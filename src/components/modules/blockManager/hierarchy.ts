@@ -4,6 +4,7 @@
  * @module BlockHierarchy
  */
 import type { Block } from '../../block';
+import { DATA_ATTR } from '../../constants/data-attributes';
 
 import type { BlockRepository } from './repository';
 
@@ -113,7 +114,9 @@ export class BlockHierarchy {
 
     // Move block holder into toggle child container if the new parent has one,
     // honouring the flat-array order so the DOM order matches the logical order.
-    if (newParentId !== null && newParent !== undefined) {
+    // Skip if the holder is already claimed by another nested-blocks container
+    // (e.g. a table cell) — moving it would steal it from that container.
+    if (newParentId !== null && newParent !== undefined && !block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`)) {
       const newContainer = newParent.holder.querySelector('[data-blok-toggle-children]');
       if (newContainer) {
         const allBlocks = this.repository.blocks;

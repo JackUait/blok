@@ -572,6 +572,35 @@ describe('BlockHierarchy', () => {
       expect(children[2]).toBe(c2.holder);
     });
 
+    it('should not steal a block holder that is already inside a [data-blok-nested-blocks] container', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'table-parent', parentId: null, contentIds: ['claimed-block'] },
+        { id: 'claimed-block', parentId: 'table-parent', contentIds: [] },
+        { id: 'toggle-parent', parentId: null, contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const claimedBlock = requireBlock('claimed-block');
+      const toggleParent = requireBlock('toggle-parent');
+
+      // Simulate claimed-block sitting inside a table cell's nested-blocks container
+      const tableCellContainer = document.createElement('div');
+      tableCellContainer.setAttribute('data-blok-nested-blocks', '');
+      tableCellContainer.appendChild(claimedBlock.holder);
+
+      // Give toggle-parent a toggle-children container
+      const toggleContainer = document.createElement('div');
+      toggleContainer.setAttribute('data-blok-toggle-children', '');
+      toggleContainer.setAttribute('data-blok-nested-blocks', '');
+      toggleParent.holder.appendChild(toggleContainer);
+
+      hierarchy.setBlockParent(claimedBlock, 'toggle-parent');
+
+      // The holder must remain in the table cell container — NOT stolen by the toggle
+      expect(tableCellContainer.contains(claimedBlock.holder)).toBe(true);
+      expect(toggleContainer.contains(claimedBlock.holder)).toBe(false);
+    });
+
     it('does NOT move block.holder when the new parent has no [data-blok-toggle-children] container', () => {
       repository = createRepositoryWithBlocks([
         { id: 'plain-parent', parentId: null, contentIds: [] },

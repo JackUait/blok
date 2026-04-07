@@ -97,6 +97,11 @@ export class DividerTool implements BlockTool {
   public onPaste(_event: PasteEvent): void {}
 
   /**
+   * Toggle read-only mode in place. Divider is purely presentational — no-op.
+   */
+  public setReadOnly(_state: boolean): void {}
+
+  /**
    * Nothing to sanitize — no HTML content
    */
   public static get sanitize(): SanitizerConfig {

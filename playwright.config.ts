@@ -100,6 +100,18 @@ const LOGIC_TESTS = [
   '**/ui/plus-block-tunes.spec.ts',
   '**/ui/selection-with-link-input.spec.ts',
   '**/ui/inline-toolbar-nested-popover.spec.ts',
+  '**/ui/multilingual-search.spec.ts',
+  '**/ui/slash-search-placeholder.spec.ts',
+  '**/ui/toolbox-no-truncation.spec.ts',
+  '**/ui/table-toolbar-visibility.spec.ts',
+  '**/ui/css-layer-conflict.spec.ts',
+  '**/ui/content-align.spec.ts',
+
+  // Seed/utility tests
+  '**/seed.spec.ts',
+
+  // React adapter
+  '**/react-adapter.spec.ts',
 ] as const;
 
 // Generate cross-browser projects programmatically

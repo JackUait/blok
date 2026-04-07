@@ -52,6 +52,8 @@ export class ListItem implements BlockTool {
   private depthValidator: ListDepthValidator;
   private markerCalculator: ListMarkerCalculator;
   private markerManager: OrderedMarkerManager | null;
+  private placeholderCleanup: (() => void) | null = null;
+  private boundHandleKeyDown: ((event: KeyboardEvent) => void) | null = null;
 
   private blockId?: string;
 
@@ -120,15 +122,23 @@ export class ListItem implements BlockTool {
     if (this.readOnly) {
       return;
     }
-    setupPlaceholder(element, this.placeholder);
+    this.placeholderCleanup = setupPlaceholder(element, this.placeholder);
   }
 
   public render(): HTMLElement {
+    if (this._element) {
+      return this._element;
+    }
+
     const blockIndex = this.blockId
       ? this.api.blocks.getBlockIndex(this.blockId) ?? this.api.blocks.getCurrentBlockIndex()
       : this.api.blocks.getCurrentBlockIndex();
     const depth = this._data.depth ?? 0;
     const markerDepth = this.markerCalculator.getVisualDepth(blockIndex, depth);
+
+    if (!this.boundHandleKeyDown) {
+      this.boundHandleKeyDown = this.handleKeyDown.bind(this);
+    }
 
     this._element = renderListItem({
       data: this._data,
@@ -145,10 +155,52 @@ export class ListItem implements BlockTool {
           content.classList.toggle('opacity-60', checked);
         }
       },
-      keydownHandler: this.readOnly ? undefined : this.handleKeyDown.bind(this),
+      keydownHandler: this.readOnly ? undefined : this.boundHandleKeyDown,
     });
 
     return this._element;
+  }
+
+  public setReadOnly(state: boolean): void {
+    if (!this._element) {
+      return;
+    }
+
+    this.readOnly = state;
+
+    const content = this.getContentElement();
+
+    // Toggle contentEditable on content container
+    if (content) {
+      content.contentEditable = state ? 'false' : 'true';
+    }
+
+    // Toggle checkbox disabled state for checklists
+    const checkbox = this._element.querySelector<HTMLInputElement>('input[type="checkbox"]');
+
+    if (checkbox) {
+      checkbox.disabled = state;
+    }
+
+    // Toggle keydown handler and placeholder
+    if (state) {
+      if (this.boundHandleKeyDown) {
+        this._element.removeEventListener('keydown', this.boundHandleKeyDown);
+      }
+
+      if (this.placeholderCleanup) {
+        this.placeholderCleanup();
+        this.placeholderCleanup = null;
+      }
+    } else {
+      if (this.boundHandleKeyDown) {
+        this._element.addEventListener('keydown', this.boundHandleKeyDown);
+      }
+
+      if (content) {
+        this.placeholderCleanup = setupPlaceholder(content, this.placeholder);
+      }
+    }
   }
 
   public rendered(): void {
@@ -408,7 +460,7 @@ export class ListItem implements BlockTool {
           content.classList.toggle('opacity-60', checked);
         }
       },
-      keydownHandler: this.readOnly ? undefined : this.handleKeyDown.bind(this),
+      keydownHandler: this.readOnly ? undefined : this.boundHandleKeyDown ?? undefined,
     });
 
     if (newElement) {

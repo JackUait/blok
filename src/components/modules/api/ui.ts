@@ -17,9 +17,6 @@ export class UiAPI extends Module {
       get isMobile(): boolean {
         return uiModule.isMobile;
       },
-      /**
-       * There can be added some UI methods, like toggleThinMode() etc
-       */
     };
   }
 

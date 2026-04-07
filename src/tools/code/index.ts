@@ -21,6 +21,7 @@ import {
   CODE_AREA_STYLES,
   COPY_CODE_KEY,
   WRAP_LINES_KEY,
+  LINE_NUMBERS_KEY,
   COPIED_KEY,
   LANGUAGE_KEY,
   COPIED_FEEDBACK_STYLES,
@@ -31,8 +32,12 @@ import {
   TAB_ACTIVE_STYLES,
   TAB_INACTIVE_STYLES,
   PREVIEW_AREA_STYLES,
+  GUTTER_LINE_STYLES,
 } from './constants';
 import { renderLatex } from './katex-loader';
+import { renderMermaid } from './mermaid-loader';
+import { tokenizeCode, isHighlightable } from './shiki-loader';
+import { applyHighlights, isHighlightingSupported } from './highlight-applier';
 
 const COPIED_FEEDBACK_DURATION = 1500;
 
@@ -42,9 +47,12 @@ export class CodeTool implements BlockTool {
   private _data: CodeData;
   private _dom: CodeDOMRefs | null = null;
   private _wrapping = true;
+  private _lineNumbers = true;
   private _picker: LanguagePicker | null = null;
   private _previewActive = false;
   private _previewContainer: HTMLElement | null = null;
+  private _disposeHighlights: (() => void) | null = null;
+  private _highlightRafId: number | null = null;
 
   constructor({ data, api, readOnly }: BlockToolConstructorOptions<CodeData>) {
     this.api = api;
@@ -52,7 +60,9 @@ export class CodeTool implements BlockTool {
     this._data = {
       code: data?.code ?? '',
       language: data?.language ?? DEFAULT_LANGUAGE,
+      lineNumbers: data?.lineNumbers,
     };
+    this._lineNumbers = data?.lineNumbers ?? true;
   }
 
   public render(): HTMLElement {
@@ -64,12 +74,17 @@ export class CodeTool implements BlockTool {
       readOnly: this.readOnly,
       copyLabel: this.api.i18n.t(COPY_CODE_KEY),
       wrapLabel: this.api.i18n.t(WRAP_LINES_KEY),
+      lineNumbersLabel: this.api.i18n.t(LINE_NUMBERS_KEY),
       previewable: this.readOnly ? false : isPreviewable,
       codeTabLabel: this.api.i18n.t(CODE_TAB_KEY),
       previewTabLabel: this.api.i18n.t(PREVIEW_TAB_KEY),
     });
 
     this._dom = dom;
+
+    // Line numbers gutter visibility
+    dom.gutterElement.hidden = !this._lineNumbers;
+    dom.lineNumbersButton.addEventListener('click', () => this.toggleLineNumbers());
 
     // Read-only + previewable: show preview only, hide code, no tabs
     if (this.readOnly && isPreviewable) {
@@ -79,6 +94,7 @@ export class CodeTool implements BlockTool {
       previewEl.setAttribute('data-blok-testid', 'code-preview');
       dom.wrapper.appendChild(previewEl);
       dom.preElement.hidden = true;
+      dom.gutterElement.hidden = true;
       this._previewContainer = previewEl;
       void this.renderPreview();
     }
@@ -87,6 +103,7 @@ export class CodeTool implements BlockTool {
     if (!this.readOnly && isPreviewable && dom.codeTab && dom.previewTab && dom.previewElement) {
       this._previewActive = true;
       dom.preElement.hidden = true;
+      dom.gutterElement.hidden = true;
       dom.previewElement.hidden = false;
       this._previewContainer = dom.previewElement;
       void this.renderPreview();
@@ -101,7 +118,16 @@ export class CodeTool implements BlockTool {
 
         if (handled) {
           event.preventDefault();
+          this.syncTrailingBr();
+          this.updateGutter();
+          this.scheduleHighlight();
         }
+      });
+
+      dom.codeElement.addEventListener('input', () => {
+        this.syncTrailingBr();
+        this.updateGutter();
+        this.scheduleHighlight();
       });
     }
 
@@ -126,6 +152,10 @@ export class CodeTool implements BlockTool {
     return dom.wrapper;
   }
 
+  public rendered(): void {
+    void this.highlightCode();
+  }
+
   private showCode(): void {
     if (!this._dom?.previewElement || !this._dom.codeTab || !this._dom.previewTab) {
       return;
@@ -133,6 +163,7 @@ export class CodeTool implements BlockTool {
 
     this._previewActive = false;
     this._dom.preElement.hidden = false;
+    this._dom.gutterElement.hidden = !this._lineNumbers;
     this._dom.previewElement.hidden = true;
     this._dom.codeTab.className = `${TAB_STYLES} ${TAB_ACTIVE_STYLES}`;
     this._dom.previewTab.className = `${TAB_STYLES} ${TAB_INACTIVE_STYLES}`;
@@ -145,6 +176,7 @@ export class CodeTool implements BlockTool {
 
     this._previewActive = true;
     this._dom.preElement.hidden = true;
+    this._dom.gutterElement.hidden = true;
     this._dom.previewElement.hidden = false;
     this._dom.codeTab.className = `${TAB_STYLES} ${TAB_INACTIVE_STYLES}`;
     this._dom.previewTab.className = `${TAB_STYLES} ${TAB_ACTIVE_STYLES}`;
@@ -159,15 +191,34 @@ export class CodeTool implements BlockTool {
     }
 
     const code = this._dom?.codeElement.textContent ?? this._data.code;
-    const rendered = await renderLatex(code);
+    const rendered = this._data.language === 'mermaid'
+      ? await renderMermaid(code)
+      : await renderLatex(code);
 
     this._previewContainer.innerHTML = rendered;
+  }
+
+  public setReadOnly(state: boolean): void {
+    this.readOnly = state;
+
+    if (!this._dom) {
+      return;
+    }
+
+    if (state) {
+      this._dom.codeElement.setAttribute('contenteditable', 'false');
+      this._dom.codeElement.removeAttribute('spellcheck');
+    } else {
+      this._dom.codeElement.setAttribute('contenteditable', 'plaintext-only');
+      this._dom.codeElement.setAttribute('spellcheck', 'false');
+    }
   }
 
   public save(_blockContent: HTMLElement): CodeData {
     return {
       code: this._dom?.codeElement.textContent ?? '',
       language: this._data.language,
+      lineNumbers: this._lineNumbers,
     };
   }
 
@@ -181,6 +232,8 @@ export class CodeTool implements BlockTool {
     if (this._dom) {
       this._dom.codeElement.textContent = this._data.code;
     }
+
+    void this.highlightCode();
   }
 
   public renderSettings(): MenuConfig {
@@ -220,6 +273,8 @@ export class CodeTool implements BlockTool {
     if (this._dom) {
       this._dom.codeElement.textContent = this._data.code;
     }
+
+    void this.highlightCode();
   }
 
   private setLanguage(id: string): void {
@@ -230,6 +285,7 @@ export class CodeTool implements BlockTool {
     }
 
     this._picker?.setActiveLanguage(id);
+    void this.highlightCode();
   }
 
   private getLanguageName(id: string): string {
@@ -271,6 +327,98 @@ export class CodeTool implements BlockTool {
     }
   }
 
+  private toggleLineNumbers(): void {
+    this._lineNumbers = !this._lineNumbers;
+
+    if (this._dom) {
+      this._dom.gutterElement.hidden = !this._lineNumbers;
+    }
+  }
+
+  private updateGutter(): void {
+    if (!this._dom) {
+      return;
+    }
+
+    const code = this._dom.codeElement.textContent ?? '';
+    const lineCount = code ? code.split('\n').length : 1;
+    const gutter = this._dom.gutterElement;
+    const currentCount = gutter.children.length;
+
+    if (currentCount === lineCount) {
+      return;
+    }
+
+    // Rebuild gutter lines
+    gutter.innerHTML = '';
+    Array.from({ length: lineCount }, (_, idx) => {
+      const lineEl = document.createElement('div');
+      lineEl.className = GUTTER_LINE_STYLES;
+      lineEl.textContent = String(idx + 1);
+      gutter.appendChild(lineEl);
+    });
+  }
+
+  /**
+   * Ensure a trailing <br> exists when the text content ends with '\n'.
+   * Browsers collapse a trailing newline in contenteditable — no visible
+   * empty line is rendered, so the caret has nowhere to go.  A sentinel
+   * <br> forces the browser to create the line box.  It is invisible to
+   * textContent, so save() and updateGutter() need no changes.
+   */
+  private syncTrailingBr(): void {
+    if (!this._dom) {
+      return;
+    }
+
+    const code = this._dom.codeElement;
+    const text = code.textContent ?? '';
+    const hasBr = code.lastChild instanceof HTMLBRElement;
+
+    if (text.endsWith('\n') && !hasBr) {
+      code.appendChild(document.createElement('br'));
+    } else if (!text.endsWith('\n') && hasBr) {
+      code.lastChild.remove();
+    }
+  }
+
+  private scheduleHighlight(): void {
+    if (this._highlightRafId !== null) {
+      return;
+    }
+
+    this._highlightRafId = requestAnimationFrame(() => {
+      this._highlightRafId = null;
+      void this.highlightCode();
+    });
+  }
+
+  private async highlightCode(): Promise<void> {
+    if (!isHighlightingSupported() || !isHighlightable(this._data.language)) {
+      this._disposeHighlights?.();
+      this._disposeHighlights = null;
+      return;
+    }
+
+    const code = this._dom?.codeElement.textContent ?? '';
+
+    if (!code.trim()) {
+      this._disposeHighlights?.();
+      this._disposeHighlights = null;
+      return;
+    }
+
+    const tokens = await tokenizeCode(code, this._data.language);
+
+    if (!tokens || !this._dom) {
+      return;
+    }
+
+    // Clean up previous highlights before applying new ones
+    this._disposeHighlights?.();
+    this._disposeHighlights = applyHighlights(this._dom.codeElement, tokens);
+  }
+
   private exitBlock(): void {
     const currentIndex = this.api.blocks.getCurrentBlockIndex();
 
@@ -278,6 +426,14 @@ export class CodeTool implements BlockTool {
   }
 
   public removed(): void {
+    this._disposeHighlights?.();
+    this._disposeHighlights = null;
+
+    if (this._highlightRafId !== null) {
+      cancelAnimationFrame(this._highlightRafId);
+      this._highlightRafId = null;
+    }
+
     if (this._picker) {
       this._picker.getElement().remove();
       this._picker = null;

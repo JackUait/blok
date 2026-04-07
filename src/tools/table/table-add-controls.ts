@@ -1,7 +1,7 @@
 import type { I18n } from '../../../types/api';
 import { IconPlus } from '../../components/icons';
 import { createTooltipContent } from '../../components/modules/toolbar/tooltip';
-import { hide as hideTooltip, onHover } from '../../components/utils/tooltip';
+import { hide as hideTooltip, onHover, show as showTooltip } from '../../components/utils/tooltip';
 import { twMerge } from '../../components/utils/tw';
 
 const ADD_ROW_ATTR = 'data-blok-table-add-row';
@@ -29,7 +29,7 @@ const VISUAL_CLASSES = [
   'justify-center',
   'border',
   'border-gray-300',
-  'rounded-full',
+  'rounded-sm',
   'group-hover/add:bg-gray-50',
 ];
 
@@ -56,6 +56,7 @@ interface TableAddControlsOptions {
   onDragAddCol: () => void;
   onDragRemoveCol: () => void;
   onDragEnd: () => void;
+  getTableSize: () => { rows: number; cols: number };
   /** Returns the pixel width of a newly added column, used as the drag unit size. */
   getNewColumnWidth?: () => number;
 }
@@ -94,6 +95,7 @@ export class TableAddControls {
   private boundPointerCancel: (e: PointerEvent) => void;
   private boundRowPointerDown: (e: PointerEvent) => void;
   private boundColPointerDown: (e: PointerEvent) => void;
+  private getTableSize: () => { rows: number; cols: number };
   private getNewColumnWidth: (() => number) | undefined;
   private scrollContainer: HTMLElement | null = null;
   private boundScrollHandler: (() => void) | null = null;
@@ -112,6 +114,7 @@ export class TableAddControls {
     this.onDragAddCol = options.onDragAddCol;
     this.onDragRemoveCol = options.onDragRemoveCol;
     this.onDragEnd = options.onDragEnd;
+    this.getTableSize = options.getTableSize;
     this.getNewColumnWidth = options.getNewColumnWidth;
     this.boundMouseMove = this.handleMouseMove.bind(this);
     this.boundDocumentMouseMove = this.handleDocumentMouseMove.bind(this);
@@ -324,6 +327,20 @@ export class TableAddControls {
     this.addColBtn.remove();
   }
 
+  private showDimensionTooltip(): void {
+    if (!this.dragState) {
+      return;
+    }
+
+    const size = this.getTableSize();
+    const target = this.dragState.axis === 'row' ? this.addRowBtn : this.addColBtn;
+    const opts = this.dragState.axis === 'row'
+      ? { placement: 'bottom' as const, marginTop: -16 }
+      : { placement: 'bottom' as const };
+
+    showTooltip(target, `${size.cols}\u00D7${size.rows}`, opts);
+  }
+
   private handlePointerDown(axis: 'row' | 'col', e: PointerEvent): void {
     e.preventDefault();
 
@@ -380,8 +397,18 @@ export class TableAddControls {
     if (Math.abs(delta) > DRAG_THRESHOLD && !this.dragState.didDrag) {
       this.dragState.didDrag = true;
       document.body.style.cursor = axis === 'row' ? 'row-resize' : 'col-resize';
-      hideTooltip();
+      this.showDimensionTooltip();
       this.onDragStart();
+
+      return;
+    }
+
+    if (this.dragState.didDrag) {
+      this.showDimensionTooltip();
+    }
+
+    if (this.dragState.didDrag) {
+      this.showDimensionTooltip();
     }
   }
 
@@ -400,6 +427,7 @@ export class TableAddControls {
     target.removeEventListener('pointercancel', this.boundPointerCancel);
 
     document.body.style.cursor = '';
+    hideTooltip();
     this.dragState = null;
 
     if (!didDrag) {
@@ -431,6 +459,7 @@ export class TableAddControls {
     target.removeEventListener('pointercancel', this.boundPointerCancel);
 
     document.body.style.cursor = '';
+    hideTooltip();
     this.dragState = null;
 
     if (didDrag) {
@@ -495,8 +524,8 @@ export class TableAddControls {
    * Document-level mousemove handler.
    * Catches mouse movements outside the wrapper (e.g. in the ::after
    * pseudo-element zone below the grid, which has pointer-events-none).
-   * Only delegates to handleMouseMove when the cursor is within the
-   * proximity zone around the grid to avoid unnecessary work.
+   * Delegates to handleMouseMove when the cursor is within the proximity
+   * zone around the grid; schedules hiding when the cursor is far away.
    */
   private handleDocumentMouseMove(e: MouseEvent): void {
     if (this.wrapper.contains(e.target as Node)) {
@@ -513,6 +542,9 @@ export class TableAddControls {
 
     if (nearGrid) {
       this.handleMouseMove(e);
+    } else {
+      this.scheduleHideRow();
+      this.scheduleHideCol();
     }
   }
 

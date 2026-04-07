@@ -1,8 +1,6 @@
 import { BORDER_WIDTH } from './table-core';
 
 const RESIZE_ATTR = 'data-blok-table-resize';
-const CELL_ATTR = 'data-blok-table-cell';
-const ROW_ATTR = 'data-blok-table-row';
 const MIN_COL_WIDTH = 50;
 const HANDLE_HIT_WIDTH = 16;
 
@@ -23,7 +21,7 @@ export class TableResize {
   private dragStartX = 0;
   private dragColIndex = -1;
   private startColWidth = 0;
-  private dragRowCells: HTMLElement[][] | null = null;
+  private dragColElements: HTMLElement[] | null = null;
   private handles: HTMLElement[] = [];
   private needsInitialApply: boolean;
 
@@ -74,7 +72,7 @@ export class TableResize {
     this.gridEl.removeEventListener('pointerdown', this.boundPointerDown);
     document.removeEventListener('pointermove', this.boundPointerMove);
     document.removeEventListener('pointerup', this.boundPointerUp);
-    this.dragRowCells = null;
+    this.dragColElements = null;
 
     this.handles.forEach(handle => handle.remove());
     this.handles = [];
@@ -170,7 +168,7 @@ export class TableResize {
     this.isDragging = true;
     this.dragStartX = e.clientX;
     this.startColWidth = this.colWidths[this.dragColIndex];
-    this.dragRowCells = this.resolveRowCells();
+    this.dragColElements = this.resolveColElements();
 
     this.onDragStart?.();
     this.gridEl.style.userSelect = 'none';
@@ -195,7 +193,7 @@ export class TableResize {
     const newWidth = Math.max(MIN_COL_WIDTH, rawWidth);
 
     this.colWidths[this.dragColIndex] = newWidth;
-    this.applyWidths(this.dragRowCells ?? undefined);
+    this.applyWidths(this.dragColElements ?? undefined);
     this.updateHandlePositions();
     this.onDrag?.();
   }
@@ -216,28 +214,32 @@ export class TableResize {
 
     document.removeEventListener('pointermove', this.boundPointerMove);
     document.removeEventListener('pointerup', this.boundPointerUp);
-    this.dragRowCells = null;
+    this.dragColElements = null;
 
     this.onChange([...this.colWidths]);
   }
 
-  private resolveRowCells(): HTMLElement[][] {
-    const rows = this.gridEl.querySelectorAll<HTMLElement>(`[${ROW_ATTR}]`);
+  private resolveColElements(): HTMLElement[] {
+    const colgroup = this.gridEl.querySelector('colgroup');
 
-    return Array.from(rows, row => Array.from(row.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`)));
+    if (!colgroup) {
+      return [];
+    }
+
+    return Array.from(colgroup.querySelectorAll<HTMLElement>('col'));
   }
 
-  private applyWidths(rowCells: HTMLElement[][] = this.resolveRowCells()): void {
+  private applyWidths(cols: HTMLElement[] = this.resolveColElements()): void {
     const totalWidth = this.colWidths.reduce((sum, w) => sum + w, 0);
 
     this.gridEl.style.width = `${totalWidth + BORDER_WIDTH}px`;
 
-    rowCells.forEach(cells => {
-      cells.forEach((cellEl, i) => {
-        if (i < this.colWidths.length) {
-          cellEl.style.setProperty('width', `${this.colWidths[i]}px`);
-        }
-      });
+    cols.forEach((colEl, i) => {
+      if (i < this.colWidths.length) {
+        const el: HTMLElement = colEl;
+
+        el.style.width = `${this.colWidths[i]}px`;
+      }
     });
   }
 }

@@ -422,16 +422,16 @@ test.describe('Edge Cases and Error Handling', () => {
 
     await expect(cells).toHaveCount(6);
 
-    // Verify the column widths from data were applied
-    const firstRowCellWidths = await page.evaluate(() => {
-      const allCells = document.querySelectorAll('[data-blok-table-cell]');
+    // Verify the column widths from data were applied (widths on <col> elements)
+    const colWidths = await page.evaluate(() => {
+      const cols = document.querySelectorAll('[data-blok-tool="table"] colgroup col');
 
-      return Array.from(allCells).slice(0, 3).map(cell => (cell as HTMLElement).style.width);
+      return Array.from(cols).map(col => (col as HTMLElement).style.width);
     });
 
-    expect(firstRowCellWidths[0]).toBe('150px');
-    expect(firstRowCellWidths[1]).toBe('200px');
-    expect(firstRowCellWidths[2]).toBe('250px');
+    expect(colWidths[0]).toBe('150px');
+    expect(colWidths[1]).toBe('200px');
+    expect(colWidths[2]).toBe('250px');
   });
 
   test('Grip operations do not produce page errors', async ({ page }) => {

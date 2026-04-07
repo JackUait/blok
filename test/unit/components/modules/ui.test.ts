@@ -274,7 +274,6 @@ describe("UI module", () => {
       expect(nodes.wrapper?.getAttribute("data-blok-testid")).toBe(
         "blok-editor",
       );
-      expect(nodes.wrapper?.dataset.blokNarrow).toBe("true");
       expect(nodes.wrapper?.getAttribute(DATA_ATTR.interface)).toBe(
         BLOK_INTERFACE_VALUE,
       );

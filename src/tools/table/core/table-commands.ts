@@ -77,6 +77,20 @@ export interface SetColWidthsCommand {
   readonly widths: readonly number[] | undefined;
 }
 
+export interface MergeCellsCommand {
+  readonly type: 'merge-cells';
+  readonly minRow: number;
+  readonly maxRow: number;
+  readonly minCol: number;
+  readonly maxCol: number;
+}
+
+export interface SplitCellCommand {
+  readonly type: 'split-cell';
+  readonly row: number;
+  readonly col: number;
+}
+
 export interface ReplaceAllCommand {
   readonly type: 'replace-all';
   readonly data: TableData;
@@ -96,4 +110,6 @@ export type TableCommand =
   | RemoveBlockFromCellCommand
   | SetCellBlocksCommand
   | SetColWidthsCommand
+  | MergeCellsCommand
+  | SplitCellCommand
   | ReplaceAllCommand;

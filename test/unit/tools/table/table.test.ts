@@ -341,6 +341,111 @@ describe('Table Tool', () => {
 
       expect(saved.content[0][0]).toEqual({ blocks: ['list-1', 'list-2', 'list-3'] });
     });
+
+    it('should produce empty blocks array when all block IDs in a cell are foreign', () => {
+      const TABLE_ID = 'table-owner';
+      const foreignBlock1 = 'block-from-other-table-1';
+      const foreignBlock2 = 'block-from-other-table-2';
+
+      const mockApi = createMockAPI({
+        blocks: {
+          getById: (id: string) => {
+            if (id === foreignBlock1 || id === foreignBlock2) {
+              return { id, parentId: 'other-table-id' } as never;
+            }
+
+            return null;
+          },
+        } as never,
+      });
+
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: {
+          withHeadings: false,
+          withHeadingColumn: false,
+          content: [
+            [{ blocks: [foreignBlock1, foreignBlock2] }],
+          ],
+        } as TableData,
+        config: {},
+        api: mockApi,
+        readOnly: false,
+        block: { id: TABLE_ID } as never,
+      };
+
+      const table = new Table(options);
+      const element = table.render();
+
+      const saved = table.save(element);
+
+      // When ALL blocks belong to another table, the cell should have an
+      // empty blocks array — not crash or produce invalid output.
+      const cell = saved.content[0][0];
+
+      expect(isCellWithBlocks(cell)).toBe(true);
+      if (isCellWithBlocks(cell)) {
+        expect(cell.blocks).toEqual([]);
+      }
+    });
+
+    it('should filter out block IDs whose parent does not match this table', () => {
+      const TABLE_ID = 'table-owner';
+      const ownedBlock = 'block-owned-1';
+      const foreignBlock = 'block-foreign-from-other-table';
+      const ownedBlock2 = 'block-owned-2';
+
+      const mockApi = createMockAPI({
+        blocks: {
+          getById: (id: string) => {
+            if (id === ownedBlock || id === ownedBlock2) {
+              return { id, parentId: TABLE_ID } as never;
+            }
+            if (id === foreignBlock) {
+              return { id, parentId: 'other-table-id' } as never;
+            }
+
+            return null;
+          },
+        } as never,
+      });
+
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: {
+          withHeadings: false,
+          withHeadingColumn: false,
+          content: [
+            [{ blocks: [ownedBlock, foreignBlock] }, { blocks: [ownedBlock2] }],
+          ],
+        } as TableData,
+        config: {},
+        api: mockApi,
+        readOnly: false,
+        block: { id: TABLE_ID } as never,
+      };
+
+      const table = new Table(options);
+      const element = table.render();
+
+      const saved = table.save(element);
+
+      // The foreign block should be filtered out — only owned blocks remain
+      const firstCell = saved.content[0][0];
+
+      expect(isCellWithBlocks(firstCell)).toBe(true);
+      if (isCellWithBlocks(firstCell)) {
+        expect(firstCell.blocks).toContain(ownedBlock);
+        expect(firstCell.blocks).not.toContain(foreignBlock);
+        expect(firstCell.blocks).toHaveLength(1);
+      }
+
+      // The second cell should be unaffected (all blocks owned)
+      const secondCell = saved.content[0][1];
+
+      expect(isCellWithBlocks(secondCell)).toBe(true);
+      if (isCellWithBlocks(secondCell)) {
+        expect(secondCell.blocks).toEqual([ownedBlock2]);
+      }
+    });
   });
 
   describe('heading row', () => {
@@ -508,9 +613,9 @@ describe('Table Tool', () => {
       const table = new Table(options);
       const element = table.render();
 
-      const firstCell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
+      const firstCol = element.querySelector('col') as HTMLElement;
 
-      expect(firstCell.style.width).toBe('33.33%');
+      expect(firstCol.style.width).toBe('33.33%');
     });
 
     it('applies custom colWidths from data as pixel values', () => {
@@ -521,10 +626,10 @@ describe('Table Tool', () => {
       const table = new Table(options);
       const element = table.render();
 
-      const cells = element.querySelectorAll('[data-blok-table-cell]');
+      const cols = element.querySelectorAll('colgroup col');
 
-      expect((cells[0] as HTMLElement).style.width).toBe('400px');
-      expect((cells[1] as HTMLElement).style.width).toBe('200px');
+      expect((cols[0] as HTMLElement).style.width).toBe('400px');
+      expect((cols[1] as HTMLElement).style.width).toBe('200px');
     });
 
     it('falls back to equal widths when colWidths length mismatches columns', () => {
@@ -535,9 +640,9 @@ describe('Table Tool', () => {
       const table = new Table(options);
       const element = table.render();
 
-      const firstCell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
+      const firstCol = element.querySelector('col') as HTMLElement;
 
-      expect(firstCell.style.width).toBe('33.33%');
+      expect(firstCol.style.width).toBe('33.33%');
     });
   });
 
@@ -664,11 +769,11 @@ describe('Table Tool', () => {
 
       table.rendered();
 
-      // Grid has no style.width (percent mode) → percent branch of syncRowButtonWidth
+      // Grid has 100% width (percent mode) → percent branch of syncRowButtonWidth
       const scrollContainer = element.firstElementChild as HTMLElement;
       const grid = scrollContainer.firstElementChild as HTMLElement;
 
-      expect(grid.style.width).toBe('');
+      expect(grid.style.width).toBe('100%');
 
       // The add-row button should be at left: 0px (no padding offset needed)
       const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
@@ -692,7 +797,7 @@ describe('Table Tool', () => {
       const scrollContainer = element.querySelector('[data-blok-table-scroll]') as HTMLElement;
       const grid = scrollContainer.firstElementChild as HTMLElement;
 
-      expect(grid.style.width).toBe('');
+      expect(grid.style.width).toBe('100%');
 
       const handle = element.querySelector('[data-blok-table-resize]') as HTMLElement;
 
@@ -841,26 +946,24 @@ describe('Table Tool', () => {
 
       const scrollContainer = element.firstElementChild as HTMLElement;
       const gridBefore = scrollContainer.firstElementChild as HTMLElement;
-      const cellsBefore = gridBefore.querySelectorAll('[data-blok-table-row]')[0]
-        .querySelectorAll('[data-blok-table-cell]');
-      const widthsBefore = Array.from(cellsBefore).map(c => (c as HTMLElement).style.width);
+      const colsBefore = gridBefore.querySelectorAll('colgroup col');
+      const widthsBefore = Array.from(colsBefore).map(c => (c as HTMLElement).style.width);
 
       const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
 
       pointerClick(addColBtn);
 
       const gridAfter = scrollContainer.firstElementChild as HTMLElement;
-      const cellsAfter = gridAfter.querySelectorAll('[data-blok-table-row]')[0]
-        .querySelectorAll('[data-blok-table-cell]');
+      const colsAfter = gridAfter.querySelectorAll('colgroup col');
 
       // Existing columns keep their widths
-      expect((cellsAfter[0] as HTMLElement).style.width).toBe(widthsBefore[0]);
-      expect((cellsAfter[1] as HTMLElement).style.width).toBe(widthsBefore[1]);
-      expect((cellsAfter[2] as HTMLElement).style.width).toBe(widthsBefore[2]);
+      expect((colsAfter[0] as HTMLElement).style.width).toBe(widthsBefore[0]);
+      expect((colsAfter[1] as HTMLElement).style.width).toBe(widthsBefore[1]);
+      expect((colsAfter[2] as HTMLElement).style.width).toBe(widthsBefore[2]);
 
       // New column added
-      expect(cellsAfter).toHaveLength(4);
-      expect((cellsAfter[3] as HTMLElement).style.width).toMatch(/px$/);
+      expect(colsAfter).toHaveLength(4);
+      expect((colsAfter[3] as HTMLElement).style.width).toMatch(/px$/);
 
       // Grid width grew (not same as before)
       const totalAfter = parseFloat(gridAfter.style.width);
@@ -887,11 +990,10 @@ describe('Table Tool', () => {
 
       const scrollContainer = element.firstElementChild as HTMLElement;
       const gridAfter = scrollContainer.firstElementChild as HTMLElement;
-      const cellsAfter = gridAfter.querySelectorAll('[data-blok-table-row]')[0]
-        .querySelectorAll('[data-blok-table-cell]');
+      const colsAfter = gridAfter.querySelectorAll('colgroup col');
 
       // Average of [200, 200, 200] = 200, half = 100
-      expect((cellsAfter[3] as HTMLElement).style.width).toBe('100px');
+      expect((colsAfter[3] as HTMLElement).style.width).toBe('100px');
 
       document.body.removeChild(element);
     });
@@ -2740,7 +2842,7 @@ describe('Table Tool', () => {
               holders[id].textContent = `Content of ${id}`;
             }
 
-            return { id, holder: holders[id] };
+            return { id, holder: holders[id], parentId: 'table-readonly-mount' };
           }),
           getBlocksCount: vi.fn().mockReturnValue(2),
         },
@@ -2989,13 +3091,13 @@ describe('Table Tool', () => {
 
       await vi.advanceTimersByTimeAsync(16);
 
-      // After deletion, the 2 remaining cells should have widths summing to 100%
-      const cellsAfter = firstRow?.querySelectorAll<HTMLElement>('[data-blok-table-cell]');
+      // After deletion, the 2 remaining columns should have widths summing to ~100%
+      const colsAfter = gridEl.querySelectorAll<HTMLElement>('col');
 
-      expect(cellsAfter).toHaveLength(2);
+      expect(colsAfter).toHaveLength(2);
 
-      const totalWidth = Array.from(cellsAfter ?? []).reduce(
-        (sum, cell) => sum + parseFloat(cell.style.width),
+      const totalWidth = Array.from(colsAfter).reduce(
+        (sum, col) => sum + parseFloat(col.style.width),
         0,
       );
 
@@ -4326,6 +4428,178 @@ describe('Table Tool', () => {
       // Must preserve the <b> tag — not strip it to plain "bold word"
       expect(blockText).toContain('<b>bold</b>');
       expect(blockText).not.toBe('bold word');
+
+      table.destroy();
+      document.body.removeChild(element);
+    });
+  });
+
+  describe('setReadOnly', () => {
+    it('sets data-blok-table-readonly attribute when entering readonly', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // Before: no readonly attribute in edit mode
+      expect(element.hasAttribute('data-blok-table-readonly')).toBe(false);
+
+      table.setReadOnly(true);
+
+      // After: readonly attribute should be present
+      expect(element.hasAttribute('data-blok-table-readonly')).toBe(true);
+
+      table.destroy();
+      document.body.removeChild(element);
+    });
+
+    it('removes data-blok-table-readonly attribute when exiting readonly', () => {
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, withHeadingColumn: false, content: [['A', 'B'], ['C', 'D']] } as TableData,
+        config: {},
+        api: createMockAPI(),
+        readOnly: true,
+        block: {} as never,
+      };
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // Before: readonly attribute is present
+      expect(element.hasAttribute('data-blok-table-readonly')).toBe(true);
+
+      table.setReadOnly(false);
+
+      // After: readonly attribute should be removed
+      expect(element.hasAttribute('data-blok-table-readonly')).toBe(false);
+
+      table.destroy();
+      document.body.removeChild(element);
+    });
+
+    it('preserves DOM element reference across toggle', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      const originalElement = element;
+
+      // Toggle to readonly and back
+      table.setReadOnly(true);
+      table.setReadOnly(false);
+
+      // The wrapper element should still be the same DOM node (in-place mutation)
+      expect(document.body.contains(originalElement)).toBe(true);
+      expect(originalElement.getAttribute('data-blok-tool')).toBe('table');
+
+      table.destroy();
+      document.body.removeChild(element);
+    });
+
+    it('adds WRAPPER_EDIT_CLASSES when exiting readonly', () => {
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, withHeadingColumn: false, content: [['A', 'B'], ['C', 'D']] } as TableData,
+        config: {},
+        api: createMockAPI(),
+        readOnly: true,
+        block: {} as never,
+      };
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // In readonly mode, edit classes should not be present
+      expect(element.classList.contains('relative')).toBe(false);
+
+      table.setReadOnly(false);
+
+      // After exiting readonly, edit classes should be added
+      expect(element.classList.contains('relative')).toBe(true);
+      expect(element.classList.contains('mb-7')).toBe(true);
+
+      table.destroy();
+      document.body.removeChild(element);
+    });
+
+    it('removes WRAPPER_EDIT_CLASSES when entering readonly', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // In edit mode, edit classes should be present
+      expect(element.classList.contains('relative')).toBe(true);
+
+      table.setReadOnly(true);
+
+      // After entering readonly, edit classes should be removed
+      expect(element.classList.contains('relative')).toBe(false);
+      expect(element.classList.contains('mb-7')).toBe(false);
+
+      table.destroy();
+      document.body.removeChild(element);
+    });
+
+    it('creates grip overlay when exiting readonly', () => {
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, withHeadingColumn: false, content: [['A', 'B'], ['C', 'D']] } as TableData,
+        config: {},
+        api: createMockAPI(),
+        readOnly: true,
+        block: {} as never,
+      };
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // In readonly mode, no grip overlay
+      expect(element.querySelector('[data-blok-table-grip-overlay]')).toBeNull();
+
+      table.setReadOnly(false);
+
+      // After exiting readonly, grip overlay should exist
+      expect(element.querySelector('[data-blok-table-grip-overlay]')).not.toBeNull();
+
+      table.destroy();
+      document.body.removeChild(element);
+    });
+
+    it('removes grip overlay when entering readonly', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // In edit mode, grip overlay exists
+      expect(element.querySelector('[data-blok-table-grip-overlay]')).not.toBeNull();
+
+      table.setReadOnly(true);
+
+      // After entering readonly, grip overlay should be removed
+      expect(element.querySelector('[data-blok-table-grip-overlay]')).toBeNull();
 
       table.destroy();
       document.body.removeChild(element);

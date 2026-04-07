@@ -88,6 +88,7 @@ export const buildToggleItem = (context: ToggleDOMBuilderContext): ToggleBuildRe
   const childContainerElement = document.createElement('div');
   childContainerElement.className = TOGGLE_CHILDREN_STYLES;
   childContainerElement.setAttribute(TOGGLE_ATTR.toggleChildren, '');
+  childContainerElement.setAttribute(DATA_ATTR.nestedBlocks, '');
   // Block DOM mutations inside the children container from triggering the toggle tool's
   // didMutated → syncBlockDataToYjs path. Child block insertions/removals are tracked
   // via the block hierarchy (parentId / contentIds) and must not create spurious Yjs

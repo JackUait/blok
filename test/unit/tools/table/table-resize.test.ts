@@ -24,10 +24,10 @@ const simulateUnhover = (element: HTMLElement): void => {
 };
 
 /**
- * Creates a grid element with cells at given pixel widths.
- * Mocks getBoundingClientRect on the grid to return the sum.
+ * Creates a table element with <colgroup>/<col>/<tbody>/<tr>/<td> at given pixel widths.
+ * Mocks getBoundingClientRect on the table to return the sum.
  */
-const createGrid = (colWidthsPx: number[]): HTMLDivElement => {
+const createGrid = (colWidthsPx: number[]): HTMLTableElement => {
   const totalWidth = colWidthsPx.reduce((sum, w) => sum + w, 0);
   const container = document.createElement('div');
 
@@ -35,33 +35,43 @@ const createGrid = (colWidthsPx: number[]): HTMLDivElement => {
     value: () => ({ width: 1000, left: 0, right: 1000, top: 0, bottom: 100, height: 100, x: 0, y: 0, toJSON: () => ({}) }),
   });
 
-  const grid = document.createElement('div');
+  const table = document.createElement('table');
+  const colgroup = document.createElement('colgroup');
 
-  const row = document.createElement('div');
+  colWidthsPx.forEach((w) => {
+    const col = document.createElement('col');
+
+    col.style.width = `${w}px`;
+    colgroup.appendChild(col);
+  });
+
+  table.appendChild(colgroup);
+
+  const tbody = document.createElement('tbody');
+  const row = document.createElement('tr');
 
   row.setAttribute('data-blok-table-row', '');
 
-  colWidthsPx.forEach((w) => {
-    const cell = document.createElement('div');
+  colWidthsPx.forEach(() => {
+    const td = document.createElement('td');
 
-    cell.setAttribute('data-blok-table-cell', '');
-    cell.style.width = `${w}px`;
-
-    row.appendChild(cell);
+    td.setAttribute('data-blok-table-cell', '');
+    row.appendChild(td);
   });
 
-  grid.appendChild(row);
-  container.appendChild(grid);
+  tbody.appendChild(row);
+  table.appendChild(tbody);
+  container.appendChild(table);
   document.body.appendChild(container);
 
-  Object.defineProperty(grid, 'getBoundingClientRect', {
+  Object.defineProperty(table, 'getBoundingClientRect', {
     value: () => ({ width: totalWidth, left: 0, right: totalWidth, top: 0, bottom: 100, height: 100, x: 0, y: 0, toJSON: () => ({}) }),
   });
 
-  return grid;
+  return table;
 };
 
-const createMultiRowGrid = (rows: number, colWidthsPx: number[]): HTMLDivElement => {
+const createMultiRowGrid = (rows: number, colWidthsPx: number[]): HTMLTableElement => {
   const totalWidth = colWidthsPx.reduce((sum, w) => sum + w, 0);
   const container = document.createElement('div');
 
@@ -69,37 +79,48 @@ const createMultiRowGrid = (rows: number, colWidthsPx: number[]): HTMLDivElement
     value: () => ({ width: 1000, left: 0, right: 1000, top: 0, bottom: 300, height: 300, x: 0, y: 0, toJSON: () => ({}) }),
   });
 
-  const grid = document.createElement('div');
+  const table = document.createElement('table');
+  const colgroup = document.createElement('colgroup');
+
+  colWidthsPx.forEach((w) => {
+    const col = document.createElement('col');
+
+    col.style.width = `${w}px`;
+    colgroup.appendChild(col);
+  });
+
+  table.appendChild(colgroup);
+
+  const tbody = document.createElement('tbody');
 
   Array.from({ length: rows }).forEach(() => {
-    const row = document.createElement('div');
+    const row = document.createElement('tr');
 
     row.setAttribute('data-blok-table-row', '');
 
-    colWidthsPx.forEach((w) => {
-      const cell = document.createElement('div');
+    colWidthsPx.forEach(() => {
+      const td = document.createElement('td');
 
-      cell.setAttribute('data-blok-table-cell', '');
-      cell.style.width = `${w}px`;
-
-      row.appendChild(cell);
+      td.setAttribute('data-blok-table-cell', '');
+      row.appendChild(td);
     });
 
-    grid.appendChild(row);
+    tbody.appendChild(row);
   });
 
-  container.appendChild(grid);
+  table.appendChild(tbody);
+  container.appendChild(table);
   document.body.appendChild(container);
 
-  Object.defineProperty(grid, 'getBoundingClientRect', {
+  Object.defineProperty(table, 'getBoundingClientRect', {
     value: () => ({ width: totalWidth, left: 0, right: totalWidth, top: 0, bottom: 300, height: 300, x: 0, y: 0, toJSON: () => ({}) }),
   });
 
-  return grid;
+  return table;
 };
 
 describe('TableResize', () => {
-  let grid: HTMLDivElement;
+  let grid: HTMLTableElement;
 
   afterEach(() => {
     grid?.parentElement?.remove();
@@ -230,7 +251,7 @@ describe('TableResize', () => {
       document.dispatchEvent(new PointerEvent('pointerup', {}));
     });
 
-    it('updates cell widths in all rows during drag', () => {
+    it('updates col widths during drag', () => {
       grid = createMultiRowGrid(3, [300, 300]);
 
       new TableResize(grid, [300, 300], vi.fn());
@@ -240,13 +261,10 @@ describe('TableResize', () => {
       handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, bubbles: true }));
       document.dispatchEvent(new PointerEvent('pointermove', { clientX: 400 }));
 
-      const rows = grid.querySelectorAll('[data-blok-table-row]');
+      const cols = grid.querySelectorAll('colgroup col');
+      const firstCol = cols[0] as HTMLElement;
 
-      rows.forEach(row => {
-        const firstCell = row.querySelector('[data-blok-table-cell]') as HTMLElement;
-
-        expect(firstCell.style.width).toBe('400px');
-      });
+      expect(firstCol.style.width).toBe('400px');
 
       document.dispatchEvent(new PointerEvent('pointerup', {}));
     });
@@ -420,9 +438,9 @@ describe('TableResize', () => {
 
       expect(onDrag).toHaveBeenCalledTimes(2);
 
-      const firstCell = grid.querySelector('[data-blok-table-cell]') as HTMLElement;
+      const firstCol = grid.querySelector('colgroup col') as HTMLElement;
 
-      expect(firstCell.style.width).toBe('400px');
+      expect(firstCol.style.width).toBe('400px');
 
       document.dispatchEvent(new PointerEvent('pointerup', {}));
     });
@@ -440,33 +458,33 @@ describe('TableResize', () => {
   });
 
   describe('performance', () => {
-    it('avoids repeated row and cell querying on each pointermove in one drag', () => {
+    it('avoids repeated colgroup querying on each pointermove in one drag', () => {
       grid = createMultiRowGrid(3, [300, 300]);
       new TableResize(grid, [300, 300], vi.fn());
 
       const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
-      const firstRow = grid.querySelector('[data-blok-table-row]') as HTMLElement;
+      const colgroup = grid.querySelector('colgroup') as HTMLElement;
 
-      const gridQueryAllSpy = vi.spyOn(grid, 'querySelectorAll');
-      const rowQueryAllSpy = vi.spyOn(firstRow, 'querySelectorAll');
+      const gridQuerySpy = vi.spyOn(grid, 'querySelector');
+      const colgroupQueryAllSpy = vi.spyOn(colgroup, 'querySelectorAll');
 
       handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, bubbles: true }));
       document.dispatchEvent(new PointerEvent('pointermove', { clientX: 350 }));
       document.dispatchEvent(new PointerEvent('pointermove', { clientX: 400 }));
       document.dispatchEvent(new PointerEvent('pointerup', {}));
 
-      const rowQueryCount = gridQueryAllSpy.mock.calls
-        .filter(([selector]) => selector === '[data-blok-table-row]')
+      const colgroupQueryCount = gridQuerySpy.mock.calls
+        .filter(([selector]) => selector === 'colgroup')
         .length;
-      const cellQueryCount = rowQueryAllSpy.mock.calls
-        .filter(([selector]) => selector === '[data-blok-table-cell]')
+      const colQueryCount = colgroupQueryAllSpy.mock.calls
+        .filter(([selector]) => selector === 'col')
         .length;
 
-      expect(rowQueryCount).toBeLessThanOrEqual(1);
-      expect(cellQueryCount).toBeLessThanOrEqual(1);
+      expect(colgroupQueryCount).toBeLessThanOrEqual(1);
+      expect(colQueryCount).toBeLessThanOrEqual(1);
 
-      gridQueryAllSpy.mockRestore();
-      rowQueryAllSpy.mockRestore();
+      gridQuerySpy.mockRestore();
+      colgroupQueryAllSpy.mockRestore();
     });
   });
 
@@ -505,40 +523,52 @@ describe('TableResize', () => {
 
   describe('skipInitialApply', () => {
     /**
-     * Helper: creates a grid with percentage-width cells (like a newly inserted table).
+     * Helper: creates a table with percentage-width cols (like a newly inserted table).
      */
-    const createPercentGrid = (cols: number): HTMLDivElement => {
+    const createPercentGrid = (cols: number): HTMLTableElement => {
       const container = document.createElement('div');
-      const grid = document.createElement('div');
-      const row = document.createElement('div');
+      const table = document.createElement('table');
+      const colgroup = document.createElement('colgroup');
       const pctWidth = `${Math.round((100 / cols) * 100) / 100}%`;
+
+      Array.from({ length: cols }).forEach(() => {
+        const col = document.createElement('col');
+
+        col.style.width = pctWidth;
+        colgroup.appendChild(col);
+      });
+
+      table.appendChild(colgroup);
+
+      const tbody = document.createElement('tbody');
+      const row = document.createElement('tr');
 
       row.setAttribute('data-blok-table-row', '');
 
       Array.from({ length: cols }).forEach(() => {
-        const cell = document.createElement('div');
+        const td = document.createElement('td');
 
-        cell.setAttribute('data-blok-table-cell', '');
-        cell.style.width = pctWidth;
-        row.appendChild(cell);
+        td.setAttribute('data-blok-table-cell', '');
+        row.appendChild(td);
       });
 
-      grid.appendChild(row);
-      container.appendChild(grid);
+      tbody.appendChild(row);
+      table.appendChild(tbody);
+      container.appendChild(table);
       document.body.appendChild(container);
 
-      return grid;
+      return table;
     };
 
-    it('does not apply pixel widths to cells when skipInitialApply is true', () => {
+    it('does not apply pixel widths to cols when skipInitialApply is true', () => {
       grid = createPercentGrid(3);
 
       new TableResize(grid, [200, 200, 200], vi.fn(), undefined, undefined, true);
 
-      const cells = grid.querySelectorAll('[data-blok-table-cell]');
+      const cols = grid.querySelectorAll('colgroup col');
 
-      cells.forEach(cell => {
-        expect((cell as HTMLElement).style.width).toBe('33.33%');
+      cols.forEach(col => {
+        expect((col as HTMLElement).style.width).toBe('33.33%');
       });
     });
 
@@ -570,10 +600,10 @@ describe('TableResize', () => {
       // Grid should now have explicit pixel width: 200+200+200 + 1px border
       expect(grid.style.width).toBe('601px');
 
-      const cells = grid.querySelectorAll('[data-blok-table-cell]');
+      const cols = grid.querySelectorAll('colgroup col');
 
-      cells.forEach(cell => {
-        expect((cell as HTMLElement).style.width).toBe('200px');
+      cols.forEach(col => {
+        expect((col as HTMLElement).style.width).toBe('200px');
       });
 
       document.dispatchEvent(new PointerEvent('pointerup', {}));
@@ -612,23 +642,23 @@ describe('TableResize', () => {
       document.dispatchEvent(new PointerEvent('pointerup', {}));
 
       const reportedWidths = onChange.mock.calls[0][0] as number[];
-      const cells = grid.querySelectorAll('[data-blok-table-cell]');
-      const domWidths = Array.from(cells).map(cell => parseInt((cell as HTMLElement).style.width, 10));
+      const cols = grid.querySelectorAll('colgroup col');
+      const domWidths = Array.from(cols).map(col => parseInt((col as HTMLElement).style.width, 10));
 
       expect(reportedWidths).toEqual(domWidths);
     });
 
-    it('constructor widths override existing DOM cell widths', () => {
+    it('constructor widths override existing DOM col widths', () => {
       grid = createGrid([300, 300]);
 
       new TableResize(grid, [200, 400], vi.fn());
 
-      const cells = grid.querySelectorAll('[data-blok-table-cell]');
-      const firstCell = cells[0] as HTMLElement;
-      const secondCell = cells[1] as HTMLElement;
+      const cols = grid.querySelectorAll('colgroup col');
+      const firstCol = cols[0] as HTMLElement;
+      const secondCol = cols[1] as HTMLElement;
 
-      expect(firstCell.style.width).toBe('200px');
-      expect(secondCell.style.width).toBe('400px');
+      expect(firstCol.style.width).toBe('200px');
+      expect(secondCol.style.width).toBe('400px');
     });
 
     it('does not read from DOM during drag — uses internal state', () => {
@@ -641,10 +671,10 @@ describe('TableResize', () => {
 
       handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, bubbles: true }));
 
-      // Externally mutate DOM widths to something unexpected during drag
-      const cells = grid.querySelectorAll('[data-blok-table-cell]');
+      // Externally mutate DOM col width to something unexpected during drag
+      const cols = grid.querySelectorAll('colgroup col');
 
-      (cells[0] as HTMLElement).style.width = '999px';
+      (cols[0] as HTMLElement).style.width = '999px';
 
       document.dispatchEvent(new PointerEvent('pointermove', { clientX: 350 }));
       document.dispatchEvent(new PointerEvent('pointerup', {}));

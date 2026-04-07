@@ -343,6 +343,98 @@ describe('Paragraph Tool - Custom Configurations', () => {
     });
   });
 
+  describe('setReadOnly', () => {
+    it('sets contentEditable to false when entering readonly', () => {
+      const options = createParagraphOptions({ text: 'Hello' });
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+
+      expect(element.contentEditable).toBe('true');
+
+      paragraph.setReadOnly(true);
+
+      expect(element.contentEditable).toBe('false');
+    });
+
+    it('sets contentEditable to true when exiting readonly', () => {
+      const options = createParagraphOptions({ text: 'Hello' });
+
+      (options as { readOnly: boolean }).readOnly = true;
+
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+
+      expect(element.contentEditable).toBe('false');
+
+      paragraph.setReadOnly(false);
+
+      expect(element.contentEditable).toBe('true');
+    });
+
+    it('removes placeholder attribute when entering readonly', () => {
+      const options = createParagraphOptions({ text: '' });
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+
+      expect(element.hasAttribute('data-blok-placeholder-active')).toBe(true);
+
+      paragraph.setReadOnly(true);
+
+      expect(element.hasAttribute('data-blok-placeholder-active')).toBe(false);
+    });
+
+    it('restores placeholder attribute when exiting readonly', () => {
+      const options = createParagraphOptions({ text: '' });
+
+      (options as { readOnly: boolean }).readOnly = true;
+
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+
+      expect(element.hasAttribute('data-blok-placeholder-active')).toBe(false);
+
+      paragraph.setReadOnly(false);
+
+      expect(element.hasAttribute('data-blok-placeholder-active')).toBe(true);
+    });
+
+    it('inserts br when entering readonly with empty content', () => {
+      const options = createParagraphOptions({ text: '' });
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+
+      paragraph.setReadOnly(true);
+
+      expect(element.innerHTML).toBe('<br>');
+    });
+
+    it('removes br when exiting readonly with empty content', () => {
+      const options = createParagraphOptions({ text: '' });
+
+      (options as { readOnly: boolean }).readOnly = true;
+
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+
+      expect(element.innerHTML).toBe('<br>');
+
+      paragraph.setReadOnly(false);
+
+      expect(element.innerHTML).toBe('');
+    });
+
+    it('preserves DOM element reference across toggle', () => {
+      const options = createParagraphOptions({ text: 'Hello' });
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+
+      paragraph.setReadOnly(true);
+      paragraph.setReadOnly(false);
+
+      expect(paragraph.render()).toBe(element);
+    });
+  });
+
   describe('line-height (Notion alignment)', () => {
     it('renders with unitless leading-[1.5] to match Notion body text line-height', () => {
       const options = createParagraphOptions({ text: 'Test' });

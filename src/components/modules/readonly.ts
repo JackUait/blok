@@ -17,6 +17,11 @@ export class ReadOnly extends Module {
   private toolsDontSupportReadOnly: string[] = [];
 
   /**
+   * Array of tools name which don't support in-place read-only toggle via setReadOnly()
+   */
+  private toolsDontSupportInPlaceToggle: string[] = [];
+
+  /**
    * Value to track read-only state
    * @type {boolean}
    */
@@ -27,6 +32,19 @@ export class ReadOnly extends Module {
    */
   public get isEnabled(): boolean {
     return this.readOnlyEnabled;
+  }
+
+  /**
+   * Whether tool support for in-place toggle has been checked during prepare()
+   */
+  private inPlaceToggleChecked = false;
+
+  /**
+   * Whether all registered block tools support in-place read-only toggle.
+   * Returns false until prepare() has run the check.
+   */
+  private get supportsInPlaceToggle(): boolean {
+    return this.inPlaceToggleChecked && this.toolsDontSupportInPlaceToggle.length === 0;
   }
 
   /**
@@ -43,9 +61,13 @@ export class ReadOnly extends Module {
         if (!tool.isReadOnlySupported) {
           toolsDontSupportReadOnly.push(name);
         }
+        if (!tool.supportsInPlaceReadOnly) {
+          this.toolsDontSupportInPlaceToggle.push(name);
+        }
       });
 
     this.toolsDontSupportReadOnly = toolsDontSupportReadOnly;
+    this.inPlaceToggleChecked = true;
 
     if (this.config.readOnly === true && toolsDontSupportReadOnly.length > 0) {
       this.throwCriticalError();
@@ -102,6 +124,24 @@ export class ReadOnly extends Module {
     }
 
     /**
+     * If all tools support in-place toggle, call setReadOnly on each block
+     * instead of the full save/clear/render cycle
+     */
+    if (this.supportsInPlaceToggle) {
+      this.Blok.ModificationsObserver.disable();
+
+      const blocks = (this.Blok.BlockManager as { blocks?: Array<{ setReadOnly: (s: boolean) => void }> }).blocks ?? [];
+
+      for (const block of blocks) {
+        block.setReadOnly(state);
+      }
+
+      this.Blok.ModificationsObserver.enable();
+
+      return this.readOnlyEnabled;
+    }
+
+    /**
      * Mutex for modifications observer to prevent onChange call when read-only mode is enabled
      */
     this.Blok.ModificationsObserver.disable();
@@ -117,6 +157,8 @@ export class ReadOnly extends Module {
       return this.readOnlyEnabled;
     }
 
+    const savedScrollY = window.scrollY;
+
     this.Blok.Renderer.markRenderStart();
 
     try {
@@ -124,6 +166,10 @@ export class ReadOnly extends Module {
       await this.Blok.Renderer.render(savedBlocks.blocks);
     } finally {
       this.Blok.Renderer.markRenderEnd();
+    }
+
+    if (window.scrollY !== savedScrollY) {
+      window.scrollTo(0, savedScrollY);
     }
 
     this.Blok.ModificationsObserver.enable();

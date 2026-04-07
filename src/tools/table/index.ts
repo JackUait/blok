@@ -25,9 +25,10 @@ import {
 } from './table-cell-clipboard';
 import type { CellColorMode } from './table-cell-color-picker';
 import { TableCellSelection } from './table-cell-selection';
-import { TableGrid, ROW_ATTR, CELL_ATTR } from './table-core';
+import { TableGrid, ROW_ATTR, CELL_ATTR, CELL_ROW_ATTR, CELL_COL_ATTR } from './table-core';
 import {
   applyCellColors,
+  applyCellPlacements,
   applyPixelWidths,
   computeHalfAvgWidth,
   computeInitialColWidth,
@@ -53,8 +54,10 @@ import type { PendingHighlight } from './table-row-col-action-handler';
 import { TableRowColControls } from './table-row-col-controls';
 import type { RowColAction } from './table-row-col-controls';
 import { registerAdditionalRestrictedTools } from './table-restrictions';
+import { TableCornerDrag } from './table-corner-drag';
 import { TableScrollHaze } from './table-scroll-haze';
-import type { ClipboardBlockData, LegacyCellContent, TableCellsClipboard, TableData, TableConfig } from './types';
+import type { CellPlacement, ClipboardBlockData, LegacyCellContent, TableCellsClipboard, TableData, TableConfig } from './types';
+import { isCellWithBlocks } from './types';
 
 const DEFAULT_ROWS = 3;
 const DEFAULT_COLS = 3;
@@ -92,6 +95,7 @@ export class Table implements BlockTool {
   private rowColControls: TableRowColControls | null = null;
   private cellBlocks: TableCellBlocks | null = null;
   private cellSelection: TableCellSelection | null = null;
+  private cornerDrag: TableCornerDrag | null = null;
   private scrollHaze: TableScrollHaze | null = null;
   private element: HTMLDivElement | null = null;
   private gridElement: HTMLElement | null = null;
@@ -101,6 +105,8 @@ export class Table implements BlockTool {
   private pendingHighlight: PendingHighlight | null = null;
   private isNewTable = false;
   private unregisterRestrictedTools: (() => void) | null = null;
+  private gridPasteCleanup: (() => void) | null = null;
+  private keyboardNavCleanup: (() => void) | null = null;
 
   /**
    * Generation counter for setData calls.
@@ -192,12 +198,135 @@ export class Table implements BlockTool {
     this.resize = null;
     this.addControls?.destroy();
     this.addControls = null;
+    this.cornerDrag?.destroy();
+    this.cornerDrag = null;
     this.rowColControls?.destroy();
     this.rowColControls = null;
     this.cellSelection?.destroy();
     this.cellSelection = null;
     this.scrollHaze?.destroy();
     this.scrollHaze = null;
+    this.gridPasteCleanup?.();
+    this.gridPasteCleanup = null;
+    this.keyboardNavCleanup?.();
+    this.keyboardNavCleanup = null;
+  }
+
+  /**
+   * Rebuild the <tbody> from the current model state.
+   * Generates a new table via createGridFromModel (with correct colspan/rowspan),
+   * transplants existing block holders into the new cells, and swaps the tbody.
+   */
+  private rebuildTableBody(): void {
+    const gridEl = this.gridElement;
+
+    if (!gridEl) {
+      return;
+    }
+
+    const oldTbody = gridEl.querySelector('tbody');
+
+    if (!oldTbody) {
+      return;
+    }
+
+    // Collect all existing block holders by ID before replacing tbody
+    const blockHolders = new Map<string, HTMLElement>();
+
+    oldTbody.querySelectorAll('[data-blok-id]').forEach(el => {
+      const id = el.getAttribute('data-blok-id');
+
+      if (id) {
+        blockHolders.set(id, el as HTMLElement);
+      }
+    });
+
+    // Build new table from model (has correct colspan/rowspan structure)
+    const newTable = this.grid.createGridFromModel(this.model);
+    const newTbody = newTable.querySelector('tbody');
+
+    if (!newTbody) {
+      return;
+    }
+
+    // Move block holders from old cells to new cells
+    const content = this.model.snapshot().content;
+
+    this.mountBlockHoldersInNewTbody(content, newTbody, blockHolders);
+
+    // Replace old tbody with new
+    oldTbody.replaceWith(newTbody);
+  }
+
+  /**
+   * Mount block holders into the new tbody cells based on model content.
+   * Extracted to keep rebuildTableBody under nesting depth limit.
+   */
+  private mountBlockHoldersInNewTbody(
+    content: TableData['content'],
+    newTbody: Element,
+    blockHolders: Map<string, HTMLElement>
+  ): void {
+    const mounted = new Set<string>();
+
+    content.forEach((rowData, r) => {
+      rowData.forEach((cellContent, c) => {
+        if (typeof cellContent === 'string') {
+          return;
+        }
+
+        if (cellContent.mergedInto) {
+          return;
+        }
+
+        const newCell = newTbody.querySelector(
+          `[${CELL_ROW_ATTR}="${r}"][${CELL_COL_ATTR}="${c}"]`
+        );
+
+        if (!newCell) {
+          return;
+        }
+
+        const container = newCell.querySelector(`[${CELL_BLOCKS_ATTR}]`);
+
+        if (!container) {
+          return;
+        }
+
+        cellContent.blocks.forEach(blockId => {
+          const holder = blockHolders.get(blockId);
+
+          if (holder && !mounted.has(blockId)) {
+            container.appendChild(holder);
+            mounted.add(blockId);
+          }
+        });
+      });
+    });
+  }
+
+  /**
+   * Check if the model's content contains any merged cells.
+   */
+  private modelHasMerges(): boolean {
+    const snapshot = this.model.snapshot();
+
+    return snapshot.content.some(row =>
+      row.some(cell =>
+        typeof cell !== 'string' && ((cell.colspan ?? 1) > 1 || (cell.rowspan ?? 1) > 1)
+      )
+    );
+  }
+
+  /**
+   * Create a flat grid (no merge handling) using createGrid.
+   * Extracted from render() to keep it readable.
+   */
+  private createFlatGrid(): HTMLTableElement {
+    const rows = this.initialContent?.length || this.config.rows || DEFAULT_ROWS;
+    const cols = this.initialContent?.reduce((max, row) => Math.max(max, row?.length ?? 0), 0) || this.config.cols || DEFAULT_COLS;
+
+    return this.grid.createGrid(rows, cols, this.model.colWidths);
   }
 
   /**
@@ -208,6 +337,7 @@ export class Table implements BlockTool {
   private initSubsystems(gridEl: HTMLElement): void {
     this.initResize(gridEl);
     this.initAddControls(gridEl);
+    this.initCornerDrag(gridEl);
     this.initRowColControls(gridEl);
     this.initCellSelection(gridEl);
     this.initGridPasteListener(gridEl);
@@ -309,12 +439,14 @@ export class Table implements BlockTool {
 
     this.isNewTable = (this.initialContent?.length ?? 0) === 0;
 
-    const rows = this.initialContent?.length || this.config.rows || DEFAULT_ROWS;
-    const cols = this.initialContent?.reduce((max, row) => Math.max(max, row?.length ?? 0), 0) || this.config.cols || DEFAULT_COLS;
+    const hasContent = (this.initialContent?.length ?? 0) > 0;
+    const hasMerges = hasContent && this.modelHasMerges();
 
-    const gridEl = this.grid.createGrid(rows, cols, this.model.colWidths);
+    const gridEl = hasMerges
+      ? this.grid.createGridFromModel(this.model)
+      : this.createFlatGrid();
 
-    if ((this.initialContent?.length ?? 0) > 0) {
+    if (hasContent && !hasMerges) {
       this.grid.fillGrid(gridEl, this.initialContent ?? []);
     }
 
@@ -365,7 +497,7 @@ export class Table implements BlockTool {
 
     if (!this.readOnly) {
       this.initCellBlocks(gridEl);
-      setupKeyboardNavigation(gridEl, this.cellBlocks);
+      this.keyboardNavCleanup = setupKeyboardNavigation(gridEl, this.cellBlocks);
     }
 
     return wrapper;
@@ -388,7 +520,9 @@ export class Table implements BlockTool {
 
     if (this.readOnly) {
       mountCellBlocksReadOnly(gridEl, content, this.api, this.blockId ?? '');
-      applyCellColors(gridEl, this.model.snapshot().content);
+      const snap = this.model.snapshot();
+      applyCellColors(gridEl, snap.content);
+      applyCellPlacements(gridEl, snap.content);
       this.initScrollHaze();
 
       return;
@@ -430,10 +564,70 @@ export class Table implements BlockTool {
     }
 
     this.initSubsystems(gridEl);
-    applyCellColors(gridEl, this.model.snapshot().content);
+    const snapInit = this.model.snapshot();
+    applyCellColors(gridEl, snapInit.content);
+    applyCellPlacements(gridEl, snapInit.content);
 
     if (this.isNewTable) {
       this.cellSelection?.selectRange({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 0 });
+    }
+  }
+
+  /**
+   * Toggle read-only mode in place without re-rendering.
+   * Entering readonly tears down all interactive subsystems and cell blocks;
+   * exiting readonly recreates them.
+   */
+  public setReadOnly(state: boolean): void {
+    const wrapper = this.element;
+    const gridEl = this.gridElement;
+
+    if (!wrapper || !gridEl) {
+      return;
+    }
+
+    this.readOnly = state;
+
+    if (state) {
+      // Entering readonly: tear down interactive subsystems
+      this.teardownSubsystems();
+      this.cellBlocks?.destroy();
+      this.cellBlocks = null;
+
+      // Remove grip overlay
+      if (this.gripOverlay) {
+        this.gripOverlay.remove();
+        this.gripOverlay = null;
+      }
+
+      // Update wrapper classes and attributes
+      WRAPPER_EDIT_CLASSES.forEach(cls => wrapper.classList.remove(cls));
+      wrapper.setAttribute('data-blok-table-readonly', '');
+
+      // Mount cell content as non-interactive
+      const snap = this.model.snapshot();
+
+      mountCellBlocksReadOnly(gridEl, snap.content, this.api, this.blockId ?? '');
+    } else {
+      // Exiting readonly: restore interactive subsystems
+      wrapper.removeAttribute('data-blok-table-readonly');
+      WRAPPER_EDIT_CLASSES.forEach(cls => wrapper.classList.add(cls));
+
+      // Create grip overlay
+      const overlay = document.createElement('div');
+
+      overlay.setAttribute('data-blok-table-grip-overlay', '');
+      overlay.style.position = 'absolute';
+      overlay.style.inset = '0';
+      overlay.style.pointerEvents = 'none';
+      overlay.style.zIndex = '3';
+      wrapper.appendChild(overlay);
+      this.gripOverlay = overlay;
+
+      // Initialize cell blocks and subsystems
+      this.initCellBlocks(gridEl);
+      this.keyboardNavCleanup = setupKeyboardNavigation(gridEl, this.cellBlocks);
+      this.initSubsystems(gridEl);
     }
   }
 
@@ -474,7 +668,28 @@ export class Table implements BlockTool {
   }
 
   public save(_blockContent: HTMLElement): TableData {
-    return this.model.snapshot();
+    const data = this.model.snapshot();
+
+    // Filter out block IDs that don't belong to this table.
+    // Corrupted data may contain cross-table references; persisting them
+    // causes DOM node stealing and data loss on subsequent renders.
+    data.content = data.content.map(row =>
+      row.map(cell => {
+        if (!isCellWithBlocks(cell)) {
+          return cell;
+        }
+
+        const filtered = cell.blocks.filter(blockId => {
+          const block = this.api.blocks.getById?.(blockId);
+
+          return !block || block.parentId === this.blockId;
+        });
+
+        return { ...cell, blocks: filtered };
+      })
+    );
+
+    return data;
   }
 
   public validate(savedData: TableData): boolean {
@@ -541,7 +756,9 @@ export class Table implements BlockTool {
     }
 
     if (this.readOnly) {
-      applyCellColors(gridEl, this.model.snapshot().content);
+      const snapRO = this.model.snapshot();
+      applyCellColors(gridEl, snapRO.content);
+      applyCellPlacements(gridEl, snapRO.content);
 
       return;
     }
@@ -602,7 +819,9 @@ export class Table implements BlockTool {
       this.rowColControls.restoreVisibleGrips(savedGripIndices.col, savedGripIndices.row);
     }
 
-    applyCellColors(gridEl, this.model.snapshot().content);
+    const snapSet = this.model.snapshot();
+    applyCellColors(gridEl, snapSet.content);
+    applyCellPlacements(gridEl, snapSet.content);
   }
 
   public onPaste(event: HTMLPasteEvent): void {
@@ -695,7 +914,9 @@ export class Table implements BlockTool {
       }, true);
 
       this.initSubsystems(gridEl);
-      applyCellColors(gridEl, this.model.snapshot().content);
+      const snapPaste = this.model.snapshot();
+      applyCellColors(gridEl, snapPaste.content);
+      applyCellPlacements(gridEl, snapPaste.content);
     }
   }
 
@@ -773,6 +994,10 @@ export class Table implements BlockTool {
       wrapper: this.element,
       grid: gridEl,
       i18n: this.api.i18n,
+      getTableSize: () => ({
+        rows: this.model.rows,
+        cols: this.model.cols,
+      }),
       getNewColumnWidth: () => {
         const colWidths = this.model.colWidths ?? readPixelWidths(gridEl);
 
@@ -913,6 +1138,131 @@ export class Table implements BlockTool {
     }
   }
 
+  private initCornerDrag(gridEl: HTMLElement): void {
+    this.cornerDrag?.destroy();
+
+    if (!this.element) {
+      return;
+    }
+
+    this.cornerDrag = new TableCornerDrag({
+      wrapper: this.element,
+      gridEl,
+      onAddRow: () => {
+        this.runStructuralOp(() => {
+          this.grid.addRow(gridEl);
+          this.model.addRow();
+          populateNewCells(gridEl, this.cellBlocks);
+          updateHeadingStyles(this.gridElement, this.model.withHeadings);
+          updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
+        });
+      },
+      onAddColumn: () => {
+        this.runStructuralOp(() => {
+          const colWidths = this.model.colWidths ?? readPixelWidths(gridEl);
+          const halfWidth = this.model.initialColWidth !== undefined
+            ? Math.round((this.model.initialColWidth / 2) * 100) / 100
+            : computeHalfAvgWidth(colWidths);
+          const newWidths = [...colWidths, halfWidth];
+
+          this.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
+          this.model.addColumn(undefined, halfWidth);
+          this.model.setColWidths(newWidths);
+          applyPixelWidths(gridEl, newWidths);
+          enableScrollOverflow(this.ensureScrollContainer());
+          populateNewCells(gridEl, this.cellBlocks);
+          updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
+        });
+      },
+      onRemoveLastRow: () => {
+        this.runStructuralOp(() => {
+          const rowCount = this.grid.getRowCount(gridEl);
+
+          if (rowCount <= 1) {
+            return;
+          }
+
+          const { blocksToDelete } = this.model.deleteRow(rowCount - 1);
+
+          this.cellBlocks?.deleteBlocks(blocksToDelete);
+          this.grid.deleteRow(gridEl, rowCount - 1);
+        });
+      },
+      onRemoveLastColumn: () => {
+        this.runStructuralOp(() => {
+          const colCount = this.grid.getColumnCount(gridEl);
+
+          if (colCount <= 1) {
+            return;
+          }
+
+          const { blocksToDelete } = this.model.deleteColumn(colCount - 1);
+
+          this.cellBlocks?.deleteBlocks(blocksToDelete);
+          this.grid.deleteColumn(gridEl, colCount - 1);
+
+          const updatedWidths = this.model.colWidths;
+
+          if (updatedWidths) {
+            applyPixelWidths(gridEl, updatedWidths);
+          }
+        });
+      },
+      onDragStart: () => {
+        if (this.resize) {
+          this.resize.enabled = false;
+        }
+        this.rowColControls?.hideAllGrips();
+        this.rowColControls?.setGripsDisplay(false);
+        this.addControls?.setDisplay(false);
+      },
+      onDragEnd: () => {
+        this.initResize(gridEl);
+        this.rowColControls?.refresh();
+        this.addControls?.setDisplay(true);
+        this.addControls?.syncRowButtonWidth();
+      },
+      getTableSize: () => {
+        return { rows: this.model.rows, cols: this.model.cols };
+      },
+      canRemoveLastRow: () => {
+        return this.model.rows > 1 && isRowEmpty(gridEl, this.model.rows - 1);
+      },
+      canRemoveLastColumn: () => {
+        return this.model.cols > 1 && isColumnEmpty(gridEl, this.model.cols - 1);
+      },
+      onClickAdd: () => {
+        this.runTransactedStructuralOp(() => {
+          // Add row
+          this.grid.addRow(gridEl);
+          this.model.addRow();
+          populateNewCells(gridEl, this.cellBlocks);
+          updateHeadingStyles(this.gridElement, this.model.withHeadings);
+          updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
+
+          // Add column
+          const colWidths = this.model.colWidths ?? readPixelWidths(gridEl);
+          const halfWidth = this.model.initialColWidth !== undefined
+            ? Math.round((this.model.initialColWidth / 2) * 100) / 100
+            : computeHalfAvgWidth(colWidths);
+          const newWidths = [...colWidths, halfWidth];
+
+          this.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
+          this.model.addColumn(undefined, halfWidth);
+          this.model.setColWidths(newWidths);
+          applyPixelWidths(gridEl, newWidths);
+          populateNewCells(gridEl, this.cellBlocks);
+          updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
+
+          // Refresh subsystems
+          this.initResize(gridEl);
+          this.rowColControls?.refresh();
+          this.addControls?.syncRowButtonWidth();
+        });
+      },
+    });
+  }
+
   private initRowColControls(gridEl: HTMLElement): void {
     this.rowColControls?.destroy();
 
@@ -936,6 +1286,7 @@ export class Table implements BlockTool {
         }
 
         this.addControls?.setDisplay(!isDragging);
+        this.cornerDrag?.setDisplay(!isDragging);
 
         if (isDragging) {
           this.api.toolbar.close({ setExplicitlyClosed: false });
@@ -1183,6 +1534,38 @@ export class Table implements BlockTool {
     });
   }
 
+  private handleCellPlacementChange(cells: HTMLElement[], placement: CellPlacement): void {
+    const gridEl = this.gridElement;
+
+    if (!gridEl) {
+      return;
+    }
+
+    this.runTransactedStructuralOp(() => {
+      for (const cell of cells) {
+        const coord = getCellPosition(gridEl, cell);
+
+        if (!coord) {
+          continue;
+        }
+
+        this.model.setCellPlacement(coord.row, coord.col, placement === 'top-left' ? undefined : placement);
+
+        const blocksContainer = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
+
+        if (!blocksContainer) {
+          continue;
+        }
+
+        if (placement === 'top-left') {
+          blocksContainer.removeAttribute('data-blok-cell-placement');
+        } else {
+          blocksContainer.setAttribute('data-blok-cell-placement', placement);
+        }
+      }
+    });
+  }
+
   private collectCellBlockData(
     cells: HTMLElement[],
   ): Array<{ row: number; col: number; blocks: ClipboardBlockData[]; color?: string; textColor?: string }> {
@@ -1283,6 +1666,7 @@ export class Table implements BlockTool {
         }
 
         this.addControls?.setInteractive(!hasSelection);
+        this.cornerDrag?.setInteractive(!hasSelection);
         this.rowColControls?.setGripsDisplay(!hasSelection);
       },
       onSelectionRangeChange: () => {
@@ -1333,6 +1717,30 @@ export class Table implements BlockTool {
       onColorChange: (cells, color, mode) => {
         this.handleCellColorChange(cells, color, mode);
       },
+      onPlacementChange: (cells, placement) => {
+        this.handleCellPlacementChange(cells, placement);
+      },
+      getCellPlacement: (row, col) => {
+        return this.model.getCellPlacement(row, col);
+      },
+      canMergeCells: (range) => {
+        return this.model.canMergeCells(range);
+      },
+      onMergeCells: (range) => {
+        this.runTransactedStructuralOp(() => {
+          this.model.mergeCells(range);
+          this.rebuildTableBody();
+        });
+      },
+      isMergedCell: (row, col) => {
+        return this.model.isMergedCell(row, col);
+      },
+      onSplitCell: (row, col) => {
+        this.runTransactedStructuralOp(() => {
+          this.model.splitCell(row, col);
+          this.rebuildTableBody();
+        });
+      },
     });
   }
 
@@ -1348,9 +1756,14 @@ export class Table implements BlockTool {
   }
 
   private initGridPasteListener(gridEl: HTMLElement): void {
-    gridEl.addEventListener('paste', (e: ClipboardEvent) => {
+    const handler = (e: ClipboardEvent): void => {
       this.handleGridPaste(e, gridEl);
-    });
+    };
+
+    gridEl.addEventListener('paste', handler);
+    this.gridPasteCleanup = () => {
+      gridEl.removeEventListener('paste', handler);
+    };
   }
 
   private handleGridPaste(e: ClipboardEvent, gridEl: HTMLElement): void {
@@ -1450,7 +1863,9 @@ export class Table implements BlockTool {
 
     const range = selection.getRangeAt(0);
 
-    range.deleteContents();
+    if (!range.collapsed) {
+      range.deleteContents();
+    }
 
     const fragment = document.createDocumentFragment();
     const wrapper = document.createElement('div');

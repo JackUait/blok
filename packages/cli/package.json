@@ -1,0 +1,36 @@
+{
+  "name": "@jackuait/blok-cli",
+  "version": "0.10.0-beta.15",
+  "description": "CLI tools for Blok — convert HTML to Blok JSON, generate migration guides",
+  "bin": {
+    "blok-cli": "./bin/blok-cli.mjs"
+  },
+  "files": [
+    "bin",
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "blok",
+    "cli",
+    "html-to-json",
+    "editorjs",
+    "migration",
+    "rich-text"
+  ],
+  "author": "JackUait",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JackUait/blok.git",
+    "directory": "packages/cli"
+  },
+  "dependencies": {
+    "jsdom": "28.1.0"
+  }
+}

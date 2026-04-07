@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { TableRowColDrag } from '../../../../src/tools/table/table-row-col-drag';
+import { getCumulativeColEdges, TableRowColDrag } from '../../../../src/tools/table/table-row-col-drag';
 
 const DRAG_THRESHOLD = 10;
 
@@ -10,15 +10,17 @@ const DRAG_THRESHOLD = 10;
 const createGrid = (rows: number, cols: number): HTMLDivElement => {
   const grid = document.createElement('div');
 
-  Array.from({ length: rows }).forEach(() => {
+  Array.from({ length: rows }).forEach((_, rowIndex) => {
     const row = document.createElement('div');
 
     row.setAttribute('data-blok-table-row', '');
 
-    Array.from({ length: cols }).forEach(() => {
+    Array.from({ length: cols }).forEach((__, colIndex) => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-row', String(rowIndex));
+      cell.setAttribute('data-blok-table-cell-col', String(colIndex));
       cell.style.width = '100px';
       Object.defineProperty(cell, 'offsetWidth', { value: 100 });
       Object.defineProperty(cell, 'offsetHeight', { value: 40 });
@@ -360,5 +362,51 @@ describe('TableRowColDrag', () => {
       expect(document.querySelector('[data-blok-table-drag-ghost]')).toBeNull();
       expect(onAction).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('getCumulativeColEdges with colgroup', () => {
+  it('reads column widths from col elements instead of cells', () => {
+    const table = document.createElement('table');
+    const colgroup = document.createElement('colgroup');
+
+    [100, 200, 150].forEach(w => {
+      const col = document.createElement('col');
+
+      col.style.width = `${w}px`;
+      Object.defineProperty(col, 'offsetWidth', { value: w });
+      colgroup.appendChild(col);
+    });
+    table.appendChild(colgroup);
+
+    const tbody = document.createElement('tbody');
+    const row = document.createElement('tr');
+
+    row.setAttribute('data-blok-table-row', '');
+
+    // Only 2 physical cells (first has colspan=2) — simulates merged cell
+    const td0 = document.createElement('td');
+
+    td0.setAttribute('data-blok-table-cell', '');
+    td0.colSpan = 2;
+    Object.defineProperty(td0, 'offsetWidth', { value: 300 });
+    row.appendChild(td0);
+
+    const td2 = document.createElement('td');
+
+    td2.setAttribute('data-blok-table-cell', '');
+    Object.defineProperty(td2, 'offsetWidth', { value: 150 });
+    row.appendChild(td2);
+
+    tbody.appendChild(row);
+    table.appendChild(tbody);
+    document.body.appendChild(table);
+
+    const edges = getCumulativeColEdges(table);
+
+    // Should be [0, 100, 300, 450] — from 3 col elements, not 2 cells
+    expect(edges).toEqual([0, 100, 300, 450]);
+
+    document.body.removeChild(table);
   });
 });

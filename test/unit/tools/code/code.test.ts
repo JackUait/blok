@@ -6,6 +6,30 @@ vi.mock('../../../../src/tools/code/katex-loader', () => ({
   renderLatex: vi.fn().mockResolvedValue('<span class="katex">rendered</span>'),
 }));
 
+vi.mock('../../../../src/tools/code/mermaid-loader', () => ({
+  renderMermaid: vi.fn().mockResolvedValue('<svg>mermaid diagram</svg>'),
+}));
+
+const mockTokenizeCode = vi.fn().mockResolvedValue(null);
+const mockIsHighlightable = vi.fn().mockReturnValue(false);
+const mockDisposeHighlighter = vi.fn();
+
+vi.mock('../../../../src/tools/code/shiki-loader', () => ({
+  tokenizeCode: (...args: unknown[]): unknown => mockTokenizeCode(...args),
+  isHighlightable: (...args: unknown[]): unknown => mockIsHighlightable(...args),
+  disposeHighlighter: mockDisposeHighlighter,
+}));
+
+const mockApplyHighlights = vi.fn().mockReturnValue(() => {});
+const mockIsHighlightingSupported = vi.fn().mockReturnValue(false);
+const mockDisposeAllHighlights = vi.fn();
+
+vi.mock('../../../../src/tools/code/highlight-applier', () => ({
+  applyHighlights: (...args: unknown[]): unknown => mockApplyHighlights(...args),
+  isHighlightingSupported: (): unknown => mockIsHighlightingSupported(),
+  disposeAllHighlights: mockDisposeAllHighlights,
+}));
+
 const createMockAPI = (): API =>
   ({
     styles: {
@@ -31,6 +55,7 @@ const createOptions = (
   data: {
     code: data.code ?? '',
     language: data.language ?? 'plain text',
+    ...(data.lineNumbers !== undefined ? { lineNumbers: data.lineNumbers } : {}),
   } as CodeData,
   config: {},
   api: createMockAPI(),
@@ -41,6 +66,10 @@ const createOptions = (
 describe('CodeTool', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockTokenizeCode.mockResolvedValue(null);
+    mockIsHighlightable.mockReturnValue(false);
+    mockApplyHighlights.mockReturnValue(() => {});
+    mockIsHighlightingSupported.mockReturnValue(false);
   });
   afterEach(() => {
     vi.restoreAllMocks();
@@ -78,7 +107,7 @@ describe('CodeTool', () => {
       const el = tool.render();
       const codeEl = el.querySelector('[data-blok-testid="code-content"]')!;
 
-      expect(codeEl.getAttribute('contenteditable')).toBe('true');
+      expect(codeEl.getAttribute('contenteditable')).toBe('plaintext-only');
     });
 
     it('does not set contentEditable in read-only mode', async () => {
@@ -394,6 +423,537 @@ describe('CodeTool', () => {
       // No tabs in read-only
       expect(el.querySelector('[data-blok-testid="code-code-tab"]')).toBeNull();
       expect(el.querySelector('[data-blok-testid="code-preview-tab"]')).toBeNull();
+    });
+
+    it('shows tab buttons for mermaid language', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'graph TD; A-->B;', language: 'mermaid' }));
+      const el = tool.render();
+
+      expect(el.querySelector('[data-blok-testid="code-code-tab"]')).toBeTruthy();
+      expect(el.querySelector('[data-blok-testid="code-preview-tab"]')).toBeTruthy();
+    });
+
+    it('shows preview container for mermaid language', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'graph TD; A-->B;', language: 'mermaid' }));
+      const el = tool.render();
+
+      expect(el.querySelector('[data-blok-testid="code-preview"]')).toBeTruthy();
+    });
+
+    it('calls renderMermaid (not renderLatex) for mermaid language', async () => {
+      const { renderMermaid } = await import('../../../../src/tools/code/mermaid-loader');
+      const { renderLatex } = await import('../../../../src/tools/code/katex-loader');
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'graph TD; A-->B;', language: 'mermaid' }));
+      tool.render();
+
+      // Wait for async renderPreview to complete
+      await vi.waitFor(() => {
+        expect(renderMermaid).toHaveBeenCalledWith('graph TD; A-->B;');
+      });
+      expect(renderLatex).not.toHaveBeenCalled();
+    });
+
+    it('calls renderLatex (not renderMermaid) for latex language', async () => {
+      const { renderMermaid } = await import('../../../../src/tools/code/mermaid-loader');
+      const { renderLatex } = await import('../../../../src/tools/code/katex-loader');
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
+      tool.render();
+
+      await vi.waitFor(() => {
+        expect(renderLatex).toHaveBeenCalledWith('E = mc^2');
+      });
+      expect(renderMermaid).not.toHaveBeenCalled();
+    });
+
+    it('read-only mode with mermaid shows preview only (no tabs)', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'graph TD; A-->B;', language: 'mermaid' }, { readOnly: true }));
+      const el = tool.render();
+
+      expect(el.querySelector('[data-blok-testid="code-preview"]')).toBeTruthy();
+      expect(el.querySelector('pre')!.hidden).toBe(true);
+      expect(el.querySelector('[data-blok-testid="code-code-tab"]')).toBeNull();
+      expect(el.querySelector('[data-blok-testid="code-preview-tab"]')).toBeNull();
+    });
+  });
+
+  describe('syntax highlighting', () => {
+    it('highlights code after rendered() for highlightable language when supported', async () => {
+      mockIsHighlightingSupported.mockReturnValue(true);
+      mockIsHighlightable.mockReturnValue(true);
+      mockTokenizeCode.mockResolvedValue({
+        light: { tokens: [[{ content: 'const', color: '#A626A4', offset: 0 }]], fg: '#383A42' },
+        dark: { tokens: [[{ content: 'const', color: '#4FC1FF', offset: 0 }]], fg: '#D4D4D4' },
+      });
+
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'const x = 1', language: 'javascript' }));
+      tool.render();
+      tool.rendered();
+
+      await vi.waitFor(() => {
+        expect(mockTokenizeCode).toHaveBeenCalledWith('const x = 1', 'javascript');
+      });
+      expect(mockApplyHighlights).toHaveBeenCalled();
+    });
+
+    it('does not highlight when CSS Highlight API is not supported', async () => {
+      mockIsHighlightingSupported.mockReturnValue(false);
+      mockIsHighlightable.mockReturnValue(true);
+
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'const x = 1', language: 'javascript' }));
+      tool.render();
+      tool.rendered();
+
+      await new Promise((r) => setTimeout(r, 10));
+      expect(mockTokenizeCode).not.toHaveBeenCalled();
+    });
+
+    it('does not highlight unhighlightable languages', async () => {
+      mockIsHighlightingSupported.mockReturnValue(true);
+      mockIsHighlightable.mockReturnValue(false);
+
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'plain text', language: 'plain text' }));
+      tool.render();
+      tool.rendered();
+
+      await new Promise((r) => setTimeout(r, 10));
+      expect(mockTokenizeCode).not.toHaveBeenCalled();
+    });
+
+    it('re-highlights when language changes', async () => {
+      mockIsHighlightingSupported.mockReturnValue(true);
+      mockIsHighlightable.mockReturnValue(true);
+      mockTokenizeCode.mockResolvedValue({
+        light: { tokens: [[{ content: 'x', color: '#FF0000', offset: 0 }]], fg: '#000' },
+        dark: { tokens: [[{ content: 'x', color: '#00FF00', offset: 0 }]], fg: '#FFF' },
+      });
+
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'x = 1', language: 'javascript' }));
+      tool.render();
+
+      const settings = tool.renderSettings() as Array<{ children: { items: Array<{ onActivate: () => void; title: string }> } }>;
+      const pythonItem = settings[0].children.items.find((i) => i.title === 'Python');
+      pythonItem?.onActivate();
+
+      await vi.waitFor(() => {
+        expect(mockTokenizeCode).toHaveBeenCalledWith(expect.any(String), 'python');
+      });
+    });
+
+    it('disposes highlights in removed()', async () => {
+      const mockCleanup = vi.fn();
+      mockIsHighlightingSupported.mockReturnValue(true);
+      mockIsHighlightable.mockReturnValue(true);
+      mockTokenizeCode.mockResolvedValue({
+        light: { tokens: [[{ content: 'x', color: '#FF0000', offset: 0 }]], fg: '#000' },
+        dark: { tokens: [[{ content: 'x', color: '#00FF00', offset: 0 }]], fg: '#FFF' },
+      });
+      mockApplyHighlights.mockReturnValue(mockCleanup);
+
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'test', language: 'javascript' }));
+      tool.render();
+      tool.rendered();
+
+      await vi.waitFor(() => {
+        expect(mockApplyHighlights).toHaveBeenCalled();
+      });
+
+      tool.removed();
+      expect(mockCleanup).toHaveBeenCalled();
+    });
+  });
+
+  describe('line numbers', () => {
+    it('renders a gutter element with line numbers', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'line 1\nline 2\nline 3' }));
+      const el = tool.render();
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]');
+
+      expect(gutter).not.toBeNull();
+      expect(gutter!.children).toHaveLength(3);
+    });
+
+    it('gutter shows correct line numbers', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'a\nb\nc\nd\ne' }));
+      const el = tool.render();
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]')!;
+
+      expect(gutter.children[0].textContent).toBe('1');
+      expect(gutter.children[4].textContent).toBe('5');
+    });
+
+    it('updates gutter on input', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'line 1' }));
+      const el = tool.render();
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]')!;
+
+      expect(gutter.children).toHaveLength(1);
+
+      // Simulate typing a new line
+      codeEl.textContent = 'line 1\nline 2\nline 3';
+      codeEl.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(gutter.children).toHaveLength(3);
+    });
+
+    it('updates gutter immediately when Enter creates a new line', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'line 1' }));
+      const el = tool.render();
+
+      // Element must be in the DOM for window.getSelection() to work
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]')!;
+
+      expect(gutter.children).toHaveLength(1);
+
+      // Place caret at end of the code element
+      const range = document.createRange();
+      const textNode = codeEl.firstChild!;
+      range.setStart(textNode, textNode.textContent!.length);
+      range.collapse(true);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      // Dispatch keydown Enter — handled by handleCodeKeydown which inserts
+      // '\n' via Range API; preventDefault suppresses the native input event
+      const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
+      codeEl.dispatchEvent(enterEvent);
+
+      // Gutter must update immediately — not wait for the next input event
+      expect(gutter.children).toHaveLength(2);
+      expect(gutter.children[0].textContent).toBe('1');
+      expect(gutter.children[1].textContent).toBe('2');
+
+      el.remove();
+    });
+
+    it('appends trailing BR when Enter creates a trailing newline', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'hello' }));
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      // Place caret at end
+      const range = document.createRange();
+      range.setStart(codeEl.firstChild!, 5);
+      range.collapse(true);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      // Press Enter at end of text
+      codeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      // A <br> sentinel should be appended so the browser renders the empty line
+      expect(codeEl.lastChild).toBeInstanceOf(HTMLBRElement);
+      // textContent must NOT include the BR (it's invisible to content)
+      expect(codeEl.textContent).toBe('hello\n');
+
+      el.remove();
+    });
+
+    it('does not append BR when Enter is pressed in the middle of text', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'helloworld' }));
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      // Place caret in the middle (after "hello")
+      const range = document.createRange();
+      range.setStart(codeEl.firstChild!, 5);
+      range.collapse(true);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      codeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      // No BR needed — newline is followed by "world"
+      expect(codeEl.lastChild).not.toBeInstanceOf(HTMLBRElement);
+      expect(codeEl.textContent).toBe('hello\nworld');
+
+      el.remove();
+    });
+
+    it('removes trailing BR when input makes content no longer end with newline', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'hello' }));
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      // Place caret at end and press Enter to create trailing newline + BR
+      const range = document.createRange();
+      range.setStart(codeEl.firstChild!, 5);
+      range.collapse(true);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      codeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      expect(codeEl.lastChild).toBeInstanceOf(HTMLBRElement);
+
+      // Simulate user typing on the new line (browser modifies text node)
+      const textNode = codeEl.firstChild!;
+      (textNode as Text).data = 'hello\nx';
+      codeEl.dispatchEvent(new Event('input', { bubbles: true }));
+
+      // BR should be removed — content no longer ends with \n
+      expect(codeEl.lastChild).not.toBeInstanceOf(HTMLBRElement);
+
+      el.remove();
+    });
+
+    it('save() excludes the trailing BR from saved data', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'hello' }));
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      // Press Enter at end to create trailing newline + BR
+      const range = document.createRange();
+      range.setStart(codeEl.firstChild!, 5);
+      range.collapse(true);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      codeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      // save() should return the text content without the BR
+      const data = tool.save(el);
+      expect(data.code).toBe('hello\n');
+
+      el.remove();
+    });
+
+    it('line numbers toggle button exists in header', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions());
+      const el = tool.render();
+      const btn = el.querySelector('[data-blok-testid="code-line-numbers-btn"]');
+
+      expect(btn).not.toBeNull();
+      expect(btn).toBeInstanceOf(HTMLButtonElement);
+    });
+
+    it('clicking line numbers button hides the gutter', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'line 1\nline 2' }));
+      const el = tool.render();
+      const btn = el.querySelector('[data-blok-testid="code-line-numbers-btn"]') as HTMLButtonElement;
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]') as HTMLElement;
+
+      expect(gutter.hidden).toBe(false);
+
+      btn.click();
+
+      expect(gutter.hidden).toBe(true);
+    });
+
+    it('clicking line numbers button twice restores the gutter', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'a\nb' }));
+      const el = tool.render();
+      const btn = el.querySelector('[data-blok-testid="code-line-numbers-btn"]') as HTMLButtonElement;
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]') as HTMLElement;
+
+      btn.click();
+      expect(gutter.hidden).toBe(true);
+
+      btn.click();
+      expect(gutter.hidden).toBe(false);
+    });
+
+    it('save() includes lineNumbers field', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'test' }));
+      const el = tool.render();
+      const data = tool.save(el);
+
+      expect(data).toHaveProperty('lineNumbers');
+      expect(data.lineNumbers).toBe(true);
+    });
+
+    it('save() returns lineNumbers false after toggling off', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'test' }));
+      const el = tool.render();
+
+      const btn = el.querySelector('[data-blok-testid="code-line-numbers-btn"]') as HTMLButtonElement;
+      btn.click();
+
+      const data = tool.save(el);
+      expect(data.lineNumbers).toBe(false);
+    });
+
+    it('restores lineNumbers false from saved data', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'hello', lineNumbers: false } as Partial<CodeData>));
+      const el = tool.render();
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]') as HTMLElement;
+
+      expect(gutter.hidden).toBe(true);
+    });
+
+    it('defaults lineNumbers to true when not provided', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'hello' }));
+      const el = tool.render();
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]') as HTMLElement;
+
+      expect(gutter.hidden).toBe(false);
+    });
+
+    it('gutter updates after merge()', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'line 1' }));
+      tool.render();
+
+      tool.merge({ code: 'line 2\nline 3', language: 'plain text' } as CodeData);
+
+      const el = tool.render();
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]')!;
+
+      // 'line 1\nline 2\nline 3' = 3 lines
+      expect(gutter.children).toHaveLength(3);
+    });
+
+    it('gutter is hidden when preview is active for previewable language', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
+      const el = tool.render();
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]') as HTMLElement;
+
+      // Preview defaults to active for previewable languages
+      expect(gutter.hidden).toBe(true);
+    });
+
+    it('gutter is restored when switching from preview to code tab', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
+      const el = tool.render();
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]') as HTMLElement;
+      const codeTab = el.querySelector('[data-blok-testid="code-code-tab"]') as HTMLButtonElement;
+
+      expect(gutter.hidden).toBe(true);
+
+      codeTab.click();
+
+      expect(gutter.hidden).toBe(false);
+    });
+
+    it('gutter is hidden in read-only mode with previewable language', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }, { readOnly: true }));
+      const el = tool.render();
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]') as HTMLElement;
+
+      expect(gutter.hidden).toBe(true);
+    });
+  });
+
+  describe('setReadOnly', () => {
+    it('sets contentEditable to false when entering readonly', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'const x = 1;' }));
+      const el = tool.render();
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      expect(codeEl.getAttribute('contenteditable')).toBe('plaintext-only');
+
+      tool.setReadOnly(true);
+
+      expect(codeEl.getAttribute('contenteditable')).toBe('false');
+    });
+
+    it('sets contentEditable to plaintext-only when exiting readonly', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'const x = 1;' }, { readOnly: true }));
+      const el = tool.render();
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      expect(codeEl.getAttribute('contenteditable')).toBeNull();
+
+      tool.setReadOnly(false);
+
+      expect(codeEl.getAttribute('contenteditable')).toBe('plaintext-only');
+    });
+
+    it('removes spellcheck when entering readonly', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'const x = 1;' }));
+      const el = tool.render();
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      expect(codeEl.getAttribute('spellcheck')).toBe('false');
+
+      tool.setReadOnly(true);
+
+      expect(codeEl.hasAttribute('spellcheck')).toBe(false);
+    });
+
+    it('restores spellcheck when exiting readonly', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'const x = 1;' }, { readOnly: true }));
+      const el = tool.render();
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      expect(codeEl.hasAttribute('spellcheck')).toBe(false);
+
+      tool.setReadOnly(false);
+
+      expect(codeEl.getAttribute('spellcheck')).toBe('false');
+    });
+
+    it('mutates code element in-place across toggle', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'hello' }));
+      const el = tool.render();
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      tool.setReadOnly(true);
+
+      // Same code element reference should be in the DOM
+      expect(el.querySelector('[data-blok-testid="code-content"]')).toBe(codeEl);
+      expect(codeEl.getAttribute('contenteditable')).toBe('false');
+
+      tool.setReadOnly(false);
+
+      expect(el.querySelector('[data-blok-testid="code-content"]')).toBe(codeEl);
+      expect(codeEl.getAttribute('contenteditable')).toBe('plaintext-only');
+    });
+
+    it('is a no-op when called before render', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'hello' }));
+
+      // Should not throw
+      expect(() => tool.setReadOnly(true)).not.toThrow();
     });
   });
 });

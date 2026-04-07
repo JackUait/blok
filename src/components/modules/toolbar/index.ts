@@ -289,11 +289,17 @@ export class Toolbar extends Module<ToolbarNodes> {
         // eslint-disable-next-line @typescript-eslint/no-deprecated
         this.nodes.actions?.classList.remove(this.CSS.actionsOpened);
         this.nodes.actions?.removeAttribute('data-blok-opened');
+        if (this.nodes.actions) {
+          this.nodes.actions.style.pointerEvents = 'none';
+        }
       },
       show: (): void => {
         // eslint-disable-next-line @typescript-eslint/no-deprecated
         this.nodes.actions?.classList.add(this.CSS.actionsOpened);
         this.nodes.actions?.setAttribute('data-blok-opened', 'true');
+        if (this.nodes.actions) {
+          this.nodes.actions.style.pointerEvents = 'auto';
+        }
       },
     };
   }
@@ -478,15 +484,6 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     if (blockContentElement) {
       this.toolboxInstance.updateLeftAlignElement(blockContentElement);
-
-      /**
-       * Sync toolbar content wrapper's margin with the block content element
-       * so toolbar buttons align with the block content edge, even when
-       * consumer CSS overrides the block content's margin.
-       */
-      if (this.nodes.content) {
-        this.nodes.content.style.marginLeft = getComputedStyle(blockContentElement).marginLeft;
-      }
     }
 
     /**
@@ -507,6 +504,36 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     this.open();
+
+    /**
+     * For blocks with interactive elements at the left edge (toggle arrows,
+     * callout emoji buttons), disable pointer-events on the actions
+     * container so clicks pass through to the block content.
+     * Must run after open() which sets pointer-events: auto on actions.
+     */
+    const isToggleHeader = targetBlock.name === 'header'
+      && targetBlock.holder.querySelector('[data-blok-toggle-arrow]') !== null;
+    const hasLeftEdgeInteraction = targetBlock.name === 'callout'
+      || targetBlock.name === 'toggle'
+      || isToggleHeader;
+
+    if (hasLeftEdgeInteraction && this.nodes.actions) {
+      this.nodes.actions.style.pointerEvents = 'none';
+    }
+
+    /**
+     * Sync toolbar content wrapper's margin with the block content element
+     * so toolbar buttons align with the block content edge, even when
+     * consumer CSS overrides the block content's margin.
+     *
+     * Runs after open() so the toolbar is visible and actions have correct offsetWidth.
+     */
+    if (blockContentElement && this.nodes.content) {
+      const blockMarginLeft = parseFloat(getComputedStyle(blockContentElement).marginLeft) || 0;
+      const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
+
+      this.nodes.content.style.marginLeft = `${Math.max(blockMarginLeft, actionsWidth)}px`;
+    }
   }
 
   /**
@@ -607,18 +634,10 @@ export class Toolbar extends Module<ToolbarNodes> {
       targetBlock.setupDraggable(settingsToggler, this.Blok.DragManager);
     }
 
-    /**
-     * Sync toolbar content wrapper's margin with the block content element
-     * so toolbar buttons align with the block content edge.
-     */
     const blockContentElement = targetBlockHolder.querySelector<HTMLElement>(`[${DATA_ATTR.elementContent}]`);
 
     if (blockContentElement) {
       this.toolboxInstance.updateLeftAlignElement(blockContentElement);
-
-      if (this.nodes.content) {
-        this.nodes.content.style.marginLeft = getComputedStyle(blockContentElement).marginLeft;
-      }
     }
 
     /**
@@ -632,6 +651,17 @@ export class Toolbar extends Module<ToolbarNodes> {
     this.blockTunesToggler.show();
 
     this.open();
+
+    /**
+     * Sync toolbar content wrapper's margin with the block content element.
+     * Runs after open() so the toolbar is visible and actions have correct offsetWidth.
+     */
+    if (blockContentElement && this.nodes.content) {
+      const blockMarginLeft = parseFloat(getComputedStyle(blockContentElement).marginLeft) || 0;
+      const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
+
+      this.nodes.content.style.marginLeft = `${Math.max(blockMarginLeft, actionsWidth)}px`;
+    }
   }
 
   /**
@@ -914,6 +944,13 @@ export class Toolbar extends Module<ToolbarNodes> {
       // eslint-disable-next-line @typescript-eslint/no-deprecated -- CSS getter now returns Tailwind classes
       this.CSS.actions,
     ]);
+
+    /**
+     * Start with pointer-events disabled so invisible (opacity-0) actions
+     * don't intercept clicks on elements underneath (e.g. toggle arrows).
+     * blockActions.show()/hide() toggles this inline style.
+     */
+    actions.style.pointerEvents = 'none';
 
     this.nodes.content = content;
 

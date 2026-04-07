@@ -1,20 +1,12 @@
 import type { API } from '../../../types';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 
-import { CELL_ATTR, ROW_ATTR } from './table-core';
+import { CELL_ATTR, ROW_ATTR, CELL_COL_ATTR } from './table-core';
 import type { TableModel } from './table-model';
 import type { LegacyCellContent, CellContent } from './types';
 import { isCellWithBlocks } from './types';
 
 export const CELL_BLOCKS_ATTR = 'data-blok-table-cell-blocks';
-
-/**
- * Check if an element is inside a block-based table cell
- */
-export const isInCellBlock = (element: HTMLElement): boolean => {
-  const cellBlocksContainer = element.closest(`[${CELL_BLOCKS_ATTR}]`);
-
-  return cellBlocksContainer !== null;
-};
 
 /**
  * Get the cell element that contains the given element
@@ -330,6 +322,12 @@ export class TableCellBlocks {
    * Get the number of columns in the table (based on first row)
    */
   private getColumnCount(): number {
+    const colgroup = this.gridElement.querySelector('colgroup');
+
+    if (colgroup) {
+      return colgroup.querySelectorAll('col').length;
+    }
+
     const firstRow = this.gridElement.querySelector('[data-blok-table-row]');
 
     return firstRow?.querySelectorAll('[data-blok-table-cell]').length ?? 0;
@@ -346,9 +344,7 @@ export class TableCellBlocks {
       return null;
     }
 
-    const cells = rowEl.querySelectorAll('[data-blok-table-cell]');
-
-    return (cells[col] as HTMLElement | undefined) ?? null;
+    return rowEl.querySelector<HTMLElement>(`[${CELL_COL_ATTR}="${col}"]`) ?? null;
   }
 
   /**
@@ -368,11 +364,10 @@ export class TableCellBlocks {
         return;
       }
 
-      const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
       const normalizedRow: CellContent[] = [];
 
       rowData.forEach((cellContent, colIndex) => {
-        const cell = cells[colIndex] as HTMLElement | undefined;
+        const cell = row.querySelector<HTMLElement>(`[${CELL_COL_ATTR}="${colIndex}"]`);
 
         if (!cell) {
           return;
@@ -387,9 +382,9 @@ export class TableCellBlocks {
         const referencedBlockIds = isCellWithBlocks(cellContent) && cellContent.blocks.length > 0
           ? [...cellContent.blocks]
           : null;
-        const mountedIds = referencedBlockIds
+        const { mountedIds, replacements } = referencedBlockIds
           ? this.mountBlocksInCell(container, referencedBlockIds)
-          : [];
+          : { mountedIds: [] as string[], replacements: new Map<string, string>() };
 
         const cellColorProps: Pick<CellContent, 'color' | 'textColor'> = {};
 
@@ -403,7 +398,12 @@ export class TableCellBlocks {
         }
 
         if (mountedIds.length > 0) {
-          normalizedRow.push({ blocks: referencedBlockIds ?? mountedIds, ...cellColorProps });
+          const baseIds = referencedBlockIds ?? mountedIds;
+          const blockIds = replacements.size > 0
+            ? baseIds.map(id => replacements.get(id) ?? id)
+            : baseIds;
+
+          normalizedRow.push({ blocks: blockIds, ...cellColorProps });
         } else {
           const text = typeof cellContent === 'string'
             ? cellContent
@@ -452,10 +452,15 @@ export class TableCellBlocks {
 
   /**
    * Mount existing blocks into a cell container by their IDs.
-   * Returns the IDs of blocks that were successfully mounted.
+   * Returns the IDs of blocks that were successfully mounted and a map of
+   * original→duplicate IDs for blocks that were already in another cell.
    */
-  private mountBlocksInCell(container: HTMLElement, blockIds: string[]): string[] {
+  private mountBlocksInCell(
+    container: HTMLElement,
+    blockIds: string[]
+  ): { mountedIds: string[]; replacements: Map<string, string> } {
     const mountedIds: string[] = [];
+    const replacements = new Map<string, string>();
 
     for (const blockId of blockIds) {
       const index = this.api.blocks.getBlockIndex(blockId);
@@ -470,11 +475,30 @@ export class TableCellBlocks {
         continue;
       }
 
+      // Guard: if the block is already mounted in another nested container
+      // (table cell, toggle, callout, header), create a duplicate with the
+      // same tool name and data rather than stealing the DOM node.
+      if (block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`)) {
+        const duplicate = this.api.blocks.insert(
+          block.name,
+          block.preservedData,
+          {},
+          this.api.blocks.getBlocksCount(),
+          false
+        );
+
+        container.appendChild(duplicate.holder);
+        this.api.blocks.setBlockParent(duplicate.id, this.tableBlockId);
+        mountedIds.push(duplicate.id);
+        replacements.set(blockId, duplicate.id);
+        continue;
+      }
+
       container.appendChild(block.holder);
       this.api.blocks.setBlockParent(blockId, this.tableBlockId);
       mountedIds.push(blockId);
     }
-    return mountedIds;
+    return { mountedIds, replacements };
   }
 
   /**
@@ -502,6 +526,12 @@ export class TableCellBlocks {
     // Guard against circular DOM: never append the table block's own holder
     // into one of its descendant cell containers.
     if (block.holder.contains(container)) {
+      return;
+    }
+
+    // Guard: skip blocks already mounted in another nested container.
+    // Without this, insertBefore would steal the DOM node from the other container.
+    if (block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`)) {
       return;
     }
 
@@ -611,6 +641,12 @@ export class TableCellBlocks {
 
     if (type === 'block-removed') {
       this.handleBlockRemoved(detail);
+
+      return;
+    }
+
+    if (type === 'block-moved') {
+      this.handleBlockMoved(detail);
 
       return;
     }
@@ -751,6 +787,30 @@ export class TableCellBlocks {
     }
 
     this.schedulePendingCellCheck();
+  }
+
+  /**
+   * Handle a block-moved event: if the block left this table (its holder is
+   * no longer inside our grid), remove the stale reference from the model.
+   *
+   * Without this, cross-table moves leave ghost entries in the source table's
+   * model, causing the same block ID to appear in two tables' saved data.
+   */
+  private handleBlockMoved(detail: { target: { id: string; holder: HTMLElement } }): void {
+    const blockId = detail.target.id;
+    const cellPos = this.model.findCellForBlock(blockId);
+
+    if (!cellPos) {
+      return;
+    }
+
+    // If the holder is still inside our grid, the block was moved within
+    // this table — nothing to clean up.
+    if (this.gridElement.contains(detail.target.holder)) {
+      return;
+    }
+
+    this.model.removeBlockFromCell(cellPos.row, cellPos.col, blockId);
   }
 
   /**
@@ -993,7 +1053,11 @@ export class TableCellBlocks {
   }
 
   /**
-   * Delete blocks by their IDs (in reverse index order to avoid shifting issues)
+   * Delete blocks by their IDs (in reverse index order to avoid shifting issues).
+   * Preserves scroll position because api.blocks.delete() is async — its internal
+   * `await` defers Caret.setToBlock() to microtasks that run AFTER this method returns,
+   * causing unwanted page jumps via element.focus() and window.scrollBy().
+   * We use Promise.all().then() to schedule the scroll restore after all those microtasks.
    */
   public deleteBlocks(blockIds: string[]): void {
     const blockIndices = blockIds
@@ -1001,8 +1065,14 @@ export class TableCellBlocks {
       .filter((index): index is number => index !== undefined)
       .sort((a, b) => b - a);
 
-    blockIndices.forEach(index => {
-      void this.api.blocks.delete(index);
+    const savedScrollY = window.scrollY;
+
+    const deletePromises = blockIndices.map(index => this.api.blocks.delete(index));
+
+    void Promise.all(deletePromises).then(() => {
+      if (window.scrollY !== savedScrollY) {
+        window.scrollTo(0, savedScrollY);
+      }
     });
   }
 

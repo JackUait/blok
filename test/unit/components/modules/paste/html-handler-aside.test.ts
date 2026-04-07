@@ -23,14 +23,12 @@ function makeRegistry(tools: ReturnType<typeof makeToolStub>[]): ToolRegistry {
   for (const tool of tools) {
     const tags = tool.pasteConfig?.tags ?? [];
 
+    tagsByTool[tool.name] = tagsByTool[tool.name] ?? [];
+
     for (const tag of tags) {
       const tagName = typeof tag === 'string' ? tag : Object.keys(tag)[0];
 
       toolsTags[tagName.toUpperCase()] = { tool, sanitizationConfig: null };
-
-      if (!tagsByTool[tool.name]) {
-        tagsByTool[tool.name] = [];
-      }
       tagsByTool[tool.name].push(tagName.toUpperCase());
     }
   }

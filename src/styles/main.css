@@ -491,7 +491,7 @@
 
   /* Spacing (also powers w-*, h-*, min-w-*, min-h-*, size-*) */
   --spacing-content-width: 650px;
-  --spacing-narrow-mode-padding: 50px;
+
   --spacing-toolbox-btn: 26px;
   --spacing-toolbox-btn-mobile: 36px;
   --spacing-icon: 20px;
@@ -1198,8 +1198,12 @@
 /**
  * Content alignment
  * Applies horizontal alignment to block content based on the editor's contentAlign setting.
- * Left alignment is the default (no margin needed).
+ * Left alignment overrides the mx-auto Tailwind class on [data-blok-element-content].
  */
+[data-blok-content-align="left"] [data-blok-element-content] {
+  margin-left: 0;
+}
+
 [data-blok-content-align="center"] [data-blok-element-content] {
   margin-left: auto;
   margin-right: auto;
@@ -1272,6 +1276,44 @@
 
 [data-blok-table-cell-blocks] .blok-block {
   @apply p-0 m-0 min-h-[1.6em];
+}
+
+/* ─── Cell content placement ──────────────────────────────────── */
+
+[data-blok-cell-placement="top-center"] {
+  align-items: center;
+}
+
+[data-blok-cell-placement="top-right"] {
+  align-items: flex-end;
+}
+
+[data-blok-cell-placement="middle-left"] {
+  justify-content: center;
+}
+
+[data-blok-cell-placement="middle-center"] {
+  align-items: center;
+  justify-content: center;
+}
+
+[data-blok-cell-placement="middle-right"] {
+  align-items: flex-end;
+  justify-content: center;
+}
+
+[data-blok-cell-placement="bottom-left"] {
+  justify-content: flex-end;
+}
+
+[data-blok-cell-placement="bottom-center"] {
+  align-items: center;
+  justify-content: flex-end;
+}
+
+[data-blok-cell-placement="bottom-right"] {
+  align-items: flex-end;
+  justify-content: flex-end;
 }
 
 /**

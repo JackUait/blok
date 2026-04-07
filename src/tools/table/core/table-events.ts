@@ -81,6 +81,21 @@ export interface ColWidthsChangedEvent {
   readonly widths: readonly number[] | undefined;
 }
 
+export interface CellsMergedEvent {
+  readonly type: 'cells-merged';
+  readonly minRow: number;
+  readonly maxRow: number;
+  readonly minCol: number;
+  readonly maxCol: number;
+  readonly blocksToRelocate: readonly string[];
+}
+
+export interface CellSplitEvent {
+  readonly type: 'cell-split';
+  readonly row: number;
+  readonly col: number;
+}
+
 export interface ModelReplacedEvent {
   readonly type: 'model-replaced';
 }
@@ -99,4 +114,6 @@ export type TableDomainEvent =
   | BlockRemovedFromCellEvent
   | CellBlocksSetEvent
   | ColWidthsChangedEvent
+  | CellsMergedEvent
+  | CellSplitEvent
   | ModelReplacedEvent;

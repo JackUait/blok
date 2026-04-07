@@ -15,7 +15,7 @@ export function handleCodeKeydown(
   }
 
   if (event.key === 'Enter') {
-    insertNewline();
+    insertNewline(codeElement);
     return true;
   }
 
@@ -32,20 +32,27 @@ export function handleCodeKeydown(
   return false;
 }
 
-function insertNewline(): void {
+function insertNewline(codeElement: HTMLElement): void {
   const selection = window.getSelection();
   if (!selection || selection.rangeCount === 0) return;
 
   const range = selection.getRangeAt(0);
-  range.deleteContents();
 
-  const newline = document.createTextNode('\n');
-  range.insertNode(newline);
-  range.setStartAfter(newline);
-  range.collapse(true);
+  const preCaretRange = range.cloneRange();
+  preCaretRange.selectNodeContents(codeElement);
+  preCaretRange.setEnd(range.startContainer, range.startOffset);
+  const caretOffset = preCaretRange.toString().length;
 
-  selection.removeAllRanges();
-  selection.addRange(range);
+  const text = codeElement.textContent ?? '';
+  const before = text.substring(0, caretOffset);
+  const after = text.substring(caretOffset);
+
+  while (codeElement.firstChild) {
+    codeElement.removeChild(codeElement.firstChild);
+  }
+  codeElement.appendChild(document.createTextNode(before + '\n' + after));
+
+  restoreCaretOffset(codeElement, caretOffset + 1);
 }
 
 function insertTab(): void {

@@ -61,8 +61,6 @@ export const DATA_ATTR = {
 
   /** Content alignment mode (left, center, right) */
   contentAlign: 'data-blok-content-align',
-  /** Narrow mode state */
-  narrow: 'data-blok-narrow',
   /** Right-to-left mode */
   rtl: 'data-blok-rtl',
 
@@ -221,6 +219,16 @@ export const DATA_ATTR = {
   placeholder: 'data-blok-placeholder',
   /** Active placeholder text */
   placeholderActive: 'data-blok-placeholder-active',
+
+  // ============================================
+  // Nested Blocks
+  // ============================================
+
+  /** Container that hosts nested block holders (table cells, toggle/callout/header children).
+   *  Used as a universal guard: before moving a block holder via appendChild,
+   *  check `holder.closest([nestedBlocks])` — if truthy, the holder is already
+   *  claimed by another container and must not be stolen. */
+  nestedBlocks: 'data-blok-nested-blocks',
 
   // ============================================
   // Mutation Tracking

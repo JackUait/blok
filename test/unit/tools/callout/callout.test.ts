@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 import { PopoverItemType } from '../../../../types/utils/popover/popover-item-type';
 import type { CalloutData, CalloutConfig } from '../../../../src/tools/callout/types';
+import { TOGGLE_ATTR } from '../../../../src/tools/toggle/constants';
 
 vi.mock('../../../../src/tools/callout/emoji-picker/emoji-data', () => ({
   loadEmojiData: vi.fn().mockResolvedValue([]),
@@ -129,6 +130,36 @@ describe('CalloutTool', () => {
 
       const container = wrapper.querySelector('[data-blok-toggle-children]')!;
       expect(container.contains(childHolder)).toBe(true);
+    });
+  });
+
+  describe('cross-parent block stealing', () => {
+    it('should not steal a child holder that is already inside another parent container', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+
+      // Create a child holder that is already placed inside another parent's child container
+      const otherParentContainer = document.createElement('div');
+      otherParentContainer.setAttribute(TOGGLE_ATTR.toggleChildren, '');
+      otherParentContainer.setAttribute('data-blok-nested-blocks', '');
+
+      const childHolder = document.createElement('div');
+      otherParentContainer.appendChild(childHolder);
+
+      // Create options with a mock API that returns this pre-placed child
+      const opts = createOptions();
+      const mockChild = { id: 'stolen-child', holder: childHolder };
+      (opts.api.blocks.getChildren as ReturnType<typeof vi.fn>).mockReturnValue([mockChild]);
+
+      const tool = new CalloutTool(opts);
+      const wrapper = tool.render();
+      tool.rendered();
+
+      const ownChildContainer = wrapper.querySelector(`[${TOGGLE_ATTR.toggleChildren}]`)!;
+
+      // The child holder should remain in its original parent container
+      expect(otherParentContainer.contains(childHolder)).toBe(true);
+      // The callout's own child container should NOT contain the stolen holder
+      expect(ownChildContainer.contains(childHolder)).toBe(false);
     });
   });
 
@@ -539,6 +570,47 @@ describe('CalloutTool', () => {
       const cfg = CalloutTool.conversionConfig;
       const imported = (cfg.import as (text: string) => CalloutData)('hello');
       expect(imported).toEqual({ emoji: '💡', textColor: null, backgroundColor: null });
+    });
+  });
+
+  describe('setReadOnly()', () => {
+    it('disables emoji button when entering readonly', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions());
+      const el = tool.render();
+      const btn = el.querySelector<HTMLButtonElement>('[data-blok-testid="callout-emoji-btn"]');
+
+      expect(btn).not.toBeNull();
+      expect(btn!.disabled).toBe(false);
+
+      tool.setReadOnly(true);
+
+      expect(btn!.disabled).toBe(true);
+    });
+
+    it('enables emoji button when exiting readonly', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions({}, { readOnly: true }));
+      const el = tool.render();
+      const btn = el.querySelector<HTMLButtonElement>('[data-blok-testid="callout-emoji-btn"]');
+
+      expect(btn).not.toBeNull();
+      expect(btn!.disabled).toBe(true);
+
+      tool.setReadOnly(false);
+
+      expect(btn!.disabled).toBe(false);
+    });
+
+    it('preserves DOM element reference across toggle', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions());
+      const el = tool.render();
+
+      tool.setReadOnly(true);
+      tool.setReadOnly(false);
+
+      expect(tool.render()).toBe(el);
     });
   });
 });

@@ -467,24 +467,11 @@ export class UI extends Module<UINodes> {
       this.nodes.wrapper.setAttribute(DATA_ATTR.rtl, 'true');
     }
     this.nodes.redactor = $.make('div', [
-      // Narrow mode: add left margin on non-mobile screens to make room for toolbar buttons
-      'not-mobile:group-data-[blok-narrow=true]:ml-(--spacing-narrow-mode-padding)',
-      // RTL narrow mode: add right margin instead
-      'not-mobile:group-data-[blok-rtl=true]:group-data-[blok-narrow=true]:mr-(--spacing-narrow-mode-padding)',
-      'not-mobile:group-data-[blok-rtl=true]:group-data-[blok-narrow=true]:ml-0',
       // Firefox empty contenteditable fix
       '[&_[contenteditable]:empty]:after:content-["\\feff_"]',
     ]);
     this.nodes.redactor.setAttribute(DATA_ATTR.redactor, '');
     this.nodes.redactor.setAttribute('data-blok-testid', 'redactor');
-
-    /**
-     * If Blok has injected into the narrow container, enable Narrow Mode
-     * @todo Forced layout. Get rid of this feature
-     */
-    if (this.nodes.holder.offsetWidth < this.contentRect.width) {
-      this.nodes.wrapper.setAttribute(DATA_ATTR.narrow, 'true');
-    }
 
     /**
      * Create dedicated bottom zone element

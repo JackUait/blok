@@ -59,6 +59,7 @@ docs/plans/
 
 # Git worktrees
 .worktrees/
+.claude/worktrees/
 
 # Local run artifacts
 nohup.out

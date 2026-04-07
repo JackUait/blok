@@ -6,11 +6,13 @@ const mockI18n: I18n = { t: (key: string) => key } as I18n;
 
 const mockOnHover = vi.fn();
 const mockHide = vi.fn();
+const mockShow = vi.fn();
 const mockCreateTooltipContent = vi.fn((_lines: string[]) => document.createElement('div'));
 
 vi.mock('../../../../src/components/utils/tooltip', () => ({
   onHover: (...args: unknown[]): void => { mockOnHover(...(args as [unknown, unknown, unknown])); },
   hide: (): void => { mockHide(); },
+  show: (...args: unknown[]): void => { mockShow(...args); },
 }));
 
 vi.mock('../../../../src/components/modules/toolbar/tooltip', () => ({
@@ -111,6 +113,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -128,6 +131,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -145,6 +149,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -162,6 +167,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -179,6 +185,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -196,6 +203,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -213,6 +221,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -256,6 +265,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -275,6 +285,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -298,6 +309,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -319,6 +331,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -340,6 +353,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -363,6 +377,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -395,6 +410,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -425,6 +441,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -447,6 +464,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -471,6 +489,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -501,6 +520,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -529,6 +549,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -555,6 +576,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -574,6 +596,90 @@ describe('TableAddControls', () => {
       expect(addColBtn.style.opacity).toBe('0');
     });
 
+    it('buttons hide when document mousemove moves far from grid after being shown via document handler', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      vi.useFakeTimers();
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
+        ...defaultDragCallbacks(),
+      });
+
+      const gridRect = new DOMRect(0, 0, 200, 100);
+
+      vi.spyOn(grid, 'getBoundingClientRect').mockReturnValue(gridRect);
+
+      // Step 1: show buttons via document mousemove near grid (outside wrapper)
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 50, clientY: 120, bubbles: true }));
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      expect(addRowBtn.style.opacity).toBe('1');
+
+      // Step 2: move cursor far from grid via document mousemove
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 50, clientY: 300, bubbles: true }));
+
+      vi.advanceTimersByTime(200);
+
+      expect(addRowBtn.style.opacity).toBe('0');
+
+      vi.useRealTimers();
+    });
+
+    it('buttons hide after document mousemove near grid cancels mouseleave hide and cursor moves far away', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      vi.useFakeTimers();
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
+        ...defaultDragCallbacks(),
+      });
+
+      const gridRect = new DOMRect(0, 0, 200, 100);
+
+      vi.spyOn(grid, 'getBoundingClientRect').mockReturnValue(gridRect);
+      vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue(gridRect);
+
+      // Step 1: show add-row button via wrapper mousemove near bottom
+      wrapper.dispatchEvent(new MouseEvent('mousemove', { clientX: 50, clientY: 90, bubbles: true }));
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      expect(addRowBtn.style.opacity).toBe('1');
+
+      // Step 2: wrapper mouseleave schedules hide
+      wrapper.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+
+      // Step 3: document mousemove near grid (within proximity) — cancels the pending hide via showRow()
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 50, clientY: 120, bubbles: true }));
+
+      // Button should still be visible (hide was canceled, re-shown by proximity)
+      vi.advanceTimersByTime(200);
+      expect(addRowBtn.style.opacity).toBe('1');
+
+      // Step 4: cursor moves far from grid via document mousemove
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 50, clientY: 300, bubbles: true }));
+
+      vi.advanceTimersByTime(200);
+
+      // Button must hide — this is the bug: without the fix, it stays at opacity '1'
+      expect(addRowBtn.style.opacity).toBe('0');
+
+      vi.useRealTimers();
+    });
+
     it('document mousemove listener is removed after destroy', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 2));
 
@@ -583,6 +689,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -619,6 +726,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow,
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -641,6 +749,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn,
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -663,6 +772,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -681,6 +791,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -713,6 +824,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow,
         onAddColumn,
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -749,6 +861,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -770,6 +883,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -794,6 +908,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -813,6 +928,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -830,6 +946,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -851,6 +968,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -869,6 +987,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -927,6 +1046,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...callbacks,
       });
 
@@ -950,6 +1070,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...callbacks,
       });
 
@@ -973,6 +1094,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...callbacks,
       });
 
@@ -1025,6 +1147,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...callbacks,
       });
 
@@ -1048,6 +1171,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...callbacks,
       });
 
@@ -1071,6 +1195,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...callbacks,
       });
 
@@ -1093,6 +1218,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...callbacks,
       });
 
@@ -1140,6 +1266,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -1161,6 +1288,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -1182,6 +1310,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -1200,6 +1329,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -1209,8 +1339,10 @@ describe('TableAddControls', () => {
       ]);
     });
 
-    it('hides the tooltip when a drag exceeds the threshold', () => {
+    it('shows dimension tooltip when row drag exceeds threshold', () => {
       ({ wrapper, grid } = createGridAndWrapper(3, 2));
+
+      const getTableSize = vi.fn(() => ({ rows: 3, cols: 2 }));
 
       new TableAddControls({
         wrapper,
@@ -1218,6 +1350,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize,
         ...defaultDragCallbacks(),
       });
 
@@ -1231,7 +1364,7 @@ describe('TableAddControls', () => {
         bubbles: true,
       }));
 
-      mockHide.mockClear();
+      mockShow.mockClear();
 
       addRowBtn.dispatchEvent(new PointerEvent('pointermove', {
         clientY: 10,
@@ -1239,8 +1372,185 @@ describe('TableAddControls', () => {
         bubbles: true,
       }));
 
-      expect(mockHide).toHaveBeenCalledTimes(1);
-      expect(addRowBtn).toBeInTheDocument();
+      expect(mockShow).toHaveBeenCalledWith(
+        addRowBtn,
+        '2\u00D73',
+        expect.objectContaining({ placement: 'bottom', marginTop: -16 }),
+      );
+    });
+
+    it('shows dimension tooltip when column drag exceeds threshold', () => {
+      ({ wrapper, grid } = createGridAndWrapper(3, 2));
+
+      const getTableSize = vi.fn(() => ({ rows: 3, cols: 2 }));
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        getTableSize,
+        ...defaultDragCallbacks(),
+      });
+
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+
+      addColBtn.setPointerCapture = vi.fn();
+
+      addColBtn.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: 0,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      mockShow.mockClear();
+
+      addColBtn.dispatchEvent(new PointerEvent('pointermove', {
+        clientX: 10,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      expect(mockShow).toHaveBeenCalledWith(
+        addColBtn,
+        '2\u00D73',
+        expect.objectContaining({ placement: 'bottom' }),
+      );
+    });
+
+    it('updates dimension tooltip as rows are added during drag', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 3));
+
+      let currentSize = { rows: 2, cols: 3 };
+      const getTableSize = vi.fn(() => currentSize);
+      const onDragAddRow = vi.fn(() => { currentSize = { rows: currentSize.rows + 1, cols: currentSize.cols }; });
+
+      const rows = grid.querySelectorAll('[data-blok-table-row]');
+
+      Object.defineProperty(rows[rows.length - 1], 'offsetHeight', { value: 30 });
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        getTableSize,
+        ...defaultDragCallbacks(),
+        onDragAddRow,
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      addRowBtn.setPointerCapture = vi.fn();
+
+      addRowBtn.dispatchEvent(new PointerEvent('pointerdown', {
+        clientY: 0,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      addRowBtn.dispatchEvent(new PointerEvent('pointermove', {
+        clientY: 40,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      mockShow.mockClear();
+
+      addRowBtn.dispatchEvent(new PointerEvent('pointermove', {
+        clientY: 60,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      expect(mockShow).toHaveBeenCalledWith(
+        addRowBtn,
+        '3\u00D74',
+        expect.objectContaining({ placement: 'bottom', marginTop: -16 }),
+      );
+    });
+
+    it('hides dimension tooltip on pointer up after drag', () => {
+      ({ wrapper, grid } = createGridAndWrapper(3, 2));
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 3, cols: 2 })),
+        ...defaultDragCallbacks(),
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      addRowBtn.setPointerCapture = vi.fn();
+      addRowBtn.releasePointerCapture = vi.fn();
+
+      addRowBtn.dispatchEvent(new PointerEvent('pointerdown', {
+        clientY: 0,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      addRowBtn.dispatchEvent(new PointerEvent('pointermove', {
+        clientY: 10,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      mockHide.mockClear();
+
+      addRowBtn.dispatchEvent(new PointerEvent('pointerup', {
+        clientY: 10,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      expect(mockHide).toHaveBeenCalled();
+    });
+
+    it('hides dimension tooltip on pointer cancel', () => {
+      ({ wrapper, grid } = createGridAndWrapper(3, 2));
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 3, cols: 2 })),
+        ...defaultDragCallbacks(),
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      addRowBtn.setPointerCapture = vi.fn();
+      addRowBtn.releasePointerCapture = vi.fn();
+
+      addRowBtn.dispatchEvent(new PointerEvent('pointerdown', {
+        clientY: 0,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      addRowBtn.dispatchEvent(new PointerEvent('pointermove', {
+        clientY: 10,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      mockHide.mockClear();
+
+      addRowBtn.dispatchEvent(new PointerEvent('pointercancel', {
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      expect(mockHide).toHaveBeenCalled();
     });
 
     it('does not set a native title attribute on either button', () => {
@@ -1252,6 +1562,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -1310,6 +1621,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...callbacks,
       });
 
@@ -1331,6 +1643,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...callbacks,
       });
 
@@ -1353,6 +1666,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...callbacks,
       });
 
@@ -1376,6 +1690,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow,
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...callbacks,
       });
 
@@ -1401,6 +1716,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow,
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -1441,6 +1757,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         getNewColumnWidth: () => NEW_COL_WIDTH,
         ...callbacks,
       });
@@ -1498,6 +1815,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -1528,6 +1846,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -1550,6 +1869,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -1576,6 +1896,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -1605,6 +1926,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -1638,6 +1960,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -1668,6 +1991,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -1696,6 +2020,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -1734,6 +2059,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -1767,6 +2093,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -1800,6 +2127,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -1829,6 +2157,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -1890,6 +2219,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -1911,6 +2241,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -1932,6 +2263,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -1954,6 +2286,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -1978,6 +2311,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -2003,6 +2337,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -2036,6 +2371,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -2065,6 +2401,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -2107,6 +2444,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 
@@ -2143,6 +2481,7 @@ describe('TableAddControls', () => {
         i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
         ...defaultDragCallbacks(),
       });
 

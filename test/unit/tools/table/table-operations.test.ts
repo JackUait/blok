@@ -9,7 +9,7 @@ describe('table-operations', () => {
   describe('mountCellBlocksReadOnly', () => {
     it('should render legacy string content as plain text without creating blocks', async () => {
       const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
-      const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
       const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       // Create DOM structure: grid > row > cell > container
@@ -19,6 +19,7 @@ describe('table-operations', () => {
 
       const cell = document.createElement('div');
       cell.setAttribute(CELL_ATTR, '');
+      cell.setAttribute(CELL_COL_ATTR, '0');
 
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -51,7 +52,7 @@ describe('table-operations', () => {
 
     it('should handle empty legacy string content', async () => {
       const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
-      const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
       const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       const gridElement = document.createElement('div');
@@ -60,6 +61,7 @@ describe('table-operations', () => {
 
       const cell = document.createElement('div');
       cell.setAttribute(CELL_ATTR, '');
+      cell.setAttribute(CELL_COL_ATTR, '0');
 
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -90,7 +92,7 @@ describe('table-operations', () => {
 
     it('should handle mixed legacy strings and block-based cells', async () => {
       const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
-      const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
       const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       const gridElement = document.createElement('div');
@@ -100,6 +102,7 @@ describe('table-operations', () => {
       // Cell 0: legacy string
       const cell0 = document.createElement('div');
       cell0.setAttribute(CELL_ATTR, '');
+      cell0.setAttribute(CELL_COL_ATTR, '0');
       const container0 = document.createElement('div');
       container0.setAttribute(CELL_BLOCKS_ATTR, '');
       cell0.appendChild(container0);
@@ -107,6 +110,7 @@ describe('table-operations', () => {
       // Cell 1: block-based
       const cell1 = document.createElement('div');
       cell1.setAttribute(CELL_ATTR, '');
+      cell1.setAttribute(CELL_COL_ATTR, '1');
       const container1 = document.createElement('div');
       container1.setAttribute(CELL_BLOCKS_ATTR, '');
       cell1.appendChild(container1);
@@ -136,8 +140,8 @@ describe('table-operations', () => {
       });
 
       const mockGetBlockByIndex = vi.fn((index: number) => {
-        if (index === 0) return { id: 'existing-block', holder: existingBlockHolder };
-        if (index === 1) return { id: 'legacy-block', holder: legacyBlockHolder };
+        if (index === 0) return { id: 'existing-block', holder: existingBlockHolder, parentId: 'table-id' };
+        if (index === 1) return { id: 'legacy-block', holder: legacyBlockHolder, parentId: 'table-id' };
         return undefined;
       });
 
@@ -168,7 +172,7 @@ describe('table-operations', () => {
 
     it('should handle block-based cells without modification', async () => {
       const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
-      const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
       const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       const gridElement = document.createElement('div');
@@ -177,6 +181,7 @@ describe('table-operations', () => {
 
       const cell = document.createElement('div');
       cell.setAttribute(CELL_ATTR, '');
+      cell.setAttribute(CELL_COL_ATTR, '0');
 
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -193,6 +198,7 @@ describe('table-operations', () => {
       const mockGetBlockByIndex = vi.fn().mockReturnValue({
         id: 'block-1',
         holder: existingBlockHolder,
+        parentId: 'table-id',
       });
 
       const api = {
@@ -218,7 +224,7 @@ describe('table-operations', () => {
 
     it('should strip placeholder attributes from mounted blocks', async () => {
       const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
-      const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
       const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       const gridElement = document.createElement('div');
@@ -227,6 +233,7 @@ describe('table-operations', () => {
 
       const cell = document.createElement('div');
       cell.setAttribute(CELL_ATTR, '');
+      cell.setAttribute(CELL_COL_ATTR, '0');
 
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -251,6 +258,7 @@ describe('table-operations', () => {
           getBlockByIndex: vi.fn().mockReturnValue({
             id: 'block-1',
             holder: blockHolder,
+            parentId: 'table-id',
           }),
           getBlocksCount: vi.fn().mockReturnValue(1),
           setBlockParent: vi.fn(),
@@ -269,7 +277,7 @@ describe('table-operations', () => {
 
     it('should be idempotent when called multiple times with legacy string content', async () => {
       const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
-      const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
       const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       // Create DOM structure: grid > row > cell > container
@@ -279,6 +287,7 @@ describe('table-operations', () => {
 
       const cell = document.createElement('div');
       cell.setAttribute(CELL_ATTR, '');
+      cell.setAttribute(CELL_COL_ATTR, '0');
 
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -312,7 +321,7 @@ describe('table-operations', () => {
 
     it('should render legacy string HTML markup as real HTML, not as literal text', async () => {
       const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
-      const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
       const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       const gridElement = document.createElement('div');
@@ -321,6 +330,7 @@ describe('table-operations', () => {
 
       const cell = document.createElement('div');
       cell.setAttribute(CELL_ATTR, '');
+      cell.setAttribute(CELL_COL_ATTR, '0');
 
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -354,7 +364,7 @@ describe('table-operations', () => {
 
     it('should not call setBlockParent or insert for legacy string cells in read-only mode', async () => {
       const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
-      const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
       const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       const gridElement = document.createElement('div');
@@ -363,6 +373,7 @@ describe('table-operations', () => {
 
       const cell = document.createElement('div');
       cell.setAttribute(CELL_ATTR, '');
+      cell.setAttribute(CELL_COL_ATTR, '0');
 
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -392,6 +403,317 @@ describe('table-operations', () => {
       expect(mockInsert).not.toHaveBeenCalled();
       expect(mockSetBlockParent).not.toHaveBeenCalled();
       expect(container).toHaveTextContent('Cell text');
+    });
+
+    it('should not steal a block holder that is already mounted in another table cell', async () => {
+      const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      // --- Grid 1: one row, one cell ---
+      const grid1 = document.createElement('div');
+      const row1 = document.createElement('div');
+      row1.setAttribute(ROW_ATTR, '');
+
+      const cell1 = document.createElement('div');
+      cell1.setAttribute(CELL_ATTR, '');
+      cell1.setAttribute(CELL_COL_ATTR, '0');
+
+      const container1 = document.createElement('div');
+      container1.setAttribute(CELL_BLOCKS_ATTR, '');
+      container1.setAttribute('data-blok-nested-blocks', '');
+
+      cell1.appendChild(container1);
+      row1.appendChild(cell1);
+      grid1.appendChild(row1);
+
+      // --- Grid 2: one row, one cell ---
+      const grid2 = document.createElement('div');
+      const row2 = document.createElement('div');
+      row2.setAttribute(ROW_ATTR, '');
+
+      const cell2 = document.createElement('div');
+      cell2.setAttribute(CELL_ATTR, '');
+      cell2.setAttribute(CELL_COL_ATTR, '0');
+
+      const container2 = document.createElement('div');
+      container2.setAttribute(CELL_BLOCKS_ATTR, '');
+      container2.setAttribute('data-blok-nested-blocks', '');
+
+      cell2.appendChild(container2);
+      row2.appendChild(cell2);
+      grid2.appendChild(row2);
+
+      // Shared block holder referenced by both tables
+      const sharedBlockHolder = document.createElement('div');
+      sharedBlockHolder.setAttribute('data-blok-id', 'shared-block');
+
+      const mockGetBlockIndex = vi.fn().mockReturnValue(0);
+      const mockGetBlockByIndex = vi.fn().mockReturnValue({
+        id: 'shared-block',
+        holder: sharedBlockHolder,
+        parentId: 'table-1',
+      });
+
+      const api = {
+        blocks: {
+          insert: vi.fn(),
+          getBlockIndex: mockGetBlockIndex,
+          getBlockByIndex: mockGetBlockByIndex,
+          getBlocksCount: vi.fn().mockReturnValue(1),
+          setBlockParent: vi.fn(),
+        },
+      } as unknown as API;
+
+      // Both tables reference the same block ID (corrupted data)
+      const content = [[{ blocks: ['shared-block'] }]];
+
+      // Mount grid1 first — block belongs to table-1 so it should land in container1
+      mountCellBlocksReadOnly(grid1, content, api, 'table-1');
+
+      // Mount grid2 second — block belongs to table-1, not table-2, so it must be skipped
+      mountCellBlocksReadOnly(grid2, content, api, 'table-2');
+
+      // Grid1's cell must still contain the block holder
+      expect(container1.contains(sharedBlockHolder)).toBe(true);
+      // Grid2's cell must NOT have the block (parent mismatch → skipped)
+      expect(container2.contains(sharedBlockHolder)).toBe(false);
+      expect(container2.children).toHaveLength(0);
+    });
+
+    it('should wrap legacy string content in a div with leading-[1.5] to match paragraph line-height', async () => {
+      const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute(ROW_ATTR, '');
+
+      const cell = document.createElement('div');
+      cell.setAttribute(CELL_ATTR, '');
+      cell.setAttribute(CELL_COL_ATTR, '0');
+
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const api = {
+        blocks: {
+          insert: vi.fn(),
+          getBlockIndex: vi.fn(),
+          getBlockByIndex: vi.fn(),
+          getBlocksCount: vi.fn().mockReturnValue(1),
+          setBlockParent: vi.fn(),
+        },
+      } as unknown as API;
+
+      const legacyContent = [['Hello world']];
+
+      mountCellBlocksReadOnly(gridElement, legacyContent, api, 'table-id');
+
+      // Legacy text must be wrapped in a div with leading-[1.5] so its
+      // line-height matches paragraph blocks used in edit mode.
+      const wrapper = container.querySelector('div');
+
+      expect(wrapper).not.toBeNull();
+      expect(wrapper!.classList.contains('leading-[1.5]')).toBe(true);
+      expect(wrapper!.textContent).toBe('Hello world');
+    });
+
+    it('should not duplicate block holders when called on a container that already has them mounted', async () => {
+      const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      // Create DOM structure: grid > row > cell > container (with nested-blocks attr)
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute(ROW_ATTR, '');
+
+      const cell = document.createElement('div');
+      cell.setAttribute(CELL_ATTR, '');
+      cell.setAttribute(CELL_COL_ATTR, '0');
+
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      container.setAttribute('data-blok-nested-blocks', '');
+
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      // Simulate edit mode: block holder is ALREADY mounted inside the container
+      const blockHolder = document.createElement('div');
+      blockHolder.setAttribute('data-blok-id', 'block-1');
+      blockHolder.textContent = 'Cell content';
+      container.appendChild(blockHolder);
+
+      const api = {
+        blocks: {
+          insert: vi.fn(),
+          getBlockIndex: vi.fn().mockReturnValue(0),
+          getBlockByIndex: vi.fn().mockReturnValue({
+            id: 'block-1',
+            holder: blockHolder,
+            parentId: 'table-id',
+          }),
+          getBlocksCount: vi.fn().mockReturnValue(1),
+          setBlockParent: vi.fn(),
+        },
+      } as unknown as API;
+
+      const content = [[{ blocks: ['block-1'] }]];
+
+      // This simulates setReadOnly(true) calling mountCellBlocksReadOnly
+      // while block holders are still in the container from edit mode.
+      mountCellBlocksReadOnly(gridElement, content, api, 'table-id');
+
+      // Must have exactly ONE block holder, not a duplicate
+      const holders = container.querySelectorAll('[data-blok-id]');
+      expect(holders).toHaveLength(1);
+      expect(container.textContent).toBe('Cell content');
+    });
+
+    it('should skip blocks whose parent does not match the table block ID', async () => {
+      const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute(ROW_ATTR, '');
+
+      const cell = document.createElement('div');
+      cell.setAttribute(CELL_ATTR, '');
+      cell.setAttribute(CELL_COL_ATTR, '0');
+
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      container.setAttribute('data-blok-nested-blocks', '');
+
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      // Block that belongs to THIS table
+      const ownBlockHolder = document.createElement('div');
+      ownBlockHolder.setAttribute('data-blok-id', 'own-block');
+      ownBlockHolder.textContent = 'Own content';
+
+      // Block that belongs to ANOTHER table (cross-table reference)
+      const foreignBlockHolder = document.createElement('div');
+      foreignBlockHolder.setAttribute('data-blok-id', 'foreign-block');
+      foreignBlockHolder.textContent = 'Foreign content';
+
+      const mockGetBlockIndex = vi.fn((id: string) => {
+        if (id === 'own-block') return 0;
+        if (id === 'foreign-block') return 1;
+        return undefined;
+      });
+
+      const mockGetBlockByIndex = vi.fn((index: number) => {
+        if (index === 0) return { id: 'own-block', holder: ownBlockHolder, parentId: 'table-1' };
+        if (index === 1) return { id: 'foreign-block', holder: foreignBlockHolder, parentId: 'table-2' };
+        return undefined;
+      });
+
+      const api = {
+        blocks: {
+          insert: vi.fn(),
+          getBlockIndex: mockGetBlockIndex,
+          getBlockByIndex: mockGetBlockByIndex,
+          getBlocksCount: vi.fn().mockReturnValue(2),
+          setBlockParent: vi.fn(),
+        },
+      } as unknown as API;
+
+      // Corrupted content: cell references both own block and foreign block
+      const content = [[{ blocks: ['own-block', 'foreign-block'] }]];
+
+      mountCellBlocksReadOnly(gridElement, content, api, 'table-1');
+
+      // Only the own block should be mounted; foreign block must be skipped
+      const holders = container.querySelectorAll('[data-blok-id]');
+      expect(holders).toHaveLength(1);
+      expect(container.textContent).toBe('Own content');
+    });
+
+    it('should skip cross-table blocks instead of cloning them', async () => {
+      const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      // --- Grid 1 ---
+      const grid1 = document.createElement('div');
+      const row1 = document.createElement('div');
+      row1.setAttribute(ROW_ATTR, '');
+
+      const cell1 = document.createElement('div');
+      cell1.setAttribute(CELL_ATTR, '');
+      cell1.setAttribute(CELL_COL_ATTR, '0');
+
+      const container1 = document.createElement('div');
+      container1.setAttribute(CELL_BLOCKS_ATTR, '');
+      container1.setAttribute('data-blok-nested-blocks', '');
+
+      cell1.appendChild(container1);
+      row1.appendChild(cell1);
+      grid1.appendChild(row1);
+
+      // --- Grid 2 ---
+      const grid2 = document.createElement('div');
+      const row2 = document.createElement('div');
+      row2.setAttribute(ROW_ATTR, '');
+
+      const cell2 = document.createElement('div');
+      cell2.setAttribute(CELL_ATTR, '');
+      cell2.setAttribute(CELL_COL_ATTR, '0');
+
+      const container2 = document.createElement('div');
+      container2.setAttribute(CELL_BLOCKS_ATTR, '');
+      container2.setAttribute('data-blok-nested-blocks', '');
+
+      cell2.appendChild(container2);
+      row2.appendChild(cell2);
+      grid2.appendChild(row2);
+
+      // Block owned by table-1
+      const sharedBlockHolder = document.createElement('div');
+      sharedBlockHolder.setAttribute('data-blok-id', 'shared-block');
+      sharedBlockHolder.innerHTML = '<div class="blok-block">Paragraph text</div>';
+
+      const mockGetBlockIndex = vi.fn().mockReturnValue(0);
+      const mockGetBlockByIndex = vi.fn().mockReturnValue({
+        id: 'shared-block',
+        holder: sharedBlockHolder,
+        parentId: 'table-1',
+      });
+
+      const api = {
+        blocks: {
+          insert: vi.fn(),
+          getBlockIndex: mockGetBlockIndex,
+          getBlockByIndex: mockGetBlockByIndex,
+          getBlocksCount: vi.fn().mockReturnValue(1),
+          setBlockParent: vi.fn(),
+        },
+      } as unknown as API;
+
+      // Both tables reference the same block (corrupted data)
+      const content = [[{ blocks: ['shared-block'] }]];
+
+      mountCellBlocksReadOnly(grid1, content, api, 'table-1');
+      mountCellBlocksReadOnly(grid2, content, api, 'table-2');
+
+      // Grid1 has the original holder (block belongs to table-1)
+      expect(container1.contains(sharedBlockHolder)).toBe(true);
+
+      // Grid2 must be empty — block belongs to table-1, not table-2
+      expect(container2.children).toHaveLength(0);
     });
   });
 
@@ -500,6 +822,43 @@ describe('table-operations', () => {
 
       // Half average of [200, 300, 100] = 100
       expect(result).toEqual([200, 100, 300, 100]);
+    });
+  });
+
+  describe('setupKeyboardNavigation', () => {
+    it('should return a cleanup function that removes the keydown listener', async () => {
+      const { setupKeyboardNavigation } = await import('../../../../src/tools/table/table-operations');
+      const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+
+      const gridEl = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute(ROW_ATTR, '');
+      const cell = document.createElement('div');
+      cell.setAttribute(CELL_ATTR, '');
+      row.appendChild(cell);
+      gridEl.appendChild(row);
+
+      const handleKeyDown = vi.fn();
+      const cellBlocks = { handleKeyDown } as unknown as Parameters<typeof setupKeyboardNavigation>[1];
+
+      const cleanup = setupKeyboardNavigation(gridEl, cellBlocks);
+
+      expect(typeof cleanup).toBe('function');
+
+      // Dispatch a keydown event — handler should fire
+      const event = new KeyboardEvent('keydown', { bubbles: true });
+      cell.dispatchEvent(event);
+
+      expect(handleKeyDown).toHaveBeenCalledTimes(1);
+
+      // Call cleanup — handler should be removed
+      cleanup();
+      handleKeyDown.mockClear();
+
+      const event2 = new KeyboardEvent('keydown', { bubbles: true });
+      cell.dispatchEvent(event2);
+
+      expect(handleKeyDown).not.toHaveBeenCalled();
     });
   });
 

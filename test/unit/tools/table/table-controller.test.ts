@@ -427,6 +427,59 @@ describe('TableController', () => {
     });
   });
 
+  describe('merge/split commands', () => {
+    it('routes merge-cells command and emits cells-merged event', () => {
+      controller.execute({
+        type: 'merge-cells',
+        minRow: 0,
+        maxRow: 1,
+        minCol: 0,
+        maxCol: 1,
+      });
+
+      expect(model.isMergedCell(0, 0)).toBe(true);
+      expect(model.getCellSpan(0, 0)).toEqual({ colspan: 2, rowspan: 2 });
+      expect(emittedEvents).toHaveLength(1);
+      expect(emittedEvents[0]).toMatchObject({
+        type: 'cells-merged',
+        minRow: 0,
+        maxRow: 1,
+        minCol: 0,
+        maxCol: 1,
+      });
+      model.validateInvariants();
+    });
+
+    it('routes split-cell command and emits cell-split event', () => {
+      // First merge
+      controller.execute({
+        type: 'merge-cells',
+        minRow: 0,
+        maxRow: 1,
+        minCol: 0,
+        maxCol: 1,
+      });
+
+      emittedEvents = [];
+
+      // Then split
+      controller.execute({
+        type: 'split-cell',
+        row: 0,
+        col: 0,
+      });
+
+      expect(model.isMergedCell(0, 0)).toBe(false);
+      expect(emittedEvents).toHaveLength(1);
+      expect(emittedEvents[0]).toMatchObject({
+        type: 'cell-split',
+        row: 0,
+        col: 0,
+      });
+      model.validateInvariants();
+    });
+  });
+
   describe('listener management', () => {
     it('works without a listener', () => {
       const noListenerController = new TableController(model);

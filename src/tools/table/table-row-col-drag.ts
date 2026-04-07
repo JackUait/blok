@@ -1,4 +1,4 @@
-import { BORDER_WIDTH, CELL_ATTR, ROW_ATTR } from './table-core';
+import { BORDER_WIDTH, CELL_ATTR, CELL_COL_ATTR, ROW_ATTR } from './table-core';
 import type { RowColAction } from './table-row-col-controls';
 
 const DRAG_THRESHOLD = 10;
@@ -10,6 +10,23 @@ const GHOST_ATTR = 'data-blok-table-drag-ghost';
  * plus the right edge of the last column.
  */
 export const getCumulativeColEdges = (grid: HTMLElement): number[] => {
+  const colgroup = grid.querySelector('colgroup');
+
+  if (colgroup) {
+    const cols = Array.from(colgroup.querySelectorAll('col'));
+
+    return cols.reduce<number[]>(
+      (edges, col) => {
+        const last = edges[edges.length - 1];
+        const width = (col as HTMLElement).offsetWidth || parseFloat((col as HTMLElement).style.width) || 0;
+
+        return [...edges, last + width];
+      },
+      [0]
+    );
+  }
+
+  // Fallback for grids without colgroup
   const firstRow = grid.querySelector(`[${ROW_ATTR}]`);
 
   if (!firstRow) {
@@ -211,13 +228,11 @@ export class TableRowColDrag {
     const dragBg = this.getDragSourceBg();
 
     rows.forEach(row => {
-      const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
+      const cellEl = row.querySelector<HTMLElement>(`[${CELL_COL_ATTR}="${this.dragFromIndex}"]`);
 
-      if (this.dragFromIndex >= cells.length) {
+      if (!cellEl) {
         return;
       }
-
-      const cellEl = cells[this.dragFromIndex] as HTMLElement;
 
       cellEl.style.backgroundColor = dragBg;
       cellEl.style.opacity = '0.7';
@@ -418,8 +433,8 @@ export class TableRowColDrag {
       return null;
     }
 
-    const firstCell = firstRow.querySelectorAll(`[${CELL_ATTR}]`)[this.dragFromIndex] as HTMLElement | undefined;
-    const lastCell = lastRow.querySelectorAll(`[${CELL_ATTR}]`)[this.dragFromIndex] as HTMLElement | undefined;
+    const firstCell = firstRow.querySelector<HTMLElement>(`[${CELL_COL_ATTR}="${this.dragFromIndex}"]`);
+    const lastCell = lastRow.querySelector<HTMLElement>(`[${CELL_COL_ATTR}="${this.dragFromIndex}"]`);
 
     if (!firstCell || !lastCell) {
       return null;
@@ -469,13 +484,12 @@ export class TableRowColDrag {
     ghostStyle.flexDirection = 'column';
 
     rows.forEach(row => {
-      const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
+      const cellEl = row.querySelector<HTMLElement>(`[${CELL_COL_ATTR}="${this.dragFromIndex}"]`);
 
-      if (this.dragFromIndex >= cells.length) {
+      if (!cellEl) {
         return;
       }
 
-      const cellEl = cells[this.dragFromIndex] as HTMLElement;
       const clone = cellEl.cloneNode(true) as HTMLElement;
 
       clone.style.width = `${cellEl.offsetWidth}px`;

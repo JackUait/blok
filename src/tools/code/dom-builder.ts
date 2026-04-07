@@ -8,16 +8,21 @@ import {
   TAB_ACTIVE_STYLES,
   TAB_INACTIVE_STYLES,
   PREVIEW_AREA_STYLES,
+  CODE_BODY_STYLES,
+  GUTTER_STYLES,
+  GUTTER_LINE_STYLES,
 } from './constants';
-import { IconCopy, IconWrap } from '../../components/icons';
+import { IconCopy, IconWrap, IconLineNumbers } from '../../components/icons';
 
 export interface CodeDOMRefs {
   wrapper: HTMLElement;
   languageButton: HTMLButtonElement;
+  lineNumbersButton: HTMLButtonElement;
   copyButton: HTMLButtonElement;
   wrapButton: HTMLButtonElement;
   preElement: HTMLPreElement;
   codeElement: HTMLElement;
+  gutterElement: HTMLElement;
   codeTab: HTMLButtonElement | null;
   previewTab: HTMLButtonElement | null;
   previewElement: HTMLDivElement | null;
@@ -29,6 +34,7 @@ export interface BuildCodeDOMOptions {
   readOnly: boolean;
   copyLabel: string;
   wrapLabel: string;
+  lineNumbersLabel?: string;
   previewable?: boolean;
   codeTabLabel?: string;
   previewTabLabel?: string;
@@ -61,7 +67,7 @@ function buildPreviewElements(
 }
 
 export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
-  const { code, languageName, readOnly, copyLabel, wrapLabel, previewable, codeTabLabel, previewTabLabel } = options;
+  const { code, languageName, readOnly, copyLabel, wrapLabel, lineNumbersLabel, previewable, codeTabLabel, previewTabLabel } = options;
 
   // Wrapper
   const wrapper = document.createElement('div');
@@ -96,6 +102,14 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   wrapButton.setAttribute('aria-label', wrapLabel);
   wrapButton.setAttribute('data-blok-testid', 'code-wrap-btn');
 
+  // Line numbers toggle button
+  const lineNumbersButton = document.createElement('button');
+  lineNumbersButton.type = 'button';
+  lineNumbersButton.className = HEADER_BUTTON_STYLES;
+  lineNumbersButton.innerHTML = IconLineNumbers;
+  lineNumbersButton.setAttribute('aria-label', lineNumbersLabel ?? 'Line numbers');
+  lineNumbersButton.setAttribute('data-blok-testid', 'code-line-numbers-btn');
+
   // Copy button
   const copyButton = document.createElement('button');
   copyButton.type = 'button';
@@ -114,9 +128,23 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   }
 
   if (!readOnly) {
-    codeElement.setAttribute('contenteditable', 'true');
+    codeElement.setAttribute('contenteditable', 'plaintext-only');
     codeElement.setAttribute('spellcheck', 'false');
   }
+
+  // Line number gutter
+  const gutterElement = document.createElement('div');
+  gutterElement.className = GUTTER_STYLES;
+  gutterElement.setAttribute('aria-hidden', 'true');
+  gutterElement.setAttribute('data-blok-testid', 'code-gutter');
+
+  const lineCount = code ? code.split('\n').length : 1;
+  Array.from({ length: lineCount }, (_, idx) => {
+    const lineEl = document.createElement('div');
+    lineEl.className = GUTTER_LINE_STYLES;
+    lineEl.textContent = String(idx + 1);
+    gutterElement.appendChild(lineEl);
+  });
 
   // Assemble header
   header.appendChild(languageButton);
@@ -127,6 +155,7 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
     header.appendChild(previewTab);
   }
 
+  header.appendChild(lineNumbersButton);
   header.appendChild(wrapButton);
   header.appendChild(copyButton);
 
@@ -134,13 +163,19 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   const preElement = document.createElement('pre');
   preElement.appendChild(codeElement);
 
+  // Code body container (flex: gutter + pre)
+  const codeBody = document.createElement('div');
+  codeBody.className = CODE_BODY_STYLES;
+  codeBody.appendChild(gutterElement);
+  codeBody.appendChild(preElement);
+
   // Assemble wrapper
   wrapper.appendChild(header);
-  wrapper.appendChild(preElement);
+  wrapper.appendChild(codeBody);
 
   if (previewElement) {
     wrapper.appendChild(previewElement);
   }
 
-  return { wrapper, languageButton, copyButton, wrapButton, preElement, codeElement, codeTab, previewTab, previewElement };
+  return { wrapper, languageButton, lineNumbersButton, copyButton, wrapButton, preElement, codeElement, gutterElement, codeTab, previewTab, previewElement };
 }

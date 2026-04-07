@@ -45,22 +45,6 @@
     .dark-mode .playground-tab:hover { color: #ffffff; }
     .dark-mode .playground-tab[aria-selected="true"] { color: #ffffff; }
     .dark-mode .playground-tab[aria-selected="true"]::after { background: #ffffff; }
-
-    /* Thin mode content narrowing */
-    .thin-mode .thin-mode-content {
-      max-width: 500px;
-      border-left-width: 1px;
-      border-right-width: 1px;
-      border-left-style: solid;
-      border-right-style: solid;
-      border-color: #eee;
-      padding-left: 15px;
-      padding-right: 15px;
-    }
-    .dark-mode.thin-mode .thin-mode-content {
-      border-color: #37352f;
-    }
-
     /* Pill toggle switch */
     .pill-toggle {
       position: relative;
@@ -196,7 +180,7 @@
 
     <!-- Editor tab -->
     <div id="tab-editor" class="mt-[30px]" role="tabpanel">
-      <div class="thin-mode-content mx-auto antialiased max-md:px-5">
+      <div class="mx-auto antialiased max-md:px-5">
         <div id="blok"></div>
       </div>
     </div>
@@ -231,11 +215,6 @@
         <label class="flex items-center justify-between cursor-pointer">
           <span class="text-[13px] dark-mode:text-[#ffffff]">Readonly</span>
           <input type="checkbox" id="toggle-readonly" class="peer sr-only">
-          <span class="pill-toggle"></span>
-        </label>
-        <label class="flex items-center justify-between cursor-pointer">
-          <span class="text-[13px] dark-mode:text-[#ffffff]">Thin mode</span>
-          <input type="checkbox" id="toggle-thin" class="peer sr-only">
           <span class="pill-toggle"></span>
         </label>
         <label class="flex items-center justify-between cursor-pointer">
@@ -276,7 +255,6 @@
      */
     const state = {
       readOnly: false,
-      thinMode: false,
       darkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
       autofocus: true,
       tools: {
@@ -926,6 +904,30 @@
         { id: "list-row-7", type: "database-row", parent: "database-list", data: { position: "a6", properties: { "prop-title": "Project scaffolding", "prop-status": "opt-done", "prop-description": { time: 1700000007000, version: "1.0.0", blocks: [{ id: "d7b1", type: "paragraph", data: { text: "Monorepo initialised with Yarn workspaces. Packages: core editor, tools, docs site." } }, { id: "d7b2", type: "paragraph", data: { text: "Vite for bundling, Vitest for unit tests, Playwright for E2E." } }] } } } },
         { id: "list-row-8", type: "database-row", parent: "database-list", data: { position: "a7", properties: { "prop-title": "Database schema design", "prop-status": "opt-done", "prop-description": { time: 1700000008000, version: "1.0.0", blocks: [{ id: "d8b1", type: "paragraph", data: { text: "Settled on a row/property/view model. Each row holds a flat properties map keyed by property ID." } }, { id: "d8b2", type: "paragraph", data: { text: "Views are projections over the same data — board groups by a select property, list shows all rows." } }] } } } },
         { id: "list-row-9", type: "database-row", parent: "database-list", data: { position: "a8", properties: { "prop-title": "User authentication", "prop-status": "opt-done", "prop-description": { time: 1700000009000, version: "1.0.0", blocks: [{ id: "d9b1", type: "paragraph", data: { text: "Implemented JWT-based auth with HTTP-only refresh tokens and CSRF protection." } }, { id: "d9b2", type: "paragraph", data: { text: "Passwords hashed with bcrypt (cost factor 12). Account lockout after 5 failed attempts." } }] } } } },
+      {
+        type: "header",
+        id: "code-section-header",
+        data: {
+          text: "Code Blocks",
+          level: 2
+        }
+      },
+      {
+        id: "code-latex",
+        type: "code",
+        data: {
+          code: "\\begin{aligned}\n  e^{i\\pi} + 1 &= 0 \\\\\n  x &= \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a} \\\\\n  \\nabla \\cdot \\mathbf{E} &= \\frac{\\rho}{\\varepsilon_0} \\\\\n  \\nabla \\times \\mathbf{B} &= \\mu_0 \\mathbf{J} + \\mu_0 \\varepsilon_0\n    \\frac{\\partial \\mathbf{E}}{\\partial t}\n\\end{aligned}",
+          language: "latex"
+        }
+      },
+      {
+        id: "code-mermaid",
+        type: "code",
+        data: {
+          code: "graph TD\n  A[Start] --> B{Decision}\n  B -->|Yes| C[Action 1]\n  B -->|No| D[Action 2]\n  C --> E[Result]\n  D --> E",
+          language: "mermaid"
+        }
+      },
     ];
 
     /**
@@ -1059,7 +1061,6 @@
      * Mode toggles
      */
     const toggleReadonly = document.getElementById('toggle-readonly');
-    const toggleThin = document.getElementById('toggle-thin');
     const toggleDark = document.getElementById('toggle-dark');
     const toggleAutofocus = document.getElementById('toggle-autofocus');
 
@@ -1097,12 +1098,6 @@
     toggleReadonly.addEventListener('change', async () => {
       state.readOnly = toggleReadonly.checked;
       await blok.readOnly.toggle(state.readOnly);
-    });
-
-    toggleThin.addEventListener('change', () => {
-      state.thinMode = toggleThin.checked;
-      document.body.classList.toggle('thin-mode', state.thinMode);
-      reinitEditor();
     });
 
     toggleDark.addEventListener('change', () => {
@@ -1168,8 +1163,8 @@
       'Headings': ['IconHeading', 'IconH1', 'IconH2', 'IconH3', 'IconH4', 'IconH5', 'IconH6'],
       'Block Tools': ['IconText', 'IconListBulleted', 'IconListNumbered', 'IconListChecklist', 'IconTable', 'IconToggleList', 'IconCallout', 'IconDatabase', 'IconBoard', 'IconGallery', 'IconList', 'IconDivider', 'IconQuote', 'IconCodeBlock', 'IconCalendar'],
       'Toggle Headings': ['IconToggleH1', 'IconToggleH2', 'IconToggleH3'],
-      'Table Actions': ['IconHeaderRow', 'IconHeaderColumn', 'IconInsertAbove', 'IconInsertBelow', 'IconInsertLeft', 'IconInsertRight', 'IconMoveUp', 'IconMoveDown', 'IconMoveLeft', 'IconMoveRight'],
-      'Utility': ['IconCopy', 'IconTrash', 'IconPencil', 'IconWarning', 'IconPaintRoller', 'IconWrap', 'IconPreview'],
+      'Table Actions': ['IconHeaderRow', 'IconHeaderColumn', 'IconInsertAbove', 'IconInsertBelow', 'IconInsertLeft', 'IconInsertRight', 'IconMoveUp', 'IconMoveDown', 'IconMoveLeft', 'IconMoveRight', 'IconMergeCells', 'IconSplitCell', 'IconPlacement'],
+      'Utility': ['IconCopy', 'IconTrash', 'IconPencil', 'IconWarning', 'IconPaintRoller', 'IconWrap', 'IconLineNumbers', 'IconPreview'],
       'Emoji Picker': ['IconEmojiStar', 'IconEmojiSmile', 'IconEmojiSprout', 'IconEmojiUtensils', 'IconEmojiBall', 'IconEmojiGlobe', 'IconEmojiLightbulb', 'IconEmojiHash', 'IconEmojiFlag'],
     };
 

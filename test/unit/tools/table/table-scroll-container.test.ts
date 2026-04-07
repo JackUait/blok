@@ -242,6 +242,65 @@ describe('Table scroll container', () => {
     });
   });
 
+  describe('corner drag enables scroll overflow', () => {
+    it('scroll container gets overflow classes when corner drag adds a column', () => {
+      // Regression: corner drag's onAddColumn did not call enableScrollOverflow,
+      // causing the grid to overflow unclipped during drag.
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // In percent mode, scroll container has NO overflow classes
+      const scrollContainer = element.querySelector('[data-blok-table-scroll]') as HTMLElement;
+
+      expect(scrollContainer).not.toBeNull();
+      expect(scrollContainer.classList.contains('overflow-x-auto')).toBe(false);
+
+      // Stub pointer capture APIs not available in jsdom
+      HTMLElement.prototype.setPointerCapture = vi.fn();
+      HTMLElement.prototype.releasePointerCapture = vi.fn();
+
+      // Simulate corner drag: pointerdown then pointermove past threshold + 1 unit
+      const hitZone = element.querySelector('[data-blok-table-corner-drag]') as HTMLElement;
+
+      expect(hitZone).not.toBeNull();
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      // Move right by 110px (>threshold 5px, >unitWidth 100px fallback in jsdom)
+      hitZone.dispatchEvent(new PointerEvent('pointermove', {
+        clientX: 210,
+        clientY: 100,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      // After one column was added via drag, scroll container must have overflow
+      expect(scrollContainer.classList.contains('overflow-x-auto')).toBe(true);
+      expect(scrollContainer.classList.contains('overflow-y-hidden')).toBe(true);
+
+      // Clean up — release drag
+      hitZone.dispatchEvent(new PointerEvent('pointerup', {
+        clientX: 210,
+        clientY: 100,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      document.body.removeChild(element);
+    });
+  });
+
   describe('resize preserves scroll container', () => {
     it('scroll container exists before and after resize — no mid-drag reparenting', () => {
       const options = createTableOptions({

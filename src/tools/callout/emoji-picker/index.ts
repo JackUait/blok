@@ -613,8 +613,9 @@ export class EmojiPicker {
       this._body.appendChild(section);
     }
 
-    // Standard categories
-    const byCategory = groupEmojisByCategory(emojis);
+    // Standard categories (exclude curated emojis to avoid duplicates)
+    const curatedSet = new Set(CURATED_CALLOUT_EMOJIS);
+    const byCategory = groupEmojisByCategory(emojis.filter(e => !curatedSet.has(e.native)));
 
     for (const [category, categoryEmojis] of byCategory) {
       visibleCategories.add(category);

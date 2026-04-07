@@ -725,3 +725,148 @@ describe('Data Model Transform - List Compatibility', () => {
     });
   });
 });
+
+describe('List Tool - setReadOnly', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('sets contentEditable to false on content element when entering readonly (unordered)', () => {
+    const options = createListOptions({ text: 'Hello', style: 'unordered' });
+    const list = new List(options);
+    const element = list.render();
+
+    const content = element.querySelector('[data-blok-testid="list-content-container"]') as HTMLElement;
+
+    expect(content.contentEditable).toBe('true');
+
+    list.setReadOnly(true);
+
+    expect(content.contentEditable).toBe('false');
+  });
+
+  it('sets contentEditable to true on content element when exiting readonly (unordered)', () => {
+    const options = createListOptions({ text: 'Hello', style: 'unordered' });
+
+    (options as { readOnly: boolean }).readOnly = true;
+
+    const list = new List(options);
+    const element = list.render();
+
+    const content = element.querySelector('[data-blok-testid="list-content-container"]') as HTMLElement;
+
+    expect(content.contentEditable).toBe('false');
+
+    list.setReadOnly(false);
+
+    expect(content.contentEditable).toBe('true');
+  });
+
+  it('sets contentEditable to false on content element when entering readonly (checklist)', () => {
+    const options = createListOptions({ text: 'Task', style: 'checklist' });
+    const list = new List(options);
+    const element = list.render();
+
+    const content = element.querySelector('[data-blok-testid="list-checklist-content"]') as HTMLElement;
+
+    expect(content.contentEditable).toBe('true');
+
+    list.setReadOnly(true);
+
+    expect(content.contentEditable).toBe('false');
+  });
+
+  it('sets contentEditable to true on content element when exiting readonly (checklist)', () => {
+    const options = createListOptions({ text: 'Task', style: 'checklist' });
+
+    (options as { readOnly: boolean }).readOnly = true;
+
+    const list = new List(options);
+    const element = list.render();
+
+    const content = element.querySelector('[data-blok-testid="list-checklist-content"]') as HTMLElement;
+
+    expect(content.contentEditable).toBe('false');
+
+    list.setReadOnly(false);
+
+    expect(content.contentEditable).toBe('true');
+  });
+
+  it('disables checkbox when entering readonly for checklist', () => {
+    const options = createListOptions({ text: 'Task', style: 'checklist' });
+    const list = new List(options);
+    const element = list.render();
+
+    const checkbox = element.querySelector('input[type="checkbox"]') as HTMLInputElement;
+
+    expect(checkbox.disabled).toBe(false);
+
+    list.setReadOnly(true);
+
+    expect(checkbox.disabled).toBe(true);
+  });
+
+  it('enables checkbox when exiting readonly for checklist', () => {
+    const options = createListOptions({ text: 'Task', style: 'checklist' });
+
+    (options as { readOnly: boolean }).readOnly = true;
+
+    const list = new List(options);
+    const element = list.render();
+
+    const checkbox = element.querySelector('input[type="checkbox"]') as HTMLInputElement;
+
+    expect(checkbox.disabled).toBe(true);
+
+    list.setReadOnly(false);
+
+    expect(checkbox.disabled).toBe(false);
+  });
+
+  it('removes placeholder attribute when entering readonly', () => {
+    const options = createListOptions({ text: '', style: 'unordered' });
+    const list = new List(options);
+    const element = list.render();
+
+    const content = element.querySelector('[data-blok-testid="list-content-container"]') as HTMLElement;
+
+    expect(content.hasAttribute('data-placeholder')).toBe(true);
+
+    list.setReadOnly(true);
+
+    expect(content.hasAttribute('data-placeholder')).toBe(false);
+  });
+
+  it('restores placeholder attribute when exiting readonly', () => {
+    const options = createListOptions({ text: '', style: 'unordered' });
+
+    (options as { readOnly: boolean }).readOnly = true;
+
+    const list = new List(options);
+    const element = list.render();
+
+    const content = element.querySelector('[data-blok-testid="list-content-container"]') as HTMLElement;
+
+    expect(content.hasAttribute('data-placeholder')).toBe(false);
+
+    list.setReadOnly(false);
+
+    expect(content.hasAttribute('data-placeholder')).toBe(true);
+  });
+
+  it('preserves DOM element reference across toggle', () => {
+    const options = createListOptions({ text: 'Hello', style: 'unordered' });
+    const list = new List(options);
+    const element = list.render();
+
+    list.setReadOnly(true);
+    list.setReadOnly(false);
+
+    expect(list.render()).toBe(element);
+  });
+});

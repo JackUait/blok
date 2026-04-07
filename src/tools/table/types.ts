@@ -1,10 +1,32 @@
 import type { BlockToolData } from '../../../types';
 
 /**
+ * Content placement within a cell.
+ * Describes vertical (top/middle/bottom) and horizontal (left/center/right) alignment.
+ */
+export type CellPlacement =
+  | 'top-left' | 'top-center' | 'top-right'
+  | 'middle-left' | 'middle-center' | 'middle-right'
+  | 'bottom-left' | 'bottom-center' | 'bottom-right';
+
+/**
  * Cell content always contains block IDs.
  * Every cell in the table is represented as an array of block references.
  */
-export type CellContent = { blocks: string[]; color?: string; textColor?: string; text?: string };
+export type CellContent = {
+  blocks: string[];
+  color?: string;
+  textColor?: string;
+  text?: string;
+  /** Content placement within the cell (vertical + horizontal alignment). */
+  placement?: CellPlacement;
+  /** Number of columns this cell spans (default 1 when omitted). Only set on origin cells. */
+  colspan?: number;
+  /** Number of rows this cell spans (default 1 when omitted). Only set on origin cells. */
+  rowspan?: number;
+  /** If set, this cell is covered by a merge whose origin is at [row, col]. */
+  mergedInto?: [number, number];
+};
 
 /**
  * Legacy cell content type for migration from string-based cells.
@@ -73,5 +95,5 @@ export interface ClipboardBlockData {
 export interface TableCellsClipboard {
   rows: number;
   cols: number;
-  cells: Array<Array<{ blocks: ClipboardBlockData[]; color?: string; textColor?: string }>>;
+  cells: Array<Array<{ blocks: ClipboardBlockData[]; color?: string; textColor?: string; placement?: CellPlacement }>>;
 }

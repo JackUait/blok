@@ -341,23 +341,23 @@ test.describe('Column Resizing', () => {
 
     await expect(table).toBeVisible();
 
-    // Measure first column width via inline style set by TableResize.applyWidths()
-    const firstCellWidth = await page.evaluate(() => {
-      const cell = document.querySelector('[data-blok-table-cell]') as HTMLElement;
+    // Measure first column width via inline style on <col> elements in <colgroup>
+    const firstColWidth = await page.evaluate(() => {
+      const cols = document.querySelectorAll('[data-blok-tool="table"] colgroup col');
 
-      return cell?.style.width;
+      return (cols[0] as HTMLElement)?.style.width;
     });
 
-    expect(firstCellWidth).toBe('400px');
+    expect(firstColWidth).toBe('400px');
 
     // Measure second column width
-    const secondCellWidth = await page.evaluate(() => {
-      const cells = document.querySelectorAll('[data-blok-table-cell]');
+    const secondColWidth = await page.evaluate(() => {
+      const cols = document.querySelectorAll('[data-blok-tool="table"] colgroup col');
 
-      return (cells[1] as HTMLElement).style.width;
+      return (cols[1] as HTMLElement)?.style.width;
     });
 
-    expect(secondCellWidth).toBe('200px');
+    expect(secondColWidth).toBe('200px');
   });
 
   test('Dragging a resize handle cannot shrink a column below 50px minimum width', async ({ page }) => {
@@ -422,12 +422,11 @@ test.describe('Column Resizing', () => {
       },
     });
 
-    // Verify cells do NOT have an inline width style with px before resize
+    // Verify <col> elements do NOT have an inline width style with px before resize
     const hasPixelWidthBefore = await page.evaluate(() => {
-      const cells = document.querySelectorAll('[data-blok-table-cell]');
-      const firstRow = [cells[0], cells[1]] as HTMLElement[];
+      const cols = document.querySelectorAll('[data-blok-tool="table"] colgroup col');
 
-      return firstRow.some((cell) => cell.style.width?.includes('px'));
+      return Array.from(cols).some((col) => (col as HTMLElement).style.width?.includes('px'));
     });
 
     expect(hasPixelWidthBefore).toBe(false);
@@ -449,14 +448,13 @@ test.describe('Column Resizing', () => {
     await page.mouse.move(startX + 50, startY, { steps: 5 });
     await page.mouse.up();
 
-    // Verify all cells in the first row now have inline width style containing px
-    const firstRowPixelWidths = await page.evaluate(() => {
-      const cells = document.querySelectorAll('[data-blok-table-cell]');
-      const firstRow = [cells[0], cells[1]] as HTMLElement[];
+    // Verify all <col> elements now have inline width style containing px
+    const colPixelWidths = await page.evaluate(() => {
+      const cols = document.querySelectorAll('[data-blok-tool="table"] colgroup col');
 
-      return firstRow.map((cell) => cell.style.width?.includes('px') ?? false);
+      return Array.from(cols).map((col) => (col as HTMLElement).style.width?.includes('px') ?? false);
     });
 
-    expect(firstRowPixelWidths).toStrictEqual([true, true]);
+    expect(colPixelWidths).toStrictEqual([true, true]);
   });
 });

@@ -6,6 +6,7 @@
 
 import type { API } from '../../../types';
 
+import { mountChildBlocks } from '../nested-blocks';
 import { setupPlaceholder } from '../../components/utils/placeholder';
 
 import { TOGGLE_ATTR } from './constants';
@@ -94,11 +95,11 @@ export const updateChildrenVisibility = (
     arrowElement.focus();
   }
 
-  for (const child of children) {
-    if (childContainer && child.holder.parentElement !== childContainer) {
-      childContainer.appendChild(child.holder);
-    }
+  if (childContainer) {
+    mountChildBlocks(childContainer, children);
+  }
 
+  for (const child of children) {
     if (isOpen) {
       child.holder.classList.remove('hidden');
     } else {

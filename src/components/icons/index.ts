@@ -495,6 +495,17 @@ export const IconWrap = `
 </svg>
 `;
 
+// Line numbers icon (gutter marks + code lines)
+export const IconLineNumbers = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M7 4v12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" opacity="0.35"/>
+  <circle cx="4.5" cy="7" r="0.75" fill="currentColor"/>
+  <circle cx="4.5" cy="10" r="0.75" fill="currentColor"/>
+  <circle cx="4.5" cy="13" r="0.75" fill="currentColor"/>
+  <path d="M10 7h6M10 10h6M10 13h4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
 // Emoji Picker Category Icons
 
 // Star icon (Callout category)
@@ -631,5 +642,32 @@ export const IconCalendar = `
   <circle cx="7" cy="12" r="1" fill="currentColor"/>
   <circle cx="10" cy="12" r="1" fill="currentColor"/>
   <circle cx="13" cy="12" r="1" fill="currentColor"/>
+</svg>
+`;
+
+// Merge cells icon (two cells merging into one)
+export const IconMergeCells = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M10 4v12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-dasharray="1.5 2"/>
+  <path d="M5.5 7 8.5 10 5.5 13" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M14.5 7 11.5 10 14.5 13" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Split cell icon (one cell splitting into two)
+export const IconSplitCell = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18"/><path d="M8 8l4 4-4 4"/><path d="M16 8l-4 4 4 4"/></svg>`;
+
+// Placement icon (3x3 alignment dot grid)
+export const IconPlacement = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="6" cy="6" r="1.25" fill="currentColor"/>
+  <circle cx="10" cy="6" r="1.25" fill="currentColor"/>
+  <circle cx="14" cy="6" r="1.25" fill="currentColor"/>
+  <circle cx="6" cy="10" r="1.25" fill="currentColor"/>
+  <circle cx="10" cy="10" r="1.25" fill="currentColor"/>
+  <circle cx="14" cy="10" r="1.25" fill="currentColor"/>
+  <circle cx="6" cy="14" r="1.25" fill="currentColor"/>
+  <circle cx="10" cy="14" r="1.25" fill="currentColor"/>
+  <circle cx="14" cy="14" r="1.25" fill="currentColor"/>
 </svg>
 `;

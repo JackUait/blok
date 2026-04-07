@@ -1,0 +1,20 @@
+name: Push to mirror
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+
+jobs:
+  mirror:
+    if: github.repository != 'dodopizza/blok'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Push to mirror
+        run: |
+          git remote add mirror https://x-access-token:${{ secrets.MIRROR_PAT }}@github.com/dodopizza/blok.git
+          git push mirror --mirror

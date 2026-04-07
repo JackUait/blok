@@ -1911,4 +1911,113 @@ describe('TableModel', () => {
       expect(model.getCellTextColor(0, 0)).toBe('#787774');
     });
   });
+
+  describe('cell placement', () => {
+    it('preserves placement field through snapshot', () => {
+      const data = makeData({
+        content: [
+          [{ blocks: ['b1'], placement: 'middle-center' }, { blocks: ['b2'] }],
+        ],
+      });
+      const model = new TableModel(data);
+      const snap = model.snapshot();
+      expect((snap.content[0][0] as CellContent).placement).toBe('middle-center');
+      expect((snap.content[0][1] as CellContent).placement).toBeUndefined();
+    });
+
+    it('setCellPlacement sets placement on a cell', () => {
+      const data = makeData({
+        content: [[{ blocks: ['b1'] }, { blocks: ['b2'] }]],
+      });
+      const model = new TableModel(data);
+      model.setCellPlacement(0, 0, 'bottom-right');
+      const snap = model.snapshot();
+      expect((snap.content[0][0] as CellContent).placement).toBe('bottom-right');
+      expect((snap.content[0][1] as CellContent).placement).toBeUndefined();
+    });
+
+    it('setCellPlacement with undefined removes placement', () => {
+      const data = makeData({
+        content: [[{ blocks: ['b1'], placement: 'middle-center' }]],
+      });
+      const model = new TableModel(data);
+      model.setCellPlacement(0, 0, undefined);
+      const snap = model.snapshot();
+      expect((snap.content[0][0] as CellContent).placement).toBeUndefined();
+    });
+
+    it('setCellPlacement is no-op for out-of-bounds', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+      model.setCellPlacement(5, 5, 'bottom-right');
+      expect(model.snapshot().content[0][0]).toEqual({ blocks: [] });
+    });
+
+    it('getCellPlacement returns placement for a cell', () => {
+      const data = makeData({
+        content: [[{ blocks: [], placement: 'top-right' }]],
+      });
+      const model = new TableModel(data);
+      expect(model.getCellPlacement(0, 0)).toBe('top-right');
+    });
+
+    it('getCellPlacement returns undefined when no placement set', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+      expect(model.getCellPlacement(0, 0)).toBeUndefined();
+    });
+
+    it('placement survives replaceAll (undo/redo)', () => {
+      const data = makeData({
+        content: [[{ blocks: ['b1'], placement: 'bottom-center' }]],
+      });
+      const model = new TableModel(data);
+      const snap = model.snapshot();
+      model.replaceAll(snap);
+      expect(model.getCellPlacement(0, 0)).toBe('bottom-center');
+    });
+
+    it('addRow creates cells without placement', () => {
+      const data = makeData({
+        content: [[{ blocks: [], placement: 'middle-center' }]],
+      });
+      const model = new TableModel(data);
+      model.addRow();
+      expect(model.getCellPlacement(1, 0)).toBeUndefined();
+      expect(model.getCellPlacement(0, 0)).toBe('middle-center');
+    });
+
+    it('addColumn creates cells without placement', () => {
+      const data = makeData({
+        content: [[{ blocks: [], placement: 'middle-center' }]],
+      });
+      const model = new TableModel(data);
+      model.addColumn();
+      expect(model.getCellPlacement(0, 1)).toBeUndefined();
+      expect(model.getCellPlacement(0, 0)).toBe('middle-center');
+    });
+
+    it('moveRow preserves cell placements', () => {
+      const data = makeData({
+        content: [
+          [{ blocks: [], placement: 'bottom-right' }],
+          [{ blocks: [] }],
+        ],
+      });
+      const model = new TableModel(data);
+      model.moveRow(0, 1);
+      expect(model.getCellPlacement(1, 0)).toBe('bottom-right');
+      expect(model.getCellPlacement(0, 0)).toBeUndefined();
+    });
+
+    it('moveColumn preserves cell placements', () => {
+      const data = makeData({
+        content: [
+          [{ blocks: [], placement: 'bottom-right' }, { blocks: [] }],
+        ],
+      });
+      const model = new TableModel(data);
+      model.moveColumn(0, 1);
+      expect(model.getCellPlacement(0, 1)).toBe('bottom-right');
+      expect(model.getCellPlacement(0, 0)).toBeUndefined();
+    });
+  });
 });

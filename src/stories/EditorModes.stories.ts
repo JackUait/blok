@@ -5,7 +5,6 @@
  * - ReadOnlyMode: Editor in read-only state
  * - EmptyEditor: Editor with no initial content
  * - ToolboxOpenedMode: Editor with toolbox popover open
- * - NarrowMode: Editor in constrained width container
  *
  * Do not duplicate these stories in other files.
  */
@@ -81,52 +80,6 @@ export const ReadOnlyMode: Story = {
   args: {
     data: sampleData,
     readOnly: true,
-  },
-};
-
-/**
- * Narrow mode - editor in a constrained width container.
- * Toolbar actions move inside the content area.
- */
-export const NarrowMode: Story = {
-  args: {
-    data: sampleData,
-    readOnly: false,
-    width: 400,
-  },
-  parameters: {
-    chromatic: { delay: 500 },
-  },
-  play: async ({ canvasElement, step }) => {
-    await step('Wait for editor and toolbar to initialize', async () => {
-      await waitFor(
-        () => {
-          const block = canvasElement.querySelector(BLOCK_TESTID);
-
-          expect(block).toBeInTheDocument();
-        },
-        TIMEOUT_INIT
-      );
-      // Wait for toolbar to be created (happens in requestIdleCallback)
-      await waitForToolbar(canvasElement);
-    });
-
-    await step('Click block to show toolbar in narrow mode', async () => {
-      const block = canvasElement.querySelector(BLOCK_TESTID);
-
-      if (block) {
-        simulateClick(block);
-      }
-
-      await waitFor(
-        () => {
-          const toolbar = canvasElement.querySelector(TOOLBAR_TESTID);
-
-          expect(toolbar).toHaveAttribute('data-blok-opened', 'true');
-        },
-        TIMEOUT_ACTION
-      );
-    });
   },
 };
 
@@ -214,7 +167,6 @@ export const ToolboxOpenedMode: Story = {
   args: {
     data: sampleData,
     readOnly: false,
-    width: 450,
   },
   parameters: {
     chromatic: { delay: 500 },
@@ -266,18 +218,6 @@ export const ToolboxOpenedMode: Story = {
         TIMEOUT_ACTION
       );
     });
-  },
-};
-
-/**
- * Compact narrow editor (mobile-like).
- */
-export const CompactNarrow: Story = {
-  args: {
-    data: sampleData,
-    readOnly: false,
-    width: 320,
-    minHeight: 200,
   },
 };
 

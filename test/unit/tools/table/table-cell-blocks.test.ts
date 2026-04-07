@@ -40,45 +40,11 @@ describe('TableCellBlocks', () => {
     });
   });
 
-  describe('isInCellBlock', () => {
-    it('should return true when element is inside a cell block container', async () => {
-      // Create DOM structure: cell > container > block > content
-      const cell = document.createElement('div');
-      cell.setAttribute('data-blok-table-cell', '');
-
-      const container = document.createElement('div');
-      container.setAttribute('data-blok-table-cell-blocks', '');
-      cell.appendChild(container);
-
-      const block = document.createElement('div');
-      block.setAttribute('data-blok-id', 'block-1');
-      container.appendChild(block);
-
-      const content = document.createElement('div');
-      content.setAttribute('contenteditable', 'true');
-      block.appendChild(content);
-
-      // Import after setting up DOM
-      const { isInCellBlock } = await import('../../../../src/tools/table/table-cell-blocks');
-
-      expect(isInCellBlock(content)).toBe(true);
-    });
-
-    it('should return false when element is in plain text cell', async () => {
-      const cell = document.createElement('div');
-      cell.setAttribute('data-blok-table-cell', '');
-      cell.setAttribute('contenteditable', 'true');
-
-      const { isInCellBlock } = await import('../../../../src/tools/table/table-cell-blocks');
-
-      expect(isInCellBlock(cell)).toBe(false);
-    });
-  });
-
   describe('getCellFromElement', () => {
     it('should return the cell element containing the given element', async () => {
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
 
       const nested = document.createElement('span');
       cell.appendChild(nested);
@@ -189,6 +155,7 @@ describe('TableCellBlocks', () => {
 
         const cell = document.createElement('div');
         cell.setAttribute('data-blok-table-cell', '');
+        cell.setAttribute('data-blok-table-cell-col', '0');
         row.appendChild(cell);
 
         const container = document.createElement('div');
@@ -283,6 +250,7 @@ describe('TableCellBlocks', () => {
 
         const cell = document.createElement('div');
         cell.setAttribute('data-blok-table-cell', '');
+        cell.setAttribute('data-blok-table-cell-col', '0');
         row.appendChild(cell);
 
         const container = document.createElement('div');
@@ -325,6 +293,69 @@ describe('TableCellBlocks', () => {
         expect(mockApi.caret.setToBlock).not.toHaveBeenCalled();
       });
     });
+
+    describe('block-moved handling', () => {
+      it('should remove block from model when block-moved event fires and block left this table', async () => {
+        const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+        const model = createMockModel();
+
+        // The model still tracks the moved block at cell (0, 0)
+        (model.findCellForBlock as ReturnType<typeof vi.fn>).mockImplementation((id: string) => {
+          if (id === 'moved-block') return { row: 0, col: 0 };
+
+          return null;
+        });
+
+        // Capture the handler registered via api.events.on('block changed', handler)
+        let blockChangedHandler: ((data: unknown) => void) | undefined;
+
+        const api = {
+          blocks: {},
+          events: {
+            on: vi.fn((eventName: string, cb: (data: unknown) => void) => {
+              if (eventName === 'block changed') {
+                blockChangedHandler = cb;
+              }
+            }),
+            off: vi.fn(),
+          },
+        } as unknown as API;
+
+        new TableCellBlocks({
+          api: api as never,
+          gridElement: gridEl,
+          tableBlockId: 'table-1',
+          model,
+        });
+
+        expect(blockChangedHandler).toBeDefined();
+
+        // Create a holder that is NOT inside this table's grid (simulating the
+        // block was moved out of the table to somewhere else in the editor)
+        const movedBlockHolder = document.createElement('div');
+
+        movedBlockHolder.setAttribute('data-blok-id', 'moved-block');
+        document.body.appendChild(movedBlockHolder);
+
+        // Fire the block-moved event
+        blockChangedHandler!({
+          event: {
+            type: 'block-moved',
+            detail: {
+              target: { id: 'moved-block', holder: movedBlockHolder },
+              fromIndex: 1,
+              toIndex: 5,
+            },
+          },
+        });
+
+        // The source table should remove the stale block reference from its model
+        expect(model.removeBlockFromCell).toHaveBeenCalledWith(0, 0, 'moved-block');
+
+        movedBlockHolder.remove();
+      });
+    });
   });
 
   describe('handleKeyDown in cell blocks', () => {
@@ -335,6 +366,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
 
       const container = document.createElement('div');
 
@@ -377,6 +409,8 @@ describe('TableCellBlocks', () => {
       const { cell: c1 } = buildCellWithEditable(cellBlocksAttr);
       const { cell: c2 } = buildCellWithEditable(cellBlocksAttr);
 
+      c1.setAttribute('data-blok-table-cell-col', '0');
+      c2.setAttribute('data-blok-table-cell-col', '1');
       row1.appendChild(c1);
       row1.appendChild(c2);
       gridEl.appendChild(row1);
@@ -387,6 +421,7 @@ describe('TableCellBlocks', () => {
 
       const { cell: c3 } = buildCellWithEditable(cellBlocksAttr);
 
+      c3.setAttribute('data-blok-table-cell-col', '0');
       row2.appendChild(c3);
       gridEl.appendChild(row2);
 
@@ -499,6 +534,7 @@ describe('TableCellBlocks', () => {
       // Cell 0
       const cell0 = document.createElement('div');
       cell0.setAttribute('data-blok-table-cell', '');
+      cell0.setAttribute('data-blok-table-cell-col', '0');
       const container0 = document.createElement('div');
       container0.setAttribute(CELL_BLOCKS_ATTR, '');
       const block0 = document.createElement('div');
@@ -512,6 +548,7 @@ describe('TableCellBlocks', () => {
       // Cell 1
       const cell1 = document.createElement('div');
       cell1.setAttribute('data-blok-table-cell', '');
+      cell1.setAttribute('data-blok-table-cell-col', '1');
       const container1 = document.createElement('div');
       container1.setAttribute(CELL_BLOCKS_ATTR, '');
       const block1 = document.createElement('div');
@@ -551,6 +588,7 @@ describe('TableCellBlocks', () => {
       // Cell 0 with two blocks
       const cell0 = document.createElement('div');
       cell0.setAttribute('data-blok-table-cell', '');
+      cell0.setAttribute('data-blok-table-cell-col', '0');
       const container0 = document.createElement('div');
       container0.setAttribute(CELL_BLOCKS_ATTR, '');
       const block0a = document.createElement('div');
@@ -570,6 +608,7 @@ describe('TableCellBlocks', () => {
       // Cell 1
       const cell1 = document.createElement('div');
       cell1.setAttribute('data-blok-table-cell', '');
+      cell1.setAttribute('data-blok-table-cell-col', '1');
       const container1 = document.createElement('div');
       container1.setAttribute(CELL_BLOCKS_ATTR, '');
       const block1 = document.createElement('div');
@@ -609,6 +648,7 @@ describe('TableCellBlocks', () => {
       row0.setAttribute('data-blok-table-row', '');
       const cell00 = document.createElement('div');
       cell00.setAttribute('data-blok-table-cell', '');
+      cell00.setAttribute('data-blok-table-cell-col', '0');
       const cont00 = document.createElement('div');
       cont00.setAttribute(CELL_BLOCKS_ATTR, '');
       const blk00 = document.createElement('div');
@@ -625,6 +665,7 @@ describe('TableCellBlocks', () => {
       row1.setAttribute('data-blok-table-row', '');
       const cell10 = document.createElement('div');
       cell10.setAttribute('data-blok-table-cell', '');
+      cell10.setAttribute('data-blok-table-cell-col', '0');
       const cont10 = document.createElement('div');
       cont10.setAttribute(CELL_BLOCKS_ATTR, '');
       const blk10 = document.createElement('div');
@@ -664,6 +705,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -723,6 +765,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -817,6 +860,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -895,6 +939,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -977,6 +1022,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -1063,6 +1109,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -1139,6 +1186,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -1229,6 +1277,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -1310,6 +1359,7 @@ describe('TableCellBlocks', () => {
       row.setAttribute('data-blok-table-row', '');
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
       // Container is empty — no block holders
@@ -1346,6 +1396,7 @@ describe('TableCellBlocks', () => {
       row.setAttribute('data-blok-table-row', '');
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
       const existingBlock = document.createElement('div');
@@ -1397,6 +1448,7 @@ describe('TableCellBlocks', () => {
       row.setAttribute('data-blok-table-row', '');
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
 
@@ -1462,6 +1514,7 @@ describe('TableCellBlocks', () => {
       // Cell with two blocks: the first will be replaced, the second provides adjacency
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
 
@@ -1573,6 +1626,7 @@ describe('TableCellBlocks', () => {
       // Cell (0,0) with a single block — the one being replaced
       const cell00 = document.createElement('div');
       cell00.setAttribute('data-blok-table-cell', '');
+      cell00.setAttribute('data-blok-table-cell-col', '0');
       const container00 = document.createElement('div');
       container00.setAttribute(CELL_BLOCKS_ATTR, '');
       const paraBlock = document.createElement('div');
@@ -1583,6 +1637,7 @@ describe('TableCellBlocks', () => {
       // Cell (0,1) with a single block — NOT the target cell
       const cell01 = document.createElement('div');
       cell01.setAttribute('data-blok-table-cell', '');
+      cell01.setAttribute('data-blok-table-cell-col', '1');
       const container01 = document.createElement('div');
       container01.setAttribute(CELL_BLOCKS_ATTR, '');
       const otherBlock = document.createElement('div');
@@ -1710,6 +1765,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -1760,6 +1816,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -1811,6 +1868,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -1855,6 +1913,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -1903,6 +1962,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -1960,6 +2020,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -2007,6 +2068,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -2027,13 +2089,14 @@ describe('TableCellBlocks', () => {
       expect(setBlockParentMock).toHaveBeenCalledWith('new-para-1', 'table-1');
     });
 
-    it('steals block from original table when called with existing block ID (documents the root cause)', async () => {
+    it('does not steal block from original table when called with existing block ID', async () => {
       const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       // Original cell DOM: a container that already holds an existing block holder
       const existingBlockHolder = document.createElement('div');
       const originalCellContainer = document.createElement('div');
       originalCellContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+      originalCellContainer.setAttribute('data-blok-nested-blocks', '');
       originalCellContainer.appendChild(existingBlockHolder);
 
       // Pasted table grid: a 1x1 table (row > cell > container)
@@ -2042,15 +2105,20 @@ describe('TableCellBlocks', () => {
       pastedRow.setAttribute('data-blok-table-row', '');
       const pastedCell = document.createElement('div');
       pastedCell.setAttribute('data-blok-table-cell', '');
+      pastedCell.setAttribute('data-blok-table-cell-col', '0');
       const pastedCellContainer = document.createElement('div');
       pastedCellContainer.setAttribute(CELL_BLOCKS_ATTR, '');
       pastedCell.appendChild(pastedCellContainer);
       pastedRow.appendChild(pastedCell);
       pastedGridElement.appendChild(pastedRow);
 
+      const fallbackHolder = document.createElement('div');
+
+      fallbackHolder.setAttribute('data-blok-id', 'fallback-para');
+
       const api = {
         blocks: {
-          insert: vi.fn(),
+          insert: vi.fn().mockReturnValue({ id: 'fallback-para', holder: fallbackHolder }),
           getBlockIndex: vi.fn((id: string) => {
             if (id === 'original-para-id') return 0;
 
@@ -2061,6 +2129,7 @@ describe('TableCellBlocks', () => {
 
             return undefined;
           }),
+          getBlocksCount: vi.fn().mockReturnValue(1),
           setBlockParent: vi.fn(),
         },
         events: { on: vi.fn(), off: vi.fn() },
@@ -2076,10 +2145,10 @@ describe('TableCellBlocks', () => {
       // Call with the OLD ID — the one that already belongs to the original table
       cellBlocks.initializeCells([[{ blocks: ['original-para-id'] }]]);
 
-      // The block was stolen: no longer in the original container
-      expect(originalCellContainer.contains(existingBlockHolder)).toBe(false);
-      // And now lives in the pasted table's cell container
-      expect(pastedCellContainer.contains(existingBlockHolder)).toBe(true);
+      // The block should NOT be stolen — it must stay in the original container
+      expect(originalCellContainer.contains(existingBlockHolder)).toBe(true);
+      // The pasted table should NOT contain the original block
+      expect(pastedCellContainer.contains(existingBlockHolder)).toBe(false);
     });
 
     it('does not disturb original table blocks when called with new remapped IDs (fix verification)', async () => {
@@ -2097,6 +2166,7 @@ describe('TableCellBlocks', () => {
       pastedRow.setAttribute('data-blok-table-row', '');
       const pastedCell = document.createElement('div');
       pastedCell.setAttribute('data-blok-table-cell', '');
+      pastedCell.setAttribute('data-blok-table-cell-col', '0');
       const pastedCellContainer = document.createElement('div');
       pastedCellContainer.setAttribute(CELL_BLOCKS_ATTR, '');
       pastedCell.appendChild(pastedCellContainer);
@@ -2176,6 +2246,7 @@ describe('TableCellBlocks', () => {
       row.setAttribute('data-blok-table-row', '');
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
       cell.appendChild(container);
@@ -2246,6 +2317,7 @@ describe('TableCellBlocks', () => {
       row.setAttribute('data-blok-table-row', '');
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
       cell.appendChild(container);
@@ -2296,6 +2368,7 @@ describe('TableCellBlocks', () => {
       row.setAttribute('data-blok-table-row', '');
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
       // Container is empty — ensureCellHasBlock will insert and call stripPlaceholders
@@ -2325,6 +2398,7 @@ describe('TableCellBlocks', () => {
       // Cell with two blocks
       const cell0 = document.createElement('div');
       cell0.setAttribute('data-blok-table-cell', '');
+      cell0.setAttribute('data-blok-table-cell-col', '0');
       const container0 = document.createElement('div');
       container0.setAttribute(CELL_BLOCKS_ATTR, '');
       const block0a = document.createElement('div');
@@ -2338,6 +2412,7 @@ describe('TableCellBlocks', () => {
       // Cell with one block
       const cell1 = document.createElement('div');
       cell1.setAttribute('data-blok-table-cell', '');
+      cell1.setAttribute('data-blok-table-cell-col', '1');
       const container1 = document.createElement('div');
       container1.setAttribute(CELL_BLOCKS_ATTR, '');
       const block1 = document.createElement('div');
@@ -2365,6 +2440,7 @@ describe('TableCellBlocks', () => {
       // Cell without a blocks container
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
 
       const api = { blocks: {}, events: { on: vi.fn(), off: vi.fn() } } as unknown as API;
       const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
@@ -2380,6 +2456,7 @@ describe('TableCellBlocks', () => {
       const gridElement = document.createElement('div');
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
       cell.appendChild(container);
@@ -2448,6 +2525,99 @@ describe('TableCellBlocks', () => {
       expect(mockDelete).toHaveBeenCalledTimes(1);
       expect(mockDelete).toHaveBeenCalledWith(0);
     });
+
+    it('should preserve scroll position when deleting blocks causes a scroll jump', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      let currentScrollY = 500;
+      const originalDescriptor = Object.getOwnPropertyDescriptor(window, 'scrollY');
+
+      Object.defineProperty(window, 'scrollY', {
+        get: () => currentScrollY,
+        configurable: true,
+      });
+
+      const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation((() => {}) as typeof window.scrollTo);
+
+      /**
+       * Mock delete as async (matching the real api.blocks.delete signature).
+       * The scroll jump from Caret.setToBlock() happens after the await inside
+       * delete(), so we simulate it in the resolved promise.
+       */
+      const mockDelete = vi.fn(async () => {
+        currentScrollY = 0;
+      });
+
+      const api = {
+        blocks: {
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'b1') return 0;
+            if (id === 'b2') return 1;
+
+            return undefined;
+          }),
+          delete: mockDelete,
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
+
+      cellBlocks.deleteBlocks(['b1', 'b2']);
+
+      // Flush the Promise.all().then() microtask chain
+      await new Promise(resolve => { setTimeout(resolve, 0); });
+
+      expect(scrollToSpy).toHaveBeenCalledWith(0, 500);
+
+      scrollToSpy.mockRestore();
+      if (originalDescriptor) {
+        Object.defineProperty(window, 'scrollY', originalDescriptor);
+      }
+    });
+
+    it('should not call scrollTo when scroll position is unchanged after deletion', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const originalDescriptor = Object.getOwnPropertyDescriptor(window, 'scrollY');
+
+      Object.defineProperty(window, 'scrollY', {
+        get: () => 300,
+        configurable: true,
+      });
+
+      const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation((() => {}) as typeof window.scrollTo);
+
+      const mockDelete = vi.fn(async () => {});
+
+      const api = {
+        blocks: {
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'b1') return 0;
+
+            return undefined;
+          }),
+          delete: mockDelete,
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
+
+      cellBlocks.deleteBlocks(['b1']);
+
+      // Flush the Promise.all().then() microtask chain
+      await new Promise(resolve => { setTimeout(resolve, 0); });
+
+      expect(scrollToSpy).not.toHaveBeenCalled();
+
+      scrollToSpy.mockRestore();
+      if (originalDescriptor) {
+        Object.defineProperty(window, 'scrollY', originalDescriptor);
+      }
+    });
   });
 
   describe('initializeCells recovery for missing blocks', () => {
@@ -2477,6 +2647,7 @@ describe('TableCellBlocks', () => {
       row.setAttribute('data-blok-table-row', '');
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
       cell.appendChild(container);
@@ -2532,6 +2703,7 @@ describe('TableCellBlocks', () => {
       row.setAttribute('data-blok-table-row', '');
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
       cell.appendChild(container);
@@ -2600,6 +2772,7 @@ describe('TableCellBlocks', () => {
         for (let c = 0; c < 3; c++) {
           const cell = document.createElement('div');
           cell.setAttribute('data-blok-table-cell', '');
+          cell.setAttribute('data-blok-table-cell-col', String(c));
           const container = document.createElement('div');
           container.setAttribute(CELL_BLOCKS_ATTR, '');
           cell.appendChild(container);
@@ -2678,6 +2851,7 @@ describe('TableCellBlocks', () => {
       row.setAttribute('data-blok-table-row', '');
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
       cell.appendChild(container);
@@ -2708,6 +2882,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -2733,6 +2908,283 @@ describe('TableCellBlocks', () => {
 
       // Enter should NOT be prevented — let the editor handle it
       expect(preventSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('cross-table block stealing prevention', () => {
+    it('mountBlocksInCell should not steal a block already mounted in another cell container', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      // Original table's cell container — the block already lives here
+      const originalContainer = document.createElement('div');
+      originalContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+      originalContainer.setAttribute('data-blok-nested-blocks', '');
+
+      const blockHolder = document.createElement('div');
+      blockHolder.setAttribute('data-blok-id', 'stolen-block');
+      originalContainer.appendChild(blockHolder);
+
+      // New (pasted) table grid: 1x1 with its own cell container
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
+      const newContainer = document.createElement('div');
+      newContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(newContainer);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const fallbackHolder = document.createElement('div');
+
+      fallbackHolder.setAttribute('data-blok-id', 'fallback-paragraph');
+
+      const api = {
+        blocks: {
+          insert: vi.fn().mockReturnValue({ id: 'fallback-paragraph', holder: fallbackHolder }),
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'stolen-block') return 0;
+
+            return undefined;
+          }),
+          getBlockByIndex: vi.fn((index: number) => {
+            if (index === 0) return { id: 'stolen-block', holder: blockHolder };
+
+            return undefined;
+          }),
+          getBlocksCount: vi.fn().mockReturnValue(1),
+          setBlockParent: vi.fn(),
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const cellBlocks = new TableCellBlocks({
+        api,
+        gridElement,
+        tableBlockId: 'pasted-table',
+        model: createMockModel(),
+      });
+
+      // initializeCells calls mountBlocksInCell internally
+      cellBlocks.initializeCells([[{ blocks: ['stolen-block'] }]]);
+
+      // The block should NOT have been moved — it must stay in the original container
+      expect(originalContainer.contains(blockHolder)).toBe(true);
+      expect(newContainer.contains(blockHolder)).toBe(false);
+    });
+
+    it('should duplicate a stolen block with the same tool name and data instead of creating an empty paragraph', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      // Original table's cell container — the block already lives here
+      const originalContainer = document.createElement('div');
+      originalContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+      originalContainer.setAttribute('data-blok-nested-blocks', '');
+
+      const blockHolder = document.createElement('div');
+      blockHolder.setAttribute('data-blok-id', 'stolen-block');
+      blockHolder.innerHTML = '<div>Original paragraph</div>';
+      originalContainer.appendChild(blockHolder);
+
+      // New table grid: 1x1 with its own cell container
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
+      const newContainer = document.createElement('div');
+      newContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(newContainer);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const duplicateHolder = document.createElement('div');
+
+      duplicateHolder.setAttribute('data-blok-id', 'duplicate-block');
+
+      const api = {
+        blocks: {
+          insert: vi.fn().mockReturnValue({ id: 'duplicate-block', holder: duplicateHolder }),
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'stolen-block') return 0;
+
+            return undefined;
+          }),
+          getBlockByIndex: vi.fn((index: number) => {
+            if (index === 0) {
+              return {
+                id: 'stolen-block',
+                holder: blockHolder,
+                name: 'paragraph',
+                preservedData: { text: 'Original paragraph' },
+              };
+            }
+
+            return undefined;
+          }),
+          getBlocksCount: vi.fn().mockReturnValue(1),
+          setBlockParent: vi.fn(),
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const cellBlocks = new TableCellBlocks({
+        api,
+        gridElement,
+        tableBlockId: 'new-table',
+        model: createMockModel(),
+      });
+
+      const result = cellBlocks.initializeCells([[{ blocks: ['stolen-block'] }]]);
+
+      // The original block must stay in its original container
+      expect(originalContainer.contains(blockHolder)).toBe(true);
+
+      // A duplicate block must be created with the stolen block's tool name and data
+      expect(api.blocks.insert).toHaveBeenCalledWith(
+        'paragraph',
+        { text: 'Original paragraph' },
+        {},
+        expect.any(Number),
+        false
+      );
+
+      // The duplicate's holder must be mounted in the new container
+      expect(newContainer.contains(duplicateHolder)).toBe(true);
+
+      // The normalized content must reference the duplicate's ID, not the stolen block's
+      expect(result[0][0].blocks).toContain('duplicate-block');
+      expect(result[0][0].blocks).not.toContain('stolen-block');
+    });
+
+    it('mountBlocksInCell should not steal a block from a toggle child container', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+      const { TOGGLE_ATTR } = await import('../../../../src/tools/toggle/constants');
+
+      // Toggle's child container — the block already lives here
+      const toggleChildrenContainer = document.createElement('div');
+      toggleChildrenContainer.setAttribute(TOGGLE_ATTR.toggleChildren, '');
+      toggleChildrenContainer.setAttribute('data-blok-nested-blocks', '');
+
+      const blockHolder = document.createElement('div');
+      blockHolder.setAttribute('data-blok-id', 'toggle-child-block');
+      blockHolder.innerHTML = '<div>Child paragraph</div>';
+      toggleChildrenContainer.appendChild(blockHolder);
+
+      // Table grid: 1x1 with its own cell container
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
+      const cellContainer = document.createElement('div');
+      cellContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(cellContainer);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const duplicateHolder = document.createElement('div');
+      duplicateHolder.setAttribute('data-blok-id', 'duplicate-block');
+
+      const api = {
+        blocks: {
+          insert: vi.fn().mockReturnValue({ id: 'duplicate-block', holder: duplicateHolder }),
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'toggle-child-block') return 0;
+
+            return undefined;
+          }),
+          getBlockByIndex: vi.fn((index: number) => {
+            if (index === 0) {
+              return {
+                id: 'toggle-child-block',
+                holder: blockHolder,
+                name: 'paragraph',
+                preservedData: { text: 'Child paragraph' },
+              };
+            }
+
+            return undefined;
+          }),
+          getBlocksCount: vi.fn().mockReturnValue(1),
+          setBlockParent: vi.fn(),
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const cellBlocks = new TableCellBlocks({
+        api,
+        gridElement,
+        tableBlockId: 'table-1',
+        model: createMockModel(),
+      });
+
+      cellBlocks.initializeCells([[{ blocks: ['toggle-child-block'] }]]);
+
+      // The block must NOT have been stolen from the toggle container
+      expect(toggleChildrenContainer.contains(blockHolder)).toBe(true);
+      expect(cellContainer.contains(blockHolder)).toBe(false);
+    });
+
+    it('claimBlockForCell should not steal a block already mounted in another cell container', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      // Original table's cell container — the block already lives here
+      const originalContainer = document.createElement('div');
+      originalContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+      originalContainer.setAttribute('data-blok-nested-blocks', '');
+
+      const blockHolder = document.createElement('div');
+      blockHolder.setAttribute('data-blok-id', 'stolen-block');
+      originalContainer.appendChild(blockHolder);
+
+      // New table grid: 1x1 with its own cell container
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
+      const newContainer = document.createElement('div');
+      newContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(newContainer);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const api = {
+        blocks: {
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'stolen-block') return 0;
+
+            return undefined;
+          }),
+          getBlockByIndex: vi.fn((index: number) => {
+            if (index === 0) return { id: 'stolen-block', holder: blockHolder };
+
+            return undefined;
+          }),
+          getBlocksCount: vi.fn().mockReturnValue(1),
+          setBlockParent: vi.fn(),
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const cellBlocks = new TableCellBlocks({
+        api,
+        gridElement,
+        tableBlockId: 'new-table',
+        model: createMockModel(),
+      });
+
+      cellBlocks.claimBlockForCell(cell, 'stolen-block');
+
+      // The block should NOT have been moved — it must stay in the original container
+      expect(originalContainer.contains(blockHolder)).toBe(true);
+      expect(newContainer.contains(blockHolder)).toBe(false);
     });
   });
 });

@@ -87,6 +87,16 @@ export interface BlockTool extends BaseTool {
    * @returns Object with left offset in pixels, or undefined if no offset should be applied
    */
   getContentOffset?(hoveredElement: Element): { left: number } | undefined;
+
+  /**
+   * Called when read-only mode is toggled without re-rendering the block.
+   * Implementations should update the DOM in place: toggle contentEditable,
+   * bind/unbind event listeners, show/hide interactive elements, etc.
+   *
+   * Optional — tools without this method trigger a full save/clear/render
+   * fallback when read-only mode is toggled.
+   */
+  setReadOnly?(state: boolean): void;
 }
 
 /**

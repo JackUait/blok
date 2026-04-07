@@ -1,5 +1,5 @@
 import type { SanitizerConfig } from '../../../types/configs/sanitizer-config';
-import type { ClipboardBlockData, TableCellsClipboard } from './types';
+import type { CellPlacement, ClipboardBlockData, TableCellsClipboard } from './types';
 import { mapToNearestPresetColor } from '../../components/utils/color-mapping';
 import { clean } from '../../components/utils/sanitizer';
 
@@ -33,6 +33,7 @@ interface CellEntry {
   blocks: ClipboardBlockData[];
   color?: string;
   textColor?: string;
+  placement?: CellPlacement;
 }
 
 /**
@@ -72,6 +73,10 @@ export function serializeCellsToClipboard(entries: CellEntry[]): TableCellsClipb
 
     if (entry.textColor !== undefined) {
       cells[r][c].textColor = entry.textColor;
+    }
+
+    if (entry.placement !== undefined) {
+      cells[r][c].placement = entry.placement;
     }
   }
 

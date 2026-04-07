@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { convertHtml } from '../../../../../src/cli/commands/convert-html/index';
+import { ROOT_PACKAGE_VERSION as EXPECTED_VERSION } from '../../../../helpers/packageVersion';
 
 describe('convertHtml', () => {
   it('converts simple HTML to OutputData JSON', () => {
     const json = convertHtml('<h1>Title</h1><p>Hello <b>world</b></p>');
     const result = JSON.parse(json);
 
-    expect(result.version).toBe('2.31.0');
+    expect(result.version).toBe(EXPECTED_VERSION);
     expect(result.blocks).toHaveLength(2);
     expect(result.blocks[0].type).toBe('header');
     expect(result.blocks[0].data.text).toBe('Title');
@@ -18,7 +19,7 @@ describe('convertHtml', () => {
   it('returns empty blocks for empty input', () => {
     const result = JSON.parse(convertHtml(''));
 
-    expect(result.version).toBe('2.31.0');
+    expect(result.version).toBe(EXPECTED_VERSION);
     expect(result.blocks).toEqual([]);
   });
 
@@ -48,7 +49,7 @@ describe('convertHtml', () => {
     `;
     const result = JSON.parse(convertHtml(html));
 
-    expect(result.version).toBe('2.31.0');
+    expect(result.version).toBe(EXPECTED_VERSION);
     const types = result.blocks.map((b: { type: string }) => b.type);
 
     expect(types).toContain('header');

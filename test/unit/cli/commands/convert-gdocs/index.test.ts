@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { convertGdocs } from '../../../../../src/cli/commands/convert-gdocs/index';
+import { ROOT_PACKAGE_VERSION as EXPECTED_VERSION } from '../../../../helpers/packageVersion';
 
 const gdocs = (html: string): string =>
   `<b id="docs-internal-guid-test">${html}</b>`;
@@ -9,7 +10,7 @@ describe('convertGdocs', () => {
     const json = convertGdocs(gdocs('<p><span>Hello world</span></p>'));
     const result = JSON.parse(json);
 
-    expect(result.version).toBe('2.31.0');
+    expect(result.version).toBe(EXPECTED_VERSION);
     expect(result.blocks).toHaveLength(1);
     expect(result.blocks[0].type).toBe('paragraph');
     expect(result.blocks[0].data.text).toBe('Hello world');
@@ -108,7 +109,7 @@ describe('convertGdocs', () => {
   it('returns empty blocks for empty input', () => {
     const result = JSON.parse(convertGdocs(''));
 
-    expect(result.version).toBe('2.31.0');
+    expect(result.version).toBe(EXPECTED_VERSION);
     expect(result.blocks).toEqual([]);
   });
 

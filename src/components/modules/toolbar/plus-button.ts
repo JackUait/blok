@@ -47,6 +47,13 @@ export class PlusButtonHandler {
   private moveAndOpenToolbar: (block?: Block | null, target?: Element | null) => void;
 
   /**
+   * Optional callback invoked at the very start of handleClick(), before any
+   * block manipulation, with the block that currently has focus.
+   * Used by Toolbar to capture the pre-toolbox block for focus restoration on cancel.
+   */
+  private onFocusBlockCaptured: ((block: Block | null, insertedBlock: Block | null) => void) | undefined;
+
+  /**
    * @param getBlok - Function to get Blok modules reference
    * @param callbacks - Object containing callback functions
    */
@@ -58,6 +65,7 @@ export class PlusButtonHandler {
       openToolboxWithoutSlash: () => void;
       closeToolbox: () => void;
       moveAndOpenToolbar: (block?: Block | null, target?: Element | null) => void;
+      onFocusBlockCaptured?: (block: Block | null, insertedBlock: Block | null) => void;
     }
   ) {
     this.getBlok = getBlok;
@@ -66,6 +74,7 @@ export class PlusButtonHandler {
     this.openToolboxWithoutSlash = callbacks.openToolboxWithoutSlash;
     this.closeToolbox = callbacks.closeToolbox;
     this.moveAndOpenToolbar = callbacks.moveAndOpenToolbar;
+    this.onFocusBlockCaptured = callbacks.onFocusBlockCaptured;
   }
 
   /**
@@ -175,6 +184,23 @@ export class PlusButtonHandler {
     // If hoveredBlock is not empty (e.g. a table), check if the focused block
     // is empty and nested inside it (e.g. an empty paragraph in a table cell).
     const currentBlock = BlockManager.currentBlock ?? null;
+
+    /**
+     * Capture the block that CURRENTLY HAS DOM FOCUS before any manipulation,
+     * so that focus can be restored to it if the user cancels (Escape) without
+     * selecting a tool.
+     *
+     * We cannot rely on BlockManager.currentBlock here: the mousedown event on
+     * the plus button (which lives inside the hovered block's DOM) triggers the
+     * redactorTouchHandler in capture phase, which calls setCurrentBlockByChildNode
+     * and overwrites currentBlock to the hovered block BEFORE our preventDefault
+     * or handleClick() runs.  Instead we look at the actual DOM-focused element
+     * and find which block owns it.
+     */
+    const activeEl = document.activeElement;
+    const focusedBlockBeforeOpen = activeEl !== null && activeEl !== document.body
+      ? (BlockManager.getBlockByChildNode(activeEl) ?? null)
+      : null;
     const hoveredIsEmpty = hoveredBlock !== null && hoveredBlock.isEmpty;
     const nestedCurrentBlockIsEmpty = !hoveredIsEmpty && currentBlock !== null
       && currentBlock !== hoveredBlock && currentBlock.isEmpty
@@ -214,6 +240,17 @@ export class PlusButtonHandler {
     if (targetBlock !== hoveredBlock && emptyBlockToReuse === null && isNested(targetBlock)) {
       hoveredBlock?.holder.after(targetBlock.holder);
     }
+
+    /**
+     * Notify Toolbar of the pre-open focus context.
+     * insertedBlock is non-null only when we created a brand-new empty block
+     * (not when we're reusing an existing empty block or operating in slash mode).
+     * On cancel (Escape), Toolbar will remove the inserted block and restore focus
+     * to focusedBlockBeforeOpen.
+     */
+    const insertedBlock = (!startsWithSlash && emptyBlockToReuse === null) ? targetBlock : null;
+
+    this.onFocusBlockCaptured?.(focusedBlockBeforeOpen, insertedBlock);
 
     // Position caret and open toolbox
     if (startsWithSlash) {

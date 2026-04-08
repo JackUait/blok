@@ -285,8 +285,6 @@ export class KeyboardController extends Controller {
     if (this.Blok.Toolbar.toolbox.opened) {
       event.stopPropagation();
       this.Blok.Toolbar.toolbox.close();
-      this.Blok.BlockManager.currentBlock &&
-        this.Blok.Caret.setToBlock(this.Blok.BlockManager.currentBlock, this.Blok.Caret.positions.END);
 
       return;
     }
@@ -351,6 +349,13 @@ export class KeyboardController extends Controller {
 
     if (isInsideRedactor && hasCurrentBlock && !this.Blok.DragManager.isDragging) {
       event.preventDefault();
+      /**
+       * Stop propagation so the block holder's bubble keydown handler (blockEvents.keydown)
+       * does not see this same Escape event. Without this, the block-level NavigationMode
+       * composer's handleKey() would receive the event AFTER navigation mode is enabled,
+       * see navigationModeEnabled=true + key='Escape', and immediately disable it.
+       */
+      event.stopPropagation();
       this.Blok.Toolbar.close();
       this.Blok.BlockSelection.enableNavigationMode();
 

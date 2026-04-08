@@ -206,12 +206,15 @@ test.describe('toolbar button focus preservation', () => {
    * in block B even after hovering block B and pressing plus button followed
    * by Escape.
    *
-   * Preconditions: Two blocks ("Hello" and ""), focus in block 0.
-   * Action: Hover block 1 → click plus → Escape → type " World"
-   * Expected: Block 0 = "Hello World", Block 1 = ""
+   * The user must NOT need to re-click block A after Escape — focus should be
+   * restored automatically to the block that had focus before the plus was clicked.
+   *
+   * Preconditions: Two blocks ("Hello" and "Second"), focus in block 0.
+   * Action: Hover block 1 → click plus → Escape → type " World" (NO re-click)
+   * Expected: Block 0 = "Hello World", block count = 2 (no orphan block left)
    */
   test('text typed after plus+Escape should stay in the originally-focused block', async ({ page }) => {
-    await createParagraphBlok(page, [ 'Hello', '' ]);
+    await createParagraphBlok(page, [ 'Hello', 'Second' ]);
 
     const paragraphs = page.locator(PARAGRAPH_SELECTOR);
     const firstParagraph = paragraphs.nth(0);
@@ -228,18 +231,14 @@ test.describe('toolbar button focus preservation', () => {
 
     await plusButton.waitFor({ state: 'visible' });
 
-    // Click plus (opens toolbox), then Escape to dismiss
+    // Click plus (opens toolbox), then Escape to dismiss — NO re-click after this
     await plusButton.click();
     await page.keyboard.press('Escape');
 
     // Wait for focus restoration to complete (toolbox fully closed)
     await page.waitForFunction(() => !document.querySelector('[data-blok-toolbox-opened]'));
 
-    // Click block 0 explicitly to re-anchor focus (simulates user going back)
-    await firstParagraph.click();
-    await page.keyboard.press('End');
-
-    // Type more text
+    // Type without re-clicking — text must land in block 0
     await page.keyboard.type(' World');
 
     // All text must be in block 0
@@ -247,10 +246,8 @@ test.describe('toolbar button focus preservation', () => {
 
     expect(firstText).toBe('Hello World');
 
-    // Block 1 must remain empty
-    const secondText = await secondParagraph.evaluate((el) => el.textContent ?? '');
-
-    expect(secondText).toBe('');
+    // Block count must be 2 (plus+Escape must not leave an orphan block)
+    await expect(paragraphs).toHaveCount(2);
   });
 });
 

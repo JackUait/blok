@@ -107,6 +107,7 @@ const LOGIC_TESTS = [
   '**/ui/css-layer-conflict.spec.ts',
   '**/ui/content-align.spec.ts',
   '**/ui/database-board-pill-width.spec.ts',
+  '**/ui/database-pill-title-edit.spec.ts',
 
   // Seed/utility tests
   '**/seed.spec.ts',

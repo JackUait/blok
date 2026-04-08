@@ -366,4 +366,148 @@ describe('ToolbarPositioner', () => {
       expect(mockNodes.actions.style.transform).toBe('translateX(50px)');
     });
   });
+
+  describe('getToolbarAnchorElement integration', () => {
+    beforeEach(() => {
+      vi.stubGlobal('getComputedStyle', vi.fn((element: HTMLElement) => {
+        const computedStyle = actualGetComputedStyle(element);
+
+        return {
+          ...computedStyle,
+          paddingTop: '0px',
+          lineHeight: '24',
+          height: '40px',
+        };
+      }));
+    });
+
+    it('uses getToolbarAnchorElement result instead of searching for contenteditable descendant', () => {
+      if (!mockNodes.plusButton) {
+        throw new Error('plusButton is undefined');
+      }
+
+      // Build a block like the code tool: non-editable wrapper with a header bar
+      // above the contenteditable element, and the tool provides an anchor
+      const holder = document.createElement('div');
+      const wrapper = document.createElement('div'); // pluginsContent (non-editable)
+      const header = document.createElement('div'); // header bar above code
+      header.style.height = '40px';
+      const codeBody = document.createElement('div');
+      const pre = document.createElement('pre');
+      const code = document.createElement('code');
+      code.setAttribute('contenteditable', 'plaintext-only');
+      pre.appendChild(code);
+      codeBody.appendChild(pre);
+      wrapper.appendChild(header);
+      wrapper.appendChild(codeBody);
+      holder.appendChild(wrapper);
+      document.body.appendChild(holder);
+
+      // Block provides getToolbarAnchorElement returning the wrapper (not the deeply nested code)
+      const blockWithAnchor = {
+        ...mockBlock,
+        holder,
+        pluginsContent: wrapper,
+        getToolbarAnchorElement: vi.fn(() => wrapper),
+      } as unknown as Block;
+
+      const resultWithAnchor = positioner.calculateToolbarY(
+        { targetBlock: blockWithAnchor, hoveredTarget: null, isMobile: false },
+        mockNodes.plusButton
+      );
+
+      // Block without getToolbarAnchorElement falls through to editableDescendant (the <code>)
+      const blockWithoutAnchor = {
+        ...mockBlock,
+        holder,
+        pluginsContent: wrapper,
+      } as unknown as Block;
+
+      const resultWithoutAnchor = positioner.calculateToolbarY(
+        { targetBlock: blockWithoutAnchor, hoveredTarget: null, isMobile: false },
+        mockNodes.plusButton
+      );
+
+      // Both should be numbers
+      expect(resultWithAnchor).toBeTypeOf('number');
+      expect(resultWithoutAnchor).toBeTypeOf('number');
+
+      // The anchor-based result should use the wrapper's position (top of block),
+      // while the fallback uses the code element (lower, below the header)
+      // In JSDOM getBoundingClientRect returns 0 for both, so just verify the method was called
+      expect(blockWithAnchor.getToolbarAnchorElement).toHaveBeenCalled();
+    });
+
+    it('falls back to editableDescendant when getToolbarAnchorElement returns undefined', () => {
+      if (!mockNodes.plusButton) {
+        throw new Error('plusButton is undefined');
+      }
+
+      const holder = document.createElement('div');
+      const wrapper = document.createElement('div');
+      const heading = document.createElement('h2');
+      heading.setAttribute('contenteditable', 'true');
+      wrapper.appendChild(heading);
+      holder.appendChild(wrapper);
+      document.body.appendChild(holder);
+
+      // getToolbarAnchorElement exists but returns undefined — should use editableDescendant
+      vi.stubGlobal('getComputedStyle', vi.fn((element: HTMLElement) => {
+        if (element === heading) {
+          return { paddingTop: '0px', lineHeight: '36', height: '40px' };
+        }
+        return { paddingTop: '0px', lineHeight: '24', height: '40px' };
+      }));
+
+      const blockReturningUndefined = {
+        ...mockBlock,
+        holder,
+        pluginsContent: wrapper,
+        getToolbarAnchorElement: vi.fn(() => undefined),
+      } as unknown as Block;
+
+      const result = positioner.calculateToolbarY(
+        { targetBlock: blockReturningUndefined, hoveredTarget: null, isMobile: false },
+        mockNodes.plusButton
+      );
+
+      // Should use heading's lineHeight (36), not wrapper's (24)
+      // firstLineCenterY = 0 + 0 + 36/2 = 18, toolbarY = 18 - 40/2 = -2
+      expect(result).toBe(-2);
+    });
+
+    it('does not use getToolbarAnchorElement when hovered target resolves to a list item', () => {
+      if (!mockNodes.plusButton) {
+        throw new Error('plusButton is undefined');
+      }
+
+      const holder = document.createElement('div');
+      const wrapper = document.createElement('div');
+      const listItem = document.createElement('div');
+      listItem.setAttribute('role', 'listitem');
+      const contentDiv = document.createElement('div');
+      contentDiv.setAttribute('contenteditable', 'true');
+      listItem.appendChild(contentDiv);
+      wrapper.appendChild(listItem);
+      holder.appendChild(wrapper);
+      document.body.appendChild(holder);
+
+      const blockWithAnchor = {
+        ...mockBlock,
+        holder,
+        pluginsContent: wrapper,
+        getToolbarAnchorElement: vi.fn(() => wrapper),
+      } as unknown as Block;
+
+      positioner.setHoveredTarget(listItem);
+
+      positioner.calculateToolbarY(
+        { targetBlock: blockWithAnchor, hoveredTarget: listItem, isMobile: false },
+        mockNodes.plusButton
+      );
+
+      // List item special-case takes priority, so getToolbarAnchorElement should not be used
+      expect(blockWithAnchor.getToolbarAnchorElement).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -1286,4 +1286,39 @@ describe('Block', () => {
       expect(mutationHandler).not.toHaveBeenCalled();
     });
   });
+
+  describe('getToolbarAnchorElement', () => {
+    it('delegates to tool instance when tool implements getToolbarAnchorElement', () => {
+      const anchorElement = document.createElement('div');
+      const getToolbarAnchorElement = vi.fn(() => anchorElement);
+
+      const { block } = createBlock({
+        toolOverrides: {
+          render: vi.fn(() => {
+            const el = document.createElement('div');
+
+            el.setAttribute('contenteditable', 'true');
+
+            return el;
+          }),
+        },
+      });
+
+      // Attach method to tool instance after creation (duck-typing, same as setReadOnly pattern)
+      (block as unknown as { toolInstance: Record<string, unknown> }).toolInstance.getToolbarAnchorElement = getToolbarAnchorElement;
+
+      const result = block.getToolbarAnchorElement();
+
+      expect(getToolbarAnchorElement).toHaveBeenCalled();
+      expect(result).toBe(anchorElement);
+    });
+
+    it('returns undefined when tool does not implement getToolbarAnchorElement', () => {
+      const { block } = createBlock();
+
+      const result = block.getToolbarAnchorElement();
+
+      expect(result).toBeUndefined();
+    });
+  });
 });

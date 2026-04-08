@@ -432,6 +432,8 @@ export class TableGrid {
       let modelCol = 0;
 
       cells.forEach((cell) => {
+        const tdCell = cell as HTMLTableCellElement;
+
         // Skip columns that are occupied by rowspan cells from previous rows
         while (blockedCols.has(modelCol)) {
           modelCol++;
@@ -440,8 +442,8 @@ export class TableGrid {
         cell.setAttribute(CELL_ROW_ATTR, String(r));
         cell.setAttribute(CELL_COL_ATTR, String(modelCol));
 
-        const colSpan = (cell as HTMLTableCellElement).colSpan || 1;
-        const rowSpan = (cell as HTMLTableCellElement).rowSpan || 1;
+        const colSpan = tdCell.colSpan || 1;
+        const rowSpan = tdCell.rowSpan || 1;
 
         // If this cell has rowspan > 1, mark those columns as blocked in subsequent rows
         if (rowSpan > 1) {
@@ -460,6 +462,8 @@ export class TableGrid {
         // Advance by colspan
         modelCol += colSpan;
       });
+
+      occupiedCols.delete(r);
     });
   }
 

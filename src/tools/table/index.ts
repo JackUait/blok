@@ -1804,9 +1804,7 @@ export class Table implements BlockTool {
       return;
     }
 
-    const targetRow = targetCell.closest<HTMLElement>(`[${ROW_ATTR}]`);
-
-    if (!targetRow) {
+    if (!targetCell.closest(`[${ROW_ATTR}]`)) {
       return;
     }
 

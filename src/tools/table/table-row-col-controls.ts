@@ -419,7 +419,40 @@ export class TableRowColControls {
       }
 
       const rowEl = rows[i] as HTMLElement;
-      const centerY = rowEl.offsetTop + rowEl.offsetHeight / 2;
+
+      // Find the cell with the maximum rowSpan in this row to correctly
+      // center the grip over merged cells that span multiple rows.
+      const cellsInRow = this.grid.querySelectorAll<HTMLElement>(`[${CELL_ROW_ATTR}="${i}"]`);
+      let maxRowSpan = 1;
+      let originCell: HTMLTableCellElement | null = null;
+
+      cellsInRow.forEach((cell) => {
+        const tdCell = cell as HTMLTableCellElement;
+        const span = tdCell.rowSpan || 1;
+
+        if (span > maxRowSpan) {
+          maxRowSpan = span;
+          originCell = tdCell;
+        }
+      });
+
+      let centerY: number;
+
+      if (maxRowSpan > 1 && originCell !== null) {
+        // Use getBoundingClientRect() on the origin cell to get its actual rendered
+        // height — summing tr.offsetHeight is inaccurate when the merged cell's
+        // content forces the browser to redistribute height across rows (each
+        // individual tr.offsetHeight stays at its minimum rather than reflecting
+        // the full visual contribution of the merged content).
+        const container = this.overlay ?? this.grid;
+        const containerRect = container.getBoundingClientRect();
+        const cellRect = (originCell as HTMLTableCellElement).getBoundingClientRect();
+
+        centerY = cellRect.top - containerRect.top + cellRect.height / 2;
+      } else {
+        centerY = rowEl.offsetTop + rowEl.offsetHeight / 2;
+      }
+
       const style = grip.style;
 
       style.left = `${-BORDER_WIDTH / 2}px`;

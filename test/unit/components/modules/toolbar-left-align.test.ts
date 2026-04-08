@@ -244,12 +244,11 @@ describe('Toolbar moveAndOpen — leftAlignElement update', () => {
     document.body.removeChild(blockHolder);
   });
 
-  it('preserves block content marginLeft for centered content even with actions width', () => {
+  it('preserves block content visual offset for centered content even with actions width', () => {
     const blockHolder = document.createElement('div');
     const blockContent = document.createElement('div');
 
     blockContent.setAttribute(DATA_ATTR.elementContent, '');
-    blockContent.style.marginLeft = '153px';
     blockHolder.appendChild(blockContent);
     document.body.appendChild(blockHolder);
 
@@ -263,7 +262,7 @@ describe('Toolbar moveAndOpen — leftAlignElement update', () => {
       getTunes: vi.fn().mockReturnValue({ toolTunes: [], commonTunes: [] }),
     } as unknown as Block;
 
-    const { toolbar, content } = createToolbar({
+    const { toolbar, content, wrapper } = createToolbar({
       BlockManager: {
         currentBlock: block,
         currentBlockIndex: 0,
@@ -284,10 +283,20 @@ describe('Toolbar moveAndOpen — leftAlignElement update', () => {
 
     vi.spyOn(actions, 'offsetWidth', 'get').mockReturnValue(51);
 
+    // Simulate centered content: holder at left=0, content at left=153px (e.g. margin: 0 auto)
+    vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue({
+      left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0,
+      x: 0, y: 0, toJSON: () => ({}),
+    } as DOMRect);
+    vi.spyOn(blockContent, 'getBoundingClientRect').mockReturnValue({
+      left: 153, top: 0, right: 0, bottom: 0, width: 720, height: 0,
+      x: 153, y: 0, toJSON: () => ({}),
+    } as DOMRect);
+
     // Act
     toolbar.moveAndOpen(block);
 
-    // Assert: marginLeft matches block content (153px), not clamped to actionsWidth
+    // Assert: marginLeft matches the visual offset (153px), not clamped to actionsWidth (51px)
     expect(content.style.marginLeft).toBe('153px');
 
     document.body.removeChild(blockHolder);
@@ -410,6 +419,73 @@ describe('Toolbar moveAndOpen — leftAlignElement update', () => {
     // Assert: marginLeft is clamped to actionsWidth (51px) so that the actions container
     // (positioned via right:100%) never extends beyond the left viewport edge.
     expect(content.style.marginLeft).toBe('51px');
+
+    document.body.removeChild(blockHolder);
+  });
+
+  it('aligns toolbar buttons with block content left edge when content has no CSS margin but is visually offset from the block holder (wide-mode scenario)', () => {
+    const blockHolder = document.createElement('div');
+    const blockContent = document.createElement('div');
+
+    blockContent.setAttribute(DATA_ATTR.elementContent, '');
+    // No CSS margin — wide-mode scenario: max-width: none, marginLeft: 0px
+    blockContent.style.marginLeft = '0px';
+    blockHolder.appendChild(blockContent);
+    document.body.appendChild(blockHolder);
+
+    const block = {
+      id: 'block-1',
+      name: 'paragraph',
+      holder: blockHolder,
+      isEmpty: false,
+      setupDraggable: vi.fn(),
+      cleanupDraggable: vi.fn(),
+      getTunes: vi.fn().mockReturnValue({ toolTunes: [], commonTunes: [] }),
+    } as unknown as Block;
+
+    const { toolbar, content, wrapper } = createToolbar({
+      BlockManager: {
+        currentBlock: block,
+        currentBlockIndex: 0,
+        blocks: [block],
+      } as unknown as BlokModules['BlockManager'],
+    });
+
+    const priv = toolbar as unknown as Record<string, unknown>;
+
+    priv.toolboxInstance = {
+      opened: false,
+      close: vi.fn(),
+      open: vi.fn(),
+      updateLeftAlignElement: vi.fn(),
+    };
+
+    // The toolbar wrapper sits at viewport left = 0
+    vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue({
+      left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0,
+      x: 0, y: 0, toJSON: () => ({}),
+    } as DOMRect);
+
+    // The block content element is visually offset 200px from the left edge
+    // (e.g. in wide-mode the editor container has a left offset of 200px)
+    vi.spyOn(blockContent, 'getBoundingClientRect').mockReturnValue({
+      left: 200, top: 0, right: 0, bottom: 0, width: 1208, height: 0,
+      x: 200, y: 0, toJSON: () => ({}),
+    } as DOMRect);
+
+    // actionsWidth = 51px; Math.max(200, 51) = 200
+    const actions = toolbar.nodes.actions!;
+
+    vi.spyOn(actions, 'offsetWidth', 'get').mockReturnValue(51);
+
+    // Act
+    toolbar.moveAndOpen(block);
+
+    // Assert: toolbar content marginLeft should be 200px (the actual visual offset),
+    // NOT 51px (the actionsWidth-clamped value based on CSS marginLeft=0).
+    // Currently the code reads CSS marginLeft (0px) and clamps to actionsWidth (51px),
+    // so this assertion will FAIL, demonstrating the wide-mode misalignment bug.
+    expect(content.style.marginLeft).toBe('200px');
 
     document.body.removeChild(blockHolder);
   });

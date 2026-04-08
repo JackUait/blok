@@ -526,19 +526,26 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     /**
-     * Sync toolbar content wrapper's margin with the block content element
-     * so toolbar buttons align with the block content edge, even when
-     * consumer CSS overrides the block content's margin.
+     * Sync toolbar content wrapper's position and width with the block content element
+     * so toolbar buttons align with the block content edge regardless of whether
+     * the consumer uses CSS margin or overrides max-width (e.g. wide-mode).
+     *
+     * Uses getBoundingClientRect to get the actual visual offset rather than reading
+     * CSS marginLeft, which does not account for cases where max-width is removed
+     * and the content fills the full container width.
      *
      * Uses Math.max to guarantee the actions container (positioned via right:100%)
      * never extends beyond the left edge of the viewport, which would make the
-      * drag handle unreachable by pointer events.
+     * drag handle unreachable by pointer events.
      */
     if (blockContentElement && this.nodes.content) {
-      const blockMarginLeft = parseFloat(getComputedStyle(blockContentElement).marginLeft) || 0;
+      const holderRect = this.nodes.wrapper?.getBoundingClientRect();
+      const contentRect = blockContentElement.getBoundingClientRect();
+      const visualOffset = holderRect ? Math.max(0, contentRect.left - holderRect.left) : 0;
       const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
 
-      this.nodes.content.style.marginLeft = `${Math.max(blockMarginLeft, actionsWidth)}px`;
+      this.nodes.content.style.marginLeft = `${Math.max(visualOffset, actionsWidth)}px`;
+      this.nodes.content.style.maxWidth = `${contentRect.width}px`;
     }
   }
 
@@ -659,14 +666,18 @@ export class Toolbar extends Module<ToolbarNodes> {
     this.open();
 
     /**
-     * Sync toolbar content wrapper's margin with the block content element.
+     * Sync toolbar content wrapper's position and width with the block content element.
+     * Uses getBoundingClientRect so wide-mode content (max-width: none) is handled correctly.
      * Clamp to actionsWidth so actions never extend beyond the left viewport edge.
      */
     if (blockContentElement && this.nodes.content) {
-      const blockMarginLeft = parseFloat(getComputedStyle(blockContentElement).marginLeft) || 0;
+      const holderRect = this.nodes.wrapper?.getBoundingClientRect();
+      const contentRect = blockContentElement.getBoundingClientRect();
+      const visualOffset = holderRect ? Math.max(0, contentRect.left - holderRect.left) : 0;
       const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
 
-      this.nodes.content.style.marginLeft = `${Math.max(blockMarginLeft, actionsWidth)}px`;
+      this.nodes.content.style.marginLeft = `${Math.max(visualOffset, actionsWidth)}px`;
+      this.nodes.content.style.maxWidth = `${contentRect.width}px`;
     }
   }
 
@@ -732,6 +743,7 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
     if (this.nodes.content) {
       this.nodes.content.style.marginLeft = '';
+      this.nodes.content.style.maxWidth = '';
     }
     this.positioner.setHoveredTarget(null);
 

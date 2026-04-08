@@ -490,6 +490,85 @@ describe('Toolbar moveAndOpen — leftAlignElement update', () => {
     document.body.removeChild(blockHolder);
   });
 
+  it('does not push buttons into nested block text when block holder is offset from viewport left (callout child scenario)', () => {
+    /**
+     * Reproduction of the "buttons overlap text" bug for callout non-first children:
+     *
+     * When a block is nested inside a callout, its holder sits ~264px from the
+     * viewport left (editor offset + callout padding + emoji + gap). The
+     * [data-blok-element-content] fills the holder width so visualOffset ≈ 0.
+     *
+     * The old code: content.marginLeft = Math.max(visualOffset=0, actionsWidth=51) = 51px.
+     * The actions (right:100% of content) extend from x=0 to x=51 inside the wrapper.
+     * The text also starts at x=0 → the buttons overlap the text.
+     *
+     * The fix: clamp marginLeft to at most max(0, actionsWidth - holderLeft),
+     * so when the holder is far enough from the viewport left, content.marginLeft = 0
+     * and actions extend outside the holder into the parent's padding area.
+     */
+    const blockHolder = document.createElement('div');
+    const blockContent = document.createElement('div');
+
+    blockContent.setAttribute(DATA_ATTR.elementContent, '');
+    blockHolder.appendChild(blockContent);
+    document.body.appendChild(blockHolder);
+
+    const block = {
+      id: 'block-callout-child',
+      name: 'paragraph',
+      holder: blockHolder,
+      isEmpty: false,
+      setupDraggable: vi.fn(),
+      cleanupDraggable: vi.fn(),
+      getTunes: vi.fn().mockReturnValue({ toolTunes: [], commonTunes: [] }),
+    } as unknown as Block;
+
+    const { toolbar, content, wrapper } = createToolbar({
+      BlockManager: {
+        currentBlock: block,
+        currentBlockIndex: 0,
+        blocks: [block],
+      } as unknown as BlokModules['BlockManager'],
+    });
+
+    const priv = toolbar as unknown as Record<string, unknown>;
+
+    priv.toolboxInstance = {
+      opened: false,
+      close: vi.fn(),
+      open: vi.fn(),
+      updateLeftAlignElement: vi.fn(),
+    };
+
+    const actions = toolbar.nodes.actions!;
+
+    vi.spyOn(actions, 'offsetWidth', 'get').mockReturnValue(51);
+
+    // Simulate the holder being at viewport left = 264px (editor at 200px + callout indent 64px).
+    // The toolbar wrapper is appended into the holder, so it shares the same left.
+    vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue({
+      left: 264, top: 100, right: 864, bottom: 124, width: 600, height: 24,
+      x: 264, y: 100, toJSON: () => ({}),
+    } as DOMRect);
+
+    // The block content fills the holder (no centering margin), same left edge.
+    vi.spyOn(blockContent, 'getBoundingClientRect').mockReturnValue({
+      left: 264, top: 100, right: 864, bottom: 124, width: 600, height: 24,
+      x: 264, y: 100, toJSON: () => ({}),
+    } as DOMRect);
+
+    // Act
+    toolbar.moveAndOpen(block);
+
+    // Assert: content.marginLeft should be 0px, NOT 51px.
+    // With marginLeft=0, actions (right:100% of content, width=51px) extend from
+    // viewport x=213 to x=264 — into the callout's padding area, NOT over the text.
+    // With the buggy marginLeft=51px, actions extend from x=264 to x=315 — on top of text.
+    expect(content.style.marginLeft).toBe('0px');
+
+    document.body.removeChild(blockHolder);
+  });
+
   it('resets toolbar content wrapper marginLeft on close', () => {
     const { toolbar, content } = createToolbar();
 

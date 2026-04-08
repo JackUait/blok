@@ -557,14 +557,22 @@ export class Toolbar extends Module<ToolbarNodes> {
      * Uses Math.max to guarantee the actions container (positioned via right:100%)
      * never extends beyond the left edge of the viewport, which would make the
      * drag handle unreachable by pointer events.
+     *
+     * For nested blocks (e.g. children inside a callout), the holder is already
+     * offset from the viewport left by the parent's indentation. In that case we
+     * only need to ensure the actions don't extend beyond the viewport left edge
+     * (holderLeft px are available to the left), so the minimum margin is
+     * max(0, actionsWidth - holderLeft) rather than a flat actionsWidth clamp.
      */
     if (blockContentElement && this.nodes.content) {
       const holderRect = this.nodes.wrapper?.getBoundingClientRect();
       const contentRect = blockContentElement.getBoundingClientRect();
       const visualOffset = holderRect ? Math.max(0, contentRect.left - holderRect.left) : 0;
       const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
+      const holderLeft = holderRect ? Math.max(0, holderRect.left) : 0;
+      const minMarginLeft = Math.max(0, actionsWidth - holderLeft);
 
-      this.nodes.content.style.marginLeft = `${Math.max(visualOffset, actionsWidth)}px`;
+      this.nodes.content.style.marginLeft = `${Math.max(visualOffset, minMarginLeft)}px`;
       this.nodes.content.style.maxWidth = `${contentRect.width}px`;
     }
   }
@@ -688,15 +696,19 @@ export class Toolbar extends Module<ToolbarNodes> {
     /**
      * Sync toolbar content wrapper's position and width with the block content element.
      * Uses getBoundingClientRect so wide-mode content (max-width: none) is handled correctly.
-     * Clamp to actionsWidth so actions never extend beyond the left viewport edge.
+     * Clamp to max(0, actionsWidth - holderLeft) so actions never extend beyond the left
+     * viewport edge. For nested blocks already offset from the left, a smaller clamp is
+     * used so buttons are not pushed into the text content.
      */
     if (blockContentElement && this.nodes.content) {
       const holderRect = this.nodes.wrapper?.getBoundingClientRect();
       const contentRect = blockContentElement.getBoundingClientRect();
       const visualOffset = holderRect ? Math.max(0, contentRect.left - holderRect.left) : 0;
       const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
+      const holderLeft = holderRect ? Math.max(0, holderRect.left) : 0;
+      const minMarginLeft = Math.max(0, actionsWidth - holderLeft);
 
-      this.nodes.content.style.marginLeft = `${Math.max(visualOffset, actionsWidth)}px`;
+      this.nodes.content.style.marginLeft = `${Math.max(visualOffset, minMarginLeft)}px`;
       this.nodes.content.style.maxWidth = `${contentRect.width}px`;
     }
   }

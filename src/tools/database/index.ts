@@ -214,6 +214,7 @@ export class DatabaseTool implements BlockTool {
     this.keyboard?.destroy();
     this.tabBar?.destroy();
     this.sync.flushPendingUpdates();
+    this.sync.flushPendingPropertyUpdates();
     this.sync.destroy();
     this.element = null;
     this.boardContainer = null;
@@ -372,6 +373,7 @@ export class DatabaseTool implements BlockTool {
     this.keyboard = null;
 
     this.sync.flushPendingUpdates();
+    this.sync.flushPendingPropertyUpdates();
     this.sync.destroy();
 
     this.activateView(viewId);
@@ -798,6 +800,20 @@ export class DatabaseTool implements BlockTool {
         i18n: this.api.i18n,
         onRename: (optionId, label) => this.handleOptionRename(optionId, label),
         onDelete: (optionId) => this.handleOptionDelete(optionId, boardEl),
+        onRenameInput: (optionId, label) => {
+          // Instant local save — update the model immediately so save() captures latest value
+          this.handleOptionRename(optionId, label);
+        },
+        onRenameCommit: (optionId, label) => {
+          // Debounced backend persist
+          const viewConfig = this.model.getView(this.activeViewId);
+          const groupByPropId = viewConfig?.groupBy;
+          if (groupByPropId === undefined) return;
+          const prop = this.model.getProperty(groupByPropId);
+          if (prop?.config === undefined) return;
+          const options = prop.config.options.map((o) => (o.id === optionId ? { ...o, label } : o));
+          this.sync.syncUpdatePropertyDebounced({ propertyId: groupByPropId, changes: { config: { options } } });
+        },
       });
 
       this.makeColumnHeadersEditable(boardEl);
@@ -865,6 +881,10 @@ export class DatabaseTool implements BlockTool {
       const columnHeader = target.closest('[data-blok-database-column-header]');
 
       if (columnHeader !== null) {
+        // Do not start drag when the click originates from the pill (title element or its input)
+        const isPillTarget = target.closest('[data-blok-database-column-pill]') !== null;
+        if (isPillTarget) return;
+
         const columnEl = columnHeader.closest<HTMLElement>('[data-blok-database-column]');
         const optId = columnEl?.getAttribute('data-option-id') ?? null;
 
@@ -919,7 +939,8 @@ export class DatabaseTool implements BlockTool {
       const optId = columnEl?.getAttribute('data-option-id');
 
       if (optId !== null && optId !== undefined) {
-        this.columnControls.makeEditable(header, optId);
+        this.columnControls.makePillTitleEditable(header, optId);
+        this.columnControls.appendDeleteButton(header, optId);
       }
     }
   }

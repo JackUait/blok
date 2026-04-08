@@ -1732,6 +1732,9 @@ export class Table implements BlockTool {
           this.rebuildTableBody();
         });
       },
+      getCellSpan: (row, col) => {
+        return this.model.getCellSpan(row, col);
+      },
     });
   }
 

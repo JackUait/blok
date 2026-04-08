@@ -625,6 +625,175 @@ describe('TableCellSelection — merged cells', () => {
   });
 
   /**
+   * Full-row merged cells — selection rect must expand to cover full colspan.
+   *
+   * Concrete scenario from bug report:
+   *   5-row × 4-column table
+   *   Row 0: single td[0,0] with colspan=4 (spans all 4 cols)
+   *   Row 1: single td[1,0] with colspan=4 (spans all 4 cols)
+   *   Rows 2-4: normal 4-cell rows
+   *
+   * Bug: dragging from (row=0,col=0) to (row=1,col=0) produces a raw rect of
+   *   {minRow:0, maxRow:1, minCol:0, maxCol:0}
+   * because both origin cells resolve to col=0. The selection rect should be
+   * expanded to include the full span of the merged cells:
+   *   {minRow:0, maxRow:1, minCol:0, maxCol:3}
+   *
+   * Without expansion, canMergeCells returns false and no Merge button appears.
+   */
+  describe('paintSelection — rect expansion for full-row colspan merges', () => {
+    const createFullRowMergeGrid = (): HTMLTableElement => {
+      const table = document.createElement('table');
+
+      table.style.position = 'relative';
+
+      const colgroup = document.createElement('colgroup');
+
+      [200, 200, 200, 200].forEach(w => {
+        const col = document.createElement('col');
+
+        col.style.width = `${w}px`;
+        colgroup.appendChild(col);
+      });
+      table.appendChild(colgroup);
+
+      const tbody = document.createElement('tbody');
+
+      const makeTd = (r: number, c: number, cs = 1, rs = 1): HTMLTableCellElement => {
+        const td = document.createElement('td');
+
+        td.setAttribute(CELL_ATTR, '');
+        td.setAttribute(CELL_ROW_ATTR, String(r));
+        td.setAttribute(CELL_COL_ATTR, String(c));
+        td.colSpan = cs;
+        td.rowSpan = rs;
+        const blocks = document.createElement('div');
+
+        blocks.setAttribute('data-blok-table-cell-blocks', '');
+        td.appendChild(blocks);
+        return td;
+      };
+
+      // Row 0: single cell spanning all 4 columns (colspan=4)
+      const row0 = document.createElement('tr');
+
+      row0.setAttribute(ROW_ATTR, '');
+      row0.appendChild(makeTd(0, 0, 4, 1));
+      tbody.appendChild(row0);
+
+      // Row 1: single cell spanning all 4 columns (colspan=4)
+      const row1 = document.createElement('tr');
+
+      row1.setAttribute(ROW_ATTR, '');
+      row1.appendChild(makeTd(1, 0, 4, 1));
+      tbody.appendChild(row1);
+
+      // Rows 2-4: normal 4-cell rows
+      for (let r = 2; r <= 4; r++) {
+        const row = document.createElement('tr');
+
+        row.setAttribute(ROW_ATTR, '');
+        for (let c = 0; c < 4; c++) {
+          row.appendChild(makeTd(r, c));
+        }
+        tbody.appendChild(row);
+      }
+
+      table.appendChild(tbody);
+      document.body.appendChild(table);
+      return table;
+    };
+
+    const mockFullRowMergeBoundingRects = (tbl: HTMLTableElement): void => {
+      const gridLeft = 10;
+      const gridTop = 10;
+      const colWidth = 200;
+      const rowHeight = 40;
+      const totalCols = 4;
+      const totalRows = 5;
+
+      vi.spyOn(tbl, 'getBoundingClientRect').mockReturnValue({
+        top: gridTop, left: gridLeft,
+        bottom: gridTop + totalRows * rowHeight, right: gridLeft + totalCols * colWidth,
+        width: totalCols * colWidth, height: totalRows * rowHeight,
+        x: gridLeft, y: gridTop, toJSON: () => ({}),
+      });
+
+      tbl.querySelectorAll(`[${CELL_ATTR}]`).forEach(cell => {
+        const r = Number(cell.getAttribute(CELL_ROW_ATTR));
+        const c = Number(cell.getAttribute(CELL_COL_ATTR));
+        const td = cell as HTMLTableCellElement;
+        const cs = td.colSpan || 1;
+        const rs = td.rowSpan || 1;
+
+        vi.spyOn(cell, 'getBoundingClientRect').mockReturnValue({
+          top: gridTop + r * rowHeight, left: gridLeft + c * colWidth,
+          bottom: gridTop + (r + rs) * rowHeight, right: gridLeft + (c + cs) * colWidth,
+          width: cs * colWidth, height: rs * rowHeight,
+          x: gridLeft + c * colWidth, y: gridTop + r * rowHeight, toJSON: () => ({}),
+        });
+      });
+
+      vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+        borderTopWidth: '0', borderLeftWidth: '0',
+      } as unknown as CSSStyleDeclaration);
+    };
+
+    it('expands selection rect to full span of merged cells when dragging across merged cell origins', () => {
+      const tbl = createFullRowMergeGrid();
+
+      mockFullRowMergeBoundingRects(tbl);
+
+      const rangeSpy = vi.fn();
+      const canMergeSpy = vi.fn().mockReturnValue(true);
+      const sel = new TableCellSelection({
+        grid: tbl,
+        i18n: mockI18n,
+        onSelectionRangeChange: rangeSpy,
+        canMergeCells: canMergeSpy,
+        getCellSpan: (row, col) => {
+          const td = tbl.querySelector<HTMLTableCellElement>(`[${CELL_ROW_ATTR}="${row}"][${CELL_COL_ATTR}="${col}"]`);
+
+          return {
+            colspan: td?.colSpan ?? 1,
+            rowspan: td?.rowSpan ?? 1,
+          };
+        },
+      });
+
+      // td[0,0] is the only physical <td> in row 0 (colspan=4), logical col 0
+      const td00 = tbl.querySelector<HTMLElement>(`[${CELL_ROW_ATTR}="0"][${CELL_COL_ATTR}="0"]`)!;
+      // td[1,0] is the only physical <td> in row 1 (colspan=4), logical col 0
+      const td10 = tbl.querySelector<HTMLElement>(`[${CELL_ROW_ATTR}="1"][${CELL_COL_ATTR}="0"]`)!;
+
+      // Simulate drag from td[0,0] to td[1,0]
+      document.elementFromPoint = () => td10;
+      td00.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: td00.getBoundingClientRect().left + 5,
+        clientY: td00.getBoundingClientRect().top + 5,
+        bubbles: true, button: 0,
+      }));
+      document.dispatchEvent(new PointerEvent('pointermove', {
+        clientX: td10.getBoundingClientRect().left + 5,
+        clientY: td10.getBoundingClientRect().top + 5,
+        bubbles: true,
+      }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      // The selection rect must be expanded to cover the full colspan of both merged cells.
+      // Both td[0,0] and td[1,0] have colspan=4, so cols 0-3 are spanned.
+      // Bug: paintSelection uses raw anchor/extent coords {minCol:0, maxCol:0} without expanding.
+      // Correct: {minRow:0, maxRow:1, minCol:0, maxCol:3}
+      expect(rangeSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ minRow: 0, maxRow: 1, minCol: 0, maxCol: 3 })
+      );
+
+      sel.destroy();
+      tbl.remove();
+    });
+  });
+
+  /**
    * Colspan-only merge (no rowspan):
    *
    *   col 0     col 1     col 2

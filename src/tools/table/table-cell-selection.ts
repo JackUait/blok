@@ -86,6 +86,8 @@ interface CellSelectionOptions {
   isMergedCell?: (row: number, col: number) => boolean;
   /** Called when user requests to split a merged cell. */
   onSplitCell?: (row: number, col: number) => void;
+  /** Returns the colspan and rowspan of the cell at (row, col). Used to expand the selection rect to full merged-cell spans. */
+  getCellSpan?: (row: number, col: number) => { colspan: number; rowspan: number };
   i18n: I18n;
 }
 
@@ -118,6 +120,7 @@ export class TableCellSelection {
   private onMergeCells: ((range: SelectionRange) => void) | undefined;
   private isMergedCell: ((row: number, col: number) => boolean) | undefined;
   private onSplitCell: ((row: number, col: number) => void) | undefined;
+  private getCellSpan: ((row: number, col: number) => { colspan: number; rowspan: number }) | undefined;
   private lastPaintedRange: SelectionRange | null = null;
 
   private boundPointerDown: (e: PointerEvent) => void;
@@ -148,6 +151,7 @@ export class TableCellSelection {
     this.onMergeCells = options.onMergeCells;
     this.isMergedCell = options.isMergedCell;
     this.onSplitCell = options.onSplitCell;
+    this.getCellSpan = options.getCellSpan;
     this.i18n = options.i18n;
     this.grid.style.position = 'relative';
 
@@ -566,6 +570,50 @@ export class TableCellSelection {
     document.addEventListener('pointerdown', this.boundClearSelection);
   }
 
+  /**
+   * Expand a selection rect to fully include the spans of any merged cells
+   * whose origins fall within the rect. Iterates until the rect is stable,
+   * since pulling in a new merged cell may expose further cells that extend
+   * beyond the current boundary.
+   */
+  private expandRectToMergedSpans(rect: SelectionRange): SelectionRange {
+    if (!this.getCellSpan) {
+      return rect;
+    }
+
+    return this.expandRectStep(rect);
+  }
+
+  private expandRectStep(rect: SelectionRange): SelectionRange {
+    const getCellSpan = this.getCellSpan;
+
+    if (!getCellSpan) {
+      return rect;
+    }
+
+    const rows = Array.from({ length: rect.maxRow - rect.minRow + 1 }, (_, i) => rect.minRow + i);
+    const cols = Array.from({ length: rect.maxCol - rect.minCol + 1 }, (_, i) => rect.minCol + i);
+
+    const expanded = rows.reduce<SelectionRange>((acc, r) => {
+      return cols.reduce<SelectionRange>((inner, c) => {
+        const { colspan, rowspan } = getCellSpan(r, c);
+
+        return {
+          minRow: inner.minRow,
+          maxRow: Math.max(inner.maxRow, r + rowspan - 1),
+          minCol: inner.minCol,
+          maxCol: Math.max(inner.maxCol, c + colspan - 1),
+        };
+      }, acc);
+    }, rect);
+
+    const changed =
+      expanded.maxRow !== rect.maxRow ||
+      expanded.maxCol !== rect.maxCol;
+
+    return changed ? this.expandRectStep(expanded) : expanded;
+  }
+
   private paintSelection(): void {
     if (!this.anchorCell || !this.extentCell) {
       return;
@@ -583,12 +631,14 @@ export class TableCellSelection {
     const minCol = Math.min(this.anchorCell.col, this.extentCell.col);
     const maxCol = Math.max(this.anchorCell.col, this.extentCell.col);
 
-    this.lastPaintedRange = { minRow, maxRow, minCol, maxCol };
+    this.lastPaintedRange = this.expandRectToMergedSpans({ minRow, maxRow, minCol, maxCol });
+
+    const { minRow: expandedMinRow, maxRow: expandedMaxRow, minCol: expandedMinCol, maxCol: expandedMaxCol } = this.lastPaintedRange;
 
     const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
 
     // Mark selected cells
-    this.selectedCells = this.collectCellsInRange(rows, minRow, maxRow, minCol, maxCol);
+    this.selectedCells = this.collectCellsInRange(rows, expandedMinRow, expandedMaxRow, expandedMinCol, expandedMaxCol);
     this.selectedCells.forEach(cell => {
       cell.setAttribute(SELECTED_ATTR, '');
     });
@@ -596,8 +646,8 @@ export class TableCellSelection {
     // Calculate overlay position from bounding rects of corner cells.
     // Try coordinate-based lookup first (works with merged cells),
     // then fall back to index-based lookup for backwards compatibility.
-    const firstCell = this.findCellByCoordOrIndex(rows, minRow, minCol);
-    const lastCell = this.findCellByCoordOrIndex(rows, maxRow, maxCol);
+    const firstCell = this.findCellByCoordOrIndex(rows, expandedMinRow, expandedMinCol);
+    const lastCell = this.findCellByCoordOrIndex(rows, expandedMaxRow, expandedMaxCol);
 
     if (!firstCell || !lastCell) {
       return;

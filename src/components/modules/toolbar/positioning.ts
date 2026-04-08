@@ -78,14 +78,23 @@ export class ToolbarPositioner {
     const textElement = listItemElement?.querySelector('[contenteditable]');
     const pluginsContent = targetBlock.pluginsContent;
     /**
+     * If the tool provides a toolbar anchor element, use it instead of searching
+     * for a contenteditable descendant. This allows tools with deeply nested
+     * editable areas (e.g., code block with a header above the code) to control
+     * where the toolbar centers vertically.
+     */
+    const toolbarAnchor = !textElement && !listItemElement
+      ? targetBlock.getToolbarAnchorElement()
+      : undefined;
+    /**
      * If pluginsContent is a non-editable container (e.g. a toggle heading wrapper <div>),
      * use its first contenteditable descendant for accurate line-height centering.
      */
     const editableDescendant =
-      !pluginsContent.matches('[contenteditable]')
+      !toolbarAnchor && !pluginsContent.matches('[contenteditable]')
         ? (pluginsContent.querySelector('[contenteditable]') ?? null)
         : null;
-    const contentElement = textElement ?? listItemElement ?? editableDescendant ?? pluginsContent;
+    const contentElement = textElement ?? listItemElement ?? toolbarAnchor ?? editableDescendant ?? pluginsContent;
     const contentRect = contentElement.getBoundingClientRect();
     const contentOffset = contentRect.top - holderRect.top;
 

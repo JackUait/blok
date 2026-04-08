@@ -89,6 +89,16 @@ export interface BlockTool extends BaseTool {
   getContentOffset?(hoveredElement: Element): { left: number } | undefined;
 
   /**
+   * Returns the element that the toolbar should vertically center on.
+   * Used by tools whose editable area is deeply nested below non-editable UI
+   * (e.g., a header bar), where the default contenteditable-descendant search
+   * would position the toolbar too far down inside the block.
+   *
+   * Return undefined to use the default positioning logic.
+   */
+  getToolbarAnchorElement?(): HTMLElement | undefined;
+
+  /**
    * Called when read-only mode is toggled without re-rendering the block.
    * Implementations should update the DOM in place: toggle contentEditable,
    * bind/unbind event listeners, show/hide interactive elements, etc.

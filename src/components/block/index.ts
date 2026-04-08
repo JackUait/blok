@@ -428,6 +428,20 @@ export class Block extends EventsDispatcher<BlockEvents> {
   }
 
   /**
+   * Returns the element that the toolbar should vertically center on.
+   * Delegates to the tool's getToolbarAnchorElement method if implemented.
+   *
+   * @returns The anchor element, or undefined if the tool does not provide one
+   */
+  public getToolbarAnchorElement(): HTMLElement | undefined {
+    if (typeof this.toolInstance.getToolbarAnchorElement === 'function') {
+      return this.toolInstance.getToolbarAnchorElement();
+    }
+
+    return undefined;
+  }
+
+  /**
    * Extracts data from Block
    * Groups Tool's save processing time
    * @returns {object}

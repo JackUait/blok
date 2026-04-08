@@ -289,6 +289,7 @@ describe('Toolbar module interactions', () => {
       cleanupDraggable: vi.fn(),
       setupDraggable: vi.fn(),
       getTunes: vi.fn(() => ({ toolTunes: [{}], commonTunes: [] })),
+      getToolbarAnchorElement: vi.fn(() => undefined),
     };
     const cellBlock = {
       id: 'cell-block-1',
@@ -340,6 +341,7 @@ describe('Toolbar module interactions', () => {
       cleanupDraggable: vi.fn(),
       setupDraggable: vi.fn(),
       getTunes: vi.fn(() => ({ toolTunes: [{}], commonTunes: [] })),
+      getToolbarAnchorElement: vi.fn(() => undefined),
     };
 
     // Set up BlockManager to return null when asked for block by child node (resolution fails)
@@ -394,6 +396,7 @@ describe('Toolbar module interactions', () => {
       cleanupDraggable: vi.fn(),
       setupDraggable: vi.fn(),
       getTunes: vi.fn(() => ({ toolTunes: [{}], commonTunes: [] })),
+      getToolbarAnchorElement: vi.fn(() => undefined),
     };
 
     const cellBlock = {
@@ -405,6 +408,7 @@ describe('Toolbar module interactions', () => {
       cleanupDraggable: vi.fn(),
       setupDraggable: vi.fn(),
       getTunes: vi.fn(() => ({ toolTunes: [{}], commonTunes: [] })),
+      getToolbarAnchorElement: vi.fn(() => undefined),
     };
 
     // Focus an element inside the cell so isFocusInsideTableCell() returns true
@@ -461,6 +465,7 @@ describe('Toolbar module interactions', () => {
       cleanupDraggable: vi.fn(),
       setupDraggable: vi.fn(),
       getTunes: vi.fn(() => ({ toolTunes: [{}], commonTunes: [] })),
+      getToolbarAnchorElement: vi.fn(() => undefined),
     };
 
     const cellBlock = {
@@ -472,6 +477,7 @@ describe('Toolbar module interactions', () => {
       cleanupDraggable: vi.fn(),
       setupDraggable: vi.fn(),
       getTunes: vi.fn(() => ({ toolTunes: [{}], commonTunes: [] })),
+      getToolbarAnchorElement: vi.fn(() => undefined),
     };
 
     // Focus an element inside the cell so isFocusInsideTableCell() returns true

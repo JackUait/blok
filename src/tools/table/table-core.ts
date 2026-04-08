@@ -420,50 +420,65 @@ export class TableGrid {
    * rather than its physical DOM index.
    */
   public reindexCoordinates(table: HTMLElement): void {
-    const rows = Array.from(table.querySelectorAll(`[${ROW_ATTR}]`)) as HTMLElement[];
+    const rows = Array.from(table.querySelectorAll(`[${ROW_ATTR}]`));
 
     // Map from rowIndex -> Set of columnIndices occupied by rowspan cells from earlier rows
     const occupiedCols: Map<number, Set<number>> = new Map();
 
     rows.forEach((row, r) => {
-      const cells = Array.from(row.querySelectorAll(`[${CELL_ATTR}]`)) as HTMLElement[];
+      const cells = Array.from(row.querySelectorAll(`[${CELL_ATTR}]`));
       const blockedCols = occupiedCols.get(r) ?? new Set<number>();
 
-      let modelCol = 0;
-
-      cells.forEach((cell) => {
+      cells.reduce((modelCol, cell) => {
         const tdCell = cell as HTMLTableCellElement;
 
         // Skip columns that are occupied by rowspan cells from previous rows
-        while (blockedCols.has(modelCol)) {
-          modelCol++;
-        }
+        const skipBlocked = (c: number): number => (blockedCols.has(c) ? skipBlocked(c + 1) : c);
+        const col = skipBlocked(modelCol);
 
         cell.setAttribute(CELL_ROW_ATTR, String(r));
-        cell.setAttribute(CELL_COL_ATTR, String(modelCol));
+        cell.setAttribute(CELL_COL_ATTR, String(col));
 
         const colSpan = tdCell.colSpan || 1;
         const rowSpan = tdCell.rowSpan || 1;
 
         // If this cell has rowspan > 1, mark those columns as blocked in subsequent rows
         if (rowSpan > 1) {
-          for (let dr = 1; dr < rowSpan; dr++) {
-            const futureRow = r + dr;
-
-            if (!occupiedCols.has(futureRow)) {
-              occupiedCols.set(futureRow, new Set());
-            }
-            for (let dc = 0; dc < colSpan; dc++) {
-              occupiedCols.get(futureRow)!.add(modelCol + dc);
-            }
-          }
+          this.blockRowspanCols(occupiedCols, r, col, rowSpan, colSpan);
         }
 
         // Advance by colspan
-        modelCol += colSpan;
-      });
+        return col + colSpan;
+      }, 0);
 
       occupiedCols.delete(r);
+    });
+  }
+
+  /**
+   * Register blocked columns in occupiedCols for a cell with rowspan > 1.
+   * All columns in [startCol, startCol + colSpan) are blocked for rows
+   * [startRow + 1, startRow + rowSpan).
+   */
+  private blockRowspanCols(
+    occupiedCols: Map<number, Set<number>>,
+    startRow: number,
+    startCol: number,
+    rowSpan: number,
+    colSpan: number
+  ): void {
+    Array.from({ length: rowSpan - 1 }, (_, i) => i + 1).forEach((dr) => {
+      const futureRow = startRow + dr;
+
+      if (!occupiedCols.has(futureRow)) {
+        occupiedCols.set(futureRow, new Set());
+      }
+
+      const blocked = occupiedCols.get(futureRow) as Set<number>;
+
+      Array.from({ length: colSpan }, (_, dc) => dc).forEach((dc) => {
+        blocked.add(startCol + dc);
+      });
     });
   }
 

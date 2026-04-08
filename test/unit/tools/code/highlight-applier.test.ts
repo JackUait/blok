@@ -46,8 +46,8 @@ function setupHighlightMocks(): Map<string, MockHighlight> {
 }
 
 function teardownHighlightMocks(): void {
-  delete (globalThis as Record<string, unknown>).CSS;
-  delete (globalThis as Record<string, unknown>).Highlight;
+  (globalThis as Record<string, unknown>).CSS = undefined;
+  (globalThis as Record<string, unknown>).Highlight = undefined;
 }
 
 describe('highlight-applier', () => {

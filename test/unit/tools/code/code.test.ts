@@ -1081,7 +1081,8 @@ describe('CodeTool', () => {
       }>;
       const items = settings[0].children.items;
 
-      // Should start with the chosen language (no detected section with 'auto' label)
+      // Detection ran but result matches chosen, so no 'auto' label shown
+      expect(mockDetectLanguage).toHaveBeenCalled();
       const detectedItem = items.find((i) => i.secondaryLabel === 'auto');
       expect(detectedItem).toBeUndefined();
 
@@ -1113,7 +1114,8 @@ describe('CodeTool', () => {
       }>;
       const items = settings[0].children.items;
 
-      // No detected section
+      // Detection ran but returned null, so no 'auto' label shown
+      expect(mockDetectLanguage).toHaveBeenCalled();
       const detectedItem = items.find((i) => i.secondaryLabel === 'auto');
       expect(detectedItem).toBeUndefined();
 

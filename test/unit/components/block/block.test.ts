@@ -1187,7 +1187,12 @@ describe('Block', () => {
 
       // Mutations should no longer propagate
       eventBus.emit(RedactorDomChanged, { mutations: [mockMutation] });
-      expect(mutationHandler).not.toHaveBeenCalled();
+      expect(mutationHandler.mock.calls).toHaveLength(0);
+
+      // Calling setReadOnly again with same state is a no-op (early return)
+      block.setReadOnly(true);
+      eventBus.emit(RedactorDomChanged, { mutations: [mockMutation] });
+      expect(mutationHandler.mock.calls).toHaveLength(0);
     });
 
     it('resumes propagating mutations when exiting readonly', () => {
@@ -1212,7 +1217,7 @@ describe('Block', () => {
 
       // In readonly, mutations should not propagate
       eventBus.emit(RedactorDomChanged, { mutations: [mockMutation] });
-      expect(mutationHandler).not.toHaveBeenCalled();
+      expect(mutationHandler.mock.calls).toHaveLength(0);
 
       // Exit readonly
       block.setReadOnly(false);
@@ -1220,6 +1225,12 @@ describe('Block', () => {
       // Mutations should now propagate
       eventBus.emit(RedactorDomChanged, { mutations: [mockMutation] });
       expect(mutationHandler).toHaveBeenCalledTimes(1);
+
+      // Calling setReadOnly again with same state is a no-op (early return)
+      mutationHandler.mockClear();
+      block.setReadOnly(false);
+      eventBus.emit(RedactorDomChanged, { mutations: [mockMutation] });
+      expect(mutationHandler.mock.calls).toHaveLength(1);
     });
 
     it('calls tool.setReadOnly when tool implements it', () => {

@@ -384,6 +384,9 @@ describe('BlockSelectionKeys', () => {
 
         expect(event.preventDefault).toHaveBeenCalledTimes(1);
         expect(blok.BlockManager.update).toHaveBeenCalled();
+        expect(blok.BlockManager.update).toHaveBeenCalledWith(mockListBlock, expect.objectContaining({ depth: 1 }));
+        expect(updatedBlock.selected).toBe(true);
+        expect(blok.BlockSelection.clearCache).toHaveBeenCalled();
       });
 
       it('allows indent when previous block is not a list (first-in-group)', async () => {
@@ -414,6 +417,9 @@ describe('BlockSelectionKeys', () => {
 
         expect(event.preventDefault).toHaveBeenCalledTimes(1);
         expect(blok.BlockManager.update).toHaveBeenCalled();
+        expect(blok.BlockManager.update).toHaveBeenCalledWith(mockListBlock, expect.objectContaining({ depth: 1 }));
+        expect(updatedBlock.selected).toBe(true);
+        expect(blok.BlockSelection.clearCache).toHaveBeenCalled();
       });
 
       it('blocks indent when first-in-group item is already at depth 1', () => {
@@ -437,11 +443,13 @@ describe('BlockSelectionKeys', () => {
         const blockSelectionKeys = new BlockSelectionKeys(blok);
         const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
 
-        blockSelectionKeys.handleIndent(event);
+        const result = blockSelectionKeys.handleIndent(event);
 
+        expect(result).toBe(true);
         expect(event.preventDefault).toHaveBeenCalledTimes(1);
         // update should NOT have been called — can't indent past depth 1
         expect(blok.BlockManager.update).not.toHaveBeenCalled();
+        expect(blok.BlockSelection.clearCache).not.toHaveBeenCalled();
       });
 
       it('allows indent when selected items at different depths have a selected predecessor', async () => {

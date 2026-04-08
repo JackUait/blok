@@ -43,20 +43,16 @@ const MAX_ACCEPTABLE_FG_RATIO = 0.75;
  * language produces mostly fg-colored (unrecognized) tokens.
  */
 function scoreTokens(tokens: Array<Array<{ content: string; color: string }>>, fg: string): number {
-  let totalChars = 0;
-  let fgChars = 0;
-
-  for (const line of tokens) {
-    for (const token of line) {
-      const len = token.content.length;
-      totalChars += len;
-      if (token.color === fg) {
-        fgChars += len;
-      }
-    }
-  }
+  const allTokens = tokens.flat();
+  const totalChars = allTokens.reduce((sum, token) => sum + token.content.length, 0);
 
   if (totalChars === 0) return 1;
+
+  const fgChars = allTokens.reduce(
+    (sum, token) => sum + (token.color === fg ? token.content.length : 0),
+    0
+  );
+
   return fgChars / totalChars;
 }
 
@@ -80,23 +76,20 @@ export async function detectLanguage(code: string): Promise<string | null> {
     })
   );
 
-  let bestLang: string | null = null;
-  let bestScore = Infinity;
+  const best = results.reduce<{ lang: string | null; score: number }>(
+    (acc, { lang, tokens }) => {
+      if (!tokens) return acc;
 
-  for (const { lang, tokens } of results) {
-    if (!tokens) continue;
+      const score = scoreTokens(tokens.light.tokens, tokens.light.fg);
 
-    const score = scoreTokens(tokens.light.tokens, tokens.light.fg);
+      return score < acc.score ? { lang, score } : acc;
+    },
+    { lang: null, score: Infinity }
+  );
 
-    if (score < bestScore) {
-      bestScore = score;
-      bestLang = lang;
-    }
-  }
-
-  if (bestLang === null || bestScore >= MAX_ACCEPTABLE_FG_RATIO) {
+  if (best.lang === null || best.score >= MAX_ACCEPTABLE_FG_RATIO) {
     return null;
   }
 
-  return bestLang;
+  return best.lang;
 }

@@ -1,7 +1,7 @@
 import type { I18n } from '../../../types/api';
 import { twMerge } from '../../components/utils/tw';
 
-import { BORDER_WIDTH, CELL_ATTR, ROW_ATTR } from './table-core';
+import { BORDER_WIDTH, CELL_ATTR, CELL_COL_ATTR, CELL_ROW_ATTR, ROW_ATTR } from './table-core';
 import { collapseGrip, createGripDotsSvg, expandGrip, GRIP_HOVER_SIZE, setGripPillSize } from './table-grip-visuals';
 import { getCumulativeColEdges, TableRowColDrag } from './table-row-col-drag';
 import { createGripPopover } from './table-row-col-popover';
@@ -482,27 +482,21 @@ export class TableRowColControls {
   }
 
   private getCellPosition(cell: HTMLElement): { row: number; col: number } | null {
-    const row = cell.closest<HTMLElement>(`[${ROW_ATTR}]`);
+    const rowAttr = cell.getAttribute(CELL_ROW_ATTR);
+    const colAttr = cell.getAttribute(CELL_COL_ATTR);
 
-    if (!row) {
+    if (rowAttr === null || colAttr === null) {
       return null;
     }
 
-    const rows = Array.from(this.grid.querySelectorAll(`[${ROW_ATTR}]`));
-    const rowIndex = rows.indexOf(row);
+    const row = parseInt(rowAttr, 10);
+    const col = parseInt(colAttr, 10);
 
-    if (rowIndex < 0) {
+    if (isNaN(row) || isNaN(col)) {
       return null;
     }
 
-    const cells = Array.from(row.querySelectorAll(`[${CELL_ATTR}]`));
-    const colIndex = cells.indexOf(cell);
-
-    if (colIndex < 0) {
-      return null;
-    }
-
-    return { row: rowIndex, col: colIndex };
+    return { row, col };
   }
 
   /**

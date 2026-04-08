@@ -3,6 +3,8 @@ import { TableRowColControls } from '../../../../src/tools/table/table-row-col-c
 
 const CELL_ATTR = 'data-blok-table-cell';
 const ROW_ATTR = 'data-blok-table-row';
+const CELL_COL_ATTR = 'data-blok-table-cell-col';
+const CELL_ROW_ATTR = 'data-blok-table-cell-row';
 const GRIP_COL_ATTR = 'data-blok-table-grip-col';
 const GRIP_ROW_ATTR = 'data-blok-table-grip-row';
 const GRIP_VISIBLE_ATTR = 'data-blok-table-grip-visible';
@@ -11,6 +13,7 @@ const HIDE_DELAY_MS = 150;
 /**
  * Create a minimal grid element with rows and cells for testing.
  * Mocks offsetWidth/offsetHeight/offsetTop so grip positioning works.
+ * Stamps CELL_COL_ATTR and CELL_ROW_ATTR so getCellPosition() reads logical indices.
  */
 const createGrid = (rows: number, cols: number, cellWidth = 100): HTMLElement => {
   const grid = document.createElement('div');
@@ -28,6 +31,8 @@ const createGrid = (rows: number, cols: number, cellWidth = 100): HTMLElement =>
       const cell = document.createElement('div');
 
       cell.setAttribute(CELL_ATTR, '');
+      cell.setAttribute(CELL_COL_ATTR, String(c));
+      cell.setAttribute(CELL_ROW_ATTR, String(r));
       cell.style.width = `${cellWidth}px`;
       Object.defineProperty(cell, 'offsetWidth', { value: cellWidth, configurable: true });
       row.appendChild(cell);
@@ -1169,6 +1174,124 @@ describe('TableRowColControls', () => {
 
       // Original behavior: no position: relative (pseudo-element approach removed)
       expect(grip.style.position).not.toBe('relative');
+    });
+  });
+
+  describe('getCellPosition with merged cells', () => {
+    /**
+     * Build a 3-column grid where row 1 has a colspan=2 origin cell at logical
+     * col 0 (spanning cols 0–1) and a regular cell at logical col 2.
+     *
+     * DOM structure:
+     *   Row 0: <td col=0> <td col=1> <td col=2>   (3 physical cells)
+     *   Row 1: <td col=0 colspan=2> <td col=2>    (2 physical cells, logical cols 0 and 2)
+     *
+     * The bug: hovering the last cell in row 1 returns physical index 1,
+     * which activates colGrip[1] instead of the correct colGrip[2].
+     */
+    const createMergedGrid = (): HTMLElement => {
+      const grid = document.createElement('div');
+
+      grid.style.position = 'relative';
+
+      // Row 0 — 3 regular cells at logical cols 0, 1, 2
+      const row0 = document.createElement('div');
+
+      row0.setAttribute(ROW_ATTR, '');
+      Object.defineProperty(row0, 'offsetTop', { value: 0, configurable: true });
+      Object.defineProperty(row0, 'offsetHeight', { value: 40, configurable: true });
+
+      for (let c = 0; c < 3; c++) {
+        const cell = document.createElement('div');
+
+        cell.setAttribute(CELL_ATTR, '');
+        cell.setAttribute(CELL_COL_ATTR, String(c));
+        cell.setAttribute(CELL_ROW_ATTR, '0');
+        Object.defineProperty(cell, 'offsetWidth', { value: 100, configurable: true });
+        row0.appendChild(cell);
+      }
+
+      // Row 1 — colspan=2 origin at logical col 0, then regular cell at logical col 2
+      const row1 = document.createElement('div');
+
+      row1.setAttribute(ROW_ATTR, '');
+      Object.defineProperty(row1, 'offsetTop', { value: 40, configurable: true });
+      Object.defineProperty(row1, 'offsetHeight', { value: 40, configurable: true });
+
+      const mergedCell = document.createElement('div');
+
+      mergedCell.setAttribute(CELL_ATTR, '');
+      mergedCell.setAttribute(CELL_COL_ATTR, '0');
+      mergedCell.setAttribute(CELL_ROW_ATTR, '1');
+      Object.defineProperty(mergedCell, 'offsetWidth', { value: 200, configurable: true });
+      row1.appendChild(mergedCell);
+
+      const lastCell = document.createElement('div');
+
+      lastCell.setAttribute(CELL_ATTR, '');
+      lastCell.setAttribute(CELL_COL_ATTR, '2');
+      lastCell.setAttribute(CELL_ROW_ATTR, '1');
+      Object.defineProperty(lastCell, 'offsetWidth', { value: 100, configurable: true });
+      row1.appendChild(lastCell);
+
+      grid.appendChild(row0);
+      grid.appendChild(row1);
+      document.body.appendChild(grid);
+
+      return grid;
+    };
+
+    it('shows the correct column grip (logical col 2) when hovering a cell after a colspan=2 cell', () => {
+      grid = createMergedGrid();
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 3,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+        i18n: mockI18n,
+      });
+
+      // The last cell in row 1 is at physical index 1, but logical col 2.
+      // Hovering it should activate colGrip[2], not colGrip[1].
+      const row1 = grid.querySelectorAll(`[${ROW_ATTR}]`)[1];
+      const cells = row1.querySelectorAll(`[${CELL_ATTR}]`);
+      const lastCellInRow1 = cells[1] as HTMLElement; // physical index 1, logical col 2
+
+      simulateMouseOver(lastCellInRow1);
+
+      const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
+
+      // colGrip[2] must be visible — the logical column of lastCellInRow1
+      expect(isGripVisible(colGrips[2])).toBe(true);
+      // colGrip[1] must NOT be visible — the (wrong) physical index
+      expect(isGripVisible(colGrips[1])).toBe(false);
+    });
+
+    it('shows the correct row grip (logical row 1) when hovering a cell in a merged row', () => {
+      grid = createMergedGrid();
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 3,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+        i18n: mockI18n,
+      });
+
+      const row1 = grid.querySelectorAll(`[${ROW_ATTR}]`)[1];
+      const cells = row1.querySelectorAll(`[${CELL_ATTR}]`);
+      const lastCellInRow1 = cells[1] as HTMLElement;
+
+      simulateMouseOver(lastCellInRow1);
+
+      const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
+
+      // rowGrip[1] should be visible — the logical row of row1
+      expect(isGripVisible(rowGrips[1])).toBe(true);
+      expect(isGripVisible(rowGrips[0])).toBe(false);
     });
   });
 

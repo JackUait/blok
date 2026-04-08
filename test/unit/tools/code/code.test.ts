@@ -1124,5 +1124,33 @@ describe('CodeTool', () => {
       el.remove();
       vi.useRealTimers();
     });
+
+    it('debounces: only calls detectLanguage once for rapid input events', async () => {
+      mockDetectLanguage.mockResolvedValue('python');
+
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: '', language: 'plain text' }));
+      vi.useFakeTimers();
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      simulateInput(codeEl);
+      simulateInput(codeEl);
+      simulateInput(codeEl);
+      await vi.advanceTimersByTimeAsync(600);
+      expect(mockDetectLanguage).toHaveBeenCalledTimes(1);
+
+      // Observable: after the single detection resolves, settings includes detected language
+      await vi.advanceTimersByTimeAsync(0);
+      const settings = tool.renderSettings() as Array<{
+        children: { items: Array<{ title: string; secondaryLabel?: string }> };
+      }>;
+      const detectedItem = settings[0].children.items.find((i) => i.secondaryLabel === 'auto');
+      expect(detectedItem?.title).toBe('Python');
+
+      el.remove();
+    });
   });
 });

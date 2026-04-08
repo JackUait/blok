@@ -298,7 +298,6 @@ export class CodeTool implements BlockTool {
         childItems.push({
           title: detectedLanguage.name,
           icon: IconWand,
-          secondaryLabel: 'auto',
           onActivate: (): void => this.setLanguage(detectedLanguage.id),
           closeOnActivate: true,
           isActive: (): boolean => this._data.language === detectedLanguage.id,
@@ -388,7 +387,6 @@ export class CodeTool implements BlockTool {
           title: detectedLanguage.name,
           name: detectedLanguage.id,
           icon: IconWand,
-          secondaryLabel: 'auto',
           toggle: 'language',
           isActive: (): boolean => this._data.language === detectedLanguage.id,
           closeOnActivate: true,

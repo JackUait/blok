@@ -1634,7 +1634,7 @@ export class Table implements BlockTool {
         ...(color !== undefined ? { color } : {}),
         ...(textColor !== undefined ? { textColor } : {}),
       };
-    }).filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+    });
   }
 
   private initCellSelection(gridEl: HTMLElement): void {

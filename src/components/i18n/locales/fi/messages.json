@@ -161,6 +161,7 @@
   "tools.quote.largeSize": "Suuri",
   "tools.code.codeTab": "Koodi",
   "tools.code.previewTab": "Esikatselu",
+  "tools.code.sideBySide": "Vierekkäin",
   "tools.table.placement": "Sijainti",
   "tools.table.placementTopLeft": "Ylhäällä vasemmalla",
   "tools.table.placementTopCenter": "Ylhäällä keskellä",

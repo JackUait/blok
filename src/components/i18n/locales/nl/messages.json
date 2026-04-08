@@ -161,6 +161,7 @@
   "tools.quote.largeSize": "Groot",
   "tools.code.codeTab": "Code",
   "tools.code.previewTab": "Voorbeeld",
+  "tools.code.sideBySide": "Naast elkaar",
   "tools.table.placement": "Positie",
   "tools.table.placementTopLeft": "Boven links",
   "tools.table.placementTopCenter": "Boven midden",

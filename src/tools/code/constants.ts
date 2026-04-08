@@ -57,6 +57,7 @@ export const HEADER_STYLES = 'flex items-center gap-1 px-3 py-1.5 text-xs text-g
 export const LANGUAGE_BUTTON_STYLES = 'inline-flex items-center px-1.5 py-0.5 rounded cursor-pointer bg-transparent border-0 text-xs text-gray-text font-medium transition-colors can-hover:hover:bg-item-hover-bg select-none';
 export const HEADER_CONTROLS_STYLES = 'flex items-center gap-1 opacity-0 group-hover/code:opacity-100 transition-opacity';
 export const HEADER_BUTTON_STYLES = 'p-1 rounded cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
+export const HEADER_BUTTON_MATCHED_STYLES = 'p-1.5 rounded-lg cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
 export const CODE_AREA_STYLES = 'block px-4 py-3 font-mono text-sm leading-relaxed outline-hidden whitespace-pre-wrap overflow-x-auto min-h-[1.5em]';
 export const COPIED_FEEDBACK_STYLES = 'text-xs text-gray-text font-medium select-none';
 
@@ -75,6 +76,25 @@ export const PREVIEW_AREA_STYLES = 'px-4 py-3 overflow-x-auto min-h-[1.5em] flex
 
 // i18n key — preview toggle
 export const PREVIEW_TOGGLE_KEY = 'tools.code.previewToggle';
+
+// i18n key — side-by-side view mode
+export const SIDE_BY_SIDE_KEY = 'tools.code.sideBySide';
+
+// View mode type
+export type CodeViewMode = 'code' | 'preview' | 'split';
+
+// CSS — view mode segmented control
+export const VIEW_MODE_CONTAINER_STYLES = 'flex items-center rounded-lg border border-border-secondary p-0.5 gap-0.5';
+export const VIEW_MODE_BUTTON_STYLES = 'p-1 rounded cursor-pointer bg-transparent border-0 text-gray-text transition-colors flex items-center justify-center';
+export const VIEW_MODE_BUTTON_ACTIVE_STYLES = 'p-1 rounded cursor-pointer bg-item-hover-bg border-0 text-primary transition-colors flex items-center justify-center';
+// Preview icon is 16x16 (vs 20x20 for code/split), so extra 2px padding keeps containers equal
+export const VIEW_MODE_PREVIEW_BUTTON_STYLES = 'p-[6px] rounded cursor-pointer bg-transparent border-0 text-gray-text transition-colors flex items-center justify-center';
+export const VIEW_MODE_PREVIEW_BUTTON_ACTIVE_STYLES = 'p-[6px] rounded cursor-pointer bg-item-hover-bg border-0 text-primary transition-colors flex items-center justify-center';
+
+// CSS — split container
+export const SPLIT_CONTAINER_STYLES = 'flex flex-col overflow-hidden';
+export const SPLIT_CONTAINER_SPLIT_STYLES = 'flex flex-row overflow-hidden';
+export const SPLIT_HALF_STYLES = 'flex-1 min-w-0 overflow-hidden';
 
 // Shiki theme names for syntax highlighting
 export const SHIKI_LIGHT_THEME = 'one-light';

@@ -1,3 +1,10 @@
+// Check/Confirm icon
+export const IconCheck = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="m4.5 10.5 4 4 7-8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Cross/Close icon
 export const IconCross = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -589,6 +596,14 @@ export const IconMergeCells = `
 
 // Split cell icon (one cell splitting into two)
 export const IconSplitCell = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18"/><path d="M8 8l4 4-4 4"/><path d="M16 8l-4 4 4 4"/></svg>`;
+
+// Split view icon (two panels side by side)
+export const IconSplitView = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="3" y="4" width="6" height="12" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
+  <rect x="11" y="4" width="6" height="12" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
+</svg>
+`;
 
 // Placement icon (3x3 alignment dot grid)
 export const IconPlacement = `

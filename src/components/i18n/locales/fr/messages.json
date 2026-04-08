@@ -161,6 +161,7 @@
   "tools.quote.largeSize": "Grand",
   "tools.code.codeTab": "Code",
   "tools.code.previewTab": "Aperçu",
+  "tools.code.sideBySide": "Côte à côte",
   "tools.table.placement": "Position",
   "tools.table.placementTopLeft": "Haut gauche",
   "tools.table.placementTopCenter": "Haut centre",

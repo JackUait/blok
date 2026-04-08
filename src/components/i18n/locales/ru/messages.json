@@ -161,6 +161,7 @@
   "tools.quote.largeSize": "Большой",
   "tools.code.codeTab": "Код",
   "tools.code.previewTab": "Предпросмотр",
+  "tools.code.sideBySide": "Бок о бок",
   "tools.table.placement": "Расположение",
   "tools.table.placementTopLeft": "Сверху слева",
   "tools.table.placementTopCenter": "Сверху по центру",

@@ -161,6 +161,7 @@
   "tools.quote.largeSize": "Голям",
   "tools.code.codeTab": "Код",
   "tools.code.previewTab": "Преглед",
+  "tools.code.sideBySide": "Един до друг",
   "tools.table.placement": "Подравняване",
   "tools.table.placementTopLeft": "Горе вляво",
   "tools.table.placementTopCenter": "Горе в центъра",

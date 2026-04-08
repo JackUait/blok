@@ -218,7 +218,7 @@ describe('buildCodeDOM', () => {
   });
 
   describe('preview support', () => {
-    it('includes preview toggle button when previewable is true', async () => {
+    it('includes view mode container when previewable is true', async () => {
       const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
       const result = buildCodeDOM({
         code: 'E = mc^2',
@@ -226,11 +226,49 @@ describe('buildCodeDOM', () => {
         readOnly: false,
         copyLabel: 'Copy code',
         previewable: true,
-        previewToggleLabel: 'Preview',
+        viewModeLabels: { code: 'Code', preview: 'Preview', split: 'Side by side' },
       });
 
-      expect(result.previewToggleButton).toBeInstanceOf(HTMLButtonElement);
-      expect(result.previewToggleButton!.getAttribute('data-blok-testid')).toBe('code-preview-toggle-btn');
+      expect(result.viewModeContainer).toBeInstanceOf(HTMLElement);
+      expect(result.viewModeContainer!.getAttribute('data-blok-testid')).toBe('code-view-mode');
+    });
+
+    it('view mode container has three buttons (code, preview, split)', async () => {
+      const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+      const result = buildCodeDOM({
+        code: 'E = mc^2',
+        languageName: 'LaTeX',
+        readOnly: false,
+        copyLabel: 'Copy code',
+        previewable: true,
+        viewModeLabels: { code: 'Code', preview: 'Preview', split: 'Side by side' },
+      });
+
+      const container = result.viewModeContainer!;
+      const buttons = container.querySelectorAll('button');
+
+      expect(buttons).toHaveLength(3);
+      expect(container.querySelector('[data-blok-testid="code-mode-code"]')).toBeTruthy();
+      expect(container.querySelector('[data-blok-testid="code-mode-preview"]')).toBeTruthy();
+      expect(container.querySelector('[data-blok-testid="code-mode-split"]')).toBeTruthy();
+    });
+
+    it('view mode buttons have aria-label attributes', async () => {
+      const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+      const result = buildCodeDOM({
+        code: 'E = mc^2',
+        languageName: 'LaTeX',
+        readOnly: false,
+        copyLabel: 'Copy code',
+        previewable: true,
+        viewModeLabels: { code: 'Code', preview: 'Preview', split: 'Side by side' },
+      });
+
+      const container = result.viewModeContainer!;
+
+      expect(container.querySelector('[data-blok-testid="code-mode-code"]')!.getAttribute('aria-label')).toBe('Code');
+      expect(container.querySelector('[data-blok-testid="code-mode-preview"]')!.getAttribute('aria-label')).toBe('Preview');
+      expect(container.querySelector('[data-blok-testid="code-mode-split"]')!.getAttribute('aria-label')).toBe('Side by side');
     });
 
     it('includes preview container when previewable is true', async () => {
@@ -241,14 +279,32 @@ describe('buildCodeDOM', () => {
         readOnly: false,
         copyLabel: 'Copy code',
         previewable: true,
-        previewToggleLabel: 'Preview',
+        viewModeLabels: { code: 'Code', preview: 'Preview', split: 'Side by side' },
       });
 
       expect(result.previewElement).toBeInstanceOf(HTMLDivElement);
       expect(result.previewElement!.getAttribute('data-blok-testid')).toBe('code-preview');
     });
 
-    it('does not include preview toggle when previewable is false', async () => {
+    it('includes split container wrapping code body and preview', async () => {
+      const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+      const result = buildCodeDOM({
+        code: 'E = mc^2',
+        languageName: 'LaTeX',
+        readOnly: false,
+        copyLabel: 'Copy code',
+        previewable: true,
+        viewModeLabels: { code: 'Code', preview: 'Preview', split: 'Side by side' },
+      });
+
+      expect(result.splitContainer).toBeInstanceOf(HTMLElement);
+      expect(result.splitContainer!.getAttribute('data-blok-testid')).toBe('code-split-container');
+      // Both code body and preview are inside the split container
+      expect(result.splitContainer!.contains(result.preElement)).toBe(true);
+      expect(result.splitContainer!.contains(result.previewElement)).toBe(true);
+    });
+
+    it('does not include view mode container when previewable is false', async () => {
       const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
       const result = buildCodeDOM({
         code: 'const x = 1;',
@@ -258,11 +314,12 @@ describe('buildCodeDOM', () => {
         previewable: false,
       });
 
-      expect(result.previewToggleButton).toBeNull();
+      expect(result.viewModeContainer).toBeNull();
       expect(result.previewElement).toBeNull();
+      expect(result.splitContainer).toBeNull();
     });
 
-    it('does not include preview toggle when previewable is omitted', async () => {
+    it('does not include view mode container when previewable is omitted', async () => {
       const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
       const result = buildCodeDOM({
         code: 'const x = 1;',
@@ -271,30 +328,60 @@ describe('buildCodeDOM', () => {
         copyLabel: 'Copy code',
       });
 
-      expect(result.previewToggleButton).toBeNull();
+      expect(result.viewModeContainer).toBeNull();
       expect(result.previewElement).toBeNull();
+      expect(result.splitContainer).toBeNull();
     });
 
-    it('preview toggle button is in the controls before copy button', async () => {
+    it('copy button has larger padding to match segmented control height', async () => {
       const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
-      const { wrapper, previewToggleButton, copyButton } = buildCodeDOM({
+      const { copyButton } = buildCodeDOM({
         code: '',
         languageName: 'LaTeX',
         readOnly: false,
         copyLabel: 'Copy code',
         previewable: true,
-        previewToggleLabel: 'Preview',
+        viewModeLabels: { code: 'Code', preview: 'Preview', split: 'Side by side' },
+      });
+
+      // Copy button should have p-1.5 to visually match the segmented control
+      expect(copyButton.className).toContain('p-1.5');
+    });
+
+    it('copy button keeps standard padding when not previewable', async () => {
+      const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+      const { copyButton } = buildCodeDOM({
+        code: '',
+        languageName: 'JavaScript',
+        readOnly: false,
+        copyLabel: 'Copy code',
+      });
+
+      // Standard copy button should NOT have the larger padding
+      expect(copyButton.className).not.toContain('p-1.5');
+      expect(copyButton.className).toContain('p-1');
+    });
+
+    it('view mode container is in the controls before copy button', async () => {
+      const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+      const { wrapper, viewModeContainer, copyButton } = buildCodeDOM({
+        code: '',
+        languageName: 'LaTeX',
+        readOnly: false,
+        copyLabel: 'Copy code',
+        previewable: true,
+        viewModeLabels: { code: 'Code', preview: 'Preview', split: 'Side by side' },
       });
 
       const header = wrapper.children[0];
       // Controls container is the last child of header
       const controls = header.children[2];
       const children = Array.from(controls.children);
-      const toggleIndex = children.indexOf(previewToggleButton!);
+      const viewModeIndex = children.indexOf(viewModeContainer!);
       const copyIndex = children.indexOf(copyButton);
 
-      expect(toggleIndex).toBeGreaterThanOrEqual(0);
-      expect(toggleIndex).toBeLessThan(copyIndex);
+      expect(viewModeIndex).toBeGreaterThanOrEqual(0);
+      expect(viewModeIndex).toBeLessThan(copyIndex);
     });
   });
 

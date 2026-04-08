@@ -161,6 +161,7 @@
   "tools.quote.largeSize": "크게",
   "tools.code.codeTab": "코드",
   "tools.code.previewTab": "미리보기",
+  "tools.code.sideBySide": "나란히",
   "tools.table.placement": "배치",
   "tools.table.placementTopLeft": "왼쪽 상단",
   "tools.table.placementTopCenter": "상단 가운데",

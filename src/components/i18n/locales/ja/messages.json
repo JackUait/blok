@@ -161,6 +161,7 @@
   "tools.quote.largeSize": "大",
   "tools.code.codeTab": "コード",
   "tools.code.previewTab": "プレビュー",
+  "tools.code.sideBySide": "並列表示",
   "tools.table.placement": "配置",
   "tools.table.placementTopLeft": "左上",
   "tools.table.placementTopCenter": "上中央",

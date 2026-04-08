@@ -4,13 +4,22 @@ import {
   LANGUAGE_BUTTON_STYLES,
   HEADER_CONTROLS_STYLES,
   HEADER_BUTTON_STYLES,
+  HEADER_BUTTON_MATCHED_STYLES,
   CODE_AREA_STYLES,
   PREVIEW_AREA_STYLES,
   CODE_BODY_STYLES,
   GUTTER_STYLES,
   GUTTER_LINE_STYLES,
+  VIEW_MODE_CONTAINER_STYLES,
+  VIEW_MODE_BUTTON_STYLES,
+  VIEW_MODE_BUTTON_ACTIVE_STYLES,
+  VIEW_MODE_PREVIEW_BUTTON_STYLES,
+  VIEW_MODE_PREVIEW_BUTTON_ACTIVE_STYLES,
+  SPLIT_CONTAINER_STYLES,
+  SPLIT_HALF_STYLES,
 } from './constants';
-import { IconCopy, IconCode, IconChevronDown } from '../../components/icons';
+import type { CodeViewMode } from './constants';
+import { IconCopy, IconCode, IconPreview, IconSplitView, IconChevronDown } from '../../components/icons';
 
 export interface CodeDOMRefs {
   wrapper: HTMLElement;
@@ -19,8 +28,15 @@ export interface CodeDOMRefs {
   preElement: HTMLPreElement;
   codeElement: HTMLElement;
   gutterElement: HTMLElement;
-  previewToggleButton: HTMLButtonElement | null;
+  viewModeContainer: HTMLElement | null;
   previewElement: HTMLDivElement | null;
+  splitContainer: HTMLElement | null;
+}
+
+export interface ViewModeLabels {
+  code: string;
+  preview: string;
+  split: string;
 }
 
 export interface BuildCodeDOMOptions {
@@ -29,30 +45,82 @@ export interface BuildCodeDOMOptions {
   readOnly: boolean;
   copyLabel: string;
   previewable?: boolean;
-  previewToggleLabel?: string;
+  viewModeLabels?: ViewModeLabels;
 }
 
-function buildPreviewElements(
-  previewToggleLabel?: string,
-): { previewToggleButton: HTMLButtonElement; previewElement: HTMLDivElement } {
-  const previewToggleButton = document.createElement('button');
+interface ViewModeElements {
+  viewModeContainer: HTMLElement;
+  previewElement: HTMLDivElement;
+  splitContainer: HTMLElement;
+}
 
-  previewToggleButton.type = 'button';
-  previewToggleButton.className = HEADER_BUTTON_STYLES;
-  previewToggleButton.innerHTML = IconCode;
-  previewToggleButton.setAttribute('aria-label', previewToggleLabel ?? 'Preview');
-  previewToggleButton.setAttribute('data-blok-testid', 'code-preview-toggle-btn');
+function buildViewModeElements(
+  labels: ViewModeLabels,
+): ViewModeElements {
+  // Segmented control container
+  const viewModeContainer = document.createElement('div');
 
+  viewModeContainer.className = VIEW_MODE_CONTAINER_STYLES;
+  viewModeContainer.setAttribute('role', 'group');
+  viewModeContainer.setAttribute('data-blok-testid', 'code-view-mode');
+
+  const modes: Array<{ mode: CodeViewMode; icon: string; label: string }> = [
+    { mode: 'code', icon: IconCode, label: labels.code },
+    { mode: 'preview', icon: IconPreview, label: labels.preview },
+    { mode: 'split', icon: IconSplitView, label: labels.split },
+  ];
+
+  for (const { mode, icon, label } of modes) {
+    const button = document.createElement('button');
+    const isPreview = mode === 'preview';
+
+    button.type = 'button';
+    button.className = isPreview ? VIEW_MODE_PREVIEW_BUTTON_STYLES : VIEW_MODE_BUTTON_STYLES;
+    button.innerHTML = icon;
+    button.setAttribute('aria-label', label);
+    button.setAttribute('aria-pressed', 'false');
+    button.setAttribute('data-blok-testid', `code-mode-${mode}`);
+    button.setAttribute('data-mode', mode);
+    viewModeContainer.appendChild(button);
+  }
+
+  // Preview container
   const previewElement = document.createElement('div');
 
   previewElement.className = PREVIEW_AREA_STYLES;
   previewElement.setAttribute('data-blok-testid', 'code-preview');
 
-  return { previewToggleButton, previewElement };
+  // Split container — wraps code body + preview
+  const splitContainer = document.createElement('div');
+
+  splitContainer.className = SPLIT_CONTAINER_STYLES;
+  splitContainer.setAttribute('data-blok-testid', 'code-split-container');
+
+  return { viewModeContainer, previewElement, splitContainer };
+}
+
+/**
+ * Set the active view mode button styling and aria-pressed state.
+ */
+export function setActiveViewMode(viewModeContainer: HTMLElement, mode: CodeViewMode): void {
+  const buttons = Array.from(viewModeContainer.querySelectorAll<HTMLButtonElement>('[data-mode]'));
+
+  for (const btn of buttons) {
+    const isActive = btn.getAttribute('data-mode') === mode;
+    const isPreview = btn.getAttribute('data-mode') === 'preview';
+
+    btn.setAttribute('aria-pressed', String(isActive));
+
+    if (isPreview) {
+      btn.className = isActive ? VIEW_MODE_PREVIEW_BUTTON_ACTIVE_STYLES : VIEW_MODE_PREVIEW_BUTTON_STYLES;
+    } else {
+      btn.className = isActive ? VIEW_MODE_BUTTON_ACTIVE_STYLES : VIEW_MODE_BUTTON_STYLES;
+    }
+  }
 }
 
 export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
-  const { code, languageName, readOnly, copyLabel, previewable, previewToggleLabel } = options;
+  const { code, languageName, readOnly, copyLabel, previewable, viewModeLabels } = options;
 
   // Wrapper
   const wrapper = document.createElement('div');
@@ -82,15 +150,19 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   const spacer = document.createElement('div');
   spacer.className = 'flex-1';
 
-  // Preview toggle button (only when previewable and not read-only)
-  const { previewToggleButton, previewElement } = previewable
-    ? buildPreviewElements(previewToggleLabel)
-    : { previewToggleButton: null, previewElement: null };
+  // View mode segmented control (only when previewable and not read-only)
+  const viewModeResult = previewable && viewModeLabels
+    ? buildViewModeElements(viewModeLabels)
+    : null;
+
+  const viewModeContainer = viewModeResult?.viewModeContainer ?? null;
+  const previewElement = viewModeResult?.previewElement ?? null;
+  const splitContainer = viewModeResult?.splitContainer ?? null;
 
   // Copy button
   const copyButton = document.createElement('button');
   copyButton.type = 'button';
-  copyButton.className = HEADER_BUTTON_STYLES;
+  copyButton.className = viewModeContainer ? HEADER_BUTTON_MATCHED_STYLES : HEADER_BUTTON_STYLES;
   copyButton.innerHTML = IconCopy;
   copyButton.setAttribute('aria-label', copyLabel);
   copyButton.setAttribute('data-blok-testid', 'code-copy-btn');
@@ -123,7 +195,7 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
     gutterElement.appendChild(lineEl);
   });
 
-  // Assemble header: [language] [spacer] [controls: preview toggle? | copy | more]
+  // Assemble header: [language] [spacer] [controls: view mode? | copy]
   header.appendChild(languageButton);
   header.appendChild(spacer);
 
@@ -131,8 +203,8 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   const controls = document.createElement('div');
   controls.className = HEADER_CONTROLS_STYLES;
 
-  if (previewToggleButton) {
-    controls.appendChild(previewToggleButton);
+  if (viewModeContainer) {
+    controls.appendChild(viewModeContainer);
   }
 
   controls.appendChild(copyButton);
@@ -151,11 +223,23 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
 
   // Assemble wrapper
   wrapper.appendChild(header);
-  wrapper.appendChild(codeBody);
 
-  if (previewElement) {
-    wrapper.appendChild(previewElement);
+  if (splitContainer && previewElement) {
+    // Previewable: wrap code body + preview in the split container
+    const codeHalf = document.createElement('div');
+    codeHalf.className = SPLIT_HALF_STYLES;
+    codeHalf.appendChild(codeBody);
+
+    const previewHalf = document.createElement('div');
+    previewHalf.className = SPLIT_HALF_STYLES;
+    previewHalf.appendChild(previewElement);
+
+    splitContainer.appendChild(codeHalf);
+    splitContainer.appendChild(previewHalf);
+    wrapper.appendChild(splitContainer);
+  } else {
+    wrapper.appendChild(codeBody);
   }
 
-  return { wrapper, languageButton, copyButton, preElement, codeElement, gutterElement, previewToggleButton, previewElement };
+  return { wrapper, languageButton, copyButton, preElement, codeElement, gutterElement, viewModeContainer, previewElement, splitContainer };
 }

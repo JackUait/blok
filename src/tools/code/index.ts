@@ -10,12 +10,14 @@ import type {
 } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import type { CodeData } from '../../../types/tools/code';
-import { IconCodeBlock } from '../../components/icons';
-import { buildCodeDOM } from './dom-builder';
+import { IconCodeBlock, IconCheck } from '../../components/icons';
+import { buildCodeDOM, setActiveViewMode } from './dom-builder';
 import type { CodeDOMRefs } from './dom-builder';
 import { handleCodeKeydown } from './code-keyboard';
 import { PopoverDesktop } from '../../components/utils/popover';
+import { onHover as tooltipOnHover } from '../../components/utils/tooltip';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
+import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import {
   DEFAULT_LANGUAGE,
   LANGUAGES,
@@ -25,10 +27,15 @@ import {
   SEARCH_LANGUAGE_KEY,
   COPIED_FEEDBACK_STYLES,
   PREVIEWABLE_LANGUAGES,
-  PREVIEW_TOGGLE_KEY,
+  CODE_TAB_KEY,
+  PREVIEW_TAB_KEY,
+  SIDE_BY_SIDE_KEY,
   PREVIEW_AREA_STYLES,
   GUTTER_LINE_STYLES,
+  SPLIT_CONTAINER_STYLES,
+  SPLIT_CONTAINER_SPLIT_STYLES,
 } from './constants';
+import type { CodeViewMode } from './constants';
 import { renderLatex } from './katex-loader';
 import { renderMermaid } from './mermaid-loader';
 import { tokenizeCode, isHighlightable } from './shiki-loader';
@@ -43,7 +50,7 @@ export class CodeTool implements BlockTool {
   private _dom: CodeDOMRefs | null = null;
   private _lineNumbers = true;
   private _picker: PopoverDesktop | null = null;
-  private _previewActive = false;
+  private _viewMode: CodeViewMode = 'preview';
   private _previewContainer: HTMLElement | null = null;
   private _disposeHighlights: (() => void) | null = null;
   private _highlightRafId: number | null = null;
@@ -68,7 +75,11 @@ export class CodeTool implements BlockTool {
       readOnly: this.readOnly,
       copyLabel: this.api.i18n.t(COPY_CODE_KEY),
       previewable: this.readOnly ? false : isPreviewable,
-      previewToggleLabel: this.api.i18n.t(PREVIEW_TOGGLE_KEY),
+      viewModeLabels: (this.readOnly ? false : isPreviewable) ? {
+        code: this.api.i18n.t(CODE_TAB_KEY),
+        preview: this.api.i18n.t(PREVIEW_TAB_KEY),
+        split: this.api.i18n.t(SIDE_BY_SIDE_KEY),
+      } : undefined,
     });
 
     this._dom = dom;
@@ -89,16 +100,31 @@ export class CodeTool implements BlockTool {
       void this.renderPreview();
     }
 
-    // Edit mode + previewable: show preview toggle, default to preview
-    if (!this.readOnly && isPreviewable && dom.previewToggleButton && dom.previewElement) {
-      this._previewActive = true;
-      dom.preElement.hidden = true;
-      dom.gutterElement.hidden = true;
-      dom.previewElement.hidden = false;
+    // Edit mode + previewable: show view mode segmented control, default to preview
+    if (!this.readOnly && isPreviewable && dom.viewModeContainer && dom.previewElement && dom.splitContainer) {
+      this._viewMode = 'preview';
       this._previewContainer = dom.previewElement;
+
+      // Apply initial state: preview mode
+      this.applyViewMode();
       void this.renderPreview();
 
-      dom.previewToggleButton.addEventListener('click', () => this.togglePreview());
+      // Listen for clicks on view mode buttons
+      const modeButtons = Array.from(dom.viewModeContainer.querySelectorAll<HTMLButtonElement>('[data-mode]'));
+
+      for (const btn of modeButtons) {
+        const label = btn.getAttribute('aria-label') ?? '';
+
+        tooltipOnHover(btn, label, { placement: 'bottom' });
+
+        btn.addEventListener('click', () => {
+          const mode = btn.getAttribute('data-mode') as CodeViewMode;
+
+          if (mode && mode !== this._viewMode) {
+            this.setViewMode(mode);
+          }
+        });
+      }
     }
 
     if (!this.readOnly) {
@@ -121,27 +147,10 @@ export class CodeTool implements BlockTool {
     }
 
     dom.copyButton.addEventListener('click', () => this.copyCode());
+    tooltipOnHover(dom.copyButton, this.api.i18n.t(COPY_CODE_KEY), { placement: 'bottom' });
 
     if (!this.readOnly) {
-      const languageItems: PopoverItemParams[] = LANGUAGES.map((lang) => ({
-        title: lang.name,
-        name: lang.id,
-        toggle: 'language',
-        isActive: (): boolean => this._data.language === lang.id,
-        closeOnActivate: true,
-        onActivate: (): void => this.setLanguage(lang.id),
-      }));
-
-      this._picker = new PopoverDesktop({
-        items: languageItems,
-        trigger: dom.languageButton,
-        leftAlignElement: dom.wrapper,
-        searchable: true,
-        width: '200px',
-        messages: {
-          search: this.api.i18n.t(SEARCH_LANGUAGE_KEY),
-        },
-      });
+      this._picker = this.buildLanguagePicker(dom.languageButton, dom.wrapper);
 
       dom.languageButton.addEventListener('click', () => {
         this._picker?.show();
@@ -155,37 +164,56 @@ export class CodeTool implements BlockTool {
     void this.highlightCode();
   }
 
-  private togglePreview(): void {
-    if (this._previewActive) {
-      this.showCode();
-    } else {
-      this.showPreview();
+  private setViewMode(mode: CodeViewMode): void {
+    this._viewMode = mode;
+    this.applyViewMode();
+
+    if (mode === 'preview' || mode === 'split') {
+      void this.renderPreview();
     }
   }
 
-  private showCode(): void {
-    if (!this._dom?.previewElement || !this._dom.previewToggleButton) {
+  private applyViewMode(): void {
+    if (!this._dom?.previewElement || !this._dom.viewModeContainer || !this._dom.splitContainer) {
       return;
     }
 
-    this._previewActive = false;
-    this._dom.preElement.hidden = false;
-    this._dom.gutterElement.hidden = !this._lineNumbers;
-    this._dom.previewElement.hidden = true;
-  }
+    // Update segmented control active state
+    setActiveViewMode(this._dom.viewModeContainer, this._viewMode);
 
-  private showPreview(): void {
-    if (!this._dom?.previewElement || !this._dom.previewToggleButton) {
-      return;
+    const codeBody = this._dom.preElement.parentElement?.parentElement;
+
+    switch (this._viewMode) {
+      case 'code':
+        this._dom.preElement.hidden = false;
+        this._dom.gutterElement.hidden = !this._lineNumbers;
+        this._dom.previewElement.hidden = true;
+        if (codeBody) {
+          codeBody.hidden = false;
+        }
+        this._dom.splitContainer.className = SPLIT_CONTAINER_STYLES;
+        break;
+
+      case 'preview':
+        this._dom.preElement.hidden = true;
+        this._dom.gutterElement.hidden = true;
+        this._dom.previewElement.hidden = false;
+        if (codeBody) {
+          codeBody.hidden = true;
+        }
+        this._dom.splitContainer.className = SPLIT_CONTAINER_STYLES;
+        break;
+
+      case 'split':
+        this._dom.preElement.hidden = false;
+        this._dom.gutterElement.hidden = !this._lineNumbers;
+        this._dom.previewElement.hidden = false;
+        if (codeBody) {
+          codeBody.hidden = false;
+        }
+        this._dom.splitContainer.className = SPLIT_CONTAINER_SPLIT_STYLES;
+        break;
     }
-
-    this._previewActive = true;
-    this._dom.preElement.hidden = true;
-    this._dom.gutterElement.hidden = true;
-    this._dom.previewElement.hidden = false;
-
-    // Re-render preview with current code content
-    void this.renderPreview();
   }
 
   private async renderPreview(): Promise<void> {
@@ -240,18 +268,32 @@ export class CodeTool implements BlockTool {
   }
 
   public renderSettings(): MenuConfig {
+    const selectedId = this._data.language;
+    const selectedLanguage = LANGUAGES.find((lang) => lang.id === selectedId) ?? LANGUAGES[0];
+    const otherLanguages = LANGUAGES.filter((lang) => lang.id !== selectedId);
+
     return [
       {
         icon: IconCodeBlock,
         title: this.api.i18n.t(LANGUAGE_KEY),
         name: 'code-language',
         children: {
-          items: LANGUAGES.map((lang) => ({
-            title: lang.name,
-            onActivate: (): void => this.setLanguage(lang.id),
-            closeOnActivate: true,
-            isActive: this._data.language === lang.id,
-          })),
+          items: [
+            {
+              title: selectedLanguage.name,
+              icon: IconCheck,
+              onActivate: (): void => this.setLanguage(selectedLanguage.id),
+              closeOnActivate: true,
+              isActive: true,
+            },
+            { type: PopoverItemType.Separator },
+            ...otherLanguages.map((lang) => ({
+              title: lang.name,
+              onActivate: (): void => this.setLanguage(lang.id),
+              closeOnActivate: true,
+              isActive: false,
+            })),
+          ],
         },
       },
     ];
@@ -290,9 +332,63 @@ export class CodeTool implements BlockTool {
       if (textSpan) {
         textSpan.textContent = this.getLanguageName(id);
       }
+
+      // Rebuild the language picker so the selected language moves to the top
+      if (this._picker) {
+        this._picker.destroy();
+      }
+      this._picker = this.buildLanguagePicker(this._dom.languageButton, this._dom.wrapper);
     }
 
     void this.highlightCode();
+  }
+
+  /**
+   * Builds the language items array with the currently selected language
+   * pinned at the top (with a check icon), followed by a separator, then
+   * the remaining languages in their original order.
+   */
+  private buildLanguagePickerItems(): PopoverItemParams[] {
+    const selectedId = this._data.language;
+    const otherLanguages = LANGUAGES.filter((lang) => lang.id !== selectedId);
+    const selectedLanguage = LANGUAGES.find((lang) => lang.id === selectedId) ?? LANGUAGES[0];
+
+    return [
+      {
+        title: selectedLanguage.name,
+        name: selectedLanguage.id,
+        icon: IconCheck,
+        toggle: 'language',
+        isActive: (): boolean => this._data.language === selectedLanguage.id,
+        closeOnActivate: true,
+        onActivate: (): void => this.setLanguage(selectedLanguage.id),
+      },
+      { type: PopoverItemType.Separator },
+      ...otherLanguages.map((lang) => ({
+        title: lang.name,
+        name: lang.id,
+        toggle: 'language',
+        isActive: (): boolean => this._data.language === lang.id,
+        closeOnActivate: true,
+        onActivate: (): void => this.setLanguage(lang.id),
+      })),
+    ];
+  }
+
+  /**
+   * Creates a new PopoverDesktop instance for the language picker.
+   */
+  private buildLanguagePicker(trigger: HTMLElement, leftAlignElement: HTMLElement): PopoverDesktop {
+    return new PopoverDesktop({
+      items: this.buildLanguagePickerItems(),
+      trigger,
+      leftAlignElement,
+      searchable: true,
+      width: '200px',
+      messages: {
+        search: this.api.i18n.t(SEARCH_LANGUAGE_KEY),
+      },
+    });
   }
 
   private getLanguageName(id: string): string {

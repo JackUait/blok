@@ -451,5 +451,457 @@ describe('TableCellSelection — merged cells', () => {
         expect.objectContaining({ minRow: 0, maxRow: 1, minCol: 2, maxCol: 2 })
       );
     });
+
+    it('anchor cell on non-origin cell: drag starting at td[0,2] (physical index 1) resolves to logical col=2', () => {
+      grid = createMergedGrid();
+      mockMergedBoundingRects(grid);
+
+      const rangeSpy = vi.fn();
+
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onSelectionRangeChange: rangeSpy,
+      });
+
+      // Start the drag on td[0,2] — physical index 1 in row 0, logical col 2.
+      // Before the fix the anchor would be resolved to col=1 (physical index),
+      // causing the selection to start one column too far left.
+      const td02 = grid.querySelector<HTMLElement>(`[${CELL_COL_ATTR}="2"][${CELL_ROW_ATTR}="0"]`)!;
+      const td00 = grid.querySelector<HTMLElement>(`[${CELL_COL_ATTR}="0"]`)!;
+
+      simulateDragBetweenCells(td02, td00);
+
+      // anchor=col 2, extent=col 0 → minCol=0, maxCol=2
+      // Before the fix: anchor=col 1 (physical) → minCol=0, maxCol=1 (wrong)
+      expect(rangeSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 2 })
+      );
+    });
+  });
+
+  /**
+   * Rowspan-only merge (no colspan):
+   *
+   *   col 0     col 1     col 2
+   *   +---------+---------+---------+
+   *   | [0,0]   | merged  | [0,2]   |   row 0
+   *   |         | (2×1)   |         |
+   *   +---------+         +---------+
+   *   | [1,0]   |         | [1,2]   |   row 1
+   *   +---------+---------+---------+
+   *
+   * Physical <td> elements per row:
+   *   Row 0: td[0,0], td[0,1] (rowspan=2), td[0,2]  → 3 physical cells
+   *   Row 1: td[1,0], td[1,2]                        → 2 physical cells
+   *
+   * In row 1, physical index 0 = logical col 0 (unchanged),
+   * but physical index 1 = logical col 2 (NOT col 1).
+   */
+  describe('resolveCellCoord — rowspan-only merge', () => {
+    const createRowspanGrid = (): HTMLTableElement => {
+      const table = document.createElement('table');
+
+      table.style.position = 'relative';
+
+      const colgroup = document.createElement('colgroup');
+
+      [200, 200, 200].forEach(w => {
+        const col = document.createElement('col');
+
+        col.style.width = `${w}px`;
+        colgroup.appendChild(col);
+      });
+      table.appendChild(colgroup);
+
+      const tbody = document.createElement('tbody');
+
+      // Row 0: [0,0], [0,1] (rowspan=2), [0,2]
+      const row0 = document.createElement('tr');
+
+      row0.setAttribute(ROW_ATTR, '');
+
+      const makeTd = (r: number, c: number, cs = 1, rs = 1): HTMLTableCellElement => {
+        const td = document.createElement('td');
+
+        td.setAttribute(CELL_ATTR, '');
+        td.setAttribute(CELL_ROW_ATTR, String(r));
+        td.setAttribute(CELL_COL_ATTR, String(c));
+        td.colSpan = cs;
+        td.rowSpan = rs;
+        const blocks = document.createElement('div');
+
+        blocks.setAttribute('data-blok-table-cell-blocks', '');
+        td.appendChild(blocks);
+        return td;
+      };
+
+      row0.appendChild(makeTd(0, 0));
+      row0.appendChild(makeTd(0, 1, 1, 2)); // rowspan=2
+      row0.appendChild(makeTd(0, 2));
+      tbody.appendChild(row0);
+
+      // Row 1: [1,0], [1,2]  (col 1 is covered by the rowspan above)
+      const row1 = document.createElement('tr');
+
+      row1.setAttribute(ROW_ATTR, '');
+      row1.appendChild(makeTd(1, 0));
+      row1.appendChild(makeTd(1, 2));
+      tbody.appendChild(row1);
+
+      table.appendChild(tbody);
+      document.body.appendChild(table);
+      return table;
+    };
+
+    const mockRowspanBoundingRects = (tbl: HTMLTableElement): void => {
+      const gridLeft = 10;
+      const gridTop = 10;
+      const colWidth = 200;
+      const rowHeight = 40;
+
+      vi.spyOn(tbl, 'getBoundingClientRect').mockReturnValue({
+        top: gridTop, left: gridLeft,
+        bottom: gridTop + 2 * rowHeight, right: gridLeft + 3 * colWidth,
+        width: 3 * colWidth, height: 2 * rowHeight,
+        x: gridLeft, y: gridTop, toJSON: () => ({}),
+      });
+
+      tbl.querySelectorAll(`[${CELL_ATTR}]`).forEach(cell => {
+        const r = Number(cell.getAttribute(CELL_ROW_ATTR));
+        const c = Number(cell.getAttribute(CELL_COL_ATTR));
+        const td = cell as HTMLTableCellElement;
+        const cs = td.colSpan || 1;
+        const rs = td.rowSpan || 1;
+
+        vi.spyOn(cell, 'getBoundingClientRect').mockReturnValue({
+          top: gridTop + r * rowHeight, left: gridLeft + c * colWidth,
+          bottom: gridTop + (r + rs) * rowHeight, right: gridLeft + (c + cs) * colWidth,
+          width: cs * colWidth, height: rs * rowHeight,
+          x: gridLeft + c * colWidth, y: gridTop + r * rowHeight, toJSON: () => ({}),
+        });
+      });
+
+      vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+        borderTopWidth: '0', borderLeftWidth: '0',
+      } as unknown as CSSStyleDeclaration);
+    };
+
+    it('resolveCellCoord returns logical col=2 (not physical index 1) for td[1,2] after rowspan-only merge', () => {
+      const tbl = createRowspanGrid();
+
+      mockRowspanBoundingRects(tbl);
+
+      const rangeSpy = vi.fn();
+      const sel = new TableCellSelection({ grid: tbl, i18n: mockI18n, onSelectionRangeChange: rangeSpy });
+
+      // td[1,0] is physical index 0 and logical col 0 (unchanged)
+      const td10 = tbl.querySelector<HTMLElement>(`[${CELL_ROW_ATTR}="1"][${CELL_COL_ATTR}="0"]`)!;
+      // td[1,2] is physical index 1 in row 1 (col 1 is covered), but logical col 2
+      const td12 = tbl.querySelector<HTMLElement>(`[${CELL_ROW_ATTR}="1"][${CELL_COL_ATTR}="2"]`)!;
+
+      document.elementFromPoint = () => td12;
+      td10.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: td10.getBoundingClientRect().left + 5,
+        clientY: td10.getBoundingClientRect().top + 5,
+        bubbles: true, button: 0,
+      }));
+      document.dispatchEvent(new PointerEvent('pointermove', {
+        clientX: td12.getBoundingClientRect().left + 5,
+        clientY: td12.getBoundingClientRect().top + 5,
+        bubbles: true,
+      }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      // Before the fix: extent col = 1 (physical index), so maxCol=1 (wrong)
+      // After the fix:  extent col = 2 (logical from attribute), so maxCol=2
+      expect(rangeSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ minRow: 1, maxRow: 1, minCol: 0, maxCol: 2 })
+      );
+
+      sel.destroy();
+      tbl.remove();
+    });
+  });
+
+  /**
+   * Colspan-only merge (no rowspan):
+   *
+   *   col 0     col 1     col 2
+   *   +---------+---------+---------+
+   *   | merged (1×2)      | [0,2]   |   row 0
+   *   +---------+---------+---------+
+   *   | [1,0]   | [1,1]   | [1,2]   |   row 1
+   *   +---------+---------+---------+
+   *
+   * Physical <td> elements per row:
+   *   Row 0: td[0,0] (colspan=2), td[0,2]  → 2 physical cells
+   *   Row 1: td[1,0], td[1,1], td[1,2]     → 3 physical cells (unchanged)
+   *
+   * In row 0, physical index 1 = logical col 2 (NOT col 1).
+   */
+  describe('resolveCellCoord — colspan-only merge', () => {
+    const createColspanGrid = (): HTMLTableElement => {
+      const table = document.createElement('table');
+
+      table.style.position = 'relative';
+
+      const colgroup = document.createElement('colgroup');
+
+      [200, 200, 200].forEach(w => {
+        const col = document.createElement('col');
+
+        col.style.width = `${w}px`;
+        colgroup.appendChild(col);
+      });
+      table.appendChild(colgroup);
+
+      const tbody = document.createElement('tbody');
+
+      const makeTd = (r: number, c: number, cs = 1, rs = 1): HTMLTableCellElement => {
+        const td = document.createElement('td');
+
+        td.setAttribute(CELL_ATTR, '');
+        td.setAttribute(CELL_ROW_ATTR, String(r));
+        td.setAttribute(CELL_COL_ATTR, String(c));
+        td.colSpan = cs;
+        td.rowSpan = rs;
+        const blocks = document.createElement('div');
+
+        blocks.setAttribute('data-blok-table-cell-blocks', '');
+        td.appendChild(blocks);
+        return td;
+      };
+
+      // Row 0: td[0,0] (colspan=2), td[0,2]
+      const row0 = document.createElement('tr');
+
+      row0.setAttribute(ROW_ATTR, '');
+      row0.appendChild(makeTd(0, 0, 2, 1)); // colspan=2
+      row0.appendChild(makeTd(0, 2));
+      tbody.appendChild(row0);
+
+      // Row 1: normal 3-cell row
+      const row1 = document.createElement('tr');
+
+      row1.setAttribute(ROW_ATTR, '');
+      row1.appendChild(makeTd(1, 0));
+      row1.appendChild(makeTd(1, 1));
+      row1.appendChild(makeTd(1, 2));
+      tbody.appendChild(row1);
+
+      table.appendChild(tbody);
+      document.body.appendChild(table);
+      return table;
+    };
+
+    const mockColspanBoundingRects = (tbl: HTMLTableElement): void => {
+      const gridLeft = 10;
+      const gridTop = 10;
+      const colWidth = 200;
+      const rowHeight = 40;
+
+      vi.spyOn(tbl, 'getBoundingClientRect').mockReturnValue({
+        top: gridTop, left: gridLeft,
+        bottom: gridTop + 2 * rowHeight, right: gridLeft + 3 * colWidth,
+        width: 3 * colWidth, height: 2 * rowHeight,
+        x: gridLeft, y: gridTop, toJSON: () => ({}),
+      });
+
+      tbl.querySelectorAll(`[${CELL_ATTR}]`).forEach(cell => {
+        const r = Number(cell.getAttribute(CELL_ROW_ATTR));
+        const c = Number(cell.getAttribute(CELL_COL_ATTR));
+        const td = cell as HTMLTableCellElement;
+        const cs = td.colSpan || 1;
+        const rs = td.rowSpan || 1;
+
+        vi.spyOn(cell, 'getBoundingClientRect').mockReturnValue({
+          top: gridTop + r * rowHeight, left: gridLeft + c * colWidth,
+          bottom: gridTop + (r + rs) * rowHeight, right: gridLeft + (c + cs) * colWidth,
+          width: cs * colWidth, height: rs * rowHeight,
+          x: gridLeft + c * colWidth, y: gridTop + r * rowHeight, toJSON: () => ({}),
+        });
+      });
+
+      vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+        borderTopWidth: '0', borderLeftWidth: '0',
+      } as unknown as CSSStyleDeclaration);
+    };
+
+    it('resolveCellCoord returns logical col=2 (not physical index 1) for td[0,2] after colspan-only merge', () => {
+      const tbl = createColspanGrid();
+
+      mockColspanBoundingRects(tbl);
+
+      const rangeSpy = vi.fn();
+      const sel = new TableCellSelection({ grid: tbl, i18n: mockI18n, onSelectionRangeChange: rangeSpy });
+
+      // td[0,0] is the colspan=2 origin cell; physical index 0, logical col 0
+      const td00 = tbl.querySelector<HTMLElement>(`[${CELL_ROW_ATTR}="0"][${CELL_COL_ATTR}="0"]`)!;
+      // td[0,2] is physical index 1 in row 0, but logical col 2
+      const td02 = tbl.querySelector<HTMLElement>(`[${CELL_ROW_ATTR}="0"][${CELL_COL_ATTR}="2"]`)!;
+
+      document.elementFromPoint = () => td02;
+      td00.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: td00.getBoundingClientRect().left + 5,
+        clientY: td00.getBoundingClientRect().top + 5,
+        bubbles: true, button: 0,
+      }));
+      document.dispatchEvent(new PointerEvent('pointermove', {
+        clientX: td02.getBoundingClientRect().left + 5,
+        clientY: td02.getBoundingClientRect().top + 5,
+        bubbles: true,
+      }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      // Before the fix: extent col = 1 (physical index), so maxCol=1 (wrong)
+      // After the fix:  extent col = 2 (logical from attribute), so maxCol=2
+      expect(rangeSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 2 })
+      );
+
+      sel.destroy();
+      tbl.remove();
+    });
+  });
+
+  /**
+   * Multiple disjoint merges:
+   *
+   *   col 0     col 1     col 2     col 3
+   *   +---------+---------+---------+---------+
+   *   | merged (1×2)      | merged (1×2)      |   row 0
+   *   +---------+---------+---------+---------+
+   *   | [1,0]   | [1,1]   | [1,2]   | [1,3]   |   row 1
+   *   +---------+---------+---------+---------+
+   *
+   * Physical <td> elements per row:
+   *   Row 0: td[0,0] (colspan=2), td[0,2] (colspan=2)  → 2 physical cells
+   *   Row 1: td[1,0], td[1,1], td[1,2], td[1,3]        → 4 physical cells
+   *
+   * In row 0, physical index 0 = logical col 0, physical index 1 = logical col 2.
+   */
+  describe('resolveCellCoord — multiple disjoint merges', () => {
+    const createDisjointMergesGrid = (): HTMLTableElement => {
+      const table = document.createElement('table');
+
+      table.style.position = 'relative';
+
+      const colgroup = document.createElement('colgroup');
+
+      [200, 200, 200, 200].forEach(w => {
+        const col = document.createElement('col');
+
+        col.style.width = `${w}px`;
+        colgroup.appendChild(col);
+      });
+      table.appendChild(colgroup);
+
+      const tbody = document.createElement('tbody');
+
+      const makeTd = (r: number, c: number, cs = 1, rs = 1): HTMLTableCellElement => {
+        const td = document.createElement('td');
+
+        td.setAttribute(CELL_ATTR, '');
+        td.setAttribute(CELL_ROW_ATTR, String(r));
+        td.setAttribute(CELL_COL_ATTR, String(c));
+        td.colSpan = cs;
+        td.rowSpan = rs;
+        const blocks = document.createElement('div');
+
+        blocks.setAttribute('data-blok-table-cell-blocks', '');
+        td.appendChild(blocks);
+        return td;
+      };
+
+      // Row 0: two disjoint colspan=2 merges
+      const row0 = document.createElement('tr');
+
+      row0.setAttribute(ROW_ATTR, '');
+      row0.appendChild(makeTd(0, 0, 2)); // colspan=2, logical cols 0-1
+      row0.appendChild(makeTd(0, 2, 2)); // colspan=2, logical cols 2-3
+      tbody.appendChild(row0);
+
+      // Row 1: normal 4-cell row
+      const row1 = document.createElement('tr');
+
+      row1.setAttribute(ROW_ATTR, '');
+      [0, 1, 2, 3].forEach(c => row1.appendChild(makeTd(1, c)));
+      tbody.appendChild(row1);
+
+      table.appendChild(tbody);
+      document.body.appendChild(table);
+      return table;
+    };
+
+    const mockDisjointBoundingRects = (tbl: HTMLTableElement): void => {
+      const gridLeft = 10;
+      const gridTop = 10;
+      const colWidth = 200;
+      const rowHeight = 40;
+
+      vi.spyOn(tbl, 'getBoundingClientRect').mockReturnValue({
+        top: gridTop, left: gridLeft,
+        bottom: gridTop + 2 * rowHeight, right: gridLeft + 4 * colWidth,
+        width: 4 * colWidth, height: 2 * rowHeight,
+        x: gridLeft, y: gridTop, toJSON: () => ({}),
+      });
+
+      tbl.querySelectorAll(`[${CELL_ATTR}]`).forEach(cell => {
+        const r = Number(cell.getAttribute(CELL_ROW_ATTR));
+        const c = Number(cell.getAttribute(CELL_COL_ATTR));
+        const td = cell as HTMLTableCellElement;
+        const cs = td.colSpan || 1;
+        const rs = td.rowSpan || 1;
+
+        vi.spyOn(cell, 'getBoundingClientRect').mockReturnValue({
+          top: gridTop + r * rowHeight, left: gridLeft + c * colWidth,
+          bottom: gridTop + (r + rs) * rowHeight, right: gridLeft + (c + cs) * colWidth,
+          width: cs * colWidth, height: rs * rowHeight,
+          x: gridLeft + c * colWidth, y: gridTop + r * rowHeight, toJSON: () => ({}),
+        });
+      });
+
+      vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+        borderTopWidth: '0', borderLeftWidth: '0',
+      } as unknown as CSSStyleDeclaration);
+    };
+
+    it('resolveCellCoord returns logical col=2 (not physical index 1) for second merged cell in row 0', () => {
+      const tbl = createDisjointMergesGrid();
+
+      mockDisjointBoundingRects(tbl);
+
+      const rangeSpy = vi.fn();
+      const sel = new TableCellSelection({ grid: tbl, i18n: mockI18n, onSelectionRangeChange: rangeSpy });
+
+      // td[0,0] is colspan=2 at physical index 0, logical col 0
+      const td00 = tbl.querySelector<HTMLElement>(`[${CELL_ROW_ATTR}="0"][${CELL_COL_ATTR}="0"]`)!;
+      // td[0,2] is colspan=2 at physical index 1, but logical col 2
+      const td02 = tbl.querySelector<HTMLElement>(`[${CELL_ROW_ATTR}="0"][${CELL_COL_ATTR}="2"]`)!;
+
+      document.elementFromPoint = () => td02;
+      td00.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: td00.getBoundingClientRect().left + 5,
+        clientY: td00.getBoundingClientRect().top + 5,
+        bubbles: true, button: 0,
+      }));
+      document.dispatchEvent(new PointerEvent('pointermove', {
+        clientX: td02.getBoundingClientRect().left + 5,
+        clientY: td02.getBoundingClientRect().top + 5,
+        bubbles: true,
+      }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      // Before the fix: extent col = 1 (physical index), so maxCol=1 (wrong — selects only first merge)
+      // After the fix:  extent col = 2 (logical col of second merge origin), so maxCol=3 after
+      //                 collectCellsInRange expands for colspan
+      expect(rangeSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 2 })
+      );
+
+      sel.destroy();
+      tbl.remove();
+    });
   });
 });

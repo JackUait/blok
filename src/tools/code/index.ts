@@ -288,14 +288,14 @@ export class CodeTool implements BlockTool {
     if (showDetected) {
       const detectedLanguage = LANGUAGES.find((lang) => lang.id === detectedId);
       if (detectedLanguage) {
-          childItems.push({
-            title: detectedLanguage.name,
-            icon: IconWand,
-            secondaryLabel: 'auto',
-            onActivate: (): void => this.setLanguage(detectedLanguage.id),
-            closeOnActivate: true,
-            isActive: (): boolean => this._data.language === detectedLanguage.id,
-          });
+        childItems.push({
+          title: detectedLanguage.name,
+          icon: IconWand,
+          secondaryLabel: 'auto',
+          onActivate: (): void => this.setLanguage(detectedLanguage.id),
+          closeOnActivate: true,
+          isActive: (): boolean => this._data.language === detectedLanguage.id,
+        });
         childItems.push({ type: PopoverItemType.Separator });
       }
     }

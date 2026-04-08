@@ -286,6 +286,8 @@ export class CodeTool implements BlockTool {
 
     if (this._dom) {
       this._dom.codeElement.textContent = this._data.code;
+      this.syncTrailingBr();
+      this.updateGutter();
     }
 
     void this.highlightCode();
@@ -348,6 +350,8 @@ export class CodeTool implements BlockTool {
 
     if (this._dom) {
       this._dom.codeElement.textContent = this._data.code;
+      this.syncTrailingBr();
+      this.updateGutter();
     }
 
     void this.highlightCode();

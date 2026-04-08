@@ -237,6 +237,25 @@ describe('CodeTool', () => {
 
       expect(data.code).toBe('line 1\nline 2');
     });
+
+    it('appends trailing BR when merged code ends with newline', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'line 1' }));
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      // Merge code that ends with a newline
+      tool.merge({ code: 'line 2\n', language: 'plain text' } as CodeData);
+
+      // The resulting text is 'line 1\nline 2\n' — ends with newline
+      // syncTrailingBr() must add a sentinel <br> so the last empty line is visible
+      expect(codeEl.lastChild).toBeInstanceOf(HTMLBRElement);
+      expect(codeEl.textContent).toBe('line 1\nline 2\n');
+
+      el.remove();
+    });
   });
 
   describe('static toolbox', () => {
@@ -335,6 +354,82 @@ describe('CodeTool', () => {
       const { CodeTool } = await import('../../../../src/tools/code');
 
       expect(typeof CodeTool.prototype.onPaste).toBe('function');
+    });
+
+    it('sets code content from pasted string', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions());
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      const pasteEvent = {
+        detail: { data: 'hello world' },
+      } as unknown as Parameters<typeof tool.onPaste>[0];
+      tool.onPaste(pasteEvent);
+
+      expect(codeEl.textContent).toBe('hello world');
+
+      el.remove();
+    });
+
+    it('appends trailing BR when pasted code ends with newline', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions());
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      const pasteEvent = {
+        detail: { data: 'function foo() {\n  return 1;\n}\n' },
+      } as unknown as Parameters<typeof tool.onPaste>[0];
+      tool.onPaste(pasteEvent);
+
+      // Code ends with '\n' — syncTrailingBr() must add a sentinel <br>
+      expect(codeEl.lastChild).toBeInstanceOf(HTMLBRElement);
+      expect(codeEl.textContent).toBe('function foo() {\n  return 1;\n}\n');
+
+      el.remove();
+    });
+
+    it('does not append trailing BR when pasted code does not end with newline', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions());
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      const pasteEvent = {
+        detail: { data: 'const x = 1;' },
+      } as unknown as Parameters<typeof tool.onPaste>[0];
+      tool.onPaste(pasteEvent);
+
+      expect(codeEl.lastChild).not.toBeInstanceOf(HTMLBRElement);
+
+      el.remove();
+    });
+
+    it('gutter updates after onPaste()', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'line 1' }));
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]')!;
+      expect(gutter.children).toHaveLength(1);
+
+      const pasteEvent = {
+        detail: { data: 'line 1\nline 2\nline 3' },
+      } as unknown as Parameters<typeof tool.onPaste>[0];
+      tool.onPaste(pasteEvent);
+
+      // Gutter must reflect the new 3-line content without re-rendering
+      expect(gutter.children).toHaveLength(3);
+
+      el.remove();
     });
   });
 
@@ -915,6 +1010,24 @@ describe('CodeTool', () => {
 
       // 'line 1\nline 2\nline 3' = 3 lines
       expect(gutter.children).toHaveLength(3);
+    });
+
+    it('gutter updates live (without re-render) after merge()', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'line 1' }));
+      // Render once and keep the live DOM reference
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]')!;
+      expect(gutter.children).toHaveLength(1);
+
+      // Merge adds two more lines — gutter must update in-place, no re-render
+      tool.merge({ code: 'line 2\nline 3', language: 'plain text' } as CodeData);
+
+      expect(gutter.children).toHaveLength(3);
+
+      el.remove();
     });
 
     it('gutter is hidden when preview is active for previewable language', async () => {

@@ -413,17 +413,52 @@ export class TableGrid {
   /**
    * Reindex coordinate attributes on all cells after structural changes.
    * Sets data-blok-table-cell-row and data-blok-table-cell-col to match
-   * each cell's current physical position.
+   * each cell's model (logical) position, accounting for colspan and rowspan.
+   *
+   * Uses sparse table reconstruction: tracks columns blocked by rowspan cells
+   * from previous rows so that each DOM cell gets the correct model column index
+   * rather than its physical DOM index.
    */
   public reindexCoordinates(table: HTMLElement): void {
-    const rows = table.querySelectorAll(`[${ROW_ATTR}]`);
+    const rows = Array.from(table.querySelectorAll(`[${ROW_ATTR}]`)) as HTMLElement[];
+
+    // Map from rowIndex -> Set of columnIndices occupied by rowspan cells from earlier rows
+    const occupiedCols: Map<number, Set<number>> = new Map();
 
     rows.forEach((row, r) => {
-      const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
+      const cells = Array.from(row.querySelectorAll(`[${CELL_ATTR}]`)) as HTMLElement[];
+      const blockedCols = occupiedCols.get(r) ?? new Set<number>();
 
-      cells.forEach((cell, c) => {
+      let modelCol = 0;
+
+      cells.forEach((cell) => {
+        // Skip columns that are occupied by rowspan cells from previous rows
+        while (blockedCols.has(modelCol)) {
+          modelCol++;
+        }
+
         cell.setAttribute(CELL_ROW_ATTR, String(r));
-        cell.setAttribute(CELL_COL_ATTR, String(c));
+        cell.setAttribute(CELL_COL_ATTR, String(modelCol));
+
+        const colSpan = (cell as HTMLTableCellElement).colSpan || 1;
+        const rowSpan = (cell as HTMLTableCellElement).rowSpan || 1;
+
+        // If this cell has rowspan > 1, mark those columns as blocked in subsequent rows
+        if (rowSpan > 1) {
+          for (let dr = 1; dr < rowSpan; dr++) {
+            const futureRow = r + dr;
+
+            if (!occupiedCols.has(futureRow)) {
+              occupiedCols.set(futureRow, new Set());
+            }
+            for (let dc = 0; dc < colSpan; dc++) {
+              occupiedCols.get(futureRow)!.add(modelCol + dc);
+            }
+          }
+        }
+
+        // Advance by colspan
+        modelCol += colSpan;
       });
     });
   }

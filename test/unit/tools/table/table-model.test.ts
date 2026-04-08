@@ -314,6 +314,26 @@ describe('TableModel', () => {
       expect(model.getCellBlocks(1, 1)).toContain('b1');
       assertBlockCellMapConsistency(model);
     });
+
+    it('is a no-op when the target cell is a covered (spanned) cell', () => {
+      // [0,0] is a 2-wide merge origin; [0,1] is covered by it
+      const spanModel = new TableModel(makeData({
+        content: [
+          [
+            { blocks: [], colspan: 2 },
+            { blocks: [], mergedInto: [0, 0] },
+          ],
+        ],
+      }));
+
+      spanModel.addBlockToCell(0, 1, 'new-block');
+
+      // Covered cell must remain empty
+      expect(spanModel.getCellBlocks(0, 1)).toEqual([]);
+
+      // The new block ID must not be tracked in the map
+      expect(spanModel.findCellForBlock('new-block')).toBeNull();
+    });
   });
 
   describe('removeBlockFromCell', () => {

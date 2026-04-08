@@ -169,6 +169,15 @@ export class CodeTool implements BlockTool {
     return dom.wrapper;
   }
 
+  /**
+   * Returns the wrapper element as the toolbar anchor so the toolbar
+   * centers on the block's visual top, not on the deeply nested
+   * contenteditable code element below the header bar.
+   */
+  public getToolbarAnchorElement(): HTMLElement | undefined {
+    return this._dom?.wrapper;
+  }
+
   public rendered(): void {
     void this.highlightCode();
   }
@@ -280,8 +289,6 @@ export class CodeTool implements BlockTool {
     const selectedId = this._data.language;
     const detectedId = this._detectedLanguage;
     const showDetected = detectedId !== null && detectedId !== selectedId;
-    const selectedLanguage = LANGUAGES.find((lang) => lang.id === selectedId) ?? LANGUAGES[0];
-    const otherLanguages = LANGUAGES.filter((lang) => lang.id !== selectedId && lang.id !== detectedId);
 
     const childItems: PopoverItemParams[] = [];
 
@@ -300,21 +307,12 @@ export class CodeTool implements BlockTool {
       }
     }
 
-    childItems.push({
-      title: selectedLanguage.name,
-      icon: IconCheck,
-      onActivate: (): void => this.setLanguage(selectedLanguage.id),
-      closeOnActivate: true,
-      isActive: true,
-    });
-
-    childItems.push({ type: PopoverItemType.Separator });
-
-    childItems.push(...otherLanguages.map((lang) => ({
+    childItems.push(...LANGUAGES.map((lang) => ({
       title: lang.name,
+      icon: lang.id === selectedId ? IconCheck : undefined,
       onActivate: (): void => this.setLanguage(lang.id),
       closeOnActivate: true,
-      isActive: false,
+      isActive: lang.id === selectedId,
     })));
 
     return [
@@ -361,7 +359,7 @@ export class CodeTool implements BlockTool {
         textSpan.textContent = this.getLanguageName(id);
       }
 
-      // Rebuild the language picker so the selected language moves to the top
+      // Rebuild the language picker so the selected language check icon updates
       if (this._picker) {
         this._picker.destroy();
       }
@@ -372,19 +370,15 @@ export class CodeTool implements BlockTool {
   }
 
   /**
-   * Builds the language items array with the currently selected language
-   * pinned at the top (with a check icon), followed by a separator, then
-   * the remaining languages in their original order.
-   * When a detected language differs from the chosen one, it appears first
-   * with a wand icon and "auto" secondary label.
+   * Builds the language items array. When a detected language differs from the
+   * chosen one, it appears first with a wand icon and "auto" secondary label.
+   * The currently selected language is shown with a check icon and active state
+   * in its natural position in the full language list.
    */
   private buildLanguagePickerItems(): PopoverItemParams[] {
     const selectedId = this._data.language;
     const detectedId = this._detectedLanguage;
     const showDetected = detectedId !== null && detectedId !== selectedId;
-
-    const selectedLanguage = LANGUAGES.find((lang) => lang.id === selectedId) ?? LANGUAGES[0];
-    const otherLanguages = LANGUAGES.filter((lang) => lang.id !== selectedId && lang.id !== detectedId);
 
     const items: PopoverItemParams[] = [];
 
@@ -405,21 +399,10 @@ export class CodeTool implements BlockTool {
       }
     }
 
-    items.push({
-      title: selectedLanguage.name,
-      name: selectedLanguage.id,
-      icon: IconCheck,
-      toggle: 'language',
-      isActive: (): boolean => this._data.language === selectedLanguage.id,
-      closeOnActivate: true,
-      onActivate: (): void => this.setLanguage(selectedLanguage.id),
-    });
-
-    items.push({ type: PopoverItemType.Separator });
-
-    items.push(...otherLanguages.map((lang) => ({
+    items.push(...LANGUAGES.map((lang) => ({
       title: lang.name,
       name: lang.id,
+      icon: lang.id === selectedId ? IconCheck : undefined,
       toggle: 'language',
       isActive: (): boolean => this._data.language === lang.id,
       closeOnActivate: true,

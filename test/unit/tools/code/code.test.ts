@@ -1087,8 +1087,9 @@ describe('CodeTool', () => {
       expect(detectedItem).toBeUndefined();
 
       // First item should be JavaScript with check icon
-      expect(items[0].title).toBe('JavaScript');
-      expect(items[0].icon).toBeDefined();
+      const jsItem = items.find((i) => i.title === 'JavaScript');
+      expect(jsItem).toBeDefined();
+      expect(jsItem!.icon).toBeDefined();
 
       el.remove();
       vi.useRealTimers();
@@ -1153,6 +1154,31 @@ describe('CodeTool', () => {
       expect(detectedItem?.title).toBe('Python');
 
       el.remove();
+    });
+  });
+
+  describe('getToolbarAnchorElement', () => {
+    it('returns the wrapper element so toolbar positions at block top, not inside the code area', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'console.log("hello")', language: 'javascript' }));
+      const rendered = tool.render();
+
+      document.body.appendChild(rendered);
+
+      const anchor = tool.getToolbarAnchorElement();
+
+      // The anchor should be the wrapper element (what render() returns),
+      // not the deeply nested <code contenteditable> element
+      expect(anchor).toBe(rendered);
+
+      // Verify that the code element IS a descendant (proving the anchor is the outer wrapper)
+      const codeElement = rendered.querySelector('[data-blok-testid="code-content"]');
+
+      expect(codeElement).not.toBeNull();
+      expect(anchor).not.toBe(codeElement);
+      expect(anchor!.contains(codeElement)).toBe(true);
+
+      rendered.remove();
     });
   });
 });

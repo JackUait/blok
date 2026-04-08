@@ -281,6 +281,17 @@ export class PopoverItemDefault extends PopoverItem {
       this.nodes.secondaryLabelEl = secondaryEl;
     }
 
+    // Trailing icon (right-side indicator, e.g. checkmark)
+    if (params.trailingIcon) {
+      const trailingEl = document.createElement('div');
+
+      trailingEl.className = 'ml-auto shrink-0 flex items-center justify-center [&_svg]:w-icon [&_svg]:h-icon';
+      trailingEl.setAttribute('data-blok-testid', 'popover-item-trailing-icon');
+      trailingEl.innerHTML = params.trailingIcon;
+
+      root.appendChild(trailingEl);
+    }
+
     // Chevron
     const showChevron = this.hasChildren && !this.isChevronHidden;
 

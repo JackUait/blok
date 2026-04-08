@@ -221,6 +221,10 @@ export class TableModel {
       return;
     }
 
+    if (this.isSpannedCell(row, col)) {
+      return;
+    }
+
     // Remove old entries from map
     for (const oldId of this.contentGrid[row][col].blocks) {
       this.blockCellMap.delete(oldId);

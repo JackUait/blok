@@ -1827,10 +1827,9 @@ export class Table implements BlockTool {
     e.preventDefault();
     e.stopPropagation();
 
-    const rows = Array.from(gridEl.querySelectorAll(`[${ROW_ATTR}]`));
-    const targetRowIndex = rows.indexOf(targetRow);
-    const cellsInRow = Array.from(targetRow.querySelectorAll(`[${CELL_ATTR}]`));
-    const targetColIndex = cellsInRow.indexOf(targetCell);
+    // Read true model coordinates from stamped data attributes
+    const targetRowIndex = parseInt(targetCell.getAttribute(CELL_ROW_ATTR) ?? '0', 10);
+    const targetColIndex = parseInt(targetCell.getAttribute(CELL_COL_ATTR) ?? '0', 10);
 
     this.pastePayloadIntoCells(gridEl, payload, targetRowIndex, targetColIndex);
   }

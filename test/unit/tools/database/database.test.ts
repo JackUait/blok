@@ -1056,11 +1056,11 @@ describe('DatabaseTool', () => {
       expect(element.querySelector('[data-blok-database-board]')).not.toBeNull();
     });
 
-    it('does not render a tab bar in read-only mode', () => {
+    it('renders a tab bar in read-only mode (navigation is not an edit action)', () => {
       const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: true }));
       const element = tool.render();
 
-      expect(element.querySelector('[data-blok-database-tab-bar]')).toBeNull();
+      expect(element.querySelector('[data-blok-database-tab-bar]')).not.toBeNull();
     });
   });
 
@@ -1392,7 +1392,7 @@ describe('DatabaseTool', () => {
       tool.destroy();
     });
 
-    it('entering read-only removes the tab bar from DOM', () => {
+    it('tab bar is always present when entering read-only', () => {
       const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: false }));
       const element = tool.render();
 
@@ -1402,7 +1402,47 @@ describe('DatabaseTool', () => {
 
       tool.setReadOnly(true);
 
-      expect(element.querySelector('[data-blok-database-tab-bar]')).toBeNull();
+      expect(element.querySelector('[data-blok-database-tab-bar]')).not.toBeNull();
+
+      element.remove();
+      tool.destroy();
+    });
+
+    it('entering read-only hides the add-view button', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: false }));
+      const element = tool.render();
+
+      document.body.appendChild(element);
+
+      expect(element.querySelector('[data-blok-database-add-view]')).not.toBeNull();
+
+      tool.setReadOnly(true);
+
+      expect(element.querySelector('[data-blok-database-add-view]')).toBeNull();
+
+      element.remove();
+      tool.destroy();
+    });
+
+    it('tab bar is present when initially rendered in read-only mode', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: true }));
+      const element = tool.render();
+
+      document.body.appendChild(element);
+
+      expect(element.querySelector('[data-blok-database-tab-bar]')).not.toBeNull();
+
+      element.remove();
+      tool.destroy();
+    });
+
+    it('add-view button is hidden when initially rendered in read-only mode', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: true }));
+      const element = tool.render();
+
+      document.body.appendChild(element);
+
+      expect(element.querySelector('[data-blok-database-add-view]')).toBeNull();
 
       element.remove();
       tool.destroy();
@@ -1458,17 +1498,17 @@ describe('DatabaseTool', () => {
       tool.destroy();
     });
 
-    it('exiting read-only restores tab bar in DOM', () => {
+    it('exiting read-only shows the add-view button', () => {
       const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: true }));
       const element = tool.render();
 
       document.body.appendChild(element);
 
-      expect(element.querySelector('[data-blok-database-tab-bar]')).toBeNull();
+      expect(element.querySelector('[data-blok-database-add-view]')).toBeNull();
 
       tool.setReadOnly(false);
 
-      expect(element.querySelector('[data-blok-database-tab-bar]')).not.toBeNull();
+      expect(element.querySelector('[data-blok-database-add-view]')).not.toBeNull();
 
       element.remove();
       tool.destroy();
@@ -1498,25 +1538,6 @@ describe('DatabaseTool', () => {
       expect(() => tool.setReadOnly(false)).not.toThrow();
 
       expect(element.querySelector('[data-blok-database-add-column]')).not.toBeNull();
-
-      element.remove();
-      tool.destroy();
-    });
-
-    it('tab bar is inserted before the board container when exiting read-only', () => {
-      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: true }));
-      const element = tool.render();
-
-      document.body.appendChild(element);
-      tool.setReadOnly(false);
-
-      const tabBar = element.querySelector('[data-blok-database-tab-bar]');
-      const boardContainer = element.querySelector('[data-blok-database-board-container]');
-
-      expect(tabBar).not.toBeNull();
-      expect(boardContainer).not.toBeNull();
-      // Tab bar should come before board container in DOM order
-      expect(tabBar!.compareDocumentPosition(boardContainer!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 
       element.remove();
       tool.destroy();

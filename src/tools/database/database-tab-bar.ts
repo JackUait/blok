@@ -19,6 +19,7 @@ export interface TabBarOptions {
   onDuplicate: (viewId: string) => void;
   onDelete: (viewId: string) => void;
   onReorder: (viewId: string, newPosition: string) => void;
+  readOnly?: boolean;
 }
 
 export class DatabaseTabBar {
@@ -27,6 +28,8 @@ export class DatabaseTabBar {
   private readonly onReorder: (viewId: string, newPosition: string) => void;
   private element: HTMLElement | null = null;
   private barEl: HTMLElement | null = null;
+  private addBtnEl: HTMLElement | null = null;
+  private readOnly: boolean;
   private viewPopover: DatabaseViewPopover | null = null;
   private contextPopoverEl: HTMLElement | null = null;
   private boundOutsideContextClick: ((e: MouseEvent) => void) | null = null;
@@ -48,6 +51,7 @@ export class DatabaseTabBar {
     this.options = options;
     this.views = options.views;
     this.onReorder = options.onReorder;
+    this.readOnly = options.readOnly ?? false;
 
     this.boundDragMove = this.handleDragMove.bind(this);
     this.boundDragUp = this.handleDragUp.bind(this);
@@ -75,7 +79,10 @@ export class DatabaseTabBar {
     addBtn.addEventListener('click', () => {
       this.openViewPopover(addBtn);
     });
-    bar.appendChild(addBtn);
+    this.addBtnEl = addBtn;
+    if (!this.readOnly) {
+      bar.appendChild(addBtn);
+    }
 
     bar.addEventListener('click', (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -518,6 +525,23 @@ export class DatabaseTabBar {
     document.removeEventListener('pointerup', this.boundDragUp);
     document.removeEventListener('pointercancel', this.boundDragCancel);
     document.removeEventListener('keydown', this.boundDragKeyDown);
+  }
+
+  setReadOnly(state: boolean): void {
+    if (this.readOnly === state) {
+      return;
+    }
+    this.readOnly = state;
+
+    if (this.barEl === null || this.addBtnEl === null) {
+      return;
+    }
+
+    if (state) {
+      this.addBtnEl.remove();
+    } else {
+      this.barEl.appendChild(this.addBtnEl);
+    }
   }
 
   destroy(): void {

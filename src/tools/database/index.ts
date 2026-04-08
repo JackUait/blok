@@ -98,10 +98,8 @@ export class DatabaseTool implements BlockTool {
     this.titleElement = titleEl;
     wrapper.appendChild(titleEl);
 
-    if (!this.readOnly) {
-      this.tabBar = this.createTabBar();
-      wrapper.appendChild(this.tabBar.render());
-    }
+    this.tabBar = this.createTabBar();
+    wrapper.appendChild(this.tabBar.render());
 
     const boardContainer = document.createElement('div');
     boardContainer.setAttribute('data-blok-database-board-container', '');
@@ -247,28 +245,7 @@ export class DatabaseTool implements BlockTool {
       this.titleElement.setAttribute('contenteditable', state ? 'false' : 'true');
     }
 
-    if (state) {
-      // Remove tab bar from DOM and destroy it
-      if (this.tabBar !== null && this.element !== null) {
-        const tabBarEl = this.element.querySelector('[data-blok-database-tab-bar]');
-
-        tabBarEl?.remove();
-        this.tabBar.destroy();
-        this.tabBar = null;
-      }
-    } else {
-      // Recreate tab bar and insert before boardContainer
-      if (this.element !== null) {
-        this.tabBar = this.createTabBar();
-        const newTabBarEl = this.tabBar.render();
-
-        if (this.boardContainer !== null) {
-          this.element.insertBefore(newTabBarEl, this.boardContainer);
-        } else {
-          this.element.appendChild(newTabBarEl);
-        }
-      }
-    }
+    this.tabBar?.setReadOnly(state);
 
     this.rerenderView();
   }
@@ -485,6 +462,7 @@ export class DatabaseTool implements BlockTool {
       onDuplicate: (viewId) => this.duplicateView(viewId),
       onDelete: (viewId) => this.deleteView(viewId),
       onReorder: (viewId, newPosition) => this.reorderView(viewId, newPosition),
+      readOnly: this.readOnly,
     });
   }
 

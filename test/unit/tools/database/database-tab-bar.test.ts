@@ -554,4 +554,62 @@ describe('DatabaseTabBar', () => {
       el.remove();
     });
   });
+
+  describe('read-only mode', () => {
+    it('+ button is hidden when readOnly: true is passed to constructor', () => {
+      const view = makeView({ id: 'v1', position: 'a0' });
+      const bar = new DatabaseTabBar({
+        views: [view],
+        activeViewId: 'v1',
+        onTabClick,
+        onAddView,
+        onRename,
+        onDuplicate,
+        onDelete,
+        onReorder,
+        readOnly: true,
+      });
+      const el = bar.render();
+      expect(el.querySelector('[data-blok-database-add-view]')).toBeNull();
+      el.remove();
+    });
+
+    it('+ button is visible when readOnly: false (default)', () => {
+      const view = makeView({ id: 'v1', position: 'a0' });
+      const bar = createTabBar([view], 'v1');
+      const el = bar.render();
+      expect(el.querySelector('[data-blok-database-add-view]')).not.toBeNull();
+      el.remove();
+    });
+
+    it('setReadOnly(true) hides the + button', () => {
+      const view = makeView({ id: 'v1', position: 'a0' });
+      const bar = createTabBar([view], 'v1');
+      const el = bar.render();
+      expect(el.querySelector('[data-blok-database-add-view]')).not.toBeNull();
+      bar.setReadOnly(true);
+      expect(el.querySelector('[data-blok-database-add-view]')).toBeNull();
+      el.remove();
+    });
+
+    it('setReadOnly(false) shows the + button', () => {
+      const view = makeView({ id: 'v1', position: 'a0' });
+      const bar = new DatabaseTabBar({
+        views: [view],
+        activeViewId: 'v1',
+        onTabClick,
+        onAddView,
+        onRename,
+        onDuplicate,
+        onDelete,
+        onReorder,
+        readOnly: true,
+      });
+      const el = bar.render();
+      expect(el.querySelector('[data-blok-database-add-view]')).toBeNull();
+      bar.setReadOnly(false);
+      expect(el.querySelector('[data-blok-database-add-view]')).not.toBeNull();
+      el.remove();
+    });
+  });
 });

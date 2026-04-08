@@ -2059,7 +2059,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 8px 16px;
   border-radius: 10px;
   cursor: grab;
   font-size: 14px;
@@ -2093,17 +2093,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
   border: none;
   background: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   color: var(--blok-database-tab-text);
-  font-size: 18px;
   margin-left: 2px;
   transition: background-color 120ms ease, opacity 120ms ease;
   opacity: 0;
+}
+
+[data-blok-database-add-view] svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
 [data-blok-database-tab-bar]:hover [data-blok-database-add-view] {

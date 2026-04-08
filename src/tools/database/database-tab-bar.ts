@@ -1,5 +1,5 @@
 import { generateKeyBetween } from 'fractional-indexing';
-import { IconBoard, IconList, IconPencil, IconCopy, IconTrash } from '../../components/icons';
+import { IconBoard, IconList, IconPencil, IconCopy, IconTrash, IconPlus } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
 import type { DatabaseViewConfig, ViewType } from './types';
 
@@ -75,7 +75,7 @@ export class DatabaseTabBar {
 
     const addBtn = document.createElement('button');
     addBtn.setAttribute('data-blok-database-add-view', '');
-    addBtn.textContent = '+';
+    addBtn.innerHTML = IconPlus;
     addBtn.addEventListener('click', () => {
       this.openViewPopover(addBtn);
     });

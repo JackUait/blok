@@ -1,6 +1,7 @@
 import type { I18n } from '../../../types';
 import type { SelectOption, DatabaseRow } from './types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
+import { IconPlus } from '../../components/icons';
 
 interface DatabaseBoardViewOptions {
   readOnly: boolean;
@@ -110,9 +111,11 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       if (title) {
         titleEl.textContent = title;
         titleEl.removeAttribute('data-placeholder');
+        cardEl?.removeAttribute('data-empty');
       } else {
         titleEl.textContent = this.i18n.t('tools.database.cardTitlePlaceholder');
         titleEl.setAttribute('data-placeholder', '');
+        cardEl?.setAttribute('data-empty', '');
       }
     }
   }
@@ -167,7 +170,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     header.setAttribute('data-blok-database-column-header', '');
     header.style.display = 'flex';
     header.style.alignItems = 'center';
-    header.style.padding = '6px 8px';
+    header.style.padding = '6px 8px 6px 0';
     header.style.borderRadius = '4px';
     header.style.gap = '6px';
     header.style.cursor = 'grab';
@@ -190,7 +193,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     const titleEl = document.createElement('div');
 
     titleEl.setAttribute('data-blok-database-column-title', '');
-    titleEl.style.fontWeight = '600';
+    titleEl.style.fontWeight = '400';
     titleEl.textContent = option.label;
     pill.appendChild(titleEl);
 
@@ -233,7 +236,17 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       addCardBtn.setAttribute('data-blok-database-add-card', '');
       addCardBtn.setAttribute('data-option-id', option.id);
       addCardBtn.setAttribute('aria-label', this.i18n.t('tools.database.addCard'));
-      addCardBtn.textContent = '+ ' + this.i18n.t('tools.database.newPage');
+
+      const iconEl = document.createElement('span');
+
+      iconEl.setAttribute('data-blok-database-add-card-icon', '');
+      iconEl.innerHTML = IconPlus;
+      addCardBtn.appendChild(iconEl);
+
+      const labelEl = document.createElement('span');
+
+      labelEl.textContent = this.i18n.t('tools.database.newPage');
+      addCardBtn.appendChild(labelEl);
 
       if (option.color !== undefined) {
         addCardBtn.style.borderColor = `color-mix(in srgb, var(--blok-color-${option.color}-text) 30%, transparent)`;
@@ -270,6 +283,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     } else {
       titleEl.textContent = this.i18n.t('tools.database.cardTitlePlaceholder');
       titleEl.setAttribute('data-placeholder', '');
+      cardEl.setAttribute('data-empty', '');
     }
 
     cardEl.appendChild(titleEl);

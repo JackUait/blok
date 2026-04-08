@@ -309,10 +309,9 @@ export class CodeTool implements BlockTool {
 
     childItems.push(...LANGUAGES.map((lang) => ({
       title: lang.name,
-      icon: lang.id === selectedId ? IconCheck : undefined,
+      trailingIcon: lang.id === selectedId ? IconCheck : undefined,
       onActivate: (): void => this.setLanguage(lang.id),
       closeOnActivate: true,
-      isActive: lang.id === selectedId,
     })));
 
     return [
@@ -372,7 +371,7 @@ export class CodeTool implements BlockTool {
   /**
    * Builds the language items array. When a detected language differs from the
    * chosen one, it appears first with a wand icon and "auto" secondary label.
-   * The currently selected language is shown with a check icon and active state
+   * The currently selected language is shown with a trailing check icon
    * in its natural position in the full language list.
    */
   private buildLanguagePickerItems(): PopoverItemParams[] {
@@ -402,9 +401,8 @@ export class CodeTool implements BlockTool {
     items.push(...LANGUAGES.map((lang) => ({
       title: lang.name,
       name: lang.id,
-      icon: lang.id === selectedId ? IconCheck : undefined,
+      trailingIcon: lang.id === selectedId ? IconCheck : undefined,
       toggle: 'language',
-      isActive: (): boolean => this._data.language === lang.id,
       closeOnActivate: true,
       onActivate: (): void => this.setLanguage(lang.id),
     })));

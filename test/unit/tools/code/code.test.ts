@@ -1014,7 +1014,7 @@ describe('CodeTool', () => {
 
       // Verify observable behavior: renderSettings() now includes detected language
       const settings = tool.renderSettings() as Array<{
-        children: { items: Array<{ title: string; secondaryLabel?: string }> };
+        children: { items: Array<{ title: string; secondaryLabel?: string; icon?: string; trailingIcon?: string }> };
       }>;
       const items = settings[0].children.items;
       const detectedItem = items.find((i) => i.secondaryLabel === 'auto');
@@ -1043,7 +1043,7 @@ describe('CodeTool', () => {
 
       // Inspect via public renderSettings()
       const settings = tool.renderSettings() as Array<{
-        children: { items: Array<{ title: string; secondaryLabel?: string; icon?: string }> };
+        children: { items: Array<{ title: string; secondaryLabel?: string; icon?: string; trailingIcon?: string }> };
       }>;
       const items = settings[0].children.items;
 
@@ -1054,7 +1054,7 @@ describe('CodeTool', () => {
       // There should also be the chosen language (TypeScript) in the list
       const chosenItem = items.find((i) => i.title === 'TypeScript');
       expect(chosenItem).toBeDefined();
-      expect(chosenItem!.icon).toBeDefined();
+      expect(chosenItem!.trailingIcon).toBeDefined();
 
       el.remove();
       vi.useRealTimers();
@@ -1077,7 +1077,7 @@ describe('CodeTool', () => {
       await vi.advanceTimersByTimeAsync(0);
 
       const settings = tool.renderSettings() as Array<{
-        children: { items: Array<{ title: string; secondaryLabel?: string; icon?: string }> };
+        children: { items: Array<{ title: string; secondaryLabel?: string; icon?: string; trailingIcon?: string }> };
       }>;
       const items = settings[0].children.items;
 
@@ -1086,10 +1086,10 @@ describe('CodeTool', () => {
       const detectedItem = items.find((i) => i.secondaryLabel === 'auto');
       expect(detectedItem).toBeUndefined();
 
-      // First item should be JavaScript with check icon
+      // First item should be JavaScript with trailing check icon
       const jsItem = items.find((i) => i.title === 'JavaScript');
       expect(jsItem).toBeDefined();
-      expect(jsItem!.icon).toBeDefined();
+      expect(jsItem!.trailingIcon).toBeDefined();
 
       el.remove();
       vi.useRealTimers();
@@ -1111,7 +1111,7 @@ describe('CodeTool', () => {
       await vi.advanceTimersByTimeAsync(0);
 
       const settings = tool.renderSettings() as Array<{
-        children: { items: Array<{ title: string; secondaryLabel?: string; icon?: string }> };
+        children: { items: Array<{ title: string; secondaryLabel?: string; icon?: string; trailingIcon?: string }> };
       }>;
       const items = settings[0].children.items;
 

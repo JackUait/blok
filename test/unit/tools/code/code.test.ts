@@ -1120,9 +1120,9 @@ describe('CodeTool', () => {
       const detectedItem = items.find((i) => i.secondaryLabel === 'auto');
       expect(detectedItem).toBeUndefined();
 
-      // First item should be Plain Text with check icon
+      // First item should be Plain Text with trailing check icon
       expect(items[0].title).toBe('Plain Text');
-      expect(items[0].icon).toBeDefined();
+      expect(items[0].trailingIcon).toBeDefined();
 
       el.remove();
       vi.useRealTimers();

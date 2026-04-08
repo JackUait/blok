@@ -122,6 +122,7 @@ export class TableCellSelection {
   private onSplitCell: ((row: number, col: number) => void) | undefined;
   private getCellSpan: ((row: number, col: number) => { colspan: number; rowspan: number }) | undefined;
   private lastPaintedRange: SelectionRange | null = null;
+  private preExpansionWasSingleCell = false;
 
   private boundPointerDown: (e: PointerEvent) => void;
   private boundPointerMove: (e: PointerEvent) => void;
@@ -517,6 +518,7 @@ export class TableCellSelection {
     this.restoreModifiedCells();
     this.hasSelection = false;
     this.lastPaintedRange = null;
+    this.preExpansionWasSingleCell = false;
 
     if (hadSelection) {
       this.onSelectionActiveChange?.(false);
@@ -631,6 +633,7 @@ export class TableCellSelection {
     const minCol = Math.min(this.anchorCell.col, this.extentCell.col);
     const maxCol = Math.max(this.anchorCell.col, this.extentCell.col);
 
+    this.preExpansionWasSingleCell = minRow === maxRow && minCol === maxCol;
     this.lastPaintedRange = this.expandRectToMergedSpans({ minRow, maxRow, minCol, maxCol });
 
     const { minRow: expandedMinRow, maxRow: expandedMaxRow, minCol: expandedMinCol, maxCol: expandedMaxCol } = this.lastPaintedRange;
@@ -879,7 +882,7 @@ export class TableCellSelection {
     if (this.lastPaintedRange && this.onMergeCells) {
       const range = this.lastPaintedRange;
       const isMultiCell = range.minRow !== range.maxRow || range.minCol !== range.maxCol;
-      const canMerge = isMultiCell && this.canMergeCells?.(range);
+      const canMerge = isMultiCell && !this.preExpansionWasSingleCell && this.canMergeCells?.(range);
 
       if (canMerge) {
         mergeItems.push({
@@ -897,8 +900,9 @@ export class TableCellSelection {
     if (this.lastPaintedRange && this.onSplitCell) {
       const range = this.lastPaintedRange;
       const isSingleCell = range.minRow === range.maxRow && range.minCol === range.maxCol;
+      const isSingleOriginExpanded = this.preExpansionWasSingleCell && this.isMergedCell?.(range.minRow, range.minCol);
 
-      if (isSingleCell && this.isMergedCell?.(range.minRow, range.minCol)) {
+      if ((isSingleCell || isSingleOriginExpanded) && this.isMergedCell?.(range.minRow, range.minCol)) {
         mergeItems.push({
           icon: IconSplitCell,
           title: this.i18n.t('tools.table.splitCell'),
@@ -1118,6 +1122,12 @@ export class TableCellSelection {
   /**
    * Find a cell by coordinate attributes first, falling back to index-based
    * lookup when coordinate attributes are not present.
+   *
+   * When both primary lookups fail (e.g. `col` points to a covered logical
+   * column that has no physical <td> of its own), scan all cells in the row
+   * and return the one whose colspan range covers `col`.  This handles the
+   * case where `expandRectToMergedSpans` has expanded the selection corner to
+   * a column that is spanned by an origin cell at a lower column index.
    */
   private findCellByCoordOrIndex(
     rows: NodeListOf<Element>,
@@ -1132,7 +1142,23 @@ export class TableCellSelection {
       return coordCell;
     }
 
-    return rows[row]?.querySelectorAll(`[${CELL_ATTR}]`)[col] as HTMLElement | undefined;
+    const indexCell = rows[row]?.querySelectorAll(`[${CELL_ATTR}]`)[col] as HTMLElement | undefined;
+
+    if (indexCell) {
+      return indexCell;
+    }
+
+    // Neither coord-based nor index-based lookup found a cell.  Walk all
+    // physical cells in the row to find one whose logical column range covers
+    // the requested column (origin cellCol <= col <= cellCol + colSpan - 1).
+    const rowCells = Array.from(rows[row]?.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`) ?? []);
+
+    return rowCells.find(cell => {
+      const cellCol = Number(cell.getAttribute(CELL_COL_ATTR));
+      const cellColSpan = (cell as HTMLTableCellElement).colSpan || 1;
+
+      return cellCol <= col && cellCol + cellColSpan - 1 >= col;
+    });
   }
 
   /**

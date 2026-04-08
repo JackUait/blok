@@ -6,10 +6,30 @@ const CELL_ROW_ATTR = 'data-blok-table-cell-row';
 const CELL_COL_ATTR = 'data-blok-table-cell-col';
 const SELECTED_ATTR = 'data-blok-table-cell-selected';
 const OVERLAY_ATTR = 'data-blok-table-selection-overlay';
+const PILL_ATTR = 'data-blok-table-selection-pill';
+
+interface MockPopoverItem {
+  onActivate?: () => void;
+  icon?: string;
+  title?: string;
+  name?: string;
+  secondaryLabel?: string;
+}
+
+interface MockPopoverArgs {
+  items?: MockPopoverItem[];
+  trigger?: HTMLElement;
+  flippable?: boolean;
+}
+
+let lastPopoverArgs: MockPopoverArgs | null = null;
 
 vi.mock('../../../../src/components/utils/popover', () => ({
   PopoverDesktop: class MockPopoverDesktop {
     private el = document.createElement('div');
+    constructor(args: MockPopoverArgs) {
+      lastPopoverArgs = args;
+    }
     show(): void {
       this.el.setAttribute('data-blok-popover-opened', 'true');
       document.body.appendChild(this.el);
@@ -200,6 +220,7 @@ describe('TableCellSelection — merged cells', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    lastPopoverArgs = null;
   });
 
   afterEach(() => {
@@ -739,6 +760,62 @@ describe('TableCellSelection — merged cells', () => {
       } as unknown as CSSStyleDeclaration);
     };
 
+    it('paintSelection creates overlay and pill after dragging across two stacked full-row merged cells', () => {
+      // Regression test for Bug 1: when expandRectToMergedSpans expands the rect to
+      // {minRow:0, maxRow:1, minCol:0, maxCol:3}, findCellByCoordOrIndex looks for
+      // a cell at [row=1][col=3]. Row 1 only has td[1,0] (colspan=4) — no DOM element
+      // exists at col=3. So findCellByCoordOrIndex returns undefined and paintSelection
+      // early-returns before creating the overlay or pill.
+      const tbl = createFullRowMergeGrid();
+
+      mockFullRowMergeBoundingRects(tbl);
+
+      const sel = new TableCellSelection({
+        grid: tbl,
+        i18n: mockI18n,
+        getCellSpan: (row, col) => {
+          const td = tbl.querySelector<HTMLTableCellElement>(`[${CELL_ROW_ATTR}="${row}"][${CELL_COL_ATTR}="${col}"]`);
+
+          return {
+            colspan: td?.colSpan ?? 1,
+            rowspan: td?.rowSpan ?? 1,
+          };
+        },
+        canMergeCells: vi.fn().mockReturnValue(true),
+        onMergeCells: vi.fn(),
+        isMergedCell: vi.fn().mockReturnValue(false),
+        onSplitCell: vi.fn(),
+      });
+
+      // td[0,0] is the only physical <td> in row 0 (colspan=4), logical col 0
+      const td00 = tbl.querySelector<HTMLElement>(`[${CELL_ROW_ATTR}="0"][${CELL_COL_ATTR}="0"]`)!;
+      // td[1,0] is the only physical <td> in row 1 (colspan=4), logical col 0
+      const td10 = tbl.querySelector<HTMLElement>(`[${CELL_ROW_ATTR}="1"][${CELL_COL_ATTR}="0"]`)!;
+
+      // Simulate drag from td[0,0] to td[1,0]
+      document.elementFromPoint = () => td10;
+      td00.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: td00.getBoundingClientRect().left + 5,
+        clientY: td00.getBoundingClientRect().top + 5,
+        bubbles: true, button: 0,
+      }));
+      document.dispatchEvent(new PointerEvent('pointermove', {
+        clientX: td10.getBoundingClientRect().left + 5,
+        clientY: td10.getBoundingClientRect().top + 5,
+        bubbles: true,
+      }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      // The overlay must be present: paintSelection must NOT early-return
+      // Bug: lastCell = findCellByCoordOrIndex(rows, expandedMaxRow=1, expandedMaxCol=3)
+      //      returns undefined (no <td> at col=3 in row 1) → early return → no overlay/pill
+      expect(tbl.querySelector('[data-blok-table-selection-overlay]')).not.toBeNull();
+      expect(tbl.querySelector('[data-blok-table-selection-pill]')).not.toBeNull();
+
+      sel.destroy();
+      tbl.remove();
+    });
+
     it('expands selection rect to full span of merged cells when dragging across merged cell origins', () => {
       const tbl = createFullRowMergeGrid();
 
@@ -1068,6 +1145,208 @@ describe('TableCellSelection — merged cells', () => {
       expect(rangeSpy).toHaveBeenCalledWith(
         expect.objectContaining({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 2 })
       );
+
+      sel.destroy();
+      tbl.remove();
+    });
+  });
+
+  /**
+   * Bug 2 — Single click on a merged cell origin shows "Merge" instead of "Split"
+   *
+   * Root cause: after `expandRectToMergedSpans`, a single-cell click on a merged
+   * origin (e.g. td[0,0] with colspan=2) produces `lastPaintedRange` of
+   * {minRow:0, maxRow:0, minCol:0, maxCol:1} (expanded). In `openPillPopover`:
+   *   - `isSingleCell = (0===0 && 0===1)` → false → Split NOT added (BUG)
+   *   - `isMultiCell = (0!==0 || 0!==1)` → true → canMergeCells called → Merge wrongly shown
+   *
+   * Expected behaviour: a single click (no drag) on a merged cell origin should
+   * show the **Split** action in the pill popover and NOT show the **Merge** action.
+   *
+   * Grid layout (2 rows × 3 cols, colspan=2 merge at [0,0]):
+   *
+   *   col 0     col 1     col 2
+   *   +---------+---------+---------+
+   *   | merged (1×2)      | [0,2]   |   row 0
+   *   +---------+---------+---------+
+   *   | [1,0]   | [1,1]   | [1,2]   |   row 1
+   *   +---------+---------+---------+
+   *
+   * Using colspan-only (no rowspan) so that findCellByCoordOrIndex can locate
+   * row-1 cells as the fallback corner for the overlay — allowing the pill to
+   * be created and letting us test the Merge/Split popover logic.
+   */
+  describe('openPillPopover — single click on merged cell origin (Bug 2)', () => {
+    /**
+     * 2-row × 3-col table: td[0,0] is a colspan=2 merged cell (no rowspan).
+     *
+     *   Row 0: td[0,0] (colspan=2), td[0,2]
+     *   Row 1: td[1,0], td[1,1], td[1,2]
+     */
+    const createBug2Grid = (): HTMLTableElement => {
+      const table = document.createElement('table');
+
+      table.style.position = 'relative';
+
+      const colgroup = document.createElement('colgroup');
+
+      [200, 200, 200].forEach(w => {
+        const col = document.createElement('col');
+
+        col.style.width = `${w}px`;
+        colgroup.appendChild(col);
+      });
+      table.appendChild(colgroup);
+
+      const tbody = document.createElement('tbody');
+
+      const makeTd = (r: number, c: number, cs = 1, rs = 1): HTMLTableCellElement => {
+        const td = document.createElement('td');
+
+        td.setAttribute(CELL_ATTR, '');
+        td.setAttribute(CELL_ROW_ATTR, String(r));
+        td.setAttribute(CELL_COL_ATTR, String(c));
+        td.colSpan = cs;
+        td.rowSpan = rs;
+        const blocks = document.createElement('div');
+
+        blocks.setAttribute('data-blok-table-cell-blocks', '');
+        td.appendChild(blocks);
+        return td;
+      };
+
+      // Row 0: td[0,0] (colspan=2) + td[0,2]
+      const row0 = document.createElement('tr');
+
+      row0.setAttribute(ROW_ATTR, '');
+      row0.appendChild(makeTd(0, 0, 2, 1)); // colspan=2, no rowspan
+      row0.appendChild(makeTd(0, 2));
+      tbody.appendChild(row0);
+
+      // Row 1: normal 3-cell row
+      const row1 = document.createElement('tr');
+
+      row1.setAttribute(ROW_ATTR, '');
+      row1.appendChild(makeTd(1, 0));
+      row1.appendChild(makeTd(1, 1));
+      row1.appendChild(makeTd(1, 2));
+      tbody.appendChild(row1);
+
+      table.appendChild(tbody);
+      document.body.appendChild(table);
+      return table;
+    };
+
+    const mockBug2BoundingRects = (tbl: HTMLTableElement): void => {
+      const gridLeft = 10;
+      const gridTop = 10;
+      const colWidth = 200;
+      const rowHeight = 40;
+      const totalCols = 3;
+      const totalRows = 2;
+
+      vi.spyOn(tbl, 'getBoundingClientRect').mockReturnValue({
+        top: gridTop, left: gridLeft,
+        bottom: gridTop + totalRows * rowHeight, right: gridLeft + totalCols * colWidth,
+        width: totalCols * colWidth, height: totalRows * rowHeight,
+        x: gridLeft, y: gridTop, toJSON: () => ({}),
+      });
+
+      tbl.querySelectorAll(`[${CELL_ATTR}]`).forEach(cell => {
+        const r = Number(cell.getAttribute(CELL_ROW_ATTR));
+        const c = Number(cell.getAttribute(CELL_COL_ATTR));
+        const td = cell as HTMLTableCellElement;
+        const cs = td.colSpan || 1;
+        const rs = td.rowSpan || 1;
+
+        vi.spyOn(cell, 'getBoundingClientRect').mockReturnValue({
+          top: gridTop + r * rowHeight, left: gridLeft + c * colWidth,
+          bottom: gridTop + (r + rs) * rowHeight, right: gridLeft + (c + cs) * colWidth,
+          width: cs * colWidth, height: rs * rowHeight,
+          x: gridLeft + c * colWidth, y: gridTop + r * rowHeight, toJSON: () => ({}),
+        });
+      });
+
+      vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+        borderTopWidth: '0', borderLeftWidth: '0',
+      } as unknown as CSSStyleDeclaration);
+    };
+
+    it('single click on merged cell origin shows Split (not Merge) in pill popover', () => {
+      const tbl = createBug2Grid();
+
+      mockBug2BoundingRects(tbl);
+
+      const canMergeSpy = vi.fn().mockReturnValue(true);
+      const isMergedCellSpy = vi.fn().mockImplementation((row: number, col: number) => {
+        // Only td[0,0] is a merge origin
+        return row === 0 && col === 0;
+      });
+      const onSplitCellSpy = vi.fn();
+      const onMergeCellsSpy = vi.fn();
+
+      const sel = new TableCellSelection({
+        grid: tbl,
+        i18n: mockI18n,
+        canMergeCells: canMergeSpy,
+        isMergedCell: isMergedCellSpy,
+        onMergeCells: onMergeCellsSpy,
+        onSplitCell: onSplitCellSpy,
+        getCellSpan: (row, col) => {
+          const td = tbl.querySelector<HTMLTableCellElement>(
+            `[${CELL_ROW_ATTR}="${row}"][${CELL_COL_ATTR}="${col}"]`
+          );
+
+          return {
+            colspan: td?.colSpan ?? 1,
+            rowspan: td?.rowSpan ?? 1,
+          };
+        },
+      });
+
+      // Simulate a single click (no drag) on td[0,0] — the colspan=2 merge origin
+      const td00 = tbl.querySelector<HTMLElement>(`[${CELL_ROW_ATTR}="0"][${CELL_COL_ATTR}="0"]`)!;
+      const rect = td00.getBoundingClientRect();
+
+      // pointerdown then pointerup without any pointermove → single click path
+      td00.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: rect.left + 5,
+        clientY: rect.top + 5,
+        bubbles: true,
+        button: 0,
+      }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      // After a single click, showProgrammaticSelection(0,0,0,0) is called.
+      // With expandRectToMergedSpans and getCellSpan, lastPaintedRange becomes
+      // {minRow:0, maxRow:0, minCol:0, maxCol:1} (colspan expanded).
+      // findCellByCoordOrIndex falls back to the physical DOM for (0,1) and
+      // returns td[0,2] (physical index 1 in row 0), so the pill IS created.
+      const pill = tbl.querySelector<HTMLElement>(`[${PILL_ATTR}]`);
+
+      expect(pill).not.toBeNull();
+
+      // Open the pill popover
+      pill!.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+
+      // Verify popover was opened and capture its items
+      expect(lastPopoverArgs).not.toBeNull();
+
+      const items = lastPopoverArgs?.items ?? [];
+      const splitItem = items.find(i => i.title === 'tools.table.splitCell');
+      const mergeItem = items.find(i => i.title === 'tools.table.mergeCells');
+
+      // BUG: lastPaintedRange is {0,0,0,1} after expansion.
+      // openPillPopover checks `isSingleCell = (minRow===maxRow && minCol===maxCol)` → false.
+      // So Split is NOT added. Then isMultiCell is true → canMergeCells IS called → Merge added.
+      //
+      // Correct behaviour:
+      //   - canMergeCells should NOT be called for a single merged-cell click
+      //   - Split item MUST be present
+      //   - Merge item MUST NOT be present
+      expect(canMergeSpy).not.toHaveBeenCalled();
+      expect(splitItem).toBeDefined();
+      expect(mergeItem).toBeUndefined();
 
       sel.destroy();
       tbl.remove();

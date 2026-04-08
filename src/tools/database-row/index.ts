@@ -60,6 +60,15 @@ export class DatabaseRowTool implements BlockTool {
   public static get isReadOnlySupported(): boolean {
     return true;
   }
+
+  /**
+   * No-op: DatabaseRowTool renders an invisible div with no interactive elements.
+   * Implementing this method enables the fast-path in-place read-only toggle in
+   * the ReadOnly module (which requires ALL tools to have setReadOnly()).
+   */
+  public setReadOnly(_state: boolean): void {
+    // intentionally empty
+  }
 }
 
 export type { DatabaseRowData };

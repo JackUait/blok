@@ -1337,6 +1337,192 @@ describe('DatabaseTool', () => {
     });
   });
 
+  describe('setReadOnly()', () => {
+    it('setReadOnly method exists on prototype (enables fast-path in-place toggle)', () => {
+      expect(typeof DatabaseTool.prototype.setReadOnly).toBe('function');
+    });
+
+    it('entering read-only hides add-card buttons from DOM', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: false }));
+      const element = tool.render();
+
+      document.body.appendChild(element);
+
+      expect(element.querySelectorAll('[data-blok-database-add-card]').length).toBeGreaterThan(0);
+
+      tool.setReadOnly(true);
+
+      expect(element.querySelectorAll('[data-blok-database-add-card]')).toHaveLength(0);
+
+      element.remove();
+      tool.destroy();
+    });
+
+    it('entering read-only hides add-column button from DOM', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: false }));
+      const element = tool.render();
+
+      document.body.appendChild(element);
+
+      expect(element.querySelector('[data-blok-database-add-column]')).not.toBeNull();
+
+      tool.setReadOnly(true);
+
+      expect(element.querySelector('[data-blok-database-add-column]')).toBeNull();
+
+      element.remove();
+      tool.destroy();
+    });
+
+    it('entering read-only sets title contenteditable to false', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: false }));
+      const element = tool.render();
+
+      document.body.appendChild(element);
+
+      const titleEl = element.querySelector<HTMLElement>('[data-blok-database-title]');
+
+      expect(titleEl?.getAttribute('contenteditable')).toBe('true');
+
+      tool.setReadOnly(true);
+
+      expect(titleEl?.getAttribute('contenteditable')).toBe('false');
+
+      element.remove();
+      tool.destroy();
+    });
+
+    it('entering read-only removes the tab bar from DOM', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: false }));
+      const element = tool.render();
+
+      document.body.appendChild(element);
+
+      expect(element.querySelector('[data-blok-database-tab-bar]')).not.toBeNull();
+
+      tool.setReadOnly(true);
+
+      expect(element.querySelector('[data-blok-database-tab-bar]')).toBeNull();
+
+      element.remove();
+      tool.destroy();
+    });
+
+    it('exiting read-only restores add-card buttons in DOM', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: true }));
+      const element = tool.render();
+
+      document.body.appendChild(element);
+
+      expect(element.querySelectorAll('[data-blok-database-add-card]')).toHaveLength(0);
+
+      tool.setReadOnly(false);
+
+      expect(element.querySelectorAll('[data-blok-database-add-card]').length).toBeGreaterThan(0);
+
+      element.remove();
+      tool.destroy();
+    });
+
+    it('exiting read-only restores add-column button in DOM', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: true }));
+      const element = tool.render();
+
+      document.body.appendChild(element);
+
+      expect(element.querySelector('[data-blok-database-add-column]')).toBeNull();
+
+      tool.setReadOnly(false);
+
+      expect(element.querySelector('[data-blok-database-add-column]')).not.toBeNull();
+
+      element.remove();
+      tool.destroy();
+    });
+
+    it('exiting read-only restores title contenteditable to true', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: true }));
+      const element = tool.render();
+
+      document.body.appendChild(element);
+
+      const titleEl = element.querySelector<HTMLElement>('[data-blok-database-title]');
+
+      expect(titleEl?.getAttribute('contenteditable')).toBeNull();
+
+      tool.setReadOnly(false);
+
+      expect(titleEl?.getAttribute('contenteditable')).toBe('true');
+
+      element.remove();
+      tool.destroy();
+    });
+
+    it('exiting read-only restores tab bar in DOM', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: true }));
+      const element = tool.render();
+
+      document.body.appendChild(element);
+
+      expect(element.querySelector('[data-blok-database-tab-bar]')).toBeNull();
+
+      tool.setReadOnly(false);
+
+      expect(element.querySelector('[data-blok-database-tab-bar]')).not.toBeNull();
+
+      element.remove();
+      tool.destroy();
+    });
+
+    it('setReadOnly is idempotent when called with the same state (true→true)', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: false }));
+      const element = tool.render();
+
+      document.body.appendChild(element);
+
+      tool.setReadOnly(true);
+      expect(() => tool.setReadOnly(true)).not.toThrow();
+
+      expect(element.querySelector('[data-blok-database-add-column]')).toBeNull();
+
+      element.remove();
+      tool.destroy();
+    });
+
+    it('setReadOnly is idempotent when called with the same state (false→false)', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: false }));
+      const element = tool.render();
+
+      document.body.appendChild(element);
+
+      expect(() => tool.setReadOnly(false)).not.toThrow();
+
+      expect(element.querySelector('[data-blok-database-add-column]')).not.toBeNull();
+
+      element.remove();
+      tool.destroy();
+    });
+
+    it('tab bar is inserted before the board container when exiting read-only', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: true }));
+      const element = tool.render();
+
+      document.body.appendChild(element);
+      tool.setReadOnly(false);
+
+      const tabBar = element.querySelector('[data-blok-database-tab-bar]');
+      const boardContainer = element.querySelector('[data-blok-database-board-container]');
+
+      expect(tabBar).not.toBeNull();
+      expect(boardContainer).not.toBeNull();
+      // Tab bar should come before board container in DOM order
+      expect(tabBar!.compareDocumentPosition(boardContainer!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+
+      element.remove();
+      tool.destroy();
+    });
+  });
+
   describe('getToolbarAnchorElement', () => {
     it('returns the outer wrapper element so the toolbar positions at block top, not inside deeply nested content', () => {
       const tool = new DatabaseTool(createDatabaseOptions());

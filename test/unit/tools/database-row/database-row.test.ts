@@ -149,6 +149,36 @@ describe('DatabaseRowTool', () => {
     });
   });
 
+  describe('setReadOnly()', () => {
+    it('setReadOnly method exists on prototype (enables fast-path in-place toggle)', () => {
+      expect(typeof DatabaseRowTool.prototype.setReadOnly).toBe('function');
+    });
+
+    it('setReadOnly(true) does not throw', () => {
+      const tool = new DatabaseRowTool(createRowOptions());
+
+      expect(() => tool.setReadOnly(true)).not.toThrow();
+    });
+
+    it('setReadOnly(false) does not throw', () => {
+      const tool = new DatabaseRowTool(createRowOptions());
+
+      expect(() => tool.setReadOnly(false)).not.toThrow();
+    });
+
+    it('setReadOnly does not affect saved data', () => {
+      const tool = new DatabaseRowTool(createRowOptions({ properties: { title: 'Stable' }, position: 'b2' }));
+
+      tool.setReadOnly(true);
+      tool.setReadOnly(false);
+
+      const saved = tool.save(tool.render());
+
+      expect(saved.properties).toEqual({ title: 'Stable' });
+      expect(saved.position).toBe('b2');
+    });
+  });
+
   describe('public type export', () => {
     it('DatabaseRowData is importable from public types', () => {
       const rowData: PublicDatabaseRowData = { properties: { title: 'Test' }, position: 'a0' };

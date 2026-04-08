@@ -28,7 +28,7 @@ import { nanoid } from 'nanoid';
 export class DatabaseTool implements BlockTool {
   private readonly api: API;
   private readonly block: BlockAPI;
-  private readonly readOnly: boolean;
+  private readOnly: boolean;
   private readonly config: DatabaseConfig;
 
   private title: string;
@@ -218,6 +218,58 @@ export class DatabaseTool implements BlockTool {
     this.element = null;
     this.boardContainer = null;
     this.tabBar = null;
+  }
+
+  /**
+   * Toggles read-only mode in place without triggering a full save→clear→render
+   * cycle. This enables the fast-path in the ReadOnly module (which requires all
+   * tools to implement setReadOnly()).
+   *
+   * Entering read-only:
+   *   - Makes the title non-editable
+   *   - Removes the tab bar from DOM
+   *   - Re-renders the active view in read-only mode (which skips subsystem init)
+   *
+   * Exiting read-only:
+   *   - Makes the title editable
+   *   - Recreates the tab bar before the board container
+   *   - Re-renders the active view in edit mode (which re-inits subsystems)
+   */
+  setReadOnly(state: boolean): void {
+    if (this.readOnly === state) {
+      return;
+    }
+
+    this.readOnly = state;
+
+    if (this.titleElement !== null) {
+      this.titleElement.setAttribute('contenteditable', state ? 'false' : 'true');
+    }
+
+    if (state) {
+      // Remove tab bar from DOM and destroy it
+      if (this.tabBar !== null && this.element !== null) {
+        const tabBarEl = this.element.querySelector('[data-blok-database-tab-bar]');
+
+        tabBarEl?.remove();
+        this.tabBar.destroy();
+        this.tabBar = null;
+      }
+    } else {
+      // Recreate tab bar and insert before boardContainer
+      if (this.element !== null) {
+        this.tabBar = this.createTabBar();
+        const newTabBarEl = this.tabBar.render();
+
+        if (this.boardContainer !== null) {
+          this.element.insertBefore(newTabBarEl, this.boardContainer);
+        } else {
+          this.element.appendChild(newTabBarEl);
+        }
+      }
+    }
+
+    this.rerenderView();
   }
 
   /**

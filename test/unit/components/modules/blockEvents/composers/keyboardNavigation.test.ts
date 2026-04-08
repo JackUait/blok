@@ -1753,7 +1753,7 @@ describe('KeyboardNavigation', () => {
       expect(hideBlockActions).not.toHaveBeenCalled();
     });
 
-    it('does not close toolbar after merge inside table cell', () => {
+    it('does not merge blocks when Backspace is pressed inside a table cell', () => {
       const previousBlock = createBlock({ id: 'prev-block', isEmpty: false, mergeable: true });
       Object.defineProperty(previousBlock, 'lastInput', {
         value: document.createElement('div'),
@@ -1786,9 +1786,38 @@ describe('KeyboardNavigation', () => {
 
       keyboardNavigation.handleBackspace(event);
 
-      expect(mergeBlocks).toHaveBeenCalledWith(previousBlock, mockBlock);
-      // The merge .then() callback should also not close toolbar for table cell blocks
+      // Table cell boundary must not merge blocks across cells
+      expect(mergeBlocks).not.toHaveBeenCalled();
       expect(hideBlockActions).not.toHaveBeenCalled();
+    });
+
+    it('does not merge blocks when Delete is pressed at end of last input inside a table cell', () => {
+      const mockBlock = createBlock({ id: 'current-block', isEmpty: false, mergeable: true, parentId: 'table-block-1' } as unknown as Partial<Block>);
+      wrapBlockInTableCell(mockBlock);
+
+      const nextBlock = createBlock({ id: 'next-block', isEmpty: false, mergeable: true, parentId: 'table-block-1' } as unknown as Partial<Block>);
+      const mergeBlocks = vi.fn(() => Promise.resolve());
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          nextBlock,
+          mergeBlocks,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({
+        keyCode: keyCodes.DELETE,
+        key: 'Delete',
+        code: 'Delete',
+      });
+
+      vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+      vi.spyOn(SelectionUtils, 'isCollapsed', 'get').mockReturnValue(true);
+
+      keyboardNavigation.handleDelete(event);
+
+      // Table cell boundary must not merge blocks across cells
+      expect(mergeBlocks).not.toHaveBeenCalled();
     });
 
     it('does not hide block actions on ArrowRight for regular block', () => {

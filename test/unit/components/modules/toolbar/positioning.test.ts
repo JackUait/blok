@@ -32,6 +32,7 @@ describe('ToolbarPositioner', () => {
       lastSavedData: {},
       getTunes: vi.fn(() => ({ toolTunes: [], commonTunes: [] })),
       getContentOffset: vi.fn(() => ({ left: 0, top: 0 })),
+      getToolbarAnchorElement: vi.fn(() => undefined),
       calculateData: vi.fn(),
       dispatch: vi.fn(),
       render: vi.fn(),

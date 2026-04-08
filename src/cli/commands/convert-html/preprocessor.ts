@@ -49,26 +49,45 @@ function convertBackgroundDivsToCallouts(wrapper: HTMLElement): void {
 
     // Unwrap non-semantic <div> wrappers so the aside's direct children are
     // the content elements (<p>, <a>, etc.), not intermediate <div> shells.
-    let bareDivs: HTMLElement[];
-
-    while ((bareDivs = Array.from(aside.querySelectorAll<HTMLElement>(':scope > div'))
-      .filter((d) => !d.getAttribute('style') && !d.getAttribute('class'))).length > 0) {
-      for (const child of bareDivs) {
-        child.replaceWith(...Array.from(child.childNodes));
-      }
-    }
+    unwrapBareDivs(aside);
 
     // Strip trailing <br> inside paragraphs — the paste handler splits
     // content at <br> boundaries, so a trailing one creates an empty block.
-    for (const p of Array.from(aside.querySelectorAll('p'))) {
-      const lastChild = p.lastElementChild;
-
-      if (lastChild?.tagName === 'BR') {
-        lastChild.remove();
-      }
-    }
+    stripTrailingBrInParagraphs(aside);
 
     div.replaceWith(aside);
+  }
+}
+
+/**
+ * Repeatedly unwrap non-semantic `<div>` wrappers (no style or class) that are
+ * direct children of the given element, replacing them with their child nodes.
+ */
+function unwrapBareDivs(parent: HTMLElement): void {
+  for (;;) {
+    const bareDivs = Array.from(parent.querySelectorAll<HTMLElement>(':scope > div'))
+      .filter((d) => !d.getAttribute('style') && !d.getAttribute('class'));
+
+    if (bareDivs.length === 0) {
+      break;
+    }
+
+    for (const child of bareDivs) {
+      child.replaceWith(...Array.from(child.childNodes));
+    }
+  }
+}
+
+/**
+ * Remove trailing `<br>` elements from paragraphs inside the given element.
+ */
+function stripTrailingBrInParagraphs(parent: HTMLElement): void {
+  for (const p of Array.from(parent.querySelectorAll('p'))) {
+    const lastChild = p.lastElementChild;
+
+    if (lastChild?.tagName === 'BR') {
+      lastChild.remove();
+    }
   }
 }
 
@@ -89,16 +108,18 @@ function stripSpuriousBackgroundColors(wrapper: HTMLElement): void {
   const candidates = wrapper.querySelectorAll<HTMLElement>('[style*="background-color"]');
 
   for (const el of Array.from(candidates)) {
-    if (isSpuriousBackgroundColor(el.style.backgroundColor)) {
-      el.style.removeProperty('background-color');
+    if (!isSpuriousBackgroundColor(el.style.backgroundColor)) {
+      continue;
+    }
 
-      if (el.getAttribute('style')?.trim() === '') {
-        el.removeAttribute('style');
-      }
+    el.style.removeProperty('background-color');
 
-      if (isEmptyWrapper(el)) {
-        el.replaceWith(...Array.from(el.childNodes));
-      }
+    if (el.getAttribute('style')?.trim() === '') {
+      el.removeAttribute('style');
+    }
+
+    if (isEmptyWrapper(el)) {
+      el.replaceWith(...Array.from(el.childNodes));
     }
   }
 }
@@ -187,8 +208,6 @@ function getBackgroundColor(el: HTMLElement): string {
  * Only targets `<td>` and `<th>` — top-level `<p>` tags are left intact.
  */
 function convertTableCellParagraphs(wrapper: HTMLElement): void {
-  const doc = wrapper.ownerDocument;
-
   for (const cell of Array.from(wrapper.querySelectorAll('td, th'))) {
     const paragraphs = cell.querySelectorAll('p');
 
@@ -197,20 +216,30 @@ function convertTableCellParagraphs(wrapper: HTMLElement): void {
     }
 
     for (const p of Array.from(paragraphs)) {
-      if (p.innerHTML.trim() === '' || p.innerHTML.trim() === '&nbsp;') {
-        p.remove();
-        continue;
-      }
-
-      const fragment = doc.createDocumentFragment();
-
-      fragment.append(...Array.from(p.childNodes));
-      fragment.append(doc.createElement('br'));
-      p.replaceWith(fragment);
+      replaceParagraphWithBr(p);
     }
 
     stripTrailingBreaks(cell);
   }
+}
+
+/**
+ * Replace a `<p>` element with its child nodes followed by a `<br>`,
+ * or remove it entirely if it is empty / nbsp-only.
+ */
+function replaceParagraphWithBr(p: HTMLParagraphElement): void {
+  if (p.innerHTML.trim() === '' || p.innerHTML.trim() === '&nbsp;') {
+    p.remove();
+
+    return;
+  }
+
+  const doc = p.ownerDocument;
+  const fragment = doc.createDocumentFragment();
+
+  fragment.append(...Array.from(p.childNodes));
+  fragment.append(doc.createElement('br'));
+  p.replaceWith(fragment);
 }
 
 /**
@@ -261,8 +290,49 @@ const BULLET_PREFIX = /^[\u2022\u00B7][\s\u00A0]*|^-\s/;
  */
 function convertBulletParagraphsToLists(wrapper: HTMLElement): void {
   const doc = wrapper.ownerDocument;
+
+  // Collect runs of consecutive bullet paragraphs. Each run is a group
+  // that will become a single <ul>.
+  const groups = collectBulletGroups(wrapper);
+
+  for (const group of groups) {
+    const ul = doc.createElement('ul');
+
+    group[0].before(ul);
+
+    for (const p of group) {
+      convertBulletParagraphToListItem(p, ul);
+    }
+  }
+}
+
+/**
+ * Strip the bullet prefix from a paragraph and append its content as
+ * a `<li>` to the given list.
+ */
+function convertBulletParagraphToListItem(p: HTMLParagraphElement, ul: HTMLUListElement): void {
+  const li = p.ownerDocument.createElement('li');
+
+  // Strip the bullet character and any leading nbsp/whitespace from
+  // the first text node, preserving any inline HTML that follows.
+  const firstTextNode = findFirstTextNode(p);
+
+  if (firstTextNode) {
+    firstTextNode.textContent = (firstTextNode.textContent ?? '').replace(BULLET_PREFIX, '');
+  }
+
+  li.append(...Array.from(p.childNodes));
+  ul.appendChild(li);
+  p.remove();
+}
+
+/**
+ * Walk direct children of an element and return groups of consecutive `<p>`
+ * elements whose text starts with a bullet character.
+ */
+function collectBulletGroups(wrapper: HTMLElement): HTMLParagraphElement[][] {
+  const groups: HTMLParagraphElement[][] = [];
   const children = Array.from(wrapper.childNodes);
-  let currentList: HTMLUListElement | null = null;
 
   for (const child of children) {
     if (child.nodeType !== Node.ELEMENT_NODE) {
@@ -270,38 +340,43 @@ function convertBulletParagraphsToLists(wrapper: HTMLElement): void {
     }
 
     const el = child as HTMLElement;
+    const isBulletParagraph = el.tagName === 'P' && BULLET_PREFIX.test(el.textContent ?? '');
 
-    if (el.tagName !== 'P') {
-      currentList = null;
+    if (!isBulletParagraph) {
       continue;
     }
 
-    const textContent = el.textContent ?? '';
+    const lastGroup = groups[groups.length - 1];
+    const previousSibling = findPreviousElementSibling(el);
+    const belongsToCurrentGroup = lastGroup
+      && previousSibling !== null
+      && lastGroup[lastGroup.length - 1] === previousSibling;
 
-    if (!BULLET_PREFIX.test(textContent)) {
-      currentList = null;
-      continue;
+    if (belongsToCurrentGroup) {
+      lastGroup.push(el as HTMLParagraphElement);
+    } else {
+      groups.push([el as HTMLParagraphElement]);
     }
-
-    if (!currentList) {
-      currentList = doc.createElement('ul');
-      el.before(currentList);
-    }
-
-    const li = doc.createElement('li');
-
-    // Strip the bullet character and any leading nbsp/whitespace from
-    // the first text node, preserving any inline HTML that follows.
-    const firstTextNode = findFirstTextNode(el);
-
-    if (firstTextNode) {
-      firstTextNode.textContent = (firstTextNode.textContent ?? '').replace(BULLET_PREFIX, '');
-    }
-
-    li.append(...Array.from(el.childNodes));
-    currentList.appendChild(li);
-    el.remove();
   }
+
+  return groups;
+}
+
+/**
+ * Find the previous sibling that is an element, skipping non-element nodes.
+ */
+function findPreviousElementSibling(el: HTMLElement): Element | null {
+  const prev = el.previousSibling;
+
+  if (!prev) {
+    return null;
+  }
+
+  if (prev.nodeType === Node.ELEMENT_NODE) {
+    return prev as Element;
+  }
+
+  return null;
 }
 
 /**
@@ -309,22 +384,21 @@ function convertBulletParagraphsToLists(wrapper: HTMLElement): void {
  * of an element.
  */
 function stripTrailingBreaks(element: Element): void {
-  let node = element.lastChild;
+  for (;;) {
+    const node = element.lastChild;
 
-  while (node) {
-    if (node.nodeType === Node.ELEMENT_NODE && (node as Element).tagName === 'BR') {
-      const prev = node.previousSibling;
-
-      node.remove();
-      node = prev;
-    } else if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim() === '') {
-      const prev = node.previousSibling;
-
-      node.remove();
-      node = prev;
-    } else {
+    if (!node) {
       break;
     }
+
+    const isBr = node.nodeType === Node.ELEMENT_NODE && (node as Element).tagName === 'BR';
+    const isBlankText = node.nodeType === Node.TEXT_NODE && node.textContent?.trim() === '';
+
+    if (!isBr && !isBlankText) {
+      break;
+    }
+
+    node.remove();
   }
 }
 

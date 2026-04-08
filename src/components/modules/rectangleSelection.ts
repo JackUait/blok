@@ -73,6 +73,14 @@ export class RectangleSelection extends Module {
   private mouseDownWithinBoundsFromContentEditable = false;
 
   /**
+   * Set when the user mousedowns in a position that should eventually close the toolbar
+   * if a drag begins, but NOT immediately (to avoid interfering with button clicks like
+   * the plus button). The toolbar is closed on the first mousemove after mousedown.
+   * Cleared on mouseup / endSelection.
+   */
+  private pendingToolbarClose = false;
+
+  /**
    *  Is scrolling now
    */
   private isScrolling = false;
@@ -187,7 +195,7 @@ export class RectangleSelection extends Module {
 
     const selectorsToAvoid = [
       createSelector(DATA_ATTR.elementContent),
-      createSelector(DATA_ATTR.toolbar),
+      createSelector(DATA_ATTR.settingsToggler),
       createSelector(DATA_ATTR.popover),
       INLINE_TOOLBAR_INTERFACE_SELECTOR,
     ];
@@ -202,12 +210,13 @@ export class RectangleSelection extends Module {
     }
 
     /**
-     * Hide the toolbar immediately so it does not obstruct drag selection.
-     * Only close the toolbar if the selection starts within the horizontal bounds of the editor.
-     * This allows rectangle selection to start from outside (e.g., left margin) without closing the toolbar.
+     * Schedule toolbar close for the first mousemove (i.e. when the user actually drags).
+     * Deferring prevents a plain click (e.g. on the plus button) from accidentally closing
+     * the toolbar before its own click handler fires.
+     * Only close if starting within the horizontal bounds of the editor.
      */
     if (withinEditorHorizontally) {
-      this.Blok.Toolbar.close();
+      this.pendingToolbarClose = true;
     }
 
     this.mousedown = true;
@@ -221,6 +230,7 @@ export class RectangleSelection extends Module {
   public endSelection(): void {
     this.mousedown = false;
     this.mouseDownWithinBoundsFromContentEditable = false;
+    this.pendingToolbarClose = false;
     this.startX = 0;
     this.startY = 0;
     this.anchorBlockIndex = null;
@@ -358,6 +368,16 @@ export class RectangleSelection extends Module {
      * does not accidentally close the toolbar.
      */
     if (this.mouseDownWithinBoundsFromContentEditable) {
+      this.Blok.Toolbar.close();
+    }
+
+    /**
+     * Close the toolbar on the first actual drag movement after a mousedown
+     * that was scheduled to close it. Using mousemove instead of mousedown ensures
+     * plain button clicks (e.g. the plus button) don't close the toolbar prematurely.
+     */
+    if (this.pendingToolbarClose) {
+      this.pendingToolbarClose = false;
       this.Blok.Toolbar.close();
     }
 

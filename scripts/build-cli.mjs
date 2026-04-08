@@ -32,7 +32,7 @@ async function buildCli() {
     define: {
       __MIGRATION_CONTENT__: JSON.stringify(migrationContent),
       __CLI_VERSION__: JSON.stringify(
-        JSON.parse(readFileSync(path.resolve(__dirname, '../package.json'), 'utf-8')).version
+        JSON.parse(readFileSync(path.resolve(__dirname, '../packages/cli/package.json'), 'utf-8')).version
       ),
     },
   });

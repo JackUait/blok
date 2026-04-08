@@ -161,7 +161,7 @@ describe('preprocess', () => {
       expect(result).toContain('<aside');
       expect(result).toContain('<p>inner</p>');
       // The bare inner div should be unwrapped
-      const asideContent = result.match(/<aside[^>]*>(.*)<\/aside>/s)?.[1] ?? '';
+      const asideContent = result.match(/<aside[^>]*>([\s\S]*)<\/aside>/)?.[1] ?? '';
 
       expect(asideContent).not.toContain('<div');
     });

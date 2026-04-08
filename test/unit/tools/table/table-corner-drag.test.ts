@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TableCornerDrag } from '../../../../src/tools/table/table-corner-drag';
+import { simulateMouseenter, simulateMouseleave } from '../../../helpers/simulate';
 
 const mockShowTooltip = vi.fn();
 const mockHideTooltip = vi.fn();
@@ -144,7 +145,7 @@ describe('TableCornerDrag', () => {
 
       const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
 
-      hitZone.dispatchEvent(new MouseEvent('mouseenter'));
+      simulateMouseenter(hitZone);
 
       expect(mockShowTooltip).toHaveBeenCalledWith(
         hitZone,
@@ -160,10 +161,11 @@ describe('TableCornerDrag', () => {
 
       const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
 
-      hitZone.dispatchEvent(new MouseEvent('mouseenter'));
-      hitZone.dispatchEvent(new MouseEvent('mouseleave'));
+      simulateMouseenter(hitZone);
+      simulateMouseleave(hitZone);
 
       expect(mockHideTooltip).toHaveBeenCalled();
+      expect(hitZone.isConnected).toBe(true);
     });
   });
 
@@ -263,6 +265,8 @@ describe('TableCornerDrag', () => {
 
       expect(options.onAddRow).toHaveBeenCalledTimes(2);
       expect(options.onAddColumn).toHaveBeenCalledTimes(2);
+      expect(options.onDragEnd).toHaveBeenCalledOnce();
+      expect(document.body.style.cursor).toBe('');
     });
 
     it('fires onDragStart after exceeding threshold', () => {
@@ -302,6 +306,8 @@ describe('TableCornerDrag', () => {
       hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 100, clientY: 136, pointerId: 1 }));
 
       expect(mockHideTooltip).toHaveBeenCalled();
+      expect(document.body.style.cursor).toBe('');
+      expect(document.body.style.userSelect).toBe('');
     });
 
     it('does not trigger drag mode when movement is under threshold', () => {
@@ -548,12 +554,13 @@ describe('TableCornerDrag', () => {
 
       const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
 
-      hitZone.dispatchEvent(new MouseEvent('mouseenter'));
+      simulateMouseenter(hitZone);
       mockHideTooltip.mockClear();
 
       cornerDrag.destroy();
 
       expect(mockHideTooltip).toHaveBeenCalled();
+      expect(hitZone.isConnected).toBe(false);
     });
   });
 });

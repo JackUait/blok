@@ -103,6 +103,13 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   }
 
   /**
+   * Whether the popover is currently shown
+   */
+  public get isShown(): boolean {
+    return this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpened);
+  }
+
+  /**
    * Open popover
    */
   public show(): void {

@@ -1,6 +1,7 @@
 import type { I18n } from '../../../../types/api';
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { TableAddControls } from '../../../../src/tools/table/table-add-controls';
+import { simulateMousemove, simulateMouseleave } from '../../../helpers/simulate';
 
 const mockI18n: I18n = { t: (key: string) => key } as I18n;
 
@@ -616,14 +617,14 @@ describe('TableAddControls', () => {
       vi.spyOn(grid, 'getBoundingClientRect').mockReturnValue(gridRect);
 
       // Step 1: show buttons via document mousemove near grid (outside wrapper)
-      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 50, clientY: 120, bubbles: true }));
+      simulateMousemove(document, { clientX: 50, clientY: 120 });
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
 
       expect(addRowBtn.style.opacity).toBe('1');
 
       // Step 2: move cursor far from grid via document mousemove
-      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 50, clientY: 300, bubbles: true }));
+      simulateMousemove(document, { clientX: 50, clientY: 300 });
 
       vi.advanceTimersByTime(200);
 
@@ -653,24 +654,24 @@ describe('TableAddControls', () => {
       vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue(gridRect);
 
       // Step 1: show add-row button via wrapper mousemove near bottom
-      wrapper.dispatchEvent(new MouseEvent('mousemove', { clientX: 50, clientY: 90, bubbles: true }));
+      simulateMousemove(wrapper, { clientX: 50, clientY: 90 });
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
 
       expect(addRowBtn.style.opacity).toBe('1');
 
       // Step 2: wrapper mouseleave schedules hide
-      wrapper.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+      simulateMouseleave(wrapper);
 
       // Step 3: document mousemove near grid (within proximity) — cancels the pending hide via showRow()
-      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 50, clientY: 120, bubbles: true }));
+      simulateMousemove(document, { clientX: 50, clientY: 120 });
 
       // Button should still be visible (hide was canceled, re-shown by proximity)
       vi.advanceTimersByTime(200);
       expect(addRowBtn.style.opacity).toBe('1');
 
       // Step 4: cursor moves far from grid via document mousemove
-      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 50, clientY: 300, bubbles: true }));
+      simulateMousemove(document, { clientX: 50, clientY: 300 });
 
       vi.advanceTimersByTime(200);
 
@@ -1511,6 +1512,7 @@ describe('TableAddControls', () => {
       }));
 
       expect(mockHide).toHaveBeenCalled();
+      expect(document.body.style.cursor).toBe('');
     });
 
     it('hides dimension tooltip on pointer cancel', () => {
@@ -1551,6 +1553,7 @@ describe('TableAddControls', () => {
       }));
 
       expect(mockHide).toHaveBeenCalled();
+      expect(document.body.style.cursor).toBe('');
     });
 
     it('does not set a native title attribute on either button', () => {

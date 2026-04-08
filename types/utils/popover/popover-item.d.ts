@@ -152,6 +152,12 @@ export interface PopoverItemDefaultBaseParams {
   icon?: string;
 
   /**
+   * Icon to be displayed on the trailing (right) side of the item.
+   * Rendered without a box background, suitable for indicators like a checkmark.
+   */
+  trailingIcon?: string;
+
+  /**
    * Additional displayed text
    */
   secondaryLabel?: string;

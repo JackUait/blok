@@ -66,6 +66,7 @@ export class CalloutTool implements BlockTool {
   private _dom: CalloutDOMRefs | null = null;
   private _emojiPicker: EmojiPicker | null = null;
   private _colorPicker: ColorPickerHandle | null = null;
+  private _dragZone: HTMLElement | null = null;
   private blockId?: string;
 
   constructor({ data, api, readOnly, block }: BlockToolConstructorOptions<CalloutData, CalloutConfig>) {
@@ -120,6 +121,7 @@ export class CalloutTool implements BlockTool {
     });
 
     this._dom = dom;
+    this._dragZone = dom.dragZone;
     this.applyColors();
 
     if (!this.readOnly) {
@@ -258,6 +260,10 @@ export class CalloutTool implements BlockTool {
     if (this._dom) {
       this._dom.emojiButton.disabled = state;
     }
+  }
+
+  public get dragZone(): HTMLElement | null {
+    return this._dragZone;
   }
 
   private syncPickerActiveColors(): void {

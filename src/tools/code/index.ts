@@ -10,34 +10,37 @@ import type {
 } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import type { CodeData } from '../../../types/tools/code';
-import { IconCodeBlock } from '../../components/icons';
-import { buildCodeDOM } from './dom-builder';
+import { IconCodeBlock, IconCheck, IconWand } from '../../components/icons';
+import { buildCodeDOM, setActiveViewMode } from './dom-builder';
 import type { CodeDOMRefs } from './dom-builder';
 import { handleCodeKeydown } from './code-keyboard';
-import { LanguagePicker } from './language-picker';
+import { PopoverDesktop } from '../../components/utils/popover';
+import { onHover as tooltipOnHover } from '../../components/utils/tooltip';
+import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
+import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import {
   DEFAULT_LANGUAGE,
   LANGUAGES,
-  CODE_AREA_STYLES,
   COPY_CODE_KEY,
-  WRAP_LINES_KEY,
-  LINE_NUMBERS_KEY,
   COPIED_KEY,
   LANGUAGE_KEY,
+  SEARCH_LANGUAGE_KEY,
   COPIED_FEEDBACK_STYLES,
   PREVIEWABLE_LANGUAGES,
   CODE_TAB_KEY,
   PREVIEW_TAB_KEY,
-  TAB_STYLES,
-  TAB_ACTIVE_STYLES,
-  TAB_INACTIVE_STYLES,
+  SIDE_BY_SIDE_KEY,
   PREVIEW_AREA_STYLES,
   GUTTER_LINE_STYLES,
+  SPLIT_CONTAINER_STYLES,
+  SPLIT_CONTAINER_SPLIT_STYLES,
 } from './constants';
+import type { CodeViewMode } from './constants';
 import { renderLatex } from './katex-loader';
 import { renderMermaid } from './mermaid-loader';
 import { tokenizeCode, isHighlightable } from './shiki-loader';
 import { applyHighlights, isHighlightingSupported } from './highlight-applier';
+import { detectLanguage } from './language-detector';
 
 const COPIED_FEEDBACK_DURATION = 1500;
 
@@ -46,13 +49,14 @@ export class CodeTool implements BlockTool {
   private readOnly: boolean;
   private _data: CodeData;
   private _dom: CodeDOMRefs | null = null;
-  private _wrapping = true;
   private _lineNumbers = true;
-  private _picker: LanguagePicker | null = null;
-  private _previewActive = false;
+  private _picker: PopoverDesktop | null = null;
+  private _viewMode: CodeViewMode = 'preview';
   private _previewContainer: HTMLElement | null = null;
   private _disposeHighlights: (() => void) | null = null;
   private _highlightRafId: number | null = null;
+  private _detectedLanguage: string | null = null;
+  private _detectionTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   constructor({ data, api, readOnly }: BlockToolConstructorOptions<CodeData>) {
     this.api = api;
@@ -73,20 +77,20 @@ export class CodeTool implements BlockTool {
       languageName: this.getLanguageName(this._data.language),
       readOnly: this.readOnly,
       copyLabel: this.api.i18n.t(COPY_CODE_KEY),
-      wrapLabel: this.api.i18n.t(WRAP_LINES_KEY),
-      lineNumbersLabel: this.api.i18n.t(LINE_NUMBERS_KEY),
       previewable: this.readOnly ? false : isPreviewable,
-      codeTabLabel: this.api.i18n.t(CODE_TAB_KEY),
-      previewTabLabel: this.api.i18n.t(PREVIEW_TAB_KEY),
+      viewModeLabels: (this.readOnly ? false : isPreviewable) ? {
+        code: this.api.i18n.t(CODE_TAB_KEY),
+        preview: this.api.i18n.t(PREVIEW_TAB_KEY),
+        split: this.api.i18n.t(SIDE_BY_SIDE_KEY),
+      } : undefined,
     });
 
     this._dom = dom;
 
     // Line numbers gutter visibility
     dom.gutterElement.hidden = !this._lineNumbers;
-    dom.lineNumbersButton.addEventListener('click', () => this.toggleLineNumbers());
 
-    // Read-only + previewable: show preview only, hide code, no tabs
+    // Read-only + previewable: show preview only, hide code, no toggle
     if (this.readOnly && isPreviewable) {
       const previewEl = document.createElement('div');
 
@@ -99,17 +103,31 @@ export class CodeTool implements BlockTool {
       void this.renderPreview();
     }
 
-    // Edit mode + previewable: show tabs, default to preview
-    if (!this.readOnly && isPreviewable && dom.codeTab && dom.previewTab && dom.previewElement) {
-      this._previewActive = true;
-      dom.preElement.hidden = true;
-      dom.gutterElement.hidden = true;
-      dom.previewElement.hidden = false;
+    // Edit mode + previewable: show view mode segmented control, default to preview
+    if (!this.readOnly && isPreviewable && dom.viewModeContainer && dom.previewElement && dom.splitContainer) {
+      this._viewMode = 'preview';
       this._previewContainer = dom.previewElement;
+
+      // Apply initial state: preview mode
+      this.applyViewMode();
       void this.renderPreview();
 
-      dom.codeTab.addEventListener('click', () => this.showCode());
-      dom.previewTab.addEventListener('click', () => this.showPreview());
+      // Listen for clicks on view mode buttons
+      const modeButtons = Array.from(dom.viewModeContainer.querySelectorAll<HTMLButtonElement>('[data-mode]'));
+
+      for (const btn of modeButtons) {
+        const label = btn.getAttribute('aria-label') ?? '';
+
+        tooltipOnHover(btn, label, { placement: 'bottom' });
+
+        btn.addEventListener('click', () => {
+          const mode = btn.getAttribute('data-mode') as CodeViewMode;
+
+          if (mode && mode !== this._viewMode) {
+            this.setViewMode(mode);
+          }
+        });
+      }
     }
 
     if (!this.readOnly) {
@@ -121,6 +139,7 @@ export class CodeTool implements BlockTool {
           this.syncTrailingBr();
           this.updateGutter();
           this.scheduleHighlight();
+          this.scheduleDetection();
         }
       });
 
@@ -128,61 +147,91 @@ export class CodeTool implements BlockTool {
         this.syncTrailingBr();
         this.updateGutter();
         this.scheduleHighlight();
+        this.scheduleDetection();
       });
     }
 
     dom.copyButton.addEventListener('click', () => this.copyCode());
-    dom.wrapButton.addEventListener('click', () => this.toggleWrap());
+    tooltipOnHover(dom.copyButton, this.api.i18n.t(COPY_CODE_KEY), { placement: 'bottom' });
 
     if (!this.readOnly) {
-      this._picker = new LanguagePicker({
-        languages: LANGUAGES,
-        onSelect: (id: string) => this.setLanguage(id),
-        i18n: this.api.i18n,
-        activeLanguageId: this._data.language,
-      });
-
-      document.body.appendChild(this._picker.getElement());
+      this._picker = this.buildLanguagePicker(dom.languageButton, dom.wrapper);
 
       dom.languageButton.addEventListener('click', () => {
-        this._picker?.open(dom.languageButton);
+        if (this._picker?.isShown) {
+          this._picker.hide();
+        } else {
+          this._picker?.show();
+        }
       });
     }
 
     return dom.wrapper;
   }
 
+  /**
+   * Returns the wrapper element as the toolbar anchor so the toolbar
+   * centers on the block's visual top, not on the deeply nested
+   * contenteditable code element below the header bar.
+   */
+  public getToolbarAnchorElement(): HTMLElement | undefined {
+    return this._dom?.wrapper;
+  }
+
   public rendered(): void {
     void this.highlightCode();
   }
 
-  private showCode(): void {
-    if (!this._dom?.previewElement || !this._dom.codeTab || !this._dom.previewTab) {
-      return;
-    }
+  private setViewMode(mode: CodeViewMode): void {
+    this._viewMode = mode;
+    this.applyViewMode();
 
-    this._previewActive = false;
-    this._dom.preElement.hidden = false;
-    this._dom.gutterElement.hidden = !this._lineNumbers;
-    this._dom.previewElement.hidden = true;
-    this._dom.codeTab.className = `${TAB_STYLES} ${TAB_ACTIVE_STYLES}`;
-    this._dom.previewTab.className = `${TAB_STYLES} ${TAB_INACTIVE_STYLES}`;
+    if (mode === 'preview' || mode === 'split') {
+      void this.renderPreview();
+    }
   }
 
-  private showPreview(): void {
-    if (!this._dom?.previewElement || !this._dom.codeTab || !this._dom.previewTab) {
+  private applyViewMode(): void {
+    if (!this._dom?.previewElement || !this._dom.viewModeContainer || !this._dom.splitContainer) {
       return;
     }
 
-    this._previewActive = true;
-    this._dom.preElement.hidden = true;
-    this._dom.gutterElement.hidden = true;
-    this._dom.previewElement.hidden = false;
-    this._dom.codeTab.className = `${TAB_STYLES} ${TAB_INACTIVE_STYLES}`;
-    this._dom.previewTab.className = `${TAB_STYLES} ${TAB_ACTIVE_STYLES}`;
+    // Update segmented control active state
+    setActiveViewMode(this._dom.viewModeContainer, this._viewMode);
 
-    // Re-render preview with current code content
-    void this.renderPreview();
+    const codeBody = this._dom.preElement.parentElement?.parentElement;
+
+    switch (this._viewMode) {
+      case 'code':
+        this._dom.preElement.hidden = false;
+        this._dom.gutterElement.hidden = !this._lineNumbers;
+        this._dom.previewElement.hidden = true;
+        if (codeBody) {
+          codeBody.hidden = false;
+        }
+        this._dom.splitContainer.className = SPLIT_CONTAINER_STYLES;
+        break;
+
+      case 'preview':
+        this._dom.preElement.hidden = true;
+        this._dom.gutterElement.hidden = true;
+        this._dom.previewElement.hidden = false;
+        if (codeBody) {
+          codeBody.hidden = true;
+        }
+        this._dom.splitContainer.className = SPLIT_CONTAINER_STYLES;
+        break;
+
+      case 'split':
+        this._dom.preElement.hidden = false;
+        this._dom.gutterElement.hidden = !this._lineNumbers;
+        this._dom.previewElement.hidden = false;
+        if (codeBody) {
+          codeBody.hidden = false;
+        }
+        this._dom.splitContainer.className = SPLIT_CONTAINER_SPLIT_STYLES;
+        break;
+    }
   }
 
   private async renderPreview(): Promise<void> {
@@ -237,19 +286,40 @@ export class CodeTool implements BlockTool {
   }
 
   public renderSettings(): MenuConfig {
+    const selectedId = this._data.language;
+    const detectedId = this._detectedLanguage;
+    const showDetected = detectedId !== null && detectedId !== selectedId;
+
+    const childItems: PopoverItemParams[] = [];
+
+    if (showDetected) {
+      const detectedLanguage = LANGUAGES.find((lang) => lang.id === detectedId);
+      if (detectedLanguage) {
+        childItems.push({
+          title: detectedLanguage.name,
+          icon: IconWand,
+          secondaryLabel: 'auto',
+          onActivate: (): void => this.setLanguage(detectedLanguage.id),
+          closeOnActivate: true,
+          isActive: (): boolean => this._data.language === detectedLanguage.id,
+        });
+        childItems.push({ type: PopoverItemType.Separator });
+      }
+    }
+
+    childItems.push(...LANGUAGES.map((lang) => ({
+      title: lang.name,
+      trailingIcon: lang.id === selectedId ? IconCheck : undefined,
+      onActivate: (): void => this.setLanguage(lang.id),
+      closeOnActivate: true,
+    })));
+
     return [
       {
         icon: IconCodeBlock,
         title: this.api.i18n.t(LANGUAGE_KEY),
         name: 'code-language',
-        children: {
-          items: LANGUAGES.map((lang) => ({
-            title: lang.name,
-            onActivate: (): void => this.setLanguage(lang.id),
-            closeOnActivate: true,
-            isActive: this._data.language === lang.id,
-          })),
-        },
+        children: { items: childItems },
       },
     ];
   }
@@ -281,11 +351,79 @@ export class CodeTool implements BlockTool {
     this._data.language = id;
 
     if (this._dom) {
-      this._dom.languageButton.textContent = this.getLanguageName(id);
+      // Update the text span inside the language button (first child)
+      const textSpan = this._dom.languageButton.querySelector('span');
+
+      if (textSpan) {
+        textSpan.textContent = this.getLanguageName(id);
+      }
+
+      // Rebuild the language picker so the selected language check icon updates
+      if (this._picker) {
+        this._picker.destroy();
+      }
+      this._picker = this.buildLanguagePicker(this._dom.languageButton, this._dom.wrapper);
     }
 
-    this._picker?.setActiveLanguage(id);
     void this.highlightCode();
+  }
+
+  /**
+   * Builds the language items array. When a detected language differs from the
+   * chosen one, it appears first with a wand icon and "auto" secondary label.
+   * The currently selected language is shown with a trailing check icon
+   * in its natural position in the full language list.
+   */
+  private buildLanguagePickerItems(): PopoverItemParams[] {
+    const selectedId = this._data.language;
+    const detectedId = this._detectedLanguage;
+    const showDetected = detectedId !== null && detectedId !== selectedId;
+
+    const items: PopoverItemParams[] = [];
+
+    if (showDetected) {
+      const detectedLanguage = LANGUAGES.find((lang) => lang.id === detectedId);
+      if (detectedLanguage) {
+        items.push({
+          title: detectedLanguage.name,
+          name: detectedLanguage.id,
+          icon: IconWand,
+          secondaryLabel: 'auto',
+          toggle: 'language',
+          isActive: (): boolean => this._data.language === detectedLanguage.id,
+          closeOnActivate: true,
+          onActivate: (): void => this.setLanguage(detectedLanguage.id),
+        });
+        items.push({ type: PopoverItemType.Separator });
+      }
+    }
+
+    items.push(...LANGUAGES.map((lang) => ({
+      title: lang.name,
+      name: lang.id,
+      trailingIcon: lang.id === selectedId ? IconCheck : undefined,
+      toggle: 'language',
+      closeOnActivate: true,
+      onActivate: (): void => this.setLanguage(lang.id),
+    })));
+
+    return items;
+  }
+
+  /**
+   * Creates a new PopoverDesktop instance for the language picker.
+   */
+  private buildLanguagePicker(trigger: HTMLElement, leftAlignElement: HTMLElement): PopoverDesktop {
+    return new PopoverDesktop({
+      items: this.buildLanguagePickerItems(),
+      trigger,
+      leftAlignElement,
+      searchable: true,
+      width: '200px',
+      messages: {
+        search: this.api.i18n.t(SEARCH_LANGUAGE_KEY),
+      },
+    });
   }
 
   private getLanguageName(id: string): string {
@@ -311,28 +449,6 @@ export class CodeTool implements BlockTool {
         btn.innerHTML = originalHTML;
       }, COPIED_FEEDBACK_DURATION);
     }).catch(() => { /* clipboard unavailable */ });
-  }
-
-  private toggleWrap(): void {
-    this._wrapping = !this._wrapping;
-
-    if (!this._dom) {
-      return;
-    }
-
-    if (this._wrapping) {
-      this._dom.codeElement.className = CODE_AREA_STYLES;
-    } else {
-      this._dom.codeElement.className = CODE_AREA_STYLES.replace('whitespace-pre-wrap', 'whitespace-pre');
-    }
-  }
-
-  private toggleLineNumbers(): void {
-    this._lineNumbers = !this._lineNumbers;
-
-    if (this._dom) {
-      this._dom.gutterElement.hidden = !this._lineNumbers;
-    }
   }
 
   private updateGutter(): void {
@@ -393,6 +509,30 @@ export class CodeTool implements BlockTool {
     });
   }
 
+  private scheduleDetection(): void {
+    if (this._detectionTimeoutId !== null) {
+      clearTimeout(this._detectionTimeoutId);
+    }
+
+    this._detectionTimeoutId = setTimeout(() => {
+      this._detectionTimeoutId = null;
+      const code = this._dom?.codeElement.textContent ?? '';
+      void detectLanguage(code).then((detected) => {
+        if (detected === this._detectedLanguage) {
+          return;
+        }
+        this._detectedLanguage = detected;
+        // Rebuild picker so the detected language section updates
+        if (this._dom) {
+          if (this._picker) {
+            this._picker.destroy();
+          }
+          this._picker = this.buildLanguagePicker(this._dom.languageButton, this._dom.wrapper);
+        }
+      });
+    }, 600);
+  }
+
   private async highlightCode(): Promise<void> {
     if (!isHighlightingSupported() || !isHighlightable(this._data.language)) {
       this._disposeHighlights?.();
@@ -434,10 +574,17 @@ export class CodeTool implements BlockTool {
       this._highlightRafId = null;
     }
 
+    if (this._detectionTimeoutId !== null) {
+      clearTimeout(this._detectionTimeoutId);
+      this._detectionTimeoutId = null;
+    }
+
     if (this._picker) {
-      this._picker.getElement().remove();
+      this._picker.destroy();
       this._picker = null;
     }
+
+    this._dom = null;
   }
 
   public static get toolbox(): ToolboxConfig {

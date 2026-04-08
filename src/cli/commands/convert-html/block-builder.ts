@@ -85,16 +85,7 @@ function convertNode(
 
   if (tag === 'IMG') {
     const src = el.getAttribute('src') ?? '';
-    const widthStyle = parseCssProperty(el, 'width');
-    let width: number | null = null;
-
-    if (widthStyle) {
-      const parsed = parseInt(widthStyle, 10);
-
-      if (!isNaN(parsed)) {
-        width = parsed;
-      }
-    }
+    const width = parseIntFromStyle(el, 'width');
 
     blocks.push({
       id: nextId('image'),
@@ -156,13 +147,9 @@ function flattenList(
 ): void {
   const startAttr = listEl.getAttribute('start');
   const startValue = startAttr ? Number(startAttr) : null;
-  let isFirstItem = true;
+  const listItems = Array.from(listEl.children).filter((child) => child.tagName === 'LI');
 
-  for (const child of Array.from(listEl.children)) {
-    if (child.tagName !== 'LI') {
-      continue;
-    }
-
+  for (const [index, child] of listItems.entries()) {
     // Clone the li so we can remove nested lists without mutating DOM
     const clone = child.cloneNode(true) as HTMLElement;
     const nestedLists: HTMLElement[] = [];
@@ -176,11 +163,9 @@ function flattenList(
 
     // Use aria-level if present (1-based → 0-based), otherwise use nesting depth
     const ariaLevel = (child as HTMLElement).getAttribute('aria-level');
-    let itemDepth = depth;
-
-    if (ariaLevel) {
-      itemDepth = Math.max(0, parseInt(ariaLevel, 10) - 1);
-    }
+    const itemDepth = ariaLevel
+      ? Math.max(0, parseInt(ariaLevel, 10) - 1)
+      : depth;
 
     blocks.push({
       id: nextId('list'),
@@ -190,11 +175,9 @@ function flattenList(
         style,
         depth: itemDepth === 0 ? null : itemDepth,
         checked: null,
-        start: isFirstItem && startValue !== null ? startValue : null,
+        start: index === 0 && startValue !== null ? startValue : null,
       },
     });
-
-    isFirstItem = false;
 
     // Recursively process nested lists
     for (const nested of nestedLists) {
@@ -216,53 +199,18 @@ function convertTable(
 ): void {
   const tableId = nextId('table');
   const rows = Array.from(tableEl.querySelectorAll('tr'));
-
-  let withHeadings = false;
   const content: Record<string, unknown>[][] = [];
 
-  for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
-    const row = rows[rowIdx];
+  for (const row of rows) {
     const cells = Array.from(row.querySelectorAll('td, th'));
-
-    if (rowIdx === 0 && cells.some((c) => c.tagName === 'TH')) {
-      withHeadings = true;
-    }
-
-    const rowData: Record<string, unknown>[] = [];
-
-    for (const cell of cells) {
-      const cellEl = cell as HTMLElement;
-      const cellText = cellEl.innerHTML.trim();
-
-      if (cellText) {
-        const childId = nextId('paragraph');
-
-        blocks.push({
-          id: childId,
-          type: 'paragraph',
-          parent: tableId,
-          data: { text: cellText },
-        });
-
-        // Parse cell colors
-        const bgColor = parseCssProperty(cellEl, 'background-color');
-        const textColor = parseCssProperty(cellEl, 'color');
-
-        rowData.push({
-          blocks: [childId],
-          color: bgColor ? mapToNearestPresetName(bgColor, 'bg') : null,
-          textColor: textColor ? mapToNearestPresetName(textColor, 'text') : null,
-        });
-      } else {
-        rowData.push({ blocks: [], color: null, textColor: null });
-      }
-    }
+    const rowData = cells.map((cell) => convertTableCell(cell as HTMLElement, tableId, blocks, nextId));
 
     content.push(rowData);
   }
 
-  // Parse column widths from first row cells
+  // Parse column widths and headings from first row cells
   const firstRowCells = rows[0] ? Array.from(rows[0].querySelectorAll('td, th')) : [];
+  const withHeadings = firstRowCells.some((c) => c.tagName === 'TH');
   const colWidths = firstRowCells.map((cell) => {
     const width = parseCssProperty(cell as HTMLElement, 'width');
 
@@ -314,33 +262,10 @@ function convertCallout(
   const childIds: string[] = [];
 
   for (const child of Array.from(asideEl.childNodes)) {
-    if (child.nodeType === Node.ELEMENT_NODE) {
-      const childEl = child as HTMLElement;
-      const childId = nextId('paragraph');
+    const childId = convertCalloutChild(child, calloutId, blocks, nextId);
 
-      blocks.push({
-        id: childId,
-        type: 'paragraph',
-        parent: calloutId,
-        data: { text: childEl.innerHTML },
-      });
-
+    if (childId) {
       childIds.push(childId);
-    } else if (child.nodeType === Node.TEXT_NODE) {
-      const text = child.textContent?.trim() ?? '';
-
-      if (text) {
-        const childId = nextId('paragraph');
-
-        blocks.push({
-          id: childId,
-          type: 'paragraph',
-          parent: calloutId,
-          data: { text },
-        });
-
-        childIds.push(childId);
-      }
     }
   }
 
@@ -367,6 +292,91 @@ function convertCallout(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function convertTableCell(
+  cellEl: HTMLElement,
+  tableId: string,
+  blocks: OutputBlockData[],
+  nextId: (prefix: string) => string
+): Record<string, unknown> {
+  const cellText = cellEl.innerHTML.trim();
+
+  if (!cellText) {
+    return { blocks: [], color: null, textColor: null };
+  }
+
+  const childId = nextId('paragraph');
+
+  blocks.push({
+    id: childId,
+    type: 'paragraph',
+    parent: tableId,
+    data: { text: cellText },
+  });
+
+  const bgColor = parseCssProperty(cellEl, 'background-color');
+  const textColor = parseCssProperty(cellEl, 'color');
+
+  return {
+    blocks: [childId],
+    color: bgColor ? mapToNearestPresetName(bgColor, 'bg') : null,
+    textColor: textColor ? mapToNearestPresetName(textColor, 'text') : null,
+  };
+}
+
+function convertCalloutChild(
+  child: ChildNode,
+  calloutId: string,
+  blocks: OutputBlockData[],
+  nextId: (prefix: string) => string
+): string | null {
+  if (child.nodeType === Node.ELEMENT_NODE) {
+    const childEl = child as HTMLElement;
+    const childId = nextId('paragraph');
+
+    blocks.push({
+      id: childId,
+      type: 'paragraph',
+      parent: calloutId,
+      data: { text: childEl.innerHTML },
+    });
+
+    return childId;
+  }
+
+  if (child.nodeType === Node.TEXT_NODE) {
+    const text = child.textContent?.trim() ?? '';
+
+    if (!text) {
+      return null;
+    }
+
+    const childId = nextId('paragraph');
+
+    blocks.push({
+      id: childId,
+      type: 'paragraph',
+      parent: calloutId,
+      data: { text },
+    });
+
+    return childId;
+  }
+
+  return null;
+}
+
+function parseIntFromStyle(el: HTMLElement, property: string): number | null {
+  const value = parseCssProperty(el, property);
+
+  if (!value) {
+    return null;
+  }
+
+  const parsed = parseInt(value, 10);
+
+  return isNaN(parsed) ? null : parsed;
+}
 
 function parseCssProperty(el: HTMLElement, property: string): string | null {
   const style = el.getAttribute('style');

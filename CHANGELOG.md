@@ -2,6 +2,45 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.0](https://github.com/JackUait/blok/compare/v0.5.0...v0.10.0) (2026-04-08)
+
+### Features
+
+- **Code block** — New `CodeTool` with syntax highlighting (via Shiki), line numbers toggle, language selector popover, copy button, wrap toggle, and preview tab for KaTeX/Mermaid rendering ([#61](https://github.com/JackUait/blok/pull/61))
+- **Inline code** — New `InlineCodeTool` with CMD+E shortcut
+- **Quote block** — Notion-style quote block with size options submenu
+- **Divider block** — Horizontal rule block with `---` markdown shortcut
+- **Callout block** — Callout block with emoji picker and skin tone persistence ([#59](https://github.com/JackUait/blok/pull/59))
+- **Toggle list** — Collapsible toggle list block with drag & drop support inside toggles ([#46](https://github.com/JackUait/blok/pull/46), [#52](https://github.com/JackUait/blok/pull/52))
+- **Toggle headings** — Toggle heading blocks with markdown shortcuts (`>#`, `>##`, `>###`) and body placeholder
+- **Marker inline tool** — Color text/background inline tool with color picker and dark mode support
+- **Underline & Strikethrough** — New inline tools with CMD+U and CMD+SHIFT+S shortcuts
+- **Table enhancements** — Cell color picker, cell placement picker, HTML `<table>` rendering, corner drag, Tab/Arrow escape from cells, and cross-table block protection ([#38](https://github.com/JackUait/blok/pull/38), [#45](https://github.com/JackUait/blok/pull/45), [#63](https://github.com/JackUait/blok/pull/63))
+- **Markdown import** — `importMarkdown()` API method and paste handler with GFM support including math (KaTeX) extensions
+- **React adapter** — `useBlok` hook and `BlokContent` component for React integration ([#55](https://github.com/JackUait/blok/pull/55))
+- **Read-only toggle** — Seamless in-place `readonly` mode toggle with scroll position preservation ([#62](https://github.com/JackUait/blok/pull/62))
+- **Editor width API** — `editor.width` namespace with `WidthManager` module and `config.width` options
+- **Content alignment** — `config.style.contentAlign` option for global block content alignment
+- **Font family config** — `config.style.fontFamily` option for editor and popover typography
+- **Theme API** — `ThemeAPI` module for programmatic dark/light theme control
+- **Fuzzy toolbox search** — Ranked fuzzy search in slash menu with animated filtering ([#51](https://github.com/JackUait/blok/pull/51))
+- **Toolbox plus button** — Opens blocks menu directly without inserting `/`
+- **Link suggestion chip** — URL type detection chip in inline toolbar
+- **Google Docs paste** — Expand `<details>` tags into toggle blocks with parent-child wiring
+- **blok-cli package** — New `@jackuait/blok-cli` package with `convert` (HTML→JSON) and `convert-gdocs` commands
+- **i18n search terms** — Multilingual toolbox search via `searchTermKeys` across all 68 locales
+
+### Bug Fixes
+
+- **Drag & drop** — Toggle hierarchy, ghost preview, subtree depth preservation, and spring-load auto-expand for closed toggles
+- **Toolbar** — Drag handle reachability, left-edge overflow, and actions not intercepting toggle arrow clicks
+- **Inline toolbar** — Cross-block selection positioning, background element cleanup on close
+- **Table** — Cross-table block stealing, undo/redo focus, cell selection border persistence, and arrow key navigation between blocks
+- **Marker** — Partial selection color removal, dark theme palette, and active color display on toolbar button
+- **Toggle** — Backspace/Delete boundary crossing, undo atomicity for Enter, children DOM nesting, and collapse in read-only mode
+- **List** — Tab indent for multi-selected items, depth reduction cascade on outdent, and bullet marker pinning
+- **Paste** — Table cell content appearing outside table, marker formatting preservation, and math formula detection
+
 ## [0.5.0](https://github.com/JackUait/blok/compare/v0.4.1-beta.5...v0.5.0) (2026-01-23)
 
 ### Features

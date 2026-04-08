@@ -1,3 +1,23 @@
+// Check/Confirm icon
+export const IconCheck = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="m4.5 10.5 4 4 7-8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Wand/Auto-detect icon
+export const IconWand = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M3.5 16.5L12 8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M10 6l1.5-1.5 1 1L11 7l-1-1Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M14 4l.5-.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M16 6l.5-.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M14 8l.5.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M12 4l.5.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M16 4l.5.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
 // Cross/Close icon
 export const IconCross = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -92,6 +112,13 @@ export const IconMenu = `
 export const IconPlus = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path d="M4.5 10h11M10 4.5v11" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Chevron Down icon
+export const IconChevronDown = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="m6 8 4 4 4-4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
@@ -488,24 +515,6 @@ export const IconCodeBlock = `
 </svg>
 `;
 
-// Line wrap icon
-export const IconWrap = `
-<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M4 6h12M4 10h8a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2H9m0 0 2-2m-2 2 2 2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
-`;
-
-// Line numbers icon (gutter marks + code lines)
-export const IconLineNumbers = `
-<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M7 4v12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" opacity="0.35"/>
-  <circle cx="4.5" cy="7" r="0.75" fill="currentColor"/>
-  <circle cx="4.5" cy="10" r="0.75" fill="currentColor"/>
-  <circle cx="4.5" cy="13" r="0.75" fill="currentColor"/>
-  <path d="M10 7h6M10 10h6M10 13h4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
-</svg>
-`;
-
 // Emoji Picker Category Icons
 
 // Star icon (Callout category)
@@ -656,6 +665,14 @@ export const IconMergeCells = `
 
 // Split cell icon (one cell splitting into two)
 export const IconSplitCell = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18"/><path d="M8 8l4 4-4 4"/><path d="M16 8l-4 4 4 4"/></svg>`;
+
+// Split view icon (two panels side by side)
+export const IconSplitView = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="3" y="4" width="6" height="12" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
+  <rect x="11" y="4" width="6" height="12" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
+</svg>
+`;
 
 // Placement icon (3x3 alignment dot grid)
 export const IconPlacement = `

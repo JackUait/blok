@@ -2,30 +2,41 @@ import {
   WRAPPER_STYLES,
   HEADER_STYLES,
   LANGUAGE_BUTTON_STYLES,
+  HEADER_CONTROLS_STYLES,
   HEADER_BUTTON_STYLES,
+  HEADER_BUTTON_MATCHED_STYLES,
   CODE_AREA_STYLES,
-  TAB_STYLES,
-  TAB_ACTIVE_STYLES,
-  TAB_INACTIVE_STYLES,
   PREVIEW_AREA_STYLES,
   CODE_BODY_STYLES,
   GUTTER_STYLES,
   GUTTER_LINE_STYLES,
+  VIEW_MODE_CONTAINER_STYLES,
+  VIEW_MODE_BUTTON_STYLES,
+  VIEW_MODE_BUTTON_ACTIVE_STYLES,
+  VIEW_MODE_PREVIEW_BUTTON_STYLES,
+  VIEW_MODE_PREVIEW_BUTTON_ACTIVE_STYLES,
+  SPLIT_CONTAINER_STYLES,
+  SPLIT_HALF_STYLES,
 } from './constants';
-import { IconCopy, IconWrap, IconLineNumbers } from '../../components/icons';
+import type { CodeViewMode } from './constants';
+import { IconCopy, IconCode, IconPreview, IconSplitView, IconChevronDown } from '../../components/icons';
 
 export interface CodeDOMRefs {
   wrapper: HTMLElement;
   languageButton: HTMLButtonElement;
-  lineNumbersButton: HTMLButtonElement;
   copyButton: HTMLButtonElement;
-  wrapButton: HTMLButtonElement;
   preElement: HTMLPreElement;
   codeElement: HTMLElement;
   gutterElement: HTMLElement;
-  codeTab: HTMLButtonElement | null;
-  previewTab: HTMLButtonElement | null;
+  viewModeContainer: HTMLElement | null;
   previewElement: HTMLDivElement | null;
+  splitContainer: HTMLElement | null;
+}
+
+export interface ViewModeLabels {
+  code: string;
+  preview: string;
+  split: string;
 }
 
 export interface BuildCodeDOMOptions {
@@ -33,41 +44,83 @@ export interface BuildCodeDOMOptions {
   languageName: string;
   readOnly: boolean;
   copyLabel: string;
-  wrapLabel: string;
-  lineNumbersLabel?: string;
   previewable?: boolean;
-  codeTabLabel?: string;
-  previewTabLabel?: string;
+  viewModeLabels?: ViewModeLabels;
 }
 
-function buildPreviewElements(
-  codeTabLabel?: string,
-  previewTabLabel?: string,
-): { codeTab: HTMLButtonElement; previewTab: HTMLButtonElement; previewElement: HTMLDivElement } {
-  const codeTab = document.createElement('button');
+interface ViewModeElements {
+  viewModeContainer: HTMLElement;
+  previewElement: HTMLDivElement;
+  splitContainer: HTMLElement;
+}
 
-  codeTab.type = 'button';
-  codeTab.className = `${TAB_STYLES} ${TAB_INACTIVE_STYLES}`;
-  codeTab.textContent = codeTabLabel ?? 'Code';
-  codeTab.setAttribute('data-blok-testid', 'code-code-tab');
+function buildViewModeElements(
+  labels: ViewModeLabels,
+): ViewModeElements {
+  // Segmented control container
+  const viewModeContainer = document.createElement('div');
 
-  const previewTab = document.createElement('button');
+  viewModeContainer.className = VIEW_MODE_CONTAINER_STYLES;
+  viewModeContainer.setAttribute('role', 'group');
+  viewModeContainer.setAttribute('data-blok-testid', 'code-view-mode');
 
-  previewTab.type = 'button';
-  previewTab.className = `${TAB_STYLES} ${TAB_ACTIVE_STYLES}`;
-  previewTab.textContent = previewTabLabel ?? 'Preview';
-  previewTab.setAttribute('data-blok-testid', 'code-preview-tab');
+  const modes: Array<{ mode: CodeViewMode; icon: string; label: string }> = [
+    { mode: 'code', icon: IconCode, label: labels.code },
+    { mode: 'preview', icon: IconPreview, label: labels.preview },
+    { mode: 'split', icon: IconSplitView, label: labels.split },
+  ];
 
+  for (const { mode, icon, label } of modes) {
+    const button = document.createElement('button');
+    const isPreview = mode === 'preview';
+
+    button.type = 'button';
+    button.className = isPreview ? VIEW_MODE_PREVIEW_BUTTON_STYLES : VIEW_MODE_BUTTON_STYLES;
+    button.innerHTML = icon;
+    button.setAttribute('aria-label', label);
+    button.setAttribute('aria-pressed', 'false');
+    button.setAttribute('data-blok-testid', `code-mode-${mode}`);
+    button.setAttribute('data-mode', mode);
+    viewModeContainer.appendChild(button);
+  }
+
+  // Preview container
   const previewElement = document.createElement('div');
 
   previewElement.className = PREVIEW_AREA_STYLES;
   previewElement.setAttribute('data-blok-testid', 'code-preview');
 
-  return { codeTab, previewTab, previewElement };
+  // Split container — wraps code body + preview
+  const splitContainer = document.createElement('div');
+
+  splitContainer.className = SPLIT_CONTAINER_STYLES;
+  splitContainer.setAttribute('data-blok-testid', 'code-split-container');
+
+  return { viewModeContainer, previewElement, splitContainer };
+}
+
+/**
+ * Set the active view mode button styling and aria-pressed state.
+ */
+export function setActiveViewMode(viewModeContainer: HTMLElement, mode: CodeViewMode): void {
+  const buttons = Array.from(viewModeContainer.querySelectorAll<HTMLButtonElement>('[data-mode]'));
+
+  for (const btn of buttons) {
+    const isActive = btn.getAttribute('data-mode') === mode;
+    const isPreview = btn.getAttribute('data-mode') === 'preview';
+
+    btn.setAttribute('aria-pressed', String(isActive));
+
+    if (isPreview) {
+      btn.className = isActive ? VIEW_MODE_PREVIEW_BUTTON_ACTIVE_STYLES : VIEW_MODE_PREVIEW_BUTTON_STYLES;
+    } else {
+      btn.className = isActive ? VIEW_MODE_BUTTON_ACTIVE_STYLES : VIEW_MODE_BUTTON_STYLES;
+    }
+  }
 }
 
 export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
-  const { code, languageName, readOnly, copyLabel, wrapLabel, lineNumbersLabel, previewable, codeTabLabel, previewTabLabel } = options;
+  const { code, languageName, readOnly, copyLabel, previewable, viewModeLabels } = options;
 
   // Wrapper
   const wrapper = document.createElement('div');
@@ -77,43 +130,39 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   const header = document.createElement('div');
   header.className = HEADER_STYLES;
 
-  // Language button (opens language picker)
+  // Language button (opens language picker) — includes text + chevron icon
   const languageButton = document.createElement('button');
   languageButton.type = 'button';
   languageButton.className = LANGUAGE_BUTTON_STYLES;
-  languageButton.textContent = languageName;
   languageButton.setAttribute('aria-haspopup', 'listbox');
   languageButton.setAttribute('data-blok-testid', 'code-language-btn');
+
+  const langText = document.createElement('span');
+  langText.textContent = languageName;
+  languageButton.appendChild(langText);
+
+  const chevronSpan = document.createElement('span');
+  chevronSpan.className = 'inline-flex items-center ml-0.5 -mr-0.5';
+  chevronSpan.innerHTML = IconChevronDown;
+  languageButton.appendChild(chevronSpan);
 
   // Spacer
   const spacer = document.createElement('div');
   spacer.className = 'flex-1';
 
-  // Tab buttons (only when previewable)
-  const { codeTab, previewTab, previewElement } = previewable
-    ? buildPreviewElements(codeTabLabel, previewTabLabel)
-    : { codeTab: null, previewTab: null, previewElement: null };
+  // View mode segmented control (only when previewable and not read-only)
+  const viewModeResult = previewable && viewModeLabels
+    ? buildViewModeElements(viewModeLabels)
+    : null;
 
-  // Wrap toggle button
-  const wrapButton = document.createElement('button');
-  wrapButton.type = 'button';
-  wrapButton.className = HEADER_BUTTON_STYLES;
-  wrapButton.innerHTML = IconWrap;
-  wrapButton.setAttribute('aria-label', wrapLabel);
-  wrapButton.setAttribute('data-blok-testid', 'code-wrap-btn');
-
-  // Line numbers toggle button
-  const lineNumbersButton = document.createElement('button');
-  lineNumbersButton.type = 'button';
-  lineNumbersButton.className = HEADER_BUTTON_STYLES;
-  lineNumbersButton.innerHTML = IconLineNumbers;
-  lineNumbersButton.setAttribute('aria-label', lineNumbersLabel ?? 'Line numbers');
-  lineNumbersButton.setAttribute('data-blok-testid', 'code-line-numbers-btn');
+  const viewModeContainer = viewModeResult?.viewModeContainer ?? null;
+  const previewElement = viewModeResult?.previewElement ?? null;
+  const splitContainer = viewModeResult?.splitContainer ?? null;
 
   // Copy button
   const copyButton = document.createElement('button');
   copyButton.type = 'button';
-  copyButton.className = HEADER_BUTTON_STYLES;
+  copyButton.className = viewModeContainer ? HEADER_BUTTON_MATCHED_STYLES : HEADER_BUTTON_STYLES;
   copyButton.innerHTML = IconCopy;
   copyButton.setAttribute('aria-label', copyLabel);
   copyButton.setAttribute('data-blok-testid', 'code-copy-btn');
@@ -146,18 +195,21 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
     gutterElement.appendChild(lineEl);
   });
 
-  // Assemble header
+  // Assemble header: [language] [spacer] [controls: view mode? | copy]
   header.appendChild(languageButton);
   header.appendChild(spacer);
 
-  if (codeTab && previewTab) {
-    header.appendChild(codeTab);
-    header.appendChild(previewTab);
+  // Controls container — hidden by default, visible on wrapper hover
+  const controls = document.createElement('div');
+  controls.className = HEADER_CONTROLS_STYLES;
+
+  if (viewModeContainer) {
+    controls.appendChild(viewModeContainer);
   }
 
-  header.appendChild(lineNumbersButton);
-  header.appendChild(wrapButton);
-  header.appendChild(copyButton);
+  controls.appendChild(copyButton);
+
+  header.appendChild(controls);
 
   // Pre wrapper for semantic HTML
   const preElement = document.createElement('pre');
@@ -171,11 +223,23 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
 
   // Assemble wrapper
   wrapper.appendChild(header);
-  wrapper.appendChild(codeBody);
 
-  if (previewElement) {
-    wrapper.appendChild(previewElement);
+  if (splitContainer && previewElement) {
+    // Previewable: wrap code body + preview in the split container
+    const codeHalf = document.createElement('div');
+    codeHalf.className = SPLIT_HALF_STYLES;
+    codeHalf.appendChild(codeBody);
+
+    const previewHalf = document.createElement('div');
+    previewHalf.className = SPLIT_HALF_STYLES;
+    previewHalf.appendChild(previewElement);
+
+    splitContainer.appendChild(codeHalf);
+    splitContainer.appendChild(previewHalf);
+    wrapper.appendChild(splitContainer);
+  } else {
+    wrapper.appendChild(codeBody);
   }
 
-  return { wrapper, languageButton, lineNumbersButton, copyButton, wrapButton, preElement, codeElement, gutterElement, codeTab, previewTab, previewElement };
+  return { wrapper, languageButton, copyButton, preElement, codeElement, gutterElement, viewModeContainer, previewElement, splitContainer };
 }

@@ -27,6 +27,7 @@ const getRequiredBoundingBox = async (locator: Locator): Promise<{
 type CreateBlokOptions = {
   data?: OutputData;
   readOnly?: boolean;
+  holderStyle?: Record<string, string>;
 };
 
 declare global {
@@ -55,13 +56,13 @@ const resetBlok = async (page: Page): Promise<void> => {
 };
 
 const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<void> => {
-  const { data, readOnly } = options;
+  const { data, readOnly, holderStyle } = options;
 
   await resetBlok(page);
   await page.waitForFunction(() => typeof window.Blok === 'function');
 
   await page.evaluate(
-    async ({ holder, blokData, readOnlyMode }) => {
+    async ({ holder, blokData, readOnlyMode, holderStyles }) => {
       const blokConfig: Record<string, unknown> = {
         holder: holder,
       };
@@ -74,6 +75,14 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
         blokConfig.readOnly = readOnlyMode;
       }
 
+      if (holderStyles !== null) {
+        const el = document.getElementById(holder);
+
+        if (el) {
+          Object.assign(el.style, holderStyles);
+        }
+      }
+
       const blok = new window.Blok(blokConfig);
 
       window.blokInstance = blok;
@@ -83,6 +92,7 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
       holder: HOLDER_ID,
       blokData: data ?? null,
       readOnlyMode: typeof readOnly === 'boolean' ? readOnly : null,
+      holderStyles: holderStyle ?? null,
     }
   );
 };
@@ -441,7 +451,7 @@ test.describe('ui module', () => {
     };
 
     test('shows toolbar when hovering in extended zone to the left of content (LTR)', async ({ page }) => {
-      await createBlok(page, { data: threeBlocksData });
+      await createBlok(page, { data: threeBlocksData, holderStyle: { marginLeft: '300px' } });
 
       // First hover directly on the second block to establish toolbar there
       const secondParagraph = page.locator(PARAGRAPH_SELECTOR).filter({
@@ -477,7 +487,7 @@ test.describe('ui module', () => {
     });
 
     test('does not trigger hover when cursor is beyond the extended zone boundary', async ({ page }) => {
-      await createBlok(page, { data: threeBlocksData });
+      await createBlok(page, { data: threeBlocksData, holderStyle: { marginLeft: '300px' } });
 
       // Get positions first
       const positions = await getHoverZonePositions(page);
@@ -512,7 +522,7 @@ test.describe('ui module', () => {
     });
 
     test('switches between blocks when moving vertically in the extended zone', async ({ page }) => {
-      await createBlok(page, { data: threeBlocksData });
+      await createBlok(page, { data: threeBlocksData, holderStyle: { marginLeft: '300px' } });
 
       // Get positions
       const positions = await getHoverZonePositions(page);

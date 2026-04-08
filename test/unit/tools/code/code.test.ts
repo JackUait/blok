@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 import type { CodeData } from '../../../../types/tools/code';
+import { simulateInput, simulateKeydown } from '../../../helpers/simulate';
 
 vi.mock('../../../../src/tools/code/katex-loader', () => ({
   renderLatex: vi.fn().mockResolvedValue('<span class="katex">rendered</span>'),
@@ -9,6 +10,12 @@ vi.mock('../../../../src/tools/code/katex-loader', () => ({
 vi.mock('../../../../src/tools/code/mermaid-loader', () => ({
   renderMermaid: vi.fn().mockResolvedValue('<svg>mermaid diagram</svg>'),
 }));
+
+vi.mock('../../../../src/tools/code/language-detector', () => ({
+  detectLanguage: vi.fn(),
+}));
+import { detectLanguage } from '../../../../src/tools/code/language-detector';
+const mockDetectLanguage = vi.mocked(detectLanguage);
 
 const mockTokenizeCode = vi.fn().mockResolvedValue(null);
 const mockIsHighlightable = vi.fn().mockReturnValue(false);
@@ -70,13 +77,13 @@ describe('CodeTool', () => {
     mockIsHighlightable.mockReturnValue(false);
     mockApplyHighlights.mockReturnValue(() => {});
     mockIsHighlightingSupported.mockReturnValue(false);
+    mockDetectLanguage.mockResolvedValue(null);
   });
   afterEach(() => {
     vi.restoreAllMocks();
 
-    // Clean up any language picker elements left in document.body
-    document.querySelectorAll('[data-blok-testid="code-language-picker"]').forEach((el) => el.remove());
-    document.querySelectorAll('[data-blok-language-picker-backdrop]').forEach((el) => el.remove());
+    // Clean up any popover elements left in document.body
+    document.querySelectorAll('[data-blok-popover-opened]').forEach((el) => el.remove());
   });
 
   describe('render()', () => {
@@ -89,7 +96,6 @@ describe('CodeTool', () => {
       expect(el.querySelector('[data-blok-testid="code-content"]')).toBeTruthy();
       expect(el.querySelector('[data-blok-testid="code-language-btn"]')).toBeTruthy();
       expect(el.querySelector('[data-blok-testid="code-copy-btn"]')).toBeTruthy();
-      expect(el.querySelector('[data-blok-testid="code-wrap-btn"]')).toBeTruthy();
     });
 
     it('renders existing code content', async () => {
@@ -125,42 +131,57 @@ describe('CodeTool', () => {
       const el = tool.render();
       const btn = el.querySelector('[data-blok-testid="code-language-btn"]')!;
 
-      expect(btn.textContent).toBe('JavaScript');
+      // Language button now contains a text span + chevron SVG
+      expect(btn.querySelector('span')!.textContent).toBe('JavaScript');
     });
 
-    it('language button opens language picker on click', async () => {
+    it('language button creates a popover for language selection', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ language: 'javascript' }));
-      const el = tool.render();
+      tool.render();
 
-      const langBtn = el.querySelector('[data-blok-testid="code-language-btn"]') as HTMLButtonElement;
-
-      // Picker is appended to document.body after render, but hidden
-      const pickerEl = document.body.querySelector('[data-blok-testid="code-language-picker"]') as HTMLElement;
-
-      expect(pickerEl).not.toBeNull();
-      expect(pickerEl.hidden).toBe(true);
-
-      // Click language button to open the picker
-      langBtn.click();
-
-      expect(pickerEl.hidden).toBe(false);
+      // After switching to PopoverDesktop, the old custom picker element should NOT exist
+      expect(document.body.querySelector('[data-blok-testid="code-language-picker"]')).toBeNull();
 
       // Clean up
       tool.removed();
     });
 
-    it('removed() cleans up picker element from document.body', async () => {
+    it('clicking language button toggles the picker (closes if already open)', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ language: 'javascript' }));
+      const el = tool.render();
+      const langBtn = el.querySelector('[data-blok-testid="code-language-btn"]') as HTMLButtonElement;
+
+      // First click opens the popover
+      langBtn.click();
+      const popover = document.querySelector('[data-blok-popover-opened]');
+
+      expect(popover).not.toBeNull();
+
+      // Second click on the same button should close the popover
+      langBtn.click();
+      const popoverAfterSecondClick = document.querySelector('[data-blok-popover-opened]');
+
+      expect(popoverAfterSecondClick).toBeNull();
+
+      // Clean up
+      tool.removed();
+    });
+
+    it('removed() cleans up popover from document.body', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions());
 
       tool.render();
 
-      expect(document.body.querySelector('[data-blok-testid="code-language-picker"]')).not.toBeNull();
+      // After switching to PopoverDesktop, no old-style picker element should exist
+      expect(document.body.querySelector('[data-blok-testid="code-language-picker"]')).toBeNull();
 
       tool.removed();
 
-      expect(document.body.querySelector('[data-blok-testid="code-language-picker"]')).toBeNull();
+      // removed() should not throw when called again (idempotent cleanup)
+      expect(() => tool.removed()).not.toThrow();
     });
   });
 
@@ -284,25 +305,6 @@ describe('CodeTool', () => {
     });
   });
 
-  describe('wrap toggle', () => {
-    it('toggles whitespace style on code element', async () => {
-      const { CodeTool } = await import('../../../../src/tools/code');
-      const tool = new CodeTool(createOptions());
-      const el = tool.render();
-      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
-      const wrapBtn = el.querySelector('[data-blok-testid="code-wrap-btn"]') as HTMLButtonElement;
-
-      expect(codeEl.className).toContain('whitespace-pre-wrap');
-
-      wrapBtn.click();
-      expect(codeEl.className).toContain('whitespace-pre');
-      expect(codeEl.className).not.toContain('whitespace-pre-wrap');
-
-      wrapBtn.click();
-      expect(codeEl.className).toContain('whitespace-pre-wrap');
-    });
-  });
-
   describe('renderSettings()', () => {
     it('returns menu config with language submenu', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
@@ -336,23 +338,24 @@ describe('CodeTool', () => {
     });
   });
 
-  describe('preview tab', () => {
-    it('shows tab buttons for latex language', async () => {
+  describe('view mode', () => {
+    it('shows view mode segmented control for latex language', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
       const el = tool.render();
 
-      expect(el.querySelector('[data-blok-testid="code-code-tab"]')).toBeTruthy();
-      expect(el.querySelector('[data-blok-testid="code-preview-tab"]')).toBeTruthy();
+      expect(el.querySelector('[data-blok-testid="code-view-mode"]')).toBeTruthy();
+      expect(el.querySelector('[data-blok-testid="code-mode-code"]')).toBeTruthy();
+      expect(el.querySelector('[data-blok-testid="code-mode-preview"]')).toBeTruthy();
+      expect(el.querySelector('[data-blok-testid="code-mode-split"]')).toBeTruthy();
     });
 
-    it('does not show tab buttons for non-previewable language', async () => {
+    it('does not show view mode control for non-previewable language', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'const x = 1;', language: 'javascript' }));
       const el = tool.render();
 
-      expect(el.querySelector('[data-blok-testid="code-code-tab"]')).toBeNull();
-      expect(el.querySelector('[data-blok-testid="code-preview-tab"]')).toBeNull();
+      expect(el.querySelector('[data-blok-testid="code-view-mode"]')).toBeNull();
     });
 
     it('shows preview container for latex language', async () => {
@@ -363,7 +366,7 @@ describe('CodeTool', () => {
       expect(el.querySelector('[data-blok-testid="code-preview"]')).toBeTruthy();
     });
 
-    it('defaults to preview tab active for latex', async () => {
+    it('defaults to preview active for latex', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
       const el = tool.render();
@@ -376,14 +379,14 @@ describe('CodeTool', () => {
       expect((previewEl as HTMLElement).hidden).toBe(false);
     });
 
-    it('clicking code tab shows code and hides preview', async () => {
+    it('clicking code mode button shows code and hides preview', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
       const el = tool.render();
 
-      const codeTab = el.querySelector('[data-blok-testid="code-code-tab"]') as HTMLButtonElement;
+      const codeBtn = el.querySelector('[data-blok-testid="code-mode-code"]') as HTMLButtonElement;
 
-      codeTab.click();
+      codeBtn.click();
 
       const preElement = el.querySelector('pre')!;
       const previewEl = el.querySelector('[data-blok-testid="code-preview"]')!;
@@ -392,18 +395,18 @@ describe('CodeTool', () => {
       expect((previewEl as HTMLElement).hidden).toBe(true);
     });
 
-    it('clicking preview tab shows preview and hides code', async () => {
+    it('clicking preview mode button from code shows only preview', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
       const el = tool.render();
 
       // Switch to code first
-      const codeTab = el.querySelector('[data-blok-testid="code-code-tab"]') as HTMLButtonElement;
-      codeTab.click();
+      const codeBtn = el.querySelector('[data-blok-testid="code-mode-code"]') as HTMLButtonElement;
+      codeBtn.click();
 
       // Switch back to preview
-      const previewTab = el.querySelector('[data-blok-testid="code-preview-tab"]') as HTMLButtonElement;
-      previewTab.click();
+      const previewBtn = el.querySelector('[data-blok-testid="code-mode-preview"]') as HTMLButtonElement;
+      previewBtn.click();
 
       const preElement = el.querySelector('pre')!;
       const previewEl = el.querySelector('[data-blok-testid="code-preview"]')!;
@@ -412,7 +415,64 @@ describe('CodeTool', () => {
       expect((previewEl as HTMLElement).hidden).toBe(false);
     });
 
-    it('read-only mode with latex shows preview only (no tabs)', async () => {
+    it('clicking split mode button shows both code and preview', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
+      const el = tool.render();
+
+      const splitBtn = el.querySelector('[data-blok-testid="code-mode-split"]') as HTMLButtonElement;
+      splitBtn.click();
+
+      const preElement = el.querySelector('pre')!;
+      const previewEl = el.querySelector('[data-blok-testid="code-preview"]')!;
+
+      // Both visible in split mode
+      expect(preElement.hidden).toBe(false);
+      expect((previewEl as HTMLElement).hidden).toBe(false);
+    });
+
+    it('split container uses flex-row layout in split mode', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
+      const el = tool.render();
+
+      const splitBtn = el.querySelector('[data-blok-testid="code-mode-split"]') as HTMLButtonElement;
+      splitBtn.click();
+
+      const splitContainer = el.querySelector('[data-blok-testid="code-split-container"]') as HTMLElement;
+
+      expect(splitContainer.className).toContain('flex-row');
+    });
+
+    it('split container uses flex-col layout in non-split modes', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
+      const el = tool.render();
+
+      const splitContainer = el.querySelector('[data-blok-testid="code-split-container"]') as HTMLElement;
+
+      // Default mode is preview — split container should be flex-col
+      expect(splitContainer.className).toContain('flex-col');
+      expect(splitContainer.className).not.toContain('flex-row');
+    });
+
+    it('active mode button has aria-pressed true', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
+      const el = tool.render();
+
+      // Default is preview
+      const previewBtn = el.querySelector('[data-blok-testid="code-mode-preview"]') as HTMLButtonElement;
+      expect(previewBtn.getAttribute('aria-pressed')).toBe('true');
+
+      // Others are not pressed
+      const codeBtn = el.querySelector('[data-blok-testid="code-mode-code"]') as HTMLButtonElement;
+      const splitBtn = el.querySelector('[data-blok-testid="code-mode-split"]') as HTMLButtonElement;
+      expect(codeBtn.getAttribute('aria-pressed')).toBe('false');
+      expect(splitBtn.getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('read-only mode with latex shows preview only (no view mode control)', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }, { readOnly: true }));
       const el = tool.render();
@@ -420,18 +480,16 @@ describe('CodeTool', () => {
       // Preview shown, code hidden
       expect(el.querySelector('[data-blok-testid="code-preview"]')).toBeTruthy();
       expect(el.querySelector('pre')!.hidden).toBe(true);
-      // No tabs in read-only
-      expect(el.querySelector('[data-blok-testid="code-code-tab"]')).toBeNull();
-      expect(el.querySelector('[data-blok-testid="code-preview-tab"]')).toBeNull();
+      // No view mode control in read-only
+      expect(el.querySelector('[data-blok-testid="code-view-mode"]')).toBeNull();
     });
 
-    it('shows tab buttons for mermaid language', async () => {
+    it('shows view mode control for mermaid language', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'graph TD; A-->B;', language: 'mermaid' }));
       const el = tool.render();
 
-      expect(el.querySelector('[data-blok-testid="code-code-tab"]')).toBeTruthy();
-      expect(el.querySelector('[data-blok-testid="code-preview-tab"]')).toBeTruthy();
+      expect(el.querySelector('[data-blok-testid="code-view-mode"]')).toBeTruthy();
     });
 
     it('shows preview container for mermaid language', async () => {
@@ -469,15 +527,14 @@ describe('CodeTool', () => {
       expect(renderMermaid).not.toHaveBeenCalled();
     });
 
-    it('read-only mode with mermaid shows preview only (no tabs)', async () => {
+    it('read-only mode with mermaid shows preview only (no view mode control)', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'graph TD; A-->B;', language: 'mermaid' }, { readOnly: true }));
       const el = tool.render();
 
       expect(el.querySelector('[data-blok-testid="code-preview"]')).toBeTruthy();
       expect(el.querySelector('pre')!.hidden).toBe(true);
-      expect(el.querySelector('[data-blok-testid="code-code-tab"]')).toBeNull();
-      expect(el.querySelector('[data-blok-testid="code-preview-tab"]')).toBeNull();
+      expect(el.querySelector('[data-blok-testid="code-view-mode"]')).toBeNull();
     });
   });
 
@@ -537,7 +594,7 @@ describe('CodeTool', () => {
 
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'x = 1', language: 'javascript' }));
-      tool.render();
+      const el = tool.render();
 
       const settings = tool.renderSettings() as Array<{ children: { items: Array<{ onActivate: () => void; title: string }> } }>;
       const pythonItem = settings[0].children.items.find((i) => i.title === 'Python');
@@ -546,9 +603,13 @@ describe('CodeTool', () => {
       await vi.waitFor(() => {
         expect(mockTokenizeCode).toHaveBeenCalledWith(expect.any(String), 'python');
       });
+
+      // Verify observable behavior: language button text updates to the new language
+      const langBtn = el.querySelector('[data-blok-testid="code-language-btn"]')!;
+      expect(langBtn.querySelector('span')!.textContent).toBe('Python');
     });
 
-    it('disposes highlights in removed()', async () => {
+    it('disposes highlights in removed() and re-renders cleanly', async () => {
       const mockCleanup = vi.fn();
       mockIsHighlightingSupported.mockReturnValue(true);
       mockIsHighlightable.mockReturnValue(true);
@@ -569,6 +630,12 @@ describe('CodeTool', () => {
 
       tool.removed();
       expect(mockCleanup).toHaveBeenCalled();
+
+      // Verify observable behavior: tool can re-render correctly and save data is intact
+      const el2 = tool.render();
+      const savedData = tool.save(el2);
+      expect(savedData.code).toBe('test');
+      expect(savedData.language).toBe('javascript');
     });
   });
 
@@ -604,7 +671,7 @@ describe('CodeTool', () => {
 
       // Simulate typing a new line
       codeEl.textContent = 'line 1\nline 2\nline 3';
-      codeEl.dispatchEvent(new Event('input', { bubbles: true }));
+      simulateInput(codeEl);
 
       expect(gutter.children).toHaveLength(3);
     });
@@ -633,8 +700,7 @@ describe('CodeTool', () => {
 
       // Dispatch keydown Enter — handled by handleCodeKeydown which inserts
       // '\n' via Range API; preventDefault suppresses the native input event
-      const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
-      codeEl.dispatchEvent(enterEvent);
+      simulateKeydown(codeEl, 'Enter');
 
       // Gutter must update immediately — not wait for the next input event
       expect(gutter.children).toHaveLength(2);
@@ -661,7 +727,7 @@ describe('CodeTool', () => {
       selection.addRange(range);
 
       // Press Enter at end of text
-      codeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      simulateKeydown(codeEl, 'Enter');
 
       // A <br> sentinel should be appended so the browser renders the empty line
       expect(codeEl.lastChild).toBeInstanceOf(HTMLBRElement);
@@ -687,7 +753,7 @@ describe('CodeTool', () => {
       selection.removeAllRanges();
       selection.addRange(range);
 
-      codeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      simulateKeydown(codeEl, 'Enter');
 
       // No BR needed — newline is followed by "world"
       expect(codeEl.lastChild).not.toBeInstanceOf(HTMLBRElement);
@@ -712,13 +778,13 @@ describe('CodeTool', () => {
       selection.removeAllRanges();
       selection.addRange(range);
 
-      codeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      simulateKeydown(codeEl, 'Enter');
       expect(codeEl.lastChild).toBeInstanceOf(HTMLBRElement);
 
       // Simulate user typing on the new line (browser modifies text node)
       const textNode = codeEl.firstChild!;
       (textNode as Text).data = 'hello\nx';
-      codeEl.dispatchEvent(new Event('input', { bubbles: true }));
+      simulateInput(codeEl);
 
       // BR should be removed — content no longer ends with \n
       expect(codeEl.lastChild).not.toBeInstanceOf(HTMLBRElement);
@@ -742,51 +808,13 @@ describe('CodeTool', () => {
       selection.removeAllRanges();
       selection.addRange(range);
 
-      codeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      simulateKeydown(codeEl, 'Enter');
 
       // save() should return the text content without the BR
       const data = tool.save(el);
       expect(data.code).toBe('hello\n');
 
       el.remove();
-    });
-
-    it('line numbers toggle button exists in header', async () => {
-      const { CodeTool } = await import('../../../../src/tools/code');
-      const tool = new CodeTool(createOptions());
-      const el = tool.render();
-      const btn = el.querySelector('[data-blok-testid="code-line-numbers-btn"]');
-
-      expect(btn).not.toBeNull();
-      expect(btn).toBeInstanceOf(HTMLButtonElement);
-    });
-
-    it('clicking line numbers button hides the gutter', async () => {
-      const { CodeTool } = await import('../../../../src/tools/code');
-      const tool = new CodeTool(createOptions({ code: 'line 1\nline 2' }));
-      const el = tool.render();
-      const btn = el.querySelector('[data-blok-testid="code-line-numbers-btn"]') as HTMLButtonElement;
-      const gutter = el.querySelector('[data-blok-testid="code-gutter"]') as HTMLElement;
-
-      expect(gutter.hidden).toBe(false);
-
-      btn.click();
-
-      expect(gutter.hidden).toBe(true);
-    });
-
-    it('clicking line numbers button twice restores the gutter', async () => {
-      const { CodeTool } = await import('../../../../src/tools/code');
-      const tool = new CodeTool(createOptions({ code: 'a\nb' }));
-      const el = tool.render();
-      const btn = el.querySelector('[data-blok-testid="code-line-numbers-btn"]') as HTMLButtonElement;
-      const gutter = el.querySelector('[data-blok-testid="code-gutter"]') as HTMLElement;
-
-      btn.click();
-      expect(gutter.hidden).toBe(true);
-
-      btn.click();
-      expect(gutter.hidden).toBe(false);
     });
 
     it('save() includes lineNumbers field', async () => {
@@ -797,18 +825,6 @@ describe('CodeTool', () => {
 
       expect(data).toHaveProperty('lineNumbers');
       expect(data.lineNumbers).toBe(true);
-    });
-
-    it('save() returns lineNumbers false after toggling off', async () => {
-      const { CodeTool } = await import('../../../../src/tools/code');
-      const tool = new CodeTool(createOptions({ code: 'test' }));
-      const el = tool.render();
-
-      const btn = el.querySelector('[data-blok-testid="code-line-numbers-btn"]') as HTMLButtonElement;
-      btn.click();
-
-      const data = tool.save(el);
-      expect(data.lineNumbers).toBe(false);
     });
 
     it('restores lineNumbers false from saved data', async () => {
@@ -853,16 +869,16 @@ describe('CodeTool', () => {
       expect(gutter.hidden).toBe(true);
     });
 
-    it('gutter is restored when switching from preview to code tab', async () => {
+    it('gutter is restored when switching from preview to code via view mode', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
       const el = tool.render();
       const gutter = el.querySelector('[data-blok-testid="code-gutter"]') as HTMLElement;
-      const codeTab = el.querySelector('[data-blok-testid="code-code-tab"]') as HTMLButtonElement;
+      const codeBtn = el.querySelector('[data-blok-testid="code-mode-code"]') as HTMLButtonElement;
 
       expect(gutter.hidden).toBe(true);
 
-      codeTab.click();
+      codeBtn.click();
 
       expect(gutter.hidden).toBe(false);
     });
@@ -954,6 +970,215 @@ describe('CodeTool', () => {
 
       // Should not throw
       expect(() => tool.setReadOnly(true)).not.toThrow();
+    });
+  });
+
+  describe('language button chevron', () => {
+    it('language button contains a chevron-down icon', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ language: 'javascript' }));
+      const el = tool.render();
+      const langBtn = el.querySelector('[data-blok-testid="code-language-btn"]') as HTMLButtonElement;
+
+      // Button should contain both text and an SVG chevron
+      expect(langBtn.querySelector('svg')).toBeTruthy();
+      expect(langBtn.textContent).toContain('JavaScript');
+    });
+  });
+
+  describe('language detection', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('schedules detection on input event', async () => {
+      mockDetectLanguage.mockResolvedValue('python');
+
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: '', language: 'plain text' }));
+      vi.useFakeTimers();
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      codeEl.textContent = 'import numpy as np';
+      simulateInput(codeEl);
+
+      // Advance past the 600ms debounce
+      await vi.advanceTimersByTimeAsync(600);
+      expect(mockDetectLanguage).toHaveBeenCalled();
+
+      // Allow the detection promise to resolve and rebuild the picker
+      await vi.advanceTimersByTimeAsync(0);
+
+      // Verify observable behavior: renderSettings() now includes detected language
+      const settings = tool.renderSettings() as Array<{
+        children: { items: Array<{ title: string; secondaryLabel?: string; icon?: string; trailingIcon?: string }> };
+      }>;
+      const items = settings[0].children.items;
+      const detectedItem = items.find((i) => i.secondaryLabel === 'auto');
+      expect(detectedItem).toBeDefined();
+      expect(detectedItem!.title).toBe('Python');
+
+      el.remove();
+    });
+
+    it('includes detected language item in picker when detected differs from chosen', async () => {
+      // Set up detection to return 'javascript' when called
+      mockDetectLanguage.mockResolvedValue('javascript');
+
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'const x = 1;', language: 'typescript' }));
+      vi.useFakeTimers();
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      simulateInput(codeEl);
+      await vi.advanceTimersByTimeAsync(600);
+      // Allow detection promise to resolve
+      await vi.advanceTimersByTimeAsync(0);
+
+      // Inspect via public renderSettings()
+      const settings = tool.renderSettings() as Array<{
+        children: { items: Array<{ title: string; secondaryLabel?: string; icon?: string; trailingIcon?: string }> };
+      }>;
+      const items = settings[0].children.items;
+
+      // First item should be detected language with 'auto' label
+      expect(items[0].title).toBe('JavaScript');
+      expect(items[0].secondaryLabel).toBe('auto');
+
+      // There should also be the chosen language (TypeScript) in the list
+      const chosenItem = items.find((i) => i.title === 'TypeScript');
+      expect(chosenItem).toBeDefined();
+      expect(chosenItem!.trailingIcon).toBeDefined();
+
+      el.remove();
+      vi.useRealTimers();
+    });
+
+    it('does not show detected section when detected matches chosen language', async () => {
+      // Detection returns same language as chosen
+      mockDetectLanguage.mockResolvedValue('javascript');
+
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'const x = 1;', language: 'javascript' }));
+      vi.useFakeTimers();
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      simulateInput(codeEl);
+      await vi.advanceTimersByTimeAsync(600);
+      await vi.advanceTimersByTimeAsync(0);
+
+      const settings = tool.renderSettings() as Array<{
+        children: { items: Array<{ title: string; secondaryLabel?: string; icon?: string; trailingIcon?: string }> };
+      }>;
+      const items = settings[0].children.items;
+
+      // Detection ran but result matches chosen, so no 'auto' label shown
+      expect(mockDetectLanguage).toHaveBeenCalled();
+      const detectedItem = items.find((i) => i.secondaryLabel === 'auto');
+      expect(detectedItem).toBeUndefined();
+
+      // First item should be JavaScript with trailing check icon
+      const jsItem = items.find((i) => i.title === 'JavaScript');
+      expect(jsItem).toBeDefined();
+      expect(jsItem!.trailingIcon).toBeDefined();
+
+      el.remove();
+      vi.useRealTimers();
+    });
+
+    it('does not show detected section when detection returns null', async () => {
+      mockDetectLanguage.mockResolvedValue(null);
+
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: '', language: 'plain text' }));
+      vi.useFakeTimers();
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      simulateInput(codeEl);
+      await vi.advanceTimersByTimeAsync(600);
+      await vi.advanceTimersByTimeAsync(0);
+
+      const settings = tool.renderSettings() as Array<{
+        children: { items: Array<{ title: string; secondaryLabel?: string; icon?: string; trailingIcon?: string }> };
+      }>;
+      const items = settings[0].children.items;
+
+      // Detection ran but returned null, so no 'auto' label shown
+      expect(mockDetectLanguage).toHaveBeenCalled();
+      const detectedItem = items.find((i) => i.secondaryLabel === 'auto');
+      expect(detectedItem).toBeUndefined();
+
+      // First item should be Plain Text with check icon
+      expect(items[0].title).toBe('Plain Text');
+      expect(items[0].icon).toBeDefined();
+
+      el.remove();
+      vi.useRealTimers();
+    });
+
+    it('debounces: only calls detectLanguage once for rapid input events', async () => {
+      mockDetectLanguage.mockResolvedValue('python');
+
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: '', language: 'plain text' }));
+      vi.useFakeTimers();
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      simulateInput(codeEl);
+      simulateInput(codeEl);
+      simulateInput(codeEl);
+      await vi.advanceTimersByTimeAsync(600);
+      expect(mockDetectLanguage).toHaveBeenCalledTimes(1);
+
+      // Observable: after the single detection resolves, settings includes detected language
+      await vi.advanceTimersByTimeAsync(0);
+      const settings = tool.renderSettings() as Array<{
+        children: { items: Array<{ title: string; secondaryLabel?: string }> };
+      }>;
+      const detectedItem = settings[0].children.items.find((i) => i.secondaryLabel === 'auto');
+      expect(detectedItem?.title).toBe('Python');
+
+      el.remove();
+    });
+  });
+
+  describe('getToolbarAnchorElement', () => {
+    it('returns the wrapper element so toolbar positions at block top, not inside the code area', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'console.log("hello")', language: 'javascript' }));
+      const rendered = tool.render();
+
+      document.body.appendChild(rendered);
+
+      const anchor = tool.getToolbarAnchorElement();
+
+      // The anchor should be the wrapper element (what render() returns),
+      // not the deeply nested <code contenteditable> element
+      expect(anchor).toBe(rendered);
+
+      // Verify that the code element IS a descendant (proving the anchor is the outer wrapper)
+      const codeElement = rendered.querySelector('[data-blok-testid="code-content"]');
+
+      expect(codeElement).not.toBeNull();
+      expect(anchor).not.toBe(codeElement);
+      expect(anchor!.contains(codeElement)).toBe(true);
+
+      rendered.remove();
     });
   });
 });

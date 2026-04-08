@@ -69,22 +69,31 @@ describe('shiki-loader', () => {
     it('lazily creates the shiki highlighter on first call', async () => {
       const { tokenizeCode } = await import('../../../../src/tools/code/shiki-loader');
       expect(mockCreateHighlighterCore).not.toHaveBeenCalled();
-      await tokenizeCode('const x = 1', 'javascript');
+      const result = await tokenizeCode('const x = 1', 'javascript');
       expect(mockCreateHighlighterCore).toHaveBeenCalledTimes(1);
       expect(mockCreateJavaScriptRegexEngine).toHaveBeenCalled();
+      // Highlighter was initialized with the regex engine
+      const initArg = mockCreateHighlighterCore.mock.calls[0][0] as { engine: unknown; themes: unknown[]; langs: unknown[] };
+      expect(initArg.engine).toBeDefined();
+      expect(initArg.themes).toHaveLength(2);
+      expect(result).not.toBeNull();
     });
 
     it('reuses singleton highlighter across calls', async () => {
       const { tokenizeCode } = await import('../../../../src/tools/code/shiki-loader');
-      await tokenizeCode('const x = 1', 'javascript');
-      await tokenizeCode('let y = 2', 'javascript');
+      const result1 = await tokenizeCode('const x = 1', 'javascript');
+      const result2 = await tokenizeCode('let y = 2', 'javascript');
       expect(mockCreateHighlighterCore).toHaveBeenCalledTimes(1);
+      // Both calls succeed (non-null), proving the singleton is shared
+      expect(result1).toBeTruthy();
+      expect(result2).toBeTruthy();
     });
 
     it('loads language on demand before tokenizing', async () => {
       const { tokenizeCode } = await import('../../../../src/tools/code/shiki-loader');
-      await tokenizeCode('const x = 1', 'javascript');
-      expect(mockLoadLanguage).toHaveBeenCalled();
+      const result = await tokenizeCode('const x = 1', 'javascript');
+      expect(mockLoadLanguage).toHaveBeenCalledTimes(1);
+      expect(result).toBeTruthy();
     });
 
     it('returns dual theme tokens mapped to HighlightToken format', async () => {
@@ -142,6 +151,11 @@ describe('shiki-loader', () => {
       await tokenizeCode('test', 'javascript');
       disposeHighlighter();
       expect(mockDispose).toHaveBeenCalled();
+
+      // After dispose, next tokenizeCode should create a new highlighter (proving disposal cleared state)
+      const result = await tokenizeCode('test2', 'javascript');
+      expect(mockCreateHighlighterCore).toHaveBeenCalledTimes(2);
+      expect(result).toBeTruthy();
     });
   });
 });

@@ -2774,6 +2774,7 @@ test.describe('yjs undo/redo', () => {
       // Move 2: Drag Block B (now at index 0) to the end (after Block A)
       // Current: B, C, A -> After: C, A, B
       await getParagraphByIndex(page, 0).hover();
+      await waitForDelay(page, 50); // allow blockHover throttle (20ms) to fire and toolbar to reposition
       await expect(settingsButton).toBeVisible();
       await performDragDrop(page, settingsButton, getParagraphByIndex(page, 2), 'bottom');
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);

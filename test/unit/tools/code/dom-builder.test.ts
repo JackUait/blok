@@ -6,20 +6,18 @@ describe('buildCodeDOM', () => {
   beforeEach(() => { vi.clearAllMocks(); });
   afterEach(() => { vi.restoreAllMocks(); });
 
-  it('returns wrapper, languageButton, copyButton, wrapButton, preElement, and codeElement', async () => {
+  it('returns wrapper, languageButton, copyButton, preElement, and codeElement', async () => {
     const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
     const result = buildCodeDOM({
       code: '',
       languageName: 'JavaScript',
       readOnly: false,
       copyLabel: 'Copy code',
-      wrapLabel: 'Wrap lines',
     });
 
     expect(result.wrapper).toBeInstanceOf(HTMLElement);
     expect(result.languageButton).toBeInstanceOf(HTMLButtonElement);
     expect(result.copyButton).toBeInstanceOf(HTMLButtonElement);
-    expect(result.wrapButton).toBeInstanceOf(HTMLButtonElement);
     expect(result.preElement).toBeInstanceOf(HTMLPreElement);
     expect(result.codeElement).toBeInstanceOf(HTMLElement);
   });
@@ -31,7 +29,6 @@ describe('buildCodeDOM', () => {
       languageName: 'Plain Text',
       readOnly: false,
       copyLabel: 'Copy code',
-      wrapLabel: 'Wrap lines',
     });
 
     expect(wrapper.children).toHaveLength(2);
@@ -42,36 +39,44 @@ describe('buildCodeDOM', () => {
     expect(preElement.contains(codeElement)).toBe(true);
   });
 
-  it('header contains languageButton, spacer, lineNumbersButton, wrapButton, and copyButton', async () => {
+  it('header contains languageButton, spacer, and controls container', async () => {
     const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
-    const { wrapper, languageButton, lineNumbersButton, wrapButton, copyButton } = buildCodeDOM({
+    const { wrapper, languageButton } = buildCodeDOM({
       code: '',
       languageName: 'Python',
       readOnly: false,
       copyLabel: 'Copy code',
-      wrapLabel: 'Wrap lines',
     });
 
     const header = wrapper.children[0];
-    expect(header.children).toHaveLength(5);
+    // [language] [spacer] [controls]
+    expect(header.children).toHaveLength(3);
     expect(header.children[0]).toBe(languageButton);
-    // children[1] is the spacer
-    expect(header.children[2]).toBe(lineNumbersButton);
-    expect(header.children[3]).toBe(wrapButton);
-    expect(header.children[4]).toBe(copyButton);
   });
 
-  it('language button displays the language name', async () => {
+  it('language button displays the language name in a text span', async () => {
     const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
     const { languageButton } = buildCodeDOM({
       code: '',
       languageName: 'TypeScript',
       readOnly: false,
       copyLabel: 'Copy code',
-      wrapLabel: 'Wrap lines',
     });
 
-    expect(languageButton.textContent).toBe('TypeScript');
+    // Language name is in the first span child
+    expect(languageButton.querySelector('span')!.textContent).toBe('TypeScript');
+  });
+
+  it('language button contains a chevron-down SVG icon', async () => {
+    const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+    const { languageButton } = buildCodeDOM({
+      code: '',
+      languageName: 'TypeScript',
+      readOnly: false,
+      copyLabel: 'Copy code',
+    });
+
+    expect(languageButton.querySelector('svg')).toBeTruthy();
   });
 
   it('code element renders initial code text', async () => {
@@ -81,7 +86,6 @@ describe('buildCodeDOM', () => {
       languageName: 'JavaScript',
       readOnly: false,
       copyLabel: 'Copy code',
-      wrapLabel: 'Wrap lines',
     });
 
     expect(codeElement.textContent).toBe('console.log("hello");');
@@ -94,7 +98,6 @@ describe('buildCodeDOM', () => {
       languageName: 'JavaScript',
       readOnly: false,
       copyLabel: 'Copy code',
-      wrapLabel: 'Wrap lines',
     });
 
     expect(codeElement.textContent).toBe('');
@@ -107,7 +110,6 @@ describe('buildCodeDOM', () => {
       languageName: 'JavaScript',
       readOnly: false,
       copyLabel: 'Copy code',
-      wrapLabel: 'Wrap lines',
     });
 
     expect(codeElement.getAttribute('contenteditable')).toBe('plaintext-only');
@@ -121,7 +123,6 @@ describe('buildCodeDOM', () => {
       languageName: 'JavaScript',
       readOnly: true,
       copyLabel: 'Copy code',
-      wrapLabel: 'Wrap lines',
     });
 
     expect(codeElement.getAttribute('contenteditable')).toBeNull();
@@ -135,38 +136,22 @@ describe('buildCodeDOM', () => {
       languageName: 'JavaScript',
       readOnly: false,
       copyLabel: 'Copy code',
-      wrapLabel: 'Wrap lines',
     });
 
     expect(copyButton.getAttribute('aria-label')).toBe('Copy code');
   });
 
-  it('wrap button has aria-label from wrapLabel option', async () => {
-    const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
-    const { wrapButton } = buildCodeDOM({
-      code: '',
-      languageName: 'JavaScript',
-      readOnly: false,
-      copyLabel: 'Copy code',
-      wrapLabel: 'Wrap lines',
-    });
-
-    expect(wrapButton.getAttribute('aria-label')).toBe('Wrap lines');
-  });
-
   it('all interactive elements have data-blok-testid attributes', async () => {
     const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
-    const { languageButton, copyButton, wrapButton, codeElement } = buildCodeDOM({
+    const { languageButton, copyButton, codeElement } = buildCodeDOM({
       code: '',
       languageName: 'JavaScript',
       readOnly: false,
       copyLabel: 'Copy code',
-      wrapLabel: 'Wrap lines',
     });
 
     expect(languageButton.getAttribute('data-blok-testid')).toBe('code-language-btn');
     expect(copyButton.getAttribute('data-blok-testid')).toBe('code-copy-btn');
-    expect(wrapButton.getAttribute('data-blok-testid')).toBe('code-wrap-btn');
     expect(codeElement.getAttribute('data-blok-testid')).toBe('code-content');
   });
 
@@ -177,7 +162,6 @@ describe('buildCodeDOM', () => {
       languageName: 'JavaScript',
       readOnly: false,
       copyLabel: 'Copy code',
-      wrapLabel: 'Wrap lines',
     });
 
     expect(codeElement.tagName).toBe('CODE');
@@ -190,25 +174,22 @@ describe('buildCodeDOM', () => {
       languageName: 'JavaScript',
       readOnly: false,
       copyLabel: 'Copy code',
-      wrapLabel: 'Wrap lines',
     });
 
     expect(preElement.tagName).toBe('PRE');
     expect(codeElement.parentElement).toBe(preElement);
   });
 
-  it('actual buttons have type="button"', async () => {
+  it('copy button has type="button"', async () => {
     const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
-    const { copyButton, wrapButton } = buildCodeDOM({
+    const { copyButton } = buildCodeDOM({
       code: '',
       languageName: 'JavaScript',
       readOnly: false,
       copyLabel: 'Copy code',
-      wrapLabel: 'Wrap lines',
     });
 
     expect(copyButton.type).toBe('button');
-    expect(wrapButton.type).toBe('button');
   });
 
   it('language element is a button', async () => {
@@ -218,7 +199,6 @@ describe('buildCodeDOM', () => {
       languageName: 'JavaScript',
       readOnly: false,
       copyLabel: 'Copy code',
-      wrapLabel: 'Wrap lines',
     });
 
     expect(languageButton.tagName).toBe('BUTTON');
@@ -232,30 +212,63 @@ describe('buildCodeDOM', () => {
       languageName: 'JavaScript',
       readOnly: false,
       copyLabel: 'Copy code',
-      wrapLabel: 'Wrap lines',
     });
 
     expect(languageButton.getAttribute('aria-haspopup')).toBe('listbox');
   });
 
   describe('preview support', () => {
-    it('includes tab buttons when previewable is true', async () => {
+    it('includes view mode container when previewable is true', async () => {
       const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
       const result = buildCodeDOM({
         code: 'E = mc^2',
         languageName: 'LaTeX',
         readOnly: false,
         copyLabel: 'Copy code',
-        wrapLabel: 'Wrap lines',
         previewable: true,
-        codeTabLabel: 'Code',
-        previewTabLabel: 'Preview',
+        viewModeLabels: { code: 'Code', preview: 'Preview', split: 'Side by side' },
       });
 
-      expect(result.codeTab).toBeInstanceOf(HTMLButtonElement);
-      expect(result.previewTab).toBeInstanceOf(HTMLButtonElement);
-      expect(result.codeTab!.textContent).toBe('Code');
-      expect(result.previewTab!.textContent).toBe('Preview');
+      expect(result.viewModeContainer).toBeInstanceOf(HTMLElement);
+      expect(result.viewModeContainer!.getAttribute('data-blok-testid')).toBe('code-view-mode');
+    });
+
+    it('view mode container has three buttons (code, preview, split)', async () => {
+      const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+      const result = buildCodeDOM({
+        code: 'E = mc^2',
+        languageName: 'LaTeX',
+        readOnly: false,
+        copyLabel: 'Copy code',
+        previewable: true,
+        viewModeLabels: { code: 'Code', preview: 'Preview', split: 'Side by side' },
+      });
+
+      const container = result.viewModeContainer!;
+      const buttons = container.querySelectorAll('button');
+
+      expect(buttons).toHaveLength(3);
+      expect(container.querySelector('[data-blok-testid="code-mode-code"]')).toBeTruthy();
+      expect(container.querySelector('[data-blok-testid="code-mode-preview"]')).toBeTruthy();
+      expect(container.querySelector('[data-blok-testid="code-mode-split"]')).toBeTruthy();
+    });
+
+    it('view mode buttons have aria-label attributes', async () => {
+      const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+      const result = buildCodeDOM({
+        code: 'E = mc^2',
+        languageName: 'LaTeX',
+        readOnly: false,
+        copyLabel: 'Copy code',
+        previewable: true,
+        viewModeLabels: { code: 'Code', preview: 'Preview', split: 'Side by side' },
+      });
+
+      const container = result.viewModeContainer!;
+
+      expect(container.querySelector('[data-blok-testid="code-mode-code"]')!.getAttribute('aria-label')).toBe('Code');
+      expect(container.querySelector('[data-blok-testid="code-mode-preview"]')!.getAttribute('aria-label')).toBe('Preview');
+      expect(container.querySelector('[data-blok-testid="code-mode-split"]')!.getAttribute('aria-label')).toBe('Side by side');
     });
 
     it('includes preview container when previewable is true', async () => {
@@ -265,86 +278,132 @@ describe('buildCodeDOM', () => {
         languageName: 'LaTeX',
         readOnly: false,
         copyLabel: 'Copy code',
-        wrapLabel: 'Wrap lines',
         previewable: true,
-        codeTabLabel: 'Code',
-        previewTabLabel: 'Preview',
+        viewModeLabels: { code: 'Code', preview: 'Preview', split: 'Side by side' },
       });
 
       expect(result.previewElement).toBeInstanceOf(HTMLDivElement);
       expect(result.previewElement!.getAttribute('data-blok-testid')).toBe('code-preview');
     });
 
-    it('does not include tab buttons when previewable is false', async () => {
+    it('includes split container wrapping code body and preview', async () => {
+      const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+      const result = buildCodeDOM({
+        code: 'E = mc^2',
+        languageName: 'LaTeX',
+        readOnly: false,
+        copyLabel: 'Copy code',
+        previewable: true,
+        viewModeLabels: { code: 'Code', preview: 'Preview', split: 'Side by side' },
+      });
+
+      expect(result.splitContainer).toBeInstanceOf(HTMLElement);
+      expect(result.splitContainer!.getAttribute('data-blok-testid')).toBe('code-split-container');
+      // Both code body and preview are inside the split container
+      expect(result.splitContainer!.contains(result.preElement)).toBe(true);
+      expect(result.splitContainer!.contains(result.previewElement)).toBe(true);
+    });
+
+    it('does not include view mode container when previewable is false', async () => {
       const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
       const result = buildCodeDOM({
         code: 'const x = 1;',
         languageName: 'JavaScript',
         readOnly: false,
         copyLabel: 'Copy code',
-        wrapLabel: 'Wrap lines',
         previewable: false,
-        codeTabLabel: 'Code',
-        previewTabLabel: 'Preview',
       });
 
-      expect(result.codeTab).toBeNull();
-      expect(result.previewTab).toBeNull();
+      expect(result.viewModeContainer).toBeNull();
       expect(result.previewElement).toBeNull();
+      expect(result.splitContainer).toBeNull();
     });
 
-    it('does not include tab buttons when previewable is omitted', async () => {
+    it('does not include view mode container when previewable is omitted', async () => {
       const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
       const result = buildCodeDOM({
         code: 'const x = 1;',
         languageName: 'JavaScript',
         readOnly: false,
         copyLabel: 'Copy code',
-        wrapLabel: 'Wrap lines',
       });
 
-      expect(result.codeTab).toBeNull();
-      expect(result.previewTab).toBeNull();
+      expect(result.viewModeContainer).toBeNull();
       expect(result.previewElement).toBeNull();
+      expect(result.splitContainer).toBeNull();
     });
 
-    it('tab buttons have data-blok-testid attributes', async () => {
+    it('copy button has larger padding to match segmented control height', async () => {
       const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
-      const result = buildCodeDOM({
+      const { copyButton } = buildCodeDOM({
         code: '',
         languageName: 'LaTeX',
         readOnly: false,
         copyLabel: 'Copy code',
-        wrapLabel: 'Wrap lines',
         previewable: true,
-        codeTabLabel: 'Code',
-        previewTabLabel: 'Preview',
+        viewModeLabels: { code: 'Code', preview: 'Preview', split: 'Side by side' },
       });
 
-      expect(result.codeTab!.getAttribute('data-blok-testid')).toBe('code-code-tab');
-      expect(result.previewTab!.getAttribute('data-blok-testid')).toBe('code-preview-tab');
+      // Copy button should have p-1.5 to visually match the segmented control
+      expect(copyButton.className).toContain('p-1.5');
     });
 
-    it('tab buttons are in the header between spacer and wrap button', async () => {
+    it('copy button keeps standard padding when not previewable', async () => {
       const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
-      const { wrapper, codeTab, wrapButton } = buildCodeDOM({
+      const { copyButton } = buildCodeDOM({
+        code: '',
+        languageName: 'JavaScript',
+        readOnly: false,
+        copyLabel: 'Copy code',
+      });
+
+      // Standard copy button should NOT have the larger padding
+      expect(copyButton.className).not.toContain('p-1.5');
+      expect(copyButton.className).toContain('p-1');
+    });
+
+    it('view mode container is in the controls before copy button', async () => {
+      const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+      const { wrapper, viewModeContainer, copyButton } = buildCodeDOM({
         code: '',
         languageName: 'LaTeX',
         readOnly: false,
         copyLabel: 'Copy code',
-        wrapLabel: 'Wrap lines',
         previewable: true,
-        codeTabLabel: 'Code',
-        previewTabLabel: 'Preview',
+        viewModeLabels: { code: 'Code', preview: 'Preview', split: 'Side by side' },
       });
 
       const header = wrapper.children[0];
-      const children = Array.from(header.children);
-      const codeTabIndex = children.indexOf(codeTab!);
-      const wrapIndex = children.indexOf(wrapButton);
+      // Controls container is the last child of header
+      const controls = header.children[2];
+      const children = Array.from(controls.children);
+      const viewModeIndex = children.indexOf(viewModeContainer!);
+      const copyIndex = children.indexOf(copyButton);
 
-      expect(codeTabIndex).toBeGreaterThan(1); // after language + spacer
-      expect(codeTabIndex).toBeLessThan(wrapIndex);
+      expect(viewModeIndex).toBeGreaterThanOrEqual(0);
+      expect(viewModeIndex).toBeLessThan(copyIndex);
+    });
+  });
+
+  describe('wrapper container styling', () => {
+    it('wrapper has a visible border class for the rounded container', async () => {
+      const { WRAPPER_STYLES } = await import('../../../../src/tools/code/constants');
+
+      expect(WRAPPER_STYLES).toContain('border');
+      expect(WRAPPER_STYLES).toContain('border-border-secondary');
+    });
+
+    it('wrapper has a background color class', async () => {
+      const { WRAPPER_STYLES } = await import('../../../../src/tools/code/constants');
+
+      expect(WRAPPER_STYLES).toContain('bg-bg-secondary');
+    });
+
+    it('wrapper has rounded corners and overflow hidden', async () => {
+      const { WRAPPER_STYLES } = await import('../../../../src/tools/code/constants');
+
+      expect(WRAPPER_STYLES).toContain('rounded-xl');
+      expect(WRAPPER_STYLES).toContain('overflow-hidden');
     });
   });
 
@@ -356,7 +415,6 @@ describe('buildCodeDOM', () => {
         languageName: 'JavaScript',
         readOnly: false,
         copyLabel: 'Copy code',
-        wrapLabel: 'Wrap lines',
       });
 
       expect(result.gutterElement).toBeInstanceOf(HTMLElement);
@@ -369,7 +427,6 @@ describe('buildCodeDOM', () => {
         languageName: 'JavaScript',
         readOnly: false,
         copyLabel: 'Copy code',
-        wrapLabel: 'Wrap lines',
       });
 
       expect(gutterElement.getAttribute('aria-hidden')).toBe('true');
@@ -382,7 +439,6 @@ describe('buildCodeDOM', () => {
         languageName: 'JavaScript',
         readOnly: false,
         copyLabel: 'Copy code',
-        wrapLabel: 'Wrap lines',
       });
 
       expect(gutterElement.getAttribute('data-blok-testid')).toBe('code-gutter');
@@ -395,7 +451,6 @@ describe('buildCodeDOM', () => {
         languageName: 'JavaScript',
         readOnly: false,
         copyLabel: 'Copy code',
-        wrapLabel: 'Wrap lines',
       });
 
       // Both share the same parent (the code body flex container)
@@ -410,7 +465,6 @@ describe('buildCodeDOM', () => {
         languageName: 'JavaScript',
         readOnly: false,
         copyLabel: 'Copy code',
-        wrapLabel: 'Wrap lines',
       });
 
       const codeBody = gutterElement.parentElement!;
@@ -425,7 +479,6 @@ describe('buildCodeDOM', () => {
         languageName: 'JavaScript',
         readOnly: false,
         copyLabel: 'Copy code',
-        wrapLabel: 'Wrap lines',
       });
 
       expect(gutterElement.children).toHaveLength(3);
@@ -441,7 +494,6 @@ describe('buildCodeDOM', () => {
         languageName: 'JavaScript',
         readOnly: false,
         copyLabel: 'Copy code',
-        wrapLabel: 'Wrap lines',
       });
 
       expect(gutterElement.children).toHaveLength(1);
@@ -468,21 +520,19 @@ describe('buildCodeDOM', () => {
         languageName: 'LaTeX',
         readOnly: false,
         copyLabel: 'Copy code',
-        wrapLabel: 'Wrap lines',
       });
 
       expect(gutterElement.children).toHaveLength(7);
       expect(gutterElement.children[6].textContent).toBe('7');
     });
 
-    it('wrapper has header and code body as direct children (no longer header + pre)', async () => {
+    it('wrapper has header and code body as direct children', async () => {
       const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
       const { wrapper, gutterElement } = buildCodeDOM({
         code: 'hello',
         languageName: 'JavaScript',
         readOnly: false,
         copyLabel: 'Copy code',
-        wrapLabel: 'Wrap lines',
       });
 
       // wrapper has: header, codeBody (which contains gutter + pre)

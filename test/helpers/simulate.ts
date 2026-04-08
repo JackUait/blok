@@ -36,3 +36,24 @@ export function simulateMousedown(element: EventTarget): void {
 export function simulateChange(element: EventTarget): void {
   element.dispatchEvent(new Event('change', { bubbles: true }));
 }
+
+/**
+ * Simulate a mousemove event on an element.
+ */
+export function simulateMousemove(element: EventTarget, options?: MouseEventInit): void {
+  element.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, ...options }));
+}
+
+/**
+ * Simulate a mouseenter event on an element.
+ */
+export function simulateMouseenter(element: EventTarget): void {
+  element.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
+}
+
+/**
+ * Simulate a mouseleave event on an element.
+ */
+export function simulateMouseleave(element: EventTarget): void {
+  element.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
+}

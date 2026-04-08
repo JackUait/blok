@@ -1067,7 +1067,9 @@ export class TableCellBlocks {
 
     const savedScrollY = window.scrollY;
 
-    const deletePromises = blockIndices.map(index => this.api.blocks.delete(index));
+    const deletePromises = blockIndices.map(index => {
+      return this.api.blocks.delete(index);
+    });
 
     void Promise.all(deletePromises).then(() => {
       if (window.scrollY !== savedScrollY) {

@@ -18,6 +18,83 @@ export function gprPublishCommand({ packJson, packDir, tag }) {
   return `npm publish ${tarballPath} --tag ${tag}`;
 }
 
+/**
+ * Extract the changelog section for `version` from a markdown changelog string.
+ * Returns the body text (everything between the version heading and the next
+ * same-level heading), or an empty string if the version is not found.
+ *
+ * @param {string} version - e.g. "1.2.0" or "1.0.0-beta.1"
+ * @param {string} changelog - full CHANGELOG.md content
+ * @returns {string}
+ */
+function extractChangelogSection(version, changelog) {
+  // Match the heading line for this exact version (escaped for regex special chars)
+  const escapedVersion = version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const headingPattern = new RegExp(`^## \\[${escapedVersion}\\]`, 'm');
+  const start = changelog.search(headingPattern);
+
+  if (start === -1) {
+    return '';
+  }
+
+  // Find the next `## ` heading after the matched one
+  const afterStart = changelog.indexOf('\n', start) + 1;
+  const nextHeading = changelog.indexOf('\n## ', afterStart);
+  const section = nextHeading === -1
+    ? changelog.slice(afterStart)
+    : changelog.slice(afterStart, nextHeading);
+
+  return section.trim();
+}
+
+/**
+ * Build the GitHub release notes body combining the main package and blok-cli
+ * changelog sections for the given version.
+ *
+ * @param {string} version        - e.g. "1.2.0"
+ * @param {string} mainChangelog  - root CHANGELOG.md content
+ * @param {string} cliChangelog   - packages/cli/CHANGELOG.md content
+ * @returns {string} Markdown release notes body
+ */
+/**
+ * Publish a package to both npm and GitHub Packages, always restoring the
+ * original package name even if either publish step throws.
+ *
+ * Errors are re-thrown so the caller can abort the release — nothing is
+ * silently swallowed.
+ *
+ * @param {object} opts
+ * @param {() => void} opts.publishToNpm - Callback that runs the npm publish
+ * @param {() => void} opts.publishToGpr - Callback that runs the GPR publish
+ * @param {() => void} opts.restoreName  - Callback that restores package.json name
+ * @returns {Promise<void>}
+ */
+export async function publishPackagePair({ publishToNpm, publishToGpr, restoreName }) {
+  try {
+    publishToNpm();
+    publishToGpr();
+  } finally {
+    restoreName();
+  }
+}
+
+export function buildReleaseNotes(version, mainChangelog, cliChangelog) {
+  const mainSection = extractChangelogSection(version, mainChangelog);
+  const cliSection = extractChangelogSection(version, cliChangelog);
+
+  const parts = [];
+
+  if (mainSection) {
+    parts.push(mainSection);
+  }
+
+  if (cliSection) {
+    parts.push(`## blok-cli\n\n${cliSection}`);
+  }
+
+  return parts.join('\n\n');
+}
+
 // --- Only run the release flow when executed directly (not imported by tests) ---
 
 const isDirectRun = process.argv[1] === fileURLToPath(import.meta.url);
@@ -113,38 +190,40 @@ if (isDirectRun) {
 
   const pkgJson = JSON.parse(readFileSync('package.json', 'utf-8'));
 
-  try {
-    // Rewrite name so the tarball contains @dodopizza/blok
-    pkgJson.name = '@dodopizza/blok';
-    writeFileSync('package.json', JSON.stringify(pkgJson, null, 2) + '\n');
+  await publishPackagePair({
+    publishToNpm: () => {
+      // Already published above; nothing to do for npm in the GPR step
+    },
+    publishToGpr: () => {
+      // Rewrite name so the tarball contains @dodopizza/blok
+      pkgJson.name = '@dodopizza/blok';
+      writeFileSync('package.json', JSON.stringify(pkgJson, null, 2) + '\n');
 
-    // Pack a second tarball under the @dodopizza name
-    const gprPackJson = runCapture('npm pack --ignore-scripts --pack-destination /tmp --json');
+      // Pack a second tarball under the @dodopizza name
+      const gprPackJson = runCapture('npm pack --ignore-scripts --pack-destination /tmp --json');
 
-    const gprToken = process.env.BLOK_GITHUB_TOKEN;
+      const gprToken = process.env.BLOK_GITHUB_TOKEN;
 
-    if (gprToken) {
-      writeFileSync('.npmrc', [
-        '@dodopizza:registry=https://npm.pkg.github.com',
-        `//npm.pkg.github.com/:_authToken=${gprToken}`,
-        '',
-      ].join('\n'));
-    }
+      if (gprToken) {
+        writeFileSync('.npmrc', [
+          '@dodopizza:registry=https://npm.pkg.github.com',
+          `//npm.pkg.github.com/:_authToken=${gprToken}`,
+          '',
+        ].join('\n'));
+      }
 
-    run(gprPublishCommand({ packJson: gprPackJson, packDir: '/tmp', tag }));
-    console.log('\nPublished @dodopizza/blok to GitHub Packages');
-  } catch (err) {
-    console.error('\nFailed to publish @dodopizza/blok to GitHub Packages:');
-    console.error(err.message || err);
-    process.exitCode = 1;
-  } finally {
-    pkgJson.name = '@jackuait/blok';
-    writeFileSync('package.json', JSON.stringify(pkgJson, null, 2) + '\n');
+      run(gprPublishCommand({ packJson: gprPackJson, packDir: '/tmp', tag }));
+      console.log('\nPublished @dodopizza/blok to GitHub Packages');
+    },
+    restoreName: () => {
+      pkgJson.name = '@jackuait/blok';
+      writeFileSync('package.json', JSON.stringify(pkgJson, null, 2) + '\n');
 
-    if (existsSync('.npmrc')) {
-      unlinkSync('.npmrc');
-    }
-  }
+      if (existsSync('.npmrc')) {
+        unlinkSync('.npmrc');
+      }
+    },
+  });
 
   // --- Publish @jackuait/blok-cli ---
 
@@ -152,66 +231,68 @@ if (isDirectRun) {
   const cliPkgPath = join(cliDir, 'package.json');
   const cliPkgJson = JSON.parse(readFileSync(cliPkgPath, 'utf-8'));
 
-  try {
-    // Sync version from main package
-    cliPkgJson.version = version;
-    writeFileSync(cliPkgPath, JSON.stringify(cliPkgJson, null, 2) + '\n');
+  // Sync version from main package
+  cliPkgJson.version = version;
+  writeFileSync(cliPkgPath, JSON.stringify(cliPkgJson, null, 2) + '\n');
 
-    // Build CLI
-    run('node scripts/build-cli.mjs');
+  // Build CLI
+  run('node scripts/build-cli.mjs');
 
-    // Write npm .npmrc
-    if (npmToken) {
-      writeFileSync('.npmrc', `//registry.npmjs.org/:_authToken=${npmToken}\n`);
-    }
-
-    // Pack and publish to npm as @jackuait/blok-cli
-    const cliNpmPackJson = runCapture(
-      'npm pack --ignore-scripts --pack-destination /tmp --json',
-      { cwd: cliDir }
-    );
-
-    run(gprPublishCommand({ packJson: cliNpmPackJson, packDir: '/tmp', tag }));
-    console.log('\nPublished @jackuait/blok-cli to npm');
-
-    // Cleanup npm .npmrc
-    if (existsSync('.npmrc')) {
-      unlinkSync('.npmrc');
-    }
-
-    // Publish to GitHub Packages as @dodopizza/blok-cli
-    cliPkgJson.name = '@dodopizza/blok-cli';
-    writeFileSync(cliPkgPath, JSON.stringify(cliPkgJson, null, 2) + '\n');
-
-    const gprToken = process.env.BLOK_GITHUB_TOKEN;
-
-    if (gprToken) {
-      writeFileSync('.npmrc', [
-        '@dodopizza:registry=https://npm.pkg.github.com',
-        `//npm.pkg.github.com/:_authToken=${gprToken}`,
-        '',
-      ].join('\n'));
-    }
-
-    const cliGprPackJson = runCapture(
-      'npm pack --ignore-scripts --pack-destination /tmp --json',
-      { cwd: cliDir }
-    );
-
-    run(gprPublishCommand({ packJson: cliGprPackJson, packDir: '/tmp', tag }));
-    console.log('\nPublished @dodopizza/blok-cli to GitHub Packages');
-  } catch (err) {
-    console.error('\nFailed to publish blok-cli:');
-    console.error(err.message || err);
-    process.exitCode = 1;
-  } finally {
-    cliPkgJson.name = '@jackuait/blok-cli';
-    writeFileSync(cliPkgPath, JSON.stringify(cliPkgJson, null, 2) + '\n');
-
-    if (existsSync('.npmrc')) {
-      unlinkSync('.npmrc');
-    }
+  // Write npm .npmrc
+  if (npmToken) {
+    writeFileSync('.npmrc', `//registry.npmjs.org/:_authToken=${npmToken}\n`);
   }
+
+  // Pack and publish to npm as @jackuait/blok-cli
+  const cliNpmPackJson = runCapture(
+    'npm pack --ignore-scripts --pack-destination /tmp --json',
+    { cwd: cliDir }
+  );
+
+  run(gprPublishCommand({ packJson: cliNpmPackJson, packDir: '/tmp', tag }));
+  console.log('\nPublished @jackuait/blok-cli to npm');
+
+  // Cleanup npm .npmrc
+  if (existsSync('.npmrc')) {
+    unlinkSync('.npmrc');
+  }
+
+  await publishPackagePair({
+    publishToNpm: () => {
+      // Already published above; nothing to do for npm in the GPR step
+    },
+    publishToGpr: () => {
+      // Publish to GitHub Packages as @dodopizza/blok-cli
+      cliPkgJson.name = '@dodopizza/blok-cli';
+      writeFileSync(cliPkgPath, JSON.stringify(cliPkgJson, null, 2) + '\n');
+
+      const gprToken = process.env.BLOK_GITHUB_TOKEN;
+
+      if (gprToken) {
+        writeFileSync('.npmrc', [
+          '@dodopizza:registry=https://npm.pkg.github.com',
+          `//npm.pkg.github.com/:_authToken=${gprToken}`,
+          '',
+        ].join('\n'));
+      }
+
+      const cliGprPackJson = runCapture(
+        'npm pack --ignore-scripts --pack-destination /tmp --json',
+        { cwd: cliDir }
+      );
+
+      run(gprPublishCommand({ packJson: cliGprPackJson, packDir: '/tmp', tag }));
+      console.log('\nPublished @dodopizza/blok-cli to GitHub Packages');
+    },
+    restoreName: () => {
+      cliPkgJson.name = '@jackuait/blok-cli';
+      writeFileSync(cliPkgPath, JSON.stringify(cliPkgJson, null, 2) + '\n');
+
+      if (existsSync('.npmrc')) {
+        unlinkSync('.npmrc');
+      }
+    },
+  });
 
   // --- Git: commit, tag, push ---
 
@@ -225,7 +306,25 @@ if (isDirectRun) {
 
   const prereleaseFlag = isBeta ? ' --prerelease' : '';
 
-  run(`gh release create ${gitTag}${prereleaseFlag}`);
+  const mainChangelog = existsSync('CHANGELOG.md')
+    ? readFileSync('CHANGELOG.md', 'utf-8')
+    : '';
+  const cliChangelogPath = join(cliDir, 'CHANGELOG.md');
+  const cliChangelog = existsSync(cliChangelogPath)
+    ? readFileSync(cliChangelogPath, 'utf-8')
+    : '';
+
+  const releaseNotes = buildReleaseNotes(version, mainChangelog, cliChangelog);
+  let notesFlag = '';
+
+  if (releaseNotes) {
+    const notesFile = `/tmp/blok-release-notes-${version}.md`;
+
+    writeFileSync(notesFile, releaseNotes);
+    notesFlag = ` --notes-file ${notesFile}`;
+  }
+
+  run(`gh release create ${gitTag}${prereleaseFlag}${notesFlag}`);
 
   console.log(`\nReleased ${version} successfully.`);
 }

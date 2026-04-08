@@ -1244,7 +1244,7 @@ describe('RectangleSelection', () => {
       expect(toolbar.close).not.toHaveBeenCalled();
     });
 
-    it('closes toolbar when click is within content area horizontal bounds', () => {
+    it('closes toolbar on first mousemove when click is within content area horizontal bounds', () => {
       const {
         rectangleSelection,
         toolbar,
@@ -1287,13 +1287,25 @@ describe('RectangleSelection', () => {
       blokWrapper.appendChild(startTarget);
       vi.spyOn(document, 'elementFromPoint').mockReturnValue(startTarget);
 
-      const internal = rectangleSelection as unknown as { mousedown: boolean };
+      const internal = rectangleSelection as unknown as {
+        mousedown: boolean;
+        pendingToolbarClose: boolean;
+        processMouseMove: (event: MouseEvent) => void;
+      };
 
       // Click at x=300, which is inside content (200-600)
       rectangleSelection.startSelection(300, 250);
 
-      expect(toolbar.close).toHaveBeenCalled();
+      // Toolbar close is deferred — not called immediately on startSelection
+      expect(toolbar.close).not.toHaveBeenCalled();
+      // But the pending flag must be set
+      expect(internal.pendingToolbarClose).toBe(true);
       expect(internal.mousedown).toBe(true);
+
+      // On the first mousemove the toolbar IS closed and the flag cleared
+      internal.processMouseMove(new MouseEvent('mousemove', { clientX: 310, clientY: 250 }));
+      expect(toolbar.close).toHaveBeenCalled();
+      expect(internal.pendingToolbarClose).toBe(false);
     });
   });
 

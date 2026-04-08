@@ -195,6 +195,7 @@
   "tools.code.searchLanguage": "Search language...",
   "tools.code.codeTab": "Code",
   "tools.code.previewTab": "Preview",
+  "tools.code.sideBySide": "Side by side",
   "tools.code.lineNumbers": "Line numbers",
   "searchTerms.code": "code",
   "searchTerms.snippet": "snippet",

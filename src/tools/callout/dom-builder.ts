@@ -6,12 +6,14 @@ import {
   WRAPPER_STYLES,
   EMOJI_BUTTON_STYLES,
   CHILDREN_STYLES,
+  DRAG_ZONE_STYLES,
 } from './constants';
 
 export interface CalloutDOMRefs {
   wrapper: HTMLElement;
   emojiButton: HTMLButtonElement;
   childContainer: HTMLElement;
+  dragZone: HTMLElement;
 }
 
 export interface BuildCalloutDOMOptions {
@@ -51,5 +53,13 @@ export function buildCalloutDOM(options: BuildCalloutDOMOptions): CalloutDOMRefs
   wrapper.appendChild(emojiButton);
   wrapper.appendChild(childContainer);
 
-  return { wrapper, emojiButton, childContainer };
+  // Drag zone — covers left padding area (x=[0,16px]) for drag handle,
+  // sits behind emoji button so emoji clicks pass through
+  const dragZone = document.createElement('span');
+  dragZone.className = DRAG_ZONE_STYLES;
+  dragZone.style.width = '32px'; // matches pl-8 left padding
+  dragZone.setAttribute('data-callout-drag-zone', '');
+  wrapper.prepend(dragZone);
+
+  return { wrapper, emojiButton, childContainer, dragZone };
 }

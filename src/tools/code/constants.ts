@@ -5,7 +5,6 @@ export const PLACEHOLDER_KEY = 'tools.code.placeholder';
 export const LANGUAGE_KEY = 'tools.code.language';
 export const COPIED_KEY = 'tools.code.copied';
 export const COPY_CODE_KEY = 'tools.code.copyCode';
-export const WRAP_LINES_KEY = 'tools.code.wrapLines';
 export const SEARCH_LANGUAGE_KEY = 'tools.code.searchLanguage';
 
 // Default values
@@ -53,10 +52,12 @@ export const LANGUAGES: LanguageEntry[] = [
 ];
 
 // CSS — Tailwind classes
-export const WRAPPER_STYLES = 'flex flex-col rounded-lg bg-bg-secondary overflow-hidden my-1';
-export const HEADER_STYLES = 'flex items-center gap-1 px-3 py-1.5 border-b border-border-primary text-xs text-gray-text';
-export const LANGUAGE_BUTTON_STYLES = 'px-1.5 py-0.5 rounded cursor-pointer bg-transparent border-0 text-xs text-gray-text font-medium transition-colors can-hover:hover:bg-item-hover-bg select-none';
+export const WRAPPER_STYLES = 'group/code flex flex-col rounded-xl border border-border-secondary bg-bg-secondary overflow-hidden my-2';
+export const HEADER_STYLES = 'flex items-center gap-1 px-3 py-1.5 text-xs text-gray-text';
+export const LANGUAGE_BUTTON_STYLES = 'inline-flex items-center px-1.5 py-0.5 rounded cursor-pointer bg-transparent border-0 text-xs text-gray-text font-medium transition-colors can-hover:hover:bg-item-hover-bg select-none';
+export const HEADER_CONTROLS_STYLES = 'flex items-center gap-1 opacity-0 group-hover/code:opacity-100 transition-opacity';
 export const HEADER_BUTTON_STYLES = 'p-1 rounded cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
+export const HEADER_BUTTON_MATCHED_STYLES = 'p-1.5 rounded-lg cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
 export const CODE_AREA_STYLES = 'block px-4 py-3 font-mono text-sm leading-relaxed outline-hidden whitespace-pre-wrap overflow-x-auto min-h-[1.5em]';
 export const COPIED_FEEDBACK_STYLES = 'text-xs text-gray-text font-medium select-none';
 
@@ -73,6 +74,28 @@ export const TAB_ACTIVE_STYLES = 'bg-blue-500 text-white';
 export const TAB_INACTIVE_STYLES = 'bg-transparent text-gray-text can-hover:hover:bg-item-hover-bg';
 export const PREVIEW_AREA_STYLES = 'px-4 py-3 overflow-x-auto min-h-[1.5em] flex justify-center';
 
+// i18n key — preview toggle
+export const PREVIEW_TOGGLE_KEY = 'tools.code.previewToggle';
+
+// i18n key — side-by-side view mode
+export const SIDE_BY_SIDE_KEY = 'tools.code.sideBySide';
+
+// View mode type
+export type CodeViewMode = 'code' | 'preview' | 'split';
+
+// CSS — view mode segmented control
+export const VIEW_MODE_CONTAINER_STYLES = 'flex items-center rounded-lg border border-border-secondary p-0.5 gap-0.5';
+export const VIEW_MODE_BUTTON_STYLES = 'p-1 rounded cursor-pointer bg-transparent border-0 text-gray-text transition-colors flex items-center justify-center';
+export const VIEW_MODE_BUTTON_ACTIVE_STYLES = 'p-1 rounded cursor-pointer bg-item-hover-bg border-0 text-primary transition-colors flex items-center justify-center';
+// Preview icon is 16x16 (vs 20x20 for code/split), so extra 2px padding keeps containers equal
+export const VIEW_MODE_PREVIEW_BUTTON_STYLES = 'p-[6px] rounded cursor-pointer bg-transparent border-0 text-gray-text transition-colors flex items-center justify-center';
+export const VIEW_MODE_PREVIEW_BUTTON_ACTIVE_STYLES = 'p-[6px] rounded cursor-pointer bg-item-hover-bg border-0 text-primary transition-colors flex items-center justify-center';
+
+// CSS — split container
+export const SPLIT_CONTAINER_STYLES = 'flex flex-col overflow-hidden';
+export const SPLIT_CONTAINER_SPLIT_STYLES = 'flex flex-row overflow-hidden';
+export const SPLIT_HALF_STYLES = 'flex-1 min-w-0 overflow-hidden';
+
 // Shiki theme names for syntax highlighting
 export const SHIKI_LIGHT_THEME = 'one-light';
 export const SHIKI_DARK_THEME = 'vitesse-dark';
@@ -87,10 +110,7 @@ export const HIGHLIGHTABLE_LANGUAGES = new Set(
     .filter((id) => id !== DEFAULT_LANGUAGE)
 );
 
-// i18n key — line numbers toggle
-export const LINE_NUMBERS_KEY = 'tools.code.lineNumbers';
-
 // CSS — line number gutter
 export const CODE_BODY_STYLES = 'flex overflow-hidden';
-export const GUTTER_STYLES = 'select-none text-right pr-3 py-3 font-mono text-sm leading-relaxed text-gray-text/40 border-r border-border-primary shrink-0';
+export const GUTTER_STYLES = 'select-none text-right pl-4 pr-3 py-3 font-mono text-sm leading-relaxed text-gray-text/40 shrink-0';
 export const GUTTER_LINE_STYLES = 'leading-relaxed';

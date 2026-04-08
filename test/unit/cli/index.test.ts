@@ -25,8 +25,12 @@ vi.mock('../../../src/cli/commands/convert-html/index', () => ({
   convertHtml: vi.fn(() => '{"version":"2.31.0","blocks":[]}'),
 }));
 
-vi.mock(import('node:fs'), async (importOriginal) => {
-  const actual = await importOriginal();
+vi.mock('../../../src/cli/commands/convert-gdocs/index', () => ({
+  convertGdocs: vi.fn(() => '{"version":"2.31.0","blocks":[]}'),
+}));
+
+vi.mock('node:fs', async (importOriginal) => {
+  const actual: Record<string, unknown> = await importOriginal();
 
   return {
     ...actual,
@@ -91,5 +95,18 @@ describe('cli/index', () => {
 
     expect(mockJSDOM).toHaveBeenCalled();
     expect(writeOutput).toHaveBeenCalledWith('{"version":"2.31.0","blocks":[]}', undefined);
+  });
+
+  it('routes --convert-gdocs to convertGdocs handler', async () => {
+    await run(['--convert-gdocs'], '1.0.0');
+
+    expect(mockJSDOM).toHaveBeenCalled();
+    expect(writeOutput).toHaveBeenCalledWith('{"version":"2.31.0","blocks":[]}', undefined);
+  });
+
+  it('passes --output value for --convert-gdocs', async () => {
+    await run(['--convert-gdocs', '--output', 'out.json'], '1.0.0');
+
+    expect(writeOutput).toHaveBeenCalledWith('{"version":"2.31.0","blocks":[]}', 'out.json');
   });
 });

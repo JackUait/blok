@@ -34,13 +34,26 @@ const MIN_CODE_LENGTH = 20;
 const MAX_ACCEPTABLE_FG_RATIO = 0.75;
 
 /**
+ * Minimum number of distinct non-fg colors a tokenization must produce
+ * to be considered a genuine match. Languages that colorize everything
+ * with a single non-fg color (e.g. YAML treating code as a string block)
+ * produce a deceptively low fg-ratio without actually recognizing the syntax.
+ */
+const MIN_DISTINCT_COLORS = 2;
+
+/**
  * Scores how well shiki tokenized the code in a given language.
- * Returns a value in [0, 1] — lower is better (fewer unrecognized tokens).
+ * Returns a value in [0, 1] — lower is better (fewer unrecognized tokens),
+ * or 1 if the tokenization didn't use enough distinct colors to be a real match.
  *
  * Strategy: compute the ratio of characters colored with the theme's
  * foreground color (= unrecognized/plain text) to total characters.
  * A well-matched language has many distinctly-colored tokens; a poorly-matched
  * language produces mostly fg-colored (unrecognized) tokens.
+ *
+ * Guard: if fewer than MIN_DISTINCT_COLORS non-fg colors appear, the grammar
+ * is treating everything as the same token type (e.g. YAML string), which is
+ * a false positive. Return 1 in that case.
  */
 function scoreTokens(tokens: Array<Array<{ content: string; color: string }>>, fg: string): number {
   const allTokens = tokens.flat();
@@ -48,10 +61,20 @@ function scoreTokens(tokens: Array<Array<{ content: string; color: string }>>, f
 
   if (totalChars === 0) return 1;
 
-  const fgChars = allTokens.reduce(
-    (sum, token) => sum + (token.color === fg ? token.content.length : 0),
-    0
+  const { fgChars, nonFgColors } = allTokens.reduce(
+    (acc, token) => ({
+      fgChars: acc.fgChars + (token.color === fg ? token.content.length : 0),
+      nonFgColors: token.color === fg ? acc.nonFgColors : acc.nonFgColors.add(token.color),
+    }),
+    { fgChars: 0, nonFgColors: new Set<string>() }
   );
+
+  // Reject tokenizations that use fewer than MIN_DISTINCT_COLORS non-fg colors —
+  // these are grammars that "colorize" everything as a single token type
+  // (e.g. YAML interpreting code as block scalars), which is a false positive.
+  if (nonFgColors.size < MIN_DISTINCT_COLORS) {
+    return 1;
+  }
 
   return fgChars / totalChars;
 }

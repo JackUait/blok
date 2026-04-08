@@ -77,6 +77,35 @@ describe('detectLanguage', () => {
     expect(result).toBeNull();
   });
 
+  it('returns null when a language uses fewer than 2 distinct non-fg colors (false positive guard)', async () => {
+    const FG_COLOR = '#383a42';
+    const STRING_COLOR = '#50a14f'; // YAML-like: colorizes everything as one type
+
+    mockTokenizeCode.mockImplementation(async (_code, lang) => {
+      if (lang === 'yaml') {
+        // Simulates YAML treating code as block scalars — low fg-ratio but only 1 non-fg color
+        return {
+          light: {
+            fg: FG_COLOR,
+            tokens: [[
+              { content: 'const x = 1;', color: STRING_COLOR, offset: 0 },
+              { content: 'function foo() {', color: STRING_COLOR, offset: 13 },
+              { content: '  ', color: FG_COLOR, offset: 30 },
+              { content: 'return x;', color: STRING_COLOR, offset: 32 },
+              { content: '}', color: FG_COLOR, offset: 42 },
+            ]],
+          },
+          dark: { fg: '#dbd7ca', tokens: [] },
+        };
+      }
+      return null;
+    });
+
+    // YAML would win on raw fg-ratio (0.075) but should be rejected due to only 1 non-fg color
+    const result = await detectLanguage('const x = 1;\nfunction foo() {\n  return x;\n}');
+    expect(result).toBeNull();
+  });
+
   it('exports the candidate language list', () => {
     expect(DETECTION_CANDIDATE_LANGUAGES).toContain('javascript');
     expect(DETECTION_CANDIDATE_LANGUAGES).toContain('python');

@@ -277,4 +277,27 @@ describe('DatabaseBackendSync', () => {
       expect(adapter.updateRow).not.toHaveBeenCalled();
     });
   });
+
+  describe('flushPendingPropertyUpdates', () => {
+    it('immediately flushes pending property updates', async () => {
+      vi.useFakeTimers();
+      const adapter = { updateProperty: vi.fn().mockResolvedValue(undefined) } as unknown as DatabaseAdapter;
+      const sync = new DatabaseBackendSync(adapter);
+
+      sync.syncUpdatePropertyDebounced({ propertyId: 'p1', changes: { config: { options: [] } } });
+      sync.flushPendingPropertyUpdates();
+
+      // should fire immediately without waiting for timer
+      expect(adapter.updateProperty).toHaveBeenCalledOnce();
+      vi.useRealTimers();
+    });
+
+    it('is a no-op when no pending property updates exist', () => {
+      const adapter = { updateProperty: vi.fn().mockResolvedValue(undefined) } as unknown as DatabaseAdapter;
+      const sync = new DatabaseBackendSync(adapter);
+
+      expect(() => sync.flushPendingPropertyUpdates()).not.toThrow();
+      expect(adapter.updateProperty).not.toHaveBeenCalled();
+    });
+  });
 });

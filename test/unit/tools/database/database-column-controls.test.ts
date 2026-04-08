@@ -208,7 +208,8 @@ describe('DatabaseColumnControls', () => {
       input.value = '';
       input.dispatchEvent(new Event('blur'));
 
-      expect(onRenameCommit).toHaveBeenCalledWith('opt-1', 'BACKLOG');
+      // When input is empty, falls back to original — no change, so onRenameCommit is NOT called
+      expect(onRenameCommit).not.toHaveBeenCalled();
       expect(headerEl.querySelector('[data-blok-database-column-title]')?.textContent).toBe('BACKLOG');
     });
 

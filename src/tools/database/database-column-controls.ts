@@ -45,15 +45,7 @@ export class DatabaseColumnControls {
       titleEl.replaceWith(input);
     }
 
-    const deleteBtn = document.createElement('button');
-
-    deleteBtn.setAttribute('data-blok-database-delete-column', '');
-    deleteBtn.setAttribute('aria-label', this.i18n.t('tools.database.deleteColumn'));
-    deleteBtn.setAttribute('data-option-id', optionId);
-    deleteBtn.addEventListener('click', () => {
-      this.options.onDelete(optionId);
-    });
-    headerEl.appendChild(deleteBtn);
+    this.appendDeleteButton(headerEl, optionId);
   }
 
   appendDeleteButton(headerEl: HTMLElement, optionId: string): void {
@@ -114,12 +106,10 @@ export class DatabaseColumnControls {
         input.replaceWith(restoredDiv);
         // re-attach click listener on restored div
         this.makePillTitleEditable(headerEl, optionId);
-        // Fire commit only when the user actually changed the raw input value
-        if (rawValue !== originalLabel) {
+        // Fire commit only when the final resolved label actually changed
+        if (newLabel !== originalLabel) {
           this.options.onRenameCommit?.(optionId, newLabel);
-          if (newLabel !== originalLabel) {
-            this.options.onRename(optionId, newLabel);
-          }
+          this.options.onRename(optionId, newLabel);
         }
       };
 

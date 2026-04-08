@@ -99,6 +99,10 @@ export class DatabaseBackendSync {
     for (const rowId of this.pendingTimers.keys()) { this.flushRow(rowId); }
   }
 
+  flushPendingPropertyUpdates(): void {
+    for (const propertyId of this.pendingPropertyTimers.keys()) { this.flushProperty(propertyId); }
+  }
+
   destroy(): void {
     for (const timer of this.pendingTimers.values()) clearTimeout(timer);
     this.pendingTimers.clear();

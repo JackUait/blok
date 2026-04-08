@@ -1766,14 +1766,16 @@
 /**
  * Column header pill — rounded badge containing dot + title.
  * When the column has a color, the pill gets a colored background (set inline via JS).
+ * Sized to content only — never stretches to fill available space.
  */
 [data-blok-database-column-pill] {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 8px 3px 6px;
+  gap: 5px;
+  padding: 2px 7px 2px 5px;
   border-radius: 20px;
   flex: 0 0 auto;
+  min-width: 0;
 }
 
 /**
@@ -1784,20 +1786,14 @@
   :root:not([data-blok-theme="light"]) [data-blok-database-column][data-color] [data-blok-database-column-pill] {
     color: rgba(255, 255, 255, 0.9) !important;
   }
-  :root:not([data-blok-theme="light"]) [data-blok-database-column][data-color] [data-blok-database-column-dot] {
-    background-color: rgba(255, 255, 255, 0.9) !important;
-  }
 }
 
 [data-blok-theme="dark"] [data-blok-database-column][data-color] [data-blok-database-column-pill] {
   color: rgba(255, 255, 255, 0.9) !important;
 }
-[data-blok-theme="dark"] [data-blok-database-column][data-color] [data-blok-database-column-dot] {
-  background-color: rgba(255, 255, 255, 0.9) !important;
-}
 
 /**
- * Column status dot — small colored circle.
+ * Column status dot — solid circle using the accent text color.
  */
 [data-blok-database-column-dot] {
   width: 8px;
@@ -1807,13 +1803,11 @@
 }
 
 /**
- * Column title text — uppercase status-label style, truncate long titles.
+ * Column title text — uppercase status-label style, never truncate.
  */
 [data-blok-database-column-title] {
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }

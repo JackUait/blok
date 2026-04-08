@@ -7,6 +7,8 @@ export class DatabaseBackendSync {
   private readonly onError: ((error: unknown) => void) | undefined;
   private readonly pendingTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly pendingUpdates = new Map<string, Parameters<DatabaseAdapter['updateRow']>[0]>();
+  private readonly pendingPropertyTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly pendingPropertyUpdates = new Map<string, Parameters<DatabaseAdapter['updateProperty']>[0]>();
 
   constructor(adapter?: DatabaseAdapter, onError?: (error: unknown) => void) {
     this.adapter = adapter;
@@ -61,6 +63,18 @@ export class DatabaseBackendSync {
     return this.safeCall((a) => a.updateProperty(params));
   }
 
+  syncUpdatePropertyDebounced(params: Parameters<DatabaseAdapter['updateProperty']>[0]): void {
+    if (this.adapter === undefined) return;
+    const { propertyId } = params;
+    const existing = this.pendingPropertyTimers.get(propertyId);
+    if (existing !== undefined) clearTimeout(existing);
+    this.pendingPropertyUpdates.set(propertyId, params);
+    this.pendingPropertyTimers.set(
+      propertyId,
+      setTimeout(() => { this.flushProperty(propertyId); }, UPDATE_DEBOUNCE_MS),
+    );
+  }
+
   async syncDeleteProperty(params: Parameters<DatabaseAdapter['deleteProperty']>[0]): Promise<void> {
     await this.safeCall((a) => a.deleteProperty(params));
   }
@@ -89,6 +103,9 @@ export class DatabaseBackendSync {
     for (const timer of this.pendingTimers.values()) clearTimeout(timer);
     this.pendingTimers.clear();
     this.pendingUpdates.clear();
+    for (const timer of this.pendingPropertyTimers.values()) clearTimeout(timer);
+    this.pendingPropertyTimers.clear();
+    this.pendingPropertyUpdates.clear();
   }
 
   private flushRow(rowId: string): void {
@@ -98,5 +115,14 @@ export class DatabaseBackendSync {
     const params = this.pendingUpdates.get(rowId);
     this.pendingUpdates.delete(rowId);
     if (params !== undefined) void this.safeCall((a) => a.updateRow(params));
+  }
+
+  private flushProperty(propertyId: string): void {
+    const timer = this.pendingPropertyTimers.get(propertyId);
+    if (timer !== undefined) clearTimeout(timer);
+    this.pendingPropertyTimers.delete(propertyId);
+    const params = this.pendingPropertyUpdates.get(propertyId);
+    this.pendingPropertyUpdates.delete(propertyId);
+    if (params !== undefined) void this.safeCall((a) => a.updateProperty(params));
   }
 }

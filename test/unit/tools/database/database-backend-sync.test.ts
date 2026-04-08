@@ -184,6 +184,77 @@ describe('DatabaseBackendSync', () => {
     });
   });
 
+  describe('syncUpdatePropertyDebounced', () => {
+    it('does not call adapter immediately', () => {
+      vi.useFakeTimers();
+      const adapter = { updateProperty: vi.fn().mockResolvedValue(undefined) } as unknown as DatabaseAdapter;
+      const sync = new DatabaseBackendSync(adapter);
+
+      sync.syncUpdatePropertyDebounced({ propertyId: 'p1', changes: { config: { options: [] } } });
+
+      expect(adapter.updateProperty).not.toHaveBeenCalled();
+      vi.useRealTimers();
+    });
+
+    it('calls adapter after debounce delay', async () => {
+      vi.useFakeTimers();
+      const adapter = { updateProperty: vi.fn().mockResolvedValue(undefined) } as unknown as DatabaseAdapter;
+      const sync = new DatabaseBackendSync(adapter);
+      const params = { propertyId: 'p1', changes: { config: { options: [] } } };
+
+      sync.syncUpdatePropertyDebounced(params);
+      await vi.runAllTimersAsync();
+
+      expect(adapter.updateProperty).toHaveBeenCalledOnce();
+      expect(adapter.updateProperty).toHaveBeenCalledWith(params);
+      vi.useRealTimers();
+    });
+
+    it('coalesces rapid calls — only the last one fires', async () => {
+      vi.useFakeTimers();
+      const adapter = { updateProperty: vi.fn().mockResolvedValue(undefined) } as unknown as DatabaseAdapter;
+      const sync = new DatabaseBackendSync(adapter);
+
+      sync.syncUpdatePropertyDebounced({ propertyId: 'p1', changes: { config: { options: [{ id: 'o1', label: 'A', position: 'a0' }] } } });
+      sync.syncUpdatePropertyDebounced({ propertyId: 'p1', changes: { config: { options: [{ id: 'o1', label: 'B', position: 'a0' }] } } });
+      await vi.runAllTimersAsync();
+
+      expect(adapter.updateProperty).toHaveBeenCalledOnce();
+      expect(adapter.updateProperty).toHaveBeenCalledWith({
+        propertyId: 'p1',
+        changes: { config: { options: [{ id: 'o1', label: 'B', position: 'a0' }] } },
+      });
+      vi.useRealTimers();
+    });
+
+    it('uses a separate timer per propertyId', async () => {
+      vi.useFakeTimers();
+      const adapter = { updateProperty: vi.fn().mockResolvedValue(undefined) } as unknown as DatabaseAdapter;
+      const sync = new DatabaseBackendSync(adapter);
+
+      sync.syncUpdatePropertyDebounced({ propertyId: 'p1', changes: { config: { options: [] } } });
+      sync.syncUpdatePropertyDebounced({ propertyId: 'p2', changes: { config: { options: [] } } });
+      await vi.runAllTimersAsync();
+
+      expect(adapter.updateProperty).toHaveBeenCalledTimes(2);
+      vi.useRealTimers();
+    });
+
+    it('cancels pending property timer on destroy', () => {
+      vi.useFakeTimers();
+      const adapter = { updateProperty: vi.fn().mockResolvedValue(undefined) } as unknown as DatabaseAdapter;
+      const sync = new DatabaseBackendSync(adapter);
+
+      sync.syncUpdatePropertyDebounced({ propertyId: 'p1', changes: { config: { options: [] } } });
+      sync.destroy();
+      vi.runAllTimers();
+
+      // destroy should clear the timer — adapter must NOT be called after destroy
+      expect(adapter.updateProperty).not.toHaveBeenCalled();
+      vi.useRealTimers();
+    });
+  });
+
   describe('flush and destroy', () => {
     it('flushPendingUpdates sends all debounced updates immediately', () => {
       const adapter = createMockAdapter();

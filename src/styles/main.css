@@ -1776,6 +1776,7 @@
   border-radius: 20px;
   flex: 0 0 auto;
   min-width: 0;
+  width: fit-content;
 }
 
 /**
@@ -1805,11 +1806,20 @@
 /**
  * Column title text — uppercase status-label style, never truncate.
  */
-[data-blok-database-column-title] {
+[data-blok-database-column-title],
+[data-blok-database-column-title-input] {
   white-space: nowrap;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+[data-blok-database-column-title-input] {
+  border: none;
+  outline: none;
+  padding: 0;
+  min-width: 0;
+  field-sizing: content;
 }
 
 /**

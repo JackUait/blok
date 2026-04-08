@@ -25,6 +25,16 @@ export class DatabaseColumnControls {
       input.value = titleEl.textContent ?? '';
       input.setAttribute('data-blok-database-column-title-input', '');
       input.setAttribute('aria-label', this.i18n.t('tools.database.renameColumn'));
+
+      // Fallback for browsers without field-sizing: content (e.g. Firefox).
+      // Sets the size attribute to the character count so the input doesn't
+      // default to 20-char width. Modern browsers use the CSS property instead.
+      const syncSize = (): void => {
+        input.size = Math.max(input.value.length, 1);
+      };
+
+      syncSize();
+      input.addEventListener('input', syncSize);
       input.addEventListener('change', () => {
         this.options.onRename(optionId, input.value);
       });

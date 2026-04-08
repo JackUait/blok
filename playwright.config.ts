@@ -106,6 +106,7 @@ const LOGIC_TESTS = [
   '**/ui/table-toolbar-visibility.spec.ts',
   '**/ui/css-layer-conflict.spec.ts',
   '**/ui/content-align.spec.ts',
+  '**/ui/database-board-pill-width.spec.ts',
 
   // Seed/utility tests
   '**/seed.spec.ts',

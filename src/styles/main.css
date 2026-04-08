@@ -2102,7 +2102,12 @@
   color: var(--blok-database-tab-text);
   font-size: 18px;
   margin-left: 2px;
-  transition: background-color 120ms ease;
+  transition: background-color 120ms ease, opacity 120ms ease;
+  opacity: 0;
+}
+
+[data-blok-database-tab-bar]:hover [data-blok-database-add-view] {
+  opacity: 1;
 }
 
 [data-blok-database-add-view]:hover {

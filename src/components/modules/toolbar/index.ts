@@ -1089,6 +1089,18 @@ export class Toolbar extends Module<ToolbarNodes> {
       // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.Blok.UI.nodes.wrapper.classList.remove(this.CSS.openedToolboxHolderModifier);
       this.Blok.UI.nodes.wrapper.removeAttribute(DATA_ATTR.toolboxOpened);
+
+      /**
+       * Restore focus to the current block when the toolbox closes via any path
+       * (keyboard Escape, clicking outside, or selecting a tool).
+       * Without this, focus falls to document.body after non-keyboard close paths,
+       * causing subsequent keystrokes to be lost or land in the wrong block.
+       */
+      const currentBlock = this.Blok.BlockManager.currentBlock;
+
+      if (currentBlock && currentBlock.inputs.length > 0) {
+        this.Blok.Caret.setToBlock(currentBlock, this.Blok.Caret.positions.END);
+      }
     });
 
     this.toolboxInstance.on(ToolboxEvent.BlockAdded, ({ block }) => {
@@ -1142,6 +1154,12 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     if (plusButton) {
       this.readOnlyMutableListeners.on(plusButton, 'mousedown', (e) => {
+        /**
+         * Prevent focus from moving away from the currently-active contenteditable block.
+         * Without this, clicking the plus button steals DOM focus, causing subsequent
+         * keystrokes to land in the wrong block (text-jumping bug).
+         */
+        (e as MouseEvent).preventDefault();
         hide();
 
         this.clickDragHandler.setup(

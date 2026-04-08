@@ -179,6 +179,12 @@ export class SettingsTogglerHandler {
    */
   public createMousedownHandler(): (e: Event) => void {
     return (e: Event) => {
+      /**
+       * Prevent focus from moving away from the currently-active contenteditable block.
+       * Without this, clicking the settings toggler steals DOM focus, causing subsequent
+       * keystrokes to land in the wrong block (text-jumping bug).
+       */
+      (e as MouseEvent).preventDefault();
       hide();
 
       this.clickDragHandler.setup(

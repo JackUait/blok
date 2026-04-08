@@ -381,6 +381,18 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     this.stopListeningToBlockInput();
     this.popover?.hide();
+
+    /**
+     * Only emit Closed event when the toolbox was actually open.
+     * This prevents spurious Closed events (and their side-effects such as
+     * caret restoration) when close() is called as routine cleanup (e.g.
+     * during cross-block selection, block deletion, or toolbar dismissal)
+     * even though the toolbox was never shown.
+     */
+    if (!this.opened) {
+      return;
+    }
+
     this.opened = false;
     this.emit(ToolboxEvent.Closed);
   }
@@ -447,6 +459,17 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * Handles popover close event
    */
   private onPopoverClose = (): void => {
+    /**
+     * Only handle the Closed event when the toolbox was actually open.
+     * The popover can fire Closed during routine cleanup (e.g. when Toolbar.close()
+     * is called unconditionally as part of CBS, block deletion, etc.), even though
+     * the toolbox was never shown. Emitting ToolboxEvent.Closed in those cases
+     * triggers side-effects (like caret restoration) that break cross-block selection.
+     */
+    if (!this.opened) {
+      return;
+    }
+
     if (this.isInsideTableCell) {
       this.toggleRestrictedToolsHidden(false);
       this.isInsideTableCell = false;

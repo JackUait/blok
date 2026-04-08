@@ -73,6 +73,9 @@ const CROSS_BROWSER_TESTS = [
   '**/ui/toolbar-rubber-band-hover.spec.ts',
   '**/ui/toolbar-always-visible.spec.ts',
   '**/ui/settings-toggler-after-drag.spec.ts',
+
+  // Toolbar focus preservation (mouse events - cross-browser)
+  '**/modules/toolbar-focus.spec.ts',
 ] as const;
 
 // Logic/API tests - browser-agnostic, run once on Chromium

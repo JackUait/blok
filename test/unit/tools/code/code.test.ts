@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 import type { CodeData } from '../../../../types/tools/code';
+import { simulateInput, simulateKeydown } from '../../../helpers/simulate';
 
 vi.mock('../../../../src/tools/code/katex-loader', () => ({
   renderLatex: vi.fn().mockResolvedValue('<span class="katex">rendered</span>'),
@@ -9,6 +10,12 @@ vi.mock('../../../../src/tools/code/katex-loader', () => ({
 vi.mock('../../../../src/tools/code/mermaid-loader', () => ({
   renderMermaid: vi.fn().mockResolvedValue('<svg>mermaid diagram</svg>'),
 }));
+
+vi.mock('../../../../src/tools/code/language-detector', () => ({
+  detectLanguage: vi.fn(),
+}));
+import { detectLanguage } from '../../../../src/tools/code/language-detector';
+const mockDetectLanguage = vi.mocked(detectLanguage);
 
 const mockTokenizeCode = vi.fn().mockResolvedValue(null);
 const mockIsHighlightable = vi.fn().mockReturnValue(false);
@@ -70,6 +77,7 @@ describe('CodeTool', () => {
     mockIsHighlightable.mockReturnValue(false);
     mockApplyHighlights.mockReturnValue(() => {});
     mockIsHighlightingSupported.mockReturnValue(false);
+    mockDetectLanguage.mockResolvedValue(null);
   });
   afterEach(() => {
     vi.restoreAllMocks();
@@ -586,7 +594,7 @@ describe('CodeTool', () => {
 
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'x = 1', language: 'javascript' }));
-      tool.render();
+      const el = tool.render();
 
       const settings = tool.renderSettings() as Array<{ children: { items: Array<{ onActivate: () => void; title: string }> } }>;
       const pythonItem = settings[0].children.items.find((i) => i.title === 'Python');
@@ -595,9 +603,13 @@ describe('CodeTool', () => {
       await vi.waitFor(() => {
         expect(mockTokenizeCode).toHaveBeenCalledWith(expect.any(String), 'python');
       });
+
+      // Verify observable behavior: language button text updates to the new language
+      const langBtn = el.querySelector('[data-blok-testid="code-language-btn"]')!;
+      expect(langBtn.querySelector('span')!.textContent).toBe('Python');
     });
 
-    it('disposes highlights in removed()', async () => {
+    it('disposes highlights in removed() and re-renders cleanly', async () => {
       const mockCleanup = vi.fn();
       mockIsHighlightingSupported.mockReturnValue(true);
       mockIsHighlightable.mockReturnValue(true);
@@ -618,6 +630,12 @@ describe('CodeTool', () => {
 
       tool.removed();
       expect(mockCleanup).toHaveBeenCalled();
+
+      // Verify observable behavior: tool can re-render correctly and save data is intact
+      const el2 = tool.render();
+      const savedData = tool.save(el2);
+      expect(savedData.code).toBe('test');
+      expect(savedData.language).toBe('javascript');
     });
   });
 
@@ -653,7 +671,7 @@ describe('CodeTool', () => {
 
       // Simulate typing a new line
       codeEl.textContent = 'line 1\nline 2\nline 3';
-      codeEl.dispatchEvent(new Event('input', { bubbles: true }));
+      simulateInput(codeEl);
 
       expect(gutter.children).toHaveLength(3);
     });
@@ -682,8 +700,7 @@ describe('CodeTool', () => {
 
       // Dispatch keydown Enter — handled by handleCodeKeydown which inserts
       // '\n' via Range API; preventDefault suppresses the native input event
-      const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
-      codeEl.dispatchEvent(enterEvent);
+      simulateKeydown(codeEl, 'Enter');
 
       // Gutter must update immediately — not wait for the next input event
       expect(gutter.children).toHaveLength(2);
@@ -710,7 +727,7 @@ describe('CodeTool', () => {
       selection.addRange(range);
 
       // Press Enter at end of text
-      codeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      simulateKeydown(codeEl, 'Enter');
 
       // A <br> sentinel should be appended so the browser renders the empty line
       expect(codeEl.lastChild).toBeInstanceOf(HTMLBRElement);
@@ -736,7 +753,7 @@ describe('CodeTool', () => {
       selection.removeAllRanges();
       selection.addRange(range);
 
-      codeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      simulateKeydown(codeEl, 'Enter');
 
       // No BR needed — newline is followed by "world"
       expect(codeEl.lastChild).not.toBeInstanceOf(HTMLBRElement);
@@ -761,13 +778,13 @@ describe('CodeTool', () => {
       selection.removeAllRanges();
       selection.addRange(range);
 
-      codeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      simulateKeydown(codeEl, 'Enter');
       expect(codeEl.lastChild).toBeInstanceOf(HTMLBRElement);
 
       // Simulate user typing on the new line (browser modifies text node)
       const textNode = codeEl.firstChild!;
       (textNode as Text).data = 'hello\nx';
-      codeEl.dispatchEvent(new Event('input', { bubbles: true }));
+      simulateInput(codeEl);
 
       // BR should be removed — content no longer ends with \n
       expect(codeEl.lastChild).not.toBeInstanceOf(HTMLBRElement);
@@ -791,7 +808,7 @@ describe('CodeTool', () => {
       selection.removeAllRanges();
       selection.addRange(range);
 
-      codeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      simulateKeydown(codeEl, 'Enter');
 
       // save() should return the text content without the BR
       const data = tool.save(el);
@@ -966,6 +983,146 @@ describe('CodeTool', () => {
       // Button should contain both text and an SVG chevron
       expect(langBtn.querySelector('svg')).toBeTruthy();
       expect(langBtn.textContent).toContain('JavaScript');
+    });
+  });
+
+  describe('language detection', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('schedules detection on input event', async () => {
+      mockDetectLanguage.mockResolvedValue('python');
+
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: '', language: 'plain text' }));
+      vi.useFakeTimers();
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      codeEl.textContent = 'import numpy as np';
+      simulateInput(codeEl);
+
+      // Advance past the 600ms debounce
+      await vi.advanceTimersByTimeAsync(600);
+      expect(mockDetectLanguage).toHaveBeenCalled();
+
+      // Allow the detection promise to resolve and rebuild the picker
+      await vi.advanceTimersByTimeAsync(0);
+
+      // Verify observable behavior: renderSettings() now includes detected language
+      const settings = tool.renderSettings() as Array<{
+        children: { items: Array<{ title: string; secondaryLabel?: string }> };
+      }>;
+      const items = settings[0].children.items;
+      const detectedItem = items.find((i) => i.secondaryLabel === 'auto');
+      expect(detectedItem).toBeDefined();
+      expect(detectedItem!.title).toBe('Python');
+
+      el.remove();
+    });
+
+    it('includes detected language item in picker when detected differs from chosen', async () => {
+      // Set up detection to return 'javascript' when called
+      mockDetectLanguage.mockResolvedValue('javascript');
+
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'const x = 1;', language: 'typescript' }));
+      vi.useFakeTimers();
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      simulateInput(codeEl);
+      await vi.advanceTimersByTimeAsync(600);
+      // Allow detection promise to resolve
+      await vi.advanceTimersByTimeAsync(0);
+
+      // Inspect via public renderSettings()
+      const settings = tool.renderSettings() as Array<{
+        children: { items: Array<{ title: string; secondaryLabel?: string; icon?: string }> };
+      }>;
+      const items = settings[0].children.items;
+
+      // First item should be detected language with 'auto' label
+      expect(items[0].title).toBe('JavaScript');
+      expect(items[0].secondaryLabel).toBe('auto');
+
+      // There should also be the chosen language (TypeScript) in the list
+      const chosenItem = items.find((i) => i.title === 'TypeScript');
+      expect(chosenItem).toBeDefined();
+      expect(chosenItem!.icon).toBeDefined();
+
+      el.remove();
+      vi.useRealTimers();
+    });
+
+    it('does not show detected section when detected matches chosen language', async () => {
+      // Detection returns same language as chosen
+      mockDetectLanguage.mockResolvedValue('javascript');
+
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'const x = 1;', language: 'javascript' }));
+      vi.useFakeTimers();
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      simulateInput(codeEl);
+      await vi.advanceTimersByTimeAsync(600);
+      await vi.advanceTimersByTimeAsync(0);
+
+      const settings = tool.renderSettings() as Array<{
+        children: { items: Array<{ title: string; secondaryLabel?: string; icon?: string }> };
+      }>;
+      const items = settings[0].children.items;
+
+      // Should start with the chosen language (no detected section with 'auto' label)
+      const detectedItem = items.find((i) => i.secondaryLabel === 'auto');
+      expect(detectedItem).toBeUndefined();
+
+      // First item should be JavaScript with check icon
+      expect(items[0].title).toBe('JavaScript');
+      expect(items[0].icon).toBeDefined();
+
+      el.remove();
+      vi.useRealTimers();
+    });
+
+    it('does not show detected section when detection returns null', async () => {
+      mockDetectLanguage.mockResolvedValue(null);
+
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: '', language: 'plain text' }));
+      vi.useFakeTimers();
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      simulateInput(codeEl);
+      await vi.advanceTimersByTimeAsync(600);
+      await vi.advanceTimersByTimeAsync(0);
+
+      const settings = tool.renderSettings() as Array<{
+        children: { items: Array<{ title: string; secondaryLabel?: string; icon?: string }> };
+      }>;
+      const items = settings[0].children.items;
+
+      // No detected section
+      const detectedItem = items.find((i) => i.secondaryLabel === 'auto');
+      expect(detectedItem).toBeUndefined();
+
+      // First item should be Plain Text with check icon
+      expect(items[0].title).toBe('Plain Text');
+      expect(items[0].icon).toBeDefined();
+
+      el.remove();
+      vi.useRealTimers();
     });
   });
 });

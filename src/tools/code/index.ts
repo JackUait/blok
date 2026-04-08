@@ -10,7 +10,7 @@ import type {
 } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import type { CodeData } from '../../../types/tools/code';
-import { IconCodeBlock, IconCheck } from '../../components/icons';
+import { IconCodeBlock, IconCheck, IconWand } from '../../components/icons';
 import { buildCodeDOM, setActiveViewMode } from './dom-builder';
 import type { CodeDOMRefs } from './dom-builder';
 import { handleCodeKeydown } from './code-keyboard';
@@ -40,6 +40,7 @@ import { renderLatex } from './katex-loader';
 import { renderMermaid } from './mermaid-loader';
 import { tokenizeCode, isHighlightable } from './shiki-loader';
 import { applyHighlights, isHighlightingSupported } from './highlight-applier';
+import { detectLanguage } from './language-detector';
 
 const COPIED_FEEDBACK_DURATION = 1500;
 
@@ -54,6 +55,8 @@ export class CodeTool implements BlockTool {
   private _previewContainer: HTMLElement | null = null;
   private _disposeHighlights: (() => void) | null = null;
   private _highlightRafId: number | null = null;
+  private _detectedLanguage: string | null = null;
+  private _detectionTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   constructor({ data, api, readOnly }: BlockToolConstructorOptions<CodeData>) {
     this.api = api;
@@ -143,6 +146,7 @@ export class CodeTool implements BlockTool {
         this.syncTrailingBr();
         this.updateGutter();
         this.scheduleHighlight();
+        this.scheduleDetection();
       });
     }
 
@@ -273,32 +277,51 @@ export class CodeTool implements BlockTool {
 
   public renderSettings(): MenuConfig {
     const selectedId = this._data.language;
+    const detectedId = this._detectedLanguage;
+    const showDetected = detectedId !== null && detectedId !== selectedId;
     const selectedLanguage = LANGUAGES.find((lang) => lang.id === selectedId) ?? LANGUAGES[0];
-    const otherLanguages = LANGUAGES.filter((lang) => lang.id !== selectedId);
+    const otherLanguages = LANGUAGES.filter((lang) => lang.id !== selectedId && lang.id !== detectedId);
+
+    const childItems: PopoverItemParams[] = [];
+
+    if (showDetected) {
+      const detectedLanguage = LANGUAGES.find((lang) => lang.id === detectedId);
+      if (detectedLanguage) {
+        childItems.push({
+          title: detectedLanguage.name,
+          icon: IconWand,
+          secondaryLabel: 'auto',
+          onActivate: (): void => this.setLanguage(detectedLanguage.id),
+          closeOnActivate: true,
+          isActive: false,
+        });
+        childItems.push({ type: PopoverItemType.Separator });
+      }
+    }
+
+    childItems.push({
+      title: selectedLanguage.name,
+      icon: IconCheck,
+      onActivate: (): void => this.setLanguage(selectedLanguage.id),
+      closeOnActivate: true,
+      isActive: true,
+    });
+
+    childItems.push({ type: PopoverItemType.Separator });
+
+    childItems.push(...otherLanguages.map((lang) => ({
+      title: lang.name,
+      onActivate: (): void => this.setLanguage(lang.id),
+      closeOnActivate: true,
+      isActive: false,
+    })));
 
     return [
       {
         icon: IconCodeBlock,
         title: this.api.i18n.t(LANGUAGE_KEY),
         name: 'code-language',
-        children: {
-          items: [
-            {
-              title: selectedLanguage.name,
-              icon: IconCheck,
-              onActivate: (): void => this.setLanguage(selectedLanguage.id),
-              closeOnActivate: true,
-              isActive: true,
-            },
-            { type: PopoverItemType.Separator },
-            ...otherLanguages.map((lang) => ({
-              title: lang.name,
-              onActivate: (): void => this.setLanguage(lang.id),
-              closeOnActivate: true,
-              isActive: false,
-            })),
-          ],
-        },
+        children: { items: childItems },
       },
     ];
   }
@@ -351,32 +374,58 @@ export class CodeTool implements BlockTool {
    * Builds the language items array with the currently selected language
    * pinned at the top (with a check icon), followed by a separator, then
    * the remaining languages in their original order.
+   * When a detected language differs from the chosen one, it appears first
+   * with a wand icon and "auto" secondary label.
    */
   private buildLanguagePickerItems(): PopoverItemParams[] {
     const selectedId = this._data.language;
-    const otherLanguages = LANGUAGES.filter((lang) => lang.id !== selectedId);
-    const selectedLanguage = LANGUAGES.find((lang) => lang.id === selectedId) ?? LANGUAGES[0];
+    const detectedId = this._detectedLanguage;
+    const showDetected = detectedId !== null && detectedId !== selectedId;
 
-    return [
-      {
-        title: selectedLanguage.name,
-        name: selectedLanguage.id,
-        icon: IconCheck,
-        toggle: 'language',
-        isActive: (): boolean => this._data.language === selectedLanguage.id,
-        closeOnActivate: true,
-        onActivate: (): void => this.setLanguage(selectedLanguage.id),
-      },
-      { type: PopoverItemType.Separator },
-      ...otherLanguages.map((lang) => ({
-        title: lang.name,
-        name: lang.id,
-        toggle: 'language',
-        isActive: (): boolean => this._data.language === lang.id,
-        closeOnActivate: true,
-        onActivate: (): void => this.setLanguage(lang.id),
-      })),
-    ];
+    const selectedLanguage = LANGUAGES.find((lang) => lang.id === selectedId) ?? LANGUAGES[0];
+    const otherLanguages = LANGUAGES.filter((lang) => lang.id !== selectedId && lang.id !== detectedId);
+
+    const items: PopoverItemParams[] = [];
+
+    if (showDetected) {
+      const detectedLanguage = LANGUAGES.find((lang) => lang.id === detectedId);
+      if (detectedLanguage) {
+        items.push({
+          title: detectedLanguage.name,
+          name: detectedLanguage.id,
+          icon: IconWand,
+          secondaryLabel: 'auto',
+          toggle: 'language',
+          isActive: (): boolean => this._data.language === detectedLanguage.id,
+          closeOnActivate: true,
+          onActivate: (): void => this.setLanguage(detectedLanguage.id),
+        });
+        items.push({ type: PopoverItemType.Separator });
+      }
+    }
+
+    items.push({
+      title: selectedLanguage.name,
+      name: selectedLanguage.id,
+      icon: IconCheck,
+      toggle: 'language',
+      isActive: (): boolean => this._data.language === selectedLanguage.id,
+      closeOnActivate: true,
+      onActivate: (): void => this.setLanguage(selectedLanguage.id),
+    });
+
+    items.push({ type: PopoverItemType.Separator });
+
+    items.push(...otherLanguages.map((lang) => ({
+      title: lang.name,
+      name: lang.id,
+      toggle: 'language',
+      isActive: (): boolean => this._data.language === lang.id,
+      closeOnActivate: true,
+      onActivate: (): void => this.setLanguage(lang.id),
+    })));
+
+    return items;
   }
 
   /**
@@ -478,6 +527,30 @@ export class CodeTool implements BlockTool {
     });
   }
 
+  private scheduleDetection(): void {
+    if (this._detectionTimeoutId !== null) {
+      clearTimeout(this._detectionTimeoutId);
+    }
+
+    this._detectionTimeoutId = setTimeout(() => {
+      this._detectionTimeoutId = null;
+      const code = this._dom?.codeElement.textContent ?? '';
+      void detectLanguage(code).then((detected) => {
+        if (detected === this._detectedLanguage) {
+          return;
+        }
+        this._detectedLanguage = detected;
+        // Rebuild picker so the detected language section updates
+        if (this._dom) {
+          if (this._picker) {
+            this._picker.destroy();
+          }
+          this._picker = this.buildLanguagePicker(this._dom.languageButton, this._dom.wrapper);
+        }
+      });
+    }, 600);
+  }
+
   private async highlightCode(): Promise<void> {
     if (!isHighlightingSupported() || !isHighlightable(this._data.language)) {
       this._disposeHighlights?.();
@@ -517,6 +590,11 @@ export class CodeTool implements BlockTool {
     if (this._highlightRafId !== null) {
       cancelAnimationFrame(this._highlightRafId);
       this._highlightRafId = null;
+    }
+
+    if (this._detectionTimeoutId !== null) {
+      clearTimeout(this._detectionTimeoutId);
+      this._detectionTimeoutId = null;
     }
 
     if (this._picker) {

@@ -1215,4 +1215,34 @@ describe('DatabaseTool', () => {
       expect(saved.activeViewId).toBe('stable-view-1');
     });
   });
+
+  describe('getToolbarAnchorElement', () => {
+    it('returns the outer wrapper element so the toolbar positions at block top, not inside deeply nested content', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+      const rendered = tool.render();
+
+      document.body.appendChild(rendered);
+
+      const anchor = tool.getToolbarAnchorElement();
+
+      // The anchor must be the outer wrapper (what render() returns), not an inner element
+      expect(anchor).toBe(rendered);
+
+      // Verify the board container IS a descendant, proving anchor is the outer wrapper
+      const boardContainer = rendered.querySelector('[data-blok-database-board-container]');
+
+      expect(boardContainer).not.toBeNull();
+      expect(anchor).not.toBe(boardContainer);
+      expect(anchor!.contains(boardContainer)).toBe(true);
+
+      rendered.remove();
+      tool.destroy();
+    });
+
+    it('returns undefined before render() is called', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+
+      expect(tool.getToolbarAnchorElement()).toBeUndefined();
+    });
+  });
 });

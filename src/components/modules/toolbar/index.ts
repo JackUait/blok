@@ -532,13 +532,19 @@ export class Toolbar extends Module<ToolbarNodes> {
      *
      * Uses Math.max to guarantee the actions container (positioned via right:100%)
      * never extends beyond the left edge of the viewport, which would make the
-      * drag handle unreachable by pointer events.
+     * drag handle unreachable by pointer events.
+     *
+     * For stretched blocks, reset to '' so CSS mx-auto can center the toolbar.
      */
-    if (blockContentElement && this.nodes.content) {
-      const blockMarginLeft = parseFloat(getComputedStyle(blockContentElement).marginLeft) || 0;
-      const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
+    if (this.nodes.content) {
+      if (targetBlock.stretched) {
+        this.nodes.content.style.marginLeft = '';
+      } else if (blockContentElement) {
+        const blockMarginLeft = parseFloat(getComputedStyle(blockContentElement).marginLeft) || 0;
+        const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
 
-      this.nodes.content.style.marginLeft = `${Math.max(blockMarginLeft, actionsWidth)}px`;
+        this.nodes.content.style.marginLeft = `${Math.max(blockMarginLeft, actionsWidth)}px`;
+      }
     }
   }
 

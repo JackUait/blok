@@ -179,6 +179,15 @@ export class DatabaseTool implements BlockTool {
     this.tabBar = null;
   }
 
+  /**
+   * Returns the outer wrapper element as the toolbar anchor so the toolbar
+   * vertically centers on the block's visual top, not on a deeply nested
+   * descendant (or falls back to pluginsContent when no contenteditable exists).
+   */
+  getToolbarAnchorElement(): HTMLElement | undefined {
+    return this.element ?? undefined;
+  }
+
   // ---------------------------------------------------------------------------
   // Row projection from child blocks
   // ---------------------------------------------------------------------------

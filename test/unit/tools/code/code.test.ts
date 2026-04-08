@@ -139,6 +139,28 @@ describe('CodeTool', () => {
       tool.removed();
     });
 
+    it('clicking language button toggles the picker (closes if already open)', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ language: 'javascript' }));
+      const el = tool.render();
+      const langBtn = el.querySelector('[data-blok-testid="code-language-btn"]') as HTMLButtonElement;
+
+      // First click opens the popover
+      langBtn.click();
+      const popover = document.querySelector('[data-blok-popover-opened]');
+
+      expect(popover).not.toBeNull();
+
+      // Second click on the same button should close the popover
+      langBtn.click();
+      const popoverAfterSecondClick = document.querySelector('[data-blok-popover-opened]');
+
+      expect(popoverAfterSecondClick).toBeNull();
+
+      // Clean up
+      tool.removed();
+    });
+
     it('removed() cleans up popover from document.body', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions());

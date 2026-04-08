@@ -153,7 +153,11 @@ export class CodeTool implements BlockTool {
       this._picker = this.buildLanguagePicker(dom.languageButton, dom.wrapper);
 
       dom.languageButton.addEventListener('click', () => {
-        this._picker?.show();
+        if (this._picker?.isShown) {
+          this._picker.hide();
+        } else {
+          this._picker?.show();
+        }
       });
     }
 

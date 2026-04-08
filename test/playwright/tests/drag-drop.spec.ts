@@ -1139,17 +1139,10 @@ test.describe('drag and drop', () => {
       expect(getBlockDepth(savedData?.blocks[3])).toBe(2);         // Deep A1: depth 2 ← this fails without the fix
     });
 
-    // FIXME: These tests have never passed since they were added. The issue is related to
-    // how the toolbar's content offset (translateX) interacts with drag detection when
-    // dragging nested list items. The settings button for nested items is positioned far
-    // to the right (x=310 vs x=1 for root items), which appears to interfere with either:
-    // 1. The drag threshold detection
-    // 2. The drop target element detection (elementFromPoint)
-    // 3. The coordinate calculations for drop target detection
-    //
-    // The descendants ARE correctly found ( ListItemDescendants works properly), but
-    // the actual drag operation doesn't execute - blocks remain in their original positions.
-    test.skip('should drag nested item with its own children', async ({ page }) => {
+    // Previously skipped due to toolbar content offset (translateX) interfering with drag
+    // detection for nested list items. Fixed in commit 9d7f0c49 by restoring drag handle
+    // reachability for all block types (toolbar/positioning.ts applyContentOffset fix).
+    test('should drag nested item with its own children', async ({ page }) => {
       // Create a deeply nested list:
       // - First (depth 0)
       //   - Nested A (depth 1) <- drag this
@@ -1189,7 +1182,7 @@ test.describe('drag and drop', () => {
       expect(getBlockText(savedData?.blocks[3])).toBe('Deep A1');
     });
 
-    test.skip('should drag deepest nested item alone (no children)', async ({ page }) => {
+    test('should drag deepest nested item alone (no children)', async ({ page }) => {
       // Create a nested list where the dragged item has no children:
       // - First (depth 0)
       //   - Nested A (depth 1)

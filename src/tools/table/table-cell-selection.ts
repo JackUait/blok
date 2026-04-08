@@ -466,6 +466,14 @@ export class TableCellSelection {
       return;
     }
 
+    // For single-cell selections, if the user has a non-collapsed native text
+    // selection within the cell's contenteditable (i.e., they selected specific
+    // text characters), defer to the browser's native copy so their text
+    // selection is copied rather than the whole cell block structure.
+    if (this.selectedCells.length <= 1 && this.hasNativeTextSelection()) {
+      return;
+    }
+
     e.preventDefault();
     this.onCopy?.([...this.selectedCells], e.clipboardData);
   }
@@ -475,10 +483,28 @@ export class TableCellSelection {
       return;
     }
 
+    // For single-cell selections, if the user has a non-collapsed native text
+    // selection within the cell's contenteditable, defer to the browser's native
+    // cut so their text selection is cut rather than clearing the entire cell.
+    if (this.selectedCells.length <= 1 && this.hasNativeTextSelection()) {
+      return;
+    }
+
     e.preventDefault();
     this.onCut?.([...this.selectedCells], e.clipboardData);
     this.onClearContent?.([...this.selectedCells]);
     this.clearSelection();
+  }
+
+  /**
+   * Returns true if the browser has a non-collapsed text selection (i.e. the
+   * user has selected one or more characters inside a contenteditable), as
+   * opposed to a mere caret position or no selection at all.
+   */
+  private hasNativeTextSelection(): boolean {
+    const selection = window.getSelection();
+
+    return selection !== null && !selection.isCollapsed;
   }
 
   private clearSelection(): void {
@@ -936,6 +962,23 @@ export class TableCellSelection {
       return null;
     }
 
+    // Prefer logical coordinate attributes stamped by reindexCoordinates() —
+    // these are correct even when rows have fewer physical <td> elements than
+    // logical columns (e.g. after a colspan/rowspan merge).
+    const cellRowAttr = cell.getAttribute(CELL_ROW_ATTR);
+    const cellColAttr = cell.getAttribute(CELL_COL_ATTR);
+
+    if (cellRowAttr !== null && cellColAttr !== null) {
+      const rowIndex = parseInt(cellRowAttr, 10);
+      const colIndex = parseInt(cellColAttr, 10);
+
+      if (!isNaN(rowIndex) && !isNaN(colIndex)) {
+        return { row: rowIndex, col: colIndex };
+      }
+    }
+
+    // Fallback: physical DOM index — only used for grids without coordinate
+    // attributes (e.g. legacy non-table grid elements).
     const rows = Array.from(this.grid.querySelectorAll(`[${ROW_ATTR}]`));
     const rowIndex = rows.indexOf(row);
 

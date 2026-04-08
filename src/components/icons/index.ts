@@ -5,6 +5,19 @@ export const IconCheck = `
 </svg>
 `;
 
+// Wand/Auto-detect icon
+export const IconWand = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M3.5 16.5L12 8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M10 6l1.5-1.5 1 1L11 7l-1-1Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M14 4l.5-.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M16 6l.5-.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M14 8l.5.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M12 4l.5.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M16 4l.5.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
 // Cross/Close icon
 export const IconCross = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">

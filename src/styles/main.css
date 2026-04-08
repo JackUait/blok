@@ -1986,6 +1986,12 @@
   right: 0;
 }
 
+/* Database Title */
+[data-blok-database-title] {
+  padding-left: max(0px, calc((100% - var(--max-width-content)) / 2));
+  padding-right: max(0px, calc((100% - var(--max-width-content)) / 2));
+}
+
 /* Database Tab Bar */
 [data-blok-database-tab-bar] {
   display: flex;

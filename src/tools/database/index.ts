@@ -3,6 +3,7 @@ import type { DatabaseData, DatabaseConfig, DatabaseRow, DatabaseRowData, ViewTy
 import { DatabaseModel } from './database-model';
 import { DatabaseBoardView } from './database-board-view';
 import { DatabaseListView } from './database-list-view';
+import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { DatabaseBackendSync } from './database-backend-sync';
 import { DatabaseCardDrag } from './database-card-drag';
@@ -30,12 +31,14 @@ export class DatabaseTool implements BlockTool {
   private readonly readOnly: boolean;
   private readonly config: DatabaseConfig;
 
+  private title: string;
   private activeViewId: string;
   private model: DatabaseModel;
   private view!: DatabaseViewRenderer;
   private sync!: DatabaseBackendSync;
 
   private element: HTMLDivElement | null = null;
+  private titleElement: HTMLElement | null = null;
   private boardContainer: HTMLDivElement | null = null;
   private tabBar: DatabaseTabBar | null = null;
 
@@ -52,6 +55,7 @@ export class DatabaseTool implements BlockTool {
     this.readOnly = readOnly;
     this.config = config ?? {};
 
+    this.title = (data as DatabaseData | undefined)?.title ?? '';
     this.model = new DatabaseModel(data as DatabaseData | undefined);
     const views = this.model.getViews();
     this.activeViewId = (data as DatabaseData | undefined)?.activeViewId ?? (views.length > 0 ? views[0].id : '');
@@ -90,6 +94,10 @@ export class DatabaseTool implements BlockTool {
     wrapper.style.flexDirection = 'column';
     this.element = wrapper;
 
+    const titleEl = this.createTitleElement();
+    this.titleElement = titleEl;
+    wrapper.appendChild(titleEl);
+
     if (!this.readOnly) {
       this.tabBar = this.createTabBar();
       wrapper.appendChild(this.tabBar.render());
@@ -112,6 +120,36 @@ export class DatabaseTool implements BlockTool {
     }
 
     return wrapper;
+  }
+
+  private createTitleElement(): HTMLElement {
+    const titleEl = document.createElement('div');
+    titleEl.setAttribute('data-blok-database-title', '');
+    titleEl.textContent = this.title;
+
+    titleEl.style.fontSize = '1.5rem';
+    titleEl.style.fontWeight = '600';
+    titleEl.style.lineHeight = '1.3';
+    titleEl.style.color = 'var(--blok-text-primary)';
+    titleEl.style.marginBottom = '4px';
+    titleEl.style.outline = 'none';
+    titleEl.style.cursor = 'text';
+    titleEl.style.wordBreak = 'break-word';
+
+    titleEl.className = PLACEHOLDER_CLASSES.join(' ');
+    setupPlaceholder(titleEl, 'New database');
+
+    if (!this.readOnly) {
+      titleEl.setAttribute('contenteditable', 'true');
+      titleEl.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === 'Tab') {
+          e.preventDefault();
+          titleEl.blur();
+        }
+      });
+    }
+
+    return titleEl;
   }
 
   rendered(): void {
@@ -148,8 +186,11 @@ export class DatabaseTool implements BlockTool {
   }
 
   save(_blockContent: HTMLElement): DatabaseData {
+    const currentTitle = this.titleElement?.textContent ?? this.title;
+
     return {
       ...this.model.snapshot(),
+      title: currentTitle,
       activeViewId: this.activeViewId,
     };
   }

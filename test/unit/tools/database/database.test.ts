@@ -147,6 +147,95 @@ describe('DatabaseTool', () => {
 
       expect(columns).toHaveLength(3);
     });
+
+    it('renders a title element with data-blok-database-title attribute', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+      const element = tool.render();
+      const titleEl = element.querySelector('[data-blok-database-title]');
+
+      expect(titleEl).not.toBeNull();
+    });
+
+    it('renders title text from data.title when provided', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({ title: 'My Project' }));
+      const element = tool.render();
+      const titleEl = element.querySelector('[data-blok-database-title]');
+
+      expect(titleEl?.textContent).toBe('My Project');
+    });
+
+    it('renders empty title element when data.title is not provided', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+      const element = tool.render();
+      const titleEl = element.querySelector('[data-blok-database-title]');
+
+      expect(titleEl?.textContent).toBe('');
+    });
+
+    it('renders title element with data-placeholder="New database" when no title provided', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+      const element = tool.render();
+      const titleEl = element.querySelector('[data-blok-database-title]');
+
+      expect(titleEl?.getAttribute('data-placeholder')).toBe('New database');
+    });
+
+    it('renders title element with data-placeholder even when title is provided', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({ title: 'My Project' }));
+      const element = tool.render();
+      const titleEl = element.querySelector('[data-blok-database-title]');
+
+      expect(titleEl?.getAttribute('data-placeholder')).toBe('New database');
+    });
+
+    it('renders title before the tab bar', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+      const element = tool.render();
+      const children = Array.from(element.children);
+      const titleIndex = children.findIndex((el) => el.hasAttribute('data-blok-database-title'));
+      const tabBarIndex = children.findIndex((el) => el.hasAttribute('data-blok-database-tab-bar'));
+
+      expect(titleIndex).toBeGreaterThanOrEqual(0);
+      expect(tabBarIndex).toBeGreaterThan(titleIndex);
+    });
+
+    it('renders title as contenteditable in edit mode', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+      const element = tool.render();
+      const titleEl = element.querySelector('[data-blok-database-title]');
+
+      expect(titleEl?.getAttribute('contenteditable')).toBe('true');
+    });
+
+    it('renders title as non-editable in read-only mode', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: true }));
+      const element = tool.render();
+      const titleEl = element.querySelector('[data-blok-database-title]');
+
+      expect(titleEl?.getAttribute('contenteditable')).not.toBe('true');
+    });
+
+    it('blurs title on Enter key', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+      const element = tool.render();
+      const titleEl = element.querySelector('[data-blok-database-title]') as HTMLElement;
+      const blurSpy = vi.spyOn(titleEl, 'blur');
+
+      fireEvent.keyDown(titleEl, { key: 'Enter' });
+
+      expect(blurSpy).toHaveBeenCalled();
+    });
+
+    it('blurs title on Tab key', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+      const element = tool.render();
+      const titleEl = element.querySelector('[data-blok-database-title]') as HTMLElement;
+      const blurSpy = vi.spyOn(titleEl, 'blur');
+
+      fireEvent.keyDown(titleEl, { key: 'Tab' });
+
+      expect(blurSpy).toHaveBeenCalled();
+    });
   });
 
   describe('save()', () => {
@@ -165,6 +254,38 @@ describe('DatabaseTool', () => {
       expect(saved.schema.length).toBeGreaterThan(0);
       expect(Array.isArray(saved.views)).toBe(true);
       expect(saved.views.length).toBeGreaterThan(0);
+    });
+
+    it('saves title from data.title when provided', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({ title: 'Sprint 1' }));
+
+      tool.render();
+
+      const saved = tool.save(document.createElement('div'));
+
+      expect(saved.title).toBe('Sprint 1');
+    });
+
+    it('saves empty string when no title provided (placeholder is not persisted)', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+
+      tool.render();
+
+      const saved = tool.save(document.createElement('div'));
+
+      expect(saved.title).toBe('');
+    });
+
+    it('saves updated title after editing the title element', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({ title: 'Original' }));
+      const element = tool.render();
+      const titleEl = element.querySelector('[data-blok-database-title]') as HTMLElement;
+
+      titleEl.textContent = 'Updated title';
+
+      const saved = tool.save(document.createElement('div'));
+
+      expect(saved.title).toBe('Updated title');
     });
   });
 

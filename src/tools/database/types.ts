@@ -73,6 +73,7 @@ export interface DatabaseViewConfig {
  * Schema and views only — rows are child blocks (database-row type).
  */
 export interface DatabaseData extends BlockToolData {
+  title?: string;
   schema: PropertyDefinition[];
   views: DatabaseViewConfig[];
   activeViewId: string;

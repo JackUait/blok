@@ -316,8 +316,6 @@ describe('TableRowColControls', () => {
       table.appendChild(tbody);
       table.getBoundingClientRect = vi.fn().mockReturnValue(containerBCR);
 
-      let originCellEl: HTMLTableCellElement | null = null;
-
       for (let r = 0; r < rowCount; r++) {
         const tr = document.createElement('tr');
 
@@ -334,7 +332,6 @@ describe('TableRowColControls', () => {
           originCell.setAttribute(CELL_COL_ATTR, '0');
           originCell.rowSpan = rowCount;
           originCell.getBoundingClientRect = vi.fn().mockReturnValue(mergedCellBCR);
-          originCellEl = originCell;
           tr.appendChild(originCell);
 
           // Second column cell (non-merged)

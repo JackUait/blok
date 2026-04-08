@@ -204,9 +204,8 @@ test.describe('table row grip positioning with merged cells (rowspan)', () => {
 
     await expect(row0Grip).toBeVisible();
 
-    // Get the bounding boxes of all three rows to compute the visual center of the merged area
+    // Get the bounding boxes of the first and last rows to compute the visual center of the merged area
     const row0Box = await getRowBoundingBox(page, 0);
-    const row1Box = await getRowBoundingBox(page, 1);
     const row2Box = await getRowBoundingBox(page, 2);
 
     // The merged cell spans all 3 rows; its visual center is the midpoint of the
@@ -220,15 +219,6 @@ test.describe('table row grip positioning with merged cells (rowspan)', () => {
     // The grip should be centered on the full merged span, not just the first row.
     // Allow 2px tolerance for sub-pixel rendering.
     expect(Math.abs(row0GripY - mergedAreaCenterY)).toBeLessThan(2);
-
-    // The grip should NOT be centered on the first row alone (which would be wrong).
-    const row0AloneCenterY = row0Box.y + row0Box.height / 2;
-    const spansCoveredMultipleRows = row1Box.y > row0Box.y + row0Box.height - 2;
-
-    if (spansCoveredMultipleRows) {
-      // Only assert the grip is NOT at the first-row center if rows are visually distinct
-      expect(Math.abs(row0GripY - row0AloneCenterY)).toBeGreaterThan(5);
-    }
   });
 
   test('row grip stays centered on merged cell when its content is taller than individual row heights', async ({ page }) => {

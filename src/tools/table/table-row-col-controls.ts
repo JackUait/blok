@@ -423,20 +423,13 @@ export class TableRowColControls {
       // Find the cell with the maximum rowSpan in this row to correctly
       // center the grip over merged cells that span multiple rows.
       const cellsInRow = this.grid.querySelectorAll<HTMLElement>(`[${CELL_ROW_ATTR}="${i}"]`);
-      let maxRowSpan = 1;
-      let originCell: HTMLTableCellElement | null = null;
-
-      cellsInRow.forEach((cell) => {
+      const originCell = Array.from(cellsInRow).reduce<HTMLTableCellElement | null>((best, cell) => {
         const tdCell = cell as HTMLTableCellElement;
-        const span = tdCell.rowSpan || 1;
+        const bestSpan = best !== null ? best.rowSpan || 1 : 0;
 
-        if (span > maxRowSpan) {
-          maxRowSpan = span;
-          originCell = tdCell;
-        }
-      });
-
-      let centerY: number;
+        return (tdCell.rowSpan || 1) > bestSpan ? tdCell : best;
+      }, null);
+      const maxRowSpan = originCell !== null ? (originCell.rowSpan || 1) : 1;
 
       if (maxRowSpan > 1 && originCell !== null) {
         // Use getBoundingClientRect() on the origin cell to get its actual rendered
@@ -446,17 +439,19 @@ export class TableRowColControls {
         // the full visual contribution of the merged content).
         const container = this.overlay ?? this.grid;
         const containerRect = container.getBoundingClientRect();
-        const cellRect = (originCell as HTMLTableCellElement).getBoundingClientRect();
+        const cellRect = originCell.getBoundingClientRect();
+        const centerY = cellRect.top - containerRect.top + cellRect.height / 2;
+        const style = grip.style;
 
-        centerY = cellRect.top - containerRect.top + cellRect.height / 2;
+        style.left = `${-BORDER_WIDTH / 2}px`;
+        style.top = `${centerY}px`;
       } else {
-        centerY = rowEl.offsetTop + rowEl.offsetHeight / 2;
+        const centerY = rowEl.offsetTop + rowEl.offsetHeight / 2;
+        const style = grip.style;
+
+        style.left = `${-BORDER_WIDTH / 2}px`;
+        style.top = `${centerY}px`;
       }
-
-      const style = grip.style;
-
-      style.left = `${-BORDER_WIDTH / 2}px`;
-      style.top = `${centerY}px`;
     });
   }
 

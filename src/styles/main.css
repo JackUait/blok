@@ -721,6 +721,9 @@
   --blok-database-card-border: rgba(0, 0, 0, 0.06);
   --blok-database-card-border-active: rgba(35, 131, 226, 0.57);
   --blok-database-card-placeholder: rgba(55, 53, 47, 0.4);
+  --blok-database-card-colored-overlay: var(--blok-database-card-bg);
+  --blok-database-card-colored-overlay-hover: var(--blok-database-card-bg-hover);
+  --blok-database-card-colored-border: var(--blok-database-card-border);
   --blok-database-column-bg: rgba(0, 0, 0, 0.04);
   --blok-database-add-text: rgba(55, 53, 47, 0.5);
   --blok-database-add-border: rgba(55, 53, 47, 0.25);
@@ -842,6 +845,9 @@
     --blok-database-card-border: rgba(255, 255, 255, 0.06);
     --blok-database-card-border-active: rgba(35, 131, 226, 0.7);
     --blok-database-card-placeholder: rgba(255, 255, 255, 0.3);
+    --blok-database-card-colored-overlay: rgba(255, 255, 255, 0.06);
+    --blok-database-card-colored-overlay-hover: rgba(255, 255, 255, 0.11);
+    --blok-database-card-colored-border: rgba(255, 255, 255, 0.07);
     --blok-database-column-bg: rgba(255, 255, 255, 0.05);
     --blok-database-add-text: rgba(255, 255, 255, 0.4);
     --blok-database-add-border: rgba(255, 255, 255, 0.2);
@@ -961,6 +967,9 @@
   --blok-database-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   --blok-database-card-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.45);
   --blok-database-card-border: rgba(255, 255, 255, 0.06);
+  --blok-database-card-colored-overlay: rgba(255, 255, 255, 0.06);
+  --blok-database-card-colored-overlay-hover: rgba(255, 255, 255, 0.11);
+  --blok-database-card-colored-border: rgba(255, 255, 255, 0.07);
   --blok-database-column-bg: rgba(255, 255, 255, 0.03);
   --blok-database-add-text: rgba(255, 255, 255, 0.4);
   --blok-database-add-border: rgba(255, 255, 255, 0.2);
@@ -1631,6 +1640,20 @@
 }
 
 /**
+ * Colored columns — cards use a transparent overlay so the column
+ * background color shows through, matching the "New page" button.
+ */
+[data-blok-database-column][data-color] [data-blok-database-card] {
+  background-color: var(--blok-database-card-colored-overlay);
+  box-shadow: none;
+  border-color: var(--blok-database-card-colored-border);
+}
+
+[data-blok-database-column][data-color] [data-blok-database-card]:hover {
+  background-color: var(--blok-database-card-colored-overlay-hover);
+}
+
+/**
  * During drag — smooth card displacement transitions.
  */
 [data-blok-database-dragging] [data-blok-database-card] {
@@ -1702,6 +1725,11 @@
   color: var(--blok-text-primary, inherit);
 }
 
+/* In colored columns, add-card keeps the accent color on hover too */
+[data-blok-database-column][data-color] [data-blok-database-add-card]:hover {
+  background-color: color-mix(in srgb, currentColor 8%, transparent);
+}
+
 [data-blok-database-add-column] {
   white-space: nowrap;
   align-self: flex-start;
@@ -1737,13 +1765,35 @@
 
 /**
  * Column header pill — rounded badge containing dot + title.
+ * When the column has a color, the pill gets a colored background (set inline via JS).
  */
 [data-blok-database-column-pill] {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 2px 4px;
-  border-radius: 4px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 20px;
+  flex: 0 0 auto;
+}
+
+/**
+ * In dark theme, colored pills use white text for legibility over the
+ * saturated background (overrides the inline color set by JS).
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-blok-theme="light"]) [data-blok-database-column][data-color] [data-blok-database-column-pill] {
+    color: rgba(255, 255, 255, 0.9) !important;
+  }
+  :root:not([data-blok-theme="light"]) [data-blok-database-column][data-color] [data-blok-database-column-dot] {
+    background-color: rgba(255, 255, 255, 0.9) !important;
+  }
+}
+
+[data-blok-theme="dark"] [data-blok-database-column][data-color] [data-blok-database-column-pill] {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+[data-blok-theme="dark"] [data-blok-database-column][data-color] [data-blok-database-column-dot] {
+  background-color: rgba(255, 255, 255, 0.9) !important;
 }
 
 /**

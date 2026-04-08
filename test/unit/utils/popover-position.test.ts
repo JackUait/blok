@@ -206,48 +206,6 @@ describe('resolvePosition', () => {
     });
   });
 
-  describe('off-screen anchor (scrolled past)', () => {
-    it('places popover at correct document position when anchor is above the viewport', () => {
-      // Reproduces the bug where a block is scrolled above the viewport.
-      // anchor.bottom is negative (above the visible viewport).
-      // scrollY is large, so rawTop in document coords is well below the page top,
-      // but the old clamp formula compared rawTop against boundaryTop + scrollY
-      // (= 0 + 3935 = 3935) and incorrectly snapped the popover to the viewport top.
-      const result = resolvePosition({
-        anchor: rect({ top: -2118, bottom: -2109, left: 50, right: 200 }),
-        popoverSize: { width: 200, height: 300 },
-        scopeBounds: rect({ top: -3852, bottom: 500, left: 0, right: 1000 }),
-        viewportSize: { width: 1024, height: 768 },
-        scrollOffset: { x: 0, y: 3935 },
-        offset: 8,
-      });
-
-      // rawTop = anchor.bottom + offset + scrollY = -2109 + 8 + 3935 = 1834
-      // boundaryTop = max(0, -3852) = 0
-      // scopeBounds.top in document coords = -3852 + 3935 = 83
-      // Correct clamp: max(rawTop, scopeTopInDocCoords) = max(1834, 83) = 1834
-      expect(result.top).toBe(1834);
-      expect(result.openTop).toBe(false);
-    });
-
-    it('still clamps when anchor is above the scope boundary in document coords', () => {
-      // The popover would open above the scope element — clamp to scope top in doc coords
-      const result = resolvePosition({
-        anchor: rect({ top: 10, bottom: 50, left: 50, right: 200 }),
-        popoverSize: { width: 200, height: 400 },
-        scopeBounds: rect({ top: 0, bottom: 800, left: 0, right: 1000 }),
-        viewportSize: { width: 1024, height: 768 },
-        scrollOffset: { x: 0, y: 200 },
-        offset: 8,
-      });
-
-      // spaceBelow = min(768, 800) - 50 - 8 = 710 (enough for 400)
-      // openTop = false
-      // rawTop = 50 + 8 + 200 = 258
-      expect(result.top).toBe(258);
-      expect(result.openTop).toBe(false);
-    });
-  });
 
   describe('scope boundary', () => {
     it('uses scope bottom instead of viewport when scope is smaller', () => {

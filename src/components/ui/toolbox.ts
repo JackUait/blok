@@ -341,13 +341,17 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     this.popover?.show();
 
     /**
-     * When opening toolbox inside a table cell, position it at the caret
-     * instead of at the trigger element (which is outside the table).
+     * When opening toolbox inside a table cell or a nested block (toggle, callout),
+     * position it at the caret instead of at the trigger element (which is outside
+     * the nested container).
      * Must be called after show() so the popover is in the DOM.
      */
-    const triggerHidden = this.triggerElement?.getBoundingClientRect().height === 0;
+    const triggerRect = this.triggerElement?.getBoundingClientRect();
+    const triggerHidden = triggerRect?.height === 0;
+    const triggerOffScreen = triggerRect !== undefined && triggerRect.bottom < 0;
+    const isInsideNestedBlock = currentBlock !== undefined && currentBlock.parentId !== null;
 
-    if ((this.isInsideTableCell || triggerHidden) && this.popover instanceof PopoverDesktop) {
+    if ((this.isInsideTableCell || triggerHidden || triggerOffScreen || isInsideNestedBlock) && this.popover instanceof PopoverDesktop) {
       const caretRect = SelectionUtils.rect;
 
       this.popover.updatePosition(caretRect);

@@ -1,6 +1,9 @@
 import { generateKeyBetween } from 'fractional-indexing';
 import { IconBoard, IconList, IconPencil, IconCopy, IconTrash, IconPlus } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
+import { PopoverDesktop } from '../../components/utils/popover';
+import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
+import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import type { DatabaseViewConfig, ViewType } from './types';
 
 const DRAG_THRESHOLD = 10;
@@ -31,8 +34,7 @@ export class DatabaseTabBar {
   private addBtnEl: HTMLElement | null = null;
   private readOnly: boolean;
   private viewPopover: DatabaseViewPopover | null = null;
-  private contextPopoverEl: HTMLElement | null = null;
-  private boundOutsideContextClick: ((e: MouseEvent) => void) | null = null;
+  private contextPopover: PopoverDesktop | null = null;
 
   private overflowDropdownEl: HTMLElement | null = null;
   private boundOverflowClose: ((e: MouseEvent) => void) | null = null;
@@ -114,6 +116,19 @@ export class DatabaseTabBar {
       this.openContextPopover(tab, viewId);
     });
 
+    bar.addEventListener('dblclick', (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const tab = target.closest('[data-blok-database-tab]');
+      if (!(tab instanceof HTMLElement)) {
+        return;
+      }
+      const viewId = tab.getAttribute('data-view-id');
+      if (viewId === null) {
+        return;
+      }
+      this.openContextPopover(tab, viewId);
+    });
+
     bar.addEventListener('pointerdown', (e) => {
       const target = e.target as HTMLElement;
       const tab = target.closest<HTMLElement>('[data-blok-database-tab]');
@@ -187,92 +202,62 @@ export class DatabaseTabBar {
   private openContextPopover(tab: HTMLElement, viewId: string): void {
     this.closeContextPopover();
 
-    const popover = document.createElement('div');
-    popover.setAttribute('data-blok-popover', '');
-    popover.setAttribute('data-blok-database-tab-context', '');
-    popover.style.position = 'fixed';
-    popover.style.zIndex = '1000';
+    const canDelete = this.options.views.length > 1;
 
-    const rect = tab.getBoundingClientRect();
-    popover.style.top = `${rect.bottom + 4}px`;
-    popover.style.left = `${rect.left}px`;
+    const baseItems = [
+      {
+        icon: IconPencil,
+        title: 'Rename',
+        closeOnActivate: true,
+        onActivate: () => {
+          this.startInlineRename(tab, viewId);
+        },
+      },
+      {
+        icon: IconCopy,
+        title: 'Duplicate',
+        closeOnActivate: true,
+        onActivate: () => {
+          this.options.onDuplicate(viewId);
+        },
+      },
+    ];
 
-    const renameItem = document.createElement('div');
-    renameItem.setAttribute('data-blok-database-tab-action', 'rename');
-    const renameIcon = document.createElement('span');
-    renameIcon.setAttribute('data-blok-database-tab-action-icon', '');
-    renameIcon.innerHTML = IconPencil;
-    renameItem.appendChild(renameIcon);
-    const renameLabel = document.createElement('span');
-    renameLabel.textContent = 'Rename';
-    renameItem.appendChild(renameLabel);
-    renameItem.addEventListener('click', () => {
-      this.closeContextPopover();
-      this.startInlineRename(tab, viewId);
+    const deleteItems = canDelete
+      ? [
+          { type: PopoverItemType.Separator as const },
+          {
+            icon: IconTrash,
+            title: 'Delete',
+            isDestructive: true,
+            closeOnActivate: true,
+            onActivate: () => {
+              this.options.onDelete(viewId);
+            },
+          },
+        ]
+      : [];
+
+    this.contextPopover = new PopoverDesktop({
+      trigger: tab,
+      width: 'auto',
+      minWidth: '160px',
+      autoFocusFirstItem: false,
+      items: [...baseItems, ...deleteItems],
     });
-    popover.appendChild(renameItem);
 
-    const duplicateItem = document.createElement('div');
-    duplicateItem.setAttribute('data-blok-database-tab-action', 'duplicate');
-    const duplicateIcon = document.createElement('span');
-    duplicateIcon.setAttribute('data-blok-database-tab-action-icon', '');
-    duplicateIcon.innerHTML = IconCopy;
-    duplicateItem.appendChild(duplicateIcon);
-    const duplicateLabel = document.createElement('span');
-    duplicateLabel.textContent = 'Duplicate';
-    duplicateItem.appendChild(duplicateLabel);
-    duplicateItem.addEventListener('click', () => {
-      this.closeContextPopover();
-      this.options.onDuplicate(viewId);
+    this.contextPopover.on(PopoverEvent.Closed, () => {
+      this.contextPopover?.destroy();
+      this.contextPopover = null;
     });
-    popover.appendChild(duplicateItem);
 
-    const separator = document.createElement('div');
-    separator.setAttribute('data-blok-database-tab-context-separator', '');
-    if (this.options.views.length === 1) {
-      separator.style.display = 'none';
-    }
-    popover.appendChild(separator);
-
-    const deleteItem = document.createElement('div');
-    deleteItem.setAttribute('data-blok-database-tab-action', 'delete');
-    const deleteIcon = document.createElement('span');
-    deleteIcon.setAttribute('data-blok-database-tab-action-icon', '');
-    deleteIcon.innerHTML = IconTrash;
-    deleteItem.appendChild(deleteIcon);
-    const deleteLabel = document.createElement('span');
-    deleteLabel.textContent = 'Delete';
-    deleteItem.appendChild(deleteLabel);
-    if (this.options.views.length === 1) {
-      deleteItem.style.display = 'none';
-    }
-    deleteItem.addEventListener('click', () => {
-      this.closeContextPopover();
-      this.options.onDelete(viewId);
-    });
-    popover.appendChild(deleteItem);
-
-    document.body.appendChild(popover);
-    this.contextPopoverEl = popover;
-
-    this.boundOutsideContextClick = (e: MouseEvent): void => {
-      const target = e.target as HTMLElement;
-      if (!popover.contains(target) && !tab.contains(target)) {
-        this.closeContextPopover();
-      }
-    };
-
-    document.addEventListener('mousedown', this.boundOutsideContextClick);
+    this.contextPopover.show();
   }
 
   private closeContextPopover(): void {
-    if (this.contextPopoverEl !== null) {
-      this.contextPopoverEl.remove();
-      this.contextPopoverEl = null;
-    }
-    if (this.boundOutsideContextClick !== null) {
-      document.removeEventListener('mousedown', this.boundOutsideContextClick);
-      this.boundOutsideContextClick = null;
+    if (this.contextPopover !== null) {
+      this.contextPopover.destroy();
+      this.contextPopover = null;
     }
   }
 
@@ -321,9 +306,15 @@ export class DatabaseTabBar {
     if (this.viewPopover !== null) {
       this.viewPopover.destroy();
     }
+    anchor.setAttribute('data-popover-open', '');
+    this.barEl?.setAttribute('data-popover-open', '');
     this.viewPopover = new DatabaseViewPopover({
       onSelect: (type) => {
         this.options.onAddView(type);
+      },
+      onClose: () => {
+        anchor.removeAttribute('data-popover-open');
+        this.barEl?.removeAttribute('data-popover-open');
       },
     });
     this.viewPopover.open(anchor);

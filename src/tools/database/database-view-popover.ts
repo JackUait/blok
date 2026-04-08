@@ -1,105 +1,121 @@
-import { IconBoard, IconGallery, IconList, IconTable } from '../../components/icons';
+import { IconBoard, IconList } from '../../components/icons';
+import { PopoverDesktop } from '../../components/utils/popover';
+import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
+import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import type { ViewType } from './types';
 
 interface ViewTypeOption {
   type: ViewType;
   icon: string;
   label: string;
-  disabled?: boolean;
+  description: string;
 }
 
 const VIEW_TYPES: ViewTypeOption[] = [
-  { type: 'board', icon: IconBoard, label: 'Board' },
-  { type: 'list', icon: IconList, label: 'List' },
-  { type: 'table', icon: IconTable, label: 'Table', disabled: true },
-  { type: 'gallery', icon: IconGallery, label: 'Gallery', disabled: true },
+  { type: 'board', icon: IconBoard, label: 'Board', description: 'Visualize work as columns' },
+  { type: 'list', icon: IconList, label: 'List', description: 'A simple linear view' },
 ];
 
 export interface ViewPopoverOptions {
   onSelect: (type: ViewType) => void;
+  onClose?: () => void;
 }
 
 export class DatabaseViewPopover {
   private readonly onSelect: (type: ViewType) => void;
-  private popoverEl: HTMLElement | null = null;
-  private boundOutsideClick: ((e: MouseEvent) => void) | null = null;
+  private readonly onClose: (() => void) | undefined;
+  private popover: PopoverDesktop | null = null;
 
   constructor(options: ViewPopoverOptions) {
     this.onSelect = options.onSelect;
+    this.onClose = options.onClose;
   }
 
   open(anchor: HTMLElement): void {
     this.close();
 
-    const popover = document.createElement('div');
-    popover.setAttribute('data-blok-popover', '');
-    popover.setAttribute('data-blok-database-view-popover', '');
-    popover.style.position = 'fixed';
-    popover.style.zIndex = '1000';
+    const headingEl = document.createElement('div');
 
-    const rect = anchor.getBoundingClientRect();
-    popover.style.top = `${rect.bottom + 4}px`;
-    popover.style.left = `${rect.left}px`;
+    headingEl.setAttribute('data-blok-database-view-popover-heading', '');
+    headingEl.textContent = 'Add view';
 
-    const heading = document.createElement('div');
-    heading.setAttribute('data-blok-database-view-popover-heading', '');
-    heading.textContent = 'Add a new view';
-    popover.appendChild(heading);
-
-    const grid = document.createElement('div');
-    grid.setAttribute('data-blok-database-view-popover-grid', '');
-    grid.style.display = 'grid';
-    grid.style.gridTemplateColumns = '1fr 1fr';
-    grid.style.gap = '2px';
-
-    for (const option of VIEW_TYPES) {
-      const item = document.createElement('div');
-      item.setAttribute('data-blok-database-view-option', option.type);
-
-      const iconEl = document.createElement('div');
-      iconEl.setAttribute('data-blok-database-view-option-icon', '');
-      iconEl.innerHTML = option.icon;
-      item.appendChild(iconEl);
-
-      const label = document.createElement('span');
-      label.textContent = option.label;
-      item.appendChild(label);
-
-      if (option.disabled === true) {
-        item.style.opacity = '0.35';
-        item.style.pointerEvents = 'none';
-      } else {
-        item.addEventListener('click', () => {
-          this.onSelect(option.type);
-          this.close();
-        });
-      }
-
-      grid.appendChild(item);
-    }
-
-    popover.appendChild(grid);
-    document.body.appendChild(popover);
-    this.popoverEl = popover;
-
-    this.boundOutsideClick = (e: MouseEvent): void => {
-      const target = e.target as HTMLElement;
-      if (!popover.contains(target) && !anchor.contains(target)) {
-        this.close();
-      }
+    const headingItem = {
+      type: PopoverItemType.Html as const,
+      element: headingEl,
     };
 
-    document.addEventListener('mousedown', this.boundOutsideClick);
+    const items = [
+      headingItem,
+      ...VIEW_TYPES.map((option) => {
+        const el = this.createViewItem(option);
+
+        return {
+          type: PopoverItemType.Html as const,
+          element: el,
+          closeOnActivate: true,
+        };
+      }),
+    ];
+
+    this.popover = new PopoverDesktop({
+      items,
+      trigger: anchor,
+      width: 'auto',
+      minWidth: '200px',
+      flippable: false,
+      autoFocusFirstItem: false,
+    });
+
+    this.popover.on(PopoverEvent.Closed, () => {
+      this.popover?.destroy();
+      this.popover = null;
+      this.onClose?.();
+    });
+
+    this.popover.show();
+  }
+
+  private createViewItem(option: ViewTypeOption): HTMLElement {
+    const item = document.createElement('div');
+
+    item.setAttribute('data-blok-database-view-option', option.type);
+
+    const iconEl = document.createElement('div');
+
+    iconEl.setAttribute('data-blok-database-view-option-icon', '');
+    iconEl.innerHTML = option.icon;
+    item.appendChild(iconEl);
+
+    const textEl = document.createElement('div');
+
+    textEl.setAttribute('data-blok-database-view-option-text', '');
+
+    const labelEl = document.createElement('span');
+
+    labelEl.setAttribute('data-blok-database-view-option-label', '');
+    labelEl.textContent = option.label;
+    textEl.appendChild(labelEl);
+
+    const descEl = document.createElement('span');
+
+    descEl.setAttribute('data-blok-database-view-option-desc', '');
+    descEl.textContent = option.description;
+    textEl.appendChild(descEl);
+
+    item.appendChild(textEl);
+
+    item.addEventListener('click', () => {
+      this.onSelect(option.type);
+    });
+
+    return item;
   }
 
   close(): void {
-    if (this.popoverEl !== null) {
-      this.popoverEl.remove();
-      this.popoverEl = null;
-    }
-    if (this.boundOutsideClick !== null) {
-      document.removeEventListener('mousedown', this.boundOutsideClick);
-      this.boundOutsideClick = null;
+    if (this.popover !== null) {
+      this.popover.destroy();
+      this.popover = null;
+      this.onClose?.();
     }
   }
 

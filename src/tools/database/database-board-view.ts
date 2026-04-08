@@ -200,6 +200,11 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
 
     countEl.setAttribute('data-blok-database-column-count', '');
     countEl.textContent = String(rows.length);
+
+    if (option.color !== undefined) {
+      countEl.style.color = `var(--blok-color-${option.color}-text)`;
+    }
+
     header.appendChild(countEl);
 
     columnEl.appendChild(header);

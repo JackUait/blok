@@ -2016,7 +2016,7 @@
  */
 [data-blok-database-column-count] {
   color: var(--blok-database-add-text);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
   margin-left: 2px;
   flex-shrink: 0;
@@ -2111,11 +2111,14 @@
   flex-shrink: 0;
 }
 
-[data-blok-database-tab-bar]:hover [data-blok-database-add-view] {
+[data-blok-database-tab-bar]:hover [data-blok-database-add-view],
+[data-blok-database-tab-bar][data-popover-open] [data-blok-database-add-view],
+[data-blok-database-add-view][data-popover-open] {
   opacity: 1;
 }
 
-[data-blok-database-add-view]:hover {
+[data-blok-database-add-view]:hover,
+[data-blok-database-add-view][data-popover-open] {
   background-color: var(--blok-database-tab-bg-hover);
 }
 
@@ -2133,9 +2136,7 @@
   background-color: var(--blok-database-tab-bg-hover);
 }
 
-/* View Popover */
-[data-blok-database-view-popover],
-[data-blok-database-tab-context],
+/* Overflow dropdown */
 [data-blok-database-tab-overflow-dropdown] {
   background: var(--blok-database-popover-bg);
   border-radius: 10px;
@@ -2143,31 +2144,24 @@
   padding: 6px;
 }
 
-[data-blok-database-view-popover] {
-  min-width: 220px;
-}
-
+/* View option items (rendered as Html items inside PopoverDesktop) */
 [data-blok-database-view-popover-heading] {
-  padding: 8px 8px 6px;
-  font-size: 12px;
-  font-weight: 500;
+  padding: 6px 8px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   color: var(--blok-database-tab-text);
-}
-
-[data-blok-database-view-popover-grid] {
-  padding: 0 0 4px;
 }
 
 [data-blok-database-view-option] {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 14px 8px;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 7px 8px;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 13px;
-  color: var(--blok-database-tab-text-active);
   transition: background-color 120ms ease;
 }
 
@@ -2179,61 +2173,37 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
   background: var(--blok-database-popover-hover);
-  color: var(--blok-database-tab-text);
+  color: var(--blok-database-tab-text-active);
+  flex-shrink: 0;
 }
 
 [data-blok-database-view-option-icon] svg {
-  width: 20px;
-  height: 20px;
-}
-
-/* Context popover actions */
-[data-blok-database-tab-context] {
-  min-width: 180px;
-}
-
-[data-blok-database-tab-action] {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 120ms ease;
-}
-
-[data-blok-database-tab-action]:hover {
-  background-color: var(--blok-database-popover-hover);
-}
-
-[data-blok-database-tab-action-icon] {
-  display: flex;
-  align-items: center;
-  color: var(--blok-database-tab-text);
-}
-
-[data-blok-database-tab-action-icon] svg {
   width: 16px;
   height: 16px;
 }
 
-[data-blok-database-tab-action="delete"] {
-  color: #eb5757;
+[data-blok-database-view-option-text] {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
 }
 
-[data-blok-database-tab-action="delete"] [data-blok-database-tab-action-icon] {
-  color: #eb5757;
+[data-blok-database-view-option-label] {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--blok-database-tab-text-active);
+  line-height: 1.3;
 }
 
-[data-blok-database-tab-context-separator] {
-  height: 1px;
-  margin: 4px 10px;
-  background-color: var(--blok-database-drawer-border);
+[data-blok-database-view-option-desc] {
+  font-size: 11px;
+  color: var(--blok-database-tab-text);
+  line-height: 1.3;
 }
 
 /* Overflow dropdown items */

@@ -1575,18 +1575,9 @@ export class Table implements BlockTool {
       return [];
     }
 
-    const allRows = Array.from(gridEl.querySelectorAll(`[${ROW_ATTR}]`));
-
     return cells.map(cell => {
-      const row = cell.closest<HTMLElement>(`[${ROW_ATTR}]`);
-
-      if (!row) {
-        return null;
-      }
-
-      const rowIndex = allRows.indexOf(row);
-      const cellsInRow = Array.from(row.querySelectorAll(`[${CELL_ATTR}]`));
-      const colIndex = cellsInRow.indexOf(cell);
+      const rowIndex = parseInt(cell.getAttribute(CELL_ROW_ATTR) ?? '0', 10);
+      const colIndex = parseInt(cell.getAttribute(CELL_COL_ATTR) ?? '0', 10);
 
       const container = cell.querySelector(`[${CELL_BLOCKS_ATTR}]`);
       const blocks: ClipboardBlockData[] = [];

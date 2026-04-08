@@ -355,7 +355,46 @@ describe('CodeTool', () => {
       const tool = new CodeTool(createOptions({ code: 'const x = 1;', language: 'javascript' }));
       const el = tool.render();
 
-      expect(el.querySelector('[data-blok-testid="code-view-mode"]')).toBeNull();
+      const viewMode = el.querySelector('[data-blok-testid="code-view-mode"]');
+      expect(viewMode === null || (viewMode as HTMLElement).hidden).toBe(true);
+    });
+
+    it('shows view mode control when language changes from non-previewable to latex', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'x = 1', language: 'javascript' }));
+      const el = tool.render();
+
+      const settings = tool.renderSettings() as Array<{ children: { items: Array<{ onActivate: () => void; title: string }> } }>;
+      settings[0].children.items.find((i) => i.title === 'LaTeX')?.onActivate();
+
+      const viewMode = el.querySelector('[data-blok-testid="code-view-mode"]');
+      expect(viewMode).not.toBeNull();
+      expect((viewMode as HTMLElement).hidden).toBe(false);
+    });
+
+    it('hides view mode control when language changes from latex to non-previewable', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
+      const el = tool.render();
+
+      const settings = tool.renderSettings() as Array<{ children: { items: Array<{ onActivate: () => void; title: string }> } }>;
+      settings[0].children.items.find((i) => i.title === 'JavaScript')?.onActivate();
+
+      const viewMode = el.querySelector('[data-blok-testid="code-view-mode"]');
+      expect(viewMode === null || (viewMode as HTMLElement).hidden).toBe(true);
+    });
+
+    it('keeps view mode control visible when switching between two previewable languages', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'graph TD; A-->B;', language: 'mermaid' }));
+      const el = tool.render();
+
+      const settings = tool.renderSettings() as Array<{ children: { items: Array<{ onActivate: () => void; title: string }> } }>;
+      settings[0].children.items.find((i) => i.title === 'LaTeX')?.onActivate();
+
+      const viewMode = el.querySelector('[data-blok-testid="code-view-mode"]');
+      expect(viewMode).not.toBeNull();
+      expect((viewMode as HTMLElement).hidden).toBe(false);
     });
 
     it('shows preview container for latex language', async () => {
@@ -535,6 +574,25 @@ describe('CodeTool', () => {
       expect(el.querySelector('[data-blok-testid="code-preview"]')).toBeTruthy();
       expect(el.querySelector('pre')!.hidden).toBe(true);
       expect(el.querySelector('[data-blok-testid="code-view-mode"]')).toBeNull();
+    });
+
+    it('does not throw when language switches away before renderPreview resolves', async () => {
+      const { renderLatex } = await import('../../../../src/tools/code/katex-loader');
+      // Hold the render promise so we can switch language before it resolves
+      let resolveRender!: (v: string) => void;
+      vi.mocked(renderLatex).mockReturnValueOnce(new Promise<string>((res) => { resolveRender = res; }));
+
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
+      tool.render();
+
+      // Switch away from latex — clears _previewContainer mid-flight
+      const settings = tool.renderSettings() as Array<{ children: { items: Array<{ onActivate: () => void; title: string }> } }>;
+      settings[0].children.items.find((i) => i.title === 'JavaScript')?.onActivate();
+
+      // Resolve the deferred render — should NOT produce an unhandled error
+      resolveRender('<span>ok</span>');
+      await new Promise<void>((res) => setTimeout(res, 0));
     });
   });
 
@@ -1017,7 +1075,8 @@ describe('CodeTool', () => {
         children: { items: Array<{ title: string; secondaryLabel?: string; icon?: string; trailingIcon?: string }> };
       }>;
       const items = settings[0].children.items;
-      const detectedItem = items.find((i) => i.secondaryLabel === 'auto');
+      // Detected language item appears first (with sparkle icon, no secondary label)
+      const detectedItem = items.find((i) => i.title === 'Python' && i.icon);
       expect(detectedItem).toBeDefined();
       expect(detectedItem!.title).toBe('Python');
 
@@ -1047,9 +1106,9 @@ describe('CodeTool', () => {
       }>;
       const items = settings[0].children.items;
 
-      // First item should be detected language with 'auto' label
+      // First item should be detected language (sparkle icon, no secondary label)
       expect(items[0].title).toBe('JavaScript');
-      expect(items[0].secondaryLabel).toBe('auto');
+      expect(items[0].icon).toBeDefined();
 
       // There should also be the chosen language (TypeScript) in the list
       const chosenItem = items.find((i) => i.title === 'TypeScript');
@@ -1148,9 +1207,9 @@ describe('CodeTool', () => {
       // Observable: after the single detection resolves, settings includes detected language
       await vi.advanceTimersByTimeAsync(0);
       const settings = tool.renderSettings() as Array<{
-        children: { items: Array<{ title: string; secondaryLabel?: string }> };
+        children: { items: Array<{ title: string; secondaryLabel?: string; icon?: string }> };
       }>;
-      const detectedItem = settings[0].children.items.find((i) => i.secondaryLabel === 'auto');
+      const detectedItem = settings[0].children.items.find((i) => i.title === 'Python' && i.icon);
       expect(detectedItem?.title).toBe('Python');
 
       el.remove();

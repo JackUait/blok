@@ -78,11 +78,11 @@ export class CodeTool implements BlockTool {
       readOnly: this.readOnly,
       copyLabel: this.api.i18n.t(COPY_CODE_KEY),
       previewable: this.readOnly ? false : isPreviewable,
-      viewModeLabels: (this.readOnly ? false : isPreviewable) ? {
+      viewModeLabels: this.readOnly ? undefined : {
         code: this.api.i18n.t(CODE_TAB_KEY),
         preview: this.api.i18n.t(PREVIEW_TAB_KEY),
         split: this.api.i18n.t(SIDE_BY_SIDE_KEY),
-      } : undefined,
+      },
     });
 
     this._dom = dom;
@@ -103,16 +103,18 @@ export class CodeTool implements BlockTool {
       void this.renderPreview();
     }
 
-    // Edit mode + previewable: show view mode segmented control, default to preview
-    if (!this.readOnly && isPreviewable && dom.viewModeContainer && dom.previewElement && dom.splitContainer) {
+    // Edit mode + previewable: default to preview mode and render
+    if (!this.readOnly && isPreviewable && dom.previewElement) {
       this._viewMode = 'preview';
       this._previewContainer = dom.previewElement;
 
       // Apply initial state: preview mode
       this.applyViewMode();
       void this.renderPreview();
+    }
 
-      // Listen for clicks on view mode buttons
+    // Edit mode: wire view mode button listeners (buttons always present in edit mode)
+    if (!this.readOnly && dom.viewModeContainer) {
       const modeButtons = Array.from(dom.viewModeContainer.querySelectorAll<HTMLButtonElement>('[data-mode]'));
 
       for (const btn of modeButtons) {
@@ -235,7 +237,11 @@ export class CodeTool implements BlockTool {
   }
 
   private async renderPreview(): Promise<void> {
-    if (!this._previewContainer) {
+    // Capture the container reference before the async gap so that if the language
+    // changes mid-flight (nulling _previewContainer), we don't write to null.
+    const container = this._previewContainer;
+
+    if (!container) {
       return;
     }
 
@@ -244,7 +250,7 @@ export class CodeTool implements BlockTool {
       ? await renderMermaid(code)
       : await renderLatex(code);
 
-    this._previewContainer.innerHTML = rendered;
+    container.innerHTML = rendered;
   }
 
   public setReadOnly(state: boolean): void {
@@ -297,6 +303,7 @@ export class CodeTool implements BlockTool {
       if (detectedLanguage) {
         childItems.push({
           title: detectedLanguage.name,
+          secondaryLabel: 'auto',
           icon: IconWand,
           onActivate: (): void => this.setLanguage(detectedLanguage.id),
           closeOnActivate: true,
@@ -348,6 +355,7 @@ export class CodeTool implements BlockTool {
 
   private setLanguage(id: string): void {
     this._data.language = id;
+    const isPreviewable = PREVIEWABLE_LANGUAGES.has(id);
 
     if (this._dom) {
       // Update the text span inside the language button (first child)
@@ -355,6 +363,26 @@ export class CodeTool implements BlockTool {
 
       if (textSpan) {
         textSpan.textContent = this.getLanguageName(id);
+      }
+
+      // Show or hide the view mode segmented control based on previewability
+      if (this._dom.viewModeContainer) {
+        this._dom.viewModeContainer.hidden = !isPreviewable;
+      }
+
+      // When switching to a previewable language, activate preview mode
+      if (isPreviewable && this._dom.previewElement) {
+        this._previewContainer = this._dom.previewElement;
+        this._viewMode = 'preview';
+        this.applyViewMode();
+        void this.renderPreview();
+      }
+
+      // When switching away from a previewable language, reset to code mode
+      if (!isPreviewable) {
+        this._previewContainer = null;
+        this._viewMode = 'code';
+        this.applyViewMode();
       }
 
       // Rebuild the language picker so the selected language check icon updates

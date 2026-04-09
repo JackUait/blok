@@ -463,11 +463,11 @@ export class DatabaseTool implements BlockTool {
   }
 
   private syncTitleRowAddBtn(): void {
-    if (this.titleRowElement === null || this.tabBar === null) {
+    if (this.element === null || this.titleRowElement === null || this.tabBar === null) {
       return;
     }
 
-    const tabBarEl = this.element?.querySelector('[data-blok-database-tab-bar]') ?? null;
+    const tabBarEl = this.element.querySelector('[data-blok-database-tab-bar]');
     const views = this.model.getViews();
     const addBtn = this.tabBar.getAddBtnEl();
 

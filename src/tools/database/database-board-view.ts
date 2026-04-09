@@ -49,7 +49,6 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     boardArea.style.overflowX = 'auto';
     boardArea.style.alignItems = 'flex-start';
     boardArea.style.gap = '12px';
-    boardArea.style.paddingTop = '6px';
     boardArea.style.paddingBottom = '24px';
     boardArea.style.flex = '1';
     boardArea.style.minWidth = '0';
@@ -170,7 +169,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     header.setAttribute('data-blok-database-column-header', '');
     header.style.display = 'flex';
     header.style.alignItems = 'center';
-    header.style.padding = '6px 8px 6px 0';
+    header.style.padding = '0 0 6px 0';
     header.style.borderRadius = '4px';
     header.style.gap = '6px';
     header.style.cursor = 'grab';

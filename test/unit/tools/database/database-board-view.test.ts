@@ -394,7 +394,7 @@ describe('DatabaseBoardView', () => {
 
       const boardArea = board.querySelector('[data-blok-database-board]') as HTMLElement;
 
-      expect(boardArea.style.paddingTop).toBeTruthy();
+      expect(boardArea.style.paddingBottom).toBeTruthy();
     });
 
     it('board area has data-blok-database-board attribute for CSS alignment', () => {
@@ -429,6 +429,17 @@ describe('DatabaseBoardView', () => {
       expect(header.style.alignItems).toBe('center');
       expect(header.style.padding).toBeTruthy();
       expect(header.style.borderRadius).toBeTruthy();
+    });
+
+    it('column header has no top padding', () => {
+      const options = [makeOption({ id: 'opt-1', position: 'a0' })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
+
+      const header = board.querySelector('[data-blok-database-column-header]') as HTMLElement;
+
+      expect(header.style.paddingTop).toBe('0px');
+      expect(header.style.paddingRight).toBe('0px');
     });
 
     it('cards container has flex column layout with gap', () => {
@@ -506,7 +517,7 @@ describe('DatabaseBoardView', () => {
 
       const boardArea = board.querySelector('[data-blok-database-board]') as HTMLElement;
 
-      expect(boardArea.style.paddingTop).toBe('6px');
+      expect(boardArea.style.paddingTop).toBe('');
       expect(boardArea.style.paddingBottom).toBe('24px');
     });
 

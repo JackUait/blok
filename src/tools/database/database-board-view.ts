@@ -180,7 +180,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     pill.setAttribute('data-blok-database-column-pill', '');
 
     if (option.color !== undefined) {
-      pill.style.backgroundColor = `color-mix(in srgb, var(--blok-color-${option.color}-text) 50%, transparent)`;
+      pill.style.backgroundColor = `color-mix(in srgb, var(--blok-color-${option.color}-text) 20%, var(--blok-color-${option.color}-bg))`;
       pill.style.color = `var(--blok-color-${option.color}-text)`;
 
       const dot = document.createElement('span');

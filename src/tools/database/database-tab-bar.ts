@@ -247,8 +247,9 @@ export class DatabaseTabBar {
     });
 
     this.contextPopover.on(PopoverEvent.Closed, () => {
-      this.contextPopover?.destroy();
-      this.contextPopover = null;
+      if (this.contextPopover !== null) {
+        this.contextPopover = null;
+      }
     });
 
     this.contextPopover.show();
@@ -256,8 +257,9 @@ export class DatabaseTabBar {
 
   private closeContextPopover(): void {
     if (this.contextPopover !== null) {
-      this.contextPopover.destroy();
+      const popover = this.contextPopover;
       this.contextPopover = null;
+      popover.destroy();
     }
   }
 

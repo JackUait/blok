@@ -67,9 +67,12 @@ export class DatabaseViewPopover {
     });
 
     this.popover.on(PopoverEvent.Closed, () => {
-      this.popover?.destroy();
-      this.popover = null;
-      this.onClose?.();
+      if (this.popover !== null) {
+        const p = this.popover;
+        this.popover = null;
+        p.destroy();
+        this.onClose?.();
+      }
     });
 
     this.popover.show();
@@ -113,8 +116,9 @@ export class DatabaseViewPopover {
 
   close(): void {
     if (this.popover !== null) {
-      this.popover.destroy();
+      const popover = this.popover;
       this.popover = null;
+      popover.destroy();
       this.onClose?.();
     }
   }

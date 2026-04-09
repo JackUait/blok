@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import type { ViewType } from '../../../../src/tools/database/types';
 
 /**
@@ -117,7 +116,7 @@ describe('DatabaseViewPopover', () => {
       const items = getLastItems();
       const boardEl = items
         .map((item) => item.element)
-        .find((el) => el?.getAttribute('data-blok-database-view-option') === 'board') as HTMLElement | undefined;
+        .find((el) => el?.getAttribute('data-blok-database-view-option') === 'board');
 
       expect(boardEl).not.toBeUndefined();
       expect(boardEl!.style.opacity).not.toBe('0.35');
@@ -139,7 +138,7 @@ describe('DatabaseViewPopover', () => {
       const items = getLastItems();
       const listEl = items
         .map((item) => item.element)
-        .find((el) => el?.getAttribute('data-blok-database-view-option') === 'list') as HTMLElement | undefined;
+        .find((el) => el?.getAttribute('data-blok-database-view-option') === 'list');
 
       expect(listEl).not.toBeUndefined();
       expect(listEl!.style.opacity).not.toBe('0.35');

@@ -108,6 +108,7 @@ const LOGIC_TESTS = [
   '**/ui/content-align.spec.ts',
   '**/ui/database-board-pill-width.spec.ts',
   '**/ui/database-pill-title-edit.spec.ts',
+  '**/ui/database-single-view-tab-bar.spec.ts',
 
   // Seed/utility tests
   '**/seed.spec.ts',

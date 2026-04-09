@@ -106,6 +106,7 @@ export class DatabaseTool implements BlockTool {
 
     this.tabBar = this.createTabBar();
     wrapper.appendChild(this.tabBar.render());
+    this.syncTitleRowAddBtn();
 
     const boardContainer = document.createElement('div');
     boardContainer.setAttribute('data-blok-database-board-container', '');
@@ -455,6 +456,40 @@ export class DatabaseTool implements BlockTool {
     } else {
       // Tab bar should be first child (before boardContainer)
       this.element.insertBefore(newBarEl, this.boardContainer);
+    }
+
+    this.syncTitleRowAddBtn();
+  }
+
+  private syncTitleRowAddBtn(): void {
+    if (this.titleRowElement === null || this.tabBar === null) {
+      return;
+    }
+
+    const tabBarEl = this.element?.querySelector('[data-blok-database-tab-bar]') ?? null;
+    const views = this.model.getViews();
+    const addBtn = this.tabBar.getAddBtnEl();
+
+    if (views.length === 1 && !this.readOnly && addBtn !== null) {
+      this.titleRowElement.appendChild(addBtn);
+      if (tabBarEl instanceof HTMLElement) {
+        tabBarEl.style.display = 'none';
+      }
+    } else {
+      // Remove any stale addBtn(s) from titleRow (e.g. from a prior single-view phase)
+      const staleInTitleRow = this.titleRowElement.querySelectorAll('[data-blok-database-add-view]');
+      staleInTitleRow.forEach((el) => {
+        if (el !== addBtn) {
+          el.remove();
+        }
+      });
+
+      if (!this.readOnly && addBtn !== null && tabBarEl !== null && !tabBarEl.contains(addBtn)) {
+        tabBarEl.appendChild(addBtn);
+      }
+      if (tabBarEl instanceof HTMLElement) {
+        tabBarEl.style.display = views.length >= 2 ? '' : 'none';
+      }
     }
   }
 

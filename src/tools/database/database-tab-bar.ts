@@ -533,7 +533,10 @@ export class DatabaseTabBar {
     if (state) {
       this.addBtnEl.remove();
     } else {
-      this.barEl.appendChild(this.addBtnEl);
+      // Only re-attach to bar if the button isn't already placed elsewhere (e.g. title row)
+      if (!this.addBtnEl.isConnected) {
+        this.barEl.appendChild(this.addBtnEl);
+      }
     }
   }
 

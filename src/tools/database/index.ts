@@ -253,6 +253,7 @@ export class DatabaseTool implements BlockTool {
     }
 
     this.tabBar?.setReadOnly(state);
+    this.syncTitleRowAddBtn();
 
     this.rerenderView();
   }
@@ -476,12 +477,10 @@ export class DatabaseTool implements BlockTool {
         tabBarEl.style.display = 'none';
       }
     } else {
-      // Remove any stale addBtn(s) from titleRow (e.g. from a prior single-view phase)
+      // Remove all stale addBtn(s) from titleRow before re-attaching cleanly
       const staleInTitleRow = this.titleRowElement.querySelectorAll('[data-blok-database-add-view]');
       staleInTitleRow.forEach((el) => {
-        if (el !== addBtn) {
-          el.remove();
-        }
+        el.remove();
       });
 
       if (!this.readOnly && addBtn !== null && tabBarEl !== null && !tabBarEl.contains(addBtn)) {

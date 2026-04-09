@@ -308,8 +308,16 @@ export class BoldInlineTool implements InlineTool {
     BoldNormalizationPass.normalizeAroundSelection(selection);
 
     boldAncestors.forEach((element) => {
+      if (!element.isConnected) {
+        return;
+      }
+
       if (isElementEmpty(element)) {
         element.remove();
+      } else if (element.textContent.trim().length === 0) {
+        // Element contains only whitespace — unwrap it to preserve the whitespace
+        // as plain text while removing the bold formatting
+        this.unwrapElement(element);
       }
     });
 

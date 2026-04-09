@@ -174,6 +174,31 @@ describe('BoldInlineTool', () => {
     expect(strong?.textContent).toBe('text ');
   });
 
+  it('does not leave trailing space wrapped in bold when un-bolding partial selection', () => {
+    // Reproduces the scenario where:
+    // 1. Text is bolded as '<strong>hello world </strong>' (space is charCode 32 after normalization)
+    // 2. User selects only 'hello world' (without trailing space, e.g. via triple-click)
+    // 3. User toggles bold off
+    // Expected: trailing space is not left inside a lone <strong> element
+    const { block } = setupBlok('<strong>hello world </strong>');
+    const strong = block.querySelector('strong') as HTMLElement;
+    const textNode = strong.firstChild as Text;
+
+    // Select only 'hello world' (11 chars), leaving the trailing space unselected
+    setRange(textNode, 0, 11);
+
+    const tool = new BoldInlineTool();
+    const menu = tool.render() as PopoverItemDefaultBaseParams;
+
+    menu.onActivate(menu);
+
+    // There should be no <strong> element containing only whitespace
+    const remainingStrong = block.querySelector('strong');
+
+    expect(remainingStrong).toBeNull();
+    expect(block.textContent).toBe('hello world ');
+  });
+
   it('exits collapsed bold when caret is inside bold content', () => {
     const { block } = setupBlok('<strong>BOLD</strong> text');
     const strong = block.querySelector('strong');

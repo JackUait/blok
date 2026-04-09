@@ -1680,26 +1680,67 @@
 }
 
 /**
- * Delete card button — hidden until card hover.
+ * Card action group — edit + menu buttons revealed on hover.
  */
-[data-blok-database-delete-card] {
+[data-blok-database-card-actions] {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 2px;
   opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+  background: var(--blok-database-card-actions-bg, #1e2533);
+  border-radius: 8px;
+  padding: 2px;
+}
+
+[data-blok-database-card]:hover [data-blok-database-card-actions],
+[data-blok-database-card][data-popover-open] [data-blok-database-card-actions],
+[data-blok-database-card-actions]:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+[data-blok-database-edit-card],
+[data-blok-database-card-menu] {
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--blok-database-delete-text);
-  font-size: 16px;
-  line-height: 1;
-  padding: 0 2px;
-  transition: opacity 120ms ease, color 120ms ease;
+  color: var(--blok-database-card-actions-icon, rgba(255,255,255,0.75));
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 120ms ease, color 120ms ease;
+  padding: 0;
+  flex-shrink: 0;
 }
 
-[data-blok-database-card]:hover [data-blok-database-delete-card] {
-  opacity: 1;
+[data-blok-database-edit-card]:hover,
+[data-blok-database-card-menu]:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
 }
 
-[data-blok-database-delete-card]:hover {
-  color: var(--blok-database-delete-hover-text);
+/**
+ * Inline title edit input inside a card.
+ */
+[data-blok-database-card-title-input] {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--blok-database-card-actions-icon, rgba(255,255,255,0.4));
+  color: inherit;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0;
 }
 
 /**

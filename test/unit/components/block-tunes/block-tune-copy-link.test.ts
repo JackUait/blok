@@ -9,7 +9,7 @@ import type { MenuConfig } from '../../../../types/tools/menu-config';
 type MenuConfigItem = Extract<MenuConfig, { onActivate: unknown }>;
 
 type NotifierMocks = {
-  show: Mock<(options: object) => void>;
+  show: Mock<(options: Record<string, unknown>) => void>;
 };
 
 type I18nMocks = {

@@ -359,7 +359,6 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
 
       if (newTitle) {
         cardEl.removeAttribute('data-empty');
-        restoredDiv.removeAttribute('data-placeholder');
       }
     };
 

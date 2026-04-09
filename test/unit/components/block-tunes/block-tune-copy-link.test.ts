@@ -1,6 +1,6 @@
-import { IconCopy } from '../../../../src/components/icons';
+import { IconLink } from '../../../../src/components/icons';
 import type { Mock } from 'vitest';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CopyLinkTune } from '../../../../src/components/block-tunes/block-tune-copy-link';
 import type { API, BlockAPI } from '../../../../types';
@@ -32,6 +32,10 @@ const createMocks = (): { api: API; block: BlockAPI; notifier: NotifierMocks; i1
 };
 
 describe('CopyLinkTune', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -40,17 +44,26 @@ describe('CopyLinkTune', () => {
     expect(CopyLinkTune.isTune).toBe(true);
   });
 
-  it('renders block tune config with translated label and copy icon', () => {
+  it('renders block tune config with translated label and link icon', () => {
     const { api, block, i18n } = createMocks();
     const tune = new CopyLinkTune({ api, block });
 
     const config = tune.render() as MenuConfigItem;
 
     expect(i18n.t).toHaveBeenCalledWith('blockSettings.copyLink');
-    expect(config.icon).toBe(IconCopy);
+    expect(config.icon).toBe(IconLink);
     expect(config.title).toBe('blockSettings.copyLink');
     expect(config.name).toBe('copy-link');
     expect(config.isDestructive).toBeUndefined();
+  });
+
+  it('renders block tune config with ⌃⌘L shortcut hint in secondaryLabel', () => {
+    const { api, block } = createMocks();
+    const tune = new CopyLinkTune({ api, block });
+
+    const config = tune.render() as MenuConfigItem;
+
+    expect((config as { secondaryLabel?: string }).secondaryLabel).toBe('⌃⌘L');
   });
 
   it('copies the correct URL to clipboard and shows success notification when activated', async () => {
@@ -96,5 +109,72 @@ describe('CopyLinkTune', () => {
     expect(notifier.show).toHaveBeenCalledWith(
       expect.objectContaining({ style: 'error' })
     );
+  });
+
+  it('triggers handleClick via Cmd+Ctrl+L keydown when the block is focused', async () => {
+    const { api, block, notifier } = createMocks();
+    const focusedBlock = { ...block, selected: true } as unknown as BlockAPI;
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextMock },
+      writable: true,
+    });
+
+    Object.defineProperty(window, 'location', {
+      value: { href: 'https://example.com/' },
+      writable: true,
+    });
+
+    const _tune = new CopyLinkTune({ api, block: focusedBlock });
+
+    const event = new KeyboardEvent('keydown', { metaKey: true, ctrlKey: true, code: 'KeyL' });
+
+    document.dispatchEvent(event);
+
+    // Give async handleClick a tick to complete
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(notifier.show).toHaveBeenCalledWith(
+      expect.objectContaining({ style: 'success' })
+    );
+  });
+
+  it('does not trigger handleClick via Cmd+Ctrl+L when block is not focused', async () => {
+    const { api, block, notifier } = createMocks();
+    const unfocusedBlock = { ...block, selected: false } as unknown as BlockAPI;
+
+    const _tune = new CopyLinkTune({ api, block: unfocusedBlock });
+
+    const event = new KeyboardEvent('keydown', { metaKey: true, ctrlKey: true, code: 'KeyL' });
+
+    document.dispatchEvent(event);
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(notifier.show).not.toHaveBeenCalled();
+  });
+
+  it('removes the Cmd+Ctrl+L keydown listener when destroy() is called', async () => {
+    const { api, block, notifier } = createMocks();
+    const focusedBlock = { ...block, selected: true } as unknown as BlockAPI;
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextMock },
+      writable: true,
+    });
+
+    const tune = new CopyLinkTune({ api, block: focusedBlock });
+
+    tune.destroy();
+
+    const event = new KeyboardEvent('keydown', { metaKey: true, ctrlKey: true, code: 'KeyL' });
+
+    document.dispatchEvent(event);
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(notifier.show).not.toHaveBeenCalled();
   });
 });

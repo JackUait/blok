@@ -1,6 +1,6 @@
 import type { API, BlockAPI, BlockTune } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
-import { IconCopy } from '../icons';
+import { IconLink } from '../icons';
 
 /**
  * @class CopyLinkTune
@@ -23,6 +23,11 @@ export class CopyLinkTune implements BlockTune {
   private readonly block: BlockAPI;
 
   /**
+   * Bound keydown handler for cleanup in destroy()
+   */
+  private readonly onKeydown: (event: KeyboardEvent) => void;
+
+  /**
    * @param params - constructor params
    * @param params.api - Blok's API
    * @param params.block - BlockAPI for the current block
@@ -30,6 +35,14 @@ export class CopyLinkTune implements BlockTune {
   constructor({ api, block }: { api: API; block: BlockAPI }) {
     this.api = api;
     this.block = block;
+
+    this.onKeydown = (event: KeyboardEvent): void => {
+      if (event.metaKey && event.ctrlKey && event.code === 'KeyL' && this.block.selected) {
+        void this.handleClick();
+      }
+    };
+
+    document.addEventListener('keydown', this.onKeydown);
   }
 
   /**
@@ -37,11 +50,19 @@ export class CopyLinkTune implements BlockTune {
    */
   public render(): MenuConfig {
     return {
-      icon: IconCopy,
+      icon: IconLink,
       title: this.api.i18n.t('blockSettings.copyLink'),
       name: 'copy-link',
+      secondaryLabel: '⌃⌘L',
       onActivate: (): Promise<void> => this.handleClick(),
     };
+  }
+
+  /**
+   * Remove the keyboard shortcut listener
+   */
+  public destroy(): void {
+    document.removeEventListener('keydown', this.onKeydown);
   }
 
   /**

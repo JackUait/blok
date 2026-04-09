@@ -283,6 +283,80 @@ describe('DatabaseBoardView', () => {
     });
   });
 
+  describe('card action buttons', () => {
+    it('renders [data-blok-database-card-actions] on each card when NOT read-only', () => {
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1' })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
+
+      const actionGroups = board.querySelectorAll('[data-blok-database-card-actions]');
+      expect(actionGroups).toHaveLength(1);
+    });
+
+    it('does not render [data-blok-database-card-actions] in read-only mode', () => {
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1' })];
+      const view = new DatabaseBoardView({ readOnly: true, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
+
+      const actionGroups = board.querySelectorAll('[data-blok-database-card-actions]');
+      expect(actionGroups).toHaveLength(0);
+    });
+
+    it('renders [data-blok-database-edit-card] button inside the action group', () => {
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1' })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
+
+      const editBtn = board.querySelector('[data-blok-database-edit-card]');
+      expect(editBtn).not.toBeNull();
+      expect(editBtn?.closest('[data-blok-database-card-actions]')).not.toBeNull();
+    });
+
+    it('renders [data-blok-database-card-menu] button inside the action group', () => {
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1' })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
+
+      const menuBtn = board.querySelector('[data-blok-database-card-menu]');
+      expect(menuBtn).not.toBeNull();
+      expect(menuBtn?.closest('[data-blok-database-card-actions]')).not.toBeNull();
+    });
+
+    it('does NOT render the old [data-blok-database-delete-card] button', () => {
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1' })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
+
+      const deleteBtn = board.querySelector('[data-blok-database-delete-card]');
+      expect(deleteBtn).toBeNull();
+    });
+
+    it('sets aria-label on edit button', () => {
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1' })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
+
+      const editBtn = board.querySelector('[data-blok-database-edit-card]');
+      expect(editBtn?.getAttribute('aria-label')).toBeTruthy();
+    });
+
+    it('sets aria-label on menu button', () => {
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1' })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
+
+      const menuBtn = board.querySelector('[data-blok-database-card-menu]');
+      expect(menuBtn?.getAttribute('aria-label')).toBeTruthy();
+    });
+  });
+
   describe('accessibility', () => {
     it('board element has role="region" and aria-label="Kanban board"', () => {
       const view = new DatabaseBoardView({ readOnly: false, i18n, options: [], getRows: () => [], titlePropertyId: 'title' });

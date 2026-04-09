@@ -157,6 +157,23 @@ describe('BoldInlineTool', () => {
     expect(window.getSelection()?.anchorNode).toBe(strong?.firstChild ?? null);
   });
 
+  it('preserves trailing space when wrapping selected text that ends with a space', () => {
+    const { block } = setupBlok('text ');
+    const textNode = block.firstChild as Text;
+
+    // Select all 5 characters: 't', 'e', 'x', 't', ' '
+    setRange(textNode, 0, 5);
+
+    const tool = new BoldInlineTool();
+    const menu = tool.render() as PopoverItemDefaultBaseParams;
+
+    menu.onActivate(menu);
+
+    const strong = block.querySelector('strong');
+
+    expect(strong?.textContent).toBe('text ');
+  });
+
   it('exits collapsed bold when caret is inside bold content', () => {
     const { block } = setupBlok('<strong>BOLD</strong> text');
     const strong = block.querySelector('strong');

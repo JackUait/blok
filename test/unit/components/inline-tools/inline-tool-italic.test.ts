@@ -59,5 +59,41 @@ describe('ItalicInlineTool', () => {
       expect(typeof config.isActive === 'function' && config.isActive()).toBe(false);
     });
   });
+
+  describe('toggle behavior', () => {
+    let div: HTMLDivElement;
+
+    beforeEach(() => {
+      div = document.createElement('div');
+      div.contentEditable = 'true';
+      document.body.appendChild(div);
+    });
+
+    afterEach(() => {
+      document.body.removeChild(div);
+      window.getSelection()?.removeAllRanges();
+    });
+
+    it('preserves trailing space when wrapping selected text that ends with a space', () => {
+      div.textContent = 'text ';
+
+      const textNode = div.firstChild!;
+      const range = document.createRange();
+
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, 5);
+
+      const selection = window.getSelection()!;
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      const config = tool.render() as PopoverItemDefaultBaseParams;
+
+      (config.onActivate as () => void)();
+
+      expect(div.querySelector('i')?.textContent).toBe('text ');
+    });
+  });
 });
 

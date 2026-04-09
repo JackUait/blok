@@ -117,5 +117,32 @@ describe('CodeInlineTool', () => {
 
       document.body.removeChild(div);
     });
+
+    it('preserves trailing space when wrapping selected text that ends with a space', () => {
+      const div = document.createElement('div');
+
+      div.contentEditable = 'true';
+      div.textContent = 'text ';
+      document.body.appendChild(div);
+
+      const textNode = div.firstChild!;
+      const range = document.createRange();
+
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, 5);
+
+      const selection = window.getSelection()!;
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      const config = tool.render() as PopoverItemDefaultBaseParams;
+
+      (config.onActivate as () => void)();
+
+      expect(div.querySelector('code')?.textContent).toBe('text ');
+
+      document.body.removeChild(div);
+    });
   });
 });

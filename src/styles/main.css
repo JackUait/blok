@@ -2081,6 +2081,23 @@
   margin-bottom: 4px;
 }
 
+/* Single-view mode: move centering offset to the row, strip it from the title
+   so the + button sits exactly 4px after the title text */
+[data-blok-database-title-row][data-single-view] {
+  padding-left: max(0px, calc((100% - var(--max-width-content)) / 2));
+}
+
+[data-blok-database-title-row][data-single-view] [data-blok-database-title] {
+  flex: 0 1 auto;
+  min-width: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+[data-blok-database-title-row][data-single-view] [data-blok-database-add-view] {
+  margin-left: 4px;
+}
+
 /* When + button is inside the title row, show it on row hover */
 [data-blok-database-title-row]:hover [data-blok-database-add-view],
 [data-blok-database-title-row] [data-blok-database-add-view][data-popover-open] {

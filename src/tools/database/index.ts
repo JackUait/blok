@@ -472,10 +472,12 @@ export class DatabaseTool implements BlockTool {
 
     if (views.length === 1 && !this.readOnly && addBtn !== null) {
       this.titleRowElement.appendChild(addBtn);
+      this.titleRowElement.setAttribute('data-single-view', '');
       if (tabBarEl instanceof HTMLElement) {
         tabBarEl.style.display = 'none';
       }
     } else {
+      this.titleRowElement.removeAttribute('data-single-view');
       // Remove all stale addBtn(s) from titleRow before re-attaching cleanly
       const staleInTitleRow = this.titleRowElement.querySelectorAll('[data-blok-database-add-view]');
       staleInTitleRow.forEach((el) => {

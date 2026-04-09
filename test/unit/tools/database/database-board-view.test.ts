@@ -357,6 +357,88 @@ describe('DatabaseBoardView', () => {
     });
   });
 
+  describe('card inline title edit', () => {
+    const createViewWithCard = (title = 'Fix bug'): { board: HTMLDivElement; cardEl: HTMLElement } => {
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1', properties: { title } })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
+      const cardEl = board.querySelector('[data-blok-database-card]') as HTMLElement;
+      return { board, cardEl };
+    };
+
+    it('replaces title div with input when edit button is clicked', () => {
+      const { cardEl } = createViewWithCard('Fix bug');
+      const editBtn = cardEl.querySelector('[data-blok-database-edit-card]') as HTMLElement;
+
+      editBtn.click();
+
+      const input = cardEl.querySelector<HTMLInputElement>('[data-blok-database-card-title-input]');
+      expect(input).not.toBeNull();
+      expect(input?.value).toBe('Fix bug');
+    });
+
+    it('restores title div on Enter and calls onTitleEdit with new value', () => {
+      const onTitleEdit = vi.fn();
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1', properties: { title: 'Fix bug' } })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title', onTitleEdit });
+      const board = view.createView();
+      const cardEl = board.querySelector('[data-blok-database-card]') as HTMLElement;
+      const editBtn = cardEl.querySelector('[data-blok-database-edit-card]') as HTMLElement;
+
+      editBtn.click();
+
+      const input = cardEl.querySelector<HTMLInputElement>('[data-blok-database-card-title-input]')!;
+      input.value = 'New Title';
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      const titleDiv = cardEl.querySelector('[data-blok-database-card-title]');
+      expect(titleDiv).not.toBeNull();
+      expect(cardEl.querySelector('[data-blok-database-card-title-input]')).toBeNull();
+      expect(onTitleEdit).toHaveBeenCalledWith('row-1', 'New Title');
+    });
+
+    it('restores title div on blur and calls onTitleEdit with new value', () => {
+      const onTitleEdit = vi.fn();
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1', properties: { title: 'Fix bug' } })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title', onTitleEdit });
+      const board = view.createView();
+      const cardEl = board.querySelector('[data-blok-database-card]') as HTMLElement;
+      const editBtn = cardEl.querySelector('[data-blok-database-edit-card]') as HTMLElement;
+
+      editBtn.click();
+
+      const input = cardEl.querySelector<HTMLInputElement>('[data-blok-database-card-title-input]')!;
+      input.value = 'Blurred Title';
+      input.dispatchEvent(new Event('blur', { bubbles: true }));
+
+      expect(cardEl.querySelector('[data-blok-database-card-title]')).not.toBeNull();
+      expect(onTitleEdit).toHaveBeenCalledWith('row-1', 'Blurred Title');
+    });
+
+    it('restores original title on Escape without calling onTitleEdit', () => {
+      const onTitleEdit = vi.fn();
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1', properties: { title: 'Fix bug' } })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title', onTitleEdit });
+      const board = view.createView();
+      const cardEl = board.querySelector('[data-blok-database-card]') as HTMLElement;
+      const editBtn = cardEl.querySelector('[data-blok-database-edit-card]') as HTMLElement;
+
+      editBtn.click();
+
+      const input = cardEl.querySelector<HTMLInputElement>('[data-blok-database-card-title-input]')!;
+      input.value = 'Changed';
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      const titleDiv = cardEl.querySelector('[data-blok-database-card-title]');
+      expect(titleDiv?.textContent).toBe('Fix bug');
+      expect(onTitleEdit).not.toHaveBeenCalled();
+    });
+  });
+
   describe('accessibility', () => {
     it('board element has role="region" and aria-label="Kanban board"', () => {
       const view = new DatabaseBoardView({ readOnly: false, i18n, options: [], getRows: () => [], titlePropertyId: 'title' });

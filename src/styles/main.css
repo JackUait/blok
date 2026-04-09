@@ -1813,6 +1813,7 @@
 [data-blok-database-column-title-input] {
   white-space: nowrap;
   font-size: 14px;
+  font-weight: 400;
   text-transform: capitalize;
   letter-spacing: 0.04em;
 }
@@ -2082,6 +2083,7 @@
   border-radius: 10px;
   cursor: grab;
   font-size: 14px;
+  font-weight: 400;
   color: var(--blok-database-tab-text);
   user-select: none;
   white-space: nowrap;
@@ -2105,7 +2107,6 @@
 [data-blok-database-tab][data-active] {
   background-color: var(--blok-database-tab-bg-active);
   color: var(--blok-database-tab-text-active);
-  font-weight: 500;
 }
 
 [data-blok-database-add-view] {
@@ -2234,6 +2235,7 @@
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
+  font-weight: 400;
   transition: background-color 120ms ease;
 }
 
@@ -2243,7 +2245,6 @@
 
 [data-blok-database-tab-overflow-item][data-active] {
   background-color: var(--blok-database-tab-bg-active);
-  font-weight: 500;
 }
 
 [data-blok-database-tab-overflow-new] {

@@ -1,4 +1,126 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+// ---------------------------------------------------------------------------
+// Mock PopoverDesktop so JSDOM does not blow up on className assignments.
+// When show() is called the mock appends a lightweight DOM container with
+// action items derived from the constructor `items` array.  Tests can then
+// query `[data-blok-database-tab-context]` and
+// `[data-blok-database-tab-action="…"]` as expected.
+// ---------------------------------------------------------------------------
+vi.mock('../../../../src/components/utils/popover', () => {
+  const PopoverItemType = { Default: 'default', Separator: 'separator', Html: 'html' };
+
+  class MockPopoverDesktop {
+    private container: HTMLElement | null = null;
+    private readonly items: Array<{ title?: string; onActivate?: () => void; type?: string }>;
+    private readonly eventHandlers: Map<string, Array<() => void>> = new Map();
+
+    constructor(params: { items?: Array<{ title?: string; onActivate?: () => void; type?: string }>; [key: string]: unknown }) {
+      this.items = params.items ?? [];
+    }
+
+    show(): void {
+      this.container = document.createElement('div');
+      this.container.setAttribute('data-blok-database-tab-context', '');
+      this.container.style.position = 'fixed';
+
+      for (const item of this.items) {
+        if (item.type === PopoverItemType.Separator || !item.title) continue;
+        const el = document.createElement('div');
+        el.setAttribute('data-blok-database-tab-action', item.title.toLowerCase());
+        el.textContent = item.title;
+        const onActivate = item.onActivate;
+        if (onActivate) {
+          el.addEventListener('click', () => onActivate());
+        }
+        this.container.appendChild(el);
+      }
+
+      document.body.appendChild(this.container);
+    }
+
+    hide(): void {
+      /* no-op */
+    }
+
+    destroy(): void {
+      this.container?.remove();
+      this.container = null;
+      // Fire Closed handlers
+      const handlers = this.eventHandlers.get('closed') ?? [];
+      for (const h of handlers) h();
+    }
+
+    on(event: string, handler: () => void): void {
+      const existing = this.eventHandlers.get(event) ?? [];
+      this.eventHandlers.set(event, [...existing, handler]);
+    }
+
+    off(): void {
+      /* no-op */
+    }
+
+    getElement(): HTMLElement | null {
+      return this.container;
+    }
+  }
+
+  return { PopoverDesktop: MockPopoverDesktop, PopoverMobile: MockPopoverDesktop, PopoverItemType };
+});
+
+// ---------------------------------------------------------------------------
+// Mock PopoverEvent so the 'closed' string constant matches what MockPopoverDesktop
+// uses internally.
+// ---------------------------------------------------------------------------
+vi.mock('@/types/utils/popover/popover-event', () => ({
+  PopoverEvent: { Closed: 'closed' },
+}));
+
+// ---------------------------------------------------------------------------
+// Mock DatabaseViewPopover so it produces testable DOM instead of delegating
+// to the real PopoverDesktop.  When open() is called a lightweight container
+// is appended to the body with view-option elements the tests expect.
+// ---------------------------------------------------------------------------
+vi.mock('../../../../src/tools/database/database-view-popover', () => {
+  class MockDatabaseViewPopover {
+    private container: HTMLElement | null = null;
+    private readonly onSelect: (type: string) => void;
+    private readonly onClose?: () => void;
+
+    constructor(options: { onSelect: (type: string) => void; onClose?: () => void }) {
+      this.onSelect = options.onSelect;
+      this.onClose = options.onClose;
+    }
+
+    open(_anchor: HTMLElement): void {
+      this.container = document.createElement('div');
+      this.container.setAttribute('data-blok-database-view-popover', '');
+
+      for (const viewType of ['board', 'list']) {
+        const el = document.createElement('div');
+        el.setAttribute('data-blok-database-view-option', viewType);
+        const onSelect = this.onSelect;
+        el.addEventListener('click', () => onSelect(viewType));
+        this.container.appendChild(el);
+      }
+
+      document.body.appendChild(this.container);
+    }
+
+    close(): void {
+      this.container?.remove();
+      this.container = null;
+      this.onClose?.();
+    }
+
+    destroy(): void {
+      this.close();
+    }
+  }
+
+  return { DatabaseViewPopover: MockDatabaseViewPopover };
+});
+
 import { DatabaseTabBar } from '../../../../src/tools/database/database-tab-bar';
 import type { DatabaseViewConfig, ViewType } from '../../../../src/tools/database/types';
 

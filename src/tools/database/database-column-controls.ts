@@ -91,7 +91,6 @@ export class DatabaseColumnControls {
       const restoreDiv = (label: string): HTMLElement => {
         const div = document.createElement('div');
         div.setAttribute('data-blok-database-column-title', '');
-        div.style.fontWeight = '600';
         div.style.cursor = 'text';
         div.textContent = label;
         return div;

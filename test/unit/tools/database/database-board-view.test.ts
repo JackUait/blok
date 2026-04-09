@@ -211,8 +211,11 @@ describe('DatabaseBoardView', () => {
       const board = view.createView();
 
       const addCardBtn = board.querySelector('[data-blok-database-add-card]');
+      const iconEl = addCardBtn?.querySelector('[data-blok-database-add-card-icon]');
+      const labelEl = addCardBtn?.querySelector('span:last-child');
 
-      expect(addCardBtn?.textContent).toMatch(/^\+ /);
+      expect(iconEl).not.toBeNull();
+      expect(labelEl?.textContent).toBeTruthy();
     });
 
     it('prefixes add-column button text with +', () => {
@@ -477,14 +480,14 @@ describe('DatabaseBoardView', () => {
       expect(deleteBtn.style.right).toBeTruthy();
     });
 
-    it('column title has font-weight semibold', () => {
+    it('column title has no inline font-weight override (weight comes from CSS)', () => {
       const options = [makeOption({ id: 'opt-1', position: 'a0' })];
       const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
       const board = view.createView();
 
       const title = board.querySelector('[data-blok-database-column-title]') as HTMLElement;
 
-      expect(title.style.fontWeight).toBe('600');
+      expect(title.style.fontWeight).toBe('');
     });
 
     it('column header has gap between title and delete button', () => {

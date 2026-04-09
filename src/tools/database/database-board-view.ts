@@ -193,7 +193,6 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     const titleEl = document.createElement('div');
 
     titleEl.setAttribute('data-blok-database-column-title', '');
-    titleEl.style.fontWeight = '400';
     titleEl.textContent = option.label;
     pill.appendChild(titleEl);
 

@@ -5,6 +5,7 @@ import { EditorWrapper } from '../components/demo/EditorWrapper';
 import { OutputPanel } from '../components/demo/OutputPanel';
 import { NAV_LINKS } from '../utils/constants';
 import { useI18n } from '../contexts/I18nContext';
+import { ShortcutKeys } from '../components/common/KeyIcon';
 import '../../assets/demo.css';
 
 interface BlokEditor {
@@ -189,19 +190,19 @@ export const DemoPage: React.FC = () => {
 
           <div className="demo-tips">
             <div className="demo-tip">
-              <kbd>/</kbd>
+              <ShortcutKeys keys={['/']} />
               <span>{t('demo.tipOpenMenu')}</span>
             </div>
             <div className="demo-tip">
-              <kbd>Tab</kbd>
+              <ShortcutKeys keys={['Tab']} />
               <span>{t('demo.tipIndentList')}</span>
             </div>
             <div className="demo-tip">
-              <kbd>Ctrl</kbd><span>+</span><kbd>Z</kbd>
+              <ShortcutKeys keys={['Ctrl', 'Z']} />
               <span>{t('demo.tipUndo')}</span>
             </div>
             <div className="demo-tip">
-              <kbd>Ctrl</kbd><span>+</span><kbd>B</kbd>
+              <ShortcutKeys keys={['Ctrl', 'B']} />
               <span>{t('demo.tipBoldText')}</span>
             </div>
           </div>

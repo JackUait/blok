@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { ShortcutKeys } from '../common/KeyIcon';
 import { useI18n } from '../../contexts/I18nContext';
 
 interface ShortcutGroup {
@@ -6,15 +7,6 @@ interface ShortcutGroup {
   icon: React.ReactNode;
   shortcuts: { keys: string[]; action: string }[];
 }
-
-const KeyCap: React.FC<{ children: string; isModifier?: boolean }> = ({ children, isModifier }) => {
-  const isSymbol = ['⌘', '⇧', '⌥', '⌃'].includes(children);
-  return (
-    <kbd className={`shortcuts-kbd ${isModifier ? 'shortcuts-kbd--modifier' : ''} ${isSymbol ? 'shortcuts-kbd--symbol' : ''}`}>
-      {children}
-    </kbd>
-  );
-};
 
 export const KeyboardShortcuts: React.FC = () => {
   const { t } = useI18n();
@@ -104,16 +96,7 @@ export const KeyboardShortcuts: React.FC = () => {
             <ul className="shortcuts-list">
               {group.shortcuts.map((shortcut, index) => (
                 <li key={index} className="shortcuts-item">
-                  <span className="shortcuts-keys">
-                    {shortcut.keys.map((key, keyIndex) => (
-                      <span key={keyIndex} className="shortcuts-key-group">
-                        <KeyCap isModifier={keyIndex < shortcut.keys.length - 1}>{key}</KeyCap>
-                        {keyIndex < shortcut.keys.length - 1 && (
-                          <span className="shortcuts-plus">+</span>
-                        )}
-                      </span>
-                    ))}
-                  </span>
+                  <ShortcutKeys keys={shortcut.keys} className="shortcuts-keys" />
                   <span className="shortcuts-action">{shortcut.action}</span>
                 </li>
               ))}

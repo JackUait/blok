@@ -272,7 +272,7 @@ export class PopoverItemDefault extends PopoverItem {
     if (params.secondaryLabel) {
       const secondaryEl = document.createElement('div');
 
-      secondaryEl.className = 'ml-auto shrink-0 flex items-center whitespace-nowrap pl-20 font-mono text-[13px] tracking-wide text-text-secondary/60';
+      secondaryEl.className = 'ml-auto shrink-0 inline-flex items-center whitespace-nowrap pl-20 font-mono text-[13px] leading-none tracking-wide text-text-secondary/60';
       secondaryEl.setAttribute(DATA_ATTR.popoverItemSecondaryTitle, '');
       secondaryEl.setAttribute('data-blok-testid', 'popover-item-secondary-title');
       secondaryEl.textContent = params.secondaryLabel;

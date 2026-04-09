@@ -8,6 +8,63 @@ import type { DatabaseModel } from '../../../../src/tools/database/database-mode
 import type { CardDragResult, DatabaseCardDrag } from '../../../../src/tools/database/database-card-drag';
 import type { GroupDragResult, DatabaseColumnDrag } from '../../../../src/tools/database/database-column-drag';
 
+// ---------------------------------------------------------------------------
+// Mock PopoverDesktop so JSDOM does not blow up. When show() is called the
+// mock appends a container with clickable action items so tests can trigger
+// onActivate callbacks.
+// ---------------------------------------------------------------------------
+vi.mock('../../../../src/components/utils/popover', () => {
+  const PopoverItemType = { Default: 'default', Separator: 'separator', Html: 'html' };
+
+  class MockPopoverDesktop {
+    private container: HTMLElement | null = null;
+    private readonly items: Array<{ title?: string; onActivate?: () => void; type?: string }>;
+    private readonly eventHandlers: Map<string, Array<() => void>> = new Map();
+
+    constructor(params: { items?: Array<{ title?: string; onActivate?: () => void; type?: string }>; [key: string]: unknown }) {
+      this.items = params.items ?? [];
+    }
+
+    show(): void {
+      this.container = document.createElement('div');
+      this.container.setAttribute('data-mock-popover', '');
+
+      for (const item of this.items) {
+        if (item.type === PopoverItemType.Separator || !item.title) continue;
+        const el = document.createElement('div');
+        el.setAttribute('data-mock-popover-action', item.title.toLowerCase());
+        const onActivate = item.onActivate;
+        if (onActivate) {
+          el.addEventListener('click', () => onActivate());
+        }
+        this.container.appendChild(el);
+      }
+
+      document.body.appendChild(this.container);
+    }
+
+    destroy(): void {
+      this.container?.remove();
+      this.container = null;
+      const handlers = this.eventHandlers.get('closed') ?? [];
+      for (const h of handlers) h();
+    }
+
+    on(event: string, handler: () => void): void {
+      const existing = this.eventHandlers.get(event) ?? [];
+      this.eventHandlers.set(event, [...existing, handler]);
+    }
+
+    off(): void { /* no-op */ }
+  }
+
+  return { PopoverDesktop: MockPopoverDesktop, PopoverMobile: MockPopoverDesktop, PopoverItemType };
+});
+
+vi.mock('@/types/utils/popover/popover-event', () => ({
+  PopoverEvent: { Closed: 'closed' },
+}));
+
 /**
  * Creates a mock child block (database-row) as returned by api.blocks.getChildren.
  */
@@ -431,7 +488,7 @@ describe('DatabaseTool', () => {
   });
 
   describe('delete row via click', () => {
-    it('clicking delete-card button calls api.blocks.delete', () => {
+    it('clicking card-menu button and selecting delete calls api.blocks.delete', () => {
       const childBlocks = [
         createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, position: 'a0' }),
       ];
@@ -444,14 +501,24 @@ describe('DatabaseTool', () => {
       const element = tool.render();
       tool.rendered();
 
-      const deleteBtn = element.querySelector('[data-blok-database-delete-card]') as HTMLButtonElement;
+      const cardMenuBtn = element.querySelector('[data-blok-database-card-menu]') as HTMLButtonElement;
 
-      expect(deleteBtn).not.toBeNull();
+      expect(cardMenuBtn).not.toBeNull();
 
-      deleteBtn.click();
+      cardMenuBtn.click();
+
+      // The mock popover appends action items to document.body
+      const deleteAction = document.body.querySelector('[data-mock-popover-action]') as HTMLElement;
+
+      expect(deleteAction).not.toBeNull();
+
+      deleteAction.click();
 
       expect(options.api.blocks.getBlockIndex).toHaveBeenCalledWith('row-1');
       expect(options.api.blocks.delete).toHaveBeenCalledWith(1);
+
+      // Cleanup mock popover
+      document.body.querySelector('[data-mock-popover]')?.remove();
     });
   });
 

@@ -149,6 +149,24 @@ test.describe('Database — single-view tab bar behaviour', () => {
     await expect(addBtnInTabBar).toBeAttached();
   });
 
+  test('hides + button in read-only mode and restores to title row when switching back to edit', async ({ page }) => {
+    await resetAndCreate(page, SINGLE_VIEW_BLOCKS);
+
+    // In read-only mode, no + button should be present anywhere
+    await page.evaluate(() => { void window.blokInstance?.readOnly.toggle(true); });
+
+    const addBtn = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-add-view]`);
+    await expect(addBtn).toHaveCount(0);
+
+    // Switch back to edit mode — + button should return to the title row (single view)
+    await page.evaluate(() => { void window.blokInstance?.readOnly.toggle(false); });
+
+    const addBtnInTitleRow = page.locator(
+      `${BLOK_INTERFACE_SELECTOR} [data-blok-database-title-row] [data-blok-database-add-view]`
+    );
+    await expect(addBtnInTitleRow).toBeAttached();
+  });
+
   test('hides tab bar and moves + button back to title row after deleting to one view', async ({ page }) => {
     await resetAndCreate(page, SINGLE_VIEW_BLOCKS);
 

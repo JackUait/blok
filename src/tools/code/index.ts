@@ -402,7 +402,11 @@ export class CodeTool implements BlockTool {
   /**
    * Builds the language items array. When a detected language differs from the
    * chosen one, it appears first with a wand icon and "auto" secondary label.
+<<<<<<< Updated upstream
    * The currently selected language is shown with a trailing check icon
+=======
+   * The currently selected language is shown with a check icon and active state
+>>>>>>> Stashed changes
    * in its natural position in the full language list.
    */
   private buildLanguagePickerItems(): PopoverItemParams[] {

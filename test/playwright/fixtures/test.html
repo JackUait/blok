@@ -13,7 +13,7 @@
 <body>
   <script type="module">
     import { Blok, DATA_ATTR, version } from '/dist/blok.mjs?_v=1';
-    import { Header, Paragraph, List, Table, Toggle, Callout, Bold, Italic, Link, Convert, Marker, Underline, Strikethrough } from '/dist/tools.mjs?_v=1';
+    import { Header, Paragraph, List, Table, Toggle, Callout, Bold, Italic, Link, Convert, Marker, Underline, Strikethrough, Database, DatabaseRow } from '/dist/tools.mjs?_v=1';
 
     // Create default tools configuration (mimics pre-modular behavior)
     // Block tools with inlineToolbar enabled
@@ -85,6 +85,8 @@
     window.BlokMarker = Marker;
     window.BlokUnderline = Underline;
     window.BlokStrikethrough = Strikethrough;
+    window.BlokDatabase = Database;
+    window.BlokDatabaseRow = DatabaseRow;
     window.BlokDataAttr = DATA_ATTR;
     window.BlokVersion = version;
     window.defaultTools = defaultTools;

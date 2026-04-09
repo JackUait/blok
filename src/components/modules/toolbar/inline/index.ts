@@ -330,11 +330,8 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     const popoverItems = await this.buildPopoverItems();
 
     // Create popover
-    const scopeElement = this.Blok.API?.methods?.ui?.nodes?.redactor ?? this.Blok.UI.nodes.redactor;
-
     this.popover = new PopoverInline({
       items: popoverItems,
-      scopeElement,
       messages: {
         nothingFound: this.Blok.I18n.t('popover.nothingFound'),
         search: this.Blok.I18n.t('popover.search'),

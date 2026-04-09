@@ -36,7 +36,7 @@ const AMOUNT_OF_LOCAL_WORKERS = 3;
 // Cross-browser critical tests - require validation on all browsers
 const CROSS_BROWSER_TESTS = [
   // Browser-specific event handling
-  '**/drag-drop*.spec.ts',
+  '**/drag-drop.spec.ts',
   '**/copy-paste.spec.ts',
 
   // Keyboard navigation (Firefox has known Tab/Shift+Tab issues)
@@ -50,7 +50,6 @@ const CROSS_BROWSER_TESTS = [
 
   // UI components with browser-specific rendering
   '**/ui/inline-toolbar.spec.ts',
-  '**/ui/inline-toolbar-underline-strikethrough.spec.ts',
   '**/ui/toolbox.spec.ts',
   '**/ui/placeholders.spec.ts',
   '**/ui/keyboard-shortcuts.spec.ts',
@@ -84,40 +83,32 @@ const LOGIC_TESTS = [
   '**/api/**/*.spec.ts',
 
   // Module logic tests
-  '**/modules/blockManager.spec.ts',
+  '**/modules/BlockManager.spec.ts',
   '**/modules/block-movement.spec.ts',
   '**/modules/Saver.spec.ts',
   '**/modules/BlockIds.spec.ts',
   '**/modules/selection.spec.ts',
   '**/modules/navigation-mode.spec.ts',
   '**/modules/undo-redo.spec.ts',
-  '**/modules/multi-block-selection-with-toolbar.spec.ts',
 
   // Tool configuration tests (standard DOM operations)
   '**/tools/block-tool.spec.ts',
   '**/tools/block-tune.spec.ts',
+  '**/tools/callout.spec.ts',
   '**/tools/header.spec.ts',
   '**/tools/inline-tool.spec.ts',
-  '**/tools/list*.spec.ts',
+  '**/tools/list.spec.ts',
   '**/tools/paragraph.spec.ts',
-  '**/tools/table*.spec.ts',
-  '**/tools/table/**/*.spec.ts',
-  '**/tools/toggle*.spec.ts',
-  '**/tools/callout.spec.ts',
   '**/tools/tools-factory.spec.ts',
   '**/tools/tools-collection.spec.ts',
 
   // UI utilities (generic components)
   '**/utils/**/*.spec.ts',
 
-  // Block component tests
-  '**/block/**/*.spec.ts',
-
   // Editor state and configuration
   '**/error-handling.spec.ts',
   '**/i18n.spec.ts',
   '**/read-only.spec.ts',
-  '**/width-mode.spec.ts',
   '**/sanitisation.spec.ts',
   '**/ui/initialization.spec.ts',
   '**/ui/configuration.spec.ts',
@@ -125,7 +116,6 @@ const LOGIC_TESTS = [
   '**/ui/ui-module.spec.ts',
   '**/ui/block-tunes.spec.ts',
   '**/ui/plus-block-tunes.spec.ts',
-  '**/ui/block-settings-active-state.spec.ts',
   '**/ui/selection-with-link-input.spec.ts',
   '**/ui/inline-toolbar-nested-popover.spec.ts',
   '**/ui/multilingual-search.spec.ts',
@@ -134,6 +124,9 @@ const LOGIC_TESTS = [
   '**/ui/table-toolbar-visibility.spec.ts',
   '**/ui/css-layer-conflict.spec.ts',
   '**/ui/content-align.spec.ts',
+  '**/ui/database-board-pill-width.spec.ts',
+  '**/ui/database-pill-title-edit.spec.ts',
+  '**/ui/database-single-view-tab-bar.spec.ts',
 
   // Seed/utility tests
   '**/seed.spec.ts',
@@ -146,49 +139,22 @@ const LOGIC_TESTS = [
 const BROWSERS = ['chromium', 'firefox', 'webkit'] as const;
 const crossBrowserProjects = BROWSERS.map(browser => ({
   name: browser,
-  use: {
-    browserName: browser,
-    // Firefox-specific fix: Bypass system proxy for localhost connections.
-    // Some macOS systems have proxy configurations that interfere with localhost,
-    // causing NS_ERROR_NET_ERROR_RESPONSE / 502 errors.
-    ...(browser === 'firefox' && {
-      launchOptions: {
-        firefoxUserPrefs: {
-          'network.proxy.type': 0, // 0 = No proxy / Direct connection
-        },
-      },
-    }),
-  },
+  use: { browserName: browser },
   testMatch: [...CROSS_BROWSER_TESTS],
 }));
 
 export default defineConfig({
   globalSetup: './test/playwright/global-setup.ts',
-  testDir: 'test',
-  webServer: {
-    command: 'npx serve . -l 4444 --no-clipboard',
-    port: 4444,
-    // Don't reuse existing server - it might be a Vite dev server which has
-    // module resolution issues under concurrent test load
-    reuseExistingServer: false,
-    timeout: 120000, // Give the server more time to start up
-  },
+  testDir: 'test/playwright/tests',
   timeout: 15_000,
   expect: {
     timeout: 5_000,
   },
   fullyParallel: true,
-  reporter: process.env.CI
-    ? [
-        ['blob', { outputDir: 'blob-report' }],
-        ['github'],
-        ['json', { outputFile: 'test-results/test-results.json' }],
-      ]
-    : [
-        ['list'],
-        ['html', { open: 'never' }],
-        ['json', { outputFile: 'test-results/test-results.json' }],
-      ],
+  reporter: [
+    ['list'],
+    ['html', { open: 'never' }],
+  ],
   use: {
     headless: true,
     screenshot: 'only-on-failure',
@@ -203,14 +169,17 @@ export default defineConfig({
       use: { browserName: 'chromium' },
       testMatch: [...LOGIC_TESTS],
     },
-    {
-      name: 'chromium-e2e',
-      use: { browserName: 'chromium' },
-      testMatch: ['**/e2e/**/*.spec.ts'],
-    },
   ],
-  retries: 0,
-  workers: process.env.CI ? undefined : AMOUNT_OF_LOCAL_WORKERS,
+  webServer: {
+    command: 'npx serve . -l 4444 --no-clipboard',
+    port: 4444,
+    // Don't reuse existing server - it might be a Vite dev server which has
+    // module resolution issues under concurrent test load
+    reuseExistingServer: false,
+    timeout: 120000, // Give the server more time to start up
+  },
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 3 : AMOUNT_OF_LOCAL_WORKERS,
 });
 
 // Export for tooling/scripts

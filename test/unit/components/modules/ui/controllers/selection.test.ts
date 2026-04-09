@@ -442,6 +442,119 @@ describe('SelectionController', () => {
     });
   });
 
+  describe('nested editor instance guard', () => {
+    it('does not update currentBlock when focus is inside a different editor instance', async () => {
+      const { controller, blok, wrapper } = createSelectionController();
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      /**
+       * Build DOM mimicking a database block with a nested editor inside its drawer.
+       * The inner editor sits inside the database block-content, so the focused element's
+       * closest block-content resolves to the OUTER database block — making the handler
+       * think we're inside this editor instance and reach shouldUpdateCurrentBlock().
+       *
+       * outer-editor [data-blok-testid="blok-editor"]  ← wrapper (this instance)
+       *   database-block [data-blok-testid="block-content"]
+       *     inner-editor [data-blok-testid="blok-editor"]
+       *       contenteditable  ← focusedElement
+       */
+      const databaseBlockContent = document.createElement('div');
+
+      databaseBlockContent.setAttribute('data-blok-testid', 'block-content');
+      wrapper.appendChild(databaseBlockContent);
+
+      const innerEditorWrapper = document.createElement('div');
+
+      innerEditorWrapper.setAttribute('data-blok-testid', 'blok-editor');
+      databaseBlockContent.appendChild(innerEditorWrapper);
+
+      const innerContentEditable = document.createElement('div');
+
+      innerContentEditable.setAttribute('contenteditable', 'true');
+      innerEditorWrapper.appendChild(innerContentEditable);
+
+      blok.InlineToolbar.opened = false;
+      (blok.InlineToolbar as { hasNestedPopoverOpen: boolean }).hasNestedPopoverOpen = false;
+
+      vi.spyOn(Selection, 'anchorElement', 'get').mockReturnValue(innerContentEditable);
+      vi.spyOn(Selection, 'get').mockReturnValue({
+        isCollapsed: false,
+      } as unknown as ReturnType<typeof Selection.get>);
+      vi.spyOn(Selection, 'text', 'get').mockReturnValue('text');
+
+      // Trigger selection change
+      document.dispatchEvent(new Event('selectionchange'));
+      vi.advanceTimersByTime(200);
+
+      expect(blok.BlockManager.setCurrentBlockByChildNode).not.toHaveBeenCalled();
+    });
+
+    it('updates currentBlock when focus is inside this editor instance', async () => {
+      const { controller, blok, wrapper } = createSelectionController();
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      // Create block content directly inside this editor's wrapper
+      const blockContent = document.createElement('div');
+
+      blockContent.setAttribute('data-blok-testid', 'block-content');
+      wrapper.appendChild(blockContent);
+
+      const contentEditable = document.createElement('div');
+
+      contentEditable.setAttribute('contenteditable', 'true');
+      blockContent.appendChild(contentEditable);
+
+      blok.InlineToolbar.opened = false;
+      (blok.InlineToolbar as { hasNestedPopoverOpen: boolean }).hasNestedPopoverOpen = false;
+
+      vi.spyOn(Selection, 'anchorElement', 'get').mockReturnValue(contentEditable);
+      vi.spyOn(Selection, 'get').mockReturnValue({
+        isCollapsed: false,
+      } as unknown as ReturnType<typeof Selection.get>);
+      vi.spyOn(Selection, 'text', 'get').mockReturnValue('text');
+
+      // Trigger selection change
+      document.dispatchEvent(new Event('selectionchange'));
+      vi.advanceTimersByTime(200);
+
+      expect(blok.BlockManager.setCurrentBlockByChildNode).toHaveBeenCalledWith(contentEditable);
+    });
+
+    it('updates currentBlock when focus is outside any editor (e.g. document body)', async () => {
+      const { controller, blok, wrapper } = createSelectionController();
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      // Create block content inside this wrapper so it passes the clickedOutsideBlockContent check
+      const blockContent = document.createElement('div');
+
+      blockContent.setAttribute('data-blok-testid', 'block-content');
+      wrapper.appendChild(blockContent);
+
+      // Element with no [data-blok-testid="blok-editor"] ancestor
+      const orphanElement = document.createElement('div');
+
+      blockContent.appendChild(orphanElement);
+
+      blok.InlineToolbar.opened = false;
+      (blok.InlineToolbar as { hasNestedPopoverOpen: boolean }).hasNestedPopoverOpen = false;
+
+      vi.spyOn(Selection, 'anchorElement', 'get').mockReturnValue(orphanElement);
+      vi.spyOn(Selection, 'get').mockReturnValue({
+        isCollapsed: false,
+      } as unknown as ReturnType<typeof Selection.get>);
+      vi.spyOn(Selection, 'text', 'get').mockReturnValue('text');
+
+      // Trigger selection change
+      document.dispatchEvent(new Event('selectionchange'));
+      vi.advanceTimersByTime(200);
+
+      expect(blok.BlockManager.setCurrentBlockByChildNode).toHaveBeenCalledWith(orphanElement);
+    });
+  });
+
   describe('edge cases', () => {
     it('handles null wrapper element gracefully', async () => {
       const { controller, blok } = createSelectionController();

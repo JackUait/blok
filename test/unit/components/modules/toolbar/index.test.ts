@@ -771,4 +771,121 @@ describe('Plus button interactions', () => {
     // Toolbox should still be opened
     expect(toolboxInstance.opened).toBe(true);
   });
+
+  describe('marginLeft sync in moveAndOpen', () => {
+    /**
+     * Helper: build a minimal block mock whose holder contains a
+     * [data-blok-element-content] child with the given inline marginLeft.
+     */
+    const buildBlockWithContentMargin = (
+      marginLeft: string,
+      stretched = false
+    ) => {
+      const holder = document.createElement('div');
+      holder.setAttribute('data-blok-testid', 'block-wrapper');
+
+      const contentEl = document.createElement('div');
+      contentEl.setAttribute('data-blok-element-content', '');
+      contentEl.style.marginLeft = marginLeft;
+      holder.appendChild(contentEl);
+
+      const pluginsContent = document.createElement('div');
+      holder.appendChild(pluginsContent);
+
+      return {
+        id: 'test-block',
+        name: 'paragraph',
+        holder,
+        pluginsContent,
+        isEmpty: false,
+        stretched,
+        cleanupDraggable: vi.fn(),
+        setupDraggable: vi.fn(),
+        getTunes: vi.fn(() => ({ toolTunes: [{}], commonTunes: [] })),
+        getToolbarAnchorElement: vi.fn(() => undefined),
+      };
+    };
+
+    beforeEach(() => {
+      (toolbar as unknown as {
+        toolboxInstance: {
+          opened: boolean;
+          close: () => void;
+          updateLeftAlignElement: () => void;
+        };
+      }).toolboxInstance = {
+        opened: false,
+        close: vi.fn(),
+        updateLeftAlignElement: vi.fn(),
+      };
+
+      (getBlok().BlockManager as unknown as { blocks: unknown[] }).blocks = [{}];
+
+      // Restore the real moveAndOpen — the outer beforeEach replaces it with vi.fn()
+      // so that other plus-button tests can spy on it. We need the real implementation here.
+      (toolbar as unknown as { moveAndOpen: typeof toolbar['moveAndOpen'] }).moveAndOpen =
+        toolbar.constructor.prototype.moveAndOpen.bind(toolbar);
+
+      // Mock positioner so calculateToolbarY returns 0 instead of null,
+      // allowing moveAndOpen to reach the marginLeft sync code.
+      const positioner = (toolbar as unknown as { positioner: {
+        setHoveredTarget: (t: unknown) => void;
+        resetCachedPosition: () => void;
+        calculateToolbarY: () => number | null;
+        moveToY: () => void;
+        applyContentOffset: () => void;
+      } }).positioner;
+
+      vi.spyOn(positioner, 'calculateToolbarY').mockReturnValue(0);
+      vi.spyOn(positioner, 'moveToY').mockImplementation(() => {});
+      vi.spyOn(positioner, 'applyContentOffset').mockImplementation(() => {});
+      vi.spyOn(positioner, 'setHoveredTarget').mockImplementation(() => {});
+      vi.spyOn(positioner, 'resetCachedPosition').mockImplementation(() => {});
+    });
+
+    it('sets toolbar content marginLeft to the block content margin for non-stretched blocks', () => {
+      const block = buildBlockWithContentMargin('40px', false);
+      const blok = getBlok();
+      blok.BlockManager.currentBlock = block as never;
+
+      document.body.appendChild(block.holder);
+
+      // jsdom does not perform CSS layout, so getComputedStyle returns 0 for
+      // marginLeft even when set inline. Stub the global to return the inline value.
+      vi.stubGlobal('getComputedStyle', (el: Element) => {
+        const style = (el as HTMLElement).style;
+        return { marginLeft: style.marginLeft, paddingTop: '0px', lineHeight: '24px', height: '24px' } as CSSStyleDeclaration;
+      });
+
+      let moveAndOpenError: unknown = null;
+      try {
+        toolbar.moveAndOpen(block as never);
+      } catch (e) {
+        moveAndOpenError = e;
+      }
+
+      vi.unstubAllGlobals();
+
+      const nodesAfter = (toolbar as unknown as { nodes: typeof toolbar['nodes'] }).nodes;
+
+      document.body.removeChild(block.holder);
+
+      expect(moveAndOpenError).toBeNull();
+      expect(nodesAfter.content!.style.marginLeft).toBe('40px');
+    });
+
+    it('resets toolbar content marginLeft to empty string for stretched blocks so CSS mx-auto can center correctly', () => {
+      const block = buildBlockWithContentMargin('0px', true);
+      const blok = getBlok();
+      blok.BlockManager.currentBlock = block as never;
+
+      toolbar.moveAndOpen(block as never);
+
+      const contentNode = (toolbar as unknown as { nodes: typeof toolbar['nodes'] }).nodes.content!;
+
+      // Must be '' (empty) so the CSS `mx-auto` class centers the toolbar.
+      // A hardcoded pixel value would push the toolbar to the left edge.
+      expect(contentNode.style.marginLeft).toBe('');
+    });
+  });
 });

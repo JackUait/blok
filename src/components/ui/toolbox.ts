@@ -427,7 +427,6 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     const PopoverClass = isMobileScreen() ? PopoverMobile : PopoverDesktop;
 
     this.popover = new PopoverClass({
-      scopeElement: this.api.ui.nodes.redactor,
       trigger: this.triggerElement || this.nodes.toolbox,
       leftAlignElement: this.leftAlignElement,
       messages: {

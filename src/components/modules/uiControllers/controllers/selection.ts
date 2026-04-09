@@ -167,10 +167,22 @@ export class SelectionController extends Controller {
    * @returns true if current block should be updated
    */
   private shouldUpdateCurrentBlock(): boolean {
+    const focusedElement = Selection.anchorElement;
+
+    if (!focusedElement || !this.wrapperElement) {
+      return false;
+    }
+
     /**
-     * Always update current block when focus moves to a different block.
-     * This handles Tab key navigation, programmatic focus, and accessibility tools.
+     * Skip updating current block when focus is inside a nested editor instance.
+     * The closest editor wrapper must match this instance's wrapper.
      */
+    const closestEditor = focusedElement.closest('[data-blok-testid="blok-editor"]');
+
+    if (closestEditor !== null && closestEditor !== this.wrapperElement) {
+      return false;
+    }
+
     return true;
   }
 }

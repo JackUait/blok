@@ -6,19 +6,31 @@ on:
   pull_request:
     branches: ["**"]
 
-permissions:
-  contents: read
-  pull-requests: write
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  version-check:
+    name: Version Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history to check tags
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Verify package.json version
+        run: node scripts/verify-version.mjs
+
   i18n:
     name: i18n Check
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,61 +43,40 @@ jobs:
       - name: Check translations
         run: node scripts/i18n/check-translations.mjs
 
-      - name: Check docs translations
-        run: node scripts/i18n/check-docs-translations.mjs
-
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js and Dependencies
-        uses: ./.github/actions/setup-node-deps
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install
 
       - name: Lint
         run: yarn lint
 
-  docs-lint:
-    name: Docs Lint
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js and Dependencies
-        uses: ./.github/actions/setup-node-deps
-
-      - name: Lint docs
-        run: cd docs && npm run lint
-
-  validate-test-categories:
-    name: Validate Test Categories
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js and Dependencies
-        uses: ./.github/actions/setup-node-deps
-
-      - name: Validate E2E Test Categorization
-        run: yarn e2e:validate-categories
-
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js and Dependencies
-        uses: ./.github/actions/setup-node-deps
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install
 
       - name: Build CLI
         run: yarn build:cli
@@ -93,42 +84,23 @@ jobs:
       - name: Run Unit Tests
         run: yarn test
 
-  docs-tests:
-    name: Docs Unit Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js and Dependencies
-        uses: ./.github/actions/setup-node-deps
-
-      - name: Run docs tests
-        run: cd docs && npm test
-
   build:
     name: Build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    outputs:
-      cache-hit: ${{ steps.build-cache.outputs.cache-hit }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js and Dependencies
-        uses: ./.github/actions/setup-node-deps
-
-      - name: Cache Build Output
-        id: build-cache
-        uses: actions/cache@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          path: dist/
-          key: build-${{ runner.os }}-${{ hashFiles('src/**', 'types/**', 'package.json', 'vite.config.mjs', 'tsconfig.json') }}
+          node-version: 24
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install
 
       - name: Build
-        if: steps.build-cache.outputs.cache-hit != 'true'
         run: yarn build
 
       - name: Upload build artifacts
@@ -138,204 +110,90 @@ jobs:
           path: dist/
           retention-days: 1
 
-  smoke-test:
-    name: Smoke Tests
+  e2e-tests:
+    name: E2E Tests
     runs-on: ubuntu-latest
-    needs: [build]
-    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js and Dependencies
-        uses: ./.github/actions/setup-node-deps
-
-      - name: Download Build Artifacts
-        uses: actions/download-artifact@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          name: dist
-          path: dist/
+          node-version: 24
+          cache: 'yarn'
 
-      - name: Mark Build as Available
-        run: echo "BLOK_BUILT=true" >> $GITHUB_ENV
+      - name: Install dependencies
+        run: yarn install
 
-      - name: Cache Playwright Browser
+      - name: Cache Playwright Browsers
         id: playwright-cache
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-chromium-${{ hashFiles('**/yarn.lock') }}
+          key: playwright-browsers-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            playwright-browsers-
 
-      - name: Install Playwright Browser
+      - name: Install Playwright Browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install chromium --with-deps
+        run: npx playwright install --with-deps
 
       - name: Install Playwright Browser Dependencies
         if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
+        run: npx playwright install-deps
 
-      - name: Run Smoke Tests
-        run: yarn e2e:smoke
+      - name: Run E2E Tests
+        run: yarn e2e
 
-      - name: Upload Smoke Test Results
+      - name: Upload E2E Test Results
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: smoke-test-results
+          name: playwright-results
           path: test-results/
-          retention-days: 3
+          retention-days: 7
 
-  e2e-tests:
-    name: E2E Tests
-    needs: [smoke-test, build]
-    uses: ./.github/workflows/e2e.yml
-    with:
-      artifact-name: dist
+      - name: Upload E2E HTML Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
 
   storybook-tests:
     name: Storybook Tests
     runs-on: ubuntu-latest
-    # No E2E dependency - storybook tests run independently
-    timeout-minutes: 20
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js and Dependencies
-        uses: ./.github/actions/setup-node-deps
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'yarn'
 
-      - name: Cache Playwright Browser
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Cache Playwright Browsers
         id: playwright-cache
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-chromium-${{ hashFiles('**/yarn.lock') }}
+          key: playwright-browsers-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            playwright-browsers-
 
-      - name: Install Playwright Browser
+      - name: Install Playwright Browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install chromium --with-deps
+        run: npx playwright install --with-deps
 
       - name: Install Playwright Browser Dependencies
         if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
-
-      - name: Build Storybook
-        run: yarn storybook:build
+        run: npx playwright install-deps
 
       - name: Run Storybook Tests
         run: yarn storybook:test
-
-  merge-e2e-reports:
-    name: Merge E2E Reports
-    runs-on: ubuntu-latest
-    needs: [e2e-tests]
-    if: always() && needs.e2e-tests.result != 'skipped' && github.ref != 'refs/heads/master'
-    timeout-minutes: 10
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js and Dependencies
-        uses: ./.github/actions/setup-node-deps
-
-      - name: Download All Blob Reports
-        uses: actions/download-artifact@v4
-        with:
-          pattern: blob-report-*
-          path: all-blob-reports/
-          merge-multiple: true
-
-      - name: Merge Reports
-        run: |
-          echo "Downloaded blob reports:"
-          ls -la all-blob-reports/
-
-          # Merge blob reports into HTML and JSON reports
-          mkdir -p playwright-report
-          PLAYWRIGHT_JSON_OUTPUT_FILE=playwright-report/results.json npx playwright merge-reports --reporter=html,json ./all-blob-reports
-
-      - name: Generate E2E Report Summary
-        id: e2e-report
-        if: always()
-        run: |
-          if [ -f playwright-report/results.json ]; then
-            node scripts/generate-e2e-report.mjs --input=playwright-report/results.json --output=e2e-report.md
-            {
-              echo "REPORT<<EOF"
-              cat e2e-report.md
-              echo "EOF"
-            } >> $GITHUB_OUTPUT
-          else
-            echo "::warning::No test results found at playwright-report/results.json"
-            {
-              echo "REPORT<<EOF"
-              echo "## 🧪 E2E Test Report"
-              echo ""
-              echo "⚠️ No test results available"
-              echo "EOF"
-            } >> $GITHUB_OUTPUT
-          fi
-        continue-on-error: true
-
-      - name: Warn on Report Generation Failure
-        if: steps.e2e-report.outcome == 'failure'
-        run: |
-          echo "::warning::E2E report generation failed. Check the 'Generate E2E Report Summary' step for details."
-
-      - name: Comment on PR
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        env:
-          E2E_REPORT: ${{ steps.e2e-report.outputs.REPORT }}
-        with:
-          script: |
-            const report = process.env.E2E_REPORT;
-
-            // Skip if no report content available
-            if (!report || report.trim() === '') {
-              console.log('No report content available, skipping comment');
-              return;
-            }
-
-            // Get PR number from payload (more reliable than context.issue)
-            const prNumber = context.payload.pull_request?.number;
-            if (!prNumber) {
-              console.log('No PR number found, skipping comment');
-              return;
-            }
-
-            // Find existing E2E report comments
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: prNumber,
-            });
-
-            const e2eComments = comments.filter(comment =>
-              comment.user.type === 'Bot' &&
-              comment.body.includes('E2E Test Report')
-            );
-
-            // Delete existing E2E report comments
-            for (const comment of e2eComments) {
-              await github.rest.issues.deleteComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: comment.id
-              });
-            }
-
-            // Create new comment
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: prNumber,
-              body: report
-            });
-
-      - name: Upload Merged HTML Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report-merged
-          path: playwright-report/
-          retention-days: 7

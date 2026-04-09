@@ -300,6 +300,17 @@ export class BlockManager extends Module {
       eventsDispatcher: this.eventsDispatcher,
       getBlockIndex: (block) => this.repository.getBlockIndex(block),
       onBlockMutated: this.blockDidMutated.bind(this),
+      shouldHandleEvent: (event: Event) => {
+        const target = event.target;
+
+        if (target instanceof Element) {
+          const closestEditor = target.closest('[data-blok-testid="blok-editor"]');
+
+          return closestEditor === null || closestEditor === this.Blok.UI.nodes.wrapper;
+        }
+
+        return true;
+      },
     });
 
     // Initialize factory

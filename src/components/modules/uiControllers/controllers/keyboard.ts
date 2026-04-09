@@ -102,6 +102,20 @@ export class KeyboardController extends Controller {
    * @param event - keyboard event
    */
   private handleKeydown(event: KeyboardEvent): void {
+    const target = event.target;
+
+    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+      return;
+    }
+
+    if (target instanceof Element) {
+      const closestEditor = target.closest('[data-blok-testid="blok-editor"]');
+
+      if (closestEditor !== null && closestEditor !== this.Blok.UI.nodes.wrapper) {
+        return;
+      }
+    }
+
     const key = event.key ?? '';
 
     switch (key) {

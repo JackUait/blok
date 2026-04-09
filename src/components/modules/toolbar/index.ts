@@ -558,6 +558,7 @@ export class Toolbar extends Module<ToolbarNodes> {
      * never extends beyond the left edge of the viewport, which would make the
      * drag handle unreachable by pointer events.
      *
+<<<<<<< HEAD
      * For nested blocks (e.g. children inside a callout), the holder is already
      * offset from the viewport left by the parent's indentation. In that case we
      * only need to ensure the actions don't extend beyond the viewport left edge

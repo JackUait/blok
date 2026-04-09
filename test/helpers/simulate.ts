@@ -30,6 +30,14 @@ export function simulateMousedown(element: EventTarget): void {
 }
 
 /**
+ * Simulate a change event on an element.
+ * Use after setting the element's value property.
+ */
+export function simulateChange(element: EventTarget): void {
+  element.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+/**
  * Simulate a mousemove event on an element.
  */
 export function simulateMousemove(element: EventTarget, options?: MouseEventInit): void {

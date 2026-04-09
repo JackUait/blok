@@ -66,7 +66,7 @@ export default defineConfig(({ mode }) => {
 
                   // Allow permissive open-source licenses.
                   // Handle SPDX OR expressions like "(MPL-2.0 OR Apache-2.0)".
-                  const allowed = ['MIT', 'Apache-2.0', 'ISC', 'BSD-2-Clause', 'BSD-3-Clause', '0BSD'];
+                  const allowed = ['MIT', 'Apache-2.0', 'ISC', 'BSD-2-Clause', 'BSD-3-Clause', '0BSD', 'CC0-1.0'];
                   const parts = dependency.license.replace(/[()]/g, '').split(/\s+OR\s+/);
 
                   return parts.some((l) => allowed.includes(l));

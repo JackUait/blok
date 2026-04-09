@@ -327,6 +327,17 @@ describe('Toolbox', () => {
 
       expect(lastPopoverParams.value).toHaveProperty('minWidth', '250px');
     });
+
+    it('should not pass scopeElement to the popover so it defaults to document.body', () => {
+      new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      expect(lastPopoverParams.value).not.toHaveProperty('scopeElement');
+    });
   });
 
   describe('isEmpty', () => {

@@ -319,6 +319,78 @@ describe('BlockEventBinder', () => {
     });
   });
 
+  describe('nested editor instance guard', () => {
+    it('skips keydown when shouldHandleEvent returns false', () => {
+      const deps = createMockDependencies();
+      deps.shouldHandleEvent = () => false;
+      const guardedBinder = new BlockEventBinder(deps);
+      const block = createMockBlock();
+
+      guardedBinder.bindBlockEvents(block);
+
+      const event = new KeyboardEvent('keydown', { key: 'Enter' });
+      block.holder.dispatchEvent(event);
+
+      expect(deps.blockEvents.keydown).not.toHaveBeenCalled();
+    });
+
+    it('processes keydown when shouldHandleEvent returns true', () => {
+      const deps = createMockDependencies();
+      deps.shouldHandleEvent = () => true;
+      const guardedBinder = new BlockEventBinder(deps);
+      const block = createMockBlock();
+
+      guardedBinder.bindBlockEvents(block);
+
+      const event = new KeyboardEvent('keydown', { key: 'Enter' });
+      block.holder.dispatchEvent(event);
+
+      expect(deps.blockEvents.keydown).toHaveBeenCalledWith(event);
+    });
+
+    it('processes keydown when shouldHandleEvent is not provided', () => {
+      const deps = createMockDependencies();
+      // shouldHandleEvent is not set (undefined by default)
+      const guardedBinder = new BlockEventBinder(deps);
+      const block = createMockBlock();
+
+      guardedBinder.bindBlockEvents(block);
+
+      const event = new KeyboardEvent('keydown', { key: 'Enter' });
+      block.holder.dispatchEvent(event);
+
+      expect(deps.blockEvents.keydown).toHaveBeenCalledWith(event);
+    });
+
+    it('skips keyup when shouldHandleEvent returns false', () => {
+      const deps = createMockDependencies();
+      deps.shouldHandleEvent = () => false;
+      const guardedBinder = new BlockEventBinder(deps);
+      const block = createMockBlock();
+
+      guardedBinder.bindBlockEvents(block);
+
+      const event = new KeyboardEvent('keyup', { key: 'a' });
+      block.holder.dispatchEvent(event);
+
+      expect(deps.blockEvents.keyup).not.toHaveBeenCalled();
+    });
+
+    it('skips input when shouldHandleEvent returns false', () => {
+      const deps = createMockDependencies();
+      deps.shouldHandleEvent = () => false;
+      const guardedBinder = new BlockEventBinder(deps);
+      const block = createMockBlock();
+
+      guardedBinder.bindBlockEvents(block);
+
+      const event = new InputEvent('input', { data: 'a' });
+      block.holder.dispatchEvent(event);
+
+      expect(deps.blockEvents.input).not.toHaveBeenCalled();
+    });
+  });
+
   describe('integration scenarios', () => {
     it('handles enable/disable cycle correctly', () => {
       const block = createMockBlock();

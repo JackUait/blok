@@ -51,6 +51,8 @@ export interface BlockEventBinderDependencies {
   getBlockIndex: (block: Block) => number;
   /** Callback when block is mutated */
   onBlockMutated: BlockMutationCallback;
+  /** Check if an event should be handled by this editor instance */
+  shouldHandleEvent?: (event: Event) => boolean;
 }
 
 /**
@@ -76,22 +78,31 @@ export class BlockEventBinder {
    * @param block - Block to bind events to
    */
   public bindBlockEvents(block: Block): void {
-    const { blockEvents, listeners, onBlockMutated, getBlockIndex } = this.dependencies;
+    const { blockEvents, listeners, onBlockMutated, getBlockIndex, shouldHandleEvent } = this.dependencies;
 
     listeners.on(block.holder, 'keydown', (event: Event) => {
       if (event instanceof KeyboardEvent) {
+        if (shouldHandleEvent && !shouldHandleEvent(event)) {
+          return;
+        }
         blockEvents.keydown(event);
       }
     });
 
     listeners.on(block.holder, 'keyup', (event: Event) => {
       if (event instanceof KeyboardEvent) {
+        if (shouldHandleEvent && !shouldHandleEvent(event)) {
+          return;
+        }
         blockEvents.keyup(event);
       }
     });
 
     listeners.on(block.holder, 'input', (event: Event) => {
       if (event instanceof InputEvent) {
+        if (shouldHandleEvent && !shouldHandleEvent(event)) {
+          return;
+        }
         blockEvents.input(event);
       }
     });

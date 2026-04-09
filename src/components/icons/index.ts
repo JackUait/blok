@@ -399,6 +399,13 @@ export const IconCopy = `
 </svg>
 `;
 
+// Pencil/Rename icon
+export const IconPencil = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M12.5 5.5l2 2M4.5 13.5l8-8 2 2-8 8H4.5v-2z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Trash/Delete icon
 export const IconTrash = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -589,6 +596,55 @@ export const IconEmojiFlag = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path d="M5 17V3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
   <path d="M5 3c2 0 3 1.5 5 1.5S14 3 16 3v8c-2 0-3 1.5-5 1.5S7 11 5 11" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+export const IconDatabase = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="10" cy="5.5" rx="6" ry="2.5" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M4 5.5v4c0 1.38 2.69 2.5 6 2.5s6-1.12 6-2.5v-4" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M4 9.5v4c0 1.38 2.69 2.5 6 2.5s6-1.12 6-2.5v-4" stroke="currentColor" stroke-width="1.25"/>
+</svg>
+`;
+
+export const IconBoard = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="3" y="4" width="14" height="12" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M7.5 4v12M12.5 4v12" stroke="currentColor" stroke-width="1.25"/>
+  <rect x="4.5" y="6" width="1.5" height="2" rx="0.5" fill="currentColor"/>
+  <rect x="4.5" y="9" width="1.5" height="2" rx="0.5" fill="currentColor"/>
+  <rect x="9" y="6" width="1.5" height="2" rx="0.5" fill="currentColor"/>
+  <rect x="14" y="6" width="1.5" height="2" rx="0.5" fill="currentColor"/>
+</svg>
+`;
+
+export const IconGallery = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="3" y="4" width="6" height="5" rx="1" stroke="currentColor" stroke-width="1.25"/>
+  <rect x="11" y="4" width="6" height="5" rx="1" stroke="currentColor" stroke-width="1.25"/>
+  <rect x="3" y="11" width="6" height="5" rx="1" stroke="currentColor" stroke-width="1.25"/>
+  <rect x="11" y="11" width="6" height="5" rx="1" stroke="currentColor" stroke-width="1.25"/>
+</svg>
+`;
+
+export const IconList = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="4.5" cy="6.5" r="1" fill="currentColor"/>
+  <circle cx="4.5" cy="10" r="1" fill="currentColor"/>
+  <circle cx="4.5" cy="13.5" r="1" fill="currentColor"/>
+  <path d="M7.5 6.5h9M7.5 10h9M7.5 13.5h9" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
+// Calendar icon (date property type)
+export const IconCalendar = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="3" y="4.5" width="14" height="12" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M3 8.5h14" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M7 3v3M13 3v3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <circle cx="7" cy="12" r="1" fill="currentColor"/>
+  <circle cx="10" cy="12" r="1" fill="currentColor"/>
+  <circle cx="13" cy="12" r="1" fill="currentColor"/>
 </svg>
 `;
 

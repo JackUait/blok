@@ -191,7 +191,6 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         searchable: true,
         trigger: trigger || this.nodes.wrapper,
         items: await this.getTunesItems(block, commonTunes, toolTunes),
-        scopeElement: this.Blok.API.methods.ui.nodes.redactor,
         messages: {
           nothingFound: this.Blok.I18n.t('popover.nothingFound'),
           search: this.Blok.I18n.t('popover.search'),

@@ -26,6 +26,8 @@ export { ListItem as List } from './list';
 export { Table } from './table';
 export { ToggleItem as Toggle } from './toggle';
 export { CalloutTool as Callout } from './callout';
+export { DatabaseTool as Database } from './database';
+export { DatabaseRowTool as DatabaseRow } from './database-row';
 export { DividerTool as Divider } from './divider';
 export { Quote } from './quote';
 export { CodeTool as Code } from './code';
@@ -49,6 +51,8 @@ export const defaultBlockTools = {
   table: {},
   toggle: {},
   callout: {},
+  database: {},
+  'database-row': {},
   divider: {},
   quote: {},
   code: { inlineToolbar: false },

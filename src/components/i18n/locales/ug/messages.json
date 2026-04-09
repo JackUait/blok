@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "بوش بەت",
   "tools.database.columnTitlePlaceholder": "ئىستون",
   "tools.database.deleteCard": "كارتىنى ئۆچۈرۈش",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "ئىستوننى ئۆچۈرۈش",
   "tools.database.emptyColumn": "كارتا يوق",
   "tools.database.rowTitlePlaceholder": "بوش بەت",

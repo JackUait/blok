@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "خالی صفحہ",
   "tools.database.columnTitlePlaceholder": "کالم",
   "tools.database.deleteCard": "کارڈ حذف کریں",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "کالم حذف کریں",
   "tools.database.emptyColumn": "کوئی کارڈ نہیں",
   "tools.database.rowTitlePlaceholder": "خالی صفحہ",

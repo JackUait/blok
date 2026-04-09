@@ -161,6 +161,8 @@
   "tools.database.addCard": "Add card",
   "tools.database.newPage": "New page",
   "tools.database.deleteCard": "Delete card",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.cardTitlePlaceholder": "Empty page",
   "tools.database.columnTitlePlaceholder": "Column",
   "tools.database.emptyColumn": "No cards",

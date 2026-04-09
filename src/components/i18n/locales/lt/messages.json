@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "Tuščias puslapis",
   "tools.database.columnTitlePlaceholder": "Stulpelis",
   "tools.database.deleteCard": "Ištrinti kortelę",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "Ištrinti stulpelį",
   "tools.database.renameColumn": "Pervadinti stulpelį",
   "tools.database.emptyColumn": "Nėra kortelių",

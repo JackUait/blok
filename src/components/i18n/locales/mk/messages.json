@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "Празна страница",
   "tools.database.columnTitlePlaceholder": "Колона",
   "tools.database.deleteCard": "Избриши картичка",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "Избриши колона",
   "tools.database.emptyColumn": "Нема картички",
   "tools.database.rowTitlePlaceholder": "Празна страница",

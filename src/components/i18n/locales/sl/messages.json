@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "Prazna stran",
   "tools.database.columnTitlePlaceholder": "Stolpec",
   "tools.database.deleteCard": "Izbriši kartico",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "Izbriši stolpec",
   "tools.database.emptyColumn": "Ni kartic",
   "tools.database.rowTitlePlaceholder": "Prazna stran",

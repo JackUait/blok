@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "דף ריק",
   "tools.database.columnTitlePlaceholder": "עמודה",
   "tools.database.deleteCard": "מחק כרטיס",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "מחק עמודה",
   "tools.database.renameColumn": "שנה שם עמודה",
   "tools.database.emptyColumn": "אין כרטיסים",

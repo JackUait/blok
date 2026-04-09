@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "खाली पेज",
   "tools.database.columnTitlePlaceholder": "कॉलम",
   "tools.database.deleteCard": "कार्ड हटाएं",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "कॉलम हटाएं",
   "tools.database.renameColumn": "कॉलम का नाम बदलें",
   "tools.database.emptyColumn": "कोई कार्ड नहीं",

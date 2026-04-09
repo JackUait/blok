@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "Դատարկ էջ",
   "tools.database.columnTitlePlaceholder": "Column",
   "tools.database.deleteCard": "Delete card",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "Delete column",
   "tools.database.renameColumn": "Rename column",
   "tools.database.emptyColumn": "Քարտեր չկան",

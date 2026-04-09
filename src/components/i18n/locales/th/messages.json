@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "หน้าเปล่า",
   "tools.database.columnTitlePlaceholder": "คอลัมน์",
   "tools.database.deleteCard": "ลบการ์ด",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "ลบคอลัมน์",
   "tools.database.emptyColumn": "ไม่มีการ์ด",
   "tools.database.rowTitlePlaceholder": "หน้าเปล่า",

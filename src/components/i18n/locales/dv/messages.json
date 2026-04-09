@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "ހުސް ޞަފްޙާ",
   "tools.database.columnTitlePlaceholder": "ކޮލަމު",
   "tools.database.deleteCard": "ކާޑު ފޮހެލާ",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "ކޮލަމު ފޮހެލާ",
   "tools.database.renameColumn": "ކޮލަމުގެ ނަން ބަދަލުކުރޭ",
   "tools.database.emptyColumn": "ކާޑެއް ނެތް",

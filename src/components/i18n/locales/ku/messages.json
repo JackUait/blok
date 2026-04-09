@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "Rûpela vala",
   "tools.database.columnTitlePlaceholder": "Stûn",
   "tools.database.deleteCard": "Qertê jê bibe",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "Stûnê jê bibe",
   "tools.database.renameColumn": "Navê stûnê biguherîne",
   "tools.database.emptyColumn": "Qert tune",

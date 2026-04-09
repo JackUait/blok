@@ -151,6 +151,8 @@
   "tools.database.addCard": "ਕਾਰਡ ਜੋੜੋ",
   "tools.database.newPage": "ਨਵਾਂ ਪੰਨਾ",
   "tools.database.deleteCard": "ਕਾਰਡ ਮਿਟਾਓ",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.cardTitlePlaceholder": "ਖਾਲੀ ਪੰਨਾ",
   "tools.database.columnTitlePlaceholder": "ਕਾਲਮ",
   "tools.database.emptyColumn": "ਕੋਈ ਕਾਰਡ ਨਹੀਂ",

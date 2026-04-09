@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "Порожня сторінка",
   "tools.database.columnTitlePlaceholder": "Стовпець",
   "tools.database.deleteCard": "Видалити картку",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "Видалити стовпець",
   "tools.database.emptyColumn": "Немає карток",
   "tools.database.rowTitlePlaceholder": "Порожня сторінка",

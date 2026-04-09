@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "Tukša lapa",
   "tools.database.columnTitlePlaceholder": "Kolonna",
   "tools.database.deleteCard": "Dzēst kartīti",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "Dzēst kolonnu",
   "tools.database.renameColumn": "Pārdēvēt kolonnu",
   "tools.database.emptyColumn": "Nav kartīšu",

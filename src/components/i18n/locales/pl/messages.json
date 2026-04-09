@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "Pusta strona",
   "tools.database.columnTitlePlaceholder": "Kolumna",
   "tools.database.deleteCard": "Usuń kartę",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "Usuń kolumnę",
   "tools.database.emptyColumn": "Brak kart",
   "tools.database.rowTitlePlaceholder": "Pusta strona",

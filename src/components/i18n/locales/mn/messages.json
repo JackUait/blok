@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "Хоосон хуудас",
   "tools.database.columnTitlePlaceholder": "Багана",
   "tools.database.deleteCard": "Карт устгах",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "Багана устгах",
   "tools.database.emptyColumn": "Карт байхгүй",
   "tools.database.rowTitlePlaceholder": "Хоосон хуудас",

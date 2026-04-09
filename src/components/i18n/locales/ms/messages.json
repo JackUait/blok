@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "Halaman kosong",
   "tools.database.columnTitlePlaceholder": "Lajur",
   "tools.database.deleteCard": "Padam kad",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "Padam lajur",
   "tools.database.emptyColumn": "Tiada kad",
   "tools.database.rowTitlePlaceholder": "Halaman kosong",

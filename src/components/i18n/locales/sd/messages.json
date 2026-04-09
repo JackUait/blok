@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "خالي صفحو",
   "tools.database.columnTitlePlaceholder": "ڪالم",
   "tools.database.deleteCard": "ڪارڊ ختم ڪريو",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "ڪالم ختم ڪريو",
   "tools.database.emptyColumn": "ڪو به ڪارڊ ناهي",
   "tools.database.rowTitlePlaceholder": "خالي صفحو",

@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "空白页面",
   "tools.database.columnTitlePlaceholder": "列",
   "tools.database.deleteCard": "删除卡片",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "删除列",
   "tools.database.emptyColumn": "没有卡片",
   "tools.database.rowTitlePlaceholder": "空白页面",

@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "Leere Seite",
   "tools.database.columnTitlePlaceholder": "Spalte",
   "tools.database.deleteCard": "Karte löschen",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "Spalte löschen",
   "tools.database.renameColumn": "Spalte umbenennen",
   "tools.database.emptyColumn": "Keine Karten",

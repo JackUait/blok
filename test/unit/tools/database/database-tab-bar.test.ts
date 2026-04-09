@@ -677,6 +677,23 @@ describe('DatabaseTabBar', () => {
     });
   });
 
+  describe('getAddBtnEl', () => {
+    it('returns the add-view button element after render', () => {
+      const view = makeView({ id: 'v1' });
+      const bar = createTabBar([view], 'v1');
+      bar.render();
+      const btn = bar.getAddBtnEl();
+      expect(btn).not.toBeNull();
+      expect(btn?.hasAttribute('data-blok-database-add-view')).toBe(true);
+    });
+
+    it('returns null before render', () => {
+      const view = makeView({ id: 'v1' });
+      const bar = createTabBar([view], 'v1');
+      expect(bar.getAddBtnEl()).toBeNull();
+    });
+  });
+
   describe('read-only mode', () => {
     it('+ button is hidden when readOnly: true is passed to constructor', () => {
       const view = makeView({ id: 'v1', position: 'a0' });

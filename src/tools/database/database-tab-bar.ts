@@ -544,4 +544,8 @@ export class DatabaseTabBar {
       this.viewPopover = null;
     }
   }
+
+  getAddBtnEl(): HTMLElement | null {
+    return this.addBtnEl;
+  }
 }

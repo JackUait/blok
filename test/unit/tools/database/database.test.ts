@@ -192,11 +192,11 @@ describe('DatabaseTool', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
       const element = tool.render();
       const children = Array.from(element.children);
-      const titleIndex = children.findIndex((el) => el.hasAttribute('data-blok-database-title'));
+      const titleRowIndex = children.findIndex((el) => el.hasAttribute('data-blok-database-title-row'));
       const tabBarIndex = children.findIndex((el) => el.hasAttribute('data-blok-database-tab-bar'));
 
-      expect(titleIndex).toBeGreaterThanOrEqual(0);
-      expect(tabBarIndex).toBeGreaterThan(titleIndex);
+      expect(titleRowIndex).toBeGreaterThanOrEqual(0);
+      expect(tabBarIndex).toBeGreaterThan(titleRowIndex);
     });
 
     it('renders title as contenteditable in edit mode', () => {

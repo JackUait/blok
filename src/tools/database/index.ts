@@ -39,6 +39,7 @@ export class DatabaseTool implements BlockTool {
 
   private element: HTMLDivElement | null = null;
   private titleElement: HTMLElement | null = null;
+  private titleRowElement: HTMLDivElement | null = null;
   private boardContainer: HTMLDivElement | null = null;
   private tabBar: DatabaseTabBar | null = null;
 
@@ -96,7 +97,12 @@ export class DatabaseTool implements BlockTool {
 
     const titleEl = this.createTitleElement();
     this.titleElement = titleEl;
-    wrapper.appendChild(titleEl);
+
+    const titleRow = document.createElement('div');
+    titleRow.setAttribute('data-blok-database-title-row', '');
+    titleRow.appendChild(titleEl);
+    this.titleRowElement = titleRow;
+    wrapper.appendChild(titleRow);
 
     this.tabBar = this.createTabBar();
     wrapper.appendChild(this.tabBar.render());

@@ -136,7 +136,6 @@ export class DatabaseTool implements BlockTool {
     titleEl.style.fontWeight = '600';
     titleEl.style.lineHeight = '1.3';
     titleEl.style.color = 'var(--blok-text-primary)';
-    titleEl.style.marginBottom = '4px';
     titleEl.style.outline = 'none';
     titleEl.style.cursor = 'text';
     titleEl.style.wordBreak = 'break-word';

@@ -2075,6 +2075,19 @@
   padding-left: max(0px, calc((100% - var(--max-width-content)) / 2));
 }
 
+[data-blok-database-title-row] {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+/* When + button is inside the title row, show it on row hover */
+[data-blok-database-title-row]:hover [data-blok-database-add-view],
+[data-blok-database-title-row] [data-blok-database-add-view][data-popover-open] {
+  opacity: 1;
+}
+
 [data-blok-database-tab] {
   display: flex;
   align-items: center;

@@ -185,9 +185,10 @@ export interface BlokConfig {
   onThemeChange?: (resolvedTheme: ResolvedTheme) => void;
 
   /**
-   * Options for automatic scroll-to-block behaviour on hash navigation.
+   * Options for automatic scroll-to-block behavior on hash navigation.
    * When the page URL contains a hash matching a block ID, the editor scrolls
    * to that block after all blocks are rendered.
+   * No-op if the URL contains no hash or the hash does not match any block ID.
    */
   scrollToBlock?: {
     /**

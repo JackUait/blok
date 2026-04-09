@@ -183,4 +183,18 @@ export interface BlokConfig {
    * @param resolvedTheme - the resolved theme ('dark' or 'light')
    */
   onThemeChange?: (resolvedTheme: ResolvedTheme) => void;
+
+  /**
+   * Options for automatic scroll-to-block behaviour on hash navigation.
+   * When the page URL contains a hash matching a block ID, the editor scrolls
+   * to that block after all blocks are rendered.
+   */
+  scrollToBlock?: {
+    /**
+     * Pixels to leave above the block when scrolling into view.
+     * Useful when a sticky header is present.
+     * @default 0
+     */
+    topOffset?: number;
+  };
 }

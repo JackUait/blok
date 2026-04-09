@@ -155,28 +155,16 @@ describe('DatabaseBoardView', () => {
       expect(column.style.backgroundColor).toBe('');
     });
 
-    it('renders delete-card button on each card when NOT read-only', () => {
-      const options = [makeOption({ id: 'opt-1' })];
-      const rows = [makeRow({ id: 'row-1' })];
-      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
-      const board = view.createView();
-
-      const deleteBtns = board.querySelectorAll('[data-blok-database-delete-card]');
-
-      expect(deleteBtns).toHaveLength(1);
-      expect(deleteBtns[0].getAttribute('data-row-id')).toBe('row-1');
-      expect(deleteBtns[0].textContent).toBe('\u00d7');
-    });
-
-    it('does not render delete-card button in read-only mode', () => {
+    it('does not render action buttons in read-only mode', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1' })];
       const view = new DatabaseBoardView({ readOnly: true, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
       const board = view.createView();
 
-      const deleteBtns = board.querySelectorAll('[data-blok-database-delete-card]');
-
-      expect(deleteBtns).toHaveLength(0);
+      expect(board.querySelector('[data-blok-database-card-actions]')).toBeNull();
+      expect(board.querySelector('[data-blok-database-delete-card]')).toBeNull();
+      expect(board.querySelector('[data-blok-database-edit-card]')).toBeNull();
+      expect(board.querySelector('[data-blok-database-card-menu]')).toBeNull();
     });
 
     it('renders card count badge in each column header', () => {
@@ -501,15 +489,15 @@ describe('DatabaseBoardView', () => {
       expect(cardEls[1].getAttribute('role')).toBe('listitem');
     });
 
-    it('delete card button has a descriptive aria-label', () => {
+    it('edit card button has a descriptive aria-label', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1' })];
       const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
       const board = view.createView();
 
-      const deleteBtn = board.querySelector('[data-blok-database-delete-card]');
+      const editBtn = board.querySelector('[data-blok-database-edit-card]');
 
-      expect(deleteBtn?.getAttribute('aria-label')).toBe('tools.database.deleteCard');
+      expect(editBtn?.getAttribute('aria-label')).toBe('tools.database.editCardTitle');
     });
 
     it('add-card button has an aria-label', () => {
@@ -623,7 +611,7 @@ describe('DatabaseBoardView', () => {
       expect(card.style.cursor).toBe('pointer');
     });
 
-    it('card element has position relative for delete button positioning', () => {
+    it('card element has position relative for action button positioning', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1' })];
       const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
@@ -632,19 +620,6 @@ describe('DatabaseBoardView', () => {
       const card = board.querySelector('[data-blok-database-card]') as HTMLElement;
 
       expect(card.style.position).toBe('relative');
-    });
-
-    it('delete card button is positioned absolutely in top-right corner', () => {
-      const options = [makeOption({ id: 'opt-1' })];
-      const rows = [makeRow({ id: 'row-1' })];
-      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
-      const board = view.createView();
-
-      const deleteBtn = board.querySelector('[data-blok-database-delete-card]') as HTMLElement;
-
-      expect(deleteBtn.style.position).toBe('absolute');
-      expect(deleteBtn.style.top).toBeTruthy();
-      expect(deleteBtn.style.right).toBeTruthy();
     });
 
     it('column title has no inline font-weight override (weight comes from CSS)', () => {

@@ -449,6 +449,8 @@ export class BlockManager extends Module {
     parentId?: string;
     contentIds?: string[];
     bindEventsImmediately?: boolean;
+    lastEditedAt?: number;
+    lastEditedBy?: string | null;
   }): Block {
     return this.factory.composeBlock(options);
   }

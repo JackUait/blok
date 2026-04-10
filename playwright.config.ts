@@ -130,6 +130,7 @@ const LOGIC_TESTS = [
   '**/ui/database-pill-title-edit.spec.ts',
   '**/ui/database-single-view-tab-bar.spec.ts',
   '**/ui/database-card-hover-actions.spec.ts',
+  '**/ui/block-settings-edit-metadata.spec.ts',
 
   // Seed/utility tests
   '**/seed.spec.ts',

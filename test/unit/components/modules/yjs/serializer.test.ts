@@ -180,6 +180,79 @@ describe('YBlockSerializer', () => {
     });
   });
 
+  describe('edit metadata serialization', () => {
+    it('should serialize lastEditedAt and lastEditedBy to Y.Map', () => {
+      const yblocks = ydoc.getArray('test');
+
+      const blockData = {
+        id: 'test-1',
+        type: 'paragraph',
+        data: { text: 'Hello' },
+        lastEditedAt: 1712880000000,
+        lastEditedBy: 'Jack Uait',
+      };
+
+      const yblock = serializer.outputDataToYBlock(blockData);
+      yblocks.push([yblock]);
+
+      const stored = yblocks.get(0) as Y.Map<unknown>;
+
+      expect(stored.get('lastEditedAt')).toBe(1712880000000);
+      expect(stored.get('lastEditedBy')).toBe('Jack Uait');
+    });
+
+    it('should omit metadata fields from Y.Map when not present', () => {
+      const blockData = {
+        id: 'test-2',
+        type: 'paragraph',
+        data: { text: 'Hello' },
+      };
+
+      const yblock = serializer.outputDataToYBlock(blockData);
+
+      expect(yblock.has('lastEditedAt')).toBe(false);
+      expect(yblock.has('lastEditedBy')).toBe(false);
+    });
+
+    it('should deserialize lastEditedAt and lastEditedBy from Y.Map', () => {
+      const yblocks = ydoc.getArray('test');
+
+      const blockData = {
+        id: 'test-3',
+        type: 'paragraph',
+        data: { text: 'Hello' },
+        lastEditedAt: 1712880000000,
+        lastEditedBy: 'Jack Uait',
+      };
+
+      const yblock = serializer.outputDataToYBlock(blockData);
+      yblocks.push([yblock]);
+
+      const output = serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>);
+
+      expect(output.lastEditedAt).toBe(1712880000000);
+      expect(output.lastEditedBy).toBe('Jack Uait');
+    });
+
+    it('should return output without metadata for legacy blocks', () => {
+      const yblocks = ydoc.getArray('test');
+
+      const blockData = {
+        id: 'test-4',
+        type: 'paragraph',
+        data: { text: 'Hello' },
+      };
+
+      const yblock = serializer.outputDataToYBlock(blockData);
+      yblocks.push([yblock]);
+
+      const output = serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>);
+
+      expect(output.lastEditedAt).toBeUndefined();
+      expect(output.lastEditedBy).toBeUndefined();
+    });
+  });
+
   describe('isBoundaryCharacter', () => {
     it('returns true for boundary characters', () => {
       expect(isBoundaryCharacter(' ')).toBe(true);

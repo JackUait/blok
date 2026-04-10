@@ -74,6 +74,14 @@ export class YBlockSerializer {
       yblock.set('contentIds', Y.Array.from(blockData.content));
     }
 
+    if (blockData.lastEditedAt !== undefined) {
+      yblock.set('lastEditedAt', blockData.lastEditedAt);
+    }
+
+    if (blockData.lastEditedBy !== undefined) {
+      yblock.set('lastEditedBy', blockData.lastEditedBy);
+    }
+
     return yblock;
   }
 
@@ -120,6 +128,18 @@ export class YBlockSerializer {
 
     if (contentIds instanceof Y.Array && contentIds.length > 0) {
       block.content = contentIds.toArray();
+    }
+
+    const lastEditedAt = yblock.get('lastEditedAt');
+
+    if (typeof lastEditedAt === 'number') {
+      block.lastEditedAt = lastEditedAt;
+    }
+
+    const lastEditedBy = yblock.get('lastEditedBy');
+
+    if (typeof lastEditedBy === 'string') {
+      block.lastEditedBy = lastEditedBy;
     }
 
     return block;

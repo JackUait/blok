@@ -16,7 +16,7 @@ import type { DragController } from '../modules/drag/DragController';
 import type { BlockToolAdapter } from '../tools/block';
 import type { ToolsCollection } from '../tools/collection';
 import type { BlockTuneAdapter } from '../tools/tune';
-import { generateBlockId, isFunction, log } from '../utils';
+import { generateBlockId, isFunction, isValidBlockId, log } from '../utils';
 import { isSameBlockData } from '../utils/blocks';
 import { EventsDispatcher } from '../utils/events';
 
@@ -244,7 +244,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @param [options.contentIds] - array of child block ids
    * @param [eventBus] - Blok common event bus. Allows to subscribe on some Blok events. Could be omitted when "virtual" Block is created. See BlocksAPI@composeBlockData.
    */
-  constructor({
+   constructor({
     id = generateBlockId(),
     data,
     tool,
@@ -256,9 +256,12 @@ export class Block extends EventsDispatcher<BlockEvents> {
   }: BlockConstructorOptions, eventBus?: EventsDispatcher<BlokEventMap>) {
     super();
 
+    // Validate id: replace non-nanoid strings with a freshly generated id
+    const validatedId = isValidBlockId(id) ? id : generateBlockId();
+
     // Set basic properties
     this.name = tool.name;
-    this.id = id;
+    this.id = validatedId;
     this.parentId = parentId ?? null;
     this.contentIds = contentIds ?? [];
     this.settings = tool.settings;

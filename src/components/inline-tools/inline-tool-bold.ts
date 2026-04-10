@@ -16,6 +16,7 @@ import {
 import {
   isRangeFormatted,
   collectFormattingAncestors,
+  extendRangeToTrailingWhitespace,
 } from './utils/formatting-range-utils';
 
 /**
@@ -212,6 +213,7 @@ export class BoldInlineTool implements InlineTool {
    * @param range - The Range object containing the selection to wrap
    */
   private wrapWithBold(range: Range): void {
+    extendRangeToTrailingWhitespace(range);
     const html = this.getRangeHtmlWithoutBold(range);
     const insertedRange = this.replaceRangeWithHtml(range, `<strong>${html}</strong>`);
     const selection = window.getSelection();

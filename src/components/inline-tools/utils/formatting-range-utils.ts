@@ -133,6 +133,46 @@ export const isRangeFormatted = (
 };
 
 /**
+ * Extend the range to include any trailing whitespace characters that browsers
+ * exclude from selections (e.g. Ctrl+A on loaded text stops before trailing spaces).
+ *
+ * When text is loaded via innerHTML (e.g. `"hello "`), browsers keep trailing
+ * regular spaces (char 32) as-is in the text node, but Ctrl+A / selectAll
+ * in Chromium and WebKit places the range end *before* those trailing spaces.
+ * This means `range.cloneContents()` omits them, so formatting operations
+ * (bold, italic, etc.) silently drop any trailing whitespace.
+ *
+ * By contrast, text typed by the user is stored internally with a non-breaking
+ * space (`\u00A0`) which is always included in the selection.
+ *
+ * This function mutates the range in place to cover those excluded trailing
+ * spaces, so downstream formatting can include them.
+ *
+ * @param range - The range to extend (mutated in place)
+ */
+export const extendRangeToTrailingWhitespace = (range: Range): void => {
+  const endContainer = range.endContainer;
+
+  if (endContainer.nodeType !== Node.TEXT_NODE) {
+    return;
+  }
+
+  const text = endContainer.textContent ?? '';
+  const endOffset = range.endOffset;
+
+  if (endOffset >= text.length) {
+    return;
+  }
+
+  // Check whether all characters between endOffset and end of text node are whitespace
+  const trailingSlice = text.slice(endOffset);
+
+  if (trailingSlice.length > 0 && trailingSlice.trim().length === 0) {
+    range.setEnd(endContainer, text.length);
+  }
+};
+
+/**
  * Collect all unique formatting ancestors within a range
  * @param range - The range to search within
  * @param predicate - Function to test elements for formatting

@@ -51,6 +51,21 @@ export class KeyboardController extends Controller {
       return;
     }
 
+    const target = event.target;
+
+    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+      return;
+    }
+
+    // Skip events from nested editors
+    if (target instanceof Element) {
+      const closestEditor = target.closest('[data-blok-testid="blok-editor"]');
+
+      if (closestEditor !== null && closestEditor !== this.Blok.UI.nodes.wrapper) {
+        return;
+      }
+    }
+
     if (KEYS_REQUIRING_CARET_CAPTURE.has(event.key)) {
       this.Blok.YjsManager.markCaretBeforeChange();
     }

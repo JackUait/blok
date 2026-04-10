@@ -199,4 +199,15 @@ export interface BlokConfig {
      */
     topOffset?: number;
   };
+
+  /**
+   * User identity for edit tracking.
+   * When set, the user's name is recorded on each block they edit.
+   */
+  user?: {
+    /**
+     * Display name shown in the "Last edited by" footer in block settings.
+     */
+    name: string;
+  };
 }

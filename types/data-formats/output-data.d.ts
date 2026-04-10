@@ -41,6 +41,19 @@ export interface OutputBlockData<Type extends string = string, Data extends obje
    * Omit if block has no children.
    */
   content?: BlockId[];
+
+  /**
+   * Timestamp (milliseconds since epoch) of the last edit to this block.
+   * Automatically tracked by the editor when content changes.
+   * Omit for legacy data or blocks that haven't been edited.
+   */
+  lastEditedAt?: number;
+
+  /**
+   * Display name of the user who last edited this block.
+   * Set from the `user.name` config option. Omit if no user is configured.
+   */
+  lastEditedBy?: string;
 }
 
 export interface OutputData {

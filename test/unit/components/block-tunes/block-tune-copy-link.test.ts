@@ -140,6 +140,56 @@ describe('CopyLinkTune', () => {
     );
   });
 
+  it('percent-encodes the block id when it contains URL-unsafe characters', async () => {
+    const { api, notifier } = createMocks();
+    const blockWithUnsafeId = { id: 'Hello World & More' } as unknown as BlockAPI;
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextMock },
+      writable: true,
+    });
+
+    Object.defineProperty(window, 'location', {
+      value: { href: 'https://example.com/page' },
+      writable: true,
+    });
+
+    const tune = new CopyLinkTune({ api, block: blockWithUnsafeId });
+    const config = tune.render() as MenuConfigItem;
+
+    await config.onActivate?.(config);
+
+    expect(writeTextMock).toHaveBeenCalledWith(
+      'https://example.com/page#Hello%20World%20%26%20More'
+    );
+
+    void notifier;
+  });
+
+  it('does not alter a valid nanoid block id in the URL', async () => {
+    const { api, block } = createMocks(); // block.id = 'abc123XYZ0'
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextMock },
+      writable: true,
+    });
+
+    Object.defineProperty(window, 'location', {
+      value: { href: 'https://example.com/' },
+      writable: true,
+    });
+
+    const tune = new CopyLinkTune({ api, block });
+    const config = tune.render() as MenuConfigItem;
+
+    await config.onActivate?.(config);
+
+    // nanoid chars are all URL-safe — encodeURIComponent must not alter them
+    expect(writeTextMock).toHaveBeenCalledWith('https://example.com/#abc123XYZ0');
+  });
+
   it('does not trigger handleClick via Cmd+Ctrl+L when block is not focused', async () => {
     const { api, block, notifier } = createMocks();
     const unfocusedBlock = { ...block, selected: false } as unknown as BlockAPI;

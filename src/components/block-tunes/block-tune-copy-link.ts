@@ -70,7 +70,7 @@ export class CopyLinkTune implements BlockTune {
    */
   public async handleClick(): Promise<void> {
     const baseUrl = window.location.href.split('#')[0];
-    const url = `${baseUrl}#${this.block.id}`;
+    const url = `${baseUrl}#${encodeURIComponent(this.block.id)}`;
 
     try {
       await navigator.clipboard.writeText(url);

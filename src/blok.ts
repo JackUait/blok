@@ -150,7 +150,8 @@ class Blok {
       // Scroll to the block referenced by the URL hash, if present.
       // isReady resolves only after all blocks are in the DOM (requestIdleCallback fence in Renderer),
       // so no extra polling is needed even on slow connections.
-      const hash = window.location.hash.slice(1);
+      const rawHash = window.location.hash.slice(1);
+      const hash = rawHash ? decodeURIComponent(rawHash) : '';
 
       if (hash) {
         const el = document.querySelector(`[data-blok-id="${CSS.escape(hash)}"]`);

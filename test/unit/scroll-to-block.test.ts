@@ -223,6 +223,33 @@ describe('scroll-to-block', () => {
 
   // -------------------------------------------------------------------------
 
+  it('decodes a percent-encoded hash before querying data-blok-id', async () => {
+    // Simulate a URL like: page#Hello%20World
+    setHash('#Hello%20World');
+
+    const el = fakeEl(100);
+
+    document.querySelector = vi.fn((selector: string): Element | null => {
+      // The implementation decodes the hash then CSS.escape()s it.
+      // CSS.escape('Hello World') === 'Hello\\ World', so the selector becomes:
+      // [data-blok-id="Hello\ World"]
+      if (selector === `[data-blok-id="${CSS.escape('Hello World')}"]`) {
+        return el;
+      }
+
+      return originalQuerySelector(selector);
+    }) as typeof document.querySelector;
+
+    const editor = new Blok({} as BlokConfig);
+
+    await editor.isReady;
+
+    // If decoding works, querySelector matched and scrollTo was called
+    expect(mockScrollTo).toHaveBeenCalledWith({ top: 100, behavior: 'smooth' });
+  });
+
+  // -------------------------------------------------------------------------
+
   it('defaults topOffset to 0 when scrollToBlock is omitted', async () => {
     setHash('#someBlock');
 

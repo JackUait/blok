@@ -151,7 +151,9 @@ class Blok {
       // isReady resolves only after all blocks are in the DOM (requestIdleCallback fence in Renderer),
       // so no extra polling is needed even on slow connections.
       const rawHash = window.location.hash.slice(1);
-      const hash = rawHash ? decodeURIComponent(rawHash) : '';
+      // Malformed percent-sequences (e.g. %ZZ) cause decodeURIComponent to throw;
+      // fall back to the raw value so the query finds nothing and we skip scrolling.
+      const hash = rawHash ? ((): string => { try { return decodeURIComponent(rawHash); } catch { return rawHash; } })() : '';
 
       if (hash) {
         const el = document.querySelector(`[data-blok-id="${CSS.escape(hash)}"]`);

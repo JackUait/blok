@@ -318,6 +318,23 @@ describe('scroll-to-block', () => {
 
   // -------------------------------------------------------------------------
 
+  it('does not throw and does not scroll when hash contains a malformed percent-sequence', async () => {
+    // %ZZ is an invalid percent-escape — decodeURIComponent would throw
+    setHash('#abc%ZZdef');
+
+    // querySelector returns null by default (from beforeEach mock)
+
+    const editor = new Blok({} as BlokConfig);
+
+    // isReady must resolve without throwing
+    await expect(editor.isReady).resolves.toBeUndefined();
+
+    // No scroll should occur because the element wasn't found
+    expect(mockScrollTo).not.toHaveBeenCalled();
+  });
+
+  // -------------------------------------------------------------------------
+
   it('does not call selectBlock when hash does not match a block in BlockManager', async () => {
     setHash('#abc123XYZ0');
 

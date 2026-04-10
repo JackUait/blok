@@ -86,8 +86,6 @@ export class DatabaseColumnControls {
         this.options.onRenameInput?.(optionId, input.value);
       });
 
-      let committed = false;
-
       const restoreDiv = (label: string): HTMLElement => {
         const div = document.createElement('div');
         div.setAttribute('data-blok-database-column-title', '');
@@ -97,8 +95,7 @@ export class DatabaseColumnControls {
       };
 
       const commit = (): void => {
-        if (committed) return;
-        committed = true;
+        if (!input.isConnected) return;
         const rawValue = input.value;
         const newLabel = rawValue.trim() || originalLabel;
         const restoredDiv = restoreDiv(newLabel);
@@ -113,8 +110,7 @@ export class DatabaseColumnControls {
       };
 
       const cancel = (): void => {
-        if (committed) return;
-        committed = true;
+        if (!input.isConnected) return;
         const restoredDiv = restoreDiv(originalLabel);
         input.replaceWith(restoredDiv);
         this.makePillTitleEditable(headerEl, optionId);

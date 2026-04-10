@@ -103,13 +103,14 @@ export class Renderer extends Module {
          * Create Blocks instances
          */
         const blocks = processedBlocks.map((blockData: OutputBlockData) => {
-          let { id } = blockData;
           const { tunes, parent, content, lastEditedAt, lastEditedBy } = blockData;
+          const hasDuplicateId = blockData.id !== undefined && seenIds.has(blockData.id);
 
-          if (id !== undefined && seenIds.has(id)) {
-            logLabeled(`Duplicate block id «${id}» replaced with a generated id to ensure uniqueness`, 'warn');
-            id = generateBlockId();
+          if (hasDuplicateId) {
+            logLabeled(`Duplicate block id «${blockData.id}» replaced with a generated id to ensure uniqueness`, 'warn');
           }
+
+          const id = hasDuplicateId ? generateBlockId() : blockData.id;
 
           if (id !== undefined) {
             seenIds.add(id);

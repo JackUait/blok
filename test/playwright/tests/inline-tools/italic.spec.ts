@@ -649,14 +649,15 @@ test.describe('inline tool italic', () => {
     await italicButton.click();
 
     // Verify the <i> tag contains the trailing space
-    const italic = paragraph.locator('i');
+    await expect(async () => {
+      const italicText = await paragraph.evaluate((el) => {
+        const i = el.querySelector('i');
 
-    await expect(italic).toHaveCount(1);
+        return i ? JSON.stringify(i.textContent) : null;
+      });
 
-    const italicText = await italic.evaluate((el) => JSON.stringify(el.textContent));
-
-    // The italic content must preserve the trailing space: "hello world "
-    expect(italicText).toBe('"hello world "');
+      expect(italicText).toBe('"hello world "');
+    }).toPass();
   });
 });
 

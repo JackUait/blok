@@ -626,7 +626,7 @@ test.describe('inline tool bold', () => {
     await boldButton.click();
 
     // Verify the strong tag preserves the trailing space
-    const strong = paragraph.locator('strong');
+    const strong = paragraph.getByRole('strong');
 
     await expect(strong).toHaveCount(1);
 
@@ -670,7 +670,7 @@ test.describe('inline tool bold', () => {
     await boldButton.click();
 
     // Verify the strong tag contains the trailing space
-    const strong = paragraph.locator('strong');
+    const strong = paragraph.getByRole('strong');
 
     await expect(strong).toHaveCount(1);
 

@@ -121,7 +121,12 @@ function computeRelativeLuminance(color: string): number {
     const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
     const p = 2 * l - q;
     const hueToChannel = (t: number): number => {
-      const wrapped = t < 0 ? t + 1 : t > 1 ? t - 1 : t;
+      const wrapped = (() => {
+        if (t < 0) return t + 1;
+        if (t > 1) return t - 1;
+
+        return t;
+      })();
 
       if (wrapped < 1 / 6) { return p + (q - p) * 6 * wrapped; }
       if (wrapped < 1 / 2) { return q; }

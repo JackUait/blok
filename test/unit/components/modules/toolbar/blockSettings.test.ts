@@ -860,4 +860,70 @@ describe('BlockSettings', () => {
     expect('englishTitle' in headerItem && headerItem.englishTitle).toBe('Heading 1');
     expect('searchTerms' in headerItem && headerItem.searchTerms).toEqual(['h1', 'title', 'header', 'heading']);
   });
+
+  describe('edit metadata footer', () => {
+    it('should append a separator and Html item with edit metadata when lastEditedAt is set', async () => {
+      const block = createBlock();
+
+      block.lastEditedAt = 1712700720000;
+      block.lastEditedBy = 'Jack Uait';
+
+      getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
+
+      const items = await (blockSettings as unknown as {
+        getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+      }).getTunesItems(block, []);
+
+      // Last two items should be separator + Html footer
+      const lastItem = items[items.length - 1];
+      const separatorItem = items[items.length - 2];
+
+      expect(separatorItem).toEqual({ type: PopoverItemType.Separator });
+      expect(lastItem).toEqual(expect.objectContaining({
+        type: PopoverItemType.Html,
+        name: 'edit-metadata',
+      }));
+
+      const element = (lastItem as { element: HTMLElement }).element;
+
+      expect(element.textContent).toContain('Last edited by Jack Uait');
+    });
+
+    it('should show "Last edited" without user name when lastEditedBy is null', async () => {
+      const block = createBlock();
+
+      block.lastEditedAt = 1712700720000;
+      block.lastEditedBy = null;
+
+      getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
+
+      const items = await (blockSettings as unknown as {
+        getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+      }).getTunesItems(block, []);
+
+      const lastItem = items[items.length - 1];
+      const element = (lastItem as { element: HTMLElement }).element;
+      const firstLine = element.querySelector('[data-edit-meta-label]');
+
+      expect(firstLine?.textContent).toBe('Last edited');
+    });
+
+    it('should not show footer when lastEditedAt is undefined', async () => {
+      const block = createBlock();
+
+      block.lastEditedAt = undefined;
+      block.lastEditedBy = null;
+
+      getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
+
+      const items = await (blockSettings as unknown as {
+        getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+      }).getTunesItems(block, []);
+
+      // Check no edit-metadata item exists
+      const metadataItem = items.find((item: PopoverItemParams) => 'name' in item && item.name === 'edit-metadata');
+
+      expect(metadataItem).toBeUndefined();
+    });
+  });
 });

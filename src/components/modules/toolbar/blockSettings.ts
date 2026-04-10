@@ -430,7 +430,58 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       });
     }
 
+    if (currentBlock.lastEditedAt !== undefined) {
+      items.push({
+        type: PopoverItemType.Separator,
+      });
+      items.push({
+        type: PopoverItemType.Html,
+        element: this.createEditMetadataFooter(currentBlock),
+        name: 'edit-metadata',
+      });
+    }
+
     return items;
+  }
+
+  /**
+   * Creates the "Last edited by..." footer element for block settings.
+   * @param block - the block whose metadata to display
+   * @returns the footer DOM element
+   */
+  private createEditMetadataFooter(block: Block): HTMLElement {
+    const container = document.createElement('div');
+
+    container.classList.add(
+      'px-3', 'py-2', 'text-xs', 'leading-snug',
+      'text-[color:var(--popover-text-secondary,_#888)]',
+      'select-none'
+    );
+
+    const label = document.createElement('div');
+
+    label.setAttribute('data-edit-meta-label', '');
+
+    if (block.lastEditedBy !== null && block.lastEditedBy !== undefined) {
+      label.textContent = `Last edited by ${block.lastEditedBy}`;
+    } else {
+      label.textContent = 'Last edited';
+    }
+
+    container.appendChild(label);
+
+    if (block.lastEditedAt !== undefined) {
+      const dateEl = document.createElement('div');
+      const formatted = new Intl.DateTimeFormat(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }).format(new Date(block.lastEditedAt));
+
+      dateEl.textContent = formatted;
+      container.appendChild(dateEl);
+    }
+
+    return container;
   }
 
   /**

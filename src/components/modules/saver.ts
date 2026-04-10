@@ -24,6 +24,14 @@ type SaverValidatedData = ValidatedData & {
    * Array of child block ids (Notion-like flat-with-references model)
    */
   contentIds?: string[];
+  /**
+   * Timestamp of the last edit to this block
+   */
+  lastEditedAt?: number;
+  /**
+   * Identifier of the user who last edited this block
+   */
+  lastEditedBy?: string | null;
 };
 
 type SanitizableBlockData = SaverValidatedData & Pick<SavedData, 'data' | 'tool'>;
@@ -163,6 +171,8 @@ export class Saver extends Module {
       isValid,
       parentId: block.parentId,
       contentIds: block.contentIds,
+      lastEditedAt: block.lastEditedAt,
+      lastEditedBy: block.lastEditedBy,
     };
   }
 
@@ -174,7 +184,7 @@ export class Saver extends Module {
   private makeOutput(allExtractedData: SaverValidatedData[]): OutputData {
     const extractedBlocks: OutputData['blocks'] = [];
 
-    allExtractedData.forEach(({ id, tool, data, tunes, isValid, parentId, contentIds }) => {
+    allExtractedData.forEach(({ id, tool, data, tunes, isValid, parentId, contentIds, lastEditedAt, lastEditedBy }) => {
       const hasParent = parentId !== undefined && parentId !== null;
 
       if (!isValid && !hasParent) {
@@ -204,6 +214,8 @@ export class Saver extends Module {
 
       const isTunesEmpty = tunes === undefined || isEmpty(tunes);
       const hasContent = contentIds !== undefined && contentIds.length > 0;
+      const hasLastEdited = lastEditedAt !== undefined;
+      const hasLastEditedBy = lastEditedBy !== undefined && lastEditedBy !== null;
 
       const output: OutputData['blocks'][number] = {
         id,
@@ -217,6 +229,12 @@ export class Saver extends Module {
         },
         ...hasContent && {
           content: contentIds,
+        },
+        ...hasLastEdited && {
+          lastEditedAt,
+        },
+        ...hasLastEditedBy && {
+          lastEditedBy,
         },
       };
 

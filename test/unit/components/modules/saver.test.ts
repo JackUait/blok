@@ -29,6 +29,8 @@ interface BlockMockOptions {
   isValid?: boolean;
   parentId?: string | null;
   contentIds?: string[];
+  lastEditedAt?: number;
+  lastEditedBy?: string | null;
 }
 
 interface CreateSaverOptions {
@@ -55,6 +57,8 @@ const createBlockMock = (options: BlockMockOptions): BlockMock => {
     validate: validateMock,
     parentId: options.parentId ?? null,
     contentIds: options.contentIds ?? [],
+    lastEditedAt: options.lastEditedAt,
+    lastEditedBy: options.lastEditedBy ?? null,
   } as unknown as Block;
 
   return {
@@ -421,6 +425,64 @@ describe('Saver module', () => {
     await expect(saver.save()).resolves.toBeUndefined();
     expect(logLabeledSpy).toHaveBeenCalledWith('Saving failed due to the Error %o', 'error', error);
     expect(sanitizeBlocksSpy).not.toHaveBeenCalled();
+  });
+
+  describe('block edit metadata in output', () => {
+    it('should include lastEditedAt and lastEditedBy in output when present', async () => {
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+
+      const editedBlock = createBlockMock({
+        id: 'edited-block',
+        tool: 'paragraph',
+        data: { text: 'Edited content' },
+        lastEditedAt: 1700000000000,
+        lastEditedBy: 'user-123',
+      });
+
+      const { saver } = createSaver({
+        blocks: [editedBlock.block],
+        toolSanitizeConfigs: {
+          paragraph: {},
+        },
+      });
+
+      const result = await saver.save();
+
+      expect(result?.blocks).toEqual([
+        expect.objectContaining({
+          id: 'edited-block',
+          type: 'paragraph',
+          data: { text: 'Edited content' },
+          lastEditedAt: 1700000000000,
+          lastEditedBy: 'user-123',
+        }),
+      ]);
+    });
+
+    it('should omit lastEditedAt and lastEditedBy from output when not present', async () => {
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+
+      const plainBlock = createBlockMock({
+        id: 'plain-block',
+        tool: 'paragraph',
+        data: { text: 'Plain content' },
+      });
+
+      const { saver } = createSaver({
+        blocks: [plainBlock.block],
+        toolSanitizeConfigs: {
+          paragraph: {},
+        },
+      });
+
+      const result = await saver.save();
+
+      const outputBlock = result?.blocks[0];
+
+      expect(outputBlock).toBeDefined();
+      expect(outputBlock).not.toHaveProperty('lastEditedAt');
+      expect(outputBlock).not.toHaveProperty('lastEditedBy');
+    });
   });
 
   it('normalizes inline images in table cell paragraphs during save', async () => {

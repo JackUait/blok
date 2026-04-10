@@ -64,6 +64,8 @@ export class BlockFactory {
       parentId,
       contentIds,
       bindEventsImmediately = false,
+      lastEditedAt,
+      lastEditedBy,
     } = options;
 
     const tool = this.dependencies.tools.get(name);
@@ -82,6 +84,8 @@ export class BlockFactory {
       parentId,
       contentIds,
       bindMutationWatchersImmediately: bindEventsImmediately,
+      lastEditedAt,
+      lastEditedBy,
     }, this.dependencies.eventsDispatcher);
 
     if (this.readOnlyState) {

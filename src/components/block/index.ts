@@ -84,6 +84,12 @@ interface BlockConstructorOptions {
    * Module-level events (keyboard handlers) are controlled separately by BlockManager.
    */
   bindMutationWatchersImmediately?: boolean;
+
+  /** Timestamp of the last edit to this block (milliseconds since epoch) */
+  lastEditedAt?: number;
+
+  /** Display name of the user who last edited this block */
+  lastEditedBy?: string | null;
 }
 
 /**
@@ -136,6 +142,12 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * Empty array if block has no children.
    */
   public contentIds: string[];
+
+  /** Timestamp of the last edit (ms since epoch). Updated by BlockManager on mutation. */
+  public lastEditedAt: number | undefined;
+
+  /** Display name of the user who last edited. Updated by BlockManager on mutation. */
+  public lastEditedBy: string | null;
 
   /**
    * Block Tool`s name
@@ -253,6 +265,8 @@ export class Block extends EventsDispatcher<BlockEvents> {
     parentId,
     contentIds,
     bindMutationWatchersImmediately = false,
+    lastEditedAt,
+    lastEditedBy,
   }: BlockConstructorOptions, eventBus?: EventsDispatcher<BlokEventMap>) {
     super();
 
@@ -264,6 +278,8 @@ export class Block extends EventsDispatcher<BlockEvents> {
     this.id = validatedId;
     this.parentId = parentId ?? null;
     this.contentIds = contentIds ?? [];
+    this.lastEditedAt = lastEditedAt;
+    this.lastEditedBy = lastEditedBy ?? null;
     this.settings = tool.settings;
     this.config = this.settings;
     this.blokEventBus = eventBus || null;

@@ -43,6 +43,8 @@ interface CreateBlockOptions {
   eventBus?: EventsDispatcher<BlokEventMap>;
   readOnly?: boolean;
   toolSetReadOnly?: (state: boolean) => void;
+  lastEditedAt?: number;
+  lastEditedBy?: string | null;
 }
 
 interface CreateBlockResult {
@@ -157,6 +159,8 @@ const createBlock = (options: CreateBlockOptions = {}): CreateBlockResult => {
     readOnly: options.readOnly ?? false,
     tunesData: options.tunesData ?? {},
     api: {} as ApiModules,
+    lastEditedAt: options.lastEditedAt,
+    lastEditedBy: options.lastEditedBy,
   }, options.eventBus);
 
   return {
@@ -1352,6 +1356,25 @@ describe('Block', () => {
       const result = block.getToolbarAnchorElement();
 
       expect(result).toBeUndefined();
+    });
+  });
+
+  describe('edit metadata', () => {
+    it('should initialize lastEditedAt and lastEditedBy from constructor options', () => {
+      const { block } = createBlock({
+        lastEditedAt: 1712880000000,
+        lastEditedBy: 'Jack Uait',
+      });
+
+      expect(block.lastEditedAt).toBe(1712880000000);
+      expect(block.lastEditedBy).toBe('Jack Uait');
+    });
+
+    it('should default lastEditedAt to undefined and lastEditedBy to null when not provided', () => {
+      const { block } = createBlock();
+
+      expect(block.lastEditedAt).toBeUndefined();
+      expect(block.lastEditedBy).toBeNull();
     });
   });
 });

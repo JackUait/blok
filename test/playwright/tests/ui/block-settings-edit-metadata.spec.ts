@@ -129,14 +129,14 @@ test.describe('Block settings edit metadata footer', () => {
     await expect(label).toHaveText('Last edited');
   });
 
-  test('does not show metadata footer when block has not been edited', async ({ page }) => {
+  test('shows metadata footer even when block has not been edited by user', async ({ page }) => {
     await createBlok(page, { user: { name: 'Jack Uait' } });
 
     const block = page.locator(BLOCK_SELECTOR).filter({ hasText: 'Hello world' });
 
     /**
      * Click the block to focus it but do NOT type anything.
-     * Without a mutation, lastEditedAt remains undefined and the footer should not appear.
+     * The footer should still appear because lastEditedAt defaults to Date.now() on block creation.
      */
     await block.click();
 
@@ -144,6 +144,6 @@ test.describe('Block settings edit metadata footer', () => {
 
     const metadataItem = page.locator(`${POPOVER_CONTAINER_SELECTOR} ${EDIT_METADATA_SELECTOR}`);
 
-    await expect(metadataItem).toHaveCount(0);
+    await expect(metadataItem).toBeVisible();
   });
 });

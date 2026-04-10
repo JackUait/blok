@@ -1370,10 +1370,13 @@ describe('Block', () => {
       expect(block.lastEditedBy).toBe('Jack Uait');
     });
 
-    it('should default lastEditedAt to undefined and lastEditedBy to null when not provided', () => {
+    it('should default lastEditedAt to Date.now() and lastEditedBy to null when not provided', () => {
+      const before = Date.now();
       const { block } = createBlock();
+      const after = Date.now();
 
-      expect(block.lastEditedAt).toBeUndefined();
+      expect(block.lastEditedAt).toBeGreaterThanOrEqual(before);
+      expect(block.lastEditedAt).toBeLessThanOrEqual(after);
       expect(block.lastEditedBy).toBeNull();
     });
   });

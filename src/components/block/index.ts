@@ -278,7 +278,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
     this.id = validatedId;
     this.parentId = parentId ?? null;
     this.contentIds = contentIds ?? [];
-    this.lastEditedAt = lastEditedAt;
+    this.lastEditedAt = lastEditedAt ?? Date.now();
     this.lastEditedBy = lastEditedBy ?? null;
     this.settings = tool.settings;
     this.config = this.settings;

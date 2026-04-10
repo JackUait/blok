@@ -151,6 +151,8 @@
   "tools.database.addCard": "कार्ड थप्नुहोस्",
   "tools.database.newPage": "नयाँ पृष्ठ",
   "tools.database.deleteCard": "कार्ड मेट्नुहोस्",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.cardTitlePlaceholder": "खाली पृष्ठ",
   "tools.database.columnTitlePlaceholder": "स्तम्भ",
   "tools.database.emptyColumn": "कुनै कार्ड छैन",

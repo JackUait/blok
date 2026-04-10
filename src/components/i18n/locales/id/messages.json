@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "Halaman kosong",
   "tools.database.columnTitlePlaceholder": "Kolom",
   "tools.database.deleteCard": "Hapus kartu",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "Hapus kolom",
   "tools.database.renameColumn": "Ubah nama kolom",
   "tools.database.emptyColumn": "Tidak ada kartu",

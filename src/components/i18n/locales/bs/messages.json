@@ -151,6 +151,8 @@
   "tools.database.addCard": "Dodaj karticu",
   "tools.database.newPage": "Nova stranica",
   "tools.database.deleteCard": "Obriši karticu",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.cardTitlePlaceholder": "Prazna stranica",
   "tools.database.columnTitlePlaceholder": "Kolona",
   "tools.database.emptyColumn": "Nema kartica",

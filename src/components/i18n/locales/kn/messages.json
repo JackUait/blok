@@ -151,6 +151,8 @@
   "tools.database.addCard": "ಕಾರ್ಡ್ ಸೇರಿಸಿ",
   "tools.database.newPage": "ಹೊಸ ಪುಟ",
   "tools.database.deleteCard": "ಕಾರ್ಡ್ ಅಳಿಸಿ",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.cardTitlePlaceholder": "ಖಾಲಿ ಪುಟ",
   "tools.database.columnTitlePlaceholder": "ಕಾಲಮ್",
   "tools.database.emptyColumn": "ಯಾವುದೇ ಕಾರ್ಡ್‌ಗಳಿಲ್ಲ",

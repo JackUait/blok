@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "Trang trống",
   "tools.database.columnTitlePlaceholder": "Cột",
   "tools.database.deleteCard": "Xóa thẻ",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "Xóa cột",
   "tools.database.emptyColumn": "Không có thẻ",
   "tools.database.rowTitlePlaceholder": "Trang trống",

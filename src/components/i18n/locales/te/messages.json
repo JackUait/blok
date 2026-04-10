@@ -151,6 +151,8 @@
   "tools.database.addCard": "కార్డ్ జోడించండి",
   "tools.database.newPage": "కొత్త పేజీ",
   "tools.database.deleteCard": "కార్డ్ తొలగించండి",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.cardTitlePlaceholder": "ఖాళీ పేజీ",
   "tools.database.columnTitlePlaceholder": "నిలువు వరుస",
   "tools.database.emptyColumn": "కార్డ్‌లు లేవు",

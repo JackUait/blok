@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "ליידיק בלאַט",
   "tools.database.columnTitlePlaceholder": "שפּאַלט",
   "tools.database.deleteCard": "אויסמעקן קאַרטל",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "אויסמעקן שפּאַלט",
   "tools.database.emptyColumn": "קיין קארטן",
   "tools.database.rowTitlePlaceholder": "ליידיק בלאַט",

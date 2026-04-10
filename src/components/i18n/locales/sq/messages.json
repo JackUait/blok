@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "Faqe boshe",
   "tools.database.columnTitlePlaceholder": "Kolonë",
   "tools.database.deleteCard": "Fshi kartën",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "Fshi kolonën",
   "tools.database.emptyColumn": "Nuk ka karta",
   "tools.database.rowTitlePlaceholder": "Faqe boshe",

@@ -151,6 +151,8 @@
   "tools.database.addCard": "បន្ថែមកាត",
   "tools.database.newPage": "ទំព័រថ្មី",
   "tools.database.deleteCard": "លុបកាត",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.cardTitlePlaceholder": "ទំព័រទទេ",
   "tools.database.columnTitlePlaceholder": "ជួរ",
   "tools.database.emptyColumn": "គ្មានកាត",

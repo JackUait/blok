@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "Prázdná stránka",
   "tools.database.columnTitlePlaceholder": "Sloupec",
   "tools.database.deleteCard": "Smazat kartu",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "Smazat sloupec",
   "tools.database.renameColumn": "Přejmenovat sloupec",
   "tools.database.emptyColumn": "Žádné karty",

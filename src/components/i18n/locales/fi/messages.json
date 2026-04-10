@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "Tyhjä sivu",
   "tools.database.columnTitlePlaceholder": "Sarake",
   "tools.database.deleteCard": "Poista kortti",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "Poista sarake",
   "tools.database.renameColumn": "Nimeä sarake uudelleen",
   "tools.database.emptyColumn": "Ei kortteja",

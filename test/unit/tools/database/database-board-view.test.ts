@@ -155,28 +155,16 @@ describe('DatabaseBoardView', () => {
       expect(column.style.backgroundColor).toBe('');
     });
 
-    it('renders delete-card button on each card when NOT read-only', () => {
-      const options = [makeOption({ id: 'opt-1' })];
-      const rows = [makeRow({ id: 'row-1' })];
-      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
-      const board = view.createView();
-
-      const deleteBtns = board.querySelectorAll('[data-blok-database-delete-card]');
-
-      expect(deleteBtns).toHaveLength(1);
-      expect(deleteBtns[0].getAttribute('data-row-id')).toBe('row-1');
-      expect(deleteBtns[0].textContent).toBe('\u00d7');
-    });
-
-    it('does not render delete-card button in read-only mode', () => {
+    it('does not render action buttons in read-only mode', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1' })];
       const view = new DatabaseBoardView({ readOnly: true, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
       const board = view.createView();
 
-      const deleteBtns = board.querySelectorAll('[data-blok-database-delete-card]');
-
-      expect(deleteBtns).toHaveLength(0);
+      expect(board.querySelector('[data-blok-database-card-actions]')).toBeNull();
+      expect(board.querySelector('[data-blok-database-delete-card]')).toBeNull();
+      expect(board.querySelector('[data-blok-database-edit-card]')).toBeNull();
+      expect(board.querySelector('[data-blok-database-card-menu]')).toBeNull();
     });
 
     it('renders card count badge in each column header', () => {
@@ -283,6 +271,162 @@ describe('DatabaseBoardView', () => {
     });
   });
 
+  describe('card action buttons', () => {
+    it('renders [data-blok-database-card-actions] on each card when NOT read-only', () => {
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1' })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
+
+      const actionGroups = board.querySelectorAll('[data-blok-database-card-actions]');
+      expect(actionGroups).toHaveLength(1);
+    });
+
+    it('does not render [data-blok-database-card-actions] in read-only mode', () => {
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1' })];
+      const view = new DatabaseBoardView({ readOnly: true, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
+
+      const actionGroups = board.querySelectorAll('[data-blok-database-card-actions]');
+      expect(actionGroups).toHaveLength(0);
+    });
+
+    it('renders [data-blok-database-edit-card] button inside the action group', () => {
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1' })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
+
+      const editBtn = board.querySelector('[data-blok-database-edit-card]');
+      expect(editBtn).not.toBeNull();
+      expect(editBtn?.closest('[data-blok-database-card-actions]')).not.toBeNull();
+    });
+
+    it('renders [data-blok-database-card-menu] button inside the action group', () => {
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1' })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
+
+      const menuBtn = board.querySelector('[data-blok-database-card-menu]');
+      expect(menuBtn).not.toBeNull();
+      expect(menuBtn?.closest('[data-blok-database-card-actions]')).not.toBeNull();
+    });
+
+    it('does NOT render the old [data-blok-database-delete-card] button', () => {
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1' })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
+
+      const deleteBtn = board.querySelector('[data-blok-database-delete-card]');
+      expect(deleteBtn).toBeNull();
+    });
+
+    it('sets aria-label on edit button', () => {
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1' })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
+
+      const editBtn = board.querySelector('[data-blok-database-edit-card]');
+      expect(editBtn?.getAttribute('aria-label')).toBeTruthy();
+    });
+
+    it('sets aria-label on menu button', () => {
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1' })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
+
+      const menuBtn = board.querySelector('[data-blok-database-card-menu]');
+      expect(menuBtn?.getAttribute('aria-label')).toBeTruthy();
+    });
+  });
+
+  describe('card inline title edit', () => {
+    const createViewWithCard = (title = 'Fix bug'): { board: HTMLDivElement; cardEl: HTMLElement } => {
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1', properties: { title } })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
+      const cardEl = board.querySelector('[data-blok-database-card]') as HTMLElement;
+      return { board, cardEl };
+    };
+
+    it('replaces title div with input when edit button is clicked', () => {
+      const { cardEl } = createViewWithCard('Fix bug');
+      const editBtn = cardEl.querySelector('[data-blok-database-edit-card]') as HTMLElement;
+
+      editBtn.click();
+
+      const input = cardEl.querySelector<HTMLInputElement>('[data-blok-database-card-title-input]');
+      expect(input).not.toBeNull();
+      expect(input?.value).toBe('Fix bug');
+    });
+
+    it('restores title div on Enter and calls onTitleEdit with new value', () => {
+      const onTitleEdit = vi.fn();
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1', properties: { title: 'Fix bug' } })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title', onTitleEdit });
+      const board = view.createView();
+      const cardEl = board.querySelector('[data-blok-database-card]') as HTMLElement;
+      const editBtn = cardEl.querySelector('[data-blok-database-edit-card]') as HTMLElement;
+
+      editBtn.click();
+
+      const input = cardEl.querySelector<HTMLInputElement>('[data-blok-database-card-title-input]')!;
+      input.value = 'New Title';
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      const titleDiv = cardEl.querySelector('[data-blok-database-card-title]');
+      expect(titleDiv).not.toBeNull();
+      expect(cardEl.querySelector('[data-blok-database-card-title-input]')).toBeNull();
+      expect(onTitleEdit).toHaveBeenCalledWith('row-1', 'New Title');
+    });
+
+    it('restores title div on blur and calls onTitleEdit with new value', () => {
+      const onTitleEdit = vi.fn();
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1', properties: { title: 'Fix bug' } })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title', onTitleEdit });
+      const board = view.createView();
+      const cardEl = board.querySelector('[data-blok-database-card]') as HTMLElement;
+      const editBtn = cardEl.querySelector('[data-blok-database-edit-card]') as HTMLElement;
+
+      editBtn.click();
+
+      const input = cardEl.querySelector<HTMLInputElement>('[data-blok-database-card-title-input]')!;
+      input.value = 'Blurred Title';
+      input.dispatchEvent(new Event('blur', { bubbles: true }));
+
+      expect(cardEl.querySelector('[data-blok-database-card-title]')).not.toBeNull();
+      expect(onTitleEdit).toHaveBeenCalledWith('row-1', 'Blurred Title');
+    });
+
+    it('restores original title on Escape without calling onTitleEdit', () => {
+      const onTitleEdit = vi.fn();
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1', properties: { title: 'Fix bug' } })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title', onTitleEdit });
+      const board = view.createView();
+      const cardEl = board.querySelector('[data-blok-database-card]') as HTMLElement;
+      const editBtn = cardEl.querySelector('[data-blok-database-edit-card]') as HTMLElement;
+
+      editBtn.click();
+
+      const input = cardEl.querySelector<HTMLInputElement>('[data-blok-database-card-title-input]')!;
+      input.value = 'Changed';
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      const titleDiv = cardEl.querySelector('[data-blok-database-card-title]');
+      expect(titleDiv?.textContent).toBe('Fix bug');
+      expect(onTitleEdit).not.toHaveBeenCalled();
+    });
+  });
+
   describe('accessibility', () => {
     it('board element has role="region" and aria-label="Kanban board"', () => {
       const view = new DatabaseBoardView({ readOnly: false, i18n, options: [], getRows: () => [], titlePropertyId: 'title' });
@@ -345,15 +489,15 @@ describe('DatabaseBoardView', () => {
       expect(cardEls[1].getAttribute('role')).toBe('listitem');
     });
 
-    it('delete card button has a descriptive aria-label', () => {
+    it('edit card button has a descriptive aria-label', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1' })];
       const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
       const board = view.createView();
 
-      const deleteBtn = board.querySelector('[data-blok-database-delete-card]');
+      const editBtn = board.querySelector('[data-blok-database-edit-card]');
 
-      expect(deleteBtn?.getAttribute('aria-label')).toBe('tools.database.deleteCard');
+      expect(editBtn?.getAttribute('aria-label')).toBe('tools.database.editCardTitle');
     });
 
     it('add-card button has an aria-label', () => {
@@ -467,7 +611,7 @@ describe('DatabaseBoardView', () => {
       expect(card.style.cursor).toBe('pointer');
     });
 
-    it('card element has position relative for delete button positioning', () => {
+    it('card element has position relative for action button positioning', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1' })];
       const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
@@ -476,19 +620,6 @@ describe('DatabaseBoardView', () => {
       const card = board.querySelector('[data-blok-database-card]') as HTMLElement;
 
       expect(card.style.position).toBe('relative');
-    });
-
-    it('delete card button is positioned absolutely in top-right corner', () => {
-      const options = [makeOption({ id: 'opt-1' })];
-      const rows = [makeRow({ id: 'row-1' })];
-      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
-      const board = view.createView();
-
-      const deleteBtn = board.querySelector('[data-blok-database-delete-card]') as HTMLElement;
-
-      expect(deleteBtn.style.position).toBe('absolute');
-      expect(deleteBtn.style.top).toBeTruthy();
-      expect(deleteBtn.style.right).toBeTruthy();
     });
 
     it('column title has no inline font-weight override (weight comes from CSS)', () => {

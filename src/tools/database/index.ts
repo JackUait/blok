@@ -16,7 +16,10 @@ import type { ListRowDragResult } from './database-list-row-drag';
 import { DatabaseCardDrawer } from './database-card-drawer';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar } from './database-tab-bar';
-import { IconDatabase, IconBoard } from '../../components/icons';
+import { IconDatabase, IconBoard, IconTrash } from '../../components/icons';
+import { PopoverDesktop } from '../../components/utils/popover';
+import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
+import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { nanoid } from 'nanoid';
 
 /**
@@ -49,6 +52,7 @@ export class DatabaseTool implements BlockTool {
   private listRowDrag: DatabaseListRowDrag | null = null;
   private cardDrawer: DatabaseCardDrawer | null = null;
   private keyboard: DatabaseKeyboard | null = null;
+  private cardMenuPopover: PopoverDesktop | null = null;
 
   constructor({ data, config, api, block, readOnly }: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>) {
     this.api = api;
@@ -472,10 +476,12 @@ export class DatabaseTool implements BlockTool {
 
     if (views.length === 1 && !this.readOnly && addBtn !== null) {
       this.titleRowElement.appendChild(addBtn);
+      this.titleRowElement.setAttribute('data-single-view', '');
       if (tabBarEl instanceof HTMLElement) {
         tabBarEl.style.display = 'none';
       }
     } else {
+      this.titleRowElement.removeAttribute('data-single-view');
       // Remove all stale addBtn(s) from titleRow before re-attaching cleanly
       const staleInTitleRow = this.titleRowElement.querySelectorAll('[data-blok-database-add-view]');
       staleInTitleRow.forEach((el) => {
@@ -532,6 +538,12 @@ export class DatabaseTool implements BlockTool {
       options,
       getRows: (optionId) => groups.get(optionId) ?? [],
       titlePropertyId: titlePropId,
+      onTitleEdit: (rowId, newTitle) => {
+        const titleProp = this.model.getSchema().find((p) => p.type === 'title');
+        const titlePropId = titleProp?.id ?? '';
+        this.updateRowBlock(rowId, { [titlePropId]: newTitle });
+        this.sync.syncUpdateRow({ rowId, properties: { [titlePropId]: newTitle } });
+      },
     });
 
     return this.view.createView();
@@ -599,16 +611,15 @@ export class DatabaseTool implements BlockTool {
         return;
       }
 
-      const deleteCardBtn = target.closest('[data-blok-database-delete-card]');
+      const cardMenuBtn = target.closest('[data-blok-database-card-menu]');
 
-      if (deleteCardBtn !== null) {
-        const rowId = deleteCardBtn.getAttribute('data-row-id');
+      if (cardMenuBtn instanceof HTMLElement) {
+        const rowId = cardMenuBtn.getAttribute('data-row-id');
+        const cardEl = cardMenuBtn.closest('[data-blok-database-card]');
 
-        if (rowId !== null) {
+        if (rowId !== null && cardEl instanceof HTMLElement) {
           event.stopPropagation();
-          this.deleteRowBlock(rowId);
-          this.view.removeRow(boardEl, rowId);
-          void this.sync.syncDeleteRow({ rowId });
+          this.openCardMenu(cardMenuBtn, cardEl, rowId, boardEl);
         }
 
         return;
@@ -662,6 +673,40 @@ export class DatabaseTool implements BlockTool {
         }
       }
     });
+  }
+
+  private openCardMenu(anchor: HTMLElement, cardEl: HTMLElement, rowId: string, boardEl: HTMLElement): void {
+    cardEl.setAttribute('data-popover-open', '');
+
+    this.cardMenuPopover = new PopoverDesktop({
+      trigger: anchor,
+      width: 'auto',
+      minWidth: '140px',
+      autoFocusFirstItem: false,
+      items: [
+        {
+          type: PopoverItemType.Default,
+          title: this.api.i18n.t('tools.database.deleteCard'),
+          icon: IconTrash,
+          onActivate: () => {
+            this.deleteRowBlock(rowId);
+            this.view.removeRow(boardEl, rowId);
+            void this.sync.syncDeleteRow({ rowId });
+          },
+        },
+      ],
+    });
+
+    this.cardMenuPopover.on(PopoverEvent.Closed, () => {
+      cardEl.removeAttribute('data-popover-open');
+      if (this.cardMenuPopover !== null) {
+        const p = this.cardMenuPopover;
+        this.cardMenuPopover = null;
+        p.destroy();
+      }
+    });
+
+    this.cardMenuPopover.show();
   }
 
   private handleAddListRow(optionId: string | null, viewEl: HTMLDivElement): void {

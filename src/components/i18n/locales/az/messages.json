@@ -151,6 +151,8 @@
   "tools.database.addCard": "Kart əlavə et",
   "tools.database.newPage": "Yeni səhifə",
   "tools.database.deleteCard": "Kartı sil",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.cardTitlePlaceholder": "Boş səhifə",
   "tools.database.columnTitlePlaceholder": "Sütun",
   "tools.database.emptyColumn": "Kart yoxdur",

@@ -151,6 +151,8 @@
   "tools.database.addCard": "Magdagdag ng card",
   "tools.database.newPage": "Bagong pahina",
   "tools.database.deleteCard": "Tanggalin ang card",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.cardTitlePlaceholder": "Walang laman",
   "tools.database.columnTitlePlaceholder": "Column",
   "tools.database.emptyColumn": "Walang mga card",

@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "صفحة فارغة",
   "tools.database.columnTitlePlaceholder": "عمود",
   "tools.database.deleteCard": "حذف البطاقة",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "حذف العمود",
   "tools.database.renameColumn": "إعادة تسمية العمود",
   "tools.database.emptyColumn": "لا بطاقات",

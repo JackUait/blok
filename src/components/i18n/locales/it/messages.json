@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "Pagina vuota",
   "tools.database.columnTitlePlaceholder": "Colonna",
   "tools.database.deleteCard": "Elimina scheda",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "Elimina colonna",
   "tools.database.renameColumn": "Rinomina colonna",
   "tools.database.emptyColumn": "Nessuna scheda",

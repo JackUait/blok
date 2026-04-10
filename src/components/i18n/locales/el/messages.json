@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "Κενή σελίδα",
   "tools.database.columnTitlePlaceholder": "Στήλη",
   "tools.database.deleteCard": "Διαγραφή κάρτας",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "Διαγραφή στήλης",
   "tools.database.renameColumn": "Μετονομασία στήλης",
   "tools.database.emptyColumn": "Χωρίς κάρτες",

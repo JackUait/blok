@@ -416,6 +416,15 @@ export const IconTrash = `
 </svg>
 `;
 
+// Horizontal dots / more options icon
+export const IconDotsHorizontal = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="5" cy="10" r="1.25" fill="currentColor"/>
+  <circle cx="10" cy="10" r="1.25" fill="currentColor"/>
+  <circle cx="15" cy="10" r="1.25" fill="currentColor"/>
+</svg>
+`;
+
 // Toggle Heading 1 icon (H1 with toggle arrow)
 export const IconToggleH1 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">

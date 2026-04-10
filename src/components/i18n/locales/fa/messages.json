@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "صفحه خالی",
   "tools.database.columnTitlePlaceholder": "ستون",
   "tools.database.deleteCard": "حذف کارت",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "حذف ستون",
   "tools.database.renameColumn": "تغییر نام ستون",
   "tools.database.emptyColumn": "بدون کارت",

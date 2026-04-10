@@ -1,7 +1,7 @@
 import type { I18n } from '../../../types';
 import type { SelectOption, DatabaseRow } from './types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
-import { IconPlus } from '../../components/icons';
+import { IconPlus, IconPencil, IconDotsHorizontal } from '../../components/icons';
 
 interface DatabaseBoardViewOptions {
   readOnly: boolean;
@@ -9,6 +9,7 @@ interface DatabaseBoardViewOptions {
   options: SelectOption[];
   getRows: (optionId: string) => DatabaseRow[];
   titlePropertyId: string;
+  onTitleEdit?: (rowId: string, newTitle: string) => void;
 }
 
 /**
@@ -22,13 +23,15 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
   private readonly options: SelectOption[];
   private readonly getRows: (optionId: string) => DatabaseRow[];
   private readonly titlePropertyId: string;
+  private readonly onTitleEdit: ((rowId: string, newTitle: string) => void) | undefined;
 
-  constructor({ readOnly, i18n, options, getRows, titlePropertyId }: DatabaseBoardViewOptions) {
+  constructor({ readOnly, i18n, options, getRows, titlePropertyId, onTitleEdit }: DatabaseBoardViewOptions) {
     this.readOnly = readOnly;
     this.i18n = i18n;
     this.options = options;
     this.getRows = getRows;
     this.titlePropertyId = titlePropertyId;
+    this.onTitleEdit = onTitleEdit;
   }
 
   /**
@@ -287,19 +290,103 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     cardEl.appendChild(titleEl);
 
     if (!this.readOnly) {
-      const deleteBtn = document.createElement('button');
+      const actionsEl = document.createElement('div');
 
-      deleteBtn.setAttribute('data-blok-database-delete-card', '');
-      deleteBtn.setAttribute('data-row-id', row.id);
-      deleteBtn.setAttribute('aria-label', this.i18n.t('tools.database.deleteCard'));
-      deleteBtn.style.position = 'absolute';
-      deleteBtn.style.top = '4px';
-      deleteBtn.style.right = '4px';
-      deleteBtn.textContent = '\u00d7';
-      cardEl.appendChild(deleteBtn);
+      actionsEl.setAttribute('data-blok-database-card-actions', '');
+
+      const editBtn = document.createElement('button');
+
+      editBtn.setAttribute('data-blok-database-edit-card', '');
+      editBtn.setAttribute('data-row-id', row.id);
+      editBtn.setAttribute('aria-label', this.i18n.t('tools.database.editCardTitle'));
+      editBtn.innerHTML = IconPencil;
+      editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.startCardTitleEdit(cardEl, row.id);
+      });
+
+      const menuBtn = document.createElement('button');
+
+      menuBtn.setAttribute('data-blok-database-card-menu', '');
+      menuBtn.setAttribute('data-row-id', row.id);
+      menuBtn.setAttribute('aria-label', this.i18n.t('tools.database.cardMenuLabel'));
+      menuBtn.innerHTML = IconDotsHorizontal;
+
+      actionsEl.appendChild(editBtn);
+      actionsEl.appendChild(menuBtn);
+      cardEl.appendChild(actionsEl);
     }
 
     return cardEl;
+  }
+
+  /**
+   * Replaces the card title div with an inline input for editing.
+   * Mirrors the input-swap pattern in DatabaseColumnControls.
+   */
+  private startCardTitleEdit(cardEl: HTMLElement, rowId: string): void {
+    const titleEl = cardEl.querySelector<HTMLElement>('[data-blok-database-card-title]');
+
+    if (titleEl === null) {
+      return;
+    }
+
+    const originalTitle = titleEl.textContent ?? '';
+    const input = document.createElement('input');
+
+    input.type = 'text';
+    input.value = originalTitle;
+    input.setAttribute('data-blok-database-card-title-input', '');
+    input.setAttribute('aria-label', this.i18n.t('tools.database.editCardTitle'));
+    input.style.width = '100%';
+    input.style.boxSizing = 'border-box';
+
+    const state = { committed: false };
+
+    const commit = (): void => {
+      if (state.committed) return;
+      state.committed = true;
+      const newTitle = input.value.trim() || originalTitle;
+      const restoredDiv = document.createElement('div');
+
+      restoredDiv.setAttribute('data-blok-database-card-title', '');
+      restoredDiv.textContent = newTitle;
+      input.replaceWith(restoredDiv);
+
+      if (newTitle !== originalTitle) {
+        this.onTitleEdit?.(rowId, newTitle);
+      }
+
+      if (newTitle) {
+        cardEl.removeAttribute('data-empty');
+      }
+    };
+
+    const cancel = (): void => {
+      if (state.committed) return;
+      state.committed = true;
+      const restoredDiv = document.createElement('div');
+
+      restoredDiv.setAttribute('data-blok-database-card-title', '');
+      restoredDiv.textContent = originalTitle;
+      input.replaceWith(restoredDiv);
+    };
+
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', (ke) => {
+      ke.stopPropagation();
+      if (ke.key === 'Enter') {
+        input.removeEventListener('blur', commit);
+        commit();
+      } else if (ke.key === 'Escape') {
+        input.removeEventListener('blur', commit);
+        cancel();
+      }
+    });
+
+    titleEl.replaceWith(input);
+    input.focus();
+    input.select();
   }
 
   /**

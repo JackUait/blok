@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "Tühi leht",
   "tools.database.columnTitlePlaceholder": "Veerg",
   "tools.database.deleteCard": "Kustuta kaart",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "Kustuta veerg",
   "tools.database.renameColumn": "Nimeta veerg ümber",
   "tools.database.emptyColumn": "Kaarte pole",

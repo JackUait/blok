@@ -151,6 +151,8 @@
   "tools.database.addCard": "ເພີ່ມບັດ",
   "tools.database.newPage": "ໜ້າໃໝ່",
   "tools.database.deleteCard": "ລຶບບັດ",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.cardTitlePlaceholder": "ໜ້າເປົ່າ",
   "tools.database.columnTitlePlaceholder": "ຖັນ",
   "tools.database.emptyColumn": "ບໍ່ມີບັດ",

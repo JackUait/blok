@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "Tom side",
   "tools.database.columnTitlePlaceholder": "Kolonne",
   "tools.database.deleteCard": "Slett kort",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "Slett kolonne",
   "tools.database.emptyColumn": "Ingen kort",
   "tools.database.rowTitlePlaceholder": "Tom side",

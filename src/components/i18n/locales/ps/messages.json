@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "تشه پاڼه",
   "tools.database.columnTitlePlaceholder": "کالم",
   "tools.database.deleteCard": "کارت ړنګ کړئ",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "کالم ړنګ کړئ",
   "tools.database.emptyColumn": "کارتونه نشته",
   "tools.database.rowTitlePlaceholder": "تشه پاڼه",

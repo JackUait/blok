@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "Pagină goală",
   "tools.database.columnTitlePlaceholder": "Coloană",
   "tools.database.deleteCard": "Șterge card",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "Șterge coloana",
   "tools.database.emptyColumn": "Fără carduri",
   "tools.database.rowTitlePlaceholder": "Pagină goală",

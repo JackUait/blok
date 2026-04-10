@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "Prázdna stránka",
   "tools.database.columnTitlePlaceholder": "Stĺpec",
   "tools.database.deleteCard": "Odstrániť kartu",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "Odstrániť stĺpec",
   "tools.database.emptyColumn": "Žiadne karty",
   "tools.database.rowTitlePlaceholder": "Prázdna stránka",

@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "Prazna stranica",
   "tools.database.columnTitlePlaceholder": "Stupac",
   "tools.database.deleteCard": "Obriši karticu",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "Obriši stupac",
   "tools.database.renameColumn": "Preimenuj stupac",
   "tools.database.emptyColumn": "Nema kartica",

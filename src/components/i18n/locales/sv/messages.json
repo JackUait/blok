@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "Tom sida",
   "tools.database.columnTitlePlaceholder": "Kolumn",
   "tools.database.deleteCard": "Ta bort kort",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "Ta bort kolumn",
   "tools.database.emptyColumn": "Inga kort",
   "tools.database.rowTitlePlaceholder": "Tom sida",

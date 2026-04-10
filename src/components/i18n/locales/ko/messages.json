@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "빈 페이지",
   "tools.database.columnTitlePlaceholder": "열",
   "tools.database.deleteCard": "카드 삭제",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "열 삭제",
   "tools.database.renameColumn": "열 이름 변경",
   "tools.database.emptyColumn": "카드 없음",

@@ -151,6 +151,8 @@
   "tools.database.cardTitlePlaceholder": "ცარიელი გვერდი",
   "tools.database.columnTitlePlaceholder": "სვეტი",
   "tools.database.deleteCard": "ბარათის წაშლა",
+  "tools.database.editCardTitle": "Edit title",
+  "tools.database.cardMenuLabel": "Card options",
   "tools.database.deleteColumn": "სვეტის წაშლა",
   "tools.database.renameColumn": "სვეტის გადარქმევა",
   "tools.database.emptyColumn": "ბარათები არ არის",

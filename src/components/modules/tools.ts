@@ -1,6 +1,7 @@
 import type { SanitizerConfig, ToolConfig, ToolConstructable, ToolSettings } from '../../../types';
 import { Stub } from '../../tools/stub';
 import { Module } from '../__module';
+import { CopyLinkTune } from '../block-tunes/block-tune-copy-link';
 import { DeleteTune } from '../block-tunes/block-tune-delete';
 import { CriticalError } from '../errors/critical';
 import { ConvertInlineTool } from '../inline-tools/inline-tool-convert';
@@ -270,6 +271,10 @@ export class Tools extends Module {
       },
       delete: {
         class: toToolConstructable(DeleteTune),
+        isInternal: true,
+      },
+      copyLink: {
+        class: toToolConstructable(CopyLinkTune),
         isInternal: true,
       },
       convertTo: {

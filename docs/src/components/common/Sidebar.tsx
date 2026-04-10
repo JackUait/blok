@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { KeyIcon } from './KeyIcon';
 import { useI18n } from '../../contexts/I18nContext';
 
 export interface SidebarLink {
@@ -202,13 +203,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </svg>
             </button>
           ) : (
-            <kbd
+            <KeyIcon
               className={`${variant}-sidebar-search-shortcut`}
               title={t('common.pressSlashToSearch')}
               data-blok-testid={`${variant}-sidebar-search-shortcut`}
             >
               /
-            </kbd>
+            </KeyIcon>
           )}
         </div>
       </div>

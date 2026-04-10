@@ -769,13 +769,20 @@ describe('BlockOperations', () => {
     });
 
     it('replaces block in blocksStore', async () => {
-      const block = repository.getBlockById('block-1');
-      if (!block) {
-        throw new Error('Test setup failed: block-1 not found');
-      }
-      const oldId = block.id;
+      // 'block-1' is not a valid nanoid, so use a block with a valid nanoid id
+      // to verify that update() preserves the original id in the new block.
+      const validNanoid = 'V1StGXR8_Z';
+      const mockBlock = createMockBlock({ id: validNanoid, name: 'paragraph' });
 
-      const newBlock = await operations.update(block, blocksStore, { text: 'New' });
+      // Add to the shared blocksStore and reinitialize repository so operations can find it
+      const newBlocksStore = createBlocksStore([
+        mockBlock,
+        ...blocksStore.array,
+      ]);
+      repository.initialize(newBlocksStore);
+
+      const oldId = mockBlock.id;
+      const newBlock = await operations.update(mockBlock, newBlocksStore, { text: 'New' });
 
       expect(newBlock.id).toBe(oldId);
       expect(repository.getBlockById(oldId)).toBe(newBlock);

@@ -4,6 +4,7 @@ import { Logo } from "../common/Logo";
 import { Search } from "../common/Search";
 import { ThemeToggle } from "../common/ThemeToggle";
 import { LanguageSelector } from "../common/LanguageSelector";
+import { ShortcutKeys } from "../common/KeyIcon";
 import { useI18n } from "../../contexts/I18nContext";
 import type { NavLink } from "@/types/navigation";
 import styles from "./Nav.module.css";
@@ -154,7 +155,7 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
                   strokeLinejoin="round"
                 />
               </svg>
-              <kbd className={styles.searchShortcut}>⌘K</kbd>
+              <ShortcutKeys keys={['⌘', 'K']} className={styles.searchShortcut} />
             </button>
             <LanguageSelector />
             <ThemeToggle />

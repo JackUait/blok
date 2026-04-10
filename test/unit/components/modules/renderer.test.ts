@@ -402,6 +402,101 @@ describe('Renderer module', () => {
     expect(composeArgs.tool).toBe(tools.stubTool);
   });
 
+  it('forwards parent and content fields as parentId and contentIds to composeBlock', async () => {
+    const { renderer, blockManager, tools } = createRenderer();
+
+    tools.available.set('paragraph', {});
+    tools.available.set('toggle', {});
+
+    const parentBlock: OutputBlockData = {
+      id: 'parent-1',
+      type: 'toggle',
+      data: { text: 'Toggle' },
+      content: ['child-1', 'child-2'],
+    };
+
+    const childBlock1: OutputBlockData = {
+      id: 'child-1',
+      type: 'paragraph',
+      data: { text: 'First child' },
+      parent: 'parent-1',
+    };
+
+    const childBlock2: OutputBlockData = {
+      id: 'child-2',
+      type: 'paragraph',
+      data: { text: 'Second child' },
+      parent: 'parent-1',
+    };
+
+    await renderer.render([parentBlock, childBlock1, childBlock2]);
+
+    expect(blockManager.composeBlock).toHaveBeenCalledTimes(3);
+
+    // Parent block: contentIds forwarded, no parentId
+    expect(blockManager.composeBlock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'parent-1',
+        tool: 'toggle',
+        contentIds: ['child-1', 'child-2'],
+      })
+    );
+
+    // Child blocks: parentId forwarded, no contentIds
+    expect(blockManager.composeBlock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'child-1',
+        tool: 'paragraph',
+        parentId: 'parent-1',
+      })
+    );
+
+    expect(blockManager.composeBlock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'child-2',
+        tool: 'paragraph',
+        parentId: 'parent-1',
+      })
+    );
+  });
+
+  it('assigns a unique id to the second block when two blocks share the same id', async () => {
+    const { renderer, blockManager, tools } = createRenderer();
+
+    tools.available.set('paragraph', {});
+
+    const logLabeledSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => {});
+
+    // Make composeBlock return the id it received so we can inspect it
+    blockManager.composeBlock = vi.fn<BlockManagerComposeBlock>((options) => {
+      return createMockBlock({ id: options.id, tool: options.tool });
+    });
+
+    const blocks: OutputBlockData[] = [
+      { id: 'dupe-id', type: 'paragraph', data: { text: 'First' } },
+      { id: 'dupe-id', type: 'paragraph', data: { text: 'Second' } },
+    ];
+
+    await renderer.render(blocks);
+
+    expect(blockManager.composeBlock).toHaveBeenCalledTimes(2);
+
+    const firstCallId = (blockManager.composeBlock.mock.calls[0][0] as ComposeBlockArgs).id;
+    const secondCallId = (blockManager.composeBlock.mock.calls[1][0] as ComposeBlockArgs).id;
+
+    // First block keeps the original id
+    expect(firstCallId).toBe('dupe-id');
+    // Second block must get a different (generated) id
+    expect(secondCallId).not.toBe('dupe-id');
+    expect(secondCallId).toBeDefined();
+
+    // A warning should be logged about the duplicate
+    expect(logLabeledSpy).toHaveBeenCalledWith(
+      expect.stringContaining('dupe-id'),
+      'warn'
+    );
+  });
+
   it('falls back to the tool name when toolbox metadata is missing', () => {
     const { renderer } = createRenderer();
 

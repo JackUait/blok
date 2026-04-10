@@ -1,4 +1,5 @@
 import { Dom } from '../../../../dom';
+import { makeShortcutHtml } from '../../../key-icon';
 
 import { css } from './hint.const';
 
@@ -33,7 +34,8 @@ export class Hint {
     this.nodes.root.appendChild(this.nodes.title);
 
     if (params.description !== undefined) {
-      this.nodes.description = Dom.make('div', css.description, { textContent: params.description });
+      this.nodes.description = Dom.make('div', css.description);
+      this.nodes.description.innerHTML = makeShortcutHtml(params.description);
 
       this.nodes.root.appendChild(this.nodes.description);
     }

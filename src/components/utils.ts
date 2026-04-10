@@ -73,6 +73,7 @@ export {
 export {
   generateBlockId,
   generateId,
+  isValidBlockId,
 } from './utils/id-generator';
 
 // HTML utilities

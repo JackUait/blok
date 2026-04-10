@@ -244,7 +244,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @param [options.contentIds] - array of child block ids
    * @param [eventBus] - Blok common event bus. Allows to subscribe on some Blok events. Could be omitted when "virtual" Block is created. See BlocksAPI@composeBlockData.
    */
-  constructor({
+   constructor({
     id = generateBlockId(),
     data,
     tool,
@@ -256,9 +256,12 @@ export class Block extends EventsDispatcher<BlockEvents> {
   }: BlockConstructorOptions, eventBus?: EventsDispatcher<BlokEventMap>) {
     super();
 
+    // Use the provided id as-is; only generate a new one when the id is empty
+    const validatedId = id !== '' ? id : generateBlockId();
+
     // Set basic properties
     this.name = tool.name;
-    this.id = id;
+    this.id = validatedId;
     this.parentId = parentId ?? null;
     this.contentIds = contentIds ?? [];
     this.settings = tool.settings;

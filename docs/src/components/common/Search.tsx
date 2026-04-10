@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { search, getSearchIndex } from '@/utils/search';
 import type { SearchResult } from '@/types/search';
 import { ModuleIcon } from './ModuleIcon';
+import { KeyIcon, ShortcutKeys } from './KeyIcon';
 import buttonStyles from './SearchButton.module.css';
 import dialogStyles from './SearchDialog.module.css';
 import resultsStyles from './SearchResults.module.css';
@@ -410,7 +411,7 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
                 </svg>
               </button>
             )}
-            <kbd className={styles['search-shortcut']}>{t('search.escKey')}</kbd>
+            <KeyIcon className={styles['search-shortcut']}>{t('search.escKey')}</KeyIcon>
           </div>
 
           <div className={styles['search-results']} ref={resultsRef}>
@@ -551,9 +552,9 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
 
           <div className={styles['search-footer']}>
             <span className={styles['search-footer-hint']}>
-              <kbd>↑↓</kbd> {t('search.navigate')}
+              <ShortcutKeys keys={['↑', '↓']} /> {t('search.navigate')}
               <span className={styles['search-footer-separator']} />
-              <kbd>↵</kbd> {t('search.select')}
+              <KeyIcon>↵</KeyIcon> {t('search.select')}
             </span>
           </div>
         </div>

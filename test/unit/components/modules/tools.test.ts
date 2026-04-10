@@ -296,7 +296,7 @@ describe('tools module', () => {
 
       expect(toolWithInline?.tunes.has('blockTune')).toBe(true);
       expect(toolWithInline?.tunes.has('blockTune2')).toBe(true);
-      expect(tunesOrder).toStrictEqual(['blockTune2', 'blockTune', 'delete']);
+      expect(tunesOrder).toStrictEqual(['blockTune2', 'blockTune', 'delete', 'copyLink']);
 
       const toolWithSuccessfulPrepare = module.blockTools.get('withSuccessfulPrepare');
 

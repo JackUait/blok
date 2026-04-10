@@ -336,6 +336,34 @@ describe('scroll-to-block', () => {
 
   // -------------------------------------------------------------------------
 
+  it('scrolls to and selects a child block (one with parentId) via hash', async () => {
+    setHash('#childBlock1');
+
+    const el = fakeEl(150);
+    const fakeBlock = { id: 'childBlock1', parentId: 'parentBlk0' } as unknown as Block;
+
+    document.querySelector = vi.fn((selector: string): Element | null => {
+      if (selector === '[data-blok-id="childBlock1"]') {
+        return el;
+      }
+
+      return originalQuerySelector(selector);
+    }) as typeof document.querySelector;
+
+    mockGetBlockById.mockImplementation((id: string) =>
+      id === 'childBlock1' ? fakeBlock : undefined
+    );
+
+    const editor = new Blok({} as BlokConfig);
+
+    await editor.isReady;
+
+    // Scroll should work for child blocks exactly like top-level blocks
+    expect(mockScrollTo).toHaveBeenCalledWith({ top: 150, behavior: 'smooth' });
+    expect(mockGetBlockById).toHaveBeenCalledWith('childBlock1');
+    expect(mockSelectBlock).toHaveBeenCalledWith(fakeBlock);
+  });
+
   it('does not call selectBlock when hash does not match a block in BlockManager', async () => {
     setHash('#abc123XYZ0');
 

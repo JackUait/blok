@@ -3,7 +3,7 @@ import type { StubData } from '../../tools/stub';
 import { Module } from '../__module';
 import type { Block } from '../block';
 import type { BlockToolAdapter } from '../tools/block';
-import { log, logLabeled } from '../utils';
+import { generateBlockId, log, logLabeled } from '../utils';
 import {
   analyzeDataFormat,
   expandToHierarchical,
@@ -95,10 +95,25 @@ export class Renderer extends Module {
         // Note: Yjs data layer is loaded via BlockManager.insertMany() with the correct block IDs
 
         /**
+         * Track seen IDs to detect and resolve duplicates
+         */
+        const seenIds = new Set<string>();
+
+        /**
          * Create Blocks instances
          */
         const blocks = processedBlocks.map((blockData: OutputBlockData) => {
-          const { tunes, id, parent, content } = blockData;
+          let { id } = blockData;
+          const { tunes, parent, content } = blockData;
+
+          if (id !== undefined && seenIds.has(id)) {
+            logLabeled(`Duplicate block id «${id}» replaced with a generated id to ensure uniqueness`, 'warn');
+            id = generateBlockId();
+          }
+
+          if (id !== undefined) {
+            seenIds.add(id);
+          }
           const originalTool = blockData.type;
 
           /**

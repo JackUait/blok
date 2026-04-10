@@ -16,7 +16,7 @@ import type { DragController } from '../modules/drag/DragController';
 import type { BlockToolAdapter } from '../tools/block';
 import type { ToolsCollection } from '../tools/collection';
 import type { BlockTuneAdapter } from '../tools/tune';
-import { generateBlockId, isFunction, isValidBlockId, log } from '../utils';
+import { generateBlockId, isFunction, log } from '../utils';
 import { isSameBlockData } from '../utils/blocks';
 import { EventsDispatcher } from '../utils/events';
 
@@ -256,8 +256,8 @@ export class Block extends EventsDispatcher<BlockEvents> {
   }: BlockConstructorOptions, eventBus?: EventsDispatcher<BlokEventMap>) {
     super();
 
-    // Validate id: replace non-nanoid strings with a freshly generated id
-    const validatedId = isValidBlockId(id) ? id : generateBlockId();
+    // Use the provided id as-is; only generate a new one when the id is empty
+    const validatedId = id !== '' ? id : generateBlockId();
 
     // Set basic properties
     this.name = tool.name;

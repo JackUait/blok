@@ -1157,27 +1157,30 @@ describe('Block', () => {
     });
   });
 
-  describe('id validation', () => {
+  describe('id handling', () => {
     it('uses a provided valid nanoid as the block id', () => {
-      const block = createBlock({ id: 'V1StGXR8_Z' }).block; // exactly 10 URL-safe chars
+      const block = createBlock({ id: 'V1StGXR8_Z' }).block;
       expect(block.id).toBe('V1StGXR8_Z');
     });
 
-    it('replaces a human-readable string id with a generated nanoid', () => {
+    it('preserves a human-readable string id from input data', () => {
       const block = createBlock({ id: 'Hello World' }).block;
-      expect(block.id).toMatch(/^[A-Za-z0-9_-]{10}$/);
-      expect(block.id).not.toBe('Hello World');
+      expect(block.id).toBe('Hello World');
     });
 
-    it('replaces an empty-string id with a generated nanoid', () => {
+    it('generates a nanoid when id is an empty string', () => {
       const block = createBlock({ id: '' }).block;
       expect(block.id).toMatch(/^[A-Za-z0-9_-]{10}$/);
     });
 
-    it('replaces a slug-style id with a generated nanoid', () => {
+    it('preserves a slug-style id from input data', () => {
       const block = createBlock({ id: 'my-intro-section' }).block;
-      expect(block.id).toMatch(/^[A-Za-z0-9_-]{10}$/);
-      expect(block.id).not.toBe('my-intro-section');
+      expect(block.id).toBe('my-intro-section');
+    });
+
+    it('preserves a legacy EditorJS-style id from input data', () => {
+      const block = createBlock({ id: 'toggle-example-1' }).block;
+      expect(block.id).toBe('toggle-example-1');
     });
 
     it('generates a nanoid when id is undefined', () => {

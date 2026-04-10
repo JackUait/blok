@@ -194,6 +194,28 @@ export class DocumentStore {
   }
 
   /**
+   * Update a block's edit metadata fields directly on the Y.Map.
+   * @param id - Block id
+   * @param lastEditedAt - Timestamp in milliseconds
+   * @param lastEditedBy - User display name, or null
+   */
+  public updateBlockMetadata(id: string, lastEditedAt: number, lastEditedBy: string | null): void {
+    const yblock = this.getBlockById(id);
+
+    if (yblock === undefined) {
+      return;
+    }
+
+    this.transact(() => {
+      yblock.set('lastEditedAt', lastEditedAt);
+
+      if (lastEditedBy !== null) {
+        yblock.set('lastEditedBy', lastEditedBy);
+      }
+    }, 'local');
+  }
+
+  /**
    * Find block index by id.
    * @param id - Block id to find
    * @returns Index or -1 if not found

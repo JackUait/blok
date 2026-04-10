@@ -247,6 +247,8 @@ export class BlockYjsSync {
     const data = this.dependencies.YjsManager.yMapToObject(yblock.get('data') as YMap<unknown>);
     const ytunes = yblock.get('tunes') as YMap<unknown> | undefined;
     const tunes = ytunes !== undefined ? this.dependencies.YjsManager.yMapToObject(ytunes) : {};
+    const lastEditedAt = yblock.get('lastEditedAt') as number | undefined;
+    const lastEditedBy = (yblock.get('lastEditedBy') as string | undefined) ?? null;
 
     // Check if tunes have changed - if so, we need to recreate the block
     // because tunes are instantiated during block construction
@@ -267,6 +269,8 @@ export class BlockYjsSync {
         contentIds: block.contentIds.length > 0 ? [...block.contentIds] : undefined,
         parentId: block.parentId ?? undefined,
         bindEventsImmediately: true,
+        lastEditedAt,
+        lastEditedBy,
       });
 
       // Use atomic operation with RAF extension to prevent DOM mutation observers
@@ -298,6 +302,8 @@ export class BlockYjsSync {
             contentIds: block.contentIds.length > 0 ? [...block.contentIds] : undefined,
             parentId: block.parentId ?? undefined,
             bindEventsImmediately: true,
+            lastEditedAt,
+            lastEditedBy,
           });
 
           this.handlers.replaceBlock(blockIndex, newBlock);
@@ -330,6 +336,8 @@ export class BlockYjsSync {
     const toolName = yblock.get('type') as string;
     const data = this.dependencies.YjsManager.yMapToObject(yblock.get('data') as YMap<unknown>);
     const parentId = yblock.get('parentId') as string | undefined;
+    const lastEditedAt = yblock.get('lastEditedAt') as number | undefined;
+    const lastEditedBy = (yblock.get('lastEditedBy') as string | undefined) ?? null;
 
     // Find the index of this block in Yjs to insert at correct position
     const yjsBlocks = this.dependencies.YjsManager.toJSON();
@@ -350,6 +358,8 @@ export class BlockYjsSync {
         data,
         parentId: parentId ?? undefined,
         bindEventsImmediately: true,
+        lastEditedAt,
+        lastEditedBy,
       });
 
       this.blocksStore.insert(targetIndex, block);
@@ -438,7 +448,7 @@ export class BlockYjsSync {
     const yjsBlocks = this.dependencies.YjsManager.toJSON();
 
     // Collect blocks to create — skip any that already exist
-    const toCreate: Array<{ blockId: string; toolName: string; data: Record<string, unknown>; parentId: string | undefined; targetIndex: number }> = [];
+    const toCreate: Array<{ blockId: string; toolName: string; data: Record<string, unknown>; parentId: string | undefined; lastEditedAt: number | undefined; lastEditedBy: string | null; targetIndex: number }> = [];
 
     for (const blockId of blockIds) {
       if (this.repository.getBlockById(blockId) !== undefined) {
@@ -454,13 +464,15 @@ export class BlockYjsSync {
       const toolName = yblock.get('type') as string;
       const data = this.dependencies.YjsManager.yMapToObject(yblock.get('data') as YMap<unknown>);
       const parentId = yblock.get('parentId') as string | undefined;
+      const lastEditedAt = yblock.get('lastEditedAt') as number | undefined;
+      const lastEditedBy = (yblock.get('lastEditedBy') as string | undefined) ?? null;
       const targetIndex = yjsBlocks.findIndex((b) => b.id === blockId);
 
       if (targetIndex === -1) {
         continue;
       }
 
-      toCreate.push({ blockId, toolName, data, parentId: parentId ?? undefined, targetIndex });
+      toCreate.push({ blockId, toolName, data, parentId: parentId ?? undefined, lastEditedAt, lastEditedBy, targetIndex });
     }
 
     if (toCreate.length === 0) {
@@ -478,6 +490,8 @@ export class BlockYjsSync {
           data: entry.data,
           parentId: entry.parentId,
           bindEventsImmediately: true,
+          lastEditedAt: entry.lastEditedAt,
+          lastEditedBy: entry.lastEditedBy,
         });
 
         this.blocksStore.addToArray(entry.targetIndex, block);

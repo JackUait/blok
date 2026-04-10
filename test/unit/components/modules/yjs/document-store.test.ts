@@ -476,6 +476,46 @@ describe('DocumentStore', () => {
     });
   });
 
+  describe('updateBlockMetadata', () => {
+    it('should set lastEditedAt and lastEditedBy on the Y.Map', () => {
+      store.fromJSON([{ id: 'block1', type: 'paragraph', data: { text: 'Hello' } }]);
+
+      store.updateBlockMetadata('block1', 1700000000000, 'Alice');
+
+      const yblock = store.getBlockById('block1')!;
+
+      expect(yblock.get('lastEditedAt')).toBe(1700000000000);
+      expect(yblock.get('lastEditedBy')).toBe('Alice');
+    });
+
+    it('should not set lastEditedBy when null', () => {
+      store.fromJSON([{ id: 'block1', type: 'paragraph', data: { text: 'Hello' } }]);
+
+      // First set a value for lastEditedBy
+      store.updateBlockMetadata('block1', 1700000000000, 'Alice');
+
+      // Now call with null — lastEditedBy should retain its previous value
+      store.updateBlockMetadata('block1', 1700000001000, null);
+
+      const yblock = store.getBlockById('block1')!;
+
+      expect(yblock.get('lastEditedAt')).toBe(1700000001000);
+      expect(yblock.get('lastEditedBy')).toBe('Alice');
+    });
+
+    it('does nothing if block not found', () => {
+      store.fromJSON([{ id: 'block1', type: 'paragraph', data: { text: 'Hello' } }]);
+
+      // Should not throw
+      store.updateBlockMetadata('nonexistent', 1700000000000, 'Alice');
+
+      // Original block is unaffected
+      const yblock = store.getBlockById('block1')!;
+
+      expect(yblock.get('lastEditedAt')).toBeUndefined();
+    });
+  });
+
   describe('destroy', () => {
     it('destroys the Yjs document', () => {
       store.destroy();

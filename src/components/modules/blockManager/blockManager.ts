@@ -1156,5 +1156,9 @@ export class BlockManager extends Module {
     for (const [key, value] of Object.entries(savedData.data)) {
       this.Blok.YjsManager.updateBlockData(block.id, key, value);
     }
+
+    if (block.lastEditedAt !== undefined) {
+      this.Blok.YjsManager.updateBlockMetadata(block.id, block.lastEditedAt, block.lastEditedBy);
+    }
   }
 }

@@ -1097,6 +1097,11 @@ export class BlockManager extends Module {
     // Also skip if a pointer drag is active — the browser can mutate contenteditable DOM across
     // cell boundaries during a drag, and we must not write that corrupted state to Yjs.
     if (mutationType === BlockChangedMutationType && !this.yjsSync.isSyncingFromYjs && !this._isPointerDragActive) {
+      // eslint-disable-next-line no-param-reassign
+      block.lastEditedAt = Date.now();
+      // eslint-disable-next-line no-param-reassign
+      block.lastEditedBy = this.config.user?.name ?? null;
+
       void this.syncBlockDataToYjs(block);
     }
 

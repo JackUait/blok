@@ -1014,4 +1014,105 @@ describe('BlockManager', () => {
 
     expect(syncingDuringRendered).toBe(true);
   });
+
+  describe('edit metadata on mutation', () => {
+    it('should update block lastEditedAt and lastEditedBy on content change', () => {
+      const block = createBlockStub({ id: 'block-meta' });
+
+      const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
+      const config = {
+        defaultBlock: 'paragraph',
+        sanitizer: {},
+        user: { name: 'Test User' },
+      } as BlokConfig;
+
+      const blockManager = new BlockManager({
+        config,
+        eventsDispatcher,
+      });
+
+      blockManager.state = {
+        BlockEvents: {
+          handleCommandC: vi.fn(),
+          handleCommandX: vi.fn(),
+          keydown: vi.fn(),
+          keyup: vi.fn(),
+        } as unknown as BlokModules['BlockEvents'],
+        ReadOnly: {
+          isEnabled: false,
+        } as unknown as BlokModules['ReadOnly'],
+        UI: {
+          nodes: {
+            holder: document.createElement('div'),
+            redactor: document.createElement('div'),
+            wrapper: document.createElement('div'),
+          },
+          CSS: {
+            blokWrapper: '',
+            blokWrapperNarrow: '',
+            blokZone: '',
+            blokZoneHidden: '',
+            blokEmpty: '',
+            blokRtlFix: '',
+            blokDragging: '',
+          },
+          checkEmptiness: vi.fn(),
+        } as unknown as BlokModules['UI'],
+        Tools: {
+          blockTools: createMockToolsCollection(['paragraph']),
+        } as unknown as BlokModules['Tools'],
+        YjsManager: {
+          addBlock: vi.fn(),
+          removeBlock: vi.fn(),
+          moveBlock: vi.fn(),
+          updateBlockData: vi.fn(),
+          updateBlockTune: vi.fn(),
+          stopCapturing: vi.fn(),
+          transact: vi.fn((fn: () => void) => fn()),
+          toJSON: vi.fn(() => []),
+          getBlockById: vi.fn(() => undefined),
+          onBlocksChanged: vi.fn(() => vi.fn()),
+          fromJSON: vi.fn(),
+        } as unknown as BlokModules['YjsManager'],
+        Caret: {
+          extractFragmentFromCaretPosition: vi.fn(),
+          setToBlock: vi.fn(),
+          positions: { START: 'start', END: 'end' },
+        } as unknown as BlokModules['Caret'],
+        I18n: {
+          t: vi.fn((key: string) => key),
+        } as unknown as BlokModules['I18n'],
+      } as BlokModules;
+
+      blockManager.prepare();
+
+      const now = Date.now();
+
+      (blockManager as unknown as BlockManagerInternalAccess).blockDidMutated(
+        BlockChangedMutationType,
+        block,
+        { index: 0 }
+      );
+
+      expect(block.lastEditedAt).toBeTypeOf('number');
+      expect((block.lastEditedAt as number)).toBeGreaterThanOrEqual(now);
+      expect((block.lastEditedAt as number)).toBeLessThanOrEqual(Date.now());
+      expect(block.lastEditedBy).toBe('Test User');
+    });
+
+    it('should set lastEditedBy to null when no user is configured', () => {
+      const block = createBlockStub({ id: 'block-no-user' });
+
+      const { blockManager } = createBlockManager();
+
+      (blockManager as unknown as BlockManagerInternalAccess).blockDidMutated(
+        BlockChangedMutationType,
+        block,
+        { index: 0 }
+      );
+
+      expect(block.lastEditedAt).toBeTypeOf('number');
+      expect(block.lastEditedBy).toBeNull();
+    });
+  });
 });

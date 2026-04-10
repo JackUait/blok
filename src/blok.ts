@@ -151,9 +151,7 @@ class Blok {
       // isReady resolves only after all blocks are in the DOM (requestIdleCallback fence in Renderer),
       // so no extra polling is needed even on slow connections.
       const rawHash = window.location.hash.slice(1);
-      // Malformed percent-sequences (e.g. %ZZ) cause decodeURIComponent to throw;
-      // fall back to the raw value so the query finds nothing and we skip scrolling.
-      const hash = rawHash ? ((): string => { try { return decodeURIComponent(rawHash); } catch { return rawHash; } })() : '';
+      const hash = rawHash ? Blok.safeDecodeHash(rawHash) : '';
 
       if (hash) {
         const el = document.querySelector(`[data-blok-id="${CSS.escape(hash)}"]`);
@@ -166,12 +164,7 @@ class Blok {
 
           window.scrollTo({ top: y, behavior: 'smooth' });
 
-          // Visually highlight the scrolled-to block
-          const block = blok.moduleInstances.BlockManager.getBlockById(hash);
-
-          if (block) {
-            blok.moduleInstances.BlockSelection.selectBlock(block);
-          }
+          Blok.selectBlockById(blok, hash);
         }
       }
 
@@ -359,6 +352,32 @@ class Blok {
         return uiMethods.isMobile as boolean;
       },
     });
+  }
+
+  /**
+   * Decodes a URL hash fragment, falling back to the raw value on malformed percent-sequences.
+   * @param raw - raw hash fragment (without leading #)
+   */
+  private static safeDecodeHash(raw: string): string {
+    try {
+      return decodeURIComponent(raw);
+    } catch {
+      // Malformed percent-sequence (e.g. %ZZ) — return raw so no block is matched
+      return raw;
+    }
+  }
+
+  /**
+   * Selects the block identified by `id` in BlockManager, if it exists.
+   * @param blok - Core instance
+   * @param id - decoded block id
+   */
+  private static selectBlockById(blok: Core, id: string): void {
+    const block = blok.moduleInstances.BlockManager.getBlockById(id);
+
+    if (block !== undefined) {
+      blok.moduleInstances.BlockSelection.selectBlock(block);
+    }
   }
 }
 

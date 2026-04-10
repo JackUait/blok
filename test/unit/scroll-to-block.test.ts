@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { BlokConfig } from '../../types';
+import type { Block } from '../../src/components/block';
 import type { BlokModules } from '../../src/types-internal/blok-modules';
 
 // Mock VERSION global variable
@@ -293,7 +294,7 @@ describe('scroll-to-block', () => {
     setHash('#abc123XYZ0');
 
     const el = fakeEl(200);
-    const fakeBlock = { id: 'abc123XYZ0' } as unknown as import('../../src/components/block').Block;
+    const fakeBlock = { id: 'abc123XYZ0' } as unknown as Block;
 
     document.querySelector = vi.fn((selector: string): Element | null => {
       if (selector === '[data-blok-id="abc123XYZ0"]') {
@@ -354,7 +355,9 @@ describe('scroll-to-block', () => {
 
     await editor.isReady;
 
-    expect(mockScrollTo).toHaveBeenCalled(); // scroll still happens
-    expect(mockSelectBlock).not.toHaveBeenCalled(); // but no selection
+    // Scroll still happens (DOM element was found)
+    expect(mockScrollTo).toHaveBeenCalledWith({ top: 200, behavior: 'smooth' });
+    // But no selection because BlockManager returned no block
+    expect(mockSelectBlock).not.toHaveBeenCalled();
   });
 });

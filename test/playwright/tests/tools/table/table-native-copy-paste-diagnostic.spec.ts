@@ -4,6 +4,7 @@
  *
  * This is a debugging/investigation test — not a permanent regression test.
  */
+/* eslint-disable playwright/no-wait-for-timeout, max-depth */
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
@@ -88,8 +89,7 @@ test.describe('Native copy paste diagnostic', () => {
     await expect(firstCellEditable).toBeFocused({ timeout: 2000 });
 
     // Verify text is there
-    const cellText = await firstCellEditable.textContent();
-    expect(cellText).toBe('Hello World');
+    await expect(firstCellEditable).toHaveText('Hello World');
 
     // Select all — this creates a non-collapsed native text selection
     await page.keyboard.press('ControlOrMeta+a');
@@ -128,27 +128,21 @@ test.describe('Native copy paste diagnostic', () => {
 
     // Now press Ctrl+C for real — Chrome writes to the actual system clipboard
     await page.keyboard.press('ControlOrMeta+c');
-    await page.waitForTimeout(300);
 
     // Read the actual clipboard Chrome wrote
     const nativeClipboard = await page.evaluate(async () => {
-      try {
-        const items = await navigator.clipboard.read();
-        const result: Record<string, string> = {};
-        for (const item of items) {
-          for (const type of item.types) {
-            try {
-              const blob = await item.getType(type);
-              result[type] = await blob.text();
-            } catch (e) {
-              result[type] = `ERROR: ${(e as Error).message}`;
-            }
-          }
-        }
-        return result;
-      } catch (err) {
-        return { error: (err as Error).message };
-      }
+      const items = await navigator.clipboard.read();
+      const entries = await Promise.all(
+        items.flatMap((item) =>
+          item.types.map(async (type) => {
+            const blob = await item.getType(type);
+
+            return [type, await blob.text()] as const;
+          })
+        )
+      );
+
+      return Object.fromEntries(entries);
     });
 
     // eslint-disable-next-line no-console
@@ -181,7 +175,9 @@ test.describe('Native copy paste diagnostic', () => {
 
     // Count blocks BEFORE paste
     const beforePaste = await page.evaluate(async () => {
-      const saved = await window.diagBlok!.save!();
+      const blok = window.diagBlok;
+      if (!blok?.save) throw new Error('diagBlok not initialized');
+      const saved = await blok.save();
       return {
         blockCount: saved.blocks.length,
         blockTypes: saved.blocks.map((b) => b.type),
@@ -211,7 +207,9 @@ test.describe('Native copy paste diagnostic', () => {
 
     // Count blocks AFTER paste
     const afterPaste = await page.evaluate(async () => {
-      const saved = await window.diagBlok!.save!();
+      const blok = window.diagBlok;
+      if (!blok?.save) throw new Error('diagBlok not initialized');
+      const saved = await blok.save();
       return {
         blockCount: saved.blocks.length,
         blockTypes: saved.blocks.map((b) => b.type),
@@ -292,7 +290,9 @@ test.describe('Native copy paste diagnostic', () => {
 
     // Count blocks before paste
     const beforePaste = await page.evaluate(async () => {
-      const saved = await window.diagBlok!.save!();
+      const blok = window.diagBlok;
+      if (!blok?.save) throw new Error('diagBlok not initialized');
+      const saved = await blok.save();
       return { blockCount: saved.blocks.length, blockTypes: saved.blocks.map((b) => b.type) };
     });
     // eslint-disable-next-line no-console
@@ -304,7 +304,9 @@ test.describe('Native copy paste diagnostic', () => {
 
     // Step 4: Check result
     const afterPaste = await page.evaluate(async () => {
-      const saved = await window.diagBlok!.save!();
+      const blok = window.diagBlok;
+      if (!blok?.save) throw new Error('diagBlok not initialized');
+      const saved = await blok.save();
       return {
         blockCount: saved.blocks.length,
         blockTypes: saved.blocks.map((b) => b.type),
@@ -368,7 +370,9 @@ test.describe('Native copy paste diagnostic', () => {
 
     // Count blocks BEFORE paste
     const beforePaste = await page.evaluate(async () => {
-      const saved = await window.diagBlok!.save!();
+      const blok = window.diagBlok;
+      if (!blok?.save) throw new Error('diagBlok not initialized');
+      const saved = await blok.save();
       return {
         blockCount: saved.blocks.length,
         blockTypes: saved.blocks.map((b) => b.type),
@@ -385,7 +389,9 @@ test.describe('Native copy paste diagnostic', () => {
 
     // Step 4: Check result
     const afterPaste = await page.evaluate(async () => {
-      const saved = await window.diagBlok!.save!();
+      const blok = window.diagBlok;
+      if (!blok?.save) throw new Error('diagBlok not initialized');
+      const saved = await blok.save();
       return {
         blockCount: saved.blocks.length,
         blockTypes: saved.blocks.map((b) => b.type),
@@ -495,7 +501,9 @@ test.describe('Native copy paste diagnostic', () => {
 
     // Count blocks before paste
     const beforePaste = await page.evaluate(async () => {
-      const saved = await window.diagBlok!.save!();
+      const blok = window.diagBlok;
+      if (!blok?.save) throw new Error('diagBlok not initialized');
+      const saved = await blok.save();
       return { blockCount: saved.blocks.length, blockTypes: saved.blocks.map((b) => b.type) };
     });
     // eslint-disable-next-line no-console
@@ -512,7 +520,9 @@ test.describe('Native copy paste diagnostic', () => {
 
     // Check result
     const afterPaste = await page.evaluate(async () => {
-      const saved = await window.diagBlok!.save!();
+      const blok = window.diagBlok;
+      if (!blok?.save) throw new Error('diagBlok not initialized');
+      const saved = await blok.save();
       return {
         blockCount: saved.blocks.length,
         blockTypes: saved.blocks.map((b) => b.type),

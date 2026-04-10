@@ -115,7 +115,9 @@ test.describe('TableCellsHandler: currentBlock fallback when activeElement loses
 
     // Count blocks before the paste.
     const beforePaste = await page.evaluate(async () => {
-      const saved = await window.handlerFixBlok!.save!();
+      const blok = window.handlerFixBlok;
+      if (!blok?.save) throw new Error('handlerFixBlok not initialized');
+      const saved = await blok.save();
 
       return {
         tableCount: saved.blocks.filter((b) => b.type === 'table').length,
@@ -164,7 +166,9 @@ test.describe('TableCellsHandler: currentBlock fallback when activeElement loses
 
       await new Promise<void>((resolve) => setTimeout(resolve, 500));
 
-      const saved = await (window.handlerFixBlok as NonNullable<typeof window.handlerFixBlok>).save!();
+      const blok = window.handlerFixBlok;
+      if (!blok?.save) throw new Error('handlerFixBlok not initialized');
+      const saved = await blok.save();
 
       return {
         tableCount: saved.blocks.filter((b) => b.type === 'table').length,

@@ -146,6 +146,25 @@ class Blok {
       }
 
       this.exportAPI(blok);
+
+      // Scroll to the block referenced by the URL hash, if present.
+      // isReady resolves only after all blocks are in the DOM (requestIdleCallback fence in Renderer),
+      // so no extra polling is needed even on slow connections.
+      const hash = window.location.hash.slice(1);
+
+      if (hash) {
+        const el = document.querySelector(`[data-blok-id="${CSS.escape(hash)}"]`);
+
+        if (el) {
+          const topOffset = (isObject(this.initialConfiguration)
+            ? (this.initialConfiguration as BlokConfig).scrollToBlock?.topOffset
+            : undefined) ?? 0;
+          const y = el.getBoundingClientRect().top + window.scrollY - topOffset;
+
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+      }
+
       /**
        * @todo pass API as an argument. It will allow to use Blok's API when blok is ready
        */

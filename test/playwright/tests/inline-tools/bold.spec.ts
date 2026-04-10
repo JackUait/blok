@@ -674,10 +674,20 @@ test.describe('inline tool bold', () => {
 
     await expect(strong).toHaveCount(1);
 
-    const strongText = await strong.evaluate((el) => JSON.stringify(el.textContent));
+    const strongInfo = await strong.evaluate((el) => {
+      const text = el.textContent ?? '';
 
-    // The bold content must preserve the trailing space: "hello world "
-    expect(strongText).toBe('"hello world "');
+      return {
+        length: text.length,
+        endsWithSpace: text.endsWith(' ') || text.endsWith('\u00A0'),
+        textWithoutTrailing: text.slice(0, -1),
+      };
+    });
+
+    // The bold content must preserve the trailing space (as \u00A0 for typed text)
+    expect(strongInfo.length).toBe(12);
+    expect(strongInfo.endsWithSpace).toBe(true);
+    expect(strongInfo.textWithoutTrailing).toBe('hello world');
   });
 });
 

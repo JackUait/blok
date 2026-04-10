@@ -95,6 +95,29 @@ describe('ItalicInlineTool', () => {
       expect(div.querySelector('i')?.textContent).toBe('text ');
     });
 
+    it('preserves trailing nbsp as nbsp after normalization (prevents visual collapse)', () => {
+      div.textContent = 'text\u00A0';
+
+      const textNode = div.firstChild!;
+      const range = document.createRange();
+
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, 5);
+
+      const selection = window.getSelection()!;
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      const config = tool.render() as PopoverItemDefaultBaseParams;
+
+      (config.onActivate as () => void)();
+
+      const lastChar = div.querySelector('i')!.textContent!.charCodeAt(div.querySelector('i')!.textContent!.length - 1);
+
+      expect(lastChar).toBe(160);
+    });
+
     it('preserves trailing space when browser selection excludes it (Chromium/WebKit Ctrl+A)', () => {
       div.textContent = 'text ';
 

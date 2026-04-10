@@ -202,10 +202,29 @@ export class UnderlineInlineTool implements InlineTool {
 
     while (node) {
       if (node.textContent?.includes('\u00A0')) {
+        const keepTrailing = node.textContent.endsWith('\u00A0') && this.isEffectivelyLastChild(node);
+
         node.textContent = node.textContent.replace(/\u00A0/g, ' ');
+
+        if (keepTrailing) {
+          node.textContent = node.textContent.slice(0, -1) + '\u00A0';
+        }
       }
       node = walker.nextNode();
     }
+  }
+
+  /**
+   * Check whether all siblings after a node are empty
+   */
+  private isEffectivelyLastChild(node: Node): boolean {
+    const next = node.nextSibling;
+
+    if (!next) {
+      return true;
+    }
+
+    return (next.textContent ?? '').length === 0 && this.isEffectivelyLastChild(next);
   }
 
   /**

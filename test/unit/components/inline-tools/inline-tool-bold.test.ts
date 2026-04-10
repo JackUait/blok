@@ -174,6 +174,76 @@ describe('BoldInlineTool', () => {
     expect(strong?.textContent).toBe('text ');
   });
 
+  it('preserves trailing nbsp as nbsp after bold normalization (prevents visual collapse)', () => {
+    // When user types "text ", the browser stores the trailing space as \u00A0.
+    // After bolding, the normalization pass must NOT convert trailing \u00A0 to
+    // regular space (char 32), because white-space:normal collapses trailing
+    // char 32, making the space invisible.
+    const { block } = setupBlok('text\u00A0');
+    const textNode = block.firstChild as Text;
+
+    // Select all 5 characters including the trailing \u00A0
+    setRange(textNode, 0, 5);
+
+    const tool = new BoldInlineTool();
+    const menu = tool.render() as PopoverItemDefaultBaseParams;
+
+    menu.onActivate(menu);
+
+    const strong = block.querySelector('strong');
+
+    expect(strong).not.toBeNull();
+
+    const lastChar = strong!.textContent!.charCodeAt(strong!.textContent!.length - 1);
+
+    // Trailing space must remain \u00A0 (160), NOT regular space (32)
+    expect(lastChar).toBe(160);
+  });
+
+  it('preserves trailing nbsp through bold → unbold → bold cycle', () => {
+    const { block } = setupBlok('text\u00A0');
+    const textNode = block.firstChild as Text;
+
+    // Step 1: Select all, bold
+    setRange(textNode, 0, 5);
+
+    const tool = new BoldInlineTool();
+    const menu = tool.render() as PopoverItemDefaultBaseParams;
+
+    menu.onActivate(menu);
+
+    const strong1 = block.querySelector('strong');
+
+    expect(strong1).not.toBeNull();
+    expect(strong1!.textContent!.charCodeAt(strong1!.textContent!.length - 1)).toBe(160);
+
+    // Step 2: Select all inside strong, unbold
+    const boldText = strong1!.firstChild as Text;
+
+    setRange(boldText, 0, boldText.textContent!.length);
+    menu.onActivate(menu);
+
+    expect(block.querySelector('strong')).toBeNull();
+    // After unbold, trailing space should still be \u00A0
+    const afterUnbold = block.textContent!;
+
+    expect(afterUnbold.charCodeAt(afterUnbold.length - 1)).toBe(160);
+
+    // Step 3: Select all, bold again
+    // After unbold, empty text nodes may exist. Normalize to merge them.
+    block.normalize();
+    const plainText = block.firstChild as Text;
+
+    setRange(plainText, 0, plainText.textContent!.length);
+    menu.onActivate(menu);
+
+    const strong2 = block.querySelector('strong');
+
+    expect(strong2).not.toBeNull();
+    // Trailing space must still be \u00A0 after re-bold
+    expect(strong2!.textContent!.charCodeAt(strong2!.textContent!.length - 1)).toBe(160);
+  });
+
   it('does not leave trailing space wrapped in bold when un-bolding partial selection', () => {
     // Reproduces the scenario where:
     // 1. Text is bolded as '<strong>hello world </strong>' (space is charCode 32 after normalization)

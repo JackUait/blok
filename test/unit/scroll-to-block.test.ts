@@ -10,6 +10,10 @@ declare global {
 // Define VERSION before importing blok
 (global as { VERSION?: string }).VERSION = '2.31.0-test';
 
+// Module-level references so tests can spy on mock instances
+const mockGetBlockById = vi.fn().mockReturnValue(undefined);
+const mockSelectBlock = vi.fn();
+
 // Mock dependencies — must come before static import of Blok
 vi.mock('../../src/components/utils/tooltip', () => ({
   destroy: vi.fn(),
@@ -60,6 +64,12 @@ vi.mock('../../src/components/core', () => {
         startSelection: vi.fn(),
         endSelection: vi.fn(),
       } as unknown as BlokModules['RectangleSelection'],
+      BlockManager: {
+        getBlockById: mockGetBlockById,
+      } as unknown as BlokModules['BlockManager'],
+      BlockSelection: {
+        selectBlock: mockSelectBlock,
+      } as unknown as BlokModules['BlockSelection'],
     };
 
     public isReady: Promise<void> = Promise.resolve();
@@ -114,6 +124,11 @@ describe('scroll-to-block', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Reset module-level mock implementations between tests
+    mockGetBlockById.mockReset();
+    mockGetBlockById.mockReturnValue(undefined);
+    mockSelectBlock.mockReset();
 
     originalScrollTo = window.scrollTo;
     originalQuerySelector = document.querySelector.bind(document);
@@ -270,5 +285,59 @@ describe('scroll-to-block', () => {
 
     // Expected: 300 (rect.top) + 0 (scrollY) - 0 (topOffset default) = 300
     expect(mockScrollTo).toHaveBeenCalledWith({ top: 300, behavior: 'smooth' });
+  });
+
+  // -------------------------------------------------------------------------
+
+  it('visually selects the matching block after scrolling to it', async () => {
+    setHash('#abc123XYZ0');
+
+    const el = fakeEl(200);
+    const fakeBlock = { id: 'abc123XYZ0' } as unknown as import('../../src/components/block').Block;
+
+    document.querySelector = vi.fn((selector: string): Element | null => {
+      if (selector === '[data-blok-id="abc123XYZ0"]') {
+        return el;
+      }
+
+      return originalQuerySelector(selector);
+    }) as typeof document.querySelector;
+
+    mockGetBlockById.mockImplementation((id: string) =>
+      id === 'abc123XYZ0' ? fakeBlock : undefined
+    );
+
+    const editor = new Blok({} as BlokConfig);
+
+    await editor.isReady;
+
+    expect(mockScrollTo).toHaveBeenCalled();
+    expect(mockGetBlockById).toHaveBeenCalledWith('abc123XYZ0');
+    expect(mockSelectBlock).toHaveBeenCalledWith(fakeBlock);
+  });
+
+  // -------------------------------------------------------------------------
+
+  it('does not call selectBlock when hash does not match a block in BlockManager', async () => {
+    setHash('#abc123XYZ0');
+
+    const el = fakeEl(200);
+
+    document.querySelector = vi.fn((selector: string): Element | null => {
+      if (selector === '[data-blok-id="abc123XYZ0"]') {
+        return el;
+      }
+
+      return originalQuerySelector(selector);
+    }) as typeof document.querySelector;
+
+    // mockGetBlockById returns undefined by default (reset in beforeEach via vi.clearAllMocks)
+
+    const editor = new Blok({} as BlokConfig);
+
+    await editor.isReady;
+
+    expect(mockScrollTo).toHaveBeenCalled(); // scroll still happens
+    expect(mockSelectBlock).not.toHaveBeenCalled(); // but no selection
   });
 });

@@ -163,6 +163,13 @@ class Blok {
           const y = el.getBoundingClientRect().top + window.scrollY - topOffset;
 
           window.scrollTo({ top: y, behavior: 'smooth' });
+
+          // Visually highlight the scrolled-to block
+          const block = blok.moduleInstances.BlockManager.getBlockById(hash);
+
+          if (block) {
+            blok.moduleInstances.BlockSelection.selectBlock(block);
+          }
         }
       }
 

@@ -150,4 +150,33 @@ test.describe('scroll to block on hash', () => {
     const diff = Math.abs((scrollYWithoutOffset - 80) - scrollYWithOffset);
     expect(diff).toBeLessThanOrEqual(10);
   });
+
+  test('visually selects (highlights) the target block after scrolling', async ({ page }) => {
+    const blocks = makeParagraphBlocks(30);
+    const block = blocks[25];
+    if (!block?.id) {
+      throw new Error('Expected block at index 25 with an id');
+    }
+    const targetBlockId = block.id;
+
+    await page.goto(TEST_PAGE_URL);
+    await page.addStyleTag({ content: 'body { min-height: 3000px; }' });
+
+    await page.evaluate((hash) => {
+      window.history.replaceState(null, '', '#' + hash);
+    }, targetBlockId);
+
+    await createEditorWithData(page, { blocks });
+
+    await waitForScrollToComplete(page);
+
+    // The block's holder (the element with data-blok-id) should have data-blok-selected="true"
+    const isSelected = await page.evaluate((blockId) => {
+      const el = document.querySelector(`[data-blok-id="${blockId}"]`);
+      if (!el) return false;
+      return el.getAttribute('data-blok-selected') === 'true';
+    }, targetBlockId);
+
+    expect(isSelected).toBe(true);
+  });
 });

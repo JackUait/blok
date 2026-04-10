@@ -7,6 +7,7 @@ import {
   findFormattingAncestor,
   hasFormattingAncestor,
   collectFormattingAncestors,
+  extendRangeToTrailingWhitespace,
 } from './utils/formatting-range-utils';
 
 /**
@@ -172,6 +173,7 @@ export class ItalicInlineTool implements InlineTool {
    * @param range - The Range object containing the selection to wrap
    */
   private wrapWithItalic(range: Range): void {
+    extendRangeToTrailingWhitespace(range);
     const html = this.getRangeHtmlWithoutItalic(range);
     const insertedRange = this.replaceRangeWithHtml(range, `<i>${html}</i>`);
     const selection = window.getSelection();

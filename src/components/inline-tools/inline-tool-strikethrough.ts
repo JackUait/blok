@@ -7,6 +7,7 @@ import {
   findFormattingAncestor,
   hasFormattingAncestor,
   collectFormattingAncestors,
+  extendRangeToTrailingWhitespace,
 } from './utils/formatting-range-utils';
 
 /**
@@ -169,6 +170,7 @@ export class StrikethroughInlineTool implements InlineTool {
    * @param range - The Range object containing the selection to wrap
    */
   private wrapWithStrikethrough(range: Range): void {
+    extendRangeToTrailingWhitespace(range);
     const html = this.getRangeHtmlWithoutStrikethrough(range);
     const insertedRange = this.replaceRangeWithHtml(range, `<s>${html}</s>`);
     const selection = window.getSelection();

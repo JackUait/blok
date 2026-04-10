@@ -94,6 +94,29 @@ describe('ItalicInlineTool', () => {
 
       expect(div.querySelector('i')?.textContent).toBe('text ');
     });
+
+    it('preserves trailing space when browser selection excludes it (Chromium/WebKit Ctrl+A)', () => {
+      div.textContent = 'text ';
+
+      const textNode = div.firstChild!;
+      const range = document.createRange();
+
+      // Simulate Chromium/WebKit Ctrl+A: endOffset stops BEFORE trailing space
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, 4);
+
+      const selection = window.getSelection()!;
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      const config = tool.render() as PopoverItemDefaultBaseParams;
+
+      (config.onActivate as () => void)();
+
+      // The trailing space must be INSIDE the <i> tag, not orphaned outside
+      expect(div.querySelector('i')?.textContent).toBe('text ');
+    });
   });
 });
 

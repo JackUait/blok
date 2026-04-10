@@ -133,6 +133,20 @@ export const isRangeFormatted = (
 };
 
 /**
+ * Walk down the `lastChild` chain of `node` and return the deepest last
+ * descendant that is a text node, or `null` if none exists.
+ */
+const findDeepestLastTextNode = (node: Node): Text | null => {
+  const last = node.lastChild;
+
+  if (last === null) {
+    return node.nodeType === Node.TEXT_NODE ? (node as Text) : null;
+  }
+
+  return findDeepestLastTextNode(last);
+};
+
+/**
  * Extend the range to include any trailing whitespace characters that browsers
  * exclude from selections (e.g. Ctrl+A on loaded text stops before trailing spaces).
  *
@@ -148,27 +162,56 @@ export const isRangeFormatted = (
  * This function mutates the range in place to cover those excluded trailing
  * spaces, so downstream formatting can include them.
  *
+ * Two browser behaviours are handled:
+ *  1. `endContainer` is a text node — the range ends mid-text, so check whether
+ *     the remaining characters are all whitespace and extend if so.
+ *  2. `endContainer` is an element node — Ctrl+A / selectAll in Chromium and
+ *     WebKit places the range end on the element itself with `endOffset` equal
+ *     to the child count (i.e. after all children). In this case the last child
+ *     text node may still have trailing whitespace that was excluded; walk to
+ *     the deepest last text node and extend the range to its end if it ends with
+ *     only whitespace after the current offset (or fully consists of whitespace).
+ *
  * @param range - The range to extend (mutated in place)
  */
 export const extendRangeToTrailingWhitespace = (range: Range): void => {
   const endContainer = range.endContainer;
 
-  if (endContainer.nodeType !== Node.TEXT_NODE) {
+  if (endContainer.nodeType === Node.TEXT_NODE) {
+    const text = endContainer.textContent ?? '';
+    const endOffset = range.endOffset;
+
+    if (endOffset >= text.length) {
+      return;
+    }
+
+    // Check whether all characters between endOffset and end of text node are whitespace
+    const trailingSlice = text.slice(endOffset);
+
+    if (trailingSlice.length > 0 && trailingSlice.trim().length === 0) {
+      range.setEnd(endContainer, text.length);
+    }
+
     return;
   }
 
-  const text = endContainer.textContent ?? '';
-  const endOffset = range.endOffset;
+  // endContainer is an element node (the common case for Ctrl+A on loaded content).
+  // Walk to the deepest last text node within it to find any trailing whitespace.
+  const lastTextNode = findDeepestLastTextNode(endContainer);
 
-  if (endOffset >= text.length) {
+  if (lastTextNode === null) {
     return;
   }
 
-  // Check whether all characters between endOffset and end of text node are whitespace
-  const trailingSlice = text.slice(endOffset);
+  const text = lastTextNode.textContent ?? '';
 
-  if (trailingSlice.length > 0 && trailingSlice.trim().length === 0) {
-    range.setEnd(endContainer, text.length);
+  if (text.length === 0) {
+    return;
+  }
+
+  // Extend range if the text ends with one or more whitespace characters.
+  if (/\s+$/.test(text)) {
+    range.setEnd(lastTextNode, text.length);
   }
 };
 

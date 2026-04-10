@@ -6,6 +6,7 @@ import {
   isRangeFormatted,
   findFormattingAncestor,
   collectFormattingAncestors,
+  extendRangeToTrailingWhitespace,
 } from './utils/formatting-range-utils';
 
 /**
@@ -168,6 +169,7 @@ export class CodeInlineTool implements InlineTool {
    * @param range - The Range object containing the selection to wrap
    */
   private wrapWithCode(range: Range): void {
+    extendRangeToTrailingWhitespace(range);
     const html = this.getRangeHtmlWithoutCode(range);
     const insertedRange = this.replaceRangeWithHtml(range, `<code>${html}</code>`);
     const selection = window.getSelection();

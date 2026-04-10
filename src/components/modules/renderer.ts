@@ -104,7 +104,7 @@ export class Renderer extends Module {
          */
         const blocks = processedBlocks.map((blockData: OutputBlockData) => {
           let { id } = blockData;
-          const { tunes, parent, content } = blockData;
+          const { tunes, parent, content, lastEditedAt, lastEditedBy } = blockData;
 
           if (id !== undefined && seenIds.has(id)) {
             logLabeled(`Duplicate block id «${id}» replaced with a generated id to ensure uniqueness`, 'warn');
@@ -160,6 +160,8 @@ export class Renderer extends Module {
                 tunes,
                 parentId: parent,
                 contentIds: content,
+                lastEditedAt,
+                lastEditedBy,
               });
             } catch (error) {
               log(`Block «${tool}» skipped because of plugins error`, 'error', {
@@ -179,6 +181,8 @@ export class Renderer extends Module {
                 tunes,
                 parentId: parent,
                 contentIds: content,
+                lastEditedAt,
+                lastEditedBy,
               });
             }
           };

@@ -85,7 +85,9 @@ function isDefaultBlack(color: string): boolean {
 }
 
 /**
- * Compute the relative luminance of a CSS color value (rgb() or hex format).
+ * Compute the relative luminance of a CSS color value.
+ * Supports rgb(), rgba(), hsl(), hsla(), and hex (#rrggbb / #rgb) formats.
+ * Alpha components are ignored — only the base RGB channels are used.
  * Returns a value in [0, 1], or -1 if the format is unrecognized.
  * Uses simplified linear luminance (no gamma correction), adequate for
  * threshold comparisons at this scale.
@@ -188,9 +190,16 @@ function isDefaultDarkBackground(bgColor: string): boolean {
  *
  * Uses relative luminance > 0.75, which is above all Blok text presets while
  * catching typical dark mode default text colors.
+ *
+ * Returns false for unrecognized color formats (luminance === -1) so unknown
+ * formats are treated conservatively: they are not filtered out here, but any
+ * color that cannot be parsed also cannot be mapped to a preset, so the
+ * sanitizer will strip it regardless.
  */
 function isDefaultLightText(color: string): boolean {
-  return computeRelativeLuminance(color) > 0.75;
+  const luminance = computeRelativeLuminance(color);
+
+  return luminance >= 0 && luminance > 0.75;
 }
 
 /**

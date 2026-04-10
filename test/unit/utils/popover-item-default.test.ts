@@ -4,11 +4,17 @@ vi.mock('../../../src/components/icons', () => ({
   IconChevronRight: '<svg data-blok-testid="chevron-right"></svg>',
 }));
 
+vi.mock('../../../src/components/utils/tooltip', () => ({
+  onHover: vi.fn(),
+  hide: vi.fn(),
+}));
+
 import {
   PopoverItemDefault,
   type PopoverItemDefaultParams
 } from '../../../src/components/utils/popover/components/popover-item';
 import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
+import * as tooltip from '../../../src/components/utils/tooltip';
 
 type ItemSetupResult = {
   item: PopoverItemDefault;
@@ -315,5 +321,33 @@ describe('PopoverItemDefault', () => {
     expect(title?.className).not.toContain('text-ellipsis');
     expect(title?.className).not.toContain('min-w-0');
     expect(title?.className).toContain('whitespace-nowrap');
+  });
+
+  it('registers tooltip on hover for secondary label showing only the readable shortcut', () => {
+    const { element } = createItem({ title: 'Copy', secondaryLabel: '⌘C' });
+    const secondary = element.querySelector<HTMLElement>('[data-blok-testid="popover-item-secondary-title"]');
+
+    expect(secondary).not.toBeNull();
+
+    // Tooltip is anchored to the inner glyph span, not the outer padded container,
+    // so it centers directly over the visible shortcut keys.
+    const glyphSpan = secondary?.firstElementChild as HTMLElement | undefined;
+    const call = vi.mocked(tooltip.onHover).mock.calls.find(([el]) => el === glyphSpan);
+
+    expect(call).toBeDefined();
+    expect(call?.[1]).toBe('Command+C');
+    expect(call?.[2]).toEqual(expect.objectContaining({ placement: 'top' }));
+  });
+
+  it('does not register secondary label tooltip when item has no secondaryLabel', () => {
+    vi.mocked(tooltip.onHover).mockClear();
+    createItem({ title: 'Copy' });
+
+    // onHover may have been called for hint registration, but NOT with the secondary element
+    const anyCallHasSecondaryArg = vi.mocked(tooltip.onHover).mock.calls.some(([el]) => {
+      return el instanceof HTMLElement && el.getAttribute('data-blok-testid') === 'popover-item-secondary-title';
+    });
+
+    expect(anyCallHasSecondaryArg).toBe(false);
   });
 });

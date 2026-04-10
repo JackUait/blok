@@ -1,5 +1,7 @@
 import { DATA_ATTR } from '../../../../../constants/data-attributes';
 import { IconChevronRight } from '../../../../../icons';
+import { makeShortcutHtml, shortcutToReadable } from '../../../../key-icon';
+import { onHover } from '../../../../tooltip';
 import { twMerge } from '../../../../tw';
 import { PopoverItem } from '../popover-item';
 
@@ -272,13 +274,22 @@ export class PopoverItemDefault extends PopoverItem {
     if (params.secondaryLabel) {
       const secondaryEl = document.createElement('div');
 
-      secondaryEl.className = 'ml-auto shrink-0 flex items-center whitespace-nowrap pl-20 font-mono text-[13px] tracking-wide text-text-secondary/60';
+      secondaryEl.className = 'ml-auto shrink-0 inline-flex items-center whitespace-nowrap pl-20 leading-none text-text-secondary/60';
       secondaryEl.setAttribute(DATA_ATTR.popoverItemSecondaryTitle, '');
       secondaryEl.setAttribute('data-blok-testid', 'popover-item-secondary-title');
-      secondaryEl.textContent = params.secondaryLabel;
+      secondaryEl.innerHTML = makeShortcutHtml(params.secondaryLabel);
 
       root.appendChild(secondaryEl);
       this.nodes.secondaryLabelEl = secondaryEl;
+
+      if (params.title !== undefined) {
+        // Anchor tooltip to the inner SVG span (the visible glyphs), not the
+        // outer container which has large left padding — so the tooltip centers
+        // directly over the shortcut keys rather than over the padded div.
+        const glyphSpan = (secondaryEl.firstElementChild ?? secondaryEl) as HTMLElement;
+
+        onHover(glyphSpan, shortcutToReadable(params.secondaryLabel), { placement: 'top' });
+      }
     }
 
     // Trailing icon (right-side indicator, e.g. checkmark)
@@ -552,8 +563,10 @@ export class PopoverItemDefault extends PopoverItem {
       return;
     }
 
-    this.nodes.secondaryLabelEl.textContent = this.params.secondaryLabel ?? '';
-    this.nodes.secondaryLabelEl.style.display = this.params.secondaryLabel ? '' : 'none';
+    const label = this.params.secondaryLabel;
+
+    this.nodes.secondaryLabelEl.innerHTML = label ? makeShortcutHtml(label) : '';
+    this.nodes.secondaryLabelEl.style.display = label ? '' : 'none';
   }
 
   /**
@@ -586,7 +599,7 @@ export class PopoverItemDefault extends PopoverItem {
       return;
     }
 
-    this.nodes.secondaryLabelEl.textContent = secondaryLabel ?? '';
+    this.nodes.secondaryLabelEl.innerHTML = secondaryLabel ? makeShortcutHtml(secondaryLabel) : '';
     this.nodes.secondaryLabelEl.style.display = secondaryLabel ? '' : 'none';
   }
 

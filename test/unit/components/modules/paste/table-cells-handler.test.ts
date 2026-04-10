@@ -421,5 +421,182 @@ describe('TableCellsHandler', () => {
 
       expect(callArgs.data.content[0][0]).toBe('Plain');
     });
+
+    // -------------------------------------------------------------------------
+    // Bug: focus lost (activeElement === body) but currentBlock is inside a
+    // table cell — handler should still bail instead of creating a new table
+    // -------------------------------------------------------------------------
+
+    it('returns false when context.currentBlock.holder is inside [data-blok-table-cell-blocks]', async () => {
+      // Simulate focus lost — activeElement is body, NOT inside a table cell
+      Object.defineProperty(document, 'activeElement', {
+        get: () => document.body,
+        configurable: true,
+      });
+
+      // currentBlock.holder IS inside a table-cell-blocks container
+      const cellBlocksContainer = document.createElement('div');
+
+      cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+
+      const mockHolder = document.createElement('div');
+
+      cellBlocksContainer.appendChild(mockHolder);
+      document.body.appendChild(cellBlocksContainer);
+
+      context.currentBlock = { holder: mockHolder } as unknown as import('../../../../../src/components/block').Block;
+
+      const html = buildTableHtml([['A', 'B']]);
+      const result = await handler.handle(html, context);
+
+      expect(result).toBe(false);
+      expect(mockBlok.BlockManager.insert).not.toHaveBeenCalled();
+
+      // Clean up
+      document.body.removeChild(cellBlocksContainer);
+    });
+
+    it('returns false when both activeElement is in a cell AND currentBlock holder is in [data-blok-table-cell-blocks]', async () => {
+      // activeElement inside [data-blok-table-cell]
+      const tableCellElement = document.createElement('div');
+
+      tableCellElement.setAttribute('data-blok-table-cell', '');
+
+      const innerElement = document.createElement('span');
+
+      tableCellElement.appendChild(innerElement);
+      document.body.appendChild(tableCellElement);
+
+      Object.defineProperty(document, 'activeElement', {
+        get: () => innerElement,
+        configurable: true,
+      });
+
+      // currentBlock.holder also inside [data-blok-table-cell-blocks]
+      const cellBlocksContainer = document.createElement('div');
+
+      cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+
+      const mockHolder = document.createElement('div');
+
+      cellBlocksContainer.appendChild(mockHolder);
+      document.body.appendChild(cellBlocksContainer);
+
+      context.currentBlock = { holder: mockHolder } as unknown as import('../../../../../src/components/block').Block;
+
+      const html = buildTableHtml([['X']]);
+      const result = await handler.handle(html, context);
+
+      expect(result).toBe(false);
+      expect(mockBlok.BlockManager.insert).not.toHaveBeenCalled();
+
+      // Clean up
+      document.body.removeChild(tableCellElement);
+      document.body.removeChild(cellBlocksContainer);
+    });
+
+    it('returns false when activeElement is body but context.pasteTarget is inside [data-blok-table-cell]', async () => {
+      // Simulate the production bug scenario:
+      // - document.activeElement is body (focus lost, e.g. React re-render)
+      // - currentBlock is NOT in any cell (setCurrentBlockByChildNode failed)
+      // - but event.target was the [data-blok-table-cell-blocks] container inside a cell
+      Object.defineProperty(document, 'activeElement', {
+        get: () => document.body,
+        configurable: true,
+      });
+
+      const tableCell = document.createElement('div');
+
+      tableCell.setAttribute('data-blok-table-cell', '');
+
+      const cellBlocksContainer = document.createElement('div');
+
+      cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+      tableCell.appendChild(cellBlocksContainer);
+      document.body.appendChild(tableCell);
+
+      // currentBlock is NOT in any cell — it's a plain block
+      const plainHolder = document.createElement('div');
+
+      document.body.appendChild(plainHolder);
+      context.currentBlock = { holder: plainHolder } as unknown as import('../../../../../src/components/block').Block;
+
+      // pasteTarget IS inside [data-blok-table-cell] — this is the fix's new bail condition
+      context.pasteTarget = cellBlocksContainer;
+
+      const html = buildTableHtml([['Source Cell']]);
+      const result = await handler.handle(html, context);
+
+      expect(result).toBe(false);
+      expect(mockBlok.BlockManager.insert).not.toHaveBeenCalled();
+
+      // Clean up
+      document.body.removeChild(tableCell);
+      document.body.removeChild(plainHolder);
+    });
+
+    it('does NOT bail when pasteTarget is outside any table cell', async () => {
+      // activeElement is body, currentBlock is not in a cell, AND pasteTarget is outside any cell
+      // → handler should proceed and create a new table block
+      Object.defineProperty(document, 'activeElement', {
+        get: () => document.body,
+        configurable: true,
+      });
+
+      const plainContainer = document.createElement('div');
+
+      document.body.appendChild(plainContainer);
+      context.currentBlock = { holder: plainContainer } as unknown as import('../../../../../src/components/block').Block;
+
+      // pasteTarget is outside any [data-blok-table-cell]
+      const outsideTarget = document.createElement('span');
+
+      document.body.appendChild(outsideTarget);
+      context.pasteTarget = outsideTarget;
+
+      const html = buildTableHtml([['A', 'B']]);
+      const result = await handler.handle(html, context);
+
+      expect(result).toBe(true);
+      expect(mockBlok.BlockManager.insert).toHaveBeenCalledOnce();
+
+      const insertMock = mockBlok.BlockManager.insert as ReturnType<typeof vi.fn>;
+      const callArgs = insertMock.mock.calls[0][0] as { tool: string };
+
+      expect(callArgs.tool).toBe('table');
+
+      // Clean up
+      document.body.removeChild(plainContainer);
+      document.body.removeChild(outsideTarget);
+    });
+
+    it('creates new table block when activeElement is body AND currentBlock is NOT in a cell', async () => {
+      // Focus lost — activeElement is body
+      Object.defineProperty(document, 'activeElement', {
+        get: () => document.body,
+        configurable: true,
+      });
+
+      // currentBlock.holder is a plain div NOT inside any table cell container
+      const plainHolder = document.createElement('div');
+
+      document.body.appendChild(plainHolder);
+
+      context.currentBlock = { holder: plainHolder } as unknown as import('../../../../../src/components/block').Block;
+
+      const html = buildTableHtml([['Hello', 'World']]);
+      const result = await handler.handle(html, context);
+
+      expect(result).toBe(true);
+      expect(mockBlok.BlockManager.insert).toHaveBeenCalledOnce();
+
+      const insertMock = mockBlok.BlockManager.insert as ReturnType<typeof vi.fn>;
+      const callArgs = insertMock.mock.calls[0][0] as { tool: string };
+
+      expect(callArgs.tool).toBe('table');
+
+      // Clean up
+      document.body.removeChild(plainHolder);
+    });
   });
 });

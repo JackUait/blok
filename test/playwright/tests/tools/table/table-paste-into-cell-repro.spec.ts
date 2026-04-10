@@ -713,4 +713,510 @@ test.describe('Paste into existing table cell — content integrity', () => {
     // The focused element should be inside the last pasted cell
     await expect(lastCellEditable).toBeFocused({ timeout: 2000 });
   });
+
+  test('Pasted-into cells remain editable — typing works after a multi-cell paste', async ({ page }) => {
+    // Regression: after pasting a multi-cell payload the pasted cells became
+    // non-editable (contenteditable was not set or was set to "false" on the
+    // new block holders inserted by pasteCellPayload).
+
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              withHeadingColumn: false,
+              content: [
+                ['A1', 'B1', 'C1'],
+                ['A2', 'B2', 'C2'],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible({ timeout: 5000 });
+
+    const cells = table.locator(CELL_SELECTOR);
+
+    await expect(cells).toHaveCount(6);
+
+    // Click cell (0,0) to focus it
+    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to target first cell
+    const firstCell = cells.first();
+
+    await firstCell.click();
+
+    const firstCellEditable = firstCell.locator('[contenteditable="true"]');
+
+    await expect(firstCellEditable).toBeFocused({ timeout: 2000 });
+
+    // Paste a 1×2 Blok custom format into cell (0,0)
+    const payload = {
+      rows: 1,
+      cols: 2,
+      cells: [
+        [
+          { blocks: [{ tool: 'paragraph', data: { text: 'Pasted-A' } }] },
+          { blocks: [{ tool: 'paragraph', data: { text: 'Pasted-B' } }] },
+        ],
+      ],
+    };
+
+    const json = JSON.stringify(payload).replace(/'/g, '&#39;');
+    const customHtml = `<table data-blok-table-cells='${json}'><tr><td>Pasted-A</td><td>Pasted-B</td></tr></table>`;
+
+    await paste(firstCellEditable, {
+      'text/html': customHtml,
+      'text/plain': 'Pasted-A\tPasted-B',
+    });
+
+    await waitForPasteComplete(page, 'Pasted-A');
+
+    // After paste, verify that BOTH pasted cells still have contenteditable="true" elements
+    // eslint-disable-next-line playwright/no-nth-methods -- nth(0) and nth(1) target specific paste-destination cells
+    const pastedCell0 = cells.nth(0);
+    // eslint-disable-next-line playwright/no-nth-methods -- nth(1) targets the second cell
+    const pastedCell1 = cells.nth(1);
+
+    const editable0 = pastedCell0.locator('[data-blok-table-cell-blocks] [contenteditable="true"]');
+    const editable1 = pastedCell1.locator('[data-blok-table-cell-blocks] [contenteditable="true"]');
+
+    await expect(editable0).toBeVisible({ timeout: 3000 });
+    await expect(editable1).toBeVisible({ timeout: 3000 });
+
+    // Click cell (0,0) and verify we can type into it
+    await editable0.click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' typed');
+
+    // Verify that typing actually worked (text appeared)
+    await expect(editable0).toContainText('Pasted-A typed', { timeout: 3000 });
+
+    // Click cell (0,1) and verify we can also type into it
+    await editable1.click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' typed');
+
+    await expect(editable1).toContainText('Pasted-B typed', { timeout: 3000 });
+  });
+
+  test('Pasted-into cells remain editable after read-only toggle roundtrip', async ({ page }) => {
+    // Regression: after pasting and then toggling read-only on+off, pasted cells
+    // should have contenteditable="true" and allow typing.
+
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              withHeadingColumn: false,
+              content: [
+                ['A1', 'B1'],
+                ['A2', 'B2'],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible({ timeout: 5000 });
+
+    const cells = table.locator(CELL_SELECTOR);
+
+    await expect(cells).toHaveCount(4);
+
+    // Click cell (0,0) to focus it
+    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to target first cell
+    const firstCell = cells.first();
+
+    await firstCell.click();
+
+    const firstCellEditable = firstCell.locator('[contenteditable="true"]');
+
+    await expect(firstCellEditable).toBeFocused({ timeout: 2000 });
+
+    // Paste a 1×2 Blok custom format into cell (0,0)
+    const payload = {
+      rows: 1,
+      cols: 2,
+      cells: [
+        [
+          { blocks: [{ tool: 'paragraph', data: { text: 'Pasted-X' } }] },
+          { blocks: [{ tool: 'paragraph', data: { text: 'Pasted-Y' } }] },
+        ],
+      ],
+    };
+
+    const json = JSON.stringify(payload).replace(/'/g, '&#39;');
+    const customHtml = `<table data-blok-table-cells='${json}'><tr><td>Pasted-X</td><td>Pasted-Y</td></tr></table>`;
+
+    await paste(firstCellEditable, {
+      'text/html': customHtml,
+      'text/plain': 'Pasted-X\tPasted-Y',
+    });
+
+    await waitForPasteComplete(page, 'Pasted-X');
+
+    // Toggle read-only ON
+    await page.evaluate(async () => {
+      await window.blokInstance?.readOnly.toggle();
+    });
+    await page.waitForFunction(() => window.blokInstance?.readOnly.isEnabled === true);
+
+    // Toggle read-only OFF
+    await page.evaluate(async () => {
+      await window.blokInstance?.readOnly.toggle();
+    });
+    await page.waitForFunction(() => window.blokInstance?.readOnly.isEnabled === false);
+
+    // After read-only roundtrip, pasted cells must still be editable
+    // eslint-disable-next-line playwright/no-nth-methods -- nth(0) and nth(1) target specific paste-destination cells
+    const pastedCell0 = cells.nth(0);
+    // eslint-disable-next-line playwright/no-nth-methods -- nth(1) targets second cell
+    const pastedCell1 = cells.nth(1);
+
+    const editable0 = pastedCell0.locator('[data-blok-table-cell-blocks] [contenteditable="true"]');
+    const editable1 = pastedCell1.locator('[data-blok-table-cell-blocks] [contenteditable="true"]');
+
+    await expect(editable0).toBeVisible({ timeout: 3000 });
+    await expect(editable1).toBeVisible({ timeout: 3000 });
+
+    // Click and type into first pasted cell
+    await editable0.click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' after-toggle');
+
+    await expect(editable0).toContainText('Pasted-X after-toggle', { timeout: 3000 });
+
+    // Click and type into second pasted cell
+    await editable1.click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' after-toggle');
+
+    await expect(editable1).toContainText('Pasted-Y after-toggle', { timeout: 3000 });
+  });
+
+  test('Pasting twice into the same cells leaves them editable', async ({ page }) => {
+    // Regression: pasting into a cell that was already pasted into should not
+    // leave the cell non-editable (contenteditable="false" or missing).
+
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              withHeadingColumn: false,
+              content: [
+                ['A1', 'B1'],
+                ['A2', 'B2'],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible({ timeout: 5000 });
+
+    const cells = table.locator(CELL_SELECTOR);
+
+    await expect(cells).toHaveCount(4);
+
+    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to target first cell
+    const firstCell = cells.first();
+    const firstCellEditable = firstCell.locator('[contenteditable="true"]');
+
+    // First paste
+    await firstCell.click();
+    await expect(firstCellEditable).toBeFocused({ timeout: 2000 });
+
+    const payload1 = {
+      rows: 1,
+      cols: 2,
+      cells: [
+        [
+          { blocks: [{ tool: 'paragraph', data: { text: 'First-A' } }] },
+          { blocks: [{ tool: 'paragraph', data: { text: 'First-B' } }] },
+        ],
+      ],
+    };
+    const json1 = JSON.stringify(payload1).replace(/'/g, '&#39;');
+    const html1 = `<table data-blok-table-cells='${json1}'><tr><td>First-A</td><td>First-B</td></tr></table>`;
+
+    await paste(firstCellEditable, { 'text/html': html1, 'text/plain': 'First-A\tFirst-B' });
+    await waitForPasteComplete(page, 'First-A');
+
+    // Second paste into the same cell
+    // eslint-disable-next-line playwright/no-nth-methods -- first() targets first cell after re-querying
+    const firstCellEditableAfterPaste1 = cells.first().locator('[contenteditable="true"]');
+
+    await firstCellEditableAfterPaste1.click();
+    await expect(firstCellEditableAfterPaste1).toBeFocused({ timeout: 2000 });
+
+    const payload2 = {
+      rows: 1,
+      cols: 2,
+      cells: [
+        [
+          { blocks: [{ tool: 'paragraph', data: { text: 'Second-A' } }] },
+          { blocks: [{ tool: 'paragraph', data: { text: 'Second-B' } }] },
+        ],
+      ],
+    };
+    const json2 = JSON.stringify(payload2).replace(/'/g, '&#39;');
+    const html2 = `<table data-blok-table-cells='${json2}'><tr><td>Second-A</td><td>Second-B</td></tr></table>`;
+
+    await paste(firstCellEditableAfterPaste1, { 'text/html': html2, 'text/plain': 'Second-A\tSecond-B' });
+    await waitForPasteComplete(page, 'Second-A');
+
+    // After second paste, cells must be editable
+    // eslint-disable-next-line playwright/no-nth-methods -- nth(0) and nth(1) target specific paste-destination cells
+    const pastedCell0 = cells.nth(0);
+    // eslint-disable-next-line playwright/no-nth-methods -- nth(1) targets second cell
+    const pastedCell1 = cells.nth(1);
+
+    const editable0 = pastedCell0.locator('[data-blok-table-cell-blocks] [contenteditable="true"]');
+    const editable1 = pastedCell1.locator('[data-blok-table-cell-blocks] [contenteditable="true"]');
+
+    await expect(editable0).toBeVisible({ timeout: 3000 });
+    await expect(editable1).toBeVisible({ timeout: 3000 });
+
+    // Verify typing works after second paste
+    await editable0.click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' typed');
+
+    await expect(editable0).toContainText('Second-A typed', { timeout: 3000 });
+
+    await editable1.click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' typed');
+
+    await expect(editable1).toContainText('Second-B typed', { timeout: 3000 });
+  });
+
+  test('Pasting plain text (non-table clipboard) into a cell leaves the cell editable', async ({ page }) => {
+    // Reproduction: user copies text from inside a table cell (produces plain text/HTML,
+    // NOT Blok table format), then pastes into another cell.
+    // The destination cell must remain editable after the paste.
+
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              withHeadingColumn: false,
+              content: [
+                ['Hello World', 'Target'],
+                ['A2', 'B2'],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible({ timeout: 5000 });
+
+    const cells = table.locator(CELL_SELECTOR);
+
+    await expect(cells).toHaveCount(4);
+
+    // Click the target cell (0,1)
+    // eslint-disable-next-line playwright/no-nth-methods -- nth(1) targets second cell (destination)
+    const targetCell = cells.nth(1);
+    const targetCellEditable = targetCell.locator('[contenteditable="true"]');
+
+    await targetCellEditable.click();
+    await expect(targetCellEditable).toBeFocused({ timeout: 2000 });
+
+    // Simulate paste of plain text from another cell (no table format, just HTML fragment)
+    // This is what the browser produces when the user copies text from a contenteditable
+    await paste(targetCellEditable, {
+      'text/plain': 'Hello World',
+      'text/html': '<span>Hello World</span>',
+    });
+
+    // Wait for the paste to be processed
+    await page.waitForFunction(
+      () => {
+        const targetCellBlocks = document.querySelectorAll('[data-blok-table-cell-blocks]');
+        // The second cell (index 1) should now contain "Hello World"
+        const secondCellBlocks = targetCellBlocks[1];
+
+        return secondCellBlocks?.textContent?.includes('Hello World') ?? false;
+      },
+      undefined,
+      { timeout: 5000 }
+    );
+
+    // The destination cell must still have contenteditable="true" elements
+    const destEditable = targetCell.locator('[data-blok-table-cell-blocks] [contenteditable="true"]');
+
+    await expect(destEditable).toBeVisible({ timeout: 3000 });
+
+    // Verify we can type into the destination cell
+    await destEditable.click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' typed');
+
+    await expect(destEditable).toContainText('Hello World typed', { timeout: 3000 });
+  });
+
+  test('Pasting realistic browser clipboard HTML (with contenteditable attributes) into a cell leaves the cell editable', async ({ page }) => {
+    // Reproduction: when a user selects text inside a table cell and copies it,
+    // the browser clipboard HTML typically includes the wrapping elements with
+    // data-blok-* attributes and contenteditable="true". This test verifies that
+    // pasting such HTML does not break the destination cell's editability.
+
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              withHeadingColumn: false,
+              content: [
+                ['Hello World', 'Target'],
+                ['A2', 'B2'],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible({ timeout: 5000 });
+
+    const cells = table.locator(CELL_SELECTOR);
+
+    await expect(cells).toHaveCount(4);
+
+    // Intercept the actual clipboard data that would be produced by copying
+    // from the first cell's contenteditable. We dispatch a copy event on the
+    // source cell and capture what the browser serializes.
+    // eslint-disable-next-line playwright/no-nth-methods -- nth(0) is the source cell
+    const sourceCell = cells.nth(0);
+    const sourceCellEditable = sourceCell.locator('[contenteditable="true"]');
+
+    await sourceCellEditable.click();
+    await expect(sourceCellEditable).toBeFocused({ timeout: 2000 });
+
+    // Select all text in source cell
+    await page.keyboard.press('Control+a');
+
+    // Capture the clipboard HTML that the browser would produce for this selection.
+    // We use a synthetic copy event to intercept the data without actually
+    // touching the system clipboard (which is restricted in headless mode).
+    const capturedClipboard = await page.evaluate(() => {
+      const dataStore: Record<string, string> = {};
+      const fakeClipboardData = {
+        setData: (type: string, data: string): void => {
+          dataStore[type] = data;
+        },
+        getData: (type: string): string => dataStore[type] ?? '',
+        types: [] as string[],
+      };
+
+      const copyEvent = Object.assign(new Event('copy', {
+        bubbles: true,
+        cancelable: true,
+      }), {
+        clipboardData: fakeClipboardData,
+      });
+
+      // Dispatch on the active element (source cell's contenteditable)
+      const activeElement = document.activeElement;
+
+      if (activeElement) {
+        activeElement.dispatchEvent(copyEvent);
+      }
+
+      // Also build a realistic HTML string that Chrome would generate when
+      // copying selected text from a contenteditable div.
+      // This simulates: <meta charset='utf-8'><div data-blok-tool="paragraph"
+      //   contenteditable="true">Hello World</div>
+      const activeEl = document.activeElement as HTMLElement | null;
+      const nativeHtml = activeEl
+        ? `<meta charset='utf-8'>${activeEl.outerHTML}`
+        : '';
+
+      return {
+        blokHtml: dataStore['text/html'] ?? '',
+        blokPlain: dataStore['text/plain'] ?? '',
+        nativeHtml,
+        nativePlain: activeEl?.textContent ?? '',
+      };
+    });
+
+    // Click on the target cell (second cell)
+    // eslint-disable-next-line playwright/no-nth-methods -- nth(1) is the destination cell
+    const targetCell = cells.nth(1);
+    const targetCellEditable = targetCell.locator('[contenteditable="true"]');
+
+    await targetCellEditable.click();
+    await expect(targetCellEditable).toBeFocused({ timeout: 2000 });
+
+    // If the table cell selection handler captured Blok-format HTML, use that.
+    // Otherwise fall back to the native browser HTML (which includes contenteditable attrs).
+    const htmlToPaste = capturedClipboard.blokHtml || capturedClipboard.nativeHtml;
+    const plainToPaste = capturedClipboard.blokPlain || capturedClipboard.nativePlain;
+
+    // Simulate paste with the realistic clipboard content
+    await paste(targetCellEditable, {
+      'text/html': htmlToPaste,
+      'text/plain': plainToPaste,
+    });
+
+    // Wait for paste to complete — some text should appear in the target cell
+    await page.waitForFunction(
+      () => {
+        const cellBlocks = document.querySelectorAll('[data-blok-table-cell-blocks]');
+        const targetCellBlocks = cellBlocks[1];
+
+        return (targetCellBlocks?.textContent?.trim().length ?? 0) > 0;
+      },
+      undefined,
+      { timeout: 5000 }
+    );
+
+    // The destination cell must still have contenteditable="true" elements
+    const destEditable = targetCell.locator('[data-blok-table-cell-blocks] [contenteditable="true"]');
+
+    await expect(destEditable).toBeVisible({ timeout: 3000 });
+
+    // Verify we can type into the destination cell after pasting
+    await destEditable.click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' typed');
+
+    // Cell should have content with " typed" appended
+    await expect(destEditable).toContainText('typed', { timeout: 3000 });
+  });
 });

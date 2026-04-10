@@ -1575,18 +1575,9 @@ export class Table implements BlockTool {
       return [];
     }
 
-    const allRows = Array.from(gridEl.querySelectorAll(`[${ROW_ATTR}]`));
-
     return cells.map(cell => {
-      const row = cell.closest<HTMLElement>(`[${ROW_ATTR}]`);
-
-      if (!row) {
-        return null;
-      }
-
-      const rowIndex = allRows.indexOf(row);
-      const cellsInRow = Array.from(row.querySelectorAll(`[${CELL_ATTR}]`));
-      const colIndex = cellsInRow.indexOf(cell);
+      const rowIndex = parseInt(cell.getAttribute(CELL_ROW_ATTR) ?? '0', 10);
+      const colIndex = parseInt(cell.getAttribute(CELL_COL_ATTR) ?? '0', 10);
 
       const container = cell.querySelector(`[${CELL_BLOCKS_ATTR}]`);
       const blocks: ClipboardBlockData[] = [];
@@ -1643,7 +1634,7 @@ export class Table implements BlockTool {
         ...(color !== undefined ? { color } : {}),
         ...(textColor !== undefined ? { textColor } : {}),
       };
-    }).filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+    });
   }
 
   private initCellSelection(gridEl: HTMLElement): void {
@@ -1741,6 +1732,9 @@ export class Table implements BlockTool {
           this.rebuildTableBody();
         });
       },
+      getCellSpan: (row, col) => {
+        return this.model.getCellSpan(row, col);
+      },
     });
   }
 
@@ -1804,9 +1798,7 @@ export class Table implements BlockTool {
       return;
     }
 
-    const targetRow = targetCell.closest<HTMLElement>(`[${ROW_ATTR}]`);
-
-    if (!targetRow) {
+    if (!targetCell.closest(`[${ROW_ATTR}]`)) {
       return;
     }
 
@@ -1827,10 +1819,9 @@ export class Table implements BlockTool {
     e.preventDefault();
     e.stopPropagation();
 
-    const rows = Array.from(gridEl.querySelectorAll(`[${ROW_ATTR}]`));
-    const targetRowIndex = rows.indexOf(targetRow);
-    const cellsInRow = Array.from(targetRow.querySelectorAll(`[${CELL_ATTR}]`));
-    const targetColIndex = cellsInRow.indexOf(targetCell);
+    // Read true model coordinates from stamped data attributes
+    const targetRowIndex = parseInt(targetCell.getAttribute(CELL_ROW_ATTR) ?? '0', 10);
+    const targetColIndex = parseInt(targetCell.getAttribute(CELL_COL_ATTR) ?? '0', 10);
 
     this.pastePayloadIntoCells(gridEl, payload, targetRowIndex, targetColIndex);
   }

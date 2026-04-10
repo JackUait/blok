@@ -57,6 +57,24 @@ const CROSS_BROWSER_TESTS = [
   // UI state management
   '**/onchange.spec.ts',
   '**/modules/multi-block-conversion.spec.ts',
+
+  // UI interactions requiring cross-browser validation
+  '**/ui/plus-block-tunes-interaction.spec.ts',
+  '**/ui/plus-button-slash.spec.ts',
+  '**/ui/inline-toolbar-nested-popover-keyboard.spec.ts',
+
+  // Keyboard shortcuts (contenteditable + keyboard behavior varies)
+  '**/tools/header-shortcut.spec.ts',
+
+  // UI interactions involving hover, viewport, mouse events
+  '**/ui/mobile-and-readonly-coordination.spec.ts',
+  '**/ui/toolbar-nested-list-positioning.spec.ts',
+  '**/ui/toolbar-rubber-band-hover.spec.ts',
+  '**/ui/toolbar-always-visible.spec.ts',
+  '**/ui/settings-toggler-after-drag.spec.ts',
+
+  // Toolbar focus preservation (mouse events - cross-browser)
+  '**/modules/toolbar-focus.spec.ts',
 ] as const;
 
 // Logic/API tests - browser-agnostic, run once on Chromium
@@ -72,6 +90,8 @@ const LOGIC_TESTS = [
   '**/modules/selection.spec.ts',
   '**/modules/navigation-mode.spec.ts',
   '**/modules/undo-redo.spec.ts',
+  '**/modules/multi-block-selection-with-toolbar.spec.ts',
+  '**/modules/scroll-to-block.spec.ts',
 
   // Tool configuration tests (standard DOM operations)
   '**/tools/block-tool.spec.ts',

@@ -181,6 +181,10 @@ export class TableModel {
       return;
     }
 
+    if (this.isSpannedCell(row, col)) {
+      return;
+    }
+
     // Enforce invariant 5: no block in more than one cell
     const existing = this.blockCellMap.get(blockId);
 
@@ -218,6 +222,10 @@ export class TableModel {
    */
   setCellBlocks(row: number, col: number, blockIds: string[]): void {
     if (!this.isInBounds(row, col)) {
+      return;
+    }
+
+    if (this.isSpannedCell(row, col)) {
       return;
     }
 

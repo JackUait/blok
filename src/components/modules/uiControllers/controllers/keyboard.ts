@@ -29,6 +29,48 @@ export class KeyboardController extends Controller {
    */
   private redactorElement: HTMLElement | null = null;
 
+  /**
+   * Stable handler references for deduplication via Listeners.findOne.
+   * Storing as class properties ensures the same function reference is passed
+   * to addEventListener on every enable() call, so the Listeners utility can
+   * detect and skip duplicate registrations (e.g. when toggleReadOnly calls
+   * enable() more than once via requestIdleCallback).
+   */
+  private readonly documentKeydownHandler = (event: Event): void => {
+    if (event instanceof KeyboardEvent) {
+      this.handleKeydown(event);
+    }
+  };
+
+  private readonly redactorBeforeinputHandler = (): void => {
+    this.Blok.YjsManager.markCaretBeforeChange();
+  };
+
+  private readonly redactorKeydownHandler = (event: Event): void => {
+    if (!(event instanceof KeyboardEvent)) {
+      return;
+    }
+
+    const target = event.target;
+
+    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+      return;
+    }
+
+    // Skip events from nested editors
+    if (target instanceof Element) {
+      const closestEditor = target.closest('[data-blok-testid="blok-editor"]');
+
+      if (closestEditor !== null && closestEditor !== this.Blok.UI.nodes.wrapper) {
+        return;
+      }
+    }
+
+    if (KEYS_REQUIRING_CARET_CAPTURE.has(event.key)) {
+      this.Blok.YjsManager.markCaretBeforeChange();
+    }
+  };
+
   constructor(options: {
     config: Controller['config'];
     eventsDispatcher: Controller['eventsDispatcher'];
@@ -54,49 +96,20 @@ export class KeyboardController extends Controller {
     }
 
     // Document-level keydown handler
-    this.readOnlyMutableListeners.on(document, 'keydown', (event: Event) => {
-      if (event instanceof KeyboardEvent) {
-        this.handleKeydown(event);
-      }
-    }, true);
+    this.readOnlyMutableListeners.on(document, 'keydown', this.documentKeydownHandler, true);
 
     /**
      * Capture caret position before any input changes the DOM.
      * This ensures undo/redo restores the caret to the correct position.
      */
-    this.readOnlyMutableListeners.on(this.redactorElement, 'beforeinput', () => {
-      this.Blok.YjsManager.markCaretBeforeChange();
-    }, true);
+    this.readOnlyMutableListeners.on(this.redactorElement, 'beforeinput', this.redactorBeforeinputHandler, true);
 
     /**
      * Capture caret position on keydown for keys that tools commonly intercept.
      * Uses capture phase to run before tool handlers.
      * markCaretBeforeChange() is idempotent - if beforeinput also fires, the second call is ignored.
      */
-    this.readOnlyMutableListeners.on(this.redactorElement, 'keydown', (event: Event) => {
-      if (!(event instanceof KeyboardEvent)) {
-        return;
-      }
-
-      const target = event.target;
-
-      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
-        return;
-      }
-
-      // Skip events from nested editors
-      if (target instanceof Element) {
-        const closestEditor = target.closest('[data-blok-testid="blok-editor"]');
-
-        if (closestEditor !== null && closestEditor !== this.Blok.UI.nodes.wrapper) {
-          return;
-        }
-      }
-
-      if (KEYS_REQUIRING_CARET_CAPTURE.has(event.key)) {
-        this.Blok.YjsManager.markCaretBeforeChange();
-      }
-    }, true);
+    this.readOnlyMutableListeners.on(this.redactorElement, 'keydown', this.redactorKeydownHandler, true);
   }
 
   /**
@@ -289,12 +302,18 @@ export class KeyboardController extends Controller {
 
     /**
      * Toolbox needs specific Escape handling for caret restoration,
-     * so check it before the registry
+     * so check it before the registry.
+     *
+     * stopPropagation() is required here: this handler runs in the capture phase
+     * on document, BEFORE the block-level keydown handler.  If we let the event
+     * continue bubbling after closing the toolbox, the block's keydown handler
+     * (navigationMode.handleEscape) will see `toolbox.opened === false` and
+     * incorrectly enable navigation mode, which calls `activeElement.blur()`
+     * and drops focus to body.
      */
     if (this.Blok.Toolbar.toolbox.opened) {
+      event.stopPropagation();
       this.Blok.Toolbar.toolbox.close();
-      this.Blok.BlockManager.currentBlock &&
-        this.Blok.Caret.setToBlock(this.Blok.BlockManager.currentBlock, this.Blok.Caret.positions.END);
 
       return;
     }
@@ -342,15 +361,30 @@ export class KeyboardController extends Controller {
 
     /**
      * If focus is inside editor content and no toolbars are open,
-     * enable navigation mode for keyboard-based block navigation
+     * enable navigation mode for keyboard-based block navigation.
+     *
+     * Skip navigation mode when a drag operation is in progress:
+     * the drag's own keydown handler (DragController.onKeyDown) must receive
+     * this Escape event to announce the cancellation and clean up drag state.
+     * Enabling navigation mode here would call blur() on the active element,
+     * then the block holder's bubbling keydown handler would see navigation
+     * mode enabled and call event.stopPropagation(), preventing DragController
+     * from ever receiving the event.
      */
     const target = event.target;
     const isTargetElement = target instanceof HTMLElement;
     const isInsideRedactor = this.redactorElement && isTargetElement && this.redactorElement.contains(target);
     const hasCurrentBlock = this.Blok.BlockManager.currentBlock !== undefined;
 
-    if (isInsideRedactor && hasCurrentBlock) {
+    if (isInsideRedactor && hasCurrentBlock && !this.Blok.DragManager.isDragging) {
       event.preventDefault();
+      /**
+       * Stop propagation so the block holder's bubble keydown handler (blockEvents.keydown)
+       * does not see this same Escape event. Without this, the block-level NavigationMode
+       * composer's handleKey() would receive the event AFTER navigation mode is enabled,
+       * see navigationModeEnabled=true + key='Escape', and immediately disable it.
+       */
+      event.stopPropagation();
       this.Blok.Toolbar.close();
       this.Blok.BlockSelection.enableNavigationMode();
 

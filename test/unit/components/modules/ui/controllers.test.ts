@@ -305,7 +305,7 @@ describe('KeyboardController', () => {
       expect(event.defaultPrevented).toBe(false);
     });
 
-    it('closes Toolbox when open and sets caret', () => {
+    it('closes Toolbox when open via Escape', () => {
       const { controller, blok } = createKeyboardController();
 
       (controller as unknown as { enable: () => void }).enable();
@@ -322,7 +322,9 @@ describe('KeyboardController', () => {
       document.dispatchEvent(event);
 
       expect(blok.Toolbar.toolbox.close).toHaveBeenCalledTimes(1);
-      expect(blok.Caret.setToBlock).toHaveBeenCalledWith(blok.BlockManager.currentBlock, blok.Caret.positions.END);
+      // Caret restoration is handled by ToolboxEvent.Closed in toolbar/index.ts,
+      // not directly in the keyboard controller.
+      expect(blok.Caret.setToBlock).not.toHaveBeenCalled();
       // Toolbox.close() is called without preventing default - event propagates normally
       expect(event.defaultPrevented).toBe(false);
     });

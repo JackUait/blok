@@ -150,8 +150,8 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   const spacer = document.createElement('div');
   spacer.className = 'flex-1';
 
-  // View mode segmented control (only when previewable and not read-only)
-  const viewModeResult = previewable && viewModeLabels
+  // View mode segmented control — always built in edit mode, hidden for non-previewable languages
+  const viewModeResult = !readOnly && viewModeLabels
     ? buildViewModeElements(viewModeLabels)
     : null;
 
@@ -159,10 +159,14 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   const previewElement = viewModeResult?.previewElement ?? null;
   const splitContainer = viewModeResult?.splitContainer ?? null;
 
+  if (viewModeContainer) {
+    viewModeContainer.hidden = !previewable;
+  }
+
   // Copy button
   const copyButton = document.createElement('button');
   copyButton.type = 'button';
-  copyButton.className = viewModeContainer ? HEADER_BUTTON_MATCHED_STYLES : HEADER_BUTTON_STYLES;
+  copyButton.className = previewable ? HEADER_BUTTON_MATCHED_STYLES : HEADER_BUTTON_STYLES;
   copyButton.innerHTML = IconCopy;
   copyButton.setAttribute('aria-label', copyLabel);
   copyButton.setAttribute('data-blok-testid', 'code-copy-btn');
@@ -225,7 +229,8 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   wrapper.appendChild(header);
 
   if (splitContainer && previewElement) {
-    // Previewable: wrap code body + preview in the split container
+    // Edit mode: always wrap code body + preview in split container.
+    // previewElement is hidden initially; shown when a previewable language is active.
     const codeHalf = document.createElement('div');
     codeHalf.className = SPLIT_HALF_STYLES;
     codeHalf.appendChild(codeBody);

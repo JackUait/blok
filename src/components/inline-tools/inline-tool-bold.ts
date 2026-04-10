@@ -16,6 +16,7 @@ import {
 import {
   isRangeFormatted,
   collectFormattingAncestors,
+  extendRangeToTrailingWhitespace,
 } from './utils/formatting-range-utils';
 
 /**
@@ -212,6 +213,7 @@ export class BoldInlineTool implements InlineTool {
    * @param range - The Range object containing the selection to wrap
    */
   private wrapWithBold(range: Range): void {
+    extendRangeToTrailingWhitespace(range);
     const html = this.getRangeHtmlWithoutBold(range);
     const insertedRange = this.replaceRangeWithHtml(range, `<strong>${html}</strong>`);
     const selection = window.getSelection();
@@ -308,8 +310,16 @@ export class BoldInlineTool implements InlineTool {
     BoldNormalizationPass.normalizeAroundSelection(selection);
 
     boldAncestors.forEach((element) => {
+      if (!element.isConnected) {
+        return;
+      }
+
       if (isElementEmpty(element)) {
         element.remove();
+      } else if (element.textContent.trim().length === 0) {
+        // Element contains only whitespace — unwrap it to preserve the whitespace
+        // as plain text while removing the bold formatting
+        this.unwrapElement(element);
       }
     });
 

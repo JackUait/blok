@@ -1,7 +1,7 @@
 import type { I18n } from '../../../types/api';
 import { twMerge } from '../../components/utils/tw';
 
-import { BORDER_WIDTH, CELL_ATTR, ROW_ATTR } from './table-core';
+import { BORDER_WIDTH, CELL_ATTR, CELL_COL_ATTR, CELL_ROW_ATTR, ROW_ATTR } from './table-core';
 import { collapseGrip, createGripDotsSvg, expandGrip, GRIP_HOVER_SIZE, setGripPillSize } from './table-grip-visuals';
 import { getCumulativeColEdges, TableRowColDrag } from './table-row-col-drag';
 import { createGripPopover } from './table-row-col-popover';
@@ -419,11 +419,39 @@ export class TableRowColControls {
       }
 
       const rowEl = rows[i] as HTMLElement;
-      const centerY = rowEl.offsetTop + rowEl.offsetHeight / 2;
-      const style = grip.style;
 
-      style.left = `${-BORDER_WIDTH / 2}px`;
-      style.top = `${centerY}px`;
+      // Find the cell with the maximum rowSpan in this row to correctly
+      // center the grip over merged cells that span multiple rows.
+      const cellsInRow = this.grid.querySelectorAll<HTMLElement>(`[${CELL_ROW_ATTR}="${i}"]`);
+      const originCell = Array.from(cellsInRow).reduce<HTMLTableCellElement | null>((best, cell) => {
+        const tdCell = cell as HTMLTableCellElement;
+        const bestSpan = best !== null ? best.rowSpan || 1 : 0;
+
+        return (tdCell.rowSpan || 1) > bestSpan ? tdCell : best;
+      }, null);
+      const maxRowSpan = originCell !== null ? (originCell.rowSpan || 1) : 1;
+
+      if (maxRowSpan > 1 && originCell !== null) {
+        // Use getBoundingClientRect() on the origin cell to get its actual rendered
+        // height — summing tr.offsetHeight is inaccurate when the merged cell's
+        // content forces the browser to redistribute height across rows (each
+        // individual tr.offsetHeight stays at its minimum rather than reflecting
+        // the full visual contribution of the merged content).
+        const container = this.overlay ?? this.grid;
+        const containerRect = container.getBoundingClientRect();
+        const cellRect = originCell.getBoundingClientRect();
+        const centerY = cellRect.top - containerRect.top + cellRect.height / 2;
+        const style = grip.style;
+
+        style.left = `${-BORDER_WIDTH / 2}px`;
+        style.top = `${centerY}px`;
+      } else {
+        const centerY = rowEl.offsetTop + rowEl.offsetHeight / 2;
+        const style = grip.style;
+
+        style.left = `${-BORDER_WIDTH / 2}px`;
+        style.top = `${centerY}px`;
+      }
     });
   }
 
@@ -482,27 +510,21 @@ export class TableRowColControls {
   }
 
   private getCellPosition(cell: HTMLElement): { row: number; col: number } | null {
-    const row = cell.closest<HTMLElement>(`[${ROW_ATTR}]`);
+    const rowAttr = cell.getAttribute(CELL_ROW_ATTR);
+    const colAttr = cell.getAttribute(CELL_COL_ATTR);
 
-    if (!row) {
+    if (rowAttr === null || colAttr === null) {
       return null;
     }
 
-    const rows = Array.from(this.grid.querySelectorAll(`[${ROW_ATTR}]`));
-    const rowIndex = rows.indexOf(row);
+    const row = parseInt(rowAttr, 10);
+    const col = parseInt(colAttr, 10);
 
-    if (rowIndex < 0) {
+    if (isNaN(row) || isNaN(col)) {
       return null;
     }
 
-    const cells = Array.from(row.querySelectorAll(`[${CELL_ATTR}]`));
-    const colIndex = cells.indexOf(cell);
-
-    if (colIndex < 0) {
-      return null;
-    }
-
-    return { row: rowIndex, col: colIndex };
+    return { row, col };
   }
 
   /**

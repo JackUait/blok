@@ -125,6 +125,18 @@ vi.mock('../../../src/components/utils', async () => {
   };
 });
 
+const mockSelectionRect = vi.hoisted(() => ({
+  value: new DOMRect(50, 300, 100, 20),
+}));
+
+vi.mock('../../../src/components/selection', () => ({
+  SelectionUtils: {
+    get rect() {
+      return mockSelectionRect.value;
+    },
+  },
+}));
+
 /**
  * Unit tests for toolbox.ts
  *
@@ -454,6 +466,69 @@ describe('Toolbox', () => {
       expect(mockPopoverInstance.show).not.toHaveBeenCalled();
       expect(toolbox.opened).toBe(false);
       expect(emitSpy).not.toHaveBeenCalled();
+    });
+
+    it('positions popover at caret rect when trigger element is off-screen above viewport', () => {
+      const triggerElement = document.createElement('div');
+
+      // Simulate a trigger element whose bottom is above the visible viewport (negative bottom)
+      vi.spyOn(triggerElement, 'getBoundingClientRect').mockReturnValue(
+        new DOMRect(50, -2140, 24, 24)
+      );
+
+      const caretRect = new DOMRect(60, 320, 100, 20);
+
+      mockSelectionRect.value = caretRect;
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+        triggerElement,
+      });
+
+      toolbox.open();
+
+      expect(mockPopoverInstance.updatePosition).toHaveBeenCalledWith(caretRect);
+    });
+
+    it('positions popover at caret rect when current block is inside a nested block (has parentId)', () => {
+      /**
+       * When a block is inside a toggle or callout (parentId is set), the toolbar's
+       * trigger element (plus button) is positioned outside the nested container.
+       * The toolbox must use the caret position instead of the trigger element position.
+       */
+      const triggerElement = document.createElement('div');
+
+      // Trigger element (plus button) is visible and on-screen — but outside the nested container
+      vi.spyOn(triggerElement, 'getBoundingClientRect').mockReturnValue(
+        new DOMRect(50, 100, 24, 24)
+      );
+
+      const caretRect = new DOMRect(260, 350, 100, 20);
+
+      mockSelectionRect.value = caretRect;
+
+      // Simulate a block that has a parentId — i.e., it is nested inside a toggle/callout
+      const nestedBlock = {
+        ...mocks.blockAPI,
+        parentId: 'parent-toggle-id',
+      };
+
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(nestedBlock as unknown as typeof mocks.blockAPI);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+        triggerElement,
+      });
+
+      toolbox.open();
+
+      expect(mockPopoverInstance.updatePosition).toHaveBeenCalledWith(caretRect);
     });
   });
 

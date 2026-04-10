@@ -843,19 +843,23 @@ describe('Plus button interactions', () => {
       vi.spyOn(positioner, 'resetCachedPosition').mockImplementation(() => {});
     });
 
-    it('sets toolbar content marginLeft to the block content margin for non-stretched blocks', () => {
+    it('sets toolbar content marginLeft using getBoundingClientRect offset for non-stretched blocks', () => {
       const block = buildBlockWithContentMargin('40px', false);
       const blok = getBlok();
       blok.BlockManager.currentBlock = block as never;
 
       document.body.appendChild(block.holder);
 
-      // jsdom does not perform CSS layout, so getComputedStyle returns 0 for
-      // marginLeft even when set inline. Stub the global to return the inline value.
-      vi.stubGlobal('getComputedStyle', (el: Element) => {
-        const style = (el as HTMLElement).style;
-        return { marginLeft: style.marginLeft, paddingTop: '0px', lineHeight: '24px', height: '24px' } as CSSStyleDeclaration;
-      });
+      // jsdom does not perform CSS layout. Stub getBoundingClientRect on the
+      // content element to simulate 40px left offset relative to the wrapper (left = 0).
+      const contentEl = block.holder.querySelector('[data-blok-element-content]') as HTMLElement;
+
+      vi.spyOn(contentEl, 'getBoundingClientRect').mockReturnValue({
+        left: 40, top: 0, right: 240, bottom: 24, width: 200, height: 24,
+      } as DOMRect);
+
+      // wrapper.getBoundingClientRect() returns left=0 (jsdom default) → visualOffset = 40 - 0 = 40
+      // actionsWidth=0 (jsdom), holderLeft=0, minMarginLeft=0 → marginLeft = max(40, 0) = 40px
 
       let moveAndOpenError: unknown = null;
       try {
@@ -863,8 +867,6 @@ describe('Plus button interactions', () => {
       } catch (e) {
         moveAndOpenError = e;
       }
-
-      vi.unstubAllGlobals();
 
       const nodesAfter = (toolbar as unknown as { nodes: typeof toolbar['nodes'] }).nodes;
 
@@ -874,7 +876,7 @@ describe('Plus button interactions', () => {
       expect(nodesAfter.content!.style.marginLeft).toBe('40px');
     });
 
-    it('resets toolbar content marginLeft to empty string for stretched blocks so CSS mx-auto can center correctly', () => {
+    it('sets toolbar content marginLeft to 0px when content has no visual offset (getBoundingClientRect returns zeros in jsdom)', () => {
       const block = buildBlockWithContentMargin('0px', true);
       const blok = getBlok();
       blok.BlockManager.currentBlock = block as never;
@@ -883,9 +885,9 @@ describe('Plus button interactions', () => {
 
       const contentNode = (toolbar as unknown as { nodes: typeof toolbar['nodes'] }).nodes.content!;
 
-      // Must be '' (empty) so the CSS `mx-auto` class centers the toolbar.
-      // A hardcoded pixel value would push the toolbar to the left edge.
-      expect(contentNode.style.marginLeft).toBe('');
+      // In jsdom getBoundingClientRect returns all zeros, so visualOffset = 0, minMarginLeft = 0
+      // → marginLeft is set to '0px' (master uses getBoundingClientRect for precise layout)
+      expect(contentNode.style.marginLeft).toBe('0px');
     });
   });
 });

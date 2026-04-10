@@ -21,6 +21,17 @@ export const generateBlockId = (): string => {
 };
 
 /**
+ * Nanoid-compatible block ID pattern: exactly 10 URL-safe characters (A-Z, a-z, 0-9, _, -)
+ */
+const BLOCK_ID_PATTERN = /^[A-Za-z0-9_-]{10}$/;
+
+/**
+ * Returns true if the given string is a valid block ID (nanoid format).
+ * @param id - string to check
+ */
+export const isValidBlockId = (id: string): boolean => BLOCK_ID_PATTERN.test(id);
+
+/**
  * Returns random generated identifier
  * @param prefix - identifier prefix
  * @returns unique identifier with prefix

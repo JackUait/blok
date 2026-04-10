@@ -870,6 +870,132 @@ describe('TableGrid', () => {
         { row: '1', col: '2' },
       ]);
     });
+
+    it('reindexCoordinates assigns correct model column when a cell has colspan=2', () => {
+      // Table layout: row 0 has [td colspan=2 at model col 0] then [td at model col 2]
+      // After reindexCoordinates, DOM cell index 1 in row 0 should be col=2, not col=1
+      const grid = new TableGrid({ readOnly: false });
+      const table = document.createElement('table');
+      const tbody = document.createElement('tbody');
+
+      const row = document.createElement('tr');
+
+      row.setAttribute('data-blok-table-row', '');
+
+      const cellA = document.createElement('td');
+
+      cellA.setAttribute('data-blok-table-cell', '');
+      cellA.colSpan = 2;
+
+      const cellB = document.createElement('td');
+
+      cellB.setAttribute('data-blok-table-cell', '');
+      cellB.colSpan = 1;
+
+      row.appendChild(cellA);
+      row.appendChild(cellB);
+      tbody.appendChild(row);
+      table.appendChild(tbody);
+
+      grid.reindexCoordinates(table);
+
+      expect(cellA.getAttribute('data-blok-table-cell-row')).toBe('0');
+      expect(cellA.getAttribute('data-blok-table-cell-col')).toBe('0');
+      expect(cellB.getAttribute('data-blok-table-cell-row')).toBe('0');
+      // cellB is at model col 2 (skipping col 1 occupied by cellA's colspan)
+      expect(cellB.getAttribute('data-blok-table-cell-col')).toBe('2');
+    });
+
+    it('reindexCoordinates skips rowspan-blocked columns in subsequent rows', () => {
+      // Table layout:
+      //   row 0: [td rowspan=2 at model (0,0)], [td at model (0,1)]
+      //   row 1: [td at model (1,1)]   <-- col 0 is blocked by rowspan from row 0
+      const grid = new TableGrid({ readOnly: false });
+      const table = document.createElement('table');
+      const tbody = document.createElement('tbody');
+
+      const row0 = document.createElement('tr');
+
+      row0.setAttribute('data-blok-table-row', '');
+
+      const cellR0C0 = document.createElement('td');
+
+      cellR0C0.setAttribute('data-blok-table-cell', '');
+      cellR0C0.rowSpan = 2;
+
+      const cellR0C1 = document.createElement('td');
+
+      cellR0C1.setAttribute('data-blok-table-cell', '');
+
+      row0.appendChild(cellR0C0);
+      row0.appendChild(cellR0C1);
+
+      const row1 = document.createElement('tr');
+
+      row1.setAttribute('data-blok-table-row', '');
+
+      const cellR1C1 = document.createElement('td');
+
+      cellR1C1.setAttribute('data-blok-table-cell', '');
+
+      row1.appendChild(cellR1C1);
+      tbody.appendChild(row0);
+      tbody.appendChild(row1);
+      table.appendChild(tbody);
+
+      grid.reindexCoordinates(table);
+
+      expect(cellR0C0.getAttribute('data-blok-table-cell-row')).toBe('0');
+      expect(cellR0C0.getAttribute('data-blok-table-cell-col')).toBe('0');
+      expect(cellR0C1.getAttribute('data-blok-table-cell-row')).toBe('0');
+      expect(cellR0C1.getAttribute('data-blok-table-cell-col')).toBe('1');
+      expect(cellR1C1.getAttribute('data-blok-table-cell-row')).toBe('1');
+      // col 0 is occupied by rowspan from row 0; this cell is at model col 1
+      expect(cellR1C1.getAttribute('data-blok-table-cell-col')).toBe('1');
+    });
+
+    it('reindexCoordinates handles a cell with both colspan=2 and rowspan=2', () => {
+      // 3x3 table where cell at [0,0] has colspan=2 AND rowspan=2
+      // Row 0 DOM: [td colspan=2 rowspan=2] [td] <- model cols 0-1 merged, td at col 2
+      // Row 1 DOM: [td] <- col 0 blocked (rowspan), col 1 blocked (rowspan+colspan), starts at col 2
+      const grid = new TableGrid({ readOnly: false });
+      const table = document.createElement('table');
+      const tbody = document.createElement('tbody');
+      table.appendChild(tbody);
+
+      const row0 = document.createElement('tr');
+      row0.setAttribute('data-blok-table-row', '');
+      const cell00 = document.createElement('td');
+      cell00.setAttribute('data-blok-table-cell', '');
+      cell00.colSpan = 2;
+      cell00.rowSpan = 2;
+      const cell02 = document.createElement('td');
+      cell02.setAttribute('data-blok-table-cell', '');
+      row0.appendChild(cell00);
+      row0.appendChild(cell02);
+      tbody.appendChild(row0);
+
+      const row1 = document.createElement('tr');
+      row1.setAttribute('data-blok-table-row', '');
+      const cell12 = document.createElement('td');
+      cell12.setAttribute('data-blok-table-cell', '');
+      row1.appendChild(cell12);
+      tbody.appendChild(row1);
+
+      grid.reindexCoordinates(table);
+
+      // cell00: model [0,0]
+      expect(cell00.getAttribute('data-blok-table-cell-row')).toBe('0');
+      expect(cell00.getAttribute('data-blok-table-cell-col')).toBe('0');
+
+      // cell02: model [0,2] (after the 2-wide colspan)
+      expect(cell02.getAttribute('data-blok-table-cell-row')).toBe('0');
+      expect(cell02.getAttribute('data-blok-table-cell-col')).toBe('2');
+
+      // cell12: model [1,2] (cols 0 and 1 are blocked by the combined colspan+rowspan)
+      expect(cell12.getAttribute('data-blok-table-cell-row')).toBe('1');
+      expect(cell12.getAttribute('data-blok-table-cell-col')).toBe('2');
+    });
   });
 
   // ─── Merge-aware rendering ─────────────────────────────────────

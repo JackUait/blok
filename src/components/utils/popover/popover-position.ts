@@ -77,9 +77,14 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
     ? anchor.top - offset - popoverSize.height + scrollOffset.y
     : anchor.bottom + offset + scrollOffset.y;
 
-  // Clamp: ensure popover doesn't overflow above top boundary
-  const top = rawTop < boundaryTop + scrollOffset.y
-    ? boundaryTop + scrollOffset.y
+  // Clamp: ensure popover doesn't overflow above top boundary.
+  // Use the scope's top in document coords (scopeBounds.top + scrollOffset.y) rather
+  // than the viewport-clamped boundaryTop, so the clamp is correct when the page is
+  // scrolled (boundaryTop is viewport-relative; adding scrollOffset converts it to
+  // document coords but discards any negative scope top that was clamped to 0).
+  const scopeTopInDocCoords = scopeBounds.top + scrollOffset.y;
+  const top = rawTop < scopeTopInDocCoords
+    ? scopeTopInDocCoords
     : rawTop;
 
   // --- Horizontal ---

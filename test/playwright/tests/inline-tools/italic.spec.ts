@@ -617,6 +617,47 @@ test.describe('inline tool italic', () => {
     expect(html).toBe('some text');
     expect(html).not.toMatch(/<i>/);
   });
+
+  test('preserves trailing space when italicizing typed text that ends with a space', async ({ page }) => {
+    // Create a blank editor
+    await resetBlok(page);
+    await page.evaluate(async ({ holder }) => {
+      const blok = new window.Blok({
+        holder: holder,
+      });
+
+      window.blokInstance = blok;
+      await blok.isReady;
+    }, { holder: HOLDER_ID });
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+    // Click into the editor so the paragraph is focused
+    await paragraph.click();
+
+    // Type "hello world " with a trailing space
+    await page.keyboard.type('hello world ');
+
+    // Select all typed text
+    await page.keyboard.press(`${MODIFIER_KEY}+a`);
+
+    const italicButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="italic"]`);
+
+    await expect(italicButton).toBeVisible();
+
+    // Click italic
+    await italicButton.click();
+
+    // Verify the <i> tag contains the trailing space
+    const italic = paragraph.locator('i');
+
+    await expect(italic).toHaveCount(1);
+
+    const italicText = await italic.evaluate((el) => JSON.stringify(el.textContent));
+
+    // The italic content must preserve the trailing space: "hello world "
+    expect(italicText).toBe('"hello world "');
+  });
 });
 
 declare global {

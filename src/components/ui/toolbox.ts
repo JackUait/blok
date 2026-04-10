@@ -341,13 +341,17 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     this.popover?.show();
 
     /**
-     * When opening toolbox inside a table cell, position it at the caret
-     * instead of at the trigger element (which is outside the table).
+     * When opening toolbox inside a table cell or a nested block (toggle, callout),
+     * position it at the caret instead of at the trigger element (which is outside
+     * the nested container).
      * Must be called after show() so the popover is in the DOM.
      */
-    const triggerHidden = this.triggerElement?.getBoundingClientRect().height === 0;
+    const triggerRect = this.triggerElement?.getBoundingClientRect();
+    const triggerHidden = triggerRect?.height === 0;
+    const triggerOffScreen = triggerRect !== undefined && triggerRect.bottom < 0;
+    const isInsideNestedBlock = currentBlock !== undefined && currentBlock.parentId !== null;
 
-    if ((this.isInsideTableCell || triggerHidden) && this.popover instanceof PopoverDesktop) {
+    if ((this.isInsideTableCell || triggerHidden || triggerOffScreen || isInsideNestedBlock) && this.popover instanceof PopoverDesktop) {
       const caretRect = SelectionUtils.rect;
 
       this.popover.updatePosition(caretRect);
@@ -381,6 +385,18 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     this.stopListeningToBlockInput();
     this.popover?.hide();
+
+    /**
+     * Only emit Closed event when the toolbox was actually open.
+     * This prevents spurious Closed events (and their side-effects such as
+     * caret restoration) when close() is called as routine cleanup (e.g.
+     * during cross-block selection, block deletion, or toolbar dismissal)
+     * even though the toolbox was never shown.
+     */
+    if (!this.opened) {
+      return;
+    }
+
     this.opened = false;
     this.emit(ToolboxEvent.Closed);
   }
@@ -446,6 +462,17 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * Handles popover close event
    */
   private onPopoverClose = (): void => {
+    /**
+     * Only handle the Closed event when the toolbox was actually open.
+     * The popover can fire Closed during routine cleanup (e.g. when Toolbar.close()
+     * is called unconditionally as part of CBS, block deletion, etc.), even though
+     * the toolbox was never shown. Emitting ToolboxEvent.Closed in those cases
+     * triggers side-effects (like caret restoration) that break cross-block selection.
+     */
+    if (!this.opened) {
+      return;
+    }
+
     if (this.isInsideTableCell) {
       this.toggleRestrictedToolsHidden(false);
       this.isInsideTableCell = false;

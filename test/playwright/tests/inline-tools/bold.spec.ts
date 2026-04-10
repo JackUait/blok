@@ -597,6 +597,88 @@ test.describe('inline tool bold', () => {
     expect(html).toBe('some text');
     expect(html).not.toMatch(/<strong>/);
   });
+
+  test('preserves trailing space when bolding text loaded from saved data that ends with a space', async ({ page }) => {
+    // Load a block from saved data where the text already ends with a trailing space
+    await createBlokWithBlocks(page, [
+      {
+        id: 'test-block-1',
+        type: 'paragraph',
+        data: { text: 'hello ' },
+      },
+    ]);
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+    // Click into the paragraph to focus it
+    await paragraph.click();
+
+    // Select all text with Ctrl/Cmd+A
+    const modifierKey = await getModifierKey(page);
+
+    await page.keyboard.press(`${modifierKey}+a`);
+
+    const boldButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="bold"]`);
+
+    await expect(boldButton).toBeVisible();
+
+    // Apply bold
+    await boldButton.click();
+
+    // Verify the strong tag preserves the trailing space
+    const strong = paragraph.locator('strong');
+
+    await expect(strong).toHaveCount(1);
+
+    const strongText = await strong.evaluate((el) => JSON.stringify(el.textContent));
+
+    // The bold content must preserve the trailing space: "hello "
+    expect(strongText).toBe('"hello "');
+  });
+
+  test('preserves trailing space when bolding typed text that ends with a space', async ({ page }) => {
+    // Create a blank editor
+    await resetBlok(page);
+    await page.evaluate(async ({ holder }) => {
+      const blok = new window.Blok({
+        holder: holder,
+      });
+
+      window.blokInstance = blok;
+      await blok.isReady;
+    }, { holder: HOLDER_ID });
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+    // Click into the editor so the paragraph is focused
+    await paragraph.click();
+
+    // Type "hello world " with a trailing space
+    await page.keyboard.type('hello world ');
+
+    // Select "world " using Shift+Home to go to start, then Shift+End to re-select all
+    // More precisely: use Ctrl+A / Cmd+A to select all typed text
+    const modifierKey = await getModifierKey(page);
+
+    await page.keyboard.press(`${modifierKey}+a`);
+
+    const boldButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="bold"]`);
+
+    await expect(boldButton).toBeVisible();
+
+    // Click bold
+    await boldButton.click();
+
+    // Verify the strong tag contains the trailing space
+    const strong = paragraph.locator('strong');
+
+    await expect(strong).toHaveCount(1);
+
+    const strongText = await strong.evaluate((el) => JSON.stringify(el.textContent));
+
+    // The bold content must preserve the trailing space: "hello world "
+    expect(strongText).toBe('"hello world "');
+  });
 });
 
 declare global {

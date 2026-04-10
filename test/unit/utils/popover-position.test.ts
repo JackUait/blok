@@ -204,6 +204,7 @@ describe('resolvePosition', () => {
     });
   });
 
+
   describe('scope boundary', () => {
     it('uses scope bottom instead of viewport when scope is smaller', () => {
       const result = resolvePosition({

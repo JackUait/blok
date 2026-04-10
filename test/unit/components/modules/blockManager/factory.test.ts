@@ -321,12 +321,12 @@ describe('BlockFactory', () => {
       const block = factory.composeBlock({
         tool: 'paragraph',
         data,
-        id: 'custom-id',
+        id: 'V1StGXR8_Z',
         tunes,
         bindEventsImmediately: true,
       });
 
-      expect(block.id).toBe('custom-id');
+      expect(block.id).toBe('V1StGXR8_Z');
     });
 
     it('creates a Block with parentId and contentIds', () => {
@@ -395,13 +395,13 @@ describe('BlockFactory', () => {
       const block = factory.composeBlock({
         tool: 'paragraph',
         data,
-        id: 'test-id',
+        id: 'AbCdEfGhIj',
         tunes,
         parentId: 'parent-id',
         contentIds: ['child-1'],
       });
 
-      expect(block.id).toBe('test-id');
+      expect(block.id).toBe('AbCdEfGhIj');
     });
 
     it('creates Block with empty data when not provided', () => {

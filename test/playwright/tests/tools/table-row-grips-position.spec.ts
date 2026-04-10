@@ -141,6 +141,129 @@ const getRowCenterY = async (page: Page, rowIndex: number): Promise<number> => {
   return box.y + box.height / 2;
 };
 
+/**
+ * Get the bounding box of a row's visual area (using the row element).
+ */
+const getRowBoundingBox = async (page: Page, rowIndex: number) => {
+  const row = page.locator(`[data-blok-table-row] >> nth=${rowIndex}`);
+  const box = await row.boundingBox();
+
+  if (!box) {
+    throw new Error(`Row ${rowIndex} has no bounding box`);
+  }
+
+  return box;
+};
+
+test.describe('table row grip positioning with merged cells (rowspan)', () => {
+  test.beforeAll(() => {
+    ensureBlokBundleBuilt();
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto(TEST_PAGE_URL);
+    await page.waitForFunction(() => typeof window.Blok === 'function');
+
+    // Create a 3-row, 2-col table where cell [0,0] has rowspan=3 (merged across all rows)
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [
+                [
+                  { blocks: [{ type: 'paragraph', data: { text: 'Merged' } }], rowspan: 3 },
+                  { blocks: [{ type: 'paragraph', data: { text: 'R0C1' } }] },
+                ],
+                [
+                  { blocks: [], mergedInto: [0, 0] as [number, number] },
+                  { blocks: [{ type: 'paragraph', data: { text: 'R1C1' } }] },
+                ],
+                [
+                  { blocks: [], mergedInto: [0, 0] as [number, number] },
+                  { blocks: [{ type: 'paragraph', data: { text: 'R2C1' } }] },
+                ],
+              ],
+            },
+          },
+        ],
+      },
+    });
+  });
+
+  test('row grip for rowspan=3 origin cell is centered on full merged height, not just first row', async ({ page }) => {
+    // Hover over the merged cell to show row grips
+    const mergedCell = page.locator('[data-blok-table-cell-row="0"][data-blok-table-cell-col="0"]');
+
+    await mergedCell.hover();
+
+    const row0Grip = page.locator('[data-blok-table-grip-row="0"][data-blok-table-grip-visible]');
+
+    await expect(row0Grip).toBeVisible();
+
+    // Get the bounding boxes of the first and last rows to compute the visual center of the merged area
+    const row0Box = await getRowBoundingBox(page, 0);
+    const row2Box = await getRowBoundingBox(page, 2);
+
+    // The merged cell spans all 3 rows; its visual center is the midpoint of the
+    // entire spanned area (from the top of row 0 to the bottom of row 2).
+    const mergedAreaTop = row0Box.y;
+    const mergedAreaBottom = row2Box.y + row2Box.height;
+    const mergedAreaCenterY = (mergedAreaTop + mergedAreaBottom) / 2;
+
+    const row0GripY = await getRowGripCenterY(page, 0);
+
+    // The grip should be centered on the full merged span, not just the first row.
+    // Allow 2px tolerance for sub-pixel rendering.
+    expect(Math.abs(row0GripY - mergedAreaCenterY)).toBeLessThan(2);
+  });
+
+  test('row grip stays centered on merged cell when its content is taller than individual row heights', async ({ page }) => {
+    // Click into the merged cell and add enough content to force its height
+    // to exceed what the individual tr.offsetHeight values would report.
+    // This tests the getBoundingClientRect-based fix.
+    const mergedCell = page.locator('[data-blok-table-cell-row="0"][data-blok-table-cell-col="0"]');
+
+    await mergedCell.click();
+
+    // Type multiple lines to grow the merged cell's height well beyond the default
+    for (let i = 0; i < 8; i++) {
+      await page.keyboard.press('Shift+Enter');
+      await page.keyboard.type(`Line ${i + 2}`);
+    }
+
+    // Wait for the merged cell to grow
+    await expect.poll(async () => {
+      const box = await mergedCell.boundingBox();
+
+      return box?.height ?? 0;
+    }).toBeGreaterThan(60);
+
+    // Hover to show grips
+    await mergedCell.hover();
+
+    const row0Grip = page.locator('[data-blok-table-grip-row="0"][data-blok-table-grip-visible]');
+
+    await expect(row0Grip).toBeVisible();
+
+    // Get the actual rendered bounding box of the merged cell
+    const mergedCellBox = await mergedCell.boundingBox();
+
+    if (!mergedCellBox) {
+      throw new Error('Merged cell has no bounding box');
+    }
+
+    const mergedCellCenterY = mergedCellBox.y + mergedCellBox.height / 2;
+    const row0GripY = await getRowGripCenterY(page, 0);
+
+    // The grip center should match the merged cell's visual center (within 2px tolerance)
+    expect(Math.abs(row0GripY - mergedCellCenterY)).toBeLessThan(2);
+  });
+});
+
 test.describe('table row grip positioning', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();

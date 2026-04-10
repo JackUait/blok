@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.3](https://github.com/JackUait/blok/compare/v0.10.2...v0.10.3) (2026-04-09)
+
+### Bug Fixes
+
+- **Table** — Guard `addBlockToCell` and `setCellBlocks` against writing into covered (merged) cells; resolve paste target and copy source coordinates from model attributes instead of DOM visual position; fix overlay/pill missing and wrong merge/split button after rect expansion; expand selection rect to include full spans of merged cells; use logical cell coordinates in `getCellPosition`; don't intercept copy/cut when user has text selected in a single cell; `reindexCoordinates` assigns model coordinates instead of DOM physical indices; center row grip on merged cell using `getBoundingClientRect`
+- **Toolbar** — Correct `marginLeft` for nested blocks and popover position when scrolled; restore focus to originally-typed block after plus+Escape
+- **Toolbox** — Position popover at caret when inside nested blocks (toggle/callout)
+- **Keyboard** — Prevent text-jumping by preserving focus on toolbar interactions
+
 ## [0.10.0](https://github.com/JackUait/blok/compare/v0.5.0...v0.10.0) (2026-04-08)
 
 ### Features

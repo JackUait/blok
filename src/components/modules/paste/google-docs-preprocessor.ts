@@ -85,7 +85,9 @@ function isDefaultBlack(color: string): boolean {
 }
 
 /**
- * Compute the relative luminance of a CSS color value (rgb() or hex format).
+ * Compute the relative luminance of a CSS color value.
+ * Supports rgb(), rgba(), hsl(), hsla(), and hex (#rrggbb / #rgb) formats.
+ * Alpha components are ignored — only the base RGB channels are used.
  * Returns a value in [0, 1], or -1 if the format is unrecognized.
  * Uses simplified linear luminance (no gamma correction), adequate for
  * threshold comparisons at this scale.
@@ -93,12 +95,44 @@ function isDefaultBlack(color: string): boolean {
 function computeRelativeLuminance(color: string): number {
   const normalized = color.replace(/\s/g, '').toLowerCase();
 
-  const rgbMatch = /^rgb\((\d+),(\d+),(\d+)\)$/.exec(normalized);
+  /* rgb() and rgba() — alpha component is optional and ignored */
+  const rgbMatch = /^rgba?\((\d+),(\d+),(\d+)(?:,[\d.]+)?\)$/.exec(normalized);
 
   if (rgbMatch) {
     const r = parseInt(rgbMatch[1], 10) / 255;
     const g = parseInt(rgbMatch[2], 10) / 255;
     const b = parseInt(rgbMatch[3], 10) / 255;
+
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+
+  /* hsl() and hsla() — alpha component is optional and ignored */
+  const hslMatch = /^hsla?\(([\d.]+),([\d.]+)%,([\d.]+)%(?:,[\d.]+)?\)$/.exec(normalized);
+
+  if (hslMatch) {
+    const h = parseFloat(hslMatch[1]) / 360;
+    const s = parseFloat(hslMatch[2]) / 100;
+    const l = parseFloat(hslMatch[3]) / 100;
+
+    if (s === 0) {
+      return 0.2126 * l + 0.7152 * l + 0.0722 * l; // achromatic: r = g = b = l
+    }
+
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    const hueToChannel = (t: number): number => {
+      const wrapped = t < 0 ? t + 1 : t > 1 ? t - 1 : t;
+
+      if (wrapped < 1 / 6) { return p + (q - p) * 6 * wrapped; }
+      if (wrapped < 1 / 2) { return q; }
+      if (wrapped < 2 / 3) { return p + (q - p) * (2 / 3 - wrapped) * 6; }
+
+      return p;
+    };
+
+    const r = hueToChannel(h + 1 / 3);
+    const g = hueToChannel(h);
+    const b = hueToChannel(h - 1 / 3);
 
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
   }
@@ -156,9 +190,16 @@ function isDefaultDarkBackground(bgColor: string): boolean {
  *
  * Uses relative luminance > 0.75, which is above all Blok text presets while
  * catching typical dark mode default text colors.
+ *
+ * Returns false for unrecognized color formats (luminance === -1) so unknown
+ * formats are treated conservatively: they are not filtered out here, but any
+ * color that cannot be parsed also cannot be mapped to a preset, so the
+ * sanitizer will strip it regardless.
  */
 function isDefaultLightText(color: string): boolean {
-  return computeRelativeLuminance(color) > 0.75;
+  const luminance = computeRelativeLuminance(color);
+
+  return luminance >= 0 && luminance > 0.75;
 }
 
 /**

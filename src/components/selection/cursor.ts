@@ -46,8 +46,18 @@ export class SelectionCursor {
     // Focus contenteditable elements explicitly after setting the selection range.
     // Placed after addRange() so the selection is preserved when focus transfers —
     // calling focus() before addRange() can reset the caret during arrow navigation.
-    if ($.isContentEditable(element) && document.activeElement !== element) {
-      element.focus();
+    //
+    // When `element` is a text node or a non-focusable inline element (e.g. <b>, <span>),
+    // `isContentEditable` will be false. In that case we walk up to the nearest
+    // contenteditable ancestor so that DOM focus is transferred there. Without this,
+    // focus stays on whatever had it before (e.g. the toolbox search input), causing
+    // subsequent keystrokes to land in the wrong place.
+    const focusTarget = $.isContentEditable(element)
+      ? element
+      : (element.parentElement?.closest('[contenteditable="true"]') as HTMLElement | null) ?? null;
+
+    if (focusTarget !== null && document.activeElement !== focusTarget) {
+      focusTarget.focus();
     }
 
     return range.getBoundingClientRect();

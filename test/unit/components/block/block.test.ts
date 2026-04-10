@@ -34,6 +34,7 @@ interface TuneFactoryResult {
 }
 
 interface CreateBlockOptions {
+  id?: string;
   toolOverrides?: Partial<MockToolInstance>;
   renderSettings?: () => unknown;
   data?: BlockToolData;
@@ -150,7 +151,7 @@ const createBlock = (options: CreateBlockOptions = {}): CreateBlockResult => {
   }
 
   const block = new Block({
-    id: 'test-block',
+    id: options.id ?? 'test-block',
     data: options.data ?? {},
     tool: toolAdapter,
     readOnly: options.readOnly ?? false,
@@ -1024,7 +1025,7 @@ describe('Block', () => {
       const contentIds = ['child-1', 'child-2'];
 
       const block = new Block({
-        id: 'middle-block',
+        id: 'V1StGXR8_Z',
         data: {},
         tool: toolAdapter,
         readOnly: false,
@@ -1036,7 +1037,7 @@ describe('Block', () => {
 
       expect(block.parentId).toBe(parentId);
       expect(block.contentIds).toEqual(contentIds);
-      expect(block.id).toBe('middle-block');
+      expect(block.id).toBe('V1StGXR8_Z');
     });
 
     it('allows contentIds to be mutated for dynamic hierarchy', () => {
@@ -1153,6 +1154,38 @@ describe('Block', () => {
       expect(() => {
         block.cleanupDraggable();
       }).not.toThrow();
+    });
+  });
+
+  describe('id handling', () => {
+    it('uses a provided valid nanoid as the block id', () => {
+      const block = createBlock({ id: 'V1StGXR8_Z' }).block;
+      expect(block.id).toBe('V1StGXR8_Z');
+    });
+
+    it('preserves a human-readable string id from input data', () => {
+      const block = createBlock({ id: 'Hello World' }).block;
+      expect(block.id).toBe('Hello World');
+    });
+
+    it('generates a nanoid when id is an empty string', () => {
+      const block = createBlock({ id: '' }).block;
+      expect(block.id).toMatch(/^[A-Za-z0-9_-]{10}$/);
+    });
+
+    it('preserves a slug-style id from input data', () => {
+      const block = createBlock({ id: 'my-intro-section' }).block;
+      expect(block.id).toBe('my-intro-section');
+    });
+
+    it('preserves a legacy EditorJS-style id from input data', () => {
+      const block = createBlock({ id: 'toggle-example-1' }).block;
+      expect(block.id).toBe('toggle-example-1');
+    });
+
+    it('generates a nanoid when id is undefined', () => {
+      const block = createBlock({ id: undefined }).block;
+      expect(block.id).toMatch(/^[A-Za-z0-9_-]{10}$/);
     });
   });
 

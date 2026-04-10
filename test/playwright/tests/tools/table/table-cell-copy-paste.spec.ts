@@ -708,6 +708,59 @@ test.describe('Table cell copy/paste', () => {
     await expect(getCellEditable(page, 1, 0)).toHaveText('A2');
   });
 
+  test('should remain editable (typing works) after single-cell paste into another cell', async ({ page }) => {
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [
+                ['Hello', 'Target'],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+    // Step 1: Click source cell (simulating user click on <td>)
+    await selectCells(page, 0, 0, 0, 0);
+    await expect(page.locator('[data-blok-table-cell-selected]')).toHaveCount(1);
+
+    // Step 2: Copy the single cell (gets Blok 1×1 format)
+    const { html, plain } = await performCopyAndCapture(page);
+
+    expect(html).toContain('<table');
+    expect(plain).toBe('Hello');
+
+    // Step 3: Click destination cell <td> (the outer TD, not inner contenteditable)
+    // This mirrors what the user does: click somewhere on the cell
+    const destCell = getCell(page, 0, 1);
+
+    await destCell.click();
+
+    // Step 4: Paste
+    await dispatchPasteEvent(page, html, plain);
+
+    // Step 5: Verify destination cell got the pasted content
+    const destEditable = getCellEditable(page, 0, 1);
+
+    await expect(destEditable).toContainText('Hello', { timeout: 3000 });
+
+    // Step 6: Try to type in the destination cell — this is the key check
+    // The bug: after paste, the cell becomes non-editable so typing doesn't work
+    await destEditable.click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' TYPED');
+
+    await expect(destEditable).toContainText('TYPED', { timeout: 3000 });
+  });
+
   test('should insert single-cell content at caret when pasting into a different cell', async ({ page }) => {
     await createBlok(page, {
       tools: defaultTools,
@@ -758,5 +811,175 @@ test.describe('Table cell copy/paste', () => {
     await expect(getCellEditable(page, 0, 0)).toHaveText('Hello');
     await expect(getCellEditable(page, 1, 0)).toHaveText('A2');
     await expect(getCellEditable(page, 1, 1)).toHaveText('B2');
+  });
+
+  test('target cell remains editable after paste from merged cell (colspan)', async ({ page }) => {
+    // Create a 2-row, 3-column table where [0,0] has colspan=2
+    // Row 0 DOM: [merged origin spanning cols 0-1] [normal cell at col 2]
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [
+                [
+                  { blocks: [], colspan: 2, text: 'Merged' },
+                  { blocks: [], mergedInto: [0, 0] as [number, number] },
+                  { blocks: [], text: '' },
+                ],
+                [
+                  { blocks: [], text: 'A' },
+                  { blocks: [], text: 'B' },
+                  { blocks: [], text: 'C' },
+                ],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+    // The merged cell is at DOM position row=0, col=0 (it's the first cell in row 0)
+    // Use selectCells with DOM indices — this works because the merged cell IS at DOM index 0
+    await selectCells(page, 0, 0, 0, 0);
+
+    const { html, plain } = await performCopyAndCapture(page);
+
+    expect(plain).toBe('Merged');
+
+    // Target cell: model col 2 (DOM col 1, because merge consumes col 0-1)
+    // Use attribute-based locator to find it by model coordinates
+    const targetCell = page.locator(
+      `${TABLE_SELECTOR} [data-blok-table-cell-row="0"][data-blok-table-cell-col="2"]`
+    );
+
+    await targetCell.click();
+
+    // Paste
+    await dispatchPasteEvent(page, html, plain);
+
+    // The target cell MUST remain editable — type into it and verify it works
+    const targetEditable = targetCell.locator('[contenteditable="true"]');
+
+    await targetEditable.click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' TYPED');
+
+    await expect(targetEditable).toContainText('TYPED', { timeout: 3000 });
+  });
+
+  test('target cell remains editable after paste from merged cell (rowspan)', async ({ page }) => {
+    // Create a 2-row, 3-column table where [0,0] has rowspan=2
+    // Row 1 DOM: [col 1 cell] [col 2 cell]  (col 0 is covered)
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [
+                [
+                  { blocks: [], rowspan: 2, text: 'SpanOrigin' },
+                  { blocks: [], text: 'B1' },
+                  { blocks: [], text: 'C1' },
+                ],
+                [
+                  { blocks: [], mergedInto: [0, 0] as [number, number] },
+                  { blocks: [], text: '' },
+                  { blocks: [], text: '' },
+                ],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+    // The merged cell origin is at DOM row=0, col=0 — select it
+    await selectCells(page, 0, 0, 0, 0);
+
+    const { html, plain } = await performCopyAndCapture(page);
+
+    expect(plain).toBe('SpanOrigin');
+
+    // Target: model [1,1] — first VISIBLE cell in row 1 (DOM col 0, model col 1)
+    // Use attribute-based locator
+    const targetCell = page.locator(
+      `${TABLE_SELECTOR} [data-blok-table-cell-row="1"][data-blok-table-cell-col="1"]`
+    );
+
+    await targetCell.click();
+
+    await dispatchPasteEvent(page, html, plain);
+
+    // Verify editability
+    const targetEditable = targetCell.locator('[contenteditable="true"]');
+
+    await targetEditable.click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' TYPED');
+
+    await expect(targetEditable).toContainText('TYPED', { timeout: 3000 });
+  });
+
+  test('should not intercept copy when user has text selected inside a single cell block', async ({ page }) => {
+    // Regression test: when a user selects text within a cell's contenteditable and presses
+    // Cmd+C, the table cell selection handler must NOT override the native copy.
+    // Previously, because hasSelection=true after any cell click, the handler would
+    // always intercept Cmd+C and write the whole cell structure to the clipboard instead
+    // of the user's text selection.
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [
+                ['Hello World', 'B1'],
+                ['A2', 'B2'],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+    // Click directly into the cell's contenteditable to place the cursor (NOT a multi-cell drag)
+    const cellEditable = getCellEditable(page, 0, 0);
+
+    await cellEditable.click();
+    await expect(cellEditable).toBeFocused();
+
+    // Select all text in the cell using keyboard (Ctrl+A / Cmd+A within the contenteditable)
+    await page.keyboard.press('ControlOrMeta+a');
+
+    // Now perform a copy event and capture what the handler writes to clipboardData.
+    // If the bug is present, the table cell handler will intercept and write the full
+    // cell structure (HTML containing <table>).
+    // If the fix is correct, the handler should NOT intercept (no setData calls),
+    // leaving the dataStore empty (the native selection copy takes over).
+    const { html, plain } = await performCopyAndCapture(page);
+
+    // The table cell handler must NOT have intercepted this copy.
+    // It should NOT write a <table> structure — that would mean it stole the native copy
+    // and replaced the user's text selection with the whole cell block structure.
+    expect(html).not.toContain('<table');
+
+    // The plain text captured by the intercepting handler should also be empty —
+    // native copy is responsible for the actual clipboard content.
+    expect(plain).toBe('');
   });
 });

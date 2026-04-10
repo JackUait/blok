@@ -86,6 +86,8 @@ interface CellSelectionOptions {
   isMergedCell?: (row: number, col: number) => boolean;
   /** Called when user requests to split a merged cell. */
   onSplitCell?: (row: number, col: number) => void;
+  /** Returns the colspan and rowspan of the cell at (row, col). Used to expand the selection rect to full merged-cell spans. */
+  getCellSpan?: (row: number, col: number) => { colspan: number; rowspan: number };
   i18n: I18n;
 }
 
@@ -118,7 +120,9 @@ export class TableCellSelection {
   private onMergeCells: ((range: SelectionRange) => void) | undefined;
   private isMergedCell: ((row: number, col: number) => boolean) | undefined;
   private onSplitCell: ((row: number, col: number) => void) | undefined;
+  private getCellSpan: ((row: number, col: number) => { colspan: number; rowspan: number }) | undefined;
   private lastPaintedRange: SelectionRange | null = null;
+  private preExpansionWasSingleCell = false;
 
   private boundPointerDown: (e: PointerEvent) => void;
   private boundPointerMove: (e: PointerEvent) => void;
@@ -148,6 +152,7 @@ export class TableCellSelection {
     this.onMergeCells = options.onMergeCells;
     this.isMergedCell = options.isMergedCell;
     this.onSplitCell = options.onSplitCell;
+    this.getCellSpan = options.getCellSpan;
     this.i18n = options.i18n;
     this.grid.style.position = 'relative';
 
@@ -466,6 +471,14 @@ export class TableCellSelection {
       return;
     }
 
+    // For single-cell selections, if the user has a non-collapsed native text
+    // selection within the cell's contenteditable (i.e., they selected specific
+    // text characters), defer to the browser's native copy so their text
+    // selection is copied rather than the whole cell block structure.
+    if (this.selectedCells.length <= 1 && this.hasNativeTextSelection()) {
+      return;
+    }
+
     e.preventDefault();
     this.onCopy?.([...this.selectedCells], e.clipboardData);
   }
@@ -475,10 +488,28 @@ export class TableCellSelection {
       return;
     }
 
+    // For single-cell selections, if the user has a non-collapsed native text
+    // selection within the cell's contenteditable, defer to the browser's native
+    // cut so their text selection is cut rather than clearing the entire cell.
+    if (this.selectedCells.length <= 1 && this.hasNativeTextSelection()) {
+      return;
+    }
+
     e.preventDefault();
     this.onCut?.([...this.selectedCells], e.clipboardData);
     this.onClearContent?.([...this.selectedCells]);
     this.clearSelection();
+  }
+
+  /**
+   * Returns true if the browser has a non-collapsed text selection (i.e. the
+   * user has selected one or more characters inside a contenteditable), as
+   * opposed to a mere caret position or no selection at all.
+   */
+  private hasNativeTextSelection(): boolean {
+    const selection = window.getSelection();
+
+    return selection !== null && !selection.isCollapsed;
   }
 
   private clearSelection(): void {
@@ -487,6 +518,7 @@ export class TableCellSelection {
     this.restoreModifiedCells();
     this.hasSelection = false;
     this.lastPaintedRange = null;
+    this.preExpansionWasSingleCell = false;
 
     if (hadSelection) {
       this.onSelectionActiveChange?.(false);
@@ -540,6 +572,50 @@ export class TableCellSelection {
     document.addEventListener('pointerdown', this.boundClearSelection);
   }
 
+  /**
+   * Expand a selection rect to fully include the spans of any merged cells
+   * whose origins fall within the rect. Iterates until the rect is stable,
+   * since pulling in a new merged cell may expose further cells that extend
+   * beyond the current boundary.
+   */
+  private expandRectToMergedSpans(rect: SelectionRange): SelectionRange {
+    if (!this.getCellSpan) {
+      return rect;
+    }
+
+    return this.expandRectStep(rect);
+  }
+
+  private expandRectStep(rect: SelectionRange): SelectionRange {
+    const getCellSpan = this.getCellSpan;
+
+    if (!getCellSpan) {
+      return rect;
+    }
+
+    const rows = Array.from({ length: rect.maxRow - rect.minRow + 1 }, (_, i) => rect.minRow + i);
+    const cols = Array.from({ length: rect.maxCol - rect.minCol + 1 }, (_, i) => rect.minCol + i);
+
+    const expanded = rows.reduce<SelectionRange>((acc, r) => {
+      return cols.reduce<SelectionRange>((inner, c) => {
+        const { colspan, rowspan } = getCellSpan(r, c);
+
+        return {
+          minRow: inner.minRow,
+          maxRow: Math.max(inner.maxRow, r + rowspan - 1),
+          minCol: inner.minCol,
+          maxCol: Math.max(inner.maxCol, c + colspan - 1),
+        };
+      }, acc);
+    }, rect);
+
+    const changed =
+      expanded.maxRow !== rect.maxRow ||
+      expanded.maxCol !== rect.maxCol;
+
+    return changed ? this.expandRectStep(expanded) : expanded;
+  }
+
   private paintSelection(): void {
     if (!this.anchorCell || !this.extentCell) {
       return;
@@ -557,12 +633,15 @@ export class TableCellSelection {
     const minCol = Math.min(this.anchorCell.col, this.extentCell.col);
     const maxCol = Math.max(this.anchorCell.col, this.extentCell.col);
 
-    this.lastPaintedRange = { minRow, maxRow, minCol, maxCol };
+    this.preExpansionWasSingleCell = minRow === maxRow && minCol === maxCol;
+    this.lastPaintedRange = this.expandRectToMergedSpans({ minRow, maxRow, minCol, maxCol });
+
+    const { minRow: expandedMinRow, maxRow: expandedMaxRow, minCol: expandedMinCol, maxCol: expandedMaxCol } = this.lastPaintedRange;
 
     const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
 
     // Mark selected cells
-    this.selectedCells = this.collectCellsInRange(rows, minRow, maxRow, minCol, maxCol);
+    this.selectedCells = this.collectCellsInRange(rows, expandedMinRow, expandedMaxRow, expandedMinCol, expandedMaxCol);
     this.selectedCells.forEach(cell => {
       cell.setAttribute(SELECTED_ATTR, '');
     });
@@ -570,8 +649,8 @@ export class TableCellSelection {
     // Calculate overlay position from bounding rects of corner cells.
     // Try coordinate-based lookup first (works with merged cells),
     // then fall back to index-based lookup for backwards compatibility.
-    const firstCell = this.findCellByCoordOrIndex(rows, minRow, minCol);
-    const lastCell = this.findCellByCoordOrIndex(rows, maxRow, maxCol);
+    const firstCell = this.findCellByCoordOrIndex(rows, expandedMinRow, expandedMinCol);
+    const lastCell = this.findCellByCoordOrIndex(rows, expandedMaxRow, expandedMaxCol);
 
     if (!firstCell || !lastCell) {
       return;
@@ -803,7 +882,7 @@ export class TableCellSelection {
     if (this.lastPaintedRange && this.onMergeCells) {
       const range = this.lastPaintedRange;
       const isMultiCell = range.minRow !== range.maxRow || range.minCol !== range.maxCol;
-      const canMerge = isMultiCell && this.canMergeCells?.(range);
+      const canMerge = isMultiCell && !this.preExpansionWasSingleCell && this.canMergeCells?.(range);
 
       if (canMerge) {
         mergeItems.push({
@@ -821,8 +900,9 @@ export class TableCellSelection {
     if (this.lastPaintedRange && this.onSplitCell) {
       const range = this.lastPaintedRange;
       const isSingleCell = range.minRow === range.maxRow && range.minCol === range.maxCol;
+      const isSingleOriginExpanded = this.preExpansionWasSingleCell && this.isMergedCell?.(range.minRow, range.minCol);
 
-      if (isSingleCell && this.isMergedCell?.(range.minRow, range.minCol)) {
+      if ((isSingleCell || isSingleOriginExpanded) && this.isMergedCell?.(range.minRow, range.minCol)) {
         mergeItems.push({
           icon: IconSplitCell,
           title: this.i18n.t('tools.table.splitCell'),
@@ -936,6 +1016,23 @@ export class TableCellSelection {
       return null;
     }
 
+    // Prefer logical coordinate attributes stamped by reindexCoordinates() —
+    // these are correct even when rows have fewer physical <td> elements than
+    // logical columns (e.g. after a colspan/rowspan merge).
+    const cellRowAttr = cell.getAttribute(CELL_ROW_ATTR);
+    const cellColAttr = cell.getAttribute(CELL_COL_ATTR);
+
+    if (cellRowAttr !== null && cellColAttr !== null) {
+      const rowIndex = parseInt(cellRowAttr, 10);
+      const colIndex = parseInt(cellColAttr, 10);
+
+      if (!isNaN(rowIndex) && !isNaN(colIndex)) {
+        return { row: rowIndex, col: colIndex };
+      }
+    }
+
+    // Fallback: physical DOM index — only used for grids without coordinate
+    // attributes (e.g. legacy non-table grid elements).
     const rows = Array.from(this.grid.querySelectorAll(`[${ROW_ATTR}]`));
     const rowIndex = rows.indexOf(row);
 
@@ -1025,6 +1122,12 @@ export class TableCellSelection {
   /**
    * Find a cell by coordinate attributes first, falling back to index-based
    * lookup when coordinate attributes are not present.
+   *
+   * When both primary lookups fail (e.g. `col` points to a covered logical
+   * column that has no physical <td> of its own), scan all cells in the row
+   * and return the one whose colspan range covers `col`.  This handles the
+   * case where `expandRectToMergedSpans` has expanded the selection corner to
+   * a column that is spanned by an origin cell at a lower column index.
    */
   private findCellByCoordOrIndex(
     rows: NodeListOf<Element>,
@@ -1039,7 +1142,23 @@ export class TableCellSelection {
       return coordCell;
     }
 
-    return rows[row]?.querySelectorAll(`[${CELL_ATTR}]`)[col] as HTMLElement | undefined;
+    const indexCell = rows[row]?.querySelectorAll(`[${CELL_ATTR}]`)[col] as HTMLElement | undefined;
+
+    if (indexCell) {
+      return indexCell;
+    }
+
+    // Neither coord-based nor index-based lookup found a cell.  Walk all
+    // physical cells in the row to find one whose logical column range covers
+    // the requested column (origin cellCol <= col <= cellCol + colSpan - 1).
+    const rowCells = Array.from(rows[row]?.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`) ?? []);
+
+    return rowCells.find(cell => {
+      const cellCol = Number(cell.getAttribute(CELL_COL_ATTR));
+      const cellColSpan = (cell as HTMLTableCellElement).colSpan || 1;
+
+      return cellCol <= col && cellCol + cellColSpan - 1 >= col;
+    });
   }
 
   /**

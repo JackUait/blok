@@ -146,6 +146,28 @@ class Blok {
       }
 
       this.exportAPI(blok);
+
+      // Scroll to the block referenced by the URL hash, if present.
+      // isReady resolves only after all blocks are in the DOM (requestIdleCallback fence in Renderer),
+      // so no extra polling is needed even on slow connections.
+      const rawHash = window.location.hash.slice(1);
+      const hash = rawHash ? Blok.safeDecodeHash(rawHash) : '';
+
+      if (hash) {
+        const el = document.querySelector(`[data-blok-id="${CSS.escape(hash)}"]`);
+
+        if (el) {
+          const topOffset = (isObject(this.initialConfiguration)
+            ? (this.initialConfiguration as BlokConfig).scrollToBlock?.topOffset
+            : undefined) ?? 0;
+          const y = el.getBoundingClientRect().top + window.scrollY - topOffset;
+
+          window.scrollTo({ top: y, behavior: 'smooth' });
+
+          Blok.selectBlockById(blok, hash);
+        }
+      }
+
       /**
        * @todo pass API as an argument. It will allow to use Blok's API when blok is ready
        */
@@ -330,6 +352,32 @@ class Blok {
         return uiMethods.isMobile as boolean;
       },
     });
+  }
+
+  /**
+   * Decodes a URL hash fragment, falling back to the raw value on malformed percent-sequences.
+   * @param raw - raw hash fragment (without leading #)
+   */
+  private static safeDecodeHash(raw: string): string {
+    try {
+      return decodeURIComponent(raw);
+    } catch {
+      // Malformed percent-sequence (e.g. %ZZ) — return raw so no block is matched
+      return raw;
+    }
+  }
+
+  /**
+   * Selects the block identified by `id` in BlockManager, if it exists.
+   * @param blok - Core instance
+   * @param id - decoded block id
+   */
+  private static selectBlockById(blok: Core, id: string): void {
+    const block = blok.moduleInstances.BlockManager.getBlockById(id);
+
+    if (block !== undefined) {
+      blok.moduleInstances.BlockSelection.selectBlock(block);
+    }
   }
 }
 

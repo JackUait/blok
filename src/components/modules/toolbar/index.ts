@@ -119,6 +119,22 @@ export class Toolbar extends Module<ToolbarNodes> {
   private settingsTogglerHandler: SettingsTogglerHandler;
 
   /**
+   * The block that had focus immediately before the plus button opened the toolbox.
+   * Captured via the onFocusBlockCaptured callback in PlusButtonHandler.handleClick(),
+   * before any block manipulation occurs.
+   * Used to restore focus if the user dismisses the toolbox without selecting a tool.
+   * Cleared when a tool is selected (ToolboxEvent.BlockAdded) or when focus is restored.
+   */
+  private preToolboxBlock: Block | null = null;
+
+  /**
+   * A newly-inserted empty block created by the plus button click (not a reused block).
+   * If the user dismisses the toolbox without selecting a tool, this block is removed.
+   * Cleared when a tool is selected or when the block is removed on cancel.
+   */
+  private plusInsertedBlock: Block | null = null;
+
+  /**
    * @class
    * @param moduleConfiguration - Module Configuration
    * @param moduleConfiguration.config - Blok's config
@@ -143,6 +159,10 @@ export class Toolbar extends Module<ToolbarNodes> {
         openToolboxWithoutSlash: () => this.toolbox.openWithoutSlash(),
         closeToolbox: () => this.toolbox.close(),
         moveAndOpenToolbar: (block, target) => this.moveAndOpen(block, target),
+        onFocusBlockCaptured: (block, insertedBlock) => {
+          this.preToolboxBlock = block;
+          this.plusInsertedBlock = insertedBlock;
+        },
       }
     );
 
@@ -526,25 +546,34 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     /**
-     * Sync toolbar content wrapper's margin with the block content element
-     * so toolbar buttons align with the block content edge, even when
-     * consumer CSS overrides the block content's margin.
+     * Sync toolbar content wrapper's position and width with the block content element
+     * so toolbar buttons align with the block content edge regardless of whether
+     * the consumer uses CSS margin or overrides max-width (e.g. wide-mode).
+     *
+     * Uses getBoundingClientRect to get the actual visual offset rather than reading
+     * CSS marginLeft, which does not account for cases where max-width is removed
+     * and the content fills the full container width.
      *
      * Uses Math.max to guarantee the actions container (positioned via right:100%)
      * never extends beyond the left edge of the viewport, which would make the
      * drag handle unreachable by pointer events.
      *
-     * For stretched blocks, reset to '' so CSS mx-auto can center the toolbar.
+     * For nested blocks (e.g. children inside a callout), the holder is already
+     * offset from the viewport left by the parent's indentation. In that case we
+     * only need to ensure the actions don't extend beyond the viewport left edge
+     * (holderLeft px are available to the left), so the minimum margin is
+     * max(0, actionsWidth - holderLeft) rather than a flat actionsWidth clamp.
      */
-    if (this.nodes.content) {
-      if (targetBlock.stretched) {
-        this.nodes.content.style.marginLeft = '';
-      } else if (blockContentElement) {
-        const blockMarginLeft = parseFloat(getComputedStyle(blockContentElement).marginLeft) || 0;
-        const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
+    if (blockContentElement && this.nodes.content) {
+      const holderRect = this.nodes.wrapper?.getBoundingClientRect();
+      const contentRect = blockContentElement.getBoundingClientRect();
+      const visualOffset = holderRect ? Math.max(0, contentRect.left - holderRect.left) : 0;
+      const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
+      const holderLeft = holderRect ? Math.max(0, holderRect.left) : 0;
+      const minMarginLeft = Math.max(0, actionsWidth - holderLeft);
 
-        this.nodes.content.style.marginLeft = `${Math.max(blockMarginLeft, actionsWidth)}px`;
-      }
+      this.nodes.content.style.marginLeft = `${Math.max(visualOffset, minMarginLeft)}px`;
+      this.nodes.content.style.maxWidth = `${contentRect.width}px`;
     }
   }
 
@@ -665,14 +694,22 @@ export class Toolbar extends Module<ToolbarNodes> {
     this.open();
 
     /**
-     * Sync toolbar content wrapper's margin with the block content element.
-     * Clamp to actionsWidth so actions never extend beyond the left viewport edge.
+     * Sync toolbar content wrapper's position and width with the block content element.
+     * Uses getBoundingClientRect so wide-mode content (max-width: none) is handled correctly.
+     * Clamp to max(0, actionsWidth - holderLeft) so actions never extend beyond the left
+     * viewport edge. For nested blocks already offset from the left, a smaller clamp is
+     * used so buttons are not pushed into the text content.
      */
     if (blockContentElement && this.nodes.content) {
-      const blockMarginLeft = parseFloat(getComputedStyle(blockContentElement).marginLeft) || 0;
+      const holderRect = this.nodes.wrapper?.getBoundingClientRect();
+      const contentRect = blockContentElement.getBoundingClientRect();
+      const visualOffset = holderRect ? Math.max(0, contentRect.left - holderRect.left) : 0;
       const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
+      const holderLeft = holderRect ? Math.max(0, holderRect.left) : 0;
+      const minMarginLeft = Math.max(0, actionsWidth - holderLeft);
 
-      this.nodes.content.style.marginLeft = `${Math.max(blockMarginLeft, actionsWidth)}px`;
+      this.nodes.content.style.marginLeft = `${Math.max(visualOffset, minMarginLeft)}px`;
+      this.nodes.content.style.maxWidth = `${contentRect.width}px`;
     }
   }
 
@@ -738,6 +775,7 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
     if (this.nodes.content) {
       this.nodes.content.style.marginLeft = '';
+      this.nodes.content.style.maxWidth = '';
     }
     this.positioner.setHoveredTarget(null);
 
@@ -1083,9 +1121,63 @@ export class Toolbar extends Module<ToolbarNodes> {
       // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.Blok.UI.nodes.wrapper.classList.remove(this.CSS.openedToolboxHolderModifier);
       this.Blok.UI.nodes.wrapper.removeAttribute(DATA_ATTR.toolboxOpened);
+
+      /**
+       * If the toolbox was opened via the plus button and the user dismissed
+       * it without selecting a tool (Escape / click outside), restore focus to
+       * the block that was focused BEFORE the plus button was clicked and
+       * remove the orphan empty block that was inserted.
+       *
+       * When a tool IS selected, ToolboxEvent.BlockAdded fires first and clears
+       * preToolboxBlock, so this branch is skipped for that case.
+       */
+      if (this.preToolboxBlock !== null) {
+        const blockToRestore = this.preToolboxBlock;
+
+        this.preToolboxBlock = null;
+
+        // Remove the orphan block that was inserted by the plus button click,
+        // then restore focus. removeBlock() is Promise-based but resolves
+        // synchronously; chaining ensures setToBlock runs after removal.
+        if (this.plusInsertedBlock !== null) {
+          const orphan = this.plusInsertedBlock;
+
+          this.plusInsertedBlock = null;
+          void this.Blok.BlockManager.removeBlock(orphan, false).then(() => {
+            if (blockToRestore.inputs.length > 0) {
+              this.Blok.Caret.setToBlock(blockToRestore, this.Blok.Caret.positions.END);
+            }
+          });
+        } else if (blockToRestore.inputs.length > 0) {
+          // Reused an existing block (emptyBlockToReuse path) — just restore focus
+          this.Blok.Caret.setToBlock(blockToRestore, this.Blok.Caret.positions.END);
+        }
+
+        return;
+      }
+
+      /**
+       * Restore focus to the current block when the toolbox closes via any
+       * non-plus-button path (e.g. slash-search dismissed via Escape).
+       * Without this, focus falls to document.body after non-keyboard close
+       * paths, causing subsequent keystrokes to be lost.
+       */
+      const currentBlock = this.Blok.BlockManager.currentBlock;
+
+      if (currentBlock && currentBlock.inputs.length > 0) {
+        this.Blok.Caret.setToBlock(currentBlock, this.Blok.Caret.positions.END);
+      }
     });
 
     this.toolboxInstance.on(ToolboxEvent.BlockAdded, ({ block }) => {
+      /**
+       * A tool was selected and a block was added — clear the cancel context so
+       * ToolboxEvent.Closed (which fires after this) does not try to undo the
+       * insertion and restore focus to the pre-plus block.
+       */
+      this.preToolboxBlock = null;
+      this.plusInsertedBlock = null;
+
       const { BlockManager, Caret } = this.Blok;
       const newBlock = BlockManager.getBlockById(block.id);
 
@@ -1136,6 +1228,12 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     if (plusButton) {
       this.readOnlyMutableListeners.on(plusButton, 'mousedown', (e) => {
+        /**
+         * Prevent focus from moving away from the currently-active contenteditable block.
+         * Without this, clicking the plus button steals DOM focus, causing subsequent
+         * keystrokes to land in the wrong block (text-jumping bug).
+         */
+        (e as MouseEvent).preventDefault();
         hide();
 
         this.clickDragHandler.setup(

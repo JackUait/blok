@@ -7,6 +7,7 @@ import {
   findFormattingAncestor,
   hasFormattingAncestor,
   collectFormattingAncestors,
+  extendRangeToTrailingWhitespace,
 } from './utils/formatting-range-utils';
 
 /**
@@ -172,13 +173,41 @@ export class ItalicInlineTool implements InlineTool {
    * @param range - The Range object containing the selection to wrap
    */
   private wrapWithItalic(range: Range): void {
+    extendRangeToTrailingWhitespace(range);
     const html = this.getRangeHtmlWithoutItalic(range);
     const insertedRange = this.replaceRangeWithHtml(range, `<i>${html}</i>`);
     const selection = window.getSelection();
 
     if (selection && insertedRange) {
+      const wrappedElement = insertedRange.startContainer.childNodes[insertedRange.startOffset] as HTMLElement | undefined;
+      const newRange = document.createRange();
+
+      if (wrappedElement) {
+        this.normalizeNbspInElement(wrappedElement);
+        newRange.selectNodeContents(wrappedElement);
+      } else {
+        newRange.setStart(insertedRange.startContainer, insertedRange.startOffset);
+        newRange.setEnd(insertedRange.endContainer, insertedRange.endOffset);
+      }
+
       selection.removeAllRanges();
-      selection.addRange(insertedRange);
+      selection.addRange(newRange);
+    }
+  }
+
+  /**
+   * Replace non-breaking spaces (\u00A0) with regular spaces in all text nodes of an element
+   * @param element - The element to normalize
+   */
+  private normalizeNbspInElement(element: HTMLElement): void {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    let node = walker.nextNode();
+
+    while (node) {
+      if (node.textContent?.includes('\u00A0')) {
+        node.textContent = node.textContent.replace(/\u00A0/g, ' ');
+      }
+      node = walker.nextNode();
     }
   }
 

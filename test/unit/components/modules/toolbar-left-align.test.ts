@@ -244,12 +244,11 @@ describe('Toolbar moveAndOpen — leftAlignElement update', () => {
     document.body.removeChild(blockHolder);
   });
 
-  it('preserves block content marginLeft for centered content even with actions width', () => {
+  it('preserves block content visual offset for centered content even with actions width', () => {
     const blockHolder = document.createElement('div');
     const blockContent = document.createElement('div');
 
     blockContent.setAttribute(DATA_ATTR.elementContent, '');
-    blockContent.style.marginLeft = '153px';
     blockHolder.appendChild(blockContent);
     document.body.appendChild(blockHolder);
 
@@ -263,7 +262,7 @@ describe('Toolbar moveAndOpen — leftAlignElement update', () => {
       getTunes: vi.fn().mockReturnValue({ toolTunes: [], commonTunes: [] }),
     } as unknown as Block;
 
-    const { toolbar, content } = createToolbar({
+    const { toolbar, content, wrapper } = createToolbar({
       BlockManager: {
         currentBlock: block,
         currentBlockIndex: 0,
@@ -284,10 +283,20 @@ describe('Toolbar moveAndOpen — leftAlignElement update', () => {
 
     vi.spyOn(actions, 'offsetWidth', 'get').mockReturnValue(51);
 
+    // Simulate centered content: holder at left=0, content at left=153px (e.g. margin: 0 auto)
+    vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue({
+      left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0,
+      x: 0, y: 0, toJSON: () => ({}),
+    } as DOMRect);
+    vi.spyOn(blockContent, 'getBoundingClientRect').mockReturnValue({
+      left: 153, top: 0, right: 0, bottom: 0, width: 720, height: 0,
+      x: 153, y: 0, toJSON: () => ({}),
+    } as DOMRect);
+
     // Act
     toolbar.moveAndOpen(block);
 
-    // Assert: marginLeft matches block content (153px), not clamped to actionsWidth
+    // Assert: marginLeft matches the visual offset (153px), not clamped to actionsWidth (51px)
     expect(content.style.marginLeft).toBe('153px');
 
     document.body.removeChild(blockHolder);
@@ -410,6 +419,152 @@ describe('Toolbar moveAndOpen — leftAlignElement update', () => {
     // Assert: marginLeft is clamped to actionsWidth (51px) so that the actions container
     // (positioned via right:100%) never extends beyond the left viewport edge.
     expect(content.style.marginLeft).toBe('51px');
+
+    document.body.removeChild(blockHolder);
+  });
+
+  it('aligns toolbar buttons with block content left edge when content has no CSS margin but is visually offset from the block holder (wide-mode scenario)', () => {
+    const blockHolder = document.createElement('div');
+    const blockContent = document.createElement('div');
+
+    blockContent.setAttribute(DATA_ATTR.elementContent, '');
+    // No CSS margin — wide-mode scenario: max-width: none, marginLeft: 0px
+    blockContent.style.marginLeft = '0px';
+    blockHolder.appendChild(blockContent);
+    document.body.appendChild(blockHolder);
+
+    const block = {
+      id: 'block-1',
+      name: 'paragraph',
+      holder: blockHolder,
+      isEmpty: false,
+      setupDraggable: vi.fn(),
+      cleanupDraggable: vi.fn(),
+      getTunes: vi.fn().mockReturnValue({ toolTunes: [], commonTunes: [] }),
+    } as unknown as Block;
+
+    const { toolbar, content, wrapper } = createToolbar({
+      BlockManager: {
+        currentBlock: block,
+        currentBlockIndex: 0,
+        blocks: [block],
+      } as unknown as BlokModules['BlockManager'],
+    });
+
+    const priv = toolbar as unknown as Record<string, unknown>;
+
+    priv.toolboxInstance = {
+      opened: false,
+      close: vi.fn(),
+      open: vi.fn(),
+      updateLeftAlignElement: vi.fn(),
+    };
+
+    // The toolbar wrapper sits at viewport left = 0
+    vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue({
+      left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0,
+      x: 0, y: 0, toJSON: () => ({}),
+    } as DOMRect);
+
+    // The block content element is visually offset 200px from the left edge
+    // (e.g. in wide-mode the editor container has a left offset of 200px)
+    vi.spyOn(blockContent, 'getBoundingClientRect').mockReturnValue({
+      left: 200, top: 0, right: 0, bottom: 0, width: 1208, height: 0,
+      x: 200, y: 0, toJSON: () => ({}),
+    } as DOMRect);
+
+    // actionsWidth = 51px; Math.max(200, 51) = 200
+    const actions = toolbar.nodes.actions!;
+
+    vi.spyOn(actions, 'offsetWidth', 'get').mockReturnValue(51);
+
+    // Act
+    toolbar.moveAndOpen(block);
+
+    // Assert: toolbar content marginLeft should be 200px (the actual visual offset),
+    // NOT 51px (the actionsWidth-clamped value based on CSS marginLeft=0).
+    // Currently the code reads CSS marginLeft (0px) and clamps to actionsWidth (51px),
+    // so this assertion will FAIL, demonstrating the wide-mode misalignment bug.
+    expect(content.style.marginLeft).toBe('200px');
+
+    document.body.removeChild(blockHolder);
+  });
+
+  it('does not push buttons into nested block text when block holder is offset from viewport left (callout child scenario)', () => {
+    /**
+     * Reproduction of the "buttons overlap text" bug for callout non-first children:
+     *
+     * When a block is nested inside a callout, its holder sits ~264px from the
+     * viewport left (editor offset + callout padding + emoji + gap). The
+     * [data-blok-element-content] fills the holder width so visualOffset ≈ 0.
+     *
+     * The old code: content.marginLeft = Math.max(visualOffset=0, actionsWidth=51) = 51px.
+     * The actions (right:100% of content) extend from x=0 to x=51 inside the wrapper.
+     * The text also starts at x=0 → the buttons overlap the text.
+     *
+     * The fix: clamp marginLeft to at most max(0, actionsWidth - holderLeft),
+     * so when the holder is far enough from the viewport left, content.marginLeft = 0
+     * and actions extend outside the holder into the parent's padding area.
+     */
+    const blockHolder = document.createElement('div');
+    const blockContent = document.createElement('div');
+
+    blockContent.setAttribute(DATA_ATTR.elementContent, '');
+    blockHolder.appendChild(blockContent);
+    document.body.appendChild(blockHolder);
+
+    const block = {
+      id: 'block-callout-child',
+      name: 'paragraph',
+      holder: blockHolder,
+      isEmpty: false,
+      setupDraggable: vi.fn(),
+      cleanupDraggable: vi.fn(),
+      getTunes: vi.fn().mockReturnValue({ toolTunes: [], commonTunes: [] }),
+    } as unknown as Block;
+
+    const { toolbar, content, wrapper } = createToolbar({
+      BlockManager: {
+        currentBlock: block,
+        currentBlockIndex: 0,
+        blocks: [block],
+      } as unknown as BlokModules['BlockManager'],
+    });
+
+    const priv = toolbar as unknown as Record<string, unknown>;
+
+    priv.toolboxInstance = {
+      opened: false,
+      close: vi.fn(),
+      open: vi.fn(),
+      updateLeftAlignElement: vi.fn(),
+    };
+
+    const actions = toolbar.nodes.actions!;
+
+    vi.spyOn(actions, 'offsetWidth', 'get').mockReturnValue(51);
+
+    // Simulate the holder being at viewport left = 264px (editor at 200px + callout indent 64px).
+    // The toolbar wrapper is appended into the holder, so it shares the same left.
+    vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue({
+      left: 264, top: 100, right: 864, bottom: 124, width: 600, height: 24,
+      x: 264, y: 100, toJSON: () => ({}),
+    } as DOMRect);
+
+    // The block content fills the holder (no centering margin), same left edge.
+    vi.spyOn(blockContent, 'getBoundingClientRect').mockReturnValue({
+      left: 264, top: 100, right: 864, bottom: 124, width: 600, height: 24,
+      x: 264, y: 100, toJSON: () => ({}),
+    } as DOMRect);
+
+    // Act
+    toolbar.moveAndOpen(block);
+
+    // Assert: content.marginLeft should be 0px, NOT 51px.
+    // With marginLeft=0, actions (right:100% of content, width=51px) extend from
+    // viewport x=213 to x=264 — into the callout's padding area, NOT over the text.
+    // With the buggy marginLeft=51px, actions extend from x=264 to x=315 — on top of text.
+    expect(content.style.marginLeft).toBe('0px');
 
     document.body.removeChild(blockHolder);
   });

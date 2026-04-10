@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.4](https://github.com/JackUait/blok/compare/v0.10.3...v0.10.4) (2026-04-11)
+
+### Features
+
+- **Database** — Kanban board view with drag-and-drop cards and columns, card drawer with nested editor, inline title editing, list view with collapsible sections, multi-view tabs with drag reorder, property-based data model, column controls, backend sync, and read-only mode ([#60](https://github.com/JackUait/blok/pull/60))
+- **Copy block link** — `CopyLinkTune` block tune with Cmd+Ctrl+L shortcut and automatic scroll-to-block on URL hash load ([#64](https://github.com/JackUait/blok/pull/64))
+- **Block edit metadata** — Track `lastEditedAt`/`lastEditedBy` on every block mutation with Yjs sync, saved output inclusion, and block settings footer display; new `user` config option
+- **Popover** — Scroll haze indicators on popover lists
+- **Shortcut keys** — Render shortcut keys as SVG icons with readable tooltip on hover
+
+### Bug Fixes
+
+- **Inline tools** — Preserve trailing nbsp through format/unformat cycles; preserve trailing spaces when applying inline formatting; extend trailing-whitespace range detection; unwrap whitespace-only bold ancestors when un-bolding partial selection
+- **Block** — Default `lastEditedAt` to `Date.now()` so footer always shows; preserve user-provided block IDs and deduplicate on render; validate block ID format in constructor
+- **Paste** — Prevent new table block when pasting into table cell with lost focus; handle hsl/hsla color formats
+- **Scroll to block** — Guard `decodeURIComponent` against malformed URL hash; encode block ID in URL hash
+- **Theme** — Prevent nested editor from resetting parent theme
+
 ## [0.10.3](https://github.com/JackUait/blok/compare/v0.10.2...v0.10.3) (2026-04-09)
 
 ### Bug Fixes

@@ -41,10 +41,20 @@ export class TableCellsHandler extends BasePasteHandler implements PasteHandler 
       return false;
     }
 
-    // If cursor is inside a table cell, let the grid paste listener handle it
+    // If cursor is inside a table cell, let the grid paste listener handle it.
+    // Also bail when focus was lost (e.g. due to a React re-render) but the
+    // current block's holder is still inside a table-cell-blocks container —
+    // the paste was intended for the table, not for creating a new one.
+    // Additionally, bail when the paste event's original target was inside a
+    // table cell, even if document.activeElement is now body (covers the case
+    // where the event fired on the cell-blocks container itself).
     const activeElement = document.activeElement as HTMLElement | null;
 
-    if (activeElement?.closest('[data-blok-table-cell]')) {
+    if (
+      activeElement?.closest('[data-blok-table-cell]') ||
+      context.currentBlock?.holder?.closest('[data-blok-table-cell-blocks]') ||
+      context.pasteTarget?.closest('[data-blok-table-cell]')
+    ) {
       return false;
     }
 

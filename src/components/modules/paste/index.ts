@@ -103,13 +103,13 @@ export class Paste extends Module {
   /**
    * Handle pasted data transfer object.
    */
-  public async processDataTransfer(dataTransfer: DataTransfer): Promise<void> {
+  public async processDataTransfer(dataTransfer: DataTransfer, pasteTarget?: Element): Promise<void> {
     const blokData = dataTransfer.getData(this.MIME_TYPE);
     const plainData = dataTransfer.getData('text/plain');
     const rawHtmlData = dataTransfer.getData('text/html');
 
     // Route to handlers based on data type
-    const handled = await this.routeToHandlers(dataTransfer, plainData, rawHtmlData, blokData);
+    const handled = await this.routeToHandlers(dataTransfer, plainData, rawHtmlData, blokData, pasteTarget);
 
     if (handled) {
       return;
@@ -126,7 +126,8 @@ export class Paste extends Module {
     dataTransfer: DataTransfer,
     plainData: string,
     rawHtmlData: string,
-    blokData: string
+    blokData: string,
+    pasteTarget?: Element
   ): Promise<boolean> {
     const { BlockManager } = this.Blok;
     const currentBlock = BlockManager.currentBlock;
@@ -142,6 +143,7 @@ export class Paste extends Module {
       canReplaceCurrentBlock,
       currentBlock: currentBlock ?? undefined,
       plainData,
+      pasteTarget,
     };
 
     // Try handlers in priority order
@@ -313,7 +315,9 @@ export class Paste extends Module {
     event.preventDefault();
 
     if (event.clipboardData) {
-      await this.processDataTransfer(event.clipboardData);
+      const pasteTarget = event.target instanceof Element ? event.target : undefined;
+
+      await this.processDataTransfer(event.clipboardData, pasteTarget);
     }
 
     Toolbar.moveAndOpen();

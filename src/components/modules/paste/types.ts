@@ -50,6 +50,8 @@ export interface HandlerContext {
   canReplaceCurrentBlock: boolean;
   currentBlock?: Block;
   plainData?: string;
+  /** The DOM element that was the target of the paste event. */
+  pasteTarget?: Element;
 }
 
 /**

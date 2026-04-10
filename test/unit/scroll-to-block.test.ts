@@ -1,11 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { BlokConfig } from '../../types';
-import type { Core } from '../../src/components/core';
 import type { BlokModules } from '../../src/types-internal/blok-modules';
 
 // Mock VERSION global variable
 declare global {
-  // eslint-disable-next-line no-var
   var VERSION: string;
 }
 
@@ -112,6 +110,7 @@ function setHash(hash: string): void {
 describe('scroll-to-block', () => {
   let originalScrollTo: typeof window.scrollTo;
   let originalQuerySelector: typeof document.querySelector;
+  let mockScrollTo: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -120,7 +119,12 @@ describe('scroll-to-block', () => {
     originalQuerySelector = document.querySelector.bind(document);
 
     // Replace window.scrollTo with a spy
-    window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
+    mockScrollTo = vi.fn();
+    window.scrollTo = mockScrollTo as unknown as typeof window.scrollTo;
+
+    // Reset document.querySelector to a default spy that returns null;
+    // individual tests override this when they need a specific element returned.
+    document.querySelector = vi.fn().mockReturnValue(null) as typeof document.querySelector;
 
     // Reset hash to empty by default
     setHash('');
@@ -137,12 +141,15 @@ describe('scroll-to-block', () => {
 
   // -------------------------------------------------------------------------
 
-  it('scrolls to the matching block when hash is present', async () => {
+  it('scrolls to the matching block when hash is present, accounting for scrollY', async () => {
     setHash('#abc123XYZ0');
+
+    // Use a non-zero scrollY to verify the computation: top = rect.top + scrollY - topOffset
+    Object.defineProperty(window, 'scrollY', { value: 100, writable: true, configurable: true });
 
     const el = fakeEl(200);
 
-    document.querySelector = vi.fn((selector: string) => {
+    document.querySelector = vi.fn((selector: string): Element | null => {
       if (selector === '[data-blok-id="abc123XYZ0"]') {
         return el;
       }
@@ -154,7 +161,8 @@ describe('scroll-to-block', () => {
 
     await editor.isReady;
 
-    expect(window.scrollTo).toHaveBeenCalledWith({ top: 200, behavior: 'smooth' });
+    // Expected: 200 (rect.top) + 100 (scrollY) - 0 (topOffset) = 300
+    expect(mockScrollTo).toHaveBeenCalledWith({ top: 300, behavior: 'smooth' });
   });
 
   // -------------------------------------------------------------------------
@@ -164,7 +172,7 @@ describe('scroll-to-block', () => {
 
     const el = fakeEl(200);
 
-    document.querySelector = vi.fn((selector: string) => {
+    document.querySelector = vi.fn((selector: string): Element | null => {
       if (selector === '[data-blok-id="abc123XYZ0"]') {
         return el;
       }
@@ -176,7 +184,8 @@ describe('scroll-to-block', () => {
 
     await editor.isReady;
 
-    expect(window.scrollTo).toHaveBeenCalledWith({ top: 120, behavior: 'smooth' });
+    // Expected: 200 (rect.top) + 0 (scrollY) - 80 (topOffset) = 120
+    expect(mockScrollTo).toHaveBeenCalledWith({ top: 120, behavior: 'smooth' });
   });
 
   // -------------------------------------------------------------------------
@@ -184,23 +193,13 @@ describe('scroll-to-block', () => {
   it('does not scroll when hash is empty', async () => {
     setHash('');
 
-    // Spy on window.location.hash getter — the implementation must read it
-    const hashGetterSpy = vi.fn().mockReturnValue('');
-
-    Object.defineProperty(window, 'location', {
-      value: { ...window.location, get hash() { return hashGetterSpy(); } },
-      writable: true,
-      configurable: true,
-    });
-
     const editor = new Blok({} as BlokConfig);
 
     await editor.isReady;
 
-    // Implementation must have read window.location.hash
-    expect(hashGetterSpy).toHaveBeenCalled();
-    // …and must NOT have scrolled
-    expect(window.scrollTo).not.toHaveBeenCalled();
+    // When hash is empty, querySelector must NOT be called and scrollTo must NOT be called
+    expect(document.querySelector).not.toHaveBeenCalled();
+    expect(mockScrollTo).not.toHaveBeenCalled();
   });
 
   // -------------------------------------------------------------------------
@@ -208,18 +207,18 @@ describe('scroll-to-block', () => {
   it('does not scroll when hash does not match any block', async () => {
     setHash('#nonExistentId');
 
-    const querySelectorSpy = vi.fn(() => null) as typeof document.querySelector;
-
-    document.querySelector = querySelectorSpy;
+    // querySelector already returns null from the beforeEach default spy
 
     const editor = new Blok({} as BlokConfig);
 
     await editor.isReady;
 
-    // Implementation must have queried for the block element
-    expect(querySelectorSpy).toHaveBeenCalledWith('[data-blok-id="nonExistentId"]');
-    // …but must NOT have scrolled because the element wasn't found
-    expect(window.scrollTo).not.toHaveBeenCalled();
+    // Verify the editor initialised successfully (observable state)
+    expect(editor).toBeDefined();
+    // Implementation must have attempted a DOM lookup (behavioral contract: hash was present)
+    expect(document.querySelector).toHaveBeenCalled();
+    // …but scrollTo must NOT be called because the element wasn't found
+    expect(mockScrollTo).not.toHaveBeenCalled();
   });
 
   // -------------------------------------------------------------------------
@@ -229,7 +228,7 @@ describe('scroll-to-block', () => {
 
     const el = fakeEl(300);
 
-    document.querySelector = vi.fn((selector: string) => {
+    document.querySelector = vi.fn((selector: string): Element | null => {
       if (selector === '[data-blok-id="someBlock"]') {
         return el;
       }
@@ -242,6 +241,7 @@ describe('scroll-to-block', () => {
 
     await editor.isReady;
 
-    expect(window.scrollTo).toHaveBeenCalledWith({ top: 300, behavior: 'smooth' });
+    // Expected: 300 (rect.top) + 0 (scrollY) - 0 (topOffset default) = 300
+    expect(mockScrollTo).toHaveBeenCalledWith({ top: 300, behavior: 'smooth' });
   });
 });

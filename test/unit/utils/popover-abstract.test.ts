@@ -557,6 +557,134 @@ describe('PopoverAbstract', () => {
     });
   });
 
+  describe('scroll hazes', () => {
+    it('creates scroll haze elements inside popoverContainer', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+
+      expect(nodes.scrollHazeTop).toBeInstanceOf(HTMLElement);
+      expect(nodes.scrollHazeBottom).toBeInstanceOf(HTMLElement);
+      expect(nodes.popoverContainer.contains(nodes.scrollHazeTop)).toBe(true);
+      expect(nodes.popoverContainer.contains(nodes.scrollHazeBottom)).toBe(true);
+    });
+
+    it('hazes have pointer-events: none so they do not intercept clicks', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+
+      expect(nodes.scrollHazeTop.classList.contains('pointer-events-none')).toBe(true);
+      expect(nodes.scrollHazeBottom.classList.contains('pointer-events-none')).toBe(true);
+    });
+
+    it('both hazes are hidden when items do not overflow', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+
+      popover.show();
+
+      expect(nodes.scrollHazeTop.style.opacity).toBe('0');
+      expect(nodes.scrollHazeBottom.style.opacity).toBe('0');
+    });
+
+    it('shows bottom haze when items overflow and scroll is at top', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+
+      Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
+      Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
+      Object.defineProperty(nodes.items, 'scrollTop', { value: 0, configurable: true, writable: true });
+
+      popover.show();
+
+      expect(nodes.scrollHazeTop.style.opacity).toBe('0');
+      expect(nodes.scrollHazeBottom.style.opacity).toBe('1');
+    });
+
+    it('shows top haze when scrolled to bottom', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+
+      Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
+      Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
+      Object.defineProperty(nodes.items, 'scrollTop', { value: 300, configurable: true, writable: true });
+
+      popover.show();
+
+      expect(nodes.scrollHazeTop.style.opacity).toBe('1');
+      expect(nodes.scrollHazeBottom.style.opacity).toBe('0');
+    });
+
+    it('shows both hazes when scrolled to middle', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+
+      Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
+      Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
+      Object.defineProperty(nodes.items, 'scrollTop', { value: 100, configurable: true, writable: true });
+
+      popover.show();
+
+      expect(nodes.scrollHazeTop.style.opacity).toBe('1');
+      expect(nodes.scrollHazeBottom.style.opacity).toBe('1');
+    });
+
+    it('updates hazes on scroll event', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+
+      Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
+      Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
+
+      let scrollTopValue = 0;
+
+      Object.defineProperty(nodes.items, 'scrollTop', {
+        get: () => scrollTopValue,
+        configurable: true,
+      });
+
+      popover.show();
+
+      // Initially at top — only bottom haze visible
+      expect(nodes.scrollHazeTop.style.opacity).toBe('0');
+      expect(nodes.scrollHazeBottom.style.opacity).toBe('1');
+
+      // Scroll to middle — both hazes visible
+      scrollTopValue = 100;
+      nodes.items.dispatchEvent(new Event('scroll'));
+
+      expect(nodes.scrollHazeTop.style.opacity).toBe('1');
+      expect(nodes.scrollHazeBottom.style.opacity).toBe('1');
+
+      // Scroll to bottom — only top haze visible
+      scrollTopValue = 300;
+      nodes.items.dispatchEvent(new Event('scroll'));
+
+      expect(nodes.scrollHazeTop.style.opacity).toBe('1');
+      expect(nodes.scrollHazeBottom.style.opacity).toBe('0');
+    });
+
+    it('resets hazes on hide', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+
+      Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
+      Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
+      Object.defineProperty(nodes.items, 'scrollTop', { value: 100, configurable: true, writable: true });
+
+      popover.show();
+
+      // Both hazes visible in middle scroll position
+      expect(nodes.scrollHazeTop.style.opacity).toBe('1');
+      expect(nodes.scrollHazeBottom.style.opacity).toBe('1');
+
+      popover.hide();
+
+      // Hazes reset after hide
+      expect(nodes.scrollHazeTop.style.opacity).toBe('0');
+      expect(nodes.scrollHazeBottom.style.opacity).toBe('0');
+    });
+  });
+
   describe('registry integration', () => {
     it('show() registers with registry when root popover with trigger', () => {
       const triggerElement = document.createElement('button');

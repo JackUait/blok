@@ -18,6 +18,8 @@ export const css = {
   popoverOverlay: 'hidden bg-dark',
 
   items: 'overflow-y-auto overscroll-contain',
+
+  scrollHaze: 'absolute inset-x-0 h-6 pointer-events-none z-1 transition-opacity duration-300 ease-in-out',
 };
 
 /**

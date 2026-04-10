@@ -86,6 +86,11 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     if (this.nodes.popoverContainer) {
       this.listeners.on(this.nodes.popoverContainer, 'click', (event: Event) => this.handleClick(event));
     }
+
+    // Set up scroll listener on items container for scroll hazes
+    if (this.nodes.items) {
+      this.listeners.on(this.nodes.items, 'scroll', () => this.updateScrollHazes());
+    }
   }
 
   /**
@@ -136,6 +141,8 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       this.search.focus();
     }
 
+    this.updateScrollHazes();
+
     const { trigger } = this.params;
     const isRootWithTrigger = (this.params.nestingLevel ?? 0) === 0 && trigger !== undefined;
 
@@ -155,6 +162,9 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     this.nodes.popoverContainer.className = css.popoverContainer;
 
     this.itemsDefault.forEach(item => item.reset());
+
+    this.nodes.scrollHazeTop.style.opacity = '0';
+    this.nodes.scrollHazeBottom.style.opacity = '0';
 
     if (this.search !== undefined) {
       this.search.clear();
@@ -430,6 +440,24 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   }
 
   /**
+   * Updates scroll haze visibility based on the items container scroll state.
+   * Shows top haze when scrolled down, bottom haze when more content below.
+   */
+  protected updateScrollHazes(): void {
+    const { items, scrollHazeTop, scrollHazeBottom } = this.nodes;
+
+    const hasOverflow = items.scrollHeight > items.clientHeight;
+    const isAtTop = items.scrollTop <= 0;
+    const isAtBottom = items.scrollTop + items.clientHeight >= items.scrollHeight - 1;
+
+    scrollHazeTop.style.opacity = hasOverflow && !isAtTop ? '1' : '0';
+    scrollHazeBottom.style.opacity = hasOverflow && !isAtBottom ? '1' : '0';
+
+    scrollHazeTop.style.top = `${items.offsetTop}px`;
+    scrollHazeBottom.style.top = `${items.offsetTop + items.clientHeight - scrollHazeBottom.offsetHeight}px`;
+  }
+
+  /**
    * Checks if popover contains the node
    * @param node - node to check
    */
@@ -485,9 +513,24 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     items.setAttribute(DATA_ATTR.popoverItems, '');
     items.setAttribute('data-blok-testid', 'popover-items');
 
+    // Create scroll haze overlays
+    const scrollHazeTop = document.createElement('div');
+
+    scrollHazeTop.className = css.scrollHaze;
+    scrollHazeTop.style.background = 'linear-gradient(to bottom, var(--blok-popover-bg), transparent)';
+    scrollHazeTop.style.opacity = '0';
+
+    const scrollHazeBottom = document.createElement('div');
+
+    scrollHazeBottom.className = css.scrollHaze;
+    scrollHazeBottom.style.background = 'linear-gradient(to top, var(--blok-popover-bg), transparent)';
+    scrollHazeBottom.style.opacity = '0';
+
     // Assemble DOM structure
     popoverContainer.appendChild(nothingFoundMessage);
     popoverContainer.appendChild(items);
+    popoverContainer.appendChild(scrollHazeTop);
+    popoverContainer.appendChild(scrollHazeBottom);
     popover.appendChild(popoverContainer);
 
     return {
@@ -495,6 +538,8 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       popoverContainer,
       nothingFoundMessage,
       items,
+      scrollHazeTop,
+      scrollHazeBottom,
     };
   }
 

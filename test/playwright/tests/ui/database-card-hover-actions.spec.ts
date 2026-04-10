@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
+import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 
 declare global {
@@ -89,23 +90,16 @@ test.describe('Database board — card hover actions', () => {
   });
 
   test('action group becomes visible on card hover', async ({ page }) => {
-    const card = page.locator('[data-blok-database-card]').first();
+    const card = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-card]`).first();
     const actions = card.locator('[data-blok-database-card-actions]');
 
-    // Actions use CSS opacity: 0 (not display:none), so we check computed style
-    const opacityBefore = await actions.evaluate((el) => getComputedStyle(el).opacity);
-    expect(opacityBefore).toBe('0');
-
+    await expect(actions).toHaveCSS('opacity', '0');
     await card.hover();
-    // Wait for CSS transition (120ms ease)
-    await page.waitForTimeout(200);
-
-    const opacityAfter = await actions.evaluate((el) => getComputedStyle(el).opacity);
-    expect(opacityAfter).toBe('1');
+    await expect(actions).toHaveCSS('opacity', '1');
   });
 
   test('pencil click replaces title with input pre-filled with current title', async ({ page }) => {
-    const card = page.locator('[data-blok-database-card]').first();
+    const card = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-card]`).first();
 
     await card.hover();
     await card.locator('[data-blok-database-edit-card]').click();
@@ -113,10 +107,11 @@ test.describe('Database board — card hover actions', () => {
     const input = card.locator('[data-blok-database-card-title-input]');
     await expect(input).toBeVisible();
     await expect(input).toHaveValue('My Card');
+    await expect(input).toBeFocused();
   });
 
   test('Enter saves new title to the card', async ({ page }) => {
-    const card = page.locator('[data-blok-database-card]').first();
+    const card = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-card]`).first();
 
     await card.hover();
     await card.locator('[data-blok-database-edit-card]').click();
@@ -130,7 +125,7 @@ test.describe('Database board — card hover actions', () => {
   });
 
   test('Escape restores original title without saving', async ({ page }) => {
-    const card = page.locator('[data-blok-database-card]').first();
+    const card = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-card]`).first();
 
     await card.hover();
     await card.locator('[data-blok-database-edit-card]').click();
@@ -143,7 +138,7 @@ test.describe('Database board — card hover actions', () => {
   });
 
   test('dots button opens a menu with Delete card option', async ({ page }) => {
-    const card = page.locator('[data-blok-database-card]').first();
+    const card = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-card]`).first();
 
     await card.hover();
     await card.locator('[data-blok-database-card-menu]').click();
@@ -153,13 +148,13 @@ test.describe('Database board — card hover actions', () => {
   });
 
   test('clicking Delete in the menu removes the card', async ({ page }) => {
-    const card = page.locator('[data-blok-database-card]').first();
+    const card = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-card]`).first();
 
     await card.hover();
     await card.locator('[data-blok-database-card-menu]').click();
 
     await page.getByText('Delete card').click();
 
-    await expect(page.locator('[data-blok-database-card]')).toHaveCount(0);
+    await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-card]`)).toHaveCount(0);
   });
 });

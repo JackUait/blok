@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.6](https://github.com/JackUait/blok/compare/v0.10.5...v0.10.6) (2026-04-12)
+
+### Features
+
+- **Config** — Replace `user.name` with `user.id` + `resolveUser` callback for multi-editor identity tracking
+- **Keyboard** — Del shortcut for block delete; markdown shortcuts for quote (`"` + space) and code (`` ``` `` + space) blocks
+
+### Bug Fixes
+
+- **i18n** — Use Blok locale for date formatting with full month names; strip trailing abbreviation suffixes for ru/uk locales
+- **Popover** — Display scroll haze instantly on open instead of fading in
+
+### Maintenance
+
+- **Deps** — Add lodash-es resolution to pin ^4.18.0
+
 ## [0.10.5](https://github.com/JackUait/blok/compare/v0.10.4...v0.10.5) (2026-04-11)
 
 ### Features

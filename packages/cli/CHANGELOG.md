@@ -2,6 +2,10 @@
 
 All notable changes to `@jackuait/blok-cli` are documented here.
 
+## [0.10.6](https://github.com/JackUait/blok/compare/v0.10.5...v0.10.6) (2026-04-12)
+
+_No CLI-specific changes in this release._
+
 ## [0.10.5](https://github.com/JackUait/blok/compare/v0.10.4...v0.10.5) (2026-04-11)
 
 _No CLI-specific changes in this release._

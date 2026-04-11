@@ -472,12 +472,32 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
     if (block.lastEditedAt !== undefined) {
       const dateEl = document.createElement('div');
-      const formatted = new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      }).format(new Date(block.lastEditedAt));
 
-      dateEl.textContent = formatted;
+      dateEl.classList.add('mt-1');
+      const locale = this.Blok.I18n.getLocale();
+      const date = new Date(block.lastEditedAt);
+
+      const dateParts = new Intl.DateTimeFormat(locale, {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }).formatToParts(date);
+
+      /**
+       * Strip trailing literal parts that are abbreviations (contain a period),
+       * e.g. " г." in Russian or " р." in Ukrainian, while preserving essential
+       * trailing literals like "日" in Japanese/Chinese.
+       */
+      while (dateParts.length > 0
+        && dateParts[dateParts.length - 1].type === 'literal'
+        && dateParts[dateParts.length - 1].value.includes('.')) {
+        dateParts.pop();
+      }
+
+      const dateStr = dateParts.map(p => p.value).join('');
+      const timeStr = new Intl.DateTimeFormat(locale, { timeStyle: 'short' }).format(date);
+
+      dateEl.textContent = `${dateStr}, ${timeStr}`;
       container.appendChild(dateEl);
     }
 

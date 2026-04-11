@@ -207,6 +207,7 @@ type BlokMock = {
   I18n: {
     t: Mock<(key: string) => string>;
     has: Mock<(key: string) => boolean>;
+    getLocale: Mock<() => string>;
   };
 };
 
@@ -248,6 +249,7 @@ const createBlokMock = (): BlokMock => {
   const i18n = {
     t: vi.fn((key: string) => key),
     has: vi.fn(() => false),
+    getLocale: vi.fn(() => 'en'),
     getEnglishTranslation: vi.fn((key: string) => {
       const translations: Record<string, string> = {
         'tools.header.heading1': 'Heading 1',
@@ -908,6 +910,33 @@ describe('BlockSettings', () => {
 
       expect(blokMock.I18n.t).toHaveBeenCalledWith('blockSettings.lastEdited');
       expect(firstLine?.textContent).toBe('blockSettings.lastEdited');
+    });
+
+    it('should format the date using the Blok locale, not the browser default', async () => {
+      const block = createBlock();
+
+      block.lastEditedAt = 1712700720000;
+      block.lastEditedBy = null;
+
+      blokMock.I18n.getLocale.mockReturnValue('ru');
+
+      getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
+
+      const items = await (blockSettings as unknown as {
+        getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+      }).getTunesItems(block, []);
+
+      const lastItem = items[items.length - 1];
+      const element = (lastItem as { element: HTMLElement }).element;
+      const dateText = element.querySelector('div:last-child')?.textContent ?? '';
+
+      /**
+       * When the Blok locale is 'ru', the date must be formatted in Russian
+       * with the full month name and no trailing abbreviation suffix on the year.
+       * Expected: "10 апреля 2024, 01:12" (no "г." after the year).
+       */
+      expect(dateText).toContain('апреля');
+      expect(dateText).not.toMatch(/г\./);
     });
 
     it('should not show footer when lastEditedAt is undefined', async () => {

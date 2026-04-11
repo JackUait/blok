@@ -25,8 +25,8 @@
   "tools.marker.textColor": "Tekstas",
   "tools.marker.background": "Fonas",
   "tools.marker.default": "Numatytoji",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "Pilka",
   "tools.colorPicker.color.brown": "Ruda",
   "tools.colorPicker.color.orange": "Oranžinė",
@@ -50,6 +50,7 @@
   "tools.header.toggleHeading3": "Sutraukiama antraštė 3",
   "tools.list.placeholder": "Sąrašas",
   "blockSettings.delete": "Ištrinti",
+  "blockSettings.copyLink": "Kopijuoti nuorodą į bloką",
   "a11y.dragHandle": "Vilkite norėdami perkelti bloką arba spustelėkite meniu",
   "a11y.dragHandleRole": "vilkimo rankena",
   "a11y.dragStarted": "Velkamas blokas",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "Tuščias puslapis",
   "tools.database.columnTitlePlaceholder": "Stulpelis",
   "tools.database.deleteCard": "Ištrinti kortelę",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "Redaguoti pavadinimą",
+  "tools.database.cardMenuLabel": "Kortelės parinktys",
   "tools.database.deleteColumn": "Ištrinti stulpelį",
   "tools.database.renameColumn": "Pervadinti stulpelį",
   "tools.database.emptyColumn": "Nėra kortelių",
@@ -202,5 +203,5 @@
   "searchTerms.code": "kodas",
   "searchTerms.snippet": "fragmentas",
   "searchTerms.program": "programa",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "formatuotas"
 }

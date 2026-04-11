@@ -25,8 +25,8 @@
   "tools.marker.textColor": "Metin",
   "tools.marker.background": "Arka plan",
   "tools.marker.default": "Varsayılan",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "Gri",
   "tools.colorPicker.color.brown": "Kahverengi",
   "tools.colorPicker.color.orange": "Turuncu",
@@ -50,6 +50,7 @@
   "tools.header.toggleHeading3": "Açılır başlık 3",
   "tools.list.placeholder": "Liste",
   "blockSettings.delete": "Sil",
+  "blockSettings.copyLink": "Bloğa bağlantı kopyala",
   "a11y.dragHandle": "Taşımak için sürükle veya menü için tıkla",
   "a11y.dragHandleRole": "sürükleme tutamacı",
   "a11y.dragStarted": "Blok sürükleniyor",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "Boş sayfa",
   "tools.database.columnTitlePlaceholder": "Sütun",
   "tools.database.deleteCard": "Kartı sil",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "Başlığı düzenle",
+  "tools.database.cardMenuLabel": "Kart seçenekleri",
   "tools.database.deleteColumn": "Sütunu sil",
   "tools.database.emptyColumn": "Kart yok",
   "tools.database.rowTitlePlaceholder": "Boş sayfa",
@@ -202,5 +203,5 @@
   "searchTerms.code": "kod",
   "searchTerms.snippet": "parça",
   "searchTerms.program": "program",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "ön biçimli"
 }

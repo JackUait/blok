@@ -25,8 +25,8 @@
   "tools.marker.textColor": "Tekst",
   "tools.marker.background": "Tło",
   "tools.marker.default": "Domyślny",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "Szary",
   "tools.colorPicker.color.brown": "Brązowy",
   "tools.colorPicker.color.orange": "Pomarańczowy",
@@ -73,6 +73,7 @@
   "tools.table.clickToAddColumn": "Kliknij, aby dodać nową kolumnę",
   "tools.table.dragToAddRemoveColumns": "Przeciągnij, aby dodać lub usunąć kolumny",
   "blockSettings.delete": "Usuń",
+  "blockSettings.copyLink": "Kopiuj link do bloku",
   "a11y.dragHandle": "Przeciągnij, aby przenieść lub kliknij, aby otworzyć menu",
   "a11y.dragHandleRole": "uchwyt przeciągania",
   "a11y.dragStarted": "Przeciąganie bloku",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "Pusta strona",
   "tools.database.columnTitlePlaceholder": "Kolumna",
   "tools.database.deleteCard": "Usuń kartę",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "Edytuj tytuł",
+  "tools.database.cardMenuLabel": "Opcje karty",
   "tools.database.deleteColumn": "Usuń kolumnę",
   "tools.database.emptyColumn": "Brak kart",
   "tools.database.rowTitlePlaceholder": "Pusta strona",
@@ -201,6 +202,6 @@
   "tools.code.lineNumbers": "Numery wierszy",
   "searchTerms.code": "kod",
   "searchTerms.snippet": "fragment",
-  "searchTerms.program": "program",
-  "searchTerms.pre": "pre"
+  "searchTerms.program": "programowanie",
+  "searchTerms.pre": "preformatowany"
 }

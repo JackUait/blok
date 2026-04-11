@@ -25,8 +25,8 @@
   "tools.marker.textColor": "Tekst",
   "tools.marker.background": "Bakgrunn",
   "tools.marker.default": "Standard",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "Grå",
   "tools.colorPicker.color.brown": "Brun",
   "tools.colorPicker.color.orange": "Oransje",
@@ -73,6 +73,7 @@
   "tools.table.clickToAddColumn": "Klikk for å legge til en ny kolonne",
   "tools.table.dragToAddRemoveColumns": "Dra for å legge til eller fjerne kolonner",
   "blockSettings.delete": "Slett",
+  "blockSettings.copyLink": "Kopier lenke til blokk",
   "a11y.dragHandle": "Dra for å flytte blokk eller klikk for meny",
   "a11y.dragHandleRole": "drahåndtak",
   "a11y.dragStarted": "Drar blokk",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "Tom side",
   "tools.database.columnTitlePlaceholder": "Kolonne",
   "tools.database.deleteCard": "Slett kort",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "Rediger tittel",
+  "tools.database.cardMenuLabel": "Kortalternativer",
   "tools.database.deleteColumn": "Slett kolonne",
   "tools.database.emptyColumn": "Ingen kort",
   "tools.database.rowTitlePlaceholder": "Tom side",
@@ -201,6 +202,6 @@
   "tools.code.lineNumbers": "Linjenumre",
   "searchTerms.code": "kode",
   "searchTerms.snippet": "kodesnutt",
-  "searchTerms.program": "program",
-  "searchTerms.pre": "pre"
+  "searchTerms.program": "programmering",
+  "searchTerms.pre": "forhåndsformatert"
 }

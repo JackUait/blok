@@ -25,8 +25,8 @@
   "tools.marker.textColor": "Tekst",
   "tools.marker.background": "Achtergrond",
   "tools.marker.default": "Standaard",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "Grijs",
   "tools.colorPicker.color.brown": "Bruin",
   "tools.colorPicker.color.orange": "Oranje",
@@ -55,6 +55,7 @@
   "tools.toggle.ariaLabelCollapse": "Inklappen",
   "tools.toggle.ariaLabelExpand": "Uitklappen",
   "blockSettings.delete": "Verwijderen",
+  "blockSettings.copyLink": "Link naar blok kopiëren",
   "a11y.dragHandle": "Sleep om te verplaatsen of klik voor menu",
   "a11y.dragHandleRole": "sleepgreep",
   "a11y.dragStarted": "Blok wordt versleept",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "Lege pagina",
   "tools.database.columnTitlePlaceholder": "Kolom",
   "tools.database.deleteCard": "Kaart verwijderen",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "Titel bewerken",
+  "tools.database.cardMenuLabel": "Kaartopties",
   "tools.database.deleteColumn": "Kolom verwijderen",
   "tools.database.emptyColumn": "Geen kaarten",
   "tools.database.rowTitlePlaceholder": "Lege pagina",
@@ -202,5 +203,5 @@
   "searchTerms.code": "code",
   "searchTerms.snippet": "fragment",
   "searchTerms.program": "programma",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "voorgeformatteerd"
 }

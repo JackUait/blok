@@ -50,6 +50,7 @@
   "tools.header.toggleHeading3": "หัวข้อพับได้ 3",
   "tools.list.placeholder": "รายการ",
   "blockSettings.delete": "ลบ",
+  "blockSettings.copyLink": "คัดลอกลิงก์ไปยังบล็อก",
   "a11y.dragHandle": "ลากเพื่อย้ายบล็อก หรือคลิกเพื่อเปิดเมนู",
   "a11y.dragHandleRole": "ที่จับสำหรับลาก",
   "a11y.dragStarted": "กำลังลากบล็อก",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "หน้าเปล่า",
   "tools.database.columnTitlePlaceholder": "คอลัมน์",
   "tools.database.deleteCard": "ลบการ์ด",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "แก้ไขชื่อ",
+  "tools.database.cardMenuLabel": "ตัวเลือกการ์ด",
   "tools.database.deleteColumn": "ลบคอลัมน์",
   "tools.database.emptyColumn": "ไม่มีการ์ด",
   "tools.database.rowTitlePlaceholder": "หน้าเปล่า",
@@ -202,5 +203,5 @@
   "searchTerms.code": "โค้ด",
   "searchTerms.snippet": "ส่วนของโค้ด",
   "searchTerms.program": "โปรแกรม",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "จัดรูปแบบ"
 }

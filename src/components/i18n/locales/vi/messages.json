@@ -73,6 +73,7 @@
   "tools.table.clickToAddColumn": "Nhấp để thêm cột mới",
   "tools.table.dragToAddRemoveColumns": "Kéo để thêm hoặc xóa cột",
   "blockSettings.delete": "Xóa",
+  "blockSettings.copyLink": "Sao chép liên kết đến khối",
   "a11y.dragHandle": "Kéo để di chuyển khối hoặc nhấp để mở menu",
   "a11y.dragHandleRole": "tay nắm kéo",
   "a11y.dragStarted": "Đang kéo khối",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "Trang trống",
   "tools.database.columnTitlePlaceholder": "Cột",
   "tools.database.deleteCard": "Xóa thẻ",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "Chỉnh sửa tiêu đề",
+  "tools.database.cardMenuLabel": "Tùy chọn thẻ",
   "tools.database.deleteColumn": "Xóa cột",
   "tools.database.emptyColumn": "Không có thẻ",
   "tools.database.rowTitlePlaceholder": "Trang trống",
@@ -202,5 +203,5 @@
   "searchTerms.code": "mã",
   "searchTerms.snippet": "đoạn mã",
   "searchTerms.program": "chương trình",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "định dạng"
 }

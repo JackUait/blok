@@ -25,8 +25,8 @@
   "tools.marker.textColor": "Текст",
   "tools.marker.background": "Дэвсгэр",
   "tools.marker.default": "Өгөгдмөл",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "Саарал",
   "tools.colorPicker.color.brown": "Хүрэн",
   "tools.colorPicker.color.orange": "Улбар шар",
@@ -73,6 +73,7 @@
   "tools.table.clickToAddColumn": "Шинэ багана нэмэхийн тулд дарна уу",
   "tools.table.dragToAddRemoveColumns": "Багана нэмэх эсвэл хасахын тулд чирнэ үү",
   "blockSettings.delete": "Устгах",
+  "blockSettings.copyLink": "Блокийн холбоосыг хуулах",
   "a11y.dragHandle": "Блок зөөхийн тулд чирнэ үү эсвэл цэсийг нээхийн тулд дарна уу",
   "a11y.dragHandleRole": "чирэх бариул",
   "a11y.dragStarted": "Блок чирж байна",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "Хоосон хуудас",
   "tools.database.columnTitlePlaceholder": "Багана",
   "tools.database.deleteCard": "Карт устгах",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "Гарчиг засах",
+  "tools.database.cardMenuLabel": "Картын сонголтууд",
   "tools.database.deleteColumn": "Багана устгах",
   "tools.database.emptyColumn": "Карт байхгүй",
   "tools.database.rowTitlePlaceholder": "Хоосон хуудас",
@@ -202,5 +203,5 @@
   "searchTerms.code": "код",
   "searchTerms.snippet": "хэсэг код",
   "searchTerms.program": "програм",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "код блок"
 }

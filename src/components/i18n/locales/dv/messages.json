@@ -25,8 +25,8 @@
   "tools.marker.textColor": "ލިޔުން",
   "tools.marker.background": "ބެކްގްރައުންޑް",
   "tools.marker.default": "ޑީފޯލްޓް",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "އަޅިކުލަ",
   "tools.colorPicker.color.brown": "މިށިކުލަ",
   "tools.colorPicker.color.orange": "ނިޔަންދުރު",
@@ -55,6 +55,7 @@
   "tools.toggle.ariaLabelCollapse": "ތިރިކުރޭ",
   "tools.toggle.ariaLabelExpand": "ފުޅާ ކުރޭ",
   "blockSettings.delete": "ފޮހެލާ",
+  "blockSettings.copyLink": "ބްލޮކަށް ލިންކް ކޮޕީކުރޭ",
   "a11y.dragHandle": "ބްލޮކް ބަދަލުކުރަން ދަމާލާ ނުވަތަ މެނޫއަށް ކްލިކް ކުރޭ",
   "a11y.dragHandleRole": "ދެމުމުގެ ހެންޑަލް",
   "a11y.dragStarted": "ބްލޮކް ދަމަނީ",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "ހުސް ޞަފްޙާ",
   "tools.database.columnTitlePlaceholder": "ކޮލަމު",
   "tools.database.deleteCard": "ކާޑު ފޮހެލާ",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "ނަން ބަދަލުކުރޭ",
+  "tools.database.cardMenuLabel": "ކާޑުގެ އިޚްތިޔާރުތައް",
   "tools.database.deleteColumn": "ކޮލަމު ފޮހެލާ",
   "tools.database.renameColumn": "ކޮލަމުގެ ނަން ބަދަލުކުރޭ",
   "tools.database.emptyColumn": "ކާޑެއް ނެތް",
@@ -202,5 +203,5 @@
   "searchTerms.code": "ކޯޑް",
   "searchTerms.snippet": "ތަންކޮޅެއް",
   "searchTerms.program": "ޕްރޮގްރާމް",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "ފޯމެޓް ކޮށްފައި"
 }

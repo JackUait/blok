@@ -25,8 +25,8 @@
   "tools.marker.textColor": "متن",
   "tools.marker.background": "شالید",
   "tools.marker.default": "اصلي",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "خاکستري",
   "tools.colorPicker.color.brown": "نسواري",
   "tools.colorPicker.color.orange": "نارنجي",
@@ -73,6 +73,7 @@
   "tools.table.clickToAddColumn": "د نوي کالم اضافه کولو لپاره کلیک وکړئ",
   "tools.table.dragToAddRemoveColumns": "د کالمونو اضافه یا لرې کولو لپاره کش کړئ",
   "blockSettings.delete": "ړنګول",
+  "blockSettings.copyLink": "بلاک ته لینک کاپي کړئ",
   "a11y.dragHandle": "د لیږدولو لپاره کش کړئ یا د مینو لپاره کلیک وکړئ",
   "a11y.dragHandleRole": "د کشولو لاستی",
   "a11y.dragStarted": "بلاک کشول کیږي",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "تشه پاڼه",
   "tools.database.columnTitlePlaceholder": "کالم",
   "tools.database.deleteCard": "کارت ړنګ کړئ",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "سرلیک سمون",
+  "tools.database.cardMenuLabel": "د کارت اختیارونه",
   "tools.database.deleteColumn": "کالم ړنګ کړئ",
   "tools.database.emptyColumn": "کارتونه نشته",
   "tools.database.rowTitlePlaceholder": "تشه پاڼه",
@@ -202,5 +203,5 @@
   "searchTerms.code": "کوډ",
   "searchTerms.snippet": "ټوټه",
   "searchTerms.program": "پروګرام",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "مخکې فارمټ"
 }

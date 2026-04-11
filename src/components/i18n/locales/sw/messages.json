@@ -73,6 +73,7 @@
   "tools.table.clickToAddColumn": "Bofya ili kuongeza safu wima mpya",
   "tools.table.dragToAddRemoveColumns": "Buruta ili kuongeza au kuondoa safu wima",
   "blockSettings.delete": "Futa",
+  "blockSettings.copyLink": "Nakili kiungo cha kizuizi",
   "a11y.dragHandle": "Buruta ili kusogeza kizuizi au bofya kwa menyu",
   "a11y.dragHandleRole": "kishikio cha kuburuta",
   "a11y.dragStarted": "Inaburuta kizuizi",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "Ukurasa tupu",
   "tools.database.columnTitlePlaceholder": "Safu",
   "tools.database.deleteCard": "Futa kadi",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "Hariri kichwa",
+  "tools.database.cardMenuLabel": "Chaguo za kadi",
   "tools.database.deleteColumn": "Futa safu",
   "tools.database.emptyColumn": "Hakuna kadi",
   "tools.database.rowTitlePlaceholder": "Ukurasa tupu",
@@ -202,5 +203,5 @@
   "searchTerms.code": "msimbo",
   "searchTerms.snippet": "kipande cha msimbo",
   "searchTerms.program": "programu",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "msimbo tayari"
 }

@@ -25,8 +25,8 @@
   "tools.marker.textColor": "متن",
   "tools.marker.background": "پس منظر",
   "tools.marker.default": "ڊفالٽ",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "سلیٹی",
   "tools.colorPicker.color.brown": "بھورو",
   "tools.colorPicker.color.orange": "نارنگي",
@@ -73,6 +73,7 @@
   "tools.table.clickToAddColumn": "نئون ڪالم شامل ڪرڻ لاءِ ڪلڪ ڪريو",
   "tools.table.dragToAddRemoveColumns": "ڪالم شامل يا ختم ڪرڻ لاءِ ڇڪيو",
   "blockSettings.delete": "ختم ڪريو",
+  "blockSettings.copyLink": "بلاڪ ڏانهن لنڪ ڪاپي ڪريو",
   "a11y.dragHandle": "بلاڪ منتقل ڪرڻ لاءِ ڇڪيو يا مينيو لاءِ ڪلڪ ڪريو",
   "a11y.dragHandleRole": "ڇڪڻ جو هينڊل",
   "a11y.dragStarted": "بلاڪ ڇڪجي رھيو آھي",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "خالي صفحو",
   "tools.database.columnTitlePlaceholder": "ڪالم",
   "tools.database.deleteCard": "ڪارڊ ختم ڪريو",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "عنوان تبديل ڪريو",
+  "tools.database.cardMenuLabel": "ڪارڊ جا اختيار",
   "tools.database.deleteColumn": "ڪالم ختم ڪريو",
   "tools.database.emptyColumn": "ڪو به ڪارڊ ناهي",
   "tools.database.rowTitlePlaceholder": "خالي صفحو",
@@ -202,5 +203,5 @@
   "searchTerms.code": "ڪوڊ",
   "searchTerms.snippet": "ٽڪرو",
   "searchTerms.program": "پروگرام",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "اڳ-ترتيب"
 }

@@ -23,8 +23,8 @@
   "tools.marker.textColor": "Mətn",
   "tools.marker.background": "Arxa fon",
   "tools.marker.default": "Standart",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "Boz",
   "tools.colorPicker.color.brown": "Qəhvəyi",
   "tools.colorPicker.color.orange": "Narıncı",
@@ -71,6 +71,7 @@
   "tools.table.clickToAddColumn": "Yeni sütun əlavə etmək üçün klikləyin",
   "tools.table.dragToAddRemoveColumns": "Sütun əlavə etmək və ya silmək üçün dartın",
   "blockSettings.delete": "Sil",
+  "blockSettings.copyLink": "Bloka keçid kopyala",
   "a11y.dragHandle": "Köçürmək üçün dartın və ya menyu üçün klikləyin",
   "a11y.dragHandleRole": "dartma tutacağı",
   "a11y.dragStarted": "Blok dartılır",
@@ -151,8 +152,8 @@
   "tools.database.addCard": "Kart əlavə et",
   "tools.database.newPage": "Yeni səhifə",
   "tools.database.deleteCard": "Kartı sil",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "Başlığı redaktə et",
+  "tools.database.cardMenuLabel": "Kart seçimləri",
   "tools.database.cardTitlePlaceholder": "Boş səhifə",
   "tools.database.columnTitlePlaceholder": "Sütun",
   "tools.database.emptyColumn": "Kart yoxdur",
@@ -202,5 +203,5 @@
   "searchTerms.code": "kod",
   "searchTerms.snippet": "fraqment",
   "searchTerms.program": "proqram",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "əvvəldən formatlanmış"
 }

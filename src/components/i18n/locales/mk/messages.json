@@ -25,8 +25,8 @@
   "tools.marker.textColor": "Текст",
   "tools.marker.background": "Позадина",
   "tools.marker.default": "Стандардно",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "Сиво",
   "tools.colorPicker.color.brown": "Кафено",
   "tools.colorPicker.color.orange": "Портокалово",
@@ -73,6 +73,7 @@
   "tools.table.clickToAddColumn": "Кликнете за додавање нова колона",
   "tools.table.dragToAddRemoveColumns": "Повлечете за додавање или отстранување колони",
   "blockSettings.delete": "Избриши",
+  "blockSettings.copyLink": "Копирај врска до блок",
   "a11y.dragHandle": "Повлечете за преместување на блок или кликнете за мени",
   "a11y.dragHandleRole": "рачка за влечење",
   "a11y.dragStarted": "Се влече блок",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "Празна страница",
   "tools.database.columnTitlePlaceholder": "Колона",
   "tools.database.deleteCard": "Избриши картичка",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "Уреди наслов",
+  "tools.database.cardMenuLabel": "Опции за картичка",
   "tools.database.deleteColumn": "Избриши колона",
   "tools.database.emptyColumn": "Нема картички",
   "tools.database.rowTitlePlaceholder": "Празна страница",
@@ -202,5 +203,5 @@
   "searchTerms.code": "код",
   "searchTerms.snippet": "фрагмент",
   "searchTerms.program": "програма",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "пре"
 }

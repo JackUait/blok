@@ -23,8 +23,8 @@
   "tools.marker.textColor": "వచనం",
   "tools.marker.background": "నేపథ్యం",
   "tools.marker.default": "అప్రమేయం",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "బూడిద",
   "tools.colorPicker.color.brown": "గోధుమ",
   "tools.colorPicker.color.orange": "నారింజ",
@@ -48,6 +48,7 @@
   "tools.header.toggleHeading3": "మడత శీర్షిక 3",
   "tools.list.placeholder": "జాబితా",
   "blockSettings.delete": "తొలగించు",
+  "blockSettings.copyLink": "బ్లాక్‌కు లింక్ కాపీ చేయి",
   "a11y.dragHandle": "విభాగం తరలించడానికి లాగండి లేదా మెనూ కోసం నొక్కండి",
   "a11y.dragHandleRole": "లాగు హ్యాండిల్",
   "a11y.dragStarted": "విభాగం తరలుతోంది",
@@ -151,8 +152,8 @@
   "tools.database.addCard": "కార్డ్ జోడించండి",
   "tools.database.newPage": "కొత్త పేజీ",
   "tools.database.deleteCard": "కార్డ్ తొలగించండి",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "శీర్షికను సవరించు",
+  "tools.database.cardMenuLabel": "కార్డ్ ఎంపికలు",
   "tools.database.cardTitlePlaceholder": "ఖాళీ పేజీ",
   "tools.database.columnTitlePlaceholder": "నిలువు వరుస",
   "tools.database.emptyColumn": "కార్డ్‌లు లేవు",
@@ -202,5 +203,5 @@
   "searchTerms.code": "కోడ్",
   "searchTerms.snippet": "కోడ్ తుంపు",
   "searchTerms.program": "ప్రోగ్రామ్",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "ముందుగా ఫార్మాట్"
 }

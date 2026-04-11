@@ -23,8 +23,8 @@
   "tools.marker.textColor": "စာသား",
   "tools.marker.background": "နောက်ခံ",
   "tools.marker.default": "မူလ",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "မီးခိုးရောင်",
   "tools.colorPicker.color.brown": "အညိုရောင်",
   "tools.colorPicker.color.orange": "လိမ္မော်ရောင်",
@@ -71,6 +71,7 @@
   "tools.table.clickToAddColumn": "ကော်လံအသစ်ထည့်ရန် နှိပ်ပါ",
   "tools.table.dragToAddRemoveColumns": "ကော်လံထည့်ရန် သို့မဟုတ် ဖယ်ရန် ဆွဲယူပါ",
   "blockSettings.delete": "ဖျက်ရန်",
+  "blockSettings.copyLink": "ဘလောက်သို့ လင့်ခ်ကူးယူရန်",
   "a11y.dragHandle": "ဘလောက်ရွှေ့ရန် ဆွဲယူပါ သို့မဟုတ် မီနူးအတွက် နှိပ်ပါ",
   "a11y.dragHandleRole": "ဆွဲယူကိုင်တံ",
   "a11y.dragStarted": "ဘလောက်ကို ဆွဲယူနေသည်",
@@ -151,8 +152,8 @@
   "tools.database.addCard": "ကတ်ထည့်ရန်",
   "tools.database.newPage": "စာမျက်နှာအသစ်",
   "tools.database.deleteCard": "ကတ်ဖျက်ရန်",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "ခေါင်းစဉ်ပြင်ရန်",
+  "tools.database.cardMenuLabel": "ကတ်ရွေးချယ်စရာများ",
   "tools.database.cardTitlePlaceholder": "စာမျက်နှာအလွတ်",
   "tools.database.columnTitlePlaceholder": "ကော်လံ",
   "tools.database.emptyColumn": "ကတ်မရှိ",
@@ -202,5 +203,5 @@
   "searchTerms.code": "ကုဒ်",
   "searchTerms.snippet": "ကုဒ်အပိုင်းအစ",
   "searchTerms.program": "ပရိုဂရမ်",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "ကြို"
 }

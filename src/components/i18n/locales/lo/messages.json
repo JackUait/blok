@@ -48,6 +48,7 @@
   "tools.header.toggleHeading3": "ຫົວຂໍ້ພັບ 3",
   "tools.list.placeholder": "ລາຍການ",
   "blockSettings.delete": "ລຶບ",
+  "blockSettings.copyLink": "ສຳເນົາລິ້ງໄປຫາບລັອກ",
   "a11y.dragHandle": "ລາກເພື່ອຍ້າຍບລັອກ ຫຼື ຄລິກເພື່ອເປີດເມນູ",
   "a11y.dragHandleRole": "ບ່ອນຈັບລາກ",
   "a11y.dragStarted": "ກຳລັງລາກບລັອກ",
@@ -151,8 +152,8 @@
   "tools.database.addCard": "ເພີ່ມບັດ",
   "tools.database.newPage": "ໜ້າໃໝ່",
   "tools.database.deleteCard": "ລຶບບັດ",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "ແກ້ໄຂຫົວຂໍ້",
+  "tools.database.cardMenuLabel": "ຕົວເລືອກບັດ",
   "tools.database.cardTitlePlaceholder": "ໜ້າເປົ່າ",
   "tools.database.columnTitlePlaceholder": "ຖັນ",
   "tools.database.emptyColumn": "ບໍ່ມີບັດ",
@@ -202,5 +203,5 @@
   "searchTerms.code": "ໂຄດ",
   "searchTerms.snippet": "ສ່ວນໂຄດ",
   "searchTerms.program": "ໂປຣແກຣມ",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "ຈັດຮູບແບບລ່ວງໜ້າ"
 }

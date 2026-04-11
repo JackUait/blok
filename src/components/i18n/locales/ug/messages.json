@@ -25,8 +25,8 @@
   "tools.marker.textColor": "تېكىست",
   "tools.marker.background": "تەگلىك",
   "tools.marker.default": "سۈكۈتتىكى",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "كۈلرەڭ",
   "tools.colorPicker.color.brown": "قوڭۇر",
   "tools.colorPicker.color.orange": "تۈختۈرەڭ",
@@ -73,6 +73,7 @@
   "tools.table.clickToAddColumn": "يېڭى ئىستون قوشۇش ئۈچۈن چېكىڭ",
   "tools.table.dragToAddRemoveColumns": "ئىستون قوشۇش ياكى ئۆچۈرۈش ئۈچۈن سۆرەڭ",
   "blockSettings.delete": "ئۆچۈرۈش",
+  "blockSettings.copyLink": "بۆلەككە ئۇلانما كۆچۈرۈش",
   "a11y.dragHandle": "بۆلەكنى يۆتكەش ئۈچۈن سۆرەڭ ياكى تىزىملىك ئۈچۈن چېكىڭ",
   "a11y.dragHandleRole": "سۆرەش تۇتقۇچى",
   "a11y.dragStarted": "بۆلەك سۆرىلىۋاتىدۇ",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "بوش بەت",
   "tools.database.columnTitlePlaceholder": "ئىستون",
   "tools.database.deleteCard": "كارتىنى ئۆچۈرۈش",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "ماۋزۇنى تەھرىرلەش",
+  "tools.database.cardMenuLabel": "كارتا تاللانمىلىرى",
   "tools.database.deleteColumn": "ئىستوننى ئۆچۈرۈش",
   "tools.database.emptyColumn": "كارتا يوق",
   "tools.database.rowTitlePlaceholder": "بوش بەت",
@@ -202,5 +203,5 @@
   "searchTerms.code": "كود",
   "searchTerms.snippet": "پارچە",
   "searchTerms.program": "پروگرامما",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "فورماتلانغان"
 }

@@ -25,8 +25,8 @@
   "tools.marker.textColor": "טקסט",
   "tools.marker.background": "רקע",
   "tools.marker.default": "ברירת מחדל",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "אפור",
   "tools.colorPicker.color.brown": "חום",
   "tools.colorPicker.color.orange": "כתום",
@@ -73,6 +73,7 @@
   "tools.table.clickToAddColumn": "לחץ להוספת עמודה חדשה",
   "tools.table.dragToAddRemoveColumns": "גרור להוספה או הסרה של עמודות",
   "blockSettings.delete": "מחק",
+  "blockSettings.copyLink": "העתק קישור לבלוק",
   "a11y.dragHandle": "גרור להזזת הבלוק או לחץ לתפריט",
   "a11y.dragHandleRole": "ידית גרירה",
   "a11y.dragStarted": "גורר בלוק",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "דף ריק",
   "tools.database.columnTitlePlaceholder": "עמודה",
   "tools.database.deleteCard": "מחק כרטיס",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "ערוך כותרת",
+  "tools.database.cardMenuLabel": "אפשרויות כרטיס",
   "tools.database.deleteColumn": "מחק עמודה",
   "tools.database.renameColumn": "שנה שם עמודה",
   "tools.database.emptyColumn": "אין כרטיסים",
@@ -202,5 +203,5 @@
   "searchTerms.code": "קוד",
   "searchTerms.snippet": "קטע קוד",
   "searchTerms.program": "תוכנית",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "מעוצב מראש"
 }

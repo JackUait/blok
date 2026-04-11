@@ -25,8 +25,8 @@
   "tools.marker.textColor": "متن",
   "tools.marker.background": "پس‌زمینه",
   "tools.marker.default": "پیش‌فرض",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "خاکستری",
   "tools.colorPicker.color.brown": "قهوه‌ای",
   "tools.colorPicker.color.orange": "نارنجی",
@@ -55,6 +55,7 @@
   "tools.toggle.ariaLabelCollapse": "جمع کردن",
   "tools.toggle.ariaLabelExpand": "گسترش",
   "blockSettings.delete": "حذف",
+  "blockSettings.copyLink": "کپی لینک بلوک",
   "a11y.dragHandle": "برای جابجایی بلوک بکشید یا برای منو کلیک کنید",
   "a11y.dragHandleRole": "دستگیره کشیدن",
   "a11y.dragStarted": "در حال کشیدن بلوک",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "صفحه خالی",
   "tools.database.columnTitlePlaceholder": "ستون",
   "tools.database.deleteCard": "حذف کارت",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "ویرایش عنوان",
+  "tools.database.cardMenuLabel": "گزینه‌های کارت",
   "tools.database.deleteColumn": "حذف ستون",
   "tools.database.renameColumn": "تغییر نام ستون",
   "tools.database.emptyColumn": "بدون کارت",
@@ -202,5 +203,5 @@
   "searchTerms.code": "کد",
   "searchTerms.snippet": "قطعه کد",
   "searchTerms.program": "برنامه",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "قالب‌بندی‌شده"
 }

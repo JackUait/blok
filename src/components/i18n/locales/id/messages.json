@@ -73,6 +73,7 @@
   "tools.table.clickToAddColumn": "Klik untuk menambahkan kolom baru",
   "tools.table.dragToAddRemoveColumns": "Seret untuk menambah atau menghapus kolom",
   "blockSettings.delete": "Hapus",
+  "blockSettings.copyLink": "Salin tautan ke blok",
   "a11y.dragHandle": "Seret untuk memindahkan blok atau klik untuk menu",
   "a11y.dragHandleRole": "pegangan seret",
   "a11y.dragStarted": "Menyeret blok",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "Halaman kosong",
   "tools.database.columnTitlePlaceholder": "Kolom",
   "tools.database.deleteCard": "Hapus kartu",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "Ubah judul",
+  "tools.database.cardMenuLabel": "Opsi kartu",
   "tools.database.deleteColumn": "Hapus kolom",
   "tools.database.renameColumn": "Ubah nama kolom",
   "tools.database.emptyColumn": "Tidak ada kartu",
@@ -201,6 +202,6 @@
   "tools.code.lineNumbers": "Nomor baris",
   "searchTerms.code": "kode",
   "searchTerms.snippet": "cuplikan",
-  "searchTerms.program": "program",
-  "searchTerms.pre": "pre"
+  "searchTerms.program": "pemrograman",
+  "searchTerms.pre": "praformat"
 }

@@ -23,8 +23,8 @@
   "tools.marker.textColor": "লেখা",
   "tools.marker.background": "পটভূমি",
   "tools.marker.default": "ডিফল্ট",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "ধূসর",
   "tools.colorPicker.color.brown": "বাদামী",
   "tools.colorPicker.color.orange": "কমলা",
@@ -53,6 +53,7 @@
   "tools.toggle.ariaLabelCollapse": "সংকুচিত করুন",
   "tools.toggle.ariaLabelExpand": "প্রসারিত করুন",
   "blockSettings.delete": "মুছুন",
+  "blockSettings.copyLink": "ব্লকের লিঙ্ক কপি করুন",
   "a11y.dragHandle": "ব্লক সরাতে টানুন বা মেনুর জন্য ক্লিক করুন",
   "a11y.dragHandleRole": "টান-হাতল",
   "a11y.dragStarted": "ব্লক টানা হচ্ছে",
@@ -151,8 +152,8 @@
   "tools.database.addCard": "কার্ড যোগ করুন",
   "tools.database.newPage": "নতুন পৃষ্ঠা",
   "tools.database.deleteCard": "কার্ড মুছুন",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "শিরোনাম সম্পাদনা",
+  "tools.database.cardMenuLabel": "কার্ড বিকল্প",
   "tools.database.cardTitlePlaceholder": "খালি পাতা",
   "tools.database.columnTitlePlaceholder": "কলাম",
   "tools.database.emptyColumn": "কোনো কার্ড নেই",
@@ -202,5 +203,5 @@
   "searchTerms.code": "কোড",
   "searchTerms.snippet": "স্নিপেট",
   "searchTerms.program": "প্রোগ্রাম",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "পূর্ববিন্যাসিত"
 }

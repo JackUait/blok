@@ -73,6 +73,7 @@
   "tools.table.clickToAddColumn": "Klik untuk tambah lajur baharu",
   "tools.table.dragToAddRemoveColumns": "Seret untuk tambah atau buang lajur",
   "blockSettings.delete": "Padam",
+  "blockSettings.copyLink": "Salin pautan ke blok",
   "a11y.dragHandle": "Seret untuk alih blok atau klik untuk menu",
   "a11y.dragHandleRole": "pemegang seret",
   "a11y.dragStarted": "Menyeret blok",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "Halaman kosong",
   "tools.database.columnTitlePlaceholder": "Lajur",
   "tools.database.deleteCard": "Padam kad",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "Sunting tajuk",
+  "tools.database.cardMenuLabel": "Pilihan kad",
   "tools.database.deleteColumn": "Padam lajur",
   "tools.database.emptyColumn": "Tiada kad",
   "tools.database.rowTitlePlaceholder": "Halaman kosong",
@@ -202,5 +203,5 @@
   "searchTerms.code": "kod",
   "searchTerms.snippet": "coretan",
   "searchTerms.program": "program",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "pra"
 }

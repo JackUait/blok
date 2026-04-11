@@ -23,8 +23,8 @@
   "tools.marker.textColor": "உரை",
   "tools.marker.background": "பின்னணி",
   "tools.marker.default": "இயல்பு",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "சாம்பல்",
   "tools.colorPicker.color.brown": "பழுப்பு",
   "tools.colorPicker.color.orange": "ஆரஞ்சு",
@@ -71,6 +71,7 @@
   "tools.table.clickToAddColumn": "புதிய நெடுவரிசை சேர்க்க கிளிக் செய்யவும்",
   "tools.table.dragToAddRemoveColumns": "நெடுவரிசைகளைச் சேர்க்க அல்லது நீக்க இழுக்கவும்",
   "blockSettings.delete": "நீக்கு",
+  "blockSettings.copyLink": "தொகுதிக்கான இணைப்பை நகலெடு",
   "a11y.dragHandle": "தொகுதியை நகர்த்த இழுக்கவும் அல்லது பட்டியலுக்கு தட்டவும்",
   "a11y.dragHandleRole": "இழுக்கும் கைப்பிடி",
   "a11y.dragStarted": "தொகுதியை இழுக்கிறது",
@@ -151,8 +152,8 @@
   "tools.database.addCard": "அட்டை சேர்க்கவும்",
   "tools.database.newPage": "புதிய பக்கம்",
   "tools.database.deleteCard": "அட்டையை நீக்கு",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "தலைப்பைத் திருத்து",
+  "tools.database.cardMenuLabel": "அட்டை விருப்பங்கள்",
   "tools.database.cardTitlePlaceholder": "வெற்று பக்கம்",
   "tools.database.columnTitlePlaceholder": "நெடுவரிசை",
   "tools.database.emptyColumn": "அட்டைகள் இல்லை",
@@ -202,5 +203,5 @@
   "searchTerms.code": "குறியீடு",
   "searchTerms.snippet": "குறியீட்டுத் துணுக்கு",
   "searchTerms.program": "நிரல்",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "முன்வடிவமைப்பு"
 }

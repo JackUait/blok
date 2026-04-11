@@ -26,7 +26,7 @@
   "tools.marker.background": "Фон",
   "tools.marker.default": "по подразбиране",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "Сиво",
   "tools.colorPicker.color.brown": "Кафяво",
   "tools.colorPicker.color.orange": "Оранжево",
@@ -73,6 +73,7 @@
   "tools.table.clickToAddColumn": "Щракнете за добавяне на нова колона",
   "tools.table.dragToAddRemoveColumns": "Плъзнете за добавяне или премахване на колони",
   "blockSettings.delete": "Изтрий",
+  "blockSettings.copyLink": "Копирай връзка към блока",
   "a11y.dragHandle": "Плъзнете за преместване на блок или щракнете за меню",
   "a11y.dragHandleRole": "манипулатор за плъзгане",
   "a11y.dragStarted": "Плъзгане на блок",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "Празна страница",
   "tools.database.columnTitlePlaceholder": "Колона",
   "tools.database.deleteCard": "Изтрий карта",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "Редактирай заглавието",
+  "tools.database.cardMenuLabel": "Опции на картата",
   "tools.database.deleteColumn": "Изтрий колона",
   "tools.database.renameColumn": "Преименувай колона",
   "tools.database.emptyColumn": "Няма карти",
@@ -202,5 +203,5 @@
   "searchTerms.code": "код",
   "searchTerms.snippet": "фрагмент",
   "searchTerms.program": "програма",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "предварително форматиран"
 }

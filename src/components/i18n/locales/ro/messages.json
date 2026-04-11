@@ -25,8 +25,8 @@
   "tools.marker.textColor": "Text",
   "tools.marker.background": "Fundal",
   "tools.marker.default": "Implicit",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "Gri",
   "tools.colorPicker.color.brown": "Maro",
   "tools.colorPicker.color.orange": "Portocaliu",
@@ -50,6 +50,7 @@
   "tools.header.toggleHeading3": "Titlu reductibil 3",
   "tools.list.placeholder": "Listă",
   "blockSettings.delete": "Șterge",
+  "blockSettings.copyLink": "Copiază linkul blocului",
   "a11y.dragHandle": "Trageți pentru a muta sau clic pentru meniu",
   "a11y.dragHandleRole": "mâner de tragere",
   "a11y.dragStarted": "Mutare bloc",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "Pagină goală",
   "tools.database.columnTitlePlaceholder": "Coloană",
   "tools.database.deleteCard": "Șterge card",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "Editează titlul",
+  "tools.database.cardMenuLabel": "Opțiuni card",
   "tools.database.deleteColumn": "Șterge coloana",
   "tools.database.emptyColumn": "Fără carduri",
   "tools.database.rowTitlePlaceholder": "Pagină goală",
@@ -202,5 +203,5 @@
   "searchTerms.code": "cod",
   "searchTerms.snippet": "fragment",
   "searchTerms.program": "program",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "preformatat"
 }

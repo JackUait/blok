@@ -26,7 +26,7 @@
   "tools.marker.background": "Фон",
   "tools.marker.default": "по умолчанию",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "Серый",
   "tools.colorPicker.color.brown": "Коричневый",
   "tools.colorPicker.color.orange": "Оранжевый",
@@ -73,6 +73,7 @@
   "tools.table.clickToAddColumn": "Нажмите, чтобы добавить столбец",
   "tools.table.dragToAddRemoveColumns": "Тяните, чтобы добавить или удалить столбцы",
   "blockSettings.delete": "Удалить",
+  "blockSettings.copyLink": "Копировать ссылку на блок",
   "a11y.dragHandle": "Перетащите или нажмите для меню",
   "a11y.dragHandleRole": "управление блоком",
   "a11y.dragStarted": "Перетаскивание блока",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "Пустая страница",
   "tools.database.columnTitlePlaceholder": "Столбец",
   "tools.database.deleteCard": "Удалить карточку",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "Редактировать заголовок",
+  "tools.database.cardMenuLabel": "Параметры карточки",
   "tools.database.deleteColumn": "Удалить столбец",
   "tools.database.emptyColumn": "Нет карточек",
   "tools.database.rowTitlePlaceholder": "Пустая страница",
@@ -202,5 +203,5 @@
   "searchTerms.code": "код",
   "searchTerms.snippet": "фрагмент",
   "searchTerms.program": "программа",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "преформатированный"
 }

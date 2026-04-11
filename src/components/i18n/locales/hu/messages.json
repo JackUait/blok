@@ -25,8 +25,8 @@
   "tools.marker.textColor": "Szöveg",
   "tools.marker.background": "Háttér",
   "tools.marker.default": "Alapértelmezett",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "Szürke",
   "tools.colorPicker.color.brown": "Barna",
   "tools.colorPicker.color.orange": "Narancs",
@@ -73,6 +73,7 @@
   "tools.table.clickToAddColumn": "Kattintson új oszlop hozzáadásához",
   "tools.table.dragToAddRemoveColumns": "Húzza oszlopok hozzáadásához vagy eltávolításához",
   "blockSettings.delete": "Törlés",
+  "blockSettings.copyLink": "Hivatkozás másolása a blokkra",
   "a11y.dragHandle": "Húzza az áthelyezéshez vagy kattintson a menühöz",
   "a11y.dragHandleRole": "húzófogantyú",
   "a11y.dragStarted": "Blokk áthelyezése",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "Üres oldal",
   "tools.database.columnTitlePlaceholder": "Oszlop",
   "tools.database.deleteCard": "Kártya törlése",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "Cím szerkesztése",
+  "tools.database.cardMenuLabel": "Kártya beállításai",
   "tools.database.deleteColumn": "Oszlop törlése",
   "tools.database.renameColumn": "Oszlop átnevezése",
   "tools.database.emptyColumn": "Nincsenek kártyák",
@@ -201,6 +202,6 @@
   "tools.code.lineNumbers": "Sorszámok",
   "searchTerms.code": "kód",
   "searchTerms.snippet": "kódrészlet",
-  "searchTerms.program": "program",
-  "searchTerms.pre": "pre"
+  "searchTerms.program": "programozás",
+  "searchTerms.pre": "előformázott"
 }

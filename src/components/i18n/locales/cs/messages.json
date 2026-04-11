@@ -25,8 +25,8 @@
   "tools.marker.textColor": "Písmo",
   "tools.marker.background": "Pozadí",
   "tools.marker.default": "Výchozí",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "Šedá",
   "tools.colorPicker.color.brown": "Hnědá",
   "tools.colorPicker.color.orange": "Oranžová",
@@ -73,6 +73,7 @@
   "tools.table.clickToAddColumn": "Klikněte pro přidání nového sloupce",
   "tools.table.dragToAddRemoveColumns": "Přetáhněte pro přidání nebo odebrání sloupců",
   "blockSettings.delete": "Smazat",
+  "blockSettings.copyLink": "Kopírovat odkaz na blok",
   "a11y.dragHandle": "Přetáhněte pro přesunutí nebo klikněte pro nabídku",
   "a11y.dragHandleRole": "úchyt pro přetažení",
   "a11y.dragStarted": "Přetahování bloku",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "Prázdná stránka",
   "tools.database.columnTitlePlaceholder": "Sloupec",
   "tools.database.deleteCard": "Smazat kartu",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "Upravit název",
+  "tools.database.cardMenuLabel": "Možnosti karty",
   "tools.database.deleteColumn": "Smazat sloupec",
   "tools.database.renameColumn": "Přejmenovat sloupec",
   "tools.database.emptyColumn": "Žádné karty",
@@ -201,6 +202,6 @@
   "tools.code.lineNumbers": "Čísla řádků",
   "searchTerms.code": "kód",
   "searchTerms.snippet": "úryvek",
-  "searchTerms.program": "program",
-  "searchTerms.pre": "pre"
+  "searchTerms.program": "programování",
+  "searchTerms.pre": "předformátovaný"
 }

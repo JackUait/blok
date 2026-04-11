@@ -23,8 +23,8 @@
   "tools.marker.textColor": "ટેક્સ્ટ",
   "tools.marker.background": "પૃષ્ઠભૂમિ",
   "tools.marker.default": "ડિફૉલ્ટ",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "ગ્રે",
   "tools.colorPicker.color.brown": "ભૂરો",
   "tools.colorPicker.color.orange": "નારંગી",
@@ -53,6 +53,7 @@
   "tools.toggle.ariaLabelCollapse": "સંકોચો",
   "tools.toggle.ariaLabelExpand": "વિસ્તૃત કરો",
   "blockSettings.delete": "કાઢી નાખો",
+  "blockSettings.copyLink": "બ્લોકની લિંક કૉપી કરો",
   "a11y.dragHandle": "બ્લોક ખસેડવા માટે ખેંચો અથવા મેનૂ માટે ક્લિક કરો",
   "a11y.dragHandleRole": "ખેંચવાનું હેન્ડલ",
   "a11y.dragStarted": "બ્લોક ખેંચાઈ રહ્યો છે",
@@ -151,8 +152,8 @@
   "tools.database.addCard": "કાર્ડ ઉમેરો",
   "tools.database.newPage": "નવું પૃષ્ઠ",
   "tools.database.deleteCard": "કાર્ડ કાઢી નાખો",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "શીર્ષક સંપાદિત કરો",
+  "tools.database.cardMenuLabel": "કાર્ડ વિકલ્પો",
   "tools.database.cardTitlePlaceholder": "ખાલી પાનું",
   "tools.database.columnTitlePlaceholder": "કૉલમ",
   "tools.database.emptyColumn": "કોઈ કાર્ડ નથી",
@@ -202,5 +203,5 @@
   "searchTerms.code": "કોડ",
   "searchTerms.snippet": "કોડ ટુકડો",
   "searchTerms.program": "પ્રોગ્રામ",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "પ્રી"
 }

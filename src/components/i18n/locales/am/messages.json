@@ -23,8 +23,8 @@
   "tools.marker.textColor": "ጽሑፍ",
   "tools.marker.background": "ዳራ",
   "tools.marker.default": "ነባሪ",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "ግራጫ",
   "tools.colorPicker.color.brown": "ቡናማ",
   "tools.colorPicker.color.orange": "ብርቱካናማ",
@@ -53,6 +53,7 @@
   "tools.toggle.ariaLabelCollapse": "ሰብስብ",
   "tools.toggle.ariaLabelExpand": "አስፋ",
   "blockSettings.delete": "ሰርዝ",
+  "blockSettings.copyLink": "ወደ ብሎክ አገናኝ ቅዳ",
   "a11y.dragHandle": "ብሎኩን ለማንቀሳቀስ ይጎትቱ ወይም ለምናሌ ጠቅ ያድርጉ",
   "a11y.dragHandleRole": "መጎተቻ",
   "a11y.dragStarted": "ብሎክ እየተጎተተ ነው",
@@ -151,8 +152,8 @@
   "tools.database.addCard": "ካርድ ጨምር",
   "tools.database.newPage": "አዲስ ገጽ",
   "tools.database.deleteCard": "ካርድ ሰርዝ",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "ርዕስ አርትዕ",
+  "tools.database.cardMenuLabel": "የካርድ አማራጮች",
   "tools.database.cardTitlePlaceholder": "ባዶ ገጽ",
   "tools.database.columnTitlePlaceholder": "አምድ",
   "tools.database.emptyColumn": "ካርዶች የሉም",
@@ -202,5 +203,5 @@
   "searchTerms.code": "ኮድ",
   "searchTerms.snippet": "ቅንጭብ",
   "searchTerms.program": "ፕሮግራም",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "ቅድመ ቅርጸት"
 }

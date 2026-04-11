@@ -23,8 +23,8 @@
   "tools.marker.textColor": "मजकूर",
   "tools.marker.background": "पार्श्वभूमी",
   "tools.marker.default": "डीफॉल्ट",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "राखाडी",
   "tools.colorPicker.color.brown": "तपकिरी",
   "tools.colorPicker.color.orange": "नारिंगी",
@@ -48,6 +48,7 @@
   "tools.header.toggleHeading3": "संकुचित शीर्षक 3",
   "tools.list.placeholder": "यादी",
   "blockSettings.delete": "हटवा",
+  "blockSettings.copyLink": "ब्लॉकची लिंक कॉपी करा",
   "a11y.dragHandle": "ब्लॉक हलवण्यासाठी ओढा किंवा मेनूसाठी क्लिक करा",
   "a11y.dragHandleRole": "हलवण्याचे नियंत्रण",
   "a11y.dragStarted": "ब्लॉक हलवला जात आहे",
@@ -151,8 +152,8 @@
   "tools.database.addCard": "कार्ड जोडा",
   "tools.database.newPage": "नवीन पृष्ठ",
   "tools.database.deleteCard": "कार्ड हटवा",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "शीर्षक संपादित करा",
+  "tools.database.cardMenuLabel": "कार्ड पर्याय",
   "tools.database.cardTitlePlaceholder": "रिक्त पृष्ठ",
   "tools.database.columnTitlePlaceholder": "स्तंभ",
   "tools.database.emptyColumn": "कार्ड नाहीत",
@@ -202,5 +203,5 @@
   "searchTerms.code": "कोड",
   "searchTerms.snippet": "कोड तुकडा",
   "searchTerms.program": "कार्यक्रम",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "पूर्व"
 }

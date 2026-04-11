@@ -25,8 +25,8 @@
   "tools.marker.textColor": "Texte",
   "tools.marker.background": "Arrière-plan",
   "tools.marker.default": "Par défaut",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "Gris",
   "tools.colorPicker.color.brown": "Marron",
   "tools.colorPicker.color.orange": "Orange",
@@ -55,6 +55,7 @@
   "tools.toggle.ariaLabelCollapse": "Réduire",
   "tools.toggle.ariaLabelExpand": "Développer",
   "blockSettings.delete": "Supprimer",
+  "blockSettings.copyLink": "Copier le lien du bloc",
   "a11y.dragHandle": "Glisser pour déplacer ou cliquer pour le menu",
   "a11y.dragHandleRole": "poignée de glissement",
   "a11y.dragStarted": "Déplacement du bloc",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "Page vide",
   "tools.database.columnTitlePlaceholder": "Colonne",
   "tools.database.deleteCard": "Supprimer la carte",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "Modifier le titre",
+  "tools.database.cardMenuLabel": "Options de la carte",
   "tools.database.deleteColumn": "Supprimer la colonne",
   "tools.database.renameColumn": "Renommer la colonne",
   "tools.database.emptyColumn": "Aucune carte",
@@ -202,5 +203,5 @@
   "searchTerms.code": "code",
   "searchTerms.snippet": "extrait",
   "searchTerms.program": "programme",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "préformaté"
 }

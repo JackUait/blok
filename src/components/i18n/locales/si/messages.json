@@ -23,8 +23,8 @@
   "tools.marker.textColor": "පෙළ",
   "tools.marker.background": "පසුබිම",
   "tools.marker.default": "පෙරනිමි",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "අළු",
   "tools.colorPicker.color.brown": "දුඹුරු",
   "tools.colorPicker.color.orange": "තැඹිලි",
@@ -48,6 +48,7 @@
   "tools.header.toggleHeading3": "හැකිලෙන ශීර්ෂය 3",
   "tools.list.placeholder": "ලැයිස්තුව",
   "blockSettings.delete": "මකන්න",
+  "blockSettings.copyLink": "බ්ලොක් එකට සබැඳිය පිටපත් කරන්න",
   "a11y.dragHandle": "කොටස ගෙනයාමට අදින්න හෝ මෙනුව සඳහා තේරන්න",
   "a11y.dragHandleRole": "ඇදීමේ හසුරුව",
   "a11y.dragStarted": "කොටස ඇදගෙන යමින්",
@@ -151,8 +152,8 @@
   "tools.database.addCard": "කාඩ්පත එක් කරන්න",
   "tools.database.newPage": "නව පිටුව",
   "tools.database.deleteCard": "කාඩ්පත මකන්න",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "මාතෘකාව සංස්කරණය කරන්න",
+  "tools.database.cardMenuLabel": "කාඩ්පත් විකල්ප",
   "tools.database.cardTitlePlaceholder": "හිස් පිටුව",
   "tools.database.columnTitlePlaceholder": "තීරුව",
   "tools.database.emptyColumn": "කාඩ්පත් නැත",
@@ -202,5 +203,5 @@
   "searchTerms.code": "කේතය",
   "searchTerms.snippet": "කේත කොටස",
   "searchTerms.program": "වැඩසටහන",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "පෙර"
 }

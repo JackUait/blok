@@ -25,8 +25,8 @@
   "tools.marker.textColor": "نص",
   "tools.marker.background": "خلفية",
   "tools.marker.default": "افتراضي",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "رمادي",
   "tools.colorPicker.color.brown": "بني",
   "tools.colorPicker.color.orange": "برتقالي",
@@ -73,6 +73,7 @@
   "tools.table.clickToAddColumn": "انقر لإضافة عمود جديد",
   "tools.table.dragToAddRemoveColumns": "اسحب لإضافة أو إزالة أعمدة",
   "blockSettings.delete": "حذف",
+  "blockSettings.copyLink": "نسخ رابط الكتلة",
   "a11y.dragHandle": "اسحب لتحريك الكتلة أو انقر للقائمة",
   "a11y.dragHandleRole": "مقبض السحب",
   "a11y.dragStarted": "جارٍ سحب الكتلة",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "صفحة فارغة",
   "tools.database.columnTitlePlaceholder": "عمود",
   "tools.database.deleteCard": "حذف البطاقة",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "تعديل العنوان",
+  "tools.database.cardMenuLabel": "خيارات البطاقة",
   "tools.database.deleteColumn": "حذف العمود",
   "tools.database.renameColumn": "إعادة تسمية العمود",
   "tools.database.emptyColumn": "لا بطاقات",
@@ -202,5 +203,5 @@
   "searchTerms.code": "كود",
   "searchTerms.snippet": "مقتطف",
   "searchTerms.program": "برنامج",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "منسق مسبقاً"
 }

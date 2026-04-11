@@ -25,8 +25,8 @@
   "tools.marker.textColor": "دەق",
   "tools.marker.background": "پاشبنەما",
   "tools.marker.default": "بنەڕەت",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "خاکستەری",
   "tools.colorPicker.color.brown": "قاوەیی",
   "tools.colorPicker.color.orange": "پرتەقاڵی",
@@ -73,6 +73,7 @@
   "tools.table.clickToAddColumn": "کلیک بکە بۆ زیادکردنی ستوونی نوێ",
   "tools.table.dragToAddRemoveColumns": "ڕاکێشە بۆ زیادکردن یان سڕینەوەی ستوون",
   "blockSettings.delete": "سڕینەوە",
+  "blockSettings.copyLink": "کۆپیکردنی لینکی بلۆک",
   "a11y.dragHandle": "ڕاکێشە بۆ گواستنەوەی بلۆک یان کلیک بکە بۆ مێنیو",
   "a11y.dragHandleRole": "دەستگیرەی ڕاکێشان",
   "a11y.dragStarted": "بلۆک دەکێشرێت",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "Rûpela vala",
   "tools.database.columnTitlePlaceholder": "Stûn",
   "tools.database.deleteCard": "Qertê jê bibe",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "دەستکاریکردنی ناونیشان",
+  "tools.database.cardMenuLabel": "هەڵبژاردنەکانی کارت",
   "tools.database.deleteColumn": "Stûnê jê bibe",
   "tools.database.renameColumn": "Navê stûnê biguherîne",
   "tools.database.emptyColumn": "Qert tune",
@@ -202,5 +203,5 @@
   "searchTerms.code": "کۆد",
   "searchTerms.snippet": "پارچە کۆد",
   "searchTerms.program": "بەرنامە",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "شێوەبەند"
 }

@@ -25,8 +25,8 @@
   "tools.marker.textColor": "Κείμενο",
   "tools.marker.background": "Φόντο",
   "tools.marker.default": "Προεπιλογή",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "Γκρι",
   "tools.colorPicker.color.brown": "Καφέ",
   "tools.colorPicker.color.orange": "Πορτοκαλί",
@@ -55,6 +55,7 @@
   "tools.toggle.ariaLabelCollapse": "Σύμπτυξη",
   "tools.toggle.ariaLabelExpand": "Ανάπτυξη",
   "blockSettings.delete": "Διαγραφή",
+  "blockSettings.copyLink": "Αντιγραφή συνδέσμου μπλοκ",
   "a11y.dragHandle": "Σύρετε για μετακίνηση ή κλικ για μενού",
   "a11y.dragHandleRole": "λαβή μετακίνησης",
   "a11y.dragStarted": "Μετακίνηση μπλοκ",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "Κενή σελίδα",
   "tools.database.columnTitlePlaceholder": "Στήλη",
   "tools.database.deleteCard": "Διαγραφή κάρτας",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "Επεξεργασία τίτλου",
+  "tools.database.cardMenuLabel": "Επιλογές κάρτας",
   "tools.database.deleteColumn": "Διαγραφή στήλης",
   "tools.database.renameColumn": "Μετονομασία στήλης",
   "tools.database.emptyColumn": "Χωρίς κάρτες",
@@ -202,5 +203,5 @@
   "searchTerms.code": "κώδικας",
   "searchTerms.snippet": "απόσπασμα",
   "searchTerms.program": "πρόγραμμα",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "προμορφοποιημένο"
 }

@@ -25,8 +25,8 @@
   "tools.marker.textColor": "テキスト",
   "tools.marker.background": "背景",
   "tools.marker.default": "デフォルト",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "グレー",
   "tools.colorPicker.color.brown": "ブラウン",
   "tools.colorPicker.color.orange": "オレンジ",
@@ -73,6 +73,7 @@
   "tools.table.clickToAddColumn": "クリックして新しい列を追加",
   "tools.table.dragToAddRemoveColumns": "ドラッグして列を追加・削除",
   "blockSettings.delete": "削除",
+  "blockSettings.copyLink": "ブロックへのリンクをコピー",
   "a11y.dragHandle": "ドラッグで移動、クリックでメニュー",
   "a11y.dragHandleRole": "ドラッグハンドル",
   "a11y.dragStarted": "ブロックをドラッグ中",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "空のページ",
   "tools.database.columnTitlePlaceholder": "列",
   "tools.database.deleteCard": "カードを削除",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "タイトルを編集",
+  "tools.database.cardMenuLabel": "カードメニュー",
   "tools.database.deleteColumn": "列を削除",
   "tools.database.renameColumn": "列名を変更",
   "tools.database.emptyColumn": "カードなし",
@@ -202,5 +203,5 @@
   "searchTerms.code": "コード",
   "searchTerms.snippet": "スニペット",
   "searchTerms.program": "プログラム",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "整形済み"
 }

@@ -25,8 +25,8 @@
   "tools.marker.textColor": "Teksts",
   "tools.marker.background": "Fons",
   "tools.marker.default": "Noklusējuma",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "Pelēks",
   "tools.colorPicker.color.brown": "Brūns",
   "tools.colorPicker.color.orange": "Oranžs",
@@ -50,6 +50,7 @@
   "tools.header.toggleHeading3": "Pārslēdzams virsraksts 3",
   "tools.list.placeholder": "Saraksts",
   "blockSettings.delete": "Dzēst",
+  "blockSettings.copyLink": "Kopēt saiti uz bloku",
   "a11y.dragHandle": "Velciet, lai pārvietotu bloku, vai noklikšķiniet izvēlnei",
   "a11y.dragHandleRole": "vilkšanas rokturis",
   "a11y.dragStarted": "Velk bloku",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "Tukša lapa",
   "tools.database.columnTitlePlaceholder": "Kolonna",
   "tools.database.deleteCard": "Dzēst kartīti",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "Rediģēt nosaukumu",
+  "tools.database.cardMenuLabel": "Kartītes opcijas",
   "tools.database.deleteColumn": "Dzēst kolonnu",
   "tools.database.renameColumn": "Pārdēvēt kolonnu",
   "tools.database.emptyColumn": "Nav kartīšu",
@@ -202,5 +203,5 @@
   "searchTerms.code": "kods",
   "searchTerms.snippet": "fragments",
   "searchTerms.program": "programma",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "formatēts"
 }

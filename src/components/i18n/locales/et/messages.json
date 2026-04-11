@@ -26,7 +26,7 @@
   "tools.marker.background": "Taust",
   "tools.marker.default": "vaikimisi",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "Hall",
   "tools.colorPicker.color.brown": "Pruun",
   "tools.colorPicker.color.orange": "Oranž",
@@ -73,6 +73,7 @@
   "tools.table.clickToAddColumn": "Klõpsa uue veeru lisamiseks",
   "tools.table.dragToAddRemoveColumns": "Lohista veergude lisamiseks või eemaldamiseks",
   "blockSettings.delete": "Kustuta",
+  "blockSettings.copyLink": "Kopeeri ploki link",
   "a11y.dragHandle": "Lohista ploki teisaldamiseks või klõpsa menüü jaoks",
   "a11y.dragHandleRole": "lohistamiskäepide",
   "a11y.dragStarted": "Lohistab plokki",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "Tühi leht",
   "tools.database.columnTitlePlaceholder": "Veerg",
   "tools.database.deleteCard": "Kustuta kaart",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "Muuda pealkirja",
+  "tools.database.cardMenuLabel": "Kaardi valikud",
   "tools.database.deleteColumn": "Kustuta veerg",
   "tools.database.renameColumn": "Nimeta veerg ümber",
   "tools.database.emptyColumn": "Kaarte pole",
@@ -202,5 +203,5 @@
   "searchTerms.code": "kood",
   "searchTerms.snippet": "koodilõik",
   "searchTerms.program": "programm",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "eelvormindatud"
 }

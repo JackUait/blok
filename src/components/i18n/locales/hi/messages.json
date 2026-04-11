@@ -25,8 +25,8 @@
   "tools.marker.textColor": "टेक्स्ट",
   "tools.marker.background": "पृष्ठभूमि",
   "tools.marker.default": "डिफ़ॉल्ट",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "ग्रे",
   "tools.colorPicker.color.brown": "भूरा",
   "tools.colorPicker.color.orange": "नारंगी",
@@ -55,6 +55,7 @@
   "tools.toggle.ariaLabelCollapse": "संकुचित करें",
   "tools.toggle.ariaLabelExpand": "विस्तृत करें",
   "blockSettings.delete": "हटाएं",
+  "blockSettings.copyLink": "ब्लॉक का लिंक कॉपी करें",
   "a11y.dragHandle": "खींचकर ब्लॉक ले जाएं या मेनू के लिए क्लिक करें",
   "a11y.dragHandleRole": "खींचने का साधन",
   "a11y.dragStarted": "ब्लॉक खींचा जा रहा है",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "खाली पेज",
   "tools.database.columnTitlePlaceholder": "कॉलम",
   "tools.database.deleteCard": "कार्ड हटाएं",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "शीर्षक संपादित करें",
+  "tools.database.cardMenuLabel": "कार्ड विकल्प",
   "tools.database.deleteColumn": "कॉलम हटाएं",
   "tools.database.renameColumn": "कॉलम का नाम बदलें",
   "tools.database.emptyColumn": "कोई कार्ड नहीं",
@@ -202,5 +203,5 @@
   "searchTerms.code": "कोड",
   "searchTerms.snippet": "कोड का टुकड़ा",
   "searchTerms.program": "प्रोग्राम",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "पूर्वस्वरूपित"
 }

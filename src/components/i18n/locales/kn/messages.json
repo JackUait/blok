@@ -23,8 +23,8 @@
   "tools.marker.textColor": "ಪಠ್ಯ",
   "tools.marker.background": "ಹಿನ್ನೆಲೆ",
   "tools.marker.default": "ಡೀಫಾಲ್ಟ್",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "ಬೂದು",
   "tools.colorPicker.color.brown": "ಕಂದು",
   "tools.colorPicker.color.orange": "ಕಿತ್ತಳೆ",
@@ -71,6 +71,7 @@
   "tools.table.clickToAddColumn": "ಹೊಸ ಕಾಲಂ ಸೇರಿಸಲು ಕ್ಲಿಕ್ ಮಾಡಿ",
   "tools.table.dragToAddRemoveColumns": "ಕಾಲಂಗಳನ್ನು ಸೇರಿಸಲು ಅಥವಾ ತೆಗೆಯಲು ಎಳೆಯಿರಿ",
   "blockSettings.delete": "ಅಳಿಸಿ",
+  "blockSettings.copyLink": "ಬ್ಲಾಕ್‌ಗೆ ಲಿಂಕ್ ನಕಲಿಸಿ",
   "a11y.dragHandle": "ಬ್ಲಾಕ್ ಸರಿಸಲು ಎಳೆಯಿರಿ ಅಥವಾ ಮೆನುಗಾಗಿ ಕ್ಲಿಕ್ ಮಾಡಿ",
   "a11y.dragHandleRole": "ಎಳೆಯುವ ಹಿಡಿಕೆ",
   "a11y.dragStarted": "ಬ್ಲಾಕ್ ಎಳೆಯಲಾಗುತ್ತಿದೆ",
@@ -151,8 +152,8 @@
   "tools.database.addCard": "ಕಾರ್ಡ್ ಸೇರಿಸಿ",
   "tools.database.newPage": "ಹೊಸ ಪುಟ",
   "tools.database.deleteCard": "ಕಾರ್ಡ್ ಅಳಿಸಿ",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "ಶೀರ್ಷಿಕೆ ಸಂಪಾದಿಸಿ",
+  "tools.database.cardMenuLabel": "ಕಾರ್ಡ್ ಆಯ್ಕೆಗಳು",
   "tools.database.cardTitlePlaceholder": "ಖಾಲಿ ಪುಟ",
   "tools.database.columnTitlePlaceholder": "ಕಾಲಮ್",
   "tools.database.emptyColumn": "ಯಾವುದೇ ಕಾರ್ಡ್‌ಗಳಿಲ್ಲ",
@@ -202,5 +203,5 @@
   "searchTerms.code": "ಕೋಡ್",
   "searchTerms.snippet": "ತುಂಡು",
   "searchTerms.program": "ಪ್ರೋಗ್ರಾಂ",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "ಪೂರ್ವ ಫಾರ್ಮ್ಯಾಟ್"
 }

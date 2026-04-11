@@ -23,8 +23,8 @@
   "tools.marker.textColor": "ਟੈਕਸਟ",
   "tools.marker.background": "ਪਿਛੋਕੜ",
   "tools.marker.default": "ਮੂਲ",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "ਸਲੇਟੀ",
   "tools.colorPicker.color.brown": "ਭੂਰਾ",
   "tools.colorPicker.color.orange": "ਸੰਤਰੀ",
@@ -48,6 +48,7 @@
   "tools.header.toggleHeading3": "ਟੌਗਲ ਸਿਰਲੇਖ 3",
   "tools.list.placeholder": "ਸੂਚੀ",
   "blockSettings.delete": "ਮਿਟਾਓ",
+  "blockSettings.copyLink": "ਬਲਾਕ ਦਾ ਲਿੰਕ ਕਾਪੀ ਕਰੋ",
   "a11y.dragHandle": "ਬਲਾਕ ਹਿਲਾਉਣ ਲਈ ਖਿੱਚੋ ਜਾਂ ਮੀਨੂ ਲਈ ਕਲਿੱਕ ਕਰੋ",
   "a11y.dragHandleRole": "ਖਿੱਚਣ ਵਾਲਾ ਹੈਂਡਲ",
   "a11y.dragStarted": "ਬਲਾਕ ਖਿੱਚਿਆ ਜਾ ਰਿਹਾ ਹੈ",
@@ -151,8 +152,8 @@
   "tools.database.addCard": "ਕਾਰਡ ਜੋੜੋ",
   "tools.database.newPage": "ਨਵਾਂ ਪੰਨਾ",
   "tools.database.deleteCard": "ਕਾਰਡ ਮਿਟਾਓ",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "ਸਿਰਲੇਖ ਸੰਪਾਦਿਤ ਕਰੋ",
+  "tools.database.cardMenuLabel": "ਕਾਰਡ ਵਿਕਲਪ",
   "tools.database.cardTitlePlaceholder": "ਖਾਲੀ ਪੰਨਾ",
   "tools.database.columnTitlePlaceholder": "ਕਾਲਮ",
   "tools.database.emptyColumn": "ਕੋਈ ਕਾਰਡ ਨਹੀਂ",
@@ -202,5 +203,5 @@
   "searchTerms.code": "ਕੋਡ",
   "searchTerms.snippet": "ਸਨਿੱਪਟ",
   "searchTerms.program": "ਪ੍ਰੋਗਰਾਮ",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "ਪੂਰਵ-ਫਾਰਮੈਟ"
 }

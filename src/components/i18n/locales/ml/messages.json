@@ -23,8 +23,8 @@
   "tools.marker.textColor": "ടെക്സ്റ്റ്",
   "tools.marker.background": "പശ്ചാത്തലം",
   "tools.marker.default": "സ്ഥിരസ്ഥിതി",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "ചാരം",
   "tools.colorPicker.color.brown": "തവിട്ട്",
   "tools.colorPicker.color.orange": "ഓറഞ്ച്",
@@ -71,6 +71,7 @@
   "tools.table.clickToAddColumn": "പുതിയ കോളം ചേർക്കാൻ ക്ലിക്ക് ചെയ്യുക",
   "tools.table.dragToAddRemoveColumns": "കോളങ്ങൾ ചേർക്കാനോ നീക്കാനോ വലിച്ചിടുക",
   "blockSettings.delete": "ഇല്ലാതാക്കുക",
+  "blockSettings.copyLink": "ബ്ലോക്കിലേക്കുള്ള ലിങ്ക് പകർത്തുക",
   "a11y.dragHandle": "ബ്ലോക്ക് നീക്കാൻ വലിച്ചിടുക അല്ലെങ്കിൽ മെനുവിന് ക്ലിക്ക് ചെയ്യുക",
   "a11y.dragHandleRole": "വലിച്ചിടൽ ഹാൻഡിൽ",
   "a11y.dragStarted": "ബ്ലോക്ക് വലിച്ചിടുന്നു",
@@ -151,8 +152,8 @@
   "tools.database.addCard": "കാർഡ് ചേർക്കുക",
   "tools.database.newPage": "പുതിയ പേജ്",
   "tools.database.deleteCard": "കാർഡ് ഇല്ലാതാക്കുക",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "ശീർഷകം തിരുത്തുക",
+  "tools.database.cardMenuLabel": "കാർഡ് ഓപ്ഷനുകൾ",
   "tools.database.cardTitlePlaceholder": "ശൂന്യ പേജ്",
   "tools.database.columnTitlePlaceholder": "കോളം",
   "tools.database.emptyColumn": "കാർഡുകളില്ല",
@@ -202,5 +203,5 @@
   "searchTerms.code": "കോഡ്",
   "searchTerms.snippet": "കോഡ്ഭാഗം",
   "searchTerms.program": "പ്രോഗ്രാം",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "പ്രീ"
 }

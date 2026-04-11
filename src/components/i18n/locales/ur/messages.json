@@ -25,8 +25,8 @@
   "tools.marker.textColor": "متن",
   "tools.marker.background": "پس منظر",
   "tools.marker.default": "طے شدہ",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "سرمئی",
   "tools.colorPicker.color.brown": "بھورا",
   "tools.colorPicker.color.orange": "نارنجی",
@@ -50,6 +50,7 @@
   "tools.header.toggleHeading3": "ٹوگل عنوان 3",
   "tools.list.placeholder": "فہرست",
   "blockSettings.delete": "حذف کریں",
+  "blockSettings.copyLink": "بلاک کا لنک کاپی کریں",
   "a11y.dragHandle": "بلاک منتقل کرنے کے لیے گھسیٹیں یا مینو کے لیے کلک کریں",
   "a11y.dragHandleRole": "گھسیٹنے کا ہینڈل",
   "a11y.dragStarted": "بلاک گھسیٹا جا رہا ہے",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "خالی صفحہ",
   "tools.database.columnTitlePlaceholder": "کالم",
   "tools.database.deleteCard": "کارڈ حذف کریں",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "عنوان ترمیم کریں",
+  "tools.database.cardMenuLabel": "کارڈ کے اختیارات",
   "tools.database.deleteColumn": "کالم حذف کریں",
   "tools.database.emptyColumn": "کوئی کارڈ نہیں",
   "tools.database.rowTitlePlaceholder": "خالی صفحہ",
@@ -202,5 +203,5 @@
   "searchTerms.code": "کوڈ",
   "searchTerms.snippet": "ٹکڑا",
   "searchTerms.program": "پروگرام",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "فارمیٹ شدہ"
 }

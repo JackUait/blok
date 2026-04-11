@@ -26,7 +26,7 @@
   "tools.marker.background": "Тло",
   "tools.marker.default": "за замовчуванням",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "Сірий",
   "tools.colorPicker.color.brown": "Коричневий",
   "tools.colorPicker.color.orange": "Помаранчевий",
@@ -50,6 +50,7 @@
   "tools.header.toggleHeading3": "Згортний заголовок 3",
   "tools.list.placeholder": "Список",
   "blockSettings.delete": "Видалити",
+  "blockSettings.copyLink": "Копіювати посилання на блок",
   "a11y.dragHandle": "Перетягніть або натисніть для меню",
   "a11y.dragHandleRole": "елемент керування блоком",
   "a11y.dragStarted": "Переміщення блока",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "Порожня сторінка",
   "tools.database.columnTitlePlaceholder": "Стовпець",
   "tools.database.deleteCard": "Видалити картку",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "Редагувати заголовок",
+  "tools.database.cardMenuLabel": "Параметри картки",
   "tools.database.deleteColumn": "Видалити стовпець",
   "tools.database.emptyColumn": "Немає карток",
   "tools.database.rowTitlePlaceholder": "Порожня сторінка",
@@ -202,5 +203,5 @@
   "searchTerms.code": "код",
   "searchTerms.snippet": "фрагмент",
   "searchTerms.program": "програма",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "форматований"
 }

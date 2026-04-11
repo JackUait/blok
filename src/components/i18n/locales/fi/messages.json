@@ -25,8 +25,8 @@
   "tools.marker.textColor": "Teksti",
   "tools.marker.background": "Tausta",
   "tools.marker.default": "Oletus",
-  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
-  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "Harmaa",
   "tools.colorPicker.color.brown": "Ruskea",
   "tools.colorPicker.color.orange": "Oranssi",
@@ -55,6 +55,7 @@
   "tools.toggle.ariaLabelCollapse": "Pienennä",
   "tools.toggle.ariaLabelExpand": "Laajenna",
   "blockSettings.delete": "Poista",
+  "blockSettings.copyLink": "Kopioi linkki lohkoon",
   "a11y.dragHandle": "Vedä siirtääksesi lohkon tai napsauta avataksesi valikon",
   "a11y.dragHandleRole": "vetokahva",
   "a11y.dragStarted": "Lohkoa vedetään",
@@ -151,8 +152,8 @@
   "tools.database.cardTitlePlaceholder": "Tyhjä sivu",
   "tools.database.columnTitlePlaceholder": "Sarake",
   "tools.database.deleteCard": "Poista kortti",
-  "tools.database.editCardTitle": "Edit title",
-  "tools.database.cardMenuLabel": "Card options",
+  "tools.database.editCardTitle": "Muokkaa otsikkoa",
+  "tools.database.cardMenuLabel": "Kortin asetukset",
   "tools.database.deleteColumn": "Poista sarake",
   "tools.database.renameColumn": "Nimeä sarake uudelleen",
   "tools.database.emptyColumn": "Ei kortteja",
@@ -202,5 +203,5 @@
   "searchTerms.code": "koodi",
   "searchTerms.snippet": "koodinpätkä",
   "searchTerms.program": "ohjelma",
-  "searchTerms.pre": "pre"
+  "searchTerms.pre": "esimuotoiltu"
 }

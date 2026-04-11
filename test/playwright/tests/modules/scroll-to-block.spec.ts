@@ -152,21 +152,14 @@ test.describe('scroll to block on hash', () => {
   });
 
   test('visually selects (highlights) the target block after scrolling', async ({ page }) => {
-    const blocks = makeParagraphBlocks(30);
-    const block = blocks[25];
-    if (!block?.id) {
-      throw new Error('Expected block at index 25 with an id');
-    }
-    const targetBlockId = block.id;
-
     await page.goto(TEST_PAGE_URL);
     await page.addStyleTag({ content: 'body { min-height: 3000px; }' });
 
     await page.evaluate((hash) => {
       window.history.replaceState(null, '', '#' + hash);
-    }, targetBlockId);
+    }, TARGET_BLOCK_ID);
 
-    await createEditorWithData(page, { blocks });
+    await createEditorWithData(page, { blocks: SCROLL_TEST_BLOCKS });
 
     await waitForScrollToComplete(page);
 
@@ -175,7 +168,7 @@ test.describe('scroll to block on hash', () => {
       const el = document.querySelector(`[data-blok-id="${blockId}"]`);
       if (!el) return false;
       return el.getAttribute('data-blok-selected') === 'true';
-    }, targetBlockId);
+    }, TARGET_BLOCK_ID);
 
     expect(isSelected).toBe(true);
   });

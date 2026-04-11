@@ -237,6 +237,11 @@ describe('DatabaseBackendSync', () => {
       await vi.runAllTimersAsync();
 
       expect(adapter.updateProperty).toHaveBeenCalledTimes(2);
+
+      // Verify each propertyId was synced independently
+      const calls = (adapter.updateProperty as ReturnType<typeof vi.fn>).mock.calls;
+
+      expect(calls.map((c: unknown[]) => (c[0] as { propertyId: string }).propertyId)).toEqual(['p1', 'p2']);
       vi.useRealTimers();
     });
 

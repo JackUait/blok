@@ -79,6 +79,22 @@ export interface DatabaseData extends BlockToolData {
   activeViewId: string;
 }
 
+// ─── View data (kanban board) ───
+
+export interface KanbanColumnData {
+  id: string;
+  title: string;
+  color?: string;
+  position: string;
+}
+
+export interface KanbanCardData {
+  id: string;
+  title: string;
+  columnId: string;
+  position: string;
+}
+
 // ─── Adapter ───
 
 export interface DatabaseAdapter {

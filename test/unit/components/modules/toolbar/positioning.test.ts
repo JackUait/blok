@@ -429,8 +429,8 @@ describe('ToolbarPositioner', () => {
       );
 
       // Both should be numbers
-      expect(resultWithAnchor).toBeTypeOf('number');
-      expect(resultWithoutAnchor).toBeTypeOf('number');
+      expect(typeof resultWithAnchor).toBe('number');
+      expect(typeof resultWithoutAnchor).toBe('number');
 
       // The anchor-based result should use the wrapper's position (top of block),
       // while the fallback uses the code element (lower, below the header)

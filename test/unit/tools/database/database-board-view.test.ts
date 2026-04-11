@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DatabaseBoardView } from '../../../../src/tools/database/database-board-view';
+import { simulateKeydown } from '../../../helpers/simulate';
 import type { SelectOption, DatabaseRow } from '../../../../src/tools/database/types';
 import type { I18n } from '../../../../types';
 
@@ -379,7 +380,7 @@ describe('DatabaseBoardView', () => {
 
       const input = cardEl.querySelector<HTMLInputElement>('[data-blok-database-card-title-input]')!;
       input.value = 'New Title';
-      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      simulateKeydown(input, 'Enter');
 
       const titleDiv = cardEl.querySelector('[data-blok-database-card-title]');
       expect(titleDiv).not.toBeNull();
@@ -419,7 +420,7 @@ describe('DatabaseBoardView', () => {
 
       const input = cardEl.querySelector<HTMLInputElement>('[data-blok-database-card-title-input]')!;
       input.value = 'Changed';
-      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      simulateKeydown(input, 'Escape');
 
       const titleDiv = cardEl.querySelector('[data-blok-database-card-title]');
       expect(titleDiv?.textContent).toBe('Fix bug');

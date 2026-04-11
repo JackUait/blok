@@ -84,7 +84,7 @@ test.describe('Native copy paste diagnostic', () => {
     await expect(table).toBeVisible({ timeout: 5000 });
 
     // Click into first cell and select all text
-    const firstCellEditable = table.locator('[data-blok-table-cell]').first().locator('[contenteditable="true"]');
+    const firstCellEditable = table.locator('[data-blok-table-cell]').filter({ hasText: 'Hello World' }).locator('[contenteditable="true"]');
     await firstCellEditable.click();
     await expect(firstCellEditable).toBeFocused({ timeout: 2000 });
 
@@ -123,7 +123,7 @@ test.describe('Native copy paste diagnostic', () => {
 
     // Since hasNativeTextSelection()=true, Blok should NOT intercept
     expect(Object.keys(blokCopyResult)).toHaveLength(0);
-    // eslint-disable-next-line no-console
+     
     console.log('Blok copy result (should be empty):', JSON.stringify(blokCopyResult));
 
     // Now press Ctrl+C for real — Chrome writes to the actual system clipboard
@@ -145,17 +145,17 @@ test.describe('Native copy paste diagnostic', () => {
       return Object.fromEntries(entries);
     });
 
-    // eslint-disable-next-line no-console
+     
     console.log('Native clipboard content:', JSON.stringify(nativeClipboard, null, 2));
 
     const htmlContent = nativeClipboard['text/html'] ?? '';
     const plainContent = nativeClipboard['text/plain'] ?? '';
 
-    // eslint-disable-next-line no-console
+     
     console.log('HTML contains <table>?', htmlContent.includes('<table'));
-    // eslint-disable-next-line no-console
+     
     console.log('HTML contains data-blok-table-cells?', htmlContent.includes('data-blok-table-cells'));
-    // eslint-disable-next-line no-console
+     
     console.log('Plain text:', plainContent);
 
     // Store for the paste test
@@ -169,7 +169,7 @@ test.describe('Native copy paste diagnostic', () => {
     expect(plainContent).toBe('Hello World');
 
     // Now test what happens when we paste this into another cell
-    const targetCellEditable = table.locator('[data-blok-table-cell]').nth(1).locator('[contenteditable="true"]');
+    const targetCellEditable = table.locator('[data-blok-table-cell]').filter({ hasText: 'Target Cell' }).locator('[contenteditable="true"]');
     await targetCellEditable.click();
     await expect(targetCellEditable).toBeFocused({ timeout: 2000 });
 
@@ -183,7 +183,7 @@ test.describe('Native copy paste diagnostic', () => {
         blockTypes: saved.blocks.map((b) => b.type),
       };
     });
-    // eslint-disable-next-line no-console
+     
     console.log('Before paste:', JSON.stringify(beforePaste));
 
     // Simulate paste with the native clipboard HTML
@@ -216,7 +216,7 @@ test.describe('Native copy paste diagnostic', () => {
         blockData: saved.blocks.map((b) => ({ type: b.type, data: b.data })),
       };
     });
-    // eslint-disable-next-line no-console
+     
     console.log('After paste:', JSON.stringify(afterPaste, null, 2));
 
     // CRITICAL ASSERTION: the block count should NOT have increased
@@ -235,7 +235,7 @@ test.describe('Native copy paste diagnostic', () => {
     await expect(table).toBeVisible({ timeout: 5000 });
 
     // Click the first cell (no drag = single cell selection, but maybe hasSelection=true)
-    const firstCell = table.locator('[data-blok-table-cell]').first();
+    const firstCell = table.locator('[data-blok-table-cell]').filter({ hasText: 'Hello World' });
     await firstCell.click();
 
     // DON'T select text — just click to place caret (selection is collapsed)
@@ -255,11 +255,11 @@ test.describe('Native copy paste diagnostic', () => {
       return store;
     });
 
-    // eslint-disable-next-line no-console
+     
     console.log('Blok copy (collapsed selection):', JSON.stringify(blokCopyResult));
-    // eslint-disable-next-line no-console
+     
     console.log('HTML contains <table>?', (blokCopyResult['text/html'] ?? '').includes('<table'));
-    // eslint-disable-next-line no-console
+     
     console.log('HTML contains data-blok-table-cells?', (blokCopyResult['text/html'] ?? '').includes('data-blok-table-cells'));
   });
 
@@ -277,14 +277,14 @@ test.describe('Native copy paste diagnostic', () => {
     await expect(table).toBeVisible({ timeout: 5000 });
 
     // Step 1: Select text in cell A and copy
-    const cellA = table.locator('[data-blok-table-cell]').first().locator('[contenteditable="true"]');
+    const cellA = table.locator('[data-blok-table-cell]').filter({ hasText: 'Hello World' }).locator('[contenteditable="true"]');
     await cellA.click();
     await page.keyboard.press('ControlOrMeta+a');
     await page.keyboard.press('ControlOrMeta+c');
     await page.waitForTimeout(300);
 
     // Step 2: Click cell B
-    const cellB = table.locator('[data-blok-table-cell]').nth(1).locator('[contenteditable="true"]');
+    const cellB = table.locator('[data-blok-table-cell]').filter({ hasText: 'Target Cell' }).locator('[contenteditable="true"]');
     await cellB.click();
     await expect(cellB).toBeFocused({ timeout: 2000 });
 
@@ -295,7 +295,7 @@ test.describe('Native copy paste diagnostic', () => {
       const saved = await blok.save();
       return { blockCount: saved.blocks.length, blockTypes: saved.blocks.map((b) => b.type) };
     });
-    // eslint-disable-next-line no-console
+     
     console.log('Before Ctrl+V paste:', JSON.stringify(beforePaste));
 
     // Step 3: Paste
@@ -313,7 +313,7 @@ test.describe('Native copy paste diagnostic', () => {
         blockData: saved.blocks.map((b) => ({ type: b.type, data: b.data })),
       };
     });
-    // eslint-disable-next-line no-console
+     
     console.log('After Ctrl+V paste:', JSON.stringify(afterPaste, null, 2));
 
     // CRITICAL: no extra blocks should have been inserted
@@ -338,7 +338,7 @@ test.describe('Native copy paste diagnostic', () => {
     await expect(cells).toHaveCount(4); // 2x2 table
 
     // Step 1: Drag-select the first cell to create a selection
-    const cell00 = cells.nth(0);
+    const cell00 = cells.filter({ hasText: 'Hello World' });
     const cell00Box = assertBoundingBox(await cell00.boundingBox(), 'cell [0,0]');
     const startX = cell00Box.x + cell00Box.width / 2;
     const startY = cell00Box.y + cell00Box.height / 2;
@@ -380,7 +380,7 @@ test.describe('Native copy paste diagnostic', () => {
     });
 
     // Step 3: Click on target cell (0,1) and paste
-    const cell01 = cells.nth(1).locator('[contenteditable="true"]');
+    const cell01 = cells.filter({ hasText: 'Target Cell' }).locator('[contenteditable="true"]');
     await cell01.click();
     await expect(cell01).toBeFocused({ timeout: 2000 });
 
@@ -398,9 +398,9 @@ test.describe('Native copy paste diagnostic', () => {
       };
     });
 
-    // eslint-disable-next-line no-console
+     
     console.log('Before pill-copy paste:', JSON.stringify(beforePaste));
-    // eslint-disable-next-line no-console
+     
     console.log('After pill-copy paste:', JSON.stringify(afterPaste));
 
     // CRITICAL: no new table block should be inserted at the document level
@@ -464,11 +464,11 @@ test.describe('Native copy paste diagnostic', () => {
     const tables = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-tool="table"]`);
     await expect(tables).toHaveCount(2);
 
-    const tableA = tables.nth(0);
-    const tableB = tables.nth(1);
+    const tableA = tables.filter({ hasText: 'Source Cell' });
+    const tableB = tables.filter({ hasText: 'Target Cell' });
 
     // Click first cell in Table A (creates selection) and copy
-    const cellA = tableA.locator('[data-blok-table-cell]').first();
+    const cellA = tableA.locator('[data-blok-table-cell]').filter({ hasText: 'Source Cell' });
     await cellA.click();
     // Verify a single-click creates a cell selection
     await page.waitForTimeout(100);
@@ -494,9 +494,9 @@ test.describe('Native copy paste diagnostic', () => {
       }
     });
 
-    // eslint-disable-next-line no-console
+     
     console.log('Cross-table clipboard content:', JSON.stringify(clipContent));
-    // eslint-disable-next-line no-console
+     
     console.log('Has data-blok-table-cells?', (clipContent['text/html'] ?? '').includes('data-blok-table-cells'));
 
     // Count blocks before paste
@@ -506,11 +506,11 @@ test.describe('Native copy paste diagnostic', () => {
       const saved = await blok.save();
       return { blockCount: saved.blocks.length, blockTypes: saved.blocks.map((b) => b.type) };
     });
-    // eslint-disable-next-line no-console
+     
     console.log('Before cross-table paste:', JSON.stringify(beforePaste));
 
     // Click first cell of Table B and paste
-    const cellB = tableB.locator('[data-blok-table-cell]').first().locator('[contenteditable="true"]');
+    const cellB = tableB.locator('[data-blok-table-cell]').filter({ hasText: 'Target Cell' }).locator('[contenteditable="true"]');
     await cellB.click();
     await expect(cellB).toBeFocused({ timeout: 2000 });
 
@@ -528,7 +528,7 @@ test.describe('Native copy paste diagnostic', () => {
         blockTypes: saved.blocks.map((b) => b.type),
       };
     });
-    // eslint-disable-next-line no-console
+     
     console.log('After cross-table paste:', JSON.stringify(afterPaste));
 
     // CRITICAL: no new table block should appear — should still be 2 tables (+ other blocks)

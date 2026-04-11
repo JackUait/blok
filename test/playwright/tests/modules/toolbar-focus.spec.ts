@@ -60,6 +60,38 @@ const createParagraphBlok = async (page: Page, paragraphs: string[]): Promise<vo
   }, { holder: HOLDER_ID, blocks });
 };
 
+/**
+ * Triggers a real mousedown on a locator via Playwright's mouse API and
+ * returns whether the handler called preventDefault().
+ *
+ * Installs a one-shot capturing listener, moves the mouse to the element
+ * center, presses down, then reads the captured defaultPrevented flag.
+ */
+const checkMousedownDefaultPrevented = async (page: Page, locator: ReturnType<Page['locator']>): Promise<boolean> => {
+  await locator.evaluate((el) => {
+    const handler = (e: Event): void => {
+      el.removeEventListener('mousedown', handler, true);
+      (window as unknown as Record<string, boolean>).__blokTestDefaultPrevented = e.defaultPrevented;
+    };
+
+    el.addEventListener('mousedown', handler, true);
+  });
+
+  const box = await locator.boundingBox();
+
+  if (box === null) {
+    throw new Error('Bounding box is null — element is not visible');
+  }
+
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.up();
+
+  return page.evaluate(
+    () => (window as unknown as Record<string, boolean>).__blokTestDefaultPrevented
+  );
+};
+
 test.describe('toolbar button focus preservation', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
@@ -88,9 +120,8 @@ test.describe('toolbar button focus preservation', () => {
   test('plus button mousedown event must have preventDefault called', async ({ page }) => {
     await createParagraphBlok(page, [ 'First', 'Second' ]);
 
-    const paragraphs = page.locator(PARAGRAPH_SELECTOR);
-    const firstParagraph = paragraphs.nth(0);
-    const secondParagraph = paragraphs.nth(1);
+    const firstParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'First' });
+    const secondParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'Second' });
 
     // Click into first paragraph so it has focus
     await firstParagraph.click();
@@ -102,19 +133,8 @@ test.describe('toolbar button focus preservation', () => {
 
     await plusButton.waitFor({ state: 'visible' });
 
-    // Dispatch a mousedown event on the plus button and record whether it was cancelled
-    const wasDefaultPrevented = await plusButton.evaluate((el) => {
-      return new Promise<boolean>((resolve) => {
-        const handler = (e: Event): void => {
-          el.removeEventListener('mousedown', handler, true);
-          // Resolve after the event loop so all handlers have run
-          setTimeout(() => resolve(e.defaultPrevented), 0);
-        };
-
-        el.addEventListener('mousedown', handler, true);
-        el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
-      });
-    });
+    // Trigger a real mousedown via Playwright's mouse API and check defaultPrevented
+    const wasDefaultPrevented = await checkMousedownDefaultPrevented(page, plusButton);
 
     expect(wasDefaultPrevented).toBe(true);
   });
@@ -127,9 +147,8 @@ test.describe('toolbar button focus preservation', () => {
   test('settings toggler mousedown event must have preventDefault called', async ({ page }) => {
     await createParagraphBlok(page, [ 'First', 'Second' ]);
 
-    const paragraphs = page.locator(PARAGRAPH_SELECTOR);
-    const firstParagraph = paragraphs.nth(0);
-    const secondParagraph = paragraphs.nth(1);
+    const firstParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'First' });
+    const secondParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'Second' });
 
     // Click into first paragraph so it has focus
     await firstParagraph.click();
@@ -141,18 +160,8 @@ test.describe('toolbar button focus preservation', () => {
 
     await settingsToggler.waitFor({ state: 'visible' });
 
-    // Dispatch a mousedown event on the settings toggler and record whether it was cancelled
-    const wasDefaultPrevented = await settingsToggler.evaluate((el) => {
-      return new Promise<boolean>((resolve) => {
-        const handler = (e: Event): void => {
-          el.removeEventListener('mousedown', handler, true);
-          setTimeout(() => resolve(e.defaultPrevented), 0);
-        };
-
-        el.addEventListener('mousedown', handler, true);
-        el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
-      });
-    });
+    // Trigger a real mousedown via Playwright's mouse API and check defaultPrevented
+    const wasDefaultPrevented = await checkMousedownDefaultPrevented(page, settingsToggler);
 
     expect(wasDefaultPrevented).toBe(true);
   });
@@ -173,9 +182,8 @@ test.describe('toolbar button focus preservation', () => {
   test('plus button click then Escape should return focus inside the editor', async ({ page }) => {
     await createParagraphBlok(page, [ 'Hello', 'Second' ]);
 
-    const paragraphs = page.locator(PARAGRAPH_SELECTOR);
-    const firstParagraph = paragraphs.nth(0);
-    const secondParagraph = paragraphs.nth(1);
+    const firstParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'Hello' });
+    const secondParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'Second' });
 
     // Click and place caret in first paragraph
     await firstParagraph.click();
@@ -216,9 +224,9 @@ test.describe('toolbar button focus preservation', () => {
   test('text typed after plus+Escape should stay in the originally-focused block', async ({ page }) => {
     await createParagraphBlok(page, [ 'Hello', 'Second' ]);
 
-    const paragraphs = page.locator(PARAGRAPH_SELECTOR);
-    const firstParagraph = paragraphs.nth(0);
-    const secondParagraph = paragraphs.nth(1);
+    const allParagraphs = page.locator(PARAGRAPH_SELECTOR);
+    const firstParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'Hello' });
+    const secondParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'Second' });
 
     // Click block 0, place caret at end
     await firstParagraph.click();
@@ -247,7 +255,7 @@ test.describe('toolbar button focus preservation', () => {
     expect(firstText).toBe('Hello World');
 
     // Block count must be 2 (plus+Escape must not leave an orphan block)
-    await expect(paragraphs).toHaveCount(2);
+    await expect(allParagraphs).toHaveCount(2);
   });
 });
 

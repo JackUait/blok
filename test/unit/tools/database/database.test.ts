@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fireEvent } from '@testing-library/dom';
+import { fireEvent, queryAllByAttribute } from '@testing-library/dom';
 import type { API, BlockAPI, BlockToolConstructorOptions } from '../../../../types';
 import type { DatabaseData, DatabaseConfig, DatabaseRowData, DatabaseViewConfig } from '../../../../src/tools/database/types';
 import { DatabaseTool } from '../../../../src/tools/database';
@@ -7,6 +7,22 @@ import type { DatabaseCardDrawer } from '../../../../src/tools/database/database
 import type { DatabaseModel } from '../../../../src/tools/database/database-model';
 import type { CardDragResult, DatabaseCardDrag } from '../../../../src/tools/database/database-card-drag';
 import type { GroupDragResult, DatabaseColumnDrag } from '../../../../src/tools/database/database-column-drag';
+
+// ---------------------------------------------------------------------------
+// Testing Library helpers — replace querySelector / querySelectorAll with
+// queryByAttribute / queryAllByAttribute to satisfy no-node-access rule.
+// ---------------------------------------------------------------------------
+
+/** Query all elements by the presence of a data attribute (value defaults to '' for boolean attrs). */
+const queryAllByData = (container: HTMLElement, attr: string, value: string | RegExp = ''): HTMLElement[] =>
+  queryAllByAttribute(attr, container, value);
+
+/** Query the first element by the presence of a data attribute (value defaults to '' for boolean attrs). */
+const queryByData = (container: HTMLElement, attr: string, value: string | RegExp = ''): HTMLElement | null => {
+  const all = queryAllByData(container, attr, value);
+
+  return all.length > 0 ? all[0] : null;
+};
 
 // ---------------------------------------------------------------------------
 // Mock PopoverDesktop so JSDOM does not blow up. When show() is called the
@@ -200,7 +216,7 @@ describe('DatabaseTool', () => {
     it('renders 3 columns for default data with 3 select options', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
       const element = tool.render();
-      const columns = element.querySelectorAll('[data-blok-database-column]');
+      const columns = queryAllByData(element, 'data-blok-database-column');
 
       expect(columns).toHaveLength(3);
     });
@@ -208,7 +224,7 @@ describe('DatabaseTool', () => {
     it('renders a title element with data-blok-database-title attribute', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
       const element = tool.render();
-      const titleEl = element.querySelector('[data-blok-database-title]');
+      const titleEl = queryByData(element, 'data-blok-database-title');
 
       expect(titleEl).not.toBeNull();
     });
@@ -216,7 +232,7 @@ describe('DatabaseTool', () => {
     it('renders title text from data.title when provided', () => {
       const tool = new DatabaseTool(createDatabaseOptions({ title: 'My Project' }));
       const element = tool.render();
-      const titleEl = element.querySelector('[data-blok-database-title]');
+      const titleEl = queryByData(element, 'data-blok-database-title');
 
       expect(titleEl?.textContent).toBe('My Project');
     });
@@ -224,7 +240,7 @@ describe('DatabaseTool', () => {
     it('renders empty title element when data.title is not provided', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
       const element = tool.render();
-      const titleEl = element.querySelector('[data-blok-database-title]');
+      const titleEl = queryByData(element, 'data-blok-database-title');
 
       expect(titleEl?.textContent).toBe('');
     });
@@ -232,7 +248,7 @@ describe('DatabaseTool', () => {
     it('renders title element with data-placeholder="New database" when no title provided', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
       const element = tool.render();
-      const titleEl = element.querySelector('[data-blok-database-title]');
+      const titleEl = queryByData(element, 'data-blok-database-title');
 
       expect(titleEl?.getAttribute('data-placeholder')).toBe('New database');
     });
@@ -240,7 +256,7 @@ describe('DatabaseTool', () => {
     it('renders title element with data-placeholder even when title is provided', () => {
       const tool = new DatabaseTool(createDatabaseOptions({ title: 'My Project' }));
       const element = tool.render();
-      const titleEl = element.querySelector('[data-blok-database-title]');
+      const titleEl = queryByData(element, 'data-blok-database-title');
 
       expect(titleEl?.getAttribute('data-placeholder')).toBe('New database');
     });
@@ -248,18 +264,19 @@ describe('DatabaseTool', () => {
     it('renders title before the tab bar', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
       const element = tool.render();
-      const children = Array.from(element.children);
-      const titleRowIndex = children.findIndex((el) => el.hasAttribute('data-blok-database-title-row'));
-      const tabBarIndex = children.findIndex((el) => el.hasAttribute('data-blok-database-tab-bar'));
+      const titleRow = queryByData(element, 'data-blok-database-title-row');
+      const tabBar = queryByData(element, 'data-blok-database-tab-bar');
 
-      expect(titleRowIndex).toBeGreaterThanOrEqual(0);
-      expect(tabBarIndex).toBeGreaterThan(titleRowIndex);
+      expect(titleRow).not.toBeNull();
+      expect(tabBar).not.toBeNull();
+      // DOCUMENT_POSITION_FOLLOWING (4) means tabBar comes after titleRow in document order
+      expect(titleRow!.compareDocumentPosition(tabBar!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     });
 
     it('renders title as contenteditable in edit mode', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
       const element = tool.render();
-      const titleEl = element.querySelector('[data-blok-database-title]');
+      const titleEl = queryByData(element, 'data-blok-database-title');
 
       expect(titleEl?.getAttribute('contenteditable')).toBe('true');
     });
@@ -267,7 +284,7 @@ describe('DatabaseTool', () => {
     it('renders title as non-editable in read-only mode', () => {
       const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: true }));
       const element = tool.render();
-      const titleEl = element.querySelector('[data-blok-database-title]');
+      const titleEl = queryByData(element, 'data-blok-database-title');
 
       expect(titleEl?.getAttribute('contenteditable')).not.toBe('true');
     });
@@ -275,23 +292,31 @@ describe('DatabaseTool', () => {
     it('blurs title on Enter key', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
       const element = tool.render();
-      const titleEl = element.querySelector('[data-blok-database-title]') as HTMLElement;
-      const blurSpy = vi.spyOn(titleEl, 'blur');
+      const titleEl = queryByData(element, 'data-blok-database-title')!;
+
+      document.body.appendChild(element);
+      titleEl.focus();
 
       fireEvent.keyDown(titleEl, { key: 'Enter' });
 
-      expect(blurSpy).toHaveBeenCalled();
+      expect(titleEl).not.toHaveFocus();
+
+      element.remove();
     });
 
     it('blurs title on Tab key', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
       const element = tool.render();
-      const titleEl = element.querySelector('[data-blok-database-title]') as HTMLElement;
-      const blurSpy = vi.spyOn(titleEl, 'blur');
+      const titleEl = queryByData(element, 'data-blok-database-title')!;
+
+      document.body.appendChild(element);
+      titleEl.focus();
 
       fireEvent.keyDown(titleEl, { key: 'Tab' });
 
-      expect(blurSpy).toHaveBeenCalled();
+      expect(titleEl).not.toHaveFocus();
+
+      element.remove();
     });
   });
 
@@ -336,7 +361,7 @@ describe('DatabaseTool', () => {
     it('saves updated title after editing the title element', () => {
       const tool = new DatabaseTool(createDatabaseOptions({ title: 'Original' }));
       const element = tool.render();
-      const titleEl = element.querySelector('[data-blok-database-title]') as HTMLElement;
+      const titleEl = queryByData(element, 'data-blok-database-title')!;
 
       titleEl.textContent = 'Updated title';
 
@@ -417,7 +442,7 @@ describe('DatabaseTool', () => {
       const tool = new DatabaseTool(options);
       const element = tool.render();
 
-      const addCardBtn = element.querySelector('[data-blok-database-add-card]') as HTMLButtonElement;
+      const addCardBtn = queryByData(element, 'data-blok-database-add-card')!;
 
       expect(addCardBtn).not.toBeNull();
 
@@ -434,7 +459,7 @@ describe('DatabaseTool', () => {
       const tool = new DatabaseTool(options);
       const element = tool.render();
 
-      const addCardBtn = element.querySelector('[data-blok-database-add-card]') as HTMLButtonElement;
+      const addCardBtn = queryByData(element, 'data-blok-database-add-card')!;
 
       addCardBtn.click();
 
@@ -450,7 +475,7 @@ describe('DatabaseTool', () => {
       const tool = new DatabaseTool(options);
       const element = tool.render();
 
-      const addCardBtn = element.querySelector('[data-blok-database-add-card]') as HTMLButtonElement;
+      const addCardBtn = queryByData(element, 'data-blok-database-add-card')!;
 
       addCardBtn.click();
 
@@ -466,17 +491,17 @@ describe('DatabaseTool', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
       const element = tool.render();
 
-      const initialColumns = element.querySelectorAll('[data-blok-database-column]');
+      const initialColumns = queryAllByData(element, 'data-blok-database-column');
 
       expect(initialColumns).toHaveLength(3);
 
-      const addColBtn = element.querySelector('[data-blok-database-add-column]') as HTMLButtonElement;
+      const addColBtn = queryByData(element, 'data-blok-database-add-column')!;
 
       expect(addColBtn).not.toBeNull();
 
       addColBtn.click();
 
-      const columns = element.querySelectorAll('[data-blok-database-column]');
+      const columns = queryAllByData(element, 'data-blok-database-column');
 
       expect(columns).toHaveLength(4);
 
@@ -501,14 +526,14 @@ describe('DatabaseTool', () => {
       const element = tool.render();
       tool.rendered();
 
-      const cardMenuBtn = element.querySelector('[data-blok-database-card-menu]') as HTMLButtonElement;
+      const cardMenuBtn = queryByData(element, 'data-blok-database-card-menu')!;
 
       expect(cardMenuBtn).not.toBeNull();
 
       cardMenuBtn.click();
 
       // The mock popover appends action items to document.body
-      const deleteAction = document.body.querySelector('[data-mock-popover-action]') as HTMLElement;
+      const deleteAction = queryByData(document.body, 'data-mock-popover-action', /.*/)!;
 
       expect(deleteAction).not.toBeNull();
 
@@ -518,7 +543,7 @@ describe('DatabaseTool', () => {
       expect(options.api.blocks.delete).toHaveBeenCalledWith(1);
 
       // Cleanup mock popover
-      document.body.querySelector('[data-mock-popover]')?.remove();
+      queryByData(document.body, 'data-mock-popover')?.remove();
     });
   });
 
@@ -578,7 +603,8 @@ describe('DatabaseTool', () => {
       tool.rendered();
 
       // Find the delete-column button for opt-todo (injected by DatabaseColumnControls.makeEditable)
-      const deleteBtn = element.querySelector('[data-blok-database-delete-column][data-option-id="opt-todo"]') as HTMLButtonElement;
+      const deleteBtn = queryAllByData(element, 'data-blok-database-delete-column')
+        .find((el) => el.getAttribute('data-option-id') === 'opt-todo')!;
 
       expect(deleteBtn).not.toBeNull();
 
@@ -598,7 +624,7 @@ describe('DatabaseTool', () => {
       expect(updatePropertyCalls[0].propertyId).toBe('prop-status');
 
       // Column should be removed from DOM
-      const remainingColumns = element.querySelectorAll('[data-blok-database-column]');
+      const remainingColumns = queryAllByData(element, 'data-blok-database-column');
 
       expect(remainingColumns).toHaveLength(2);
 
@@ -650,7 +676,7 @@ describe('DatabaseTool', () => {
 
       mockI18n.mockClear();
 
-      const addColBtn = element.querySelector('[data-blok-database-add-column]') as HTMLButtonElement;
+      const addColBtn = queryByData(element, 'data-blok-database-add-column')!;
 
       addColBtn.click();
 
@@ -688,9 +714,9 @@ describe('DatabaseTool', () => {
       const onDrop = (cardDrag as any).onDrop as (result: CardDragResult) => void;
 
       // Open the drawer on the card so we can observe its destruction
-      const cardEl = element.querySelector('[data-row-id="row-1"]') as HTMLElement;
+      const cardEl = queryByData(element, 'data-row-id', 'row-1')!;
       cardEl.click();
-      expect(element.querySelector('[data-blok-database-drawer]')).not.toBeNull();
+      expect(queryByData(element, 'data-blok-database-drawer')).not.toBeNull();
 
       // Spy on the instance after creation (not on the prototype)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -713,7 +739,7 @@ describe('DatabaseTool', () => {
       // cardDrawer.destroy() should have been called during rerenderBoard
       expect(drawerDestroySpy).toHaveBeenCalled();
       // After rerender, the old drawer element should be gone from the DOM
-      expect(element.querySelector('[data-blok-database-drawer]')).toBeNull();
+      expect(queryByData(element, 'data-blok-database-drawer')).toBeNull();
 
       tool.destroy();
     });
@@ -755,14 +781,14 @@ describe('DatabaseTool', () => {
       const element = tool.render();
 
       // Board should have no cards after render()
-      expect(element.querySelectorAll('[data-blok-database-card]')).toHaveLength(0);
+      expect(queryAllByData(element, 'data-blok-database-card')).toHaveLength(0);
 
       // Now child blocks become available (simulates Renderer creating them after database block)
       (options.api.blocks.getChildren as ReturnType<typeof vi.fn>).mockReturnValue(childBlocks);
       tool.rendered();
 
       // Board should now show the card
-      expect(element.querySelectorAll('[data-blok-database-card]')).toHaveLength(1);
+      expect(queryAllByData(element, 'data-blok-database-card')).toHaveLength(1);
     });
 
     it('projects child block data into model rows', () => {
@@ -799,12 +825,12 @@ describe('DatabaseTool', () => {
       tool.rendered();
 
       // Click the card to open the drawer
-      const cardEl = element.querySelector('[data-row-id="row-1"]') as HTMLElement;
+      const cardEl = queryByData(element, 'data-row-id', 'row-1')!;
 
       cardEl.click();
 
       // The drawer should be open with a title input
-      const drawerTitle = element.querySelector('[data-blok-database-drawer-title]') as HTMLTextAreaElement;
+      const drawerTitle = queryByData(element, 'data-blok-database-drawer-title')! as HTMLTextAreaElement;
 
       expect(drawerTitle).not.toBeNull();
 
@@ -856,7 +882,7 @@ describe('DatabaseTool', () => {
       document.body.appendChild(container);
 
       // Set horizontal scroll on the board area
-      const boardArea = element.querySelector('[data-blok-database-board]') as HTMLElement;
+      const boardArea = queryByData(element, 'data-blok-database-board')!;
 
       boardArea.scrollLeft = 200;
       expect(boardArea.scrollLeft).toBe(200);
@@ -880,7 +906,7 @@ describe('DatabaseTool', () => {
       });
 
       // After rerender, the new board area should have the scroll position restored
-      const newBoardArea = element.querySelector('[data-blok-database-board]') as HTMLElement;
+      const newBoardArea = queryByData(element, 'data-blok-database-board')!;
 
       expect(newBoardArea.scrollLeft).toBe(200);
 
@@ -897,7 +923,7 @@ describe('DatabaseTool', () => {
       container.appendChild(element);
       document.body.appendChild(container);
 
-      const boardArea = element.querySelector('[data-blok-database-board]') as HTMLElement;
+      const boardArea = queryByData(element, 'data-blok-database-board')!;
 
       boardArea.scrollLeft = 150;
 
@@ -913,7 +939,7 @@ describe('DatabaseTool', () => {
         afterOptionId: 'opt-done',
       });
 
-      const newBoardArea = element.querySelector('[data-blok-database-board]') as HTMLElement;
+      const newBoardArea = queryByData(element, 'data-blok-database-board')!;
 
       expect(newBoardArea.scrollLeft).toBe(150);
 
@@ -956,8 +982,8 @@ describe('DatabaseTool', () => {
       const tool = new DatabaseTool(createDatabaseOptions(makeListData(), {}, { childBlocks: makeListChildBlocks() }));
       const element = tool.render();
       tool.rendered();
-      expect(element.querySelector('[data-blok-database-list]')).not.toBeNull();
-      expect(element.querySelector('[data-blok-database-board]')).toBeNull();
+      expect(queryByData(element, 'data-blok-database-list')).not.toBeNull();
+      expect(queryByData(element, 'data-blok-database-board')).toBeNull();
     });
 
     it('renders list rows for each child block after rendered()', () => {
@@ -978,7 +1004,7 @@ describe('DatabaseTool', () => {
       const tool = new DatabaseTool(options);
       const element = tool.render();
       tool.rendered();
-      const addBtn = element.querySelector('[data-blok-database-add-row]') as HTMLButtonElement;
+      const addBtn = queryByData(element, 'data-blok-database-add-row')!;
       addBtn.click();
       expect(options.api.blocks.insert).toHaveBeenCalledTimes(1);
       const insertCall = (options.api.blocks.insert as ReturnType<typeof vi.fn>).mock.calls[0];
@@ -995,9 +1021,11 @@ describe('DatabaseTool', () => {
       const tool = new DatabaseTool(options);
       const element = tool.render();
       tool.rendered();
-      const deleteBtn = element.querySelector('[data-blok-database-delete-row]') as HTMLButtonElement;
+      const deleteBtn = queryByData(element, 'data-blok-database-delete-row')!;
       deleteBtn.click();
       expect(options.api.blocks.delete).toHaveBeenCalledTimes(1);
+      // Observable behavior: the row should be removed from the model
+      expect(queryAllByData(element, 'data-blok-database-list-row')).toHaveLength(1);
     });
 
     it('clicking a list row opens the card drawer', () => {
@@ -1005,9 +1033,9 @@ describe('DatabaseTool', () => {
       const tool = new DatabaseTool(options);
       const element = tool.render();
       tool.rendered();
-      const row = element.querySelector('[data-blok-database-list-row]') as HTMLElement;
+      const row = queryByData(element, 'data-blok-database-list-row')!;
       row.click();
-      expect(element.querySelector('[data-blok-database-drawer]')).not.toBeNull();
+      expect(queryByData(element, 'data-blok-database-drawer')).not.toBeNull();
     });
 
     it('validates list view without groupBy', () => {
@@ -1026,11 +1054,11 @@ describe('DatabaseTool', () => {
       };
       const tool = new DatabaseTool(createDatabaseOptions(data));
       const element = tool.render();
-      expect(element.querySelector('[data-blok-database-board]')).not.toBeNull();
-      const tab2 = element.querySelector('[data-view-id="view-2"]') as HTMLElement;
+      expect(queryByData(element, 'data-blok-database-board')).not.toBeNull();
+      const tab2 = queryByData(element, 'data-view-id', 'view-2')!;
       tab2.click();
-      expect(element.querySelector('[data-blok-database-list]')).not.toBeNull();
-      expect(element.querySelector('[data-blok-database-board]')).toBeNull();
+      expect(queryByData(element, 'data-blok-database-list')).not.toBeNull();
+      expect(queryByData(element, 'data-blok-database-board')).toBeNull();
     });
 
     it('renders grouped list when view has groupBy', () => {
@@ -1044,7 +1072,7 @@ describe('DatabaseTool', () => {
       const tool = new DatabaseTool(options);
       const element = tool.render();
       tool.rendered();
-      expect(element.querySelectorAll('[data-blok-database-list-group]')).toHaveLength(2);
+      expect(queryAllByData(element, 'data-blok-database-list-group')).toHaveLength(2);
     });
   });
 
@@ -1053,21 +1081,21 @@ describe('DatabaseTool', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
       const element = tool.render();
 
-      expect(element.querySelector('[data-blok-database-tab-bar]')).not.toBeNull();
+      expect(queryByData(element, 'data-blok-database-tab-bar')).not.toBeNull();
     });
 
     it('renders one tab for the default view', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
       const element = tool.render();
 
-      expect(element.querySelectorAll('[data-blok-database-tab]')).toHaveLength(1);
+      expect(queryAllByData(element, 'data-blok-database-tab')).toHaveLength(1);
     });
 
     it('renders the board area below the tab bar', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
       const element = tool.render();
 
-      expect(element.querySelector('[data-blok-database-board]')).not.toBeNull();
+      expect(queryByData(element, 'data-blok-database-board')).not.toBeNull();
     });
 
     it('saves data in DatabaseData format with schema and views but no rows', () => {
@@ -1112,22 +1140,22 @@ describe('DatabaseTool', () => {
       const element = tool.render();
 
       // Verify tab bar has 2 tabs
-      expect(element.querySelectorAll('[data-blok-database-tab]')).toHaveLength(2);
+      expect(queryAllByData(element, 'data-blok-database-tab')).toHaveLength(2);
 
       // Click the second tab
-      const tab2 = element.querySelector('[data-view-id="view-2"]') as HTMLElement;
+      const tab2 = queryByData(element, 'data-view-id', 'view-2')!;
 
       tab2.click();
 
       // After click, the board should still be rendered (same data, different view)
-      expect(element.querySelector('[data-blok-database-board]')).not.toBeNull();
+      expect(queryByData(element, 'data-blok-database-board')).not.toBeNull();
     });
 
     it('renders a tab bar in read-only mode (navigation is not an edit action)', () => {
       const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: true }));
       const element = tool.render();
 
-      expect(element.querySelector('[data-blok-database-tab-bar]')).not.toBeNull();
+      expect(queryByData(element, 'data-blok-database-tab-bar')).not.toBeNull();
     });
   });
 
@@ -1352,7 +1380,7 @@ describe('DatabaseTool', () => {
       const element = tool.render();
 
       // Add a row
-      const addCardBtn = element.querySelector('[data-blok-database-add-card]') as HTMLButtonElement;
+      const addCardBtn = queryByData(element, 'data-blok-database-add-card')!;
 
       addCardBtn.click();
 
@@ -1415,11 +1443,11 @@ describe('DatabaseTool', () => {
 
       document.body.appendChild(element);
 
-      expect(element.querySelectorAll('[data-blok-database-add-card]').length).toBeGreaterThan(0);
+      expect(queryAllByData(element, 'data-blok-database-add-card').length).toBeGreaterThan(0);
 
       tool.setReadOnly(true);
 
-      expect(element.querySelectorAll('[data-blok-database-add-card]')).toHaveLength(0);
+      expect(queryAllByData(element, 'data-blok-database-add-card')).toHaveLength(0);
 
       element.remove();
       tool.destroy();
@@ -1431,11 +1459,11 @@ describe('DatabaseTool', () => {
 
       document.body.appendChild(element);
 
-      expect(element.querySelector('[data-blok-database-add-column]')).not.toBeNull();
+      expect(queryByData(element, 'data-blok-database-add-column')).not.toBeNull();
 
       tool.setReadOnly(true);
 
-      expect(element.querySelector('[data-blok-database-add-column]')).toBeNull();
+      expect(queryByData(element, 'data-blok-database-add-column')).toBeNull();
 
       element.remove();
       tool.destroy();
@@ -1447,7 +1475,7 @@ describe('DatabaseTool', () => {
 
       document.body.appendChild(element);
 
-      const titleEl = element.querySelector<HTMLElement>('[data-blok-database-title]');
+      const titleEl = queryByData(element, 'data-blok-database-title');
 
       expect(titleEl?.getAttribute('contenteditable')).toBe('true');
 
@@ -1465,11 +1493,11 @@ describe('DatabaseTool', () => {
 
       document.body.appendChild(element);
 
-      expect(element.querySelector('[data-blok-database-tab-bar]')).not.toBeNull();
+      expect(queryByData(element, 'data-blok-database-tab-bar')).not.toBeNull();
 
       tool.setReadOnly(true);
 
-      expect(element.querySelector('[data-blok-database-tab-bar]')).not.toBeNull();
+      expect(queryByData(element, 'data-blok-database-tab-bar')).not.toBeNull();
 
       element.remove();
       tool.destroy();
@@ -1481,11 +1509,11 @@ describe('DatabaseTool', () => {
 
       document.body.appendChild(element);
 
-      expect(element.querySelector('[data-blok-database-add-view]')).not.toBeNull();
+      expect(queryByData(element, 'data-blok-database-add-view')).not.toBeNull();
 
       tool.setReadOnly(true);
 
-      expect(element.querySelector('[data-blok-database-add-view]')).toBeNull();
+      expect(queryByData(element, 'data-blok-database-add-view')).toBeNull();
 
       element.remove();
       tool.destroy();
@@ -1497,7 +1525,7 @@ describe('DatabaseTool', () => {
 
       document.body.appendChild(element);
 
-      expect(element.querySelector('[data-blok-database-tab-bar]')).not.toBeNull();
+      expect(queryByData(element, 'data-blok-database-tab-bar')).not.toBeNull();
 
       element.remove();
       tool.destroy();
@@ -1509,7 +1537,7 @@ describe('DatabaseTool', () => {
 
       document.body.appendChild(element);
 
-      expect(element.querySelector('[data-blok-database-add-view]')).toBeNull();
+      expect(queryByData(element, 'data-blok-database-add-view')).toBeNull();
 
       element.remove();
       tool.destroy();
@@ -1521,11 +1549,11 @@ describe('DatabaseTool', () => {
 
       document.body.appendChild(element);
 
-      expect(element.querySelectorAll('[data-blok-database-add-card]')).toHaveLength(0);
+      expect(queryAllByData(element, 'data-blok-database-add-card')).toHaveLength(0);
 
       tool.setReadOnly(false);
 
-      expect(element.querySelectorAll('[data-blok-database-add-card]').length).toBeGreaterThan(0);
+      expect(queryAllByData(element, 'data-blok-database-add-card').length).toBeGreaterThan(0);
 
       element.remove();
       tool.destroy();
@@ -1537,11 +1565,11 @@ describe('DatabaseTool', () => {
 
       document.body.appendChild(element);
 
-      expect(element.querySelector('[data-blok-database-add-column]')).toBeNull();
+      expect(queryByData(element, 'data-blok-database-add-column')).toBeNull();
 
       tool.setReadOnly(false);
 
-      expect(element.querySelector('[data-blok-database-add-column]')).not.toBeNull();
+      expect(queryByData(element, 'data-blok-database-add-column')).not.toBeNull();
 
       element.remove();
       tool.destroy();
@@ -1553,7 +1581,7 @@ describe('DatabaseTool', () => {
 
       document.body.appendChild(element);
 
-      const titleEl = element.querySelector<HTMLElement>('[data-blok-database-title]');
+      const titleEl = queryByData(element, 'data-blok-database-title');
 
       expect(titleEl?.getAttribute('contenteditable')).toBeNull();
 
@@ -1571,17 +1599,17 @@ describe('DatabaseTool', () => {
 
       document.body.appendChild(element);
 
-      expect(element.querySelector('[data-blok-database-add-view]')).toBeNull();
+      expect(queryByData(element, 'data-blok-database-add-view')).toBeNull();
 
       tool.setReadOnly(false);
 
-      expect(element.querySelector('[data-blok-database-add-view]')).not.toBeNull();
+      expect(queryByData(element, 'data-blok-database-add-view')).not.toBeNull();
 
       element.remove();
       tool.destroy();
     });
 
-    it('setReadOnly is idempotent when called with the same state (true→true)', () => {
+    it('setReadOnly is idempotent when called with the same state (true->true)', () => {
       const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: false }));
       const element = tool.render();
 
@@ -1590,13 +1618,13 @@ describe('DatabaseTool', () => {
       tool.setReadOnly(true);
       expect(() => tool.setReadOnly(true)).not.toThrow();
 
-      expect(element.querySelector('[data-blok-database-add-column]')).toBeNull();
+      expect(queryByData(element, 'data-blok-database-add-column')).toBeNull();
 
       element.remove();
       tool.destroy();
     });
 
-    it('setReadOnly is idempotent when called with the same state (false→false)', () => {
+    it('setReadOnly is idempotent when called with the same state (false->false)', () => {
       const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: false }));
       const element = tool.render();
 
@@ -1604,7 +1632,7 @@ describe('DatabaseTool', () => {
 
       expect(() => tool.setReadOnly(false)).not.toThrow();
 
-      expect(element.querySelector('[data-blok-database-add-column]')).not.toBeNull();
+      expect(queryByData(element, 'data-blok-database-add-column')).not.toBeNull();
 
       element.remove();
       tool.destroy();
@@ -1624,7 +1652,7 @@ describe('DatabaseTool', () => {
       expect(anchor).toBe(rendered);
 
       // Verify the board container IS a descendant, proving anchor is the outer wrapper
-      const boardContainer = rendered.querySelector('[data-blok-database-board-container]');
+      const boardContainer = queryByData(rendered, 'data-blok-database-board-container');
 
       expect(boardContainer).not.toBeNull();
       expect(anchor).not.toBe(boardContainer);

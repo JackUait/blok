@@ -30,6 +30,20 @@ export class KeyboardController extends Controller {
   private redactorElement: HTMLElement | null = null;
 
   /**
+   * The editor wrapper element for editor boundary checks.
+   * Stored directly because the keyboard controller's Blok reference
+   * (created by getModulesDiff) does not include the UI module itself.
+   */
+  private wrapperElement: HTMLElement | null = null;
+
+  /**
+   * Flag set when the controller is disabled (editor destroyed or read-only).
+   * Used instead of checking this.Blok.UI which is unavailable to controllers
+   * owned by the UI module (getModulesDiff excludes the owning module).
+   */
+  private isDisabled = false;
+
+  /**
    * Stable handler references for deduplication via Listeners.findOne.
    * Storing as class properties ensures the same function reference is passed
    * to addEventListener on every enable() call, so the Listeners utility can
@@ -61,7 +75,7 @@ export class KeyboardController extends Controller {
     if (target instanceof Element) {
       const closestEditor = target.closest('[data-blok-testid="blok-editor"]');
 
-      if (closestEditor !== null && closestEditor !== this.Blok.UI.nodes.wrapper) {
+      if (closestEditor !== null && closestEditor !== this.wrapperElement) {
         return;
       }
     }
@@ -88,12 +102,21 @@ export class KeyboardController extends Controller {
   }
 
   /**
+   * Set the editor wrapper element for editor boundary checks
+   */
+  public setWrapperElement(element: HTMLElement): void {
+    this.wrapperElement = element;
+  }
+
+  /**
    * Enable keyboard event listeners
    */
   public override enable(): void {
     if (!this.redactorElement) {
       return;
     }
+
+    this.isDisabled = false;
 
     // Document-level keydown handler
     this.readOnlyMutableListeners.on(document, 'keydown', this.documentKeydownHandler, true);
@@ -113,35 +136,52 @@ export class KeyboardController extends Controller {
   }
 
   /**
+   * Disable the controller — marks it as inactive so stale handlers bail out.
+   */
+  public override disable(): void {
+    this.isDisabled = true;
+    super.disable();
+  }
+
+  /**
    * Main keyboard event router
    * @param event - keyboard event
    */
   private handleKeydown(event: KeyboardEvent): void {
     /**
-     * Guard against destroyed editor instances whose listeners were not
-     * properly removed.  When this.Blok.UI is undefined the handler would
-     * throw, silently swallowing the event and preventing other editors on
-     * the page from receiving it.
+     * Guard against destroyed or disabled editor instances whose listeners
+     * were not properly removed. When the controller is disabled the handler
+     * bails out early so it does not throw or interfere with other editors.
      */
-    if (!this.Blok.UI) {
+    if (this.isDisabled) {
       return;
     }
 
     const target = event.target;
+    const key = event.key ?? '';
 
+    /**
+     * Skip input/textarea targets for most keys to avoid intercepting normal
+     * typing.  Escape is exempted only for inputs inside popovers (e.g. the
+     * search input) so the keyboard controller can close the popover.
+     * Inputs elsewhere (e.g. database title edit inputs) keep their own
+     * Escape handling.
+     */
     if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
-      return;
+      const isInsidePopover = target.closest('[data-blok-popover]') !== null;
+
+      if (key !== 'Escape' || !isInsidePopover) {
+        return;
+      }
     }
 
     if (target instanceof Element) {
       const closestEditor = target.closest('[data-blok-testid="blok-editor"]');
 
-      if (closestEditor !== null && closestEditor !== this.Blok.UI.nodes.wrapper) {
+      if (closestEditor !== null && closestEditor !== this.wrapperElement) {
         return;
       }
     }
-
-    const key = event.key ?? '';
 
     switch (key) {
       case 'Enter':

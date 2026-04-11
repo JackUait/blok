@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DatabaseColumnControls } from '../../../../src/tools/database/database-column-controls';
-import { simulateChange } from '../../../helpers/simulate';
+import { simulateChange, simulateInput, simulateKeydown } from '../../../helpers/simulate';
 import type { I18n } from '../../../../types';
 
 const createMockI18n = (): I18n => ({
@@ -146,7 +146,7 @@ describe('DatabaseColumnControls', () => {
 
       const input = headerEl.querySelector<HTMLInputElement>('[data-blok-database-column-title-input]')!;
       input.value = 'BACKLOG UPDATED';
-      input.dispatchEvent(new Event('input'));
+      simulateInput(input);
 
       expect(onRenameInput).toHaveBeenCalledWith('opt-1', 'BACKLOG UPDATED');
     });
@@ -177,7 +177,7 @@ describe('DatabaseColumnControls', () => {
 
       const input = headerEl.querySelector<HTMLInputElement>('[data-blok-database-column-title-input]')!;
       input.value = 'NEW NAME';
-      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      simulateKeydown(input, 'Enter');
 
       expect(onRenameCommit).toHaveBeenCalledWith('opt-1', 'NEW NAME');
     });
@@ -191,7 +191,7 @@ describe('DatabaseColumnControls', () => {
 
       const input = headerEl.querySelector<HTMLInputElement>('[data-blok-database-column-title-input]')!;
       input.value = 'OOPS';
-      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      simulateKeydown(input, 'Escape');
 
       expect(onRenameCommit).not.toHaveBeenCalled();
       expect(headerEl.querySelector('[data-blok-database-column-title]')?.textContent).toBe('BACKLOG');

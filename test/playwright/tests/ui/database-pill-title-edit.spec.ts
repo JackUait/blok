@@ -85,12 +85,12 @@ test.describe('Database board view — pill title inline editing', () => {
   test('clicking the column title replaces it with a focused input', async ({ page }) => {
     await resetAndCreate(page, DATABASE_BLOCKS);
 
-    const titleDiv = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).first();
+    const titleDiv = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).filter({ hasText: 'Backlog' });
     await expect(titleDiv).toBeVisible();
 
     await titleDiv.click();
 
-    const input = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title-input]`).first();
+    const input = page.locator(`${BLOK_INTERFACE_SELECTOR}`).getByRole('textbox', { name: 'Rename column' });
     await expect(input).toBeVisible();
     await expect(input).toBeFocused();
   });
@@ -98,10 +98,10 @@ test.describe('Database board view — pill title inline editing', () => {
   test('blurring the input commits the new title', async ({ page }) => {
     await resetAndCreate(page, DATABASE_BLOCKS);
 
-    const titleDiv = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).first();
+    const titleDiv = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).filter({ hasText: 'Backlog' });
     await titleDiv.click();
 
-    const input = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title-input]`).first();
+    const input = page.locator(`${BLOK_INTERFACE_SELECTOR}`).getByRole('textbox', { name: 'Rename column' });
     await expect(input).toBeVisible();
 
     await input.fill('New Column Name');
@@ -111,7 +111,7 @@ test.describe('Database board view — pill title inline editing', () => {
     await expect(input).not.toBeVisible();
 
     // Title div should now show the new name
-    const updatedTitle = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).first();
+    const updatedTitle = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).filter({ hasText: 'New Column Name' });
     await expect(updatedTitle).toBeVisible();
     await expect(updatedTitle).toHaveText('New Column Name');
   });
@@ -119,10 +119,10 @@ test.describe('Database board view — pill title inline editing', () => {
   test('pressing Enter commits the new title', async ({ page }) => {
     await resetAndCreate(page, DATABASE_BLOCKS);
 
-    const titleDiv = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).first();
+    const titleDiv = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).filter({ hasText: 'Backlog' });
     await titleDiv.click();
 
-    const input = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title-input]`).first();
+    const input = page.locator(`${BLOK_INTERFACE_SELECTOR}`).getByRole('textbox', { name: 'Rename column' });
     await expect(input).toBeVisible();
 
     await input.fill('Enter Committed');
@@ -132,7 +132,7 @@ test.describe('Database board view — pill title inline editing', () => {
     await expect(input).not.toBeVisible();
 
     // Title div should show the committed name
-    const updatedTitle = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).first();
+    const updatedTitle = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).filter({ hasText: 'Enter Committed' });
     await expect(updatedTitle).toBeVisible();
     await expect(updatedTitle).toHaveText('Enter Committed');
   });
@@ -140,12 +140,12 @@ test.describe('Database board view — pill title inline editing', () => {
   test('pressing Escape cancels the edit and restores the original title', async ({ page }) => {
     await resetAndCreate(page, DATABASE_BLOCKS);
 
-    const titleDiv = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).first();
+    const titleDiv = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).filter({ hasText: 'Backlog' });
     const originalText = await titleDiv.textContent();
 
     await titleDiv.click();
 
-    const input = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title-input]`).first();
+    const input = page.locator(`${BLOK_INTERFACE_SELECTOR}`).getByRole('textbox', { name: 'Rename column' });
     await expect(input).toBeVisible();
 
     await input.fill('Cancelled Text');
@@ -155,7 +155,7 @@ test.describe('Database board view — pill title inline editing', () => {
     await expect(input).not.toBeVisible();
 
     // Title div should be restored with the original text
-    const restoredTitle = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).first();
+    const restoredTitle = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).filter({ hasText: 'Backlog' });
     await expect(restoredTitle).toBeVisible();
     await expect(restoredTitle).toHaveText(originalText ?? '');
   });
@@ -163,7 +163,7 @@ test.describe('Database board view — pill title inline editing', () => {
   test('clicking the pill title does NOT start a column drag', async ({ page }) => {
     await resetAndCreate(page, DATABASE_BLOCKS);
 
-    const titleDiv = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).first();
+    const titleDiv = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title]`).filter({ hasText: 'Backlog' });
     await titleDiv.click();
 
     // The drag ghost element should NOT appear after a simple click on the title
@@ -171,7 +171,7 @@ test.describe('Database board view — pill title inline editing', () => {
     await expect(dragGhost).not.toBeVisible();
 
     // The input should appear instead (confirming edit mode, not drag)
-    const input = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-title-input]`).first();
+    const input = page.locator(`${BLOK_INTERFACE_SELECTOR}`).getByRole('textbox', { name: 'Rename column' });
     await expect(input).toBeVisible();
   });
 });

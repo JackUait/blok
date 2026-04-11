@@ -205,6 +205,7 @@ export class UI extends Module<UINodes> {
     });
     this.keyboardController.state = this.Blok;
     this.keyboardController.setRedactorElement(this.nodes.redactor);
+    this.keyboardController.setWrapperElement(this.nodes.wrapper);
 
     /**
      * Selection controller needs wrapper element for click detection

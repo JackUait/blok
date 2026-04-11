@@ -141,6 +141,7 @@ describe('KeyboardController', () => {
 
     controller.state = blok;
     controller.setRedactorElement(redactor);
+    controller.setWrapperElement(wrapper);
 
     // Register for cleanup
     controllers.push(controller);

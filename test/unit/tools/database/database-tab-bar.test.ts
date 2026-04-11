@@ -624,7 +624,9 @@ describe('DatabaseTabBar', () => {
         const stopSpy = vi.spyOn(enterEvent, 'stopPropagation');
         input.dispatchEvent(enterEvent);
         expect(stopSpy).toHaveBeenCalled();
-        expect(propagatedEvents).not.toContain('Enter');
+
+        // No keydown events should have reached the document listener
+        expect(propagatedEvents).toHaveLength(0);
       } finally {
         document.removeEventListener('keydown', outerHandler);
       }
@@ -651,7 +653,9 @@ describe('DatabaseTabBar', () => {
         const stopSpy = vi.spyOn(letterEvent, 'stopPropagation');
         input.dispatchEvent(letterEvent);
         expect(stopSpy).toHaveBeenCalled();
-        expect(propagatedEvents).not.toContain('a');
+
+        // No keydown events should have reached the document listener
+        expect(propagatedEvents).toHaveLength(0);
       } finally {
         document.removeEventListener('keydown', outerHandler);
       }

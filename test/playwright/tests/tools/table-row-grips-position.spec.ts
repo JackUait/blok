@@ -249,14 +249,12 @@ test.describe('table row grip positioning with merged cells (rowspan)', () => {
 
     await expect(row0Grip).toBeVisible();
 
-    // Get the actual rendered bounding box of the merged cell
-    const mergedCellBox = await mergedCell.boundingBox();
+    // Compute the visual center Y of the merged cell
+    const mergedCellCenterY = await mergedCell.evaluate((el) => {
+      const rect = el.getBoundingClientRect();
 
-    if (!mergedCellBox) {
-      throw new Error('Merged cell has no bounding box');
-    }
-
-    const mergedCellCenterY = mergedCellBox.y + mergedCellBox.height / 2;
+      return rect.top + rect.height / 2;
+    });
     const row0GripY = await getRowGripCenterY(page, 0);
 
     // The grip center should match the merged cell's visual center (within 2px tolerance)

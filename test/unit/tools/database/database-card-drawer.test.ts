@@ -819,7 +819,10 @@ describe('DatabaseCardDrawer', () => {
       drawerEl.dispatchEvent(new Event('transitionend'));
 
       expect(focusSpy).toHaveBeenCalled();
-      expect(titleInput).not.toBeNull();
+
+      // Verify the title input is present in the DOM and is an empty textarea (auto-focus target)
+      expect(titleInput.tagName).toBe('TEXTAREA');
+      expect(titleInput.value).toBe('');
     });
 
     it('does not call focus() on title input when card has a title', () => {

@@ -186,7 +186,7 @@ test.describe('Database — single-view tab bar behaviour', () => {
     await expect(tabBar).toBeVisible();
 
     // Delete the first tab via dblclick to open context menu, then click Delete
-    const firstTab = tabBar.locator('[data-blok-database-tab]').first();
+    const firstTab = tabBar.locator('[data-blok-database-tab][data-view-id="view-1"]');
     await firstTab.dblclick();
 
     // Wait for context popover and click Delete (destructive item)

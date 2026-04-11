@@ -95,8 +95,8 @@ test.describe('Database board view — column header pill', () => {
   test('column header pill width matches its text content, not the full header width', async ({ page }) => {
     await resetAndCreate(page, DATABASE_BLOCKS);
 
-    const pill = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-pill]`).first();
-    const header = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-header]`).first();
+    const pill = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-pill]`).filter({ hasText: 'Backlog' });
+    const header = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-column-header]`).filter({ hasText: 'Backlog' });
 
     await expect(pill).toBeVisible();
 

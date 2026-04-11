@@ -74,6 +74,8 @@
   "tools.table.dragToAddRemoveColumns": "Przeciągnij, aby dodać lub usunąć kolumny",
   "blockSettings.delete": "Usuń",
   "blockSettings.copyLink": "Kopiuj link do bloku",
+  "blockSettings.lastEdited": "Ostatnia edycja",
+  "blockSettings.lastEditedBy": "Ostatnia edycja: {name}",
   "a11y.dragHandle": "Przeciągnij, aby przenieść lub kliknij, aby otworzyć menu",
   "a11y.dragHandleRole": "uchwyt przeciągania",
   "a11y.dragStarted": "Przeciąganie bloku",

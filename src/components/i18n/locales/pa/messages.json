@@ -49,6 +49,8 @@
   "tools.list.placeholder": "ਸੂਚੀ",
   "blockSettings.delete": "ਮਿਟਾਓ",
   "blockSettings.copyLink": "ਬਲਾਕ ਦਾ ਲਿੰਕ ਕਾਪੀ ਕਰੋ",
+  "blockSettings.lastEdited": "ਆਖਰੀ ਸੋਧ",
+  "blockSettings.lastEditedBy": "{name} ਦੁਆਰਾ ਆਖਰੀ ਸੋਧ",
   "a11y.dragHandle": "ਬਲਾਕ ਹਿਲਾਉਣ ਲਈ ਖਿੱਚੋ ਜਾਂ ਮੀਨੂ ਲਈ ਕਲਿੱਕ ਕਰੋ",
   "a11y.dragHandleRole": "ਖਿੱਚਣ ਵਾਲਾ ਹੈਂਡਲ",
   "a11y.dragStarted": "ਬਲਾਕ ਖਿੱਚਿਆ ਜਾ ਰਿਹਾ ਹੈ",

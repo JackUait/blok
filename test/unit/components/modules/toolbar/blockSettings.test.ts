@@ -886,7 +886,8 @@ describe('BlockSettings', () => {
 
       const element = (lastItem as { element: HTMLElement }).element;
 
-      expect(element.textContent).toContain('Last edited by Jack Uait');
+      expect(blokMock.I18n.t).toHaveBeenCalledWith('blockSettings.lastEditedBy', { name: 'Jack Uait' });
+      expect(element.textContent).toContain('blockSettings.lastEditedBy');
     });
 
     it('should show "Last edited" without user name when lastEditedBy is null', async () => {
@@ -905,7 +906,8 @@ describe('BlockSettings', () => {
       const element = (lastItem as { element: HTMLElement }).element;
       const firstLine = element.querySelector('[data-edit-meta-label]');
 
-      expect(firstLine?.textContent).toBe('Last edited');
+      expect(blokMock.I18n.t).toHaveBeenCalledWith('blockSettings.lastEdited');
+      expect(firstLine?.textContent).toBe('blockSettings.lastEdited');
     });
 
     it('should not show footer when lastEditedAt is undefined', async () => {

@@ -74,6 +74,8 @@
   "tools.table.dragToAddRemoveColumns": "ڕاکێشە بۆ زیادکردن یان سڕینەوەی ستوون",
   "blockSettings.delete": "سڕینەوە",
   "blockSettings.copyLink": "کۆپیکردنی لینکی بلۆک",
+  "blockSettings.lastEdited": "دوایین دەستکاری",
+  "blockSettings.lastEditedBy": "دوایین دەستکاری لەلایەن {name}",
   "a11y.dragHandle": "ڕاکێشە بۆ گواستنەوەی بلۆک یان کلیک بکە بۆ مێنیو",
   "a11y.dragHandleRole": "دەستگیرەی ڕاکێشان",
   "a11y.dragStarted": "بلۆک دەکێشرێت",

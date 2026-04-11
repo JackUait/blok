@@ -49,6 +49,8 @@
   "tools.list.placeholder": "सूची",
   "blockSettings.delete": "मेटाउनुहोस्",
   "blockSettings.copyLink": "ब्लकको लिंक प्रतिलिपि गर्नुहोस्",
+  "blockSettings.lastEdited": "अन्तिम सम्पादन",
+  "blockSettings.lastEditedBy": "{name} द्वारा अन्तिम सम्पादन",
   "a11y.dragHandle": "ब्लक सार्न तान्नुहोस् वा मेनुको लागि क्लिक गर्नुहोस्",
   "a11y.dragHandleRole": "तान्ने नियन्त्रण",
   "a11y.dragStarted": "ब्लक तान्दै",

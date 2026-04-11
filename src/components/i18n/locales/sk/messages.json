@@ -51,6 +51,8 @@
   "tools.list.placeholder": "Zoznam",
   "blockSettings.delete": "Odstrániť",
   "blockSettings.copyLink": "Kopírovať odkaz na blok",
+  "blockSettings.lastEdited": "Naposledy upravené",
+  "blockSettings.lastEditedBy": "Naposledy upravil(a) {name}",
   "a11y.dragHandle": "Potiahnutím presuniete blok alebo kliknutím otvoríte ponuku",
   "a11y.dragHandleRole": "úchyt na presun",
   "a11y.dragStarted": "Presúva sa blok",

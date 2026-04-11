@@ -74,6 +74,8 @@
   "tools.table.dragToAddRemoveColumns": "ڪالم شامل يا ختم ڪرڻ لاءِ ڇڪيو",
   "blockSettings.delete": "ختم ڪريو",
   "blockSettings.copyLink": "بلاڪ ڏانهن لنڪ ڪاپي ڪريو",
+  "blockSettings.lastEdited": "آخري ترميم",
+  "blockSettings.lastEditedBy": "آخري ترميم: {name}",
   "a11y.dragHandle": "بلاڪ منتقل ڪرڻ لاءِ ڇڪيو يا مينيو لاءِ ڪلڪ ڪريو",
   "a11y.dragHandleRole": "ڇڪڻ جو هينڊل",
   "a11y.dragStarted": "بلاڪ ڇڪجي رھيو آھي",

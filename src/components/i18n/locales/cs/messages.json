@@ -74,6 +74,8 @@
   "tools.table.dragToAddRemoveColumns": "Přetáhněte pro přidání nebo odebrání sloupců",
   "blockSettings.delete": "Smazat",
   "blockSettings.copyLink": "Kopírovat odkaz na blok",
+  "blockSettings.lastEdited": "Naposledy upraveno",
+  "blockSettings.lastEditedBy": "Naposledy upravil/a {name}",
   "a11y.dragHandle": "Přetáhněte pro přesunutí nebo klikněte pro nabídku",
   "a11y.dragHandleRole": "úchyt pro přetažení",
   "a11y.dragStarted": "Přetahování bloku",

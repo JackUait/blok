@@ -74,6 +74,8 @@
   "tools.table.dragToAddRemoveColumns": "Povuci za dodavanje ili uklanjanje stupaca",
   "blockSettings.delete": "Obriši",
   "blockSettings.copyLink": "Kopiraj poveznicu na blok",
+  "blockSettings.lastEdited": "Zadnje uređivanje",
+  "blockSettings.lastEditedBy": "Zadnje uredio/la {name}",
   "a11y.dragHandle": "Povuci za premještanje bloka ili klikni za izbornik",
   "a11y.dragHandleRole": "ručka za povlačenje",
   "a11y.dragStarted": "Povlačenje bloka",

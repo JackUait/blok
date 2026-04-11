@@ -49,6 +49,8 @@
   "tools.list.placeholder": "జాబితా",
   "blockSettings.delete": "తొలగించు",
   "blockSettings.copyLink": "బ్లాక్‌కు లింక్ కాపీ చేయి",
+  "blockSettings.lastEdited": "చివరిగా సవరించబడింది",
+  "blockSettings.lastEditedBy": "{name} చివరిగా సవరించారు",
   "a11y.dragHandle": "విభాగం తరలించడానికి లాగండి లేదా మెనూ కోసం నొక్కండి",
   "a11y.dragHandleRole": "లాగు హ్యాండిల్",
   "a11y.dragStarted": "విభాగం తరలుతోంది",

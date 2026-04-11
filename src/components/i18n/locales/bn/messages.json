@@ -54,6 +54,8 @@
   "tools.toggle.ariaLabelExpand": "প্রসারিত করুন",
   "blockSettings.delete": "মুছুন",
   "blockSettings.copyLink": "ব্লকের লিঙ্ক কপি করুন",
+  "blockSettings.lastEdited": "সর্বশেষ সম্পাদনা",
+  "blockSettings.lastEditedBy": "{name} দ্বারা সর্বশেষ সম্পাদনা",
   "a11y.dragHandle": "ব্লক সরাতে টানুন বা মেনুর জন্য ক্লিক করুন",
   "a11y.dragHandleRole": "টান-হাতল",
   "a11y.dragStarted": "ব্লক টানা হচ্ছে",

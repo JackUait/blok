@@ -74,6 +74,8 @@
   "tools.table.dragToAddRemoveColumns": "Превуците за додавање или уклањање колона",
   "blockSettings.delete": "Обриши",
   "blockSettings.copyLink": "Копирај везу до блока",
+  "blockSettings.lastEdited": "Последња измена",
+  "blockSettings.lastEditedBy": "Последња измена: {name}",
   "a11y.dragHandle": "Превуците за премештање блока или кликните за мени",
   "a11y.dragHandleRole": "ручка за превлачење",
   "a11y.dragStarted": "Превлачење блока",

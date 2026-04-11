@@ -74,6 +74,8 @@
   "tools.table.dragToAddRemoveColumns": "Ziehen, um Spalten hinzuzufügen oder zu entfernen",
   "blockSettings.delete": "Löschen",
   "blockSettings.copyLink": "Link zum Block kopieren",
+  "blockSettings.lastEdited": "Zuletzt bearbeitet",
+  "blockSettings.lastEditedBy": "Zuletzt bearbeitet von {name}",
   "a11y.dragHandle": "Ziehen zum Verschieben oder klicken für Menü",
   "a11y.dragHandleRole": "Ziehgriff",
   "a11y.dragStarted": "Block wird verschoben",

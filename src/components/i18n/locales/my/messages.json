@@ -72,6 +72,8 @@
   "tools.table.dragToAddRemoveColumns": "ကော်လံထည့်ရန် သို့မဟုတ် ဖယ်ရန် ဆွဲယူပါ",
   "blockSettings.delete": "ဖျက်ရန်",
   "blockSettings.copyLink": "ဘလောက်သို့ လင့်ခ်ကူးယူရန်",
+  "blockSettings.lastEdited": "နောက်ဆုံးတည်းဖြတ်ချိန်",
+  "blockSettings.lastEditedBy": "{name} မှ နောက်ဆုံးတည်းဖြတ်သည်",
   "a11y.dragHandle": "ဘလောက်ရွှေ့ရန် ဆွဲယူပါ သို့မဟုတ် မီနူးအတွက် နှိပ်ပါ",
   "a11y.dragHandleRole": "ဆွဲယူကိုင်တံ",
   "a11y.dragStarted": "ဘလောက်ကို ဆွဲယူနေသည်",

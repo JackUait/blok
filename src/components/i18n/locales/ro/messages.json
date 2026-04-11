@@ -51,6 +51,8 @@
   "tools.list.placeholder": "Listă",
   "blockSettings.delete": "Șterge",
   "blockSettings.copyLink": "Copiază linkul blocului",
+  "blockSettings.lastEdited": "Ultima editare",
+  "blockSettings.lastEditedBy": "Ultima editare de {name}",
   "a11y.dragHandle": "Trageți pentru a muta sau clic pentru meniu",
   "a11y.dragHandleRole": "mâner de tragere",
   "a11y.dragStarted": "Mutare bloc",

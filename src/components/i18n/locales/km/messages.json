@@ -72,6 +72,8 @@
   "tools.table.dragToAddRemoveColumns": "អូសដើម្បីបន្ថែម ឬលុបជួរឈរ",
   "blockSettings.delete": "លុប",
   "blockSettings.copyLink": "ចម្លងតំណទៅប្លុក",
+  "blockSettings.lastEdited": "កែសម្រួលចុងក្រោយ",
+  "blockSettings.lastEditedBy": "កែសម្រួលចុងក្រោយដោយ {name}",
   "a11y.dragHandle": "អូសដើម្បីផ្លាស់ទីប្លុក ឬចុចសម្រាប់ម៉ឺនុយ",
   "a11y.dragHandleRole": "ចំណុចទាញ",
   "a11y.dragStarted": "កំពុងអូសប្លុក",

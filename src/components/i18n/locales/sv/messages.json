@@ -74,6 +74,8 @@
   "tools.table.dragToAddRemoveColumns": "Dra för att lägga till eller ta bort kolumner",
   "blockSettings.delete": "Ta bort",
   "blockSettings.copyLink": "Kopiera länk till block",
+  "blockSettings.lastEdited": "Senast redigerad",
+  "blockSettings.lastEditedBy": "Senast redigerad av {name}",
   "a11y.dragHandle": "Dra för att flytta eller klicka för meny",
   "a11y.dragHandleRole": "draghandtag",
   "a11y.dragStarted": "Drar block",

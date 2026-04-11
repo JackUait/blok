@@ -51,6 +51,8 @@
   "tools.list.placeholder": "Sąrašas",
   "blockSettings.delete": "Ištrinti",
   "blockSettings.copyLink": "Kopijuoti nuorodą į bloką",
+  "blockSettings.lastEdited": "Paskutinį kartą redaguota",
+  "blockSettings.lastEditedBy": "Paskutinį kartą redagavo {name}",
   "a11y.dragHandle": "Vilkite norėdami perkelti bloką arba spustelėkite meniu",
   "a11y.dragHandleRole": "vilkimo rankena",
   "a11y.dragStarted": "Velkamas blokas",

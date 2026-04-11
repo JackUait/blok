@@ -74,6 +74,8 @@
   "tools.table.dragToAddRemoveColumns": "Seret untuk tambah atau buang lajur",
   "blockSettings.delete": "Padam",
   "blockSettings.copyLink": "Salin pautan ke blok",
+  "blockSettings.lastEdited": "Terakhir disunting",
+  "blockSettings.lastEditedBy": "Terakhir disunting oleh {name}",
   "a11y.dragHandle": "Seret untuk alih blok atau klik untuk menu",
   "a11y.dragHandleRole": "pemegang seret",
   "a11y.dragStarted": "Menyeret blok",

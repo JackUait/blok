@@ -74,6 +74,8 @@
   "tools.table.dragToAddRemoveColumns": "Trascina per aggiungere o rimuovere colonne",
   "blockSettings.delete": "Elimina",
   "blockSettings.copyLink": "Copia collegamento al blocco",
+  "blockSettings.lastEdited": "Ultima modifica",
+  "blockSettings.lastEditedBy": "Ultima modifica di {name}",
   "a11y.dragHandle": "Trascina per spostare o clicca per il menu",
   "a11y.dragHandleRole": "maniglia di trascinamento",
   "a11y.dragStarted": "Trascinamento blocco",

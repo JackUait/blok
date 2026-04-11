@@ -74,6 +74,8 @@
   "tools.table.dragToAddRemoveColumns": "Húzza oszlopok hozzáadásához vagy eltávolításához",
   "blockSettings.delete": "Törlés",
   "blockSettings.copyLink": "Hivatkozás másolása a blokkra",
+  "blockSettings.lastEdited": "Utoljára szerkesztve",
+  "blockSettings.lastEditedBy": "Utoljára szerkesztette: {name}",
   "a11y.dragHandle": "Húzza az áthelyezéshez vagy kattintson a menühöz",
   "a11y.dragHandleRole": "húzófogantyú",
   "a11y.dragStarted": "Blokk áthelyezése",

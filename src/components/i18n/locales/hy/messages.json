@@ -56,6 +56,8 @@
   "tools.toggle.ariaLabelExpand": "Ծավալել",
   "blockSettings.delete": "Ջնջել",
   "blockSettings.copyLink": "Պատճենել բլոկի հղումը",
+  "blockSettings.lastEdited": "Վերջին խմբագրում",
+  "blockSettings.lastEditedBy": "Վերջին անգամ խմբագրել է {name}",
   "a11y.dragHandle": "Քաշեք տեղափոխելու կամ սեղմեք մենյուի համար",
   "a11y.dragHandleRole": "քաշման կոճակ",
   "a11y.dragStarted": "Բլոկի քաշում",

@@ -74,6 +74,8 @@
   "tools.table.dragToAddRemoveColumns": "גרור להוספה או הסרה של עמודות",
   "blockSettings.delete": "מחק",
   "blockSettings.copyLink": "העתק קישור לבלוק",
+  "blockSettings.lastEdited": "נערך לאחרונה",
+  "blockSettings.lastEditedBy": "נערך לאחרונה על ידי {name}",
   "a11y.dragHandle": "גרור להזזת הבלוק או לחץ לתפריט",
   "a11y.dragHandleRole": "ידית גרירה",
   "a11y.dragStarted": "גורר בלוק",

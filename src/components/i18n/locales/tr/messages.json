@@ -51,6 +51,8 @@
   "tools.list.placeholder": "Liste",
   "blockSettings.delete": "Sil",
   "blockSettings.copyLink": "Bloğa bağlantı kopyala",
+  "blockSettings.lastEdited": "Son düzenleme",
+  "blockSettings.lastEditedBy": "Son düzenleyen: {name}",
   "a11y.dragHandle": "Taşımak için sürükle veya menü için tıkla",
   "a11y.dragHandleRole": "sürükleme tutamacı",
   "a11y.dragStarted": "Blok sürükleniyor",

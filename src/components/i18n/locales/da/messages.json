@@ -74,6 +74,8 @@
   "tools.table.dragToAddRemoveColumns": "Træk for at tilføje eller fjerne kolonner",
   "blockSettings.delete": "Slet",
   "blockSettings.copyLink": "Kopiér link til blok",
+  "blockSettings.lastEdited": "Sidst redigeret",
+  "blockSettings.lastEditedBy": "Sidst redigeret af {name}",
   "a11y.dragHandle": "Træk for at flytte blok eller klik for menu",
   "a11y.dragHandleRole": "trækhåndtag",
   "a11y.dragStarted": "Trækker blok",

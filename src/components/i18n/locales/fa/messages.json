@@ -56,6 +56,8 @@
   "tools.toggle.ariaLabelExpand": "گسترش",
   "blockSettings.delete": "حذف",
   "blockSettings.copyLink": "کپی لینک بلوک",
+  "blockSettings.lastEdited": "آخرین ویرایش",
+  "blockSettings.lastEditedBy": "آخرین ویرایش توسط {name}",
   "a11y.dragHandle": "برای جابجایی بلوک بکشید یا برای منو کلیک کنید",
   "a11y.dragHandleRole": "دستگیره کشیدن",
   "a11y.dragStarted": "در حال کشیدن بلوک",

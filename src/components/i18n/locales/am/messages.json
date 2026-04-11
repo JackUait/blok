@@ -54,6 +54,8 @@
   "tools.toggle.ariaLabelExpand": "አስፋ",
   "blockSettings.delete": "ሰርዝ",
   "blockSettings.copyLink": "ወደ ብሎክ አገናኝ ቅዳ",
+  "blockSettings.lastEdited": "የመጨረሻ ማስተካከያ",
+  "blockSettings.lastEditedBy": "በ{name} የመጨረሻ ማስተካከያ",
   "a11y.dragHandle": "ብሎኩን ለማንቀሳቀስ ይጎትቱ ወይም ለምናሌ ጠቅ ያድርጉ",
   "a11y.dragHandleRole": "መጎተቻ",
   "a11y.dragStarted": "ብሎክ እየተጎተተ ነው",

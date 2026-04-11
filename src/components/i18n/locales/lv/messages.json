@@ -51,6 +51,8 @@
   "tools.list.placeholder": "Saraksts",
   "blockSettings.delete": "Dzēst",
   "blockSettings.copyLink": "Kopēt saiti uz bloku",
+  "blockSettings.lastEdited": "Pēdējo reizi rediģēts",
+  "blockSettings.lastEditedBy": "Pēdējo reizi rediģēja {name}",
   "a11y.dragHandle": "Velciet, lai pārvietotu bloku, vai noklikšķiniet izvēlnei",
   "a11y.dragHandleRole": "vilkšanas rokturis",
   "a11y.dragStarted": "Velk bloku",

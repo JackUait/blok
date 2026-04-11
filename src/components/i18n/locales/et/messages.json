@@ -74,6 +74,8 @@
   "tools.table.dragToAddRemoveColumns": "Lohista veergude lisamiseks või eemaldamiseks",
   "blockSettings.delete": "Kustuta",
   "blockSettings.copyLink": "Kopeeri ploki link",
+  "blockSettings.lastEdited": "Viimati muudetud",
+  "blockSettings.lastEditedBy": "Viimati muutis {name}",
   "a11y.dragHandle": "Lohista ploki teisaldamiseks või klõpsa menüü jaoks",
   "a11y.dragHandleRole": "lohistamiskäepide",
   "a11y.dragStarted": "Lohistab plokki",

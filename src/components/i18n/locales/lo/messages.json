@@ -49,6 +49,8 @@
   "tools.list.placeholder": "ລາຍການ",
   "blockSettings.delete": "ລຶບ",
   "blockSettings.copyLink": "ສຳເນົາລິ້ງໄປຫາບລັອກ",
+  "blockSettings.lastEdited": "ແກ້ໄຂລ່າສຸດ",
+  "blockSettings.lastEditedBy": "ແກ້ໄຂລ່າສຸດໂດຍ {name}",
   "a11y.dragHandle": "ລາກເພື່ອຍ້າຍບລັອກ ຫຼື ຄລິກເພື່ອເປີດເມນູ",
   "a11y.dragHandleRole": "ບ່ອນຈັບລາກ",
   "a11y.dragStarted": "ກຳລັງລາກບລັອກ",

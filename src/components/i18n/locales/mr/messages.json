@@ -49,6 +49,8 @@
   "tools.list.placeholder": "यादी",
   "blockSettings.delete": "हटवा",
   "blockSettings.copyLink": "ब्लॉकची लिंक कॉपी करा",
+  "blockSettings.lastEdited": "शेवटचे संपादन",
+  "blockSettings.lastEditedBy": "{name} ने शेवटचे संपादन केले",
   "a11y.dragHandle": "ब्लॉक हलवण्यासाठी ओढा किंवा मेनूसाठी क्लिक करा",
   "a11y.dragHandleRole": "हलवण्याचे नियंत्रण",
   "a11y.dragStarted": "ब्लॉक हलवला जात आहे",

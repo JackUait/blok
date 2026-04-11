@@ -56,6 +56,8 @@
   "tools.toggle.ariaLabelExpand": "Laajenna",
   "blockSettings.delete": "Poista",
   "blockSettings.copyLink": "Kopioi linkki lohkoon",
+  "blockSettings.lastEdited": "Viimeksi muokattu",
+  "blockSettings.lastEditedBy": "Viimeksi muokannut {name}",
   "a11y.dragHandle": "Vedä siirtääksesi lohkon tai napsauta avataksesi valikon",
   "a11y.dragHandleRole": "vetokahva",
   "a11y.dragStarted": "Lohkoa vedetään",

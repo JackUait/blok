@@ -74,6 +74,8 @@
   "tools.table.dragToAddRemoveColumns": "שלעפּ צו צולייגן אָדער אויסמעקן שפּאַלטן",
   "blockSettings.delete": "אויסמעקן",
   "blockSettings.copyLink": "קאָפּירן לינק צום בלאָק",
+  "blockSettings.lastEdited": "לעצט רעדאַקטירט",
+  "blockSettings.lastEditedBy": "לעצט רעדאַקטירט דורך {name}",
   "a11y.dragHandle": "שלעפּ צו באַוועגן בלאָק אָדער קליק פֿאַר מעניו",
   "a11y.dragHandleRole": "שלעפּ האַנטל",
   "a11y.dragStarted": "שלעפּט בלאָק",

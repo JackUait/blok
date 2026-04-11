@@ -463,9 +463,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     label.setAttribute('data-edit-meta-label', '');
 
     if (block.lastEditedBy !== null && block.lastEditedBy !== undefined) {
-      label.textContent = `Last edited by ${block.lastEditedBy}`;
+      label.textContent = this.Blok.I18n.t('blockSettings.lastEditedBy', { name: block.lastEditedBy });
     } else {
-      label.textContent = 'Last edited';
+      label.textContent = this.Blok.I18n.t('blockSettings.lastEdited');
     }
 
     container.appendChild(label);

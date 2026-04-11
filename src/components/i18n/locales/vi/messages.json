@@ -74,6 +74,8 @@
   "tools.table.dragToAddRemoveColumns": "Kéo để thêm hoặc xóa cột",
   "blockSettings.delete": "Xóa",
   "blockSettings.copyLink": "Sao chép liên kết đến khối",
+  "blockSettings.lastEdited": "Chỉnh sửa lần cuối",
+  "blockSettings.lastEditedBy": "Chỉnh sửa lần cuối bởi {name}",
   "a11y.dragHandle": "Kéo để di chuyển khối hoặc nhấp để mở menu",
   "a11y.dragHandleRole": "tay nắm kéo",
   "a11y.dragStarted": "Đang kéo khối",

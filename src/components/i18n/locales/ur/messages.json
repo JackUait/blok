@@ -51,6 +51,8 @@
   "tools.list.placeholder": "فہرست",
   "blockSettings.delete": "حذف کریں",
   "blockSettings.copyLink": "بلاک کا لنک کاپی کریں",
+  "blockSettings.lastEdited": "آخری ترمیم",
+  "blockSettings.lastEditedBy": "{name} نے آخری ترمیم کی",
   "a11y.dragHandle": "بلاک منتقل کرنے کے لیے گھسیٹیں یا مینو کے لیے کلک کریں",
   "a11y.dragHandleRole": "گھسیٹنے کا ہینڈل",
   "a11y.dragStarted": "بلاک گھسیٹا جا رہا ہے",

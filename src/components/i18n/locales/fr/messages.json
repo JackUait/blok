@@ -56,6 +56,8 @@
   "tools.toggle.ariaLabelExpand": "Développer",
   "blockSettings.delete": "Supprimer",
   "blockSettings.copyLink": "Copier le lien du bloc",
+  "blockSettings.lastEdited": "Dernière modification",
+  "blockSettings.lastEditedBy": "Dernière modification par {name}",
   "a11y.dragHandle": "Glisser pour déplacer ou cliquer pour le menu",
   "a11y.dragHandleRole": "poignée de glissement",
   "a11y.dragStarted": "Déplacement du bloc",

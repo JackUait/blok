@@ -74,6 +74,8 @@
   "tools.table.dragToAddRemoveColumns": "ドラッグして列を追加・削除",
   "blockSettings.delete": "削除",
   "blockSettings.copyLink": "ブロックへのリンクをコピー",
+  "blockSettings.lastEdited": "最終編集",
+  "blockSettings.lastEditedBy": "{name} が最終編集",
   "a11y.dragHandle": "ドラッグで移動、クリックでメニュー",
   "a11y.dragHandleRole": "ドラッグハンドル",
   "a11y.dragStarted": "ブロックをドラッグ中",

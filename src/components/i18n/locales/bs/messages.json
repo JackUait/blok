@@ -54,6 +54,8 @@
   "tools.toggle.ariaLabelExpand": "Proširi",
   "blockSettings.delete": "Obriši",
   "blockSettings.copyLink": "Kopiraj link na blok",
+  "blockSettings.lastEdited": "Posljednja izmjena",
+  "blockSettings.lastEditedBy": "Posljednju izmjenu napravio/la {name}",
   "a11y.dragHandle": "Prevucite za premještanje bloka ili kliknite za meni",
   "a11y.dragHandleRole": "ručka za povlačenje",
   "a11y.dragStarted": "Povlačenje bloka",

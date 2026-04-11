@@ -74,6 +74,8 @@
   "tools.table.dragToAddRemoveColumns": "د کالمونو اضافه یا لرې کولو لپاره کش کړئ",
   "blockSettings.delete": "ړنګول",
   "blockSettings.copyLink": "بلاک ته لینک کاپي کړئ",
+  "blockSettings.lastEdited": "وروستی سمون",
+  "blockSettings.lastEditedBy": "د {name} لخوا وروستی سمون",
   "a11y.dragHandle": "د لیږدولو لپاره کش کړئ یا د مینو لپاره کلیک وکړئ",
   "a11y.dragHandleRole": "د کشولو لاستی",
   "a11y.dragStarted": "بلاک کشول کیږي",

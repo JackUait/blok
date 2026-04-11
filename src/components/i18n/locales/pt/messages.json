@@ -74,6 +74,8 @@
   "tools.table.dragToAddRemoveColumns": "Arraste para adicionar ou remover colunas",
   "blockSettings.delete": "Excluir",
   "blockSettings.copyLink": "Copiar link do bloco",
+  "blockSettings.lastEdited": "Última edição",
+  "blockSettings.lastEditedBy": "Última edição por {name}",
   "a11y.dragHandle": "Arraste para mover ou clique para abrir o menu",
   "a11y.dragHandleRole": "controle de arrastar",
   "a11y.dragStarted": "Arrastando bloco",

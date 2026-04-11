@@ -51,6 +51,8 @@
   "tools.list.placeholder": "รายการ",
   "blockSettings.delete": "ลบ",
   "blockSettings.copyLink": "คัดลอกลิงก์ไปยังบล็อก",
+  "blockSettings.lastEdited": "แก้ไขล่าสุด",
+  "blockSettings.lastEditedBy": "แก้ไขล่าสุดโดย {name}",
   "a11y.dragHandle": "ลากเพื่อย้ายบล็อก หรือคลิกเพื่อเปิดเมนู",
   "a11y.dragHandleRole": "ที่จับสำหรับลาก",
   "a11y.dragStarted": "กำลังลากบล็อก",

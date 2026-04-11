@@ -74,6 +74,8 @@
   "tools.table.dragToAddRemoveColumns": "Buruta ili kuongeza au kuondoa safu wima",
   "blockSettings.delete": "Futa",
   "blockSettings.copyLink": "Nakili kiungo cha kizuizi",
+  "blockSettings.lastEdited": "Imehaririwa mwisho",
+  "blockSettings.lastEditedBy": "Imehaririwa mwisho na {name}",
   "a11y.dragHandle": "Buruta ili kusogeza kizuizi au bofya kwa menyu",
   "a11y.dragHandleRole": "kishikio cha kuburuta",
   "a11y.dragStarted": "Inaburuta kizuizi",

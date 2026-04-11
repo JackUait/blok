@@ -72,6 +72,8 @@
   "tools.table.dragToAddRemoveColumns": "Sütun əlavə etmək və ya silmək üçün dartın",
   "blockSettings.delete": "Sil",
   "blockSettings.copyLink": "Bloka keçid kopyala",
+  "blockSettings.lastEdited": "Son redaktə",
+  "blockSettings.lastEditedBy": "{name} tərəfindən son redaktə",
   "a11y.dragHandle": "Köçürmək üçün dartın və ya menyu üçün klikləyin",
   "a11y.dragHandleRole": "dartma tutacağı",
   "a11y.dragStarted": "Blok dartılır",

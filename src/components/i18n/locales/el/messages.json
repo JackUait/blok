@@ -56,6 +56,8 @@
   "tools.toggle.ariaLabelExpand": "Ανάπτυξη",
   "blockSettings.delete": "Διαγραφή",
   "blockSettings.copyLink": "Αντιγραφή συνδέσμου μπλοκ",
+  "blockSettings.lastEdited": "Τελευταία επεξεργασία",
+  "blockSettings.lastEditedBy": "Τελευταία επεξεργασία από {name}",
   "a11y.dragHandle": "Σύρετε για μετακίνηση ή κλικ για μενού",
   "a11y.dragHandleRole": "λαβή μετακίνησης",
   "a11y.dragStarted": "Μετακίνηση μπλοκ",

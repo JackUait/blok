@@ -72,6 +72,8 @@
   "tools.table.dragToAddRemoveColumns": "நெடுவரிசைகளைச் சேர்க்க அல்லது நீக்க இழுக்கவும்",
   "blockSettings.delete": "நீக்கு",
   "blockSettings.copyLink": "தொகுதிக்கான இணைப்பை நகலெடு",
+  "blockSettings.lastEdited": "கடைசியாகத் திருத்தியது",
+  "blockSettings.lastEditedBy": "{name} கடைசியாகத் திருத்தியது",
   "a11y.dragHandle": "தொகுதியை நகர்த்த இழுக்கவும் அல்லது பட்டியலுக்கு தட்டவும்",
   "a11y.dragHandleRole": "இழுக்கும் கைப்பிடி",
   "a11y.dragStarted": "தொகுதியை இழுக்கிறது",

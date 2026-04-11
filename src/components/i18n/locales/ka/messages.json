@@ -51,6 +51,8 @@
   "tools.list.placeholder": "სია",
   "blockSettings.delete": "წაშლა",
   "blockSettings.copyLink": "ბლოკის ბმულის კოპირება",
+  "blockSettings.lastEdited": "ბოლოს რედაქტირდა",
+  "blockSettings.lastEditedBy": "ბოლოს რედაქტირდა {name}-ის მიერ",
   "a11y.dragHandle": "გადაიტანეთ ბლოკის გადასატანად ან დააწკაპუნეთ მენიუსთვის",
   "a11y.dragHandleRole": "გადატანის სახელური",
   "a11y.dragStarted": "ბლოკის გადატანა",

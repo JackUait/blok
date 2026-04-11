@@ -226,6 +226,7 @@ export class Quote implements BlockTool {
       icon: IconQuote,
       title: 'Quote',
       titleKey: 'quote',
+      shortcut: '"',
       searchTerms: ['quote', 'blockquote', 'citation'],
       searchTermKeys: ['quote', 'blockquote', 'citation'],
     };

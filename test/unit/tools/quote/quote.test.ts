@@ -341,6 +341,13 @@ describe('Quote Tool', () => {
       expect(!Array.isArray(toolbox) && toolbox.titleKey).toBe('quote');
     });
 
+    it('has " shortcut for toolbox trigger', async () => {
+      const { Quote } = await import('../../../../src/tools/quote');
+      const toolbox = Quote.toolbox;
+
+      expect(!Array.isArray(toolbox) && toolbox.shortcut).toBe('"');
+    });
+
     it('has searchTermKeys for multilingual search', async () => {
       const { Quote } = await import('../../../../src/tools/quote');
       const toolbox = Quote.toolbox;

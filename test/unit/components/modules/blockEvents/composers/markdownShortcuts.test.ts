@@ -1543,4 +1543,161 @@ describe('MarkdownShortcuts', () => {
       expect(setToBlock).toHaveBeenCalledWith(paragraphBlock, 'start');
     });
   });
+
+  describe('quote shortcut', () => {
+    it('converts " followed by space to quote block', () => {
+      const mockBlock = createBlock();
+
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '" ';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const stopCapturing = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        Tools: {
+          blockTools: new Map([
+            ['quote', { settings: {} }],
+          ]),
+        } as unknown as BlokModules['Tools'],
+        YjsManager: {
+          stopCapturing,
+        } as unknown as BlokModules['YjsManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(true);
+      expect(replace).toHaveBeenCalledWith(
+        mockBlock,
+        'quote',
+        expect.objectContaining({
+          text: '',
+        })
+      );
+      expect(stopCapturing).toHaveBeenCalledTimes(2);
+    });
+
+    it('preserves text content after quote shortcut', () => {
+      const mockBlock = createBlock();
+
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '" Some quoted text';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const stopCapturing = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        Tools: {
+          blockTools: new Map([
+            ['quote', { settings: {} }],
+          ]),
+        } as unknown as BlokModules['Tools'],
+        YjsManager: {
+          stopCapturing,
+        } as unknown as BlokModules['YjsManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(true);
+      const replaceCall = replace.mock.calls[0] as unknown as [Block, string, { text: string }];
+
+      expect(replaceCall[2].text).toBe('Some quoted text');
+    });
+
+    it('returns false when quote tool is not available', () => {
+      const mockBlock = createBlock();
+
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '" ';
+      }
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+        } as unknown as BlokModules['BlockManager'],
+        Tools: {
+          blockTools: new Map(),
+        } as unknown as BlokModules['Tools'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('code shortcut', () => {
+    it('converts ``` followed by space to code block', () => {
+      const mockBlock = createBlock();
+
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '``` ';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const stopCapturing = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        Tools: {
+          blockTools: new Map([
+            ['code', { settings: {} }],
+          ]),
+        } as unknown as BlokModules['Tools'],
+        YjsManager: {
+          stopCapturing,
+        } as unknown as BlokModules['YjsManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(true);
+      expect(replace).toHaveBeenCalledWith(
+        mockBlock,
+        'code',
+        expect.objectContaining({
+          code: '',
+        })
+      );
+      expect(stopCapturing).toHaveBeenCalledTimes(2);
+    });
+
+    it('returns false when code tool is not available', () => {
+      const mockBlock = createBlock();
+
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '``` ';
+      }
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+        } as unknown as BlokModules['BlockManager'],
+        Tools: {
+          blockTools: new Map(),
+        } as unknown as BlokModules['Tools'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(false);
+    });
+  });
 });

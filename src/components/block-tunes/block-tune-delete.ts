@@ -39,6 +39,7 @@ export class DeleteTune implements BlockTune {
       title: this.api.i18n.t('blockSettings.delete'),
       name: 'delete',
       isDestructive: true,
+      secondaryLabel: 'Del',
       onActivate: (): void => this.handleClick(),
     };
   }

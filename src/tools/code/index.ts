@@ -626,6 +626,7 @@ export class CodeTool implements BlockTool {
       icon: IconCodeBlock,
       title: 'Code',
       titleKey: 'code',
+      shortcut: '```',
       searchTerms: ['code', 'pre', 'snippet', 'program'],
       searchTermKeys: ['code', 'pre', 'snippet', 'program'],
     };

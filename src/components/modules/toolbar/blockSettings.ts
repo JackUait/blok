@@ -114,6 +114,11 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   private flipperKeydownSource: HTMLElement | null = null;
 
   /**
+   * Handler for Delete key shortcut, stored for cleanup
+   */
+  private deleteKeyHandler: ((event: KeyboardEvent) => void) | null = null;
+
+  /**
    * Panel with block settings with 2 sections:
    *  - Tool's Settings
    *  - Default Settings [Move, Remove, etc]
@@ -186,11 +191,13 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       /** Get tool-specific tunes and common tunes (delete, move, etc.) */
       const { toolTunes, commonTunes } = block.getTunes();
 
+      const items = await this.getTunesItems(block, commonTunes, toolTunes);
+
       const PopoverClass = isMobileScreen() ? PopoverMobile : PopoverDesktop;
       const popoverParams: PopoverParams & { flipper?: Flipper } = {
         searchable: true,
         trigger: trigger || this.nodes.wrapper,
-        items: await this.getTunesItems(block, commonTunes, toolTunes),
+        items,
         messages: {
           nothingFound: this.Blok.I18n.t('popover.nothingFound'),
           search: this.Blok.I18n.t('popover.search'),
@@ -207,6 +214,8 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       this.popover.getElement().setAttribute('data-blok-testid', 'block-tunes-popover');
 
       this.popover.on(PopoverEvent.Closed, this.onPopoverClose);
+
+      this.attachDeleteKeyListener(items);
 
       /**
        * Set opened flag AFTER popover is created to prevent race conditions
@@ -272,6 +281,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     }
 
     this.selection.clearSaved();
+    this.detachDeleteKeyListener();
     this.detachFlipperKeydownListener();
 
     /**
@@ -415,6 +425,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         title: this.Blok.I18n.t('blockSettings.delete'),
         name: 'delete',
         isDestructive: true,
+        secondaryLabel: 'Del',
         closeOnActivate: true,
         onActivate: () => {
           const { BlockManager, Caret, Toolbar } = this.Blok;
@@ -912,5 +923,47 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
     this.flipperKeydownSource = null;
     this.flipperKeydownHandler = null;
+  }
+
+  /**
+   * Attaches a keydown listener on the popover element to handle the Delete key shortcut
+   * @param items - popover items to search for the delete action
+   */
+  private attachDeleteKeyListener(items: PopoverItemParams[]): void {
+    this.detachDeleteKeyListener();
+
+    if (this.popover === null) {
+      return;
+    }
+
+    const deleteItem = items.find(
+      (item): item is PopoverItemParams & { name: string; onActivate: () => void } =>
+        'name' in item && item.name === 'delete' && 'onActivate' in item
+    );
+
+    if (deleteItem === undefined) {
+      return;
+    }
+
+    this.deleteKeyHandler = (event: KeyboardEvent) => {
+      if (event.key === 'Delete') {
+        event.preventDefault();
+        deleteItem.onActivate(deleteItem);
+        this.close();
+      }
+    };
+
+    this.popover.getElement().addEventListener('keydown', this.deleteKeyHandler);
+  }
+
+  /**
+   * Removes the Delete key shortcut listener from the popover element
+   */
+  private detachDeleteKeyListener(): void {
+    if (this.popover !== null && this.deleteKeyHandler !== null) {
+      this.popover.getElement().removeEventListener('keydown', this.deleteKeyHandler);
+    }
+
+    this.deleteKeyHandler = null;
   }
 }

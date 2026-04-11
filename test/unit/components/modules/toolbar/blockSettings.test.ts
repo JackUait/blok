@@ -95,6 +95,7 @@ vi.mock('../../../../../src/components/utils', async () => {
       UP: 38,
       DOWN: 40,
       ENTER: 13,
+      DELETE: 46,
     },
   };
 });
@@ -113,6 +114,7 @@ vi.mock('@/types/utils/popover/popover-event', () => ({
 
 vi.mock('../../../../../src/components/icons', () => ({
   IconReplace: '<svg data-blok-icon="replace" />',
+  IconTrash: '<svg data-blok-icon="trash" />',
 }));
 
 vi.mock('../../../../../src/components/i18n', () => ({
@@ -172,6 +174,7 @@ type BlokMock = {
   BlockManager: {
     currentBlock?: Block;
     convert: Mock<(block: Block, tool: string, data?: unknown) => Promise<Block>>;
+    deleteSelectedBlocksAndInsertReplacement?: Mock<() => Block | null>;
   };
   CrossBlockSelection: {
     isCrossBlockSelectionStarted: boolean;
@@ -861,6 +864,105 @@ describe('BlockSettings', () => {
 
     expect('englishTitle' in headerItem && headerItem.englishTitle).toBe('Heading 1');
     expect('searchTerms' in headerItem && headerItem.searchTerms).toEqual(['h1', 'title', 'header', 'heading']);
+  });
+
+  describe('Delete key shortcut', () => {
+    it('triggers delete when Del key is pressed while block settings is open', async () => {
+      blockSettings.make();
+
+      const block = createBlock();
+
+      blokMock.BlockManager.currentBlock = block;
+
+      const selectionStub = {
+        save: vi.fn(),
+        restore: vi.fn(),
+        clearSaved: vi.fn(),
+      };
+
+      (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
+
+      const deleteHandler = vi.fn();
+      const commonTunes: MenuConfigItem[] = [
+        {
+          name: 'delete',
+          title: 'Delete',
+          onActivate: deleteHandler,
+        },
+      ];
+
+      (block.getTunes as ReturnType<typeof vi.fn>).mockReturnValue({ commonTunes });
+      getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
+
+      await blockSettings.open(block);
+
+      const popover = getLastPopover();
+      const popoverElement = popover!.getElement();
+
+      popoverElement.dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'Delete',
+        bubbles: true,
+      }));
+
+      expect(deleteHandler).toHaveBeenCalledTimes(1);
+      expect(blockSettings.opened).toBe(false);
+    });
+
+    it('triggers multi-block delete when Del key is pressed with multiple blocks selected', async () => {
+      blockSettings.make();
+
+      const block1 = createBlock();
+      const block2 = createBlock();
+
+      blokMock.BlockSelection.selectedBlocks = [block1, block2];
+      blokMock.BlockManager.currentBlock = block1;
+      blokMock.BlockManager.deleteSelectedBlocksAndInsertReplacement = vi.fn(() => createBlock());
+
+      const selectionStub = {
+        save: vi.fn(),
+        restore: vi.fn(),
+        clearSaved: vi.fn(),
+      };
+
+      (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
+
+      (block1.getTunes as ReturnType<typeof vi.fn>).mockReturnValue({ commonTunes: [] });
+      getConvertibleToolsForBlocksMock.mockResolvedValueOnce([]);
+
+      await blockSettings.open(block1);
+
+      const popover = getLastPopover();
+      const popoverElement = popover!.getElement();
+
+      popoverElement.dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'Delete',
+        bubbles: true,
+      }));
+
+      expect(blokMock.BlockManager.deleteSelectedBlocksAndInsertReplacement).toHaveBeenCalledTimes(1);
+      expect(blockSettings.opened).toBe(false);
+    });
+
+    it('shows Del secondaryLabel on multi-block delete item', async () => {
+      const block1 = createBlock();
+      const block2 = createBlock();
+
+      blokMock.BlockSelection.selectedBlocks = [block1, block2];
+
+      getConvertibleToolsForBlocksMock.mockResolvedValueOnce([]);
+
+      const items = await (blockSettings as unknown as {
+        getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+      }).getTunesItems(block1, []);
+
+      const deleteItem = items.find(
+        (item): item is PopoverItemParams & { name?: string; secondaryLabel?: string } =>
+          'name' in item && item.name === 'delete'
+      );
+
+      expect(deleteItem).toBeDefined();
+      expect(deleteItem!.secondaryLabel).toBe('Del');
+    });
   });
 
   describe('edit metadata footer', () => {

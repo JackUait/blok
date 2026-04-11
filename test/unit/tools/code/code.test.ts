@@ -268,6 +268,13 @@ describe('CodeTool', () => {
       expect(!Array.isArray(toolbox) && toolbox.titleKey).toBe('code');
     });
 
+    it('has ``` shortcut for toolbox trigger', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const toolbox = CodeTool.toolbox;
+
+      expect(!Array.isArray(toolbox) && toolbox.shortcut).toBe('```');
+    });
+
     it('has search terms', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const toolbox = CodeTool.toolbox;

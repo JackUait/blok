@@ -1,5 +1,5 @@
 import type { Block } from '../../../block';
-import { HEADER_PATTERN, CHECKLIST_PATTERN, UNORDERED_LIST_PATTERN, ORDERED_LIST_PATTERN, TOGGLE_HEADER_PATTERN, TOGGLE_PATTERN, HEADER_TOOL_NAME, LIST_TOOL_NAME, TOGGLE_TOOL_NAME, DIVIDER_TOOL_NAME, DIVIDER_PATTERN } from '../constants';
+import { HEADER_PATTERN, CHECKLIST_PATTERN, UNORDERED_LIST_PATTERN, ORDERED_LIST_PATTERN, TOGGLE_HEADER_PATTERN, TOGGLE_PATTERN, HEADER_TOOL_NAME, LIST_TOOL_NAME, TOGGLE_TOOL_NAME, DIVIDER_TOOL_NAME, DIVIDER_PATTERN, QUOTE_TOOL_NAME, QUOTE_PATTERN, CODE_TOOL_NAME, CODE_PATTERN } from '../constants';
 
 import { BlockEventComposer } from './__base';
 
@@ -39,8 +39,10 @@ export class MarkdownShortcuts extends BlockEventComposer {
     const handledHeader = this.handleHeaderShortcut();
     const handledToggleHeader = this.handleToggleHeaderShortcut();
     const handledToggle = this.handleToggleShortcut();
+    const handledQuote = this.handleQuoteShortcut();
+    const handledCode = this.handleCodeShortcut();
 
-    return handledList || handledHeader || handledToggleHeader || handledToggle;
+    return handledList || handledHeader || handledToggleHeader || handledToggle || handledQuote || handledCode;
   }
 
   /**
@@ -396,6 +398,107 @@ export class MarkdownShortcuts extends BlockEventComposer {
     const paragraphBlock = BlockManager.insertDefaultBlockAtIndex(newBlockIndex + 1);
 
     Caret.setToBlock(paragraphBlock, Caret.positions.START);
+
+    this.Blok.YjsManager.stopCapturing();
+
+    return true;
+  }
+
+  /**
+   * Check if current block matches a quote shortcut pattern (" ") and convert it.
+   */
+  private handleQuoteShortcut(): boolean {
+    const { BlockManager, Tools } = this.Blok;
+    const currentBlock = BlockManager.currentBlock;
+
+    if (!currentBlock) {
+      return false;
+    }
+
+    if (!currentBlock.tool.isDefault) {
+      return false;
+    }
+
+    const quoteTool = Tools.blockTools.get(QUOTE_TOOL_NAME);
+
+    if (!quoteTool) {
+      return false;
+    }
+
+    const currentInput = currentBlock.currentInput;
+
+    if (!currentInput) {
+      return false;
+    }
+
+    const textContent = currentInput.textContent || '';
+    const match = QUOTE_PATTERN.exec(textContent);
+
+    if (!match) {
+      return false;
+    }
+
+    this.Blok.YjsManager.stopCapturing();
+
+    const shortcutLength = 2; // " " + space
+    const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
+    const caretOffset = this.getCaretOffset(currentInput) - shortcutLength;
+
+    const newBlock = BlockManager.replace(currentBlock, QUOTE_TOOL_NAME, {
+      text: remainingHtml,
+    });
+
+    this.setCaretAfterConversion(newBlock, caretOffset);
+
+    this.Blok.YjsManager.stopCapturing();
+
+    return true;
+  }
+
+  /**
+   * Check if current block matches a code shortcut pattern ("``` ") and convert it.
+   */
+  private handleCodeShortcut(): boolean {
+    const { BlockManager, Tools } = this.Blok;
+    const currentBlock = BlockManager.currentBlock;
+
+    if (!currentBlock) {
+      return false;
+    }
+
+    if (!currentBlock.tool.isDefault) {
+      return false;
+    }
+
+    const codeTool = Tools.blockTools.get(CODE_TOOL_NAME);
+
+    if (!codeTool) {
+      return false;
+    }
+
+    const currentInput = currentBlock.currentInput;
+
+    if (!currentInput) {
+      return false;
+    }
+
+    const textContent = currentInput.textContent || '';
+    const match = CODE_PATTERN.exec(textContent);
+
+    if (!match) {
+      return false;
+    }
+
+    this.Blok.YjsManager.stopCapturing();
+
+    const shortcutLength = 4; // "```" + space
+    const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
+
+    const newBlock = BlockManager.replace(currentBlock, CODE_TOOL_NAME, {
+      code: remainingHtml,
+    });
+
+    this.setCaretAfterConversion(newBlock, 0);
 
     this.Blok.YjsManager.stopCapturing();
 

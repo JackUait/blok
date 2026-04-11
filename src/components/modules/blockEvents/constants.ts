@@ -93,3 +93,27 @@ export const DIVIDER_TOOL_NAME = 'divider';
  * Matches exactly three hyphens with no other content.
  */
 export const DIVIDER_PATTERN = /^-{3}$/;
+
+/**
+ * Tool name for quote blocks.
+ */
+export const QUOTE_TOOL_NAME = 'quote';
+
+/**
+ * Regex pattern for detecting quote shortcuts.
+ * Matches " followed by a space at the start of text.
+ * Captures remaining content after the shortcut in group 1.
+ */
+export const QUOTE_PATTERN = /^"\s([\s\S]*)$/;
+
+/**
+ * Tool name for code blocks.
+ */
+export const CODE_TOOL_NAME = 'code';
+
+/**
+ * Regex pattern for detecting code block shortcuts.
+ * Matches ``` followed by a space at the start of text.
+ * Captures remaining content after the shortcut in group 1.
+ */
+export const CODE_PATTERN = /^```\s([\s\S]*)$/;

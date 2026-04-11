@@ -58,6 +58,15 @@ describe('DeleteTune', () => {
     expect(handleClickSpy).toHaveBeenCalledTimes(1);
   });
 
+  it('includes Del secondaryLabel for keyboard shortcut hint', () => {
+    const { api } = createApiMocks();
+    const tune = new DeleteTune({ api });
+
+    const config = tune.render() as MenuConfig & { secondaryLabel?: string };
+
+    expect(config.secondaryLabel).toBe('Del');
+  });
+
   it('deletes current block when handler is triggered', () => {
     const { api, blocks } = createApiMocks();
     const tune = new DeleteTune({ api });

@@ -196,7 +196,9 @@ export class ItalicInlineTool implements InlineTool {
   }
 
   /**
-   * Replace non-breaking spaces (\u00A0) with regular spaces in all text nodes of an element
+   * Replace non-breaking spaces (\u00A0) with regular spaces in all text nodes of an element.
+   * The browser's contenteditable engine will re-insert nbsp where needed for rendering
+   * (e.g. trailing spaces, consecutive spaces) on the next input event.
    * @param element - The element to normalize
    */
   private normalizeNbspInElement(element: HTMLElement): void {
@@ -212,27 +214,8 @@ export class ItalicInlineTool implements InlineTool {
         continue;
       }
 
-      const keepTrailing = node.textContent.endsWith('\u00A0') && this.isEffectivelyLastChild(node);
-
       node.textContent = node.textContent.replace(/\u00A0/g, ' ');
-
-      if (keepTrailing) {
-        node.textContent = node.textContent.slice(0, -1) + '\u00A0';
-      }
     }
-  }
-
-  /**
-   * Check whether all siblings after a node are empty
-   */
-  private isEffectivelyLastChild(node: Node): boolean {
-    const next = node.nextSibling;
-
-    if (!next) {
-      return true;
-    }
-
-    return (next.textContent ?? '').length === 0 && this.isEffectivelyLastChild(next);
   }
 
   /**

@@ -202,9 +202,6 @@ export class BoldNormalizationPass {
 
   /**
    * Replace non-breaking spaces with regular spaces in a text node.
-   * Preserves a trailing \u00A0 when the text node is the last child of its
-   * parent, because converting it to a regular space (char 32) would make it
-   * invisible under CSS white-space:normal.
    * @param textNode - The text node to process
    */
   private replaceNbspInTextNode(textNode: Text): void {
@@ -214,13 +211,8 @@ export class BoldNormalizationPass {
       return;
     }
 
-    const keepTrailing = text.endsWith('\u00A0') && BoldNormalizationPass.isEffectivelyLastChild(textNode);
-    const replaced = text.replace(/\u00A0/g, ' ');
-
     // eslint-disable-next-line no-param-reassign
-    textNode.textContent = keepTrailing
-      ? replaced.slice(0, -1) + '\u00A0'
-      : replaced;
+    textNode.textContent = text.replace(/\u00A0/g, ' ');
   }
 
   /**
@@ -283,26 +275,6 @@ export class BoldNormalizationPass {
     }
 
     rightStrong.remove();
-  }
-
-  /**
-   * Check whether all siblings after a node are empty (zero-length text nodes
-   * or empty elements). The unbold process can leave behind empty text nodes
-   * which would cause `!node.nextSibling` to return false even though the node
-   * is effectively the last meaningful child.
-   */
-  private static isEffectivelyLastChild(node: Node): boolean {
-    const next = node.nextSibling;
-
-    if (!next) {
-      return true;
-    }
-
-    if ((next.textContent ?? '').length > 0) {
-      return false;
-    }
-
-    return BoldNormalizationPass.isEffectivelyLastChild(next);
   }
 
   /**

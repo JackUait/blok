@@ -209,27 +209,8 @@ export class StrikethroughInlineTool implements InlineTool {
         continue;
       }
 
-      const keepTrailing = node.textContent.endsWith('\u00A0') && this.isEffectivelyLastChild(node);
-
       node.textContent = node.textContent.replace(/\u00A0/g, ' ');
-
-      if (keepTrailing) {
-        node.textContent = node.textContent.slice(0, -1) + '\u00A0';
-      }
     }
-  }
-
-  /**
-   * Check whether all siblings after a node are empty
-   */
-  private isEffectivelyLastChild(node: Node): boolean {
-    const next = node.nextSibling;
-
-    if (!next) {
-      return true;
-    }
-
-    return (next.textContent ?? '').length === 0 && this.isEffectivelyLastChild(next);
   }
 
   /**

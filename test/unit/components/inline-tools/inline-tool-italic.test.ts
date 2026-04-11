@@ -95,7 +95,7 @@ describe('ItalicInlineTool', () => {
       expect(div.querySelector('i')?.textContent).toBe('text ');
     });
 
-    it('preserves trailing nbsp as nbsp after normalization (prevents visual collapse)', () => {
+    it('converts trailing nbsp to regular space after normalization', () => {
       div.textContent = 'text\u00A0';
 
       const textNode = div.firstChild!;
@@ -115,7 +115,7 @@ describe('ItalicInlineTool', () => {
 
       const lastChar = div.querySelector('i')!.textContent.charCodeAt(div.querySelector('i')!.textContent.length - 1);
 
-      expect(lastChar).toBe(160);
+      expect(lastChar).toBe(32);
     });
 
     it('preserves trailing space when browser selection excludes it (Chromium/WebKit Ctrl+A)', () => {

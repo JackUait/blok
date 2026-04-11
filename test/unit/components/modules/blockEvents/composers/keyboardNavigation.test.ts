@@ -206,7 +206,7 @@ describe('KeyboardNavigation', () => {
       expect(event.preventDefault).not.toHaveBeenCalled();
     });
 
-    it('always prevents default Tab behavior even when navigation fails', () => {
+    it('does not prevent default Tab behavior when navigation fails', () => {
       const navigateNext = vi.fn(() => false);
       const blok = createBlokModules({
         Caret: {
@@ -219,10 +219,10 @@ describe('KeyboardNavigation', () => {
       keyboardNavigation.handleTab(event);
 
       expect(navigateNext).toHaveBeenCalledWith(true);
-      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(event.preventDefault).not.toHaveBeenCalled();
     });
 
-    it('always prevents default Shift+Tab behavior even when navigation fails', () => {
+    it('does not prevent default Shift+Tab behavior when navigation fails', () => {
       const navigatePrevious = vi.fn(() => false);
       const blok = createBlokModules({
         Caret: {
@@ -235,7 +235,7 @@ describe('KeyboardNavigation', () => {
       keyboardNavigation.handleTab(event);
 
       expect(navigatePrevious).toHaveBeenCalledWith(true);
-      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(event.preventDefault).not.toHaveBeenCalled();
     });
   });
 

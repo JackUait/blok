@@ -117,6 +117,16 @@ export class KeyboardController extends Controller {
    * @param event - keyboard event
    */
   private handleKeydown(event: KeyboardEvent): void {
+    /**
+     * Guard against destroyed editor instances whose listeners were not
+     * properly removed.  When this.Blok.UI is undefined the handler would
+     * throw, silently swallowing the event and preventing other editors on
+     * the page from receiving it.
+     */
+    if (!this.Blok.UI) {
+      return;
+    }
+
     const target = event.target;
 
     if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {

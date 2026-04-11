@@ -91,14 +91,20 @@ export class KeyboardNavigation extends BlockEventComposer {
       return;
     }
 
-    event.shiftKey ? Caret.navigatePrevious(true) : Caret.navigateNext(true);
+    const isNavigated = event.shiftKey ? Caret.navigatePrevious(true) : Caret.navigateNext(true);
 
     /**
-     * Always prevent default Tab behaviour to keep focus inside the editor.
-     * Without this, pressing Tab on the last block of a nested editor (e.g. a
-     * database card drawer) lets the browser move focus out of the editor entirely.
+     * Prevent default Tab behaviour only when navigation occurred within the
+     * editor. When navigateNext/navigatePrevious returns false (no next/prev
+     * block), allow the browser default so focus can leave the editor to
+     * external elements (e.g. inputs after the editor).
+     *
+     * Nested editors (e.g. database card drawer) are safe because the table
+     * cell guard above returns early, and those editors handle Tab themselves.
      */
-    event.preventDefault();
+    if (isNavigated) {
+      event.preventDefault();
+    }
   }
 
   /**

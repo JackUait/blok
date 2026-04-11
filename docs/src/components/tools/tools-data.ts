@@ -397,6 +397,97 @@ const editor = new Blok({
   },
 
   {
+    id: 'database',
+    exportName: 'Database',
+    type: 'block',
+    badge: 'Block Tool',
+    title: 'Database',
+    description:
+      'A multi-view database block supporting board (Kanban), list, table, and gallery views. Stores a schema of typed properties (text, select, status, date, etc.) and view configurations. Rows are stored as child `database-row` blocks. Supports grouping, sorting, filtering, drag-and-drop reordering, inline editing, and an optional backend sync adapter.',
+    importExample: `import { Database } from '@jackuait/blok/tools';`,
+    configOptions: [
+      {
+        option: 'adapter',
+        type: 'DatabaseAdapter',
+        default: 'undefined',
+        description:
+          'Optional backend sync adapter for persisting schema, row, and view changes to an external data source.',
+      },
+    ],
+    saveDataShape: `interface DatabaseData {
+  title?: string;                      // Database title
+  schema: PropertyDefinition[];        // Column definitions (id, name, type, position, config)
+  views: DatabaseViewConfig[];         // View configs (board, list, table, gallery)
+  activeViewId: string;                // Currently active view ID
+}
+// Rows are NOT stored here — they are child database-row blocks.`,
+    saveDataExample: `{
+  "id": "db001",
+  "type": "database",
+  "data": {
+    "title": "Tasks",
+    "schema": [
+      { "id": "prop1", "name": "Name", "type": "title", "position": "a0" },
+      { "id": "prop2", "name": "Status", "type": "select", "position": "a1" }
+    ],
+    "views": [
+      { "id": "v1", "name": "Board", "type": "board", "position": "a0" }
+    ],
+    "activeViewId": "v1"
+  }
+}`,
+    usageExample: `import { Blok } from '@jackuait/blok';
+import { Database } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    database: {
+      class: Database,
+    },
+  },
+});`,
+  },
+  {
+    id: 'database-row',
+    exportName: 'DatabaseRow',
+    type: 'block',
+    badge: 'Block Tool',
+    title: 'Database Row',
+    description:
+      'An internal block tool that stores a single database row. Not user-insertable — rows are created and managed by the parent Database block. Each row stores property values conforming to the parent database schema and a position string for ordering.',
+    importExample: `import { DatabaseRow } from '@jackuait/blok/tools';`,
+    configOptions: [],
+    saveDataShape: `interface DatabaseRowData {
+  properties: Record<string, PropertyValue>; // Column values keyed by property ID
+  position: string;                          // Fractional index for ordering
+}
+// PropertyValue = string | number | boolean | string[] | OutputData | null`,
+    saveDataExample: `{
+  "id": "row001",
+  "type": "database-row",
+  "data": {
+    "properties": {
+      "prop1": "My Task",
+      "prop2": "In Progress"
+    },
+    "position": "a0"
+  }
+}`,
+    usageExample: `// DatabaseRow is not inserted directly — it is created by the Database tool.
+// Access row data via the saved output:
+import { Database, DatabaseRow } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    database: { class: Database },
+    'database-row': { class: DatabaseRow },
+  },
+});`,
+  },
+
+  {
     id: 'divider',
     exportName: 'Divider',
     type: 'block',

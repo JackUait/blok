@@ -239,7 +239,7 @@ describe('StrikethroughInlineTool', () => {
       document.body.removeChild(div);
     });
 
-    it('preserves trailing nbsp as nbsp after normalization (prevents visual collapse)', () => {
+    it('converts trailing nbsp to regular space after normalization', () => {
       const div = document.createElement('div');
 
       div.contentEditable = 'true';
@@ -263,7 +263,7 @@ describe('StrikethroughInlineTool', () => {
 
       const lastChar = div.querySelector('s')!.textContent.charCodeAt(div.querySelector('s')!.textContent.length - 1);
 
-      expect(lastChar).toBe(160);
+      expect(lastChar).toBe(32);
 
       document.body.removeChild(div);
     });

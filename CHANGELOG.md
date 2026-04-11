@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.5](https://github.com/JackUait/blok/compare/v0.10.4...v0.10.5) (2026-04-11)
+
+### Features
+
+- **Database** — DatabaseView rendering layer with kanban board DOM
+
+### Bug Fixes
+
+- **i18n** — Localize hardcoded "Last edited" strings in block settings footer; add missing translations across 67 locales
+- **Theme** — Expose theme API before `isReady` to prevent dark theme race condition
+
+### Maintenance
+
+- **Lint** — Resolve all 226 lint issues across source and test files
+- **CI** — Enable Corepack before setup-node to resolve Yarn version mismatch; remove dead version-check job
+- **Tests** — Resolve 119 failing tests across E2E, unit, and docs suites
+
 ## [0.10.4](https://github.com/JackUait/blok/compare/v0.10.3...v0.10.4) (2026-04-11)
 
 ### Features

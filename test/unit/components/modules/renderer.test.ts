@@ -481,8 +481,8 @@ describe('Renderer module', () => {
 
     expect(blockManager.composeBlock).toHaveBeenCalledTimes(2);
 
-    const firstCallId = (blockManager.composeBlock.mock.calls[0][0] as ComposeBlockArgs).id;
-    const secondCallId = (blockManager.composeBlock.mock.calls[1][0] as ComposeBlockArgs).id;
+    const firstCallId = (blockManager.composeBlock.mock.calls[0][0]).id;
+    const secondCallId = (blockManager.composeBlock.mock.calls[1][0]).id;
 
     // First block keeps the original id
     expect(firstCallId).toBe('dupe-id');

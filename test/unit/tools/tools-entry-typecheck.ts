@@ -7,7 +7,7 @@
  * declaration is wrong.
  */
 
-import { defaultBlockTools } from '../../../types/tools-entry';
+import type { defaultBlockTools } from '../../../types/tools-entry';
 
 // defaultBlockTools must include 'database' and 'database-row' entries
 const _db: typeof defaultBlockTools.database = {} as const;

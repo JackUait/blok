@@ -194,7 +194,7 @@ describe('BoldInlineTool', () => {
 
     expect(strong).not.toBeNull();
 
-    const lastChar = strong!.textContent!.charCodeAt(strong!.textContent!.length - 1);
+    const lastChar = strong!.textContent.charCodeAt(strong!.textContent.length - 1);
 
     // Trailing space must remain \u00A0 (160), NOT regular space (32)
     expect(lastChar).toBe(160);
@@ -215,17 +215,17 @@ describe('BoldInlineTool', () => {
     const strong1 = block.querySelector('strong');
 
     expect(strong1).not.toBeNull();
-    expect(strong1!.textContent!.charCodeAt(strong1!.textContent!.length - 1)).toBe(160);
+    expect(strong1!.textContent.charCodeAt(strong1!.textContent.length - 1)).toBe(160);
 
     // Step 2: Select all inside strong, unbold
     const boldText = strong1!.firstChild as Text;
 
-    setRange(boldText, 0, boldText.textContent!.length);
+    setRange(boldText, 0, boldText.textContent.length);
     menu.onActivate(menu);
 
     expect(block.querySelector('strong')).toBeNull();
     // After unbold, trailing space should still be \u00A0
-    const afterUnbold = block.textContent!;
+    const afterUnbold = block.textContent;
 
     expect(afterUnbold.charCodeAt(afterUnbold.length - 1)).toBe(160);
 
@@ -234,14 +234,14 @@ describe('BoldInlineTool', () => {
     block.normalize();
     const plainText = block.firstChild as Text;
 
-    setRange(plainText, 0, plainText.textContent!.length);
+    setRange(plainText, 0, plainText.textContent.length);
     menu.onActivate(menu);
 
     const strong2 = block.querySelector('strong');
 
     expect(strong2).not.toBeNull();
     // Trailing space must still be \u00A0 after re-bold
-    expect(strong2!.textContent!.charCodeAt(strong2!.textContent!.length - 1)).toBe(160);
+    expect(strong2!.textContent.charCodeAt(strong2!.textContent.length - 1)).toBe(160);
   });
 
   it('does not leave trailing space wrapped in bold when un-bolding partial selection', () => {

@@ -261,7 +261,7 @@ describe('StrikethroughInlineTool', () => {
 
       (config.onActivate as () => void)();
 
-      const lastChar = div.querySelector('s')!.textContent!.charCodeAt(div.querySelector('s')!.textContent!.length - 1);
+      const lastChar = div.querySelector('s')!.textContent.charCodeAt(div.querySelector('s')!.textContent.length - 1);
 
       expect(lastChar).toBe(160);
 

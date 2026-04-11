@@ -167,7 +167,7 @@ describe('CodeInlineTool', () => {
 
       (config.onActivate as () => void)();
 
-      const lastChar = div.querySelector('code')!.textContent!.charCodeAt(div.querySelector('code')!.textContent!.length - 1);
+      const lastChar = div.querySelector('code')!.textContent.charCodeAt(div.querySelector('code')!.textContent.length - 1);
 
       expect(lastChar).toBe(160);
 

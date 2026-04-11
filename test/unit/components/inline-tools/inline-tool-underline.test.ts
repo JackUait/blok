@@ -261,7 +261,7 @@ describe('UnderlineInlineTool', () => {
 
       (config.onActivate as () => void)();
 
-      const lastChar = div.querySelector('u')!.textContent!.charCodeAt(div.querySelector('u')!.textContent!.length - 1);
+      const lastChar = div.querySelector('u')!.textContent.charCodeAt(div.querySelector('u')!.textContent.length - 1);
 
       expect(lastChar).toBe(160);
 

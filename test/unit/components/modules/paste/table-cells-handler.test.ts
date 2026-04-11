@@ -6,6 +6,7 @@ import { TableCellsHandler } from '../../../../../src/components/modules/paste/h
 import type { SanitizerConfigBuilder } from '../../../../../src/components/modules/paste/sanitizer-config';
 import type { ToolRegistry } from '../../../../../src/components/modules/paste/tool-registry';
 import type { HandlerContext } from '../../../../../src/components/modules/paste/types';
+import type { Block } from '../../../../../src/components/block';
 
 /**
  * Helper: build a clipboard HTML string from a simple 2D text grid.
@@ -444,7 +445,7 @@ describe('TableCellsHandler', () => {
       cellBlocksContainer.appendChild(mockHolder);
       document.body.appendChild(cellBlocksContainer);
 
-      context.currentBlock = { holder: mockHolder } as unknown as import('../../../../../src/components/block').Block;
+      context.currentBlock = { holder: mockHolder } as unknown as Block;
 
       const html = buildTableHtml([['A', 'B']]);
       const result = await handler.handle(html, context);
@@ -482,7 +483,7 @@ describe('TableCellsHandler', () => {
       cellBlocksContainer.appendChild(mockHolder);
       document.body.appendChild(cellBlocksContainer);
 
-      context.currentBlock = { holder: mockHolder } as unknown as import('../../../../../src/components/block').Block;
+      context.currentBlock = { holder: mockHolder } as unknown as Block;
 
       const html = buildTableHtml([['X']]);
       const result = await handler.handle(html, context);
@@ -519,7 +520,7 @@ describe('TableCellsHandler', () => {
       const plainHolder = document.createElement('div');
 
       document.body.appendChild(plainHolder);
-      context.currentBlock = { holder: plainHolder } as unknown as import('../../../../../src/components/block').Block;
+      context.currentBlock = { holder: plainHolder } as unknown as Block;
 
       // pasteTarget IS inside [data-blok-table-cell] — this is the fix's new bail condition
       context.pasteTarget = cellBlocksContainer;
@@ -546,7 +547,7 @@ describe('TableCellsHandler', () => {
       const plainContainer = document.createElement('div');
 
       document.body.appendChild(plainContainer);
-      context.currentBlock = { holder: plainContainer } as unknown as import('../../../../../src/components/block').Block;
+      context.currentBlock = { holder: plainContainer } as unknown as Block;
 
       // pasteTarget is outside any [data-blok-table-cell]
       const outsideTarget = document.createElement('span');
@@ -582,7 +583,7 @@ describe('TableCellsHandler', () => {
 
       document.body.appendChild(plainHolder);
 
-      context.currentBlock = { holder: plainHolder } as unknown as import('../../../../../src/components/block').Block;
+      context.currentBlock = { holder: plainHolder } as unknown as Block;
 
       const html = buildTableHtml([['Hello', 'World']]);
       const result = await handler.handle(html, context);

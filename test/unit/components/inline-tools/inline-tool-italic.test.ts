@@ -113,7 +113,7 @@ describe('ItalicInlineTool', () => {
 
       (config.onActivate as () => void)();
 
-      const lastChar = div.querySelector('i')!.textContent!.charCodeAt(div.querySelector('i')!.textContent!.length - 1);
+      const lastChar = div.querySelector('i')!.textContent.charCodeAt(div.querySelector('i')!.textContent.length - 1);
 
       expect(lastChar).toBe(160);
     });

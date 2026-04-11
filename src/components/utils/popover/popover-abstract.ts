@@ -141,7 +141,16 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       this.search.focus();
     }
 
+    /**
+     * Show hazes instantly on open (no transition), then restore transition for scroll-triggered changes
+     */
+    this.nodes.scrollHazeTop.style.transition = 'none';
+    this.nodes.scrollHazeBottom.style.transition = 'none';
     this.updateScrollHazes();
+    requestAnimationFrame(() => {
+      this.nodes.scrollHazeTop.style.transition = '';
+      this.nodes.scrollHazeBottom.style.transition = '';
+    });
 
     const { trigger } = this.params;
     const isRootWithTrigger = (this.params.nestingLevel ?? 0) === 0 && trigger !== undefined;

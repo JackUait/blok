@@ -663,6 +663,78 @@ describe('PopoverAbstract', () => {
       expect(nodes.scrollHazeBottom.style.opacity).toBe('0');
     });
 
+    it('displays hazes instantly without CSS transition on show()', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+
+      Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
+      Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
+      Object.defineProperty(nodes.items, 'scrollTop', { value: 0, configurable: true, writable: true });
+
+      popover.show();
+
+      // Bottom haze is visible immediately
+      expect(nodes.scrollHazeBottom.style.opacity).toBe('1');
+      // Transition is disabled for instant appearance
+      expect(nodes.scrollHazeBottom.style.transition).toBe('none');
+    });
+
+    it('restores CSS transition after show() so scroll-triggered changes animate', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+
+      Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
+      Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
+      Object.defineProperty(nodes.items, 'scrollTop', { value: 0, configurable: true, writable: true });
+
+      const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+        cb(0);
+
+        return 0;
+      });
+
+      popover.show();
+
+      // After rAF fires, transition is restored (empty = CSS class transition applies)
+      expect(nodes.scrollHazeTop.style.transition).toBe('');
+      expect(nodes.scrollHazeBottom.style.transition).toBe('');
+
+      rafSpy.mockRestore();
+    });
+
+    it('uses CSS transition for scroll-triggered haze visibility changes', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+
+      Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
+      Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
+
+      let scrollTopValue = 0;
+
+      Object.defineProperty(nodes.items, 'scrollTop', {
+        get: () => scrollTopValue,
+        configurable: true,
+      });
+
+      const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+        cb(0);
+
+        return 0;
+      });
+
+      popover.show();
+
+      // Scroll to middle — top haze appears via scroll event
+      scrollTopValue = 100;
+      nodes.items.dispatchEvent(new Event('scroll'));
+
+      // Transition should NOT be 'none' — CSS class transition applies for animated scroll haze
+      expect(nodes.scrollHazeTop.style.opacity).toBe('1');
+      expect(nodes.scrollHazeTop.style.transition).not.toBe('none');
+
+      rafSpy.mockRestore();
+    });
+
     it('resets hazes on hide', () => {
       const popover = createPopover();
       const nodes = popover.getNodesForTests();

@@ -28,7 +28,7 @@ export interface ComposeBlockOptions {
   bindEventsImmediately?: boolean;
   /** Timestamp of the last edit (milliseconds since epoch) */
   lastEditedAt?: number;
-  /** Display name of the user who last edited this block */
+  /** ID of the user who last edited this block */
   lastEditedBy?: string | null;
 }
 

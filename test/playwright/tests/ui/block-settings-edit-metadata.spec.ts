@@ -37,7 +37,7 @@ const resetBlok = async (page: Page): Promise<void> => {
 };
 
 type CreateBlokOptions = {
-  user?: { name: string };
+  user?: { id: string; displayName: string };
 };
 
 const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<void> => {
@@ -58,7 +58,14 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
     };
 
     if (user) {
-      config.user = user;
+      config.user = { id: user.id };
+      config.resolveUser = (id: string) => {
+        if (id === user.id) {
+          return { name: user.displayName };
+        }
+
+        return null;
+      };
     }
 
     const blok = new window.Blok(config);
@@ -86,7 +93,7 @@ test.describe('Block settings edit metadata footer', () => {
   });
 
   test('shows "Last edited by <user>" after editing a block with user configured', async ({ page }) => {
-    await createBlok(page, { user: { name: 'Jack Uait' } });
+    await createBlok(page, { user: { id: 'user-123', displayName: 'Jack Uait' } });
 
     const block = page.locator(BLOCK_SELECTOR).filter({ hasText: 'Hello world' });
 
@@ -130,7 +137,7 @@ test.describe('Block settings edit metadata footer', () => {
   });
 
   test('shows metadata footer even when block has not been edited by user', async ({ page }) => {
-    await createBlok(page, { user: { name: 'Jack Uait' } });
+    await createBlok(page, { user: { id: 'user-123', displayName: 'Jack Uait' } });
 
     const block = page.locator(BLOCK_SELECTOR).filter({ hasText: 'Hello world' });
 

@@ -50,8 +50,8 @@ export interface OutputBlockData<Type extends string = string, Data extends obje
   lastEditedAt?: number;
 
   /**
-   * Display name of the user who last edited this block.
-   * Set from the `user.name` config option. Omit if no user is configured.
+   * ID of the user who last edited this block.
+   * Set from the `user.id` config option. Omit if no user is configured.
    */
   lastEditedBy?: string;
 }

@@ -168,7 +168,7 @@ export class YjsManager extends Module {
    * Update a block's edit metadata.
    * @param id - Block id
    * @param lastEditedAt - Timestamp in milliseconds
-   * @param lastEditedBy - User display name, or null
+   * @param lastEditedBy - User ID, or null
    */
   public updateBlockMetadata(id: string, lastEditedAt: number, lastEditedBy: string | null): void {
     this.documentStore.updateBlockMetadata(id, lastEditedAt, lastEditedBy);

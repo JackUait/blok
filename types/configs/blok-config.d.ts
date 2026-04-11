@@ -4,6 +4,7 @@ import {API, LogLevels, OutputData} from '../index';
 import {SanitizerConfig} from './sanitizer-config';
 import {I18nConfig} from './i18n-config';
 import { BlockMutationEvent } from '../events/block';
+import type { UserInfo } from './user-info';
 
 /**
  * Data model format for input/output
@@ -202,12 +203,21 @@ export interface BlokConfig {
 
   /**
    * User identity for edit tracking.
-   * When set, the user's name is recorded on each block they edit.
+   * When set, the user's ID is recorded on each block they edit.
    */
   user?: {
     /**
-     * Display name shown in the "Last edited by" footer in block settings.
+     * Stable unique identifier for the current editor.
+     * Stored on each block the user edits.
      */
-    name: string;
+    id: string;
   };
+
+  /**
+   * Resolves a user ID to display information.
+   * Called when Blok needs to show who edited a block (e.g., block settings footer).
+   * Can return synchronously or asynchronously.
+   * Return null/undefined for unknown users — Blok will fall back to showing only the date.
+   */
+  resolveUser?: (id: string) => UserInfo | Promise<UserInfo | null> | null;
 }

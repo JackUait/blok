@@ -88,7 +88,7 @@ interface BlockConstructorOptions {
   /** Timestamp of the last edit to this block (milliseconds since epoch) */
   lastEditedAt?: number;
 
-  /** Display name of the user who last edited this block */
+  /** ID of the user who last edited this block */
   lastEditedBy?: string | null;
 }
 
@@ -146,7 +146,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
   /** Timestamp of the last edit (ms since epoch). Updated by BlockManager on mutation. */
   public lastEditedAt: number | undefined;
 
-  /** Display name of the user who last edited. Updated by BlockManager on mutation. */
+  /** ID of the user who last edited. Updated by BlockManager on mutation. */
   public lastEditedBy: string | null;
 
   /**

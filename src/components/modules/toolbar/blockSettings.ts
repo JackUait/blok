@@ -456,7 +456,8 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   }
 
   /**
-   * Creates the "Last edited by..." footer element for block settings.
+   * Creates the "Last edited" footer element for block settings.
+   * If a resolveUser callback is configured, resolves the user ID to a display name.
    * @param block - the block whose metadata to display
    * @returns the footer DOM element
    */
@@ -473,10 +474,14 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
     label.setAttribute('data-edit-meta-label', '');
 
-    if (block.lastEditedBy !== null && block.lastEditedBy !== undefined) {
-      label.textContent = this.Blok.I18n.t('blockSettings.lastEditedBy', { name: block.lastEditedBy });
-    } else {
-      label.textContent = this.Blok.I18n.t('blockSettings.lastEdited');
+    label.textContent = this.Blok.I18n.t('blockSettings.lastEdited');
+
+    if (block.lastEditedBy != null && this.config.resolveUser != null) {
+      void Promise.resolve(this.config.resolveUser(block.lastEditedBy)).then((userInfo) => {
+        if (userInfo?.name != null) {
+          label.textContent = this.Blok.I18n.t('blockSettings.lastEditedBy', { name: userInfo.name });
+        }
+      });
     }
 
     container.appendChild(label);

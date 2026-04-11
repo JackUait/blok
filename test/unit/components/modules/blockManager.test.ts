@@ -1023,7 +1023,7 @@ describe('BlockManager', () => {
       const config = {
         defaultBlock: 'paragraph',
         sanitizer: {},
-        user: { name: 'Test User' },
+        user: { id: 'test-user-1' },
       } as BlokConfig;
 
       const blockManager = new BlockManager({
@@ -1097,7 +1097,7 @@ describe('BlockManager', () => {
       expect(block.lastEditedAt).toBeTypeOf('number');
       expect((block.lastEditedAt as number)).toBeGreaterThanOrEqual(now);
       expect((block.lastEditedAt as number)).toBeLessThanOrEqual(Date.now());
-      expect(block.lastEditedBy).toBe('Test User');
+      expect(block.lastEditedBy).toBe('test-user-1');
     });
 
     it('should set lastEditedBy to null when no user is configured', () => {

@@ -83,6 +83,7 @@ export {
   Dictionary,
   DictValue,
   I18nConfig,
+  UserInfo,
 } from './configs';
 
 export * from './utils/popover';

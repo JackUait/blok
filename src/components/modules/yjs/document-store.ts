@@ -197,7 +197,7 @@ export class DocumentStore {
    * Update a block's edit metadata fields directly on the Y.Map.
    * @param id - Block id
    * @param lastEditedAt - Timestamp in milliseconds
-   * @param lastEditedBy - User display name, or null
+   * @param lastEditedBy - User ID, or null
    */
   public updateBlockMetadata(id: string, lastEditedAt: number, lastEditedBy: string | null): void {
     const yblock = this.getBlockById(id);

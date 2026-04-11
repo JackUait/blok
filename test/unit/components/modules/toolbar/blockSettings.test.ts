@@ -967,10 +967,25 @@ describe('BlockSettings', () => {
 
   describe('edit metadata footer', () => {
     it('should append a separator and Html item with edit metadata when lastEditedAt is set', async () => {
+      const resolveUser = vi.fn((id: string) => {
+        if (id === 'user-123') {
+          return { name: 'Jack Uait' };
+        }
+
+        return null;
+      });
+
+      blockSettings = new BlockSettings({
+        config: { resolveUser } as unknown as BlokConfig,
+        eventsDispatcher: eventsDispatcher as unknown as typeof blockSettings['eventsDispatcher'],
+      });
+
+      blockSettings.state = blokMock as unknown as BlokModules;
+
       const block = createBlock();
 
       block.lastEditedAt = 1712700720000;
-      block.lastEditedBy = 'Jack Uait';
+      block.lastEditedBy = 'user-123';
 
       getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
 
@@ -988,10 +1003,12 @@ describe('BlockSettings', () => {
         name: 'edit-metadata',
       }));
 
-      const element = (lastItem as { element: HTMLElement }).element;
+      // Wait for the resolver promise to settle
+      await vi.waitFor(() => {
+        expect(blokMock.I18n.t).toHaveBeenCalledWith('blockSettings.lastEditedBy', { name: 'Jack Uait' });
+      });
 
-      expect(blokMock.I18n.t).toHaveBeenCalledWith('blockSettings.lastEditedBy', { name: 'Jack Uait' });
-      expect(element.textContent).toContain('blockSettings.lastEditedBy');
+      expect(resolveUser).toHaveBeenCalledWith('user-123');
     });
 
     it('should show "Last edited" without user name when lastEditedBy is null', async () => {
@@ -1012,6 +1029,88 @@ describe('BlockSettings', () => {
 
       expect(blokMock.I18n.t).toHaveBeenCalledWith('blockSettings.lastEdited');
       expect(firstLine?.textContent).toBe('blockSettings.lastEdited');
+    });
+
+    it('should resolve user name asynchronously and update the label', async () => {
+      type Resolver = (value: { name: string }) => void;
+      const resolverRef: { resolve: Resolver | null } = { resolve: null };
+
+      const resolveUser = vi.fn(() => {
+        return new Promise<{ name: string }>((resolve) => {
+          resolverRef.resolve = resolve;
+        });
+      });
+
+      blockSettings = new BlockSettings({
+        config: { resolveUser } as unknown as BlokConfig,
+        eventsDispatcher: eventsDispatcher as unknown as typeof blockSettings['eventsDispatcher'],
+      });
+
+      blockSettings.state = blokMock as unknown as BlokModules;
+
+      const block = createBlock();
+
+      block.lastEditedAt = 1712700720000;
+      block.lastEditedBy = 'user-456';
+
+      getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
+
+      const items = await (blockSettings as unknown as {
+        getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+      }).getTunesItems(block, []);
+
+      const lastItem = items[items.length - 1];
+      const element = (lastItem as { element: HTMLElement }).element;
+      const label = element.querySelector('[data-edit-meta-label]');
+
+      // Initially shows "Last edited" before resolver settles
+      expect(label?.textContent).toBe('blockSettings.lastEdited');
+      expect(resolveUser).toHaveBeenCalledWith('user-456');
+
+      // Resolve the async resolver
+      resolverRef.resolve?.({ name: 'Async User' });
+
+      // After the async resolver settles, label updates
+      await vi.waitFor(() => {
+        expect(blokMock.I18n.t).toHaveBeenCalledWith('blockSettings.lastEditedBy', { name: 'Async User' });
+      });
+    });
+
+    it('should fall back to date-only when resolveUser returns null', async () => {
+      const resolveUser = vi.fn(() => null);
+
+      blockSettings = new BlockSettings({
+        config: { resolveUser } as unknown as BlokConfig,
+        eventsDispatcher: eventsDispatcher as unknown as typeof blockSettings['eventsDispatcher'],
+      });
+
+      blockSettings.state = blokMock as unknown as BlokModules;
+
+      const block = createBlock();
+
+      block.lastEditedAt = 1712700720000;
+      block.lastEditedBy = 'unknown-user';
+
+      getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
+
+      const items = await (blockSettings as unknown as {
+        getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+      }).getTunesItems(block, []);
+
+      const lastItem = items[items.length - 1];
+      const element = (lastItem as { element: HTMLElement }).element;
+      const label = element.querySelector('[data-edit-meta-label]');
+
+      // Resolver returns null, so label stays as "Last edited" (no name)
+      await vi.waitFor(() => {
+        expect(resolveUser).toHaveBeenCalledWith('unknown-user');
+      });
+
+      expect(label?.textContent).toBe('blockSettings.lastEdited');
+      expect(blokMock.I18n.t).not.toHaveBeenCalledWith(
+        'blockSettings.lastEditedBy',
+        expect.anything()
+      );
     });
 
     it('should format the date using the Blok locale, not the browser default', async () => {

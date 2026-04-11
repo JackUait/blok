@@ -1102,7 +1102,7 @@ export class BlockManager extends Module {
       // eslint-disable-next-line no-param-reassign
       block.lastEditedAt = Date.now();
       // eslint-disable-next-line no-param-reassign
-      block.lastEditedBy = this.config.user?.name ?? null;
+      block.lastEditedBy = this.config.user?.id ?? null;
 
       void this.syncBlockDataToYjs(block);
     }

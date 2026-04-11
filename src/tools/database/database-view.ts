@@ -1,0 +1,269 @@
+import type { I18n } from '../../../types';
+import type { KanbanColumnData, KanbanCardData } from './types';
+
+interface DatabaseViewConfig {
+  readOnly: boolean;
+  i18n: I18n;
+}
+
+/**
+ * DOM rendering layer for the kanban board.
+ * Receives ordered data and creates plain DOM elements (NOT contenteditable).
+ * All interactive elements use data-blok-database-* attributes for test selectors and event delegation.
+ */
+export class DatabaseView {
+  private readonly readOnly: boolean;
+  private readonly i18n: I18n;
+
+  constructor({ readOnly, i18n }: DatabaseViewConfig) {
+    this.readOnly = readOnly;
+    this.i18n = i18n;
+  }
+
+  /**
+   * Creates the full board DOM from column and card data.
+   */
+  createBoard(columns: KanbanColumnData[], getCards: (columnId: string) => KanbanCardData[]): HTMLDivElement {
+    const wrapper = document.createElement('div');
+
+    wrapper.setAttribute('data-blok-tool', 'database');
+    wrapper.setAttribute('role', 'region');
+    wrapper.setAttribute('aria-label', 'Kanban board');
+    wrapper.style.display = 'flex';
+
+    const boardArea = document.createElement('div');
+
+    boardArea.setAttribute('data-blok-database-board', '');
+    boardArea.style.display = 'flex';
+    boardArea.style.overflowX = 'auto';
+    boardArea.style.alignItems = 'flex-start';
+    boardArea.style.gap = '12px';
+    boardArea.style.paddingTop = '6px';
+    boardArea.style.paddingBottom = '24px';
+    boardArea.style.flex = '1';
+    boardArea.style.minWidth = '0';
+
+    for (const col of columns) {
+      const columnEl = this.createColumnElement(col, getCards(col.id));
+
+      boardArea.appendChild(columnEl);
+    }
+
+    if (!this.readOnly) {
+      const addColumnBtn = document.createElement('button');
+
+      addColumnBtn.setAttribute('data-blok-database-add-column', '');
+      addColumnBtn.setAttribute('aria-label', this.i18n.t('tools.database.addColumn'));
+      addColumnBtn.textContent = '+ ' + this.i18n.t('tools.database.addColumn');
+      boardArea.appendChild(addColumnBtn);
+    }
+
+    wrapper.appendChild(boardArea);
+
+    return wrapper;
+  }
+
+  /**
+   * Creates and appends a card element to a cards container.
+   */
+  appendCard(cardsContainer: HTMLElement, card: KanbanCardData): void {
+    const cardEl = this.createCardElement(card);
+
+    cardsContainer.appendChild(cardEl);
+    this.updateColumnCount(cardsContainer);
+  }
+
+  /**
+   * Removes a card element from the wrapper by its data-card-id.
+   */
+  removeCard(wrapper: HTMLElement, cardId: string): void {
+    const cardEl = wrapper.querySelector(`[data-card-id="${cardId}"]`);
+    const cardsContainer = cardEl?.closest('[data-blok-database-cards]') as HTMLElement | null;
+
+    cardEl?.remove();
+
+    if (cardsContainer !== null) {
+      this.updateColumnCount(cardsContainer);
+    }
+  }
+
+  /**
+   * Creates and inserts a column element before the add-column button.
+   */
+  appendColumn(wrapper: HTMLElement, col: KanbanColumnData): void {
+    const columnEl = this.createColumnElement(col, []);
+    const boardArea = wrapper.querySelector('[data-blok-database-board]');
+    const container = (boardArea as HTMLElement | null) ?? wrapper;
+    const addColumnBtn = container.querySelector('[data-blok-database-add-column]');
+
+    if (addColumnBtn) {
+      container.insertBefore(columnEl, addColumnBtn);
+    } else {
+      container.appendChild(columnEl);
+    }
+  }
+
+  /**
+   * Updates the visible title of a card element found by its data-card-id.
+   */
+  updateCardTitle(wrapper: HTMLElement, cardId: string, title: string): void {
+    const cardEl = wrapper.querySelector(`[data-card-id="${cardId}"]`);
+    const titleEl = cardEl?.querySelector('[data-blok-database-card-title]');
+
+    if (titleEl !== null && titleEl !== undefined) {
+      titleEl.textContent = title || this.i18n.t('tools.database.newPage');
+    }
+  }
+
+  /**
+   * Removes a column element from the wrapper by its data-column-id.
+   */
+  removeColumn(wrapper: HTMLElement, columnId: string): void {
+    const columnEl = wrapper.querySelector(`[data-column-id="${columnId}"]`);
+
+    columnEl?.remove();
+  }
+
+  /**
+   * Creates a single column element with header, cards container, and optional add-card button.
+   */
+  private createColumnElement(col: KanbanColumnData, cards: KanbanCardData[]): HTMLDivElement {
+    const columnEl = document.createElement('div');
+
+    columnEl.setAttribute('data-blok-database-column', '');
+    columnEl.setAttribute('data-column-id', col.id);
+    columnEl.setAttribute('role', 'group');
+    columnEl.setAttribute('aria-label', col.title);
+    columnEl.style.display = 'flex';
+    columnEl.style.flexDirection = 'column';
+    columnEl.style.minWidth = '260px';
+    columnEl.style.flex = '0 0 260px';
+
+    if (col.color !== undefined) {
+      columnEl.style.backgroundColor = `var(--blok-color-${col.color}-bg)`;
+    }
+
+    const header = document.createElement('div');
+
+    header.setAttribute('data-blok-database-column-header', '');
+    header.style.display = 'flex';
+    header.style.alignItems = 'center';
+    header.style.padding = '6px 8px';
+    header.style.borderRadius = '4px';
+    header.style.gap = '6px';
+
+    const pill = document.createElement('div');
+
+    pill.setAttribute('data-blok-database-column-pill', '');
+
+    if (col.color !== undefined) {
+      const dot = document.createElement('span');
+
+      dot.setAttribute('data-blok-database-column-dot', '');
+      dot.style.backgroundColor = `var(--blok-color-${col.color}-text)`;
+      pill.appendChild(dot);
+    }
+
+    const titleEl = document.createElement('div');
+
+    titleEl.setAttribute('data-blok-database-column-title', '');
+    titleEl.style.fontWeight = '600';
+    titleEl.textContent = col.title;
+    pill.appendChild(titleEl);
+
+    header.appendChild(pill);
+
+    const countEl = document.createElement('span');
+
+    countEl.setAttribute('data-blok-database-column-count', '');
+    countEl.textContent = String(cards.length);
+    header.appendChild(countEl);
+
+    columnEl.appendChild(header);
+
+    const cardsContainer = document.createElement('div');
+
+    cardsContainer.setAttribute('data-blok-database-cards', '');
+    cardsContainer.setAttribute('role', 'list');
+    cardsContainer.style.display = 'flex';
+    cardsContainer.style.flexDirection = 'column';
+    cardsContainer.style.gap = '8px';
+    cardsContainer.style.paddingTop = '6px';
+    cardsContainer.style.minHeight = '40px';
+
+    for (const card of cards) {
+      const cardEl = this.createCardElement(card);
+
+      cardsContainer.appendChild(cardEl);
+    }
+
+    columnEl.appendChild(cardsContainer);
+
+    if (!this.readOnly) {
+      const addCardBtn = document.createElement('button');
+
+      addCardBtn.setAttribute('data-blok-database-add-card', '');
+      addCardBtn.setAttribute('data-column-id', col.id);
+      addCardBtn.setAttribute('aria-label', this.i18n.t('tools.database.addCard'));
+      addCardBtn.textContent = '+ ' + this.i18n.t('tools.database.newPage');
+      columnEl.appendChild(addCardBtn);
+    }
+
+    return columnEl;
+  }
+
+  /**
+   * Creates a single card element.
+   */
+  private createCardElement(card: KanbanCardData): HTMLDivElement {
+    const cardEl = document.createElement('div');
+
+    cardEl.setAttribute('data-blok-database-card', '');
+    cardEl.setAttribute('data-card-id', card.id);
+    cardEl.setAttribute('role', 'listitem');
+    cardEl.style.padding = '10px 12px';
+    cardEl.style.borderRadius = '8px';
+    cardEl.style.cursor = 'pointer';
+    cardEl.style.position = 'relative';
+
+    const titleEl = document.createElement('div');
+
+    titleEl.setAttribute('data-blok-database-card-title', '');
+    titleEl.textContent = card.title || this.i18n.t('tools.database.newPage');
+    cardEl.appendChild(titleEl);
+
+    if (!this.readOnly) {
+      const deleteBtn = document.createElement('button');
+
+      deleteBtn.setAttribute('data-blok-database-delete-card', '');
+      deleteBtn.setAttribute('data-card-id', card.id);
+      deleteBtn.setAttribute('aria-label', this.i18n.t('tools.database.deleteCard'));
+      deleteBtn.style.position = 'absolute';
+      deleteBtn.style.top = '4px';
+      deleteBtn.style.right = '4px';
+      deleteBtn.textContent = '\u00d7';
+      cardEl.appendChild(deleteBtn);
+    }
+
+    return cardEl;
+  }
+
+  /**
+   * Updates the card count badge for the column containing the given cards container.
+   */
+  private updateColumnCount(cardsContainer: HTMLElement): void {
+    const columnEl = cardsContainer.closest('[data-blok-database-column]');
+
+    if (columnEl === null) {
+      return;
+    }
+
+    const countEl = columnEl.querySelector('[data-blok-database-column-count]');
+
+    if (countEl !== null) {
+      const cardCount = cardsContainer.querySelectorAll('[data-blok-database-card]').length;
+
+      countEl.textContent = String(cardCount);
+    }
+  }
+}

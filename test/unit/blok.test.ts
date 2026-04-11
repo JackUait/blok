@@ -89,6 +89,18 @@ vi.mock('../../src/components/core', () => {
       startSelection: vi.fn(),
       endSelection: vi.fn(),
     } as unknown as BlokModules['RectangleSelection'],
+    ThemeManager: {
+      getMode: vi.fn().mockReturnValue('auto'),
+      setMode: vi.fn(),
+      getResolved: vi.fn().mockReturnValue('light'),
+    } as unknown as BlokModules['ThemeManager'],
+    ThemeAPI: {
+      methods: {
+        get: vi.fn().mockReturnValue('auto'),
+        set: vi.fn(),
+        getResolved: vi.fn().mockReturnValue('light'),
+      },
+    } as unknown as BlokModules['ThemeAPI'],
   });
 
   const mockModuleInstances = createMockModuleInstances();
@@ -219,6 +231,18 @@ describe('Blok', () => {
       startSelection: vi.fn(),
       endSelection: vi.fn(),
     } as unknown as BlokModules['RectangleSelection'];
+    mocks.mockModuleInstances.ThemeManager = {
+      getMode: vi.fn().mockReturnValue('auto'),
+      setMode: vi.fn(),
+      getResolved: vi.fn().mockReturnValue('light'),
+    } as unknown as BlokModules['ThemeManager'];
+    mocks.mockModuleInstances.ThemeAPI = {
+      methods: {
+        get: vi.fn().mockReturnValue('auto'),
+        set: vi.fn(),
+        getResolved: vi.fn().mockReturnValue('light'),
+      },
+    } as unknown as BlokModules['ThemeAPI'];
   });
 
   afterEach(() => {
@@ -932,6 +956,231 @@ describe('Blok', () => {
 
       // Restore original Core
       (coreModule as Record<string, unknown>).Core = OriginalMockCore;
+    });
+  });
+
+  describe('theme API availability before isReady', () => {
+    const createDeferred = (): { promise: Promise<void>; resolve: () => void } => {
+      let resolve!: () => void;
+      const promise = new Promise<void>(r => { resolve = r; });
+
+      return { promise, resolve };
+    };
+
+    it('should expose theme API immediately after construction, before isReady resolves', async () => {
+      const deferred = createDeferred();
+
+      const coreModule = await import('../../src/components/core') as {
+        Core: new (...args: unknown[]) => Core;
+      };
+      const OriginalMockCore = coreModule.Core;
+      const deferredIsReady = deferred.promise;
+
+      const PatchedCore = class extends OriginalMockCore {
+        constructor(...args: unknown[]) {
+          super(...args);
+          this.isReady = deferredIsReady;
+        }
+      } as unknown as typeof coreModule.Core;
+
+      (coreModule as Record<string, unknown>).Core = PatchedCore;
+
+      const blok = new Blok();
+
+      // theme API should be available BEFORE isReady resolves
+      const themeApi = (blok as unknown as Record<string, unknown>).theme as
+        | { set: (mode: string) => void; get: () => string; getResolved: () => string }
+        | undefined;
+
+      expect(themeApi).toBeDefined();
+      expect(typeof themeApi?.set).toBe('function');
+      expect(typeof themeApi?.get).toBe('function');
+      expect(typeof themeApi?.getResolved).toBe('function');
+
+      // Clean up
+      deferred.resolve();
+      await blok.isReady;
+      (coreModule as Record<string, unknown>).Core = OriginalMockCore;
+    });
+
+    it('should buffer theme set() calls made before isReady and replay after modules are ready', async () => {
+      const deferred = createDeferred();
+
+      const coreModule = await import('../../src/components/core') as {
+        Core: new (...args: unknown[]) => Core;
+      };
+      const OriginalMockCore = coreModule.Core;
+      const deferredIsReady = deferred.promise;
+
+      // Simulate real Core behavior: moduleInstances starts empty,
+      // then gets populated before isReady resolves
+      const PatchedCore = class extends OriginalMockCore {
+        constructor(...args: unknown[]) {
+          super(...args);
+          // Start with empty moduleInstances (like real Core)
+          this.moduleInstances = {} as BlokModules;
+          this.isReady = deferredIsReady.then(() => {
+            // Populate module instances (simulating constructModules + prepare)
+            const mockInstances = (coreModule as { mockModuleInstances?: Partial<BlokModules> }).mockModuleInstances;
+
+            if (mockInstances) {
+              Object.assign(this.moduleInstances, mockInstances);
+            }
+          });
+        }
+      } as unknown as typeof coreModule.Core;
+
+      (coreModule as Record<string, unknown>).Core = PatchedCore;
+
+      const blok = new Blok();
+
+      // Call set() before isReady — ThemeManager doesn't exist yet
+      const themeApi = (blok as unknown as Record<string, unknown>).theme as
+        { set: (mode: string) => void; get: () => string };
+
+      themeApi.set('dark');
+
+      // get() should return the buffered value
+      expect(themeApi.get()).toBe('dark');
+
+      // Now resolve isReady — modules become available, buffer is replayed
+      deferred.resolve();
+      await blok.isReady;
+
+      // ThemeManager.setMode should have been called with the buffered mode
+      const lastCoreInstance = ((coreModule as { lastInstance?: () => Core | undefined }).lastInstance?.());
+      const tm = lastCoreInstance?.moduleInstances.ThemeManager;
+
+      expect(tm?.setMode).toHaveBeenCalledWith('dark');
+
+      // Restore original Core
+      (coreModule as Record<string, unknown>).Core = OriginalMockCore;
+    });
+
+    it('should still have theme API after isReady resolves', async () => {
+      const blok = new Blok();
+
+      await blok.isReady;
+
+      const themeApi = (blok as unknown as Record<string, unknown>).theme as
+        | { set: (mode: string) => void; get: () => string; getResolved: () => string }
+        | undefined;
+
+      expect(themeApi).toBeDefined();
+      expect(typeof themeApi?.set).toBe('function');
+    });
+
+    it('should return "auto" from get() and "light" from getResolved() before any set() call', async () => {
+      const deferred = createDeferred();
+
+      const coreModule = await import('../../src/components/core') as {
+        Core: new (...args: unknown[]) => Core;
+      };
+      const OriginalMockCore = coreModule.Core;
+      const deferredIsReady = deferred.promise;
+
+      const PatchedCore = class extends OriginalMockCore {
+        constructor(...args: unknown[]) {
+          super(...args);
+          this.moduleInstances = {} as BlokModules;
+          this.isReady = deferredIsReady.then(() => {
+            const mockInstances = (coreModule as { mockModuleInstances?: Partial<BlokModules> }).mockModuleInstances;
+
+            if (mockInstances) {
+              Object.assign(this.moduleInstances, mockInstances);
+            }
+          });
+        }
+      } as unknown as typeof coreModule.Core;
+
+      (coreModule as Record<string, unknown>).Core = PatchedCore;
+
+      const blok = new Blok();
+
+      const themeApi = (blok as unknown as Record<string, unknown>).theme as
+        { get: () => string; getResolved: () => string };
+
+      // Before any set() call, get() should default to 'auto'
+      expect(themeApi.get()).toBe('auto');
+
+      // Before isReady, getResolved() should default to 'light'
+      expect(themeApi.getResolved()).toBe('light');
+
+      deferred.resolve();
+      await blok.isReady;
+      (coreModule as Record<string, unknown>).Core = OriginalMockCore;
+    });
+
+    it('should replay only the last buffered set() call when multiple are made before isReady', async () => {
+      const deferred = createDeferred();
+
+      const coreModule = await import('../../src/components/core') as {
+        Core: new (...args: unknown[]) => Core;
+        lastInstance?: () => Core | undefined;
+      };
+      const OriginalMockCore = coreModule.Core;
+      const deferredIsReady = deferred.promise;
+
+      const PatchedCore = class extends OriginalMockCore {
+        constructor(...args: unknown[]) {
+          super(...args);
+          this.moduleInstances = {} as BlokModules;
+          this.isReady = deferredIsReady.then(() => {
+            const mockInstances = (coreModule as { mockModuleInstances?: Partial<BlokModules> }).mockModuleInstances;
+
+            if (mockInstances) {
+              Object.assign(this.moduleInstances, mockInstances);
+            }
+          });
+        }
+      } as unknown as typeof coreModule.Core;
+
+      (coreModule as Record<string, unknown>).Core = PatchedCore;
+
+      const blok = new Blok();
+
+      const themeApi = (blok as unknown as Record<string, unknown>).theme as
+        { set: (mode: string) => void; get: () => string };
+
+      // Multiple set() calls before isReady — only the last should be replayed
+      themeApi.set('dark');
+      expect(themeApi.get()).toBe('dark');
+
+      themeApi.set('light');
+      expect(themeApi.get()).toBe('light');
+
+      themeApi.set('auto');
+      expect(themeApi.get()).toBe('auto');
+
+      deferred.resolve();
+      await blok.isReady;
+
+      const lastCoreInstance = coreModule.lastInstance?.();
+      const tm = lastCoreInstance?.moduleInstances.ThemeManager;
+
+      // setMode should have been called exactly once with the last buffered value
+      expect(tm?.setMode).toHaveBeenCalledTimes(1);
+      expect(tm?.setMode).toHaveBeenCalledWith('auto');
+
+      (coreModule as Record<string, unknown>).Core = OriginalMockCore;
+    });
+
+    it('should delegate to ThemeManager after isReady resolves', async () => {
+      const blok = new Blok();
+
+      await blok.isReady;
+
+      const themeApi = (blok as unknown as Record<string, unknown>).theme as
+        { set: (mode: string) => void };
+
+      themeApi.set('dark');
+
+      const coreModuleForInstance = await import('../../src/components/core') as {
+        lastInstance?: () => Core | undefined;
+      };
+      const instance = coreModuleForInstance.lastInstance?.();
+
+      expect(instance?.moduleInstances.ThemeManager?.setMode).toHaveBeenCalledWith('dark');
     });
   });
 

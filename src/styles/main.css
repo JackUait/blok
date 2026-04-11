@@ -967,6 +967,8 @@
   --blok-database-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   --blok-database-card-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.45);
   --blok-database-card-border: rgba(255, 255, 255, 0.06);
+  --blok-database-card-border-active: rgba(35, 131, 226, 0.7);
+  --blok-database-card-placeholder: rgba(255, 255, 255, 0.3);
   --blok-database-card-colored-overlay: rgba(255, 255, 255, 0.06);
   --blok-database-card-colored-overlay-hover: rgba(255, 255, 255, 0.11);
   --blok-database-card-colored-border: rgba(255, 255, 255, 0.07);
@@ -995,6 +997,7 @@
   --blok-checklist-border: rgba(255, 255, 255, 0.22);
   --blok-checklist-shadow: rgba(0, 0, 0, 0.3);
   --blok-checklist-hover-ring: rgba(82, 156, 202, 0.2);
+  --blok-checklist-readonly-fill: #475569;
 
   /* Color picker swatch */
   --blok-swatch-neutral-bg: #3a3a38;

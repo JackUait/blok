@@ -98,6 +98,49 @@ class Blok {
     };
 
     /**
+     * Expose the theme API immediately so callers can set the theme
+     * before isReady resolves.
+     *
+     * Core defers module construction to a microtask, so ThemeManager
+     * doesn't exist yet when this code runs. We buffer set() calls and
+     * replay the last one after isReady resolves (after ThemeManager.prepare()
+     * has already run, so we override the config-based default correctly).
+     *
+     * Without this, host apps that call instance.theme?.set('dark')
+     * before isReady get a silent no-op (theme is undefined), causing
+     * dark theme to fail when the host's state arrives after construction.
+     */
+    type ThemeMode = Parameters<BlokModules['ThemeManager']['setMode']>[0];
+
+    const themeBuffer = { pendingMode: null as ThemeMode | null };
+
+    const getThemeManager = (): BlokModules['ThemeManager'] | undefined =>
+      (blok.moduleInstances as Partial<BlokModules>).ThemeManager;
+
+    (this as Record<string, unknown>).theme = {
+      get: (): ThemeMode => {
+        const tm = getThemeManager();
+
+        return tm !== undefined ? tm.getMode() : (themeBuffer.pendingMode ?? 'auto');
+      },
+      set: (mode: ThemeMode): void => {
+        themeBuffer.pendingMode = mode;
+
+        // Also apply immediately if ThemeManager is already prepared
+        const tm = getThemeManager();
+
+        if (tm !== undefined) {
+          tm.setMode(mode);
+        }
+      },
+      getResolved: () => {
+        const tm = getThemeManager();
+
+        return tm !== undefined ? tm.getResolved() : 'light';
+      },
+    };
+
+    /**
      * We need to export isReady promise in the constructor
      * as it can be used before other API methods are exported
      * @type {Promise<void>}
@@ -146,6 +189,18 @@ class Blok {
       }
 
       this.exportAPI(blok);
+
+      // Apply any theme mode buffered before isReady resolved.
+      // ThemeManager.prepare() has already run (sets mode from config),
+      // so this overrides the config default with the caller's intent.
+      if (themeBuffer.pendingMode !== null) {
+        const tm = (blok.moduleInstances as Partial<BlokModules>).ThemeManager;
+
+        if (tm !== undefined) {
+          tm.setMode(themeBuffer.pendingMode);
+        }
+        themeBuffer.pendingMode = null;
+      }
 
       // Scroll to the block referenced by the URL hash, if present.
       // isReady resolves only after all blocks are in the DOM (requestIdleCallback fence in Renderer),

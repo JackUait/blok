@@ -692,6 +692,30 @@ describe('Block', () => {
       expect(mockCleanup.mock.calls.length).toBe(1);
       expect(isDragActive).toBe(false);
     });
+
+    it('invokes registered destroy callbacks so external subscribers (e.g. in-flight drag) can cancel', () => {
+      const { block } = createBlock();
+      const invocationLog: string[] = [];
+
+      block.addDestroyCallback(() => invocationLog.push('cb1'));
+      block.addDestroyCallback(() => invocationLog.push('cb2'));
+
+      block.destroy();
+
+      expect(invocationLog).toEqual(['cb1', 'cb2']);
+    });
+
+    it('allows unregistering a destroy callback before destroy', () => {
+      const { block } = createBlock();
+      const cb = vi.fn();
+
+      const unregister = block.addDestroyCallback(cb);
+
+      unregister();
+      block.destroy();
+
+      expect(cb).not.toHaveBeenCalled();
+    });
   });
 
   describe('exportDataAsString', () => {

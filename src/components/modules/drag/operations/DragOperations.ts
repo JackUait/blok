@@ -71,6 +71,24 @@ export class DragOperations {
     targetBlock: Block,
     edge: 'top' | 'bottom'
   ): MoveResult {
+    // Stale-reference guard: if any source or the target has been replaced
+    // mid-drag (Yjs remote update, blockManager.update, tool conversion),
+    // getBlockIndex returns -1. Calling blockManager.move(N, -1) would invoke
+    // Array.splice(-1, 1), which removes the LAST block in the array — this
+    // is the root cause of the "completely unrelated block dropped" bug.
+    // Abort cleanly instead of silently moving the wrong block.
+    if (this.blockManager.getBlockIndex(targetBlock) === -1) {
+      return { movedBlocks: [], targetIndex: -1 };
+    }
+
+    const hasStaleSource = sourceBlocks.some(
+      (block) => this.blockManager.getBlockIndex(block) === -1
+    );
+
+    if (hasStaleSource) {
+      return { movedBlocks: [], targetIndex: -1 };
+    }
+
     if (sourceBlocks.length === 1) {
       return this.moveSingleBlock(sourceBlocks[0], targetBlock, edge);
     }

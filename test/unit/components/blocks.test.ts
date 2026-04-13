@@ -648,6 +648,67 @@ describe('Blocks', () => {
       // toggleHolder must be immediately before p1Holder in the DOM
       expect(toggleBlock.holder.nextElementSibling).toBe(p1Block.holder);
     });
+
+    describe('invalid index guard (regression: wrong-block-dropped)', () => {
+      /**
+       * Regression: `Array.splice(-1, 1)` removes the LAST element. If a stale
+       * Block reference is passed anywhere up the call chain and `getBlockIndex`
+       * returns -1, `move(toIndex, -1)` would silently delete the last block
+       * instead of moving the stale one — this is the "wrong block dropped"
+       * symptom. Guard must live at the lowest level (`Blocks.move`) so every
+       * caller — drag, yjs-sync, API, tool conversion — is protected.
+       */
+      it('should be a no-op when fromIndex is -1 (stale reference)', () => {
+        const blocks = createBlocks();
+        const block1 = createMockBlock('block-1');
+        const block2 = createMockBlock('block-2');
+        const block3 = createMockBlock('block-3');
+
+        blocks.push(block1);
+        blocks.push(block2);
+        blocks.push(block3);
+
+        blocks.move(0, -1);
+
+        expect(blocks.length).toBe(3);
+        expect(blocks.blocks[0]).toBe(block1);
+        expect(blocks.blocks[1]).toBe(block2);
+        expect(blocks.blocks[2]).toBe(block3);
+        expect(block1.call).not.toHaveBeenCalledWith(BlockToolAPI.MOVED, expect.anything());
+        expect(block2.call).not.toHaveBeenCalledWith(BlockToolAPI.MOVED, expect.anything());
+        expect(block3.call).not.toHaveBeenCalledWith(BlockToolAPI.MOVED, expect.anything());
+      });
+
+      it('should be a no-op when fromIndex is out of range (stale reference past end)', () => {
+        const blocks = createBlocks();
+        const block1 = createMockBlock('block-1');
+        const block2 = createMockBlock('block-2');
+
+        blocks.push(block1);
+        blocks.push(block2);
+
+        blocks.move(0, 5);
+
+        expect(blocks.length).toBe(2);
+        expect(blocks.blocks[0]).toBe(block1);
+        expect(blocks.blocks[1]).toBe(block2);
+      });
+
+      it('should be a no-op when toIndex is -1', () => {
+        const blocks = createBlocks();
+        const block1 = createMockBlock('block-1');
+        const block2 = createMockBlock('block-2');
+
+        blocks.push(block1);
+        blocks.push(block2);
+
+        blocks.move(-1, 0);
+
+        expect(blocks.length).toBe(2);
+        expect(blocks.blocks[0]).toBe(block1);
+        expect(blocks.blocks[1]).toBe(block2);
+      });
+    });
   });
 
   describe('insert', () => {
@@ -873,6 +934,30 @@ describe('Blocks', () => {
       expect(() => {
         blocks.replace(invalidIndex, block);
       }).toThrow('Incorrect index');
+    });
+
+    /**
+     * Regression: blocks.replace() used to swap the DOM holder and drop the
+     * reference without calling destroy() on the previous block. The orphan
+     * Block instance kept its drag-handle listener alive on the shared
+     * settings-toggler element because cleanupDraggable() lives inside
+     * destroy(). The next mousedown then dispatched to the orphan via closure
+     * and an unrelated block was dragged.
+     */
+    it('should destroy the replaced block so drag listeners are cleaned up', () => {
+      const blocks = createBlocks();
+      const block1 = createMockBlock('block-1');
+      const block2 = createMockBlock('block-2');
+
+      blocks.push(block1);
+      workingArea.appendChild(block1.holder);
+
+      blocks.replace(0, block2);
+
+      expect(block1.destroy).toHaveBeenCalledTimes(1);
+      expect(blocks.blocks[0]).toBe(block2);
+      expect(workingArea.contains(block1.holder)).toBe(false);
+      expect(workingArea.contains(block2.holder)).toBe(true);
     });
   });
 
@@ -1170,6 +1255,22 @@ describe('Blocks', () => {
       }).not.toThrow();
 
       expect(blocks.length).toBe(0);
+    });
+
+    it('should destroy each block so drag-handle listeners are released', () => {
+      const blocks = createBlocks();
+      const block1 = createMockBlock('block-1');
+      const block2 = createMockBlock('block-2');
+
+      blocks.push(block1);
+      blocks.push(block2);
+
+      blocks.removeAll();
+
+      expect(block1.destroy).toHaveBeenCalledTimes(1);
+      expect(block2.destroy).toHaveBeenCalledTimes(1);
+      expect(blocks.length).toBe(0);
+      expect(workingArea.innerHTML).toBe('');
     });
   });
 

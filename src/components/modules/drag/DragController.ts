@@ -32,6 +32,26 @@ export class DragController extends Module {
   private springLoader: ToggleSpringLoader = new ToggleSpringLoader();
   private listItemDescendants: ListItemDescendants | null = null;
   private boundHandlers: BoundHandlers | null = null;
+  /**
+   * Tracks the active mousedown cleanup per drag-handle element.
+   *
+   * The toolbar reuses a single settings-toggler element across blocks, so
+   * `setupDragHandle` gets called repeatedly for the same element with
+   * different `Block` references. Any stale listener from a previous block
+   * must be removed before attaching a new one — otherwise multiple
+   * listeners fire on the same mousedown and the oldest (wrong, unrelated)
+   * block wins the race inside the state machine.
+   */
+  private dragHandleCleanups: WeakMap<HTMLElement, () => void> = new WeakMap();
+
+  /**
+   * Unsubscribers returned by `Block.addDestroyCallback` for every block
+   * participating in the current drag. If any source block is destroyed
+   * mid-drag (Yjs remote update, block conversion, blockManager.update)
+   * the associated callback cancels the drag before the state machine's
+   * stale reference can reach the drop handler.
+   */
+  private sourceBlockDestroyUnsubs: Array<() => void> = [];
 
   public get isDragging(): boolean {
     return isActuallyDragging(this.stateMachine.getState());
@@ -74,7 +94,25 @@ export class DragController extends Module {
     }
   }
 
+  /**
+   * Invoked when any participating source block is destroyed mid-drag.
+   * Cancels the drag cleanly so the state machine never reaches mouseup
+   * with a stale Block reference.
+   */
+  private onSourceBlockDestroyed(): void {
+    if (!isDragActive(this.stateMachine.getState())) {
+      return;
+    }
+
+    this.cleanup(true, true);
+  }
+
   public setupDragHandle(dragHandle: HTMLElement, block: Block): () => void {
+    // Remove any previously-registered listener on this element so we never
+    // end up with two handlers racing on the same mousedown. See the comment
+    // on `dragHandleCleanups` for the failure mode this guards against.
+    this.dragHandleCleanups.get(dragHandle)?.();
+
     const onMouseDown = (e: MouseEvent): void => {
       // Only handle left mouse button
       if (e.button !== 0) {
@@ -86,14 +124,39 @@ export class DragController extends Module {
         return;
       }
 
-      this.startDragTracking(e, block);
+      /**
+       * Resolve the source block FRESH at mousedown time by reading the
+       * `data-blok-id` off the drag handle's nearest block-holder ancestor.
+       * The closure-captured `block` parameter is only a hint — the Toolbar
+       * shares ONE settings-toggler across every block and re-parents it on
+       * hover, so by the time the user presses down the handle can live in
+       * a different block than the one passed at bind time. Trusting the
+       * closure alone is the last theoretical path to "wrong block dropped";
+       * this lookup kills it. If the handle has no id ancestor (orphaned
+       * fixture in tests, or a pre-attachment race) fall back to the closure
+       * block — it's the best available reference.
+       */
+      const holderAncestor = dragHandle.closest(`[${DATA_ATTR.id}]`);
+      const liveId = holderAncestor?.getAttribute(DATA_ATTR.id) ?? null;
+      const liveBlock = liveId !== null
+        ? this.Blok.BlockManager.getBlockById(liveId)
+        : undefined;
+
+      this.startDragTracking(e, liveBlock ?? block);
     };
 
     dragHandle.addEventListener('mousedown', onMouseDown);
 
-    return (): void => {
+    const cleanup = (): void => {
       dragHandle.removeEventListener('mousedown', onMouseDown);
+      if (this.dragHandleCleanups.get(dragHandle) === cleanup) {
+        this.dragHandleCleanups.delete(dragHandle);
+      }
     };
+
+    this.dragHandleCleanups.set(dragHandle, cleanup);
+
+    return cleanup;
   }
 
   private startDragTracking(e: MouseEvent, block: Block): void {
@@ -165,6 +228,15 @@ export class DragController extends Module {
       e.clientX,
       e.clientY
     );
+
+    // Subscribe to destruction of every participating block. If any source
+    // is replaced/destroyed mid-drag, cancel the drag immediately so the
+    // state machine never holds a stale Block reference at drop time.
+    this.sourceBlockDestroyUnsubs = blocksToMove
+      .filter((b): b is Block & { addDestroyCallback: (cb: () => void) => () => void } =>
+        typeof (b as { addDestroyCallback?: unknown }).addDestroyCallback === 'function'
+      )
+      .map((b) => b.addDestroyCallback(() => this.onSourceBlockDestroyed()));
 
     // Initialize auto-scroll with scrollable container
     const scrollContainer = findScrollableAncestor(this.Blok.UI.nodes.wrapper);
@@ -620,6 +692,10 @@ export class DragController extends Module {
       document.removeEventListener('keyup', this.boundHandlers.onKeyUp);
       this.boundHandlers = null;
     }
+
+    // Drop all destroy-callback subscriptions on participating blocks.
+    this.sourceBlockDestroyUnsubs.forEach((unsub) => unsub());
+    this.sourceBlockDestroyUnsubs = [];
 
     const sourceBlock = this.stateMachine.getSourceBlock();
     this.stateMachine.reset();

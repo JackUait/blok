@@ -68,12 +68,17 @@ describe('DragOperations', () => {
     it('should move block to bottom of target', () => {
       const sourceBlock = createMockBlock('source', 'paragraph', { text: 'source' });
       const targetBlock = createMockBlock('target', 'paragraph', { text: 'target' });
+      let sourceIndex = 0;
 
-      // getBlockIndex is called 3 times: sourceBlock (pre-move), targetBlock, sourceBlock (post-move)
-      mockBlockManager.getBlockIndex = vi.fn()
-        .mockReturnValueOnce(0)  // sourceBlock pre-move
-        .mockReturnValueOnce(2)  // targetBlock
-        .mockReturnValueOnce(2); // sourceBlock post-move (moved to index 2)
+      mockBlockManager.getBlockIndex = vi.fn((block) => {
+        if (block === sourceBlock) return sourceIndex;
+        if (block === targetBlock) return 2;
+
+        return -1;
+      });
+      mockBlockManager.move = vi.fn((toIndex) => {
+        sourceIndex = toIndex;
+      });
 
       const result = operations.moveBlocks([sourceBlock], targetBlock, 'bottom');
 
@@ -87,12 +92,17 @@ describe('DragOperations', () => {
     it('should move block to top of target', () => {
       const sourceBlock = createMockBlock('source', 'paragraph', { text: 'source' });
       const targetBlock = createMockBlock('target', 'paragraph', { text: 'target' });
+      let sourceIndex = 5;
 
-      // getBlockIndex is called 3 times: sourceBlock (pre-move), targetBlock, sourceBlock (post-move)
-      mockBlockManager.getBlockIndex = vi.fn()
-        .mockReturnValueOnce(5)  // sourceBlock pre-move
-        .mockReturnValueOnce(2)  // targetBlock
-        .mockReturnValueOnce(2); // sourceBlock post-move (moved to index 2)
+      mockBlockManager.getBlockIndex = vi.fn((block) => {
+        if (block === sourceBlock) return sourceIndex;
+        if (block === targetBlock) return 2;
+
+        return -1;
+      });
+      mockBlockManager.move = vi.fn((toIndex) => {
+        sourceIndex = toIndex;
+      });
 
       const result = operations.moveBlocks([sourceBlock], targetBlock, 'top');
 
@@ -436,6 +446,66 @@ describe('DragOperations', () => {
 
       expect(result.duplicatedBlocks).toEqual([newBlock]);
       // Should not throw even though blockSelection is undefined
+    });
+  });
+
+  describe('moveBlocks - stale source/target (regression)', () => {
+    it('should abort without moving any block when sourceBlock is no longer in array', () => {
+      const staleSource = createMockBlock('stale', 'paragraph', { text: 'stale' });
+      const targetBlock = createMockBlock('target', 'paragraph', { text: 'target' });
+
+      // sourceBlock was replaced mid-drag (Yjs sync / conversion / update).
+      // getBlockIndex returns -1 for the stale reference; target is healthy.
+      mockBlockManager.getBlockIndex = vi.fn((block) => {
+        if (block === staleSource) return -1;
+        if (block === targetBlock) return 3;
+
+        return -1;
+      });
+
+      const result = operations.moveBlocks([staleSource], targetBlock, 'bottom');
+
+      // Must NOT call move — calling move(toIndex, -1) would splice the last
+      // block (JS Array.splice(-1, 1) removes tail) and drop a completely
+      // unrelated block. This is the reported wrong-block-dropped bug.
+      expect(mockBlockManager.move).not.toHaveBeenCalled();
+      expect(result.movedBlocks).toEqual([]);
+    });
+
+    it('should abort when targetBlock is no longer in array', () => {
+      const sourceBlock = createMockBlock('source', 'paragraph', { text: 'source' });
+      const staleTarget = createMockBlock('stale-target', 'paragraph', { text: 'stale' });
+
+      mockBlockManager.getBlockIndex = vi.fn((block) => {
+        if (block === sourceBlock) return 2;
+        if (block === staleTarget) return -1;
+
+        return -1;
+      });
+
+      const result = operations.moveBlocks([sourceBlock], staleTarget, 'top');
+
+      expect(mockBlockManager.move).not.toHaveBeenCalled();
+      expect(result.movedBlocks).toEqual([]);
+    });
+
+    it('should abort multi-block move when any source is stale', () => {
+      const block1 = createMockBlock('b1', 'paragraph', { text: '1' });
+      const staleBlock = createMockBlock('stale', 'paragraph', { text: 'stale' });
+      const targetBlock = createMockBlock('target', 'paragraph', { text: 'target' });
+
+      mockBlockManager.getBlockIndex = vi.fn((block) => {
+        if (block === block1) return 0;
+        if (block === staleBlock) return -1;
+        if (block === targetBlock) return 4;
+
+        return -1;
+      });
+
+      const result = operations.moveBlocks([block1, staleBlock], targetBlock, 'bottom');
+
+      expect(mockBlockManager.move).not.toHaveBeenCalled();
+      expect(result.movedBlocks).toEqual([]);
     });
   });
 

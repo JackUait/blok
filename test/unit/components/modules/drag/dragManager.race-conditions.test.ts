@@ -39,9 +39,11 @@ const createBlockStub = (options: {
   stretched?: boolean;
   listDepth?: number | null;
 } = {}): Block => {
+  const blockId = options.id ?? `block-${Math.random().toString(16).slice(2)}`;
   const holder = document.createElement('div');
 
   holder.setAttribute('data-blok-element', '');
+  holder.setAttribute('data-blok-id', blockId);
 
   // Create content element structure
   const contentElement = document.createElement('div');
@@ -90,11 +92,19 @@ const createBlockStub = (options: {
 
   let isSelected = options.selected ?? false;
 
+  const destroyCallbacks = new Set<() => void>();
   const block = {
-    id: options.id ?? `block-${Math.random().toString(16).slice(2)}`,
+    id: blockId,
     holder,
     stretched: options.stretched ?? false,
     call: vi.fn(),
+    addDestroyCallback: vi.fn((cb: () => void) => {
+      destroyCallbacks.add(cb);
+
+      return (): void => {
+        destroyCallbacks.delete(cb);
+      };
+    }),
   };
 
   Object.defineProperty(block, 'selected', {
@@ -669,6 +679,212 @@ describe('DragManager - Race Conditions and Timing', () => {
 
       // Cleanup
       document.dispatchEvent(createMouseEvent('mouseup'));
+    });
+  });
+
+  describe('shared drag handle stale listener (regression)', () => {
+    /**
+     * Regression: The toolbar reuses one settings toggler element across blocks.
+     * When a previous block's listener is not cleaned up before the next block
+     * registers on the same element, the old listener fires first on mousedown
+     * and the wrong (unrelated) block gets dragged.
+     *
+     * setupDragHandle must enforce one-listener-per-handle — calling it again on
+     * the same element supersedes any prior binding regardless of which block
+     * owned it.
+     */
+    it('drags the latest block when same handle is re-registered without cleanup', () => {
+      const { dragManager, blocks, wrapper, modules } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      blocks.forEach(block => wrapper.appendChild(block.holder));
+
+      const sharedHandle = document.createElement('div');
+
+      // Register handle for block 0 (toolbar hovering block 0)
+      dragManager.setupDragHandle(sharedHandle, blocks[0]);
+
+      // Toolbar closes then reopens on block 1 — but the scenario we guard
+      // against is that cleanup for blocks[0] was skipped, so the second
+      // setupDragHandle call must overwrite the first.
+      dragManager.setupDragHandle(sharedHandle, blocks[1]);
+
+      // User grabs the handle intending to drag block 1
+      sharedHandle.dispatchEvent(createMouseEvent('mousedown', { clientX: 100, clientY: 100 }));
+      document.dispatchEvent(createMouseEvent('mousemove', { clientX: 120, clientY: 100 }));
+
+      expect(dragManager.isDragging).toBe(true);
+
+      // Drop onto block 2
+      vi.mocked(document.elementFromPoint).mockReturnValue(blocks[2].holder);
+      (blocks[2].holder.getBoundingClientRect as Mock).mockReturnValue({
+        top: 100,
+        bottom: 150,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 50,
+        x: 0,
+        y: 100,
+        toJSON: () => ({}),
+      });
+      document.dispatchEvent(createMouseEvent('mousemove', { clientX: 50, clientY: 140 }));
+      document.dispatchEvent(createMouseEvent('mouseup', { clientX: 50, clientY: 140 }));
+
+      // The move must come from block 1 (the intended source), not block 0 (the stale listener)
+      const moveMock = modules.BlockManager.move as Mock;
+
+      expect(moveMock).toHaveBeenCalled();
+      const fromIndex = moveMock.mock.calls[0][1] as number;
+
+      expect(fromIndex).toBe(1);
+    });
+
+    it('cleans up prior mousedown listener when re-registering the same handle', () => {
+      const { dragManager, blocks, wrapper } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      blocks.forEach(block => wrapper.appendChild(block.holder));
+
+      const sharedHandle = document.createElement('div');
+
+      dragManager.setupDragHandle(sharedHandle, blocks[0]);
+      dragManager.setupDragHandle(sharedHandle, blocks[1]);
+
+      sharedHandle.dispatchEvent(createMouseEvent('mousedown', { clientX: 100, clientY: 100 }));
+      document.dispatchEvent(createMouseEvent('mousemove', { clientX: 120, clientY: 100 }));
+
+      // Exactly one tracking session should be active; the stale block 0 listener
+      // must not have attempted to start a second tracking (which would have thrown
+      // inside the state machine and been swallowed).
+      expect(dragManager.isDragging).toBe(true);
+
+      // The source block should be block 1 — verify by accessing state machine.
+      const stateMachine = (dragManager as unknown as {
+        stateMachine: { getSourceBlock(): Block | null };
+      }).stateMachine;
+
+      expect(stateMachine.getSourceBlock()).toBe(blocks[1]);
+
+      document.dispatchEvent(createMouseEvent('mouseup'));
+    });
+  });
+
+  describe('source block destroyed mid-drag (regression)', () => {
+    it('cancels the in-flight drag when the source block is destroyed', () => {
+      const { dragManager, blocks, wrapper, modules } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      blocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      const sharedHandle = document.createElement('div');
+
+      dragManager.setupDragHandle(sharedHandle, blocks[0]);
+
+      // Start tracking then pass threshold so drag becomes active.
+      sharedHandle.dispatchEvent(createMouseEvent('mousedown', { clientX: 100, clientY: 100 }));
+      document.dispatchEvent(createMouseEvent('mousemove', { clientX: 120, clientY: 100 }));
+      document.dispatchEvent(createMouseEvent('mousemove', { clientX: 140, clientY: 100 }));
+
+      expect(dragManager.isDragging).toBe(true);
+
+      // Verify DragController subscribed to source-block destruction.
+      // If this fails, the controller is not wiring addDestroyCallback, and
+      // a mid-drag destroy would leave the state machine holding a stale
+      // source reference — the root cause of the "wrong block dropped" bug.
+      expect(blocks[0].addDestroyCallback).toHaveBeenCalled();
+
+      // Simulate the source block being destroyed mid-drag (e.g. Yjs remote
+      // update replaced it, blockManager.update converted it, etc). Invoke
+      // the callback captured by the addDestroyCallback mock directly —
+      // this is the exact path real Block.destroy() takes.
+      const registeredCallback = (blocks[0].addDestroyCallback as Mock).mock.calls[0][0] as () => void;
+
+      registeredCallback();
+
+      // Drag must be fully cancelled: no longer dragging, no stale listeners.
+      expect(dragManager.isDragging).toBe(false);
+
+      // A subsequent mouseup must NOT call BlockManager.move — the drag was
+      // cancelled and no drop should occur.
+      document.dispatchEvent(createMouseEvent('mouseup', { clientX: 140, clientY: 100 }));
+      expect((modules.BlockManager.move as Mock)).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('drag handle rebind between blocks (regression)', () => {
+    /**
+     * The settings toggler is ONE shared DOM element the Toolbar re-parents
+     * to the currently-hovered block. A closure-captured `Block` inside the
+     * mousedown handler can go stale between hover and press: it represents
+     * the block the handle was BOUND to, not the block the handle now lives
+     * inside. The fix resolves the source block fresh at mousedown time by
+     * reading `data-blok-id` off the drag handle's nearest block ancestor
+     * and looking it up via BlockManager.getBlockById — identical to what
+     * the drop-target detector does. This kills the last theoretical path
+     * for "wrong block dropped".
+     */
+    it('uses the current DOM-resident block when drag handle was moved to another block after binding', () => {
+      const { dragManager, blocks, wrapper, modules } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      blocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      const sharedHandle = document.createElement('div');
+
+      // Bind the handle while it lives inside block-1 (initial hover).
+      blocks[0].holder.appendChild(sharedHandle);
+      dragManager.setupDragHandle(sharedHandle, blocks[0]);
+
+      // Toolbar re-parents the handle to block-2 (user hovered a different
+      // block). The listener closure still captures block-1, but the handle
+      // is now visually and structurally inside block-2.
+      blocks[1].holder.appendChild(sharedHandle);
+
+      // User presses + crosses the drag threshold.
+      sharedHandle.dispatchEvent(createMouseEvent('mousedown', { clientX: 100, clientY: 100 }));
+      document.dispatchEvent(createMouseEvent('mousemove', { clientX: 120, clientY: 100 }));
+      document.dispatchEvent(createMouseEvent('mousemove', { clientX: 140, clientY: 100 }));
+
+      expect(dragManager.isDragging).toBe(true);
+
+      // Lookup MUST be via id — blockManager.getBlockById is the proof.
+      expect((modules.BlockManager.getBlockById as Mock)).toHaveBeenCalledWith('block-2');
+
+      // The tracked source must be block-2 (current holder), not block-1
+      // (original closure capture).
+      expect((blocks[1].addDestroyCallback as Mock)).toHaveBeenCalled();
+      expect((blocks[0].addDestroyCallback as Mock)).not.toHaveBeenCalled();
+
+      document.dispatchEvent(createMouseEvent('mouseup', { clientX: 140, clientY: 100 }));
+    });
+
+    it('falls back to the closure block when the drag handle has no id ancestor (legacy handles)', () => {
+      // In production the drag handle always lives inside a block holder,
+      // but DragController must still work with handles wired up outside
+      // any holder (legacy fixtures, programmatic consumers). When there's
+      // no `data-blok-id` to read, fall back to the closure hint so the
+      // drag still proceeds against the originally-bound block.
+      const { dragManager, blocks, wrapper } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      blocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      const detachedHandle = document.createElement('div');
+      // Handle is NOT attached to any block — closure fallback must engage.
+
+      dragManager.setupDragHandle(detachedHandle, blocks[0]);
+
+      detachedHandle.dispatchEvent(createMouseEvent('mousedown', { clientX: 100, clientY: 100 }));
+      document.dispatchEvent(createMouseEvent('mousemove', { clientX: 120, clientY: 100 }));
+      document.dispatchEvent(createMouseEvent('mousemove', { clientX: 140, clientY: 100 }));
+
+      expect(dragManager.isDragging).toBe(true);
+      // Closure-captured block drives the drag: block-1, not block-2.
+      expect((blocks[0].addDestroyCallback as Mock)).toHaveBeenCalled();
+      expect((blocks[1].addDestroyCallback as Mock)).not.toHaveBeenCalled();
+
+      document.dispatchEvent(createMouseEvent('mouseup', { clientX: 140, clientY: 100 }));
     });
   });
 });

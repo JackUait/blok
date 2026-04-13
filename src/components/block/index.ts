@@ -225,6 +225,14 @@ export class Block extends EventsDispatcher<BlockEvents> {
   private draggableCleanup: (() => void) | null = null;
 
   /**
+   * Callbacks to invoke at the top of destroy(). External subscribers
+   * (e.g. an in-flight drag) register here so they can cancel themselves
+   * when the Block instance they hold becomes invalid — preventing stale
+   * Block references from reaching drop handlers mid-drag.
+   */
+  private destroyCallbacks: Set<() => void> = new Set();
+
+  /**
    * Manages tool element composition and rendering
    */
   private readonly toolRenderer: ToolRenderer;
@@ -530,9 +538,37 @@ export class Block extends EventsDispatcher<BlockEvents> {
   }
 
   /**
+   * Register a callback to be invoked when this Block is destroyed.
+   * Returns an unregister function.
+   *
+   * Used by DragController to cancel an in-flight drag when its source
+   * block is replaced (Yjs remote update, blockManager.update, tool
+   * conversion, etc). Without this hook, the state machine would hold
+   * a stale Block reference and drop the wrong block on mouseup.
+   * @param callback - Function to call during destroy()
+   * @returns Unregister function
+   */
+  public addDestroyCallback(callback: () => void): () => void {
+    this.destroyCallbacks.add(callback);
+
+    return (): void => {
+      this.destroyCallbacks.delete(callback);
+    };
+  }
+
+  /**
    * Call Tool instance destroy method
    */
   public destroy(): void {
+    // Notify external subscribers FIRST — before any state is torn down —
+    // so listeners (e.g. DragController) can cancel cleanly while the
+    // Block is still consistent. Copy to a local list so a callback that
+    // unregisters itself doesn't mutate the set during iteration.
+    const callbacks = Array.from(this.destroyCallbacks);
+
+    this.destroyCallbacks.clear();
+    callbacks.forEach((cb) => cb());
+
     this.mutationHandler.destroy();
     this.inputManager.destroy();
 

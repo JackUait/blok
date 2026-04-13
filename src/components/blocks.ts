@@ -118,6 +118,25 @@ export class Blocks {
    */
   public move(toIndex: number, fromIndex: number, skipDOM = false, skipMovedHook = false): void {
     /**
+     * Invalid-index guard (regression: wrong-block-dropped).
+     *
+     * `Array.splice(-1, 1)` removes the LAST element, and `splice(N, 1)` where
+     * N is past the end does nothing — both hide stale-reference bugs as silent
+     * data corruption. Every caller in every surface (drag, yjs-sync, API,
+     * tool conversion, undo) flows through here, so this is the lowest-level
+     * point to reject nonsense indices and keep the "wrong block dropped"
+     * class of bug from ever reappearing.
+     */
+    if (
+      fromIndex < 0 ||
+      fromIndex >= this.blocks.length ||
+      toIndex < 0 ||
+      toIndex >= this.blocks.length
+    ) {
+      return;
+    }
+
+    /**
      * cut out the block, move the DOM element and insert at the desired index
      * again (the shifting within the blocks array will happen automatically).
      * @see https://stackoverflow.com/a/44932690/1238150
@@ -231,8 +250,12 @@ export class Blocks {
 
     const prevBlock = this.blocks[index];
 
-    prevBlock.holder.replaceWith(block.holder);
     prevBlock.call(BlockToolAPI.REMOVED);
+    // Destroy releases the drag-handle listener bound to the shared settings
+    // toggler; skipping it leaves the orphan Block wired up and dragging it
+    // on next mousedown instead of whatever the user intended.
+    prevBlock.destroy();
+    prevBlock.holder.replaceWith(block.holder);
 
     this.blocks[index] = block;
 
@@ -311,10 +334,16 @@ export class Blocks {
    * Remove all blocks
    */
   public removeAll(): void {
+    // Destroy each block so draggable listeners bound to shared DOM handles
+    // (e.g. the settings toggler) are released. Skipping destroy leaves stale
+    // mousedown handlers on the shared toggler, which later fire for whichever
+    // block is hovered and drags the wrong block.
+    this.blocks.forEach((block) => {
+      block.call(BlockToolAPI.REMOVED);
+      block.destroy();
+    });
+
     this.workingArea.innerHTML = '';
-
-    this.blocks.forEach((block) => block.call(BlockToolAPI.REMOVED));
-
     this.blocks.length = 0;
   }
 

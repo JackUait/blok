@@ -487,6 +487,165 @@ describe('data-model-transform', () => {
       expect(result[0].content).toBeUndefined();
     });
 
+    it('recursively expands nested toggleList blocks inside a toggleList body', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'outer',
+          type: 'toggleList',
+          data: {
+            title: 'Outer',
+            body: {
+              blocks: [
+                {
+                  id: 'inner',
+                  type: 'toggleList',
+                  data: {
+                    title: 'Inner',
+                    isExpanded: true,
+                    body: {
+                      blocks: [
+                        { id: 'leaf', type: 'paragraph', data: { text: 'leaf text' } },
+                      ],
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      // No legacy toggleList types should survive expansion at any depth.
+      expect(result.every(b => b.type !== 'toggleList')).toBe(true);
+
+      // Outer becomes a toggle that points to inner.
+      const outer = result.find(b => b.id === 'outer');
+      expect(outer).toBeDefined();
+      expect(outer?.type).toBe('toggle');
+      expect(outer?.content).toEqual(['inner']);
+
+      // Inner is also expanded to a toggle (not left as toggleList) and parented to outer.
+      const inner = result.find(b => b.id === 'inner');
+      expect(inner).toBeDefined();
+      expect(inner?.type).toBe('toggle');
+      expect(inner?.parent).toBe('outer');
+      expect(inner?.data.text).toBe('Inner');
+      expect(inner?.data.isOpen).toBe(true);
+      expect(inner?.content).toEqual(['leaf']);
+
+      // Leaf paragraph survives and is parented to inner.
+      const leaf = result.find(b => b.id === 'leaf');
+      expect(leaf).toBeDefined();
+      expect(leaf?.type).toBe('paragraph');
+      expect(leaf?.parent).toBe('inner');
+    });
+
+    it('recursively expands nested toggleList children with empty bodies', () => {
+      // Mirrors the real-world article shape: a toggleList parent whose body
+      // is a list of empty toggleList children.
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'parent',
+          type: 'toggleList',
+          data: {
+            title: 'Критерии',
+            body: {
+              blocks: [
+                { id: 'c1', type: 'toggleList', data: { title: 'A', isExpanded: false, body: { blocks: [] } } },
+                { id: 'c2', type: 'toggleList', data: { title: 'B', isExpanded: false, body: { blocks: [] } } },
+                { id: 'c3', type: 'toggleList', data: { title: 'C', isExpanded: false, body: { blocks: [] } } },
+              ],
+            },
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      expect(result.every(b => b.type !== 'toggleList')).toBe(true);
+      const childToggles = result.filter(b => b.parent === 'parent');
+      expect(childToggles).toHaveLength(3);
+      expect(childToggles.every(b => b.type === 'toggle')).toBe(true);
+      expect(childToggles.map(b => (b.data as { text: string }).text)).toEqual(['A', 'B', 'C']);
+    });
+
+    it('recursively expands nested toggleList with titleVariant into toggle headings', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'outer',
+          type: 'toggleList',
+          data: {
+            title: 'Outer',
+            body: {
+              blocks: [
+                {
+                  id: 'innerHeading',
+                  type: 'toggleList',
+                  data: {
+                    title: 'Heading-toggle',
+                    titleVariant: 2,
+                  },
+                },
+              ],
+            },
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      expect(result.every(b => b.type !== 'toggleList')).toBe(true);
+      const inner = result.find(b => b.id === 'innerHeading');
+      expect(inner?.type).toBe('header');
+      expect(inner?.parent).toBe('outer');
+      expect(inner?.data.isToggleable).toBe(true);
+      expect(inner?.data.level).toBe(2);
+    });
+
+    it('recursively expands legacy callout nested inside a toggleList body', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'outer',
+          type: 'toggleList',
+          data: {
+            title: 'Outer',
+            body: {
+              blocks: [
+                {
+                  id: 'innerCallout',
+                  type: 'callout',
+                  data: {
+                    body: {
+                      blocks: [
+                        { id: 'cp', type: 'paragraph', data: { text: 'inside callout' } },
+                      ],
+                    },
+                    variant: 'note',
+                    emoji: '💡',
+                    isEmojiVisible: true,
+                  },
+                },
+              ],
+            },
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      const callout = result.find(b => b.id === 'innerCallout');
+      expect(callout).toBeDefined();
+      expect(callout?.type).toBe('callout');
+      // Legacy 'body' field must have been stripped in favor of hierarchical refs.
+      expect((callout?.data as Record<string, unknown>).body).toBeUndefined();
+      expect(callout?.parent).toBe('outer');
+      expect(callout?.content).toEqual(['cp']);
+      const cp = result.find(b => b.id === 'cp');
+      expect(cp?.parent).toBe('innerCallout');
+    });
+
     it('handles mixed list and toggleList blocks', () => {
       const blocks: OutputBlockData[] = [
         {

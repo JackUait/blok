@@ -369,6 +369,45 @@ const expandListToHierarchical = (
 };
 
 /**
+ * Recursively expand a list of legacy body blocks into hierarchical flat blocks.
+ * Each body block is routed through expandToHierarchical so that nested legacy
+ * toggleList/callout/list structures are fully flattened instead of passing
+ * through with their legacy type (which would hit Renderer's "unknown tool"
+ * fallback and render as a stub).
+ *
+ * Returns both the direct-child IDs (for the parent's `content` array) and
+ * the flattened descendant blocks in document order.
+ * @param bodyBlocks - legacy body blocks to expand
+ * @param parentId - id of the parent block (toggle/callout) that owns them
+ */
+const expandLegacyBodyBlocks = (
+  bodyBlocks: OutputBlockData[],
+  parentId: BlockId
+): { childIds: BlockId[]; childBlocks: OutputBlockData[] } => {
+  const childIds: BlockId[] = [];
+  const childBlocks: OutputBlockData[] = [];
+
+  for (const childBlock of bodyBlocks) {
+    const expanded = expandToHierarchical([childBlock]);
+
+    if (expanded.length === 0) {
+      continue;
+    }
+
+    // The first emitted block corresponds to the original input block.
+    // Re-parent it to the legacy container; descendants already carry the
+    // correct parent refs assigned during their own recursive expansion.
+    const [first, ...rest] = expanded;
+    const childId = first.id ?? generateBlockId();
+
+    childIds.push(childId);
+    childBlocks.push({ ...first, id: childId, parent: parentId }, ...rest);
+  }
+
+  return { childIds, childBlocks };
+};
+
+/**
  * Expand a legacy toggleList block into flat toggle block + child blocks
  */
 const expandToggleListToHierarchical = (
@@ -378,20 +417,7 @@ const expandToggleListToHierarchical = (
   const toggleId = block.id ?? generateBlockId();
   const bodyBlocks = block.data.body?.blocks ?? [];
 
-  // Collect child IDs, ensuring each child has an ID
-  const childIds: BlockId[] = [];
-  const childBlocks: OutputBlockData[] = [];
-
-  for (const childBlock of bodyBlocks) {
-    const childId = childBlock.id ?? generateBlockId();
-
-    childIds.push(childId);
-    childBlocks.push({
-      ...childBlock,
-      id: childId,
-      parent: toggleId,
-    });
-  }
+  const { childIds, childBlocks } = expandLegacyBodyBlocks(bodyBlocks, toggleId);
 
   const sharedFields = {
     id: toggleId,
@@ -439,20 +465,7 @@ const expandCalloutToHierarchical = (
   const calloutId = block.id ?? generateBlockId();
   const bodyBlocks = block.data.body?.blocks ?? [];
 
-  // Collect child IDs, ensuring each child has an ID
-  const childIds: BlockId[] = [];
-  const childBlocks: OutputBlockData[] = [];
-
-  for (const childBlock of bodyBlocks) {
-    const childId = childBlock.id ?? generateBlockId();
-
-    childIds.push(childId);
-    childBlocks.push({
-      ...childBlock,
-      id: childId,
-      parent: calloutId,
-    });
-  }
+  const { childIds, childBlocks } = expandLegacyBodyBlocks(bodyBlocks, calloutId);
 
   // Map variant → backgroundColor preset
   const variant = block.data.variant ?? 'general';

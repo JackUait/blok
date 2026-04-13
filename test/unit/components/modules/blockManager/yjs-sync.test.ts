@@ -13,6 +13,7 @@ import type { API } from '../../../../../src/components/modules/api';
 import { ToolsCollection } from '../../../../../src/components/tools/collection';
 import type { BlockToolAdapter } from '../../../../../src/components/tools/block';
 import type { BlocksStore } from '../../../../../src/components/modules/blockManager/types';
+import { validateHierarchy } from '../../../../../src/components/utils/hierarchy-invariant';
 
 /**
  * Create a mock Block for testing
@@ -985,6 +986,273 @@ describe('BlockYjsSync', () => {
         // reconcileOrphanedChildren must call setBlockParent to fully restore
         // DOM placement, parent contentIds, and visibility — not just set parentId.
         expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(childBlock, 'parent-block');
+      });
+
+      it('reparents block into container when remote Yjs update adds a parent', async () => {
+        /**
+         * Angle 1 regression: when a remote client moves a block into a
+         * container (e.g. callout) via Yjs, handleYjsUpdate must detect the
+         * parentId drift between the local block and the Yjs record and
+         * route through setBlockParent so the local mirror matches. Without
+         * this, the next save sees a child whose parent has no link back in
+         * contentIds and ejects it — same family as the callout paste bug.
+         */
+        const parentBlock = createMockBlock({
+          id: 'callout-1',
+          data: { text: 'Callout' },
+          tunes: {},
+          contentIds: [],
+        });
+
+        const childBlock = createMockBlock({
+          id: 'child-1',
+          data: { text: 'child' },
+          tunes: {},
+          parentId: null,
+        });
+
+        const newBlocksStore = createBlocksStore([parentBlock, childBlock]);
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        // Remote Yjs state: child now has parent=callout-1
+        const childYblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: 'child' }),
+          tunes: createMockYMap({}),
+          parentId: 'callout-1',
+        });
+
+        mockGetBlockById(mockYjsManager).mockImplementation((id: string) => {
+          if (id === 'child-1') return childYblock;
+          return undefined;
+        });
+
+        mockHandlers.getBlockIndex = vi.fn(() => 1);
+
+        // Wire setBlockParent handler to apply the side effect so we can
+        // validate the invariant on the resulting state (reparent actually
+        // updates both block.parentId and parent.contentIds).
+        mockHandlers.setBlockParent = vi.fn((block: Block, parentId: string | null) => {
+          const oldParentId = block.parentId;
+
+          if (oldParentId !== null) {
+            const oldParent = repository.getBlockById(oldParentId);
+
+            if (oldParent !== undefined) {
+              oldParent.contentIds = oldParent.contentIds.filter(id => id !== block.id);
+            }
+          }
+          // eslint-disable-next-line no-param-reassign
+          block.parentId = parentId;
+          if (parentId !== null) {
+            const newParent = repository.getBlockById(parentId);
+
+            if (newParent !== undefined && !newParent.contentIds.includes(block.id)) {
+              newParent.contentIds.push(block.id);
+            }
+          }
+        });
+
+        callback({ blockId: 'child-1', type: 'update', origin: 'undo' });
+
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        // Local mirror must reflect remote parent.
+        expect(childBlock.parentId).toBe('callout-1');
+        expect(parentBlock.contentIds).toContain('child-1');
+        expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(childBlock, 'callout-1');
+
+        // Invariant must hold on the synthetic output derived from local state.
+        const output = [
+          {
+            id: parentBlock.id,
+            type: 'callout',
+            data: {},
+            content: [...parentBlock.contentIds],
+          },
+          {
+            id: childBlock.id,
+            type: 'paragraph',
+            data: {},
+            parent: childBlock.parentId ?? undefined,
+          },
+        ];
+
+        expect(validateHierarchy(output)).toHaveLength(0);
+      });
+
+      it('reparents block to root when remote Yjs update removes parent', async () => {
+        /**
+         * Angle 1 regression (converse): when a remote client moves a block
+         * OUT of a container, handleYjsUpdate must splice it from the old
+         * parent's contentIds and null out the local parentId. Otherwise
+         * the old parent still thinks it owns the child and saveBlock
+         * ejection kicks in next save.
+         */
+        const parentBlock = createMockBlock({
+          id: 'callout-1',
+          data: { text: 'Callout' },
+          tunes: {},
+          contentIds: ['child-1'],
+        });
+
+        const childBlock = createMockBlock({
+          id: 'child-1',
+          data: { text: 'child' },
+          tunes: {},
+          parentId: 'callout-1',
+        });
+
+        const newBlocksStore = createBlocksStore([parentBlock, childBlock]);
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        // Remote Yjs state: child has been reparented back to root.
+        // parentId is omitted entirely (undefined) — simulating the field
+        // never having been set after a reparent-to-root.
+        const childYblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: 'child' }),
+          tunes: createMockYMap({}),
+        });
+
+        mockGetBlockById(mockYjsManager).mockImplementation((id: string) => {
+          if (id === 'child-1') return childYblock;
+          return undefined;
+        });
+
+        mockHandlers.getBlockIndex = vi.fn(() => 1);
+
+        mockHandlers.setBlockParent = vi.fn((block: Block, parentId: string | null) => {
+          const oldParentId = block.parentId;
+
+          if (oldParentId !== null) {
+            const oldParent = repository.getBlockById(oldParentId);
+
+            if (oldParent !== undefined) {
+              oldParent.contentIds = oldParent.contentIds.filter(id => id !== block.id);
+            }
+          }
+          // eslint-disable-next-line no-param-reassign
+          block.parentId = parentId;
+          if (parentId !== null) {
+            const newParent = repository.getBlockById(parentId);
+
+            if (newParent !== undefined && !newParent.contentIds.includes(block.id)) {
+              newParent.contentIds.push(block.id);
+            }
+          }
+        });
+
+        callback({ blockId: 'child-1', type: 'update', origin: 'undo' });
+
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(childBlock.parentId).toBeNull();
+        expect(parentBlock.contentIds).not.toContain('child-1');
+        expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(childBlock, null);
+
+        const output = [
+          {
+            id: parentBlock.id,
+            type: 'callout',
+            data: {},
+            content: [...parentBlock.contentIds],
+          },
+          {
+            id: childBlock.id,
+            type: 'paragraph',
+            data: {},
+            parent: childBlock.parentId ?? undefined,
+          },
+        ];
+
+        expect(validateHierarchy(output)).toHaveLength(0);
+      });
+
+      it('does not call setBlockParent when remote parentId matches local', async () => {
+        /**
+         * Angle 1 regression: no-op case. If the Yjs record and local block
+         * already agree on parentId, handleYjsUpdate must not redundantly
+         * call setBlockParent — that would thrash DOM and undo stacks.
+         */
+        const parentBlock = createMockBlock({
+          id: 'callout-1',
+          contentIds: ['child-1'],
+        });
+
+        const childBlock = createMockBlock({
+          id: 'child-1',
+          data: { text: 'child' },
+          tunes: {},
+          parentId: 'callout-1',
+        });
+
+        const newBlocksStore = createBlocksStore([parentBlock, childBlock]);
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        const childYblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: 'child' }),
+          tunes: createMockYMap({}),
+          parentId: 'callout-1',
+        });
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(childYblock);
+        mockHandlers.getBlockIndex = vi.fn(() => 1);
+
+        callback({ blockId: 'child-1', type: 'update', origin: 'undo' });
+
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(mockHandlers.setBlockParent).not.toHaveBeenCalled();
       });
     });
 

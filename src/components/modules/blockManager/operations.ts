@@ -529,7 +529,50 @@ export class BlockOperations {
   }
 
   /**
-   * Update the parentId of each child block to the given parent id.
+   * Attach `newBlock` to the old parent in place of the old block id,
+   * routing through `setBlockParent` so the DOM reparent/hide side effects
+   * run, then restoring the original position in the parent's contentIds[].
+   *
+   * Extracted from `replace()` to keep nesting depth under the lint cap.
+   * @param oldBlockId - The id of the block being replaced
+   * @param newBlock - The newly composed replacement block
+   * @param oldParentId - The parent id to transfer onto `newBlock`
+   */
+  private transferParentLinkToNewBlock(oldBlockId: string, newBlock: Block, oldParentId: string): void {
+    const parentBlock = this.repository.getBlockById(oldParentId);
+
+    if (parentBlock === undefined) {
+      // Parent already gone from the repository (e.g. race) — fall back to
+      // the bare parentId assignment so the new block at least carries the
+      // parent link for save/serialization.
+      // eslint-disable-next-line no-param-reassign
+      newBlock.parentId = oldParentId;
+
+      return;
+    }
+
+    const oldPositionInParent = parentBlock.contentIds.indexOf(oldBlockId);
+
+    this.hierarchy.setBlockParent(newBlock, oldParentId);
+
+    if (oldPositionInParent < 0) {
+      return;
+    }
+
+    const withoutStale = parentBlock.contentIds.filter(id => id !== oldBlockId && id !== newBlock.id);
+
+    withoutStale.splice(oldPositionInParent, 0, newBlock.id);
+    parentBlock.contentIds = withoutStale;
+  }
+
+  /**
+   * Route each child through `BlockHierarchy.setBlockParent` so that DOM
+   * reparenting (into the new parent's toggle-children container) and
+   * collapsed-state propagation run as a single atomic side effect per child.
+   *
+   * Direct `childBlock.parentId = ...` mutation is the same architectural bug
+   * as the callout paste-ejection family: the parent/content invariant is
+   * maintained but the DOM drifts from the logical tree until the next render.
    * @param childIds - Array of child block IDs to reparent
    * @param newParentId - New parent block ID
    */
@@ -538,7 +581,7 @@ export class BlockOperations {
       const childBlock = this.repository.getBlockById(childId);
 
       if (childBlock !== undefined) {
-        childBlock.parentId = newParentId;
+        this.hierarchy.setBlockParent(childBlock, newParentId);
       }
     }
   }
@@ -596,15 +639,23 @@ export class BlockOperations {
       skipYjsSync: true,
     }, blocksStore);
 
-    // Transfer hierarchy to new block
+    // Transfer hierarchy to new block.
+    //
+    // Route through `BlockHierarchy.setBlockParent` rather than mutating
+    // `newBlock.parentId` / `parentBlock.contentIds` directly, so that DOM
+    // reparenting (into the parent's toggle-children container) and
+    // collapsed-state propagation happen atomically. Direct mutation was the
+    // last remaining path that could leave a replaced child inside a
+    // callout/toggle rendered at the wrong DOM position until the next full
+    // render pass — same architectural shape as the callout paste-ejection
+    // bug family.
+    //
+    // Ordering concern: `setBlockParent` appends the new id to the parent's
+    // contentIds[], but `replace()` must preserve the OLD block's position.
+    // Capture the old index first, then run setBlockParent, then move the new
+    // id back into the captured slot and drop the (now-stale) old id.
     if (oldParentId !== null) {
-      newBlock.parentId = oldParentId;
-
-      const parentBlock = this.repository.getBlockById(oldParentId);
-
-      if (parentBlock !== undefined) {
-        parentBlock.contentIds = parentBlock.contentIds.map(id => id === block.id ? newBlock.id : id);
-      }
+      this.transferParentLinkToNewBlock(block.id, newBlock, oldParentId);
     }
 
     /**
@@ -620,7 +671,11 @@ export class BlockOperations {
       (newTool === 'header' && (data as { isToggleable?: boolean }).isToggleable === true);
 
     if (oldContentIds.length > 0 && !newToolCanHostChildren) {
-      // Promote each child to root level, inserting after the new block
+      // Promote each child to root level, inserting after the new block.
+      // Route through setBlockParent so the child holder is also moved out
+      // of the old (now-removed) parent's toggle-children container and any
+      // hidden/indentation state is recomputed — same reasoning as
+      // `reparentChildren` above.
       const insertAfterIndex = this.repository.getBlockIndex(newBlock);
 
       oldContentIds.forEach((childId, offset) => {
@@ -630,14 +685,17 @@ export class BlockOperations {
           return;
         }
 
-        childBlock.parentId = null;
+        this.hierarchy.setBlockParent(childBlock, null);
         blocksStore.insert(insertAfterIndex + 1 + offset, childBlock, false, false);
       });
 
       newBlock.contentIds = [];
     } else {
+      // `reparentChildren` uses setBlockParent, which pushes each child id
+      // onto `newBlock.contentIds`. Reset it first so we don't end up with a
+      // pre-existing array plus appended ids.
+      newBlock.contentIds = [];
       this.reparentChildren(oldContentIds, newBlock.id);
-      newBlock.contentIds = oldContentIds;
     }
 
     return newBlock;

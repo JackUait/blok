@@ -26,6 +26,22 @@ import { BlockAddedMutationType } from '../../../../../types/events/block/BlockA
 import { BlockChangedMutationType } from '../../../../../types/events/block/BlockChanged';
 import { BlockMovedMutationType } from '../../../../../types/events/block/BlockMoved';
 import { BlockRemovedMutationType } from '../../../../../types/events/block/BlockRemoved';
+import { validateHierarchy } from '../../../../../src/components/utils/hierarchy-invariant';
+import type { OutputBlockData } from '@/types';
+
+/**
+ * Projects the BlockRepository state into the OutputBlockData shape that
+ * `validateHierarchy` consumes, so tests can reuse the canonical invariant
+ * checker instead of hand-rolling parent/content cross-checks.
+ */
+const projectRepositoryForInvariant = (repo: BlockRepository): OutputBlockData[] =>
+  repo.blocks.map(b => ({
+    id: b.id,
+    type: b.name,
+    data: {},
+    ...(b.parentId !== null ? { parent: b.parentId } : {}),
+    ...(b.contentIds.length > 0 ? { content: [...b.contentIds] } : {}),
+  } as OutputBlockData));
 
 /**
  * Create a mock Block for testing
@@ -1032,6 +1048,139 @@ describe('BlockOperations', () => {
       // Children should remain attached to the new toggle header
       expect(newBlock.contentIds).toHaveLength(1);
       expect(child1.parentId).toBe(newBlock.id);
+    });
+
+    /**
+     * Angle 2 (callout paste-ejection family, gap after Layer 18).
+     *
+     * `replace()` used to mutate `newBlock.parentId` and `parentBlock.contentIds`
+     * directly instead of routing through `BlockHierarchy.setBlockParent()`. The
+     * invariant still held, but the DOM side effects owned by `setBlockParent`
+     * (reparenting the block's holder into the parent's toggle-children
+     * container, hiding it when the parent is collapsed) were skipped. Result:
+     * a block replaced inside a callout/toggle would render at the wrong DOM
+     * position (sibling of the callout, not child of it) until the next full
+     * render pass.
+     *
+     * These tests lock the DOM behaviour and the invariant together.
+     */
+    it('routes the replaced child through setBlockParent so its holder is reparented into the container', () => {
+      const container = createMockBlock({ id: 'callout-1', name: 'callout', contentIds: ['child-1'] });
+      const childContainer = document.createElement('div');
+
+      childContainer.setAttribute('data-blok-toggle-children', '');
+      container.holder.appendChild(childContainer);
+
+      const child = createMockBlock({ id: 'child-1', name: 'paragraph', parentId: 'callout-1' });
+
+      childContainer.appendChild(child.holder);
+
+      const testStore = createBlocksStore([container, child]);
+      const testRepo = new BlockRepository();
+
+      testRepo.initialize(testStore);
+      const testHierarchy = new BlockHierarchy(testRepo);
+      const testOps = new BlockOperations(
+        dependencies,
+        testRepo,
+        factory,
+        testHierarchy,
+        blockDidMutatedSpy,
+        1
+      );
+
+      testOps.setYjsSync(yjsSync);
+
+      const newBlock = testOps.replace(child, 'paragraph', { text: 'converted' }, testStore);
+
+      expect(newBlock.parentId).toBe('callout-1');
+      expect(container.contentIds).toEqual([newBlock.id]);
+      expect(newBlock.holder.parentElement).toBe(childContainer);
+      expect(validateHierarchy(projectRepositoryForInvariant(testRepo))).toEqual([]);
+    });
+
+    it('routes reparentChildren through setBlockParent so DOM side effects run for surviving children', () => {
+      const oldToggle = createMockBlock({ id: 'toggle-1', name: 'toggle', contentIds: ['child-1'] });
+      const oldChildContainer = document.createElement('div');
+
+      oldChildContainer.setAttribute('data-blok-toggle-children', '');
+      oldToggle.holder.appendChild(oldChildContainer);
+
+      const child = createMockBlock({ id: 'child-1', name: 'paragraph', parentId: 'toggle-1' });
+
+      oldChildContainer.appendChild(child.holder);
+
+      const testStore = createBlocksStore([oldToggle, child]);
+      const testRepo = new BlockRepository();
+
+      testRepo.initialize(testStore);
+      const testHierarchy = new BlockHierarchy(testRepo);
+
+      // Spy on setBlockParent — production code must call it for each surviving
+      // child when reparenting from the old container to the new one.
+      const setBlockParentSpy = vi.spyOn(testHierarchy, 'setBlockParent');
+
+      const testOps = new BlockOperations(
+        dependencies,
+        testRepo,
+        factory,
+        testHierarchy,
+        blockDidMutatedSpy,
+        0
+      );
+
+      testOps.setYjsSync(yjsSync);
+
+      const newToggle = testOps.replace(oldToggle, 'toggle', { text: '' }, testStore);
+
+      // Production fix: reparentChildren must go through setBlockParent rather
+      // than mutating childBlock.parentId directly.
+      const childCalls = setBlockParentSpy.mock.calls.filter(([block]) => block === child);
+
+      expect(childCalls.length).toBeGreaterThanOrEqual(1);
+      expect(childCalls.at(-1)?.[1]).toBe(newToggle.id);
+      expect(child.parentId).toBe(newToggle.id);
+      expect(newToggle.contentIds).toContain('child-1');
+      expect(validateHierarchy(projectRepositoryForInvariant(testRepo))).toEqual([]);
+    });
+
+    it('hides the replaced child when the container is collapsed', () => {
+      const container = createMockBlock({ id: 'toggle-1', name: 'toggle', contentIds: ['child-1', 'child-2'] });
+      const childContainer = document.createElement('div');
+
+      childContainer.setAttribute('data-blok-toggle-children', '');
+      container.holder.appendChild(childContainer);
+
+      const childA = createMockBlock({ id: 'child-1', name: 'paragraph', parentId: 'toggle-1' });
+      const childB = createMockBlock({ id: 'child-2', name: 'paragraph', parentId: 'toggle-1' });
+
+      // Collapsed toggle: existing children are marked hidden in the DOM.
+      childA.holder.classList.add('hidden');
+      childB.holder.classList.add('hidden');
+      childContainer.appendChild(childA.holder);
+      childContainer.appendChild(childB.holder);
+
+      const testStore = createBlocksStore([container, childA, childB]);
+      const testRepo = new BlockRepository();
+
+      testRepo.initialize(testStore);
+      const testHierarchy = new BlockHierarchy(testRepo);
+      const testOps = new BlockOperations(
+        dependencies,
+        testRepo,
+        factory,
+        testHierarchy,
+        blockDidMutatedSpy,
+        1
+      );
+
+      testOps.setYjsSync(yjsSync);
+
+      const newChildA = testOps.replace(childA, 'paragraph', { text: 'converted' }, testStore);
+
+      expect(newChildA.parentId).toBe('toggle-1');
+      expect(newChildA.holder.classList.contains('hidden')).toBe(true);
+      expect(validateHierarchy(projectRepositoryForInvariant(testRepo))).toEqual([]);
     });
   });
 

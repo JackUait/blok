@@ -43,7 +43,7 @@ export interface SyncHandlers {
   /** Called to update block indentation */
   updateIndentation: (block: Block) => void;
   /** Called to set the parent of a block, updating contentIds and DOM placement */
-  setBlockParent: (block: Block, parentId: string) => void;
+  setBlockParent: (block: Block, parentId: string | null) => void;
   /** Called to replace a block at a specific index with a new block instance */
   replaceBlock: (index: number, newBlock: Block) => void;
   /** Called when a block is removed during undo/redo (before DOM removal) */
@@ -249,6 +249,27 @@ export class BlockYjsSync {
     const tunes = ytunes !== undefined ? this.dependencies.YjsManager.yMapToObject(ytunes) : {};
     const lastEditedAt = yblock.get('lastEditedAt') as number | undefined;
     const lastEditedBy = (yblock.get('lastEditedBy') as string | undefined) ?? null;
+
+    /**
+     * Angle 1 fix: reconcile parentId drift BEFORE data/tunes updates.
+     *
+     * A remote client may have reparented this block (e.g. dragged it into a
+     * callout) and the Yjs record now reflects the new `parentId`, but the
+     * local mirror's `block.parentId` is stale. Without this reconciliation
+     * the next save runs hierarchy validation, finds the parent's contentIds
+     * does not list the child, and ejects the child from its parent — the
+     * same corruption family as the callout paste bug.
+     *
+     * Route through the canonical setBlockParent handler so contentIds, DOM
+     * placement, and indentation all stay consistent. Must run BEFORE any
+     * composeBlock fallback below, otherwise the replacement would carry
+     * over the stale `block.parentId`.
+     */
+    const remoteParentId = (yblock.get('parentId') as string | undefined) ?? null;
+
+    if (remoteParentId !== block.parentId) {
+      this.handlers.setBlockParent(block, remoteParentId);
+    }
 
     // Check if tunes have changed - if so, we need to recreate the block
     // because tunes are instantiated during block construction

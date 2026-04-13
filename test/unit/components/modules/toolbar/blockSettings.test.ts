@@ -7,6 +7,7 @@ import type { MenuConfigItem } from '../../../../../types/tools';
 import { PopoverItemType } from '../../../../../src/components/utils/popover';
 import type { PopoverItemParams } from '../../../../../types/utils/popover/popover-item';
 import { SelectionUtils } from '../../../../../src/components/selection';
+import { simulateKeydown } from '../../../../helpers/simulate';
 
 type PopoverMock = {
   on: Mock<(event: string, handler: () => void) => void>;
@@ -899,10 +900,7 @@ describe('BlockSettings', () => {
       const popover = getLastPopover();
       const popoverElement = popover!.getElement();
 
-      popoverElement.dispatchEvent(new KeyboardEvent('keydown', {
-        key: 'Delete',
-        bubbles: true,
-      }));
+      simulateKeydown(popoverElement, 'Delete');
 
       expect(deleteHandler).toHaveBeenCalledTimes(1);
       expect(blockSettings.opened).toBe(false);
@@ -934,10 +932,7 @@ describe('BlockSettings', () => {
       const popover = getLastPopover();
       const popoverElement = popover!.getElement();
 
-      popoverElement.dispatchEvent(new KeyboardEvent('keydown', {
-        key: 'Delete',
-        bubbles: true,
-      }));
+      simulateKeydown(popoverElement, 'Delete');
 
       expect(blokMock.BlockManager.deleteSelectedBlocksAndInsertReplacement).toHaveBeenCalledTimes(1);
       expect(blockSettings.opened).toBe(false);

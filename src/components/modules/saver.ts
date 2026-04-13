@@ -11,6 +11,7 @@ import { Module } from '../__module';
 import type { Block } from '../block';
 import { getBlokVersion, isEmpty, isObject, log, logLabeled } from '../utils';
 import { collapseToLegacy, shouldCollapseToLegacy } from '../utils/data-model-transform';
+import { validateHierarchy } from '../utils/hierarchy-invariant';
 import { sanitizeBlocks } from '../utils/sanitizer';
 import { normalizeInlineImages } from './normalizeInlineImages';
 
@@ -274,6 +275,24 @@ export class Saver extends Module {
     const finalBlocks = shouldCollapseToLegacy(dataModelConfig, detectedInputFormat)
       ? collapseToLegacy(extractedBlocks)
       : extractedBlocks;
+
+    // Defense-in-depth: assert the parent/content invariant on the final output
+    // in test/dev builds. Any drift here means a mutation path elsewhere is
+    // leaking inconsistent state through every reconciliation layer — that is
+    // the exact failure mode behind the callout paste ejection bug family.
+    // Throwing in test flushes the regression out of any future refactor; in
+    // production we only log, so an edge-case drift never breaks user saves.
+    const violations = validateHierarchy(finalBlocks);
+
+    if (violations.length > 0) {
+      const summary = violations.map(v => v.message).join('; ');
+      const message = `Saver produced output with hierarchy drift: ${summary}`;
+
+      if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
+        throw new Error(message);
+      }
+      logLabeled(message, 'error');
+    }
 
     return {
       time: +new Date(),

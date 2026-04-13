@@ -108,6 +108,25 @@ export class DragOperations {
     targetBlock: Block,
     edge: 'top' | 'bottom'
   ): Promise<DuplicateResult> {
+    // Stale-reference guard (alt+drag variant of the wrong-block-dropped bug).
+    // Same failure mode as moveBlocks, different splice: targetIndex === -1
+    // produces baseInsertIndex -1 or 0, and Blocks.insert(-1, block) calls
+    // Array.splice(-1, 0, block) — inserting the block BEFORE the LAST slot.
+    // That silently diverges the flat array from the DOM, so the next move()
+    // indexOf lookup points at the wrong slot and drops an unrelated block.
+    // Abort cleanly instead of duplicating stale data at the wrong position.
+    if (this.blockManager.getBlockIndex(targetBlock) === -1) {
+      return { duplicatedBlocks: [], targetIndex: -1 };
+    }
+
+    const hasStaleSource = sourceBlocks.some(
+      (block) => this.blockManager.getBlockIndex(block) === -1
+    );
+
+    if (hasStaleSource) {
+      return { duplicatedBlocks: [], targetIndex: -1 };
+    }
+
     // Sort blocks by current index to preserve order
     const sortedBlocks = [...sourceBlocks].sort((a, b) =>
       this.blockManager.getBlockIndex(a) - this.blockManager.getBlockIndex(b)

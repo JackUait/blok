@@ -895,6 +895,48 @@ describe('Blocks', () => {
       // The new block should NOT be inside the table
       expect(tableBlock.holder.contains(newBlock.holder)).toBe(false);
     });
+
+    describe('invalid index guard (regression: wrong-block-dropped via alt+drag)', () => {
+      /**
+       * Regression: `Array.splice(-1, 0, block)` inserts the block BEFORE the
+       * LAST element, diverging the array from the DOM. A later move() then
+       * reads `indexOf(block)` and splices the wrong slot, dropping an
+       * unrelated block. Happens when alt+drag (duplicate) resolves a stale
+       * target block whose getBlockIndex returns -1 and baseInsertIndex ends
+       * up negative. Guard must live at the lowest level (`Blocks.insert`)
+       * so every caller is protected symmetrically with `Blocks.move`.
+       */
+      it('should be a no-op when index is -1 (negative insert index)', () => {
+        const blocks = createBlocks();
+        const block1 = createMockBlock('block-1');
+        const block2 = createMockBlock('block-2');
+        const block3 = createMockBlock('block-3');
+
+        blocks.push(block1);
+        blocks.push(block2);
+
+        blocks.insert(-1, block3);
+
+        expect(blocks.length).toBe(2);
+        expect(blocks.blocks[0]).toBe(block1);
+        expect(blocks.blocks[1]).toBe(block2);
+        expect(workingArea.contains(block3.holder)).toBe(false);
+      });
+
+      it('should be a no-op when index is a large negative number', () => {
+        const blocks = createBlocks();
+        const block1 = createMockBlock('block-1');
+        const block2 = createMockBlock('block-2');
+
+        blocks.push(block1);
+
+        blocks.insert(-5, block2);
+
+        expect(blocks.length).toBe(1);
+        expect(blocks.blocks[0]).toBe(block1);
+        expect(workingArea.contains(block2.holder)).toBe(false);
+      });
+    });
   });
 
   describe('replace', () => {
@@ -1142,6 +1184,32 @@ describe('Blocks', () => {
       // Should be a direct child of workingArea, not inside the table
       expect(newBlock.holder.parentElement).toBe(workingArea);
       expect(tableBlock.holder.contains(newBlock.holder)).toBe(false);
+    });
+
+    describe('invalid index guard (regression: wrong-block-dropped)', () => {
+      /**
+       * Mirrors the guards in Blocks.move and Blocks.insert. `splice(-1, 0, block)`
+       * inserts BEFORE the last element, silently diverging the flat array from
+       * the DOM. Yjs sync batch-add paths pass computed indices that can resolve
+       * to -1 when a target is stale — without this guard, the next move() reads
+       * the wrong slot and drops an unrelated block.
+       */
+      it('should be a no-op when index is -1', () => {
+        const blocks = createBlocks();
+        const block1 = createMockBlock('block-1');
+        const block2 = createMockBlock('block-2');
+        const newBlock = createMockBlock('new-block');
+
+        blocks.push(block1);
+        blocks.push(block2);
+
+        blocks.insertMany([newBlock], -1);
+
+        expect(blocks.length).toBe(2);
+        expect(blocks.blocks[0]).toBe(block1);
+        expect(blocks.blocks[1]).toBe(block2);
+        expect(workingArea.contains(newBlock.holder)).toBe(false);
+      });
     });
   });
 
@@ -1611,6 +1679,31 @@ describe('Blocks', () => {
       expect(blocks.blocks[0]).toBe(block1);
       expect(blocks.blocks[1]).toBe(block2);
       expect(blocks.blocks[2]).toBe(block3);
+    });
+
+    describe('invalid index guard (regression: wrong-block-dropped)', () => {
+      /**
+       * Same splice-negative vulnerability as Blocks.move/insert/insertMany.
+       * addToArray is called by yjs-sync batch-add during undo of hierarchical
+       * blocks — if any stale index slips in, splice(-1, 0, block) would
+       * silently corrupt the array and cause a later move to drop the wrong
+       * block. Guard rejects negative indices at the lowest level.
+       */
+      it('should be a no-op when index is -1', () => {
+        const blocks = createBlocks();
+        const block1 = createMockBlock('block-1');
+        const block2 = createMockBlock('block-2');
+        const newBlock = createMockBlock('new-block');
+
+        blocks.push(block1);
+        blocks.push(block2);
+
+        blocks.addToArray(-1, newBlock);
+
+        expect(blocks.length).toBe(2);
+        expect(blocks.blocks[0]).toBe(block1);
+        expect(blocks.blocks[1]).toBe(block2);
+      });
     });
   });
 

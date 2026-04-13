@@ -509,6 +509,52 @@ describe('DragOperations', () => {
     });
   });
 
+  describe('duplicateBlocks - stale source/target (regression)', () => {
+    it('should abort alt+drag without inserting when targetBlock is no longer in array', async () => {
+      const sourceBlock = createMockBlock('source', 'paragraph', { text: 'source' });
+      const staleTarget = createMockBlock('stale-target', 'paragraph', { text: 'stale' });
+
+      mockBlockManager.getBlockIndex = vi.fn((block) => {
+        if (block === sourceBlock) return 2;
+        if (block === staleTarget) return -1;
+
+        return -1;
+      });
+
+      const result = await operations.duplicateBlocks([sourceBlock], staleTarget, 'top');
+
+      // Without this guard, targetIndex=-1 produces baseInsertIndex=-1 (or 0 for bottom).
+      // Blocks.insert(-1, block) splices at -1, placing block BEFORE the last element and
+      // diverging the array from the DOM — the next move operation then splices the wrong
+      // block. Must abort cleanly instead.
+      expect(mockBlockManager.insert).not.toHaveBeenCalled();
+      expect(result.duplicatedBlocks).toEqual([]);
+    });
+
+    it('should abort alt+drag when any sourceBlock is stale', async () => {
+      const block1 = createMockBlock('b1', 'paragraph', { text: '1' });
+      const staleBlock = createMockBlock('stale', 'paragraph', { text: 'stale' });
+      const targetBlock = createMockBlock('target', 'paragraph', { text: 'target' });
+
+      mockBlockManager.getBlockIndex = vi.fn((block) => {
+        if (block === block1) return 0;
+        if (block === staleBlock) return -1;
+        if (block === targetBlock) return 4;
+
+        return -1;
+      });
+
+      const result = await operations.duplicateBlocks(
+        [block1, staleBlock],
+        targetBlock,
+        'bottom'
+      );
+
+      expect(mockBlockManager.insert).not.toHaveBeenCalled();
+      expect(result.duplicatedBlocks).toEqual([]);
+    });
+  });
+
   describe('moveBlocks - without yjsManager', () => {
     it('should execute moves directly without transactMoves', () => {
       const ops = new DragOperations(mockBlockManager, undefined, mockBlockSelection);

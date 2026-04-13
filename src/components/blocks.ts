@@ -177,6 +177,19 @@ export class Blocks {
    * @param {boolean} replace — it true, replace block on given index
    */
   public insert(index: number, block: Block, replace = false, appendToWorkingArea = false): void {
+    /**
+     * Invalid-index guard (regression: wrong-block-dropped via alt+drag).
+     *
+     * `Array.splice(-1, 0, block)` inserts BEFORE the last element — a silent
+     * divergence between the flat blocks array and the DOM that corrupts the
+     * next move() operation and drops an unrelated block. Mirrors the guard
+     * in Blocks.move so every caller (drag duplicate, yjs-sync, undo, API) is
+     * protected at the lowest level.
+     */
+    if (index < 0) {
+      return;
+    }
+
     if (!this.length) {
       this.push(block);
 
@@ -268,6 +281,17 @@ export class Blocks {
    * @param index - index to insert blocks at
    */
   public insertMany(blocks: Block[], index: number ): void {
+    /**
+     * Invalid-index guard (regression: wrong-block-dropped family).
+     * Mirrors Blocks.move and Blocks.insert — `splice(-1, 0, ...blocks)`
+     * silently inserts BEFORE the last element, diverging array from DOM.
+     * Yjs batch-add paths feed this method with computed indices; a stale
+     * input would otherwise cause a later move() to drop an unrelated block.
+     */
+    if (index < 0) {
+      return;
+    }
+
     const fragment = new DocumentFragment();
 
     for (const block of blocks) {
@@ -386,6 +410,16 @@ export class Blocks {
    * blocks exist in the array before any lifecycle hooks run.
    */
   public addToArray(index: number, block: Block): void {
+    /**
+     * Invalid-index guard (regression: wrong-block-dropped family).
+     * Same splice(-1, 0) vulnerability as Blocks.move/insert/insertMany.
+     * yjs-sync batch-add calls this during undo of hierarchical blocks;
+     * negative input would silently corrupt the flat array.
+     */
+    if (index < 0) {
+      return;
+    }
+
     const insertIndex = index > this.length ? this.length : index;
 
     this.blocks.splice(insertIndex, 0, block);

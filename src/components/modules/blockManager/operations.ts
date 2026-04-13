@@ -475,6 +475,26 @@ export class BlockOperations {
 
     const existingData = await block.data;
 
+    /**
+     * Layer 16: stale-source guard (regression: wrong-block-dropped family).
+     *
+     * `await block.data` is async — during that await, `block` can be removed
+     * by a Yjs remote delete, undo/redo, or tool conversion. When that happens
+     * `getBlockIndex(block)` returns -1 and `blocksStore.replace(-1, newBlock)`
+     * throws `Incorrect index`, aborting the surrounding batch mid-flight and
+     * leaving the flat blocks array inconsistent with the DOM — exactly the
+     * stale-state condition that lets drag drop an unrelated block.
+     *
+     * Abort cleanly: return the original block with no mutation or Yjs side
+     * effects. Revalidate AFTER the await, not before, so the guard covers
+     * the full async gap.
+     */
+    const blockIndex = this.repository.getBlockIndex(block);
+
+    if (blockIndex === -1) {
+      return block;
+    }
+
     const newBlock = this.factory.composeBlock({
       id: block.id,
       tool: block.name,
@@ -484,8 +504,6 @@ export class BlockOperations {
       contentIds: block.contentIds.length > 0 ? [...block.contentIds] : undefined,
       bindEventsImmediately: true,
     });
-
-    const blockIndex = this.repository.getBlockIndex(block);
 
     blocksStore.replace(blockIndex, newBlock);
 
@@ -534,6 +552,24 @@ export class BlockOperations {
    */
   public replace(block: Block, newTool: string, data: BlockToolData, blocksStore: BlocksStore): Block {
     const blockIndex = this.repository.getBlockIndex(block);
+
+    /**
+     * Layer 16: stale-source guard (regression: wrong-block-dropped family).
+     *
+     * `convert()` calls this after `await block.save()` — during that await
+     * the block can be removed by a Yjs remote delete or undo. A stale source
+     * here would drive `YjsManager.addBlock({...}, -1)` and
+     * `insert({ index: -1, replace: true })` — both feed negative indices
+     * into downstream splice paths that silently corrupt the flat array.
+     *
+     * Abort cleanly: return the original block with no Yjs or DOM side
+     * effects. The caller (conversion dropdown, paste) already tolerates a
+     * no-op outcome for a destroyed source.
+     */
+    if (blockIndex === -1) {
+      return block;
+    }
+
     const newBlockId = generateBlockId();
 
     // Capture hierarchy before replacement

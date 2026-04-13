@@ -787,6 +787,34 @@ describe('BlockOperations', () => {
       expect(newBlock.id).toBe(oldId);
       expect(repository.getBlockById(oldId)).toBe(newBlock);
     });
+
+    /**
+     * Layer 16 regression (wrong-block-dropped family).
+     *
+     * If `block` has been removed from the store between the caller obtaining
+     * its reference and `update()` executing (e.g., a Yjs remote delete while
+     * `await block.data` resolves), `getBlockIndex(block)` returns -1 and
+     * `blocksStore.replace(-1, newBlock)` throws `Incorrect index`, aborting
+     * the surrounding batch mid-flight and leaving the flat array inconsistent
+     * with the DOM — the soil that grows wrong-block-dropped.
+     *
+     * Abort cleanly when the source is stale: return the original block and
+     * fire no mutation or Yjs side effects.
+     */
+    it('aborts cleanly when source block is stale (not in store)', async () => {
+      const staleBlock = createMockBlock({ id: 'stale-id', name: 'paragraph' });
+
+      const result = await operations.update(staleBlock, blocksStore, { text: 'New' });
+
+      expect(result).toBe(staleBlock);
+      expect(blockDidMutatedSpy).not.toHaveBeenCalledWith(
+        BlockChangedMutationType,
+        expect.any(Object),
+        expect.any(Object)
+      );
+      expect(dependencies.YjsManager.updateBlockData).not.toHaveBeenCalled();
+      expect(dependencies.YjsManager.updateBlockTune).not.toHaveBeenCalled();
+    });
   });
 
   describe('replace', () => {
@@ -801,6 +829,28 @@ describe('BlockOperations', () => {
       expect(newBlock).toBeDefined();
       expect(dependencies.YjsManager.removeBlock).toHaveBeenCalledWith(block.id);
       expect(dependencies.YjsManager.addBlock).toHaveBeenCalled();
+    });
+
+    /**
+     * Layer 16 regression (wrong-block-dropped family).
+     *
+     * If `block` has been removed between the caller obtaining its reference
+     * and `replace()` executing (e.g., Yjs remote delete while
+     * `await block.save()` resolves during `convert()`), `getBlockIndex`
+     * returns -1, then `YjsManager.addBlock({...}, -1)` and
+     * `insert({ index: -1, replace: true })` corrupt downstream state.
+     *
+     * Abort cleanly when the source is stale: return the original block and
+     * fire no Yjs side effects.
+     */
+    it('aborts cleanly when source block is stale (not in store)', () => {
+      const staleBlock = createMockBlock({ id: 'stale-id', name: 'paragraph' });
+
+      const result = operations.replace(staleBlock, 'paragraph', { text: 'New' }, blocksStore);
+
+      expect(result).toBe(staleBlock);
+      expect(dependencies.YjsManager.removeBlock).not.toHaveBeenCalled();
+      expect(dependencies.YjsManager.addBlock).not.toHaveBeenCalled();
     });
 
     it('uses Yjs transaction for atomic undo', () => {

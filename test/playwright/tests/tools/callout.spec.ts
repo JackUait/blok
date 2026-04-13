@@ -383,18 +383,21 @@ test('dragging callout via settings toggler reorders the callout block', async (
 
   // After drop, the order in the flat block list should be:
   //   para-before, para-after, callout-1 (and its child inner-1)
-  const order = await page.evaluate(() =>
-    Array.from(document.querySelectorAll('[data-blok-id]'))
-      .map((el) => el.getAttribute('data-blok-id'))
-      .filter((id): id is string => id !== null && !id.startsWith('inner'))
-  );
+  // Poll instead of a single read — reorder + DOM flush can lag a frame.
+  await expect.poll(async () => {
+    const order = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('[data-blok-id]'))
+        .map((el) => el.getAttribute('data-blok-id'))
+        .filter((id): id is string => id !== null && !id.startsWith('inner'))
+    );
+    const calloutIdx = order.indexOf('callout-1');
+    const afterIdx = order.indexOf('para-after');
+    const beforeIdx = order.indexOf('para-before');
 
-  const calloutIdx = order.indexOf('callout-1');
-  const afterIdx = order.indexOf('para-after');
-  const beforeIdx = order.indexOf('para-before');
-
-  expect(beforeIdx).toBeGreaterThanOrEqual(0);
-  expect(afterIdx).toBeGreaterThanOrEqual(0);
-  expect(calloutIdx).toBeGreaterThan(afterIdx);
-  expect(afterIdx).toBeGreaterThan(beforeIdx);
+    return {
+      beforeOk: beforeIdx >= 0,
+      afterOk: afterIdx >= 0,
+      calloutAfterTarget: calloutIdx > afterIdx && afterIdx > beforeIdx,
+    };
+  }).toEqual({ beforeOk: true, afterOk: true, calloutAfterTarget: true });
 });

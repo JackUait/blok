@@ -413,10 +413,16 @@ describe('Toolbar — callout first-child plus button visibility', () => {
 
     expect(calls.length).toBeGreaterThan(0);
 
-    // The LAST call must use settingsToggler — never an inner element.
-    const lastCall = calls[calls.length - 1];
+    // EVERY call must target settingsToggler. A refactor that rewires drag to
+    // any other element (even as the "first" call before a restore) is a bug:
+    // Block.setupDraggable clears previous handlers, so the wrong first call
+    // would briefly wire a dead element and race with event dispatch.
+    for (const call of calls) {
+      expect(call[0]).toBe(settingsToggler);
+    }
 
-    expect(lastCall[0]).toBe(settingsToggler);
+    // Guard against a future rewire that silently adds a second call.
+    expect(calls).toHaveLength(1);
 
     document.body.removeChild(calloutHolder);
   });

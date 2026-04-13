@@ -33,17 +33,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Enable Corepack
-        run: corepack enable
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: 'yarn'
-
-      - name: Install dependencies
-        run: yarn install
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
 
       - name: Lint
         run: yarn lint
@@ -55,17 +46,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Enable Corepack
-        run: corepack enable
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: 'yarn'
-
-      - name: Install dependencies
-        run: yarn install
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
 
       - name: Build CLI
         run: yarn build:cli
@@ -80,17 +62,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Enable Corepack
-        run: corepack enable
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: 'yarn'
-
-      - name: Install dependencies
-        run: yarn install
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
 
       - name: Build
         run: yarn build
@@ -109,17 +82,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Enable Corepack
-        run: corepack enable
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: 'yarn'
-
-      - name: Install dependencies
-        run: yarn install
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
 
       - name: Cache Playwright Browsers
         id: playwright-cache
@@ -164,17 +128,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Enable Corepack
-        run: corepack enable
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: 'yarn'
-
-      - name: Install dependencies
-        run: yarn install
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
 
       - name: Cache Playwright Browsers
         id: playwright-cache

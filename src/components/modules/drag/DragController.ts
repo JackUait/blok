@@ -135,14 +135,29 @@ export class DragController extends Module {
        * this lookup kills it. If the handle has no id ancestor (orphaned
        * fixture in tests, or a pre-attachment race) fall back to the closure
        * block — it's the best available reference.
+       *
+       * Zombie-id guard (Layer 8): if the handle DOES sit inside a holder
+       * with a `data-blok-id` but that id resolves to no Block (the block
+       * was destroyed and its DOM not yet reaped, or yjs deleted it
+       * mid-hover), the closure hint is almost certainly ALSO stale. Abort
+       * the drag — a known-dead id is a stronger signal than silence.
        */
       const holderAncestor = dragHandle.closest(`[${DATA_ATTR.id}]`);
       const liveId = holderAncestor?.getAttribute(DATA_ATTR.id) ?? null;
-      const liveBlock = liveId !== null
-        ? this.Blok.BlockManager.getBlockById(liveId)
-        : undefined;
 
-      this.startDragTracking(e, liveBlock ?? block);
+      if (liveId !== null) {
+        const liveBlock = this.Blok.BlockManager.getBlockById(liveId);
+
+        if (liveBlock === undefined) {
+          return;
+        }
+
+        this.startDragTracking(e, liveBlock);
+
+        return;
+      }
+
+      this.startDragTracking(e, block);
     };
 
     dragHandle.addEventListener('mousedown', onMouseDown);

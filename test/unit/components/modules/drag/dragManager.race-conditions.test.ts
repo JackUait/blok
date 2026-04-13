@@ -886,5 +886,44 @@ describe('DragManager - Race Conditions and Timing', () => {
 
       document.dispatchEvent(createMouseEvent('mouseup', { clientX: 140, clientY: 100 }));
     });
+
+    it('aborts drag entirely when the handle sits inside a zombie holder whose id resolves to no block', () => {
+      // Zombie DOM: the handle's nearest [data-blok-id] ancestor still carries
+      // an id, but BlockManager.getBlockById returns undefined for it (the
+      // block was destroyed and its holder not yet reaped, or yjs deleted it
+      // mid-interaction). Falling back to the stale closure block here is
+      // exactly the "wrong block dropped" failure mode — the id is a STRONG
+      // signal the closure hint is also wrong. Abort the drag instead of
+      // guessing.
+      const { dragManager, blocks, wrapper, modules } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      blocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      const zombieHolder = document.createElement('div');
+      zombieHolder.setAttribute('data-blok-element', '');
+      zombieHolder.setAttribute('data-blok-id', 'ghost-block');
+      wrapper.appendChild(zombieHolder);
+
+      const sharedHandle = document.createElement('div');
+      zombieHolder.appendChild(sharedHandle);
+
+      dragManager.setupDragHandle(sharedHandle, blocks[0]);
+
+      sharedHandle.dispatchEvent(createMouseEvent('mousedown', { clientX: 100, clientY: 100 }));
+      document.dispatchEvent(createMouseEvent('mousemove', { clientX: 120, clientY: 100 }));
+      document.dispatchEvent(createMouseEvent('mousemove', { clientX: 140, clientY: 100 }));
+
+      // Lookup was attempted.
+      expect((modules.BlockManager.getBlockById as Mock)).toHaveBeenCalledWith('ghost-block');
+
+      // Drag MUST NOT have started against the stale closure block.
+      expect(dragManager.isDragging).toBe(false);
+      expect((blocks[0].addDestroyCallback as Mock)).not.toHaveBeenCalled();
+
+      // Subsequent mouseup is a no-op — no move recorded.
+      document.dispatchEvent(createMouseEvent('mouseup', { clientX: 140, clientY: 100 }));
+      expect((modules.BlockManager.move as Mock)).not.toHaveBeenCalled();
+    });
   });
 });

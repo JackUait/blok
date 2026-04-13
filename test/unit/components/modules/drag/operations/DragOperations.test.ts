@@ -553,6 +553,83 @@ describe('DragOperations', () => {
       expect(mockBlockManager.insert).not.toHaveBeenCalled();
       expect(result.duplicatedBlocks).toEqual([]);
     });
+
+    it('should abort alt+drag when targetBlock becomes stale during async save', async () => {
+      // Regression: Layer 9 only checks getBlockIndex BEFORE block.save() is awaited.
+      // Between the guard and the insert call, the blocks array can mutate (yjs remote
+      // update, undo, tool conversion), invalidating baseInsertIndex captured pre-save.
+      // Insert at a stale index silently diverges array from DOM — next move drops
+      // the wrong block.
+      const sourceBlock = createMockBlock('source', 'paragraph', { text: 'source' });
+      const targetBlock = createMockBlock('target', 'paragraph', { text: 'target' });
+      let targetAlive = true;
+
+      mockBlockManager.getBlockIndex = vi.fn((block) => {
+        if (block === sourceBlock) return 2;
+        if (block === targetBlock) return targetAlive ? 4 : -1;
+
+        return -1;
+      });
+
+      // Simulate mid-drag mutation: target is removed between guard and insert
+      (sourceBlock.save as ReturnType<typeof vi.fn>).mockImplementationOnce(async () => {
+        targetAlive = false;
+
+        return {
+          id: 'source',
+          tool: 'paragraph',
+          data: { text: 'source' },
+          time: Date.now(),
+          tunes: {},
+        };
+      });
+
+      const result = await operations.duplicateBlocks([sourceBlock], targetBlock, 'bottom');
+
+      expect(mockBlockManager.insert).not.toHaveBeenCalled();
+      expect(result.duplicatedBlocks).toEqual([]);
+    });
+
+    it('should recompute baseInsertIndex after save when target has moved', async () => {
+      // Even if target is still alive, its index can shift during save (e.g. blocks
+      // inserted/removed before it by a concurrent yjs update). Pre-save capture would
+      // insert at the wrong absolute position; post-save recomputation uses the live
+      // index.
+      const sourceBlock = createMockBlock('source', 'paragraph', { text: 'source' });
+      const targetBlock = createMockBlock('target', 'paragraph', { text: 'target' });
+      let targetIndex = 4;
+
+      mockBlockManager.getBlockIndex = vi.fn((block) => {
+        if (block === sourceBlock) return 2;
+        if (block === targetBlock) return targetIndex;
+
+        return -1;
+      });
+
+      mockBlockManager.insert = vi.fn((config) => {
+        return createMockBlock(`dup-${config.index}`, 'paragraph', { text: 'dup' });
+      });
+
+      (sourceBlock.save as ReturnType<typeof vi.fn>).mockImplementationOnce(async () => {
+        // Two blocks were inserted before target during save — target shifted 4 → 6
+        targetIndex = 6;
+
+        return {
+          id: 'source',
+          tool: 'paragraph',
+          data: { text: 'source' },
+          time: Date.now(),
+          tunes: {},
+        };
+      });
+
+      await operations.duplicateBlocks([sourceBlock], targetBlock, 'bottom');
+
+      // edge=bottom → insert at targetIndex + 1 = 7 (NOT the pre-save 5)
+      expect(mockBlockManager.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ index: 7 })
+      );
+    });
   });
 
   describe('moveBlocks - without yjsManager', () => {

@@ -132,10 +132,6 @@ export class DragOperations {
       this.blockManager.getBlockIndex(a) - this.blockManager.getBlockIndex(b)
     );
 
-    // Calculate target insertion point
-    const targetIndex = this.blockManager.getBlockIndex(targetBlock);
-    const baseInsertIndex = edge === 'top' ? targetIndex : targetIndex + 1;
-
     // Save all blocks concurrently and filter out failures
     const saveResults = await Promise.all(
       sortedBlocks.map(async (block) => {
@@ -151,6 +147,28 @@ export class DragOperations {
         };
       })
     );
+
+    // Post-save staleness guard (Layer 12).
+    //
+    // `block.save()` is async — during those awaits, the blocks array can mutate
+    // via a Yjs remote update, undo/redo, or a tool-conversion callback. The
+    // pre-save guard above (line 118) only proves the target was alive when we
+    // began; by the time Promise.all resolves, the target may be gone or at a
+    // different index.
+    //
+    // Using a pre-save `baseInsertIndex` against a mutated array would:
+    //   - insert at a stale absolute slot → divergence between flat array and DOM
+    //   - if target was destroyed: `getBlockIndex === -1` → `splice(-1, 0, block)`
+    //     inserts BEFORE the last element, same wrong-block-dropped mode as move.
+    //
+    // Always recompute from the live index after the save awaits resolve.
+    const liveTargetIndex = this.blockManager.getBlockIndex(targetBlock);
+
+    if (liveTargetIndex === -1) {
+      return { duplicatedBlocks: [], targetIndex: -1 };
+    }
+
+    const baseInsertIndex = edge === 'top' ? liveTargetIndex : liveTargetIndex + 1;
 
     const validResults = saveResults.filter(
       (result): result is NonNullable<typeof result> => result !== null

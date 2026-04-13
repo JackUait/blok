@@ -112,8 +112,33 @@ export class Saver extends Module {
       };
     }
 
+    /**
+     * Derive each parent's content[] from the live blocks array.
+     *
+     * `block.contentIds` is a mutable array kept in sync by hierarchy.setBlockParent,
+     * but it can drift out of sync with `block.parentId` — e.g. when hierarchical data
+     * is loaded with `parent` fields on children but no `content` on the parent,
+     * insertMany does not reconcile the two. Downstream consumers
+     * (notably collapseToLegacy's processRootCalloutItem) read `content[]` as the
+     * source of truth for nesting, and any child missing from that array gets ejected
+     * from its parent. Deriving content[] at save time from `parentId` makes the
+     * invariant `child.parentId ⇒ parent.content.includes(child)` always hold.
+     */
+    const childrenByParent = new Map<string, string[]>();
+    for (const block of blocks) {
+      if (block.parentId === null) {
+        continue;
+      }
+      const siblings = childrenByParent.get(block.parentId);
+      if (siblings === undefined) {
+        childrenByParent.set(block.parentId, [block.id]);
+      } else {
+        siblings.push(block.id);
+      }
+    }
+
     const chainData: Array<Promise<SaverValidatedData>> = blocks.map((block: Block) => {
-      return this.getSavedData(block);
+      return this.getSavedData(block, childrenByParent.get(block.id) ?? []);
     });
 
     this.lastSaveError = undefined;
@@ -147,10 +172,11 @@ export class Saver extends Module {
 
   /**
    * Saves and validates
-   * @param {Block} block - Blok's Tool
-   * @returns {ValidatedData} - Tool's validated data
+   * @param block - block to save
+   * @param derivedContentIds - content ids computed from live children's parentId
+   *        (source of truth, see doSave for rationale)
    */
-  private async getSavedData(block: Block): Promise<SaverValidatedData> {
+  private async getSavedData(block: Block, derivedContentIds: string[]): Promise<SaverValidatedData> {
     const blockData = await block.save();
     const toolName = block.name;
     const normalizedData = blockData?.data !== undefined
@@ -170,7 +196,7 @@ export class Saver extends Module {
       ...normalizedData,
       isValid,
       parentId: block.parentId,
-      contentIds: block.contentIds,
+      contentIds: derivedContentIds,
       lastEditedAt: block.lastEditedAt,
       lastEditedBy: block.lastEditedBy,
     };

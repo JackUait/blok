@@ -490,6 +490,30 @@ export class BlockManager extends Module {
    * @param index - index where to insert
    */
   public insertMany(blocks: Block[], index = 0): void {
+    // Reconcile contentIds from children's parentId before touching Yjs.
+    //
+    // Hierarchical input JSON may carry `parent` on children without a matching
+    // `content` on the parent (this is valid hierarchical data, but leaves the
+    // parent's contentIds empty after composeBlock). Downstream code reads
+    // `parent.contentIds` as the authoritative child list — drag/drop,
+    // blockSelection, nested-blocks mounting, and especially collapseToLegacy,
+    // which ejects any child missing from `content`. Reconciling here makes the
+    // invariant `child.parentId ⇒ parent.contentIds.includes(child.id)` hold
+    // from the moment blocks enter the editor.
+    const blockById = new Map<string, Block>();
+    for (const block of blocks) {
+      blockById.set(block.id, block);
+    }
+    for (const block of blocks) {
+      if (block.parentId === null) {
+        continue;
+      }
+      const parent = blockById.get(block.parentId);
+      if (parent !== undefined && !parent.contentIds.includes(block.id)) {
+        parent.contentIds.push(block.id);
+      }
+    }
+
     // Load blocks into Yjs BEFORE adding to the store.
     // blocksStore.insertMany() triggers rendered() on each block, which may
     // create nested blocks (e.g., table cell paragraphs) via api.blocks.insert().

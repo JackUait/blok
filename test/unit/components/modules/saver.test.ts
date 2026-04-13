@@ -53,6 +53,7 @@ const createBlockMock = (options: BlockMockOptions): BlockMock => {
   const validateMock = vi.fn((_data: BlockSaveResult['data']): Promise<boolean> => Promise.resolve(options.isValid ?? true));
 
   const block = {
+    id: options.id,
     save: saveMock,
     validate: validateMock,
     parentId: options.parentId ?? null,
@@ -540,6 +541,52 @@ describe('Saver module', () => {
 
     // Table content field should include new image block ID
     expect(tableOutputBlock?.content).toContain('img-norm-1');
+  });
+
+  it('derives callout content[] from children parentId when contentIds is stale', async () => {
+    // Regression: pasting content into a callout could leave parent.contentIds
+    // out of sync with child.parentId, causing collapseToLegacy to eject the
+    // child from the callout body on the next round-trip. Saver must be the
+    // single source of truth for content[] and derive it from the live block
+    // list so the invariant "child.parentId ⇒ parent.content.includes(child)"
+    // always holds in the output JSON.
+    vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+
+    const callout = createBlockMock({
+      id: 'cal1',
+      tool: 'callout',
+      data: { emoji: '💡', textColor: null, backgroundColor: null },
+      // Stale contentIds — missing the child that was added via paste
+      contentIds: [],
+    });
+
+    const header = createBlockMock({
+      id: 'hdr1',
+      tool: 'header',
+      data: { text: 'Исключения', level: 4 },
+      parentId: 'cal1',
+    });
+
+    const pastedParagraph = createBlockMock({
+      id: 'p-pasted',
+      tool: 'paragraph',
+      data: { text: '1. Item' },
+      parentId: 'cal1',
+    });
+
+    const { saver } = createSaver({
+      blocks: [callout.block, header.block, pastedParagraph.block],
+      toolSanitizeConfigs: {
+        callout: {},
+        header: {},
+        paragraph: {},
+      },
+    });
+
+    const result = await saver.save();
+    const calloutOut = result?.blocks.find(b => b.id === 'cal1');
+
+    expect(calloutOut?.content).toEqual(['hdr1', 'p-pasted']);
   });
 });
 

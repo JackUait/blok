@@ -444,14 +444,15 @@ export class Toolbar extends Module<ToolbarNodes> {
      * - Table cell focus: settings toggler hidden (drag/settings don't apply to cells)
      * - Callout first child: both plus button and settings toggler hidden
      *   to prevent overlap with the callout's emoji icon
+     *
+     * The callout block itself still shows BOTH buttons — the actions container
+     * sits outside the block (positioned via right:100% on the left gutter) and
+     * does not overlap the emoji which is inside the block at pl-8.
      */
     const focusIsInsideCell = this.isFocusInsideTableCell();
     const isCalloutFirstChild = this.isFirstChildOfCallout(targetBlock);
-    const isCalloutBlock = targetBlock.name === 'callout';
 
-    // Hide plus button for callout blocks and their first children to avoid
-    // overlap with the callout emoji icon in the left padding area.
-    plusButton.style.display = (isCalloutFirstChild || isCalloutBlock) ? 'none' : '';
+    plusButton.style.display = isCalloutFirstChild ? 'none' : '';
 
     if (settingsToggler) {
       settingsToggler.style.display = (focusIsInsideCell || isCalloutFirstChild) ? 'none' : '';
@@ -466,7 +467,8 @@ export class Toolbar extends Module<ToolbarNodes> {
      * Skip when the target is the callout itself or its first child — their toolbar
      * buttons render outside the callout's visual background area.
      */
-    const calloutBg = isCalloutFirstChild || targetBlock.name === 'callout'
+    const isCalloutBlock = targetBlock.name === 'callout';
+    const calloutBg = isCalloutFirstChild || isCalloutBlock
       ? null
       : this.getCalloutBackgroundColor(targetBlock);
 
@@ -902,9 +904,8 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     const focusIsInsideCell = this.isFocusInsideTableCell();
     const isCalloutFirstChild = this.hoveredBlock !== null && this.isFirstChildOfCallout(this.hoveredBlock);
-    const isCalloutBlock = this.hoveredBlock?.name === 'callout';
 
-    plusButton.style.display = (isCalloutFirstChild || isCalloutBlock) ? 'none' : '';
+    plusButton.style.display = isCalloutFirstChild ? 'none' : '';
 
     if (settingsToggler) {
       settingsToggler.style.display = (focusIsInsideCell || isCalloutFirstChild) ? 'none' : '';
@@ -912,33 +913,16 @@ export class Toolbar extends Module<ToolbarNodes> {
   }
 
   /**
-   * Re-enables pointer-events on the settings toggler (and callout drag zone) after
-   * the actions container has been set to pointer-events: none for left-edge blocks.
+   * Re-enables pointer-events on the settings toggler after the actions
+   * container has been set to pointer-events: none for left-edge blocks.
    *
-   * For callout blocks: also wires the dedicated drag zone as the drag handle and
-   * re-enables the settings toggler so the settings menu remains accessible.
-   * The emoji button (at x=32px) no longer overlaps the actions zone (x=[0,29px])
-   * because the callout uses pl-8 (32px) left padding.
-   *
-   * For all other left-edge blocks (toggle, header with arrow): simply re-enables the
-   * settings toggler so it continues to function as the drag handle.
+   * Left-edge blocks (callout, toggle, header-with-arrow) disable
+   * pointer-events on the actions container so clicks pass through to the
+   * block's own left-edge interactive element (emoji / toggle arrow). The
+   * settings toggler must remain clickable on top so it can still function
+   * as the drag handle and open the block tunes menu.
    */
-  private restoreSettingsTogglerForLeftEdgeBlock(targetBlock: Block): void {
-    if (targetBlock.name === 'callout') {
-      if (this.nodes.settingsToggler) {
-        this.nodes.settingsToggler.style.pointerEvents = 'auto';
-      }
-
-      const calloutDragZone = targetBlock.holder.querySelector<HTMLElement>('[data-callout-drag-zone]');
-
-      if (calloutDragZone) {
-        calloutDragZone.style.pointerEvents = 'auto';
-        targetBlock.setupDraggable(calloutDragZone, this.Blok.DragManager);
-      }
-
-      return;
-    }
-
+  private restoreSettingsTogglerForLeftEdgeBlock(_targetBlock: Block): void {
     if (this.nodes.settingsToggler) {
       this.nodes.settingsToggler.style.pointerEvents = 'auto';
     }

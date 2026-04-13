@@ -33,8 +33,9 @@ function createToolbar(blokOverrides: Partial<BlokModules> = {}): {
   const wrapper = document.createElement('div');
   const plusButton = document.createElement('button');
   const settingsToggler = document.createElement('button');
+  const actions = document.createElement('div');
 
-  toolbar.nodes = { wrapper, plusButton, settingsToggler } as unknown as typeof toolbar.nodes;
+  toolbar.nodes = { wrapper, plusButton, settingsToggler, actions } as unknown as typeof toolbar.nodes;
 
   const priv = toolbar as unknown as Record<string, unknown>;
 
@@ -333,6 +334,128 @@ describe('Toolbar — callout first-child plus button visibility', () => {
     expect(settingsToggler.style.display).toBe('');
 
     document.body.removeChild(childHolder);
+  });
+
+  it('shows plus button and settings toggler when toolbar targets the callout block itself', () => {
+    /**
+     * Regression: Previously the toolbar hid the plus button for callout
+     * blocks and rewired the drag handle to an inner `[data-callout-drag-zone]`
+     * span — leaving the visible grip dots non-functional and users unable to
+     * add a block above/below a callout. The callout block should behave like
+     * every other block: plus + settings toggler visible, settings toggler
+     * acts as the drag handle.
+     */
+    const calloutHolder = document.createElement('div');
+
+    document.body.appendChild(calloutHolder);
+
+    const calloutBlock = createBlock({
+      id: 'callout-1',
+      name: 'callout',
+      contentIds: ['child-1'],
+      holder: calloutHolder,
+    });
+
+    const { toolbar, plusButton, settingsToggler } = createToolbar({
+      BlockManager: {
+        currentBlock: null,
+        blocks: [calloutBlock],
+        getBlockByChildNode: vi.fn().mockReturnValue(null),
+        getBlockById: vi.fn().mockReturnValue(undefined),
+      } as unknown as BlokModules['BlockManager'],
+    });
+
+    toolbar.moveAndOpen(calloutBlock);
+
+    expect(plusButton.style.display).toBe('');
+    expect(settingsToggler.style.display).toBe('');
+
+    document.body.removeChild(calloutHolder);
+  });
+
+  it('wires settings toggler as drag handle when toolbar targets the callout block itself', () => {
+    /**
+     * Regression: The drag handle for a callout block must be the standard
+     * settings toggler (the visible grip-dots icon to the left of the block),
+     * just like every other block. Previous implementation replaced the drag
+     * handle with an invisible inner `[data-callout-drag-zone]` span, making
+     * the visible grip dots non-functional. This test reproduces that wiring
+     * by including the drag zone in the holder so the buggy code path fires.
+     */
+    const calloutHolder = document.createElement('div');
+    const innerDragZone = document.createElement('span');
+
+    innerDragZone.setAttribute('data-callout-drag-zone', '');
+    calloutHolder.appendChild(innerDragZone);
+
+    document.body.appendChild(calloutHolder);
+
+    const calloutBlock = createBlock({
+      id: 'callout-1',
+      name: 'callout',
+      contentIds: ['child-1'],
+      holder: calloutHolder,
+    });
+
+    const { toolbar, settingsToggler } = createToolbar({
+      BlockManager: {
+        currentBlock: null,
+        blocks: [calloutBlock],
+        getBlockByChildNode: vi.fn().mockReturnValue(null),
+        getBlockById: vi.fn().mockReturnValue(undefined),
+      } as unknown as BlokModules['BlockManager'],
+    });
+
+    toolbar.moveAndOpen(calloutBlock);
+
+    const setupDraggableMock = calloutBlock.setupDraggable as unknown as ReturnType<typeof vi.fn>;
+    const calls = setupDraggableMock.mock.calls;
+
+    expect(calls.length).toBeGreaterThan(0);
+
+    // The LAST call must use settingsToggler — never an inner element.
+    const lastCall = calls[calls.length - 1];
+
+    expect(lastCall[0]).toBe(settingsToggler);
+
+    document.body.removeChild(calloutHolder);
+  });
+
+  it('focusin handler preserves plus button visibility when toolbar targets the callout block itself', () => {
+    /**
+     * focusin handler runs outside moveAndOpen and must not hide the plus
+     * button for callout blocks.
+     */
+    const calloutHolder = document.createElement('div');
+
+    document.body.appendChild(calloutHolder);
+
+    const calloutBlock = createBlock({
+      id: 'callout-1',
+      name: 'callout',
+      contentIds: ['child-1'],
+      holder: calloutHolder,
+    });
+
+    const { toolbar, plusButton, settingsToggler } = createToolbar({
+      BlockManager: {
+        currentBlock: null,
+        blocks: [calloutBlock],
+        getBlockByChildNode: vi.fn().mockReturnValue(null),
+        getBlockById: vi.fn().mockReturnValue(undefined),
+      } as unknown as BlokModules['BlockManager'],
+    });
+
+    toolbar.moveAndOpen(calloutBlock);
+
+    const priv = toolbar as unknown as Record<string, () => void>;
+
+    priv.updateToolbarButtonsForTableCellFocus();
+
+    expect(plusButton.style.display).toBe('');
+    expect(settingsToggler.style.display).toBe('');
+
+    document.body.removeChild(calloutHolder);
   });
 
   it('focusin handler preserves hidden state while toolbar targets callout first child', () => {

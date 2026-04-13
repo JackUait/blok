@@ -7,25 +7,31 @@ describe('buildCalloutDOM', () => {
   beforeEach(() => { vi.clearAllMocks(); });
   afterEach(() => { vi.restoreAllMocks(); });
 
-  it('returns wrapper, emojiButton, childContainer, and dragZone', async () => {
+  it('returns wrapper, emojiButton, and childContainer', async () => {
     const { buildCalloutDOM } = await import('../../../../src/tools/callout/dom-builder');
     const result = buildCalloutDOM({ emoji: '💡', readOnly: false, addEmojiLabel: 'Add emoji' });
 
     expect(result.wrapper).toBeInstanceOf(HTMLElement);
     expect(result.emojiButton).toBeInstanceOf(HTMLButtonElement);
     expect(result.childContainer).toBeInstanceOf(HTMLElement);
-    expect(result.dragZone).toBeInstanceOf(HTMLElement);
     expect(result).not.toHaveProperty('textElement');
+    expect(result).not.toHaveProperty('dragZone');
   });
 
-  it('wrapper is a flex row with dragZone, emoji, and childContainer as direct children', async () => {
+  it('wrapper is a flex row with emoji and childContainer as direct children', async () => {
     const { buildCalloutDOM } = await import('../../../../src/tools/callout/dom-builder');
-    const { wrapper, emojiButton, childContainer, dragZone } = buildCalloutDOM({ emoji: '💡', readOnly: false, addEmojiLabel: 'Add emoji' });
+    const { wrapper, emojiButton, childContainer } = buildCalloutDOM({ emoji: '💡', readOnly: false, addEmojiLabel: 'Add emoji' });
 
-    expect(wrapper.children).toHaveLength(3);
-    expect(wrapper.children[0]).toBe(dragZone);
-    expect(wrapper.children[1]).toBe(emojiButton);
-    expect(wrapper.children[2]).toBe(childContainer);
+    expect(wrapper.children).toHaveLength(2);
+    expect(wrapper.children[0]).toBe(emojiButton);
+    expect(wrapper.children[1]).toBe(childContainer);
+  });
+
+  it('wrapper does not include a legacy [data-callout-drag-zone] element', async () => {
+    const { buildCalloutDOM } = await import('../../../../src/tools/callout/dom-builder');
+    const { wrapper } = buildCalloutDOM({ emoji: '💡', readOnly: false, addEmojiLabel: 'Add emoji' });
+
+    expect(wrapper.querySelector('[data-callout-drag-zone]')).toBeNull();
   });
 
   it('child container has data-blok-toggle-children attribute', async () => {

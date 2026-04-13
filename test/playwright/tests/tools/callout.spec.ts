@@ -317,3 +317,84 @@ test('search input border is not forced transparent inside colored callout', asy
 
   expect(borderVar).not.toBe('transparent');
 });
+
+test('hovering a callout block shows the plus button and settings toggler', async ({ page }) => {
+  /**
+   * Regression: The toolbar used to hide the plus button for callout blocks,
+   * preventing users from inserting a new block adjacent to a callout. The
+   * callout block must behave like every other block: plus button + settings
+   * toggler both visible on hover.
+   */
+  await createBlok(page, {
+    blocks: [
+      { id: 'callout-1', type: 'callout', data: { emoji: '💡' }, content: ['para-1'] },
+      { id: 'para-1', type: 'paragraph', data: { text: 'inside callout' }, parent: 'callout-1' },
+    ],
+  });
+
+  // Hover the callout block itself (emoji area) to aim the toolbar at the callout.
+  const emojiBtn = page.getByTestId('callout-emoji-btn');
+
+  await emojiBtn.hover();
+
+  await expect(page.getByTestId('plus-button')).toBeVisible();
+  await expect(page.getByTestId('settings-toggler')).toBeVisible();
+});
+
+test('dragging callout via settings toggler reorders the callout block', async ({ page }) => {
+  /**
+   * Regression: The callout drag handle was wired to an invisible inner span
+   * ([data-callout-drag-zone]) instead of the standard settings toggler.
+   * Users saw the grip-dots icon but dragging it did nothing. The settings
+   * toggler must function as the drag handle for callouts, like every other
+   * block.
+   */
+  await createBlok(page, {
+    blocks: [
+      { id: 'para-before', type: 'paragraph', data: { text: 'before callout' } },
+      { id: 'callout-1', type: 'callout', data: { emoji: '💡' }, content: ['inner-1'] },
+      { id: 'inner-1', type: 'paragraph', data: { text: 'inside callout' }, parent: 'callout-1' },
+      { id: 'para-after', type: 'paragraph', data: { text: 'after callout' } },
+    ],
+  });
+
+  // Aim the toolbar at the callout block itself by hovering its emoji button.
+  const emojiBtn = page.getByTestId('callout-emoji-btn');
+
+  await emojiBtn.hover();
+
+  const settingsToggler = page.getByTestId('settings-toggler');
+
+  await expect(settingsToggler).toBeVisible();
+
+  // Drag the callout from above the target paragraph to below it.
+  const targetBlock = page.locator('[data-blok-id="para-after"]');
+  const togglerBox = (await settingsToggler.boundingBox()) ?? { x: 0, y: 0, width: 0, height: 0 };
+  const targetBox = (await targetBlock.boundingBox()) ?? { x: 0, y: 0, width: 0, height: 0 };
+
+  expect(togglerBox.width).toBeGreaterThan(0);
+  expect(targetBox.width).toBeGreaterThan(0);
+
+  await page.mouse.move(togglerBox.x + togglerBox.width / 2, togglerBox.y + togglerBox.height / 2);
+  await page.mouse.down();
+  // drop BELOW the target paragraph → callout should land after it
+  await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height - 1, { steps: 15 });
+  await page.mouse.up();
+
+  // After drop, the order in the flat block list should be:
+  //   para-before, para-after, callout-1 (and its child inner-1)
+  const order = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('[data-blok-id]'))
+      .map((el) => el.getAttribute('data-blok-id'))
+      .filter((id): id is string => id !== null && !id.startsWith('inner'))
+  );
+
+  const calloutIdx = order.indexOf('callout-1');
+  const afterIdx = order.indexOf('para-after');
+  const beforeIdx = order.indexOf('para-before');
+
+  expect(beforeIdx).toBeGreaterThanOrEqual(0);
+  expect(afterIdx).toBeGreaterThanOrEqual(0);
+  expect(calloutIdx).toBeGreaterThan(afterIdx);
+  expect(afterIdx).toBeGreaterThan(beforeIdx);
+});

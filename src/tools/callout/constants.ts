@@ -29,4 +29,3 @@ export const WRAPPER_STYLES = 'rounded-xl pl-8 pr-4 py-[5px] my-1 flex items-sta
 // h-[38px] = py-[7px]×2 + 1.5rem×1 = 14+24; explicit height prevents platform-specific emoji font metrics from inflating the button
 export const EMOJI_BUTTON_STYLES = 'text-[1.5rem] leading-[1] cursor-pointer bg-transparent border-0 px-0 py-[7px] h-[38px] flex-shrink-0 select-none';
 export const CHILDREN_STYLES = 'flex-1 min-w-0';
-export const DRAG_ZONE_STYLES = 'absolute left-0 top-0 h-full cursor-grab select-none';

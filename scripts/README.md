@@ -2,26 +2,6 @@
 
 This directory contains scripts for building, verifying, and releasing the Blok package.
 
-## Bundle Size Tracking
-
-Bundle size is tracked using [size-limit](https://github.com/ai/size-limit).
-
-**Usage:**
-```bash
-# Check current bundle sizes
-yarn size
-
-# Analyze what's contributing to size
-yarn size:why
-```
-
-Configuration is in `package.json` under the `size-limit` key. Three tiers are tracked:
-- **Minimum**: Core editor only (no bundled tools, no locales)
-- **Normal**: Standard build (bundled tools + English locale)
-- **Maximum**: All tools + all 68 locales bundled
-
-On PRs, the size-limit GitHub Action compares bundle sizes against the base branch and posts a comment with the diff.
-
 ## Performance Tracking
 
 ### [`analyze-performance.mjs`](./analyze-performance.mjs)
@@ -124,11 +104,6 @@ These scripts are integrated into GitHub Actions workflows:
 
 - **Release workflow** ([`.github/workflows/release.yml`](../.github/workflows/release.yml))
   - Publishes to npm and creates GitHub release on tag push
-
-- **Bundle size check** ([`.github/workflows/size-limit.yml`](../.github/workflows/size-limit.yml))
-  - Runs on PRs
-  - Compares with base branch
-  - Posts comparison as PR comment
 
 ## Development
 

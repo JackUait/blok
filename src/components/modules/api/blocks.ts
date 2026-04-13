@@ -442,10 +442,12 @@ export class BlocksAPI extends Module {
 
     const newBlock = this.Blok.BlockManager.insertInsideParent(parentId, insertIndex);
 
-    // Boundary after the atomic op so any deferred DOM callbacks stay in the same undo group.
-    queueMicrotask(() => {
-      this.Blok.YjsManager.stopCapturing();
-    });
+    // NOTE: Do NOT call stopCapturing in a trailing microtask. The operations layer
+    // uses extendThroughRAF on its atomic wrapper to keep isSyncingFromYjs true
+    // through the next RAF, suppressing any stray mutation-observer-driven Yjs
+    // writes from deferred DOM callbacks. A trailing stopCapturing would force
+    // those late writes into a SEPARATE undo group, splitting the insertion
+    // across two CMD+Z pops.
 
     return new BlockAPI(newBlock);
   };

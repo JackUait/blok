@@ -957,7 +957,7 @@ export class BlockOperations {
       this.hierarchy.setBlockParent(newBlock, parentId);
 
       return newBlock;
-    });
+    }, { extendThroughRAF: true });
   }
 
   /**

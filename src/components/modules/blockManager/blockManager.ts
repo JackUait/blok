@@ -1099,11 +1099,6 @@ export class BlockManager extends Module {
     // Also skip if a pointer drag is active — the browser can mutate contenteditable DOM across
     // cell boundaries during a drag, and we must not write that corrupted state to Yjs.
     if (mutationType === BlockChangedMutationType && !this.yjsSync.isSyncingFromYjs && !this._isPointerDragActive) {
-      // eslint-disable-next-line no-param-reassign
-      block.lastEditedAt = Date.now();
-      // eslint-disable-next-line no-param-reassign
-      block.lastEditedBy = this.config.user?.id ?? null;
-
       void this.syncBlockDataToYjs(block);
     }
 
@@ -1146,7 +1141,13 @@ export class BlockManager extends Module {
   }
 
   /**
-   * Sync block data to Yjs after DOM mutation
+   * Sync block data to Yjs after DOM mutation.
+   *
+   * Only writes metadata (lastEditedAt / lastEditedBy) if at least one data field
+   * actually changed. This preserves the invariant "no data change → no Yjs write →
+   * no undo entry." Without this guard, a spurious metadata-only transaction lands
+   * on the Yjs undo stack after every user operation, causing a single CMD+Z to pop
+   * only the metadata entry instead of the actual data change.
    */
   private async syncBlockDataToYjs(block: Block): Promise<void> {
     const savedData = await block.save();
@@ -1155,12 +1156,33 @@ export class BlockManager extends Module {
       return;
     }
 
-    for (const [key, value] of Object.entries(savedData.data)) {
-      this.Blok.YjsManager.updateBlockData(block.id, key, value);
-    }
+    // Wrap data + metadata writes into a single Yjs transaction. Without this,
+    // each updateBlockData / updateBlockMetadata call opens its own transaction
+    // and fires a stack-item-added event, which runs caret capture that may
+    // trigger stopCapturing() as a side effect — splitting a single logical
+    // save across multiple undo groups (so a single CMD+Z only reverts the
+    // metadata bump instead of the data change).
+    const dataChangedRef = { value: false };
 
-    if (block.lastEditedAt !== undefined) {
+    this.Blok.YjsManager.transact(() => {
+      for (const [key, value] of Object.entries(savedData.data)) {
+        if (this.Blok.YjsManager.updateBlockData(block.id, key, value)) {
+          dataChangedRef.value = true;
+        }
+      }
+
+      if (!dataChangedRef.value) {
+        return;
+      }
+
+      // Bump edit metadata only when data actually changed, so we don't add
+      // a spurious metadata-only entry to the Yjs undo stack.
+      // eslint-disable-next-line no-param-reassign
+      block.lastEditedAt = Date.now();
+      // eslint-disable-next-line no-param-reassign
+      block.lastEditedBy = this.config.user?.id ?? null;
+
       this.Blok.YjsManager.updateBlockMetadata(block.id, block.lastEditedAt, block.lastEditedBy);
-    }
+    });
   }
 }

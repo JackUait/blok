@@ -150,12 +150,14 @@ export class DocumentStore {
    * @param id - Block id
    * @param key - Data property key
    * @param value - New value
+   * @returns true if a Yjs write actually occurred (value changed), false if the
+   *          equality guard short-circuited the write.
    */
-  public updateBlockData(id: string, key: string, value: unknown): void {
+  public updateBlockData(id: string, key: string, value: unknown): boolean {
     const yblock = this.getBlockById(id);
 
     if (yblock === undefined) {
-      return;
+      return false;
     }
 
     const ydata = yblock.get('data') as Y.Map<unknown>;
@@ -166,12 +168,14 @@ export class DocumentStore {
     // (e.g., marker updates in list items during undo/redo, or table content
     // arrays that are reference-different but structurally identical)
     if (equals(currentValue, value)) {
-      return;
+      return false;
     }
 
     this.transact(() => {
       ydata.set(key, value);
     }, 'local');
+
+    return true;
   }
 
   /**
@@ -199,11 +203,21 @@ export class DocumentStore {
    * @param lastEditedAt - Timestamp in milliseconds
    * @param lastEditedBy - User ID, or null
    */
-  public updateBlockMetadata(id: string, lastEditedAt: number, lastEditedBy: string | null): void {
+  public updateBlockMetadata(id: string, lastEditedAt: number, lastEditedBy: string | null): boolean {
     const yblock = this.getBlockById(id);
 
     if (yblock === undefined) {
-      return;
+      return false;
+    }
+
+    // Defensive equality guard — if both fields already match, skip the write to avoid
+    // adding an empty/no-op entry to the Yjs undo stack.
+    const currentEditedAt = yblock.get('lastEditedAt');
+    const currentEditedBy = yblock.get('lastEditedBy');
+    const editedByMatches = lastEditedBy === null || currentEditedBy === lastEditedBy;
+
+    if (currentEditedAt === lastEditedAt && editedByMatches) {
+      return false;
     }
 
     this.transact(() => {
@@ -213,6 +227,8 @@ export class DocumentStore {
         yblock.set('lastEditedBy', lastEditedBy);
       }
     }, 'local');
+
+    return true;
   }
 
   /**

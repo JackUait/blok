@@ -223,7 +223,8 @@ const createBlockManager = (
       addBlock: vi.fn(),
       removeBlock: vi.fn(),
       moveBlock: vi.fn(),
-      updateBlockData: vi.fn(),
+      updateBlockData: vi.fn(() => true),
+      updateBlockMetadata: vi.fn(() => true),
       updateBlockTune: vi.fn(),
       stopCapturing: vi.fn(),
       transact: vi.fn((fn: () => void) => fn()),
@@ -1016,8 +1017,13 @@ describe('BlockManager', () => {
   });
 
   describe('edit metadata on mutation', () => {
-    it('should update block lastEditedAt and lastEditedBy on content change', () => {
+    it('should update block lastEditedAt and lastEditedBy on content change', async () => {
       const block = createBlockStub({ id: 'block-meta' });
+
+      // Simulate a saved payload with one field so syncBlockDataToYjs actually
+      // calls updateBlockData — the new contract only bumps metadata when at
+      // least one data field actually changed.
+      (block.save as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { text: 'hello' } });
 
       const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
       const config = {
@@ -1065,7 +1071,10 @@ describe('BlockManager', () => {
           addBlock: vi.fn(),
           removeBlock: vi.fn(),
           moveBlock: vi.fn(),
-          updateBlockData: vi.fn(),
+          // Return true to indicate the data actually changed — this is what
+          // syncBlockDataToYjs uses as the signal to bump edit metadata.
+          updateBlockData: vi.fn(() => true),
+          updateBlockMetadata: vi.fn(() => true),
           updateBlockTune: vi.fn(),
           stopCapturing: vi.fn(),
           transact: vi.fn((fn: () => void) => fn()),
@@ -1094,14 +1103,19 @@ describe('BlockManager', () => {
         { index: 0 }
       );
 
+      // syncBlockDataToYjs is async — flush pending microtasks before asserting.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
       expect(block.lastEditedAt).toBeTypeOf('number');
       expect((block.lastEditedAt as number)).toBeGreaterThanOrEqual(now);
       expect((block.lastEditedAt as number)).toBeLessThanOrEqual(Date.now());
       expect(block.lastEditedBy).toBe('test-user-1');
     });
 
-    it('should set lastEditedBy to null when no user is configured', () => {
+    it('should set lastEditedBy to null when no user is configured', async () => {
       const block = createBlockStub({ id: 'block-no-user' });
+
+      (block.save as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { text: 'hello' } });
 
       const { blockManager } = createBlockManager();
 
@@ -1111,8 +1125,101 @@ describe('BlockManager', () => {
         { index: 0 }
       );
 
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
       expect(block.lastEditedAt).toBeTypeOf('number');
       expect(block.lastEditedBy).toBeNull();
+    });
+
+    it('should NOT bump lastEditedAt or call updateBlockMetadata when no data field changed', async () => {
+      const block = createBlockStub({ id: 'block-noop' });
+
+      (block.save as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { text: 'unchanged' } });
+
+      const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
+      const config = {
+        defaultBlock: 'paragraph',
+        sanitizer: {},
+        user: { id: 'test-user-1' },
+      } as BlokConfig;
+
+      const blockManager = new BlockManager({
+        config,
+        eventsDispatcher,
+      });
+
+      const updateBlockDataMock = vi.fn(() => false);
+      const updateBlockMetadataMock = vi.fn(() => false);
+
+      blockManager.state = {
+        BlockEvents: {
+          handleCommandC: vi.fn(),
+          handleCommandX: vi.fn(),
+          keydown: vi.fn(),
+          keyup: vi.fn(),
+        } as unknown as BlokModules['BlockEvents'],
+        ReadOnly: {
+          isEnabled: false,
+        } as unknown as BlokModules['ReadOnly'],
+        UI: {
+          nodes: {
+            holder: document.createElement('div'),
+            redactor: document.createElement('div'),
+            wrapper: document.createElement('div'),
+          },
+          CSS: {
+            blokWrapper: '',
+            blokWrapperNarrow: '',
+            blokZone: '',
+            blokZoneHidden: '',
+            blokEmpty: '',
+            blokRtlFix: '',
+            blokDragging: '',
+          },
+          checkEmptiness: vi.fn(),
+        } as unknown as BlokModules['UI'],
+        Tools: {
+          blockTools: createMockToolsCollection(['paragraph']),
+        } as unknown as BlokModules['Tools'],
+        YjsManager: {
+          addBlock: vi.fn(),
+          removeBlock: vi.fn(),
+          moveBlock: vi.fn(),
+          updateBlockData: updateBlockDataMock,
+          updateBlockMetadata: updateBlockMetadataMock,
+          updateBlockTune: vi.fn(),
+          stopCapturing: vi.fn(),
+          transact: vi.fn((fn: () => void) => fn()),
+          toJSON: vi.fn(() => []),
+          getBlockById: vi.fn(() => undefined),
+          onBlocksChanged: vi.fn(() => vi.fn()),
+          fromJSON: vi.fn(),
+        } as unknown as BlokModules['YjsManager'],
+        Caret: {
+          extractFragmentFromCaretPosition: vi.fn(),
+          setToBlock: vi.fn(),
+          positions: { START: 'start', END: 'end' },
+        } as unknown as BlokModules['Caret'],
+        I18n: {
+          t: vi.fn((key: string) => key),
+        } as unknown as BlokModules['I18n'],
+      } as BlokModules;
+
+      blockManager.prepare();
+
+      const lastEditedAtBefore = block.lastEditedAt;
+
+      (blockManager as unknown as BlockManagerInternalAccess).blockDidMutated(
+        BlockChangedMutationType,
+        block,
+        { index: 0 }
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(updateBlockDataMock).toHaveBeenCalled();
+      expect(updateBlockMetadataMock).not.toHaveBeenCalled();
+      expect(block.lastEditedAt).toBe(lastEditedAtBefore);
     });
   });
 });

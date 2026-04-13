@@ -99,7 +99,7 @@ test.describe('Database board — card hover actions', () => {
   });
 
   test('pencil click replaces title with input pre-filled with current title', async ({ page }) => {
-    const card = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-card]`).filter({ hasText: 'My Card' });
+    const card = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-card][data-row-id="row-1"]`);
 
     await card.hover();
     await card.locator('[data-blok-database-edit-card]').click();
@@ -111,7 +111,7 @@ test.describe('Database board — card hover actions', () => {
   });
 
   test('Enter saves new title to the card', async ({ page }) => {
-    const card = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-card]`).filter({ hasText: 'My Card' });
+    const card = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-card][data-row-id="row-1"]`);
 
     await card.hover();
     await card.locator('[data-blok-database-edit-card]').click();
@@ -125,7 +125,7 @@ test.describe('Database board — card hover actions', () => {
   });
 
   test('Escape restores original title without saving', async ({ page }) => {
-    const card = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-card]`).filter({ hasText: 'My Card' });
+    const card = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-card][data-row-id="row-1"]`);
 
     await card.hover();
     await card.locator('[data-blok-database-edit-card]').click();

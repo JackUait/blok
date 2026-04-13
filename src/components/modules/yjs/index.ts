@@ -148,10 +148,10 @@ export class YjsManager extends Module {
    * @param key - Data property key
    * @param value - New value
    */
-  public updateBlockData(id: string, key: string, value: unknown): void {
+  public updateBlockData(id: string, key: string, value: unknown): boolean {
     this.undoHistory.markCaretBeforeChange();
 
-    this.documentStore.updateBlockData(id, key, value);
+    return this.documentStore.updateBlockData(id, key, value);
   }
 
   /**
@@ -170,8 +170,8 @@ export class YjsManager extends Module {
    * @param lastEditedAt - Timestamp in milliseconds
    * @param lastEditedBy - User ID, or null
    */
-  public updateBlockMetadata(id: string, lastEditedAt: number, lastEditedBy: string | null): void {
-    this.documentStore.updateBlockMetadata(id, lastEditedAt, lastEditedBy);
+  public updateBlockMetadata(id: string, lastEditedAt: number, lastEditedBy: string | null): boolean {
+    return this.documentStore.updateBlockMetadata(id, lastEditedAt, lastEditedBy);
   }
 
   /**

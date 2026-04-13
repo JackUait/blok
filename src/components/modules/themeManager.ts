@@ -42,7 +42,7 @@ export class ThemeManager extends Module {
   public prepare(): void {
     state.activeInstances++;
     this.mode = this.config.theme ?? 'auto';
-    this.applyAttribute();
+    this.applyAttribute(false);
     this.resolved = this.deriveResolved();
 
     if (this.mode === 'auto') {
@@ -75,7 +75,7 @@ export class ThemeManager extends Module {
     }
 
     this.mode = mode;
-    this.applyAttribute();
+    this.applyAttribute(true);
     this.resolved = this.deriveResolved();
 
     if (this.mode === 'auto') {
@@ -102,7 +102,14 @@ export class ThemeManager extends Module {
 
   // ─── Private ───────────────────────────────────────────────────────────────
 
-  private applyAttribute(): void {
+  /**
+   * @param explicit - true when called from setMode() (consumer API);
+   *                   false when called from prepare() (initial construction).
+   *                   During prepare(), skip setting the attribute if another
+   *                   instance already controls it — prevents nested editors
+   *                   (e.g. inside Columns) from overriding the parent theme.
+   */
+  private applyAttribute(explicit: boolean): void {
     if (typeof document === 'undefined') {
       return;
     }
@@ -112,6 +119,9 @@ export class ThemeManager extends Module {
         this.removeAttribute();
       }
     } else {
+      if (!explicit && state.activeInstances > 1 && document.documentElement.hasAttribute(ATTR)) {
+        return;
+      }
       document.documentElement.setAttribute(ATTR, this.mode);
     }
   }

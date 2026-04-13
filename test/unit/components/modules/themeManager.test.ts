@@ -135,6 +135,20 @@ describe('ThemeManager', () => {
       first.destroy();
       second.destroy();
     });
+
+    it('should NOT override attribute when a second instance is prepared with a different explicit theme', () => {
+      const { manager: first } = createThemeManager({ theme: 'dark' });
+      first.prepare();
+      expect(document.documentElement.getAttribute('data-blok-theme')).toBe('dark');
+
+      const { manager: second } = createThemeManager({ theme: 'light' });
+      second.prepare();
+      // Second instance should NOT override the first instance's theme
+      expect(document.documentElement.getAttribute('data-blok-theme')).toBe('dark');
+
+      first.destroy();
+      second.destroy();
+    });
   });
 
   describe('getMode()', () => {
@@ -218,7 +232,8 @@ describe('ThemeManager', () => {
       second.prepare();
 
       second.setMode('auto');
-      expect(document.documentElement.getAttribute('data-blok-theme')).toBe('light');
+      // First instance's 'dark' was preserved (second.prepare() didn't override it)
+      expect(document.documentElement.getAttribute('data-blok-theme')).toBe('dark');
 
       first.destroy();
       second.destroy();

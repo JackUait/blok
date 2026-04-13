@@ -7,6 +7,7 @@ import { Module } from '../../__module';
 import { Block } from '../../block';
 import { BlockAPI } from '../../block/api';
 import { capitalize } from '../../utils';
+import { normalizeTableChildParents } from '../../utils/data-model-transform';
 
 import { logLabeled } from './../../utils';
 
@@ -401,11 +402,23 @@ export class BlocksAPI extends Module {
   ): BlockAPIInterface[] => {
     this.validateIndex(index);
 
-    const blocksToInsert = blocks.map(({ id, type, data }) => {
+    // Backfill `parent` on children referenced by table cells so that
+    // alternative load paths (any consumer of the public API) get the
+    // same hierarchical correctness as Renderer.render(). Without this,
+    // flat-array article shapes lose their cell→child relationship and
+    // children render as detached top-level blocks.
+    const normalizedBlocks = normalizeTableChildParents(blocks);
+
+    const blocksToInsert = normalizedBlocks.map(({ id, type, data, tunes, parent, content, lastEditedAt, lastEditedBy }) => {
       return this.Blok.BlockManager.composeBlock({
         id,
         tool: type || (this.config.defaultBlock as string),
         data: data as BlockToolData,
+        tunes,
+        parentId: parent,
+        contentIds: content,
+        lastEditedAt,
+        lastEditedBy,
       });
     });
     

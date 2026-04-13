@@ -642,6 +642,83 @@ describe('table-operations', () => {
       expect(container.textContent).toBe('Own content');
     });
 
+    /**
+     * Regression (dodopizza.info article table bug): when a flat-array article
+     * JSON references table children via `data.content[r][c].blocks = [<id>]`
+     * but the child blocks carry no explicit `parent` field, the Renderer
+     * composes them with parentId=null. Pre-normalization (normalizeTableChildParents)
+     * fixes parentId for Renderer-driven loads, but the read-only mounter is a
+     * defense-in-depth layer: it must still mount blocks with null/undefined
+     * parentId, because non-Renderer load paths (Yjs sync, direct insertion,
+     * tests) can leave parentId unset. The strict cross-table guard must only
+     * reject blocks whose parentId explicitly points to a DIFFERENT table.
+     */
+    it('should mount blocks referenced by a cell even when their parentId is null', async () => {
+      const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute(ROW_ATTR, '');
+
+      const cell = document.createElement('div');
+      cell.setAttribute(CELL_ATTR, '');
+      cell.setAttribute(CELL_COL_ATTR, '0');
+
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      container.setAttribute('data-blok-nested-blocks', '');
+
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      // Holder for a child whose parentId is null (flat-array shape without `parent` field)
+      const orphanHolder = document.createElement('div');
+      orphanHolder.setAttribute('data-blok-id', 'Q6jhC1QvG9');
+      orphanHolder.textContent = 'Авторы статьи';
+
+      // Holder for a child whose parentId is undefined
+      const undefinedParentHolder = document.createElement('div');
+      undefinedParentHolder.setAttribute('data-blok-id', 'kEJpCzGPeo');
+      undefinedParentHolder.textContent = 'Ирина Макеева';
+
+      const mockGetBlockIndex = vi.fn((id: string) => {
+        if (id === 'Q6jhC1QvG9') return 0;
+        if (id === 'kEJpCzGPeo') return 1;
+        return undefined;
+      });
+
+      const mockGetBlockByIndex = vi.fn((index: number) => {
+        if (index === 0) return { id: 'Q6jhC1QvG9', holder: orphanHolder, parentId: null };
+        if (index === 1) return { id: 'kEJpCzGPeo', holder: undefinedParentHolder, parentId: undefined };
+        return undefined;
+      });
+
+      const api = {
+        blocks: {
+          insert: vi.fn(),
+          getBlockIndex: mockGetBlockIndex,
+          getBlockByIndex: mockGetBlockByIndex,
+          getBlocksCount: vi.fn().mockReturnValue(2),
+          setBlockParent: vi.fn(),
+        },
+      } as unknown as API;
+
+      const content = [[{ blocks: ['Q6jhC1QvG9', 'kEJpCzGPeo'] }]];
+
+      mountCellBlocksReadOnly(gridElement, content, api, 'table-1');
+
+      // Both child holders must have been moved into the cell container
+      const holders = container.querySelectorAll('[data-blok-id]');
+      expect(holders).toHaveLength(2);
+      expect(container.contains(orphanHolder)).toBe(true);
+      expect(container.contains(undefinedParentHolder)).toBe(true);
+      expect(container.textContent).toContain('Авторы статьи');
+      expect(container.textContent).toContain('Ирина Макеева');
+    });
+
     it('should skip cross-table blocks instead of cloning them', async () => {
       const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
       const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');

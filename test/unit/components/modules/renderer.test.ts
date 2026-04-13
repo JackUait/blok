@@ -460,6 +460,61 @@ describe('Renderer module', () => {
     );
   });
 
+  /**
+   * Regression: live article at dodopizza.info saves tables in a flat-array shape
+   * where the table block references its children via `data.content[r][c].blocks = [<id>]`
+   * but the referenced child blocks carry NO `parent` field. Without pre-normalization
+   * the Renderer composed those children with parentId=undefined and the read-only
+   * table cell mounter (gated on parentId === tableBlockId) skipped them — leaking
+   * the child content to the bottom of the page instead of inside the table cells.
+   *
+   * This test locks in the normalization: the Renderer must assign `parentId: <tableId>`
+   * to every block referenced by a table's cell.blocks array before composeBlock runs.
+   */
+  it('assigns parentId to children referenced by table cells when parent field is missing', async () => {
+    const { renderer, blockManager, tools } = createRenderer();
+
+    tools.available.set('table', {});
+    tools.available.set('paragraph', {});
+
+    const tableBlock: OutputBlockData = {
+      id: 'tbl-1',
+      type: 'table',
+      data: {
+        withHeadings: false,
+        content: [
+          [{ blocks: ['child-a'] }, { blocks: ['child-b'] }],
+          [{ blocks: ['child-c'] }, { blocks: ['child-d'] }],
+        ],
+      },
+    };
+
+    const childA: OutputBlockData = { id: 'child-a', type: 'paragraph', data: { text: 'A' } };
+    const childB: OutputBlockData = { id: 'child-b', type: 'paragraph', data: { text: 'B' } };
+    const childC: OutputBlockData = { id: 'child-c', type: 'paragraph', data: { text: 'C' } };
+    const childD: OutputBlockData = { id: 'child-d', type: 'paragraph', data: { text: 'D' } };
+
+    await renderer.render([tableBlock, childA, childB, childC, childD]);
+
+    expect(blockManager.composeBlock).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'child-a', parentId: 'tbl-1' })
+    );
+    expect(blockManager.composeBlock).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'child-b', parentId: 'tbl-1' })
+    );
+    expect(blockManager.composeBlock).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'child-c', parentId: 'tbl-1' })
+    );
+    expect(blockManager.composeBlock).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'child-d', parentId: 'tbl-1' })
+    );
+
+    // Table block itself must NOT have its parentId mutated
+    expect(blockManager.composeBlock).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'tbl-1', tool: 'table', parentId: undefined })
+    );
+  });
+
   it('assigns a unique id to the second block when two blocks share the same id', async () => {
     const { renderer, blockManager, tools } = createRenderer();
 

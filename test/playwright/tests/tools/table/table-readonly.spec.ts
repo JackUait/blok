@@ -535,4 +535,71 @@ test.describe('Read-Only Mode', () => {
     // No selection overlay should appear
     await expect(page.locator('[data-blok-table-selection-overlay]')).toHaveCount(0);
   });
+
+  /**
+   * Regression: dodopizza.info article with id 06e2ee77-e855-46a7-bd8f-aad2f4b9c824
+   * shipped a flat-array shape where the table block referenced its children via
+   * `data.content[r][c].blocks = [<id>]` but the referenced child blocks had NO
+   * `parent` field. The Renderer composed those children with parentId=undefined,
+   * the read-only mounter's parentId-equality guard rejected them, and they
+   * leaked out of the table to render at the bottom of the page.
+   */
+  test('Read-only renders table cells whose children are referenced by id without explicit parent field', async ({ page }) => {
+    await createBlok(page, {
+      tools: defaultTools,
+      readOnly: true,
+      data: {
+        blocks: [
+          {
+            id: 'tbl-1',
+            type: 'table',
+            data: {
+              withHeadings: false,
+              withHeadingColumn: false,
+              content: [
+                [{ blocks: ['cell-r0c0'] }, { blocks: ['cell-r0c1'] }],
+                [{ blocks: ['cell-r1c0'] }, { blocks: ['cell-r1c1'] }],
+              ],
+            },
+          },
+          // Children referenced from cells; no `parent` field on purpose.
+          { id: 'cell-r0c0', type: 'paragraph', data: { text: 'Авторы статьи' } },
+          { id: 'cell-r0c1', type: 'paragraph', data: { text: 'Ирина Макеева' } },
+          { id: 'cell-r1c0', type: 'paragraph', data: { text: 'Прививки' } },
+          { id: 'cell-r1c1', type: 'paragraph', data: { text: 'Кратность' } },
+        ],
+      } as unknown as OutputData,
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible();
+
+    // Each cell must contain its referenced child text
+    await expect(getCell(page, 0, 0)).toContainText('Авторы статьи');
+    await expect(getCell(page, 0, 1)).toContainText('Ирина Макеева');
+    await expect(getCell(page, 1, 0)).toContainText('Прививки');
+    await expect(getCell(page, 1, 1)).toContainText('Кратность');
+
+    // No child block holders may sit OUTSIDE the table grid (i.e. orphaned at
+    // the bottom of the editor working area).
+    const orphans = await page.evaluate(({ tableSel, ids }) => {
+      const tableRoot = document.querySelector(tableSel);
+      const result: string[] = [];
+
+      for (const id of ids) {
+        const holder = document.querySelector<HTMLElement>(`[data-blok-id="${id}"]`);
+
+        if (holder && tableRoot && !tableRoot.contains(holder)) {
+          result.push(id);
+        }
+      }
+      return result;
+    }, {
+      tableSel: TABLE_SELECTOR,
+      ids: ['cell-r0c0', 'cell-r0c1', 'cell-r1c0', 'cell-r1c1'],
+    });
+
+    expect(orphans).toStrictEqual([]);
+  });
 });

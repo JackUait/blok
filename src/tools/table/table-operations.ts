@@ -326,10 +326,15 @@ export const mountCellBlocksReadOnly = (
           continue;
         }
 
-        // Skip blocks that don't belong to this table.
-        // Corrupted data may contain cross-table references; mounting them
-        // would steal (or clone) DOM nodes from the other table.
-        if (block.parentId !== _tableBlockId) {
+        // Skip blocks whose parentId explicitly points to a DIFFERENT table
+        // (corrupted cross-table references). Blocks with null/undefined
+        // parentId are accepted: legitimate flat-array data shapes (e.g. the
+        // dodopizza article format) reference children by id from
+        // `cell.blocks` without setting `parent` on each child, and the
+        // Renderer's normalizeTableChildParents pre-step is the primary
+        // place that backfills parentId. This guard is defense-in-depth for
+        // load paths that bypass the Renderer (Yjs sync, direct insertion).
+        if (block.parentId !== null && block.parentId !== undefined && block.parentId !== _tableBlockId) {
           continue;
         }
 

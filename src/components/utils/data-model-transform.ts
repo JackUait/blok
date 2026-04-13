@@ -919,6 +919,131 @@ export const collapseToLegacy = (blocks: OutputBlockData[]): OutputBlockData[] =
 };
 
 /**
+ * A table cell that references its content blocks by id.
+ * Tables persist their child blocks via `data.content[row][col].blocks = [<id>, ...]`
+ * rather than nesting block payloads inline, so the parent/content relationship
+ * is implicit in the table data instead of explicit on each child block.
+ */
+interface CellWithBlockRefs {
+  blocks: string[];
+}
+
+const isCellWithBlockRefs = (cell: unknown): cell is CellWithBlockRefs => {
+  return (
+    typeof cell === 'object' &&
+    cell !== null &&
+    Array.isArray((cell as { blocks?: unknown }).blocks)
+  );
+};
+
+interface TableDataShape {
+  content?: unknown;
+}
+
+const getTableContentRows = (data: unknown): unknown[][] | null => {
+  if (typeof data !== 'object' || data === null) {
+    return null;
+  }
+  const content = (data as TableDataShape).content;
+
+  if (!Array.isArray(content)) {
+    return null;
+  }
+  return content as unknown[][];
+};
+
+/**
+ * When a flat block array contains `table` blocks that reference child blocks
+ * via `data.content[row][col].blocks = [<id>, ...]`, ensure each referenced
+ * child carries `parent: <tableId>`. This makes the parent/content invariant
+ * explicit even for externally-authored data shapes that omit the `parent`
+ * field on children.
+ *
+ * Without this normalization, downstream readers that key on parentId
+ * (`mountCellBlocksReadOnly`'s cross-table guard, the table saver's
+ * own-child filter, hierarchy queries, drag-and-drop) skip those children
+ * and leak them out of the table, rendering them at the bottom of the page
+ * instead of inside the cells.
+ *
+ * The function is idempotent, never mutates the input array, and leaves
+ * pre-existing `parent` fields unchanged. Children referenced by multiple
+ * tables get assigned to the first table that lists them (first-writer-wins);
+ * corrupted cross-table references are preserved as-is so defensive guards
+ * downstream can still reject them.
+ * @param blocks - flat block array potentially containing tables with cell refs
+ */
+const collectCellChildRefs = (
+  cell: unknown,
+  tableId: BlockId,
+  childToTable: Map<BlockId, BlockId>
+): void => {
+  if (!isCellWithBlockRefs(cell)) {
+    return;
+  }
+  for (const childId of cell.blocks) {
+    if (typeof childId !== 'string' || childToTable.has(childId)) {
+      continue;
+    }
+    childToTable.set(childId, tableId);
+  }
+};
+
+const collectRowChildRefs = (
+  row: unknown,
+  tableId: BlockId,
+  childToTable: Map<BlockId, BlockId>
+): void => {
+  if (!Array.isArray(row)) {
+    return;
+  }
+  row.forEach(cell => collectCellChildRefs(cell, tableId, childToTable));
+};
+
+const collectTableChildRefs = (
+  tableBlock: OutputBlockData,
+  childToTable: Map<BlockId, BlockId>
+): void => {
+  if (tableBlock.id === undefined || tableBlock.id === null) {
+    return;
+  }
+  const rows = getTableContentRows(tableBlock.data);
+
+  if (rows === null) {
+    return;
+  }
+  const tableId = tableBlock.id;
+
+  rows.forEach(row => collectRowChildRefs(row, tableId, childToTable));
+};
+
+export const normalizeTableChildParents = (blocks: OutputBlockData[]): OutputBlockData[] => {
+  const childToTable = new Map<BlockId, BlockId>();
+
+  blocks
+    .filter(block => block.type === 'table')
+    .forEach(tableBlock => collectTableChildRefs(tableBlock, childToTable));
+
+  if (childToTable.size === 0) {
+    return blocks;
+  }
+
+  return blocks.map(block => {
+    if (block.id === undefined || block.id === null) {
+      return block;
+    }
+    const tableId = childToTable.get(block.id);
+
+    if (tableId === undefined) {
+      return block;
+    }
+    if (block.parent !== undefined && block.parent !== null) {
+      return block;
+    }
+    return { ...block, parent: tableId };
+  });
+};
+
+/**
  * Check if transformation is needed based on config and detected format
  */
 export const shouldExpandToHierarchical = (

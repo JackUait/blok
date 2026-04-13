@@ -6,6 +6,7 @@ import type { HandlerContext } from '../components/modules/paste/types';
 import type { PasteHandler } from '../components/modules/paste/handlers/base';
 import { BasePasteHandler } from '../components/modules/paste/handlers/base';
 import { Block } from '../components/block';
+import { normalizeTableChildParents } from '../components/utils/data-model-transform';
 
 /**
  * Patterns that indicate text is likely Markdown rather than plain text.
@@ -66,11 +67,17 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
     }
 
     const { markdownToBlocks } = await import('./index');
-    const outputBlocks = await markdownToBlocks(data);
+    const rawOutputBlocks = await markdownToBlocks(data);
 
-    if (!outputBlocks.length) {
+    if (!rawOutputBlocks.length) {
       return false;
     }
+
+    // Defense-in-depth: backfill `parent` on table cell children so that any
+    // future regression in mdast-to-blocks (or external converter) cannot
+    // produce the dodopizza shape (children referenced by table cells but
+    // lacking explicit parent), which would render them at page bottom.
+    const outputBlocks = normalizeTableChildParents(rawOutputBlocks);
 
     const { BlockManager, Caret } = this.Blok;
 

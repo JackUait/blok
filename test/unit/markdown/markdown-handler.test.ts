@@ -4,6 +4,16 @@ import type { BlokModules } from '../../../src/types-internal/blok-modules';
 import type { ToolRegistry } from '../../../src/components/modules/paste/tool-registry';
 import type { SanitizerConfigBuilder } from '../../../src/components/modules/paste/sanitizer-config';
 
+import type * as MarkdownIndexModule from '../../../src/markdown/index';
+
+vi.mock('../../../src/markdown/index', async () => {
+  const actual = await vi.importActual<typeof MarkdownIndexModule>(
+    '../../../src/markdown/index'
+  );
+
+  return actual;
+});
+
 describe('MarkdownHandler', () => {
   let handler: MarkdownHandler;
   let mockComposeBlock: ReturnType<typeof vi.fn>;
@@ -66,6 +76,67 @@ describe('MarkdownHandler', () => {
     for (const args of cellCalls) {
       expect((args[0] as { parentId: string }).parentId).toBe(tableId);
     }
+  });
+
+  it('normalizes flat-array table children even if markdownToBlocks emits children without parent', async () => {
+    // Defense-in-depth: if mdast-to-blocks ever regresses to emitting the
+    // dodopizza shape (table cells reference children by id but the children
+    // themselves carry no `parent` field), the handler must still classify
+    // them as children of the table — not as detached top-level paragraphs.
+    vi.doMock('../../../src/markdown/index', () => ({
+      markdownToBlocks: vi.fn().mockResolvedValue([
+        {
+          id: 'tbl-1',
+          type: 'table',
+          data: {
+            withHeadings: false,
+            content: [[{ blocks: ['p-a'] }, { blocks: ['p-b'] }]],
+          },
+        },
+        {
+          id: 'p-a',
+          type: 'paragraph',
+          data: { text: 'Cell A' },
+        },
+        {
+          id: 'p-b',
+          type: 'paragraph',
+          data: { text: 'Cell B' },
+        },
+      ]),
+    }));
+
+    // Re-import handler so the dynamic import inside handle() resolves the mock.
+    vi.resetModules();
+    const { MarkdownHandler: IsolatedHandler } = await import('../../../src/markdown/markdown-handler');
+
+    const isolatedCompose = vi.fn().mockImplementation((options: { id: string }) => ({ id: options.id }));
+    const isolatedInsert = vi.fn();
+    const isolatedBlok = {
+      BlockManager: {
+        composeBlock: isolatedCompose,
+        insertMany: isolatedInsert,
+        removeBlock: vi.fn().mockResolvedValue(undefined),
+        currentBlock: undefined,
+        currentBlockIndex: 0,
+      },
+      Caret: { setToBlock: vi.fn(), positions: { END: 'end' } },
+    } as unknown as BlokModules;
+
+    const isolated = new IsolatedHandler(isolatedBlok, {} as ToolRegistry, {} as SanitizerConfigBuilder);
+
+    await isolated.handle('| A | B |\n| --- | --- |\n| 1 | 2 |', { canReplaceCurrentBlock: false });
+
+    const childCalls = isolatedCompose.mock.calls.filter(
+      (args) => (args[0] as { tool: string }).tool === 'paragraph'
+    );
+
+    expect(childCalls).toHaveLength(2);
+    for (const args of childCalls) {
+      expect((args[0] as { parentId?: string }).parentId).toBe('tbl-1');
+    }
+
+    vi.doUnmock('../../../src/markdown/index');
   });
 });
 

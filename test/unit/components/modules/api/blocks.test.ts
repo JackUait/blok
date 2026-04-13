@@ -742,6 +742,72 @@ describe('BlocksAPI', () => {
         blocksApi.methods.insertMany([], -1);
       }).toThrow('Index should be greater than or equal to 0');
     });
+
+    it('forwards explicit parent and content through insertMany to composeBlock', () => {
+      const { blocksApi, blockManager } = createBlocksApi();
+      const blocksToInsert: OutputBlockData[] = [
+        {
+          id: 'parent-1',
+          type: 'table',
+          data: { content: [] },
+          content: [ 'child-1' ],
+        },
+        {
+          id: 'child-1',
+          type: 'paragraph',
+          data: { text: 'inside table' },
+          parent: 'parent-1',
+        },
+      ];
+
+      blocksApi.methods.insertMany(blocksToInsert, 0);
+
+      expect(blockManager.composeBlock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'parent-1',
+          tool: 'table',
+          contentIds: [ 'child-1' ],
+        })
+      );
+      expect(blockManager.composeBlock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'child-1',
+          tool: 'paragraph',
+          parentId: 'parent-1',
+        })
+      );
+    });
+
+    it('normalizes table cell child refs when insertMany receives flat-array data without parent', () => {
+      const { blocksApi, blockManager } = createBlocksApi();
+      const blocksToInsert: OutputBlockData[] = [
+        {
+          id: 'tbl-1',
+          type: 'table',
+          data: {
+            withHeadings: false,
+            content: [
+              [ { blocks: [ 'p-1' ] } ],
+            ],
+          },
+        },
+        {
+          id: 'p-1',
+          type: 'paragraph',
+          data: { text: 'cell child without explicit parent' },
+        },
+      ];
+
+      blocksApi.methods.insertMany(blocksToInsert, 0);
+
+      expect(blockManager.composeBlock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'p-1',
+          tool: 'paragraph',
+          parentId: 'tbl-1',
+        })
+      );
+    });
   });
 
   describe('block updates and conversion', () => {

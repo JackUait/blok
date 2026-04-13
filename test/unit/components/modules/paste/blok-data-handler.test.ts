@@ -334,6 +334,65 @@ describe('BlokDataHandler', () => {
       expect(insertedBlocks[2].replace).toBe(false);
     });
 
+    it('restores hierarchy when pasting a flat-array table whose children have no parent field', async () => {
+      const { modules, insertedBlocks, blockInstances } = createBlokModulesMock();
+      const handler = new BlokDataHandler(
+        modules,
+        createToolRegistryMock(),
+        createSanitizerBuilderMock(),
+        { sanitizer: {} }
+      );
+
+      /**
+       * Dodopizza-shape paste: a table block references children only via
+       * `data.content[r][c].blocks = [<id>]`. The child paragraphs themselves
+       * carry NO `parentId` field. Without normalization, paste classifies
+       * them as roots and they end up at the top of the editor instead of
+       * inside the table cells.
+       */
+      const pasteData = JSON.stringify([
+        {
+          id: 'table-1',
+          tool: 'table',
+          data: {
+            withHeadings: false,
+            content: [
+              [{ blocks: ['child-1'] }, { blocks: ['child-2'] }],
+            ],
+          },
+        },
+        {
+          id: 'child-1',
+          tool: 'paragraph',
+          data: { text: 'Cell A' },
+        },
+        {
+          id: 'child-2',
+          tool: 'paragraph',
+          data: { text: 'Cell B' },
+        },
+      ]);
+
+      await handler.handle(pasteData, { canReplaceCurrentBlock: false });
+
+      // Pass 1 inserts both children before the table.
+      expect(insertedBlocks[0].tool).toBe('paragraph');
+      expect(insertedBlocks[1].tool).toBe('paragraph');
+      expect(insertedBlocks[2].tool).toBe('table');
+
+      const newChild1 = blockInstances[0];
+      const newChild2 = blockInstances[1];
+      const newTable = blockInstances[2];
+
+      // The pasted table must own both children via contentIds, and the
+      // children must point back at the table via parentId. Otherwise the
+      // children render as detached top-level blocks.
+      expect(newTable.contentIds).toContain(newChild1.id);
+      expect(newTable.contentIds).toContain(newChild2.id);
+      expect(newChild1.parentId).toBe(newTable.id);
+      expect(newChild2.parentId).toBe(newTable.id);
+    });
+
     it('replaces current block when pasting flat blocks (no children) with canReplaceCurrentBlock true', async () => {
       const { modules, insertedBlocks } = createBlokModulesMock();
       const handler = new BlokDataHandler(

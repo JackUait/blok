@@ -7,6 +7,7 @@ import { generateBlockId, log, logLabeled } from '../utils';
 import {
   analyzeDataFormat,
   expandToHierarchical,
+  normalizeTableChildParents,
   shouldExpandToHierarchical,
   type DataFormatAnalysis,
 } from '../utils/data-model-transform';
@@ -88,9 +89,16 @@ export class Renderer extends Module {
         this.detectedInputFormat = analysis.format;
 
         // Transform to hierarchical if config requires it
-        const processedBlocks = shouldExpandToHierarchical(dataModelConfig, analysis.format)
+        const expandedBlocks = shouldExpandToHierarchical(dataModelConfig, analysis.format)
           ? expandToHierarchical(blocksData)
           : blocksData;
+
+        // Tables persist child references via `data.content[r][c].blocks = [<id>]`
+        // rather than an explicit `parent` field on each child. Pre-normalize
+        // those parent references so downstream code that gates on parentId
+        // (read-only cell mounter, saver filter, hierarchy queries) correctly
+        // recognizes the children as belonging to their table.
+        const processedBlocks = normalizeTableChildParents(expandedBlocks);
 
         // Note: Yjs data layer is loaded via BlockManager.insertMany() with the correct block IDs
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { analyzeDataFormat, expandToHierarchical, collapseToLegacy } from '../../../../src/components/utils/data-model-transform';
+import { analyzeDataFormat, expandToHierarchical, collapseToLegacy, normalizeTableChildParents } from '../../../../src/components/utils/data-model-transform';
 import type { OutputBlockData } from '../../../../types';
 
 describe('data-model-transform', () => {
@@ -1473,6 +1473,143 @@ describe('data-model-transform', () => {
       const result = collapseToLegacy(blocks);
 
       expect(result[0].data.title).toBe('');
+    });
+  });
+
+  describe('normalizeTableChildParents', () => {
+    /**
+     * Regression: dodopizza.info articles save tables in a flat-array shape where
+     * the table block references its children via `data.content[r][c].blocks = [<id>]`
+     * but the referenced child blocks DO NOT carry a `parent` field. Without
+     * normalization, the renderer composes those children with parentId=undefined
+     * and the read-only table mounter (which gates on parentId === tableBlockId)
+     * skips them — so they leak out of the table and render at the bottom of the page.
+     */
+    it('assigns parent to children referenced inside table cells', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'tbl-1',
+          type: 'table',
+          data: {
+            withHeadings: false,
+            content: [
+              [{ blocks: ['child-a'] }, { blocks: ['child-b'] }],
+              [{ blocks: ['child-c'] }, { blocks: ['child-d'] }],
+            ],
+          },
+        },
+        { id: 'child-a', type: 'paragraph', data: { text: 'A' } },
+        { id: 'child-b', type: 'paragraph', data: { text: 'B' } },
+        { id: 'child-c', type: 'paragraph', data: { text: 'C' } },
+        { id: 'child-d', type: 'paragraph', data: { text: 'D' } },
+      ];
+
+      const result = normalizeTableChildParents(blocks);
+
+      expect(result.find(b => b.id === 'child-a')?.parent).toBe('tbl-1');
+      expect(result.find(b => b.id === 'child-b')?.parent).toBe('tbl-1');
+      expect(result.find(b => b.id === 'child-c')?.parent).toBe('tbl-1');
+      expect(result.find(b => b.id === 'child-d')?.parent).toBe('tbl-1');
+    });
+
+    it('leaves the table block itself untouched', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'tbl-1',
+          type: 'table',
+          data: { content: [[{ blocks: ['child-a'] }]] },
+        },
+        { id: 'child-a', type: 'paragraph', data: { text: 'A' } },
+      ];
+
+      const result = normalizeTableChildParents(blocks);
+
+      expect(result.find(b => b.id === 'tbl-1')?.parent).toBeUndefined();
+    });
+
+    it('does not overwrite an explicit parent already set on a child', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'tbl-1',
+          type: 'table',
+          data: { content: [[{ blocks: ['child-a'] }]] },
+        },
+        { id: 'child-a', type: 'paragraph', data: { text: 'A' }, parent: 'some-other-parent' },
+      ];
+
+      const result = normalizeTableChildParents(blocks);
+
+      expect(result.find(b => b.id === 'child-a')?.parent).toBe('some-other-parent');
+    });
+
+    it('does not crash when a referenced child is missing from the array', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'tbl-1',
+          type: 'table',
+          data: { content: [[{ blocks: ['ghost-id'] }]] },
+        },
+        { id: 'p1', type: 'paragraph', data: { text: 'p' } },
+      ];
+
+      expect(() => normalizeTableChildParents(blocks)).not.toThrow();
+
+      const result = normalizeTableChildParents(blocks);
+
+      expect(result.find(b => b.id === 'p1')?.parent).toBeUndefined();
+    });
+
+    it('ignores legacy string cells (no blocks references)', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'tbl-1',
+          type: 'table',
+          data: { content: [['plain text', 'more text']] },
+        },
+        { id: 'p1', type: 'paragraph', data: { text: 'unrelated' } },
+      ];
+
+      const result = normalizeTableChildParents(blocks);
+
+      expect(result.find(b => b.id === 'p1')?.parent).toBeUndefined();
+    });
+
+    it('returns the same array reference when there are no table refs to normalize', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'p1', type: 'paragraph', data: { text: 'A' } },
+        { id: 'p2', type: 'paragraph', data: { text: 'B' } },
+      ];
+
+      const result = normalizeTableChildParents(blocks);
+
+      expect(result).toBe(blocks);
+    });
+
+    it('does not mutate the input blocks array', () => {
+      const child = { id: 'child-a', type: 'paragraph', data: { text: 'A' } } as OutputBlockData;
+      const blocks: OutputBlockData[] = [
+        { id: 'tbl-1', type: 'table', data: { content: [[{ blocks: ['child-a'] }]] } },
+        child,
+      ];
+
+      const before = JSON.stringify(blocks);
+
+      normalizeTableChildParents(blocks);
+
+      expect(JSON.stringify(blocks)).toBe(before);
+      expect(child.parent).toBeUndefined();
+    });
+
+    it('keeps null/undefined-id table blocks safe (skipped, not crashing)', () => {
+      const blocks: OutputBlockData[] = [
+        // table block without an id — cannot be a parent target
+        { type: 'table', data: { content: [[{ blocks: ['child-a'] }]] } } as OutputBlockData,
+        { id: 'child-a', type: 'paragraph', data: { text: 'A' } },
+      ];
+
+      const result = normalizeTableChildParents(blocks);
+
+      expect(result.find(b => b.id === 'child-a')?.parent).toBeUndefined();
     });
   });
 });

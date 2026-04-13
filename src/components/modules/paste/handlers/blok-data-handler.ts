@@ -142,10 +142,17 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
    * accumulated old→new ID mapping.
    */
   private insertBlokBlocks(
-    blocks: BlokClipboardBlock[],
+    rawBlocks: BlokClipboardBlock[],
     canReplace: boolean
   ): void {
     const { BlockManager, Caret, Tools } = this.Blok;
+
+    // Some article shapes (e.g. flat-array exports) reference table children
+    // ONLY via `data.content[r][c].blocks = [<id>]` and never set parentId
+    // on the children themselves. Backfill parentId before classification so
+    // those children get adopted by the table during the two-pass insert
+    // instead of becoming detached top-level paragraphs.
+    const blocks = backfillTableChildParents(rawBlocks);
     const sanitizedBlocks = sanitizeBlocks(
       blocks,
       (name) => Tools.blockTools.get(name)?.sanitizeConfig ?? {},
@@ -241,6 +248,91 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
       }
     }
   }
+}
+
+/**
+ * Records each cell-referenced child id under its owning table.
+ */
+function collectCellChildIds(
+  cell: unknown,
+  tableId: string,
+  childToTable: Map<string, string>
+): void {
+  if (
+    typeof cell !== 'object' ||
+    cell === null ||
+    !Array.isArray((cell as { blocks?: unknown }).blocks)
+  ) {
+    return;
+  }
+  const ids = (cell as { blocks: unknown[] }).blocks;
+
+  ids.forEach(childId => {
+    if (typeof childId === 'string' && !childToTable.has(childId)) {
+      childToTable.set(childId, tableId);
+    }
+  });
+}
+
+/**
+ * Walks a clipboard table block's `data.content[r][c]` cells and records
+ * every child id referenced by `cell.blocks` under its owning table.
+ */
+function collectTableCellRefs(
+  block: BlokClipboardBlock,
+  childToTable: Map<string, string>
+): void {
+  if (block.tool !== 'table' || block.id === undefined) {
+    return;
+  }
+  const data = block.data as { content?: unknown } | undefined;
+  const content = data?.content;
+
+  if (!Array.isArray(content)) {
+    return;
+  }
+
+  const tableId = block.id;
+
+  content.forEach(row => {
+    if (!Array.isArray(row)) {
+      return;
+    }
+    row.forEach(cell => collectCellChildIds(cell, tableId, childToTable));
+  });
+}
+
+/**
+ * Backfills `parentId` on clipboard blocks that are referenced by a sibling
+ * table's `data.content[r][c].blocks` array but never declare a parent of
+ * their own. Idempotent — never overwrites an explicit parentId.
+ */
+function backfillTableChildParents(
+  blocks: BlokClipboardBlock[]
+): BlokClipboardBlock[] {
+  const childToTable = new Map<string, string>();
+
+  blocks.forEach(block => collectTableCellRefs(block, childToTable));
+
+  if (childToTable.size === 0) {
+    return blocks;
+  }
+
+  return blocks.map(block => {
+    if (block.id === undefined) {
+      return block;
+    }
+    const tableId = childToTable.get(block.id);
+
+    if (tableId === undefined) {
+      return block;
+    }
+    if (block.parentId !== undefined && block.parentId !== null) {
+      return block;
+    }
+
+    return { ...block, parentId: tableId };
+  });
 }
 
 /**

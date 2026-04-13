@@ -107,6 +107,9 @@ const LOGIC_TESTS = [
   // UI utilities (generic components)
   '**/utils/**/*.spec.ts',
 
+  // Table read-only rendering (regression coverage for flat-array article shapes)
+  '**/tools/table/table-readonly.spec.ts',
+
   // Editor state and configuration
   '**/error-handling.spec.ts',
   '**/i18n.spec.ts',

@@ -421,6 +421,42 @@ describe('Header Tool - Custom Configurations', () => {
         expect(heading.contains(arrow)).toBe(false);
       });
 
+      it('marks wrapper data-blok-toggle-empty="true" when the toggle heading has no children', () => {
+        const api = createMockAPI();
+        const getChildren = api.blocks.getChildren as unknown as ReturnType<typeof vi.fn>;
+        getChildren.mockReturnValue([]);
+        const header = new Header({
+          data: { text: 'Toggle Heading', level: 2, isToggleable: true } as HeaderData,
+          config: {},
+          api,
+          readOnly: false,
+          block: { id: 'test-block-id' } as never,
+        });
+        const wrapper = header.render();
+        header.rendered();
+
+        expect(wrapper.getAttribute(TOGGLE_ATTR.toggleEmpty)).toBe('true');
+      });
+
+      it('marks wrapper data-blok-toggle-empty="false" when a child block has text content', () => {
+        const api = createMockAPI();
+        const getChildren = api.blocks.getChildren as unknown as ReturnType<typeof vi.fn>;
+        const childHolder = document.createElement('div');
+        childHolder.textContent = 'Some body text';
+        getChildren.mockReturnValue([{ holder: childHolder }]);
+        const header = new Header({
+          data: { text: 'Toggle Heading', level: 2, isToggleable: true } as HeaderData,
+          config: {},
+          api,
+          readOnly: false,
+          block: { id: 'test-block-id' } as never,
+        });
+        const wrapper = header.render();
+        header.rendered();
+
+        expect(wrapper.getAttribute(TOGGLE_ATTR.toggleEmpty)).toBe('false');
+      });
+
       it('preserves heading text content when isToggleable is true', () => {
         const options = createHeaderOptions({ text: '<b>Bold</b> toggle heading', level: 1, isToggleable: true });
         const header = new Header(options);

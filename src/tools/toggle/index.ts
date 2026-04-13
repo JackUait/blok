@@ -27,7 +27,7 @@ import {
 import { clean } from '../../components/utils/sanitizer';
 import { ARIA_LABEL_COLLAPSE_KEY, ARIA_LABEL_EXPAND_KEY, BODY_PLACEHOLDER_KEY, PLACEHOLDER_KEY, TOOL_NAME } from './constants';
 import { IconToggleList } from '../../components/icons';
-import { renderToggleItem, updateArrowState, updateChildrenVisibility, updateBodyPlaceholderVisibility } from './toggle-lifecycle';
+import { renderToggleItem, updateArrowState, updateChildrenVisibility, updateBodyPlaceholderVisibility, updateToggleEmptyState } from './toggle-lifecycle';
 import { handleToggleEnter, handleToggleBackspace } from './toggle-keyboard';
 import type { ToggleItemData, ToggleItemConfig } from './types';
 
@@ -127,8 +127,19 @@ export class ToggleItem implements BlockTool {
     this._bodyPlaceholderElement = result.bodyPlaceholderElement;
     this._childContainerElement = result.childContainerElement;
 
+    /**
+     * Listen for input events from child blocks so the empty-state attribute
+     * (and the grayish arrow it drives) tracks what the user is typing in
+     * real time.
+     */
+    this._childContainerElement.addEventListener('input', this.handleChildContainerInput);
+
     return this._element;
   }
+
+  private handleChildContainerInput = (): void => {
+    updateToggleEmptyState(this._element, this._childContainerElement);
+  };
 
   public rendered(): void {
     this.updateChildrenVisibility();
@@ -322,6 +333,8 @@ export class ToggleItem implements BlockTool {
       this._isOpen,
       this.readOnly
     );
+
+    updateToggleEmptyState(this._element, this._childContainerElement);
   }
 
   private handleBodyPlaceholderClick(): void {

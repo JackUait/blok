@@ -73,6 +73,13 @@ export const buildToggleItem = (context: ToggleDOMBuilderContext): ToggleBuildRe
   wrapper.className = BASE_STYLES;
   wrapper.setAttribute(DATA_ATTR.tool, TOOL_NAME);
   wrapper.setAttribute(TOGGLE_ATTR.toggleOpen, String(isOpen));
+  /**
+   * Empty state default: assume no children until the tool syncs real state
+   * via updateToggleEmptyState() in its lifecycle methods. This drives the
+   * grayish arrow styling applied through the in-data-[blok-toggle-empty=true]
+   * Tailwind variant on ARROW_STYLES.
+   */
+  wrapper.setAttribute(TOGGLE_ATTR.toggleEmpty, 'true');
 
   const headerRow = document.createElement('div');
   headerRow.className = TOGGLE_WRAPPER_STYLES;

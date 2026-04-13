@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { API, BlockToolConstructorOptions, SanitizerConfig, HTMLPasteEvent } from '../../../../types';
 import type { ToggleItemData, ToggleItemConfig } from '../../../../src/tools/toggle/types';
 import { TOGGLE_ATTR } from '../../../../src/tools/toggle/constants';
+import { simulateInput } from '../../../helpers/simulate';
 
 /**
  * Create a mock API for testing
@@ -268,6 +269,86 @@ describe('ToggleItem', () => {
       // Each call to updateChildrenVisibility + updateBodyPlaceholderVisibility = 2 calls per lifecycle
       // rendered() = 2 calls, setData() = 2 calls = 4 total
       expect(mockAPI.blocks.getChildren).toHaveBeenCalledTimes(4);
+    });
+  });
+
+  describe('empty state', () => {
+    it('marks wrapper data-blok-toggle-empty="true" when there are no children', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createToggleOptions());
+      const wrapper = toggle.render();
+      toggle.rendered();
+
+      expect(wrapper.getAttribute(TOGGLE_ATTR.toggleEmpty)).toBe('true');
+    });
+
+    it('marks wrapper data-blok-toggle-empty="false" when a child has text content', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const childHolder = document.createElement('div');
+      childHolder.textContent = 'Child content';
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi
+        .fn()
+        .mockReturnValue([{ id: 'child-1', holder: childHolder }]);
+
+      const options = createToggleOptions();
+      options.api = mockAPI;
+      const toggle = new ToggleItem(options);
+      const wrapper = toggle.render();
+      toggle.rendered();
+
+      expect(wrapper.getAttribute(TOGGLE_ATTR.toggleEmpty)).toBe('false');
+    });
+
+    it('stays empty when a child block exists but has no text content', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const childHolder = document.createElement('div');
+      childHolder.innerHTML = '<p><br></p>';
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi
+        .fn()
+        .mockReturnValue([{ id: 'child-1', holder: childHolder }]);
+
+      const options = createToggleOptions();
+      options.api = mockAPI;
+      const toggle = new ToggleItem(options);
+      const wrapper = toggle.render();
+      toggle.rendered();
+
+      expect(wrapper.getAttribute(TOGGLE_ATTR.toggleEmpty)).toBe('true');
+    });
+
+    it('live-updates empty state as the user types into a child block', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const childHolder = document.createElement('div');
+      const childInner = document.createElement('p');
+      childInner.innerHTML = '<br>';
+      childHolder.appendChild(childInner);
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi
+        .fn()
+        .mockReturnValue([{ id: 'child-1', holder: childHolder }]);
+
+      const options = createToggleOptions();
+      options.api = mockAPI;
+      const toggle = new ToggleItem(options);
+      const wrapper = toggle.render();
+      toggle.rendered();
+
+      expect(wrapper.getAttribute(TOGGLE_ATTR.toggleEmpty)).toBe('true');
+
+      // User types into the child block.
+      childInner.innerHTML = 'H';
+      simulateInput(childInner);
+
+      expect(wrapper.getAttribute(TOGGLE_ATTR.toggleEmpty)).toBe('false');
+
+      // User deletes everything.
+      childInner.innerHTML = '';
+      simulateInput(childInner);
+
+      expect(wrapper.getAttribute(TOGGLE_ATTR.toggleEmpty)).toBe('true');
     });
   });
 

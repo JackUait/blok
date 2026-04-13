@@ -2,7 +2,7 @@ import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest';
 
 import type { API } from '../../../../types';
 import { TOGGLE_ATTR } from '../../../../src/tools/toggle/constants';
-import { updateArrowState, updateChildrenVisibility } from '../../../../src/tools/toggle/toggle-lifecycle';
+import { updateArrowState, updateChildrenVisibility, updateToggleEmptyState } from '../../../../src/tools/toggle/toggle-lifecycle';
 
 describe('Toggle Lifecycle', () => {
   beforeEach(() => {
@@ -279,6 +279,55 @@ describe('Toggle Lifecycle', () => {
 
       updateArrowState(arrowEl, wrapper, false);
       expect(wrapper.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
+    });
+  });
+
+  describe('updateToggleEmptyState', () => {
+    it('sets data-blok-toggle-empty="true" when childContainer has no text content', () => {
+      const wrapper = document.createElement('div');
+      const childContainer = document.createElement('div');
+
+      updateToggleEmptyState(wrapper, childContainer);
+
+      expect(wrapper.getAttribute(TOGGLE_ATTR.toggleEmpty)).toBe('true');
+    });
+
+    it('sets data-blok-toggle-empty="true" when childContainer contains only empty child blocks', () => {
+      const wrapper = document.createElement('div');
+      const childContainer = document.createElement('div');
+      const emptyChild = document.createElement('p');
+      emptyChild.innerHTML = '<br>';
+      childContainer.appendChild(emptyChild);
+
+      updateToggleEmptyState(wrapper, childContainer);
+
+      expect(wrapper.getAttribute(TOGGLE_ATTR.toggleEmpty)).toBe('true');
+    });
+
+    it('sets data-blok-toggle-empty="false" when childContainer has non-empty text content', () => {
+      const wrapper = document.createElement('div');
+      const childContainer = document.createElement('div');
+      const child = document.createElement('p');
+      child.textContent = 'Hello';
+      childContainer.appendChild(child);
+
+      updateToggleEmptyState(wrapper, childContainer);
+
+      expect(wrapper.getAttribute(TOGGLE_ATTR.toggleEmpty)).toBe('false');
+    });
+
+    it('is a no-op when wrapper is null', () => {
+      const childContainer = document.createElement('div');
+
+      expect(() => updateToggleEmptyState(null, childContainer)).not.toThrow();
+    });
+
+    it('treats null childContainer as empty', () => {
+      const wrapper = document.createElement('div');
+
+      updateToggleEmptyState(wrapper, null);
+
+      expect(wrapper.getAttribute(TOGGLE_ATTR.toggleEmpty)).toBe('true');
     });
   });
 });

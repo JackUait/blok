@@ -14,6 +14,30 @@ import { buildToggleItem } from './dom-builder';
 import type { ToggleDOMBuilderContext } from './dom-builder';
 
 /**
+ * Sync the wrapper's data-blok-toggle-empty attribute to reflect whether the
+ * toggle's body has any visible text. Reads `textContent` off the child
+ * container directly so the state updates live as the user types (or deletes).
+ * The attribute drives the grayish arrow styling via the
+ * in-data-[blok-toggle-empty=true] Tailwind variant on ARROW_STYLES.
+ *
+ * @param wrapper - The toggle wrapper element that receives the attribute
+ * @param childContainer - The element that hosts the child block holders
+ */
+export const updateToggleEmptyState = (
+  wrapper: HTMLElement | null,
+  childContainer: HTMLElement | null
+): void => {
+  if (wrapper === null) {
+    return;
+  }
+
+  const text = childContainer?.textContent ?? '';
+  const isEmpty = text.trim() === '';
+
+  wrapper.setAttribute(TOGGLE_ATTR.toggleEmpty, String(isEmpty));
+};
+
+/**
  * Context for rendering a toggle item
  */
 export interface ToggleRenderContext extends ToggleDOMBuilderContext {

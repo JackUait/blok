@@ -23,7 +23,7 @@ import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/pl
 import { twMerge } from '../../components/utils/tw';
 import { BODY_PLACEHOLDER_STYLES, TOGGLE_ATTR } from '../toggle/constants';
 import { buildArrow } from '../toggle/dom-builder';
-import { updateArrowState, updateBodyPlaceholderVisibility, updateChildrenVisibility } from '../toggle/toggle-lifecycle';
+import { updateArrowState, updateBodyPlaceholderVisibility, updateChildrenVisibility, updateToggleEmptyState } from '../toggle/toggle-lifecycle';
 import { handleHeaderToggleEnter, handleHeaderToggleBackspace } from './header-toggle-keyboard';
 
 /**
@@ -764,6 +764,7 @@ export class Header implements BlockTool {
    */
   private buildWrapper(): HTMLElement {
     const wrapper = document.createElement('div');
+    wrapper.setAttribute(TOGGLE_ATTR.toggleEmpty, 'true');
 
     // Inner row: positioning context for the arrow (only heading height, not children).
     const headerRow = document.createElement('div');
@@ -799,11 +800,20 @@ export class Header implements BlockTool {
     // Block DOM mutations inside the children container from triggering the header tool's
     // didMutated → syncBlockDataToYjs path (same rationale as the toggle list tool).
     childContainer.setAttribute('data-blok-mutation-free', 'true');
+    /**
+     * Listen for typing inside child blocks so the empty-state attribute
+     * (and the grayish arrow it drives) tracks what the user types in real time.
+     */
+    childContainer.addEventListener('input', this.handleChildContainerInput);
     this._childContainerElement = childContainer;
     wrapper.appendChild(childContainer);
 
     return wrapper;
   }
+
+  private handleChildContainerInput = (): void => {
+    updateToggleEmptyState(this._wrapper, this._childContainerElement);
+  };
 
   /**
    * Wrap the heading element in a new wrapper div containing the toggle arrow,
@@ -814,6 +824,7 @@ export class Header implements BlockTool {
     const parent = this._element.parentNode;
 
     this._wrapper = document.createElement('div');
+    this._wrapper.setAttribute(TOGGLE_ATTR.toggleEmpty, 'true');
 
     // Inner row: positioning context for the arrow (only heading height, not children).
     const headerRow = document.createElement('div');
@@ -916,6 +927,8 @@ export class Header implements BlockTool {
       this._isOpen,
       this.readOnly
     );
+
+    updateToggleEmptyState(this._wrapper, this._childContainerElement);
   }
 
   /**

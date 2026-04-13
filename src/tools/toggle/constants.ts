@@ -43,7 +43,7 @@ export const TOGGLE_WRAPPER_STYLES = 'flex items-center';
 /**
  * Styles for the toggle arrow button
  */
-export const ARROW_STYLES = 'flex-shrink-0 p-[8px] flex items-center justify-center cursor-pointer select-none rounded can-hover:hover:bg-item-hover-bg transition-colors duration-200 ease-in-out focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none';
+export const ARROW_STYLES = 'flex-shrink-0 p-[8px] flex items-center justify-center cursor-pointer select-none rounded can-hover:hover:bg-item-hover-bg transition-colors duration-200 ease-in-out focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none in-data-[blok-toggle-empty=true]:text-gray-text';
 
 /**
  * SVG icon for the toggle arrow
@@ -77,4 +77,5 @@ export const TOGGLE_ATTR = {
   toggleContent: 'data-blok-toggle-content',
   toggleBodyPlaceholder: 'data-blok-toggle-body-placeholder',
   toggleChildren: 'data-blok-toggle-children',
+  toggleEmpty: 'data-blok-toggle-empty',
 } as const;

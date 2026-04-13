@@ -389,6 +389,22 @@ describe('Toggle DOM Builder', () => {
         expect(onBodyPlaceholderClick).toHaveBeenCalledOnce();
       });
     });
+
+    describe('empty state', () => {
+      it('marks wrapper data-blok-toggle-empty="true" by default (no children yet)', () => {
+        const context = createDefaultContext();
+        const result = buildToggleItem(context);
+
+        expect(result.wrapper.getAttribute(TOGGLE_ATTR.toggleEmpty)).toBe('true');
+      });
+
+      it('arrow carries an empty-state Tailwind variant that grays out when ancestor is marked empty', () => {
+        const context = createDefaultContext();
+        const result = buildToggleItem(context);
+
+        expect(result.arrowElement.className).toContain('in-data-[blok-toggle-empty=true]:text-gray-text');
+      });
+    });
   });
 
   describe('buildArrow', () => {

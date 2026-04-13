@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.7](https://github.com/JackUait/blok/compare/v0.10.6...v0.10.7) (2026-04-13)
+
+### Bug Fixes
+
+- **Theme** — Prevent nested editor instances from overriding parent theme on prepare
+
 ## [0.10.6](https://github.com/JackUait/blok/compare/v0.10.5...v0.10.6) (2026-04-12)
 
 ### Features

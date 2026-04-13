@@ -349,6 +349,88 @@ describe('BlockHierarchy', () => {
       expect(onParentChanged).toHaveBeenNthCalledWith(1, 'parent-2');
       expect(onParentChanged).toHaveBeenNthCalledWith(2, 'parent-1');
     });
+
+    /**
+     * Layer 19 regression: wrong-block-dropped family.
+     *
+     * hierarchy.ts:75 and :123 do `allBlocks.indexOf(block)`. If `block` has
+     * been destroyed and is no longer in the repository, indexOf returns -1,
+     * and subsequent `allBlocks.slice(0, -1)` / `allBlocks.slice(0)` logic
+     * computes a wrong anchor — then `insertAdjacentElement('afterend', …)`
+     * or `newContainer.insertBefore(block.holder, nextSibling)` mounts the
+     * STALE block's DOM holder at a position that corresponds to some other
+     * block, silently diverging the DOM from the flat array. Worse, the
+     * stale block's parentId is mutated and onParentChanged fires for a
+     * ghost, polluting Yjs with writes against a dead id.
+     *
+     * Guard must bail out at entry when `getBlockIndex(block) === -1`.
+     */
+    it('aborts cleanly when called on a block that is not in the repository (stale ref)', () => {
+      const onParentChanged = vi.fn();
+
+      hierarchy = new BlockHierarchy(repository, onParentChanged);
+
+      // Build a stale block that was never added to the repository, giving
+      // it a parentId so the would-be mutation path is observable.
+      const staleBlock = createMockBlock({ id: 'stale', parentId: 'parent-1' });
+
+      // Seed parent-1 so the "should remove from old parent's contentIds"
+      // branch would fire if the guard were missing.
+      const parent1 = requireBlock('parent-1');
+
+      parent1.contentIds = ['stale'];
+
+      hierarchy.setBlockParent(staleBlock, 'parent-2');
+
+      // Guard must: leave the stale block's parentId untouched, leave
+      // parent-1.contentIds untouched, and never call onParentChanged.
+      expect(staleBlock.parentId).toBe('parent-1');
+      expect(parent1.contentIds).toContain('stale');
+
+      const parent2 = requireBlock('parent-2');
+
+      expect(parent2.contentIds).not.toContain('stale');
+      expect(onParentChanged).not.toHaveBeenCalled();
+    });
+
+    it('aborts cleanly when called on a stale block with a toggle-children DOM context', () => {
+      // Reproduce the exact splice(-1)-equivalent DOM vector: a stale block
+      // whose holder is still inside a live toggle-children container. Without
+      // the guard, indexOf returns -1, slice(0, -1) walks every block except
+      // the last, and insertAdjacentElement('afterend', staleHolder) lands the
+      // ghost holder at a completely unrelated DOM position.
+      repository = createRepositoryWithBlocks([
+        { id: 'toggle', parentId: null, contentIds: [] },
+        { id: 'live-1', parentId: null },
+        { id: 'live-2', parentId: null },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const toggle = requireBlock('toggle');
+      const toggleChildren = document.createElement('div');
+
+      toggleChildren.setAttribute('data-blok-toggle-children', '');
+      toggle.holder.appendChild(toggleChildren);
+
+      const staleBlock = createMockBlock({ id: 'ghost', parentId: 'toggle' });
+
+      toggleChildren.appendChild(staleBlock.holder);
+
+      const live1 = requireBlock('live-1');
+      const live2 = requireBlock('live-2');
+
+      workingArea.appendChild(toggle.holder);
+      workingArea.appendChild(live1.holder);
+      workingArea.appendChild(live2.holder);
+
+      hierarchy.setBlockParent(staleBlock, null);
+
+      // The stale holder must NOT have been moved out of the toggle
+      // container — the guard must refuse to touch the DOM.
+      expect(staleBlock.holder.parentElement).toBe(toggleChildren);
+      // The stale block's parentId must remain 'toggle' (unchanged).
+      expect(staleBlock.parentId).toBe('toggle');
+    });
   });
 
   describe('updateBlockIndentation', () => {

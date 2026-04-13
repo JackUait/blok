@@ -54,6 +54,29 @@ export class BlockHierarchy {
    * @param newParentId - the new parent block id, or null for root level
    */
   public setBlockParent(block: Block, newParentId: string | null): void {
+    /**
+     * Layer 19: stale-block guard (regression: wrong-block-dropped family).
+     *
+     * If `block` has been destroyed and is no longer in the repository,
+     * `repository.blocks.indexOf(block)` below returns -1. The toggle-DOM
+     * anchor logic then runs `allBlocks.slice(0, -1)` — the whole array
+     * minus its last element — and silently anchors the stale block's
+     * holder at a completely unrelated DOM position. The new-parent
+     * branch repeats the same failure with `slice(0)` returning every
+     * block. That's the DOM-manipulation analogue of the `splice(-1, …)`
+     * root cause behind the original "wrong block dropped" bug.
+     *
+     * Additionally, without this guard `block.parentId` would be mutated
+     * on a destroyed reference and `onParentChanged` would fire with a
+     * ghost id, polluting Yjs with writes against a dead block.
+     *
+     * Bail out cleanly at entry so callers — DragController.handleDrop in
+     * particular — get a no-op instead of silent DOM/data corruption.
+     */
+    if (this.repository.getBlockIndex(block) === -1) {
+      return;
+    }
+
     const oldParentId = block.parentId;
 
     // Remove from old parent's contentIds

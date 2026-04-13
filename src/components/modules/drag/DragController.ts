@@ -451,6 +451,22 @@ export class DragController extends Module {
     }
     const result = this.operations.moveBlocks(sourceBlocks, targetBlock, edge);
 
+    // Layer 13: stale-drop abort guard.
+    //
+    // When moveBlocks aborts because the target or a source went stale mid-drag
+    // (Layer 9), it returns `{ movedBlocks: [], targetIndex: -1 }`. Everything
+    // downstream in handleDrop assumes the move succeeded:
+    //   - resolveParentForDrop reads `targetBlock.parentId` (may be stale)
+    //   - getBlockByIndex(-1) returns undefined → a11y guard catches it
+    //   - Toolbar.moveAndOpen fires on a possibly-dead source holder
+    //
+    // None of those cause wrong-block-dropped, but they leak stale state into
+    // the toolbar and a11y layers. Abort cleanly so "moveBlocks aborted" has a
+    // single, observable contract: nothing happens downstream.
+    if (result.movedBlocks.length === 0) {
+      return;
+    }
+
     // Update parent-child relationships after move
     const newParentId = this.resolveParentForDrop(targetBlock, edge, sourceBlocks);
     const movedBlockIds = new Set(result.movedBlocks.map(b => b.id));

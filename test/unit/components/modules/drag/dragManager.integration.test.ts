@@ -373,6 +373,77 @@ describe("DragManager - Component Integration", () => {
       expect(dragManager.isDragging).toBe(false);
       expect(wrapper).not.toHaveAttribute(DATA_ATTR.dragging);
     });
+
+    it("should abort handleDrop completely when target became stale mid-drag (Layer 13)", () => {
+      // Regression: wrong-block-dropped family.
+      //
+      // After Layer 9, `DragOperations.moveBlocks` correctly returns an empty
+      // result when the target block is no longer in the array. But
+      // `DragController.handleDrop` continued running downstream code:
+      //   - `resolveParentForDrop(staleTarget)` read stale parentId
+      //   - the empty movedBlocks loop was a no-op (safe)
+      //   - `getBlockByIndex(-1)` was called for a11y (guarded)
+      //   - `Toolbar.moveAndOpen(sourceBlock)` opened on a potentially dead source
+      //
+      // This is defense-in-depth: when moveBlocks aborts, handleDrop must also
+      // abort completely — no downstream side effects that could leak stale
+      // state into the toolbar, parent resolution, or a11y layer.
+      const { dragManager, blocks, wrapper, modules } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      blocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      const dragHandle = document.createElement("div");
+      dragManager.setupDragHandle(dragHandle, blocks[0]);
+
+      dragHandle.dispatchEvent(
+        createMouseEvent("mousedown", { clientX: 100, clientY: 100 }),
+      );
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 110, clientY: 100 }),
+      );
+
+      const targetBlock = blocks[2];
+
+      vi.mocked(document.elementFromPoint).mockReturnValue(targetBlock.holder);
+      (targetBlock.holder.getBoundingClientRect as Mock).mockReturnValue({
+        top: 100,
+        bottom: 150,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 50,
+        x: 0,
+        y: 100,
+        toJSON: () => ({}),
+      });
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 50, clientY: 130 }),
+      );
+
+      // Simulate remote Yjs update / undo that removes the target AFTER drag
+      // tracking captured it, BUT before mouseup fires.
+      vi.mocked(modules.BlockManager.getBlockIndex).mockImplementation(
+        (block: Block) => {
+          if (block === targetBlock) return -1;
+
+          return blocks.indexOf(block);
+        },
+      );
+
+      document.dispatchEvent(createMouseEvent("mouseup", { altKey: false }));
+
+      // No move ever happens
+      expect(modules.BlockManager.move).not.toHaveBeenCalled();
+      // No parent re-assignment — resolveParentForDrop must NOT leak side effects
+      expect(modules.BlockManager.setBlockParent).not.toHaveBeenCalled();
+      // handleDrop's own Toolbar.moveAndOpen must NOT fire. `cleanup()` still
+      // calls it once post-drop to restore the toolbar on the source — so the
+      // expected total is exactly 1, not 2 (the pre-Layer-13 count).
+      expect(modules.Toolbar.moveAndOpen).toHaveBeenCalledTimes(1);
+      // Drag state still cleaned up
+      expect(dragManager.isDragging).toBe(false);
+    });
   });
 
   describe("DragPreview + DragA11y integration", () => {

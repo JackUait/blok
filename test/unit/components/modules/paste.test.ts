@@ -116,12 +116,17 @@ type ToolbarMock = {
   close: ReturnType<typeof vi.fn<() => void>>;
 };
 
+type DragManagerMock = {
+  isDragging: boolean;
+};
+
 type PasteMocks = {
   listeners: ListenersMock;
   BlockManager: BlockManagerMock;
   Caret: CaretMock;
   Tools: ToolsMock;
   Toolbar: ToolbarMock;
+  DragManager: DragManagerMock;
   holder: HTMLElement;
 };
 
@@ -167,6 +172,10 @@ const createPaste = (options?: CreatePasteOptions): { paste: Paste; mocks: Paste
     close: vi.fn<() => void>(),
   };
 
+  const dragManager: DragManagerMock = {
+    isDragging: false,
+  };
+
   const paste = new Paste({
     config: {
       defaultBlock: options?.defaultBlock ?? 'paragraph',
@@ -192,6 +201,7 @@ const createPaste = (options?: CreatePasteOptions): { paste: Paste; mocks: Paste
     Tools: tools,
     Toolbar: toolbar,
     YjsManager: yjsManager,
+    DragManager: dragManager,
     UI: {
       nodes: {
         holder,
@@ -209,6 +219,7 @@ const createPaste = (options?: CreatePasteOptions): { paste: Paste; mocks: Paste
       Caret: caret,
       Tools: tools,
       Toolbar: toolbar,
+      DragManager: dragManager,
       holder,
     },
   };
@@ -568,6 +579,43 @@ describe('Paste module', () => {
       // processDataTransfer should NOT have been called
       expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
       expect(mocks.Toolbar.close).not.toHaveBeenCalled();
+    });
+
+    it('skips processing while a drag is in progress (regression: wrong-block-dropped)', async () => {
+      const { paste, mocks } = createPaste();
+
+      mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+
+      await paste.prepare();
+
+      const div = document.createElement('div');
+
+      mocks.holder.appendChild(div);
+      mocks.BlockManager.setCurrentBlockByChildNode.mockReturnValue({
+        name: 'paragraph',
+        tool: { isDefault: true },
+        isEmpty: false,
+      });
+
+      paste.toggleReadOnly(false);
+
+      // Simulate active drag
+      mocks.DragManager.isDragging = true;
+
+      const event = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent;
+      const clipboardData = new MockDataTransfer({ 'text/html': '<p>test</p>' }, {} as FileList, ['text/html']);
+
+      Object.defineProperty(event, 'clipboardData', { value: clipboardData });
+
+      div.dispatchEvent(event);
+
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      // Paste must not mutate the block array while DragController holds
+      // live block references — otherwise the flat array is reshuffled under
+      // the drag's feet and handleDrop operates on stale indices.
+      expect(mocks.BlockManager.setCurrentBlockByChildNode).not.toHaveBeenCalled();
+      expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
     });
   });
 

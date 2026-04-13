@@ -297,6 +297,26 @@ export class Paste extends Module {
       return;
     }
 
+    /**
+     * Layer 20: paste-during-drag bail (regression: wrong-block-dropped family).
+     *
+     * DragController captures live Block references when the drag starts and
+     * commits them in `handleDrop` on mouseup. A paste firing mid-drag would
+     * call `BlockManager.paste` / `insert` / `convertToTool`, any of which
+     * reshuffles the flat blocks array under DragController's feet — the
+     * resulting indices are stale and a later move() silently drops an
+     * unrelated block. Mirrors the Cmd+Z-during-drag guard in
+     * uiControllers/controllers/keyboard.ts handleZ.
+     *
+     * Swallow the paste so the drag completes cleanly; the user can paste
+     * after releasing the mouse.
+     */
+    if (this.Blok.DragManager?.isDragging) {
+      event.preventDefault();
+
+      return;
+    }
+
     const { BlockManager, Toolbar } = this.Blok;
 
     const currentBlock = BlockManager.setCurrentBlockByChildNode(event.target as HTMLElement);

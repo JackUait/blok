@@ -340,6 +340,21 @@ export class Blocks {
    */
   public remove(index: number): void {
     const removeIndex = isNaN(index) ? this.length - 1 : index;
+
+    /**
+     * Layer 15: invalid-index guard (regression: wrong-block-dropped family).
+     *
+     * Before this guard, a stale caller passing a negative or out-of-bounds
+     * index would crash on `blockToRemove.call(REMOVED)` (undefined.call),
+     * aborting the surrounding batch (e.g. a Yjs undo transaction) partway
+     * and leaving the flat array inconsistent with the DOM — exactly the
+     * soil that grows the wrong-block-dropped bug class. Reject nonsense
+     * indices at the lowest level instead of throwing.
+     */
+    if (removeIndex < 0 || removeIndex >= this.blocks.length) {
+      return;
+    }
+
     const blockToRemove = this.blocks[removeIndex];
 
     /**
@@ -379,6 +394,19 @@ export class Blocks {
    */
   public insertAfter(targetBlock: Block, newBlock: Block): void {
     const index = this.blocks.indexOf(targetBlock);
+
+    /**
+     * Layer 14: stale target guard (regression: wrong-block-dropped family).
+     *
+     * Without this guard, a stale `targetBlock` makes `indexOf` return `-1`,
+     * then `insert(0, newBlock)` teleports the new block to the TOP of the
+     * document — the same symptom as wrong-block-dropped. insertAfter has
+     * no live callers today, but codifying the guard now prevents a future
+     * consumer from reintroducing the bug class through this entry point.
+     */
+    if (index === -1) {
+      return;
+    }
 
     this.insert(index + 1, newBlock);
   }

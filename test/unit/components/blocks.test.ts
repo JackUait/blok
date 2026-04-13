@@ -1269,6 +1269,49 @@ describe('Blocks', () => {
 
       expect(block.call).toHaveBeenCalledWith(BlockToolAPI.REMOVED);
     });
+
+    describe('invalid index guard (regression: wrong-block-dropped family)', () => {
+      /**
+       * Layer 15: defensive guard for Blocks.remove.
+       *
+       * Before this guard, a stale caller passing `-1` would hit
+       * `this.blocks[-1]` (undefined) and crash on `.call(REMOVED)`. A large
+       * negative like `-5` also crashes. Either way it's an uncaught exception
+       * that can abort a larger batch (e.g. a Yjs undo transaction) halfway,
+       * leaving the flat array inconsistent with the DOM — exactly the soil
+       * that grows the wrong-block-dropped bug. Reject nonsense indices at the
+       * lowest level and keep the array intact.
+       */
+      it('should be a no-op when index is negative', () => {
+        const blocks = createBlocks();
+        const block1 = createMockBlock('block-1');
+        const block2 = createMockBlock('block-2');
+
+        blocks.push(block1);
+        blocks.push(block2);
+
+        expect(() => blocks.remove(-1)).not.toThrow();
+
+        expect(blocks.length).toBe(2);
+        expect(blocks.blocks[0]).toBe(block1);
+        expect(blocks.blocks[1]).toBe(block2);
+        expect(block1.call).not.toHaveBeenCalledWith(BlockToolAPI.REMOVED);
+        expect(block2.call).not.toHaveBeenCalledWith(BlockToolAPI.REMOVED);
+      });
+
+      it('should be a no-op when index is past the end', () => {
+        const blocks = createBlocks();
+        const block1 = createMockBlock('block-1');
+
+        blocks.push(block1);
+
+        expect(() => blocks.remove(99)).not.toThrow();
+
+        expect(blocks.length).toBe(1);
+        expect(blocks.blocks[0]).toBe(block1);
+        expect(block1.call).not.toHaveBeenCalledWith(BlockToolAPI.REMOVED);
+      });
+    });
   });
 
   describe('removeAll', () => {
@@ -1370,6 +1413,37 @@ describe('Blocks', () => {
 
       expect(blocks.blocks[0]).toBe(block1);
       expect(blocks.blocks[1]).toBe(block2);
+    });
+
+    describe('stale target guard (regression: wrong-block-dropped family)', () => {
+      /**
+       * Layer 14: defensive guard for Blocks.insertAfter.
+       *
+       * Without the guard, passing a stale targetBlock (not in `this.blocks`
+       * anymore) makes `indexOf` return `-1`, then `insert(index + 1, …)` =
+       * `insert(0, …)` which silently teleports the new block to the TOP of
+       * the document. The symptom is identical to wrong-block-dropped: the
+       * user expected the new block to land next to a specific target, and
+       * it lands somewhere completely unrelated. insertAfter currently has
+       * no live callers, but codifying the guard now stops any future caller
+       * from reintroducing the bug class.
+       */
+      it('should be a no-op when targetBlock is not in the array', () => {
+        const blocks = createBlocks();
+        const block1 = createMockBlock('block-1');
+        const block2 = createMockBlock('block-2');
+        const staleBlock = createMockBlock('stale');
+        const newBlock = createMockBlock('new-block');
+
+        blocks.push(block1);
+        blocks.push(block2);
+
+        blocks.insertAfter(staleBlock, newBlock);
+
+        expect(blocks.length).toBe(2);
+        expect(blocks.blocks[0]).toBe(block1);
+        expect(blocks.blocks[1]).toBe(block2);
+      });
     });
   });
 

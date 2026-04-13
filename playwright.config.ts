@@ -108,7 +108,7 @@ const LOGIC_TESTS = [
   '**/utils/**/*.spec.ts',
 
   // Table read-only rendering (regression coverage for flat-array article shapes)
-  '**/tools/table/table-readonly.spec.ts',
+  '**/tools/table-readonly.spec.ts',
 
   // Editor state and configuration
   '**/error-handling.spec.ts',
@@ -158,10 +158,9 @@ export default defineConfig({
     timeout: 5_000,
   },
   fullyParallel: true,
-  reporter: [
-    ['list'],
-    ['html', { open: 'never' }],
-  ],
+  reporter: process.env.CI
+    ? [['blob'], ['list'], ['github']]
+    : [['list'], ['html', { open: 'never' }]],
   use: {
     headless: true,
     screenshot: 'only-on-failure',
@@ -175,6 +174,11 @@ export default defineConfig({
       name: 'chromium-logic',
       use: { browserName: 'chromium' },
       testMatch: [...LOGIC_TESTS],
+    },
+    {
+      name: 'chromium-default',
+      use: { browserName: 'chromium' },
+      testIgnore: [...CROSS_BROWSER_TESTS, ...LOGIC_TESTS],
     },
   ],
   webServer: {

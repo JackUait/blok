@@ -21,20 +21,20 @@ jobs:
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
 
+      - name: Get Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> $GITHUB_OUTPUT
+
       - name: Cache Playwright Browsers
         id: playwright-cache
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-all-${{ hashFiles('**/yarn.lock') }}
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
 
       - name: Install Playwright Browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install chromium firefox webkit --with-deps
-
-      - name: Install Playwright Browser Dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium firefox webkit
 
   e2e-tests:
     name: E2E (${{ matrix.project }}${{ matrix.shard && format(' {0}', matrix.shard) || '' }})
@@ -92,11 +92,15 @@ jobs:
       - name: Build React Vendor Files
         run: node scripts/build-react-vendor.mjs
 
+      - name: Get Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> $GITHUB_OUTPUT
+
       - name: Restore Playwright Browsers from Cache
         uses: actions/cache/restore@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-all-${{ hashFiles('**/yarn.lock') }}
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
           fail-on-cache-miss: true
 
       - name: Install Browser Dependencies
@@ -120,3 +124,32 @@ jobs:
           name: blob-report-${{ matrix.project }}-${{ strategy.job-index }}
           path: blob-report/
           retention-days: 1
+
+  merge-reports:
+    name: Merge E2E Reports
+    if: ${{ !cancelled() }}
+    needs: [e2e-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+
+      - name: Download all blob reports
+        uses: actions/download-artifact@v4
+        with:
+          path: all-blob-reports
+          pattern: blob-report-*
+          merge-multiple: true
+
+      - name: Merge into unified HTML report
+        run: npx playwright merge-reports --reporter html ./all-blob-reports
+
+      - name: Upload unified HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 14

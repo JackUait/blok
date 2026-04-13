@@ -492,6 +492,26 @@ export class KeyboardController extends Controller {
       return;
     }
 
+    /**
+     * Layer 18: block undo/redo while a drag is in progress.
+     *
+     * Regression: "wrong block dropped" family. `moveUndoStack` entries capture
+     * `fromIndex`/`toIndex` at record time. Replaying them synchronously while
+     * DragController still holds a live source/target reference mutates the
+     * flat blocks array under the drag's feet — subsequent `handleDrop` then
+     * operates on stale indices and silently drops an unrelated block.
+     *
+     * The Escape handler already guards on `DragManager.isDragging` (see
+     * handleEscape above). Mirror that here: swallow the keystroke so the
+     * drag completes cleanly, then the user can undo.
+     */
+    if (this.Blok.DragManager.isDragging) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      return;
+    }
+
     // Prevent double-firing within 50ms
     const now = Date.now();
 

@@ -91,6 +91,9 @@ const createBlokStub = (): BlokModules => {
       undo: vi.fn(),
       redo: vi.fn(),
     },
+    DragManager: {
+      isDragging: false,
+    },
   } as unknown as BlokModules;
 };
 
@@ -460,6 +463,34 @@ describe('KeyboardController', () => {
       expect(preventDefaultSpy).toHaveBeenCalled();
       expect(stopPropagationSpy).toHaveBeenCalled();
       expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('does NOT call undo while a drag is active (regression: wrong-block-dropped)', () => {
+      const { controller, blok } = createKeyboardController();
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      Object.assign(blok.DragManager, { isDragging: true });
+
+      const event = new KeyboardEvent('keydown', { key: 'z', ctrlKey: true });
+
+      document.dispatchEvent(event);
+
+      expect(blok.YjsManager.undo).not.toHaveBeenCalled();
+    });
+
+    it('does NOT call redo while a drag is active (regression: wrong-block-dropped)', () => {
+      const { controller, blok } = createKeyboardController();
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      Object.assign(blok.DragManager, { isDragging: true });
+
+      const event = new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, shiftKey: true });
+
+      document.dispatchEvent(event);
+
+      expect(blok.YjsManager.redo).not.toHaveBeenCalled();
     });
 
     it('prevents double-firing within 50ms', () => {

@@ -1091,6 +1091,36 @@ describe('BlockManager', () => {
 
       expect((parent as unknown as { contentIds: string[] }).contentIds).toContain('hdr1');
     });
+
+    /**
+     * The reconcile is intentionally keyed on `block.parentId`, not on tool name,
+     * so it must work for EVERY container block type, not just callout. This
+     * regression guards the generic contract so a future refactor cannot silently
+     * narrow the reconcile to one container type and leave toggle, header, list,
+     * database, table etc. re-exposed to the paste-ejection drift.
+     */
+    it('reconciles contentIds generically across every container type in one call', () => {
+      const toggle = createBlockStub({ id: 'tog1' });
+      const toggleChild = createBlockStub({ id: 'tog-kid' });
+      const header = createBlockStub({ id: 'hdr1' });
+      const headerChild = createBlockStub({ id: 'hdr-kid' });
+      const list = createBlockStub({ id: 'list1' });
+      const listChild = createBlockStub({ id: 'list-kid' });
+
+      (toggle as unknown as { contentIds: string[] }).contentIds = [];
+      (header as unknown as { contentIds: string[] }).contentIds = [];
+      (list as unknown as { contentIds: string[] }).contentIds = [];
+      (toggleChild as unknown as { parentId: string }).parentId = 'tog1';
+      (headerChild as unknown as { parentId: string }).parentId = 'hdr1';
+      (listChild as unknown as { parentId: string }).parentId = 'list1';
+
+      const { blockManager } = createBlockManager({});
+      blockManager.insertMany([toggle, toggleChild, header, headerChild, list, listChild], 0);
+
+      expect((toggle as unknown as { contentIds: string[] }).contentIds).toEqual(['tog-kid']);
+      expect((header as unknown as { contentIds: string[] }).contentIds).toEqual(['hdr-kid']);
+      expect((list as unknown as { contentIds: string[] }).contentIds).toEqual(['list-kid']);
+    });
   });
 
   describe('edit metadata on mutation', () => {

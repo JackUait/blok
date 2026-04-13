@@ -670,6 +670,85 @@ describe('Saver module', () => {
     expect(result?.blocks.find(b => b.id === 'cal2')?.content).toEqual(['b1']);
   });
 
+  it('derives root-toggle content[] from children parentId when contentIds is stale', async () => {
+    // Saver reconciliation must be generic for every container, not just callout.
+    // Pasting into a toggle body leaves toggle.contentIds stale the same way it
+    // does for callout; if saver only covers callout the bug recurs on toggle.
+    vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+
+    const toggle = createBlockMock({
+      id: 'tog1',
+      tool: 'toggle',
+      data: { text: 'Group', isOpen: true },
+      contentIds: [],
+    });
+    const p1 = createBlockMock({ id: 'p1', tool: 'paragraph', data: { text: 'one' }, parentId: 'tog1' });
+    const p2 = createBlockMock({ id: 'p2', tool: 'paragraph', data: { text: 'two' }, parentId: 'tog1' });
+
+    const { saver } = createSaver({
+      blocks: [toggle.block, p1.block, p2.block],
+      toolSanitizeConfigs: { toggle: {}, paragraph: {} },
+    });
+
+    const result = await saver.save();
+
+    expect(result?.blocks.find(b => b.id === 'tog1')?.content).toEqual(['p1', 'p2']);
+  });
+
+  it('derives toggleable-header content[] from children parentId when contentIds is stale', async () => {
+    vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+
+    const header = createBlockMock({
+      id: 'h1',
+      tool: 'header',
+      data: { text: 'Section', level: 2, isToggleable: true, isOpen: true },
+      contentIds: [],
+    });
+    const p1 = createBlockMock({ id: 'p1', tool: 'paragraph', data: { text: 'a' }, parentId: 'h1' });
+    const p2 = createBlockMock({ id: 'p2', tool: 'paragraph', data: { text: 'b' }, parentId: 'h1' });
+
+    const { saver } = createSaver({
+      blocks: [header.block, p1.block, p2.block],
+      toolSanitizeConfigs: { header: {}, paragraph: {} },
+    });
+
+    const result = await saver.save();
+
+    expect(result?.blocks.find(b => b.id === 'h1')?.content).toEqual(['p1', 'p2']);
+  });
+
+  it('derives nested-list content[] from children parentId when contentIds is stale', async () => {
+    vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+
+    const root = createBlockMock({
+      id: 'l1',
+      tool: 'list',
+      data: { style: 'unordered', text: 'root' },
+      contentIds: [],
+    });
+    const child1 = createBlockMock({
+      id: 'l2',
+      tool: 'list',
+      data: { style: 'unordered', text: 'child one' },
+      parentId: 'l1',
+    });
+    const child2 = createBlockMock({
+      id: 'l3',
+      tool: 'list',
+      data: { style: 'unordered', text: 'child two' },
+      parentId: 'l1',
+    });
+
+    const { saver } = createSaver({
+      blocks: [root.block, child1.block, child2.block],
+      toolSanitizeConfigs: { list: {} },
+    });
+
+    const result = await saver.save();
+
+    expect(result?.blocks.find(b => b.id === 'l1')?.content).toEqual(['l2', 'l3']);
+  });
+
   it('derives content[] through a two-level callout→toggle→paragraph chain', async () => {
     vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
 

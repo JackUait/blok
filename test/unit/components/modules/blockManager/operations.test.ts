@@ -1035,6 +1035,99 @@ describe('BlockOperations', () => {
     });
   });
 
+  describe('mergeBlocks', () => {
+    /**
+     * Layer 17 regression (wrong-block-dropped family).
+     *
+     * `mergeBlocks` awaits `blockToMerge.data` then `targetBlock.data`. During
+     * those awaits, either block can be destroyed by a Yjs remote delete,
+     * undo/redo, or a tool-conversion callback. The original code held closure
+     * references and used them after the awaits, which drove:
+     *   - `YjsManager.transact` + `updateBlockData(targetBlock.id, ...)` with a
+     *     dead target id → merged data silently applied to nothing
+     *   - `removeBlock(blockToMerge)` → throws `Can't find a Block to remove`
+     *     inside a `void ... .then(...)` chain → unhandled rejection
+     *   - `currentBlockIndexValue = getBlockIndex(targetBlock)` → -1 when
+     *     targetBlock is gone, corrupting caret state
+     *
+     * Abort cleanly when either block is stale (not in store) — no Yjs side
+     * effects, no block removal, no currentBlockIndex mutation.
+     */
+    it('aborts cleanly when targetBlock is stale (not in store)', async () => {
+      const staleTarget = createMockBlock({
+        id: 'stale-target',
+        name: 'paragraph',
+        mergeable: true,
+        data: { text: 'target content' },
+      });
+      // Replace blocks store's block-2 with a fresh mergeable one carrying real data
+      const freshSource = createMockBlock({
+        id: 'block-2',
+        name: 'paragraph',
+        data: { text: 'source content' },
+      });
+      // Put it in the store by reinitializing with the same ids
+      const testStore = createBlocksStore([
+        createMockBlock({ id: 'block-1', name: 'paragraph' }),
+        freshSource,
+        createMockBlock({ id: 'block-3', name: 'paragraph' }),
+      ]);
+      const testRepo = new BlockRepository();
+      testRepo.initialize(testStore);
+      const testOps = new BlockOperations(
+        dependencies,
+        testRepo,
+        factory,
+        new BlockHierarchy(testRepo),
+        blockDidMutatedSpy,
+        0
+      );
+      testOps.setYjsSync(yjsSync);
+
+      await testOps.mergeBlocks(staleTarget, freshSource, testStore);
+
+      expect(dependencies.YjsManager.transact).not.toHaveBeenCalled();
+      expect(dependencies.YjsManager.updateBlockData).not.toHaveBeenCalled();
+      expect(dependencies.YjsManager.removeBlock).not.toHaveBeenCalled();
+    });
+
+    it('aborts cleanly when blockToMerge is stale (not in store)', async () => {
+      const freshTarget = createMockBlock({
+        id: 'block-1',
+        name: 'paragraph',
+        mergeable: true,
+        data: { text: 'target content' },
+      });
+      const staleSource = createMockBlock({
+        id: 'stale-source',
+        name: 'paragraph',
+        data: { text: 'source content' },
+      });
+      const testStore = createBlocksStore([
+        freshTarget,
+        createMockBlock({ id: 'block-2', name: 'paragraph' }),
+        createMockBlock({ id: 'block-3', name: 'paragraph' }),
+      ]);
+      const testRepo = new BlockRepository();
+      testRepo.initialize(testStore);
+      const testOps = new BlockOperations(
+        dependencies,
+        testRepo,
+        factory,
+        new BlockHierarchy(testRepo),
+        blockDidMutatedSpy,
+        0
+      );
+      testOps.setYjsSync(yjsSync);
+
+      await testOps.mergeBlocks(freshTarget, staleSource, testStore);
+
+      expect(dependencies.YjsManager.transact).not.toHaveBeenCalled();
+      expect(dependencies.YjsManager.updateBlockData).not.toHaveBeenCalled();
+      expect(dependencies.YjsManager.removeBlock).not.toHaveBeenCalled();
+    });
+  });
+
   describe('move', () => {
     it('moves block to new index', () => {
       operations.move(2, 0, false, blocksStore);

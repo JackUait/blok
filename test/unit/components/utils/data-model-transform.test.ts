@@ -1529,6 +1529,119 @@ describe('data-model-transform', () => {
       expect(result[0].data.body.blocks).toHaveLength(1);
       expect(result[0].data.body.blocks[0].id).toBe('h1');
     });
+
+    /**
+     * Generic container reconciliation: the same paste-ejection drift that hit
+     * callout can hit ANY container block (toggle, toggleable header, nested
+     * list) because processRootToggleItem / processRootToggleableHeader /
+     * processRootListItem all read `block.content ?? []` as authoritative. The
+     * defense-in-depth reconcile pass at the head of collapseToLegacy is generic
+     * (keyed on `block.parent`, not on container type), so toggle, header, and
+     * list must behave the same as callout under stale-content drift. These
+     * tests lock the generic contract so no future refactor can silently make
+     * the reconcile callout-specific and leave other containers unprotected.
+     */
+    it('keeps toggle children when content[] is missing but parent fields are set', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 't1', type: 'toggle', data: { text: 'Group', isOpen: true } },
+        { id: 'p1', type: 'paragraph', data: { text: 'Pasted 1' }, parent: 't1' },
+        { id: 'p2', type: 'paragraph', data: { text: 'Pasted 2' }, parent: 't1' },
+      ];
+
+      const result = collapseToLegacy(blocks);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe('toggleList');
+      expect(result[0].data.body).toBeDefined();
+      expect(result[0].data.body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['p1', 'p2']);
+    });
+
+    it('keeps toggle children when content[] is stale (partial list)', () => {
+      const blocks: OutputBlockData[] = [
+        // content only names p1 — p2 and p3 missing from the stale list
+        { id: 't1', type: 'toggle', data: { text: 'Group', isOpen: true }, content: ['p1'] },
+        { id: 'p1', type: 'paragraph', data: { text: 'one' }, parent: 't1' },
+        { id: 'p2', type: 'paragraph', data: { text: 'two' }, parent: 't1' },
+        { id: 'p3', type: 'paragraph', data: { text: 'three' }, parent: 't1' },
+      ];
+
+      const result = collapseToLegacy(blocks);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].data.body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['p1', 'p2', 'p3']);
+    });
+
+    it('keeps toggleable-header children when content[] is missing but parent fields are set', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'h1', type: 'header', data: { text: 'Section', level: 2, isToggleable: true, isOpen: true } },
+        { id: 'p1', type: 'paragraph', data: { text: 'Pasted body 1' }, parent: 'h1' },
+        { id: 'p2', type: 'paragraph', data: { text: 'Pasted body 2' }, parent: 'h1' },
+      ];
+
+      const result = collapseToLegacy(blocks);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe('toggleList');
+      expect(result[0].data.body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['p1', 'p2']);
+    });
+
+    it('keeps toggleable-header children when content[] is stale (partial list)', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'h1', type: 'header', data: { text: 'Section', level: 2, isToggleable: true, isOpen: true }, content: ['p1'] },
+        { id: 'p1', type: 'paragraph', data: { text: 'a' }, parent: 'h1' },
+        { id: 'p2', type: 'paragraph', data: { text: 'b' }, parent: 'h1' },
+      ];
+
+      const result = collapseToLegacy(blocks);
+
+      expect(result[0].data.body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['p1', 'p2']);
+    });
+
+    it('keeps nested flat-list children when content[] is missing but parent fields are set', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'l1', type: 'list', data: { style: 'unordered', text: 'root' } },
+        { id: 'l2', type: 'list', data: { style: 'unordered', text: 'child one' }, parent: 'l1' },
+        { id: 'l3', type: 'list', data: { style: 'unordered', text: 'child two' }, parent: 'l1' },
+      ];
+
+      const result = collapseToLegacy(blocks);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe('list');
+      const items = result[0].data.items;
+
+      expect(items).toHaveLength(1);
+      expect(items[0].content).toBe('root');
+      expect(items[0].items).toHaveLength(2);
+      expect(items[0].items[0].content).toBe('child one');
+      expect(items[0].items[1].content).toBe('child two');
+    });
+
+    it('reconciles mixed container types in one pass without cross-contamination', () => {
+      // Three different containers coexist with stale/missing content[]. The
+      // generic reconcile must keep each container's children scoped to the
+      // right parent — no bleed-over between callout, toggle, and header.
+      const blocks: OutputBlockData[] = [
+        { id: 'c1', type: 'callout', data: { emoji: '💡', textColor: null, backgroundColor: null } },
+        { id: 'cp1', type: 'paragraph', data: { text: 'callout kid' }, parent: 'c1' },
+        { id: 't1', type: 'toggle', data: { text: 'toggle title', isOpen: true } },
+        { id: 'tp1', type: 'paragraph', data: { text: 'toggle kid' }, parent: 't1' },
+        { id: 'h1', type: 'header', data: { text: 'header title', level: 3, isToggleable: true } },
+        { id: 'hp1', type: 'paragraph', data: { text: 'header kid' }, parent: 'h1' },
+      ];
+
+      const result = collapseToLegacy(blocks);
+
+      expect(result).toHaveLength(3);
+
+      const callout = result.find(b => b.id === 'c1');
+      const toggle = result.find(b => b.id === 't1');
+      const header = result.find(b => b.id === 'h1');
+
+      expect(callout?.data.body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['cp1']);
+      expect(toggle?.data.body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['tp1']);
+      expect(header?.data.body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['hp1']);
+    });
   });
 
   describe('normalizeTableChildParents', () => {

@@ -721,13 +721,59 @@ export class BlockOperations {
    */
   public async mergeBlocks(targetBlock: Block, blockToMerge: Block, blocksStore: BlocksStore): Promise<void> {
     /**
+     * Layer 17: stale-source guard (regression: wrong-block-dropped family).
+     *
+     * `mergeBlocks` awaits `blockToMerge.data` (and `blockToMerge.exportDataAsString`
+     * in the conversion path), then re-awaits `targetBlock.data` inside
+     * `completeMerge`. During those awaits, either block can be removed by a
+     * Yjs remote delete, undo/redo, or a tool-conversion callback. The original
+     * code held closure references and used them unguarded after the awaits,
+     * which drove:
+     *   - `YjsManager.transact` + `updateBlockData(targetBlock.id, …)` against a
+     *     dead target id (silent no-op but still a mutation attempt)
+     *   - `targetBlock.mergeWith(mergeData).then(…)` on a destroyed Block where
+     *     `mergeWith` returns undefined → `.then` crash
+     *   - `removeBlock(blockToMerge, …)` → `Can't find a Block to remove` thrown
+     *     inside a `void ... .then(...)` chain → unhandled rejection
+     *   - `currentBlockIndexValue = getBlockIndex(targetBlock)` → -1, corrupting
+     *     caret state downstream
+     *
+     * Verify both blocks are still in the store before starting and also before
+     * each mutation step so a remote delete during any of the awaits aborts
+     * cleanly rather than propagating the stale reference into Yjs and the DOM.
+     */
+    if (
+      this.repository.getBlockIndex(targetBlock) === -1 ||
+      this.repository.getBlockIndex(blockToMerge) === -1
+    ) {
+      return;
+    }
+
+    /**
      * Complete the merge operation with the prepared data
      * Syncs to Yjs atomically, then updates DOM without re-syncing
      */
     const completeMerge = async (mergeData: BlockToolData): Promise<void> => {
+      // Layer 17 re-check: post-await staleness window. Both blocks must still
+      // be in the store, otherwise abort before any Yjs/DOM mutation.
+      if (
+        this.repository.getBlockIndex(targetBlock) === -1 ||
+        this.repository.getBlockIndex(blockToMerge) === -1
+      ) {
+        return;
+      }
+
       // Get current target data to compute merged result for Yjs
       const targetData = await targetBlock.data;
       const mergedData = { ...targetData, ...mergeData };
+
+      // Layer 17 re-check after the second await.
+      if (
+        this.repository.getBlockIndex(targetBlock) === -1 ||
+        this.repository.getBlockIndex(blockToMerge) === -1
+      ) {
+        return;
+      }
 
       // Sync to Yjs atomically: update target + remove source as single undo entry
       this.dependencies.YjsManager.transact(() => {

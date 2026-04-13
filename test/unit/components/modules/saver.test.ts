@@ -588,5 +588,120 @@ describe('Saver module', () => {
 
     expect(calloutOut?.content).toEqual(['hdr1', 'p-pasted']);
   });
+
+  it('derives content[] in blocks-array order even when contentIds is reversed', async () => {
+    vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+
+    const callout = createBlockMock({
+      id: 'cal1',
+      tool: 'callout',
+      data: { emoji: '💡', textColor: null, backgroundColor: null },
+      // Stale AND reversed — must be overridden by blocks-array order
+      contentIds: ['p3', 'p2', 'p1'],
+    });
+
+    const p1 = createBlockMock({ id: 'p1', tool: 'paragraph', data: { text: 'one' },   parentId: 'cal1' });
+    const p2 = createBlockMock({ id: 'p2', tool: 'paragraph', data: { text: 'two' },   parentId: 'cal1' });
+    const p3 = createBlockMock({ id: 'p3', tool: 'paragraph', data: { text: 'three' }, parentId: 'cal1' });
+
+    const { saver } = createSaver({
+      blocks: [callout.block, p1.block, p2.block, p3.block],
+      toolSanitizeConfigs: { callout: {}, paragraph: {} },
+    });
+
+    const result = await saver.save();
+
+    expect(result?.blocks.find(b => b.id === 'cal1')?.content).toEqual(['p1', 'p2', 'p3']);
+  });
+
+  it('drops dead ids from contentIds when children do not exist in blocks array', async () => {
+    vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+
+    const callout = createBlockMock({
+      id: 'cal1',
+      tool: 'callout',
+      data: { emoji: '💡', textColor: null, backgroundColor: null },
+      // Dead id "ghost" no longer exists — must be dropped
+      contentIds: ['ghost', 'p1'],
+    });
+
+    const p1 = createBlockMock({ id: 'p1', tool: 'paragraph', data: { text: 'real' }, parentId: 'cal1' });
+
+    const { saver } = createSaver({
+      blocks: [callout.block, p1.block],
+      toolSanitizeConfigs: { callout: {}, paragraph: {} },
+    });
+
+    const result = await saver.save();
+    const calloutOut = result?.blocks.find(b => b.id === 'cal1');
+
+    expect(calloutOut?.content).toEqual(['p1']);
+    expect(calloutOut?.content).not.toContain('ghost');
+  });
+
+  it('keeps drift isolated per callout when multiple callouts coexist', async () => {
+    vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+
+    const cal1 = createBlockMock({
+      id: 'cal1',
+      tool: 'callout',
+      data: { emoji: '💡', textColor: null, backgroundColor: null },
+      contentIds: [],
+    });
+    const cal2 = createBlockMock({
+      id: 'cal2',
+      tool: 'callout',
+      data: { emoji: '⚠️', textColor: null, backgroundColor: null },
+      contentIds: [],
+    });
+
+    const a1 = createBlockMock({ id: 'a1', tool: 'paragraph', data: { text: 'A1' }, parentId: 'cal1' });
+    const a2 = createBlockMock({ id: 'a2', tool: 'paragraph', data: { text: 'A2' }, parentId: 'cal1' });
+    const b1 = createBlockMock({ id: 'b1', tool: 'paragraph', data: { text: 'B1' }, parentId: 'cal2' });
+
+    const { saver } = createSaver({
+      blocks: [cal1.block, a1.block, a2.block, cal2.block, b1.block],
+      toolSanitizeConfigs: { callout: {}, paragraph: {} },
+    });
+
+    const result = await saver.save();
+
+    expect(result?.blocks.find(b => b.id === 'cal1')?.content).toEqual(['a1', 'a2']);
+    expect(result?.blocks.find(b => b.id === 'cal2')?.content).toEqual(['b1']);
+  });
+
+  it('derives content[] through a two-level callout→toggle→paragraph chain', async () => {
+    vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+
+    const callout = createBlockMock({
+      id: 'cal1',
+      tool: 'callout',
+      data: { emoji: '💡', textColor: null, backgroundColor: null },
+      contentIds: [],
+    });
+    const toggle = createBlockMock({
+      id: 'tog1',
+      tool: 'toggle',
+      data: { text: 'Toggle title', status: 'open' },
+      parentId: 'cal1',
+      contentIds: [],
+    });
+    const leaf = createBlockMock({
+      id: 'leaf',
+      tool: 'paragraph',
+      data: { text: 'deep child' },
+      parentId: 'tog1',
+    });
+
+    const { saver } = createSaver({
+      blocks: [callout.block, toggle.block, leaf.block],
+      toolSanitizeConfigs: { callout: {}, toggle: {}, paragraph: {} },
+    });
+
+    const result = await saver.save();
+
+    expect(result?.blocks.find(b => b.id === 'cal1')?.content).toEqual(['tog1']);
+    expect(result?.blocks.find(b => b.id === 'tog1')?.content).toEqual(['leaf']);
+  });
 });
 

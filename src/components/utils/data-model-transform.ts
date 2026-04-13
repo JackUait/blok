@@ -844,31 +844,105 @@ const processRootCalloutItem = (
  * @param blocks - array of flat blocks with parent/content references
  * @returns collapsed array with nested structures
  */
+/**
+ * Groups one block under its parent in the derived-content map if it has a
+ * valid parent reference. Helper extracted for collapseToLegacy reconciliation.
+ */
+const appendChildToDerivedContent = (
+  block: OutputBlockData,
+  blockById: Map<BlockId, OutputBlockData>,
+  derivedContent: Map<BlockId, BlockId[]>
+): void => {
+  if (!block.id || !block.parent || !blockById.has(block.parent)) {
+    return;
+  }
+  const siblings = derivedContent.get(block.parent);
+
+  if (siblings === undefined) {
+    derivedContent.set(block.parent, [block.id]);
+
+    return;
+  }
+  siblings.push(block.id);
+};
+
+/**
+ * Merges live (parent-derived) ids into the existing content[] preserving its
+ * order, dropping any dead ids that don't resolve to a block in the input.
+ */
+const mergeContentIds = (
+  existingContent: BlockId[] | undefined,
+  derivedIds: BlockId[],
+  blockById: Map<BlockId, OutputBlockData>
+): BlockId[] => {
+  const existing = Array.isArray(existingContent) ? existingContent : [];
+  const merged = existing.filter((id) => blockById.has(id));
+
+  for (const id of derivedIds) {
+    if (!merged.includes(id)) {
+      merged.push(id);
+    }
+  }
+
+  return merged;
+};
+
 export const collapseToLegacy = (blocks: OutputBlockData[]): OutputBlockData[] => {
+  // Defense-in-depth: reconcile each parent's content[] from children's parent
+  // fields before processing. Saver is the primary source of truth for content[]
+  // (see src/components/modules/saver.ts#doSave), but this pass guarantees the
+  // invariant `child.parent === X ⇒ X.content.includes(child.id)` even when
+  // OutputBlockData originates from a path that bypassed the saver — migrations,
+  // external JSON, tests, 3rd-party consumers. Without this, stale content[]
+  // causes processRootCalloutItem to eject real children as root siblings.
+  const reconciledBlocks = blocks.map((block) => ({ ...block }));
+  const reconciledById = new Map<BlockId, OutputBlockData>();
+
+  for (const block of reconciledBlocks) {
+    if (block.id) {
+      reconciledById.set(block.id, block);
+    }
+  }
+
+  const derivedContent = new Map<BlockId, BlockId[]>();
+
+  for (const block of reconciledBlocks) {
+    appendChildToDerivedContent(block, reconciledById, derivedContent);
+  }
+
+  for (const [parentId, derivedIds] of derivedContent) {
+    const parent = reconciledById.get(parentId);
+
+    if (parent === undefined) {
+      continue;
+    }
+    parent.content = mergeContentIds(parent.content, derivedIds, reconciledById);
+  }
+
   // Build a map of blocks by ID for quick lookup
   const blockMap = new Map<BlockId, OutputBlockData>();
 
-  for (const block of blocks) {
+  for (const block of reconciledBlocks) {
     if (block.id) {
       blockMap.set(block.id, block);
     }
   }
 
   // If no flat-model list, toggle, or callout blocks, just strip hierarchy fields and return
-  const hasFlatListBlocks = blocks.some(isFlatModelListBlock);
-  const hasFlatToggleBlocks = blocks.some(isFlatModelToggleBlock);
-  const hasFlatToggleableHeaders = blocks.some(b => isToggleableHeaderBlock(b) && !b.parent);
-  const hasFlatCalloutBlocks = blocks.some(isFlatModelCalloutBlock);
+  const hasFlatListBlocks = reconciledBlocks.some(isFlatModelListBlock);
+  const hasFlatToggleBlocks = reconciledBlocks.some(isFlatModelToggleBlock);
+  const hasFlatToggleableHeaders = reconciledBlocks.some(b => isToggleableHeaderBlock(b) && !b.parent);
+  const hasFlatCalloutBlocks = reconciledBlocks.some(isFlatModelCalloutBlock);
 
   if (!hasFlatListBlocks && !hasFlatToggleBlocks && !hasFlatToggleableHeaders && !hasFlatCalloutBlocks) {
-    return blocks.map(stripHierarchyFields);
+    return reconciledBlocks.map(stripHierarchyFields);
   }
 
   // Process blocks, converting root flat-model list blocks to legacy List blocks
   const result: OutputBlockData[] = [];
   const processedIds = new Set<BlockId>();
 
-  for (const block of blocks) {
+  for (const block of reconciledBlocks) {
     const alreadyProcessed = block.id && processedIds.has(block.id);
 
     if (alreadyProcessed) {

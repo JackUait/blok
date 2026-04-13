@@ -1474,6 +1474,61 @@ describe('data-model-transform', () => {
 
       expect(result[0].data.title).toBe('');
     });
+
+    /**
+     * Defense-in-depth regression for the callout paste bug: even if upstream
+     * persistence passes us OutputBlockData with a stale or missing `content[]`
+     * on the parent, children carrying `parent: X` must NOT be ejected from the
+     * legacy body. Saver is the primary fix; this layer is a safety net for any
+     * code path that constructs OutputBlockData without running the saver
+     * reconciliation (external JSON, migrations, tests, 3rd-party consumers).
+     */
+    it('keeps callout children when content[] is missing but parent fields are set', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'c1', type: 'callout', data: { emoji: '💡', textColor: null, backgroundColor: null } },
+        { id: 'h1', type: 'header', data: { text: 'Исключения', level: 4 }, parent: 'c1' },
+        { id: 'p1', type: 'paragraph', data: { text: '1. Item' }, parent: 'c1' },
+        { id: 'p2', type: 'paragraph', data: { text: '2. Item' }, parent: 'c1' },
+      ];
+
+      const result = collapseToLegacy(blocks);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe('callout');
+      const body = result[0].data.body;
+
+      expect(body).toBeDefined();
+      expect(body.blocks).toHaveLength(3);
+      expect(body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['h1', 'p1', 'p2']);
+    });
+
+    it('keeps callout children when content[] is stale (partial list)', () => {
+      const blocks: OutputBlockData[] = [
+        // content only names h1 — p1 and p2 are missing from the stale list
+        { id: 'c1', type: 'callout', data: { emoji: '💡', textColor: null, backgroundColor: null }, content: ['h1'] },
+        { id: 'h1', type: 'header', data: { text: 'Исключения', level: 4 }, parent: 'c1' },
+        { id: 'p1', type: 'paragraph', data: { text: '1. Item' }, parent: 'c1' },
+        { id: 'p2', type: 'paragraph', data: { text: '2. Item' }, parent: 'c1' },
+      ];
+
+      const result = collapseToLegacy(blocks);
+
+      // Stale content[] must not cause paragraphs to get ejected as root siblings.
+      expect(result).toHaveLength(1);
+      expect(result[0].data.body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['h1', 'p1', 'p2']);
+    });
+
+    it('drops dead ids from content[] when block is missing from input', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'c1', type: 'callout', data: { emoji: '💡', textColor: null, backgroundColor: null }, content: ['ghost', 'h1'] },
+        { id: 'h1', type: 'header', data: { text: 'T', level: 4 }, parent: 'c1' },
+      ];
+
+      const result = collapseToLegacy(blocks);
+
+      expect(result[0].data.body.blocks).toHaveLength(1);
+      expect(result[0].data.body.blocks[0].id).toBe('h1');
+    });
   });
 
   describe('normalizeTableChildParents', () => {

@@ -1016,6 +1016,83 @@ describe('BlockManager', () => {
     expect(syncingDuringRendered).toBe(true);
   });
 
+  describe('insertMany contentIds reconciliation', () => {
+    /**
+     * Regression guard for the callout paste bug (commit 062d9fd1): hierarchical
+     * input JSON can carry `parent: X` on a child without a matching `content: [...]`
+     * on the parent. Downstream consumers (collapseToLegacy, drag descendants,
+     * block selection copy) treat parent.contentIds as authoritative, so any child
+     * missing from contentIds gets ejected. insertMany must reconcile the
+     * invariant `child.parentId ⇒ parent.contentIds.includes(child.id)` up front.
+     */
+    it('back-fills parent.contentIds from children.parentId on load', () => {
+      const parent = createBlockStub({ id: 'cal1' });
+      const child = createBlockStub({ id: 'hdr1' });
+
+      (parent as unknown as { contentIds: string[] }).contentIds = [];
+      (child as unknown as { parentId: string }).parentId = 'cal1';
+
+      const { blockManager } = createBlockManager({});
+      blockManager.insertMany([parent, child], 0);
+
+      expect((parent as unknown as { contentIds: string[] }).contentIds).toContain('hdr1');
+    });
+
+    it('does not duplicate ids already present in contentIds', () => {
+      const parent = createBlockStub({ id: 'cal1' });
+      const child = createBlockStub({ id: 'hdr1' });
+
+      (parent as unknown as { contentIds: string[] }).contentIds = ['hdr1'];
+      (child as unknown as { parentId: string }).parentId = 'cal1';
+
+      const { blockManager } = createBlockManager({});
+      blockManager.insertMany([parent, child], 0);
+
+      expect((parent as unknown as { contentIds: string[] }).contentIds).toEqual(['hdr1']);
+    });
+
+    it('merges missing child into a partially populated contentIds', () => {
+      const parent = createBlockStub({ id: 'cal1' });
+      const existing = createBlockStub({ id: 'hdr1' });
+      const missing = createBlockStub({ id: 'p-pasted' });
+
+      (parent as unknown as { contentIds: string[] }).contentIds = ['hdr1'];
+      (existing as unknown as { parentId: string }).parentId = 'cal1';
+      (missing as unknown as { parentId: string }).parentId = 'cal1';
+
+      const { blockManager } = createBlockManager({});
+      blockManager.insertMany([parent, existing, missing], 0);
+
+      expect((parent as unknown as { contentIds: string[] }).contentIds).toEqual(['hdr1', 'p-pasted']);
+    });
+
+    it('ignores child whose parentId points to a non-existent parent', () => {
+      const orphan = createBlockStub({ id: 'orphan' });
+      const unrelated = createBlockStub({ id: 'u1' });
+
+      (orphan as unknown as { parentId: string }).parentId = 'ghost-parent';
+
+      const { blockManager } = createBlockManager({});
+
+      expect(() => blockManager.insertMany([orphan, unrelated], 0)).not.toThrow();
+      expect((unrelated as unknown as { contentIds: string[] }).contentIds).toEqual([]);
+    });
+
+    it('reconciles even when child precedes parent in the blocks array', () => {
+      const parent = createBlockStub({ id: 'cal1' });
+      const child = createBlockStub({ id: 'hdr1' });
+
+      (parent as unknown as { contentIds: string[] }).contentIds = [];
+      (child as unknown as { parentId: string }).parentId = 'cal1';
+
+      const { blockManager } = createBlockManager({});
+      // Child listed FIRST; parent second.
+      blockManager.insertMany([child, parent], 0);
+
+      expect((parent as unknown as { contentIds: string[] }).contentIds).toContain('hdr1');
+    });
+  });
+
   describe('edit metadata on mutation', () => {
     it('should update block lastEditedAt and lastEditedBy on content change', async () => {
       const block = createBlockStub({ id: 'block-meta' });

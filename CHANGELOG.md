@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.8](https://github.com/JackUait/blok/compare/v0.10.7...v0.10.8) (2026-04-13)
+
+### Bug Fixes
+
+- **Table** — Normalize flat-array table child parents at every entry point
+- **Data Model** — Recursively expand legacy nested toggleList/callout bodies
+
 ## [0.10.7](https://github.com/JackUait/blok/compare/v0.10.6...v0.10.7) (2026-04-13)
 
 ### Bug Fixes

@@ -117,6 +117,7 @@
     "perf:dashboard": "node scripts/generate-performance-dashboard.mjs",
     "e2e:validate-categories": "node scripts/validate-test-categories.mjs",
     "validate:spec-coverage": "node scripts/validate-spec-file-coverage.mjs",
+    "ci:timing": "node scripts/ci-timing-probe.mjs",
     "size": "size-limit",
     "size:why": "size-limit --why",
     "release": "node scripts/release.mjs",

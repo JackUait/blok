@@ -158,10 +158,9 @@ export default defineConfig({
     timeout: 5_000,
   },
   fullyParallel: true,
-  reporter: [
-    ['list'],
-    ['html', { open: 'never' }],
-  ],
+  reporter: process.env.CI
+    ? [['blob'], ['list'], ['github']]
+    : [['list'], ['html', { open: 'never' }]],
   use: {
     headless: true,
     screenshot: 'only-on-failure',

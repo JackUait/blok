@@ -92,11 +92,15 @@ jobs:
       - name: Build React Vendor Files
         run: node scripts/build-react-vendor.mjs
 
+      - name: Get Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> $GITHUB_OUTPUT
+
       - name: Restore Playwright Browsers from Cache
         uses: actions/cache/restore@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-all-${{ hashFiles('**/yarn.lock') }}
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
           fail-on-cache-miss: true
 
       - name: Install Browser Dependencies

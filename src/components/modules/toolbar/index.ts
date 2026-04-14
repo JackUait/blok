@@ -886,11 +886,16 @@ export class Toolbar extends Module<ToolbarNodes> {
    * refreshed immediately when focus moves, without waiting for the next
    * hover/moveAndOpen cycle.
    *
-   * Note: table cell focus intentionally does NOT hide the settings toggler —
-   * the toolbar is anchored on the parent table block and its drag handle
-   * must remain usable to drag the whole table while cell text is edited.
+   * INVARIANT: the ONLY reason this method may hide the settings toggler
+   * (drag handle) is `isCalloutFirstChild` — a structural property of the
+   * block, NOT where `document.activeElement` currently is. Hiding the drag
+   * handle based on focus position inside nested content (table cells,
+   * code editors, database titles, etc.) will break dragging of the
+   * containing block while the user edits its content. Do NOT add focus-
+   * based or DOM-attribute-based hide branches here. See the arch guard
+   * test in test/unit/components/modules/toolbar/index.test.ts.
    */
-  private updateToolbarButtonsForTableCellFocus(): void {
+  private updateToolbarButtonsForCalloutFirstChild(): void {
     const { plusButton, settingsToggler } = this.nodes;
 
     if (!plusButton) {
@@ -1242,15 +1247,13 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     /**
-     * Listen for focus changes inside the editor.
-     * When the user clicks/tabs into a table cell, hide the plus button and
-     * settings toggler. When focus moves to a regular block, restore them.
-     *
-     * This runs on every focusin event (not throttled) to ensure buttons
-     * update immediately on click — no 300ms delay.
+     * Listen for focus changes inside the editor so callout first-child
+     * button state refreshes immediately on click/tab — no 300ms delay.
+     * Drag handle visibility must NOT depend on focus position inside
+     * nested content (see updateToolbarButtonsForCalloutFirstChild doc).
      */
     this.readOnlyMutableListeners.on(this.Blok.UI.nodes.wrapper, 'focusin', () => {
-      this.updateToolbarButtonsForTableCellFocus();
+      this.updateToolbarButtonsForCalloutFirstChild();
     });
 
     /**

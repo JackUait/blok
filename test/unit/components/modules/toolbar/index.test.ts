@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Toolbar } from '../../../../../src/components/modules/toolbar/index';
 import type * as UtilsModule from '../../../../../src/components/utils';
@@ -521,7 +524,7 @@ describe('Toolbar module interactions', () => {
     expect(tableBlock.setupDraggable).toHaveBeenCalledWith(nodes.settingsToggler, expect.anything());
 
     // Also verify the focusin-triggered update path does not re-hide it
-    (toolbar as unknown as { updateToolbarButtonsForTableCellFocus: () => void }).updateToolbarButtonsForTableCellFocus();
+    (toolbar as unknown as { updateToolbarButtonsForCalloutFirstChild: () => void }).updateToolbarButtonsForCalloutFirstChild();
     expect(nodes.settingsToggler?.style.display).toBe('');
 
     document.body.removeChild(tableBlockHolder);
@@ -975,5 +978,298 @@ describe('Plus button interactions', () => {
       // → marginLeft is set to '0px' (master uses getBoundingClientRect for precise layout)
       expect(contentNode.style.marginLeft).toBe('0px');
     });
+  });
+
+  /**
+   * Arch guardrail: protect the "drag handle always visible" invariant.
+   *
+   * Background: a prior bug hid the toolbar's settings toggler (drag handle)
+   * whenever `document.activeElement` was inside `[data-blok-table-cell-blocks]`.
+   * Because the toolbar is anchored on the parent table block and the drag
+   * handle is wired via `setupDraggable()` to drag that parent, hiding the
+   * handle left the whole table undraggable while editing cell text.
+   *
+   * The fix removed all focus-based hide paths. The settings toggler is now
+   * hidden ONLY when the target block is the first child of a callout
+   * (structural, not focus-based) — a deliberate design choice so the drag
+   * handle does not overlap the callout emoji.
+   *
+   * These tests ensure the bug class stays dead: no future edit may reintroduce
+   * a hide branch keyed off focus, activeElement, or a container DOM attribute.
+   */
+  describe('drag-handle-always-visible invariant (arch guardrail)', () => {
+    const toolbarSource = readFileSync(
+      resolve(__dirname, '../../../../../src/components/modules/toolbar/index.ts'),
+      'utf8'
+    );
+
+    beforeEach(() => {
+      /**
+       * Parent `Plus button interactions` beforeEach stubs `moveAndOpen` with a
+       * noop so other tests can spy on it. Restore the real implementation and
+       * mock positioner methods (jsdom doesn't layout) so moveAndOpen can reach
+       * setupDraggable.
+       */
+      (toolbar as unknown as { moveAndOpen: typeof toolbar['moveAndOpen'] }).moveAndOpen =
+        toolbar.constructor.prototype.moveAndOpen.bind(toolbar);
+
+      const positioner = (toolbar as unknown as { positioner: {
+        setHoveredTarget: (t: unknown) => void;
+        resetCachedPosition: () => void;
+        calculateToolbarY: () => number | null;
+        moveToY: () => void;
+        applyContentOffset: () => void;
+      } }).positioner;
+
+      vi.spyOn(positioner, 'calculateToolbarY').mockReturnValue(0);
+      vi.spyOn(positioner, 'moveToY').mockImplementation(() => {});
+      vi.spyOn(positioner, 'applyContentOffset').mockImplementation(() => {});
+      vi.spyOn(positioner, 'setHoveredTarget').mockImplementation(() => {});
+      vi.spyOn(positioner, 'resetCachedPosition').mockImplementation(() => {});
+
+      (toolbar as unknown as { toolboxInstance: { opened: boolean; close: () => void; updateLeftAlignElement: () => void } }).toolboxInstance = {
+        opened: false,
+        close: vi.fn(),
+        updateLeftAlignElement: vi.fn(),
+      };
+
+      (getBlok().BlockManager as unknown as { blocks: unknown[] }).blocks = [{}];
+    });
+
+    it('never writes a literal "none" to settingsToggler.style.display in toolbar source', () => {
+      /**
+       * Any literal `settingsToggler.style.display = 'none'` assignment would
+       * be an unconditional hide and would re-introduce the bug. The only
+       * allowed hide path uses the ternary `isCalloutFirstChild ? 'none' : ''`.
+       */
+      const literalHide = toolbarSource.match(
+        /settingsToggler\s*\.\s*style\s*\.\s*display\s*=\s*['"]none['"]/g
+      );
+
+      expect(literalHide).toBeNull();
+    });
+
+    it('hides settingsToggler only via the isCalloutFirstChild ternary', () => {
+      const allWrites = toolbarSource.match(
+        /settingsToggler(?:\??\.style)?\.style\.display\s*=\s*[^;]+/g
+      ) ?? [];
+
+      /**
+       * Every hide-capable write (one containing 'none') must be guarded by
+       * `isCalloutFirstChild`. Restore writes (containing only '' ) are fine.
+       */
+      const hidingWrites = allWrites.filter((line) => line.includes("'none'") || line.includes('"none"'));
+
+      expect(hidingWrites.length).toBeGreaterThan(0);
+
+      for (const line of hidingWrites) {
+        expect(line).toContain('isCalloutFirstChild');
+      }
+    });
+
+    it('does not key settings-toggler visibility off document.activeElement or container DOM attributes', () => {
+      /**
+       * Future regressions to watch: someone re-introducing a helper like
+       * `isFocusInsideTableCell()` or an inline `document.activeElement`
+       * check that hides the drag handle based on where focus currently sits.
+       *
+       * Strategy: find every line assigning `settingsToggler.style.display`
+       * and check a ±400-character window around each assignment for
+       * forbidden symbols. A window-based check catches mutations regardless
+       * of whether the forbidden symbol appears before or after the assignment
+       * (e.g. a ternary condition to the left, or a helper variable computed
+       * just above).
+       */
+      const forbiddenInWindow: Array<{ name: string; pattern: RegExp }> = [
+        { name: 'document.activeElement', pattern: /document\s*\.\s*activeElement/ },
+        { name: 'container DOM attribute selector', pattern: /closest\s*\(\s*['"][^'"]*data-blok-[a-z-]*(?:cell|nested-blocks|toggle-children)/ },
+        { name: 'isFocusInside* helper', pattern: /isFocusInside/i },
+      ];
+
+      const assignmentRegex = /settingsToggler[\s\S]{0,30}?\.style\.display\s*=/g;
+      const windowSize = 400;
+
+      let match: RegExpExecArray | null;
+      const windows: Array<{ start: number; text: string }> = [];
+
+      while ((match = assignmentRegex.exec(toolbarSource)) !== null) {
+        const start = Math.max(0, match.index - windowSize);
+        const end = Math.min(toolbarSource.length, match.index + windowSize);
+
+        windows.push({ start, text: toolbarSource.slice(start, end) });
+      }
+
+      expect(windows.length).toBeGreaterThan(0);
+
+      const findHit = (): { name: string; start: number } | null => {
+        for (const { start, text } of windows) {
+          const hit = forbiddenInWindow.find(({ pattern }) => pattern.test(text));
+
+          if (hit !== undefined) {
+            return { name: hit.name, start };
+          }
+        }
+
+        return null;
+      };
+
+      const hit = findHit();
+
+      expect(
+        hit,
+        hit === null
+          ? ''
+          : `Forbidden symbol "${hit.name}" appears within 400 chars of a `
+            + `settingsToggler.style.display assignment near offset ${hit.start}. `
+            + `This risks re-introducing the "drag handle hidden while editing `
+            + `nested content" bug. See the comment on `
+            + `updateToolbarButtonsForCalloutFirstChild().`
+      ).toBeNull();
+
+      /**
+       * Also forbid the standalone helper name anywhere in the file — if
+       * someone re-adds it, catch it regardless of where it's called.
+       */
+      expect(toolbarSource).not.toMatch(/isFocusInside/i);
+    });
+
+    /**
+     * Behavioral matrix: for every common nested-content shape, `moveAndOpen`
+     * must keep the drag handle visible when focus sits inside that content.
+     * Covers table cells (resolved up to parent), code-style
+     * contenteditables, database-title-style contenteditables, toggle/header
+     * child containers, and a plain nested contenteditable.
+     */
+    const scenarios: Array<{ name: string; buildNested: (blockHolder: HTMLElement) => HTMLElement }> = [
+      {
+        name: 'focus inside a table cell (resolved to parent table)',
+        buildNested: (blockHolder) => {
+          const cellContainer = document.createElement('div');
+
+          cellContainer.setAttribute('data-blok-table-cell-blocks', '');
+
+          const cellBlockHolder = document.createElement('div');
+
+          cellBlockHolder.setAttribute('data-blok-testid', 'block-wrapper');
+          cellContainer.appendChild(cellBlockHolder);
+          blockHolder.appendChild(cellContainer);
+
+          const editable = document.createElement('div');
+
+          editable.setAttribute('contenteditable', 'true');
+          cellBlockHolder.appendChild(editable);
+
+          return editable;
+        },
+      },
+      {
+        name: 'focus inside a code-block contenteditable',
+        buildNested: (blockHolder) => {
+          const code = document.createElement('div');
+
+          code.setAttribute('contenteditable', 'plaintext-only');
+          blockHolder.appendChild(code);
+
+          return code;
+        },
+      },
+      {
+        name: 'focus inside a database title contenteditable',
+        buildNested: (blockHolder) => {
+          const title = document.createElement('div');
+
+          title.setAttribute('data-blok-database-title', '');
+          title.setAttribute('contenteditable', 'true');
+          blockHolder.appendChild(title);
+
+          return title;
+        },
+      },
+      {
+        name: 'focus inside a toggle/header child-blocks container',
+        buildNested: (blockHolder) => {
+          const childContainer = document.createElement('div');
+
+          childContainer.setAttribute('data-blok-toggle-children', '');
+          childContainer.setAttribute('data-blok-nested-blocks', '');
+          blockHolder.appendChild(childContainer);
+
+          const childEditable = document.createElement('div');
+
+          childEditable.setAttribute('contenteditable', 'true');
+          childContainer.appendChild(childEditable);
+
+          return childEditable;
+        },
+      },
+      {
+        name: 'focus inside an arbitrary nested contenteditable',
+        buildNested: (blockHolder) => {
+          const wrapper = document.createElement('section');
+
+          blockHolder.appendChild(wrapper);
+
+          const editable = document.createElement('div');
+
+          editable.setAttribute('contenteditable', 'true');
+          wrapper.appendChild(editable);
+
+          return editable;
+        },
+      },
+    ];
+
+    for (const scenario of scenarios) {
+      it(`keeps drag handle visible: ${scenario.name}`, () => {
+        const blockHolder = document.createElement('div');
+
+        blockHolder.setAttribute('data-blok-testid', 'block-wrapper');
+
+        const pluginsContent = document.createElement('div');
+
+        blockHolder.appendChild(pluginsContent);
+        document.body.appendChild(blockHolder);
+
+        const nested = scenario.buildNested(blockHolder);
+
+        nested.focus();
+
+        const block = {
+          id: 'test-block',
+          name: 'paragraph',
+          holder: blockHolder,
+          pluginsContent,
+          isEmpty: false,
+          cleanupDraggable: vi.fn(),
+          setupDraggable: vi.fn(),
+          getTunes: vi.fn(() => ({ toolTunes: [{}], commonTunes: [] })),
+          getToolbarAnchorElement: vi.fn(() => undefined),
+        };
+
+        const blok = getBlok();
+
+        blok.BlockManager.currentBlock = block as unknown as typeof blok.BlockManager.currentBlock;
+        (blok.BlockManager as unknown as { getBlockByChildNode: (node: Node) => unknown }).getBlockByChildNode =
+          vi.fn(() => block);
+
+        (toolbar as unknown as { moveAndOpen: (b: unknown, t?: unknown) => void }).moveAndOpen(block);
+
+        const nodes = (toolbar as unknown as { nodes: typeof toolbar['nodes'] }).nodes;
+
+        expect(nodes.settingsToggler?.style.display).toBe('');
+        expect(nodes.plusButton?.style.display).toBe('');
+
+        (toolbar as unknown as { updateToolbarButtonsForCalloutFirstChild: () => void })
+          .updateToolbarButtonsForCalloutFirstChild();
+
+        expect(nodes.settingsToggler?.style.display).toBe('');
+        expect(nodes.plusButton?.style.display).toBe('');
+
+        expect(block.setupDraggable).toHaveBeenCalled();
+        expect(block.setupDraggable.mock.calls[0]?.[0]).toBe(nodes.settingsToggler);
+
+        document.body.removeChild(blockHolder);
+      });
+    }
   });
 });

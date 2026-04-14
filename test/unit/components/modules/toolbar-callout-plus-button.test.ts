@@ -456,7 +456,7 @@ describe('Toolbar — callout first-child plus button visibility', () => {
 
     const priv = toolbar as unknown as Record<string, () => void>;
 
-    priv.updateToolbarButtonsForTableCellFocus();
+    priv.updateToolbarButtonsForCalloutFirstChild();
 
     expect(plusButton.style.display).toBe('');
     expect(settingsToggler.style.display).toBe('');
@@ -520,7 +520,7 @@ describe('Toolbar — callout first-child plus button visibility', () => {
     // Simulate focusin by calling the private method directly
     const priv = toolbar as unknown as Record<string, () => void>;
 
-    priv.updateToolbarButtonsForTableCellFocus();
+    priv.updateToolbarButtonsForCalloutFirstChild();
 
     // Actions must STAY hidden
     expect(plusButton.style.display).toBe('none');

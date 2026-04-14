@@ -3,6 +3,7 @@ import type { Locator, Page } from '@playwright/test';
 import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { selectAllInEditable } from '../helpers/selection';
 import { BLOK_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/components/constants';
 
 const HOLDER_ID = 'blok';
@@ -638,8 +639,7 @@ test.describe('inline tool italic', () => {
     // Type "hello world " with a trailing space
     await page.keyboard.type('hello world ');
 
-    // Select all typed text
-    await page.keyboard.press(`${MODIFIER_KEY}+a`);
+    await selectAllInEditable(paragraph);
 
     const italicButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="italic"]`);
 

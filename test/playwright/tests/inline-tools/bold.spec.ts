@@ -3,6 +3,7 @@ import type { Locator, Page } from '@playwright/test';
 import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { selectAllInEditable } from '../helpers/selection';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const HOLDER_ID = 'blok';
@@ -613,10 +614,7 @@ test.describe('inline tool bold', () => {
     // Click into the paragraph to focus it
     await paragraph.click();
 
-    // Select all text with Ctrl/Cmd+A
-    const modifierKey = await getModifierKey(page);
-
-    await page.keyboard.press(`${modifierKey}+a`);
+    await selectAllInEditable(paragraph);
 
     const boldButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="bold"]`);
 
@@ -656,11 +654,7 @@ test.describe('inline tool bold', () => {
     // Type "hello world " with a trailing space
     await page.keyboard.type('hello world ');
 
-    // Select "world " using Shift+Home to go to start, then Shift+End to re-select all
-    // More precisely: use Ctrl+A / Cmd+A to select all typed text
-    const modifierKey = await getModifierKey(page);
-
-    await page.keyboard.press(`${modifierKey}+a`);
+    await selectAllInEditable(paragraph);
 
     const boldButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="bold"]`);
 

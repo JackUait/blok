@@ -4,6 +4,7 @@ import type { Page } from '@playwright/test';
 import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { selectAllInEditable } from '../helpers/selection';
 import {
   BLOK_INTERFACE_SELECTOR,
   MODIFIER_KEY,
@@ -392,9 +393,10 @@ test.describe('paragraph tool', () => {
       });
 
       const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
+      const paragraphContent = paragraph.locator('[contenteditable="true"]');
 
       await paragraph.click();
-      await page.keyboard.press(`${MODIFIER_KEY}+a`);
+      await selectAllInEditable(paragraphContent);
 
       const inlineToolbar = page.locator(INLINE_TOOLBAR_SELECTOR);
 
@@ -408,9 +410,10 @@ test.describe('paragraph tool', () => {
       });
 
       const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
+      const paragraphContent = paragraph.locator('[contenteditable="true"]');
 
       await paragraph.click();
-      await page.keyboard.press(`${MODIFIER_KEY}+a`);
+      await selectAllInEditable(paragraphContent);
       await page.keyboard.press(`${MODIFIER_KEY}+b`);
 
       await expect(paragraph).toContainText('Make this bold');
@@ -423,9 +426,10 @@ test.describe('paragraph tool', () => {
       });
 
       const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
+      const paragraphContent = paragraph.locator('[contenteditable="true"]');
 
       await paragraph.click();
-      await page.keyboard.press(`${MODIFIER_KEY}+a`);
+      await selectAllInEditable(paragraphContent);
       await page.keyboard.press(`${MODIFIER_KEY}+i`);
 
       await expect(paragraph).toContainText('Make this italic');

@@ -1277,6 +1277,16 @@ export class BlockOperations {
     // Insert block without syncing to Yjs yet.
     // Wrap in atomic operation so that child blocks created during rendered()
     // (e.g., table cell paragraph blocks) also skip Yjs sync.
+    //
+    // `extendThroughRAF: true` keeps `isSyncingFromYjs` elevated past the end
+    // of this sync closure and through the next animation frame. Without it,
+    // the cleanup runs immediately on return and the subsequent
+    // `await block.ready` → `onPaste` → `addBlock` microtask chain would see
+    // `isSyncingFromYjs === false`. Any MutationObserver-triggered first
+    // `save()` on the freshly rendered block would then land as a separate
+    // Yjs transaction *before* the authoritative `YjsManager.addBlock()` call
+    // below, producing a phantom post-paste undo entry. Mirrors the guard in
+    // `convert()` for the same bug class.
     const block = this.yjsSync.withAtomicOperation(() => {
       return this.insert({
         tool: toolName,
@@ -1284,7 +1294,7 @@ export class BlockOperations {
         needToFocus: false,
         skipYjsSync: true,
       }, blocksStore);
-    });
+    }, { extendThroughRAF: true });
 
     // Update currentBlockIndex AFTER insert (and handleBlockMutation) completes.
     this.currentBlockIndex = this.repository.getBlockIndex(block);

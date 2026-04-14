@@ -1801,6 +1801,30 @@ describe('BlockOperations', () => {
       expect(result).toBeDefined();
     });
 
+    /**
+     * Architectural invariant (mirrors convert()). `paste()` creates a fresh
+     * block whose first `save()` pass may emit fields beyond what the paste
+     * handler seeded. Without `extendThroughRAF: true` on the insert-time
+     * atomic op, the RAF-scheduled `beginAtomicOperation` cleanup fires
+     * before `await block.ready` + `onPaste` + the manual `addBlock()` Yjs
+     * write land — meaning `isSyncingFromYjs` flips back to false mid-paste
+     * and MutationObserver-triggered `syncBlockDataToYjs` calls on the
+     * fresh block become a separate Yjs transaction, producing a phantom
+     * post-paste undo entry.
+     *
+     * Locking the option here so future refactors cannot silently drop it.
+     */
+    it('wraps the insert-time atomic op in extendThroughRAF to suppress phantom first-save', async () => {
+      const pasteEvent = { detail: { data: '<p>pasted</p>' } } as unknown as PasteEvent;
+
+      await operations.paste('paragraph', pasteEvent, false, blocksStore);
+
+      expect(yjsSync.withAtomicOperation).toHaveBeenCalledWith(
+        expect.any(Function),
+        { extendThroughRAF: true }
+      );
+    });
+
     it('awaits block.ready before calling onPaste', async () => {
       const callOrder: string[] = [];
       let resolveReady: () => void;

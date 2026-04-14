@@ -715,7 +715,7 @@ test.describe('yjs undo/redo', () => {
 
       const matrixTypes = CONVERT_TARGETS.map((t) => t.type).sort();
 
-      expect(convertibleToolNames).toEqual(matrixTypes);
+      expect(convertibleToolNames).toStrictEqual(matrixTypes);
     });
 
     for (const target of CONVERT_TARGETS) {
@@ -779,6 +779,74 @@ test.describe('yjs undo/redo', () => {
         await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
         await expect(
           getParagraphByIndex(page, 0).locator('[contenteditable="true"]')
+        ).toContainText(sourceText);
+      });
+    }
+
+    /**
+     * Non-paragraph source matrix. `operations.convert()` is source-tool
+     * agnostic — the flow only branches on the TARGET tool — but the
+     * regression matrix above only exercises paragraph as source. This
+     * parametrized block widens coverage to header → * and list → *
+     * conversions so a future refactor that accidentally specializes on the
+     * source tool type cannot silently reintroduce the bug class for
+     * non-paragraph sources. Toggle-keyboard (backspace-on-empty) and
+     * callout-keyboard both fire `convert(..., 'paragraph')`, so covering
+     * {header,list} → paragraph also locks that keyboard flow.
+     */
+    const NON_PARAGRAPH_SOURCES: Array<{ type: string; componentAttr: string; label: string }> = [
+      { type: 'header', componentAttr: 'header', label: 'header' },
+      { type: 'list', componentAttr: 'list', label: 'list' },
+    ];
+
+    const NON_PARAGRAPH_PAIRS = NON_PARAGRAPH_SOURCES.flatMap((source) =>
+      CONVERT_TARGETS
+        .filter((target) => target.type !== source.type)
+        .map((target) => ({ source, target }))
+    );
+
+    for (const { source, target } of NON_PARAGRAPH_PAIRS) {
+      const sourceText = `Preserve ${source.label} → ${target.label}`;
+      const sourceSelector = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="${source.componentAttr}"]`;
+      const targetSelector = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="${target.componentAttr}"]`;
+
+      test(`${source.label} → ${target.label} preserves text and undoes in a single step`, async ({ page }) => {
+        await createBlokWithBlocks(page, [
+          {
+            type: source.type,
+            data: { text: sourceText },
+          },
+        ]);
+
+        await expect(page.locator(sourceSelector)).toHaveCount(1);
+
+        await page.evaluate(async (toolType) => {
+          const block = window.blokInstance?.blocks.getBlockByIndex(0);
+
+          if (block) {
+            await window.blokInstance?.blocks.convert(block.id, toolType);
+          }
+        }, target.type);
+
+        await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+        await expect(page.locator(targetSelector)).toHaveCount(1);
+        await expect(
+          page
+            .locator(targetSelector)
+            // eslint-disable-next-line playwright/no-nth-methods -- See paragraph matrix above
+            .locator('[contenteditable="true"]').first()
+        ).toContainText(sourceText);
+
+        await page.keyboard.press(UNDO_SHORTCUT);
+        await waitForDelay(page, 200);
+
+        await expect(page.locator(targetSelector)).toHaveCount(0);
+        await expect(page.locator(sourceSelector)).toHaveCount(1);
+        await expect(
+          page
+            .locator(sourceSelector)
+            // eslint-disable-next-line playwright/no-nth-methods -- See paragraph matrix above
+            .locator('[contenteditable="true"]').first()
         ).toContainText(sourceText);
       });
     }

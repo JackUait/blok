@@ -30,17 +30,37 @@ const resetBlok = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const createBlok = async (page: Page, data?: OutputData): Promise<void> => {
+const createBlok = async (
+  page: Page,
+  data?: OutputData,
+  extraToolNames: string[] = []
+): Promise<void> => {
   await resetBlok(page);
   await page.waitForFunction(() => typeof window.Blok === 'function');
   await page.evaluate(
-    async ({ holder, initialData }) => {
-      const blok = new window.Blok({ holder, ...(initialData ? { data: initialData } : {}) });
+    async ({ holder, initialData, extras }) => {
+      const extraTools: Record<string, unknown> = {};
+
+      for (const name of extras) {
+        const cls = (window.Blok as unknown as Record<string, unknown>)[
+          name.charAt(0).toUpperCase() + name.slice(1)
+        ];
+
+        if (cls === undefined) {
+          throw new Error(`tool class ${name} not exposed on window.Blok`);
+        }
+        extraTools[name] = { class: cls, inlineToolbar: true };
+      }
+      const blok = new window.Blok({
+        holder,
+        ...(initialData ? { data: initialData } : {}),
+        ...(Object.keys(extraTools).length > 0 ? { tools: extraTools } : {}),
+      });
 
       window.blokInstance = blok;
       await blok.isReady;
     },
-    { holder: HOLDER_ID, initialData: data ?? null }
+    { holder: HOLDER_ID, initialData: data ?? null, extras: extraToolNames }
   );
 };
 
@@ -76,6 +96,8 @@ type NestingScenario = {
   build: (text: string) => OutputData;
   // CSS selector that matches the auto-created nested child of the nesting block.
   nestedChildSelector: string;
+  // Tool class names to register beyond the default set (e.g. 'table').
+  extraTools?: string[];
 };
 
 const NESTING_SCENARIOS: NestingScenario[] = [
@@ -99,6 +121,49 @@ const NESTING_SCENARIOS: NestingScenario[] = [
         { id: 'follower-1', type: 'paragraph', data: { text } },
       ],
     }),
+  },
+  {
+    label: 'header-toggleable',
+    nestedChildSelector: '[data-blok-component="header"] [data-blok-toggle-children] [data-blok-component="paragraph"]',
+    build: (text) => ({
+      blocks: [
+        {
+          id: 'parent-1',
+          type: 'header',
+          data: { text: 'A toggleable heading', level: 2, isToggleable: true, isOpen: true },
+          contentIds: ['header-child-1'],
+        },
+        { id: 'header-child-1', type: 'paragraph', data: { text: 'inside header' }, parent: 'parent-1' },
+        { id: 'follower-1', type: 'paragraph', data: { text } },
+      ],
+    }),
+  },
+  {
+    label: 'table',
+    extraTools: ['table'],
+    nestedChildSelector: '[data-blok-tool="table"] [data-blok-nested-blocks] [data-blok-component="paragraph"]',
+    build: (text) => {
+      const cellWith = (t: string): { blocks: Array<{ type: string; data: { text: string } }> } => ({
+        blocks: [{ type: 'paragraph', data: { text: t } }],
+      });
+
+      return {
+        blocks: [
+          {
+            id: 'parent-1',
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [
+                [cellWith('a'), cellWith('b')],
+                [cellWith('c'), cellWith('d')],
+              ],
+            },
+          },
+          { id: 'follower-1', type: 'paragraph', data: { text } },
+        ],
+      };
+    },
   },
 ];
 
@@ -163,7 +228,7 @@ const newBlockEscapedNestedContainer = async (page: Page, before: Set<string>): 
 for (const scenario of NESTING_SCENARIOS) {
   test.describe(`new block after ${scenario.label}'s auto-child must not leak into nested container`, () => {
     test(`Enter at offset 0 of follower paragraph (${scenario.label})`, async ({ page }) => {
-      await createBlok(page, scenario.build('outside'));
+      await createBlok(page, scenario.build('outside'), scenario.extraTools);
       await expect(page.locator(scenario.nestedChildSelector).first()).toBeVisible();
 
       const before = await captureBlockIds(page);
@@ -175,7 +240,7 @@ for (const scenario of NESTING_SCENARIOS) {
     });
 
     test(`paste plain text at offset 0 of follower paragraph (${scenario.label})`, async ({ page }) => {
-      await createBlok(page, scenario.build('outside'));
+      await createBlok(page, scenario.build('outside'), scenario.extraTools);
       await expect(page.locator(scenario.nestedChildSelector).first()).toBeVisible();
 
       const before = await captureBlockIds(page);
@@ -211,7 +276,7 @@ for (const scenario of NESTING_SCENARIOS) {
     });
 
     test(`programmatic api insert top-level block above follower (${scenario.label})`, async ({ page }) => {
-      await createBlok(page, scenario.build('outside'));
+      await createBlok(page, scenario.build('outside'), scenario.extraTools);
       await expect(page.locator(scenario.nestedChildSelector).first()).toBeVisible();
 
       const before = await captureBlockIds(page);

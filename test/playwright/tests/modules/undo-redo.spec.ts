@@ -660,6 +660,95 @@ test.describe('yjs undo/redo', () => {
       ).toContainText('Convert me to callout');
     });
 
+    /**
+     * Regression guardrails: converting a paragraph into any block tool must
+     * preserve the source text and remain fully reversible with a single undo.
+     *
+     * The original incident was paragraph → callout, which lost text because
+     * callout stores its content in a child paragraph (rather than in `data`)
+     * and split the undo across two entries. Those bugs were fixed by threading
+     * the imported text through a transient `__importedText` field and by
+     * bracketing `convert()` in `suppressStopCapturing` so the rendered()-time
+     * `insertInsideParent` merges into the same undo group.
+     *
+     * This parametrized matrix locks the expected behavior in for every
+     * convertible target tool registered in the default test fixture. If a
+     * future tool ships with the same "content in children" pattern or a
+     * rendered()-time block op that forces `stopCapturing`, it will surface
+     * here before reaching users.
+     */
+    const CONVERT_TARGETS: Array<{ type: string; componentAttr: string; label: string }> = [
+      { type: 'header', componentAttr: 'header', label: 'header' },
+      { type: 'list', componentAttr: 'list', label: 'list' },
+      { type: 'toggle', componentAttr: 'toggle', label: 'toggle' },
+      { type: 'callout', componentAttr: 'callout', label: 'callout' },
+    ];
+
+    for (const target of CONVERT_TARGETS) {
+      const sourceText = `Preserve ${target.label} text through conversion`;
+      const targetSelector = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="${target.componentAttr}"]`;
+
+      test(`paragraph → ${target.label} preserves source text in the converted block`, async ({ page }) => {
+        await createBlokWithBlocks(page, [
+          {
+            type: 'paragraph',
+            data: { text: sourceText },
+          },
+        ]);
+
+        await expect(
+          getParagraphByIndex(page, 0).locator('[contenteditable="true"]')
+        ).toContainText(sourceText);
+
+        await page.evaluate(async (toolType) => {
+          const block = window.blokInstance?.blocks.getBlockByIndex(0);
+
+          if (block) {
+            await window.blokInstance?.blocks.convert(block.id, toolType);
+          }
+        }, target.type);
+
+        await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+        await expect(page.locator(targetSelector)).toHaveCount(1);
+        await expect(
+          page
+            .locator(targetSelector)
+            // eslint-disable-next-line playwright/no-nth-methods -- Callout nests text in a child contenteditable; `.first()` is the portable way to grab the text holder across all tool layouts
+            .locator('[contenteditable="true"]').first()
+        ).toContainText(sourceText);
+      });
+
+      test(`undo after paragraph → ${target.label} restores original paragraph in a single step`, async ({ page }) => {
+        await createBlokWithBlocks(page, [
+          {
+            type: 'paragraph',
+            data: { text: sourceText },
+          },
+        ]);
+
+        await page.evaluate(async (toolType) => {
+          const block = window.blokInstance?.blocks.getBlockByIndex(0);
+
+          if (block) {
+            await window.blokInstance?.blocks.convert(block.id, toolType);
+          }
+        }, target.type);
+
+        await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+        await expect(page.locator(targetSelector)).toHaveCount(1);
+
+        await page.keyboard.press(UNDO_SHORTCUT);
+        await waitForDelay(page, 200);
+
+        await expect(page.locator(targetSelector)).toHaveCount(0);
+        await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
+        await expect(
+          getParagraphByIndex(page, 0).locator('[contenteditable="true"]')
+        ).toContainText(sourceText);
+      });
+    }
+
     test('undo after block split rejoins blocks (single undo)', async ({ page }) => {
       await createBlokWithBlocks(page, [
         {

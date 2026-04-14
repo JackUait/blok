@@ -1195,12 +1195,26 @@ export class BlockOperations {
     /**
      * Bracket the whole convert in a single undo group.
      *
-     * Container tools (callout/toggle) auto-seed a first child paragraph inside
-     * their `rendered()` hook via `api.blocks.insertInsideParent`. That path
-     * normally forces a new undo group via `stopCapturing()` which would split
-     * the conversion into two Cmd+Z pops (empty child first, then the actual
-     * tool swap). Suppress `stopCapturing` across the whole convert so the
-     * replace + post-replace seed merge into one entry.
+     * Two things can split a convert across multiple Cmd+Z entries if left
+     * unchecked:
+     *
+     * 1. Container tools (callout) seed a first child paragraph inside their
+     *    `rendered()` hook via `api.blocks.insertInsideParent`, which normally
+     *    forces a new undo boundary via `stopCapturing()`.
+     *
+     * 2. ANY tool can accept `{text}` on conversion but then populate extra
+     *    fields (e.g. toggle's `isOpen: true`) during its first `save()` pass.
+     *    That first save is triggered by the MutationObserver watching the
+     *    brand-new block's DOM, and its `syncBlockDataToYjs` would write the
+     *    extra fields as a *separate* Yjs transaction — creating a phantom
+     *    post-convert undo entry so Cmd+Z needs two presses.
+     *
+     * We solve (1) with `suppressStopCapturing` (no new undo boundary) and
+     * (2) with `yjsSync.withAtomicOperation({ extendThroughRAF: true })` which
+     * keeps `isSyncingFromYjs = true` through the next animation frame, so
+     * mutation-triggered `syncBlockDataToYjs` calls are suppressed for
+     * rendered()/first-save writes. The tool's real data persists because
+     * `replace()` already wrote it into Yjs via its own transaction.
      */
     this.dependencies.YjsManager.stopCapturing();
     const prevSuppress = this.suppressStopCapturing;
@@ -1208,7 +1222,10 @@ export class BlockOperations {
     this.suppressStopCapturing = true;
 
     try {
-      return this.replace(blockToConvert, replacingTool.name, newBlockData, blocksStore);
+      return this.yjsSync.withAtomicOperation(
+        () => this.replace(blockToConvert, replacingTool.name, newBlockData, blocksStore),
+        { extendThroughRAF: true }
+      );
     } finally {
       // Close the undo group after the sync `replace()` and any synchronous
       // `rendered()` → `insertInsideParent` have landed, but wait one microtask

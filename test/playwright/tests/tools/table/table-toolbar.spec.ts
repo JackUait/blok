@@ -160,7 +160,13 @@ test.describe('Toolbar Visibility in Table Cells', () => {
     await expect(plusButton).toBeVisible();
   });
 
-  test('The settings toggler is hidden when a table cell is focused', async ({ page }) => {
+  test('The settings toggler stays visible when a table cell is focused', async ({ page }) => {
+    /**
+     * Regression: previously the toolbar hid the drag handle (settings toggler)
+     * while focus was inside a cell, which left the whole table undraggable
+     * while editing cell text. The toolbar is anchored on the parent table
+     * block, so the drag handle drags the table — it must stay visible.
+     */
     // 1. Initialize editor with a table block (2x2 content)
     await createBlok(page, {
       tools: defaultTools,
@@ -183,13 +189,13 @@ test.describe('Toolbar Visibility in Table Cells', () => {
     await firstCell.click();
 
     // 3. Wait 300ms for toolbar state to settle
-    // eslint-disable-next-line playwright/no-wait-for-timeout -- checking non-appearance requires a brief wait
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- waiting for focusin/toolbar reposition
     await page.waitForTimeout(300);
 
-    // 4. Verify the settings toggler is hidden
+    // 4. Verify the settings toggler (drag handle) stays visible
     const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
 
-    await expect(settingsButton).toBeHidden();
+    await expect(settingsButton).toBeVisible();
   });
 
   test('Toolbar buttons reappear when switching from table cell to regular paragraph', async ({ page }) => {

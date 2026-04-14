@@ -441,6 +441,92 @@ describe('Toolbar module interactions', () => {
     document.body.removeChild(tableBlockHolder);
   });
 
+  it('keeps drag handle (settings toggler) visible and wired to the parent table block when focus is inside a cell', () => {
+    /**
+     * Regression for: clicking inside a table/database cell hid the drag handle
+     * on the parent table's toolbar, making the whole table undraggable while
+     * editing cell text. The toolbar resolves to the parent table block via
+     * resolveTableCellBlock(), so the settings toggler drags the TABLE — it
+     * must stay visible and wired to that parent block even while focus is
+     * inside a cell.
+     */
+    const tableBlockHolder = document.createElement('div');
+
+    tableBlockHolder.setAttribute('data-blok-testid', 'block-wrapper');
+
+    const cellBlocksContainer = document.createElement('div');
+
+    cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+    tableBlockHolder.appendChild(cellBlocksContainer);
+
+    const cellBlockHolder = document.createElement('div');
+
+    cellBlockHolder.setAttribute('data-blok-testid', 'block-wrapper');
+    cellBlocksContainer.appendChild(cellBlockHolder);
+
+    const pluginsContent = document.createElement('div');
+
+    tableBlockHolder.appendChild(pluginsContent);
+
+    const tableBlock = {
+      id: 'table-block',
+      name: 'table',
+      holder: tableBlockHolder,
+      pluginsContent,
+      isEmpty: false,
+      cleanupDraggable: vi.fn(),
+      setupDraggable: vi.fn(),
+      getTunes: vi.fn(() => ({ toolTunes: [{}], commonTunes: [] })),
+      getToolbarAnchorElement: vi.fn(() => undefined),
+    };
+
+    const cellBlock = {
+      id: 'cell-paragraph',
+      name: 'paragraph',
+      holder: cellBlockHolder,
+      pluginsContent: document.createElement('div'),
+      isEmpty: true,
+      cleanupDraggable: vi.fn(),
+      setupDraggable: vi.fn(),
+      getTunes: vi.fn(() => ({ toolTunes: [{}], commonTunes: [] })),
+      getToolbarAnchorElement: vi.fn(() => undefined),
+    };
+
+    // Focus a contenteditable inside the cell to simulate the user clicking a cell
+    const focusable = document.createElement('div');
+
+    focusable.setAttribute('contenteditable', 'true');
+    cellBlocksContainer.appendChild(focusable);
+    document.body.appendChild(tableBlockHolder);
+    focusable.focus();
+
+    const blok = getBlok();
+
+    blok.BlockManager.currentBlock = cellBlock as unknown as typeof blok.BlockManager.currentBlock;
+    (blok.BlockManager as unknown as { getBlockByChildNode: (node: Node) => unknown }).getBlockByChildNode = vi.fn(() => tableBlock);
+
+    (toolbar as unknown as { toolboxInstance: { opened: boolean; close: () => void } }).toolboxInstance = {
+      opened: false,
+      close: vi.fn(),
+    };
+
+    (toolbar as unknown as { moveAndOpen: (block: unknown, target?: unknown) => void }).moveAndOpen(cellBlock);
+
+    const nodes = (toolbar as unknown as { nodes: typeof toolbar['nodes'] }).nodes;
+
+    // Drag handle MUST stay visible — it drags the parent table, not the cell
+    expect(nodes.settingsToggler?.style.display).toBe('');
+
+    // And MUST be wired to the parent table block so dragging it moves the table
+    expect(tableBlock.setupDraggable).toHaveBeenCalledWith(nodes.settingsToggler, expect.anything());
+
+    // Also verify the focusin-triggered update path does not re-hide it
+    (toolbar as unknown as { updateToolbarButtonsForTableCellFocus: () => void }).updateToolbarButtonsForTableCellFocus();
+    expect(nodes.settingsToggler?.style.display).toBe('');
+
+    document.body.removeChild(tableBlockHolder);
+  });
+
   it('keeps plus button visible when moveAndOpen is called with no arguments but currentBlock is inside a table cell', () => {
     // Create DOM: cell block inside table cell container
     const cellBlocksContainer = document.createElement('div');

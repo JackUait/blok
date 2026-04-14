@@ -441,21 +441,24 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     /**
      * Adjust toolbar button visibility based on context:
-     * - Table cell focus: settings toggler hidden (drag/settings don't apply to cells)
      * - Callout first child: both plus button and settings toggler hidden
      *   to prevent overlap with the callout's emoji icon
      *
      * The callout block itself still shows BOTH buttons — the actions container
      * sits outside the block (positioned via right:100% on the left gutter) and
      * does not overlap the emoji which is inside the block at pl-8.
+     *
+     * Note: when the toolbar resolves to a parent table block from a focused
+     * cell, the settings toggler must STAY visible — it is wired via
+     * setupDraggable() to drag the parent table, so hiding it would leave the
+     * whole table undraggable while the user edits cell text.
      */
-    const focusIsInsideCell = this.isFocusInsideTableCell();
     const isCalloutFirstChild = this.isFirstChildOfCallout(targetBlock);
 
     plusButton.style.display = isCalloutFirstChild ? 'none' : '';
 
     if (settingsToggler) {
-      settingsToggler.style.display = (focusIsInsideCell || isCalloutFirstChild) ? 'none' : '';
+      settingsToggler.style.display = isCalloutFirstChild ? 'none' : '';
     }
 
     /**
@@ -877,23 +880,15 @@ export class Toolbar extends Module<ToolbarNodes> {
     return parent;
   }
 
-  private isFocusInsideTableCell(): boolean {
-    const active = document.activeElement;
-
-    if (!active) {
-      return false;
-    }
-
-    return active.closest('[data-blok-table-cell-blocks]') !== null;
-  }
-
   /**
-   * Updates toolbar button visibility based on whether a table cell has focus.
-   * The plus button always stays visible; the settings toggler is hidden when
-   * focus is inside a cell and restored when focus moves to a regular block.
+   * Updates toolbar button visibility based on the current hovered block.
+   * Called from the focusin listener so callout first-child state is
+   * refreshed immediately when focus moves, without waiting for the next
+   * hover/moveAndOpen cycle.
    *
-   * Called from the focusin listener so button state is updated immediately
-   * on click, without waiting for the next hover/moveAndOpen cycle.
+   * Note: table cell focus intentionally does NOT hide the settings toggler —
+   * the toolbar is anchored on the parent table block and its drag handle
+   * must remain usable to drag the whole table while cell text is edited.
    */
   private updateToolbarButtonsForTableCellFocus(): void {
     const { plusButton, settingsToggler } = this.nodes;
@@ -902,13 +897,12 @@ export class Toolbar extends Module<ToolbarNodes> {
       return;
     }
 
-    const focusIsInsideCell = this.isFocusInsideTableCell();
     const isCalloutFirstChild = this.hoveredBlock !== null && this.isFirstChildOfCallout(this.hoveredBlock);
 
     plusButton.style.display = isCalloutFirstChild ? 'none' : '';
 
     if (settingsToggler) {
-      settingsToggler.style.display = (focusIsInsideCell || isCalloutFirstChild) ? 'none' : '';
+      settingsToggler.style.display = isCalloutFirstChild ? 'none' : '';
     }
   }
 

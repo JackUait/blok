@@ -232,6 +232,41 @@ describe('data-normalizer', () => {
 
         expect(result.checked).toBe(true);
       });
+
+      it('extracts text from first string item in legacy items array (regression: dodois KRZH article)', () => {
+        const legacyData = {
+          items: ['Убедись, что кружка чистая', 'Сполосни её перед заливкой'],
+          style: 'unordered' as const,
+        };
+
+        const result = normalizeListItemData(legacyData, defaultSettings);
+
+        expect(result.text).toBe('Убедись, что кружка чистая');
+        expect(result.style).toBe('unordered');
+      });
+
+      it('extracts text from first old-checklist item (text field) in legacy items array', () => {
+        const legacyData = {
+          items: [{ text: 'Buy milk', checked: true }],
+          style: 'checklist' as const,
+        };
+
+        const result = normalizeListItemData(legacyData, defaultSettings);
+
+        expect(result.text).toBe('Buy milk');
+        expect(result.checked).toBe(true);
+      });
+
+      it('returns empty string when first item is not a recognized shape', () => {
+        const legacyData = {
+          items: [42],
+          style: 'unordered' as const,
+        };
+
+        const result = normalizeListItemData(legacyData, defaultSettings);
+
+        expect(result.text).toBe('');
+      });
     });
 
     describe('edge cases', () => {

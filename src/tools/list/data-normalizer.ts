@@ -10,7 +10,7 @@ import type { ListItemConfig, ListItemData, ListItemStyle } from './types';
  * Type for legacy list item format (used for type guard)
  */
 type LegacyListItemFormat = {
-  items: Array<{ content: string; checked?: boolean | string }>;
+  items: Array<string | { content?: string; text?: string; checked?: boolean | string }>;
   style?: ListItemStyle;
   start?: number;
 };
@@ -117,8 +117,17 @@ export const normalizeListItemData = (
   // This provides backward compatibility when legacy data is passed directly to the tool
   if (isLegacyFormat(data)) {
     const firstItem = data.items[0];
-    const text = firstItem?.content || '';
-    const checked = firstItem?.checked || false;
+    // handle string items and old {text,checked} shape
+    const extractLegacy = (item: typeof firstItem): { text: string; checked: boolean | string | undefined } => {
+      if (typeof item === 'string') {
+        return { text: item, checked: false };
+      }
+      if (item !== null && typeof item === 'object') {
+        return { text: item.content ?? item.text ?? '', checked: item.checked ?? false };
+      }
+      return { text: '', checked: false };
+    };
+    const { text, checked } = extractLegacy(firstItem);
 
     return {
       text,

@@ -380,6 +380,29 @@ const expandListToHierarchical = (
  * @param bodyBlocks - legacy body blocks to expand
  * @param parentId - id of the parent block (toggle/callout) that owns them
  */
+/**
+ * Route one emitted block into the accumulator. Root-level blocks (no parent)
+ * become direct children of the legacy container; descendants keep their
+ * existing parent refs assigned during recursive expansion.
+ */
+const appendEmittedBlock = (
+  emitted: OutputBlockData,
+  parentId: BlockId,
+  childIds: BlockId[],
+  childBlocks: OutputBlockData[]
+): void => {
+  if (emitted.parent !== undefined) {
+    childBlocks.push(emitted);
+
+    return;
+  }
+
+  const childId = emitted.id ?? generateBlockId();
+
+  childIds.push(childId);
+  childBlocks.push({ ...emitted, id: childId, parent: parentId });
+};
+
 const expandLegacyBodyBlocks = (
   bodyBlocks: OutputBlockData[],
   parentId: BlockId
@@ -390,18 +413,29 @@ const expandLegacyBodyBlocks = (
   for (const childBlock of bodyBlocks) {
     const expanded = expandToHierarchical([childBlock]);
 
-    if (expanded.length === 0) {
-      continue;
+    // A single legacy block may expand into N root-level siblings (e.g. a list
+    // with N items). Every parent-less root becomes a direct child here so
+    // multi-item lists inside callout/toggle bodies aren't orphaned.
+    for (const emitted of expanded) {
+      appendEmittedBlock(emitted, parentId, childIds, childBlocks);
     }
+  }
 
-    // The first emitted block corresponds to the original input block.
-    // Re-parent it to the legacy container; descendants already carry the
-    // correct parent refs assigned during their own recursive expansion.
-    const [first, ...rest] = expanded;
-    const childId = first.id ?? generateBlockId();
+  // Invariant: every emitted block must either carry a parent ref (descendant
+  // assigned during its own recursive expansion) or appear in childIds (root
+  // we just re-parented). If this ever trips, some expansion path is leaking
+  // orphans — exactly the regression this assertion exists to catch.
+  for (const block of childBlocks) {
+    const hasParent = block.parent !== undefined;
+    const hasId = block.id !== undefined;
+    const isDirectChild = hasId && childIds.includes(block.id as BlockId);
 
-    childIds.push(childId);
-    childBlocks.push({ ...first, id: childId, parent: parentId }, ...rest);
+    if (!hasParent && !isDirectChild) {
+      throw new Error(
+        `expandLegacyBodyBlocks: orphaned block emitted (type=${block.type}, id=${block.id ?? '<none>'}). ` +
+        `Every root-level expansion must be re-parented to ${parentId}.`
+      );
+    }
   }
 
   return { childIds, childBlocks };
@@ -647,6 +681,52 @@ const processRootListItem = (
 };
 
 /**
+ * Recursively collapse a container's body: routes each direct child through the
+ * appropriate processRoot* helper based on its type so that grandchildren land in
+ * the correct nested legacy shape instead of being ejected to the document root.
+ */
+function collapseBodyBlocks(
+  contentIds: BlockId[],
+  blockMap: Map<BlockId, OutputBlockData>,
+  processedIds: Set<BlockId>
+): OutputBlockData[] {
+  const result: OutputBlockData[] = [];
+
+  for (const childId of contentIds) {
+    if (processedIds.has(childId)) {
+      continue;
+    }
+    const childBlock = blockMap.get(childId);
+
+    if (childBlock === undefined) {
+      continue;
+    }
+
+    if (isFlatModelListBlock(childBlock)) {
+      result.push(processRootListItem(childBlock, blockMap, processedIds));
+      continue;
+    }
+    if (isFlatModelToggleBlock(childBlock)) {
+      result.push(processRootToggleItem(childBlock, blockMap, processedIds));
+      continue;
+    }
+    if (isToggleableHeaderBlock(childBlock)) {
+      result.push(processRootToggleableHeader(childBlock, blockMap, processedIds));
+      continue;
+    }
+    if (isFlatModelCalloutBlock(childBlock)) {
+      result.push(processRootCalloutItem(childBlock, blockMap, processedIds));
+      continue;
+    }
+
+    markBlockAsProcessed(childBlock.id, processedIds);
+    result.push(stripHierarchyFields(childBlock));
+  }
+
+  return result;
+}
+
+/**
  * Process a root toggle block and convert to a legacy toggleList block
  */
 const processRootToggleItem = (
@@ -662,18 +742,8 @@ const processRootToggleItem = (
     ? (data as Record<string, unknown>).isOpen as boolean
     : undefined;
 
-  // Collect child blocks
-  const childBlocks: OutputBlockData[] = [];
   const contentIds = block.content ?? [];
-
-  for (const childId of contentIds) {
-    const childBlock = blockMap.get(childId);
-
-    if (childBlock) {
-      markBlockAsProcessed(childId, processedIds);
-      childBlocks.push(stripHierarchyFields(childBlock));
-    }
-  }
+  const childBlocks = collapseBodyBlocks(contentIds, blockMap, processedIds);
 
   const legacyBlock: OutputBlockData = {
     id: block.id,
@@ -732,17 +802,8 @@ const processRootToggleableHeader = (
     ? (data as Record<string, unknown>).isOpen as boolean
     : undefined;
 
-  const childBlocks: OutputBlockData[] = [];
   const contentIds = block.content ?? [];
-
-  for (const childId of contentIds) {
-    const childBlock = blockMap.get(childId);
-
-    if (childBlock) {
-      markBlockAsProcessed(childId, processedIds);
-      childBlocks.push(stripHierarchyFields(childBlock));
-    }
-  }
+  const childBlocks = collapseBodyBlocks(contentIds, blockMap, processedIds);
 
   const legacyBlock: OutputBlockData = {
     id: block.id,
@@ -810,18 +871,8 @@ const processRootCalloutItem = (
   const isEmojiVisible = typeof emojiValue === 'string' && emojiValue.length > 0;
   const emoji = isEmojiVisible ? emojiValue : null;
 
-  // Collect child blocks
-  const childBlocks: OutputBlockData[] = [];
   const contentIds = block.content ?? [];
-
-  for (const childId of contentIds) {
-    const childBlock = blockMap.get(childId);
-
-    if (childBlock) {
-      markBlockAsProcessed(childId, processedIds);
-      childBlocks.push(stripHierarchyFields(childBlock));
-    }
-  }
+  const childBlocks = collapseBodyBlocks(contentIds, blockMap, processedIds);
 
   const legacyBlock: OutputBlockData = {
     id: block.id,

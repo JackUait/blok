@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { analyzeDataFormat, expandToHierarchical, collapseToLegacy, normalizeTableChildParents } from '../../../../src/components/utils/data-model-transform';
-import type { OutputBlockData } from '../../../../types';
+import type { OutputBlockData, BlockId } from '../../../../types';
 
 describe('data-model-transform', () => {
   describe('analyzeDataFormat - legacy toggleList', () => {
@@ -602,6 +602,57 @@ describe('data-model-transform', () => {
       expect(inner?.parent).toBe('outer');
       expect(inner?.data.isToggleable).toBe(true);
       expect(inner?.data.level).toBe(2);
+    });
+
+    it('keeps multi-item legacy list inside callout body as callout descendants (regression: dodois KRZH article)', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'callout-1',
+          type: 'callout',
+          data: {
+            body: {
+              blocks: [
+                { id: 'p1', type: 'paragraph', data: { text: 'Если ты заметил...' } },
+                {
+                  type: 'list',
+                  data: {
+                    style: 'unordered',
+                    items: [
+                      'Убедись, что в раковине для посуды нет инвентаря;',
+                      'Сполосни кружку проточной водой.',
+                    ],
+                  },
+                },
+              ],
+            },
+            variant: 'info',
+            emoji: 'ℹ️',
+            isEmojiVisible: true,
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      const callout = result.find(b => b.id === 'callout-1');
+      expect(callout).toBeDefined();
+      // Callout content must reference the paragraph AND both list items (3 total).
+      expect(callout?.content).toHaveLength(3);
+
+      const listBlocks = result.filter(b => b.type === 'list');
+      expect(listBlocks).toHaveLength(2);
+      // BOTH list items must be parented to the callout, not orphaned at root.
+      for (const listBlock of listBlocks) {
+        expect(listBlock.parent).toBe('callout-1');
+      }
+      // Their IDs must appear in callout.content.
+      for (const listBlock of listBlocks) {
+        expect(callout?.content).toContain(listBlock.id);
+      }
+      // Content text must be preserved for both items.
+      const texts = listBlocks.map(b => (b.data as { text: string }).text);
+      expect(texts).toContain('Убедись, что в раковине для посуды нет инвентаря;');
+      expect(texts).toContain('Сполосни кружку проточной водой.');
     });
 
     it('recursively expands legacy callout nested inside a toggleList body', () => {
@@ -1803,6 +1854,738 @@ describe('data-model-transform', () => {
       const result = normalizeTableChildParents(blocks);
 
       expect(result.find(b => b.id === 'child-a')?.parent).toBeUndefined();
+    });
+  });
+
+  /**
+   * Exhaustive regression matrix for the "multi-item legacy list inside legacy
+   * container body" bug. The original bug dropped items 2..N to document root
+   * because `expandLegacyBodyBlocks` only re-parented the first emitted block.
+   * Every case below MUST keep all N items as descendants of the container.
+   */
+  describe('expandLegacyBodyBlocks regression matrix', () => {
+    const assertAllListItemsParentedTo = (
+      result: OutputBlockData[],
+      containerId: BlockId,
+      expectedTexts: string[]
+    ): void => {
+      const container = result.find(b => b.id === containerId);
+
+      expect(container).toBeDefined();
+
+      const listBlocks = result.filter(b => b.type === 'list' && b.parent === containerId);
+
+      expect(listBlocks).toHaveLength(expectedTexts.length);
+
+      const texts = listBlocks.map(b => (b.data as { text: string }).text);
+
+      for (const expected of expectedTexts) {
+        expect(texts).toContain(expected);
+      }
+
+      for (const listBlock of listBlocks) {
+        expect(container?.content).toContain(listBlock.id);
+      }
+
+      const orphanListBlocks = result.filter(
+        b => b.type === 'list' && b.parent === undefined
+      );
+
+      expect(orphanListBlocks).toHaveLength(0);
+    };
+
+    it('multi-item unordered string list inside toggleList body', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'toggle-1',
+          type: 'toggleList',
+          data: {
+            title: 'Outer toggle',
+            body: {
+              blocks: [
+                {
+                  type: 'list',
+                  data: {
+                    style: 'unordered',
+                    items: ['t1', 't2', 't3'],
+                  },
+                },
+              ],
+            },
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      assertAllListItemsParentedTo(result, 'toggle-1', ['t1', 't2', 't3']);
+    });
+
+    it('multi-item list inside toggleable-header body (titleVariant set)', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'toggle-header-1',
+          type: 'toggleList',
+          data: {
+            title: 'Toggle heading',
+            titleVariant: 2,
+            body: {
+              blocks: [
+                {
+                  type: 'list',
+                  data: {
+                    style: 'unordered',
+                    items: ['a', 'b'],
+                  },
+                },
+              ],
+            },
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      const header = result.find(b => b.id === 'toggle-header-1');
+
+      expect(header?.type).toBe('header');
+      expect(header?.data.isToggleable).toBe(true);
+      assertAllListItemsParentedTo(result, 'toggle-header-1', ['a', 'b']);
+    });
+
+    it('3+ item list stays parented (no off-by-one)', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'callout-1',
+          type: 'callout',
+          data: {
+            body: {
+              blocks: [
+                {
+                  type: 'list',
+                  data: {
+                    style: 'unordered',
+                    items: ['i1', 'i2', 'i3', 'i4', 'i5'],
+                  },
+                },
+              ],
+            },
+            variant: 'note',
+            emoji: '💡',
+            isEmojiVisible: true,
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      assertAllListItemsParentedTo(result, 'callout-1', ['i1', 'i2', 'i3', 'i4', 'i5']);
+    });
+
+    it('mixed body: paragraph + two sequential multi-item lists', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'callout-1',
+          type: 'callout',
+          data: {
+            body: {
+              blocks: [
+                { id: 'p1', type: 'paragraph', data: { text: 'intro' } },
+                {
+                  type: 'list',
+                  data: {
+                    style: 'unordered',
+                    items: ['a1', 'a2'],
+                  },
+                },
+                { id: 'p2', type: 'paragraph', data: { text: 'middle' } },
+                {
+                  type: 'list',
+                  data: {
+                    style: 'unordered',
+                    items: ['b1', 'b2', 'b3'],
+                  },
+                },
+              ],
+            },
+            variant: 'info',
+            emoji: 'ℹ️',
+            isEmojiVisible: true,
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      const callout = result.find(b => b.id === 'callout-1');
+
+      // 2 paragraphs + 2 + 3 list items = 7 direct children.
+      expect(callout?.content).toHaveLength(7);
+
+      const listBlocks = result.filter(b => b.type === 'list');
+
+      expect(listBlocks).toHaveLength(5);
+      for (const listBlock of listBlocks) {
+        expect(listBlock.parent).toBe('callout-1');
+        expect(callout?.content).toContain(listBlock.id);
+      }
+    });
+
+    it('object-form items ({content}) inside callout', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'callout-1',
+          type: 'callout',
+          data: {
+            body: {
+              blocks: [
+                {
+                  type: 'list',
+                  data: {
+                    style: 'unordered',
+                    items: [
+                      { content: 'alpha' },
+                      { content: 'beta' },
+                    ],
+                  },
+                },
+              ],
+            },
+            variant: 'note',
+            emoji: '💡',
+            isEmojiVisible: true,
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      assertAllListItemsParentedTo(result, 'callout-1', ['alpha', 'beta']);
+    });
+
+    it('old checklist items ({text, checked}) inside callout', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'callout-1',
+          type: 'callout',
+          data: {
+            body: {
+              blocks: [
+                {
+                  type: 'list',
+                  data: {
+                    style: 'checklist',
+                    items: [
+                      { text: 'done', checked: true },
+                      { text: 'todo', checked: false },
+                    ],
+                  },
+                },
+              ],
+            },
+            variant: 'note',
+            emoji: '💡',
+            isEmojiVisible: true,
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      const callout = result.find(b => b.id === 'callout-1');
+      const listBlocks = result.filter(b => b.type === 'list' && b.parent === 'callout-1');
+
+      expect(listBlocks).toHaveLength(2);
+
+      const doneItem = listBlocks.find(b => (b.data as { text: string }).text === 'done');
+      const todoItem = listBlocks.find(b => (b.data as { text: string }).text === 'todo');
+
+      expect((doneItem?.data as { checked: boolean }).checked).toBe(true);
+      expect((todoItem?.data as { checked: boolean }).checked).toBe(false);
+      expect(callout?.content).toContain(doneItem?.id);
+      expect(callout?.content).toContain(todoItem?.id);
+    });
+
+    it('ordered list with start > 1 inside callout', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'callout-1',
+          type: 'callout',
+          data: {
+            body: {
+              blocks: [
+                {
+                  type: 'list',
+                  data: {
+                    style: 'ordered',
+                    start: 5,
+                    items: ['step 5', 'step 6'],
+                  },
+                },
+              ],
+            },
+            variant: 'note',
+            emoji: '💡',
+            isEmojiVisible: true,
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      const callout = result.find(b => b.id === 'callout-1');
+      const listBlocks = result.filter(b => b.type === 'list' && b.parent === 'callout-1');
+
+      expect(listBlocks).toHaveLength(2);
+
+      const firstItem = listBlocks.find(b => (b.data as { text: string }).text === 'step 5');
+
+      // start flag lives on the first root ordered item only.
+      expect((firstItem?.data as { start?: number }).start).toBe(5);
+      expect(callout?.content).toHaveLength(2);
+    });
+
+    it('nested list items (items with children) inside callout', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'callout-1',
+          type: 'callout',
+          data: {
+            body: {
+              blocks: [
+                {
+                  type: 'list',
+                  data: {
+                    style: 'unordered',
+                    items: [
+                      {
+                        content: 'parent A',
+                        items: [
+                          { content: 'child A.1' },
+                          { content: 'child A.2' },
+                        ],
+                      },
+                      { content: 'parent B' },
+                    ],
+                  },
+                },
+              ],
+            },
+            variant: 'note',
+            emoji: '💡',
+            isEmojiVisible: true,
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      const callout = result.find(b => b.id === 'callout-1');
+
+      // Root list items (parent A, parent B) must be callout children.
+      const rootListItems = result.filter(
+        b => b.type === 'list' && b.parent === 'callout-1'
+      );
+
+      expect(rootListItems).toHaveLength(2);
+
+      const parentA = rootListItems.find(b => (b.data as { text: string }).text === 'parent A');
+      const parentB = rootListItems.find(b => (b.data as { text: string }).text === 'parent B');
+
+      expect(parentA).toBeDefined();
+      expect(parentB).toBeDefined();
+      expect(callout?.content).toContain(parentA?.id);
+      expect(callout?.content).toContain(parentB?.id);
+
+      // Nested children must be parented to parent A, not orphaned.
+      const nestedChildren = result.filter(
+        b => b.type === 'list' && b.parent === parentA?.id
+      );
+
+      expect(nestedChildren).toHaveLength(2);
+
+      const nestedTexts = nestedChildren.map(b => (b.data as { text: string }).text);
+
+      expect(nestedTexts).toContain('child A.1');
+      expect(nestedTexts).toContain('child A.2');
+    });
+
+    it('deeply nested: multi-item list inside callout inside toggleList', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'toggle-1',
+          type: 'toggleList',
+          data: {
+            title: 'Outer',
+            body: {
+              blocks: [
+                {
+                  id: 'callout-1',
+                  type: 'callout',
+                  data: {
+                    body: {
+                      blocks: [
+                        {
+                          type: 'list',
+                          data: {
+                            style: 'unordered',
+                            items: ['x', 'y', 'z'],
+                          },
+                        },
+                      ],
+                    },
+                    variant: 'note',
+                    emoji: '💡',
+                    isEmojiVisible: true,
+                  },
+                },
+              ],
+            },
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      const toggle = result.find(b => b.id === 'toggle-1');
+      const callout = result.find(b => b.id === 'callout-1');
+
+      expect(toggle?.content).toEqual(['callout-1']);
+      expect(callout?.parent).toBe('toggle-1');
+      assertAllListItemsParentedTo(result, 'callout-1', ['x', 'y', 'z']);
+    });
+
+    it('round-trip: expand → collapse → expand produces stable output', () => {
+      const original: OutputBlockData[] = [
+        {
+          id: 'callout-1',
+          type: 'callout',
+          data: {
+            body: {
+              blocks: [
+                { id: 'p1', type: 'paragraph', data: { text: 'intro' } },
+                {
+                  type: 'list',
+                  data: {
+                    style: 'unordered',
+                    items: ['rt1', 'rt2', 'rt3'],
+                  },
+                },
+              ],
+            },
+            variant: 'note',
+            emoji: '💡',
+            isEmojiVisible: true,
+          },
+        },
+      ];
+
+      const firstExpand = expandToHierarchical(original);
+      const collapsed = collapseToLegacy(firstExpand);
+      const secondExpand = expandToHierarchical(collapsed);
+
+      const calloutFirst = firstExpand.find(b => b.id === 'callout-1');
+      const calloutSecond = secondExpand.find(b => b.id === 'callout-1');
+
+      expect(calloutFirst?.content?.length).toBe(calloutSecond?.content?.length);
+
+      const firstListTexts = firstExpand
+        .filter(b => b.type === 'list' && b.parent === 'callout-1')
+        .map(b => (b.data as { text: string }).text)
+        .sort();
+      const secondListTexts = secondExpand
+        .filter(b => b.type === 'list' && b.parent === 'callout-1')
+        .map(b => (b.data as { text: string }).text)
+        .sort();
+
+      expect(secondListTexts).toEqual(firstListTexts);
+      expect(secondListTexts).toEqual(['rt1', 'rt2', 'rt3']);
+
+      const orphansFirst = firstExpand.filter(b => b.type === 'list' && b.parent === undefined);
+      const orphansSecond = secondExpand.filter(b => b.type === 'list' && b.parent === undefined);
+
+      expect(orphansFirst).toHaveLength(0);
+      expect(orphansSecond).toHaveLength(0);
+    });
+
+    it('legacy list block without an explicit id still gets every item re-parented', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'callout-1',
+          type: 'callout',
+          data: {
+            body: {
+              blocks: [
+                // No id on the list block — expansion must mint ids and still parent all.
+                {
+                  type: 'list',
+                  data: {
+                    style: 'unordered',
+                    items: ['first', 'second'],
+                  },
+                },
+              ],
+            },
+            variant: 'note',
+            emoji: '💡',
+            isEmojiVisible: true,
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      assertAllListItemsParentedTo(result, 'callout-1', ['first', 'second']);
+    });
+
+    it('exact dodois "в свою кружку" article shape round-trips without orphans', () => {
+      // Shape copied from production API (c23b8bf4-d68c-11f0-b1ee-6045bda1eb80).
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'callout-1',
+          type: 'callout',
+          data: {
+            body: {
+              blocks: [
+                {
+                  type: 'paragraph',
+                  data: {
+                    text: 'Если ты заметил, что в кружке Гостя есть остатки напитка или она выглядит грязной:',
+                  },
+                },
+                {
+                  type: 'list',
+                  data: {
+                    items: [
+                      'Убедись, что в раковине для посуды нет инвентаря;',
+                      'Сполосни кружку проточной водой, можешь использовать одноразовую белую тряпку и средство для ручного мытья посуды Assert Lemon для более тщательного промывания.',
+                    ],
+                    style: 'unordered',
+                  },
+                },
+              ],
+            },
+            emoji: 'ℹ️',
+            title: '',
+            variant: 'info',
+            isEmojiVisible: true,
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      const callout = result.find(b => b.id === 'callout-1');
+
+      // 1 paragraph + 2 list items = 3 direct descendants.
+      expect(callout?.content).toHaveLength(3);
+
+      const listItems = result.filter(b => b.type === 'list');
+
+      expect(listItems).toHaveLength(2);
+      for (const li of listItems) {
+        expect(li.parent).toBe('callout-1');
+        expect(callout?.content).toContain(li.id);
+      }
+
+      // Orphan guard: zero root-level list blocks must exist outside the callout.
+      const rootListBlocks = result.filter(b => b.type === 'list' && b.parent === undefined);
+
+      expect(rootListBlocks).toHaveLength(0);
+    });
+  });
+
+  describe('collapseToLegacy deep-nesting regression (grandchildren preservation)', () => {
+    /**
+     * Guards against the mirror of the expand-side bug: processRoot{Callout,Toggle,
+     * ToggleableHeader}Item previously only copied direct children via
+     * stripHierarchyFields, so grandchildren were ejected to the document root
+     * (or silently dropped when the outer loop could not classify them).
+     */
+    it('preserves paragraph grandchild nested in flat callout → toggle → paragraph', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'callout-1',
+          type: 'callout',
+          data: { title: '', variant: 'info', emoji: null, isEmojiVisible: false },
+          content: ['toggle-1'],
+        },
+        {
+          id: 'toggle-1',
+          type: 'toggle',
+          data: { text: 'Outer toggle', isOpen: true },
+          parent: 'callout-1',
+          content: ['para-1'],
+        },
+        {
+          id: 'para-1',
+          type: 'paragraph',
+          data: { text: 'Grandchild paragraph' },
+          parent: 'toggle-1',
+        },
+      ];
+
+      const result = collapseToLegacy(blocks);
+
+      const rootCallout = result.find(b => b.id === 'callout-1');
+
+      expect(rootCallout).toBeDefined();
+      expect(rootCallout?.type).toBe('callout');
+
+      const calloutBody = (rootCallout?.data as { body?: { blocks: OutputBlockData[] } }).body;
+
+      expect(calloutBody?.blocks).toHaveLength(1);
+
+      const innerToggle = calloutBody?.blocks[0];
+
+      expect(innerToggle?.type).toBe('toggleList');
+
+      const innerBody = (innerToggle?.data as { body?: { blocks: OutputBlockData[] } }).body;
+
+      expect(innerBody?.blocks).toHaveLength(1);
+      expect(innerBody?.blocks[0].type).toBe('paragraph');
+      expect((innerBody?.blocks[0].data as { text: string }).text).toBe('Grandchild paragraph');
+
+      // Grandchild must NOT appear as root sibling of the callout.
+      const rootParagraphs = result.filter(b => b.type === 'paragraph');
+
+      expect(rootParagraphs).toHaveLength(0);
+    });
+
+    it('collapses flat list (with nested child) inside callout body into legacy list shape', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'callout-1',
+          type: 'callout',
+          data: { title: '', variant: 'info', emoji: null, isEmojiVisible: false },
+          content: ['list-1'],
+        },
+        {
+          id: 'list-1',
+          type: 'list',
+          data: { text: 'Root item', style: 'unordered', checked: false, depth: 0 },
+          parent: 'callout-1',
+          content: ['list-2'],
+        },
+        {
+          id: 'list-2',
+          type: 'list',
+          data: { text: 'Nested item', style: 'unordered', checked: false, depth: 1 },
+          parent: 'list-1',
+        },
+      ];
+
+      const result = collapseToLegacy(blocks);
+
+      const rootCallout = result.find(b => b.id === 'callout-1');
+
+      expect(rootCallout).toBeDefined();
+
+      const body = (rootCallout?.data as { body?: { blocks: OutputBlockData[] } }).body;
+
+      expect(body?.blocks).toHaveLength(1);
+
+      const legacyList = body?.blocks[0];
+
+      expect(legacyList?.type).toBe('list');
+
+      const items = (legacyList?.data as { items: Array<{ content: string; items?: Array<{ content: string }> }> }).items;
+
+      expect(items).toHaveLength(1);
+      expect(items[0].content).toBe('Root item');
+      expect(items[0].items).toHaveLength(1);
+      expect(items[0].items?.[0].content).toBe('Nested item');
+
+      // Grandchild list must not leak to root.
+      const rootLists = result.filter(b => b.type === 'list' && b.id !== 'callout-1');
+
+      expect(rootLists).toHaveLength(0);
+    });
+
+    it('preserves grandchildren under toggleable-header (titleVariant path)', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'h-1',
+          type: 'header',
+          data: { text: 'Outer', level: 2, isToggleable: true, isOpen: true },
+          content: ['toggle-2'],
+        },
+        {
+          id: 'toggle-2',
+          type: 'toggle',
+          data: { text: 'Inner toggle', isOpen: true },
+          parent: 'h-1',
+          content: ['para-2'],
+        },
+        {
+          id: 'para-2',
+          type: 'paragraph',
+          data: { text: 'Deep content' },
+          parent: 'toggle-2',
+        },
+      ];
+
+      const result = collapseToLegacy(blocks);
+
+      const rootHeader = result.find(b => b.id === 'h-1');
+
+      expect(rootHeader?.type).toBe('toggleList');
+
+      const outerBody = (rootHeader?.data as { body?: { blocks: OutputBlockData[] } }).body;
+
+      expect(outerBody?.blocks).toHaveLength(1);
+
+      const innerToggle = outerBody?.blocks[0];
+
+      expect(innerToggle?.type).toBe('toggleList');
+
+      const innerBody = (innerToggle?.data as { body?: { blocks: OutputBlockData[] } }).body;
+
+      expect(innerBody?.blocks).toHaveLength(1);
+      expect((innerBody?.blocks[0].data as { text: string }).text).toBe('Deep content');
+
+      const rootParagraphs = result.filter(b => b.type === 'paragraph');
+
+      expect(rootParagraphs).toHaveLength(0);
+    });
+
+    it('round-trip: expand(collapse(flat callout → toggle → para)) is stable', () => {
+      const flat: OutputBlockData[] = [
+        {
+          id: 'c-1',
+          type: 'callout',
+          data: { title: '', variant: 'info', emoji: null, isEmojiVisible: false },
+          content: ['t-1'],
+        },
+        {
+          id: 't-1',
+          type: 'toggle',
+          data: { text: 'T', isOpen: true },
+          parent: 'c-1',
+          content: ['p-1'],
+        },
+        {
+          id: 'p-1',
+          type: 'paragraph',
+          data: { text: 'P' },
+          parent: 't-1',
+        },
+      ];
+
+      const legacy = collapseToLegacy(flat);
+      const reExpanded = expandToHierarchical(legacy);
+
+      // Re-expanded set must contain the 3 blocks, with parents preserved.
+      expect(reExpanded).toHaveLength(3);
+
+      const callout = reExpanded.find(b => b.type === 'callout');
+      const toggle = reExpanded.find(b => b.type === 'toggle');
+      const para = reExpanded.find(b => b.type === 'paragraph');
+
+      expect(callout?.parent).toBeUndefined();
+      expect(toggle?.parent).toBe(callout?.id);
+      expect(para?.parent).toBe(toggle?.id);
+      expect((para?.data as { text: string }).text).toBe('P');
     });
   });
 });

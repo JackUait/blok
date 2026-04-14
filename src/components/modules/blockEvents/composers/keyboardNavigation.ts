@@ -230,9 +230,18 @@ export class KeyboardNavigation extends BlockEventComposer {
   }
 
   private createBlockOnEnter(currentBlock: Block): Block {
+    /**
+     * When the current block is top-level (parentId === null), pass forceTopLevel
+     * so the new block's DOM holder is anchored at workingArea root level even if
+     * the previous block in the flat array is nested inside a callout/toggle/table.
+     * Without this, insertAdjacentElement('afterend', previousBlock.holder) drops
+     * the new holder inside the nested container — the Enter-after-callout bug.
+     */
+    const isCurrentTopLevel = currentBlock.parentId === null;
+
     // Case 1: Caret at start - insert block above
     if (currentBlock.currentInput !== undefined && isCaretAtStartOfInput(currentBlock.currentInput) && !currentBlock.hasMedia && (currentBlock.parentId === null || !currentBlock.isEmpty)) {
-      const newBlock = this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex);
+      const newBlock = this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex, false, false, isCurrentTopLevel);
 
       /**
        * When the current block is a child of a toggle, the new block inserted above
@@ -258,19 +267,21 @@ export class KeyboardNavigation extends BlockEventComposer {
         return promotedBlock;
       }
 
-      const newBlock = this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex + 1);
-
       /**
        * When the current block is an open toggle (heading or list item),
        * the new block should become a child of the toggle rather than a sibling.
        * Detect via the data-blok-toggle-open DOM attribute set by toggle tools.
        *
-       * When the current block is already a child of a toggle, the new block
-       * should inherit the same parent so it stays inside the toggle.
+       * forceTopLevel is safe to pass only when the current block is top-level
+       * AND is not an open toggle (which intentionally nests the new block as its child).
        */
       const toggleWrapper = currentBlock.holder.querySelector('[data-blok-toggle-open]');
+      const isToggleOpen = toggleWrapper?.getAttribute('data-blok-toggle-open') === 'true';
+      const forceTopLevelCase2 = isCurrentTopLevel && !isToggleOpen;
 
-      if (toggleWrapper?.getAttribute('data-blok-toggle-open') === 'true') {
+      const newBlock = this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex + 1, false, false, forceTopLevelCase2);
+
+      if (isToggleOpen) {
         this.Blok.BlockManager.setBlockParent(newBlock, currentBlock.id);
       } else if (currentBlock.parentId !== null && newBlock.parentId !== currentBlock.parentId) {
         this.Blok.BlockManager.setBlockParent(newBlock, currentBlock.parentId);

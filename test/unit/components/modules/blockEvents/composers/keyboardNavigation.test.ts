@@ -417,7 +417,7 @@ describe('KeyboardNavigation', () => {
       // setBlockParent should NOT be called with null (no un-parenting).
       expect(setBlockParent).not.toHaveBeenCalledWith(emptyChildBlock, null);
       // A new block should be created inside the toggle at currentBlockIndex + 1
-      expect(insertDefaultBlockAtIndex).toHaveBeenCalledWith(2);
+      expect(insertDefaultBlockAtIndex.mock.calls[0][0]).toBe(2);
       // The new block should inherit the toggle parent
       expect(setBlockParent).toHaveBeenCalledWith(newBlock, toggleParentId);
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
@@ -597,7 +597,7 @@ describe('KeyboardNavigation', () => {
       expect(setBlockParent).not.toHaveBeenCalledWith(emptyLastChild, null);
       expect(move).not.toHaveBeenCalled();
       // Should insert a new block inside the callout
-      expect(insertDefaultBlockAtIndex).toHaveBeenCalledWith(3);
+      expect(insertDefaultBlockAtIndex.mock.calls[0][0]).toBe(3);
       expect(setBlockParent).toHaveBeenCalledWith(newBlock, calloutParentId);
 
       isCaretAtStartOfInputSpy.mockRestore();
@@ -643,7 +643,7 @@ describe('KeyboardNavigation', () => {
       keyboardNavigation.handleEnter(event);
 
       // Block should be inserted below (currentBlockIndex + 1), not above (currentBlockIndex)
-      expect(insertDefaultBlockAtIndex).toHaveBeenCalledWith(2);
+      expect(insertDefaultBlockAtIndex.mock.calls[0][0]).toBe(2);
       expect(split).not.toHaveBeenCalled();
       expect(setToBlock).toHaveBeenCalledWith(insertedBlock);
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
@@ -700,7 +700,7 @@ describe('KeyboardNavigation', () => {
       keyboardNavigation.handleEnter(event);
 
       // insertDefaultBlockAtIndex should be called (block inserted below)
-      expect(insertDefaultBlockAtIndex).toHaveBeenCalledWith(2);
+      expect(insertDefaultBlockAtIndex.mock.calls[0][0]).toBe(2);
 
       // setBlockParent should NOT be called because newBlock.parentId already matches currentBlock.parentId
       expect(setBlockParent).not.toHaveBeenCalled();

@@ -1701,6 +1701,83 @@ describe('Blocks', () => {
       expect(newBlock.holder.parentElement).not.toBe(workingArea);
     });
 
+    it('should place new top-level block at workingArea root when previous block is nested inside a callout', () => {
+      const blocks = createBlocks();
+
+      /**
+       * Regression for Enter-at-start-after-callout bug.
+       *
+       * Flat array: [callout, nestedChild, textBlock]
+       *   - callout.holder: direct workingArea child
+       *   - nestedChild.holder: inside callout.holder > childContainer (data-blok-nested-blocks)
+       *   - textBlock.holder: direct workingArea child
+       *
+       * User caret at offset 0 of textBlock, presses Enter. keyboardNavigation
+       * inserts a new top-level block at index 2 (the index of textBlock), with
+       * `forceTopLevel: true` because currentBlock.parentId === null.
+       *
+       * The new block must land at workingArea level, immediately before textBlock,
+       * NOT inside callout's nested container. Without the fix, Blocks.insert would
+       * anchor on nestedChild (blocks[1]) and insertAdjacentElement('afterend', ...)
+       * would place the new holder inside callout's nested container.
+       */
+      const callout = createMockBlock('callout-1', 'callout');
+      const nestedChild = createMockBlock('nested-1', 'paragraph');
+      const textBlock = createMockBlock('text-1', 'paragraph');
+
+      blocks.push(callout);
+
+      // Build callout's nested-blocks container and move nestedChild into it
+      const nestedContainer = document.createElement('div');
+
+      nestedContainer.setAttribute('data-blok-nested-blocks', '');
+      callout.holder.appendChild(nestedContainer);
+      nestedContainer.appendChild(nestedChild.holder);
+      blocks.blocks.push(nestedChild);
+
+      // textBlock is top-level
+      workingArea.appendChild(textBlock.holder);
+      blocks.blocks.push(textBlock);
+
+      // Now insert a new top-level block at index 2 with forceTopLevel
+      const newBlock = createMockBlock('new-1', 'paragraph');
+
+      blocks.insert(2, newBlock, false, false, true);
+
+      // New block must be at workingArea level
+      expect(newBlock.holder.parentElement).toBe(workingArea);
+      // Must NOT land inside callout's nested container
+      expect(nestedContainer.contains(newBlock.holder)).toBe(false);
+      // Must be immediately before textBlock in DOM
+      expect(newBlock.holder.nextElementSibling).toBe(textBlock.holder);
+    });
+
+    it('should append new top-level block to workingArea end when no top-level block follows (forceTopLevel)', () => {
+      const blocks = createBlocks();
+
+      const callout = createMockBlock('callout-1', 'callout');
+      const nestedChild = createMockBlock('nested-1', 'paragraph');
+
+      blocks.push(callout);
+
+      const nestedContainer = document.createElement('div');
+
+      nestedContainer.setAttribute('data-blok-nested-blocks', '');
+      callout.holder.appendChild(nestedContainer);
+      nestedContainer.appendChild(nestedChild.holder);
+      blocks.blocks.push(nestedChild);
+
+      // Insert at index 2 (end) with forceTopLevel — no top-level sibling after
+      const newBlock = createMockBlock('new-1', 'paragraph');
+
+      blocks.insert(2, newBlock, false, false, true);
+
+      expect(newBlock.holder.parentElement).toBe(workingArea);
+      expect(nestedContainer.contains(newBlock.holder)).toBe(false);
+      // Should be last child of workingArea
+      expect(workingArea.lastElementChild).toBe(newBlock.holder);
+    });
+
     it('should handle replace followed by remove', () => {
       const blocks = createBlocks();
       const block1 = createMockBlock('block-1');

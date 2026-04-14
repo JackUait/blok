@@ -175,8 +175,20 @@ export class Blocks {
    * @param {number} index — index to insert Block
    * @param {Block} block — Block to insert
    * @param {boolean} replace — it true, replace block on given index
+   * @param {boolean} appendToWorkingArea — if true, append to workingArea end (ignores position)
+   * @param {boolean} forceTopLevel — if true, place holder at workingArea root level even when
+   *   the previous block in the flat array is nested inside another container. Used when the
+   *   caller knows the new block is logically top-level (parentId === null). Prevents the
+   *   Enter-after-callout regression family where insertAdjacentElement('afterend',
+   *   previousBlock.holder) would otherwise drop the new holder inside a nested container.
    */
-  public insert(index: number, block: Block, replace = false, appendToWorkingArea = false): void {
+  public insert(
+    index: number,
+    block: Block,
+    replace = false,
+    appendToWorkingArea = false,
+    forceTopLevel = false
+  ): void {
     /**
      * Invalid-index guard (regression: wrong-block-dropped via alt+drag).
      *
@@ -235,7 +247,19 @@ export class Blocks {
     if (insertIndex > 0) {
       const previousBlock = this.blocks[insertIndex - 1];
 
+      if (forceTopLevel) {
+        this.insertAtRootLevel(block, insertIndex);
+
+        return;
+      }
+
       this.insertToDOM(block, 'afterend', previousBlock);
+
+      return;
+    }
+
+    if (forceTopLevel) {
+      this.insertAtRootLevel(block, insertIndex);
 
       return;
     }
@@ -508,6 +532,39 @@ export class Blocks {
     }
 
     target.holder.insertAdjacentElement(position, block.holder);
+    block.call(BlockToolAPI.RENDERED);
+  }
+
+  /**
+   * Place a single block's holder at workingArea root level. Finds the next
+   * top-level block at or after `insertIndex` in the flat array and inserts
+   * before it; falls back to appending to workingArea when no top-level
+   * sibling follows. Keeps DOM parent aligned with `parentId === null`.
+   */
+  private insertAtRootLevel(block: Block, insertIndex: number): void {
+    const nextTopLevel = this.blocks.slice(insertIndex + 1).find(
+      (b) => b.holder.parentElement === this.workingArea
+    );
+
+    if (nextTopLevel !== undefined) {
+      nextTopLevel.holder.insertAdjacentElement('beforebegin', block.holder);
+    } else {
+      this.workingArea.appendChild(block.holder);
+    }
+
+    /**
+     * Invariant: forceTopLevel insertion must land at workingArea root. If it
+     * does not, a future change broke the resolution logic above and the
+     * Enter-after-callout bug is one wrong neighbor away from reappearing.
+     * Fail loud and early so the regression cannot sneak in silently.
+     */
+    if (block.holder.parentElement !== this.workingArea) {
+      throw new Error(
+        '[Blocks.insertAtRootLevel] invariant violated: block holder did not land at workingArea root. ' +
+        'This indicates the Enter-after-callout regression guard is broken.'
+      );
+    }
+
     block.call(BlockToolAPI.RENDERED);
   }
 

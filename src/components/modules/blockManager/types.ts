@@ -54,6 +54,12 @@ export interface InsertBlockOptions {
   skipYjsSync?: boolean;
   /** When true, append block to workingArea instead of positioning relative to adjacent blocks */
   appendToWorkingArea?: boolean;
+  /**
+   * When true, force DOM placement at workingArea root level even if the previous block
+   * in the flat array is nested. Prevents the Enter-after-callout regression family where
+   * a top-level insertion would otherwise land inside a nested container.
+   */
+  forceTopLevel?: boolean;
 }
 
 /**
@@ -111,7 +117,13 @@ export interface ConvertBlockOptions {
  */
 export type BlocksStore = Blocks & {
   [index: number]: Block | undefined;
-  insert(index: number, block: Block, replace?: boolean, appendToWorkingArea?: boolean): void;
+  insert(
+    index: number,
+    block: Block,
+    replace?: boolean,
+    appendToWorkingArea?: boolean,
+    forceTopLevel?: boolean
+  ): void;
   remove(index: number): void;
   move(toIndex: number, fromIndex: number, skipDOM?: boolean, skipMovedHook?: boolean): void;
 };

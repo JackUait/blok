@@ -582,9 +582,14 @@ export class BlockManager extends Module {
    * @param {boolean} skipYjsSync - if true, skip syncing to Yjs (caller handles sync separately)
    * @returns {Block} inserted Block
    */
-  public insertDefaultBlockAtIndex(index: number, needToFocus = false, skipYjsSync = false): Block {
+  public insertDefaultBlockAtIndex(
+    index: number,
+    needToFocus = false,
+    skipYjsSync = false,
+    forceTopLevel = false
+  ): Block {
     this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    const result = this.operations.insertDefaultBlockAtIndex(index, needToFocus, skipYjsSync, this.blocksStore);
+    const result = this.operations.insertDefaultBlockAtIndex(index, needToFocus, skipYjsSync, this.blocksStore, forceTopLevel);
     this._currentBlockIndex = this.operations.currentBlockIndexValue;
     return result;
   }

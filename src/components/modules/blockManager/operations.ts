@@ -221,6 +221,7 @@ export class BlockOperations {
       tunes,
       skipYjsSync = false,
       appendToWorkingArea = false,
+      forceTopLevel = false,
     } = options;
 
     const targetIndex = index ?? this.currentBlockIndex + (replace ? 0 : 1);
@@ -295,7 +296,7 @@ export class BlockOperations {
       });
     }
 
-    blocksStore.insert(targetIndex, block, replace, appendToWorkingArea);
+    blocksStore.insert(targetIndex, block, replace, appendToWorkingArea, forceTopLevel);
 
     /**
      * Transfer the parent link to the new block BEFORE Yjs sync so
@@ -365,9 +366,18 @@ export class BlockOperations {
    * @param needToFocus - If true, updates current Block index
    * @param skipYjsSync - If true, skip syncing to Yjs
    * @param blocksStore - The blocks store to modify
+   * @param forceTopLevel - If true, place new block at workingArea root level regardless of
+   *   whether the predecessor in the flat array is nested. Used by Enter-at-start and
+   *   Enter-at-end handlers when the current block is top-level.
    * @returns Inserted Block
    */
-  public insertDefaultBlockAtIndex(index: number, needToFocus = false, skipYjsSync = false, blocksStore: BlocksStore): Block {
+  public insertDefaultBlockAtIndex(
+    index: number,
+    needToFocus = false,
+    skipYjsSync = false,
+    blocksStore: BlocksStore,
+    forceTopLevel = false
+  ): Block {
     const defaultTool = this.dependencies.config.defaultBlock;
 
     if (defaultTool === undefined) {
@@ -379,6 +389,7 @@ export class BlockOperations {
       index,
       needToFocus,
       skipYjsSync,
+      forceTopLevel,
     }, blocksStore);
   }
 
@@ -1202,8 +1213,21 @@ export class BlockOperations {
     // into a nested empty block (e.g. a paragraph inside a callout) via the
     // replace=true path strands the new block as a root sibling once Saver
     // re-derives content[] from live parentIds.
-    const predecessorParentId = this.currentBlock?.parentId ?? null;
-    const oldBlockId = replace ? this.currentBlock?.id : undefined;
+    //
+    // Title-vs-child defense: when the caret is in the CONTAINER's own title
+    // input (the header of a toggle/callout) rather than inside one of its
+    // children, the new block should become a CHILD of the container — its
+    // parent must be the container's id, NOT the container's parentId.
+    // Mirrors the `contextParentId` logic in BasePasteHandler.insertPasteData
+    // and BlokDataHandler so all paste entry points agree.
+    const currentBlock = this.currentBlock;
+    const childContainer = currentBlock?.holder?.querySelector('[data-blok-toggle-children]') ?? null;
+    const isInContainerTitle = childContainer !== null &&
+      !childContainer.contains(currentBlock?.currentInput ?? null);
+    const predecessorParentId = isInContainerTitle
+      ? (currentBlock?.id ?? null)
+      : (currentBlock?.parentId ?? null);
+    const oldBlockId = replace ? currentBlock?.id : undefined;
 
     // Insert block without syncing to Yjs yet.
     // Wrap in atomic operation so that child blocks created during rendered()

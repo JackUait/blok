@@ -114,6 +114,27 @@ export class Saver extends Module {
     }
 
     /**
+     * Dangling parentId repair pass (belt-and-braces).
+     *
+     * Before deriving content[] or running hierarchy validation, walk every
+     * block and, if a block's parentId points at an id that does NOT exist in
+     * the live blocks array, clear it in-memory. This promotes the orphan to
+     * root-level — strictly better than emitting a dangling `parent` reference
+     * downstream, which produces corrupted JSON for users. This is the final
+     * exit ramp for the "container paste ejection" bug family: even if a
+     * mutation path somewhere else regresses, the saver is physically incapable
+     * of shipping output with a parent pointing to a non-existent block.
+     */
+    const blockIds = new Set(blocks.map(b => b.id));
+
+    for (const block of blocks) {
+      if (block.parentId !== null && !blockIds.has(block.parentId)) {
+        logLabeled(`Saver: cleared dangling parentId ${block.parentId} on block ${block.id}`, 'warn');
+        block.parentId = null;
+      }
+    }
+
+    /**
      * Derive each parent's content[] from the live blocks array.
      *
      * `block.contentIds` is a mutable array kept in sync by hierarchy.setBlockParent,

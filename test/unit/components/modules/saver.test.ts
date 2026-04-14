@@ -783,20 +783,89 @@ describe('Saver module', () => {
     expect(result?.blocks.find(b => b.id === 'tog1')?.content).toEqual(['leaf']);
   });
 
+  describe('dangling parentId repair pass', () => {
+    // Regression: even after a6fa892e closed the three mutation paths that
+    // introduced dangling parent refs, a belt-and-braces save-time repair
+    // guarantees the saver is physically incapable of emitting output where
+    // block.parent points at an id that does not exist in the blocks array.
+    // If drift somehow reaches this point, the orphan is promoted to root
+    // (parent cleared) — strictly better than shipping corrupted JSON.
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it('clears dangling parentId and promotes orphan to root without throwing', async () => {
+      vi.stubEnv('NODE_ENV', 'test');
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+      const logLabeledSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+
+      const rootA = createBlockMock({
+        id: 'A',
+        tool: 'paragraph',
+        data: { text: 'root A' },
+      });
+
+      const orphanB = createBlockMock({
+        id: 'B',
+        tool: 'paragraph',
+        data: { text: 'orphan B' },
+        // parentId points at a block that does not exist in the blocks array
+        parentId: 'missing-block-id',
+      });
+
+      const { saver } = createSaver({
+        blocks: [rootA.block, orphanB.block],
+        toolSanitizeConfigs: { paragraph: {} },
+      });
+
+      const result = await saver.save();
+
+      // Save must succeed — no hierarchy violation should be thrown because
+      // the repair pass cleared the dangling ref before validation ran.
+      expect(saver.getLastSaveError()).toBeUndefined();
+      expect(result).toBeDefined();
+
+      const blockIds = result?.blocks.map(b => b.id);
+
+      expect(blockIds).toContain('A');
+      expect(blockIds).toContain('B');
+
+      const outputB = result?.blocks.find(b => b.id === 'B');
+
+      // B must NOT carry a parent field — it was promoted to root
+      expect(outputB).toBeDefined();
+      expect(outputB).not.toHaveProperty('parent');
+
+      // The repair must have logged exactly one warning about the cleared ref
+      expect(logLabeledSpy).toHaveBeenCalledWith(
+        expect.stringMatching(/cleared dangling parentId missing-block-id on block B/),
+        'warn'
+      );
+    });
+  });
+
   describe('hierarchy drift assertion gate (NODE_ENV)', () => {
-    // Regression: the saver's post-output drift assertion only threw in
-    // NODE_ENV='test'. `yarn serve` runs with NODE_ENV='development', so any
-    // drift introduced during manual dev testing would silently log and pass
-    // through. The gate must also throw in 'development' so dev-time testing
-    // catches the next paste-ejection-family bug immediately. Only 'production'
-    // falls back to logging so end-user saves never break.
+    // The dangling-parentId repair pass runs before validation, so the old
+    // "orphan points at ghost parent" fixture no longer reaches the gate — it
+    // is repaired pre-validation and the orphan is promoted to root-level.
+    // To still exercise the NODE_ENV gate, these tests induce drift AFTER the
+    // repair pass by mutating block.parentId inside block.save() — which runs
+    // later in doSave's Promise.all step, after repair has already executed.
+    // This simulates a regression where some late mutation path re-introduces
+    // a dangling reference between repair and makeOutput.
     const driftingBlocks = (): Block[] => {
       const orphan = createBlockMock({
         id: 'orphan-child',
         tool: 'paragraph',
         data: { text: 'ejected from nowhere' },
-        // parentId points at a block that does not exist → drift by construction.
-        parentId: 'ghost-parent',
+      });
+
+      // Rewire save() so it flips parentId to a ghost id at save time — this
+      // happens AFTER the repair pass, so drift reaches makeOutput intact.
+      orphan.saveMock.mockImplementation(() => {
+        (orphan.block as { parentId: string | null }).parentId = 'ghost-parent';
+
+        return Promise.resolve(orphan.savedData);
       });
 
       return [orphan.block];
@@ -854,6 +923,34 @@ describe('Saver module', () => {
       );
       expect(saver.getLastSaveError()).toBeUndefined();
       expect(logLabeledSpy).toHaveBeenCalledWith(expect.stringMatching(/hierarchy drift/), 'error');
+    });
+
+    it('repairs dangling parentId before the gate so no drift is thrown', async () => {
+      // The classic fixture (orphan.parentId = 'ghost-parent') now flows through
+      // the pre-validation repair pass. In dev/test the gate would previously
+      // have thrown; now the ref is cleared, the orphan is promoted to root,
+      // and save succeeds cleanly.
+      vi.stubEnv('NODE_ENV', 'test');
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+      vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+
+      const orphan = createBlockMock({
+        id: 'orphan-child',
+        tool: 'paragraph',
+        data: { text: 'ejected from nowhere' },
+        parentId: 'ghost-parent',
+      });
+
+      const { saver } = createSaver({
+        blocks: [orphan.block],
+        toolSanitizeConfigs: { paragraph: {} },
+      });
+
+      const result = await saver.save();
+
+      expect(saver.getLastSaveError()).toBeUndefined();
+      expect(result?.blocks).toHaveLength(1);
+      expect(result?.blocks[0]).not.toHaveProperty('parent');
     });
   });
 });

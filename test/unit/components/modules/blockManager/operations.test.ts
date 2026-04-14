@@ -1913,6 +1913,48 @@ describe('BlockOperations', () => {
       expect(parentBlock?.contentIds).toContain(newBlock.id);
       expect(parentBlock?.contentIds).not.toContain('block-2');
     });
+
+    it('paste() into container title inherits container id as parent (title-vs-child defense)', async () => {
+      // The caret is inside a container BLOCK's title input (e.g. the header
+      // of a toggle/callout), NOT inside one of its children. In that case the
+      // pasted block should become a CHILD of the container — its parent must
+      // be the container's id, NOT the container's own parentId.
+      //
+      // This mirrors the `contextParentId` title-vs-child logic already
+      // present in BasePasteHandler.insertPasteData and BlokDataHandler.
+      const container = createMockBlock({ id: 'container-1', name: 'toggle' });
+      const childContainer = document.createElement('div');
+
+      childContainer.setAttribute('data-blok-toggle-children', '');
+      // Important: do NOT place the container's input inside childContainer.
+      // The input stays at the top of holder (the title), so currentInput is
+      // NOT a descendant of [data-blok-toggle-children].
+      container.holder.appendChild(childContainer);
+
+      const testStore = createBlocksStore([container]);
+      const testRepo = new BlockRepository();
+
+      testRepo.initialize(testStore);
+      const testHierarchy = new BlockHierarchy(testRepo);
+      const testOps = new BlockOperations(
+        dependencies,
+        testRepo,
+        factory,
+        testHierarchy,
+        blockDidMutatedSpy,
+        0
+      );
+
+      testOps.setYjsSync(yjsSync);
+
+      const pasteEvent = { detail: { data: '<p>pasted</p>' } } as unknown as PasteEvent;
+      const newBlock = await testOps.paste('paragraph', pasteEvent, false, testStore);
+
+      // The pasted block must become a child of the container block, not a
+      // sibling. Its parent must be the container's id (null parentId on the
+      // container must NOT leak through as the new block's parent).
+      expect(newBlock.parentId).toBe('container-1');
+    });
   });
 
   describe('moveCurrentBlockUp', () => {

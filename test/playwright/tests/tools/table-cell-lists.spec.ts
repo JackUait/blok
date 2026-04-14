@@ -335,8 +335,15 @@ test.describe('table cells — always-blocks model', () => {
     });
   });
 
-  test.describe('toolbar suppression', () => {
-    test('block toolbar hides settings toggler but keeps plus button for blocks inside table cells', async ({ page }) => {
+  test.describe('toolbar visibility', () => {
+    test('block toolbar keeps plus button and settings toggler visible for blocks inside table cells', async ({ page }) => {
+      /**
+       * Regression for c25a3a83: hover/focus inside a cell resolves the
+       * toolbar to the parent table block via resolveTableCellBlock(), which
+       * wires the settings toggler via setupDraggable() to drag that table.
+       * Hiding the toggler here left the whole table undraggable while the
+       * user edited cell text — both buttons must stay visible.
+       */
       await create2x2Table(page);
 
       // Click into a cell's editable area to give it focus
@@ -348,16 +355,14 @@ test.describe('table cells — always-blocks model', () => {
       // Hover over the cell block to trigger the block-hovered event
       await firstEditable.hover();
 
-      // Wait a moment for toolbar to potentially appear
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- checking non-appearance requires a brief wait
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- waiting for focusin/toolbar reposition
       await page.waitForTimeout(300);
 
-      // The plus button and settings toggler should not be visible for cell blocks
       const plusButton = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`);
       const settingsToggler = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`);
 
       await expect(plusButton).toBeVisible();
-      await expect(settingsToggler).toBeHidden();
+      await expect(settingsToggler).toBeVisible();
     });
   });
 

@@ -74,20 +74,26 @@ test.describe('toolbar visibility in table cells', () => {
     await page.goto(TEST_PAGE_URL);
   });
 
-  test('hides settings toggler but keeps plus button visible when clicking inside a table cell', async ({ page }) => {
+  test('keeps settings toggler and plus button visible when clicking inside a table cell', async ({ page }) => {
+    /**
+     * Regression for c25a3a83: the toolbar resolves cell focus to the parent
+     * table block and wires the settings toggler via setupDraggable() to drag
+     * that table, so the toggler must stay visible — hiding it would leave the
+     * whole table undraggable while editing cell text.
+     */
     await createBlokWithTable(page);
 
     const firstCell = page.locator(CELL_SELECTOR).filter({ hasText: 'Cell A' });
 
     await firstCell.click();
 
-    // eslint-disable-next-line playwright/no-wait-for-timeout -- checking non-appearance requires a brief wait
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- waiting for focusin/toolbar reposition
     await page.waitForTimeout(300);
 
     const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
     const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
 
-    await expect(settingsButton).toBeHidden();
+    await expect(settingsButton).toBeVisible();
     await expect(plusButton).toBeVisible();
   });
 });

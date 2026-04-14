@@ -5,6 +5,7 @@
  */
 import type { Block } from '../../block';
 import { DATA_ATTR } from '../../constants/data-attributes';
+import { logLabeled } from '../../utils';
 
 import type { BlockRepository } from './repository';
 
@@ -145,6 +146,48 @@ export class BlockHierarchy {
       );
     }
 
+    /**
+     * Layer 7: universal chokepoint guard against dangling parentId.
+     *
+     * Every reparent in the editor — paste, drag, split, duplicate, slash
+     * menu, Cmd+D, markdown shortcut, public api — flows through this
+     * method. Previously, if the caller passed a parent id that was no
+     * longer in the repository, the write silently mutated block.parentId
+     * to garbage: getBlockById returned undefined, the new-parent DOM and
+     * contentIds branches no-opped, but `block.parentId = newParentId`
+     * still ran. The ghost id then survived until Saver's dangling-parent
+     * repair (layer 5), by which point the block has already been
+     * ejected from any container it was supposed to belong to.
+     *
+     * Guarding at this chokepoint catches the regression at the point of
+     * introduction instead of one save cycle later:
+     *   - test/dev: throw loudly so the offending caller is fixed before
+     *     the build ships.
+     *   - prod: coerce to null + log `error`, matching the saver's graceful
+     *     repair semantics so end users never see a wedged editor.
+     *
+     * This is the upstream-most defense in the callout paste ejection
+     * bug family (operations.paste title-vs-child, insert transfer, blok
+     * data handler contextParent, saver repair, validateHierarchy gate).
+     */
+    const parentExists =
+      newParentId === null || this.repository.getBlockById(newParentId) !== undefined;
+
+    if (!parentExists) {
+      const env = typeof process !== 'undefined' ? process.env?.NODE_ENV : undefined;
+      const message =
+        `BlockHierarchy.setBlockParent: dangling parent id "${newParentId}" ` +
+        `for block "${block.id}" — parent block is not in the repository.`;
+
+      if (env === 'test' || env === 'development') {
+        throw new Error(message);
+      }
+
+      logLabeled(message, 'error');
+    }
+
+    const sanitizedParentId = parentExists ? newParentId : null;
+
     const oldParentId = block.parentId;
 
     // Remove from old parent's contentIds
@@ -176,7 +219,7 @@ export class BlockHierarchy {
     }
 
     // Add to new parent's contentIds
-    const newParent = newParentId !== null ? this.repository.getBlockById(newParentId) : undefined;
+    const newParent = sanitizedParentId !== null ? this.repository.getBlockById(sanitizedParentId) : undefined;
     const shouldAddToNewParent = newParent !== undefined && !newParent.contentIds.includes(block.id);
 
     if (shouldAddToNewParent) {
@@ -185,7 +228,7 @@ export class BlockHierarchy {
 
     // Update block's parentId - parentId is a public mutable property on Block
     // eslint-disable-next-line no-param-reassign
-    block.parentId = newParentId;
+    block.parentId = sanitizedParentId;
 
     // If the new parent's existing children are hidden (toggle is collapsed),
     // hide this newly added child too so Tab navigation skips it.
@@ -194,7 +237,7 @@ export class BlockHierarchy {
     // children to infer state from. Fall back to reading the toggle/header
     // tool's persistent open-state attribute (`data-blok-toggle-open="false"`)
     // on any descendant of the parent holder.
-    if (newParentId !== null && newParent !== undefined) {
+    if (sanitizedParentId !== null && newParent !== undefined) {
       const existingChildren = newParent.contentIds
         .filter(id => id !== block.id)
         .map(id => this.repository.getBlockById(id))
@@ -217,7 +260,7 @@ export class BlockHierarchy {
     // honouring the flat-array order so the DOM order matches the logical order.
     // Skip if the holder is already claimed by another nested-blocks container
     // (e.g. a table cell) — moving it would steal it from that container.
-    if (newParentId !== null && newParent !== undefined && !block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`)) {
+    if (sanitizedParentId !== null && newParent !== undefined && !block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`)) {
       const newContainer = newParent.holder.querySelector('[data-blok-toggle-children]');
       if (newContainer) {
         const allBlocks = this.repository.blocks;
@@ -235,8 +278,8 @@ export class BlockHierarchy {
     this.updateBlockIndentation(block);
 
     // Notify listener so parent data can be synced (e.g. to Yjs)
-    if (newParentId !== null && this.onParentChanged !== undefined) {
-      this.onParentChanged(newParentId);
+    if (sanitizedParentId !== null && this.onParentChanged !== undefined) {
+      this.onParentChanged(sanitizedParentId);
     }
   }
 

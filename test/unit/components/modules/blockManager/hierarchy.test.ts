@@ -247,16 +247,55 @@ describe('BlockHierarchy', () => {
       expect(newParent.contentIds).toContain('child');
     });
 
-    it('handles new parent that does not exist', () => {
+    /**
+     * Layer 7: universal chokepoint guard against dangling parentId.
+     * Every reparent in the editor flows through setBlockParent. If a caller
+     * passes a parent id that is not present in the repository, the write
+     * used to silently mutate block.parentId to garbage and let drift
+     * accumulate until save. This is the upstream-most defense against the
+     * callout paste ejection bug family and any future regression that
+     * introduces a dangling parent id.
+     */
+    it('rejects a non-null parent id that is not in the repository (test/dev)', () => {
       const block = requireBlock('child');
       const oldParent = requireBlock('parent-1');
 
       oldParent.contentIds = ['child'];
 
-      hierarchy.setBlockParent(block, 'non-existent-parent');
+      expect(() => hierarchy.setBlockParent(block, 'non-existent-parent')).toThrow(
+        /dangling parent id/i
+      );
 
-      expect(block.parentId).toBe('non-existent-parent');
-      expect(oldParent.contentIds).not.toContain('child');
+      expect(block.parentId).toBe('parent-1');
+      expect(oldParent.contentIds).toContain('child');
+    });
+
+    it('coerces a dangling parent id to null and logs in production', async () => {
+      const prevEnv = process.env.NODE_ENV;
+
+      process.env.NODE_ENV = 'production';
+
+      try {
+        const loggerModule = await import('../../../../../src/components/utils');
+        const warnSpy = vi.spyOn(loggerModule, 'logLabeled').mockImplementation(() => undefined);
+        const block = requireBlock('child');
+        const oldParent = requireBlock('parent-1');
+
+        oldParent.contentIds = ['child'];
+
+        hierarchy.setBlockParent(block, 'non-existent-parent');
+
+        expect(block.parentId).toBeNull();
+        expect(oldParent.contentIds).not.toContain('child');
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringMatching(/dangling parent id/i),
+          'error'
+        );
+
+        warnSpy.mockRestore();
+      } finally {
+        process.env.NODE_ENV = prevEnv;
+      }
     });
 
     it('updates visual indentation after reparenting', () => {

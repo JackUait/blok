@@ -1864,6 +1864,55 @@ describe('BlockOperations', () => {
       // The pasted block should inherit block-2's parentId
       expect(newBlock.parentId).toBe('block-1');
     });
+
+    it('inherits parentId from replaced block when pasting with replace=true (callout-child-paste defense)', async () => {
+      // Setup: block-2 is a child of block-1 (e.g., an empty paragraph inside a callout).
+      // Pasting a different block onto that empty paragraph triggers the replace=true
+      // path in BasePasteHandler.processSingleBlock. The new block must inherit
+      // block-1 as its parent, otherwise Saver re-derives content[] from live parentId
+      // and the pasted block is ejected out of the callout at save time.
+      const childBlock = repository.getBlockById('block-2');
+
+      if (!childBlock) {
+        throw new Error('block-2 not found');
+      }
+      hierarchy.setBlockParent(childBlock, 'block-1');
+
+      operations.currentBlockIndexValue = 1; // block-2 (child of block-1)
+
+      const pasteEvent = { detail: { data: '<p>pasted</p>' } } as unknown as PasteEvent;
+      const newBlock = await operations.paste('paragraph', pasteEvent, true, blocksStore);
+
+      // The new block must inherit block-1 as its parent.
+      expect(newBlock.parentId).toBe('block-1');
+
+      // Hierarchy must stay consistent: block-1's contentIds now reference the
+      // new block in place of the replaced block-2.
+      const parentBlock = repository.getBlockById('block-1');
+
+      expect(parentBlock?.contentIds).toContain(newBlock.id);
+    });
+
+    it('transferParentLinkToNewBlock swaps old->new id in parent contentIds when pasting with replace', async () => {
+      const childBlock = repository.getBlockById('block-2');
+
+      if (!childBlock) {
+        throw new Error('block-2 not found');
+      }
+      hierarchy.setBlockParent(childBlock, 'block-1');
+
+      operations.currentBlockIndexValue = 1; // block-2 (child of block-1)
+
+      const pasteEvent = { detail: { data: '<p>pasted</p>' } } as unknown as PasteEvent;
+      const newBlock = await operations.paste('paragraph', pasteEvent, true, blocksStore);
+
+      const parentBlock = repository.getBlockById('block-1');
+
+      // block-2's id must be fully removed from the parent's contentIds and
+      // replaced by the new block's id at the same position.
+      expect(parentBlock?.contentIds).toContain(newBlock.id);
+      expect(parentBlock?.contentIds).not.toContain('block-2');
+    });
   });
 
   describe('moveCurrentBlockUp', () => {

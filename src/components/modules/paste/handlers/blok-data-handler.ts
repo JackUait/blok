@@ -165,6 +165,28 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
       Boolean(BlockManager.currentBlock?.tool.isDefault) &&
       Boolean(BlockManager.currentBlock?.isEmpty);
 
+    /**
+     * Capture the container membership of the current block BEFORE any
+     * inserts so pasted "root" blocks inherit it. Without this, pasting
+     * into a child of a callout / toggle / table cell would drop the
+     * parent link on the first pasted block and the Saver's
+     * derive-from-live-parentId fallback would emit it as a root sibling
+     * of the container — the "callout paste ejection" regression family.
+     *
+     * Mirrors the `contextParentId` logic in `BasePasteHandler.insertPasteData`
+     * for multi-item HTML/plain paste. `canReplaceCurrentBlock` is
+     * explicitly gated off inside table cells by paste/index.ts, so this
+     * capture is the only place where a table-cell paste picks up its
+     * parent id.
+     */
+    const currentBlock = BlockManager.currentBlock;
+    const childContainer = currentBlock?.holder?.querySelector('[data-blok-toggle-children]') ?? null;
+    const isInContainerTitle = childContainer !== null &&
+      !childContainer.contains(currentBlock?.currentInput ?? null);
+    const contextParentId = isInContainerTitle
+      ? (currentBlock?.id ?? null)
+      : (currentBlock?.parentId ?? null);
+
     // Set of old IDs present in this paste, used to identify parent-child pairs.
     const pastedOldIds = new Set(blocks.map(b => b.id));
 
@@ -226,6 +248,16 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
           data: remappedData,
           replace: idx === 0 && shouldReplaceFirst && children.length === 0,
         });
+
+        /**
+         * Wire the root block into the surrounding container membership.
+         * Only applies when the clipboard payload itself did not declare
+         * a parentId for this block (explicit clipboard hierarchy wins,
+         * since it is restored by the pass below).
+         */
+        if (contextParentId !== null && (original.parentId === undefined || original.parentId === null)) {
+          BlockManager.setBlockParent(block, contextParentId);
+        }
 
         oldIdToEntry.set(original.id, { newBlock: block, original });
         Caret.setToBlock(block, Caret.positions.END);

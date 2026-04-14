@@ -277,6 +277,18 @@ export class BlockOperations {
       throw new Error(`Could not replace Block at index ${targetIndex}. Block not found.`);
     }
 
+    /**
+     * Capture the replaced block's parent link BEFORE it leaves the
+     * repository so the new block inherits the same container membership.
+     * Without this, a replace-insert inside a callout/toggle/table-cell
+     * child drops parentId and the Saver's derive-from-live-parentId
+     * fallback then emits the new block as a root sibling — the "callout
+     * paste ejection" regression family. Defense-in-depth counterpart to
+     * the paste() method's inheritance handling.
+     */
+    const replacedParentId = blockToReplace?.parentId ?? null;
+    const replacedBlockId = blockToReplace?.id;
+
     if (replace && blockToReplace !== undefined) {
       this.blockDidMutated(BlockRemovedMutationType, blockToReplace, {
         index: targetIndex,
@@ -284,6 +296,17 @@ export class BlockOperations {
     }
 
     blocksStore.insert(targetIndex, block, replace, appendToWorkingArea);
+
+    /**
+     * Transfer the parent link to the new block BEFORE Yjs sync so
+     * `addBlock` writes the final parentId in a single shot. Routing
+     * through `transferParentLinkToNewBlock` swaps the old id for the new
+     * one in the parent's contentIds while preserving its original
+     * position, matching the semantics used by `replace()`.
+     */
+    if (replace && replacedParentId !== null && replacedBlockId !== undefined) {
+      this.transferParentLinkToNewBlock(replacedBlockId, block, replacedParentId);
+    }
 
     /**
      * Update the raw currentBlockIndex BEFORE firing the mutation event so
@@ -1173,11 +1196,14 @@ export class BlockOperations {
     replace = false,
     blocksStore: BlocksStore
   ): Promise<Block> {
-    // Capture predecessor's parentId BEFORE insert (for non-replace, the
-    // predecessor is the current block; its parentId should be inherited).
-    const predecessorParentId = !replace
-      ? this.currentBlock?.parentId ?? null
-      : null;
+    // Capture predecessor's parentId and id BEFORE insert. The predecessor is
+    // the current block — whether we're replacing it in place or inserting
+    // after it, the new block belongs to the same parent. Without this, pasting
+    // into a nested empty block (e.g. a paragraph inside a callout) via the
+    // replace=true path strands the new block as a root sibling once Saver
+    // re-derives content[] from live parentIds.
+    const predecessorParentId = this.currentBlock?.parentId ?? null;
+    const oldBlockId = replace ? this.currentBlock?.id : undefined;
 
     // Insert block without syncing to Yjs yet.
     // Wrap in atomic operation so that child blocks created during rendered()
@@ -1206,9 +1232,16 @@ export class BlockOperations {
       block.refreshToolRootElement();
     });
 
-    // Inherit parentId from predecessor for non-replace inserts.
-    if (!replace && predecessorParentId !== null) {
-      this.hierarchy.setBlockParent(block, predecessorParentId);
+    // Wire the new block into the predecessor's parent BEFORE the Yjs addBlock
+    // call below so Yjs sees the final parentId in one shot. For replace we
+    // route through `transferParentLinkToNewBlock` which swaps the old id for
+    // the new id inside the parent's contentIds while preserving position.
+    if (predecessorParentId !== null) {
+      if (replace && oldBlockId !== undefined) {
+        this.transferParentLinkToNewBlock(oldBlockId, block, predecessorParentId);
+      } else {
+        this.hierarchy.setBlockParent(block, predecessorParentId);
+      }
     }
 
     // Sync final state to Yjs as single operation

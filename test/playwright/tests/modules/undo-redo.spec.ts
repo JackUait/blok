@@ -682,6 +682,8 @@ test.describe('yjs undo/redo', () => {
       { type: 'list', componentAttr: 'list', label: 'list' },
       { type: 'toggle', componentAttr: 'toggle', label: 'toggle' },
       { type: 'callout', componentAttr: 'callout', label: 'callout' },
+      { type: 'quote', componentAttr: 'quote', label: 'quote' },
+      { type: 'code', componentAttr: 'code', label: 'code' },
     ];
 
     /**
@@ -748,8 +750,11 @@ test.describe('yjs undo/redo', () => {
         await expect(
           page
             .locator(targetSelector)
-            // eslint-disable-next-line playwright/no-nth-methods -- Callout nests text in a child contenteditable; `.first()` is the portable way to grab the text holder across all tool layouts
-            .locator('[contenteditable="true"]').first()
+            // Code uses contenteditable="plaintext-only"; paragraph/header/list/etc. use "true".
+            // This selector is portable across both. `.first()` grabs the text holder (callout
+            // nests its child paragraph's editable, so the first match is the seeded child).
+            // eslint-disable-next-line playwright/no-nth-methods -- portable across all tool layouts
+            .locator('[contenteditable]:not([contenteditable="false"])').first()
         ).toContainText(sourceText);
       });
 
@@ -834,7 +839,7 @@ test.describe('yjs undo/redo', () => {
           page
             .locator(targetSelector)
             // eslint-disable-next-line playwright/no-nth-methods -- See paragraph matrix above
-            .locator('[contenteditable="true"]').first()
+            .locator('[contenteditable]:not([contenteditable="false"])').first()
         ).toContainText(sourceText);
 
         await page.keyboard.press(UNDO_SHORTCUT);
@@ -846,7 +851,7 @@ test.describe('yjs undo/redo', () => {
           page
             .locator(sourceSelector)
             // eslint-disable-next-line playwright/no-nth-methods -- See paragraph matrix above
-            .locator('[contenteditable="true"]').first()
+            .locator('[contenteditable]:not([contenteditable="false"])').first()
         ).toContainText(sourceText);
       });
     }

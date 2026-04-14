@@ -17,9 +17,15 @@ type DocumentStoreBlockData = YjsOutputBlockData;
  */
 export class DocumentStore {
   /**
-   * Yjs document instance
+   * Yjs document instance.
+   *
+   * PRIVATE by design: all writes MUST route through `transact` or
+   * `transactWithoutCapture` so the origin passes the `LocalOriginTag`
+   * type barrier. Exposing the raw Y.Doc lets callers bypass the
+   * whitelist and silently reintroduce the class of bugs that
+   * `BlockObserver.mapTransactionOrigin` exists to prevent.
    */
-  public readonly ydoc: Y.Doc = new Y.Doc();
+  private readonly ydoc: Y.Doc = new Y.Doc();
 
   /**
    * Yjs array containing all blocks

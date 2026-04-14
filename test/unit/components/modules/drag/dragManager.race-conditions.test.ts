@@ -189,7 +189,7 @@ const createDragManager = (overrides: ModuleOverrides = {}): DragManagerSetup =>
 
   const yjsManager = {
     transact: vi.fn((callback: () => void) => callback()),
-    transactMoves: vi.fn(),
+    transactMoves: vi.fn((callback: () => void) => callback()),
   };
 
   const mergedState = {

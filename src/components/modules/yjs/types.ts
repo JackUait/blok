@@ -47,11 +47,19 @@ export interface CaretHistoryEntry {
 
 /**
  * Represents a single move operation within a move group.
+ *
+ * Drag-reparent flows attach `fromParentId`/`toParentId` so that undo/redo
+ * can restore the parent relationship atomically alongside the array move.
+ * Without this, a drag-reparent splits across two history stacks
+ * (`moveUndoStack` for the array move, Y.UndoManager for the parentId write)
+ * and requires two Cmd+Z presses to fully reverse.
  */
 export interface SingleMoveEntry {
   blockId: string;
   fromIndex: number;
   toIndex: number;
+  fromParentId?: string | null;
+  toParentId?: string | null;
 }
 
 /**

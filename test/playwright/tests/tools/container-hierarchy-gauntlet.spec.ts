@@ -427,20 +427,99 @@ test.describe('Container hierarchy invariant gauntlet', () => {
 
     const afterUndo = await saveAndAssertInvariant(page, 'after undo');
     const undoneChild = afterUndo.blocks.find(b => b.id === 'p-root');
+    const undoneToggle = afterUndo.blocks.find(b => b.id === 'tog1');
 
-    // p-root must still exist and be in a self-consistent hierarchy state.
-    // Whether undo fully restores parent=undefined is a separate behavioral
-    // contract tracked by the drag/history work (see drag layers 18–20); the
-    // gauntlet's job is to lock in that whatever state history picks, the
-    // parent/content invariant is not violated by the transition.
+    // One Cmd+Z must fully reverse the drag: p-root back at root level,
+    // and the toggle no longer claims it as a child. The drag-history
+    // integration (DragController wrapping handleDrop in `transactMoves`)
+    // atomically rewinds the array move AND the parent reassignment.
+    const reparentedId = 'p-root';
+
     expect(undoneChild, 'p-root should still exist after undo').toBeDefined();
+    expect(undoneChild?.parent, 'p-root should be back at root level').toBeUndefined();
+    expect(undoneToggle?.content ?? [], 'toggle should not list p-root as a child').not.toContain(reparentedId);
+
+    // Re-focus the editor (save() may have stolen focus via a side effect).
+    // eslint-disable-next-line playwright/no-nth-methods -- contenteditable has no role/testid
+    await page.locator('[data-blok-id="body1"] [contenteditable]').first().click();
+
+    // Wait past the 50ms undo/redo debounce window in the keyboard controller.
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- needed to clear the 50ms debounce
+    await page.waitForTimeout(80);
 
     // Redo — step back in.
     await page.keyboard.press(REDO_COMBO);
 
     const afterRedo = await saveAndAssertInvariant(page, 'after redo');
     const redoneChild = afterRedo.blocks.find(b => b.id === 'p-root');
+    const redoneToggle = afterRedo.blocks.find(b => b.id === 'tog1');
 
     expect(redoneChild, 'p-root should still exist after redo').toBeDefined();
+    expect(redoneChild?.parent, 'p-root should be inside the toggle after redo').toBe('tog1');
+    expect(redoneToggle?.content ?? [], 'toggle should list p-root as a child after redo').toContain(reparentedId);
+  });
+
+  test('drag root reorder: single Cmd+Z restores original order', async ({ page }) => {
+    const initial: OutputData = {
+      blocks: [
+        { id: 'p-a', type: 'paragraph', data: { text: 'Alpha' } },
+        { id: 'p-b', type: 'paragraph', data: { text: 'Bravo' } },
+        { id: 'p-c', type: 'paragraph', data: { text: 'Charlie' } },
+      ],
+    };
+
+    await createBlok(page, initial);
+    await saveAndAssertInvariant(page, 'drag root reorder initial');
+
+    // Drag Bravo (index 1) below Charlie (index 2) → [Alpha, Charlie, Bravo]
+    const bravo = page.getByTestId('block-wrapper').filter({ hasText: 'Bravo' });
+
+    await bravo.hover();
+
+    const settingsButton = page.locator(SETTINGS_BUTTON);
+
+    await expect(settingsButton).toBeVisible();
+
+    const charlie = page.getByTestId('block-wrapper').filter({ hasText: 'Charlie' });
+
+    await performDragDrop(page, settingsButton, charlie, 'bottom');
+
+    const afterDrag = await saveAndAssertInvariant(page, 'drag root reorder after drag');
+
+    expect(afterDrag.blocks.map(b => b.id), 'order after drag').toStrictEqual([
+      'p-a',
+      'p-c',
+      'p-b',
+    ]);
+
+    // Focus the editor before keyboard undo.
+    // eslint-disable-next-line playwright/no-nth-methods -- contenteditable has no role/testid
+    await page.locator('[data-blok-id="p-a"] [contenteditable]').first().click();
+
+    await page.keyboard.press(UNDO_COMBO);
+
+    const afterUndo = await saveAndAssertInvariant(page, 'drag root reorder after undo');
+
+    expect(afterUndo.blocks.map(b => b.id), 'order after single undo').toStrictEqual([
+      'p-a',
+      'p-b',
+      'p-c',
+    ]);
+
+    // eslint-disable-next-line playwright/no-nth-methods -- contenteditable has no role/testid
+    await page.locator('[data-blok-id="p-a"] [contenteditable]').first().click();
+    // Wait past the 50ms undo/redo debounce window in the keyboard controller.
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- needed to clear the 50ms debounce
+    await page.waitForTimeout(80);
+
+    await page.keyboard.press(REDO_COMBO);
+
+    const afterRedo = await saveAndAssertInvariant(page, 'drag root reorder after redo');
+
+    expect(afterRedo.blocks.map(b => b.id), 'order after redo').toStrictEqual([
+      'p-a',
+      'p-c',
+      'p-b',
+    ]);
   });
 });

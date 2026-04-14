@@ -895,6 +895,30 @@ export class BlockManager extends Module {
       return;
     }
 
+    // Drag-reparent path: when a move group is open (DragController wraps
+    // its drop handler in `YjsManager.transactMoves`), route the Yjs write
+    // through `transactWithoutCapture` so Y.UndoManager does not record it
+    // as a separate stack item. Attach the parent change to the in-flight
+    // move entry instead — on undo/redo we rewind both atomically.
+    if (this.Blok.YjsManager.isInMoveGroup) {
+      this.Blok.YjsManager.transactWithoutCapture(() => {
+        if (newParentId !== null) {
+          yblock.set('parentId', newParentId);
+        } else {
+          yblock.delete('parentId');
+        }
+
+        this.syncParentContentIdsToYjs(block.id, oldParentId, newParentId);
+      });
+      this.Blok.YjsManager.recordParentChangeForPendingMove(
+        block.id,
+        oldParentId,
+        newParentId
+      );
+
+      return;
+    }
+
     // Wrap parentId + parent contentIds updates in a single Yjs transaction so
     // they land atomically on remote peers and in the undo stack.
     this.Blok.YjsManager.transact(() => {
@@ -905,6 +929,29 @@ export class BlockManager extends Module {
       }
 
       this.syncParentContentIdsToYjs(block.id, oldParentId, newParentId);
+    });
+  }
+
+  /**
+   * Reparent a block in response to UndoHistory replaying a drag move.
+   *
+   * The replay path has ALREADY written the new parentId to Yjs under
+   * `transactWithoutCapture`. This method exists so UndoHistory has a
+   * stable entry point for the in-memory reparent that:
+   *   - routes through `BlockHierarchy.setBlockParent` so contentIds, DOM
+   *     placement, and indentation all stay consistent
+   *   - does NOT re-write Yjs (that would double-emit or re-enter capture)
+   * @param block - the block being reparented during move-undo/move-redo
+   * @param newParentId - the parent id to restore
+   */
+  public reparentFromHistoryReplay(block: Block, newParentId: string | null): void {
+    // Run inside withAtomicOperation so `isSyncingFromYjs` is true for the
+    // duration of the hierarchy update. This suppresses:
+    //   - `onParentChanged` → `scheduleParentSync` → a fresh Yjs write that
+    //     would land on Y.UndoManager (polluting the undo stack)
+    //   - any DOM mutation observer write-back into Yjs
+    this.yjsSync.withAtomicOperation(() => {
+      this.hierarchy.setBlockParent(block, newParentId);
     });
   }
 

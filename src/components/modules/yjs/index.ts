@@ -43,9 +43,22 @@ export class YjsManager extends Module {
   private blockObserver: BlockObserver;
 
   /**
-   * Flag to track if move group is active
+   * Flag to track if move group is active.
+   *
+   * Read via the `isInMoveGroup` getter by `BlockManager.setBlockParent`,
+   * which routes its Yjs writes through `transactWithoutCapture` while this
+   * flag is true so the parent change attaches to the in-flight move entry
+   * instead of landing on Y.UndoManager as a separate stack item.
    */
   private isMoveGroupActive = false;
+
+  /**
+   * Whether a drag-backed move group is currently open.
+   * See `isMoveGroupActive`.
+   */
+  public get isInMoveGroup(): boolean {
+    return this.isMoveGroupActive;
+  }
 
   /**
    * Constructor - initializes all components
@@ -65,6 +78,42 @@ export class YjsManager extends Module {
     // Set up move callback for undo history
     this.undoHistory.setMoveCallback((blockId, toIndex, origin) => {
       this.documentStore.moveBlock(blockId, toIndex, origin);
+    });
+
+    // Set up parent-restore callback — invoked by UndoHistory during
+    // move-undo/move-redo on drag-reparent entries.
+    //
+    // Writes parentId (and the two parents' contentIds) to Yjs under
+    // `transactWithoutCapture` so Y.UndoManager does not record the replay
+    // as a new stack item, then drives the in-memory BlockManager reparent
+    // directly via `reparentFromHistoryReplay`. Going direct avoids the
+    // `handleYjsUpdate` path's parentId-delete blind spot (that handler
+    // gates reconciliation on `yblock.has('parentId')` which is false after
+    // a delete, so a non-root → root undo would otherwise silently skip).
+    this.undoHistory.setParentRestoreCallback((blockId, parentId) => {
+      const yblock = this.documentStore.getBlockById(blockId);
+
+      if (yblock === undefined) {
+        return;
+      }
+
+      this.documentStore.transactWithoutCapture(() => {
+        if (parentId !== null) {
+          yblock.set('parentId', parentId);
+        } else {
+          yblock.delete('parentId');
+        }
+      });
+
+      const blockManager = this.Blok?.BlockManager;
+
+      if (blockManager !== undefined) {
+        const block = blockManager.getBlockById(blockId);
+
+        if (block !== undefined) {
+          blockManager.reparentFromHistoryReplay(block, parentId);
+        }
+      }
     });
 
     // Set up observation
@@ -259,8 +308,35 @@ export class YjsManager extends Module {
    */
   public transactMoves(fn: () => void): void {
     this.isMoveGroupActive = true;
-    this.undoHistory.transactMoves(fn);
-    this.isMoveGroupActive = false;
+    try {
+      this.undoHistory.transactMoves(fn);
+    } finally {
+      this.isMoveGroupActive = false;
+    }
+  }
+
+  /**
+   * Attach a parent change to the in-flight move entry so `undo`/`redo`
+   * restores the block's parent atomically with its position.
+   *
+   * Called from `BlockManager.setBlockParent` when a drag-backed move group
+   * is open (see `isInMoveGroup`). The accompanying Yjs parentId write must
+   * use `transactWithoutCapture` — otherwise Y.UndoManager records it as a
+   * separate stack item and the drag splits into a two-step undo.
+   * @param blockId - id of the block being reparented
+   * @param fromParentId - parent id before the reparent (null for root)
+   * @param toParentId - parent id after the reparent (null for root)
+   */
+  public recordParentChangeForPendingMove(
+    blockId: string,
+    fromParentId: string | null,
+    toParentId: string | null
+  ): void {
+    this.undoHistory.recordParentChangeForPendingMove(
+      blockId,
+      fromParentId,
+      toParentId
+    );
   }
 
   /**

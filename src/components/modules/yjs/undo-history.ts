@@ -102,6 +102,15 @@ export class UndoHistory {
    */
   private moveCallback: (blockId: string, toIndex: number, origin: 'local' | 'move-undo' | 'move-redo') => void;
 
+  /**
+   * Callback to restore a block's parent during move-undo/move-redo.
+   *
+   * Must not record its own history entry — the call is part of replaying
+   * an existing `SingleMoveEntry`. Set by YjsManager to route through
+   * `transactWithoutCapture` + a direct in-memory reparent.
+   */
+  private parentRestoreCallback: (blockId: string, parentId: string | null) => void;
+
   constructor(
     yblocks: Y.Array<Y.Map<unknown>>,
     blok: BlokModules
@@ -120,6 +129,9 @@ export class UndoHistory {
     this.moveCallback = () => {
       // Placeholder, will be set by setMoveCallback
     };
+    this.parentRestoreCallback = () => {
+      // Placeholder, will be set by setParentRestoreCallback
+    };
   }
 
   /**
@@ -129,6 +141,16 @@ export class UndoHistory {
     callback: (blockId: string, toIndex: number, origin: 'local' | 'move-undo' | 'move-redo') => void
   ): void {
     this.moveCallback = callback;
+  }
+
+  /**
+   * Set the parent-restore callback used by move-undo/move-redo to rewind
+   * drag-reparent side effects. See `parentRestoreCallback`.
+   */
+  public setParentRestoreCallback(
+    callback: (blockId: string, parentId: string | null) => void
+  ): void {
+    this.parentRestoreCallback = callback;
   }
 
   /**
@@ -216,10 +238,14 @@ export class UndoHistory {
       // Push to redo stack for potential redo
       this.moveRedoStack.push(lastMoveGroup);
 
-      // Reverse all moves in the group, in reverse order
-      // This is crucial for multi-block moves to restore correctly
+      // Reverse all moves in the group, in reverse order.
+      // This is crucial for multi-block moves to restore correctly.
+      //
+      // Drag-reparent entries may additionally carry `fromParentId`; restore
+      // the parent BEFORE the position so the block lands in the correct
+      // flat-array slot relative to its (soon-to-be-restored) parent siblings.
       [...lastMoveGroup].reverse().forEach((move) => {
-        this.moveCallback(move.blockId, move.fromIndex, 'move-undo');
+        this.replayMoveUndo(move);
       });
 
       // Pop caret entry only after move succeeds
@@ -257,9 +283,12 @@ export class UndoHistory {
       // Push back to undo stack
       this.moveUndoStack.push(lastMoveGroup);
 
-      // Redo all moves in the group, in original order
+      // Redo all moves in the group, in original order. Drag-reparent
+      // entries restore the destination parent AFTER the position so that
+      // the flat-array splice settles first and the parent's contentIds
+      // then re-attach cleanly.
       for (const move of lastMoveGroup) {
-        this.moveCallback(move.blockId, move.toIndex, 'move-redo');
+        this.replayMoveRedo(move);
       }
 
       // Pop caret entry only after move succeeds
@@ -305,6 +334,36 @@ export class UndoHistory {
       : entry.after ?? entry.before;
 
     this.restoreCaretSnapshot(snapshot);
+  }
+
+  /**
+   * Replay a single move entry in the undo direction.
+   * Parent restore runs BEFORE the position restore so the block lands in
+   * the correct slot relative to its (soon-to-be-restored) parent siblings.
+   */
+  private replayMoveUndo(move: SingleMoveEntry): void {
+    if (move.fromParentId !== undefined) {
+      this.parentRestoreCallback(move.blockId, move.fromParentId);
+    }
+
+    if (move.fromIndex !== -1) {
+      this.moveCallback(move.blockId, move.fromIndex, 'move-undo');
+    }
+  }
+
+  /**
+   * Replay a single move entry in the redo direction.
+   * Position restore runs BEFORE the parent restore so the flat-array splice
+   * settles first and the destination parent's contentIds re-attach cleanly.
+   */
+  private replayMoveRedo(move: SingleMoveEntry): void {
+    if (move.toIndex !== -1) {
+      this.moveCallback(move.blockId, move.toIndex, 'move-redo');
+    }
+
+    if (move.toParentId !== undefined) {
+      this.parentRestoreCallback(move.blockId, move.toParentId);
+    }
   }
 
   /**
@@ -436,6 +495,58 @@ export class UndoHistory {
       this.markCaretBeforeChange();
       this.recordMoveForUndo([moveEntry]);
     }
+  }
+
+  /**
+   * Attach a parent change to the in-flight move entry (or create a
+   * parent-only entry if the block hasn't been moved inside the group yet).
+   *
+   * Used by drag-reparent so that `undo` restores the parent relationship
+   * atomically with the array move. The caller (`BlockManager.setBlockParent`
+   * when `YjsManager.isInMoveGroup` is true) is responsible for writing the
+   * parentId/contentIds to Yjs through `transactWithoutCapture` so the
+   * Y.UndoManager does not also record the change.
+   * @param blockId - id of the reparented block
+   * @param fromParentId - parent id before the reparent (null for root)
+   * @param toParentId - parent id after the reparent (null for root)
+   */
+  public recordParentChangeForPendingMove(
+    blockId: string,
+    fromParentId: string | null,
+    toParentId: string | null
+  ): void {
+    if (this.pendingMoveGroup === null) {
+      // Not inside a move group — nothing to attach to. Drop the hint.
+      return;
+    }
+
+    const existing = this.pendingMoveGroup.find(
+      entry => entry.blockId === blockId
+    );
+
+    if (existing !== undefined) {
+      // Preserve the earliest known `fromParentId` (first write wins — that's
+      // the parent BEFORE the drag started). Always update `toParentId` to
+      // the most recent write.
+      if (existing.fromParentId === undefined) {
+        existing.fromParentId = fromParentId;
+      }
+      existing.toParentId = toParentId;
+
+      return;
+    }
+
+    // No matching move entry yet (e.g. a same-index reparent within a toggle
+    // body, where DragController calls setBlockParent without a prior move).
+    // Push a parent-only entry with identical from/to indices so the undo
+    // walker still has something to unwind.
+    this.pendingMoveGroup.push({
+      blockId,
+      fromIndex: -1,
+      toIndex: -1,
+      fromParentId,
+      toParentId,
+    });
   }
 
   /**

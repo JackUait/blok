@@ -191,13 +191,13 @@ const createDragManager = (
 
   const yjsManager = {
     transact: vi.fn((callback: () => void) => callback()),
-    transactMoves: vi.fn(),
+    transactMoves: vi.fn((callback: () => void) => callback()),
   };
 
   const mergedState = {
     ...defaults,
-    ...overrides,
     YjsManager: yjsManager as unknown as BlokModules["YjsManager"],
+    ...overrides,
   } as BlokModules;
   const dragManager = new DragManager({
     config: {} as BlokConfig,
@@ -1882,6 +1882,214 @@ describe("DragManager - Component Integration", () => {
       // setBlockParent should NOT be called since both blocks are at root level
       // and the duplicated block also goes to root level (parentId already null)
       expect(modules.BlockManager.setBlockParent).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * History integration — the bug:
+   *
+   * A drag-reparent currently produces TWO independent undo entries on two
+   * separate stacks:
+   *   1) `BlockManager.move` → `YjsManager.moveBlock` → `UndoHistory.recordMove`
+   *      → custom `moveUndoStack` entry
+   *   2) `BlockManager.setBlockParent` → `YjsManager.transact('local')`
+   *      → `Y.UndoManager` entry (captures `parentId` + parent `contentIds`)
+   *
+   * `UndoHistory.undo()` pops `moveUndoStack` FIRST and returns. It never
+   * touches the Yjs UndoManager entry. So the first Cmd+Z restores the
+   * block's flat-array position but leaves `parentId` pointing at the new
+   * parent — an invariant-broken intermediate state. A second Cmd+Z finally
+   * pops the parentId change. Net: a single user drag requires two undos.
+   *
+   * The fix (and the assertion this test locks in): wrap the entire drop
+   * operation — the `move` AND every subsequent `setBlockParent` — in a
+   * single `YjsManager.transactMoves` group, so the two writes land in the
+   * same undo entry.
+   */
+  describe("handleDrop history integration", () => {
+    const performDragDrop = (
+      dragManager: DragManager,
+      sourceBlock: Block,
+      targetBlock: Block,
+      edge: "top" | "bottom",
+    ): void => {
+      const dragHandle = document.createElement("div");
+
+      dragManager.setupDragHandle(dragHandle, sourceBlock);
+
+      dragHandle.dispatchEvent(
+        createMouseEvent("mousedown", { clientX: 100, clientY: 100 }),
+      );
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 110, clientY: 100 }),
+      );
+
+      vi.mocked(document.elementFromPoint).mockReturnValue(targetBlock.holder);
+
+      const targetY = edge === "top" ? 105 : 140;
+
+      (targetBlock.holder.getBoundingClientRect as Mock).mockReturnValue({
+        top: 100,
+        bottom: 150,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 50,
+        x: 0,
+        y: 100,
+        toJSON: () => ({}),
+      });
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 50, clientY: targetY }),
+      );
+
+      document.dispatchEvent(createMouseEvent("mouseup", { altKey: false }));
+    };
+
+    it("wraps a drag-reparent (root → container) in a single transactMoves group so one Cmd+Z reverses it", () => {
+      // Source paragraph at root level.
+      const paragraph = createBlockStub({
+        id: "paragraph-1",
+        name: "paragraph",
+        parentId: null,
+      });
+
+      // Target toggle that will receive the reparent.
+      const toggleBlock = createBlockStub({
+        id: "toggle-1",
+        name: "toggle",
+        parentId: null,
+      });
+
+      const toggleWrapper = document.createElement("div");
+
+      toggleWrapper.setAttribute("data-blok-toggle-open", "true");
+      toggleBlock.holder
+        .querySelector("[data-blok-element-content]")!
+        .appendChild(toggleWrapper);
+
+      const allBlocks = [paragraph, toggleBlock];
+      const blocks = [...allBlocks];
+
+      // Track the order of BlockManager calls WRT the transactMoves window so we
+      // can assert that move AND setBlockParent both happened INSIDE it.
+      const callLog: string[] = [];
+
+      const blockManagerMock = {
+        blocks,
+        getBlockIndex: vi.fn((b: Block) => blocks.indexOf(b)),
+        getBlockByIndex: vi.fn((i: number) => blocks[i]),
+        getBlockById: vi.fn((id: string) => blocks.find((b) => b.id === id)),
+        move: vi.fn((toIndex: number, fromIndex: number) => {
+          callLog.push("move");
+          const [block] = blocks.splice(fromIndex, 1);
+
+          blocks.splice(toIndex, 0, block);
+        }),
+        insert: vi.fn(),
+        setBlockParent: vi.fn(() => {
+          callLog.push("setBlockParent");
+        }),
+      } as unknown as BlokModules["BlockManager"];
+
+      let insideTransactMoves = false;
+      const transactMovesCalls: string[][] = [];
+
+      const yjsManagerMock = {
+        transact: vi.fn((callback: () => void) => callback()),
+        transactMoves: vi.fn((callback: () => void) => {
+          insideTransactMoves = true;
+          const before = callLog.length;
+
+          callback();
+          transactMovesCalls.push(callLog.slice(before));
+          insideTransactMoves = false;
+        }),
+      };
+
+      const { dragManager, wrapper } = createDragManager({
+        BlockManager: blockManagerMock,
+        YjsManager: yjsManagerMock as unknown as BlokModules["YjsManager"],
+      });
+
+      document.body.appendChild(wrapper);
+      allBlocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      performDragDrop(dragManager, paragraph, toggleBlock, "bottom");
+
+      // 1. transactMoves must be called exactly once for the full drop.
+      expect(yjsManagerMock.transactMoves).toHaveBeenCalledTimes(1);
+
+      // 2. Both the array move AND the reparent must have happened INSIDE the
+      //    single transactMoves group. If either leaks out, we get two
+      //    separate undo stack entries → the two-Cmd-Z bug.
+      expect(transactMovesCalls).toHaveLength(1);
+      expect(transactMovesCalls[0]).toContain("move");
+      expect(transactMovesCalls[0]).toContain("setBlockParent");
+
+      // Sanity: the outer flag should have been reset.
+      expect(insideTransactMoves).toBe(false);
+    });
+
+    it("wraps a root → root reorder (no parent change) in transactMoves", () => {
+      // Even a plain root reorder emits a setBlockParent(null) write alongside
+      // the array move. That write lands on Y.UndoManager as a separate stack
+      // item, so without grouping one drag still needs two undos.
+      const paragraphA = createBlockStub({
+        id: "p-a",
+        name: "paragraph",
+        parentId: null,
+      });
+      const paragraphB = createBlockStub({
+        id: "p-b",
+        name: "paragraph",
+        parentId: null,
+      });
+      const paragraphC = createBlockStub({
+        id: "p-c",
+        name: "paragraph",
+        parentId: null,
+      });
+
+      const allBlocks = [paragraphA, paragraphB, paragraphC];
+      const blocks = [...allBlocks];
+
+      const blockManagerMock = {
+        blocks,
+        getBlockIndex: vi.fn((b: Block) => blocks.indexOf(b)),
+        getBlockByIndex: vi.fn((i: number) => blocks[i]),
+        getBlockById: vi.fn((id: string) => blocks.find((b) => b.id === id)),
+        move: vi.fn((toIndex: number, fromIndex: number) => {
+          const [block] = blocks.splice(fromIndex, 1);
+
+          blocks.splice(toIndex, 0, block);
+        }),
+        insert: vi.fn(),
+        setBlockParent: vi.fn(),
+      } as unknown as BlokModules["BlockManager"];
+
+      const yjsManagerMock = {
+        transact: vi.fn((callback: () => void) => callback()),
+        transactMoves: vi.fn((callback: () => void) => callback()),
+      };
+
+      const { dragManager, wrapper } = createDragManager({
+        BlockManager: blockManagerMock,
+        YjsManager: yjsManagerMock as unknown as BlokModules["YjsManager"],
+      });
+
+      document.body.appendChild(wrapper);
+      allBlocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      // Drag paragraphB below paragraphC.
+      performDragDrop(dragManager, paragraphB, paragraphC, "bottom");
+
+      // Observable behavior: the flat-array order must land as [A, C, B].
+      expect(blocks.map((b) => b.id)).toEqual(["p-a", "p-c", "p-b"]);
+
+      // And the entire operation must have been wrapped in a single
+      // transactMoves group — otherwise undo would split across stacks.
+      expect(yjsManagerMock.transactMoves).toHaveBeenCalledTimes(1);
     });
   });
 });

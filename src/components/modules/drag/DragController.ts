@@ -443,6 +443,43 @@ export class DragController extends Module {
     targetBlock: Block,
     edge: 'top' | 'bottom'
   ): void {
+    // History integration: wrap the entire drop (array move + every
+    // subsequent `setBlockParent`) in a single `YjsManager.transactMoves`
+    // group so the user's drag lands as ONE atomic undo entry.
+    //
+    // Without this wrapper, a drag-reparent emits two independent entries
+    // on two separate history stacks — `BlockManager.move` records to the
+    // custom `moveUndoStack`, while `BlockManager.setBlockParent` writes
+    // `parentId` / `contentIds` through `YjsManager.transact('local')` which
+    // lands on the Y.UndoManager stack. `UndoHistory.undo()` pops the
+    // custom stack first and returns, so the first Cmd+Z restores the
+    // block's flat position but leaves `parentId` pointing at the new
+    // parent. A second Cmd+Z is needed to finish reversing the drag.
+    //
+    // Wrapping in `transactMoves` opens a move group AND sets the
+    // `isMoveGroupActive` flag on the YjsManager; `YjsSyncCoordinator`
+    // routes setBlockParent's Yjs writes through `transactWithoutCapture`
+    // while that flag is true, so the parent change attaches to the move
+    // entry instead of landing on Y.UndoManager as a separate stack item.
+    const yjsManager = this.Blok.YjsManager;
+
+    if (yjsManager !== undefined && typeof yjsManager.transactMoves === 'function') {
+      yjsManager.transactMoves(() => {
+        this.handleDropImpl(sourceBlock, sourceBlocks, targetBlock, edge);
+      });
+
+      return;
+    }
+
+    this.handleDropImpl(sourceBlock, sourceBlocks, targetBlock, edge);
+  }
+
+  private handleDropImpl(
+    sourceBlock: Block,
+    sourceBlocks: Block[],
+    targetBlock: Block,
+    edge: 'top' | 'bottom'
+  ): void {
     const isMultiBlockDrag = sourceBlocks.length > 1;
 
     // Execute move operation

@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.9](https://github.com/JackUait/blok/compare/v0.10.8...v0.10.9) (2026-04-14)
+
+### Features
+
+- **Toggle** — Gray arrow icon when toggle body is empty
+
+### Bug Fixes
+
+- **Drag** — Eliminate "wrong block dropped" with multi-layer stale-block defense; block paste, undo/redo, and move shortcuts during active drag; integrate drag-reparent with undo as a single step
+- **Hierarchy** — Reject dangling parentId at universal chokepoint; reconcile remote Yjs reparents; close remaining container drift vectors; exempt Yjs remote sync from dangling parent throw
+- **Paste** — Inherit container parent on replace-insert and x-blok root paste; harden container paste ejection across all container block types
+- **Callout** — Restore plus button and drag handle; stop paste from ejecting children via stale contentIds; prevent Enter from inserting new block inside callout
+- **Undo** — Collapse multi-block paste and alt-drag duplicate into one undo group; eliminate spurious entries from metadata-only writes
+- **Toolbar** — Keep drag handle visible when editing inside table cell
+- **Insert** — Universally protect all Enter paths from nested-block leak
+- **Table** — Tighten list item spacing inside table cells
+- **Yjs** — Map 'no-capture' origin to local to prevent mid-op sync clobbering tool state
+
+### Maintenance
+
+- **Yjs** — Make `DocumentStore.ydoc` private; enforce local origin whitelist with exhaustive mapper
+- **CI** — Shard E2E tests via reusable workflow; add merge-reports job; run spec-file coverage validator on every PR; remove size-limit bundle size check
+
 ## [0.10.8](https://github.com/JackUait/blok/compare/v0.10.7...v0.10.8) (2026-04-13)
 
 ### Bug Fixes

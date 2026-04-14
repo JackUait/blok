@@ -1825,6 +1825,37 @@ describe('BlockOperations', () => {
       );
     });
 
+    /**
+     * Architectural invariant (companion to the insert-time lock above).
+     *
+     * `paste()` calls the tool's `onPaste` hook inside a *second*
+     * `withAtomicOperation` call — see `operations.ts:~1309`. Some tools
+     * (database card drawer → dynamic `import('../../blok')`, code tool →
+     * async highlighter/mermaid/katex imports) perform async DOM mutation
+     * from inside `onPaste`. If that RAF is dropped, the async work runs
+     * after `isSyncingFromYjs` flips back to false and any
+     * MutationObserver-triggered `syncBlockDataToYjs` lands as a separate
+     * Yjs transaction, reintroducing the phantom-undo bug class for
+     * async-onPaste tools.
+     *
+     * Lock: every single `withAtomicOperation` call issued during paste()
+     * must carry `{ extendThroughRAF: true }`. If a future refactor adds
+     * another wrap without the option, this test fails.
+     */
+    it('wraps every paste-time atomic op in extendThroughRAF (including the onPaste wrap)', async () => {
+      const pasteEvent = { detail: { data: '<p>pasted</p>' } } as unknown as PasteEvent;
+
+      await operations.paste('paragraph', pasteEvent, false, blocksStore);
+
+      const mock = yjsSync.withAtomicOperation as Mock;
+
+      expect(mock.mock.calls.length).toBeGreaterThanOrEqual(2);
+
+      for (const call of mock.mock.calls) {
+        expect(call[1]).toEqual({ extendThroughRAF: true });
+      }
+    });
+
     it('awaits block.ready before calling onPaste', async () => {
       const callOrder: string[] = [];
       let resolveReady: () => void;

@@ -1306,10 +1306,19 @@ export class BlockOperations {
 
     // Call onPaste within atomic operation so child blocks created
     // during cell initialization also skip Yjs sync.
+    //
+    // `extendThroughRAF: true` is critical for tools whose `onPaste()`
+    // performs async DOM mutation — e.g. database card drawer dynamic
+    // `import('../../blok')`, code tool shiki/mermaid/katex imports.
+    // Without it, the atomic-op cleanup fires synchronously on return
+    // and the async work lands after `isSyncingFromYjs` flips back to
+    // false, letting MutationObserver-triggered `syncBlockDataToYjs`
+    // calls on the fresh block become a separate Yjs transaction — the
+    // same phantom-undo bug class as the insert-time wrap above.
     this.yjsSync.withAtomicOperation(() => {
       block.call(BlockToolAPI.ON_PASTE, pasteEvent as unknown as Record<string, unknown>);
       block.refreshToolRootElement();
-    });
+    }, { extendThroughRAF: true });
 
     // Wire the new block into the predecessor's parent BEFORE the Yjs addBlock
     // call below so Yjs sees the final parentId in one shot. For replace we

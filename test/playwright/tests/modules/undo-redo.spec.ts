@@ -684,6 +684,40 @@ test.describe('yjs undo/redo', () => {
       { type: 'callout', componentAttr: 'callout', label: 'callout' },
     ];
 
+    /**
+     * Coverage completeness guardrail. Discovers every tool registered in the
+     * fixture whose class exposes a static `conversionConfig` (i.e. is a valid
+     * conversion target) and fails if any such tool is missing from
+     * CONVERT_TARGETS. This way, the day someone adds quote/code/etc. to the
+     * fixture, CI forces them to wire the new tool into the regression matrix
+     * before the PR lands. The bug class cannot silently re-emerge behind a
+     * gap in the parametrized tests.
+     */
+    test('CONVERT_TARGETS covers every convertible tool in the fixture', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'probe' } },
+      ]);
+
+      const convertibleToolNames = await page.evaluate(() => {
+        const tools = (window as unknown as { defaultBlockTools?: Record<string, { class: { conversionConfig?: unknown } }> }).defaultBlockTools;
+
+        if (!tools) {
+          return [];
+        }
+
+        return Object.entries(tools)
+          .filter(([, entry]) => entry.class?.conversionConfig !== undefined)
+          // paragraph is the source of every test, not a target
+          .map(([name]) => name)
+          .filter((name) => name !== 'paragraph')
+          .sort();
+      });
+
+      const matrixTypes = CONVERT_TARGETS.map((t) => t.type).sort();
+
+      expect(convertibleToolNames).toEqual(matrixTypes);
+    });
+
     for (const target of CONVERT_TARGETS) {
       const sourceText = `Preserve ${target.label} text through conversion`;
       const targetSelector = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="${target.componentAttr}"]`;

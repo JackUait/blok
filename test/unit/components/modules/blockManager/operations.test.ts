@@ -1706,6 +1706,60 @@ describe('BlockOperations', () => {
 
       expect(result).toBeDefined();
     });
+
+    /**
+     * Architectural invariant. `convert()` MUST wrap the tool-swap in
+     * `yjsSync.withAtomicOperation({ extendThroughRAF: true })` so the
+     * mutation-triggered first `save()` of the new block (which may emit
+     * fields beyond what `conversionConfig.import` seeded — e.g. toggle's
+     * `isOpen`, code's `language`, header's `level`) is suppressed through
+     * the next animation frame. Without this, that first save lands as a
+     * separate Yjs transaction → phantom second undo entry, and the user
+     * needs two Cmd+Z presses to undo the conversion.
+     *
+     * Locking the exact option here so a future refactor cannot silently
+     * remove `extendThroughRAF` and resurrect the bug class.
+     */
+    it('wraps replace() in withAtomicOperation with extendThroughRAF: true', async () => {
+      const block = repository.getBlockById('block-1');
+      if (!block) {
+        throw new Error('Test setup failed: block-1 not found');
+      }
+      (block.exportDataAsString as ReturnType<typeof vi.fn>).mockResolvedValue('<p>Hello</p>');
+
+      await operations.convert(block, 'paragraph', blocksStore);
+
+      expect(yjsSync.withAtomicOperation).toHaveBeenCalledWith(
+        expect.any(Function),
+        { extendThroughRAF: true }
+      );
+    });
+
+    /**
+     * Architectural invariant. The tool-swap executes under
+     * `suppressStopCapturing = true` so container tools whose `rendered()`
+     * hooks call `insertInsideParent` (callout, future container tools) do
+     * not force a new undo boundary mid-convert.
+     */
+    it('runs replace() under suppressStopCapturing', async () => {
+      const block = repository.getBlockById('block-1');
+      if (!block) {
+        throw new Error('Test setup failed: block-1 not found');
+      }
+      (block.exportDataAsString as ReturnType<typeof vi.fn>).mockResolvedValue('<p>Hello</p>');
+
+      let suppressDuringReplace: boolean | null = null;
+
+      (yjsSync.withAtomicOperation as Mock).mockImplementationOnce(<T>(fn: () => T): T => {
+        suppressDuringReplace = operations.suppressStopCapturing;
+
+        return fn();
+      });
+
+      await operations.convert(block, 'paragraph', blocksStore);
+
+      expect(suppressDuringReplace).toBe(true);
+    });
   });
 
   describe('paste', () => {

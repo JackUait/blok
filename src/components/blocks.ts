@@ -246,9 +246,47 @@ export class Blocks {
 
     if (insertIndex > 0) {
       const previousBlock = this.blocks[insertIndex - 1];
+      const nextBlock = this.blocks[insertIndex + 1] as Block | undefined;
 
       if (forceTopLevel) {
         this.insertAtRootLevel(block, insertIndex);
+
+        return;
+      }
+
+      /**
+       * Universal defense against the Enter-after-nested bug family, covering
+       * every insertion path (paste, toolbox, slash menu, plus button, markdown
+       * shortcut, conversion, split, public API, yjs-sync, drag, programmatic).
+       *
+       * The only configuration where flat-array adjacency disagrees with the
+       * caller's intended DOM container is when the predecessor is DOM-nested
+       * (inside a callout, toggle, header-toggleable, table cell, or any future
+       * nesting tool's `[data-blok-nested-blocks]` container) AND the successor
+       * is at workingArea root. In that case, anchoring `afterend previous`
+       * would leak the new holder into the nested container even though the
+       * caller's logical intent is a top-level sibling. Route to the successor
+       * instead, which correctly anchors at workingArea root.
+       *
+       * Every OTHER configuration stays on the original `afterend previous`
+       * rule, which preserves:
+       *   - Plain top-level insertion: prev at root, any next → afterend prev.
+       *   - Nested-sibling insertion (paste inside a toggle child, no top-level
+       *     follower): prev nested, next undefined or same-container → afterend
+       *     prev keeps the new block in the same nested container.
+       *   - Insertion between two same-parent nested children: prev and next
+       *     both in same nested container → afterend prev stays in container.
+       *
+       * The forceTopLevel flag is still honored above for callers that want to
+       * skip past a trailing nested subtree. This rule is the defense for every
+       * path that does NOT explicitly set forceTopLevel.
+       */
+      const prevIsAtRoot = previousBlock.holder.parentElement === this.workingArea;
+      const nextIsAtRoot = nextBlock !== undefined
+        && nextBlock.holder.parentElement === this.workingArea;
+
+      if (!prevIsAtRoot && nextIsAtRoot && nextBlock !== undefined) {
+        this.insertToDOM(block, 'beforebegin', nextBlock);
 
         return;
       }

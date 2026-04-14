@@ -797,7 +797,7 @@ describe('Blocks', () => {
       expect(block2.call).toHaveBeenCalledWith(BlockToolAPI.RENDERED);
     });
 
-    it('should insert block after previous block when index > 0', () => {
+    it('should insert block at the correct DOM position when index > 0', () => {
       const blocks = createBlocks();
       const block1 = createMockBlock('block-1');
       const block2 = createMockBlock('block-2');
@@ -806,11 +806,12 @@ describe('Blocks', () => {
       blocks.push(block1);
       blocks.push(block2);
 
-      const insertAdjacentSpy = vi.spyOn(block1.holder, 'insertAdjacentElement');
-
       blocks.insert(1, block3);
 
-      expect(insertAdjacentSpy).toHaveBeenCalledWith('afterend', block3.holder);
+      // block3 must land between block1 and block2 at workingArea root.
+      expect(block3.holder.parentElement).toBe(workingArea);
+      expect(block3.holder.previousElementSibling).toBe(block1.holder);
+      expect(block3.holder.nextElementSibling).toBe(block2.holder);
     });
 
     it('should insert block before next block when index is 0 and next block exists', () => {
@@ -1776,6 +1777,79 @@ describe('Blocks', () => {
       expect(nestedContainer.contains(newBlock.holder)).toBe(false);
       // Should be last child of workingArea
       expect(workingArea.lastElementChild).toBe(newBlock.holder);
+    });
+
+    it('auto-heals DOM when previous block is nested, even without forceTopLevel (paste path)', () => {
+      /**
+       * Universal defense against the Enter-after-callout regression family.
+       *
+       * Any caller path (paste, toolbox, markdown shortcut, plus button, split)
+       * that inserts a new block whose flat-array predecessor is DOM-nested
+       * must NOT leak the new holder into the nested container — even if the
+       * caller forgets to pass `forceTopLevel: true`. Blocks.insert must detect
+       * the nested-predecessor situation and auto-route to workingArea root.
+       *
+       * Why: Relying on every insertion caller to thread a flag is fragile.
+       * Any new caller (e.g. a future /image tool) would silently regress the
+       * Enter-after-callout bug for its path. A single defense in the lowest
+       * layer protects all paths forever.
+       */
+      const blocks = createBlocks();
+      const callout = createMockBlock('callout-1', 'callout');
+      const nestedChild = createMockBlock('nested-1', 'paragraph');
+      const textBlock = createMockBlock('text-1', 'paragraph');
+
+      blocks.push(callout);
+
+      const nestedContainer = document.createElement('div');
+
+      nestedContainer.setAttribute('data-blok-nested-blocks', '');
+      callout.holder.appendChild(nestedContainer);
+      nestedContainer.appendChild(nestedChild.holder);
+      blocks.blocks.push(nestedChild);
+
+      workingArea.appendChild(textBlock.holder);
+      blocks.blocks.push(textBlock);
+
+      const newBlock = createMockBlock('new-1', 'paragraph');
+
+      // IMPORTANT: no forceTopLevel flag passed. Must still land at root.
+      blocks.insert(2, newBlock);
+
+      expect(newBlock.holder.parentElement).toBe(workingArea);
+      expect(nestedContainer.contains(newBlock.holder)).toBe(false);
+      expect(newBlock.holder.nextElementSibling).toBe(textBlock.holder);
+    });
+
+    it('auto-heals insertMany when predecessor is nested', () => {
+      const blocks = createBlocks();
+      const callout = createMockBlock('callout-1', 'callout');
+      const nestedChild = createMockBlock('nested-1', 'paragraph');
+      const textBlock = createMockBlock('text-1', 'paragraph');
+
+      blocks.push(callout);
+
+      const nestedContainer = document.createElement('div');
+
+      nestedContainer.setAttribute('data-blok-nested-blocks', '');
+      callout.holder.appendChild(nestedContainer);
+      nestedContainer.appendChild(nestedChild.holder);
+      blocks.blocks.push(nestedChild);
+
+      workingArea.appendChild(textBlock.holder);
+      blocks.blocks.push(textBlock);
+
+      const newA = createMockBlock('new-a', 'paragraph');
+      const newB = createMockBlock('new-b', 'paragraph');
+
+      // Batch insert two top-level blocks between nestedChild and textBlock.
+      // insertMany already has insertAfterNestedBlock defense — this locks it in.
+      blocks.insertMany([newA, newB], 2);
+
+      expect(newA.holder.parentElement).toBe(workingArea);
+      expect(newB.holder.parentElement).toBe(workingArea);
+      expect(nestedContainer.contains(newA.holder)).toBe(false);
+      expect(nestedContainer.contains(newB.holder)).toBe(false);
     });
 
     it('should handle replace followed by remove', () => {

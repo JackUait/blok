@@ -270,6 +270,37 @@ describe('BlockHierarchy', () => {
       expect(oldParent.contentIds).toContain('child');
     });
 
+    /**
+     * Layer 7a: Yjs remote-sync exemption.
+     * Remote peers can legally deliver a block whose parentId points at a
+     * parent that is not yet present locally (conflict resolution, batched
+     * undo replay, initial sync ordering). Throwing in test/dev during that
+     * window would tear down the editor. Hierarchy must coerce and log
+     * silently while `isSyncingFromYjs` is true, same as prod semantics.
+     */
+    it('coerces dangling parent id silently while syncing from Yjs', async () => {
+      const loggerModule = await import('../../../../../src/components/utils');
+      const warnSpy = vi.spyOn(loggerModule, 'logLabeled').mockImplementation(() => undefined);
+      const syncingHierarchy = new BlockHierarchy(repository, undefined, () => true);
+      const block = requireBlock('child');
+      const oldParent = requireBlock('parent-1');
+
+      oldParent.contentIds = ['child'];
+
+      expect(() =>
+        syncingHierarchy.setBlockParent(block, 'non-existent-parent')
+      ).not.toThrow();
+
+      expect(block.parentId).toBeNull();
+      expect(oldParent.contentIds).not.toContain('child');
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringMatching(/dangling parent id/i),
+        'error'
+      );
+
+      warnSpy.mockRestore();
+    });
+
     it('coerces a dangling parent id to null and logs in production', async () => {
       const prevEnv = process.env.NODE_ENV;
 

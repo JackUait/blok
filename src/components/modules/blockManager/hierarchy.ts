@@ -15,14 +15,25 @@ import type { BlockRepository } from './repository';
 export class BlockHierarchy {
   private readonly repository: BlockRepository;
   private readonly onParentChanged?: (parentId: string) => void;
+  private readonly getIsSyncingFromYjs?: () => boolean;
 
   /**
    * @param repository - BlockRepository for looking up blocks by id
    * @param onParentChanged - optional callback invoked after a block is assigned a non-null parent
+   * @param getIsSyncingFromYjs - optional getter that reports whether the editor is
+   *   currently applying a remote Yjs update. When true, the Layer 7 dangling
+   *   parent id guard skips the throw and always coerces + logs — remote
+   *   peers can legitimately deliver a transiently-dangling parent id during
+   *   conflict resolution, batched undo replay, or initial sync ordering.
    */
-  constructor(repository: BlockRepository, onParentChanged?: (parentId: string) => void) {
+  constructor(
+    repository: BlockRepository,
+    onParentChanged?: (parentId: string) => void,
+    getIsSyncingFromYjs?: () => boolean
+  ) {
     this.repository = repository;
     this.onParentChanged = onParentChanged;
+    this.getIsSyncingFromYjs = getIsSyncingFromYjs;
   }
 
   /**
@@ -175,11 +186,12 @@ export class BlockHierarchy {
 
     if (!parentExists) {
       const env = typeof process !== 'undefined' ? process.env?.NODE_ENV : undefined;
+      const isSyncingFromYjs = this.getIsSyncingFromYjs?.() === true;
       const message =
         `BlockHierarchy.setBlockParent: dangling parent id "${newParentId}" ` +
         `for block "${block.id}" — parent block is not in the repository.`;
 
-      if (env === 'test' || env === 'development') {
+      if (!isSyncingFromYjs && (env === 'test' || env === 'development')) {
         throw new Error(message);
       }
 

@@ -326,12 +326,20 @@ export class BlockManager extends Module {
       this.bindBlockEvents.bind(this)
     );
 
-    // Initialize hierarchy with callback to sync parent data to Yjs
-    this.hierarchy = new BlockHierarchy(this.repository, (parentId) => {
-      if (!this.yjsSync.isSyncingFromYjs) {
-        this.scheduleParentSync(parentId);
-      }
-    });
+    // Initialize hierarchy with callback to sync parent data to Yjs.
+    // The third argument exposes `yjsSync.isSyncingFromYjs` lazily (yjsSync is
+    // constructed later in this ctor) so the Layer 7 dangling-parentId guard
+    // can exempt remote sync paths from throwing — a remote peer may legally
+    // deliver a transiently-dangling parent id during conflict resolution.
+    this.hierarchy = new BlockHierarchy(
+      this.repository,
+      (parentId) => {
+        if (!this.yjsSync.isSyncingFromYjs) {
+          this.scheduleParentSync(parentId);
+        }
+      },
+      () => Boolean(this.yjsSync?.isSyncingFromYjs)
+    );
 
     // Initialize operations first (before yjsSync) to allow circular dependency resolution
     this.operations = new BlockOperations(

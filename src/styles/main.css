@@ -1306,6 +1306,11 @@
   @apply p-0 m-0 min-h-[1.6em];
 }
 
+/* List items inside table cells use tight 2px top/bottom spacing */
+[data-blok-table-cell-blocks] [data-blok-tool="list"] {
+  @apply py-0 mt-[2px] mb-[2px];
+}
+
 /* ─── Cell content placement ──────────────────────────────────── */
 
 [data-blok-cell-placement="top-center"] {

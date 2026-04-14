@@ -298,6 +298,40 @@ test.describe('table cells — any block type', () => {
       await expect(listInCell).toBeVisible();
       await expect(listInCell).toContainText('Item');
     });
+
+    test('list items inside a table cell have 2px top/bottom spacing', async ({ page }) => {
+      await create2x2Table(page);
+
+      await getCellEditable(page, 0, 0).click();
+      await page.keyboard.type('- First');
+      await page.keyboard.press('Enter');
+      await page.keyboard.type('Second');
+
+      const firstCell = getCell(page, 0, 0);
+      const listItems = firstCell.locator('[data-blok-tool="list"]');
+
+      await expect(listItems).toHaveCount(2);
+
+      const spacing = await listItems.evaluateAll((items) =>
+        items.map((el) => {
+          const cs = getComputedStyle(el as HTMLElement);
+
+          return {
+            marginTop: cs.marginTop,
+            marginBottom: cs.marginBottom,
+            paddingTop: cs.paddingTop,
+            paddingBottom: cs.paddingBottom,
+          };
+        })
+      );
+
+      for (const style of spacing) {
+        expect(style.marginTop).toBe('2px');
+        expect(style.marginBottom).toBe('2px');
+        expect(style.paddingTop).toBe('0px');
+        expect(style.paddingBottom).toBe('0px');
+      }
+    });
   });
 
   test.describe('html paste in table cells', () => {

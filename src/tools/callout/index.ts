@@ -67,10 +67,26 @@ export class CalloutTool implements BlockTool {
   private _emojiPicker: EmojiPicker | null = null;
   private _colorPicker: ColorPickerHandle | null = null;
   private blockId?: string;
+  /**
+   * Text captured from a source block during conversion (paragraph -> callout).
+   * Callout stores its rich content inside child blocks rather than in `data`,
+   * so the first-time `rendered()` hook seeds a child paragraph with this
+   * text — preserving the original content across the conversion.
+   */
+  private _pendingChildText: string | null = null;
 
   constructor({ data, api, readOnly, block }: BlockToolConstructorOptions<CalloutData, CalloutConfig>) {
     this.api = api;
     this.readOnly = readOnly;
+
+    const importedText = typeof (data as Record<string, unknown>).__importedText === 'string'
+      ? (data as Record<string, unknown>).__importedText as string
+      : null;
+
+    if (importedText !== null && importedText.length > 0) {
+      this._pendingChildText = importedText;
+    }
+
     this._data = this.normalizeData(data);
 
     if (block) {
@@ -156,13 +172,23 @@ export class CalloutTool implements BlockTool {
       const blockIndex = this.api.blocks.getBlockIndex(this.blockId);
 
       if (blockIndex !== undefined) {
-        const newBlock = this.api.blocks.insertInsideParent(this.blockId, blockIndex + 1);
+        // If conversion handed us source text to preserve, seed the first
+        // child paragraph with it (single-shot — cleared immediately).
+        const seedText = this._pendingChildText;
+
+        this._pendingChildText = null;
+
+        const childData = seedText !== null && seedText.length > 0
+          ? { text: seedText }
+          : undefined;
+
+        const newBlock = this.api.blocks.insertInsideParent(this.blockId, blockIndex + 1, childData);
 
         // Manually append the new child's holder — insertInsideParent places it in the
         // flat block list but doesn't know about our childContainer DOM.
         this._dom.childContainer.appendChild(newBlock.holder);
 
-        this.api.caret.setToBlock(newBlock.id, 'start');
+        this.api.caret.setToBlock(newBlock.id, seedText !== null ? 'end' : 'start');
       }
     }
   }
@@ -392,11 +418,20 @@ export class CalloutTool implements BlockTool {
 
   public static get conversionConfig(): ConversionConfig<CalloutData> {
     return {
-      import: (): CalloutData => ({
+      /**
+       * Callout stores its text inside child blocks, not in its own `data`.
+       * On import we capture the source block's text through a transient
+       * `__importedText` field that the callout constructor reads and the
+       * `rendered()` hook uses to seed the first child paragraph with the
+       * original content — preserving the text across paragraph -> callout
+       * conversion.
+       */
+      import: (stringToImport: string): CalloutData => ({
         emoji: DEFAULT_EMOJI,
         textColor: null,
         backgroundColor: null,
-      }),
+        __importedText: stringToImport,
+      } as CalloutData),
     };
   }
 

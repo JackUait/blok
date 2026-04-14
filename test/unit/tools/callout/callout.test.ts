@@ -95,13 +95,65 @@ describe('CalloutTool', () => {
 
       tool.rendered();
 
-      expect(opts.api.blocks.insertInsideParent).toHaveBeenCalledWith('callout-block-id', expect.any(Number));
+      expect(opts.api.blocks.insertInsideParent).toHaveBeenCalledWith('callout-block-id', expect.any(Number), undefined);
       expect(opts.api.caret.setToBlock).toHaveBeenCalledWith('child-id', 'start');
 
       // Verify the new child's holder was appended to the childContainer
       const container = wrapper.querySelector('[data-blok-toggle-children]')!;
       const newChildHolder = (opts.api.blocks.insertInsideParent as ReturnType<typeof vi.fn>).mock.results[0].value.holder as HTMLElement;
       expect(container.contains(newChildHolder)).toBe(true);
+    });
+
+    it('seeds the initial child paragraph with imported text when converting from another tool', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const opts = createOptions({ __importedText: 'Converted paragraph text' } as Partial<CalloutData>);
+      const tool = new CalloutTool(opts);
+
+      tool.render();
+      tool.rendered();
+
+      expect(opts.api.blocks.insertInsideParent).toHaveBeenCalledWith(
+        'callout-block-id',
+        expect.any(Number),
+        { text: 'Converted paragraph text' }
+      );
+      // Caret should land at the END of the seeded content so the user can keep typing.
+      expect(opts.api.caret.setToBlock).toHaveBeenCalledWith('child-id', 'end');
+    });
+
+    it('clears pending child text after the first seed so re-renders do not duplicate it', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const opts = createOptions({ __importedText: 'Once only' } as Partial<CalloutData>);
+      const tool = new CalloutTool(opts);
+
+      tool.render();
+      tool.rendered();
+
+      // Simulate a second rendered() call after a round-trip where no children exist yet.
+      (opts.api.blocks.getChildren as ReturnType<typeof vi.fn>).mockReturnValue([]);
+      (opts.api.blocks.insertInsideParent as ReturnType<typeof vi.fn>).mockClear();
+      tool.rendered();
+
+      expect(opts.api.blocks.insertInsideParent).toHaveBeenCalledWith(
+        'callout-block-id',
+        expect.any(Number),
+        undefined
+      );
+    });
+
+    it('does NOT persist __importedText to saved data', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const opts = createOptions({ __importedText: 'transient' } as Partial<CalloutData>);
+      const tool = new CalloutTool(opts);
+
+      const saved = tool.save();
+
+      expect(saved).not.toHaveProperty('__importedText');
+      expect(saved).toEqual({
+        emoji: '💡',
+        textColor: null,
+        backgroundColor: null,
+      });
     });
 
     it('does NOT create a child block when children already exist', async () => {
@@ -565,11 +617,25 @@ describe('CalloutTool', () => {
       expect(CalloutTool.sanitize).not.toHaveProperty('text');
     });
 
-    it('conversionConfig imports with default emoji and null colors', async () => {
+    it('conversionConfig imports with default emoji and null colors, capturing source text as transient __importedText', async () => {
       const { CalloutTool } = await import('../../../../src/tools/callout');
       const cfg = CalloutTool.conversionConfig;
       const imported = (cfg.import as (text: string) => CalloutData)('hello');
-      expect(imported).toEqual({ emoji: '💡', textColor: null, backgroundColor: null });
+
+      expect(imported).toEqual({
+        emoji: '💡',
+        textColor: null,
+        backgroundColor: null,
+        __importedText: 'hello',
+      });
+    });
+
+    it('conversionConfig.import captures empty strings so constructor skips seeding', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const cfg = CalloutTool.conversionConfig;
+      const imported = (cfg.import as (text: string) => CalloutData)('');
+
+      expect(imported).toMatchObject({ __importedText: '' });
     });
   });
 

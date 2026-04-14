@@ -1090,7 +1090,7 @@ export class BlockOperations {
    * @param blocksStore - The blocks store to modify
    * @returns the newly created child block
    */
-  public insertInsideParent(parentId: string, insertIndex: number, blocksStore: BlocksStore): Block {
+  public insertInsideParent(parentId: string, insertIndex: number, blocksStore: BlocksStore, childData?: BlockToolData): Block {
     const parentBlock = this.repository.getBlockById(parentId);
 
     if (parentBlock === undefined) {
@@ -1098,14 +1098,16 @@ export class BlockOperations {
     }
 
     const newBlockId = generateBlockId();
+    const defaultBlockTool = this.dependencies.config.defaultBlock ?? 'paragraph';
+    const resolvedChildData = childData ?? { text: '' };
 
     return this.yjsSync.withAtomicOperation(() => {
       // Atomic Yjs transaction: add new block with parent (single undo entry)
       this.dependencies.YjsManager.transact(() => {
         this.dependencies.YjsManager.addBlock({
           id: newBlockId,
-          type: this.dependencies.config.defaultBlock ?? 'paragraph',
-          data: { text: '' },
+          type: defaultBlockTool,
+          data: resolvedChildData,
           parent: parentId,
         }, insertIndex);
       });
@@ -1113,8 +1115,8 @@ export class BlockOperations {
       // Insert DOM block (skip Yjs sync — already done above)
       const newBlock = this.insert({
         id: newBlockId,
-        tool: this.dependencies.config.defaultBlock ?? 'paragraph',
-        data: { text: '' },
+        tool: defaultBlockTool,
+        data: resolvedChildData,
         index: insertIndex,
         needToFocus: false,
         skipYjsSync: true,
@@ -1190,7 +1192,33 @@ export class BlockOperations {
       ? Object.assign(baseBlockData, blockDataOverrides)
       : baseBlockData;
 
-    return this.replace(blockToConvert, replacingTool.name, newBlockData, blocksStore);
+    /**
+     * Bracket the whole convert in a single undo group.
+     *
+     * Container tools (callout/toggle) auto-seed a first child paragraph inside
+     * their `rendered()` hook via `api.blocks.insertInsideParent`. That path
+     * normally forces a new undo group via `stopCapturing()` which would split
+     * the conversion into two Cmd+Z pops (empty child first, then the actual
+     * tool swap). Suppress `stopCapturing` across the whole convert so the
+     * replace + post-replace seed merge into one entry.
+     */
+    this.dependencies.YjsManager.stopCapturing();
+    const prevSuppress = this.suppressStopCapturing;
+
+    this.suppressStopCapturing = true;
+
+    try {
+      return this.replace(blockToConvert, replacingTool.name, newBlockData, blocksStore);
+    } finally {
+      // Close the undo group after the sync `replace()` and any synchronous
+      // `rendered()` → `insertInsideParent` have landed, but wait one microtask
+      // so DOM MutationObserver-triggered Yjs writes settle inside the same
+      // entry.
+      queueMicrotask(() => {
+        this.suppressStopCapturing = prevSuppress;
+        this.dependencies.YjsManager.stopCapturing();
+      });
+    }
   }
 
   /**

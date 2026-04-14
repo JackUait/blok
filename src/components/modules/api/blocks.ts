@@ -436,11 +436,16 @@ export class BlocksAPI extends Module {
    * @param insertIndex - flat block index where the new block should appear
    * @returns BlockAPI for the newly created child block
    */
-  private insertInsideParent = (parentId: string, insertIndex: number): BlockAPIInterface => {
-    // Force new undo group so this insertion is separate from previous typing.
-    this.Blok.YjsManager.stopCapturing();
+  private insertInsideParent = (parentId: string, insertIndex: number, childData?: BlockToolData): BlockAPIInterface => {
+    // Force new undo group so this insertion is separate from previous typing,
+    // UNLESS an enclosing atomic operation (e.g. tool conversion) has asked the
+    // block manager to suppress stopCapturing so everything merges into a
+    // single undo entry.
+    if (!this.Blok.BlockManager.suppressStopCapturing) {
+      this.Blok.YjsManager.stopCapturing();
+    }
 
-    const newBlock = this.Blok.BlockManager.insertInsideParent(parentId, insertIndex);
+    const newBlock = this.Blok.BlockManager.insertInsideParent(parentId, insertIndex, childData);
 
     // NOTE: Do NOT call stopCapturing in a trailing microtask. The operations layer
     // uses extendThroughRAF on its atomic wrapper to keep isSyncingFromYjs true

@@ -799,11 +799,21 @@ export class BlockManager extends Module {
    * @param insertIndex - flat block index where the new block should appear
    * @returns the newly created child block
    */
-  public insertInsideParent(parentId: string, insertIndex: number): Block {
+  public insertInsideParent(parentId: string, insertIndex: number, childData?: BlockToolData): Block {
     this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    const result = this.operations.insertInsideParent(parentId, insertIndex, this.blocksStore);
+    const result = this.operations.insertInsideParent(parentId, insertIndex, this.blocksStore, childData);
     this._currentBlockIndex = this.operations.currentBlockIndexValue;
     return result;
+  }
+
+  /**
+   * True when an atomic operation (convert, split, drag, etc.) is in progress
+   * and callers should NOT break the current undo group with `stopCapturing()`.
+   * Consumed by api-layer wrappers like `insertInsideParent` that normally
+   * force a new undo entry.
+   */
+  public get suppressStopCapturing(): boolean {
+    return this.operations?.suppressStopCapturing ?? false;
   }
 
   /**

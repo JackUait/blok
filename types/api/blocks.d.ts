@@ -189,9 +189,10 @@ export interface Blocks {
    *
    * @param parentId - id of the parent block
    * @param insertIndex - flat block index where the new block should appear
+   * @param childData - optional data override for the child block (default: empty paragraph)
    * @returns BlockAPI for the newly created child block
    */
-  insertInsideParent(parentId: string, insertIndex: number): BlockAPI;
+  insertInsideParent(parentId: string, insertIndex: number, childData?: BlockToolData): BlockAPI;
 
   /**
    * Execute a function within a transaction.

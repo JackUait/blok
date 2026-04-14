@@ -8,6 +8,7 @@ const HOLDER_ID = 'blok';
 const BLOCK_WRAPPER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
 const HEADER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="header"]`;
+const CALLOUT_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="callout"]`;
 const LIST_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="list"]`;
 const PLUS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
 const TOOLBOX_ITEM_SELECTOR = (itemName: string): string =>
@@ -574,6 +575,89 @@ test.describe('yjs undo/redo', () => {
       await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
       await expect(page.locator(HEADER_SELECTOR)).toHaveCount(0);
       await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toContainText('Convert me to header');
+    });
+
+    test('converting paragraph to callout preserves text as child block', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Preserve my text through callout conversion' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+
+      await expect(paragraph.locator('[contenteditable="true"]')).toContainText(
+        'Preserve my text through callout conversion'
+      );
+
+      await page.evaluate(async () => {
+        const block = window.blokInstance?.blocks.getBlockByIndex(0);
+
+        if (block) {
+          await window.blokInstance?.blocks.convert(block.id, 'callout');
+        }
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Callout should exist and contain the original text as a child paragraph
+      await expect(page.locator(CALLOUT_SELECTOR)).toHaveCount(1);
+      await expect(
+        page
+          .locator(CALLOUT_SELECTOR)
+          // eslint-disable-next-line playwright/no-nth-methods -- Need the first contenteditable inside the callout (the seeded child paragraph)
+          .locator('[contenteditable="true"]').first()
+      ).toContainText('Preserve my text through callout conversion');
+
+      // Saved data must hold the text inside a child paragraph of the callout
+      const saved = await saveBlok(page);
+      const calloutBlock = saved.blocks.find((block) => block.type === 'callout');
+
+      expect(calloutBlock).toBeDefined();
+
+      const childParagraph = saved.blocks.find(
+        (block) => block.type === 'paragraph' && (block as unknown as { parent?: string }).parent === calloutBlock?.id
+      );
+
+      expect(childParagraph).toBeDefined();
+      expect((childParagraph?.data as { text?: string }).text).toBe('Preserve my text through callout conversion');
+    });
+
+    test('undo after paragraph convert to callout restores original text (single undo)', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Convert me to callout' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+
+      await expect(paragraph.locator('[contenteditable="true"]')).toContainText('Convert me to callout');
+
+      await page.evaluate(async () => {
+        const block = window.blokInstance?.blocks.getBlockByIndex(0);
+
+        if (block) {
+          await window.blokInstance?.blocks.convert(block.id, 'callout');
+        }
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Sanity-check the converted state
+      await expect(page.locator(CALLOUT_SELECTOR)).toHaveCount(1);
+
+      // Single undo should restore the original paragraph with its text intact
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      await expect(page.locator(CALLOUT_SELECTOR)).toHaveCount(0);
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(1);
+      await expect(
+        getParagraphByIndex(page, 0).locator('[contenteditable="true"]')
+      ).toContainText('Convert me to callout');
     });
 
     test('undo after block split rejoins blocks (single undo)', async ({ page }) => {

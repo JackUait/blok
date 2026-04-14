@@ -210,10 +210,30 @@ export class BlockObserver {
   }
 
   /**
-   * Handle map-level changes (data update).
+   * Handle map-level changes (data update, tunes update, or top-level
+   * yblock key changes like `parentId` / `contentIds`).
+   *
+   * When a remote client reparents a block, the changed Y.Map is the
+   * yblock itself — not a nested `data`/`tunes` sub-map. Detect both
+   * cases so we always emit an update event for the affected block id.
    */
   private handleMapEvent(ymap: Y.Map<unknown>, origin: TransactionOrigin): void {
     if (this.yblocks === null) {
+      return;
+    }
+
+    // Direct yblock change (e.g. parentId/contentIds written on the yblock itself).
+    if (this.isTopLevelYblock(ymap)) {
+      const id: unknown = ymap.get('id');
+
+      if (typeof id === 'string') {
+        this.emitChange({
+          type: 'update',
+          blockId: id,
+          origin,
+        });
+      }
+
       return;
     }
 
@@ -228,6 +248,18 @@ export class BlockObserver {
       blockId: yblock.get('id') as string,
       origin,
     });
+  }
+
+  /**
+   * Returns true if the given Y.Map is one of the top-level yblocks tracked
+   * in the blocks array.
+   */
+  private isTopLevelYblock(ymap: Y.Map<unknown>): boolean {
+    if (this.yblocks === null) {
+      return false;
+    }
+
+    return this.yblocks.toArray().includes(ymap);
   }
 
   /**

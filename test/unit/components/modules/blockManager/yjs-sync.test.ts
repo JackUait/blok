@@ -1138,13 +1138,14 @@ describe('BlockYjsSync', () => {
         });
         yjsSync.subscribe();
 
-        // Remote Yjs state: child has been reparented back to root.
-        // parentId is omitted entirely (undefined) — simulating the field
-        // never having been set after a reparent-to-root.
+        // Remote Yjs state: child has been reparented back to root with
+        // an explicit null parentId. Explicit null means "reparent to root",
+        // distinct from a missing key which is a no-op (see Fix 4).
         const childYblock = createMockYMap({
           type: 'paragraph',
           data: createMockYMap({ text: 'child' }),
           tunes: createMockYMap({}),
+          parentId: null,
         });
 
         mockGetBlockById(mockYjsManager).mockImplementation((id: string) => {
@@ -1253,6 +1254,270 @@ describe('BlockYjsSync', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
 
         expect(mockHandlers.setBlockParent).not.toHaveBeenCalled();
+      });
+
+      it('processes remote-origin update events (Fix 2)', async () => {
+        /**
+         * Fix 2 regression: subscribe() must deliver remote-origin events
+         * to handleYjsUpdate. Previously the filter only accepted
+         * undo/redo, so remote reparents silently dropped.
+         */
+        const parentBlock = createMockBlock({
+          id: 'callout-1',
+          contentIds: [],
+        });
+        const childBlock = createMockBlock({
+          id: 'child-1',
+          parentId: null,
+        });
+
+        const newBlocksStore = createBlocksStore([parentBlock, childBlock]);
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        const childYblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: 'child' }),
+          tunes: createMockYMap({}),
+          parentId: 'callout-1',
+        });
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(childYblock);
+        mockHandlers.getBlockIndex = vi.fn(() => 1);
+
+        // Dispatch with origin === 'remote'
+        callback({ blockId: 'child-1', type: 'update', origin: 'remote' });
+
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        // setBlockParent must fire — remote events are no longer dropped.
+        expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(childBlock, 'callout-1');
+      });
+
+      it('ignores local-origin update events (Fix 2 guard)', async () => {
+        /**
+         * Fix 2 guard: local-origin events must still be ignored because
+         * the in-memory state was already updated before the Yjs write.
+         * Re-applying would thrash the DOM and undo stacks.
+         */
+        const childBlock = createMockBlock({
+          id: 'child-1',
+          parentId: 'callout-1',
+        });
+
+        const newBlocksStore = createBlocksStore([childBlock]);
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        const yblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: 'child' }),
+          tunes: createMockYMap({}),
+          parentId: 'other-parent',
+        });
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
+
+        callback({ blockId: 'child-1', type: 'update', origin: 'local' });
+
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        // Local events bypass handleYjsUpdate entirely — no side effects.
+        expect(mockHandlers.setBlockParent).not.toHaveBeenCalled();
+        expect(childBlock.setData).not.toHaveBeenCalled();
+      });
+
+      it('reconciles parentId inside an atomic operation (Fix 3)', async () => {
+        /**
+         * Fix 3 regression: setBlockParent() must run inside a
+         * withAtomicOperation context so isSyncingFromYjs is true for the
+         * duration. Otherwise onParentChanged in hierarchy.ts echoes a
+         * fresh Yjs write, polluting the undo stack.
+         */
+        const parentBlock = createMockBlock({
+          id: 'callout-1',
+          contentIds: [],
+        });
+        const childBlock = createMockBlock({
+          id: 'child-1',
+          parentId: null,
+        });
+
+        const newBlocksStore = createBlocksStore([parentBlock, childBlock]);
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        const yblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: 'child' }),
+          tunes: createMockYMap({}),
+          parentId: 'callout-1',
+        });
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
+        mockHandlers.getBlockIndex = vi.fn(() => 1);
+
+        let syncingDuringSetBlockParent = false;
+        mockHandlers.setBlockParent = vi.fn(() => {
+          syncingDuringSetBlockParent = yjsSync.isSyncingFromYjs;
+        });
+
+        callback({ blockId: 'child-1', type: 'update', origin: 'remote' });
+
+        // Reparent reconcile runs synchronously before awaited setData.
+        expect(syncingDuringSetBlockParent).toBe(true);
+
+        await new Promise(resolve => setTimeout(resolve, 0));
+      });
+
+      it('treats missing parentId key as no-op (Fix 4)', async () => {
+        /**
+         * Fix 4 regression: when the Yjs record has no `parentId` key at
+         * all (key never written), handleYjsUpdate must NOT call
+         * setBlockParent — missing key means "no authoritative value",
+         * not "reparent to root".
+         */
+        const childBlock = createMockBlock({
+          id: 'child-1',
+          parentId: 'callout-1',
+        });
+
+        const newBlocksStore = createBlocksStore([childBlock]);
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        // No parentId key at all.
+        const yblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: 'child' }),
+          tunes: createMockYMap({}),
+        });
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
+        mockHandlers.getBlockIndex = vi.fn(() => 0);
+
+        callback({ blockId: 'child-1', type: 'update', origin: 'remote' });
+
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(mockHandlers.setBlockParent).not.toHaveBeenCalled();
+        // Local state untouched.
+        expect(childBlock.parentId).toBe('callout-1');
+      });
+
+      it('treats explicit null parentId as reparent-to-root (Fix 4)', async () => {
+        /**
+         * Fix 4 regression converse: explicit null IS authoritative and
+         * must trigger setBlockParent(block, null).
+         */
+        const parentBlock = createMockBlock({
+          id: 'callout-1',
+          contentIds: ['child-1'],
+        });
+        const childBlock = createMockBlock({
+          id: 'child-1',
+          parentId: 'callout-1',
+        });
+
+        const newBlocksStore = createBlocksStore([parentBlock, childBlock]);
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        const yblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: 'child' }),
+          tunes: createMockYMap({}),
+          parentId: null,
+        });
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
+        mockHandlers.getBlockIndex = vi.fn(() => 1);
+
+        callback({ blockId: 'child-1', type: 'update', origin: 'remote' });
+
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(childBlock, null);
       });
     });
 

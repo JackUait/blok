@@ -231,4 +231,216 @@ test.describe('Container hierarchy invariant gauntlet', () => {
 
     expect(orphans).toHaveLength(0);
   });
+
+  /**
+   * Cross-boundary hierarchy gauntlet — drag/merge/undo.
+   *
+   * The original gauntlet covers single-client edit flows inside a container.
+   * These tests extend it to cross-boundary mutations that are the remaining
+   * known drift vectors for the callout/toggle family:
+   *
+   *   A) drag a root block into a container (reparent through DragManager)
+   *   B) merge a root block into a nested block via Backspace at start
+   *   C) undo/redo around a reparent (history replay must not corrupt state)
+   *
+   * Invariant must hold at every save point. Uses the same saveAndAssertInvariant
+   * helper as the rest of the suite; any drift becomes a loud failure.
+   */
+  const SETTINGS_BUTTON = '[data-blok-interface="blok"] [data-blok-testid="settings-toggler"]';
+  const IS_MAC = process.platform === 'darwin';
+  const UNDO_COMBO = IS_MAC ? 'Meta+Z' : 'Control+Z';
+  const REDO_COMBO = IS_MAC ? 'Meta+Shift+Z' : 'Control+Shift+Z';
+
+  const performDragDrop = async (
+    page: Page,
+    sourceLocator: ReturnType<Page['locator']>,
+    targetLocator: ReturnType<Page['locator']>,
+    targetVerticalPosition: 'top' | 'bottom'
+  ): Promise<void> => {
+    const sourceBox = await sourceLocator.boundingBox();
+    const targetBox = await targetLocator.boundingBox();
+
+    if (sourceBox === null || targetBox === null) {
+      throw new Error('Cannot get bounding box for drag source or target');
+    }
+
+    const sourceX = sourceBox.x + sourceBox.width / 2;
+    const sourceY = sourceBox.y + sourceBox.height / 2;
+    const targetX = targetBox.x + targetBox.width / 2;
+    const targetY = targetVerticalPosition === 'top'
+      ? targetBox.y + 1
+      : targetBox.y + targetBox.height - 1;
+
+    await page.mouse.move(sourceX, sourceY);
+    await page.mouse.down();
+    await page.mouse.move(targetX, targetY, { steps: 15 });
+
+    await page.waitForFunction(() => {
+      const wrapper = document.querySelector('[data-blok-interface=blok]');
+
+      return wrapper?.getAttribute('data-blok-dragging') === 'true';
+    }, { timeout: 2000 });
+
+    await page.mouse.up();
+
+    await page.waitForFunction(() => {
+      const wrapper = document.querySelector('[data-blok-interface=blok]');
+
+      return wrapper?.getAttribute('data-blok-dragging') !== 'true';
+    }, { timeout: 2000 });
+  };
+
+  test('drag-and-drop: paragraph reparents into callout with invariant intact', async ({ page }) => {
+    const initial: OutputData = {
+      blocks: [
+        { id: 'cal1', type: 'callout', data: { emoji: '💡', color: 'default' }, content: ['seed1'] },
+        { id: 'seed1', type: 'paragraph', data: { text: 'seed' }, parent: 'cal1' },
+        { id: 'p1', type: 'paragraph', data: { text: 'Root one' } },
+        { id: 'p2', type: 'paragraph', data: { text: 'Root two' } },
+        { id: 'p3', type: 'paragraph', data: { text: 'Root three' } },
+      ],
+    };
+
+    await createBlok(page, initial);
+    await saveAndAssertInvariant(page, 'drag initial');
+
+    // Reveal the drag handle on the source paragraph.
+    const source = page.getByTestId('block-wrapper').filter({ hasText: 'Root two' });
+
+    await source.hover();
+
+    const settingsButton = page.locator(SETTINGS_BUTTON);
+
+    await expect(settingsButton).toBeVisible();
+
+    // Target: the callout's inner nested-blocks container — the actual drop
+    // zone for children. Dropping on the outer block wrapper's bottom edge
+    // resolves to "insert after the callout at root level", not reparent.
+    const calloutBody = page.locator('[data-blok-id="cal1"] [data-blok-nested-blocks]');
+
+    await expect(calloutBody).toBeVisible();
+
+    await performDragDrop(page, settingsButton, calloutBody, 'bottom');
+
+    const afterDrop = await saveAndAssertInvariant(page, 'after drop into callout');
+
+    const p2 = afterDrop.blocks.find(b => b.id === 'p2');
+    const callout = afterDrop.blocks.find(b => b.id === 'cal1');
+
+    expect(p2?.parent, 'p2 should now be a child of cal1').toBe('cal1');
+    expect(callout?.content, 'callout content[] should include p2').toContain('p2');
+
+    // Reload with the saved data; invariant must hold through the collapse/insertMany cycle.
+    await createBlok(page, afterDrop);
+    const reloaded = await saveAndAssertInvariant(page, 'drag reload');
+
+    const orphans = reloaded.blocks.filter(b => b.type === 'paragraph' && b.id === 'p2' && b.parent === undefined);
+
+    expect(orphans, 'p2 must not be ejected from callout after reload').toHaveLength(0);
+  });
+
+  test('merge-across-container: backspace at start of root paragraph below a callout', async ({ page }) => {
+    const initial: OutputData = {
+      blocks: [
+        { id: 'cal1', type: 'callout', data: { emoji: '💡', color: 'default' }, content: ['inside1'] },
+        { id: 'inside1', type: 'paragraph', data: { text: 'inside' }, parent: 'cal1' },
+        { id: 'outside1', type: 'paragraph', data: { text: 'outside' } },
+      ],
+    };
+
+    await createBlok(page, initial);
+    await saveAndAssertInvariant(page, 'merge initial');
+
+    // Place caret at the very start of the outside paragraph.
+    // eslint-disable-next-line playwright/no-nth-methods -- contenteditable has no role/testid
+    const outside = page.locator('[data-blok-id="outside1"] [contenteditable]').first();
+
+    await outside.click();
+    await page.keyboard.press('Home');
+
+    // Backspace from the start of a root paragraph that sits after a container
+    // block is the classic "merge across container boundary" vector.
+    await page.keyboard.press('Backspace');
+
+    const afterMerge = await saveAndAssertInvariant(page, 'after merge across container');
+
+    // Whatever the exact merge behavior is — the critical contract is the
+    // invariant holding and no root-level paragraph being orphaned with drift.
+    // If "outside" survived as a separate block it must either be inside the
+    // callout OR a clean root sibling; either way the invariant check above
+    // is the real assertion. Belt-and-braces: no root paragraph should claim
+    // a parent that does not exist, and no callout child should be missing
+    // from the callout's content[].
+    const hasPhantomParents = afterMerge.blocks.some((b) => {
+      if (b.parent === undefined || b.parent === null) {
+        return false;
+      }
+      const parent = afterMerge.blocks.find(p => p.id === b.parent);
+
+      return parent === undefined;
+    });
+
+    expect(hasPhantomParents, 'no child block should reference a missing parent').toBe(false);
+
+    // Reload + resave — catches drift that only surfaces through collapseToLegacy.
+    await createBlok(page, afterMerge);
+    await saveAndAssertInvariant(page, 'merge reload');
+  });
+
+  test('reparent + undo + redo keeps invariant at every save point', async ({ page }) => {
+    const initial: OutputData = {
+      blocks: [
+        { id: 'tog1', type: 'toggle', data: { text: 'Toggle', isOpen: true }, content: ['body1'] },
+        { id: 'body1', type: 'paragraph', data: { text: 'seed body' }, parent: 'tog1' },
+        { id: 'p-root', type: 'paragraph', data: { text: 'root paragraph' } },
+      ],
+    };
+
+    await createBlok(page, initial);
+    await saveAndAssertInvariant(page, 'undo initial');
+
+    // Drag the root paragraph into the toggle.
+    const source = page.getByTestId('block-wrapper').filter({ hasText: 'root paragraph' });
+
+    await source.hover();
+
+    const settingsButton = page.locator(SETTINGS_BUTTON);
+
+    await expect(settingsButton).toBeVisible();
+
+    const toggleInner = page.locator('[data-blok-toggle-open="true"]');
+
+    await expect(toggleInner).toBeVisible();
+
+    await performDragDrop(page, settingsButton, toggleInner, 'bottom');
+
+    const afterReparent = await saveAndAssertInvariant(page, 'after reparent');
+    const reparentedChild = afterReparent.blocks.find(b => b.id === 'p-root');
+
+    expect(reparentedChild?.parent, 'p-root should live inside the toggle').toBe('tog1');
+
+    // Undo — step out. Click into an editable area first so the editor has focus.
+    // eslint-disable-next-line playwright/no-nth-methods -- contenteditable has no role/testid
+    await page.locator('[data-blok-id="body1"] [contenteditable]').first().click();
+
+    await page.keyboard.press(UNDO_COMBO);
+
+    const afterUndo = await saveAndAssertInvariant(page, 'after undo');
+    const undoneChild = afterUndo.blocks.find(b => b.id === 'p-root');
+
+    // p-root must still exist and be in a self-consistent hierarchy state.
+    // Whether undo fully restores parent=undefined is a separate behavioral
+    // contract tracked by the drag/history work (see drag layers 18–20); the
+    // gauntlet's job is to lock in that whatever state history picks, the
+    // parent/content invariant is not violated by the transition.
+    expect(undoneChild, 'p-root should still exist after undo').toBeDefined();
+
+    // Redo — step back in.
+    await page.keyboard.press(REDO_COMBO);
+
+    const afterRedo = await saveAndAssertInvariant(page, 'after redo');
+    const redoneChild = afterRedo.blocks.find(b => b.id === 'p-root');
+
+    expect(redoneChild, 'p-root should still exist after redo').toBeDefined();
+  });
 });

@@ -782,5 +782,79 @@ describe('Saver module', () => {
     expect(result?.blocks.find(b => b.id === 'cal1')?.content).toEqual(['tog1']);
     expect(result?.blocks.find(b => b.id === 'tog1')?.content).toEqual(['leaf']);
   });
+
+  describe('hierarchy drift assertion gate (NODE_ENV)', () => {
+    // Regression: the saver's post-output drift assertion only threw in
+    // NODE_ENV='test'. `yarn serve` runs with NODE_ENV='development', so any
+    // drift introduced during manual dev testing would silently log and pass
+    // through. The gate must also throw in 'development' so dev-time testing
+    // catches the next paste-ejection-family bug immediately. Only 'production'
+    // falls back to logging so end-user saves never break.
+    const driftingBlocks = (): Block[] => {
+      const orphan = createBlockMock({
+        id: 'orphan-child',
+        tool: 'paragraph',
+        data: { text: 'ejected from nowhere' },
+        // parentId points at a block that does not exist → drift by construction.
+        parentId: 'ghost-parent',
+      });
+
+      return [orphan.block];
+    };
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it('throws on drift when NODE_ENV=development', async () => {
+      vi.stubEnv('NODE_ENV', 'development');
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+
+      const { saver } = createSaver({
+        blocks: driftingBlocks(),
+        toolSanitizeConfigs: { paragraph: {} },
+      });
+
+      await expect(saver.save()).resolves.toBeUndefined();
+      expect(saver.getLastSaveError()).toBeInstanceOf(Error);
+      expect((saver.getLastSaveError() as Error).message).toMatch(/hierarchy drift/);
+    });
+
+    it('throws on drift when NODE_ENV=test', async () => {
+      vi.stubEnv('NODE_ENV', 'test');
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+
+      const { saver } = createSaver({
+        blocks: driftingBlocks(),
+        toolSanitizeConfigs: { paragraph: {} },
+      });
+
+      await expect(saver.save()).resolves.toBeUndefined();
+      expect(saver.getLastSaveError()).toBeInstanceOf(Error);
+      expect((saver.getLastSaveError() as Error).message).toMatch(/hierarchy drift/);
+    });
+
+    it('only logs on drift when NODE_ENV=production so user saves never break', async () => {
+      vi.stubEnv('NODE_ENV', 'production');
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+      const logLabeledSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+
+      const { saver } = createSaver({
+        blocks: driftingBlocks(),
+        toolSanitizeConfigs: { paragraph: {} },
+      });
+
+      const result = await saver.save();
+
+      expect(result).toBeDefined();
+      expect(result?.blocks).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: 'orphan-child', parent: 'ghost-parent' }),
+        ])
+      );
+      expect(saver.getLastSaveError()).toBeUndefined();
+      expect(logLabeledSpy).toHaveBeenCalledWith(expect.stringMatching(/hierarchy drift/), 'error');
+    });
+  });
 });
 

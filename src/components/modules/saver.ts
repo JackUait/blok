@@ -287,8 +287,12 @@ export class Saver extends Module {
     if (violations.length > 0) {
       const summary = violations.map(v => v.message).join('; ');
       const message = `Saver produced output with hierarchy drift: ${summary}`;
+      const nodeEnv = typeof process !== 'undefined' ? process.env?.NODE_ENV : undefined;
 
-      if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
+      // Throw in test AND development so manual dev-time testing (yarn serve)
+      // flushes drift out immediately. Only production silently logs so an
+      // edge-case drift never breaks end-user saves.
+      if (nodeEnv === 'test' || nodeEnv === 'development') {
         throw new Error(message);
       }
       logLabeled(message, 'error');

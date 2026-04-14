@@ -13,10 +13,34 @@ const createBlokModulesMock = (): {
   modules: BlokModules;
   insertedBlocks: Array<{ tool: string; data: Record<string, unknown>; replace: boolean }>;
   blockInstances: Block[];
+  setBlockParentMock: ReturnType<typeof vi.fn>;
 } => {
   const insertedBlocks: Array<{ tool: string; data: Record<string, unknown>; replace: boolean }> = [];
   const blockInstances: Block[] = [];
   let blockCounter = 0;
+
+  const blockLookup = new Map<string, Block & { parentId: string | null; contentIds: string[] }>();
+
+  const setBlockParentMock = vi.fn((block: Block, newParentId: string | null) => {
+    const target = block as Block & { parentId: string | null; contentIds: string[] };
+    const oldParentId = target.parentId;
+
+    if (oldParentId !== null) {
+      const oldParent = blockLookup.get(oldParentId);
+
+      if (oldParent !== undefined) {
+        oldParent.contentIds = oldParent.contentIds.filter(id => id !== target.id);
+      }
+    }
+    target.parentId = newParentId;
+    if (newParentId !== null) {
+      const newParent = blockLookup.get(newParentId);
+
+      if (newParent !== undefined && !newParent.contentIds.includes(target.id)) {
+        newParent.contentIds = [...newParent.contentIds, target.id];
+      }
+    }
+  });
 
   const modules = {
     BlockManager: {
@@ -32,12 +56,14 @@ const createBlokModulesMock = (): {
           name: options.tool,
           parentId: null,
           contentIds: [] as string[],
-        } as unknown as Block;
+        } as unknown as Block & { parentId: string | null; contentIds: string[] };
 
         blockInstances.push(newBlock);
+        blockLookup.set(newBlock.id as unknown as string, newBlock);
 
         return newBlock;
       }),
+      setBlockParent: setBlockParentMock,
     },
     Caret: {
       setToBlock: vi.fn(),
@@ -52,7 +78,7 @@ const createBlokModulesMock = (): {
     },
   } as unknown as BlokModules;
 
-  return { modules, insertedBlocks, blockInstances };
+  return { modules, insertedBlocks, blockInstances, setBlockParentMock };
 };
 
 const createToolRegistryMock = (): ToolRegistry => {
@@ -133,6 +159,65 @@ describe('BlokDataHandler', () => {
       // The newly inserted child blocks should have parentId pointing to new parent block ID
       expect(newChild1.parentId).toBe(newParent.id);
       expect(newChild2.parentId).toBe(newParent.id);
+    });
+
+    it('routes parent-child restoration through BlockManager.setBlockParent instead of mutating fields directly', async () => {
+      // Regression guard for the callout paste-ejection bug family. Direct
+      // `newBlock.parentId =` / `parent.contentIds.push` mutations bypass DOM
+      // reparent, collapsed-hidden state sync, and the Yjs parentId/contentIds
+      // companion writes. The fix: route every reparent through
+      // BlockManager.setBlockParent. This test locks it in by asserting the
+      // canonical reparent API is called once per parent-child edge.
+      const { modules, blockInstances, setBlockParentMock } = createBlokModulesMock();
+      const handler = new BlokDataHandler(
+        modules,
+        createToolRegistryMock(),
+        createSanitizerBuilderMock(),
+        { sanitizer: {} }
+      );
+
+      const pasteData = JSON.stringify([
+        {
+          id: 'cal-1',
+          tool: 'callout',
+          data: { emoji: '💡', color: 'default' },
+          parentId: null,
+          contentIds: ['cal-child-1', 'cal-child-2'],
+        },
+        {
+          id: 'cal-child-1',
+          tool: 'paragraph',
+          data: { text: 'First nested line' },
+          parentId: 'cal-1',
+          contentIds: [],
+        },
+        {
+          id: 'cal-child-2',
+          tool: 'paragraph',
+          data: { text: 'Second nested line' },
+          parentId: 'cal-1',
+          contentIds: [],
+        },
+      ]);
+
+      await handler.handle(pasteData, { canReplaceCurrentBlock: false });
+
+      expect(blockInstances).toHaveLength(3);
+      expect(setBlockParentMock).toHaveBeenCalledTimes(2);
+
+      const newChild1 = blockInstances[0];
+      const newChild2 = blockInstances[1];
+      const newCallout = blockInstances[2];
+
+      expect(setBlockParentMock).toHaveBeenCalledWith(newChild1, newCallout.id);
+      expect(setBlockParentMock).toHaveBeenCalledWith(newChild2, newCallout.id);
+
+      // Side-effects through the mock mirror the real hierarchy API: children
+      // end up pointing at the new callout and the callout's contentIds include them.
+      expect(newChild1.parentId).toBe(newCallout.id);
+      expect(newChild2.parentId).toBe(newCallout.id);
+      expect(newCallout.contentIds).toContain(newChild1.id);
+      expect(newCallout.contentIds).toContain(newChild2.id);
     });
 
     it('remaps old child block IDs in parent data before inserting the parent', async () => {

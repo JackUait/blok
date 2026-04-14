@@ -132,6 +132,25 @@ describe('BlockHierarchy', () => {
       expect(hierarchy.getBlockDepth(orphanBlock)).toBe(0);
     });
 
+    /**
+     * Fix 4: getBlockDepth cycle guard.
+     *
+     * Before: walking an A→B→A cycle stack-overflows. A remote peer could
+     * construct this via concurrent reparents, and we'd take down the tab.
+     */
+    it('Fix 4: terminates on a two-block cycle without stack overflow', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'A', parentId: 'B', contentIds: [] },
+        { id: 'B', parentId: 'A', contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const a = requireBlock('A');
+      const depth = hierarchy.getBlockDepth(a);
+
+      expect(Number.isFinite(depth)).toBe(true);
+    });
+
     it('correctly calculates depth for deeply nested hierarchy', () => {
       repository = createRepositoryWithBlocks([
         { id: 'level-0', parentId: null },
@@ -320,7 +339,7 @@ describe('BlockHierarchy', () => {
       expect(newChild.holder.classList.contains('hidden')).toBe(false);
     });
 
-    it('does not hide new child block when parent has no existing children (cannot determine state)', () => {
+    it('does not hide new child block when parent has no existing children AND no collapsed attribute', () => {
       repository = createRepositoryWithBlocks([
         { id: 'toggle', parentId: null, contentIds: [] },
         { id: 'new-child', parentId: null, contentIds: [] },
@@ -331,8 +350,101 @@ describe('BlockHierarchy', () => {
 
       hierarchy.setBlockParent(newChild, 'toggle');
 
-      // No existing children to infer collapsed state from, so leave visible
+      // No existing children and no `data-blok-toggle-open="false"` anywhere
+      // on the parent holder, so leave the child visible.
       expect(newChild.holder.classList.contains('hidden')).toBe(false);
+    });
+
+    /**
+     * Fix 5: collapsed-state detection for empty container.
+     *
+     * Previously, the collapsed-state check required at least one EXISTING
+     * hidden child under the parent, so a block moved into a previously-empty
+     * collapsed toggle was not hidden. Toggle and toggleable-header both
+     * expose their open state via `data-blok-toggle-open="true|false"` on a
+     * descendant of the block holder — read that as a fallback.
+     */
+    it('Fix 5: hides new child when parent has zero children but is collapsed (data-blok-toggle-open="false")', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'toggle', parentId: null, contentIds: [] },
+        { id: 'new-child', parentId: null, contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const toggle = requireBlock('toggle');
+      const inner = document.createElement('div');
+      inner.setAttribute('data-blok-toggle-open', 'false');
+      toggle.holder.appendChild(inner);
+
+      const newChild = requireBlock('new-child');
+
+      hierarchy.setBlockParent(newChild, 'toggle');
+
+      expect(newChild.holder.classList.contains('hidden')).toBe(true);
+    });
+
+    it('Fix 5: does not hide new child when parent has zero children AND is expanded (data-blok-toggle-open="true")', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'toggle', parentId: null, contentIds: [] },
+        { id: 'new-child', parentId: null, contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const toggle = requireBlock('toggle');
+      const inner = document.createElement('div');
+      inner.setAttribute('data-blok-toggle-open', 'true');
+      toggle.holder.appendChild(inner);
+
+      const newChild = requireBlock('new-child');
+
+      hierarchy.setBlockParent(newChild, 'toggle');
+
+      expect(newChild.holder.classList.contains('hidden')).toBe(false);
+    });
+
+    /**
+     * Fix 4: cycle guard.
+     *
+     * Before: setBlockParent had no cycle guard, so it would happily assign
+     * A.parent = B while B.parent = A was already in place. The next call
+     * into getBlockDepth would recurse forever on the A↔B cycle.
+     */
+    it('Fix 4: throws when the new parent chain already contains the block (direct cycle)', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'A', parentId: null, contentIds: ['B'] },
+        { id: 'B', parentId: 'A', contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const a = requireBlock('A');
+
+      expect(() => hierarchy.setBlockParent(a, 'B')).toThrow(/cycle/i);
+    });
+
+    it('Fix 4: throws when the new parent chain already contains the block (transitive cycle)', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'A', parentId: null, contentIds: ['B'] },
+        { id: 'B', parentId: 'A', contentIds: ['C'] },
+        { id: 'C', parentId: 'B', contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const a = requireBlock('A');
+
+      expect(() => hierarchy.setBlockParent(a, 'C')).toThrow(/cycle/i);
+    });
+
+    it('Fix 4: allows reparent when the new parent chain does not contain the block', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'A', parentId: null, contentIds: [] },
+        { id: 'B', parentId: null, contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const a = requireBlock('A');
+
+      expect(() => hierarchy.setBlockParent(a, 'B')).not.toThrow();
+      expect(a.parentId).toBe('B');
     });
 
     it('calls onParentChanged for each setBlockParent call', () => {

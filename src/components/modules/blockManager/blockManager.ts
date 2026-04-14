@@ -16,7 +16,9 @@ import { BlockAPI } from '../../block/api';
 import { Blocks } from '../../blocks';
 import { DATA_ATTR } from '../../constants';
 import { BlockChanged } from '../../events';
-import { generateBlockId } from '../../utils';
+import { generateBlockId, logLabeled } from '../../utils';
+import { assertHierarchy, validateHierarchy } from '../../utils/hierarchy-invariant';
+import * as Y from 'yjs';
 
 // Imported modules
 import { BlockEventBinder } from './event-binder';
@@ -490,29 +492,15 @@ export class BlockManager extends Module {
    * @param index - index where to insert
    */
   public insertMany(blocks: Block[], index = 0): void {
-    // Reconcile contentIds from children's parentId before touching Yjs.
-    //
-    // Hierarchical input JSON may carry `parent` on children without a matching
-    // `content` on the parent (this is valid hierarchical data, but leaves the
-    // parent's contentIds empty after composeBlock). Downstream code reads
-    // `parent.contentIds` as the authoritative child list — drag/drop,
-    // blockSelection, nested-blocks mounting, and especially collapseToLegacy,
-    // which ejects any child missing from `content`. Reconciling here makes the
-    // invariant `child.parentId ⇒ parent.contentIds.includes(child.id)` hold
-    // from the moment blocks enter the editor.
     const blockById = new Map<string, Block>();
+
     for (const block of blocks) {
       blockById.set(block.id, block);
     }
-    for (const block of blocks) {
-      if (block.parentId === null) {
-        continue;
-      }
-      const parent = blockById.get(block.parentId);
-      if (parent !== undefined && !parent.contentIds.includes(block.id)) {
-        parent.contentIds.push(block.id);
-      }
-    }
+
+    this.reconcileChildrenToParents(blocks, blockById);
+    this.reconcileParentsToChildren(blocks, blockById);
+    this.assertInsertManyHierarchy(blocks);
 
     // Load blocks into Yjs BEFORE adding to the store.
     // blocksStore.insertMany() triggers rendered() on each block, which may
@@ -871,10 +859,25 @@ export class BlockManager extends Module {
 
   /**
    * Sets the parent of a block, updating both the block's parentId and the parent's contentIds.
+   *
+   * Fix 1: the Yjs-side contentIds Y.Arrays on the old and new parents must be
+   * updated in the SAME transaction as the child's parentId write. Previously,
+   * only `yblock.set('parentId', …)` was synced to Yjs, so:
+   *   - Two concurrent peers reparenting siblings would drift on both parents
+   *     because neither ever learned the move through CRDT.
+   *   - Undo snapshots captured the parentId change but left stale contentIds
+   *     on the old/new parents, so redo could restore a child that no parent
+   *     actually claimed.
+   * The companion writes keep the persistent Yjs store consistent with the
+   * in-memory hierarchy at every transaction boundary.
    * @param block - the block to reparent
    * @param newParentId - the new parent block id, or null for root level
    */
   public setBlockParent(block: Block, newParentId: string | null): void {
+    // Capture the old parent id BEFORE hierarchy.setBlockParent mutates it —
+    // we need it to remove the child from the old parent's Yjs contentIds.
+    const oldParentId = block.parentId;
+
     this.hierarchy.setBlockParent(block, newParentId);
 
     // Sync the child block's parentId to Yjs so undo/redo can restore the relationship.
@@ -892,11 +895,95 @@ export class BlockManager extends Module {
       return;
     }
 
-    if (newParentId !== null) {
-      yblock.set('parentId', newParentId);
-    } else {
-      yblock.delete('parentId');
+    // Wrap parentId + parent contentIds updates in a single Yjs transaction so
+    // they land atomically on remote peers and in the undo stack.
+    this.Blok.YjsManager.transact(() => {
+      if (newParentId !== null) {
+        yblock.set('parentId', newParentId);
+      } else {
+        yblock.delete('parentId');
+      }
+
+      this.syncParentContentIdsToYjs(block.id, oldParentId, newParentId);
+    });
+  }
+
+  /**
+   * Fix 1 helper: update the old and new parents' Yjs `contentIds` Y.Arrays
+   * so the persistent store mirrors the in-memory hierarchy after a reparent.
+   * Extracted from {@link setBlockParent} to keep block nesting shallow.
+   * @param childId - id of the block being reparented
+   * @param oldParentId - parent id before the reparent (may be null)
+   * @param newParentId - parent id after the reparent (may be null)
+   */
+  private syncParentContentIdsToYjs(
+    childId: string,
+    oldParentId: string | null,
+    newParentId: string | null
+  ): void {
+    if (oldParentId !== null && oldParentId !== newParentId) {
+      this.removeChildFromParentYContent(oldParentId, childId);
     }
+    if (newParentId !== null) {
+      this.appendChildToParentYContent(newParentId, childId);
+    }
+  }
+
+  /**
+   * Fix 1 helper: remove a child id from a parent block's Yjs `contentIds`
+   * Y.Array if it is present. No-op when the parent or its contentIds are
+   * missing from Yjs.
+   * @param parentId - parent block id
+   * @param childId - child block id to remove
+   */
+  private removeChildFromParentYContent(parentId: string, childId: string): void {
+    const parentYBlock = this.Blok.YjsManager.getBlockById(parentId);
+
+    if (parentYBlock === undefined) {
+      return;
+    }
+    const content = parentYBlock.get('contentIds');
+
+    if (!(content instanceof Y.Array)) {
+      return;
+    }
+    const idx = (content.toArray() as string[]).indexOf(childId);
+
+    if (idx !== -1) {
+      content.delete(idx, 1);
+    }
+  }
+
+  /**
+   * Fix 1 helper: append a child id to a parent block's Yjs `contentIds`
+   * Y.Array, creating the Y.Array on the parent yblock if missing. Inserts at
+   * the index the child occupies in the in-memory parent so remote peers see
+   * the same ordering as the local editor.
+   * @param parentId - parent block id
+   * @param childId - child block id to append
+   */
+  private appendChildToParentYContent(parentId: string, childId: string): void {
+    const parentYBlock = this.Blok.YjsManager.getBlockById(parentId);
+
+    if (parentYBlock === undefined) {
+      return;
+    }
+    const existing = parentYBlock.get('contentIds');
+    const content: Y.Array<string> = existing instanceof Y.Array
+      ? (existing as Y.Array<string>)
+      : new Y.Array<string>();
+
+    if (!(existing instanceof Y.Array)) {
+      parentYBlock.set('contentIds', content);
+    }
+    if ((content.toArray()).includes(childId)) {
+      return;
+    }
+    const parentBlock = this.repository.getBlockById(parentId);
+    const memoryIndex = parentBlock !== undefined ? parentBlock.contentIds.indexOf(childId) : -1;
+    const insertAt = memoryIndex === -1 ? content.length : Math.min(memoryIndex, content.length);
+
+    content.insert(insertAt, [childId]);
   }
 
   /**
@@ -1150,6 +1237,131 @@ export class BlockManager extends Module {
     }
 
     return block;
+  }
+
+  /**
+   * insertMany helper: fills parent.contentIds from child.parentId.
+   *
+   * Hierarchical input JSON may carry `parent` on children without a matching
+   * `content` on the parent (valid hierarchical data, but leaves the parent's
+   * contentIds empty after composeBlock). Downstream code treats
+   * `parent.contentIds` as the authoritative child list, so reconciling here
+   * makes the invariant `child.parentId ⇒ parent.contentIds.includes(child.id)`
+   * hold from the moment blocks enter the editor.
+   *
+   * If a child's parentId points to a block id that is not in the input, the
+   * parentId is cleared — matching the editor's pre-existing permissive
+   * behaviour of dropping dangling cross-references so the subsequent Fix 3
+   * `assertHierarchy` pass can run on a consistent snapshot.
+   * @param blocks - blocks being inserted
+   * @param blockById - id→block lookup built from `blocks`
+   */
+  private reconcileChildrenToParents(blocks: Block[], blockById: Map<string, Block>): void {
+    for (const block of blocks) {
+      if (block.parentId === null) {
+        continue;
+      }
+      const parent = blockById.get(block.parentId);
+
+      if (parent === undefined) {
+        // Dangling parentId: the referenced parent is missing from the input.
+        // Clear the orphan reference so the block becomes root-level instead
+        // of carrying a stale pointer into the editor state.
+        block.parentId = null;
+
+        continue;
+      }
+      if (!parent.contentIds.includes(block.id)) {
+        parent.contentIds.push(block.id);
+      }
+    }
+  }
+
+  /**
+   * Fix 2: inverse reconcile — sanitise parent.contentIds against the children.
+   *
+   * The symmetric case: a parent with `content: ['c1']` whose child c1 has no
+   * `parent` field (or points at a different parent). Child is the source of
+   * truth, because the block physically carries the back-pointer downstream.
+   * For every parent→child claim:
+   *   - child missing from the input: drop the dangling id from parent.contentIds
+   *   - child has no parentId: set child.parentId = parent.id (keep the claim)
+   *   - child has a different parentId: trust the child, sanitise the parent
+   * @param blocks - blocks being inserted
+   * @param blockById - id→block lookup built from `blocks`
+   */
+  private reconcileParentsToChildren(blocks: Block[], blockById: Map<string, Block>): void {
+    for (const block of blocks) {
+      if (block.contentIds.length === 0) {
+        continue;
+      }
+      block.contentIds = block.contentIds.filter((childId) =>
+        this.resolveChildForParent(block, childId, blockById)
+      );
+    }
+  }
+
+  /**
+   * Fix 2 helper: decide whether a parent.contentIds entry should be kept.
+   *
+   * Side effect: when a child exists and has no parentId, its parentId is set
+   * to the claiming parent id (keeping the entry in the parent's contentIds).
+   * @param parent - the parent block whose contentIds we are sanitising
+   * @param childId - candidate child id from parent.contentIds
+   * @param blockById - id→block lookup built from the insertMany input
+   * @returns true when the child id should remain in parent.contentIds
+   */
+  private resolveChildForParent(
+    parent: Block,
+    childId: string,
+    blockById: Map<string, Block>
+  ): boolean {
+    const child = blockById.get(childId);
+
+    if (child === undefined) {
+      return false;
+    }
+    if (child.parentId === null) {
+      child.parentId = parent.id;
+
+      return true;
+    }
+
+    return child.parentId === parent.id;
+  }
+
+  /**
+   * Fix 3: assert the hierarchy invariant before handing the blocks off to Yjs.
+   *
+   * Matches the saver pattern (`saver.ts:287-295`): in test and development
+   * builds, any residual drift throws loudly so the regression is caught at
+   * the point of introduction; in production we only log, so an edge-case
+   * drift never breaks user loads.
+   * @param blocks - the fully reconciled blocks about to be handed to Yjs
+   */
+  private assertInsertManyHierarchy(blocks: Block[]): void {
+    const snapshot: OutputBlockData<string, Record<string, unknown>>[] = blocks.map((block) => ({
+      id: block.id,
+      type: block.name,
+      data: {},
+      ...(block.parentId !== null && { parent: block.parentId }),
+      ...(block.contentIds.length > 0 && { content: block.contentIds }),
+    }));
+    const env = typeof process !== 'undefined' ? process.env?.NODE_ENV : undefined;
+
+    if (env === 'test' || env === 'development') {
+      assertHierarchy(snapshot, 'BlockManager.insertMany');
+
+      return;
+    }
+    const violations = validateHierarchy(snapshot);
+
+    if (violations.length === 0) {
+      return;
+    }
+    const summary = violations.map((v) => v.message).join('; ');
+
+    logLabeled(`BlockManager.insertMany produced output with hierarchy drift: ${summary}`, 'error');
   }
 
   /**

@@ -241,11 +241,13 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
         continue;
       }
 
-      newBlock.parentId = parentEntry.newBlock.id;
-
-      if (!parentEntry.newBlock.contentIds.includes(newBlock.id)) {
-        parentEntry.newBlock.contentIds = [...parentEntry.newBlock.contentIds, newBlock.id];
-      }
+      // Route through the canonical reparent API — it handles old-parent
+      // splice, new-parent push, DOM reparent into the container's children
+      // wrapper, collapsed-hidden state sync, and the Yjs parentId +
+      // contentIds companion writes. Direct parentId/contentIds mutations
+      // bypass every one of those and reintroduce the callout paste
+      // ejection bug family.
+      BlockManager.setBlockParent(newBlock, parentEntry.newBlock.id);
     }
   }
 }

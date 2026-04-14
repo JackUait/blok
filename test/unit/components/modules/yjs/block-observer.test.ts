@@ -443,6 +443,66 @@ describe('BlockObserver', () => {
     });
   });
 
+  describe('top-level yblock key updates', () => {
+    it('emits update event when parentId is set on the yblock', () => {
+      // Add block with no parent
+      ydoc.transact(() => {
+        const yblock = new Y.Map<unknown>();
+        yblock.set('id', 'child-1');
+        yblock.set('type', 'paragraph');
+        yblock.set('data', new Y.Map<unknown>());
+        yblocks.push([yblock]);
+      }, 'local');
+
+      const callback = vi.fn();
+      observer.onBlocksChanged(callback);
+
+      // Simulate a remote client reparenting this block by writing
+      // parentId directly on the yblock (not on a nested data/tunes map).
+      ydoc.transact(() => {
+        const yblock = yblocks.get(0);
+        yblock.set('parentId', 'callout-1');
+      }, 'remote-peer');
+
+      const updateEvents = callback.mock.calls
+        .map((call) => call[0] as BlockChangeEvent)
+        .filter((event) => event.type === 'update');
+
+      expect(updateEvents.length).toBeGreaterThanOrEqual(1);
+      const event = updateEvents[0] as SingleBlockEvent;
+
+      expect(event.blockId).toBe('child-1');
+      expect(event.origin).toBe('remote');
+    });
+
+    it('emits update event when contentIds is set on the yblock', () => {
+      ydoc.transact(() => {
+        const yblock = new Y.Map<unknown>();
+        yblock.set('id', 'toggle-1');
+        yblock.set('type', 'toggle');
+        yblock.set('data', new Y.Map<unknown>());
+        yblocks.push([yblock]);
+      }, 'local');
+
+      const callback = vi.fn();
+      observer.onBlocksChanged(callback);
+
+      ydoc.transact(() => {
+        const yblock = yblocks.get(0);
+        yblock.set('contentIds', ['child-a', 'child-b']);
+      }, 'local');
+
+      const updateEvents = callback.mock.calls
+        .map((call) => call[0] as BlockChangeEvent)
+        .filter((event) => event.type === 'update');
+
+      expect(updateEvents.length).toBeGreaterThanOrEqual(1);
+      const event = updateEvents[0] as SingleBlockEvent;
+
+      expect(event.blockId).toBe('toggle-1');
+    });
+  });
+
   describe('nested map updates', () => {
     it('emits update event when tunes change', () => {
       // Add block with tunes

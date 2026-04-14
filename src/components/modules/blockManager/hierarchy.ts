@@ -27,14 +27,31 @@ export class BlockHierarchy {
   /**
    * Returns the depth (nesting level) of a block in the hierarchy.
    * Root-level blocks have depth 0.
+   *
+   * Fix 4: a `visited` set guards against malformed parent chains that form a
+   * cycle (e.g. remote peers that concurrently reparent A→B and B→A converge
+   * into A↔B). Without the guard, the recursion blows the stack and takes
+   * down the tab.
    * @param block - the block to get depth for
    * @returns {number} - depth level (0 for root, 1 for first level children, etc.)
    */
   public getBlockDepth(block: Block): number {
+    const visited = new Set<string>();
+
+    if (block.id !== undefined) {
+      visited.add(block.id);
+    }
+
     const calculateDepth = (parentId: string | null, currentDepth: number): number => {
       if (parentId === null) {
         return currentDepth;
       }
+
+      if (visited.has(parentId)) {
+        // Cycle detected — bail to the current depth so we don't blow the stack.
+        return currentDepth;
+      }
+      visited.add(parentId);
 
       const parentBlock = this.repository.getBlockById(parentId);
 
@@ -46,6 +63,42 @@ export class BlockHierarchy {
     };
 
     return calculateDepth(block.parentId, 0);
+  }
+
+  /**
+   * Walks the target parent chain and returns true if `childId` already
+   * appears in it — meaning assigning `child` as a descendant of the target
+   * parent would form a cycle.
+   *
+   * Fix 4 companion guard for {@link setBlockParent}.
+   * @param childId - block id being reparented
+   * @param targetParentId - prospective new parent id
+   * @returns true if the assignment would form a cycle
+   */
+  private wouldFormCycle(childId: string, targetParentId: string): boolean {
+    const walk = (cursor: string | null, visited: Set<string>): boolean => {
+      if (cursor === null) {
+        return false;
+      }
+      if (cursor === childId) {
+        return true;
+      }
+      if (visited.has(cursor)) {
+        // Pre-existing cycle — still disqualifies the reparent.
+        return true;
+      }
+      visited.add(cursor);
+
+      const parent = this.repository.getBlockById(cursor);
+
+      if (parent === undefined) {
+        return false;
+      }
+
+      return walk(parent.parentId, visited);
+    };
+
+    return walk(targetParentId, new Set<string>());
   }
 
   /**
@@ -75,6 +128,21 @@ export class BlockHierarchy {
      */
     if (this.repository.getBlockIndex(block) === -1) {
       return;
+    }
+
+    /**
+     * Fix 4: cycle guard.
+     *
+     * Reject reparents that would form a cycle (e.g. make A a descendant of
+     * one of its own descendants). Without this guard, a corrupted remote
+     * update can land the editor in a state where getBlockDepth recurses
+     * forever, plus any hierarchical save would produce a tree that can
+     * never round-trip.
+     */
+    if (newParentId !== null && this.wouldFormCycle(block.id, newParentId)) {
+      throw new Error(
+        `BlockHierarchy.setBlockParent: refusing to form cycle — assigning ${block.id} to parent ${newParentId} would create a parent/child cycle.`
+      );
     }
 
     const oldParentId = block.parentId;
@@ -121,14 +189,24 @@ export class BlockHierarchy {
 
     // If the new parent's existing children are hidden (toggle is collapsed),
     // hide this newly added child too so Tab navigation skips it.
+    //
+    // Fix 5: a previously-empty collapsed container has no existing hidden
+    // children to infer state from. Fall back to reading the toggle/header
+    // tool's persistent open-state attribute (`data-blok-toggle-open="false"`)
+    // on any descendant of the parent holder.
     if (newParentId !== null && newParent !== undefined) {
       const existingChildren = newParent.contentIds
         .filter(id => id !== block.id)
         .map(id => this.repository.getBlockById(id))
         .filter((b): b is NonNullable<typeof b> => b !== undefined);
 
-      const parentIsCollapsed = existingChildren.length > 0 &&
+      const parentIsCollapsedFromChildren = existingChildren.length > 0 &&
         existingChildren.every(b => b.holder.classList.contains('hidden'));
+
+      const parentIsCollapsedFromAttr =
+        newParent.holder.querySelector('[data-blok-toggle-open="false"]') !== null;
+
+      const parentIsCollapsed = parentIsCollapsedFromChildren || parentIsCollapsedFromAttr;
 
       if (parentIsCollapsed) {
         block.holder.classList.add('hidden');

@@ -192,12 +192,22 @@ export class BlockYjsSync {
   }
 
   /**
-   * Subscribe to Yjs changes for undo/redo DOM synchronization
+   * Subscribe to Yjs changes for undo/redo and remote DOM synchronization.
+   *
+   * Accepts undo/redo (local-history replay) AND remote origins (changes
+   * from other clients). Local-origin events are filtered because the
+   * in-memory state was already mutated before the Yjs write landed —
+   * re-applying would thrash DOM and undo stacks.
+   *
    * @returns unsubscribe function
    */
   public subscribe(): () => void {
     return this.dependencies.YjsManager.onBlocksChanged((event: BlockChangeEvent) => {
-      if (event.origin === 'undo' || event.origin === 'redo') {
+      if (
+        event.origin === 'undo' ||
+        event.origin === 'redo' ||
+        event.origin === 'remote'
+      ) {
         this.syncBlockFromYjs(event);
       }
     });
@@ -264,11 +274,25 @@ export class BlockYjsSync {
      * placement, and indentation all stay consistent. Must run BEFORE any
      * composeBlock fallback below, otherwise the replacement would carry
      * over the stale `block.parentId`.
+     *
+     * Fix 4: distinguish "key missing" from "explicit null". A missing
+     * `parentId` key means the Yjs record has no authoritative value —
+     * treat as a no-op. Explicit null means "reparent to root".
+     *
+     * Fix 3: run the reconcile inside withAtomicOperation so
+     * isSyncingFromYjs is true for the duration. Without this, the
+     * hierarchy's onParentChanged listener echoes a fresh Yjs write,
+     * polluting the undo stack and potentially looping.
      */
-    const remoteParentId = (yblock.get('parentId') as string | undefined) ?? null;
+    if (yblock.has('parentId')) {
+      const rawParentId = yblock.get('parentId') as string | null | undefined;
+      const remoteParentId: string | null = rawParentId === undefined ? null : rawParentId;
 
-    if (remoteParentId !== block.parentId) {
-      this.handlers.setBlockParent(block, remoteParentId);
+      if (remoteParentId !== block.parentId) {
+        this.withAtomicOperation(() => {
+          this.handlers.setBlockParent(block, remoteParentId);
+        });
+      }
     }
 
     // Check if tunes have changed - if so, we need to recreate the block

@@ -193,61 +193,75 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
      */
     const oldIdToEntry = new Map<string, { newBlock: Block; original: BlokClipboardBlock }>();
 
-    // Pass 1: insert children first so they exist with new IDs before the parent.
-    children.forEach(({ sanitized, original }) => {
-      const block = BlockManager.insert({ tool: sanitized.tool, data: sanitized.data });
+    // Group every insert + setBlockParent call into a single Yjs undo entry
+    // so that one Cmd+Z removes the whole pasted set. Without this wrapper
+    // each BlockManager.insert and setBlockParent lands on its own undo
+    // stack item, and the user has to press undo N times to clear a paste.
+    const runInsertPasses = (): void => {
+      // Pass 1: insert children first so they exist with new IDs before the parent.
+      children.forEach(({ sanitized, original }) => {
+        const block = BlockManager.insert({ tool: sanitized.tool, data: sanitized.data });
 
-      oldIdToEntry.set(original.id, { newBlock: block, original });
-      Caret.setToBlock(block, Caret.positions.END);
-    });
-
-    // Build old→new string map for remapping ID references inside parent data.
-    const oldIdToNewId = new Map<string, string>();
-
-    for (const [oldId, { newBlock }] of oldIdToEntry) {
-      oldIdToNewId.set(oldId, newBlock.id);
-    }
-
-    // Pass 2: insert root blocks with child IDs remapped in their data.
-    // Skip replace when children were pre-inserted to avoid replacing a
-    // just-inserted child paragraph rather than the original empty block.
-    roots.forEach(({ sanitized, original }, idx) => {
-      const remappedData = oldIdToNewId.size > 0
-        ? remapIds(sanitized.data, oldIdToNewId) as typeof sanitized.data
-        : sanitized.data;
-
-      const block = BlockManager.insert({
-        tool: sanitized.tool,
-        data: remappedData,
-        replace: idx === 0 && shouldReplaceFirst && children.length === 0,
+        oldIdToEntry.set(original.id, { newBlock: block, original });
+        Caret.setToBlock(block, Caret.positions.END);
       });
 
-      oldIdToEntry.set(original.id, { newBlock: block, original });
-      Caret.setToBlock(block, Caret.positions.END);
-    });
+      // Build old→new string map for remapping ID references inside parent data.
+      const oldIdToNewId = new Map<string, string>();
 
-    /**
-     * Restore parent-child hierarchy using the old-to-new ID mapping.
-     * Only restores relationships where both parent and child are in the pasted set.
-     */
-    for (const [, { newBlock, original }] of oldIdToEntry) {
-      if (original.parentId === undefined || original.parentId === null) {
-        continue;
+      for (const [oldId, { newBlock }] of oldIdToEntry) {
+        oldIdToNewId.set(oldId, newBlock.id);
       }
 
-      const parentEntry = oldIdToEntry.get(original.parentId);
+      // Pass 2: insert root blocks with child IDs remapped in their data.
+      // Skip replace when children were pre-inserted to avoid replacing a
+      // just-inserted child paragraph rather than the original empty block.
+      roots.forEach(({ sanitized, original }, idx) => {
+        const remappedData = oldIdToNewId.size > 0
+          ? remapIds(sanitized.data, oldIdToNewId) as typeof sanitized.data
+          : sanitized.data;
 
-      if (parentEntry === undefined) {
-        continue;
+        const block = BlockManager.insert({
+          tool: sanitized.tool,
+          data: remappedData,
+          replace: idx === 0 && shouldReplaceFirst && children.length === 0,
+        });
+
+        oldIdToEntry.set(original.id, { newBlock: block, original });
+        Caret.setToBlock(block, Caret.positions.END);
+      });
+
+      /**
+       * Restore parent-child hierarchy using the old-to-new ID mapping.
+       * Only restores relationships where both parent and child are in the pasted set.
+       */
+      for (const [, { newBlock, original }] of oldIdToEntry) {
+        if (original.parentId === undefined || original.parentId === null) {
+          continue;
+        }
+
+        const parentEntry = oldIdToEntry.get(original.parentId);
+
+        if (parentEntry === undefined) {
+          continue;
+        }
+
+        // Route through the canonical reparent API — it handles old-parent
+        // splice, new-parent push, DOM reparent into the container's children
+        // wrapper, collapsed-hidden state sync, and the Yjs parentId +
+        // contentIds companion writes. Direct parentId/contentIds mutations
+        // bypass every one of those and reintroduce the callout paste
+        // ejection bug family.
+        BlockManager.setBlockParent(newBlock, parentEntry.newBlock.id);
       }
+    };
 
-      // Route through the canonical reparent API — it handles old-parent
-      // splice, new-parent push, DOM reparent into the container's children
-      // wrapper, collapsed-hidden state sync, and the Yjs parentId +
-      // contentIds companion writes. Direct parentId/contentIds mutations
-      // bypass every one of those and reintroduce the callout paste
-      // ejection bug family.
-      BlockManager.setBlockParent(newBlock, parentEntry.newBlock.id);
+    // Older test mocks may not expose transactForTool; fall through
+    // gracefully in that case so unrelated suites keep working.
+    if (typeof BlockManager.transactForTool === 'function') {
+      BlockManager.transactForTool(runInsertPasses);
+    } else {
+      runInsertPasses();
     }
   }
 }

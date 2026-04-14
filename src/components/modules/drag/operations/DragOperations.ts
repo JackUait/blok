@@ -20,6 +20,25 @@ export interface DuplicateResult {
   targetIndex: number;
 }
 
+/**
+ * Precomputed duplicate plan — all the async work (block.save() awaits,
+ * stale-reference guards) is done, leaving only synchronous Yjs writes for
+ * `applyDuplicates`. This split lets `handleDuplicate` wrap the sync tail
+ * in `BlockManager.transactForTool` so every insert + setBlockParent call
+ * collapses into one undo stack item.
+ */
+export interface DuplicatePreparation {
+  sortedBlocks: Block[];
+  sourceIds: Set<string>;
+  validResults: Array<{
+    saved: { data: Record<string, unknown>; tunes: Record<string, unknown> };
+    toolName: string;
+  }>;
+  baseInsertIndex: number;
+  /** null when pre-save stale guards aborted or post-save liveTargetIndex was -1. */
+  aborted: boolean;
+}
+
 export interface BlockManagerAdapter {
   getBlockIndex(block: Block): number;
   getBlockByIndex(index: number): Block | undefined;
@@ -97,17 +116,21 @@ export class DragOperations {
   }
 
   /**
-   * Duplicates blocks at a new position
-   * @param sourceBlocks - Blocks to duplicate
-   * @param targetBlock - Block to insert duplicates before/after
-   * @param edge - Edge of target ('top' or 'bottom')
-   * @returns Result with duplicated blocks and target index
+   * Async phase of alt-drag duplicate. Runs all `block.save()` awaits and both
+   * stale-reference guards (Layer 11 pre-save + Layer 12 post-save), then
+   * returns a fully-computed plan. The returned plan is consumed by the
+   * synchronous {@link applyDuplicates} — that split lets callers wrap the
+   * Yjs-touching tail in a single `BlockManager.transactForTool` group so one
+   * alt-drag collapses into one undo stack item.
+   *
+   * When either stale guard trips, returns `{ aborted: true, ... }`; callers
+   * should skip `applyDuplicates` and report an empty result.
    */
-  async duplicateBlocks(
+  async prepareDuplicates(
     sourceBlocks: Block[],
     targetBlock: Block,
     edge: 'top' | 'bottom'
-  ): Promise<DuplicateResult> {
+  ): Promise<DuplicatePreparation> {
     // Stale-reference guard (alt+drag variant of the wrong-block-dropped bug).
     // Same failure mode as moveBlocks, different splice: targetIndex === -1
     // produces baseInsertIndex -1 or 0, and Blocks.insert(-1, block) calls
@@ -116,7 +139,13 @@ export class DragOperations {
     // indexOf lookup points at the wrong slot and drops an unrelated block.
     // Abort cleanly instead of duplicating stale data at the wrong position.
     if (this.blockManager.getBlockIndex(targetBlock) === -1) {
-      return { duplicatedBlocks: [], targetIndex: -1 };
+      return {
+        sortedBlocks: [],
+        sourceIds: new Set(),
+        validResults: [],
+        baseInsertIndex: -1,
+        aborted: true,
+      };
     }
 
     const hasStaleSource = sourceBlocks.some(
@@ -124,7 +153,13 @@ export class DragOperations {
     );
 
     if (hasStaleSource) {
-      return { duplicatedBlocks: [], targetIndex: -1 };
+      return {
+        sortedBlocks: [],
+        sourceIds: new Set(),
+        validResults: [],
+        baseInsertIndex: -1,
+        aborted: true,
+      };
     }
 
     // Sort blocks by current index to preserve order
@@ -152,9 +187,9 @@ export class DragOperations {
     //
     // `block.save()` is async — during those awaits, the blocks array can mutate
     // via a Yjs remote update, undo/redo, or a tool-conversion callback. The
-    // pre-save guard above (line 118) only proves the target was alive when we
-    // began; by the time Promise.all resolves, the target may be gone or at a
-    // different index.
+    // pre-save guard above only proves the target was alive when we began; by
+    // the time Promise.all resolves, the target may be gone or at a different
+    // index.
     //
     // Using a pre-save `baseInsertIndex` against a mutated array would:
     //   - insert at a stale absolute slot → divergence between flat array and DOM
@@ -165,7 +200,13 @@ export class DragOperations {
     const liveTargetIndex = this.blockManager.getBlockIndex(targetBlock);
 
     if (liveTargetIndex === -1) {
-      return { duplicatedBlocks: [], targetIndex: -1 };
+      return {
+        sortedBlocks: [],
+        sourceIds: new Set(),
+        validResults: [],
+        baseInsertIndex: -1,
+        aborted: true,
+      };
     }
 
     const baseInsertIndex = edge === 'top' ? liveTargetIndex : liveTargetIndex + 1;
@@ -174,17 +215,37 @@ export class DragOperations {
       (result): result is NonNullable<typeof result> => result !== null
     );
 
-    if (validResults.length === 0) {
-      return { duplicatedBlocks: [], targetIndex: baseInsertIndex };
+    return {
+      sortedBlocks,
+      sourceIds: new Set(sortedBlocks.map((b) => b.id)),
+      validResults,
+      baseInsertIndex,
+      aborted: false,
+    };
+  }
+
+  /**
+   * Sync phase of alt-drag duplicate. Performs the inserts and re-establishes
+   * internal parent-child relationships among the duplicated set. Every Yjs
+   * write this method emits must stay synchronous so the caller can bracket
+   * the whole thing in `BlockManager.transactForTool` for a single undo entry.
+   */
+  applyDuplicates(prep: DuplicatePreparation): DuplicateResult {
+    if (prep.aborted) {
+      return { duplicatedBlocks: [], targetIndex: prep.baseInsertIndex };
+    }
+
+    if (prep.validResults.length === 0) {
+      return { duplicatedBlocks: [], targetIndex: prep.baseInsertIndex };
     }
 
     // Insert duplicated blocks
-    const duplicatedBlocks = validResults.map(({ saved, toolName }, index) =>
+    const duplicatedBlocks = prep.validResults.map(({ saved, toolName }, index) =>
       this.blockManager.insert({
         tool: toolName,
         data: saved.data,
         tunes: saved.tunes,
-        index: baseInsertIndex + index,
+        index: prep.baseInsertIndex + index,
         needToFocus: false,
       })
     );
@@ -195,17 +256,16 @@ export class DragOperations {
     // corresponding duplicate parent rather than inheriting the drop context.
     if (this.blockManager.setBlockParent !== undefined) {
       const originalIdToDupId = new Map<string, string>();
-      const sourceIds = new Set(sortedBlocks.map(b => b.id));
 
-      sortedBlocks.forEach((originalBlock, i) => {
+      prep.sortedBlocks.forEach((originalBlock, i) => {
         originalIdToDupId.set(originalBlock.id, duplicatedBlocks[i].id);
       });
 
-      sortedBlocks.forEach((originalBlock, i) => {
+      prep.sortedBlocks.forEach((originalBlock, i) => {
         const originalParentId = originalBlock.parentId;
 
         // Only reparent if the original parent is also part of the duplicated set
-        if (originalParentId !== null && sourceIds.has(originalParentId)) {
+        if (originalParentId !== null && prep.sourceIds.has(originalParentId)) {
           const dupParentId = originalIdToDupId.get(originalParentId);
 
           if (dupParentId !== undefined && this.blockManager.setBlockParent !== undefined) {
@@ -224,7 +284,25 @@ export class DragOperations {
       });
     }
 
-    return { duplicatedBlocks, targetIndex: baseInsertIndex };
+    return { duplicatedBlocks, targetIndex: prep.baseInsertIndex };
+  }
+
+  /**
+   * Duplicates blocks at a new position.
+   *
+   * Thin compatibility wrapper around {@link prepareDuplicates} and
+   * {@link applyDuplicates} — new call sites (notably `DragController.handleDuplicate`)
+   * should call those directly so the sync tail can be wrapped in
+   * `BlockManager.transactForTool` for single-undo semantics.
+   */
+  async duplicateBlocks(
+    sourceBlocks: Block[],
+    targetBlock: Block,
+    edge: 'top' | 'bottom'
+  ): Promise<DuplicateResult> {
+    const prep = await this.prepareDuplicates(sourceBlocks, targetBlock, edge);
+
+    return this.applyDuplicates(prep);
   }
 
   /**

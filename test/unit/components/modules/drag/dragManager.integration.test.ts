@@ -2092,4 +2092,180 @@ describe("DragManager - Component Integration", () => {
       expect(yjsManagerMock.transactMoves).toHaveBeenCalledTimes(1);
     });
   });
+
+  /**
+   * History integration — the alt-drag bug:
+   *
+   * An alt-drag duplicate currently fragments into N separate Yjs UndoManager
+   * entries: one per `BlockManager.insert` inside `DragOperations.duplicateBlocks`,
+   * plus one per follow-up `setBlockParent` in `handleDuplicate`. Undoing the
+   * operation requires N+M Cmd+Z presses instead of one.
+   *
+   * The fix (and the assertion this test locks in): wrap the entire duplicate
+   * body — inserts + reparents — in a single `BlockManager.transactForTool`
+   * group, so every write collapses into one undo stack item.
+   *
+   * `transactForTool` is the correct primitive here (not `transactMoves`):
+   * duplicate is pure creation, not a move, so the move-specific machinery
+   * inside `transactMoves` would be the wrong tool. `transactForTool` simply
+   * brackets the group with `stopCapturing` boundaries and suppresses
+   * per-insert `stopCapturing` calls — exactly what creation bursts need.
+   */
+  describe("handleDuplicate history integration", () => {
+    /**
+     * Creates a block stub with a `save()` method for duplication tests.
+     */
+    const createDuplicableBlock = (
+      options: Parameters<typeof createBlockStub>[0] & {
+        saveData?: Record<string, unknown>;
+      } = {},
+    ): Block => {
+      const block = createBlockStub(options);
+      const saveData = options.saveData ?? { text: "duplicated content" };
+
+      (block as unknown as { save: () => Promise<{ data: Record<string, unknown>; tunes: Record<string, unknown> }> }).save =
+        vi.fn().mockResolvedValue({ data: saveData, tunes: {} });
+
+      return block;
+    };
+
+    it("wraps an alt-drag duplicate (2 blocks → root) in a single undo group so one Cmd+Z reverses it", async () => {
+      // Two source paragraphs at root and a target paragraph to drop past.
+      const paragraphA = createDuplicableBlock({
+        id: "p-a",
+        name: "paragraph",
+        parentId: null,
+      });
+      const paragraphB = createDuplicableBlock({
+        id: "p-b",
+        name: "paragraph",
+        parentId: null,
+      });
+      const paragraphC = createDuplicableBlock({
+        id: "p-c",
+        name: "paragraph",
+        parentId: null,
+      });
+
+      // Pre-select A and B so the drag carries both as the source set.
+      paragraphA.selected = true;
+      paragraphB.selected = true;
+
+      const allBlocks = [paragraphA, paragraphB, paragraphC];
+      const blocks = [...allBlocks];
+
+      // Track order of BlockManager writes WRT the transactForTool window so
+      // we can assert every insert AND every setBlockParent happened INSIDE it.
+      const callLog: string[] = [];
+      let insertCounter = 0;
+
+      const blockManagerMock = {
+        blocks,
+        getBlockIndex: vi.fn((b: Block) => blocks.indexOf(b)),
+        getBlockByIndex: vi.fn((i: number) => blocks[i]),
+        getBlockById: vi.fn((id: string) => blocks.find((b) => b.id === id)),
+        move: vi.fn(),
+        insert: vi.fn((config: { tool: string; data: Record<string, unknown>; index: number }) => {
+          callLog.push("insert");
+          insertCounter++;
+          const newBlock = createBlockStub({
+            id: `duplicated-${insertCounter}`,
+            name: config.tool,
+            parentId: null,
+          });
+
+          blocks.splice(config.index, 0, newBlock);
+
+          return newBlock;
+        }),
+        setBlockParent: vi.fn(() => {
+          callLog.push("setBlockParent");
+        }),
+        transactForTool: vi.fn(),
+      } as unknown as BlokModules["BlockManager"] & {
+        transactForTool: Mock;
+      };
+
+      // transactForTool should run the fn synchronously and record the call
+      // window so we can diff which writes landed inside vs outside.
+      const transactForToolCalls: string[][] = [];
+
+      (blockManagerMock.transactForTool as Mock).mockImplementation(
+        (fn: () => void) => {
+          const before = callLog.length;
+
+          fn();
+          transactForToolCalls.push(callLog.slice(before));
+        },
+      );
+
+      // BlockSelection mock needs selectedBlocks populated so the drag carries
+      // both source blocks through the state machine.
+      const blockSelectionMock = {
+        selectedBlocks: [paragraphA, paragraphB],
+        clearSelection: vi.fn(),
+        selectBlock: vi.fn(),
+      };
+
+      const { dragManager, wrapper } = createDragManager({
+        BlockManager: blockManagerMock,
+        BlockSelection:
+          blockSelectionMock as unknown as BlokModules["BlockSelection"],
+      });
+
+      document.body.appendChild(wrapper);
+      allBlocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      // Drive an alt-drag from paragraphA onto paragraphC (bottom edge).
+      const dragHandle = document.createElement("div");
+
+      dragManager.setupDragHandle(dragHandle, paragraphA);
+      dragHandle.dispatchEvent(
+        createMouseEvent("mousedown", { clientX: 100, clientY: 100 }),
+      );
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 110, clientY: 100 }),
+      );
+
+      vi.mocked(document.elementFromPoint).mockReturnValue(
+        paragraphC.holder,
+      );
+      (paragraphC.holder.getBoundingClientRect as Mock).mockReturnValue({
+        top: 100,
+        bottom: 150,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 50,
+        x: 0,
+        y: 100,
+        toJSON: () => ({}),
+      });
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 50, clientY: 140 }),
+      );
+
+      // Drop with alt key held → handleDuplicate.
+      document.dispatchEvent(createMouseEvent("mouseup", { altKey: true }));
+
+      // handleDuplicate is async; flush microtasks.
+      await vi.runAllTimersAsync();
+
+      // 1. transactForTool must be called exactly once for the whole alt-drag.
+      expect(blockManagerMock.transactForTool).toHaveBeenCalledTimes(1);
+
+      // 2. The inserts MUST have happened inside that single group.
+      expect(transactForToolCalls).toHaveLength(1);
+      const insideCount = transactForToolCalls[0].filter((c) => c === "insert").length;
+
+      expect(insideCount).toBeGreaterThanOrEqual(1);
+
+      // 3. Nothing writing to BlockManager should leak outside the group.
+      const outsideWrites = callLog.filter(
+        (_, idx) => idx < (callLog.length - transactForToolCalls[0].length),
+      );
+
+      expect(outsideWrites).toEqual([]);
+    });
+  });
 });

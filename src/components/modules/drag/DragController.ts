@@ -644,24 +644,81 @@ export class DragController extends Module {
     if (!this.operations) {
       return;
     }
-    const result = await this.operations.duplicateBlocks(sourceBlocks, targetBlock, edge);
+
+    // Run the async prep (block.save() awaits + stale guards) OUTSIDE the
+    // undo group — transactForTool is a synchronous bracket and awaiting
+    // inside it would leak writes out of the group. The returned plan holds
+    // everything `applyDuplicates` needs to run its inserts + reparents
+    // synchronously inside the bracket below.
+    const prep = await this.operations.prepareDuplicates(sourceBlocks, targetBlock, edge);
+
+    if (prep.aborted) {
+      return;
+    }
+
+    // History integration: wrap the sync tail of the alt-drag — every insert
+    // from `applyDuplicates` AND the follow-up `setBlockParent` loop that
+    // reparents duplicates to the drop target — in a single
+    // `BlockManager.transactForTool` group.
+    //
+    // Without this wrapper, an alt-drag fragments into N+M independent Y.UndoManager
+    // entries (one per insert inside `applyDuplicates`, one per setBlockParent in
+    // the reparent loop), so undoing the operation requires N+M Cmd+Z presses.
+    //
+    // `transactForTool` suppresses per-insert `stopCapturing` and brackets the
+    // group with `stopCapturing` boundaries before/after — exactly the right
+    // primitive for pure-creation bursts like duplicate (whereas `transactMoves`
+    // is move-specific and not applicable here).
+    const resultRef: { current: { duplicatedBlocks: Block[]; targetIndex: number } } = {
+      current: {
+        duplicatedBlocks: [],
+        targetIndex: prep.baseInsertIndex,
+      },
+    };
+
+    const applyAndReparent = (): void => {
+      if (!this.operations) {
+        return;
+      }
+      resultRef.current = this.operations.applyDuplicates(prep);
+
+      if (resultRef.current.duplicatedBlocks.length === 0) {
+        return;
+      }
+
+      // Set parent relationships for duplicated blocks
+      const dropParentId = this.resolveParentForDrop(targetBlock, edge, sourceBlocks);
+
+      for (const dupBlock of resultRef.current.duplicatedBlocks) {
+        if (dupBlock.parentId === dropParentId) {
+          continue;
+        }
+        this.Blok.BlockManager.setBlockParent(dupBlock, dropParentId);
+      }
+    };
+
+    if (typeof this.Blok.BlockManager.transactForTool === 'function') {
+      this.Blok.BlockManager.transactForTool(applyAndReparent);
+    } else {
+      applyAndReparent();
+    }
+
+    const result = resultRef.current;
 
     if (result.duplicatedBlocks.length === 0) {
       return;
     }
 
-    // Set parent relationships for duplicated blocks
+    // Recompute the affected-parent set from the final duplicate state so
+    // toggle tools still receive their `rendered` nudge after the group
+    // closes. Only parents that actually received a duplicate need notifying.
     const newParentId = this.resolveParentForDrop(targetBlock, edge, sourceBlocks);
     const affectedParentIds = new Set<string>();
 
     for (const dupBlock of result.duplicatedBlocks) {
-      if (dupBlock.parentId === newParentId) {
-        continue;
-      }
-      if (newParentId !== null) {
+      if (dupBlock.parentId === newParentId && newParentId !== null) {
         affectedParentIds.add(newParentId);
       }
-      this.Blok.BlockManager.setBlockParent(dupBlock, newParentId);
     }
 
     // Notify affected parent blocks so toggle tools update their visual state

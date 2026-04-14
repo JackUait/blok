@@ -124,27 +124,55 @@ export abstract class BasePasteHandler implements PasteHandler {
         : (currentBlock?.parentId ?? null);
       const insertedByIndex: Array<Awaited<ReturnType<BlokModules['BlockManager']['paste']>>> = [];
 
-      for (const [index, pasteData] of data.entries()) {
-        /**
-         * Force each pasted block into its own Yjs undo entry so that
-         * Ctrl+Z removes them one at a time.
-         *
-         * paste() wraps insert() in withAtomicOperation() which suppresses
-         * the normal stopCapturing() from currentBlockIndexValue changes.
-         * Without this, consecutive addBlock() calls within the 500ms
-         * captureTimeout get merged into a single undo entry.
-         */
-        this.Blok.YjsManager.stopCapturing();
-        const shouldReplace = index === 0 && canReplaceCurrentBlock && BlockManager.currentBlock?.isEmpty === true;
-        const block = shouldReplace
-          ? await BlockManager.paste(pasteData.tool, pasteData.event, true)
-          : await BlockManager.paste(pasteData.tool, pasteData.event);
+      /**
+       * Group every pasted block's Yjs write into a single undo entry so
+       * that one Cmd+Z removes the whole paste. transactForTool sets
+       * operations.suppressStopCapturing = true before invoking the fn and
+       * restores it in a trailing microtask, which keeps the synchronous
+       * prefix of BlockManager.paste (where the currentBlockIndex setter
+       * would otherwise fire stopCapturing) inside the group.
+       *
+       * The fn is synchronous — transactForTool does not await — so the
+       * async work is kicked off inside the fn and its promise is awaited
+       * below. Between iterations we re-suppress directly on operations to
+       * keep the entire loop body inside the same undo group even after
+       * the initial close-boundary microtask has fired.
+       */
+      const operationsBridge = (BlockManager as unknown as { operations?: { suppressStopCapturing: boolean } }).operations;
+      const pasteChainRef: { current: Promise<void> } = { current: Promise.resolve() };
 
-        Caret.setToBlock(block, Caret.positions.END);
-        insertedByIndex.push(block);
+      const runPasteLoop = (): void => {
+        pasteChainRef.current = (async (): Promise<void> => {
+          for (const [index, pasteData] of data.entries()) {
+            // Re-assert suppression on every iteration — transactForTool's
+            // close-boundary microtask may have flipped suppressStopCapturing
+            // back to false before the next paste() runs its sync prefix.
+            if (operationsBridge !== undefined) {
+              operationsBridge.suppressStopCapturing = true;
+            }
 
-        this.applyPastedBlockParent(block, pasteData, insertedByIndex, BlockManager, contextParentId);
+            const shouldReplace = index === 0 && canReplaceCurrentBlock && BlockManager.currentBlock?.isEmpty === true;
+            const block = shouldReplace
+              ? await BlockManager.paste(pasteData.tool, pasteData.event, true)
+              : await BlockManager.paste(pasteData.tool, pasteData.event);
+
+            Caret.setToBlock(block, Caret.positions.END);
+            insertedByIndex.push(block);
+
+            this.applyPastedBlockParent(block, pasteData, insertedByIndex, BlockManager, contextParentId);
+          }
+        })();
+      };
+
+      // Older test mocks may not expose transactForTool; fall through
+      // gracefully in that case so unrelated suites keep working.
+      if (typeof BlockManager.transactForTool === 'function') {
+        BlockManager.transactForTool(runPasteLoop);
+      } else {
+        runPasteLoop();
       }
+
+      await pasteChainRef.current;
 
       BlockManager.currentBlock && Caret.setToBlock(BlockManager.currentBlock, Caret.positions.END);
 

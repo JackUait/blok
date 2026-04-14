@@ -290,6 +290,54 @@ test.describe('Container hierarchy invariant gauntlet', () => {
     }, { timeout: 2000 });
   };
 
+  const performAltDragDrop = async (
+    page: Page,
+    sourceLocator: ReturnType<Page['locator']>,
+    targetLocator: ReturnType<Page['locator']>,
+    targetVerticalPosition: 'top' | 'bottom'
+  ): Promise<void> => {
+    const sourceBox = await sourceLocator.boundingBox();
+    const targetBox = await targetLocator.boundingBox();
+
+    if (sourceBox === null || targetBox === null) {
+      throw new Error('Cannot get bounding box for alt-drag source or target');
+    }
+
+    const sourceX = sourceBox.x + sourceBox.width / 2;
+    const sourceY = sourceBox.y + sourceBox.height / 2;
+    const targetX = targetBox.x + targetBox.width / 2;
+    const targetY = targetVerticalPosition === 'top'
+      ? targetBox.y + 1
+      : targetBox.y + targetBox.height - 1;
+
+    await page.mouse.move(sourceX, sourceY);
+    await page.mouse.down();
+    await page.mouse.move(targetX, targetY, { steps: 15 });
+
+    await page.waitForFunction(() => {
+      const wrapper = document.querySelector('[data-blok-interface=blok]');
+
+      return wrapper?.getAttribute('data-blok-dragging') === 'true';
+    }, { timeout: 2000 });
+
+    await page.keyboard.down('Alt');
+
+    await page.waitForFunction(() => {
+      const wrapper = document.querySelector('[data-blok-interface=blok]');
+
+      return wrapper?.getAttribute('data-blok-duplicating') === 'true';
+    }, { timeout: 2000 });
+
+    await page.mouse.up();
+    await page.keyboard.up('Alt');
+
+    await page.waitForFunction(() => {
+      const wrapper = document.querySelector('[data-blok-interface=blok]');
+
+      return wrapper?.getAttribute('data-blok-dragging') !== 'true';
+    }, { timeout: 2000 });
+  };
+
   test('drag-and-drop: paragraph reparents into callout with invariant intact', async ({ page }) => {
     const initial: OutputData = {
       blocks: [
@@ -520,6 +568,64 @@ test.describe('Container hierarchy invariant gauntlet', () => {
       'p-a',
       'p-c',
       'p-b',
+    ]);
+  });
+
+  test('alt-drag duplicate: single Cmd+Z undoes the entire duplicate operation', async ({ page }) => {
+    // Regression: alt-drag duplicate used to fragment into N separate Yjs
+    // UndoManager entries (one per insert + one per setBlockParent), so
+    // undoing required multiple Cmd+Z presses. Wrapping the sync tail of
+    // `DragController.handleDuplicate` in `BlockManager.transactForTool`
+    // collapses every write into a single undo stack item.
+    const initial: OutputData = {
+      blocks: [
+        { id: 'p-a', type: 'paragraph', data: { text: 'Alpha' } },
+        { id: 'p-b', type: 'paragraph', data: { text: 'Bravo' } },
+        { id: 'p-c', type: 'paragraph', data: { text: 'Charlie' } },
+      ],
+    };
+
+    await createBlok(page, initial);
+    await saveAndAssertInvariant(page, 'alt-drag initial');
+
+    // Alt-drag Alpha onto Charlie (bottom edge) → duplicate Alpha at root tail.
+    const alpha = page.getByTestId('block-wrapper').filter({ hasText: 'Alpha' });
+
+    await alpha.hover();
+
+    const settingsButton = page.locator(SETTINGS_BUTTON);
+
+    await expect(settingsButton).toBeVisible();
+
+    const charlie = page.getByTestId('block-wrapper').filter({ hasText: 'Charlie' });
+
+    await performAltDragDrop(page, settingsButton, charlie, 'bottom');
+
+    // 4 paragraphs: Alpha, Bravo, Charlie, Alpha-dup.
+    await expect(page.getByTestId('block-wrapper')).toHaveCount(4);
+
+    const afterAltDrag = await saveAndAssertInvariant(page, 'alt-drag after drop');
+
+    expect(afterAltDrag.blocks, 'alt-drag should duplicate to 4 blocks').toHaveLength(4);
+
+    // Focus editor before keyboard undo.
+    // eslint-disable-next-line playwright/no-nth-methods -- contenteditable has no role/testid
+    await page.locator('[data-blok-id="p-a"] [contenteditable]').first().click();
+
+    await page.keyboard.press(UNDO_COMBO);
+
+    // A single Cmd+Z must fully reverse the alt-drag — back to 3 paragraphs.
+    await expect(
+      page.getByTestId('block-wrapper'),
+      'single undo should fully reverse alt-drag duplicate'
+    ).toHaveCount(3);
+
+    const afterUndo = await saveAndAssertInvariant(page, 'alt-drag after undo');
+
+    expect(afterUndo.blocks.map(b => b.id), 'order after single undo').toStrictEqual([
+      'p-a',
+      'p-b',
+      'p-c',
     ]);
   });
 });

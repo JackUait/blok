@@ -1501,7 +1501,7 @@ test.describe('yjs undo/redo', () => {
       expect(htmlAfterUndo).toBe('Start');
     });
 
-    test('undo removes multiple blocks created from paste (requires multiple undos)', async ({ page }) => {
+    test('single undo removes all blocks created from paste', async ({ page }) => {
       await createBlokWithBlocks(page, [
         {
           type: 'paragraph',
@@ -1530,20 +1530,15 @@ test.describe('yjs undo/redo', () => {
       await expect(getParagraphByIndex(page, 1).locator('[contenteditable="true"]')).toContainText('Second block');
       await expect(getParagraphByIndex(page, 2).locator('[contenteditable="true"]')).toContainText('Third block');
 
-      // Note: Multi-block paste creates separate undo entries per block
-      // First undo removes third block
-      await page.keyboard.press(UNDO_SHORTCUT);
-      await waitForDelay(page, 200);
-      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
-
-      // Second undo removes second block
+      // A paste is grouped into ONE Yjs undo entry regardless of how many
+      // blocks it produced, so one Cmd+Z must restore the pre-paste state.
       await page.keyboard.press(UNDO_SHORTCUT);
       await waitForDelay(page, 200);
       await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
       await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toHaveText('Existing');
     });
 
-    test('undo removes blocks pasted from application/x-blok format (requires multiple undos)', async ({ page }) => {
+    test('single undo removes blocks pasted from application/x-blok format', async ({ page }) => {
       await createBlokWithBlocks(page, [
         {
           type: 'paragraph',
@@ -1568,20 +1563,15 @@ test.describe('yjs undo/redo', () => {
 
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
-      // Verify blocks were created
+      // Verify both pasted blocks were created
       await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
 
-      // Note: Multi-block paste creates separate undo entries per block
-      // First undo removes second pasted block
-      await page.keyboard.press(UNDO_SHORTCUT);
-      await waitForDelay(page, 200);
-      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
-
-      // Second undo removes first pasted block
+      // Application/x-blok paste is grouped into ONE Yjs undo entry via
+      // BlockManager.transactForTool — one Cmd+Z removes every pasted block.
       await page.keyboard.press(UNDO_SHORTCUT);
       await waitForDelay(page, 200);
 
-      // Verify all pasted blocks removed
+      // Verify all pasted blocks removed in a single undo step
       await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
       await expect(getParagraphByIndex(page, 0).locator('[contenteditable="true"]')).toHaveText('Original');
     });

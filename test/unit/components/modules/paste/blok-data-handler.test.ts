@@ -14,12 +14,17 @@ const createBlokModulesMock = (): {
   insertedBlocks: Array<{ tool: string; data: Record<string, unknown>; replace: boolean }>;
   blockInstances: Block[];
   setBlockParentMock: ReturnType<typeof vi.fn>;
+  transactForToolMock: ReturnType<typeof vi.fn>;
+  stopCapturingMock: ReturnType<typeof vi.fn>;
 } => {
   const insertedBlocks: Array<{ tool: string; data: Record<string, unknown>; replace: boolean }> = [];
   const blockInstances: Block[] = [];
   let blockCounter = 0;
 
   const blockLookup = new Map<string, Block & { parentId: string | null; contentIds: string[] }>();
+
+  const transactForToolMock = vi.fn((fn: () => void) => fn());
+  const stopCapturingMock = vi.fn();
 
   const setBlockParentMock = vi.fn((block: Block, newParentId: string | null) => {
     const target = block as Block & { parentId: string | null; contentIds: string[] };
@@ -64,6 +69,7 @@ const createBlokModulesMock = (): {
         return newBlock;
       }),
       setBlockParent: setBlockParentMock,
+      transactForTool: transactForToolMock,
     },
     Caret: {
       setToBlock: vi.fn(),
@@ -76,9 +82,19 @@ const createBlokModulesMock = (): {
         })),
       },
     },
+    YjsManager: {
+      stopCapturing: stopCapturingMock,
+    },
   } as unknown as BlokModules;
 
-  return { modules, insertedBlocks, blockInstances, setBlockParentMock };
+  return {
+    modules,
+    insertedBlocks,
+    blockInstances,
+    setBlockParentMock,
+    transactForToolMock,
+    stopCapturingMock,
+  };
 };
 
 const createToolRegistryMock = (): ToolRegistry => {
@@ -476,6 +492,140 @@ describe('BlokDataHandler', () => {
       expect(newTable.contentIds).toContain(newChild2.id);
       expect(newChild1.parentId).toBe(newTable.id);
       expect(newChild2.parentId).toBe(newTable.id);
+    });
+
+    it('wraps insertBlokBlocks work in a single BlockManager.transactForTool undo group', async () => {
+      // Regression guard: multi-block paste must land in ONE Yjs undo entry,
+      // not N. The Blok JSON handler wraps its children-insert + roots-insert
+      // + setBlockParent reparent passes in BlockManager.transactForTool so a
+      // single Cmd+Z removes every block the paste created.
+      const {
+        modules,
+        transactForToolMock,
+        setBlockParentMock,
+      } = createBlokModulesMock();
+      const handler = new BlokDataHandler(
+        modules,
+        createToolRegistryMock(),
+        createSanitizerBuilderMock(),
+        { sanitizer: {} }
+      );
+
+      // Track insert/setBlockParent calls that happen inside the transact body
+      // vs. after it has returned. The mock runs fn() synchronously, so any
+      // insert/setBlockParent call during fn() counts as "inside".
+      const insertMock = modules.BlockManager.insert as ReturnType<typeof vi.fn>;
+      let transactActive = false;
+      let insertsInsideTransact = 0;
+      let setBlockParentInsideTransact = 0;
+
+      transactForToolMock.mockImplementationOnce((fn: () => void) => {
+        transactActive = true;
+        try {
+          fn();
+        } finally {
+          transactActive = false;
+        }
+      });
+
+      const originalInsertImpl = insertMock.getMockImplementation() as
+        | ((options: { tool: string; data: Record<string, unknown>; replace: boolean }) => Block)
+        | undefined;
+
+      insertMock.mockImplementation((options: { tool: string; data: Record<string, unknown>; replace: boolean }) => {
+        if (transactActive) {
+          insertsInsideTransact++;
+        }
+
+        return originalInsertImpl!(options);
+      });
+
+      const originalSetBlockParentImpl = setBlockParentMock.getMockImplementation() as
+        | ((block: Block, newParentId: string | null) => void)
+        | undefined;
+
+      setBlockParentMock.mockImplementation((block: Block, newParentId: string | null) => {
+        if (transactActive) {
+          setBlockParentInsideTransact++;
+        }
+        originalSetBlockParentImpl!(block, newParentId);
+      });
+
+      // 3-block paste: callout parent + 2 child paragraphs. Exercises
+      // Pass 1 (children), Pass 2 (root), and the reparent loop — all three
+      // stages must happen inside the single transactForTool call.
+      const pasteData = JSON.stringify([
+        {
+          id: 'cal-1',
+          tool: 'callout',
+          data: { emoji: '💡', color: 'default' },
+          parentId: null,
+          contentIds: ['cal-child-1', 'cal-child-2'],
+        },
+        {
+          id: 'cal-child-1',
+          tool: 'paragraph',
+          data: { text: 'First nested line' },
+          parentId: 'cal-1',
+          contentIds: [],
+        },
+        {
+          id: 'cal-child-2',
+          tool: 'paragraph',
+          data: { text: 'Second nested line' },
+          parentId: 'cal-1',
+          contentIds: [],
+        },
+      ]);
+
+      await handler.handle(pasteData, { canReplaceCurrentBlock: false });
+
+      // Exactly one transactForTool call wraps the paste.
+      expect(transactForToolMock).toHaveBeenCalledTimes(1);
+      // Both children and the callout root inserted inside the transact.
+      expect(insertsInsideTransact).toBe(3);
+      // Two reparent edges happened inside the transact (one per child).
+      expect(setBlockParentInsideTransact).toBe(2);
+    });
+
+    it('does not call YjsManager.stopCapturing between pasted blocks', async () => {
+      // The Blok JSON handler must not fire explicit stopCapturing between
+      // block inserts — doing so splits the paste into N undo entries. With
+      // the transactForTool wrapper in place, grouping is handled at its
+      // boundaries (before+after the whole fn), and the handler itself must
+      // not call stopCapturing.
+      const { modules, stopCapturingMock } = createBlokModulesMock();
+      const handler = new BlokDataHandler(
+        modules,
+        createToolRegistryMock(),
+        createSanitizerBuilderMock(),
+        { sanitizer: {} }
+      );
+
+      const pasteData = JSON.stringify([
+        {
+          id: 'p-1',
+          tool: 'paragraph',
+          data: { text: 'First' },
+        },
+        {
+          id: 'p-2',
+          tool: 'paragraph',
+          data: { text: 'Second' },
+        },
+        {
+          id: 'p-3',
+          tool: 'paragraph',
+          data: { text: 'Third' },
+        },
+      ]);
+
+      await handler.handle(pasteData, { canReplaceCurrentBlock: false });
+
+      // The handler itself must not call stopCapturing. The transactForTool
+      // mock ((fn) => fn()) bypasses the real boundary stopCapturing calls,
+      // so any invocation recorded here comes from the handler's own code.
+      expect(stopCapturingMock).not.toHaveBeenCalled();
     });
 
     it('replaces current block when pasting flat blocks (no children) with canReplaceCurrentBlock true', async () => {

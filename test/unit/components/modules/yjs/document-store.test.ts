@@ -18,7 +18,7 @@ describe('DocumentStore', () => {
 
   describe('initialization', () => {
     it('creates Y.Doc on construction', () => {
-      expect(store.ydoc).toBeDefined();
+      expect((store as unknown as { ydoc: unknown }).ydoc).toBeDefined();
       expect(store.yblocks).toBeDefined();
     });
 

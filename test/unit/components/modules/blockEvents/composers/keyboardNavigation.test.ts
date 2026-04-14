@@ -371,7 +371,7 @@ describe('KeyboardNavigation', () => {
 
       const newBlock = createBlock({ id: 'new-block' });
       const setBlockParent = vi.fn();
-      const insertDefaultBlockAtIndex = vi.fn(() => newBlock);
+      const insertDefaultBlockAtIndex = vi.fn((_index: number, ..._rest: boolean[]): Block => newBlock);
       const getBlockById = vi.fn((id: string) => {
         if (id === toggleParentId) return toggleParent;
         if (id === childBlockId) return emptyChildBlock;
@@ -548,7 +548,7 @@ describe('KeyboardNavigation', () => {
       const newBlock = createBlock({ id: 'new-block' });
       const setBlockParent = vi.fn();
       const move = vi.fn();
-      const insertDefaultBlockAtIndex = vi.fn(() => newBlock);
+      const insertDefaultBlockAtIndex = vi.fn((_index: number, ..._rest: boolean[]): Block => newBlock);
       const getBlockIndex = vi.fn((block: Block) => {
         if (block === calloutParent) return 0;
         if (block === emptyLastChild) return 2;
@@ -607,7 +607,7 @@ describe('KeyboardNavigation', () => {
     it('inserts block below (not above) when the current block is empty', () => {
       const emptyBlock = createBlock({ isEmpty: true });
       const insertedBlock = createBlock({ id: 'inserted-block' });
-      const insertDefaultBlockAtIndex = vi.fn(() => insertedBlock);
+      const insertDefaultBlockAtIndex = vi.fn((_index: number, ..._rest: boolean[]): Block => insertedBlock);
       const split = vi.fn(() => insertedBlock);
       const setToBlock = vi.fn();
       const moveAndOpen = vi.fn();
@@ -668,7 +668,7 @@ describe('KeyboardNavigation', () => {
       });
 
       const setBlockParent = vi.fn();
-      const insertDefaultBlockAtIndex = vi.fn(() => newBlock);
+      const insertDefaultBlockAtIndex = vi.fn((_index: number, ..._rest: boolean[]): Block => newBlock);
 
       const blok = createBlokModules({
         BlockManager: {

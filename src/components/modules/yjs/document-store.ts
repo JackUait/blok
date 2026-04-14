@@ -1,7 +1,7 @@
 import * as Y from 'yjs';
 
 import type { YBlockSerializer, YjsOutputBlockData } from './serializer';
-import type { TransactionOrigin } from './types';
+import type { LocalOriginTag } from './types';
 import { equals } from '../../utils/object';
 
 // Re-export YjsOutputBlockData as DocumentStoreBlockData for consistency
@@ -97,7 +97,11 @@ export class DocumentStore {
    * @param toIndex - Target index (the final position where the block should end up)
    * @param origin - Transaction origin
    */
-  public moveBlock(id: string, toIndex: number, origin: TransactionOrigin): void {
+  public moveBlock(
+    id: string,
+    toIndex: number,
+    origin: 'local' | 'move-undo' | 'move-redo'
+  ): void {
     const fromIndex = this.findBlockIndex(id);
 
     if (fromIndex === -1) {
@@ -112,7 +116,7 @@ export class DocumentStore {
     // Use the origin for the transaction:
     // - 'local' for user-initiated moves (we use 'move' so Yjs UndoManager doesn't track them)
     // - 'move-undo' / 'move-redo' for our custom undo/redo (maps to 'undo'/'redo' for DOM sync)
-    const transactionOrigin = origin === 'local' ? 'move' : origin;
+    const transactionOrigin: LocalOriginTag = origin === 'local' ? 'move' : origin;
 
     this.transact(() => {
       const yblock = this.yblocks.get(fromIndex);
@@ -246,7 +250,7 @@ export class DocumentStore {
    * @param fn - Function containing Yjs operations to execute atomically
    * @param origin - Transaction origin
    */
-  public transact(fn: () => void, origin: TransactionOrigin): void {
+  public transact(fn: () => void, origin: LocalOriginTag): void {
     this.ydoc.transact(fn, origin);
   }
 

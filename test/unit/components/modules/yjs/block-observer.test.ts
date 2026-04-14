@@ -1,7 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as Y from 'yjs';
 import { BlockObserver } from '../../../../../src/components/modules/yjs/block-observer';
-import type { BlockChangeEvent } from '../../../../../src/components/modules/yjs/types';
+import {
+  LOCAL_ORIGIN_TAGS,
+  type BlockChangeEvent,
+  type LocalOriginTag,
+} from '../../../../../src/components/modules/yjs/types';
 
 type SingleBlockEvent = Extract<BlockChangeEvent, { blockId: string }>;
 type BatchBlockEvent = Extract<BlockChangeEvent, { blockIds: string[] }>;
@@ -225,6 +229,19 @@ describe('BlockObserver', () => {
 
     it('maps unknown origin to "remote"', () => {
       expect(observer.mapTransactionOrigin('unknown')).toBe('remote');
+    });
+
+    // Regression guard: every tag in LOCAL_ORIGIN_TAGS must map to a
+    // non-'remote' classification. If a future dev adds a new origin string
+    // without teaching the mapper, this test fails in CI before the silent
+    // `setData(staleYjsData)` clobber bug can reappear. See block-observer.ts
+    // and the original table-row-removal regression for context.
+    it('maps every LOCAL_ORIGIN_TAGS entry away from "remote"', () => {
+      for (const tag of LOCAL_ORIGIN_TAGS) {
+        const mapped = observer.mapTransactionOrigin(tag satisfies LocalOriginTag);
+
+        expect(mapped, `tag "${tag}" must not fall through to "remote"`).not.toBe('remote');
+      }
     });
   });
 

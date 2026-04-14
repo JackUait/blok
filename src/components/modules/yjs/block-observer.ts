@@ -1,9 +1,11 @@
 import * as Y from 'yjs';
 
-import type {
-  BlockChangeEvent,
-  BlockChangeCallback,
-  TransactionOrigin,
+import {
+  LOCAL_ORIGIN_TAGS,
+  type BlockChangeEvent,
+  type BlockChangeCallback,
+  type LocalOriginTag,
+  type TransactionOrigin,
 } from './types';
 
 /**
@@ -66,45 +68,64 @@ export class BlockObserver {
 
   /**
    * Map transaction origin to event origin.
+   *
+   * Input shapes:
+   *  - `Y.UndoManager` instance → `'undo'` or `'redo'`
+   *  - `LocalOriginTag` string  → mapped by the exhaustive switch below
+   *  - anything else            → `'remote'` (treated as a peer update)
+   *
+   * IMPORTANT: the switch is exhaustive over `LOCAL_ORIGIN_TAGS`. Adding a
+   * new tag there without teaching this switch is a compile error via the
+   * `satisfies never` guard, and the enumeration test in
+   * `block-observer.test.ts` catches any runtime drift. Do not add a local
+   * origin tag that silently falls through to `'remote'` — that is the
+   * exact bug class that broke `ensureCellHasBlock` → table row deletion.
    */
   public mapTransactionOrigin(origin: unknown): TransactionOrigin {
-    if (origin === 'local') {
-      return 'local';
-    }
-
-    if (origin === 'load') {
-      return 'load';
-    }
-
     if (this.undoManager && origin === this.undoManager) {
       return this.undoManager.undoing ? 'undo' : 'redo';
     }
 
-    // Handle custom move origins for our application-level move undo/redo
-    if (origin === 'move') {
-      return 'local';
+    if (!this.isLocalOriginTag(origin)) {
+      return 'remote';
     }
 
-    if (origin === 'move-undo') {
-      return 'undo';
-    }
+    switch (origin) {
+      case 'local':
+        return 'local';
+      case 'load':
+        return 'load';
+      // `no-capture` is used by `DocumentStore.transactWithoutCapture` for
+      // local writes that must bypass the undo stack (auto-repair inserts,
+      // drag-move parent rewrites replayed by undo/redo, etc). They are
+      // LOCAL authoring writes — mapping them to `'remote'` would make
+      // `BlockYjsSync` call `setData(staleYjsData)` on the authoring block
+      // mid-operation and wipe any in-memory state the tool had written
+      // ahead of Yjs (e.g. Table's local model after `model.addRow()`).
+      case 'no-capture':
+        return 'local';
+      case 'move':
+        return 'local';
+      case 'move-undo':
+        return 'undo';
+      case 'move-redo':
+        return 'redo';
+      default: {
+        const _exhaustive: never = origin;
 
-    if (origin === 'move-redo') {
-      return 'redo';
+        return _exhaustive;
+      }
     }
+  }
 
-    // `no-capture` origin is used by `DocumentStore.transactWithoutCapture` for
-    // local writes that must not land on the undo stack (auto-repair inserts,
-    // drag-move parent rewrites replayed by undo/redo, etc). These are LOCAL
-    // operations — mapping them to 'remote' would make `BlockYjsSync` call
-    // `setData(staleYjsData)` on the authoring block mid-operation, clobbering
-    // any in-memory state the tool had ahead of Yjs (e.g. Table's local model
-    // after `model.addRow()` before the data-field write has committed).
-    if (origin === 'no-capture') {
-      return 'local';
-    }
-
-    return 'remote';
+  /**
+   * Type guard for known local-authored origin tags.
+   */
+  private isLocalOriginTag(value: unknown): value is LocalOriginTag {
+    return (
+      typeof value === 'string' &&
+      (LOCAL_ORIGIN_TAGS as readonly string[]).includes(value)
+    );
   }
 
   /**

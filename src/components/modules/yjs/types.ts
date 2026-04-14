@@ -10,8 +10,9 @@ export type BlockChangeEvent =
   | { type: 'batch-add'; blockIds: string[]; origin: TransactionOrigin };
 
 /**
- * Transaction origin types.
- * Includes 'move' and 'move-undo'/'move-redo' for custom move handling.
+ * Transaction origin types AFTER classification by
+ * `BlockObserver.mapTransactionOrigin`. This is what downstream consumers
+ * (e.g. `BlockYjsSync`) see on a `BlockChangeEvent`.
  */
 export type TransactionOrigin =
   | 'local'
@@ -22,6 +23,30 @@ export type TransactionOrigin =
   | 'move'
   | 'move-undo'
   | 'move-redo';
+
+/**
+ * Whitelist of raw origin tags that our own code passes to `Y.Doc.transact`.
+ *
+ * Adding a new local-authored origin tag? You MUST:
+ *   1. Add it here.
+ *   2. Handle it explicitly in `BlockObserver.mapTransactionOrigin`.
+ *
+ * The mapper's exhaustiveness check and the `block-observer.test.ts`
+ * enumeration test will otherwise fail CI — preventing a repeat of the
+ * table-row-removal bug where `'no-capture'` silently fell through to
+ * `'remote'` and made `BlockYjsSync` clobber the authoring tool's state
+ * with stale Yjs data mid-operation.
+ */
+export const LOCAL_ORIGIN_TAGS = [
+  'local',
+  'load',
+  'no-capture',
+  'move',
+  'move-undo',
+  'move-redo',
+] as const;
+
+export type LocalOriginTag = (typeof LOCAL_ORIGIN_TAGS)[number];
 
 /**
  * Callback for block change events

@@ -1039,6 +1039,24 @@ export class BlockManager extends Module {
    * Moves the current block up by one position
    */
   public moveCurrentBlockUp(): void {
+    /**
+     * Layer 21: block move shortcuts while a drag is in progress.
+     *
+     * Regression: "wrong block dropped" family. Cmd/Ctrl+Shift+ArrowUp routes
+     * through BlockShortcuts → this method → BlockOperations.moveCurrentBlockUp,
+     * which mutates the flat blocks array. If DragController is mid-drag (it
+     * holds live source/target Block references captured on dragstart), the
+     * array reshuffle leaves its stored indices pointing at the wrong rows
+     * and handleDrop silently drops an unrelated block.
+     *
+     * Mirrors the Cmd+Z-during-drag guard (layer 18) and the paste-during-drag
+     * guard (layer 20): swallow the shortcut so the drag completes cleanly,
+     * then the user can retry the move.
+     */
+    if (this.Blok.DragManager?.isDragging) {
+      return;
+    }
+
     this._currentBlockIndex = this.operations.currentBlockIndexValue;
     this.operations.moveCurrentBlockUp(this.blocksStore);
     this._currentBlockIndex = this.operations.currentBlockIndexValue;
@@ -1048,6 +1066,11 @@ export class BlockManager extends Module {
    * Moves the current block down by one position
    */
   public moveCurrentBlockDown(): void {
+    // Layer 21: see moveCurrentBlockUp above for rationale.
+    if (this.Blok.DragManager?.isDragging) {
+      return;
+    }
+
     this._currentBlockIndex = this.operations.currentBlockIndexValue;
     this.operations.moveCurrentBlockDown(this.blocksStore);
     this._currentBlockIndex = this.operations.currentBlockIndexValue;

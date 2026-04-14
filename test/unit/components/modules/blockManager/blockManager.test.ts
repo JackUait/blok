@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import * as Y from 'yjs';
 import { BlockManager } from '../../../../../src/components/modules/blockManager/blockManager';
+import { BlockHierarchy } from '../../../../../src/components/modules/blockManager/hierarchy';
+import { BlockRepository } from '../../../../../src/components/modules/blockManager/repository';
+import type { BlocksStore } from '../../../../../src/components/modules/blockManager/types';
+import { Blocks } from '../../../../../src/components/blocks';
+import type { Block } from '../../../../../src/components/block';
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
@@ -207,5 +213,73 @@ describe('BlockManager.setPointerDragActive', () => {
     blockManager.setPointerDragActive(false);
     priv.blockDidMutated(BlockChangedMutationType, createBlockStub(), {});
     expect(syncSpy).toHaveBeenCalledOnce();
+  });
+});
+
+describe('BlockManager.moveCurrentBlockUp/Down (drag guard)', () => {
+  const createBlockManagerWithOps = (isDragging: boolean): {
+    blockManager: BlockManager;
+    moveUpSpy: ReturnType<typeof vi.fn>;
+    moveDownSpy: ReturnType<typeof vi.fn>;
+  } => {
+    const blockManager = new BlockManager(createModuleConfig());
+    const moveUpSpy = vi.fn();
+    const moveDownSpy = vi.fn();
+
+    (blockManager as unknown as Record<string, unknown>).operations = {
+      suppressStopCapturing: false,
+      currentBlockIndexValue: 0,
+      moveCurrentBlockUp: moveUpSpy,
+      moveCurrentBlockDown: moveDownSpy,
+    };
+    // eslint-disable-next-line internal-unit-test/prefer-public-api -- guard test needs a sentinel blocksStore
+    (blockManager as unknown as Record<string, unknown>)._blocks = {};
+
+    blockManager.state = {
+      YjsManager: { stopCapturing: vi.fn() },
+      DragManager: { isDragging },
+    } as unknown as BlokModules;
+
+    return { blockManager, moveUpSpy, moveDownSpy };
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('does NOT call operations.moveCurrentBlockUp while a drag is active (regression: wrong-block-dropped)', () => {
+    const { blockManager, moveUpSpy } = createBlockManagerWithOps(true);
+
+    blockManager.moveCurrentBlockUp();
+
+    expect(moveUpSpy).not.toHaveBeenCalled();
+  });
+
+  it('does NOT call operations.moveCurrentBlockDown while a drag is active (regression: wrong-block-dropped)', () => {
+    const { blockManager, moveDownSpy } = createBlockManagerWithOps(true);
+
+    blockManager.moveCurrentBlockDown();
+
+    expect(moveDownSpy).not.toHaveBeenCalled();
+  });
+
+  it('calls operations.moveCurrentBlockUp when no drag is active', () => {
+    const { blockManager, moveUpSpy } = createBlockManagerWithOps(false);
+
+    blockManager.moveCurrentBlockUp();
+
+    expect(moveUpSpy).toHaveBeenCalledOnce();
+  });
+
+  it('calls operations.moveCurrentBlockDown when no drag is active', () => {
+    const { blockManager, moveDownSpy } = createBlockManagerWithOps(false);
+
+    blockManager.moveCurrentBlockDown();
+
+    expect(moveDownSpy).toHaveBeenCalledOnce();
   });
 });

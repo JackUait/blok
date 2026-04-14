@@ -213,6 +213,16 @@ describe('BlockObserver', () => {
       expect(observer.mapTransactionOrigin('move-redo')).toBe('redo');
     });
 
+    // Regression: 'no-capture' is used by DocumentStore.transactWithoutCapture
+    // for local auto-repair writes (e.g. Table.ensureCellHasBlock inserting a
+    // placeholder paragraph after Insert Row Below). Before the fix this
+    // origin fell through to the `'remote'` default, which made BlockYjsSync
+    // call `Table.setData(staleYjsData)` mid-operation and clobbered the
+    // just-inserted row, making the row undeletable afterwards.
+    it('maps "no-capture" origin to "local"', () => {
+      expect(observer.mapTransactionOrigin('no-capture')).toBe('local');
+    });
+
     it('maps unknown origin to "remote"', () => {
       expect(observer.mapTransactionOrigin('unknown')).toBe('remote');
     });

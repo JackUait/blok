@@ -356,6 +356,54 @@ test.describe('Row and Column Grip Controls', () => {
     expect(thirdCellText?.trim()).toBe('C');
   });
 
+  // Regression: inserting a row via the grip popover and immediately deleting
+  // a row in the same session used to leave a phantom DOM row that could not
+  // be removed. Root cause: `ensureCellHasBlock` runs its placeholder insert
+  // inside `transactWithoutCapture`, whose `'no-capture'` origin was mapped
+  // to `'remote'` in `BlockObserver.mapTransactionOrigin`, making
+  // `BlockYjsSync` replay stale Yjs `data` onto the table mid-operation and
+  // clobber the just-inserted row. See src/components/modules/yjs/block-observer.ts.
+  test('Insert Row Below then Delete the inserted row leaves original row count', async ({ page }) => {
+    await createTable2x2(page);
+
+    const firstCell = page.locator(`${CELL_SELECTOR} >> nth=0`);
+
+    await firstCell.click();
+
+    const firstRowGrip = page.locator(`${ROW_GRIP_SELECTOR} >> nth=0`);
+
+    await expect(firstRowGrip).toBeVisible();
+    await firstRowGrip.click();
+    await page.getByText('Insert Row Below').click();
+
+    await expect(page.locator('[data-blok-table-row]')).toHaveCount(3);
+
+    // The inserted row is at index 1. Click one of its cells so the row grip
+    // for row 1 becomes visible, then open that grip's popover and delete.
+    const insertedRowCell = page
+      .locator(`${CELL_SELECTOR} >> nth=2`)
+      .locator('[contenteditable="true"] >> nth=0');
+
+    await insertedRowCell.click();
+
+    const insertedRowGrip = page.locator(`${ROW_GRIP_SELECTOR} >> nth=1`);
+
+    await expect(insertedRowGrip).toBeVisible();
+    await insertedRowGrip.click();
+    await page.getByText('Delete').click();
+
+    await expect(page.locator('[data-blok-table-row]')).toHaveCount(2);
+
+    const saved = await page.evaluate(async () => {
+      const data = await window.blokInstance?.save();
+      const table = data?.blocks.find(b => b.type === 'table');
+
+      return (table?.data as { content: unknown[] } | undefined)?.content.length ?? -1;
+    });
+
+    expect(saved).toBe(2);
+  });
+
   test('Delete middle row via grip removes it leaving 2 rows', async ({ page }) => {
     // Initialize 3x2 table (3 rows, 2 columns)
     await createBlok(page, {

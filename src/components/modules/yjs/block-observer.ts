@@ -93,6 +93,17 @@ export class BlockObserver {
       return 'redo';
     }
 
+    // `no-capture` origin is used by `DocumentStore.transactWithoutCapture` for
+    // local writes that must not land on the undo stack (auto-repair inserts,
+    // drag-move parent rewrites replayed by undo/redo, etc). These are LOCAL
+    // operations — mapping them to 'remote' would make `BlockYjsSync` call
+    // `setData(staleYjsData)` on the authoring block mid-operation, clobbering
+    // any in-memory state the tool had ahead of Yjs (e.g. Table's local model
+    // after `model.addRow()` before the data-field write has committed).
+    if (origin === 'no-capture') {
+      return 'local';
+    }
+
     return 'remote';
   }
 

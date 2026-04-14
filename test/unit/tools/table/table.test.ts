@@ -47,6 +47,11 @@ const pointerClick = (element: HTMLElement): void => {
 const createMockAPI = (overrides: Partial<API> = {}): API => {
   const { blocks: blocksOverrides, events: eventsOverrides, ...restOverrides } = overrides as Record<string, unknown>;
 
+  // Track inserted blocks + parent assignments so save() filter (which requires
+  // getById → block whose parentId matches this table) works for tests that go
+  // through the render → initializeCells → insert flow.
+  const blockStore = new Map<string, { id: string; holder: HTMLElement; parentId: string | null }>();
+
   return {
     styles: {
       block: 'blok-block',
@@ -66,16 +71,28 @@ const createMockAPI = (overrides: Partial<API> = {}): API => {
       delete: () => {},
       getChildren: () => [],
       insert: () => {
+        const id = `mock-${Math.random().toString(36).slice(2, 8)}`;
         const holder = document.createElement('div');
 
-        holder.setAttribute('data-blok-id', `mock-${Math.random().toString(36).slice(2, 8)}`);
+        holder.setAttribute('data-blok-id', id);
 
-        return { id: `mock-${Math.random().toString(36).slice(2, 8)}`, holder };
+        const entry = { id, holder, parentId: null };
+
+        blockStore.set(id, entry);
+
+        return entry;
       },
       getCurrentBlockIndex: () => 0,
-      getBlocksCount: () => 0,
+      getBlocksCount: () => blockStore.size,
       getBlockIndex: () => undefined,
-      setBlockParent: vi.fn(),
+      getById: (id: string) => blockStore.get(id) ?? null,
+      setBlockParent: vi.fn((id: string, parentId: string) => {
+        const entry = blockStore.get(id);
+
+        if (entry !== undefined) {
+          entry.parentId = parentId;
+        }
+      }),
       transactWithoutCapture: vi.fn((fn: () => void) => fn()),
       ...(blocksOverrides as Record<string, unknown>),
     },
@@ -330,9 +347,23 @@ describe('Table Tool', () => {
     });
 
     it('saves multiple block references when initial data has them', () => {
-      const options = createTableOptions({
-        content: [[{ blocks: ['list-1', 'list-2', 'list-3'] }]],
+      const TABLE_ID = 'table-multi';
+      const mockApi = createMockAPI({
+        blocks: {
+          getById: (id: string) => ({ id, parentId: TABLE_ID } as never),
+        } as never,
       });
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: {
+          withHeadings: false,
+          withHeadingColumn: false,
+          content: [[{ blocks: ['list-1', 'list-2', 'list-3'] }]],
+        } as TableData,
+        config: {},
+        api: mockApi,
+        readOnly: false,
+        block: { id: TABLE_ID } as never,
+      };
       const table = new Table(options);
       const element = table.render();
 
@@ -444,6 +475,184 @@ describe('Table Tool', () => {
       expect(isCellWithBlocks(secondCell)).toBe(true);
       if (isCellWithBlocks(secondCell)) {
         expect(secondCell.blocks).toEqual([ownedBlock2]);
+      }
+    });
+
+    it('regression: two tables referencing the same block id — second table must not steal DOM and save must only keep owner', () => {
+      // Root-cause regression for the dodopizza article bug: block rGvmRJP10H
+      // was referenced by two different tables' data.content matrices. The
+      // second table to mount stole the DOM holder from the first, then a
+      // downstream wipe left the first table's cell empty. Full end-to-end
+      // cycle: build shared api → construct both tables → render both →
+      // rendered() both → verify mount ownership → save both → verify data.
+      const TABLE_A = 'table-a';
+      const TABLE_B = 'table-b';
+      const SHARED_ID = 'shared-rGvmRJP10H';
+
+      type MockBlock = {
+        id: string;
+        holder: HTMLElement;
+        parentId: string | null;
+        name: string;
+        preservedData: Record<string, unknown>;
+      };
+
+      const blockStore = new Map<string, MockBlock>();
+      const sharedHolder = document.createElement('div');
+
+      sharedHolder.setAttribute('data-blok-id', SHARED_ID);
+      blockStore.set(SHARED_ID, {
+        id: SHARED_ID,
+        holder: sharedHolder,
+        parentId: null,
+        name: 'paragraph',
+        preservedData: { text: 'Зеленая зона' },
+      });
+
+      const setBlockParent = vi.fn((id: string, parentId: string) => {
+        const entry = blockStore.get(id);
+
+        if (entry !== undefined) {
+          entry.parentId = parentId;
+        }
+      });
+
+      const sharedApi = {
+        styles: {},
+        i18n: { t: (k: string) => k },
+        blocks: {
+          delete: () => {},
+          getChildren: () => [],
+          insert: (name: string, data: Record<string, unknown>) => {
+            const id = `clone-${blockStore.size}`;
+            const holder = document.createElement('div');
+
+            holder.setAttribute('data-blok-id', id);
+            const entry: MockBlock = {
+              id,
+              holder,
+              parentId: null,
+              name,
+              preservedData: data ?? {},
+            };
+
+            blockStore.set(id, entry);
+
+            return entry;
+          },
+          getCurrentBlockIndex: () => 0,
+          getBlocksCount: () => blockStore.size,
+          getBlockIndex: (id: string) => {
+            const ids = Array.from(blockStore.keys());
+            const idx = ids.indexOf(id);
+
+            return idx === -1 ? undefined : idx;
+          },
+          getBlockByIndex: (idx: number) => {
+            const ids = Array.from(blockStore.keys());
+
+            return blockStore.get(ids[idx]) ?? undefined;
+          },
+          getById: (id: string) => blockStore.get(id) ?? null,
+          setBlockParent,
+          transactWithoutCapture: (fn: () => void) => fn(),
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const makeOptions = (tableId: string): BlockToolConstructorOptions<TableData, TableConfig> => ({
+        data: {
+          withHeadings: false,
+          withHeadingColumn: false,
+          content: [[{ blocks: [SHARED_ID] }]],
+        } as TableData,
+        config: {},
+        api: sharedApi,
+        readOnly: false,
+        block: { id: tableId } as never,
+      });
+
+      const tableA = new Table(makeOptions(TABLE_A));
+      const tableB = new Table(makeOptions(TABLE_B));
+
+      const elA = tableA.render();
+
+      tableA.rendered();
+
+      const elB = tableB.render();
+
+      tableB.rendered();
+
+      // Mount guard must leave sharedHolder owned by table A, NOT table B
+      expect(elA.contains(sharedHolder)).toBe(true);
+      expect(elB.contains(sharedHolder)).toBe(false);
+
+      // Block's parentId must be table A (first mount wins)
+      expect(blockStore.get(SHARED_ID)?.parentId).toBe(TABLE_A);
+
+      const savedA = tableA.save(elA);
+      const savedB = tableB.save(elB);
+
+      const cellA = savedA.content[0][0];
+      const cellB = savedB.content[0][0];
+
+      // Table A: shared block survives save
+      expect(isCellWithBlocks(cellA)).toBe(true);
+      if (isCellWithBlocks(cellA)) {
+        expect(cellA.blocks).toContain(SHARED_ID);
+      }
+
+      // Table B: SHARED_ID must NOT appear in saved data — the save filter drops
+      // it because its parentId points to table A. If a clone was mounted, only
+      // the clone ID may appear here.
+      expect(isCellWithBlocks(cellB)).toBe(true);
+      if (isCellWithBlocks(cellB)) {
+        expect(cellB.blocks).not.toContain(SHARED_ID);
+      }
+    });
+
+    it('should drop phantom block IDs whose block no longer exists (getById returns null)', () => {
+      const TABLE_ID = 'table-owner';
+      const phantomBlock = 'ghost-block-id';
+      const realBlock = 'real-block-id';
+
+      const mockApi = createMockAPI({
+        blocks: {
+          getById: (id: string) => {
+            if (id === realBlock) {
+              return { id, parentId: TABLE_ID } as never;
+            }
+
+            return null;
+          },
+        } as never,
+      });
+
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: {
+          withHeadings: false,
+          withHeadingColumn: false,
+          content: [
+            [{ blocks: [phantomBlock, realBlock] }],
+          ],
+        } as TableData,
+        config: {},
+        api: mockApi,
+        readOnly: false,
+        block: { id: TABLE_ID } as never,
+      };
+
+      const table = new Table(options);
+      const element = table.render();
+
+      const saved = table.save(element);
+
+      const cell = saved.content[0][0];
+
+      expect(isCellWithBlocks(cell)).toBe(true);
+      if (isCellWithBlocks(cell)) {
+        expect(cell.blocks).not.toContain(phantomBlock);
+        expect(cell.blocks).toEqual([realBlock]);
       }
     });
   });
@@ -2761,6 +2970,13 @@ describe('Table Tool', () => {
             holder.setAttribute('data-blok-id', [blockId1, blockId2, blockId3, blockId4][index]);
 
             return { id: [blockId1, blockId2, blockId3, blockId4][index], holder };
+          }),
+          getById: vi.fn().mockImplementation((id: string) => {
+            if ([blockId1, blockId2, blockId3, blockId4].includes(id)) {
+              return { id, parentId: 'table-readonly' };
+            }
+
+            return null;
           }),
           getBlocksCount: vi.fn().mockReturnValue(4),
         },

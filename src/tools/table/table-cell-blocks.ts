@@ -476,9 +476,15 @@ export class TableCellBlocks {
       }
 
       // Guard: if the block is already mounted in another nested container
-      // (table cell, toggle, callout, header), create a duplicate with the
-      // same tool name and data rather than stealing the DOM node.
-      if (block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`)) {
+      // (table cell, toggle, callout, header), OR its parentId already points
+      // to a different owner (race window where another table has claimed it
+      // via flat-list parent field but has not yet mounted its DOM), create a
+      // duplicate with the same tool name and data rather than stealing.
+      const hasDifferentOwner = block.parentId != null
+        && block.parentId !== ''
+        && block.parentId !== this.tableBlockId;
+
+      if (block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`) || hasDifferentOwner) {
         const duplicate = this.api.blocks.insert(
           block.name,
           block.preservedData,
@@ -529,9 +535,15 @@ export class TableCellBlocks {
       return;
     }
 
-    // Guard: skip blocks already mounted in another nested container.
-    // Without this, insertBefore would steal the DOM node from the other container.
-    if (block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`)) {
+    // Guard: skip blocks already mounted in another nested container, or whose
+    // parentId already points to a different owner (race window where another
+    // table has claimed the block via flat-list parent field but has not yet
+    // mounted its DOM). Without this, insertBefore would steal the DOM node.
+    const hasDifferentOwner = block.parentId != null
+      && block.parentId !== ''
+      && block.parentId !== this.tableBlockId;
+
+    if (block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`) || hasDifferentOwner) {
       return;
     }
 

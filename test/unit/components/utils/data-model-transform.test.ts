@@ -1768,6 +1768,31 @@ describe('data-model-transform', () => {
       expect(child.parent).toBeUndefined();
     });
 
+    it('assigns child to the first table in document order when two tables reference the same child (cross-table duplicate)', () => {
+      // Regression coverage for the dodopizza article bug: block rGvmRJP10H was
+      // listed in both table EcpQotB04_ and table oGx-emyH_h. First-writer-wins
+      // means the block's parent becomes the first table encountered in doc
+      // order. The second table's data.content still lists the id, but the
+      // save-time parent filter in Table.save() drops it.
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'tbl-first',
+          type: 'table',
+          data: { content: [[{ blocks: ['shared-child'] }]] },
+        },
+        {
+          id: 'tbl-second',
+          type: 'table',
+          data: { content: [[{ blocks: ['shared-child'] }]] },
+        },
+        { id: 'shared-child', type: 'paragraph', data: { text: 'X' } },
+      ];
+
+      const result = normalizeTableChildParents(blocks);
+
+      expect(result.find(b => b.id === 'shared-child')?.parent).toBe('tbl-first');
+    });
+
     it('keeps null/undefined-id table blocks safe (skipped, not crashing)', () => {
       const blocks: OutputBlockData[] = [
         // table block without an id — cannot be a parent target

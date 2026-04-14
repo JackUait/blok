@@ -234,6 +234,19 @@ export class TableModel {
       this.blockCellMap.delete(oldId);
     }
 
+    // Scrub each new ID from any other cell it previously occupied. Without this,
+    // reassigning a block ID from cell A to cell B would leave a dangling copy in A,
+    // producing the cross-cell duplicate references observed in the corrupted article.
+    for (const id of blockIds) {
+      const prior = this.blockCellMap.get(id);
+
+      if (prior !== undefined && (prior.row !== row || prior.col !== col)) {
+        const priorCell = this.contentGrid[prior.row][prior.col];
+
+        priorCell.blocks = priorCell.blocks.filter(existingId => existingId !== id);
+      }
+    }
+
     this.contentGrid[row][col].blocks = [...blockIds];
 
     // Add new entries to map
@@ -1430,14 +1443,34 @@ export class TableModel {
 
   /**
    * Normalize legacy content (strings) into CellContent objects.
+   *
+   * Also scrubs duplicate block IDs: if the same block ID appears in more than
+   * one cell (as in a corrupted saved document), the first occurrence in
+   * row-major order keeps it and later occurrences drop it. This preserves the
+   * invariant that every block belongs to at most one cell.
    */
   private normalizeContent(content?: LegacyCellContent[][]): CellContent[][] {
     if (!content || !Array.isArray(content)) {
       return [];
     }
 
+    const seen = new Set<string>();
+
     return content.map(row =>
-      (row ?? []).map(c => this.normalizeCell(c))
+      (row ?? []).map(c => {
+        const normalized = this.normalizeCell(c);
+
+        normalized.blocks = normalized.blocks.filter(blockId => {
+          if (seen.has(blockId)) {
+            return false;
+          }
+          seen.add(blockId);
+
+          return true;
+        });
+
+        return normalized;
+      })
     );
   }
 

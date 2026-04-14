@@ -671,8 +671,11 @@ export class Table implements BlockTool {
     const data = this.model.snapshot();
 
     // Filter out block IDs that don't belong to this table.
-    // Corrupted data may contain cross-table references; persisting them
-    // causes DOM node stealing and data loss on subsequent renders.
+    // Corrupted data may contain cross-table references or phantom IDs
+    // (blocks deleted but matrix not updated); persisting them causes DOM
+    // node stealing and data loss on subsequent renders.
+    const tableId = this.blockId ?? '';
+
     data.content = data.content.map(row =>
       row.map(cell => {
         if (!isCellWithBlocks(cell)) {
@@ -682,7 +685,7 @@ export class Table implements BlockTool {
         const filtered = cell.blocks.filter(blockId => {
           const block = this.api.blocks.getById?.(blockId);
 
-          return !block || block.parentId === this.blockId;
+          return block != null && (block.parentId ?? '') === tableId;
         });
 
         return { ...cell, blocks: filtered };

@@ -2975,6 +2975,103 @@ describe('TableCellBlocks', () => {
       expect(newContainer.contains(blockHolder)).toBe(false);
     });
 
+    it('mountBlocksInCell should clone instead of steal when block.parentId points to a different table (race window)', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      // Race window scenario: block exists with parentId pointing to another
+      // table, but its holder is NOT yet inside any nested container (Table 1
+      // has not finished rendering yet). The DOM-ancestor guard misses this
+      // case — the parentId guard must catch it.
+      const blockHolder = document.createElement('div');
+
+      blockHolder.setAttribute('data-blok-id', 'shared-block');
+      blockHolder.innerHTML = '<div>Зеленая зона</div>';
+      // NOTE: holder is intentionally detached — not inside any container with
+      // data-blok-nested-blocks. The DOM-ancestor guard must not trigger.
+
+      // New (second) table grid
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+
+      cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
+      const newContainer = document.createElement('div');
+
+      newContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(newContainer);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const duplicateHolder = document.createElement('div');
+
+      duplicateHolder.setAttribute('data-blok-id', 'cloned-block');
+
+      const api = {
+        blocks: {
+          insert: vi.fn().mockReturnValue({ id: 'cloned-block', holder: duplicateHolder }),
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'shared-block') return 0;
+
+            return undefined;
+          }),
+          getBlockByIndex: vi.fn((index: number) => {
+            if (index === 0) {
+              return {
+                id: 'shared-block',
+                holder: blockHolder,
+                name: 'paragraph',
+                preservedData: { text: 'Зеленая зона' },
+                // parentId points to a DIFFERENT table than tableBlockId below
+                parentId: 'table-1-owner',
+              };
+            }
+
+            return undefined;
+          }),
+          getBlocksCount: vi.fn().mockReturnValue(1),
+          setBlockParent: vi.fn(),
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const cellBlocks = new TableCellBlocks({
+        api,
+        gridElement,
+        tableBlockId: 'table-2-new',
+        model: createMockModel(),
+      });
+
+      const result = cellBlocks.initializeCells([[{ blocks: ['shared-block'] }]]);
+
+      // The original block's holder must NOT have been moved into the new container
+      expect(newContainer.contains(blockHolder)).toBe(false);
+
+      // A clone must have been created from the block's tool name + data
+      expect(api.blocks.insert).toHaveBeenCalledWith(
+        'paragraph',
+        { text: 'Зеленая зона' },
+        {},
+        expect.any(Number),
+        false
+      );
+
+      // The cloned holder must be in the new container, and the normalized
+      // content must reference the clone — NOT the shared-block id
+      expect(newContainer.contains(duplicateHolder)).toBe(true);
+      expect(result[0][0].blocks).toContain('cloned-block');
+      expect(result[0][0].blocks).not.toContain('shared-block');
+
+      // Critical: setBlockParent must NOT have been called with (shared-block, table-2-new).
+      // Stealing would have reparented the block; cloning must not touch the source.
+      const reparentCalls = (api.blocks.setBlockParent as ReturnType<typeof vi.fn>).mock.calls
+        .filter(c => c[0] === 'shared-block');
+
+      expect(reparentCalls).toHaveLength(0);
+    });
+
     it('should duplicate a stolen block with the same tool name and data instead of creating an empty paragraph', async () => {
       const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
@@ -3185,6 +3282,86 @@ describe('TableCellBlocks', () => {
       // The block should NOT have been moved — it must stay in the original container
       expect(originalContainer.contains(blockHolder)).toBe(true);
       expect(newContainer.contains(blockHolder)).toBe(false);
+    });
+
+    it('claimBlockForCell should not steal a block whose parentId points to another table (race window)', async () => {
+      // Regression: claimBlockForCell's only defense was a DOM check
+      // (`closest([nestedBlocks])`). If another table had claimed the block via
+      // `setBlockParent` but its cell container had not yet been appended to the
+      // document, the holder had no `nestedBlocks` ancestor, the DOM check
+      // returned null, and claimBlockForCell happily reparented the block —
+      // stealing it from the rightful owner. This test forces that race window by
+      // leaving the block's holder detached while `parentId` points to another table.
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const blockHolder = document.createElement('div');
+
+      blockHolder.setAttribute('data-blok-id', 'shared-block');
+      // Deliberately NOT attached to any nested-blocks container.
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+
+      cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
+      const newContainer = document.createElement('div');
+
+      newContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(newContainer);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const setBlockParent = vi.fn();
+      const insertedHolders: HTMLElement[] = [];
+      const api = {
+        blocks: {
+          getBlockIndex: vi.fn((id: string) => (id === 'shared-block' ? 0 : undefined)),
+          getBlockByIndex: vi.fn((index: number) => {
+            if (index === 0) {
+              return {
+                id: 'shared-block',
+                holder: blockHolder,
+                parentId: 'table-original-owner',
+                name: 'paragraph',
+                preservedData: { text: 'hi' },
+              };
+            }
+
+            return undefined;
+          }),
+          getBlocksCount: vi.fn().mockReturnValue(1),
+          insert: vi.fn((name: string) => {
+            const holder = document.createElement('div');
+
+            holder.setAttribute('data-blok-id', `clone-${insertedHolders.length}`);
+            insertedHolders.push(holder);
+
+            return { id: `clone-${insertedHolders.length - 1}`, holder, name };
+          }),
+          setBlockParent,
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const cellBlocks = new TableCellBlocks({
+        api,
+        gridElement,
+        tableBlockId: 'table-new-claimant',
+        model: createMockModel(),
+      });
+
+      cellBlocks.claimBlockForCell(cell, 'shared-block');
+
+      // The original holder must NOT be stolen into the new container
+      expect(newContainer.contains(blockHolder)).toBe(false);
+
+      // setBlockParent must NOT be called for the original shared-block id
+      const callsForShared = setBlockParent.mock.calls.filter(args => args[0] === 'shared-block');
+
+      expect(callsForShared).toHaveLength(0);
     });
   });
 });

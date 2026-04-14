@@ -5,6 +5,8 @@ import { isCellWithBlocks } from '../../../../src/tools/table/types';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 
 const createMockAPI = (): API => {
+  const blockStore = new Map<string, { id: string; holder: HTMLElement; parentId: string | null }>();
+
   return {
     styles: {
       block: 'blok-block',
@@ -23,16 +25,28 @@ const createMockAPI = (): API => {
     blocks: {
       delete: () => {},
       insert: () => {
+        const id = `mock-${Math.random().toString(36).slice(2, 8)}`;
         const holder = document.createElement('div');
 
-        holder.setAttribute('data-blok-id', `mock-${Math.random().toString(36).slice(2, 8)}`);
+        holder.setAttribute('data-blok-id', id);
 
-        return { id: `mock-${Math.random().toString(36).slice(2, 8)}`, holder };
+        const entry = { id, holder, parentId: null };
+
+        blockStore.set(id, entry);
+
+        return entry;
       },
       getCurrentBlockIndex: () => 0,
-      getBlocksCount: () => 0,
+      getBlocksCount: () => blockStore.size,
       getBlockIndex: () => undefined,
-      setBlockParent: vi.fn(),
+      getById: (id: string) => blockStore.get(id) ?? null,
+      setBlockParent: vi.fn((id: string, parentId: string) => {
+        const entry = blockStore.get(id);
+
+        if (entry !== undefined) {
+          entry.parentId = parentId;
+        }
+      }),
     },
     events: {
       on: vi.fn(),

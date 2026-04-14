@@ -436,6 +436,113 @@ describe('TableModel invariants', () => {
       expect(model.getCellBlocks(0, 1)).toEqual(['blockX']);
     });
 
+    it('invariants hold across a randomized fuzz sequence over every mutator', () => {
+      // Property: every public TableModel mutator must preserve the invariant
+      // "no block ID appears in more than one cell". This test runs a seeded
+      // pseudo-random sequence of operations and asserts validateInvariants()
+      // never throws. The seed makes failures reproducible.
+      let seed = 0x12345678;
+      const next = (): number => {
+        seed = (seed * 1664525 + 1013904223) >>> 0;
+
+        return seed;
+      };
+      const pick = <T>(arr: T[]): T => arr[next() % arr.length];
+
+      const model = new TableModel(makeData({
+        content: [
+          [cell('seed-0'), cell('seed-1'), cell('seed-2')],
+          [cell('seed-3'), cell('seed-4'), cell('seed-5')],
+          [cell('seed-6'), cell('seed-7'), cell('seed-8')],
+        ],
+      }));
+
+      expect(() => model.validateInvariants()).not.toThrow();
+
+      const runOne = (i: number): void => {
+        const op = next() % 10;
+        const rows = model.rows;
+        const cols = model.cols;
+
+        if (rows === 0 || cols === 0) {
+          model.addRow();
+
+          return;
+        }
+
+        const r = next() % rows;
+        const c = next() % cols;
+
+        switch (op) {
+          case 0:
+            model.addBlockToCell(r, c, `fuzz-${i}`);
+            break;
+          case 1: {
+            const existing = model.getCellBlocks(r, c);
+
+            if (existing.length > 0) {
+              model.removeBlockFromCell(r, c, pick(existing));
+            }
+            break;
+          }
+          case 2:
+            // Cross-cell reassign using an ID that already lives elsewhere.
+            // Uses an id drawn from a neighbouring cell when available.
+            {
+              const donorRow = (r + 1) % rows;
+              const donorCol = (c + 1) % cols;
+              const donor = model.getCellBlocks(donorRow, donorCol);
+              const ids = donor.length > 0 ? [donor[0]] : [`fuzz-${i}`];
+
+              model.setCellBlocks(r, c, ids);
+            }
+            break;
+          case 3:
+            model.addRow(r);
+            break;
+          case 4:
+            if (rows > 1) {
+              model.deleteRow(r);
+            }
+            break;
+          case 5:
+            model.addColumn(c);
+            break;
+          case 6:
+            if (cols > 1) {
+              model.deleteColumn(c);
+            }
+            break;
+          case 7:
+            if (rows > 1) {
+              model.moveRow(r, (r + 1) % rows);
+            }
+            break;
+          case 8:
+            if (cols > 1) {
+              model.moveColumn(c, (c + 1) % cols);
+            }
+            break;
+          case 9:
+            // Fresh setCellBlocks with a brand-new id; must not corrupt map.
+            model.setCellBlocks(r, c, [`fresh-${i}`]);
+            break;
+          default:
+            break;
+        }
+      };
+
+      for (let i = 0; i < 500; i++) {
+        runOne(i);
+
+        try {
+          model.validateInvariants();
+        } catch (err) {
+          throw new Error(`Invariant broke after iteration ${i}: ${(err as Error).message}`);
+        }
+      }
+    });
+
     it('invariants hold with colWidths through add and delete column sequence', () => {
       const model = new TableModel(makeData({
         content: [

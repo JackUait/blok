@@ -114,6 +114,46 @@ describe('TableModel', () => {
       expect(model.snapshot().withHeadings).toBe(true);
     });
 
+    it('dedupes duplicate block IDs across cells in corrupted input data (load-time scrub)', () => {
+      // Regression: if a saved document contains the same block ID in more than
+      // one cell of the same table (as in the corrupted dodopizza article), the
+      // constructor must scrub the duplicates at load time. Otherwise
+      // blockCellMap reports one cell while the grid still lists the id in
+      // another — the exact state that caused the phantom first-cell bug.
+      const data = makeData({
+        content: [
+          [cell('shared', 'b2'), cell('b3')],
+          [cell('b4'), cell('shared', 'b6')],
+        ],
+      });
+
+      const model = new TableModel(data);
+      const snap = model.snapshot();
+
+      // Count occurrences of "shared" across all cells
+      let occurrences = 0;
+
+      snap.content.forEach(row => row.forEach(rawCell => {
+        const contentCell = rawCell as CellContent;
+
+        occurrences += contentCell.blocks.filter(id => id === 'shared').length;
+      }));
+
+      expect(occurrences).toBe(1);
+
+      // Whichever cell still owns "shared" must be consistent with the map
+      const mapped = model.findCellForBlock('shared');
+
+      expect(mapped).not.toBeNull();
+      if (mapped) {
+        const owningCell = snap.content[mapped.row][mapped.col] as CellContent;
+
+        expect(owningCell.blocks).toContain('shared');
+      }
+
+      assertBlockCellMapConsistency(model);
+    });
+
     it('builds blockCellMap from initial data', () => {
       const data = makeData({
         content: [
@@ -426,6 +466,27 @@ describe('TableModel', () => {
     it('updates blockCellMap correctly', () => {
       model.setCellBlocks(0, 0, ['x1', 'x2']);
 
+      assertBlockCellMapConsistency(model);
+    });
+
+    it('removes stale references when a block ID already lives in another cell of the same table', () => {
+      // Regression: setCellBlocks used to overwrite contentGrid[r][c].blocks without
+      // scrubbing the ID from its previous cell. That left the same block ID in two
+      // cells simultaneously — the same class of corruption observed in the article
+      // where block rGvmRJP10H appeared in two different cells.
+      model.setCellBlocks(0, 1, ['b1']);
+
+      expect(model.getCellBlocks(0, 0)).toEqual(['b2']);
+      expect(model.getCellBlocks(0, 1)).toEqual(['b1']);
+      expect(model.findCellForBlock('b1')).toEqual({ row: 0, col: 1 });
+      assertBlockCellMapConsistency(model);
+    });
+
+    it('scrubs every duplicated ID, not just the first', () => {
+      model.setCellBlocks(0, 1, ['b1', 'b2']);
+
+      expect(model.getCellBlocks(0, 0)).toEqual([]);
+      expect(model.getCellBlocks(0, 1)).toEqual(['b1', 'b2']);
       assertBlockCellMapConsistency(model);
     });
 

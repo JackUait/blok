@@ -399,7 +399,7 @@ test('dragging callout via settings toggler reorders the callout block', async (
       afterOk: afterIdx >= 0,
       calloutAfterTarget: calloutIdx > afterIdx && afterIdx > beforeIdx,
     };
-  }).toEqual({ beforeOk: true, afterOk: true, calloutAfterTarget: true });
+  }).toStrictEqual({ beforeOk: true, afterOk: true, calloutAfterTarget: true });
 });
 
 test.describe('Callout - within-container Backspace merge', () => {
@@ -529,5 +529,48 @@ test.describe('Callout - within-container Backspace merge', () => {
     expect(child).toBeDefined();
     expect(child?.parent).toBe('callout-1');
     expect((child?.data as { text?: string } | undefined)?.text).toBe('Inside');
+  });
+
+  test('Backspace at start of first child of the second of two adjacent callouts does NOT merge across containers', async ({ page }) => {
+    // Adjacent-containers cross-boundary check: two sibling callouts, each with
+    // a child. The user places the caret at the start of the SECOND callout's
+    // first child and presses Backspace. The previous block is the first
+    // callout's last child — but it belongs to a DIFFERENT container. No merge,
+    // no reparent, no ejection.
+    await createBlok(page, {
+      blocks: [
+        { id: 'callout-a', type: 'callout', data: { emoji: '💡', color: 'default' }, content: ['child-a'] },
+        { id: 'child-a', type: 'paragraph', data: { text: 'Inside A' }, parent: 'callout-a' },
+        { id: 'callout-b', type: 'callout', data: { emoji: '💡', color: 'default' }, content: ['child-b'] },
+        { id: 'child-b', type: 'paragraph', data: { text: 'Inside B' }, parent: 'callout-b' },
+      ],
+    });
+
+    const childB = page.locator('[data-blok-toggle-children]').locator('[data-blok-id="child-b"]');
+    await childB.click();
+    await page.keyboard.press('Home');
+    await page.keyboard.press('Backspace');
+
+    const saved = await page.evaluate(async () => window.blokInstance?.save());
+    const blocks = saved?.blocks ?? [];
+
+    const childAAfter = blocks.find((b) => b.id === 'child-a');
+    const childBAfter = blocks.find((b) => b.id === 'child-b');
+
+    // Both children remain, in their own callouts, with untouched content.
+    expect(childAAfter).toBeDefined();
+    expect(childAAfter?.parent).toBe('callout-a');
+    expect((childAAfter?.data as { text?: string } | undefined)?.text).toBe('Inside A');
+
+    expect(childBAfter).toBeDefined();
+    expect(childBAfter?.parent).toBe('callout-b');
+    expect((childBAfter?.data as { text?: string } | undefined)?.text).toBe('Inside B');
+
+    // Sanity: no surprise orphan paragraphs appeared at root.
+    const orphaned = blocks.filter(
+      (b) => b.type === 'paragraph' && !b.parent
+    );
+
+    expect(orphaned).toHaveLength(0);
   });
 });

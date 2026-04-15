@@ -239,12 +239,19 @@ export class DragOperations {
       return { duplicatedBlocks: [], targetIndex: prep.baseInsertIndex };
     }
 
-    // Insert duplicated blocks
+    // Insert duplicated blocks.
+    //
+    // Deep-clone `saved.data` and `saved.tunes` so the duplicate does not share
+    // nested structures with the source. Tools like `table` return arrays from
+    // their internal state straight out of `save()`, so a shallow pass would
+    // leave the duplicate and the original mutating each other's `content`
+    // until the next save cycle — a silent data-corruption class of bug in the
+    // same family as the nested-container ejection regressions.
     const duplicatedBlocks = prep.validResults.map(({ saved, toolName }, index) =>
       this.blockManager.insert({
         tool: toolName,
-        data: saved.data,
-        tunes: saved.tunes,
+        data: structuredClone(saved.data),
+        tunes: structuredClone(saved.tunes),
         index: prep.baseInsertIndex + index,
         needToFocus: false,
       })

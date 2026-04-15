@@ -196,6 +196,46 @@ test.describe('Toggle - Backspace key behavior', () => {
       expect(child1Data?.text).toBe('Hello world');
     });
 
+    test('Backspace at start of first child of the second of two adjacent toggles does NOT merge across containers', async ({ page }) => {
+      // Two adjacent toggles, each with one child. Caret at start of the second
+      // toggle's first child. The previous block in the flat list is the first
+      // toggle's last child — a DIFFERENT parent container. Backspace must not
+      // cross the boundary.
+      await createBlok(page, {
+        blocks: [
+          { id: 'toggle-a', type: 'toggle', data: { text: 'Toggle A' }, content: ['child-a'] },
+          { id: 'child-a', type: 'paragraph', data: { text: 'Inside A' }, parent: 'toggle-a' },
+          { id: 'toggle-b', type: 'toggle', data: { text: 'Toggle B' }, content: ['child-b'] },
+          { id: 'child-b', type: 'paragraph', data: { text: 'Inside B' }, parent: 'toggle-b' },
+        ],
+      });
+
+      const childB = page.locator(TOGGLE_CHILDREN_SELECTOR).locator('[data-blok-id="child-b"]');
+      await childB.click();
+      await page.keyboard.press('Home');
+      await page.keyboard.press('Backspace');
+
+      const saved = await page.evaluate(async () => window.blokInstance?.save());
+
+      expect(saved).toBeDefined();
+
+      const allBlocks = saved?.blocks ?? [];
+
+      const childAAfter = allBlocks.find(b => b.id === 'child-a');
+      const childBAfter = allBlocks.find(b => b.id === 'child-b');
+
+      // Both children remain in their respective toggles.
+      expect(childAAfter?.parent).toBe('toggle-a');
+      expect((childAAfter?.data as { text?: string } | undefined)?.text).toBe('Inside A');
+
+      expect(childBAfter?.parent).toBe('toggle-b');
+      expect((childBAfter?.data as { text?: string } | undefined)?.text).toBe('Inside B');
+
+      // No surprise orphans.
+      const orphaned = allBlocks.filter(b => b.type === 'paragraph' && !b.parent);
+      expect(orphaned).toHaveLength(0);
+    });
+
     test('Backspace at start of non-empty child with previous sibling merges into previous sibling inside toggle', async ({ page }) => {
       // child-2 has content, cursor at position 0. Previous sibling is child-1 (same toggle).
       // Backspace should merge child-2 into child-1 (standard merge), NOT promote child-2 to root.

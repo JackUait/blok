@@ -447,6 +447,66 @@ describe('DragOperations', () => {
       expect(result.duplicatedBlocks).toEqual([newBlock]);
       // Should not throw even though blockSelection is undefined
     });
+
+    /**
+     * Regression: alt-drag duplicate used to pass `saved.data` to `insert()` by
+     * reference. Tools whose save() returns nested arrays/objects straight from
+     * their internal state (e.g. table.content) would then share those nested
+     * structures between the original and the duplicate — mutating one would
+     * silently corrupt the other until the next save cycle.
+     *
+     * The fix deep-clones `saved.data` and `saved.tunes` before insert so the
+     * duplicate is fully independent.
+     */
+    it('deep-clones nested data so the duplicate does not share references with the source', async () => {
+      const sourceBlock = createMockBlock('source', 'table', {});
+      const targetBlock = createMockBlock('target', 'paragraph', { text: 'target' });
+      const newBlock = createMockBlock('new-1', 'table', {});
+
+      const sharedContent = [[{ blocks: ['p-1'] }, { blocks: ['p-2'] }]];
+      const sharedTune = { nested: { value: 'original' } };
+
+      sourceBlock.save = vi.fn(async () => ({
+        id: 'source',
+        tool: 'table',
+        data: { content: sharedContent },
+        time: Date.now(),
+        tunes: sharedTune,
+      }));
+
+      let capturedConfig: { data: Record<string, unknown>; tunes: Record<string, unknown> } | null = null;
+
+      mockBlockManager.getBlockIndex = vi.fn(() => 0);
+      mockBlockManager.insert = vi.fn((config) => {
+        capturedConfig = config;
+
+        return newBlock;
+      });
+
+      await operations.duplicateBlocks([sourceBlock], targetBlock, 'bottom');
+
+      expect(capturedConfig).not.toBeNull();
+
+      const captured = capturedConfig as unknown as {
+        data: { content: unknown };
+        tunes: { nested: unknown };
+      };
+
+      // Reference identity: the duplicate must NOT share nested objects with the source.
+      expect(captured.data.content).not.toBe(sharedContent);
+      expect(captured.tunes.nested).not.toBe(sharedTune.nested);
+
+      // Value equality: the duplicate must still carry the same content.
+      expect(captured.data.content).toEqual(sharedContent);
+      expect(captured.tunes.nested).toEqual(sharedTune.nested);
+
+      // Mutation isolation: mutating the duplicate must not reach the source.
+      (captured.data.content as Array<Array<{ blocks: string[] }>>)[0][0].blocks.push('p-EVIL');
+      (captured.tunes.nested as { value: string }).value = 'mutated';
+
+      expect(sharedContent[0][0].blocks).toEqual(['p-1']);
+      expect(sharedTune.nested.value).toBe('original');
+    });
   });
 
   describe('moveBlocks - stale source/target (regression)', () => {

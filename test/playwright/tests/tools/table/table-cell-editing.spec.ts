@@ -434,6 +434,98 @@ test.describe('Cell Editing', () => {
 
     await expect(firstCell.locator('[data-blok-id]')).toHaveCount(1);
     await expect(firstCell).toContainText('First lineSecond line');
+
+    // Saver-level guard: after the merge, there must be no orphan paragraph
+    // containing the merged text sitting outside the table. The original bug
+    // ejected the second line into the root tree — this assertion locks the
+    // fix end-to-end and catches any regression that drifts the block out.
+    const savedData = await page.evaluate(async () => {
+      const blok = window.blokInstance;
+
+      if (!blok) {
+        throw new Error('Blok instance not found');
+      }
+
+      return blok.save();
+    });
+
+    const tableBlock = savedData.blocks.find(
+      (b: { type: string }) => b.type === 'table'
+    ) as { id: string } | undefined;
+
+    expect(tableBlock).toBeDefined();
+
+    const orphanParagraphs = savedData.blocks.filter(
+      (b: { type: string; parent?: string; data?: { text?: string } }) =>
+        b.type === 'paragraph' &&
+        b.parent !== tableBlock?.id &&
+        typeof b.data?.text === 'string' &&
+        (b.data.text.includes('First line') || b.data.text.includes('Second line'))
+    );
+
+    expect(orphanParagraphs).toHaveLength(0);
+  });
+
+  test('Backspace at start of a cell first block does not pull content across cells', async ({ page }) => {
+    // Cross-cell ejection regression. Two cells both have content. The caret is
+    // placed at the start of the FIRST block of the SECOND cell. Pressing
+    // Backspace must be a no-op — the two cells must not merge, and the first
+    // cell's content must not be pulled into the second cell (or vice versa).
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['Cell A text', 'Cell B text'], ['', '']],
+            },
+          },
+        ],
+      },
+    });
+
+    const cellA = getCell(page, 0, 0);
+    const cellB = getCell(page, 0, 1);
+    const cellBEditable = getCellEditable(page, 0, 1);
+
+    await cellBEditable.click();
+    await page.keyboard.press('Home');
+    await page.keyboard.press('Backspace');
+
+    // Both cells still have their original content and exactly one block each.
+    await expect(cellA.locator('[data-blok-id]')).toHaveCount(1);
+    await expect(cellB.locator('[data-blok-id]')).toHaveCount(1);
+    await expect(cellA).toContainText('Cell A text');
+    await expect(cellB).toContainText('Cell B text');
+
+    // Saver-level: no orphan paragraph carrying the cell content outside the table.
+    const savedData = await page.evaluate(async () => {
+      const blok = window.blokInstance;
+
+      if (!blok) {
+        throw new Error('Blok instance not found');
+      }
+
+      return blok.save();
+    });
+
+    const tableBlock = savedData.blocks.find(
+      (b: { type: string }) => b.type === 'table'
+    ) as { id: string } | undefined;
+
+    expect(tableBlock).toBeDefined();
+
+    const orphanParagraphs = savedData.blocks.filter(
+      (b: { type: string; parent?: string; data?: { text?: string } }) =>
+        b.type === 'paragraph' &&
+        b.parent !== tableBlock?.id &&
+        typeof b.data?.text === 'string' &&
+        (b.data.text.includes('Cell A text') || b.data.text.includes('Cell B text'))
+    );
+
+    expect(orphanParagraphs).toHaveLength(0);
   });
 
   test('Delete at end of first block in a cell merges the next block into it in the same cell', async ({ page }) => {

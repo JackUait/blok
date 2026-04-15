@@ -1224,6 +1224,167 @@ describe('KeyboardNavigation', () => {
 
       isCaretAtStartOfInputSpy.mockRestore();
     });
+
+    /**
+     * Callout parity: the Backspace-at-start-of-nested-child guard is written
+     * to be generic (parentId-based, not container-specific). This suite locks
+     * that invariant for callouts so a future refactor of the guard cannot
+     * silently ship an ejection regression for any nested-container tool.
+     *
+     * These tests mirror the toggle coverage above — the expected behaviour is
+     * identical, and that is exactly the point.
+     */
+    describe('handleBackspace - nested container parity (callout)', () => {
+      it('does nothing when Backspace is pressed at start of a callout first child with no previous sibling in same parent', () => {
+        const calloutParentId = 'callout-parent';
+        const childBlockId = 'callout-child';
+
+        const calloutParent = createBlock({
+          id: calloutParentId,
+          name: 'callout',
+          contentIds: [childBlockId],
+        });
+
+        const childBlock = createBlock({
+          id: childBlockId,
+          isEmpty: false,
+          parentId: calloutParentId,
+        });
+
+        const setBlockParent = vi.fn();
+        const move = vi.fn();
+        const removeBlock = vi.fn();
+        const mergeBlocks = vi.fn(() => Promise.resolve());
+
+        const blok = createBlokModules({
+          BlockManager: {
+            currentBlock: childBlock,
+            // previousBlock is the callout parent — no sibling in same parent
+            previousBlock: calloutParent,
+            currentBlockIndex: 1,
+            setBlockParent,
+            move,
+            getBlockIndex: vi.fn(),
+            getBlockById: vi.fn((id: string) => (id === calloutParentId ? calloutParent : undefined)),
+            removeBlock,
+            mergeBlocks,
+          } as unknown as BlokModules['BlockManager'],
+          Caret: {
+            setToBlock: vi.fn(),
+            navigatePrevious: vi.fn(),
+            positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+          } as unknown as BlokModules['Caret'],
+          Toolbar: {
+            close: vi.fn(),
+          } as unknown as BlokModules['Toolbar'],
+        });
+
+        const keyboardNavigation = new KeyboardNavigation(blok);
+        const event = createKeyboardEvent({ key: 'Backspace' });
+
+        const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+        keyboardNavigation.handleBackspace(event);
+
+        // Block must NOT be ejected from the callout — no reparent, no move, no merge, no remove.
+        expect(setBlockParent).not.toHaveBeenCalled();
+        expect(move).not.toHaveBeenCalled();
+        expect(mergeBlocks).not.toHaveBeenCalled();
+        expect(removeBlock).not.toHaveBeenCalled();
+        expect(event.preventDefault).toHaveBeenCalledTimes(1);
+
+        // Observable state: block remains nested inside callout parent.
+        expect(childBlock.parentId).toBe(calloutParentId);
+        expect(calloutParent.contentIds).toContain(childBlockId);
+
+        isCaretAtStartOfInputSpy.mockRestore();
+      });
+
+      it('does not merge across sibling callouts when Backspace is pressed at start of the first child of a later callout', () => {
+        const firstCalloutId = 'callout-first';
+        const secondCalloutId = 'callout-second';
+        const firstCalloutChildId = 'first-callout-child';
+        const secondCalloutChildId = 'second-callout-child';
+
+        const firstCallout = createBlock({
+          id: firstCalloutId,
+          name: 'callout',
+          contentIds: [firstCalloutChildId],
+        });
+
+        const secondCallout = createBlock({
+          id: secondCalloutId,
+          name: 'callout',
+          contentIds: [secondCalloutChildId],
+        });
+
+        // previousBlock belongs to a DIFFERENT callout container — this is the
+        // cross-container drift scenario. We must not merge across the boundary.
+        const previousChild = createBlock({
+          id: firstCalloutChildId,
+          isEmpty: false,
+          parentId: firstCalloutId,
+        });
+
+        const currentChild = createBlock({
+          id: secondCalloutChildId,
+          isEmpty: false,
+          parentId: secondCalloutId,
+        });
+
+        const setBlockParent = vi.fn();
+        const move = vi.fn();
+        const removeBlock = vi.fn();
+        const mergeBlocks = vi.fn(() => Promise.resolve());
+
+        const blok = createBlokModules({
+          BlockManager: {
+            currentBlock: currentChild,
+            previousBlock: previousChild,
+            currentBlockIndex: 3,
+            setBlockParent,
+            move,
+            getBlockIndex: vi.fn(),
+            getBlockById: vi.fn((id: string) => {
+              if (id === firstCalloutId) return firstCallout;
+              if (id === secondCalloutId) return secondCallout;
+
+              return undefined;
+            }),
+            removeBlock,
+            mergeBlocks,
+          } as unknown as BlokModules['BlockManager'],
+          Caret: {
+            setToBlock: vi.fn(),
+            navigatePrevious: vi.fn(),
+            positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+          } as unknown as BlokModules['Caret'],
+          Toolbar: {
+            close: vi.fn(),
+          } as unknown as BlokModules['Toolbar'],
+        });
+
+        const keyboardNavigation = new KeyboardNavigation(blok);
+        const event = createKeyboardEvent({ key: 'Backspace' });
+
+        const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+        keyboardNavigation.handleBackspace(event);
+
+        // No cross-container merge, no reparent, no ejection.
+        expect(setBlockParent).not.toHaveBeenCalled();
+        expect(move).not.toHaveBeenCalled();
+        expect(mergeBlocks).not.toHaveBeenCalled();
+        // removeBlock only happens if the current block is empty; it is not.
+        expect(removeBlock).not.toHaveBeenCalled();
+
+        // Observable state: both children remain inside their respective callouts.
+        expect(currentChild.parentId).toBe(secondCalloutId);
+        expect(previousChild.parentId).toBe(firstCalloutId);
+
+        isCaretAtStartOfInputSpy.mockRestore();
+      });
+    });
   });
 
   describe('handleDelete', () => {

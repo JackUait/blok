@@ -1,7 +1,7 @@
 import type { API } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 
-import { CELL_ATTR, ROW_ATTR, CELL_COL_ATTR } from './table-core';
+import { CELL_ATTR, ROW_ATTR, CELL_ROW_ATTR, CELL_COL_ATTR } from './table-core';
 import type { TableModel } from './table-model';
 import type { LegacyCellContent, CellContent } from './types';
 import { isCellWithBlocks } from './types';
@@ -353,7 +353,9 @@ export class TableCellBlocks {
    * - Cells that already have block references get those blocks mounted.
    * - If referenced blocks are missing from BlockManager, a fallback paragraph is created.
    */
-  public initializeCells(content: LegacyCellContent[][]): CellContent[][] {
+  public initializeCells(
+    content: LegacyCellContent[][]
+  ): CellContent[][] {
     const rowElements = this.gridElement.querySelectorAll(`[${ROW_ATTR}]`);
     const normalizedContent: CellContent[][] = [];
 
@@ -435,6 +437,63 @@ export class TableCellBlocks {
     });
 
     return normalizedContent;
+  }
+
+  /**
+   * After a setData/render rebuild, reclaim any blocks the model references
+   * whose holders are not yet mounted in their model cell. This catches blocks
+   * that were restored via separate Yjs ops in a different transaction order
+   * — without it the restored block would float at the top level as an orphan
+   * (regression: table-undo-redo-orphans, multi-cell undo restoration).
+   */
+  public reclaimReferencedBlocks(): void {
+    const snapshot = this.model.snapshot();
+
+    snapshot.content.forEach((row, rowIndex) => {
+      row.forEach((cellContent, colIndex) => {
+        if (!isCellWithBlocks(cellContent) || cellContent.blocks.length === 0) {
+          return;
+        }
+
+        const cell = this.gridElement.querySelector<HTMLElement>(
+          `[${CELL_ROW_ATTR}="${rowIndex}"][${CELL_COL_ATTR}="${colIndex}"]`
+        );
+
+        if (!cell) {
+          return;
+        }
+
+        const container = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
+
+        if (!container) {
+          return;
+        }
+
+        for (const blockId of cellContent.blocks) {
+          const getIndex = this.api.blocks.getBlockIndex;
+          const getByIndex = this.api.blocks.getBlockByIndex;
+
+          if (typeof getIndex !== 'function' || typeof getByIndex !== 'function') {
+            return;
+          }
+
+          const index = getIndex(blockId);
+
+          if (index === undefined) {
+            continue;
+          }
+          const block = getByIndex(index);
+
+          if (!block) {
+            continue;
+          }
+          if (container.contains(block.holder)) {
+            continue;
+          }
+          this.claimBlockForCell(cell, blockId);
+        }
+      });
+    });
   }
 
   /**
@@ -635,7 +694,14 @@ export class TableCellBlocks {
    * When a block is removed, ensure no cell is left empty.
    */
   private handleBlockMutation = (data: unknown): void => {
-    if (this.isStructuralOpActive()) {
+    // While a structural op (setData / paste / row-col change) is rebuilding
+    // the table, defer events so they don't operate on stale DOM. EXCEPT for
+    // Yjs replay: an undo/redo that restores a previously-owned cell block
+    // fires block-added DURING the table's own setData, and discarding it
+    // would leave the restored block as a top-level orphan
+    // (regression: table-undo-redo-orphans). Process those immediately —
+    // recordedCellPos lookup below will route the block back to its cell.
+    if (this.isStructuralOpActive() && !this.api.blocks.isSyncingFromYjs) {
       this.deferredEvents.push(data);
 
       return;
@@ -672,6 +738,27 @@ export class TableCellBlocks {
     // polluting currentBlockIndex before the table's own block-added fires.
     if (detail.target.id === this.tableBlockId) {
       return;
+    }
+
+    // Yjs undo replay: a block this table previously owned is being restored.
+    // The model's contentGrid still references its id from a prior render but
+    // the DOM is empty (we deliberately did not fabricate a replacement, see
+    // table-undo-redo-orphans regression). Reattach it to the recorded cell
+    // before falling through to adjacency-based heuristics, otherwise the
+    // restored block lands as a top-level orphan.
+    const recordedCellPos = this.model.findCellForBlock(detail.target.id);
+
+    if (recordedCellPos) {
+      const cellEl = this.gridElement.querySelector<HTMLElement>(
+        `[${CELL_ROW_ATTR}="${recordedCellPos.row}"][${CELL_COL_ATTR}="${recordedCellPos.col}"]`
+      );
+
+      if (cellEl) {
+        this.claimBlockForCell(cellEl, detail.target.id);
+        this.cellsPendingCheck.delete(cellEl);
+
+        return;
+      }
     }
 
     const blockIndex = detail.index;

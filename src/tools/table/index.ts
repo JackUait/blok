@@ -675,9 +675,10 @@ export class Table implements BlockTool {
     // (blocks deleted but matrix not updated); persisting them causes DOM
     // node stealing and data loss on subsequent renders.
     const tableId = this.blockId ?? '';
+    const gridEl = this.gridElement;
 
-    data.content = data.content.map(row =>
-      row.map(cell => {
+    data.content = data.content.map((row, rowIndex) =>
+      row.map((cell, colIndex) => {
         if (!isCellWithBlocks(cell)) {
           return cell;
         }
@@ -687,6 +688,35 @@ export class Table implements BlockTool {
 
           return block != null && (block.parentId ?? '') === tableId;
         });
+
+        // Recover from a stale model snapshot: if the model says this cell is
+        // empty but the live DOM still has child blocks parented to the table
+        // here, harvest their ids from the DOM. Without this guard, a
+        // mid-render snapshot can persist empty cells to Yjs and become an
+        // attractor state that later undo presses revert to — see
+        // table-undo-redo-orphans regression.
+        if (filtered.length === 0 && gridEl) {
+          const cellEl = gridEl.querySelector<HTMLElement>(
+            `[${CELL_ROW_ATTR}="${rowIndex}"][${CELL_COL_ATTR}="${colIndex}"]`
+          );
+          const container = cellEl?.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
+          const harvested = container
+            ? Array.from(container.querySelectorAll<HTMLElement>('[data-blok-id]'))
+              .map(el => el.getAttribute('data-blok-id') ?? '')
+              .filter(id => {
+                if (!id) {
+                  return false;
+                }
+                const block = this.api.blocks.getById?.(id);
+
+                return block != null && (block.parentId ?? '') === tableId;
+              })
+            : [];
+
+          if (harvested.length > 0) {
+            return { ...cell, blocks: harvested };
+          }
+        }
 
         return { ...cell, blocks: filtered };
       })
@@ -772,6 +802,8 @@ export class Table implements BlockTool {
       return;
     }
 
+    const isSyncReplay = this.api.blocks.isSyncingFromYjs;
+
     this.runStructuralOp(() => {
       const setDataContent = this.cellBlocks?.initializeCells(this.initialContent ?? []) ?? this.initialContent ?? [];
 
@@ -782,9 +814,14 @@ export class Table implements BlockTool {
         return;
       }
 
-      // When undoing reverts content to empty, the grid has default dimensions
-      // but initializeCells([]) mounted zero blocks. Pre-populate the model
-      // with empty cell entries so populateNewCells can place blocks correctly.
+      // When an undo replay reverts content to empty, the DOM grid has its
+      // default dimensions but the model has zero rows. Reflect the grid
+      // shape in the model with empty cells so subsequent operations have
+      // valid bounds. Do NOT call populateNewCells here — fabricating new
+      // paragraph blocks during a Yjs replay creates orphans that survive
+      // the next undo cycle (regression: table-undo-redo-orphans).
+      // If Yjs actually contains child blocks for those cells they will
+      // arrive via separate block-add events.
       if (this.api.blocks.isSyncingFromYjs && setDataContent.length === 0 && gridEl) {
         const emptyGridContent = Array.from(gridEl.querySelectorAll(`[${ROW_ATTR}]`), (row) => {
           const cellCount = row.querySelectorAll(`[${CELL_ATTR}]`).length;
@@ -796,8 +833,6 @@ export class Table implements BlockTool {
           ...this.model.snapshot(),
           content: emptyGridContent,
         });
-
-        populateNewCells(gridEl, this.cellBlocks);
       } else {
         this.model.replaceAll({
           ...this.model.snapshot(),
@@ -825,6 +860,23 @@ export class Table implements BlockTool {
     const snapSet = this.model.snapshot();
     applyCellColors(gridEl, snapSet.content);
     applyCellPlacements(gridEl, snapSet.content);
+
+    if (isSyncReplay) {
+      // Catch blocks already restored by sibling Yjs ops in this same replay
+      // batch — they may be sitting at the top level waiting to be reattached
+      // to their original cell. Without this, multi-cell undo restoration
+      // leaves cell content as orphan top-level blocks.
+      this.cellBlocks?.reclaimReferencedBlocks();
+      // Yjs sometimes restores sibling blocks AFTER this sync transaction
+      // commits. Schedule a second pass on the next microtask so blocks that
+      // arrive late are still attached to their cells.
+      void Promise.resolve().then(() => {
+        if (currentGeneration !== this.setDataGeneration) {
+          return;
+        }
+        this.cellBlocks?.reclaimReferencedBlocks();
+      });
+    }
   }
 
   public onPaste(event: HTMLPasteEvent): void {

@@ -416,7 +416,14 @@ describe('Table lifecycle rebuild', () => {
   });
 
   describe('setData() with empty content during Yjs sync', () => {
-    it('populates empty cells when content reverts to empty during undo', () => {
+    it('does not fabricate new blocks when undo reverts table content to empty', () => {
+      // Regression: previously, this path called populateNewCells to insert
+      // empty paragraph fallbacks. Each Yjs undo cycle minted fresh ids and
+      // those orphans cascaded into top-level siblings of the table
+      // (regression: table-undo-redo-orphans). The correct behavior is to
+      // leave cells visually empty — Yjs is the authority on which child
+      // blocks exist, and any blocks restored later will be re-claimed via
+      // handleBlockMutation / reclaimReferencedBlocks.
       const options = createTableOptions(
         { content: [['A', 'B'], ['C', 'D']] },
         {},
@@ -433,16 +440,16 @@ describe('Table lifecycle rebuild', () => {
 
       const newWrapper = container.firstElementChild as HTMLElement;
 
-      // Grid should have default dimensions (3x3) since content is empty
+      // Grid keeps its default dimensions even though content is empty.
       const rows = newWrapper.querySelectorAll('[data-blok-table-row]');
 
       expect(rows.length).toBeGreaterThan(0);
 
-      // Each cell should still have a block (populated via populateNewCells)
-      const blockElements = newWrapper.querySelectorAll('[data-blok-id]');
+      // No new fallback blocks should have been fabricated for empty cells
+      // during a Yjs replay — that was the orphan-accumulation source.
+      const fallbackInserts = newWrapper.querySelectorAll('[data-blok-id]');
 
-      expect(blockElements.length).toBeGreaterThan(0);
-      expect(blockElements.length).toBe(rows.length * rows[0].querySelectorAll('[data-blok-table-cell]').length);
+      expect(fallbackInserts.length).toBe(0);
     });
 
     it('does not populate cells when content has actual data', () => {

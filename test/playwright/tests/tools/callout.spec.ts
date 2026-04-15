@@ -401,3 +401,133 @@ test('dragging callout via settings toggler reorders the callout block', async (
     };
   }).toEqual({ beforeOk: true, afterOk: true, calloutAfterTarget: true });
 });
+
+test.describe('Callout - within-container Backspace merge', () => {
+  /**
+   * Regression: same bug family as table cells. Pressing Enter inside a
+   * callout child splits the paragraph into a sibling child block. Backspace
+   * at the start of the new sibling must merge it back into the previous
+   * child — keeping both children inside the callout (parent preserved).
+   *
+   * The defense-in-depth guard in `BlockOperations.mergeBlocks` refuses any
+   * cross-parent merge, so this test also locks in that same-parent merges
+   * still succeed for callout children.
+   */
+  test('Backspace at start of second callout child merges into previous child inside callout', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [
+        { id: 'callout-1', type: 'callout', data: { emoji: '💡', color: 'default' }, content: ['child-1', 'child-2'] },
+        { id: 'child-1', type: 'paragraph', data: { text: 'First' }, parent: 'callout-1' },
+        { id: 'child-2', type: 'paragraph', data: { text: 'Second' }, parent: 'callout-1' },
+        { id: 'root-1', type: 'paragraph', data: { text: 'Root' } },
+      ],
+    });
+
+    const child2 = page.locator('[data-blok-toggle-children]').locator('[data-blok-id="child-2"]');
+    await child2.click();
+    await page.keyboard.press('Home');
+    await page.keyboard.press('Backspace');
+
+    const saved = await page.evaluate(async () => window.blokInstance?.save());
+    const blocks = saved?.blocks ?? [];
+
+    expect(blocks.find((b) => b.id === 'child-2')).toBeUndefined();
+
+    const mergedChild = blocks.find((b) => b.id === 'child-1');
+    expect(mergedChild?.parent).toBe('callout-1');
+    expect((mergedChild?.data as { text?: string } | undefined)?.text).toBe('FirstSecond');
+
+    // Root block untouched — no cross-container merge happened
+    const root = blocks.find((b) => b.id === 'root-1');
+    expect(root?.parent).toBeUndefined();
+    expect((root?.data as { text?: string } | undefined)?.text).toBe('Root');
+  });
+
+  test('Delete at end of first callout child merges next child into it inside callout', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [
+        { id: 'callout-1', type: 'callout', data: { emoji: '💡', color: 'default' }, content: ['child-1', 'child-2'] },
+        { id: 'child-1', type: 'paragraph', data: { text: 'First' }, parent: 'callout-1' },
+        { id: 'child-2', type: 'paragraph', data: { text: 'Second' }, parent: 'callout-1' },
+        { id: 'root-1', type: 'paragraph', data: { text: 'Root' } },
+      ],
+    });
+
+    const child1 = page.locator('[data-blok-toggle-children]').locator('[data-blok-id="child-1"]');
+    await child1.click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('Delete');
+
+    const saved = await page.evaluate(async () => window.blokInstance?.save());
+    const blocks = saved?.blocks ?? [];
+
+    expect(blocks.find((b) => b.id === 'child-2')).toBeUndefined();
+
+    const mergedChild = blocks.find((b) => b.id === 'child-1');
+    expect(mergedChild?.parent).toBe('callout-1');
+    expect((mergedChild?.data as { text?: string } | undefined)?.text).toBe('FirstSecond');
+
+    const root = blocks.find((b) => b.id === 'root-1');
+    expect(root?.parent).toBeUndefined();
+    expect((root?.data as { text?: string } | undefined)?.text).toBe('Root');
+  });
+
+  test('Delete at end of last callout child does NOT cross callout boundary', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [
+        { id: 'callout-1', type: 'callout', data: { emoji: '💡', color: 'default' }, content: ['child-1'] },
+        { id: 'child-1', type: 'paragraph', data: { text: 'Inside' }, parent: 'callout-1' },
+        { id: 'root-below', type: 'paragraph', data: { text: 'Below' } },
+      ],
+    });
+
+    const child1 = page.locator('[data-blok-toggle-children]').locator('[data-blok-id="child-1"]');
+    await child1.click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('Delete');
+
+    const saved = await page.evaluate(async () => window.blokInstance?.save());
+    const blocks = saved?.blocks ?? [];
+
+    const below = blocks.find((b) => b.id === 'root-below');
+    const child = blocks.find((b) => b.id === 'child-1');
+
+    expect(below).toBeDefined();
+    expect((below?.data as { text?: string } | undefined)?.text).toBe('Below');
+    expect(child).toBeDefined();
+    expect(child?.parent).toBe('callout-1');
+    expect((child?.data as { text?: string } | undefined)?.text).toBe('Inside');
+  });
+
+  test('Backspace at start of first callout child does NOT cross callout boundary', async ({ page }) => {
+    // Cross-boundary check: the first child has no previous sibling inside the
+    // callout. The previous block in the flat list is some block above the
+    // callout. Backspace must NOT pull the callout's first child up to root
+    // level and must NOT merge it with the previous block outside.
+    await createBlok(page, {
+      blocks: [
+        { id: 'root-above', type: 'paragraph', data: { text: 'Above' } },
+        { id: 'callout-1', type: 'callout', data: { emoji: '💡', color: 'default' }, content: ['child-1'] },
+        { id: 'child-1', type: 'paragraph', data: { text: 'Inside' }, parent: 'callout-1' },
+      ],
+    });
+
+    const child1 = page.locator('[data-blok-toggle-children]').locator('[data-blok-id="child-1"]');
+    await child1.click();
+    await page.keyboard.press('Home');
+    await page.keyboard.press('Backspace');
+
+    const saved = await page.evaluate(async () => window.blokInstance?.save());
+    const blocks = saved?.blocks ?? [];
+
+    // Nothing merged across the callout boundary
+    const above = blocks.find((b) => b.id === 'root-above');
+    const child = blocks.find((b) => b.id === 'child-1');
+
+    expect(above).toBeDefined();
+    expect((above?.data as { text?: string } | undefined)?.text).toBe('Above');
+    expect(child).toBeDefined();
+    expect(child?.parent).toBe('callout-1');
+    expect((child?.data as { text?: string } | undefined)?.text).toBe('Inside');
+  });
+});

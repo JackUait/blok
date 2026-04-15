@@ -57,6 +57,26 @@ export class KeyboardNavigation extends BlockEventComposer {
   }
 
   /**
+   * Resolve the table-cell-blocks container element that owns the given block,
+   * or null if the block is not inside a table cell.
+   */
+  private getTableCellContainer(block: Block | null | undefined): HTMLElement | null {
+    return block?.holder?.closest<HTMLElement>('[data-blok-table-cell-blocks]') ?? null;
+  }
+
+  /**
+   * True when `a` and `b` live inside the same table cell (same
+   * `[data-blok-table-cell-blocks]` container). Used to decide whether
+   * a Backspace/Delete merge would cross a cell boundary.
+   */
+  private areBlocksInSameTableCell(a: Block | null | undefined, b: Block | null | undefined): boolean {
+    const cellA = this.getTableCellContainer(a);
+    const cellB = this.getTableCellContainer(b);
+
+    return cellA !== null && cellA === cellB;
+  }
+
+  /**
    * Fully close the toolbar if the current block is NOT inside a table cell.
    * Used for destructive operations (Backspace, Delete, merge) where the
    * toolbar should be dismissed — unlike arrow navigation where
@@ -363,10 +383,12 @@ export class KeyboardNavigation extends BlockEventComposer {
 
     /**
      * Don't merge across table cell boundaries.
-     * When the caret is at the start of the first input in a table cell, Backspace should be a no-op
-     * rather than merging the previous cell's last block into the current cell.
+     * When the caret is at the start of the FIRST block in a table cell, Backspace
+     * must be a no-op rather than merging the previous cell's last block into the
+     * current cell. Merges within the same cell (e.g. the user hit Enter to split a
+     * paragraph and now wants to undo it) must still work.
      */
-    if (this.isCurrentBlockInsideTableCell) {
+    if (this.isCurrentBlockInsideTableCell && !this.areBlocksInSameTableCell(currentBlock, previousBlock)) {
       return;
     }
 
@@ -475,10 +497,11 @@ export class KeyboardNavigation extends BlockEventComposer {
 
     /**
      * Don't merge across table cell boundaries.
-     * When the caret is at the end of the last input in a table cell, Delete should be a no-op
-     * rather than merging the next cell's first block into the current cell.
+     * When the caret is at the end of the LAST block in a table cell, Delete must
+     * be a no-op rather than pulling the next cell's first block into the current
+     * cell. Merges within the same cell must still work.
      */
-    if (this.isCurrentBlockInsideTableCell) {
+    if (this.isCurrentBlockInsideTableCell && !this.areBlocksInSameTableCell(currentBlock, nextBlock)) {
       return;
     }
 

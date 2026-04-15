@@ -1275,6 +1275,255 @@ describe('BlockOperations', () => {
       expect(dependencies.YjsManager.updateBlockData).not.toHaveBeenCalled();
       expect(dependencies.YjsManager.removeBlock).not.toHaveBeenCalled();
     });
+
+    /**
+     * Defense-in-depth against the "Enter-then-Backspace-inside-a-nested-container"
+     * bug family. Blocks live in logical containers identified by `parentId`
+     * (table cells, toggles, callouts, headers-as-toggles, database rows). A
+     * cross-parent merge silently mangles the hierarchy: the source block's
+     * data ends up appended to a target in a different container, and the
+     * source is then deleted — losing content and breaking invariants.
+     *
+     * Any future keyboardNavigation/caret bug that forgets a boundary check
+     * must fail safe at this layer instead of corrupting data.
+     */
+    it('refuses to merge blocks with different parentId (cross-container guard)', async () => {
+      const targetInCellA = createMockBlock({
+        id: 'target-in-cell-a',
+        name: 'paragraph',
+        mergeable: true,
+        parentId: 'cell-a',
+        data: { text: 'A' },
+      });
+      const sourceInCellB = createMockBlock({
+        id: 'source-in-cell-b',
+        name: 'paragraph',
+        mergeable: true,
+        parentId: 'cell-b',
+        data: { text: 'B' },
+      });
+      const testStore = createBlocksStore([targetInCellA, sourceInCellB]);
+      const testRepo = new BlockRepository();
+      testRepo.initialize(testStore);
+      const testOps = new BlockOperations(
+        dependencies,
+        testRepo,
+        factory,
+        new BlockHierarchy(testRepo),
+        blockDidMutatedSpy,
+        0
+      );
+      testOps.setYjsSync(yjsSync);
+
+      await testOps.mergeBlocks(targetInCellA, sourceInCellB, testStore);
+
+      expect(dependencies.YjsManager.transact).not.toHaveBeenCalled();
+      expect(dependencies.YjsManager.updateBlockData).not.toHaveBeenCalled();
+      expect(dependencies.YjsManager.removeBlock).not.toHaveBeenCalled();
+    });
+
+    it('refuses to merge a nested child block into a root-level block', async () => {
+      const rootTarget = createMockBlock({
+        id: 'root-target',
+        name: 'paragraph',
+        mergeable: true,
+        parentId: null,
+        data: { text: 'root' },
+      });
+      const nestedSource = createMockBlock({
+        id: 'nested-source',
+        name: 'paragraph',
+        mergeable: true,
+        parentId: 'toggle-1',
+        data: { text: 'child' },
+      });
+      const testStore = createBlocksStore([rootTarget, nestedSource]);
+      const testRepo = new BlockRepository();
+      testRepo.initialize(testStore);
+      const testOps = new BlockOperations(
+        dependencies,
+        testRepo,
+        factory,
+        new BlockHierarchy(testRepo),
+        blockDidMutatedSpy,
+        0
+      );
+      testOps.setYjsSync(yjsSync);
+
+      await testOps.mergeBlocks(rootTarget, nestedSource, testStore);
+
+      expect(dependencies.YjsManager.transact).not.toHaveBeenCalled();
+    });
+
+    /**
+     * End-to-end hierarchy-invariant lock for the "Enter-then-Backspace-inside-
+     * a-nested-container" bug family. The scenario:
+     *
+     *   1. A callout (parent) hosts two sibling paragraphs via contentIds.
+     *   2. The user presses Backspace at the start of the second child; this
+     *      calls `mergeBlocks(firstChild, secondChild)`.
+     *   3. After the merge, the parent's contentIds must lose the source id
+     *      and the survivor must still belong to the same parent — i.e. the
+     *      `validateHierarchy` invariant must hold.
+     *
+     * A future bug that either (a) forgets the parentId guard or (b) forgets
+     * to update contentIds during removal would produce a violation reported
+     * by `validateHierarchy`, failing this test before the bug ships.
+     */
+    it('preserves hierarchy invariant after a within-container merge', async () => {
+      const container = createMockBlock({
+        id: 'callout-1',
+        name: 'callout',
+        contentIds: ['child-1', 'child-2'],
+      });
+      const childContainer = document.createElement('div');
+      childContainer.setAttribute('data-blok-toggle-children', '');
+      container.holder.appendChild(childContainer);
+
+      const firstChild = createMockBlock({
+        id: 'child-1',
+        name: 'paragraph',
+        mergeable: true,
+        parentId: 'callout-1',
+        data: { text: 'First' },
+      });
+      (firstChild.mergeWith as Mock).mockResolvedValue(undefined);
+      childContainer.appendChild(firstChild.holder);
+
+      const secondChild = createMockBlock({
+        id: 'child-2',
+        name: 'paragraph',
+        mergeable: true,
+        parentId: 'callout-1',
+        data: { text: 'Second' },
+      });
+      childContainer.appendChild(secondChild.holder);
+
+      const testStore = createBlocksStore([container, firstChild, secondChild]);
+      const testRepo = new BlockRepository();
+      testRepo.initialize(testStore);
+      const testOps = new BlockOperations(
+        dependencies,
+        testRepo,
+        factory,
+        new BlockHierarchy(testRepo),
+        blockDidMutatedSpy,
+        1
+      );
+      testOps.setYjsSync(yjsSync);
+
+      // Baseline: the constructed hierarchy is valid before we touch it.
+      expect(validateHierarchy(projectRepositoryForInvariant(testRepo))).toEqual([]);
+
+      await testOps.mergeBlocks(firstChild, secondChild, testStore);
+
+      // Post-merge invariant: no orphaned children, no dangling contentIds.
+      expect(validateHierarchy(projectRepositoryForInvariant(testRepo))).toEqual([]);
+
+      // The source child left the parent's contentIds; the survivor stayed.
+      expect(container.contentIds).toEqual(['child-1']);
+      expect(firstChild.parentId).toBe('callout-1');
+    });
+
+    /**
+     * Cross-container defense lock. A mis-targeted merge across container
+     * boundaries must abort AND leave the hierarchy untouched. Combined with
+     * the positive test above, these two cases pin every observable side
+     * effect of the guard.
+     */
+    it('leaves hierarchy invariant intact when a cross-container merge is refused', async () => {
+      const leftContainer = createMockBlock({
+        id: 'cell-a',
+        name: 'paragraph',
+        contentIds: ['child-a'],
+      });
+      const childA = createMockBlock({
+        id: 'child-a',
+        name: 'paragraph',
+        mergeable: true,
+        parentId: 'cell-a',
+        data: { text: 'A' },
+      });
+      const rightContainer = createMockBlock({
+        id: 'cell-b',
+        name: 'paragraph',
+        contentIds: ['child-b'],
+      });
+      const childB = createMockBlock({
+        id: 'child-b',
+        name: 'paragraph',
+        mergeable: true,
+        parentId: 'cell-b',
+        data: { text: 'B' },
+      });
+
+      const testStore = createBlocksStore([leftContainer, childA, rightContainer, childB]);
+      const testRepo = new BlockRepository();
+      testRepo.initialize(testStore);
+      const testOps = new BlockOperations(
+        dependencies,
+        testRepo,
+        factory,
+        new BlockHierarchy(testRepo),
+        blockDidMutatedSpy,
+        1
+      );
+      testOps.setYjsSync(yjsSync);
+
+      expect(validateHierarchy(projectRepositoryForInvariant(testRepo))).toEqual([]);
+
+      await testOps.mergeBlocks(childA, childB, testStore);
+
+      // Nothing merged, nothing moved, hierarchy still valid.
+      expect(validateHierarchy(projectRepositoryForInvariant(testRepo))).toEqual([]);
+      expect(leftContainer.contentIds).toEqual(['child-a']);
+      expect(rightContainer.contentIds).toEqual(['child-b']);
+      expect(dependencies.YjsManager.transact).not.toHaveBeenCalled();
+    });
+
+    it('still merges blocks that share the same parentId (within-container merge)', async () => {
+      const targetInCell = createMockBlock({
+        id: 'target-same-cell',
+        name: 'paragraph',
+        mergeable: true,
+        parentId: 'cell-1',
+        data: { text: 'first' },
+      });
+      (targetInCell.mergeWith as Mock).mockResolvedValue(undefined);
+      const sourceInCell = createMockBlock({
+        id: 'source-same-cell',
+        name: 'paragraph',
+        mergeable: true,
+        parentId: 'cell-1',
+        data: { text: 'second' },
+      });
+      const testStore = createBlocksStore([targetInCell, sourceInCell]);
+      const testRepo = new BlockRepository();
+      testRepo.initialize(testStore);
+      const testOps = new BlockOperations(
+        dependencies,
+        testRepo,
+        factory,
+        new BlockHierarchy(testRepo),
+        blockDidMutatedSpy,
+        0
+      );
+      testOps.setYjsSync(yjsSync);
+
+      await testOps.mergeBlocks(targetInCell, sourceInCell, testStore);
+
+      expect(dependencies.YjsManager.transact).toHaveBeenCalled();
+      // Source block's data is propagated into the target via Yjs
+      expect(dependencies.YjsManager.updateBlockData).toHaveBeenCalledWith(
+        'target-same-cell',
+        'text',
+        'second'
+      );
+      // Source block is removed from Yjs as part of the same transaction
+      expect(dependencies.YjsManager.removeBlock).toHaveBeenCalledWith('source-same-cell');
+      // Target block receives the merge at the DOM/tool layer
+      expect(targetInCell.mergeWith).toHaveBeenCalledWith({ text: 'second' });
+    });
   });
 
   describe('move', () => {

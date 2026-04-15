@@ -842,6 +842,27 @@ export class BlockOperations {
     }
 
     /**
+     * Defense-in-depth: refuse to merge across container boundaries.
+     *
+     * Every block belongs to a logical container identified by `parentId`
+     * (null = root, or the id of a table/toggle/callout/header/database-row
+     * block). Merging across containers silently mangles the hierarchy —
+     * the source block's data is appended to a target in a DIFFERENT
+     * container, and the source is then deleted, losing content and
+     * breaking the invariant that a block lives under exactly one parent.
+     *
+     * keyboardNavigation already guards Backspace/Delete at cell/toggle
+     * boundaries, but a missed guard (or a future composer that forgets
+     * the check) must fail safe at this layer instead of corrupting data.
+     * This is the root-cause fix for the "Enter-then-Backspace-inside-a-
+     * table-cell" bug family — any similar bug in any nested-container
+     * tool is prevented here.
+     */
+    if (targetBlock.parentId !== blockToMerge.parentId) {
+      return;
+    }
+
+    /**
      * Complete the merge operation with the prepared data
      * Syncs to Yjs atomically, then updates DOM without re-syncing
      */

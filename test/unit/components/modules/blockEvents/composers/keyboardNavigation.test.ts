@@ -1820,6 +1820,78 @@ describe('KeyboardNavigation', () => {
       expect(mergeBlocks).not.toHaveBeenCalled();
     });
 
+    /**
+     * Wrap two blocks inside the SAME table-cell-blocks container. Mirrors the
+     * real DOM when a cell holds multiple paragraph blocks (e.g. after the user
+     * pressed Enter to split text inside a cell).
+     */
+    const wrapBlocksInSameTableCell = (...blocks: Block[]): void => {
+      const cellBlocks = document.createElement('div');
+      cellBlocks.setAttribute('data-blok-table-cell-blocks', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      cell.appendChild(cellBlocks);
+      blocks.forEach((b) => cellBlocks.appendChild(b.holder));
+    };
+
+    it('MERGES blocks when Backspace is pressed with previous block in the SAME table cell', () => {
+      const previousBlock = createBlock({ id: 'prev-in-same-cell', isEmpty: false, mergeable: true, parentId: 'table-block-1' } as unknown as Partial<Block>);
+      const mockBlock = createBlock({ id: 'current-in-same-cell', isEmpty: false, mergeable: true, parentId: 'table-block-1' } as unknown as Partial<Block>);
+      wrapBlocksInSameTableCell(previousBlock, mockBlock);
+
+      const mergeBlocks = vi.fn(() => Promise.resolve());
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          previousBlock,
+          mergeBlocks,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({
+        keyCode: keyCodes.BACKSPACE,
+        key: 'Backspace',
+        code: 'Backspace',
+      });
+
+      vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+      vi.spyOn(SelectionUtils, 'isCollapsed', 'get').mockReturnValue(true);
+
+      keyboardNavigation.handleBackspace(event);
+
+      // Regression: previously this returned no-op; now it must merge within the same cell.
+      expect(mergeBlocks).toHaveBeenCalledWith(previousBlock, mockBlock);
+    });
+
+    it('MERGES blocks when Delete is pressed with next block in the SAME table cell', () => {
+      const mockBlock = createBlock({ id: 'current-in-same-cell', isEmpty: false, mergeable: true, parentId: 'table-block-1' } as unknown as Partial<Block>);
+      const nextBlock = createBlock({ id: 'next-in-same-cell', isEmpty: false, mergeable: true, parentId: 'table-block-1' } as unknown as Partial<Block>);
+      wrapBlocksInSameTableCell(mockBlock, nextBlock);
+
+      const mergeBlocks = vi.fn(() => Promise.resolve());
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          nextBlock,
+          mergeBlocks,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({
+        keyCode: keyCodes.DELETE,
+        key: 'Delete',
+        code: 'Delete',
+      });
+
+      vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+      vi.spyOn(SelectionUtils, 'isCollapsed', 'get').mockReturnValue(true);
+
+      keyboardNavigation.handleDelete(event);
+
+      // Regression: previously this returned no-op; now it must merge within the same cell.
+      expect(mergeBlocks).toHaveBeenCalledWith(mockBlock, nextBlock);
+    });
+
     it('does not hide block actions on ArrowRight for regular block', () => {
       const mockBlock = createBlock();
       const hideBlockActions = vi.fn();

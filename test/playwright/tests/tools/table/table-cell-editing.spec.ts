@@ -400,6 +400,147 @@ test.describe('Cell Editing', () => {
     expect(orphanedBlocks).toHaveLength(0);
   });
 
+  test('Backspace at start of second block in a cell merges it into the previous block in the same cell', async ({ page }) => {
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['', ''], ['', '']],
+            },
+          },
+        ],
+      },
+    });
+
+    const firstCell = getCell(page, 0, 0);
+    const firstCellEditable = getCellEditable(page, 0, 0);
+
+    await firstCellEditable.click();
+    await page.keyboard.type('First line');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('Second line');
+
+    await expect(firstCell.locator('[data-blok-id]')).toHaveCount(2);
+
+    // Move caret to the start of the second block.
+    await page.keyboard.press('Home');
+
+    // Backspace should merge the second block into the first, within the same cell.
+    await page.keyboard.press('Backspace');
+
+    await expect(firstCell.locator('[data-blok-id]')).toHaveCount(1);
+    await expect(firstCell).toContainText('First lineSecond line');
+  });
+
+  test('Delete at end of first block in a cell merges the next block into it in the same cell', async ({ page }) => {
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['', ''], ['', '']],
+            },
+          },
+        ],
+      },
+    });
+
+    const firstCell = getCell(page, 0, 0);
+    const firstCellEditable = getCellEditable(page, 0, 0);
+
+    await firstCellEditable.click();
+    await page.keyboard.type('First line');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('Second line');
+
+    await expect(firstCell.locator('[data-blok-id]')).toHaveCount(2);
+
+    // Move caret back to the end of the first block.
+    await page.keyboard.press('Home');
+    await page.keyboard.press('ArrowLeft');
+
+    await page.keyboard.press('Delete');
+
+    await expect(firstCell.locator('[data-blok-id]')).toHaveCount(1);
+    await expect(firstCell).toContainText('First lineSecond line');
+  });
+
+  test('Backspace at start of first block in a cell does NOT cross the cell boundary', async ({ page }) => {
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['A', 'B'], ['C', 'D']],
+            },
+          },
+        ],
+      },
+    });
+
+    // Focus the second cell (row 0, col 1) that already has "B".
+    const secondCell = getCell(page, 0, 1);
+    const secondCellEditable = getCellEditable(page, 0, 1);
+
+    await secondCellEditable.click();
+    await page.keyboard.press('Home');
+
+    // Backspace at the start of the first block in a cell must be a no-op
+    // — it must not merge with the previous cell's content.
+    await page.keyboard.press('Backspace');
+
+    const firstCell = getCell(page, 0, 0);
+
+    await expect(firstCell).toContainText('A');
+    await expect(secondCell).toContainText('B');
+    await expect(firstCell.locator('[data-blok-id]')).toHaveCount(1);
+    await expect(secondCell.locator('[data-blok-id]')).toHaveCount(1);
+  });
+
+  test('Delete at end of last block in a cell does NOT cross the cell boundary', async ({ page }) => {
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['A', 'B'], ['C', 'D']],
+            },
+          },
+        ],
+      },
+    });
+
+    const firstCell = getCell(page, 0, 0);
+    const firstCellEditable = getCellEditable(page, 0, 0);
+
+    await firstCellEditable.click();
+    await page.keyboard.press('End');
+
+    // Delete at the end of the last block in a cell must be a no-op
+    // — it must not pull the next cell's content in.
+    await page.keyboard.press('Delete');
+
+    const secondCell = getCell(page, 0, 1);
+
+    await expect(firstCell).toContainText('A');
+    await expect(secondCell).toContainText('B');
+    await expect(firstCell.locator('[data-blok-id]')).toHaveCount(1);
+    await expect(secondCell.locator('[data-blok-id]')).toHaveCount(1);
+  });
+
   test('Clicking blank space below block content in a cell focuses the last block', async ({ page }) => {
     // 1. Initialize editor with a 2x2 table with empty cells
     await createBlok(page, {

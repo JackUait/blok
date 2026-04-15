@@ -560,7 +560,7 @@ describe('BlockOperations', () => {
       document.body.appendChild(tableCellContainer);
 
       try {
-        const tableBlock = createMockBlock({ id: 'table-block', name: 'table' });
+        const tableBlock = createMockBlock({ id: 'table-block', name: 'table', contentIds: ['cell-para'] });
         const cellParagraph = createMockBlock({ id: 'cell-para', name: 'paragraph', parentId: 'table-block' });
 
         blocksStore = createBlocksStore([tableBlock, cellParagraph]);
@@ -1583,6 +1583,80 @@ describe('BlockOperations', () => {
           toIndex: 1,
         })
       );
+    });
+
+    /**
+     * Defense-in-depth for the "callout/table/toggle ejection" bug family.
+     *
+     * `move()` is a flat-array reorder. Without an auto-heal, moving a block
+     * across container boundaries (drag from one cell into another, keyboard
+     * moveUp/Down past a callout boundary) leaves `parentId` stale: the block
+     * sits visually inside the new container but still claims the old one,
+     * which silently corrupts `validateHierarchy`. Locking these tests here
+     * prevents any future regression in the move pipeline from re-introducing
+     * the same family of bugs the cross-parent merge guard already blocks.
+     */
+    it('auto-reparents a moved block when it crosses container boundaries', () => {
+      const containerA = createMockBlock({ id: 'cell-a', name: 'callout', contentIds: ['child-a'] });
+      const childA = createMockBlock({ id: 'child-a', parentId: 'cell-a' });
+      const containerB = createMockBlock({ id: 'cell-b', name: 'callout', contentIds: ['child-b'] });
+      const childB = createMockBlock({ id: 'child-b', parentId: 'cell-b' });
+
+      const testStore = createBlocksStore([containerA, childA, containerB, childB]);
+      const testRepo = new BlockRepository();
+      testRepo.initialize(testStore);
+      const testHierarchy = new BlockHierarchy(testRepo);
+      const testOps = new BlockOperations(
+        dependencies,
+        testRepo,
+        factory,
+        testHierarchy,
+        blockDidMutatedSpy,
+        0
+      );
+      testOps.setYjsSync(yjsSync);
+
+      // Sanity: initial hierarchy is clean
+      expect(validateHierarchy(projectRepositoryForInvariant(testRepo))).toEqual([]);
+
+      // Move child-a (index 1) into the slot occupied by child-b (index 3)
+      testOps.move(3, 1, false, testStore);
+
+      // child-a's parentId must follow the new flat-array neighborhood
+      expect(childA.parentId).toBe('cell-b');
+      // cell-a should no longer claim child-a
+      expect(containerA.contentIds).not.toContain('child-a');
+      // cell-b should now claim child-a
+      expect(containerB.contentIds).toContain('child-a');
+      // Hierarchy invariant must hold after the auto-heal
+      expect(validateHierarchy(projectRepositoryForInvariant(testRepo))).toEqual([]);
+    });
+
+    it('does not reparent when the move stays inside the same container', () => {
+      const container = createMockBlock({ id: 'cell-1', name: 'callout', contentIds: ['child-1', 'child-2'] });
+      const child1 = createMockBlock({ id: 'child-1', parentId: 'cell-1' });
+      const child2 = createMockBlock({ id: 'child-2', parentId: 'cell-1' });
+
+      const testStore = createBlocksStore([container, child1, child2]);
+      const testRepo = new BlockRepository();
+      testRepo.initialize(testStore);
+      const testHierarchy = new BlockHierarchy(testRepo);
+      const testOps = new BlockOperations(
+        dependencies,
+        testRepo,
+        factory,
+        testHierarchy,
+        blockDidMutatedSpy,
+        0
+      );
+      testOps.setYjsSync(yjsSync);
+
+      testOps.move(2, 1, false, testStore);
+
+      expect(child1.parentId).toBe('cell-1');
+      expect(child2.parentId).toBe('cell-1');
+      expect(container.contentIds).toEqual(expect.arrayContaining(['child-1', 'child-2']));
+      expect(validateHierarchy(projectRepositoryForInvariant(testRepo))).toEqual([]);
     });
   });
 

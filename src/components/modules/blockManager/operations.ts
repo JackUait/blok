@@ -3,7 +3,7 @@
  * @classdesc Handles state-changing operations on blocks
  * @module BlockOperations
  */
-import type { BlockToolData, PasteEvent, SanitizerConfig , BlokConfig } from '../../../../types';
+import type { BlockToolData, PasteEvent, SanitizerConfig, BlokConfig, OutputBlockData } from '../../../../types';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import type { BlockMutationType } from '../../../../types/events/block';
 import { BlockAddedMutationType } from '../../../../types/events/block/BlockAdded';
@@ -17,6 +17,7 @@ import type { BlokEventMap } from '../../events';
 import { isEmpty, isObject, isString, log, generateBlockId } from '../../utils';
 import { announce } from '../../utils/announcer';
 import { convertStringToBlockData, isBlockConvertable } from '../../utils/blocks';
+import { validateHierarchy } from '../../utils/hierarchy-invariant';
 import type { EventsDispatcher } from '../../utils/events';
 import { sanitizeBlocks, clean, composeSanitizerConfig } from '../../utils/sanitizer';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
@@ -357,6 +358,8 @@ export class BlockOperations {
       this.dependencies.YjsManager?.stopCapturing();
     }
 
+    this.assertHierarchyInvariantInDev('insert');
+
     return block;
   }
 
@@ -490,6 +493,8 @@ export class BlockOperations {
       if (index === 0 && this.currentBlockIndexValue < 0) {
         this.currentBlockIndexValue = 0;
       }
+
+      this.assertHierarchyInvariantInDev('removeBlock');
 
       resolve();
     });
@@ -732,6 +737,8 @@ export class BlockOperations {
       this.reparentChildren(oldContentIds, newBlock.id);
     }
 
+    this.assertHierarchyInvariantInDev('replace');
+
     return newBlock;
   }
 
@@ -767,6 +774,23 @@ export class BlockOperations {
       return;
     }
 
+    /**
+     * Defense-in-depth: capture the destination's parentId BEFORE the flat
+     * reorder so we can auto-heal cross-container moves below.
+     *
+     * `move()` is only a flat-array reorder — it does NOT touch parentId or
+     * the source/destination container `contentIds`. Without an auto-heal,
+     * any caller that drags or keyboard-shuffles a block past a container
+     * boundary leaves `parentId` stale: the block lands visually inside the
+     * new container but still claims the old one. That's the exact drift
+     * the cross-parent merge guard already blocks at the merge layer; we
+     * mirror the defense here so the same bug family can never re-enter
+     * via the move pipeline. DragController already calls setBlockParent
+     * after move(); the auto-heal below makes that a no-op (idempotent),
+     * and rescues every other caller (keyboard moveUp/Down, public api).
+     */
+    const destinationParentId = neighborBlock !== undefined ? neighborBlock.parentId : null;
+
     // Suppress stopCapturing to keep DOM + Yjs move as single undo entry
     this.suppressStopCapturing = true;
     try {
@@ -791,6 +815,19 @@ export class BlockOperations {
       }
 
       /**
+       * Cross-container auto-heal — see the comment above destinationParentId.
+       *
+       * Routes through `setBlockParent`, which is the canonical chokepoint
+       * that updates BOTH the moved block's `parentId` AND the source/dest
+       * container `contentIds` arrays. Idempotent when the parent already
+       * matches, so DragController's existing post-move setBlockParent call
+       * remains a safe no-op.
+       */
+      if (movedBlock.parentId !== destinationParentId) {
+        this.hierarchy.setBlockParent(movedBlock, destinationParentId);
+      }
+
+      /**
        * Force call of didMutated event on Block movement
        */
       this.blockDidMutated(BlockMovedMutationType, movedBlock, {
@@ -800,6 +837,8 @@ export class BlockOperations {
 
       // Sync to Yjs using the actual resolved index
       this.dependencies.YjsManager.moveBlock(movedBlock.id, resolvedIndex);
+
+      this.assertHierarchyInvariantInDev('move');
     } finally {
       this.suppressStopCapturing = false;
     }
@@ -1091,6 +1130,8 @@ export class BlockOperations {
         this.hierarchy.setBlockParent(newBlock, currentBlock.parentId);
       }
 
+      this.assertHierarchyInvariantInDev('splitBlockWithData');
+
       return newBlock;
     });
   }
@@ -1152,6 +1193,8 @@ export class BlockOperations {
       // that MutationObserver-triggered blockDidMutated calls are suppressed (they would
       // otherwise create a second Yjs undo entry for the toggle data update, splitting undo).
       this.hierarchy.setBlockParent(newBlock, parentId);
+
+      this.assertHierarchyInvariantInDev('insertInsideParent');
 
       return newBlock;
     }, { extendThroughRAF: true });
@@ -1442,5 +1485,57 @@ export class BlockOperations {
     if (block !== undefined) {
       this.dependencies.Caret.setToBlock(block, this.dependencies.Caret.positions.END);
     }
+  }
+
+  /**
+   * Dev/test invariant gate.
+   *
+   * Validates the parent/contentIds bidirectional invariant against the live
+   * repository. Gated behind NODE_ENV so prod stays free, but every test run
+   * and dev session asserts it after every BlockOperations mutation. Catches
+   * any future regression that would corrupt the hierarchy at the point of
+   * introduction instead of one save cycle later — closing the last gap in
+   * the "callout/table/toggle ejection" bug family by instrumenting the
+   * mutation pipeline itself.
+   *
+   * The save-time gate (saver) and the setBlockParent dangling-id guard are
+   * defenses at the boundaries; this is the defense at the core.
+   *
+   * Filters out the saver-repairable violation kinds (`child-parent-missing`,
+   * `content-id-dangling`) because complex multi-step ops legitimately pass
+   * through transient orphan states between sub-operations. The gate fires
+   * only on the irreversible drift kinds: bidirectional divergence
+   * (`child-not-in-parent-content`, `content-parent-mismatch`) and duplicate
+   * content ids (`content-duplicate`) — the patterns the callout/table/toggle
+   * ejection bug family exhibits.
+   */
+  private assertHierarchyInvariantInDev(context: string): void {
+    const env = typeof process !== 'undefined' ? process.env?.NODE_ENV : undefined;
+
+    if (env !== 'test' && env !== 'development') {
+      return;
+    }
+
+    const blocks: OutputBlockData[] = this.repository.blocks.map(b => ({
+      id: b.id,
+      type: b.name,
+      data: {},
+      ...(b.parentId !== null && b.parentId !== undefined ? { parent: b.parentId } : {}),
+      ...(Array.isArray(b.contentIds) && b.contentIds.length > 0 ? { content: [...b.contentIds] } : {}),
+    } as OutputBlockData));
+
+    const violations = validateHierarchy(blocks).filter(v =>
+      v.kind === 'child-not-in-parent-content' ||
+      v.kind === 'content-parent-mismatch' ||
+      v.kind === 'content-duplicate'
+    );
+
+    if (violations.length === 0) {
+      return;
+    }
+
+    const summary = violations.map(v => `  - ${v.message}`).join('\n');
+
+    throw new Error(`Hierarchy invariant violated at BlockOperations.${context}:\n${summary}`);
   }
 }

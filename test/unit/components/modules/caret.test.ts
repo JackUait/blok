@@ -669,6 +669,90 @@ describe('Caret module', () => {
     });
   });
 
+  describe('navigateVerticalPrevious navigates within same container', () => {
+    it('navigates to the previous block in the same cell instead of exiting the table', () => {
+      const { caret, blockManager } = createCaret();
+
+      const cellContainer = document.createElement('div');
+
+      cellContainer.setAttribute('data-blok-table-cell-blocks', '');
+      document.body.appendChild(cellContainer);
+
+      const previousInput = createContentEditable('line one');
+      const previousBlock = createBlock({
+        parentId: 'table-1',
+        inputs: { current: previousInput, last: previousInput },
+      });
+
+      const currentInput = createContentEditable('line two');
+      const currentBlock = createBlock({
+        parentId: 'table-1',
+        inputs: { current: currentInput },
+      });
+
+      cellContainer.appendChild(previousBlock.holder);
+      cellContainer.appendChild(currentBlock.holder);
+
+      blockManager.currentBlock = currentBlock;
+      blockManager.previousVisibleBlock = previousBlock;
+
+      vi.spyOn(caretUtils, 'isCaretAtFirstLine').mockReturnValue(true);
+      vi.spyOn(caretUtils, 'getCaretXPosition').mockReturnValue(50);
+
+      const setToBlockAtXPosition = vi.spyOn(caret, 'setToBlockAtXPosition').mockImplementation(() => undefined);
+
+      const result = caret.navigateVerticalPrevious();
+
+      expect(result).toBe(true);
+      expect(setToBlockAtXPosition).toHaveBeenCalledWith(previousBlock, 50, false);
+    });
+
+    it('exits the container UPWARDS to the block before the parent when the previous block is in a different cell', () => {
+      const { caret, blockManager } = createCaret();
+
+      const cell1 = document.createElement('div');
+      const cell2 = document.createElement('div');
+
+      cell1.setAttribute('data-blok-table-cell-blocks', '');
+      cell2.setAttribute('data-blok-table-cell-blocks', '');
+      document.body.appendChild(cell1);
+      document.body.appendChild(cell2);
+
+      const previousBlock = createBlock({
+        parentId: 'table-1',
+      });
+
+      const currentInput = createContentEditable('cell 2 text');
+      const currentBlock = createBlock({
+        parentId: 'table-1',
+        inputs: { current: currentInput },
+      });
+
+      const blockBeforeTable = createBlock();
+
+      cell1.appendChild(previousBlock.holder);
+      cell2.appendChild(currentBlock.holder);
+
+      blockManager.currentBlock = currentBlock;
+      blockManager.previousVisibleBlock = previousBlock;
+
+      vi.spyOn(caretUtils, 'isCaretAtFirstLine').mockReturnValue(true);
+      vi.spyOn(caretUtils, 'getCaretXPosition').mockReturnValue(50);
+
+      const setToBlockAtXPosition = vi.spyOn(caret, 'setToBlockAtXPosition').mockImplementation(() => undefined);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- private method spy
+      const findFirstBlockBeforeParent = vi.spyOn(caret as any, 'findFirstBlockBeforeParent')
+        .mockReturnValue(blockBeforeTable);
+
+      const result = caret.navigateVerticalPrevious();
+
+      expect(result).toBe(true);
+      expect(findFirstBlockBeforeParent).toHaveBeenCalledWith('table-1');
+      expect(setToBlockAtXPosition).toHaveBeenCalledWith(blockBeforeTable, 50, false);
+    });
+  });
+
   describe('setToTheLastBlock', () => {
     it('moves caret to the last default empty block', () => {
       const { caret, blockManager } = createCaret();

@@ -803,6 +803,47 @@ export class Caret extends Module {
     }
 
     /**
+     * If both blocks share the same DOM container (e.g., same table cell),
+     * navigate directly to the previous block instead of exiting the container.
+     * Symmetric to navigateVerticalNext — without this guard, ArrowUp from the
+     * first child of a callout/toggle/table cell would silently escape the
+     * container even though a sibling block sits right above it in the same
+     * DOM container.
+     */
+    if (previousBlock !== null && currentBlock.parentId !== null &&
+        currentBlock.holder.parentElement !== null &&
+        currentBlock.holder.parentElement === previousBlock.holder.parentElement) {
+      this.setToBlockAtXPosition(previousBlock, caretX, false);
+
+      return true;
+    }
+
+    /**
+     * If current block is inside a container, the "previous block" in the flat
+     * array may belong to a DIFFERENT cell of the SAME parent (e.g., a sibling
+     * cell of the same table). Navigating to it would jump across cells, which
+     * Notion-style navigation should treat as exiting the container UP.
+     */
+    const shouldExitParent = currentBlock.parentId !== null && (
+      previousBlock === null ||
+      previousBlock.parentId === currentBlock.parentId ||
+      previousBlock.id === currentBlock.parentId
+    );
+
+    if (shouldExitParent && currentBlock.parentId !== null) {
+      const blockBeforeContainer = this.findFirstBlockBeforeParent(currentBlock.parentId);
+
+      if (blockBeforeContainer !== null) {
+        this.setToBlockAtXPosition(blockBeforeContainer, caretX, false);
+
+        return true;
+      }
+
+      // No block before container — we're at the top of the document.
+      return false;
+    }
+
+    /**
      * Navigate to previous block, preserving horizontal position
      */
     if (previousBlock !== null) {
@@ -812,6 +853,22 @@ export class Caret extends Module {
     }
 
     return false;
+  }
+
+  /**
+   * Find the first block before a parent block (e.g., a table) — the block
+   * sitting immediately above the parent in the flat block array.
+   */
+  private findFirstBlockBeforeParent(parentBlockId: string): Block | null {
+    const { BlockManager } = this.Blok;
+    const blocks = BlockManager.blocks;
+    const parentIndex = blocks.findIndex(b => b.id === parentBlockId);
+
+    if (parentIndex <= 0) {
+      return null;
+    }
+
+    return blocks[parentIndex - 1];
   }
 
   /**

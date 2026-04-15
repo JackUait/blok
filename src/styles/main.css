@@ -1458,6 +1458,11 @@
   @apply bg-search-input-bg rounded-[10px] transition-colors duration-150 w-fit max-w-[240px] px-2;
 }
 
+[data-blok-table-cell] [data-blok-slash-search],
+[data-blok-table-cell] [data-blok-slash-search]:focus-visible {
+  @apply rounded-[6px];
+}
+
 [data-blok-slash-search]::after {
   content: attr(data-blok-slash-search);
   @apply text-gray-text font-medium text-base pointer-events-none;

@@ -1201,6 +1201,42 @@ describe('PopoverDesktop', () => {
       newAlignElement.remove();
     });
 
+    it('ignores leftAlignElement when updatePosition supplies an explicit anchor', () => {
+      // Regression: in a 3-column table, the toolbox passes a caret rect via
+      // updatePosition but leftAlignElement still pointed at the whole table.
+      // Without this guard, the popover snapped to the table's left edge
+      // hundreds of pixels away from the caret.
+      const trigger = document.createElement('button');
+      const leftAlignElement = document.createElement('div');
+
+      document.body.appendChild(trigger);
+      document.body.appendChild(leftAlignElement);
+
+      vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 100, bottom: 140, left: 50, right: 90, width: 40, height: 40 })
+      );
+      vi.spyOn(leftAlignElement, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 100, bottom: 140, left: 10, right: 800, width: 790, height: 40 })
+      );
+
+      const popover = createPopover({
+        trigger,
+        leftAlignElement,
+      });
+
+      const caretRect = createRect({ top: 110, bottom: 126, left: 500, right: 500, width: 0, height: 16 });
+
+      popover.updatePosition(caretRect);
+      popover.show();
+
+      // Horizontal position should follow the explicit caret rect (500),
+      // not the leftAlignElement left (10).
+      expect(popover.getElement().style.left).toBe(`${500 + window.scrollX}px`);
+
+      trigger.remove();
+      leftAlignElement.remove();
+    });
+
     it('falls back to trigger left when leftAlignElement is not provided', () => {
       const trigger = document.createElement('button');
 

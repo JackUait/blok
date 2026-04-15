@@ -321,11 +321,23 @@ export class PopoverDesktop extends PopoverAbstract {
    * Calculates position for the popover
    */
   private calculatePosition(): { top: number; left: number; openTop: boolean; openLeft: boolean } {
-    const rect = this.params.position ?? this.trigger?.getBoundingClientRect();
+    const explicitPosition = this.params.position;
+    const rect = explicitPosition ?? this.trigger?.getBoundingClientRect();
 
     if (!rect) {
       return { top: 0, left: 0, openTop: false, openLeft: false };
     }
+
+    // leftAlignElement forces horizontal alignment to a block-level content
+    // element (e.g. the whole table). When the caller supplies an explicit
+    // anchor rect via updatePosition(), that rect already reflects the
+    // intended position (a caret rect or a specific cell rect) and must NOT
+    // be overridden — otherwise the popover snaps to the block's left edge
+    // and drifts hundreds of pixels away from the caret in wide containers
+    // like multi-column tables.
+    const leftAlignRect = explicitPosition === undefined
+      ? this.leftAlignElement?.getBoundingClientRect()
+      : undefined;
 
     return resolvePosition({
       anchor: rect,
@@ -334,7 +346,7 @@ export class PopoverDesktop extends PopoverAbstract {
       viewportSize: { width: window.innerWidth, height: window.innerHeight },
       scrollOffset: { x: window.scrollX, y: window.scrollY },
       offset: 8,
-      leftAlignRect: this.leftAlignElement?.getBoundingClientRect(),
+      leftAlignRect,
     });
   }
 
@@ -350,6 +362,15 @@ export class PopoverDesktop extends PopoverAbstract {
     this.flipper?.deactivate();
 
     this.previouslyHoveredItem = null;
+
+    // Clear any externally-supplied anchor rect so the next show() falls back
+    // to the trigger element unless the caller explicitly sets a new one.
+    // Also clear inline position so a stale top/left from a previous open
+    // cannot render the popover at an unexpected location if it ever becomes
+    // visible before calculatePosition() runs again.
+    this.params.position = undefined;
+    this.nodes.popover.style.top = '';
+    this.nodes.popover.style.left = '';
   };
 
   /**

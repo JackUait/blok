@@ -338,35 +338,40 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       this.toggleRestrictedToolsHidden(true);
     }
 
-    this.popover?.show();
-
     /**
-     * When opening toolbox inside a table cell or a nested block (toggle, callout),
-     * position it at the caret instead of at the trigger element (which is outside
-     * the nested container).
-     * Must be called after show() so the popover is in the DOM.
+     * Always anchor the popover to a rect derived from the current context,
+     * never from the trigger element (plus button). The trigger rect is fragile:
+     * it can be hidden, offscreen, misaligned with the caret in nested containers
+     * (table cells, toggles, callouts), or detached from the block when the plus
+     * button sits at the block's top edge while the caret is elsewhere.
+     *
+     * - Slash open ("/"): anchor at the caret rect so the menu appears next to
+     *   what the user is typing, in any block type at any nesting depth.
+     * - Plus button open: anchor at the current block's bounding rect so the
+     *   menu appears below the block regardless of trigger placement.
+     *
+     * Set the position BEFORE show() so the first paint is already correct —
+     * popover.show() reads `params.position` via calculatePosition() and uses
+     * it instead of the trigger rect when present.
      */
-    const triggerRect = this.triggerElement?.getBoundingClientRect();
-    const triggerHidden = triggerRect?.height === 0;
-    const triggerOffScreen = triggerRect !== undefined && triggerRect.bottom < 0;
-    const isInsideNestedBlock = currentBlock !== undefined && currentBlock.parentId !== null;
+    if (this.popover instanceof PopoverDesktop) {
+      const blockRect = currentBlock?.holder.getBoundingClientRect();
+      const caretRect = withSlash ? SelectionUtils.rect : undefined;
+      const caretRectIsDegenerate = caretRect !== undefined
+        && caretRect.width === 0
+        && caretRect.height === 0
+        && caretRect.x === 0
+        && caretRect.y === 0;
+      // Fall back to the block rect when selection is lost or returns a
+      // degenerate {0,0,0,0} rect — never anchor the popover at the page origin.
+      const anchorRect = caretRect !== undefined && !caretRectIsDegenerate ? caretRect : blockRect;
 
-    if ((this.isInsideTableCell || triggerHidden || triggerOffScreen || isInsideNestedBlock) && this.popover instanceof PopoverDesktop) {
-      const caretRect = SelectionUtils.rect;
-
-      this.popover.updatePosition(caretRect);
-    } else if (!withSlash && this.popover instanceof PopoverDesktop) {
-      /**
-       * When opened without slash (via plus button), the trigger element (plus button)
-       * is at the top of the block. Position the popover below the block's bottom edge
-       * instead, so it doesn't overlap the block's placeholder text.
-       */
-      const currentBlock = this.api.blocks.getBlockByIndex(currentBlockIndex);
-
-      if (currentBlock) {
-        this.popover.updatePosition(currentBlock.holder.getBoundingClientRect());
+      if (anchorRect !== undefined) {
+        this.popover.updatePosition(anchorRect);
       }
     }
+
+    this.popover?.show();
 
     this.openedWithSlash = withSlash;
     this.opened = true;

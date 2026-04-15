@@ -324,6 +324,83 @@ test.describe('Toolbox popover position regression', () => {
     await openSlashMenuAndMeasure(page, 'quote block');
   });
 
+  test('4-column table, right-most cell: popover near caret even in wider table', async ({ page }) => {
+    await createBlok(
+      page,
+      {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: true,
+              content: [
+                ['A long header', 'Another header', 'Third column', 'Last column'],
+                ['Row value one', 'Row value two', 'Row value three', 'Row value four'],
+              ],
+            },
+          },
+        ],
+      },
+      { withTable: true }
+    );
+
+    const rightCell = page.locator('[data-blok-table-cell]').nth(7);
+
+    await expect(rightCell).toBeVisible();
+    await rightCell.click();
+
+    await openSlashMenuAndMeasure(page, '4-col table right cell');
+  });
+
+  test('plus button open on empty paragraph: popover aligned with block, dx small', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [
+        { id: 'plus-p', type: 'paragraph', data: { text: '' } },
+      ],
+    });
+
+    const editable = page.locator('[data-blok-id="plus-p"] [contenteditable="true"]');
+
+    await editable.click();
+
+    const plusButton = page.locator('[data-blok-testid="plus-button"]').first();
+
+    await expect(plusButton).toBeVisible();
+    await plusButton.click();
+
+    const popover = page.locator(POPOVER_SELECTOR);
+
+    await popover.waitFor({ state: 'attached' });
+    await expect(popover).toHaveAttribute('data-blok-popover-opened', 'true');
+
+    // For plus-button open, anchor is the block rect, not caret. Verify the
+    // popover sits within the block's horizontal bounds and just below it.
+    const measurement = await page.evaluate(() => {
+      const popHolder = document.querySelector('[data-blok-testid="toolbox-popover"]');
+
+      if (popHolder === null) {
+        throw new Error('Toolbox popover not found');
+      }
+
+      const pop = (popHolder.firstElementChild ?? popHolder) as HTMLElement;
+      const block = document.querySelector('[data-blok-id="plus-p"]');
+
+      if (block === null) {
+        throw new Error('Block not found');
+      }
+
+      return {
+        pop: pop.getBoundingClientRect(),
+        block: block.getBoundingClientRect(),
+      };
+    });
+
+    expect(measurement.pop.top).toBeGreaterThanOrEqual(measurement.block.bottom - 4);
+    expect(measurement.pop.top).toBeLessThanOrEqual(measurement.block.bottom + 50);
+    // Plus-button popover should be within the block's horizontal extent.
+    expect(Math.abs(measurement.pop.left - measurement.block.left)).toBeLessThanOrEqual(20);
+  });
+
   test('new empty paragraph after a long wrapped paragraph: popover is near caret', async ({ page }) => {
     const longText = (
       'Lorem ipsum dolor sit amet, consectetur adipiscing elit. '

@@ -1237,6 +1237,116 @@ describe('PopoverDesktop', () => {
       leftAlignElement.remove();
     });
 
+    it('hide clears explicit position so next show reuses leftAlignElement', () => {
+      // Regression guard: after hide(), params.position must be cleared so a
+      // subsequent show() without a fresh updatePosition() falls back to the
+      // leftAlignElement path, not a stale rect from a previous open.
+      const trigger = document.createElement('button');
+      const leftAlignElement = document.createElement('div');
+
+      document.body.appendChild(trigger);
+      document.body.appendChild(leftAlignElement);
+
+      vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 100, bottom: 140, left: 50, right: 90, width: 40, height: 40 })
+      );
+      vi.spyOn(leftAlignElement, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 100, bottom: 140, left: 200, right: 600, width: 400, height: 40 })
+      );
+
+      const popover = createPopover({
+        trigger,
+        leftAlignElement,
+      });
+
+      const caretRect = createRect({ top: 110, bottom: 126, left: 500, right: 500, width: 0, height: 16 });
+
+      popover.updatePosition(caretRect);
+      popover.show();
+      expect(popover.getElement().style.left).toBe(`${500 + window.scrollX}px`);
+
+      popover.hide();
+
+      // After hide, no updatePosition — should honor leftAlignElement again.
+      popover.show();
+      expect(popover.getElement().style.left).toBe(`${200 + window.scrollX}px`);
+
+      trigger.remove();
+      leftAlignElement.remove();
+    });
+
+    it('explicit updatePosition wins even when anchor rect is narrower than popover width', () => {
+      // In tables with wide leftAlignElement but tiny caret rect, make sure
+      // the flip logic uses the explicit anchor and doesn't silently re-snap.
+      const trigger = document.createElement('button');
+      const leftAlignElement = document.createElement('div');
+
+      document.body.appendChild(trigger);
+      document.body.appendChild(leftAlignElement);
+
+      vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 100, bottom: 140, left: 50, right: 90, width: 40, height: 40 })
+      );
+      vi.spyOn(leftAlignElement, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 100, bottom: 140, left: 0, right: 1200, width: 1200, height: 40 })
+      );
+
+      const popover = createPopover({
+        trigger,
+        leftAlignElement,
+      });
+
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 200, width: 220 });
+
+      const caretRect = createRect({ top: 110, bottom: 126, left: 900, right: 900, width: 0, height: 16 });
+
+      popover.updatePosition(caretRect);
+      popover.show();
+
+      const leftPx = popover.getElement().style.left;
+      const leftNum = Number(leftPx.replace('px', ''));
+
+      // Must be within popover width of the caret (900), never clamped to leftAlignElement.left (0).
+      expect(leftNum).toBeGreaterThanOrEqual(900 - 220);
+      expect(leftNum).toBeLessThanOrEqual(900 + 20);
+    });
+
+    it('repeated updatePosition calls each override the previous anchor', () => {
+      const trigger = document.createElement('button');
+      const leftAlignElement = document.createElement('div');
+
+      document.body.appendChild(trigger);
+      document.body.appendChild(leftAlignElement);
+
+      vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 100, bottom: 140, left: 50, right: 90, width: 40, height: 40 })
+      );
+      vi.spyOn(leftAlignElement, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 100, bottom: 140, left: 10, right: 800, width: 790, height: 40 })
+      );
+
+      const popover = createPopover({
+        trigger,
+        leftAlignElement,
+      });
+
+      popover.updatePosition(
+        createRect({ top: 110, bottom: 126, left: 300, right: 300, width: 0, height: 16 })
+      );
+      popover.show();
+      expect(popover.getElement().style.left).toBe(`${300 + window.scrollX}px`);
+
+      popover.updatePosition(
+        createRect({ top: 110, bottom: 126, left: 700, right: 700, width: 0, height: 16 })
+      );
+      expect(popover.getElement().style.left).toBe(`${700 + window.scrollX}px`);
+
+      trigger.remove();
+      leftAlignElement.remove();
+    });
+
     it('falls back to trigger left when leftAlignElement is not provided', () => {
       const trigger = document.createElement('button');
 

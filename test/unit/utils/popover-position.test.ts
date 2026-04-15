@@ -205,6 +205,115 @@ describe('resolvePosition', () => {
   });
 
 
+  describe('fuzz: horizontal anchor fidelity with wide leftAlignRect', () => {
+    // Matrix fuzz: for many realistic combinations of (caret position,
+    // leftAlignRect width, popover width, viewport width, horizontal scroll),
+    // when leftAlignRect is explicitly undefined (simulating the toolbox path
+    // that passes a caret anchor), the popover's left must track the caret
+    // and NEVER snap to 0 or to some wide container's left edge.
+    const caretLefts = [10, 100, 400, 700, 900];
+    const popoverWidths = [180, 240, 320];
+    const viewportWidths = [800, 1024, 1440];
+    const scrollXs = [0, 150, 600];
+
+    const scenarios: Array<{ caretLeft: number; popoverWidth: number; viewportWidth: number; scrollX: number }> = [];
+
+    caretLefts.forEach((caretLeft) => {
+      popoverWidths.forEach((popoverWidth) => {
+        viewportWidths.forEach((viewportWidth) => {
+          scrollXs.forEach((scrollX) => {
+            // Skip degenerate cases where the caret itself sits outside the
+            // viewport — a real editor would scroll the caret into view first.
+            if (caretLeft >= viewportWidth) {
+              return;
+            }
+            scenarios.push({ caretLeft, popoverWidth, viewportWidth, scrollX });
+          });
+        });
+      });
+    });
+
+    scenarios.forEach(({ caretLeft, popoverWidth, viewportWidth, scrollX }) => {
+      const label = `caretLeft=${caretLeft} popoverW=${popoverWidth} vpW=${viewportWidth} scrollX=${scrollX}`;
+
+      it(`tracks the caret anchor — ${label}`, () => {
+        const result = resolvePosition({
+          anchor: rect({
+            top: 200,
+            bottom: 216,
+            left: caretLeft,
+            right: caretLeft,
+            width: 0,
+            height: 16,
+          }),
+          popoverSize: { width: popoverWidth, height: 300 },
+          scopeBounds: rect({ top: 0, bottom: 2000, left: 0, right: viewportWidth }),
+          viewportSize: { width: viewportWidth, height: 900 },
+          scrollOffset: { x: scrollX, y: 0 },
+          offset: 8,
+          // leftAlignRect intentionally undefined — mirrors toolbox path
+          // where updatePosition(caretRect) was supplied.
+        });
+
+        const caretLeftDoc = caretLeft + scrollX;
+
+        // Core invariant: popover is adjacent to the caret horizontally —
+        // its left edge is at or before the caret, and its right edge
+        // reaches the caret. Never snapped to the origin or to some
+        // unrelated container's left edge.
+        expect(result.left).toBeLessThanOrEqual(caretLeftDoc);
+        expect(result.left + popoverWidth).toBeGreaterThanOrEqual(caretLeftDoc);
+      });
+    });
+  });
+
+  describe('fuzz: wide leftAlignRect does NOT snap popover when explicit anchor is on the right', () => {
+    // Regression guard for the 3-column-table bug: even if callers accidentally
+    // forward a wide leftAlignRect, they should get the caller-chosen anchor
+    // when they explicitly mean to override — the toolbox achieves this by
+    // passing leftAlignRect: undefined (see popover-desktop.calculatePosition).
+    // This test locks in the behavior of resolvePosition when leftAlignRect
+    // is undefined versus when it is defined.
+    const cases = [
+      { caretLeft: 500, wideContainer: { left: 10, right: 1200 }, popoverWidth: 220 },
+      { caretLeft: 900, wideContainer: { left: 0, right: 1400 }, popoverWidth: 260 },
+      { caretLeft: 300, wideContainer: { left: 50, right: 900 }, popoverWidth: 200 },
+    ];
+
+    for (const { caretLeft, wideContainer, popoverWidth } of cases) {
+      it(`honors caret=${caretLeft} when leftAlignRect is undefined (container ${wideContainer.left}-${wideContainer.right})`, () => {
+        const explicit = resolvePosition({
+          anchor: rect({ top: 100, bottom: 116, left: caretLeft, right: caretLeft, width: 0, height: 16 }),
+          popoverSize: { width: popoverWidth, height: 200 },
+          scopeBounds: rect({ top: 0, bottom: 2000, left: 0, right: 1600 }),
+          viewportSize: { width: 1600, height: 900 },
+          scrollOffset: { x: 0, y: 0 },
+          offset: 8,
+        });
+
+        // Should track caret, not container left
+        expect(explicit.left).toBeGreaterThanOrEqual(Math.max(0, caretLeft - popoverWidth));
+        expect(explicit.left).toBeLessThanOrEqual(caretLeft);
+        expect(explicit.left).not.toBe(wideContainer.left);
+      });
+
+      it(`snaps to container left when leftAlignRect is defined (caret=${caretLeft})`, () => {
+        const aligned = resolvePosition({
+          anchor: rect({ top: 100, bottom: 116, left: caretLeft, right: caretLeft, width: 0, height: 16 }),
+          popoverSize: { width: popoverWidth, height: 200 },
+          scopeBounds: rect({ top: 0, bottom: 2000, left: 0, right: 1600 }),
+          viewportSize: { width: 1600, height: 900 },
+          scrollOffset: { x: 0, y: 0 },
+          offset: 8,
+          leftAlignRect: rect({ left: wideContainer.left }),
+        });
+
+        // When leftAlignRect is provided, horizontal override IS in effect.
+        expect(aligned.left).toBe(wideContainer.left);
+      });
+    }
+  });
+
   describe('scope boundary', () => {
     it('uses scope bottom instead of viewport when scope is smaller', () => {
       const result = resolvePosition({

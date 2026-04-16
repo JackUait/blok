@@ -66,6 +66,7 @@ export class CalloutTool implements BlockTool {
   private _dom: CalloutDOMRefs | null = null;
   private _emojiPicker: EmojiPicker | null = null;
   private _colorPicker: ColorPickerHandle | null = null;
+  private readonly _customEmojiPicker: ((onSelect: (emoji: string) => void) => void) | undefined;
   private blockId?: string;
   /**
    * Text captured from a source block during conversion (paragraph -> callout).
@@ -75,7 +76,7 @@ export class CalloutTool implements BlockTool {
    */
   private _pendingChildText: string | null = null;
 
-  constructor({ data, api, readOnly, block }: BlockToolConstructorOptions<CalloutData, CalloutConfig>) {
+  constructor({ data, api, readOnly, block, config }: BlockToolConstructorOptions<CalloutData, CalloutConfig>) {
     this.api = api;
     this.readOnly = readOnly;
 
@@ -92,6 +93,7 @@ export class CalloutTool implements BlockTool {
     if (block) {
       this.blockId = block.id;
     }
+    this._customEmojiPicker = config?.emojiPicker;
   }
 
   private normalizeData(data: Partial<CalloutData>): CalloutData {
@@ -375,6 +377,11 @@ export class CalloutTool implements BlockTool {
 
   private openEmojiPicker(): void {
     if (this._dom === null) {
+      return;
+    }
+
+    if (this._customEmojiPicker !== undefined) {
+      this._customEmojiPicker((emoji: string) => this.setEmoji(emoji));
       return;
     }
 

@@ -679,4 +679,57 @@ describe('CalloutTool', () => {
       expect(tool.render()).toBe(el);
     });
   });
+
+  describe('custom emojiPicker config', () => {
+    it('calls config.emojiPicker instead of opening built-in picker when provided', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const customPicker = vi.fn();
+      const options = createOptions({}, {});
+      // Override config with custom picker
+      (options as unknown as { config: { emojiPicker: typeof customPicker } }).config = {
+        emojiPicker: customPicker,
+      };
+      const tool = new CalloutTool(options);
+      const wrapper = tool.render();
+      const emojiBtn = wrapper.querySelector('[data-blok-testid="callout-emoji-btn"]') as HTMLButtonElement;
+
+      emojiBtn.click();
+
+      expect(customPicker).toHaveBeenCalledOnce();
+      // The callback passed to customPicker should set the emoji when called
+      const [onSelect] = customPicker.mock.calls[0] as [(emoji: string) => void];
+
+      onSelect('🎉');
+      expect(emojiBtn.textContent).toBe('🎉');
+    });
+
+    it('opens built-in picker when config.emojiPicker is not provided', async () => {
+      const emojiPickerOpenSpy = vi.fn().mockResolvedValue(undefined);
+      vi.resetModules();
+      vi.doMock('../../../../src/tools/callout/emoji-data', () => ({
+        loadEmojiData: vi.fn().mockResolvedValue([]),
+        searchEmojis: vi.fn().mockReturnValue([]),
+        groupEmojisByCategory: vi.fn().mockReturnValue(new Map()),
+        CURATED_CALLOUT_EMOJIS: [],
+      }));
+      vi.doMock('../../../../src/tools/callout/emoji-picker', () => {
+        class MockEmojiPicker {
+          getElement() { return document.createElement('div'); }
+          open(...args: unknown[]) { return emojiPickerOpenSpy(...args); }
+        }
+        return { EmojiPicker: MockEmojiPicker };
+      });
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions());
+      const wrapper = tool.render();
+      const emojiBtn = wrapper.querySelector('[data-blok-testid="callout-emoji-btn"]') as HTMLButtonElement;
+
+      emojiBtn.click();
+      await Promise.resolve(); // flush microtasks
+
+      expect(emojiPickerOpenSpy).toHaveBeenCalledOnce();
+      vi.doUnmock('../../../../src/tools/callout/emoji-picker');
+      vi.doUnmock('../../../../src/tools/callout/emoji-data');
+    });
+  });
 });

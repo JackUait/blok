@@ -681,6 +681,10 @@ describe('CalloutTool', () => {
   });
 
   describe('custom emojiPicker config', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
     it('calls config.emojiPicker instead of opening built-in picker when provided', async () => {
       const { CalloutTool } = await import('../../../../src/tools/callout');
       const customPicker = vi.fn();
@@ -715,7 +719,7 @@ describe('CalloutTool', () => {
       vi.doMock('../../../../src/tools/callout/emoji-picker', () => {
         class MockEmojiPicker {
           getElement() { return document.createElement('div'); }
-          open(...args: unknown[]) { return emojiPickerOpenSpy(...args); }
+          open(...args: unknown[]) { emojiPickerOpenSpy(...args); }
         }
         return { EmojiPicker: MockEmojiPicker };
       });

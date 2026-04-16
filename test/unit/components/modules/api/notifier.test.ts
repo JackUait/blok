@@ -6,10 +6,10 @@ vi.mock('../../../../../src/components/utils/notifier/index', () => ({
 }));
 
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
-import type { NotifierOptions } from '../../../../../types/configs/notifier';
+import type { NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions } from '../../../../../types/configs/notifier';
 import { NotifierAPI } from '../../../../../src/components/modules/api/notifier';
 
-const makeConfig = (notifierOverride?: (opts: NotifierOptions) => void): ModuleConfig => ({
+const makeConfig = (notifierOverride?: (opts: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions) => void): ModuleConfig => ({
   config: {
     notifier: notifierOverride,
   } as never,

@@ -229,15 +229,6 @@ export interface BlokConfig {
   notifierPosition?: NotifierPosition;
 
   /**
-   * Custom emoji picker handler.
-   * When provided, Blok calls this function instead of showing the built-in emoji picker.
-   * Your implementation must call `onSelect` with the chosen native emoji character,
-   * or call it with an empty string to clear the emoji.
-   * @param onSelect - call with the selected emoji (e.g. "😊") or "" to remove
-   */
-  emojiPicker?: (onSelect: (emoji: string) => void) => void;
-
-  /**
    * Custom notifier handler.
    * When provided, Blok calls this function instead of showing the built-in DOM notification.
    * Your implementation receives the same options object that the built-in notifier accepts.

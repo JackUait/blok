@@ -31,7 +31,7 @@ export class NotifierAPI extends Module {
     super({ config, eventsDispatcher });
 
     this.builtInNotifier = new Notifier(config.notifierPosition ?? DEFAULT_NOTIFIER_POSITION);
-    this.customNotifier = (config as { notifier?: (opts: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions) => void }).notifier;
+    this.customNotifier = config.notifier;
   }
 
   /**

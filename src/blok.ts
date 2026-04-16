@@ -205,6 +205,9 @@ class Blok {
       // Scroll to the block referenced by the URL hash, if present.
       // isReady resolves only after all blocks are in the DOM (requestIdleCallback fence in Renderer),
       // so no extra polling is needed even on slow connections.
+      // However, when consumers pass no `data` in the config and instead call blocks.render()
+      // from onReady, the target block won't exist yet. In that case we store the hash
+      // on Renderer.pendingHashScroll so BlocksAPI.render() can retry after the real blocks arrive.
       const rawHash = window.location.hash.slice(1);
       const hash = rawHash ? Blok.safeDecodeHash(rawHash) : '';
 
@@ -220,6 +223,8 @@ class Blok {
           window.scrollTo({ top: y, behavior: 'smooth' });
 
           Blok.selectBlockById(blok, hash);
+        } else if (blok.moduleInstances.Renderer !== undefined) {
+          blok.moduleInstances.Renderer.pendingHashScroll = hash;
         }
       }
 

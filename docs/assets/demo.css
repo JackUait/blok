@@ -473,7 +473,7 @@
   max-height: 520px;
   overflow-y: auto;
   position: relative;
-  padding: var(--spacing-xl) var(--spacing-2xl);
+  padding: var(--spacing-xl) var(--spacing-2xl) var(--spacing-xl) 5rem;
   scroll-behavior: smooth;
 }
 

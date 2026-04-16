@@ -5,7 +5,7 @@ import {SanitizerConfig} from './sanitizer-config';
 import {I18nConfig} from './i18n-config';
 import { BlockMutationEvent } from '../events/block';
 import type { UserInfo } from './user-info';
-import type { NotifierPosition } from './notifier';
+import type { NotifierPosition, NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions } from './notifier';
 
 /**
  * Data model format for input/output
@@ -227,4 +227,21 @@ export interface BlokConfig {
    * @default 'bottom-center' — see DEFAULT_NOTIFIER_POSITION
    */
   notifierPosition?: NotifierPosition;
+
+  /**
+   * Custom emoji picker handler.
+   * When provided, Blok calls this function instead of showing the built-in emoji picker.
+   * Your implementation must call `onSelect` with the chosen native emoji character,
+   * or call it with an empty string to clear the emoji.
+   * @param onSelect - call with the selected emoji (e.g. "😊") or "" to remove
+   */
+  emojiPicker?: (onSelect: (emoji: string) => void) => void;
+
+  /**
+   * Custom notifier handler.
+   * When provided, Blok calls this function instead of showing the built-in DOM notification.
+   * Your implementation receives the same options object that the built-in notifier accepts.
+   * @param options - notification options (message, style, type, time, etc.)
+   */
+  notifier?: (options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions) => void;
 }

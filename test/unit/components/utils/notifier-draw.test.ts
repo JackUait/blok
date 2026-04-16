@@ -51,7 +51,7 @@ describe('Notifier draw', () => {
       const el = alert({ message: 'removeme' });
 
       document.body.appendChild(el);
-      const cross = el.querySelector('[data-blok-testid="notification-cross"]') as HTMLElement | null;
+      const cross = el.querySelector('[data-blok-testid="notification-cross"]');
 
       expect(cross).toBeNull();
       el.remove();

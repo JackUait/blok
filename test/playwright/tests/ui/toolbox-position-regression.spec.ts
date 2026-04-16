@@ -230,7 +230,7 @@ test.describe('Toolbox popover position regression', () => {
       { withTable: true }
     );
 
-    const firstCell = page.locator('[data-blok-table-cell]').first();
+    const firstCell = page.locator('[data-blok-table-cell]:nth-child(1)');
 
     await expect(firstCell).toBeVisible();
     await firstCell.click();
@@ -258,7 +258,7 @@ test.describe('Toolbox popover position regression', () => {
       { withTable: true }
     );
 
-    const rightMostCell = page.locator('[data-blok-table-cell]').nth(5);
+    const rightMostCell = page.locator('[data-blok-table-cell]').filter({ hasText: 'Supports any size' });
 
     await expect(rightMostCell).toBeVisible();
     await rightMostCell.click();
@@ -300,8 +300,7 @@ test.describe('Toolbox popover position regression', () => {
     });
 
     const childEditable = page
-      .locator('[data-blok-id="callout-1"] [data-blok-toggle-children] [data-blok-component="paragraph"] [contenteditable="true"]')
-      .first();
+      .locator('[data-blok-id="callout-1"] [data-blok-toggle-children] [data-blok-component="paragraph"] [contenteditable="true"]');
 
     await expect(childEditable).toBeVisible();
     await childEditable.click();
@@ -316,7 +315,7 @@ test.describe('Toolbox popover position regression', () => {
       ],
     });
 
-    const quoteEditable = page.locator('[data-blok-id="q-1"] [contenteditable="true"]').first();
+    const quoteEditable = page.locator('[data-blok-id="q-1"] [contenteditable="true"]');
 
     await expect(quoteEditable).toBeVisible();
     await quoteEditable.click();
@@ -344,7 +343,7 @@ test.describe('Toolbox popover position regression', () => {
       { withTable: true }
     );
 
-    const rightCell = page.locator('[data-blok-table-cell]').nth(7);
+    const rightCell = page.locator('[data-blok-table-cell]').filter({ hasText: 'Row value four' });
 
     await expect(rightCell).toBeVisible();
     await rightCell.click();
@@ -363,7 +362,7 @@ test.describe('Toolbox popover position regression', () => {
 
     await editable.click();
 
-    const plusButton = page.locator('[data-blok-testid="plus-button"]').first();
+    const plusButton = page.locator('[data-blok-testid="plus-button"]');
 
     await expect(plusButton).toBeVisible();
     await plusButton.click();

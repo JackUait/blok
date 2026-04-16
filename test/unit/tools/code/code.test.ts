@@ -81,6 +81,7 @@ describe('CodeTool', () => {
   });
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.clearAllTimers();
 
     // Clean up any popover elements left in document.body
     document.querySelectorAll('[data-blok-popover-opened]').forEach((el) => el.remove());

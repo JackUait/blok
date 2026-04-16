@@ -77,12 +77,12 @@ test.describe('slash search radius inside table cell', () => {
 
     await expect(table).toBeVisible();
 
-    const firstCell = page.locator(CELL_SELECTOR).first();
+    const firstCell = page.locator(`${CELL_SELECTOR}:nth-child(1)`);
 
     await firstCell.click();
     await page.keyboard.type('/');
 
-    const slashSearch = firstCell.locator('[data-blok-slash-search]').first();
+    const slashSearch = firstCell.locator('[data-blok-slash-search]');
 
     await expect(slashSearch).toHaveAttribute('data-blok-slash-search', /.+/);
 

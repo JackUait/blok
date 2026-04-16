@@ -33,6 +33,7 @@ function walk(dir: string, out: string[] = []): string[] {
 
     if (statSync(full).isDirectory()) {
       walk(full, out);
+      // eslint-disable-next-line vitest/no-conditional-tests -- utility walk fn, not a conditional test
     } else if (/\.(ts|tsx|js|jsx|css|scss)$/.test(entry)) {
       out.push(full);
     }
@@ -44,19 +45,48 @@ function walk(dir: string, out: string[] = []): string[] {
 describe('callout: dead drag-zone pattern lock-in', () => {
   const files = walk(SRC_ROOT);
 
-  for (const { pattern, reason } of FORBIDDEN_PATTERNS) {
-    it(`no production source contains ${pattern.source} (${reason})`, () => {
-      const offenders: string[] = [];
+  it(`no production source contains ${FORBIDDEN_PATTERNS[0].pattern.source} (${FORBIDDEN_PATTERNS[0].reason})`, () => {
+    const { pattern } = FORBIDDEN_PATTERNS[0];
+    const offenders: string[] = [];
 
-      for (const file of files) {
-        const content = readFileSync(file, 'utf8');
+    for (const file of files) {
+      const content = readFileSync(file, 'utf8');
 
-        if (pattern.test(content)) {
-          offenders.push(file.replace(SRC_ROOT, 'src'));
-        }
+      if (pattern.test(content)) {
+        offenders.push(file.replace(SRC_ROOT, 'src'));
       }
+    }
 
-      expect(offenders).toEqual([]);
-    });
-  }
+    expect(offenders).toEqual([]);
+  });
+
+  it(`no production source contains ${FORBIDDEN_PATTERNS[1].pattern.source} (${FORBIDDEN_PATTERNS[1].reason})`, () => {
+    const { pattern } = FORBIDDEN_PATTERNS[1];
+    const offenders: string[] = [];
+
+    for (const file of files) {
+      const content = readFileSync(file, 'utf8');
+
+      if (pattern.test(content)) {
+        offenders.push(file.replace(SRC_ROOT, 'src'));
+      }
+    }
+
+    expect(offenders).toEqual([]);
+  });
+
+  it(`no production source contains ${FORBIDDEN_PATTERNS[2].pattern.source} (${FORBIDDEN_PATTERNS[2].reason})`, () => {
+    const { pattern } = FORBIDDEN_PATTERNS[2];
+    const offenders: string[] = [];
+
+    for (const file of files) {
+      const content = readFileSync(file, 'utf8');
+
+      if (pattern.test(content)) {
+        offenders.push(file.replace(SRC_ROOT, 'src'));
+      }
+    }
+
+    expect(offenders).toEqual([]);
+  });
 });

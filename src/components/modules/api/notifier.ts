@@ -6,13 +6,21 @@ import type { ConfirmNotifierOptions, NotifierOptions, PromptNotifierOptions } f
 import { DEFAULT_NOTIFIER_POSITION } from '../../utils/notifier/types';
 
 /**
- *
+ * Notifier API module — routes show() to the custom handler when the consumer
+ * provides one in BlokConfig.notifier, otherwise falls back to the built-in notifier.
  */
 export class NotifierAPI extends Module {
   /**
-   * Notifier utility Instance
+   * Built-in notifier utility instance (used only when no custom handler is provided)
    */
-  private notifier: Notifier;
+  private builtInNotifier: Notifier;
+
+  /**
+   * Optional consumer-provided notifier handler from BlokConfig
+   */
+  private readonly customNotifier:
+    | ((options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions) => void)
+    | undefined;
 
   /**
    * @param moduleConfiguration - Module Configuration
@@ -20,12 +28,10 @@ export class NotifierAPI extends Module {
    * @param moduleConfiguration.eventsDispatcher - Blok's event dispatcher
    */
   constructor({ config, eventsDispatcher }: ModuleConfig) {
-    super({
-      config,
-      eventsDispatcher,
-    });
+    super({ config, eventsDispatcher });
 
-    this.notifier = new Notifier(config.notifierPosition ?? DEFAULT_NOTIFIER_POSITION);
+    this.builtInNotifier = new Notifier(config.notifierPosition ?? DEFAULT_NOTIFIER_POSITION);
+    this.customNotifier = (config as { notifier?: (opts: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions) => void }).notifier;
   }
 
   /**
@@ -33,15 +39,21 @@ export class NotifierAPI extends Module {
    */
   public get methods(): INotifier {
     return {
-      show: (options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions): void => this.show(options),
+      show: (options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions): void =>
+        this.show(options),
     };
   }
 
   /**
-   * Show notification
+   * Show notification — delegates to custom handler if provided, else built-in
    * @param {NotifierOptions} options - message option
    */
   public show(options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions): void {
-    return this.notifier.show(options);
+    if (this.customNotifier !== undefined) {
+      this.customNotifier(options);
+      return;
+    }
+
+    this.builtInNotifier.show(options);
   }
 }

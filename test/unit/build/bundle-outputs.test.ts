@@ -50,3 +50,45 @@ describe('IIFE bundle content', () => {
     expect(iife).toMatch(/var\s+BlokEditor\s*=/)
   })
 })
+
+import packageJson from '../../../package.json'
+
+describe('package.json exports include require conditions', () => {
+  it('"." export has "require" condition pointing to blok.cjs', () => {
+    expect((packageJson.exports['.'] as Record<string, string>)['require']).toBe('./dist/blok.cjs')
+  })
+
+  it('"./tools" export has "require" condition', () => {
+    expect((packageJson.exports['./tools'] as Record<string, string>)['require']).toBe('./dist/tools.cjs')
+  })
+
+  it('"./full" export has "require" condition', () => {
+    expect((packageJson.exports['./full'] as Record<string, string>)['require']).toBe('./dist/full.cjs')
+  })
+
+  it('"./react" export has "require" condition', () => {
+    expect((packageJson.exports['./react'] as Record<string, string>)['require']).toBe('./dist/react.cjs')
+  })
+
+  it('"./markdown" export has "require" condition', () => {
+    expect((packageJson.exports['./markdown'] as Record<string, string>)['require']).toBe('./dist/markdown.cjs')
+  })
+})
+
+describe('package.json top-level fields for CJS + IIFE', () => {
+  it('has "main" field pointing to blok.cjs', () => {
+    expect((packageJson as unknown as Record<string, string>)['main']).toBe('./dist/blok.cjs')
+  })
+
+  it('has "browser" field pointing to blok.iife.js', () => {
+    expect((packageJson as unknown as Record<string, string>)['browser']).toBe('./dist/blok.iife.js')
+  })
+
+  it('has "unpkg" field pointing to blok.iife.js', () => {
+    expect((packageJson as unknown as Record<string, string>)['unpkg']).toBe('./dist/blok.iife.js')
+  })
+
+  it('has "jsdelivr" field pointing to blok.iife.js', () => {
+    expect((packageJson as unknown as Record<string, string>)['jsdelivr']).toBe('./dist/blok.iife.js')
+  })
+})

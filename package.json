@@ -3,6 +3,10 @@
   "version": "0.11.0",
   "description": "Blok — headless, highly extensible rich text editor built for developers who need to implement a block-based editing experience (similar to Notion) without building it from scratch",
   "module": "dist/blok.mjs",
+  "main": "./dist/blok.cjs",
+  "browser": "./dist/blok.iife.js",
+  "unpkg": "./dist/blok.iife.js",
+  "jsdelivr": "./dist/blok.iife.js",
   "types": "./types/index.d.ts",
   "typesVersions": {
     "*": {
@@ -26,15 +30,18 @@
   "exports": {
     ".": {
       "types": "./types/index.d.ts",
-      "import": "./dist/blok.mjs"
+      "import": "./dist/blok.mjs",
+      "require": "./dist/blok.cjs"
     },
     "./tools": {
       "types": "./types/tools-entry.d.ts",
-      "import": "./dist/tools.mjs"
+      "import": "./dist/tools.mjs",
+      "require": "./dist/tools.cjs"
     },
     "./full": {
       "types": "./types/full.d.ts",
-      "import": "./dist/full.mjs"
+      "import": "./dist/full.mjs",
+      "require": "./dist/full.cjs"
     },
     "./locales": {
       "types": "./types/locales.d.ts",
@@ -42,11 +49,13 @@
     },
     "./react": {
       "types": "./types/react.d.ts",
-      "import": "./dist/react.mjs"
+      "import": "./dist/react.mjs",
+      "require": "./dist/react.cjs"
     },
     "./markdown": {
       "types": "./types/markdown.d.ts",
-      "import": "./dist/markdown.mjs"
+      "import": "./dist/markdown.mjs",
+      "require": "./dist/markdown.cjs"
     }
   },
   "bin": {

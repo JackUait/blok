@@ -36,6 +36,42 @@ Unlike traditional `contenteditable` solutions that treat text as a single HTML 
 
 **♿ Accessible** — ARIA live announcements for drag and block operations, full keyboard navigation (Notion-style vertical caret movement), and semantic data attributes throughout.
 
+## Installation
+
+**npm / yarn / pnpm (bundler):**
+
+```bash
+npm install @jackuait/blok
+# or
+yarn add @jackuait/blok
+# or
+pnpm add @jackuait/blok
+```
+
+```js
+// ESM (Vite, webpack, Rollup, …)
+import Blok from '@jackuait/blok';
+
+// CommonJS (Node.js, Jest, …)
+const { Blok } = require('@jackuait/blok');
+```
+
+**CDN (no bundler, `<script>` tag):**
+
+```html
+<!-- unpkg -->
+<script src="https://unpkg.com/@jackuait/blok/dist/blok.iife.js"></script>
+
+<!-- jsDelivr -->
+<script src="https://cdn.jsdelivr.net/npm/@jackuait/blok/dist/blok.iife.js"></script>
+
+<script>
+  const editor = new BlokEditor.Blok({ holder: 'editor' });
+</script>
+```
+
+The IIFE bundle exposes everything under the `BlokEditor` global.
+
 ## Documentation
 
 📚 **Full documentation is available at [blokeditor.com](https://blokeditor.com)**

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.1](https://github.com/JackUait/blok/compare/v0.11.0...v0.11.1) (2026-04-16)
+
+### Features
+
+- **Bundles** — Ship CJS (`require()`) and IIFE (`<script>` tag / CDN) bundles alongside ESM; add `"main"`, `"browser"`, `"unpkg"`, and `"jsdelivr"` fields to `package.json`
+
+### Maintenance
+
+- **README** — Add installation section documenting ESM, CJS, and CDN usage
+
 ## [0.10.9](https://github.com/JackUait/blok/compare/v0.10.8...v0.10.9) (2026-04-14)
 
 ### Features

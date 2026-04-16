@@ -14,6 +14,7 @@ declare global {
 // Module-level references so tests can spy on mock instances
 const mockGetBlockById = vi.fn().mockReturnValue(undefined);
 const mockSelectBlock = vi.fn();
+const mockRenderer = { pendingHashScroll: null as string | null };
 
 // Mock dependencies — must come before static import of Blok
 vi.mock('../../src/components/utils/tooltip', () => ({
@@ -71,6 +72,7 @@ vi.mock('../../src/components/core', () => {
       BlockSelection: {
         selectBlock: mockSelectBlock,
       } as unknown as BlokModules['BlockSelection'],
+      Renderer: mockRenderer as unknown as BlokModules['Renderer'],
     };
 
     public isReady: Promise<void> = Promise.resolve();
@@ -130,6 +132,7 @@ describe('scroll-to-block', () => {
     mockGetBlockById.mockReset();
     mockGetBlockById.mockReturnValue(undefined);
     mockSelectBlock.mockReset();
+    mockRenderer.pendingHashScroll = null;
 
     originalScrollTo = window.scrollTo;
     originalQuerySelector = document.querySelector.bind(document);
@@ -387,5 +390,57 @@ describe('scroll-to-block', () => {
     expect(mockScrollTo).toHaveBeenCalledWith({ top: 200, behavior: 'smooth' });
     // But no selection because BlockManager returned no block
     expect(mockSelectBlock).not.toHaveBeenCalled();
+  });
+
+  // -------------------------------------------------------------------------
+  // Deferred hash scroll (blocks.render() after onReady)
+  // -------------------------------------------------------------------------
+
+  it('stores pending hash on Renderer when hash exists but block element is not in DOM', async () => {
+    setHash('#Wioa6QcE52');
+
+    // querySelector returns null by default (block not in DOM yet)
+
+    const editor = new Blok({} as BlokConfig);
+
+    await editor.isReady;
+
+    // No scroll should occur
+    expect(mockScrollTo).not.toHaveBeenCalled();
+    // The hash should be stored for deferred scroll after blocks.render()
+    expect(mockRenderer.pendingHashScroll).toBe('Wioa6QcE52');
+  });
+
+  it('does not store pending hash when hash is empty', async () => {
+    setHash('');
+
+    const editor = new Blok({} as BlokConfig);
+
+    await editor.isReady;
+
+    expect(mockRenderer.pendingHashScroll).toBeNull();
+  });
+
+  it('does not store pending hash when hash scroll succeeds immediately', async () => {
+    setHash('#abc123XYZ0');
+
+    const el = fakeEl(200);
+
+    document.querySelector = vi.fn((selector: string): Element | null => {
+      if (selector === '[data-blok-id="abc123XYZ0"]') {
+        return el;
+      }
+
+      return originalQuerySelector(selector);
+    }) as typeof document.querySelector;
+
+    const editor = new Blok({} as BlokConfig);
+
+    await editor.isReady;
+
+    // Scroll happened immediately
+    expect(mockScrollTo).toHaveBeenCalled();
+    // No pending hash stored
+    expect(mockRenderer.pendingHashScroll).toBeNull();
   });
 });

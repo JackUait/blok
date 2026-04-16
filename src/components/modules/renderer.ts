@@ -38,6 +38,13 @@ export class Renderer extends Module {
   public pendingRender: Promise<void> | null = null;
 
   /**
+   * Decoded URL hash fragment that could not be scrolled to at init time
+   * because the target block was not yet in the DOM.
+   * Set by Blok constructor; consumed (and cleared) by BlocksAPI.render().
+   */
+  public pendingHashScroll: string | null = null;
+
+  /**
    * Resolve function for the current pendingRender promise.
    * Called when the render operation is done (in finally block).
    */

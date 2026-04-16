@@ -249,6 +249,10 @@ type BlokStub = {
     render: ReturnType<typeof vi.fn>;
     markRenderStart: ReturnType<typeof vi.fn>;
     markRenderEnd: ReturnType<typeof vi.fn>;
+    pendingHashScroll: string | null;
+  };
+  BlockSelection: {
+    selectBlock: ReturnType<typeof vi.fn>;
   };
   Paste: {
     processText: ReturnType<typeof vi.fn>;
@@ -288,9 +292,13 @@ const createBlokStub = (
       render: vi.fn(async (_blocks: OutputBlockData[]) => {}) as ReturnType<typeof vi.fn>,
       markRenderStart: vi.fn(),
       markRenderEnd: vi.fn(),
+      pendingHashScroll: null,
     },
     Paste: {
       processText: vi.fn(async (_html: string, _sanitize: boolean) => {}) as ReturnType<typeof vi.fn>,
+    },
+    BlockSelection: {
+      selectBlock: vi.fn(),
     },
     Tools: {
       blockTools: new Map(),
@@ -639,6 +647,161 @@ describe('BlocksAPI', () => {
 
       expect(blockManager.clear).toHaveBeenCalledWith();
       expect(blok.Paste.processText).toHaveBeenCalledWith('<p>Hello</p>', true);
+    });
+  });
+
+  describe('deferred hash scroll after render()', () => {
+    let originalScrollTo: typeof window.scrollTo;
+    let originalQuerySelector: typeof document.querySelector;
+    let mockScrollTo: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      originalScrollTo = window.scrollTo;
+      originalQuerySelector = document.querySelector.bind(document);
+      mockScrollTo = vi.fn();
+      window.scrollTo = mockScrollTo as unknown as typeof window.scrollTo;
+      Object.defineProperty(window, 'scrollY', { value: 0, writable: true, configurable: true });
+    });
+
+    afterEach(() => {
+      window.scrollTo = originalScrollTo;
+      document.querySelector = originalQuerySelector;
+    });
+
+    it('scrolls to and selects the hash-referenced block after render() when pendingHashScroll is set', async () => {
+      const targetBlock = createBlockStub({ id: 'Wioa6QcE52' });
+      const { blocksApi, blok, blockManager } = createBlocksApi({ blocks: [ targetBlock ] });
+
+      blok.Renderer.pendingHashScroll = 'Wioa6QcE52';
+
+      // After render() clears and re-renders, the block should be findable.
+      // Override getBlockById to return the target block after rendering.
+      blockManager.getBlockById.mockImplementation((id: string) =>
+        id === 'Wioa6QcE52' ? targetBlock : undefined
+      );
+
+      const el = document.createElement('div');
+
+      el.getBoundingClientRect = () =>
+        ({ top: 400, bottom: 400, left: 0, right: 0, width: 0, height: 0, x: 0, y: 400, toJSON: () => ({}) } as DOMRect);
+
+      document.querySelector = vi.fn((selector: string): Element | null => {
+        if (selector === '[data-blok-id="Wioa6QcE52"]') {
+          return el;
+        }
+
+        return originalQuerySelector(selector);
+      }) as typeof document.querySelector;
+
+      const data: OutputData = {
+        blocks: [{ id: 'Wioa6QcE52', type: 'paragraph', data: { text: 'target' } }],
+      };
+
+      await blocksApi.render(data);
+
+      expect(mockScrollTo).toHaveBeenCalledWith({ top: 400, behavior: 'smooth' });
+      expect(blok.BlockSelection.selectBlock).toHaveBeenCalledWith(targetBlock);
+      expect(blok.Renderer.pendingHashScroll).toBeNull();
+    });
+
+    it('applies topOffset from config when scrolling after render()', async () => {
+      const targetBlock = createBlockStub({ id: 'blockABC' });
+      const { blocksApi, blok } = createBlocksApi({
+        blocks: [ targetBlock ],
+        configOverrides: { scrollToBlock: { topOffset: 60 } },
+      });
+
+      blok.Renderer.pendingHashScroll = 'blockABC';
+
+      const el = document.createElement('div');
+
+      el.getBoundingClientRect = () =>
+        ({ top: 300, bottom: 300, left: 0, right: 0, width: 0, height: 0, x: 0, y: 300, toJSON: () => ({}) } as DOMRect);
+
+      document.querySelector = vi.fn((selector: string): Element | null => {
+        if (selector === '[data-blok-id="blockABC"]') {
+          return el;
+        }
+
+        return originalQuerySelector(selector);
+      }) as typeof document.querySelector;
+
+      const data: OutputData = {
+        blocks: [{ id: 'blockABC', type: 'paragraph', data: { text: 'target' } }],
+      };
+
+      await blocksApi.render(data);
+
+      // 300 (top) + 0 (scrollY) - 60 (topOffset) = 240
+      expect(mockScrollTo).toHaveBeenCalledWith({ top: 240, behavior: 'smooth' });
+    });
+
+    it('does not scroll when pendingHashScroll is null', async () => {
+      const { blocksApi, blok } = createBlocksApi();
+
+      blok.Renderer.pendingHashScroll = null;
+
+      const data: OutputData = {
+        blocks: [{ id: 'id-1', type: 'paragraph', data: { text: 'text' } }],
+      };
+
+      await blocksApi.render(data);
+
+      expect(mockScrollTo).not.toHaveBeenCalled();
+      expect(blok.BlockSelection.selectBlock).not.toHaveBeenCalled();
+    });
+
+    it('clears pendingHashScroll even when block element is not found after render()', async () => {
+      const { blocksApi, blok } = createBlocksApi();
+
+      blok.Renderer.pendingHashScroll = 'missingBlock';
+
+      // querySelector returns null by default
+
+      const data: OutputData = {
+        blocks: [{ id: 'id-1', type: 'paragraph', data: { text: 'text' } }],
+      };
+
+      await blocksApi.render(data);
+
+      // No scroll should occur
+      expect(mockScrollTo).not.toHaveBeenCalled();
+      // But pendingHashScroll should be cleared (no infinite retries)
+      expect(blok.Renderer.pendingHashScroll).toBeNull();
+    });
+
+    it('scrolls but does not select when DOM element exists but BlockManager has no matching block', async () => {
+      const { blocksApi, blok, blockManager } = createBlocksApi();
+
+      blok.Renderer.pendingHashScroll = 'orphanEl123';
+
+      // BlockManager returns undefined for this id (block not tracked)
+      blockManager.getBlockById.mockReturnValue(undefined);
+
+      const el = document.createElement('div');
+
+      el.getBoundingClientRect = () =>
+        ({ top: 250, bottom: 250, left: 0, right: 0, width: 0, height: 0, x: 0, y: 250, toJSON: () => ({}) } as DOMRect);
+
+      document.querySelector = vi.fn((selector: string): Element | null => {
+        if (selector === '[data-blok-id="orphanEl123"]') {
+          return el;
+        }
+
+        return originalQuerySelector(selector);
+      }) as typeof document.querySelector;
+
+      const data: OutputData = {
+        blocks: [{ id: 'id-1', type: 'paragraph', data: { text: 'text' } }],
+      };
+
+      await blocksApi.render(data);
+
+      // Scroll should still happen (DOM element found)
+      expect(mockScrollTo).toHaveBeenCalledWith({ top: 250, behavior: 'smooth' });
+      // But no selection (BlockManager doesn't know this block)
+      expect(blok.BlockSelection.selectBlock).not.toHaveBeenCalled();
+      expect(blok.Renderer.pendingHashScroll).toBeNull();
     });
   });
 

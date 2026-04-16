@@ -228,6 +228,8 @@ export class BlocksAPI extends Module {
     }
 
     this.Blok.ModificationsObserver.enable();
+
+    this.processPendingHashScroll();
   }
 
   /**
@@ -562,6 +564,38 @@ export class BlocksAPI extends Module {
 
     if (index < 0) {
       throw new Error(`Index should be greater than or equal to 0`);
+    }
+  }
+
+  /**
+   * If Renderer.pendingHashScroll is set (hash-based scroll was deferred because the
+   * target block did not exist at init time), attempt to scroll to and select the block now.
+   * Always clears the pending hash afterward (one-shot).
+   */
+  private processPendingHashScroll(): void {
+    const hash = this.Blok.Renderer.pendingHashScroll;
+
+    if (hash === null) {
+      return;
+    }
+
+    this.Blok.Renderer.pendingHashScroll = null;
+
+    const el = document.querySelector(`[data-blok-id="${CSS.escape(hash)}"]`);
+
+    if (el === null) {
+      return;
+    }
+
+    const topOffset = this.config.scrollToBlock?.topOffset ?? 0;
+    const y = el.getBoundingClientRect().top + window.scrollY - topOffset;
+
+    window.scrollTo({ top: y, behavior: 'smooth' });
+
+    const block = this.Blok.BlockManager.getBlockById(hash);
+
+    if (block !== undefined) {
+      this.Blok.BlockSelection.selectBlock(block);
     }
   }
 }

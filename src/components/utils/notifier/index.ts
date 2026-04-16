@@ -110,7 +110,7 @@ export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptN
     return alert(options);
   };
 
-  const existing = wrapper.querySelector('[data-blok-testid]') as HTMLElement | null;
+  const existing = wrapper.querySelector<HTMLElement>('[data-blok-testid]');
 
   if (existing) {
     // Cancel any in-progress swap-out on the existing element so we don't double-fire

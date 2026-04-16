@@ -32,16 +32,24 @@ export default defineConfig(({ mode }) => {
           react: path.resolve(__dirname, 'src', 'react', 'index.ts'),
           markdown: path.resolve(__dirname, 'src', 'markdown', 'index.ts'),
         },
-        formats: ['es'],
+        formats: ['es', 'cjs'],
       },
       rollupOptions: {
         external: [
           'react', 'react-dom', 'react/jsx-runtime',
         ],
-        output: {
-          entryFileNames: '[name].mjs',
-          chunkFileNames: 'chunks/[name]-[hash].mjs',
-        },
+        output: [
+          {
+            format: 'es',
+            entryFileNames: '[name].mjs',
+            chunkFileNames: 'chunks/[name]-[hash].mjs',
+          },
+          {
+            format: 'cjs',
+            entryFileNames: '[name].cjs',
+            chunkFileNames: 'chunks/[name]-[hash].cjs',
+          },
+        ],
         plugins: [
           license({
             thirdParty: {

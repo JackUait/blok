@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * Tests for the notifier show module (index.ts).
- * Covers progress bar rendering for alerts and exit animations.
+ * Covers notification rendering and exit animations.
  */
 
 vi.mock('../../../../src/components/utils/notifier/draw', () => {
@@ -12,7 +12,7 @@ vi.mock('../../../../src/components/utils/notifier/draw', () => {
     div.setAttribute('data-blok-testid', options.style ? `notification-${options.style}` : 'notification');
     div.innerHTML = options.message;
 
-    // Add a mock cross button matching real draw.ts structure
+  // Add a mock cross button matching real draw.ts structure
     const cross = document.createElement('div');
 
     cross.setAttribute('data-blok-testid', 'notification-cross');
@@ -22,11 +22,10 @@ vi.mock('../../../../src/components/utils/notifier/draw', () => {
     return div;
   };
 
-  const createProgressBar = (style?: string, time?: number): HTMLElement => {
+  const createProgressBar = (_style?: string, _time?: number): HTMLElement => {
     const bar = document.createElement('div');
 
     bar.setAttribute('data-blok-testid', 'notification-progress');
-    bar.style.animationDuration = `${time ?? 8000}ms`;
 
     return bar;
   };
@@ -64,33 +63,13 @@ describe('Notifier show (index.ts)', () => {
     document.querySelectorAll('[data-blok-testid="notifier-container"]').forEach((el) => el.remove());
   });
 
-  it('appends a progress bar to alert notifications', () => {
+  it('does not render a progress bar (dark pill design has no progress bar)', () => {
     show({ message: 'test alert', time: 5000 });
 
     const notification = document.querySelector('[data-blok-testid^="notification"]');
     const progressBar = notification?.querySelector('[data-blok-testid="notification-progress"]');
 
-    expect(progressBar).not.toBeNull();
-  });
-
-  it('sets progress bar animation duration to match the time option', () => {
-    show({ message: 'timed', time: 3000 });
-
-    const notification = document.querySelector('[data-blok-testid^="notification"]');
-    const progressBar = notification?.querySelector('[data-blok-testid="notification-progress"]') as HTMLElement;
-
-    expect(progressBar).not.toBeNull();
-    expect(progressBar.style.animationDuration).toBe('3000ms');
-  });
-
-  it('uses default time (8000ms) for progress bar when time is not specified', () => {
-    show({ message: 'default time' });
-
-    const notification = document.querySelector('[data-blok-testid^="notification"]');
-    const progressBar = notification?.querySelector('[data-blok-testid="notification-progress"]') as HTMLElement;
-
-    expect(progressBar).not.toBeNull();
-    expect(progressBar.style.animationDuration).toBe('8000ms');
+    expect(progressBar).toBeNull();
   });
 
   it('does not add progress bar to confirm notifications', () => {

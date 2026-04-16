@@ -11,47 +11,21 @@ describe('Notifier draw', () => {
   });
 
   describe('alert', () => {
-    it('renders an icon element for default style', () => {
+    it('does not render an icon element (dark pill has no icon)', () => {
       const el = alert({ message: 'Hello' });
       const icon = el.querySelector('[data-blok-testid="notification-icon"]');
 
-      expect(icon).not.toBeNull();
-      expect(icon?.querySelector('svg')).not.toBeNull();
+      expect(icon).toBeNull();
     });
 
-    it('renders a success icon for success style', () => {
-      const el = alert({ message: 'Done', style: 'success' });
-      const icon = el.querySelector('[data-blok-testid="notification-icon"]');
-
-      expect(icon).not.toBeNull();
-      expect(icon?.getAttribute('data-blok-style')).toBe('success');
-    });
-
-    it('renders an error icon for error style', () => {
-      const el = alert({ message: 'Fail', style: 'error' });
-      const icon = el.querySelector('[data-blok-testid="notification-icon"]');
-
-      expect(icon).not.toBeNull();
-      expect(icon?.getAttribute('data-blok-style')).toBe('error');
-    });
-
-    it('renders a default icon when no style is provided', () => {
-      const el = alert({ message: 'Info' });
-      const icon = el.querySelector('[data-blok-testid="notification-icon"]');
-
-      expect(icon).not.toBeNull();
-      expect(icon?.getAttribute('data-blok-style')).toBe('default');
-    });
-
-    it('renders close button with an SVG element', () => {
+    it('does not render a close button (dark pill has no close button)', () => {
       const el = alert({ message: 'Test' });
       const cross = el.querySelector('[data-blok-testid="notification-cross"]');
 
-      expect(cross).not.toBeNull();
-      expect(cross?.querySelector('svg')).not.toBeNull();
+      expect(cross).toBeNull();
     });
 
-    it('uses flex layout for icon and message alignment', () => {
+    it('uses flex layout for message alignment', () => {
       const el = alert({ message: 'Layout test' });
 
       expect(el.className).toContain('flex');
@@ -71,20 +45,21 @@ describe('Notifier draw', () => {
       expect(plain.getAttribute('data-blok-testid')).toBe('notification');
     });
 
-    it('removes notification when cross button is clicked', () => {
+    it('removes notification when close button is clicked', () => {
+      // Dark pill has no cross button; notification is dismissed by timeout only.
+      // This test verifies that no spurious close button exists.
       const el = alert({ message: 'removeme' });
 
       document.body.appendChild(el);
-      const cross = el.querySelector('[data-blok-testid="notification-cross"]') as HTMLElement;
+      const cross = el.querySelector('[data-blok-testid="notification-cross"]') as HTMLElement | null;
 
-      cross.click();
-
-      expect(document.body.contains(el)).toBe(false);
+      expect(cross).toBeNull();
+      el.remove();
     });
   });
 
   describe('confirm', () => {
-    it('renders icon and preserves confirm/cancel buttons', () => {
+    it('preserves confirm/cancel buttons (no icon in dark pill)', () => {
       const el = confirm({
         message: 'Sure?',
         okHandler: vi.fn(),
@@ -94,14 +69,14 @@ describe('Notifier draw', () => {
       const okBtn = el.querySelector('[data-blok-testid="notification-confirm-button"]');
       const cancelBtn = el.querySelector('[data-blok-testid="notification-cancel-button"]');
 
-      expect(icon).not.toBeNull();
+      expect(icon).toBeNull();
       expect(okBtn).not.toBeNull();
       expect(cancelBtn).not.toBeNull();
     });
   });
 
   describe('prompt', () => {
-    it('renders icon and preserves input field', () => {
+    it('preserves input field (no icon in dark pill)', () => {
       const el = prompt({
         message: 'Name?',
         okHandler: vi.fn(),
@@ -109,7 +84,7 @@ describe('Notifier draw', () => {
       const icon = el.querySelector('[data-blok-testid="notification-icon"]');
       const input = el.querySelector('[data-blok-testid="notification-input"]');
 
-      expect(icon).not.toBeNull();
+      expect(icon).toBeNull();
       expect(input).not.toBeNull();
     });
   });

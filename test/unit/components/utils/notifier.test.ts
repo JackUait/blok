@@ -162,7 +162,7 @@ describe('Notifier utility', () => {
       await loadingPromise;
 
       expect(showSpy).toHaveBeenCalledTimes(1);
-      expect(showSpy).toHaveBeenCalledWith(options);
+      expect(showSpy).toHaveBeenCalledWith(options, 'bottom-center');
     });
 
     it('logs an error when loading notifier fails', async () => {

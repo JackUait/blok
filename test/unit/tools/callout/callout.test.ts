@@ -735,5 +735,23 @@ describe('CalloutTool', () => {
       vi.doUnmock('../../../../src/tools/callout/emoji-picker');
       vi.doUnmock('../../../../src/tools/callout/emoji-data');
     });
+
+    it('clears emoji when onSelect is called with empty string', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const customPicker = vi.fn();
+      const options = createOptions({}, {});
+      (options as unknown as { config: { emojiPicker: typeof customPicker } }).config = {
+        emojiPicker: customPicker,
+      };
+      const tool = new CalloutTool(options);
+      const wrapper = tool.render();
+      const emojiBtn = wrapper.querySelector('[data-blok-testid="callout-emoji-btn"]') as HTMLButtonElement;
+
+      emojiBtn.click();
+      const [onSelect] = customPicker.mock.calls[0] as [(emoji: string) => void];
+      onSelect('');
+
+      expect(emojiBtn.textContent).toBe('');
+    });
   });
 });

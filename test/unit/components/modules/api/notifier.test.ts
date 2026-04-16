@@ -38,6 +38,22 @@ describe('NotifierAPI', () => {
     // flush microtask (lazy dynamic import inside Notifier.show)
     await new Promise(r => setTimeout(r, 0));
 
-    expect(builtInShow).toHaveBeenCalled();
+    expect(builtInShow).toHaveBeenCalledWith(options, expect.anything());
+  });
+
+  it('forwards ConfirmNotifierOptions to custom notifier', () => {
+    const customNotifier = vi.fn();
+    const api = new NotifierAPI(makeConfig(customNotifier));
+    const options: ConfirmNotifierOptions = {
+      message: 'Are you sure?',
+      type: 'confirm',
+      okText: 'Yes',
+      cancelText: 'No',
+      okHandler: vi.fn(),
+    };
+
+    api.show(options);
+
+    expect(customNotifier).toHaveBeenCalledWith(options);
   });
 });

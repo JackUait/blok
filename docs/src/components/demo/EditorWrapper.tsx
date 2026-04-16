@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "../../contexts/I18nContext";
+import { useTheme } from "../../hooks/useTheme";
 
 interface BlokEditor {
   save: () => Promise<unknown>;
@@ -7,6 +8,7 @@ interface BlokEditor {
   undo: () => Promise<void>;
   redo: () => Promise<void>;
   destroy?: () => void;
+  theme: { set: (mode: "dark" | "light" | "auto") => void };
 }
 
 interface BlokModule {
@@ -27,6 +29,11 @@ export const EditorWrapper: React.FC<{
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { t } = useI18n();
+  const { resolvedTheme } = useTheme();
+
+  // Use a ref so the init effect can read the current theme without re-running
+  const resolvedThemeRef = useRef(resolvedTheme);
+  resolvedThemeRef.current = resolvedTheme;
 
   // Use a ref to store the latest callback without triggering re-runs
   const onEditorReadyRef = useRef(onEditorReady);
@@ -64,6 +71,7 @@ export const EditorWrapper: React.FC<{
         const BlokClass = module.Blok;
         editorState.editor = new BlokClass({
           holder: containerRef.current,
+          theme: resolvedThemeRef.current,
           tools: {
             header: {
               class: module.Header,
@@ -170,6 +178,11 @@ export const EditorWrapper: React.FC<{
       }
     };
   }, []); // Empty deps array - only run once
+
+  // Sync docs theme changes to the editor instance
+  useEffect(() => {
+    editorRef.current?.theme.set(resolvedTheme);
+  }, [resolvedTheme]);
 
   if (error) {
     return (

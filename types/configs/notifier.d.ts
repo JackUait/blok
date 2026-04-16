@@ -1,4 +1,15 @@
 /**
+ * Position of the notification container on screen.
+ * - 'bottom-left' (default)
+ * - 'bottom-right'
+ * - 'bottom-center'
+ * - 'top-left'
+ * - 'top-right'
+ * - 'top-center'
+ */
+export type NotifierPosition = 'bottom-left' | 'bottom-right' | 'bottom-center' | 'top-left' | 'top-right' | 'top-center';
+
+/**
  * Base options interface for notifications
  */
 export interface NotifierOptions {

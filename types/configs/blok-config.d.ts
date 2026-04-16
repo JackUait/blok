@@ -5,6 +5,7 @@ import {SanitizerConfig} from './sanitizer-config';
 import {I18nConfig} from './i18n-config';
 import { BlockMutationEvent } from '../events/block';
 import type { UserInfo } from './user-info';
+import type { NotifierPosition } from './notifier';
 
 /**
  * Data model format for input/output
@@ -220,4 +221,10 @@ export interface BlokConfig {
    * Return null/undefined for unknown users — Blok will fall back to showing only the date.
    */
   resolveUser?: (id: string) => UserInfo | Promise<UserInfo | null> | null;
+
+  /**
+   * Position of the notification (toast) container on screen.
+   * @default 'bottom-center' — see DEFAULT_NOTIFIER_POSITION
+   */
+  notifierPosition?: NotifierPosition;
 }

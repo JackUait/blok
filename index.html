@@ -227,6 +227,17 @@
           <input type="checkbox" id="toggle-autofocus" class="peer sr-only" checked>
           <span class="pill-toggle"></span>
         </label>
+        <div class="flex items-center justify-between">
+          <span class="text-[13px] dark-mode:text-[#ffffff]">Notification position</span>
+          <select id="select-notifier-position" class="text-[12px] py-1 px-2 border border-[#e8e8eb] dark-mode:border-[#37352f] rounded-md text-[#666] dark-mode:text-[#a39e98] bg-transparent cursor-pointer outline-none">
+            <option value="bottom-left">Bottom left</option>
+            <option value="bottom-right">Bottom right</option>
+            <option value="bottom-center" selected>Bottom center</option>
+            <option value="top-left">Top left</option>
+            <option value="top-right">Top right</option>
+            <option value="top-center">Top center</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -257,6 +268,7 @@
       readOnly: false,
       darkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
       autofocus: true,
+      notifierPosition: 'bottom-center',
       tools: {
         paragraph: true,
         header: true,
@@ -961,6 +973,7 @@
         holder: 'blok',
         tools,
         autofocus: state.autofocus,
+        notifierPosition: state.notifierPosition,
         style: { contentAlign: 'center' },
         data: { blocks: structuredClone(DEFAULT_BLOCKS) },
         onChange(api, event) {
@@ -1106,6 +1119,12 @@
 
     toggleAutofocus.addEventListener('change', () => {
       state.autofocus = toggleAutofocus.checked;
+    });
+
+    const selectNotifierPosition = document.getElementById('select-notifier-position');
+    selectNotifierPosition.addEventListener('change', () => {
+      state.notifierPosition = selectNotifierPosition.value;
+      reinitEditor();
     });
 
     /**

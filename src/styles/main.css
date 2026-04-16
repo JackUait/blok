@@ -528,6 +528,9 @@
   --animate-notify-bounce-in: notifyBounceIn 600ms 1;
   --animate-notify-slide-in: notifySlideIn 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
   --animate-notify-slide-out: notifySlideOut 250ms cubic-bezier(0.4, 0, 1, 1) both;
+  --animate-notify-slide-in-top: notifySlideInTop 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-notify-slide-out-top: notifySlideOutTop 250ms cubic-bezier(0.4, 0, 1, 1) both;
+  --animate-notify-swap-out: notifySwapOut 140ms cubic-bezier(0.4, 0, 1, 1) both;
   --animate-notify-progress: notifyProgress linear forwards;
 
   /* Keyframes */
@@ -585,6 +588,22 @@
   @keyframes notifySlideOut {
     0% { opacity: 1; transform: translateY(0); }
     100% { opacity: 0; transform: translateY(8px); }
+  }
+
+  @keyframes notifySlideInTop {
+    0% { opacity: 0; transform: translateY(-16px); }
+    70% { opacity: 1; transform: translateY(2px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes notifySlideOutTop {
+    0% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-8px); }
+  }
+
+  @keyframes notifySwapOut {
+    0% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0.94); }
   }
 
   @keyframes notifyProgress {

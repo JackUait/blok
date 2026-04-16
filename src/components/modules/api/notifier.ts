@@ -3,6 +3,7 @@ import type { ModuleConfig } from '../../../types-internal/module-config';
 import { Module } from '../../__module';
 import { Notifier } from '../../utils/notifier';
 import type { ConfirmNotifierOptions, NotifierOptions, PromptNotifierOptions } from '../../utils/notifier/types';
+import { DEFAULT_NOTIFIER_POSITION } from '../../utils/notifier/types';
 
 /**
  *
@@ -24,7 +25,7 @@ export class NotifierAPI extends Module {
       eventsDispatcher,
     });
 
-    this.notifier = new Notifier();
+    this.notifier = new Notifier(config.notifierPosition ?? DEFAULT_NOTIFIER_POSITION);
   }
 
   /**

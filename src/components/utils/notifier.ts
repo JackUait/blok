@@ -1,10 +1,11 @@
 /**
  * Use local module for notifications
  */
-import type { ConfirmNotifierOptions, NotifierOptions, PromptNotifierOptions } from './notifier/types';
+import type { ConfirmNotifierOptions, NotifierOptions, PromptNotifierOptions, NotifierPosition } from './notifier/types';
+import { DEFAULT_NOTIFIER_POSITION } from './notifier/types';
 
 type NotifierModule = {
-  show: (options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions) => void;
+  show: (options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions, position?: NotifierPosition) => void;
 };
 
 /**
@@ -20,6 +21,18 @@ export class Notifier {
    * Promise used to avoid multiple parallel loads of the notifier module
    */
   private loadingPromise: Promise<NotifierModule> | null = null;
+
+  /**
+   * Default position for notifications
+   */
+  private position: NotifierPosition;
+
+  /**
+   * @param position - notification container position
+   */
+  constructor(position: NotifierPosition = DEFAULT_NOTIFIER_POSITION) {
+    this.position = position;
+  }
 
   /**
    * Lazily load notifier only when necessary.
@@ -60,7 +73,7 @@ export class Notifier {
   public show(options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions): void {
     void this.loadNotifierModule()
       .then((notifier) => {
-        notifier.show(options);
+        notifier.show(options, this.position);
       })
       .catch((error) => {
         console.error('[Blok] Failed to display notification. Reason:', error);

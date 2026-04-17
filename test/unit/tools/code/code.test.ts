@@ -1361,4 +1361,105 @@ describe('CodeTool', () => {
       rendered.remove();
     });
   });
+
+  describe('setData()', () => {
+    it('updates code content in-place without re-rendering', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'const x = 1;', language: 'javascript' }));
+      const el = tool.render();
+
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      expect(codeEl.textContent).toBe('const x = 1;');
+
+      // setData should update in-place, returning true
+      const result = (tool as unknown as { setData(data: { code: string; language: string }): boolean }).setData({
+        code: 'const y = 2;',
+        language: 'javascript',
+      });
+
+      expect(result).toBe(true);
+      expect(codeEl.textContent).toBe('const y = 2;');
+
+      el.remove();
+    });
+
+    it('preserves view mode when setData is called (undo/redo scenario)', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: '\\\\frac{1}{2}', language: 'latex' }));
+      const el = tool.render();
+
+      document.body.appendChild(el);
+
+      // The default view mode for previewable languages is 'preview'.
+      // Switch to 'code' mode via the button.
+      const codeButton = el.querySelector('[data-mode="code"]') as HTMLButtonElement;
+
+      expect(codeButton).not.toBeNull();
+      codeButton.click();
+
+      // Verify code mode is active: the pre element should be visible
+      const preEl = el.querySelector('pre') as HTMLElement;
+
+      expect(preEl.hidden).toBe(false);
+
+      // Now simulate undo/redo: setData is called with updated code
+      const result = (tool as unknown as { setData(data: { code: string; language: string }): boolean }).setData({
+        code: '\\\\frac{2}{3}',
+        language: 'latex',
+      });
+
+      expect(result).toBe(true);
+
+      // View mode MUST still be 'code', not reset to 'preview'
+      expect(preEl.hidden).toBe(false);
+
+      el.remove();
+    });
+
+    it('updates language and refreshes language button label', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'x = 1', language: 'javascript' }));
+      const el = tool.render();
+
+      document.body.appendChild(el);
+
+      const langBtn = el.querySelector('[data-blok-testid="code-language-btn"]') as HTMLElement;
+
+      expect(langBtn.textContent).toContain('JavaScript');
+
+      (tool as unknown as { setData(data: { code: string; language: string }): boolean }).setData({
+        code: 'x = 1',
+        language: 'python',
+      });
+
+      expect(langBtn.textContent).toContain('Python');
+
+      el.remove();
+    });
+
+    it('updates line numbers visibility', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'a\nb', language: 'javascript', lineNumbers: true }));
+      const el = tool.render();
+
+      document.body.appendChild(el);
+
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]') as HTMLElement;
+
+      expect(gutter.hidden).toBe(false);
+
+      (tool as unknown as { setData(data: { code: string; language: string; lineNumbers: boolean }): boolean }).setData({
+        code: 'a\nb',
+        language: 'javascript',
+        lineNumbers: false,
+      });
+
+      expect(gutter.hidden).toBe(true);
+
+      el.remove();
+    });
+  });
 });

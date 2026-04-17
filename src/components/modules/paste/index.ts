@@ -282,7 +282,11 @@ export class Paste extends Module {
    * Check if browser behavior suits better.
    */
   private isNativeBehaviour(element: EventTarget): boolean {
-    return dom$.isNativeInput(element);
+    return dom$.isNativeInput(element) ||
+      (element instanceof HTMLElement && (
+        element.contentEditable === 'plaintext-only' ||
+        element.getAttribute('contenteditable') === 'plaintext-only'
+      ));
   }
 
   /**

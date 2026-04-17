@@ -431,5 +431,55 @@ describe('Dom helper utilities', () => {
       expect(element).toHaveAttribute('data-blok-empty', 'false');
     });
   });
+
+  describe('contenteditable="plaintext-only" support', () => {
+    it('allInputsSelector matches contenteditable="plaintext-only" elements', () => {
+      const container = document.createElement('div');
+      const codeEl = document.createElement('code');
+
+      codeEl.setAttribute('contenteditable', 'plaintext-only');
+      container.appendChild(codeEl);
+      document.body.appendChild(container);
+
+      const matched = container.querySelectorAll(Dom.allInputsSelector);
+
+      expect(matched.length).toBe(1);
+      expect(matched[0]).toBe(codeEl);
+
+      container.remove();
+    });
+
+    it('findAllInputs discovers contenteditable="plaintext-only" elements', () => {
+      const container = document.createElement('div');
+      const codeEl = document.createElement('code');
+
+      codeEl.setAttribute('contenteditable', 'plaintext-only');
+      codeEl.textContent = 'const x = 1;';
+      container.appendChild(codeEl);
+      document.body.appendChild(container);
+
+      const inputs = Dom.findAllInputs(container);
+
+      expect(inputs).toContain(codeEl);
+
+      container.remove();
+    });
+
+    it('isContentEditable returns true for plaintext-only contenteditable', () => {
+      const el = document.createElement('code');
+
+      el.setAttribute('contenteditable', 'plaintext-only');
+
+      expect(Dom.isContentEditable(el)).toBe(true);
+    });
+
+    it('canSetCaret returns true for plaintext-only contenteditable', () => {
+      const el = document.createElement('code');
+
+      el.setAttribute('contenteditable', 'plaintext-only');
+
+      expect(Dom.canSetCaret(el)).toBe(true);
+    });
+  });
 });
 

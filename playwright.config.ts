@@ -38,6 +38,7 @@ const CROSS_BROWSER_TESTS = [
   // Browser-specific event handling
   '**/drag-drop.spec.ts',
   '**/copy-paste.spec.ts',
+  '**/tools/code-block-paste.spec.ts',
 
   // Keyboard navigation (Firefox has known Tab/Shift+Tab issues)
   '**/modules/BlockEvents/**/*.spec.ts',
@@ -90,6 +91,7 @@ const LOGIC_TESTS = [
   '**/modules/selection.spec.ts',
   '**/modules/navigation-mode.spec.ts',
   '**/modules/undo-redo.spec.ts',
+  '**/tools/code-block-undo-view-mode.spec.ts',
   '**/modules/multi-block-selection-with-toolbar.spec.ts',
   '**/modules/scroll-to-block.spec.ts',
 

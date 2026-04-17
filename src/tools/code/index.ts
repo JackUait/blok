@@ -277,6 +277,81 @@ export class CodeTool implements BlockTool {
     };
   }
 
+  /**
+   * In-place data update for undo/redo. Preserves view mode and DOM state.
+   */
+  public setData(newData: CodeData): boolean {
+    const oldLanguage = this._data.language;
+
+    this._data = {
+      code: newData.code ?? '',
+      language: newData.language ?? DEFAULT_LANGUAGE,
+      lineNumbers: newData.lineNumbers,
+    };
+
+    if (!this._dom) {
+      return true;
+    }
+
+    this._dom.codeElement.textContent = this._data.code;
+    this.syncTrailingBr();
+
+    this._lineNumbers = newData.lineNumbers ?? true;
+    this._dom.gutterElement.hidden = !this._lineNumbers;
+    this.updateGutter();
+
+    if (newData.language !== oldLanguage) {
+      this.applyLanguageChange(this._data.language);
+    } else if (this._viewMode === 'preview' || this._viewMode === 'split') {
+      void this.renderPreview();
+    }
+
+    void this.highlightCode();
+
+    return true;
+  }
+
+  /**
+   * Update DOM for a language change during setData, preserving current view mode.
+   */
+  private applyLanguageChange(languageId: string): void {
+    if (!this._dom) {
+      return;
+    }
+
+    const textSpan = this._dom.languageButton.querySelector('span');
+
+    if (textSpan) {
+      textSpan.textContent = this.getLanguageName(languageId);
+    }
+
+    const isPreviewable = PREVIEWABLE_LANGUAGES.has(languageId);
+
+    if (this._dom.viewModeContainer) {
+      this._dom.viewModeContainer.hidden = !isPreviewable;
+    }
+
+    if (isPreviewable && this._dom.previewElement) {
+      this._previewContainer = this._dom.previewElement;
+
+      if (this._viewMode === 'preview' || this._viewMode === 'split') {
+        void this.renderPreview();
+      }
+    } else if (!isPreviewable) {
+      this._previewContainer = null;
+
+      if (this._viewMode !== 'code') {
+        this._viewMode = 'code';
+        this.applyViewMode();
+      }
+    }
+
+    if (this._picker) {
+      this._picker.destroy();
+    }
+    this._picker = this.buildLanguagePicker(this._dom.languageButton, this._dom.wrapper);
+  }
+
   public validate(savedData: CodeData): boolean {
     return savedData.code.trim() !== '';
   }

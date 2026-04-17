@@ -114,6 +114,7 @@ type ToolsMock = {
 
 type ToolbarMock = {
   close: ReturnType<typeof vi.fn<() => void>>;
+  moveAndOpen: ReturnType<typeof vi.fn<() => void>>;
 };
 
 type DragManagerMock = {
@@ -170,6 +171,7 @@ const createPaste = (options?: CreatePasteOptions): { paste: Paste; mocks: Paste
 
   const toolbar: ToolbarMock = {
     close: vi.fn<() => void>(),
+    moveAndOpen: vi.fn<() => void>(),
   };
 
   const dragManager: DragManagerMock = {
@@ -539,6 +541,66 @@ describe('Paste module', () => {
 
       expect((paste as unknown as { isNativeBehaviour(element: EventTarget): boolean }).isNativeBehaviour(input)).toBe(true);
       expect((paste as unknown as { isNativeBehaviour(element: EventTarget): boolean }).isNativeBehaviour(div)).toBe(false);
+    });
+
+    it('treats contenteditable="plaintext-only" elements as native behaviour', () => {
+      const { paste } = createPaste();
+
+      const codeEl = document.createElement('code');
+
+      codeEl.setAttribute('contenteditable', 'plaintext-only');
+
+      expect((paste as unknown as { isNativeBehaviour(element: EventTarget): boolean }).isNativeBehaviour(codeEl)).toBe(true);
+    });
+
+    it('does not intercept paste when target is a plaintext-only contenteditable element', async () => {
+      const { paste, mocks } = createPaste();
+
+      const codeTool = {
+        name: 'code',
+        create: vi.fn(() => ({ onPaste: vi.fn() })),
+        pasteConfig: { tags: ['PRE'], patterns: { code: /^```/ } },
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.blockTools.set('code', codeTool);
+      mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+
+      await paste.prepare();
+
+      // Create a contenteditable="plaintext-only" code element inside the holder
+      const codeEl = document.createElement('code');
+
+      codeEl.setAttribute('contenteditable', 'plaintext-only');
+      codeEl.textContent = 'existing code';
+      mocks.holder.appendChild(codeEl);
+
+      mocks.BlockManager.setCurrentBlockByChildNode.mockReturnValue({
+        name: 'code',
+        tool: { isDefault: false },
+        isEmpty: false,
+      });
+
+      paste.toggleReadOnly(false);
+
+      // Create a paste event targeting the plaintext-only contenteditable
+      const event = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent;
+      const clipboardData = new MockDataTransfer(
+        { 'text/plain': 'pasted text' },
+        {} as FileList,
+        ['text/plain']
+      );
+
+      Object.defineProperty(event, 'clipboardData', { value: clipboardData });
+
+      codeEl.dispatchEvent(event);
+
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      // Paste module should NOT have processed this — it should let the browser handle natively
+      expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
+      expect(mocks.Caret.insertContentAtCaretPosition).not.toHaveBeenCalled();
     });
 
     it('skips processing when event.defaultPrevented is true', async () => {

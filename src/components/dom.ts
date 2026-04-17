@@ -228,7 +228,7 @@ export class Dom {
   public static get allInputsSelector(): string {
     const allowedInputTypes = ['text', 'password', 'email', 'number', 'search', 'tel', 'url'];
 
-    return '[contenteditable=true], textarea, input:not([type]), ' +
+    return '[contenteditable=true], [contenteditable="plaintext-only"], textarea, input:not([type]), ' +
       allowedInputTypes.map((type) => `input[type="${type}"]`).join(', ');
   }
 
@@ -343,7 +343,9 @@ export class Dom {
    * @returns {boolean}
    */
   public static isContentEditable(element: HTMLElement): boolean {
-    return element.contentEditable === 'true';
+    return element.contentEditable === 'true' ||
+      element.contentEditable === 'plaintext-only' ||
+      element.getAttribute('contenteditable') === 'plaintext-only';
   }
 
   /**

@@ -74,8 +74,10 @@ describe('prism-applier', () => {
   describe('disposePrismStyles', () => {
     it('removes the injected stylesheet', () => {
       applyPrismHighlight(codeEl, '<span class="token keyword">if</span>');
+      const countBefore = document.adoptedStyleSheets.length;
+      expect(countBefore).toBeGreaterThan(0);
       disposePrismStyles();
-      // After dispose, stylesheet should be gone — just check no throw
+      expect(document.adoptedStyleSheets.length).toBe(countBefore - 1);
     });
   });
 });

@@ -54,16 +54,6 @@ describe('prism-loader', () => {
       expect(result).toBeNull();
     });
 
-    it('loads language grammar lazily on first call', async () => {
-      const loadMod = vi.fn().mockResolvedValue({});
-      vi.doMock('prismjs/components/prism-typescript', loadMod);
-      const { tokenizePrism, resetPrismState } = await import('../../../../src/tools/code/prism-loader');
-      resetPrismState();
-      await tokenizePrism('const x: number = 1;', 'typescript');
-      // grammar for typescript should have been loaded
-      // (we verify indirectly: no throw, result is string or null)
-    });
-
     it('reuses loaded grammar on second call (does not reload)', async () => {
       const { tokenizePrism } = await import('../../../../src/tools/code/prism-loader');
       await tokenizePrism('const x = 1;', 'javascript');

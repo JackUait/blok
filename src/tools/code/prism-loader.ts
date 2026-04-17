@@ -1,37 +1,39 @@
 import Prism from 'prismjs';
 import { HIGHLIGHTABLE_LANGUAGES } from './constants';
 
-// Map Blok language IDs to Prism grammar names and dynamic import paths
-const LANG_MAP: Record<string, { grammar: string; importPath: string }> = {
-  javascript:  { grammar: 'javascript',  importPath: 'prismjs/components/prism-javascript' },
-  typescript:  { grammar: 'typescript',  importPath: 'prismjs/components/prism-typescript' },
-  python:      { grammar: 'python',      importPath: 'prismjs/components/prism-python' },
-  java:        { grammar: 'java',        importPath: 'prismjs/components/prism-java' },
-  c:           { grammar: 'c',           importPath: 'prismjs/components/prism-c' },
-  cpp:         { grammar: 'cpp',         importPath: 'prismjs/components/prism-cpp' },
-  csharp:      { grammar: 'csharp',      importPath: 'prismjs/components/prism-csharp' },
-  go:          { grammar: 'go',          importPath: 'prismjs/components/prism-go' },
-  rust:        { grammar: 'rust',        importPath: 'prismjs/components/prism-rust' },
-  ruby:        { grammar: 'ruby',        importPath: 'prismjs/components/prism-ruby' },
-  php:         { grammar: 'php',         importPath: 'prismjs/components/prism-php' },
-  swift:       { grammar: 'swift',       importPath: 'prismjs/components/prism-swift' },
-  kotlin:      { grammar: 'kotlin',      importPath: 'prismjs/components/prism-kotlin' },
-  sql:         { grammar: 'sql',         importPath: 'prismjs/components/prism-sql' },
-  html:        { grammar: 'markup',      importPath: 'prismjs/components/prism-markup' },
-  css:         { grammar: 'css',         importPath: 'prismjs/components/prism-css' },
-  json:        { grammar: 'json',        importPath: 'prismjs/components/prism-json' },
-  yaml:        { grammar: 'yaml',        importPath: 'prismjs/components/prism-yaml' },
-  markdown:    { grammar: 'markdown',    importPath: 'prismjs/components/prism-markdown' },
-  bash:        { grammar: 'bash',        importPath: 'prismjs/components/prism-bash' },
-  shell:       { grammar: 'bash',        importPath: 'prismjs/components/prism-bash' },
-  dockerfile:  { grammar: 'docker',      importPath: 'prismjs/components/prism-docker' },
-  xml:         { grammar: 'markup',      importPath: 'prismjs/components/prism-markup' },
-  graphql:     { grammar: 'graphql',     importPath: 'prismjs/components/prism-graphql' },
-  r:           { grammar: 'r',           importPath: 'prismjs/components/prism-r' },
-  scala:       { grammar: 'scala',       importPath: 'prismjs/components/prism-scala' },
-  dart:        { grammar: 'dart',        importPath: 'prismjs/components/prism-dart' },
-  lua:         { grammar: 'lua',         importPath: 'prismjs/components/prism-lua' },
-  latex:       { grammar: 'latex',       importPath: 'prismjs/components/prism-latex' },
+// Map Blok language IDs to Prism grammar names and callable importers
+const LANG_MAP: Record<string, { grammar: string; importer: () => Promise<unknown> }> = {
+  javascript:  { grammar: 'javascript',  importer: () => import('prismjs/components/prism-javascript') },
+  typescript:  { grammar: 'typescript',  importer: () => import('prismjs/components/prism-typescript') },
+  python:      { grammar: 'python',      importer: () => import('prismjs/components/prism-python') },
+  java:        { grammar: 'java',        importer: () => import('prismjs/components/prism-java') },
+  c:           { grammar: 'c',           importer: () => import('prismjs/components/prism-c') },
+  cpp:         { grammar: 'cpp',         importer: () => import('prismjs/components/prism-cpp') },
+  csharp:      { grammar: 'csharp',      importer: () => import('prismjs/components/prism-csharp') },
+  go:          { grammar: 'go',          importer: () => import('prismjs/components/prism-go') },
+  rust:        { grammar: 'rust',        importer: () => import('prismjs/components/prism-rust') },
+  ruby:        { grammar: 'ruby',        importer: () => import('prismjs/components/prism-ruby') },
+  php:         { grammar: 'php',         importer: () => import('prismjs/components/prism-php') },
+  swift:       { grammar: 'swift',       importer: () => import('prismjs/components/prism-swift') },
+  kotlin:      { grammar: 'kotlin',      importer: () => import('prismjs/components/prism-kotlin') },
+  sql:         { grammar: 'sql',         importer: () => import('prismjs/components/prism-sql') },
+  html:        { grammar: 'markup',      importer: () => import('prismjs/components/prism-markup') },
+  css:         { grammar: 'css',         importer: () => import('prismjs/components/prism-css') },
+  json:        { grammar: 'json',        importer: () => import('prismjs/components/prism-json') },
+  yaml:        { grammar: 'yaml',        importer: () => import('prismjs/components/prism-yaml') },
+  markdown:    { grammar: 'markdown',    importer: () => import('prismjs/components/prism-markdown') },
+  bash:        { grammar: 'bash',        importer: () => import('prismjs/components/prism-bash') },
+  // shell shares the bash grammar intentionally
+  shell:       { grammar: 'bash',        importer: () => import('prismjs/components/prism-bash') },
+  dockerfile:  { grammar: 'docker',      importer: () => import('prismjs/components/prism-docker') },
+  // xml shares the markup grammar intentionally
+  xml:         { grammar: 'markup',      importer: () => import('prismjs/components/prism-markup') },
+  graphql:     { grammar: 'graphql',     importer: () => import('prismjs/components/prism-graphql') },
+  r:           { grammar: 'r',           importer: () => import('prismjs/components/prism-r') },
+  scala:       { grammar: 'scala',       importer: () => import('prismjs/components/prism-scala') },
+  dart:        { grammar: 'dart',        importer: () => import('prismjs/components/prism-dart') },
+  lua:         { grammar: 'lua',         importer: () => import('prismjs/components/prism-lua') },
+  latex:       { grammar: 'latex',       importer: () => import('prismjs/components/prism-latex') },
 };
 
 // Tracks which language grammars have been loaded
@@ -47,11 +49,11 @@ async function ensureLanguage(lang: string): Promise<boolean> {
   const entry = LANG_MAP[lang];
   if (!entry) return false;
 
-  const key = entry.importPath;
+  const key = entry.grammar;
   if (loadedLanguages.has(key)) return true;
 
   try {
-    await import(/* @vite-ignore */ entry.importPath);
+    await entry.importer();
     loadedLanguages.add(key);
     return true;
   } catch (e) {
@@ -88,4 +90,14 @@ export async function tokenizePrism(code: string, lang: string): Promise<string 
 /** For testing: reset loaded language cache */
 export function resetPrismState(): void {
   loadedLanguages.clear();
+}
+
+/**
+ * Compatibility shim: matches the tokenizeCode signature previously exported
+ * by shiki-loader. Returns null since Prism uses innerHTML-based highlighting
+ * (see tokenizePrism) rather than the CSS Custom Highlight API token format.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function tokenizeCode(_code: string, _lang: string): Promise<null> {
+  return null;
 }

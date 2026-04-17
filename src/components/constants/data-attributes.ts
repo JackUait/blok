@@ -322,6 +322,9 @@ export const DATA_ATTR = {
   /** Slash search active on content editable */
   slashSearch: 'data-blok-slash-search',
 
+  /** Current slash search query (text typed after "/"), used by CSS ::before to render it */
+  slashQuery: 'data-blok-slash-query',
+
   // ============================================
   // Testing
   // ============================================

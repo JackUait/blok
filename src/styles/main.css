@@ -1471,10 +1471,20 @@
  * Slash search input appearance
  * When the user types "/" to open the toolbox, the contenteditable
  * transforms to look like a search input with a placeholder.
+ *
+ * The raw DOM text (the "/" prefix and any typed query) is hidden via
+ * color:transparent so that only the pseudo-elements are visible:
+ *   ::after  — placeholder text (shown when no query is typed yet)
+ *   ::before — typed query text (shown via data-blok-slash-query attr)
+ * The caret remains visible via caret-color so the user can still see
+ * where they are typing.
  */
 [data-blok-slash-search],
 [data-blok-slash-search]:focus-visible {
   @apply bg-search-input-bg rounded-[10px] transition-colors duration-150 w-fit max-w-[240px] px-2;
+  color: transparent !important;
+  caret-color: var(--blok-text-color, currentColor);
+  transition-property: background-color, border-color, outline-color, text-decoration-color, fill, stroke;
 }
 
 [data-blok-table-cell] [data-blok-slash-search],
@@ -1487,8 +1497,16 @@
   @apply text-gray-text font-medium text-base pointer-events-none;
 }
 
+/* Suppress the default paragraph empty-state ::before placeholder */
 [data-blok-slash-search]::before {
   content: none !important;
+}
+
+/* Show the typed query (text after "/") via ::before pseudo-element */
+[data-blok-slash-search][data-blok-slash-query]::before {
+  content: attr(data-blok-slash-query) !important;
+  @apply text-base font-medium pointer-events-none;
+  color: var(--blok-text-color, inherit);
 }
 
 /**

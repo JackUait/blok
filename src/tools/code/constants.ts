@@ -107,3 +107,4 @@ export const HIGHLIGHTABLE_LANGUAGES = new Set(
 export const CODE_BODY_STYLES = 'flex overflow-hidden';
 export const GUTTER_STYLES = 'select-none text-right pl-4 pr-3 py-3 font-mono text-sm leading-relaxed text-gray-text/40 shrink-0';
 export const GUTTER_LINE_STYLES = 'leading-relaxed';
+

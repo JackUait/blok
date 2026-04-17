@@ -97,13 +97,18 @@
   direction: rtl !important;
 }
 
-/* Font family — user-configurable via config.style.fontFamily / fontFamilySans / etc. */
-[data-blok-interface=blok],
-[data-blok-interface=tooltip] {
+/* Font family defaults — hoisted to :root so they resolve anywhere (including popovers). */
+:root {
   --blok-font-sans: 'Inter', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
   --blok-font-serif: 'Source Serif 4', 'Noto Serif', Georgia, ui-serif, serif;
   --blok-font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Monaco, 'Courier New', monospace;
+  /* Note: Load 'Permanent Marker' from Google Fonts or @fontsource for best results */
   --blok-font-handwriting: 'Permanent Marker', cursive;
+}
+
+/* Font family — user-configurable via config.style.fontFamily / fontFamilySans / etc. */
+[data-blok-interface=blok],
+[data-blok-interface=tooltip] {
   font-family: var(--blok-font-family, var(--blok-font-sans)) !important;
   color: var(--blok-text-primary) !important;
 }
@@ -139,10 +144,6 @@
 */
 [data-blok-popover]:not([data-blok-popover-inline]),
 [data-blok-interface=tooltip] {
-  --blok-font-sans: 'Inter', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-  --blok-font-serif: 'Source Serif 4', 'Noto Serif', Georgia, ui-serif, serif;
-  --blok-font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Monaco, 'Courier New', monospace;
-  --blok-font-handwriting: 'Permanent Marker', cursive;
   color: initial !important;
   font-family: var(--blok-font-family, var(--blok-font-sans)) !important;
   font-size: initial !important;
@@ -251,6 +252,7 @@
 
 /* Correct the odd em font sizing in all browsers for code elements. */
 :where([data-blok-interface], [data-blok-popover]) :is(code, kbd, samp, pre) {
+  /* Fallback list applies outside blok interface roots; --blok-font-mono resolves inside them */
   font-family: var(--blok-font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace);
   font-feature-settings: --theme(--default-mono-font-feature-settings, normal);
   font-variation-settings: --theme(--default-mono-font-variation-settings, normal);

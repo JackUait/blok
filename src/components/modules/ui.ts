@@ -529,11 +529,6 @@ export class UI extends Module<UINodes> {
   }
 
   /**
-   * Injects a font-family override stylesheet when config.style.fontFamily is set.
-   * Uses a separate <style> tag so it applies even when blok-styles already exists
-   * (multiple editor instances on the same page).
-   */
-  /**
    * Injects font-family override stylesheets when any config.style font field is set.
    * Handles: --blok-font-family (legacy), --blok-font-sans, --blok-font-serif,
    * --blok-font-mono, and --blok-font-handwriting.
@@ -562,11 +557,11 @@ export class UI extends Module<UINodes> {
 
     const varLines: string[] = [];
 
-    if (style?.fontFamily)            varLines.push(`  --blok-font-family: ${style.fontFamily};`);
-    if (style?.fontFamilySans)        varLines.push(`  --blok-font-sans: ${style.fontFamilySans};`);
-    if (style?.fontFamilySerif)       varLines.push(`  --blok-font-serif: ${style.fontFamilySerif};`);
-    if (style?.fontFamilyMono)        varLines.push(`  --blok-font-mono: ${style.fontFamilyMono};`);
-    if (style?.fontFamilyHandwriting) varLines.push(`  --blok-font-handwriting: ${style.fontFamilyHandwriting};`);
+    if (style.fontFamily)            varLines.push(`  --blok-font-family: ${style.fontFamily};`);
+    if (style.fontFamilySans)        varLines.push(`  --blok-font-sans: ${style.fontFamilySans};`);
+    if (style.fontFamilySerif)       varLines.push(`  --blok-font-serif: ${style.fontFamilySerif};`);
+    if (style.fontFamilyMono)        varLines.push(`  --blok-font-mono: ${style.fontFamilyMono};`);
+    if (style.fontFamilyHandwriting) varLines.push(`  --blok-font-handwriting: ${style.fontFamilyHandwriting};`);
 
     const vars = varLines.join('\n');
     const css = [

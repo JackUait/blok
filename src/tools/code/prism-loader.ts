@@ -2,7 +2,8 @@ import Prism from 'prismjs';
 import { HIGHLIGHTABLE_LANGUAGES } from './constants';
 
 // Map Blok language IDs to Prism grammar names and callable importers
-const LANG_MAP: Record<string, { grammar: string; importer: () => Promise<unknown> }> = {
+// `prereqs` lists grammar keys that must be loaded before this grammar runs.
+const LANG_MAP: Record<string, { grammar: string; prereqs?: string[]; importer: () => Promise<unknown> }> = {
   javascript:  { grammar: 'javascript',  importer: () => import('prismjs/components/prism-javascript') },
   typescript:  { grammar: 'typescript',  importer: () => import('prismjs/components/prism-typescript') },
   python:      { grammar: 'python',      importer: () => import('prismjs/components/prism-python') },
@@ -13,7 +14,8 @@ const LANG_MAP: Record<string, { grammar: string; importer: () => Promise<unknow
   go:          { grammar: 'go',          importer: () => import('prismjs/components/prism-go') },
   rust:        { grammar: 'rust',        importer: () => import('prismjs/components/prism-rust') },
   ruby:        { grammar: 'ruby',        importer: () => import('prismjs/components/prism-ruby') },
-  php:         { grammar: 'php',         importer: () => import('prismjs/components/prism-php') },
+  // php requires markup and markup-templating to be loaded first
+  php:         { grammar: 'php',         prereqs: ['markup', 'markup-templating'], importer: () => import('prismjs/components/prism-php') },
   swift:       { grammar: 'swift',       importer: () => import('prismjs/components/prism-swift') },
   kotlin:      { grammar: 'kotlin',      importer: () => import('prismjs/components/prism-kotlin') },
   sql:         { grammar: 'sql',         importer: () => import('prismjs/components/prism-sql') },
@@ -36,12 +38,31 @@ const LANG_MAP: Record<string, { grammar: string; importer: () => Promise<unknow
   latex:       { grammar: 'latex',       importer: () => import('prismjs/components/prism-latex') },
 };
 
+// Prerequisites that aren't user-facing languages but must be loadable by grammar key
+const PREREQ_IMPORTERS: Record<string, () => Promise<unknown>> = {
+  'markup':              () => import('prismjs/components/prism-markup'),
+  'markup-templating':   () => import('prismjs/components/prism-markup-templating'),
+};
+
 // Tracks which language grammars have been loaded
 const loadedLanguages = new Set<string>();
 
 /** Returns true if this language should be syntax-highlighted */
 export function isHighlightable(lang: string): boolean {
   return HIGHLIGHTABLE_LANGUAGES.has(lang);
+}
+
+/** Load a prerequisite grammar by key (not a user-facing language ID) */
+async function ensurePrereq(grammarKey: string): Promise<void> {
+  if (loadedLanguages.has(grammarKey)) return;
+  const importer = PREREQ_IMPORTERS[grammarKey];
+  if (!importer) return;
+  try {
+    await importer();
+    loadedLanguages.add(grammarKey);
+  } catch (e) {
+    console.warn(`[blok] Failed to load Prism prerequisite grammar "${grammarKey}":`, e);
+  }
 }
 
 /** Load the Prism grammar for a language if not yet loaded */
@@ -51,6 +72,13 @@ async function ensureLanguage(lang: string): Promise<boolean> {
 
   const key = entry.grammar;
   if (loadedLanguages.has(key)) return true;
+
+  // Load prerequisites first, in order
+  if (entry.prereqs) {
+    for (const prereq of entry.prereqs) {
+      await ensurePrereq(prereq);
+    }
+  }
 
   try {
     await entry.importer();

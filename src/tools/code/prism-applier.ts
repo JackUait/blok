@@ -3,6 +3,7 @@
  * the custom stylesheet for token colors.
  */
 
+// eslint-disable-next-line no-restricted-syntax -- module singleton, must be reassignable
 let stylesheet: CSSStyleSheet | null = null;
 
 const LIGHT_RULES = `
@@ -93,7 +94,9 @@ function getCaretOffset(el: HTMLElement): number {
 function setCaretOffset(el: HTMLElement, offset: number): void {
   if (offset < 0) return;
   const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  // eslint-disable-next-line no-restricted-syntax -- TreeWalker requires iteration with nextNode()
   let remaining = offset;
+  // eslint-disable-next-line no-restricted-syntax -- accumulator updated inside TreeWalker loop
   let node: Text | null = null;
   while (walker.nextNode()) {
     const n = walker.currentNode as Text;
@@ -121,11 +124,13 @@ export function applyPrismHighlight(el: HTMLElement, highlightedHtml: string): (
   const caretOffset = getCaretOffset(el);
 
   el.classList.add('blok-code');
+  // eslint-disable-next-line no-param-reassign -- intentional DOM mutation to apply highlighting
   el.innerHTML = highlightedHtml;
 
   setCaretOffset(el, caretOffset);
 
   return () => {
+    // eslint-disable-next-line no-param-reassign -- intentional DOM mutation to restore plain text
     el.innerHTML = plainText;
     el.classList.remove('blok-code');
   };

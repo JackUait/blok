@@ -120,12 +120,3 @@ export function resetPrismState(): void {
   loadedLanguages.clear();
 }
 
-/**
- * Compatibility shim: matches the tokenizeCode signature previously exported
- * by shiki-loader. Returns null since Prism uses innerHTML-based highlighting
- * (see tokenizePrism) rather than the CSS Custom Highlight API token format.
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function tokenizeCode(_code: string, _lang: string): Promise<null> {
-  return null;
-}

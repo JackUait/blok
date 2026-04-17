@@ -17,24 +17,20 @@ vi.mock('../../../../src/tools/code/language-detector', () => ({
 import { detectLanguage } from '../../../../src/tools/code/language-detector';
 const mockDetectLanguage = vi.mocked(detectLanguage);
 
-const mockTokenizeCode = vi.fn().mockResolvedValue(null);
+const mockTokenizePrism = vi.fn().mockResolvedValue(null);
 const mockIsHighlightable = vi.fn().mockReturnValue(false);
-const mockDisposeHighlighter = vi.fn();
 
-vi.mock('../../../../src/tools/code/shiki-loader', () => ({
-  tokenizeCode: (...args: unknown[]): unknown => mockTokenizeCode(...args),
+vi.mock('../../../../src/tools/code/prism-loader', () => ({
+  tokenizePrism: (...args: unknown[]): unknown => mockTokenizePrism(...args),
   isHighlightable: (...args: unknown[]): unknown => mockIsHighlightable(...args),
-  disposeHighlighter: mockDisposeHighlighter,
 }));
 
-const mockApplyHighlights = vi.fn().mockReturnValue(() => {});
-const mockIsHighlightingSupported = vi.fn().mockReturnValue(false);
-const mockDisposeAllHighlights = vi.fn();
+const mockApplyPrismHighlight = vi.fn().mockReturnValue(() => {});
+const mockDisposePrismStyles = vi.fn();
 
-vi.mock('../../../../src/tools/code/highlight-applier', () => ({
-  applyHighlights: (...args: unknown[]): unknown => mockApplyHighlights(...args),
-  isHighlightingSupported: (): unknown => mockIsHighlightingSupported(),
-  disposeAllHighlights: mockDisposeAllHighlights,
+vi.mock('../../../../src/tools/code/prism-applier', () => ({
+  applyPrismHighlight: (...args: unknown[]): unknown => mockApplyPrismHighlight(...args),
+  disposePrismStyles: mockDisposePrismStyles,
 }));
 
 const createMockAPI = (): API =>
@@ -73,10 +69,9 @@ const createOptions = (
 describe('CodeTool', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockTokenizeCode.mockResolvedValue(null);
+    mockTokenizePrism.mockResolvedValue(null);
     mockIsHighlightable.mockReturnValue(false);
-    mockApplyHighlights.mockReturnValue(() => {});
-    mockIsHighlightingSupported.mockReturnValue(false);
+    mockApplyPrismHighlight.mockReturnValue(() => {});
     mockDetectLanguage.mockResolvedValue(null);
   });
   afterEach(() => {
@@ -700,13 +695,9 @@ describe('CodeTool', () => {
   });
 
   describe('syntax highlighting', () => {
-    it('highlights code after rendered() for highlightable language when supported', async () => {
-      mockIsHighlightingSupported.mockReturnValue(true);
+    it('highlights code after rendered() for highlightable language', async () => {
       mockIsHighlightable.mockReturnValue(true);
-      mockTokenizeCode.mockResolvedValue({
-        light: { tokens: [[{ content: 'const', color: '#A626A4', offset: 0 }]], fg: '#383A42' },
-        dark: { tokens: [[{ content: 'const', color: '#4FC1FF', offset: 0 }]], fg: '#D4D4D4' },
-      });
+      mockTokenizePrism.mockResolvedValue('<span class="token keyword">const</span>');
 
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'const x = 1', language: 'javascript' }));
@@ -714,26 +705,12 @@ describe('CodeTool', () => {
       tool.rendered();
 
       await vi.waitFor(() => {
-        expect(mockTokenizeCode).toHaveBeenCalledWith('const x = 1', 'javascript');
+        expect(mockTokenizePrism).toHaveBeenCalledWith('const x = 1', 'javascript');
       });
-      expect(mockApplyHighlights).toHaveBeenCalled();
-    });
-
-    it('does not highlight when CSS Highlight API is not supported', async () => {
-      mockIsHighlightingSupported.mockReturnValue(false);
-      mockIsHighlightable.mockReturnValue(true);
-
-      const { CodeTool } = await import('../../../../src/tools/code');
-      const tool = new CodeTool(createOptions({ code: 'const x = 1', language: 'javascript' }));
-      tool.render();
-      tool.rendered();
-
-      await new Promise((r) => setTimeout(r, 10));
-      expect(mockTokenizeCode).not.toHaveBeenCalled();
+      expect(mockApplyPrismHighlight).toHaveBeenCalled();
     });
 
     it('does not highlight unhighlightable languages', async () => {
-      mockIsHighlightingSupported.mockReturnValue(true);
       mockIsHighlightable.mockReturnValue(false);
 
       const { CodeTool } = await import('../../../../src/tools/code');
@@ -742,16 +719,12 @@ describe('CodeTool', () => {
       tool.rendered();
 
       await new Promise((r) => setTimeout(r, 10));
-      expect(mockTokenizeCode).not.toHaveBeenCalled();
+      expect(mockTokenizePrism).not.toHaveBeenCalled();
     });
 
     it('re-highlights when language changes', async () => {
-      mockIsHighlightingSupported.mockReturnValue(true);
       mockIsHighlightable.mockReturnValue(true);
-      mockTokenizeCode.mockResolvedValue({
-        light: { tokens: [[{ content: 'x', color: '#FF0000', offset: 0 }]], fg: '#000' },
-        dark: { tokens: [[{ content: 'x', color: '#00FF00', offset: 0 }]], fg: '#FFF' },
-      });
+      mockTokenizePrism.mockResolvedValue('<span class="token keyword">x</span>');
 
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'x = 1', language: 'javascript' }));
@@ -762,7 +735,7 @@ describe('CodeTool', () => {
       pythonItem?.onActivate();
 
       await vi.waitFor(() => {
-        expect(mockTokenizeCode).toHaveBeenCalledWith(expect.any(String), 'python');
+        expect(mockTokenizePrism).toHaveBeenCalledWith(expect.any(String), 'python');
       });
 
       // Verify observable behavior: language button text updates to the new language
@@ -772,13 +745,9 @@ describe('CodeTool', () => {
 
     it('disposes highlights in removed() and re-renders cleanly', async () => {
       const mockCleanup = vi.fn();
-      mockIsHighlightingSupported.mockReturnValue(true);
       mockIsHighlightable.mockReturnValue(true);
-      mockTokenizeCode.mockResolvedValue({
-        light: { tokens: [[{ content: 'x', color: '#FF0000', offset: 0 }]], fg: '#000' },
-        dark: { tokens: [[{ content: 'x', color: '#00FF00', offset: 0 }]], fg: '#FFF' },
-      });
-      mockApplyHighlights.mockReturnValue(mockCleanup);
+      mockTokenizePrism.mockResolvedValue('<span class="token keyword">x</span>');
+      mockApplyPrismHighlight.mockReturnValue(mockCleanup);
 
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'test', language: 'javascript' }));
@@ -786,7 +755,7 @@ describe('CodeTool', () => {
       tool.rendered();
 
       await vi.waitFor(() => {
-        expect(mockApplyHighlights).toHaveBeenCalled();
+        expect(mockApplyPrismHighlight).toHaveBeenCalled();
       });
 
       tool.removed();

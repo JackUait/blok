@@ -38,8 +38,8 @@ import {
 import type { CodeViewMode } from './constants';
 import { renderLatex } from './katex-loader';
 import { renderMermaid } from './mermaid-loader';
-import { tokenizeCode, isHighlightable } from './shiki-loader';
-import { applyHighlights, isHighlightingSupported } from './highlight-applier';
+import { tokenizePrism, isHighlightable } from './prism-loader';
+import { applyPrismHighlight, disposePrismStyles } from './prism-applier';
 import { detectLanguage } from './language-detector';
 
 const COPIED_FEEDBACK_DURATION = 1500;
@@ -639,29 +639,22 @@ export class CodeTool implements BlockTool {
   }
 
   private async highlightCode(): Promise<void> {
-    if (!isHighlightingSupported() || !isHighlightable(this._data.language)) {
-      this._disposeHighlights?.();
-      this._disposeHighlights = null;
-      return;
-    }
+    this._disposeHighlights?.();
+    this._disposeHighlights = null;
+
+    const lang = this._data.language;
+
+    if (!isHighlightable(lang)) return;
 
     const code = this._dom?.codeElement.textContent ?? '';
 
-    if (!code.trim()) {
-      this._disposeHighlights?.();
-      this._disposeHighlights = null;
-      return;
-    }
+    if (!code.trim()) return;
 
-    const tokens = await tokenizeCode(code, this._data.language);
+    const html = await tokenizePrism(code, lang);
 
-    if (!tokens || !this._dom) {
-      return;
-    }
+    if (!html || !this._dom) return;
 
-    // Clean up previous highlights before applying new ones
-    this._disposeHighlights?.();
-    this._disposeHighlights = applyHighlights(this._dom.codeElement, tokens);
+    this._disposeHighlights = applyPrismHighlight(this._dom.codeElement, html);
   }
 
   private exitBlock(): void {
@@ -673,6 +666,7 @@ export class CodeTool implements BlockTool {
   public removed(): void {
     this._disposeHighlights?.();
     this._disposeHighlights = null;
+    disposePrismStyles();
 
     if (this._highlightRafId !== null) {
       cancelAnimationFrame(this._highlightRafId);

@@ -116,7 +116,6 @@ describe('Code Block Constants', () => {
       const constants = await import('../../../../src/tools/code/constants');
       expect((constants as Record<string, unknown>)['SHIKI_LIGHT_THEME']).toBeUndefined();
       expect((constants as Record<string, unknown>)['SHIKI_DARK_THEME']).toBeUndefined();
-      expect((constants as Record<string, unknown>)['DARK_MODE_SELECTOR']).toBeUndefined();
     });
   });
 

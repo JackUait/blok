@@ -183,7 +183,6 @@
     "react-dom": "^19.2.4",
     "rollup-plugin-license": "3.7.0",
     "semantic-release": "25.0.3",
-    "shiki": "^4.0.2",
     "storybook": "10.2.19",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3",
@@ -195,6 +194,7 @@
   },
   "dependencies": {
     "@emoji-mart/data": "^1.2.1",
+    "@types/prismjs": "^1.26.6",
     "fractional-indexing": "^3.2.0",
     "i18next": "25.8.18",
     "katex": "^0.16.44",
@@ -205,6 +205,7 @@
     "micromark-extension-gfm": "^3.0.0",
     "micromark-extension-math": "^3.1.0",
     "nanoid": "5.1.6",
+    "prismjs": "^1.30.0",
     "yjs": "13.6.30"
   },
   "resolutions": {

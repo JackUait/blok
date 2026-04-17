@@ -96,13 +96,6 @@ export const SPLIT_CONTAINER_STYLES = 'flex flex-col overflow-hidden';
 export const SPLIT_CONTAINER_SPLIT_STYLES = 'flex flex-row overflow-hidden';
 export const SPLIT_HALF_STYLES = 'flex-1 min-w-0 overflow-hidden';
 
-// Shiki theme names for syntax highlighting
-export const SHIKI_LIGHT_THEME = 'one-light';
-export const SHIKI_DARK_THEME = 'vitesse-dark';
-
-// CSS selector for dark mode (Tailwind convention)
-export const DARK_MODE_SELECTOR = '.dark';
-
 // Languages that support syntax highlighting (all except plain text)
 export const HIGHLIGHTABLE_LANGUAGES = new Set(
   LANGUAGES

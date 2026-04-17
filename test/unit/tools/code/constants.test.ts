@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 import {
   TOOL_NAME, PLACEHOLDER_KEY, LANGUAGE_KEY, COPIED_KEY, COPY_CODE_KEY,
   DEFAULT_LANGUAGE, TAB_STRING, LANGUAGES, PREVIEWABLE_LANGUAGES,
-  HIGHLIGHTABLE_LANGUAGES, SHIKI_LIGHT_THEME, SHIKI_DARK_THEME, DARK_MODE_SELECTOR,
+  HIGHLIGHTABLE_LANGUAGES,
   CODE_AREA_STYLES, GUTTER_STYLES, GUTTER_LINE_STYLES, CODE_BODY_STYLES,
 } from '../../../../src/tools/code/constants';
 
@@ -112,16 +112,11 @@ describe('Code Block Constants', () => {
   });
 
   describe('Shiki theme constants', () => {
-    it('SHIKI_LIGHT_THEME is defined', () => {
-      expect(SHIKI_LIGHT_THEME).toBe('one-light');
-    });
-
-    it('SHIKI_DARK_THEME is defined', () => {
-      expect(SHIKI_DARK_THEME).toBe('vitesse-dark');
-    });
-
-    it('DARK_MODE_SELECTOR targets .dark class', () => {
-      expect(DARK_MODE_SELECTOR).toBe('.dark');
+    it('does not export Shiki theme constants', async () => {
+      const constants = await import('../../../../src/tools/code/constants');
+      expect((constants as Record<string, unknown>)['SHIKI_LIGHT_THEME']).toBeUndefined();
+      expect((constants as Record<string, unknown>)['SHIKI_DARK_THEME']).toBeUndefined();
+      expect((constants as Record<string, unknown>)['DARK_MODE_SELECTOR']).toBeUndefined();
     });
   });
 

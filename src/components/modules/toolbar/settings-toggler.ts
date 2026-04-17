@@ -3,6 +3,7 @@ import type { Block } from '../../block';
 import { DATA_ATTR } from '../../constants';
 import { Dom as $ } from '../../dom';
 import { IconMenu } from '../../icons';
+import { getUserOS } from '../../utils';
 import { hide, onHover } from '../../utils/tooltip';
 import { twJoin } from '../../utils/tw';
 
@@ -160,9 +161,19 @@ export class SettingsTogglerHandler {
     /**
      * Add events to show/hide tooltip for settings toggler
      */
+    const userOS = getUserOS();
+    const shortcut = userOS.win
+      ? blok.I18n.t('blockSettings.menuShortcutWin')
+      : blok.I18n.t('blockSettings.menuShortcutMac');
+
     const blockTunesTooltip = createTooltipContent([
       blok.I18n.t('blockSettings.dragToMove'),
-      blok.I18n.t('blockSettings.clickToOpenMenu'),
+      [
+        { text: 'Click', highlight: true },
+        { text: ' or ', highlight: false },
+        { text: shortcut, highlight: true },
+        { text: ' to open menu', highlight: false },
+      ],
     ]);
 
     onHover(settingsToggler, blockTunesTooltip, {

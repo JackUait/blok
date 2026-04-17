@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 import { SettingsTogglerHandler } from '../../../../../src/components/modules/toolbar/settings-toggler';
 import { ClickDragHandler } from '../../../../../src/components/modules/toolbar/click-handler';
 import type { Block } from '../../../../../src/components/block';
@@ -21,9 +21,12 @@ type MockBlockSettings = Partial<Pick<BlockSettings, 'open' | 'close'>> & {
 };
 
 vi.mock('../../../../../src/components/utils/tooltip', () => ({
-  createTooltipContent: vi.fn(() => 'tooltip content'),
   hide: vi.fn(),
   onHover: vi.fn(),
+}));
+
+vi.mock('../../../../../src/components/modules/toolbar/tooltip', () => ({
+  createTooltipContent: vi.fn(() => 'tooltip content'),
 }));
 
 vi.mock('../../../../../src/components/dom', () => ({
@@ -35,6 +38,14 @@ vi.mock('../../../../../src/components/dom', () => ({
 vi.mock('../../../../../src/components/icons', () => ({
   IconMenu: '<svg></svg>',
 }));
+
+vi.mock('../../../../../src/components/utils', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    getUserOS: vi.fn(() => ({ mac: true, win: false, other: false })),
+  };
+});
 
 describe('SettingsTogglerHandler', () => {
   let settingsTogglerHandler: SettingsTogglerHandler;
@@ -91,6 +102,58 @@ describe('SettingsTogglerHandler', () => {
         closeToolbox: vi.fn(),
       }
     );
+  });
+
+  describe('make', () => {
+    it('builds tooltip with segment-based second line showing Click and shortcut highlighted on Mac', async () => {
+      const { createTooltipContent } = await import('../../../../../src/components/modules/toolbar/tooltip');
+      const { getUserOS } = await import('../../../../../src/components/utils');
+
+      (getUserOS as Mock).mockReturnValue({ mac: true, win: false, other: false });
+
+      settingsTogglerHandler.make({
+        wrapper: undefined,
+        content: undefined,
+        actions: undefined,
+        plusButton: undefined,
+        settingsToggler: undefined,
+      });
+
+      expect(createTooltipContent).toHaveBeenCalledWith([
+        'blockSettings.dragToMove',
+        [
+          { text: 'Click', highlight: true },
+          { text: ' or ', highlight: false },
+          { text: 'blockSettings.menuShortcutMac', highlight: true },
+          { text: ' to open menu', highlight: false },
+        ],
+      ]);
+    });
+
+    it('uses Windows shortcut in tooltip second line on Windows', async () => {
+      const { createTooltipContent } = await import('../../../../../src/components/modules/toolbar/tooltip');
+      const { getUserOS } = await import('../../../../../src/components/utils');
+
+      (getUserOS as Mock).mockReturnValue({ mac: false, win: true, other: false });
+
+      settingsTogglerHandler.make({
+        wrapper: undefined,
+        content: undefined,
+        actions: undefined,
+        plusButton: undefined,
+        settingsToggler: undefined,
+      });
+
+      expect(createTooltipContent).toHaveBeenCalledWith([
+        'blockSettings.dragToMove',
+        [
+          { text: 'Click', highlight: true },
+          { text: ' or ', highlight: false },
+          { text: 'blockSettings.menuShortcutWin', highlight: true },
+          { text: ' to open menu', highlight: false },
+        ],
+      ]);
+    });
   });
 
   describe('handleClick', () => {

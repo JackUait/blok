@@ -37,12 +37,13 @@ describe('createTooltipContent', () => {
     vi.clearAllMocks();
   });
 
-  it('creates a container element with flex column layout', () => {
+  it('creates a container element with flex column layout and muted text color', () => {
     const result = createTooltipContent(['Line 1', 'Line 2']);
 
     expect(result.style.display).toBe('flex');
     expect(result.style.flexDirection).toBe('column');
     expect(result.style.gap).toBe('4px');
+    expect(result.style.color).toBe('rgba(255, 255, 255, 0.55)');
   });
 
   it('creates a single line element without space', () => {
@@ -53,7 +54,7 @@ describe('createTooltipContent', () => {
     expect(line).toHaveTextContent('SingleLine');
   });
 
-  it('creates a single line element with space - first word styled white', () => {
+  it('creates a single line element with space - first word styled white and bold', () => {
     const result = createTooltipContent(['First rest']);
 
     expect(result.children).toHaveLength(1);
@@ -64,6 +65,7 @@ describe('createTooltipContent', () => {
     expect(span.tagName).toBe('SPAN');
     expect(span).toHaveTextContent('First');
     expect(span.style.color).toBe('white');
+    expect(span.style.fontWeight).toBe('500');
 
     // The rest of the text is a text node
     // Check using nodeValue directly since toHaveTextContent may normalize whitespace
@@ -116,5 +118,93 @@ describe('createTooltipContent', () => {
     const line = result.children[0] as HTMLElement;
     const textNode = line.childNodes[1] as Text;
     expect(textNode.nodeValue).toBe('  Click');
+  });
+
+  describe('segment-based lines', () => {
+    it('renders a line with a single highlighted segment', () => {
+      const result = createTooltipContent([
+        [{ text: 'Click', highlight: true }, { text: ' to add below', highlight: false }],
+      ]);
+
+      expect(result.children).toHaveLength(1);
+      const line = result.children[0] as HTMLElement;
+      const span = line.children[0] as HTMLElement;
+      expect(span.tagName).toBe('SPAN');
+      expect(span).toHaveTextContent('Click');
+      expect(span.style.color).toBe('white');
+    expect(span.style.fontWeight).toBe('500');
+
+      const textNode = line.childNodes[1] as Text;
+      expect(textNode.nodeValue).toBe(' to add below');
+    });
+
+    it('renders a line with multiple highlighted segments', () => {
+      const result = createTooltipContent([
+        [
+          { text: 'Click', highlight: true },
+          { text: ' or ', highlight: false },
+          { text: '⌘/', highlight: true },
+          { text: ' to open menu', highlight: false },
+        ],
+      ]);
+
+      expect(result.children).toHaveLength(1);
+      const line = result.children[0] as HTMLElement;
+
+      // Two highlighted spans: 'Click' and '⌘/'
+      const spans = Array.from(line.children) as HTMLElement[];
+      expect(spans).toHaveLength(2);
+      expect(spans[0].tagName).toBe('SPAN');
+      expect(spans[0]).toHaveTextContent('Click');
+      expect(spans[0].style.color).toBe('white');
+      expect(spans[1].tagName).toBe('SPAN');
+      expect(spans[1]).toHaveTextContent('⌘/');
+      expect(spans[1].style.color).toBe('white');
+
+      // Text nodes in between
+      const childNodes = Array.from(line.childNodes);
+      expect(childNodes[1]).toBeInstanceOf(Text);
+      expect((childNodes[1] as Text).nodeValue).toBe(' or ');
+      expect(childNodes[3]).toBeInstanceOf(Text);
+      expect((childNodes[3] as Text).nodeValue).toBe(' to open menu');
+    });
+
+    it('renders a line with no highlighted segments as plain text', () => {
+      const result = createTooltipContent([
+        [{ text: 'plain text', highlight: false }],
+      ]);
+
+      const line = result.children[0] as HTMLElement;
+      expect(line.children).toHaveLength(0);
+      const textNode = line.childNodes[0] as Text;
+      expect(textNode.nodeValue).toBe('plain text');
+    });
+
+    it('mixes string lines and segment lines', () => {
+      const result = createTooltipContent([
+        'Drag to move',
+        [
+          { text: 'Click', highlight: true },
+          { text: ' or ', highlight: false },
+          { text: '⌘/', highlight: true },
+          { text: ' to open menu', highlight: false },
+        ],
+      ]);
+
+      expect(result.children).toHaveLength(2);
+
+      // First line: string-based (first word highlighted)
+      const firstLine = result.children[0] as HTMLElement;
+      const firstSpan = firstLine.children[0] as HTMLElement;
+      expect(firstSpan).toHaveTextContent('Drag');
+      expect(firstSpan.style.color).toBe('white');
+
+      // Second line: segment-based (two highlighted spans)
+      const secondLine = result.children[1] as HTMLElement;
+      const spans = Array.from(secondLine.children) as HTMLElement[];
+      expect(spans).toHaveLength(2);
+      expect(spans[0]).toHaveTextContent('Click');
+      expect(spans[1]).toHaveTextContent('⌘/');
+    });
   });
 });

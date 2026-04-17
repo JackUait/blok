@@ -138,10 +138,12 @@ describe('highlight-applier', () => {
       expect(range.endOffset).toBe(5);
     });
 
-    it('handles multi-line tokens with correct document offsets', async () => {
+    it('handles multi-line tokens with document-relative offsets (Shiki format)', async () => {
       const highlights = setupHighlightMocks();
       const { applyHighlights } = await import('../../../../src/tools/code/highlight-applier');
 
+      // Shiki returns document-relative offsets, not line-relative.
+      // For "ab\ncd": 'ab' starts at 0, 'cd' starts at 3 (after 'a','b','\n').
       const element = document.createElement('code');
       element.textContent = 'ab\ncd';
 
@@ -149,14 +151,14 @@ describe('highlight-applier', () => {
         light: {
           tokens: [
             [{ content: 'ab', color: '#FF0000', offset: 0 }],
-            [{ content: 'cd', color: '#00FF00', offset: 0 }],
+            [{ content: 'cd', color: '#00FF00', offset: 3 }],
           ],
           fg: '#000000',
         },
         dark: {
           tokens: [
             [{ content: 'ab', color: '#FF0000', offset: 0 }],
-            [{ content: 'cd', color: '#00FF00', offset: 0 }],
+            [{ content: 'cd', color: '#00FF00', offset: 3 }],
           ],
           fg: '#FFFFFF',
         },
@@ -167,6 +169,65 @@ describe('highlight-applier', () => {
       const range = [...greenHl.ranges][0];
       expect(range.startOffset).toBe(3);
       expect(range.endOffset).toBe(5);
+    });
+
+    it('highlights keywords at correct positions in realistic multi-line code', async () => {
+      const highlights = setupHighlightMocks();
+      const { applyHighlights } = await import('../../../../src/tools/code/highlight-applier');
+
+      // Simulates real Shiki output for: "// comment\nconst x = 1;"
+      // Shiki offsets are document-relative:
+      //   "// comment" at 0, "const" at 11, " " at 16, "x" at 17, etc.
+      const element = document.createElement('code');
+      element.textContent = '// comment\nconst x = 1;';
+
+      applyHighlights(element, {
+        light: {
+          tokens: [
+            [{ content: '// comment', color: '#A0A1A7', offset: 0 }],
+            [
+              { content: 'const', color: '#A626A4', offset: 11 },
+              { content: ' ', color: '#383A42', offset: 16 },
+              { content: 'x', color: '#986801', offset: 17 },
+              { content: ' = ', color: '#383A42', offset: 18 },
+              { content: '1', color: '#986801', offset: 21 },
+              { content: ';', color: '#383A42', offset: 22 },
+            ],
+          ],
+          fg: '#383A42',
+        },
+        dark: {
+          tokens: [
+            [{ content: '// comment', color: '#758575', offset: 0 }],
+            [
+              { content: 'const', color: '#CB7676', offset: 11 },
+              { content: ' ', color: '#DBD7CA', offset: 16 },
+              { content: 'x', color: '#BD976A', offset: 17 },
+              { content: ' = ', color: '#DBD7CA', offset: 18 },
+              { content: '1', color: '#BD976A', offset: 21 },
+              { content: ';', color: '#DBD7CA', offset: 22 },
+            ],
+          ],
+          fg: '#DBD7CA',
+        },
+      });
+
+      // Verify the keyword "const" is highlighted at the correct position (11–16)
+      const keywordHl = highlights.get('blok-l-a626a4')!;
+      expect(keywordHl).toBeDefined();
+      expect(keywordHl.size).toBe(1);
+      const keywordRange = [...keywordHl.ranges][0];
+      expect(keywordRange.startOffset).toBe(11);
+      expect(keywordRange.endOffset).toBe(16);
+
+      // Verify the number "1" is highlighted at the correct position (21–22)
+      const numberHl = highlights.get('blok-l-986801')!;
+      expect(numberHl).toBeDefined();
+      const numberRanges = [...numberHl.ranges];
+      // Both 'x' (offset 17) and '1' (offset 21) share this color
+      const oneRange = numberRanges.find(r => r.startOffset === 21);
+      expect(oneRange).toBeDefined();
+      expect(oneRange!.endOffset).toBe(22);
     });
 
     it('returns a cleanup function that removes highlights', async () => {

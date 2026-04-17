@@ -99,20 +99,9 @@ function findTextNode(
   return find(walker.nextNode(), 0);
 }
 
-function buildLineOffsets(text: string): number[] {
-  return text.split('\n').reduce<{ offsets: number[]; pos: number }>(
-    (acc, line) => ({
-      offsets: [...acc.offsets, acc.pos],
-      pos: acc.pos + line.length + 1,
-    }),
-    { offsets: [], pos: 0 }
-  ).offsets;
-}
-
 function applyToken(
   element: HTMLElement,
   text: string,
-  lineBase: number,
   token: HighlightToken,
   themeKey: string,
   scope: string | undefined,
@@ -122,7 +111,8 @@ function applyToken(
 ): void {
   if (!token.content.trim()) return;
 
-  const start = lineBase + token.offset;
+  // token.offset is document-relative (absolute from start of code)
+  const start = token.offset;
   const end = start + token.content.length;
   if (end > text.length) return;
 
@@ -158,7 +148,6 @@ function applyToken(
 function applyThemeTokens(
   element: HTMLElement,
   text: string,
-  lineOffsets: number[],
   themeData: ThemeTokens,
   themeKey: string,
   scope: string | undefined,
@@ -166,12 +155,9 @@ function applyThemeTokens(
   stylesheet: CSSStyleSheet,
   ownedRanges: Array<[string, Range]>
 ): void {
-  for (const [lineIdx, lineTokens] of themeData.tokens.entries()) {
-    const lineBase = lineOffsets[lineIdx];
-    if (lineBase === undefined) continue;
-
+  for (const lineTokens of themeData.tokens) {
     for (const token of lineTokens) {
-      applyToken(element, text, lineBase, token, themeKey, scope, priority, stylesheet, ownedRanges);
+      applyToken(element, text, token, themeKey, scope, priority, stylesheet, ownedRanges);
     }
   }
 }
@@ -182,7 +168,6 @@ export function applyHighlights(element: HTMLElement, themes: DualThemeTokens): 
   const stylesheet = ensureStylesheet();
   const ownedRanges: Array<[string, Range]> = [];
   const text = element.textContent ?? '';
-  const lineOffsets = buildLineOffsets(text);
 
   const themeEntries: Array<[string, ThemeTokens, string | undefined, number]> = [
     ['l', themes.light, undefined, 0],
@@ -190,7 +175,7 @@ export function applyHighlights(element: HTMLElement, themes: DualThemeTokens): 
   ];
 
   for (const [themeKey, themeData, scope, priority] of themeEntries) {
-    applyThemeTokens(element, text, lineOffsets, themeData, themeKey, scope, priority, stylesheet, ownedRanges);
+    applyThemeTokens(element, text, themeData, themeKey, scope, priority, stylesheet, ownedRanges);
   }
 
   return () => cleanupRanges(ownedRanges, getHighlights());

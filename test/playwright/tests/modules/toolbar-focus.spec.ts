@@ -219,7 +219,7 @@ test.describe('toolbar button focus preservation', () => {
    *
    * Preconditions: Two blocks ("Hello" and "Second"), focus in block 0.
    * Action: Hover block 1 → click plus → Escape → type " World" (NO re-click)
-   * Expected: Block 0 = "Hello World", block count = 2 (no orphan block left)
+   * Expected: Block 0 = "Hello World"; block count = 3 (inserted line stays)
    */
   test('text typed after plus+Escape should stay in the originally-focused block', async ({ page }) => {
     await createParagraphBlok(page, [ 'Hello', 'Second' ]);
@@ -254,7 +254,39 @@ test.describe('toolbar button focus preservation', () => {
 
     expect(firstText).toBe('Hello World');
 
-    // Block count must be 2 (plus+Escape must not leave an orphan block)
+    // Block count must be 3: original two blocks + the inserted empty line
+    // that the plus button created (kept in place per new "leave it" behavior)
+    await expect(allParagraphs).toHaveCount(3);
+  });
+
+  /**
+   * Regression test: clicking the plus button creates a new line.
+   * If the user dismisses the toolbox (Escape or click-away) without
+   * choosing a tool, the newly created line MUST stay in place.
+   *
+   * Steps:
+   * 1. Create one paragraph block "Hello"
+   * 2. Hover it → click plus → new empty line inserted below
+   * 3. Press Escape to dismiss the toolbox
+   * 4. Block count must be 2 (the inserted line stays)
+   */
+  test('plus button click then Escape should leave the inserted line in place', async ({ page }) => {
+    await createParagraphBlok(page, [ 'Hello' ]);
+
+    const allParagraphs = page.locator(PARAGRAPH_SELECTOR);
+    const firstParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'Hello' });
+
+    await firstParagraph.click();
+    await firstParagraph.hover();
+
+    const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+
+    await plusButton.waitFor({ state: 'visible' });
+    await plusButton.click();
+    await page.keyboard.press('Escape');
+
+    await page.waitForFunction(() => !document.querySelector('[data-blok-toolbox-opened]'));
+
     await expect(allParagraphs).toHaveCount(2);
   });
 });

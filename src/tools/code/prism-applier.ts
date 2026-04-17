@@ -38,6 +38,21 @@ const LIGHT_RULES = `
 .blok-code .token.variable { color: #ea580c; }
 
 .blok-code .token.punctuation { color: #374151; }
+
+/* Mermaid-specific tokens — scoped to lang-mermaid to avoid polluting other languages.
+ * Colors use Atom One Light palette:
+ *   @hue-1 = #0184bc  (cyan)
+ *   @hue-6-2 = #c18401 (amber/gold — node IDs)
+ *   @hue-4 = #50a14f  (green — edge labels)
+ */
+.blok-code.lang-mermaid .token.diagram-name { color: #0184bc; }
+.blok-code.lang-mermaid .token.node-bracket { color: #0184bc; }
+.blok-code.lang-mermaid .token.edge-delimiter { color: #0184bc; }
+.blok-code.lang-mermaid .token.edge-label { color: #50a14f; }
+.blok-code.lang-mermaid .token.variable { color: #c18401; }
+.blok-code.lang-mermaid .token.keyword,
+.blok-code.lang-mermaid .token.operator,
+.blok-code.lang-mermaid .token.string { color: inherit; }
 `;
 
 const DARK_RULES = `
@@ -72,6 +87,21 @@ const DARK_RULES = `
 .dark .blok-code .token.variable { color: #fb923c; }
 
 .dark .blok-code .token.punctuation { color: #d1d5db; }
+
+/* Mermaid-specific tokens — dark mode.
+ * Colors use Atom One Dark palette:
+ *   @hue-1 = #56b5c2  (cyan)
+ *   @hue-6-2 = #e4bf7a (amber/yellow — node IDs)
+ *   @hue-4 = #97c279  (green — edge labels)
+ */
+.dark .blok-code.lang-mermaid .token.diagram-name { color: #56b5c2; }
+.dark .blok-code.lang-mermaid .token.node-bracket { color: #56b5c2; }
+.dark .blok-code.lang-mermaid .token.edge-delimiter { color: #56b5c2; }
+.dark .blok-code.lang-mermaid .token.edge-label { color: #97c279; }
+.dark .blok-code.lang-mermaid .token.variable { color: #e4bf7a; }
+.dark .blok-code.lang-mermaid .token.keyword,
+.dark .blok-code.lang-mermaid .token.operator,
+.dark .blok-code.lang-mermaid .token.string { color: inherit; }
 `;
 
 function ensureStylesheet(): void {
@@ -116,14 +146,19 @@ function setCaretOffset(el: HTMLElement, offset: number): void {
  * Apply Prism-highlighted HTML to a code element.
  * Saves and restores caret position. Returns a dispose function
  * that reverts the element to its plain-text content.
+ * The optional `lang` parameter adds a `lang-{language}` class used
+ * to scope language-specific CSS rules (e.g. Mermaid token colors).
  */
-export function applyPrismHighlight(el: HTMLElement, highlightedHtml: string): () => void {
+export function applyPrismHighlight(el: HTMLElement, highlightedHtml: string, lang?: string): () => void {
   ensureStylesheet();
 
   const plainText = el.textContent ?? '';
   const caretOffset = getCaretOffset(el);
 
   el.classList.add('blok-code');
+  if (lang) {
+    el.classList.add(`lang-${lang}`);
+  }
   // eslint-disable-next-line no-param-reassign -- intentional DOM mutation to apply highlighting
   el.innerHTML = highlightedHtml;
 
@@ -133,6 +168,9 @@ export function applyPrismHighlight(el: HTMLElement, highlightedHtml: string): (
     // eslint-disable-next-line no-param-reassign -- intentional DOM mutation to restore plain text
     el.innerHTML = plainText;
     el.classList.remove('blok-code');
+    if (lang) {
+      el.classList.remove(`lang-${lang}`);
+    }
   };
 }
 

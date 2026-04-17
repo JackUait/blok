@@ -62,6 +62,102 @@ describe('prism-loader', () => {
       expect(result2).not.toBeNull();
     });
 
+    describe('mermaid', () => {
+      it('returns highlighted HTML for mermaid code', async () => {
+        const { tokenizePrism } = await import('../../../../src/tools/code/prism-loader');
+        const result = await tokenizePrism('flowchart TD\n  A --> B', 'mermaid');
+        expect(result).not.toBeNull();
+        expect(result).toContain('class="token');
+      });
+
+      it('highlights %% comments with token comment', async () => {
+        const { tokenizePrism } = await import('../../../../src/tools/code/prism-loader');
+        const result = await tokenizePrism('%% this is a comment', 'mermaid');
+        expect(result).toContain('token comment');
+      });
+
+      it('highlights %%{...}%% directives with token directive', async () => {
+        const { tokenizePrism } = await import('../../../../src/tools/code/prism-loader');
+        const result = await tokenizePrism("%%{init: {'theme': 'base'}}%%", 'mermaid');
+        expect(result).toContain('token directive');
+      });
+
+      // Diagram type keywords (graph, flowchart, sequenceDiagram, etc.)
+      // get token diagram-name so they can be colored differently (cyan) from
+      // structural keywords like subgraph/end (which stay token keyword)
+      it('highlights diagram type keyword (graph) with token diagram-name', async () => {
+        const { tokenizePrism } = await import('../../../../src/tools/code/prism-loader');
+        const result = await tokenizePrism('graph TD', 'mermaid');
+        expect(result).toContain('token diagram-name');
+      });
+
+      it('highlights diagram type keyword (flowchart) with token diagram-name', async () => {
+        const { tokenizePrism } = await import('../../../../src/tools/code/prism-loader');
+        const result = await tokenizePrism('flowchart LR', 'mermaid');
+        expect(result).toContain('token diagram-name');
+      });
+
+      it('highlights direction (TD, LR) with token keyword', async () => {
+        const { tokenizePrism } = await import('../../../../src/tools/code/prism-loader');
+        const result = await tokenizePrism('graph TD', 'mermaid');
+        expect(result).toContain('token keyword');
+      });
+
+      // Node IDs like A, B, myNode get token variable (yellow)
+      it('highlights node IDs with token variable', async () => {
+        const { tokenizePrism } = await import('../../../../src/tools/code/prism-loader');
+        const result = await tokenizePrism('graph TD\n  A --> B', 'mermaid');
+        expect(result).toContain('token variable');
+      });
+
+      // Node shape brackets [ ] { } ( ) get token node-bracket (cyan)
+      it('highlights node label opening bracket with token node-bracket', async () => {
+        const { tokenizePrism } = await import('../../../../src/tools/code/prism-loader');
+        const result = await tokenizePrism('A[Start]', 'mermaid');
+        expect(result).toContain('token node-bracket');
+      });
+
+      it('highlights node label content with token string', async () => {
+        const { tokenizePrism } = await import('../../../../src/tools/code/prism-loader');
+        const result = await tokenizePrism('A[Start]', 'mermaid');
+        expect(result).toContain('token string');
+      });
+
+      // Arrows --> get token operator (white)
+      it('highlights --> arrow with token operator', async () => {
+        const { tokenizePrism } = await import('../../../../src/tools/code/prism-loader');
+        const result = await tokenizePrism('A --> B', 'mermaid');
+        expect(result).toContain('token operator');
+      });
+
+      it('highlights -.-> dotted arrow with token operator', async () => {
+        const { tokenizePrism } = await import('../../../../src/tools/code/prism-loader');
+        const result = await tokenizePrism('A -.-> B', 'mermaid');
+        expect(result).toContain('token operator');
+      });
+
+      // Edge label delimiters |text| get token edge-delimiter (cyan)
+      it('highlights edge label pipe delimiters with token edge-delimiter', async () => {
+        const { tokenizePrism } = await import('../../../../src/tools/code/prism-loader');
+        const result = await tokenizePrism('B -->|Yes| C', 'mermaid');
+        expect(result).toContain('token edge-delimiter');
+      });
+
+      // Edge label text gets token edge-label (green)
+      it('highlights edge label text with token edge-label', async () => {
+        const { tokenizePrism } = await import('../../../../src/tools/code/prism-loader');
+        const result = await tokenizePrism('B -->|Yes| C', 'mermaid');
+        expect(result).toContain('token edge-label');
+      });
+
+      // Structural keywords subgraph/end/participant get token keyword
+      it('highlights subgraph keyword with token keyword', async () => {
+        const { tokenizePrism } = await import('../../../../src/tools/code/prism-loader');
+        const result = await tokenizePrism('subgraph MyGroup', 'mermaid');
+        expect(result).toContain('token keyword');
+      });
+    });
+
     it('returns null and logs warning when grammar import fails', async () => {
       vi.doMock('prismjs/components/prism-dart', () => { throw new Error('load failed'); });
       const { tokenizePrism, resetPrismState } = await import('../../../../src/tools/code/prism-loader');

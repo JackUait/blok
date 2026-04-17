@@ -1108,8 +1108,8 @@ export class Toolbar extends Module<ToolbarNodes> {
       /**
        * If the toolbox was opened via the plus button and the user dismissed
        * it without selecting a tool (Escape / click outside), restore focus to
-       * the block that was focused BEFORE the plus button was clicked and
-       * remove the orphan empty block that was inserted.
+       * the block that was focused BEFORE the plus button was clicked. The
+       * newly-inserted empty line is intentionally kept in place.
        *
        * When a tool IS selected, ToolboxEvent.BlockAdded fires first and clears
        * preToolboxBlock, so this branch is skipped for that case.
@@ -1118,21 +1118,9 @@ export class Toolbar extends Module<ToolbarNodes> {
         const blockToRestore = this.preToolboxBlock;
 
         this.preToolboxBlock = null;
+        this.plusInsertedBlock = null;
 
-        // Remove the orphan block that was inserted by the plus button click,
-        // then restore focus. removeBlock() is Promise-based but resolves
-        // synchronously; chaining ensures setToBlock runs after removal.
-        if (this.plusInsertedBlock !== null) {
-          const orphan = this.plusInsertedBlock;
-
-          this.plusInsertedBlock = null;
-          void this.Blok.BlockManager.removeBlock(orphan, false).then(() => {
-            if (blockToRestore.inputs.length > 0) {
-              this.Blok.Caret.setToBlock(blockToRestore, this.Blok.Caret.positions.END);
-            }
-          });
-        } else if (blockToRestore.inputs.length > 0) {
-          // Reused an existing block (emptyBlockToReuse path) — just restore focus
+        if (blockToRestore.inputs.length > 0) {
           this.Blok.Caret.setToBlock(blockToRestore, this.Blok.Caret.positions.END);
         }
 

@@ -654,7 +654,7 @@ export class CodeTool implements BlockTool {
 
     if (!html || !this._dom) return;
 
-    this._disposeHighlights = applyPrismHighlight(this._dom.codeElement, html);
+    this._disposeHighlights = applyPrismHighlight(this._dom.codeElement, html, lang);
   }
 
   private exitBlock(): void {

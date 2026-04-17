@@ -16,8 +16,7 @@
     "framer-motion": "^12.36.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-router-dom": "^7.13.1",
-    "shiki": "^4.0.2"
+    "react-router-dom": "^7.13.1"
   },
   "devDependencies": {
     "@react-grab/claude-code": "^0.1.28",

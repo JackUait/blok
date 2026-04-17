@@ -345,7 +345,7 @@ export class Dom {
   public static isContentEditable(element: HTMLElement): boolean {
     return element.contentEditable === 'true' ||
       element.contentEditable === 'plaintext-only' ||
-      (element instanceof HTMLElement && element.getAttribute('contenteditable') === 'plaintext-only');
+      element.getAttribute('contenteditable') === 'plaintext-only';
   }
 
   /**

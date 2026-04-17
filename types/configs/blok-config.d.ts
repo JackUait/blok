@@ -164,6 +164,30 @@ export interface BlokConfig {
     fontFamily?: string;
 
     /**
+     * Custom sans-serif font family. Overrides the `--blok-font-sans` CSS variable.
+     * @example "'Inter', sans-serif"
+     */
+    fontFamilySans?: string;
+
+    /**
+     * Custom serif font family. Overrides the `--blok-font-serif` CSS variable.
+     * @example "'Merriweather', serif"
+     */
+    fontFamilySerif?: string;
+
+    /**
+     * Custom monospace font family. Overrides the `--blok-font-mono` CSS variable.
+     * @example "'Fira Code', monospace"
+     */
+    fontFamilyMono?: string;
+
+    /**
+     * Custom handwriting font family. Overrides the `--blok-font-handwriting` CSS variable.
+     * @example "'Caveat', cursive"
+     */
+    fontFamilyHandwriting?: string;
+
+    /**
      * Global content alignment within the editor.
      * Controls whether block content is left-aligned, centered, or right-aligned.
      * @default 'left'

@@ -1246,6 +1246,179 @@ describe("UI module", () => {
       // Verify tag is removed after destroy
       expect(document.getElementById("blok-font-destroy-editor")).toBeNull();
     });
+
+    it("injects --blok-font-sans when config.style.fontFamilySans is set", () => {
+      const holder = document.createElement("div");
+      holder.id = "font-sans-editor";
+      document.body.appendChild(holder);
+
+      const eventsDispatcher = { on: vi.fn(), off: vi.fn(), emit: vi.fn() };
+      const ui = new UI({
+        config: {
+          holder,
+          minHeight: 50,
+          style: { fontFamilySans: "'Roboto', sans-serif" },
+        } as BlokConfig,
+        eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
+      });
+      const blok = createBlokStub();
+      ui.state = blok;
+
+      const wrapper = document.createElement("div");
+      const redactor = document.createElement("div");
+      const bottomZone = document.createElement("div");
+      wrapper.appendChild(redactor);
+      holder.appendChild(wrapper);
+      (ui as { nodes: UI["nodes"] }).nodes = { holder, wrapper, redactor, bottomZone };
+
+      (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
+
+      const tag = document.getElementById("blok-font-font-sans-editor");
+      expect(tag?.textContent).toContain("--blok-font-sans: 'Roboto', sans-serif");
+    });
+
+    it("injects --blok-font-serif when config.style.fontFamilySerif is set", () => {
+      const holder = document.createElement("div");
+      holder.id = "font-serif-editor";
+      document.body.appendChild(holder);
+
+      const eventsDispatcher = { on: vi.fn(), off: vi.fn(), emit: vi.fn() };
+      const ui = new UI({
+        config: {
+          holder,
+          minHeight: 50,
+          style: { fontFamilySerif: "'Merriweather', serif" },
+        } as BlokConfig,
+        eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
+      });
+      const blok = createBlokStub();
+      ui.state = blok;
+
+      const wrapper = document.createElement("div");
+      const redactor = document.createElement("div");
+      const bottomZone = document.createElement("div");
+      wrapper.appendChild(redactor);
+      holder.appendChild(wrapper);
+      (ui as { nodes: UI["nodes"] }).nodes = { holder, wrapper, redactor, bottomZone };
+
+      (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
+
+      const tag = document.getElementById("blok-font-font-serif-editor");
+      expect(tag?.textContent).toContain("--blok-font-serif: 'Merriweather', serif");
+    });
+
+    it("injects --blok-font-mono when config.style.fontFamilyMono is set", () => {
+      const holder = document.createElement("div");
+      holder.id = "font-mono-editor";
+      document.body.appendChild(holder);
+
+      const eventsDispatcher = { on: vi.fn(), off: vi.fn(), emit: vi.fn() };
+      const ui = new UI({
+        config: {
+          holder,
+          minHeight: 50,
+          style: { fontFamilyMono: "'Fira Code', monospace" },
+        } as BlokConfig,
+        eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
+      });
+      const blok = createBlokStub();
+      ui.state = blok;
+
+      const wrapper = document.createElement("div");
+      const redactor = document.createElement("div");
+      const bottomZone = document.createElement("div");
+      wrapper.appendChild(redactor);
+      holder.appendChild(wrapper);
+      (ui as { nodes: UI["nodes"] }).nodes = { holder, wrapper, redactor, bottomZone };
+
+      (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
+
+      const tag = document.getElementById("blok-font-font-mono-editor");
+      expect(tag?.textContent).toContain("--blok-font-mono: 'Fira Code', monospace");
+    });
+
+    it("injects --blok-font-handwriting when config.style.fontFamilyHandwriting is set", () => {
+      const holder = document.createElement("div");
+      holder.id = "font-hw-editor";
+      document.body.appendChild(holder);
+
+      const eventsDispatcher = { on: vi.fn(), off: vi.fn(), emit: vi.fn() };
+      const ui = new UI({
+        config: {
+          holder,
+          minHeight: 50,
+          style: { fontFamilyHandwriting: "'Caveat', cursive" },
+        } as BlokConfig,
+        eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
+      });
+      const blok = createBlokStub();
+      ui.state = blok;
+
+      const wrapper = document.createElement("div");
+      const redactor = document.createElement("div");
+      const bottomZone = document.createElement("div");
+      wrapper.appendChild(redactor);
+      holder.appendChild(wrapper);
+      (ui as { nodes: UI["nodes"] }).nodes = { holder, wrapper, redactor, bottomZone };
+
+      (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
+
+      const tag = document.getElementById("blok-font-font-hw-editor");
+      expect(tag?.textContent).toContain("--blok-font-handwriting: 'Caveat', cursive");
+    });
+
+    it("injects a single style tag containing all provided font overrides", () => {
+      const holder = document.createElement("div");
+      holder.id = "font-multi-editor";
+      document.body.appendChild(holder);
+
+      const eventsDispatcher = { on: vi.fn(), off: vi.fn(), emit: vi.fn() };
+      const ui = new UI({
+        config: {
+          holder,
+          minHeight: 50,
+          style: {
+            fontFamily: "Times New Roman, serif",
+            fontFamilySans: "'Roboto', sans-serif",
+            fontFamilySerif: "'Merriweather', serif",
+            fontFamilyMono: "'Fira Code', monospace",
+            fontFamilyHandwriting: "'Caveat', cursive",
+          },
+        } as BlokConfig,
+        eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
+      });
+      const blok = createBlokStub();
+      ui.state = blok;
+
+      const wrapper = document.createElement("div");
+      const redactor = document.createElement("div");
+      const bottomZone = document.createElement("div");
+      wrapper.appendChild(redactor);
+      holder.appendChild(wrapper);
+      (ui as { nodes: UI["nodes"] }).nodes = { holder, wrapper, redactor, bottomZone };
+
+      (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
+
+      const tag = document.getElementById("blok-font-font-multi-editor");
+      const css = tag?.textContent ?? "";
+      expect(css).toContain("--blok-font-family: Times New Roman, serif");
+      expect(css).toContain("--blok-font-sans: 'Roboto', sans-serif");
+      expect(css).toContain("--blok-font-serif: 'Merriweather', serif");
+      expect(css).toContain("--blok-font-mono: 'Fira Code', monospace");
+      expect(css).toContain("--blok-font-handwriting: 'Caveat', cursive");
+    });
+
+    it("does not inject a style tag when only style.nonce is set (no font fields)", () => {
+      const { ui } = createUI({ configOverrides: { style: { nonce: "abc" } } });
+
+      (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
+
+      const fontStyleTags = Array.from(document.head.querySelectorAll("style")).filter(
+        (tag) => tag.id.startsWith("blok-font-"),
+      );
+
+      expect(fontStyleTags).toHaveLength(0);
+    });
   });
 
   describe("contentAlign data attribute", () => {

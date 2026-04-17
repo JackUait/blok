@@ -59,38 +59,33 @@ test.describe('slash search placeholder', () => {
     await expect(paragraph).toHaveAttribute('data-blok-slash-search', /.+/);
   });
 
-  test('should hide the "/" character so it is not visually visible in the search input', async ({ page }) => {
+  test('should render slash and placeholder on the same line (inline layout)', async ({ page }) => {
     const paragraph = page.locator(CONTENT_EDITABLE_SELECTOR);
     await paragraph.click();
 
     await page.keyboard.type('/');
     await expect(paragraph).toHaveAttribute('data-blok-slash-search', /.+/);
 
-    // The "/" character must NOT be visually rendered — its color should be transparent
-    const color = await paragraph.evaluate(
-      (el) => window.getComputedStyle(el).color
+    // The element must use inline-flex display so "/" and the ::after placeholder
+    // are on the same line — not stacked vertically.
+    const display = await paragraph.evaluate(
+      (el) => window.getComputedStyle(el).display
     );
-    expect(color).toBe('rgba(0, 0, 0, 0)');
+    expect(display).toBe('inline-flex');
   });
 
-  test('should display the typed query via data-blok-slash-query attribute for CSS rendering', async ({ page }) => {
+  test('should keep "/" text visible (not transparent) in the search input', async ({ page }) => {
     const paragraph = page.locator(CONTENT_EDITABLE_SELECTOR);
     await paragraph.click();
 
     await page.keyboard.type('/');
-    // Initially no query
-    await expect(paragraph).not.toHaveAttribute('data-blok-slash-query');
+    await expect(paragraph).toHaveAttribute('data-blok-slash-search', /.+/);
 
-    // Type a query — attribute should reflect the typed text (without "/")
-    await page.keyboard.type('head');
-    await expect(paragraph).toHaveAttribute('data-blok-slash-query', 'head');
-
-    // Clear back to just "/"
-    await page.keyboard.press('Backspace');
-    await page.keyboard.press('Backspace');
-    await page.keyboard.press('Backspace');
-    await page.keyboard.press('Backspace');
-    await expect(paragraph).not.toHaveAttribute('data-blok-slash-query');
+    // The text color must NOT be transparent — "/" and typed query should be visible
+    const color = await paragraph.evaluate(
+      (el) => window.getComputedStyle(el).color
+    );
+    expect(color).not.toBe('rgba(0, 0, 0, 0)');
   });
 
   test('should remove slash search styling when toolbox closes', async ({ page }) => {

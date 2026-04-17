@@ -811,7 +811,6 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       this.listeners.off(this.currentBlockForSearch, 'input', this.handleBlockInput);
       if (this.currentContentEditable instanceof HTMLElement) {
         this.currentContentEditable.removeAttribute(DATA_ATTR.slashSearch);
-        this.currentContentEditable.removeAttribute(DATA_ATTR.slashQuery);
       }
       this.currentBlockForSearch = null;
       this.currentContentEditable = null;
@@ -853,11 +852,6 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
         DATA_ATTR.slashSearch,
         query.length === 0 ? this.i18nLabels.slashSearchPlaceholder : ''
       );
-      if (query.length > 0) {
-        this.currentContentEditable.setAttribute(DATA_ATTR.slashQuery, query);
-      } else {
-        this.currentContentEditable.removeAttribute(DATA_ATTR.slashQuery);
-      }
     }
 
     this.popover?.filterItems(query);

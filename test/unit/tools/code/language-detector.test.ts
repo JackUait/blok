@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { detectLanguage, DETECTION_CANDIDATE_LANGUAGES } from '../../../../src/tools/code/language-detector';
 
-// Mock shiki-loader so tests don't need the actual shiki runtime
-vi.mock('../../../../src/tools/code/shiki-loader', () => ({
-  tokenizeCode: vi.fn(),
+// Mock prism-loader so tests don't need the actual Prism runtime
+vi.mock('../../../../src/tools/code/prism-loader', () => ({
+  tokenizePrism: vi.fn(),
 }));
 
-import { tokenizeCode } from '../../../../src/tools/code/shiki-loader';
-const mockTokenizeCode = vi.mocked(tokenizeCode);
+import { tokenizePrism } from '../../../../src/tools/code/prism-loader';
+const mockTokenizePrism = vi.mocked(tokenizePrism);
 
 describe('detectLanguage', () => {
   beforeEach(() => {
@@ -17,44 +17,24 @@ describe('detectLanguage', () => {
   it('returns null for code shorter than 20 characters', async () => {
     const result = await detectLanguage('const x = 1');
     expect(result).toBeNull();
-    expect(mockTokenizeCode).not.toHaveBeenCalled();
+    expect(mockTokenizePrism).not.toHaveBeenCalled();
   });
 
-  it('returns null when tokenizeCode returns null for all languages', async () => {
-    mockTokenizeCode.mockResolvedValue(null);
+  it('returns null when tokenizePrism returns null for all languages', async () => {
+    mockTokenizePrism.mockResolvedValue(null);
     const result = await detectLanguage('const x = 1;\nconst y = 2;\nfunction foo() {}');
     expect(result).toBeNull();
   });
 
-  it('returns the language with the lowest fg-token ratio', async () => {
-    const FG_COLOR = '#383a42';
-    const KEYWORD_COLOR = '#a626a4';
-
-    mockTokenizeCode.mockImplementation(async (_code, lang) => {
+  it('returns the language with the most diverse token types', async () => {
+    mockTokenizePrism.mockImplementation(async (_code, lang) => {
       if (lang === 'javascript') {
-        return {
-          light: {
-            fg: FG_COLOR,
-            tokens: [[
-              { content: 'const', color: KEYWORD_COLOR, offset: 0 },
-              { content: ' x ', color: FG_COLOR, offset: 5 },
-              { content: '=', color: KEYWORD_COLOR, offset: 8 },
-              { content: ' 1', color: '#986801', offset: 10 },
-            ]],
-          },
-          dark: { fg: '#dbd7ca', tokens: [] },
-        };
+        // Rich token diversity: keyword, string, punctuation, operator
+        return '<span class="token keyword">const</span> <span class="token string">"hello"</span> <span class="token operator">=</span> <span class="token punctuation">(</span>';
       }
       if (lang === 'python') {
-        return {
-          light: {
-            fg: FG_COLOR,
-            tokens: [[
-              { content: 'const x = 1', color: FG_COLOR, offset: 0 },
-            ]],
-          },
-          dark: { fg: '#dbd7ca', tokens: [] },
-        };
+        // Poor token diversity: only one token type
+        return '<span class="token keyword">const</span>';
       }
       return null;
     });
@@ -64,44 +44,22 @@ describe('detectLanguage', () => {
   });
 
   it('returns null when no language scores significantly better than plain text', async () => {
-    const FG_COLOR = '#383a42';
-    mockTokenizeCode.mockResolvedValue({
-      light: {
-        fg: FG_COLOR,
-        tokens: [[{ content: 'some ambiguous text here and more text', color: FG_COLOR, offset: 0 }]],
-      },
-      dark: { fg: '#dbd7ca', tokens: [] },
-    });
+    // All languages produce no token spans (plain text / unrecognized)
+    mockTokenizePrism.mockResolvedValue('some plain text with no spans');
 
     const result = await detectLanguage('some ambiguous text here and more text that is long enough');
     expect(result).toBeNull();
   });
 
-  it('returns null when a language uses fewer than 2 distinct non-fg colors (false positive guard)', async () => {
-    const FG_COLOR = '#383a42';
-    const STRING_COLOR = '#50a14f'; // YAML-like: colorizes everything as one type
-
-    mockTokenizeCode.mockImplementation(async (_code, lang) => {
+  it('returns null when a language uses fewer than 2 distinct token types (false positive guard)', async () => {
+    mockTokenizePrism.mockImplementation(async (_code, lang) => {
       if (lang === 'yaml') {
-        // Simulates YAML treating code as block scalars — low fg-ratio but only 1 non-fg color
-        return {
-          light: {
-            fg: FG_COLOR,
-            tokens: [[
-              { content: 'const x = 1;', color: STRING_COLOR, offset: 0 },
-              { content: 'function foo() {', color: STRING_COLOR, offset: 13 },
-              { content: '  ', color: FG_COLOR, offset: 30 },
-              { content: 'return x;', color: STRING_COLOR, offset: 32 },
-              { content: '}', color: FG_COLOR, offset: 42 },
-            ]],
-          },
-          dark: { fg: '#dbd7ca', tokens: [] },
-        };
+        // YAML treats everything as a single token type (string) — false positive guard
+        return '<span class="token string">const x = 1;</span><span class="token string">function foo() {</span><span class="token string">return x;</span>';
       }
       return null;
     });
 
-    // YAML would win on raw fg-ratio (0.075) but should be rejected due to only 1 non-fg color
     const result = await detectLanguage('const x = 1;\nfunction foo() {\n  return x;\n}');
     expect(result).toBeNull();
   });

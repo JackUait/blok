@@ -193,6 +193,10 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
       const items = await this.getTunesItems(block, commonTunes, toolTunes);
 
+      const contextLabel = hasMultipleBlocksSelected
+        ? `${selectedBlocks.length} blocks`
+        : (await block.getActiveToolboxEntry())?.title ?? block.name;
+
       const PopoverClass = isMobileScreen() ? PopoverMobile : PopoverDesktop;
       const popoverParams: PopoverParams & { flipper?: Flipper } = {
         searchable: true,
@@ -206,6 +210,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         minWidth: '220px',
         placeLeftOfAnchor: true,
         viewportMargin: 50,
+        contextLabel,
       };
 
       if (PopoverClass === PopoverDesktop) {

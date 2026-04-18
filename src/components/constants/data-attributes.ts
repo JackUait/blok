@@ -127,6 +127,8 @@ export const DATA_ATTR = {
   nestedLevel: 'data-blok-nested-level',
   /** Group label for promoted search results from nested children */
   promotedGroupLabel: 'data-blok-promoted-group-label',
+  /** Group label for top-level matches in search results */
+  topLevelGroupLabel: 'data-blok-top-level-group-label',
 
   // ============================================
   // Popover Header

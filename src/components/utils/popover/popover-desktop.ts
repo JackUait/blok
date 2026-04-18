@@ -12,6 +12,7 @@ import { PopoverAbstract } from './popover-abstract';
 import { CSSVariables, css as popoverCss } from './popover.const';
 import { clampNestedPopoverTop, resolveNestedPopoverSide } from './popover-nested-position';
 import { resolvePosition } from './popover-position';
+import { stripPopoverAttribute } from '../top-layer';
 import { twMerge } from '../tw';
 
 import type { PopoverParams } from '@/types/utils/popover/popover';
@@ -123,6 +124,11 @@ export class PopoverDesktop extends PopoverAbstract {
    * Temporary group separator elements injected during search.
    */
   private promotedSeparators: HTMLElement[] = [];
+
+  /**
+   * Group separator rendered above top-level matches in search results.
+   */
+  private topLevelSeparator: HTMLElement | null = null;
 
   /**
    * Construct the instance
@@ -785,9 +791,10 @@ export class PopoverDesktop extends PopoverAbstract {
     popoverClone.style.top = '-1000px';
 
     // The native `popover` attribute makes the element `display:none` until
-    // `showPopover()` is called. Remove it from the measurement clone so the
-    // container has a rendered box and offsetHeight/offsetWidth are real.
-    popoverClone.removeAttribute('popover');
+    // `showPopover()` is called. Strip it from the measurement clone (via the
+    // centralized helper) so the container has a rendered box and
+    // offsetHeight/offsetWidth are real.
+    stripPopoverAttribute(popoverClone);
 
     popoverClone.setAttribute(DATA_ATTR.popoverOpened, 'true');
     popoverClone.querySelector(`[${DATA_ATTR.nested}]`)?.remove();
@@ -940,6 +947,11 @@ export class PopoverDesktop extends PopoverAbstract {
     }
     this.promotedSeparators = [];
 
+    if (this.topLevelSeparator !== null) {
+      this.topLevelSeparator.remove();
+      this.topLevelSeparator = null;
+    }
+
     if (this.promotedItemCache !== null) {
       for (const item of this.promotedItemCache.items) {
         item.getElement()?.remove();
@@ -950,15 +962,17 @@ export class PopoverDesktop extends PopoverAbstract {
   }
 
   /**
-   * Creates a group separator element for promoted search results.
-   * @param label - the parent chain label (e.g., "Convert to" or "Parent › Child")
+   * Creates a group separator element for search results.
+   * @param label - group label text
+   * @param kind - which data attribute to tag the separator with (top-level vs promoted group)
    */
-  private createGroupSeparator(label: string): HTMLElement {
+  private createGroupSeparator(label: string, kind: 'promoted' | 'topLevel' = 'promoted'): HTMLElement {
     const el = document.createElement('div');
+    const attr = kind === 'topLevel' ? DATA_ATTR.topLevelGroupLabel : DATA_ATTR.promotedGroupLabel;
 
-    el.setAttribute(DATA_ATTR.promotedGroupLabel, '');
+    el.setAttribute(attr, '');
     el.setAttribute('role', 'separator');
-    el.className = 'px-3 pt-2.5 pb-1 text-[11px] font-medium uppercase tracking-wide text-gray-text/50 cursor-default';
+    el.className = 'pl-2 pr-3 pt-2.5 pb-1 text-[11px] font-medium uppercase tracking-wide text-gray-text/50 cursor-default';
     el.textContent = label;
 
     return el;
@@ -1151,9 +1165,26 @@ export class PopoverDesktop extends PopoverAbstract {
     }
     this.promotedSeparators = [];
 
+    if (this.topLevelSeparator !== null) {
+      this.topLevelSeparator.remove();
+      this.topLevelSeparator = null;
+    }
+
     if (this.promotedItemCache !== null) {
       for (const item of this.promotedItemCache.items) {
         item.getElement()?.remove();
+      }
+    }
+
+    // Render top-level group header when promoted groups will be rendered below
+    if (!isEmptyQuery && matchingTopLevel.length > 0 && data.promotedItems.length > 0) {
+      const label = this.messages.actions ?? 'Actions';
+      const separator = this.createGroupSeparator(label, 'topLevel');
+      const firstRankedElement = matchingTopLevel[0].getElement();
+
+      if (firstRankedElement !== null && this.nodes.items !== null) {
+        this.nodes.items.insertBefore(separator, firstRankedElement);
+        this.topLevelSeparator = separator;
       }
     }
 

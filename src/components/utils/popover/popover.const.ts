@@ -12,12 +12,12 @@ export const css = {
   popoverContainerMobile: 'fixed max-w-none rounded-[10px] min-w-[calc(100%-var(--offset)*2)] left-auto top-auto inset-[auto_var(--offset)_calc(var(--offset)+env(safe-area-inset-bottom))_var(--offset)]',
 
   // Popover container - opened state
-  popoverContainerOpened: 'opacity-100 pointer-events-auto p-1.5 max-h-(--max-height) border-none',
+  popoverContainerOpened: 'opacity-100 pointer-events-auto px-1.5 pt-1.5 pb-0 max-h-(--max-height) border-none',
 
   // Popover overlay
   popoverOverlay: 'hidden bg-dark',
 
-  items: 'overflow-y-auto overscroll-contain',
+  items: 'flex-1 min-h-0 overflow-y-auto overscroll-contain',
 
   scrollHaze: 'absolute inset-x-0 h-6 pointer-events-none z-1 transition-opacity duration-300 ease-in-out',
 };

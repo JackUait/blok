@@ -1,6 +1,7 @@
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { EventsDispatcher } from '../events';
 import { Listeners } from '../listeners';
+import { isPromotedToTopLayer, promoteToTopLayer, removeFromTopLayer, supportsPopoverAPI } from '../top-layer';
 import { twMerge } from '../tw';
 
 import { PopoverItemDefault, PopoverItemSeparator, PopoverItemType } from './components/popover-item';
@@ -12,15 +13,6 @@ import { css } from './popover.const';
 
 import type { PopoverEventMap, PopoverMessages, PopoverParams, PopoverNodes } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
-
-/**
- * Feature-detects the native HTML Popover API. When supported, popovers
- * are promoted to the CSS Top Layer via `showPopover()` so they render
- * above any other element regardless of z-index or stacking context.
- */
-const supportsPopoverAPI = (): boolean => {
-  return typeof HTMLElement !== 'undefined' && 'popover' in HTMLElement.prototype;
-};
 
 /**
  * Class responsible for rendering popover and handling its behaviour.
@@ -60,6 +52,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   protected messages: PopoverMessages = {
     nothingFound: 'Nothing found',
     search: 'Search',
+    actions: 'Actions',
   };
 
   /**
@@ -146,15 +139,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     const isBodyMounted = this.params.trigger !== undefined;
 
     if (mountTarget !== null && isRoot && isBodyMounted && supportsPopoverAPI()) {
-      if (!mountTarget.hasAttribute('popover')) {
-        mountTarget.setAttribute('popover', 'manual');
-      }
-
-      try {
-        mountTarget.showPopover();
-      } catch {
-        // Already open or not eligible — fall back to z-index stacking.
-      }
+      promoteToTopLayer(mountTarget);
     }
 
     // Update DOM state
@@ -199,16 +184,12 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   public hide(): void {
     const mountTarget = this.nodes.popover;
 
-    if (mountTarget !== null && supportsPopoverAPI() && mountTarget.hasAttribute('popover')) {
-      try {
-        mountTarget.hidePopover();
-      } catch {
-        // Not open — nothing to remove from the top layer.
-      }
-      // Remove the attribute so the UA `[popover]:not(:popover-open)`
-      // display:none rule no longer applies; the popover returns to
-      // ordinary layout controlled entirely by Blok's own classes.
-      mountTarget.removeAttribute('popover');
+    if (mountTarget !== null && supportsPopoverAPI() && isPromotedToTopLayer(mountTarget)) {
+      // Centralized helper hides the popover, strips the `popover` attribute
+      // (so UA `[popover]:not(:popover-open)` display:none no longer applies)
+      // and removes the `data-blok-top-layer` marker so the CSS reset rule
+      // turns off too.
+      removeFromTopLayer(mountTarget);
     }
 
     // Update DOM state
@@ -589,8 +570,21 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     scrollHazeBottom.style.background = 'linear-gradient(to top, var(--blok-popover-bg), transparent)';
     scrollHazeBottom.style.opacity = '0';
 
+    let contextLabel: HTMLElement | undefined;
+
+    if (this.params.contextLabel !== undefined) {
+      contextLabel = document.createElement('div');
+      contextLabel.className = 'shrink-0 pl-2 pr-3 pt-1 pb-1.5 text-xs font-medium text-gray-text/50 cursor-default bg-popover-bg';
+      contextLabel.setAttribute('role', 'status');
+      contextLabel.setAttribute('data-blok-testid', 'popover-context-label');
+      contextLabel.textContent = this.params.contextLabel;
+    }
+
     // Assemble DOM structure
     popoverContainer.appendChild(nothingFoundMessage);
+    if (contextLabel !== undefined) {
+      popoverContainer.appendChild(contextLabel);
+    }
     popoverContainer.appendChild(items);
     popoverContainer.appendChild(scrollHazeTop);
     popoverContainer.appendChild(scrollHazeBottom);
@@ -600,6 +594,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       popover,
       popoverContainer,
       nothingFoundMessage,
+      contextLabel,
       items,
       scrollHazeTop,
       scrollHazeBottom,

@@ -115,6 +115,12 @@ export interface PopoverParams {
    * Defaults to true. Has no effect when a search field is present (search receives focus instead).
    */
   autoFocusFirstItem?: boolean;
+
+  /**
+   * Optional label describing what the popover targets (e.g. the active block name).
+   * Rendered at the top, below the search input, before any items.
+   */
+  contextLabel?: string;
 }
 
 
@@ -127,6 +133,9 @@ export interface PopoverMessages {
 
   /** Search input label */
   search?: string
+
+  /** Group label shown above top-level matches in search results */
+  actions?: string
 }
 
 
@@ -158,6 +167,9 @@ export interface PopoverNodes {
 
   /** Message displayed when no items found while searching */
   nothingFoundMessage: HTMLElement;
+
+  /** Optional label describing what the popover targets, rendered above items */
+  contextLabel?: HTMLElement;
 
   /** Popover items wrapper */
   items: HTMLElement;

@@ -14,6 +14,7 @@ import { IconImage } from '../../components/icons';
 import { DEFAULT_CAPTION_PLACEHOLDER, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { ImageError } from './errors';
+import { attachResizeHandle, type ResizeEdge } from './resizer';
 import { openLightbox, renderCaption, renderImage, renderOverlay } from './ui';
 import { Uploader, type UploadResult } from './uploader';
 
@@ -29,6 +30,7 @@ export class ImageTool implements BlockTool {
   private root: HTMLElement | null = null;
   private state: ToolState = 'EMPTY';
   private emptyStateEl: EmptyStateElement | null = null;
+  private resizeDetach: (() => void)[] = [];
 
   constructor(options: BlockToolConstructorOptions<ImageData, ImageConfig>) {
     this.api = options.api;
@@ -127,6 +129,10 @@ export class ImageTool implements BlockTool {
 
   private renderState(): void {
     if (!this.root) return;
+    while (this.resizeDetach.length > 0) {
+      const detach = this.resizeDetach.pop();
+      if (detach) detach();
+    }
     this.root.replaceChildren();
 
     if (this.state === 'EMPTY') {
@@ -203,6 +209,41 @@ export class ImageTool implements BlockTool {
       }
     });
     figure.appendChild(caption);
+
+    if (!this.readOnly) {
+      const edges: ResizeEdge[] = ['left', 'right'];
+      for (const edge of edges) {
+        const handle = document.createElement('div');
+        handle.setAttribute('data-role', 'resize-handle');
+        handle.setAttribute('data-edge', edge);
+        Object.assign(handle.style, {
+          position: 'absolute',
+          top: '0',
+          bottom: '0',
+          width: '6px',
+          cursor: 'col-resize',
+          background: 'transparent',
+        } as Partial<CSSStyleDeclaration>);
+        if (edge === 'left') handle.style.left = '-3px';
+        else handle.style.right = '-3px';
+        figure.appendChild(handle);
+        const detach = attachResizeHandle({
+          handle,
+          container: figure,
+          edge,
+          onPreview: (percent) => {
+            const img = figure.querySelector('img');
+            if (img) img.style.width = `${percent}%`;
+          },
+          onCommit: (percent) => {
+            this.data.width = percent;
+            this.block.dispatchChange();
+          },
+        });
+        this.resizeDetach.push(detach);
+      }
+    }
+
     this.root.appendChild(figure);
   }
 

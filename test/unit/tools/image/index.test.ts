@@ -176,3 +176,28 @@ describe('ImageTool — overlay actions', () => {
     expect(root.querySelector('input[type="file"]')).not.toBeNull();
   });
 });
+
+describe('ImageTool — resize', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('updates data.width and dispatches change after resize commit', () => {
+    const block = createMockBlock();
+    const tool = new ImageTool(createOptions({ url: 'u', width: 100 }, {}, block));
+    const root = tool.render();
+    const figure = root.querySelector('figure');
+    if (!figure) throw new Error('figure missing');
+    Object.defineProperty(figure, 'getBoundingClientRect', {
+      value: () => ({ left: 0, right: 1000, width: 1000, top: 0, bottom: 100, height: 100, x: 0, y: 0, toJSON: () => ({}) }),
+    });
+    const handle = root.querySelector<HTMLElement>('[data-role="resize-handle"][data-edge="right"]');
+    if (!handle) throw new Error('handle missing');
+    handle.setPointerCapture = () => undefined;
+    handle.releasePointerCapture = () => undefined;
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 1000, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 400, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 400, bubbles: true }));
+    expect(tool.save().width).toBe(40);
+    expect(block.dispatchChange).toHaveBeenCalled();
+  });
+});

@@ -882,6 +882,27 @@
   --blok-z-popover: 50;
   --blok-z-tooltip: 100;
   --blok-z-drawer: 1000;
+
+  /* Motion tokens — durations and easings. */
+  --blok-duration-fast: 80ms;
+  --blok-duration-base: 120ms;
+  --blok-duration-standard: 150ms;
+  --blok-duration-slow: 200ms;
+  --blok-duration-popover-enter: 180ms;
+  --blok-duration-fade: 300ms;
+  --blok-duration-notify-enter: 400ms;
+  --blok-duration-notify-exit: 250ms;
+  --blok-duration-bounce: 750ms;
+  --blok-duration-rotation: 1200ms;
+  --blok-duration-flash: 700ms;
+  --blok-duration-checkbox-pop: 280ms;
+
+  --blok-ease-standard: ease;
+  --blok-ease-popover: cubic-bezier(0.16, 1, 0.3, 1);
+  --blok-ease-spring: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --blok-ease-bounce: cubic-bezier(0.215, 0.61, 0.355, 1);
+  --blok-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --blok-ease-exit-out: ease-out;
 }
 
 /* ─── Dark theme — system preference ────────────────── */

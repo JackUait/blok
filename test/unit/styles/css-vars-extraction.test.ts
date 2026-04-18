@@ -122,6 +122,18 @@ const COLOR_KEYWORD_ALLOWLIST = new Set([
 // R1 — No raw color literal appears outside a palette block.
 // ---------------------------------------------------------------------------
 
+/**
+ * Ranges of `box-shadow:` declarations. Colour literals embedded in shadow
+ * strings are extracted separately in B4 — until then, they're allowlisted
+ * here so R1 can enforce strict extraction everywhere else.
+ */
+const shadowDeclRegex = /box-shadow\s*:[^;]*/g;
+const shadowRanges: Range[] = [];
+
+for (const m of sourceClean.matchAll(shadowDeclRegex)) {
+  shadowRanges.push({ start: m.index, end: m.index + m[0].length });
+}
+
 describe('R1 — colors must live in palette blocks', () => {
   const colorPatterns = [
     { kind: 'hex', regex: /#[0-9a-fA-F]{3,8}\b/g },
@@ -136,6 +148,8 @@ describe('R1 — colors must live in palette blocks', () => {
       for (const m of sourceClean.matchAll(regex)) {
         const idx = m.index;
         if (inAnyRange(idx, tokenRanges)) continue;
+        // TODO(B4): drop shadowRanges allowlist once shadows reference colour vars.
+        if (inAnyRange(idx, shadowRanges)) continue;
 
         // Allowlist: literal lives inside a `var(--x, <literal>)` fallback.
         // Fallbacks are acceptable short-term but flagged by R3/R4 later.

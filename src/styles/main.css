@@ -3131,7 +3131,7 @@
 /* toolbar */
 [data-blok-tool="image"] .blok-image-toolbar {
   position: absolute;
-  top: -48px; right: 0;
+  top: 10px; right: 10px;
   display: inline-flex;
   background: var(--blok-overlay-dark-strong);
   backdrop-filter: blur(12px);
@@ -3177,7 +3177,7 @@
 /* overflow popover */
 [data-blok-tool="image"] .blok-image-popover {
   position: absolute;
-  top: 0; right: 0;
+  top: 44px; right: 10px;
   min-width: 220px;
   background: var(--blok-bg-primary);
   border: 1px solid var(--blok-border-primary);

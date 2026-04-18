@@ -187,26 +187,6 @@ describe('ImageTool — overlay actions', () => {
     replace.click();
     expect(root.querySelector('input[type="file"]')).not.toBeNull();
   });
-
-  it('overlay is a direct child of the tool root, not of .blok-image-frame', () => {
-    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
-    const root = tool.render();
-    const overlay = root.querySelector<HTMLElement>('[data-role="image-overlay"]');
-    if (!overlay) throw new Error('overlay missing');
-    expect(overlay.parentElement).toBe(root);
-    const frame = root.querySelector<HTMLElement>('.blok-image-frame');
-    expect(frame?.contains(overlay)).toBe(false);
-  });
-
-  it('more-popover is a direct child of the tool root, not of .blok-image-frame', () => {
-    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
-    const root = tool.render();
-    const popover = root.querySelector<HTMLElement>('[data-role="image-popover"]');
-    if (!popover) throw new Error('popover missing');
-    expect(popover.parentElement).toBe(root);
-    const frame = root.querySelector<HTMLElement>('.blok-image-frame');
-    expect(frame?.contains(popover)).toBe(false);
-  });
 });
 
 describe('ImageTool — resize', () => {

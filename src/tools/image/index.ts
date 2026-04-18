@@ -265,27 +265,6 @@ export class ImageTool implements BlockTool {
       imgEl.addEventListener('click', () => openLightbox({ url: this.data.url, alt: this.data.alt }));
     }
 
-    const placeholder = this.config.captionPlaceholder ?? DEFAULT_CAPTION_PLACEHOLDER;
-    const caption = renderCaption({
-      value: this.data.caption ?? '',
-      placeholder,
-      readOnly: this.readOnly,
-    });
-    caption.addEventListener('blur', () => {
-      const next = caption.textContent ?? '';
-      if (next !== this.data.caption) {
-        this.data.caption = next;
-        this.block.dispatchChange();
-      }
-    });
-    figure.appendChild(caption);
-
-    if (!this.readOnly) {
-      this.attachResizeHandles(frame);
-    }
-
-    this.root.appendChild(figure);
-
     if (!this.readOnly) {
       const overlay = renderOverlay({
         state: {
@@ -305,7 +284,7 @@ export class ImageTool implements BlockTool {
         onCopyUrl: () => this.copyUrl(),
         onToggleCaption: () => this.toggleCaption(),
       });
-      this.root.appendChild(overlay);
+      frame.appendChild(overlay);
 
       const popover = renderMorePopover({
         size: this.data.size ?? 'md',
@@ -327,7 +306,7 @@ export class ImageTool implements BlockTool {
         },
       });
       this.popover = popover;
-      this.root.appendChild(popover);
+      frame.appendChild(popover);
 
       const moreBtn = overlay.querySelector<HTMLButtonElement>('[data-action="more"]');
       moreBtn?.addEventListener('click', (event) => {
@@ -335,8 +314,29 @@ export class ImageTool implements BlockTool {
         this.togglePopover();
       });
 
-      this.root.addEventListener('mouseleave', () => this.closePopover());
+      figure.addEventListener('mouseleave', () => this.closePopover());
     }
+
+    const placeholder = this.config.captionPlaceholder ?? DEFAULT_CAPTION_PLACEHOLDER;
+    const caption = renderCaption({
+      value: this.data.caption ?? '',
+      placeholder,
+      readOnly: this.readOnly,
+    });
+    caption.addEventListener('blur', () => {
+      const next = caption.textContent ?? '';
+      if (next !== this.data.caption) {
+        this.data.caption = next;
+        this.block.dispatchChange();
+      }
+    });
+    figure.appendChild(caption);
+
+    if (!this.readOnly) {
+      this.attachResizeHandles(frame);
+    }
+
+    this.root.appendChild(figure);
   }
 
   private togglePopover(): void {

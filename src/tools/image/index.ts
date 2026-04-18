@@ -172,6 +172,12 @@ export class ImageTool implements BlockTool {
     const figure = renderImage(this.data);
     figure.style.position = 'relative';
 
+    const imgEl = figure.querySelector('img');
+    if (imgEl) {
+      imgEl.style.cursor = 'zoom-in';
+      imgEl.addEventListener('click', () => openLightbox({ url: this.data.url, alt: this.data.alt }));
+    }
+
     if (!this.readOnly) {
       const overlay = renderOverlay({
         onAlign: () => this.cycleAlignment(),

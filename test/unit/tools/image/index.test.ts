@@ -201,3 +201,16 @@ describe('ImageTool — resize', () => {
     expect(block.dispatchChange).toHaveBeenCalled();
   });
 });
+
+describe('ImageTool — fullscreen triggers', () => {
+  it('clicking the image opens lightbox', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    const root = tool.render();
+    const img = root.querySelector('img');
+    if (!img) throw new Error('img missing');
+    img.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(document.querySelector('[role="dialog"][aria-modal="true"]')).not.toBeNull();
+    const dialog = document.querySelector('[role="dialog"]');
+    if (dialog) dialog.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  });
+});

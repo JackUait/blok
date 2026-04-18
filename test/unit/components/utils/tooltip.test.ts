@@ -606,32 +606,29 @@ describe('Tooltip utility', () => {
    * width: fit-content; padding: 0.25em; border: solid; background: Canvas`)
    * that pin the tooltip to the bottom-right of the viewport, throwing away
    * our inline `top`/`left` placement. The fix lives in `src/styles/main.css`:
-   * the reset selector that neutralizes those UA defaults must include
-   * `[data-blok-interface=tooltip][popover]`. If anyone removes the tooltip
-   * selector from the reset block, this test fails.
+   * the reset selector keys off the `data-blok-top-layer` marker that the
+   * centralized helper (`src/components/utils/top-layer.ts`) sets on every
+   * promoted element. The deeper structural assertions live in
+   * `test/unit/styles/top-layer-css.test.ts`; this test verifies the tooltip
+   * happens to inherit the marker-driven safety net.
    */
-  it('main.css reset block targets [data-blok-interface=tooltip][popover] (UA popover defaults)', () => {
+  it('main.css reset block targets [data-blok-top-layer][popover] (UA popover defaults)', () => {
     const cssPath = path.resolve(__dirname, '../../../../src/styles/main.css');
     const cssSource = fs.readFileSync(cssPath, 'utf-8');
 
-    // Find every CSS rule whose body contains `inset: auto` AND `margin: 0`
-    // (the signature of the UA `[popover]` reset block) and confirm at least
-    // one of them lists `[data-blok-interface=tooltip][popover]` in its
-    // selector list. Regex tolerates whitespace, attribute-value quoting and
-    // selector ordering.
     const ruleRegex = /([^{}]+)\{([^}]*)\}/g;
-    const tooltipSelectorRegex = /\[data-blok-interface\s*=\s*["']?tooltip["']?\]\s*\[popover\]/;
+    const markerSelectorRegex = /\[data-blok-top-layer\]\s*\[popover\]/;
     const insetRegex = /inset\s*:\s*auto\s*;/;
     const marginRegex = /margin\s*:\s*0\s*;/;
 
-    let foundResetForTooltip = false;
+    let foundReset = false;
     let match: RegExpExecArray | null = ruleRegex.exec(cssSource);
 
     while (match !== null) {
       const [ , selectorList, body ] = match;
 
-      if (insetRegex.test(body) && marginRegex.test(body) && tooltipSelectorRegex.test(selectorList)) {
-        foundResetForTooltip = true;
+      if (insetRegex.test(body) && marginRegex.test(body) && markerSelectorRegex.test(selectorList)) {
+        foundReset = true;
         break;
       }
 
@@ -639,8 +636,8 @@ describe('Tooltip utility', () => {
     }
 
     expect(
-      foundResetForTooltip,
-      'main.css must contain a reset rule that targets `[data-blok-interface=tooltip][popover]` and sets `inset: auto; margin: 0;` to neutralize the UA `[popover]` modal-dialog defaults — otherwise tooltips inside the CSS Top Layer collapse to the bottom-right of the viewport.'
+      foundReset,
+      'main.css must contain a reset rule that targets `[data-blok-top-layer][popover]` and sets `inset: auto; margin: 0;` so every Top-Layer-promoted blok element (including the tooltip) escapes the UA `[popover]` modal-dialog defaults.'
     ).toBe(true);
   });
 

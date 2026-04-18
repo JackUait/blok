@@ -106,11 +106,18 @@
   defaults (position: fixed; inset: 0; margin: auto; width: fit-content;
   border: solid; padding: 0.25em; background: Canvas; overflow: auto). Those
   defaults fight with Blok's own popover layout, which positions the content
-  via inline `top`/`left` and styles the inner container directly. Reset them
-  so the `popover` attribute only contributes its Top Layer promotion.
+  via inline `top`/`left` and styles the inner container directly.
+
+  Every blok element promoted to the Top Layer goes through
+  `src/components/utils/top-layer.ts`, which tags the element with
+  `data-blok-top-layer="true"`. Keying the reset off that marker means a
+  single rule covers every current and future caller — no per-element CSS
+  update required. Background is intentionally NOT reset here: at specificity
+  0,2,0 it would override author background utilities (e.g. tailwind's
+  `bg-tooltip-bg` at 0,1,0). Components that need a transparent background
+  opt in via their own selector (see the popover-specific rule below).
 */
-[data-blok-popover][popover],
-[data-blok-interface=tooltip][popover] {
+[data-blok-top-layer][popover] {
   inset: auto;
   margin: 0;
   border: 0;
@@ -125,7 +132,7 @@
 /*
   Popover wrapper paints background on its inner container, so wipe the UA
   Canvas background here. Tooltip paints background directly on the wrapper
-  via tailwind's `bg-tooltip-bg`, so excluding it keeps the pill visible.
+  via tailwind's `bg-tooltip-bg`, so it must NOT inherit this rule.
 */
 [data-blok-popover][popover] {
   background: transparent;
@@ -1676,7 +1683,7 @@
  */
 [data-blok-slash-search],
 [data-blok-slash-search]:focus-visible {
-  @apply bg-search-input-bg rounded-[10px] transition-colors duration-150 w-fit max-w-[240px] px-2;
+  @apply bg-search-input-bg rounded-[10px] transition-colors duration-150 w-fit max-w-[240px] px-2 py-[2px];
   display: inline-flex;
   align-items: center;
 }
@@ -1688,7 +1695,7 @@
 
 [data-blok-slash-search]::after {
   content: attr(data-blok-slash-search);
-  @apply text-gray-text font-medium text-base pointer-events-none;
+  @apply text-gray-text font-medium pointer-events-none;
 }
 
 /* Suppress the default paragraph empty-state ::before placeholder */

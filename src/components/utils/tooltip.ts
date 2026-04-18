@@ -1,5 +1,11 @@
 import { DATA_ATTR, TOOLTIP_INTERFACE_VALUE } from '../constants';
 
+import {
+  isPromotedToTopLayer,
+  promoteToTopLayer,
+  removeFromTopLayer,
+  supportsPopoverAPI,
+} from './top-layer';
 import { twJoin } from './tw';
 
 /**
@@ -41,15 +47,6 @@ export interface TooltipOptions {
    */
   delay?: number;
 }
-
-/**
- * Feature-detects the native HTML Popover API. When supported, the tooltip
- * is promoted to the CSS Top Layer via `showPopover()` so it renders above
- * any other element — including open popovers (which also use the Top Layer).
- */
-const supportsPopoverAPI = (): boolean => {
-  return typeof HTMLElement !== 'undefined' && 'popover' in HTMLElement.prototype;
-};
 
 const DEFAULT_OFFSET = 10;
 const TOOLTIP_ROLE = 'tooltip';
@@ -251,26 +248,16 @@ class Tooltip {
   }
 
   /**
-   * Promote the tooltip wrapper to the CSS Top Layer via the native HTML
-   * Popover API. Necessary so the tooltip renders above any open popover —
+   * Promote the tooltip wrapper to the CSS Top Layer via the centralized
+   * helper. Necessary so the tooltip renders above any open popover —
    * popovers themselves use the Top Layer, and no z-index can beat that.
    */
   private promoteToTopLayer(): void {
-    const wrapper = this.nodes.wrapper;
-
-    if (wrapper === null || !supportsPopoverAPI()) {
+    if (this.nodes.wrapper === null) {
       return;
     }
 
-    if (!wrapper.hasAttribute('popover')) {
-      wrapper.setAttribute('popover', 'manual');
-    }
-
-    try {
-      wrapper.showPopover();
-    } catch {
-      // Already open or not eligible — fall back to z-index stacking.
-    }
+    promoteToTopLayer(this.nodes.wrapper);
   }
 
   /**
@@ -314,22 +301,16 @@ class Tooltip {
   }
 
   /**
-   * Reverse of {@link promoteToTopLayer}. Hides the popover and clears the
-   * `popover` attribute so the wrapper returns to the regular flow.
+   * Reverse of {@link promoteToTopLayer}. Delegates to the centralized helper
+   * which hides the popover, clears the `popover` attribute, and removes the
+   * top-layer marker so the wrapper returns to ordinary layout.
    */
   private removeFromTopLayer(): void {
-    const wrapper = this.nodes.wrapper;
-
-    if (wrapper === null || !supportsPopoverAPI() || !wrapper.hasAttribute('popover')) {
+    if (this.nodes.wrapper === null) {
       return;
     }
 
-    try {
-      wrapper.hidePopover();
-    } catch {
-      // Not open — nothing to remove from the top layer.
-    }
-    wrapper.removeAttribute('popover');
+    removeFromTopLayer(this.nodes.wrapper);
   }
 
   /**
@@ -562,6 +543,17 @@ class Tooltip {
    * tooltip off-screen on scrolled pages.
    */
   private getScrollTop(): number {
+    if (supportsPopoverAPI() && this.nodes.wrapper !== null && isPromotedToTopLayer(this.nodes.wrapper)) {
+      return 0;
+    }
+
+    /**
+     * Fall back to viewport-relative coords whenever the API exists, even
+     * before the wrapper is actually promoted: placement math runs once,
+     * before promoteToTopLayer() flips the marker. Using scrollY here would
+     * land the wrapper at the wrong coordinate during the brief window
+     * between style application and Top Layer entry.
+     */
     if (supportsPopoverAPI()) {
       return 0;
     }

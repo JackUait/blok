@@ -135,6 +135,20 @@ export class Toolbar extends Module<ToolbarNodes> {
   private plusInsertedBlock: Block | null = null;
 
   /**
+   * Drops the pre-plus focus-restoration context.
+   *
+   * Called when the user commits to editing the plus-opened block — e.g. types
+   * "/" to activate slash search. After that point a Closed event is not a
+   * dismissal (Escape / click outside) but a transition: the toolbox is torn
+   * down and reopened, and restoring caret to the originally-focused block
+   * would strand the caret away from the block the user is actually typing in.
+   */
+  public discardPlusContext(): void {
+    this.preToolboxBlock = null;
+    this.plusInsertedBlock = null;
+  }
+
+  /**
    * @class
    * @param moduleConfiguration - Module Configuration
    * @param moduleConfiguration.config - Blok's config

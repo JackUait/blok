@@ -334,6 +334,15 @@ export class BlockEvents extends Module {
     event.preventDefault();
     this.Blok.Caret.insertContentAtCaretPosition('/');
 
+    /**
+     * Drop the plus-button focus-restoration context: the user has committed
+     * to the new block by pressing '/'. activateToolbox() calls moveAndOpen(),
+     * which closes-and-reopens the toolbox; without this, the Closed handler
+     * would yank the caret back to the pre-plus block and subsequent keystrokes
+     * (the search query) would land in the wrong block.
+     */
+    this.Blok.Toolbar.discardPlusContext();
+
     this.activateToolbox();
   }
 

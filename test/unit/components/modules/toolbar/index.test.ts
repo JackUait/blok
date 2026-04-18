@@ -1272,4 +1272,39 @@ describe('Plus button interactions', () => {
       });
     }
   });
+
+  describe('discardPlusContext', () => {
+    // Regression guard: if preToolboxBlock survives a programmatic
+    // close-and-reopen of the toolbox (e.g. slashPressed -> activateToolbox),
+    // the Closed handler restores caret to the pre-plus block and subsequent
+    // keystrokes land in the wrong block. Both fields must clear.
+    it('clears preToolboxBlock and plusInsertedBlock so Closed handler skips focus restore', () => {
+      const internal = toolbar as unknown as {
+        preToolboxBlock: unknown;
+        plusInsertedBlock: unknown;
+      };
+
+      internal.preToolboxBlock = { name: 'paragraph' };
+      internal.plusInsertedBlock = { name: 'paragraph' };
+
+      toolbar.discardPlusContext();
+
+      expect(internal.preToolboxBlock).toBeNull();
+      expect(internal.plusInsertedBlock).toBeNull();
+    });
+
+    it('is a no-op when no plus context is set', () => {
+      const internal = toolbar as unknown as {
+        preToolboxBlock: unknown;
+        plusInsertedBlock: unknown;
+      };
+
+      internal.preToolboxBlock = null;
+      internal.plusInsertedBlock = null;
+
+      expect(() => toolbar.discardPlusContext()).not.toThrow();
+      expect(internal.preToolboxBlock).toBeNull();
+      expect(internal.plusInsertedBlock).toBeNull();
+    });
+  });
 });

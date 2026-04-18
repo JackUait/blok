@@ -34,6 +34,7 @@ const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents =>
       close: vi.fn(),
       hideBlockActions: vi.fn(),
       moveAndOpen: vi.fn(),
+      discardPlusContext: vi.fn(),
       toolbox: {
         open: vi.fn(),
       },
@@ -328,6 +329,7 @@ describe('BlockEvents', () => {
       const insertContentAtCaretPosition = vi.fn();
       const moveAndOpen = vi.fn();
       const toolboxOpen = vi.fn();
+      const discardPlusContext = vi.fn();
 
       wrapper.appendChild(target);
       document.body.appendChild(wrapper);
@@ -348,6 +350,7 @@ describe('BlockEvents', () => {
           opened: false,
           hideBlockActions: vi.fn(),
           moveAndOpen,
+          discardPlusContext,
           toolbox: {
             open: toolboxOpen,
           },
@@ -363,6 +366,13 @@ describe('BlockEvents', () => {
 
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
       expect(insertContentAtCaretPosition).toHaveBeenCalledWith('/');
+      // The plus-button focus-restoration context MUST be dropped before
+      // moveAndOpen fires: moveAndOpen closes-and-reopens the toolbox, and
+      // the Closed handler would otherwise yank the caret to the pre-plus
+      // block, stranding the search query in the wrong block.
+      expect(discardPlusContext).toHaveBeenCalledTimes(1);
+      expect(discardPlusContext.mock.invocationCallOrder[0])
+        .toBeLessThan(moveAndOpen.mock.invocationCallOrder[0]);
       expect(moveAndOpen).toHaveBeenCalledTimes(1);
       expect(toolboxOpen).toHaveBeenCalledTimes(1);
 
@@ -398,6 +408,7 @@ describe('BlockEvents', () => {
           opened: true,
           hideBlockActions: vi.fn(),
           moveAndOpen,
+          discardPlusContext: vi.fn(),
           toolbox: {
             open: toolboxOpen,
           },

@@ -914,4 +914,65 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
 
     expect(blockTypes).toStrictEqual(['table', 'paragraph', 'paragraph', 'paragraph', 'paragraph', 'paragraph']);
   });
+
+  test('plus on hovered block followed by "/" keeps search attached to the inserted block, not the previously-focused block', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      { type: 'paragraph', data: { text: 'AAA' } },
+      { type: 'paragraph', data: { text: 'BBB' } },
+      { type: 'paragraph', data: { text: 'CCC' } },
+    ]);
+
+    // Focus a different block (CCC) so preToolboxBlock captures CCC.
+    await page.locator(PARAGRAPH_SELECTOR, { hasText: 'CCC' }).click();
+
+    // Hover block AAA, click its plus button - inserts new empty block between AAA and BBB.
+    await page.locator(PARAGRAPH_SELECTOR, { hasText: 'AAA' }).hover();
+    await page.locator(PLUS_BUTTON_SELECTOR).click();
+
+    await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(4);
+    await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
+
+    // Press "/" inside the new empty block, then type filter text.
+    // Typed characters MUST go to the newly-inserted block, NOT back to CCC.
+    await page.keyboard.press('Slash');
+    await page.keyboard.type('head');
+
+    const blockTexts = await page.evaluate(
+      () => window.blokInstance?.save().then(data => data.blocks.map(b => (b.data as { text: string }).text))
+    );
+
+    expect(blockTexts).toStrictEqual(['AAA', '/head', 'BBB', 'CCC']);
+
+    // Toolbox must filter by "head" - heading items visible, not "Nothing found".
+    const visibleItems = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])');
+
+    await expect(visibleItems).toHaveCount(9);
+  });
+
+  test('plus+slash regression: Escape still restores focus to pre-plus block', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      { type: 'paragraph', data: { text: 'AAA' } },
+      { type: 'paragraph', data: { text: 'BBB' } },
+      { type: 'paragraph', data: { text: 'CCC' } },
+    ]);
+
+    await page.locator(PARAGRAPH_SELECTOR, { hasText: 'CCC' }).click();
+    await page.locator(PARAGRAPH_SELECTOR, { hasText: 'AAA' }).hover();
+    await page.locator(PLUS_BUTTON_SELECTOR).click();
+
+    // Dismiss without a tool selection.
+    await page.keyboard.press('Escape');
+
+    // The inserted empty block stays (per existing contract), 4 blocks.
+    await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(4);
+
+    // Typing now must land in CCC (the originally-focused block).
+    await page.keyboard.type('XYZ');
+
+    const blockTexts = await page.evaluate(
+      () => window.blokInstance?.save().then(data => data.blocks.map(b => (b.data as { text: string }).text))
+    );
+
+    expect(blockTexts).toStrictEqual(['AAA', '', 'BBB', 'CCCXYZ']);
+  });
 });

@@ -10,6 +10,7 @@ import type { SearchableItem } from './components/search-input';
 import { SearchInput, SearchInputEvent, scoreSearchMatch } from './components/search-input';
 import { PopoverAbstract } from './popover-abstract';
 import { CSSVariables, css as popoverCss } from './popover.const';
+import { clampNestedPopoverTop, resolveNestedPopoverSide } from './popover-nested-position';
 import { resolvePosition } from './popover-position';
 import { twMerge } from '../tw';
 
@@ -631,7 +632,7 @@ export class PopoverDesktop extends PopoverAbstract {
     actualNestedPopoverEl.style.setProperty(CSSVariables.NestingLevel, this.nestedPopover.nestingLevel.toString());
 
     // Apply nested popover positioning (moved from popover.css)
-    this.applyNestedPopoverPositioning(nestedPopoverEl);
+    this.applyNestedPopoverPositioning(nestedPopoverEl, item);
 
     /**
      * Refresh trigger item's active state after any click inside the nested popover.
@@ -654,8 +655,9 @@ export class PopoverDesktop extends PopoverAbstract {
    * Applies positioning styles to nested popover container.
    * This replaces CSS selectors like [data-blok-nested] [data-blok-popover-container]
    * @param nestedPopoverEl - the nested popover element (mount element)
+   * @param triggerItem - popover item whose children are rendered as the nested popover
    */
-  private applyNestedPopoverPositioning(nestedPopoverEl: HTMLElement): void {
+  private applyNestedPopoverPositioning(nestedPopoverEl: HTMLElement, triggerItem: PopoverItem): void {
     const nestedContainerEl = nestedPopoverEl.querySelector(`[${DATA_ATTR.popoverContainer}]`);
     if (!(nestedContainerEl instanceof HTMLElement)) {
       return;
@@ -667,19 +669,38 @@ export class PopoverDesktop extends PopoverAbstract {
 
     // Check if parent popover has openTop or openLeft state
     const _isParentOpenTop = this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpenTop);
-    const isParentOpenLeft = this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpenLeft);
+    const parentPrefersLeft = this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpenLeft);
 
     // Apply position: absolute for nested container
     nestedContainer.style.position = 'absolute';
 
     // Get parent width - use computed width if --width resolves to 'auto'
+    const parentContainerWidth = this.nodes.popoverContainer.offsetWidth;
     const parentWidth = this.params.width === undefined || this.params.width === 'auto'
-      ? `${this.nodes.popoverContainer.offsetWidth}px`
+      ? `${parentContainerWidth}px`
       : 'var(--width)';
 
-    // Calculate --popover-left based on nesting level and parent open direction
-    // Set on the actual popover element to override its default value
-    if (isParentOpenLeft) {
+    // Decide the side based on measured space, not just the parent's flag.
+    // The flag can be truthy for very different reasons (open-left after a
+    // right-edge flip vs. placeLeftOfAnchor) — mirroring it blindly used to
+    // push the nested popover off-screen when the parent itself hugged the
+    // viewport's left edge (e.g. BlockSettings on the leftmost block).
+    const parentRect = this.nodes.popoverContainer.getBoundingClientRect();
+    const nestedMeasuredWidth = this.nestedPopover?.size.width ?? parentContainerWidth;
+    const { openLeft: openNestedLeft } = resolveNestedPopoverSide({
+      parentRect: {
+        left: parentRect.left,
+        right: parentRect.right,
+        width: parentRect.width,
+      },
+      nestedWidth: nestedMeasuredWidth,
+      viewportWidth: window.innerWidth,
+      parentPrefersLeft,
+    });
+
+    // Calculate --popover-left based on nesting level and chosen side.
+    // Set on the actual popover element to override its default value.
+    if (openNestedLeft) {
       // Position to the left
       actualPopoverEl.style.setProperty(CSSVariables.PopoverLeft, `calc(-1 * (var(--nesting-level) + 1) * ${parentWidth} + 100%)`);
     } else {
@@ -687,8 +708,27 @@ export class PopoverDesktop extends PopoverAbstract {
       actualPopoverEl.style.setProperty(CSSVariables.PopoverLeft, `calc(var(--nesting-level) * (${parentWidth} - var(--nested-popover-overlap)))`);
     }
 
-    // Center nested popover vertically on the trigger item
-    nestedContainer.style.top = 'calc(var(--trigger-item-top) - var(--popover-height) / 2 + var(--item-height) / 2)';
+    // Center nested popover vertically on the trigger item, then clamp
+    // so the submenu never overflows the viewport top or bottom.
+    const triggerItemEl = triggerItem.getElement();
+    const triggerItemRect = triggerItemEl?.getBoundingClientRect();
+    const nestedHeight = this.nestedPopover?.size.height ?? 0;
+
+    if (triggerItemRect && nestedHeight > 0) {
+      const triggerCenterY = triggerItemRect.top + triggerItemRect.height / 2;
+      const desiredTop = triggerCenterY - nestedHeight / 2;
+      const { top: clampedTop } = clampNestedPopoverTop({
+        desiredTop,
+        nestedHeight,
+        viewportHeight: window.innerHeight,
+      });
+
+      const parentRootTop = this.nodes.popover.getBoundingClientRect().top;
+
+      nestedContainer.style.top = `${clampedTop - parentRootTop}px`;
+    } else {
+      nestedContainer.style.top = 'calc(var(--trigger-item-top) - var(--popover-height) / 2 + var(--item-height) / 2)';
+    }
   }
 
 

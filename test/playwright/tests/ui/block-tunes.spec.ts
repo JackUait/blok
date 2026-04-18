@@ -425,6 +425,66 @@ test.describe('ui.block-tunes', () => {
       ).toBeVisible();
     });
 
+    test('convert to submenu stays on-screen when block settings hugs the left edge', async ({ page }) => {
+      // Regression: the BlockSettings popover opens with placeLeftOfAnchor,
+      // which clamps its left edge to the viewport's left when the anchor
+      // sits near the origin. The nested convert-to submenu used to mirror
+      // the parent's openLeft attribute and render at a negative x
+      // coordinate (fully off-screen). See
+      // src/components/utils/popover/popover-nested-position.ts.
+      await createBlok(page, {
+        tools: {
+          header: {
+            className: 'Blok.Header',
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: {
+                text: 'Some text',
+              },
+            },
+          ],
+        },
+      });
+
+      await openBlockTunesViaShortcut(page);
+
+      const convertToOption = page.locator(
+        `${POPOVER_CONTAINER_SELECTOR} [data-blok-testid="popover-item"][data-blok-item-name="convert-to"]`
+      );
+
+      while (!await convertToOption.getAttribute('data-blok-focused')) {
+        await page.keyboard.press('ArrowDown');
+      }
+
+      await page.keyboard.press('ArrowRight');
+
+      const nestedPopover = page.locator(NESTED_POPOVER_SELECTOR);
+
+      await expect(nestedPopover).toBeVisible();
+
+      const position = await nestedPopover.evaluate((el) => {
+        const r = (el as HTMLElement).getBoundingClientRect();
+
+        return {
+          left: r.left,
+          right: r.right,
+          top: r.top,
+          bottom: r.bottom,
+          viewportWidth: window.innerWidth,
+          viewportHeight: window.innerHeight,
+        };
+      });
+
+      expect(position.left).toBeGreaterThanOrEqual(0);
+      expect(position.right).toBeLessThanOrEqual(position.viewportWidth);
+      expect(position.top).toBeGreaterThanOrEqual(0);
+      expect(position.bottom).toBeLessThanOrEqual(position.viewportHeight);
+    });
+
     test('convert to submenu has a minimum width of 200px', async ({ page }) => {
       await createBlok(page, {
         tools: {

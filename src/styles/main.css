@@ -825,6 +825,9 @@
   --blok-table-add-pill-bg: transparent;
   --blok-table-add-pill-bg-hover: transparent;
   --blok-table-add-pill-icon: currentColor;
+
+  /* Foreground used on tinted dark surfaces (card hover, database actions). */
+  --blok-text-on-dark: #ffffff;
 }
 
 /* ─── Dark theme — system preference ────────────────── */
@@ -956,6 +959,8 @@
     --blok-table-add-pill-bg: #2c2c2b;
     --blok-table-add-pill-bg-hover: #2e2e2d;
     --blok-table-add-pill-icon: #9e9e9d;
+
+    --blok-text-on-dark: #ffffff;
   }
 }
 
@@ -1087,6 +1092,8 @@
   --blok-table-add-pill-bg: #2c2c2b;
   --blok-table-add-pill-bg-hover: #2e2e2d;
   --blok-table-add-pill-icon: #9e9e9d;
+
+  --blok-text-on-dark: #ffffff;
 }
 
 /* ─── Checklist checkbox — custom styled ────────────────── */
@@ -1802,7 +1809,7 @@
 [data-blok-database-edit-card]:hover,
 [data-blok-database-card-menu]:hover {
   background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+  color: var(--blok-text-on-dark);
 }
 
 /**

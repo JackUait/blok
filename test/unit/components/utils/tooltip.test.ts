@@ -478,6 +478,53 @@ describe('Tooltip utility', () => {
     expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
   });
 
+  it('promotes tooltip wrapper to CSS Top Layer on show so it renders above open popovers', () => {
+    const showPopoverSpy = vi.fn();
+    const hidePopoverSpy = vi.fn();
+
+    // jsdom (as of 28) does not implement the HTML Popover API. Polyfill enough
+    // of it on the prototype so the production feature-detection (`'popover' in
+    // HTMLElement.prototype`) succeeds and `showPopover()` is callable.
+    Object.defineProperty(HTMLElement.prototype, 'popover', {
+      configurable: true,
+      get(this: HTMLElement) { return this.getAttribute('popover'); },
+      set(this: HTMLElement, value: string | null) {
+        if (value === null) {
+          this.removeAttribute('popover');
+        } else {
+          this.setAttribute('popover', value);
+        }
+      },
+    });
+    Object.defineProperty(HTMLElement.prototype, 'showPopover', {
+      configurable: true,
+      writable: true,
+      value: showPopoverSpy,
+    });
+    Object.defineProperty(HTMLElement.prototype, 'hidePopover', {
+      configurable: true,
+      writable: true,
+      value: hidePopoverSpy,
+    });
+
+    const target = createTargetElement();
+
+    show(target, 'tooltip text', { delay: 0 });
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper).not.toBeNull();
+    // Tooltip wrapper must be promoted to Top Layer via the native HTML Popover API.
+    // CSS z-index can't beat an open popover that's already in the Top Layer.
+    expect(wrapper?.getAttribute('popover')).toBe('manual');
+    expect(showPopoverSpy).toHaveBeenCalled();
+
+    // Cleanup: remove polyfilled props so they don't leak into other suites.
+    delete (HTMLElement.prototype as unknown as Record<string, unknown>).popover;
+    delete (HTMLElement.prototype as unknown as Record<string, unknown>).showPopover;
+    delete (HTMLElement.prototype as unknown as Record<string, unknown>).hidePopover;
+  });
+
   it('handles rapid show/hide/show cycles correctly', () => {
     vi.useFakeTimers();
     const target = createTargetElement();

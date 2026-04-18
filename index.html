@@ -208,37 +208,183 @@
       align-items: center;
       justify-content: center;
       z-index: 10000;
-      animation: icon-lightbox-fade 0.12s ease-out;
+      animation: icon-lightbox-backdrop-in 0.18s ease-out both;
+    }
+    .icon-lightbox.icon-lightbox--closing {
+      animation: icon-lightbox-backdrop-out 0.16s ease-in forwards;
+      pointer-events: none;
     }
     .icon-lightbox__content {
+      animation: icon-lightbox-content-in 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 24px;
-      padding: 48px 64px;
+      gap: 20px;
+      padding: 40px 56px;
       background: #ffffff;
-      border-radius: 8px;
+      border-radius: 10px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-      min-width: 280px;
+      min-width: 360px;
+      position: relative;
     }
     .icon-lightbox__preview {
       color: #1a1a1a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 160px;
+      height: 160px;
+      border-radius: 8px;
+      transition: background 0.15s ease;
     }
-    .icon-lightbox__preview svg {
-      width: 96px;
-      height: 96px;
+    .icon-lightbox__preview[data-bg="transparent"] {
+      background: transparent;
+      background-image:
+        linear-gradient(45deg, #f0f0f0 25%, transparent 25%),
+        linear-gradient(-45deg, #f0f0f0 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #f0f0f0 75%),
+        linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+      background-size: 12px 12px;
+      background-position: 0 0, 0 6px, 6px -6px, -6px 0;
     }
+    .icon-lightbox__preview[data-bg="light"] { background: #ffffff; border: 1px solid #ececec; }
+    .icon-lightbox__preview[data-bg="dark"] { background: #191919; color: #ffffff; }
     .icon-lightbox__name {
       font-family: 'PT Mono', monospace;
       font-size: 13px;
       color: #1a1a1a;
     }
+    .icon-lightbox__controls {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+    }
+    .icon-lightbox__field {
+      display: grid;
+      grid-template-columns: 56px 1fr auto;
+      align-items: center;
+      gap: 12px;
+      font-family: 'PT Mono', monospace;
+      font-size: 11px;
+    }
+    .icon-lightbox__field-label {
+      color: #8a8580;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .icon-lightbox__field-value {
+      color: #1a1a1a;
+      font-variant-numeric: tabular-nums;
+      min-width: 32px;
+      text-align: right;
+    }
+    .icon-lightbox__slider {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 2px;
+      background: #ececec;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+    .icon-lightbox__slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #1a1a1a;
+      cursor: pointer;
+    }
+    .icon-lightbox__slider::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #1a1a1a;
+      border: none;
+      cursor: pointer;
+    }
+    .icon-lightbox__color {
+      width: 28px;
+      height: 28px;
+      border: 1px solid #ececec;
+      border-radius: 6px;
+      padding: 0;
+      background: none;
+      cursor: pointer;
+    }
+    .icon-lightbox__color::-webkit-color-swatch-wrapper { padding: 2px; }
+    .icon-lightbox__color::-webkit-color-swatch { border: none; border-radius: 4px; }
+    .icon-lightbox__toolbar {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .icon-lightbox__btn {
+      font-family: 'PT Mono', monospace;
+      font-size: 11px;
+      padding: 8px 12px;
+      border: 1px solid #ececec;
+      border-radius: 6px;
+      background: #ffffff;
+      color: #1a1a1a;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .icon-lightbox__btn:hover { background: #f6f6f4; border-color: #d0d0d0; }
+    .icon-lightbox__btn:active { background: #ececec; }
+    .icon-lightbox__feedback {
+      position: absolute;
+      bottom: -28px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'PT Mono', monospace;
+      font-size: 11px;
+      color: #1a1a1a;
+      opacity: 0;
+      transition: opacity 0.12s;
+      pointer-events: none;
+    }
+    .icon-lightbox__feedback--visible { opacity: 1; }
     .dark-mode .icon-lightbox__content { background: #252525; }
     .dark-mode .icon-lightbox__preview { color: #ffffff; }
+    .dark-mode .icon-lightbox__preview[data-bg="transparent"] {
+      background-image:
+        linear-gradient(45deg, #2a2a2a 25%, transparent 25%),
+        linear-gradient(-45deg, #2a2a2a 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #2a2a2a 75%),
+        linear-gradient(-45deg, transparent 75%, #2a2a2a 75%);
+    }
+    .dark-mode .icon-lightbox__preview[data-bg="light"] { background: #ffffff; color: #1a1a1a; border-color: #37352f; }
+    .dark-mode .icon-lightbox__preview[data-bg="dark"] { background: #191919; color: #ffffff; }
     .dark-mode .icon-lightbox__name { color: #ffffff; }
-    @keyframes icon-lightbox-fade {
+    .dark-mode .icon-lightbox__field-label { color: #a39e98; }
+    .dark-mode .icon-lightbox__field-value { color: #ffffff; }
+    .dark-mode .icon-lightbox__slider { background: #37352f; }
+    .dark-mode .icon-lightbox__slider::-webkit-slider-thumb { background: #ffffff; }
+    .dark-mode .icon-lightbox__slider::-moz-range-thumb { background: #ffffff; }
+    .dark-mode .icon-lightbox__color { border-color: #37352f; }
+    .dark-mode .icon-lightbox__btn { background: #2a2a2a; border-color: #37352f; color: #ffffff; }
+    .dark-mode .icon-lightbox__btn:hover { background: #333; border-color: #555; }
+    .dark-mode .icon-lightbox__feedback { color: #ffffff; }
+    .icon-lightbox--closing .icon-lightbox__content {
+      animation: icon-lightbox-content-out 0.16s ease-in forwards;
+    }
+    @keyframes icon-lightbox-backdrop-in {
       from { opacity: 0; }
       to { opacity: 1; }
+    }
+    @keyframes icon-lightbox-backdrop-out {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+    @keyframes icon-lightbox-content-in {
+      from { opacity: 0; transform: translateY(8px) scale(0.94); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes icon-lightbox-content-out {
+      from { opacity: 1; transform: translateY(0) scale(1); }
+      to { opacity: 0; transform: translateY(4px) scale(0.96); }
     }
 
     /* Settings panel polish */

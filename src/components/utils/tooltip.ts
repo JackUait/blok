@@ -42,6 +42,15 @@ export interface TooltipOptions {
   delay?: number;
 }
 
+/**
+ * Feature-detects the native HTML Popover API. When supported, the tooltip
+ * is promoted to the CSS Top Layer via `showPopover()` so it renders above
+ * any other element — including open popovers (which also use the Top Layer).
+ */
+const supportsPopoverAPI = (): boolean => {
+  return typeof HTMLElement !== 'undefined' && 'popover' in HTMLElement.prototype;
+};
+
 const DEFAULT_OFFSET = 10;
 const TOOLTIP_ROLE = 'tooltip';
 const ARIA_HIDDEN_ATTRIBUTE = 'aria-hidden';
@@ -236,8 +245,32 @@ class Tooltip {
 
       this.nodes.wrapper.classList.add(...classes);
       this.updateTooltipVisibility();
+      this.promoteToTopLayer();
     }
     this.showed = true;
+  }
+
+  /**
+   * Promote the tooltip wrapper to the CSS Top Layer via the native HTML
+   * Popover API. Necessary so the tooltip renders above any open popover —
+   * popovers themselves use the Top Layer, and no z-index can beat that.
+   */
+  private promoteToTopLayer(): void {
+    const wrapper = this.nodes.wrapper;
+
+    if (wrapper === null || !supportsPopoverAPI()) {
+      return;
+    }
+
+    if (!wrapper.hasAttribute('popover')) {
+      wrapper.setAttribute('popover', 'manual');
+    }
+
+    try {
+      wrapper.showPopover();
+    } catch {
+      // Already open or not eligible — fall back to z-index stacking.
+    }
   }
 
   /**
@@ -275,8 +308,28 @@ class Tooltip {
 
       this.nodes.wrapper.classList.remove(...classes);
       this.updateTooltipVisibility();
+      this.removeFromTopLayer();
     }
     this.showed = false;
+  }
+
+  /**
+   * Reverse of {@link promoteToTopLayer}. Hides the popover and clears the
+   * `popover` attribute so the wrapper returns to the regular flow.
+   */
+  private removeFromTopLayer(): void {
+    const wrapper = this.nodes.wrapper;
+
+    if (wrapper === null || !supportsPopoverAPI() || !wrapper.hasAttribute('popover')) {
+      return;
+    }
+
+    try {
+      wrapper.hidePopover();
+    } catch {
+      // Not open — nothing to remove from the top layer.
+    }
+    wrapper.removeAttribute('popover');
   }
 
   /**

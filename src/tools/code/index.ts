@@ -714,6 +714,16 @@ export class CodeTool implements BlockTool {
     return true;
   }
 
+  /**
+   * CodeTool handles Enter and Tab itself (see handleCodeKeydown). Declaring
+   * this flag tells KeyboardNavigation to skip its own Enter handling — without
+   * it, the global handler would run on top of the tool's handler, splitting
+   * the block and yanking the caret out of the code element on every newline.
+   */
+  public static get enableLineBreaks(): boolean {
+    return true;
+  }
+
   public static get pasteConfig(): PasteConfig {
     return {
       tags: ['PRE'],

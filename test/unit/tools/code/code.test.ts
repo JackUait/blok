@@ -306,6 +306,19 @@ describe('CodeTool', () => {
 
       expect(CodeTool.conversionConfig).toEqual({ export: 'code', import: 'code' });
     });
+
+    /**
+     * Regression: without this flag the global KeyboardNavigation.handleEnter
+     * fires on top of CodeTool's own Enter handler, creating an extra block
+     * and jumping the caret out of the code element.
+     */
+    it('enableLineBreaks is true so CodeTool owns Enter handling', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code') as unknown as {
+        CodeTool: { enableLineBreaks?: boolean };
+      };
+
+      expect(CodeTool.enableLineBreaks).toBe(true);
+    });
   });
 
   describe('copy button', () => {

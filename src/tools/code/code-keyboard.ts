@@ -32,27 +32,89 @@ export function handleCodeKeydown(
   return false;
 }
 
+/**
+ * Map of opening brackets to their matching closers. Used by Enter handling to
+ * decide whether the caret sits between a paired set of brackets, in which
+ * case the closer is pushed to its own dedented line and the caret lands on
+ * an indented middle line — same shape as VSCode/JetBrains defaults.
+ */
+const BRACKET_PAIRS: Record<string, string> = {
+  '{': '}',
+  '(': ')',
+  '[': ']',
+};
+
 function insertNewline(codeElement: HTMLElement): void {
   const selection = window.getSelection();
+
   if (!selection || selection.rangeCount === 0) return;
 
   const range = selection.getRangeAt(0);
 
-  const preCaretRange = range.cloneRange();
-  preCaretRange.selectNodeContents(codeElement);
-  preCaretRange.setEnd(range.startContainer, range.startOffset);
-  const caretOffset = preCaretRange.toString().length;
+  const startOffset = computeCaretOffset(codeElement, range.startContainer, range.startOffset);
+  const endOffset = computeCaretOffset(codeElement, range.endContainer, range.endOffset);
 
   const text = codeElement.textContent ?? '';
-  const before = text.substring(0, caretOffset);
-  const after = text.substring(caretOffset);
+  const before = text.substring(0, startOffset);
+  const after = text.substring(endOffset);
+
+  // Leading whitespace of the line where the caret sits — auto-indent baseline.
+  const lineStart = before.lastIndexOf('\n') + 1;
+  const indentMatch = before.substring(lineStart).match(/^[ \t]*/);
+  const indent = indentMatch ? indentMatch[0] : '';
+
+  const charBefore = before.length > 0 ? before.charAt(before.length - 1) : '';
+  const expectedCloser = BRACKET_PAIRS[charBefore];
+  const charAfter = after.charAt(0);
+
+  const { inserted, caretDelta } = computeNewlineInsertion({
+    indent,
+    afterOpener: expectedCloser !== undefined,
+    betweenMatchedPair: expectedCloser !== undefined && charAfter === expectedCloser,
+  });
 
   while (codeElement.firstChild) {
     codeElement.removeChild(codeElement.firstChild);
   }
-  codeElement.appendChild(document.createTextNode(before + '\n' + after));
+  codeElement.appendChild(document.createTextNode(before + inserted + after));
 
-  restoreCaretOffset(codeElement, caretOffset + 1);
+  restoreCaretOffset(codeElement, startOffset + caretDelta);
+}
+
+function computeNewlineInsertion(opts: {
+  indent: string;
+  afterOpener: boolean;
+  betweenMatchedPair: boolean;
+}): { inserted: string; caretDelta: number } {
+  const { indent, afterOpener, betweenMatchedPair } = opts;
+
+  if (betweenMatchedPair) {
+    return {
+      inserted: `\n${indent}${TAB_STRING}\n${indent}`,
+      caretDelta: 1 + indent.length + TAB_STRING.length,
+    };
+  }
+
+  if (afterOpener) {
+    return {
+      inserted: `\n${indent}${TAB_STRING}`,
+      caretDelta: 1 + indent.length + TAB_STRING.length,
+    };
+  }
+
+  return {
+    inserted: `\n${indent}`,
+    caretDelta: 1 + indent.length,
+  };
+}
+
+function computeCaretOffset(root: HTMLElement, container: Node, offset: number): number {
+  const range = document.createRange();
+
+  range.selectNodeContents(root);
+  range.setEnd(container, offset);
+
+  return range.toString().length;
 }
 
 function insertTab(): void {

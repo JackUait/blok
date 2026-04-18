@@ -828,6 +828,9 @@
 
   /* Foreground used on tinted dark surfaces (card hover, database actions). */
   --blok-text-on-dark: #ffffff;
+
+  /* Dark translucent background used behind database card actions. */
+  --blok-database-card-actions-bg: #1e2533;
 }
 
 /* ─── Dark theme — system preference ────────────────── */
@@ -961,6 +964,7 @@
     --blok-table-add-pill-icon: #9e9e9d;
 
     --blok-text-on-dark: #ffffff;
+    --blok-database-card-actions-bg: #0f1420;
   }
 }
 
@@ -1094,6 +1098,7 @@
   --blok-table-add-pill-icon: #9e9e9d;
 
   --blok-text-on-dark: #ffffff;
+  --blok-database-card-actions-bg: #0f1420;
 }
 
 /* ─── Checklist checkbox — custom styled ────────────────── */
@@ -1777,7 +1782,7 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity 120ms ease;
-  background: var(--blok-database-card-actions-bg, #1e2533);
+  background: var(--blok-database-card-actions-bg);
   border-radius: 8px;
   padding: 2px;
 }

@@ -203,7 +203,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
           search: this.Blok.I18n.t('popover.search'),
         },
         autoFocusFirstItem: false,
-        minWidth: '250px',
+        minWidth: '220px',
         placeLeftOfAnchor: true,
         viewportMargin: 50,
       };

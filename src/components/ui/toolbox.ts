@@ -488,7 +488,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       },
       items: this.toolboxItemsToBeDisplayed,
       handleContentEditableNavigation: true,
-      minWidth: '250px',
+      minWidth: '220px',
     });
 
     this.popover.on(PopoverEvent.Closed, this.onPopoverClose);

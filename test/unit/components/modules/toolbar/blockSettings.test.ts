@@ -378,6 +378,31 @@ describe('BlockSettings', () => {
     getTunesItemsSpy.mockRestore();
   });
 
+  it('passes placeLeftOfAnchor:true to popover so menu opens to the left of dots button, vertically centered', async () => {
+    blockSettings.make();
+
+    const block = createBlock();
+
+    blokMock.BlockManager.currentBlock = block;
+
+    const selectionStub = { save: vi.fn(), restore: vi.fn(), clearSaved: vi.fn() };
+
+    (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
+
+    const getTunesItemsSpy = vi.spyOn(blockSettings as unknown as {
+      getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+    }, 'getTunesItems').mockResolvedValue([]);
+
+    await blockSettings.open(block);
+
+    const popover = getLastPopover();
+    const params = popover?.params as { placeLeftOfAnchor?: boolean };
+
+    expect(params?.placeLeftOfAnchor).toBe(true);
+
+    getTunesItemsSpy.mockRestore();
+  });
+
   it('does not hardcode convert-to children width so the nested popover fits any language text', async () => {
     blockSettings.make();
 

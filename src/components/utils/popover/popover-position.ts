@@ -17,6 +17,12 @@ export interface PositionInput {
   offset?: number;
   /** Element rect whose left edge overrides anchor's left for horizontal alignment */
   leftAlignRect?: DOMRect;
+  /**
+   * When true, the popover is placed to the left of the anchor (its right edge
+   * sits one offset-gap before the anchor's left edge) and is vertically centered
+   * against the anchor. Clamping to scope boundaries still applies.
+   */
+  placeLeftOfAnchor?: boolean;
 }
 
 export interface ResolvedPosition {
@@ -62,12 +68,28 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
     scrollOffset,
     offset = 8,
     leftAlignRect,
+    placeLeftOfAnchor = false,
   } = input;
 
-  // --- Vertical ---
   const boundaryBottom = Math.min(viewportSize.height, scopeBounds.bottom);
   const boundaryTop = Math.max(0, scopeBounds.top);
+  const boundaryRight = Math.min(viewportSize.width, scopeBounds.right);
+  const boundaryLeft = Math.max(0, scopeBounds.left);
+  const scopeTopInDocCoords = scopeBounds.top + scrollOffset.y;
 
+  // Placement mode: left of anchor, vertically centered.
+  if (placeLeftOfAnchor) {
+    const anchorCenterY = (anchor.top + anchor.bottom) / 2 + scrollOffset.y;
+    const rawTop = anchorCenterY - popoverSize.height / 2;
+    const top = Math.max(scopeTopInDocCoords, rawTop);
+
+    const rawLeft = anchor.left - offset - popoverSize.width + scrollOffset.x;
+    const left = Math.max(boundaryLeft + scrollOffset.x, rawLeft);
+
+    return { top, left, openTop: false, openLeft: true };
+  }
+
+  // --- Vertical ---
   const spaceBelow = boundaryBottom - anchor.bottom - offset;
   const spaceAbove = anchor.top - offset - boundaryTop;
 
@@ -82,15 +104,11 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
   // than the viewport-clamped boundaryTop, so the clamp is correct when the page is
   // scrolled (boundaryTop is viewport-relative; adding scrollOffset converts it to
   // document coords but discards any negative scope top that was clamped to 0).
-  const scopeTopInDocCoords = scopeBounds.top + scrollOffset.y;
   const top = rawTop < scopeTopInDocCoords
     ? scopeTopInDocCoords
     : rawTop;
 
   // --- Horizontal ---
-  const boundaryRight = Math.min(viewportSize.width, scopeBounds.right);
-  const boundaryLeft = Math.max(0, scopeBounds.left);
-
   const alignLeft = (leftAlignRect?.left ?? anchor.left) + scrollOffset.x;
   const alignRight = anchor.right + scrollOffset.x;
 

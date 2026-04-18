@@ -70,6 +70,11 @@ export class PopoverDesktop extends PopoverAbstract {
   private leftAlignElement: HTMLElement | undefined;
 
   /**
+   * When true, places the popover to the left of the trigger, vertically centered.
+   */
+  private placeLeftOfAnchor = false;
+
+  /**
    * Updates the element whose left edge is used for horizontal positioning.
    * @param element - new element to align against, or undefined to fall back to trigger
    */
@@ -117,6 +122,10 @@ export class PopoverDesktop extends PopoverAbstract {
 
     if (params.leftAlignElement) {
       this.leftAlignElement = params.leftAlignElement;
+    }
+
+    if (params.placeLeftOfAnchor === true) {
+      this.placeLeftOfAnchor = true;
     }
 
     if (params.nestingLevel !== undefined) {
@@ -347,6 +356,7 @@ export class PopoverDesktop extends PopoverAbstract {
       scrollOffset: { x: window.scrollX, y: window.scrollY },
       offset: 8,
       leftAlignRect,
+      placeLeftOfAnchor: this.placeLeftOfAnchor,
     });
   }
 

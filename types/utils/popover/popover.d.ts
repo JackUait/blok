@@ -95,6 +95,13 @@ export interface PopoverParams {
   leftAlignElement?: HTMLElement;
 
   /**
+   * When true, the popover is placed to the left of the trigger (right edge sits
+   * one offset-gap before trigger's left edge) and vertically centered against the
+   * trigger. Clamping to scope boundaries still applies.
+   */
+  placeLeftOfAnchor?: boolean;
+
+  /**
    * When true, the first item is focused when the popover opens (default behavior).
    * When false, no item is pre-focused — focus only appears after keyboard navigation.
    * Defaults to true. Has no effect when a search field is present (search receives focus instead).

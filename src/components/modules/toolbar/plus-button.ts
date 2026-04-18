@@ -114,6 +114,8 @@ export class PlusButtonHandler {
         'can-hover:hover:bg-bg-light',
         // Keep hover background when toolbox is open
         'group-data-[blok-toolbox-opened=true]:bg-bg-light',
+        // Hide when block settings popover is open
+        'group-data-[blok-block-settings-opened=true]:hidden',
         // Mobile styles (static positioning with overlay-pane appearance)
         'mobile:bg-popover-bg mobile:border mobile:border-mobile-border mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-2',
         'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',

@@ -314,6 +314,71 @@ describe('resolvePosition', () => {
     }
   });
 
+  describe('placeLeftOfAnchor', () => {
+    it('places popover to the left of anchor, vertically centered', () => {
+      const result = resolvePosition({
+        anchor: rect({ top: 100, bottom: 140, left: 400, right: 440 }),
+        popoverSize: { width: 250, height: 100 },
+        scopeBounds: rect({ top: 0, bottom: 800, left: 0, right: 1000 }),
+        viewportSize: { width: 1024, height: 768 },
+        scrollOffset: { x: 0, y: 0 },
+        offset: 8,
+        placeLeftOfAnchor: true,
+      });
+
+      // horizontal: popover.right = anchor.left - offset → left = 400 - 8 - 250 = 142
+      expect(result.left).toBe(142);
+      // vertical: anchor center = 120, popover top = 120 - 50 = 70
+      expect(result.top).toBe(70);
+      expect(result.openLeft).toBe(true);
+    });
+
+    it('clamps to scope left boundary when popover would overflow left', () => {
+      const result = resolvePosition({
+        anchor: rect({ top: 100, bottom: 140, left: 200, right: 240 }),
+        popoverSize: { width: 300, height: 100 },
+        scopeBounds: rect({ top: 0, bottom: 800, left: 0, right: 1000 }),
+        viewportSize: { width: 1024, height: 768 },
+        scrollOffset: { x: 0, y: 0 },
+        offset: 8,
+        placeLeftOfAnchor: true,
+      });
+
+      // raw = 200 - 8 - 300 = -108, clamped to scope.left (0)
+      expect(result.left).toBe(0);
+    });
+
+    it('clamps to scope top boundary when anchor is near the top', () => {
+      const result = resolvePosition({
+        anchor: rect({ top: 20, bottom: 60, left: 400, right: 440 }),
+        popoverSize: { width: 250, height: 200 },
+        scopeBounds: rect({ top: 0, bottom: 800, left: 0, right: 1000 }),
+        viewportSize: { width: 1024, height: 768 },
+        scrollOffset: { x: 0, y: 0 },
+        offset: 8,
+        placeLeftOfAnchor: true,
+      });
+
+      // anchor center y = 40, raw top = 40 - 100 = -60, clamped to 0
+      expect(result.top).toBe(0);
+    });
+
+    it('respects scrollOffset when placeLeftOfAnchor is true', () => {
+      const result = resolvePosition({
+        anchor: rect({ top: 100, bottom: 140, left: 400, right: 440 }),
+        popoverSize: { width: 250, height: 100 },
+        scopeBounds: rect({ top: 0, bottom: 800, left: 0, right: 1000 }),
+        viewportSize: { width: 1024, height: 768 },
+        scrollOffset: { x: 50, y: 200 },
+        offset: 8,
+        placeLeftOfAnchor: true,
+      });
+
+      expect(result.left).toBe(192); // 142 + 50
+      expect(result.top).toBe(270); // 70 + 200
+    });
+  });
+
   describe('scope boundary', () => {
     it('uses scope bottom instead of viewport when scope is smaller', () => {
       const result = resolvePosition({

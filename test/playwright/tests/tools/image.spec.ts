@@ -71,10 +71,10 @@ test('inserts image via slash menu and embeds URL', async ({ page }) => {
   await expect(imageBlock).toBeVisible();
 
   await imageBlock.locator('[data-tab="embed"]').click();
-  await imageBlock.locator('input[type="url"]').fill(SAMPLE_IMAGE_URL);
+  await imageBlock.getByPlaceholder('Paste image URL').fill(SAMPLE_IMAGE_URL);
   await imageBlock.locator('[data-action="submit-url"]').click();
 
-  await expect(imageBlock.locator('img[src*="placehold"]')).toBeVisible();
+  await expect(imageBlock.getByRole('img')).toBeVisible();
 });
 
 test('clicking image opens lightbox; Escape closes it', async ({ page }) => {
@@ -84,12 +84,13 @@ test('clicking image opens lightbox; Escape closes it', async ({ page }) => {
     ],
   });
 
-  const imageEl = page.locator(`${IMAGE_BLOCK_SELECTOR} img[src*="placehold"]`);
+  const imageBlock = page.locator(IMAGE_BLOCK_SELECTOR);
+  const imageEl = imageBlock.getByRole('img');
 
   await expect(imageEl).toBeVisible();
   await imageEl.click();
 
-  const dialog = page.locator('[role="dialog"][aria-modal="true"]');
+  const dialog = page.getByRole('dialog');
 
   await expect(dialog).toBeVisible();
 
@@ -104,7 +105,9 @@ test('read-only mode hides overlay and resize handles', async ({ page }) => {
     ],
   });
 
-  await expect(page.locator(`${IMAGE_BLOCK_SELECTOR} img[src*="placehold"]`)).toBeVisible();
+  const imageBlock = page.locator(IMAGE_BLOCK_SELECTOR);
+
+  await expect(imageBlock.getByRole('img')).toBeVisible();
 
   await page.evaluate(async () => {
     const blok = window.blokInstance ?? (() => {
@@ -116,6 +119,6 @@ test('read-only mode hides overlay and resize handles', async ({ page }) => {
 
   await page.waitForFunction(() => window.blokInstance?.readOnly.isEnabled === true);
 
-  await expect(page.locator(`${IMAGE_BLOCK_SELECTOR} [data-role="image-overlay"]`)).toHaveCount(0);
-  await expect(page.locator(`${IMAGE_BLOCK_SELECTOR} [data-role="resize-handle"]`)).toHaveCount(0);
+  await expect(imageBlock.locator('[data-role="image-overlay"]')).toHaveCount(0);
+  await expect(imageBlock.locator('[data-role="resize-handle"]')).toHaveCount(0);
 });

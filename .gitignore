@@ -25,7 +25,7 @@ test/playwright/fixtures/vendor/
 
 coverage/
 .nyc_output/
-.vscode/launch.json
+.vscode/
 jscpd-report/
 playwright-report/
 

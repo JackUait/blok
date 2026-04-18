@@ -37,7 +37,7 @@ export class ImageTool implements BlockTool {
     this.block = options.block;
     this.config = options.config ?? {};
     this.readOnly = options.readOnly;
-    this.data = { url: '', ...options.data };
+    this.data = { ...options.data, url: options.data?.url ?? '' };
     this.state = this.data.url ? 'RENDERED' : 'EMPTY';
     this.uploader = new Uploader(this.config);
   }
@@ -50,7 +50,7 @@ export class ImageTool implements BlockTool {
     return root;
   }
 
-  public save(): ImageData {
+  public save(_block?: HTMLElement): ImageData {
     const out: ImageData = { url: this.data.url };
     if (this.data.caption !== undefined) out.caption = this.data.caption;
     if (this.data.width !== undefined) out.width = this.data.width;
@@ -87,7 +87,7 @@ export class ImageTool implements BlockTool {
   public onPaste(event: PasteEvent): void {
     if (event.type === 'pattern') {
       const detail = (event as PatternPasteEvent).detail;
-      void this.applyResult({ url: detail.data });
+      this.applyResult({ url: detail.data });
       return;
     }
     if (event.type === 'file') {
@@ -227,40 +227,49 @@ export class ImageTool implements BlockTool {
     figure.appendChild(caption);
 
     if (!this.readOnly) {
-      const edges: ResizeEdge[] = ['left', 'right'];
-      for (const edge of edges) {
-        const handle = document.createElement('div');
-        handle.setAttribute('data-role', 'resize-handle');
-        handle.setAttribute('data-edge', edge);
-        Object.assign(handle.style, {
-          position: 'absolute',
-          top: '0',
-          bottom: '0',
-          width: '6px',
-          cursor: 'col-resize',
-          background: 'transparent',
-        } as Partial<CSSStyleDeclaration>);
-        if (edge === 'left') handle.style.left = '-3px';
-        else handle.style.right = '-3px';
-        figure.appendChild(handle);
-        const detach = attachResizeHandle({
-          handle,
-          container: figure,
-          edge,
-          onPreview: (percent) => {
-            const img = figure.querySelector('img');
-            if (img) img.style.width = `${percent}%`;
-          },
-          onCommit: (percent) => {
-            this.data.width = percent;
-            this.block.dispatchChange();
-          },
-        });
-        this.resizeDetach.push(detach);
-      }
+      this.attachResizeHandles(figure);
     }
 
     this.root.appendChild(figure);
+  }
+
+  private attachResizeHandles(figure: HTMLElement): void {
+    const edges: ResizeEdge[] = ['left', 'right'];
+    for (const edge of edges) {
+      const handle = this.createResizeHandle(edge);
+      figure.appendChild(handle);
+      const detach = attachResizeHandle({
+        handle,
+        container: figure,
+        edge,
+        onPreview: (percent) => {
+          const img = figure.querySelector('img');
+          if (img) img.style.width = `${percent}%`;
+        },
+        onCommit: (percent) => {
+          this.data.width = percent;
+          this.block.dispatchChange();
+        },
+      });
+      this.resizeDetach.push(detach);
+    }
+  }
+
+  private createResizeHandle(edge: ResizeEdge): HTMLElement {
+    const handle = document.createElement('div');
+    handle.setAttribute('data-role', 'resize-handle');
+    handle.setAttribute('data-edge', edge);
+    Object.assign(handle.style, {
+      position: 'absolute',
+      top: '0',
+      bottom: '0',
+      width: '6px',
+      cursor: 'col-resize',
+      background: 'transparent',
+    } as Partial<CSSStyleDeclaration>);
+    const side = edge === 'left' ? 'left' : 'right';
+    handle.style[side] = '-3px';
+    return handle;
   }
 
   private cycleAlignment(): void {
@@ -282,6 +291,7 @@ export class ImageTool implements BlockTool {
   }
 
   private promptAlt(): void {
+    // eslint-disable-next-line no-alert
     const next = window.prompt('Alt text', this.data.alt ?? '');
     if (next === null) return;
     this.data.alt = next;

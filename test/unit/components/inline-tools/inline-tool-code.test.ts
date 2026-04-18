@@ -26,7 +26,7 @@ describe('CodeInlineTool', () => {
 
     expect(config).toHaveProperty('icon');
     expect(config.icon).toBe(IconCode);
-    expect(config.name).toBe('code');
+    expect(config.name).toBe('inlineCode');
     expect(config.onActivate).toBeInstanceOf(Function);
     expect(config.isActive).toBeInstanceOf(Function);
   });

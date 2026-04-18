@@ -262,6 +262,15 @@
   font-size: 1em;
 }
 
+/* Inline code tool styling — coral/red text on a subtle surface. */
+:where([data-blok-interface], [data-blok-popover]) code {
+  background-color: var(--blok-inline-code-bg);
+  color: var(--blok-color-red-text);
+  padding: 2px 4px;
+  border-radius: 0.25em;
+  font-size: 0.875em;
+}
+
 /* Add the correct font size in all browsers. */
 :where([data-blok-interface], [data-blok-popover]) small {
   font-size: 80%;
@@ -803,6 +812,7 @@
   --blok-color-pink-bg: #f9f0f5;
   --blok-color-red-text: #d44c47;
   --blok-color-red-bg: #fdebec;
+  --blok-inline-code-bg: rgba(135, 131, 120, 0.15);
 }
 
 /* ─── Dark theme — system preference ────────────────── */

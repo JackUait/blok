@@ -21,88 +21,136 @@
     body:not(.ready) { visibility: hidden !important; }
   </style>
   <style>
+    /* Playground header */
+    .playground-header {
+      height: 56px;
+      backdrop-filter: saturate(180%) blur(12px);
+      -webkit-backdrop-filter: saturate(180%) blur(12px);
+      background: rgba(255,255,255,0.78);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+    .dark-mode .playground-header { background: rgba(25,25,24,0.78); }
+
+    .playground-wordmark {
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: -0.02em;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .playground-wordmark__logo {
+      width: 20px;
+      height: 20px;
+      display: block;
+      flex-shrink: 0;
+    }
+
     /* Playground tabs */
     .playground-tab {
       position: relative;
-      padding: 0 16px;
-      height: 50px;
-      line-height: 50px;
+      padding: 0 14px;
+      height: 56px;
+      line-height: 56px;
       font-size: 13px;
-      color: #999;
+      font-weight: 500;
+      letter-spacing: -0.005em;
+      color: #8a8a8a;
       cursor: pointer;
-      transition: color 0.15s;
+      transition: color 0.18s ease;
       background: none;
       border: none;
       font-family: inherit;
+      text-decoration: none;
     }
-    .playground-tab:hover { color: #333; }
-    .playground-tab[aria-selected="true"] { color: #000; font-weight: 600; }
-    .playground-tab[aria-selected="true"]::after {
+    .playground-tab:hover { color: #1a1a1a; }
+    .playground-tab[aria-selected="true"] { color: #0a0a0a; font-weight: 600; }
+    .playground-tab::after {
       content: '';
       position: absolute;
-      bottom: 0;
-      left: 16px;
-      right: 16px;
+      bottom: -1px;
+      left: 50%;
+      width: 0;
       height: 2px;
-      background: #000;
-      border-radius: 1px;
+      background: #0a0a0a;
+      border-radius: 2px 2px 0 0;
+      transition: width 0.22s ease, left 0.22s ease;
+    }
+    .playground-tab[aria-selected="true"]::after {
+      width: calc(100% - 28px);
+      left: 14px;
     }
 
     /* Dark mode tab overrides */
-    .dark-mode .playground-tab { color: #a39e98; }
+    .dark-mode .playground-tab { color: #8a8580; }
     .dark-mode .playground-tab:hover { color: #ffffff; }
     .dark-mode .playground-tab[aria-selected="true"] { color: #ffffff; }
-    .dark-mode .playground-tab[aria-selected="true"]::after { background: #ffffff; }
+    .dark-mode .playground-tab::after { background: #ffffff; }
+
     /* Pill toggle switch */
     .pill-toggle {
       position: relative;
-      width: 36px;
-      height: 20px;
-      background: #e0e0e0;
-      border-radius: 10px;
-      transition: background 0.15s;
+      width: 32px;
+      height: 18px;
+      background: #e6e4e0;
+      border-radius: 999px;
+      transition: background 0.18s ease;
       flex-shrink: 0;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.04);
     }
     .pill-toggle::after {
       content: '';
       position: absolute;
       top: 2px;
       left: 2px;
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
       background: white;
       border-radius: 50%;
-      transition: transform 0.15s;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+      transition: transform 0.22s cubic-bezier(0.4, 0.0, 0.2, 1), box-shadow 0.18s;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.12);
+    }
+    label:hover .pill-toggle::after {
+      box-shadow: 0 1px 2px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.16);
     }
     input:checked + .pill-toggle {
       background: #e45735;
+      box-shadow: inset 0 0 0 1px rgba(228,87,53,0.2), 0 0 0 0 rgba(228,87,53,0);
+    }
+    input:focus-visible + .pill-toggle {
+      outline: 2px solid #e45735;
+      outline-offset: 2px;
     }
     .dark-mode input:checked + .pill-toggle {
       background: #e45735;
     }
     .dark-mode .pill-toggle {
-      background: #37352f;
+      background: #2a2826;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
     }
     input:checked + .pill-toggle::after {
-      transform: translateX(16px);
+      transform: translateX(14px);
     }
 
     /* Dark mode page styles */
     .dark-mode { background: #191919; color: #ffffff; }
 
     /* Icon gallery */
-    .icon-gallery { padding: 40px 0 100px; }
-    .icon-group { margin-bottom: 48px; }
+    .icon-gallery { padding: 48px 0 120px; }
+    .icon-group { margin-bottom: 56px; }
     .icon-group-title {
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #999;
-      margin-bottom: 20px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid #f0f0f0;
+      letter-spacing: 0.14em;
+      color: #8a8580;
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #ececec;
+      font-family: 'PT Mono', monospace;
     }
     .icon-grid {
       display: grid;
@@ -146,42 +194,159 @@
     .dark-mode .icon-cell .icon-preview { color: #ffffff; }
      .dark-mode .icon-cell .icon-name { color: #a39e98; }
 
-    /* Settings panel & header dark mode (dark-mode: Tailwind variant not compiled for index.html) */
-    .dark-mode #main-content > div:first-child { background: #191918; border-color: #37352f; }
-    .dark-mode #main-content > div:first-child a { color: #a39e98; }
-    .dark-mode #main-content > div:first-child a:hover { color: #ffffff; }
-    .dark-mode #settings-tab { background: #191919; border-color: #37352f; }
+    /* Settings panel polish */
+    #settings-panel {
+      box-shadow: -8px 0 24px -8px rgba(0,0,0,0.06), -1px 0 0 0 rgba(0,0,0,0.04);
+    }
+    .dark-mode #settings-panel {
+      box-shadow: -8px 0 32px -8px rgba(0,0,0,0.4), -1px 0 0 0 rgba(255,255,255,0.05);
+    }
+
+    .settings-section-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: #8a8580;
+      font-family: 'PT Mono', monospace;
+      margin-bottom: 14px;
+      display: block;
+    }
+    .dark-mode .settings-section-label { color: #8a8580; }
+
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      padding: 6px 8px;
+      margin: 0 -8px;
+      border-radius: 6px;
+      transition: background 0.12s ease;
+    }
+    .settings-row:hover { background: rgba(0,0,0,0.025); }
+    .dark-mode .settings-row:hover { background: rgba(255,255,255,0.04); }
+
+    .settings-row-label {
+      font-size: 13px;
+      font-weight: 450;
+      color: #1a1a1a;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: -0.005em;
+    }
+    .dark-mode .settings-row-label { color: #ffffff; }
+
+    .settings-row-icon {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #8a8580;
+      transition: color 0.15s;
+    }
+    .settings-row:hover .settings-row-icon { color: #1a1a1a; }
+    .dark-mode .settings-row:hover .settings-row-icon { color: #ffffff; }
+
+    #settings-close {
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      color: #8a8580;
+      transition: background 0.12s ease, color 0.12s ease;
+    }
+    #settings-close:hover { background: rgba(0,0,0,0.05); color: #1a1a1a; }
+    .dark-mode #settings-close:hover { background: rgba(255,255,255,0.06); color: #ffffff; }
+
+    #select-notifier-position {
+      font-size: 12px;
+      padding: 5px 26px 5px 10px;
+      border: 1px solid #e6e4e0;
+      border-radius: 6px;
+      color: #4a4a48;
+      background: #fafaf8 url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12' fill='none'><path d='M3 4.5L6 7.5L9 4.5' stroke='%238a8580' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>") no-repeat right 8px center;
+      -webkit-appearance: none;
+      appearance: none;
+      cursor: pointer;
+      transition: border-color 0.12s, background-color 0.12s;
+      outline: none;
+      font-family: inherit;
+      letter-spacing: -0.005em;
+    }
+    #select-notifier-position:hover { border-color: #d4d2ce; background-color: #ffffff; }
+    #select-notifier-position:focus { border-color: #e45735; box-shadow: 0 0 0 3px rgba(228,87,53,0.12); }
+    .dark-mode #select-notifier-position {
+      background-color: #1f1f1e;
+      border-color: #37352f;
+      color: #d4d2ce;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12' fill='none'><path d='M3 4.5L6 7.5L9 4.5' stroke='%238a8580' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    }
+    .dark-mode #select-notifier-position:hover { border-color: #504d45; background-color: #242321; }
+
+    #reset-content {
+      width: 100%;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 9px 16px;
+      border: 1px solid #e6e4e0;
+      border-radius: 8px;
+      color: #4a4a48;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.12s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      letter-spacing: -0.005em;
+    }
+    #reset-content:hover { border-color: #1a1a1a; color: #1a1a1a; background: rgba(0,0,0,0.02); }
+    #reset-content:active { transform: scale(0.985); }
+    .dark-mode #reset-content { border-color: #37352f; color: #a39e98; }
+    .dark-mode #reset-content:hover { border-color: #a39e98; color: #ffffff; background: rgba(255,255,255,0.03); }
+
+    /* Settings side-tab handle */
+    #settings-tab {
+      transition: transform 0.2s ease, background 0.15s ease, border-color 0.15s ease;
+      box-shadow: -2px 0 12px -4px rgba(0,0,0,0.05);
+    }
+    #settings-tab:hover { transform: translate(-2px, -50%); }
+
+    /* Dark mode overrides */
+    .dark-mode .playground-header { border-color: #2a2826; }
+    .dark-mode #main-content > div.playground-header a { color: #8a8580; }
+    .dark-mode #main-content > div.playground-header a:hover { color: #ffffff; }
+    .dark-mode #settings-tab { background: #191919; border-color: #2a2826; }
     .dark-mode #settings-tab:hover { background: #1f1f1e; }
     .dark-mode #settings-tab svg,
-    .dark-mode #settings-tab span { color: #a39e98; }
+    .dark-mode #settings-tab span { color: #8a8580; }
     .dark-mode #settings-tab:hover svg,
     .dark-mode #settings-tab:hover span { color: #ffffff; }
-    .dark-mode #settings-panel { background: #191918; border-color: #37352f; }
-    .dark-mode #settings-panel * { border-color: #37352f; }
-    .dark-mode #settings-panel span,
-    .dark-mode #settings-panel label { color: #ffffff; }
-    .dark-mode #settings-panel .text-\\[\\#999\\],
-    .dark-mode #settings-panel [class*="text-[#999]"],
-    .dark-mode #settings-panel [class*="tracking-widest"] { color: #a39e98; }
-    .dark-mode #settings-close { color: #a39e98; }
-    .dark-mode #settings-close:hover { color: #ffffff; }
-    .dark-mode #reset-content { border-color: #37352f; color: #a39e98; background: transparent; }
-    .dark-mode #reset-content:hover { border-color: #a39e98; color: #ffffff; }
+    .dark-mode #settings-panel { background: #191918; border-color: #2a2826; }
+    .dark-mode .settings-divider { border-color: #2a2826 !important; }
    </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 </head>
 <body class="m-0 bg-white text-black transition-colors duration-150" style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; font-size: 14px; line-height: 1.6;">
   <div class="text-base transition-[margin] duration-200 ease-in-out" id="main-content">
     <!-- Header -->
-    <div class="flex items-center h-[50px] px-[30px] max-md:px-5 border-b border-[#e8e8eb] dark-mode:border-[#37352f] dark-mode:bg-[#191918] transition-colors duration-150">
-      <span class="font-bold text-inherit mr-6 select-none tracking-tight">Blok</span>
-      <nav role="tablist" class="flex">
+    <div class="playground-header flex items-center px-[30px] max-md:px-5 border-b border-[#ececec] dark-mode:border-[#2a2826] transition-colors duration-150">
+      <span class="playground-wordmark text-inherit mr-7 select-none">
+        <img class="playground-wordmark__logo" src="/favicon.svg" alt="" aria-hidden="true">
+        Blok
+      </span>
+      <nav role="tablist" class="flex gap-1">
         <a class="playground-tab" role="tab" aria-selected="true" href="/editor" data-tab="editor">Editor</a>
         <a class="playground-tab" role="tab" aria-selected="false" href="/icons" data-tab="icons">Icons</a>
       </nav>
       <div class="ml-auto">
-        <a href="https://github.com/JackUait/blok" target="_blank" rel="noopener noreferrer" class="text-[#999] hover:text-[#333] dark-mode:text-[#a39e98] dark-mode:hover:text-[#ffffff] transition-colors" aria-label="View on GitHub">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        <a href="https://github.com/JackUait/blok" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-md text-[#8a8580] hover:text-[#1a1a1a] hover:bg-black/5 dark-mode:text-[#8a8580] dark-mode:hover:text-[#ffffff] dark-mode:hover:bg-white/5 transition-colors" aria-label="View on GitHub">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
         </a>
       </div>
     </div>
@@ -208,36 +373,36 @@
   </button>
 
   <!-- Settings side panel: drawer -->
-  <div id="settings-panel" class="fixed right-0 top-0 bottom-0 w-[280px] bg-white dark-mode:bg-[#191918] border-l border-[#e8e8eb] dark-mode:border-[#37352f] translate-x-full transition-transform duration-200 ease-in-out z-10 overflow-y-auto" style="transform: translateX(100%)" aria-label="Settings panel">
-    <div class="flex items-center justify-between px-5 py-4 border-b border-[#f0f0f0] dark-mode:border-[#37352f] mt-[50px]">
-      <span class="text-sm font-semibold dark-mode:text-[#ffffff]">Settings</span>
-      <button id="settings-close" class="text-[#999] hover:text-[#333] dark-mode:hover:text-[#ffffff] transition-colors cursor-pointer" aria-label="Close settings panel">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+  <div id="settings-panel" class="fixed right-0 top-0 bottom-0 w-[300px] bg-white dark-mode:bg-[#191918] border-l border-[#ececec] dark-mode:border-[#2a2826] translate-x-full transition-transform duration-[240ms] ease-[cubic-bezier(0.4,0.0,0.2,1)] z-10 overflow-y-auto" style="transform: translateX(100%)" aria-label="Settings panel">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-[#ececec] settings-divider dark-mode:border-[#2a2826] mt-[56px]">
+      <span class="text-[15px] font-semibold tracking-tight dark-mode:text-[#ffffff]" style="letter-spacing: -0.015em;">Settings</span>
+      <button id="settings-close" class="cursor-pointer" aria-label="Close settings panel">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
       </button>
     </div>
 
     <!-- Modes section -->
-    <div class="px-5 py-4 border-b border-[#f0f0f0] dark-mode:border-[#37352f]">
-      <div class="text-[10px] font-semibold uppercase tracking-widest text-[#999] dark-mode:text-[#a39e98] mb-3" style="font-family: 'PT Mono', monospace;">Modes</div>
-      <div class="flex flex-col gap-3">
-        <label class="flex items-center justify-between cursor-pointer">
-          <span class="text-[13px] dark-mode:text-[#ffffff]">Readonly</span>
+    <div class="px-6 py-5 border-b border-[#ececec] settings-divider dark-mode:border-[#2a2826]">
+      <div class="settings-section-label">Modes</div>
+      <div class="flex flex-col gap-1">
+        <label class="settings-row">
+          <span class="settings-row-label">Readonly</span>
           <input type="checkbox" id="toggle-readonly" class="peer sr-only">
           <span class="pill-toggle"></span>
         </label>
-        <label class="flex items-center justify-between cursor-pointer">
-          <span class="text-[13px] dark-mode:text-[#ffffff]">Dark mode</span>
+        <label class="settings-row">
+          <span class="settings-row-label">Dark mode</span>
           <input type="checkbox" id="toggle-dark" class="peer sr-only">
           <span class="pill-toggle"></span>
         </label>
-        <label class="flex items-center justify-between cursor-pointer">
-          <span class="text-[13px] dark-mode:text-[#ffffff]">Autofocus</span>
+        <label class="settings-row">
+          <span class="settings-row-label">Autofocus</span>
           <input type="checkbox" id="toggle-autofocus" class="peer sr-only" checked>
           <span class="pill-toggle"></span>
         </label>
-        <div class="flex items-center justify-between">
-          <span class="text-[13px] dark-mode:text-[#ffffff]">Notification position</span>
-          <select id="select-notifier-position" class="text-[12px] py-1 px-2 border border-[#e8e8eb] dark-mode:border-[#37352f] rounded-md text-[#666] dark-mode:text-[#a39e98] bg-transparent cursor-pointer outline-none">
+        <div class="settings-row" style="cursor: default;">
+          <span class="settings-row-label">Notification position</span>
+          <select id="select-notifier-position">
             <option value="bottom-left">Bottom left</option>
             <option value="bottom-right">Bottom right</option>
             <option value="bottom-center" selected>Bottom center</option>
@@ -250,16 +415,17 @@
     </div>
 
     <!-- Tools section -->
-    <div class="px-5 py-4 border-b border-[#f0f0f0] dark-mode:border-[#37352f]">
-      <div class="text-[10px] font-semibold uppercase tracking-widest text-[#999] dark-mode:text-[#a39e98] mb-3" style="font-family: 'PT Mono', monospace;">Tools</div>
-      <div class="flex flex-col gap-3" id="tool-toggles"></div>
+    <div class="px-6 py-5 border-b border-[#ececec] settings-divider dark-mode:border-[#2a2826]">
+      <div class="settings-section-label">Tools</div>
+      <div class="flex flex-col gap-1" id="tool-toggles"></div>
     </div>
 
     <!-- Actions section -->
-    <div class="px-5 py-4">
-      <div class="text-[10px] font-semibold uppercase tracking-widest text-[#999] dark-mode:text-[#a39e98] mb-3" style="font-family: 'PT Mono', monospace;">Actions</div>
-      <button id="reset-content" class="w-full text-[13px] py-2 px-4 border border-[#e8e8eb] dark-mode:border-[#37352f] rounded-lg text-[#666] dark-mode:text-[#a39e98] hover:border-[#ccc] dark-mode:hover:border-[#a39e98] hover:text-[#333] dark-mode:hover:text-[#ffffff] transition-colors cursor-pointer bg-transparent">
-        Reset Content
+    <div class="px-6 py-5">
+      <div class="settings-section-label">Actions</div>
+      <button id="reset-content">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 8a6 6 0 1 1-1.757-4.243M14 2v4h-4"/></svg>
+        Reset content
       </button>
     </div>
   </div>
@@ -1067,7 +1233,7 @@
       settingsPanel.style.transform = '';
       settingsPanel.classList.remove('translate-x-full');
       settingsTab.classList.add('hidden');
-      mainContent.style.marginRight = '280px';
+      mainContent.style.marginRight = '300px';
     }
 
     function closeSettingsPanel() {
@@ -1170,10 +1336,10 @@
 
     for (const tool of TOOL_DEFS) {
       const label = document.createElement('label');
-      label.className = 'flex items-center justify-between cursor-pointer';
+      label.className = 'settings-row';
       label.innerHTML = `
-        <span class="flex items-center gap-2 text-[13px] dark-mode:text-[#ffffff]">
-          <span class="w-5 h-5 flex items-center justify-center text-[#999] dark-mode:text-[#a39e98]">${tool.icon}</span>
+        <span class="settings-row-label">
+          <span class="settings-row-icon">${tool.icon}</span>
           ${tool.label}
         </span>
         <input type="checkbox" id="toggle-tool-${tool.key}" class="peer sr-only" checked>

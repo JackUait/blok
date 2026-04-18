@@ -58,7 +58,7 @@ export class CodeInlineTool implements InlineTool {
   public render(): MenuConfig {
     return {
       icon: IconCode,
-      name: 'code',
+      name: 'inlineCode',
       onActivate: () => {
         this.toggleCode();
       },

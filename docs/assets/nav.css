@@ -14,6 +14,11 @@
   -webkit-backdrop-filter: saturate(180%) blur(24px);
   border-bottom: 1px solid rgba(240, 123, 75, 0.08);
   transition: all var(--transition-smooth);
+  will-change: transform;
+}
+
+.nav.hidden {
+  transform: translateY(-100%);
 }
 
 /* Subtle top highlight for depth */

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Logo } from "../common/Logo";
 import { Search } from "../common/Search";
@@ -17,8 +17,10 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
   const location = useLocation();
   const { t } = useI18n();
   const [navScrolled, setNavScrolled] = useState(false);
+  const [navHidden, setNavHidden] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const lastScrollYRef = useRef(0);
 
   // Determine active link based on current location
   const linksWithActive = useMemo(() => {
@@ -37,20 +39,29 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
   }, [links, location.pathname]);
 
   useEffect(() => {
+    const HIDE_THRESHOLD = 80;
     const handleScroll = () => {
       const scrollY = window.scrollY;
-      // Track scrolled state for visual enhancement
+      const lastY = lastScrollYRef.current;
       setNavScrolled(scrollY > 20);
+      if (scrollY <= HIDE_THRESHOLD) {
+        setNavHidden(false);
+      } else if (scrollY > lastY) {
+        setNavHidden(true);
+      } else if (scrollY < lastY) {
+        setNavHidden(false);
+      }
+      lastScrollYRef.current = scrollY;
     };
 
     const tickingState = { value: false };
     const onScroll = () => {
       if (!tickingState.value) {
+        tickingState.value = true;
         window.requestAnimationFrame(() => {
           handleScroll();
           tickingState.value = false;
         });
-        tickingState.value = true;
       }
     };
 
@@ -95,7 +106,11 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
     return baseClass;
   };
 
-  const navClasses = ["nav", navScrolled ? "scrolled" : ""]
+  const navClasses = [
+    "nav",
+    navScrolled ? "scrolled" : "",
+    navHidden && !menuOpen ? "hidden" : "",
+  ]
     .filter(Boolean)
     .join(" ");
 

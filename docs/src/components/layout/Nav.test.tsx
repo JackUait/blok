@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { Nav } from './Nav';
 import { I18nProvider } from '../../contexts/I18nContext';
@@ -207,5 +207,74 @@ describe('Nav', () => {
       </TestWrapper>
     );
     expect(screen.getByLabelText('Поиск (⌘K)')).toBeInTheDocument();
+  });
+
+  describe('hide on scroll', () => {
+    const setScrollY = (value: number) => {
+      Object.defineProperty(window, 'scrollY', {
+        value,
+        writable: true,
+        configurable: true,
+      });
+    };
+
+    beforeEach(() => {
+      setScrollY(0);
+      vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+        cb(0);
+        return 0;
+      });
+    });
+
+    it('is visible at the top of the page', () => {
+      render(
+        <TestWrapper>
+          <Nav links={mockLinks} />
+        </TestWrapper>
+      );
+      const nav = screen.getByRole('navigation');
+      act(() => {
+        setScrollY(40);
+        fireEvent.scroll(window);
+      });
+      expect(nav.className).not.toContain('hidden');
+    });
+
+    it('hides when scrolling down past the threshold', () => {
+      render(
+        <TestWrapper>
+          <Nav links={mockLinks} />
+        </TestWrapper>
+      );
+      const nav = screen.getByRole('navigation');
+      act(() => {
+        setScrollY(50);
+        fireEvent.scroll(window);
+      });
+      act(() => {
+        setScrollY(200);
+        fireEvent.scroll(window);
+      });
+      expect(nav.className).toContain('hidden');
+    });
+
+    it('shows again when scrolling up', () => {
+      render(
+        <TestWrapper>
+          <Nav links={mockLinks} />
+        </TestWrapper>
+      );
+      const nav = screen.getByRole('navigation');
+      act(() => {
+        setScrollY(300);
+        fireEvent.scroll(window);
+      });
+      expect(nav.className).toContain('hidden');
+      act(() => {
+        setScrollY(200);
+        fireEvent.scroll(window);
+      });
+      expect(nav.className).not.toContain('hidden');
+    });
   });
 });

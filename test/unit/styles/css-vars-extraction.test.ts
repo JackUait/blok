@@ -174,6 +174,23 @@ describe('R1 — colors must live in palette blocks', () => {
 // R2 — No non-zero length literal appears >= 2 times outside var definitions.
 // ---------------------------------------------------------------------------
 
+function collectLength(
+  literal: string,
+  absIdx: number,
+  buckets: Map<string, number[]>,
+): void {
+  if (/^-?0+(?:\.0+)?(?:px|rem|em|%|vh|vw|vmin|vmax|ch)$/.test(literal)) return;
+  if (inAnyRange(absIdx, tokenRanges)) return;
+
+  const existing = buckets.get(literal);
+
+  if (existing) {
+    existing.push(lineOf(sourceClean, absIdx));
+  } else {
+    buckets.set(literal, [lineOf(sourceClean, absIdx)]);
+  }
+}
+
 describe('R2 — repeated length literals in themeable properties must be tokenised', () => {
   /**
    * Scope: enforces on `padding`, `margin`, `gap`, `border-radius`,
@@ -214,15 +231,9 @@ describe('R2 — repeated length literals in themeable properties must be tokeni
       if (/^\s*var\(/.test(m[2])) continue;
 
       const valueStart = m.index + m[0].indexOf(m[2]);
+
       for (const lm of m[2].matchAll(lengthRegex)) {
-        const literal = lm[0];
-        if (/^-?0+(?:\.0+)?(?:px|rem|em|%|vh|vw|vmin|vmax|ch)$/.test(literal)) continue;
-
-        const absIdx = valueStart + lm.index;
-        if (inAnyRange(absIdx, tokenRanges)) continue;
-
-        if (!buckets.has(literal)) buckets.set(literal, []);
-        buckets.get(literal).push(lineOf(sourceClean, absIdx));
+        collectLength(lm[0], valueStart + lm.index, buckets);
       }
     }
 

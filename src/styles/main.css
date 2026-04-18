@@ -209,7 +209,7 @@
 :where([data-blok-interface], [data-blok-popover]) hr {
   height: 0;
   color: inherit;
-  border-top-width: 1px;
+  border-top-width: var(--blok-border-width-hairline);
 }
 
 /* Add the correct text decoration in Chrome, Edge, and Safari. */
@@ -266,7 +266,7 @@
 :where([data-blok-interface], [data-blok-popover]) code {
   background-color: var(--blok-inline-code-bg);
   color: var(--blok-color-red-text);
-  padding: 2px 4px;
+  padding: var(--blok-space-0-5) var(--blok-space-1);
   border-radius: 0.25em;
   font-size: 0.875em;
 }
@@ -343,12 +343,12 @@
 
 /* Restore indentation for optgroup options. */
 :where([data-blok-interface], [data-blok-popover]) :where(select:is([multiple], [size])) optgroup option {
-  padding-inline-start: 20px;
+  padding-inline-start: var(--blok-space-5);
 }
 
 /* Restore space after file selector button. */
 :where([data-blok-interface], [data-blok-popover]) ::file-selector-button {
-  margin-inline-end: 4px;
+  margin-inline-end: var(--blok-space-1);
 }
 
 /* Reset placeholder opacity in Firefox. */
@@ -852,8 +852,13 @@
   --blok-radius-md: 6px;
 
   /* Spacing scale — 4px base, aligned with Tailwind's default spacing scale. */
+  --blok-space-0-5: 2px;
   --blok-space-1: 4px;
+  --blok-space-1-25: 5px;
+  --blok-space-1-5: 6px;
+  --blok-space-1-75: 7px;
   --blok-space-2: 8px;
+  --blok-space-2-5: 10px;
   --blok-space-3: 12px;
   --blok-space-4: 16px;
   --blok-space-5: 20px;
@@ -1224,7 +1229,7 @@
   appearance: none;
   -webkit-appearance: none;
   flex-shrink: 0;
-  border-radius: 5px;
+  border-radius: var(--blok-space-1-25);
   border: 2px solid var(--blok-checklist-border);
   background-color: transparent;
   box-shadow: inset 0 1px 2px var(--blok-checklist-shadow);
@@ -1377,7 +1382,7 @@
   @apply content-[''] absolute w-full max-w-content h-1.5 rounded-xs pointer-events-none z-10;
   background-color: var(--blok-dnd-drop-indicator-bg);
   left: 50%;
-  margin-left: calc(var(--drop-indicator-depth, 0) * 12px);
+  margin-left: calc(var(--drop-indicator-depth, 0) * var(--blok-space-3));
   max-width: calc(650px - var(--drop-indicator-depth, 0) * 24px);
 }
 
@@ -1399,7 +1404,7 @@
 
 [data-blok-spring-loaded] [data-blok-element-content] {
   animation: spring-loaded-flash 700ms ease-out forwards;
-  border-radius: 4px;
+  border-radius: var(--blok-space-1);
 }
 
 /**
@@ -1469,7 +1474,7 @@
   margin-top: 4.6px;
 }
 [data-blok-component="callout"] button:has(+ [data-blok-toggle-children] > :first-child h3) {
-  margin-top: 2px;
+  margin-top: var(--blok-space-0-5);
 }
 
 /**
@@ -1674,7 +1679,7 @@
 }
 [data-blok-popover-items]::-webkit-scrollbar-thumb {
   background: var(--blok-popover-border);
-  border-radius: 4px;
+  border-radius: var(--blok-space-1);
 }
 [data-blok-popover-items]::-webkit-scrollbar-thumb:hover {
   background: var(--blok-gray-text);
@@ -1755,7 +1760,7 @@
 }
 [data-emoji-picker-body]::-webkit-scrollbar-thumb {
   background: transparent;
-  border-radius: 3px;
+  border-radius: var(--blok-radius-sm);
 }
 [data-emoji-picker-body]:hover::-webkit-scrollbar-thumb {
   background: color-mix(in srgb, currentColor 12%, transparent);
@@ -1793,7 +1798,7 @@
 }
 [data-blok-database-board]::-webkit-scrollbar-thumb {
   background: transparent;
-  border-radius: 4px;
+  border-radius: var(--blok-space-1);
 }
 [data-blok-database-board]:hover::-webkit-scrollbar-thumb {
   background: color-mix(in srgb, currentColor 15%, transparent);
@@ -1807,8 +1812,8 @@
  */
 [data-blok-database-column] {
   background-color: var(--blok-database-column-bg);
-  border-radius: 10px;
-  padding: 8px;
+  border-radius: var(--blok-space-2-5);
+  padding: var(--blok-space-2);
 }
 
 /**
@@ -1825,7 +1830,7 @@
   background-color: var(--blok-database-card-bg);
   box-shadow: var(--blok-database-card-shadow);
   border: 1px solid var(--blok-database-card-border);
-  border-radius: 8px;
+  border-radius: var(--blok-space-2);
   transition: background-color 150ms ease, box-shadow 150ms ease, border-color 150ms ease, outline-color 150ms ease;
 }
 
@@ -1887,13 +1892,13 @@
   top: 8px;
   right: 8px;
   display: flex;
-  gap: 2px;
+  gap: var(--blok-space-0-5);
   opacity: 0;
   pointer-events: none;
   transition: opacity 120ms ease;
   background: var(--blok-database-card-actions-bg);
-  border-radius: 8px;
-  padding: 2px;
+  border-radius: var(--blok-space-2);
+  padding: var(--blok-space-0-5);
 }
 
 [data-blok-database-card]:hover [data-blok-database-card-actions],
@@ -1911,7 +1916,7 @@
   color: var(--blok-database-card-actions-icon);
   width: 28px;
   height: 28px;
-  border-radius: 6px;
+  border-radius: var(--blok-radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1953,13 +1958,13 @@
   cursor: pointer;
   color: var(--blok-database-add-text);
   font-size: 14px;
-  padding: 6px 8px;
-  border-radius: 8px;
+  padding: var(--blok-space-1-5) var(--blok-space-2);
+  border-radius: var(--blok-space-2);
   text-align: left;
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--blok-space-1-5);
   transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
 }
 
@@ -1978,8 +1983,8 @@
   white-space: nowrap;
   align-self: flex-start;
   flex-shrink: 0;
-  padding: 10px 12px;
-  border-radius: 8px;
+  padding: var(--blok-space-2-5) var(--blok-space-3);
+  border-radius: var(--blok-space-2);
 }
 
 /**
@@ -1993,8 +1998,8 @@
   color: var(--blok-database-delete-text);
   font-size: 14px;
   line-height: 1;
-  padding: 2px 4px;
-  border-radius: 3px;
+  padding: var(--blok-space-0-5) var(--blok-space-1);
+  border-radius: var(--blok-radius-sm);
   flex-shrink: 0;
   transition: opacity 120ms ease, color 120ms ease;
 }
@@ -2015,9 +2020,9 @@
 [data-blok-database-column-pill] {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 2px 7px 2px 5px;
-  border-radius: 20px;
+  gap: var(--blok-space-1-25);
+  padding: var(--blok-space-0-5) var(--blok-space-1-75) var(--blok-space-0-5) var(--blok-space-1-25);
+  border-radius: var(--blok-space-5);
   flex: 0 0 auto;
   min-width: 0;
   width: fit-content;
@@ -2112,7 +2117,7 @@
 [data-blok-database-drawer-toolbar] {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
+  padding: var(--blok-space-2) var(--blok-space-3);
   flex-shrink: 0;
   border-bottom: 1px solid var(--blok-database-drawer-border);
 }
@@ -2126,8 +2131,8 @@
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
+  padding: var(--blok-space-1);
+  border-radius: var(--blok-space-1);
   color: var(--blok-database-add-text);
   gap: -4px;
 }
@@ -2152,7 +2157,7 @@
 [data-blok-database-drawer-content] {
   flex: 1;
   overflow-y: auto;
-  padding: 40px 60px 20px;
+  padding: var(--blok-space-10) 60px var(--blok-space-5);
 }
 
 /**
@@ -2168,7 +2173,7 @@
   background-color: transparent;
   color: inherit;
   padding: 0;
-  margin-bottom: 12px;
+  margin-bottom: var(--blok-space-3);
   line-height: 1.2;
   resize: none;
   overflow: hidden;
@@ -2185,8 +2190,8 @@
 [data-blok-database-drawer-props] {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: 16px;
+  gap: var(--blok-space-1);
+  margin-bottom: var(--blok-space-4);
 }
 
 /**
@@ -2195,7 +2200,7 @@
 [data-blok-database-drawer-prop-row] {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--blok-space-2);
   min-height: 32px;
   font-size: 14px;
 }
@@ -2216,9 +2221,9 @@
 [data-blok-database-drawer-status-pill] {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 2px 8px;
-  border-radius: 4px;
+  gap: var(--blok-space-1-5);
+  padding: var(--blok-space-0-5) var(--blok-space-2);
+  border-radius: var(--blok-space-1);
   font-size: 14px;
   font-weight: 500;
   line-height: 1.4;
@@ -2240,7 +2245,7 @@
 [data-blok-database-drawer] hr {
   border: none;
   border-top: 1px solid var(--blok-database-drawer-border);
-  margin: 0 0 4px;
+  margin: 0 0 var(--blok-space-1);
 }
 
 /**
@@ -2256,9 +2261,9 @@
  * Add card — match card height and visual rhythm.
  */
 [data-blok-database-add-card] {
-  margin-top: 6px;
-  padding: 10px 12px;
-  border-radius: 12px;
+  margin-top: var(--blok-space-1-5);
+  padding: var(--blok-space-2-5) var(--blok-space-3);
+  border-radius: var(--blok-space-3);
 }
 
 [data-blok-database-add-card-icon] {
@@ -2279,7 +2284,7 @@
   color: var(--blok-database-add-text);
   font-size: 13px;
   font-weight: 400;
-  margin-left: 2px;
+  margin-left: var(--blok-space-0-5);
   flex-shrink: 0;
 }
 
@@ -2290,7 +2295,7 @@
   color: var(--blok-database-add-text);
   font-size: 13px;
   text-align: center;
-  padding: 12px 0;
+  padding: var(--blok-space-3) 0;
 }
 
 /**
@@ -2311,15 +2316,15 @@
 [data-blok-database-tab-bar] {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 4px 0 8px;
+  gap: var(--blok-space-0-5);
+  padding: var(--blok-space-1) 0 var(--blok-space-2);
   padding-left: max(0px, calc((100% - var(--max-width-content)) / 2));
 }
 
 [data-blok-database-title-row] {
   display: flex;
   align-items: center;
-  margin-bottom: 4px;
+  margin-bottom: var(--blok-space-1);
 }
 
 /* Single-view mode: move centering offset to the row, strip it from the title
@@ -2336,7 +2341,7 @@
 }
 
 [data-blok-database-title-row][data-single-view] [data-blok-database-add-view] {
-  margin-left: 4px;
+  margin-left: var(--blok-space-1);
 }
 
 /* When + button is inside the title row, show it on row hover */
@@ -2348,9 +2353,9 @@
 [data-blok-database-tab] {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-radius: 10px;
+  gap: var(--blok-space-1-5);
+  padding: var(--blok-space-2) var(--blok-space-4);
+  border-radius: var(--blok-space-2-5);
   cursor: grab;
   font-size: 14px;
   font-weight: 400;
@@ -2387,10 +2392,10 @@
   height: 32px;
   border: none;
   background: none;
-  border-radius: 8px;
+  border-radius: var(--blok-space-2);
   cursor: pointer;
   color: var(--blok-database-tab-text);
-  margin-left: 2px;
+  margin-left: var(--blok-space-0-5);
   transition: background-color 120ms ease, opacity 120ms ease;
   opacity: 0;
 }
@@ -2413,8 +2418,8 @@
 }
 
 [data-blok-database-tab-more] {
-  padding: 4px 10px;
-  border-radius: 6px;
+  padding: var(--blok-space-1) var(--blok-space-2-5);
+  border-radius: var(--blok-radius-md);
   font-size: 13px;
   color: var(--blok-database-tab-text);
   cursor: pointer;
@@ -2429,14 +2434,14 @@
 /* Overflow dropdown */
 [data-blok-database-tab-overflow-dropdown] {
   background: var(--blok-database-popover-bg);
-  border-radius: 10px;
+  border-radius: var(--blok-space-2-5);
   box-shadow: var(--blok-database-popover-shadow);
-  padding: 6px;
+  padding: var(--blok-space-1-5);
 }
 
 /* View option items (rendered as Html items inside PopoverDesktop) */
 [data-blok-database-view-popover-heading] {
-  padding: 6px 8px 4px;
+  padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -2448,9 +2453,9 @@
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  gap: 10px;
-  padding: 7px 8px;
-  border-radius: 6px;
+  gap: var(--blok-space-2-5);
+  padding: var(--blok-space-1-75) var(--blok-space-2);
+  border-radius: var(--blok-radius-md);
   cursor: pointer;
   transition: background-color 120ms ease;
 }
@@ -2479,7 +2484,7 @@
 [data-blok-database-view-option-text] {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: var(--blok-border-width-hairline);
   min-width: 0;
 }
 
@@ -2500,9 +2505,9 @@
 [data-blok-database-tab-overflow-item] {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 7px 10px;
-  border-radius: 6px;
+  gap: var(--blok-space-2-5);
+  padding: var(--blok-space-1-75) var(--blok-space-2-5);
+  border-radius: var(--blok-radius-md);
   cursor: pointer;
   font-size: 14px;
   font-weight: 400;
@@ -2518,11 +2523,11 @@
 }
 
 [data-blok-database-tab-overflow-new] {
-  padding: 7px 10px;
+  padding: var(--blok-space-1-75) var(--blok-space-2-5);
   font-size: 14px;
   color: var(--blok-database-tab-text);
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: var(--blok-radius-md);
   transition: background-color 120ms ease;
 }
 
@@ -2532,15 +2537,15 @@
 
 [data-blok-database-tab-overflow-separator] {
   height: 1px;
-  margin: 4px 10px;
+  margin: var(--blok-space-1) var(--blok-space-2-5);
   background-color: var(--blok-database-drawer-border);
 }
 
 /* Tab rename input */
 [data-blok-database-tab-rename-input] {
   border: 1px solid var(--blok-database-drawer-border);
-  border-radius: 4px;
-  padding: 2px 6px;
+  border-radius: var(--blok-space-1);
+  padding: var(--blok-space-0-5) var(--blok-space-1-5);
   font-size: 14px;
   font-family: inherit;
   background: var(--blok-database-popover-bg);
@@ -2552,7 +2557,7 @@
 /* Tab ghost during drag */
 [data-blok-database-tab-ghost] {
   box-shadow: var(--blok-shadow-tab-ghost);
-  border-radius: 6px;
+  border-radius: var(--blok-radius-md);
   background: var(--blok-database-tab-bg-active);
 }
 
@@ -2582,9 +2587,9 @@
 [data-blok-database-list-row] {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 8px;
-  border-radius: 4px;
+  gap: var(--blok-space-2);
+  padding: var(--blok-space-1-25) var(--blok-space-2);
+  border-radius: var(--blok-space-1);
   cursor: pointer;
   position: relative;
   font-size: 14px;
@@ -2624,7 +2629,7 @@
 [data-blok-database-list-row-properties] {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--blok-space-1-5);
   flex-shrink: 0;
 }
 
@@ -2637,8 +2642,8 @@
   font-size: 12px;
   font-weight: 500;
   line-height: 1;
-  padding: 2px 7px;
-  border-radius: 4px;
+  padding: var(--blok-space-0-5) var(--blok-space-1-75);
+  border-radius: var(--blok-space-1);
   white-space: nowrap;
   background: var(--blok-database-add-hover-bg);
   color: var(--blok-database-tab-text-active);
@@ -2657,7 +2662,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--blok-space-1);
   color: var(--blok-database-add-text);
   flex-shrink: 0;
   transition: opacity 80ms ease, background-color 80ms ease, color 80ms ease;
@@ -2671,7 +2676,7 @@
   border-right: 2px solid currentColor;
   border-top: 2px solid currentColor;
   transform: rotate(45deg);
-  border-radius: 1px;
+  border-radius: var(--blok-border-width-hairline);
   flex-shrink: 0;
 }
 
@@ -2697,7 +2702,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: var(--blok-radius-sm);
   color: var(--blok-database-delete-text);
   font-size: 15px;
   line-height: 1;
@@ -2722,18 +2727,18 @@
 [data-blok-database-list-rows] ~ [data-blok-database-add-row] {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--blok-space-1-5);
   width: 100%;
-  padding: 6px 8px;
+  padding: var(--blok-space-1-5) var(--blok-space-2);
   background: none;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--blok-space-2);
   cursor: pointer;
   font-size: 13px;
   color: var(--blok-database-add-text);
   text-align: left;
   transition: background-color 80ms ease, color 80ms ease;
-  margin-top: 2px;
+  margin-top: var(--blok-space-0-5);
 }
 
 [data-blok-database-list] > [data-blok-database-add-row]:hover,
@@ -2748,7 +2753,7 @@
 [data-blok-database-list-group] {
   display: flex;
   flex-direction: column;
-  margin-bottom: 4px;
+  margin-bottom: var(--blok-space-1);
 }
 
 /**
@@ -2757,10 +2762,10 @@
 [data-blok-database-list-group-header] {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px 4px;
+  gap: var(--blok-space-1-5);
+  padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--blok-space-1);
   user-select: none;
   transition: background-color 80ms ease;
 }
@@ -2813,7 +2818,7 @@
   font-size: 12px;
   color: var(--blok-database-add-text);
   font-weight: 400;
-  margin-left: 2px;
+  margin-left: var(--blok-space-0-5);
 }
 
 /**
@@ -2822,7 +2827,7 @@
 [data-blok-database-list-rows] {
   display: flex;
   flex-direction: column;
-  padding-left: 8px;
+  padding-left: var(--blok-space-2);
 }
 
 /* ─── "Add a property" button ────────────────────────────────────────────── */
@@ -2834,13 +2839,13 @@
 [data-blok-database-drawer-add-prop] {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--blok-space-1-75);
   width: 100%;
-  padding: 6px 8px;
-  margin-top: 4px;
+  padding: var(--blok-space-1-5) var(--blok-space-2);
+  margin-top: var(--blok-space-1);
   background: none;
   border: 1.5px dashed transparent;
-  border-radius: 6px;
+  border-radius: var(--blok-radius-md);
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
@@ -2884,9 +2889,9 @@
 [data-blok-database-property-type-popover] {
   min-width: 210px;
   background: var(--blok-database-popover-bg);
-  border-radius: 10px;
+  border-radius: var(--blok-space-2-5);
   box-shadow: var(--blok-database-popover-shadow);
-  padding: 6px;
+  padding: var(--blok-space-1-5);
   animation: blok-prop-popover-in 120ms cubic-bezier(0.16, 1, 0.3, 1) both;
   transform-origin: top left;
 }
@@ -2895,7 +2900,7 @@
  * Section heading — "Property type" label above the list.
  */
 [data-blok-database-property-type-heading] {
-  padding: 6px 8px 4px;
+  padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -2910,9 +2915,9 @@
 [data-blok-database-property-type-option] {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 8px;
-  border-radius: 6px;
+  gap: var(--blok-space-2-5);
+  padding: var(--blok-space-1-5) var(--blok-space-2);
+  border-radius: var(--blok-radius-md);
   cursor: pointer;
   font-size: 13.5px;
   color: var(--blok-database-tab-text-active);
@@ -2937,7 +2942,7 @@
   justify-content: center;
   width: 26px;
   height: 26px;
-  border-radius: 5px;
+  border-radius: var(--blok-space-1-25);
   background: var(--blok-popover-icon-bg);
   color: var(--blok-database-tab-text-active);
   flex-shrink: 0;

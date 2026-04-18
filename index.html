@@ -437,7 +437,7 @@
 
   <script type="module">
     import { Blok } from './src/blok.ts';
-    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Quote, Code, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Quote, Code, Image, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
 
     /**
@@ -459,6 +459,7 @@
         divider: true,
         quote: true,
         code: true,
+        image: true,
       },
     };
 
@@ -1163,6 +1164,7 @@
       if (state.tools.divider) tools.divider = Divider;
       if (state.tools.quote) tools.quote = { class: Quote, inlineToolbar: true };
       if (state.tools.code) tools.code = { class: Code, inlineToolbar: false };
+      if (state.tools.image) tools.image = Image;
       return {
         readOnly: state.readOnly,
         holder: 'blok',

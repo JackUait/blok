@@ -553,9 +553,19 @@ class Tooltip {
   }
 
   /**
-   * Get current page vertical scroll offset
+   * Get current page vertical scroll offset.
+   *
+   * Returns 0 when the tooltip is promoted to the CSS Top Layer: in that case
+   * the wrapper's containing block is the viewport (not the document), so
+   * `getBoundingClientRect()` coordinates map directly to the wrapper's
+   * `top`/`left` without any scroll adjustment. Adding scroll would push the
+   * tooltip off-screen on scrolled pages.
    */
   private getScrollTop(): number {
+    if (supportsPopoverAPI()) {
+      return 0;
+    }
+
     if (typeof window.scrollY === 'number') {
       return window.scrollY;
     }

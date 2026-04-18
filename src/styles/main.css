@@ -109,7 +109,8 @@
   via inline `top`/`left` and styles the inner container directly. Reset them
   so the `popover` attribute only contributes its Top Layer promotion.
 */
-[data-blok-popover][popover] {
+[data-blok-popover][popover],
+[data-blok-interface=tooltip][popover] {
   inset: auto;
   margin: 0;
   border: 0;
@@ -118,9 +119,17 @@
   height: auto;
   max-width: none;
   max-height: none;
+  overflow: visible;
+}
+
+/*
+  Popover wrapper paints background on its inner container, so wipe the UA
+  Canvas background here. Tooltip paints background directly on the wrapper
+  via tailwind's `bg-tooltip-bg`, so excluding it keeps the pill visible.
+*/
+[data-blok-popover][popover] {
   background: transparent;
   color: inherit;
-  overflow: visible;
 }
 
 /* Font family defaults — hoisted to :root so they resolve anywhere (including popovers). */

@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DATA_ATTR, TOOLTIP_INTERFACE_VALUE } from '../../../../src/components/constants';
 import { destroy, hide, onHover, show } from '../../../../src/components/utils/tooltip';
@@ -478,6 +480,53 @@ describe('Tooltip utility', () => {
     expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
   });
 
+  it('uses viewport-relative coords (no scroll add) when promoted to Top Layer', () => {
+    // Polyfill the Popover API on the prototype so the production code's
+    // feature-detection succeeds inside jsdom.
+    Object.defineProperty(HTMLElement.prototype, 'popover', {
+      configurable: true,
+      get(this: HTMLElement) { return this.getAttribute('popover'); },
+      set(this: HTMLElement, value: string | null) {
+        if (value === null) {
+          this.removeAttribute('popover');
+        } else {
+          this.setAttribute('popover', value);
+        }
+      },
+    });
+    Object.defineProperty(HTMLElement.prototype, 'showPopover', {
+      configurable: true, writable: true, value: vi.fn(),
+    });
+    Object.defineProperty(HTMLElement.prototype, 'hidePopover', {
+      configurable: true, writable: true, value: vi.fn(),
+    });
+
+    const target = createTargetElement({ left: 15, bottom: 75, width: 120 });
+
+    show(target, 'bottom', { delay: 0 });
+
+    const wrapper = getTooltipWrapper();
+
+    if (wrapper === null) {
+      throw new Error('Tooltip wrapper should exist');
+    }
+
+    setWrapperSize(wrapper, 80, 30);
+    setWindowScrollY(500);
+
+    show(target, 'bottom', { placement: 'bottom', marginTop: 8, delay: 0 });
+
+    // When tooltip is promoted to Top Layer, its containing block is the
+    // viewport. `getBoundingClientRect()` is already viewport-relative, so
+    // adding scrollY would shift the tooltip off-screen. Expect raw rect coords.
+    expect(wrapper.style.top).toBe('93px');
+
+    // Cleanup
+    delete (HTMLElement.prototype as unknown as Record<string, unknown>).popover;
+    delete (HTMLElement.prototype as unknown as Record<string, unknown>).showPopover;
+    delete (HTMLElement.prototype as unknown as Record<string, unknown>).hidePopover;
+  });
+
   it('promotes tooltip wrapper to CSS Top Layer on show so it renders above open popovers', () => {
     const showPopoverSpy = vi.fn();
     const hidePopoverSpy = vi.fn();
@@ -548,5 +597,110 @@ describe('Tooltip utility', () => {
 
     // Clean up
     hide();
+  });
+
+  /**
+   * Regression: when the tooltip wrapper is promoted to the CSS Top Layer via
+   * the native HTML Popover API, the User-Agent stylesheet for `[popover]`
+   * applies modal-dialog defaults (`position: fixed; inset: 0; margin: auto;
+   * width: fit-content; padding: 0.25em; border: solid; background: Canvas`)
+   * that pin the tooltip to the bottom-right of the viewport, throwing away
+   * our inline `top`/`left` placement. The fix lives in `src/styles/main.css`:
+   * the reset selector that neutralizes those UA defaults must include
+   * `[data-blok-interface=tooltip][popover]`. If anyone removes the tooltip
+   * selector from the reset block, this test fails.
+   */
+  it('main.css reset block targets [data-blok-interface=tooltip][popover] (UA popover defaults)', () => {
+    const cssPath = path.resolve(__dirname, '../../../../src/styles/main.css');
+    const cssSource = fs.readFileSync(cssPath, 'utf-8');
+
+    // Find every CSS rule whose body contains `inset: auto` AND `margin: 0`
+    // (the signature of the UA `[popover]` reset block) and confirm at least
+    // one of them lists `[data-blok-interface=tooltip][popover]` in its
+    // selector list. Regex tolerates whitespace, attribute-value quoting and
+    // selector ordering.
+    const ruleRegex = /([^{}]+)\{([^}]*)\}/g;
+    const tooltipSelectorRegex = /\[data-blok-interface\s*=\s*["']?tooltip["']?\]\s*\[popover\]/;
+    const insetRegex = /inset\s*:\s*auto\s*;/;
+    const marginRegex = /margin\s*:\s*0\s*;/;
+
+    let foundResetForTooltip = false;
+    let match: RegExpExecArray | null = ruleRegex.exec(cssSource);
+
+    while (match !== null) {
+      const [ , selectorList, body ] = match;
+
+      if (insetRegex.test(body) && marginRegex.test(body) && tooltipSelectorRegex.test(selectorList)) {
+        foundResetForTooltip = true;
+        break;
+      }
+
+      match = ruleRegex.exec(cssSource);
+    }
+
+    expect(
+      foundResetForTooltip,
+      'main.css must contain a reset rule that targets `[data-blok-interface=tooltip][popover]` and sets `inset: auto; margin: 0;` to neutralize the UA `[popover]` modal-dialog defaults — otherwise tooltips inside the CSS Top Layer collapse to the bottom-right of the viewport.'
+    ).toBe(true);
+  });
+
+  /**
+   * Regression: when the tooltip is promoted to the Top Layer, its containing
+   * block is the viewport, so `getBoundingClientRect()` already gives
+   * viewport-relative coords and `getScrollTop()` must return 0. Verifies the
+   * full `top`/`left` placement math for `placement: 'top'` against a trigger
+   * with a known offset rect.
+   */
+  it('places tooltip with viewport-relative coords for placement:top when in Top Layer', () => {
+    Object.defineProperty(HTMLElement.prototype, 'popover', {
+      configurable: true,
+      get(this: HTMLElement) { return this.getAttribute('popover'); },
+      set(this: HTMLElement, value: string | null) {
+        if (value === null) {
+          this.removeAttribute('popover');
+        } else {
+          this.setAttribute('popover', value);
+        }
+      },
+    });
+    Object.defineProperty(HTMLElement.prototype, 'showPopover', {
+      configurable: true, writable: true, value: vi.fn(),
+    });
+    Object.defineProperty(HTMLElement.prototype, 'hidePopover', {
+      configurable: true, writable: true, value: vi.fn(),
+    });
+
+    const target = createTargetElement({
+      left: 200,
+      top: 300,
+      width: 40,
+      height: 20,
+    });
+
+    show(target, 'top', { delay: 0 });
+
+    const wrapper = getTooltipWrapper();
+
+    if (wrapper === null) {
+      throw new Error('Tooltip wrapper should exist');
+    }
+
+    setWrapperSize(wrapper, 80, 24);
+    // Even with a sizeable scroll, getScrollTop() returns 0 when popover API
+    // is available, so the placement must NOT add scrollY to top.
+    setWindowScrollY(750);
+
+    show(target, 'top', { placement: 'top', delay: 0 });
+
+    // left = elementLeft + clientWidth/2 - wrapperWidth/2 = 200 + 20 - 40 = 180
+    // top  = elementTop  + 0 (Top Layer)  - wrapperHeight - offsetTop = 300 - 24 - 10 = 266
+    expect(wrapper.style.left).toBe('180px');
+    expect(wrapper.style.top).toBe('266px');
+    expect(wrapper.getAttribute('data-blok-placement')).toBe('top');
+
+    // Cleanup polyfill so it does not leak into other suites.
+    delete (HTMLElement.prototype as unknown as Record<string, unknown>).popover;
+    delete (HTMLElement.prototype as unknown as Record<string, unknown>).showPopover;
+    delete (HTMLElement.prototype as unknown as Record<string, unknown>).hidePopover;
   });
 });

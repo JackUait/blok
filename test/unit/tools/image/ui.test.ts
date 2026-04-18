@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { renderImage, renderCaption } from '../../../../src/tools/image/ui';
+import { renderImage, renderCaption, openLightbox } from '../../../../src/tools/image/ui';
 
 describe('renderImage', () => {
   it('returns figure with <img> carrying url, alt, and width style', () => {
@@ -44,5 +44,34 @@ describe('renderCaption', () => {
     const el = renderCaption({ value: 'hello', placeholder: 'p', readOnly: true });
     expect(el.textContent).toBe('hello');
     expect(el.getAttribute('contenteditable')).toBe('false');
+  });
+});
+
+describe('openLightbox', () => {
+  it('appends a dialog to document.body and removes it on close', () => {
+    const close = openLightbox({ url: 'https://x/y.png', alt: 'pic' });
+    const dialog = document.querySelector('[role="dialog"][aria-modal="true"]');
+    expect(dialog).not.toBeNull();
+    if (!dialog) throw new Error('dialog missing');
+    const img = dialog.querySelector('img');
+    if (!img) throw new Error('img missing');
+    expect(img.getAttribute('src')).toBe('https://x/y.png');
+    expect(img.getAttribute('alt')).toBe('pic');
+    close();
+    expect(document.querySelector('[role="dialog"][aria-modal="true"]')).toBeNull();
+  });
+
+  it('closes on Escape key', () => {
+    openLightbox({ url: 'u' });
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(document.querySelector('[role="dialog"][aria-modal="true"]')).toBeNull();
+  });
+
+  it('closes on backdrop click', () => {
+    openLightbox({ url: 'u' });
+    const dialog = document.querySelector('[role="dialog"][aria-modal="true"]');
+    if (!(dialog instanceof HTMLElement)) throw new Error('dialog missing');
+    dialog.click();
+    expect(document.querySelector('[role="dialog"][aria-modal="true"]')).toBeNull();
   });
 });

@@ -12,6 +12,7 @@ import type {
 import type { ImageData, ImageConfig } from '../../../types/tools/image';
 import { IconImage } from '../../components/icons';
 import { DEFAULT_CAPTION_PLACEHOLDER, URL_PATTERN } from './constants';
+import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { ImageError } from './errors';
 import { renderCaption, renderImage } from './ui';
 import { Uploader, type UploadResult } from './uploader';
@@ -27,6 +28,7 @@ export class ImageTool implements BlockTool {
   private readOnly: boolean;
   private root: HTMLElement | null = null;
   private state: ToolState = 'EMPTY';
+  private emptyStateEl: EmptyStateElement | null = null;
 
   constructor(options: BlockToolConstructorOptions<ImageData, ImageConfig>) {
     this.api = options.api;
@@ -112,6 +114,12 @@ export class ImageTool implements BlockTool {
     }
   }
 
+  private showEmptyError(err: unknown): void {
+    if (this.emptyStateEl) {
+      this.emptyStateEl.setError(err instanceof Error ? err.message : 'Upload failed');
+    }
+  }
+
   public setReadOnly(state: boolean): void {
     this.readOnly = state;
     this.renderState();
@@ -121,7 +129,39 @@ export class ImageTool implements BlockTool {
     if (!this.root) return;
     this.root.replaceChildren();
 
-    if (this.state !== 'RENDERED') return;
+    if (this.state === 'EMPTY') {
+      const el = renderEmptyState({
+        onFile: (file) => {
+          const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+          Object.defineProperty(event, 'type', { value: 'file' });
+          this.onPaste(event);
+        },
+        onUrl: (url) => {
+          void this.uploader
+            .handleUrl(url)
+            .then((result) => this.applyResult(result))
+            .catch((err) => this.showEmptyError(err));
+        },
+        acceptTypes: this.config.types,
+      });
+      this.emptyStateEl = el;
+      this.root.appendChild(el);
+      return;
+    }
+    if (this.state === 'LOADING') {
+      const skeleton = document.createElement('div');
+      skeleton.setAttribute('data-role', 'loading');
+      skeleton.textContent = 'Loading…';
+      this.root.appendChild(skeleton);
+      return;
+    }
+    if (this.state === 'ERROR') {
+      const err = document.createElement('div');
+      err.setAttribute('data-role', 'error');
+      err.textContent = "Couldn't load image";
+      this.root.appendChild(err);
+      return;
+    }
 
     const figure = renderImage(this.data);
     const placeholder = this.config.captionPlaceholder ?? DEFAULT_CAPTION_PLACEHOLDER;

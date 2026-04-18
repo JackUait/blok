@@ -103,3 +103,33 @@ describe('ImageTool — onPaste', () => {
     expect(img.getAttribute('src')).toBe('blob:fake');
   });
 });
+
+describe('ImageTool — EMPTY state', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('renders empty-state with file + tab buttons when data.url is empty', () => {
+    const tool = new ImageTool(createOptions());
+    const root = tool.render();
+    expect(root.querySelector('input[type="file"]')).not.toBeNull();
+    expect(root.querySelector('[data-tab="embed"]')).not.toBeNull();
+  });
+
+  it('submitting URL via empty-state transitions to RENDERED', async () => {
+    const tool = new ImageTool(createOptions());
+    const root = tool.render();
+    const embedTab = root.querySelector<HTMLButtonElement>('[data-tab="embed"]');
+    if (!embedTab) throw new Error('embed tab missing');
+    embedTab.click();
+    const input = root.querySelector<HTMLInputElement>('input[type="url"]');
+    if (!input) throw new Error('url input missing');
+    input.value = 'https://x/y.png';
+    const submit = root.querySelector<HTMLButtonElement>('[data-action="submit-url"]');
+    if (!submit) throw new Error('submit missing');
+    submit.click();
+    await new Promise((r) => setTimeout(r, 0));
+    const img = root.querySelector('img');
+    if (!img) throw new Error('img missing');
+    expect(img.getAttribute('src')).toBe('https://x/y.png');
+  });
+});

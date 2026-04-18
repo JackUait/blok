@@ -850,6 +850,21 @@
   --blok-radius-xs: 0.25rem;
   --blok-radius-sm: 3px;
   --blok-radius-md: 6px;
+
+  /* Spacing scale — 4px base, aligned with Tailwind's default spacing scale. */
+  --blok-space-1: 4px;
+  --blok-space-2: 8px;
+  --blok-space-3: 12px;
+  --blok-space-4: 16px;
+  --blok-space-5: 20px;
+  --blok-space-6: 24px;
+  --blok-space-10: 40px;
+
+  /* Icon sizing (non-scale, role-based). */
+  --blok-size-icon-sm: 18px;
+  --blok-size-icon-md: 22px;
+  --blok-size-icon-lg: 26px;
+  --blok-size-icon-xl: 32px;
 }
 
 /* ─── Dark theme — system preference ────────────────── */

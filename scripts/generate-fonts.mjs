@@ -18,6 +18,11 @@ const root = path.resolve(__dirname, '..');
  * Reads a woff2 file and returns a base64 data URI.
  */
 function toDataUri(filePath) {
+  if (!fs.existsSync(filePath)) {
+    console.error(`✗ Font file not found: ${filePath}`);
+    console.error('  Run `yarn install` to restore @fontsource packages.');
+    process.exit(1);
+  }
   const bytes = fs.readFileSync(filePath);
   return `data:font/woff2;base64,${bytes.toString('base64')}`;
 }
@@ -28,6 +33,7 @@ const fonts = [
     style: 'normal',
     weight: '100 900',
     format: 'woff2-variations',
+    display: 'swap',
     file: 'node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2',
   },
   {
@@ -35,6 +41,7 @@ const fonts = [
     style: 'normal',
     weight: '200 900',
     format: 'woff2-variations',
+    display: 'swap',
     file: 'node_modules/@fontsource-variable/source-serif-4/files/source-serif-4-latin-wght-normal.woff2',
   },
   {
@@ -42,6 +49,7 @@ const fonts = [
     style: 'normal',
     weight: '100 800',
     format: 'woff2-variations',
+    display: 'block',
     file: 'node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2',
   },
   {
@@ -49,18 +57,19 @@ const fonts = [
     style: 'normal',
     weight: '400',
     format: 'woff2',
+    display: 'block',
     file: 'node_modules/@fontsource/permanent-marker/files/permanent-marker-latin-400-normal.woff2',
   },
 ];
 
-const blocks = fonts.map(({ family, style, weight, format, file }) => {
+const blocks = fonts.map(({ family, style, weight, format, display, file }) => {
   const absPath = path.resolve(root, file);
   const dataUri = toDataUri(absPath);
   return [
     `@font-face {`,
     `  font-family: '${family}';`,
     `  font-style: ${style};`,
-    `  font-display: block;`,
+    `  font-display: ${display};`,
     `  font-weight: ${weight};`,
     `  src: url('${dataUri}') format('${format}');`,
     `}`,

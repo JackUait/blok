@@ -831,6 +831,10 @@
 
   /* Dark translucent background used behind database card actions. */
   --blok-database-card-actions-bg: #1e2533;
+
+  /* Small UI surfaces that can't reach a var via Tailwind arbitrary syntax. */
+  --blok-button-focus-bg-hover: #fbfcfe;
+  --blok-dnd-drop-indicator-bg: #d4e3fc;
 }
 
 /* ─── Dark theme — system preference ────────────────── */
@@ -965,6 +969,9 @@
 
     --blok-text-on-dark: #ffffff;
     --blok-database-card-actions-bg: #0f1420;
+
+    --blok-button-focus-bg-hover: #2d2d2c;
+    --blok-dnd-drop-indicator-bg: #1f3a5c;
   }
 }
 
@@ -1099,6 +1106,9 @@
 
   --blok-text-on-dark: #ffffff;
   --blok-database-card-actions-bg: #0f1420;
+
+  --blok-button-focus-bg-hover: #2d2d2c;
+  --blok-dnd-drop-indicator-bg: #1f3a5c;
 }
 
 /* ─── Checklist checkbox — custom styled ────────────────── */
@@ -1222,7 +1232,11 @@
 }
 @utility blok-button {
   /* Button styles */
-  @apply p-[13px] rounded-[3px] border border-line-gray text-[14.9px] bg-white text-center cursor-pointer text-gray-text shadow-button-base hover:bg-[#fbfcfe] hover:shadow-button-base-hover [&_svg]:h-5 [&_svg]:mr-[0.2em] [&_svg]:-mt-0.5;
+  @apply p-[13px] rounded-[3px] border border-line-gray text-[14.9px] bg-white text-center cursor-pointer text-gray-text shadow-button-base hover:shadow-button-base-hover [&_svg]:h-5 [&_svg]:mr-[0.2em] [&_svg]:-mt-0.5;
+
+  &:hover {
+    background-color: var(--blok-button-focus-bg-hover);
+  }
 }
 @utility blok-settings-button {
   /* Settings button styles */
@@ -1266,7 +1280,8 @@
 }
 
 [data-drop-indicator]::before {
-  @apply content-[''] absolute w-full max-w-content h-1.5 rounded-xs bg-[#d4e3fc] pointer-events-none z-10;
+  @apply content-[''] absolute w-full max-w-content h-1.5 rounded-xs pointer-events-none z-10;
+  background-color: var(--blok-dnd-drop-indicator-bg);
   left: 50%;
   margin-left: calc(var(--drop-indicator-depth, 0) * 12px);
   max-width: calc(650px - var(--drop-indicator-depth, 0) * 24px);

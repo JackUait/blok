@@ -242,11 +242,26 @@ describe('R2 — repeated length literals in themeable properties must be tokeni
 });
 
 // ---------------------------------------------------------------------------
-// R3 — Every declared --blok-* var must be used at least once.
+// R3 — Every `var(--blok-*)` reference must correspond to a declared var.
 // ---------------------------------------------------------------------------
+//
+// The inverse of the original rule: catch typos and vars that were renamed
+// without updating their callers. Declaration-only vars are intentional here
+// — they expose the palette as a public API for consumer themes, even when
+// main.css itself never references them.
 
-describe('R3 — declared vars must be referenced', () => {
-  it('every --blok-* declaration has at least one var(--blok-*) reference', () => {
+/**
+ * Vars that are intentionally referenced without being declared — they exist
+ * purely as consumer-overridable hooks. Each must have a fallback in its
+ * var() call so the reference resolves.
+ */
+const DANGLING_VAR_ALLOWLIST = new Set([
+  // Consumer-supplied font-family; falls back to --blok-font-sans.
+  '--blok-font-family',
+]);
+
+describe('R3 — every var() reference resolves to a declared token', () => {
+  it('every var(--blok-*) call targets a var declared somewhere in main.css', () => {
     const declRegex = /^\s*(--blok-[\w-]+)\s*:/gm;
     const declared = new Set<string>();
     for (const m of sourceClean.matchAll(declRegex)) declared.add(m[1]);
@@ -255,11 +270,13 @@ describe('R3 — declared vars must be referenced', () => {
     const used = new Set<string>();
     for (const m of sourceClean.matchAll(usedRegex)) used.add(m[1]);
 
-    const unreferenced = [...declared].filter((name) => !used.has(name)).sort();
+    const dangling = [...used]
+      .filter((name) => !declared.has(name) && !DANGLING_VAR_ALLOWLIST.has(name))
+      .sort();
 
     expect(
-      unreferenced,
-      `Expected every declared --blok-* var to be referenced. Unreferenced (${unreferenced.length}):\n${unreferenced
+      dangling,
+      `Expected every var(--blok-*) reference to hit a declared token. Dangling (${dangling.length}):\n${dangling
         .slice(0, 20)
         .map((n) => `  ${n}`)
         .join('\n')}`,

@@ -1991,8 +1991,8 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  border-left: 1px solid var(--blok-popover-border, #e8e8eb);
-  background-color: var(--blok-popover-bg, #fff);
+  border-left: 1px solid var(--blok-popover-border);
+  background-color: var(--blok-popover-bg);
   box-shadow: -4px 0 12px rgba(0, 0, 0, 0.08);
   transition: width 200ms ease;
 }

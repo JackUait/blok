@@ -843,6 +843,13 @@
   --blok-database-column-pill-text: rgba(55, 53, 47, 0.9);
   --blok-database-card-actions-icon: rgba(55, 53, 47, 0.55);
   --blok-database-card-actions-divider: rgba(55, 53, 47, 0.15);
+
+  /* Border widths + radii — shared structural tokens. */
+  --blok-border-width-hairline: 1px;
+  --blok-border-width-2: 2px;
+  --blok-radius-xs: 0.25rem;
+  --blok-radius-sm: 3px;
+  --blok-radius-md: 6px;
 }
 
 /* ─── Dark theme — system preference ────────────────── */

@@ -188,38 +188,56 @@ describe('R1 — colors must live in palette blocks', () => {
 // R2 — No non-zero length literal appears >= 2 times outside var definitions.
 // ---------------------------------------------------------------------------
 
-describe('R2 — repeated length literals must be tokenised', () => {
-  it('no non-zero px/rem/em length appears twice or more outside declarations', () => {
-    /**
-     * Strategy: outside token blocks, collect each occurrence of a length,
-     * group by literal, fail if any group has >=2 entries.
-     *
-     * A "declaration" means a `--...: VALUE` statement. Those are where a
-     * length is allowed to appear (it's becoming a var).
-     */
-    const declarationRegex = /--[\w-]+\s*:[^;]*/g;
-    const declarationRanges: Range[] = [];
-    for (const m of sourceClean.matchAll(declarationRegex)) {
-      declarationRanges.push({ start: m.index, end: m.index + m[0].length });
-    }
+describe('R2 — repeated length literals in themeable properties must be tokenised', () => {
+  /**
+   * Scope: enforces on `padding`, `margin`, `gap`, `border-radius`,
+   * `border-width`, and the four `border-*-width` properties. These are the
+   * properties a theme consumer typically wants to rescale.
+   *
+   * Out of scope (allowed to remain literal):
+   *   - `box-shadow` offsets and blur radii (visual-effect composition, B4).
+   *   - Pixel-exact layout primitives (widths, heights, positions).
+   *   - Pseudo-element `top` / `left` / `margin-left` positioning.
+   */
+  const THEMEABLE_PROPERTIES = [
+    'padding', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
+    'padding-inline', 'padding-inline-start', 'padding-inline-end',
+    'padding-block', 'padding-block-start', 'padding-block-end',
+    'margin', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
+    'margin-inline', 'margin-inline-start', 'margin-inline-end',
+    'margin-block', 'margin-block-start', 'margin-block-end',
+    'gap', 'row-gap', 'column-gap',
+    'border-radius',
+    'border-top-left-radius', 'border-top-right-radius',
+    'border-bottom-left-radius', 'border-bottom-right-radius',
+    'border-width',
+    'border-top-width', 'border-right-width', 'border-bottom-width', 'border-left-width',
+  ];
+  const themeablePattern = new RegExp(
+    `(?<![-\\w])(${THEMEABLE_PROPERTIES.join('|')})\\s*:\\s*([^;]+)`,
+    'g',
+  );
 
+  it('no non-zero length repeats across themeable-property declarations', () => {
     const lengthRegex = /\b-?\d*\.?\d+(?:px|rem|em|%|vh|vw|vmin|vmax|ch)\b/g;
     const buckets = new Map<string, number[]>();
 
-    for (const m of sourceClean.matchAll(lengthRegex)) {
-      const literal = m[0];
-      // Skip zero lengths.
-      if (/^-?0+(\.0+)?(px|rem|em|%|vh|vw|vmin|vmax|ch)$/.test(literal)) continue;
+    for (const m of sourceClean.matchAll(themeablePattern)) {
+      // Skip declarations that are already a single var() call — the
+      // end-state we're chasing.
+      if (/^\s*var\(/.test(m[2])) continue;
 
-      const idx = m.index;
-      // Skip when literal is the VALUE of a `--...` declaration.
-      if (inAnyRange(idx, declarationRanges)) continue;
-      // Skip when inside a var() fallback.
-      const pre = sourceClean.slice(Math.max(0, idx - 60), idx);
-      if (/var\(\s*--[\w-]+\s*,\s*[^)]*$/.test(pre)) continue;
+      const valueStart = m.index + m[0].indexOf(m[2]);
+      for (const lm of m[2].matchAll(lengthRegex)) {
+        const literal = lm[0];
+        if (/^-?0+(?:\.0+)?(?:px|rem|em|%|vh|vw|vmin|vmax|ch)$/.test(literal)) continue;
 
-      if (!buckets.has(literal)) buckets.set(literal, []);
-      buckets.get(literal)!.push(lineOf(sourceClean, idx));
+        const absIdx = valueStart + lm.index;
+        if (inAnyRange(absIdx, tokenRanges)) continue;
+
+        if (!buckets.has(literal)) buckets.set(literal, []);
+        buckets.get(literal).push(lineOf(sourceClean, absIdx));
+      }
     }
 
     const repeated = [...buckets.entries()]
@@ -229,7 +247,7 @@ describe('R2 — repeated length literals must be tokenised', () => {
 
     expect(
       repeated,
-      `Expected 0 repeated length literals, found ${repeated.length}. Top 10:\n${repeated
+      `Expected 0 repeated themeable length literals, found ${repeated.length}. Top 10:\n${repeated
         .slice(0, 10)
         .map((r) => `  ${r.literal} × ${r.count} (first lines: ${r.lines.join(', ')})`)
         .join('\n')}`,

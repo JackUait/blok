@@ -24,3 +24,22 @@ export function renderImage(data: Partial<ImageData> & { url: string }): HTMLEle
   figure.appendChild(img);
   return figure;
 }
+
+export interface CaptionOptions {
+  value: string;
+  placeholder: string;
+  readOnly: boolean;
+}
+
+export function renderCaption(opts: CaptionOptions): HTMLElement {
+  const el = document.createElement('div');
+  el.setAttribute('role', 'textbox');
+  el.setAttribute('contenteditable', opts.readOnly ? 'false' : 'true');
+  el.setAttribute('data-placeholder', opts.placeholder);
+  el.textContent = opts.value;
+  el.style.marginTop = '8px';
+  el.style.fontSize = '0.875rem';
+  el.style.color = 'var(--blok-text-secondary, #6b7280)';
+  el.style.outline = 'none';
+  return el;
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { renderImage } from '../../../../src/tools/image/ui';
+import { renderImage, renderCaption } from '../../../../src/tools/image/ui';
 
 describe('renderImage', () => {
   it('returns figure with <img> carrying url, alt, and width style', () => {
@@ -29,5 +29,20 @@ describe('renderImage', () => {
     const img = fig.querySelector('img');
     if (!img) throw new Error('img missing');
     expect(img.getAttribute('alt')).toBe('');
+  });
+});
+
+describe('renderCaption', () => {
+  it('returns a contenteditable element with placeholder attribute', () => {
+    const el = renderCaption({ value: '', placeholder: 'Write a caption…', readOnly: false });
+    expect(el.getAttribute('contenteditable')).toBe('true');
+    expect(el.getAttribute('data-placeholder')).toBe('Write a caption…');
+    expect(el.textContent).toBe('');
+  });
+
+  it('renders text and respects readOnly by setting contenteditable=false', () => {
+    const el = renderCaption({ value: 'hello', placeholder: 'p', readOnly: true });
+    expect(el.textContent).toBe('hello');
+    expect(el.getAttribute('contenteditable')).toBe('false');
   });
 });

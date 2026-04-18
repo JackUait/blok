@@ -40,17 +40,19 @@ export interface AttachResizeHandleOptions {
 }
 
 export function attachResizeHandle(opts: AttachResizeHandleOptions): () => void {
-  let active = false;
-  let lastPercent: number | undefined;
+  const state: { active: boolean; lastPercent: number | undefined } = {
+    active: false,
+    lastPercent: undefined,
+  };
 
   const onDown = (event: PointerEvent): void => {
-    active = true;
+    state.active = true;
     opts.handle.setPointerCapture(event.pointerId);
     event.preventDefault();
   };
 
   const onMove = (event: PointerEvent): void => {
-    if (!active) return;
+    if (!state.active) return;
     const rect = opts.container.getBoundingClientRect();
     const next = computeWidthPercent({
       edge: opts.edge,
@@ -58,15 +60,15 @@ export function attachResizeHandle(opts: AttachResizeHandleOptions): () => void 
       dragX: event.clientX,
       originX: rect.left,
     });
-    lastPercent = next;
+    state.lastPercent = next;
     opts.onPreview(next);
   };
 
   const onUp = (event: PointerEvent): void => {
-    if (!active) return;
-    active = false;
+    if (!state.active) return;
+    state.active = false;
     opts.handle.releasePointerCapture(event.pointerId);
-    if (lastPercent !== undefined) opts.onCommit(lastPercent);
+    if (state.lastPercent !== undefined) opts.onCommit(state.lastPercent);
   };
 
   opts.handle.addEventListener('pointerdown', onDown);

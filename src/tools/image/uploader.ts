@@ -7,6 +7,14 @@ export interface UploadResult {
   fileName?: string;
 }
 
+function parseUrl(raw: string): URL | null {
+  try {
+    return new URL(raw);
+  } catch {
+    return null;
+  }
+}
+
 export class Uploader {
   constructor(private readonly config: ImageConfig) {}
 
@@ -29,11 +37,9 @@ export class Uploader {
   }
 
   private validateUrl(raw: string): void {
-    let parsed: URL;
+    const parsed = parseUrl(raw);
 
-    try {
-      parsed = new URL(raw);
-    } catch {
+    if (!parsed) {
       throw new ImageError('INVALID_URL', raw);
     }
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {

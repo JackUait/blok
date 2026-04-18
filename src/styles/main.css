@@ -865,6 +865,10 @@
   --blok-size-icon-md: 22px;
   --blok-size-icon-lg: 26px;
   --blok-size-icon-xl: 32px;
+
+  /* Shadow tokens — direct-usage surfaces (drawer, tab ghost). */
+  --blok-shadow-drawer-side: -4px 0 12px rgba(0, 0, 0, 0.08);
+  --blok-shadow-tab-ghost: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* ─── Dark theme — system preference ────────────────── */
@@ -2050,7 +2054,7 @@
   flex-direction: column;
   border-left: 1px solid var(--blok-popover-border);
   background-color: var(--blok-popover-bg);
-  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--blok-shadow-drawer-side);
   transition: width 200ms ease;
 }
 
@@ -2499,7 +2503,7 @@
 
 /* Tab ghost during drag */
 [data-blok-database-tab-ghost] {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--blok-shadow-tab-ghost);
   border-radius: 6px;
   background: var(--blok-database-tab-bg-active);
 }

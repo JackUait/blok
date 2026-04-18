@@ -74,7 +74,6 @@ class Tooltip {
         'bg-tooltip-bg opacity-0',
         'select-none pointer-events-none',
         'rounded-lg shadow-tooltip',
-        'before:content-[\'\'] before:absolute before:inset-0 before:bg-tooltip-bg before:-z-10 before:rounded-lg',
         'mobile:hidden'
       ).split(' '),
       tooltipContent: twJoin(

@@ -55,6 +55,9 @@ test-results/*.json
 # Screenshots at root
 /*.png
 
+# Bundle analyzer reports at root
+/esbuild-why-*.html
+
 # Design plans (local only)
 docs/plans/
 

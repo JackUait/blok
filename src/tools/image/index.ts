@@ -161,6 +161,10 @@ export class ImageTool implements BlockTool {
     this.renderState();
   }
 
+  public getToolbarAnchorElement(): HTMLElement | undefined {
+    return this.root?.querySelector<HTMLElement>('.blok-image-frame') ?? undefined;
+  }
+
   public removed(): void {
     this.detachResize();
     if (this.data.url.startsWith('blob:')) {

@@ -187,6 +187,14 @@ describe('ImageTool — overlay actions', () => {
     replace.click();
     expect(root.querySelector('input[type="file"]')).not.toBeNull();
   });
+
+  it('getToolbarAnchorElement() returns the image frame so block toolbar centers at image top, not on the caption', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png', caption: 'hi' }));
+    const root = tool.render();
+    const frame = root.querySelector<HTMLElement>('.blok-image-frame');
+    if (!frame) throw new Error('frame missing');
+    expect(tool.getToolbarAnchorElement()).toBe(frame);
+  });
 });
 
 describe('ImageTool — resize', () => {

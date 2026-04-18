@@ -150,21 +150,33 @@ describe('ImageTool — overlay actions', () => {
     expect(root.querySelector('[data-role="image-overlay"]')).toBeNull();
   });
 
-  it('clicking align cycles alignment left → center → right → left and dispatches change', () => {
+  it('clicking align cycles left → center → right → full → left and dispatches change', () => {
     const block = createMockBlock();
     const tool = new ImageTool(createOptions({ url: 'u' }, {}, block));
     const root = tool.render();
-    const align = root.querySelector<HTMLButtonElement>('[data-action="align"]');
-    if (!align) throw new Error('align missing');
-    align.click();
+    const align = (): HTMLButtonElement => {
+      const btn = root.querySelector<HTMLButtonElement>('[data-action="align"]');
+      if (!btn) throw new Error('align missing');
+      return btn;
+    };
+    align().click();
     expect(tool.save().alignment).toBe('left');
-    align.click();
+    align().click();
     expect(tool.save().alignment).toBe('center');
-    align.click();
+    align().click();
     expect(tool.save().alignment).toBe('right');
-    align.click();
+    align().click();
+    expect(tool.save().alignment).toBe('full');
+    align().click();
     expect(tool.save().alignment).toBe('left');
     expect(block.dispatchChange).toHaveBeenCalled();
+  });
+
+  it('clicking an alignment-pill button sets that exact value', () => {
+    const tool = new ImageTool(createOptions({ url: 'u' }));
+    const root = tool.render();
+    root.querySelector<HTMLButtonElement>('[data-action="align-full"]')?.click();
+    expect(tool.save().alignment).toBe('full');
   });
 
   it('clicking replace returns the tool to EMPTY state', () => {
@@ -187,7 +199,8 @@ describe('ImageTool — resize', () => {
     const root = tool.render();
     const figure = root.querySelector('figure');
     if (!figure) throw new Error('figure missing');
-    Object.defineProperty(figure, 'getBoundingClientRect', {
+    const frame = figure.querySelector<HTMLElement>('.blok-image-frame') ?? figure;
+    Object.defineProperty(frame, 'getBoundingClientRect', {
       value: () => ({ left: 0, right: 1000, width: 1000, top: 0, bottom: 100, height: 100, x: 0, y: 0, toJSON: () => ({}) }),
     });
     const handle = root.querySelector<HTMLElement>('[data-role="resize-handle"][data-edge="right"]');
@@ -233,5 +246,162 @@ describe('ImageTool — blob lifecycle', () => {
     tool.render();
     tool.removed();
     expect(revoke).not.toHaveBeenCalled();
+  });
+});
+
+describe('ImageTool — data attributes on root', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('applies data-state reflecting the tool state', () => {
+    const tool = new ImageTool(createOptions());
+    const root = tool.render();
+    expect(root.getAttribute('data-state')).toBe('empty');
+  });
+
+  it('rendered state has data-state="rendered" with size/align/frame/rounded/caption/alt defaults', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    const root = tool.render();
+    expect(root.getAttribute('data-state')).toBe('rendered');
+    expect(root.getAttribute('data-size')).toBe('md');
+    expect(root.getAttribute('data-align')).toBe('center');
+    expect(root.getAttribute('data-frame')).toBe('none');
+    expect(root.getAttribute('data-rounded')).toBe('on');
+    expect(root.getAttribute('data-caption')).toBe('on');
+    expect(root.getAttribute('data-alt')).toBe('none');
+  });
+
+  it('reflects persisted data in data attributes', () => {
+    const tool = new ImageTool(createOptions({
+      url: 'u',
+      size: 'lg',
+      alignment: 'full',
+      frame: 'shadow',
+      rounded: false,
+      captionVisible: false,
+      alt: 'hello',
+    }));
+    const root = tool.render();
+    expect(root.getAttribute('data-size')).toBe('lg');
+    expect(root.getAttribute('data-align')).toBe('full');
+    expect(root.getAttribute('data-frame')).toBe('shadow');
+    expect(root.getAttribute('data-rounded')).toBe('off');
+    expect(root.getAttribute('data-caption')).toBe('off');
+    expect(root.getAttribute('data-alt')).toBe('set');
+  });
+});
+
+describe('ImageTool — size presets', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('clicking a size preset in the more-popover sets data.size and data-size attr', () => {
+    const block = createMockBlock();
+    const tool = new ImageTool(createOptions({ url: 'u' }, {}, block));
+    const root = tool.render();
+    root.querySelector<HTMLButtonElement>('[data-action="size-lg"]')?.click();
+    expect(tool.save().size).toBe('lg');
+    expect(root.getAttribute('data-size')).toBe('lg');
+    expect(block.dispatchChange).toHaveBeenCalled();
+  });
+});
+
+describe('ImageTool — caption toggle', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('caption-toggle flips captionVisible and updates data-caption', () => {
+    const tool = new ImageTool(createOptions({ url: 'u' }));
+    const root = tool.render();
+    expect(root.getAttribute('data-caption')).toBe('on');
+    root.querySelector<HTMLButtonElement>('[data-action="caption-toggle"]')?.click();
+    expect(root.getAttribute('data-caption')).toBe('off');
+    expect(tool.save().captionVisible).toBe(false);
+    root.querySelector<HTMLButtonElement>('[data-action="caption-toggle"]')?.click();
+    expect(root.getAttribute('data-caption')).toBe('on');
+    expect(tool.save().captionVisible).toBe(true);
+  });
+});
+
+describe('ImageTool — upload progression', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('shows uploading state with filename during file upload', async () => {
+    let resolveUpload!: (v: { url: string; fileName: string }) => void;
+    const uploadByFile = (_file: File): Promise<{ url: string; fileName: string }> =>
+      new Promise((r) => { resolveUpload = r; });
+    const tool = new ImageTool(createOptions(
+      {},
+      { uploader: { uploadByFile } }
+    ));
+    const root = tool.render();
+    const file = new File([new Uint8Array(10)], 'p.png', { type: 'image/png' });
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+    await Promise.resolve();
+    expect(root.getAttribute('data-state')).toBe('loading');
+    expect(root.querySelector('[data-role="uploading"]')).not.toBeNull();
+    expect(root.querySelector('[data-role="filename"]')?.textContent).toBe('p.png');
+    resolveUpload({ url: 'https://cdn/p.png', fileName: 'p.png' });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(root.getAttribute('data-state')).toBe('rendered');
+  });
+
+  it('cancel button during upload returns to empty state', async () => {
+    const tool = new ImageTool(createOptions(
+      {},
+      { uploader: { uploadByFile: () => new Promise(() => undefined) } }
+    ));
+    const root = tool.render();
+    const file = new File([new Uint8Array(10)], 'p.png', { type: 'image/png' });
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+    await Promise.resolve();
+    root.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.click();
+    expect(root.getAttribute('data-state')).toBe('empty');
+  });
+});
+
+describe('ImageTool — error state', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('surfaces error-state element when upload rejects', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const tool = new ImageTool(createOptions(
+      {},
+      { uploader: { uploadByFile: () => Promise.reject(new Error('boom')) } }
+    ));
+    const root = tool.render();
+    const file = new File([new Uint8Array(10)], 'p.png', { type: 'image/png' });
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(root.getAttribute('data-state')).toBe('error');
+    expect(root.querySelector('[data-role="error-state"]')).not.toBeNull();
+    expect(root.querySelector('[data-action="replace"]')).not.toBeNull();
+  });
+});
+
+describe('ImageTool — alt badge', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('renders alt badge when alt is set', () => {
+    const tool = new ImageTool(createOptions({ url: 'u', alt: 'a photo' }));
+    const root = tool.render();
+    const badge = root.querySelector('[data-role="alt-badge"]');
+    expect(badge).not.toBeNull();
+    expect(badge?.textContent).toContain('a photo');
+  });
+
+  it('omits alt badge when alt missing', () => {
+    const tool = new ImageTool(createOptions({ url: 'u' }));
+    const root = tool.render();
+    expect(root.querySelector('[data-role="alt-badge"]')).toBeNull();
   });
 });

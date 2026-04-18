@@ -1,5 +1,12 @@
 import { BlockToolData } from './block-tool-data';
 
+/** Horizontal alignment: 'full' bleeds beyond the doc column. */
+export type ImageAlignment = 'left' | 'center' | 'right' | 'full';
+/** Size preset. `full` matches a full-bleed layout. Custom `width` still wins when set. */
+export type ImageSize = 'sm' | 'md' | 'lg' | 'full';
+/** Frame treatment around the image. */
+export type ImageFrame = 'none' | 'border' | 'shadow';
+
 /**
  * Persisted data shape for the Image block tool.
  */
@@ -10,8 +17,16 @@ export interface ImageData extends BlockToolData {
   caption?: string;
   /** Width as percent of container, 10–100. Default 100. */
   width?: number;
-  /** Horizontal alignment when width < 100 */
-  alignment?: 'left' | 'center' | 'right';
+  /** Horizontal alignment */
+  alignment?: ImageAlignment;
+  /** Discrete size preset; when present, overrides `width`. */
+  size?: ImageSize;
+  /** Decorative frame treatment. Default 'none'. */
+  frame?: ImageFrame;
+  /** Rounded corners. Default true. */
+  rounded?: boolean;
+  /** Caption visible in the rendered state. Default true. */
+  captionVisible?: boolean;
   /** Alt text for screen readers */
   alt?: string;
   /** Original filename, when known */

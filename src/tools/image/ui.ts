@@ -1,17 +1,30 @@
-import type { ImageData } from '../../../types/tools/image';
+import type { ImageAlignment, ImageData, ImageSize } from '../../../types/tools/image';
 
-const ALIGNMENT_TO_JUSTIFY: Record<NonNullable<ImageData['alignment']>, string> = {
+const ALIGNMENT_TO_JUSTIFY: Record<ImageAlignment, string> = {
   left: 'flex-start',
   center: 'center',
   right: 'flex-end',
+  full: 'center',
 };
 
-export function renderImage(data: Partial<ImageData> & { url: string }): HTMLElement {
+export interface RenderImageOptions {
+  /** Show the alt text badge overlaid on the image. */
+  altBadge?: boolean;
+}
+
+export function renderImage(
+  data: Partial<ImageData> & { url: string },
+  opts: RenderImageOptions = {}
+): HTMLElement {
   const figure = document.createElement('figure');
+  figure.className = 'blok-image-inner';
   figure.style.display = 'flex';
   figure.style.flexDirection = 'column';
   figure.style.margin = '0';
   figure.style.justifyContent = ALIGNMENT_TO_JUSTIFY[data.alignment ?? 'center'];
+
+  const frame = document.createElement('div');
+  frame.className = 'blok-image-frame';
 
   const img = document.createElement('img');
   img.setAttribute('src', data.url);
@@ -21,7 +34,17 @@ export function renderImage(data: Partial<ImageData> & { url: string }): HTMLEle
   img.style.maxWidth = '100%';
   img.draggable = false;
 
-  figure.appendChild(img);
+  frame.appendChild(img);
+
+  if (opts.altBadge && data.alt) {
+    const badge = document.createElement('div');
+    badge.className = 'blok-image-alt-badge';
+    badge.setAttribute('data-role', 'alt-badge');
+    badge.textContent = `alt: “${data.alt}”`;
+    frame.appendChild(badge);
+  }
+
+  figure.appendChild(frame);
   return figure;
 }
 
@@ -33,13 +56,11 @@ export interface CaptionOptions {
 
 export function renderCaption(opts: CaptionOptions): HTMLElement {
   const el = document.createElement('div');
+  el.className = 'blok-image-caption';
   el.setAttribute('role', 'textbox');
   el.setAttribute('contenteditable', opts.readOnly ? 'false' : 'true');
   el.setAttribute('data-placeholder', opts.placeholder);
   el.textContent = opts.value;
-  el.style.marginTop = '8px';
-  el.style.fontSize = '0.875rem';
-  el.style.color = 'var(--blok-text-secondary, #6b7280)';
   el.style.outline = 'none';
   return el;
 }
@@ -99,62 +120,269 @@ export function openLightbox(opts: LightboxOptions): () => void {
   return close;
 }
 
+export interface OverlayState {
+  alignment: ImageAlignment;
+  captionVisible: boolean;
+  hasAlt: boolean;
+  size: ImageSize;
+}
+
 export interface OverlayOptions {
-  onAlign(): void;
+  state: OverlayState;
+  onAlign(next: ImageAlignment): void;
+  onAlignCycle(): void;
+  onSize(next: ImageSize): void;
   onReplace(): void;
   onAlt(): void;
   onDelete(): void;
   onDownload(): void;
   onFullscreen(): void;
+  onCopyUrl(): void;
+  onToggleCaption(): void;
 }
 
-const ACTIONS: { key: keyof OverlayOptions; label: string; symbol: string }[] = [
-  { key: 'onFullscreen', label: 'Fullscreen', symbol: '⛶' },
-  { key: 'onAlign', label: 'Align', symbol: '↔' },
-  { key: 'onDownload', label: 'Download', symbol: '⤓' },
-  { key: 'onReplace', label: 'Replace', symbol: '⇄' },
-  { key: 'onAlt', label: 'Alt text', symbol: 'A' },
-  { key: 'onDelete', label: 'Delete', symbol: '✕' },
-];
-
+/**
+ * Data-action naming stays stable for test & user-code targeting.
+ * Additional visual-only elements carry their own class names.
+ */
 export function renderOverlay(opts: OverlayOptions): HTMLElement {
   const root = document.createElement('div');
   root.setAttribute('data-role', 'image-overlay');
-  Object.assign(root.style, {
-    position: 'absolute',
-    top: '8px',
-    right: '8px',
-    display: 'flex',
-    gap: '4px',
-    background: 'rgba(15,23,42,0.75)',
-    color: '#fff',
-    borderRadius: '6px',
-    padding: '4px',
-    opacity: '0',
-    transition: 'opacity 120ms ease-in',
-    pointerEvents: 'none',
-  } satisfies Partial<CSSStyleDeclaration>);
+  root.className = 'blok-image-toolbar';
 
-  for (const { key, label, symbol } of ACTIONS) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.setAttribute('aria-label', label);
-    button.setAttribute('data-action', key.replace(/^on/, '').toLowerCase());
-    button.textContent = symbol;
-    Object.assign(button.style, {
-      background: 'transparent',
-      border: 'none',
-      color: 'inherit',
-      cursor: 'pointer',
-      padding: '4px 6px',
-      lineHeight: '1',
-    } satisfies Partial<CSSStyleDeclaration>);
-    button.addEventListener('click', (event) => {
+  const pill = document.createElement('div');
+  pill.className = 'blok-image-toolbar__pill';
+  pill.setAttribute('role', 'group');
+  pill.setAttribute('aria-label', 'Alignment');
+
+  const alignments: { value: ImageAlignment; label: string; svg: string }[] = [
+    { value: 'left',   label: 'Align left',   svg: '<path d="M3 6h18M3 12h10M3 18h14"/>' },
+    { value: 'center', label: 'Align center', svg: '<path d="M3 6h18M7 12h10M5 18h14"/>' },
+    { value: 'right',  label: 'Align right',  svg: '<path d="M3 6h18M11 12h10M7 18h14"/>' },
+    { value: 'full',   label: 'Full width',   svg: '<rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M7 10v4M17 10v4"/>' },
+  ];
+  for (const a of alignments) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.setAttribute('aria-label', a.label);
+    btn.setAttribute('title', a.label);
+    btn.setAttribute('data-action', `align-${a.value}`);
+    btn.setAttribute('aria-pressed', opts.state.alignment === a.value ? 'true' : 'false');
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${a.svg}</svg>`;
+    btn.addEventListener('click', (event) => {
       event.stopPropagation();
-      opts[key]();
+      opts.onAlign(a.value);
     });
-    root.appendChild(button);
+    pill.appendChild(btn);
   }
+  root.appendChild(pill);
+
+  // Hidden legacy cycle button — keeps data-action="align" stable for consumers/tests.
+  const alignCycle = document.createElement('button');
+  alignCycle.type = 'button';
+  alignCycle.setAttribute('aria-label', 'Cycle alignment');
+  alignCycle.setAttribute('data-action', 'align');
+  alignCycle.className = 'blok-image-toolbar__alias';
+  alignCycle.style.display = 'none';
+  alignCycle.addEventListener('click', (event) => {
+    event.stopPropagation();
+    opts.onAlignCycle();
+  });
+  root.appendChild(alignCycle);
+
+  appendDivider(root);
+
+  appendSimpleButton(root, {
+    action: 'caption-toggle',
+    label: 'Toggle caption',
+    pressed: opts.state.captionVisible,
+    svg: '<path d="M4 6h16M4 12h16M4 18h10"/>',
+    onClick: opts.onToggleCaption,
+  });
+  appendSimpleButton(root, {
+    action: 'alt',
+    label: 'Edit alt text',
+    pressed: opts.state.hasAlt,
+    svg: '<path d="M4 4h16v14H5l-3 3V4z"/><path d="M8 11h8M8 7h8"/>',
+    onClick: opts.onAlt,
+  });
+  appendSimpleButton(root, {
+    action: 'replace',
+    label: 'Replace image',
+    svg: '<path d="M3 12a9 9 0 0115-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 01-15 6.7L3 16"/><path d="M3 21v-5h5"/>',
+    onClick: opts.onReplace,
+  });
+  appendSimpleButton(root, {
+    action: 'fullscreen',
+    label: 'View fullscreen',
+    svg: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+    onClick: opts.onFullscreen,
+  });
+  appendSimpleButton(root, {
+    action: 'download',
+    label: 'Download original',
+    svg: '<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>',
+    onClick: opts.onDownload,
+  });
+
+  appendDivider(root);
+
+  const more = document.createElement('button');
+  more.type = 'button';
+  more.setAttribute('data-action', 'more');
+  more.setAttribute('aria-label', 'More options');
+  more.setAttribute('aria-haspopup', 'menu');
+  more.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>';
+  root.appendChild(more);
+
+  // Delete is reachable from the popover; expose an invisible legacy button for consumers/tests.
+  const deleteAlias = document.createElement('button');
+  deleteAlias.type = 'button';
+  deleteAlias.setAttribute('data-action', 'delete');
+  deleteAlias.setAttribute('aria-label', 'Delete');
+  deleteAlias.className = 'blok-image-toolbar__alias is-danger';
+  deleteAlias.style.display = 'none';
+  deleteAlias.addEventListener('click', (event) => {
+    event.stopPropagation();
+    opts.onDelete();
+  });
+  root.appendChild(deleteAlias);
 
   return root;
+}
+
+function appendDivider(parent: HTMLElement): void {
+  const d = document.createElement('div');
+  d.className = 'blok-image-toolbar__divider';
+  d.setAttribute('aria-hidden', 'true');
+  parent.appendChild(d);
+}
+
+interface SimpleButtonSpec {
+  action: string;
+  label: string;
+  svg: string;
+  onClick(): void;
+  pressed?: boolean;
+}
+
+function appendSimpleButton(parent: HTMLElement, spec: SimpleButtonSpec): void {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.setAttribute('aria-label', spec.label);
+  btn.setAttribute('title', spec.label);
+  btn.setAttribute('data-action', spec.action);
+  if (spec.pressed !== undefined) {
+    btn.setAttribute('aria-pressed', spec.pressed ? 'true' : 'false');
+  }
+  btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${spec.svg}</svg>`;
+  btn.addEventListener('click', (event) => {
+    event.stopPropagation();
+    spec.onClick();
+  });
+  parent.appendChild(btn);
+}
+
+export interface MorePopoverOptions {
+  size: ImageSize;
+  onSize(next: ImageSize): void;
+  onCopyUrl(): void;
+  onDownload(): void;
+  onDuplicate?(): void;
+  onDelete(): void;
+}
+
+export function renderMorePopover(opts: MorePopoverOptions): HTMLElement {
+  const root = document.createElement('div');
+  root.className = 'blok-image-popover';
+  root.setAttribute('role', 'menu');
+  root.setAttribute('data-role', 'image-popover');
+
+  const sizeLabel = document.createElement('div');
+  sizeLabel.className = 'blok-image-popover__label';
+  sizeLabel.textContent = 'Size';
+  root.appendChild(sizeLabel);
+
+  const sizes = document.createElement('div');
+  sizes.className = 'blok-image-popover__sizes';
+  const sizeDefs: { value: ImageSize; label: string }[] = [
+    { value: 'sm',   label: 'Small' },
+    { value: 'md',   label: 'Medium' },
+    { value: 'lg',   label: 'Large' },
+    { value: 'full', label: 'Full' },
+  ];
+  for (const s of sizeDefs) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'blok-image-popover__size';
+    btn.setAttribute('data-action', `size-${s.value}`);
+    btn.setAttribute('aria-pressed', opts.size === s.value ? 'true' : 'false');
+    btn.textContent = s.label;
+    btn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      opts.onSize(s.value);
+    });
+    sizes.appendChild(btn);
+  }
+  root.appendChild(sizes);
+
+  appendSep(root);
+
+  appendPopoverItem(root, {
+    action: 'download',
+    label: 'Download original',
+    onClick: opts.onDownload,
+  });
+  appendPopoverItem(root, {
+    action: 'copy-url',
+    label: 'Copy URL',
+    onClick: opts.onCopyUrl,
+  });
+  if (opts.onDuplicate) {
+    appendPopoverItem(root, {
+      action: 'duplicate',
+      label: 'Duplicate',
+      onClick: opts.onDuplicate,
+    });
+  }
+
+  appendSep(root);
+
+  appendPopoverItem(root, {
+    action: 'delete',
+    label: 'Delete',
+    onClick: opts.onDelete,
+    danger: true,
+  });
+
+  return root;
+}
+
+function appendSep(parent: HTMLElement): void {
+  const s = document.createElement('div');
+  s.className = 'blok-image-popover__sep';
+  parent.appendChild(s);
+}
+
+interface PopoverItemSpec {
+  action: string;
+  label: string;
+  onClick(): void;
+  danger?: boolean;
+}
+
+function appendPopoverItem(parent: HTMLElement, spec: PopoverItemSpec): void {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = spec.danger
+    ? 'blok-image-popover__item is-danger'
+    : 'blok-image-popover__item';
+  btn.setAttribute('role', 'menuitem');
+  btn.setAttribute('data-action', spec.action);
+  btn.textContent = spec.label;
+  btn.addEventListener('click', (event) => {
+    event.stopPropagation();
+    spec.onClick();
+  });
+  parent.appendChild(btn);
 }

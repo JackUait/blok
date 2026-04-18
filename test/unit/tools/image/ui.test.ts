@@ -76,40 +76,112 @@ describe('openLightbox', () => {
   });
 });
 
-import { renderOverlay } from '../../../../src/tools/image/ui';
+import { renderOverlay, renderMorePopover } from '../../../../src/tools/image/ui';
 import { vi } from 'vitest';
+
+const noop = (): void => undefined;
+const makeOverlayOpts = (over: Partial<Parameters<typeof renderOverlay>[0]> = {}) => ({
+  state: { alignment: 'center' as const, captionVisible: true, hasAlt: false, size: 'md' as const },
+  onAlign: noop,
+  onAlignCycle: noop,
+  onSize: noop,
+  onReplace: noop,
+  onAlt: noop,
+  onDelete: noop,
+  onDownload: noop,
+  onFullscreen: noop,
+  onCopyUrl: noop,
+  onToggleCaption: noop,
+  ...over,
+});
 
 describe('renderOverlay', () => {
   it('exposes data-action buttons for each command', () => {
-    const overlay = renderOverlay({
-      onAlign: () => undefined,
-      onReplace: () => undefined,
-      onAlt: () => undefined,
-      onDelete: () => undefined,
-      onDownload: () => undefined,
-      onFullscreen: () => undefined,
-    });
+    const overlay = renderOverlay(makeOverlayOpts());
     expect(overlay.querySelector('[data-action="align"]')).not.toBeNull();
     expect(overlay.querySelector('[data-action="replace"]')).not.toBeNull();
     expect(overlay.querySelector('[data-action="alt"]')).not.toBeNull();
     expect(overlay.querySelector('[data-action="delete"]')).not.toBeNull();
     expect(overlay.querySelector('[data-action="download"]')).not.toBeNull();
     expect(overlay.querySelector('[data-action="fullscreen"]')).not.toBeNull();
+    expect(overlay.querySelector('[data-action="more"]')).not.toBeNull();
+    expect(overlay.querySelector('[data-action="caption-toggle"]')).not.toBeNull();
   });
 
-  it('invokes the matching handler on click', () => {
+  it('renders four alignment-pill buttons with aria-pressed reflecting state', () => {
+    const overlay = renderOverlay(makeOverlayOpts({ state: { alignment: 'right', captionVisible: true, hasAlt: false, size: 'md' } }));
+    const left = overlay.querySelector<HTMLButtonElement>('[data-action="align-left"]');
+    const center = overlay.querySelector<HTMLButtonElement>('[data-action="align-center"]');
+    const right = overlay.querySelector<HTMLButtonElement>('[data-action="align-right"]');
+    const full = overlay.querySelector<HTMLButtonElement>('[data-action="align-full"]');
+    if (!left || !center || !right || !full) throw new Error('pill buttons missing');
+    expect(right.getAttribute('aria-pressed')).toBe('true');
+    expect(left.getAttribute('aria-pressed')).toBe('false');
+    expect(full.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('invokes onAlign with the chosen value when a pill button is clicked', () => {
     const onAlign = vi.fn();
-    const overlay = renderOverlay({
-      onAlign,
-      onReplace: () => undefined,
-      onAlt: () => undefined,
-      onDelete: () => undefined,
-      onDownload: () => undefined,
-      onFullscreen: () => undefined,
+    const overlay = renderOverlay(makeOverlayOpts({ onAlign }));
+    overlay.querySelector<HTMLButtonElement>('[data-action="align-full"]')?.click();
+    expect(onAlign).toHaveBeenCalledWith('full');
+  });
+
+  it('invokes onAlignCycle via the legacy align alias', () => {
+    const onAlignCycle = vi.fn();
+    const overlay = renderOverlay(makeOverlayOpts({ onAlignCycle }));
+    overlay.querySelector<HTMLButtonElement>('[data-action="align"]')?.click();
+    expect(onAlignCycle).toHaveBeenCalled();
+  });
+});
+
+describe('renderMorePopover', () => {
+  it('renders four size preset buttons with aria-pressed reflecting state', () => {
+    const pop = renderMorePopover({
+      size: 'lg',
+      onSize: noop,
+      onCopyUrl: noop,
+      onDownload: noop,
+      onDelete: noop,
     });
-    const btn = overlay.querySelector<HTMLButtonElement>('[data-action="align"]');
-    if (!btn) throw new Error('align missing');
-    btn.click();
-    expect(onAlign).toHaveBeenCalled();
+    const lg = pop.querySelector<HTMLButtonElement>('[data-action="size-lg"]');
+    const sm = pop.querySelector<HTMLButtonElement>('[data-action="size-sm"]');
+    if (!lg || !sm) throw new Error('size buttons missing');
+    expect(lg.getAttribute('aria-pressed')).toBe('true');
+    expect(sm.getAttribute('aria-pressed')).toBe('false');
+    expect(pop.querySelector('[data-action="size-md"]')).not.toBeNull();
+    expect(pop.querySelector('[data-action="size-full"]')).not.toBeNull();
+  });
+
+  it('fires onSize with the chosen preset', () => {
+    const onSize = vi.fn();
+    const pop = renderMorePopover({
+      size: 'md',
+      onSize,
+      onCopyUrl: noop,
+      onDownload: noop,
+      onDelete: noop,
+    });
+    pop.querySelector<HTMLButtonElement>('[data-action="size-sm"]')?.click();
+    expect(onSize).toHaveBeenCalledWith('sm');
+  });
+
+  it('fires onCopyUrl / onDownload / onDelete when their items are clicked', () => {
+    const onCopyUrl = vi.fn();
+    const onDownload = vi.fn();
+    const onDelete = vi.fn();
+    const pop = renderMorePopover({
+      size: 'md',
+      onSize: noop,
+      onCopyUrl,
+      onDownload,
+      onDelete,
+    });
+    pop.querySelector<HTMLButtonElement>('[data-action="copy-url"]')?.click();
+    pop.querySelector<HTMLButtonElement>('[data-action="download"]')?.click();
+    pop.querySelector<HTMLButtonElement>('[data-action="delete"]')?.click();
+    expect(onCopyUrl).toHaveBeenCalled();
+    expect(onDownload).toHaveBeenCalled();
+    expect(onDelete).toHaveBeenCalled();
   });
 });

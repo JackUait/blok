@@ -9,13 +9,31 @@ import type {
   FilePasteEvent,
   PatternPasteEvent,
 } from '../../../types';
-import type { ImageData, ImageConfig } from '../../../types/tools/image';
+import type {
+  ImageAlignment,
+  ImageConfig,
+  ImageData,
+  ImageFrame,
+  ImageSize,
+} from '../../../types/tools/image';
 import { IconImage } from '../../components/icons';
-import { DEFAULT_CAPTION_PLACEHOLDER, URL_PATTERN } from './constants';
+import {
+  ALIGNMENT_ORDER,
+  DEFAULT_CAPTION_PLACEHOLDER,
+  URL_PATTERN,
+} from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
+import { renderErrorState } from './error-state';
 import { ImageError } from './errors';
 import { attachResizeHandle, type ResizeEdge } from './resizer';
-import { openLightbox, renderCaption, renderImage, renderOverlay } from './ui';
+import {
+  openLightbox,
+  renderCaption,
+  renderImage,
+  renderMorePopover,
+  renderOverlay,
+} from './ui';
+import { renderUploadingState, type UploadingStateElement } from './uploading-state';
 import { Uploader, type UploadResult } from './uploader';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
@@ -30,7 +48,11 @@ export class ImageTool implements BlockTool {
   private root: HTMLElement | null = null;
   private state: ToolState = 'EMPTY';
   private emptyStateEl: EmptyStateElement | null = null;
+  private uploadingEl: UploadingStateElement | null = null;
   private resizeDetach: (() => void)[] = [];
+  private errorMessage: string | null = null;
+  private lastFileName: string | null = null;
+  private popover: HTMLElement | null = null;
 
   constructor(options: BlockToolConstructorOptions<ImageData, ImageConfig>) {
     this.api = options.api;
@@ -57,6 +79,10 @@ export class ImageTool implements BlockTool {
     if (this.data.alignment !== undefined) out.alignment = this.data.alignment;
     if (this.data.alt !== undefined) out.alt = this.data.alt;
     if (this.data.fileName !== undefined) out.fileName = this.data.fileName;
+    if (this.data.size !== undefined) out.size = this.data.size;
+    if (this.data.frame !== undefined) out.frame = this.data.frame;
+    if (this.data.rounded !== undefined) out.rounded = this.data.rounded;
+    if (this.data.captionVisible !== undefined) out.captionVisible = this.data.captionVisible;
     return out;
   }
 
@@ -92,24 +118,32 @@ export class ImageTool implements BlockTool {
     }
     if (event.type === 'file') {
       const detail = (event as FilePasteEvent).detail;
-      this.state = 'LOADING';
-      this.renderState();
-      void this.uploader
-        .handleFile(detail.file)
-        .then((result) => this.applyResult(result))
-        .catch((err) => this.applyError(err));
+      this.startUpload(detail.file);
     }
+  }
+
+  private startUpload(file: File): void {
+    this.lastFileName = file.name;
+    this.state = 'LOADING';
+    this.errorMessage = null;
+    this.renderState();
+    void this.uploader
+      .handleFile(file)
+      .then((result) => this.applyResult(result))
+      .catch((err) => this.applyError(err));
   }
 
   private applyResult(result: UploadResult): void {
     this.data = { ...this.data, url: result.url, fileName: result.fileName ?? this.data.fileName };
     this.state = 'RENDERED';
+    this.errorMessage = null;
     this.renderState();
     this.block.dispatchChange();
   }
 
   private applyError(err: unknown): void {
     this.state = 'ERROR';
+    this.errorMessage = err instanceof Error ? err.message : 'Upload failed';
     this.renderState();
     if (!(err instanceof ImageError)) {
       console.error('[image] upload failed', err);
@@ -128,59 +162,102 @@ export class ImageTool implements BlockTool {
   }
 
   public removed(): void {
-    while (this.resizeDetach.length > 0) {
-      const detach = this.resizeDetach.pop();
-      if (detach) detach();
-    }
+    this.detachResize();
     if (this.data.url.startsWith('blob:')) {
       URL.revokeObjectURL(this.data.url);
     }
   }
 
-  private renderState(): void {
-    if (!this.root) return;
+  private detachResize(): void {
     while (this.resizeDetach.length > 0) {
       const detach = this.resizeDetach.pop();
       if (detach) detach();
     }
+  }
+
+  private syncRootAttributes(): void {
+    if (!this.root) return;
+    const r = this.root;
+    r.setAttribute('data-state', this.state.toLowerCase());
+    r.setAttribute('data-size', this.data.size ?? 'md');
+    r.setAttribute('data-align', this.data.alignment ?? 'center');
+    r.setAttribute('data-frame', this.data.frame ?? 'none');
+    r.setAttribute('data-rounded', this.data.rounded === false ? 'off' : 'on');
+    r.setAttribute(
+      'data-caption',
+      this.data.captionVisible === false ? 'off' : 'on'
+    );
+    r.setAttribute('data-alt', this.data.alt ? 'set' : 'none');
+    r.setAttribute('data-selected', 'false');
+  }
+
+  private renderState(): void {
+    if (!this.root) return;
+    this.detachResize();
+    this.popover = null;
     this.root.replaceChildren();
+    this.syncRootAttributes();
 
     if (this.state === 'EMPTY') {
-      const el = renderEmptyState({
-        onFile: (file) => {
-          const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
-          Object.defineProperty(event, 'type', { value: 'file' });
-          this.onPaste(event);
-        },
-        onUrl: (url) => {
-          void this.uploader
-            .handleUrl(url)
-            .then((result) => this.applyResult(result))
-            .catch((err) => this.showEmptyError(err));
-        },
-        acceptTypes: this.config.types,
-      });
-      this.emptyStateEl = el;
-      this.root.appendChild(el);
+      this.renderEmpty();
       return;
     }
     if (this.state === 'LOADING') {
-      const skeleton = document.createElement('div');
-      skeleton.setAttribute('data-role', 'loading');
-      skeleton.textContent = 'Loading…';
-      this.root.appendChild(skeleton);
+      this.renderLoading();
       return;
     }
     if (this.state === 'ERROR') {
-      const err = document.createElement('div');
-      err.setAttribute('data-role', 'error');
-      err.textContent = "Couldn't load image";
-      this.root.appendChild(err);
+      this.renderError();
       return;
     }
 
-    const figure = renderImage(this.data);
+    this.renderRendered();
+  }
+
+  private renderEmpty(): void {
+    if (!this.root) return;
+    const el = renderEmptyState({
+      onFile: (file) => this.startUpload(file),
+      onUrl: (url) => {
+        void this.uploader
+          .handleUrl(url)
+          .then((result) => this.applyResult(result))
+          .catch((err) => this.showEmptyError(err));
+      },
+      acceptTypes: this.config.types,
+    });
+    this.emptyStateEl = el;
+    this.root.appendChild(el);
+  }
+
+  private renderLoading(): void {
+    if (!this.root) return;
+    const el = renderUploadingState({
+      fileName: this.lastFileName ?? 'Uploading…',
+      onCancel: () => this.transitionToEmpty(),
+    });
+    this.uploadingEl = el;
+    this.root.appendChild(el);
+  }
+
+  private renderError(): void {
+    if (!this.root) return;
+    const el = renderErrorState({
+      message: this.errorMessage ?? undefined,
+      onRetry: this.lastFileName
+        ? undefined
+        : () => this.transitionToEmpty(),
+      onReplace: () => this.transitionToEmpty(),
+    });
+    this.root.appendChild(el);
+  }
+
+  private renderRendered(): void {
+    if (!this.root) return;
+    const figure = renderImage(this.data, { altBadge: Boolean(this.data.alt) });
     figure.style.position = 'relative';
+
+    const frame = figure.querySelector<HTMLElement>('.blok-image-frame') ?? figure;
 
     const imgEl = figure.querySelector('img');
     if (imgEl) {
@@ -190,25 +267,54 @@ export class ImageTool implements BlockTool {
 
     if (!this.readOnly) {
       const overlay = renderOverlay({
-        onAlign: () => this.cycleAlignment(),
+        state: {
+          alignment: this.data.alignment ?? 'center',
+          captionVisible: this.data.captionVisible !== false,
+          hasAlt: Boolean(this.data.alt),
+          size: this.data.size ?? 'md',
+        },
+        onAlign: (next) => this.setAlignment(next),
+        onAlignCycle: () => this.cycleAlignment(),
+        onSize: (next) => this.setSize(next),
         onReplace: () => this.transitionToEmpty(),
         onAlt: () => this.promptAlt(),
-        onDelete: () => {
-          const blocks = (this.api as unknown as { blocks?: { delete?: (id: string) => void } }).blocks;
-          blocks?.delete?.(this.block.id);
-        },
+        onDelete: () => this.deleteBlock(),
         onDownload: () => this.download(),
         onFullscreen: () => openLightbox({ url: this.data.url, alt: this.data.alt }),
+        onCopyUrl: () => this.copyUrl(),
+        onToggleCaption: () => this.toggleCaption(),
       });
-      figure.appendChild(overlay);
-      figure.addEventListener('mouseenter', () => {
-        overlay.style.opacity = '1';
-        overlay.style.pointerEvents = 'auto';
+      frame.appendChild(overlay);
+
+      const popover = renderMorePopover({
+        size: this.data.size ?? 'md',
+        onSize: (next) => {
+          this.setSize(next);
+          this.closePopover();
+        },
+        onCopyUrl: () => {
+          this.copyUrl();
+          this.closePopover();
+        },
+        onDownload: () => {
+          this.download();
+          this.closePopover();
+        },
+        onDelete: () => {
+          this.closePopover();
+          this.deleteBlock();
+        },
       });
-      figure.addEventListener('mouseleave', () => {
-        overlay.style.opacity = '0';
-        overlay.style.pointerEvents = 'none';
+      this.popover = popover;
+      frame.appendChild(popover);
+
+      const moreBtn = overlay.querySelector<HTMLButtonElement>('[data-action="more"]');
+      moreBtn?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        this.togglePopover();
       });
+
+      figure.addEventListener('mouseleave', () => this.closePopover());
     }
 
     const placeholder = this.config.captionPlaceholder ?? DEFAULT_CAPTION_PLACEHOLDER;
@@ -227,10 +333,19 @@ export class ImageTool implements BlockTool {
     figure.appendChild(caption);
 
     if (!this.readOnly) {
-      this.attachResizeHandles(figure);
+      this.attachResizeHandles(frame);
     }
 
     this.root.appendChild(figure);
+  }
+
+  private togglePopover(): void {
+    if (!this.popover) return;
+    this.popover.classList.toggle('is-open');
+  }
+
+  private closePopover(): void {
+    this.popover?.classList.remove('is-open');
   }
 
   private attachResizeHandles(figure: HTMLElement): void {
@@ -259,26 +374,47 @@ export class ImageTool implements BlockTool {
     const handle = document.createElement('div');
     handle.setAttribute('data-role', 'resize-handle');
     handle.setAttribute('data-edge', edge);
-    Object.assign(handle.style, {
-      position: 'absolute',
-      top: '0',
-      bottom: '0',
-      width: '6px',
-      cursor: 'col-resize',
-      background: 'transparent',
-    } as Partial<CSSStyleDeclaration>);
-    const side = edge === 'left' ? 'left' : 'right';
-    handle.style[side] = '-3px';
     return handle;
   }
 
   private cycleAlignment(): void {
-    const order: NonNullable<ImageData['alignment']>[] = ['left', 'center', 'right'];
     const current = this.data.alignment;
     const next = current === undefined
-      ? order[0]
-      : order[(order.indexOf(current) + 1) % order.length];
+      ? ALIGNMENT_ORDER[0]
+      : ALIGNMENT_ORDER[(ALIGNMENT_ORDER.indexOf(current) + 1) % ALIGNMENT_ORDER.length];
+    this.setAlignment(next);
+  }
+
+  private setAlignment(next: ImageAlignment): void {
+    if (this.data.alignment === next) return;
     this.data.alignment = next;
+    this.block.dispatchChange();
+    this.renderState();
+  }
+
+  private setSize(next: ImageSize): void {
+    if (this.data.size === next) return;
+    this.data.size = next;
+    this.block.dispatchChange();
+    this.renderState();
+  }
+
+  public setFrame(next: ImageFrame): void {
+    if (this.data.frame === next) return;
+    this.data.frame = next;
+    this.block.dispatchChange();
+    this.renderState();
+  }
+
+  public setRounded(next: boolean): void {
+    if (this.data.rounded === next) return;
+    this.data.rounded = next;
+    this.block.dispatchChange();
+    this.renderState();
+  }
+
+  private toggleCaption(): void {
+    this.data.captionVisible = this.data.captionVisible === false;
     this.block.dispatchChange();
     this.renderState();
   }
@@ -286,6 +422,7 @@ export class ImageTool implements BlockTool {
   private transitionToEmpty(): void {
     this.data = { ...this.data, url: '' };
     this.state = 'EMPTY';
+    this.errorMessage = null;
     this.renderState();
     this.block.dispatchChange();
   }
@@ -299,6 +436,11 @@ export class ImageTool implements BlockTool {
     this.renderState();
   }
 
+  private deleteBlock(): void {
+    const blocks = (this.api as unknown as { blocks?: { delete?: (id: string) => void } }).blocks;
+    blocks?.delete?.(this.block.id);
+  }
+
   private download(): void {
     const a = document.createElement('a');
     a.href = this.data.url;
@@ -308,5 +450,12 @@ export class ImageTool implements BlockTool {
     document.body.appendChild(a);
     a.click();
     a.remove();
+  }
+
+  private copyUrl(): void {
+    const clip = navigator.clipboard;
+    if (clip && typeof clip.writeText === 'function') {
+      void clip.writeText(this.data.url);
+    }
   }
 }

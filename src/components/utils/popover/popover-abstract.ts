@@ -13,7 +13,14 @@ import { css } from './popover.const';
 import type { PopoverEventMap, PopoverMessages, PopoverParams, PopoverNodes } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 
-
+/**
+ * Feature-detects the native HTML Popover API. When supported, popovers
+ * are promoted to the CSS Top Layer via `showPopover()` so they render
+ * above any other element regardless of z-index or stacking context.
+ */
+const supportsPopoverAPI = (): boolean => {
+  return typeof HTMLElement !== 'undefined' && 'popover' in HTMLElement.prototype;
+};
 
 /**
  * Class responsible for rendering popover and handling its behaviour.
@@ -124,6 +131,32 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       document.body.appendChild(mountTarget);
     }
 
+    // Promote ROOT, body-mounted popovers into the CSS Top Layer so they
+    // render above every other element on the page (site headers, drawers,
+    // consumer overlays). Skipped when:
+    //   - the popover is nested inside another popover (descendants render
+    //     inside the same top layer automatically; promoting them would
+    //     change their containing block to the viewport and break
+    //     positioning math that assumes the nested root sits at the
+    //     parent's coordinates);
+    //   - the popover has no `trigger` (inline-toolbar popovers mount
+    //     inside their owning wrapper rather than `<body>`; promotion
+    //     would leave that wrapper empty and zero-sized).
+    const isRoot = (this.params.nestingLevel ?? 0) === 0;
+    const isBodyMounted = this.params.trigger !== undefined;
+
+    if (mountTarget !== null && isRoot && isBodyMounted && supportsPopoverAPI()) {
+      if (!mountTarget.hasAttribute('popover')) {
+        mountTarget.setAttribute('popover', 'manual');
+      }
+
+      try {
+        mountTarget.showPopover();
+      } catch {
+        // Already open or not eligible — fall back to z-index stacking.
+      }
+    }
+
     // Update DOM state
     this.nodes.popover.setAttribute(DATA_ATTR.popoverOpened, 'true');
     this.nodes.popoverContainer.className = twMerge(
@@ -164,6 +197,20 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * Closes popover
    */
   public hide(): void {
+    const mountTarget = this.nodes.popover;
+
+    if (mountTarget !== null && supportsPopoverAPI() && mountTarget.hasAttribute('popover')) {
+      try {
+        mountTarget.hidePopover();
+      } catch {
+        // Not open — nothing to remove from the top layer.
+      }
+      // Remove the attribute so the UA `[popover]:not(:popover-open)`
+      // display:none rule no longer applies; the popover returns to
+      // ordinary layout controlled entirely by Blok's own classes.
+      mountTarget.removeAttribute('popover');
+    }
+
     // Update DOM state
     this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpened);
     this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpenTop);
@@ -490,6 +537,13 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       popover.setAttribute('data-blok-popover-custom-class', this.params.class);
     }
     popover.setAttribute('data-blok-testid', 'popover');
+
+    // Popover attribute is added lazily on show() — adding it at creation
+    // time would invoke UA `[popover]:not(:popover-open)` display:none
+    // styles and, in Chromium, fire synthesized pointer events when the
+    // element is promoted to the top layer (matching the mouse position
+    // left over from the trigger click). Adding it only around the show()
+    // call avoids those synthetic events.
 
     // Set CSS variables
     popover.style.setProperty('--width', this.params.width ?? 'auto');

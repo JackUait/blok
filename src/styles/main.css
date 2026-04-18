@@ -100,6 +100,28 @@
   direction: rtl !important;
 }
 
+/*
+  Native Popover API: the UA stylesheet for `[popover]` imposes modal-dialog
+  defaults (position: fixed; inset: 0; margin: auto; width: fit-content;
+  border: solid; padding: 0.25em; background: Canvas; overflow: auto). Those
+  defaults fight with Blok's own popover layout, which positions the content
+  via inline `top`/`left` and styles the inner container directly. Reset them
+  so the `popover` attribute only contributes its Top Layer promotion.
+*/
+[data-blok-popover][popover] {
+  inset: auto;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  background: transparent;
+  color: inherit;
+  overflow: visible;
+}
+
 /* Font family defaults — hoisted to :root so they resolve anywhere (including popovers). */
 :root {
   --blok-font-sans: 'Inter', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
@@ -884,7 +906,7 @@
   --blok-z-selection: 10;
   --blok-z-toolbar: 20;
   --blok-z-inline-toolbar: 30;
-  --blok-z-popover: 50;
+  --blok-z-popover: 2147483000;
   --blok-z-tooltip: 100;
   --blok-z-drawer: 1000;
 

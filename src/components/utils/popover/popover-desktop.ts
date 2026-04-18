@@ -54,6 +54,17 @@ export class PopoverDesktop extends PopoverAbstract {
   private previouslyHoveredItem: PopoverItem | null = null;
 
   /**
+   * Suppresses the synchronous mouseover that Chromium fires immediately
+   * after the popover enters the CSS Top Layer (via `showPopover()`).
+   * Without this guard, the layout-triggered hover would open whatever
+   * nested submenu happens to sit under the pointer the moment the parent
+   * popover appears (e.g. "Convert to" auto-expands the moment block
+   * settings opens). Cleared on the next microtask so genuine async hover
+   * events still work.
+   */
+  private suppressSyncHover = false;
+
+  /**
    * Element of the page that creates 'scope' of the popover.
    * If possible, popover will not cross specified element's borders when opening.
    */
@@ -288,6 +299,17 @@ export class PopoverDesktop extends PopoverAbstract {
       }
     }
 
+    // Set flag BEFORE super.show() so handleHover can suppress the
+    // synthesized mouseover Chromium fires when the element enters the
+    // CSS Top Layer. The flag is cleared after two animation frames so
+    // the synthesized hit test (which may run after layout/paint) is
+    // covered while genuine async hover events still work.
+    this.suppressSyncHover = true;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        this.suppressSyncHover = false;
+      });
+    });
     super.show();
     this.flipper?.activate(this.flippableElements);
 
@@ -438,6 +460,12 @@ export class PopoverDesktop extends PopoverAbstract {
    * @param event - hover event data
    */
   protected handleHover(event: Event): void {
+    // Suppress the synthesized mouseover that Chromium fires immediately
+    // after the popover enters the CSS Top Layer. See `suppressSyncHover`.
+    if (this.suppressSyncHover) {
+      return;
+    }
+
     const item = this.getTargetItem(event);
 
     if (item === undefined) {
@@ -755,6 +783,11 @@ export class PopoverDesktop extends PopoverAbstract {
     popoverClone.style.visibility = 'hidden';
     popoverClone.style.position = 'absolute';
     popoverClone.style.top = '-1000px';
+
+    // The native `popover` attribute makes the element `display:none` until
+    // `showPopover()` is called. Remove it from the measurement clone so the
+    // container has a rendered box and offsetHeight/offsetWidth are real.
+    popoverClone.removeAttribute('popover');
 
     popoverClone.setAttribute(DATA_ATTR.popoverOpened, 'true');
     popoverClone.querySelector(`[${DATA_ATTR.nested}]`)?.remove();

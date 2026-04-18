@@ -730,7 +730,7 @@
   /* Tokens extracted from TS files */
   --blok-mobile-border: #e8e8eb;
   --blok-search-input-bg: #f8f8f8;
-  --blok-search-input-border: rgba(226, 226, 229, 0.20);
+  --blok-search-input-border: rgba(226, 226, 229, 0.2);
   --blok-search-input-focus-border: rgba(35, 131, 226, 0.5);
   --blok-link-input-border: rgba(226, 226, 229, 0.2);
 
@@ -784,8 +784,8 @@
 
   /* Color picker swatch */
   --blok-swatch-neutral-bg: #f7f7f5;
-  --blok-swatch-ring-hover: rgba(0, 0, 0, 0.10);
-  --blok-swatch-ring-active: rgba(0, 0, 0, 0.30);
+  --blok-swatch-ring-hover: rgba(0, 0, 0, 0.1);
+  --blok-swatch-ring-active: rgba(0, 0, 0, 0.3);
 
   /* Surface tokens (code blocks, secondary containers) */
   --blok-bg-secondary: #f7f8fa;
@@ -841,6 +841,8 @@
   --blok-table-add-pill-border: rgba(55, 53, 47, 0.17);
   --blok-database-card-menu-hover-bg: rgba(0, 0, 0, 0.04);
   --blok-database-column-pill-text: rgba(55, 53, 47, 0.9);
+  --blok-database-card-actions-icon: rgba(55, 53, 47, 0.55);
+  --blok-database-card-actions-divider: rgba(55, 53, 47, 0.15);
 }
 
 /* ─── Dark theme — system preference ────────────────── */
@@ -885,7 +887,7 @@
     --blok-notify-btn-confirm-bg: #34c992;
     --blok-mobile-border: rgba(255, 255, 255, 0.07);
     --blok-search-input-bg: #363636;
-    --blok-search-input-border: rgba(255, 255, 255, 0.20);
+    --blok-search-input-border: rgba(255, 255, 255, 0.2);
     --blok-search-input-focus-border: rgba(35, 131, 226, 0.5);
     --blok-link-input-border: #37352f;
     --blok-popover-icon-bg: rgba(255, 255, 255, 0.08);
@@ -982,6 +984,8 @@
     --blok-table-add-pill-border: rgba(255, 255, 255, 0.17);
     --blok-database-card-menu-hover-bg: rgba(255, 255, 255, 0.12);
     --blok-database-column-pill-text: rgba(255, 255, 255, 0.9);
+    --blok-database-card-actions-icon: rgba(255, 255, 255, 0.75);
+    --blok-database-card-actions-divider: rgba(255, 255, 255, 0.4);
   }
 }
 
@@ -1026,7 +1030,7 @@
   --blok-notify-btn-confirm-bg: #34c992;
   --blok-mobile-border: rgba(255, 255, 255, 0.07);
   --blok-search-input-bg: #363636;
-  --blok-search-input-border: rgba(255, 255, 255, 0.20);
+  --blok-search-input-border: rgba(255, 255, 255, 0.2);
   --blok-search-input-focus-border: rgba(35, 131, 226, 0.5);
   --blok-link-input-border: #37352f;
   --blok-popover-icon-bg: rgba(255, 255, 255, 0.08);
@@ -1123,6 +1127,8 @@
   --blok-table-add-pill-border: rgba(255, 255, 255, 0.17);
   --blok-database-card-menu-hover-bg: rgba(255, 255, 255, 0.12);
   --blok-database-column-pill-text: rgba(255, 255, 255, 0.9);
+  --blok-database-card-actions-icon: rgba(255, 255, 255, 0.75);
+  --blok-database-card-actions-divider: rgba(255, 255, 255, 0.4);
 }
 
 /* ─── Checklist checkbox — custom styled ────────────────── */
@@ -1828,7 +1834,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--blok-database-card-actions-icon, rgba(255,255,255,0.75));
+  color: var(--blok-database-card-actions-icon);
   width: 28px;
   height: 28px;
   border-radius: 6px;
@@ -1855,7 +1861,7 @@
   line-height: 1.45;
   background: none;
   border: none;
-  border-bottom: 1px solid var(--blok-database-card-actions-icon, rgba(255,255,255,0.4));
+  border-bottom: 1px solid var(--blok-database-card-actions-divider);
   color: inherit;
   outline: none;
   width: 100%;

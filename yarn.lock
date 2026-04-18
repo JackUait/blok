@@ -1010,6 +1010,34 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@fontsource-variable/inter@npm:^5.2.8":
+  version: 5.2.8
+  resolution: "@fontsource-variable/inter@npm:5.2.8"
+  checksum: 10c0/35b46df31c8c18f55f87228acf6297e4dac6cc9f38d0faaafdaf5a40e40c386cf1bfb115fb0fe0dcdb9b7e14f582843693ccf070d9c903072a5b2fc0f8dfde56
+  languageName: node
+  linkType: hard
+
+"@fontsource-variable/jetbrains-mono@npm:^5.2.8":
+  version: 5.2.8
+  resolution: "@fontsource-variable/jetbrains-mono@npm:5.2.8"
+  checksum: 10c0/574e5463b802cfdd6ec8dd16724d2fd5ee38204815729c9dca0f457a417f0a4d32e6ec4ed2dfa0e5a5de5a9b0deaeb9f3c0b49b332763ed40172de43d6b1502f
+  languageName: node
+  linkType: hard
+
+"@fontsource-variable/source-serif-4@npm:^5.2.9":
+  version: 5.2.9
+  resolution: "@fontsource-variable/source-serif-4@npm:5.2.9"
+  checksum: 10c0/95bf11dbdf1b9948d6f8c01ed194c0dea41c277ef65f1f43d24ad2690b4dc57ec0ccae0adbdd9648604a436e1c7b02441a85474605d53dce2f4619e9df162df6
+  languageName: node
+  linkType: hard
+
+"@fontsource/permanent-marker@npm:^5.2.7":
+  version: 5.2.7
+  resolution: "@fontsource/permanent-marker@npm:5.2.7"
+  checksum: 10c0/ced14d22a07dda5491c0e5c3f5c2f46b25e4e669dea4eeffa8f41dda51a1469c6712b6f78d24bc9cb9318c19456b61ac78575e254b00a6cd2aeea7b766fec462
+  languageName: node
+  linkType: hard
+
 "@humanfs/core@npm:^0.19.1":
   version: 0.19.1
   resolution: "@humanfs/core@npm:0.19.1"
@@ -1100,6 +1128,10 @@ __metadata:
     "@commitlint/cli": "npm:20.4.4"
     "@commitlint/config-conventional": "npm:20.4.4"
     "@emoji-mart/data": "npm:^1.2.1"
+    "@fontsource-variable/inter": "npm:^5.2.8"
+    "@fontsource-variable/jetbrains-mono": "npm:^5.2.8"
+    "@fontsource-variable/source-serif-4": "npm:^5.2.9"
+    "@fontsource/permanent-marker": "npm:^5.2.7"
     "@playwright/test": "npm:1.58.2"
     "@storybook/addon-a11y": "npm:10.2.19"
     "@storybook/addon-vitest": "npm:10.2.19"

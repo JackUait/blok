@@ -903,6 +903,20 @@
   --blok-ease-bounce: cubic-bezier(0.215, 0.61, 0.355, 1);
   --blok-ease-exit: cubic-bezier(0.4, 0, 1, 1);
   --blok-ease-exit-out: ease-out;
+
+  /* Typography tokens. */
+  --blok-font-size-body: 14px;
+  --blok-font-size-ui-label: 13px;
+  --blok-font-size-ui-compact: 12px;
+  --blok-font-size-ui-small: 11px;
+
+  --blok-font-weight-regular: 400;
+  --blok-font-weight-medium: 500;
+  --blok-font-weight-semibold: 600;
+
+  --blok-line-height-tight: 1;
+  --blok-line-height-body: 1.45;
+  --blok-line-height-option: 1.3;
 }
 
 /* ─── Dark theme — system preference ────────────────── */

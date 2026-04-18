@@ -87,3 +87,9 @@ Visit the documentation site for:
 💬 **Join the Telegram channel**: [t.me/that_ai_guy](https://t.me/that_ai_guy)
 
 Follow for updates, discussions, and insights about Blok and other projects.
+
+## License & Attribution
+
+Blok is licensed under the [Apache License 2.0](./LICENSE). See the [NOTICE](./NOTICE) file for attribution details.
+
+Blok was originally forked from [Editor.js](https://github.com/codex-team/editor.js) by [CodeX](https://codex.so/) in November 2025 and has been substantially reworked since. The Editor.js codebase remains © CodeX under Apache-2.0; subsequent Blok-specific changes are © JackUait, also under Apache-2.0.

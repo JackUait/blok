@@ -65,7 +65,8 @@
     "dist",
     "types",
     "src",
-    "codemod"
+    "codemod",
+    "NOTICE"
   ],
   "publishConfig": {
     "access": "public"

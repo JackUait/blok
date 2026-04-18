@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ImageTool } from '../../../../src/tools/image';
 import type { ImageData, ImageConfig } from '../../../../types/tools/image';
-import type { API, BlockToolConstructorOptions, BlockAPI } from '../../../../types';
+import type { API, BlockToolConstructorOptions, BlockAPI, FilePasteEvent, PatternPasteEvent } from '../../../../types';
 
 const createMockApi = (): API => ({
   styles: { block: 'blok-block' },
@@ -66,5 +66,40 @@ describe('ImageTool — RENDERED state', () => {
   it('validate({ url: "https://..." }) returns true', () => {
     const tool = new ImageTool(createOptions());
     expect(tool.validate({ url: 'https://x/y.png' } as ImageData)).toBe(true);
+  });
+});
+
+describe('ImageTool — onPaste', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('onPaste(pattern) sets data.url and renders image', async () => {
+    const tool = new ImageTool(createOptions());
+    const root = tool.render();
+    const event = new CustomEvent('paste', {
+      detail: { key: 'image', data: 'https://x/y.png' },
+    }) as PatternPasteEvent;
+    Object.defineProperty(event, 'type', { value: 'pattern' });
+    tool.onPaste(event);
+    await Promise.resolve();
+    expect(tool.save().url).toBe('https://x/y.png');
+    const img = root.querySelector('img');
+    if (!img) throw new Error('img missing');
+    expect(img.getAttribute('src')).toBe('https://x/y.png');
+  });
+
+  it('onPaste(file) routes through Uploader and sets blob URL', async () => {
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:fake');
+    const tool = new ImageTool(createOptions());
+    const root = tool.render();
+    const file = new File([new Uint8Array(10)], 'p.png', { type: 'image/png' });
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(tool.save().url).toBe('blob:fake');
+    const img = root.querySelector('img');
+    if (!img) throw new Error('img missing');
+    expect(img.getAttribute('src')).toBe('blob:fake');
   });
 });

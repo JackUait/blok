@@ -6,11 +6,15 @@ import type {
   ToolboxConfig,
   API,
   BlockAPI,
+  FilePasteEvent,
+  PatternPasteEvent,
 } from '../../../types';
 import type { ImageData, ImageConfig } from '../../../types/tools/image';
 import { IconImage } from '../../components/icons';
 import { DEFAULT_CAPTION_PLACEHOLDER, URL_PATTERN } from './constants';
+import { ImageError } from './errors';
 import { renderCaption, renderImage } from './ui';
+import { Uploader, type UploadResult } from './uploader';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -18,6 +22,7 @@ export class ImageTool implements BlockTool {
   private readonly api: API;
   private readonly block: BlockAPI;
   private readonly config: ImageConfig;
+  private readonly uploader: Uploader;
   private data: ImageData;
   private readOnly: boolean;
   private root: HTMLElement | null = null;
@@ -30,6 +35,7 @@ export class ImageTool implements BlockTool {
     this.readOnly = options.readOnly;
     this.data = { url: '', ...options.data };
     this.state = this.data.url ? 'RENDERED' : 'EMPTY';
+    this.uploader = new Uploader(this.config);
   }
 
   public render(): HTMLElement {
@@ -74,8 +80,36 @@ export class ImageTool implements BlockTool {
     };
   }
 
-  public onPaste(_event: PasteEvent): void {
-    // wired in next task
+  public onPaste(event: PasteEvent): void {
+    if (event.type === 'pattern') {
+      const detail = (event as PatternPasteEvent).detail;
+      void this.applyResult({ url: detail.data });
+      return;
+    }
+    if (event.type === 'file') {
+      const detail = (event as FilePasteEvent).detail;
+      this.state = 'LOADING';
+      this.renderState();
+      void this.uploader
+        .handleFile(detail.file)
+        .then((result) => this.applyResult(result))
+        .catch((err) => this.applyError(err));
+    }
+  }
+
+  private applyResult(result: UploadResult): void {
+    this.data = { ...this.data, url: result.url, fileName: result.fileName ?? this.data.fileName };
+    this.state = 'RENDERED';
+    this.renderState();
+    this.block.dispatchChange();
+  }
+
+  private applyError(err: unknown): void {
+    this.state = 'ERROR';
+    this.renderState();
+    if (!(err instanceof ImageError)) {
+      console.error('[image] upload failed', err);
+    }
   }
 
   public setReadOnly(state: boolean): void {

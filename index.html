@@ -199,6 +199,43 @@
     .dark-mode .icon-cell .icon-preview { color: #ffffff; }
      .dark-mode .icon-cell .icon-name { color: #a39e98; }
 
+    /* Icon lightbox */
+    .icon-lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 15, 15, 0.72);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      animation: icon-lightbox-fade 0.12s ease-out;
+    }
+    .icon-lightbox__content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      padding: 48px 64px;
+      background: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      min-width: 280px;
+    }
+    .icon-lightbox__preview { color: #1a1a1a; }
+    .icon-lightbox__preview svg { width: 96px; height: 96px; }
+    .icon-lightbox__name {
+      font-family: 'PT Mono', monospace;
+      font-size: 13px;
+      color: #1a1a1a;
+    }
+    .dark-mode .icon-lightbox__content { background: #252525; }
+    .dark-mode .icon-lightbox__preview { color: #ffffff; }
+    .dark-mode .icon-lightbox__name { color: #ffffff; }
+    @keyframes icon-lightbox-fade {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
     /* Settings panel polish */
     #settings-panel {
       box-shadow: -8px 0 24px -8px rgba(0,0,0,0.06), -1px 0 0 0 rgba(0,0,0,0.04);
@@ -317,10 +354,26 @@
 
     /* Settings side-tab handle */
     #settings-tab {
-      transition: transform 0.2s ease, background 0.15s ease, border-color 0.15s ease;
+      transition:
+        transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 220ms cubic-bezier(0.22, 1, 0.36, 1),
+        background 0.15s ease,
+        border-color 0.15s ease;
       box-shadow: -2px 0 12px -4px rgba(0,0,0,0.05);
+      will-change: transform, opacity;
     }
     #settings-tab:hover { transform: translate(-2px, -50%); }
+    /* Hide-on-scroll: slide out to the right + fade */
+    #settings-tab.is-hidden,
+    #settings-tab.is-hidden:hover {
+      transform: translate(calc(100% + 8px), -50%);
+      opacity: 0;
+      pointer-events: none;
+      box-shadow: none;
+      transition:
+        transform 260ms cubic-bezier(0.4, 0, 1, 1),
+        opacity 180ms cubic-bezier(0.4, 0, 1, 1);
+    }
 
     /* Dark mode overrides */
     .dark-mode .playground-header { border-color: #2a2826; }
@@ -1425,54 +1478,11 @@
       'Emoji Picker': ['IconEmojiStar', 'IconEmojiSmile', 'IconEmojiSprout', 'IconEmojiUtensils', 'IconEmojiBall', 'IconEmojiGlobe', 'IconEmojiLightbulb', 'IconEmojiHash', 'IconEmojiFlag'],
     };
 
-    const gallery = document.getElementById('icon-gallery');
-
-    for (const [groupName, iconNames] of Object.entries(iconGroups)) {
-      const group = document.createElement('div');
-      group.className = 'icon-group';
-
-      const title = document.createElement('div');
-      title.className = 'icon-group-title';
-      title.textContent = groupName;
-      group.appendChild(title);
-
-      const grid = document.createElement('div');
-      grid.className = 'icon-grid';
-
-      for (const name of iconNames) {
-        const svg = Icons[name];
-        if (!svg) continue;
-
-        const cell = document.createElement('div');
-        cell.className = 'icon-cell';
-
-        const preview = document.createElement('div');
-        preview.className = 'icon-preview';
-        preview.innerHTML = svg;
-
-        const label = document.createElement('div');
-        label.className = 'icon-name';
-        label.textContent = name;
-
-        cell.appendChild(preview);
-        cell.appendChild(label);
-        grid.appendChild(cell);
-
-        cell.addEventListener('click', async () => {
-          await navigator.clipboard.writeText(name);
-          const original = label.textContent;
-          label.textContent = 'Copied!';
-          label.style.color = document.body.classList.contains('dark-mode') ? '#fff' : '#000';
-          setTimeout(() => {
-            label.textContent = original;
-            label.style.color = '';
-          }, 1000);
-        });
-      }
-
-      group.appendChild(grid);
-      gallery.appendChild(group);
-    }
+    renderIconGallery({
+      container: document.getElementById('icon-gallery'),
+      iconGroups,
+      icons: Icons,
+    });
 
     // Reveal page once editor is ready (Tailwind CSS is injected during Blok init)
     blok.isReady.then(() => document.body.classList.add('ready'));

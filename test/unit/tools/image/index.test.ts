@@ -133,3 +133,46 @@ describe('ImageTool — EMPTY state', () => {
     expect(img.getAttribute('src')).toBe('https://x/y.png');
   });
 });
+
+describe('ImageTool — overlay actions', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('renders overlay when data.url is set and not readOnly', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    const root = tool.render();
+    expect(root.querySelector('[data-role="image-overlay"]')).not.toBeNull();
+  });
+
+  it('does not render overlay in readOnly mode', () => {
+    const tool = new ImageTool({ ...createOptions({ url: 'https://x/y.png' }), readOnly: true });
+    const root = tool.render();
+    expect(root.querySelector('[data-role="image-overlay"]')).toBeNull();
+  });
+
+  it('clicking align cycles alignment left → center → right → left and dispatches change', () => {
+    const block = createMockBlock();
+    const tool = new ImageTool(createOptions({ url: 'u' }, {}, block));
+    const root = tool.render();
+    const align = root.querySelector<HTMLButtonElement>('[data-action="align"]');
+    if (!align) throw new Error('align missing');
+    align.click();
+    expect(tool.save().alignment).toBe('left');
+    align.click();
+    expect(tool.save().alignment).toBe('center');
+    align.click();
+    expect(tool.save().alignment).toBe('right');
+    align.click();
+    expect(tool.save().alignment).toBe('left');
+    expect(block.dispatchChange).toHaveBeenCalled();
+  });
+
+  it('clicking replace returns the tool to EMPTY state', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    const root = tool.render();
+    const replace = root.querySelector<HTMLButtonElement>('[data-action="replace"]');
+    if (!replace) throw new Error('replace missing');
+    replace.click();
+    expect(root.querySelector('input[type="file"]')).not.toBeNull();
+  });
+});

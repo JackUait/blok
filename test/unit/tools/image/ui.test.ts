@@ -75,3 +75,41 @@ describe('openLightbox', () => {
     expect(document.querySelector('[role="dialog"][aria-modal="true"]')).toBeNull();
   });
 });
+
+import { renderOverlay } from '../../../../src/tools/image/ui';
+import { vi } from 'vitest';
+
+describe('renderOverlay', () => {
+  it('exposes data-action buttons for each command', () => {
+    const overlay = renderOverlay({
+      onAlign: () => undefined,
+      onReplace: () => undefined,
+      onAlt: () => undefined,
+      onDelete: () => undefined,
+      onDownload: () => undefined,
+      onFullscreen: () => undefined,
+    });
+    expect(overlay.querySelector('[data-action="align"]')).not.toBeNull();
+    expect(overlay.querySelector('[data-action="replace"]')).not.toBeNull();
+    expect(overlay.querySelector('[data-action="alt"]')).not.toBeNull();
+    expect(overlay.querySelector('[data-action="delete"]')).not.toBeNull();
+    expect(overlay.querySelector('[data-action="download"]')).not.toBeNull();
+    expect(overlay.querySelector('[data-action="fullscreen"]')).not.toBeNull();
+  });
+
+  it('invokes the matching handler on click', () => {
+    const onAlign = vi.fn();
+    const overlay = renderOverlay({
+      onAlign,
+      onReplace: () => undefined,
+      onAlt: () => undefined,
+      onDelete: () => undefined,
+      onDownload: () => undefined,
+      onFullscreen: () => undefined,
+    });
+    const btn = overlay.querySelector<HTMLButtonElement>('[data-action="align"]');
+    if (!btn) throw new Error('align missing');
+    btn.click();
+    expect(onAlign).toHaveBeenCalled();
+  });
+});

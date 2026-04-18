@@ -14,7 +14,7 @@ import { IconImage } from '../../components/icons';
 import { DEFAULT_CAPTION_PLACEHOLDER, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { ImageError } from './errors';
-import { renderCaption, renderImage } from './ui';
+import { openLightbox, renderCaption, renderImage, renderOverlay } from './ui';
 import { Uploader, type UploadResult } from './uploader';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
@@ -164,6 +164,31 @@ export class ImageTool implements BlockTool {
     }
 
     const figure = renderImage(this.data);
+    figure.style.position = 'relative';
+
+    if (!this.readOnly) {
+      const overlay = renderOverlay({
+        onAlign: () => this.cycleAlignment(),
+        onReplace: () => this.transitionToEmpty(),
+        onAlt: () => this.promptAlt(),
+        onDelete: () => {
+          const blocks = (this.api as unknown as { blocks?: { delete?: (id: string) => void } }).blocks;
+          blocks?.delete?.(this.block.id);
+        },
+        onDownload: () => this.download(),
+        onFullscreen: () => openLightbox({ url: this.data.url, alt: this.data.alt }),
+      });
+      figure.appendChild(overlay);
+      figure.addEventListener('mouseenter', () => {
+        overlay.style.opacity = '1';
+        overlay.style.pointerEvents = 'auto';
+      });
+      figure.addEventListener('mouseleave', () => {
+        overlay.style.opacity = '0';
+        overlay.style.pointerEvents = 'none';
+      });
+    }
+
     const placeholder = this.config.captionPlaceholder ?? DEFAULT_CAPTION_PLACEHOLDER;
     const caption = renderCaption({
       value: this.data.caption ?? '',
@@ -179,5 +204,42 @@ export class ImageTool implements BlockTool {
     });
     figure.appendChild(caption);
     this.root.appendChild(figure);
+  }
+
+  private cycleAlignment(): void {
+    const order: NonNullable<ImageData['alignment']>[] = ['left', 'center', 'right'];
+    const current = this.data.alignment;
+    const next = current === undefined
+      ? order[0]
+      : order[(order.indexOf(current) + 1) % order.length];
+    this.data.alignment = next;
+    this.block.dispatchChange();
+    this.renderState();
+  }
+
+  private transitionToEmpty(): void {
+    this.data = { ...this.data, url: '' };
+    this.state = 'EMPTY';
+    this.renderState();
+    this.block.dispatchChange();
+  }
+
+  private promptAlt(): void {
+    const next = window.prompt('Alt text', this.data.alt ?? '');
+    if (next === null) return;
+    this.data.alt = next;
+    this.block.dispatchChange();
+    this.renderState();
+  }
+
+  private download(): void {
+    const a = document.createElement('a');
+    a.href = this.data.url;
+    a.download = this.data.fileName ?? '';
+    a.target = '_blank';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   }
 }

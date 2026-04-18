@@ -98,3 +98,63 @@ export function openLightbox(opts: LightboxOptions): () => void {
 
   return close;
 }
+
+export interface OverlayOptions {
+  onAlign(): void;
+  onReplace(): void;
+  onAlt(): void;
+  onDelete(): void;
+  onDownload(): void;
+  onFullscreen(): void;
+}
+
+const ACTIONS: { key: keyof OverlayOptions; label: string; symbol: string }[] = [
+  { key: 'onFullscreen', label: 'Fullscreen', symbol: '⛶' },
+  { key: 'onAlign', label: 'Align', symbol: '↔' },
+  { key: 'onDownload', label: 'Download', symbol: '⤓' },
+  { key: 'onReplace', label: 'Replace', symbol: '⇄' },
+  { key: 'onAlt', label: 'Alt text', symbol: 'A' },
+  { key: 'onDelete', label: 'Delete', symbol: '✕' },
+];
+
+export function renderOverlay(opts: OverlayOptions): HTMLElement {
+  const root = document.createElement('div');
+  root.setAttribute('data-role', 'image-overlay');
+  Object.assign(root.style, {
+    position: 'absolute',
+    top: '8px',
+    right: '8px',
+    display: 'flex',
+    gap: '4px',
+    background: 'rgba(15,23,42,0.75)',
+    color: '#fff',
+    borderRadius: '6px',
+    padding: '4px',
+    opacity: '0',
+    transition: 'opacity 120ms ease-in',
+    pointerEvents: 'none',
+  } satisfies Partial<CSSStyleDeclaration>);
+
+  for (const { key, label, symbol } of ACTIONS) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.setAttribute('aria-label', label);
+    button.setAttribute('data-action', key.replace(/^on/, '').toLowerCase());
+    button.textContent = symbol;
+    Object.assign(button.style, {
+      background: 'transparent',
+      border: 'none',
+      color: 'inherit',
+      cursor: 'pointer',
+      padding: '4px 6px',
+      lineHeight: '1',
+    } satisfies Partial<CSSStyleDeclaration>);
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      opts[key]();
+    });
+    root.appendChild(button);
+  }
+
+  return root;
+}

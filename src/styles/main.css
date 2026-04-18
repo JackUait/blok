@@ -835,6 +835,12 @@
   /* Small UI surfaces that can't reach a var via Tailwind arbitrary syntax. */
   --blok-button-focus-bg-hover: #fbfcfe;
   --blok-dnd-drop-indicator-bg: #d4e3fc;
+
+  /* Direct-usage surface tokens extracted in B1.6. Light-theme values match
+     the dark overrides below; they are rarely applied outside the dark theme. */
+  --blok-table-add-pill-border: rgba(55, 53, 47, 0.17);
+  --blok-database-card-menu-hover-bg: rgba(0, 0, 0, 0.04);
+  --blok-database-column-pill-text: rgba(55, 53, 47, 0.9);
 }
 
 /* ─── Dark theme — system preference ────────────────── */
@@ -972,6 +978,10 @@
 
     --blok-button-focus-bg-hover: #2d2d2c;
     --blok-dnd-drop-indicator-bg: #1f3a5c;
+
+    --blok-table-add-pill-border: rgba(255, 255, 255, 0.17);
+    --blok-database-card-menu-hover-bg: rgba(255, 255, 255, 0.12);
+    --blok-database-column-pill-text: rgba(255, 255, 255, 0.9);
   }
 }
 
@@ -1109,6 +1119,10 @@
 
   --blok-button-focus-bg-hover: #2d2d2c;
   --blok-dnd-drop-indicator-bg: #1f3a5c;
+
+  --blok-table-add-pill-border: rgba(255, 255, 255, 0.17);
+  --blok-database-card-menu-hover-bg: rgba(255, 255, 255, 0.12);
+  --blok-database-column-pill-text: rgba(255, 255, 255, 0.9);
 }
 
 /* ─── Checklist checkbox — custom styled ────────────────── */
@@ -1486,7 +1500,7 @@
   }
   /* Add row/col pill: border + subtle rest-state fill */
   :root:not([data-blok-theme="light"]) [data-blok-interface] :is([data-blok-table-add-row], [data-blok-table-add-col]) .border-gray-300 {
-    border-color: rgba(255, 255, 255, 0.17);
+    border-color: var(--blok-table-add-pill-border);
     background-color: var(--blok-table-add-pill-bg);
   }
   /* Add row/col pill hover background */
@@ -1517,7 +1531,7 @@
   color: var(--blok-table-grip-dot);
 }
 [data-blok-theme="dark"] [data-blok-interface] :is([data-blok-table-add-row], [data-blok-table-add-col]) .border-gray-300 {
-  border-color: rgba(255, 255, 255, 0.17);
+  border-color: var(--blok-table-add-pill-border);
   background-color: var(--blok-table-add-pill-bg);
 }
 [data-blok-theme="dark"] [data-blok-interface] :is([data-blok-table-add-row], [data-blok-table-add-col]):hover .border-gray-300 {
@@ -1828,7 +1842,7 @@
 
 [data-blok-database-edit-card]:hover,
 [data-blok-database-card-menu]:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--blok-database-card-menu-hover-bg);
   color: var(--blok-text-on-dark);
 }
 
@@ -1935,12 +1949,12 @@
  */
 @media (prefers-color-scheme: dark) {
   :root:not([data-blok-theme="light"]) [data-blok-database-column][data-color] [data-blok-database-column-pill] {
-    color: rgba(255, 255, 255, 0.9) !important;
+    color: var(--blok-database-column-pill-text) !important;
   }
 }
 
 [data-blok-theme="dark"] [data-blok-database-column][data-color] [data-blok-database-column-pill] {
-  color: rgba(255, 255, 255, 0.9) !important;
+  color: var(--blok-database-column-pill-text) !important;
 }
 
 /**

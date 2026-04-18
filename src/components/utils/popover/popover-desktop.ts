@@ -75,6 +75,11 @@ export class PopoverDesktop extends PopoverAbstract {
   private placeLeftOfAnchor = false;
 
   /**
+   * Minimum gap (px) from viewport top/bottom when placeLeftOfAnchor is active.
+   */
+  private viewportMargin = 0;
+
+  /**
    * Updates the element whose left edge is used for horizontal positioning.
    * @param element - new element to align against, or undefined to fall back to trigger
    */
@@ -126,6 +131,10 @@ export class PopoverDesktop extends PopoverAbstract {
 
     if (params.placeLeftOfAnchor === true) {
       this.placeLeftOfAnchor = true;
+    }
+
+    if (typeof params.viewportMargin === 'number') {
+      this.viewportMargin = params.viewportMargin;
     }
 
     if (params.nestingLevel !== undefined) {
@@ -357,6 +366,7 @@ export class PopoverDesktop extends PopoverAbstract {
       offset: 8,
       leftAlignRect,
       placeLeftOfAnchor: this.placeLeftOfAnchor,
+      viewportMargin: this.viewportMargin,
     });
   }
 

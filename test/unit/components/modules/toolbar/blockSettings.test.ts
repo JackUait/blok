@@ -396,9 +396,10 @@ describe('BlockSettings', () => {
     await blockSettings.open(block);
 
     const popover = getLastPopover();
-    const params = popover?.params as { placeLeftOfAnchor?: boolean };
+    const params = popover?.params as { placeLeftOfAnchor?: boolean; viewportMargin?: number };
 
     expect(params?.placeLeftOfAnchor).toBe(true);
+    expect(params?.viewportMargin).toBe(50);
 
     getTunesItemsSpy.mockRestore();
   });

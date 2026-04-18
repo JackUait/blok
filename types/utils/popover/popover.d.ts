@@ -102,6 +102,14 @@ export interface PopoverParams {
   placeLeftOfAnchor?: boolean;
 
   /**
+   * Minimum distance (in pixels) between the popover and the viewport top/bottom
+   * edges. Applied only together with placeLeftOfAnchor. Keeps the popover fully
+   * inside the viewport — shifting upward if centered placement would overflow
+   * the bottom — so it stays visible and close to the trigger.
+   */
+  viewportMargin?: number;
+
+  /**
    * When true, the first item is focused when the popover opens (default behavior).
    * When false, no item is pre-focused — focus only appears after keyboard navigation.
    * Defaults to true. Has no effect when a search field is present (search receives focus instead).

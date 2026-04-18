@@ -23,6 +23,13 @@ export interface PositionInput {
    * against the anchor. Clamping to scope boundaries still applies.
    */
   placeLeftOfAnchor?: boolean;
+  /**
+   * Minimum distance (in pixels) between the popover and the viewport top/bottom
+   * edges. Applied only when placeLeftOfAnchor is true. Keeps the popover
+   * within the viewport — shifting up if centered placement would overflow the
+   * bottom — so it remains fully visible near the anchor. Has no effect when 0.
+   */
+  viewportMargin?: number;
 }
 
 export interface ResolvedPosition {
@@ -69,6 +76,7 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
     offset = 8,
     leftAlignRect,
     placeLeftOfAnchor = false,
+    viewportMargin = 0,
   } = input;
 
   const boundaryBottom = Math.min(viewportSize.height, scopeBounds.bottom);
@@ -80,8 +88,23 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
   // Placement mode: left of anchor, vertically centered.
   if (placeLeftOfAnchor) {
     const anchorCenterY = (anchor.top + anchor.bottom) / 2 + scrollOffset.y;
+    const anchorTopInDocCoords = anchor.top + scrollOffset.y;
     const rawTop = anchorCenterY - popoverSize.height / 2;
-    const top = Math.max(scopeTopInDocCoords, rawTop);
+    const scopeBottomInDocCoords = scopeBounds.bottom + scrollOffset.y;
+    const viewportTopFloor = scrollOffset.y + viewportMargin;
+    const viewportBottomCeiling = scrollOffset.y + viewportSize.height - viewportMargin;
+
+    // Popover top must never sit below the anchor top — keeps the menu visually
+    // attached to the trigger instead of dropping underneath it when the viewport
+    // margin would otherwise force the top edge down.
+    const topFloor = Math.max(scopeTopInDocCoords, Math.min(viewportTopFloor, anchorTopInDocCoords));
+    const bottomCeiling = Math.min(scopeBottomInDocCoords, viewportBottomCeiling);
+    const maxTop = bottomCeiling - popoverSize.height;
+    const anchorCeiling = Math.max(topFloor, anchorTopInDocCoords);
+    const constrainedTop = Math.min(anchorCeiling, Math.max(topFloor, rawTop));
+    const top = maxTop < topFloor
+      ? topFloor
+      : Math.min(maxTop, constrainedTop);
 
     const rawLeft = anchor.left - offset - popoverSize.width + scrollOffset.x;
     const left = Math.max(boundaryLeft + scrollOffset.x, rawLeft);

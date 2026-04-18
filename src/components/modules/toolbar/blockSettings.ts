@@ -205,6 +205,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         autoFocusFirstItem: false,
         minWidth: '250px',
         placeLeftOfAnchor: true,
+        viewportMargin: 50,
       };
 
       if (PopoverClass === PopoverDesktop) {

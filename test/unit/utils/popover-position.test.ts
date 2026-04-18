@@ -377,6 +377,121 @@ describe('resolvePosition', () => {
       expect(result.left).toBe(192); // 142 + 50
       expect(result.top).toBe(270); // 70 + 200
     });
+
+    it('pins top to anchor top when viewport margin would push popover below the anchor (no scroll)', () => {
+      const result = resolvePosition({
+        anchor: rect({ top: 20, bottom: 60, left: 400, right: 440 }),
+        popoverSize: { width: 250, height: 200 },
+        scopeBounds: rect({ top: 0, bottom: 800, left: 0, right: 1000 }),
+        viewportSize: { width: 1024, height: 768 },
+        scrollOffset: { x: 0, y: 0 },
+        offset: 8,
+        placeLeftOfAnchor: true,
+        viewportMargin: 50,
+      });
+
+      // Centered raw top = -60. Viewport-margin floor (50) would sit below anchor top (20),
+      // so the effective floor is clamped to anchor top. Popover top pinned at 20.
+      expect(result.top).toBe(20);
+    });
+
+    it('pins top to anchor top in doc coords when page is scrolled', () => {
+      const result = resolvePosition({
+        anchor: rect({ top: 30, bottom: 70, left: 400, right: 440 }),
+        popoverSize: { width: 250, height: 300 },
+        scopeBounds: rect({ top: -400, bottom: 1200, left: 0, right: 1000 }),
+        viewportSize: { width: 1024, height: 800 },
+        scrollOffset: { x: 0, y: 400 },
+        offset: 8,
+        placeLeftOfAnchor: true,
+        viewportMargin: 50,
+      });
+
+      // Anchor top in doc = 30 + 400 = 430. Viewport floor (450) exceeds ceiling; clamp to 430.
+      expect(result.top).toBe(430);
+    });
+
+    it('never positions popover top below anchor top (regression)', () => {
+      const result = resolvePosition({
+        anchor: rect({ top: 5, bottom: 45, left: 400, right: 440 }),
+        popoverSize: { width: 250, height: 600 },
+        scopeBounds: rect({ top: 0, bottom: 900, left: 0, right: 1000 }),
+        viewportSize: { width: 1024, height: 900 },
+        scrollOffset: { x: 0, y: 0 },
+        offset: 8,
+        placeLeftOfAnchor: true,
+        viewportMargin: 50,
+      });
+
+      // Popover top must never exceed anchor.top (=5) regardless of margins.
+      expect(result.top).toBeLessThanOrEqual(5);
+    });
+
+    it('does not clamp when centered position leaves enough viewport room', () => {
+      const result = resolvePosition({
+        anchor: rect({ top: 400, bottom: 440, left: 400, right: 440 }),
+        popoverSize: { width: 250, height: 200 },
+        scopeBounds: rect({ top: 0, bottom: 1000, left: 0, right: 1000 }),
+        viewportSize: { width: 1024, height: 800 },
+        scrollOffset: { x: 0, y: 0 },
+        offset: 8,
+        placeLeftOfAnchor: true,
+        viewportMargin: 50,
+      });
+
+      // Center = 420, raw top = 420 - 100 = 320. Floor = 50. No clamp.
+      expect(result.top).toBe(320);
+    });
+
+    it('shifts top upward when centered position would overflow viewport bottom', () => {
+      const result = resolvePosition({
+        anchor: rect({ top: 700, bottom: 740, left: 400, right: 440 }),
+        popoverSize: { width: 250, height: 400 },
+        scopeBounds: rect({ top: 0, bottom: 2000, left: 0, right: 1000 }),
+        viewportSize: { width: 1024, height: 800 },
+        scrollOffset: { x: 0, y: 0 },
+        offset: 8,
+        placeLeftOfAnchor: true,
+        viewportMargin: 50,
+      });
+
+      // Centered raw top = 720 - 200 = 520. bottom = 520 + 400 = 920, exceeds viewport (800 - 50 = 750).
+      // maxTop = 750 - 400 = 350. Clamp to 350.
+      expect(result.top).toBe(350);
+    });
+
+    it('shifts top upward when page is scrolled and centered overflows bottom', () => {
+      const result = resolvePosition({
+        anchor: rect({ top: 700, bottom: 740, left: 400, right: 440 }),
+        popoverSize: { width: 250, height: 400 },
+        scopeBounds: rect({ top: -300, bottom: 1700, left: 0, right: 1000 }),
+        viewportSize: { width: 1024, height: 800 },
+        scrollOffset: { x: 0, y: 300 },
+        offset: 8,
+        placeLeftOfAnchor: true,
+        viewportMargin: 50,
+      });
+
+      // Anchor center doc = 720 + 300 = 1020. Raw top = 1020 - 200 = 820.
+      // maxTop = (300 + 800 - 50) - 400 = 1050 - 400 = 650. Clamp to 650.
+      expect(result.top).toBe(650);
+    });
+
+    it('falls back to top-aligned at viewportMargin when popover is taller than viewport minus margins', () => {
+      const result = resolvePosition({
+        anchor: rect({ top: 300, bottom: 340, left: 400, right: 440 }),
+        popoverSize: { width: 250, height: 900 },
+        scopeBounds: rect({ top: 0, bottom: 2000, left: 0, right: 1000 }),
+        viewportSize: { width: 1024, height: 800 },
+        scrollOffset: { x: 0, y: 0 },
+        offset: 8,
+        placeLeftOfAnchor: true,
+        viewportMargin: 50,
+      });
+
+      // viewport window = 800 - 100 = 700 < popover height 900. Align to top floor.
+      expect(result.top).toBe(50);
+    });
   });
 
   describe('scope boundary', () => {

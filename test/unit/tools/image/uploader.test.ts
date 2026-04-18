@@ -66,4 +66,31 @@ describe('Uploader', () => {
       });
     });
   });
+
+  describe('custom uploader integration', () => {
+    it('routes handleFile through config.uploader.uploadByFile when present', async () => {
+      const uploadByFile = vi.fn().mockResolvedValue({ url: 'https://cdn/x.png', fileName: 'x.png' });
+      const u = new Uploader({ uploader: { uploadByFile } });
+      const file = new File([new Uint8Array(10)], 'x.png', { type: 'image/png' });
+
+      await expect(u.handleFile(file)).resolves.toEqual({ url: 'https://cdn/x.png', fileName: 'x.png' });
+      expect(uploadByFile).toHaveBeenCalledWith(file);
+    });
+
+    it('routes handleUrl through config.uploader.uploadByUrl when present', async () => {
+      const uploadByUrl = vi.fn().mockResolvedValue({ url: 'https://cdn/proxied.png' });
+      const u = new Uploader({ uploader: { uploadByUrl } });
+
+      await expect(u.handleUrl('https://orig/x.png')).resolves.toEqual({ url: 'https://cdn/proxied.png' });
+      expect(uploadByUrl).toHaveBeenCalledWith('https://orig/x.png');
+    });
+
+    it('propagates rejection from custom uploader', async () => {
+      const uploadByFile = vi.fn().mockRejectedValue(new Error('S3 down'));
+      const u = new Uploader({ uploader: { uploadByFile } });
+      const file = new File([new Uint8Array(10)], 'x.png', { type: 'image/png' });
+
+      await expect(u.handleFile(file)).rejects.toThrow('S3 down');
+    });
+  });
 });

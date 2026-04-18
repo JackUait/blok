@@ -188,6 +188,17 @@ describe('ImageTool — overlay actions', () => {
     expect(root.querySelector('input[type="file"]')).not.toBeNull();
   });
 
+  it('more-popover is a sibling of .blok-image-frame (inside figure, outside frame overflow) so it is not clipped', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    const root = tool.render();
+    const popover = root.querySelector<HTMLElement>('[data-role="image-popover"]');
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+    const frame = root.querySelector<HTMLElement>('.blok-image-frame');
+    if (!popover || !figure || !frame) throw new Error('dom missing');
+    expect(popover.parentElement).toBe(figure);
+    expect(frame.contains(popover)).toBe(false);
+  });
+
   it('getToolbarAnchorElement() returns the image frame so block toolbar centers at image top, not on the caption', () => {
     const tool = new ImageTool(createOptions({ url: 'https://x/y.png', caption: 'hi' }));
     const root = tool.render();

@@ -310,7 +310,7 @@ export class ImageTool implements BlockTool {
         },
       });
       this.popover = popover;
-      frame.appendChild(popover);
+      figure.appendChild(popover);
 
       const moreBtn = overlay.querySelector<HTMLButtonElement>('[data-action="more"]');
       moreBtn?.addEventListener('click', (event) => {

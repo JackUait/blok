@@ -88,7 +88,7 @@
   position: relative !important;
   box-sizing: border-box !important;
   display: block !important;
-  z-index: 1 !important;
+  z-index: var(--blok-z-relative) !important;
 }
 
 /*
@@ -869,6 +869,19 @@
   /* Shadow tokens — direct-usage surfaces (drawer, tab ghost). */
   --blok-shadow-drawer-side: -4px 0 12px rgba(0, 0, 0, 0.08);
   --blok-shadow-tab-ghost: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+  /*
+    Z-index ladder — semantic layer names. Declared consumer-themeable even
+    when only a subset is used by main.css today; Tailwind z-* utilities
+    applied elsewhere can migrate to these later without conflict.
+  */
+  --blok-z-relative: 1;
+  --blok-z-selection: 10;
+  --blok-z-toolbar: 20;
+  --blok-z-inline-toolbar: 30;
+  --blok-z-popover: 50;
+  --blok-z-tooltip: 100;
+  --blok-z-drawer: 1000;
 }
 
 /* ─── Dark theme — system preference ────────────────── */
@@ -2048,7 +2061,7 @@
   right: 0;
   height: 100%;
   width: 0;
-  z-index: 1000;
+  z-index: var(--blok-z-drawer);
   overflow: hidden;
   display: flex;
   flex-direction: column;

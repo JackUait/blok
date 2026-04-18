@@ -31,6 +31,7 @@ export { DatabaseRowTool as DatabaseRow } from './database-row';
 export { DividerTool as Divider } from './divider';
 export { Quote } from './quote';
 export { CodeTool as Code } from './code';
+export { ImageTool as Image } from './image';
 
 // Inline tools
 export { BoldInlineTool as Bold } from '../components/inline-tools/inline-tool-bold';
@@ -56,6 +57,7 @@ export const defaultBlockTools = {
   divider: {},
   quote: {},
   code: { inlineToolbar: false },
+  image: {},
 } as const;
 
 export const defaultInlineTools = {

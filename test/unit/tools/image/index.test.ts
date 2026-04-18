@@ -214,3 +214,24 @@ describe('ImageTool — fullscreen triggers', () => {
     if (dialog) dialog.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   });
 });
+
+describe('ImageTool — blob lifecycle', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('revokes blob URLs in removed()', () => {
+    const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const tool = new ImageTool(createOptions({ url: 'blob:abc' }));
+    tool.render();
+    tool.removed();
+    expect(revoke).toHaveBeenCalledWith('blob:abc');
+  });
+
+  it('does not revoke non-blob URLs', () => {
+    const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    tool.render();
+    tool.removed();
+    expect(revoke).not.toHaveBeenCalled();
+  });
+});

@@ -127,6 +127,16 @@ export class ImageTool implements BlockTool {
     this.renderState();
   }
 
+  public removed(): void {
+    while (this.resizeDetach.length > 0) {
+      const detach = this.resizeDetach.pop();
+      if (detach) detach();
+    }
+    if (this.data.url.startsWith('blob:')) {
+      URL.revokeObjectURL(this.data.url);
+    }
+  }
+
   private renderState(): void {
     if (!this.root) return;
     while (this.resizeDetach.length > 0) {

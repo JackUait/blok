@@ -60,6 +60,45 @@ export interface ToolboxEventMap {
 type ToolboxTextLabelsKeys = 'filter' | 'nothingFound' | 'slashSearchPlaceholder';
 
 /**
+ * Pick the DOMRect used to anchor the toolbox popover.
+ * - Slash open: use the caret rect directly.
+ * - Plus button (or slash with degenerate caret): build a composite rect from
+ *   the block's CONTENT element (horizontal bounds) and the block holder
+ *   (vertical bounds). Using the holder's horizontal bounds would snap the
+ *   popover to the editor's left viewport edge in layouts where the holder is
+ *   wider than the centered content column.
+ * @param params - anchor inputs
+ * @param params.caretRect - current selection rect, if any
+ * @param params.caretRectIsDegenerate - true when the caret rect is {0,0,0,0}
+ * @param params.blockRect - the current block holder rect
+ * @param params.contentElement - the current block's content element, if any
+ */
+const resolveAnchorRect = (params: {
+  caretRect: DOMRect | undefined;
+  caretRectIsDegenerate: boolean;
+  blockRect: DOMRect | undefined;
+  contentElement: HTMLElement | null;
+}): DOMRect | undefined => {
+  const { caretRect, caretRectIsDegenerate, blockRect, contentElement } = params;
+
+  if (caretRect !== undefined && !caretRectIsDegenerate) {
+    return caretRect;
+  }
+
+  if (blockRect === undefined) {
+    return undefined;
+  }
+
+  const contentRect = contentElement?.getBoundingClientRect();
+
+  if (contentRect === undefined) {
+    return blockRect;
+  }
+
+  return new DOMRect(contentRect.left, blockRect.top, contentRect.width, blockRect.height);
+};
+
+/**
  * Toolbox
  * This UI element contains list of Block Tools available to be inserted
  * It appears after click on the Plus Button
@@ -347,8 +386,12 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
      *
      * - Slash open ("/"): anchor at the caret rect so the menu appears next to
      *   what the user is typing, in any block type at any nesting depth.
-     * - Plus button open: anchor at the current block's bounding rect so the
-     *   menu appears below the block regardless of trigger placement.
+     * - Plus button open: build a composite rect that uses the block's CONTENT
+     *   element for horizontal bounds (so the menu aligns with the visible
+     *   content column) and the block holder for vertical bounds (so the menu
+     *   sits below the block). Using the holder rect for horizontal bounds
+     *   snapped the menu to the editor's left viewport edge whenever the holder
+     *   was wider than the centered content column.
      *
      * Set the position BEFORE show() so the first paint is already correct —
      * popover.show() reads `params.position` via calculatePosition() and uses
@@ -362,9 +405,14 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
         && caretRect.height === 0
         && caretRect.x === 0
         && caretRect.y === 0;
-      // Fall back to the block rect when selection is lost or returns a
-      // degenerate {0,0,0,0} rect — never anchor the popover at the page origin.
-      const anchorRect = caretRect !== undefined && !caretRectIsDegenerate ? caretRect : blockRect;
+
+      const anchorRect = resolveAnchorRect({
+        caretRect,
+        caretRectIsDegenerate,
+        blockRect,
+        contentElement: currentBlock?.holder
+          .querySelector<HTMLElement>(`[${DATA_ATTR.elementContent}]`) ?? null,
+      });
 
       if (anchorRect !== undefined) {
         this.popover.updatePosition(anchorRect);

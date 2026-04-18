@@ -351,7 +351,7 @@ test.describe('Toolbox popover position regression', () => {
     await openSlashMenuAndMeasure(page, '4-col table right cell');
   });
 
-  test('plus button open on empty paragraph: popover aligned with block, dx small', async ({ page }) => {
+  test('plus button open on empty paragraph: popover aligned with block content, not holder edge', async ({ page }) => {
     await createBlok(page, {
       blocks: [
         { id: 'plus-p', type: 'paragraph', data: { text: '' } },
@@ -372,8 +372,15 @@ test.describe('Toolbox popover position regression', () => {
     await popover.waitFor({ state: 'attached' });
     await expect(popover).toHaveAttribute('data-blok-popover-opened', 'true');
 
-    // For plus-button open, anchor is the block rect, not caret. Verify the
-    // popover sits within the block's horizontal bounds and just below it.
+    /*
+     * For plus-button open, anchor is the block rect, not caret. Verify the
+     * popover sits below the block and horizontally aligned with the block's
+     * visible CONTENT element (not the outer holder). The block holder often
+     * spans the full editor width while the content is centered/narrower
+     * (default max-width: var(--max-width-content)). Anchoring the popover
+     * to holder.left made it render at the viewport's left edge, far from
+     * the plus button and visible content.
+     */
     const measurement = await page.evaluate(() => {
       const popHolder = document.querySelector('[data-blok-testid="toolbox-popover"]');
 
@@ -388,16 +395,162 @@ test.describe('Toolbox popover position regression', () => {
         throw new Error('Block not found');
       }
 
+      const content = block.querySelector('[data-blok-element-content]');
+
+      if (content === null) {
+        throw new Error('Block content element not found');
+      }
+
+      const plusBtn = document.querySelector('[data-blok-testid="plus-button"]');
+
+      if (plusBtn === null) {
+        throw new Error('Plus button not found');
+      }
+
       return {
         pop: pop.getBoundingClientRect(),
         block: block.getBoundingClientRect(),
+        content: content.getBoundingClientRect(),
+        plus: plusBtn.getBoundingClientRect(),
       };
     });
 
+    console.log(
+      `[plus-button] holder=${measurement.block.left.toFixed(1)}..${measurement.block.right.toFixed(1)} `
+      + `content=${measurement.content.left.toFixed(1)}..${measurement.content.right.toFixed(1)} `
+      + `plus=${measurement.plus.left.toFixed(1)} pop=${measurement.pop.left.toFixed(1)}`
+    );
     expect(measurement.pop.top).toBeGreaterThanOrEqual(measurement.block.bottom - 4);
     expect(measurement.pop.top).toBeLessThanOrEqual(measurement.block.bottom + 50);
-    // Plus-button popover should be within the block's horizontal extent.
-    expect(Math.abs(measurement.pop.left - measurement.block.left)).toBeLessThanOrEqual(20);
+    // Plus-button popover must align with the block's CONTENT column, not the
+    // outer holder. When these diverge (holder wider than content), anchoring
+    // at holder.left drifts the popover hundreds of pixels off the visible area.
+    expect(
+      Math.abs(measurement.pop.left - measurement.content.left),
+      `popover.left=${measurement.pop.left.toFixed(1)} should align with `
+      + `content.left=${measurement.content.left.toFixed(1)}; `
+      + `holder.left=${measurement.block.left.toFixed(1)}, plus.left=${measurement.plus.left.toFixed(1)}`
+    ).toBeLessThanOrEqual(20);
+    // Additional safety: popover must not drift far-left of the plus button.
+    expect(
+      measurement.plus.left - measurement.pop.left,
+      `popover.left should not be more than 60px left of plus button`
+    ).toBeLessThanOrEqual(60);
+  });
+
+  test('plus button open in wide holder: popover aligned with content, not holder edge', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [
+        { id: 'wide-p', type: 'paragraph', data: { text: '' } },
+      ],
+    });
+
+    /*
+     * Force the holder to be wider than content (as in the real playground
+     * where the editor fills the viewport but the block content is capped at
+     * 720px). Without this divergence the bug hides because holder.left ===
+     * content.left. This layout matches the user-reported scenario.
+     */
+    await page.evaluate(() => {
+      const holder = document.getElementById('blok');
+
+      if (holder !== null) {
+        holder.style.width = '1400px';
+        holder.style.maxWidth = 'none';
+      }
+
+      /*
+       * Default Blok rendering sets `mx-auto` + max-width on the content
+       * element, centering it inside the wrapper. The minimal test fixture
+       * anchors content to the left, so the bug cannot manifest. Inject an
+       * explicit stylesheet that forces centering to match real layouts.
+       */
+      const style = document.createElement('style');
+
+      style.textContent = `
+        [data-blok-element-content] {
+          margin-left: auto !important;
+          margin-right: auto !important;
+          max-width: 720px !important;
+        }
+      `;
+      document.head.appendChild(style);
+    });
+
+    const editable = page.locator('[data-blok-id="wide-p"] [contenteditable="true"]');
+
+    await editable.click();
+
+    const plusButton = page.locator('[data-blok-testid="plus-button"]');
+
+    await expect(plusButton).toBeVisible();
+    await plusButton.click();
+
+    const popover = page.locator(POPOVER_SELECTOR);
+
+    await popover.waitFor({ state: 'attached' });
+    await expect(popover).toHaveAttribute('data-blok-popover-opened', 'true');
+
+    const measurement = await page.evaluate(() => {
+      const popHolder = document.querySelector('[data-blok-testid="toolbox-popover"]');
+
+      if (popHolder === null) {
+        throw new Error('Toolbox popover not found');
+      }
+
+      const pop = (popHolder.firstElementChild ?? popHolder) as HTMLElement;
+      const block = document.querySelector('[data-blok-id="wide-p"]');
+
+      if (block === null) {
+        throw new Error('Block not found');
+      }
+
+      const content = block.querySelector('[data-blok-element-content]');
+
+      if (content === null) {
+        throw new Error('Block content element not found');
+      }
+
+      const plusBtn = document.querySelector('[data-blok-testid="plus-button"]');
+
+      if (plusBtn === null) {
+        throw new Error('Plus button not found');
+      }
+
+      return {
+        pop: pop.getBoundingClientRect(),
+        block: block.getBoundingClientRect(),
+        content: content.getBoundingClientRect(),
+        plus: plusBtn.getBoundingClientRect(),
+      };
+    });
+
+    console.log(
+      `[wide-holder] holder=${measurement.block.left.toFixed(1)}..${measurement.block.right.toFixed(1)} `
+      + `content=${measurement.content.left.toFixed(1)}..${measurement.content.right.toFixed(1)} `
+      + `plus=${measurement.plus.left.toFixed(1)} pop=${measurement.pop.left.toFixed(1)}`
+    );
+
+    // Fixture must actually diverge holder vs content to exercise the bug.
+    expect(
+      measurement.content.left - measurement.block.left,
+      'wide-holder setup failed: holder and content share the same left edge'
+    ).toBeGreaterThan(50);
+
+    expect(measurement.pop.top).toBeGreaterThanOrEqual(measurement.block.bottom - 4);
+    expect(measurement.pop.top).toBeLessThanOrEqual(measurement.block.bottom + 50);
+    // CRITICAL: popover must NOT snap to the holder's left edge. It must align
+    // with the visible content column.
+    expect(
+      Math.abs(measurement.pop.left - measurement.content.left),
+      `popover.left=${measurement.pop.left.toFixed(1)} should align with `
+      + `content.left=${measurement.content.left.toFixed(1)}; `
+      + `holder.left=${measurement.block.left.toFixed(1)}, plus.left=${measurement.plus.left.toFixed(1)}`
+    ).toBeLessThanOrEqual(20);
+    expect(
+      measurement.plus.left - measurement.pop.left,
+      `popover.left should not be more than 60px left of plus button`
+    ).toBeLessThanOrEqual(60);
   });
 
   test('new empty paragraph after a long wrapped paragraph: popover is near caret', async ({ page }) => {

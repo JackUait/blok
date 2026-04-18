@@ -55,7 +55,9 @@ function findBlockRanges(source: string): Range[] {
     const closeIdx = findMatchingBrace(source, i);
     if (closeIdx === -1) continue;
     const body = source.slice(i + 1, closeIdx);
-    if (/--blok-[\w-]+\s*:/.test(body)) {
+    // Any custom-property declaration marks this as a token-definition block
+    // (`:root`, scoped palette roots, `@theme`, dark-theme overrides, etc).
+    if (/--[a-z][\w-]*\s*:/.test(body)) {
       ranges.push({ start: i, end: closeIdx });
     }
     // Don't jump past this block — nested palette blocks (e.g. :root inside

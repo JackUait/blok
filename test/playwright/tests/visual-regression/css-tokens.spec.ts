@@ -117,7 +117,8 @@ test.describe('CSS tokens — visual regression baselines', () => {
       { type: 'list', data: { style: 'unordered', items: [{ content: 'One' }, { content: 'Two' }] } },
     ]);
 
-    await page.waitForTimeout(100);
+    const list = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="list"]`).first();
+    await expect(list).toBeVisible();
 
     await expect(page.locator(BLOK_INTERFACE_SELECTOR)).toHaveScreenshot('editor-shell.png', SCREENSHOT_OPTIONS);
   });

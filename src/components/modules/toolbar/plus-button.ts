@@ -112,8 +112,8 @@ export class PlusButtonHandler {
         '[&_svg]:h-[22px] [&_svg]:w-[22px]',
         // Hover (can-hover)
         'can-hover:hover:bg-bg-light',
-        // Keep hover background when toolbox is open
-        'group-data-[blok-toolbox-opened=true]:bg-bg-light',
+        // Hide when the toolbox popover is open
+        'group-data-[blok-toolbox-opened=true]:hidden',
         // Hide when block settings popover is open
         'group-data-[blok-block-settings-opened=true]:hidden',
         // Mobile styles (static positioning with overlay-pane appearance)

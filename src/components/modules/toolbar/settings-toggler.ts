@@ -121,8 +121,8 @@ export class SettingsTogglerHandler {
         'active:cursor-grabbing',
         // Hover (can-hover)
         'can-hover:hover:bg-bg-light can-hover:hover:cursor-grab',
-        // When toolbox is opened, use pointer cursor on hover
-        'can-hover:hover:group-data-[blok-toolbox-opened=true]:cursor-pointer',
+        // Hide when the toolbox popover is open
+        'group-data-[blok-toolbox-opened=true]:hidden',
         // When block settings is opened, show hover background and pointer cursor
         'group-data-[blok-block-settings-opened=true]:bg-bg-light',
         'can-hover:hover:group-data-[blok-block-settings-opened=true]:cursor-pointer',

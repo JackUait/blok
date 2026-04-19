@@ -840,12 +840,16 @@
   --blok-color-accent: #2383e2;
   --blok-color-danger: #e24a4a;
 
-  /* Overlay tokens (for dark-on-image chrome: toolbars, badges, shimmer). */
+  /* Overlay tokens (for dark-on-image chrome: toolbars, badges, shimmer).
+     These surfaces stay dark regardless of page theme, so their foreground
+     token (`fg-strong`) must always be light — never `--blok-bg-primary`. */
   --blok-overlay-dark: rgba(25, 25, 24, 0.85);
   --blok-overlay-dark-strong: rgba(25, 25, 24, 0.88);
+  --blok-overlay-ring: rgba(255, 255, 255, 0.06);
   --blok-overlay-fg: rgba(255, 255, 255, 0.82);
+  --blok-overlay-fg-strong: #ffffff;
   --blok-overlay-fg-hover: rgba(255, 255, 255, 0.13);
-  --blok-overlay-fg-pressed: rgba(255, 255, 255, 0.18);
+  --blok-overlay-fg-pressed: rgba(255, 255, 255, 0.22);
   --blok-overlay-divider: rgba(255, 255, 255, 0.14);
   --blok-overlay-shimmer: rgba(255, 255, 255, 0.5);
   --blok-overlay-handle-ring: rgba(255, 255, 255, 0.9);
@@ -1101,8 +1105,16 @@
     --blok-color-accent: #4c9fff;
     --blok-color-danger: #ff6b6b;
 
-    /* Image-tool shadow — darker elevation for dark backgrounds. */
+    /* Image-tool — dark elevation + denser overlay chrome with hairline ring. */
     --blok-image-shadow-resting: 0 10px 28px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    --blok-image-shadow-toolbar: 0 12px 28px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
+    --blok-image-shadow-popover: 0 24px 48px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06);
+    --blok-overlay-dark: rgba(14, 14, 13, 0.78);
+    --blok-overlay-dark-strong: rgba(14, 14, 13, 0.92);
+    --blok-overlay-ring: rgba(255, 255, 255, 0.08);
+    --blok-overlay-fg: rgba(255, 255, 255, 0.86);
+    --blok-overlay-fg-hover: rgba(255, 255, 255, 0.14);
+    --blok-overlay-fg-pressed: rgba(255, 255, 255, 0.24);
 
     /* Marker colors — dark theme */
     --blok-color-gray-text: #9b9b9b;
@@ -1257,8 +1269,16 @@
   --blok-color-accent: #4c9fff;
   --blok-color-danger: #ff6b6b;
 
-  /* Image-tool shadow — darker elevation for dark backgrounds. */
+  /* Image-tool — dark elevation + denser overlay chrome with hairline ring. */
   --blok-image-shadow-resting: 0 10px 28px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --blok-image-shadow-toolbar: 0 12px 28px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
+  --blok-image-shadow-popover: 0 24px 48px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --blok-overlay-dark: rgba(14, 14, 13, 0.78);
+  --blok-overlay-dark-strong: rgba(14, 14, 13, 0.92);
+  --blok-overlay-ring: rgba(255, 255, 255, 0.08);
+  --blok-overlay-fg: rgba(255, 255, 255, 0.86);
+  --blok-overlay-fg-hover: rgba(255, 255, 255, 0.14);
+  --blok-overlay-fg-pressed: rgba(255, 255, 255, 0.24);
 
   /* Marker colors — dark theme */
   --blok-color-gray-text: #9b9b9b;
@@ -3113,35 +3133,38 @@
 }
 [data-blok-tool="image"][data-caption="off"] .blok-image-caption { display: none; }
 
-/* alt badge */
+/* alt badge — overlay surface, foreground stays light in any page theme. */
 [data-blok-tool="image"] .blok-image-alt-badge {
   position: absolute;
   bottom: 10px; left: 10px;
   background: var(--blok-overlay-dark);
-  color: var(--blok-bg-primary);
+  color: var(--blok-overlay-fg-strong);
   font-size: 11px;
   font-family: var(--blok-font-mono, 'JetBrains Mono', ui-monospace, monospace);
   padding: var(--blok-space-0-5) var(--blok-space-2);
   border-radius: var(--blok-space-1);
   backdrop-filter: blur(8px);
+  box-shadow: inset 0 0 0 1px var(--blok-overlay-ring);
   pointer-events: none;
 }
 [data-blok-tool="image"]:not([data-alt="set"]) .blok-image-alt-badge { display: none; }
 
-/* toolbar */
+/* toolbar — dark glass surface, hairline ring for crisp edge against dark page bg. */
 [data-blok-tool="image"] .blok-image-toolbar {
   position: absolute;
   top: 10px; right: 10px;
   display: inline-flex;
   background: var(--blok-overlay-dark-strong);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(14px) saturate(140%);
   border-radius: var(--blok-space-2);
   padding: var(--blok-space-1);
   opacity: 0;
   transform: translateY(-4px);
   transition: opacity 120ms ease, transform 120ms ease;
   pointer-events: none;
-  box-shadow: var(--blok-image-shadow-toolbar);
+  box-shadow:
+    inset 0 0 0 1px var(--blok-overlay-ring),
+    var(--blok-image-shadow-toolbar);
   z-index: 2;
 }
 [data-blok-tool="image"]:hover .blok-image-toolbar,
@@ -3160,12 +3183,12 @@
   cursor: pointer;
   transition: background 80ms ease, color 80ms ease;
 }
-[data-blok-tool="image"] .blok-image-toolbar button:hover { background: var(--blok-overlay-fg-hover); color: var(--blok-bg-primary); }
+[data-blok-tool="image"] .blok-image-toolbar button:hover { background: var(--blok-overlay-fg-hover); color: var(--blok-overlay-fg-strong); }
 [data-blok-tool="image"] .blok-image-toolbar button.is-danger:hover { background: var(--blok-overlay-danger-bg); color: var(--blok-overlay-danger-fg); }
 [data-blok-tool="image"] .blok-image-toolbar button svg { width: 14px; height: 14px; }
 [data-blok-tool="image"] .blok-image-toolbar button[aria-pressed="true"] {
   background: var(--blok-overlay-fg-pressed);
-  color: var(--blok-bg-primary);
+  color: var(--blok-overlay-fg-strong);
 }
 [data-blok-tool="image"] .blok-image-toolbar__divider {
   width: 1px; align-self: stretch; margin: var(--blok-space-1) var(--blok-space-0-5);

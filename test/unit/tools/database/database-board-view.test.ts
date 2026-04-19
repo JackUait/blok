@@ -703,7 +703,7 @@ describe('DatabaseBoardView', () => {
       expect(card.style.padding).toBe('10px 12px');
     });
 
-    it('card element has border-radius of 12px', () => {
+    it('card element has border-radius of 10px to match Notion', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1' })];
       const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
@@ -711,7 +711,29 @@ describe('DatabaseBoardView', () => {
 
       const card = board.querySelector('[data-blok-database-card]') as HTMLElement;
 
-      expect(card.style.borderRadius).toBe('12px');
+      expect(card.style.borderRadius).toBe('10px');
+    });
+
+    it('applies Notion-style card background via --blok-database-card-bg token', () => {
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1' })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
+
+      const card = board.querySelector('[data-blok-database-card]') as HTMLElement;
+
+      expect(card.style.backgroundColor).toBe('var(--blok-database-card-bg)');
+    });
+
+    it('applies Notion-style card shadow via --blok-database-card-shadow token', () => {
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1' })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
+
+      const card = board.querySelector('[data-blok-database-card]') as HTMLElement;
+
+      expect(card.style.boxShadow).toBe('var(--blok-database-card-shadow)');
     });
 
     it('add-card button border color matches column color when color is defined', () => {

@@ -784,10 +784,10 @@
   --blok-table-drag-source-bg: #f3f4f6;
 
   /* Database / Kanban */
-  --blok-database-card-bg: #fff;
+  --blok-database-card-bg: #ffffff;
   --blok-database-card-bg-hover: #f7f7f5;
-  --blok-database-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --blok-database-card-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --blok-database-card-shadow: rgba(25, 25, 25, 0.027) 0 4px 12px 0, rgba(25, 25, 25, 0.02) 0 1px 2px 0, rgba(42, 28, 0, 0.07) 0 0 0 1px;
+  --blok-database-card-shadow-hover: rgba(25, 25, 25, 0.06) 0 4px 12px 0, rgba(25, 25, 25, 0.04) 0 1px 2px 0, rgba(42, 28, 0, 0.1) 0 0 0 1px;
   --blok-database-card-border: rgba(0, 0, 0, 0.06);
   --blok-database-card-border-active: rgba(35, 131, 226, 0.57);
   --blok-database-card-placeholder: rgba(55, 53, 47, 0.4);
@@ -1051,8 +1051,8 @@
     /* Database / Kanban */
     --blok-database-card-bg: #2d2d2c;
     --blok-database-card-bg-hover: #353534;
-    --blok-database-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-    --blok-database-card-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.45);
+    --blok-database-card-shadow: rgba(0, 0, 0, 0.4) 0 4px 12px 0, rgba(0, 0, 0, 0.3) 0 1px 2px 0, rgba(255, 255, 255, 0.06) 0 0 0 1px;
+    --blok-database-card-shadow-hover: rgba(0, 0, 0, 0.5) 0 4px 12px 0, rgba(0, 0, 0, 0.4) 0 1px 2px 0, rgba(255, 255, 255, 0.09) 0 0 0 1px;
     --blok-database-card-border: rgba(255, 255, 255, 0.06);
     --blok-database-card-border-active: rgba(35, 131, 226, 0.7);
     --blok-database-card-placeholder: rgba(255, 255, 255, 0.3);
@@ -1215,8 +1215,8 @@
   /* Database / Kanban */
   --blok-database-card-bg: #2d2d2c;
   --blok-database-card-bg-hover: #353534;
-  --blok-database-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --blok-database-card-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --blok-database-card-shadow: rgba(0, 0, 0, 0.4) 0 4px 12px 0, rgba(0, 0, 0, 0.3) 0 1px 2px 0, rgba(255, 255, 255, 0.06) 0 0 0 1px;
+  --blok-database-card-shadow-hover: rgba(0, 0, 0, 0.5) 0 4px 12px 0, rgba(0, 0, 0, 0.4) 0 1px 2px 0, rgba(255, 255, 255, 0.09) 0 0 0 1px;
   --blok-database-card-border: rgba(255, 255, 255, 0.06);
   --blok-database-card-border-active: rgba(35, 131, 226, 0.7);
   --blok-database-card-placeholder: rgba(255, 255, 255, 0.3);

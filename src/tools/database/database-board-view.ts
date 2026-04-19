@@ -271,9 +271,11 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     cardEl.setAttribute('data-row-id', row.id);
     cardEl.setAttribute('role', 'listitem');
     cardEl.style.padding = '10px 12px';
-    cardEl.style.borderRadius = '12px';
+    cardEl.style.borderRadius = '10px';
     cardEl.style.cursor = 'pointer';
     cardEl.style.position = 'relative';
+    cardEl.style.backgroundColor = 'var(--blok-database-card-bg)';
+    cardEl.style.boxShadow = 'var(--blok-database-card-shadow)';
 
     const titleEl = document.createElement('div');
 

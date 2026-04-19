@@ -228,7 +228,7 @@ function appendAlignmentControl(root: HTMLElement, opts: OverlayOptions): void {
   popover.setAttribute('data-role', 'align-popover');
   popover.setAttribute('role', 'group');
   popover.setAttribute('aria-label', 'Alignment');
-  popover.className = 'blok-image-toolbar__pill blok-image-toolbar__align-popover';
+  popover.className = 'blok-image-toolbar__align-popover';
   popover.hidden = true;
 
   for (const value of ['left', 'center', 'right'] as ImageAlignment[]) {

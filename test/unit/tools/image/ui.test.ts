@@ -140,6 +140,14 @@ describe('renderOverlay', () => {
     expect(popover.hidden).toBe(true);
   });
 
+  it('align popover does not reuse the toolbar pill class that overrides [hidden] via display:inline-flex', () => {
+    const overlay = renderOverlay(makeOverlayOpts());
+    const popover = overlay.querySelector<HTMLElement>('[data-role="align-popover"]');
+    if (!popover) throw new Error('popover missing');
+    expect(popover.classList.contains('blok-image-toolbar__pill')).toBe(false);
+    expect(popover.classList.contains('blok-image-toolbar__align-popover')).toBe(true);
+  });
+
   it('trigger reflects current alignment via data-current', () => {
     const overlay = renderOverlay(makeOverlayOpts({ state: { alignment: 'right', captionVisible: true, hasAlt: false, size: 'md' } }));
     const trigger = overlay.querySelector<HTMLButtonElement>('[data-action="align-trigger"]');

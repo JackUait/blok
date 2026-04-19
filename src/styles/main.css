@@ -3174,6 +3174,26 @@
 [data-blok-tool="image"] .blok-image-toolbar__pill { display: inline-flex; border-radius: var(--blok-space-1); overflow: hidden; }
 [data-blok-tool="image"] .blok-image-toolbar__pill button { width: 26px; border-radius: 0; }
 
+/* alignment popover — floats below the trigger, rides the same dark glass surface */
+[data-blok-tool="image"] .blok-image-toolbar__align { position: relative; }
+[data-blok-tool="image"] .blok-image-toolbar__align-popover {
+  position: absolute;
+  top: calc(100% + var(--blok-space-1));
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  gap: var(--blok-space-0-5);
+  padding: var(--blok-space-1);
+  background: var(--blok-overlay-dark-strong);
+  backdrop-filter: blur(14px) saturate(140%);
+  border-radius: var(--blok-space-2);
+  box-shadow:
+    inset 0 0 0 1px var(--blok-overlay-ring),
+    var(--blok-image-shadow-toolbar);
+  z-index: 3;
+}
+[data-blok-tool="image"] .blok-image-toolbar__align-popover[hidden] { display: none; }
+
 /* overflow popover */
 [data-blok-tool="image"] .blok-image-popover {
   position: absolute;

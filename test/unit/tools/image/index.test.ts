@@ -279,25 +279,61 @@ describe('ImageTool — resize', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());
 
+  function stubRect(el: Element, width: number, left = 0): void {
+    Object.defineProperty(el, 'getBoundingClientRect', {
+      value: () => ({
+        left,
+        right: left + width,
+        width,
+        top: 0,
+        bottom: 100,
+        height: 100,
+        x: left,
+        y: 0,
+        toJSON: () => ({}),
+      }),
+      configurable: true,
+    });
+  }
+
   it('updates data.width and dispatches change after resize commit', () => {
     const block = createMockBlock();
     const tool = new ImageTool(createOptions({ url: 'u', width: 100 }, {}, block));
     const root = tool.render();
     const figure = root.querySelector('figure');
     if (!figure) throw new Error('figure missing');
-    const frame = figure;
-    Object.defineProperty(frame, 'getBoundingClientRect', {
-      value: () => ({ left: 0, right: 1000, width: 1000, top: 0, bottom: 100, height: 100, x: 0, y: 0, toJSON: () => ({}) }),
-    });
+    stubRect(root, 1000);
+    stubRect(figure, 1000);
     const handle = root.querySelector<HTMLElement>('[data-role="resize-handle"][data-edge="right"]');
     if (!handle) throw new Error('handle missing');
-    handle.setPointerCapture = () => undefined;
-    handle.releasePointerCapture = () => undefined;
+    handle.setPointerCapture = (): void => undefined;
+    handle.releasePointerCapture = (): void => undefined;
     handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 1000, bubbles: true }));
     handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 400, bubbles: true }));
     handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 400, bubbles: true }));
     expect(tool.save().width).toBe(40);
     expect(block.dispatchChange).toHaveBeenCalled();
+  });
+
+  it('uses parent root width as the 100% reference, not the figure width', () => {
+    const block = createMockBlock();
+    const tool = new ImageTool(createOptions({ url: 'u' }, {}, block));
+    const root = tool.render();
+    const figure = root.querySelector('figure');
+    if (!figure) throw new Error('figure missing');
+    // parent (root) is 1000px; figure currently 520px (e.g. data-size="md").
+    // Tiny rightward drag MUST stay near 60% — not snap to 100% just because
+    // the resizer mistakenly sized against the figure itself.
+    stubRect(root, 1000);
+    stubRect(figure, 520);
+    const handle = root.querySelector<HTMLElement>('[data-role="resize-handle"][data-edge="right"]');
+    if (!handle) throw new Error('handle missing');
+    handle.setPointerCapture = (): void => undefined;
+    handle.releasePointerCapture = (): void => undefined;
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 520, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 600, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 600, bubbles: true }));
+    expect(tool.save().width).toBe(60);
   });
 });
 

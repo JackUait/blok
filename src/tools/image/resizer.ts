@@ -4,12 +4,14 @@ export type ResizeEdge = 'left' | 'right';
 
 export interface ComputeWidthInput {
   edge: ResizeEdge;
-  /** Width of the layout container in pixels */
+  /** Width of the layout container (figure's parent) in pixels */
   containerWidth: number;
-  /** Pointer X relative to viewport */
-  dragX: number;
-  /** Container's left X relative to viewport — used to translate dragX to container-relative */
-  originX: number;
+  /** Figure width in pixels at the moment the drag began */
+  startWidth: number;
+  /** Pointer X relative to viewport at the moment the drag began */
+  startX: number;
+  /** Current pointer X relative to viewport */
+  currentX: number;
 }
 
 export function clampPercent(value: number): number {
@@ -19,46 +21,63 @@ export function clampPercent(value: number): number {
 }
 
 /**
- * Compute new width percent given pointer position during edge drag.
- * Right-edge drag: width = relativeX / containerWidth.
- * Left-edge drag:  width = (containerWidth - relativeX) / containerWidth.
+ * Delta-based width: pin the figure's starting width, then grow/shrink by
+ * the pointer travel since pointerdown so the image never jumps on first move.
  */
 export function computeWidthPercent(input: ComputeWidthInput): number {
-  const relativeX = input.dragX - input.originX;
-  const ratio = input.edge === 'right'
-    ? relativeX / input.containerWidth
-    : (input.containerWidth - relativeX) / input.containerWidth;
-  return clampPercent(Math.round(ratio * 100));
+  if (input.containerWidth <= 0) return clampPercent(0);
+  const deltaX = input.currentX - input.startX;
+  const signedDelta = input.edge === 'right' ? deltaX : -deltaX;
+  const nextWidth = input.startWidth + signedDelta;
+  return clampPercent(Math.round((nextWidth / input.containerWidth) * 100));
 }
 
 export interface AttachResizeHandleOptions {
   handle: HTMLElement;
+  /** Element being resized — used to read its starting width */
+  figure: HTMLElement;
+  /** Layout container — used as the 100% reference */
   container: HTMLElement;
   edge: ResizeEdge;
   onPreview(percent: number): void;
   onCommit(percent: number): void;
 }
 
+interface DragState {
+  active: boolean;
+  startX: number;
+  startWidth: number;
+  containerWidth: number;
+  lastPercent: number | undefined;
+}
+
 export function attachResizeHandle(opts: AttachResizeHandleOptions): () => void {
-  const state: { active: boolean; lastPercent: number | undefined } = {
+  const state: DragState = {
     active: false,
+    startX: 0,
+    startWidth: 0,
+    containerWidth: 0,
     lastPercent: undefined,
   };
 
   const onDown = (event: PointerEvent): void => {
     state.active = true;
+    state.startX = event.clientX;
+    state.startWidth = opts.figure.getBoundingClientRect().width;
+    state.containerWidth = opts.container.getBoundingClientRect().width;
+    state.lastPercent = undefined;
     opts.handle.setPointerCapture(event.pointerId);
     event.preventDefault();
   };
 
   const onMove = (event: PointerEvent): void => {
     if (!state.active) return;
-    const rect = opts.container.getBoundingClientRect();
     const next = computeWidthPercent({
       edge: opts.edge,
-      containerWidth: rect.width,
-      dragX: event.clientX,
-      originX: rect.left,
+      containerWidth: state.containerWidth,
+      startWidth: state.startWidth,
+      startX: state.startX,
+      currentX: event.clientX,
     });
     state.lastPercent = next;
     opts.onPreview(next);

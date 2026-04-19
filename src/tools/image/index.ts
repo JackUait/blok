@@ -376,11 +376,11 @@ export class ImageTool implements BlockTool {
     });
     figure.appendChild(caption);
 
+    this.root.appendChild(figure);
+
     if (!this.readOnly) {
       this.attachResizeHandles(figure);
     }
-
-    this.root.appendChild(figure);
   }
 
   private togglePopover(): void {
@@ -399,7 +399,8 @@ export class ImageTool implements BlockTool {
       figure.appendChild(handle);
       const detach = attachResizeHandle({
         handle,
-        container: figure,
+        figure,
+        container: figure.parentElement ?? figure,
         edge,
         onPreview: (percent) => {
           figure.style.setProperty('width', `${percent}%`);

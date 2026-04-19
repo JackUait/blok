@@ -48,4 +48,33 @@ describe('Slash search input styling (src/styles/main.css)', () => {
     expect(body).not.toBeNull();
     expect(body).toMatch(/mt-\d|mt-\[\d+px\]/);
   });
+
+  it('prevents the placeholder from wrapping onto a second line in large-font blocks (h1, h2)', () => {
+    const body = findRuleBody(css, '[data-blok-slash-search]:focus-visible');
+
+    expect(body).not.toBeNull();
+    expect(body).toMatch(/\bwhitespace-nowrap\b/);
+  });
+
+  it('drops the 240px max-width cap so the pill sizes to its content and does not force a wrap', () => {
+    const body = findRuleBody(css, '[data-blok-slash-search]:focus-visible');
+
+    expect(body).not.toBeNull();
+    expect(body).not.toMatch(/max-w-\[240px\]/);
+  });
+
+  it('uses a smaller corner radius (<= 6px) so the pill feels like a tight search input', () => {
+    const body = findRuleBody(css, '[data-blok-slash-search]:focus-visible');
+
+    expect(body).not.toBeNull();
+    expect(body).not.toMatch(/rounded-\[10px\]/);
+
+    const match = body?.match(/rounded-\[(\d+)px\]/);
+
+    expect(match).not.toBeNull();
+
+    const radius = match !== null && match !== undefined ? parseInt(match[1], 10) : Number.POSITIVE_INFINITY;
+
+    expect(radius).toBeLessThanOrEqual(6);
+  });
 });

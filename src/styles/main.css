@@ -1736,7 +1736,7 @@
  */
 [data-blok-slash-search],
 [data-blok-slash-search]:focus-visible {
-  @apply bg-search-input-bg rounded-[10px] transition-colors duration-150 w-fit max-w-[240px] px-2 py-[2px] mt-[9px];
+  @apply bg-search-input-bg rounded-[6px] transition-colors duration-150 w-fit whitespace-nowrap px-2 py-[2px] mt-[9px];
   display: inline-flex;
   align-items: center;
 }

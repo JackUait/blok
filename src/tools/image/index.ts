@@ -301,7 +301,7 @@ export class ImageTool implements BlockTool {
 
   private renderRendered(): void {
     if (!this.root) return;
-    const figure = renderImage(this.data, { altBadge: Boolean(this.data.alt) });
+    const figure = renderImage(this.data);
 
     const imgEl = figure.querySelector('img');
     if (imgEl) {
@@ -402,8 +402,7 @@ export class ImageTool implements BlockTool {
         container: figure,
         edge,
         onPreview: (percent) => {
-          const img = figure.querySelector('img');
-          if (img) img.style.width = `${percent}%`;
+          figure.style.setProperty('width', `${percent}%`);
         },
         onCommit: (percent) => {
           this.data.width = percent;

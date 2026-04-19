@@ -7,21 +7,8 @@ const ALIGNMENT_TO_TEXT_ALIGN: Record<ImageAlignment, string> = {
   full: 'center',
 };
 
-const ALIGNMENT_TO_IMG_MARGIN: Record<ImageAlignment, { left: string; right: string }> = {
-  left:   { left: '0',    right: 'auto' },
-  center: { left: 'auto', right: 'auto' },
-  right:  { left: 'auto', right: '0'    },
-  full:   { left: '0',    right: '0'    },
-};
-
-export interface RenderImageOptions {
-  /** Show the alt text badge overlaid on the image. */
-  altBadge?: boolean;
-}
-
 export function renderImage(
-  data: Partial<ImageData> & { url: string },
-  opts: RenderImageOptions = {}
+  data: Partial<ImageData> & { url: string }
 ): HTMLElement {
   const alignment = data.alignment ?? 'center';
   const figure = document.createElement('figure');
@@ -29,27 +16,16 @@ export function renderImage(
   figure.style.margin = '0';
   figure.style.textAlign = ALIGNMENT_TO_TEXT_ALIGN[alignment];
   figure.style.position = 'relative';
+  if (data.width !== undefined) {
+    figure.style.width = `${data.width}%`;
+  }
 
   const img = document.createElement('img');
   img.setAttribute('src', data.url);
   img.setAttribute('alt', data.alt ?? '');
-  img.style.width = `${data.width ?? 100}%`;
-  img.style.height = 'auto';
-  img.style.maxWidth = '100%';
-  const margin = ALIGNMENT_TO_IMG_MARGIN[alignment];
-  img.style.marginLeft = margin.left;
-  img.style.marginRight = margin.right;
   img.draggable = false;
 
   figure.appendChild(img);
-
-  if (opts.altBadge && data.alt) {
-    const badge = document.createElement('div');
-    badge.className = 'blok-image-alt-badge';
-    badge.setAttribute('data-role', 'alt-badge');
-    badge.textContent = `alt: “${data.alt}”`;
-    figure.appendChild(badge);
-  }
 
   return figure;
 }

@@ -2,21 +2,23 @@ import { describe, it, expect } from 'vitest';
 import { renderImage, renderCaption, openLightbox } from '../../../../src/tools/image/ui';
 
 describe('renderImage', () => {
-  it('returns figure with <img> carrying url, alt, and width style', () => {
+  it('returns figure with <img> carrying url and alt; width is set on figure so container fits image', () => {
     const fig = renderImage({ url: 'https://x/y.png', alt: 'photo', width: 60, alignment: 'center' });
     const img = fig.querySelector('img');
     expect(img).not.toBeNull();
     if (!img) throw new Error('img missing');
     expect(img.getAttribute('src')).toBe('https://x/y.png');
     expect(img.getAttribute('alt')).toBe('photo');
-    expect(img.style.width).toBe('60%');
+    expect(fig.style.width).toBe('60%');
+    expect(img.style.width).toBe('');
   });
 
-  it('defaults width to 100% when omitted', () => {
+  it('omits inline figure width when omitted so CSS size preset applies', () => {
     const fig = renderImage({ url: 'https://x/y.png' });
     const img = fig.querySelector('img');
     if (!img) throw new Error('img missing');
-    expect(img.style.width).toBe('100%');
+    expect(fig.style.width).toBe('');
+    expect(img.style.width).toBe('');
   });
 
   it('sets text-align on figure per alignment so caption inherits and aligns with image', () => {
@@ -31,17 +33,14 @@ describe('renderImage', () => {
     expect(fig.style.display).not.toBe('flex');
   });
 
-  it('aligns resized image within frame via margin-inline so image shifts with caption', () => {
+  it('does not apply margin-inline on img — figure itself shifts via root text-align so container fits image', () => {
     const leftImg = renderImage({ url: 'u', alignment: 'left', width: 60 }).querySelector('img');
-    const centerImg = renderImage({ url: 'u', alignment: 'center', width: 60 }).querySelector('img');
     const rightImg = renderImage({ url: 'u', alignment: 'right', width: 60 }).querySelector('img');
-    if (!leftImg || !centerImg || !rightImg) throw new Error('img missing');
-    expect(leftImg.style.marginLeft).toBe('0px');
-    expect(leftImg.style.marginRight).toBe('auto');
-    expect(centerImg.style.marginLeft).toBe('auto');
-    expect(centerImg.style.marginRight).toBe('auto');
-    expect(rightImg.style.marginLeft).toBe('auto');
-    expect(rightImg.style.marginRight).toBe('0px');
+    if (!leftImg || !rightImg) throw new Error('img missing');
+    expect(leftImg.style.marginLeft).toBe('');
+    expect(leftImg.style.marginRight).toBe('');
+    expect(rightImg.style.marginLeft).toBe('');
+    expect(rightImg.style.marginRight).toBe('');
   });
 
   it('renders alt as empty string when missing', () => {

@@ -473,21 +473,3 @@ describe('ImageTool — error state', () => {
   });
 });
 
-describe('ImageTool — alt badge', () => {
-  beforeEach(() => vi.clearAllMocks());
-  afterEach(() => vi.restoreAllMocks());
-
-  it('renders alt badge when alt is set', () => {
-    const tool = new ImageTool(createOptions({ url: 'u', alt: 'a photo' }));
-    const root = tool.render();
-    const badge = root.querySelector('[data-role="alt-badge"]');
-    expect(badge).not.toBeNull();
-    expect(badge?.textContent).toContain('a photo');
-  });
-
-  it('omits alt badge when alt missing', () => {
-    const tool = new ImageTool(createOptions({ url: 'u' }));
-    const root = tool.render();
-    expect(root.querySelector('[data-role="alt-badge"]')).toBeNull();
-  });
-});

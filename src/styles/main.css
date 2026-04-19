@@ -3128,22 +3128,6 @@
 }
 [data-blok-tool="image"][data-caption="off"] .blok-image-caption { display: none; }
 
-/* alt badge — overlay surface, foreground stays light in any page theme. */
-[data-blok-tool="image"] .blok-image-alt-badge {
-  position: absolute;
-  bottom: 10px; left: 10px;
-  background: var(--blok-overlay-dark);
-  color: var(--blok-overlay-fg-strong);
-  font-size: 11px;
-  font-family: var(--blok-font-mono, 'JetBrains Mono', ui-monospace, monospace);
-  padding: var(--blok-space-0-5) var(--blok-space-2);
-  border-radius: var(--blok-space-1);
-  backdrop-filter: blur(8px);
-  box-shadow: inset 0 0 0 1px var(--blok-overlay-ring);
-  pointer-events: none;
-}
-[data-blok-tool="image"]:not([data-alt="set"]) .blok-image-alt-badge { display: none; }
-
 /* toolbar — dark glass surface, hairline ring for crisp edge against dark page bg. */
 [data-blok-tool="image"] .blok-image-toolbar {
   position: absolute;
@@ -3264,26 +3248,45 @@
   color: var(--blok-bg-primary);
 }
 
-/* resize handle visual */
+/* resize handle visual — Notion-style pill straddling the edge */
 [data-blok-tool="image"] [data-role="resize-handle"] {
   position: absolute;
   top: 50%;
-  transform: translateY(-50%);
-  width: 10px;
-  height: 40px;
-  background: var(--blok-overlay-dark);
-  border-radius: var(--blok-space-1-25);
-  box-shadow: 0 0 0 2px var(--blok-overlay-handle-ring);
+  width: 6px;
+  height: clamp(24px, 25%, 50px);
+  background: rgba(15, 15, 15, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 999px;
   cursor: ew-resize;
   opacity: 0;
-  transition: opacity 120ms ease;
+  transform: translateY(-50%) scale(1);
+  transform-origin: center;
+  transition:
+    opacity 120ms ease,
+    background-color 120ms ease,
+    transform 140ms cubic-bezier(0.2, 0.8, 0.2, 1);
   z-index: 2;
 }
-[data-blok-tool="image"] [data-role="resize-handle"][data-edge="left"]  { left: -5px; }
-[data-blok-tool="image"] [data-role="resize-handle"][data-edge="right"] { right: -5px; }
-[data-blok-tool="image"]:hover [data-role="resize-handle"] { opacity: 0.7; }
-[data-blok-tool="image"]:hover [data-role="resize-handle"]:hover,
-[data-blok-tool="image"][data-selected="true"] [data-role="resize-handle"] { opacity: 1; }
+[data-blok-tool="image"] [data-role="resize-handle"]::before {
+  content: '';
+  position: absolute;
+  inset: -8px -6px;
+}
+[data-blok-tool="image"] [data-role="resize-handle"][data-edge="left"]  { left: -3px; }
+[data-blok-tool="image"] [data-role="resize-handle"][data-edge="right"] { right: -3px; }
+[data-blok-tool="image"]:hover [data-role="resize-handle"],
+[data-blok-tool="image"][data-selected="true"] [data-role="resize-handle"] {
+  opacity: 1;
+}
+[data-blok-tool="image"] [data-role="resize-handle"]:hover {
+  background: rgba(15, 15, 15, 0.85);
+  transform: translateY(-50%) scale(1.15);
+}
+[data-blok-tool="image"] [data-role="resize-handle"]:active {
+  background: rgba(15, 15, 15, 1);
+  transform: translateY(-50%) scale(1.15);
+  transition-duration: 0s;
+}
 
 /* ----- Empty state ----- */
 .blok-image-empty {

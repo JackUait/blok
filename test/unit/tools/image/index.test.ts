@@ -208,6 +208,65 @@ describe('ImageTool — overlay actions', () => {
   });
 });
 
+describe('ImageTool — renderSettings (block settings menu)', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  const names = (cfg: unknown[]): string[] =>
+    cfg.map((i) => (i as { name?: string }).name ?? '');
+
+  it('returns size + download + copy-url items matching the 3-dots popover', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    tool.render();
+    const items = tool.renderSettings() as unknown[];
+    expect(Array.isArray(items)).toBe(true);
+    expect(names(items)).toContain('image-size');
+    expect(names(items)).toContain('image-download');
+    expect(names(items)).toContain('image-copy-url');
+  });
+
+  it('size item has children for small/medium/large/full, with isActive reflecting current size', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png', size: 'lg' }));
+    tool.render();
+    const items = tool.renderSettings() as unknown[];
+    const size = items.find((i) => (i as { name?: string }).name === 'image-size') as {
+      children?: { items?: Array<{ title?: string; isActive?: boolean; onActivate?: () => void }> };
+    };
+    const children = size.children?.items ?? [];
+    const titles = children.map((c) => c.title ?? '');
+    expect(titles).toEqual(expect.arrayContaining(['Small', 'Medium', 'Large', 'Full']));
+    const large = children.find((c) => c.title === 'Large');
+    expect(large?.isActive).toBe(true);
+  });
+
+  it('activating a size child updates data.size and dispatches change', () => {
+    const block = createMockBlock();
+    const tool = new ImageTool(createOptions({ url: 'u', size: 'md' }, {}, block));
+    tool.render();
+    const items = tool.renderSettings() as unknown[];
+    const size = items.find((i) => (i as { name?: string }).name === 'image-size') as {
+      children?: { items?: Array<{ title?: string; onActivate?: () => void }> };
+    };
+    const full = size.children?.items?.find((c) => c.title === 'Full');
+    full?.onActivate?.();
+    expect(tool.save().size).toBe('full');
+    expect(block.dispatchChange).toHaveBeenCalled();
+  });
+
+  it('activating copy-url writes the image URL to the clipboard', () => {
+    const writeText = vi.fn();
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    tool.render();
+    const items = tool.renderSettings() as unknown[];
+    const copy = items.find((i) => (i as { name?: string }).name === 'image-copy-url') as {
+      onActivate?: () => void;
+    };
+    copy.onActivate?.();
+    expect(writeText).toHaveBeenCalledWith('https://x/y.png');
+  });
+});
+
 describe('ImageTool — resize', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());

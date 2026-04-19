@@ -9,6 +9,7 @@ import type {
   FilePasteEvent,
   PatternPasteEvent,
 } from '../../../types';
+import type { MenuConfig } from '../../../types/tools/menu-config';
 import type {
   ImageAlignment,
   ImageConfig,
@@ -16,7 +17,7 @@ import type {
   ImageFrame,
   ImageSize,
 } from '../../../types/tools/image';
-import { IconImage } from '../../components/icons';
+import { IconCopy, IconImage } from '../../components/icons';
 import {
   ALIGNMENT_ORDER,
   DEFAULT_CAPTION_PLACEHOLDER,
@@ -163,6 +164,48 @@ export class ImageTool implements BlockTool {
 
   public getToolbarAnchorElement(): HTMLElement | undefined {
     return this.root?.querySelector<HTMLElement>('.blok-image-frame') ?? undefined;
+  }
+
+  public renderSettings(): MenuConfig {
+    const currentSize = this.data.size ?? 'md';
+    const sizes: { value: ImageSize; title: string }[] = [
+      { value: 'sm', title: 'Small' },
+      { value: 'md', title: 'Medium' },
+      { value: 'lg', title: 'Large' },
+      { value: 'full', title: 'Full' },
+    ];
+    const iconDownload = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>';
+    return [
+      {
+        icon: IconImage,
+        title: 'Size',
+        name: 'image-size',
+        children: {
+          items: sizes.map((s) => ({
+            icon: IconImage,
+            title: s.title,
+            name: `image-size-${s.value}`,
+            isActive: currentSize === s.value,
+            closeOnActivate: true,
+            onActivate: (): void => this.setSize(s.value),
+          })),
+        },
+      },
+      {
+        icon: iconDownload,
+        title: 'Download original',
+        name: 'image-download',
+        closeOnActivate: true,
+        onActivate: (): void => this.download(),
+      },
+      {
+        icon: IconCopy,
+        title: 'Copy URL',
+        name: 'image-copy-url',
+        closeOnActivate: true,
+        onActivate: (): void => this.copyUrl(),
+      },
+    ];
   }
 
   public removed(): void {

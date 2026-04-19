@@ -530,6 +530,140 @@ describe('Toolbox', () => {
 
       expect(mockPopoverInstance.updatePosition).toHaveBeenCalledWith(caretRect);
     });
+
+    it('anchors slash-search popover at the slash-search pill rect (not caret) so gap matches plus-search', () => {
+      /**
+       * When a slash-search pill is present, the popover must sit below the
+       * pill's actual bottom — the same way the plus-button flow anchors to
+       * the block's bottom. Anchoring to the caret instead produces a smaller
+       * (or even negative) visual gap vs. plus-search because the caret rect
+       * is contained inside the pill's padding.
+       */
+      const caretRect = new DOMRect(60, 320, 0, 18);
+      const pillRect = new DOMRect(50, 315, 130, 28);
+
+      mockSelectionRect.value = caretRect;
+
+      const pillElement = document.createElement('div');
+
+      pillElement.setAttribute('data-blok-slash-search', 'Type to search');
+      vi.spyOn(pillElement, 'getBoundingClientRect').mockReturnValue(pillRect);
+
+      const holder = document.createElement('div');
+
+      holder.appendChild(pillElement);
+
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue({
+        ...mocks.blockAPI,
+        holder,
+      } as unknown as typeof mocks.blockAPI);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+
+      const call = mockPopoverInstance.updatePosition.mock.calls[0]?.[0] as DOMRect | undefined;
+
+      expect(call).toBeDefined();
+      expect(call?.left).toBe(pillRect.left);
+      expect(call?.top).toBe(pillRect.top);
+      expect(call?.width).toBe(pillRect.width);
+      // Anchor bottom shrinks by PILL_BOTTOM_INSET so the popover's own 8px offset
+      // yields a slightly smaller visual gap below the pill.
+      expect(call?.bottom).toBe(pillRect.bottom - 2);
+    });
+
+    it('plus-search (withSlash=false) anchors at the same pill rect as slash-search so the gap is identical', () => {
+      /**
+       * Parity regression: plus-button and slash both apply the search pill
+       * attribute via startListeningToBlockInput. To ensure the popover-to-field
+       * gap is the same, both flows must resolve to the same anchor — the pill
+       * rect — not drift between "pill rect" (slash) and "block holder rect"
+       * (plus).
+       */
+      const pillRect = new DOMRect(50, 315, 130, 28);
+      const pillElement = document.createElement('div');
+
+      pillElement.setAttribute('data-blok-slash-search', 'Type to search');
+      vi.spyOn(pillElement, 'getBoundingClientRect').mockReturnValue(pillRect);
+
+      const holder = document.createElement('div');
+
+      holder.appendChild(pillElement);
+
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue({
+        ...mocks.blockAPI,
+        holder,
+      } as unknown as typeof mocks.blockAPI);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open(false);
+
+      const call = mockPopoverInstance.updatePosition.mock.calls[0]?.[0] as DOMRect | undefined;
+
+      expect(call).toBeDefined();
+      expect(call?.left).toBe(pillRect.left);
+      expect(call?.top).toBe(pillRect.top);
+      expect(call?.width).toBe(pillRect.width);
+      expect(call?.bottom).toBe(pillRect.bottom - 2);
+    });
+
+    it('applies the slash-search pill attribute BEFORE calling updatePosition so the pill rect is queryable', () => {
+      /**
+       * updatePosition relies on querying [data-blok-slash-search] inside the
+       * block. If the attribute is applied after updatePosition, the query
+       * returns null and the popover falls back to the caret rect — collapsing
+       * the gap between pill and popover.
+       */
+      const contentEditable = document.createElement('div');
+
+      contentEditable.setAttribute('contenteditable', 'true');
+
+      const holder = document.createElement('div');
+
+      holder.appendChild(contentEditable);
+
+      // Spy on setAttribute so we can assert the attribute lands before updatePosition.
+      let attributeSetAtCall = -1;
+
+      const originalSetAttribute = contentEditable.setAttribute.bind(contentEditable);
+
+      vi.spyOn(contentEditable, 'setAttribute').mockImplementation((name, value) => {
+        if (name === 'data-blok-slash-search') {
+          attributeSetAtCall = mockPopoverInstance.updatePosition.mock.calls.length;
+        }
+        originalSetAttribute(name, value);
+      });
+
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue({
+        ...mocks.blockAPI,
+        holder,
+      } as unknown as typeof mocks.blockAPI);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+
+      // Attribute must be set before updatePosition fires (i.e. updatePosition call count was 0 at that moment).
+      expect(attributeSetAtCall).toBe(0);
+      expect(contentEditable.getAttribute('data-blok-slash-search')).toBe('Type to search');
+    });
   });
 
   describe('close', () => {

@@ -61,7 +61,12 @@ type ToolboxTextLabelsKeys = 'filter' | 'nothingFound' | 'slashSearchPlaceholder
 
 /**
  * Pick the DOMRect used to anchor the toolbox popover.
- * - Slash open: use the caret rect directly.
+ * - Slash open with a slash-search pill present: use the pill's own rect so
+ *   the popover sits below the pill's visual bottom — the same way plus-button
+ *   anchors at the block's bottom. This keeps the popover-to-field gap equal
+ *   between plus-search and slash-search.
+ * - Slash open without a pill (e.g., nested container where the pill was not
+ *   applied): use the caret rect directly.
  * - Plus button (or slash with degenerate caret): build a composite rect from
  *   the block's CONTENT element (horizontal bounds) and the block holder
  *   (vertical bounds). Using the holder's horizontal bounds would snap the
@@ -72,14 +77,37 @@ type ToolboxTextLabelsKeys = 'filter' | 'nothingFound' | 'slashSearchPlaceholder
  * @param params.caretRectIsDegenerate - true when the caret rect is {0,0,0,0}
  * @param params.blockRect - the current block holder rect
  * @param params.contentElement - the current block's content element, if any
+ * @param params.slashSearchElement - the slash-search pill element, if any
  */
 const resolveAnchorRect = (params: {
   caretRect: DOMRect | undefined;
   caretRectIsDegenerate: boolean;
   blockRect: DOMRect | undefined;
   contentElement: HTMLElement | null;
+  slashSearchElement: HTMLElement | null;
 }): DOMRect | undefined => {
-  const { caretRect, caretRectIsDegenerate, blockRect, contentElement } = params;
+  const { caretRect, caretRectIsDegenerate, blockRect, contentElement, slashSearchElement } = params;
+
+  if (slashSearchElement !== null) {
+    const pillRect = slashSearchElement.getBoundingClientRect();
+
+    if (pillRect.width > 0 || pillRect.height > 0) {
+      /**
+       * Tighten the visual gap below the pill without changing the popover's
+       * own offset constant. The popover anchors at rect.bottom + 8; shrinking
+       * the anchor height by this inset pulls the popover a few pixels closer
+       * to the pill. Affects both slash-search and plus-search (same anchor).
+       */
+      const PILL_BOTTOM_INSET = 2;
+
+      return new DOMRect(
+        pillRect.left,
+        pillRect.top,
+        pillRect.width,
+        Math.max(0, pillRect.height - PILL_BOTTOM_INSET)
+      );
+    }
+  }
 
   if (caretRect !== undefined && !caretRectIsDegenerate) {
     return caretRect;
@@ -397,6 +425,14 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
      * popover.show() reads `params.position` via calculatePosition() and uses
      * it instead of the trigger rect when present.
      */
+    /**
+     * Attach the slash-search pill styling BEFORE computing the anchor rect so
+     * getBoundingClientRect reflects the pill's applied margin/padding — the
+     * popover gap is calculated from that rect and must not predate the class
+     * application.
+     */
+    this.startListeningToBlockInput();
+
     if (this.popover instanceof PopoverDesktop) {
       const blockRect = currentBlock?.holder.getBoundingClientRect();
       const caretRect = withSlash ? SelectionUtils.rect : undefined;
@@ -412,6 +448,8 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
         blockRect,
         contentElement: currentBlock?.holder
           .querySelector<HTMLElement>(`[${DATA_ATTR.elementContent}]`) ?? null,
+        slashSearchElement: currentBlock?.holder
+          .querySelector<HTMLElement>(`[${DATA_ATTR.slashSearch}]`) ?? null,
       });
 
       if (anchorRect !== undefined) {
@@ -424,7 +462,6 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     this.openedWithSlash = withSlash;
     this.opened = true;
     this.emit(ToolboxEvent.Opened);
-    this.startListeningToBlockInput();
   }
 
   /**

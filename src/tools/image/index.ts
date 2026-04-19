@@ -163,7 +163,7 @@ export class ImageTool implements BlockTool {
   }
 
   public getToolbarAnchorElement(): HTMLElement | undefined {
-    return this.root?.querySelector<HTMLElement>('.blok-image-frame') ?? undefined;
+    return this.root?.querySelector<HTMLElement>('.blok-image-inner') ?? undefined;
   }
 
   public renderSettings(): MenuConfig {
@@ -302,9 +302,6 @@ export class ImageTool implements BlockTool {
   private renderRendered(): void {
     if (!this.root) return;
     const figure = renderImage(this.data, { altBadge: Boolean(this.data.alt) });
-    figure.style.position = 'relative';
-
-    const frame = figure.querySelector<HTMLElement>('.blok-image-frame') ?? figure;
 
     const imgEl = figure.querySelector('img');
     if (imgEl) {
@@ -331,7 +328,7 @@ export class ImageTool implements BlockTool {
         onCopyUrl: () => this.copyUrl(),
         onToggleCaption: () => this.toggleCaption(),
       });
-      frame.appendChild(overlay);
+      figure.appendChild(overlay);
 
       const popover = renderMorePopover({
         size: this.data.size ?? 'md',
@@ -380,7 +377,7 @@ export class ImageTool implements BlockTool {
     figure.appendChild(caption);
 
     if (!this.readOnly) {
-      this.attachResizeHandles(frame);
+      this.attachResizeHandles(figure);
     }
 
     this.root.appendChild(figure);

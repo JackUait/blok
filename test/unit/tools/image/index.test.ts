@@ -188,23 +188,31 @@ describe('ImageTool — overlay actions', () => {
     expect(root.querySelector('input[type="file"]')).not.toBeNull();
   });
 
-  it('more-popover is a sibling of .blok-image-frame (inside figure, outside frame overflow) so it is not clipped', () => {
+  it('img is a direct child of .blok-image-inner — no frame wrapper, image itself is the container', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    const root = tool.render();
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+    const img = root.querySelector('img');
+    if (!figure || !img) throw new Error('dom missing');
+    expect(img.parentElement).toBe(figure);
+    expect(root.querySelector('.blok-image-frame')).toBeNull();
+  });
+
+  it('more-popover is a direct child of .blok-image-inner so it is not clipped', () => {
     const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
     const root = tool.render();
     const popover = root.querySelector<HTMLElement>('[data-role="image-popover"]');
     const figure = root.querySelector<HTMLElement>('.blok-image-inner');
-    const frame = root.querySelector<HTMLElement>('.blok-image-frame');
-    if (!popover || !figure || !frame) throw new Error('dom missing');
+    if (!popover || !figure) throw new Error('dom missing');
     expect(popover.parentElement).toBe(figure);
-    expect(frame.contains(popover)).toBe(false);
   });
 
-  it('getToolbarAnchorElement() returns the image frame so block toolbar centers at image top, not on the caption', () => {
+  it('getToolbarAnchorElement() returns the image wrapper so block toolbar centers at image top, not on the caption', () => {
     const tool = new ImageTool(createOptions({ url: 'https://x/y.png', caption: 'hi' }));
     const root = tool.render();
-    const frame = root.querySelector<HTMLElement>('.blok-image-frame');
-    if (!frame) throw new Error('frame missing');
-    expect(tool.getToolbarAnchorElement()).toBe(frame);
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+    if (!figure) throw new Error('figure missing');
+    expect(tool.getToolbarAnchorElement()).toBe(figure);
   });
 });
 
@@ -277,7 +285,7 @@ describe('ImageTool — resize', () => {
     const root = tool.render();
     const figure = root.querySelector('figure');
     if (!figure) throw new Error('figure missing');
-    const frame = figure.querySelector<HTMLElement>('.blok-image-frame') ?? figure;
+    const frame = figure;
     Object.defineProperty(frame, 'getBoundingClientRect', {
       value: () => ({ left: 0, right: 1000, width: 1000, top: 0, bottom: 100, height: 100, x: 0, y: 0, toJSON: () => ({}) }),
     });

@@ -28,9 +28,7 @@ export function renderImage(
   figure.className = 'blok-image-inner';
   figure.style.margin = '0';
   figure.style.textAlign = ALIGNMENT_TO_TEXT_ALIGN[alignment];
-
-  const frame = document.createElement('div');
-  frame.className = 'blok-image-frame';
+  figure.style.position = 'relative';
 
   const img = document.createElement('img');
   img.setAttribute('src', data.url);
@@ -43,17 +41,16 @@ export function renderImage(
   img.style.marginRight = margin.right;
   img.draggable = false;
 
-  frame.appendChild(img);
+  figure.appendChild(img);
 
   if (opts.altBadge && data.alt) {
     const badge = document.createElement('div');
     badge.className = 'blok-image-alt-badge';
     badge.setAttribute('data-role', 'alt-badge');
     badge.textContent = `alt: “${data.alt}”`;
-    frame.appendChild(badge);
+    figure.appendChild(badge);
   }
 
-  figure.appendChild(frame);
   return figure;
 }
 

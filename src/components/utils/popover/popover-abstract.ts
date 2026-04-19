@@ -216,10 +216,83 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * Clears memory
    */
   public destroy(): void {
+    const ghost = this.createCloseGhost();
+
     this.items.forEach(item => item.destroy());
     this.nodes.popover?.remove();
     this.listeners.removeAll();
     this.search?.destroy();
+
+    this.playCloseGhost(ghost);
+  }
+
+  /**
+   * Snapshots the popover so its exit transition can play after the real
+   * element is torn down. Returns null when there is nothing visible to
+   * animate (e.g. popover never opened).
+   */
+  private createCloseGhost(): HTMLElement | null {
+    const popover = this.nodes.popover;
+
+    if (!popover?.isConnected) {
+      return null;
+    }
+
+    const rect = popover.getBoundingClientRect();
+
+    if (rect.width === 0 && rect.height === 0) {
+      return null;
+    }
+
+    const ghost = popover.cloneNode(true) as HTMLElement;
+
+    ghost.removeAttribute('id');
+    ghost.removeAttribute('data-blok-testid');
+    ghost.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+    ghost.querySelectorAll('[data-blok-testid]').forEach(el => el.removeAttribute('data-blok-testid'));
+
+    ghost.setAttribute(DATA_ATTR.popoverOpened, 'true');
+
+    const ghostContainer = ghost.querySelector<HTMLElement>(`[${DATA_ATTR.popoverContainer}]`);
+
+    if (ghostContainer) {
+      ghostContainer.className = twMerge(css.popoverContainer, css.popoverContainerOpened);
+    }
+
+    ghost.style.position = 'absolute';
+    ghost.style.top = `${rect.top + window.scrollY}px`;
+    ghost.style.left = `${rect.left + window.scrollX}px`;
+    ghost.style.pointerEvents = 'none';
+
+    return ghost;
+  }
+
+  /**
+   * Mounts the ghost and triggers the exit transition, then cleans it up
+   * when the transition completes.
+   * @param ghost - element produced by createCloseGhost
+   */
+  private playCloseGhost(ghost: HTMLElement | null): void {
+    if (!ghost) {
+      return;
+    }
+
+    document.body.appendChild(ghost);
+
+    void ghost.offsetHeight;
+
+    ghost.removeAttribute(DATA_ATTR.popoverOpened);
+
+    const ghostContainer = ghost.querySelector<HTMLElement>(`[${DATA_ATTR.popoverContainer}]`);
+
+    if (ghostContainer) {
+      ghostContainer.className = css.popoverContainer;
+    }
+
+    const cleanup = (): void => ghost.remove();
+
+    ghostContainer?.addEventListener('transitionend', cleanup, { once: true });
+    window.setTimeout(cleanup, 400);
   }
 
   /**

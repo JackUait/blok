@@ -1,10 +1,17 @@
 import type { ImageAlignment, ImageData, ImageSize } from '../../../types/tools/image';
 
-const ALIGNMENT_TO_JUSTIFY: Record<ImageAlignment, string> = {
-  left: 'flex-start',
+const ALIGNMENT_TO_TEXT_ALIGN: Record<ImageAlignment, string> = {
+  left: 'left',
   center: 'center',
-  right: 'flex-end',
+  right: 'right',
   full: 'center',
+};
+
+const ALIGNMENT_TO_IMG_MARGIN: Record<ImageAlignment, { left: string; right: string }> = {
+  left:   { left: '0',    right: 'auto' },
+  center: { left: 'auto', right: 'auto' },
+  right:  { left: 'auto', right: '0'    },
+  full:   { left: '0',    right: '0'    },
 };
 
 export interface RenderImageOptions {
@@ -16,12 +23,11 @@ export function renderImage(
   data: Partial<ImageData> & { url: string },
   opts: RenderImageOptions = {}
 ): HTMLElement {
+  const alignment = data.alignment ?? 'center';
   const figure = document.createElement('figure');
   figure.className = 'blok-image-inner';
-  figure.style.display = 'flex';
-  figure.style.flexDirection = 'column';
   figure.style.margin = '0';
-  figure.style.justifyContent = ALIGNMENT_TO_JUSTIFY[data.alignment ?? 'center'];
+  figure.style.textAlign = ALIGNMENT_TO_TEXT_ALIGN[alignment];
 
   const frame = document.createElement('div');
   frame.className = 'blok-image-frame';
@@ -32,6 +38,9 @@ export function renderImage(
   img.style.width = `${data.width ?? 100}%`;
   img.style.height = 'auto';
   img.style.maxWidth = '100%';
+  const margin = ALIGNMENT_TO_IMG_MARGIN[alignment];
+  img.style.marginLeft = margin.left;
+  img.style.marginRight = margin.right;
   img.draggable = false;
 
   frame.appendChild(img);

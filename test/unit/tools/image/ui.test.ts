@@ -19,9 +19,29 @@ describe('renderImage', () => {
     expect(img.style.width).toBe('100%');
   });
 
-  it('applies alignment via wrapper justify-content', () => {
+  it('sets text-align on figure per alignment so caption inherits and aligns with image', () => {
+    expect(renderImage({ url: 'u', alignment: 'left' }).style.textAlign).toBe('left');
+    expect(renderImage({ url: 'u', alignment: 'center' }).style.textAlign).toBe('center');
+    expect(renderImage({ url: 'u', alignment: 'right' }).style.textAlign).toBe('right');
+    expect(renderImage({ url: 'u', alignment: 'full' }).style.textAlign).toBe('center');
+  });
+
+  it('does not force display:flex on figure (CSS inline-block shifts figure on page)', () => {
     const fig = renderImage({ url: 'u', alignment: 'right' });
-    expect(fig.style.justifyContent).toBe('flex-end');
+    expect(fig.style.display).not.toBe('flex');
+  });
+
+  it('aligns resized image within frame via margin-inline so image shifts with caption', () => {
+    const leftImg = renderImage({ url: 'u', alignment: 'left', width: 60 }).querySelector('img');
+    const centerImg = renderImage({ url: 'u', alignment: 'center', width: 60 }).querySelector('img');
+    const rightImg = renderImage({ url: 'u', alignment: 'right', width: 60 }).querySelector('img');
+    if (!leftImg || !centerImg || !rightImg) throw new Error('img missing');
+    expect(leftImg.style.marginLeft).toBe('0px');
+    expect(leftImg.style.marginRight).toBe('auto');
+    expect(centerImg.style.marginLeft).toBe('auto');
+    expect(centerImg.style.marginRight).toBe('auto');
+    expect(rightImg.style.marginLeft).toBe('auto');
+    expect(rightImg.style.marginRight).toBe('0px');
   });
 
   it('renders alt as empty string when missing', () => {

@@ -144,8 +144,13 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
    * Open Block Settings pane
    * @param targetBlock - near which Block we should open BlockSettings
    * @param trigger - element to position the popover relative to
+   * @param options - popover placement overrides
    */
-  public async open(targetBlock?: Block, trigger?: HTMLElement): Promise<void> {
+  public async open(
+    targetBlock?: Block,
+    trigger?: HTMLElement,
+    options?: { placeLeftOfAnchor?: boolean }
+  ): Promise<void> {
     const selectedBlocks = this.Blok.BlockSelection.selectedBlocks;
     const hasMultipleBlocksSelected = selectedBlocks.length > 1;
 
@@ -208,7 +213,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         },
         autoFocusFirstItem: false,
         minWidth: '220px',
-        placeLeftOfAnchor: true,
+        placeLeftOfAnchor: options?.placeLeftOfAnchor ?? true,
         viewportMargin: 50,
         contextLabel,
       };

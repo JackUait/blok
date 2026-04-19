@@ -106,7 +106,7 @@ describe('ToolbarAPI', () => {
 
       expect(openSpy).toHaveBeenCalledTimes(1);
       expect(closeSpy).toHaveBeenCalledTimes(1);
-      expect(toggleBlockSettingsSpy).toHaveBeenCalledWith(true, undefined);
+      expect(toggleBlockSettingsSpy).toHaveBeenCalledWith(true, undefined, undefined);
       expect(toggleToolboxSpy).toHaveBeenCalledWith(false);
     });
   });
@@ -165,7 +165,15 @@ describe('ToolbarAPI', () => {
 
       toolbarApi.toggleBlockSettings(true, trigger);
 
-      expect(blokMock.BlockSettings.open).toHaveBeenCalledWith(undefined, trigger);
+      expect(blokMock.BlockSettings.open).toHaveBeenCalledWith(undefined, trigger, undefined);
+    });
+
+    it('forwards placeLeftOfAnchor override to BlockSettings.open', () => {
+      const trigger = document.createElement('button');
+
+      toolbarApi.toggleBlockSettings(true, trigger, { placeLeftOfAnchor: false });
+
+      expect(blokMock.BlockSettings.open).toHaveBeenCalledWith(undefined, trigger, { placeLeftOfAnchor: false });
     });
 
     it('logs a warning when no block is selected', () => {

@@ -27,7 +27,6 @@ import {
   openLightbox,
   renderCaption,
   renderImage,
-  renderMorePopover,
   renderOverlay,
 } from './ui';
 import { renderUploadingState, type UploadingStateElement } from './uploading-state';
@@ -49,7 +48,6 @@ export class ImageTool implements BlockTool {
   private resizeDetach: (() => void)[] = [];
   private errorMessage: string | null = null;
   private lastFileName: string | null = null;
-  private popover: HTMLElement | null = null;
 
   constructor(options: BlockToolConstructorOptions<ImageData, ImageConfig>) {
     this.api = options.api;
@@ -237,7 +235,6 @@ export class ImageTool implements BlockTool {
   private renderState(): void {
     if (!this.root) return;
     this.detachResize();
-    this.popover = null;
     this.root.replaceChildren();
     this.syncRootAttributes();
 
@@ -325,35 +322,11 @@ export class ImageTool implements BlockTool {
       });
       figure.appendChild(overlay);
 
-      const popover = renderMorePopover({
-        size: this.data.size ?? 'md',
-        onSize: (next) => {
-          this.setSize(next);
-          this.closePopover();
-        },
-        onCopyUrl: () => {
-          this.copyUrl();
-          this.closePopover();
-        },
-        onDownload: () => {
-          this.download();
-          this.closePopover();
-        },
-        onDelete: () => {
-          this.closePopover();
-          this.deleteBlock();
-        },
-      });
-      this.popover = popover;
-      figure.appendChild(popover);
-
       const moreBtn = overlay.querySelector<HTMLButtonElement>('[data-action="more"]');
       moreBtn?.addEventListener('click', (event) => {
         event.stopPropagation();
-        this.togglePopover();
+        this.openBlockSettings(moreBtn);
       });
-
-      figure.addEventListener('mouseleave', () => this.closePopover());
     }
 
     const placeholder = this.config.captionPlaceholder ?? DEFAULT_CAPTION_PLACEHOLDER;
@@ -378,13 +351,17 @@ export class ImageTool implements BlockTool {
     }
   }
 
-  private togglePopover(): void {
-    if (!this.popover) return;
-    this.popover.classList.toggle('is-open');
-  }
-
-  private closePopover(): void {
-    this.popover?.classList.remove('is-open');
+  private openBlockSettings(trigger?: HTMLElement): void {
+    const toolbar = (this.api as unknown as {
+      toolbar?: {
+        toggleBlockSettings?: (
+          state: boolean,
+          trigger?: HTMLElement,
+          options?: { placeLeftOfAnchor?: boolean }
+        ) => void;
+      };
+    }).toolbar;
+    toolbar?.toggleBlockSettings?.(true, trigger, { placeLeftOfAnchor: false });
   }
 
   private attachResizeHandles(figure: HTMLElement): void {

@@ -195,15 +195,6 @@ describe('ImageTool — overlay actions', () => {
     expect(root.querySelector('.blok-image-frame')).toBeNull();
   });
 
-  it('more-popover is a direct child of .blok-image-inner so it is not clipped', () => {
-    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
-    const root = tool.render();
-    const popover = root.querySelector<HTMLElement>('[data-role="image-popover"]');
-    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
-    if (!popover || !figure) throw new Error('dom missing');
-    expect(popover.parentElement).toBe(figure);
-  });
-
   it('getToolbarAnchorElement() returns the image wrapper so block toolbar centers at image top, not on the caption', () => {
     const tool = new ImageTool(createOptions({ url: 'https://x/y.png', caption: 'hi' }));
     const root = tool.render();
@@ -269,6 +260,32 @@ describe('ImageTool — renderSettings (block settings menu)', () => {
     };
     copy.onActivate?.();
     expect(writeText).toHaveBeenCalledWith('https://x/y.png');
+  });
+});
+
+describe('ImageTool — more button opens BlockSettings', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('clicking overlay "..." opens BlockSettings anchored to three-dots button and placed to its right', () => {
+    const toggleBlockSettings = vi.fn();
+    const api = {
+      styles: { block: 'blok-block' },
+      i18n: { t: (k: string) => k },
+      toolbar: { toggleBlockSettings },
+    } as unknown as API;
+    const tool = new ImageTool({ ...createOptions({ url: 'https://x/y.png' }), api });
+    const root = tool.render();
+    const more = root.querySelector<HTMLButtonElement>('[data-action="more"]');
+    if (!more) throw new Error('more button missing');
+    more.click();
+    expect(toggleBlockSettings).toHaveBeenCalledWith(true, more, { placeLeftOfAnchor: false });
+  });
+
+  it('does not render a custom more-popover inside the figure', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    const root = tool.render();
+    expect(root.querySelector('[data-role="image-popover"]')).toBeNull();
   });
 });
 
@@ -407,21 +424,6 @@ describe('ImageTool — data attributes on root', () => {
     expect(root.getAttribute('data-rounded')).toBe('off');
     expect(root.getAttribute('data-caption')).toBe('off');
     expect(root.getAttribute('data-alt')).toBe('set');
-  });
-});
-
-describe('ImageTool — size presets', () => {
-  beforeEach(() => vi.clearAllMocks());
-  afterEach(() => vi.restoreAllMocks());
-
-  it('clicking a size preset in the more-popover sets data.size and data-size attr', () => {
-    const block = createMockBlock();
-    const tool = new ImageTool(createOptions({ url: 'u' }, {}, block));
-    const root = tool.render();
-    root.querySelector<HTMLButtonElement>('[data-action="size-lg"]')?.click();
-    expect(tool.save().size).toBe('lg');
-    expect(root.getAttribute('data-size')).toBe('lg');
-    expect(block.dispatchChange).toHaveBeenCalled();
   });
 });
 

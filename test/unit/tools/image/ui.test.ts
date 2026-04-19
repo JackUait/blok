@@ -64,6 +64,11 @@ describe('renderCaption', () => {
     expect(el.textContent).toBe('hello');
     expect(el.getAttribute('contenteditable')).toBe('false');
   });
+
+  it('forces text-align:left so caption stays left regardless of image alignment', () => {
+    const el = renderCaption({ value: '', placeholder: 'p', readOnly: false });
+    expect(el.style.textAlign).toBe('left');
+  });
 });
 
 describe('openLightbox', () => {

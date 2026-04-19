@@ -44,6 +44,7 @@ export function renderCaption(opts: CaptionOptions): HTMLElement {
   el.setAttribute('data-placeholder', opts.placeholder);
   el.textContent = opts.value;
   el.style.outline = 'none';
+  el.style.textAlign = 'left';
   return el;
 }
 

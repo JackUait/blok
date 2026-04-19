@@ -1286,9 +1286,15 @@
               { id: "prop-status", name: "Status", type: "select", position: "a1", config: {
                 options: [
                   { id: "opt-backlog", label: "Backlog", color: "gray", position: "a0" },
-                  { id: "opt-progress", label: "In progress", color: "blue", position: "a1" },
-                  { id: "opt-review", label: "In review", color: "purple", position: "a2" },
-                  { id: "opt-done", label: "Done", color: "green", position: "a3" }
+                  { id: "opt-brown", label: "Brown sample", color: "brown", position: "a1" },
+                  { id: "opt-orange", label: "Orange sample", color: "orange", position: "a2" },
+                  { id: "opt-yellow", label: "Yellow sample", color: "yellow", position: "a3" },
+                  { id: "opt-done", label: "Done", color: "green", position: "a4" },
+                  { id: "opt-teal", label: "Teal sample", color: "teal", position: "a5" },
+                  { id: "opt-progress", label: "In progress", color: "blue", position: "a6" },
+                  { id: "opt-review", label: "In review", color: "purple", position: "a7" },
+                  { id: "opt-pink", label: "Pink sample", color: "pink", position: "a8" },
+                  { id: "opt-red", label: "Red sample", color: "red", position: "a9" }
                 ]
               }},
               { id: "prop-description", name: "Description", type: "richText", position: "a2" }
@@ -1298,8 +1304,14 @@
             ],
             activeViewId: "view-1"
           },
-          content: ["board-row-1", "board-row-2", "board-row-3", "board-row-4", "board-row-5", "board-row-6", "board-row-7", "board-row-8", "board-row-9"]
+          content: ["board-row-1", "board-row-2", "board-row-3", "board-row-4", "board-row-5", "board-row-6", "board-row-7", "board-row-8", "board-row-9", "board-row-brown", "board-row-orange", "board-row-yellow", "board-row-teal", "board-row-pink", "board-row-red"]
         },
+        { id: "board-row-brown", type: "database-row", parent: "database-board", data: { position: "b0", properties: { "prop-title": "Brown card sample", "prop-status": "opt-brown", "prop-description": { time: 1700000010000, version: "1.0.0", blocks: [{ id: "db1", type: "paragraph", data: { text: "Example card inside the brown column." } }] } } } },
+        { id: "board-row-orange", type: "database-row", parent: "database-board", data: { position: "b1", properties: { "prop-title": "Orange card sample", "prop-status": "opt-orange", "prop-description": { time: 1700000011000, version: "1.0.0", blocks: [{ id: "do1", type: "paragraph", data: { text: "Example card inside the orange column." } }] } } } },
+        { id: "board-row-yellow", type: "database-row", parent: "database-board", data: { position: "b2", properties: { "prop-title": "Yellow card sample", "prop-status": "opt-yellow", "prop-description": { time: 1700000012000, version: "1.0.0", blocks: [{ id: "dy1", type: "paragraph", data: { text: "Example card inside the yellow column." } }] } } } },
+        { id: "board-row-teal", type: "database-row", parent: "database-board", data: { position: "b3", properties: { "prop-title": "Teal card sample", "prop-status": "opt-teal", "prop-description": { time: 1700000013000, version: "1.0.0", blocks: [{ id: "dt1", type: "paragraph", data: { text: "Example card inside the teal column." } }] } } } },
+        { id: "board-row-pink", type: "database-row", parent: "database-board", data: { position: "b4", properties: { "prop-title": "Pink card sample", "prop-status": "opt-pink", "prop-description": { time: 1700000014000, version: "1.0.0", blocks: [{ id: "dp1", type: "paragraph", data: { text: "Example card inside the pink column." } }] } } } },
+        { id: "board-row-red", type: "database-row", parent: "database-board", data: { position: "b5", properties: { "prop-title": "Red card sample", "prop-status": "opt-red", "prop-description": { time: 1700000015000, version: "1.0.0", blocks: [{ id: "dr1", type: "paragraph", data: { text: "Example card inside the red column." } }] } } } },
         { id: "board-row-1", type: "database-row", parent: "database-board", data: { position: "a0", properties: { "prop-title": "Write documentation", "prop-status": "opt-backlog", "prop-description": { time: 1700000001000, version: "1.0.0", blocks: [{ id: "d1b1", type: "paragraph", data: { text: "Cover all public API methods, config options, and integration examples." } }, { id: "d1b2", type: "paragraph", data: { text: "Sections needed: Quick Start, Configuration, Tools API, Events." } }] } } } },
         { id: "board-row-2", type: "database-row", parent: "database-board", data: { position: "a1", properties: { "prop-title": "Add dark mode support", "prop-status": "opt-backlog", "prop-description": { time: 1700000002000, version: "1.0.0", blocks: [{ id: "d2b1", type: "paragraph", data: { text: "Introduce a CSS custom-property theme layer so users can switch between light and dark palettes without re-initialising the editor." } }, { id: "d2b2", type: "paragraph", data: { text: "Follow the OS-level preference via prefers-color-scheme and also expose a manual toggle." } }] } } } },
         { id: "board-row-3", type: "database-row", parent: "database-board", data: { position: "a2", properties: { "prop-title": "Implement drag and drop", "prop-status": "opt-progress", "prop-description": { time: 1700000003000, version: "1.0.0", blocks: [{ id: "d3b1", type: "paragraph", data: { text: "Use pointer events (not the HTML5 drag API) for cross-browser consistency." } }, { id: "d3b2", type: "paragraph", data: { text: "Cards should snap to the nearest drop zone and show a placeholder while dragging." } }] } } } },
@@ -1325,9 +1337,15 @@
               { id: "prop-status", name: "Status", type: "select", position: "a1", config: {
                 options: [
                   { id: "opt-backlog", label: "Backlog", color: "gray", position: "a0" },
-                  { id: "opt-progress", label: "In progress", color: "blue", position: "a1" },
-                  { id: "opt-review", label: "In review", color: "purple", position: "a2" },
-                  { id: "opt-done", label: "Done", color: "green", position: "a3" }
+                  { id: "opt-brown", label: "Brown sample", color: "brown", position: "a1" },
+                  { id: "opt-orange", label: "Orange sample", color: "orange", position: "a2" },
+                  { id: "opt-yellow", label: "Yellow sample", color: "yellow", position: "a3" },
+                  { id: "opt-done", label: "Done", color: "green", position: "a4" },
+                  { id: "opt-teal", label: "Teal sample", color: "teal", position: "a5" },
+                  { id: "opt-progress", label: "In progress", color: "blue", position: "a6" },
+                  { id: "opt-review", label: "In review", color: "purple", position: "a7" },
+                  { id: "opt-pink", label: "Pink sample", color: "pink", position: "a8" },
+                  { id: "opt-red", label: "Red sample", color: "red", position: "a9" }
                 ]
               }},
               { id: "prop-description", name: "Description", type: "richText", position: "a2" }

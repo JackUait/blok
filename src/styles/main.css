@@ -3081,7 +3081,6 @@
 [data-blok-tool="image"][data-align="left"]   { text-align: left; }
 [data-blok-tool="image"][data-align="center"] { text-align: center; }
 [data-blok-tool="image"][data-align="right"]  { text-align: right; }
-[data-blok-tool="image"][data-align="full"]   { text-align: center; }
 
 [data-blok-tool="image"] .blok-image-inner {
   display: inline-block;
@@ -3092,7 +3091,6 @@
 [data-blok-tool="image"][data-size="md"]   .blok-image-inner { width: 520px; }
 [data-blok-tool="image"][data-size="lg"]   .blok-image-inner { width: 100%; }
 [data-blok-tool="image"][data-size="full"] .blok-image-inner { width: 100%; }
-[data-blok-tool="image"][data-align="full"] .blok-image-inner { width: min(1200px, 100%); }
 
 [data-blok-tool="image"] .blok-image-inner img {
   display: block;

@@ -150,33 +150,30 @@ describe('ImageTool — overlay actions', () => {
     expect(root.querySelector('[data-role="image-overlay"]')).toBeNull();
   });
 
-  it('clicking align cycles left → center → right → full → left and dispatches change', () => {
+  it('clicking a popover alignment option sets that exact value and dispatches change', () => {
     const block = createMockBlock();
     const tool = new ImageTool(createOptions({ url: 'u' }, {}, block));
     const root = tool.render();
-    const align = (): HTMLButtonElement => {
-      const btn = root.querySelector<HTMLButtonElement>('[data-action="align"]');
-      if (!btn) throw new Error('align missing');
-      return btn;
+    const openPopover = (): void => {
+      root.querySelector<HTMLButtonElement>('[data-action="align-trigger"]')?.click();
     };
-    align().click();
-    expect(tool.save().alignment).toBe('left');
-    align().click();
-    expect(tool.save().alignment).toBe('center');
-    align().click();
+    openPopover();
+    root.querySelector<HTMLButtonElement>('[data-action="align-right"]')?.click();
     expect(tool.save().alignment).toBe('right');
-    align().click();
-    expect(tool.save().alignment).toBe('full');
-    align().click();
+    openPopover();
+    root.querySelector<HTMLButtonElement>('[data-action="align-left"]')?.click();
     expect(tool.save().alignment).toBe('left');
+    openPopover();
+    root.querySelector<HTMLButtonElement>('[data-action="align-center"]')?.click();
+    expect(tool.save().alignment).toBe('center');
     expect(block.dispatchChange).toHaveBeenCalled();
   });
 
-  it('clicking an alignment-pill button sets that exact value', () => {
-    const tool = new ImageTool(createOptions({ url: 'u' }));
+  it('alignment trigger exposes current alignment on data-current', () => {
+    const tool = new ImageTool(createOptions({ url: 'u', alignment: 'right' }));
     const root = tool.render();
-    root.querySelector<HTMLButtonElement>('[data-action="align-full"]')?.click();
-    expect(tool.save().alignment).toBe('full');
+    const trigger = root.querySelector<HTMLButtonElement>('[data-action="align-trigger"]');
+    expect(trigger?.getAttribute('data-current')).toBe('right');
   });
 
   it('clicking replace returns the tool to EMPTY state', () => {
@@ -397,7 +394,7 @@ describe('ImageTool — data attributes on root', () => {
     const tool = new ImageTool(createOptions({
       url: 'u',
       size: 'lg',
-      alignment: 'full',
+      alignment: 'right',
       frame: 'shadow',
       rounded: false,
       captionVisible: false,
@@ -405,7 +402,7 @@ describe('ImageTool — data attributes on root', () => {
     }));
     const root = tool.render();
     expect(root.getAttribute('data-size')).toBe('lg');
-    expect(root.getAttribute('data-align')).toBe('full');
+    expect(root.getAttribute('data-align')).toBe('right');
     expect(root.getAttribute('data-frame')).toBe('shadow');
     expect(root.getAttribute('data-rounded')).toBe('off');
     expect(root.getAttribute('data-caption')).toBe('off');

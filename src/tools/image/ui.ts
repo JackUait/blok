@@ -4,7 +4,18 @@ const ALIGNMENT_TO_TEXT_ALIGN: Record<ImageAlignment, string> = {
   left: 'left',
   center: 'center',
   right: 'right',
-  full: 'center',
+};
+
+const ALIGNMENT_ICON: Record<ImageAlignment, string> = {
+  left:   '<path d="M3 6h18M3 12h10M3 18h14"/>',
+  center: '<path d="M3 6h18M7 12h10M5 18h14"/>',
+  right:  '<path d="M3 6h18M11 12h10M7 18h14"/>',
+};
+
+const ALIGNMENT_LABEL: Record<ImageAlignment, string> = {
+  left: 'Align left',
+  center: 'Align center',
+  right: 'Align right',
 };
 
 export function renderImage(
@@ -113,7 +124,6 @@ export interface OverlayState {
 export interface OverlayOptions {
   state: OverlayState;
   onAlign(next: ImageAlignment): void;
-  onAlignCycle(): void;
   onSize(next: ImageSize): void;
   onReplace(): void;
   onAlt(): void;
@@ -133,45 +143,7 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
   root.setAttribute('data-role', 'image-overlay');
   root.className = 'blok-image-toolbar';
 
-  const pill = document.createElement('div');
-  pill.className = 'blok-image-toolbar__pill';
-  pill.setAttribute('role', 'group');
-  pill.setAttribute('aria-label', 'Alignment');
-
-  const alignments: { value: ImageAlignment; label: string; svg: string }[] = [
-    { value: 'left',   label: 'Align left',   svg: '<path d="M3 6h18M3 12h10M3 18h14"/>' },
-    { value: 'center', label: 'Align center', svg: '<path d="M3 6h18M7 12h10M5 18h14"/>' },
-    { value: 'right',  label: 'Align right',  svg: '<path d="M3 6h18M11 12h10M7 18h14"/>' },
-    { value: 'full',   label: 'Full width',   svg: '<rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M7 10v4M17 10v4"/>' },
-  ];
-  for (const a of alignments) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.setAttribute('aria-label', a.label);
-    btn.setAttribute('title', a.label);
-    btn.setAttribute('data-action', `align-${a.value}`);
-    btn.setAttribute('aria-pressed', opts.state.alignment === a.value ? 'true' : 'false');
-    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${a.svg}</svg>`;
-    btn.addEventListener('click', (event) => {
-      event.stopPropagation();
-      opts.onAlign(a.value);
-    });
-    pill.appendChild(btn);
-  }
-  root.appendChild(pill);
-
-  // Hidden legacy cycle button — keeps data-action="align" stable for consumers/tests.
-  const alignCycle = document.createElement('button');
-  alignCycle.type = 'button';
-  alignCycle.setAttribute('aria-label', 'Cycle alignment');
-  alignCycle.setAttribute('data-action', 'align');
-  alignCycle.className = 'blok-image-toolbar__alias';
-  alignCycle.style.display = 'none';
-  alignCycle.addEventListener('click', (event) => {
-    event.stopPropagation();
-    opts.onAlignCycle();
-  });
-  root.appendChild(alignCycle);
+  appendAlignmentControl(root, opts);
 
   appendDivider(root);
 
@@ -232,6 +204,91 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
   root.appendChild(deleteAlias);
 
   return root;
+}
+
+function appendAlignmentControl(root: HTMLElement, opts: OverlayOptions): void {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'blok-image-toolbar__align';
+  wrapper.style.position = 'relative';
+
+  const current = opts.state.alignment;
+
+  const trigger = document.createElement('button');
+  trigger.type = 'button';
+  trigger.setAttribute('data-action', 'align-trigger');
+  trigger.setAttribute('data-current', current);
+  trigger.setAttribute('aria-label', 'Alignment');
+  trigger.setAttribute('title', 'Alignment');
+  trigger.setAttribute('aria-haspopup', 'true');
+  trigger.setAttribute('aria-expanded', 'false');
+  trigger.innerHTML = alignmentIconSvg(current);
+  wrapper.appendChild(trigger);
+
+  const popover = document.createElement('div');
+  popover.setAttribute('data-role', 'align-popover');
+  popover.setAttribute('role', 'group');
+  popover.setAttribute('aria-label', 'Alignment');
+  popover.className = 'blok-image-toolbar__pill blok-image-toolbar__align-popover';
+  popover.hidden = true;
+
+  for (const value of ['left', 'center', 'right'] as ImageAlignment[]) {
+    const option = document.createElement('button');
+    option.type = 'button';
+    option.setAttribute('data-action', `align-${value}`);
+    option.setAttribute('aria-label', ALIGNMENT_LABEL[value]);
+    option.setAttribute('title', ALIGNMENT_LABEL[value]);
+    option.setAttribute('aria-pressed', current === value ? 'true' : 'false');
+    option.innerHTML = alignmentIconSvg(value);
+    option.addEventListener('click', (event) => {
+      event.stopPropagation();
+      opts.onAlign(value);
+      closePopover();
+    });
+    popover.appendChild(option);
+  }
+
+  wrapper.appendChild(popover);
+  root.appendChild(wrapper);
+
+  const onKeyDown = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape' && !popover.hidden) {
+      event.stopPropagation();
+      closePopover();
+    }
+  };
+
+  const onOutside = (event: MouseEvent): void => {
+    if (popover.hidden) return;
+    const target = event.target as Node | null;
+    if (target && wrapper.contains(target)) return;
+    closePopover();
+  };
+
+  const openPopover = (): void => {
+    if (!popover.hidden) return;
+    popover.hidden = false;
+    trigger.setAttribute('aria-expanded', 'true');
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('mousedown', onOutside);
+  };
+
+  function closePopover(): void {
+    if (popover.hidden) return;
+    popover.hidden = true;
+    trigger.setAttribute('aria-expanded', 'false');
+    document.removeEventListener('keydown', onKeyDown);
+    document.removeEventListener('mousedown', onOutside);
+  }
+
+  trigger.addEventListener('click', (event) => {
+    event.stopPropagation();
+    if (popover.hidden) openPopover();
+    else closePopover();
+  });
+}
+
+function alignmentIconSvg(value: ImageAlignment): string {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ALIGNMENT_ICON[value]}</svg>`;
 }
 
 function appendDivider(parent: HTMLElement): void {

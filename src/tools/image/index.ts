@@ -18,11 +18,7 @@ import type {
   ImageSize,
 } from '../../../types/tools/image';
 import { IconCopy, IconImage } from '../../components/icons';
-import {
-  ALIGNMENT_ORDER,
-  DEFAULT_CAPTION_PLACEHOLDER,
-  URL_PATTERN,
-} from './constants';
+import { DEFAULT_CAPTION_PLACEHOLDER, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { renderErrorState } from './error-state';
 import { ImageError } from './errors';
@@ -318,7 +314,6 @@ export class ImageTool implements BlockTool {
           size: this.data.size ?? 'md',
         },
         onAlign: (next) => this.setAlignment(next),
-        onAlignCycle: () => this.cycleAlignment(),
         onSize: (next) => this.setSize(next),
         onReplace: () => this.transitionToEmpty(),
         onAlt: () => this.promptAlt(),
@@ -419,14 +414,6 @@ export class ImageTool implements BlockTool {
     handle.setAttribute('data-role', 'resize-handle');
     handle.setAttribute('data-edge', edge);
     return handle;
-  }
-
-  private cycleAlignment(): void {
-    const current = this.data.alignment;
-    const next = current === undefined
-      ? ALIGNMENT_ORDER[0]
-      : ALIGNMENT_ORDER[(ALIGNMENT_ORDER.indexOf(current) + 1) % ALIGNMENT_ORDER.length];
-    this.setAlignment(next);
   }
 
   private setAlignment(next: ImageAlignment): void {

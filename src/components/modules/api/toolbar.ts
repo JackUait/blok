@@ -15,7 +15,7 @@ export class ToolbarAPI extends Module {
     return {
       close: (options?: ToolbarCloseOptions): void => this.close(options),
       open: (): void => this.open(),
-      toggleBlockSettings: (openingState?: boolean): void => this.toggleBlockSettings(openingState),
+      toggleBlockSettings: (openingState?: boolean, trigger?: HTMLElement): void => this.toggleBlockSettings(openingState, trigger),
       toggleToolbox: (openingState?: boolean): void => this.toggleToolbox(openingState),
     };
   }
@@ -38,8 +38,9 @@ export class ToolbarAPI extends Module {
   /**
    * Toggles Block Setting of the current block
    * @param {boolean} openingState —  opening state of Block Setting
+   * @param {HTMLElement} trigger — element to anchor the settings popover to
    */
-  public toggleBlockSettings(openingState?: boolean): void {
+  public toggleBlockSettings(openingState?: boolean, trigger?: HTMLElement): void {
     if (this.Blok.BlockManager.currentBlockIndex === -1) {
       logLabeled('Could\'t toggle the Toolbar because there is no block selected ', 'warn');
 
@@ -51,7 +52,7 @@ export class ToolbarAPI extends Module {
 
     if (canOpenBlockSettings) {
       this.Blok.Toolbar.moveAndOpen();
-      void this.Blok.BlockSettings.open();
+      void this.Blok.BlockSettings.open(undefined, trigger);
     } else {
       this.Blok.BlockSettings.close();
     }

@@ -27,8 +27,9 @@ export interface Toolbar {
   /**
    * Toggles Block Setting of the current block
    * @param {boolean} openingState —  opening state of Block Setting
+   * @param {HTMLElement} trigger — element to anchor the settings popover to
    */
-  toggleBlockSettings(openingState?: boolean): void;
+  toggleBlockSettings(openingState?: boolean, trigger?: HTMLElement): void;
 
   /**
    * Toggle toolbox

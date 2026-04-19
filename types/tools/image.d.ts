@@ -1,7 +1,7 @@
 import { BlockToolData } from './block-tool-data';
 
-/** Horizontal alignment: 'full' bleeds beyond the doc column. */
-export type ImageAlignment = 'left' | 'center' | 'right' | 'full';
+/** Horizontal alignment of the image within its container. */
+export type ImageAlignment = 'left' | 'center' | 'right';
 /** Size preset. `full` matches a full-bleed layout. Custom `width` still wins when set. */
 export type ImageSize = 'sm' | 'md' | 'lg' | 'full';
 /** Frame treatment around the image. */

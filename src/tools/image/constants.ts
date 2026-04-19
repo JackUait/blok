@@ -15,8 +15,8 @@ export const MAX_WIDTH_PERCENT = 100;
 
 export const URL_PATTERN = /^https?:\/\/\S+\.(jpe?g|png|gif|webp|svg)(\?\S*)?$/i;
 
-/** All alignment values cycled through by the toolbar pill. */
-export const ALIGNMENT_ORDER = ['left', 'center', 'right', 'full'] as const;
+/** All alignment values available in the alignment popover. */
+export const ALIGNMENT_ORDER = ['left', 'center', 'right'] as const;
 
 /** All size presets exposed in the overflow menu. */
 export const SIZE_ORDER = ['sm', 'md', 'lg', 'full'] as const;

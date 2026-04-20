@@ -131,6 +131,67 @@ describe('mountCropEditor', () => {
     }
   });
 
+  it('edge pill handles visible only in freeform; corner handles always visible', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    mountCropEditor(host, {
+      url: 'x.png',
+      onApply: vi.fn(),
+      onCancel: vi.fn(),
+    });
+
+    const edgeHandles = ['n', 'e', 's', 'w'] as const;
+    const cornerHandles = ['nw', 'ne', 'se', 'sw'] as const;
+
+    for (const h of edgeHandles) {
+      const el = host.querySelector<HTMLElement>(`[data-handle="${h}"]`)!;
+      expect(el.hidden).toBe(false);
+    }
+
+    host.querySelector<HTMLButtonElement>('[data-ratio="1"]')!.click();
+    for (const h of edgeHandles) {
+      const el = host.querySelector<HTMLElement>(`[data-handle="${h}"]`)!;
+      expect(el.hidden).toBe(true);
+    }
+    for (const h of cornerHandles) {
+      const el = host.querySelector<HTMLElement>(`[data-handle="${h}"]`)!;
+      expect(el.hidden).toBe(false);
+    }
+
+    host.querySelector<HTMLButtonElement>('[data-ratio="circle"]')!.click();
+    for (const h of edgeHandles) {
+      const el = host.querySelector<HTMLElement>(`[data-handle="${h}"]`)!;
+      expect(el.hidden).toBe(true);
+    }
+
+    host.querySelector<HTMLButtonElement>('[data-ratio="ellipse"]')!.click();
+    for (const h of edgeHandles) {
+      const el = host.querySelector<HTMLElement>(`[data-handle="${h}"]`)!;
+      expect(el.hidden).toBe(false);
+    }
+
+    host.querySelector<HTMLButtonElement>('[data-ratio="free"]')!.click();
+    for (const h of edgeHandles) {
+      const el = host.querySelector<HTMLElement>(`[data-handle="${h}"]`)!;
+      expect(el.hidden).toBe(false);
+    }
+  });
+
+  it('size pill is anchored outside the rect (above top edge), not inside', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    mountCropEditor(host, {
+      url: 'x.png',
+      onApply: vi.fn(),
+      onCancel: vi.fn(),
+    });
+    const rectEl = host.querySelector<HTMLElement>('.blok-image-crop-editor__rect')!;
+    const pill = host.querySelector<HTMLElement>('.blok-image-crop-editor__size-pill')!;
+    expect(rectEl.contains(pill)).toBe(false);
+    const frame = host.querySelector<HTMLElement>('.blok-image-crop-editor__frame')!;
+    expect(frame.contains(pill)).toBe(true);
+  });
+
   it('detach removes editor and unbinds keys', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);

@@ -128,16 +128,12 @@
 .blok-image-crop-editor__grid-line--h-1 { top: 33.333%; }
 .blok-image-crop-editor__grid-line--h-2 { top: 66.666%; }
 
-/* Size pill — anchored inside top-center of rect */
+/* Size pill — anchored outside above rect top edge */
 .blok-image-crop-editor__size-pill {
   position: absolute;
-  left: 50%;
-  top: 8px;
-  transform: translateX(-50%);
+  transform: translate(-50%, calc(-100% - 12px));
   padding: 3px 9px;
-  background: rgba(10, 10, 12, 0.78);
-  backdrop-filter: blur(10px) saturate(120%);
-  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  background: #14141a;
   color: #fff;
   font:
     500 11px/1.3 ui-monospace,

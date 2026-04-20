@@ -116,7 +116,7 @@ export function mountCropEditor(
   const pill = document.createElement('div');
   pill.className = 'blok-image-crop-editor__size-pill';
   pill.hidden = true;
-  rectEl.appendChild(pill);
+  frame.appendChild(pill);
 
   const handleEls: Record<Handle, HTMLElement> = {} as Record<Handle, HTMLElement>;
   for (const h of HANDLES) {
@@ -187,6 +187,8 @@ export function mountCropEditor(
     rectEl.style.top = `${rect.y}%`;
     rectEl.style.width = `${rect.w}%`;
     rectEl.style.height = `${rect.h}%`;
+    pill.style.left = `${rect.x + rect.w / 2}%`;
+    pill.style.top = `${rect.y}%`;
     shapeMask.style.left = `${rect.x}%`;
     shapeMask.style.top = `${rect.y}%`;
     shapeMask.style.width = `${rect.w}%`;
@@ -221,6 +223,14 @@ export function mountCropEditor(
     }
   }
 
+  function updateEdgeVisibility(): void {
+    const freeform = state.ratio === null;
+    for (const h of HANDLES) {
+      if (!CORNERS.has(h)) handleEls[h].hidden = !freeform;
+    }
+  }
+  updateEdgeVisibility();
+
   function setRatio(def: RatioDef): void {
     state.ratio = def.value;
     state.ratioKey = def.key;
@@ -228,6 +238,7 @@ export function mountCropEditor(
     rectEl.setAttribute('data-shape', def.shape);
     shapeMask.setAttribute('data-shape', def.shape);
     updateActiveChip();
+    updateEdgeVisibility();
     setRect(state.rect);
   }
 

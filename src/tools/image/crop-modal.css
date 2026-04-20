@@ -11,9 +11,7 @@
   margin: 0;
   padding: 0;
   border: 0;
-  background: rgba(8, 9, 12, 0.72);
-  backdrop-filter: blur(10px) saturate(120%);
-  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  background: rgba(8, 9, 12, 0.82);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -63,15 +61,15 @@
 
 .blok-image-crop-modal-body .blok-image-crop-editor__stage {
   max-height: 74vh;
-  padding: 28px 28px 16px;
+  padding: 48px 28px 16px;
   box-sizing: border-box;
 }
 
 .blok-image-crop-modal-body .blok-image-crop-editor__frame {
-  max-height: calc(74vh - 44px);
+  max-height: calc(74vh - 64px);
 }
 
 .blok-image-crop-modal-body .blok-image-crop-editor__source {
-  max-height: calc(74vh - 44px);
+  max-height: calc(74vh - 64px);
   object-fit: contain;
 }

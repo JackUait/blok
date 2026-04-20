@@ -873,6 +873,32 @@ describe('PopoverDesktop', () => {
 
       expect(restoredOrder).toEqual(originalOrder);
     });
+
+    it('hides contextLabel when filter query is non-empty and restores it when cleared', () => {
+      const popover = createPopover({
+        contextLabel: 'Text',
+        items: [
+          { title: 'Alpha', name: 'alpha', onActivate: vi.fn() },
+          { title: 'Beta', name: 'beta', onActivate: vi.fn() },
+        ],
+      });
+      const contextLabelEl = popover.getElement().querySelector('[data-blok-testid="popover-context-label"]');
+
+      expect(contextLabelEl).not.toBeNull();
+
+      popover.show();
+
+      // Initially visible (empty query)
+      expect(contextLabelEl?.hasAttribute(DATA_ATTR.hidden)).toBe(false);
+
+      popover.filterItems('alp');
+
+      expect(contextLabelEl?.hasAttribute(DATA_ATTR.hidden)).toBe(true);
+
+      popover.filterItems('');
+
+      expect(contextLabelEl?.hasAttribute(DATA_ATTR.hidden)).toBe(false);
+    });
   });
 
   describe('onFlip', () => {

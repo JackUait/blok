@@ -1131,6 +1131,16 @@ export class PopoverDesktop extends PopoverAbstract {
     const isEmptyQuery = data.query === '';
     const allTopLevel = data.topLevelItems as unknown as PopoverItemDefault[];
 
+    if (this.nodes.contextLabel !== undefined) {
+      if (isEmptyQuery) {
+        this.nodes.contextLabel.removeAttribute(DATA_ATTR.hidden);
+        this.nodes.contextLabel.classList.remove('hidden');
+      } else {
+        this.nodes.contextLabel.setAttribute(DATA_ATTR.hidden, 'true');
+        this.nodes.contextLabel.classList.add('hidden');
+      }
+    }
+
     // Deduplicate: hide top-level items whose title matches a promoted item
     const matchingTopLevel = !isEmptyQuery && data.promotedItems.length > 0
       ? this.deduplicateAgainstPromoted(allTopLevel, data.promotedItems)

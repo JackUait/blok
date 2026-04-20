@@ -545,6 +545,20 @@ describe('renderOverlay', () => {
       overlay.querySelector<HTMLButtonElement>('[data-action="align-center"]')?.click();
       expect(tooltip.hide).toHaveBeenCalled();
     });
+
+    it.each([
+      'caption-toggle',
+      'replace',
+      'crop',
+      'fullscreen',
+      'download',
+    ])('hides tooltip when %s button is clicked so hint disappears (button may unmount on click)', (action) => {
+      const overlay = renderOverlay(makeOverlayOpts());
+      document.body.appendChild(overlay);
+      vi.mocked(tooltip.hide).mockClear();
+      overlay.querySelector<HTMLButtonElement>(`[data-action="${action}"]`)?.click();
+      expect(tooltip.hide).toHaveBeenCalled();
+    });
   });
 
   it('clicking outside the overlay closes the popover', () => {

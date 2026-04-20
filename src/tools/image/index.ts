@@ -13,6 +13,7 @@ import type { MenuConfig } from '../../../types/tools/menu-config';
 import type {
   ImageAlignment,
   ImageConfig,
+  ImageCrop,
   ImageData,
   ImageFrame,
   ImageSize,
@@ -29,6 +30,7 @@ import {
   renderImage,
   renderOverlay,
 } from './ui';
+import { mountCropEditor } from './crop-editor';
 import { renderUploadingState, type UploadingStateElement } from './uploading-state';
 import { Uploader, type UploadResult } from './uploader';
 
@@ -46,6 +48,8 @@ export class ImageTool implements BlockTool {
   private emptyStateEl: EmptyStateElement | null = null;
   private uploadingEl: UploadingStateElement | null = null;
   private resizeDetach: (() => void)[] = [];
+  private cropping = false;
+  private cropDetach: (() => void) | null = null;
   private errorMessage: string | null = null;
   private lastFileName: string | null = null;
 
@@ -207,8 +211,35 @@ export class ImageTool implements BlockTool {
     ];
   }
 
+  private enterCrop(): void {
+    this.cropping = true;
+    this.renderState();
+  }
+
+  private applyCrop(rect: ImageCrop | null): void {
+    if (rect === null) {
+      delete this.data.crop;
+    } else {
+      this.data.crop = rect;
+    }
+    this.cropping = false;
+    this.block.dispatchChange();
+    this.renderState();
+  }
+
+  private cancelCrop(): void {
+    this.cropping = false;
+    this.renderState();
+  }
+
+  private detachCrop(): void {
+    this.cropDetach?.();
+    this.cropDetach = null;
+  }
+
   public removed(): void {
     this.detachResize();
+    this.detachCrop();
     if (this.data.url.startsWith('blob:')) {
       URL.revokeObjectURL(this.data.url);
     }
@@ -240,6 +271,7 @@ export class ImageTool implements BlockTool {
   private renderState(): void {
     if (!this.root) return;
     this.detachResize();
+    this.detachCrop();
     this.root.replaceChildren();
     this.syncRootAttributes();
 
@@ -322,7 +354,7 @@ export class ImageTool implements BlockTool {
         onFullscreen: () => openLightbox({ url: this.data.url, alt: this.data.alt }),
         onCopyUrl: () => this.copyUrl(),
         onToggleCaption: () => this.toggleCaption(),
-        onCrop: () => {},
+        onCrop: () => this.enterCrop(),
       });
       figure.appendChild(overlay);
 

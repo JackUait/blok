@@ -3192,7 +3192,8 @@
   z-index: 2;
 }
 [data-blok-tool="image"]:hover .blok-image-toolbar,
-[data-blok-tool="image"][data-selected="true"] .blok-image-toolbar {
+[data-blok-tool="image"][data-selected="true"] .blok-image-toolbar,
+[data-blok-tool="image"][data-settings-open="true"] .blok-image-toolbar {
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;

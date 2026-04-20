@@ -272,6 +272,7 @@ describe('ImageTool — more button opens BlockSettings', () => {
     const api = {
       styles: { block: 'blok-block' },
       i18n: { t: (k: string) => k },
+      events: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
       toolbar: { toggleBlockSettings },
     } as unknown as API;
     const tool = new ImageTool({ ...createOptions({ url: 'https://x/y.png' }), api });
@@ -286,6 +287,64 @@ describe('ImageTool — more button opens BlockSettings', () => {
     const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
     const root = tool.render();
     expect(root.querySelector('[data-role="image-popover"]')).toBeNull();
+  });
+});
+
+describe('ImageTool — overlay stays visible while block settings popover open', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  /**
+   * Build an api stub with a capturing events bus and a toolbar.toggleBlockSettings spy.
+   */
+  const createApiStub = (): {
+    api: API;
+    emit: (name: string) => void;
+    toggleBlockSettings: ReturnType<typeof vi.fn>;
+  } => {
+    const handlers = new Map<string, Array<(data?: unknown) => void>>();
+    const toggleBlockSettings = vi.fn();
+    const api = {
+      styles: { block: 'blok-block' },
+      i18n: { t: (k: string) => k },
+      events: {
+        on: (name: string, cb: (data?: unknown) => void): void => {
+          const arr = handlers.get(name) ?? [];
+          arr.push(cb);
+          handlers.set(name, arr);
+        },
+        off: (name: string, cb: (data?: unknown) => void): void => {
+          const arr = handlers.get(name) ?? [];
+          handlers.set(name, arr.filter((h) => h !== cb));
+        },
+        emit: vi.fn(),
+      },
+      toolbar: { toggleBlockSettings },
+    } as unknown as API;
+    const emit = (name: string): void => {
+      (handlers.get(name) ?? []).forEach((h) => h());
+    };
+    return { api, emit, toggleBlockSettings };
+  };
+
+  it('sets data-settings-open="true" on the tool root when the three-dots button opens block settings', () => {
+    const { api } = createApiStub();
+    const tool = new ImageTool({ ...createOptions({ url: 'https://x/y.png' }), api });
+    const root = tool.render();
+    const more = root.querySelector<HTMLButtonElement>('[data-action="more"]');
+    if (!more) throw new Error('more button missing');
+    more.click();
+    expect(root.getAttribute('data-settings-open')).toBe('true');
+  });
+
+  it('removes data-settings-open when block-settings-closed event fires', () => {
+    const { api, emit } = createApiStub();
+    const tool = new ImageTool({ ...createOptions({ url: 'https://x/y.png' }), api });
+    const root = tool.render();
+    root.querySelector<HTMLButtonElement>('[data-action="more"]')?.click();
+    expect(root.getAttribute('data-settings-open')).toBe('true');
+    emit('block-settings-closed');
+    expect(root.getAttribute('data-settings-open')).toBeNull();
   });
 });
 

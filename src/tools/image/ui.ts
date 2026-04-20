@@ -150,6 +150,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
   };
 
   const toolbar = renderLightboxToolbar({
+    fileName: opts.fileName,
     getZoom: () => zoomState.value,
     setZoom,
     onDownload: () => {
@@ -161,6 +162,10 @@ export function openLightbox(opts: LightboxOptions): () => void {
       document.body.appendChild(a);
       a.click();
       a.remove();
+    },
+    onCopyUrl: () => {
+      const clip = (navigator as Navigator & { clipboard?: { writeText(text: string): Promise<void> } }).clipboard;
+      void clip?.writeText(opts.url);
     },
     onCollapse: () => close(),
   });
@@ -208,9 +213,11 @@ export function openLightbox(opts: LightboxOptions): () => void {
 }
 
 interface LightboxToolbarOptions {
+  fileName?: string;
   getZoom(): number;
   setZoom(next: number): void;
   onDownload(): void;
+  onCopyUrl(): void;
   onCollapse(): void;
 }
 
@@ -225,11 +232,23 @@ function renderLightboxToolbar(opts: LightboxToolbarOptions): HTMLElement {
   const iconMinus = wrapSvg('<path d="M5 12h14"/>');
   const iconPlus = wrapSvg('<path d="M12 5v14"/><path d="M5 12h14"/>');
   const iconDownload = wrapSvg('<circle cx="12" cy="12" r="9"/><path d="M12 7v8"/><path d="m8.5 12 3.5 3.5L15.5 12"/>');
+  const iconCopy = wrapSvg('<path d="M10 13a4 4 0 0 1 0-5.66l3-3a4 4 0 0 1 5.66 5.66l-1.5 1.5"/><path d="M14 11a4 4 0 0 1 0 5.66l-3 3a4 4 0 1 1-5.66-5.66l1.5-1.5"/>');
   const iconCollapse = wrapSvg('<path d="M9 3v6H3"/><path d="M21 9h-6V3"/><path d="M3 15h6v6"/><path d="M15 21v-6h6"/>');
+
+  if (opts.fileName) {
+    const label = document.createElement('span');
+    label.className = 'blok-image-lightbox__filename';
+    label.setAttribute('data-role', 'lightbox-filename');
+    label.textContent = opts.fileName;
+    label.setAttribute('title', opts.fileName);
+    bar.appendChild(label);
+    appendLightboxDivider(bar);
+  }
 
   appendLightboxButton(bar, {
     action: 'zoom-out',
     label: 'Zoom out',
+    tooltip: 'Zoom out  −',
     html: iconMinus,
     onClick: () => opts.setZoom(opts.getZoom() - ZOOM_STEP),
   });
@@ -243,10 +262,13 @@ function renderLightboxToolbar(opts: LightboxToolbarOptions): HTMLElement {
   appendLightboxButton(bar, {
     action: 'zoom-in',
     label: 'Zoom in',
+    tooltip: 'Zoom in  +',
     html: iconPlus,
     onClick: () => opts.setZoom(opts.getZoom() + ZOOM_STEP),
   });
+
   appendLightboxDivider(bar);
+
   appendLightboxButton(bar, {
     action: 'lightbox-download',
     label: 'Download',
@@ -254,8 +276,15 @@ function renderLightboxToolbar(opts: LightboxToolbarOptions): HTMLElement {
     onClick: opts.onDownload,
   });
   appendLightboxButton(bar, {
+    action: 'lightbox-copy-url',
+    label: 'Copy URL',
+    html: iconCopy,
+    onClick: opts.onCopyUrl,
+  });
+  appendLightboxButton(bar, {
     action: 'lightbox-collapse',
     label: 'Exit fullscreen',
+    tooltip: 'Exit fullscreen  Esc',
     html: iconCollapse,
     onClick: opts.onCollapse,
   });
@@ -277,6 +306,7 @@ function appendLightboxDivider(parent: HTMLElement): void {
 interface LightboxButtonSpec {
   action: string;
   label: string;
+  tooltip?: string;
   html: string;
   onClick(): void;
   extraClass?: string;
@@ -291,7 +321,7 @@ function appendLightboxButton(parent: HTMLElement, spec: LightboxButtonSpec): vo
     ? `blok-image-lightbox__btn ${spec.extraClass}`
     : 'blok-image-lightbox__btn';
   btn.innerHTML = spec.html;
-  tooltipOnHover(btn, spec.label, { placement: 'top' });
+  tooltipOnHover(btn, spec.tooltip ?? spec.label, { placement: 'top' });
   btn.addEventListener('click', (event) => {
     event.stopPropagation();
     tooltipHide();
@@ -511,6 +541,7 @@ function appendSimpleButton(parent: HTMLElement, spec: SimpleButtonSpec): void {
   tooltipOnHover(btn, spec.label);
   btn.addEventListener('click', (event) => {
     event.stopPropagation();
+    tooltipHide();
     spec.onClick();
   });
   parent.appendChild(btn);

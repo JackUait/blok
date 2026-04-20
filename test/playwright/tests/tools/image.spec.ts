@@ -98,6 +98,32 @@ test('clicking image opens lightbox; Escape closes it', async ({ page }) => {
   await expect(dialog).toHaveCount(0);
 });
 
+test('lightbox toolbar renders filename, copy-url, and no backdrop-filter', async ({ page }) => {
+  await createBlok(page, {
+    blocks: [
+      { type: 'image', data: { url: SAMPLE_IMAGE_URL, alt: 'pic', fileName: 'photo.png' } },
+    ],
+  });
+
+  const imageEl = page.locator(IMAGE_BLOCK_SELECTOR).getByAltText('pic');
+
+  await expect(imageEl).toBeVisible();
+  await imageEl.click();
+
+  const dialog = page.getByRole('dialog');
+  const toolbar = dialog.locator('[data-role="lightbox-toolbar"]');
+
+  await expect(toolbar).toBeVisible();
+  await expect(toolbar.locator('[data-role="lightbox-filename"]')).toHaveText('photo.png');
+  await expect(toolbar.locator('[data-action="lightbox-copy-url"]')).toBeVisible();
+
+  const backdrop = await toolbar.evaluate((el) => getComputedStyle(el).backdropFilter);
+  expect(backdrop).toBe('none');
+
+  await toolbar.locator('[data-action="lightbox-collapse"]').click();
+  await expect(dialog).toHaveCount(0);
+});
+
 test('read-only mode hides overlay and resize handles', async ({ page }) => {
   await createBlok(page, {
     blocks: [

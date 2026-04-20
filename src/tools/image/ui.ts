@@ -290,6 +290,7 @@ function appendAlignmentControl(root: HTMLElement, opts: OverlayOptions): void {
     option.addEventListener('click', (event) => {
       event.stopPropagation();
       opts.onAlign(value);
+      tooltipHide();
       closePopover();
     });
     popover.appendChild(option);

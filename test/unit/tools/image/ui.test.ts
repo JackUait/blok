@@ -340,6 +340,15 @@ describe('renderOverlay', () => {
       trigger.click();
       expect(popover.getAttribute('data-blok-popover-opened')).not.toBe('true');
     });
+
+    it('hides tooltip when an alignment option is clicked so option hint disappears immediately', () => {
+      const overlay = renderOverlay(makeOverlayOpts());
+      document.body.appendChild(overlay);
+      overlay.querySelector<HTMLButtonElement>('[data-action="align-trigger"]')?.click();
+      vi.mocked(tooltip.hide).mockClear();
+      overlay.querySelector<HTMLButtonElement>('[data-action="align-center"]')?.click();
+      expect(tooltip.hide).toHaveBeenCalled();
+    });
   });
 
   it('clicking outside the overlay closes the popover', () => {

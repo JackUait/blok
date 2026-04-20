@@ -10,6 +10,7 @@ export interface CropEditorOptions {
 }
 
 const HANDLES: Handle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+const CORNERS = new Set<Handle>(['nw', 'ne', 'se', 'sw']);
 
 const RATIOS: { label: string; value: number | null }[] = [
   { label: 'Free', value: null },
@@ -18,6 +19,12 @@ const RATIOS: { label: string; value: number | null }[] = [
   { label: '16:9', value: 16 / 9 },
   { label: 'Original', value: 0 },
 ];
+
+const CHEVRON_SVG =
+  '<svg class="blok-image-crop-editor__chevron" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" focusable="false"><path d="M1.5 3.5 L5 7 L8.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+const CHECK_SVG =
+  '<svg class="blok-image-crop-editor__ratio-check" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M2.5 6.5 L4.8 8.8 L9.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 function assertEl<T extends Element>(node: T | null, what: string): T {
   if (!node) throw new Error(`CropEditor: missing ${what}`);
@@ -30,6 +37,24 @@ function ratioDataValue(v: number | null): string {
   return String(v);
 }
 
+function buildHandle(h: Handle): HTMLElement {
+  const el = document.createElement('span');
+  el.setAttribute('data-handle', h);
+  const variant = CORNERS.has(h) ? 'corner' : 'edge';
+  el.className = `blok-image-crop-editor__handle blok-image-crop-editor__handle--${variant} blok-image-crop-editor__handle--${h}`;
+  if (CORNERS.has(h)) {
+    el.appendChild(makeStroke('a'));
+    el.appendChild(makeStroke('b'));
+  }
+  return el;
+}
+
+function makeStroke(side: 'a' | 'b'): HTMLElement {
+  const stroke = document.createElement('i');
+  stroke.className = `blok-image-crop-editor__handle-stroke blok-image-crop-editor__handle-stroke--${side}`;
+  return stroke;
+}
+
 export function mountCropEditor(
   container: HTMLElement,
   opts: CropEditorOptions
@@ -37,6 +62,7 @@ export function mountCropEditor(
   const state = {
     rect: opts.initial ? clampRect(opts.initial) : { ...FULL_RECT },
     ratio: null as number | null,
+    ratioKey: 'free' as string,
   };
 
   const root = document.createElement('div');
@@ -62,26 +88,36 @@ export function mountCropEditor(
   rectEl.className = 'blok-image-crop-editor__rect';
   stage.appendChild(rectEl);
 
+  const GRID_LINE_VARIANTS = ['v-1', 'v-2', 'h-1', 'h-2'] as const;
+  for (const variant of GRID_LINE_VARIANTS) {
+    const line = document.createElement('i');
+    line.className = `blok-image-crop-editor__grid-line blok-image-crop-editor__grid-line--${variant}`;
+    rectEl.appendChild(line);
+  }
+
+  const pill = document.createElement('div');
+  pill.className = 'blok-image-crop-editor__size-pill';
+  pill.hidden = true;
+  rectEl.appendChild(pill);
+
   const handleEls: Record<Handle, HTMLElement> = {} as Record<Handle, HTMLElement>;
   for (const h of HANDLES) {
-    const el = document.createElement('span');
-    el.setAttribute('data-handle', h);
-    el.className = `blok-image-crop-editor__handle blok-image-crop-editor__handle--${h}`;
+    const el = buildHandle(h);
     rectEl.appendChild(el);
     handleEls[h] = el;
   }
 
   const toolbar = document.createElement('div');
-  toolbar.className = 'blok-image-crop-editor__toolbar';
+  toolbar.className = 'blok-image-crop-editor__toolbar blok-image-crop-editor__toolbar--footer';
   toolbar.setAttribute('role', 'toolbar');
   toolbar.innerHTML = `
     <div class="blok-image-crop-editor__ratio-wrap" style="position:relative">
-      <button type="button" data-action="ratio" aria-haspopup="menu" aria-expanded="false">Free ▾</button>
-      <div data-role="ratio-menu" role="menu" hidden></div>
+      <button type="button" class="blok-image-crop-editor__btn blok-image-crop-editor__btn--ghost" data-action="ratio" aria-haspopup="menu" aria-expanded="false"><span data-role="ratio-label">Free</span>${CHEVRON_SVG}</button>
+      <div class="blok-image-crop-editor__ratio-menu" data-role="ratio-menu" role="menu" hidden></div>
     </div>
-    <button type="button" data-action="reset">Reset</button>
-    <button type="button" data-action="cancel">Cancel</button>
-    <button type="button" data-action="done">Done</button>
+    <button type="button" class="blok-image-crop-editor__btn blok-image-crop-editor__btn--ghost" data-action="reset">Reset</button>
+    <button type="button" class="blok-image-crop-editor__btn blok-image-crop-editor__btn--ghost" data-action="cancel">Cancel</button>
+    <button type="button" class="blok-image-crop-editor__btn blok-image-crop-editor__btn--primary" data-action="done">Done</button>
   `;
 
   root.appendChild(stage);
@@ -90,6 +126,20 @@ export function mountCropEditor(
 
   const ratioMenu = assertEl(toolbar.querySelector<HTMLElement>('[data-role="ratio-menu"]'), 'ratio-menu');
   const ratioTrigger = assertEl(toolbar.querySelector<HTMLButtonElement>('[data-action="ratio"]'), 'ratio trigger');
+  const ratioLabel = assertEl(toolbar.querySelector<HTMLElement>('[data-role="ratio-label"]'), 'ratio label');
+
+  function updatePill(): void {
+    const nw = source.naturalWidth;
+    const nh = source.naturalHeight;
+    if (!nw || !nh) {
+      pill.hidden = true;
+      return;
+    }
+    pill.hidden = false;
+    const w = Math.round((state.rect.w / 100) * nw);
+    const h = Math.round((state.rect.h / 100) * nh);
+    pill.textContent = `${w} × ${h} px`;
+  }
 
   function paint(): void {
     const { rect } = state;
@@ -105,15 +155,21 @@ export function mountCropEditor(
       ${rect.x + rect.w}% ${rect.y}%,
       ${rect.x}% ${rect.y}%
     )`;
+    updatePill();
   }
   paint();
+
+  if (source.complete && source.naturalWidth > 0) {
+    updatePill();
+  }
+  source.addEventListener('load', updatePill);
 
   function setRect(next: ImageCrop): void {
     state.rect = applyRatio(clampRect(next), state.ratio);
     paint();
   }
 
-  function setRatio(next: number | null): void {
+  function setRatio(next: number | null, key: string): void {
     if (next === 0) {
       const n = source.naturalWidth && source.naturalHeight
         ? source.naturalWidth / source.naturalHeight
@@ -122,6 +178,7 @@ export function mountCropEditor(
     } else {
       state.ratio = next;
     }
+    state.ratioKey = key;
     setRect(state.rect);
   }
 
@@ -130,7 +187,7 @@ export function mountCropEditor(
   }
   rectEl.addEventListener('pointerdown', (e) => {
     const tgt = e.target as HTMLElement;
-    if (tgt.dataset.handle) return;
+    if (tgt.closest('[data-handle]')) return;
     startBodyDrag(e);
   });
 
@@ -186,15 +243,19 @@ export function mountCropEditor(
   function renderRatioMenu(): void {
     ratioMenu.replaceChildren();
     for (const r of RATIOS) {
+      const key = ratioDataValue(r.value);
       const btn = document.createElement('button');
       btn.type = 'button';
+      btn.className = 'blok-image-crop-editor__ratio-item';
       btn.setAttribute('role', 'menuitem');
-      btn.textContent = r.label;
-      btn.setAttribute('data-ratio', ratioDataValue(r.value));
+      btn.setAttribute('data-ratio', key);
+      const active = key === state.ratioKey;
+      btn.setAttribute('data-active', String(active));
+      btn.innerHTML = `${active ? CHECK_SVG : '<span class="blok-image-crop-editor__ratio-check-slot" aria-hidden="true"></span>'}<span class="blok-image-crop-editor__ratio-label">${r.label}</span>`;
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        setRatio(r.value);
-        ratioTrigger.textContent = `${r.label} ▾`;
+        setRatio(r.value, key);
+        ratioLabel.textContent = r.label;
         ratioMenu.hidden = true;
         ratioTrigger.setAttribute('aria-expanded', 'false');
       });
@@ -223,6 +284,7 @@ export function mountCropEditor(
 
   return (): void => {
     document.removeEventListener('keydown', onKey);
+    source.removeEventListener('load', updatePill);
     root.remove();
   };
 }

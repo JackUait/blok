@@ -1,4 +1,4 @@
-import type { ImageCrop } from '../../../types/tools/image';
+import type { ImageCrop, ImageCropShape } from '../../../types/tools/image';
 import { FULL_RECT, clampRect, isFullRect, resizeRect, applyRatio, type Handle } from './crop-math';
 
 export interface CropEditorOptions {
@@ -12,23 +12,27 @@ export interface CropEditorOptions {
 const HANDLES: Handle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
 const CORNERS = new Set<Handle>(['nw', 'ne', 'se', 'sw']);
 
-const RATIOS: { label: string; value: number | null }[] = [
-  { label: 'Free', value: null },
-  { label: '1:1', value: 1 },
-  { label: '4:3', value: 4 / 3 },
-  { label: '16:9', value: 16 / 9 },
-  { label: 'Original', value: 0 },
+type RatioShape = 'rect' | ImageCropShape;
+
+interface RatioDef {
+  label: string;
+  key: string;
+  value: number | null;
+  shape: RatioShape;
+}
+
+const RATIOS: RatioDef[] = [
+  { label: 'Free', key: 'free', value: null, shape: 'rect' },
+  { label: '1:1', key: '1', value: 1, shape: 'rect' },
+  { label: '4:3', key: String(4 / 3), value: 4 / 3, shape: 'rect' },
+  { label: '16:9', key: String(16 / 9), value: 16 / 9, shape: 'rect' },
+  { label: 'Circle', key: 'circle', value: 1, shape: 'circle' },
+  { label: 'Oval', key: 'ellipse', value: null, shape: 'ellipse' },
 ];
 
 function assertEl<T extends Element>(node: T | null, what: string): T {
   if (!node) throw new Error(`CropEditor: missing ${what}`);
   return node;
-}
-
-function ratioDataValue(v: number | null): string {
-  if (v === null) return 'free';
-  if (v === 0) return 'original';
-  return String(v);
 }
 
 function buildHandle(h: Handle): HTMLElement {
@@ -53,10 +57,15 @@ export function mountCropEditor(
   container: HTMLElement,
   opts: CropEditorOptions
 ): () => void {
+  const initialShape: RatioShape = opts.initial?.shape ?? 'rect';
+  const initialDef = RATIOS.find((r) => r.shape === initialShape && r.shape !== 'rect')
+    ?? RATIOS[0];
+
   const state = {
     rect: opts.initial ? clampRect(opts.initial) : { ...FULL_RECT },
-    ratio: null as number | null,
-    ratioKey: 'free' as string,
+    ratio: initialDef.value,
+    ratioKey: initialDef.key,
+    shape: initialDef.shape,
   };
 
   const root = document.createElement('div');
@@ -84,7 +93,13 @@ export function mountCropEditor(
 
   const rectEl = document.createElement('div');
   rectEl.className = 'blok-image-crop-editor__rect';
+  rectEl.setAttribute('data-shape', state.shape);
   frame.appendChild(rectEl);
+
+  const shapeMask = document.createElement('div');
+  shapeMask.className = 'blok-image-crop-editor__shape-mask';
+  shapeMask.setAttribute('aria-hidden', 'true');
+  rectEl.appendChild(shapeMask);
 
   const GRID_LINE_VARIANTS = ['v-1', 'v-2', 'h-1', 'h-2'] as const;
   for (const variant of GRID_LINE_VARIANTS) {
@@ -117,31 +132,25 @@ export function mountCropEditor(
 
   const ratioChips: Record<string, HTMLButtonElement> = {};
   for (const r of RATIOS) {
-    const key = ratioDataValue(r.value);
     const chip = document.createElement('button');
     chip.type = 'button';
     chip.className = 'blok-image-crop-editor__ratio-chip';
     chip.setAttribute('role', 'radio');
-    chip.setAttribute('data-ratio', key);
-    chip.setAttribute('data-active', String(key === state.ratioKey));
-    chip.setAttribute('aria-checked', String(key === state.ratioKey));
+    chip.setAttribute('data-ratio', r.key);
+    chip.setAttribute('data-active', String(r.key === state.ratioKey));
+    chip.setAttribute('aria-checked', String(r.key === state.ratioKey));
     chip.textContent = r.label;
     chip.addEventListener('click', (e) => {
       e.stopPropagation();
-      setRatio(r.value, key);
+      setRatio(r);
     });
     ratioGroup.appendChild(chip);
-    ratioChips[key] = chip;
+    ratioChips[r.key] = chip;
   }
 
   const actions = document.createElement('div');
   actions.className = 'blok-image-crop-editor__actions';
   actions.innerHTML = `
-    <div class="blok-image-crop-editor__kbd-hint" aria-hidden="true">
-      <kbd>↵</kbd><span>apply</span>
-      <span class="blok-image-crop-editor__kbd-sep">·</span>
-      <kbd>esc</kbd><span>cancel</span>
-    </div>
     <button type="button" class="blok-image-crop-editor__btn blok-image-crop-editor__btn--ghost" data-action="reset">Reset</button>
     <button type="button" class="blok-image-crop-editor__btn blok-image-crop-editor__btn--ghost" data-action="cancel">Cancel</button>
     <button type="button" class="blok-image-crop-editor__btn blok-image-crop-editor__btn--primary" data-action="done">Done</button>
@@ -203,16 +212,11 @@ export function mountCropEditor(
     }
   }
 
-  function setRatio(next: number | null, key: string): void {
-    if (next === 0) {
-      const n = source.naturalWidth && source.naturalHeight
-        ? source.naturalWidth / source.naturalHeight
-        : null;
-      state.ratio = n;
-    } else {
-      state.ratio = next;
-    }
-    state.ratioKey = key;
+  function setRatio(def: RatioDef): void {
+    state.ratio = def.value;
+    state.ratioKey = def.key;
+    state.shape = def.shape;
+    rectEl.setAttribute('data-shape', def.shape);
     updateActiveChip();
     setRect(state.rect);
   }
@@ -268,6 +272,11 @@ export function mountCropEditor(
   }
 
   function applyDone(): void {
+    const shape = state.shape;
+    if (shape === 'circle' || shape === 'ellipse') {
+      opts.onApply({ ...state.rect, shape });
+      return;
+    }
     opts.onApply(isFullRect(state.rect) ? null : state.rect);
   }
 

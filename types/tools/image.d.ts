@@ -7,12 +7,17 @@ export type ImageSize = 'sm' | 'md' | 'lg' | 'full';
 /** Frame treatment around the image. */
 export type ImageFrame = 'none' | 'border' | 'shadow';
 
+/** Crop mask shape. Defaults to 'rect'. */
+export type ImageCropShape = 'rect' | 'circle' | 'ellipse';
+
 /** Non-destructive crop rectangle, in percent of intrinsic image (0–100). */
 export interface ImageCrop {
   x: number;
   y: number;
   w: number;
   h: number;
+  /** Optional mask shape. Omit for rectangular crop. */
+  shape?: ImageCropShape;
 }
 
 /**

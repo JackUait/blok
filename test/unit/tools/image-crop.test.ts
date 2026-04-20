@@ -54,6 +54,18 @@ describe('ImageTool.save crop', () => {
     const t = createTool({ crop: { x: 0, y: 0, w: 100, h: 100 } });
     expect(t.save().crop).toBeUndefined();
   });
+  it('emits shape=circle even when rect is full', () => {
+    const t = createTool({ crop: { x: 0, y: 0, w: 100, h: 100, shape: 'circle' } });
+    expect(t.save().crop).toEqual({ x: 0, y: 0, w: 100, h: 100, shape: 'circle' });
+  });
+  it('emits shape=ellipse with custom rect', () => {
+    const t = createTool({ crop: { x: 10, y: 10, w: 80, h: 60, shape: 'ellipse' } });
+    expect(t.save().crop).toEqual({ x: 10, y: 10, w: 80, h: 60, shape: 'ellipse' });
+  });
+  it('does not emit shape=rect', () => {
+    const t = createTool({ crop: { x: 10, y: 10, w: 80, h: 80, shape: 'rect' } });
+    expect(t.save().crop).toEqual({ x: 10, y: 10, w: 80, h: 80 });
+  });
 });
 
 import { renderOverlay } from '../../../src/tools/image/ui';

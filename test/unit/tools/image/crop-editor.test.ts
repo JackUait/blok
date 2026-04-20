@@ -101,7 +101,7 @@ describe('crop-editor', () => {
     expect(pill.textContent).toBe('1000 × 250 px');
   });
 
-  it('renders 5 segmented ratio chips with Free active by default', () => {
+  it('renders 6 segmented ratio chips with Free active by default', () => {
     detach = mountCropEditor(container, {
       url: 'x.png',
       onApply: () => {},
@@ -110,13 +110,117 @@ describe('crop-editor', () => {
     const group = container.querySelector<HTMLElement>('[data-action="ratio"]')!;
     expect(group.getAttribute('role')).toBe('radiogroup');
     const chips = group.querySelectorAll<HTMLButtonElement>('[role="radio"][data-ratio]');
-    expect(chips).toHaveLength(5);
+    expect(chips).toHaveLength(6);
     const keys = Array.from(chips).map((c) => c.getAttribute('data-ratio'));
-    expect(keys).toEqual(['free', '1', String(4 / 3), String(16 / 9), 'original']);
+    expect(keys).toEqual(['free', '1', String(4 / 3), String(16 / 9), 'circle', 'ellipse']);
     const active = group.querySelectorAll('[role="radio"][data-active="true"]');
     expect(active).toHaveLength(1);
     expect(active[0].getAttribute('data-ratio')).toBe('free');
     expect(active[0].getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('does not render apply/cancel kbd hint', () => {
+    detach = mountCropEditor(container, {
+      url: 'x.png',
+      onApply: () => {},
+      onCancel: () => {},
+    });
+    expect(container.querySelector('.blok-image-crop-editor__kbd-hint')).toBeNull();
+  });
+
+  it('clicking Circle chip activates it and emits shape=circle on apply', () => {
+    const onApply = vi.fn();
+    detach = mountCropEditor(container, {
+      url: 'x.png',
+      onApply,
+      onCancel: () => {},
+    });
+    const chip = container.querySelector<HTMLButtonElement>('[data-ratio="circle"]')!;
+    chip.click();
+    expect(chip.getAttribute('data-active')).toBe('true');
+    expect(chip.getAttribute('aria-checked')).toBe('true');
+    container.querySelector<HTMLButtonElement>('[data-action="done"]')!.click();
+    expect(onApply).toHaveBeenCalledTimes(1);
+    const arg = onApply.mock.calls[0][0];
+    expect(arg).toMatchObject({ shape: 'circle' });
+  });
+
+  it('clicking Oval chip emits shape=ellipse on apply', () => {
+    const onApply = vi.fn();
+    detach = mountCropEditor(container, {
+      url: 'x.png',
+      onApply,
+      onCancel: () => {},
+    });
+    const chip = container.querySelector<HTMLButtonElement>('[data-ratio="ellipse"]')!;
+    chip.click();
+    expect(chip.getAttribute('data-active')).toBe('true');
+    container.querySelector<HTMLButtonElement>('[data-action="done"]')!.click();
+    expect(onApply).toHaveBeenCalledTimes(1);
+    const arg = onApply.mock.calls[0][0];
+    expect(arg).toMatchObject({ shape: 'ellipse' });
+  });
+
+  it('clicking Free chip after Circle drops shape from payload', () => {
+    const onApply = vi.fn();
+    detach = mountCropEditor(container, {
+      url: 'x.png',
+      onApply,
+      onCancel: () => {},
+    });
+    container.querySelector<HTMLButtonElement>('[data-ratio="circle"]')!.click();
+    container.querySelector<HTMLButtonElement>('[data-ratio="free"]')!.click();
+    container.querySelector<HTMLButtonElement>('[data-action="done"]')!.click();
+    expect(onApply).toHaveBeenCalledWith(null);
+  });
+
+  it('restores circle shape from initial', () => {
+    detach = mountCropEditor(container, {
+      url: 'x.png',
+      initial: { x: 25, y: 25, w: 50, h: 50, shape: 'circle' },
+      onApply: () => {},
+      onCancel: () => {},
+    });
+    const active = container.querySelector('[data-ratio="circle"][data-active="true"]');
+    expect(active).not.toBeNull();
+  });
+
+  it('rect preview has data-shape attribute matching selected shape chip', () => {
+    detach = mountCropEditor(container, {
+      url: 'x.png',
+      onApply: () => {},
+      onCancel: () => {},
+    });
+    const rect = container.querySelector<HTMLElement>('.blok-image-crop-editor__rect')!;
+    expect(rect.getAttribute('data-shape')).toBe('rect');
+    container.querySelector<HTMLButtonElement>('[data-ratio="circle"]')!.click();
+    expect(rect.getAttribute('data-shape')).toBe('circle');
+    container.querySelector<HTMLButtonElement>('[data-ratio="ellipse"]')!.click();
+    expect(rect.getAttribute('data-shape')).toBe('ellipse');
+    container.querySelector<HTMLButtonElement>('[data-ratio="free"]')!.click();
+    expect(rect.getAttribute('data-shape')).toBe('rect');
+  });
+
+  it('renders inner shape-mask overlay element inside rect for corner coverage', () => {
+    detach = mountCropEditor(container, {
+      url: 'x.png',
+      onApply: () => {},
+      onCancel: () => {},
+    });
+    const rect = container.querySelector<HTMLElement>('.blok-image-crop-editor__rect')!;
+    const shapeMask = rect.querySelector<HTMLElement>('.blok-image-crop-editor__shape-mask');
+    expect(shapeMask).not.toBeNull();
+  });
+
+  it('rect preview is round when mounted with initial shape circle', () => {
+    detach = mountCropEditor(container, {
+      url: 'x.png',
+      initial: { x: 10, y: 10, w: 60, h: 60, shape: 'circle' },
+      onApply: () => {},
+      onCancel: () => {},
+    });
+    const rect = container.querySelector<HTMLElement>('.blok-image-crop-editor__rect')!;
+    expect(rect.getAttribute('data-shape')).toBe('circle');
   });
 
   it('clicking a ratio chip moves the active state to that chip', () => {

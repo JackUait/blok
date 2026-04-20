@@ -39,6 +39,7 @@
   max-width: 100%;
   max-height: 100%;
   line-height: 0;
+  overflow: hidden;
 }
 
 .blok-image-crop-editor__source {
@@ -66,6 +67,23 @@
     0 0 0 1px var(--crop-rect-stroke),
     0 0 0 2px var(--crop-rect-halo),
     0 8px 32px -8px rgba(0, 0, 0, 0.8);
+}
+
+.blok-image-crop-editor__rect[data-shape="circle"],
+.blok-image-crop-editor__rect[data-shape="ellipse"] {
+  border-radius: 50%;
+}
+
+.blok-image-crop-editor__shape-mask {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.blok-image-crop-editor__rect[data-shape="circle"] .blok-image-crop-editor__shape-mask,
+.blok-image-crop-editor__rect[data-shape="ellipse"] .blok-image-crop-editor__shape-mask {
+  box-shadow: 0 0 0 9999px var(--crop-mask);
 }
 
 .blok-image-crop-editor__grid-line {
@@ -144,30 +162,34 @@
   width: 18px;
   height: 18px;
   transform: translate(-50%, -50%);
+  filter:
+    drop-shadow(1px 0 0 rgba(0, 0, 0, 0.55))
+    drop-shadow(-1px 0 0 rgba(0, 0, 0, 0.55))
+    drop-shadow(0 1px 0 rgba(0, 0, 0, 0.55))
+    drop-shadow(0 -1px 0 rgba(0, 0, 0, 0.55))
+    drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
 }
 
 .blok-image-crop-editor__handle-stroke {
   position: absolute;
   background: #fff;
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.55),
-    0 1px 3px rgba(0, 0, 0, 0.5);
-  border-radius: 1.5px;
 }
 
-/* Corner bracket strokes — L-vertex hugs rect corner (hitbox center 9,9),
-   arms extend inward along rect edges. Hitbox is 18×18. */
-.blok-image-crop-editor__handle--nw .blok-image-crop-editor__handle-stroke--a { top: 9px; left: 9px; width: 13px; height: 3px; }
-.blok-image-crop-editor__handle--nw .blok-image-crop-editor__handle-stroke--b { top: 9px; left: 9px; width: 3px; height: 13px; }
+/* Corner bracket strokes — two rects meeting at L-vertex. Outer ends rounded,
+   inner (vertex) ends square so the union reads as one continuous L shape.
+   Parent filter: drop-shadow paints a single outline around the union.
+   Hitbox is 18×18, vertex at (9,9) relative to the hugged rect corner. */
+.blok-image-crop-editor__handle--nw .blok-image-crop-editor__handle-stroke--a { top: 8px; left: 8px; width: 13px; height: 3px; border-radius: 0 1.5px 1.5px 0; }
+.blok-image-crop-editor__handle--nw .blok-image-crop-editor__handle-stroke--b { top: 8px; left: 8px; width: 3px; height: 13px; border-radius: 0 0 1.5px 1.5px; }
 
-.blok-image-crop-editor__handle--ne .blok-image-crop-editor__handle-stroke--a { top: 9px; right: 9px; width: 13px; height: 3px; }
-.blok-image-crop-editor__handle--ne .blok-image-crop-editor__handle-stroke--b { top: 9px; right: 9px; width: 3px; height: 13px; }
+.blok-image-crop-editor__handle--ne .blok-image-crop-editor__handle-stroke--a { top: 8px; right: 8px; width: 13px; height: 3px; border-radius: 1.5px 0 0 1.5px; }
+.blok-image-crop-editor__handle--ne .blok-image-crop-editor__handle-stroke--b { top: 8px; right: 8px; width: 3px; height: 13px; border-radius: 0 0 1.5px 1.5px; }
 
-.blok-image-crop-editor__handle--se .blok-image-crop-editor__handle-stroke--a { bottom: 9px; right: 9px; width: 13px; height: 3px; }
-.blok-image-crop-editor__handle--se .blok-image-crop-editor__handle-stroke--b { bottom: 9px; right: 9px; width: 3px; height: 13px; }
+.blok-image-crop-editor__handle--se .blok-image-crop-editor__handle-stroke--a { bottom: 8px; right: 8px; width: 13px; height: 3px; border-radius: 1.5px 0 0 1.5px; }
+.blok-image-crop-editor__handle--se .blok-image-crop-editor__handle-stroke--b { bottom: 8px; right: 8px; width: 3px; height: 13px; border-radius: 1.5px 1.5px 0 0; }
 
-.blok-image-crop-editor__handle--sw .blok-image-crop-editor__handle-stroke--a { bottom: 9px; left: 9px; width: 13px; height: 3px; }
-.blok-image-crop-editor__handle--sw .blok-image-crop-editor__handle-stroke--b { bottom: 9px; left: 9px; width: 3px; height: 13px; }
+.blok-image-crop-editor__handle--sw .blok-image-crop-editor__handle-stroke--a { bottom: 8px; left: 8px; width: 13px; height: 3px; border-radius: 0 1.5px 1.5px 0; }
+.blok-image-crop-editor__handle--sw .blok-image-crop-editor__handle-stroke--b { bottom: 8px; left: 8px; width: 3px; height: 13px; border-radius: 1.5px 1.5px 0 0; }
 
 .blok-image-crop-editor__handle--edge {
   background: #fff;

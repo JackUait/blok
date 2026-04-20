@@ -84,9 +84,12 @@ export class ImageTool implements BlockTool {
     if (this.data.rounded !== undefined) out.rounded = this.data.rounded;
     if (this.data.captionVisible !== undefined) out.captionVisible = this.data.captionVisible;
     if (this.data.crop !== undefined) {
-      const { x, y, w, h } = this.data.crop;
+      const { x, y, w, h, shape } = this.data.crop;
       const isFull = x === 0 && y === 0 && w === 100 && h === 100;
-      if (!isFull) out.crop = { x, y, w, h };
+      const isShaped = shape === 'circle' || shape === 'ellipse';
+      if (!isFull || isShaped) {
+        out.crop = isShaped ? { x, y, w, h, shape } : { x, y, w, h };
+      }
     }
     return out;
   }

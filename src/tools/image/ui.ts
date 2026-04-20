@@ -38,7 +38,7 @@ export function renderImage(
   img.draggable = false;
 
   if (data.crop) {
-    const { x, y, w, h } = data.crop;
+    const { x, y, w, h, shape } = data.crop;
     const wrapper = document.createElement('div');
     wrapper.className = 'blok-image-crop';
     wrapper.setAttribute('data-role', 'image-crop');
@@ -46,6 +46,10 @@ export function renderImage(
     wrapper.style.position = 'relative';
     wrapper.style.aspectRatio = `${w} / ${h}`;
     wrapper.style.width = '100%';
+    if (shape) wrapper.setAttribute('data-shape', shape);
+    if (shape === 'circle' || shape === 'ellipse') {
+      wrapper.style.borderRadius = '50%';
+    }
     img.style.display = 'block';
     img.style.width = `${(100 / w) * 100}%`;
     img.style.height = `${(100 / h) * 100}%`;

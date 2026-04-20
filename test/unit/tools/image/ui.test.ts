@@ -56,6 +56,29 @@ describe('renderImage', () => {
     if (!img) throw new Error('img missing');
     expect(img.getAttribute('alt')).toBe('');
   });
+
+  it('applies border-radius 50% when crop.shape is circle', () => {
+    const fig = renderImage({ url: 'x', crop: { x: 0, y: 0, w: 100, h: 100, shape: 'circle' } });
+    const wrapper = fig.querySelector<HTMLElement>('[data-role="image-crop"]');
+    if (!wrapper) throw new Error('wrapper missing');
+    expect(wrapper.style.borderRadius).toBe('50%');
+    expect(wrapper.dataset.shape).toBe('circle');
+  });
+
+  it('applies border-radius 50% when crop.shape is ellipse', () => {
+    const fig = renderImage({ url: 'x', crop: { x: 0, y: 0, w: 100, h: 100, shape: 'ellipse' } });
+    const wrapper = fig.querySelector<HTMLElement>('[data-role="image-crop"]');
+    if (!wrapper) throw new Error('wrapper missing');
+    expect(wrapper.style.borderRadius).toBe('50%');
+    expect(wrapper.dataset.shape).toBe('ellipse');
+  });
+
+  it('does not set border-radius for default rect crop', () => {
+    const fig = renderImage({ url: 'x', crop: { x: 0, y: 0, w: 50, h: 50 } });
+    const wrapper = fig.querySelector<HTMLElement>('[data-role="image-crop"]');
+    if (!wrapper) throw new Error('wrapper missing');
+    expect(wrapper.style.borderRadius).toBe('');
+  });
 });
 
 describe('renderCaption', () => {

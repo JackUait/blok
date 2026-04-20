@@ -20,6 +20,30 @@ import { PopoverEvent } from '@/types/utils/popover/popover-event';
 
 
 /**
+ * Last observed pointer position, tracked globally via a document-level
+ * mousemove listener. Used by `PopoverDesktop` to distinguish the
+ * synthesized post-paint mouseover (which fires at the same coordinates
+ * the pointer was already sitting at) from a genuine mouseover triggered
+ * by real pointer motion.
+ *
+ * Fields are null until the first mousemove is observed in this document.
+ */
+const pointerTracker: { x: number | null; y: number | null } = { x: null, y: null };
+
+const POINTER_TRACKER_KEY = '__blokPopoverPointerTracker__';
+
+// Install the tracker once per document; installing from multiple
+// PopoverDesktop modules is a no-op.
+if (typeof document !== 'undefined' && !(document as unknown as Record<string, unknown>)[POINTER_TRACKER_KEY]) {
+  document.addEventListener('mousemove', (event: MouseEvent) => {
+    pointerTracker.x = event.clientX;
+    pointerTracker.y = event.clientY;
+  }, { capture: true });
+  (document as unknown as Record<string, unknown>)[POINTER_TRACKER_KEY] = true;
+}
+
+
+/**
  * Desktop popover.
  * On desktop devices popover behaves like a floating element. Nested popover appears at right or left side.
  * @internal
@@ -55,15 +79,39 @@ export class PopoverDesktop extends PopoverAbstract {
   private previouslyHoveredItem: PopoverItem | null = null;
 
   /**
-   * Suppresses the synchronous mouseover that Chromium fires immediately
+   * Suppresses the synthesized mouseover that Chromium fires immediately
    * after the popover enters the CSS Top Layer (via `showPopover()`).
    * Without this guard, the layout-triggered hover would open whatever
    * nested submenu happens to sit under the pointer the moment the parent
    * popover appears (e.g. "Convert to" auto-expands the moment block
-   * settings opens). Cleared on the next microtask so genuine async hover
-   * events still work.
+   * settings opens).
+   *
+   * The synthesized hit test fires at the same screen coordinates where
+   * the pointer was sitting when the popover opened — it's a pure layout
+   * event, with no pointer motion behind it. We capture those coordinates
+   * at `show()` time; any mouseover whose clientX/Y matches is discarded
+   * as synthesized, while a mouseover at different coordinates is a
+   * genuine hover triggered by real pointer motion and passes through.
+   *
+   * Cleared after one animation frame as a safety net in case no
+   * mouseover arrives at all.
    */
   private suppressSyncHover = false;
+
+  /**
+   * Pointer coordinates at the moment `show()` was invoked. Any mouseover
+   * received while armed whose clientX/Y matches these coordinates is
+   * treated as a synthesized post-paint hit test and swallowed. Null when
+   * the suppressor is disarmed or no pointer motion has ever been seen.
+   */
+  private suppressSyncHoverPointer: { x: number; y: number } | null = null;
+
+  /**
+   * Handle returned by requestAnimationFrame used to arm the frame that
+   * clears `suppressSyncHover` as a safety net. Null when no frame is
+   * scheduled.
+   */
+  private suppressSyncHoverRaf: number | null = null;
 
   /**
    * Element of the page that creates 'scope' of the popover.
@@ -307,13 +355,11 @@ export class PopoverDesktop extends PopoverAbstract {
 
     // Set flag BEFORE super.show() so handleHover can suppress the
     // synthesized mouseover Chromium fires when the element enters the
-    // CSS Top Layer. The flag is cleared after two animation frames so
-    // the synthesized hit test (which may run after layout/paint) is
-    // covered while genuine async hover events still work.
-    this.suppressSyncHover = true;
-    queueMicrotask(() => {
-      this.suppressSyncHover = false;
-    });
+    // CSS Top Layer. The flag is released as soon as the user moves the
+    // mouse (real pointer motion distinguishes a genuine hover from a
+    // paint-triggered hit test, which has no motion) or, as a safety net,
+    // after two animation frames if nothing arrives.
+    this.armSuppressSyncHover();
     super.show();
     this.flipper?.activate(this.flippableElements);
 
@@ -410,6 +456,10 @@ export class PopoverDesktop extends PopoverAbstract {
 
     this.previouslyHoveredItem = null;
 
+    // Tear down synthesized-hover suppression so a future show() starts
+    // from a known state.
+    this.disarmSuppressSyncHover();
+
     // Clear any externally-supplied anchor rect so the next show() falls back
     // to the trigger element unless the caller explicitly sets a new one.
     // Also clear inline position so a stale top/left from a previous open
@@ -426,6 +476,60 @@ export class PopoverDesktop extends PopoverAbstract {
   public destroy(): void {
     this.hide();
     super.destroy();
+  }
+
+  /**
+   * Arms the synthesized-hover suppression: records the pointer position
+   * at the moment `show()` was called and schedules a safety rAF that
+   * clears the flag even if no mouseover ever arrives. Idempotent —
+   * re-arming tears down any prior armament first.
+   */
+  private armSuppressSyncHover(): void {
+    this.disarmSuppressSyncHover();
+
+    this.suppressSyncHover = true;
+    this.suppressSyncHoverPointer = pointerTracker.x !== null && pointerTracker.y !== null
+      ? { x: pointerTracker.x, y: pointerTracker.y }
+      : null;
+
+    this.suppressSyncHoverRaf = window.requestAnimationFrame(() => {
+      this.suppressSyncHoverRaf = window.requestAnimationFrame(() => {
+        this.disarmSuppressSyncHover();
+      });
+    });
+  }
+
+  /**
+   * True when the given mouseover event looks like Chromium's post-paint
+   * synthesized hit test — i.e. its clientX/Y match the pointer position
+   * snapshot captured at `show()` time. If we have no snapshot (no
+   * mousemove has ever fired in the document) we fall back to treating
+   * every mouseover received while armed as synthesized, matching the
+   * pre-fix behavior for the very first popover opened in a fresh page.
+   * @param event - the mouseover event under consideration
+   */
+  private isLikelySynthesizedHover(event: MouseEvent): boolean {
+    if (this.suppressSyncHoverPointer === null) {
+      return true;
+    }
+
+    return event.clientX === this.suppressSyncHoverPointer.x
+      && event.clientY === this.suppressSyncHoverPointer.y;
+  }
+
+  /**
+   * Tears down the synthesized-hover suppression: clears the flag,
+   * forgets the pointer position snapshot, and cancels the safety rAF.
+   * Safe to call when nothing is armed.
+   */
+  private disarmSuppressSyncHover(): void {
+    this.suppressSyncHover = false;
+    this.suppressSyncHoverPointer = null;
+
+    if (this.suppressSyncHoverRaf !== null) {
+      window.cancelAnimationFrame(this.suppressSyncHoverRaf);
+      this.suppressSyncHoverRaf = null;
+    }
   }
 
   /**
@@ -464,10 +568,20 @@ export class PopoverDesktop extends PopoverAbstract {
    * @param event - hover event data
    */
   protected handleHover(event: Event): void {
-    // Suppress the synthesized mouseover that Chromium fires immediately
-    // after the popover enters the CSS Top Layer. See `suppressSyncHover`.
+    // Swallow the synthesized hit test Chromium fires when the element
+    // enters the CSS Top Layer. That hit test reports the same clientX/Y
+    // the pointer was sitting at when `show()` ran; a genuine hover
+    // triggered by real pointer motion reports different coordinates.
+    // A matching event is discarded; a non-matching event disarms the
+    // suppressor and passes through as normal. See `suppressSyncHover`.
     if (this.suppressSyncHover) {
-      return;
+      if (event instanceof MouseEvent && this.isLikelySynthesizedHover(event)) {
+        this.disarmSuppressSyncHover();
+
+        return;
+      }
+
+      this.disarmSuppressSyncHover();
     }
 
     const item = this.getTargetItem(event);

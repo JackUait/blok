@@ -48,10 +48,11 @@ test('crop flow: Done with unchanged full rect → no crop saved', async ({ page
   const cropBtn = image.locator('[data-action="crop"]');
   await expect(cropBtn).toBeVisible();
   await cropBtn.click();
-  await expect(image.locator('.blok-image-crop-editor')).toBeVisible();
+  await expect(image.getByRole('region', { name: 'Crop image' })).toBeVisible();
   await image.locator('[data-action="done"]').click();
-  await expect(image.locator('.blok-image-crop-editor')).toHaveCount(0);
-  const saved = await page.evaluate(() => window.blokInstance!.save() as Promise<OutputData>);
+  await expect(image.getByRole('region', { name: 'Crop image' })).toHaveCount(0);
+  const saved = await page.evaluate(() => window.blokInstance?.save());
+  if (!saved) throw new Error('no blok instance');
   const first = saved.blocks[0].data as { crop?: unknown };
   expect(first.crop).toBeUndefined();
 });
@@ -59,14 +60,15 @@ test('crop flow: Done with unchanged full rect → no crop saved', async ({ page
 test('crop flow: Reset clears existing crop', async ({ page }) => {
   await seedImage(page, { x: 10, y: 10, w: 60, h: 60 });
   const image = page.locator(IMAGE_BLOCK_SELECTOR);
-  await expect(image.locator('.blok-image-crop')).toBeVisible();
+  await expect(image.locator('[data-role="image-crop"]')).toBeVisible();
   await image.hover();
   const cropBtn = image.locator('[data-action="crop"]');
   await expect(cropBtn).toBeVisible();
   await cropBtn.click();
   await image.locator('[data-action="reset"]').click();
   await image.locator('[data-action="done"]').click();
-  const saved = await page.evaluate(() => window.blokInstance!.save() as Promise<OutputData>);
+  const saved = await page.evaluate(() => window.blokInstance?.save());
+  if (!saved) throw new Error('no blok instance');
   const first = saved.blocks[0].data as { crop?: unknown };
   expect(first.crop).toBeUndefined();
 });
@@ -79,7 +81,8 @@ test('crop flow: Cancel preserves existing crop', async ({ page }) => {
   await expect(cropBtn).toBeVisible();
   await cropBtn.click();
   await image.locator('[data-action="cancel"]').click();
-  const saved = await page.evaluate(() => window.blokInstance!.save() as Promise<OutputData>);
+  const saved = await page.evaluate(() => window.blokInstance?.save());
+  if (!saved) throw new Error('no blok instance');
   const first = saved.blocks[0].data as { crop?: { w: number; h: number } };
   expect(first.crop).toEqual({ x: 10, y: 10, w: 60, h: 60 });
 });

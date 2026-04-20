@@ -41,6 +41,7 @@ export function renderImage(
     const { x, y, w, h } = data.crop;
     const wrapper = document.createElement('div');
     wrapper.className = 'blok-image-crop';
+    wrapper.setAttribute('data-role', 'image-crop');
     wrapper.style.overflow = 'hidden';
     wrapper.style.position = 'relative';
     wrapper.style.aspectRatio = `${w} / ${h}`;

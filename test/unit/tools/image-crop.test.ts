@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import { renderImage } from '../../../src/tools/image/ui';
 
 describe('renderImage with crop', () => {
@@ -81,7 +81,25 @@ describe('renderOverlay crop button', () => {
 });
 
 describe('ImageTool crop lifecycle', () => {
-  it('enterCrop swaps overlay for CropEditor; applyCrop writes data', () => {
+  beforeEach(() => {
+    if (!('popover' in HTMLElement.prototype)) {
+      Object.defineProperty(HTMLElement.prototype, 'popover', {
+        configurable: true,
+        get(this: HTMLElement) { return this.getAttribute('popover'); },
+        set(this: HTMLElement, v: string) { this.setAttribute('popover', v); },
+      });
+    }
+    if (typeof (HTMLElement.prototype as unknown as { showPopover?: () => void }).showPopover !== 'function') {
+      (HTMLElement.prototype as unknown as { showPopover: () => void }).showPopover = function() {};
+      (HTMLElement.prototype as unknown as { hidePopover: () => void }).hidePopover = function() {};
+    }
+  });
+
+  afterEach(() => {
+    document.body.replaceChildren();
+  });
+
+  it('enterCrop opens crop modal in document.body; block image stays rendered', () => {
     const dispatch = vi.fn();
     const block = { id: 'b1', dispatchChange: dispatch } as unknown as BlockAPI;
     const tool = new ImageTool({
@@ -95,19 +113,28 @@ describe('ImageTool crop lifecycle', () => {
     expect(cropBtn).not.toBeNull();
     cropBtn!.click();
 
-    expect(root.querySelector('.blok-image-crop-editor')).not.toBeNull();
-    expect(root.querySelector('[data-role="image-overlay"]')).toBeNull();
+    // Modal lives in document.body, NOT inside the block root
+    expect(root.querySelector('.blok-image-crop-editor')).toBeNull();
+    const dialog = document.body.querySelector<HTMLElement>(
+      '[role="dialog"][aria-label="Crop image"]'
+    );
+    expect(dialog).not.toBeNull();
+    expect(dialog!.querySelector('.blok-image-crop-editor')).not.toBeNull();
 
-    const done = root.querySelector<HTMLButtonElement>('[data-action="done"]');
+    // Block still renders image + overlay while modal is open
+    expect(root.querySelector('.blok-image-inner img')).not.toBeNull();
+    expect(root.querySelector('[data-role="image-overlay"]')).not.toBeNull();
+
+    const done = dialog!.querySelector<HTMLButtonElement>('[data-action="done"]');
     expect(done).not.toBeNull();
     done!.click();
 
     expect(tool.save().crop).toBeUndefined();
-    expect(root.querySelector('.blok-image-crop-editor')).toBeNull();
+    expect(document.body.querySelector('[role="dialog"][aria-label="Crop image"]')).toBeNull();
     expect(root.querySelector('[data-role="image-overlay"]')).not.toBeNull();
   });
 
-  it('cancelCrop restores without data change', () => {
+  it('cancel button in modal restores without data change', () => {
     const block = { id: 'b1', dispatchChange: vi.fn() } as unknown as BlockAPI;
     const tool = new ImageTool({
       api: mockApi, block, config: {} as ImageConfig,
@@ -118,8 +145,26 @@ describe('ImageTool crop lifecycle', () => {
     document.body.appendChild(root);
     const crop = root.querySelector<HTMLButtonElement>('[data-action="crop"]');
     crop!.click();
-    const cancel = root.querySelector<HTMLButtonElement>('[data-action="cancel"]');
+    const cancel = document.body.querySelector<HTMLButtonElement>(
+      '[role="dialog"] [data-action="cancel"]'
+    );
+    expect(cancel).not.toBeNull();
     cancel!.click();
     expect(tool.save().crop).toEqual({ x: 5, y: 5, w: 90, h: 90 });
+    expect(document.body.querySelector('[role="dialog"][aria-label="Crop image"]')).toBeNull();
+  });
+
+  it('removed() while modal open tears down modal', () => {
+    const block = { id: 'b1', dispatchChange: vi.fn() } as unknown as BlockAPI;
+    const tool = new ImageTool({
+      api: mockApi, block, config: {} as ImageConfig,
+      data: { url: 'x.png' } as ImageData, readOnly: false,
+    } as BlockToolConstructorOptions<ImageData, ImageConfig>);
+    const root = tool.render();
+    document.body.appendChild(root);
+    root.querySelector<HTMLButtonElement>('[data-action="crop"]')!.click();
+    expect(document.body.querySelector('[role="dialog"][aria-label="Crop image"]')).not.toBeNull();
+    tool.removed();
+    expect(document.body.querySelector('[role="dialog"][aria-label="Crop image"]')).toBeNull();
   });
 });

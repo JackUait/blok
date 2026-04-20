@@ -1,0 +1,51 @@
+/*
+  Double-attribute selector keeps specificity (0,3,0) above the top-layer reset
+  in main.css (0,2,0), so backdrop stays full-viewport when promoted to popover.
+*/
+.blok-image-crop-modal-backdrop,
+.blok-image-crop-modal-backdrop[data-blok-top-layer][popover] {
+  position: fixed;
+  inset: 0;
+  width: auto;
+  height: auto;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9998;
+}
+.blok-image-crop-modal-dialog {
+  background: var(--blok-color-bg, #fff);
+  color: var(--blok-color-text, #111);
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  max-width: min(90vw, 1100px);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  outline: none;
+}
+.blok-image-crop-modal-body {
+  padding: 16px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+.blok-image-crop-modal-body .blok-image-crop-editor {
+  width: auto;
+  max-width: 80vw;
+}
+.blok-image-crop-modal-body .blok-image-crop-editor__stage {
+  max-height: 70vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.blok-image-crop-modal-body .blok-image-crop-editor__source {
+  width: auto;
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+}

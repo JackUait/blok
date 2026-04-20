@@ -48,9 +48,12 @@ test('crop flow: Done with unchanged full rect → no crop saved', async ({ page
   const cropBtn = image.locator('[data-action="crop"]');
   await expect(cropBtn).toBeVisible();
   await cropBtn.click();
-  await expect(image.getByRole('region', { name: 'Crop image' })).toBeVisible();
-  await image.locator('[data-action="done"]').click();
-  await expect(image.getByRole('region', { name: 'Crop image' })).toHaveCount(0);
+  const dialog = page.getByRole('dialog', { name: 'Crop image' });
+  await expect(dialog).toBeVisible();
+  // Block root remains in DOM while modal is open
+  await expect(image).toBeVisible();
+  await dialog.locator('[data-action="done"]').click();
+  await expect(dialog).toHaveCount(0);
   const saved = await page.evaluate(() => window.blokInstance?.save());
   if (!saved) throw new Error('no blok instance');
   const first = saved.blocks[0].data as { crop?: unknown };
@@ -65,8 +68,10 @@ test('crop flow: Reset clears existing crop', async ({ page }) => {
   const cropBtn = image.locator('[data-action="crop"]');
   await expect(cropBtn).toBeVisible();
   await cropBtn.click();
-  await image.locator('[data-action="reset"]').click();
-  await image.locator('[data-action="done"]').click();
+  const dialog = page.getByRole('dialog', { name: 'Crop image' });
+  await expect(dialog).toBeVisible();
+  await dialog.locator('[data-action="reset"]').click();
+  await dialog.locator('[data-action="done"]').click();
   const saved = await page.evaluate(() => window.blokInstance?.save());
   if (!saved) throw new Error('no blok instance');
   const first = saved.blocks[0].data as { crop?: unknown };
@@ -80,7 +85,24 @@ test('crop flow: Cancel preserves existing crop', async ({ page }) => {
   const cropBtn = image.locator('[data-action="crop"]');
   await expect(cropBtn).toBeVisible();
   await cropBtn.click();
-  await image.locator('[data-action="cancel"]').click();
+  const dialog = page.getByRole('dialog', { name: 'Crop image' });
+  await dialog.locator('[data-action="cancel"]').click();
+  const saved = await page.evaluate(() => window.blokInstance?.save());
+  if (!saved) throw new Error('no blok instance');
+  const first = saved.blocks[0].data as { crop?: { w: number; h: number } };
+  expect(first.crop).toEqual({ x: 10, y: 10, w: 60, h: 60 });
+});
+
+test('crop flow: backdrop click cancels', async ({ page }) => {
+  await seedImage(page, { x: 10, y: 10, w: 60, h: 60 });
+  const image = page.locator(IMAGE_BLOCK_SELECTOR);
+  await image.hover();
+  await image.locator('[data-action="crop"]').click();
+  const backdrop = page.getByTestId('image-crop-backdrop');
+  await expect(backdrop).toBeVisible();
+  // Click near the top-left corner of the backdrop (outside the centered dialog)
+  await backdrop.click({ position: { x: 10, y: 10 } });
+  await expect(page.getByRole('dialog', { name: 'Crop image' })).toHaveCount(0);
   const saved = await page.evaluate(() => window.blokInstance?.save());
   if (!saved) throw new Error('no blok instance');
   const first = saved.blocks[0].data as { crop?: { w: number; h: number } };

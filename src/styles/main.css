@@ -2,6 +2,7 @@
 @import './fonts.css';
 @import './popover-animation.css';
 @import '../tools/image/crop-editor.css';
+@import '../tools/image/crop-modal.css';
 
 /*
   Import Tailwind CSS sub-modules individually (without native @layer wrappers).

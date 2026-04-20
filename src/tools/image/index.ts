@@ -30,7 +30,7 @@ import {
   renderImage,
   renderOverlay,
 } from './ui';
-import { mountCropEditor } from './crop-editor';
+import { openCropModal } from './crop-modal';
 import { renderUploadingState, type UploadingStateElement } from './uploading-state';
 import { Uploader, type UploadResult } from './uploader';
 
@@ -48,7 +48,6 @@ export class ImageTool implements BlockTool {
   private emptyStateEl: EmptyStateElement | null = null;
   private uploadingEl: UploadingStateElement | null = null;
   private resizeDetach: (() => void)[] = [];
-  private cropping = false;
   private cropDetach: (() => void) | null = null;
   private errorMessage: string | null = null;
   private lastFileName: string | null = null;
@@ -212,29 +211,49 @@ export class ImageTool implements BlockTool {
   }
 
   private enterCrop(): void {
-    this.cropping = true;
-    this.renderState();
+    if (this.cropDetach) return;
+    this.closeAlignmentPopover();
+    this.cropDetach = openCropModal({
+      url: this.data.url,
+      alt: this.data.alt,
+      initial: this.data.crop,
+      onApply: (rect) => this.applyCrop(rect),
+      onCancel: () => this.cancelCrop(),
+    });
   }
 
   private applyCrop(rect: ImageCrop | null): void {
+    this.cropDetach = null;
     if (rect === null) {
       delete this.data.crop;
     } else {
       this.data.crop = rect;
     }
-    this.cropping = false;
     this.block.dispatchChange();
     this.renderState();
   }
 
   private cancelCrop(): void {
-    this.cropping = false;
-    this.renderState();
+    this.cropDetach = null;
   }
 
   private detachCrop(): void {
     this.cropDetach?.();
     this.cropDetach = null;
+  }
+
+  private closeAlignmentPopover(): void {
+    if (!this.root) return;
+    const popover = this.root.querySelector<HTMLElement>(
+      '[data-role="align-popover"]:not([hidden])'
+    );
+    if (!popover) return;
+    popover.hidden = true;
+    popover.removeAttribute('data-blok-popover-opened');
+    this.root.removeAttribute('data-align-open');
+    this.root
+      .querySelector<HTMLElement>('[data-action="align-trigger"]')
+      ?.setAttribute('aria-expanded', 'false');
   }
 
   public removed(): void {
@@ -271,7 +290,6 @@ export class ImageTool implements BlockTool {
   private renderState(): void {
     if (!this.root) return;
     this.detachResize();
-    this.detachCrop();
     this.root.replaceChildren();
     this.syncRootAttributes();
 
@@ -331,21 +349,6 @@ export class ImageTool implements BlockTool {
 
   private renderRendered(): void {
     if (!this.root) return;
-    if (this.cropping) {
-      const figure = document.createElement('figure');
-      figure.className = 'blok-image-inner blok-image-inner--cropping';
-      figure.style.position = 'relative';
-      this.detachCrop();
-      this.cropDetach = mountCropEditor(figure, {
-        url: this.data.url,
-        alt: this.data.alt,
-        initial: this.data.crop,
-        onApply: (rect) => this.applyCrop(rect),
-        onCancel: () => this.cancelCrop(),
-      });
-      this.root.appendChild(figure);
-      return;
-    }
     const figure = renderImage(this.data);
 
     const imgEl = figure.querySelector('img');

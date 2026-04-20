@@ -29,11 +29,24 @@ export function resizeRect(
   const hasE = handle.includes('e');
   const hasN = handle.includes('n');
   const hasS = handle.includes('s');
-  const x = hasW ? sx + dxPct : sx;
-  const y = hasN ? sy + dyPct : sy;
-  const w = sw + (hasE ? dxPct : 0) - (hasW ? dxPct : 0);
-  const h = sh + (hasS ? dyPct : 0) - (hasN ? dyPct : 0);
-  return clampRect({ x, y, w, h });
+
+  const startRight = sx + sw;
+  const startBottom = sy + sh;
+
+  const left = hasW
+    ? Math.max(0, Math.min(startRight - MIN, sx + dxPct))
+    : sx;
+  const right = hasE
+    ? Math.max(sx + MIN, Math.min(100, startRight + dxPct))
+    : startRight;
+  const top = hasN
+    ? Math.max(0, Math.min(startBottom - MIN, sy + dyPct))
+    : sy;
+  const bottom = hasS
+    ? Math.max(sy + MIN, Math.min(100, startBottom + dyPct))
+    : startBottom;
+
+  return { x: left, y: top, w: right - left, h: bottom - top };
 }
 
 export function applyRatio(rect: ImageCrop, ratio: number | null): ImageCrop {

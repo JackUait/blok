@@ -41,12 +41,14 @@
   line-height: 0;
 }
 
-/* Shape-mask trick (box-shadow: 0 0 0 9999px) only runs for circle/ellipse —
-   clip at frame so the huge shadow doesn't leak. Rect shape has no such
-   shadow, so no clipping; edge handles can safely straddle the rect edge. */
-.blok-image-crop-editor__frame:has(.blok-image-crop-editor__rect[data-shape="circle"]),
-.blok-image-crop-editor__frame:has(.blok-image-crop-editor__rect[data-shape="ellipse"]) {
+/* Shape-mask trick (box-shadow: 0 0 0 9999px) only runs for circle/ellipse.
+   Scope the huge shadow to its own clip wrapper so the frame stays overflow:visible
+   and corner/edge handles can straddle the rect edges without being truncated. */
+.blok-image-crop-editor__shape-mask-clip {
+  position: absolute;
+  inset: 0;
   overflow: hidden;
+  pointer-events: none;
 }
 
 .blok-image-crop-editor__source {
@@ -83,13 +85,12 @@
 
 .blok-image-crop-editor__shape-mask {
   position: absolute;
-  inset: 0;
   pointer-events: none;
-  border-radius: inherit;
 }
 
-.blok-image-crop-editor__rect[data-shape="circle"] .blok-image-crop-editor__shape-mask,
-.blok-image-crop-editor__rect[data-shape="ellipse"] .blok-image-crop-editor__shape-mask {
+.blok-image-crop-editor__shape-mask[data-shape="circle"],
+.blok-image-crop-editor__shape-mask[data-shape="ellipse"] {
+  border-radius: 50%;
   box-shadow: 0 0 0 9999px var(--crop-mask);
 }
 

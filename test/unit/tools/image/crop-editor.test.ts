@@ -201,14 +201,16 @@ describe('crop-editor', () => {
     expect(rect.getAttribute('data-shape')).toBe('rect');
   });
 
-  it('renders inner shape-mask overlay element inside rect for corner coverage', () => {
+  it('renders shape-mask in dedicated clip wrapper so corner handles are not truncated', () => {
     detach = mountCropEditor(container, {
       url: 'x.png',
       onApply: () => {},
       onCancel: () => {},
     });
-    const rect = container.querySelector<HTMLElement>('.blok-image-crop-editor__rect')!;
-    const shapeMask = rect.querySelector<HTMLElement>('.blok-image-crop-editor__shape-mask');
+    const frame = container.querySelector<HTMLElement>('.blok-image-crop-editor__frame')!;
+    const clip = frame.querySelector<HTMLElement>('.blok-image-crop-editor__shape-mask-clip');
+    expect(clip).not.toBeNull();
+    const shapeMask = clip!.querySelector<HTMLElement>('.blok-image-crop-editor__shape-mask');
     expect(shapeMask).not.toBeNull();
   });
 

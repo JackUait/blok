@@ -107,6 +107,30 @@ describe('mountCropEditor', () => {
     expect(onApply).toHaveBeenCalledWith({ x: 10, y: 10, w: 50, h: 50 });
   });
 
+  it('circle/ellipse shape-mask lives outside rectEl so corner handles are not clipped', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    mountCropEditor(host, {
+      url: 'x.png',
+      onApply: vi.fn(),
+      onCancel: vi.fn(),
+    });
+    host.querySelector<HTMLButtonElement>('[data-ratio="circle"]')!.click();
+
+    const rectEl = host.querySelector('.blok-image-crop-editor__rect')!;
+    const shapeMask = host.querySelector('.blok-image-crop-editor__shape-mask')!;
+    expect(shapeMask).not.toBeNull();
+    expect(rectEl.contains(shapeMask)).toBe(false);
+
+    const frame = host.querySelector('.blok-image-crop-editor__frame')!;
+    expect(frame.contains(shapeMask)).toBe(true);
+
+    for (const h of ['nw', 'ne', 'se', 'sw'] as const) {
+      const handle = host.querySelector(`[data-handle="${h}"]`)!;
+      expect(rectEl.contains(handle)).toBe(true);
+    }
+  });
+
   it('detach removes editor and unbinds keys', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);

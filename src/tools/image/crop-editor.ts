@@ -91,15 +91,20 @@ export function mountCropEditor(
   mask.className = 'blok-image-crop-editor__mask';
   frame.appendChild(mask);
 
+  const shapeMaskClip = document.createElement('div');
+  shapeMaskClip.className = 'blok-image-crop-editor__shape-mask-clip';
+  shapeMaskClip.setAttribute('aria-hidden', 'true');
+  frame.appendChild(shapeMaskClip);
+
+  const shapeMask = document.createElement('div');
+  shapeMask.className = 'blok-image-crop-editor__shape-mask';
+  shapeMask.setAttribute('data-shape', state.shape);
+  shapeMaskClip.appendChild(shapeMask);
+
   const rectEl = document.createElement('div');
   rectEl.className = 'blok-image-crop-editor__rect';
   rectEl.setAttribute('data-shape', state.shape);
   frame.appendChild(rectEl);
-
-  const shapeMask = document.createElement('div');
-  shapeMask.className = 'blok-image-crop-editor__shape-mask';
-  shapeMask.setAttribute('aria-hidden', 'true');
-  rectEl.appendChild(shapeMask);
 
   const GRID_LINE_VARIANTS = ['v-1', 'v-2', 'h-1', 'h-2'] as const;
   for (const variant of GRID_LINE_VARIANTS) {
@@ -182,6 +187,10 @@ export function mountCropEditor(
     rectEl.style.top = `${rect.y}%`;
     rectEl.style.width = `${rect.w}%`;
     rectEl.style.height = `${rect.h}%`;
+    shapeMask.style.left = `${rect.x}%`;
+    shapeMask.style.top = `${rect.y}%`;
+    shapeMask.style.width = `${rect.w}%`;
+    shapeMask.style.height = `${rect.h}%`;
     mask.style.clipPath = `polygon(
       0 0, 100% 0, 100% 100%, 0 100%, 0 0,
       ${rect.x}% ${rect.y}%,
@@ -217,6 +226,7 @@ export function mountCropEditor(
     state.ratioKey = def.key;
     state.shape = def.shape;
     rectEl.setAttribute('data-shape', def.shape);
+    shapeMask.setAttribute('data-shape', def.shape);
     updateActiveChip();
     setRect(state.rect);
   }

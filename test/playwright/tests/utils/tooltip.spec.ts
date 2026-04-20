@@ -1401,7 +1401,7 @@ test.describe('tooltip API', () => {
   });
 
   test.describe('CSS cascade isolation', () => {
-    test('tooltip wrapper has position:absolute so its ::before does not expand to fill the viewport', async ({ page }) => {
+    test('tooltip wrapper is positioned (not static) so its ::before does not expand to fill the viewport', async ({ page }) => {
       const testElement = await page.evaluate(({ holder }) => {
         const container = document.getElementById(holder);
         const button = document.createElement('button');
@@ -1437,8 +1437,13 @@ test.describe('tooltip API', () => {
        * The ::before pseudo-element (position:absolute; inset:0) then expanded to fill
        * the entire viewport with a dark bg-tooltip-bg background, darkening the page
        * on hover of inline toolbar buttons.
+       *
+       * The invariant is "wrapper is a positioned ancestor", not any specific value.
+       * `fixed` (current) and `absolute` (historic) both satisfy the containing-block
+       * requirement; `static` and `relative-without-offsets` would regress.
        */
-      expect(position).toBe('absolute');
+      expect(position).not.toBe('static');
+      expect(['fixed', 'absolute']).toContain(position);
     });
   });
 });

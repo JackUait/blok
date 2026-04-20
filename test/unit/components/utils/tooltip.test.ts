@@ -104,6 +104,33 @@ describe('Tooltip utility', () => {
     vi.useRealTimers();
   });
 
+  it('uses position: fixed so Top-Layer placement is viewport-relative', () => {
+    /**
+     * Regression: when promoted to the CSS Top Layer (popover="manual" +
+     * showPopover), the wrapper's containing block becomes the viewport ONLY
+     * when it is positioned via `fixed` (or a top-layer-specific containing
+     * block). With `position: absolute`, Chrome still resolves the wrapper's
+     * containing block to the initial containing block (document) — so inline
+     * `style.top = "<viewport-Y>px"` renders <scrollY> px too high whenever
+     * the user has scrolled the page. That made the "Alignment" tooltip on
+     * the image block jump up to overlap earlier icons once the page was
+     * scrolled, because placement math (correctly) produces viewport-Y but
+     * the CSS rendered it as document-Y.
+     *
+     * Pinning `fixed` here prevents any future refactor from re-introducing
+     * the scroll-offset ghost.
+     */
+    const target = createTargetElement();
+
+    show(target, 'fixed-check');
+
+    const wrapper = getTooltipWrapper();
+    const classes = Array.from(wrapper?.classList ?? []);
+
+    expect(classes).toContain('fixed');
+    expect(classes).not.toContain('absolute');
+  });
+
   it('has no transition or transform animation classes on the wrapper', () => {
     const target = createTargetElement();
 
@@ -210,7 +237,7 @@ describe('Tooltip utility', () => {
     }).toThrow('[Blok Tooltip] Wrong type of «content» passed. It should be an instance of Node or String. But number given.');
   });
 
-  it('places tooltip below the element taking margins and scroll into account', () => {
+  it('places tooltip below the element independent of page scroll', () => {
     const target = createTargetElement({
       left: 15,
       bottom: 75,
@@ -234,8 +261,15 @@ describe('Tooltip utility', () => {
       marginTop: 8,
       delay: 0 });
 
+    /**
+     * Wrapper is `position: fixed` and `getBoundingClientRect()` is already
+     * viewport-relative, so `scrollY` must NOT be added here. Before the
+     * switch to `fixed`, this test expected `98px` (= 75 + 5 + 10 + 8); the
+     * `5` was the scroll offset that now lives implicitly in the fixed
+     * layout. Expected value today = 75 + 10 + 8 = 93.
+     */
     expect(wrapper?.style.left).toBe('35px');
-    expect(wrapper?.style.top).toBe('98px');
+    expect(wrapper?.style.top).toBe('93px');
     expect(wrapper?.getAttribute('data-blok-placement')).toBe('bottom');
   });
 
@@ -299,7 +333,7 @@ describe('Tooltip utility', () => {
     expect(wrapper?.getAttribute('data-blok-placement')).toBe('right');
   });
 
-  it('places tooltip above the element using document scroll fallback', () => {
+  it('places tooltip above the element independent of document scroll', () => {
     const target = createTargetElement({
       top: 120,
       left: 40,
@@ -324,8 +358,13 @@ describe('Tooltip utility', () => {
     show(target, 'top', { placement: 'top',
       delay: 0 });
 
+    /**
+     * Fixed positioning means the `scrollTop` fallback branch is a no-op:
+     * `getBoundingClientRect()` already gives viewport-Y, and a fixed
+     * wrapper anchors to the viewport. Expected top = 120 − 24 − 10 = 86.
+     */
     expect(wrapper?.style.left).toBe('50px');
-    expect(wrapper?.style.top).toBe('116px');
+    expect(wrapper?.style.top).toBe('86px');
     expect(wrapper?.getAttribute('data-blok-placement')).toBe('top');
   });
 

@@ -1,10 +1,8 @@
 import { DATA_ATTR, TOOLTIP_INTERFACE_VALUE } from '../constants';
 
 import {
-  isPromotedToTopLayer,
   promoteToTopLayer,
   removeFromTopLayer,
-  supportsPopoverAPI,
 } from './top-layer';
 import { twJoin } from './tw';
 
@@ -76,7 +74,17 @@ class Tooltip {
   private get CSS(): CSSTooltipClasses {
     return {
       tooltip: twJoin(
-        'absolute z-overlay top-0 left-0',
+        /**
+         * `fixed` (not `absolute`) anchors the wrapper to the viewport. That
+         * matters because placement math feeds in viewport-relative coords
+         * (from `getBoundingClientRect()`, with no scroll offset added), and
+         * the CSS Top Layer does NOT give `position: absolute` a viewport
+         * containing block — Chrome keeps the initial containing block
+         * (document), so a scrolled page would push the tooltip up by
+         * `scrollY`. `fixed` side-steps that entirely, both before and after
+         * the wrapper is promoted to the Top Layer.
+         */
+        'fixed z-overlay top-0 left-0',
         'bg-tooltip-bg opacity-0',
         'select-none pointer-events-none',
         'rounded-lg shadow-tooltip',
@@ -534,35 +542,17 @@ class Tooltip {
   }
 
   /**
-   * Get current page vertical scroll offset.
+   * Scroll offset to add to placement math.
    *
-   * Returns 0 when the tooltip is promoted to the CSS Top Layer: in that case
-   * the wrapper's containing block is the viewport (not the document), so
-   * `getBoundingClientRect()` coordinates map directly to the wrapper's
-   * `top`/`left` without any scroll adjustment. Adding scroll would push the
-   * tooltip off-screen on scrolled pages.
+   * Always 0. The wrapper is `position: fixed`, so its containing block is
+   * the viewport regardless of Top-Layer promotion — and
+   * `getBoundingClientRect()` is already viewport-relative. Adding `scrollY`
+   * would double-count the offset and push the tooltip off-screen on any
+   * scrolled page. Kept as a method (not inlined) so future placements have
+   * a single chokepoint to revisit if the positioning model ever changes.
    */
   private getScrollTop(): number {
-    if (supportsPopoverAPI() && this.nodes.wrapper !== null && isPromotedToTopLayer(this.nodes.wrapper)) {
-      return 0;
-    }
-
-    /**
-     * Fall back to viewport-relative coords whenever the API exists, even
-     * before the wrapper is actually promoted: placement math runs once,
-     * before promoteToTopLayer() flips the marker. Using scrollY here would
-     * land the wrapper at the wrong coordinate during the brief window
-     * between style application and Top Layer entry.
-     */
-    if (supportsPopoverAPI()) {
-      return 0;
-    }
-
-    if (typeof window.scrollY === 'number') {
-      return window.scrollY;
-    }
-
-    return document.documentElement?.scrollTop ?? document.body.scrollTop ?? 0;
+    return 0;
   }
 
   /**

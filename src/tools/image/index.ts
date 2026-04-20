@@ -322,6 +322,7 @@ export class ImageTool implements BlockTool {
         onFullscreen: () => openLightbox({ url: this.data.url, alt: this.data.alt }),
         onCopyUrl: () => this.copyUrl(),
         onToggleCaption: () => this.toggleCaption(),
+        onCrop: () => {},
       });
       figure.appendChild(overlay);
 
@@ -369,7 +370,14 @@ export class ImageTool implements BlockTool {
         ) => void;
       };
     }).toolbar;
-    toolbar?.toggleBlockSettings?.(true, trigger, { placeLeftOfAnchor: false });
+    if (!toolbar?.toggleBlockSettings) return;
+    this.root?.setAttribute('data-settings-open', 'true');
+    const onClosed = (): void => {
+      this.root?.removeAttribute('data-settings-open');
+      this.api.events.off('block-settings-closed', onClosed);
+    };
+    this.api.events.on('block-settings-closed', onClosed);
+    toolbar.toggleBlockSettings(true, trigger, { placeLeftOfAnchor: false });
   }
 
   private attachResizeHandles(figure: HTMLElement): void {

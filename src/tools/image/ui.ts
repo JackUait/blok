@@ -178,6 +178,7 @@ export interface OverlayOptions {
   onFullscreen(): void;
   onCopyUrl(): void;
   onToggleCaption(): void;
+  onCrop(): void;
 }
 
 /**
@@ -205,6 +206,12 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
     label: 'Replace image',
     svg: '<path d="M4 7h15"/><path d="m15 3 4 4-4 4"/><path d="M20 17H5"/><path d="m9 13-4 4 4 4"/>',
     onClick: opts.onReplace,
+  });
+  appendSimpleButton(root, {
+    action: 'crop',
+    label: 'Crop',
+    svg: '<path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M2 6h14a2 2 0 0 1 2 2v14"/>',
+    onClick: opts.onCrop,
   });
   appendSimpleButton(root, {
     action: 'fullscreen',

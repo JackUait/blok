@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { renderImage } from '../../../src/tools/image/ui';
 
 describe('renderImage with crop', () => {
@@ -53,5 +53,29 @@ describe('ImageTool.save crop', () => {
   it('normalizes full rect to undefined', () => {
     const t = createTool({ crop: { x: 0, y: 0, w: 100, h: 100 } });
     expect(t.save().crop).toBeUndefined();
+  });
+});
+
+import { renderOverlay } from '../../../src/tools/image/ui';
+
+describe('renderOverlay crop button', () => {
+  it('renders crop button that invokes onCrop', () => {
+    const onCrop = vi.fn();
+    const overlay = renderOverlay({
+      state: { alignment: 'center', captionVisible: true, size: 'md' },
+      onAlign: vi.fn(),
+      onSize: vi.fn(),
+      onReplace: vi.fn(),
+      onDelete: vi.fn(),
+      onDownload: vi.fn(),
+      onFullscreen: vi.fn(),
+      onCopyUrl: vi.fn(),
+      onToggleCaption: vi.fn(),
+      onCrop,
+    });
+    const btn = overlay.querySelector<HTMLButtonElement>('[data-action="crop"]')!;
+    expect(btn).not.toBeNull();
+    btn.click();
+    expect(onCrop).toHaveBeenCalled();
   });
 });

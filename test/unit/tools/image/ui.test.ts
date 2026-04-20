@@ -156,6 +156,7 @@ const makeOverlayOpts = (over: Partial<Parameters<typeof renderOverlay>[0]> = {}
   onFullscreen: noop,
   onCopyUrl: noop,
   onToggleCaption: noop,
+  onCrop: noop,
   ...over,
 });
 

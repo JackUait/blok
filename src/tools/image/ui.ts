@@ -7,9 +7,9 @@ const ALIGNMENT_TO_TEXT_ALIGN: Record<ImageAlignment, string> = {
 };
 
 const ALIGNMENT_ICON: Record<ImageAlignment, string> = {
-  left:   '<path d="M3 6h18M3 12h10M3 18h14"/>',
-  center: '<path d="M3 6h18M7 12h10M5 18h14"/>',
-  right:  '<path d="M3 6h18M11 12h10M7 18h14"/>',
+  left:   '<path d="M21 6H3"/><path d="M15 12H3"/><path d="M17 18H3"/>',
+  center: '<path d="M21 6H3"/><path d="M17 12H7"/><path d="M19 18H5"/>',
+  right:  '<path d="M21 6H3"/><path d="M21 12H9"/><path d="M21 18H7"/>',
 };
 
 const ALIGNMENT_LABEL: Record<ImageAlignment, string> = {
@@ -151,32 +151,32 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
     action: 'caption-toggle',
     label: 'Toggle caption',
     pressed: opts.state.captionVisible,
-    svg: '<path d="M4 6h16M4 12h16M4 18h10"/>',
+    svg: '<rect x="3" y="4.5" width="18" height="11" rx="2"/><path d="m8.5 11 2-2 2.5 2.5 2-2 2.5 2.5"/><path d="M7 19.5h10"/>',
     onClick: opts.onToggleCaption,
   });
   appendSimpleButton(root, {
     action: 'alt',
     label: 'Edit alt text',
     pressed: opts.state.hasAlt,
-    svg: '<path d="M4 4h16v14H5l-3 3V4z"/><path d="M8 11h8M8 7h8"/>',
+    svg: '<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r="1.25"/>',
     onClick: opts.onAlt,
   });
   appendSimpleButton(root, {
     action: 'replace',
     label: 'Replace image',
-    svg: '<path d="M3 12a9 9 0 0115-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 01-15 6.7L3 16"/><path d="M3 21v-5h5"/>',
+    svg: '<path d="m17 3 4 4-4 4"/><path d="M21 7H9"/><path d="m7 21-4-4 4-4"/><path d="M3 17h12"/>',
     onClick: opts.onReplace,
   });
   appendSimpleButton(root, {
     action: 'fullscreen',
     label: 'View fullscreen',
-    svg: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+    svg: '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
     onClick: opts.onFullscreen,
   });
   appendSimpleButton(root, {
     action: 'download',
     label: 'Download original',
-    svg: '<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>',
+    svg: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
     onClick: opts.onDownload,
   });
 
@@ -187,7 +187,7 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
   more.setAttribute('data-action', 'more');
   more.setAttribute('aria-label', 'More options');
   more.setAttribute('aria-haspopup', 'menu');
-  more.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>';
+  more.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.35"/><circle cx="12" cy="12" r="1.35"/><circle cx="19" cy="12" r="1.35"/></svg>';
   root.appendChild(more);
 
   // Delete is reachable from the popover; expose an invisible legacy button for consumers/tests.
@@ -288,7 +288,7 @@ function appendAlignmentControl(root: HTMLElement, opts: OverlayOptions): void {
 }
 
 function alignmentIconSvg(value: ImageAlignment): string {
-  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ALIGNMENT_ICON[value]}</svg>`;
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${ALIGNMENT_ICON[value]}</svg>`;
 }
 
 function appendDivider(parent: HTMLElement): void {
@@ -315,7 +315,7 @@ function appendSimpleButton(parent: HTMLElement, spec: SimpleButtonSpec): void {
   if (spec.pressed !== undefined) {
     btn.setAttribute('aria-pressed', spec.pressed ? 'true' : 'false');
   }
-  btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${spec.svg}</svg>`;
+  btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${spec.svg}</svg>`;
   btn.addEventListener('click', (event) => {
     event.stopPropagation();
     spec.onClick();

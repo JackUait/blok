@@ -78,6 +78,11 @@ export class ImageTool implements BlockTool {
     if (this.data.frame !== undefined) out.frame = this.data.frame;
     if (this.data.rounded !== undefined) out.rounded = this.data.rounded;
     if (this.data.captionVisible !== undefined) out.captionVisible = this.data.captionVisible;
+    if (this.data.crop !== undefined) {
+      const { x, y, w, h } = this.data.crop;
+      const isFull = x === 0 && y === 0 && w === 100 && h === 100;
+      if (!isFull) out.crop = { x, y, w, h };
+    }
     return out;
   }
 

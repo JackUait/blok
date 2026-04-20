@@ -822,8 +822,21 @@ export class BlockOperations {
        * container `contentIds` arrays. Idempotent when the parent already
        * matches, so DragController's existing post-move setBlockParent call
        * remains a safe no-op.
+       *
+       * Skip inside a Yjs move group (drag path): DragController.handleDropImpl
+       * calls the undo-aware `BlockManager.setBlockParent` after `move()` and
+       * relies on reading the pre-move `parentId` to record the correct
+       * `fromParentId` on the in-flight move entry. Mutating `parentId` here
+       * via `hierarchy.setBlockParent` (which bypasses the undo bookkeeping)
+       * would clobber that baseline and leave undo unable to restore the
+       * original parent. The non-drag callers (keyboard moveUp/Down, public
+       * api) still get the auto-heal — `isInMoveGroup` is only true while
+       * DragController's `transactMoves` wrapper is open.
        */
-      if (movedBlock.parentId !== destinationParentId) {
+      if (
+        movedBlock.parentId !== destinationParentId
+        && !this.dependencies.YjsManager.isInMoveGroup
+      ) {
         this.hierarchy.setBlockParent(movedBlock, destinationParentId);
       }
 

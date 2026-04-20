@@ -32,6 +32,9 @@ export const cssInline = {
 
   // Container for inline popover
   popoverContainer: 'flex-row top-0 min-w-max w-max p-1 mobile:absolute',
+
+  // Opened state for inline popover - symmetric padding (no scroll area, so pb matches pt)
+  popoverContainerOpened: 'pb-1.5',
 };
 
 /**

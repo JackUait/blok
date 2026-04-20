@@ -202,6 +202,20 @@ describe('PopoverInline', () => {
       expect(() => popover.show()).not.toThrow();
     });
 
+    it('applies symmetric top/bottom padding to inline popover container (no pb-0 from desktop opened state)', () => {
+      const popover = createPopoverInline();
+      const instance = popover as unknown as PopoverInlineInternal;
+
+      popover.show();
+
+      // Inline popover has no scroll area, so bottom padding should match top padding.
+      // Desktop popover uses pb-0 on the outer container so the scroll haze renders only inside
+      // the scrollable items list — that logic does not apply to the inline toolbar.
+      expect(instance.nodes.popoverContainer.className).toContain('pt-1.5');
+      expect(instance.nodes.popoverContainer.className).toContain('pb-1.5');
+      expect(instance.nodes.popoverContainer.className).not.toContain('pb-0');
+    });
+
     it('should activate flipper with flippableElements', () => {
       vi.useFakeTimers();
 

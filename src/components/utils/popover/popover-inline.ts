@@ -204,7 +204,8 @@ export class PopoverInline extends PopoverDesktop {
       this.nodes.popoverContainer.className = twMerge(
         css.popoverContainer,
         css.popoverContainerOpened,
-        cssInline.popoverContainer
+        cssInline.popoverContainer,
+        cssInline.popoverContainerOpened
       );
 
       // Set height based on screen

@@ -17,18 +17,16 @@ export interface EmptyStateElement extends HTMLElement {
 
 type SourceKind = 'upload' | 'embed' | 'stock';
 
-const ICON_SVG =
-  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 15l-4.5-4.5L7 21"/></svg>';
-
-function makeChip(src: SourceKind, label: string, current: boolean): HTMLButtonElement {
-  const chip = document.createElement('button');
-  chip.type = 'button';
-  chip.className = 'blok-image-empty__chip';
-  chip.setAttribute('data-src', src);
-  chip.setAttribute('data-tab', src);
-  if (current) chip.setAttribute('aria-current', 'true');
-  chip.textContent = label;
-  return chip;
+function makeTab(kind: SourceKind, label: string, current: boolean): HTMLButtonElement {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'blok-image-empty__tab';
+  btn.setAttribute('data-src', kind);
+  btn.setAttribute('data-tab', kind);
+  btn.setAttribute('role', 'tab');
+  if (current) btn.setAttribute('aria-current', 'true');
+  btn.textContent = label;
+  return btn;
 }
 
 export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
@@ -43,145 +41,151 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
   root.className = 'blok-image-empty';
   root.setAttribute('data-blok-image-empty-state', '');
 
-  const intro = document.createElement('div');
-  intro.className = 'blok-image-empty__intro';
-  intro.tabIndex = 0;
+  const card = document.createElement('div');
+  card.className = 'blok-image-empty__card';
+  card.tabIndex = 0;
+  card.setAttribute('role', 'group');
+  card.setAttribute('aria-label', 'Add an image');
 
-  const icon = document.createElement('span');
-  icon.className = 'blok-image-empty__icon';
-  icon.setAttribute('aria-hidden', 'true');
-  icon.innerHTML = ICON_SVG;
+  const label = document.createElement('span');
+  label.className = 'blok-image-empty__label';
+  label.textContent = 'Add an image';
 
-  const text = document.createElement('span');
-  text.className = 'blok-image-empty__text';
-  const title = document.createElement('span');
-  title.className = 'blok-image-empty__title';
-  title.textContent = 'Add an image';
-  const hint = document.createElement('span');
-  hint.className = 'blok-image-empty__hint';
-  hint.textContent = 'Drag, paste, or click to upload — or embed from a URL';
-  text.append(title, hint);
-
-  const chips = document.createElement('span');
-  chips.className = 'blok-image-empty__chips';
-  chips.setAttribute('role', 'tablist');
-  const uploadChip = makeChip('upload', uploadLabel, true);
-  const embedChip = makeChip('embed', embedLabel, false);
-  const stockChip = makeChip('stock', stockLabel, false);
-  chips.append(uploadChip, embedChip, stockChip);
-
-  intro.append(icon, text, chips);
+  const tabs = document.createElement('div');
+  tabs.className = 'blok-image-empty__tabs';
+  tabs.setAttribute('role', 'tablist');
+  const uploadTab = makeTab('upload', uploadLabel, true);
+  const embedTab = makeTab('embed', embedLabel, false);
+  const stockTab = makeTab('stock', stockLabel, false);
+  tabs.append(uploadTab, embedTab, stockTab);
 
   const panel = document.createElement('div');
   panel.className = 'blok-image-empty__panel';
   panel.setAttribute('data-panel-host', '');
-  panel.hidden = true;
+  panel.setAttribute('role', 'tabpanel');
+
+  const dropOverlay = document.createElement('div');
+  dropOverlay.className = 'blok-image-empty__drop-overlay';
+  dropOverlay.setAttribute('aria-hidden', 'true');
+  dropOverlay.textContent = 'Drop an image here';
 
   const error = document.createElement('div');
   error.className = 'blok-image-empty__error';
   error.setAttribute('data-role', 'error');
   error.hidden = true;
 
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = accept;
+  input.hidden = true;
+  input.addEventListener('change', () => {
+    const file = input.files?.[0];
+    if (file) opts.onFile(file);
+  });
+
   const renderUpload = (): void => {
     panel.replaceChildren();
-    const drop = document.createElement('div');
-    drop.className = 'blok-image-empty__drop';
-    const big = document.createElement('div');
-    big.className = 'blok-image-empty__drop-big';
-    big.textContent = 'Drop an image here';
-    const small = document.createElement('div');
-    small.className = 'blok-image-empty__drop-small';
-    small.textContent = 'PNG, JPG, GIF, WebP, SVG · or click to browse';
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = accept;
-    input.hidden = true;
-    input.addEventListener('change', () => {
-      const file = input.files?.[0];
-      if (file) opts.onFile(file);
-    });
-    drop.addEventListener('click', () => input.click());
-    drop.addEventListener('dragover', (ev) => {
-      ev.preventDefault();
-      drop.classList.add('is-drag-over');
-    });
-    drop.addEventListener('dragleave', () => drop.classList.remove('is-drag-over'));
-    drop.addEventListener('drop', (ev) => {
-      ev.preventDefault();
-      drop.classList.remove('is-drag-over');
-      const file = ev.dataTransfer?.files?.[0];
-      if (file) opts.onFile(file);
-    });
-    drop.append(big, small, input);
-    panel.appendChild(drop);
+    const choose = document.createElement('button');
+    choose.type = 'button';
+    choose.className = 'blok-image-empty__choose';
+    choose.setAttribute('data-action', 'choose-file');
+    choose.textContent = 'Choose file';
+    choose.addEventListener('click', () => input.click());
+
+    const hint = document.createElement('span');
+    hint.className = 'blok-image-empty__hint';
+    hint.textContent = 'or drag & drop';
+
+    panel.append(choose, hint, input);
   };
 
   const renderEmbed = (): void => {
     panel.replaceChildren();
-    const row = document.createElement('div');
-    row.className = 'blok-image-empty__row';
-    const input = document.createElement('input');
-    input.type = 'url';
-    input.className = 'blok-image-empty__input';
-    input.placeholder = embedPlaceholder;
+    const urlInput = document.createElement('input');
+    urlInput.type = 'url';
+    urlInput.className = 'blok-image-empty__input';
+    urlInput.placeholder = embedPlaceholder;
+    urlInput.setAttribute('aria-label', 'Image URL');
     const submit = document.createElement('button');
     submit.type = 'button';
     submit.className = 'blok-image-empty__submit';
     submit.setAttribute('data-action', 'submit-url');
     submit.textContent = submitLabel;
     const commit = (): void => {
-      const value = input.value.trim();
+      const value = urlInput.value.trim();
       if (value) opts.onUrl(value);
     };
     submit.addEventListener('click', commit);
-    input.addEventListener('keydown', (ev) => {
+    urlInput.addEventListener('keydown', (ev) => {
       if (ev.key === 'Enter') {
         ev.preventDefault();
         commit();
       }
     });
-    row.append(input, submit);
-    panel.appendChild(row);
+    panel.append(urlInput, submit);
+    queueMicrotask(() => urlInput.focus());
   };
 
   const renderStock = (): void => {
     panel.replaceChildren();
-    const row = document.createElement('div');
-    row.className = 'blok-image-empty__row';
     const search = document.createElement('input');
     search.type = 'text';
     search.className = 'blok-image-empty__input';
     search.placeholder = 'Search stock images…';
-    row.appendChild(search);
-    const placeholder = document.createElement('div');
-    placeholder.className = 'blok-image-empty__stock-placeholder';
-    placeholder.textContent = 'Stock images — coming soon';
-    panel.append(row, placeholder);
+    search.setAttribute('aria-label', 'Stock images');
+    const note = document.createElement('span');
+    note.className = 'blok-image-empty__hint';
+    note.textContent = 'coming soon';
+    panel.append(search, note);
   };
 
   const activate = (kind: SourceKind): void => {
-    panel.hidden = false;
-    for (const chip of [uploadChip, embedChip, stockChip]) {
-      if (chip.getAttribute('data-src') === kind) {
-        chip.setAttribute('aria-current', 'true');
-      } else {
-        chip.removeAttribute('aria-current');
-      }
+    for (const tab of [uploadTab, embedTab, stockTab]) {
+      if (tab.getAttribute('data-src') === kind) tab.setAttribute('aria-current', 'true');
+      else tab.removeAttribute('aria-current');
     }
+    card.setAttribute('data-active-tab', kind);
     if (kind === 'upload') renderUpload();
     else if (kind === 'embed') renderEmbed();
     else renderStock();
   };
 
-  uploadChip.addEventListener('click', () => activate('upload'));
-  embedChip.addEventListener('click', () => activate('embed'));
-  stockChip.addEventListener('click', () => activate('stock'));
+  uploadTab.addEventListener('click', () => activate('upload'));
+  embedTab.addEventListener('click', () => activate('embed'));
+  stockTab.addEventListener('click', () => activate('stock'));
 
-  root.append(intro, panel, error);
-  // Render default upload panel so a file input is present on first paint
-  // (matches legacy behavior & passes existing tests).
-  renderUpload();
-  panel.hidden = false;
+  const drag = { depth: 0 };
+  card.addEventListener('dragenter', (ev) => {
+    if (!ev.dataTransfer?.types.includes('Files')) return;
+    ev.preventDefault();
+    drag.depth += 1;
+    card.classList.add('is-dragover');
+  });
+  card.addEventListener('dragover', (ev) => {
+    const dt = ev.dataTransfer;
+    if (!dt?.types.includes('Files')) return;
+    ev.preventDefault();
+    dt.dropEffect = 'copy';
+  });
+  card.addEventListener('dragleave', () => {
+    drag.depth = Math.max(0, drag.depth - 1);
+    if (drag.depth === 0) card.classList.remove('is-dragover');
+  });
+  card.addEventListener('drop', (ev) => {
+    ev.preventDefault();
+    drag.depth = 0;
+    card.classList.remove('is-dragover');
+    const file = ev.dataTransfer?.files?.[0];
+    if (file) opts.onFile(file);
+  });
+
+  const header = document.createElement('div');
+  header.className = 'blok-image-empty__header';
+  header.append(label, tabs);
+
+  card.append(header, panel, dropOverlay);
+  root.append(card, error);
+  activate('upload');
 
   root.setError = (message: string | null): void => {
     if (!message) {

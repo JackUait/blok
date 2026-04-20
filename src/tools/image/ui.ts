@@ -115,7 +115,12 @@ export function renderCaptionRow(opts: CaptionRowOptions): HTMLElement {
 export interface LightboxOptions {
   url: string;
   alt?: string;
+  fileName?: string;
 }
+
+const ZOOM_MIN = 0.25;
+const ZOOM_MAX = 4;
+const ZOOM_STEP = 0.25;
 
 export function openLightbox(opts: LightboxOptions): () => void {
   const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -142,9 +147,39 @@ export function openLightbox(opts: LightboxOptions): () => void {
     maxWidth: '95vw',
     maxHeight: '95vh',
     objectFit: 'contain',
+    transform: 'scale(1)',
+    transformOrigin: 'center center',
+    transition: 'transform 120ms ease-out',
   } satisfies Partial<CSSStyleDeclaration>);
 
+  const zoomState = { value: 1 };
+
+  const toolbar = renderLightboxToolbar({
+    getZoom: () => zoomState.value,
+    setZoom: (next) => {
+      zoomState.value = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, next));
+      img.style.transform = `scale(${zoomState.value})`;
+      syncResetLabel();
+    },
+    onDownload: () => {
+      const a = document.createElement('a');
+      a.href = opts.url;
+      a.download = opts.fileName ?? '';
+      a.target = '_blank';
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    },
+    onCollapse: () => close(),
+  });
+  const syncResetLabel = (): void => {
+    const reset = toolbar.querySelector<HTMLButtonElement>('[data-action="zoom-reset"]');
+    if (reset) reset.textContent = `${Math.round(zoomState.value * 100)}%`;
+  };
+
   dialog.appendChild(img);
+  dialog.appendChild(toolbar);
   document.body.appendChild(dialog);
 
   const close = (): void => {
@@ -160,11 +195,122 @@ export function openLightbox(opts: LightboxOptions): () => void {
     }
   };
 
-  dialog.addEventListener('click', close);
+  dialog.addEventListener('click', (event) => {
+    if (event.target instanceof Node && toolbar.contains(event.target)) return;
+    close();
+  });
   document.addEventListener('keydown', onKey);
   dialog.focus();
 
   return close;
+}
+
+interface LightboxToolbarOptions {
+  getZoom(): number;
+  setZoom(next: number): void;
+  onDownload(): void;
+  onCollapse(): void;
+}
+
+function renderLightboxToolbar(opts: LightboxToolbarOptions): HTMLElement {
+  const bar = document.createElement('div');
+  bar.setAttribute('data-role', 'lightbox-toolbar');
+  bar.setAttribute('role', 'toolbar');
+  bar.setAttribute('aria-label', 'Image preview controls');
+  Object.assign(bar.style, {
+    position: 'absolute',
+    bottom: '24px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    padding: '6px 8px',
+    background: 'rgba(30,30,30,0.92)',
+    color: '#fff',
+    borderRadius: '999px',
+    boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+    cursor: 'default',
+    fontFamily: 'inherit',
+    fontSize: '13px',
+    lineHeight: '1',
+    zIndex: '1',
+  } satisfies Partial<CSSStyleDeclaration>);
+  bar.addEventListener('click', (event) => event.stopPropagation());
+
+  const iconMinus = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false" width="18" height="18"><path d="M5 12h14"/></svg>';
+  const iconPlus = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false" width="18" height="18"><path d="M12 5v14"/><path d="M5 12h14"/></svg>';
+  const iconDownload = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" width="18" height="18"><circle cx="12" cy="12" r="9"/><path d="M12 7v8"/><path d="m8.5 12 3.5 3.5L15.5 12"/></svg>';
+  const iconCollapse = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" width="18" height="18"><path d="M9 3v6H3"/><path d="M21 9h-6V3"/><path d="M3 15h6v6"/><path d="M15 21v-6h6"/></svg>';
+
+  appendLightboxButton(bar, {
+    action: 'zoom-out',
+    label: 'Zoom out',
+    html: iconMinus,
+    onClick: () => opts.setZoom(opts.getZoom() - ZOOM_STEP),
+  });
+  appendLightboxButton(bar, {
+    action: 'zoom-reset',
+    label: 'Reset zoom',
+    html: '100%',
+    onClick: () => opts.setZoom(1),
+    minWidth: '48px',
+  });
+  appendLightboxButton(bar, {
+    action: 'zoom-in',
+    label: 'Zoom in',
+    html: iconPlus,
+    onClick: () => opts.setZoom(opts.getZoom() + ZOOM_STEP),
+  });
+  appendLightboxButton(bar, {
+    action: 'lightbox-download',
+    label: 'Download',
+    html: iconDownload,
+    onClick: opts.onDownload,
+  });
+  appendLightboxButton(bar, {
+    action: 'lightbox-collapse',
+    label: 'Exit fullscreen',
+    html: iconCollapse,
+    onClick: opts.onCollapse,
+  });
+
+  return bar;
+}
+
+interface LightboxButtonSpec {
+  action: string;
+  label: string;
+  html: string;
+  onClick(): void;
+  minWidth?: string;
+}
+
+function appendLightboxButton(parent: HTMLElement, spec: LightboxButtonSpec): void {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.setAttribute('data-action', spec.action);
+  btn.setAttribute('aria-label', spec.label);
+  Object.assign(btn.style, {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '32px',
+    minWidth: spec.minWidth ?? '32px',
+    padding: '0 8px',
+    background: 'transparent',
+    border: '0',
+    borderRadius: '999px',
+    color: 'inherit',
+    cursor: 'pointer',
+    font: 'inherit',
+  } satisfies Partial<CSSStyleDeclaration>);
+  btn.innerHTML = spec.html;
+  btn.addEventListener('click', (event) => {
+    event.stopPropagation();
+    spec.onClick();
+  });
+  parent.appendChild(btn);
 }
 
 export interface OverlayState {

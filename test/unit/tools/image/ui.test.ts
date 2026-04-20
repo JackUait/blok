@@ -165,6 +165,105 @@ describe('openLightbox', () => {
     dialog.click();
     expect(document.querySelector('[role="dialog"][aria-modal="true"]')).toBeNull();
   });
+
+  it('renders bottom toolbar with zoom-out, zoom-reset, zoom-in, download, collapse buttons', () => {
+    const close = openLightbox({ url: 'u' });
+    const toolbar = document.querySelector('[data-role="lightbox-toolbar"]');
+    expect(toolbar).not.toBeNull();
+    if (!toolbar) throw new Error('toolbar missing');
+    expect(toolbar.querySelector('[data-action="zoom-out"]')).not.toBeNull();
+    expect(toolbar.querySelector('[data-action="zoom-reset"]')).not.toBeNull();
+    expect(toolbar.querySelector('[data-action="zoom-in"]')).not.toBeNull();
+    expect(toolbar.querySelector('[data-action="lightbox-download"]')).not.toBeNull();
+    expect(toolbar.querySelector('[data-action="lightbox-collapse"]')).not.toBeNull();
+    close();
+  });
+
+  it('zoom-reset button shows current zoom (initially 100%)', () => {
+    const close = openLightbox({ url: 'u' });
+    const reset = document.querySelector<HTMLButtonElement>('[data-action="zoom-reset"]');
+    if (!reset) throw new Error('reset missing');
+    expect(reset.textContent).toContain('100%');
+    close();
+  });
+
+  it('clicking zoom-in increases zoom and updates label', () => {
+    const close = openLightbox({ url: 'u' });
+    const zoomIn = document.querySelector<HTMLButtonElement>('[data-action="zoom-in"]');
+    const reset = document.querySelector<HTMLButtonElement>('[data-action="zoom-reset"]');
+    const img = document.querySelector<HTMLImageElement>('[role="dialog"] img');
+    if (!zoomIn || !reset || !img) throw new Error('elements missing');
+    zoomIn.click();
+    expect(reset.textContent).not.toContain('100%');
+    expect(img.style.transform).toMatch(/scale\(([^)]+)\)/);
+    const match = img.style.transform.match(/scale\(([^)]+)\)/);
+    if (!match) throw new Error('no scale');
+    expect(parseFloat(match[1])).toBeGreaterThan(1);
+    close();
+  });
+
+  it('clicking zoom-out decreases zoom', () => {
+    const close = openLightbox({ url: 'u' });
+    const zoomOut = document.querySelector<HTMLButtonElement>('[data-action="zoom-out"]');
+    const img = document.querySelector<HTMLImageElement>('[role="dialog"] img');
+    if (!zoomOut || !img) throw new Error('elements missing');
+    zoomOut.click();
+    const match = img.style.transform.match(/scale\(([^)]+)\)/);
+    if (!match) throw new Error('no scale');
+    expect(parseFloat(match[1])).toBeLessThan(1);
+    close();
+  });
+
+  it('clicking zoom-reset after zooming returns to 100%', () => {
+    const close = openLightbox({ url: 'u' });
+    const zoomIn = document.querySelector<HTMLButtonElement>('[data-action="zoom-in"]');
+    const reset = document.querySelector<HTMLButtonElement>('[data-action="zoom-reset"]');
+    const img = document.querySelector<HTMLImageElement>('[role="dialog"] img');
+    if (!zoomIn || !reset || !img) throw new Error('elements missing');
+    zoomIn.click();
+    zoomIn.click();
+    reset.click();
+    expect(reset.textContent).toContain('100%');
+    const match = img.style.transform.match(/scale\(([^)]+)\)/);
+    if (!match) throw new Error('no scale');
+    expect(parseFloat(match[1])).toBe(1);
+    close();
+  });
+
+  it('clicking collapse closes the lightbox', () => {
+    openLightbox({ url: 'u' });
+    const collapse = document.querySelector<HTMLButtonElement>('[data-action="lightbox-collapse"]');
+    if (!collapse) throw new Error('collapse missing');
+    collapse.click();
+    expect(document.querySelector('[role="dialog"][aria-modal="true"]')).toBeNull();
+  });
+
+  it('toolbar clicks do not close the lightbox', () => {
+    const close = openLightbox({ url: 'u' });
+    const zoomIn = document.querySelector<HTMLButtonElement>('[data-action="zoom-in"]');
+    if (!zoomIn) throw new Error('zoom-in missing');
+    zoomIn.click();
+    expect(document.querySelector('[role="dialog"][aria-modal="true"]')).not.toBeNull();
+    close();
+  });
+
+  it('download button uses url and fileName on an anchor', () => {
+    const close = openLightbox({ url: 'https://x/y.png', fileName: 'pic.png' });
+    const download = document.querySelector<HTMLButtonElement>('[data-action="lightbox-download"]');
+    if (!download) throw new Error('download missing');
+    const clicks: Array<{ href: string; download: string }> = [];
+    const originalAppend = HTMLBodyElement.prototype.appendChild;
+    const spy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      clicks.push({ href: this.getAttribute('href') ?? '', download: this.getAttribute('download') ?? '' });
+    });
+    download.click();
+    expect(clicks).toHaveLength(1);
+    expect(clicks[0].href).toBe('https://x/y.png');
+    expect(clicks[0].download).toBe('pic.png');
+    spy.mockRestore();
+    void originalAppend;
+    close();
+  });
 });
 
 import { renderOverlay } from '../../../../src/tools/image/ui';

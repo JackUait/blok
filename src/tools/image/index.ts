@@ -361,7 +361,7 @@ export class ImageTool implements BlockTool {
     const imgEl = figure.querySelector('img');
     if (imgEl) {
       imgEl.style.cursor = 'zoom-in';
-      imgEl.addEventListener('click', () => openLightbox({ url: this.data.url, alt: this.data.alt }));
+      imgEl.addEventListener('click', () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName }));
     }
 
     if (!this.readOnly) {
@@ -376,7 +376,7 @@ export class ImageTool implements BlockTool {
         onReplace: () => this.transitionToEmpty(),
         onDelete: () => this.deleteBlock(),
         onDownload: () => this.download(),
-        onFullscreen: () => openLightbox({ url: this.data.url, alt: this.data.alt }),
+        onFullscreen: () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName }),
         onCopyUrl: () => this.copyUrl(),
         onToggleCaption: () => this.toggleCaption(),
         onCrop: () => this.enterCrop(),

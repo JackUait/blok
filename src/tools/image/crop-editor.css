@@ -1,0 +1,101 @@
+.blok-image-crop-editor {
+  position: relative;
+  width: 100%;
+  background: #000;
+  user-select: none;
+}
+.blok-image-crop-editor__stage {
+  position: relative;
+  width: 100%;
+  line-height: 0;
+}
+.blok-image-crop-editor__source {
+  width: 100%;
+  height: auto;
+  display: block;
+  pointer-events: none;
+}
+.blok-image-crop-editor__mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+.blok-image-crop-editor__rect {
+  position: absolute;
+  outline: 1px dashed var(--blok-accent, #2b7fff);
+  cursor: move;
+  touch-action: none;
+}
+.blok-image-crop-editor__handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border: 1px solid var(--blok-accent, #2b7fff);
+  border-radius: 2px;
+  transform: translate(-50%, -50%);
+  touch-action: none;
+}
+.blok-image-crop-editor__handle--nw { top: 0;    left: 0;    cursor: nwse-resize; }
+.blok-image-crop-editor__handle--n  { top: 0;    left: 50%;  cursor: ns-resize; }
+.blok-image-crop-editor__handle--ne { top: 0;    left: 100%; cursor: nesw-resize; }
+.blok-image-crop-editor__handle--e  { top: 50%;  left: 100%; cursor: ew-resize; }
+.blok-image-crop-editor__handle--se { top: 100%; left: 100%; cursor: nwse-resize; }
+.blok-image-crop-editor__handle--s  { top: 100%; left: 50%;  cursor: ns-resize; }
+.blok-image-crop-editor__handle--sw { top: 100%; left: 0;    cursor: nesw-resize; }
+.blok-image-crop-editor__handle--w  { top: 50%;  left: 0;    cursor: ew-resize; }
+
+.blok-image-crop-editor__toolbar {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  padding: 8px;
+  background: rgba(20, 20, 20, 0.95);
+  color: #fff;
+  position: relative;
+}
+.blok-image-crop-editor__toolbar button {
+  background: transparent;
+  color: inherit;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font: inherit;
+  cursor: pointer;
+}
+.blok-image-crop-editor__toolbar button[data-action="done"] {
+  background: var(--blok-accent, #2b7fff);
+  border-color: transparent;
+}
+.blok-image-crop-editor__toolbar [data-role="ratio-menu"] {
+  position: absolute;
+  bottom: 100%;
+  left: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(20, 20, 20, 0.98);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 4px;
+  z-index: 2;
+  min-width: 120px;
+}
+.blok-image-crop-editor__toolbar [data-role="ratio-menu"] button {
+  border: none;
+  text-align: left;
+  padding: 4px 12px;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+}
+.blok-image-crop-editor__toolbar [data-role="ratio-menu"] button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.blok-image-crop {
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}

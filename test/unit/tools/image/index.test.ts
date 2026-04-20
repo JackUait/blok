@@ -504,15 +504,37 @@ describe('ImageTool — alt button next to caption', () => {
     expect(root.querySelector('[data-action="alt-edit"]')).toBeNull();
   });
 
-  it('clicking alt-edit prompts for alt text and persists the value', () => {
-    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('pretty picture');
+  it('clicking alt-edit opens an inline popover that persists committed value', () => {
+    if (!('popover' in HTMLElement.prototype)) {
+      Object.defineProperty(HTMLElement.prototype, 'popover', {
+        configurable: true,
+        get(this: HTMLElement) { return this.getAttribute('popover'); },
+        set(this: HTMLElement, v: string) { this.setAttribute('popover', v); },
+      });
+    }
+    if (typeof (HTMLElement.prototype as unknown as { showPopover?: () => void }).showPopover !== 'function') {
+      (HTMLElement.prototype as unknown as { showPopover: () => void }).showPopover = function showPopover() {};
+      (HTMLElement.prototype as unknown as { hidePopover: () => void }).hidePopover = function hidePopover() {};
+    }
+    const promptSpy = vi.spyOn(window, 'prompt');
     const block = createMockBlock();
     const tool = new ImageTool(createOptions({ url: 'u' }, {}, block));
     const root = tool.render();
+    document.body.appendChild(root);
     root.querySelector<HTMLButtonElement>('[data-action="alt-edit"]')?.click();
-    expect(promptSpy).toHaveBeenCalled();
+    expect(promptSpy).not.toHaveBeenCalled();
+    const textarea = document.body.querySelector<HTMLTextAreaElement>(
+      '[data-role="image-alt-popover"] textarea'
+    );
+    expect(textarea).not.toBeNull();
+    textarea!.value = 'pretty picture';
+    textarea!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+    );
     expect(tool.save().alt).toBe('pretty picture');
     expect(block.dispatchChange).toHaveBeenCalled();
+    expect(document.body.querySelector('[data-role="image-alt-popover"]')).toBeNull();
+    root.remove();
   });
 
   it('overlay no longer carries an alt button — alt only lives by the caption', () => {

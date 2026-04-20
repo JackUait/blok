@@ -31,6 +31,7 @@ import {
   renderOverlay,
 } from './ui';
 import { openCropModal } from './crop-modal';
+import { openAltPopover } from './alt-popover';
 import { renderUploadingState, type UploadingStateElement } from './uploading-state';
 import { Uploader, type UploadResult } from './uploader';
 
@@ -49,6 +50,7 @@ export class ImageTool implements BlockTool {
   private uploadingEl: UploadingStateElement | null = null;
   private resizeDetach: (() => void)[] = [];
   private cropDetach: (() => void) | null = null;
+  private altPopoverDetach: (() => void) | null = null;
   private errorMessage: string | null = null;
   private lastFileName: string | null = null;
 
@@ -259,6 +261,8 @@ export class ImageTool implements BlockTool {
   public removed(): void {
     this.detachResize();
     this.detachCrop();
+    this.altPopoverDetach?.();
+    this.altPopoverDetach = null;
     if (this.data.url.startsWith('blob:')) {
       URL.revokeObjectURL(this.data.url);
     }
@@ -502,12 +506,32 @@ export class ImageTool implements BlockTool {
   }
 
   private promptAlt(): void {
-    // eslint-disable-next-line no-alert
-    const next = window.prompt('Alt text', this.data.alt ?? '');
-    if (next === null) return;
-    this.data.alt = next;
-    this.block.dispatchChange();
-    this.renderState();
+    if (this.altPopoverDetach || !this.root) return;
+    const anchor = this.root.querySelector<HTMLElement>(
+      '.blok-image-caption-row [data-action="alt-edit"]'
+    );
+    if (!anchor) return;
+    this.closeAlignmentPopover();
+    anchor.setAttribute('aria-expanded', 'true');
+    this.altPopoverDetach = openAltPopover({
+      anchor,
+      value: this.data.alt ?? '',
+      onSave: (next) => {
+        this.altPopoverDetach = null;
+        anchor.setAttribute('aria-expanded', 'false');
+        const trimmed = next.trim();
+        const current = this.data.alt ?? '';
+        if (trimmed === current) return;
+        if (trimmed === '') delete this.data.alt;
+        else this.data.alt = trimmed;
+        this.block.dispatchChange();
+        this.renderState();
+      },
+      onCancel: () => {
+        this.altPopoverDetach = null;
+        anchor.setAttribute('aria-expanded', 'false');
+      },
+    });
   }
 
   private deleteBlock(): void {

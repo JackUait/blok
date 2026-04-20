@@ -333,6 +333,14 @@ export class Toolbar extends Module<ToolbarNodes> {
         this.nodes.actions?.setAttribute('data-blok-opened', 'true');
         if (this.nodes.actions) {
           this.nodes.actions.style.pointerEvents = 'auto';
+          /**
+           * Reset inline pointer-events overrides that a previous
+           * left-edge block may have set on actions descendants so
+           * non-left-edge blocks regain click-ability everywhere.
+           */
+          for (const descendant of Array.from(this.nodes.actions.querySelectorAll<HTMLElement>('*'))) {
+            descendant.style.pointerEvents = '';
+          }
         }
       },
     };
@@ -560,7 +568,21 @@ export class Toolbar extends Module<ToolbarNodes> {
       || isToggleHeader;
 
     if (hasLeftEdgeInteraction && this.nodes.actions) {
+      /**
+       * CSS pointer-events does not inherit — every descendant of `actions`
+       * keeps its default `auto` and will still intercept clicks that land
+       * on its painted area. For left-edge blocks (toggle, callout,
+       * header-with-arrow) the actions rectangle visually overlaps the
+       * block's own left-edge interactive element (toggle arrow / callout
+       * emoji) once the toolbar is margin-aligned, so a toolbar SVG
+       * swallows the arrow click. Walk every descendant and disable pointer
+       * events explicitly, then restore them on the settings toggler so the
+       * drag handle / tunes-menu still work.
+       */
       this.nodes.actions.style.pointerEvents = 'none';
+      for (const descendant of Array.from(this.nodes.actions.querySelectorAll<HTMLElement>('*'))) {
+        descendant.style.pointerEvents = 'none';
+      }
       this.restoreSettingsTogglerForLeftEdgeBlock(targetBlock);
     }
 

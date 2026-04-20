@@ -1,5 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+vi.mock('../../../../src/components/utils/tooltip', () => ({
+  onHover: vi.fn(),
+  hide: vi.fn(),
+}));
+
 import { renderImage, renderCaption, renderCaptionRow, openLightbox } from '../../../../src/tools/image/ui';
+import * as tooltip from '../../../../src/components/utils/tooltip';
 
 describe('renderImage', () => {
   it('returns figure with <img> carrying url and alt; width is set on figure so container fits image', () => {
@@ -137,7 +144,6 @@ describe('openLightbox', () => {
 });
 
 import { renderOverlay } from '../../../../src/tools/image/ui';
-import { vi } from 'vitest';
 
 const noop = (): void => undefined;
 const makeOverlayOpts = (over: Partial<Parameters<typeof renderOverlay>[0]> = {}) => ({
@@ -243,6 +249,56 @@ describe('renderOverlay', () => {
     expect(popover.hidden).toBe(false);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     expect(popover.hidden).toBe(true);
+  });
+
+  describe('JS tooltips (no native browser title)', () => {
+    const EXPECTED_LABELS: Record<string, string> = {
+      'align-trigger': 'Alignment',
+      'caption-toggle': 'Toggle caption',
+      'replace': 'Replace image',
+      'fullscreen': 'View fullscreen',
+      'download': 'Download original',
+      'more': 'More options',
+    };
+
+    it('no button inside overlay sets a native title attribute (prevents browser tooltip)', () => {
+      const overlay = renderOverlay(makeOverlayOpts());
+      overlay.querySelector<HTMLButtonElement>('[data-action="align-trigger"]')?.click();
+      overlay.querySelectorAll('button').forEach((btn) => {
+        expect(btn.hasAttribute('title')).toBe(false);
+      });
+    });
+
+    it('registers JS tooltip via onHover for each toolbar button with its accessible label', () => {
+      vi.mocked(tooltip.onHover).mockClear();
+      const overlay = renderOverlay(makeOverlayOpts());
+      for (const [action, label] of Object.entries(EXPECTED_LABELS)) {
+        const btn = overlay.querySelector<HTMLElement>(`[data-action="${action}"]`);
+        if (!btn) throw new Error(`button missing: ${action}`);
+        const called = vi.mocked(tooltip.onHover).mock.calls.some(
+          ([el, content]) => el === btn && content === label
+        );
+        expect(called, `onHover not registered for ${action}`).toBe(true);
+      }
+    });
+
+    it('registers JS tooltip on each alignment popover option', () => {
+      vi.mocked(tooltip.onHover).mockClear();
+      const overlay = renderOverlay(makeOverlayOpts());
+      const ALIGN_LABELS: Record<string, string> = {
+        'align-left': 'Align left',
+        'align-center': 'Align center',
+        'align-right': 'Align right',
+      };
+      for (const [action, label] of Object.entries(ALIGN_LABELS)) {
+        const btn = overlay.querySelector<HTMLElement>(`[data-action="${action}"]`);
+        if (!btn) throw new Error(`option missing: ${action}`);
+        const called = vi.mocked(tooltip.onHover).mock.calls.some(
+          ([el, content]) => el === btn && content === label
+        );
+        expect(called, `onHover not registered for ${action}`).toBe(true);
+      }
+    });
   });
 
   it('clicking outside the overlay closes the popover', () => {

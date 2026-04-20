@@ -1,4 +1,5 @@
 import type { ImageAlignment, ImageData, ImageSize } from '../../../types/tools/image';
+import { onHover as tooltipOnHover } from '../../components/utils/tooltip';
 
 const ALIGNMENT_TO_TEXT_ALIGN: Record<ImageAlignment, string> = {
   left: 'left',
@@ -209,6 +210,7 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
   more.setAttribute('aria-label', 'More options');
   more.setAttribute('aria-haspopup', 'menu');
   more.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>';
+  tooltipOnHover(more, 'More options');
   root.appendChild(more);
 
   // Delete is reachable from the popover; expose an invisible legacy button for consumers/tests.
@@ -239,10 +241,10 @@ function appendAlignmentControl(root: HTMLElement, opts: OverlayOptions): void {
   trigger.setAttribute('data-action', 'align-trigger');
   trigger.setAttribute('data-current', current);
   trigger.setAttribute('aria-label', 'Alignment');
-  trigger.setAttribute('title', 'Alignment');
   trigger.setAttribute('aria-haspopup', 'true');
   trigger.setAttribute('aria-expanded', 'false');
   trigger.innerHTML = alignmentIconSvg(current);
+  tooltipOnHover(trigger, 'Alignment');
   wrapper.appendChild(trigger);
 
   const popover = document.createElement('div');
@@ -257,9 +259,9 @@ function appendAlignmentControl(root: HTMLElement, opts: OverlayOptions): void {
     option.type = 'button';
     option.setAttribute('data-action', `align-${value}`);
     option.setAttribute('aria-label', ALIGNMENT_LABEL[value]);
-    option.setAttribute('title', ALIGNMENT_LABEL[value]);
     option.setAttribute('aria-pressed', current === value ? 'true' : 'false');
     option.innerHTML = alignmentIconSvg(value);
+    tooltipOnHover(option, ALIGNMENT_LABEL[value]);
     option.addEventListener('click', (event) => {
       event.stopPropagation();
       opts.onAlign(value);
@@ -331,12 +333,12 @@ function appendSimpleButton(parent: HTMLElement, spec: SimpleButtonSpec): void {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.setAttribute('aria-label', spec.label);
-  btn.setAttribute('title', spec.label);
   btn.setAttribute('data-action', spec.action);
   if (spec.pressed !== undefined) {
     btn.setAttribute('aria-pressed', spec.pressed ? 'true' : 'false');
   }
   btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${spec.svg}</svg>`;
+  tooltipOnHover(btn, spec.label);
   btn.addEventListener('click', (event) => {
     event.stopPropagation();
     spec.onClick();

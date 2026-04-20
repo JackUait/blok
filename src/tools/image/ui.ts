@@ -179,25 +179,25 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
     action: 'caption-toggle',
     label: 'Toggle caption',
     pressed: opts.state.captionVisible,
-    svg: '<rect x="3" y="4.5" width="18" height="11" rx="2"/><path d="m8.5 11 2-2 2.5 2.5 2-2 2.5 2.5"/><path d="M7 19.5h10"/>',
+    svg: '<rect x="3" y="3.5" width="18" height="12" rx="2.5"/><path d="M5 19h14"/><path d="M8 22h8"/>',
     onClick: opts.onToggleCaption,
   });
   appendSimpleButton(root, {
     action: 'replace',
     label: 'Replace image',
-    svg: '<path d="m17 3 4 4-4 4"/><path d="M21 7H9"/><path d="m7 21-4-4 4-4"/><path d="M3 17h12"/>',
+    svg: '<path d="M4 7h15"/><path d="m15 3 4 4-4 4"/><path d="M20 17H5"/><path d="m9 13-4 4 4 4"/>',
     onClick: opts.onReplace,
   });
   appendSimpleButton(root, {
     action: 'fullscreen',
     label: 'View fullscreen',
-    svg: '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
+    svg: '<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/>',
     onClick: opts.onFullscreen,
   });
   appendSimpleButton(root, {
     action: 'download',
     label: 'Download original',
-    svg: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
+    svg: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
     onClick: opts.onDownload,
   });
 
@@ -208,7 +208,7 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
   more.setAttribute('data-action', 'more');
   more.setAttribute('aria-label', 'More options');
   more.setAttribute('aria-haspopup', 'menu');
-  more.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1.35"/><circle cx="12" cy="12" r="1.35"/><circle cx="19" cy="12" r="1.35"/></svg>';
+  more.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>';
   root.appendChild(more);
 
   // Delete is reachable from the popover; expose an invisible legacy button for consumers/tests.

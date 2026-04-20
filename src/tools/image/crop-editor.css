@@ -1,20 +1,50 @@
 .blok-image-crop-editor {
+  --crop-bg: #0a0a0a;
+  --crop-toolbar-bg: #111;
+  --crop-fg: #f5f5f5;
+  --crop-fg-muted: rgba(245, 245, 245, 0.56);
+  --crop-fg-faint: rgba(245, 245, 245, 0.16);
+  --crop-divider: rgba(255, 255, 255, 0.06);
+  --crop-rule: rgba(255, 255, 255, 0.32);
+  --crop-rect-stroke: rgba(255, 255, 255, 0.98);
+  --crop-rect-halo: rgba(0, 0, 0, 0.5);
+  --crop-mask: rgba(5, 6, 8, 0.7);
+  --crop-accent: var(--blok-accent, #2b7fff);
+
   position: relative;
   width: 100%;
-  background: #000;
+  background: var(--crop-bg);
+  color: var(--crop-fg);
   user-select: none;
   display: flex;
   flex-direction: column;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 }
 
 .blok-image-crop-editor__stage {
   position: relative;
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  background:
+    radial-gradient(ellipse at center, rgba(255, 255, 255, 0.02), transparent 60%),
+    var(--crop-bg);
+}
+
+.blok-image-crop-editor__frame {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  max-height: 100%;
   line-height: 0;
 }
 
 .blok-image-crop-editor__source {
-  width: 100%;
+  width: auto;
+  max-width: 100%;
+  max-height: 100%;
   height: auto;
   display: block;
   pointer-events: none;
@@ -23,23 +53,33 @@
 .blok-image-crop-editor__mask {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--crop-mask);
   pointer-events: none;
+  transition: background 160ms ease;
 }
 
 .blok-image-crop-editor__rect {
   position: absolute;
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.95),
-    0 0 0 2px rgba(0, 0, 0, 0.35);
   cursor: move;
   touch-action: none;
+  box-shadow:
+    0 0 0 1px var(--crop-rect-stroke),
+    0 0 0 2px var(--crop-rect-halo),
+    0 8px 32px -8px rgba(0, 0, 0, 0.8);
 }
 
 .blok-image-crop-editor__grid-line {
   position: absolute;
-  background: rgba(255, 255, 255, 0.38);
+  background: var(--crop-rule);
   pointer-events: none;
+  opacity: 0.5;
+  transition: opacity 140ms ease;
+}
+
+.blok-image-crop-editor__rect:hover .blok-image-crop-editor__grid-line,
+.blok-image-crop-editor__rect:active .blok-image-crop-editor__grid-line,
+.blok-image-crop-editor__rect:focus-within .blok-image-crop-editor__grid-line {
+  opacity: 1;
 }
 
 .blok-image-crop-editor__grid-line--v-1,
@@ -62,24 +102,35 @@
 .blok-image-crop-editor__grid-line--h-1 { top: 33.333%; }
 .blok-image-crop-editor__grid-line--h-2 { top: 66.666%; }
 
+/* Size pill — anchored inside top-center of rect */
 .blok-image-crop-editor__size-pill {
   position: absolute;
-  left: 0;
-  top: -28px;
-  padding: 3px 8px;
-  background: rgba(0, 0, 0, 0.78);
+  left: 50%;
+  top: 8px;
+  transform: translateX(-50%);
+  padding: 3px 9px;
+  background: rgba(10, 10, 12, 0.78);
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
   color: #fff;
   font:
-    500 11px/1.2 ui-monospace,
+    500 11px/1.3 ui-monospace,
     SFMono-Regular,
     Menlo,
     Consolas,
     monospace;
-  letter-spacing: 0.02em;
-  border-radius: 4px;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   pointer-events: none;
   white-space: nowrap;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  animation: blok-crop-pill-in 160ms 60ms ease forwards;
+}
+
+@keyframes blok-crop-pill-in {
+  to { opacity: 1; }
 }
 
 /* Corner (bracket) and edge (bar) handles */
@@ -90,51 +141,62 @@
 }
 
 .blok-image-crop-editor__handle--corner {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   transform: translate(-50%, -50%);
 }
 
 .blok-image-crop-editor__handle-stroke {
   position: absolute;
   background: #fff;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
-  border-radius: 1px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 1px 3px rgba(0, 0, 0, 0.5);
+  border-radius: 1.5px;
 }
 
-/* nw — strokes hug top-left corner */
-.blok-image-crop-editor__handle--nw .blok-image-crop-editor__handle-stroke--a { top: 0; left: 0; width: 12px; height: 2px; }
-.blok-image-crop-editor__handle--nw .blok-image-crop-editor__handle-stroke--b { top: 0; left: 0; width: 2px; height: 12px; }
+/* Corner bracket strokes — L-vertex hugs rect corner (hitbox center 9,9),
+   arms extend inward along rect edges. Hitbox is 18×18. */
+.blok-image-crop-editor__handle--nw .blok-image-crop-editor__handle-stroke--a { top: 9px; left: 9px; width: 13px; height: 3px; }
+.blok-image-crop-editor__handle--nw .blok-image-crop-editor__handle-stroke--b { top: 9px; left: 9px; width: 3px; height: 13px; }
 
-/* ne — top-right */
-.blok-image-crop-editor__handle--ne .blok-image-crop-editor__handle-stroke--a { top: 0; right: 0; width: 12px; height: 2px; }
-.blok-image-crop-editor__handle--ne .blok-image-crop-editor__handle-stroke--b { top: 0; right: 0; width: 2px; height: 12px; }
+.blok-image-crop-editor__handle--ne .blok-image-crop-editor__handle-stroke--a { top: 9px; right: 9px; width: 13px; height: 3px; }
+.blok-image-crop-editor__handle--ne .blok-image-crop-editor__handle-stroke--b { top: 9px; right: 9px; width: 3px; height: 13px; }
 
-/* se — bottom-right */
-.blok-image-crop-editor__handle--se .blok-image-crop-editor__handle-stroke--a { bottom: 0; right: 0; width: 12px; height: 2px; }
-.blok-image-crop-editor__handle--se .blok-image-crop-editor__handle-stroke--b { bottom: 0; right: 0; width: 2px; height: 12px; }
+.blok-image-crop-editor__handle--se .blok-image-crop-editor__handle-stroke--a { bottom: 9px; right: 9px; width: 13px; height: 3px; }
+.blok-image-crop-editor__handle--se .blok-image-crop-editor__handle-stroke--b { bottom: 9px; right: 9px; width: 3px; height: 13px; }
 
-/* sw — bottom-left */
-.blok-image-crop-editor__handle--sw .blok-image-crop-editor__handle-stroke--a { bottom: 0; left: 0; width: 12px; height: 2px; }
-.blok-image-crop-editor__handle--sw .blok-image-crop-editor__handle-stroke--b { bottom: 0; left: 0; width: 2px; height: 12px; }
+.blok-image-crop-editor__handle--sw .blok-image-crop-editor__handle-stroke--a { bottom: 9px; left: 9px; width: 13px; height: 3px; }
+.blok-image-crop-editor__handle--sw .blok-image-crop-editor__handle-stroke--b { bottom: 9px; left: 9px; width: 3px; height: 13px; }
 
-/* Edge bars */
 .blok-image-crop-editor__handle--edge {
   background: #fff;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
-  border-radius: 2px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 1px 4px rgba(0, 0, 0, 0.5);
+  border-radius: 999px;
   transform: translate(-50%, -50%);
+  transition: transform 120ms ease, background 120ms ease, box-shadow 120ms ease;
+}
+
+.blok-image-crop-editor__handle--edge:hover {
+  background: #fff;
+  transform: translate(-50%, -50%) scale(1.2);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.7),
+    0 0 0 3px rgba(255, 255, 255, 0.12),
+    0 2px 6px rgba(0, 0, 0, 0.55);
 }
 
 .blok-image-crop-editor__handle--n,
 .blok-image-crop-editor__handle--s {
   width: 26px;
-  height: 4px;
+  height: 5px;
 }
 
 .blok-image-crop-editor__handle--e,
 .blok-image-crop-editor__handle--w {
-  width: 4px;
+  width: 5px;
   height: 26px;
 }
 
@@ -154,15 +216,102 @@
 .blok-image-crop-editor__toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  background: #141414;
-  color: #fff;
+  gap: 14px;
+  padding: 10px 14px;
+  background: var(--crop-toolbar-bg);
+  color: var(--crop-fg);
   position: relative;
+  font-size: 13px;
 }
 
 .blok-image-crop-editor__toolbar--footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--crop-divider);
+}
+
+/* Segmented ratio chips */
+.blok-image-crop-editor__ratio-group {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--crop-divider);
+  border-radius: 10px;
+}
+
+.blok-image-crop-editor__ratio-chip {
+  appearance: none;
+  background: transparent;
+  color: var(--crop-fg-muted);
+  border: none;
+  padding: 5px 11px;
+  font: 500 12px/1 inherit;
+  letter-spacing: 0.01em;
+  border-radius: 7px;
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease;
+  position: relative;
+}
+
+.blok-image-crop-editor__ratio-chip:hover {
+  color: var(--crop-fg);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.blok-image-crop-editor__ratio-chip:focus-visible {
+  outline: 2px solid var(--crop-accent);
+  outline-offset: 1px;
+  z-index: 1;
+}
+
+.blok-image-crop-editor__ratio-chip[data-active="true"] {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--crop-fg);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.blok-image-crop-editor__actions {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.blok-image-crop-editor__kbd-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--crop-fg-muted);
+  font-size: 11px;
+  margin-right: 6px;
+  user-select: none;
+}
+
+.blok-image-crop-editor__kbd-hint kbd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  padding: 1px 5px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--crop-divider);
+  border-radius: 4px;
+  color: var(--crop-fg);
+  min-width: 14px;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.blok-image-crop-editor__kbd-sep {
+  opacity: 0.4;
+  padding: 0 2px;
+}
+
+@media (max-width: 640px) {
+  .blok-image-crop-editor__kbd-hint { display: none; }
 }
 
 .blok-image-crop-editor__btn {
@@ -171,83 +320,47 @@
   gap: 6px;
   background: transparent;
   color: inherit;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 6px;
-  padding: 6px 12px;
-  font: inherit;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font: 500 13px/1.2 inherit;
   cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease;
+  transition:
+    background 140ms ease,
+    color 140ms ease,
+    border-color 140ms ease,
+    transform 120ms ease;
 }
 
-.blok-image-crop-editor__btn:hover {
+.blok-image-crop-editor__btn--ghost {
+  color: var(--crop-fg-muted);
+}
+
+.blok-image-crop-editor__btn--ghost:hover {
+  color: var(--crop-fg);
   background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .blok-image-crop-editor__btn:focus-visible {
-  outline: 2px solid var(--blok-accent, #2b7fff);
+  outline: 2px solid var(--crop-accent);
   outline-offset: 2px;
 }
 
+.blok-image-crop-editor__btn:active {
+  transform: scale(0.98);
+}
+
 .blok-image-crop-editor__btn--primary {
-  background: var(--blok-accent, #2b7fff);
+  background: var(--crop-accent);
   border-color: transparent;
   color: #fff;
+  padding: 6px 18px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 1px color-mix(in srgb, var(--crop-accent) 50%, transparent);
 }
 
 .blok-image-crop-editor__btn--primary:hover {
-  background: color-mix(in srgb, var(--blok-accent, #2b7fff) 88%, white);
+  background: color-mix(in srgb, var(--crop-accent) 90%, white);
   border-color: transparent;
-}
-
-.blok-image-crop-editor__chevron {
-  opacity: 0.75;
-}
-
-/* Ratio menu */
-.blok-image-crop-editor__ratio-menu {
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  background: #1b1b1b;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 4px;
-  z-index: 2;
-  min-width: 140px;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
-}
-
-.blok-image-crop-editor__ratio-item {
-  display: grid;
-  grid-template-columns: 16px 1fr;
-  align-items: center;
-  gap: 8px;
-  border: none;
-  text-align: left;
-  padding: 6px 10px;
-  background: transparent;
-  color: #fff;
-  border-radius: 4px;
-  cursor: pointer;
-  font: inherit;
-}
-
-.blok-image-crop-editor__ratio-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.blok-image-crop-editor__ratio-item[data-active="true"] {
-  color: var(--blok-accent, #2b7fff);
-}
-
-.blok-image-crop-editor__ratio-check-slot {
-  width: 12px;
-  height: 12px;
-  display: inline-block;
 }
 
 .blok-image-crop {

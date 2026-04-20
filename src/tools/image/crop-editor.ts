@@ -20,12 +20,6 @@ const RATIOS: { label: string; value: number | null }[] = [
   { label: 'Original', value: 0 },
 ];
 
-const CHEVRON_SVG =
-  '<svg class="blok-image-crop-editor__chevron" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" focusable="false"><path d="M1.5 3.5 L5 7 L8.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-
-const CHECK_SVG =
-  '<svg class="blok-image-crop-editor__ratio-check" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M2.5 6.5 L4.8 8.8 L9.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-
 function assertEl<T extends Element>(node: T | null, what: string): T {
   if (!node) throw new Error(`CropEditor: missing ${what}`);
   return node;
@@ -73,20 +67,24 @@ export function mountCropEditor(
   const stage = document.createElement('div');
   stage.className = 'blok-image-crop-editor__stage';
 
+  const frame = document.createElement('div');
+  frame.className = 'blok-image-crop-editor__frame';
+  stage.appendChild(frame);
+
   const source = document.createElement('img');
   source.className = 'blok-image-crop-editor__source';
   source.src = opts.url;
   source.alt = opts.alt ?? '';
   source.draggable = false;
-  stage.appendChild(source);
+  frame.appendChild(source);
 
   const mask = document.createElement('div');
   mask.className = 'blok-image-crop-editor__mask';
-  stage.appendChild(mask);
+  frame.appendChild(mask);
 
   const rectEl = document.createElement('div');
   rectEl.className = 'blok-image-crop-editor__rect';
-  stage.appendChild(rectEl);
+  frame.appendChild(rectEl);
 
   const GRID_LINE_VARIANTS = ['v-1', 'v-2', 'h-1', 'h-2'] as const;
   for (const variant of GRID_LINE_VARIANTS) {
@@ -110,23 +108,51 @@ export function mountCropEditor(
   const toolbar = document.createElement('div');
   toolbar.className = 'blok-image-crop-editor__toolbar blok-image-crop-editor__toolbar--footer';
   toolbar.setAttribute('role', 'toolbar');
-  toolbar.innerHTML = `
-    <div class="blok-image-crop-editor__ratio-wrap" style="position:relative">
-      <button type="button" class="blok-image-crop-editor__btn blok-image-crop-editor__btn--ghost" data-action="ratio" aria-haspopup="menu" aria-expanded="false"><span data-role="ratio-label">Free</span>${CHEVRON_SVG}</button>
-      <div class="blok-image-crop-editor__ratio-menu" data-role="ratio-menu" role="menu" hidden></div>
+
+  const ratioGroup = document.createElement('div');
+  ratioGroup.className = 'blok-image-crop-editor__ratio-group';
+  ratioGroup.setAttribute('role', 'radiogroup');
+  ratioGroup.setAttribute('aria-label', 'Aspect ratio');
+  ratioGroup.setAttribute('data-action', 'ratio');
+
+  const ratioChips: Record<string, HTMLButtonElement> = {};
+  for (const r of RATIOS) {
+    const key = ratioDataValue(r.value);
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'blok-image-crop-editor__ratio-chip';
+    chip.setAttribute('role', 'radio');
+    chip.setAttribute('data-ratio', key);
+    chip.setAttribute('data-active', String(key === state.ratioKey));
+    chip.setAttribute('aria-checked', String(key === state.ratioKey));
+    chip.textContent = r.label;
+    chip.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setRatio(r.value, key);
+    });
+    ratioGroup.appendChild(chip);
+    ratioChips[key] = chip;
+  }
+
+  const actions = document.createElement('div');
+  actions.className = 'blok-image-crop-editor__actions';
+  actions.innerHTML = `
+    <div class="blok-image-crop-editor__kbd-hint" aria-hidden="true">
+      <kbd>↵</kbd><span>apply</span>
+      <span class="blok-image-crop-editor__kbd-sep">·</span>
+      <kbd>esc</kbd><span>cancel</span>
     </div>
     <button type="button" class="blok-image-crop-editor__btn blok-image-crop-editor__btn--ghost" data-action="reset">Reset</button>
     <button type="button" class="blok-image-crop-editor__btn blok-image-crop-editor__btn--ghost" data-action="cancel">Cancel</button>
     <button type="button" class="blok-image-crop-editor__btn blok-image-crop-editor__btn--primary" data-action="done">Done</button>
   `;
 
+  toolbar.appendChild(ratioGroup);
+  toolbar.appendChild(actions);
+
   root.appendChild(stage);
   root.appendChild(toolbar);
   container.appendChild(root);
-
-  const ratioMenu = assertEl(toolbar.querySelector<HTMLElement>('[data-role="ratio-menu"]'), 'ratio-menu');
-  const ratioTrigger = assertEl(toolbar.querySelector<HTMLButtonElement>('[data-action="ratio"]'), 'ratio trigger');
-  const ratioLabel = assertEl(toolbar.querySelector<HTMLElement>('[data-role="ratio-label"]'), 'ratio label');
 
   function updatePill(): void {
     const nw = source.naturalWidth;
@@ -169,6 +195,14 @@ export function mountCropEditor(
     paint();
   }
 
+  function updateActiveChip(): void {
+    for (const [key, chip] of Object.entries(ratioChips)) {
+      const active = key === state.ratioKey;
+      chip.setAttribute('data-active', String(active));
+      chip.setAttribute('aria-checked', String(active));
+    }
+  }
+
   function setRatio(next: number | null, key: string): void {
     if (next === 0) {
       const n = source.naturalWidth && source.naturalHeight
@@ -179,6 +213,7 @@ export function mountCropEditor(
       state.ratio = next;
     }
     state.ratioKey = key;
+    updateActiveChip();
     setRect(state.rect);
   }
 
@@ -192,7 +227,7 @@ export function mountCropEditor(
   });
 
   function stagePct(clientX: number, clientY: number): { x: number; y: number } {
-    const s = stage.getBoundingClientRect();
+    const s = frame.getBoundingClientRect();
     return {
       x: ((clientX - s.left) / s.width) * 100,
       y: ((clientY - s.top) / s.height) * 100,
@@ -232,48 +267,17 @@ export function mountCropEditor(
     window.addEventListener('pointerup', up);
   }
 
-  ratioTrigger.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const open = ratioMenu.hidden;
-    ratioMenu.hidden = !open;
-    ratioTrigger.setAttribute('aria-expanded', String(open));
-    if (open) renderRatioMenu();
-  });
-
-  function renderRatioMenu(): void {
-    ratioMenu.replaceChildren();
-    for (const r of RATIOS) {
-      const key = ratioDataValue(r.value);
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'blok-image-crop-editor__ratio-item';
-      btn.setAttribute('role', 'menuitem');
-      btn.setAttribute('data-ratio', key);
-      const active = key === state.ratioKey;
-      btn.setAttribute('data-active', String(active));
-      btn.innerHTML = `${active ? CHECK_SVG : '<span class="blok-image-crop-editor__ratio-check-slot" aria-hidden="true"></span>'}<span class="blok-image-crop-editor__ratio-label">${r.label}</span>`;
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        setRatio(r.value, key);
-        ratioLabel.textContent = r.label;
-        ratioMenu.hidden = true;
-        ratioTrigger.setAttribute('aria-expanded', 'false');
-      });
-      ratioMenu.appendChild(btn);
-    }
-  }
-
   function applyDone(): void {
     opts.onApply(isFullRect(state.rect) ? null : state.rect);
   }
 
-  const doneBtn = assertEl(toolbar.querySelector<HTMLButtonElement>('[data-action="done"]'), 'done button');
+  const doneBtn = assertEl(actions.querySelector<HTMLButtonElement>('[data-action="done"]'), 'done button');
   doneBtn.addEventListener('click', applyDone);
 
-  const cancelBtn = assertEl(toolbar.querySelector<HTMLButtonElement>('[data-action="cancel"]'), 'cancel button');
+  const cancelBtn = assertEl(actions.querySelector<HTMLButtonElement>('[data-action="cancel"]'), 'cancel button');
   cancelBtn.addEventListener('click', () => opts.onCancel());
 
-  const resetBtn = assertEl(toolbar.querySelector<HTMLButtonElement>('[data-action="reset"]'), 'reset button');
+  const resetBtn = assertEl(actions.querySelector<HTMLButtonElement>('[data-action="reset"]'), 'reset button');
   resetBtn.addEventListener('click', () => setRect({ ...FULL_RECT }));
 
   const onKey = (e: KeyboardEvent): void => {

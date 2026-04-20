@@ -101,32 +101,37 @@ describe('crop-editor', () => {
     expect(pill.textContent).toBe('1000 × 250 px');
   });
 
-  it('ratio menu marks the active option with a checkmark', () => {
+  it('renders 5 segmented ratio chips with Free active by default', () => {
     detach = mountCropEditor(container, {
       url: 'x.png',
       onApply: () => {},
       onCancel: () => {},
     });
-    const trigger = container.querySelector<HTMLButtonElement>('[data-action="ratio"]')!;
-    trigger.click();
-
-    const activeBtns = container.querySelectorAll(
-      '[role="menuitem"][data-active="true"]'
-    );
-    expect(activeBtns).toHaveLength(1);
-    expect(activeBtns[0].querySelector('.blok-image-crop-editor__ratio-check')).not.toBeNull();
-    expect(activeBtns[0].getAttribute('data-ratio')).toBe('free');
+    const group = container.querySelector<HTMLElement>('[data-action="ratio"]')!;
+    expect(group.getAttribute('role')).toBe('radiogroup');
+    const chips = group.querySelectorAll<HTMLButtonElement>('[role="radio"][data-ratio]');
+    expect(chips).toHaveLength(5);
+    const keys = Array.from(chips).map((c) => c.getAttribute('data-ratio'));
+    expect(keys).toEqual(['free', '1', String(4 / 3), String(16 / 9), 'original']);
+    const active = group.querySelectorAll('[role="radio"][data-active="true"]');
+    expect(active).toHaveLength(1);
+    expect(active[0].getAttribute('data-ratio')).toBe('free');
+    expect(active[0].getAttribute('aria-checked')).toBe('true');
   });
 
-  it('ratio menu trigger uses an inline chevron svg, not the ▾ character', () => {
+  it('clicking a ratio chip moves the active state to that chip', () => {
     detach = mountCropEditor(container, {
       url: 'x.png',
       onApply: () => {},
       onCancel: () => {},
     });
-    const trigger = container.querySelector<HTMLButtonElement>('[data-action="ratio"]')!;
-    expect(trigger.textContent).not.toContain('▾');
-    expect(trigger.querySelector('svg')).not.toBeNull();
+    const chip = container.querySelector<HTMLButtonElement>('[role="radio"][data-ratio="1"]')!;
+    chip.click();
+    expect(chip.getAttribute('data-active')).toBe('true');
+    expect(chip.getAttribute('aria-checked')).toBe('true');
+    const active = container.querySelectorAll('[role="radio"][data-active="true"]');
+    expect(active).toHaveLength(1);
+    expect(active[0]).toBe(chip);
   });
 
   it('toolbar is a direct child of the editor root and carries the footer modifier', () => {

@@ -149,7 +149,7 @@ export class PopoverInline extends PopoverDesktop {
 
     // Apply inline items container styles
     if (this.nodes.items) {
-      this.nodes.items.className = twMerge(css.items, 'flex');
+      this.nodes.items.className = twMerge(css.items, 'flex pb-0');
     }
 
     // Set inline height CSS variables

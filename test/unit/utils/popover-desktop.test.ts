@@ -1035,8 +1035,10 @@ describe('PopoverDesktop', () => {
       popover.invalidateSizeCache();
       void instance.size;
 
-      // The clone's container should include the opened-state padding (p-1.5)
-      expect(cloneContainerClass).toContain('p-1.5');
+      // The clone's container should include the opened-state padding (asymmetric: px-1.5 pt-1.5 pb-0 for scroll haze)
+      expect(cloneContainerClass).toContain('px-1.5');
+      expect(cloneContainerClass).toContain('pt-1.5');
+      expect(cloneContainerClass).toContain('pb-0');
     });
   });
 
@@ -1653,6 +1655,73 @@ describe('PopoverDesktop', () => {
       // Desktop items should have pl-2 (8px) and pr-3 (12px)
       expect(element?.className).toContain('pl-2');
       expect(element?.className).toContain('pr-3');
+    });
+
+    it('adds bottom padding inside the scrollable items container so it only shows at end of list', () => {
+      const popover = createPopover();
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      // Bottom padding lives on the scrollable items container (not the popover container),
+      // so it is only visible when user scrolls to the bottom of the list.
+      // Top padding (pt-1.5) is on the outer popover container and is always visible.
+      expect(instance.nodes.items.className).toContain('pb-1.5');
+    });
+
+    it('hides items-container bottom padding while "nothing found" is displayed', () => {
+      const popover = createPopover({
+        searchable: true,
+        items: createDefaultItems(),
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      popover.show();
+
+      const searchInput = getMockSearchInput();
+
+      searchInput.emitSearch({ query: 'no-match-xyz', items: [] });
+
+      expect(instance.nodes.nothingFoundMessage).toHaveAttribute(DATA_ATTR.nothingFoundDisplayed);
+      expect(instance.nodes.items.className).not.toContain('pb-1.5');
+
+      searchInput.emitSearch({ query: '', items: instance.itemsDefault });
+
+      expect(instance.nodes.nothingFoundMessage).not.toHaveAttribute(DATA_ATTR.nothingFoundDisplayed);
+      expect(instance.nodes.items.className).toContain('pb-1.5');
+    });
+
+    it('collapses outer popover container padding while "nothing found" is displayed', () => {
+      const popover = createPopover({
+        searchable: true,
+        items: createDefaultItems(),
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      popover.show();
+
+      const searchInput = getMockSearchInput();
+
+      searchInput.emitSearch({ query: 'no-match-xyz', items: [] });
+
+      expect(instance.nodes.nothingFoundMessage).toHaveAttribute(DATA_ATTR.nothingFoundDisplayed);
+      expect(instance.nodes.popoverContainer.className).not.toContain('px-1.5');
+      expect(instance.nodes.popoverContainer.className).not.toContain('pt-1.5');
+
+      searchInput.emitSearch({ query: '', items: instance.itemsDefault });
+
+      expect(instance.nodes.nothingFoundMessage).not.toHaveAttribute(DATA_ATTR.nothingFoundDisplayed);
+      expect(instance.nodes.popoverContainer.className).toContain('px-1.5');
+      expect(instance.nodes.popoverContainer.className).toContain('pt-1.5');
+    });
+
+    it('removes bottom padding from the outer popover container (pb-0 stays on wrapper)', () => {
+      const popover = createPopover();
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      popover.show();
+
+      // Outer container keeps pb-0 so bottom padding is solely handled inside the scroll area.
+      expect(instance.nodes.popoverContainer.className).toContain('pb-0');
+      expect(instance.nodes.popoverContainer.className).toContain('pt-1.5');
     });
   });
 

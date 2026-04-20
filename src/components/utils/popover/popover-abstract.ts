@@ -519,9 +519,13 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     if (isDisplayed) {
       this.nodes.nothingFoundMessage.classList.remove('hidden');
       this.nodes.nothingFoundMessage.setAttribute(DATA_ATTR.nothingFoundDisplayed, 'true');
+      this.nodes.items?.classList.remove('pb-1.5');
+      this.nodes.popoverContainer?.classList.remove('px-1.5', 'pt-1.5');
     } else {
       this.nodes.nothingFoundMessage.classList.add('hidden');
       this.nodes.nothingFoundMessage.removeAttribute(DATA_ATTR.nothingFoundDisplayed);
+      this.nodes.items?.classList.add('pb-1.5');
+      this.nodes.popoverContainer?.classList.add('px-1.5', 'pt-1.5');
     }
   }
 

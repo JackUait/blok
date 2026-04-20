@@ -17,7 +17,7 @@ export const css = {
   // Popover overlay
   popoverOverlay: 'hidden bg-dark',
 
-  items: 'flex-1 min-h-0 overflow-y-auto overscroll-contain',
+  items: 'flex-1 min-h-0 overflow-y-auto overscroll-contain pb-1.5',
 
   scrollHaze: 'absolute inset-x-0 h-6 pointer-events-none z-1 transition-opacity duration-300 ease-in-out',
 };

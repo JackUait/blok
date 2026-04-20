@@ -129,38 +129,24 @@ export function openLightbox(opts: LightboxOptions): () => void {
   dialog.setAttribute('role', 'dialog');
   dialog.setAttribute('aria-modal', 'true');
   dialog.setAttribute('aria-label', 'Image preview');
-  Object.assign(dialog.style, {
-    position: 'fixed',
-    inset: '0',
-    background: 'rgba(0,0,0,0.85)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: '9999',
-    cursor: 'zoom-out',
-  } satisfies Partial<CSSStyleDeclaration>);
+  dialog.className = 'blok-image-lightbox';
 
   const img = document.createElement('img');
   img.setAttribute('src', opts.url);
   img.setAttribute('alt', opts.alt ?? '');
-  Object.assign(img.style, {
-    maxWidth: '95vw',
-    maxHeight: '95vh',
-    objectFit: 'contain',
-    transform: 'scale(1)',
-    transformOrigin: 'center center',
-    transition: 'transform 120ms ease-out',
-  } satisfies Partial<CSSStyleDeclaration>);
+  img.className = 'blok-image-lightbox__image';
 
   const zoomState = { value: 1 };
 
+  const setZoom = (next: number): void => {
+    zoomState.value = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, next));
+    img.style.transform = `scale(${zoomState.value})`;
+    syncResetLabel();
+  };
+
   const toolbar = renderLightboxToolbar({
     getZoom: () => zoomState.value,
-    setZoom: (next) => {
-      zoomState.value = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, next));
-      img.style.transform = `scale(${zoomState.value})`;
-      syncResetLabel();
-    },
+    setZoom,
     onDownload: () => {
       const a = document.createElement('a');
       a.href = opts.url;
@@ -192,6 +178,17 @@ export function openLightbox(opts: LightboxOptions): () => void {
     if (event.key === 'Escape' || event.key === ' ') {
       event.preventDefault();
       close();
+      return;
+    }
+    if (event.key === '+' || event.key === '=') {
+      event.preventDefault();
+      setZoom(zoomState.value + ZOOM_STEP);
+      return;
+    }
+    if (event.key === '-') {
+      event.preventDefault();
+      setZoom(zoomState.value - ZOOM_STEP);
+      return;
     }
   };
 
@@ -217,31 +214,13 @@ function renderLightboxToolbar(opts: LightboxToolbarOptions): HTMLElement {
   bar.setAttribute('data-role', 'lightbox-toolbar');
   bar.setAttribute('role', 'toolbar');
   bar.setAttribute('aria-label', 'Image preview controls');
-  Object.assign(bar.style, {
-    position: 'absolute',
-    bottom: '24px',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-    padding: '6px 8px',
-    background: 'rgba(30,30,30,0.92)',
-    color: '#fff',
-    borderRadius: '999px',
-    boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-    cursor: 'default',
-    fontFamily: 'inherit',
-    fontSize: '13px',
-    lineHeight: '1',
-    zIndex: '1',
-  } satisfies Partial<CSSStyleDeclaration>);
+  bar.className = 'blok-image-lightbox__bar';
   bar.addEventListener('click', (event) => event.stopPropagation());
 
-  const iconMinus = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false" width="18" height="18"><path d="M5 12h14"/></svg>';
-  const iconPlus = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false" width="18" height="18"><path d="M12 5v14"/><path d="M5 12h14"/></svg>';
-  const iconDownload = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" width="18" height="18"><circle cx="12" cy="12" r="9"/><path d="M12 7v8"/><path d="m8.5 12 3.5 3.5L15.5 12"/></svg>';
-  const iconCollapse = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" width="18" height="18"><path d="M9 3v6H3"/><path d="M21 9h-6V3"/><path d="M3 15h6v6"/><path d="M15 21v-6h6"/></svg>';
+  const iconMinus = wrapSvg('<path d="M5 12h14"/>');
+  const iconPlus = wrapSvg('<path d="M12 5v14"/><path d="M5 12h14"/>');
+  const iconDownload = wrapSvg('<circle cx="12" cy="12" r="9"/><path d="M12 7v8"/><path d="m8.5 12 3.5 3.5L15.5 12"/>');
+  const iconCollapse = wrapSvg('<path d="M9 3v6H3"/><path d="M21 9h-6V3"/><path d="M3 15h6v6"/><path d="M15 21v-6h6"/>');
 
   appendLightboxButton(bar, {
     action: 'zoom-out',
@@ -254,7 +233,7 @@ function renderLightboxToolbar(opts: LightboxToolbarOptions): HTMLElement {
     label: 'Reset zoom',
     html: '100%',
     onClick: () => opts.setZoom(1),
-    minWidth: '48px',
+    extraClass: 'blok-image-lightbox__zoom-label',
   });
   appendLightboxButton(bar, {
     action: 'zoom-in',
@@ -262,6 +241,7 @@ function renderLightboxToolbar(opts: LightboxToolbarOptions): HTMLElement {
     html: iconPlus,
     onClick: () => opts.setZoom(opts.getZoom() + ZOOM_STEP),
   });
+  appendLightboxDivider(bar);
   appendLightboxButton(bar, {
     action: 'lightbox-download',
     label: 'Download',
@@ -278,12 +258,23 @@ function renderLightboxToolbar(opts: LightboxToolbarOptions): HTMLElement {
   return bar;
 }
 
+function wrapSvg(inner: string): string {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${inner}</svg>`;
+}
+
+function appendLightboxDivider(parent: HTMLElement): void {
+  const d = document.createElement('div');
+  d.className = 'blok-image-lightbox__divider';
+  d.setAttribute('aria-hidden', 'true');
+  parent.appendChild(d);
+}
+
 interface LightboxButtonSpec {
   action: string;
   label: string;
   html: string;
   onClick(): void;
-  minWidth?: string;
+  extraClass?: string;
 }
 
 function appendLightboxButton(parent: HTMLElement, spec: LightboxButtonSpec): void {
@@ -291,23 +282,14 @@ function appendLightboxButton(parent: HTMLElement, spec: LightboxButtonSpec): vo
   btn.type = 'button';
   btn.setAttribute('data-action', spec.action);
   btn.setAttribute('aria-label', spec.label);
-  Object.assign(btn.style, {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '32px',
-    minWidth: spec.minWidth ?? '32px',
-    padding: '0 8px',
-    background: 'transparent',
-    border: '0',
-    borderRadius: '999px',
-    color: 'inherit',
-    cursor: 'pointer',
-    font: 'inherit',
-  } satisfies Partial<CSSStyleDeclaration>);
+  btn.className = spec.extraClass
+    ? `blok-image-lightbox__btn ${spec.extraClass}`
+    : 'blok-image-lightbox__btn';
   btn.innerHTML = spec.html;
+  tooltipOnHover(btn, spec.label, { placement: 'top' });
   btn.addEventListener('click', (event) => {
     event.stopPropagation();
+    tooltipHide();
     spec.onClick();
   });
   parent.appendChild(btn);

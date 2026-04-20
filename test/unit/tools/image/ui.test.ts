@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 
 vi.mock('../../../../src/components/utils/tooltip', () => ({
   onHover: vi.fn(),
@@ -139,6 +139,10 @@ describe('renderCaptionRow', () => {
 });
 
 describe('openLightbox', () => {
+  afterEach(() => {
+    document.querySelectorAll('[role="dialog"][aria-modal="true"]').forEach((el) => el.remove());
+  });
+
   it('appends a dialog to document.body and removes it on close', () => {
     const close = openLightbox({ url: 'https://x/y.png', alt: 'pic' });
     const dialog = document.querySelector('[role="dialog"][aria-modal="true"]');
@@ -156,6 +160,47 @@ describe('openLightbox', () => {
     openLightbox({ url: 'u' });
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     expect(document.querySelector('[role="dialog"][aria-modal="true"]')).toBeNull();
+  });
+
+  it('pressing "-" zooms out', () => {
+    const close = openLightbox({ url: 'u' });
+    const img = document.querySelector<HTMLImageElement>('[role="dialog"] img');
+    if (!img) throw new Error('img missing');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '-' }));
+    const match = img.style.transform.match(/scale\(([^)]+)\)/);
+    if (!match) throw new Error('no scale');
+    expect(parseFloat(match[1])).toBeLessThan(1);
+    close();
+  });
+
+  it('pressing "+" zooms in', () => {
+    const close = openLightbox({ url: 'u' });
+    const img = document.querySelector<HTMLImageElement>('[role="dialog"] img');
+    if (!img) throw new Error('img missing');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '+' }));
+    const match = img.style.transform.match(/scale\(([^)]+)\)/);
+    if (!match) throw new Error('no scale');
+    expect(parseFloat(match[1])).toBeGreaterThan(1);
+    close();
+  });
+
+  it('pressing "=" (unshifted plus) also zooms in', () => {
+    const close = openLightbox({ url: 'u' });
+    const img = document.querySelector<HTMLImageElement>('[role="dialog"] img');
+    if (!img) throw new Error('img missing');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '=' }));
+    const match = img.style.transform.match(/scale\(([^)]+)\)/);
+    if (!match) throw new Error('no scale');
+    expect(parseFloat(match[1])).toBeGreaterThan(1);
+    close();
+  });
+
+  it('keyboard shortcuts do not fire after lightbox closes', () => {
+    const close = openLightbox({ url: 'u' });
+    close();
+    const img = document.querySelector<HTMLImageElement>('[role="dialog"] img');
+    expect(img).toBeNull();
+    expect(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: '+' }))).not.toThrow();
   });
 
   it('closes on backdrop click', () => {

@@ -85,7 +85,7 @@ test('clicking image opens lightbox; Escape closes it', async ({ page }) => {
   });
 
   const imageBlock = page.locator(IMAGE_BLOCK_SELECTOR);
-  const imageEl = imageBlock.locator('img[alt="pic"]');
+  const imageEl = imageBlock.getByAltText('pic');
 
   await expect(imageEl).toBeVisible();
   await imageEl.click();

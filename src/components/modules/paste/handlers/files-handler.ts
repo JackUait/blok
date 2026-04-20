@@ -66,25 +66,22 @@ export class FilesHandler extends BasePasteHandler implements PasteHandler {
    * where each entry has kind === 'file'. Fall back to items when needed.
    */
   private extractFiles(dataTransfer: DataTransfer): File[] {
-    const collected: File[] = [];
-
     if (dataTransfer.files && dataTransfer.files.length > 0) {
       return Array.from(dataTransfer.files);
     }
 
-    if (dataTransfer.items) {
-      for (const item of Array.from(dataTransfer.items)) {
-        if (item.kind === 'file') {
-          const file = item.getAsFile();
+    return this.extractFilesFromItems(dataTransfer.items);
+  }
 
-          if (file !== null) {
-            collected.push(file);
-          }
-        }
-      }
+  private extractFilesFromItems(items: DataTransferItemList | null | undefined): File[] {
+    if (!items) {
+      return [];
     }
 
-    return collected;
+    return Array.from(items)
+      .filter((item) => item.kind === 'file')
+      .map((item) => item.getAsFile())
+      .filter((file): file is File => file !== null);
   }
 
   /**
@@ -101,12 +98,8 @@ export class FilesHandler extends BasePasteHandler implements PasteHandler {
       return true;
     }
 
-    if (dataTransfer.items) {
-      for (const item of Array.from(dataTransfer.items)) {
-        if (item.kind === 'file') {
-          return true;
-        }
-      }
+    if (this.itemsContainFile(dataTransfer.items)) {
+      return true;
     }
 
     try {
@@ -120,6 +113,14 @@ export class FilesHandler extends BasePasteHandler implements PasteHandler {
     }
 
     return false;
+  }
+
+  private itemsContainFile(items: DataTransferItemList | null | undefined): boolean {
+    if (!items) {
+      return false;
+    }
+
+    return Array.from(items).some((item) => item.kind === 'file');
   }
 
   /**

@@ -5,7 +5,6 @@ import {
   isFullRect,
   resizeRect,
   applyRatio,
-  type Handle,
 } from '../../../src/tools/image/crop-math';
 
 describe('crop-math', () => {

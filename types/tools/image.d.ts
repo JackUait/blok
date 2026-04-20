@@ -7,6 +7,14 @@ export type ImageSize = 'sm' | 'md' | 'lg' | 'full';
 /** Frame treatment around the image. */
 export type ImageFrame = 'none' | 'border' | 'shadow';
 
+/** Non-destructive crop rectangle, in percent of intrinsic image (0–100). */
+export interface ImageCrop {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 /**
  * Persisted data shape for the Image block tool.
  */
@@ -27,6 +35,8 @@ export interface ImageData extends BlockToolData {
   rounded?: boolean;
   /** Caption visible in the rendered state. Default true. */
   captionVisible?: boolean;
+  /** Non-destructive crop rectangle. */
+  crop?: ImageCrop;
   /** Alt text for screen readers */
   alt?: string;
   /** Original filename, when known */

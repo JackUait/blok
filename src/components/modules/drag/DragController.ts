@@ -486,6 +486,15 @@ export class DragController extends Module {
     if (!this.operations) {
       return;
     }
+
+    // Snapshot pre-move parentIds before moveBlocks mutates them. resolveParentForDrop
+    // must read source parents as they existed at drag start, not after reparenting.
+    const preMoveParentIds = new Map<string, string | null>();
+
+    for (const block of sourceBlocks) {
+      preMoveParentIds.set(block.id, block.parentId);
+    }
+
     const result = this.operations.moveBlocks(sourceBlocks, targetBlock, edge);
 
     // Layer 13: stale-drop abort guard.
@@ -505,7 +514,7 @@ export class DragController extends Module {
     }
 
     // Update parent-child relationships after move
-    const newParentId = this.resolveParentForDrop(targetBlock, edge, sourceBlocks);
+    const newParentId = this.resolveParentForDrop(targetBlock, edge, sourceBlocks, preMoveParentIds);
     const movedBlockIds = new Set(result.movedBlocks.map(b => b.id));
     const reparentedBlocks: Block[] = [];
     const affectedParentIds = new Set<string>();
@@ -572,14 +581,26 @@ export class DragController extends Module {
    * @param sourceBlocks - The blocks being dragged
    * @returns The parentId for the dropped blocks, or null for root level
    */
-  private resolveParentForDrop(targetBlock: Block, edge: 'top' | 'bottom', sourceBlocks: Block[]): string | null {
+  private resolveParentForDrop(
+    targetBlock: Block,
+    edge: 'top' | 'bottom',
+    sourceBlocks: Block[],
+    preMoveParentIds?: Map<string, string | null>
+  ): string | null {
     // If dropping below a toggleable block, the block becomes a child of the toggle.
     // Detect via DOM attribute (covers both toggle list blocks AND toggle headings).
     if (edge === 'bottom' && this.isToggleableBlock(targetBlock) && this.isOpenToggle(targetBlock)) {
       // Don't re-enter the toggle if all source blocks are already its children.
       // This allows a child to escape its own toggle parent by dragging to the bottom edge.
+      // Use pre-move snapshot when available; moveBlocks may have already rewritten parentId.
       const allSourcesAreChildren = sourceBlocks.length > 0 &&
-        sourceBlocks.every(b => b.parentId === targetBlock.id);
+        sourceBlocks.every((b) => {
+          const parentId = preMoveParentIds?.has(b.id) === true
+            ? preMoveParentIds.get(b.id)
+            : b.parentId;
+
+          return parentId === targetBlock.id;
+        });
 
       if (!allSourcesAreChildren) {
         return targetBlock.id;

@@ -591,6 +591,20 @@ const editor = new Blok({
 });`,
   },
 
+  {
+    id: 'image',
+    exportName: 'Image',
+    type: 'block',
+    badge: 'Block Tool',
+    title: 'Image',
+    description: 'Embed an image via URL upload or file paste.',
+    importExample: "import { Image } from '@jackuait/blok/tools';",
+    configOptions: [],
+    saveDataShape: '{ url: string; caption?: string; alt?: string; withBorder?: boolean; stretched?: boolean; withBackground?: boolean }',
+    saveDataExample: "{ url: 'https://example.com/image.png', caption: 'Cat', alt: 'A cat' }",
+    usageExample: "tools: { image: { class: Image, config: { endpoints: { byFile: '/upload', byUrl: '/fetch' } } } }",
+  },
+
   // ── Inline Tools ──────────────────────────────────────────────────────────
   {
     id: 'bold',

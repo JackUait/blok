@@ -229,8 +229,11 @@ test.describe("ui.settings-toggler-after-drag", () => {
     // Block settings should open on click
     await expect(getBlockTunesPopover(page)).toBeVisible();
 
-    // Close the menu
-    await page.mouse.click(clickX + 10, clickY + 10);
+    // Close the menu via Escape (clicking at offset coordinates may land on the
+    // popover itself and fail to dismiss it, since the popover is positioned
+    // near/over the settings toggler once open).
+    await page.keyboard.press("Escape");
+    await expect(getBlockTunesPopover(page)).toHaveCount(0);
 
     // Hover again to make the toolbar visible for the drag
     await firstBlock.hover();

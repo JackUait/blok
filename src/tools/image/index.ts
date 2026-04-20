@@ -331,6 +331,21 @@ export class ImageTool implements BlockTool {
 
   private renderRendered(): void {
     if (!this.root) return;
+    if (this.cropping) {
+      const figure = document.createElement('figure');
+      figure.className = 'blok-image-inner blok-image-inner--cropping';
+      figure.style.position = 'relative';
+      this.detachCrop();
+      this.cropDetach = mountCropEditor(figure, {
+        url: this.data.url,
+        alt: this.data.alt,
+        initial: this.data.crop,
+        onApply: (rect) => this.applyCrop(rect),
+        onCancel: () => this.cancelCrop(),
+      });
+      this.root.appendChild(figure);
+      return;
+    }
     const figure = renderImage(this.data);
 
     const imgEl = figure.querySelector('img');

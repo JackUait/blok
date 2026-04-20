@@ -222,12 +222,9 @@ test.describe('Tooltip on a popover item with a keyboard-shortcut glyph', () => 
     expect(backgroundColor).not.toBe('');
 
     const alphaMatch = backgroundColor.match(/rgba?\(([^)]+)\)/);
+    const parts = alphaMatch !== null ? alphaMatch[1].split(',').map((s) => s.trim()) : [];
+    const alpha = parts.length === 4 ? Number(parts[3]) : 1;
 
-    if (alphaMatch !== null) {
-      const parts = alphaMatch[1].split(',').map((s) => s.trim());
-      const alpha = parts.length === 4 ? Number(parts[3]) : 1;
-
-      expect(alpha).toBeGreaterThan(0);
-    }
+    expect(alpha).toBeGreaterThan(0);
   });
 });

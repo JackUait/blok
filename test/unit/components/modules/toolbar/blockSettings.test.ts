@@ -160,6 +160,8 @@ const createBlock = (): Block => ({
   getTunes: vi.fn(() => ({
     commonTunes: [],
   })),
+  getActiveToolboxEntry: vi.fn(async () => undefined),
+  name: 'paragraph',
   holder: document.createElement('div'),
   pluginsContent: document.createElement('div'),
 } as unknown as Block);
@@ -542,7 +544,7 @@ describe('BlockSettings', () => {
   });
 
 
-  it('passes minWidth of 250px to the popover', async () => {
+  it('passes minWidth of 220px to the popover', async () => {
     blockSettings.make();
 
     const block = createBlock();
@@ -566,7 +568,7 @@ describe('BlockSettings', () => {
     const popover = getLastPopover();
     const params = popover?.params as { minWidth?: string } | undefined;
 
-    expect(params?.minWidth).toBe('250px');
+    expect(params?.minWidth).toBe('220px');
 
     getTunesItemsSpy.mockRestore();
   });

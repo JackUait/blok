@@ -264,6 +264,10 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     ghost.style.left = `${rect.left + window.scrollX}px`;
     ghost.style.pointerEvents = 'none';
 
+    ghost.querySelectorAll<HTMLElement>(`[${DATA_ATTR.popoverContainer}]`).forEach((container) => {
+      container.style.setProperty('pointer-events', 'none');
+    });
+
     return ghost;
   }
 
@@ -525,7 +529,9 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       this.nodes.nothingFoundMessage.classList.add('hidden');
       this.nodes.nothingFoundMessage.removeAttribute(DATA_ATTR.nothingFoundDisplayed);
       this.nodes.items?.classList.add('pb-1.5');
-      this.nodes.popoverContainer?.classList.add('px-1.5', 'pt-1.5');
+      if (this.isShown) {
+        this.nodes.popoverContainer?.classList.add('px-1.5', 'pt-1.5');
+      }
     }
   }
 
@@ -647,15 +653,18 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     scrollHazeBottom.style.background = 'linear-gradient(to top, var(--blok-popover-bg), transparent)';
     scrollHazeBottom.style.opacity = '0';
 
-    let contextLabel: HTMLElement | undefined;
+    const contextLabel = this.params.contextLabel !== undefined
+      ? (() => {
+        const el = document.createElement('div');
 
-    if (this.params.contextLabel !== undefined) {
-      contextLabel = document.createElement('div');
-      contextLabel.className = 'shrink-0 pl-2 pr-3 pt-1 pb-1.5 text-xs font-medium text-gray-text/50 cursor-default bg-popover-bg';
-      contextLabel.setAttribute('role', 'status');
-      contextLabel.setAttribute('data-blok-testid', 'popover-context-label');
-      contextLabel.textContent = this.params.contextLabel;
-    }
+        el.className = 'shrink-0 pl-2 pr-3 pt-1 pb-1.5 text-xs font-medium text-gray-text/50 cursor-default bg-popover-bg';
+        el.setAttribute('role', 'status');
+        el.setAttribute('data-blok-testid', 'popover-context-label');
+        el.textContent = this.params.contextLabel;
+
+        return el;
+      })()
+      : undefined;
 
     // Assemble DOM structure
     popoverContainer.appendChild(nothingFoundMessage);

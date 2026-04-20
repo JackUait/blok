@@ -311,10 +311,8 @@ export class PopoverDesktop extends PopoverAbstract {
     // the synthesized hit test (which may run after layout/paint) is
     // covered while genuine async hover events still work.
     this.suppressSyncHover = true;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        this.suppressSyncHover = false;
-      });
+    queueMicrotask(() => {
+      this.suppressSyncHover = false;
     });
     super.show();
     this.flipper?.activate(this.flippableElements);

@@ -79,3 +79,47 @@ describe('renderOverlay crop button', () => {
     expect(onCrop).toHaveBeenCalled();
   });
 });
+
+describe('ImageTool crop lifecycle', () => {
+  it('enterCrop swaps overlay for CropEditor; applyCrop writes data', () => {
+    const dispatch = vi.fn();
+    const block = { id: 'b1', dispatchChange: dispatch } as unknown as BlockAPI;
+    const tool = new ImageTool({
+      api: mockApi, block, config: {} as ImageConfig,
+      data: { url: 'x.png' } as ImageData, readOnly: false,
+    } as BlockToolConstructorOptions<ImageData, ImageConfig>);
+    const root = tool.render();
+    document.body.appendChild(root);
+
+    const cropBtn = root.querySelector<HTMLButtonElement>('[data-action="crop"]');
+    expect(cropBtn).not.toBeNull();
+    cropBtn!.click();
+
+    expect(root.querySelector('.blok-image-crop-editor')).not.toBeNull();
+    expect(root.querySelector('[data-role="image-overlay"]')).toBeNull();
+
+    const done = root.querySelector<HTMLButtonElement>('[data-action="done"]');
+    expect(done).not.toBeNull();
+    done!.click();
+
+    expect(tool.save().crop).toBeUndefined();
+    expect(root.querySelector('.blok-image-crop-editor')).toBeNull();
+    expect(root.querySelector('[data-role="image-overlay"]')).not.toBeNull();
+  });
+
+  it('cancelCrop restores without data change', () => {
+    const block = { id: 'b1', dispatchChange: vi.fn() } as unknown as BlockAPI;
+    const tool = new ImageTool({
+      api: mockApi, block, config: {} as ImageConfig,
+      data: { url: 'x.png', crop: { x: 5, y: 5, w: 90, h: 90 } } as ImageData,
+      readOnly: false,
+    } as BlockToolConstructorOptions<ImageData, ImageConfig>);
+    const root = tool.render();
+    document.body.appendChild(root);
+    const crop = root.querySelector<HTMLButtonElement>('[data-action="crop"]');
+    crop!.click();
+    const cancel = root.querySelector<HTMLButtonElement>('[data-action="cancel"]');
+    cancel!.click();
+    expect(tool.save().crop).toEqual({ x: 5, y: 5, w: 90, h: 90 });
+  });
+});

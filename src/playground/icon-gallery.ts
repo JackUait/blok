@@ -209,14 +209,14 @@ function openLightbox(entries: IconEntry[], startIndex: number): void {
   lightbox.appendChild(content);
   document.body.appendChild(lightbox);
 
-  let closing = false;
+  const state = { closing: false };
 
   const close = (): void => {
-    if (closing) {
+    if (state.closing) {
       return;
     }
 
-    closing = true;
+    state.closing = true;
     document.removeEventListener('keydown', onKeydown);
     lightbox.classList.add('icon-lightbox--closing');
 

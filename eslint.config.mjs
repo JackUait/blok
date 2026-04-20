@@ -1084,6 +1084,8 @@ export default defineConfig(
       'public/assets/**',
       '**/public/assets/**',
       'storybook-static/**',
+      'test-results/**',
+      'playwright-report/**',
       'docs/**',
       '.worktrees/**',
     ],

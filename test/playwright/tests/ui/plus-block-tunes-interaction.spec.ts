@@ -77,12 +77,16 @@ test.describe('plus button after block tunes', () => {
 
     await expect(blockTunesPopover).toBeVisible();
 
+    // The plus button is intentionally hidden while the tunes popover is open.
+    // Close the popover first via Escape, then click the plus to open the toolbox.
+    await page.keyboard.press('Escape');
+    await expect(blockTunesPopover).toBeHidden();
+
     const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
 
     await expect(plusButton).toBeVisible();
     await plusButton.click();
 
-    await expect(blockTunesPopover).toBeHidden();
     await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
   });
 });

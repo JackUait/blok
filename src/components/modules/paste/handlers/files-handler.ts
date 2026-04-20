@@ -49,15 +49,42 @@ export class FilesHandler extends BasePasteHandler implements PasteHandler {
       return false;
     }
 
-    const files = data.files;
+    const files = this.extractFiles(data);
 
-    if (!files || files.length === 0) {
+    if (files.length === 0) {
       return false;
     }
 
     await this.processFiles(files);
 
     return true;
+  }
+
+  /**
+   * Extract File objects from DataTransfer. Some platforms leave
+   * `dataTransfer.files` empty but expose files through `dataTransfer.items`
+   * where each entry has kind === 'file'. Fall back to items when needed.
+   */
+  private extractFiles(dataTransfer: DataTransfer): File[] {
+    const collected: File[] = [];
+
+    if (dataTransfer.files && dataTransfer.files.length > 0) {
+      return Array.from(dataTransfer.files);
+    }
+
+    if (dataTransfer.items) {
+      for (const item of Array.from(dataTransfer.items)) {
+        if (item.kind === 'file') {
+          const file = item.getAsFile();
+
+          if (file !== null) {
+            collected.push(file);
+          }
+        }
+      }
+    }
+
+    return collected;
   }
 
   /**
@@ -72,6 +99,14 @@ export class FilesHandler extends BasePasteHandler implements PasteHandler {
 
     if (dataTransfer.files?.length) {
       return true;
+    }
+
+    if (dataTransfer.items) {
+      for (const item of Array.from(dataTransfer.items)) {
+        if (item.kind === 'file') {
+          return true;
+        }
+      }
     }
 
     try {
@@ -90,7 +125,7 @@ export class FilesHandler extends BasePasteHandler implements PasteHandler {
   /**
    * Get files from data transfer object and insert related Tools.
    */
-  private async processFiles(items: FileList): Promise<void> {
+  private async processFiles(items: FileList | File[]): Promise<void> {
     const { BlockManager } = this.Blok;
 
     const fileProcessingResults = await Promise.all(
@@ -113,7 +148,8 @@ export class FilesHandler extends BasePasteHandler implements PasteHandler {
    * Get information about file and find Tool to handle it.
    */
   private async processFile(file: File): Promise<ProcessedFile | undefined> {
-    const toolName = this.toolRegistry.findToolForFile(file);
+    const preferredToolName = this.Blok.BlockManager.currentBlock?.name;
+    const toolName = this.toolRegistry.findToolForFile(file, preferredToolName);
 
     if (!toolName) {
       return;

@@ -197,23 +197,33 @@ export class ToolRegistry {
   /**
    * Find tool for a given file.
    */
-  public findToolForFile(file: File): string | undefined {
+  public findToolForFile(file: File, preferredToolName?: string): string | undefined {
     const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
+
+    const matches = (config: FilesSubstitution): boolean => {
+      const [fileType, fileSubtype] = file.type.split('/');
+
+      const foundExt = config.extensions.find((ext) => ext.toLowerCase() === extension);
+      const foundMimeType = config.mimeTypes.find((mime) => {
+        const [type, subtype] = mime.split('/');
+
+        return type === fileType && (subtype === fileSubtype || subtype === '*');
+      });
+
+      return foundExt !== undefined || foundMimeType !== undefined;
+    };
+
+    if (preferredToolName !== undefined) {
+      const preferredConfig = this.toolsFiles[preferredToolName];
+
+      if (preferredConfig !== undefined && matches(preferredConfig)) {
+        return preferredToolName;
+      }
+    }
 
     const foundConfig = Object
       .entries(this.toolsFiles)
-      .find(([, { mimeTypes, extensions }]) => {
-        const [fileType, fileSubtype] = file.type.split('/');
-
-        const foundExt = extensions.find((ext) => ext.toLowerCase() === extension);
-        const foundMimeType = mimeTypes.find((mime) => {
-          const [type, subtype] = mime.split('/');
-
-          return type === fileType && (subtype === fileSubtype || subtype === '*');
-        });
-
-        return foundExt !== undefined || foundMimeType !== undefined;
-      });
+      .find(([, config]) => matches(config));
 
     return foundConfig?.[0];
   }

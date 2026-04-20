@@ -1016,8 +1016,8 @@ test.describe('modules/selection', () => {
 
     await expect(toolbox).toHaveAttribute('data-blok-popover-opened', 'true');
 
-    // Click plus button again to close toolbox
-    await plusButton.click();
+    // Close toolbox (plus button is intentionally hidden while toolbox is open)
+    await page.keyboard.press('Escape');
 
     // Wait for toolbox to close
     await expect(toolbox).not.toHaveAttribute('data-blok-popover-opened', 'true');

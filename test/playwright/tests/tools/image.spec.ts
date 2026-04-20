@@ -71,10 +71,10 @@ test('inserts image via slash menu and embeds URL', async ({ page }) => {
   await expect(imageBlock).toBeVisible();
 
   await imageBlock.locator('[data-tab="embed"]').click();
-  await imageBlock.getByPlaceholder('Paste image URL').fill(SAMPLE_IMAGE_URL);
+  await imageBlock.getByPlaceholder('Paste an image URL…').fill(SAMPLE_IMAGE_URL);
   await imageBlock.locator('[data-action="submit-url"]').click();
 
-  await expect(imageBlock.getByRole('img')).toBeVisible();
+  await expect(imageBlock).toHaveAttribute('data-state', 'rendered');
 });
 
 test('clicking image opens lightbox; Escape closes it', async ({ page }) => {
@@ -85,7 +85,7 @@ test('clicking image opens lightbox; Escape closes it', async ({ page }) => {
   });
 
   const imageBlock = page.locator(IMAGE_BLOCK_SELECTOR);
-  const imageEl = imageBlock.getByRole('img');
+  const imageEl = imageBlock.locator('img[alt="pic"]');
 
   await expect(imageEl).toBeVisible();
   await imageEl.click();

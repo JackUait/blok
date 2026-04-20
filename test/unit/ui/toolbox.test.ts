@@ -317,7 +317,7 @@ describe('Toolbox', () => {
       );
     });
 
-    it('should pass minWidth of 250px to the popover', () => {
+    it('should pass minWidth of 220px to the popover', () => {
       new Toolbox({
         api: mocks.api,
         tools: mocks.tools,
@@ -325,7 +325,7 @@ describe('Toolbox', () => {
         i18n: mockI18n,
       });
 
-      expect(lastPopoverParams.value).toHaveProperty('minWidth', '250px');
+      expect(lastPopoverParams.value).toHaveProperty('minWidth', '220px');
     });
 
     it('should not pass scopeElement to the popover so it defaults to document.body', () => {

@@ -39,6 +39,13 @@
   max-width: 100%;
   max-height: 100%;
   line-height: 0;
+}
+
+/* Shape-mask trick (box-shadow: 0 0 0 9999px) only runs for circle/ellipse —
+   clip at frame so the huge shadow doesn't leak. Rect shape has no such
+   shadow, so no clipping; edge handles can safely straddle the rect edge. */
+.blok-image-crop-editor__frame:has(.blok-image-crop-editor__rect[data-shape="circle"]),
+.blok-image-crop-editor__frame:has(.blok-image-crop-editor__rect[data-shape="ellipse"]) {
   overflow: hidden;
 }
 
@@ -162,12 +169,23 @@
   width: 18px;
   height: 18px;
   transform: translate(-50%, -50%);
+  transition: transform 120ms ease, filter 120ms ease;
   filter:
     drop-shadow(1px 0 0 rgba(0, 0, 0, 0.55))
     drop-shadow(-1px 0 0 rgba(0, 0, 0, 0.55))
     drop-shadow(0 1px 0 rgba(0, 0, 0, 0.55))
     drop-shadow(0 -1px 0 rgba(0, 0, 0, 0.55))
     drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
+}
+
+.blok-image-crop-editor__handle--corner:hover {
+  transform: translate(-50%, -50%) scale(1.18);
+  filter:
+    drop-shadow(1px 0 0 rgba(0, 0, 0, 0.72))
+    drop-shadow(-1px 0 0 rgba(0, 0, 0, 0.72))
+    drop-shadow(0 1px 0 rgba(0, 0, 0, 0.72))
+    drop-shadow(0 -1px 0 rgba(0, 0, 0, 0.72))
+    drop-shadow(0 2px 8px rgba(0, 0, 0, 0.6));
 }
 
 .blok-image-crop-editor__handle-stroke {
@@ -179,17 +197,17 @@
    inner (vertex) ends square so the union reads as one continuous L shape.
    Parent filter: drop-shadow paints a single outline around the union.
    Hitbox is 18×18, vertex at (9,9) relative to the hugged rect corner. */
-.blok-image-crop-editor__handle--nw .blok-image-crop-editor__handle-stroke--a { top: 8px; left: 8px; width: 13px; height: 3px; border-radius: 0 1.5px 1.5px 0; }
-.blok-image-crop-editor__handle--nw .blok-image-crop-editor__handle-stroke--b { top: 8px; left: 8px; width: 3px; height: 13px; border-radius: 0 0 1.5px 1.5px; }
+.blok-image-crop-editor__handle--nw .blok-image-crop-editor__handle-stroke--a { top: 7px; left: 7px; width: 13px; height: 3px; border-radius: 0 1.5px 1.5px 0; }
+.blok-image-crop-editor__handle--nw .blok-image-crop-editor__handle-stroke--b { top: 7px; left: 7px; width: 3px; height: 13px; border-radius: 0 0 1.5px 1.5px; }
 
-.blok-image-crop-editor__handle--ne .blok-image-crop-editor__handle-stroke--a { top: 8px; right: 8px; width: 13px; height: 3px; border-radius: 1.5px 0 0 1.5px; }
-.blok-image-crop-editor__handle--ne .blok-image-crop-editor__handle-stroke--b { top: 8px; right: 8px; width: 3px; height: 13px; border-radius: 0 0 1.5px 1.5px; }
+.blok-image-crop-editor__handle--ne .blok-image-crop-editor__handle-stroke--a { top: 7px; right: 7px; width: 13px; height: 3px; border-radius: 1.5px 0 0 1.5px; }
+.blok-image-crop-editor__handle--ne .blok-image-crop-editor__handle-stroke--b { top: 7px; right: 7px; width: 3px; height: 13px; border-radius: 0 0 1.5px 1.5px; }
 
-.blok-image-crop-editor__handle--se .blok-image-crop-editor__handle-stroke--a { bottom: 8px; right: 8px; width: 13px; height: 3px; border-radius: 1.5px 0 0 1.5px; }
-.blok-image-crop-editor__handle--se .blok-image-crop-editor__handle-stroke--b { bottom: 8px; right: 8px; width: 3px; height: 13px; border-radius: 1.5px 1.5px 0 0; }
+.blok-image-crop-editor__handle--se .blok-image-crop-editor__handle-stroke--a { bottom: 7px; right: 7px; width: 13px; height: 3px; border-radius: 1.5px 0 0 1.5px; }
+.blok-image-crop-editor__handle--se .blok-image-crop-editor__handle-stroke--b { bottom: 7px; right: 7px; width: 3px; height: 13px; border-radius: 1.5px 1.5px 0 0; }
 
-.blok-image-crop-editor__handle--sw .blok-image-crop-editor__handle-stroke--a { bottom: 8px; left: 8px; width: 13px; height: 3px; border-radius: 0 1.5px 1.5px 0; }
-.blok-image-crop-editor__handle--sw .blok-image-crop-editor__handle-stroke--b { bottom: 8px; left: 8px; width: 3px; height: 13px; border-radius: 1.5px 1.5px 0 0; }
+.blok-image-crop-editor__handle--sw .blok-image-crop-editor__handle-stroke--a { bottom: 7px; left: 7px; width: 13px; height: 3px; border-radius: 0 1.5px 1.5px 0; }
+.blok-image-crop-editor__handle--sw .blok-image-crop-editor__handle-stroke--b { bottom: 7px; left: 7px; width: 3px; height: 13px; border-radius: 1.5px 1.5px 0 0; }
 
 .blok-image-crop-editor__handle--edge {
   background: #fff;
@@ -228,11 +246,13 @@
 .blok-image-crop-editor__handle--se { top: 100%; left: 100%; cursor: nwse-resize; }
 .blok-image-crop-editor__handle--sw { top: 100%; left: 0;    cursor: nesw-resize; }
 
-/* Edge positions */
-.blok-image-crop-editor__handle--n { top: 0;    left: 50%;  cursor: ns-resize; }
-.blok-image-crop-editor__handle--e { top: 50%;  left: 100%; cursor: ew-resize; }
-.blok-image-crop-editor__handle--s { top: 100%; left: 50%;  cursor: ns-resize; }
-.blok-image-crop-editor__handle--w { top: 50%;  left: 0;    cursor: ew-resize; }
+/* Edge positions — anchor on rect outer stroke center (0.5px outward from
+   content edge, since box-shadow: 0 0 0 1px paints a 1px ring whose center
+   sits at content-edge − 0.5px). */
+.blok-image-crop-editor__handle--n { top: -0.5px;               left: 50%;                  cursor: ns-resize; }
+.blok-image-crop-editor__handle--e { top: 50%;                  left: calc(100% + 0.5px);   cursor: ew-resize; }
+.blok-image-crop-editor__handle--s { top: calc(100% + 0.5px);   left: 50%;                  cursor: ns-resize; }
+.blok-image-crop-editor__handle--w { top: 50%;                  left: -0.5px;               cursor: ew-resize; }
 
 /* Toolbar footer */
 .blok-image-crop-editor__toolbar {

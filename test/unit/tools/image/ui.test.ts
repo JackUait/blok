@@ -312,6 +312,22 @@ describe('renderOverlay', () => {
       expect(tooltip.hide).toHaveBeenCalled();
     });
 
+    it('marks image tool root with data-align-open while popover is open so overlay stays visible', () => {
+      document.body.innerHTML = '';
+      const root = document.createElement('div');
+      root.setAttribute('data-blok-tool', 'image');
+      const overlay = renderOverlay(makeOverlayOpts());
+      root.appendChild(overlay);
+      document.body.appendChild(root);
+      const trigger = overlay.querySelector<HTMLButtonElement>('[data-action="align-trigger"]');
+      if (!trigger) throw new Error('trigger missing');
+      expect(root.getAttribute('data-align-open')).not.toBe('true');
+      trigger.click();
+      expect(root.getAttribute('data-align-open')).toBe('true');
+      trigger.click();
+      expect(root.getAttribute('data-align-open')).not.toBe('true');
+    });
+
     it('marks popover with data-blok-popover-opened while open so hover on trigger suppresses tooltip', () => {
       const overlay = renderOverlay(makeOverlayOpts());
       document.body.appendChild(overlay);

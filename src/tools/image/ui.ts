@@ -312,10 +312,13 @@ function appendAlignmentControl(root: HTMLElement, opts: OverlayOptions): void {
     closePopover();
   };
 
+  const imageRoot = (): HTMLElement | null => wrapper.closest<HTMLElement>('[data-blok-tool="image"]');
+
   const openPopover = (): void => {
     if (!popover.hidden) return;
     popover.hidden = false;
     popover.setAttribute('data-blok-popover-opened', 'true');
+    imageRoot()?.setAttribute('data-align-open', 'true');
     trigger.setAttribute('aria-expanded', 'true');
     tooltipHide();
     document.addEventListener('keydown', onKeyDown);
@@ -326,6 +329,7 @@ function appendAlignmentControl(root: HTMLElement, opts: OverlayOptions): void {
     if (popover.hidden) return;
     popover.hidden = true;
     popover.removeAttribute('data-blok-popover-opened');
+    imageRoot()?.removeAttribute('data-align-open');
     trigger.setAttribute('aria-expanded', 'false');
     document.removeEventListener('keydown', onKeyDown);
     document.removeEventListener('mousedown', onOutside);

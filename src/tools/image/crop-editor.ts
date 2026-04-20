@@ -19,12 +19,25 @@ const RATIOS: { label: string; value: number | null }[] = [
   { label: 'Original', value: 0 },
 ];
 
+function assertEl<T extends Element>(node: T | null, what: string): T {
+  if (!node) throw new Error(`CropEditor: missing ${what}`);
+  return node;
+}
+
+function ratioDataValue(v: number | null): string {
+  if (v === null) return 'free';
+  if (v === 0) return 'original';
+  return String(v);
+}
+
 export function mountCropEditor(
   container: HTMLElement,
   opts: CropEditorOptions
 ): () => void {
-  let rect: ImageCrop = opts.initial ? clampRect(opts.initial) : { ...FULL_RECT };
-  let ratio: number | null = null;
+  const state = {
+    rect: opts.initial ? clampRect(opts.initial) : { ...FULL_RECT },
+    ratio: null as number | null,
+  };
 
   const root = document.createElement('div');
   root.className = 'blok-image-crop-editor';
@@ -52,7 +65,7 @@ export function mountCropEditor(
   const handleEls: Record<Handle, HTMLElement> = {} as Record<Handle, HTMLElement>;
   for (const h of HANDLES) {
     const el = document.createElement('span');
-    el.dataset.handle = h;
+    el.setAttribute('data-handle', h);
     el.className = `blok-image-crop-editor__handle blok-image-crop-editor__handle--${h}`;
     rectEl.appendChild(el);
     handleEls[h] = el;
@@ -75,10 +88,11 @@ export function mountCropEditor(
   root.appendChild(toolbar);
   container.appendChild(root);
 
-  const ratioMenu = toolbar.querySelector<HTMLElement>('[data-role="ratio-menu"]')!;
-  const ratioTrigger = toolbar.querySelector<HTMLButtonElement>('[data-action="ratio"]')!;
+  const ratioMenu = assertEl(toolbar.querySelector<HTMLElement>('[data-role="ratio-menu"]'), 'ratio-menu');
+  const ratioTrigger = assertEl(toolbar.querySelector<HTMLButtonElement>('[data-action="ratio"]'), 'ratio trigger');
 
   function paint(): void {
+    const { rect } = state;
     rectEl.style.left = `${rect.x}%`;
     rectEl.style.top = `${rect.y}%`;
     rectEl.style.width = `${rect.w}%`;
@@ -95,7 +109,7 @@ export function mountCropEditor(
   paint();
 
   function setRect(next: ImageCrop): void {
-    rect = applyRatio(clampRect(next), ratio);
+    state.rect = applyRatio(clampRect(next), state.ratio);
     paint();
   }
 
@@ -104,11 +118,11 @@ export function mountCropEditor(
       const n = source.naturalWidth && source.naturalHeight
         ? source.naturalWidth / source.naturalHeight
         : null;
-      ratio = n;
+      state.ratio = n;
     } else {
-      ratio = next;
+      state.ratio = next;
     }
-    setRect(rect);
+    setRect(state.rect);
   }
 
   for (const h of HANDLES) {
@@ -131,7 +145,7 @@ export function mountCropEditor(
   function startHandleDrag(ev: PointerEvent, h: Handle): void {
     ev.preventDefault();
     ev.stopPropagation();
-    const start = { ...rect };
+    const start = { ...state.rect };
     const origin = stagePct(ev.clientX, ev.clientY);
     const move = (m: PointerEvent): void => {
       const p = stagePct(m.clientX, m.clientY);
@@ -147,7 +161,7 @@ export function mountCropEditor(
 
   function startBodyDrag(ev: PointerEvent): void {
     ev.preventDefault();
-    const start = { ...rect };
+    const start = { ...state.rect };
     const origin = stagePct(ev.clientX, ev.clientY);
     const move = (m: PointerEvent): void => {
       const p = stagePct(m.clientX, m.clientY);
@@ -176,7 +190,7 @@ export function mountCropEditor(
       btn.type = 'button';
       btn.setAttribute('role', 'menuitem');
       btn.textContent = r.label;
-      btn.dataset.ratio = r.value === null ? 'free' : r.value === 0 ? 'original' : String(r.value);
+      btn.setAttribute('data-ratio', ratioDataValue(r.value));
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         setRatio(r.value);
@@ -189,14 +203,17 @@ export function mountCropEditor(
   }
 
   function applyDone(): void {
-    opts.onApply(isFullRect(rect) ? null : rect);
+    opts.onApply(isFullRect(state.rect) ? null : state.rect);
   }
-  toolbar.querySelector<HTMLButtonElement>('[data-action="done"]')!
-    .addEventListener('click', applyDone);
-  toolbar.querySelector<HTMLButtonElement>('[data-action="cancel"]')!
-    .addEventListener('click', () => opts.onCancel());
-  toolbar.querySelector<HTMLButtonElement>('[data-action="reset"]')!
-    .addEventListener('click', () => setRect({ ...FULL_RECT }));
+
+  const doneBtn = assertEl(toolbar.querySelector<HTMLButtonElement>('[data-action="done"]'), 'done button');
+  doneBtn.addEventListener('click', applyDone);
+
+  const cancelBtn = assertEl(toolbar.querySelector<HTMLButtonElement>('[data-action="cancel"]'), 'cancel button');
+  cancelBtn.addEventListener('click', () => opts.onCancel());
+
+  const resetBtn = assertEl(toolbar.querySelector<HTMLButtonElement>('[data-action="reset"]'), 'reset button');
+  resetBtn.addEventListener('click', () => setRect({ ...FULL_RECT }));
 
   const onKey = (e: KeyboardEvent): void => {
     if (e.key === 'Escape') { e.preventDefault(); opts.onCancel(); }

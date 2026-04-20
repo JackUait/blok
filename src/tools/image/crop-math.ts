@@ -10,11 +10,11 @@ export function isFullRect(r: ImageCrop): boolean {
 }
 
 export function clampRect(r: ImageCrop): ImageCrop {
-  let { x, y, w, h } = r;
-  w = Math.max(MIN, Math.min(100, w));
-  h = Math.max(MIN, Math.min(100, h));
-  x = Math.max(0, Math.min(100 - w, x));
-  y = Math.max(0, Math.min(100 - h, y));
+  const { x: rx, y: ry, w: rw, h: rh } = r;
+  const w = Math.max(MIN, Math.min(100, rw));
+  const h = Math.max(MIN, Math.min(100, rh));
+  const x = Math.max(0, Math.min(100 - w, rx));
+  const y = Math.max(0, Math.min(100 - h, ry));
   return { x, y, w, h };
 }
 
@@ -24,11 +24,15 @@ export function resizeRect(
   dxPct: number,
   dyPct: number
 ): ImageCrop {
-  let { x, y, w, h } = start;
-  if (handle.includes('w')) { x += dxPct; w -= dxPct; }
-  if (handle.includes('e')) { w += dxPct; }
-  if (handle.includes('n')) { y += dyPct; h -= dyPct; }
-  if (handle.includes('s')) { h += dyPct; }
+  const { x: sx, y: sy, w: sw, h: sh } = start;
+  const hasW = handle.includes('w');
+  const hasE = handle.includes('e');
+  const hasN = handle.includes('n');
+  const hasS = handle.includes('s');
+  const x = hasW ? sx + dxPct : sx;
+  const y = hasN ? sy + dyPct : sy;
+  const w = sw + (hasE ? dxPct : 0) - (hasW ? dxPct : 0);
+  const h = sh + (hasS ? dyPct : 0) - (hasN ? dyPct : 0);
   return clampRect({ x, y, w, h });
 }
 
@@ -36,11 +40,9 @@ export function applyRatio(rect: ImageCrop, ratio: number | null): ImageCrop {
   if (ratio === null || !Number.isFinite(ratio) || ratio <= 0) return rect;
   const cx = rect.x + rect.w / 2;
   const cy = rect.y + rect.h / 2;
-  let w = rect.w;
-  let h = w / ratio;
-  if (h > rect.h) {
-    h = rect.h;
-    w = h * ratio;
-  }
+  const baseW = rect.w;
+  const baseH = baseW / ratio;
+  const w = baseH > rect.h ? rect.h * ratio : baseW;
+  const h = baseH > rect.h ? rect.h : baseH;
   return clampRect({ x: cx - w / 2, y: cy - h / 2, w, h });
 }

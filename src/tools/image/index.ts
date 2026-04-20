@@ -25,7 +25,7 @@ import { ImageError } from './errors';
 import { attachResizeHandle, type ResizeEdge } from './resizer';
 import {
   openLightbox,
-  renderCaption,
+  renderCaptionRow,
   renderImage,
   renderOverlay,
 } from './ui';
@@ -168,7 +168,7 @@ export class ImageTool implements BlockTool {
       { value: 'lg', title: 'Large' },
       { value: 'full', title: 'Full' },
     ];
-    const iconDownload = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>';
+    const iconDownload = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20" aria-hidden="true" focusable="false"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>';
     return [
       {
         icon: IconImage,
@@ -307,13 +307,11 @@ export class ImageTool implements BlockTool {
         state: {
           alignment: this.data.alignment ?? 'center',
           captionVisible: this.data.captionVisible !== false,
-          hasAlt: Boolean(this.data.alt),
           size: this.data.size ?? 'md',
         },
         onAlign: (next) => this.setAlignment(next),
         onSize: (next) => this.setSize(next),
         onReplace: () => this.transitionToEmpty(),
-        onAlt: () => this.promptAlt(),
         onDelete: () => this.deleteBlock(),
         onDownload: () => this.download(),
         onFullscreen: () => openLightbox({ url: this.data.url, alt: this.data.alt }),
@@ -330,19 +328,24 @@ export class ImageTool implements BlockTool {
     }
 
     const placeholder = this.config.captionPlaceholder ?? DEFAULT_CAPTION_PLACEHOLDER;
-    const caption = renderCaption({
-      value: this.data.caption ?? '',
-      placeholder,
-      readOnly: this.readOnly,
+    const captionRow = renderCaptionRow({
+      caption: {
+        value: this.data.caption ?? '',
+        placeholder,
+        readOnly: this.readOnly,
+      },
+      onAlt: this.readOnly ? undefined : () => this.promptAlt(),
+      hasAlt: Boolean(this.data.alt),
     });
-    caption.addEventListener('blur', () => {
-      const next = caption.textContent ?? '';
+    const captionEl = captionRow.querySelector<HTMLElement>('.blok-image-caption');
+    captionEl?.addEventListener('blur', () => {
+      const next = captionEl.textContent ?? '';
       if (next !== this.data.caption) {
         this.data.caption = next;
         this.block.dispatchChange();
       }
     });
-    figure.appendChild(caption);
+    figure.appendChild(captionRow);
 
     this.root.appendChild(figure);
 

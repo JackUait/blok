@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { renderImage, renderCaption, openLightbox } from '../../../../src/tools/image/ui';
+import { renderImage, renderCaption, renderCaptionRow, openLightbox } from '../../../../src/tools/image/ui';
 
 describe('renderImage', () => {
   it('returns figure with <img> carrying url and alt; width is set on figure so container fits image', () => {
@@ -70,6 +70,43 @@ describe('renderCaption', () => {
   });
 });
 
+describe('renderCaptionRow', () => {
+  const baseCaption = { value: '', placeholder: 'p', readOnly: false };
+
+  it('wraps caption with class blok-image-caption-row and contains the caption element', () => {
+    const row = renderCaptionRow({ caption: baseCaption, onAlt: () => undefined });
+    expect(row.classList.contains('blok-image-caption-row')).toBe(true);
+    expect(row.querySelector('.blok-image-caption')).not.toBeNull();
+  });
+
+  it('renders alt button with text label "Alt" when onAlt is provided', () => {
+    const row = renderCaptionRow({ caption: baseCaption, onAlt: () => undefined });
+    const btn = row.querySelector<HTMLButtonElement>('[data-action="alt-edit"]');
+    if (!btn) throw new Error('alt button missing');
+    expect(btn.textContent).toBe('Alt');
+    expect(btn.tagName).toBe('BUTTON');
+  });
+
+  it('omits alt button when onAlt is not provided (readOnly)', () => {
+    const row = renderCaptionRow({ caption: { ...baseCaption, readOnly: true } });
+    expect(row.querySelector('[data-action="alt-edit"]')).toBeNull();
+  });
+
+  it('clicking the alt button invokes onAlt', () => {
+    let calls = 0;
+    const row = renderCaptionRow({ caption: baseCaption, onAlt: () => { calls += 1; } });
+    row.querySelector<HTMLButtonElement>('[data-action="alt-edit"]')?.click();
+    expect(calls).toBe(1);
+  });
+
+  it('alt button reflects hasAlt via aria-pressed so styling can show current state', () => {
+    const onRow = renderCaptionRow({ caption: baseCaption, onAlt: () => undefined, hasAlt: true });
+    const offRow = renderCaptionRow({ caption: baseCaption, onAlt: () => undefined, hasAlt: false });
+    expect(onRow.querySelector('[data-action="alt-edit"]')?.getAttribute('aria-pressed')).toBe('true');
+    expect(offRow.querySelector('[data-action="alt-edit"]')?.getAttribute('aria-pressed')).toBe('false');
+  });
+});
+
 describe('openLightbox', () => {
   it('appends a dialog to document.body and removes it on close', () => {
     const close = openLightbox({ url: 'https://x/y.png', alt: 'pic' });
@@ -104,11 +141,10 @@ import { vi } from 'vitest';
 
 const noop = (): void => undefined;
 const makeOverlayOpts = (over: Partial<Parameters<typeof renderOverlay>[0]> = {}) => ({
-  state: { alignment: 'center' as const, captionVisible: true, hasAlt: false, size: 'md' as const },
+  state: { alignment: 'center' as const, captionVisible: true, size: 'md' as const },
   onAlign: noop,
   onSize: noop,
   onReplace: noop,
-  onAlt: noop,
   onDelete: noop,
   onDownload: noop,
   onFullscreen: noop,
@@ -122,12 +158,16 @@ describe('renderOverlay', () => {
     const overlay = renderOverlay(makeOverlayOpts());
     expect(overlay.querySelector('[data-action="align-trigger"]')).not.toBeNull();
     expect(overlay.querySelector('[data-action="replace"]')).not.toBeNull();
-    expect(overlay.querySelector('[data-action="alt"]')).not.toBeNull();
     expect(overlay.querySelector('[data-action="delete"]')).not.toBeNull();
     expect(overlay.querySelector('[data-action="download"]')).not.toBeNull();
     expect(overlay.querySelector('[data-action="fullscreen"]')).not.toBeNull();
     expect(overlay.querySelector('[data-action="more"]')).not.toBeNull();
     expect(overlay.querySelector('[data-action="caption-toggle"]')).not.toBeNull();
+  });
+
+  it('does not render alt button — it lives next to the caption', () => {
+    const overlay = renderOverlay(makeOverlayOpts());
+    expect(overlay.querySelector('[data-action="alt"]')).toBeNull();
   });
 
   it('renders a single alignment trigger — no inline pill buttons', () => {
@@ -149,7 +189,7 @@ describe('renderOverlay', () => {
   });
 
   it('trigger reflects current alignment via data-current', () => {
-    const overlay = renderOverlay(makeOverlayOpts({ state: { alignment: 'right', captionVisible: true, hasAlt: false, size: 'md' } }));
+    const overlay = renderOverlay(makeOverlayOpts({ state: { alignment: 'right', captionVisible: true, size: 'md' } }));
     const trigger = overlay.querySelector<HTMLButtonElement>('[data-action="align-trigger"]');
     if (!trigger) throw new Error('trigger missing');
     expect(trigger.getAttribute('data-current')).toBe('right');
@@ -171,7 +211,7 @@ describe('renderOverlay', () => {
   });
 
   it('aria-pressed inside popover reflects current alignment', () => {
-    const overlay = renderOverlay(makeOverlayOpts({ state: { alignment: 'right', captionVisible: true, hasAlt: false, size: 'md' } }));
+    const overlay = renderOverlay(makeOverlayOpts({ state: { alignment: 'right', captionVisible: true, size: 'md' } }));
     overlay.querySelector<HTMLButtonElement>('[data-action="align-trigger"]')?.click();
     const right = overlay.querySelector<HTMLButtonElement>('[data-action="align-right"]');
     const left = overlay.querySelector<HTMLButtonElement>('[data-action="align-left"]');

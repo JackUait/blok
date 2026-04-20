@@ -920,6 +920,13 @@
   --blok-radius-xs: 0.25rem;
   --blok-radius-sm: 3px;
   --blok-radius-md: 6px;
+  --blok-radius-pill: 999px;
+
+  /* Image resize-handle surface colors (Notion-style dark pill + white rim). */
+  --blok-handle-bg-default: rgba(15, 15, 15, 0.6);
+  --blok-handle-bg-hover: rgba(15, 15, 15, 0.85);
+  --blok-handle-bg-active: rgba(15, 15, 15, 1);
+  --blok-handle-fg-default: rgba(255, 255, 255, 0.85);
 
   /* Spacing scale — 4px base, aligned with Tailwind's default spacing scale. */
   --blok-space-0-5: 2px;
@@ -3126,6 +3133,45 @@
 }
 [data-blok-tool="image"][data-caption="off"] .blok-image-caption { display: none; }
 
+/* caption row — caption text + inline alt button revealed on hover */
+[data-blok-tool="image"] .blok-image-caption-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--blok-space-2);
+}
+[data-blok-tool="image"] .blok-image-caption-row .blok-image-caption {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+[data-blok-tool="image"] .blok-image-caption-row__alt {
+  flex: 0 0 auto;
+  margin-top: var(--blok-space-2);
+  padding: var(--blok-space-1) var(--blok-space-2);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--blok-text-tertiary);
+  background: transparent;
+  border: 1px solid var(--blok-border-primary);
+  border-radius: var(--blok-radius-sm);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+[data-blok-tool="image"] .blok-image-caption-row__alt:hover,
+[data-blok-tool="image"] .blok-image-caption-row__alt:focus-visible {
+  color: var(--blok-text-primary);
+  border-color: var(--blok-border-strong);
+}
+[data-blok-tool="image"] .blok-image-caption-row__alt[aria-pressed="true"] {
+  color: var(--blok-text-primary);
+}
+[data-blok-tool="image"]:hover .blok-image-caption-row__alt,
+[data-blok-tool="image"] .blok-image-caption-row__alt:focus-visible,
+[data-blok-tool="image"] .blok-image-caption:focus ~ .blok-image-caption-row__alt {
+  opacity: 1;
+}
+
 /* toolbar — dark glass surface, hairline ring for crisp edge against dark page bg. */
 [data-blok-tool="image"] .blok-image-toolbar {
   position: absolute;
@@ -3272,9 +3318,9 @@
   top: 50%;
   width: 6px;
   height: clamp(24px, 25%, 50px);
-  background: rgba(15, 15, 15, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.85);
-  border-radius: 999px;
+  background: var(--blok-handle-bg-default);
+  border: 1px solid var(--blok-handle-fg-default);
+  border-radius: var(--blok-radius-pill);
   cursor: ew-resize;
   opacity: 0;
   transform: translateY(-50%) scale(1);
@@ -3297,11 +3343,11 @@
   opacity: 1;
 }
 [data-blok-tool="image"] [data-role="resize-handle"]:hover {
-  background: rgba(15, 15, 15, 0.85);
+  background: var(--blok-handle-bg-hover);
   transform: translateY(-50%) scale(1.15);
 }
 [data-blok-tool="image"] [data-role="resize-handle"]:active {
-  background: rgba(15, 15, 15, 1);
+  background: var(--blok-handle-bg-active);
   transform: translateY(-50%) scale(1.15);
   transition-duration: 0s;
 }
@@ -3343,7 +3389,7 @@
 .blok-image-empty__chips { margin-left: auto; display: flex; gap: var(--blok-space-1-5); }
 .blok-image-empty__chip {
   font-size: 12px; padding: var(--blok-space-1-25) var(--blok-space-2-5);
-  border-radius: 999px;
+  border-radius: var(--blok-radius-pill);
   background: var(--blok-bg-primary);
   border: 1px solid var(--blok-border-primary);
   color: var(--blok-text-secondary);

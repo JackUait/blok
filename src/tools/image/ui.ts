@@ -59,6 +59,36 @@ export function renderCaption(opts: CaptionOptions): HTMLElement {
   return el;
 }
 
+export interface CaptionRowOptions {
+  caption: CaptionOptions;
+  onAlt?: () => void;
+  hasAlt?: boolean;
+}
+
+export function renderCaptionRow(opts: CaptionRowOptions): HTMLElement {
+  const row = document.createElement('div');
+  row.className = 'blok-image-caption-row';
+  row.appendChild(renderCaption(opts.caption));
+
+  if (opts.onAlt) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'blok-image-caption-row__alt';
+    btn.setAttribute('data-action', 'alt-edit');
+    btn.setAttribute('aria-label', 'Edit alt text');
+    btn.setAttribute('title', 'Edit alt text');
+    btn.setAttribute('aria-pressed', opts.hasAlt ? 'true' : 'false');
+    btn.textContent = 'Alt';
+    btn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      opts.onAlt?.();
+    });
+    row.appendChild(btn);
+  }
+
+  return row;
+}
+
 export interface LightboxOptions {
   url: string;
   alt?: string;
@@ -117,7 +147,6 @@ export function openLightbox(opts: LightboxOptions): () => void {
 export interface OverlayState {
   alignment: ImageAlignment;
   captionVisible: boolean;
-  hasAlt: boolean;
   size: ImageSize;
 }
 
@@ -126,7 +155,6 @@ export interface OverlayOptions {
   onAlign(next: ImageAlignment): void;
   onSize(next: ImageSize): void;
   onReplace(): void;
-  onAlt(): void;
   onDelete(): void;
   onDownload(): void;
   onFullscreen(): void;
@@ -155,13 +183,6 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
     onClick: opts.onToggleCaption,
   });
   appendSimpleButton(root, {
-    action: 'alt',
-    label: 'Edit alt text',
-    pressed: opts.state.hasAlt,
-    svg: '<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r="1.25"/>',
-    onClick: opts.onAlt,
-  });
-  appendSimpleButton(root, {
     action: 'replace',
     label: 'Replace image',
     svg: '<path d="m17 3 4 4-4 4"/><path d="M21 7H9"/><path d="m7 21-4-4 4-4"/><path d="M3 17h12"/>',
@@ -187,7 +208,7 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
   more.setAttribute('data-action', 'more');
   more.setAttribute('aria-label', 'More options');
   more.setAttribute('aria-haspopup', 'menu');
-  more.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.35"/><circle cx="12" cy="12" r="1.35"/><circle cx="19" cy="12" r="1.35"/></svg>';
+  more.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1.35"/><circle cx="12" cy="12" r="1.35"/><circle cx="19" cy="12" r="1.35"/></svg>';
   root.appendChild(more);
 
   // Delete is reachable from the popover; expose an invisible legacy button for consumers/tests.
@@ -288,7 +309,7 @@ function appendAlignmentControl(root: HTMLElement, opts: OverlayOptions): void {
 }
 
 function alignmentIconSvg(value: ImageAlignment): string {
-  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${ALIGNMENT_ICON[value]}</svg>`;
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${ALIGNMENT_ICON[value]}</svg>`;
 }
 
 function appendDivider(parent: HTMLElement): void {
@@ -315,7 +336,7 @@ function appendSimpleButton(parent: HTMLElement, spec: SimpleButtonSpec): void {
   if (spec.pressed !== undefined) {
     btn.setAttribute('aria-pressed', spec.pressed ? 'true' : 'false');
   }
-  btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${spec.svg}</svg>`;
+  btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${spec.svg}</svg>`;
   btn.addEventListener('click', (event) => {
     event.stopPropagation();
     spec.onClick();

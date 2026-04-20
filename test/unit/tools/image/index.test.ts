@@ -427,6 +427,44 @@ describe('ImageTool — data attributes on root', () => {
   });
 });
 
+describe('ImageTool — alt button next to caption', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('renders alt-edit button inside the caption row when not readOnly', () => {
+    const tool = new ImageTool(createOptions({ url: 'u' }));
+    const root = tool.render();
+    const btn = root.querySelector<HTMLButtonElement>('.blok-image-caption-row [data-action="alt-edit"]');
+    expect(btn).not.toBeNull();
+    expect(btn?.textContent).toBe('Alt');
+  });
+
+  it('does not render alt-edit button in readOnly mode', () => {
+    const tool = new ImageTool({ ...createOptions({ url: 'u' }), readOnly: true });
+    const root = tool.render();
+    expect(root.querySelector('[data-action="alt-edit"]')).toBeNull();
+  });
+
+  it('clicking alt-edit prompts for alt text and persists the value', () => {
+    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('pretty picture');
+    const block = createMockBlock();
+    const tool = new ImageTool(createOptions({ url: 'u' }, {}, block));
+    const root = tool.render();
+    root.querySelector<HTMLButtonElement>('[data-action="alt-edit"]')?.click();
+    expect(promptSpy).toHaveBeenCalled();
+    expect(tool.save().alt).toBe('pretty picture');
+    expect(block.dispatchChange).toHaveBeenCalled();
+  });
+
+  it('overlay no longer carries an alt button — alt only lives by the caption', () => {
+    const tool = new ImageTool(createOptions({ url: 'u' }));
+    const root = tool.render();
+    const overlay = root.querySelector<HTMLElement>('[data-role="image-overlay"]');
+    if (!overlay) throw new Error('overlay missing');
+    expect(overlay.querySelector('[data-action="alt"]')).toBeNull();
+  });
+});
+
 describe('ImageTool — caption toggle', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());

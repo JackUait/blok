@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('../../../../src/components/utils/tooltip', () => ({
   onHover: vi.fn(),
   hide: vi.fn(),
+  show: vi.fn(),
 }));
 
 import { renderImage, renderCaption, renderCaptionRow, openLightbox } from '../../../../src/tools/image/ui';
@@ -299,6 +300,29 @@ describe('renderOverlay', () => {
         );
         expect(called, `onHover not registered for ${action}`).toBe(true);
       }
+    });
+  });
+
+  describe('alignment tooltip suppression while popover open', () => {
+    it('hides tooltip when popover opens so Alignment hint disappears', () => {
+      vi.mocked(tooltip.hide).mockClear();
+      const overlay = renderOverlay(makeOverlayOpts());
+      document.body.appendChild(overlay);
+      overlay.querySelector<HTMLButtonElement>('[data-action="align-trigger"]')?.click();
+      expect(tooltip.hide).toHaveBeenCalled();
+    });
+
+    it('marks popover with data-blok-popover-opened while open so hover on trigger suppresses tooltip', () => {
+      const overlay = renderOverlay(makeOverlayOpts());
+      document.body.appendChild(overlay);
+      const trigger = overlay.querySelector<HTMLButtonElement>('[data-action="align-trigger"]');
+      const popover = overlay.querySelector<HTMLElement>('[data-role="align-popover"]');
+      if (!trigger || !popover) throw new Error('dom missing');
+      expect(popover.getAttribute('data-blok-popover-opened')).not.toBe('true');
+      trigger.click();
+      expect(popover.getAttribute('data-blok-popover-opened')).toBe('true');
+      trigger.click();
+      expect(popover.getAttribute('data-blok-popover-opened')).not.toBe('true');
     });
   });
 

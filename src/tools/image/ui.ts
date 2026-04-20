@@ -1,5 +1,5 @@
 import type { ImageAlignment, ImageData, ImageSize } from '../../../types/tools/image';
-import { onHover as tooltipOnHover } from '../../components/utils/tooltip';
+import { onHover as tooltipOnHover, hide as tooltipHide } from '../../components/utils/tooltip';
 
 const ALIGNMENT_TO_TEXT_ALIGN: Record<ImageAlignment, string> = {
   left: 'left',
@@ -314,7 +314,9 @@ function appendAlignmentControl(root: HTMLElement, opts: OverlayOptions): void {
   const openPopover = (): void => {
     if (!popover.hidden) return;
     popover.hidden = false;
+    popover.setAttribute('data-blok-popover-opened', 'true');
     trigger.setAttribute('aria-expanded', 'true');
+    tooltipHide();
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('mousedown', onOutside);
   };
@@ -322,6 +324,7 @@ function appendAlignmentControl(root: HTMLElement, opts: OverlayOptions): void {
   function closePopover(): void {
     if (popover.hidden) return;
     popover.hidden = true;
+    popover.removeAttribute('data-blok-popover-opened');
     trigger.setAttribute('aria-expanded', 'false');
     document.removeEventListener('keydown', onKeyDown);
     document.removeEventListener('mousedown', onOutside);

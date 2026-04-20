@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "Sleep om te verplaatsen",
   "blockSettings.clickToOpenMenu": "Klik om menu te openen",
+  "blockSettings.clickOrShortcutToOpenMenu": "Klik of {shortcut} om menu te openen",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Blok toevoegen",
   "toolbox.optionAddAbove": "⌥ — erboven invoegen",
   "toolbox.ctrlAddAbove": "Ctrl — erboven invoegen",
@@ -194,7 +197,7 @@
   "tools.table.placementBottomCenter": "Onder midden",
   "tools.table.placementBottomRight": "Onder rechts",
   "toolNames.code": "Code",
-  "toolNames.inlineCode": "Code",
+  "toolNames.inlineCode": "Inline code",
   "tools.code.placeholder": "Schrijf code…",
   "tools.code.language": "Taal",
   "tools.code.copied": "Gekopieerd!",

@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "გადაიტანეთ გადასატანად",
   "blockSettings.clickToOpenMenu": "დააწკაპუნეთ მენიუს გასახსნელად",
+  "blockSettings.clickOrShortcutToOpenMenu": "დააწკაპუნეთ ან {shortcut} მენიუს გასახსნელად",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "დააწკაპუნეთ ქვემოთ დასამატებლად",
   "toolbox.optionAddAbove": "Option-დაწკაპუნება ზემოთ დასამატებლად",
   "toolbox.ctrlAddAbove": "Ctrl-დაწკაპუნება ზემოთ დასამატებლად",

@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "Перетягніть для переміщення",
   "blockSettings.clickToOpenMenu": "Натисніть для меню",
+  "blockSettings.clickOrShortcutToOpenMenu": "Натисніть або {shortcut} для меню",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Додати блок",
   "toolbox.optionAddAbove": "⌥ — додати вище",
   "toolbox.ctrlAddAbove": "Ctrl — додати вище",

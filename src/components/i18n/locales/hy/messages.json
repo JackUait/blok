@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "Քաշեք տեղափոխելու",
   "blockSettings.clickToOpenMenu": "Սեղմեք մենյու համար",
+  "blockSettings.clickOrShortcutToOpenMenu": "Սեղմեք կամ {shortcut} մենյու բացելու համար",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Ավելացնել բլոկ",
   "toolbox.optionAddAbove": "⌥ — ավելացնել վերևում",
   "toolbox.ctrlAddAbove": "Ctrl — ավելացնել վերևում",

@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "Buruta ili kusogeza",
   "blockSettings.clickToOpenMenu": "Bofya ili kufungua menyu",
+  "blockSettings.clickOrShortcutToOpenMenu": "Bofya au {shortcut} kufungua menyu",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Bofya ili kuongeza chini",
   "toolbox.optionAddAbove": "Bofya na Option ili kuongeza juu",
   "toolbox.ctrlAddAbove": "Bofya na Ctrl ili kuongeza juu",

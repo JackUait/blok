@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "拖动以移动",
   "blockSettings.clickToOpenMenu": "点击打开菜单",
+  "blockSettings.clickOrShortcutToOpenMenu": "点击或 {shortcut} 打开菜单",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "添加内容块",
   "toolbox.optionAddAbove": "⌥ 在上方添加",
   "toolbox.ctrlAddAbove": "Ctrl 在上方添加",

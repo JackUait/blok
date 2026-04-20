@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "நகர்த்த இழுக்கவும்",
   "blockSettings.clickToOpenMenu": "பட்டியலைத் திறக்க தட்டவும்",
+  "blockSettings.clickOrShortcutToOpenMenu": "பட்டியலைத் திறக்க தட்டவும் அல்லது {shortcut}",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "கீழே சேர்க்க தட்டவும்",
   "toolbox.optionAddAbove": "மேலே சேர்க்க Option-தட்டவும்",
   "toolbox.ctrlAddAbove": "மேலே சேர்க்க Ctrl-தட்டவும்",

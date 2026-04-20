@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "Dra for å flytte",
   "blockSettings.clickToOpenMenu": "Klikk for å åpne menyen",
+  "blockSettings.clickOrShortcutToOpenMenu": "Klikk eller {shortcut} for å åpne menyen",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Klikk for å legge til nedenfor",
   "toolbox.optionAddAbove": "Option-klikk for å legge til ovenfor",
   "toolbox.ctrlAddAbove": "Ctrl-klikk for å legge til ovenfor",

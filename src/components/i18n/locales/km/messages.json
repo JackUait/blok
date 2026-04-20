@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "អូសដើម្បីផ្លាស់ទី",
   "blockSettings.clickToOpenMenu": "ចុចដើម្បីបើកម៉ឺនុយ",
+  "blockSettings.clickOrShortcutToOpenMenu": "ចុច ឬចុច {shortcut} ដើម្បីបើកម៉ឺនុយ",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "ចុចដើម្បីបន្ថែមខាងក្រោម",
   "toolbox.optionAddAbove": "Option-ចុចដើម្បីបន្ថែមខាងលើ",
   "toolbox.ctrlAddAbove": "Ctrl-ចុចដើម្បីបន្ថែមខាងលើ",

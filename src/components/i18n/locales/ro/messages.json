@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "Trageți pentru a muta",
   "blockSettings.clickToOpenMenu": "Clic pentru meniu",
+  "blockSettings.clickOrShortcutToOpenMenu": "Clic sau {shortcut} pentru a deschide meniul",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Adaugă bloc",
   "toolbox.optionAddAbove": "⌥ — adaugă deasupra",
   "toolbox.ctrlAddAbove": "Ctrl — adaugă deasupra",

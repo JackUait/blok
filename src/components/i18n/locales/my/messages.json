@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "ရွှေ့ရန် ဆွဲယူပါ",
   "blockSettings.clickToOpenMenu": "မီနူးဖွင့်ရန် နှိပ်ပါ",
+  "blockSettings.clickOrShortcutToOpenMenu": "မီနူးဖွင့်ရန် နှိပ်ပါ သို့မဟုတ် {shortcut} ကိုနှိပ်ပါ",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "အောက်တွင် ထည့်ရန် နှိပ်ပါ",
   "toolbox.optionAddAbove": "အပေါ်တွင် ထည့်ရန် Option-နှိပ်ပါ",
   "toolbox.ctrlAddAbove": "အပေါ်တွင် ထည့်ရန် Ctrl-နှိပ်ပါ",

@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "Köçürmək üçün dartın",
   "blockSettings.clickToOpenMenu": "Menyunu açmaq üçün klikləyin",
+  "blockSettings.clickOrShortcutToOpenMenu": "Menyunu açmaq üçün klikləyin və ya {shortcut}",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Blok əlavə et",
   "toolbox.optionAddAbove": "⌥ Yuxarıya əlavə et",
   "toolbox.ctrlAddAbove": "Ctrl Yuxarıya əlavə et",

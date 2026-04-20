@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "ለማንቀሳቀስ ይጎትቱ",
   "blockSettings.clickToOpenMenu": "ምናሌውን ለመክፈት ጠቅ ያድርጉ",
+  "blockSettings.clickOrShortcutToOpenMenu": "ምናሌውን ለመክፈት ጠቅ ያድርጉ ወይም {shortcut} ይጫኑ",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "ከታች ለመጨመር ጠቅ ያድርጉ",
   "toolbox.optionAddAbove": "ከላይ ለመጨመር Option-ጠቅ ያድርጉ",
   "toolbox.ctrlAddAbove": "ከላይ ለመጨመር Ctrl-ጠቅ ያድርጉ",

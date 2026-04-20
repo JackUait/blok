@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "Húzza az áthelyezéshez",
   "blockSettings.clickToOpenMenu": "Kattintson a menühöz",
+  "blockSettings.clickOrShortcutToOpenMenu": "Kattintson vagy {shortcut} a menühöz",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Blokk hozzáadása",
   "toolbox.optionAddAbove": "⌥ — hozzáadás fölé",
   "toolbox.ctrlAddAbove": "Ctrl — hozzáadás fölé",

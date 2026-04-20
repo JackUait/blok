@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "Potiahnutím presuniete",
   "blockSettings.clickToOpenMenu": "Kliknutím otvoríte ponuku",
+  "blockSettings.clickOrShortcutToOpenMenu": "Kliknutím alebo {shortcut} otvoríte ponuku",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Kliknutím pridáte nižšie",
   "toolbox.optionAddAbove": "Option-klik pridá vyššie",
   "toolbox.ctrlAddAbove": "Ctrl-klik pridá vyššie",

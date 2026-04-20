@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "يۆتكەش ئۈچۈن سۆرەڭ",
   "blockSettings.clickToOpenMenu": "تىزىملىكنى ئېچىش ئۈچۈن چېكىڭ",
+  "blockSettings.clickOrShortcutToOpenMenu": "تىزىملىكنى ئېچىش ئۈچۈن چېكىڭ ياكى {shortcut}",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "ئاستىغا قوشۇش ئۈچۈن چېكىڭ",
   "toolbox.optionAddAbove": "ئۈستىگە قوشۇش ئۈچۈن Option-چېكىڭ",
   "toolbox.ctrlAddAbove": "ئۈستىگە قوشۇش ئۈچۈن Ctrl-چېكىڭ",

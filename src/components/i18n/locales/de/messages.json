@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "Ziehen zum Verschieben",
   "blockSettings.clickToOpenMenu": "Klicken zum Öffnen des Menüs",
+  "blockSettings.clickOrShortcutToOpenMenu": "Klicken oder {shortcut} zum Öffnen des Menüs",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Strg+/",
   "toolbox.addBelow": "Block hinzufügen",
   "toolbox.optionAddAbove": "⌥ — darüber einfügen",
   "toolbox.ctrlAddAbove": "Strg — darüber einfügen",
@@ -194,7 +197,7 @@
   "tools.table.placementBottomCenter": "Unten zentriert",
   "tools.table.placementBottomRight": "Unten rechts",
   "toolNames.code": "Code",
-  "toolNames.inlineCode": "Code",
+  "toolNames.inlineCode": "Inline-Code",
   "tools.code.placeholder": "Code schreiben…",
   "tools.code.language": "Sprache",
   "tools.code.copied": "Kopiert!",

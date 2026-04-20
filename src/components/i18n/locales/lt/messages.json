@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "Vilkite norėdami perkelti",
   "blockSettings.clickToOpenMenu": "Spustelėkite norėdami atidaryti meniu",
+  "blockSettings.clickOrShortcutToOpenMenu": "Spustelėkite arba {shortcut}, kad atidarytumėte meniu",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Spustelėkite norėdami pridėti žemiau",
   "toolbox.optionAddAbove": "Option-spustelėjimas pridės aukščiau",
   "toolbox.ctrlAddAbove": "Ctrl-spustelėjimas pridės aukščiau",

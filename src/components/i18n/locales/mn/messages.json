@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "Зөөхийн тулд чирнэ үү",
   "blockSettings.clickToOpenMenu": "Цэс нээхийн тулд дарна уу",
+  "blockSettings.clickOrShortcutToOpenMenu": "Цэс нээхийн тулд дарна уу эсвэл {shortcut} товч дарна уу",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Доор нэмэхийн тулд дарна уу",
   "toolbox.optionAddAbove": "Дээр нэмэхийн тулд Option дарна уу",
   "toolbox.ctrlAddAbove": "Дээр нэмэхийн тулд Ctrl дарна уу",

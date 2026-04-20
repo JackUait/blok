@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "सार्न तान्नुहोस्",
   "blockSettings.clickToOpenMenu": "मेनु खोल्न क्लिक गर्नुहोस्",
+  "blockSettings.clickOrShortcutToOpenMenu": "मेनु खोल्न क्लिक गर्नुहोस् वा {shortcut}",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "तल थप्न क्लिक गर्नुहोस्",
   "toolbox.optionAddAbove": "माथि थप्न Option-क्लिक गर्नुहोस्",
   "toolbox.ctrlAddAbove": "माथि थप्न Ctrl-क्लिक गर्नुहोस्",

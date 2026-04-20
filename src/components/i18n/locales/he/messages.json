@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "גרור להזזה",
   "blockSettings.clickToOpenMenu": "לחץ לפתיחת התפריט",
+  "blockSettings.clickOrShortcutToOpenMenu": "לחץ או {shortcut} לפתיחת התפריט",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "לחץ להוספה מתחת",
   "toolbox.optionAddAbove": "Option-לחץ להוספה מעל",
   "toolbox.ctrlAddAbove": "Ctrl-לחץ להוספה מעל",

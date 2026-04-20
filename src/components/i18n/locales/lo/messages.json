@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "ລາກເພື່ອຍ້າຍ",
   "blockSettings.clickToOpenMenu": "ຄລິກເພື່ອເປີດເມນູ",
+  "blockSettings.clickOrShortcutToOpenMenu": "ຄລິກ ຫຼື ກົດ {shortcut} ເພື່ອເປີດເມນູ",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "ຄລິກເພື່ອເພີ່ມຂ້າງລຸ່ມ",
   "toolbox.optionAddAbove": "Option-ຄລິກເພື່ອເພີ່ມຂ້າງເທິງ",
   "toolbox.ctrlAddAbove": "Ctrl-ຄລິກເພື່ອເພີ່ມຂ້າງເທິງ",

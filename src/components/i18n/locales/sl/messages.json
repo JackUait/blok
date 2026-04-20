@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "Povlecite za premik",
   "blockSettings.clickToOpenMenu": "Kliknite za odprtje menija",
+  "blockSettings.clickOrShortcutToOpenMenu": "Kliknite ali {shortcut} za odprtje menija",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Kliknite za dodajanje spodaj",
   "toolbox.optionAddAbove": "Option-klik za dodajanje zgoraj",
   "toolbox.ctrlAddAbove": "Ctrl-klik za dodajanje zgoraj",

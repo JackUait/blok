@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "د لیږدولو لپاره کش کړئ",
   "blockSettings.clickToOpenMenu": "د مینو خلاصولو لپاره کلیک وکړئ",
+  "blockSettings.clickOrShortcutToOpenMenu": "د مینو خلاصولو لپاره کلیک وکړئ یا {shortcut} کېکاږئ",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "لاندې اضافه کولو لپاره کلیک وکړئ",
   "toolbox.optionAddAbove": "پورته اضافه کولو لپاره Option-کلیک",
   "toolbox.ctrlAddAbove": "پورته اضافه کولو لپاره Ctrl-کلیک",

@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "Lohista teisaldamiseks",
   "blockSettings.clickToOpenMenu": "Klõpsa menüü avamiseks",
+  "blockSettings.clickOrShortcutToOpenMenu": "Klõpsa või {shortcut} menüü avamiseks",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Klõpsa alla lisamiseks",
   "toolbox.optionAddAbove": "Option-klõps lisab üles",
   "toolbox.ctrlAddAbove": "Ctrl-klõps lisab üles",

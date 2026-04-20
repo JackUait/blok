@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "اسحب للتحريك",
   "blockSettings.clickToOpenMenu": "انقر لفتح القائمة",
+  "blockSettings.clickOrShortcutToOpenMenu": "انقر أو اضغط {shortcut} لفتح القائمة",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "إضافة كتلة",
   "toolbox.optionAddAbove": "⌥ — إضافة أعلى",
   "toolbox.ctrlAddAbove": "Ctrl — إضافة أعلى",

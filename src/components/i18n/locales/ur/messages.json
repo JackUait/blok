@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "منتقل کرنے کے لیے گھسیٹیں",
   "blockSettings.clickToOpenMenu": "مینو کھولنے کے لیے کلک کریں",
+  "blockSettings.clickOrShortcutToOpenMenu": "مینو کھولنے کے لیے کلک کریں یا {shortcut} دبائیں",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "نیچے شامل کرنے کے لیے کلک کریں",
   "toolbox.optionAddAbove": "اوپر شامل کرنے کے لیے Option-کلک",
   "toolbox.ctrlAddAbove": "اوپر شامل کرنے کے لیے Ctrl-کلک",

@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "Vedä siirtääksesi",
   "blockSettings.clickToOpenMenu": "Napsauta avataksesi valikon",
+  "blockSettings.clickOrShortcutToOpenMenu": "Napsauta tai {shortcut} avataksesi valikon",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Napsauta lisätäksesi alle",
   "toolbox.optionAddAbove": "Option-napsautus lisää yläpuolelle",
   "toolbox.ctrlAddAbove": "Ctrl-napsautus lisää yläpuolelle",

@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "Σύρετε για μετακίνηση",
   "blockSettings.clickToOpenMenu": "Κλικ για το μενού",
+  "blockSettings.clickOrShortcutToOpenMenu": "Κλικ ή {shortcut} για το μενού",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Προσθήκη μπλοκ",
   "toolbox.optionAddAbove": "⌥ — προσθήκη πάνω",
   "toolbox.ctrlAddAbove": "Ctrl — προσθήκη πάνω",

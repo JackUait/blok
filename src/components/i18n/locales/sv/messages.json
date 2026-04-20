@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "Dra för att flytta",
   "blockSettings.clickToOpenMenu": "Klicka för att öppna menyn",
+  "blockSettings.clickOrShortcutToOpenMenu": "Klicka eller {shortcut} för att öppna menyn",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Lägg till block",
   "toolbox.optionAddAbove": "⌥ — lägg till ovanför",
   "toolbox.ctrlAddAbove": "Ctrl — lägg till ovanför",

@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "ගෙනයාමට අදින්න",
   "blockSettings.clickToOpenMenu": "මෙනුව විවෘත කිරීමට තේරන්න",
+  "blockSettings.clickOrShortcutToOpenMenu": "මෙනුව විවෘත කිරීමට තේරන්න හෝ {shortcut}",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "පහළින් එක් කිරීමට තේරන්න",
   "toolbox.optionAddAbove": "ඉහළින් එක් කිරීමට Option-තේරන්න",
   "toolbox.ctrlAddAbove": "ඉහළින් එක් කිරීමට Ctrl-තේරන්න",

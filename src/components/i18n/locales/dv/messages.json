@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "ބަދަލުކުރަން ދަމާލާ",
   "blockSettings.clickToOpenMenu": "މެނޫ ހުޅުވަން ކްލިކް ކުރޭ",
+  "blockSettings.clickOrShortcutToOpenMenu": "މެނޫ ހުޅުވަން ކްލިކް ކުރޭ ނުވަތަ {shortcut} ފިތާލާ",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "ތިރީގައި އިތުރުކުރަން ކްލިކް ކުރޭ",
   "toolbox.optionAddAbove": "މަތީގައި އިތުރުކުރަން Option-ކްލިކް",
   "toolbox.ctrlAddAbove": "މަތީގައި އިތުރުކުރަން Ctrl-ކްލިކް",

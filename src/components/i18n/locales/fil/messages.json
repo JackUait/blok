@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "I-drag para ilipat",
   "blockSettings.clickToOpenMenu": "I-click para buksan ang menu",
+  "blockSettings.clickOrShortcutToOpenMenu": "I-click o pindutin ang {shortcut} para buksan ang menu",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "I-click para magdagdag sa ibaba",
   "toolbox.optionAddAbove": "Option-click para magdagdag sa itaas",
   "toolbox.ctrlAddAbove": "Ctrl-click para magdagdag sa itaas",

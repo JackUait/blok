@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "منتقل ڪرڻ لاءِ ڇڪيو",
   "blockSettings.clickToOpenMenu": "مينيو کولڻ لاءِ ڪلڪ ڪريو",
+  "blockSettings.clickOrShortcutToOpenMenu": "مينيو کولڻ لاءِ ڪلڪ ڪريو يا {shortcut} دٻايو",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "ھيٺان شامل ڪرڻ لاءِ ڪلڪ ڪريو",
   "toolbox.optionAddAbove": "مٿي شامل ڪرڻ لاءِ Option-ڪلڪ",
   "toolbox.ctrlAddAbove": "مٿي شامل ڪرڻ لاءِ Ctrl-ڪلڪ",

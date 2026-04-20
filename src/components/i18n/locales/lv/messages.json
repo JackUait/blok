@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "Velciet, lai pārvietotu",
   "blockSettings.clickToOpenMenu": "Noklikšķiniet, lai atvērtu izvēlni",
+  "blockSettings.clickOrShortcutToOpenMenu": "Noklikšķiniet vai {shortcut}, lai atvērtu izvēlni",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Noklikšķiniet, lai pievienotu zemāk",
   "toolbox.optionAddAbove": "Option-klikšķis pievieno augšā",
   "toolbox.ctrlAddAbove": "Ctrl-klikšķis pievieno augšā",

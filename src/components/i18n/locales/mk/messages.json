@@ -1,6 +1,9 @@
 {
   "blockSettings.dragToMove": "Повлечете за преместување",
   "blockSettings.clickToOpenMenu": "Кликнете за отворање на менито",
+  "blockSettings.clickOrShortcutToOpenMenu": "Кликнете или {shortcut} за да го отворите менито",
+  "blockSettings.menuShortcutMac": "⌘/",
+  "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Кликнете за додавање подолу",
   "toolbox.optionAddAbove": "Option-клик за додавање погоре",
   "toolbox.ctrlAddAbove": "Ctrl-клик за додавање погоре",

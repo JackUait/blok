@@ -447,6 +447,7 @@ export class ImageTool implements BlockTool {
         figure,
         container: figure.parentElement ?? figure,
         edge,
+        alignment: this.data.alignment ?? 'center',
         onPreview: (percent) => {
           figure.style.setProperty('width', `${percent}%`);
         },

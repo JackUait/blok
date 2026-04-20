@@ -1,6 +1,29 @@
+import type { ImageAlignment } from '../../../types/tools/image';
 import { MAX_WIDTH_PERCENT, MIN_WIDTH_PERCENT } from './constants';
 
 export type ResizeEdge = 'left' | 'right';
+
+export function alignmentFraction(alignment: ImageAlignment): number {
+  if (alignment === 'left') return 0;
+  if (alignment === 'right') return 1;
+  return 0.5;
+}
+
+/**
+ * Compensation translate that keeps the opposite edge visually pinned during
+ * resize. Without it, a centered figure grows symmetrically and the user sees
+ * the "other side" extend when they drag a single handle.
+ */
+export function computeTranslateXPx(
+  deltaWpx: number,
+  edge: ResizeEdge,
+  alignFrac: number
+): number {
+  const raw = edge === 'right'
+    ? deltaWpx * alignFrac
+    : -deltaWpx * (1 - alignFrac);
+  return raw === 0 ? 0 : raw;
+}
 
 export interface ComputeWidthInput {
   edge: ResizeEdge;
@@ -39,6 +62,8 @@ export interface AttachResizeHandleOptions {
   /** Layout container — used as the 100% reference */
   container: HTMLElement;
   edge: ResizeEdge;
+  /** Figure alignment — drives compensation so the opposite edge stays pinned */
+  alignment?: ImageAlignment;
   onPreview(percent: number): void;
   onCommit(percent: number): void;
 }
@@ -48,7 +73,13 @@ interface DragState {
   startX: number;
   startWidth: number;
   containerWidth: number;
+  startTranslate: number;
   lastPercent: number | undefined;
+}
+
+function parseTranslateXPx(transform: string): number {
+  const match = /translateX\((-?[\d.]+)px\)/.exec(transform);
+  return match ? parseFloat(match[1]) : 0;
 }
 
 export function attachResizeHandle(opts: AttachResizeHandleOptions): () => void {
@@ -57,13 +88,19 @@ export function attachResizeHandle(opts: AttachResizeHandleOptions): () => void 
     startX: 0,
     startWidth: 0,
     containerWidth: 0,
+    startTranslate: 0,
     lastPercent: undefined,
   };
+
+  const alignFrac = alignmentFraction(opts.alignment ?? 'center');
+  const { figure } = opts;
 
   const onDown = (event: PointerEvent): void => {
     state.active = true;
     state.startX = event.clientX;
-    state.startWidth = opts.figure.getBoundingClientRect().width;
+    state.startTranslate = parseTranslateXPx(figure.style.transform);
+    const rect = opts.figure.getBoundingClientRect();
+    state.startWidth = rect.width;
     state.containerWidth = opts.container.getBoundingClientRect().width;
     state.lastPercent = undefined;
     opts.handle.setPointerCapture(event.pointerId);
@@ -80,6 +117,10 @@ export function attachResizeHandle(opts: AttachResizeHandleOptions): () => void 
       currentX: event.clientX,
     });
     state.lastPercent = next;
+    const clampedWidthPx = (next / 100) * state.containerWidth;
+    const deltaW = clampedWidthPx - state.startWidth;
+    const tx = state.startTranslate + computeTranslateXPx(deltaW, opts.edge, alignFrac);
+    figure.style.transform = `translateX(${tx}px)`;
     opts.onPreview(next);
   };
 

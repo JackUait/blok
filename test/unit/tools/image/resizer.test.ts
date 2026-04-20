@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { computeWidthPercent, clampPercent, attachResizeHandle } from '../../../../src/tools/image/resizer';
+import {
+  computeWidthPercent,
+  clampPercent,
+  attachResizeHandle,
+  computeTranslateXPx,
+  alignmentFraction,
+} from '../../../../src/tools/image/resizer';
 
 describe('clampPercent', () => {
   it('clamps below MIN to 10', () => {
@@ -160,5 +166,189 @@ describe('attachResizeHandle', () => {
 
     expect(updates[updates.length - 1]).toBe(60);
     detach();
+  });
+
+  it('keeps translateX compensation after release so figure does not snap back (right handle grows)', () => {
+    const parent = document.createElement('div');
+    const figure = document.createElement('div');
+    parent.appendChild(figure);
+    Object.defineProperty(parent, 'getBoundingClientRect', {
+      value: () => makeRect(1000, 0),
+    });
+    Object.defineProperty(figure, 'getBoundingClientRect', {
+      value: () => makeRect(500, 250),
+    });
+    const handle = document.createElement('div');
+    figure.appendChild(handle);
+    handle.setPointerCapture = (): void => undefined;
+    handle.releasePointerCapture = (): void => undefined;
+
+    const detach = attachResizeHandle({
+      handle,
+      figure,
+      container: parent,
+      edge: 'right',
+      alignment: 'center',
+      onPreview: () => undefined,
+      onCommit: () => undefined,
+    });
+
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 750, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 850, bubbles: true }));
+
+    expect(figure.style.transform).toBe('translateX(50px)');
+
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 850, bubbles: true }));
+
+    expect(figure.style.transform).toBe('translateX(50px)');
+    detach();
+  });
+
+  it('keeps negative translateX compensation after release (left handle grows)', () => {
+    const parent = document.createElement('div');
+    const figure = document.createElement('div');
+    parent.appendChild(figure);
+    Object.defineProperty(parent, 'getBoundingClientRect', {
+      value: () => makeRect(1000, 0),
+    });
+    Object.defineProperty(figure, 'getBoundingClientRect', {
+      value: () => makeRect(500, 250),
+    });
+    const handle = document.createElement('div');
+    figure.appendChild(handle);
+    handle.setPointerCapture = (): void => undefined;
+    handle.releasePointerCapture = (): void => undefined;
+
+    const detach = attachResizeHandle({
+      handle,
+      figure,
+      container: parent,
+      edge: 'left',
+      alignment: 'center',
+      onPreview: () => undefined,
+      onCommit: () => undefined,
+    });
+
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 250, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 150, bubbles: true }));
+
+    expect(figure.style.transform).toBe('translateX(-50px)');
+
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 150, bubbles: true }));
+
+    expect(figure.style.transform).toBe('translateX(-50px)');
+    detach();
+  });
+
+  it('accumulates translateX across consecutive drags so subsequent drags resume from prior anchor', () => {
+    const parent = document.createElement('div');
+    const figure = document.createElement('div');
+    parent.appendChild(figure);
+    Object.defineProperty(parent, 'getBoundingClientRect', {
+      value: () => makeRect(1000, 0),
+    });
+    let currentFigureWidth = 500;
+    Object.defineProperty(figure, 'getBoundingClientRect', {
+      get: () => () => makeRect(currentFigureWidth, 250),
+    });
+    const handle = document.createElement('div');
+    figure.appendChild(handle);
+    handle.setPointerCapture = (): void => undefined;
+    handle.releasePointerCapture = (): void => undefined;
+
+    const detach = attachResizeHandle({
+      handle,
+      figure,
+      container: parent,
+      edge: 'right',
+      alignment: 'center',
+      onPreview: () => undefined,
+      onCommit: () => undefined,
+    });
+
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 750, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 850, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 850, bubbles: true }));
+
+    expect(figure.style.transform).toBe('translateX(50px)');
+    currentFigureWidth = 600;
+
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 850, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 950, bubbles: true }));
+
+    expect(figure.style.transform).toBe('translateX(100px)');
+    detach();
+  });
+
+  it('omits transform for left-aligned figure (left edge is already anchored)', () => {
+    const parent = document.createElement('div');
+    const figure = document.createElement('div');
+    parent.appendChild(figure);
+    Object.defineProperty(parent, 'getBoundingClientRect', {
+      value: () => makeRect(1000, 0),
+    });
+    Object.defineProperty(figure, 'getBoundingClientRect', {
+      value: () => makeRect(500, 0),
+    });
+    const handle = document.createElement('div');
+    figure.appendChild(handle);
+    handle.setPointerCapture = (): void => undefined;
+    handle.releasePointerCapture = (): void => undefined;
+
+    const detach = attachResizeHandle({
+      handle,
+      figure,
+      container: parent,
+      edge: 'right',
+      alignment: 'left',
+      onPreview: () => undefined,
+      onCommit: () => undefined,
+    });
+
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 500, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 600, bubbles: true }));
+
+    expect(figure.style.transform).toBe('translateX(0px)');
+
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 600, bubbles: true }));
+
+    expect(figure.style.transform).toBe('translateX(0px)');
+    detach();
+  });
+});
+
+describe('alignmentFraction', () => {
+  it('maps left to 0', () => {
+    expect(alignmentFraction('left')).toBe(0);
+  });
+  it('maps center to 0.5', () => {
+    expect(alignmentFraction('center')).toBe(0.5);
+  });
+  it('maps right to 1', () => {
+    expect(alignmentFraction('right')).toBe(1);
+  });
+});
+
+describe('computeTranslateXPx', () => {
+  it('right handle with center fraction returns +deltaW/2', () => {
+    expect(computeTranslateXPx(100, 'right', 0.5)).toBe(50);
+  });
+  it('left handle with center fraction returns -deltaW/2', () => {
+    expect(computeTranslateXPx(100, 'left', 0.5)).toBe(-50);
+  });
+  it('right handle with left-anchor (frac 0) returns 0', () => {
+    expect(computeTranslateXPx(100, 'right', 0)).toBe(0);
+  });
+  it('left handle with left-anchor (frac 0) returns -deltaW', () => {
+    expect(computeTranslateXPx(100, 'left', 0)).toBe(-100);
+  });
+  it('right handle with right-anchor (frac 1) returns +deltaW', () => {
+    expect(computeTranslateXPx(100, 'right', 1)).toBe(100);
+  });
+  it('left handle with right-anchor (frac 1) returns 0', () => {
+    expect(computeTranslateXPx(100, 'left', 1)).toBe(0);
+  });
+  it('negative delta (shrink) flips sign symmetrically for center + right', () => {
+    expect(computeTranslateXPx(-100, 'right', 0.5)).toBe(-50);
   });
 });

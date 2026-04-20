@@ -21,8 +21,8 @@ describe('renderImage with crop', () => {
     expect(wrapper!.style.aspectRatio).toBe('50 / 40');
     expect(img!.style.width).toBe('200%');
     expect(img!.style.height).toBe('250%');
-    expect(img!.style.marginLeft).toBe('-20%');
-    expect(img!.style.marginTop).toBe('-50%');
+    expect(img!.style.maxWidth).toBe('none');
+    expect(img!.style.transform).toBe('translate(-10%, -20%)');
   });
 });
 

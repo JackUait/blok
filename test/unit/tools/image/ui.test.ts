@@ -79,6 +79,35 @@ describe('renderImage', () => {
     if (!wrapper) throw new Error('wrapper missing');
     expect(wrapper.style.borderRadius).toBe('');
   });
+
+  it('emits max-width:none on cropped img so the global preflight (img{max-width:100%}) does not clamp the scaled image', () => {
+    // Regression: global rule in main.css gives every editor <img> max-width:100%.
+    // That silently clobbers the crop wrapper's intended width:333% scaling,
+    // shrinking the source to wrapper size and — combined with negative margin —
+    // shifting the visible region entirely out of the wrapper. Result: a crop
+    // that looked right in the preview renders as a different (or empty) region.
+    const fig = renderImage({ url: 'x', crop: { x: 45, y: 10, w: 30, h: 60 } });
+    const img = fig.querySelector<HTMLImageElement>('img');
+    if (!img) throw new Error('img missing');
+    expect(img.style.maxWidth).toBe('none');
+  });
+
+  it('offsets the cropped source via transform (not margin) so horizontal and vertical shifts use the same reference frame', () => {
+    // CSS gotcha: margin-left/-top percentages BOTH resolve against the
+    // containing block's WIDTH. Using margin-top:-(y/h)*100% therefore shifts
+    // the image by (y/h) * wrapperWidth instead of the intended
+    // (y/h) * wrapperHeight, producing a vertically mis-cropped region.
+    //
+    // transform:translate(-x%,-y%) resolves percentages against the element's
+    // OWN box, so -x%/img-width and -y%/img-height both resolve correctly
+    // regardless of wrapper aspect.
+    const fig = renderImage({ url: 'x', crop: { x: 45, y: 10, w: 30, h: 60 } });
+    const img = fig.querySelector<HTMLImageElement>('img');
+    if (!img) throw new Error('img missing');
+    expect(img.style.marginLeft).toBe('');
+    expect(img.style.marginTop).toBe('');
+    expect(img.style.transform).toBe('translate(-45%, -10%)');
+  });
 });
 
 describe('renderCaption', () => {

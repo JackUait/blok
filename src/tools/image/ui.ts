@@ -51,10 +51,15 @@ export function renderImage(
       wrapper.style.borderRadius = '50%';
     }
     img.style.display = 'block';
+    // Opt out of the editor's global `img { max-width: 100% }` preflight so
+    // the (100/w)*100% width below can actually scale the source past the wrapper.
+    img.style.maxWidth = 'none';
     img.style.width = `${(100 / w) * 100}%`;
     img.style.height = `${(100 / h) * 100}%`;
-    img.style.marginLeft = `-${(x / w) * 100}%`;
-    img.style.marginTop = `-${(y / h) * 100}%`;
+    // transform % resolves against the element's own box, so -x%/-y% shift the
+    // img by x% of its width and y% of its height. margin-top % would instead
+    // resolve against the container's WIDTH, skewing vertically for non-square crops.
+    img.style.transform = `translate(-${x}%, -${y}%)`;
     wrapper.appendChild(img);
     figure.appendChild(wrapper);
   } else {

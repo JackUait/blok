@@ -37,7 +37,24 @@ export function renderImage(
   img.setAttribute('alt', data.alt ?? '');
   img.draggable = false;
 
-  figure.appendChild(img);
+  if (data.crop) {
+    const { x, y, w, h } = data.crop;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'blok-image-crop';
+    wrapper.style.overflow = 'hidden';
+    wrapper.style.position = 'relative';
+    wrapper.style.aspectRatio = `${w} / ${h}`;
+    wrapper.style.width = '100%';
+    img.style.display = 'block';
+    img.style.width = `${(100 / w) * 100}%`;
+    img.style.height = `${(100 / h) * 100}%`;
+    img.style.marginLeft = `-${(x / w) * 100}%`;
+    img.style.marginTop = `-${(y / h) * 100}%`;
+    wrapper.appendChild(img);
+    figure.appendChild(wrapper);
+  } else {
+    figure.appendChild(img);
+  }
 
   return figure;
 }

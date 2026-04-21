@@ -53,6 +53,8 @@ export class ImageTool implements BlockTool {
   private altPopoverDetach: (() => void) | null = null;
   private errorMessage: string | null = null;
   private lastFileName: string | null = null;
+  private lastSource: { kind: 'file'; file: File } | { kind: 'url'; url: string } | null = null;
+  private brokenImage = false;
 
   constructor(options: BlockToolConstructorOptions<ImageData, ImageConfig>) {
     this.api = options.api;
@@ -132,8 +134,10 @@ export class ImageTool implements BlockTool {
 
   private startUpload(file: File): void {
     this.lastFileName = file.name;
+    this.lastSource = { kind: 'file', file };
     this.state = 'LOADING';
     this.errorMessage = null;
+    this.brokenImage = false;
     this.renderState();
     void this.uploader
       .handleFile(file)
@@ -141,10 +145,37 @@ export class ImageTool implements BlockTool {
       .catch((err) => this.applyError(err));
   }
 
+  private startUrl(url: string): void {
+    this.lastFileName = null;
+    this.lastSource = { kind: 'url', url };
+    this.state = 'LOADING';
+    this.errorMessage = null;
+    this.brokenImage = false;
+    this.renderState();
+    void this.uploader
+      .handleUrl(url)
+      .then((result) => this.applyResult(result))
+      .catch((err) => this.applyError(err));
+  }
+
+  private retryLastSource(): void {
+    const source = this.lastSource;
+    if (!source) {
+      this.transitionToEmpty();
+      return;
+    }
+    if (source.kind === 'file') {
+      this.startUpload(source.file);
+    } else {
+      this.startUrl(source.url);
+    }
+  }
+
   private applyResult(result: UploadResult): void {
     this.data = { ...this.data, url: result.url, fileName: result.fileName ?? this.data.fileName };
     this.state = 'RENDERED';
     this.errorMessage = null;
+    this.brokenImage = false;
     this.renderState();
     this.block.dispatchChange();
   }
@@ -152,16 +183,26 @@ export class ImageTool implements BlockTool {
   private applyError(err: unknown): void {
     this.state = 'ERROR';
     this.errorMessage = err instanceof Error ? err.message : 'Upload failed';
+    this.brokenImage = false;
     this.renderState();
     if (!(err instanceof ImageError)) {
       console.error('[image] upload failed', err);
     }
   }
 
-  private showEmptyError(err: unknown): void {
-    if (this.emptyStateEl) {
-      this.emptyStateEl.setError(err instanceof Error ? err.message : 'Upload failed');
-    }
+  private applyBrokenImage(): void {
+    if (this.state === 'ERROR' && this.brokenImage) return;
+    this.state = 'ERROR';
+    this.brokenImage = true;
+    this.errorMessage = 'The source may have moved or be offline.';
+    this.renderState();
+  }
+
+  private retryBrokenImage(): void {
+    this.brokenImage = false;
+    this.errorMessage = null;
+    this.state = 'RENDERED';
+    this.renderState();
   }
 
   public setReadOnly(state: boolean): void {
@@ -320,12 +361,7 @@ export class ImageTool implements BlockTool {
     if (!this.root) return;
     const el = renderEmptyState({
       onFile: (file) => this.startUpload(file),
-      onUrl: (url) => {
-        void this.uploader
-          .handleUrl(url)
-          .then((result) => this.applyResult(result))
-          .catch((err) => this.showEmptyError(err));
-      },
+      onUrl: (url) => this.startUrl(url),
       acceptTypes: this.config.types,
       maxSize: this.config.maxSize,
     });
@@ -345,11 +381,13 @@ export class ImageTool implements BlockTool {
 
   private renderError(): void {
     if (!this.root) return;
+    const isBroken = this.brokenImage;
     const el = renderErrorState({
+      title: isBroken ? 'Image unavailable' : undefined,
       message: this.errorMessage ?? undefined,
-      onRetry: this.lastFileName
-        ? undefined
-        : () => this.transitionToEmpty(),
+      onRetry: isBroken
+        ? () => this.retryBrokenImage()
+        : () => this.retryLastSource(),
       onReplace: () => this.transitionToEmpty(),
     });
     this.root.appendChild(el);
@@ -366,6 +404,11 @@ export class ImageTool implements BlockTool {
     if (imgEl) {
       imgEl.style.cursor = 'zoom-in';
       imgEl.addEventListener('click', () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, crop: this.data.crop, origin: originEl }));
+      imgEl.addEventListener('error', () => this.applyBrokenImage(), { once: true });
+      if (imgEl.complete && imgEl.naturalWidth === 0) {
+        this.applyBrokenImage();
+        return;
+      }
     }
 
     if (!this.readOnly) {
@@ -528,6 +571,9 @@ export class ImageTool implements BlockTool {
     this.data = { ...this.data, url: '' };
     this.state = 'EMPTY';
     this.errorMessage = null;
+    this.brokenImage = false;
+    this.lastSource = null;
+    this.lastFileName = null;
     this.renderState();
     this.block.dispatchChange();
   }

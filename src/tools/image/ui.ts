@@ -1,4 +1,4 @@
-import type { ImageAlignment, ImageData, ImageSize } from '../../../types/tools/image';
+import type { ImageAlignment, ImageCrop, ImageData, ImageSize } from '../../../types/tools/image';
 import { onHover as tooltipOnHover, hide as tooltipHide } from '../../components/utils/tooltip';
 import { applyRubberBand } from './spring';
 
@@ -123,6 +123,12 @@ export interface LightboxOptions {
   alt?: string;
   fileName?: string;
   /**
+   * Non-destructive crop applied inline. When present, the lightbox mirrors
+   * the same cropped view (wrapper + transformed inner img) so the preview
+   * matches what the user sees in the editor.
+   */
+  crop?: ImageCrop;
+  /**
    * Source element (the inline thumbnail) used for the FLIP open/close morph.
    * When omitted, the dialog cross-fades without a spatial transition.
    */
@@ -183,17 +189,46 @@ export function openLightbox(opts: LightboxOptions): () => void {
   const img = document.createElement('img');
   img.setAttribute('src', opts.url);
   img.setAttribute('alt', opts.alt ?? '');
-  img.className = 'blok-image-lightbox__image';
+  img.draggable = false;
+
+  // displayEl is the element that receives zoom/pan/FLIP transforms. When a crop
+  // is active, the img already carries the `translate(-x%, -y%)` crop transform,
+  // so we mount it inside a wrapper and animate the wrapper instead. Without a
+  // crop, the img itself is the display element and keeps the legacy behavior.
+  const displayEl: HTMLElement = (() => {
+    const crop = opts.crop;
+    if (!crop) {
+      img.className = 'blok-image-lightbox__image';
+      return img;
+    }
+    const { x, y, w, h, shape } = crop;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'blok-image-lightbox__image blok-image-lightbox__crop';
+    wrapper.setAttribute('data-role', 'lightbox-crop');
+    wrapper.style.overflow = 'hidden';
+    wrapper.style.aspectRatio = `${w} / ${h}`;
+    if (shape) wrapper.setAttribute('data-shape', shape);
+    if (shape === 'circle' || shape === 'ellipse') {
+      wrapper.style.borderRadius = '50%';
+    }
+    img.style.display = 'block';
+    img.style.maxWidth = 'none';
+    img.style.width = `${(100 / w) * 100}%`;
+    img.style.height = `${(100 / h) * 100}%`;
+    img.style.transform = `translate(-${x}%, -${y}%)`;
+    wrapper.appendChild(img);
+    return wrapper;
+  })();
 
   const zoomState = { value: 1 };
   const panState = { x: 0, y: 0 };
 
   const applyTransform = (): void => {
-    img.style.transform = `translate(${panState.x}px, ${panState.y}px) scale(${zoomState.value})`;
+    displayEl.style.transform = `translate(${panState.x}px, ${panState.y}px) scale(${zoomState.value})`;
   };
 
   function panBounds(): { maxX: number; maxY: number; width: number; height: number } {
-    const rect = img.getBoundingClientRect();
+    const rect = displayEl.getBoundingClientRect();
     return { maxX: rect.width / 2, maxY: rect.height / 2, width: rect.width, height: rect.height };
   }
 
@@ -253,7 +288,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
     if (reset) reset.textContent = `${Math.round(zoomState.value * 100)}%`;
   };
 
-  dialog.appendChild(img);
+  dialog.appendChild(displayEl);
   dialog.appendChild(toolbar);
   document.body.appendChild(dialog);
 
@@ -291,13 +326,13 @@ export function openLightbox(opts: LightboxOptions): () => void {
   };
 
   const playOpen = (): void => {
-    if (origin && canAnimate(img)) {
+    if (origin && canAnimate(displayEl)) {
       const srcRect = origin.getBoundingClientRect();
-      const destRect = img.getBoundingClientRect();
+      const destRect = displayEl.getBoundingClientRect();
       if (srcRect.width > 0 && srcRect.height > 0 && destRect.width > 0 && destRect.height > 0) {
         const from = toTransform(flipTransform(srcRect, destRect));
         origin.style.opacity = '0';
-        animState.img = img.animate(
+        animState.img = displayEl.animate(
           [{ transform: from }, { transform: 'translate(0px, 0px) scale(1)' }],
           { duration: OPEN_DURATION, easing: OPEN_EASING, fill: 'backwards' }
         );
@@ -343,19 +378,19 @@ export function openLightbox(opts: LightboxOptions): () => void {
     // Suppress the spring transition on .blok-image-lightbox__image so the
     // identity measurement and final-state commit below don't trigger a CSS
     // tween underneath the WAAPI animation.
-    img.style.transition = 'none';
+    displayEl.style.transition = 'none';
     // Capture the currently-displayed transform (may include user zoom/pan) so
     // the reverse-FLIP starts from where the image visually is right now.
-    const current = img.style.transform || 'translate(0px, 0px) scale(1)';
+    const current = displayEl.style.transform || 'translate(0px, 0px) scale(1)';
     // Measure the identity rect (transform=none) so we can map dest→source.
-    img.style.transform = 'none';
-    const identRect = img.getBoundingClientRect();
-    img.style.transform = current;
+    displayEl.style.transform = 'none';
+    const identRect = displayEl.getBoundingClientRect();
+    displayEl.style.transform = current;
     const to = toTransform(flipTransform(srcRect, identRect));
     // Lock the final visible state on the inline style so there is no snap
     // back to identity after WAAPI releases its hold.
-    img.style.transform = to;
-    const anim = img.animate(
+    displayEl.style.transform = to;
+    const anim = displayEl.animate(
       [{ transform: current }, { transform: to }],
       { duration: CLOSE_DURATION, easing: CLOSE_EASING, fill: 'forwards' }
     );
@@ -372,7 +407,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
     if (animState.closing) return;
     animState.closing = true;
     cancelRunning();
-    if (origin && canAnimate(img)) closeWithFlip(origin);
+    if (origin && canAnimate(displayEl)) closeWithFlip(origin);
     else closeFadeOnly();
   };
 

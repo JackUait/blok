@@ -29,25 +29,26 @@
 
 @media (prefers-color-scheme: light) {
   :root:not([data-blok-theme="dark"]) .blok-image-crop-modal-backdrop {
-    --crop-modal-backdrop: rgba(18, 20, 26, 0.32);
-    --crop-modal-dialog-bg: #fbfbfa;
-    --crop-modal-dialog-fg: #16181d;
-    --crop-modal-dialog-border: rgba(22, 24, 29, 0.08);
+    --crop-modal-backdrop: rgba(22, 18, 14, 0.3);
+    --crop-modal-dialog-bg: #f7f5f0;
+    --crop-modal-dialog-fg: #1a1a1e;
+    --crop-modal-dialog-border: rgba(26, 26, 30, 0.09);
     --crop-modal-dialog-shadow:
-      0 30px 80px -20px rgba(18, 20, 26, 0.28),
-      0 8px 24px -8px rgba(18, 20, 26, 0.14),
-      0 1px 0 rgba(22, 24, 29, 0.04);
+      0 1px 0 rgba(26, 26, 30, 0.04),
+      0 12px 32px -12px rgba(18, 20, 26, 0.16),
+      0 40px 100px -30px rgba(18, 20, 26, 0.32);
   }
 }
 
 [data-blok-theme="light"] .blok-image-crop-modal-backdrop {
-  --crop-modal-backdrop: rgba(18, 20, 26, 0.32);
-  --crop-modal-dialog-bg: #fbfbfa;
-  --crop-modal-dialog-fg: #16181d;
-  --crop-modal-dialog-border: rgba(22, 24, 29, 0.08);
+  --crop-modal-backdrop: rgba(22, 18, 14, 0.3);
+  --crop-modal-dialog-bg: #f7f5f0;
+  --crop-modal-dialog-fg: #1a1a1e;
+  --crop-modal-dialog-border: rgba(26, 26, 30, 0.09);
   --crop-modal-dialog-shadow:
-    0 1px 0 rgba(22, 24, 29, 0.04),
-    0 12px 32px -12px rgba(22, 24, 29, 0.12);
+    0 1px 0 rgba(26, 26, 30, 0.04),
+    0 12px 32px -12px rgba(18, 20, 26, 0.16),
+    0 40px 100px -30px rgba(18, 20, 26, 0.32);
 }
 
 @keyframes blok-crop-modal-backdrop-in {

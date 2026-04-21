@@ -68,6 +68,11 @@ describe('locale completeness (keys match en)', () => {
 const UNIVERSAL_SYMBOL_KEYS = new Set<string>([
   'blockSettings.menuShortcutMac',
   'blockSettings.menuShortcutWin',
+  'tools.image.cropRatio1to1',
+  'tools.image.cropRatio4to3',
+  'tools.image.cropRatio16to9',
+  'tools.database.propertyTypeUrl',
+  'tools.image.altButton',
 ]);
 
 /**
@@ -77,21 +82,35 @@ const UNIVERSAL_SYMBOL_KEYS = new Set<string>([
  * translation gap and fails the test.
  */
 const COGNATE_RETENTIONS: Record<string, Set<string>> = {
-  da: new Set(['tools.colorPicker.color.orange', 'toolNames.database', 'tools.callout.colorOrange']),
-  de: new Set(['tools.colorPicker.color.orange', 'tools.callout.colorOrange', 'toolNames.code', 'tools.code.codeTab']),
-  es: new Set(['tools.stub.error', 'tools.table.cellColor', 'tools.callout.color']),
-  fr: new Set(['tools.colorPicker.color.orange', 'searchTerms.note', 'tools.callout.emojiCategoryNature', 'tools.callout.colorOrange', 'toolNames.code', 'tools.code.codeTab', 'searchTerms.code']),
-  ms: new Set(['searchTerms.program']),
-  nl: new Set(['toolNames.link', 'toolNames.database', 'searchTerms.info', 'toolNames.code', 'tools.code.codeTab', 'searchTerms.code']),
-  no: new Set(['toolNames.database']),
-  pl: new Set(['toolNames.link', 'searchTerms.info']),
-  pt: new Set(['toolNames.link']),
-  ro: new Set(['toolNames.text', 'toolNames.link', 'tools.marker.textColor', 'searchTerms.separator', 'searchTerms.program']),
-  sk: new Set(['toolNames.text', 'tools.marker.textColor', 'searchTerms.program']),
-  sl: new Set(['searchTerms.program']),
-  sq: new Set(['searchTerms.program']),
-  sv: new Set(['toolNames.text', 'tools.marker.textColor', 'tools.colorPicker.color.orange', 'tools.callout.colorOrange', 'searchTerms.program']),
-  tr: new Set(['searchTerms.program']),
+  az: new Set(['tools.image.emptyLink', 'tools.image.cropRatioOval', 'tools.database.defaultStatusProperty']),
+  bs: new Set(['tools.code.autoDetected', 'tools.image.emptyLink', 'tools.image.emptyStock', 'tools.image.cropRatioOval', 'tools.database.defaultStatusProperty']),
+  cs: new Set(['tools.code.autoDetected', 'tools.image.emptyStock', 'tools.image.emptyMaxSize', 'tools.database.propertyTypeText']),
+  da: new Set(['tools.colorPicker.color.orange', 'toolNames.database', 'tools.callout.colorOrange', 'tools.code.autoDetected', 'tools.image.downloadOriginal', 'tools.image.download', 'tools.image.emptyUpload', 'tools.image.emptyLink', 'tools.image.emptyStock', 'tools.image.cropRatioOval', 'tools.database.defaultStatusProperty']),
+  de: new Set(['tools.colorPicker.color.orange', 'tools.callout.colorOrange', 'toolNames.code', 'tools.code.codeTab', 'tools.code.autoDetected', 'tools.image.emptyLink', 'tools.image.cropRatioOval', 'tools.database.viewTypeBoard', 'tools.database.propertyTypeText', 'tools.database.defaultStatusProperty', 'tools.database.defaultViewBoard']),
+  el: new Set(['tools.image.emptyStock']),
+  es: new Set(['tools.stub.error', 'tools.table.cellColor', 'tools.callout.color', 'tools.code.autoDetected']),
+  et: new Set(['tools.code.autoDetected', 'tools.image.emptyLink']),
+  fi: new Set(['tools.code.autoDetected']),
+  fil: new Set(['tools.link.emailAddress', 'tools.code.autoDetected', 'tools.image.alignment', 'tools.image.caption', 'tools.image.altPlaceholder', 'tools.image.emptyLink', 'tools.image.emptyStock', 'tools.image.emptyMaxSize', 'tools.image.emptyStockAria', 'tools.image.cropAspectRatio', 'tools.database.viewTypeBoard', 'tools.database.propertyTypeCheckbox', 'tools.database.listView', 'tools.database.kanbanBoard', 'tools.database.defaultStatusProperty', 'tools.database.defaultViewBoard']),
+  fr: new Set(['tools.colorPicker.color.orange', 'searchTerms.note', 'tools.callout.emojiCategoryNature', 'tools.callout.colorOrange', 'toolNames.code', 'tools.code.codeTab', 'searchTerms.code', 'toolNames.image', 'popover.actions', 'tools.code.autoDetected', 'tools.image.emptyMaxSize', 'tools.database.propertyTypeDate']),
+  hr: new Set(['tools.code.autoDetected', 'tools.image.emptyStock', 'tools.image.cropRatioOval', 'tools.database.defaultStatusProperty']),
+  hu: new Set(['tools.code.autoDetected', 'tools.image.emptyLink', 'tools.image.emptyStock']),
+  id: new Set(['tools.image.cropRatioOval', 'tools.database.defaultStatusProperty']),
+  it: new Set(['tools.code.autoDetected', 'tools.image.emptyLink', 'tools.image.emptyMaxSize']),
+  lt: new Set(['tools.code.autoDetected', 'tools.image.emptyStock']),
+  lv: new Set(['tools.code.autoDetected', 'tools.image.emptyStock']),
+  ms: new Set(['searchTerms.program', 'tools.code.autoDetected', 'tools.database.defaultStatusProperty']),
+  nl: new Set(['toolNames.link', 'toolNames.database', 'searchTerms.info', 'toolNames.code', 'tools.code.codeTab', 'searchTerms.code', 'tools.code.autoDetected', 'tools.image.emptyLink', 'tools.image.emptyStock', 'tools.database.defaultStatusProperty']),
+  no: new Set(['toolNames.database', 'tools.code.autoDetected', 'tools.image.sizeFull', 'tools.image.emptyStock', 'tools.image.cropRatioOval', 'tools.database.defaultStatusProperty']),
+  pl: new Set(['toolNames.link', 'searchTerms.info', 'tools.code.autoDetected', 'tools.image.emptyLink', 'tools.image.emptyStock', 'tools.database.defaultStatusProperty']),
+  pt: new Set(['toolNames.link', 'tools.code.autoDetected', 'tools.image.emptyLink', 'tools.image.cropRatioOval', 'tools.database.defaultStatusProperty']),
+  ro: new Set(['toolNames.text', 'toolNames.link', 'tools.marker.textColor', 'searchTerms.separator', 'searchTerms.program', 'tools.code.autoDetected', 'tools.image.emptyLink', 'tools.image.cropRatioOval', 'tools.database.propertyTypeText']),
+  sk: new Set(['toolNames.text', 'tools.marker.textColor', 'searchTerms.program', 'tools.code.autoDetected', 'tools.image.emptyStock', 'tools.image.emptyMaxSize', 'tools.database.propertyTypeText']),
+  sl: new Set(['searchTerms.program', 'tools.image.emptyStock', 'tools.image.cropRatioOval', 'tools.database.defaultStatusProperty']),
+  sq: new Set(['searchTerms.program', 'tools.code.autoDetected', 'tools.image.cropRatioOval']),
+  sv: new Set(['toolNames.text', 'tools.marker.textColor', 'tools.colorPicker.color.orange', 'tools.callout.colorOrange', 'searchTerms.program', 'tools.code.autoDetected', 'tools.image.sizeFull', 'tools.image.emptyStock', 'tools.image.emptyMaxSize', 'tools.image.cropRatioOval', 'tools.database.propertyTypeText', 'tools.database.defaultStatusProperty']),
+  sw: new Set(['tools.image.emptyStock']),
+  tr: new Set(['searchTerms.program', 'tools.image.cropRatioOval']),
 };
 
 describe('locale values are translated (identical-to-en only when cognate)', () => {

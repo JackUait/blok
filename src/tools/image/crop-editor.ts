@@ -1,4 +1,5 @@
 import type { ImageCrop, ImageCropShape } from '../../../types/tools/image';
+import type { I18nInstance } from '../../components/utils/tools';
 import { FULL_RECT, clampRect, isFullRect, resizeRect, applyRatio, type Handle } from './crop-math';
 
 export interface CropEditorOptions {
@@ -7,6 +8,7 @@ export interface CropEditorOptions {
   initial?: ImageCrop;
   onApply(rect: ImageCrop | null): void;
   onCancel(): void;
+  i18n?: I18nInstance;
 }
 
 const HANDLES: Handle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
@@ -16,19 +18,23 @@ type RatioShape = 'rect' | ImageCropShape;
 
 interface RatioDef {
   label: string;
+  i18nKey: string;
   key: string;
   value: number | null;
   shape: RatioShape;
 }
 
 const RATIOS: RatioDef[] = [
-  { label: 'Free', key: 'free', value: null, shape: 'rect' },
-  { label: '1:1', key: '1', value: 1, shape: 'rect' },
-  { label: '4:3', key: String(4 / 3), value: 4 / 3, shape: 'rect' },
-  { label: '16:9', key: String(16 / 9), value: 16 / 9, shape: 'rect' },
-  { label: 'Circle', key: 'circle', value: 1, shape: 'circle' },
-  { label: 'Oval', key: 'ellipse', value: null, shape: 'ellipse' },
+  { label: 'Free', i18nKey: 'tools.image.cropRatioFree', key: 'free', value: null, shape: 'rect' },
+  { label: '1:1', i18nKey: 'tools.image.cropRatio1to1', key: '1', value: 1, shape: 'rect' },
+  { label: '4:3', i18nKey: 'tools.image.cropRatio4to3', key: String(4 / 3), value: 4 / 3, shape: 'rect' },
+  { label: '16:9', i18nKey: 'tools.image.cropRatio16to9', key: String(16 / 9), value: 16 / 9, shape: 'rect' },
+  { label: 'Circle', i18nKey: 'tools.image.cropRatioCircle', key: 'circle', value: 1, shape: 'circle' },
+  { label: 'Oval', i18nKey: 'tools.image.cropRatioOval', key: 'ellipse', value: null, shape: 'ellipse' },
 ];
+
+const tr = (i18n: I18nInstance | undefined, key: string): string =>
+  i18n?.has(key) ? i18n.t(key) : key;
 
 function assertEl<T extends Element>(node: T | null, what: string): T {
   if (!node) throw new Error(`CropEditor: missing ${what}`);
@@ -71,7 +77,7 @@ export function mountCropEditor(
   const root = document.createElement('div');
   root.className = 'blok-image-crop-editor';
   root.setAttribute('role', 'region');
-  root.setAttribute('aria-label', 'Crop image');
+  root.setAttribute('aria-label', tr(opts.i18n, 'tools.image.cropDialogLabel'));
 
   const stage = document.createElement('div');
   stage.className = 'blok-image-crop-editor__stage';
@@ -132,7 +138,7 @@ export function mountCropEditor(
   const ratioGroup = document.createElement('div');
   ratioGroup.className = 'blok-image-crop-editor__ratio-group';
   ratioGroup.setAttribute('role', 'radiogroup');
-  ratioGroup.setAttribute('aria-label', 'Aspect ratio');
+  ratioGroup.setAttribute('aria-label', tr(opts.i18n, 'tools.image.cropAspectRatio'));
   ratioGroup.setAttribute('data-action', 'ratio');
 
   const ratioChips: Record<string, HTMLButtonElement> = {};
@@ -144,7 +150,7 @@ export function mountCropEditor(
     chip.setAttribute('data-ratio', r.key);
     chip.setAttribute('data-active', String(r.key === state.ratioKey));
     chip.setAttribute('aria-checked', String(r.key === state.ratioKey));
-    chip.textContent = r.label;
+    chip.textContent = tr(opts.i18n, r.i18nKey, r.label);
     chip.addEventListener('click', (e) => {
       e.stopPropagation();
       setRatio(r);
@@ -155,10 +161,13 @@ export function mountCropEditor(
 
   const actions = document.createElement('div');
   actions.className = 'blok-image-crop-editor__actions';
+  const labelReset = tr(opts.i18n, 'tools.image.cropReset');
+  const labelCancel = tr(opts.i18n, 'tools.image.cropCancel');
+  const labelDone = tr(opts.i18n, 'tools.image.cropDone');
   actions.innerHTML = `
-    <button type="button" class="blok-image-crop-editor__btn blok-image-crop-editor__btn--ghost" data-action="reset">Reset</button>
-    <button type="button" class="blok-image-crop-editor__btn blok-image-crop-editor__btn--ghost" data-action="cancel">Cancel</button>
-    <button type="button" class="blok-image-crop-editor__btn blok-image-crop-editor__btn--primary" data-action="done">Done</button>
+    <button type="button" class="blok-image-crop-editor__btn blok-image-crop-editor__btn--ghost" data-action="reset">${labelReset}</button>
+    <button type="button" class="blok-image-crop-editor__btn blok-image-crop-editor__btn--ghost" data-action="cancel">${labelCancel}</button>
+    <button type="button" class="blok-image-crop-editor__btn blok-image-crop-editor__btn--primary" data-action="done">${labelDone}</button>
   `;
 
   toolbar.appendChild(ratioGroup);

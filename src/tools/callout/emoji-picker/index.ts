@@ -22,6 +22,8 @@ const CATEGORY_I18N_KEYS: Readonly<Record<string, string>> = {
   flags: EMOJI_CATEGORY_FLAGS_KEY,
 };
 import {
+  IconCrossSmall,
+  IconDice,
   IconSearch,
   IconEmojiStar,
   IconEmojiSmile,
@@ -90,7 +92,7 @@ function saveSkinTone(index: number): void {
 }
 
 /** Dice SVG for the random button. */
-const ICON_DICE = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="1.5" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.2"/><circle cx="4.5" cy="4.5" r=".9" fill="currentColor"/><circle cx="7" cy="7" r=".9" fill="currentColor"/><circle cx="9.5" cy="9.5" r=".9" fill="currentColor"/></svg>';
+const ICON_DICE = IconDice;
 
 export class EmojiPicker {
   private readonly onSelect: (native: string) => void;
@@ -304,7 +306,7 @@ export class EmojiPicker {
       'theme-dark:hover:bg-neutral-800 theme-dark:hover:text-neutral-300',
       'transition-colors duration-100 cursor-pointer',
     ].join(' ');
-    removeBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+    removeBtn.innerHTML = IconCrossSmall;
     removeBtn.addEventListener('click', () => {
       this.onRemove();
       this.close();

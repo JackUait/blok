@@ -1,4 +1,13 @@
+import {
+  IconArrowDownLine,
+  IconArrowUp,
+  IconGridFour,
+  IconLinkExternal,
+  IconSearchLarge,
+  IconUpload,
+} from '../../components/icons';
 import { DEFAULT_MIME_TYPES } from './constants';
+import type { I18nInstance } from '../../components/utils/tools';
 
 export interface EmptyStateOptions {
   onFile(file: File): void;
@@ -12,7 +21,11 @@ export interface EmptyStateOptions {
   stockLabel?: string;
   embedPlaceholder?: string;
   submitLabel?: string;
+  i18n?: I18nInstance;
 }
+
+const tr = (i18n: I18nInstance | undefined, key: string): string =>
+  i18n?.has(key) ? i18n.t(key) : key;
 
 const MIME_LABELS: Record<string, string> = {
   'image/jpeg': 'JPG',
@@ -66,24 +79,11 @@ export interface EmptyStateElement extends HTMLElement {
 
 type SourceKind = 'upload' | 'embed' | 'stock';
 
-const ICONS = {
-  upload: '<path d="M12 4v10"/><path d="m7.5 8.5 4.5-4.5 4.5 4.5"/><path d="M5 14v3.5A2.5 2.5 0 0 0 7.5 20h9a2.5 2.5 0 0 0 2.5-2.5V14"/>',
-  link: '<path d="M10 14a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 5.5"/><path d="M14 10a5 5 0 0 0-7.07 0l-2.83 2.83a5 5 0 0 0 7.07 7.07l1.33-1.33"/>',
-  stock: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
-  drop: '<path d="M12 4v12"/><path d="m6.5 10.5 5.5 5.5 5.5-5.5"/><path d="M4 18h16"/>',
-  arrow: '<path d="M12 5v11"/><path d="m7 10 5-5 5 5"/>',
-  search: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-3.5-3.5"/>',
-};
-
-function wrapSvg(inner: string, size = 24): string {
-  return `<svg viewBox="0 0 ${size} ${size}" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${inner}</svg>`;
-}
-
 function makeTile(icon: string): HTMLElement {
   const tile = document.createElement('span');
   tile.className = 'blok-image-empty__tile';
   tile.setAttribute('aria-hidden', 'true');
-  tile.innerHTML = wrapSvg(icon);
+  tile.innerHTML = icon;
   return tile;
 }
 
@@ -117,11 +117,12 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
   const accept = types.join(',');
   const formats = formatsLabel(types);
   const sizeHint = opts.maxSize !== undefined ? formatBytes(opts.maxSize) : '';
-  const uploadLabel = opts.uploadLabel ?? 'Upload';
-  const embedLabel = opts.embedLabel ?? 'Link';
-  const stockLabel = opts.stockLabel ?? 'Stock';
-  const embedPlaceholder = opts.embedPlaceholder ?? 'Paste an image URL…';
-  const submitLabel = opts.submitLabel ?? 'Insert';
+  const uploadLabel = opts.uploadLabel ?? tr(opts.i18n, 'tools.image.emptyUpload');
+  const embedLabel = opts.embedLabel ?? tr(opts.i18n, 'tools.image.emptyLink');
+  const stockLabel = opts.stockLabel ?? tr(opts.i18n, 'tools.image.emptyStock');
+  const embedPlaceholder = opts.embedPlaceholder ?? tr(opts.i18n, 'tools.image.emptyUrlPlaceholder');
+  const submitLabel = opts.submitLabel ?? tr(opts.i18n, 'tools.image.emptyInsert');
+  const addImageLabel = tr(opts.i18n, 'tools.image.emptyAddImage');
 
   const root = document.createElement('div') as unknown as EmptyStateElement;
   root.className = 'blok-image-empty';
@@ -131,11 +132,11 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
   card.className = 'blok-image-empty__card';
   card.tabIndex = 0;
   card.setAttribute('role', 'group');
-  card.setAttribute('aria-label', 'Add an image');
+  card.setAttribute('aria-label', addImageLabel);
 
   const label = document.createElement('span');
   label.className = 'blok-image-empty__label';
-  label.textContent = 'Add an image';
+  label.textContent = addImageLabel;
 
   const panel = document.createElement('div');
   panel.className = 'blok-image-empty__panel';
@@ -146,7 +147,7 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
   const tabs = document.createElement('div');
   tabs.className = 'blok-image-empty__tabs';
   tabs.setAttribute('role', 'tablist');
-  tabs.setAttribute('aria-label', 'Image source');
+  tabs.setAttribute('aria-label', tr(opts.i18n, 'tools.image.emptySourceAria'));
   const uploadTab = makeTab('upload', uploadLabel, panel.id, true);
   const embedTab = makeTab('embed', embedLabel, panel.id, false);
   const stockTab = makeTab('stock', stockLabel, panel.id, false);
@@ -161,7 +162,7 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
   dropOverlay.setAttribute('aria-hidden', 'true');
   const dropInner = document.createElement('div');
   dropInner.className = 'blok-image-empty__drop-inner';
-  dropInner.innerHTML = `<span class="blok-image-empty__drop-icon">${wrapSvg(ICONS.drop)}</span><span>Drop to upload</span>`;
+  dropInner.innerHTML = `<span class="blok-image-empty__drop-icon">${IconArrowDownLine}</span><span>${tr(opts.i18n, 'tools.image.emptyDropToUpload')}</span>`;
   dropOverlay.appendChild(dropInner);
 
   const error = document.createElement('div');
@@ -180,7 +181,7 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
 
   const renderUpload = (): void => {
     panel.replaceChildren();
-    panel.appendChild(makeTile(ICONS.upload));
+    panel.appendChild(makeTile(IconUpload));
 
     const content = document.createElement('div');
     content.className = 'blok-image-empty__content';
@@ -192,7 +193,7 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
     choose.type = 'button';
     choose.className = 'blok-image-empty__choose';
     choose.setAttribute('data-action', 'choose-file');
-    choose.innerHTML = `<span class="blok-image-empty__choose-icon">${wrapSvg(ICONS.arrow)}</span><span>Choose file</span>`;
+    choose.innerHTML = `<span class="blok-image-empty__choose-icon">${IconArrowUp}</span><span>${tr(opts.i18n, 'tools.image.emptyChooseFile')}</span>`;
     choose.addEventListener('click', (ev) => {
       ev.stopPropagation();
       input.click();
@@ -200,7 +201,7 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
 
     const hint = document.createElement('span');
     hint.className = 'blok-image-empty__hint';
-    hint.textContent = 'or drop an image here';
+    hint.textContent = tr(opts.i18n, 'tools.image.emptyOrDropHere');
 
     primary.append(choose, hint);
 
@@ -208,7 +209,7 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
     meta.className = 'blok-image-empty__meta';
     const metaParts: string[] = [];
     if (formats) metaParts.push(formats);
-    if (sizeHint) metaParts.push(`max ${sizeHint}`);
+    if (sizeHint) metaParts.push(opts.i18n?.has('tools.image.emptyMaxSize') ? opts.i18n.t('tools.image.emptyMaxSize', { size: sizeHint }) : `max ${sizeHint}`);
     meta.textContent = metaParts.join('  ·  ');
 
     content.append(primary);
@@ -219,7 +220,7 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
 
   const renderEmbed = (): void => {
     panel.replaceChildren();
-    panel.appendChild(makeTile(ICONS.link));
+    panel.appendChild(makeTile(IconLinkExternal));
 
     const content = document.createElement('div');
     content.className = 'blok-image-empty__content blok-image-empty__content--row';
@@ -228,7 +229,7 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
     urlInput.type = 'url';
     urlInput.className = 'blok-image-empty__input';
     urlInput.placeholder = embedPlaceholder;
-    urlInput.setAttribute('aria-label', 'Image URL');
+    urlInput.setAttribute('aria-label', tr(opts.i18n, 'tools.image.emptyUrlAria'));
 
     const submit = document.createElement('button');
     submit.type = 'button';
@@ -259,7 +260,7 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
 
   const renderStock = (): void => {
     panel.replaceChildren();
-    panel.appendChild(makeTile(ICONS.stock));
+    panel.appendChild(makeTile(IconGridFour));
 
     const content = document.createElement('div');
     content.className = 'blok-image-empty__content blok-image-empty__content--row';
@@ -270,13 +271,13 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
     const searchIcon = document.createElement('span');
     searchIcon.className = 'blok-image-empty__search-icon';
     searchIcon.setAttribute('aria-hidden', 'true');
-    searchIcon.innerHTML = wrapSvg(ICONS.search);
+    searchIcon.innerHTML = IconSearchLarge;
 
     const searchInput = document.createElement('input');
     searchInput.type = 'text';
     searchInput.className = 'blok-image-empty__input blok-image-empty__input--bare';
-    searchInput.placeholder = 'Search stock images…';
-    searchInput.setAttribute('aria-label', 'Stock images');
+    searchInput.placeholder = tr(opts.i18n, 'tools.image.emptyStockPlaceholder');
+    searchInput.setAttribute('aria-label', tr(opts.i18n, 'tools.image.emptyStockAria'));
     searchInput.disabled = true;
     searchInput.addEventListener('click', (ev) => ev.stopPropagation());
 
@@ -284,7 +285,7 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
 
     const badge = document.createElement('span');
     badge.className = 'blok-image-empty__badge';
-    badge.textContent = 'Coming soon';
+    badge.textContent = tr(opts.i18n, 'tools.image.emptyComingSoon');
 
     content.append(search, badge);
     panel.appendChild(content);

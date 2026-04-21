@@ -1,17 +1,19 @@
-import { IconImage } from '../../components/icons';
+import { IconCloseThick, IconImage } from '../../components/icons';
+import type { I18nInstance } from '../../components/utils/tools';
 
 export interface UploadingStateOptions {
   fileName: string;
   sizeLabel?: string;
   onCancel?(): void;
+  i18n?: I18nInstance;
 }
+
+const tr = (i18n: I18nInstance | undefined, key: string): string =>
+  i18n?.has(key) ? i18n.t(key) : key;
 
 export interface UploadingStateElement extends HTMLElement {
   setProgress(percent: number, sizeLabel?: string): void;
 }
-
-const CLOSE_ICON_SVG =
-  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true" focusable="false"><path d="M18 6L6 18M6 6l12 12"/></svg>';
 
 function clamp(percent: number): number {
   if (!Number.isFinite(percent)) return 0;
@@ -33,7 +35,7 @@ export function renderUploadingState(opts: UploadingStateOptions): UploadingStat
 
   const label = document.createElement('span');
   label.className = 'blok-image-uploading__label';
-  label.textContent = 'Uploading';
+  label.textContent = tr(opts.i18n, 'tools.image.uploadingLabel');
 
   const name = document.createElement('span');
   name.className = 'blok-image-uploading__filename';
@@ -45,8 +47,8 @@ export function renderUploadingState(opts: UploadingStateOptions): UploadingStat
   cancel.type = 'button';
   cancel.className = 'blok-image-uploading__cancel';
   cancel.setAttribute('data-action', 'cancel');
-  cancel.setAttribute('aria-label', 'Cancel upload');
-  cancel.innerHTML = CLOSE_ICON_SVG;
+  cancel.setAttribute('aria-label', tr(opts.i18n, 'tools.image.cancelUpload'));
+  cancel.innerHTML = IconCloseThick;
   cancel.addEventListener('click', () => {
     opts.onCancel?.();
   });
@@ -90,7 +92,7 @@ export function renderUploadingState(opts: UploadingStateOptions): UploadingStat
   bar.setAttribute('aria-valuemin', '0');
   bar.setAttribute('aria-valuemax', '100');
   bar.setAttribute('aria-valuenow', '0');
-  bar.setAttribute('aria-label', 'Upload progress');
+  bar.setAttribute('aria-label', tr(opts.i18n, 'tools.image.uploadProgress'));
 
   const fill = document.createElement('div');
   fill.className = 'blok-image-uploading__bar-fill';

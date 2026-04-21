@@ -2,6 +2,8 @@
  * Constants for the Toggle tool
  */
 
+import { IconChevronRightSmall } from '../../components/icons';
+
 /**
  * Tool name used when registering this tool with Blok
  */
@@ -48,7 +50,7 @@ export const ARROW_STYLES = 'flex-shrink-0 p-[8px] flex items-center justify-cen
 /**
  * SVG icon for the toggle arrow
  */
-export const ARROW_ICON = '<svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 2.5L8.5 6L4.5 9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+export const ARROW_ICON = IconChevronRightSmall;
 
 /**
  * Styles for the body placeholder element

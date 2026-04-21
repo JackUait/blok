@@ -280,6 +280,13 @@ function createIconCell(name: string, svg: string, entries: IconEntry[]): HTMLEl
   preview.className = 'icon-preview';
   preview.innerHTML = svg;
 
+  const previewSvg = preview.querySelector('svg');
+
+  if (previewSvg && !previewSvg.hasAttribute('width') && !previewSvg.hasAttribute('height')) {
+    previewSvg.setAttribute('width', '20');
+    previewSvg.setAttribute('height', '20');
+  }
+
   const label = document.createElement('div');
 
   label.className = 'icon-name';

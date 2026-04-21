@@ -700,3 +700,56 @@ export const IconImage = `
   <path d="M3 13.25 6.25 10l2.25 2.25L12.25 8.25 17 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
+
+// ============================================================================
+// Image tool icons (24×24 viewBox, 1.75 stroke — toolbar / overlay / lightbox)
+// ============================================================================
+
+const wrapImageSvg = (inner: string): string =>
+  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${inner}</svg>`;
+
+export const IconImageAlignLeft = wrapImageSvg('<rect x="3" y="8" width="8" height="8" rx="1.5" fill="currentColor" stroke="none"/><path d="M3 4h18"/><path d="M14 10h7"/><path d="M14 14h7"/><path d="M3 20h18"/>');
+export const IconImageAlignCenter = wrapImageSvg('<rect x="8" y="8" width="8" height="8" rx="1.5" fill="currentColor" stroke="none"/><path d="M3 4h18"/><path d="M3 20h18"/>');
+export const IconImageAlignRight = wrapImageSvg('<rect x="13" y="8" width="8" height="8" rx="1.5" fill="currentColor" stroke="none"/><path d="M3 4h18"/><path d="M3 10h7"/><path d="M3 14h7"/><path d="M3 20h18"/>');
+
+export const IconZoomOut = wrapImageSvg('<path d="M5 12h14"/>');
+export const IconZoomIn = wrapImageSvg('<path d="M12 5v14"/><path d="M5 12h14"/>');
+export const IconLinkCopy = wrapImageSvg('<path d="M10 13a4 4 0 0 1 0-5.66l3-3a4 4 0 0 1 5.66 5.66l-1.5 1.5"/><path d="M14 11a4 4 0 0 1 0 5.66l-3 3a4 4 0 1 1-5.66-5.66l1.5-1.5"/>');
+export const IconCollapseFullscreen = wrapImageSvg('<path d="M9 3v6H3"/><path d="M21 9h-6V3"/><path d="M3 15h6v6"/><path d="M15 21v-6h6"/>');
+export const IconExpandFullscreen = wrapImageSvg('<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/>');
+export const IconDownload = wrapImageSvg('<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>');
+export const IconCaption = wrapImageSvg('<rect x="3" y="3.5" width="18" height="12" rx="2.5"/><path d="M5 19h14"/><path d="M8 22h8"/>');
+// Replace (image) — opposing horizontal arrows. Distinct from IconReplace
+// (20×20 looping arrows) used by the inline-toolbar convert-to feature.
+export const IconReplaceImage = wrapImageSvg('<path d="M4 7h15"/><path d="m15 3 4 4-4 4"/><path d="M20 17H5"/><path d="m9 13-4 4 4 4"/>');
+export const IconCrop = wrapImageSvg('<path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M2 6h14a2 2 0 0 1 2 2v14"/>');
+
+// More-options (horizontal 3 dots) — filled circles
+export const IconMoreHorizontal = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>';
+
+// Thick close (×) — 14×14 fixed size. Distinct from IconCross (20×20, 1.25 stroke).
+export const IconCloseThick = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true" focusable="false"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+
+// Broken image alert — error state
+export const IconImageBroken = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14.5 4.5H6A2.5 2.5 0 0 0 3.5 7v10A2.5 2.5 0 0 0 6 19.5h12a2.5 2.5 0 0 0 2.5-2.5v-6.25"/><path d="m14.5 4.5 1.75 2.25 2.25-1.25 2 2.75"/><circle cx="8" cy="9" r="1.2" fill="currentColor" stroke="none"/><path d="m3.8 16.25 3.45-3.45 2.5 2.5 3.5-3.5 4 4"/></svg>';
+
+export const IconUpload = wrapImageSvg('<path d="M12 4v10"/><path d="m7.5 8.5 4.5-4.5 4.5 4.5"/><path d="M5 14v3.5A2.5 2.5 0 0 0 7.5 20h9a2.5 2.5 0 0 0 2.5-2.5V14"/>');
+export const IconLinkExternal = wrapImageSvg('<path d="M10 14a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 5.5"/><path d="M14 10a5 5 0 0 0-7.07 0l-2.83 2.83a5 5 0 0 0 7.07 7.07l1.33-1.33"/>');
+export const IconGridFour = wrapImageSvg('<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>');
+export const IconArrowDownLine = wrapImageSvg('<path d="M12 4v12"/><path d="m6.5 10.5 5.5 5.5 5.5-5.5"/><path d="M4 18h16"/>');
+export const IconArrowUp = wrapImageSvg('<path d="M12 5v11"/><path d="m7 10 5-5 5 5"/>');
+// Thicker 24×24 search variant — IconSearch (20×20) is used elsewhere in UI
+export const IconSearchLarge = wrapImageSvg('<circle cx="11" cy="11" r="6.5"/><path d="m20 20-3.5-3.5"/>');
+
+// ============================================================================
+// Misc shared icons
+// ============================================================================
+
+// Dice — emoji picker "random" button (14×14)
+export const IconDice = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="1.5" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.2"/><circle cx="4.5" cy="4.5" r=".9" fill="currentColor"/><circle cx="7" cy="7" r=".9" fill="currentColor"/><circle cx="9.5" cy="9.5" r=".9" fill="currentColor"/></svg>';
+
+// Small close (×) — emoji picker remove button (14×14)
+export const IconCrossSmall = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+
+// Toggle expand/collapse chevron — 12×12 so it fits the toggle arrow button
+export const IconChevronRightSmall = '<svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 2.5L8.5 6L4.5 9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';

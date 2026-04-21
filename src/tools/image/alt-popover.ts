@@ -1,32 +1,37 @@
 import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
+import type { I18nInstance } from '../../components/utils/tools';
 
 export interface OpenAltPopoverOptions {
   anchor: HTMLElement;
   value: string;
   onSave(next: string): void;
   onCancel(): void;
+  i18n?: I18nInstance;
 }
 
 const DESCRIPTION =
   'Add alt text to describe this image. This makes your page more accessible to people who are vision-impaired or blind.';
+
+const tr = (i18n: I18nInstance | undefined, key: string): string =>
+  i18n?.has(key) ? i18n.t(key) : key;
 
 export function openAltPopover(opts: OpenAltPopoverOptions): () => void {
   const popover = document.createElement('div');
   popover.className = 'blok-image-alt-popover';
   popover.setAttribute('data-role', 'image-alt-popover');
   popover.setAttribute('role', 'dialog');
-  popover.setAttribute('aria-label', 'Edit alt text');
+  popover.setAttribute('aria-label', tr(opts.i18n, 'tools.image.altEdit'));
 
   const description = document.createElement('p');
   description.className = 'blok-image-alt-popover__description';
-  description.textContent = DESCRIPTION;
+  description.textContent = tr(opts.i18n, 'tools.image.altDescription');
   popover.appendChild(description);
 
   const textarea = document.createElement('textarea');
   textarea.className = 'blok-image-alt-popover__input';
   textarea.rows = 2;
   textarea.value = opts.value;
-  textarea.placeholder = 'Alt text';
+  textarea.placeholder = tr(opts.i18n, 'tools.image.altPlaceholder');
   popover.appendChild(textarea);
 
   document.body.appendChild(popover);

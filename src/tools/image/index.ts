@@ -464,13 +464,14 @@ export class ImageTool implements BlockTool {
     }
 
     const placeholder = this.config.captionPlaceholder ?? DEFAULT_CAPTION_PLACEHOLDER;
+    const captionVisible = this.data.captionVisible !== false;
     const captionRow = renderCaptionRow({
       caption: {
         value: this.data.caption ?? '',
         placeholder,
         readOnly: this.readOnly,
       },
-      onAlt: this.readOnly ? undefined : () => this.promptAlt(),
+      onAlt: this.readOnly || !captionVisible ? undefined : () => this.promptAlt(),
       hasAlt: Boolean(this.data.alt),
     });
     const captionEl = captionRow.querySelector<HTMLElement>('.blok-image-caption');

@@ -74,22 +74,6 @@ describe('openAltPopover', () => {
     detach();
   });
 
-  it('close button commits current text via onSave then detaches', () => {
-    const onSave = vi.fn();
-    const detach = open({ value: 'old', onSave });
-    const textarea = document.body.querySelector<HTMLTextAreaElement>(
-      '[data-role="image-alt-popover"] textarea'
-    )!;
-    textarea.value = 'new alt';
-    const close = document.body.querySelector<HTMLButtonElement>(
-      '[data-role="image-alt-popover"] [data-action="close"]'
-    )!;
-    close.click();
-    expect(onSave).toHaveBeenCalledWith('new alt');
-    expect(document.body.querySelector('[data-role="image-alt-popover"]')).toBeNull();
-    detach();
-  });
-
   it('Enter key commits onSave and detaches', () => {
     const onSave = vi.fn();
     const detach = open({ onSave });

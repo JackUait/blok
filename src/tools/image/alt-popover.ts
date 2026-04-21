@@ -17,15 +17,6 @@ export function openAltPopover(opts: OpenAltPopoverOptions): () => void {
   popover.setAttribute('role', 'dialog');
   popover.setAttribute('aria-label', 'Edit alt text');
 
-  const closeBtn = document.createElement('button');
-  closeBtn.type = 'button';
-  closeBtn.className = 'blok-image-alt-popover__close';
-  closeBtn.setAttribute('data-action', 'close');
-  closeBtn.setAttribute('aria-label', 'Close');
-  closeBtn.innerHTML =
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
-  popover.appendChild(closeBtn);
-
   const description = document.createElement('p');
   description.className = 'blok-image-alt-popover__description';
   description.textContent = DESCRIPTION;
@@ -93,11 +84,6 @@ export function openAltPopover(opts: OpenAltPopoverOptions): () => void {
     if (state.detached) return;
     positionPopover(popover, opts.anchor);
   }
-
-  closeBtn.addEventListener('click', (event) => {
-    event.stopPropagation();
-    commit();
-  });
 
   textarea.addEventListener('keydown', onKeyDown);
   document.addEventListener('mousedown', onOutside);

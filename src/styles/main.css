@@ -3380,7 +3380,12 @@
   justify-content: center;
   background: rgba(25, 25, 24, 0.92);
   z-index: 9999;
-  cursor: zoom-out;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.blok-image-lightbox.is-dragging {
+  cursor: grabbing;
 }
 .blok-image-lightbox__image {
   max-width: 95vw;
@@ -3389,6 +3394,10 @@
   transform: scale(1);
   transform-origin: center center;
   transition: transform 120ms ease-out;
+  pointer-events: none;
+}
+.blok-image-lightbox.is-dragging .blok-image-lightbox__image {
+  transition: none;
 }
 .blok-image-lightbox__bar {
   position: absolute;

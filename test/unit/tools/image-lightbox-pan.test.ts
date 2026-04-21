@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { openLightbox } from '../../../src/tools/image/ui';
 
@@ -146,5 +148,37 @@ describe('openLightbox drag-to-pan', () => {
     // Image was never translated.
     expect(image().style.transform).toBe('translate(0px, 0px) scale(1)');
     close();
+  });
+});
+
+describe('lightbox pan CSS', () => {
+  const projectRoot = path.resolve(__dirname, '../../..');
+  const mainCss = readFileSync(path.join(projectRoot, 'src/styles/main.css'), 'utf8');
+
+  const ruleBody = (selectorPattern: RegExp): string => {
+    const match = mainCss.match(selectorPattern);
+    if (!match) throw new Error(`selector not found: ${selectorPattern}`);
+    return match[1];
+  };
+
+  it('lightbox dialog declares grab cursor and disables touch scrolling', () => {
+    const body = ruleBody(/\.blok-image-lightbox\s*\{([^}]+)\}/);
+    expect(body).toMatch(/cursor:\s*grab/);
+    expect(body).toMatch(/touch-action:\s*none/);
+    expect(body).toMatch(/user-select:\s*none/);
+    expect(body).not.toMatch(/cursor:\s*zoom-out/);
+  });
+
+  it('lightbox dialog has a grabbing cursor while dragging', () => {
+    const body = ruleBody(/\.blok-image-lightbox\.is-dragging\s*\{([^}]+)\}/);
+    expect(body).toMatch(/cursor:\s*grabbing/);
+  });
+
+  it('lightbox image ignores pointer events and disables transform transition while dragging', () => {
+    const imgBody = ruleBody(/\.blok-image-lightbox__image\s*\{([^}]+)\}/);
+    expect(imgBody).toMatch(/pointer-events:\s*none/);
+
+    const dragImgBody = ruleBody(/\.blok-image-lightbox\.is-dragging\s+\.blok-image-lightbox__image\s*\{([^}]+)\}/);
+    expect(dragImgBody).toMatch(/transition:\s*none/);
   });
 });

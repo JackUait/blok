@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resizeRect, clampRect, widthForAspectChange } from '../../../../src/tools/image/crop-math';
+import { resizeRect, clampRect, widthForAspectChange, applyRatio } from '../../../../src/tools/image/crop-math';
 
 describe('widthForAspectChange', () => {
   it('keeps width when aspect unchanged', () => {
@@ -109,6 +109,45 @@ describe('resizeRect — opposite edge stays pinned when handle hits bounds', ()
     expect(result.x).toBe(20);
     expect(result.w).toBe(50);
     expect(result.x + result.w).toBe(70);
+  });
+});
+
+describe('applyRatio anchors opposite edge when handle passed (resize drag)', () => {
+  it('se handle: NW corner stays pinned after ratio snap', () => {
+    const resized = resizeRect({ x: 10, y: 10, w: 40, h: 40 }, 'se', 20, 10);
+    const out = applyRatio(resized, 1, 'se');
+    expect(out.x).toBe(10);
+    expect(out.y).toBe(10);
+  });
+
+  it('nw handle: SE corner stays pinned after ratio snap', () => {
+    const start = { x: 20, y: 20, w: 60, h: 60 };
+    const resized = resizeRect(start, 'nw', -10, -20);
+    const out = applyRatio(resized, 1, 'nw');
+    expect(out.x + out.w).toBe(80);
+    expect(out.y + out.h).toBe(80);
+  });
+
+  it('e handle: left edge + vertical center preserved', () => {
+    const start = { x: 10, y: 10, w: 40, h: 40 };
+    const resized = resizeRect(start, 'e', 20, 0);
+    const out = applyRatio(resized, 1, 'e');
+    expect(out.x).toBe(10);
+    expect(out.y + out.h / 2).toBeCloseTo(30);
+  });
+
+  it('s handle: top edge + horizontal center preserved', () => {
+    const start = { x: 10, y: 10, w: 40, h: 40 };
+    const resized = resizeRect(start, 's', 0, 20);
+    const out = applyRatio(resized, 1, 's');
+    expect(out.y).toBe(10);
+    expect(out.x + out.w / 2).toBeCloseTo(30);
+  });
+
+  it('without handle (ratio chip switch / body drag): centers around midpoint', () => {
+    const out = applyRatio({ x: 10, y: 10, w: 60, h: 40 }, 1);
+    expect(out.x + out.w / 2).toBeCloseTo(40);
+    expect(out.y + out.h / 2).toBeCloseTo(30);
   });
 });
 

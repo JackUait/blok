@@ -219,8 +219,8 @@ export function mountCropEditor(
   }
   source.addEventListener('load', updatePill);
 
-  function setRect(next: ImageCrop): void {
-    state.rect = applyRatio(clampRect(next), state.ratio);
+  function setRect(next: ImageCrop, handle?: Handle): void {
+    state.rect = applyRatio(clampRect(next), state.ratio, handle);
     paint();
   }
 
@@ -275,7 +275,7 @@ export function mountCropEditor(
     const origin = stagePct(ev.clientX, ev.clientY);
     const move = (m: PointerEvent): void => {
       const p = stagePct(m.clientX, m.clientY);
-      setRect(resizeRect(start, h, p.x - origin.x, p.y - origin.y));
+      setRect(resizeRect(start, h, p.x - origin.x, p.y - origin.y), h);
     };
     const up = (): void => {
       window.removeEventListener('pointermove', move);

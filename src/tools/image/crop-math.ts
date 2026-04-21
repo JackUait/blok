@@ -75,13 +75,36 @@ export function widthForAspectChange(
   return Math.round(clamped * 100) / 100;
 }
 
-export function applyRatio(rect: ImageCrop, ratio: number | null): ImageCrop {
+export function applyRatio(
+  rect: ImageCrop,
+  ratio: number | null,
+  handle?: Handle
+): ImageCrop {
   if (ratio === null || !Number.isFinite(ratio) || ratio <= 0) return rect;
-  const cx = rect.x + rect.w / 2;
-  const cy = rect.y + rect.h / 2;
   const baseW = rect.w;
   const baseH = baseW / ratio;
   const w = baseH > rect.h ? rect.h * ratio : baseW;
   const h = baseH > rect.h ? rect.h : baseH;
-  return clampRect({ x: cx - w / 2, y: cy - h / 2, w, h });
+
+  const hasW = handle?.includes('w') ?? false;
+  const hasE = handle?.includes('e') ?? false;
+  const hasN = handle?.includes('n') ?? false;
+  const hasS = handle?.includes('s') ?? false;
+
+  const cx = rect.x + rect.w / 2;
+  const cy = rect.y + rect.h / 2;
+
+  let x: number;
+  if (handle === undefined) x = cx - w / 2;
+  else if (hasW && !hasE) x = rect.x + rect.w - w;
+  else if (hasE && !hasW) x = rect.x;
+  else x = cx - w / 2;
+
+  let y: number;
+  if (handle === undefined) y = cy - h / 2;
+  else if (hasN && !hasS) y = rect.y + rect.h - h;
+  else if (hasS && !hasN) y = rect.y;
+  else y = cy - h / 2;
+
+  return clampRect({ x, y, w, h });
 }

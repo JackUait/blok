@@ -142,12 +142,19 @@ export function openLightbox(opts: LightboxOptions): () => void {
   img.className = 'blok-image-lightbox__image';
 
   const zoomState = { value: 1 };
+  const panState = { x: 0, y: 0 };
+
+  const applyTransform = (): void => {
+    img.style.transform = `translate(${panState.x}px, ${panState.y}px) scale(${zoomState.value})`;
+  };
 
   const setZoom = (next: number): void => {
     zoomState.value = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, next));
-    img.style.transform = `scale(${zoomState.value})`;
+    applyTransform();
     syncResetLabel();
   };
+
+  applyTransform();
 
   const toolbar = renderLightboxToolbar({
     fileName: opts.fileName,

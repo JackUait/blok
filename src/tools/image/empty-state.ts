@@ -87,13 +87,15 @@ function makeTile(icon: string): HTMLElement {
   return tile;
 }
 
-let tabIdCounter = 0;
+function uid(): string {
+  return Math.random().toString(36).slice(2, 9);
+}
 
 function makeTab(kind: SourceKind, label: string, panelId: string, current: boolean): HTMLButtonElement {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'blok-image-empty__tab';
-  btn.id = `blok-image-empty-tab-${++tabIdCounter}`;
+  btn.id = `blok-image-empty-tab-${uid()}`;
   btn.setAttribute('data-src', kind);
   btn.setAttribute('data-tab', kind);
   btn.setAttribute('role', 'tab');
@@ -137,7 +139,7 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
 
   const panel = document.createElement('div');
   panel.className = 'blok-image-empty__panel';
-  panel.id = `blok-image-empty-panel-${++tabIdCounter}`;
+  panel.id = `blok-image-empty-panel-${uid()}`;
   panel.setAttribute('data-panel-host', '');
   panel.setAttribute('role', 'tabpanel');
 

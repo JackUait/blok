@@ -3213,7 +3213,8 @@
 [data-blok-tool="image"] .blok-image-toolbar button:hover { background: var(--blok-overlay-fg-hover); color: var(--blok-overlay-fg-strong); }
 [data-blok-tool="image"] .blok-image-toolbar button.is-danger:hover { background: var(--blok-overlay-danger-bg); color: var(--blok-overlay-danger-fg); }
 [data-blok-tool="image"] .blok-image-toolbar button svg { width: 14px; height: 14px; }
-[data-blok-tool="image"] .blok-image-toolbar button[aria-pressed="true"] {
+[data-blok-tool="image"] .blok-image-toolbar button[aria-pressed="true"],
+[data-blok-tool="image"] .blok-image-toolbar button[aria-expanded="true"] {
   background: var(--blok-overlay-fg-pressed);
   color: var(--blok-overlay-fg-strong);
 }

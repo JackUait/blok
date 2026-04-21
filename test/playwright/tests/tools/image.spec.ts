@@ -98,7 +98,7 @@ test('clicking image opens lightbox; Escape closes it', async ({ page }) => {
   await expect(dialog).toHaveCount(0);
 });
 
-test('lightbox toolbar renders filename, copy-url, and no backdrop-filter', async ({ page }) => {
+test('lightbox toolbar hides filename, shows copy-url, has no backdrop-filter', async ({ page }) => {
   await createBlok(page, {
     blocks: [
       { type: 'image', data: { url: SAMPLE_IMAGE_URL, alt: 'pic', fileName: 'photo.png' } },
@@ -114,7 +114,7 @@ test('lightbox toolbar renders filename, copy-url, and no backdrop-filter', asyn
   const toolbar = dialog.locator('[data-role="lightbox-toolbar"]');
 
   await expect(toolbar).toBeVisible();
-  await expect(toolbar.locator('[data-role="lightbox-filename"]')).toHaveText('photo.png');
+  await expect(toolbar.locator('[data-role="lightbox-filename"]')).toHaveCount(0);
   await expect(toolbar.locator('[data-action="lightbox-copy-url"]')).toBeVisible();
 
   const backdrop = await toolbar.evaluate((el) => getComputedStyle(el).backdropFilter);

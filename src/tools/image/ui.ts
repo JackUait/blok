@@ -177,7 +177,6 @@ export function openLightbox(opts: LightboxOptions): () => void {
   applyTransform();
 
   const toolbar = renderLightboxToolbar({
-    fileName: opts.fileName,
     getZoom: () => zoomState.value,
     setZoom,
     onDownload: () => {
@@ -309,7 +308,6 @@ export function openLightbox(opts: LightboxOptions): () => void {
 }
 
 interface LightboxToolbarOptions {
-  fileName?: string;
   getZoom(): number;
   setZoom(next: number): void;
   onDownload(): void;
@@ -330,16 +328,6 @@ function renderLightboxToolbar(opts: LightboxToolbarOptions): HTMLElement {
   const iconDownload = wrapSvg('<circle cx="12" cy="12" r="9"/><path d="M12 7v8"/><path d="m8.5 12 3.5 3.5L15.5 12"/>');
   const iconCopy = wrapSvg('<path d="M10 13a4 4 0 0 1 0-5.66l3-3a4 4 0 0 1 5.66 5.66l-1.5 1.5"/><path d="M14 11a4 4 0 0 1 0 5.66l-3 3a4 4 0 1 1-5.66-5.66l1.5-1.5"/>');
   const iconCollapse = wrapSvg('<path d="M9 3v6H3"/><path d="M21 9h-6V3"/><path d="M3 15h6v6"/><path d="M15 21v-6h6"/>');
-
-  if (opts.fileName) {
-    const label = document.createElement('span');
-    label.className = 'blok-image-lightbox__filename';
-    label.setAttribute('data-role', 'lightbox-filename');
-    label.textContent = opts.fileName;
-    label.setAttribute('title', opts.fileName);
-    bar.appendChild(label);
-    appendLightboxDivider(bar);
-  }
 
   appendLightboxButton(bar, {
     action: 'zoom-out',

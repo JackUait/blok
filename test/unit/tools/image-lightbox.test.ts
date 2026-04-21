@@ -13,17 +13,10 @@ const openAtBody = (opts: Parameters<typeof openLightbox>[0]): (() => void) => o
 const bar = (): HTMLElement => document.body.querySelector('[data-role="lightbox-toolbar"]') as HTMLElement;
 
 describe('openLightbox toolbar', () => {
-  it('renders filename label when fileName provided', () => {
+  it('never renders filename label, even when fileName provided', () => {
     const close = openAtBody({ url: 'https://example.com/pic.jpg', fileName: 'photo.jpg' });
-    const label = bar().querySelector('.blok-image-lightbox__filename');
-    expect(label).not.toBeNull();
-    expect(label!.textContent).toBe('photo.jpg');
-    close();
-  });
-
-  it('omits filename label when fileName absent', () => {
-    const close = openAtBody({ url: 'https://example.com/pic.jpg' });
     expect(bar().querySelector('.blok-image-lightbox__filename')).toBeNull();
+    expect(bar().querySelector('[data-role="lightbox-filename"]')).toBeNull();
     close();
   });
 

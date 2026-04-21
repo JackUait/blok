@@ -3356,13 +3356,29 @@
 }
 
 /* ----- Fullscreen lightbox ----- */
+/*
+  The lightbox mounts directly on `<body>`, outside [data-blok-interface],
+  so editor-scoped tokens (spacing + overlay palette) don't resolve via the
+  usual scope. Re-declare the spacing scale + an always-dark popover palette
+  locally so the chrome renders consistently no matter where the root lives.
+  The palette mirrors the dark-mode inline popover (#252525 surface + 14%
+  white hairline + layered drop shadow) so the lightbox toolbar reads as the
+  same Notion-style chrome as the inline formatting popover.
+*/
 .blok-image-lightbox {
+  --blok-space-0-5: 2px;
+  --blok-space-1: 4px;
+  --blok-space-1-5: 6px;
+  --blok-space-2: 8px;
+  --blok-space-3: 12px;
+  --blok-space-4: 16px;
+
   position: fixed;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--blok-overlay-dark);
+  background: rgba(25, 25, 24, 0.92);
   z-index: 9999;
   cursor: zoom-out;
 }
@@ -3383,12 +3399,13 @@
   align-items: center;
   gap: var(--blok-space-0-5);
   padding: var(--blok-space-1-5);
-  background: var(--blok-overlay-dark-strong);
-  color: var(--blok-overlay-fg);
+  background: #252525;
+  color: #e2e0dc;
   border-radius: var(--blok-space-3);
   box-shadow:
-    inset 0 0 0 1px var(--blok-overlay-ring),
-    var(--blok-image-shadow-toolbar);
+    0 0 0 1px rgba(255, 255, 255, 0.14),
+    0 4px 24px rgba(0, 0, 0, 0.5),
+    0 16px 40px -8px rgba(0, 0, 0, 0.4);
   cursor: default;
   z-index: 1;
 }
@@ -3402,7 +3419,7 @@
   font-weight: 500;
   line-height: 1;
   letter-spacing: 0.01em;
-  color: var(--blok-overlay-fg);
+  color: #a39e98;
 }
 .blok-image-lightbox__btn {
   display: inline-flex;
@@ -3420,11 +3437,11 @@
   transition: background 80ms ease, color 80ms ease;
 }
 .blok-image-lightbox__btn:hover {
-  background: var(--blok-overlay-fg-hover);
-  color: var(--blok-overlay-fg-strong);
+  background: rgba(255, 255, 255, 0.055);
+  color: #e2e0dc;
 }
 .blok-image-lightbox__btn:active {
-  background: var(--blok-overlay-fg-pressed);
+  background: rgba(255, 255, 255, 0.09);
 }
 .blok-image-lightbox__btn svg {
   width: var(--blok-space-4);
@@ -3439,12 +3456,29 @@
   line-height: 1;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.01em;
+  color: #a39e98;
 }
 .blok-image-lightbox__divider {
   width: 1px;
   align-self: stretch;
   margin: var(--blok-space-1) var(--blok-space-0-5);
-  background: var(--blok-overlay-divider);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/*
+  Lightbox tooltip content — the tooltip itself is rendered in the global
+  tooltip singleton (outside `.blok-image-lightbox`), so these selectors are
+  unscoped. The shortcut pill reads as a muted sibling of the label so the
+  hotkey is visually distinct from the action name.
+*/
+.blok-image-lightbox-tooltip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.blok-image-lightbox-tooltip__shortcut {
+  color: rgba(255, 255, 255, 0.45);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ----- Empty state ----- */

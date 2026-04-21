@@ -248,7 +248,7 @@ function renderLightboxToolbar(opts: LightboxToolbarOptions): HTMLElement {
   appendLightboxButton(bar, {
     action: 'zoom-out',
     label: 'Zoom out',
-    tooltip: 'Zoom out  −',
+    shortcut: '−',
     html: iconMinus,
     onClick: () => opts.setZoom(opts.getZoom() - ZOOM_STEP),
   });
@@ -262,7 +262,7 @@ function renderLightboxToolbar(opts: LightboxToolbarOptions): HTMLElement {
   appendLightboxButton(bar, {
     action: 'zoom-in',
     label: 'Zoom in',
-    tooltip: 'Zoom in  +',
+    shortcut: '+',
     html: iconPlus,
     onClick: () => opts.setZoom(opts.getZoom() + ZOOM_STEP),
   });
@@ -284,7 +284,7 @@ function renderLightboxToolbar(opts: LightboxToolbarOptions): HTMLElement {
   appendLightboxButton(bar, {
     action: 'lightbox-collapse',
     label: 'Exit fullscreen',
-    tooltip: 'Exit fullscreen  Esc',
+    shortcut: 'Esc',
     html: iconCollapse,
     onClick: opts.onCollapse,
   });
@@ -306,10 +306,22 @@ function appendLightboxDivider(parent: HTMLElement): void {
 interface LightboxButtonSpec {
   action: string;
   label: string;
-  tooltip?: string;
+  shortcut?: string;
   html: string;
   onClick(): void;
   extraClass?: string;
+}
+
+function buildLightboxTooltipContent(label: string, shortcut?: string): HTMLElement | string {
+  if (shortcut === undefined) return label;
+  const root = document.createElement('span');
+  root.className = 'blok-image-lightbox-tooltip';
+  root.append(document.createTextNode(label));
+  const kbd = document.createElement('span');
+  kbd.className = 'blok-image-lightbox-tooltip__shortcut';
+  kbd.textContent = shortcut;
+  root.appendChild(kbd);
+  return root;
 }
 
 function appendLightboxButton(parent: HTMLElement, spec: LightboxButtonSpec): void {
@@ -321,7 +333,7 @@ function appendLightboxButton(parent: HTMLElement, spec: LightboxButtonSpec): vo
     ? `blok-image-lightbox__btn ${spec.extraClass}`
     : 'blok-image-lightbox__btn';
   btn.innerHTML = spec.html;
-  tooltipOnHover(btn, spec.tooltip ?? spec.label, { placement: 'top' });
+  tooltipOnHover(btn, buildLightboxTooltipContent(spec.label, spec.shortcut), { placement: 'top' });
   btn.addEventListener('click', (event) => {
     event.stopPropagation();
     tooltipHide();

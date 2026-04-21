@@ -650,6 +650,25 @@ export interface OverlayState {
   size: ImageSize;
 }
 
+/**
+ * Below this figure width the overlay collapses to just the "..." button.
+ * The expanded toolbar is ~240px; collapse only when the image is too narrow
+ * to comfortably fit the full row (roughly sm-size territory).
+ */
+export const OVERLAY_COMPACT_THRESHOLD = 230;
+
+export function updateOverlayCompact(
+  overlay: HTMLElement,
+  width: number,
+  threshold: number = OVERLAY_COMPACT_THRESHOLD
+): void {
+  if (width > 0 && width < threshold) {
+    overlay.setAttribute('data-compact', 'true');
+  } else {
+    overlay.removeAttribute('data-compact');
+  }
+}
+
 export interface OverlayOptions {
   state: OverlayState;
   onAlign(next: ImageAlignment): void;

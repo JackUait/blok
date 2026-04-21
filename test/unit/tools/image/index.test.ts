@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { ImageTool } from '../../../../src/tools/image';
+import { updateOverlayCompact } from '../../../../src/tools/image/ui';
 import type { ImageData, ImageConfig } from '../../../../types/tools/image';
 import type { API, BlockToolConstructorOptions, BlockAPI, FilePasteEvent, PatternPasteEvent } from '../../../../types';
 
@@ -622,6 +623,20 @@ describe('ImageTool — caption toggle', () => {
     expect(root.getAttribute('data-caption')).toBe('on');
     expect(tool.save().captionVisible).toBe(true);
   });
+
+  it('hides the alt-edit button when the caption is hidden', () => {
+    const tool = new ImageTool(createOptions({ url: 'u', captionVisible: false }));
+    const root = tool.render();
+    expect(root.querySelector('[data-action="alt-edit"]')).toBeNull();
+  });
+
+  it('restores the alt-edit button after toggling the caption back on', () => {
+    const tool = new ImageTool(createOptions({ url: 'u', captionVisible: false }));
+    const root = tool.render();
+    expect(root.querySelector('[data-action="alt-edit"]')).toBeNull();
+    root.querySelector<HTMLButtonElement>('[data-action="caption-toggle"]')?.click();
+    expect(root.querySelector('[data-action="alt-edit"]')).not.toBeNull();
+  });
 });
 
 describe('ImageTool — upload progression', () => {
@@ -806,6 +821,72 @@ describe('ImageTool — error state', () => {
     await new Promise((r) => setTimeout(r, 0));
     root.querySelector<HTMLButtonElement>('[data-action="replace"]')?.click();
     expect(root.getAttribute('data-state')).toBe('empty');
+  });
+});
+
+describe('updateOverlayCompact', () => {
+  it('sets data-compact="true" when width below threshold', () => {
+    const el = document.createElement('div');
+    updateOverlayCompact(el, 200);
+    expect(el.getAttribute('data-compact')).toBe('true');
+  });
+
+  it('removes data-compact when width at or above threshold', () => {
+    const el = document.createElement('div');
+    el.setAttribute('data-compact', 'true');
+    updateOverlayCompact(el, 600);
+    expect(el.getAttribute('data-compact')).toBeNull();
+  });
+
+  it('zero width (detached) does not force compact', () => {
+    const el = document.createElement('div');
+    updateOverlayCompact(el, 0);
+    expect(el.getAttribute('data-compact')).toBeNull();
+  });
+});
+
+describe('ImageTool — compact toolbar when figure is narrow', () => {
+  let callbacks: ResizeObserverCallback[] = [];
+  let OriginalResizeObserver: typeof ResizeObserver;
+
+  beforeAll(() => {
+    OriginalResizeObserver = window.ResizeObserver;
+    window.ResizeObserver = class MockRO {
+      constructor(cb: ResizeObserverCallback) { callbacks.push(cb); }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    } as unknown as typeof ResizeObserver;
+  });
+  afterAll(() => {
+    window.ResizeObserver = OriginalResizeObserver;
+  });
+  beforeEach(() => { callbacks = []; vi.clearAllMocks(); });
+  afterEach(() => vi.restoreAllMocks());
+
+  it('applies data-compact="true" to overlay when figure width is narrow', () => {
+    const tool = new ImageTool(createOptions({ url: 'u' }));
+    const root = tool.render();
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+    const overlay = root.querySelector<HTMLElement>('[data-role="image-overlay"]');
+    if (!figure || !overlay) throw new Error('dom missing');
+    Object.defineProperty(figure, 'clientWidth', { configurable: true, value: 200 });
+    for (const cb of callbacks) cb([] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+    expect(overlay.getAttribute('data-compact')).toBe('true');
+  });
+
+  it('removes data-compact when figure widens', () => {
+    const tool = new ImageTool(createOptions({ url: 'u' }));
+    const root = tool.render();
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+    const overlay = root.querySelector<HTMLElement>('[data-role="image-overlay"]');
+    if (!figure || !overlay) throw new Error('dom missing');
+    Object.defineProperty(figure, 'clientWidth', { configurable: true, value: 200 });
+    for (const cb of callbacks) cb([] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+    expect(overlay.getAttribute('data-compact')).toBe('true');
+    Object.defineProperty(figure, 'clientWidth', { configurable: true, value: 600 });
+    for (const cb of callbacks) cb([] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+    expect(overlay.getAttribute('data-compact')).toBeNull();
   });
 });
 

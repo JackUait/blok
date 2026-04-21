@@ -29,6 +29,7 @@ import {
   renderCaptionRow,
   renderImage,
   renderOverlay,
+  updateOverlayCompact,
 } from './ui';
 import { openCropModal } from './crop-modal';
 import { openAltPopover } from './alt-popover';
@@ -49,6 +50,7 @@ export class ImageTool implements BlockTool {
   private emptyStateEl: EmptyStateElement | null = null;
   private uploadingEl: UploadingStateElement | null = null;
   private resizeDetach: (() => void)[] = [];
+  private overlayResizeObserver: ResizeObserver | null = null;
   private cropDetach: (() => void) | null = null;
   private altPopoverDetach: (() => void) | null = null;
   private errorMessage: string | null = null;
@@ -327,6 +329,8 @@ export class ImageTool implements BlockTool {
       const detach = this.resizeDetach.pop();
       if (detach) detach();
     }
+    this.overlayResizeObserver?.disconnect();
+    this.overlayResizeObserver = null;
   }
 
   private syncRootAttributes(): void {
@@ -455,6 +459,8 @@ export class ImageTool implements BlockTool {
         event.stopPropagation();
         this.openBlockSettings(moreBtn);
       });
+
+      this.observeOverlayWidth(figure, overlay);
     }
 
     const placeholder = this.config.captionPlaceholder ?? DEFAULT_CAPTION_PLACEHOLDER;
@@ -502,6 +508,14 @@ export class ImageTool implements BlockTool {
     };
     this.api.events.on('block-settings-closed', onClosed);
     toolbar.toggleBlockSettings(true, trigger, { placeLeftOfAnchor: false });
+  }
+
+  private observeOverlayWidth(figure: HTMLElement, overlay: HTMLElement): void {
+    const sync = (): void => updateOverlayCompact(overlay, figure.clientWidth);
+    sync();
+    if (typeof ResizeObserver === 'undefined') return;
+    this.overlayResizeObserver = new ResizeObserver(sync);
+    this.overlayResizeObserver.observe(figure);
   }
 
   private attachResizeHandles(figure: HTMLElement): void {

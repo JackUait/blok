@@ -3243,6 +3243,10 @@
 }
 [data-blok-tool="image"] .blok-image-toolbar__pill { display: inline-flex; border-radius: var(--blok-space-1); overflow: hidden; }
 [data-blok-tool="image"] .blok-image-toolbar__pill button { width: 26px; border-radius: 0; }
+/* Compact toolbar — figure too narrow to fit all actions; collapse to just the "..." button. */
+[data-blok-tool="image"] .blok-image-toolbar[data-compact="true"] > :not([data-action="more"]) {
+  display: none;
+}
 
 /* alignment popover — floats below the trigger, rides the same solid dark overlay surface */
 [data-blok-tool="image"] .blok-image-toolbar__align { position: relative; }

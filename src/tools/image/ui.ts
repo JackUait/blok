@@ -277,6 +277,12 @@ export function openLightbox(opts: LightboxOptions): () => void {
   dialog.addEventListener('pointerup', endDrag);
   dialog.addEventListener('pointercancel', endDrag);
 
+  dialog.addEventListener('wheel', (event: WheelEvent) => {
+    event.preventDefault();
+    const factor = Math.exp(-event.deltaY * WHEEL_ZOOM_COEF);
+    setZoom(zoomState.value * factor);
+  }, { passive: false });
+
   dialog.addEventListener('click', (event) => {
     if (event.target instanceof Node && toolbar.contains(event.target)) return;
     close();

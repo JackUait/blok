@@ -76,4 +76,25 @@ describe('openLightbox drag-to-pan', () => {
     expect(document.body.querySelector('.blok-image-lightbox')).not.toBeNull();
     close();
   });
+
+  it('clamps pan to half the image rect on each axis', () => {
+    const close = openWithCapture(); // stubs rect to 800x600
+    const d = dialog();
+    d.dispatchEvent(pointer('pointerdown', 100, 100));
+    d.dispatchEvent(pointer('pointermove', 100000, 100000));
+    d.dispatchEvent(pointer('pointerup', 100000, 100000));
+    // maxX = 800/2 = 400, maxY = 600/2 = 300
+    expect(image().style.transform).toBe('translate(400px, 300px) scale(1)');
+    close();
+  });
+
+  it('clamps pan in the negative direction', () => {
+    const close = openWithCapture();
+    const d = dialog();
+    d.dispatchEvent(pointer('pointerdown', 100, 100));
+    d.dispatchEvent(pointer('pointermove', -100000, -100000));
+    d.dispatchEvent(pointer('pointerup', -100000, -100000));
+    expect(image().style.transform).toBe('translate(-400px, -300px) scale(1)');
+    close();
+  });
 });

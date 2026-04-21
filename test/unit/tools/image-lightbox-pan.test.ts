@@ -111,4 +111,25 @@ describe('openLightbox drag-to-pan', () => {
     expect(image().style.transform).toBe('translate(0px, 0px) scale(1)');
     close();
   });
+
+  it('re-clamps pan when zooming out from a high scale', () => {
+    const close = openWithCapture();
+    const d = dialog();
+
+    // Pan to the bound at the initial rect (400, 300).
+    d.dispatchEvent(pointer('pointerdown', 100, 100));
+    d.dispatchEvent(pointer('pointermove', 100000, 100000));
+    d.dispatchEvent(pointer('pointerup', 100000, 100000));
+    expect(image().style.transform).toContain('translate(400px, 300px)');
+
+    // Simulate shrinking the rendered rect (as if zoom decreased).
+    stubRect(image(), { width: 500, height: 400 });
+
+    // Nudge zoom via the zoom-in button (value changes but still > 1), which triggers re-clamp.
+    d.querySelector<HTMLButtonElement>('[data-action="zoom-in"]')!.click();
+
+    // New maxX = 250, maxY = 200.
+    expect(image().style.transform).toContain('translate(250px, 200px)');
+    close();
+  });
 });

@@ -148,11 +148,25 @@ export function openLightbox(opts: LightboxOptions): () => void {
     img.style.transform = `translate(${panState.x}px, ${panState.y}px) scale(${zoomState.value})`;
   };
 
+  function clampPan(p: { x: number; y: number }): { x: number; y: number } {
+    const rect = img.getBoundingClientRect();
+    const maxX = rect.width / 2;
+    const maxY = rect.height / 2;
+    return {
+      x: Math.max(-maxX, Math.min(maxX, p.x)),
+      y: Math.max(-maxY, Math.min(maxY, p.y)),
+    };
+  }
+
   const setZoom = (next: number): void => {
     zoomState.value = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, next));
     if (zoomState.value === 1) {
       panState.x = 0;
       panState.y = 0;
+    } else {
+      const clamped = clampPan(panState);
+      panState.x = clamped.x;
+      panState.y = clamped.y;
     }
     applyTransform();
     syncResetLabel();
@@ -221,16 +235,6 @@ export function openLightbox(opts: LightboxOptions): () => void {
     startY: 0,
     originX: 0,
     originY: 0,
-  };
-
-  const clampPan = (p: { x: number; y: number }): { x: number; y: number } => {
-    const rect = img.getBoundingClientRect();
-    const maxX = rect.width / 2;
-    const maxY = rect.height / 2;
-    return {
-      x: Math.max(-maxX, Math.min(maxX, p.x)),
-      y: Math.max(-maxY, Math.min(maxY, p.y)),
-    };
   };
 
   dialog.addEventListener('pointerdown', (event: PointerEvent) => {

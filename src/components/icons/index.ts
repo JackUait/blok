@@ -692,11 +692,11 @@ export const IconPlacement = `
 </svg>
 `;
 
-// Image / photo icon — landscape with sun
+// Image / photo icon — framed landscape with filled sun
 export const IconImage = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="3" y="4" width="14" height="12" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
-  <circle cx="7.5" cy="8" r="1.25" stroke="currentColor" stroke-width="1.25"/>
-  <path d="M3.5 14l3.5-3.5 3 3 3-3 3.5 3.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="2.5" y="3.5" width="15" height="13" rx="2" fill="currentColor" fill-opacity="0.08" stroke="currentColor" stroke-width="1.4"/>
+  <circle cx="7" cy="8" r="1.3" fill="currentColor"/>
+  <path d="M3 13.25 6.25 10l2.25 2.25L12.25 8.25 17 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;

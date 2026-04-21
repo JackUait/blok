@@ -126,6 +126,8 @@ export interface LightboxOptions {
 const ZOOM_MIN = 0.25;
 const ZOOM_MAX = 4;
 const ZOOM_STEP = 0.25;
+// 100-pixel wheel tick multiplies zoom by (1 + ZOOM_STEP); small trackpad pinch deltas stay smooth.
+const WHEEL_ZOOM_COEF = Math.log(1 + ZOOM_STEP) / 100;
 
 export function openLightbox(opts: LightboxOptions): () => void {
   const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -160,14 +162,8 @@ export function openLightbox(opts: LightboxOptions): () => void {
 
   const setZoom = (next: number): void => {
     zoomState.value = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, next));
-    if (zoomState.value === 1) {
-      panState.x = 0;
-      panState.y = 0;
-    } else {
-      const clamped = clampPan(panState);
-      panState.x = clamped.x;
-      panState.y = clamped.y;
-    }
+    panState.x = 0;
+    panState.y = 0;
     applyTransform();
     syncResetLabel();
   };

@@ -114,24 +114,27 @@ describe('openLightbox drag-to-pan', () => {
     close();
   });
 
-  it('re-clamps pan when zooming out from a high scale', () => {
+  it('recenters image on any zoom change', () => {
     const close = openWithCapture();
     const d = dialog();
 
-    // Pan to the bound at the initial rect (400, 300).
+    // Pan away from center.
     d.dispatchEvent(pointer('pointerdown', 100, 100));
     d.dispatchEvent(pointer('pointermove', 100000, 100000));
     d.dispatchEvent(pointer('pointerup', 100000, 100000));
     expect(image().style.transform).toContain('translate(400px, 300px)');
 
-    // Simulate shrinking the rendered rect (as if zoom decreased).
-    stubRect(image(), { width: 500, height: 400 });
-
-    // Nudge zoom via the zoom-in button (value changes but still > 1), which triggers re-clamp.
+    // Any zoom change snaps pan back to center.
     d.querySelector<HTMLButtonElement>('[data-action="zoom-in"]')!.click();
+    expect(image().style.transform).toBe('translate(0px, 0px) scale(1.25)');
 
-    // New maxX = 250, maxY = 200.
-    expect(image().style.transform).toContain('translate(250px, 200px)');
+    // Pan again, then zoom-out — also recenters.
+    d.dispatchEvent(pointer('pointerdown', 100, 100));
+    d.dispatchEvent(pointer('pointermove', 200, 200));
+    d.dispatchEvent(pointer('pointerup', 200, 200));
+    expect(image().style.transform).toContain('translate(100px, 100px)');
+    d.querySelector<HTMLButtonElement>('[data-action="zoom-out"]')!.click();
+    expect(image().style.transform).toBe('translate(0px, 0px) scale(1)');
     close();
   });
 

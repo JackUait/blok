@@ -160,10 +160,16 @@ export function openLightbox(opts: LightboxOptions): () => void {
     };
   }
 
-  const setZoom = (next: number): void => {
+  const setZoom = (next: number, options: { preservePan?: boolean } = {}): void => {
     zoomState.value = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, next));
-    panState.x = 0;
-    panState.y = 0;
+    if (options.preservePan) {
+      const clamped = clampPan(panState);
+      panState.x = clamped.x;
+      panState.y = clamped.y;
+    } else {
+      panState.x = 0;
+      panState.y = 0;
+    }
     applyTransform();
     syncResetLabel();
   };
@@ -280,7 +286,16 @@ export function openLightbox(opts: LightboxOptions): () => void {
   dialog.addEventListener('wheel', (event: WheelEvent) => {
     event.preventDefault();
     const factor = Math.exp(-event.deltaY * WHEEL_ZOOM_COEF);
-    setZoom(zoomState.value * factor);
+    const prevZoom = zoomState.value;
+    const nextZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, prevZoom * factor));
+    const k = nextZoom / prevZoom;
+    // Anchor the zoom around the cursor: keep the image pixel under the cursor fixed on screen.
+    const rect = dialog.getBoundingClientRect();
+    const dx = event.clientX - (rect.left + rect.width / 2);
+    const dy = event.clientY - (rect.top + rect.height / 2);
+    panState.x = dx * (1 - k) + panState.x * k;
+    panState.y = dy * (1 - k) + panState.y * k;
+    setZoom(nextZoom, { preservePan: true });
   }, { passive: false });
 
   dialog.addEventListener('click', (event) => {

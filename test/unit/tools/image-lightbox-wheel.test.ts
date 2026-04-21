@@ -24,7 +24,22 @@ function open(): () => void {
   const d = dialog();
   d.setPointerCapture = (): void => undefined;
   d.releasePointerCapture = (): void => undefined;
+  stubRect(image(), { width: 800, height: 600 });
   return close;
+}
+
+function stubRect(el: HTMLElement, rect: Partial<DOMRect>): void {
+  const full: DOMRect = {
+    x: 0, y: 0, top: 0, left: 0, right: 0, bottom: 0,
+    width: 0, height: 0, toJSON: () => ({}),
+    ...rect,
+  } as DOMRect;
+  // eslint-disable-next-line no-param-reassign -- test stub overrides DOM method on the element under test
+  el.getBoundingClientRect = () => full;
+}
+
+function pointer(type: 'pointerdown' | 'pointermove' | 'pointerup', x: number, y: number): PointerEvent {
+  return new PointerEvent(type, { pointerId: 1, clientX: x, clientY: y, bubbles: true });
 }
 
 function wheel(deltaY: number, init: Partial<WheelEventInit> = {}): WheelEvent {
@@ -104,6 +119,71 @@ describe('openLightbox wheel zoom', () => {
     const afterFirst = currentScale();
     dialog().dispatchEvent(wheel(-100));
     expect(currentScale()).toBeGreaterThan(afterFirst);
+    close();
+  });
+});
+
+describe('openLightbox cursor-anchored wheel zoom', () => {
+  function stubDialogRect(w: number, h: number): void {
+    stubRect(dialog(), { left: 0, top: 0, right: w, bottom: h, width: w, height: h });
+  }
+
+  it('keeps the pixel under the cursor stationary on zoom-in', () => {
+    const close = open();
+    const d = dialog();
+    stubDialogRect(800, 600);
+    // Cursor at (500, 400) — offset (+100, +100) from the (400, 300) center.
+    // factor = 1.25, k = 1.25. newPan = 100 * (1 - 1.25) = -25.
+    d.dispatchEvent(wheel(-100, { clientX: 500, clientY: 400 }));
+    expect(image().style.transform).toBe('translate(-25px, -25px) scale(1.25)');
+    close();
+  });
+
+  it('zooming from the dialog center with pan=0 leaves pan at 0', () => {
+    const close = open();
+    const d = dialog();
+    stubDialogRect(800, 600);
+    d.dispatchEvent(wheel(-100, { clientX: 400, clientY: 300 }));
+    expect(image().style.transform).toBe('translate(0px, 0px) scale(1.25)');
+    close();
+  });
+
+  it('honours existing pan when computing the cursor anchor', () => {
+    const close = open();
+    const d = dialog();
+    stubDialogRect(800, 600);
+    // Pan to (50, 0).
+    d.dispatchEvent(pointer('pointerdown', 100, 100));
+    d.dispatchEvent(pointer('pointermove', 150, 100));
+    d.dispatchEvent(pointer('pointerup', 150, 100));
+    expect(image().style.transform).toContain('translate(50px, 0px)');
+    // Cursor at the dialog center (400, 300): dx=0, dy=0. newPan = 50 * 1.25 = 62.5.
+    d.dispatchEvent(wheel(-100, { clientX: 400, clientY: 300 }));
+    expect(image().style.transform).toBe('translate(62.5px, 0px) scale(1.25)');
+    close();
+  });
+
+  it('clamps pan to image bounds when the cursor is far off-center', () => {
+    const close = open();
+    const d = dialog();
+    stubDialogRect(800, 600);
+    // Cursor far right of dialog; without clamping newPan.x would be -2500.
+    d.dispatchEvent(wheel(-100, { clientX: 10400, clientY: 300 }));
+    const match = image().style.transform.match(/translate\((-?\d+(?:\.\d+)?)px,/);
+    expect(Number(match![1])).toBe(-400);
+    close();
+  });
+
+  it('button zoom still recenters (unchanged contract)', () => {
+    const close = open();
+    const d = dialog();
+    d.dispatchEvent(pointer('pointerdown', 100, 100));
+    d.dispatchEvent(pointer('pointermove', 200, 200));
+    d.dispatchEvent(pointer('pointerup', 200, 200));
+    expect(image().style.transform).toContain('translate(100px, 100px)');
+
+    d.querySelector<HTMLButtonElement>('[data-action="zoom-in"]')!.click();
+    expect(image().style.transform).toBe('translate(0px, 0px) scale(1.25)');
     close();
   });
 });

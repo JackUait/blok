@@ -1,6 +1,10 @@
 import type { ImageAlignment, ImageCrop, ImageData, ImageSize } from '../../../types/tools/image';
 import { onHover as tooltipOnHover, hide as tooltipHide } from '../../components/utils/tooltip';
+import type { I18nInstance } from '../../components/utils/tools';
 import { applyRubberBand } from './spring';
+
+const tr = (i18n: I18nInstance | undefined, key: string, fallback: string): string =>
+  i18n?.has(key) ? i18n.t(key) : fallback;
 
 const ALIGNMENT_TO_TEXT_ALIGN: Record<ImageAlignment, string> = {
   left: 'left',
@@ -14,11 +18,13 @@ const ALIGNMENT_ICON: Record<ImageAlignment, string> = {
   right:  '<rect x="13" y="8" width="8" height="8" rx="1.5" fill="currentColor" stroke="none"/><path d="M3 4h18"/><path d="M3 10h7"/><path d="M3 14h7"/><path d="M3 20h18"/>',
 };
 
-const ALIGNMENT_LABEL: Record<ImageAlignment, string> = {
-  left: 'Align left',
-  center: 'Align center',
-  right: 'Align right',
-};
+function alignmentLabel(i18n: I18nInstance | undefined, value: ImageAlignment): string {
+  switch (value) {
+    case 'left': return tr(i18n, 'tools.image.alignmentLeftAria', 'Align left');
+    case 'center': return tr(i18n, 'tools.image.alignmentCenterAria', 'Align center');
+    case 'right': return tr(i18n, 'tools.image.alignmentRightAria', 'Align right');
+  }
+}
 
 export function renderImage(
   data: Partial<ImageData> & { url: string }
@@ -92,6 +98,7 @@ export interface CaptionRowOptions {
   caption: CaptionOptions;
   onAlt?: () => void;
   hasAlt?: boolean;
+  i18n?: I18nInstance;
 }
 
 export function renderCaptionRow(opts: CaptionRowOptions): HTMLElement {
@@ -100,14 +107,15 @@ export function renderCaptionRow(opts: CaptionRowOptions): HTMLElement {
   row.appendChild(renderCaption(opts.caption));
 
   if (opts.onAlt) {
+    const altLabel = tr(opts.i18n, 'tools.image.altEdit', 'Edit alt text');
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'blok-image-caption-row__alt';
     btn.setAttribute('data-action', 'alt-edit');
-    btn.setAttribute('aria-label', 'Edit alt text');
-    btn.setAttribute('title', 'Edit alt text');
+    btn.setAttribute('aria-label', altLabel);
+    btn.setAttribute('title', altLabel);
     btn.setAttribute('aria-pressed', opts.hasAlt ? 'true' : 'false');
-    btn.textContent = 'Alt';
+    btn.textContent = tr(opts.i18n, 'tools.image.altButton', 'Alt');
     btn.addEventListener('click', (event) => {
       event.stopPropagation();
       opts.onAlt?.();
@@ -133,6 +141,7 @@ export interface LightboxOptions {
    * When omitted, the dialog cross-fades without a spatial transition.
    */
   origin?: HTMLElement;
+  i18n?: I18nInstance;
 }
 
 const OPEN_DURATION = 360;
@@ -178,7 +187,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
   const dialog = document.createElement('div');
   dialog.setAttribute('role', 'dialog');
   dialog.setAttribute('aria-modal', 'true');
-  dialog.setAttribute('aria-label', 'Image preview');
+  dialog.setAttribute('aria-label', tr(opts.i18n, 'tools.image.preview', 'Image preview'));
   dialog.className = 'blok-image-lightbox';
 
   const backdrop = document.createElement('div');
@@ -265,6 +274,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
   applyTransform();
 
   const toolbar = renderLightboxToolbar({
+    i18n: opts.i18n,
     getZoom: () => zoomState.value,
     setZoom,
     onDownload: () => {
@@ -526,6 +536,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
 }
 
 interface LightboxToolbarOptions {
+  i18n?: I18nInstance;
   getZoom(): number;
   setZoom(next: number): void;
   onDownload(): void;
@@ -537,33 +548,33 @@ function renderLightboxToolbar(opts: LightboxToolbarOptions): HTMLElement {
   const bar = document.createElement('div');
   bar.setAttribute('data-role', 'lightbox-toolbar');
   bar.setAttribute('role', 'toolbar');
-  bar.setAttribute('aria-label', 'Image preview controls');
+  bar.setAttribute('aria-label', tr(opts.i18n, 'tools.image.previewControls', 'Image preview controls'));
   bar.className = 'blok-image-lightbox__bar';
   bar.addEventListener('click', (event) => event.stopPropagation());
 
   const iconMinus = wrapSvg('<path d="M5 12h14"/>');
   const iconPlus = wrapSvg('<path d="M12 5v14"/><path d="M5 12h14"/>');
-  const iconDownload = wrapSvg('<circle cx="12" cy="12" r="9"/><path d="M12 7v8"/><path d="m8.5 12 3.5 3.5L15.5 12"/>');
+  const iconDownload = ICON_DOWNLOAD;
   const iconCopy = wrapSvg('<path d="M10 13a4 4 0 0 1 0-5.66l3-3a4 4 0 0 1 5.66 5.66l-1.5 1.5"/><path d="M14 11a4 4 0 0 1 0 5.66l-3 3a4 4 0 1 1-5.66-5.66l1.5-1.5"/>');
   const iconCollapse = wrapSvg('<path d="M9 3v6H3"/><path d="M21 9h-6V3"/><path d="M3 15h6v6"/><path d="M15 21v-6h6"/>');
 
   appendLightboxButton(bar, {
     action: 'zoom-out',
-    label: 'Zoom out',
+    label: tr(opts.i18n, 'tools.image.zoomOut', 'Zoom out'),
     shortcut: '−',
     html: iconMinus,
     onClick: () => opts.setZoom(opts.getZoom() - ZOOM_STEP),
   });
   appendLightboxButton(bar, {
     action: 'zoom-reset',
-    label: 'Reset zoom',
+    label: tr(opts.i18n, 'tools.image.resetZoom', 'Reset zoom'),
     html: '100%',
     onClick: () => opts.setZoom(1),
     extraClass: 'blok-image-lightbox__zoom-label',
   });
   appendLightboxButton(bar, {
     action: 'zoom-in',
-    label: 'Zoom in',
+    label: tr(opts.i18n, 'tools.image.zoomIn', 'Zoom in'),
     shortcut: '+',
     html: iconPlus,
     onClick: () => opts.setZoom(opts.getZoom() + ZOOM_STEP),
@@ -573,19 +584,19 @@ function renderLightboxToolbar(opts: LightboxToolbarOptions): HTMLElement {
 
   appendLightboxButton(bar, {
     action: 'lightbox-download',
-    label: 'Download',
+    label: tr(opts.i18n, 'tools.image.download', 'Download'),
     html: iconDownload,
     onClick: opts.onDownload,
   });
   appendLightboxButton(bar, {
     action: 'lightbox-copy-url',
-    label: 'Copy URL',
+    label: tr(opts.i18n, 'tools.image.copyUrl', 'Copy URL'),
     html: iconCopy,
     onClick: opts.onCopyUrl,
   });
   appendLightboxButton(bar, {
     action: 'lightbox-collapse',
-    label: 'Exit fullscreen',
+    label: tr(opts.i18n, 'tools.image.exitFullscreen', 'Exit fullscreen'),
     shortcut: 'Esc',
     html: iconCollapse,
     onClick: opts.onCollapse,
@@ -597,6 +608,9 @@ function renderLightboxToolbar(opts: LightboxToolbarOptions): HTMLElement {
 function wrapSvg(inner: string): string {
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${inner}</svg>`;
 }
+
+export const ICON_DOWNLOAD_PATHS = '<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>';
+export const ICON_DOWNLOAD = wrapSvg(ICON_DOWNLOAD_PATHS);
 
 function appendLightboxDivider(parent: HTMLElement): void {
   const d = document.createElement('div');
@@ -680,6 +694,7 @@ export interface OverlayOptions {
   onCopyUrl(): void;
   onToggleCaption(): void;
   onCrop(): void;
+  i18n?: I18nInstance;
 }
 
 /**
@@ -697,52 +712,53 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
 
   appendSimpleButton(root, {
     action: 'caption-toggle',
-    label: 'Toggle caption',
+    label: tr(opts.i18n, 'tools.image.toggleCaption', 'Toggle caption'),
     pressed: opts.state.captionVisible,
     svg: '<rect x="3" y="3.5" width="18" height="12" rx="2.5"/><path d="M5 19h14"/><path d="M8 22h8"/>',
     onClick: opts.onToggleCaption,
   });
   appendSimpleButton(root, {
     action: 'replace',
-    label: 'Replace image',
+    label: tr(opts.i18n, 'tools.image.replace', 'Replace image'),
     svg: '<path d="M4 7h15"/><path d="m15 3 4 4-4 4"/><path d="M20 17H5"/><path d="m9 13-4 4 4 4"/>',
     onClick: opts.onReplace,
   });
   appendSimpleButton(root, {
     action: 'crop',
-    label: 'Crop',
+    label: tr(opts.i18n, 'tools.image.crop', 'Crop'),
     svg: '<path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M2 6h14a2 2 0 0 1 2 2v14"/>',
     onClick: opts.onCrop,
   });
   appendSimpleButton(root, {
     action: 'fullscreen',
-    label: 'View fullscreen',
+    label: tr(opts.i18n, 'tools.image.viewFullscreen', 'View fullscreen'),
     svg: '<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/>',
     onClick: opts.onFullscreen,
   });
   appendSimpleButton(root, {
     action: 'download',
-    label: 'Download original',
-    svg: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
+    label: tr(opts.i18n, 'tools.image.downloadOriginal', 'Download original'),
+    svg: ICON_DOWNLOAD_PATHS,
     onClick: opts.onDownload,
   });
 
   appendDivider(root);
 
+  const moreLabel = tr(opts.i18n, 'tools.image.moreOptions', 'More options');
   const more = document.createElement('button');
   more.type = 'button';
   more.setAttribute('data-action', 'more');
-  more.setAttribute('aria-label', 'More options');
+  more.setAttribute('aria-label', moreLabel);
   more.setAttribute('aria-haspopup', 'menu');
   more.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>';
-  tooltipOnHover(more, 'More options');
+  tooltipOnHover(more, moreLabel);
   root.appendChild(more);
 
   // Delete is reachable from the popover; expose an invisible legacy button for consumers/tests.
   const deleteAlias = document.createElement('button');
   deleteAlias.type = 'button';
   deleteAlias.setAttribute('data-action', 'delete');
-  deleteAlias.setAttribute('aria-label', 'Delete');
+  deleteAlias.setAttribute('aria-label', tr(opts.i18n, 'blockSettings.delete', 'Delete'));
   deleteAlias.className = 'blok-image-toolbar__alias is-danger';
   deleteAlias.style.display = 'none';
   deleteAlias.addEventListener('click', (event) => {
@@ -760,33 +776,35 @@ function appendAlignmentControl(root: HTMLElement, opts: OverlayOptions): void {
   wrapper.style.position = 'relative';
 
   const current = opts.state.alignment;
+  const alignmentText = tr(opts.i18n, 'tools.image.alignment', 'Alignment');
 
   const trigger = document.createElement('button');
   trigger.type = 'button';
   trigger.setAttribute('data-action', 'align-trigger');
   trigger.setAttribute('data-current', current);
-  trigger.setAttribute('aria-label', 'Alignment');
+  trigger.setAttribute('aria-label', alignmentText);
   trigger.setAttribute('aria-haspopup', 'true');
   trigger.setAttribute('aria-expanded', 'false');
   trigger.innerHTML = alignmentIconSvg(current);
-  tooltipOnHover(trigger, 'Alignment');
+  tooltipOnHover(trigger, alignmentText);
   wrapper.appendChild(trigger);
 
   const popover = document.createElement('div');
   popover.setAttribute('data-role', 'align-popover');
   popover.setAttribute('role', 'group');
-  popover.setAttribute('aria-label', 'Alignment');
+  popover.setAttribute('aria-label', alignmentText);
   popover.className = 'blok-image-toolbar__align-popover';
   popover.hidden = true;
 
   for (const value of ['left', 'center', 'right'] as ImageAlignment[]) {
+    const label = alignmentLabel(opts.i18n, value);
     const option = document.createElement('button');
     option.type = 'button';
     option.setAttribute('data-action', `align-${value}`);
-    option.setAttribute('aria-label', ALIGNMENT_LABEL[value]);
+    option.setAttribute('aria-label', label);
     option.setAttribute('aria-pressed', current === value ? 'true' : 'false');
     option.innerHTML = alignmentIconSvg(value);
-    tooltipOnHover(option, ALIGNMENT_LABEL[value]);
+    tooltipOnHover(option, label);
     option.addEventListener('click', (event) => {
       event.stopPropagation();
       opts.onAlign(value);

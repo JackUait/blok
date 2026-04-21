@@ -25,6 +25,7 @@ import { renderErrorState } from './error-state';
 import { ImageError } from './errors';
 import { attachResizeHandle, type ResizeEdge } from './resizer';
 import {
+  ICON_DOWNLOAD,
   openLightbox,
   renderCaptionRow,
   renderImage,
@@ -193,7 +194,7 @@ export class ImageTool implements BlockTool {
 
   private applyError(err: unknown): void {
     this.state = 'ERROR';
-    this.errorMessage = err instanceof Error ? err.message : 'Upload failed';
+    this.errorMessage = err instanceof Error ? err.message : this.api.i18n.t('tools.image.errorUploadFailed');
     this.brokenImage = false;
     this.retrying = false;
     this.renderState();
@@ -206,7 +207,7 @@ export class ImageTool implements BlockTool {
     if (this.state === 'ERROR' && this.brokenImage) return;
     this.state = 'ERROR';
     this.brokenImage = true;
-    this.errorMessage = 'The source may have moved or be offline.';
+    this.errorMessage = this.api.i18n.t('tools.image.errorSourceOffline');
     this.renderState();
   }
 
@@ -227,12 +228,13 @@ export class ImageTool implements BlockTool {
   }
 
   public renderSettings(): MenuConfig {
+    const i18n = this.api.i18n;
     const currentAlignment: ImageAlignment = this.data.alignment ?? 'center';
     const captionVisible = this.data.captionVisible !== false;
     const alignments: { value: ImageAlignment; title: string; svg: string }[] = [
-      { value: 'left',   title: 'Left',   svg: '<rect x="3" y="8" width="8" height="8" rx="1.5" fill="currentColor" stroke="none"/><path d="M3 4h18"/><path d="M14 10h7"/><path d="M14 14h7"/><path d="M3 20h18"/>' },
-      { value: 'center', title: 'Center', svg: '<rect x="8" y="8" width="8" height="8" rx="1.5" fill="currentColor" stroke="none"/><path d="M3 4h18"/><path d="M3 20h18"/>' },
-      { value: 'right',  title: 'Right',  svg: '<rect x="13" y="8" width="8" height="8" rx="1.5" fill="currentColor" stroke="none"/><path d="M3 4h18"/><path d="M3 10h7"/><path d="M3 14h7"/><path d="M3 20h18"/>' },
+      { value: 'left',   title: i18n.t('tools.image.alignmentLeft'),   svg: '<rect x="3" y="8" width="8" height="8" rx="1.5" fill="currentColor" stroke="none"/><path d="M3 4h18"/><path d="M14 10h7"/><path d="M14 14h7"/><path d="M3 20h18"/>' },
+      { value: 'center', title: i18n.t('tools.image.alignmentCenter'), svg: '<rect x="8" y="8" width="8" height="8" rx="1.5" fill="currentColor" stroke="none"/><path d="M3 4h18"/><path d="M3 20h18"/>' },
+      { value: 'right',  title: i18n.t('tools.image.alignmentRight'),  svg: '<rect x="13" y="8" width="8" height="8" rx="1.5" fill="currentColor" stroke="none"/><path d="M3 4h18"/><path d="M3 10h7"/><path d="M3 14h7"/><path d="M3 20h18"/>' },
     ];
     const wrapSvg = (inner: string): string =>
       `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="20" height="20" aria-hidden="true" focusable="false">${inner}</svg>`;
@@ -241,11 +243,11 @@ export class ImageTool implements BlockTool {
     const iconReplace = wrapSvg('<path d="M4 7h15"/><path d="m15 3 4 4-4 4"/><path d="M20 17H5"/><path d="m9 13-4 4 4 4"/>');
     const iconCrop = wrapSvg('<path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M2 6h14a2 2 0 0 1 2 2v14"/>');
     const iconFullscreen = wrapSvg('<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/>');
-    const iconDownload = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20" aria-hidden="true" focusable="false"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>';
+    const iconDownload = ICON_DOWNLOAD;
     return [
       {
         icon: iconAlignment,
-        title: 'Alignment',
+        title: i18n.t('tools.image.alignment'),
         name: 'image-alignment',
         children: {
           items: alignments.map((a) => ({
@@ -260,7 +262,7 @@ export class ImageTool implements BlockTool {
       },
       {
         icon: iconCaption,
-        title: 'Caption',
+        title: i18n.t('tools.image.caption'),
         name: 'image-caption',
         isActive: captionVisible,
         closeOnActivate: true,
@@ -268,35 +270,35 @@ export class ImageTool implements BlockTool {
       },
       {
         icon: iconReplace,
-        title: 'Replace image',
+        title: i18n.t('tools.image.replace'),
         name: 'image-replace',
         closeOnActivate: true,
         onActivate: (): void => this.transitionToEmpty(),
       },
       {
         icon: iconCrop,
-        title: 'Crop',
+        title: i18n.t('tools.image.crop'),
         name: 'image-crop',
         closeOnActivate: true,
         onActivate: (): void => this.enterCrop(),
       },
       {
         icon: iconFullscreen,
-        title: 'View fullscreen',
+        title: i18n.t('tools.image.viewFullscreen'),
         name: 'image-fullscreen',
         closeOnActivate: true,
         onActivate: (): void => this.openFullscreen(),
       },
       {
         icon: iconDownload,
-        title: 'Download original',
+        title: i18n.t('tools.image.downloadOriginal'),
         name: 'image-download',
         closeOnActivate: true,
         onActivate: (): void => this.download(),
       },
       {
         icon: IconCopy,
-        title: 'Copy URL',
+        title: i18n.t('tools.image.copyUrl'),
         name: 'image-copy-url',
         closeOnActivate: true,
         onActivate: (): void => this.copyUrl(),
@@ -315,6 +317,7 @@ export class ImageTool implements BlockTool {
       fileName: this.data.fileName,
       crop: this.data.crop,
       origin,
+      i18n: this.api.i18n,
     });
   }
 
@@ -327,6 +330,7 @@ export class ImageTool implements BlockTool {
       initial: this.data.crop,
       onApply: (rect) => this.applyCrop(rect),
       onCancel: () => this.cancelCrop(),
+      i18n: this.api.i18n,
     });
   }
 
@@ -438,6 +442,7 @@ export class ImageTool implements BlockTool {
       onUrl: (url) => this.startUrl(url),
       acceptTypes: this.config.types,
       maxSize: this.config.maxSize,
+      i18n: this.api.i18n,
     });
     this.emptyStateEl = el;
     this.root.appendChild(el);
@@ -446,8 +451,9 @@ export class ImageTool implements BlockTool {
   private renderLoading(): void {
     if (!this.root) return;
     const el = renderUploadingState({
-      fileName: this.lastFileName ?? 'Uploading…',
+      fileName: this.lastFileName ?? this.api.i18n.t('tools.image.uploading'),
       onCancel: () => this.transitionToEmpty(),
+      i18n: this.api.i18n,
     });
     this.uploadingEl = el;
     this.root.appendChild(el);
@@ -457,12 +463,13 @@ export class ImageTool implements BlockTool {
     if (!this.root) return;
     const isBroken = this.brokenImage;
     const el = renderErrorState({
-      title: isBroken ? 'Image unavailable' : undefined,
+      title: isBroken ? this.api.i18n.t('tools.image.errorUnavailable') : undefined,
       message: this.errorMessage ?? undefined,
       onRetry: isBroken
         ? () => this.retryBrokenImage()
         : () => this.retryLastSource(),
       onReplace: () => this.transitionToEmpty(),
+      i18n: this.api.i18n,
     });
     this.root.appendChild(el);
   }
@@ -477,7 +484,7 @@ export class ImageTool implements BlockTool {
     const originEl = figure.querySelector<HTMLElement>('.blok-image-crop') ?? imgEl ?? undefined;
     if (imgEl) {
       imgEl.style.cursor = 'zoom-in';
-      imgEl.addEventListener('click', () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, crop: this.data.crop, origin: originEl }));
+      imgEl.addEventListener('click', () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, crop: this.data.crop, origin: originEl, i18n: this.api.i18n }));
       imgEl.addEventListener('error', () => this.applyBrokenImage(), { once: true });
       if (imgEl.complete && imgEl.naturalWidth === 0) {
         this.applyBrokenImage();
@@ -497,10 +504,11 @@ export class ImageTool implements BlockTool {
         onReplace: () => this.transitionToEmpty(),
         onDelete: () => this.deleteBlock(),
         onDownload: () => this.download(),
-        onFullscreen: () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, crop: this.data.crop, origin: originEl }),
+        onFullscreen: () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, crop: this.data.crop, origin: originEl, i18n: this.api.i18n }),
         onCopyUrl: () => this.copyUrl(),
         onToggleCaption: () => this.toggleCaption(),
         onCrop: () => this.enterCrop(),
+        i18n: this.api.i18n,
       });
       figure.appendChild(overlay);
 
@@ -523,6 +531,7 @@ export class ImageTool implements BlockTool {
       },
       onAlt: this.readOnly || !captionVisible ? undefined : () => this.promptAlt(),
       hasAlt: Boolean(this.data.alt),
+      i18n: this.api.i18n,
     });
     const captionEl = captionRow.querySelector<HTMLElement>('.blok-image-caption');
     captionEl?.addEventListener('blur', () => {
@@ -675,6 +684,7 @@ export class ImageTool implements BlockTool {
     this.altPopoverDetach = openAltPopover({
       anchor,
       value: this.data.alt ?? '',
+      i18n: this.api.i18n,
       onSave: (next) => {
         this.altPopoverDetach = null;
         anchor.setAttribute('aria-expanded', 'false');

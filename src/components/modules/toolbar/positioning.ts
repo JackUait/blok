@@ -20,6 +20,12 @@ export class ToolbarPositioner {
   private hoveredTarget: Element | null = null;
 
   /**
+   * Observer that fires when the hovered block's holder changes size so the
+   * toolbar can recompute Y + content offset mid-drag (e.g. image resize).
+   */
+  private targetResizeObserver: ResizeObserver | null = null;
+
+  /**
    * Gets the current last toolbar Y position
    */
   public get lastY(): number | null {
@@ -45,6 +51,25 @@ export class ToolbarPositioner {
    */
   public resetCachedPosition(): void {
     this.lastToolbarY = null;
+  }
+
+  /**
+   * Observe an element (e.g. the hovered block holder) and fire `onResize`
+   * when its box changes. Replaces any previous observer.
+   */
+  public watchTargetResize(target: Element, onResize: () => void): void {
+    this.stopWatchingTargetResize();
+    if (typeof ResizeObserver === 'undefined') return;
+    this.targetResizeObserver = new ResizeObserver(() => onResize());
+    this.targetResizeObserver.observe(target);
+  }
+
+  /**
+   * Stops the current resize observer, if any.
+   */
+  public stopWatchingTargetResize(): void {
+    this.targetResizeObserver?.disconnect();
+    this.targetResizeObserver = null;
   }
 
   /**
@@ -175,6 +200,8 @@ export class ToolbarPositioner {
       this.lastToolbarY = newToolbarY;
       wrapper.style.top = `${newToolbarY}px`;
     }
+
+    this.applyContentOffset(nodes, options.targetBlock);
 
     return positionChanged;
   }

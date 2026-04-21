@@ -542,6 +542,14 @@ export class Toolbar extends Module<ToolbarNodes> {
     this.positioner.applyContentOffset(this.nodes, targetBlock);
 
     /**
+     * Keep the toolbar aligned with the block's current bounds while its size
+     * changes without dispatching a `BlockChanged` event (e.g. image resize
+     * handle drag). ResizeObserver fires on every frame of the user's drag and
+     * re-runs Y + content-offset calculations so + / ⋮⋮ follow the image edge.
+     */
+    this.positioner.watchTargetResize(targetBlockHolder, () => this.repositionToolbar());
+
+    /**
      * Do not show Block Tunes Toggler near single and empty block
      */
     const tunes = targetBlock.getTunes();
@@ -819,6 +827,7 @@ export class Toolbar extends Module<ToolbarNodes> {
       this.nodes.content.style.maxWidth = '';
     }
     this.positioner.setHoveredTarget(null);
+    this.positioner.stopWatchingTargetResize();
 
     this.reset();
   }

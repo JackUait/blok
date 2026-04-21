@@ -51,6 +51,8 @@ function createToolbar(blokOverrides: Partial<BlokModules> = {}): {
     setHoveredTarget: vi.fn(),
     resetCachedPosition: vi.fn(),
     applyContentOffset: vi.fn(),
+    watchTargetResize: vi.fn(),
+    stopWatchingTargetResize: vi.fn(),
   };
   priv.plusButtonHandler = { setHoveredBlock: vi.fn() };
   priv.settingsTogglerHandler = { setHoveredBlock: vi.fn() };

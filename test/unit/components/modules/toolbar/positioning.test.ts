@@ -288,6 +288,35 @@ describe('ToolbarPositioner', () => {
       expect(result).toBeTypeOf('boolean');
     });
 
+    it('re-applies content offset so the X transform updates when the hovered block resizes (e.g. image resize)', () => {
+      if (!mockNodes.actions || !mockNodes.plusButton) {
+        throw new Error('actions or plusButton is undefined');
+      }
+
+      const hovered = document.createElement('div');
+
+      positioner.setHoveredTarget(hovered);
+      mockBlock.getContentOffset.mockReturnValue({ left: 120, top: 0 });
+
+      positioner.repositionToolbar(
+        mockNodes,
+        { targetBlock: mockBlock, hoveredTarget: hovered, isMobile: false },
+        mockNodes.plusButton
+      );
+
+      expect(mockNodes.actions.style.transform).toBe('translateX(120px)');
+
+      mockBlock.getContentOffset.mockReturnValue({ left: 40, top: 0 });
+
+      positioner.repositionToolbar(
+        mockNodes,
+        { targetBlock: mockBlock, hoveredTarget: hovered, isMobile: false },
+        mockNodes.plusButton
+      );
+
+      expect(mockNodes.actions.style.transform).toBe('translateX(40px)');
+    });
+
     it('updates position when change exceeds tolerance', () => {
       // Force a large position change
       positioner.resetCachedPosition();
@@ -364,6 +393,65 @@ describe('ToolbarPositioner', () => {
       positioner.applyContentOffset(mockNodes, mockBlock);
 
       expect(mockNodes.actions.style.transform).toBe('translateX(50px)');
+    });
+  });
+
+  describe('watchTargetResize', () => {
+    let callbacks: Array<{ cb: ResizeObserverCallback; observed: Element[] }>;
+    let OriginalResizeObserver: typeof ResizeObserver;
+
+    beforeEach(() => {
+      callbacks = [];
+      OriginalResizeObserver = window.ResizeObserver;
+      window.ResizeObserver = class MockRO {
+        private entry: { cb: ResizeObserverCallback; observed: Element[] };
+        public constructor(cb: ResizeObserverCallback) {
+          this.entry = { cb, observed: [] };
+          callbacks.push(this.entry);
+        }
+        public observe(el: Element): void { this.entry.observed.push(el); }
+        public unobserve(): void {}
+        public disconnect(): void { this.entry.observed = []; }
+      } as unknown as typeof ResizeObserver;
+    });
+
+    afterEach(() => {
+      window.ResizeObserver = OriginalResizeObserver;
+    });
+
+    it('observes the given element and invokes callback when ResizeObserver fires', () => {
+      const onResize = vi.fn();
+      const holder = document.createElement('div');
+
+      positioner.watchTargetResize(holder, onResize);
+
+      expect(callbacks).toHaveLength(1);
+      expect(callbacks[0].observed).toContain(holder);
+
+      callbacks[0].cb([] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+      expect(onResize).toHaveBeenCalledTimes(1);
+    });
+
+    it('stopWatchingTargetResize disconnects the observer', () => {
+      const onResize = vi.fn();
+      const holder = document.createElement('div');
+
+      positioner.watchTargetResize(holder, onResize);
+      positioner.stopWatchingTargetResize();
+
+      expect(callbacks[0].observed).toHaveLength(0);
+    });
+
+    it('watching a new element disconnects the previous observer', () => {
+      const first = document.createElement('div');
+      const second = document.createElement('div');
+      const onResize = vi.fn();
+
+      positioner.watchTargetResize(first, onResize);
+      positioner.watchTargetResize(second, onResize);
+
+      expect(callbacks[0].observed).toHaveLength(0);
+      expect(callbacks[1].observed).toContain(second);
     });
   });
 

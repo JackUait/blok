@@ -735,11 +735,8 @@ export const IconImageBroken = '<svg viewBox="0 0 24 24" fill="none" stroke="cur
 
 export const IconUpload = wrapImageSvg('<path d="M12 4v10"/><path d="m7.5 8.5 4.5-4.5 4.5 4.5"/><path d="M5 14v3.5A2.5 2.5 0 0 0 7.5 20h9a2.5 2.5 0 0 0 2.5-2.5V14"/>');
 export const IconLinkExternal = wrapImageSvg('<path d="M10 14a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 5.5"/><path d="M14 10a5 5 0 0 0-7.07 0l-2.83 2.83a5 5 0 0 0 7.07 7.07l1.33-1.33"/>');
-export const IconGridFour = wrapImageSvg('<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>');
 export const IconArrowDownLine = wrapImageSvg('<path d="M12 4v12"/><path d="m6.5 10.5 5.5 5.5 5.5-5.5"/><path d="M4 18h16"/>');
 export const IconArrowUp = wrapImageSvg('<path d="M12 5v11"/><path d="m7 10 5-5 5 5"/>');
-// Thicker 24×24 search variant — IconSearch (20×20) is used elsewhere in UI
-export const IconSearchLarge = wrapImageSvg('<circle cx="11" cy="11" r="6.5"/><path d="m20 20-3.5-3.5"/>');
 
 // ============================================================================
 // Misc shared icons

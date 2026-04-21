@@ -1,9 +1,7 @@
 import {
   IconArrowDownLine,
   IconArrowUp,
-  IconGridFour,
   IconLinkExternal,
-  IconSearchLarge,
   IconUpload,
 } from '../../components/icons';
 import { DEFAULT_MIME_TYPES } from './constants';
@@ -18,7 +16,6 @@ export interface EmptyStateOptions {
   maxSize?: number;
   uploadLabel?: string;
   embedLabel?: string;
-  stockLabel?: string;
   embedPlaceholder?: string;
   submitLabel?: string;
   i18n?: I18nInstance;
@@ -77,7 +74,7 @@ export interface EmptyStateElement extends HTMLElement {
   setError(message: string | null): void;
 }
 
-type SourceKind = 'upload' | 'embed' | 'stock';
+type SourceKind = 'upload' | 'embed';
 
 function makeTile(icon: string): HTMLElement {
   const tile = document.createElement('span');
@@ -119,7 +116,6 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
   const sizeHint = opts.maxSize !== undefined ? formatBytes(opts.maxSize) : '';
   const uploadLabel = opts.uploadLabel ?? tr(opts.i18n, 'tools.image.emptyUpload');
   const embedLabel = opts.embedLabel ?? tr(opts.i18n, 'tools.image.emptyLink');
-  const stockLabel = opts.stockLabel ?? tr(opts.i18n, 'tools.image.emptyStock');
   const embedPlaceholder = opts.embedPlaceholder ?? tr(opts.i18n, 'tools.image.emptyUrlPlaceholder');
   const submitLabel = opts.submitLabel ?? tr(opts.i18n, 'tools.image.emptyInsert');
   const addImageLabel = tr(opts.i18n, 'tools.image.emptyAddImage');
@@ -150,12 +146,11 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
   tabs.setAttribute('aria-label', tr(opts.i18n, 'tools.image.emptySourceAria'));
   const uploadTab = makeTab('upload', uploadLabel, panel.id, true);
   const embedTab = makeTab('embed', embedLabel, panel.id, false);
-  const stockTab = makeTab('stock', stockLabel, panel.id, false);
-  tabs.append(uploadTab, embedTab, stockTab);
+  tabs.append(uploadTab, embedTab);
   panel.setAttribute('aria-labelledby', uploadTab.id);
 
-  const tabList = [uploadTab, embedTab, stockTab];
-  const tabKinds: SourceKind[] = ['upload', 'embed', 'stock'];
+  const tabList = [uploadTab, embedTab];
+  const tabKinds: SourceKind[] = ['upload', 'embed'];
 
   const dropOverlay = document.createElement('div');
   dropOverlay.className = 'blok-image-empty__drop-overlay';
@@ -258,39 +253,6 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
     queueMicrotask(() => urlInput.focus());
   };
 
-  const renderStock = (): void => {
-    panel.replaceChildren();
-    panel.appendChild(makeTile(IconGridFour));
-
-    const content = document.createElement('div');
-    content.className = 'blok-image-empty__content blok-image-empty__content--row';
-
-    const search = document.createElement('div');
-    search.className = 'blok-image-empty__search';
-
-    const searchIcon = document.createElement('span');
-    searchIcon.className = 'blok-image-empty__search-icon';
-    searchIcon.setAttribute('aria-hidden', 'true');
-    searchIcon.innerHTML = IconSearchLarge;
-
-    const searchInput = document.createElement('input');
-    searchInput.type = 'text';
-    searchInput.className = 'blok-image-empty__input blok-image-empty__input--bare';
-    searchInput.placeholder = tr(opts.i18n, 'tools.image.emptyStockPlaceholder');
-    searchInput.setAttribute('aria-label', tr(opts.i18n, 'tools.image.emptyStockAria'));
-    searchInput.disabled = true;
-    searchInput.addEventListener('click', (ev) => ev.stopPropagation());
-
-    search.append(searchIcon, searchInput);
-
-    const badge = document.createElement('span');
-    badge.className = 'blok-image-empty__badge';
-    badge.textContent = tr(opts.i18n, 'tools.image.emptyComingSoon');
-
-    content.append(search, badge);
-    panel.appendChild(content);
-  };
-
   const activate = (kind: SourceKind): void => {
     const activeTab = tabList[tabKinds.indexOf(kind)];
     for (const tab of tabList) {
@@ -303,8 +265,7 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
     panel.setAttribute('aria-labelledby', activeTab.id);
     card.setAttribute('data-active-tab', kind);
     if (kind === 'upload') renderUpload();
-    else if (kind === 'embed') renderEmbed();
-    else renderStock();
+    else renderEmbed();
   };
 
   tabList.forEach((tab, idx) => {

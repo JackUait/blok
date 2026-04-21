@@ -681,6 +681,8 @@
     import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Quote, Code, Image, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
+    import { renderUploadingState } from './src/tools/image/uploading-state.ts';
+    import { renderErrorState } from './src/tools/image/error-state.ts';
 
     /**
      * Playground state - drives editor configuration
@@ -1407,6 +1409,76 @@
           language: "python"
         }
       },
+      {
+        type: "header",
+        id: "image-states-header",
+        data: {
+          text: "Image States",
+          level: 2
+        }
+      },
+      {
+        id: "image-state-empty-label",
+        type: "paragraph",
+        data: { text: "Empty — no url set. Click the empty state to pick a file or paste a URL." }
+      },
+      {
+        id: "image-state-empty",
+        type: "image",
+        data: { url: "" }
+      },
+      {
+        id: "image-state-loading-label",
+        type: "paragraph",
+        data: { text: "Loading — shown while an upload is in flight. Transient state, forced below via the tool's internal API for demo purposes." }
+      },
+      {
+        id: "image-state-loading",
+        type: "image",
+        data: { url: "" }
+      },
+      {
+        id: "image-state-error-label",
+        type: "paragraph",
+        data: { text: "Error — shown when an upload fails. Transient state, forced below via the tool's internal API for demo purposes." }
+      },
+      {
+        id: "image-state-error",
+        type: "image",
+        data: { url: "" }
+      },
+      {
+        id: "image-state-rendered-label",
+        type: "paragraph",
+        data: { text: "Rendered — url resolved." }
+      },
+      {
+        id: "image-state-rendered",
+        type: "image",
+        data: {
+          url: "/blok-logo.png",
+          caption: "Rendered state",
+          alt: "Blok logotype",
+          width: 40,
+          alignment: "center"
+        }
+      },
+      {
+        id: "image-state-broken-label",
+        type: "paragraph",
+        data: { text: "Broken URL — valid data but the browser fails to load the src (not the tool's ERROR state, just a broken <img>)." }
+      },
+      {
+        id: "image-state-broken",
+        type: "image",
+        data: {
+          url: "/this-image-does-not-exist.png",
+          caption: "Broken URL",
+          alt: "Missing image",
+          width: 40,
+          alignment: "center"
+        }
+      },
     ];
 
     /**
@@ -1450,8 +1522,32 @@
       };
     }
 
+    /**
+     * Swap the inner content of the image blocks that demo the LOADING and ERROR
+     * states. Those states can't be instantiated from persisted data (they are
+     * transient, driven by the Uploader), so we replace the DOM directly for demo.
+     */
+    function forceImageDemoStates(instance) {
+      const swap = (id, build, stateAttr) => {
+        const api = instance.blocks.getById(id);
+        if (!api) return;
+        const tool = api.holder.querySelector('[data-blok-tool="image"]');
+        if (!tool) return;
+        tool.replaceChildren(build());
+        tool.setAttribute('data-state', stateAttr);
+      };
+      swap('image-state-loading', () => renderUploadingState({
+        fileName: 'photo-of-a-cat.jpg',
+        sizeLabel: '1.2 MB',
+      }), 'loading');
+      swap('image-state-error', () => renderErrorState({
+        message: 'The URL returned a 404. Try a different source or re-upload the file.',
+      }), 'error');
+    }
+
     let blok = new Blok(buildConfig());
     window.blok = blok;
+    void blok.isReady.then(() => forceImageDemoStates(blok));
 
     /**
      * Reinitialize editor with current state.
@@ -1464,6 +1560,7 @@
         blok.destroy();
         blok = new Blok(buildConfig());
         window.blok = blok;
+        void blok.isReady.then(() => forceImageDemoStates(blok));
       }, 50);
     }
 

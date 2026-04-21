@@ -54,4 +54,15 @@ describe('openLightbox drag-to-pan', () => {
     expect(image().style.transform).toBe('translate(50px, 40px) scale(1)');
     close();
   });
+
+  it('closes lightbox on click without drag (pointer movement ≤ 3px)', () => {
+    const close = openWithCapture();
+    const d = dialog();
+    d.dispatchEvent(pointer('pointerdown', 100, 100));
+    d.dispatchEvent(pointer('pointermove', 101, 101));
+    d.dispatchEvent(pointer('pointerup', 101, 101));
+    d.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(document.body.querySelector('.blok-image-lightbox')).toBeNull();
+    close();
+  });
 });

@@ -40,9 +40,12 @@ export function openCropModal(opts: OpenCropModalOptions): () => void {
     editorDetach: null,
   };
 
+  let pointerDownOnBackdrop = false;
+
   const detach = (): void => {
     if (state.detached) return;
     state.detached = true;
+    backdrop.removeEventListener('mousedown', onBackdropPointerDown);
     backdrop.removeEventListener('click', onBackdropClick);
     state.editorDetach?.();
     state.editorDetach = null;
@@ -51,12 +54,19 @@ export function openCropModal(opts: OpenCropModalOptions): () => void {
     previousFocus?.focus?.();
   };
 
+  const onBackdropPointerDown = (event: MouseEvent): void => {
+    pointerDownOnBackdrop = event.target === backdrop;
+  };
+
   const onBackdropClick = (event: MouseEvent): void => {
-    if (event.target !== backdrop) return;
+    const shouldClose = event.target === backdrop && pointerDownOnBackdrop;
+    pointerDownOnBackdrop = false;
+    if (!shouldClose) return;
     detach();
     opts.onCancel();
   };
 
+  backdrop.addEventListener('mousedown', onBackdropPointerDown);
   backdrop.addEventListener('click', onBackdropClick);
 
   state.editorDetach = mountCropEditor(body, {

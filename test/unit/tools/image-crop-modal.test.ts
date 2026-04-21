@@ -83,6 +83,21 @@ describe('openCropModal', () => {
     detach();
   });
 
+  it('drag starting on handle and released on backdrop does not cancel', () => {
+    const onCancel = vi.fn();
+    const detach = open({ onCancel });
+    const handle = document.body.querySelector<HTMLElement>('[data-handle="se"]')!;
+    const backdrop = document.body.querySelector<HTMLElement>(
+      '.blok-image-crop-modal-backdrop'
+    )!;
+    handle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    backdrop.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    backdrop.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(document.body.querySelector('.blok-image-crop-modal-backdrop')).not.toBeNull();
+    detach();
+  });
+
   it('Done button calls onApply then detaches', () => {
     const onApply = vi.fn();
     const detach = open({ onApply });

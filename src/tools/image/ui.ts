@@ -209,6 +209,61 @@ export function openLightbox(opts: LightboxOptions): () => void {
     }
   };
 
+  const DRAG_THRESHOLD = 3;
+  const dragState = {
+    pointerDown: false,
+    dragging: false,
+    startX: 0,
+    startY: 0,
+    originX: 0,
+    originY: 0,
+  };
+
+  const clampPan = (p: { x: number; y: number }): { x: number; y: number } => {
+    const rect = img.getBoundingClientRect();
+    const maxX = rect.width / 2;
+    const maxY = rect.height / 2;
+    return {
+      x: Math.max(-maxX, Math.min(maxX, p.x)),
+      y: Math.max(-maxY, Math.min(maxY, p.y)),
+    };
+  };
+
+  dialog.addEventListener('pointerdown', (event: PointerEvent) => {
+    if (event.target instanceof Node && toolbar.contains(event.target)) return;
+    dragState.pointerDown = true;
+    dragState.dragging = false;
+    dragState.startX = event.clientX;
+    dragState.startY = event.clientY;
+    dragState.originX = panState.x;
+    dragState.originY = panState.y;
+    dialog.setPointerCapture(event.pointerId);
+  });
+
+  dialog.addEventListener('pointermove', (event: PointerEvent) => {
+    if (!dragState.pointerDown) return;
+    const dx = event.clientX - dragState.startX;
+    const dy = event.clientY - dragState.startY;
+    if (!dragState.dragging && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
+      dragState.dragging = true;
+      dialog.classList.add('is-dragging');
+    }
+    if (!dragState.dragging) return;
+    const next = clampPan({ x: dragState.originX + dx, y: dragState.originY + dy });
+    panState.x = next.x;
+    panState.y = next.y;
+    applyTransform();
+  });
+
+  const endDrag = (): void => {
+    if (!dragState.pointerDown) return;
+    dragState.pointerDown = false;
+    dialog.classList.remove('is-dragging');
+  };
+
+  dialog.addEventListener('pointerup', endDrag);
+  dialog.addEventListener('pointercancel', endDrag);
+
   dialog.addEventListener('click', (event) => {
     if (event.target instanceof Node && toolbar.contains(event.target)) return;
     close();

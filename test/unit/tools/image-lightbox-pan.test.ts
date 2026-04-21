@@ -32,7 +32,6 @@ function openWithCapture(): () => void {
   return close;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- shared helper used by subsequent pan tests
 function pointer(type: 'pointerdown' | 'pointermove' | 'pointerup' | 'pointercancel', x: number, y: number): PointerEvent {
   return new PointerEvent(type, { pointerId: 1, clientX: x, clientY: y, bubbles: true });
 }
@@ -41,6 +40,18 @@ describe('openLightbox transform composition', () => {
   it('initial transform is translate(0,0) scale(1)', () => {
     const close = openWithCapture();
     expect(image().style.transform).toBe('translate(0px, 0px) scale(1)');
+    close();
+  });
+});
+
+describe('openLightbox drag-to-pan', () => {
+  it('translates image by drag delta after crossing 3px threshold', () => {
+    const close = openWithCapture();
+    const d = dialog();
+    d.dispatchEvent(pointer('pointerdown', 100, 100));
+    d.dispatchEvent(pointer('pointermove', 150, 140));
+    d.dispatchEvent(pointer('pointerup', 150, 140));
+    expect(image().style.transform).toBe('translate(50px, 40px) scale(1)');
     close();
   });
 });

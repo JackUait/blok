@@ -150,7 +150,7 @@ export function mountCropEditor(
     chip.setAttribute('data-ratio', r.key);
     chip.setAttribute('data-active', String(r.key === state.ratioKey));
     chip.setAttribute('aria-checked', String(r.key === state.ratioKey));
-    chip.textContent = tr(opts.i18n, r.i18nKey, r.label);
+    chip.textContent = tr(opts.i18n, r.i18nKey);
     chip.addEventListener('click', (e) => {
       e.stopPropagation();
       setRatio(r);

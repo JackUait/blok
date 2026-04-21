@@ -9,9 +9,6 @@ export interface OpenAltPopoverOptions {
   i18n?: I18nInstance;
 }
 
-const DESCRIPTION =
-  'Add alt text to describe this image. This makes your page more accessible to people who are vision-impaired or blind.';
-
 const tr = (i18n: I18nInstance | undefined, key: string): string =>
   i18n?.has(key) ? i18n.t(key) : key;
 

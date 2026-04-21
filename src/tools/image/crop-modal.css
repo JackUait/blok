@@ -4,6 +4,14 @@
 */
 .blok-image-crop-modal-backdrop,
 .blok-image-crop-modal-backdrop[data-blok-top-layer][popover] {
+  --crop-modal-backdrop: rgba(8, 9, 12, 0.82);
+  --crop-modal-dialog-bg: #0a0a0a;
+  --crop-modal-dialog-fg: #fff;
+  --crop-modal-dialog-border: rgba(255, 255, 255, 0.06);
+  --crop-modal-dialog-shadow:
+    0 24px 80px -16px rgba(0, 0, 0, 0.7),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+
   position: fixed;
   inset: 0;
   width: auto;
@@ -11,12 +19,35 @@
   margin: 0;
   padding: 0;
   border: 0;
-  background: rgba(8, 9, 12, 0.82);
+  background: var(--crop-modal-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9998;
   animation: blok-crop-modal-backdrop-in 160ms ease;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-blok-theme="dark"]) .blok-image-crop-modal-backdrop {
+    --crop-modal-backdrop: rgba(18, 20, 26, 0.32);
+    --crop-modal-dialog-bg: #fbfbfa;
+    --crop-modal-dialog-fg: #16181d;
+    --crop-modal-dialog-border: rgba(22, 24, 29, 0.08);
+    --crop-modal-dialog-shadow:
+      0 30px 80px -20px rgba(18, 20, 26, 0.28),
+      0 8px 24px -8px rgba(18, 20, 26, 0.14),
+      0 1px 0 rgba(22, 24, 29, 0.04);
+  }
+}
+
+[data-blok-theme="light"] .blok-image-crop-modal-backdrop {
+  --crop-modal-backdrop: rgba(18, 20, 26, 0.32);
+  --crop-modal-dialog-bg: #fbfbfa;
+  --crop-modal-dialog-fg: #16181d;
+  --crop-modal-dialog-border: rgba(22, 24, 29, 0.08);
+  --crop-modal-dialog-shadow:
+    0 1px 0 rgba(22, 24, 29, 0.04),
+    0 12px 32px -12px rgba(22, 24, 29, 0.12);
 }
 
 @keyframes blok-crop-modal-backdrop-in {
@@ -25,13 +56,11 @@
 }
 
 .blok-image-crop-modal-dialog {
-  background: #0a0a0a;
-  color: #fff;
+  background: var(--crop-modal-dialog-bg);
+  color: var(--crop-modal-dialog-fg);
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow:
-    0 24px 80px -16px rgba(0, 0, 0, 0.7),
-    0 2px 8px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--crop-modal-dialog-border);
+  box-shadow: var(--crop-modal-dialog-shadow);
   max-width: min(92vw, 1100px);
   max-height: 92vh;
   display: flex;

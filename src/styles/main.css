@@ -3341,8 +3341,8 @@
   position: absolute;
   inset: -8px -6px;
 }
-[data-blok-tool="image"] [data-role="resize-handle"][data-edge="left"]  { left: -3px; }
-[data-blok-tool="image"] [data-role="resize-handle"][data-edge="right"] { right: -3px; }
+[data-blok-tool="image"] [data-role="resize-handle"][data-edge="left"]  { left: 8px; }
+[data-blok-tool="image"] [data-role="resize-handle"][data-edge="right"] { right: 8px; }
 [data-blok-tool="image"]:hover [data-role="resize-handle"],
 [data-blok-tool="image"][data-selected="true"] [data-role="resize-handle"] {
   opacity: 1;

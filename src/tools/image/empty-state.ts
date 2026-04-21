@@ -3,7 +3,10 @@ import { DEFAULT_MIME_TYPES } from './constants';
 export interface EmptyStateOptions {
   onFile(file: File): void;
   onUrl(url: string): void;
+  /** MIME types to accept on file picker + show in the formats hint. */
   acceptTypes?: string[];
+  /** Max file size in bytes — surfaced in the formats hint when set. */
+  maxSize?: number;
   uploadLabel?: string;
   embedLabel?: string;
   stockLabel?: string;
@@ -11,11 +14,76 @@ export interface EmptyStateOptions {
   submitLabel?: string;
 }
 
+const MIME_LABELS: Record<string, string> = {
+  'image/jpeg': 'JPG',
+  'image/jpg': 'JPG',
+  'image/png': 'PNG',
+  'image/gif': 'GIF',
+  'image/webp': 'WebP',
+  'image/svg+xml': 'SVG',
+  'image/avif': 'AVIF',
+  'image/heic': 'HEIC',
+  'image/heif': 'HEIF',
+  'image/bmp': 'BMP',
+  'image/tiff': 'TIFF',
+  'image/x-icon': 'ICO',
+};
+
+function mimeToLabel(mime: string): string {
+  const key = mime.toLowerCase().trim();
+  if (MIME_LABELS[key]) return MIME_LABELS[key];
+  const slash = key.indexOf('/');
+  const tail = slash >= 0 ? key.slice(slash + 1) : key;
+  return tail.replace(/^x-/, '').split('+')[0].toUpperCase();
+}
+
+function formatsLabel(types: readonly string[]): string {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const t of types) {
+    const label = mimeToLabel(t);
+    if (seen.has(label)) continue;
+    seen.add(label);
+    out.push(label);
+  }
+  return out.join(' · ');
+}
+
+function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${Math.round(kb)} KB`;
+  const mb = kb / 1024;
+  if (mb < 1024) return mb < 10 ? `${mb.toFixed(1)} MB` : `${Math.round(mb)} MB`;
+  const gb = mb / 1024;
+  return gb < 10 ? `${gb.toFixed(1)} GB` : `${Math.round(gb)} GB`;
+}
+
 export interface EmptyStateElement extends HTMLElement {
   setError(message: string | null): void;
 }
 
 type SourceKind = 'upload' | 'embed' | 'stock';
+
+const ICONS = {
+  upload: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="1.5"/><path d="m21 15-4-4L7 21"/>',
+  link: '<path d="M10 14a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 5.5"/><path d="M14 10a5 5 0 0 0-7.07 0l-2.83 2.83a5 5 0 0 0 7.07 7.07l1.33-1.33"/>',
+  stock: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  drop: '<rect x="3" y="4" width="18" height="14" rx="2"/><path d="M12 8v7"/><path d="m9 12 3 3 3-3"/>',
+};
+
+function wrapSvg(inner: string): string {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${inner}</svg>`;
+}
+
+function makeTile(icon: string): HTMLElement {
+  const tile = document.createElement('span');
+  tile.className = 'blok-image-empty__tile';
+  tile.setAttribute('aria-hidden', 'true');
+  tile.innerHTML = wrapSvg(icon);
+  return tile;
+}
 
 function makeTab(kind: SourceKind, label: string, current: boolean): HTMLButtonElement {
   const btn = document.createElement('button');
@@ -30,12 +98,18 @@ function makeTab(kind: SourceKind, label: string, current: boolean): HTMLButtonE
 }
 
 export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
-  const accept = (opts.acceptTypes ?? [...DEFAULT_MIME_TYPES]).join(',');
+  const types = opts.acceptTypes ?? [...DEFAULT_MIME_TYPES];
+  const accept = types.join(',');
+  const formats = formatsLabel(types);
+  const sizeHint = opts.maxSize !== undefined ? formatBytes(opts.maxSize) : '';
+  const metaLabel = [formats, sizeHint ? `≤ ${sizeHint}` : '']
+    .filter(Boolean)
+    .join(' · ');
   const uploadLabel = opts.uploadLabel ?? 'Upload';
-  const embedLabel = opts.embedLabel ?? 'Embed';
+  const embedLabel = opts.embedLabel ?? 'Link';
   const stockLabel = opts.stockLabel ?? 'Stock';
   const embedPlaceholder = opts.embedPlaceholder ?? 'Paste an image URL…';
-  const submitLabel = opts.submitLabel ?? 'Embed';
+  const submitLabel = opts.submitLabel ?? 'Insert';
 
   const root = document.createElement('div') as unknown as EmptyStateElement;
   root.className = 'blok-image-empty';
@@ -67,7 +141,10 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
   const dropOverlay = document.createElement('div');
   dropOverlay.className = 'blok-image-empty__drop-overlay';
   dropOverlay.setAttribute('aria-hidden', 'true');
-  dropOverlay.textContent = 'Drop an image here';
+  const dropInner = document.createElement('div');
+  dropInner.className = 'blok-image-empty__drop-inner';
+  dropInner.innerHTML = `${wrapSvg(ICONS.drop)}<span>Drop image to upload</span>`;
+  dropOverlay.appendChild(dropInner);
 
   const error = document.createElement('div');
   error.className = 'blok-image-empty__error';
@@ -85,6 +162,11 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
 
   const renderUpload = (): void => {
     panel.replaceChildren();
+    panel.appendChild(makeTile(ICONS.upload));
+
+    const content = document.createElement('div');
+    content.className = 'blok-image-empty__content blok-image-empty__content--row';
+
     const choose = document.createElement('button');
     choose.type = 'button';
     choose.className = 'blok-image-empty__choose';
@@ -96,21 +178,37 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
     hint.className = 'blok-image-empty__hint';
     hint.textContent = 'or drag & drop';
 
-    panel.append(choose, hint, input);
+    content.append(choose, hint);
+
+    if (metaLabel) {
+      const meta = document.createElement('span');
+      meta.className = 'blok-image-empty__meta';
+      meta.textContent = metaLabel;
+      content.appendChild(meta);
+    }
+
+    panel.append(content, input);
   };
 
   const renderEmbed = (): void => {
     panel.replaceChildren();
+    panel.appendChild(makeTile(ICONS.link));
+
+    const content = document.createElement('div');
+    content.className = 'blok-image-empty__content blok-image-empty__content--row';
+
     const urlInput = document.createElement('input');
     urlInput.type = 'url';
     urlInput.className = 'blok-image-empty__input';
     urlInput.placeholder = embedPlaceholder;
     urlInput.setAttribute('aria-label', 'Image URL');
+
     const submit = document.createElement('button');
     submit.type = 'button';
     submit.className = 'blok-image-empty__submit';
     submit.setAttribute('data-action', 'submit-url');
     submit.textContent = submitLabel;
+
     const commit = (): void => {
       const value = urlInput.value.trim();
       if (value) opts.onUrl(value);
@@ -122,21 +220,32 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
         commit();
       }
     });
-    panel.append(urlInput, submit);
+
+    content.append(urlInput, submit);
+    panel.appendChild(content);
     queueMicrotask(() => urlInput.focus());
   };
 
   const renderStock = (): void => {
     panel.replaceChildren();
+    panel.appendChild(makeTile(ICONS.stock));
+
+    const content = document.createElement('div');
+    content.className = 'blok-image-empty__content blok-image-empty__content--row';
+
     const search = document.createElement('input');
     search.type = 'text';
     search.className = 'blok-image-empty__input';
     search.placeholder = 'Search stock images…';
     search.setAttribute('aria-label', 'Stock images');
-    const note = document.createElement('span');
-    note.className = 'blok-image-empty__hint';
-    note.textContent = 'coming soon';
-    panel.append(search, note);
+    search.disabled = true;
+
+    const badge = document.createElement('span');
+    badge.className = 'blok-image-empty__badge';
+    badge.textContent = 'Coming soon';
+
+    content.append(search, badge);
+    panel.appendChild(content);
   };
 
   const activate = (kind: SourceKind): void => {

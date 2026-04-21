@@ -327,6 +327,7 @@ export class ImageTool implements BlockTool {
           .catch((err) => this.showEmptyError(err));
       },
       acceptTypes: this.config.types,
+      maxSize: this.config.maxSize,
     });
     this.emptyStateEl = el;
     this.root.appendChild(el);

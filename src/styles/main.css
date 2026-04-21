@@ -4026,4 +4026,28 @@
   outline: none;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 40%, transparent);
 }
+.blok-image-error__btn:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+[data-blok-tool="image"][data-retrying="true"] .blok-image-error__btn[data-action="retry"] {
+  position: relative;
+  color: transparent;
+  opacity: 1;
+}
+[data-blok-tool="image"][data-retrying="true"] .blok-image-error__btn[data-action="retry"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--blok-text-primary) 35%, transparent);
+  border-top-color: var(--blok-text-primary);
+  animation: blok-image-retry-spin 0.65s linear infinite;
+}
+@keyframes blok-image-retry-spin {
+  to { transform: rotate(360deg); }
+}
 

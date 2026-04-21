@@ -55,6 +55,7 @@ export class ImageTool implements BlockTool {
   private lastFileName: string | null = null;
   private lastSource: { kind: 'file'; file: File } | { kind: 'url'; url: string } | null = null;
   private brokenImage = false;
+  private retrying = false;
 
   constructor(options: BlockToolConstructorOptions<ImageData, ImageConfig>) {
     this.api = options.api;
@@ -164,11 +165,18 @@ export class ImageTool implements BlockTool {
       this.transitionToEmpty();
       return;
     }
-    if (source.kind === 'file') {
-      this.startUpload(source.file);
-    } else {
-      this.startUrl(source.url);
-    }
+    this.retrying = true;
+    this.syncRetryingAttribute();
+    const retryBtn = this.root?.querySelector<HTMLButtonElement>(
+      '[data-role="error-state"] [data-action="retry"]'
+    );
+    if (retryBtn) retryBtn.disabled = true;
+    const promise = source.kind === 'file'
+      ? this.uploader.handleFile(source.file)
+      : this.uploader.handleUrl(source.url);
+    void promise
+      .then((result) => this.applyResult(result))
+      .catch((err) => this.applyError(err));
   }
 
   private applyResult(result: UploadResult): void {
@@ -176,6 +184,7 @@ export class ImageTool implements BlockTool {
     this.state = 'RENDERED';
     this.errorMessage = null;
     this.brokenImage = false;
+    this.retrying = false;
     this.renderState();
     this.block.dispatchChange();
   }
@@ -184,6 +193,7 @@ export class ImageTool implements BlockTool {
     this.state = 'ERROR';
     this.errorMessage = err instanceof Error ? err.message : 'Upload failed';
     this.brokenImage = false;
+    this.retrying = false;
     this.renderState();
     if (!(err instanceof ImageError)) {
       console.error('[image] upload failed', err);
@@ -333,6 +343,16 @@ export class ImageTool implements BlockTool {
     );
     r.setAttribute('data-alt', this.data.alt ? 'set' : 'none');
     r.setAttribute('data-selected', 'false');
+    this.syncRetryingAttribute();
+  }
+
+  private syncRetryingAttribute(): void {
+    if (!this.root) return;
+    if (this.retrying) {
+      this.root.setAttribute('data-retrying', 'true');
+    } else {
+      this.root.removeAttribute('data-retrying');
+    }
   }
 
   private renderState(): void {

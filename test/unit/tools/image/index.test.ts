@@ -743,6 +743,55 @@ describe('ImageTool — error state', () => {
     expect(uploadByUrl).toHaveBeenLastCalledWith('https://x/404.png');
   });
 
+  it('retry click keeps error card mounted while upload is in flight (no flash to loading)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    let resolveRetry!: () => void;
+    const uploadByFile = vi.fn()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockImplementationOnce(() => new Promise<{ url: string; fileName: string }>((r) => {
+        resolveRetry = () => r({ url: 'https://cdn/ok.png', fileName: 'p.png' });
+      }));
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByFile } }));
+    const root = tool.render();
+    const file = new File([new Uint8Array(10)], 'p.png', { type: 'image/png' });
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    const errorEl = root.querySelector('[data-role="error-state"]');
+    expect(errorEl).not.toBeNull();
+    const retryBtn = root.querySelector<HTMLButtonElement>('[data-action="retry"]');
+    if (!retryBtn) throw new Error('retry missing');
+    retryBtn.click();
+    await Promise.resolve();
+    expect(root.getAttribute('data-state')).toBe('error');
+    expect(root.querySelector('[data-role="uploading"]')).toBeNull();
+    expect(root.querySelector('[data-role="error-state"]')).toBe(errorEl);
+    expect(root.getAttribute('data-retrying')).toBe('true');
+    expect(retryBtn.disabled).toBe(true);
+    resolveRetry();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(root.getAttribute('data-state')).toBe('rendered');
+    expect(root.getAttribute('data-retrying')).toBeNull();
+  });
+
+  it('retry click that fails again keeps the same error card and clears retrying flag', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const uploadByFile = vi.fn().mockRejectedValue(new Error('still broken'));
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByFile } }));
+    const root = tool.render();
+    const file = new File([new Uint8Array(10)], 'p.png', { type: 'image/png' });
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    root.querySelector<HTMLButtonElement>('[data-action="retry"]')?.click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(root.getAttribute('data-state')).toBe('error');
+    expect(root.getAttribute('data-retrying')).toBeNull();
+    expect(root.querySelector<HTMLButtonElement>('[data-action="retry"]')?.disabled).toBe(false);
+  });
+
   it('replace on error transitions to empty state', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const tool = new ImageTool(createOptions(

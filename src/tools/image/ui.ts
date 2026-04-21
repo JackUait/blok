@@ -1,5 +1,6 @@
 import type { ImageAlignment, ImageData, ImageSize } from '../../../types/tools/image';
 import { onHover as tooltipOnHover, hide as tooltipHide } from '../../components/utils/tooltip';
+import { applyRubberBand } from './spring';
 
 const ALIGNMENT_TO_TEXT_ALIGN: Record<ImageAlignment, string> = {
   left: 'left',
@@ -8,9 +9,9 @@ const ALIGNMENT_TO_TEXT_ALIGN: Record<ImageAlignment, string> = {
 };
 
 const ALIGNMENT_ICON: Record<ImageAlignment, string> = {
-  left:   '<path d="M21 6H3"/><path d="M15 12H3"/><path d="M17 18H3"/>',
-  center: '<path d="M21 6H3"/><path d="M17 12H7"/><path d="M19 18H5"/>',
-  right:  '<path d="M21 6H3"/><path d="M21 12H9"/><path d="M21 18H7"/>',
+  left:   '<rect x="3" y="8" width="8" height="8" rx="1.5" fill="currentColor" stroke="none"/><path d="M3 4h18"/><path d="M14 10h7"/><path d="M14 14h7"/><path d="M3 20h18"/>',
+  center: '<rect x="8" y="8" width="8" height="8" rx="1.5" fill="currentColor" stroke="none"/><path d="M3 4h18"/><path d="M3 20h18"/>',
+  right:  '<rect x="13" y="8" width="8" height="8" rx="1.5" fill="currentColor" stroke="none"/><path d="M3 4h18"/><path d="M3 10h7"/><path d="M3 14h7"/><path d="M3 20h18"/>',
 };
 
 const ALIGNMENT_LABEL: Record<ImageAlignment, string> = {
@@ -121,6 +122,42 @@ export interface LightboxOptions {
   url: string;
   alt?: string;
   fileName?: string;
+  /**
+   * Source element (the inline thumbnail) used for the FLIP open/close morph.
+   * When omitted, the dialog cross-fades without a spatial transition.
+   */
+  origin?: HTMLElement;
+}
+
+const OPEN_DURATION = 360;
+const CLOSE_DURATION = 280;
+// Smooth ease-out-expo on open; symmetric material curve on close.
+const OPEN_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
+const CLOSE_EASING = 'cubic-bezier(0.4, 0, 0.2, 1)';
+
+interface FlipTransform {
+  tx: number;
+  ty: number;
+  sx: number;
+  sy: number;
+}
+
+function flipTransform(srcRect: DOMRect, destRect: DOMRect): FlipTransform {
+  const sx = destRect.width > 0 ? srcRect.width / destRect.width : 1;
+  const sy = destRect.height > 0 ? srcRect.height / destRect.height : 1;
+  const srcCx = srcRect.left + srcRect.width / 2;
+  const srcCy = srcRect.top + srcRect.height / 2;
+  const destCx = destRect.left + destRect.width / 2;
+  const destCy = destRect.top + destRect.height / 2;
+  return { tx: srcCx - destCx, ty: srcCy - destCy, sx, sy };
+}
+
+function toTransform(t: FlipTransform): string {
+  return `translate(${t.tx}px, ${t.ty}px) scale(${t.sx}, ${t.sy})`;
+}
+
+function canAnimate(el: Element): el is Element & { animate: HTMLElement['animate'] } {
+  return typeof (el as HTMLElement).animate === 'function';
 }
 
 const ZOOM_MIN = 0.25;
@@ -138,6 +175,11 @@ export function openLightbox(opts: LightboxOptions): () => void {
   dialog.setAttribute('aria-label', 'Image preview');
   dialog.className = 'blok-image-lightbox';
 
+  const backdrop = document.createElement('div');
+  backdrop.className = 'blok-image-lightbox__backdrop';
+  backdrop.setAttribute('aria-hidden', 'true');
+  dialog.appendChild(backdrop);
+
   const img = document.createElement('img');
   img.setAttribute('src', opts.url);
   img.setAttribute('alt', opts.alt ?? '');
@@ -150,13 +192,24 @@ export function openLightbox(opts: LightboxOptions): () => void {
     img.style.transform = `translate(${panState.x}px, ${panState.y}px) scale(${zoomState.value})`;
   };
 
-  function clampPan(p: { x: number; y: number }): { x: number; y: number } {
+  function panBounds(): { maxX: number; maxY: number; width: number; height: number } {
     const rect = img.getBoundingClientRect();
-    const maxX = rect.width / 2;
-    const maxY = rect.height / 2;
+    return { maxX: rect.width / 2, maxY: rect.height / 2, width: rect.width, height: rect.height };
+  }
+
+  function clampPan(p: { x: number; y: number }): { x: number; y: number } {
+    const { maxX, maxY } = panBounds();
     return {
       x: Math.max(-maxX, Math.min(maxX, p.x)),
       y: Math.max(-maxY, Math.min(maxY, p.y)),
+    };
+  }
+
+  function rubberBandPan(p: { x: number; y: number }): { x: number; y: number } {
+    const { maxX, maxY, width, height } = panBounds();
+    return {
+      x: applyRubberBand(p.x, maxX, width),
+      y: applyRubberBand(p.y, maxY, height),
     };
   }
 
@@ -204,11 +257,126 @@ export function openLightbox(opts: LightboxOptions): () => void {
   dialog.appendChild(toolbar);
   document.body.appendChild(dialog);
 
-  const close = (): void => {
+  const animState: { img: Animation | null; backdrop: Animation | null; toolbar: Animation | null; closing: boolean } = {
+    img: null,
+    backdrop: null,
+    toolbar: null,
+    closing: false,
+  };
+  const origin = opts.origin && opts.origin.isConnected ? opts.origin : null;
+  const originPrevOpacity = origin ? origin.style.opacity : '';
+
+  const cancelRunning = (): void => {
+    animState.img?.cancel();
+    animState.backdrop?.cancel();
+    animState.toolbar?.cancel();
+    animState.img = null;
+    animState.backdrop = null;
+    animState.toolbar = null;
+  };
+
+  const slideToolbar = (
+    from: { opacity: number; y: number },
+    to: { opacity: number; y: number },
+    timing: KeyframeAnimationOptions
+  ): Animation | null => {
+    if (!canAnimate(toolbar)) return null;
+    return toolbar.animate(
+      [
+        { opacity: from.opacity, transform: `translate(-50%, ${from.y}px)` },
+        { opacity: to.opacity, transform: `translate(-50%, ${to.y}px)` },
+      ],
+      timing
+    );
+  };
+
+  const playOpen = (): void => {
+    if (origin && canAnimate(img)) {
+      const srcRect = origin.getBoundingClientRect();
+      const destRect = img.getBoundingClientRect();
+      if (srcRect.width > 0 && srcRect.height > 0 && destRect.width > 0 && destRect.height > 0) {
+        const from = toTransform(flipTransform(srcRect, destRect));
+        origin.style.opacity = '0';
+        animState.img = img.animate(
+          [{ transform: from }, { transform: 'translate(0px, 0px) scale(1)' }],
+          { duration: OPEN_DURATION, easing: OPEN_EASING, fill: 'backwards' }
+        );
+      }
+    }
+    if (canAnimate(backdrop)) {
+      animState.backdrop = backdrop.animate(
+        [{ opacity: 0 }, { opacity: 1 }],
+        { duration: 260, easing: 'linear', fill: 'backwards' }
+      );
+    }
+    animState.toolbar = slideToolbar(
+      { opacity: 0, y: 12 },
+      { opacity: 1, y: 0 },
+      { duration: 320, delay: 140, easing: OPEN_EASING, fill: 'both' }
+    );
+  };
+
+  const finalize = (): void => {
     document.removeEventListener('keydown', onKey);
     dialog.remove();
+    if (origin) origin.style.opacity = originPrevOpacity;
     previousFocus?.focus?.();
   };
+
+  const closeFadeOnly = (): void => {
+    if (!canAnimate(backdrop)) {
+      finalize();
+      return;
+    }
+    const a = backdrop.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, easing: 'linear', fill: 'forwards' });
+    a.onfinish = finalize;
+    a.oncancel = finalize;
+    slideToolbar({ opacity: 1, y: 0 }, { opacity: 0, y: 12 }, { duration: 180, easing: CLOSE_EASING, fill: 'forwards' });
+  };
+
+  const closeWithFlip = (originEl: HTMLElement): void => {
+    const srcRect = originEl.getBoundingClientRect();
+    if (srcRect.width === 0 || srcRect.height === 0) {
+      finalize();
+      return;
+    }
+    // Suppress the spring transition on .blok-image-lightbox__image so the
+    // identity measurement and final-state commit below don't trigger a CSS
+    // tween underneath the WAAPI animation.
+    img.style.transition = 'none';
+    // Capture the currently-displayed transform (may include user zoom/pan) so
+    // the reverse-FLIP starts from where the image visually is right now.
+    const current = img.style.transform || 'translate(0px, 0px) scale(1)';
+    // Measure the identity rect (transform=none) so we can map dest→source.
+    img.style.transform = 'none';
+    const identRect = img.getBoundingClientRect();
+    img.style.transform = current;
+    const to = toTransform(flipTransform(srcRect, identRect));
+    // Lock the final visible state on the inline style so there is no snap
+    // back to identity after WAAPI releases its hold.
+    img.style.transform = to;
+    const anim = img.animate(
+      [{ transform: current }, { transform: to }],
+      { duration: CLOSE_DURATION, easing: CLOSE_EASING, fill: 'forwards' }
+    );
+    anim.onfinish = finalize;
+    anim.oncancel = finalize;
+
+    if (canAnimate(backdrop)) {
+      backdrop.animate([{ opacity: 1 }, { opacity: 0 }], { duration: CLOSE_DURATION, easing: 'linear', fill: 'forwards' });
+    }
+    slideToolbar({ opacity: 1, y: 0 }, { opacity: 0, y: 12 }, { duration: 200, easing: CLOSE_EASING, fill: 'forwards' });
+  };
+
+  const close = (): void => {
+    if (animState.closing) return;
+    animState.closing = true;
+    cancelRunning();
+    if (origin && canAnimate(img)) closeWithFlip(origin);
+    else closeFadeOnly();
+  };
+
+  playOpen();
 
   const onKey = (event: KeyboardEvent): void => {
     if (event.key === 'Escape' || event.key === ' ') {
@@ -258,7 +426,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
       dialog.classList.add('is-dragging');
     }
     if (!dragState.dragging) return;
-    const next = clampPan({ x: dragState.originX + dx, y: dragState.originY + dy });
+    const next = rubberBandPan({ x: dragState.originX + dx, y: dragState.originY + dy });
     panState.x = next.x;
     panState.y = next.y;
     applyTransform();
@@ -270,6 +438,12 @@ export function openLightbox(opts: LightboxOptions): () => void {
     dialog.classList.remove('is-dragging');
     if (dragState.dragging) {
       dragState.dragging = false;
+      // Removing is-dragging re-enables the CSS transform transition; clamping now
+      // triggers the spring animation from the rubber-banded position back to bounds.
+      const settled = clampPan(panState);
+      panState.x = settled.x;
+      panState.y = settled.y;
+      applyTransform();
       const swallow = (e: MouseEvent): void => {
         if (e.target instanceof Node && toolbar.contains(e.target)) return;
         e.stopPropagation();

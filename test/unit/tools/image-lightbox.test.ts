@@ -20,6 +20,21 @@ describe('openLightbox toolbar', () => {
     close();
   });
 
+  it('renders a dedicated backdrop child so opacity can animate without affecting the image', () => {
+    const close = openAtBody({ url: 'https://example.com/pic.jpg' });
+    const dialog = document.body.querySelector('.blok-image-lightbox') as HTMLElement;
+    expect(dialog.querySelector('.blok-image-lightbox__backdrop')).not.toBeNull();
+    close();
+  });
+
+  it('accepts an origin element option without throwing and still mounts the dialog', () => {
+    const origin = document.createElement('div');
+    document.body.appendChild(origin);
+    const close = openAtBody({ url: 'https://example.com/pic.jpg', origin });
+    expect(document.body.querySelector('.blok-image-lightbox')).not.toBeNull();
+    close();
+  });
+
   it('renders zoom buttons directly in the bar in order out/reset/in, separated from actions by a divider', () => {
     const close = openAtBody({ url: 'https://example.com/pic.jpg' });
     const actions = Array.from(bar().querySelectorAll('button')).map((b) => b.getAttribute('data-action'));

@@ -362,7 +362,7 @@ export class ImageTool implements BlockTool {
     const imgEl = figure.querySelector('img');
     if (imgEl) {
       imgEl.style.cursor = 'zoom-in';
-      imgEl.addEventListener('click', () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName }));
+      imgEl.addEventListener('click', () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, origin: imgEl }));
     }
 
     if (!this.readOnly) {
@@ -377,7 +377,7 @@ export class ImageTool implements BlockTool {
         onReplace: () => this.transitionToEmpty(),
         onDelete: () => this.deleteBlock(),
         onDownload: () => this.download(),
-        onFullscreen: () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName }),
+        onFullscreen: () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, origin: imgEl ?? undefined }),
         onCopyUrl: () => this.copyUrl(),
         onToggleCaption: () => this.toggleCaption(),
         onCrop: () => this.enterCrop(),
@@ -470,9 +470,28 @@ export class ImageTool implements BlockTool {
 
   private setAlignment(next: ImageAlignment): void {
     if (this.data.alignment === next) return;
+    const prevFigure = this.root?.querySelector<HTMLElement>('.blok-image-inner');
+    const prevRect = prevFigure?.getBoundingClientRect();
     this.data.alignment = next;
     this.block.dispatchChange();
     this.renderState();
+    if (!prevRect) return;
+    const nextFigure = this.root?.querySelector<HTMLElement>('.blok-image-inner');
+    if (!nextFigure) return;
+    const nextRect = nextFigure.getBoundingClientRect();
+    const dx = prevRect.left - nextRect.left;
+    if (Math.abs(dx) < 0.5) return;
+    nextFigure.style.transition = 'none';
+    nextFigure.style.transform = `translateX(${dx}px)`;
+    void nextFigure.offsetWidth;
+    nextFigure.style.transition = 'transform 320ms cubic-bezier(0.22, 1, 0.36, 1)';
+    nextFigure.style.transform = 'translateX(0)';
+    const cleanup = (): void => {
+      nextFigure.style.transition = '';
+      nextFigure.style.transform = '';
+      nextFigure.removeEventListener('transitionend', cleanup);
+    };
+    nextFigure.addEventListener('transitionend', cleanup);
   }
 
   private setSize(next: ImageSize): void {

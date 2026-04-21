@@ -165,6 +165,53 @@ describe('openLightbox drag-to-pan', () => {
   });
 });
 
+describe('openLightbox drag-to-pan rubber band', () => {
+  function parseTranslate(style: string): { x: number; y: number } {
+    const match = style.match(/translate\((-?[\d.]+)px,\s*(-?[\d.]+)px\)/);
+    if (!match) throw new Error(`no translate in ${style}`);
+    return { x: parseFloat(match[1]), y: parseFloat(match[2]) };
+  }
+
+  it('rubber-bands past bound during drag (overshoot dampened, not hard-clamped)', () => {
+    const close = openWithCapture(); // 800x600 → maxX=400, maxY=300
+    const d = dialog();
+    d.dispatchEvent(pointer('pointerdown', 100, 100));
+    d.dispatchEvent(pointer('pointermove', 100_000, 100_000));
+    // Do NOT pointerup yet — measure live drag state.
+    const { x, y } = parseTranslate(image().style.transform);
+    expect(x).toBeGreaterThan(400); // past hard clamp
+    expect(x).toBeLessThan(100_000 - 100); // but dampened
+    expect(y).toBeGreaterThan(300);
+    expect(y).toBeLessThan(100_000 - 100);
+    d.dispatchEvent(pointer('pointerup', 100_000, 100_000));
+    close();
+  });
+
+  it('rubber-bands symmetrically in the negative direction', () => {
+    const close = openWithCapture();
+    const d = dialog();
+    d.dispatchEvent(pointer('pointerdown', 100, 100));
+    d.dispatchEvent(pointer('pointermove', -100_000, -100_000));
+    const { x, y } = parseTranslate(image().style.transform);
+    expect(x).toBeLessThan(-400);
+    expect(x).toBeGreaterThan(-100_000 + 100);
+    expect(y).toBeLessThan(-300);
+    expect(y).toBeGreaterThan(-100_000 + 100);
+    d.dispatchEvent(pointer('pointerup', -100_000, -100_000));
+    close();
+  });
+
+  it('within bound, drag is linear (no rubber band)', () => {
+    const close = openWithCapture();
+    const d = dialog();
+    d.dispatchEvent(pointer('pointerdown', 100, 100));
+    d.dispatchEvent(pointer('pointermove', 250, 200));
+    expect(image().style.transform).toBe('translate(150px, 100px) scale(1)');
+    d.dispatchEvent(pointer('pointerup', 250, 200));
+    close();
+  });
+});
+
 describe('lightbox pan CSS', () => {
   const projectRoot = path.resolve(__dirname, '../../..');
   const mainCss = readFileSync(path.join(projectRoot, 'src/styles/main.css'), 'utf8');
@@ -194,5 +241,18 @@ describe('lightbox pan CSS', () => {
 
     const dragImgBody = ruleBody(/\.blok-image-lightbox\.is-dragging\s+\.blok-image-lightbox__image\s*\{([^}]+)\}/);
     expect(dragImgBody).toMatch(/transition:\s*none/);
+  });
+
+  it('lightbox image transform transition uses a spring-like cubic-bezier (overshoot > 1)', () => {
+    const imgBody = ruleBody(/\.blok-image-lightbox__image\s*\{([^}]+)\}/);
+    const match = imgBody.match(/transition:\s*transform\s+(\d+)ms\s+cubic-bezier\(([^)]+)\)/);
+    expect(match).not.toBeNull();
+    const durationMs = parseInt(match![1], 10);
+    const bezier = match![2].split(',').map((n) => parseFloat(n.trim()));
+    expect(durationMs).toBeGreaterThanOrEqual(300); // long enough to see the spring
+    // Fourth bezier control > 1 → overshoot, i.e. a bounce/spring settle.
+    expect(bezier).toHaveLength(4);
+    // Spring overshoot: either y1 or y2 control point extends past 1.
+    expect(Math.max(bezier[1], bezier[3])).toBeGreaterThan(1);
   });
 });

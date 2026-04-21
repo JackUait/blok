@@ -65,4 +65,15 @@ describe('openLightbox drag-to-pan', () => {
     expect(document.body.querySelector('.blok-image-lightbox')).toBeNull();
     close();
   });
+
+  it('does not close after a drag gesture', () => {
+    const close = openWithCapture();
+    const d = dialog();
+    d.dispatchEvent(pointer('pointerdown', 100, 100));
+    d.dispatchEvent(pointer('pointermove', 150, 140));
+    d.dispatchEvent(pointer('pointerup', 150, 140));
+    d.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(document.body.querySelector('.blok-image-lightbox')).not.toBeNull();
+    close();
+  });
 });

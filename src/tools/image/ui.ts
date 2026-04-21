@@ -259,6 +259,14 @@ export function openLightbox(opts: LightboxOptions): () => void {
     if (!dragState.pointerDown) return;
     dragState.pointerDown = false;
     dialog.classList.remove('is-dragging');
+    if (dragState.dragging) {
+      dragState.dragging = false;
+      const swallow = (e: MouseEvent): void => {
+        e.stopPropagation();
+        dialog.removeEventListener('click', swallow, true);
+      };
+      dialog.addEventListener('click', swallow, true);
+    }
   };
 
   dialog.addEventListener('pointerup', endDrag);

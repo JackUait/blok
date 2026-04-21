@@ -135,6 +135,17 @@ describe('openLightbox drag-to-pan', () => {
     close();
   });
 
+  it('tiny sub-threshold movement does not convert the gesture into a drag', () => {
+    const close = openWithCapture();
+    const d = dialog();
+    d.dispatchEvent(pointer('pointerdown', 100, 100));
+    d.dispatchEvent(pointer('pointermove', 102, 101)); // hypot = ~2.24 < 3
+    d.dispatchEvent(pointer('pointerup', 102, 101));
+    d.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(document.body.querySelector('.blok-image-lightbox')).toBeNull();
+    close();
+  });
+
   it('pointerdown on toolbar does not start a drag', () => {
     const close = openWithCapture();
     const d = dialog();

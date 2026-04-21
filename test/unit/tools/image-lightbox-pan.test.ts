@@ -132,4 +132,19 @@ describe('openLightbox drag-to-pan', () => {
     expect(image().style.transform).toContain('translate(250px, 200px)');
     close();
   });
+
+  it('pointerdown on toolbar does not start a drag', () => {
+    const close = openWithCapture();
+    const d = dialog();
+    const toolbar = d.querySelector<HTMLElement>('[data-role="lightbox-toolbar"]')!;
+    const zoomIn = toolbar.querySelector<HTMLButtonElement>('[data-action="zoom-in"]')!;
+
+    zoomIn.dispatchEvent(pointer('pointerdown', 500, 500));
+    d.dispatchEvent(pointer('pointermove', 600, 600));
+    d.dispatchEvent(pointer('pointerup', 600, 600));
+
+    // Image was never translated.
+    expect(image().style.transform).toBe('translate(0px, 0px) scale(1)');
+    close();
+  });
 });

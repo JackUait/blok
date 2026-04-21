@@ -540,12 +540,14 @@ export class ImageTool implements BlockTool {
     if (!anchor) return;
     this.closeAlignmentPopover();
     anchor.setAttribute('aria-expanded', 'true');
+    this.root.setAttribute('data-alt-open', 'true');
     this.altPopoverDetach = openAltPopover({
       anchor,
       value: this.data.alt ?? '',
       onSave: (next) => {
         this.altPopoverDetach = null;
         anchor.setAttribute('aria-expanded', 'false');
+        this.root?.removeAttribute('data-alt-open');
         const trimmed = next.trim();
         const current = this.data.alt ?? '';
         if (trimmed === current) return;
@@ -557,6 +559,7 @@ export class ImageTool implements BlockTool {
       onCancel: () => {
         this.altPopoverDetach = null;
         anchor.setAttribute('aria-expanded', 'false');
+        this.root?.removeAttribute('data-alt-open');
       },
     });
   }

@@ -546,6 +546,67 @@ describe('ImageTool — alt button next to caption', () => {
   });
 });
 
+describe('ImageTool — overlay stays visible while alt popover open', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    if (!('popover' in HTMLElement.prototype)) {
+      Object.defineProperty(HTMLElement.prototype, 'popover', {
+        configurable: true,
+        get(this: HTMLElement) { return this.getAttribute('popover'); },
+        set(this: HTMLElement, v: string) { this.setAttribute('popover', v); },
+      });
+    }
+    if (typeof (HTMLElement.prototype as unknown as { showPopover?: () => void }).showPopover !== 'function') {
+      (HTMLElement.prototype as unknown as { showPopover: () => void }).showPopover = function showPopover() {};
+      (HTMLElement.prototype as unknown as { hidePopover: () => void }).hidePopover = function hidePopover() {};
+    }
+  });
+  afterEach(() => {
+    document.body.replaceChildren();
+    vi.restoreAllMocks();
+  });
+
+  it('sets data-alt-open="true" on the tool root while the alt popover is open', () => {
+    const tool = new ImageTool(createOptions({ url: 'u' }));
+    const root = tool.render();
+    document.body.appendChild(root);
+    root.querySelector<HTMLButtonElement>('[data-action="alt-edit"]')?.click();
+    expect(root.getAttribute('data-alt-open')).toBe('true');
+    root.remove();
+  });
+
+  it('removes data-alt-open after saving the alt text via Enter', () => {
+    const tool = new ImageTool(createOptions({ url: 'u' }));
+    const root = tool.render();
+    document.body.appendChild(root);
+    root.querySelector<HTMLButtonElement>('[data-action="alt-edit"]')?.click();
+    const textarea = document.body.querySelector<HTMLTextAreaElement>(
+      '[data-role="image-alt-popover"] textarea'
+    )!;
+    textarea.value = 'alt';
+    textarea.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+    );
+    expect(root.getAttribute('data-alt-open')).toBeNull();
+    root.remove();
+  });
+
+  it('removes data-alt-open after cancelling via Escape', () => {
+    const tool = new ImageTool(createOptions({ url: 'u' }));
+    const root = tool.render();
+    document.body.appendChild(root);
+    root.querySelector<HTMLButtonElement>('[data-action="alt-edit"]')?.click();
+    const textarea = document.body.querySelector<HTMLTextAreaElement>(
+      '[data-role="image-alt-popover"] textarea'
+    )!;
+    textarea.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    );
+    expect(root.getAttribute('data-alt-open')).toBeNull();
+    root.remove();
+  });
+});
+
 describe('ImageTool — caption toggle', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());

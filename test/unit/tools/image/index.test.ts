@@ -212,42 +212,20 @@ describe('ImageTool — renderSettings (block settings menu)', () => {
   const names = (cfg: unknown[]): string[] =>
     cfg.map((i) => (i as { name?: string }).name ?? '');
 
-  it('returns size + download + copy-url items matching the 3-dots popover', () => {
+  it('returns download + copy-url items matching the 3-dots popover', () => {
     const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
     tool.render();
     const items = tool.renderSettings() as unknown[];
     expect(Array.isArray(items)).toBe(true);
-    expect(names(items)).toContain('image-size');
     expect(names(items)).toContain('image-download');
     expect(names(items)).toContain('image-copy-url');
   });
 
-  it('size item has children for small/medium/large/full, with isActive reflecting current size', () => {
+  it('does not expose a size submenu (inline resize handles cover sizing)', () => {
     const tool = new ImageTool(createOptions({ url: 'https://x/y.png', size: 'lg' }));
     tool.render();
     const items = tool.renderSettings() as unknown[];
-    const size = items.find((i) => (i as { name?: string }).name === 'image-size') as {
-      children?: { items?: Array<{ title?: string; isActive?: boolean; onActivate?: () => void }> };
-    };
-    const children = size.children?.items ?? [];
-    const titles = children.map((c) => c.title ?? '');
-    expect(titles).toEqual(expect.arrayContaining(['Small', 'Medium', 'Large', 'Full']));
-    const large = children.find((c) => c.title === 'Large');
-    expect(large?.isActive).toBe(true);
-  });
-
-  it('activating a size child updates data.size and dispatches change', () => {
-    const block = createMockBlock();
-    const tool = new ImageTool(createOptions({ url: 'u', size: 'md' }, {}, block));
-    tool.render();
-    const items = tool.renderSettings() as unknown[];
-    const size = items.find((i) => (i as { name?: string }).name === 'image-size') as {
-      children?: { items?: Array<{ title?: string; onActivate?: () => void }> };
-    };
-    const full = size.children?.items?.find((c) => c.title === 'Full');
-    full?.onActivate?.();
-    expect(tool.save().size).toBe('full');
-    expect(block.dispatchChange).toHaveBeenCalled();
+    expect(names(items)).not.toContain('image-size');
   });
 
   it('activating copy-url writes the image URL to the clipboard', () => {
@@ -261,6 +239,104 @@ describe('ImageTool — renderSettings (block settings menu)', () => {
     };
     copy.onActivate?.();
     expect(writeText).toHaveBeenCalledWith('https://x/y.png');
+  });
+
+  it('duplicates every inline-toolbar action in the 3-dots menu', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    tool.render();
+    const items = tool.renderSettings() as unknown[];
+    const nameList = names(items);
+    expect(nameList).toEqual(expect.arrayContaining([
+      'image-alignment',
+      'image-caption',
+      'image-replace',
+      'image-crop',
+      'image-fullscreen',
+      'image-download',
+      'image-copy-url',
+    ]));
+  });
+
+  it('alignment item has left/center/right children with isActive reflecting current alignment', () => {
+    const tool = new ImageTool(createOptions({ url: 'u', alignment: 'right' }));
+    tool.render();
+    const items = tool.renderSettings() as unknown[];
+    const align = items.find((i) => (i as { name?: string }).name === 'image-alignment') as {
+      children?: { items?: Array<{ title?: string; isActive?: boolean; onActivate?: () => void }> };
+    };
+    const children = align.children?.items ?? [];
+    const titles = children.map((c) => c.title ?? '');
+    expect(titles).toEqual(expect.arrayContaining(['Left', 'Center', 'Right']));
+    expect(children.find((c) => c.title === 'Right')?.isActive).toBe(true);
+  });
+
+  it('activating an alignment child updates data.alignment and dispatches change', () => {
+    const block = createMockBlock();
+    const tool = new ImageTool(createOptions({ url: 'u' }, {}, block));
+    tool.render();
+    const items = tool.renderSettings() as unknown[];
+    const align = items.find((i) => (i as { name?: string }).name === 'image-alignment') as {
+      children?: { items?: Array<{ title?: string; onActivate?: () => void }> };
+    };
+    align.children?.items?.find((c) => c.title === 'Left')?.onActivate?.();
+    expect(tool.save().alignment).toBe('left');
+    expect(block.dispatchChange).toHaveBeenCalled();
+  });
+
+  it('caption item toggles captionVisible and reflects current state via isActive', () => {
+    const block = createMockBlock();
+    const tool = new ImageTool(createOptions({ url: 'u' }, {}, block));
+    const root = tool.render();
+    let items = tool.renderSettings() as unknown[];
+    let caption = items.find((i) => (i as { name?: string }).name === 'image-caption') as {
+      isActive?: boolean;
+      onActivate?: () => void;
+    };
+    expect(caption.isActive).toBe(true);
+    caption.onActivate?.();
+    expect(tool.save().captionVisible).toBe(false);
+    expect(root.getAttribute('data-caption')).toBe('off');
+    items = tool.renderSettings() as unknown[];
+    caption = items.find((i) => (i as { name?: string }).name === 'image-caption') as {
+      isActive?: boolean;
+      onActivate?: () => void;
+    };
+    expect(caption.isActive).toBe(false);
+  });
+
+  it('activating replace transitions the tool back to EMPTY state', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    const root = tool.render();
+    const items = tool.renderSettings() as unknown[];
+    const replace = items.find((i) => (i as { name?: string }).name === 'image-replace') as {
+      onActivate?: () => void;
+    };
+    replace.onActivate?.();
+    expect(root.getAttribute('data-state')).toBe('empty');
+  });
+
+  it('activating crop opens the crop modal', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    tool.render();
+    const items = tool.renderSettings() as unknown[];
+    const crop = items.find((i) => (i as { name?: string }).name === 'image-crop') as {
+      onActivate?: () => void;
+    };
+    crop.onActivate?.();
+    expect(document.querySelector('[data-role="image-crop-modal"], [role="dialog"][aria-label="Crop image"]')).not.toBeNull();
+    document.body.replaceChildren();
+  });
+
+  it('activating fullscreen opens the lightbox dialog', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    tool.render();
+    const items = tool.renderSettings() as unknown[];
+    const full = items.find((i) => (i as { name?: string }).name === 'image-fullscreen') as {
+      onActivate?: () => void;
+    };
+    full.onActivate?.();
+    expect(document.querySelector('[role="dialog"][aria-modal="true"]')).not.toBeNull();
+    document.body.replaceChildren();
   });
 });
 

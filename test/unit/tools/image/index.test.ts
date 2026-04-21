@@ -382,8 +382,8 @@ describe('ImageTool — resize', () => {
     handle.setPointerCapture = (): void => undefined;
     handle.releasePointerCapture = (): void => undefined;
     handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 1000, bubbles: true }));
-    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 400, bubbles: true }));
-    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 400, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 700, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 700, bubbles: true }));
     expect(tool.save().width).toBe(40);
     expect(block.dispatchChange).toHaveBeenCalled();
   });
@@ -404,8 +404,8 @@ describe('ImageTool — resize', () => {
     handle.setPointerCapture = (): void => undefined;
     handle.releasePointerCapture = (): void => undefined;
     handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 520, bubbles: true }));
-    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 600, bubbles: true }));
-    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 600, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 560, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 560, bubbles: true }));
     expect(tool.save().width).toBe(60);
   });
 });
@@ -685,6 +685,78 @@ describe('ImageTool — error state', () => {
     expect(root.getAttribute('data-state')).toBe('error');
     expect(root.querySelector('[data-role="error-state"]')).not.toBeNull();
     expect(root.querySelector('[data-action="replace"]')).not.toBeNull();
+  });
+
+  it('upload error shows BOTH retry and replace buttons', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const tool = new ImageTool(createOptions(
+      {},
+      { uploader: { uploadByFile: () => Promise.reject(new Error('boom')) } }
+    ));
+    const root = tool.render();
+    const file = new File([new Uint8Array(10)], 'p.png', { type: 'image/png' });
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(root.querySelector('[data-action="retry"]')).not.toBeNull();
+    expect(root.querySelector('[data-action="replace"]')).not.toBeNull();
+  });
+
+  it('retry after file upload error re-runs the uploader with the same file', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const uploadByFile = vi.fn().mockRejectedValue(new Error('boom'));
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByFile } }));
+    const root = tool.render();
+    const file = new File([new Uint8Array(10)], 'p.png', { type: 'image/png' });
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(uploadByFile).toHaveBeenCalledTimes(1);
+    root.querySelector<HTMLButtonElement>('[data-action="retry"]')?.click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(uploadByFile).toHaveBeenCalledTimes(2);
+    expect(uploadByFile).toHaveBeenLastCalledWith(file);
+  });
+
+  it('retry after URL fetch error re-runs uploader with the same URL', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const uploadByUrl = vi.fn().mockRejectedValue(new Error('404'));
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByUrl } }));
+    const root = tool.render();
+    const embed = root.querySelector<HTMLButtonElement>('[data-tab="embed"]');
+    if (!embed) throw new Error('embed tab missing');
+    embed.click();
+    const input = root.querySelector<HTMLInputElement>('input[type="url"]');
+    if (!input) throw new Error('url input missing');
+    input.value = 'https://x/404.png';
+    root.querySelector<HTMLButtonElement>('[data-action="submit-url"]')?.click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(root.getAttribute('data-state')).toBe('error');
+    expect(root.querySelector('[data-action="retry"]')).not.toBeNull();
+    expect(root.querySelector('[data-action="replace"]')).not.toBeNull();
+    expect(uploadByUrl).toHaveBeenCalledTimes(1);
+    root.querySelector<HTMLButtonElement>('[data-action="retry"]')?.click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(uploadByUrl).toHaveBeenCalledTimes(2);
+    expect(uploadByUrl).toHaveBeenLastCalledWith('https://x/404.png');
+  });
+
+  it('replace on error transitions to empty state', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const tool = new ImageTool(createOptions(
+      {},
+      { uploader: { uploadByFile: () => Promise.reject(new Error('boom')) } }
+    ));
+    const root = tool.render();
+    const file = new File([new Uint8Array(10)], 'p.png', { type: 'image/png' });
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    root.querySelector<HTMLButtonElement>('[data-action="replace"]')?.click();
+    expect(root.getAttribute('data-state')).toBe('empty');
   });
 });
 

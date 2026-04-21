@@ -491,6 +491,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
   dialog.addEventListener('pointerup', endDrag);
   dialog.addEventListener('pointercancel', endDrag);
 
+  const wheelIdle: { timer: ReturnType<typeof setTimeout> | null } = { timer: null };
   dialog.addEventListener('wheel', (event: WheelEvent) => {
     event.preventDefault();
     const factor = Math.exp(-event.deltaY * WHEEL_ZOOM_COEF);
@@ -503,6 +504,14 @@ export function openLightbox(opts: LightboxOptions): () => void {
     const dy = event.clientY - (rect.top + rect.height / 2);
     panState.x = dx * (1 - k) + panState.x * k;
     panState.y = dy * (1 - k) + panState.y * k;
+    // Skip the 420ms spring transition for each wheel tick — it makes continuous
+    // scroll/pinch zoom feel laggy. Button zoom keeps the bounce.
+    dialog.classList.add('is-wheel-zooming');
+    if (wheelIdle.timer !== null) clearTimeout(wheelIdle.timer);
+    wheelIdle.timer = setTimeout(() => {
+      dialog.classList.remove('is-wheel-zooming');
+      wheelIdle.timer = null;
+    }, 120);
     setZoom(nextZoom, { preservePan: true });
   }, { passive: false });
 

@@ -3410,6 +3410,9 @@
 .blok-image-lightbox.is-dragging .blok-image-lightbox__image {
   transition: none;
 }
+.blok-image-lightbox.is-wheel-zooming .blok-image-lightbox__image {
+  transition: none;
+}
 .blok-image-lightbox__bar {
   position: absolute;
   bottom: 24px;

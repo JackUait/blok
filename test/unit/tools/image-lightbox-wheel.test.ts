@@ -121,6 +121,13 @@ describe('openLightbox wheel zoom', () => {
     expect(currentScale()).toBeGreaterThan(afterFirst);
     close();
   });
+
+  it('marks the dialog as wheel-zooming so CSS can disable the transform transition', () => {
+    const close = open();
+    dialog().dispatchEvent(wheel(-100));
+    expect(dialog().classList.contains('is-wheel-zooming')).toBe(true);
+    close();
+  });
 });
 
 describe('openLightbox cursor-anchored wheel zoom', () => {

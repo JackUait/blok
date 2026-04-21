@@ -35,7 +35,8 @@ describe('openLightbox with crop', () => {
 
     const img = dialog().querySelector<HTMLImageElement>('.blok-image-lightbox__crop img')!;
     expect(img.style.width).toBe('200%');
-    expect(img.style.height).toBe('250%');
+    // Height intentionally unset — img keeps its natural aspect inside the wrapper clip.
+    expect(img.style.height).toBe('');
     expect(img.style.transform).toBe('translate(-10%, -20%)');
     expect(img.style.maxWidth).toBe('none');
     close();

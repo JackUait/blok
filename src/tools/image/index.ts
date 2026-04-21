@@ -35,6 +35,7 @@ import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { renderErrorState } from './error-state';
 import { ImageError } from './errors';
 import { attachResizeHandle, type ResizeEdge } from './resizer';
+import { widthForAspectChange } from './crop-math';
 import {
   openLightbox,
   renderCaptionRow,
@@ -352,6 +353,14 @@ export class ImageTool implements BlockTool {
 
   private applyCrop(rect: ImageCrop | null): void {
     this.cropDetach = null;
+    const prevCrop = this.data.crop;
+    // Keep the figure's rendered HEIGHT roughly stable across aspect changes
+    // so a newly-tall crop doesn't balloon into a vertical tower (and a newly-
+    // wide crop doesn't stretch sideways). Only rescale when the user has an
+    // explicit width set; otherwise CSS size presets still rule.
+    if (this.data.width !== undefined) {
+      this.data.width = widthForAspectChange(this.data.width, prevCrop, rect);
+    }
     if (rect === null) {
       delete this.data.crop;
     } else {

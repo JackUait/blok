@@ -33,6 +33,19 @@ const ALIGNMENT_ICON: Record<ImageAlignment, string> = {
   right: IconImageAlignRight,
 };
 
+function bindIntrinsicAspect(img: HTMLImageElement, wrapper: HTMLElement, w: number, h: number): void {
+  const target = wrapper;
+  const apply = (): void => {
+    const nw = img.naturalWidth;
+    const nh = img.naturalHeight;
+    if (nw > 0 && nh > 0) {
+      target.style.aspectRatio = `${w * nw} / ${h * nh}`;
+    }
+  };
+  if (img.complete) apply();
+  else img.addEventListener('load', apply, { once: true });
+}
+
 function alignmentLabel(i18n: I18nInstance | undefined, value: ImageAlignment): string {
   switch (value) {
     case 'left': return tr(i18n, 'tools.image.alignmentLeftAria');
@@ -66,6 +79,7 @@ export function renderImage(
     wrapper.setAttribute('data-role', 'image-crop');
     wrapper.style.overflow = 'hidden';
     wrapper.style.position = 'relative';
+    // Fallback until natural dims resolve — matches crop-region aspect only for square sources.
     wrapper.style.aspectRatio = `${w} / ${h}`;
     wrapper.style.width = '100%';
     if (shape) wrapper.setAttribute('data-shape', shape);
@@ -77,11 +91,15 @@ export function renderImage(
     // the (100/w)*100% width below can actually scale the source past the wrapper.
     img.style.maxWidth = 'none';
     img.style.width = `${(100 / w) * 100}%`;
-    img.style.height = `${(100 / h) * 100}%`;
+    // Height is intentionally unset so the img keeps its natural aspect inside the wrapper.
     // transform % resolves against the element's own box, so -x%/-y% shift the
     // img by x% of its width and y% of its height. margin-top % would instead
     // resolve against the container's WIDTH, skewing vertically for non-square crops.
     img.style.transform = `translate(-${x}%, -${y}%)`;
+    // Crop is in percent of intrinsic pixels; the cropped region's pixel aspect is
+    // (w*NW)/(h*NH), not w/h. Refine the wrapper's aspect once intrinsic dims are
+    // known so non-square sources aren't squashed into a crop-aspect box.
+    bindIntrinsicAspect(img, wrapper, w, h);
     wrapper.appendChild(img);
     figure.appendChild(wrapper);
   } else {
@@ -238,8 +256,8 @@ export function openLightbox(opts: LightboxOptions): () => void {
     img.style.display = 'block';
     img.style.maxWidth = 'none';
     img.style.width = `${(100 / w) * 100}%`;
-    img.style.height = `${(100 / h) * 100}%`;
     img.style.transform = `translate(-${x}%, -${y}%)`;
+    bindIntrinsicAspect(img, wrapper, w, h);
     wrapper.appendChild(img);
     return wrapper;
   })();

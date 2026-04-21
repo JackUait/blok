@@ -92,6 +92,34 @@ describe('renderImage', () => {
     expect(img.style.maxWidth).toBe('none');
   });
 
+  it('refines wrapper aspect-ratio from natural pixel dims once img loads so non-square sources do not distort', () => {
+    // The raw crop values x,y,w,h are percentages of the INTRINSIC image. A wrapper
+    // aspect of w/h only matches the crop-region pixel aspect when the natural image
+    // is square. For a 2000×1000 natural source with a full crop (w=h=100), the
+    // crop-region aspect is 2:1; the wrapper must reflect that, otherwise the
+    // contained img (width:(100/w)*100%, height:(100/h)*100% of wrapper) gets
+    // stretched to wrapper aspect and appears squashed vertically.
+    const fig = renderImage({ url: 'x', crop: { x: 0, y: 0, w: 100, h: 100 } });
+    const img = fig.querySelector<HTMLImageElement>('img');
+    const wrapper = fig.querySelector<HTMLElement>('[data-role="image-crop"]');
+    if (!img || !wrapper) throw new Error('dom missing');
+    Object.defineProperty(img, 'naturalWidth', { value: 2000, configurable: true });
+    Object.defineProperty(img, 'naturalHeight', { value: 1000, configurable: true });
+    img.dispatchEvent(new Event('load'));
+    // Expected aspect = (w*NW)/(h*NH) = (100*2000)/(100*1000)
+    expect(wrapper.style.aspectRatio.replace(/\s+/g, '')).toBe(`${100 * 2000}/${100 * 1000}`);
+  });
+
+  it('drops explicit img height so the contained image keeps its natural aspect inside the wrapper', () => {
+    // Explicit `height: (100/h)*100%` collapses to wrapper.height × factor, which
+    // combined with the width percent forces the img into the wrapper's aspect
+    // regardless of intrinsic dims. Letting height default preserves natural aspect.
+    const fig = renderImage({ url: 'x', crop: { x: 10, y: 20, w: 50, h: 40 } });
+    const img = fig.querySelector<HTMLImageElement>('img');
+    if (!img) throw new Error('img missing');
+    expect(img.style.height).toBe('');
+  });
+
   it('offsets the cropped source via transform (not margin) so horizontal and vertical shifts use the same reference frame', () => {
     // CSS gotcha: margin-left/-top percentages BOTH resolve against the
     // containing block's WIDTH. Using margin-top:-(y/h)*100% therefore shifts
@@ -132,15 +160,20 @@ describe('renderCaption', () => {
 
 describe('renderCaptionRow', () => {
   const baseCaption = { value: '', placeholder: 'p', readOnly: false };
+  const EN_MAP: Record<string, string> = {
+    'tools.image.altEdit': 'Edit alt text',
+    'tools.image.altButton': 'Alt',
+  };
+  const i18n = { t: (k: string) => EN_MAP[k] ?? k, has: (k: string) => k in EN_MAP };
 
   it('wraps caption with class blok-image-caption-row and contains the caption element', () => {
-    const row = renderCaptionRow({ caption: baseCaption, onAlt: () => undefined });
+    const row = renderCaptionRow({ caption: baseCaption, onAlt: () => undefined, i18n });
     expect(row.classList.contains('blok-image-caption-row')).toBe(true);
     expect(row.querySelector('.blok-image-caption')).not.toBeNull();
   });
 
   it('renders alt button with text label "Alt" when onAlt is provided', () => {
-    const row = renderCaptionRow({ caption: baseCaption, onAlt: () => undefined });
+    const row = renderCaptionRow({ caption: baseCaption, onAlt: () => undefined, i18n });
     const btn = row.querySelector<HTMLButtonElement>('[data-action="alt-edit"]');
     if (!btn) throw new Error('alt button missing');
     expect(btn.textContent).toBe('Alt');
@@ -148,20 +181,20 @@ describe('renderCaptionRow', () => {
   });
 
   it('omits alt button when onAlt is not provided (readOnly)', () => {
-    const row = renderCaptionRow({ caption: { ...baseCaption, readOnly: true } });
+    const row = renderCaptionRow({ caption: { ...baseCaption, readOnly: true }, i18n });
     expect(row.querySelector('[data-action="alt-edit"]')).toBeNull();
   });
 
   it('clicking the alt button invokes onAlt', () => {
     let calls = 0;
-    const row = renderCaptionRow({ caption: baseCaption, onAlt: () => { calls += 1; } });
+    const row = renderCaptionRow({ caption: baseCaption, onAlt: () => { calls += 1; }, i18n });
     row.querySelector<HTMLButtonElement>('[data-action="alt-edit"]')?.click();
     expect(calls).toBe(1);
   });
 
   it('alt button reflects hasAlt via aria-pressed so styling can show current state', () => {
-    const onRow = renderCaptionRow({ caption: baseCaption, onAlt: () => undefined, hasAlt: true });
-    const offRow = renderCaptionRow({ caption: baseCaption, onAlt: () => undefined, hasAlt: false });
+    const onRow = renderCaptionRow({ caption: baseCaption, onAlt: () => undefined, hasAlt: true, i18n });
+    const offRow = renderCaptionRow({ caption: baseCaption, onAlt: () => undefined, hasAlt: false, i18n });
     expect(onRow.querySelector('[data-action="alt-edit"]')?.getAttribute('aria-pressed')).toBe('true');
     expect(offRow.querySelector('[data-action="alt-edit"]')?.getAttribute('aria-pressed')).toBe('false');
   });
@@ -343,6 +376,23 @@ describe('openLightbox', () => {
 import { renderOverlay } from '../../../../src/tools/image/ui';
 
 const noop = (): void => undefined;
+const OVERLAY_EN_MAP: Record<string, string> = {
+  'tools.image.alignment': 'Alignment',
+  'tools.image.alignmentLeftAria': 'Align left',
+  'tools.image.alignmentCenterAria': 'Align center',
+  'tools.image.alignmentRightAria': 'Align right',
+  'tools.image.toggleCaption': 'Toggle caption',
+  'tools.image.replace': 'Replace image',
+  'tools.image.crop': 'Crop',
+  'tools.image.viewFullscreen': 'View fullscreen',
+  'tools.image.downloadOriginal': 'Download original',
+  'tools.image.moreOptions': 'More options',
+  'blockSettings.delete': 'Delete',
+};
+const overlayI18n = {
+  t: (k: string) => OVERLAY_EN_MAP[k] ?? k,
+  has: (k: string) => k in OVERLAY_EN_MAP,
+};
 const makeOverlayOpts = (over: Partial<Parameters<typeof renderOverlay>[0]> = {}) => ({
   state: { alignment: 'center' as const, captionVisible: true, size: 'md' as const },
   onAlign: noop,
@@ -354,6 +404,7 @@ const makeOverlayOpts = (over: Partial<Parameters<typeof renderOverlay>[0]> = {}
   onCopyUrl: noop,
   onToggleCaption: noop,
   onCrop: noop,
+  i18n: overlayI18n,
   ...over,
 });
 

@@ -49,6 +49,32 @@ export function resizeRect(
   return { x: left, y: top, w: right - left, h: bottom - top };
 }
 
+/**
+ * Given the current figure width% and the prev/new crop rectangles, return the
+ * width% that keeps the figure's rendered HEIGHT roughly the same across the
+ * aspect change. Prevents tall/skinny towers when a crop becomes much more
+ * vertical (and runaway width when it becomes much more horizontal).
+ *
+ * Derivation: rendered_height = rendered_width / aspect. aspect for a cropped
+ * figure is (w*NW)/(h*NH); across old/new crops the intrinsic factor NW/NH
+ * cancels, so only the w/h ratio matters. "No crop" is equivalent to (100,100)
+ * in percent-of-intrinsic terms (aspect_unit = 1) — natural dims still cancel.
+ */
+export function widthForAspectChange(
+  oldWidth: number,
+  oldCrop: ImageCrop | null | undefined,
+  newCrop: ImageCrop | null | undefined
+): number {
+  const oldUnit = oldCrop ? oldCrop.w / oldCrop.h : 1;
+  const newUnit = newCrop ? newCrop.w / newCrop.h : 1;
+  if (!Number.isFinite(oldUnit) || !Number.isFinite(newUnit) || oldUnit <= 0 || newUnit <= 0) {
+    return oldWidth;
+  }
+  const next = oldWidth * (newUnit / oldUnit);
+  const clamped = Math.max(10, Math.min(100, next));
+  return Math.round(clamped * 100) / 100;
+}
+
 export function applyRatio(rect: ImageCrop, ratio: number | null): ImageCrop {
   if (ratio === null || !Number.isFinite(ratio) || ratio <= 0) return rect;
   const cx = rect.x + rect.w / 2;

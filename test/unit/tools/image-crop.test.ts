@@ -20,7 +20,8 @@ describe('renderImage with crop', () => {
     expect(img).not.toBeNull();
     expect(wrapper!.style.aspectRatio).toBe('50 / 40');
     expect(img!.style.width).toBe('200%');
-    expect(img!.style.height).toBe('250%');
+    // Height intentionally unset — img keeps its natural aspect, wrapper clips.
+    expect(img!.style.height).toBe('');
     expect(img!.style.maxWidth).toBe('none');
     expect(img!.style.transform).toBe('translate(-10%, -20%)');
   });
@@ -30,7 +31,18 @@ import { ImageTool } from '../../../src/tools/image';
 import type { API, BlockAPI, BlockToolConstructorOptions } from '../../../types';
 import type { ImageConfig, ImageData } from '../../../types/tools/image';
 
-const mockApi = {} as unknown as API;
+const EN: Record<string, string> = {
+  'tools.image.cropDialogLabel': 'Crop image',
+  'tools.image.cropAspectRatio': 'Aspect ratio',
+  'tools.image.cropReset': 'Reset',
+  'tools.image.cropCancel': 'Cancel',
+  'tools.image.cropDone': 'Done',
+  'tools.image.crop': 'Crop',
+  'tools.image.altButton': 'Alt',
+  'tools.image.altEdit': 'Edit alt text',
+};
+const i18nStub = { t: (k: string): string => EN[k] ?? k, has: (k: string): boolean => k in EN };
+const mockApi = { i18n: i18nStub } as unknown as API;
 const mockBlock = { id: 'b1', dispatchChange: () => {} } as unknown as BlockAPI;
 
 const createTool = (data: Partial<ImageData>): ImageTool => new ImageTool({
@@ -164,6 +176,29 @@ describe('ImageTool crop lifecycle', () => {
     cancel!.click();
     expect(tool.save().crop).toEqual({ x: 5, y: 5, w: 90, h: 90 });
     expect(document.body.querySelector('[role="dialog"][aria-label="Crop image"]')).toBeNull();
+  });
+
+  it('adjusts data.width on crop apply so the figure rendered height ≈ previous (prevents tall/skinny towers)', () => {
+    // Previous: full square crop, figure at 50% container width.
+    // Pick 16:9 ratio chip → new rect (0, 21.875, 100, 56.25) aspect unit 1.777.
+    // Expected width_new = 50 * 1.777 ≈ 88.89 (rounded to 2 decimals).
+    const block = { id: 'b1', dispatchChange: vi.fn() } as unknown as BlockAPI;
+    const tool = new ImageTool({
+      api: mockApi, block, config: {} as ImageConfig,
+      data: { url: 'x.png', width: 50, crop: { x: 0, y: 0, w: 100, h: 100 } } as ImageData,
+      readOnly: false,
+    } as BlockToolConstructorOptions<ImageData, ImageConfig>);
+    const root = tool.render();
+    document.body.appendChild(root);
+    root.querySelector<HTMLButtonElement>('[data-action="crop"]')!.click();
+
+    const dialog = document.body.querySelector<HTMLElement>('.blok-image-crop-modal-dialog')!;
+    dialog.querySelector<HTMLButtonElement>(`[data-ratio="${String(16 / 9)}"]`)!.click();
+    dialog.querySelector<HTMLButtonElement>('[data-action="done"]')!.click();
+
+    const saved = tool.save();
+    expect(saved.crop).toBeDefined();
+    expect(saved.width).toBeCloseTo(50 * (100 / 56.25), 1);
   });
 
   it('removed() while modal open tears down modal', () => {

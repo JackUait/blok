@@ -6,7 +6,7 @@ export interface ErrorStateOptions {
 }
 
 const ALERT_ICON_SVG =
-  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><circle cx="12" cy="16.5" r="0.8" fill="currentColor"/></svg>';
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14.5 4.5H6A2.5 2.5 0 0 0 3.5 7v10A2.5 2.5 0 0 0 6 19.5h12a2.5 2.5 0 0 0 2.5-2.5v-6.25"/><path d="m14.5 4.5 1.75 2.25 2.25-1.25 2 2.75"/><circle cx="8" cy="9" r="1.2" fill="currentColor" stroke="none"/><path d="m3.8 16.25 3.45-3.45 2.5 2.5 3.5-3.5 4 4"/></svg>';
 
 const DEFAULT_TITLE = 'Couldn\u2019t load image';
 const DEFAULT_MESSAGE = 'The URL returned an error. Try a different source or re-upload the file.';

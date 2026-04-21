@@ -143,6 +143,66 @@
     /* Dark mode page styles */
     .dark-mode { background: #191919; color: #ffffff; }
 
+    /* Block states gallery */
+    .block-states-gallery { padding: 32px 0 120px; }
+    .block-states-tabs {
+      display: flex;
+      gap: 2px;
+      flex-wrap: wrap;
+      padding-bottom: 16px;
+      margin-bottom: 32px;
+      border-bottom: 1px solid #ececec;
+      position: sticky;
+      top: 56px;
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: saturate(180%) blur(10px);
+      -webkit-backdrop-filter: saturate(180%) blur(10px);
+      z-index: 5;
+      padding-top: 16px;
+      transition: top 240ms cubic-bezier(0.4, 0.0, 0.2, 1);
+    }
+    .header-hidden .block-states-tabs { top: 0; }
+    .dark-mode .block-states-tabs {
+      background: rgba(25,25,25,0.9);
+      border-bottom-color: #2a2826;
+    }
+    .block-states-tab {
+      font-family: 'PT Mono', monospace;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 8px 14px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      background: transparent;
+      color: #8a8580;
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s, border-color 0.15s;
+    }
+    .block-states-tab:hover { color: #1a1a1a; background: rgba(0,0,0,0.03); }
+    .block-states-tab[aria-selected="true"] {
+      color: #0a0a0a;
+      background: #0a0a0a;
+      color: #ffffff;
+      border-color: #0a0a0a;
+    }
+    .dark-mode .block-states-tab { color: #a39e98; }
+    .dark-mode .block-states-tab:hover { color: #ffffff; background: rgba(255,255,255,0.04); }
+    .dark-mode .block-states-tab[aria-selected="true"] {
+      background: #ffffff;
+      color: #191919;
+      border-color: #ffffff;
+    }
+    .block-states-panels {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .block-states-panel { display: block; }
+    .block-states-panel.hidden { display: none; }
+    .block-states-preview {
+      padding: 0;
+    }
+
     /* Icon gallery */
     .icon-gallery { padding: 48px 0 120px; }
     .icon-group { margin-bottom: 56px; }
@@ -584,6 +644,7 @@
       </span>
       <nav role="tablist" class="flex gap-1">
         <a class="playground-tab" role="tab" aria-selected="true" href="/editor" data-tab="editor">Editor</a>
+        <a class="playground-tab" role="tab" aria-selected="false" href="/block-states" data-tab="block-states">Block States</a>
         <a class="playground-tab" role="tab" aria-selected="false" href="/icons" data-tab="icons">Icons</a>
       </nav>
       <div class="ml-auto">
@@ -598,6 +659,11 @@
       <div class="mx-auto antialiased max-md:px-5">
         <div id="blok"></div>
       </div>
+    </div>
+
+    <!-- Block States tab -->
+    <div id="tab-block-states" class="hidden" role="tabpanel">
+      <div class="max-w-6xl mx-auto px-[30px] max-md:px-5 block-states-gallery" id="block-states-gallery"></div>
     </div>
 
     <!-- Icons tab -->
@@ -681,6 +747,7 @@
     import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Quote, Code, Image, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
+    import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
     import { renderUploadingState } from './src/tools/image/uploading-state.ts';
     import { renderErrorState } from './src/tools/image/error-state.ts';
 
@@ -1542,6 +1609,8 @@
       }), 'loading');
       swap('image-state-error', () => renderErrorState({
         message: 'The URL returned a 404. Try a different source or re-upload the file.',
+        onRetry: () => undefined,
+        onReplace: () => undefined,
       }), 'error');
     }
 
@@ -1569,10 +1638,32 @@
      */
     const tabs = document.querySelectorAll('[role="tab"]');
 
-    function navigateTo(page) {
+    const VALID_PAGES = ['editor', 'block-states', 'icons'];
+
+    function parseRoute(pathname) {
+      const segments = pathname.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean);
+      const page = VALID_PAGES.includes(segments[0]) ? segments[0] : 'editor';
+      const subpath = segments.slice(1).join('/');
+      return { page, subpath };
+    }
+
+    let blockStatesInitialized = false;
+    let blockStatesHandle = null;
+
+    function navigateTo(page, subpath) {
       tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.tab === page ? 'true' : 'false'));
       document.getElementById('tab-editor').classList.toggle('hidden', page !== 'editor');
+      document.getElementById('tab-block-states').classList.toggle('hidden', page !== 'block-states');
       document.getElementById('tab-icons').classList.toggle('hidden', page !== 'icons');
+
+      if (page === 'block-states') {
+        if (!blockStatesInitialized) {
+          blockStatesInitialized = true;
+          queueMicrotask(() => initBlockStatesGallery(subpath || null));
+        } else if (subpath && blockStatesHandle) {
+          blockStatesHandle.setActiveTool(subpath);
+        }
+      }
     }
 
     tabs.forEach(tab => {
@@ -1580,21 +1671,22 @@
         e.preventDefault();
         const page = tab.dataset.tab;
         history.pushState(null, '', `/${page}`);
-        navigateTo(page);
+        navigateTo(page, '');
       });
     });
 
     window.addEventListener('popstate', () => {
-      const page = window.location.pathname === '/icons' ? 'icons' : 'editor';
-      navigateTo(page);
+      const { page, subpath } = parseRoute(window.location.pathname);
+      navigateTo(page, subpath);
     });
 
     // Initial route
-    const initialPage = window.location.pathname === '/icons' ? 'icons' : 'editor';
-    if (window.location.pathname !== '/editor' && window.location.pathname !== '/icons') {
+    const initialRoute = parseRoute(window.location.pathname);
+    const rawSlug = window.location.pathname.replace(/^\//, '').split('/')[0];
+    if (!VALID_PAGES.includes(rawSlug)) {
       history.replaceState(null, '', '/editor');
     }
-    navigateTo(initialPage);
+    navigateTo(initialRoute.page, initialRoute.subpath);
 
     /**
      * Hide playground header + settings side-tab on scroll down, show on scroll up.
@@ -1609,6 +1701,7 @@
       const setHidden = (hidden) => {
         header.classList.toggle('is-hidden', hidden);
         if (sideTab) sideTab.classList.toggle('is-hidden', hidden);
+        document.body.classList.toggle('header-hidden', hidden);
       };
       const update = () => {
         const y = window.scrollY;
@@ -1831,6 +1924,296 @@
       iconGroups,
       icons: Icons,
     });
+
+    /**
+     * Block states gallery - lazy init on first visit to /block-states
+     */
+    function flattenStates(tool, label, states) {
+      const blocks = [];
+      states.forEach((state, i) => {
+        blocks.push({
+          id: `${tool}-label-${i}`,
+          type: 'header',
+          data: { text: state.label, level: 3 },
+        });
+        blocks.push(...state.blocks);
+      });
+      return { tool, label, blocks };
+    }
+
+    const BLOCK_STATES_RAW = [
+      {
+        tool: 'paragraph',
+        label: 'Paragraph',
+        states: [
+          { label: 'Empty', blocks: [{ id: 'p-empty', type: 'paragraph', data: { text: '' } }] },
+          { label: 'Filled', blocks: [{ id: 'p-filled', type: 'paragraph', data: { text: 'The quick brown fox jumps over the lazy dog.' } }] },
+          { label: 'Rich text', blocks: [{ id: 'p-rich', type: 'paragraph', data: { text: 'Mix of <b>bold</b>, <i>italic</i>, <u>underline</u>, and <a href="#">links</a>.' } }] },
+          { label: 'Long text', blocks: [{ id: 'p-long', type: 'paragraph', data: { text: 'Blocks are the universal primitive in Blok. Every content entity — from a paragraph to a database row — implements the BlockTool interface.' } }] },
+        ],
+      },
+      {
+        tool: 'header',
+        label: 'Header',
+        states: [
+          { label: 'H1', blocks: [{ id: 'h1', type: 'header', data: { text: 'Heading level 1', level: 1 } }] },
+          { label: 'H2', blocks: [{ id: 'h2', type: 'header', data: { text: 'Heading level 2', level: 2 } }] },
+          { label: 'H3', blocks: [{ id: 'h3', type: 'header', data: { text: 'Heading level 3', level: 3 } }] },
+          { label: 'H4', blocks: [{ id: 'h4', type: 'header', data: { text: 'Heading level 4', level: 4 } }] },
+          { label: 'H5', blocks: [{ id: 'h5', type: 'header', data: { text: 'Heading level 5', level: 5 } }] },
+          { label: 'H6', blocks: [{ id: 'h6', type: 'header', data: { text: 'Heading level 6', level: 6 } }] },
+          { label: 'Empty H2', blocks: [{ id: 'h-empty', type: 'header', data: { text: '', level: 2 } }] },
+          { label: 'Toggle H2 · open', blocks: [
+            { id: 'th-open', type: 'header', data: { text: 'Toggle heading (open)', level: 2, isToggleable: true, isOpen: true }, content: ['th-open-child'] },
+            { id: 'th-open-child', type: 'paragraph', data: { text: 'Child content' }, parent: 'th-open' },
+          ] },
+          { label: 'Toggle H2 · closed', blocks: [
+            { id: 'th-closed', type: 'header', data: { text: 'Toggle heading (closed)', level: 2, isToggleable: true, isOpen: false }, content: ['th-closed-child'] },
+            { id: 'th-closed-child', type: 'paragraph', data: { text: 'Hidden child' }, parent: 'th-closed' },
+          ] },
+        ],
+      },
+      {
+        tool: 'list',
+        label: 'List',
+        states: [
+          { label: 'Unordered', blocks: [
+            { id: 'ul-1', type: 'list', data: { style: 'unordered', text: 'First item' } },
+            { id: 'ul-2', type: 'list', data: { style: 'unordered', text: 'Second item' } },
+            { id: 'ul-3', type: 'list', data: { style: 'unordered', text: 'Third item' } },
+          ] },
+          { label: 'Ordered', blocks: [
+            { id: 'ol-1', type: 'list', data: { style: 'ordered', text: 'First step' } },
+            { id: 'ol-2', type: 'list', data: { style: 'ordered', text: 'Second step' } },
+            { id: 'ol-3', type: 'list', data: { style: 'ordered', text: 'Third step' } },
+          ] },
+          { label: 'Checklist', blocks: [
+            { id: 'cl-1', type: 'list', data: { style: 'checklist', text: 'Learn Blok', checked: true } },
+            { id: 'cl-2', type: 'list', data: { style: 'checklist', text: 'Build something' } },
+            { id: 'cl-3', type: 'list', data: { style: 'checklist', text: 'Ship it' } },
+          ] },
+          { label: 'Nested', blocks: [
+            { id: 'nl-1', type: 'list', data: { style: 'unordered', text: 'Top level' } },
+            { id: 'nl-2', type: 'list', data: { style: 'unordered', text: 'Nested item', depth: 1 } },
+            { id: 'nl-3', type: 'list', data: { style: 'unordered', text: 'Double nested', depth: 2 } },
+            { id: 'nl-4', type: 'list', data: { style: 'unordered', text: 'Back up top' } },
+          ] },
+          { label: 'Empty', blocks: [{ id: 'ul-empty', type: 'list', data: { style: 'unordered', text: '' } }] },
+        ],
+      },
+      {
+        tool: 'table',
+        label: 'Table',
+        states: [
+          { label: 'Plain grid', blocks: [{ id: 't-plain', type: 'table', data: { content: [
+            ['One', 'Two', 'Three'],
+            ['Four', 'Five', 'Six'],
+            ['Seven', 'Eight', 'Nine'],
+          ] } }] },
+          { label: 'Heading row', blocks: [{ id: 't-hrow', type: 'table', data: { withHeadings: true, content: [
+            ['Name', 'Role', 'Status'],
+            ['Ada', 'Analyst', 'Active'],
+            ['Linus', 'Engineer', 'Active'],
+          ] } }] },
+          { label: 'Heading row + column', blocks: [{ id: 't-hboth', type: 'table', data: { withHeadings: true, withHeadingColumn: true, content: [
+            ['', 'Q1', 'Q2'],
+            ['Revenue', '$10K', '$14K'],
+            ['Costs', '$6K', '$7K'],
+          ] } }] },
+        ],
+      },
+      {
+        tool: 'toggle',
+        label: 'Toggle',
+        states: [
+          { label: 'Open with children', blocks: [
+            { id: 'tg-open', type: 'toggle', data: { text: 'Open toggle', isOpen: true }, content: ['tg-open-c1', 'tg-open-c2'] },
+            { id: 'tg-open-c1', type: 'paragraph', data: { text: 'First child paragraph.' }, parent: 'tg-open' },
+            { id: 'tg-open-c2', type: 'paragraph', data: { text: 'Second child paragraph.' }, parent: 'tg-open' },
+          ] },
+          { label: 'Closed', blocks: [
+            { id: 'tg-closed', type: 'toggle', data: { text: 'Closed toggle', isOpen: false }, content: ['tg-closed-c'] },
+            { id: 'tg-closed-c', type: 'paragraph', data: { text: 'Hidden child' }, parent: 'tg-closed' },
+          ] },
+          { label: 'Empty (no children)', blocks: [{ id: 'tg-empty', type: 'toggle', data: { text: 'Empty toggle', isOpen: true } }] },
+        ],
+      },
+      {
+        tool: 'callout',
+        label: 'Callout',
+        states: [
+          { label: 'No emoji', blocks: [{ id: 'c-plain', type: 'callout', data: { text: 'Plain callout without emoji.', emoji: '' } }] },
+          { label: 'With emoji', blocks: [{ id: 'c-emoji', type: 'callout', data: { text: 'Tip: prefer composition over inheritance.', emoji: '💡' } }] },
+          { label: 'Colored bg', blocks: [{ id: 'c-bg', type: 'callout', data: { text: 'Heads up — background color set.', emoji: '⚠️', backgroundColor: 'yellow' } }] },
+          { label: 'Colored text', blocks: [{ id: 'c-text', type: 'callout', data: { text: 'Red text on plain background.', emoji: '🔥', textColor: 'red' } }] },
+          { label: 'Both colors', blocks: [{ id: 'c-both', type: 'callout', data: { text: 'Both colors set.', emoji: '✨', backgroundColor: 'blue', textColor: 'white' } }] },
+        ],
+      },
+      {
+        tool: 'database',
+        label: 'Database',
+        states: [
+          { label: 'List view', blocks: [
+            { id: 'db-list', type: 'database', data: {
+              schema: [
+                { id: 'title', name: 'Title', type: 'text' },
+                { id: 'status', name: 'Status', type: 'select', options: [
+                  { id: 'todo', name: 'Todo', color: 'gray' },
+                  { id: 'doing', name: 'Doing', color: 'yellow' },
+                  { id: 'done', name: 'Done', color: 'green' },
+                ] },
+              ],
+              views: [{ id: 'v1', type: 'list', name: 'All', sorts: [], filters: [], visibleProperties: ['title', 'status'] }],
+              activeViewId: 'v1',
+            }, content: ['db-list-r1', 'db-list-r2'] },
+            { id: 'db-list-r1', type: 'database-row', data: { properties: { title: 'Write tests', status: 'done' } }, parent: 'db-list' },
+            { id: 'db-list-r2', type: 'database-row', data: { properties: { title: 'Build feature', status: 'doing' } }, parent: 'db-list' },
+          ] },
+          { label: 'Board view', blocks: [
+            { id: 'db-board', type: 'database', data: {
+              schema: [
+                { id: 'title', name: 'Title', type: 'text' },
+                { id: 'status', name: 'Status', type: 'select', options: [
+                  { id: 'todo', name: 'Todo', color: 'gray' },
+                  { id: 'doing', name: 'Doing', color: 'yellow' },
+                  { id: 'done', name: 'Done', color: 'green' },
+                ] },
+              ],
+              views: [{ id: 'v1', type: 'board', name: 'Board', groupBy: 'status', sorts: [], filters: [], visibleProperties: ['title', 'status'] }],
+              activeViewId: 'v1',
+            }, content: ['db-bd-r1', 'db-bd-r2', 'db-bd-r3'] },
+            { id: 'db-bd-r1', type: 'database-row', data: { properties: { title: 'Plan', status: 'todo' } }, parent: 'db-board' },
+            { id: 'db-bd-r2', type: 'database-row', data: { properties: { title: 'Design', status: 'doing' } }, parent: 'db-board' },
+            { id: 'db-bd-r3', type: 'database-row', data: { properties: { title: 'Ship', status: 'done' } }, parent: 'db-board' },
+          ] },
+          { label: 'Empty database', blocks: [
+            { id: 'db-empty', type: 'database', data: {
+              schema: [{ id: 'title', name: 'Title', type: 'text' }],
+              views: [{ id: 'v1', type: 'list', name: 'All', sorts: [], filters: [], visibleProperties: ['title'] }],
+              activeViewId: 'v1',
+            } },
+          ] },
+        ],
+      },
+      {
+        tool: 'divider',
+        label: 'Divider',
+        states: [
+          { label: 'Between paragraphs', blocks: [
+            { id: 'd-a', type: 'paragraph', data: { text: 'Above divider.' } },
+            { id: 'd', type: 'divider', data: {} },
+            { id: 'd-b', type: 'paragraph', data: { text: 'Below divider.' } },
+          ] },
+        ],
+      },
+      {
+        tool: 'quote',
+        label: 'Quote',
+        states: [
+          { label: 'Default', blocks: [{ id: 'q-default', type: 'quote', data: { text: 'Simplicity is prerequisite for reliability.', size: 'default' } }] },
+          { label: 'Large', blocks: [{ id: 'q-large', type: 'quote', data: { text: 'Programs must be written for people to read.', size: 'large' } }] },
+          { label: 'Empty', blocks: [{ id: 'q-empty', type: 'quote', data: { text: '', size: 'default' } }] },
+        ],
+      },
+      {
+        tool: 'code',
+        label: 'Code',
+        states: [
+          { label: 'JavaScript', blocks: [{ id: 'cd-js', type: 'code', data: { code: 'const sum = (a, b) => a + b;\nconsole.log(sum(2, 3));', language: 'javascript', lineNumbers: true } }] },
+          { label: 'TypeScript', blocks: [{ id: 'cd-ts', type: 'code', data: { code: 'interface Block {\n  id: string;\n  type: string;\n}', language: 'typescript', lineNumbers: true } }] },
+          { label: 'Plain text', blocks: [{ id: 'cd-plain', type: 'code', data: { code: 'just some plain text\nno highlighting', language: 'text', lineNumbers: false } }] },
+          { label: 'Empty', blocks: [{ id: 'cd-empty', type: 'code', data: { code: '', language: 'javascript', lineNumbers: true } }] },
+        ],
+      },
+      {
+        tool: 'image',
+        label: 'Image',
+        states: [
+          { label: 'Empty (upload)', blocks: [{ id: 'im-empty', type: 'image', data: {} }] },
+          { label: 'Loaded', blocks: [{ id: 'im-loaded', type: 'image', data: {
+            url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800',
+            caption: 'Mountain vista',
+            alt: 'Mountain landscape',
+            width: 80,
+            alignment: 'center',
+          } }] },
+          { label: 'With caption', blocks: [{ id: 'im-caption', type: 'image', data: {
+            url: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800',
+            caption: 'Circuit board close-up',
+            alt: 'Circuit',
+            width: 80,
+            captionVisible: true,
+            alignment: 'center',
+          } }] },
+          { label: 'Small', blocks: [{ id: 'im-sm', type: 'image', data: {
+            url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400',
+            alt: 'Small',
+            width: 30,
+            alignment: 'center',
+          } }] },
+          { label: 'Left aligned', blocks: [{ id: 'im-left', type: 'image', data: {
+            url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400',
+            alt: 'Left',
+            width: 40,
+            alignment: 'left',
+          } }] },
+          { label: 'Broken URL', blocks: [{ id: 'im-broken', type: 'image', data: {
+            url: '/this-image-does-not-exist.png',
+            alt: 'Missing',
+            width: 40,
+            alignment: 'center',
+          } }] },
+        ],
+      },
+    ];
+
+    const BLOCK_STATES_SPEC = BLOCK_STATES_RAW.map(entry => flattenStates(entry.tool, entry.label, entry.states));
+
+    const blockStatesInstances = [];
+
+    function mountStatePreview({ container, blocks }) {
+      const holder = document.createElement('div');
+      container.appendChild(holder);
+      const instance = new Blok({
+        holder,
+        data: { blocks },
+        tools: {
+          paragraph: { class: Paragraph, preserveBlank: true },
+          header: Header,
+          list: List,
+          table: Table,
+          toggle: Toggle,
+          callout: Callout,
+          database: Database,
+          'database-row': DatabaseRow,
+          divider: Divider,
+          quote: Quote,
+          code: Code,
+          image: Image,
+          bold: Bold,
+          italic: Italic,
+          underline: Underline,
+          strikethrough: Strikethrough,
+          inlineCode: InlineCode,
+          marker: Marker,
+          link: Link,
+        },
+        minHeight: 0,
+      });
+      blockStatesInstances.push(instance);
+    }
+
+    function initBlockStatesGallery(initialTool) {
+      blockStatesHandle = renderBlockStatesGallery({
+        container: document.getElementById('block-states-gallery'),
+        spec: BLOCK_STATES_SPEC,
+        renderBlock: mountStatePreview,
+        activeTool: initialTool || undefined,
+        onTabChange: (tool) => {
+          history.pushState(null, '', `/block-states/${tool}`);
+        },
+      });
+    }
 
     // Reveal page once editor is ready (Tailwind CSS is injected during Blok init)
     blok.isReady.then(() => document.body.classList.add('ready'));

@@ -97,4 +97,18 @@ describe('openLightbox drag-to-pan', () => {
     expect(image().style.transform).toBe('translate(-400px, -300px) scale(1)');
     close();
   });
+
+  it('snaps pan to (0,0) when zoom returns to 1', () => {
+    const close = openWithCapture();
+    const d = dialog();
+    d.dispatchEvent(pointer('pointerdown', 100, 100));
+    d.dispatchEvent(pointer('pointermove', 200, 200));
+    d.dispatchEvent(pointer('pointerup', 200, 200));
+    expect(image().style.transform).toContain('translate(100px, 100px)');
+
+    const reset = d.querySelector<HTMLButtonElement>('[data-action="zoom-reset"]')!;
+    reset.click();
+    expect(image().style.transform).toBe('translate(0px, 0px) scale(1)');
+    close();
+  });
 });

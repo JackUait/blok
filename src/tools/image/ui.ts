@@ -150,6 +150,10 @@ export function openLightbox(opts: LightboxOptions): () => void {
 
   const setZoom = (next: number): void => {
     zoomState.value = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, next));
+    if (zoomState.value === 1) {
+      panState.x = 0;
+      panState.y = 0;
+    }
     applyTransform();
     syncResetLabel();
   };
@@ -262,6 +266,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
     if (dragState.dragging) {
       dragState.dragging = false;
       const swallow = (e: MouseEvent): void => {
+        if (e.target instanceof Node && toolbar.contains(e.target)) return;
         e.stopPropagation();
         dialog.removeEventListener('click', swallow, true);
       };

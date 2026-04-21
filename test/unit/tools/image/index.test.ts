@@ -6,7 +6,7 @@ import type { API, BlockToolConstructorOptions, BlockAPI, FilePasteEvent, Patter
 
 const createMockApi = (): API => ({
   styles: { block: 'blok-block' },
-  i18n: { t: (k: string) => k },
+  i18n: { t: (k: string) => k, has: () => false },
 } as unknown as API);
 
 const createMockBlock = (): BlockAPI => ({
@@ -203,6 +203,44 @@ describe('ImageTool — overlay actions', () => {
     if (!figure) throw new Error('figure missing');
     expect(tool.getToolbarAnchorElement()).toBe(figure);
   });
+
+  it('getContentOffset() returns horizontal offset of the image figure relative to tool root (content area) so block toolbar (+ / ⋮⋮) aligns with image left edge, not the wider block wrapper that includes the left gutter', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png', width: 60, alignment: 'center' }));
+    const root = tool.render();
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+    if (!figure) throw new Error('figure missing');
+
+    vi.spyOn(root, 'getBoundingClientRect').mockReturnValue({
+      left: 100, top: 0, right: 700, bottom: 100, width: 600, height: 100, x: 100, y: 0, toJSON: () => ({}),
+    } as DOMRect);
+    vi.spyOn(figure, 'getBoundingClientRect').mockReturnValue({
+      left: 220, top: 0, right: 580, bottom: 100, width: 360, height: 100, x: 220, y: 0, toJSON: () => ({}),
+    } as DOMRect);
+
+    expect(tool.getContentOffset(figure)).toEqual({ left: 120 });
+  });
+
+  it('getContentOffset() returns undefined when figure is missing (empty state)', () => {
+    const tool = new ImageTool(createOptions());
+    tool.render();
+    expect(tool.getContentOffset(document.createElement('div'))).toBeUndefined();
+  });
+
+  it('getContentOffset() returns undefined when image fills the content area (no horizontal offset to apply)', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    const root = tool.render();
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+    if (!figure) throw new Error('figure missing');
+
+    vi.spyOn(root, 'getBoundingClientRect').mockReturnValue({
+      left: 100, top: 0, right: 700, bottom: 100, width: 600, height: 100, x: 100, y: 0, toJSON: () => ({}),
+    } as DOMRect);
+    vi.spyOn(figure, 'getBoundingClientRect').mockReturnValue({
+      left: 100, top: 0, right: 700, bottom: 100, width: 600, height: 100, x: 100, y: 0, toJSON: () => ({}),
+    } as DOMRect);
+
+    expect(tool.getContentOffset(figure)).toBeUndefined();
+  });
 });
 
 describe('ImageTool — renderSettings (block settings menu)', () => {
@@ -266,8 +304,12 @@ describe('ImageTool — renderSettings (block settings menu)', () => {
     };
     const children = align.children?.items ?? [];
     const titles = children.map((c) => c.title ?? '');
-    expect(titles).toEqual(expect.arrayContaining(['Left', 'Center', 'Right']));
-    expect(children.find((c) => c.title === 'Right')?.isActive).toBe(true);
+    expect(titles).toEqual(expect.arrayContaining([
+      'tools.image.alignmentLeft',
+      'tools.image.alignmentCenter',
+      'tools.image.alignmentRight',
+    ]));
+    expect(children.find((c) => c.title === 'tools.image.alignmentRight')?.isActive).toBe(true);
   });
 
   it('activating an alignment child updates data.alignment and dispatches change', () => {
@@ -278,7 +320,7 @@ describe('ImageTool — renderSettings (block settings menu)', () => {
     const align = items.find((i) => (i as { name?: string }).name === 'image-alignment') as {
       children?: { items?: Array<{ title?: string; onActivate?: () => void }> };
     };
-    align.children?.items?.find((c) => c.title === 'Left')?.onActivate?.();
+    align.children?.items?.find((c) => c.title === 'tools.image.alignmentLeft')?.onActivate?.();
     expect(tool.save().alignment).toBe('left');
     expect(block.dispatchChange).toHaveBeenCalled();
   });
@@ -348,7 +390,7 @@ describe('ImageTool — more button opens BlockSettings', () => {
     const toggleBlockSettings = vi.fn();
     const api = {
       styles: { block: 'blok-block' },
-      i18n: { t: (k: string) => k },
+      i18n: { t: (k: string) => k, has: () => false },
       events: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
       toolbar: { toggleBlockSettings },
     } as unknown as API;
@@ -383,7 +425,7 @@ describe('ImageTool — overlay stays visible while block settings popover open'
     const toggleBlockSettings = vi.fn();
     const api = {
       styles: { block: 'blok-block' },
-      i18n: { t: (k: string) => k },
+      i18n: { t: (k: string) => k, has: () => false },
       events: {
         on: (name: string, cb: (data?: unknown) => void): void => {
           const arr = handlers.get(name) ?? [];

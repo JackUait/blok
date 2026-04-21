@@ -3120,6 +3120,15 @@
               0 0 0 4px color-mix(in srgb, var(--blok-color-accent) 20%, transparent);
 }
 
+/* Block-selection highlight: paint on the image figure only, not the full content-zone width. */
+[data-blok-element-content].bg-selection:has([data-blok-tool="image"]) {
+  background-color: transparent;
+}
+[data-blok-element-content].bg-selection:has([data-blok-tool="image"]) .blok-image-inner {
+  background-color: var(--blok-selection);
+  border-radius: 4px;
+}
+
 /* caption */
 [data-blok-tool="image"] .blok-image-caption {
   display: block;

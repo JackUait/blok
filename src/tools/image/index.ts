@@ -18,14 +18,24 @@ import type {
   ImageFrame,
   ImageSize,
 } from '../../../types/tools/image';
-import { IconCopy, IconImage } from '../../components/icons';
+import {
+  IconCaption,
+  IconCopy,
+  IconCrop,
+  IconDownload,
+  IconExpandFullscreen,
+  IconImage,
+  IconImageAlignCenter,
+  IconImageAlignLeft,
+  IconImageAlignRight,
+  IconReplaceImage,
+} from '../../components/icons';
 import { DEFAULT_CAPTION_PLACEHOLDER, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { renderErrorState } from './error-state';
 import { ImageError } from './errors';
 import { attachResizeHandle, type ResizeEdge } from './resizer';
 import {
-  ICON_DOWNLOAD,
   openLightbox,
   renderCaptionRow,
   renderImage,
@@ -227,23 +237,29 @@ export class ImageTool implements BlockTool {
     return this.root?.querySelector<HTMLElement>('.blok-image-inner') ?? undefined;
   }
 
+  public getContentOffset(_hoveredElement: Element): { left: number } | undefined {
+    const root = this.root;
+    const figure = root?.querySelector<HTMLElement>('.blok-image-inner');
+    if (!root || !figure) return undefined;
+    const delta = figure.getBoundingClientRect().left - root.getBoundingClientRect().left;
+    return delta > 0 ? { left: delta } : undefined;
+  }
+
   public renderSettings(): MenuConfig {
     const i18n = this.api.i18n;
     const currentAlignment: ImageAlignment = this.data.alignment ?? 'center';
     const captionVisible = this.data.captionVisible !== false;
-    const alignments: { value: ImageAlignment; title: string; svg: string }[] = [
-      { value: 'left',   title: i18n.t('tools.image.alignmentLeft'),   svg: '<rect x="3" y="8" width="8" height="8" rx="1.5" fill="currentColor" stroke="none"/><path d="M3 4h18"/><path d="M14 10h7"/><path d="M14 14h7"/><path d="M3 20h18"/>' },
-      { value: 'center', title: i18n.t('tools.image.alignmentCenter'), svg: '<rect x="8" y="8" width="8" height="8" rx="1.5" fill="currentColor" stroke="none"/><path d="M3 4h18"/><path d="M3 20h18"/>' },
-      { value: 'right',  title: i18n.t('tools.image.alignmentRight'),  svg: '<rect x="13" y="8" width="8" height="8" rx="1.5" fill="currentColor" stroke="none"/><path d="M3 4h18"/><path d="M3 10h7"/><path d="M3 14h7"/><path d="M3 20h18"/>' },
+    const alignments: { value: ImageAlignment; title: string; icon: string }[] = [
+      { value: 'left',   title: i18n.t('tools.image.alignmentLeft'),   icon: IconImageAlignLeft },
+      { value: 'center', title: i18n.t('tools.image.alignmentCenter'), icon: IconImageAlignCenter },
+      { value: 'right',  title: i18n.t('tools.image.alignmentRight'),  icon: IconImageAlignRight },
     ];
-    const wrapSvg = (inner: string): string =>
-      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="20" height="20" aria-hidden="true" focusable="false">${inner}</svg>`;
-    const iconAlignment = wrapSvg(alignments.find((a) => a.value === currentAlignment)?.svg ?? alignments[1].svg);
-    const iconCaption = wrapSvg('<rect x="3" y="3.5" width="18" height="12" rx="2.5"/><path d="M5 19h14"/><path d="M8 22h8"/>');
-    const iconReplace = wrapSvg('<path d="M4 7h15"/><path d="m15 3 4 4-4 4"/><path d="M20 17H5"/><path d="m9 13-4 4 4 4"/>');
-    const iconCrop = wrapSvg('<path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M2 6h14a2 2 0 0 1 2 2v14"/>');
-    const iconFullscreen = wrapSvg('<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/>');
-    const iconDownload = ICON_DOWNLOAD;
+    const iconAlignment = alignments.find((a) => a.value === currentAlignment)?.icon ?? alignments[1].icon;
+    const iconCaption = IconCaption;
+    const iconReplace = IconReplaceImage;
+    const iconCrop = IconCrop;
+    const iconFullscreen = IconExpandFullscreen;
+    const iconDownload = IconDownload;
     return [
       {
         icon: iconAlignment,
@@ -251,7 +267,7 @@ export class ImageTool implements BlockTool {
         name: 'image-alignment',
         children: {
           items: alignments.map((a) => ({
-            icon: wrapSvg(a.svg),
+            icon: a.icon,
             title: a.title,
             name: `image-alignment-${a.value}`,
             isActive: currentAlignment === a.value,

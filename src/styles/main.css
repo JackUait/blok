@@ -3724,6 +3724,32 @@
 .blok-image-empty__content--row .blok-image-empty__meta {
   margin-left: auto;
 }
+.blok-image-empty__card[data-active-tab="embed"] .blok-image-empty__panel {
+  border-color: transparent;
+  background: transparent;
+  padding: var(--blok-space-2);
+}
+.blok-image-empty__content--row .blok-image-empty__search {
+  padding: 0 10px 0 8px;
+  gap: 8px;
+  border-radius: var(--blok-radius-md);
+}
+.blok-image-empty__content--row .blok-image-empty__search-icon {
+  color: var(--blok-text-secondary);
+}
+.blok-image-empty__content--row .blok-image-empty__search-icon svg {
+  width: 16px;
+  height: 16px;
+}
+.blok-image-empty__content--row .blok-image-empty__input--bare {
+  padding: 8px 0;
+  font-size: 13px;
+}
+.blok-image-empty__content--row .blok-image-empty__submit {
+  padding: 8px 14px;
+  font-size: 13px;
+  line-height: 18px;
+}
 
 .blok-image-empty__input {
   appearance: none;

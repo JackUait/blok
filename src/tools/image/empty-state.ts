@@ -213,16 +213,25 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
 
   const renderEmbed = (): void => {
     panel.replaceChildren();
-    panel.appendChild(makeTile(IconLinkExternal));
 
     const content = document.createElement('div');
     content.className = 'blok-image-empty__content blok-image-empty__content--row';
 
+    const field = document.createElement('div');
+    field.className = 'blok-image-empty__search';
+
+    const fieldIcon = document.createElement('span');
+    fieldIcon.className = 'blok-image-empty__search-icon';
+    fieldIcon.setAttribute('aria-hidden', 'true');
+    fieldIcon.innerHTML = IconLinkExternal;
+
     const urlInput = document.createElement('input');
     urlInput.type = 'url';
-    urlInput.className = 'blok-image-empty__input';
+    urlInput.className = 'blok-image-empty__input blok-image-empty__input--bare';
     urlInput.placeholder = embedPlaceholder;
     urlInput.setAttribute('aria-label', tr(opts.i18n, 'tools.image.emptyUrlAria'));
+
+    field.append(fieldIcon, urlInput);
 
     const submit = document.createElement('button');
     submit.type = 'button';
@@ -246,7 +255,7 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
       }
     });
 
-    content.append(urlInput, submit);
+    content.append(field, submit);
     panel.appendChild(content);
     queueMicrotask(() => urlInput.focus());
   };

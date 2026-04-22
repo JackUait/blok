@@ -56,6 +56,17 @@
   to { opacity: 1; }
 }
 
+.blok-image-crop-modal-backdrop[data-blok-closing],
+.blok-image-crop-modal-backdrop[data-blok-closing][data-blok-top-layer][popover] {
+  animation: blok-crop-modal-backdrop-out 180ms ease forwards;
+  pointer-events: none;
+}
+
+@keyframes blok-crop-modal-backdrop-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
 .blok-image-crop-modal-dialog {
   background: var(--crop-modal-dialog-bg);
   color: var(--crop-modal-dialog-fg);
@@ -74,6 +85,25 @@
 @keyframes blok-crop-modal-dialog-in {
   from { opacity: 0; transform: translateY(8px) scale(0.985); }
   to { opacity: 1; transform: none; }
+}
+
+.blok-image-crop-modal-backdrop[data-blok-closing] .blok-image-crop-modal-dialog {
+  animation: blok-crop-modal-dialog-out 180ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+@keyframes blok-crop-modal-dialog-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(6px) scale(0.985); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blok-image-crop-modal-backdrop,
+  .blok-image-crop-modal-backdrop[data-blok-top-layer][popover],
+  .blok-image-crop-modal-backdrop[data-blok-closing],
+  .blok-image-crop-modal-dialog,
+  .blok-image-crop-modal-backdrop[data-blok-closing] .blok-image-crop-modal-dialog {
+    animation: none;
+  }
 }
 
 .blok-image-crop-modal-body {

@@ -4,6 +4,15 @@ import type { I18nInstance } from '../../components/utils/tools';
 import { mountCropEditor } from './crop-editor';
 import { tr } from './i18n';
 
+function readAnimationName(el: Element): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    return window.getComputedStyle(el).animationName || '';
+  } catch {
+    return '';
+  }
+}
+
 export interface OpenCropModalOptions {
   url: string;
   alt?: string;
@@ -36,23 +45,58 @@ export function openCropModal(opts: OpenCropModalOptions): () => void {
 
   promoteToTopLayer(backdrop);
 
-  const state: { detached: boolean; editorDetach: (() => void) | null } = {
+  const state: { detached: boolean; closing: boolean; editorDetach: (() => void) | null } = {
     detached: false,
+    closing: false,
     editorDetach: null,
   };
 
   const pointerState = { downOnBackdrop: false };
 
-  const detach = (): void => {
+  const finalize = (): void => {
     if (state.detached) return;
     state.detached = true;
-    backdrop.removeEventListener('mousedown', onBackdropPointerDown);
-    backdrop.removeEventListener('click', onBackdropClick);
     state.editorDetach?.();
     state.editorDetach = null;
     removeFromTopLayer(backdrop);
     backdrop.remove();
     previousFocus?.focus?.();
+  };
+
+  const detach = (): void => {
+    if (state.detached) return;
+    state.closing = true;
+    backdrop.removeEventListener('mousedown', onBackdropPointerDown);
+    backdrop.removeEventListener('click', onBackdropClick);
+    finalize();
+  };
+
+  const closeAnimated = (): void => {
+    if (state.detached || state.closing) return;
+    state.closing = true;
+    backdrop.removeEventListener('mousedown', onBackdropPointerDown);
+    backdrop.removeEventListener('click', onBackdropClick);
+
+    const reduceMotion = typeof window !== 'undefined'
+      && !!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+
+    backdrop.setAttribute('data-blok-closing', 'true');
+
+    const animName = readAnimationName(dialog);
+    const hasAnimation = !!animName && animName !== 'none';
+    const hasAnimEngine = typeof (dialog as unknown as { getAnimations?: () => unknown[] })
+      .getAnimations === 'function';
+    if (reduceMotion || !hasAnimation || !hasAnimEngine) {
+      finalize();
+      return;
+    }
+
+    const onAnimationEnd = (event: AnimationEvent): void => {
+      if (event.target !== dialog) return;
+      dialog.removeEventListener('animationend', onAnimationEnd);
+      finalize();
+    };
+    dialog.addEventListener('animationend', onAnimationEnd);
   };
 
   const onBackdropPointerDown = (event: MouseEvent): void => {
@@ -63,7 +107,7 @@ export function openCropModal(opts: OpenCropModalOptions): () => void {
     const shouldClose = event.target === backdrop && pointerState.downOnBackdrop;
     pointerState.downOnBackdrop = false;
     if (!shouldClose) return;
-    detach();
+    closeAnimated();
     opts.onCancel();
   };
 
@@ -76,11 +120,11 @@ export function openCropModal(opts: OpenCropModalOptions): () => void {
     initial: opts.initial,
     i18n: opts.i18n,
     onApply: (rect) => {
-      detach();
+      closeAnimated();
       opts.onApply(rect);
     },
     onCancel: () => {
-      detach();
+      closeAnimated();
       opts.onCancel();
     },
   });

@@ -924,6 +924,7 @@
   --blok-radius-xs: 0.25rem;
   --blok-radius-sm: 3px;
   --blok-radius-md: 6px;
+  --blok-radius-lg: 12px;
   --blok-radius-pill: 999px;
 
   /* Image resize-handle surface colors (Notion-style dark pill + white rim). */
@@ -3108,7 +3109,7 @@
   width: 100%;
   height: auto;
   object-fit: cover;
-  border-radius: var(--blok-space-2);
+  border-radius: var(--blok-radius-lg);
   transition: box-shadow 150ms ease;
 }
 [data-blok-tool="image"][data-rounded="off"] .blok-image-inner img { border-radius: 0; }
@@ -3544,7 +3545,7 @@
     radial-gradient(50% 70% at 100% 100%, color-mix(in srgb, var(--blok-color-accent) 9%, transparent) 0%, transparent 60%),
     var(--blok-bg-secondary);
   border: 1px solid var(--blok-border-subtle);
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-lg);
   overflow: hidden;
   transition: border-color var(--blok-duration-standard) ease;
 }
@@ -3583,7 +3584,7 @@
   padding: var(--blok-space-1) var(--blok-space-2);
   font: inherit; font-size: 12px; font-weight: 500;
   color: var(--blok-text-tertiary);
-  border-radius: var(--blok-radius-sm);
+  border-radius: var(--blok-radius-md);
   cursor: pointer;
   transition: color var(--blok-duration-base) ease, background var(--blok-duration-base) ease;
 }
@@ -3606,7 +3607,7 @@
   display: flex; align-items: center; gap: var(--blok-space-3);
   padding: var(--blok-space-3);
   margin: 0 var(--blok-space-2) var(--blok-space-2);
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-lg);
   border: 1px solid var(--blok-border-subtle);
   background: var(--blok-bg-primary);
   position: relative;
@@ -3866,7 +3867,7 @@
     radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--blok-bg-primary) 55%, transparent) 0%, transparent 60%),
     var(--blok-bg-secondary);
   border: 1px solid var(--blok-border-subtle);
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-lg);
   overflow: hidden;
 }
 
@@ -3989,7 +3990,7 @@
     radial-gradient(50% 70% at 100% 100%, color-mix(in srgb, var(--blok-color-danger) 7%, transparent) 0%, transparent 60%),
     var(--blok-bg-secondary);
   border: 1px solid color-mix(in srgb, var(--blok-color-danger) 30%, var(--blok-border-subtle));
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-lg);
   display: flex; gap: var(--blok-space-3); align-items: center;
   color: var(--blok-text-primary);
   font-family: var(--blok-font-family, var(--blok-font-sans));

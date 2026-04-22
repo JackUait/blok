@@ -287,6 +287,71 @@ test.describe('Code block Enter regression', () => {
   });
 });
 
+test.describe('Code block Enter — highlighted languages', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto(TEST_PAGE_URL);
+  });
+
+  test('Enter inserts newline in a Prism-highlighted block (no stale-dispose revert)', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [
+        { type: 'code', data: { code: 'const a = 1;', language: 'javascript' } },
+      ],
+    });
+
+    // Let the initial highlightCode settle so _disposeHighlights is set.
+    await page.waitForTimeout(150);
+
+    await focusCodeAtOffset(page, 5);
+    await page.keyboard.press('Enter');
+
+    // Wait past the scheduled RAF highlight — if the stale dispose fires, it
+    // would rewrite innerHTML back to the pre-Enter snapshot.
+    await page.waitForTimeout(150);
+
+    expect(await getCodeText(page)).toBe('const\n a = 1;');
+    expect(await codeCaretOffset(page)).toBe(6);
+  });
+
+  test('Enter at end of highlighted code leaves a focusable new line (trailing <br> preserved)', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [
+        { type: 'code', data: { code: 'const a = 1;', language: 'javascript' } },
+      ],
+    });
+
+    // Let the initial Prism highlight finish so the subsequent RAF highlight
+    // (triggered by Enter) runs through applyPrismHighlight which rewrites
+    // innerHTML — this is what used to drop the trailing <br> sentinel.
+    await page.waitForTimeout(150);
+
+    await focusCodeAtOffset(page, 12);
+    await page.keyboard.press('Enter');
+
+    // Wait past the scheduled highlight so applyPrismHighlight has rewritten
+    // innerHTML before we assert.
+    await page.waitForTimeout(150);
+
+    expect(await getCodeText(page)).toBe('const a = 1;\n');
+    expect(await codeCaretOffset(page)).toBe(13);
+
+    // Sentinel <br> is required — without it Chrome collapses the trailing
+    // newline and the new line has no line box, so the caret sits nowhere
+    // visible and a single keystroke cannot land on the new line.
+    const lastChildIsBr = await page.evaluate(() => {
+      const el = document.querySelector<HTMLElement>('[data-blok-testid="code-content"]');
+
+      return el?.lastChild instanceof HTMLBRElement;
+    });
+
+    expect(lastChildIsBr).toBe(true);
+
+    // Typing one character must land on the new line.
+    await page.keyboard.type('X');
+    expect(await getCodeText(page)).toBe('const a = 1;\nX');
+  });
+});
+
 test.describe('Code block Enter — auto-indent and bracket expansion', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);

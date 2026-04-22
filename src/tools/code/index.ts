@@ -78,7 +78,6 @@ export class CodeTool implements BlockTool {
   private _picker: PopoverDesktop | null = null;
   private _viewMode: CodeViewMode = 'preview';
   private _previewContainer: HTMLElement | null = null;
-  private _disposeHighlights: (() => void) | null = null;
   private _highlightRafId: number | null = null;
   private _detectedLanguage: string | null = null;
   private _detectionTimeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -689,9 +688,6 @@ export class CodeTool implements BlockTool {
   }
 
   private async highlightCode(): Promise<void> {
-    this._disposeHighlights?.();
-    this._disposeHighlights = null;
-
     const lang = this._data.language;
 
     if (!isHighlightable(lang)) return;
@@ -704,7 +700,16 @@ export class CodeTool implements BlockTool {
 
     if (!html || !this._dom) return;
 
-    this._disposeHighlights = applyPrismHighlight(this._dom.codeElement, html, lang);
+    // Text may have changed during the async tokenize (e.g. user pressed
+    // Enter). Applying a stale html would overwrite the newer content.
+    if (this._dom.codeElement.textContent !== code) return;
+
+    applyPrismHighlight(this._dom.codeElement, html, lang);
+
+    // applyPrismHighlight rewrites innerHTML, dropping the trailing <br>
+    // sentinel that the keydown handler installed. Without it, a final
+    // newline collapses and the caret has no line box on the new line.
+    this.syncTrailingBr();
   }
 
   /**
@@ -745,8 +750,6 @@ export class CodeTool implements BlockTool {
   }
 
   public removed(): void {
-    this._disposeHighlights?.();
-    this._disposeHighlights = null;
     disposePrismStyles();
 
     if (this._highlightRafId !== null) {

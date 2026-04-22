@@ -304,8 +304,9 @@
   font-size: 1em;
 }
 
-/* Inline code tool styling — coral/red text on a subtle surface. */
-:where([data-blok-interface], [data-blok-popover]) code {
+/* Inline code tool styling — coral/red text on a subtle surface.
+   Excludes <code> inside <pre> (block code tool), which paints its own surface. */
+:where([data-blok-interface], [data-blok-popover]) code:not(pre code) {
   background-color: var(--blok-inline-code-bg);
   color: var(--blok-color-red-text);
   padding: var(--blok-space-0-5) var(--blok-space-1);
@@ -3865,7 +3866,7 @@
     radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--blok-bg-primary) 55%, transparent) 0%, transparent 60%),
     var(--blok-bg-secondary);
   border: 1px solid var(--blok-border-subtle);
-  border-radius: 12px;
+  border-radius: var(--blok-radius-md);
   overflow: hidden;
 }
 

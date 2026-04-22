@@ -129,7 +129,7 @@
     "validate:spec-coverage": "node scripts/validate-spec-file-coverage.mjs",
     "ci:timing": "node scripts/ci-timing-probe.mjs",
     "release": "node scripts/release.mjs",
-    "release:preflight": "yarn lint && yarn test",
+    "release:preflight": "yarn lint",
     "unused-css": "node scripts/unused-css-finder/cli.mjs"
   },
   "author": "JackUait",

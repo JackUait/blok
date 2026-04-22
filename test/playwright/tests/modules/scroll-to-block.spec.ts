@@ -193,7 +193,10 @@ test.describe('scroll to block on hash', () => {
 
     // Now render the real content via the public API (SPA fetch-then-render path).
     await page.evaluate(async (blocks) => {
-      await window.blokInstance!.blocks.render({ blocks });
+      if (!window.blokInstance) {
+        throw new Error('blokInstance not initialized');
+      }
+      await window.blokInstance.blocks.render({ blocks });
     }, SCROLL_TEST_BLOCKS);
 
     // The deferred hash scroll must fire after render() completes.

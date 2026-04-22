@@ -803,6 +803,7 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
   more.setAttribute('data-action', 'more');
   more.setAttribute('aria-label', moreLabel);
   more.setAttribute('aria-haspopup', 'menu');
+  more.setAttribute('aria-expanded', 'false');
   more.innerHTML = IconMoreHorizontal;
   tooltipOnHover(more, moreLabel);
   root.appendChild(more);

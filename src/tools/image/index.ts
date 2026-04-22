@@ -586,8 +586,10 @@ export class ImageTool implements BlockTool {
     }).toolbar;
     if (!toolbar?.toggleBlockSettings) return;
     this.root?.setAttribute('data-settings-open', 'true');
+    trigger?.setAttribute('aria-expanded', 'true');
     const onClosed = (): void => {
       this.root?.removeAttribute('data-settings-open');
+      trigger?.setAttribute('aria-expanded', 'false');
       this.api.events.off('block-settings-closed', onClosed);
     };
     this.api.events.on('block-settings-closed', onClosed);

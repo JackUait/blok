@@ -44,6 +44,31 @@ import { detectLanguage } from './language-detector';
 
 const COPIED_FEEDBACK_DURATION = 1500;
 
+/**
+ * Walk text nodes under root to resolve a flat character offset into a
+ * (node, offset) pair usable with Range. Recurses instead of mutating locals.
+ */
+function findTextPosition(root: Node, targetOffset: number): { node: Node; offset: number } {
+  const walker = root.ownerDocument!.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const step = (consumed: number): { node: Node; offset: number } => {
+    const next = walker.nextNode() as Text | null;
+
+    if (!next) {
+      return { node: root, offset: 0 };
+    }
+
+    const len = next.nodeValue?.length ?? 0;
+
+    if (consumed + len >= targetOffset) {
+      return { node: next, offset: targetOffset - consumed };
+    }
+
+    return step(consumed + len);
+  };
+
+  return step(0);
+}
+
 export class CodeTool implements BlockTool {
   private api: API;
   private readOnly: boolean;
@@ -133,6 +158,17 @@ export class CodeTool implements BlockTool {
     }
 
     if (!this.readOnly) {
+      dom.gutterElement.addEventListener('mousedown', (event: MouseEvent) => {
+        const target = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-line-index]');
+
+        if (!target) return;
+
+        const idx = Number(target.getAttribute('data-line-index'));
+
+        event.preventDefault();
+        this.focusLineEnd(idx);
+      });
+
       dom.codeElement.addEventListener('keydown', (event: KeyboardEvent) => {
         const handled = handleCodeKeydown(event, dom.codeElement, () => this.exitBlock());
 
@@ -576,6 +612,7 @@ export class CodeTool implements BlockTool {
       const lineEl = document.createElement('div');
       lineEl.className = GUTTER_LINE_STYLES;
       lineEl.textContent = String(idx + 1);
+      lineEl.setAttribute('data-line-index', String(idx));
       gutter.appendChild(lineEl);
     });
   }
@@ -655,6 +692,37 @@ export class CodeTool implements BlockTool {
     if (!html || !this._dom) return;
 
     this._disposeHighlights = applyPrismHighlight(this._dom.codeElement, html, lang);
+  }
+
+  /**
+   * Place caret at end of the Nth text line inside the code element.
+   * Line index is 0-based. Out-of-range indices are clamped.
+   */
+  private focusLineEnd(lineIndex: number): void {
+    if (!this._dom) return;
+
+    const codeEl = this._dom.codeElement;
+    const text = codeEl.textContent ?? '';
+    const lines = text.split('\n');
+    const clamped = Math.max(0, Math.min(lineIndex, lines.length - 1));
+    const targetOffset = lines
+      .slice(0, clamped)
+      .reduce((acc, line) => acc + line.length + 1, 0) + lines[clamped].length;
+
+    const position = findTextPosition(codeEl, targetOffset);
+    const range = codeEl.ownerDocument.createRange();
+
+    range.setStart(position.node, position.offset);
+    range.setEnd(position.node, position.offset);
+
+    const selection = codeEl.ownerDocument.getSelection();
+
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    codeEl.focus({ preventScroll: true });
   }
 
   private exitBlock(): void {

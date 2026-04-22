@@ -196,6 +196,7 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
     const lineEl = document.createElement('div');
     lineEl.className = GUTTER_LINE_STYLES;
     lineEl.textContent = String(idx + 1);
+    lineEl.setAttribute('data-line-index', String(idx));
     gutterElement.appendChild(lineEl);
   });
 

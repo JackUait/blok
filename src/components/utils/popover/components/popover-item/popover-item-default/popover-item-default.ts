@@ -351,6 +351,7 @@ export class PopoverItemDefault extends PopoverItem {
       !isInline && !isNestedInline && 'pl-2 pr-3',
       isInline && cssInline.item,
       isInline && this.params.icon && cssInline.itemIconOnly,
+      isInline && this.params.title && cssInline.itemWithTitle,
       isNestedInline && cssNestedInline.item,
       this.params.isDisabled && css.itemDisabled
     );

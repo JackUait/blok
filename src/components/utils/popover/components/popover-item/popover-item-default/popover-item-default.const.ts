@@ -37,8 +37,9 @@ export const cssInline = {
   /**
    * Item in inline context - more compact styling
    */
-  item: 'rounded-lg p-1',
-  itemIconOnly: 'aspect-square justify-center',
+  item: 'rounded-md px-1 py-1.5',
+  itemIconOnly: 'justify-center',
+  itemWithTitle: 'px-2',
 };
 
 /**

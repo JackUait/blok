@@ -3219,7 +3219,7 @@
     var(--blok-image-shadow-toolbar);
   z-index: 2;
 }
-[data-blok-tool="image"]:hover .blok-image-toolbar,
+[data-blok-tool="image"] .blok-image-inner:hover .blok-image-toolbar,
 [data-blok-tool="image"][data-selected="true"] .blok-image-toolbar,
 [data-blok-tool="image"][data-settings-open="true"] .blok-image-toolbar,
 [data-blok-tool="image"][data-align-open="true"] .blok-image-toolbar,
@@ -3374,7 +3374,7 @@
 }
 [data-blok-tool="image"] [data-role="resize-handle"][data-edge="left"]  { left: 8px; }
 [data-blok-tool="image"] [data-role="resize-handle"][data-edge="right"] { right: 8px; }
-[data-blok-tool="image"]:hover [data-role="resize-handle"],
+[data-blok-tool="image"] .blok-image-inner:hover [data-role="resize-handle"],
 [data-blok-tool="image"][data-selected="true"] [data-role="resize-handle"],
 [data-blok-tool="image"][data-alt-open="true"] [data-role="resize-handle"],
 [data-blok-tool="image"][data-settings-open="true"] [data-role="resize-handle"],

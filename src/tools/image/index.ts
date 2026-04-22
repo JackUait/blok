@@ -426,6 +426,7 @@ export class ImageTool implements BlockTool {
     );
     r.setAttribute('data-alt', this.data.alt ? 'set' : 'none');
     r.setAttribute('data-selected', 'false');
+    r.removeAttribute('data-align-open');
     this.syncRetryingAttribute();
   }
 
@@ -567,7 +568,6 @@ export class ImageTool implements BlockTool {
       }
     });
     figure.appendChild(captionRow);
-
     this.root.appendChild(figure);
 
     if (!this.readOnly) {

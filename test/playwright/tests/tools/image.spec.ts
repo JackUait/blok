@@ -124,6 +124,63 @@ test('lightbox toolbar hides filename, shows copy-url, has no backdrop-filter', 
   await expect(dialog).toHaveCount(0);
 });
 
+test('image controls only show when hovering image or caption, not surrounding whitespace', async ({ page }) => {
+  await createBlok(page, {
+    blocks: [
+      { type: 'image', data: { url: SAMPLE_IMAGE_URL, alt: 'pic', caption: 'hello caption', size: 'sm', alignment: 'center' } },
+    ],
+  });
+
+  const imageBlock = page.locator(IMAGE_BLOCK_SELECTOR);
+  const img = imageBlock.getByRole('img');
+  const toolbar = imageBlock.locator('[data-role="image-overlay"]');
+  const caption = imageBlock.getByRole('textbox');
+
+  await expect(img).toBeVisible();
+
+  await page.mouse.move(0, 0);
+  expect(await toolbar.evaluate((el) => getComputedStyle(el).opacity)).toBe('0');
+
+  // Hover empty space inside the tool root but outside the image figure.
+  const rootBox = await imageBlock.boundingBox();
+  const figureBox = await imageBlock.locator('.blok-image-inner').boundingBox();
+  if (!rootBox || !figureBox) throw new Error('box missing');
+  const whitespaceX = rootBox.x + 4;
+  const whitespaceY = figureBox.y + figureBox.height / 2;
+  await page.mouse.move(whitespaceX, whitespaceY);
+  await expect.poll(() => toolbar.evaluate((el) => getComputedStyle(el).opacity)).toBe('0');
+
+  await caption.hover();
+  await expect.poll(() => toolbar.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+
+  await page.mouse.move(0, 0);
+  await expect.poll(() => toolbar.evaluate((el) => getComputedStyle(el).opacity)).toBe('0');
+
+  await img.hover();
+  await expect.poll(() => toolbar.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+});
+
+test('alignment change does not leave controls stuck visible after mouse leaves', async ({ page }) => {
+  await createBlok(page, {
+    blocks: [
+      { type: 'image', data: { url: SAMPLE_IMAGE_URL, alt: 'pic', size: 'sm', alignment: 'center' } },
+    ],
+  });
+
+  const imageBlock = page.locator(IMAGE_BLOCK_SELECTOR);
+  const img = imageBlock.getByRole('img');
+  const toolbar = imageBlock.locator('[data-role="image-overlay"]');
+
+  await expect(img).toBeVisible();
+  await img.hover();
+  await imageBlock.locator('[data-action="align-trigger"]').click();
+  await imageBlock.locator('[data-action="align-left"]').click();
+
+  await page.mouse.move(0, 0);
+  await expect.poll(() => toolbar.evaluate((el) => getComputedStyle(el).opacity)).toBe('0');
+  await expect(imageBlock).not.toHaveAttribute('data-align-open', 'true');
+});
+
 test('read-only mode hides overlay and resize handles', async ({ page }) => {
   await createBlok(page, {
     blocks: [

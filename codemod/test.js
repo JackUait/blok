@@ -1241,6 +1241,101 @@ test('exports BLOCK_TYPE_TRANSFORMS constant', () => {
   assertEqual(BLOCK_TYPE_TRANSFORMS.delimiter, 'divider');
 });
 
+test('migrates legacy image { data: { file: { url } } } to { data: { url } }', () => {
+  const input = JSON.stringify({
+    blocks: [
+      { type: 'image', data: { file: { url: 'x.png' }, caption: 'c' } },
+    ],
+  }, null, 2);
+  const result = applyBlockTypeTransforms(input);
+  const parsed = JSON.parse(result);
+  assertEqual(parsed.blocks[0].type, 'image');
+  assertEqual(parsed.blocks[0].data.url, 'x.png');
+  assertEqual(parsed.blocks[0].data.caption, 'c');
+  assertEqual(parsed.blocks[0].data.file, undefined, 'file wrapper must be dropped');
+});
+
+test('maps legacy image flags (withBorder, withBackground, stretched) to new image shape', () => {
+  const input = JSON.stringify({
+    blocks: [
+      {
+        type: 'image',
+        data: {
+          file: { url: 'x.png' },
+          caption: 'c',
+          withBorder: true,
+          withBackground: false,
+          stretched: true,
+        },
+      },
+    ],
+  }, null, 2);
+  const result = applyBlockTypeTransforms(input);
+  const parsed = JSON.parse(result);
+  assertEqual(parsed.blocks[0].data.url, 'x.png');
+  assertEqual(parsed.blocks[0].data.caption, 'c');
+  assertEqual(parsed.blocks[0].data.frame, 'border');
+  assertEqual(parsed.blocks[0].data.size, 'full');
+  assertEqual(parsed.blocks[0].data.withBorder, undefined, 'withBorder must be dropped');
+  assertEqual(parsed.blocks[0].data.withBackground, undefined, 'withBackground must be dropped');
+  assertEqual(parsed.blocks[0].data.stretched, undefined, 'stretched must be dropped');
+  assertEqual(parsed.blocks[0].data.file, undefined, 'file wrapper must be dropped');
+});
+
+test('drops withBorder: false without adding frame', () => {
+  const input = JSON.stringify({
+    blocks: [{ type: 'image', data: { file: { url: 'u' }, withBorder: false } }],
+  }, null, 2);
+  const result = applyBlockTypeTransforms(input);
+  const parsed = JSON.parse(result);
+  assertEqual(parsed.blocks[0].data.url, 'u');
+  assertEqual(parsed.blocks[0].data.frame, undefined, 'no frame on withBorder: false');
+  assertEqual(parsed.blocks[0].data.withBorder, undefined, 'withBorder must be dropped');
+});
+
+test('drops withBackground: true without any Blok equivalent', () => {
+  const input = JSON.stringify({
+    blocks: [{ type: 'image', data: { file: { url: 'u' }, withBackground: true } }],
+  }, null, 2);
+  const result = applyBlockTypeTransforms(input);
+  const parsed = JSON.parse(result);
+  assertEqual(parsed.blocks[0].data.url, 'u');
+  assertEqual(parsed.blocks[0].data.withBackground, undefined, 'withBackground must be dropped');
+});
+
+test('drops stretched: false without adding size', () => {
+  const input = JSON.stringify({
+    blocks: [{ type: 'image', data: { file: { url: 'u' }, stretched: false } }],
+  }, null, 2);
+  const result = applyBlockTypeTransforms(input);
+  const parsed = JSON.parse(result);
+  assertEqual(parsed.blocks[0].data.url, 'u');
+  assertEqual(parsed.blocks[0].data.size, undefined, 'no size on stretched: false');
+  assertEqual(parsed.blocks[0].data.stretched, undefined, 'stretched must be dropped');
+});
+
+test('passes unknown legacy image fields through (future-proof)', () => {
+  const input = JSON.stringify({
+    blocks: [{ type: 'image', data: { file: { url: 'u' }, customField: 'x' } }],
+  }, null, 2);
+  const result = applyBlockTypeTransforms(input);
+  const parsed = JSON.parse(result);
+  assertEqual(parsed.blocks[0].data.url, 'u');
+  assertEqual(parsed.blocks[0].data.customField, 'x');
+});
+
+test('leaves already-migrated image blocks unchanged', () => {
+  const input = JSON.stringify({
+    blocks: [
+      { type: 'image', data: { url: 'x.png', caption: 'c' } },
+    ],
+  }, null, 2);
+  const result = applyBlockTypeTransforms(input);
+  const parsed = JSON.parse(result);
+  assertEqual(parsed.blocks[0].data.url, 'x.png');
+  assertEqual(parsed.blocks[0].data.caption, 'c');
+});
+
 // ============================================================================
 // Summary
 // ============================================================================

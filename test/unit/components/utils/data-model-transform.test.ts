@@ -2588,4 +2588,216 @@ describe('data-model-transform', () => {
       expect((para?.data as { text: string }).text).toBe('P');
     });
   });
+
+  describe('analyzeDataFormat - legacy image', () => {
+    it('detects legacy format when block has data.file.url', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          type: 'image',
+          data: {
+            file: { url: 'https://example.com/pic.png' },
+            caption: 'c',
+          },
+        },
+      ];
+
+      const result = analyzeDataFormat(blocks);
+
+      expect(result.format).toBe('legacy');
+    });
+
+    it('does not detect new-format image as legacy', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'i1', type: 'image', data: { url: 'https://example.com/pic.png' } },
+      ];
+
+      const result = analyzeDataFormat(blocks);
+
+      expect(result.format).toBe('flat');
+    });
+  });
+
+  describe('expandToHierarchical - legacy image', () => {
+    it('converts legacy image { data: { file: { url } } } into flat image { data: { url } }', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          type: 'image',
+          data: {
+            file: { url: 'https://example.com/pic.png' },
+            caption: 'c',
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe('image');
+      expect(result[0].data).toEqual({ url: 'https://example.com/pic.png', caption: 'c' });
+    });
+
+    it('generates an id when legacy image has no id', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          type: 'image',
+          data: { file: { url: 'https://example.com/pic.png' } },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      expect(result[0].id).toBeDefined();
+      expect(typeof result[0].id).toBe('string');
+    });
+
+    it('preserves an existing id on a legacy image block', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'img-1' as BlockId,
+          type: 'image',
+          data: { file: { url: 'https://example.com/pic.png' } },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      expect(result[0].id).toBe('img-1');
+    });
+
+    it('maps legacy editor.js flags (withBorder, withBackground, stretched) to new image shape', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          type: 'image',
+          data: {
+            file: { url: 'https://example.com/pic.png' },
+            caption: 'hi',
+            withBorder: true,
+            withBackground: false,
+            stretched: true,
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      expect(result[0].data).toEqual({
+        url: 'https://example.com/pic.png',
+        caption: 'hi',
+        frame: 'border',
+        size: 'full',
+      });
+    });
+
+    it('maps withBorder: true → frame: border (and drops withBorder)', () => {
+      const blocks: OutputBlockData[] = [
+        { type: 'image', data: { file: { url: 'u' }, withBorder: true } },
+      ];
+
+      const result = expandToHierarchical(blocks);
+      const data = result[0].data as Record<string, unknown>;
+
+      expect(data.frame).toBe('border');
+      expect('withBorder' in data).toBe(false);
+    });
+
+    it('drops withBorder: false entirely (no frame, no withBorder)', () => {
+      const blocks: OutputBlockData[] = [
+        { type: 'image', data: { file: { url: 'u' }, withBorder: false } },
+      ];
+
+      const result = expandToHierarchical(blocks);
+      const data = result[0].data as Record<string, unknown>;
+
+      expect('frame' in data).toBe(false);
+      expect('withBorder' in data).toBe(false);
+    });
+
+    it('drops withBackground regardless of value', () => {
+      const trueCase = expandToHierarchical([
+        { type: 'image', data: { file: { url: 'u' }, withBackground: true } },
+      ]);
+      const falseCase = expandToHierarchical([
+        { type: 'image', data: { file: { url: 'u' }, withBackground: false } },
+      ]);
+      const trueData = trueCase[0].data as Record<string, unknown>;
+      const falseData = falseCase[0].data as Record<string, unknown>;
+
+      expect('withBackground' in trueData).toBe(false);
+      expect('withBackground' in falseData).toBe(false);
+    });
+
+    it('maps stretched: true → size: full (and drops stretched)', () => {
+      const blocks: OutputBlockData[] = [
+        { type: 'image', data: { file: { url: 'u' }, stretched: true } },
+      ];
+
+      const result = expandToHierarchical(blocks);
+      const data = result[0].data as Record<string, unknown>;
+
+      expect(data.size).toBe('full');
+      expect('stretched' in data).toBe(false);
+    });
+
+    it('drops stretched: false entirely (no size, no stretched)', () => {
+      const blocks: OutputBlockData[] = [
+        { type: 'image', data: { file: { url: 'u' }, stretched: false } },
+      ];
+
+      const result = expandToHierarchical(blocks);
+      const data = result[0].data as Record<string, unknown>;
+
+      expect('size' in data).toBe(false);
+      expect('stretched' in data).toBe(false);
+    });
+
+    it('passes unknown fields through unchanged (future-proof)', () => {
+      const blocks: OutputBlockData[] = [
+        { type: 'image', data: { file: { url: 'u' }, customField: 'x' } },
+      ];
+
+      const result = expandToHierarchical(blocks);
+      const data = result[0].data as Record<string, unknown>;
+
+      expect(data.customField).toBe('x');
+      expect(data.url).toBe('u');
+    });
+
+    it('analyzeDataFormat on image-only legacy doc reports hasHierarchy: false', () => {
+      const blocks: OutputBlockData[] = [
+        { type: 'image', data: { file: { url: 'https://example.com/pic.png' } } },
+      ];
+
+      const result = analyzeDataFormat(blocks);
+
+      expect(result.format).toBe('legacy');
+      expect(result.hasHierarchy).toBe(false);
+    });
+
+    it('passes already-new image through unchanged, only generating id when missing', () => {
+      const blocks: OutputBlockData[] = [
+        { type: 'image', data: { url: 'https://example.com/pic.png', caption: 'c' } },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe('image');
+      expect(result[0].id).toBeDefined();
+      expect(result[0].data).toEqual({ url: 'https://example.com/pic.png', caption: 'c' });
+    });
+
+    it('does not throw on garbage image data and preserves the block', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'broken', type: 'image', data: { nonsense: 42 } as unknown as Record<string, unknown> },
+      ];
+
+      expect(() => expandToHierarchical(blocks)).not.toThrow();
+
+      const result = expandToHierarchical(blocks);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe('image');
+      expect(result[0].id).toBe('broken');
+    });
+  });
 });

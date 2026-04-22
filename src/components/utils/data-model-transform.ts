@@ -232,6 +232,31 @@ const isLegacyCalloutBlock = (block: OutputBlockData): block is OutputBlockData<
 };
 
 /**
+ * Check if a block is in legacy image format
+ * Legacy editor.js shape: { type: "image", data: { file: { url: "..." }, caption?, withBorder?, withBackground?, stretched? } }
+ * New shape: { type: "image", data: { url, caption?, ... } }
+ */
+const isLegacyImageBlock = (block: OutputBlockData): boolean => {
+  if (block.type !== 'image') {
+    return false;
+  }
+
+  const data = block.data as Record<string, unknown> | null | undefined;
+
+  if (typeof data !== 'object' || data === null) {
+    return false;
+  }
+
+  const file = (data as { file?: unknown }).file;
+
+  if (typeof file !== 'object' || file === null) {
+    return false;
+  }
+
+  return typeof (file as { url?: unknown }).url === 'string';
+};
+
+/**
  * Check if a block contains nested hierarchy in its items
  */
 const hasNestedItems = (block: OutputBlockData): boolean => {
@@ -269,7 +294,10 @@ export const analyzeDataFormat = (blocks: OutputBlockData[]): DataFormatAnalysis
   // Check if any block uses legacy callout format (has body field)
   const foundLegacyCallout = blocks.some(isLegacyCalloutBlock);
 
-  const hasLegacyBlocks = foundLegacyList || foundLegacyToggle || foundLegacyCallout;
+  // Check if any block uses legacy image format (has data.file.url)
+  const foundLegacyImage = blocks.some(isLegacyImageBlock);
+
+  const hasLegacyBlocks = foundLegacyList || foundLegacyToggle || foundLegacyCallout || foundLegacyImage;
 
   if (foundHierarchicalRefs && !hasLegacyBlocks) {
     return { format: 'hierarchical', hasHierarchy: true };
@@ -528,6 +556,45 @@ const expandCalloutToHierarchical = (
 };
 
 /**
+ * Expand a legacy image block (editor.js shape with `data.file.url`) into
+ * the new flat image shape understood by Blok's ImageTool (see
+ * types/tools/image.d.ts). Moves `data.file.url` to `data.url`, drops the
+ * `file` wrapper, and maps legacy editor.js flags to ImageData fields:
+ *
+ *   - `withBorder: true`  → `frame: 'border'` (false: drop, default is 'none')
+ *   - `withBackground`    → drop entirely (no Blok equivalent)
+ *   - `stretched: true`   → `size: 'full'`   (false: drop)
+ *
+ * All other unknown fields pass through untouched so future editor.js data
+ * can't silently lose information.
+ */
+const expandImageToHierarchical = (block: OutputBlockData): OutputBlockData => {
+  const rawData = (block.data ?? {}) as Record<string, unknown>;
+  const {
+    file,
+    withBorder,
+    withBackground: _withBackground,
+    stretched,
+    ...rest
+  } = rawData;
+  const fileUrl = typeof file === 'object' && file !== null
+    ? (file as { url?: unknown }).url
+    : undefined;
+  const url = typeof fileUrl === 'string' ? fileUrl : '';
+
+  return {
+    ...block,
+    id: block.id ?? generateBlockId(),
+    data: {
+      url,
+      ...rest,
+      ...(withBorder === true ? { frame: 'border' } : {}),
+      ...(stretched === true ? { size: 'full' } : {}),
+    },
+  };
+};
+
+/**
  * Expand legacy nested format to hierarchical flat-with-references format
  * @param blocks - array of blocks potentially containing nested structures
  * @returns expanded array of flat blocks with parent/content references
@@ -552,6 +619,9 @@ export const expandToHierarchical = (blocks: OutputBlockData[]): OutputBlockData
       const expanded = expandCalloutToHierarchical(block);
 
       expandedBlocks.push(...expanded);
+    } else if (isLegacyImageBlock(block)) {
+      // Expand legacy image (data.file.url → data.url) to new flat image shape
+      expandedBlocks.push(expandImageToHierarchical(block));
     } else {
       // Non-list blocks pass through unchanged (with guaranteed ID)
       expandedBlocks.push({

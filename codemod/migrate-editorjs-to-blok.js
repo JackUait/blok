@@ -966,6 +966,53 @@ const BLOCK_TYPE_TRANSFORMS = {
 };
 
 /**
+ * Migrate a single block object in-place semantics (returns a new object).
+ * Currently handles the legacy image shape `{ type: "image", data: { file: { url } } }`
+ * → `{ type: "image", data: { url, ...mapped } }`, mapping legacy editor.js
+ * flags onto Blok's ImageData (types/tools/image.d.ts):
+ *
+ *   - `withBorder: true`  → `frame: 'border'` (false: drop, default is 'none')
+ *   - `withBackground`    → drop entirely (no Blok equivalent)
+ *   - `stretched: true`   → `size: 'full'`   (false: drop)
+ *
+ * Unknown fields pass through untouched. Other block types pass through too;
+ * type renames are handled separately.
+ * @param {Object} block - block object with `type` and `data`
+ * @returns {Object} possibly migrated block
+ */
+function migrateLegacyBlockShape(block) {
+  if (!block || typeof block !== 'object' || Array.isArray(block)) {
+    return block;
+  }
+  if (block.type !== 'image' || !block.data || typeof block.data !== 'object') {
+    return block;
+  }
+  const file = block.data.file;
+
+  if (!file || typeof file !== 'object' || typeof file.url !== 'string') {
+    return block;
+  }
+
+  const {
+    file: _file,
+    withBorder,
+    withBackground: _withBackground,
+    stretched,
+    ...rest
+  } = block.data;
+
+  return {
+    ...block,
+    data: {
+      url: file.url,
+      ...rest,
+      ...(withBorder === true ? { frame: 'border' } : {}),
+      ...(stretched === true ? { size: 'full' } : {}),
+    },
+  };
+}
+
+/**
  * Apply block type transforms to JSON article data.
  * Renames legacy EditorJS block types to their Blok equivalents.
  * @param {string} jsonString - JSON string containing article data
@@ -979,9 +1026,12 @@ function applyBlockTypeTransforms(jsonString) {
         return obj.map(transformBlocks);
       }
       if (obj !== null && typeof obj === 'object') {
+        // Migrate legacy block shapes (e.g. image { data: { file: { url } } })
+        // before recursing so the migrated shape is what children see.
+        const migrated = migrateLegacyBlockShape(obj);
         const result = {};
 
-        for (const [key, value] of Object.entries(obj)) {
+        for (const [key, value] of Object.entries(migrated)) {
           if (key === 'type' && typeof value === 'string' && BLOCK_TYPE_TRANSFORMS[value]) {
             result[key] = BLOCK_TYPE_TRANSFORMS[value];
           } else {

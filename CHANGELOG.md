@@ -2,6 +2,40 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.12.0](https://github.com/JackUait/blok/compare/v0.11.1...v0.12.0) (2026-04-22)
+
+### Features
+
+- **Image** — New image block tool (#66): drag-drop/URL/file upload, captions, alt text via inline popover, resize handles with symmetric growth, edge-pinned aspect-ratio resize, crop editor (rect/circle/oval) in modal, fullscreen lightbox with wheel/pinch zoom, drag-to-pan, rubber-band, alignment popover (left/center/right), block settings entries (size/download/copy-url), three-dots overflow menu for narrow images, empty/uploading/error states with unified card design, light-theme crop editor, legacy editor.js shape migration
+- **Code** — Migrate from Shiki to Prism.js for syntax highlighting with lazy grammar loading and class-based applier; add auto-indent and bracket expansion on Enter; add Mermaid highlighting with One Dark/Light palette; gutter line-number click focuses the line
+- **Fonts** — Bundle @fontsource fonts via generator script; new `fontFamilySans/Serif/Mono/Handwriting` config fields with CSS variable injection; `font-display: swap` for body text
+- **Popover** — Render above all elements via CSS Top Layer; nested-submenu viewport clamping on both axes; close transition via ghost clone; tighter item sizing; end-of-list padding hidden on empty search; simpler animations
+- **Toolbar** — Hide plus and dots buttons while toolbox is open; place block settings popover left of the dots button
+- **Toolbox** — Nowrap pill with tighter radius and unified plus/slash search styling
+- **Playground** — Icon gallery lightbox; block states gallery tab; settings panel shortcuts; hide header on scroll; logotype image example
+- **CSS Variables** — Tokenize radii, spacing, icon sizes, border widths, z-index ladder, duration/easing, typography; extract direct `rgba` literals to palette tokens; migrate `@apply` arbitrary hex values; split `actions-icon`/`divider` vars; add audit test and visual regression baselines
+- **Database** — Match Notion card shadow and radius on kanban cards; showcase all 10 column color variants
+- **Block Settings** — Add shortcut keys to i18n with regression tests
+- **Icons** — Migrate inline SVGs to shared icon layer
+
+### Bug Fixes
+
+- **Inline Toolbar** — Tighten item padding and radius; suppress toolbar inside code blocks; apply symmetric top/bottom padding
+- **Code** — Pin caret color so it does not inherit Prism token colors; restore trailing `<br>` after highlight so Enter works once; refresh gutter/highlight after native paste; focus line end when clicking empty strip of short lines; scope inline-code styling to not leak into code block; support `contenteditable="plaintext-only"` and preserve view mode on undo; correct syntax highlighting offset calculation
+- **Toolbar** — Reposition + / ⋮⋮ live while hovered block resizes; disable pointer-events on every actions descendant for left-edge blocks; keep slash search in inserted block after plus button
+- **Popover** — Distinguish synthesized hover from real hover; hide context label while searching; keep block settings menu visible and attached to dots trigger
+- **Block Manager** — Skip cross-container auto-heal inside move group
+- **Tooltip** — Anchor wrapper with `position: fixed` to survive page scroll; render above popover and survive UA stylesheet
+- **Fonts** — Add error handling for font load failures
+
+### Maintenance
+
+- **Styles** — Split `main.css` into 11 concern-files
+- **License** — Add fork attribution and NOTICE file
+- **Build** — Replace shiki with prismjs
+- **Tests** — Fix 60+ unit + E2E failures across the suite; add Prism integration test for all highlightable languages
+- **Chore** — Untrack `.vscode`; remove stale root files; add favicon to dev playground; drop `.editorconfig`
+
 ## [0.11.1](https://github.com/JackUait/blok/compare/v0.11.0...v0.11.1) (2026-04-16)
 
 ### Features

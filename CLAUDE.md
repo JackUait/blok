@@ -46,6 +46,20 @@ Project guidance for Claude Code (claude.ai/code) working with this repository.
 
 **This checklist is ALWAYS executed. NO MATTER how long the chat is.**
 
+### Stash Discipline
+
+**If you ever run `git stash` (for any reason — isolating a commit, avoiding a pull conflict, trying out a reset), you MUST restore every stashed change before ending the session.**
+
+1. After the operation that required the stash, run `git stash pop` (or `git stash apply` + `git stash drop`).
+2. Run `git status` and `git diff` to verify every file the user had modified is back in the working tree.
+3. If `git checkout HEAD -- <file>` was used to reset a mixed-WIP file, the WIP hunks in that file are NOT in any stash — you must re-apply them from a saved patch/diff before finishing.
+4. Never leave WIP in `git stash list` at end of session. The user's uncommitted work is sacred.
+
+**No rationalizations:**
+- "The WIP was breaking a test" → INVALID. Restore it anyway. The user owns it.
+- "I'll restore it in the next session" → INVALID. Do it now.
+- "Only the files I stashed got back, the rest is fine" → INVALID. `git checkout HEAD -- <file>` wipes WIP silently. Verify with `git diff` against the pre-session baseline.
+
 ---
 
 ## Landing the Plane (Session Completion)

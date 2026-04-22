@@ -151,6 +151,67 @@ test.describe('scroll to block on hash', () => {
     expect(diff).toBeLessThanOrEqual(10);
   });
 
+  test('scrolls to the hash block when content is rendered via api.blocks.render() after isReady', async ({ page }) => {
+    // Regression: reproduces the case where the editor is initialized with no
+    // `data` (e.g. SPA that fetches article content), and the caller invokes
+    // `api.blocks.render()` after isReady. The target block is not in the DOM
+    // when the hash is read, so the scroll must be deferred and retried once
+    // blocks.render() finishes.
+    await page.goto(TEST_PAGE_URL);
+    await page.addStyleTag({ content: 'body { min-height: 3000px; }' });
+
+    await page.evaluate((hash) => {
+      window.history.replaceState(null, '', '#' + hash);
+    }, TARGET_BLOCK_ID);
+
+    // Tear down any prior instance, create a new editor WITHOUT initial data
+    await page.evaluate(() => {
+      if (window.blokInstance) {
+        window.blokInstance.destroy?.();
+        window.blokInstance = undefined;
+      }
+      document.getElementById('blok')?.remove();
+      const div = document.createElement('div');
+      div.id = 'blok';
+      document.body.appendChild(div);
+    });
+
+    await page.waitForFunction(() => typeof window.Blok === 'function');
+
+    await page.evaluate(async () => {
+      const blok = new window.Blok({ holder: 'blok' });
+      window.blokInstance = blok;
+      await blok.isReady;
+    });
+
+    // At this point the target block is NOT in the DOM.
+    const hasBlockBeforeRender = await page.evaluate((blockId) => {
+      return !!document.querySelector(`[data-blok-id="${blockId}"]`);
+    }, TARGET_BLOCK_ID);
+
+    expect(hasBlockBeforeRender).toBe(false);
+
+    // Now render the real content via the public API (SPA fetch-then-render path).
+    await page.evaluate(async (blocks) => {
+      await window.blokInstance!.blocks.render({ blocks });
+    }, SCROLL_TEST_BLOCKS);
+
+    // The deferred hash scroll must fire after render() completes.
+    await waitForScrollToComplete(page);
+
+    const scrollY = await page.evaluate(() => window.scrollY);
+    expect(scrollY).toBeGreaterThan(0);
+
+    const isInViewport = await page.evaluate((blockId) => {
+      const el = document.querySelector(`[data-blok-id="${blockId}"]`);
+      if (!el) return false;
+      const rect = el.getBoundingClientRect();
+      return rect.top < window.innerHeight && rect.bottom > 0;
+    }, TARGET_BLOCK_ID);
+
+    expect(isInViewport).toBe(true);
+  });
+
   test('visually selects (highlights) the target block after scrolling', async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
     await page.addStyleTag({ content: 'body { min-height: 3000px; }' });

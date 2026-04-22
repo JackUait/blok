@@ -369,15 +369,13 @@ export class Paste extends Module {
   }
 
   private countAncestorBlocks(blockHolder: HTMLElement): number {
-    let count = 0;
-    let current = blockHolder.parentElement?.closest('[data-blok-element]') as HTMLElement | null;
+    const parent = blockHolder.parentElement?.closest('[data-blok-element]') as HTMLElement | null;
 
-    while (current) {
-      count += 1;
-      current = current.parentElement?.closest('[data-blok-element]') as HTMLElement | null;
+    if (!parent) {
+      return 0;
     }
 
-    return count;
+    return 1 + this.countAncestorBlocks(parent);
   }
 
   private clearDropIndicator(): void {

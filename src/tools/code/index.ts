@@ -187,6 +187,19 @@ export class CodeTool implements BlockTool {
         this.scheduleHighlight();
         this.scheduleDetection();
       });
+
+      // Chrome skips the `input` event on native paste into a plaintext-only
+      // contenteditable that already holds syntax-highlight spans — the DOM
+      // mutates but our gutter/highlight/detection refresh never runs.
+      // Re-run the refresh after the browser's native paste completes.
+      dom.codeElement.addEventListener('paste', () => {
+        requestAnimationFrame(() => {
+          this.syncTrailingBr();
+          this.updateGutter();
+          this.scheduleHighlight();
+          this.scheduleDetection();
+        });
+      });
     }
 
     dom.copyButton.addEventListener('click', () => this.copyCode());

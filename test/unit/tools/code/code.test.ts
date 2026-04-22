@@ -447,6 +447,36 @@ describe('CodeTool', () => {
 
       el.remove();
     });
+
+    it('gutter updates after native paste when input event does not fire', async () => {
+      // Regression: Chrome skips the `input` event on native paste into a
+      // plaintext-only contenteditable that contains syntax-highlight spans,
+      // leaving the gutter desynced from the text content.  A `paste` listener
+      // on the code element must refresh the gutter even when `input` is silent.
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'line 1' }));
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]')!;
+      expect(gutter.children).toHaveLength(1);
+
+      // Simulate native paste: mutate content synchronously, dispatch paste event,
+      // suppress any subsequent input event the way Chrome does in the bug.
+      codeEl.append(document.createTextNode('pasted 1\npasted 2\npasted 3'));
+      codeEl.dispatchEvent(new Event('paste', { bubbles: true }));
+
+      // Allow the paste listener's deferred refresh to run.
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve());
+      });
+
+      // "line 1" + "pasted 1" on line 1, then "pasted 2" and "pasted 3" on lines 2 and 3.
+      expect(gutter.children).toHaveLength(3);
+
+      el.remove();
+    });
   });
 
   describe('view mode', () => {

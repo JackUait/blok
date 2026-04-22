@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
+import { readMainCss } from './helpers/read-main-css';
 
-const css = readFileSync(resolve(__dirname, '../../../src/styles/main.css'), 'utf-8');
+const css = readMainCss();
 
 describe('Preflight CSS', () => {
 

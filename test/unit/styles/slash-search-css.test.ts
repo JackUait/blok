@@ -4,11 +4,11 @@
  * text so the transformed paragraph reads as a tight search pill rather than
  * a normal body-copy paragraph.
  */
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const css = readFileSync(resolve(__dirname, '../../../src/styles/main.css'), 'utf-8');
+import { readMainCss } from './helpers/read-main-css';
+
+const css = readMainCss();
 
 const findRuleBody = (source: string, selector: string): string | null => {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

@@ -1,0 +1,204 @@
+/*
+  Style isolation: prevent host-page styles from cascading into Blok's UI,
+  and prevent Blok's preflight from affecting the host page.
+
+  [data-blok-interface] — the editor wrapper element
+  [data-blok-popover]   — popover elements mounted directly to <body>
+
+  `all: revert` rolls every CSS property back to the browser's UA stylesheet
+  baseline, blocking ambient host-page styles from cascading in. Blok's own
+  utility classes (applied to the same elements or descendants) override this
+  because they appear later in the cascade.
+
+  The scoped preflight below replaces `@import 'tailwindcss/preflight.css'`.
+  It applies the same resets as Tailwind's preflight, but only inside Blok's
+  isolation roots — not to the entire host page.
+
+  All selectors use :where() (zero specificity) so user-authored CSS that
+  explicitly targets Blok elements wins without needing !important.
+*/
+
+/* --- Isolation boundaries --- */
+/*
+  Top-level isolation roots each use a different reset strategy:
+
+  [data-blok-interface=blok]
+    `all: initial !important` — main editor wrapper (outermost boundary).
+    Resets every property to its CSS initial value with !important priority,
+    blocking even `!important` host-page styles from cascading in.
+    However, `!important` declarations always beat normal declarations
+    regardless of specificity or source order, so Tailwind utility classes
+    applied to the wrapper element itself (e.g. `relative`, `z-1`) are
+    overridden. Properties that the wrapper needs must be explicitly
+    re-applied with `!important` below (same pattern as font-family/color).
+
+  [data-blok-popover]:not([data-blok-popover-inline])
+    Inherited-properties-only reset — toolbox/settings popovers, appended
+    to <body>. Unlike `[data-blok-interface=blok]`, the popover root receives
+    JS-applied inline styles (position, top, left, CSS variables) that must
+    NOT be overridden. Since only INHERITED CSS properties can flow in from
+    host page styles, we reset only inherited properties with `!important`
+    rather than using `all: initial !important` (which would override the
+    inline-normal layout styles set by JavaScript).
+
+  [data-blok-interface=tooltip]
+    Inherited-properties-only reset — tooltip element, appended directly to
+    <body>. Uses the same strategy as [data-blok-popover]: reset only inherited
+    CSS properties, not layout properties. The tooltip sets position, top, left,
+    z-index, and opacity via Tailwind utility classes and JS inline styles; using
+    `all: initial !important` here would reset `position` to `static`, which
+    removes the wrapper as a containing block. Without a positioned wrapper, the
+    `::before` pseudo-element (position:absolute; inset:0) would expand to fill
+    the entire viewport, darkening the page on hover of inline toolbar buttons.
+
+  [data-blok-interface=inline-toolbar] is intentionally excluded: it is a
+  positioned descendant inside the editor wrapper, not a top-level body
+  element. Applying `all: initial` there would undo Tailwind utilities
+  (e.g. `position: absolute`, `z-index`) that the inline toolbar relies on.
+
+  [data-blok-popover-inline] is also excluded: inline popovers (used by the
+  inline toolbar) live inside the editor wrapper and are already protected by
+  its isolation boundary. They must NOT be reset here — doing so breaks their
+  display/position/visibility. Only body-level popovers need isolation.
+*/
+[data-blok-interface=blok] {
+  all: initial !important;
+
+  /*
+    Re-apply layout properties that `all: initial` resets.
+    The wrapper must be a positioned containing block so that
+    absolutely-positioned children (inline toolbar, main toolbar)
+    resolve against it rather than the document root. Without this,
+    the inline toolbar renders off-screen when the page is scrolled.
+  */
+  position: relative !important;
+  box-sizing: border-box !important;
+  display: block !important;
+  z-index: var(--blok-z-relative) !important;
+}
+
+/*
+  RTL direction is set conditionally via JS (ui.ts) using the
+  data-blok-rtl attribute. `all: initial` resets direction to `ltr`,
+  so we must re-apply it with !important when the attribute is present.
+*/
+[data-blok-interface=blok][data-blok-rtl=true] {
+  direction: rtl !important;
+}
+
+/*
+  Native Popover API: the UA stylesheet for `[popover]` imposes modal-dialog
+  defaults (position: fixed; inset: 0; margin: auto; width: fit-content;
+  border: solid; padding: 0.25em; background: Canvas; overflow: auto). Those
+  defaults fight with Blok's own popover layout, which positions the content
+  via inline `top`/`left` and styles the inner container directly.
+
+  Every blok element promoted to the Top Layer goes through
+  `src/components/utils/top-layer.ts`, which tags the element with
+  `data-blok-top-layer="true"`. Keying the reset off that marker means a
+  single rule covers every current and future caller — no per-element CSS
+  update required. Background is intentionally NOT reset here: at specificity
+  0,2,0 it would override author background utilities (e.g. tailwind's
+  `bg-tooltip-bg` at 0,1,0). Components that need a transparent background
+  opt in via their own selector (see the popover-specific rule below).
+*/
+[data-blok-top-layer][popover] {
+  inset: auto;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  overflow: visible;
+}
+
+/*
+  Popover wrapper paints background on its inner container, so wipe the UA
+  Canvas background here. Tooltip paints background directly on the wrapper
+  via tailwind's `bg-tooltip-bg`, so it must NOT inherit this rule.
+*/
+[data-blok-popover][popover] {
+  background: transparent;
+  color: inherit;
+}
+
+/* Font family defaults — hoisted to :root so they resolve anywhere (including popovers). */
+:root {
+  --blok-font-sans: 'Inter', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --blok-font-serif: 'Source Serif 4', 'Noto Serif', Georgia, ui-serif, serif;
+  --blok-font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Monaco, 'Courier New', monospace;
+  /* Note: Load 'Permanent Marker' from Google Fonts or @fontsource for best results */
+  --blok-font-handwriting: 'Permanent Marker', cursive;
+}
+
+/* Font family — user-configurable via config.style.fontFamily / fontFamilySans / etc. */
+[data-blok-interface=blok],
+[data-blok-interface=tooltip] {
+  font-family: var(--blok-font-family, var(--blok-font-sans)) !important;
+  color: var(--blok-text-primary) !important;
+}
+
+/*
+  Reset Tailwind CSS custom properties that host-page styles may override on :root.
+  `all: initial` does NOT reset CSS custom properties (per spec), so we must
+  explicitly restore each --radius-* token to Tailwind v4's built-in defaults.
+  Without these resets, a host page that sets e.g. `--radius-lg: 20px` on :root
+  will cause Blok's `rounded-lg` utility to resolve to 20px instead of 8px.
+*/
+[data-blok-interface=blok],
+[data-blok-interface=tooltip],
+[data-blok-popover] {
+  --radius: 0.25rem;
+  --radius-xs: 0.125rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+  --radius-4xl: 2rem;
+}
+
+/*
+  Reset inherited CSS properties on body-level popover and tooltip roots.
+  Only inherited properties can cascade in from host-page styles;
+  non-inherited properties (position, top, left, display, width, etc.)
+  cannot cascade and must NOT be reset here because JavaScript and Tailwind
+  utility classes set them as normal author/inline styles, which would be
+  overridden by author-!important.
+*/
+[data-blok-popover]:not([data-blok-popover-inline]),
+[data-blok-interface=tooltip] {
+  color: initial !important;
+  font-family: var(--blok-font-family, var(--blok-font-sans)) !important;
+  font-size: initial !important;
+  font-weight: initial !important;
+  font-style: initial !important;
+  font-variant: initial !important;
+  font-stretch: initial !important;
+  line-height: initial !important;
+  letter-spacing: initial !important;
+  word-spacing: initial !important;
+  text-align: initial !important;
+  text-indent: initial !important;
+  text-transform: initial !important;
+  text-decoration: initial !important;
+  text-shadow: initial !important;
+  white-space: initial !important;
+  word-break: initial !important;
+  overflow-wrap: initial !important;
+  cursor: initial !important;
+  pointer-events: initial !important;
+  user-select: initial !important;
+  direction: initial !important;
+  list-style: initial !important;
+  quotes: initial !important;
+  border-collapse: initial !important;
+  border-spacing: initial !important;
+  empty-cells: initial !important;
+  caption-side: initial !important;
+  scrollbar-width: initial !important;
+  scrollbar-color: initial !important;
+}

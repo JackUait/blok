@@ -14,11 +14,11 @@
  * future floating-UI components (dialogs, dropdowns, picker menus) inherit
  * the safety net automatically — no per-component CSS update required.
  */
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const css = readFileSync(resolve(__dirname, '../../../src/styles/main.css'), 'utf-8');
+import { readMainCss } from './helpers/read-main-css';
+
+const css = readMainCss();
 
 const RESET_SELECTOR = '[data-blok-top-layer][popover]';
 

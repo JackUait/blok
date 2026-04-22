@@ -1,0 +1,62 @@
+/*
+  Global @keyframes for Blok UI animations.
+
+  Keyframes live in the animation-name namespace and do not participate in
+  the cascade. Grouped here so their call sites (checklist pop, spring-load
+  flash, emoji picker, property popover, image shimmer/retry) stay lean.
+*/
+
+@keyframes blok-checkbox-pop {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.18); }
+  65%  { transform: scale(0.9); }
+  82%  { transform: scale(1.07); }
+  100% { transform: scale(1); }
+}
+
+@keyframes spring-loaded-flash {
+  0% { background-color: var(--blok-selection); }
+  100% { background-color: transparent; }
+}
+
+@keyframes blok-emoji-picker-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes blok-emoji-empty-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes blok-prop-popover-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes blok-image-shimmer {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+
+@keyframes blok-image-retry-spin {
+  to { transform: rotate(360deg); }
+}

@@ -5,11 +5,11 @@
  * other two used `var(--blok-radius-lg)`, making the states look slightly
  * different when cycled in the same block.
  */
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const css = readFileSync(resolve(__dirname, '../../../src/styles/main.css'), 'utf-8');
+import { readMainCss } from './helpers/read-main-css';
+
+const css = readMainCss();
 
 const findRuleBody = (source: string, selector: string): string | null => {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

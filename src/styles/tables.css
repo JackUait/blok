@@ -1,0 +1,154 @@
+/**
+ * Table cell block wrapper overrides
+ * Strip all nested spacing so only the cell's own padding (py-1 px-2) provides spacing.
+ * Targets: block wrapper (py/my), .blok-block (py/px), and tool elements (mt/mb).
+ */
+[data-blok-table-cell-blocks] > [data-blok-element] {
+  @apply py-0 my-0;
+}
+
+[data-blok-table-cell-blocks] .blok-block {
+  @apply p-0 m-0 min-h-[1.6em];
+}
+
+/* List items inside table cells use tight 2px top/bottom spacing */
+[data-blok-table-cell-blocks] [data-blok-tool="list"] {
+  @apply py-0 mt-[2px] mb-[2px];
+}
+
+/* ─── Cell content placement ──────────────────────────────────── */
+
+[data-blok-cell-placement="top-center"] {
+  align-items: center;
+}
+
+[data-blok-cell-placement="top-right"] {
+  align-items: flex-end;
+}
+
+[data-blok-cell-placement="middle-left"] {
+  justify-content: center;
+}
+
+[data-blok-cell-placement="middle-center"] {
+  align-items: center;
+  justify-content: center;
+}
+
+[data-blok-cell-placement="middle-right"] {
+  align-items: flex-end;
+  justify-content: center;
+}
+
+[data-blok-cell-placement="bottom-left"] {
+  justify-content: flex-end;
+}
+
+[data-blok-cell-placement="bottom-center"] {
+  align-items: center;
+  justify-content: flex-end;
+}
+
+[data-blok-cell-placement="bottom-right"] {
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+
+/**
+ * Exclude bare 'color' from transition-property inside table cells.
+ * StyleManager applies transition-colors (which includes 'color') for smooth
+ * selection-state changes, but inside table cells inherited text-color changes
+ * trigger a 150ms flash from black → target. Keep all other transition
+ * properties so background-color selection highlighting still animates.
+ */
+[data-blok-table-cell] [data-blok-element-content] {
+  transition-property: background-color, border-color, outline-color,
+    text-decoration-color, fill, stroke, --tw-gradient-from,
+    --tw-gradient-via, --tw-gradient-to;
+}
+
+/**
+ * Table heading styles
+ * Applied to first row (heading row) and first column (heading column) cells
+ */
+[data-blok-table-heading] [data-blok-table-cell],
+[data-blok-table-heading-col] {
+  @apply font-semibold;
+  background-color: var(--blok-table-heading-bg);
+}
+
+/**
+ * Table scroll haze overlays
+ * Gradient indicators that show horizontal scroll availability
+ */
+[data-blok-table-haze][data-blok-table-haze-visible] {
+  @apply opacity-100;
+}
+
+/**
+ * Dark theme overrides for table UI chrome.
+ * Grip handles, add-row/col pills, and scroll haze all use hardcoded
+ * Tailwind light-gray/white classes that are too bright on dark backgrounds.
+ * Rules are written for both dark entry points (media query + explicit attr).
+ */
+@media (prefers-color-scheme: dark) {
+  /* Grip pills — collapsed/idle state */
+  :root:not([data-blok-theme="light"]) [data-blok-interface] [data-blok-table-grip]:not(.bg-gray-200):not(.bg-blue-500) {
+    background-color: var(--blok-table-grip-bg);
+  }
+  /* Grip pills — hover-expanded state */
+  :root:not([data-blok-theme="light"]) [data-blok-interface] [data-blok-table-grip].bg-gray-200 {
+    background-color: var(--blok-table-grip-hover-bg);
+  }
+  /* Grip dot SVG (exclude active/blue state — text-white must win there) */
+  :root:not([data-blok-theme="light"]) [data-blok-interface] [data-blok-table-grip]:not(.bg-blue-500) svg {
+    color: var(--blok-table-grip-dot);
+  }
+  /* Add row/col pill: border + subtle rest-state fill */
+  :root:not([data-blok-theme="light"]) [data-blok-interface] :is([data-blok-table-add-row], [data-blok-table-add-col]) .border-gray-300 {
+    border-color: var(--blok-table-add-pill-border);
+    background-color: var(--blok-table-add-pill-bg);
+  }
+  /* Add row/col pill hover background */
+  :root:not([data-blok-theme="light"]) [data-blok-interface] :is([data-blok-table-add-row], [data-blok-table-add-col]):hover .border-gray-300 {
+    background-color: var(--blok-table-add-pill-bg-hover);
+  }
+  /* Add row/col icon color */
+  :root:not([data-blok-theme="light"]) [data-blok-interface] :is([data-blok-table-add-row], [data-blok-table-add-col]) .border-gray-300 svg {
+    color: var(--blok-table-add-pill-icon);
+  }
+  /* Scroll haze: dark background gradient instead of white */
+  :root:not([data-blok-theme="light"]) [data-blok-interface] [data-blok-table-haze="left"] {
+    background-image: linear-gradient(to right, var(--blok-dark), transparent);
+  }
+  :root:not([data-blok-theme="light"]) [data-blok-interface] [data-blok-table-haze="right"] {
+    background-image: linear-gradient(to left, var(--blok-dark), transparent);
+  }
+}
+
+/* Explicit dark theme attribute — same overrides */
+[data-blok-theme="dark"] [data-blok-interface] [data-blok-table-grip]:not(.bg-gray-200):not(.bg-blue-500) {
+  background-color: var(--blok-table-grip-bg);
+}
+[data-blok-theme="dark"] [data-blok-interface] [data-blok-table-grip].bg-gray-200 {
+  background-color: var(--blok-table-grip-hover-bg);
+}
+[data-blok-theme="dark"] [data-blok-interface] [data-blok-table-grip]:not(.bg-blue-500) svg {
+  color: var(--blok-table-grip-dot);
+}
+[data-blok-theme="dark"] [data-blok-interface] :is([data-blok-table-add-row], [data-blok-table-add-col]) .border-gray-300 {
+  border-color: var(--blok-table-add-pill-border);
+  background-color: var(--blok-table-add-pill-bg);
+}
+[data-blok-theme="dark"] [data-blok-interface] :is([data-blok-table-add-row], [data-blok-table-add-col]):hover .border-gray-300 {
+  background-color: var(--blok-table-add-pill-bg-hover);
+}
+[data-blok-theme="dark"] [data-blok-interface] :is([data-blok-table-add-row], [data-blok-table-add-col]) .border-gray-300 svg {
+  color: var(--blok-table-add-pill-icon);
+}
+[data-blok-theme="dark"] [data-blok-interface] [data-blok-table-haze="left"] {
+  background-image: linear-gradient(to right, var(--blok-dark), transparent);
+}
+[data-blok-theme="dark"] [data-blok-interface] [data-blok-table-haze="right"] {
+  background-image: linear-gradient(to left, var(--blok-dark), transparent);
+}

@@ -1,0 +1,1176 @@
+/* ═══════════════════════════════════════════════════════
+   Database / Kanban board
+   ═══════════════════════════════════════════════════════ */
+
+/**
+ * Board area — scrollable padding on both sides so columns can be
+ * scrolled all the way to either edge of the editor.  The initial
+ * scrollLeft (set in DatabaseTool.rendered()) positions the first
+ * column at the content-area left edge.
+ */
+[data-blok-database-board] {
+  padding-left: max(0px, calc((100% - var(--max-width-content)) / 2));
+  padding-right: max(0px, calc((100% - var(--max-width-content)) / 2));
+
+  /* macOS-style scrollbar — thin, rounded, visible on hover/scroll */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+[data-blok-database-board]:hover {
+  scrollbar-color: color-mix(in srgb, currentColor 15%, transparent) transparent;
+}
+[data-blok-database-board]::-webkit-scrollbar {
+  height: 8px;
+}
+[data-blok-database-board]::-webkit-scrollbar-track {
+  background: transparent;
+}
+[data-blok-database-board]::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: var(--blok-space-1);
+}
+[data-blok-database-board]:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, currentColor 15%, transparent);
+}
+[data-blok-database-board]::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, currentColor 25%, transparent);
+}
+
+/**
+ * Column background tint — a subtle fill so columns read as lanes.
+ */
+[data-blok-database-column] {
+  background-color: var(--blok-database-column-bg);
+  border-radius: var(--blok-space-2-5);
+  padding: var(--blok-space-2);
+}
+
+/**
+ * Column header — grab cursor to indicate draggable area.
+ */
+[data-blok-database-column-header] {
+  cursor: grab;
+}
+
+/**
+ * Cards — elevated surface with subtle border and shadow.
+ */
+[data-blok-database-card] {
+  background-color: var(--blok-database-card-bg);
+  box-shadow: var(--blok-database-card-shadow);
+  border: 1px solid var(--blok-database-card-border);
+  border-radius: var(--blok-space-2);
+  transition: background-color 150ms ease, box-shadow 150ms ease, border-color 150ms ease, outline-color 150ms ease;
+}
+
+[data-blok-database-card]:hover {
+  background-color: var(--blok-database-card-bg-hover);
+}
+
+[data-blok-database-card-active] {
+  background-color: var(--blok-database-card-bg-hover);
+  outline: 2px solid var(--blok-database-card-border-active);
+  outline-offset: -1px;
+}
+
+/**
+ * Colored columns — cards use a transparent overlay so the column
+ * background color shows through, matching the "New page" button.
+ */
+[data-blok-database-column][data-color] [data-blok-database-card] {
+  background-color: var(--blok-database-card-colored-overlay);
+  box-shadow: none;
+  border-color: var(--blok-database-card-colored-border);
+}
+
+[data-blok-database-column][data-color] [data-blok-database-card]:hover {
+  background-color: var(--blok-database-card-colored-overlay-hover);
+}
+
+/**
+ * During drag — smooth card displacement transitions.
+ */
+[data-blok-database-dragging] [data-blok-database-card] {
+  transition: box-shadow 150ms ease, border-color 150ms ease, margin-top 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+[data-blok-database-dragging] [data-blok-database-cards] {
+  transition: padding-bottom 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/**
+ * During column reorder — smooth gap displacement and grab cursor.
+ */
+[data-blok-database-column-reordering] {
+  cursor: grabbing;
+}
+
+[data-blok-database-column-reordering] [data-blok-database-column] {
+  transition: margin-left 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+[data-blok-database-column-reordering] [data-blok-database-board] {
+  transition: padding-right 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/**
+ * Card action group — edit + menu buttons revealed on hover.
+ */
+[data-blok-database-card-actions] {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: var(--blok-space-0-5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+  background: var(--blok-database-card-actions-bg);
+  border-radius: var(--blok-space-2);
+  padding: var(--blok-space-0-5);
+}
+
+[data-blok-database-card]:hover [data-blok-database-card-actions],
+[data-blok-database-card][data-popover-open] [data-blok-database-card-actions],
+[data-blok-database-card-actions]:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+[data-blok-database-edit-card],
+[data-blok-database-card-menu] {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--blok-database-card-actions-icon);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--blok-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 120ms ease, color 120ms ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+[data-blok-database-edit-card]:hover,
+[data-blok-database-card-menu]:hover {
+  background: var(--blok-database-card-menu-hover-bg);
+  color: var(--blok-text-on-dark);
+}
+
+/**
+ * Inline title edit input inside a card.
+ */
+[data-blok-database-card-title-input] {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--blok-database-card-actions-divider);
+  color: inherit;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0;
+}
+
+/**
+ * Add card / Add column buttons — muted text with hover fill.
+ */
+[data-blok-database-add-card],
+[data-blok-database-add-column] {
+  background: none;
+  border: 1px solid var(--blok-database-add-border);
+  cursor: pointer;
+  color: var(--blok-database-add-text);
+  font-size: 14px;
+  padding: var(--blok-space-1-5) var(--blok-space-2);
+  border-radius: var(--blok-space-2);
+  text-align: left;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+[data-blok-database-add-card]:hover,
+[data-blok-database-add-column]:hover {
+  background-color: var(--blok-database-add-hover-bg);
+  color: var(--blok-text-primary, inherit);
+}
+
+/* In colored columns, add-card keeps the accent color on hover too */
+[data-blok-database-column][data-color] [data-blok-database-add-card]:hover {
+  background-color: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+[data-blok-database-add-column] {
+  white-space: nowrap;
+  align-self: flex-start;
+  flex-shrink: 0;
+  padding: var(--blok-space-2-5) var(--blok-space-3);
+  border-radius: var(--blok-space-2);
+}
+
+/**
+ * Column header delete button — hidden until column header hover.
+ */
+[data-blok-database-delete-column] {
+  opacity: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--blok-database-delete-text);
+  font-size: 14px;
+  line-height: 1;
+  padding: var(--blok-space-0-5) var(--blok-space-1);
+  border-radius: var(--blok-radius-sm);
+  flex-shrink: 0;
+  transition: opacity 120ms ease, color 120ms ease;
+}
+
+[data-blok-database-column-header]:hover [data-blok-database-delete-column] {
+  opacity: 1;
+}
+
+[data-blok-database-delete-column]:hover {
+  color: var(--blok-database-delete-hover-text);
+}
+
+/**
+ * Column header pill — rounded badge containing dot + title.
+ * When the column has a color, the pill gets a colored background (set inline via JS).
+ * Sized to content only — never stretches to fill available space.
+ */
+[data-blok-database-column-pill] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1-25);
+  padding: var(--blok-space-0-5) var(--blok-space-1-75) var(--blok-space-0-5) var(--blok-space-1-25);
+  border-radius: var(--blok-space-5);
+  flex: 0 0 auto;
+  min-width: 0;
+  width: fit-content;
+}
+
+/**
+ * In dark theme, colored pills use white text for legibility over the
+ * saturated background (overrides the inline color set by JS).
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-blok-theme="light"]) [data-blok-database-column][data-color] [data-blok-database-column-pill] {
+    color: var(--blok-database-column-pill-text) !important;
+  }
+}
+
+[data-blok-theme="dark"] [data-blok-database-column][data-color] [data-blok-database-column-pill] {
+  color: var(--blok-database-column-pill-text) !important;
+}
+
+/**
+ * Column status dot — solid circle using the accent text color.
+ */
+[data-blok-database-column-dot] {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/**
+ * Column title text — uppercase status-label style, never truncate.
+ */
+[data-blok-database-column-title],
+[data-blok-database-column-title-input] {
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 400;
+  text-transform: capitalize;
+  letter-spacing: 0.04em;
+}
+
+[data-blok-database-column-title-input] {
+  border: none;
+  outline: none;
+  padding: 0;
+  min-width: 0;
+  field-sizing: content;
+}
+
+/**
+ * Card title text — clamp to two lines.
+ */
+[data-blok-database-card-title] {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+[data-blok-database-card-title][data-placeholder] {
+  color: var(--blok-database-card-placeholder);
+  font-style: normal;
+}
+
+[data-blok-database-card][data-empty] {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/**
+ * Drawer — base layout (fixed right panel) with slide-in animation.
+ */
+[data-blok-database-drawer] {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 0;
+  z-index: var(--blok-z-drawer);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--blok-popover-border);
+  background-color: var(--blok-popover-bg);
+  box-shadow: var(--blok-shadow-drawer-side);
+  transition: width 200ms ease;
+}
+
+/**
+ * Drawer toolbar — thin top bar with close button.
+ */
+[data-blok-database-drawer-toolbar] {
+  display: flex;
+  align-items: center;
+  padding: var(--blok-space-2) var(--blok-space-3);
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--blok-database-drawer-border);
+}
+
+/**
+ * Drawer close button — double-chevron icon.
+ */
+[data-blok-database-drawer-close] {
+  display: inline-flex;
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--blok-space-1);
+  border-radius: var(--blok-space-1);
+  color: var(--blok-database-add-text);
+  gap: -4px;
+}
+
+[data-blok-database-drawer-close]:hover {
+  background-color: var(--blok-database-drawer-border);
+}
+
+[data-blok-database-drawer-close] svg {
+  width: 14px;
+  height: 14px;
+  margin-left: -6px;
+}
+
+[data-blok-database-drawer-close] svg:first-child {
+  margin-left: 0;
+}
+
+/**
+ * Drawer scrollable content area.
+ */
+[data-blok-database-drawer-content] {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--blok-space-10) 60px var(--blok-space-5);
+}
+
+/**
+ * Drawer title — large, Notion-style textarea that auto-resizes.
+ */
+[data-blok-database-drawer-title] {
+  display: block;
+  width: 100%;
+  font-size: 32px;
+  font-weight: 700;
+  border: none;
+  outline: none;
+  background-color: transparent;
+  color: inherit;
+  padding: 0;
+  margin-bottom: var(--blok-space-3);
+  line-height: 1.2;
+  resize: none;
+  overflow: hidden;
+  font-family: inherit;
+}
+
+[data-blok-database-drawer-title]::placeholder {
+  color: var(--blok-database-add-text);
+}
+
+/**
+ * Drawer properties section.
+ */
+[data-blok-database-drawer-props] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-1);
+  margin-bottom: var(--blok-space-4);
+}
+
+/**
+ * Drawer property row — label + value pair.
+ */
+[data-blok-database-drawer-prop-row] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  min-height: 32px;
+  font-size: 14px;
+}
+
+/**
+ * Drawer property label — muted left column.
+ */
+[data-blok-database-drawer-prop-label] {
+  color: var(--blok-database-add-text);
+  min-width: 100px;
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+/**
+ * Drawer status pill badge — colored chip.
+ */
+[data-blok-database-drawer-status-pill] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  padding: var(--blok-space-0-5) var(--blok-space-2);
+  border-radius: var(--blok-space-1);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/**
+ * Drawer status dot — small circle inside pill.
+ */
+[data-blok-database-drawer-status-dot] {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/**
+ * Drawer divider.
+ */
+[data-blok-database-drawer] hr {
+  border: none;
+  border-top: 1px solid var(--blok-database-drawer-border);
+  margin: 0 0 var(--blok-space-1);
+}
+
+/**
+ * Drawer editor holder.
+ */
+[data-blok-database-drawer-editor] {
+  flex: 1;
+  min-height: 200px;
+  margin-left: -53px;
+}
+
+/**
+ * Add card — match card height and visual rhythm.
+ */
+[data-blok-database-add-card] {
+  margin-top: var(--blok-space-1-5);
+  padding: var(--blok-space-2-5) var(--blok-space-3);
+  border-radius: var(--blok-space-3);
+}
+
+[data-blok-database-add-card-icon] {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+[data-blok-database-add-card-icon] svg {
+  width: 18px;
+  height: 18px;
+}
+
+/**
+ * Card count badge — muted counter after column title.
+ */
+[data-blok-database-column-count] {
+  color: var(--blok-database-add-text);
+  font-size: 13px;
+  font-weight: 400;
+  margin-left: var(--blok-space-0-5);
+  flex-shrink: 0;
+}
+
+/**
+ * Empty column placeholder — centered muted text.
+ */
+[data-blok-database-empty-placeholder] {
+  color: var(--blok-database-add-text);
+  font-size: 13px;
+  text-align: center;
+  padding: var(--blok-space-3) 0;
+}
+
+/**
+ * Drawer — ensure editor tools toolbar doesn't overflow.
+ */
+[data-blok-database-drawer-editor] .ce-toolbar {
+  left: 0;
+  right: 0;
+}
+
+/* Database Title */
+[data-blok-database-title] {
+  padding-left: max(0px, calc((100% - var(--max-width-content)) / 2));
+  padding-right: max(0px, calc((100% - var(--max-width-content)) / 2));
+}
+
+/* Database Tab Bar */
+[data-blok-database-tab-bar] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-0-5);
+  padding: var(--blok-space-1) 0 var(--blok-space-2);
+  padding-left: max(0px, calc((100% - var(--max-width-content)) / 2));
+}
+
+[data-blok-database-title-row] {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--blok-space-1);
+}
+
+/* Single-view mode: move centering offset to the row, strip it from the title
+   so the + button sits exactly 4px after the title text */
+[data-blok-database-title-row][data-single-view] {
+  padding-left: max(0px, calc((100% - var(--max-width-content)) / 2));
+}
+
+[data-blok-database-title-row][data-single-view] [data-blok-database-title] {
+  flex: 0 1 auto;
+  min-width: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+[data-blok-database-title-row][data-single-view] [data-blok-database-add-view] {
+  margin-left: var(--blok-space-1);
+}
+
+/* When + button is inside the title row, show it on row hover */
+[data-blok-database-title-row]:hover [data-blok-database-add-view],
+[data-blok-database-title-row] [data-blok-database-add-view][data-popover-open] {
+  opacity: 1;
+}
+
+[data-blok-database-tab] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  padding: var(--blok-space-2) var(--blok-space-4);
+  border-radius: var(--blok-space-2-5);
+  cursor: grab;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--blok-database-tab-text);
+  user-select: none;
+  white-space: nowrap;
+  transition: background-color 120ms ease;
+}
+
+[data-blok-database-tab-bar][data-dragging] [data-blok-database-tab] {
+  cursor: grabbing;
+}
+
+[data-blok-database-tab] svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+[data-blok-database-tab]:hover {
+  background-color: var(--blok-database-tab-bg-hover);
+}
+
+[data-blok-database-tab][data-active] {
+  background-color: var(--blok-database-tab-bg-active);
+  color: var(--blok-database-tab-text-active);
+}
+
+[data-blok-database-add-view] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: none;
+  border-radius: var(--blok-space-2);
+  cursor: pointer;
+  color: var(--blok-database-tab-text);
+  margin-left: var(--blok-space-0-5);
+  transition: background-color 120ms ease, opacity 120ms ease;
+  opacity: 0;
+}
+
+[data-blok-database-add-view] svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+[data-blok-database-tab-bar]:hover [data-blok-database-add-view],
+[data-blok-database-tab-bar][data-popover-open] [data-blok-database-add-view],
+[data-blok-database-add-view][data-popover-open] {
+  opacity: 1;
+}
+
+[data-blok-database-add-view]:hover,
+[data-blok-database-add-view][data-popover-open] {
+  background-color: var(--blok-database-tab-bg-hover);
+}
+
+[data-blok-database-tab-more] {
+  padding: var(--blok-space-1) var(--blok-space-2-5);
+  border-radius: var(--blok-radius-md);
+  font-size: 13px;
+  color: var(--blok-database-tab-text);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 120ms ease;
+}
+
+[data-blok-database-tab-more]:hover {
+  background-color: var(--blok-database-tab-bg-hover);
+}
+
+/* Overflow dropdown */
+[data-blok-database-tab-overflow-dropdown] {
+  background: var(--blok-database-popover-bg);
+  border-radius: var(--blok-space-2-5);
+  box-shadow: var(--blok-database-popover-shadow);
+  padding: var(--blok-space-1-5);
+}
+
+/* View option items (rendered as Html items inside PopoverDesktop) */
+[data-blok-database-view-popover-heading] {
+  padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--blok-database-tab-text);
+}
+
+[data-blok-database-view-option] {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--blok-space-2-5);
+  padding: var(--blok-space-1-75) var(--blok-space-2);
+  border-radius: var(--blok-radius-md);
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+[data-blok-database-view-option]:hover {
+  background-color: var(--blok-database-popover-hover);
+}
+
+[data-blok-database-view-option-icon] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  background: var(--blok-database-popover-hover);
+  color: var(--blok-database-tab-text-active);
+  flex-shrink: 0;
+}
+
+[data-blok-database-view-option-icon] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-view-option-text] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-border-width-hairline);
+  min-width: 0;
+}
+
+[data-blok-database-view-option-label] {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--blok-database-tab-text-active);
+  line-height: 1.3;
+}
+
+[data-blok-database-view-option-desc] {
+  font-size: 11px;
+  color: var(--blok-database-tab-text);
+  line-height: 1.3;
+}
+
+/* Overflow dropdown items */
+[data-blok-database-tab-overflow-item] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2-5);
+  padding: var(--blok-space-1-75) var(--blok-space-2-5);
+  border-radius: var(--blok-radius-md);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 400;
+  transition: background-color 120ms ease;
+}
+
+[data-blok-database-tab-overflow-item]:hover {
+  background-color: var(--blok-database-popover-hover);
+}
+
+[data-blok-database-tab-overflow-item][data-active] {
+  background-color: var(--blok-database-tab-bg-active);
+}
+
+[data-blok-database-tab-overflow-new] {
+  padding: var(--blok-space-1-75) var(--blok-space-2-5);
+  font-size: 14px;
+  color: var(--blok-database-tab-text);
+  cursor: pointer;
+  border-radius: var(--blok-radius-md);
+  transition: background-color 120ms ease;
+}
+
+[data-blok-database-tab-overflow-new]:hover {
+  background-color: var(--blok-database-popover-hover);
+}
+
+[data-blok-database-tab-overflow-separator] {
+  height: 1px;
+  margin: var(--blok-space-1) var(--blok-space-2-5);
+  background-color: var(--blok-database-drawer-border);
+}
+
+/* Tab rename input */
+[data-blok-database-tab-rename-input] {
+  border: 1px solid var(--blok-database-drawer-border);
+  border-radius: var(--blok-space-1);
+  padding: var(--blok-space-0-5) var(--blok-space-1-5);
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--blok-database-popover-bg);
+  color: var(--blok-database-tab-text-active);
+  outline: none;
+  width: 80px;
+}
+
+/* Tab ghost during drag */
+[data-blok-database-tab-ghost] {
+  box-shadow: var(--blok-shadow-tab-ghost);
+  border-radius: var(--blok-radius-md);
+  background: var(--blok-database-tab-bg-active);
+}
+
+/* Board container for slide transitions */
+[data-blok-database-board-container] {
+  position: relative;
+  overflow: hidden;
+}
+
+/* ─── List View ──────────────────────────────────────── */
+
+/**
+ * List wrapper — constrained to content width, centered like the editor body.
+ * Uses the same padding trick as the tab bar and board view.
+ */
+[data-blok-database-list] {
+  display: flex;
+  flex-direction: column;
+  padding-left: max(0px, calc((100% - var(--max-width-content)) / 2));
+  padding-right: max(0px, calc((100% - var(--max-width-content)) / 2));
+}
+
+/**
+ * List row — horizontal flex item. Hover reveals the delete button and
+ * highlights the row with a subtle background fill, matching Notion style.
+ */
+[data-blok-database-list-row] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  padding: var(--blok-space-1-25) var(--blok-space-2);
+  border-radius: var(--blok-space-1);
+  cursor: pointer;
+  position: relative;
+  font-size: 14px;
+  transition: background-color 80ms ease;
+  /* Thin rule between rows */
+  border-bottom: 1px solid transparent;
+}
+
+[data-blok-database-list-row]:not(:last-child) {
+  border-bottom-color: color-mix(in srgb, currentColor 5%, transparent);
+}
+
+[data-blok-database-list-row]:hover {
+  background-color: var(--blok-database-add-hover-bg);
+}
+
+/**
+ * Row title — fills available space, truncates overflow.
+ */
+[data-blok-database-list-row-title] {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.5;
+  min-width: 0;
+}
+
+[data-blok-database-list-row-title][data-placeholder] {
+  color: var(--blok-database-add-text);
+  font-style: italic;
+}
+
+/**
+ * Properties area — flex row of badges + open button, right-aligned.
+ */
+[data-blok-database-list-row-properties] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  flex-shrink: 0;
+}
+
+/**
+ * Property badge — compact colored pill.
+ */
+[data-blok-database-list-row-property] {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  padding: var(--blok-space-0-5) var(--blok-space-1-75);
+  border-radius: var(--blok-space-1);
+  white-space: nowrap;
+  background: var(--blok-database-add-hover-bg);
+  color: var(--blok-database-tab-text-active);
+}
+
+/**
+ * Open-row button — muted arrow, visible on hover.
+ */
+[data-blok-database-list-row-open] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  opacity: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: var(--blok-space-1);
+  color: var(--blok-database-add-text);
+  flex-shrink: 0;
+  transition: opacity 80ms ease, background-color 80ms ease, color 80ms ease;
+}
+
+[data-blok-database-list-row-open]::after {
+  content: '';
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-top: 2px solid currentColor;
+  transform: rotate(45deg);
+  border-radius: var(--blok-border-width-hairline);
+  flex-shrink: 0;
+}
+
+[data-blok-database-list-row]:hover [data-blok-database-list-row-open] {
+  opacity: 1;
+}
+
+[data-blok-database-list-row-open]:hover {
+  background-color: var(--blok-database-add-hover-bg);
+  color: var(--blok-database-tab-text-active);
+}
+
+/**
+ * Delete row button — hidden until hover, inline after the open button.
+ */
+[data-blok-database-list-row-properties] [data-blok-database-delete-row] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  opacity: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: var(--blok-radius-sm);
+  color: var(--blok-database-delete-text);
+  font-size: 15px;
+  line-height: 1;
+  padding: 0;
+  flex-shrink: 0;
+  transition: opacity 80ms ease, color 80ms ease, background-color 80ms ease;
+}
+
+[data-blok-database-list-row]:hover [data-blok-database-delete-row] {
+  opacity: 1;
+}
+
+[data-blok-database-list-row-properties] [data-blok-database-delete-row]:hover {
+  color: var(--blok-database-delete-hover-text);
+  background-color: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+/**
+ * Add-row button — muted "+ New row" at bottom of list.
+ */
+[data-blok-database-list] > [data-blok-database-add-row],
+[data-blok-database-list-rows] ~ [data-blok-database-add-row] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  width: 100%;
+  padding: var(--blok-space-1-5) var(--blok-space-2);
+  background: none;
+  border: none;
+  border-radius: var(--blok-space-2);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--blok-database-add-text);
+  text-align: left;
+  transition: background-color 80ms ease, color 80ms ease;
+  margin-top: var(--blok-space-0-5);
+}
+
+[data-blok-database-list] > [data-blok-database-add-row]:hover,
+[data-blok-database-list-rows] ~ [data-blok-database-add-row]:hover {
+  background-color: var(--blok-database-add-hover-bg);
+  color: var(--blok-text-primary, inherit);
+}
+
+/**
+ * Group container — stacked sections when grouped by a select property.
+ */
+[data-blok-database-list-group] {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--blok-space-1);
+}
+
+/**
+ * Group header — clickable row containing toggle chevron, dot, title, count.
+ */
+[data-blok-database-list-group-header] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
+  cursor: pointer;
+  border-radius: var(--blok-space-1);
+  user-select: none;
+  transition: background-color 80ms ease;
+}
+
+[data-blok-database-list-group-header]:hover {
+  background-color: var(--blok-database-add-hover-bg);
+}
+
+/**
+ * Collapse toggle — small chevron, rotates when expanded/collapsed.
+ */
+[data-blok-database-list-group-toggle] {
+  font-size: 10px;
+  color: var(--blok-database-add-text);
+  line-height: 1;
+  flex-shrink: 0;
+  width: 12px;
+  text-align: center;
+  transition: color 80ms ease;
+}
+
+[data-blok-database-list-group-header]:hover [data-blok-database-list-group-toggle] {
+  color: var(--blok-database-tab-text-active);
+}
+
+/**
+ * Status dot — small colored circle before the group title.
+ */
+[data-blok-database-list-group-dot] {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/**
+ * Group title text.
+ */
+[data-blok-database-list-group-title] {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--blok-database-tab-text-active);
+  letter-spacing: 0.01em;
+}
+
+/**
+ * Row count badge — muted number after the group title.
+ */
+[data-blok-database-list-group-count] {
+  font-size: 12px;
+  color: var(--blok-database-add-text);
+  font-weight: 400;
+  margin-left: var(--blok-space-0-5);
+}
+
+/**
+ * Rows container within a group — indented slightly, role=list.
+ */
+[data-blok-database-list-rows] {
+  display: flex;
+  flex-direction: column;
+  padding-left: var(--blok-space-2);
+}
+
+/* ─── "Add a property" button ────────────────────────────────────────────── */
+
+/**
+ * Ghost dashed button that reveals itself on hover.
+ * Full-width, sits below the last property row.
+ */
+[data-blok-database-drawer-add-prop] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-75);
+  width: 100%;
+  padding: var(--blok-space-1-5) var(--blok-space-2);
+  margin-top: var(--blok-space-1);
+  background: none;
+  border: 1.5px dashed transparent;
+  border-radius: var(--blok-radius-md);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--blok-database-add-text);
+  text-align: left;
+  transition:
+    background-color 130ms ease,
+    border-color 130ms ease,
+    color 130ms ease;
+}
+
+[data-blok-database-drawer-add-prop]:hover {
+  background-color: var(--blok-database-add-hover-bg);
+  border-color: var(--blok-database-add-border);
+  color: var(--blok-database-tab-text-active);
+}
+
+[data-blok-database-drawer-add-prop]:active {
+  background-color: var(--blok-item-hover-bg);
+}
+
+/* ─── Property type popover ──────────────────────────────────────────────── */
+
+
+/**
+ * Popover container — vertical list, clean card.
+ */
+[data-blok-database-property-type-popover] {
+  min-width: 210px;
+  background: var(--blok-database-popover-bg);
+  border-radius: var(--blok-space-2-5);
+  box-shadow: var(--blok-database-popover-shadow);
+  padding: var(--blok-space-1-5);
+  animation: blok-prop-popover-in 120ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: top left;
+}
+
+/**
+ * Section heading — "Property type" label above the list.
+ */
+[data-blok-database-property-type-heading] {
+  padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--blok-database-add-text);
+  user-select: none;
+}
+
+/**
+ * Each property type item — icon chip + label row.
+ */
+[data-blok-database-property-type-option] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2-5);
+  padding: var(--blok-space-1-5) var(--blok-space-2);
+  border-radius: var(--blok-radius-md);
+  cursor: pointer;
+  font-size: 13.5px;
+  color: var(--blok-database-tab-text-active);
+  transition: background-color 100ms ease;
+  user-select: none;
+}
+
+[data-blok-database-property-type-option]:hover {
+  background-color: var(--blok-database-popover-hover);
+}
+
+[data-blok-database-property-type-option]:active {
+  background-color: var(--blok-item-hover-bg);
+}
+
+/**
+ * Icon chip — small tinted square to the left of the label.
+ */
+[data-blok-database-property-type-option-icon] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--blok-space-1-25);
+  background: var(--blok-popover-icon-bg);
+  color: var(--blok-database-tab-text-active);
+  flex-shrink: 0;
+  transition: background-color 100ms ease;
+}
+
+[data-blok-database-property-type-option]:hover [data-blok-database-property-type-option-icon] {
+  background: var(--blok-popover-icon-active-bg);
+  color: var(--blok-active-icon);
+}
+
+[data-blok-database-property-type-option-icon] svg {
+  width: 14px;
+  height: 14px;
+}

@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
+import { readMainCss } from './helpers/read-main-css';
 
 /**
  * CSS custom property extraction audit.
@@ -19,8 +18,7 @@ import { resolve } from 'path';
  * and matches the pattern used in test/unit/styles/preflight.test.ts.
  */
 
-const cssPath = resolve(__dirname, '../../../src/styles/main.css');
-const css = readFileSync(cssPath, 'utf-8');
+const css = readMainCss();
 
 /**
  * Lines that belong to the palette / token-definition blocks and are therefore

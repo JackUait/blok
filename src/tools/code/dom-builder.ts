@@ -216,8 +216,11 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
 
   header.appendChild(controls);
 
-  // Pre wrapper for semantic HTML
+  // Pre wrapper for semantic HTML — flex-1 so it fills code body width,
+  // so clicks on the right empty strip of a short line still land on the
+  // editable code element and the browser snaps caret to end of that line.
   const preElement = document.createElement('pre');
+  preElement.className = 'flex-1 min-w-0';
   preElement.appendChild(codeElement);
 
   // Code body container (flex: gutter + pre)

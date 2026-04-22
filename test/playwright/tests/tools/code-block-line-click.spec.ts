@@ -137,4 +137,37 @@ test.describe('Code block — click line to focus', () => {
     expect(info.lineIndex).toBe(2);
     expect(info.atLineEnd).toBe(true);
   });
+
+  test('clicking far right of line strip (beyond short text) places caret at end of that line', async ({ page }) => {
+    await createBlok(page, [
+      {
+        type: 'code',
+        data: {
+          code: 'a\nbb\nccc',
+          language: 'javascript',
+        },
+      },
+    ]);
+
+    const wrapper = page.locator('[data-blok-testid="code-content"]').locator('xpath=ancestor::*[contains(@class,"group/code")]');
+    const wrapperBox = await wrapper.boundingBox();
+    const codeEl = page.locator('[data-blok-testid="code-content"]');
+    const codeBox = await codeEl.boundingBox();
+
+    if (!wrapperBox || !codeBox) {
+      throw new Error('bounding box not found');
+    }
+
+    const lineHeight = codeBox.height / 3;
+    const targetY = codeBox.y + lineHeight * 0.5 + lineHeight * 1; // second line
+    const targetX = wrapperBox.x + wrapperBox.width - 4; // far right of wrapper, past short text
+
+    await page.mouse.click(targetX, targetY);
+
+    const info = await getCaretLineInfo(page);
+
+    expect(info.focused).toBe(true);
+    expect(info.lineIndex).toBe(1);
+    expect(info.atLineEnd).toBe(true);
+  });
 });

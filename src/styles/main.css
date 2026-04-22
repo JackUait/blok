@@ -3729,26 +3729,134 @@
   background: transparent;
   padding: var(--blok-space-2);
 }
-.blok-image-empty__content--row .blok-image-empty__search {
-  padding: 0 10px 0 8px;
+
+/* ----- Embed bar: unified pill with icon, input, inline submit ----- */
+.blok-image-empty__embed-bar {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
   gap: 8px;
-  border-radius: var(--blok-radius-md);
+  padding: 4px 4px 4px 12px;
+  background: var(--blok-bg-primary);
+  border: 1px solid var(--blok-border-subtle);
+  border-radius: 10px;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
-.blok-image-empty__content--row .blok-image-empty__search-icon {
+.blok-image-empty__embed-bar:hover {
+  border-color: var(--blok-border-primary);
+}
+.blok-image-empty__embed-bar:focus-within {
+  border-color: var(--blok-color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blok-color-accent) 18%, transparent);
+}
+
+.blok-image-empty__embed-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--blok-text-tertiary);
+  transition: color .15s ease;
+}
+.blok-image-empty__embed-icon svg { width: 16px; height: 16px; }
+.blok-image-empty__embed-bar:focus-within .blok-image-empty__embed-icon {
+  color: var(--blok-color-accent);
+}
+.blok-image-empty__embed-bar[data-valid="true"] .blok-image-empty__embed-icon {
+  color: var(--blok-color-accent);
+}
+
+.blok-image-empty__embed-input {
+  appearance: none;
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  color: var(--blok-text-primary);
+  outline: none;
+}
+.blok-image-empty__embed-input::placeholder {
+  color: var(--blok-text-tertiary);
+}
+
+.blok-image-empty__embed-submit {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 7px 12px;
   color: var(--blok-text-secondary);
+  background: var(--blok-bg-secondary);
+  border-radius: 7px;
+  transition:
+    color .15s ease,
+    background .15s ease,
+    opacity .15s ease,
+    transform .08s ease;
 }
-.blok-image-empty__content--row .blok-image-empty__search-icon svg {
-  width: 16px;
+.blok-image-empty__embed-submit:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+.blok-image-empty__embed-bar[data-valid="true"] .blok-image-empty__embed-submit:not(:disabled) {
+  color: #fff;
+  background: var(--blok-color-accent);
+}
+.blok-image-empty__embed-submit:not(:disabled):hover { filter: brightness(1.05); }
+.blok-image-empty__embed-submit:not(:disabled):active { transform: translateY(1px); }
+.blok-image-empty__embed-submit:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 45%, transparent);
+}
+
+.blok-image-empty__embed-submit-label {
+  display: inline-flex;
+  align-items: center;
   height: 16px;
 }
-.blok-image-empty__content--row .blok-image-empty__input--bare {
-  padding: 8px 0;
-  font-size: 13px;
+
+.blok-image-empty__embed-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 16px;
+  max-width: 0;
+  margin-left: 0;
+  padding: 1px 0 0;
+  font-family: var(--blok-font-family, var(--blok-font-sans));
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: currentColor;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  border-radius: 4px;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition:
+    max-width .2s ease,
+    margin-left .2s ease,
+    padding .2s ease,
+    opacity .15s ease .05s,
+    transform .2s ease;
 }
-.blok-image-empty__content--row .blok-image-empty__submit {
-  padding: 8px 14px;
-  font-size: 13px;
-  line-height: 18px;
+.blok-image-empty__embed-bar[data-valid="true"] .blok-image-empty__embed-kbd {
+  max-width: 40px;
+  margin-left: 6px;
+  padding: 1px 4px 0;
+  opacity: 1;
+  transform: translateX(0);
 }
 
 .blok-image-empty__input {

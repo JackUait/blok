@@ -214,49 +214,78 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
   const renderEmbed = (): void => {
     panel.replaceChildren();
 
-    const content = document.createElement('div');
-    content.className = 'blok-image-empty__content blok-image-empty__content--row';
-
-    const field = document.createElement('div');
-    field.className = 'blok-image-empty__search';
+    const bar = document.createElement('div');
+    bar.className = 'blok-image-empty__embed-bar';
+    bar.setAttribute('data-valid', 'false');
 
     const fieldIcon = document.createElement('span');
-    fieldIcon.className = 'blok-image-empty__search-icon';
+    fieldIcon.className = 'blok-image-empty__embed-icon';
     fieldIcon.setAttribute('aria-hidden', 'true');
     fieldIcon.innerHTML = IconLinkExternal;
 
     const urlInput = document.createElement('input');
     urlInput.type = 'url';
-    urlInput.className = 'blok-image-empty__input blok-image-empty__input--bare';
+    urlInput.className = 'blok-image-empty__embed-input';
     urlInput.placeholder = embedPlaceholder;
     urlInput.setAttribute('aria-label', tr(opts.i18n, 'tools.image.emptyUrlAria'));
-
-    field.append(fieldIcon, urlInput);
+    urlInput.autocomplete = 'off';
+    urlInput.spellcheck = false;
 
     const submit = document.createElement('button');
     submit.type = 'button';
-    submit.className = 'blok-image-empty__submit';
+    submit.className = 'blok-image-empty__embed-submit';
     submit.setAttribute('data-action', 'submit-url');
-    submit.textContent = submitLabel;
+    submit.disabled = true;
+
+    const submitLabelEl = document.createElement('span');
+    submitLabelEl.className = 'blok-image-empty__embed-submit-label';
+    submitLabelEl.textContent = submitLabel;
+
+    const kbd = document.createElement('kbd');
+    kbd.className = 'blok-image-empty__embed-kbd';
+    kbd.setAttribute('aria-hidden', 'true');
+    kbd.textContent = '↵';
+
+    submit.append(submitLabelEl, kbd);
+
+    const isValid = (raw: string): boolean => {
+      const value = raw.trim();
+      if (!value) return false;
+      try {
+        const url = new URL(value);
+        return url.protocol === 'http:' || url.protocol === 'https:';
+      } catch {
+        return /^[\w-]+(\.[\w-]+)+([/?#].*)?$/i.test(value);
+      }
+    };
+
+    const sync = (): void => {
+      const valid = isValid(urlInput.value);
+      bar.setAttribute('data-valid', valid ? 'true' : 'false');
+      submit.disabled = !valid;
+    };
 
     const commit = (): void => {
       const value = urlInput.value.trim();
-      if (value) opts.onUrl(value);
+      if (!value) return;
+      opts.onUrl(value);
     };
+
     submit.addEventListener('click', (ev) => {
       ev.stopPropagation();
-      commit();
+      if (!submit.disabled) commit();
     });
     urlInput.addEventListener('click', (ev) => ev.stopPropagation());
+    urlInput.addEventListener('input', sync);
     urlInput.addEventListener('keydown', (ev) => {
       if (ev.key === 'Enter') {
         ev.preventDefault();
-        commit();
+        if (isValid(urlInput.value)) commit();
       }
     });
 
-    content.append(field, submit);
-    panel.appendChild(content);
+    bar.append(fieldIcon, urlInput, submit);
+    panel.appendChild(bar);
     queueMicrotask(() => urlInput.focus());
   };
 

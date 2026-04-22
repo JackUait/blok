@@ -58,6 +58,15 @@ export class InlineSelectionValidator {
       return { allowed: false, reason: `Target tag ${target.tagName} conflicts with selection` };
     }
 
+    // Code block (`<pre><code contenteditable="plaintext-only">`) is plain-text
+    // content. Inline formatting would inject HTML into the plaintext-only
+    // region and break syntax highlighting, so suppress the toolbar there.
+    const focusElement = this.nodeToElement(currentSelection.focusNode);
+
+    if (target.closest('pre') !== null || focusElement?.closest('pre')) {
+      return { allowed: false, reason: 'Selection is inside a code block' };
+    }
+
     const anchorElement = $.isElement(currentSelection.anchorNode)
       ? currentSelection.anchorNode as HTMLElement
       : currentSelection.anchorNode.parentElement;
@@ -157,5 +166,13 @@ export class InlineSelectionValidator {
     }
 
     return SelectionUtils.get();
+  }
+
+  private nodeToElement(node: Node | null | undefined): Element | null {
+    if (!node) {
+      return null;
+    }
+
+    return $.isElement(node) ? node as HTMLElement : node.parentElement;
   }
 }

@@ -40,6 +40,7 @@ const CROSS_BROWSER_TESTS = [
   '**/copy-paste.spec.ts',
   '**/tools/code-block-paste.spec.ts',
   '**/tools/code-block-enter.spec.ts',
+  '**/tools/code-block-no-inline-toolbar.spec.ts',
 
   // Keyboard navigation (Firefox has known Tab/Shift+Tab issues)
   '**/modules/BlockEvents/**/*.spec.ts',

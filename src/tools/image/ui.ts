@@ -58,6 +58,7 @@ export function renderImage(
   const alignment = data.alignment ?? 'center';
   const figure = document.createElement('figure');
   figure.className = 'blok-image-inner';
+  figure.setAttribute('data-role', 'image-figure');
   figure.style.margin = '0';
   figure.style.textAlign = ALIGNMENT_TO_TEXT_ALIGN[alignment];
   figure.style.position = 'relative';

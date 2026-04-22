@@ -300,14 +300,14 @@ test.describe('Code block Enter — highlighted languages', () => {
     });
 
     // Let the initial highlightCode settle so _disposeHighlights is set.
-    await page.waitForTimeout(150);
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 150)));
 
     await focusCodeAtOffset(page, 5);
     await page.keyboard.press('Enter');
 
     // Wait past the scheduled RAF highlight — if the stale dispose fires, it
     // would rewrite innerHTML back to the pre-Enter snapshot.
-    await page.waitForTimeout(150);
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 150)));
 
     expect(await getCodeText(page)).toBe('const\n a = 1;');
     expect(await codeCaretOffset(page)).toBe(6);
@@ -323,14 +323,14 @@ test.describe('Code block Enter — highlighted languages', () => {
     // Let the initial Prism highlight finish so the subsequent RAF highlight
     // (triggered by Enter) runs through applyPrismHighlight which rewrites
     // innerHTML — this is what used to drop the trailing <br> sentinel.
-    await page.waitForTimeout(150);
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 150)));
 
     await focusCodeAtOffset(page, 12);
     await page.keyboard.press('Enter');
 
     // Wait past the scheduled highlight so applyPrismHighlight has rewritten
     // innerHTML before we assert.
-    await page.waitForTimeout(150);
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 150)));
 
     expect(await getCodeText(page)).toBe('const a = 1;\n');
     expect(await codeCaretOffset(page)).toBe(13);

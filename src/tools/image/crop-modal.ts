@@ -41,7 +41,7 @@ export function openCropModal(opts: OpenCropModalOptions): () => void {
     editorDetach: null,
   };
 
-  let pointerDownOnBackdrop = false;
+  const pointerState = { downOnBackdrop: false };
 
   const detach = (): void => {
     if (state.detached) return;
@@ -56,12 +56,12 @@ export function openCropModal(opts: OpenCropModalOptions): () => void {
   };
 
   const onBackdropPointerDown = (event: MouseEvent): void => {
-    pointerDownOnBackdrop = event.target === backdrop;
+    pointerState.downOnBackdrop = event.target === backdrop;
   };
 
   const onBackdropClick = (event: MouseEvent): void => {
-    const shouldClose = event.target === backdrop && pointerDownOnBackdrop;
-    pointerDownOnBackdrop = false;
+    const shouldClose = event.target === backdrop && pointerState.downOnBackdrop;
+    pointerState.downOnBackdrop = false;
     if (!shouldClose) return;
     detach();
     opts.onCancel();

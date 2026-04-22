@@ -108,7 +108,7 @@ describe('openLightbox wheel zoom', () => {
     const close = open();
     dialog().dispatchEvent(wheel(-200));
     const label = dialog().querySelector<HTMLButtonElement>('[data-action="zoom-reset"]')!;
-    const pct = parseInt(label.textContent!, 10);
+    const pct = parseInt(label.textContent, 10);
     expect(pct).toBeGreaterThan(100);
     close();
   });

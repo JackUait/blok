@@ -16,7 +16,8 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import postcss, { AtRule, Declaration, Rule } from 'postcss';
+import type { Declaration } from 'postcss';
+import postcss from 'postcss';
 
 const STYLES_ROOT = resolve(__dirname, '../../../src/styles');
 const ENTRY = resolve(STYLES_ROOT, 'main.css');
@@ -66,14 +67,14 @@ function buildRuleIndex(css: string): RuleRecord[] {
   function visit(node: postcss.Container, pathParts: string[]): void {
     node.each((child) => {
       if (child.type === 'rule') {
-        const rule = child as Rule;
+        const rule = child;
         const declarations: RuleRecord['declarations'] = [];
 
         rule.walkDecls((decl: Declaration) => {
           declarations.push({
             prop: decl.prop,
             value: normalizeValue(decl.value),
-            important: decl.important === true,
+            important: decl.important,
           });
         });
         records.push({
@@ -82,7 +83,7 @@ function buildRuleIndex(css: string): RuleRecord[] {
           declarations,
         });
       } else if (child.type === 'atrule') {
-        const atrule = child as AtRule;
+        const atrule = child;
         // @keyframes live in the global animation-name namespace and do not
         // participate in the cascade. They are snapshotted separately so
         // extraction can regroup them into a dedicated file.

@@ -143,7 +143,7 @@ test('image controls only show when hovering image or caption, not surrounding w
 
   // Hover empty space inside the tool root but outside the image figure.
   const rootBox = await imageBlock.boundingBox();
-  const figureBox = await imageBlock.locator('.blok-image-inner').boundingBox();
+  const figureBox = await imageBlock.locator('[data-role="image-figure"]').boundingBox();
   if (!rootBox || !figureBox) throw new Error('box missing');
   const whitespaceX = rootBox.x + 4;
   const whitespaceY = figureBox.y + figureBox.height / 2;

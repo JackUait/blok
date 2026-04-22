@@ -94,17 +94,24 @@ export function applyRatio(
   const cx = rect.x + rect.w / 2;
   const cy = rect.y + rect.h / 2;
 
-  let x: number;
-  if (handle === undefined) x = cx - w / 2;
-  else if (hasW && !hasE) x = rect.x + rect.w - w;
-  else if (hasE && !hasW) x = rect.x;
-  else x = cx - w / 2;
+  const pickX = (): number => {
+    if (handle === undefined) return cx - w / 2;
+    if (hasW && !hasE) return rect.x + rect.w - w;
+    if (hasE && !hasW) return rect.x;
 
-  let y: number;
-  if (handle === undefined) y = cy - h / 2;
-  else if (hasN && !hasS) y = rect.y + rect.h - h;
-  else if (hasS && !hasN) y = rect.y;
-  else y = cy - h / 2;
+    return cx - w / 2;
+  };
+
+  const pickY = (): number => {
+    if (handle === undefined) return cy - h / 2;
+    if (hasN && !hasS) return rect.y + rect.h - h;
+    if (hasS && !hasN) return rect.y;
+
+    return cy - h / 2;
+  };
+
+  const x = pickX();
+  const y = pickY();
 
   return clampRect({ x, y, w, h });
 }

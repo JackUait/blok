@@ -49,7 +49,8 @@ const COPIED_FEEDBACK_DURATION = 1500;
  * (node, offset) pair usable with Range. Recurses instead of mutating locals.
  */
 function findTextPosition(root: Node, targetOffset: number): { node: Node; offset: number } {
-  const walker = root.ownerDocument!.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const doc = root.ownerDocument ?? document;
+  const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const step = (consumed: number): { node: Node; offset: number } => {
     const next = walker.nextNode() as Text | null;
 

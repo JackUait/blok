@@ -60,4 +60,27 @@ describe('renderUploadingState', () => {
     if (!btn) throw new Error('cancel button missing');
     expect(() => btn.click()).not.toThrow();
   });
+
+  it('falls back to English when i18n omitted', () => {
+    const el = renderUploadingState({ fileName: 'photo.png' });
+    const label = el.querySelector('.blok-image-uploading__label');
+    const cancel = el.querySelector<HTMLButtonElement>('[data-action="cancel"]');
+    const bar = el.querySelector('[role="progressbar"]');
+    if (!label || !cancel || !bar) throw new Error('missing nodes');
+    expect(label.textContent).toBe('Uploading');
+    expect(cancel.getAttribute('aria-label')).toBe('Cancel upload');
+    expect(bar.getAttribute('aria-label')).toBe('Upload progress');
+  });
+
+  it('uses i18n.t value when key present', () => {
+    const i18n = { has: () => true, t: (k: string) => 'X-' + k };
+    const el = renderUploadingState({ fileName: 'photo.png', i18n });
+    const label = el.querySelector('.blok-image-uploading__label');
+    const cancel = el.querySelector<HTMLButtonElement>('[data-action="cancel"]');
+    const bar = el.querySelector('[role="progressbar"]');
+    if (!label || !cancel || !bar) throw new Error('missing nodes');
+    expect(label.textContent).toBe('X-tools.image.uploadingLabel');
+    expect(cancel.getAttribute('aria-label')).toBe('X-tools.image.cancelUpload');
+    expect(bar.getAttribute('aria-label')).toBe('X-tools.image.uploadProgress');
+  });
 });

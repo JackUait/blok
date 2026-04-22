@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "添加图片",
   "tools.image.emptyUpload": "上传",
   "tools.image.emptyLink": "链接",
-  "tools.image.emptyStock": "素材库",
   "tools.image.emptyInsert": "插入",
   "tools.image.emptyChooseFile": "选择文件",
   "tools.image.emptyOrDropHere": "或将图片拖放到此处",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "粘贴图片 URL…",
   "tools.image.emptyUrlAria": "图片 URL",
   "tools.image.emptySourceAria": "图片来源",
-  "tools.image.emptyStockPlaceholder": "搜索素材图片…",
-  "tools.image.emptyStockAria": "素材图片",
-  "tools.image.emptyComingSoon": "即将推出",
   "tools.image.cropAspectRatio": "宽高比",
   "tools.image.cropRatioFree": "自由",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "已完成",
   "tools.database.defaultViewBoard": "看板"
 }
+

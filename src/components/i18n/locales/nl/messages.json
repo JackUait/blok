@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Afbeelding toevoegen",
   "tools.image.emptyUpload": "Uploaden",
   "tools.image.emptyLink": "Link",
-  "tools.image.emptyStock": "Stock",
   "tools.image.emptyInsert": "Invoegen",
   "tools.image.emptyChooseFile": "Bestand kiezen",
   "tools.image.emptyOrDropHere": "of sleep hier een afbeelding",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Plak een afbeeldings-URL…",
   "tools.image.emptyUrlAria": "Afbeeldings-URL",
   "tools.image.emptySourceAria": "Afbeeldingsbron",
-  "tools.image.emptyStockPlaceholder": "Stockafbeeldingen zoeken…",
-  "tools.image.emptyStockAria": "Stockafbeeldingen",
-  "tools.image.emptyComingSoon": "Binnenkort beschikbaar",
   "tools.image.cropAspectRatio": "Beeldverhouding",
   "tools.image.cropRatioFree": "Vrij",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Klaar",
   "tools.database.defaultViewBoard": "Bord"
 }
+

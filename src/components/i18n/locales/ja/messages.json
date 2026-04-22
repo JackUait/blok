@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "画像を追加",
   "tools.image.emptyUpload": "アップロード",
   "tools.image.emptyLink": "リンク",
-  "tools.image.emptyStock": "ストック",
   "tools.image.emptyInsert": "挿入",
   "tools.image.emptyChooseFile": "ファイルを選択",
   "tools.image.emptyOrDropHere": "またはここに画像をドロップ",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "画像 URL を貼り付け…",
   "tools.image.emptyUrlAria": "画像 URL",
   "tools.image.emptySourceAria": "画像ソース",
-  "tools.image.emptyStockPlaceholder": "ストック画像を検索…",
-  "tools.image.emptyStockAria": "ストック画像",
-  "tools.image.emptyComingSoon": "近日公開",
   "tools.image.cropAspectRatio": "アスペクト比",
   "tools.image.cropRatioFree": "フリー",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "完了",
   "tools.database.defaultViewBoard": "ボード"
 }
+

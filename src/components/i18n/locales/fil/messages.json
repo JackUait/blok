@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Magdagdag ng larawan",
   "tools.image.emptyUpload": "Mag-upload",
   "tools.image.emptyLink": "Link",
-  "tools.image.emptyStock": "Stock",
   "tools.image.emptyInsert": "Ipasok",
   "tools.image.emptyChooseFile": "Pumili ng file",
   "tools.image.emptyOrDropHere": "o ilagay ang larawan dito",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "I-paste ang URL ng larawan…",
   "tools.image.emptyUrlAria": "URL ng larawan",
   "tools.image.emptySourceAria": "Pinagmulan ng larawan",
-  "tools.image.emptyStockPlaceholder": "Maghanap ng stock images…",
-  "tools.image.emptyStockAria": "Stock images",
-  "tools.image.emptyComingSoon": "Malapit nang dumating",
   "tools.image.cropAspectRatio": "Aspect ratio",
   "tools.image.cropRatioFree": "Libre",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Tapos na",
   "tools.database.defaultViewBoard": "Board"
 }
+

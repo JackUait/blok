@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Pridajte obrázok",
   "tools.image.emptyUpload": "Nahrať",
   "tools.image.emptyLink": "Odkaz",
-  "tools.image.emptyStock": "Stock",
   "tools.image.emptyInsert": "Vložiť",
   "tools.image.emptyChooseFile": "Vybrať súbor",
   "tools.image.emptyOrDropHere": "alebo sem pretiahnite obrázok",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Vložte URL obrázka…",
   "tools.image.emptyUrlAria": "URL obrázka",
   "tools.image.emptySourceAria": "Zdroj obrázka",
-  "tools.image.emptyStockPlaceholder": "Hľadať stock obrázky…",
-  "tools.image.emptyStockAria": "Stock obrázky",
-  "tools.image.emptyComingSoon": "Čoskoro",
   "tools.image.cropAspectRatio": "Pomer strán",
   "tools.image.cropRatioFree": "Voľný",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Hotovo",
   "tools.database.defaultViewBoard": "Tabuľa"
 }
+

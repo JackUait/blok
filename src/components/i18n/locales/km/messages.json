@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "បន្ថែមរូបភាព",
   "tools.image.emptyUpload": "បញ្ជូន",
   "tools.image.emptyLink": "តំណ",
-  "tools.image.emptyStock": "ស្តុក",
   "tools.image.emptyInsert": "បញ្ចូល",
   "tools.image.emptyChooseFile": "ជ្រើសឯកសារ",
   "tools.image.emptyOrDropHere": "ឬទម្លាក់រូបភាពនៅទីនេះ",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "បិទភ្ជាប់ URL រូបភាព…",
   "tools.image.emptyUrlAria": "URL រូបភាព",
   "tools.image.emptySourceAria": "ប្រភពរូបភាព",
-  "tools.image.emptyStockPlaceholder": "ស្វែងរករូបភាពស្តុក…",
-  "tools.image.emptyStockAria": "រូបភាពស្តុក",
-  "tools.image.emptyComingSoon": "នឹងមកដល់ឆាប់ៗ",
   "tools.image.cropAspectRatio": "សមាមាត្រ",
   "tools.image.cropRatioFree": "សេរី",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "រួចរាល់",
   "tools.database.defaultViewBoard": "ក្ដារ"
 }
+

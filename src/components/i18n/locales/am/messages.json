@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "ምስል አክል",
   "tools.image.emptyUpload": "ስቀል",
   "tools.image.emptyLink": "አገናኝ",
-  "tools.image.emptyStock": "ስቶክ",
   "tools.image.emptyInsert": "አስገባ",
   "tools.image.emptyChooseFile": "ፋይል ምረጥ",
   "tools.image.emptyOrDropHere": "ወይም ምስል እዚህ ይጣሉ",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "የምስል URL ለጥፍ…",
   "tools.image.emptyUrlAria": "የምስል URL",
   "tools.image.emptySourceAria": "የምስል ምንጭ",
-  "tools.image.emptyStockPlaceholder": "የስቶክ ምስሎችን ፈልግ…",
-  "tools.image.emptyStockAria": "የስቶክ ምስሎች",
-  "tools.image.emptyComingSoon": "በቅርቡ ይመጣል",
   "tools.image.cropAspectRatio": "የገጽታ ጥምርታ",
   "tools.image.cropRatioFree": "ነፃ",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "ተጠናቋል",
   "tools.database.defaultViewBoard": "ሰሌዳ"
 }
+

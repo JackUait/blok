@@ -240,6 +240,24 @@ describe('crop-editor', () => {
     expect(active[0]).toBe(chip);
   });
 
+  it('falls back to English when i18n omitted', () => {
+    detach = mountCropEditor(container, {
+      url: 'x.png',
+      onApply: () => {},
+      onCancel: () => {},
+    });
+    const root = container.querySelector<HTMLElement>('.blok-image-crop-editor')!;
+    expect(root.getAttribute('aria-label')).toBe('Crop image');
+    const group = container.querySelector<HTMLElement>('[data-action="ratio"]')!;
+    expect(group.getAttribute('aria-label')).toBe('Aspect ratio');
+    const reset = container.querySelector<HTMLButtonElement>('[data-action="reset"]')!;
+    expect(reset.textContent).toBe('Reset');
+    const cancel = container.querySelector<HTMLButtonElement>('[data-action="cancel"]')!;
+    expect(cancel.textContent).toBe('Cancel');
+    const done = container.querySelector<HTMLButtonElement>('[data-action="done"]')!;
+    expect(done.textContent).toBe('Done');
+  });
+
   it('toolbar is a direct child of the editor root and carries the footer modifier', () => {
     detach = mountCropEditor(container, {
       url: 'x.png',

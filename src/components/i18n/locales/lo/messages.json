@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "ເພີ່ມຮູບ",
   "tools.image.emptyUpload": "ອັບໂຫຼດ",
   "tools.image.emptyLink": "ລິ້ງ",
-  "tools.image.emptyStock": "ສະຕັອກ",
   "tools.image.emptyInsert": "ແຊກ",
   "tools.image.emptyChooseFile": "ເລືອກໄຟລ໌",
   "tools.image.emptyOrDropHere": "ຫຼື ປ່ອຍຮູບໃສ່ນີ້",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "ວາງ URL ຮູບ…",
   "tools.image.emptyUrlAria": "URL ຮູບ",
   "tools.image.emptySourceAria": "ແຫຼ່ງຮູບ",
-  "tools.image.emptyStockPlaceholder": "ຊອກຮູບສະຕັອກ…",
-  "tools.image.emptyStockAria": "ຮູບສະຕັອກ",
-  "tools.image.emptyComingSoon": "ຈະມາໃນໄວໆນີ້",
   "tools.image.cropAspectRatio": "ອັດຕາສ່ວນ",
   "tools.image.cropRatioFree": "ອິດສະຫຼະ",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "ສຳເລັດ",
   "tools.database.defaultViewBoard": "ກະດານ"
 }
+

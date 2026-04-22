@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Добавете изображение",
   "tools.image.emptyUpload": "Качи",
   "tools.image.emptyLink": "Връзка",
-  "tools.image.emptyStock": "Стокове",
   "tools.image.emptyInsert": "Вмъкни",
   "tools.image.emptyChooseFile": "Избери файл",
   "tools.image.emptyOrDropHere": "или пуснете изображение тук",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Поставете URL на изображение…",
   "tools.image.emptyUrlAria": "URL на изображение",
   "tools.image.emptySourceAria": "Източник на изображение",
-  "tools.image.emptyStockPlaceholder": "Търсене в стокове…",
-  "tools.image.emptyStockAria": "Стокови изображения",
-  "tools.image.emptyComingSoon": "Скоро",
   "tools.image.cropAspectRatio": "Съотношение",
   "tools.image.cropRatioFree": "Свободно",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Готово",
   "tools.database.defaultViewBoard": "Табло"
 }
+

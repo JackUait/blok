@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Додајте слика",
   "tools.image.emptyUpload": "Подигни",
   "tools.image.emptyLink": "Врска",
-  "tools.image.emptyStock": "Сток",
   "tools.image.emptyInsert": "Вметни",
   "tools.image.emptyChooseFile": "Избери датотека",
   "tools.image.emptyOrDropHere": "или повлечете слика овде",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Залепете URL на слика…",
   "tools.image.emptyUrlAria": "URL на слика",
   "tools.image.emptySourceAria": "Извор на слика",
-  "tools.image.emptyStockPlaceholder": "Пребарај сток…",
-  "tools.image.emptyStockAria": "Сток слики",
-  "tools.image.emptyComingSoon": "Наскоро",
   "tools.image.cropAspectRatio": "Сооднос",
   "tools.image.cropRatioFree": "Слободно",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Готово",
   "tools.database.defaultViewBoard": "Табла"
 }
+

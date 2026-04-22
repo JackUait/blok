@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "ಚಿತ್ರ ಸೇರಿಸಿ",
   "tools.image.emptyUpload": "ಅಪ್‌ಲೋಡ್",
   "tools.image.emptyLink": "ಲಿಂಕ್",
-  "tools.image.emptyStock": "ಸ್ಟಾಕ್",
   "tools.image.emptyInsert": "ಸೇರಿಸಿ",
   "tools.image.emptyChooseFile": "ಫೈಲ್ ಆಯ್ಕೆಮಾಡಿ",
   "tools.image.emptyOrDropHere": "ಅಥವಾ ಇಲ್ಲಿ ಚಿತ್ರ ಬಿಡಿ",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "ಚಿತ್ರ URL ಅಂಟಿಸಿ…",
   "tools.image.emptyUrlAria": "ಚಿತ್ರ URL",
   "tools.image.emptySourceAria": "ಚಿತ್ರ ಮೂಲ",
-  "tools.image.emptyStockPlaceholder": "ಸ್ಟಾಕ್ ಚಿತ್ರಗಳನ್ನು ಹುಡುಕಿ…",
-  "tools.image.emptyStockAria": "ಸ್ಟಾಕ್ ಚಿತ್ರಗಳು",
-  "tools.image.emptyComingSoon": "ಶೀಘ್ರದಲ್ಲೇ",
   "tools.image.cropAspectRatio": "ಅಳತೆ ಅನುಪಾತ",
   "tools.image.cropRatioFree": "ಮುಕ್ತ",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "ಮುಗಿದಿದೆ",
   "tools.database.defaultViewBoard": "ಬೋರ್ಡ್"
 }
+

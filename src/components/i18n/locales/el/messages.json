@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Προσθήκη εικόνας",
   "tools.image.emptyUpload": "Μεταφόρτωση",
   "tools.image.emptyLink": "Σύνδεσμος",
-  "tools.image.emptyStock": "Stock",
   "tools.image.emptyInsert": "Εισαγωγή",
   "tools.image.emptyChooseFile": "Επιλογή αρχείου",
   "tools.image.emptyOrDropHere": "ή σύρετε μια εικόνα εδώ",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Επικολλήστε URL εικόνας…",
   "tools.image.emptyUrlAria": "URL εικόνας",
   "tools.image.emptySourceAria": "Πηγή εικόνας",
-  "tools.image.emptyStockPlaceholder": "Αναζήτηση σε stock εικόνες…",
-  "tools.image.emptyStockAria": "Stock εικόνες",
-  "tools.image.emptyComingSoon": "Σύντομα",
   "tools.image.cropAspectRatio": "Λόγος διαστάσεων",
   "tools.image.cropRatioFree": "Ελεύθερο",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Ολοκληρώθηκε",
   "tools.database.defaultViewBoard": "Πίνακας"
 }
+

@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "प्रतिमा जोडा",
   "tools.image.emptyUpload": "अपलोड",
   "tools.image.emptyLink": "दुवा",
-  "tools.image.emptyStock": "स्टॉक",
   "tools.image.emptyInsert": "घाला",
   "tools.image.emptyChooseFile": "फाइल निवडा",
   "tools.image.emptyOrDropHere": "किंवा येथे प्रतिमा ड्रॉप करा",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "प्रतिमा URL पेस्ट करा…",
   "tools.image.emptyUrlAria": "प्रतिमा URL",
   "tools.image.emptySourceAria": "प्रतिमा स्रोत",
-  "tools.image.emptyStockPlaceholder": "स्टॉक प्रतिमा शोधा…",
-  "tools.image.emptyStockAria": "स्टॉक प्रतिमा",
-  "tools.image.emptyComingSoon": "लवकरच येत आहे",
   "tools.image.cropAspectRatio": "आस्पेक्ट गुणोत्तर",
   "tools.image.cropRatioFree": "मुक्त",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "पूर्ण",
   "tools.database.defaultViewBoard": "बोर्ड"
 }
+

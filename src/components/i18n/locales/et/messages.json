@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Lisa pilt",
   "tools.image.emptyUpload": "Laadi üles",
   "tools.image.emptyLink": "Link",
-  "tools.image.emptyStock": "Pildipank",
   "tools.image.emptyInsert": "Lisa",
   "tools.image.emptyChooseFile": "Vali fail",
   "tools.image.emptyOrDropHere": "või lohista pilt siia",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Kleebi pildi URL…",
   "tools.image.emptyUrlAria": "Pildi URL",
   "tools.image.emptySourceAria": "Pildi allikas",
-  "tools.image.emptyStockPlaceholder": "Otsi pildipangast…",
-  "tools.image.emptyStockAria": "Pildipank",
-  "tools.image.emptyComingSoon": "Tulekul",
   "tools.image.cropAspectRatio": "Kuvasuhe",
   "tools.image.cropRatioFree": "Vaba",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Valmis",
   "tools.database.defaultViewBoard": "Tahvel"
 }
+

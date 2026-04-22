@@ -5,6 +5,7 @@ import {
   IconUpload,
 } from '../../components/icons';
 import { DEFAULT_MIME_TYPES } from './constants';
+import { tr } from './i18n';
 import type { I18nInstance } from '../../components/utils/tools';
 
 export interface EmptyStateOptions {
@@ -20,9 +21,6 @@ export interface EmptyStateOptions {
   submitLabel?: string;
   i18n?: I18nInstance;
 }
-
-const tr = (i18n: I18nInstance | undefined, key: string): string =>
-  i18n?.has(key) ? i18n.t(key) : key;
 
 const MIME_LABELS: Record<string, string> = {
   'image/jpeg': 'JPG',

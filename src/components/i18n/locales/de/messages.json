@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Bild hinzufügen",
   "tools.image.emptyUpload": "Hochladen",
   "tools.image.emptyLink": "Link",
-  "tools.image.emptyStock": "Stockfotos",
   "tools.image.emptyInsert": "Einfügen",
   "tools.image.emptyChooseFile": "Datei auswählen",
   "tools.image.emptyOrDropHere": "oder Bild hier ablegen",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Bild-URL einfügen…",
   "tools.image.emptyUrlAria": "Bild-URL",
   "tools.image.emptySourceAria": "Bildquelle",
-  "tools.image.emptyStockPlaceholder": "Stockfotos suchen…",
-  "tools.image.emptyStockAria": "Stockfotos",
-  "tools.image.emptyComingSoon": "Demnächst verfügbar",
   "tools.image.cropAspectRatio": "Seitenverhältnis",
   "tools.image.cropRatioFree": "Frei",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Erledigt",
   "tools.database.defaultViewBoard": "Board"
 }
+

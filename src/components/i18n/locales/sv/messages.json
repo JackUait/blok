@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Lägg till en bild",
   "tools.image.emptyUpload": "Ladda upp",
   "tools.image.emptyLink": "Länk",
-  "tools.image.emptyStock": "Stock",
   "tools.image.emptyInsert": "Infoga",
   "tools.image.emptyChooseFile": "Välj fil",
   "tools.image.emptyOrDropHere": "eller släpp en bild här",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Klistra in en bild-URL…",
   "tools.image.emptyUrlAria": "Bild-URL",
   "tools.image.emptySourceAria": "Bildkälla",
-  "tools.image.emptyStockPlaceholder": "Sök stockbilder…",
-  "tools.image.emptyStockAria": "Stockbilder",
-  "tools.image.emptyComingSoon": "Kommer snart",
   "tools.image.cropAspectRatio": "Bildförhållande",
   "tools.image.cropRatioFree": "Fri",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Klar",
   "tools.database.defaultViewBoard": "Tavla"
 }
+

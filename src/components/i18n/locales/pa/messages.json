@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "ਤਸਵੀਰ ਸ਼ਾਮਲ ਕਰੋ",
   "tools.image.emptyUpload": "ਅੱਪਲੋਡ",
   "tools.image.emptyLink": "ਲਿੰਕ",
-  "tools.image.emptyStock": "ਸਟਾਕ",
   "tools.image.emptyInsert": "ਸ਼ਾਮਲ ਕਰੋ",
   "tools.image.emptyChooseFile": "ਫਾਈਲ ਚੁਣੋ",
   "tools.image.emptyOrDropHere": "ਜਾਂ ਇੱਥੇ ਤਸਵੀਰ ਛੱਡੋ",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "ਤਸਵੀਰ URL ਪੇਸਟ ਕਰੋ…",
   "tools.image.emptyUrlAria": "ਤਸਵੀਰ URL",
   "tools.image.emptySourceAria": "ਤਸਵੀਰ ਸਰੋਤ",
-  "tools.image.emptyStockPlaceholder": "ਸਟਾਕ ਤਸਵੀਰਾਂ ਖੋਜੋ…",
-  "tools.image.emptyStockAria": "ਸਟਾਕ ਤਸਵੀਰਾਂ",
-  "tools.image.emptyComingSoon": "ਜਲਦੀ ਆ ਰਿਹਾ",
   "tools.image.cropAspectRatio": "ਪਹਿਲੂ ਅਨੁਪਾਤ",
   "tools.image.cropRatioFree": "ਮੁਫ਼ਤ",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "ਪੂਰਾ",
   "tools.database.defaultViewBoard": "ਬੋਰਡ"
 }
+

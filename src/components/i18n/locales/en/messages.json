@@ -259,7 +259,7 @@
   "tools.image.errorUploadFailed": "Upload failed",
   "tools.image.errorSourceOffline": "The source may have moved or be offline.",
   "tools.image.errorUnavailable": "Image unavailable",
-  "tools.image.errorDefaultTitle": "Couldn't load image",
+  "tools.image.errorDefaultTitle": "Couldn’t load image",
   "tools.image.errorDefaultMessage": "The URL returned an error. Try a different source or re-upload the file.",
   "tools.image.errorRetry": "Retry",
   "tools.image.errorReplace": "Replace",

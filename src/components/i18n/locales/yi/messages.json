@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "לייג צו א בילד",
   "tools.image.emptyUpload": "אפלאד",
   "tools.image.emptyLink": "לינק",
-  "tools.image.emptyStock": "סטאק",
   "tools.image.emptyInsert": "אריינלייגן",
   "tools.image.emptyChooseFile": "קלייב א טעקע",
   "tools.image.emptyOrDropHere": "אדער לאז פאלן א בילד דא",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "לייג צו בילד URL…",
   "tools.image.emptyUrlAria": "בילד URL",
   "tools.image.emptySourceAria": "בילד מקור",
-  "tools.image.emptyStockPlaceholder": "זוך סטאק בילדער…",
-  "tools.image.emptyStockAria": "סטאק בילדער",
-  "tools.image.emptyComingSoon": "קומט באלד",
   "tools.image.cropAspectRatio": "פראפארציע",
   "tools.image.cropRatioFree": "פריי",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "פארטיק",
   "tools.database.defaultViewBoard": "ברעט"
 }
+

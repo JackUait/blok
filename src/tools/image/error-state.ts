@@ -1,5 +1,6 @@
 import { IconImageBroken } from '../../components/icons';
 import type { I18nInstance } from '../../components/utils/tools';
+import { tr } from './i18n';
 
 export interface ErrorStateOptions {
   title?: string;
@@ -8,12 +9,6 @@ export interface ErrorStateOptions {
   onReplace?(): void;
   i18n?: I18nInstance;
 }
-
-const tr = (i18n: I18nInstance | undefined, key: string): string =>
-  i18n?.has(key) ? i18n.t(key) : key;
-
-const DEFAULT_TITLE = 'Couldn\u2019t load image';
-const DEFAULT_MESSAGE = 'The URL returned an error. Try a different source or re-upload the file.';
 
 export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
   const root = document.createElement('div');

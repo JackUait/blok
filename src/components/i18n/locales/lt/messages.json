@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Pridėkite paveikslą",
   "tools.image.emptyUpload": "Įkelti",
   "tools.image.emptyLink": "Nuoroda",
-  "tools.image.emptyStock": "Stock",
   "tools.image.emptyInsert": "Įterpti",
   "tools.image.emptyChooseFile": "Pasirinkti failą",
   "tools.image.emptyOrDropHere": "arba vilkite paveikslą čia",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Įklijuokite paveikslo URL…",
   "tools.image.emptyUrlAria": "Paveikslo URL",
   "tools.image.emptySourceAria": "Paveikslo šaltinis",
-  "tools.image.emptyStockPlaceholder": "Ieškoti stock paveikslų…",
-  "tools.image.emptyStockAria": "Stock paveikslai",
-  "tools.image.emptyComingSoon": "Greitai",
   "tools.image.cropAspectRatio": "Kraštinių santykis",
   "tools.image.cropRatioFree": "Laisvas",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Atlikta",
   "tools.database.defaultViewBoard": "Lenta"
 }
+

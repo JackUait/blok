@@ -1,4 +1,5 @@
 import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
+import { tr } from './i18n';
 import type { I18nInstance } from '../../components/utils/tools';
 
 export interface OpenAltPopoverOptions {
@@ -8,9 +9,6 @@ export interface OpenAltPopoverOptions {
   onCancel(): void;
   i18n?: I18nInstance;
 }
-
-const tr = (i18n: I18nInstance | undefined, key: string): string =>
-  i18n?.has(key) ? i18n.t(key) : key;
 
 export function openAltPopover(opts: OpenAltPopoverOptions): () => void {
   const popover = document.createElement('div');

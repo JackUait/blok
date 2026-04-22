@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "படத்தைச் சேர்",
   "tools.image.emptyUpload": "பதிவேற்று",
   "tools.image.emptyLink": "இணைப்பு",
-  "tools.image.emptyStock": "கையிருப்பு",
   "tools.image.emptyInsert": "செருகு",
   "tools.image.emptyChooseFile": "கோப்பைத் தேர்ந்தெடு",
   "tools.image.emptyOrDropHere": "அல்லது படத்தை இங்கே விடவும்",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "பட URL ஐ ஒட்டவும்…",
   "tools.image.emptyUrlAria": "பட URL",
   "tools.image.emptySourceAria": "பட மூலம்",
-  "tools.image.emptyStockPlaceholder": "கையிருப்பு படங்களைத் தேடு…",
-  "tools.image.emptyStockAria": "கையிருப்பு படங்கள்",
-  "tools.image.emptyComingSoon": "விரைவில்",
   "tools.image.cropAspectRatio": "விகிதாச்சாரம்",
   "tools.image.cropRatioFree": "இலவசம்",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "முடிந்தது",
   "tools.database.defaultViewBoard": "பலகை"
 }
+

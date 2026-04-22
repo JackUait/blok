@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Pievienojiet attēlu",
   "tools.image.emptyUpload": "Augšupielādēt",
   "tools.image.emptyLink": "Saite",
-  "tools.image.emptyStock": "Stock",
   "tools.image.emptyInsert": "Ievietot",
   "tools.image.emptyChooseFile": "Izvēlēties failu",
   "tools.image.emptyOrDropHere": "vai nometiet attēlu šeit",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Ielīmējiet attēla URL…",
   "tools.image.emptyUrlAria": "Attēla URL",
   "tools.image.emptySourceAria": "Attēla avots",
-  "tools.image.emptyStockPlaceholder": "Meklēt stock attēlus…",
-  "tools.image.emptyStockAria": "Stock attēli",
-  "tools.image.emptyComingSoon": "Drīzumā",
   "tools.image.cropAspectRatio": "Malu attiecība",
   "tools.image.cropRatioFree": "Brīvs",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Gatavs",
   "tools.database.defaultViewBoard": "Tāfele"
 }
+

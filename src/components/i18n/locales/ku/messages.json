@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "وێنەیەک زیاد بکە",
   "tools.image.emptyUpload": "بارکردن",
   "tools.image.emptyLink": "بەستەر",
-  "tools.image.emptyStock": "ستۆک",
   "tools.image.emptyInsert": "تێخستن",
   "tools.image.emptyChooseFile": "فایل هەڵبژێرە",
   "tools.image.emptyOrDropHere": "یان وێنەیەک لێرە دابنێ",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "URLی وێنە بلکێنە…",
   "tools.image.emptyUrlAria": "URLی وێنە",
   "tools.image.emptySourceAria": "سەرچاوەی وێنە",
-  "tools.image.emptyStockPlaceholder": "گەڕان بۆ وێنەی ستۆک…",
-  "tools.image.emptyStockAria": "وێنەی ستۆک",
-  "tools.image.emptyComingSoon": "بەم زووانە",
   "tools.image.cropAspectRatio": "ڕێژەی لاکان",
   "tools.image.cropRatioFree": "ئازاد",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "تەواو",
   "tools.database.defaultViewBoard": "تەختە"
 }
+

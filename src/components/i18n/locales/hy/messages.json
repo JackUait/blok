@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Ավելացնել պատկեր",
   "tools.image.emptyUpload": "Վերբեռնել",
   "tools.image.emptyLink": "Հղում",
-  "tools.image.emptyStock": "Ֆոտոտեկա",
   "tools.image.emptyInsert": "Տեղադրել",
   "tools.image.emptyChooseFile": "Ընտրել ֆայլ",
   "tools.image.emptyOrDropHere": "կամ ձգեք պատկերն այստեղ",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Տեղադրեք պատկերի URL…",
   "tools.image.emptyUrlAria": "Պատկերի URL",
   "tools.image.emptySourceAria": "Պատկերի աղբյուր",
-  "tools.image.emptyStockPlaceholder": "Որոնել ֆոտոտեկայում…",
-  "tools.image.emptyStockAria": "Ֆոտոտեկայի պատկերներ",
-  "tools.image.emptyComingSoon": "Շուտով",
   "tools.image.cropAspectRatio": "Կողմերի հարաբերություն",
   "tools.image.cropRatioFree": "Ազատ",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Ավարտված",
   "tools.database.defaultViewBoard": "Տախտակ"
 }
+

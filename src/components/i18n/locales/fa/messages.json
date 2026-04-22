@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "افزودن تصویر",
   "tools.image.emptyUpload": "بارگذاری",
   "tools.image.emptyLink": "پیوند",
-  "tools.image.emptyStock": "گالری",
   "tools.image.emptyInsert": "درج",
   "tools.image.emptyChooseFile": "انتخاب فایل",
   "tools.image.emptyOrDropHere": "یا تصویری را اینجا رها کنید",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "URL تصویر را بچسبانید…",
   "tools.image.emptyUrlAria": "URL تصویر",
   "tools.image.emptySourceAria": "منبع تصویر",
-  "tools.image.emptyStockPlaceholder": "جست‌وجوی گالری تصاویر…",
-  "tools.image.emptyStockAria": "تصاویر گالری",
-  "tools.image.emptyComingSoon": "به‌زودی",
   "tools.image.cropAspectRatio": "نسبت ابعاد",
   "tools.image.cropRatioFree": "آزاد",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "انجام شد",
   "tools.database.defaultViewBoard": "تخته"
 }
+

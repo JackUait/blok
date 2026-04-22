@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "ပုံထည့်",
   "tools.image.emptyUpload": "အပ်လုဒ်",
   "tools.image.emptyLink": "လင့်ခ်",
-  "tools.image.emptyStock": "စတော့",
   "tools.image.emptyInsert": "ထည့်သွင်း",
   "tools.image.emptyChooseFile": "ဖိုင်ရွေး",
   "tools.image.emptyOrDropHere": "သို့မဟုတ် ပုံကိုဤနေရာချပါ",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "ပုံ URL ပါစတ်ပါ…",
   "tools.image.emptyUrlAria": "ပုံ URL",
   "tools.image.emptySourceAria": "ပုံမူရင်း",
-  "tools.image.emptyStockPlaceholder": "စတော့ပုံများရှာ…",
-  "tools.image.emptyStockAria": "စတော့ပုံများ",
-  "tools.image.emptyComingSoon": "မကြာမီလာမည်",
   "tools.image.cropAspectRatio": "ရှုထောင့်အချိုး",
   "tools.image.cropRatioFree": "လွတ်လပ်",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "ပြီးဆုံး",
   "tools.database.defaultViewBoard": "ဘုတ်"
 }
+

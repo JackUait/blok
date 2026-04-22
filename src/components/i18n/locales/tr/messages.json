@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Görsel ekle",
   "tools.image.emptyUpload": "Yükle",
   "tools.image.emptyLink": "Bağlantı",
-  "tools.image.emptyStock": "Stok",
   "tools.image.emptyInsert": "Ekle",
   "tools.image.emptyChooseFile": "Dosya seç",
   "tools.image.emptyOrDropHere": "veya görseli buraya bırakın",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Görsel URL'si yapıştırın…",
   "tools.image.emptyUrlAria": "Görsel URL'si",
   "tools.image.emptySourceAria": "Görsel kaynağı",
-  "tools.image.emptyStockPlaceholder": "Stok görsellerde ara…",
-  "tools.image.emptyStockAria": "Stok görseller",
-  "tools.image.emptyComingSoon": "Yakında",
   "tools.image.cropAspectRatio": "En boy oranı",
   "tools.image.cropRatioFree": "Serbest",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Tamamlandı",
   "tools.database.defaultViewBoard": "Pano"
 }
+

@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "تصویر شامل کریں",
   "tools.image.emptyUpload": "اپ لوڈ",
   "tools.image.emptyLink": "لنک",
-  "tools.image.emptyStock": "اسٹاک",
   "tools.image.emptyInsert": "داخل کریں",
   "tools.image.emptyChooseFile": "فائل منتخب کریں",
   "tools.image.emptyOrDropHere": "یا یہاں تصویر ڈراپ کریں",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "تصویر کا URL پیسٹ کریں…",
   "tools.image.emptyUrlAria": "تصویر کا URL",
   "tools.image.emptySourceAria": "تصویر کا ذریعہ",
-  "tools.image.emptyStockPlaceholder": "اسٹاک تصاویر تلاش کریں…",
-  "tools.image.emptyStockAria": "اسٹاک تصاویر",
-  "tools.image.emptyComingSoon": "جلد آرہا ہے",
   "tools.image.cropAspectRatio": "تناسب",
   "tools.image.cropRatioFree": "آزاد",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "مکمل",
   "tools.database.defaultViewBoard": "بورڈ"
 }
+

@@ -1,6 +1,7 @@
 import type { ImageCrop, ImageCropShape } from '../../../types/tools/image';
 import type { I18nInstance } from '../../components/utils/tools';
 import { FULL_RECT, clampRect, isFullRect, resizeRect, applyRatio, type Handle } from './crop-math';
+import { tr } from './i18n';
 
 export interface CropEditorOptions {
   url: string;
@@ -32,9 +33,6 @@ const RATIOS: RatioDef[] = [
   { label: 'Circle', i18nKey: 'tools.image.cropRatioCircle', key: 'circle', value: 1, shape: 'circle' },
   { label: 'Oval', i18nKey: 'tools.image.cropRatioOval', key: 'ellipse', value: null, shape: 'ellipse' },
 ];
-
-const tr = (i18n: I18nInstance | undefined, key: string): string =>
-  i18n?.has(key) ? i18n.t(key) : key;
 
 function assertEl<T extends Element>(node: T | null, what: string): T {
   if (!node) throw new Error(`CropEditor: missing ${what}`);

@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "చిత్రాన్ని జోడించు",
   "tools.image.emptyUpload": "అప్‌లోడ్",
   "tools.image.emptyLink": "లింక్",
-  "tools.image.emptyStock": "స్టాక్",
   "tools.image.emptyInsert": "చొప్పించు",
   "tools.image.emptyChooseFile": "ఫైల్‌ను ఎంచుకోండి",
   "tools.image.emptyOrDropHere": "లేదా ఇక్కడ చిత్రాన్ని వదలండి",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "చిత్రం URL అతికించండి…",
   "tools.image.emptyUrlAria": "చిత్రం URL",
   "tools.image.emptySourceAria": "చిత్ర మూలం",
-  "tools.image.emptyStockPlaceholder": "స్టాక్ చిత్రాలను శోధించండి…",
-  "tools.image.emptyStockAria": "స్టాక్ చిత్రాలు",
-  "tools.image.emptyComingSoon": "త్వరలో వస్తుంది",
   "tools.image.cropAspectRatio": "కోణ నిష్పత్తి",
   "tools.image.cropRatioFree": "ఉచితం",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "పూర్తయింది",
   "tools.database.defaultViewBoard": "బోర్డ్"
 }
+

@@ -17,9 +17,7 @@ import {
   IconZoomOut,
 } from '../../components/icons';
 import { applyRubberBand } from './spring';
-
-const tr = (i18n: I18nInstance | undefined, key: string): string =>
-  i18n?.has(key) ? i18n.t(key) : key;
+import { tr } from './i18n';
 
 const ALIGNMENT_TO_TEXT_ALIGN: Record<ImageAlignment, string> = {
   left: 'left',

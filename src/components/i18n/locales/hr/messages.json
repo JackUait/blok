@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Dodajte sliku",
   "tools.image.emptyUpload": "Prenesi",
   "tools.image.emptyLink": "Poveznica",
-  "tools.image.emptyStock": "Stock",
   "tools.image.emptyInsert": "Umetni",
   "tools.image.emptyChooseFile": "Odaberi datoteku",
   "tools.image.emptyOrDropHere": "ili ispustite sliku ovdje",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Zalijepite URL slike…",
   "tools.image.emptyUrlAria": "URL slike",
   "tools.image.emptySourceAria": "Izvor slike",
-  "tools.image.emptyStockPlaceholder": "Pretraživanje stock slika…",
-  "tools.image.emptyStockAria": "Stock slike",
-  "tools.image.emptyComingSoon": "Uskoro",
   "tools.image.cropAspectRatio": "Omjer stranica",
   "tools.image.cropRatioFree": "Slobodno",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Gotovo",
   "tools.database.defaultViewBoard": "Ploča"
 }
+

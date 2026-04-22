@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Legg til et bilde",
   "tools.image.emptyUpload": "Last opp",
   "tools.image.emptyLink": "Lenke",
-  "tools.image.emptyStock": "Stock",
   "tools.image.emptyInsert": "Sett inn",
   "tools.image.emptyChooseFile": "Velg fil",
   "tools.image.emptyOrDropHere": "eller slipp et bilde her",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Lim inn en bilde-URL…",
   "tools.image.emptyUrlAria": "Bilde-URL",
   "tools.image.emptySourceAria": "Bildekilde",
-  "tools.image.emptyStockPlaceholder": "Søk etter stockbilder…",
-  "tools.image.emptyStockAria": "Stockbilder",
-  "tools.image.emptyComingSoon": "Kommer snart",
   "tools.image.cropAspectRatio": "Sideforhold",
   "tools.image.cropRatioFree": "Fritt",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Ferdig",
   "tools.database.defaultViewBoard": "Tavle"
 }
+

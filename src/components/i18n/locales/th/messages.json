@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "เพิ่มรูปภาพ",
   "tools.image.emptyUpload": "อัปโหลด",
   "tools.image.emptyLink": "ลิงก์",
-  "tools.image.emptyStock": "คลังภาพ",
   "tools.image.emptyInsert": "แทรก",
   "tools.image.emptyChooseFile": "เลือกไฟล์",
   "tools.image.emptyOrDropHere": "หรือวางรูปภาพที่นี่",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "วาง URL รูปภาพ…",
   "tools.image.emptyUrlAria": "URL รูปภาพ",
   "tools.image.emptySourceAria": "แหล่งที่มาของรูปภาพ",
-  "tools.image.emptyStockPlaceholder": "ค้นหารูปในคลัง…",
-  "tools.image.emptyStockAria": "ภาพในคลัง",
-  "tools.image.emptyComingSoon": "เร็ว ๆ นี้",
   "tools.image.cropAspectRatio": "อัตราส่วนภาพ",
   "tools.image.cropRatioFree": "อิสระ",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "เสร็จสิ้น",
   "tools.database.defaultViewBoard": "บอร์ด"
 }
+

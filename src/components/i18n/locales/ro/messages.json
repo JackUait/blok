@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Adaugă o imagine",
   "tools.image.emptyUpload": "Încarcă",
   "tools.image.emptyLink": "Link",
-  "tools.image.emptyStock": "Stoc",
   "tools.image.emptyInsert": "Inserează",
   "tools.image.emptyChooseFile": "Alege fișier",
   "tools.image.emptyOrDropHere": "sau plasează o imagine aici",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Lipește URL-ul unei imagini…",
   "tools.image.emptyUrlAria": "URL-ul imaginii",
   "tools.image.emptySourceAria": "Sursa imaginii",
-  "tools.image.emptyStockPlaceholder": "Caută imagini de stoc…",
-  "tools.image.emptyStockAria": "Imagini de stoc",
-  "tools.image.emptyComingSoon": "În curând",
   "tools.image.cropAspectRatio": "Raport de aspect",
   "tools.image.cropRatioFree": "Liber",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Gata",
   "tools.database.defaultViewBoard": "Panou"
 }
+

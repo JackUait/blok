@@ -1,5 +1,6 @@
 import { IconCloseThick, IconImage } from '../../components/icons';
 import type { I18nInstance } from '../../components/utils/tools';
+import { tr } from './i18n';
 
 export interface UploadingStateOptions {
   fileName: string;
@@ -7,9 +8,6 @@ export interface UploadingStateOptions {
   onCancel?(): void;
   i18n?: I18nInstance;
 }
-
-const tr = (i18n: I18nInstance | undefined, key: string): string =>
-  i18n?.has(key) ? i18n.t(key) : key;
 
 export interface UploadingStateElement extends HTMLElement {
   setProgress(percent: number, sizeLabel?: string): void;

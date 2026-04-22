@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Şəkil əlavə et",
   "tools.image.emptyUpload": "Yüklə",
   "tools.image.emptyLink": "Link",
-  "tools.image.emptyStock": "Stok",
   "tools.image.emptyInsert": "Daxil et",
   "tools.image.emptyChooseFile": "Fayl seç",
   "tools.image.emptyOrDropHere": "və ya şəkli bura atın",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Şəkil URL-ini yapışdırın…",
   "tools.image.emptyUrlAria": "Şəkil URL-i",
   "tools.image.emptySourceAria": "Şəkil mənbəyi",
-  "tools.image.emptyStockPlaceholder": "Stok şəkillər axtar…",
-  "tools.image.emptyStockAria": "Stok şəkillər",
-  "tools.image.emptyComingSoon": "Tezliklə",
   "tools.image.cropAspectRatio": "Nisbət",
   "tools.image.cropRatioFree": "Sərbəst",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Tamamlandı",
   "tools.database.defaultViewBoard": "Lövhə"
 }
+

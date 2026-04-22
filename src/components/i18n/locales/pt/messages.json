@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Adicionar uma imagem",
   "tools.image.emptyUpload": "Enviar",
   "tools.image.emptyLink": "Link",
-  "tools.image.emptyStock": "Banco",
   "tools.image.emptyInsert": "Inserir",
   "tools.image.emptyChooseFile": "Escolher arquivo",
   "tools.image.emptyOrDropHere": "ou solte uma imagem aqui",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Cole a URL de uma imagem…",
   "tools.image.emptyUrlAria": "URL da imagem",
   "tools.image.emptySourceAria": "Origem da imagem",
-  "tools.image.emptyStockPlaceholder": "Buscar imagens do banco…",
-  "tools.image.emptyStockAria": "Imagens do banco",
-  "tools.image.emptyComingSoon": "Em breve",
   "tools.image.cropAspectRatio": "Proporção",
   "tools.image.cropRatioFree": "Livre",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Concluído",
   "tools.database.defaultViewBoard": "Quadro"
 }
+

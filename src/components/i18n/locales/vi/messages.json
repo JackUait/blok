@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Thêm hình ảnh",
   "tools.image.emptyUpload": "Tải lên",
   "tools.image.emptyLink": "Liên kết",
-  "tools.image.emptyStock": "Kho ảnh",
   "tools.image.emptyInsert": "Chèn",
   "tools.image.emptyChooseFile": "Chọn tệp",
   "tools.image.emptyOrDropHere": "hoặc thả ảnh vào đây",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Dán URL ảnh…",
   "tools.image.emptyUrlAria": "URL hình ảnh",
   "tools.image.emptySourceAria": "Nguồn hình ảnh",
-  "tools.image.emptyStockPlaceholder": "Tìm ảnh trong kho…",
-  "tools.image.emptyStockAria": "Ảnh kho",
-  "tools.image.emptyComingSoon": "Sắp ra mắt",
   "tools.image.cropAspectRatio": "Tỷ lệ khung hình",
   "tools.image.cropRatioFree": "Tự do",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Hoàn thành",
   "tools.database.defaultViewBoard": "Bảng"
 }
+

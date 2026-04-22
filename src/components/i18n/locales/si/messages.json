@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "රූපයක් එක් කරන්න",
   "tools.image.emptyUpload": "උඩුගත",
   "tools.image.emptyLink": "සබැඳිය",
-  "tools.image.emptyStock": "ස්ටොක්",
   "tools.image.emptyInsert": "ඇතුළත් කරන්න",
   "tools.image.emptyChooseFile": "ගොනුව තෝරන්න",
   "tools.image.emptyOrDropHere": "හෝ මෙහි රූපයක් දමන්න",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "රූප URL අලවන්න…",
   "tools.image.emptyUrlAria": "රූප URL",
   "tools.image.emptySourceAria": "රූපයේ මූලාශ්‍රය",
-  "tools.image.emptyStockPlaceholder": "ස්ටොක් රූප සොයන්න…",
-  "tools.image.emptyStockAria": "ස්ටොක් රූප",
-  "tools.image.emptyComingSoon": "ඉක්මනින් පැමිණේ",
   "tools.image.cropAspectRatio": "පැති අනුපාතය",
   "tools.image.cropRatioFree": "නිදහස්",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "අවසන්",
   "tools.database.defaultViewBoard": "පුවරුව"
 }
+

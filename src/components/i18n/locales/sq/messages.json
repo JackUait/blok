@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Shto një imazh",
   "tools.image.emptyUpload": "Ngarko",
   "tools.image.emptyLink": "Lidhje",
-  "tools.image.emptyStock": "Stok",
   "tools.image.emptyInsert": "Fut",
   "tools.image.emptyChooseFile": "Zgjidh skedar",
   "tools.image.emptyOrDropHere": "ose hidh një imazh këtu",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Ngjit një URL imazhi…",
   "tools.image.emptyUrlAria": "URL e imazhit",
   "tools.image.emptySourceAria": "Burimi i imazhit",
-  "tools.image.emptyStockPlaceholder": "Kërko imazhe stoku…",
-  "tools.image.emptyStockAria": "Imazhe stoku",
-  "tools.image.emptyComingSoon": "Së shpejti",
   "tools.image.cropAspectRatio": "Raporti i pamjes",
   "tools.image.cropRatioFree": "I lirë",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "E kryer",
   "tools.database.defaultViewBoard": "Tabelë"
 }
+

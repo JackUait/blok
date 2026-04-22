@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "إضافة صورة",
   "tools.image.emptyUpload": "رفع",
   "tools.image.emptyLink": "رابط",
-  "tools.image.emptyStock": "مكتبة",
   "tools.image.emptyInsert": "إدراج",
   "tools.image.emptyChooseFile": "اختيار ملف",
   "tools.image.emptyOrDropHere": "أو أسقط صورة هنا",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "الصق رابط صورة…",
   "tools.image.emptyUrlAria": "رابط الصورة",
   "tools.image.emptySourceAria": "مصدر الصورة",
-  "tools.image.emptyStockPlaceholder": "ابحث في صور المكتبة…",
-  "tools.image.emptyStockAria": "صور المكتبة",
-  "tools.image.emptyComingSoon": "قريبًا",
   "tools.image.cropAspectRatio": "نسبة العرض إلى الارتفاع",
   "tools.image.cropRatioFree": "حر",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "منجز",
   "tools.database.defaultViewBoard": "لوحة"
 }
+

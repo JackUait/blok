@@ -64,4 +64,18 @@ describe('renderErrorState', () => {
     btn.click();
     expect(onReplace).toHaveBeenCalledTimes(1);
   });
+
+  it('uses i18n.t when present', () => {
+    const i18n = { has: () => true, t: (k: string) => 'X-' + k };
+    const el = renderErrorState({ i18n, onRetry: vi.fn(), onReplace: vi.fn() });
+    const title = el.querySelector('.blok-image-error__title');
+    const msg = el.querySelector('.blok-image-error__msg');
+    const retry = el.querySelector('[data-action="retry"]');
+    const replace = el.querySelector('[data-action="replace"]');
+    if (!title || !msg || !retry || !replace) throw new Error('missing nodes');
+    expect(title.textContent).toBe('X-tools.image.errorDefaultTitle');
+    expect(msg.textContent).toBe('X-tools.image.errorDefaultMessage');
+    expect(retry.textContent).toBe('X-tools.image.errorRetry');
+    expect(replace.textContent).toBe('X-tools.image.errorReplace');
+  });
 });

@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "ചിത്രം ചേർക്കുക",
   "tools.image.emptyUpload": "അപ്‌ലോഡ്",
   "tools.image.emptyLink": "ലിങ്ക്",
-  "tools.image.emptyStock": "സ്റ്റോക്ക്",
   "tools.image.emptyInsert": "ചേർക്കുക",
   "tools.image.emptyChooseFile": "ഫയൽ തിരഞ്ഞെടുക്കുക",
   "tools.image.emptyOrDropHere": "അല്ലെങ്കിൽ ഇവിടെ ചിത്രം ഇടുക",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "ചിത്രം URL ഒട്ടിക്കുക…",
   "tools.image.emptyUrlAria": "ചിത്രം URL",
   "tools.image.emptySourceAria": "ചിത്ര ഉറവിടം",
-  "tools.image.emptyStockPlaceholder": "സ്റ്റോക്ക് ചിത്രങ്ങൾ തിരയുക…",
-  "tools.image.emptyStockAria": "സ്റ്റോക്ക് ചിത്രങ്ങൾ",
-  "tools.image.emptyComingSoon": "ഉടൻ വരുന്നു",
   "tools.image.cropAspectRatio": "ആസ്പെക്റ്റ് അനുപാതം",
   "tools.image.cropRatioFree": "സ്വതന്ത്രം",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "പൂർത്തിയായി",
   "tools.database.defaultViewBoard": "ബോർഡ്"
 }
+

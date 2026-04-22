@@ -56,4 +56,20 @@ describe('renderEmptyState', () => {
     if (!err) throw new Error('error region missing');
     expect(err.textContent).toBe('boom');
   });
+
+  it('falls back to English when i18n omitted', () => {
+    const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn() });
+    const card = el.querySelector<HTMLElement>('.blok-image-empty__card');
+    if (!card) throw new Error('card missing');
+    expect(card.getAttribute('aria-label')).toBe('Add an image');
+    const labelEl = el.querySelector('.blok-image-empty__label');
+    expect(labelEl?.textContent).toBe('Add an image');
+    const uploadTab = el.querySelector<HTMLButtonElement>('[data-tab="upload"]');
+    expect(uploadTab?.textContent).toBe('Upload');
+    const embedTab = el.querySelector<HTMLButtonElement>('[data-tab="embed"]');
+    expect(embedTab?.textContent).toBe('Link');
+    embedTab?.click();
+    const urlInput = el.querySelector<HTMLInputElement>('input[type="url"]');
+    expect(urlInput?.placeholder).toBe('Paste an image URL…');
+  });
 });

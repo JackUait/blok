@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "تصوير شامل ڪريو",
   "tools.image.emptyUpload": "اپ لوڊ",
   "tools.image.emptyLink": "لنڪ",
-  "tools.image.emptyStock": "اسٽاڪ",
   "tools.image.emptyInsert": "داخل ڪريو",
   "tools.image.emptyChooseFile": "فائل چونڊيو",
   "tools.image.emptyOrDropHere": "يا هتي تصوير ڇڏيو",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "تصوير جو URL پيسٽ ڪريو…",
   "tools.image.emptyUrlAria": "تصوير URL",
   "tools.image.emptySourceAria": "تصوير جو ذريعو",
-  "tools.image.emptyStockPlaceholder": "اسٽاڪ تصويرون ڳوليو…",
-  "tools.image.emptyStockAria": "اسٽاڪ تصويرون",
-  "tools.image.emptyComingSoon": "جلد اچي رهيو آهي",
   "tools.image.cropAspectRatio": "پاسن جو تناسب",
   "tools.image.cropRatioFree": "آزاد",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "مڪمل",
   "tools.database.defaultViewBoard": "بورڊ"
 }
+

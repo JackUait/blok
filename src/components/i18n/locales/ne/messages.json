@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "तस्विर थप्नुहोस्",
   "tools.image.emptyUpload": "अपलोड",
   "tools.image.emptyLink": "लिङ्क",
-  "tools.image.emptyStock": "स्टक",
   "tools.image.emptyInsert": "सम्मिलित गर्नुहोस्",
   "tools.image.emptyChooseFile": "फाइल छान्नुहोस्",
   "tools.image.emptyOrDropHere": "वा यहाँ तस्विर छोड्नुहोस्",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "तस्विर URL टाँस्नुहोस्…",
   "tools.image.emptyUrlAria": "तस्विर URL",
   "tools.image.emptySourceAria": "तस्विर स्रोत",
-  "tools.image.emptyStockPlaceholder": "स्टक तस्विरहरू खोज्नुहोस्…",
-  "tools.image.emptyStockAria": "स्टक तस्विरहरू",
-  "tools.image.emptyComingSoon": "चाँडै आउँदैछ",
   "tools.image.cropAspectRatio": "आस्पेक्ट अनुपात",
   "tools.image.cropRatioFree": "स्वतन्त्र",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "सकियो",
   "tools.database.defaultViewBoard": "बोर्ड"
 }
+

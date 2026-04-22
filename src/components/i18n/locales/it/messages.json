@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Aggiungi un’immagine",
   "tools.image.emptyUpload": "Carica",
   "tools.image.emptyLink": "Link",
-  "tools.image.emptyStock": "Archivio",
   "tools.image.emptyInsert": "Inserisci",
   "tools.image.emptyChooseFile": "Scegli file",
   "tools.image.emptyOrDropHere": "oppure trascina qui un’immagine",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Incolla l’URL di un’immagine…",
   "tools.image.emptyUrlAria": "URL dell’immagine",
   "tools.image.emptySourceAria": "Origine dell’immagine",
-  "tools.image.emptyStockPlaceholder": "Cerca immagini d’archivio…",
-  "tools.image.emptyStockAria": "Immagini d’archivio",
-  "tools.image.emptyComingSoon": "Prossimamente",
   "tools.image.cropAspectRatio": "Proporzioni",
   "tools.image.cropRatioFree": "Libero",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Completato",
   "tools.database.defaultViewBoard": "Bacheca"
 }
+

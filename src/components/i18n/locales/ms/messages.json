@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Tambah imej",
   "tools.image.emptyUpload": "Muat naik",
   "tools.image.emptyLink": "Pautan",
-  "tools.image.emptyStock": "Stok",
   "tools.image.emptyInsert": "Sisip",
   "tools.image.emptyChooseFile": "Pilih fail",
   "tools.image.emptyOrDropHere": "atau lepaskan imej di sini",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Tampal URL imej…",
   "tools.image.emptyUrlAria": "URL imej",
   "tools.image.emptySourceAria": "Sumber imej",
-  "tools.image.emptyStockPlaceholder": "Cari imej stok…",
-  "tools.image.emptyStockAria": "Imej stok",
-  "tools.image.emptyComingSoon": "Akan datang",
   "tools.image.cropAspectRatio": "Nisbah aspek",
   "tools.image.cropRatioFree": "Bebas",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Selesai",
   "tools.database.defaultViewBoard": "Papan"
 }
+

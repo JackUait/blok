@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "ছবি যোগ করুন",
   "tools.image.emptyUpload": "আপলোড",
   "tools.image.emptyLink": "লিঙ্ক",
-  "tools.image.emptyStock": "স্টক",
   "tools.image.emptyInsert": "ঢোকান",
   "tools.image.emptyChooseFile": "ফাইল নির্বাচন করুন",
   "tools.image.emptyOrDropHere": "অথবা এখানে ছবি ফেলুন",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "ছবির URL পেস্ট করুন…",
   "tools.image.emptyUrlAria": "ছবির URL",
   "tools.image.emptySourceAria": "ছবির উৎস",
-  "tools.image.emptyStockPlaceholder": "স্টক ছবি খুঁজুন…",
-  "tools.image.emptyStockAria": "স্টক ছবি",
-  "tools.image.emptyComingSoon": "শীঘ্রই আসছে",
   "tools.image.cropAspectRatio": "পাশের অনুপাত",
   "tools.image.cropRatioFree": "মুক্ত",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "সম্পন্ন",
   "tools.database.defaultViewBoard": "বোর্ড"
 }
+

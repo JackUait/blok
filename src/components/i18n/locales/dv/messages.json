@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "ފޮޓޯ އިތުރުކުރޭ",
   "tools.image.emptyUpload": "އަޕްލޯޑް",
   "tools.image.emptyLink": "ލިންކް",
-  "tools.image.emptyStock": "ސްޓޮކް",
   "tools.image.emptyInsert": "އެތެރެކުރޭ",
   "tools.image.emptyChooseFile": "ފައިލް ޚިޔާރުކުރޭ",
   "tools.image.emptyOrDropHere": "ނުވަތަ މިތަނަށް ފޮޓޯ ޑްރޮޕް ކުރޭ",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "ފޮޓޯ URL ޕޭސްޓް ކުރޭ…",
   "tools.image.emptyUrlAria": "ފޮޓޯ URL",
   "tools.image.emptySourceAria": "ފޮޓޯގެ މަޞްދަރު",
-  "tools.image.emptyStockPlaceholder": "ސްޓޮކް ފޮޓޯ ހޯދާ…",
-  "tools.image.emptyStockAria": "ސްޓޮކް ފޮޓޯ",
-  "tools.image.emptyComingSoon": "ވަރަށް އަވަހަށް",
   "tools.image.cropAspectRatio": "އެސްޕެކްޓް ރޭޝިއޯ",
   "tools.image.cropRatioFree": "ހުރި",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "ނިމިއްޖެ",
   "tools.database.defaultViewBoard": "ބޯޑް"
 }
+

@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Додайте зображення",
   "tools.image.emptyUpload": "Завантажити",
   "tools.image.emptyLink": "Посилання",
-  "tools.image.emptyStock": "Стоки",
   "tools.image.emptyInsert": "Вставити",
   "tools.image.emptyChooseFile": "Вибрати файл",
   "tools.image.emptyOrDropHere": "або перетягніть сюди",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Вставте URL зображення…",
   "tools.image.emptyUrlAria": "URL зображення",
   "tools.image.emptySourceAria": "Джерело зображення",
-  "tools.image.emptyStockPlaceholder": "Пошук у стоках…",
-  "tools.image.emptyStockAria": "Стокові зображення",
-  "tools.image.emptyComingSoon": "Незабаром",
   "tools.image.cropAspectRatio": "Співвідношення сторін",
   "tools.image.cropRatioFree": "Вільне",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Готово",
   "tools.database.defaultViewBoard": "Дошка"
 }
+

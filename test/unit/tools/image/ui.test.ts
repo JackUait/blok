@@ -628,3 +628,104 @@ describe('renderOverlay', () => {
   });
 });
 
+describe('English fallback when i18n is omitted', () => {
+  afterEach(() => {
+    document.querySelectorAll('[role="dialog"][aria-modal="true"]').forEach((el) => el.remove());
+  });
+
+  it('caption row alt button falls back to "Alt" and aria-label to "Edit alt text"', () => {
+    const row = renderCaptionRow({
+      caption: { value: '', placeholder: 'p', readOnly: false },
+      onAlt: () => undefined,
+    });
+    const btn = row.querySelector<HTMLButtonElement>('[data-action="alt-edit"]');
+    if (!btn) throw new Error('alt button missing');
+    expect(btn.textContent).toBe('Alt');
+    expect(btn.getAttribute('aria-label')).toBe('Edit alt text');
+  });
+
+  it('lightbox dialog aria-label falls back to "Image preview"', () => {
+    const close = openLightbox({ url: 'u' });
+    const dialog = document.querySelector('[role="dialog"][aria-modal="true"]');
+    expect(dialog?.getAttribute('aria-label')).toBe('Image preview');
+    close();
+  });
+
+  it('lightbox toolbar aria-label falls back to "Image preview controls"', () => {
+    const close = openLightbox({ url: 'u' });
+    const toolbar = document.querySelector('[data-role="lightbox-toolbar"]');
+    expect(toolbar?.getAttribute('aria-label')).toBe('Image preview controls');
+    close();
+  });
+
+  it('lightbox zoom/reset/download/copy/exit buttons fall back to English labels', () => {
+    const close = openLightbox({ url: 'u' });
+    const expectLabel = (action: string, label: string): void => {
+      const btn = document.querySelector<HTMLElement>(`[data-action="${action}"]`);
+      expect(btn?.getAttribute('aria-label')).toBe(label);
+    };
+    expectLabel('zoom-out', 'Zoom out');
+    expectLabel('zoom-in', 'Zoom in');
+    expectLabel('zoom-reset', 'Reset zoom');
+    expectLabel('lightbox-download', 'Download');
+    expectLabel('lightbox-copy-url', 'Copy URL');
+    expectLabel('lightbox-collapse', 'Exit fullscreen');
+    close();
+  });
+
+  it('overlay action buttons fall back to English labels', () => {
+    const noop = (): void => undefined;
+    const overlay = renderOverlay({
+      state: { alignment: 'center', captionVisible: true, size: 'md' },
+      onAlign: noop,
+      onSize: noop,
+      onReplace: noop,
+      onDelete: noop,
+      onDownload: noop,
+      onFullscreen: noop,
+      onCopyUrl: noop,
+      onToggleCaption: noop,
+      onCrop: noop,
+    });
+    const expectLabel = (action: string, label: string): void => {
+      const btn = overlay.querySelector<HTMLElement>(`[data-action="${action}"]`);
+      expect(btn?.getAttribute('aria-label')).toBe(label);
+    };
+    expectLabel('caption-toggle', 'Toggle caption');
+    expectLabel('replace', 'Replace image');
+    expectLabel('crop', 'Crop');
+    expectLabel('fullscreen', 'View fullscreen');
+    expectLabel('download', 'Download original');
+    expectLabel('more', 'More options');
+  });
+
+  it('overlay alignment trigger and popover options fall back to English aria-labels', () => {
+    const noop = (): void => undefined;
+    const overlay = renderOverlay({
+      state: { alignment: 'center', captionVisible: true, size: 'md' },
+      onAlign: noop,
+      onSize: noop,
+      onReplace: noop,
+      onDelete: noop,
+      onDownload: noop,
+      onFullscreen: noop,
+      onCopyUrl: noop,
+      onToggleCaption: noop,
+      onCrop: noop,
+    });
+    const trigger = overlay.querySelector<HTMLElement>('[data-action="align-trigger"]');
+    expect(trigger?.getAttribute('aria-label')).toBe('Alignment');
+    trigger?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    const popover = overlay.querySelector<HTMLElement>('[data-role="align-popover"]');
+    expect(popover?.getAttribute('aria-label')).toBe('Alignment');
+    const optLabels: Record<string, string> = {
+      'align-left': 'Align left',
+      'align-center': 'Align center',
+      'align-right': 'Align right',
+    };
+    for (const [action, label] of Object.entries(optLabels)) {
+      const btn = overlay.querySelector<HTMLElement>(`[data-action="${action}"]`);
+      expect(btn?.getAttribute('aria-label')).toBe(label);
+    }
+  });
+});

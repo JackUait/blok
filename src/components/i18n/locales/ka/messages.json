@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "სურათის დამატება",
   "tools.image.emptyUpload": "ატვირთვა",
   "tools.image.emptyLink": "ბმული",
-  "tools.image.emptyStock": "სტოკი",
   "tools.image.emptyInsert": "ჩასმა",
   "tools.image.emptyChooseFile": "ფაილის არჩევა",
   "tools.image.emptyOrDropHere": "ან ჩააგდეთ სურათი აქ",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "ჩასვით სურათის URL…",
   "tools.image.emptyUrlAria": "სურათის URL",
   "tools.image.emptySourceAria": "სურათის წყარო",
-  "tools.image.emptyStockPlaceholder": "სტოკ სურათების ძიება…",
-  "tools.image.emptyStockAria": "სტოკ სურათები",
-  "tools.image.emptyComingSoon": "მალე",
   "tools.image.cropAspectRatio": "თანაფარდობა",
   "tools.image.cropRatioFree": "თავისუფალი",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "დასრულდა",
   "tools.database.defaultViewBoard": "დაფა"
 }
+

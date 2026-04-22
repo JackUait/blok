@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Зураг нэмэх",
   "tools.image.emptyUpload": "Оруулах",
   "tools.image.emptyLink": "Холбоос",
-  "tools.image.emptyStock": "Сток",
   "tools.image.emptyInsert": "Оруулах",
   "tools.image.emptyChooseFile": "Файл сонгох",
   "tools.image.emptyOrDropHere": "эсвэл зургийг энд чирч оруулна уу",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Зургийн URL буулгах…",
   "tools.image.emptyUrlAria": "Зургийн URL",
   "tools.image.emptySourceAria": "Зургийн эх сурвалж",
-  "tools.image.emptyStockPlaceholder": "Сток зургууд хайх…",
-  "tools.image.emptyStockAria": "Сток зургууд",
-  "tools.image.emptyComingSoon": "Удахгүй",
   "tools.image.cropAspectRatio": "Харьцаа",
   "tools.image.cropRatioFree": "Чөлөөт",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Дууссан",
   "tools.database.defaultViewBoard": "Самбар"
 }
+

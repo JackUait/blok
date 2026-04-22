@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "הוסף תמונה",
   "tools.image.emptyUpload": "העלה",
   "tools.image.emptyLink": "קישור",
-  "tools.image.emptyStock": "גלריה",
   "tools.image.emptyInsert": "הוסף",
   "tools.image.emptyChooseFile": "בחר קובץ",
   "tools.image.emptyOrDropHere": "או גרור תמונה לכאן",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "הדבק כתובת תמונה…",
   "tools.image.emptyUrlAria": "כתובת תמונה",
   "tools.image.emptySourceAria": "מקור תמונה",
-  "tools.image.emptyStockPlaceholder": "חפש בגלריית תמונות…",
-  "tools.image.emptyStockAria": "תמונות גלריה",
-  "tools.image.emptyComingSoon": "בקרוב",
   "tools.image.cropAspectRatio": "יחס גובה-רוחב",
   "tools.image.cropRatioFree": "חופשי",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "הושלם",
   "tools.database.defaultViewBoard": "לוח"
 }
+

@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Lisää kuva",
   "tools.image.emptyUpload": "Lataa",
   "tools.image.emptyLink": "Linkki",
-  "tools.image.emptyStock": "Kuvapankki",
   "tools.image.emptyInsert": "Lisää",
   "tools.image.emptyChooseFile": "Valitse tiedosto",
   "tools.image.emptyOrDropHere": "tai pudota kuva tähän",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Liitä kuvan URL…",
   "tools.image.emptyUrlAria": "Kuvan URL",
   "tools.image.emptySourceAria": "Kuvan lähde",
-  "tools.image.emptyStockPlaceholder": "Hae kuvapankkikuvia…",
-  "tools.image.emptyStockAria": "Kuvapankkikuvat",
-  "tools.image.emptyComingSoon": "Tulossa pian",
   "tools.image.cropAspectRatio": "Kuvasuhde",
   "tools.image.cropRatioFree": "Vapaa",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Valmis",
   "tools.database.defaultViewBoard": "Taulu"
 }
+

@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "رەسىم قوشۇش",
   "tools.image.emptyUpload": "يۈكلەش",
   "tools.image.emptyLink": "ئۇلانما",
-  "tools.image.emptyStock": "زاپاس",
   "tools.image.emptyInsert": "قىستۇرۇش",
   "tools.image.emptyChooseFile": "ھۆججەت تاللاش",
   "tools.image.emptyOrDropHere": "ياكى بۇ يەرگە رەسىم تاشلاڭ",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "رەسىم URL سىنى چاپلاڭ…",
   "tools.image.emptyUrlAria": "رەسىم URL",
   "tools.image.emptySourceAria": "رەسىم مەنبەسى",
-  "tools.image.emptyStockPlaceholder": "زاپاس رەسىملەرنى ئىزدەش…",
-  "tools.image.emptyStockAria": "زاپاس رەسىملەر",
-  "tools.image.emptyComingSoon": "پات يېقىندا",
   "tools.image.cropAspectRatio": "تەرەپ نىسبىتى",
   "tools.image.cropRatioFree": "ئەركىن",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "تاماملاندى",
   "tools.database.defaultViewBoard": "تاختا"
 }
+

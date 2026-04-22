@@ -2,6 +2,7 @@ import type { ImageCrop } from '../../../types/tools/image';
 import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
 import type { I18nInstance } from '../../components/utils/tools';
 import { mountCropEditor } from './crop-editor';
+import { tr } from './i18n';
 
 export interface OpenCropModalOptions {
   url: string;
@@ -24,7 +25,7 @@ export function openCropModal(opts: OpenCropModalOptions): () => void {
   dialog.className = 'blok-image-crop-modal-dialog';
   dialog.setAttribute('role', 'dialog');
   dialog.setAttribute('aria-modal', 'true');
-  dialog.setAttribute('aria-label', opts.i18n?.has('tools.image.cropDialogLabel') ? opts.i18n.t('tools.image.cropDialogLabel') : 'Crop image');
+  dialog.setAttribute('aria-label', tr(opts.i18n, 'tools.image.cropDialogLabel'));
   dialog.tabIndex = -1;
 
   const body = document.createElement('div');

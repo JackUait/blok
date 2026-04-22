@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Kép hozzáadása",
   "tools.image.emptyUpload": "Feltöltés",
   "tools.image.emptyLink": "Link",
-  "tools.image.emptyStock": "Stock",
   "tools.image.emptyInsert": "Beszúrás",
   "tools.image.emptyChooseFile": "Fájl választása",
   "tools.image.emptyOrDropHere": "vagy húzz ide egy képet",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Illessz be egy kép URL-t…",
   "tools.image.emptyUrlAria": "Kép URL",
   "tools.image.emptySourceAria": "Kép forrása",
-  "tools.image.emptyStockPlaceholder": "Stock képek keresése…",
-  "tools.image.emptyStockAria": "Stock képek",
-  "tools.image.emptyComingSoon": "Hamarosan",
   "tools.image.cropAspectRatio": "Képarány",
   "tools.image.cropRatioFree": "Szabad",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Kész",
   "tools.database.defaultViewBoard": "Tábla"
 }
+

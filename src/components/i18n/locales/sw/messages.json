@@ -266,7 +266,6 @@
   "tools.image.emptyAddImage": "Ongeza picha",
   "tools.image.emptyUpload": "Pakia",
   "tools.image.emptyLink": "Kiungo",
-  "tools.image.emptyStock": "Stock",
   "tools.image.emptyInsert": "Ingiza",
   "tools.image.emptyChooseFile": "Chagua faili",
   "tools.image.emptyOrDropHere": "au dondosha picha hapa",
@@ -275,9 +274,6 @@
   "tools.image.emptyUrlPlaceholder": "Bandika URL ya picha…",
   "tools.image.emptyUrlAria": "URL ya picha",
   "tools.image.emptySourceAria": "Chanzo cha picha",
-  "tools.image.emptyStockPlaceholder": "Tafuta picha za stock…",
-  "tools.image.emptyStockAria": "Picha za stock",
-  "tools.image.emptyComingSoon": "Inakuja hivi karibuni",
   "tools.image.cropAspectRatio": "Uwiano",
   "tools.image.cropRatioFree": "Huru",
   "tools.image.cropRatio1to1": "1:1",
@@ -318,3 +314,4 @@
   "tools.database.defaultStatusDone": "Imekamilika",
   "tools.database.defaultViewBoard": "Ubao"
 }
+

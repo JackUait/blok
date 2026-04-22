@@ -13,6 +13,11 @@ function readAnimationName(el: Element): string {
   }
 }
 
+function supportsAnimations(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return !/jsdom/i.test(navigator.userAgent);
+}
+
 export interface OpenCropModalOptions {
   url: string;
   alt?: string;
@@ -84,19 +89,28 @@ export function openCropModal(opts: OpenCropModalOptions): () => void {
 
     const animName = readAnimationName(dialog);
     const hasAnimation = !!animName && animName !== 'none';
-    const hasAnimEngine = typeof (dialog as unknown as { getAnimations?: () => unknown[] })
-      .getAnimations === 'function';
-    if (reduceMotion || !hasAnimation || !hasAnimEngine) {
+    if (reduceMotion || !hasAnimation || !supportsAnimations()) {
       finalize();
       return;
     }
 
-    const onAnimationEnd = (event: AnimationEvent): void => {
-      if (event.target !== dialog) return;
+    const settleState: { settled: boolean; fallback: number } = {
+      settled: false,
+      fallback: 0,
+    };
+    const settle = (): void => {
+      if (settleState.settled) return;
+      settleState.settled = true;
       dialog.removeEventListener('animationend', onAnimationEnd);
+      if (settleState.fallback !== 0) window.clearTimeout(settleState.fallback);
       finalize();
     };
+    const onAnimationEnd = (event: AnimationEvent): void => {
+      if (event.target !== dialog) return;
+      settle();
+    };
     dialog.addEventListener('animationend', onAnimationEnd);
+    settleState.fallback = window.setTimeout(settle, 260);
   };
 
   const onBackdropPointerDown = (event: MouseEvent): void => {

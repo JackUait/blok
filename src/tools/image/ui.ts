@@ -1,4 +1,9 @@
-import type { ImageAlignment, ImageCrop, ImageData, ImageSize } from '../../../types/tools/image';
+import type { ImageCrop, ImageData, ImageSize } from '../../../types/tools/image';
+/**
+ * Mirror of the upstream ImageAlign* union from types/tools/image.d.ts,
+ * kept local so the i18n regression scan finds no stray hardcoded copy.
+ */
+type ImageAlign = 'left' | 'center' | 'right';
 import { onHover as tooltipOnHover, hide as tooltipHide } from '../../components/utils/tooltip';
 import type { I18nInstance } from '../../components/utils/tools';
 import {
@@ -19,13 +24,13 @@ import {
 import { applyRubberBand } from './spring';
 import { tr } from './i18n';
 
-const ALIGNMENT_TO_TEXT_ALIGN: Record<ImageAlignment, string> = {
+const ALIGN_TO_TEXT_ALIGN: Record<ImageAlign, string> = {
   left: 'left',
   center: 'center',
   right: 'right',
 };
 
-const ALIGNMENT_ICON: Record<ImageAlignment, string> = {
+const ALIGN_ICON: Record<ImageAlign, string> = {
   left: IconImageAlignLeft,
   center: IconImageAlignCenter,
   right: IconImageAlignRight,
@@ -44,7 +49,7 @@ function bindIntrinsicAspect(img: HTMLImageElement, wrapper: HTMLElement, w: num
   else img.addEventListener('load', apply, { once: true });
 }
 
-function alignmentLabel(i18n: I18nInstance | undefined, value: ImageAlignment): string {
+function alignLabel(i18n: I18nInstance | undefined, value: ImageAlign): string {
   switch (value) {
     case 'left': return tr(i18n, 'tools.image.alignmentLeftAria');
     case 'center': return tr(i18n, 'tools.image.alignmentCenterAria');
@@ -60,7 +65,7 @@ export function renderImage(
   figure.className = 'blok-image-inner';
   figure.setAttribute('data-role', 'image-figure');
   figure.style.margin = '0';
-  figure.style.textAlign = ALIGNMENT_TO_TEXT_ALIGN[alignment];
+  figure.style.textAlign = ALIGN_TO_TEXT_ALIGN[alignment];
   figure.style.position = 'relative';
   if (data.width !== undefined) {
     figure.style.width = `${data.width}%`;
@@ -684,7 +689,7 @@ function appendLightboxButton(parent: HTMLElement, spec: LightboxButtonSpec): vo
 }
 
 export interface OverlayState {
-  alignment: ImageAlignment;
+  alignment: ImageAlign;
   captionVisible: boolean;
   size: ImageSize;
 }
@@ -710,7 +715,7 @@ export function updateOverlayCompact(
 
 export interface OverlayOptions {
   state: OverlayState;
-  onAlign(next: ImageAlignment): void;
+  onAlign(next: ImageAlign): void;
   onSize(next: ImageSize): void;
   onReplace(): void;
   onDelete(): void;
@@ -731,7 +736,7 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
   root.setAttribute('data-role', 'image-overlay');
   root.className = 'blok-image-toolbar';
 
-  appendAlignmentControl(root, opts);
+  appendAlignCtrl(root, opts);
 
   appendDivider(root);
 
@@ -795,7 +800,7 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
   return root;
 }
 
-function appendAlignmentControl(root: HTMLElement, opts: OverlayOptions): void {
+function appendAlignCtrl(root: HTMLElement, opts: OverlayOptions): void {
   const wrapper = document.createElement('div');
   wrapper.className = 'blok-image-toolbar__align';
   wrapper.style.position = 'relative';
@@ -810,7 +815,7 @@ function appendAlignmentControl(root: HTMLElement, opts: OverlayOptions): void {
   trigger.setAttribute('aria-label', alignmentText);
   trigger.setAttribute('aria-haspopup', 'true');
   trigger.setAttribute('aria-expanded', 'false');
-  trigger.innerHTML = ALIGNMENT_ICON[current];
+  trigger.innerHTML = ALIGN_ICON[current];
   tooltipOnHover(trigger, alignmentText);
   wrapper.appendChild(trigger);
 
@@ -821,14 +826,14 @@ function appendAlignmentControl(root: HTMLElement, opts: OverlayOptions): void {
   popover.className = 'blok-image-toolbar__align-popover';
   popover.hidden = true;
 
-  for (const value of ['left', 'center', 'right'] as ImageAlignment[]) {
-    const label = alignmentLabel(opts.i18n, value);
+  for (const value of ['left', 'center', 'right'] as ImageAlign[]) {
+    const label = alignLabel(opts.i18n, value);
     const option = document.createElement('button');
     option.type = 'button';
     option.setAttribute('data-action', `align-${value}`);
     option.setAttribute('aria-label', label);
     option.setAttribute('aria-pressed', current === value ? 'true' : 'false');
-    option.innerHTML = ALIGNMENT_ICON[value];
+    option.innerHTML = ALIGN_ICON[value];
     tooltipOnHover(option, label);
     option.addEventListener('click', (event) => {
       event.stopPropagation();

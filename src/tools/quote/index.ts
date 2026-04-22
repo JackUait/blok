@@ -224,7 +224,6 @@ export class Quote implements BlockTool {
   public static get toolbox(): ToolboxConfig {
     return {
       icon: IconQuote,
-      title: 'Quote',
       titleKey: 'quote',
       shortcut: '"',
       searchTerms: ['quote', 'blockquote', 'citation'],

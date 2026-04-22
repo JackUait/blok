@@ -37,7 +37,6 @@ export const STYLE_CONFIGS: StyleConfig[] = [
 export const getToolboxConfig = (): ToolboxConfig => [
   {
     icon: IconListBulleted,
-    title: 'Bulleted list',
     titleKey: 'bulletedList',
     data: { style: 'unordered' },
     name: 'bulleted-list',
@@ -47,7 +46,6 @@ export const getToolboxConfig = (): ToolboxConfig => [
   },
   {
     icon: IconListNumbered,
-    title: 'Numbered list',
     titleKey: 'numberedList',
     data: { style: 'ordered' },
     name: 'numbered-list',
@@ -57,7 +55,6 @@ export const getToolboxConfig = (): ToolboxConfig => [
   },
   {
     icon: IconListChecklist,
-    title: 'To-do list',
     titleKey: 'todoList',
     data: { style: 'checklist' },
     name: 'check-list',

@@ -429,12 +429,12 @@ describe('DatabaseBoardView', () => {
   });
 
   describe('accessibility', () => {
-    it('board element has role="region" and aria-label="Kanban board"', () => {
+    it('board element has role="region" and aria-label pointing at the localised key', () => {
       const view = new DatabaseBoardView({ readOnly: false, i18n, options: [], getRows: () => [], titlePropertyId: 'title' });
       const board = view.createView();
 
       expect(board.getAttribute('role')).toBe('region');
-      expect(board.getAttribute('aria-label')).toBe('Kanban board');
+      expect(board.getAttribute('aria-label')).toBe('tools.database.kanbanBoard');
     });
 
     it('each column element has role="group"', () => {

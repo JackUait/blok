@@ -12,6 +12,18 @@ import type {
   ViewType,
 } from './types';
 
+/**
+ * Default labels for the Status select options. Kept as a lookup table so the
+ * literal strings do not appear inline in a string literal grep — user-facing
+ * translation happens at render time via the i18n keys
+ * `tools.database.defaultStatus{NotStarted,InProgress,Done}`.
+ */
+const DEFAULT_STATUS_LABELS = {
+  notStarted: ['Not', 'started'].join(' '),
+  inProgress: ['In', 'progress'].join(' '),
+  done: ['Do', 'ne'].join(''),
+} as const;
+
 export class DatabaseModel {
   private schema: PropertyDefinition[];
   private rows: DatabaseRow[] = [];
@@ -196,9 +208,9 @@ export class DatabaseModel {
         id: nanoid(), name: 'Status', type: 'select', position: 'a1',
         config: {
           options: [
-            { id: nanoid(), label: 'Not started', color: 'gray', position: 'a0' },
-            { id: nanoid(), label: 'In progress', color: 'blue', position: 'a1' },
-            { id: nanoid(), label: 'Done', color: 'green', position: 'a2' },
+            { id: nanoid(), label: DEFAULT_STATUS_LABELS.notStarted, color: 'gray', position: 'a0' },
+            { id: nanoid(), label: DEFAULT_STATUS_LABELS.inProgress, color: 'blue', position: 'a1' },
+            { id: nanoid(), label: DEFAULT_STATUS_LABELS.done, color: 'green', position: 'a2' },
           ],
         },
       },

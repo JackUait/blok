@@ -52,13 +52,13 @@ describe('DatabaseListView', () => {
       expect(list.getAttribute('role')).toBe('list');
     });
 
-    it('renders aria-label="List view" on wrapper', () => {
+    it('renders localised list-view aria-label on wrapper', () => {
       const view = new DatabaseListView({
         readOnly: false, i18n, rows: [], titlePropertyId: 'title', schema: makeSchema(), visiblePropertyIds: [],
       });
       const list = view.createView();
 
-      expect(list.getAttribute('aria-label')).toBe('List view');
+      expect(list.getAttribute('aria-label')).toBe('tools.database.listView');
     });
 
     it('renders one row element per row', () => {

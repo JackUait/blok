@@ -473,7 +473,7 @@ describe('Paragraph Tool - Custom Configurations', () => {
   describe('static properties', () => {
     it('has correct toolbox configuration', () => {
       expect(Paragraph.toolbox).toHaveProperty('icon');
-      expect(Paragraph.toolbox).toHaveProperty('title', 'Text');
+      expect(Paragraph.toolbox).toHaveProperty('titleKey', 'text');
     });
 
     it('has correct conversion config', () => {

@@ -135,7 +135,7 @@ describe('ToggleItem', () => {
   });
 
   describe('static toolbox', () => {
-    it('has correct config with title and icon', async () => {
+    it('has correct config with titleKey and icon', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
       const toolbox = ToggleItem.toolbox;
 
@@ -144,7 +144,7 @@ describe('ToggleItem', () => {
       // Handle both array and single entry format
       const entry = Array.isArray(toolbox) ? toolbox[0] : toolbox;
 
-      expect(entry.title).toBe('Toggle list');
+      expect(entry.titleKey).toBe('toggleList');
       expect(entry.icon).toBeDefined();
       expect(typeof entry.icon).toBe('string');
     });

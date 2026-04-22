@@ -118,11 +118,11 @@ const createTableOptions = (
 
 describe('Table Tool', () => {
   describe('static properties', () => {
-    it('has toolbox config with icon and title', () => {
+    it('has toolbox config with icon and titleKey', () => {
       const toolbox = Table.toolbox;
 
       expect(toolbox).toHaveProperty('icon');
-      expect(toolbox).toHaveProperty('title', 'Table');
+      expect(toolbox).toHaveProperty('titleKey', 'tools.table.title');
     });
 
     it('supports read-only mode', () => {

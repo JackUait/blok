@@ -4,6 +4,7 @@ import { DatabaseViewPopover } from './database-view-popover';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
+import type { API } from '../../../types';
 import type { DatabaseViewConfig, ViewType } from './types';
 
 const DRAG_THRESHOLD = 10;
@@ -22,6 +23,7 @@ export interface TabBarOptions {
   onDuplicate: (viewId: string) => void;
   onDelete: (viewId: string) => void;
   onReorder: (viewId: string, newPosition: string) => void;
+  api?: API;
   readOnly?: boolean;
 }
 
@@ -204,10 +206,13 @@ export class DatabaseTabBar {
 
     const canDelete = this.options.views.length > 1;
 
+    const t = (key: string, fallback: string): string =>
+      this.options.api?.i18n.t(key) ?? fallback;
+
     const baseItems = [
       {
         icon: IconPencil,
-        title: 'Rename',
+        title: t('tools.database.renameView', 'Rename'),
         closeOnActivate: true,
         onActivate: () => {
           this.startInlineRename(tab, viewId);
@@ -215,7 +220,7 @@ export class DatabaseTabBar {
       },
       {
         icon: IconCopy,
-        title: 'Duplicate',
+        title: t('tools.database.duplicateView', 'Duplicate'),
         closeOnActivate: true,
         onActivate: () => {
           this.options.onDuplicate(viewId);
@@ -228,7 +233,7 @@ export class DatabaseTabBar {
           { type: PopoverItemType.Separator as const },
           {
             icon: IconTrash,
-            title: 'Delete',
+            title: t('tools.database.deleteView', 'Delete'),
             isDestructive: true,
             closeOnActivate: true,
             onActivate: () => {
@@ -320,6 +325,7 @@ export class DatabaseTabBar {
         anchor.removeAttribute('data-popover-open');
         this.barEl?.removeAttribute('data-popover-open');
       },
+      api: this.options.api,
     });
     this.viewPopover.open(anchor);
   }

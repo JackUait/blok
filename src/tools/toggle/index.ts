@@ -408,7 +408,6 @@ export class ToggleItem implements BlockTool {
   public static get toolbox(): ToolboxConfig {
     return {
       icon: IconToggleList,
-      title: 'Toggle list',
       titleKey: 'toggleList',
       name: TOOL_NAME,
       searchTerms: ['toggle', 'collapse', 'expand', 'accordion'],

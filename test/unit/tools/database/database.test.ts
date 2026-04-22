@@ -179,13 +179,13 @@ describe('DatabaseTool', () => {
       expect(entries[1].searchTerms).toBeDefined();
     });
 
-    it('toolbox entries include title field', () => {
+    it('toolbox entries include titleKey field for i18n', () => {
       const toolbox = DatabaseTool.toolbox;
 
-      const entries = toolbox as Array<{ title: string }>;
+      const entries = toolbox as Array<{ titleKey?: string }>;
 
-      expect(entries[0].title).toBe('Database');
-      expect(entries[1].title).toBe('Board');
+      expect(entries[0].titleKey).toBe('database');
+      expect(entries[1].titleKey).toBe('board');
     });
 
     it('database toolbox entry includes cards and columns in searchTerms', () => {

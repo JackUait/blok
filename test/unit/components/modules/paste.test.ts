@@ -450,31 +450,255 @@ describe('Paste module', () => {
   });
 
   describe('Paste class public API', () => {
-    it('registers and removes paste listener when toggling read-only state', () => {
+    it('registers and removes paste, drop, and dragover listeners when toggling read-only state', () => {
       const { paste, mocks } = createPaste();
 
       paste.toggleReadOnly(false);
 
-      expect(mocks.listeners.on).toHaveBeenCalledTimes(1);
       expect(mocks.listeners.on).toHaveBeenCalledWith(
         mocks.holder,
         'paste',
         expect.any(Function)
       );
+      expect(mocks.listeners.on).toHaveBeenCalledWith(
+        mocks.holder,
+        'drop',
+        expect.any(Function)
+      );
+      expect(mocks.listeners.on).toHaveBeenCalledWith(
+        mocks.holder,
+        'dragover',
+        expect.any(Function)
+      );
 
-      const [, , handler] = mocks.listeners.on.mock.calls[0];
+      const registeredCount = mocks.listeners.on.mock.calls.length;
 
       mocks.listeners.on.mockClear();
 
       paste.toggleReadOnly(true);
 
-      expect(mocks.listeners.off).toHaveBeenCalledTimes(1);
-      expect(mocks.listeners.off).toHaveBeenCalledWith(
-        mocks.holder,
-        'paste',
-        handler
-      );
+      const removedEvents = mocks.listeners.off.mock.calls.map(([, eventName]) => eventName);
+
+      expect(removedEvents).toEqual(expect.arrayContaining(['paste', 'drop', 'dragover']));
+      expect(removedEvents.length).toBe(registeredCount);
       expect(mocks.listeners.on).not.toHaveBeenCalled();
+    });
+
+    it('prevents default on dragover when dataTransfer contains files', async () => {
+      const { paste, mocks } = createPaste();
+
+      await paste.prepare();
+      paste.toggleReadOnly(false);
+
+      const dataTransfer = new MockDataTransfer({}, { length: 0 } as FileList, ['Files']);
+      const event = new Event('dragover', { bubbles: true, cancelable: true });
+
+      Object.defineProperty(event, 'dataTransfer', { value: dataTransfer });
+
+      mocks.holder.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(dataTransfer.dropEffect).toBe('copy');
+    });
+
+    it('does not prevent default on dragover without files', async () => {
+      const { paste, mocks } = createPaste();
+
+      await paste.prepare();
+      paste.toggleReadOnly(false);
+
+      const dataTransfer = new MockDataTransfer(
+        { 'text/plain': 'hello' },
+        { length: 0 } as FileList,
+        ['text/plain']
+      );
+      const event = new Event('dragover', { bubbles: true, cancelable: true });
+
+      Object.defineProperty(event, 'dataTransfer', { value: dataTransfer });
+
+      mocks.holder.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('inserts image block when an image file is dropped on the editor', async () => {
+      const { paste, mocks } = createPaste();
+
+      const imageTool = {
+        name: 'image',
+        pasteConfig: {
+          files: {
+            mimeTypes: ['image/*'],
+          },
+        },
+        hasOnPasteHandler: true,
+        baseSanitizeConfig: {},
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.blockTools.set('image', imageTool);
+
+      await paste.prepare();
+      paste.toggleReadOnly(false);
+
+      const currentBlock = {
+        tool: { isDefault: true },
+        isEmpty: true,
+        name: 'paragraph',
+      };
+
+      mocks.BlockManager.currentBlock = currentBlock;
+      mocks.BlockManager.setCurrentBlockByChildNode.mockReturnValue(currentBlock);
+
+      const file = new File(['content'], 'photo.png', { type: 'image/png' });
+      const fileList = {
+        length: 1,
+        item(index: number): File | null {
+          return index === 0 ? file : null;
+        },
+        [0]: file,
+      } as unknown as FileList;
+      const dataTransfer = new MockDataTransfer({}, fileList, ['Files']);
+
+      const event = new Event('drop', { bubbles: true, cancelable: true });
+
+      Object.defineProperty(event, 'dataTransfer', { value: dataTransfer });
+
+      mocks.holder.dispatchEvent(event);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(mocks.BlockManager.paste).toHaveBeenCalledTimes(1);
+
+      const [tool, pasteEvent] = mocks.BlockManager.paste.mock.calls[0] as [string, CustomEvent];
+
+      expect(tool).toBe('image');
+      expect(pasteEvent.type).toBe('file');
+      expect((pasteEvent.detail as { file: File }).file).toBe(file);
+    });
+
+    it('sets data-drop-indicator on the block under the pointer during file dragover', async () => {
+      const { paste, mocks } = createPaste();
+
+      await paste.prepare();
+      paste.toggleReadOnly(false);
+
+      const blockHolder = document.createElement('div');
+
+      blockHolder.setAttribute('data-blok-element', '');
+      Object.defineProperty(blockHolder, 'getBoundingClientRect', {
+        value: () => ({ top: 0, bottom: 100, height: 100, left: 0, right: 100, width: 100, x: 0, y: 0, toJSON: () => ({}) }),
+      });
+      mocks.holder.appendChild(blockHolder);
+
+      const dataTransfer = new MockDataTransfer({}, { length: 0 } as FileList, ['Files']);
+      const event = new Event('dragover', { bubbles: true, cancelable: true });
+
+      Object.defineProperty(event, 'dataTransfer', { value: dataTransfer });
+      Object.defineProperty(event, 'clientX', { value: 50 });
+      Object.defineProperty(event, 'clientY', { value: 20 });
+
+      blockHolder.dispatchEvent(event);
+
+      expect(blockHolder.getAttribute('data-drop-indicator')).toBe('top');
+    });
+
+    it('switches data-drop-indicator edge based on pointer vertical position', async () => {
+      const { paste, mocks } = createPaste();
+
+      await paste.prepare();
+      paste.toggleReadOnly(false);
+
+      const blockHolder = document.createElement('div');
+
+      blockHolder.setAttribute('data-blok-element', '');
+      Object.defineProperty(blockHolder, 'getBoundingClientRect', {
+        value: () => ({ top: 0, bottom: 100, height: 100, left: 0, right: 100, width: 100, x: 0, y: 0, toJSON: () => ({}) }),
+      });
+      mocks.holder.appendChild(blockHolder);
+
+      const dispatch = (clientY: number): void => {
+        const dataTransfer = new MockDataTransfer({}, { length: 0 } as FileList, ['Files']);
+        const event = new Event('dragover', { bubbles: true, cancelable: true });
+
+        Object.defineProperty(event, 'dataTransfer', { value: dataTransfer });
+        Object.defineProperty(event, 'clientX', { value: 50 });
+        Object.defineProperty(event, 'clientY', { value: clientY });
+        blockHolder.dispatchEvent(event);
+      };
+
+      dispatch(80);
+      expect(blockHolder.getAttribute('data-drop-indicator')).toBe('bottom');
+
+      dispatch(20);
+      expect(blockHolder.getAttribute('data-drop-indicator')).toBe('top');
+    });
+
+    it('clears data-drop-indicator after drop', async () => {
+      const { paste, mocks } = createPaste();
+
+      await paste.prepare();
+      paste.toggleReadOnly(false);
+
+      const blockHolder = document.createElement('div');
+
+      blockHolder.setAttribute('data-blok-element', '');
+      Object.defineProperty(blockHolder, 'getBoundingClientRect', {
+        value: () => ({ top: 0, bottom: 100, height: 100, left: 0, right: 100, width: 100, x: 0, y: 0, toJSON: () => ({}) }),
+      });
+      mocks.holder.appendChild(blockHolder);
+
+      mocks.BlockManager.currentBlock = { tool: { isDefault: true }, isEmpty: true, name: 'paragraph' };
+      mocks.BlockManager.setCurrentBlockByChildNode.mockReturnValue(mocks.BlockManager.currentBlock);
+
+      const dragOverDt = new MockDataTransfer({}, { length: 0 } as FileList, ['Files']);
+      const dragOver = new Event('dragover', { bubbles: true, cancelable: true });
+
+      Object.defineProperty(dragOver, 'dataTransfer', { value: dragOverDt });
+      Object.defineProperty(dragOver, 'clientX', { value: 50 });
+      Object.defineProperty(dragOver, 'clientY', { value: 20 });
+      blockHolder.dispatchEvent(dragOver);
+
+      expect(blockHolder.getAttribute('data-drop-indicator')).toBe('top');
+
+      const dropDt = new MockDataTransfer({}, { length: 0 } as FileList, ['Files']);
+      const drop = new Event('drop', { bubbles: true, cancelable: true });
+
+      Object.defineProperty(drop, 'dataTransfer', { value: dropDt });
+      mocks.holder.dispatchEvent(drop);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(blockHolder.hasAttribute('data-drop-indicator')).toBe(false);
+    });
+
+    it('ignores drop during internal block drag', async () => {
+      const { paste, mocks } = createPaste();
+
+      await paste.prepare();
+      paste.toggleReadOnly(false);
+
+      mocks.DragManager.isDragging = true;
+
+      const file = new File(['x'], 'photo.png', { type: 'image/png' });
+      const fileList = {
+        length: 1,
+        item(index: number): File | null {
+          return index === 0 ? file : null;
+        },
+        [0]: file,
+      } as unknown as FileList;
+      const dataTransfer = new MockDataTransfer({}, fileList, ['Files']);
+      const event = new Event('drop', { bubbles: true, cancelable: true });
+
+      Object.defineProperty(event, 'dataTransfer', { value: dataTransfer });
+
+      mocks.holder.dispatchEvent(event);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
     });
 
     it('processes plain text via processText', async () => {

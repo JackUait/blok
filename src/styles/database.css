@@ -363,7 +363,7 @@
   padding: var(--blok-space-1);
   border-radius: var(--blok-space-1);
   color: var(--blok-database-add-text);
-  gap: -4px;
+  gap: calc(-1 * var(--blok-space-1));
 }
 
 [data-blok-database-drawer-close]:hover {
@@ -373,7 +373,7 @@
 [data-blok-database-drawer-close] svg {
   width: 14px;
   height: 14px;
-  margin-left: -6px;
+  margin-left: calc(-1 * var(--blok-space-1-5));
 }
 
 [data-blok-database-drawer-close] svg:first-child {
@@ -699,7 +699,7 @@
   justify-content: center;
   width: 30px;
   height: 30px;
-  border-radius: 7px;
+  border-radius: var(--blok-space-1-75);
   background: var(--blok-database-popover-hover);
   color: var(--blok-database-tab-text-active);
   flex-shrink: 0;

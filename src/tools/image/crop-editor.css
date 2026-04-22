@@ -178,7 +178,7 @@
   box-shadow:
     0 0 0 1px var(--crop-rect-stroke),
     0 0 0 2px var(--crop-rect-halo),
-    var(--crop-rect-drop, 0 8px 32px -8px rgba(0, 0, 0, 0.8));
+    var(--crop-rect-drop, var(--blok-crop-rect-drop-shadow));
 }
 
 .blok-image-crop-editor__rect[data-shape="circle"],
@@ -236,7 +236,7 @@
 .blok-image-crop-editor__size-pill {
   position: absolute;
   transform: translate(-50%, calc(-100% - 12px));
-  padding: 3px 9px;
+  padding: var(--blok-space-0-75) var(--blok-space-2-25);
   background: var(--crop-pill-bg);
   color: var(--crop-pill-fg);
   font:
@@ -246,7 +246,7 @@
     Consolas,
     monospace;
   letter-spacing: 0.04em;
-  border-radius: 999px;
+  border-radius: var(--blok-radius-pill);
   border: 1px solid var(--crop-pill-border);
   pointer-events: none;
   white-space: nowrap;
@@ -298,24 +298,24 @@
    inner (vertex) ends square so the union reads as one continuous L shape.
    Parent filter: drop-shadow paints a single outline around the union.
    Hitbox is 18×18, vertex at (9,9) relative to the hugged rect corner. */
-.blok-image-crop-editor__handle--nw .blok-image-crop-editor__handle-stroke--a { top: 7px; left: 7px; width: 13px; height: 3px; border-radius: 0 1.5px 1.5px 0; }
-.blok-image-crop-editor__handle--nw .blok-image-crop-editor__handle-stroke--b { top: 7px; left: 7px; width: 3px; height: 13px; border-radius: 0 0 1.5px 1.5px; }
+.blok-image-crop-editor__handle--nw .blok-image-crop-editor__handle-stroke--a { top: 7px; left: 7px; width: 13px; height: 3px; border-radius: var(--blok-radius-none, 0) var(--blok-radius-hairline) var(--blok-radius-hairline) var(--blok-radius-none, 0); }
+.blok-image-crop-editor__handle--nw .blok-image-crop-editor__handle-stroke--b { top: 7px; left: 7px; width: 3px; height: 13px; border-radius: var(--blok-radius-none, 0) var(--blok-radius-none, 0) var(--blok-radius-hairline) var(--blok-radius-hairline); }
 
-.blok-image-crop-editor__handle--ne .blok-image-crop-editor__handle-stroke--a { top: 7px; right: 7px; width: 13px; height: 3px; border-radius: 1.5px 0 0 1.5px; }
-.blok-image-crop-editor__handle--ne .blok-image-crop-editor__handle-stroke--b { top: 7px; right: 7px; width: 3px; height: 13px; border-radius: 0 0 1.5px 1.5px; }
+.blok-image-crop-editor__handle--ne .blok-image-crop-editor__handle-stroke--a { top: 7px; right: 7px; width: 13px; height: 3px; border-radius: var(--blok-radius-hairline) var(--blok-radius-none, 0) var(--blok-radius-none, 0) var(--blok-radius-hairline); }
+.blok-image-crop-editor__handle--ne .blok-image-crop-editor__handle-stroke--b { top: 7px; right: 7px; width: 3px; height: 13px; border-radius: var(--blok-radius-none, 0) var(--blok-radius-none, 0) var(--blok-radius-hairline) var(--blok-radius-hairline); }
 
-.blok-image-crop-editor__handle--se .blok-image-crop-editor__handle-stroke--a { bottom: 7px; right: 7px; width: 13px; height: 3px; border-radius: 1.5px 0 0 1.5px; }
-.blok-image-crop-editor__handle--se .blok-image-crop-editor__handle-stroke--b { bottom: 7px; right: 7px; width: 3px; height: 13px; border-radius: 1.5px 1.5px 0 0; }
+.blok-image-crop-editor__handle--se .blok-image-crop-editor__handle-stroke--a { bottom: 7px; right: 7px; width: 13px; height: 3px; border-radius: var(--blok-radius-hairline) var(--blok-radius-none, 0) var(--blok-radius-none, 0) var(--blok-radius-hairline); }
+.blok-image-crop-editor__handle--se .blok-image-crop-editor__handle-stroke--b { bottom: 7px; right: 7px; width: 3px; height: 13px; border-radius: var(--blok-radius-hairline) var(--blok-radius-hairline) var(--blok-radius-none, 0) var(--blok-radius-none, 0); }
 
-.blok-image-crop-editor__handle--sw .blok-image-crop-editor__handle-stroke--a { bottom: 7px; left: 7px; width: 13px; height: 3px; border-radius: 0 1.5px 1.5px 0; }
-.blok-image-crop-editor__handle--sw .blok-image-crop-editor__handle-stroke--b { bottom: 7px; left: 7px; width: 3px; height: 13px; border-radius: 1.5px 1.5px 0 0; }
+.blok-image-crop-editor__handle--sw .blok-image-crop-editor__handle-stroke--a { bottom: 7px; left: 7px; width: 13px; height: 3px; border-radius: var(--blok-radius-none, 0) var(--blok-radius-hairline) var(--blok-radius-hairline) var(--blok-radius-none, 0); }
+.blok-image-crop-editor__handle--sw .blok-image-crop-editor__handle-stroke--b { bottom: 7px; left: 7px; width: 3px; height: 13px; border-radius: var(--blok-radius-hairline) var(--blok-radius-hairline) var(--blok-radius-none, 0) var(--blok-radius-none, 0); }
 
 .blok-image-crop-editor__handle--edge {
   background: var(--crop-handle-fill);
   box-shadow:
     0 0 0 1px var(--crop-handle-outline),
-    var(--crop-handle-edge-drop, 0 1px 4px rgba(0, 0, 0, 0.25));
-  border-radius: 999px;
+    var(--crop-handle-edge-drop, var(--blok-crop-handle-edge-drop-shadow));
+  border-radius: var(--blok-radius-pill);
   transform: translate(-50%, -50%);
   transition: transform 120ms ease, background 120ms ease, box-shadow 120ms ease;
 }
@@ -325,8 +325,8 @@
   transform: translate(-50%, -50%) scale(1.2);
   box-shadow:
     0 0 0 1px var(--crop-handle-outline-strong),
-    var(--crop-handle-edge-halo, 0 0 0 3px rgba(255, 255, 255, 0.18)),
-    var(--crop-handle-edge-drop-hover, 0 2px 6px rgba(0, 0, 0, 0.3));
+    var(--crop-handle-edge-halo, var(--blok-crop-handle-edge-halo)),
+    var(--crop-handle-edge-drop-hover, var(--blok-crop-handle-edge-drop-hover));
 }
 
 .blok-image-crop-editor__handle--n,
@@ -359,8 +359,8 @@
 .blok-image-crop-editor__toolbar {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 10px 14px;
+  gap: var(--blok-space-3-5);
+  padding: var(--blok-space-2-5) var(--blok-space-3-5);
   background: var(--crop-toolbar-bg);
   color: var(--crop-fg);
   position: relative;
@@ -375,11 +375,11 @@
 .blok-image-crop-editor__ratio-group {
   display: inline-flex;
   align-items: stretch;
-  gap: 2px;
-  padding: 3px;
+  gap: var(--blok-space-0-5);
+  padding: var(--blok-space-0-75);
   background: var(--crop-chip-group-bg);
   border: 1px solid var(--crop-divider);
-  border-radius: 10px;
+  border-radius: var(--blok-space-2-5);
 }
 
 .blok-image-crop-editor__ratio-chip {
@@ -387,10 +387,10 @@
   background: transparent;
   color: var(--crop-fg-muted);
   border: none;
-  padding: 5px 11px;
+  padding: var(--blok-space-1-25) var(--blok-space-2-75);
   font: 500 12px/1 inherit;
   letter-spacing: 0.01em;
-  border-radius: 7px;
+  border-radius: var(--blok-space-1-75);
   cursor: pointer;
   transition:
     color 140ms ease,
@@ -422,26 +422,26 @@
   margin-left: auto;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--blok-space-2);
 }
 
 .blok-image-crop-editor__kbd-hint {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--blok-space-1);
   color: var(--crop-fg-muted);
   font-size: 11px;
-  margin-right: 6px;
+  margin-right: var(--blok-space-1-5);
   user-select: none;
 }
 
 .blok-image-crop-editor__kbd-hint kbd {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 10px;
-  padding: 1px 5px;
+  padding: var(--blok-space-0-25) var(--blok-space-1-25);
   background: var(--crop-kbd-bg);
   border: 1px solid var(--crop-divider);
-  border-radius: 4px;
+  border-radius: var(--blok-space-1);
   color: var(--crop-fg);
   min-width: 14px;
   text-align: center;
@@ -450,7 +450,7 @@
 
 .blok-image-crop-editor__kbd-sep {
   opacity: 0.4;
-  padding: 0 2px;
+  padding: var(--blok-space-0, 0) var(--blok-space-0-5);
 }
 
 @media (max-width: 640px) {
@@ -460,12 +460,12 @@
 .blok-image-crop-editor__btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--blok-space-1-5);
   background: transparent;
   color: inherit;
   border: 1px solid transparent;
-  border-radius: 8px;
-  padding: 6px 14px;
+  border-radius: var(--blok-space-2);
+  padding: var(--blok-space-1-5) var(--blok-space-3-5);
   font: 500 13px/1.2 inherit;
   cursor: pointer;
   transition:
@@ -496,9 +496,9 @@
 .blok-image-crop-editor__btn--primary {
   background: var(--crop-accent);
   border-color: transparent;
-  color: #fff;
-  padding: 6px 18px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 1px color-mix(in srgb, var(--crop-accent) 50%, transparent);
+  color: var(--blok-crop-pill-fg);
+  padding: var(--blok-space-1-5) var(--blok-space-4-5);
+  box-shadow: 0 1px 2px var(--blok-crop-modal-btn-shadow), 0 0 0 1px color-mix(in srgb, var(--crop-accent) 50%, transparent);
 }
 
 .blok-image-crop-editor__btn--primary:hover {

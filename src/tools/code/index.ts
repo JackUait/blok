@@ -82,6 +82,8 @@ export class CodeTool implements BlockTool {
   private _highlightRafId: number | null = null;
   private _detectedLanguage: string | null = null;
   private _detectionTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private _highlightCleanup: (() => void) | null = null;
+  private _highlightedLang: string | null = null;
 
   constructor({ data, api, readOnly }: BlockToolConstructorOptions<CodeData>) {
     this.api = api;
@@ -705,7 +707,17 @@ export class CodeTool implements BlockTool {
     // Enter). Applying a stale html would overwrite the newer content.
     if (this._dom.codeElement.textContent !== code) return;
 
-    applyPrismHighlight(this._dom.codeElement, html, lang);
+    // Dispose only when language changes — cleanup wipes innerHTML to plain
+    // text, which destroys the caret before applyPrismHighlight can save it.
+    // Same-lang re-highlight lets applyPrismHighlight's own innerHTML swap
+    // preserve the caret via its internal save/restore.
+    if (this._highlightCleanup && this._highlightedLang !== lang) {
+      this._highlightCleanup();
+      this._highlightCleanup = null;
+    }
+
+    this._highlightCleanup = applyPrismHighlight(this._dom.codeElement, html, lang);
+    this._highlightedLang = lang;
 
     // applyPrismHighlight rewrites innerHTML, dropping the trailing <br>
     // sentinel that the keydown handler installed. Without it, a final
@@ -751,6 +763,12 @@ export class CodeTool implements BlockTool {
   }
 
   public removed(): void {
+    if (this._highlightCleanup) {
+      this._highlightCleanup();
+      this._highlightCleanup = null;
+    }
+    this._highlightedLang = null;
+
     disposePrismStyles();
 
     if (this._highlightRafId !== null) {
@@ -774,7 +792,6 @@ export class CodeTool implements BlockTool {
   public static get toolbox(): ToolboxConfig {
     return {
       icon: IconCodeBlock,
-      title: 'Code',
       titleKey: 'code',
       shortcut: '```',
       searchTerms: ['code', 'pre', 'snippet', 'program'],

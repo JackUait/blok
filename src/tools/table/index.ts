@@ -347,7 +347,6 @@ export class Table implements BlockTool {
   public static get toolbox(): ToolboxConfig {
     return {
       icon: IconTable,
-      title: 'Table',
       titleKey: 'tools.table.title',
       searchTerms: ['table', 'grid', 'spreadsheet'],
       searchTermKeys: ['table', 'grid', 'spreadsheet'],

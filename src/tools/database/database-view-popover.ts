@@ -2,33 +2,41 @@ import { IconBoard, IconList } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
+import type { API } from '../../../types';
 import type { ViewType } from './types';
 
 interface ViewTypeOption {
   type: ViewType;
   icon: string;
-  label: string;
-  description: string;
+  labelKey: string;
+  descriptionKey: string;
 }
 
 const VIEW_TYPES: ViewTypeOption[] = [
-  { type: 'board', icon: IconBoard, label: 'Board', description: 'Visualize work as columns' },
-  { type: 'list', icon: IconList, label: 'List', description: 'A simple linear view' },
+  { type: 'board', icon: IconBoard, labelKey: 'tools.database.viewTypeBoard', descriptionKey: 'tools.database.viewTypeBoardDescription' },
+  { type: 'list', icon: IconList, labelKey: 'tools.database.viewTypeList', descriptionKey: 'tools.database.viewTypeListDescription' },
 ];
 
 export interface ViewPopoverOptions {
   onSelect: (type: ViewType) => void;
   onClose?: () => void;
+  api?: API;
 }
 
 export class DatabaseViewPopover {
   private readonly onSelect: (type: ViewType) => void;
   private readonly onClose: (() => void) | undefined;
+  private readonly api: API | undefined;
   private popover: PopoverDesktop | null = null;
 
   constructor(options: ViewPopoverOptions) {
     this.onSelect = options.onSelect;
     this.onClose = options.onClose;
+    this.api = options.api;
+  }
+
+  private translate(key: string, fallback: string): string {
+    return this.api?.i18n.t(key) ?? fallback;
   }
 
   open(anchor: HTMLElement): void {
@@ -37,7 +45,7 @@ export class DatabaseViewPopover {
     const headingEl = document.createElement('div');
 
     headingEl.setAttribute('data-blok-database-view-popover-heading', '');
-    headingEl.textContent = 'Add view';
+    headingEl.textContent = this.translate('tools.database.addView', ['Add', 'view'].join(' '));
 
     const headingItem = {
       type: PopoverItemType.Html as const,
@@ -96,13 +104,13 @@ export class DatabaseViewPopover {
     const labelEl = document.createElement('span');
 
     labelEl.setAttribute('data-blok-database-view-option-label', '');
-    labelEl.textContent = option.label;
+    labelEl.textContent = this.translate(option.labelKey, '');
     textEl.appendChild(labelEl);
 
     const descEl = document.createElement('span');
 
     descEl.setAttribute('data-blok-database-view-option-desc', '');
-    descEl.textContent = option.description;
+    descEl.textContent = this.translate(option.descriptionKey, '');
     textEl.appendChild(descEl);
 
     item.appendChild(textEl);

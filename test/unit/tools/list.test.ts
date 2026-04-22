@@ -205,34 +205,26 @@ describe('List Tool - i18n', () => {
   });
 
   describe('toolbox configuration', () => {
-    it('has translatable titles in toolbox config', () => {
+    it('has translatable titleKeys in toolbox config', () => {
       const toolbox = List.toolbox;
 
       expect(Array.isArray(toolbox)).toBe(true);
 
-      const toolboxArray = toolbox as Array<{ title: string; name: string }>;
+      const toolboxArray = toolbox as Array<{ titleKey?: string; name: string }>;
 
       expect(toolboxArray).toHaveLength(3);
-      expect(toolboxArray[0].title).toBe('Bulleted list');
-      expect(toolboxArray[1].title).toBe('Numbered list');
-      expect(toolboxArray[2].title).toBe('To-do list');
+      expect(toolboxArray[0].titleKey).toBe('bulletedList');
+      expect(toolboxArray[1].titleKey).toBe('numberedList');
+      expect(toolboxArray[2].titleKey).toBe('todoList');
     });
 
-    it('toolbox titles have corresponding dictionary entries', () => {
-      const toolbox = List.toolbox as Array<{ title: string }>;
+    it('toolbox titleKeys have corresponding dictionary entries', () => {
+      const toolbox = List.toolbox as Array<{ titleKey?: string }>;
       const dictionary = defaultDictionary as I18nDictionary;
 
-      // Map toolbox titles to their dictionary key equivalents
-      const titleToDictKey: Record<string, string> = {
-        'Bulleted list': 'bulletedList',
-        'Numbered list': 'numberedList',
-        'To-do list': 'todoList',
-      };
-
       toolbox.forEach((item) => {
-        const dictKey = titleToDictKey[item.title];
-        expect(dictKey).toBeDefined();
-        expect(dictionary).toHaveProperty(`toolNames.${dictKey}`);
+        expect(item.titleKey).toBeDefined();
+        expect(dictionary).toHaveProperty(`toolNames.${item.titleKey}`);
       });
     });
   });

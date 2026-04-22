@@ -72,14 +72,12 @@ export class DatabaseTool implements BlockTool {
     return [
       {
         icon: IconDatabase,
-        title: 'Database',
         titleKey: 'database',
         name: 'database',
         searchTerms: ['database', 'kanban', 'board', 'cards', 'columns'],
       },
       {
         icon: IconBoard,
-        title: 'Board',
         titleKey: 'board',
         name: 'board',
         searchTerms: ['board', 'kanban', 'cards', 'columns', 'database'],

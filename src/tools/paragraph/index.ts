@@ -453,7 +453,6 @@ export class Paragraph implements BlockTool {
   public static get toolbox(): ToolboxConfig {
     return {
       icon: IconText,
-      title: 'Text',
       titleKey: 'text',
       searchTerms: ['p', 'paragraph', 'plain'],
       searchTermKeys: ['paragraph', 'plain'],

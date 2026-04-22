@@ -94,7 +94,7 @@ export class DatabaseCardDrawer {
 
     drawer.setAttribute('data-blok-database-drawer', '');
     drawer.setAttribute('role', 'complementary');
-    drawer.setAttribute('aria-label', 'Card details');
+    drawer.setAttribute('aria-label', this.i18n?.t('tools.database.cardDetails') ?? 'tools.database.cardDetails');
 
     // --- Top toolbar ---
     const toolbar = document.createElement('div');
@@ -122,7 +122,7 @@ export class DatabaseCardDrawer {
     const titleInput = document.createElement('textarea');
 
     titleInput.setAttribute('data-blok-database-drawer-title', '');
-    titleInput.setAttribute('aria-label', 'Card title');
+    titleInput.setAttribute('aria-label', this.i18n?.t('tools.database.cardTitle') ?? 'tools.database.cardTitle');
     titleInput.placeholder = this.i18n?.t('tools.database.cardTitlePlaceholder') ?? 'Empty page';
     titleInput.value = title;
     titleInput.rows = 1;
@@ -362,6 +362,7 @@ export class DatabaseCardDrawer {
               this.onAddProperty?.(type);
               this.propertyTypePopover?.close();
             },
+            i18n: this.i18n,
           });
         }
 

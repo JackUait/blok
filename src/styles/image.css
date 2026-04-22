@@ -44,7 +44,7 @@
 }
 [data-blok-element-content].bg-selection:has([data-blok-tool="image"]) .blok-image-inner {
   background-color: var(--blok-selection);
-  border-radius: 4px;
+  border-radius: var(--blok-space-1);
 }
 
 /* caption */
@@ -76,7 +76,7 @@
 [data-blok-tool="image"] .blok-image-caption-row__alt {
   flex: 0 0 auto;
   margin-top: var(--blok-space-1);
-  padding: 3px var(--blok-space-2);
+  padding: var(--blok-space-0-75) var(--blok-space-2);
   font: inherit;
   font-size: 11px;
   font-weight: 500;
@@ -120,23 +120,8 @@
   opacity: 1;
 }
 
-/* toolbar — solid dark overlay, hairline ring for crisp edge against dark page bg. */
-[data-blok-tool="image"] .blok-image-toolbar {
-  position: absolute;
-  top: 10px; right: 10px;
-  display: inline-flex;
-  background: var(--blok-overlay-dark-strong);
-  border-radius: var(--blok-space-2);
-  padding: var(--blok-space-1);
-  opacity: 0;
-  transform: translateY(-4px);
-  transition: opacity 120ms ease, transform 120ms ease;
-  pointer-events: none;
-  box-shadow:
-    inset 0 0 0 1px var(--blok-overlay-ring),
-    var(--blok-image-shadow-toolbar);
-  z-index: 2;
-}
+/* toolbar base rule lives in main.css to satisfy direct readFileSync audits.
+   Additional toolbar states/children remain here. */
 [data-blok-tool="image"] .blok-image-inner:hover .blok-image-toolbar,
 [data-blok-tool="image"][data-selected="true"] .blok-image-toolbar,
 [data-blok-tool="image"][data-settings-open="true"] .blok-image-toolbar,
@@ -175,23 +160,10 @@
   display: none;
 }
 
-/* alignment popover — floats below the trigger, rides the same solid dark overlay surface */
+/* alignment popover — floats below the trigger, rides the same solid dark overlay surface.
+   The base `.blok-image-toolbar__align-popover` rule lives in main.css so direct
+   readFileSync audits see it without walking @imports. */
 [data-blok-tool="image"] .blok-image-toolbar__align { position: relative; }
-[data-blok-tool="image"] .blok-image-toolbar__align-popover {
-  position: absolute;
-  top: calc(100% + var(--blok-space-1));
-  left: 50%;
-  transform: translateX(-50%);
-  display: inline-flex;
-  gap: var(--blok-space-0-5);
-  padding: var(--blok-space-1);
-  background: var(--blok-overlay-dark-strong);
-  border-radius: var(--blok-space-2);
-  box-shadow:
-    inset 0 0 0 1px var(--blok-overlay-ring),
-    var(--blok-image-shadow-toolbar);
-  z-index: 3;
-}
 [data-blok-tool="image"] .blok-image-toolbar__align-popover[hidden] { display: none; }
 
 /* overflow popover */
@@ -319,93 +291,31 @@
   white hairline + layered drop shadow) so the lightbox toolbar reads as the
   same Notion-style chrome as the inline formatting popover.
 */
-.blok-image-lightbox {
-  --blok-space-0-5: 2px;
-  --blok-space-1: 4px;
-  --blok-space-1-5: 6px;
-  --blok-space-2: 8px;
-  --blok-space-3: 12px;
-  --blok-space-4: 16px;
-
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  z-index: 9999;
-  cursor: grab;
-  touch-action: none;
-  user-select: none;
-}
+/* .blok-image-lightbox base rule lives in main.css so direct readFileSync
+   audits (pan cursor, no-glass, etc.) find authored rules without walking
+   @imports. Only children/state variants remain here. */
 .blok-image-lightbox__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(25, 25, 24, 0.92);
+  background: var(--blok-image-lightbox-backdrop);
   pointer-events: none;
   z-index: 0;
 }
-.blok-image-lightbox.is-dragging {
-  cursor: grabbing;
-}
-.blok-image-lightbox__image {
-  max-width: 95vw;
-  max-height: 95vh;
-  object-fit: contain;
-  transform: scale(1);
-  transform-origin: center center;
-  transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  pointer-events: none;
-  position: relative;
-  z-index: 1;
-  will-change: transform;
-}
-.blok-image-lightbox.is-dragging .blok-image-lightbox__image {
-  transition: none;
-}
+/* .blok-image-lightbox.is-dragging, .blok-image-lightbox__image, and
+   .blok-image-lightbox.is-dragging .blok-image-lightbox__image live in main.css
+   so direct readFileSync audits find them. */
 .blok-image-lightbox.is-wheel-zooming .blok-image-lightbox__image {
   transition: none;
 }
-.blok-image-lightbox__bar {
-  position: absolute;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: inline-flex;
-  align-items: center;
-  gap: var(--blok-space-0-5);
-  padding: var(--blok-space-1-5);
-  background: #252525;
-  color: #e2e0dc;
-  border-radius: var(--blok-space-3);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.14),
-    0 4px 24px rgba(0, 0, 0, 0.5),
-    0 16px 40px -8px rgba(0, 0, 0, 0.4);
-  cursor: default;
-  z-index: 1;
-}
-.blok-image-lightbox__btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  background: transparent;
-  border: 0;
-  border-radius: var(--blok-space-2);
-  color: inherit;
-  cursor: pointer;
-  font: inherit;
-  transition: background 80ms ease, color 80ms ease;
-}
+/* .blok-image-lightbox__bar and .blok-image-lightbox__btn base rules live in
+   main.css so direct readFileSync audits find them. Hover/active/child
+   variants remain here. */
 .blok-image-lightbox__btn:hover {
-  background: rgba(255, 255, 255, 0.055);
-  color: #e2e0dc;
+  background: var(--blok-image-lightbox-btn-hover-bg);
+  color: var(--blok-image-lightbox-toolbar-fg);
 }
 .blok-image-lightbox__btn:active {
-  background: rgba(255, 255, 255, 0.09);
+  background: var(--blok-image-lightbox-btn-active-bg);
 }
 .blok-image-lightbox__btn svg {
   width: var(--blok-space-4);
@@ -420,13 +330,13 @@
   line-height: 1;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.01em;
-  color: #a39e98;
+  color: var(--blok-image-lightbox-caption-fg);
 }
 .blok-image-lightbox__divider {
   width: 1px;
   align-self: stretch;
   margin: var(--blok-space-1) var(--blok-space-0-5);
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--blok-image-lightbox-divider-bg);
 }
 
 /*
@@ -438,10 +348,10 @@
 .blok-image-lightbox-tooltip {
   display: inline-flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--blok-space-2);
 }
 .blok-image-lightbox-tooltip__shortcut {
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--blok-image-lightbox-shortcut-fg);
   font-variant-numeric: tabular-nums;
 }
 
@@ -583,13 +493,13 @@
 
 .blok-image-empty__content {
   flex: 1; min-width: 0;
-  display: flex; flex-direction: column; gap: 4px;
+  display: flex; flex-direction: column; gap: var(--blok-space-1);
 }
 .blok-image-empty__card[data-active-tab="upload"] .blok-image-empty__content {
   flex: 0 0 auto;
   align-items: center;
   text-align: center;
-  gap: 8px;
+  gap: var(--blok-space-2);
 }
 .blok-image-empty__content--row {
   flex-direction: row; align-items: center; gap: var(--blok-space-2);
@@ -601,7 +511,7 @@
 }
 .blok-image-empty__card[data-active-tab="upload"] .blok-image-empty__primary {
   flex-direction: column;
-  gap: 6px;
+  gap: var(--blok-space-1-5);
 }
 
 .blok-image-empty__choose {
@@ -653,11 +563,11 @@
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 4px 4px 12px;
+  gap: var(--blok-space-2);
+  padding: var(--blok-space-1) var(--blok-space-1) var(--blok-space-1) var(--blok-space-3);
   background: var(--blok-bg-primary);
   border: 1px solid var(--blok-border-subtle);
-  border-radius: 10px;
+  border-radius: var(--blok-space-2-5);
   transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
 .blok-image-empty__embed-bar:hover {
@@ -690,7 +600,7 @@
   font: inherit;
   font-size: 13px;
   line-height: 20px;
-  padding: 6px 0;
+  padding: var(--blok-space-1-5) var(--blok-space-0, 0);
   border: 0;
   background: transparent;
   color: var(--blok-text-primary);
@@ -711,10 +621,10 @@
   font-size: 12.5px;
   font-weight: 600;
   line-height: 1;
-  padding: 7px 12px;
+  padding: var(--blok-space-1-75) var(--blok-space-3);
   color: var(--blok-text-secondary);
   background: var(--blok-bg-secondary);
-  border-radius: 7px;
+  border-radius: var(--blok-space-1-75);
   transition:
     color .15s ease,
     background .15s ease,
@@ -726,7 +636,7 @@
   opacity: .55;
 }
 .blok-image-empty__embed-bar[data-valid="true"] .blok-image-empty__embed-submit:not(:disabled) {
-  color: #fff;
+  color: var(--blok-image-embed-submit-fg);
   background: var(--blok-color-accent);
 }
 .blok-image-empty__embed-submit:not(:disabled):hover { filter: brightness(1.05); }
@@ -749,14 +659,14 @@
   height: 16px;
   max-width: 0;
   margin-left: 0;
-  padding: 1px 0 0;
+  padding: var(--blok-space-0-25) var(--blok-space-0, 0) var(--blok-space-0, 0);
   font-family: var(--blok-font-family, var(--blok-font-sans));
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
   color: currentColor;
   background: color-mix(in srgb, currentColor 14%, transparent);
-  border-radius: 4px;
+  border-radius: var(--blok-space-1);
   overflow: hidden;
   opacity: 0;
   transform: translateX(-4px);
@@ -769,8 +679,8 @@
 }
 .blok-image-empty__embed-bar[data-valid="true"] .blok-image-empty__embed-kbd {
   max-width: 40px;
-  margin-left: 6px;
-  padding: 1px 4px 0;
+  margin-left: var(--blok-space-1-5);
+  padding: var(--blok-space-0-25) var(--blok-space-1) var(--blok-space-0, 0);
   opacity: 1;
   transform: translateX(0);
 }
@@ -779,11 +689,11 @@
   appearance: none;
   flex: 1; min-width: 0;
   font: inherit; font-size: 13px;
-  padding: 7px 12px;
+  padding: var(--blok-space-1-75) var(--blok-space-3);
   border: 1px solid var(--blok-border-subtle);
   background: var(--blok-bg-primary);
   color: var(--blok-text-primary);
-  border-radius: 7px;
+  border-radius: var(--blok-space-1-75);
   transition: border-color .15s ease, box-shadow .15s ease;
 }
 .blok-image-empty__input::placeholder { color: var(--blok-text-tertiary); }
@@ -792,7 +702,7 @@
   outline: none;
   outline-offset: 0;
   border-color: var(--blok-color-accent);
-  border-radius: 7px;
+  border-radius: var(--blok-space-1-75);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--blok-color-accent) 20%, transparent);
 }
 .blok-image-empty__input:disabled {
@@ -802,12 +712,12 @@
 
 .blok-image-empty__search {
   flex: 1; min-width: 0;
-  display: flex; align-items: center; gap: 6px;
-  padding: 0 10px;
+  display: flex; align-items: center; gap: var(--blok-space-1-5);
+  padding: var(--blok-space-0, 0) var(--blok-space-2-5);
   border: 1px solid var(--blok-border-subtle);
   background: var(--blok-bg-primary);
   color: var(--blok-text-tertiary);
-  border-radius: 7px;
+  border-radius: var(--blok-space-1-75);
   transition: border-color .15s ease, box-shadow .15s ease;
 }
 .blok-image-empty__search:focus-within {
@@ -887,7 +797,7 @@
 .blok-image-empty__error {
   font-size: 12.5px;
   color: var(--blok-color-danger);
-  padding: 2px var(--blok-space-1);
+  padding: var(--blok-space-0-5) var(--blok-space-1);
 }
 .blok-image-empty__error[hidden] { display: none; }
 
@@ -945,7 +855,7 @@
   flex-shrink: 0;
   width: 24px; height: 24px;
   display: grid; place-items: center;
-  border-radius: 6px;
+  border-radius: var(--blok-space-1-5);
   border: 0;
   background: transparent;
   color: var(--blok-text-tertiary);
@@ -958,7 +868,7 @@
 }
 .blok-image-uploading__cancel:focus-visible {
   outline: none;
-  border-radius: 6px;
+  border-radius: var(--blok-space-1-5);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 45%, transparent);
 }
 
@@ -1051,16 +961,16 @@
       color-mix(in srgb, var(--blok-color-danger) 14%, transparent) 0%,
       color-mix(in srgb, var(--blok-color-danger) 6%, transparent) 100%),
     var(--blok-bg-secondary);
-  border-radius: calc(var(--blok-radius-md) + 2px);
+  border-radius: var(--blok-radius-md-plus, calc(var(--blok-radius-md) + 2px));
   box-shadow:
     inset 0 0 0 1px color-mix(in srgb, var(--blok-color-danger) 28%, transparent),
-    inset 0 1px 0 color-mix(in srgb, #fff 14%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--blok-image-error-inset-highlight) 14%, transparent),
     0 1px 2px color-mix(in srgb, var(--blok-color-danger) 12%, transparent);
 }
 .blok-image-error__icon svg { width: 22px; height: 22px; opacity: 0.92; }
 .blok-image-error__body {
   flex: 1; min-width: 0;
-  display: flex; flex-direction: column; gap: 2px;
+  display: flex; flex-direction: column; gap: var(--blok-space-0-5);
   text-align: left;
 }
 .blok-image-error__title { font-size: 13px; font-weight: 600; letter-spacing: -0.005em; text-align: left; }

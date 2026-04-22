@@ -74,9 +74,9 @@ export class CopyLinkTune implements BlockTune {
 
     try {
       await navigator.clipboard.writeText(url);
-      this.api.notifier.show({ message: 'Link copied to clipboard', style: 'success', time: 2000 });
+      this.api.notifier.show({ message: this.api.i18n.t('blockSettings.copyLinkSuccess'), style: 'success', time: 2000 });
     } catch {
-      this.api.notifier.show({ message: 'Could not copy link to block', style: 'error', time: 3000 });
+      this.api.notifier.show({ message: this.api.i18n.t('blockSettings.copyLinkError'), style: 'error', time: 3000 });
     }
   }
 }

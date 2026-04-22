@@ -57,7 +57,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
       }
     } else {
       wrapper.setAttribute('role', 'list');
-      wrapper.setAttribute('aria-label', 'List view');
+      wrapper.setAttribute('aria-label', this.i18n.t('tools.database.listView'));
 
       for (const row of this.rows) {
         const rowEl = this.createRowElement(row);

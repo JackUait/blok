@@ -118,7 +118,6 @@ export class ImageTool implements BlockTool {
   public static get toolbox(): ToolboxConfig {
     return {
       icon: IconImage,
-      title: 'Image',
       titleKey: 'image',
       searchTerms: ['image', 'img', 'picture', 'photo', 'media'],
     };
@@ -491,10 +490,10 @@ export class ImageTool implements BlockTool {
     const el = renderErrorState({
       title: isBroken ? this.api.i18n.t('tools.image.errorUnavailable') : undefined,
       message: this.errorMessage ?? undefined,
-      onRetry: isBroken
+      onTryAgain: isBroken
         ? () => this.retryBrokenImage()
         : () => this.retryLastSource(),
-      onReplace: () => this.transitionToEmpty(),
+      onSwap: () => this.transitionToEmpty(),
       i18n: this.api.i18n,
     });
     this.root.appendChild(el);

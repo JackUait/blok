@@ -3,16 +3,16 @@
   position: fixed;
   width: 320px;
   max-width: min(90vw, 360px);
-  padding: 12px;
+  padding: var(--blok-space-3);
   margin: 0;
   background: var(--blok-surface-strong, #1e1e1e);
   color: var(--blok-text-primary, #f5f5f5);
   border: 1px solid var(--blok-border-primary, rgba(255, 255, 255, 0.08));
-  border-radius: 10px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  border-radius: var(--blok-space-2-5);
+  box-shadow: var(--blok-alt-popover-shadow);
   z-index: 9999;
   display: grid;
-  gap: 10px;
+  gap: var(--blok-space-2-5);
 }
 
 .blok-image-alt-popover__description {
@@ -24,14 +24,14 @@
 
 .blok-image-alt-popover__input {
   width: 100%;
-  padding: 8px 10px;
+  padding: var(--blok-space-2) var(--blok-space-2-5);
   font: inherit;
   font-size: 14px;
   line-height: 1.4;
   color: var(--blok-text-primary, #fff);
   background: var(--blok-surface-muted, rgba(255, 255, 255, 0.05));
   border: 1px solid var(--blok-border-primary, rgba(255, 255, 255, 0.12));
-  border-radius: 6px;
+  border-radius: var(--blok-space-1-5);
   resize: vertical;
   box-sizing: border-box;
   outline: none;

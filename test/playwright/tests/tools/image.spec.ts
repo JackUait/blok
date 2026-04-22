@@ -181,6 +181,56 @@ test('alignment change does not leave controls stuck visible after mouse leaves'
   await expect(imageBlock).not.toHaveAttribute('data-align-open', 'true');
 });
 
+test('drops an image file onto the editor and inserts an image block', async ({ page }) => {
+  await createBlok(page);
+
+  const paragraph = page.locator(
+    `${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"] [contenteditable]`
+  );
+
+  await paragraph.click();
+
+  const dropTarget = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"]`);
+  const PNG_1x1_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+  await dropTarget.evaluate((element: HTMLElement, base64: string) => {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+
+    const file = new File([ bytes ], 'dropped.png', { type: 'image/png' });
+    const dataTransfer = new DataTransfer();
+
+    dataTransfer.items.add(file);
+
+    const createDragEvent = (type: string): DragEvent => {
+      const event = new DragEvent(type, { bubbles: true, cancelable: true });
+
+      if (event.dataTransfer !== dataTransfer) {
+        Object.defineProperty(event, 'dataTransfer', {
+          value: dataTransfer,
+          writable: false,
+          configurable: true,
+        });
+      }
+
+      return event;
+    };
+
+    element.dispatchEvent(createDragEvent('dragenter'));
+    element.dispatchEvent(createDragEvent('dragover'));
+    element.dispatchEvent(createDragEvent('drop'));
+  }, PNG_1x1_BASE64);
+
+  const imageBlock = page.locator(IMAGE_BLOCK_SELECTOR);
+
+  await expect(imageBlock).toBeVisible();
+  await expect(imageBlock).toHaveAttribute('data-state', 'rendered');
+});
+
 test('read-only mode hides overlay and resize handles', async ({ page }) => {
   await createBlok(page, {
     blocks: [

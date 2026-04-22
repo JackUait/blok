@@ -235,7 +235,6 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
     submit.type = 'button';
     submit.className = 'blok-image-empty__embed-submit';
     submit.setAttribute('data-action', 'submit-url');
-    submit.disabled = true;
 
     const submitLabelEl = document.createElement('span');
     submitLabelEl.className = 'blok-image-empty__embed-submit-label';
@@ -262,7 +261,7 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
     const sync = (): void => {
       const valid = isValid(urlInput.value);
       bar.setAttribute('data-valid', valid ? 'true' : 'false');
-      submit.disabled = !valid;
+      submit.setAttribute('aria-disabled', valid ? 'false' : 'true');
     };
 
     const commit = (): void => {
@@ -273,7 +272,7 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
 
     submit.addEventListener('click', (ev) => {
       ev.stopPropagation();
-      if (!submit.disabled) commit();
+      if (isValid(urlInput.value)) commit();
     });
     urlInput.addEventListener('click', (ev) => ev.stopPropagation());
     urlInput.addEventListener('input', sync);
@@ -286,6 +285,7 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
 
     bar.append(fieldIcon, urlInput, submit);
     panel.appendChild(bar);
+    sync();
     queueMicrotask(() => urlInput.focus());
   };
 

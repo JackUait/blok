@@ -59,7 +59,7 @@
 .blok-image-crop-modal-dialog {
   background: var(--crop-modal-dialog-bg);
   color: var(--crop-modal-dialog-fg);
-  border-radius: 14px;
+  border-radius: var(--blok-space-3-5);
   border: 1px solid var(--crop-modal-dialog-border);
   box-shadow: var(--crop-modal-dialog-shadow);
   max-width: min(92vw, 1100px);

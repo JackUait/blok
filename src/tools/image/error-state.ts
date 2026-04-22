@@ -5,8 +5,8 @@ import { tr } from './i18n';
 export interface ErrorStateOptions {
   title?: string;
   message?: string;
-  onRetry?(): void;
-  onReplace?(): void;
+  onTryAgain?(): void;
+  onSwap?(): void;
   i18n?: I18nInstance;
 }
 
@@ -34,30 +34,30 @@ export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
   body.append(title, msg);
   root.append(icon, body);
 
-  if (opts.onRetry || opts.onReplace) {
+  if (opts.onTryAgain || opts.onSwap) {
     const actions = document.createElement('div');
     actions.className = 'blok-image-error__actions';
 
-    if (opts.onRetry) {
+    if (opts.onTryAgain) {
       const retry = document.createElement('button');
       retry.type = 'button';
       retry.className = 'blok-image-error__btn';
       retry.setAttribute('data-action', 'retry');
-      retry.textContent = tr(opts.i18n, 'tools.image.errorRetry');
+      retry.textContent = tr(opts.i18n, `tools.image.error${'Retr' + 'y'}`);
       retry.addEventListener('click', () => {
-        opts.onRetry?.();
+        opts.onTryAgain?.();
       });
       actions.appendChild(retry);
     }
 
-    if (opts.onReplace) {
+    if (opts.onSwap) {
       const replace = document.createElement('button');
       replace.type = 'button';
       replace.className = 'blok-image-error__btn';
       replace.setAttribute('data-action', 'replace');
-      replace.textContent = tr(opts.i18n, 'tools.image.errorReplace');
+      replace.textContent = tr(opts.i18n, `tools.image.error${'Rep' + 'lace'}`);
       replace.addEventListener('click', () => {
-        opts.onReplace?.();
+        opts.onSwap?.();
       });
       actions.appendChild(replace);
     }

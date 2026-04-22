@@ -415,7 +415,6 @@ export class CalloutTool implements BlockTool {
   public static get toolbox(): ToolboxConfig {
     return {
       icon: IconCallout,
-      title: 'Callout',
       titleKey: 'callout',
       name: TOOL_NAME,
       searchTerms: ['callout', 'note', 'info', 'warning', 'tip', 'alert'],

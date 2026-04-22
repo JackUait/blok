@@ -325,13 +325,13 @@ describe('Quote Tool', () => {
   });
 
   describe('static properties', () => {
-    it('has toolbox with icon and title', async () => {
+    it('has toolbox with icon and titleKey', async () => {
       const { Quote } = await import('../../../../src/tools/quote');
       const toolbox = Quote.toolbox;
 
       expect(toolbox).toBeDefined();
       expect(!Array.isArray(toolbox) && toolbox.icon).toBeTruthy();
-      expect(!Array.isArray(toolbox) && toolbox.title).toBe('Quote');
+      expect(!Array.isArray(toolbox) && toolbox.titleKey).toBe('quote');
     });
 
     it('has titleKey for i18n', async () => {

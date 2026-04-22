@@ -599,10 +599,10 @@ describe('CalloutTool', () => {
   });
 
   describe('static getters', () => {
-    it('toolbox returns icon, title, titleKey', async () => {
+    it('toolbox returns icon and titleKey for i18n lookup', async () => {
       const { CalloutTool } = await import('../../../../src/tools/callout');
       const toolbox = CalloutTool.toolbox;
-      expect(toolbox).toMatchObject({ title: 'Callout', titleKey: 'callout' });
+      expect(toolbox).toMatchObject({ titleKey: 'callout' });
       const entry = Array.isArray(toolbox) ? toolbox[0] : toolbox;
       expect(typeof entry.icon).toBe('string');
     });

@@ -261,14 +261,24 @@ export class Paste extends Module {
    * Set onPaste callback handler.
    */
   private setCallback(): void {
-    this.listeners.on(this.Blok.UI.nodes.holder, 'paste', this.handlePasteEventWrapper);
+    const holder = this.Blok.UI.nodes.holder;
+
+    this.listeners.on(holder, 'paste', this.handlePasteEventWrapper);
+    this.listeners.on(holder, 'drop', this.handleDropEventWrapper);
+    this.listeners.on(holder, 'dragover', this.handleDragOverEventWrapper);
+    this.listeners.on(holder, 'dragleave', this.handleDragLeaveEventWrapper);
   }
 
   /**
    * Unset onPaste callback handler.
    */
   private unsetCallback(): void {
-    this.listeners.off(this.Blok.UI.nodes.holder, 'paste', this.handlePasteEventWrapper);
+    const holder = this.Blok.UI.nodes.holder;
+
+    this.listeners.off(holder, 'paste', this.handlePasteEventWrapper);
+    this.listeners.off(holder, 'drop', this.handleDropEventWrapper);
+    this.listeners.off(holder, 'dragover', this.handleDragOverEventWrapper);
+    this.listeners.off(holder, 'dragleave', this.handleDragLeaveEventWrapper);
   }
 
   /**
@@ -276,6 +286,150 @@ export class Paste extends Module {
    */
   private handlePasteEventWrapper = (event: Event): void => {
     void this.handlePasteEvent(event as ClipboardEvent);
+  };
+
+  private handleDropEventWrapper = (event: Event): void => {
+    void this.handleDropEvent(event as DragEvent);
+  };
+
+  private handleDragOverEventWrapper = (event: Event): void => {
+    this.handleDragOverEvent(event as DragEvent);
+  };
+
+  private handleDragLeaveEventWrapper = (event: Event): void => {
+    this.handleDragLeaveEvent(event as DragEvent);
+  };
+
+  private dataTransferHasFiles(dataTransfer: DataTransfer | null | undefined): boolean {
+    if (!dataTransfer) {
+      return false;
+    }
+
+    const types = Array.from(dataTransfer.types ?? []);
+
+    if (types.includes('Files')) {
+      return true;
+    }
+
+    return Boolean(dataTransfer.files?.length);
+  }
+
+  private dropIndicatorHolder: HTMLElement | null = null;
+
+  private handleDragOverEvent = (event: DragEvent): void => {
+    const { dataTransfer } = event;
+
+    if (!this.dataTransferHasFiles(dataTransfer)) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (dataTransfer) {
+      dataTransfer.dropEffect = 'copy';
+    }
+
+    this.updateDropIndicator(event);
+  };
+
+  private updateDropIndicator(event: DragEvent): void {
+    const target = event.target instanceof Element ? event.target : null;
+    const blockHolder = target?.closest('[data-blok-element]');
+
+    if (!(blockHolder instanceof HTMLElement)) {
+      this.clearDropIndicator();
+
+      return;
+    }
+
+    const rect = blockHolder.getBoundingClientRect();
+    const edge = event.clientY < rect.top + rect.height / 2 ? 'top' : 'bottom';
+
+    if (this.dropIndicatorHolder && this.dropIndicatorHolder !== blockHolder) {
+      this.dropIndicatorHolder.removeAttribute('data-drop-indicator');
+      this.dropIndicatorHolder.style.removeProperty('--drop-indicator-depth');
+    }
+
+    blockHolder.setAttribute('data-drop-indicator', edge);
+    blockHolder.style.setProperty('--drop-indicator-depth', String(this.computeDropDepth(blockHolder)));
+    this.dropIndicatorHolder = blockHolder;
+  }
+
+  private computeDropDepth(blockHolder: HTMLElement): number {
+    const ancestorBlocks = blockHolder.parentElement?.closest('[data-blok-element]')
+      ? this.countAncestorBlocks(blockHolder)
+      : 0;
+
+    const listWrapper = blockHolder.querySelector('[data-list-depth]');
+    const listDepthRaw = listWrapper?.getAttribute('data-list-depth') ?? '0';
+    const listDepth = Number.parseInt(listDepthRaw, 10);
+    const listContribution = Number.isNaN(listDepth) ? 0 : listDepth;
+
+    return ancestorBlocks + listContribution;
+  }
+
+  private countAncestorBlocks(blockHolder: HTMLElement): number {
+    let count = 0;
+    let current = blockHolder.parentElement?.closest('[data-blok-element]') as HTMLElement | null;
+
+    while (current) {
+      count += 1;
+      current = current.parentElement?.closest('[data-blok-element]') as HTMLElement | null;
+    }
+
+    return count;
+  }
+
+  private clearDropIndicator(): void {
+    if (this.dropIndicatorHolder) {
+      this.dropIndicatorHolder.removeAttribute('data-drop-indicator');
+      this.dropIndicatorHolder.style.removeProperty('--drop-indicator-depth');
+      this.dropIndicatorHolder = null;
+    }
+  }
+
+  private handleDragLeaveEvent = (event: DragEvent): void => {
+    const holder = this.Blok.UI.nodes.holder;
+    const related = event.relatedTarget as Node | null;
+
+    if (related && holder.contains(related)) {
+      return;
+    }
+
+    this.clearDropIndicator();
+  };
+
+  private handleDropEvent = async (event: DragEvent): Promise<void> => {
+    this.clearDropIndicator();
+
+    if (this.Blok.DragManager?.isDragging) {
+      return;
+    }
+
+    if (!this.dataTransferHasFiles(event.dataTransfer)) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const { BlockManager, Toolbar } = this.Blok;
+    const currentBlock = BlockManager.setCurrentBlockByChildNode(event.target as HTMLElement);
+
+    if (!currentBlock) {
+      return;
+    }
+
+    if (this.toolRegistry.isException(currentBlock.name)) {
+      return;
+    }
+
+    if (event.dataTransfer) {
+      const dropTarget = event.target instanceof Element ? event.target : undefined;
+
+      await this.processDataTransfer(event.dataTransfer, dropTarget);
+    }
+
+    Toolbar.moveAndOpen();
   };
 
   /**

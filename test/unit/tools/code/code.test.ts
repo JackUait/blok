@@ -810,6 +810,68 @@ describe('CodeTool', () => {
       expect(savedData.code).toBe('test');
       expect(savedData.language).toBe('javascript');
     });
+
+    it('does NOT invoke prior cleanup when re-highlighting with the same language', async () => {
+      // Prior cleanup wipes innerHTML to plain text BEFORE applyPrismHighlight
+      // can save caret offset. Invoking cleanup between same-lang re-highlights
+      // destroys the caret position on every keystroke. Only lang-change and
+      // removed() need to dispose.
+      const mockCleanup1 = vi.fn();
+      const mockCleanup2 = vi.fn();
+      mockIsHighlightable.mockReturnValue(true);
+      mockTokenizePrism.mockResolvedValue('<span class="token keyword">x</span>');
+      mockApplyPrismHighlight
+        .mockReturnValueOnce(mockCleanup1)
+        .mockReturnValueOnce(mockCleanup2);
+
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'x=1', language: 'javascript' }));
+      const el = tool.render();
+      tool.rendered();
+
+      await vi.waitFor(() => {
+        expect(mockApplyPrismHighlight).toHaveBeenCalledTimes(1);
+      });
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+      codeEl.textContent = 'x=2';
+      simulateInput(codeEl);
+
+      await vi.waitFor(() => {
+        expect(mockApplyPrismHighlight).toHaveBeenCalledTimes(2);
+      });
+
+      expect(mockCleanup1).not.toHaveBeenCalled();
+    });
+
+    it('invokes prior cleanup when re-highlighting with a different language', async () => {
+      const mockCleanupJs = vi.fn();
+      const mockCleanupPy = vi.fn();
+      mockIsHighlightable.mockReturnValue(true);
+      mockTokenizePrism.mockResolvedValue('<span class="token keyword">x</span>');
+      mockApplyPrismHighlight
+        .mockReturnValueOnce(mockCleanupJs)
+        .mockReturnValueOnce(mockCleanupPy);
+
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'x=1', language: 'javascript' }));
+      tool.render();
+      tool.rendered();
+
+      await vi.waitFor(() => {
+        expect(mockApplyPrismHighlight).toHaveBeenCalledTimes(1);
+      });
+
+      const settings = tool.renderSettings() as Array<{ children: { items: Array<{ onActivate: () => void; title: string }> } }>;
+      const pythonItem = settings[0].children.items.find((i) => i.title === 'Python');
+      pythonItem?.onActivate();
+
+      await vi.waitFor(() => {
+        expect(mockApplyPrismHighlight).toHaveBeenCalledTimes(2);
+      });
+
+      expect(mockCleanupJs).toHaveBeenCalled();
+    });
   });
 
   describe('line numbers', () => {

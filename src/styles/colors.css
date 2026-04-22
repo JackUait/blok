@@ -265,18 +265,30 @@
   --blok-handle-fg-default: rgba(255, 255, 255, 0.85);
 
   /* Spacing scale — 4px base, aligned with Tailwind's default spacing scale. */
+  --blok-space-0: 0;
+  --blok-space-0-25: 1px;
   --blok-space-0-5: 2px;
+  --blok-space-0-75: 3px;
   --blok-space-1: 4px;
   --blok-space-1-25: 5px;
   --blok-space-1-5: 6px;
   --blok-space-1-75: 7px;
   --blok-space-2: 8px;
+  --blok-space-2-25: 9px;
   --blok-space-2-5: 10px;
+  --blok-space-2-75: 11px;
   --blok-space-3: 12px;
+  --blok-space-3-25: 13px;
+  --blok-space-3-5: 14px;
   --blok-space-4: 16px;
+  --blok-space-4-5: 18px;
   --blok-space-5: 20px;
   --blok-space-6: 24px;
   --blok-space-10: 40px;
+
+  /* Micro radii for the crop-editor handle notches. */
+  --blok-radius-hairline: 1.5px;
+  --blok-radius-none: 0;
 
   /* Icon sizing (non-scale, role-based). */
   --blok-size-icon-sm: 18px;
@@ -335,6 +347,51 @@
   --blok-line-height-tight: 1;
   --blok-line-height-body: 1.45;
   --blok-line-height-option: 1.3;
+
+  /*
+    Generic surface / accent hooks consumed with a fallback by plugin-owned
+    CSS (image lightbox, alt popover, crop editor). Declared here so the
+    var-resolution audit sees them as valid tokens.
+  */
+  --blok-accent: var(--blok-color-accent);
+  --blok-bg-tertiary: var(--blok-bg-light);
+  --blok-surface-muted: rgba(255, 255, 255, 0.05);
+  --blok-surface-strong: #1e1e1e;
+
+  /* Image lightbox chrome (dark, independent of page theme). */
+  --blok-image-lightbox-backdrop: rgba(25, 25, 24, 0.92);
+  --blok-image-lightbox-toolbar-bg: #252525;
+  --blok-image-lightbox-toolbar-fg: #e2e0dc;
+  --blok-image-lightbox-toolbar-ring: rgba(255, 255, 255, 0.14);
+  --blok-image-lightbox-toolbar-shadow-main: rgba(0, 0, 0, 0.5);
+  --blok-image-lightbox-toolbar-shadow-ambient: rgba(0, 0, 0, 0.4);
+  --blok-image-lightbox-btn-hover-bg: rgba(255, 255, 255, 0.055);
+  --blok-image-lightbox-btn-active-bg: rgba(255, 255, 255, 0.09);
+  --blok-image-lightbox-divider-bg: rgba(255, 255, 255, 0.1);
+  --blok-image-lightbox-caption-fg: #a39e98;
+  --blok-image-lightbox-shortcut-fg: rgba(255, 255, 255, 0.45);
+
+  /* Image empty-state embed submit (high-contrast fg on accent). */
+  --blok-image-embed-submit-fg: #fff;
+
+  /* Crop editor composite-shadow leaf literals. */
+  --blok-crop-rect-drop-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.8);
+  --blok-crop-handle-edge-drop-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  --blok-crop-handle-edge-halo: 0 0 0 3px rgba(255, 255, 255, 0.18);
+  --blok-crop-handle-edge-drop-hover: 0 2px 6px rgba(0, 0, 0, 0.3);
+  --blok-crop-pill-fg: #fff;
+
+  /* Alt-popover surface composite shadow (dark surface). */
+  --blok-alt-popover-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+
+  /* Image error-state inset highlight. */
+  --blok-image-error-inset-highlight: #fff;
+
+  /* Crop-modal button shadow. */
+  --blok-crop-modal-btn-shadow: rgba(0, 0, 0, 0.3);
+
+  /* Image error-state radius (slightly larger than --blok-radius-md). */
+  --blok-radius-md-plus: 8px;
 }
 
 /* ─── Dark theme — system preference ────────────────── */

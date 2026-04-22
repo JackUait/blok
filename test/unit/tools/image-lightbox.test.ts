@@ -59,6 +59,37 @@ describe('openLightbox toolbar', () => {
     close();
   });
 
+  /**
+   * Regression: dragging inside the lightbox triggered Blok's RectangleSelection
+   * because `mousedown` bubbled from the lightbox dialog up to `document.body`,
+   * where `RectangleSelection.processMouseDown` saw a non-contentEditable target
+   * and started a rubber-band block selection on the editor behind. The
+   * lightbox must stop `mousedown` from bubbling so document-level handlers
+   * (rubber-band selection, click-outside dismissers) don't see drags inside
+   * the dialog.
+   */
+  it('stops mousedown from bubbling to document so rubber-band selection does not trigger on the editor behind', () => {
+    const docMousedown = vi.fn();
+    document.body.addEventListener('mousedown', docMousedown);
+    const close = openAtBody({ url: 'https://example.com/pic.jpg' });
+    const dialog = document.body.querySelector('.blok-image-lightbox') as HTMLElement;
+    dialog.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
+    expect(docMousedown).not.toHaveBeenCalled();
+    document.body.removeEventListener('mousedown', docMousedown);
+    close();
+  });
+
+  it('still lets toolbar mousedown bubble (so toolbar buttons keep working as expected)', () => {
+    const docMousedown = vi.fn();
+    document.body.addEventListener('mousedown', docMousedown);
+    const close = openAtBody({ url: 'https://example.com/pic.jpg' });
+    const btn = bar().querySelector<HTMLButtonElement>('[data-action="zoom-in"]')!;
+    btn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
+    expect(docMousedown).toHaveBeenCalled();
+    document.body.removeEventListener('mousedown', docMousedown);
+    close();
+  });
+
   it('retains all expected actions in the toolbar', () => {
     const close = openAtBody({ url: 'https://example.com/pic.jpg' });
     const toolbar = bar();
@@ -122,5 +153,21 @@ describe('no-glass CSS regression', () => {
 
   it('crop editor size pill has no backdrop-filter', () => {
     expect(cropEditorCss).not.toMatch(/backdrop-filter/);
+  });
+
+  /**
+   * Regression: when the lightbox is promoted to the CSS Top Layer, the
+   * `[data-blok-top-layer][popover]` reset (specificity 0,2,0) overrides
+   * `.blok-image-lightbox { inset: 0 }` (0,1,0) with `inset: auto`. The
+   * dialog then shrinks to its content, leaving the underlying editor
+   * exposed: dragging on uncovered area starts native rubber-band text
+   * selection on the editor behind the lightbox.
+   */
+  it('lightbox keeps inset:0 when promoted to top layer (covers viewport so drags do not select editor behind)', () => {
+    const body = ruleBody(
+      mainCss,
+      /\.blok-image-lightbox\[data-blok-top-layer\]\[popover\]\s*\{([^}]+)\}/,
+    );
+    expect(body).toMatch(/inset:\s*0/);
   });
 });

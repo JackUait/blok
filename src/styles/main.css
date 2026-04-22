@@ -337,6 +337,21 @@
   touch-action: none;
   user-select: none;
 }
+/*
+  Re-assert viewport coverage when promoted to the Top Layer. The
+  `[data-blok-top-layer][popover]` reset above sets `inset: auto` (specificity
+  0,2,0) which would otherwise outrank `.blok-image-lightbox { inset: 0 }`
+  (0,1,0) and shrink the dialog to its content — exposing the editor behind it
+  and letting drag gestures start native rubber-band text selection on the
+  editor.
+*/
+.blok-image-lightbox[data-blok-top-layer][popover] {
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+}
 .blok-image-lightbox.is-dragging {
   cursor: grabbing;
 }

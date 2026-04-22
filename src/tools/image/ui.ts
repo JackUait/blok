@@ -23,6 +23,7 @@ import {
 } from '../../components/icons';
 import { applyRubberBand } from './spring';
 import { tr } from './i18n';
+import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
 
 const ALIGN_TO_TEXT_ALIGN: Record<ImageAlign, string> = {
   left: 'left',
@@ -338,6 +339,15 @@ export function openLightbox(opts: LightboxOptions): () => void {
   dialog.appendChild(displayEl);
   dialog.appendChild(toolbar);
   document.body.appendChild(dialog);
+  /**
+   * Promote to the CSS Top Layer so the lightbox stacks above every other
+   * blok overlay (tooltips, popovers) and host-page content regardless of
+   * z-index. Also tags the dialog with `data-blok-top-layer` which makes
+   * the `[data-blok-interface], [data-blok-popover], [data-blok-top-layer]`
+   * scoped tokens in colors.css resolve — without it the backdrop tint and
+   * toolbar chrome render as `var(--…)` → unset → transparent.
+   */
+  promoteToTopLayer(dialog);
 
   const animState: { img: Animation | null; backdrop: Animation | null; toolbar: Animation | null; closing: boolean } = {
     img: null,
@@ -400,6 +410,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
 
   const finalize = (): void => {
     document.removeEventListener('keydown', onKey);
+    removeFromTopLayer(dialog);
     dialog.remove();
     if (origin) origin.style.opacity = originPrevOpacity;
     previousFocus?.focus?.();
@@ -487,6 +498,18 @@ export function openLightbox(opts: LightboxOptions): () => void {
     originX: 0,
     originY: 0,
   };
+
+  /**
+   * Stop `mousedown` from bubbling out of the dialog (except on the toolbar,
+   * whose buttons need their own mousedown for focus/click behavior). Without
+   * this, document-level handlers — notably `RectangleSelection` on
+   * `document.body` — see drags inside the lightbox as drags on the editor
+   * underneath and start a rubber-band block selection behind the dialog.
+   */
+  dialog.addEventListener('mousedown', (event: MouseEvent) => {
+    if (event.target instanceof Node && toolbar.contains(event.target)) return;
+    event.stopPropagation();
+  });
 
   dialog.addEventListener('pointerdown', (event: PointerEvent) => {
     if (event.target instanceof Node && toolbar.contains(event.target)) return;

@@ -145,5 +145,9 @@ describe('Code Block Constants', () => {
       expect(CODE_AREA_STYLES).toContain('text-sm');
       expect(CODE_AREA_STYLES).toContain('leading-relaxed');
     });
+
+    it('CODE_AREA_STYLES pins caret color so it does not take on syntax token colors', () => {
+      expect(CODE_AREA_STYLES).toContain('caret-text-primary');
+    });
   });
 });

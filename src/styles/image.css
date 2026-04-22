@@ -57,7 +57,7 @@
   outline: none;
   min-height: 1em;
 }
-[data-blok-tool="image"] .blok-image-caption:empty::before {
+[data-blok-tool="image"] .blok-image-caption[contenteditable="true"]:empty::before {
   content: attr(data-placeholder);
   color: var(--blok-text-tertiary);
 }

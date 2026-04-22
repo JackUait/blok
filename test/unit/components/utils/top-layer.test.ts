@@ -109,18 +109,26 @@ describe('Top Layer helper', () => {
       expect(supportsPopoverAPI()).toBe(false);
     });
 
-    it('promoteToTopLayer is a safe no-op (does not touch the element, returns false)', () => {
+    it('promoteToTopLayer still tags the marker attribute so scoped CSS tokens resolve (returns false because popover cannot actually open)', () => {
+      /**
+       * The `[data-blok-top-layer]` scope in colors.css lets tokens like
+       * `--blok-image-lightbox-backdrop` reach promoted elements appended to
+       * document.body. That indirection must work even on browsers without
+       * the Popover API, so the marker is set unconditionally; only the
+       * `popover` attribute is gated on API support.
+       */
       const el = document.createElement('div');
 
       const result = promoteToTopLayer(el);
 
       expect(result).toBe(false);
       expect(el.hasAttribute('popover')).toBe(false);
-      expect(el.hasAttribute(TOP_LAYER_MARKER_ATTR)).toBe(false);
+      expect(el.getAttribute(TOP_LAYER_MARKER_ATTR)).toBe('true');
     });
 
-    it('removeFromTopLayer is a safe no-op (does not throw, leaves the element untouched)', () => {
+    it('removeFromTopLayer strips the marker even without Popover API support (cleans up after unsupported-path promote)', () => {
       const el = document.createElement('div');
+      el.setAttribute(TOP_LAYER_MARKER_ATTR, 'true');
 
       expect(() => removeFromTopLayer(el)).not.toThrow();
       expect(el.hasAttribute('popover')).toBe(false);

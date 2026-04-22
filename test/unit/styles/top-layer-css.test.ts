@@ -98,4 +98,51 @@ describe('CSS Top Layer reset (src/styles/main.css)', () => {
      */
     expect(css).toMatch(/\[data-blok-popover\][^{]*\[popover\][^{]*\{[^}]*background\s*:\s*transparent/);
   });
+
+  describe('Top-Layer scoped CSS custom properties', () => {
+    /**
+     * Regression: blok elements promoted to the CSS Top Layer (crop modal
+     * backdrop, image lightbox) are appended to document.body, outside the
+     * `[data-blok-interface]` / `[data-blok-popover]` scope where colors.css
+     * defines `--blok-image-lightbox-*` and spacing tokens. Without
+     * `[data-blok-top-layer]` being part of the scope selector list, every
+     * `var(--blok-space-…)` and `var(--blok-image-lightbox-…)` reference
+     * inside top-layer elements resolves to nothing — padding collapses,
+     * backgrounds disappear.
+     */
+    it('light-theme scope includes [data-blok-top-layer] so promoted elements inherit tokens', () => {
+      expect(css).toMatch(
+        /\[data-blok-interface\][\s\S]*?\[data-blok-popover\][\s\S]*?\[data-blok-top-layer\]\s*\{[\s\S]*?--blok-image-lightbox-backdrop/
+      );
+    });
+
+    it('explicit-dark-theme scope also includes [data-blok-top-layer]', () => {
+      expect(css).toMatch(
+        /\[data-blok-theme="dark"\]\s+\[data-blok-interface\][\s\S]*?\[data-blok-theme="dark"\]\s+\[data-blok-top-layer\]/
+      );
+    });
+  });
+
+  describe('Image lightbox top-layer carve-out', () => {
+    /**
+     * The generic `[data-blok-top-layer][popover]` reset sets inset/width/
+     * height to auto so floating popovers can position themselves. The
+     * lightbox is a full-viewport dialog and must opt back into
+     * `inset: 0; width/height: 100%` once promoted, or it renders as a
+     * fit-content box in the top-left corner (the UA popover default origin
+     * after `inset: auto` releases).
+     */
+    it('forces inset:0 on the promoted lightbox so it fills the viewport', () => {
+      expect(css).toMatch(
+        /\.blok-image-lightbox\[data-blok-top-layer\]\[popover\][^{]*\{[^}]*inset\s*:\s*0/
+      );
+    });
+
+    it('forces width:100vw height:100vh on the promoted lightbox', () => {
+      const ruleBody =
+        css.match(/\.blok-image-lightbox\[data-blok-top-layer\]\[popover\][^{]*\{([^}]*)\}/)?.[1] ?? '';
+      expect(ruleBody).toMatch(/width\s*:\s*100vw/);
+      expect(ruleBody).toMatch(/height\s*:\s*100vh/);
+    });
+  });
 });

@@ -64,6 +64,16 @@ export const supportsPopoverAPI = (): boolean => {
  * need to fall back to z-index stacking can branch on the return value.
  */
 export const promoteToTopLayer = (el: HTMLElement): boolean => {
+  /**
+   * Tag the element unconditionally — the `[data-blok-top-layer]` selector
+   * drives the scoped CSS custom property inheritance in colors.css (so
+   * tokens like `--blok-image-lightbox-backdrop` resolve on elements
+   * appended to document.body). The tag has to land even on browsers that
+   * lack the Popover API, otherwise the backdrop/toolbar backgrounds paint
+   * transparent.
+   */
+  el.setAttribute(TOP_LAYER_MARKER_ATTR, 'true');
+
   if (!supportsPopoverAPI()) {
     return false;
   }
@@ -71,7 +81,6 @@ export const promoteToTopLayer = (el: HTMLElement): boolean => {
   if (!el.hasAttribute(POPOVER_ATTR)) {
     el.setAttribute(POPOVER_ATTR, POPOVER_VALUE_MANUAL);
   }
-  el.setAttribute(TOP_LAYER_MARKER_ATTR, 'true');
 
   try {
     el.showPopover();
@@ -92,6 +101,12 @@ export const promoteToTopLayer = (el: HTMLElement): boolean => {
  * rule no longer applies) and clears the `data-blok-top-layer` marker.
  */
 export const removeFromTopLayer = (el: HTMLElement): void => {
+  /**
+   * Always strip the marker — it was set unconditionally by promote() so
+   * scoped CSS tokens could resolve without popover support.
+   */
+  el.removeAttribute(TOP_LAYER_MARKER_ATTR);
+
   if (!supportsPopoverAPI()) {
     return;
   }
@@ -107,8 +122,6 @@ export const removeFromTopLayer = (el: HTMLElement): void => {
     }
     el.removeAttribute(POPOVER_ATTR);
   }
-
-  el.removeAttribute(TOP_LAYER_MARKER_ATTR);
 };
 
 /**

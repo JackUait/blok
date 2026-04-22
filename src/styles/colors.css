@@ -63,7 +63,8 @@
 
 /* ─── Light theme (default) ─────────────────────────── */
 [data-blok-interface],
-[data-blok-popover] {
+[data-blok-popover],
+[data-blok-top-layer] {
   --blok-selection: #e1f2ff;
   --blok-selection-inline: #d4ecff;
   --blok-selection-highlight: rgba(46, 170, 220, 0.2);
@@ -397,7 +398,8 @@
 /* ─── Dark theme — system preference ────────────────── */
 @media (prefers-color-scheme: dark) {
   :root:not([data-blok-theme="light"]) [data-blok-interface],
-  :root:not([data-blok-theme="light"]) [data-blok-popover] {
+  :root:not([data-blok-theme="light"]) [data-blok-popover],
+  :root:not([data-blok-theme="light"]) [data-blok-top-layer] {
     --blok-selection: rgba(35, 131, 226, 0.2);
     --blok-selection-inline: rgba(35, 131, 226, 0.3);
     --blok-selection-highlight: rgba(35, 131, 226, 0.25);
@@ -561,7 +563,8 @@
 
 /* ─── Dark theme — explicit override ────────────────── */
 [data-blok-theme="dark"] [data-blok-interface],
-[data-blok-theme="dark"] [data-blok-popover] {
+[data-blok-theme="dark"] [data-blok-popover],
+[data-blok-theme="dark"] [data-blok-top-layer] {
   --blok-selection: rgba(35, 131, 226, 0.2);
   --blok-selection-inline: rgba(35, 131, 226, 0.3);
   --blok-selection-highlight: rgba(35, 131, 226, 0.25);

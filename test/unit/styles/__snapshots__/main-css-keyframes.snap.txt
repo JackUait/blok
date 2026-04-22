@@ -11,9 +11,19 @@
   to { opacity: 1 }
 }
 
+@keyframes blok-crop-modal-backdrop-out {
+  from { opacity: 1 }
+  to { opacity: 0 }
+}
+
 @keyframes blok-crop-modal-dialog-in {
   from { opacity: 0; transform: translateY(8px) scale(0.985) }
   to { opacity: 1; transform: none }
+}
+
+@keyframes blok-crop-modal-dialog-out {
+  from { opacity: 1; transform: none }
+  to { opacity: 0; transform: translateY(6px) scale(0.985) }
 }
 
 @keyframes blok-crop-pill-in {

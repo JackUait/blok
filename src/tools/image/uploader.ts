@@ -7,6 +7,10 @@ export interface UploadResult {
   fileName?: string;
 }
 
+export interface UploadOptions {
+  onProgress?: (percent: number) => void;
+}
+
 function parseUrl(raw: string): URL | null {
   try {
     return new URL(raw);
@@ -38,33 +42,33 @@ function dataUrlToFile(dataUrl: string): File {
 export class Uploader {
   constructor(private readonly config: ImageConfig) {}
 
-  public async handleUrl(raw: string): Promise<UploadResult> {
+  public async handleUrl(raw: string, options: UploadOptions = {}): Promise<UploadResult> {
     if (isImageDataUrl(raw)) {
-      return this.handleDataUrl(raw);
+      return this.handleDataUrl(raw, options);
     }
     this.validateUrl(raw);
     if (this.config.uploader?.uploadByUrl) {
-      return this.config.uploader.uploadByUrl(raw);
+      return this.config.uploader.uploadByUrl(raw, { onProgress: options.onProgress });
     }
 
     return { url: raw };
   }
 
-  public async handleFile(file: File): Promise<UploadResult> {
+  public async handleFile(file: File, options: UploadOptions = {}): Promise<UploadResult> {
     this.validateFile(file);
     if (this.config.uploader?.uploadByFile) {
-      return this.config.uploader.uploadByFile(file);
+      return this.config.uploader.uploadByFile(file, { onProgress: options.onProgress });
     }
 
     return { url: URL.createObjectURL(file), fileName: file.name };
   }
 
-  private async handleDataUrl(raw: string): Promise<UploadResult> {
+  private async handleDataUrl(raw: string, options: UploadOptions): Promise<UploadResult> {
     if (this.config.uploader?.uploadByUrl) {
-      return this.config.uploader.uploadByUrl(raw);
+      return this.config.uploader.uploadByUrl(raw, { onProgress: options.onProgress });
     }
     if (this.config.uploader?.uploadByFile) {
-      return this.handleFile(dataUrlToFile(raw));
+      return this.handleFile(dataUrlToFile(raw), options);
     }
 
     return { url: raw };

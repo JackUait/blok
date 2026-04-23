@@ -155,6 +155,10 @@ export class ImageTool implements BlockTool {
     }
   }
 
+  private reportProgress = (percent: number): void => {
+    this.uploadingEl?.setProgress(percent);
+  };
+
   private startUpload(file: File): void {
     this.lastFileName = file.name;
     this.lastSource = { kind: 'file', file };
@@ -163,7 +167,7 @@ export class ImageTool implements BlockTool {
     this.brokenImage = false;
     this.renderState();
     void this.uploader
-      .handleFile(file)
+      .handleFile(file, { onProgress: this.reportProgress })
       .then((result) => this.applyResult(result))
       .catch((err) => this.applyError(err));
   }
@@ -176,7 +180,7 @@ export class ImageTool implements BlockTool {
     this.brokenImage = false;
     this.renderState();
     void this.uploader
-      .handleUrl(url)
+      .handleUrl(url, { onProgress: this.reportProgress })
       .then((result) => this.applyResult(result))
       .catch((err) => this.applyError(err));
   }
@@ -194,8 +198,8 @@ export class ImageTool implements BlockTool {
     );
     if (retryBtn) retryBtn.disabled = true;
     const promise = source.kind === 'file'
-      ? this.uploader.handleFile(source.file)
-      : this.uploader.handleUrl(source.url);
+      ? this.uploader.handleFile(source.file, { onProgress: this.reportProgress })
+      : this.uploader.handleUrl(source.url, { onProgress: this.reportProgress });
     void promise
       .then((result) => this.applyResult(result))
       .catch((err) => this.applyError(err));

@@ -135,8 +135,37 @@ describe('ImageTool — onPaste', () => {
     Object.defineProperty(event, 'type', { value: 'tag' });
     tool.onPaste(event);
     await new Promise((r) => setTimeout(r, 0));
-    expect(uploadByUrl).toHaveBeenCalledWith('https://lh3.googleusercontent.com/xyz');
+    expect(uploadByUrl).toHaveBeenCalledWith('https://lh3.googleusercontent.com/xyz', expect.any(Object));
     expect(tool.save().url).toBe('https://cdn/https%3A%2F%2Flh3.googleusercontent.com%2Fxyz');
+  });
+
+  it('onPaste(file) updates the upload bar fill width when uploader reports progress', async () => {
+    /**
+     * Bug: when pasting an image (e.g. from Google Docs) through a real
+     * uploader, the upload bar stayed stuck at 0%.  Root cause: the
+     * progress reported by uploadByFile was never piped to the
+     * uploading-state element's setProgress.
+     */
+    // Hold uploadByFile pending so we can assert the bar updates BEFORE completion.
+    const uploadByFile = vi.fn().mockImplementation(
+      async (_file: File, ctx?: { onProgress?: (percent: number) => void }) => {
+        ctx?.onProgress?.(60);
+        return new Promise<{ url: string }>(() => { /* never resolves */ });
+      }
+    );
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByFile } }));
+    const root = tool.render();
+    const file = new File([new Uint8Array(10)], 'p.png', { type: 'image/png' });
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+
+    const fill = root.querySelector<HTMLElement>('[data-role="fill"]');
+    const pct = root.querySelector<HTMLElement>('[data-role="pct"]');
+    if (!fill || !pct) throw new Error('uploading state DOM missing');
+    expect(fill.style.width).toBe('60%');
+    expect(pct.textContent).toBe('60%');
   });
 
   it('onPaste(file) routes through Uploader and sets blob URL', async () => {
@@ -900,7 +929,7 @@ describe('ImageTool — error state', () => {
     root.querySelector<HTMLButtonElement>('[data-action="retry"]')?.click();
     await new Promise((r) => setTimeout(r, 0));
     expect(uploadByFile).toHaveBeenCalledTimes(2);
-    expect(uploadByFile).toHaveBeenLastCalledWith(file);
+    expect(uploadByFile).toHaveBeenLastCalledWith(file, expect.any(Object));
   });
 
   it('retry after URL fetch error re-runs uploader with the same URL', async () => {
@@ -923,7 +952,7 @@ describe('ImageTool — error state', () => {
     root.querySelector<HTMLButtonElement>('[data-action="retry"]')?.click();
     await new Promise((r) => setTimeout(r, 0));
     expect(uploadByUrl).toHaveBeenCalledTimes(2);
-    expect(uploadByUrl).toHaveBeenLastCalledWith('https://x/404.png');
+    expect(uploadByUrl).toHaveBeenLastCalledWith('https://x/404.png', expect.any(Object));
   });
 
   it('retry click keeps error card mounted while upload is in flight (no flash to loading)', async () => {

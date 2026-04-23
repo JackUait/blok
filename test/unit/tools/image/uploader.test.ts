@@ -50,7 +50,7 @@ describe('Uploader', () => {
       const u = new Uploader({ uploader: { uploadByUrl } });
 
       await expect(u.handleUrl(DATA_URL)).resolves.toEqual({ url: 'https://cdn/rehosted.png' });
-      expect(uploadByUrl).toHaveBeenCalledWith(DATA_URL);
+      expect(uploadByUrl).toHaveBeenCalledWith(DATA_URL, expect.any(Object));
     });
 
     it('converts data: URL to File and routes to uploadByFile when only uploadByFile is configured', async () => {
@@ -111,6 +111,67 @@ describe('Uploader', () => {
     });
   });
 
+  describe('progress reporting', () => {
+    /**
+     * Progress events from the consumer's upload implementation must reach
+     * the UI so the upload bar moves.  Without forwarding, the bar stays
+     * at 0% until the upload completes — observed when pasting images
+     * from Google Docs through a real (non-blob) uploader.
+     */
+    it('forwards onProgress callback into uploadByFile so consumer can report bytes uploaded', async () => {
+      const uploadByFile = vi.fn().mockImplementation(
+        async (_file: File, ctx?: { onProgress?: (percent: number) => void }) => {
+          ctx?.onProgress?.(25);
+          ctx?.onProgress?.(75);
+          return { url: 'https://cdn/x.png' };
+        }
+      );
+      const onProgress = vi.fn();
+      const u = new Uploader({ uploader: { uploadByFile } });
+      const file = new File([new Uint8Array(10)], 'x.png', { type: 'image/png' });
+
+      await u.handleFile(file, { onProgress });
+      expect(uploadByFile).toHaveBeenCalledWith(file, expect.objectContaining({
+        onProgress: expect.any(Function),
+      }));
+      expect(onProgress).toHaveBeenCalledWith(25);
+      expect(onProgress).toHaveBeenCalledWith(75);
+    });
+
+    it('forwards onProgress callback into uploadByUrl so consumer can report progress', async () => {
+      const uploadByUrl = vi.fn().mockImplementation(
+        async (_url: string, ctx?: { onProgress?: (percent: number) => void }) => {
+          ctx?.onProgress?.(50);
+          return { url: 'https://cdn/x.png' };
+        }
+      );
+      const onProgress = vi.fn();
+      const u = new Uploader({ uploader: { uploadByUrl } });
+
+      await u.handleUrl('https://orig/x.png', { onProgress });
+      expect(uploadByUrl).toHaveBeenCalledWith('https://orig/x.png', expect.objectContaining({
+        onProgress: expect.any(Function),
+      }));
+      expect(onProgress).toHaveBeenCalledWith(50);
+    });
+
+    it('forwards onProgress when data: URL is rerouted to uploadByFile', async () => {
+      const uploadByFile = vi.fn().mockImplementation(
+        async (_file: File, ctx?: { onProgress?: (percent: number) => void }) => {
+          ctx?.onProgress?.(40);
+          return { url: 'https://cdn/x.png', fileName: 'pasted-image.png' };
+        }
+      );
+      const onProgress = vi.fn();
+      const u = new Uploader({ uploader: { uploadByFile } });
+      const DATA_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9ZmUkA0AAAAASUVORK5CYII=';
+
+      await u.handleUrl(DATA_URL, { onProgress });
+      expect(uploadByFile).toHaveBeenCalledOnce();
+      expect(onProgress).toHaveBeenCalledWith(40);
+    });
+  });
+
   describe('custom uploader integration', () => {
     it('routes handleFile through config.uploader.uploadByFile when present', async () => {
       const uploadByFile = vi.fn().mockResolvedValue({ url: 'https://cdn/x.png', fileName: 'x.png' });
@@ -118,7 +179,7 @@ describe('Uploader', () => {
       const file = new File([new Uint8Array(10)], 'x.png', { type: 'image/png' });
 
       await expect(u.handleFile(file)).resolves.toEqual({ url: 'https://cdn/x.png', fileName: 'x.png' });
-      expect(uploadByFile).toHaveBeenCalledWith(file);
+      expect(uploadByFile).toHaveBeenCalledWith(file, expect.any(Object));
     });
 
     it('routes handleUrl through config.uploader.uploadByUrl when present', async () => {
@@ -126,7 +187,7 @@ describe('Uploader', () => {
       const u = new Uploader({ uploader: { uploadByUrl } });
 
       await expect(u.handleUrl('https://orig/x.png')).resolves.toEqual({ url: 'https://cdn/proxied.png' });
-      expect(uploadByUrl).toHaveBeenCalledWith('https://orig/x.png');
+      expect(uploadByUrl).toHaveBeenCalledWith('https://orig/x.png', expect.any(Object));
     });
 
     it('propagates rejection from custom uploader', async () => {

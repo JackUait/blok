@@ -49,12 +49,22 @@ export interface ImageData extends BlockToolData {
 }
 
 /**
+ * Context passed to consumer-supplied upload methods. Currently exposes
+ * an `onProgress(percent)` hook so the upload bar in the editor can
+ * reflect real upload progress (0–100). Optional — consumers that don't
+ * report progress simply ignore it.
+ */
+export interface ImageUploadContext {
+  onProgress?(percent: number): void;
+}
+
+/**
  * Consumer-supplied uploader. Both methods optional — when absent,
  * the tool falls back to blob URLs (uploadByFile) or direct embed (uploadByUrl).
  */
 export interface ImageUploader {
-  uploadByFile?(file: File): Promise<{ url: string; fileName?: string }>;
-  uploadByUrl?(url: string): Promise<{ url: string }>;
+  uploadByFile?(file: File, ctx?: ImageUploadContext): Promise<{ url: string; fileName?: string }>;
+  uploadByUrl?(url: string, ctx?: ImageUploadContext): Promise<{ url: string }>;
 }
 
 /**

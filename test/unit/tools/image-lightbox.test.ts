@@ -90,6 +90,48 @@ describe('openLightbox toolbar', () => {
     close();
   });
 
+  it('enables zoom-in and zoom-out at initial 100% (room in both directions)', () => {
+    const close = openAtBody({ url: 'https://example.com/pic.jpg' });
+    const zoomIn = bar().querySelector<HTMLButtonElement>('[data-action="zoom-in"]')!;
+    const zoomOut = bar().querySelector<HTMLButtonElement>('[data-action="zoom-out"]')!;
+    expect(zoomIn.disabled).toBe(false);
+    expect(zoomOut.disabled).toBe(false);
+    close();
+  });
+
+  it('disables zoom-out at minimum zoom and keeps zoom-in enabled', () => {
+    const close = openAtBody({ url: 'https://example.com/pic.jpg' });
+    const zoomOut = bar().querySelector<HTMLButtonElement>('[data-action="zoom-out"]')!;
+    const zoomIn = bar().querySelector<HTMLButtonElement>('[data-action="zoom-in"]')!;
+    // ZOOM_MIN=0.25, ZOOM_STEP=0.25 -> 3 clicks from 1 reaches 0.25
+    for (let i = 0; i < 3; i++) zoomOut.click();
+    expect(zoomOut.disabled).toBe(true);
+    expect(zoomIn.disabled).toBe(false);
+    close();
+  });
+
+  it('disables zoom-in at maximum zoom and keeps zoom-out enabled', () => {
+    const close = openAtBody({ url: 'https://example.com/pic.jpg' });
+    const zoomIn = bar().querySelector<HTMLButtonElement>('[data-action="zoom-in"]')!;
+    const zoomOut = bar().querySelector<HTMLButtonElement>('[data-action="zoom-out"]')!;
+    // ZOOM_MAX=4, ZOOM_STEP=0.25 -> 12 clicks from 1 reaches 4
+    for (let i = 0; i < 12; i++) zoomIn.click();
+    expect(zoomIn.disabled).toBe(true);
+    expect(zoomOut.disabled).toBe(false);
+    close();
+  });
+
+  it('re-enables zoom-out after clicking zoom-in once from minimum', () => {
+    const close = openAtBody({ url: 'https://example.com/pic.jpg' });
+    const zoomOut = bar().querySelector<HTMLButtonElement>('[data-action="zoom-out"]')!;
+    const zoomIn = bar().querySelector<HTMLButtonElement>('[data-action="zoom-in"]')!;
+    for (let i = 0; i < 3; i++) zoomOut.click();
+    expect(zoomOut.disabled).toBe(true);
+    zoomIn.click();
+    expect(zoomOut.disabled).toBe(false);
+    close();
+  });
+
   it('retains all expected actions in the toolbar', () => {
     const close = openAtBody({ url: 'https://example.com/pic.jpg' });
     const toolbar = bar();

@@ -378,7 +378,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
   dialog.appendChild(displayState.el);
   dialog.appendChild(toolbar);
 
-  function navigate(delta: number): void {
+  function navigate(delta: number, source: 'click' | 'keyboard' = 'click'): void {
     if (!hasNav) return;
     const next = navState.index + delta;
     if (next < 0 || next >= navItems.length) return;
@@ -391,13 +391,49 @@ export function openLightbox(opts: LightboxOptions): () => void {
     zoomState.value = 1;
     panState.x = 0;
     panState.y = 0;
+    const prev = displayState.el;
     const fresh = buildDisplay(currentItem);
-    displayState.el.replaceWith(fresh);
+    prev.replaceWith(fresh);
     displayState.el = fresh;
     applyTransform();
     syncResetLabel();
     syncZoomDisabled();
     syncNavDisabled();
+    const offset = delta > 0 ? 160 : -160;
+    if (canAnimate(fresh)) {
+      fresh.animate(
+        [
+          { opacity: 0, transform: `translate(${offset}px, 0px) scale(0.92)` },
+          { opacity: 1, transform: 'translate(0px, 0px) scale(1)' },
+        ],
+        { duration: 380, easing: OPEN_EASING, fill: 'backwards' }
+      );
+    }
+    const btn = nav?.querySelector<HTMLElement>(
+      delta > 0 ? '[data-action="lightbox-next"]' : '[data-action="lightbox-prev"]'
+    );
+    if (btn && canAnimate(btn)) {
+      if (source === 'keyboard') {
+        const nudge = delta > 0 ? 6 : -6;
+        btn.animate(
+          [
+            { transform: 'translateX(0) scale(1)' },
+            { transform: `translateX(${nudge}px) scale(0.78)`, offset: 0.4 },
+            { transform: 'translateX(0) scale(1)' },
+          ],
+          { duration: 320, easing: OPEN_EASING }
+        );
+      } else {
+        btn.animate(
+          [
+            { transform: 'scale(1)' },
+            { transform: 'scale(0.92)', offset: 0.5 },
+            { transform: 'scale(1)' },
+          ],
+          { duration: 160, easing: OPEN_EASING }
+        );
+      }
+    }
   }
 
   const nav = hasNav
@@ -436,10 +472,11 @@ export function openLightbox(opts: LightboxOptions): () => void {
    */
   promoteToTopLayer(dialog);
 
-  const animState: { img: Animation | null; backdrop: Animation | null; toolbar: Animation | null; closing: boolean } = {
+  const animState: { img: Animation | null; backdrop: Animation | null; toolbar: Animation | null; nav: Animation | null; closing: boolean } = {
     img: null,
     backdrop: null,
     toolbar: null,
+    nav: null,
     closing: false,
   };
   const origin = opts.origin && opts.origin.isConnected ? opts.origin : null;
@@ -449,9 +486,11 @@ export function openLightbox(opts: LightboxOptions): () => void {
     animState.img?.cancel();
     animState.backdrop?.cancel();
     animState.toolbar?.cancel();
+    animState.nav?.cancel();
     animState.img = null;
     animState.backdrop = null;
     animState.toolbar = null;
+    animState.nav = null;
   };
 
   const slideToolbar = (
@@ -464,6 +503,21 @@ export function openLightbox(opts: LightboxOptions): () => void {
       [
         { opacity: from.opacity, transform: `translate(-50%, ${from.y}px)` },
         { opacity: to.opacity, transform: `translate(-50%, ${to.y}px)` },
+      ],
+      timing
+    );
+  };
+
+  const slideNav = (
+    from: { opacity: number; x: number },
+    to: { opacity: number; x: number },
+    timing: KeyframeAnimationOptions
+  ): Animation | null => {
+    if (!nav || !canAnimate(nav)) return null;
+    return nav.animate(
+      [
+        { opacity: from.opacity, transform: `translate(${from.x}px, -50%)` },
+        { opacity: to.opacity, transform: `translate(${to.x}px, -50%)` },
       ],
       timing
     );
@@ -493,6 +547,11 @@ export function openLightbox(opts: LightboxOptions): () => void {
       { opacity: 1, y: 0 },
       { duration: 320, delay: 140, easing: OPEN_EASING, fill: 'both' }
     );
+    animState.nav = slideNav(
+      { opacity: 0, x: -12 },
+      { opacity: 1, x: 0 },
+      { duration: 320, delay: 140, easing: OPEN_EASING, fill: 'both' }
+    );
   };
 
   const finalize = (): void => {
@@ -512,6 +571,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
     a.onfinish = finalize;
     a.oncancel = finalize;
     slideToolbar({ opacity: 1, y: 0 }, { opacity: 0, y: 12 }, { duration: 180, easing: CLOSE_EASING, fill: 'forwards' });
+    slideNav({ opacity: 1, x: 0 }, { opacity: 0, x: -12 }, { duration: 180, easing: CLOSE_EASING, fill: 'forwards' });
   };
 
   const closeWithFlip = (originEl: HTMLElement): void => {
@@ -546,6 +606,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
       backdrop.animate([{ opacity: 1 }, { opacity: 0 }], { duration: CLOSE_DURATION, easing: 'linear', fill: 'forwards' });
     }
     slideToolbar({ opacity: 1, y: 0 }, { opacity: 0, y: 12 }, { duration: 200, easing: CLOSE_EASING, fill: 'forwards' });
+    slideNav({ opacity: 1, x: 0 }, { opacity: 0, x: -12 }, { duration: 200, easing: CLOSE_EASING, fill: 'forwards' });
   };
 
   const close = (): void => {
@@ -576,12 +637,12 @@ export function openLightbox(opts: LightboxOptions): () => void {
     }
     if (hasNav && event.key === 'ArrowRight') {
       event.preventDefault();
-      navigate(1);
+      navigate(1, 'keyboard');
       return;
     }
     if (hasNav && event.key === 'ArrowLeft') {
       event.preventDefault();
-      navigate(-1);
+      navigate(-1, 'keyboard');
       return;
     }
   };

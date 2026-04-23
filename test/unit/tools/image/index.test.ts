@@ -1076,6 +1076,46 @@ describe('ImageTool — lightbox navigation wiring', () => {
     expect(document.querySelector('[data-role="lightbox-nav"]')).toBeNull();
   });
 
+  it('skips broken image blocks (error state) when collecting navigation items', () => {
+    const makeImageHolder = (state: string): HTMLElement => {
+      const holder = document.createElement('div');
+      const root = document.createElement('div');
+      root.setAttribute('data-blok-tool', 'image');
+      root.setAttribute('data-state', state);
+      holder.appendChild(root);
+      return holder;
+    };
+    const blockStubs: BlockAPI[] = [
+      { id: 'i1', name: 'image', preservedData: { url: 'https://x/a.png' }, holder: makeImageHolder('rendered') },
+      { id: 'i2', name: 'image', preservedData: { url: 'https://x/broken.png' }, holder: makeImageHolder('error') },
+      { id: 'i3', name: 'image', preservedData: { url: 'https://x/c.png' }, holder: makeImageHolder('rendered') },
+    ] as unknown as BlockAPI[];
+    const api = {
+      styles: { block: 'blok-block' },
+      i18n: { t: (k: string) => k, has: () => false },
+      blocks: {
+        getBlocksCount: (): number => blockStubs.length,
+        getBlockByIndex: (i: number): BlockAPI | undefined => blockStubs[i],
+      },
+    } as unknown as API;
+    const block = { ...createMockBlock(), id: 'i1' } as BlockAPI;
+    const tool = new ImageTool({
+      ...createOptions({ url: 'https://x/a.png' }, {}, block),
+      api,
+    });
+    const root = tool.render();
+    const imgEl = root.querySelector<HTMLImageElement>('img');
+    if (!imgEl) throw new Error('img missing');
+    imgEl.click();
+    const nav = document.querySelector('[data-role="lightbox-nav"]');
+    expect(nav).not.toBeNull();
+    const next = document.querySelector<HTMLButtonElement>('[data-action="lightbox-next"]');
+    next?.click();
+    const dialogImg = document.querySelector<HTMLImageElement>('[role="dialog"] img');
+    // Skips i2 (broken) and lands on i3 directly
+    expect(dialogImg?.getAttribute('src')).toBe('https://x/c.png');
+  });
+
   it('skips non-image blocks and blocks with empty url when collecting navigation items', () => {
     const blockStubs: BlockAPI[] = [
       { id: 'p1', name: 'paragraph', preservedData: { text: 'hi' } },

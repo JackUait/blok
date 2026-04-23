@@ -342,21 +342,25 @@ export class ImageTool implements BlockTool {
     const blocksApi = (this.api as API & { blocks?: { getBlocksCount(): number; getBlockByIndex(i: number): BlockAPI | undefined } }).blocks;
     if (!blocksApi?.getBlocksCount || !blocksApi.getBlockByIndex) return undefined;
     const count = blocksApi.getBlocksCount();
-    const collected: Array<{ blockId: string; item: { url: string; alt?: string; fileName?: string; crop?: ImageCrop } }> = Array.from({ length: count }, (_, i) => blocksApi.getBlockByIndex(i))
+    type Collected = { blockId: string; item: { url: string; alt?: string; fileName?: string; crop?: ImageCrop } };
+    const collected: Collected[] = Array.from({ length: count }, (_, i) => blocksApi.getBlockByIndex(i))
       .filter((b): b is BlockAPI => b !== undefined && b.name === 'image')
-      .map((b) => {
+      .map((b): Collected | null => {
+        const toolRoot = b.holder?.querySelector<HTMLElement>('[data-blok-tool="image"]');
+        if (toolRoot?.getAttribute('data-state') === 'error') return null;
+        const img = b.holder?.querySelector<HTMLImageElement>('.blok-image-inner img');
+        if (img && img.complete && img.naturalWidth === 0) return null;
         const preserved = b.preservedData as Partial<ImageData> | undefined;
         const preservedUrl = typeof preserved?.url === 'string' ? preserved.url : '';
         if (preservedUrl) {
           return { blockId: b.id, item: { url: preservedUrl, alt: preserved?.alt, fileName: preserved?.fileName, crop: preserved?.crop } };
         }
-        const img = b.holder?.querySelector<HTMLImageElement>('.blok-image-inner img');
         const src = img?.getAttribute('src') ?? '';
         if (!src) return null;
         const alt = img?.getAttribute('alt') ?? undefined;
         return { blockId: b.id, item: { url: src, alt, fileName: preserved?.fileName, crop: preserved?.crop } };
       })
-      .filter((entry): entry is { blockId: string; item: { url: string; alt?: string; fileName?: string; crop?: ImageCrop } } => entry !== null);
+      .filter((entry): entry is Collected => entry !== null);
     if (collected.length < 2) return undefined;
     const foundIndex = collected.findIndex((c) => c.blockId === this.block.id);
     const startIndex = foundIndex === -1 ? 0 : foundIndex;

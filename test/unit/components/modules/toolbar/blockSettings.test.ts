@@ -855,6 +855,78 @@ describe('BlockSettings', () => {
     getTunesItemsSpy.mockRestore();
   });
 
+  it('translates contextLabel using the active toolbox entry titleKey (Heading 1 → Заголовок 1)', async () => {
+    blockSettings.make();
+
+    const block = createBlock();
+
+    (block.getActiveToolboxEntry as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      icon: '<svg />',
+      title: 'Heading 1',
+      titleKey: 'tools.header.heading1',
+    });
+    (block as unknown as { name: string }).name = 'header';
+
+    blokMock.BlockManager.currentBlock = block;
+    blokMock.I18n.t.mockImplementation((key: string) =>
+      key === 'tools.header.heading1' ? 'Заголовок 1' : key
+    );
+    blokMock.I18n.has.mockImplementation((key: string) => key === 'tools.header.heading1');
+
+    const selectionStub = { save: vi.fn(), restore: vi.fn(), clearSaved: vi.fn() };
+
+    (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
+
+    const getTunesItemsSpy = vi.spyOn(blockSettings as unknown as {
+      getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+    }, 'getTunesItems').mockResolvedValue([]);
+
+    await blockSettings.open(block);
+
+    const popover = getLastPopover();
+    const params = popover?.params as { contextLabel?: string } | undefined;
+
+    expect(params?.contextLabel).toBe('Заголовок 1');
+
+    getTunesItemsSpy.mockRestore();
+  });
+
+  it('translates contextLabel using block.name via toolNames.<name> when entry has no title (image → Изображение)', async () => {
+    blockSettings.make();
+
+    const block = createBlock();
+
+    // Image tool exposes no `title`, only `titleKey: 'image'`.
+    (block.getActiveToolboxEntry as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      icon: '<svg />',
+      titleKey: 'image',
+    });
+    (block as unknown as { name: string }).name = 'image';
+
+    blokMock.BlockManager.currentBlock = block;
+    blokMock.I18n.t.mockImplementation((key: string) =>
+      key === 'toolNames.image' ? 'Изображение' : key
+    );
+    blokMock.I18n.has.mockImplementation((key: string) => key === 'toolNames.image');
+
+    const selectionStub = { save: vi.fn(), restore: vi.fn(), clearSaved: vi.fn() };
+
+    (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
+
+    const getTunesItemsSpy = vi.spyOn(blockSettings as unknown as {
+      getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+    }, 'getTunesItems').mockResolvedValue([]);
+
+    await blockSettings.open(block);
+
+    const popover = getLastPopover();
+    const params = popover?.params as { contextLabel?: string } | undefined;
+
+    expect(params?.contextLabel).toBe('Изображение');
+
+    getTunesItemsSpy.mockRestore();
+  });
+
   it('sets englishTitle and searchTerms on convert-to children for multilingual search', async () => {
     const block = createBlock();
 

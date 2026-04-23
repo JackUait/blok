@@ -13,7 +13,7 @@ import { getConvertibleToolsForBlock, getConvertibleToolsForBlocks } from '../..
 import type { PopoverItemParams, Popover } from '../../utils/popover';
 import { PopoverDesktop, PopoverMobile, PopoverItemType } from '../../utils/popover';
 import { css as popoverItemCls } from '../../utils/popover/components/popover-item';
-import { translateToolTitle } from '../../utils/tools';
+import { translateToolName, translateToolTitle } from '../../utils/tools';
 
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -198,9 +198,14 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
       const items = await this.getTunesItems(block, commonTunes, toolTunes);
 
+      const activeEntry = hasMultipleBlocksSelected
+        ? undefined
+        : await block.getActiveToolboxEntry();
       const contextLabel = hasMultipleBlocksSelected
         ? `${selectedBlocks.length} blocks`
-        : (await block.getActiveToolboxEntry())?.title ?? block.name;
+        : activeEntry
+          ? translateToolTitle(this.Blok.I18n, activeEntry, block.name)
+          : translateToolName(this.Blok.I18n, undefined, block.name);
 
       const PopoverClass = isMobileScreen() ? PopoverMobile : PopoverDesktop;
       const popoverParams: PopoverParams & { flipper?: Flipper } = {

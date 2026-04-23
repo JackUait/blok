@@ -890,6 +890,43 @@ describe('table-cell-clipboard', () => {
       expect(result?.cells[0][0].textColor).toBeUndefined();
       expect(result?.cells[0][1].textColor).toBe('#d44c47');
     });
+
+    // -------------------------------------------------------------------------
+    // Default page background filtering — browsers (and Google Docs) include
+    // the resolved page background-color on every span/cell in the clipboard
+    // payload. These should not produce <mark> wrappers nor cell colors.
+    // -------------------------------------------------------------------------
+
+    it('does not create <mark> for default white page background on span', () => {
+      const html = '<table><tr><td><span style="background-color: #ffffff">x</span></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('x');
+      expect(result?.cells[0][0].blocks[0].data.text).not.toContain('<mark');
+    });
+
+    it('does not create <mark> for default dark page background on span', () => {
+      const html = '<table><tr><td><span style="background-color: rgb(25, 25, 24)">x</span></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('x');
+      expect(result?.cells[0][0].blocks[0].data.text).not.toContain('<mark');
+    });
+
+    it('does not set cell color for default white page background on td', () => {
+      const html = '<table><tr><td style="background-color: #ffffff">x</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].color).toBeUndefined();
+    });
+
+    it('still creates <mark> for intentional yellow highlight on span (positive control)', () => {
+      const html = '<table><tr><td><span style="background-color: rgb(255, 226, 153)">x</span></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].data.text).toContain('<mark');
+      expect(result?.cells[0][0].blocks[0].data.text).toContain('background-color');
+    });
   });
 
   // ---------------------------------------------------------------------------

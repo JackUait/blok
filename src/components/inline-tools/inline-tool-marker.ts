@@ -17,6 +17,7 @@ import { createColorPicker } from '../shared/color-picker';
 import type { ColorPickerHandle } from '../shared/color-picker';
 import { colorVarName } from '../shared/color-presets';
 import { mapToNearestPresetName } from '../utils/color-mapping';
+import { isDefaultDarkBackground, isDefaultWhiteBackground } from '../utils/default-page-colors';
 
 /**
  * Color mode type — either text color or background color
@@ -86,6 +87,17 @@ export class MarkerInlineTool implements InlineTool {
           if (!MarkerInlineTool.ALLOWED_STYLE_PROPS.has(prop)) {
             style.removeProperty(prop);
           }
+        }
+
+        /**
+         * Strip default page background-colors (white / near-black) so a
+         * pasted <mark> from another editor doesn't persist a bg that was
+         * really just the source page background.
+         */
+        const bg = style.getPropertyValue('background-color');
+
+        if (bg && (isDefaultWhiteBackground(bg) || isDefaultDarkBackground(bg))) {
+          style.removeProperty('background-color');
         }
 
         /**

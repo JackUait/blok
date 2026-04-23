@@ -148,10 +148,12 @@ describe('mapToNearestPresetColor', () => {
     expect(mapToNearestPresetColor('#000000', 'text')).toBe('#787774');
   });
 
-  it('maps white (#ffffff) bg to nearest bg preset', () => {
-    const result = mapToNearestPresetColor('#ffffff', 'bg');
+  it('returns white (#ffffff) bg unchanged — default page bg must not collapse to gray preset', () => {
+    expect(mapToNearestPresetColor('#ffffff', 'bg')).toBe('#ffffff');
+  });
 
-    expect(result).toMatch(/^#[0-9a-f]{6}$/);
+  it('returns near-black bg (rgb(25, 25, 24)) unchanged — default dark page bg must not collapse to gray preset', () => {
+    expect(mapToNearestPresetColor('rgb(25, 25, 24)', 'bg')).toBe('rgb(25, 25, 24)');
   });
 
   it('maps Google Docs light red bg (#f4cccc) to Blok red bg', () => {
@@ -234,5 +236,25 @@ describe('mapToNearestPresetName', () => {
 
   it('maps dark green bg preset hex to green name', () => {
     expect(mapToNearestPresetName('#243d30', 'bg')).toBe('green');
+  });
+
+  it('returns null for default white page bg (#ffffff) — guard prevents collapse to gray', () => {
+    expect(mapToNearestPresetName('#ffffff', 'bg')).toBeNull();
+  });
+
+  it('returns null for default dark page bg (rgb(25, 25, 24)) — guard prevents collapse to gray', () => {
+    expect(mapToNearestPresetName('rgb(25, 25, 24)', 'bg')).toBeNull();
+  });
+
+  it('returns null for white keyword bg', () => {
+    expect(mapToNearestPresetName('white', 'bg')).toBeNull();
+  });
+
+  it('still maps non-default light yellow bg (#fbf3db) to yellow — positive control', () => {
+    expect(mapToNearestPresetName('#fbf3db', 'bg')).toBe('yellow');
+  });
+
+  it('still maps white in text mode (no guard for text)', () => {
+    expect(mapToNearestPresetName('#ffffff', 'text')).not.toBeNull();
   });
 });

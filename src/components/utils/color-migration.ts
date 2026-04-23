@@ -1,5 +1,6 @@
 import { colorVarName } from '../shared/color-presets';
 import { mapToNearestPresetName } from './color-mapping';
+import { isDefaultDarkBackground, isDefaultWhiteBackground } from './default-page-colors';
 
 const PROPS = ['color', 'background-color'] as const;
 type Prop = typeof PROPS[number];
@@ -24,6 +25,15 @@ export function migrateMarkColors(container: Element): void {
       const value = el.style.getPropertyValue(prop);
 
       if (!value || value === 'transparent' || value.startsWith('var(')) {
+        continue;
+      }
+
+      /* Strip default page background-colors so persisted defaults don't render
+       * as a styled <mark>. mapToNearestPresetName already returns null for
+       * these inputs, but null only blocks substitution — it does not remove
+       * the existing inline value. */
+      if (prop === 'background-color' && (isDefaultWhiteBackground(value) || isDefaultDarkBackground(value))) {
+        el.style.removeProperty(prop);
         continue;
       }
 

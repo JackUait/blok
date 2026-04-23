@@ -1,4 +1,5 @@
 import { COLOR_PRESETS, COLOR_PRESETS_DARK } from '../shared/color-presets';
+import { isDefaultDarkBackground, isDefaultWhiteBackground } from './default-page-colors';
 
 /**
  * Convert an HSL color (H in degrees, S and L as 0-100 percentages) to an RGB tuple.
@@ -214,6 +215,13 @@ function hslDistance(
  * @returns the nearest preset hex color, or the input unchanged if unparseable
  */
 export function mapToNearestPresetColor(cssColor: string, mode: 'text' | 'bg'): string {
+  /* Defense-in-depth: default page backgrounds (white / near-black) would otherwise
+   * collapse onto the gray bg preset since gray is the only achromatic bg color.
+   * Return the input unchanged so callers preserve the page-default rendering. */
+  if (mode === 'bg' && (isDefaultWhiteBackground(cssColor) || isDefaultDarkBackground(cssColor))) {
+    return cssColor;
+  }
+
   const rgb = parseColor(cssColor);
 
   if (rgb === null) {
@@ -251,6 +259,13 @@ export function mapToNearestPresetColor(cssColor: string, mode: 'text' | 'bg'): 
  * @returns the nearest preset name (e.g. 'red'), or null if unparseable
  */
 export function mapToNearestPresetName(cssColor: string, mode: 'text' | 'bg'): string | null {
+  /* Defense-in-depth: default page backgrounds (white / near-black) would otherwise
+   * collapse onto the gray bg preset since gray is the only achromatic bg color.
+   * Return null so callers leave the original styling untouched. */
+  if (mode === 'bg' && (isDefaultWhiteBackground(cssColor) || isDefaultDarkBackground(cssColor))) {
+    return null;
+  }
+
   const rgb = parseColor(cssColor);
 
   if (rgb === null) {

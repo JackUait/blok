@@ -227,6 +227,45 @@ describe('preprocessGoogleDocsHtml', () => {
     });
   });
 
+  describe('Google Docs content — default page-color spans', () => {
+    /**
+     * Regression: Google Docs adds the page background-color to spans even when
+     * the user did not apply a highlight. These default white/near-white backgrounds
+     * must not be converted to <mark> — the nearest-preset color mapping turns
+     * any low-saturation color into the gray preset, which leaks a spurious gray
+     * background onto every paragraph and heading on paste.
+     */
+    it('should not convert Google Docs span with default white background to mark', () => {
+      const html = gdocs('<span style="background-color: #ffffff;">plain heading</span>');
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).not.toContain('<mark');
+      expect(result).toContain('plain heading');
+    });
+
+    it('should not convert Google Docs span with rgb(255, 255, 255) background to mark', () => {
+      const html = gdocs('<span style="background-color: rgb(255, 255, 255);">plain text</span>');
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).not.toContain('<mark');
+    });
+
+    it('should not convert Google Docs span with default dark page background to mark', () => {
+      const html = gdocs('<span style="background-color: rgb(25, 25, 24);">dark mode text</span>');
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).not.toContain('<mark');
+    });
+
+    it('should still convert Google Docs span with intentional yellow highlight to mark', () => {
+      const html = gdocs('<span style="background-color: rgb(255, 226, 153);">highlighted</span>');
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).toContain('<mark');
+      expect(result).toContain('highlighted');
+    });
+  });
+
   it('converts bold style spans to <b> tags', () => {
     const html = '<span style="font-weight:700">bold text</span>';
     const result = preprocessGoogleDocsHtml(html);

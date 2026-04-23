@@ -131,5 +131,41 @@ describe('CalloutTool — paste support', () => {
 
       expect(saved.backgroundColor).toBeNull();
     });
+
+    it('REGRESSION: white page background must NOT collapse onto gray preset', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions({ backgroundColor: null }));
+      tool.render();
+
+      const aside = document.createElement('aside');
+      // rgb(255, 255, 255) is the resolved page bg copied by the browser when
+      // pasting from a contenteditable. It must be filtered, not mapped to gray.
+      aside.setAttribute('style', 'background-color: rgb(255, 255, 255);');
+
+      const event = { detail: { data: aside } } as unknown as HTMLPasteEvent;
+      tool.onPaste(event);
+
+      const saved = tool.save();
+
+      expect(saved.backgroundColor).toBeNull();
+    });
+
+    it('REGRESSION: dark page background must NOT collapse onto gray preset', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions({ backgroundColor: null }));
+      tool.render();
+
+      const aside = document.createElement('aside');
+      // rgb(25, 25, 24) is Blok's dark page bg (#191918) copied by the browser
+      // in dark mode. It must be filtered, not mapped to gray.
+      aside.setAttribute('style', 'background-color: rgb(25, 25, 24);');
+
+      const event = { detail: { data: aside } } as unknown as HTMLPasteEvent;
+      tool.onPaste(event);
+
+      const saved = tool.save();
+
+      expect(saved.backgroundColor).toBeNull();
+    });
   });
 });

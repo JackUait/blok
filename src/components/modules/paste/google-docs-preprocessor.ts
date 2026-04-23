@@ -1,4 +1,8 @@
 import { mapToNearestPresetColor } from '../../utils/color-mapping';
+import {
+  isDefaultDarkBackground as isDefaultDarkBackgroundShared,
+  isDefaultWhiteBackground as isDefaultWhiteBackgroundShared,
+} from '../../utils/default-page-colors';
 
 /**
  * Pre-process Google Docs clipboard HTML before sanitization.
@@ -263,31 +267,12 @@ function computeRelativeLuminance(color: string): number {
 }
 
 /**
- * Check whether a CSS background-color value is the default white page background.
- * When the browser natively copies from a contenteditable, it adds computed styles
- * including `background-color: rgb(255, 255, 255)` — the resolved page background.
- * These should not be treated as intentional marker formatting.
+ * Re-exports for backward compatibility with table-cell-clipboard and other
+ * callers that still import these helpers from this module. The canonical
+ * implementations live in `src/components/utils/default-page-colors.ts`.
  */
-function isDefaultWhiteBackground(bgColor: string): boolean {
-  const normalized = bgColor.replace(/\s/g, '').toLowerCase();
-
-  return normalized === 'rgb(255,255,255)' || normalized === '#ffffff' || normalized === 'white';
-}
-
-/**
- * Check whether a CSS background-color value is a near-black (dark mode page) background.
- * When the browser natively copies from a contenteditable in dark mode, it adds computed
- * styles including the resolved dark page background (e.g. rgb(25, 25, 24) for Blok's
- * #191918 dark background). These should not be treated as intentional marker formatting.
- *
- * Uses relative luminance < 0.12, which is below all Blok dark background presets
- * (~18% minimum lightness for #2f2f2f) while catching typical dark page backgrounds.
- */
-function isDefaultDarkBackground(bgColor: string): boolean {
-  const luminance = computeRelativeLuminance(bgColor);
-
-  return luminance >= 0 && luminance < 0.12;
-}
+export const isDefaultWhiteBackground = isDefaultWhiteBackgroundShared;
+export const isDefaultDarkBackground = isDefaultDarkBackgroundShared;
 
 /**
  * Check whether a CSS color value is a near-white (dark mode default text) color.
@@ -362,9 +347,17 @@ function convertSpanToSemanticHtml(span: Element, isGoogleDocs: boolean): string
   const hasColor = isGoogleDocs
     ? color !== undefined && !isDefaultBlack(color)
     : color !== undefined && !isDefaultBlack(color) && !isDefaultLightText(color);
-  const hasBgColor = isGoogleDocs
-    ? bgColor !== undefined && bgColor !== 'transparent'
-    : bgColor !== undefined && bgColor !== 'transparent' && !isDefaultWhiteBackground(bgColor) && !isDefaultDarkBackground(bgColor);
+  /**
+   * Default page backgrounds (white/near-white, near-black) are filtered for both
+   * branches. Google Docs writes the page background-color onto every <span> in
+   * the clipboard payload — without this filter, the nearest-preset color mapping
+   * would attach a default-bg styled <mark> to every paragraph.
+   */
+  const hasBgColor =
+    bgColor !== undefined &&
+    bgColor !== 'transparent' &&
+    !isDefaultWhiteBackground(bgColor) &&
+    !isDefaultDarkBackground(bgColor);
 
   if (!isBold && !isItalic && !hasColor && !hasBgColor) {
     return null;

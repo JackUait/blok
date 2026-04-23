@@ -210,6 +210,16 @@ describe('buildBlocks', () => {
       // textColor should come from the explicit color property
       expect(row[0].textColor).not.toBe('orange');
     });
+
+    it('does not map default white cell background to a gray preset', () => {
+      const blocks = run(
+        '<table><tr><td style="background-color: rgb(255, 255, 255);">x</td></tr></table>'
+      );
+      const tableBlock = blocks.find((b) => b.type === 'table')!;
+      const row = (tableBlock.data.content as Record<string, unknown>[][])[0];
+      expect(row[0].color).not.toBe('gray');
+      expect(row[0].color).toBeNull();
+    });
   });
 
   // --- Callout blocks ---
@@ -235,6 +245,19 @@ describe('buildBlocks', () => {
       const blocks = run('<aside style="background-color: rgb(231, 243, 248);"><p>blue note</p></aside>');
       const calloutBlock = blocks.find((b) => b.type === 'callout')!;
       expect(calloutBlock.data.backgroundColor).toBe('blue');
+    });
+
+    it('does not map default white background to a gray preset', () => {
+      const blocks = run('<aside style="background-color: #ffffff;">x</aside>');
+      const calloutBlock = blocks.find((b) => b.type === 'callout')!;
+      expect(calloutBlock.data.backgroundColor).not.toBe('gray');
+    });
+
+    it('maps an intentional non-white background to a non-default preset', () => {
+      const blocks = run('<aside style="background-color: rgb(255, 226, 153);">y</aside>');
+      const calloutBlock = blocks.find((b) => b.type === 'callout')!;
+      expect(calloutBlock.data.backgroundColor).not.toBeNull();
+      expect(calloutBlock.data.backgroundColor).not.toBe('gray');
     });
   });
 

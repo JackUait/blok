@@ -75,4 +75,28 @@ describe('migrateMarkColors', () => {
     container.innerHTML = '<p>no marks here</p>';
     expect(() => migrateMarkColors(container)).not.toThrow();
   });
+
+  it('removes background-color when value is the default white page background', () => {
+    container.innerHTML = '<mark style="background-color:#ffffff">x</mark>';
+    migrateMarkColors(container);
+    const mark = container.querySelector('mark') as HTMLElement;
+
+    expect(mark.style.getPropertyValue('background-color')).toBe('');
+  });
+
+  it('removes background-color when value is the dark-mode page background', () => {
+    container.innerHTML = '<mark style="background-color:rgb(25, 25, 24)">x</mark>';
+    migrateMarkColors(container);
+    const mark = container.querySelector('mark') as HTMLElement;
+
+    expect(mark.style.getPropertyValue('background-color')).toBe('');
+  });
+
+  it('still migrates a genuine yellow highlight background-color (positive control)', () => {
+    container.innerHTML = '<mark style="background-color:#fbf3db">x</mark>';
+    migrateMarkColors(container);
+    const mark = container.querySelector('mark') as HTMLElement;
+
+    expect(mark.style.getPropertyValue('background-color')).toBe('var(--blok-color-yellow-bg)');
+  });
 });

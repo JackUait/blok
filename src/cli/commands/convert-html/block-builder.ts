@@ -1,5 +1,6 @@
 import { createIdGenerator } from './id-generator';
 import { mapToNearestPresetName } from '../../../components/utils/color-mapping';
+import { isDefaultDarkBackground, isDefaultWhiteBackground } from '../../../components/utils/default-page-colors';
 import type { OutputBlockData } from './types';
 
 /**
@@ -257,7 +258,11 @@ function convertCallout(
 ): void {
   const calloutId = nextId('callout');
   const bgColor = parseCssProperty(asideEl, 'background-color');
-  const backgroundColor = bgColor ? mapToNearestPresetName(bgColor, 'bg') : null;
+  // Skip default page backgrounds so white/dark pass-throughs don't map to a gray preset.
+  const backgroundColor =
+    bgColor && !isDefaultWhiteBackground(bgColor) && !isDefaultDarkBackground(bgColor)
+      ? mapToNearestPresetName(bgColor, 'bg')
+      : null;
 
   const childIds: string[] = [];
 
@@ -277,7 +282,7 @@ function convertCallout(
     type: 'callout',
     data: {
       emoji: '\u{1F4A1}',
-      backgroundColor: backgroundColor ?? 'gray',
+      backgroundColor,
     },
     content: childIds,
   };
@@ -316,10 +321,15 @@ function convertTableCell(
 
   const bgColor = parseCssProperty(cellEl, 'background-color');
   const textColor = parseCssProperty(cellEl, 'color');
+  // Skip default page backgrounds so white/dark pass-throughs don't map to a gray preset.
+  const mappedBg =
+    bgColor && !isDefaultWhiteBackground(bgColor) && !isDefaultDarkBackground(bgColor)
+      ? mapToNearestPresetName(bgColor, 'bg')
+      : null;
 
   return {
     blocks: [childId],
-    color: bgColor ? mapToNearestPresetName(bgColor, 'bg') : null,
+    color: mappedBg,
     textColor: textColor ? mapToNearestPresetName(textColor, 'text') : null,
   };
 }

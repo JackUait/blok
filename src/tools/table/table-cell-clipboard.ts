@@ -1,6 +1,7 @@
 import type { SanitizerConfig } from '../../../types/configs/sanitizer-config';
 import type { CellPlacement, ClipboardBlockData, TableCellsClipboard } from './types';
 import { mapToNearestPresetColor } from '../../components/utils/color-mapping';
+import { isDefaultDarkBackground, isDefaultWhiteBackground } from '../../components/modules/paste/google-docs-preprocessor';
 import { clean } from '../../components/utils/sanitizer';
 
 /** Attribute name used to embed clipboard data on the HTML table element. */
@@ -245,7 +246,11 @@ function sanitizeCellHtml(td: Element): string {
     const bgColor = bgMatch?.[1]?.trim();
 
     const hasColor = color !== undefined && !isDefaultBlack(color);
-    const hasBgColor = bgColor !== undefined && bgColor !== 'transparent';
+    // Filter resolved page bg (white/dark) so plain spans don't collapse onto gray preset.
+    const hasBgColor = bgColor !== undefined
+      && bgColor !== 'transparent'
+      && !isDefaultWhiteBackground(bgColor)
+      && !isDefaultDarkBackground(bgColor);
 
     if (!isBold && !isItalic && !hasColor && !hasBgColor) {
       continue;
@@ -282,7 +287,11 @@ function sanitizeCellHtml(td: Element): string {
     const bgColor = bgMatch?.[1]?.trim();
 
     const hasColor = color !== undefined && !isDefaultBlack(color) && color !== 'inherit';
-    const hasBgColor = bgColor !== undefined && bgColor !== 'transparent' && bgColor !== 'inherit';
+    const hasBgColor = bgColor !== undefined
+      && bgColor !== 'transparent'
+      && bgColor !== 'inherit'
+      && !isDefaultWhiteBackground(bgColor)
+      && !isDefaultDarkBackground(bgColor);
 
     if (!hasColor && !hasBgColor) {
       continue;
@@ -372,7 +381,12 @@ export function parseGenericHtmlTable(html: string): TableCellsClipboard | null 
       const cellBgMatch = /background-color\s*:\s*([^;]+)/i.exec(tdStyle);
 
       if (cellBgMatch?.[1]) {
-        cell.color = mapToNearestPresetColor(cellBgMatch[1].trim(), 'bg');
+        const cellBg = cellBgMatch[1].trim();
+
+        // Skip resolved page bg (white/dark) so plain cells don't collapse onto gray preset.
+        if (!isDefaultWhiteBackground(cellBg) && !isDefaultDarkBackground(cellBg)) {
+          cell.color = mapToNearestPresetColor(cellBg, 'bg');
+        }
       }
 
       const cellTextColorMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(tdStyle);

@@ -719,9 +719,9 @@ export const IconCollapseFullscreen = wrapImageSvg('<path d="M9 3v6H3"/><path d=
 export const IconExpandFullscreen = wrapImageSvg('<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/>');
 export const IconDownload = wrapImageSvg('<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>');
 export const IconCaption = wrapImageSvg('<rect x="3" y="3.5" width="18" height="12" rx="2.5"/><path d="M5 19h14"/><path d="M8 22h8"/>');
-// Replace (image) — opposing horizontal arrows. Distinct from IconReplace
-// (20×20 looping arrows) used by the inline-toolbar convert-to feature.
-export const IconReplaceImage = wrapImageSvg('<path d="M4 7h15"/><path d="m15 3 4 4-4 4"/><path d="M20 17H5"/><path d="m9 13-4 4 4 4"/>');
+// Replace (image) — IconReplace geometry scaled to the 24×24 / 1.75-stroke
+// image-toolbar spec so it sits at the same optical size as its neighbours.
+export const IconReplaceImage = wrapImageSvg('<path d="m17.5 8 2.5-2.5L17.5 3"/><path d="M20 5.5h-5.5a6 6 0 0 0-6 6V13"/><path d="m6.5 16-2.5 2.5L6.5 21"/><path d="M4 18.5h5.5a6 6 0 0 0 6-6V11"/>');
 export const IconCrop = wrapImageSvg('<path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M2 6h14a2 2 0 0 1 2 2v14"/>');
 
 // More-options (horizontal 3 dots) — filled circles

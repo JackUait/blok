@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } 
 import { ImageTool } from '../../../../src/tools/image';
 import { updateOverlayCompact } from '../../../../src/tools/image/ui';
 import type { ImageData, ImageConfig } from '../../../../types/tools/image';
-import type { API, BlockToolConstructorOptions, BlockAPI, FilePasteEvent, PatternPasteEvent } from '../../../../types';
+import type { API, BlockToolConstructorOptions, BlockAPI, FilePasteEvent, HTMLPasteEvent, PatternPasteEvent } from '../../../../types';
 
 const createMockApi = (): API => ({
   styles: { block: 'blok-block' },
@@ -87,6 +87,56 @@ describe('ImageTool — onPaste', () => {
     const img = root.querySelector('img');
     if (!img) throw new Error('img missing');
     expect(img.getAttribute('src')).toBe('https://x/y.png');
+  });
+
+  it('pasteConfig.tags registers IMG so HTML <img> paste is routed to ImageTool', () => {
+    /**
+     * Google Docs clipboard HTML contains <img src="https://lh3.googleusercontent.com/…">
+     * tags.  Without tag registration, the HTML handler routes them to the default
+     * paragraph tool (and the sanitizer strips them).  Declaring IMG in pasteConfig.tags
+     * wires the HTML handler to dispatch a 'tag' paste event to the image tool with
+     * src/alt preserved.
+     */
+    const { pasteConfig } = ImageTool;
+    if (pasteConfig === false) throw new Error('pasteConfig is false');
+    expect(pasteConfig.tags).toBeDefined();
+    expect(Array.isArray(pasteConfig.tags)).toBe(true);
+
+    const entries = (pasteConfig.tags ?? []) as Array<string | Record<string, unknown>>;
+    const hasImg = entries.some((entry) => {
+      if (typeof entry === 'string') return entry.toUpperCase() === 'IMG';
+      return Object.keys(entry).some((k) => k.toLowerCase() === 'img');
+    });
+    expect(hasImg).toBe(true);
+  });
+
+  it('onPaste(tag) extracts src from <img> and applies URL', async () => {
+    const tool = new ImageTool(createOptions());
+    const root = tool.render();
+    const img = document.createElement('img');
+    img.setAttribute('src', 'https://lh3.googleusercontent.com/abc123');
+    const event = new CustomEvent('paste', { detail: { data: img } }) as HTMLPasteEvent;
+    Object.defineProperty(event, 'type', { value: 'tag' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(tool.save().url).toBe('https://lh3.googleusercontent.com/abc123');
+    const rendered = root.querySelector('img');
+    if (!rendered) throw new Error('img missing');
+    expect(rendered.getAttribute('src')).toBe('https://lh3.googleusercontent.com/abc123');
+  });
+
+  it('onPaste(tag) forwards URL through Uploader.uploadByUrl when configured', async () => {
+    const uploadByUrl = vi.fn(async (src: string) => ({ url: `https://cdn/${encodeURIComponent(src)}` }));
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByUrl } }));
+    tool.render();
+    const img = document.createElement('img');
+    img.setAttribute('src', 'https://lh3.googleusercontent.com/xyz');
+    const event = new CustomEvent('paste', { detail: { data: img } }) as HTMLPasteEvent;
+    Object.defineProperty(event, 'type', { value: 'tag' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(uploadByUrl).toHaveBeenCalledWith('https://lh3.googleusercontent.com/xyz');
+    expect(tool.save().url).toBe('https://cdn/https%3A%2F%2Flh3.googleusercontent.com%2Fxyz');
   });
 
   it('onPaste(file) routes through Uploader and sets blob URL', async () => {

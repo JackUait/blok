@@ -7,6 +7,7 @@ import type {
   API,
   BlockAPI,
   FilePasteEvent,
+  HTMLPasteEvent,
   PatternPasteEvent,
 } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
@@ -130,6 +131,7 @@ export class ImageTool implements BlockTool {
   public static get pasteConfig(): PasteConfig {
     return {
       patterns: { image: URL_PATTERN },
+      tags: [{ img: { src: true, alt: true } }],
       files: { mimeTypes: ['image/*'] },
     };
   }
@@ -138,6 +140,13 @@ export class ImageTool implements BlockTool {
     if (event.type === 'pattern') {
       const detail = (event as PatternPasteEvent).detail;
       this.applyResult({ url: detail.data });
+      return;
+    }
+    if (event.type === 'tag') {
+      const node = (event as HTMLPasteEvent).detail.data;
+      const src = node?.getAttribute?.('src') ?? '';
+      if (!src) return;
+      this.startUrl(src);
       return;
     }
     if (event.type === 'file') {

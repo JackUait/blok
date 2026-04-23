@@ -905,6 +905,82 @@ describe('preprocessGoogleDocsHtml', () => {
   });
 });
 
+describe('Google Docs embedded images', () => {
+  /**
+   * Google Docs copy-paste puts the image as an <img> tag inside a wrapping <p>
+   * (or a <span>) nested under the <b id="docs-internal-guid-..."> wrapper.  The
+   * HTML handler splits top-level siblings into blocks, so for the image to land
+   * in its own image block we must promote <img> elements out of their enclosing
+   * paragraph to become a top-level sibling of the preprocessed output.
+   */
+  it('preserves <img> src for Google Docs embedded images', () => {
+    const html = '<b id="docs-internal-guid-test"><p><span><img src="https://lh3.googleusercontent.com/abc"></span></p></b>';
+    const result = preprocessGoogleDocsHtml(html);
+
+    expect(result).toContain('src="https://lh3.googleusercontent.com/abc"');
+  });
+
+  it('promotes a standalone <img> inside a paragraph to a top-level sibling', () => {
+    const html = '<b id="docs-internal-guid-test"><p><img src="https://lh3.googleusercontent.com/x"></p></b>';
+    const result = preprocessGoogleDocsHtml(html);
+
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = result;
+
+    // The <img> must be a direct child of the wrapper so the HTML handler
+    // treats it as its own block instead of burying it inside a paragraph.
+    const topLevelImg = Array.from(wrapper.children).find((el) => el.tagName === 'IMG');
+    expect(topLevelImg).toBeDefined();
+    expect(topLevelImg?.getAttribute('src')).toBe('https://lh3.googleusercontent.com/x');
+  });
+
+  it('splits a paragraph that contains text AND an image into separate top-level nodes', () => {
+    const html = '<b id="docs-internal-guid-test"><p><span>before</span><img src="https://lh3.googleusercontent.com/y"><span>after</span></p></b>';
+    const result = preprocessGoogleDocsHtml(html);
+
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = result;
+
+    const children = Array.from(wrapper.children);
+    const imgIndex = children.findIndex((el) => el.tagName === 'IMG');
+    expect(imgIndex).toBeGreaterThan(-1);
+
+    // The textual content remains accessible around the promoted image.
+    expect(wrapper.textContent).toContain('before');
+    expect(wrapper.textContent).toContain('after');
+  });
+
+  it('promotes multiple images into multiple top-level siblings', () => {
+    const html = [
+      '<b id="docs-internal-guid-test">',
+      '<p><img src="https://lh3.googleusercontent.com/a"></p>',
+      '<p><img src="https://lh3.googleusercontent.com/b"></p>',
+      '</b>',
+    ].join('');
+    const result = preprocessGoogleDocsHtml(html);
+
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = result;
+
+    const imgs = wrapper.querySelectorAll(':scope > img');
+    expect(imgs).toHaveLength(2);
+    expect(imgs[0].getAttribute('src')).toBe('https://lh3.googleusercontent.com/a');
+    expect(imgs[1].getAttribute('src')).toBe('https://lh3.googleusercontent.com/b');
+  });
+
+  it('leaves images outside Google Docs wrapper untouched', () => {
+    const html = '<p><img src="https://example.com/pic.png"></p>';
+    const result = preprocessGoogleDocsHtml(html);
+
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = result;
+
+    // Non-Google-Docs content must not be reshuffled — <img> stays inside <p>.
+    expect(wrapper.querySelector(':scope > img')).toBeNull();
+    expect(wrapper.querySelector(':scope > p > img')).not.toBeNull();
+  });
+});
+
 describe('SAFE_STRUCTURAL_TAGS', () => {
   it('includes details', () => {
     expect(SAFE_STRUCTURAL_TAGS.has('details')).toBe(true);

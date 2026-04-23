@@ -15,10 +15,33 @@ function parseUrl(raw: string): URL | null {
   }
 }
 
+const DATA_IMAGE_PREFIX = /^data:image\//i;
+
+function isImageDataUrl(raw: string): boolean {
+  return DATA_IMAGE_PREFIX.test(raw);
+}
+
+function dataUrlToFile(dataUrl: string): File {
+  const commaIndex = dataUrl.indexOf(',');
+  const header = dataUrl.slice(5, commaIndex); // strip "data:"
+  const payload = dataUrl.slice(commaIndex + 1);
+  const isBase64 = header.endsWith(';base64');
+  const mime = isBase64 ? header.slice(0, -7) : header.split(';')[0];
+  const binary = isBase64 ? atob(payload) : decodeURIComponent(payload);
+  const bytes = Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
+
+  const ext = mime.split('/')[1]?.split('+')[0] ?? 'bin';
+
+  return new File([bytes], `pasted-image.${ext}`, { type: mime });
+}
+
 export class Uploader {
   constructor(private readonly config: ImageConfig) {}
 
   public async handleUrl(raw: string): Promise<UploadResult> {
+    if (isImageDataUrl(raw)) {
+      return this.handleDataUrl(raw);
+    }
     this.validateUrl(raw);
     if (this.config.uploader?.uploadByUrl) {
       return this.config.uploader.uploadByUrl(raw);
@@ -34,6 +57,17 @@ export class Uploader {
     }
 
     return { url: URL.createObjectURL(file), fileName: file.name };
+  }
+
+  private async handleDataUrl(raw: string): Promise<UploadResult> {
+    if (this.config.uploader?.uploadByUrl) {
+      return this.config.uploader.uploadByUrl(raw);
+    }
+    if (this.config.uploader?.uploadByFile) {
+      return this.handleFile(dataUrlToFile(raw));
+    }
+
+    return { url: raw };
   }
 
   private validateUrl(raw: string): void {

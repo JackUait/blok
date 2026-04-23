@@ -23,9 +23,112 @@ export function preprocessGoogleDocsHtml(html: string): string {
 
   if (isGoogleDocs) {
     convertTableCellParagraphs(wrapper);
+    promoteImages(wrapper);
   }
 
   return wrapper.innerHTML;
+}
+
+/**
+ * Promote every `<img>` under the wrapper to a top-level sibling.
+ *
+ * Google Docs pastes images wrapped inside a `<p>` (often further nested
+ * under `<span>`s).  The paste pipeline splits top-level siblings into
+ * separate blocks, so an `<img>` buried inside a `<p>` never gets a chance
+ * to become its own image block.  This splits each enclosing ancestor at
+ * the image boundary so the `<img>` ends up as a direct child of the
+ * wrapper, with any before/after content preserved in clones of the
+ * original ancestors.
+ */
+function findTopLevelAncestor(node: Element, wrapper: HTMLElement): Element | null {
+  const parent = node.parentElement;
+
+  if (parent === null) {
+    return null;
+  }
+
+  return parent === wrapper ? node : findTopLevelAncestor(parent, wrapper);
+}
+
+/**
+ * Shallow-clone `parent` and move every sibling before `pivot` into the clone.
+ * Returns the clone (or null if it would be empty and `carry` is null).
+ */
+function buildBeforeHalf(parent: Element, pivot: Node, carry: Node | null): Element | null {
+  const clone = parent.cloneNode(false) as Element;
+  const siblings: Node[] = [];
+
+  for (const child of Array.from(parent.childNodes)) {
+    if (child === pivot) break;
+    siblings.push(child);
+  }
+
+  siblings.forEach((sib) => clone.appendChild(sib));
+
+  if (carry !== null) {
+    clone.appendChild(carry);
+  }
+
+  return clone.childNodes.length > 0 ? clone : null;
+}
+
+/**
+ * Shallow-clone `parent` and move every sibling after `pivot` into the clone,
+ * preceded by an inner `carry` node if present.
+ */
+function buildAfterHalf(parent: Element, pivot: Node, carry: Node | null): Element | null {
+  const clone = parent.cloneNode(false) as Element;
+  const allChildren = Array.from(parent.childNodes);
+  const pivotIndex = allChildren.findIndex((child) => child === pivot);
+  const siblings = allChildren.slice(pivotIndex + 1);
+
+  if (carry !== null) {
+    clone.appendChild(carry);
+  }
+
+  siblings.forEach((sib) => clone.appendChild(sib));
+
+  return clone.childNodes.length > 0 ? clone : null;
+}
+
+/**
+ * Walk up from `img` to `topLevel`, splitting each ancestor at the image boundary.
+ * Returns the before/after halves (clones of original ancestors, minus the image).
+ */
+function splitAncestorsAroundImage(img: Element, topLevel: Element): { before: Node | null; after: Node | null } {
+  const reduce = (current: Element, before: Node | null, after: Node | null): { before: Node | null; after: Node | null } => {
+    if (current === topLevel) return { before, after };
+
+    const parent = current.parentElement;
+
+    if (parent === null) return { before, after };
+
+    const nextBefore = buildBeforeHalf(parent, current, before);
+    const nextAfter = buildAfterHalf(parent, current, after);
+
+    return reduce(parent, nextBefore, nextAfter);
+  };
+
+  return reduce(img, null, null);
+}
+
+function promoteImages(wrapper: HTMLElement): void {
+  const imgs = Array.from(wrapper.querySelectorAll('img'));
+
+  for (const img of imgs) {
+    const topLevel = findTopLevelAncestor(img, wrapper);
+
+    if (!topLevel) continue;
+
+    const { before, after } = splitAncestorsAroundImage(img, topLevel);
+    const frag = document.createDocumentFragment();
+
+    if (before) frag.appendChild(before);
+    frag.appendChild(img);
+    if (after) frag.appendChild(after);
+
+    topLevel.replaceWith(frag);
+  }
 }
 
 /**

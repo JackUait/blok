@@ -443,4 +443,107 @@ describe('scroll-to-block', () => {
     // No pending hash stored
     expect(mockRenderer.pendingHashScroll).toBeNull();
   });
+
+  // -------------------------------------------------------------------------
+  // Arrival highlight pulse
+  // -------------------------------------------------------------------------
+
+  describe('arrival highlight', () => {
+    it('adds blok-block--target class on the target block after scroll from hash', async () => {
+      setHash('#abc123XYZ0');
+
+      const el = fakeEl(200);
+
+      document.querySelector = vi.fn((selector: string): Element | null => {
+        if (selector === '[data-blok-id="abc123XYZ0"]') {
+          return el;
+        }
+
+        return originalQuerySelector(selector);
+      }) as typeof document.querySelector;
+
+      const editor = new Blok({} as BlokConfig);
+
+      await editor.isReady;
+
+      expect(el.classList.contains('blok-block--target')).toBe(true);
+    });
+
+    it('removes the highlight class on animationend', async () => {
+      setHash('#abc123XYZ0');
+
+      const el = fakeEl(200);
+
+      document.querySelector = vi.fn((selector: string): Element | null => {
+        if (selector === '[data-blok-id="abc123XYZ0"]') {
+          return el;
+        }
+
+        return originalQuerySelector(selector);
+      }) as typeof document.querySelector;
+
+      const editor = new Blok({} as BlokConfig);
+
+      await editor.isReady;
+
+      expect(el.classList.contains('blok-block--target')).toBe(true);
+
+      // Dispatch animationend → class removed
+      el.dispatchEvent(new Event('animationend'));
+
+      expect(el.classList.contains('blok-block--target')).toBe(false);
+    });
+
+    it('removes the highlight class via fallback timeout when animationend never fires', async () => {
+      vi.useFakeTimers();
+
+      try {
+        setHash('#abc123XYZ0');
+
+        const el = fakeEl(200);
+
+        document.querySelector = vi.fn((selector: string): Element | null => {
+          if (selector === '[data-blok-id="abc123XYZ0"]') {
+            return el;
+          }
+
+          return originalQuerySelector(selector);
+        }) as typeof document.querySelector;
+
+        const editor = new Blok({} as BlokConfig);
+
+        await editor.isReady;
+
+        expect(el.classList.contains('blok-block--target')).toBe(true);
+
+        // Advance past the 1500ms animation window (with a safety buffer)
+        vi.advanceTimersByTime(2000);
+
+        expect(el.classList.contains('blok-block--target')).toBe(false);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('does not add the highlight class when hash does not match any block', async () => {
+      setHash('#nonExistentId');
+
+      // querySelector returns null by default
+
+      const editor = new Blok({} as BlokConfig);
+
+      await editor.isReady;
+
+      // No element was found — nothing to assert a class on, but verify no crash
+      expect(editor).toBeDefined();
+    });
+
+    it('does not throw on malformed percent-encoded hash', async () => {
+      setHash('#abc%ZZdef');
+
+      const editor = new Blok({} as BlokConfig);
+
+      await expect(editor.isReady).resolves.toBeUndefined();
+    });
+  });
 });

@@ -215,6 +215,24 @@ test.describe('scroll to block on hash', () => {
     expect(isInViewport).toBe(true);
   });
 
+  test('briefly applies and removes blok-block--target highlight class on hash arrival', async ({ page }) => {
+    await page.goto(TEST_PAGE_URL);
+    await page.addStyleTag({ content: 'body { min-height: 3000px; }' });
+
+    await page.evaluate((hash) => {
+      window.history.replaceState(null, '', '#' + hash);
+    }, TARGET_BLOCK_ID);
+
+    await createEditorWithData(page, { blocks: SCROLL_TEST_BLOCKS });
+
+    await waitForScrollToComplete(page);
+
+    const target = page.locator(`[data-blok-id="${TARGET_BLOCK_ID}"]`);
+
+    await expect(target).toHaveClass(/blok-block--target/, { timeout: 1000 });
+    await expect(target).not.toHaveClass(/blok-block--target/, { timeout: 3000 });
+  });
+
   test('visually selects (highlights) the target block after scrolling', async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
     await page.addStyleTag({ content: 'body { min-height: 3000px; }' });

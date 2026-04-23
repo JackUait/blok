@@ -1,3 +1,9 @@
+@keyframes blok-block-target-pulse {
+  0% { background-color: var(--blok-selection) }
+  60% { background-color: var(--blok-selection) }
+  100% { background-color: transparent }
+}
+
 @keyframes blok-checkbox-pop {
   0% { transform: scale(1) }
   35% { transform: scale(1.18) }

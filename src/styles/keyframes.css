@@ -60,3 +60,9 @@
 @keyframes blok-image-retry-spin {
   to { transform: rotate(360deg); }
 }
+
+@keyframes blok-block-target-pulse {
+  0%   { background-color: var(--blok-selection); }
+  60%  { background-color: var(--blok-selection); }
+  100% { background-color: transparent; }
+}

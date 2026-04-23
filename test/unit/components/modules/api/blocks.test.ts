@@ -770,6 +770,42 @@ describe('BlocksAPI', () => {
       expect(blok.Renderer.pendingHashScroll).toBeNull();
     });
 
+    it('adds and removes blok-block--target class on the target holder after deferred render', async () => {
+      const targetBlock = createBlockStub({ id: 'Wioa6QcE52' });
+      const { blocksApi, blok, blockManager } = createBlocksApi({ blocks: [ targetBlock ] });
+
+      blok.Renderer.pendingHashScroll = 'Wioa6QcE52';
+
+      blockManager.getBlockById.mockImplementation((id: string) =>
+        id === 'Wioa6QcE52' ? targetBlock : undefined
+      );
+
+      const el = document.createElement('div');
+
+      el.getBoundingClientRect = () =>
+        ({ top: 400, bottom: 400, left: 0, right: 0, width: 0, height: 0, x: 0, y: 400, toJSON: () => ({}) } as DOMRect);
+
+      document.querySelector = vi.fn((selector: string): Element | null => {
+        if (selector === '[data-blok-id="Wioa6QcE52"]') {
+          return el;
+        }
+
+        return originalQuerySelector(selector);
+      }) as typeof document.querySelector;
+
+      const data: OutputData = {
+        blocks: [{ id: 'Wioa6QcE52', type: 'paragraph', data: { text: 'target' } }],
+      };
+
+      await blocksApi.render(data);
+
+      expect(el.classList.contains('blok-block--target')).toBe(true);
+
+      el.dispatchEvent(new Event('animationend'));
+
+      expect(el.classList.contains('blok-block--target')).toBe(false);
+    });
+
     it('scrolls but does not select when DOM element exists but BlockManager has no matching block', async () => {
       const { blocksApi, blok, blockManager } = createBlocksApi();
 

@@ -1706,6 +1706,16 @@
   border-radius: var(--blok-space-1);
 }
 
+.blok-block--target {
+  animation: blok-block-target-pulse 1.5s ease-out;
+  border-radius: var(--blok-space-1);
+}
+
+[@media (prefers-reduced-motion: reduce)] .blok-block--target {
+  animation: none;
+  background-color: var(--blok-selection);
+}
+
 [data-blok-content-align="left"] [data-blok-element-content] {
   margin-left: 0;
 }

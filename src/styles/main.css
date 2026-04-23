@@ -193,6 +193,23 @@
   border-radius: var(--blok-space-1);
 }
 
+/*
+ * Arrival pulse: briefly highlight the block that a #<id> URL points to
+ * after scroll + select. Class is applied/removed by highlightBlockArrival().
+ */
+.blok-block--target {
+  animation: blok-block-target-pulse 1.5s ease-out;
+  border-radius: var(--blok-space-1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blok-block--target {
+    /* Skip the keyframe tween but keep the hold so the class still clears. */
+    animation: none;
+    background-color: var(--blok-selection);
+  }
+}
+
 /**
  * Content alignment
  * Applies horizontal alignment to block content based on the editor's contentAlign setting.

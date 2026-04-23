@@ -10,6 +10,7 @@ import type { BlokConfig, API } from '../types';
 import { DATA_ATTR } from './components/constants/data-attributes';
 import { Core } from './components/core';
 import { getBlokVersion, isObject, isFunction } from './components/utils';
+import { highlightBlockArrival } from './components/utils/highlight-block-arrival';
 import { destroy as destroyTooltip } from './components/utils/tooltip';
 import './components/polyfills';
 import type { BlokModules } from './types-internal/blok-modules';
@@ -223,6 +224,7 @@ class Blok {
           window.scrollTo({ top: y, behavior: 'smooth' });
 
           Blok.selectBlockById(blok, hash);
+          highlightBlockArrival(el);
         } else if (blok.moduleInstances.Renderer !== undefined) {
           blok.moduleInstances.Renderer.pendingHashScroll = hash;
         }

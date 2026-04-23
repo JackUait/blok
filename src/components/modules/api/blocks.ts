@@ -8,6 +8,7 @@ import { Block } from '../../block';
 import { BlockAPI } from '../../block/api';
 import { capitalize } from '../../utils';
 import { normalizeTableChildParents } from '../../utils/data-model-transform';
+import { highlightBlockArrival } from '../../utils/highlight-block-arrival';
 
 import { logLabeled } from './../../utils';
 
@@ -597,5 +598,7 @@ export class BlocksAPI extends Module {
     if (block !== undefined) {
       this.Blok.BlockSelection.selectBlock(block);
     }
+
+    highlightBlockArrival(el);
   }
 }

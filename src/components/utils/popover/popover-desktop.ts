@@ -125,6 +125,15 @@ export class PopoverDesktop extends PopoverAbstract {
   private trigger: HTMLElement | undefined;
 
   /**
+   * Trigger rect captured at construction time. Used as a fallback if the
+   * live trigger rect has collapsed to zero size by the time `show()` runs
+   * (e.g. because a subscriber to an "opened" event set the trigger to
+   * `display:none`). Prevents the popover from rendering at the viewport's
+   * top-left corner when the trigger is no longer measurable.
+   */
+  private capturedTriggerRect: DOMRect | undefined;
+
+  /**
    * Optional element whose left edge is used for horizontal positioning
    * instead of the trigger's left edge.
    */
@@ -189,6 +198,12 @@ export class PopoverDesktop extends PopoverAbstract {
 
     if (params.trigger) {
       this.trigger = params.trigger;
+
+      const initialRect = params.trigger.getBoundingClientRect();
+
+      if (initialRect.width > 0 || initialRect.height > 0) {
+        this.capturedTriggerRect = initialRect;
+      }
     }
 
     if (params.leftAlignElement) {
@@ -413,7 +428,14 @@ export class PopoverDesktop extends PopoverAbstract {
    */
   private calculatePosition(): { top: number; left: number; openTop: boolean; openLeft: boolean } {
     const explicitPosition = this.params.position;
-    const rect = explicitPosition ?? this.trigger?.getBoundingClientRect();
+    const liveRect = this.trigger?.getBoundingClientRect();
+    const isLiveRectCollapsed = liveRect !== undefined
+      && liveRect.width === 0
+      && liveRect.height === 0;
+    const fallbackRect = isLiveRectCollapsed && this.capturedTriggerRect !== undefined
+      ? this.capturedTriggerRect
+      : liveRect;
+    const rect = explicitPosition ?? fallbackRect;
 
     if (!rect) {
       return { top: 0, left: 0, openTop: false, openLeft: false };

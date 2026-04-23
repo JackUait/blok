@@ -598,6 +598,58 @@ describe('PopoverDesktop', () => {
       await Promise.resolve();
       expect(focusSpy).toHaveBeenCalledOnce();
     });
+
+    // Regression: BlockSettings used to emit `opened` before calling `show()`.
+    // A listener toggled a CSS rule that set the trigger (settings toggler) to
+    // `display:none`, so by the time calculatePosition() read its rect it
+    // returned (0,0,0,0) and the popover appeared at the viewport's top-left
+    // corner. The defensive fix captures the trigger rect on construction and
+    // falls back to that cached rect whenever the live rect has collapsed to
+    // zero size — so hiding the trigger between construction and show() can
+    // never again push the popover to (0,0).
+    it('falls back to the trigger rect captured at construction when the live trigger rect collapses to zero before show()', () => {
+      const scopeElement = document.createElement('div');
+      const trigger = document.createElement('button');
+
+      document.body.appendChild(trigger);
+
+      const liveRectSpy = vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 200, bottom: 230, left: 400, right: 420, width: 20, height: 30 })
+      );
+
+      const popover = createPopover({ trigger, scopeElement });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 120, width: 200 });
+      vi.spyOn(scopeElement, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 0, bottom: 800, left: 0, right: 800, width: 800, height: 800 })
+      );
+
+      // Simulate the BlockSettingsOpened handler hiding the trigger via a
+      // Tailwind group-data-... rule: the element still exists in the DOM,
+      // but getBoundingClientRect() now returns all zeros.
+      liveRectSpy.mockReturnValue(
+        createRect({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 })
+      );
+
+      const originalInnerHeight = window.innerHeight;
+      const originalInnerWidth = window.innerWidth;
+
+      Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800, writable: true });
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: 800, writable: true });
+
+      try {
+        popover.show();
+
+        const popoverElement = popover.getElement();
+
+        expect(popoverElement.style.top).not.toBe('0px');
+        expect(popoverElement.style.left).not.toBe('0px');
+      } finally {
+        Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalInnerHeight, writable: true });
+        Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalInnerWidth, writable: true });
+      }
+    });
   });
 
   describe('hide', () => {

@@ -242,11 +242,22 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       this.opened = true;
       this.isOpening = false;
 
-      /** Tell to subscribers that block settings is opened */
-      this.eventsDispatcher.emit(this.events.opened);
-
+      /**
+       * Show the popover BEFORE dispatching the `opened` event.
+       *
+       * Listeners of that event toggle a data attribute on the UI wrapper
+       * (`data-blok-block-settings-opened=true`) whose Tailwind rule hides the
+       * settings toggler via `display:none`. If we emit first, the trigger
+       * element collapses to a zero rect before `show()` reads it, and the
+       * popover ends up positioned at the viewport's top-left corner.
+       * Measure + place the popover while the trigger is still visible,
+       * then announce state change.
+       */
       this.popover.show();
       this.attachFlipperKeydownListener(block);
+
+      /** Tell to subscribers that block settings is opened */
+      this.eventsDispatcher.emit(this.events.opened);
     } catch {
       this.isOpening = false;
     }

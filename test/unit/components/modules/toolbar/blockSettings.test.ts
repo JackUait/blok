@@ -384,6 +384,57 @@ describe('BlockSettings', () => {
     getTunesItemsSpy.mockRestore();
   });
 
+  // Regression: the BlockSettingsOpened event toggles a data attribute whose
+  // Tailwind rule (`group-data-[blok-block-settings-opened=true]:hidden`) sets
+  // the settings toggler to `display:none`. If we emit before showing the
+  // popover, the trigger element collapses to a zero rect and the popover
+  // positions itself at the viewport's top-left corner. `show()` must run
+  // while the trigger is still visible — i.e. before the `opened` event is
+  // dispatched.
+  it('calls popover.show() before dispatching the opened event so the trigger rect is still measurable', async () => {
+    blockSettings.make();
+
+    const block = createBlock();
+
+    blokMock.BlockManager.currentBlock = block;
+
+    const selectionStub = { save: vi.fn(), restore: vi.fn(), clearSaved: vi.fn() };
+
+    (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
+
+    const getTunesItemsSpy = vi.spyOn(blockSettings as unknown as {
+      getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+    }, 'getTunesItems').mockResolvedValue([]);
+
+    const order: string[] = [];
+
+    eventsDispatcher.emit.mockImplementation((event: unknown) => {
+      if (event === blockSettings.events.opened) {
+        order.push('emit-opened');
+      }
+    });
+
+    await blockSettings.open(block);
+
+    const popover = getLastPopover();
+
+    popover?.show.mock.invocationCallOrder.forEach(() => order.unshift('show'));
+    // Use actual call order: vitest exposes invocation order numbers so we can
+    // compare them directly instead of relying on mutation above.
+    const showOrder = popover?.show.mock.invocationCallOrder[0] ?? Infinity;
+    const emitOpenedOrder = (eventsDispatcher.emit as unknown as {
+      mock: { calls: unknown[][]; invocationCallOrder: number[] };
+    }).mock.invocationCallOrder[
+      (eventsDispatcher.emit as unknown as { mock: { calls: unknown[][] } }).mock.calls.findIndex(
+        (call) => call[0] === blockSettings.events.opened
+      )
+    ] ?? -Infinity;
+
+    expect(showOrder).toBeLessThan(emitOpenedOrder);
+
+    getTunesItemsSpy.mockRestore();
+  });
+
   it('passes placeLeftOfAnchor:true to popover so menu opens to the left of dots button, vertically centered', async () => {
     blockSettings.make();
 

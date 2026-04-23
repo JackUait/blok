@@ -649,10 +649,41 @@ export class CodeTool implements BlockTool {
     const hasBr = code.lastChild instanceof HTMLBRElement;
 
     if (text.endsWith('\n') && !hasBr) {
-      code.appendChild(document.createElement('br'));
+      const br = document.createElement('br');
+      code.appendChild(br);
+      this.pinCaretBeforeSentinelBr(code, br);
     } else if (!text.endsWith('\n') && hasBr) {
       code.lastChild.remove();
     }
+  }
+
+  /**
+   * WebKit collapses the boundary `...\n|<br>` on the next native text
+   * insertion — it strips both the trailing '\n' and the sentinel <br>,
+   * so typing lands on the previous line. If the caret is currently
+   * sitting at the end of a text node whose final char is '\n' and the
+   * <br> we just appended is its next sibling, pin the caret *before*
+   * the <br> (a stable boundary WebKit preserves).
+   */
+  private pinCaretBeforeSentinelBr(code: HTMLElement, br: HTMLBRElement): void {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return;
+
+    const range = sel.getRangeAt(0);
+    const { startContainer, startOffset } = range;
+    if (startContainer.nodeType !== Node.TEXT_NODE) return;
+    if (!code.contains(startContainer)) return;
+
+    const text = startContainer as Text;
+    if (startOffset !== text.length) return;
+    if (!text.data.endsWith('\n')) return;
+    if (text.nextSibling !== br) return;
+
+    const fixed = document.createRange();
+    fixed.setStartBefore(br);
+    fixed.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(fixed);
   }
 
   private scheduleHighlight(): void {

@@ -87,9 +87,14 @@ export function openCropModal(opts: OpenCropModalOptions): () => void {
 
     backdrop.setAttribute('data-blok-closing', 'true');
 
+    if (reduceMotion || !supportsAnimations()) {
+      finalize();
+      return;
+    }
+
     const animName = readAnimationName(dialog);
     const hasAnimation = !!animName && animName !== 'none';
-    if (reduceMotion || !hasAnimation || !supportsAnimations()) {
+    if (!hasAnimation) {
       finalize();
       return;
     }

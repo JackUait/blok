@@ -607,6 +607,27 @@ export class PopoverDesktop extends PopoverAbstract {
       return;
     }
 
+    /**
+     * If a nested popover is already open, only destroy it when the pointer
+     * moves onto a *different* trigger item (so we can open that item's
+     * submenu instead). Hovering plain parent items or re-hovering the
+     * current trigger during click dispatch must not tear the nested popover
+     * down — otherwise Playwright's click resolves to a stale/detached node
+     * while the pointer sweeps across the parent on its way to the nested
+     * submenu.
+     */
+    if (this.nestedPopover !== undefined && this.nestedPopover !== null) {
+      if (item === this.nestedPopoverTriggerItem) {
+        return;
+      }
+
+      if (!item.hasChildren) {
+        this.previouslyHoveredItem = item;
+
+        return;
+      }
+    }
+
     this.destroyNestedPopoverIfExists(false);
 
     this.previouslyHoveredItem = item;

@@ -1008,3 +1008,108 @@ describe('ImageTool — compact toolbar when figure is narrow', () => {
   });
 });
 
+describe('ImageTool — lightbox navigation wiring', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.querySelectorAll('[role="dialog"][aria-modal="true"]').forEach((el) => el.remove());
+  });
+
+  const makeApiWithImages = (images: Array<{ id: string; data: ImageData | { url?: string } }>): API => {
+    const blockStubs = images.map(({ id, data }) => ({
+      id,
+      name: 'image',
+      preservedData: data,
+    } as unknown as BlockAPI));
+
+    return {
+      styles: { block: 'blok-block' },
+      i18n: { t: (k: string) => k, has: () => false },
+      blocks: {
+        getBlocksCount: (): number => blockStubs.length,
+        getBlockByIndex: (i: number): BlockAPI | undefined => blockStubs[i],
+      },
+    } as unknown as API;
+  };
+
+  it('clicking the image opens lightbox with nav when the page has multiple image blocks', () => {
+    const api = makeApiWithImages([
+      { id: 'b1', data: { url: 'https://x/a.png', alt: 'a' } },
+      { id: 'b2', data: { url: 'https://x/b.png', alt: 'b' } },
+      { id: 'b3', data: { url: 'https://x/c.png', alt: 'c' } },
+    ]);
+    const block = { ...createMockBlock(), id: 'b2' } as BlockAPI;
+    const tool = new ImageTool({
+      ...createOptions({ url: 'https://x/b.png', alt: 'b' }, {}, block),
+      api,
+    });
+    const root = tool.render();
+    const imgEl = root.querySelector<HTMLImageElement>('img');
+    if (!imgEl) throw new Error('img missing');
+    imgEl.click();
+    const nav = document.querySelector('[data-role="lightbox-nav"]');
+    expect(nav).not.toBeNull();
+    // Starts on current block (index 1) → prev enabled, next enabled
+    const prev = document.querySelector<HTMLButtonElement>('[data-action="lightbox-prev"]');
+    const next = document.querySelector<HTMLButtonElement>('[data-action="lightbox-next"]');
+    expect(prev?.disabled).toBe(false);
+    expect(next?.disabled).toBe(false);
+    // Clicking next advances to b3
+    next?.click();
+    const dialogImg = document.querySelector<HTMLImageElement>('[role="dialog"] img');
+    expect(dialogImg?.getAttribute('src')).toBe('https://x/c.png');
+  });
+
+  it('does not render nav when page has only one image block', () => {
+    const api = makeApiWithImages([
+      { id: 'b1', data: { url: 'https://x/a.png' } },
+    ]);
+    const block = { ...createMockBlock(), id: 'b1' } as BlockAPI;
+    const tool = new ImageTool({
+      ...createOptions({ url: 'https://x/a.png' }, {}, block),
+      api,
+    });
+    const root = tool.render();
+    const imgEl = root.querySelector<HTMLImageElement>('img');
+    if (!imgEl) throw new Error('img missing');
+    imgEl.click();
+    expect(document.querySelector('[data-role="lightbox-nav"]')).toBeNull();
+  });
+
+  it('skips non-image blocks and blocks with empty url when collecting navigation items', () => {
+    const blockStubs: BlockAPI[] = [
+      { id: 'p1', name: 'paragraph', preservedData: { text: 'hi' } },
+      { id: 'i1', name: 'image', preservedData: { url: 'https://x/a.png' } },
+      { id: 'i2', name: 'image', preservedData: { url: '' } },
+      { id: 'i3', name: 'image', preservedData: { url: 'https://x/c.png' } },
+    ] as unknown as BlockAPI[];
+    const api = {
+      styles: { block: 'blok-block' },
+      i18n: { t: (k: string) => k, has: () => false },
+      blocks: {
+        getBlocksCount: (): number => blockStubs.length,
+        getBlockByIndex: (i: number): BlockAPI | undefined => blockStubs[i],
+      },
+    } as unknown as API;
+    const block = { ...createMockBlock(), id: 'i1' } as BlockAPI;
+    const tool = new ImageTool({
+      ...createOptions({ url: 'https://x/a.png' }, {}, block),
+      api,
+    });
+    const root = tool.render();
+    const imgEl = root.querySelector<HTMLImageElement>('img');
+    if (!imgEl) throw new Error('img missing');
+    imgEl.click();
+    const nav = document.querySelector('[data-role="lightbox-nav"]');
+    expect(nav).not.toBeNull();
+    // Current image i1 is first in the navigable list → prev disabled, next enabled (i3 after)
+    const prev = document.querySelector<HTMLButtonElement>('[data-action="lightbox-prev"]');
+    const next = document.querySelector<HTMLButtonElement>('[data-action="lightbox-next"]');
+    expect(prev?.disabled).toBe(true);
+    expect(next?.disabled).toBe(false);
+    next?.click();
+    const dialogImg = document.querySelector<HTMLImageElement>('[role="dialog"] img');
+    expect(dialogImg?.getAttribute('src')).toBe('https://x/c.png');
+  });
+});
+

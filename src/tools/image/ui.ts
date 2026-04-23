@@ -8,6 +8,8 @@ import { onHover as tooltipOnHover, hide as tooltipHide } from '../../components
 import type { I18nInstance } from '../../components/utils/tools';
 import {
   IconCaption,
+  IconChevronLeft,
+  IconChevronRight,
   IconCollapseFullscreen,
   IconCrop,
   IconDownload,
@@ -164,6 +166,13 @@ export function renderCaptionRow(opts: CaptionRowOptions): HTMLElement {
   return row;
 }
 
+export interface LightboxNavigationItem {
+  url: string;
+  alt?: string;
+  fileName?: string;
+  crop?: ImageCrop;
+}
+
 export interface LightboxOptions {
   url: string;
   alt?: string;
@@ -180,6 +189,15 @@ export interface LightboxOptions {
    */
   origin?: HTMLElement;
   i18n?: I18nInstance;
+  /**
+   * Other images on the page, enabling prev/next navigation within the lightbox.
+   * The entry at `startIndex` is the image the lightbox opens on; it should
+   * match `url`. Nav UI is suppressed when `items.length` is < 2.
+   */
+  navigation?: {
+    items: LightboxNavigationItem[];
+    startIndex: number;
+  };
 }
 
 const OPEN_DURATION = 360;
@@ -233,20 +251,31 @@ export function openLightbox(opts: LightboxOptions): () => void {
   backdrop.setAttribute('aria-hidden', 'true');
   dialog.appendChild(backdrop);
 
-  const img = document.createElement('img');
-  img.setAttribute('src', opts.url);
-  img.setAttribute('alt', opts.alt ?? '');
-  img.draggable = false;
+  const navItems: LightboxNavigationItem[] = opts.navigation?.items ?? [];
+  const hasNav = navItems.length > 1;
+  const currentItem: LightboxNavigationItem = {
+    url: opts.url,
+    alt: opts.alt,
+    fileName: opts.fileName,
+    crop: opts.crop,
+  };
+  const navState = {
+    index: hasNav ? Math.max(0, Math.min(navItems.length - 1, opts.navigation?.startIndex ?? 0)) : 0,
+  };
 
-  // displayEl is the element that receives zoom/pan/FLIP transforms. When a crop
+  // displayState.el is the element that receives zoom/pan/FLIP transforms. When a crop
   // is active, the img already carries the `translate(-x%, -y%)` crop transform,
   // so we mount it inside a wrapper and animate the wrapper instead. Without a
   // crop, the img itself is the display element and keeps the legacy behavior.
-  const displayEl: HTMLElement = (() => {
-    const crop = opts.crop;
+  function buildDisplay(item: LightboxNavigationItem): HTMLElement {
+    const el = document.createElement('img');
+    el.setAttribute('src', item.url);
+    el.setAttribute('alt', item.alt ?? '');
+    el.draggable = false;
+    const crop = item.crop;
     if (!crop) {
-      img.className = 'blok-image-lightbox__image';
-      return img;
+      el.className = 'blok-image-lightbox__image';
+      return el;
     }
     const { x, y, w, h, shape } = crop;
     const wrapper = document.createElement('div');
@@ -258,24 +287,26 @@ export function openLightbox(opts: LightboxOptions): () => void {
     if (shape === 'circle' || shape === 'ellipse') {
       wrapper.style.borderRadius = '50%';
     }
-    img.style.display = 'block';
-    img.style.maxWidth = 'none';
-    img.style.width = `${(100 / w) * 100}%`;
-    img.style.transform = `translate(-${x}%, -${y}%)`;
-    bindIntrinsicAspect(img, wrapper, w, h);
-    wrapper.appendChild(img);
+    el.style.display = 'block';
+    el.style.maxWidth = 'none';
+    el.style.width = `${(100 / w) * 100}%`;
+    el.style.transform = `translate(-${x}%, -${y}%)`;
+    bindIntrinsicAspect(el, wrapper, w, h);
+    wrapper.appendChild(el);
     return wrapper;
-  })();
+  }
+
+  const displayState: { el: HTMLElement } = { el: buildDisplay(currentItem) };
 
   const zoomState = { value: 1 };
   const panState = { x: 0, y: 0 };
 
   const applyTransform = (): void => {
-    displayEl.style.transform = `translate(${panState.x}px, ${panState.y}px) scale(${zoomState.value})`;
+    displayState.el.style.transform = `translate(${panState.x}px, ${panState.y}px) scale(${zoomState.value})`;
   };
 
   function panBounds(): { maxX: number; maxY: number; width: number; height: number } {
-    const rect = displayEl.getBoundingClientRect();
+    const rect = displayState.el.getBoundingClientRect();
     return { maxX: rect.width / 2, maxY: rect.height / 2, width: rect.width, height: rect.height };
   }
 
@@ -307,6 +338,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
     }
     applyTransform();
     syncResetLabel();
+    syncZoomDisabled();
   };
 
   applyTransform();
@@ -317,8 +349,8 @@ export function openLightbox(opts: LightboxOptions): () => void {
     setZoom,
     onDownload: () => {
       const a = document.createElement('a');
-      a.href = opts.url;
-      a.download = opts.fileName ?? '';
+      a.href = currentItem.url;
+      a.download = currentItem.fileName ?? '';
       a.target = '_blank';
       a.rel = 'noopener';
       document.body.appendChild(a);
@@ -327,7 +359,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
     },
     onCopyUrl: () => {
       const clip = (navigator as Navigator & { clipboard?: { writeText(text: string): Promise<void> } }).clipboard;
-      void clip?.writeText(opts.url);
+      void clip?.writeText(currentItem.url);
     },
     onCollapse: () => close(),
   });
@@ -335,9 +367,64 @@ export function openLightbox(opts: LightboxOptions): () => void {
     const reset = toolbar.querySelector<HTMLButtonElement>('[data-action="zoom-reset"]');
     if (reset) reset.textContent = `${Math.round(zoomState.value * 100)}%`;
   };
+  const syncZoomDisabled = (): void => {
+    const zoomOut = toolbar.querySelector<HTMLButtonElement>('[data-action="zoom-out"]');
+    const zoomIn = toolbar.querySelector<HTMLButtonElement>('[data-action="zoom-in"]');
+    if (zoomOut) zoomOut.disabled = zoomState.value <= ZOOM_MIN;
+    if (zoomIn) zoomIn.disabled = zoomState.value >= ZOOM_MAX;
+  };
+  syncZoomDisabled();
 
-  dialog.appendChild(displayEl);
+  dialog.appendChild(displayState.el);
   dialog.appendChild(toolbar);
+
+  function navigate(delta: number): void {
+    if (!hasNav) return;
+    const next = navState.index + delta;
+    if (next < 0 || next >= navItems.length) return;
+    navState.index = next;
+    const item = navItems[next];
+    currentItem.url = item.url;
+    currentItem.alt = item.alt;
+    currentItem.fileName = item.fileName;
+    currentItem.crop = item.crop;
+    zoomState.value = 1;
+    panState.x = 0;
+    panState.y = 0;
+    const fresh = buildDisplay(currentItem);
+    displayState.el.replaceWith(fresh);
+    displayState.el = fresh;
+    applyTransform();
+    syncResetLabel();
+    syncZoomDisabled();
+    syncNavDisabled();
+  }
+
+  const nav = hasNav
+    ? renderLightboxNav({
+      i18n: opts.i18n,
+      onPrev: () => navigate(-1),
+      onNext: () => navigate(1),
+    })
+    : null;
+  if (nav) dialog.appendChild(nav);
+
+  function syncNavDisabled(): void {
+    if (!nav) return;
+    const prevBtn = nav.querySelector<HTMLButtonElement>('[data-action="lightbox-prev"]');
+    const nextBtn = nav.querySelector<HTMLButtonElement>('[data-action="lightbox-next"]');
+    if (prevBtn) prevBtn.disabled = navState.index <= 0;
+    if (nextBtn) nextBtn.disabled = navState.index >= navItems.length - 1;
+  }
+  syncNavDisabled();
+
+  function isChromeTarget(target: EventTarget | null): boolean {
+    if (!(target instanceof Node)) return false;
+    if (toolbar.contains(target)) return true;
+    if (nav && nav.contains(target)) return true;
+    return false;
+  }
+
   document.body.appendChild(dialog);
   /**
    * Promote to the CSS Top Layer so the lightbox stacks above every other
@@ -383,13 +470,13 @@ export function openLightbox(opts: LightboxOptions): () => void {
   };
 
   const playOpen = (): void => {
-    if (origin && canAnimate(displayEl)) {
+    if (origin && canAnimate(displayState.el)) {
       const srcRect = origin.getBoundingClientRect();
-      const destRect = displayEl.getBoundingClientRect();
+      const destRect = displayState.el.getBoundingClientRect();
       if (srcRect.width > 0 && srcRect.height > 0 && destRect.width > 0 && destRect.height > 0) {
         const from = toTransform(flipTransform(srcRect, destRect));
         origin.style.opacity = '0';
-        animState.img = displayEl.animate(
+        animState.img = displayState.el.animate(
           [{ transform: from }, { transform: 'translate(0px, 0px) scale(1)' }],
           { duration: OPEN_DURATION, easing: OPEN_EASING, fill: 'backwards' }
         );
@@ -436,19 +523,19 @@ export function openLightbox(opts: LightboxOptions): () => void {
     // Suppress the spring transition on .blok-image-lightbox__image so the
     // identity measurement and final-state commit below don't trigger a CSS
     // tween underneath the WAAPI animation.
-    displayEl.style.transition = 'none';
+    displayState.el.style.transition = 'none';
     // Capture the currently-displayed transform (may include user zoom/pan) so
     // the reverse-FLIP starts from where the image visually is right now.
-    const current = displayEl.style.transform || 'translate(0px, 0px) scale(1)';
+    const current = displayState.el.style.transform || 'translate(0px, 0px) scale(1)';
     // Measure the identity rect (transform=none) so we can map dest→source.
-    displayEl.style.transform = 'none';
-    const identRect = displayEl.getBoundingClientRect();
-    displayEl.style.transform = current;
+    displayState.el.style.transform = 'none';
+    const identRect = displayState.el.getBoundingClientRect();
+    displayState.el.style.transform = current;
     const to = toTransform(flipTransform(srcRect, identRect));
     // Lock the final visible state on the inline style so there is no snap
     // back to identity after WAAPI releases its hold.
-    displayEl.style.transform = to;
-    const anim = displayEl.animate(
+    displayState.el.style.transform = to;
+    const anim = displayState.el.animate(
       [{ transform: current }, { transform: to }],
       { duration: CLOSE_DURATION, easing: CLOSE_EASING, fill: 'forwards' }
     );
@@ -465,7 +552,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
     if (animState.closing) return;
     animState.closing = true;
     cancelRunning();
-    if (origin && canAnimate(displayEl)) closeWithFlip(origin);
+    if (origin && canAnimate(displayState.el)) closeWithFlip(origin);
     else closeFadeOnly();
   };
 
@@ -485,6 +572,16 @@ export function openLightbox(opts: LightboxOptions): () => void {
     if (event.key === '-') {
       event.preventDefault();
       setZoom(zoomState.value - ZOOM_STEP);
+      return;
+    }
+    if (hasNav && event.key === 'ArrowRight') {
+      event.preventDefault();
+      navigate(1);
+      return;
+    }
+    if (hasNav && event.key === 'ArrowLeft') {
+      event.preventDefault();
+      navigate(-1);
       return;
     }
   };
@@ -507,12 +604,12 @@ export function openLightbox(opts: LightboxOptions): () => void {
    * underneath and start a rubber-band block selection behind the dialog.
    */
   dialog.addEventListener('mousedown', (event: MouseEvent) => {
-    if (event.target instanceof Node && toolbar.contains(event.target)) return;
+    if (isChromeTarget(event.target)) return;
     event.stopPropagation();
   });
 
   dialog.addEventListener('pointerdown', (event: PointerEvent) => {
-    if (event.target instanceof Node && toolbar.contains(event.target)) return;
+    if (isChromeTarget(event.target)) return;
     dragState.pointerDown = true;
     dragState.dragging = false;
     dragState.startX = event.clientX;
@@ -550,7 +647,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
       panState.y = settled.y;
       applyTransform();
       const swallow = (e: MouseEvent): void => {
-        if (e.target instanceof Node && toolbar.contains(e.target)) return;
+        if (isChromeTarget(e.target)) return;
         e.stopPropagation();
         dialog.removeEventListener('click', swallow, true);
       };
@@ -586,7 +683,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
   }, { passive: false });
 
   dialog.addEventListener('click', (event) => {
-    if (event.target instanceof Node && toolbar.contains(event.target)) return;
+    if (isChromeTarget(event.target)) return;
     close();
   });
   document.addEventListener('keydown', onKey);
@@ -672,6 +769,40 @@ function appendLightboxDivider(parent: HTMLElement): void {
   parent.appendChild(d);
 }
 
+interface LightboxNavOptions {
+  i18n?: I18nInstance;
+  onPrev(): void;
+  onNext(): void;
+}
+
+function renderLightboxNav(opts: LightboxNavOptions): HTMLElement {
+  const nav = document.createElement('div');
+  nav.setAttribute('data-role', 'lightbox-nav');
+  nav.setAttribute('role', 'group');
+  nav.setAttribute('aria-label', tr(opts.i18n, 'tools.image.navigationControls'));
+  nav.className = 'blok-image-lightbox__nav';
+  nav.addEventListener('click', (event) => event.stopPropagation());
+
+  appendLightboxButton(nav, {
+    action: 'lightbox-prev',
+    label: tr(opts.i18n, 'tools.image.previousImage'),
+    shortcut: '←',
+    html: IconChevronLeft,
+    onClick: opts.onPrev,
+    tooltipPlacement: 'right',
+  });
+  appendLightboxButton(nav, {
+    action: 'lightbox-next',
+    label: tr(opts.i18n, 'tools.image.nextImage'),
+    shortcut: '→',
+    html: IconChevronRight,
+    onClick: opts.onNext,
+    tooltipPlacement: 'right',
+  });
+
+  return nav;
+}
+
 interface LightboxButtonSpec {
   action: string;
   label: string;
@@ -679,6 +810,7 @@ interface LightboxButtonSpec {
   html: string;
   onClick(): void;
   extraClass?: string;
+  tooltipPlacement?: 'top' | 'bottom' | 'left' | 'right';
 }
 
 function buildLightboxTooltipContent(label: string, shortcut?: string): HTMLElement | string {
@@ -702,7 +834,7 @@ function appendLightboxButton(parent: HTMLElement, spec: LightboxButtonSpec): vo
     ? `blok-image-lightbox__btn ${spec.extraClass}`
     : 'blok-image-lightbox__btn';
   btn.innerHTML = spec.html;
-  tooltipOnHover(btn, buildLightboxTooltipContent(spec.label, spec.shortcut), { placement: 'top' });
+  tooltipOnHover(btn, buildLightboxTooltipContent(spec.label, spec.shortcut), { placement: spec.tooltipPlacement ?? 'top' });
   btn.addEventListener('click', (event) => {
     event.stopPropagation();
     tooltipHide();

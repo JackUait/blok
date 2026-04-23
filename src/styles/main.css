@@ -404,3 +404,28 @@
   font: inherit;
   transition: background 80ms ease, color 80ms ease;
 }
+.blok-image-lightbox__btn[disabled] {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
+.blok-image-lightbox__nav {
+  position: absolute;
+  left: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--blok-space-1);
+  padding: var(--blok-space-1-5);
+  background: var(--blok-image-lightbox-toolbar-bg);
+  color: var(--blok-image-lightbox-toolbar-fg);
+  border-radius: var(--blok-space-3);
+  box-shadow:
+    0 0 0 1px var(--blok-image-lightbox-toolbar-ring),
+    0 4px 24px var(--blok-image-lightbox-toolbar-shadow-main),
+    0 16px 40px -8px var(--blok-image-lightbox-toolbar-shadow-ambient);
+  cursor: default;
+  z-index: 1;
+}

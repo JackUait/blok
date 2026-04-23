@@ -334,7 +334,33 @@ export class ImageTool implements BlockTool {
       crop: this.data.crop,
       origin,
       i18n: this.api.i18n,
+      navigation: this.collectNavigation(),
     });
+  }
+
+  private collectNavigation(): { items: Array<{ url: string; alt?: string; fileName?: string; crop?: ImageCrop }>; startIndex: number } | undefined {
+    const blocksApi = (this.api as API & { blocks?: { getBlocksCount(): number; getBlockByIndex(i: number): BlockAPI | undefined } }).blocks;
+    if (!blocksApi?.getBlocksCount || !blocksApi.getBlockByIndex) return undefined;
+    const count = blocksApi.getBlocksCount();
+    const collected: Array<{ blockId: string; item: { url: string; alt?: string; fileName?: string; crop?: ImageCrop } }> = Array.from({ length: count }, (_, i) => blocksApi.getBlockByIndex(i))
+      .filter((b): b is BlockAPI => b !== undefined && b.name === 'image')
+      .map((b) => {
+        const preserved = b.preservedData as Partial<ImageData> | undefined;
+        const preservedUrl = typeof preserved?.url === 'string' ? preserved.url : '';
+        if (preservedUrl) {
+          return { blockId: b.id, item: { url: preservedUrl, alt: preserved?.alt, fileName: preserved?.fileName, crop: preserved?.crop } };
+        }
+        const img = b.holder?.querySelector<HTMLImageElement>('.blok-image-inner img');
+        const src = img?.getAttribute('src') ?? '';
+        if (!src) return null;
+        const alt = img?.getAttribute('alt') ?? undefined;
+        return { blockId: b.id, item: { url: src, alt, fileName: preserved?.fileName, crop: preserved?.crop } };
+      })
+      .filter((entry): entry is { blockId: string; item: { url: string; alt?: string; fileName?: string; crop?: ImageCrop } } => entry !== null);
+    if (collected.length < 2) return undefined;
+    const foundIndex = collected.findIndex((c) => c.blockId === this.block.id);
+    const startIndex = foundIndex === -1 ? 0 : foundIndex;
+    return { items: collected.map((c) => c.item), startIndex };
   }
 
   private enterCrop(): void {
@@ -509,7 +535,7 @@ export class ImageTool implements BlockTool {
     const originEl = figure.querySelector<HTMLElement>('.blok-image-crop') ?? imgEl ?? undefined;
     if (imgEl) {
       imgEl.style.cursor = 'zoom-in';
-      imgEl.addEventListener('click', () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, crop: this.data.crop, origin: originEl, i18n: this.api.i18n }));
+      imgEl.addEventListener('click', () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, crop: this.data.crop, origin: originEl, i18n: this.api.i18n, navigation: this.collectNavigation() }));
       imgEl.addEventListener('error', () => this.applyBrokenImage(), { once: true });
       if (imgEl.complete && imgEl.naturalWidth === 0) {
         this.applyBrokenImage();
@@ -529,7 +555,7 @@ export class ImageTool implements BlockTool {
         onReplace: () => this.transitionToEmpty(),
         onDelete: () => this.deleteBlock(),
         onDownload: () => this.download(),
-        onFullscreen: () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, crop: this.data.crop, origin: originEl, i18n: this.api.i18n }),
+        onFullscreen: () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, crop: this.data.crop, origin: originEl, i18n: this.api.i18n, navigation: this.collectNavigation() }),
         onCopyUrl: () => this.copyUrl(),
         onToggleCaption: () => this.toggleCaption(),
         onCrop: () => this.enterCrop(),

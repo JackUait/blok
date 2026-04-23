@@ -17,6 +17,7 @@ import { hide } from '../../utils/tooltip';
  * Refactored Toolbar module components
  */
 import { ClickDragHandler } from './click-handler';
+import { computeVisualContentOffset, resolveVisualContentWidth } from './content-alignment';
 import { PlusButtonHandler } from './plus-button';
 import { ToolbarPositioner } from './positioning';
 import { SettingsTogglerHandler } from './settings-toggler';
@@ -622,36 +623,39 @@ export class Toolbar extends Module<ToolbarNodes> {
       this.restoreSettingsTogglerForLeftEdgeBlock(targetBlock);
     }
 
-    /**
-     * Sync toolbar content wrapper's position and width with the block content element
-     * so toolbar buttons align with the block content edge regardless of whether
-     * the consumer uses CSS margin or overrides max-width (e.g. wide-mode).
-     *
-     * Uses getBoundingClientRect to get the actual visual offset rather than reading
-     * CSS marginLeft, which does not account for cases where max-width is removed
-     * and the content fills the full container width.
-     *
-     * Uses Math.max to guarantee the actions container (positioned via right:100%)
-     * never extends beyond the left edge of the viewport, which would make the
-     * drag handle unreachable by pointer events.
-     *
-     * For nested blocks (e.g. children inside a callout), the holder is already
-     * offset from the viewport left by the parent's indentation. In that case we
-     * only need to ensure the actions don't extend beyond the viewport left edge
-     * (holderLeft px are available to the left), so the minimum margin is
-     * max(0, actionsWidth - holderLeft) rather than a flat actionsWidth clamp.
-     */
-    if (blockContentElement && this.nodes.content) {
-      const holderRect = this.nodes.wrapper?.getBoundingClientRect();
-      const contentRect = blockContentElement.getBoundingClientRect();
-      const visualOffset = holderRect ? Math.max(0, contentRect.left - holderRect.left) : 0;
-      const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
-      const holderLeft = holderRect ? Math.max(0, holderRect.left) : 0;
-      const minMarginLeft = Math.max(0, actionsWidth - holderLeft);
-
-      this.nodes.content.style.marginLeft = `${Math.max(visualOffset, minMarginLeft)}px`;
-      this.nodes.content.style.maxWidth = `${contentRect.width}px`;
+    if (blockContentElement) {
+      this.syncContentToBlock(targetBlockHolder, blockContentElement);
     }
+  }
+
+  /**
+   * Align the toolbar's inner content wrapper with the block's visible content column.
+   * See `content-alignment.ts` for the two-case reasoning (non-stretched vs stretched).
+   *
+   * `Math.max` with `actionsWidth - holderLeft` guarantees the actions bar
+   * (positioned at `right:100%`) never extends past the viewport's left edge,
+   * which would make the drag handle unreachable by pointer events. For nested
+   * blocks already offset from the viewport, `holderLeft` px-of-slack relax the
+   * minimum so buttons aren't pushed into the text content.
+   * @param targetBlockHolder - Block holder element
+   * @param blockContentElement - `[data-blok-element-content]` element inside the holder
+   */
+  private syncContentToBlock(targetBlockHolder: HTMLElement, blockContentElement: HTMLElement): void {
+    if (this.nodes.content === undefined) {
+      return;
+    }
+
+    const wrapperRect = this.nodes.wrapper?.getBoundingClientRect();
+    const contentRect = blockContentElement.getBoundingClientRect();
+    const visualOffset = computeVisualContentOffset(targetBlockHolder, contentRect, wrapperRect);
+    const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
+    const holderLeft = wrapperRect ? Math.max(0, wrapperRect.left) : 0;
+    const minMarginLeft = Math.max(0, actionsWidth - holderLeft);
+    const effectiveOffset = Math.max(visualOffset, minMarginLeft);
+    const contentWidth = resolveVisualContentWidth(targetBlockHolder, contentRect, wrapperRect);
+
+    this.nodes.content.style.marginLeft = `${effectiveOffset}px`;
+    this.nodes.content.style.maxWidth = `${contentWidth}px`;
   }
 
   /**
@@ -771,23 +775,8 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     this.open();
 
-    /**
-     * Sync toolbar content wrapper's position and width with the block content element.
-     * Uses getBoundingClientRect so wide-mode content (max-width: none) is handled correctly.
-     * Clamp to max(0, actionsWidth - holderLeft) so actions never extend beyond the left
-     * viewport edge. For nested blocks already offset from the left, a smaller clamp is
-     * used so buttons are not pushed into the text content.
-     */
-    if (blockContentElement && this.nodes.content) {
-      const holderRect = this.nodes.wrapper?.getBoundingClientRect();
-      const contentRect = blockContentElement.getBoundingClientRect();
-      const visualOffset = holderRect ? Math.max(0, contentRect.left - holderRect.left) : 0;
-      const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
-      const holderLeft = holderRect ? Math.max(0, holderRect.left) : 0;
-      const minMarginLeft = Math.max(0, actionsWidth - holderLeft);
-
-      this.nodes.content.style.marginLeft = `${Math.max(visualOffset, minMarginLeft)}px`;
-      this.nodes.content.style.maxWidth = `${contentRect.width}px`;
+    if (blockContentElement) {
+      this.syncContentToBlock(targetBlockHolder, blockContentElement);
     }
   }
 

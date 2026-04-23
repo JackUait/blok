@@ -794,17 +794,11 @@ describe("UI module", () => {
       expect(listenersEnabled.blockHover).toBe(true);
     });
 
-    it("coordinately disables all controllers when toggling on read-only mode", () => {
+    it("disables keyboard but keeps block hover enabled when toggling on read-only mode", () => {
       const { ui } = createUI();
-      const listenersRemoved = { keyboard: false, blockHover: false };
-      const keyboardDisableSpy = vi.fn(() => {
-        // Simulate listener cleanup
-        listenersRemoved.keyboard = true;
-      });
-      const blockHoverDisableSpy = vi.fn(() => {
-        // Simulate listener cleanup
-        listenersRemoved.blockHover = true;
-      });
+      const keyboardDisableSpy = vi.fn();
+      const blockHoverDisableSpy = vi.fn();
+      const blockHoverEnableSpy = vi.fn();
 
       (
         ui as unknown as { keyboardController: { disable: () => void } }
@@ -812,20 +806,22 @@ describe("UI module", () => {
         disable: keyboardDisableSpy,
       };
       (
-        ui as unknown as { blockHoverController: { disable: () => void } }
+        ui as unknown as { blockHoverController: { disable: () => void; enable: () => void } }
       ).blockHoverController = {
         disable: blockHoverDisableSpy,
+        enable: blockHoverEnableSpy,
       };
 
       ui.toggleReadOnly(true);
 
-      // Verify controllers were disabled
+      /**
+       * Keyboard MUST be disabled in read-only mode.
+       * Block hover MUST stay enabled so the Notion-style "copy link to block"
+       * popover can still appear on hover.
+       */
       expect(keyboardDisableSpy).toHaveBeenCalledTimes(1);
-      expect(blockHoverDisableSpy).toHaveBeenCalledTimes(1);
-
-      // Verify observable behavior: listeners were cleaned up
-      expect(listenersRemoved.keyboard).toBe(true);
-      expect(listenersRemoved.blockHover).toBe(true);
+      expect(blockHoverDisableSpy).not.toHaveBeenCalled();
+      expect(blockHoverEnableSpy).toHaveBeenCalled();
     });
   });
 

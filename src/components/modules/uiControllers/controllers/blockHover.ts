@@ -49,9 +49,21 @@ export class BlockHoverController extends Controller {
   }
 
   /**
+   * Whether the controller's listeners are currently bound. Used to make
+   * enable() idempotent so repeated calls (e.g. during read-only toggling)
+   * do not register the mousemove handler multiple times.
+   */
+  private isEnabled: boolean = false;
+
+  /**
    * Enable block hover detection
    */
   public override enable(): void {
+    if (this.isEnabled) {
+      return;
+    }
+
+    this.isEnabled = true;
     /**
      * Local function that handles block hover detection
      * Bound to 'this' to preserve context when passed to throttle
@@ -250,6 +262,14 @@ export class BlockHoverController extends Controller {
     }, { block: topLevelBlocks[0], distance: Infinity });
 
     return result.block;
+  }
+
+  /**
+   * Disable the controller and clear its listeners.
+   */
+  public override disable(): void {
+    super.disable();
+    this.isEnabled = false;
   }
 
   /**

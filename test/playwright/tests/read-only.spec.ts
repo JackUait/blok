@@ -268,9 +268,8 @@ const placeCursorAtEnd = async (locator: Locator): Promise<void> => {
   });
 };
 
-const expectSettingsButtonToDisappear = async (page: Page): Promise<void> => {
-  await page.waitForFunction((selector) => document.querySelector(selector) === null, SETTINGS_BUTTON_SELECTOR);
-};
+const PLUS_BUTTON_SELECTOR = `${TOOLBAR_SELECTOR} [data-blok-testid="plus-button"]`;
+const BLOCK_TUNES_POPOVER_SELECTOR = '[data-blok-testid="block-tunes-popover"]';
 
 const waitForReadOnlyState = async (page: Page, expected: boolean): Promise<void> => {
   await page.waitForFunction(({ expectedState }) => {
@@ -387,33 +386,117 @@ test.describe('read-only mode', () => {
     await expect(unsupportedToolItem).toBeVisible();
   });
 
-  test('removes block settings UI while read-only is enabled', async ({ page }) => {
+  test('shows settings toggler on hover in read-only mode (Notion-style copy-link menu)', async ({ page }) => {
     await createBlok(page, {
+      readOnly: true,
       data: {
         blocks: [
-          {
-            type: 'paragraph',
-            data: {
-              text: 'Block tunes availability',
-            },
-          },
+          { type: 'paragraph', data: { text: 'Only paragraph' } },
         ],
       },
     });
 
     const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
-    await expect(paragraph).toHaveCount(1);
-    await paragraph.click();
-    await expect(page.locator(SETTINGS_BUTTON_SELECTOR)).toBeVisible();
+    await expect(paragraph).toBeVisible();
+    await paragraph.hover();
 
-    await toggleReadOnly(page, true);
-    await expectSettingsButtonToDisappear(page);
-
-    await toggleReadOnly(page, false);
-    await waitForReadOnlyState(page, false);
-    await paragraph.click();
     await expect(page.locator(SETTINGS_BUTTON_SELECTOR)).toBeVisible();
+  });
+
+  test('hides plus button on hover in read-only mode', async ({ page }) => {
+    await createBlok(page, {
+      readOnly: true,
+      data: {
+        blocks: [
+          { type: 'paragraph', data: { text: 'Only paragraph' } },
+        ],
+      },
+    });
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+    await expect(paragraph).toBeVisible();
+    await paragraph.hover();
+
+    // Plus button must not be visible in read-only mode
+    await expect(page.locator(PLUS_BUTTON_SELECTOR)).toBeHidden();
+  });
+
+  test('block settings popover in read-only mode exposes only copy-link item', async ({ page }) => {
+    await createBlok(page, {
+      readOnly: true,
+      data: {
+        blocks: [
+          { type: 'paragraph', data: { text: 'Link me' } },
+        ],
+      },
+    });
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+    await paragraph.hover();
+
+    const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+    await expect(settingsButton).toBeVisible();
+    await settingsButton.click();
+
+    const popover = page.locator(BLOCK_TUNES_POPOVER_SELECTOR);
+
+    // The popover uses the native popover API (popover="manual") — wait for the
+    // opened attribute instead of relying on toBeVisible, which flakes on some
+    // Playwright builds for native popovers.
+    await expect(popover).toHaveAttribute('data-blok-popover-opened', 'true');
+
+    // Only the copy-link item should appear (edit-metadata footer is allowed but never interactive)
+    await expect(popover.getByText('Copy link to block')).toHaveCount(1);
+    await expect(popover.getByText('Delete')).toHaveCount(0);
+    await expect(popover.getByText('Move up')).toHaveCount(0);
+    await expect(popover.getByText('Move down')).toHaveCount(0);
+    await expect(popover.getByText('Convert to')).toHaveCount(0);
+  });
+
+  test('clicking copy-link in read-only mode writes URL to clipboard and shows success notifier', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+
+    // Spy on clipboard.writeText before creating editor
+    await page.goto(TEST_PAGE_URL);
+    await page.waitForFunction(() => typeof window.Blok === 'function');
+
+    await page.evaluate(() => {
+      (window as unknown as { __copiedUrl?: string }).__copiedUrl = undefined;
+      const original = navigator.clipboard.writeText.bind(navigator.clipboard);
+
+      navigator.clipboard.writeText = async (value: string) => {
+        (window as unknown as { __copiedUrl?: string }).__copiedUrl = value;
+
+        return original(value);
+      };
+    });
+
+    await createBlok(page, {
+      readOnly: true,
+      data: {
+        blocks: [
+          { type: 'paragraph', data: { text: 'Copy me' } },
+        ],
+      },
+    });
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+    await paragraph.hover();
+    await page.locator(SETTINGS_BUTTON_SELECTOR).click();
+
+    const popover = page.locator(BLOCK_TUNES_POPOVER_SELECTOR);
+
+    await popover.getByText('Copy link to block').click();
+
+    // Clipboard should have been written with a URL containing a hash
+    await expect.poll(async () => {
+      return page.evaluate(() => (window as unknown as { __copiedUrl?: string }).__copiedUrl ?? '');
+    }).toContain('#');
   });
 
   test('prevents paste operations while read-only is enabled', async ({ page }) => {

@@ -179,6 +179,9 @@ type BlokMock = {
     convert: Mock<(block: Block, tool: string, data?: unknown) => Promise<Block>>;
     deleteSelectedBlocksAndInsertReplacement?: Mock<() => Block | null>;
   };
+  ReadOnly: {
+    isEnabled: boolean;
+  };
   CrossBlockSelection: {
     isCrossBlockSelectionStarted: boolean;
     clear: Mock<(event?: Event) => void>;
@@ -271,6 +274,7 @@ const createBlokMock = (): BlokMock => {
   return {
     BlockSelection: blockSelection,
     BlockManager: blockManager,
+    ReadOnly: { isEnabled: false },
     CrossBlockSelection: crossBlockSelection,
     API: {
       methods: {
@@ -1179,6 +1183,99 @@ describe('BlockSettings', () => {
       const metadataItem = items.find((item: PopoverItemParams) => 'name' in item && item.name === 'edit-metadata');
 
       expect(metadataItem).toBeUndefined();
+    });
+  });
+
+  describe('read-only menu filtering', () => {
+    it('in read-only mode, returns only copy-link items from common tunes (no convert-to, no delete, no moves)', async () => {
+      const block = createBlock();
+
+      blokMock.ReadOnly.isEnabled = true;
+      blokMock.Tools.blockTools = new Map([
+        ['paragraph', { name: 'paragraph' }],
+        ['header', { name: 'header', toolbox: [{ icon: '<svg/>', title: 'Heading' }] }],
+      ]);
+
+      const commonTunes: MenuConfigItem[] = [
+        { name: 'move-up', title: 'Move up', onActivate: vi.fn() },
+        { name: 'move-down', title: 'Move down', onActivate: vi.fn() },
+        { name: 'copy-link', title: 'Copy link to block', onActivate: vi.fn() },
+        { name: 'delete', title: 'Delete', onActivate: vi.fn() },
+      ];
+
+      getConvertibleToolsForBlockMock.mockResolvedValueOnce([
+        { name: 'header', toolbox: [{ icon: '<svg/>', title: 'Heading', data: { level: 2 } }] },
+      ]);
+
+      const items = await (blockSettings as unknown as {
+        getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+      }).getTunesItems(block, commonTunes);
+
+      const names = items
+        .map((item) => ('name' in item ? item.name : undefined))
+        .filter((name): name is string => name !== undefined);
+
+      expect(names).toContain('copy-link');
+      expect(names).not.toContain('convert-to');
+      expect(names).not.toContain('delete');
+      expect(names).not.toContain('move-up');
+      expect(names).not.toContain('move-down');
+    });
+
+    it('in read-only mode, keeps the edit-metadata footer when lastEditedAt is set', async () => {
+      const block = createBlock();
+
+      block.lastEditedAt = 1712700720000;
+      block.lastEditedBy = null;
+
+      blokMock.ReadOnly.isEnabled = true;
+
+      const commonTunes: MenuConfigItem[] = [
+        { name: 'copy-link', title: 'Copy link to block', onActivate: vi.fn() },
+      ];
+
+      getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
+
+      const items = await (blockSettings as unknown as {
+        getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+      }).getTunesItems(block, commonTunes);
+
+      const footer = items.find((item) => 'name' in item && item.name === 'edit-metadata');
+
+      expect(footer).toBeDefined();
+    });
+
+    it('in non-read-only mode, preserves convert-to menu and all common tunes', async () => {
+      const block = createBlock();
+
+      blokMock.ReadOnly.isEnabled = false;
+      blokMock.Tools.blockTools = new Map([
+        ['paragraph', { name: 'paragraph' }],
+        ['header', { name: 'header', toolbox: [{ icon: '<svg/>', title: 'Heading' }] }],
+      ]);
+
+      const commonTunes: MenuConfigItem[] = [
+        { name: 'move-up', title: 'Move up', onActivate: vi.fn() },
+        { name: 'copy-link', title: 'Copy link to block', onActivate: vi.fn() },
+        { name: 'delete', title: 'Delete', onActivate: vi.fn() },
+      ];
+
+      getConvertibleToolsForBlockMock.mockResolvedValueOnce([
+        { name: 'header', toolbox: [{ icon: '<svg/>', title: 'Heading', data: { level: 2 } }] },
+      ]);
+
+      const items = await (blockSettings as unknown as {
+        getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+      }).getTunesItems(block, commonTunes);
+
+      const names = items
+        .map((item) => ('name' in item ? item.name : undefined))
+        .filter((name): name is string => name !== undefined);
+
+      expect(names).toContain('convert-to');
+      expect(names).toContain('copy-link');
+      expect(names).toContain('delete');
+      expect(names).toContain('move-up');
     });
   });
 });

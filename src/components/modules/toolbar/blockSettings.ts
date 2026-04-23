@@ -324,8 +324,33 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     const items = [] as MenuConfigItem[];
     const selectedBlocks = this.Blok.BlockSelection.selectedBlocks;
     const hasMultipleBlocksSelected = selectedBlocks.length > 1;
+    const isReadOnly = this.Blok.ReadOnly.isEnabled;
 
     const allBlockTools = Array.from(this.Blok.Tools.blockTools.values());
+
+    /**
+     * Read-only (Notion-style): expose only the copy-link tune, plus the
+     * edit-metadata footer if present. No convert-to, no delete, no moves,
+     * no tool-specific tunes.
+     */
+    if (isReadOnly) {
+      const copyLinkItems = commonTunes.filter(
+        (tune): tune is MenuConfigItem & { name: string } => 'name' in tune && tune.name === 'copy-link'
+      );
+
+      items.push(...copyLinkItems);
+
+      if (currentBlock.lastEditedAt !== undefined) {
+        items.push({ type: PopoverItemType.Separator });
+        items.push({
+          type: PopoverItemType.Html,
+          element: this.createEditMetadataFooter(currentBlock),
+          name: 'edit-metadata',
+        });
+      }
+
+      return items;
+    }
 
     /**
      * Tool-specific tunes come first (e.g. heading level selector)

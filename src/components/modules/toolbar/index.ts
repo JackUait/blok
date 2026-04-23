@@ -360,20 +360,47 @@ export class Toolbar extends Module<ToolbarNodes> {
 
 
   /**
-   * Toggles read-only mode
+   * Toggles read-only mode.
+   *
+   * Read-only (Notion-style): the toolbar and block settings stay alive so the
+   * user can still hover a block and copy a link to it. The plus button is
+   * hidden and the drag gesture is suppressed (see moveAndOpen + plus-button
+   * handler).
    * @param {boolean} readOnlyEnabled - read-only mode
    */
   public toggleReadOnly(readOnlyEnabled: boolean): void {
-    if (!readOnlyEnabled) {
+    /**
+     * Draw the toolbar the first time we need it. Previously the toolbar DOM
+     * was only built on the readOnly=false path; now read-only also hosts a
+     * (restricted) block settings popover, so ensure the DOM exists in both
+     * modes. Subsequent toggles just flip plus-button visibility.
+     */
+    if (this.nodes.wrapper === undefined) {
       window.requestIdleCallback(async () => {
         await this.drawUI();
         this.enableModuleBindings();
+        this.applyReadOnlyToPlusButton(readOnlyEnabled);
       }, { timeout: 2000 });
-    } else {
-      this.destroy();
-      this.Blok.BlockSettings.destroy();
-      this.disableModuleBindings();
+
+      return;
     }
+
+    this.applyReadOnlyToPlusButton(readOnlyEnabled);
+  }
+
+  /**
+   * Hides the plus button in read-only mode, restores its visibility otherwise.
+   * Uses inline display:none because the button element already uses inline
+   * style toggling elsewhere (moveAndOpen, close, moveAndOpenForMultipleBlocks).
+   */
+  private applyReadOnlyToPlusButton(readOnlyEnabled: boolean): void {
+    const { plusButton } = this.nodes;
+
+    if (plusButton === undefined) {
+      return;
+    }
+
+    plusButton.style.display = readOnlyEnabled ? 'none' : '';
   }
 
   /**
@@ -476,8 +503,9 @@ export class Toolbar extends Module<ToolbarNodes> {
      * whole table undraggable while the user edits cell text.
      */
     const isCalloutFirstChild = this.isFirstChildOfCallout(targetBlock);
+    const hidePlusButton = isCalloutFirstChild || this.Blok.ReadOnly.isEnabled;
 
-    plusButton.style.display = isCalloutFirstChild ? 'none' : '';
+    plusButton.style.display = hidePlusButton ? 'none' : '';
 
     if (settingsToggler) {
       settingsToggler.style.display = isCalloutFirstChild ? 'none' : '';
@@ -697,8 +725,9 @@ export class Toolbar extends Module<ToolbarNodes> {
     /**
      * Restore plus button and settings toggler visibility for multi-block selection,
      * in case they were hidden for table cell blocks.
+     * In read-only mode, keep the plus button hidden.
      */
-    plusButton.style.display = '';
+    plusButton.style.display = this.Blok.ReadOnly.isEnabled ? 'none' : '';
     plusButton.style.color = '';
 
     if (settingsToggler) {
@@ -767,10 +796,6 @@ export class Toolbar extends Module<ToolbarNodes> {
    * @param options - Optional configuration
    */
   public close(options?: ToolbarCloseOptions): void {
-    if (this.Blok.ReadOnly.isEnabled) {
-      return;
-    }
-
     // eslint-disable-next-line @typescript-eslint/no-deprecated
     this.nodes.wrapper?.classList.remove(this.CSS.toolbarOpened);
     // eslint-disable-next-line @typescript-eslint/no-deprecated
@@ -804,10 +829,11 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     /**
      * Restore plus button and settings toggler visibility
-     * in case they were hidden for table cell blocks
+     * in case they were hidden for table cell blocks.
+     * In read-only mode, keep the plus button hidden.
      */
     if (this.nodes.plusButton) {
-      this.nodes.plusButton.style.display = '';
+      this.nodes.plusButton.style.display = this.Blok.ReadOnly.isEnabled ? 'none' : '';
       this.nodes.plusButton.style.color = '';
     }
 
@@ -948,8 +974,9 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     const isCalloutFirstChild = this.hoveredBlock !== null && this.isFirstChildOfCallout(this.hoveredBlock);
+    const hidePlusButton = isCalloutFirstChild || this.Blok.ReadOnly.isEnabled;
 
-    plusButton.style.display = isCalloutFirstChild ? 'none' : '';
+    plusButton.style.display = hidePlusButton ? 'none' : '';
 
     if (settingsToggler) {
       settingsToggler.style.display = isCalloutFirstChild ? 'none' : '';
@@ -1244,6 +1271,14 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     if (plusButton) {
       this.readOnlyMutableListeners.on(plusButton, 'mousedown', (e) => {
+        /**
+         * Plus button is inert in read-only mode. It is also visually hidden
+         * (see toggleReadOnly), but guard here too in case of programmatic clicks.
+         */
+        if (this.Blok.ReadOnly.isEnabled) {
+          return;
+        }
+
         /**
          * Prevent focus from moving away from the currently-active contenteditable block.
          * Without this, clicking the plus button steals DOM focus, causing subsequent

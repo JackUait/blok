@@ -429,6 +429,22 @@ describe('ReadOnly module', () => {
       expect(mocks.modificationsObserver.enable).not.toHaveBeenCalled();
     });
   });
+
+  describe('toolbar survives read-only toggle', () => {
+    it('delegates to Toolbar.toggleReadOnly and Toolbar continues to expose moveAndOpen without throwing', async () => {
+      const { readOnly, mocks } = createReadOnly();
+
+      const moveAndOpen = vi.fn();
+
+      (mocks.toolbar as unknown as { moveAndOpen: () => void }).moveAndOpen = moveAndOpen;
+
+      await readOnly.set(true);
+
+      expect(mocks.toolbar.toggleReadOnly).toHaveBeenCalledWith(true);
+      expect(typeof (mocks.toolbar as unknown as { moveAndOpen: () => void }).moveAndOpen).toBe('function');
+      expect(() => (mocks.toolbar as unknown as { moveAndOpen: () => void }).moveAndOpen()).not.toThrow();
+    });
+  });
 });
 
 

@@ -261,10 +261,18 @@ export class UI extends Module<UINodes> {
      */
     if (readOnlyEnabled) {
       /**
-       * Unbind all events
-       *
+       * Unbind editing-only events but keep block hover active so the toolbar
+       * can still appear on hover (used by the read-only "copy link to block"
+       * popover; see Toolbar.toggleReadOnly).
        */
-      this.unbindReadOnlySensitiveListeners();
+      this.unbindReadOnlySensitiveListeners({ keepBlockHover: true });
+
+      /**
+       * Ensure block hover detection is active even when the editor starts in
+       * read-only mode — bindReadOnlySensitiveListeners() was never called in
+       * that path.
+       */
+      this.blockHoverController?.enable();
 
       /**
        * Set contenteditable="false" on all block content elements
@@ -672,8 +680,11 @@ export class UI extends Module<UINodes> {
 
   /**
    * Unbind events that should work only in read-only mode
+   * @param options - when keepBlockHover is true, the block-hover controller
+   * stays enabled so the toolbar can still appear on hover. Used when entering
+   * read-only mode; editor destroy still disables everything.
    */
-  private unbindReadOnlySensitiveListeners(): void {
+  private unbindReadOnlySensitiveListeners(options?: { keepBlockHover?: boolean }): void {
     this.readOnlyMutableListeners.clearAll();
 
     /**
@@ -682,9 +693,11 @@ export class UI extends Module<UINodes> {
     this.keyboardController?.disable();
 
     /**
-     * Disable block hover controller
+     * Disable block hover controller unless the caller opted to keep it alive.
      */
-    this.blockHoverController?.disable();
+    if (options?.keepBlockHover !== true) {
+      this.blockHoverController?.disable();
+    }
   }
 
   /**

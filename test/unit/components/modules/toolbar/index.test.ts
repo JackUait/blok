@@ -1273,6 +1273,64 @@ describe('Plus button interactions', () => {
     }
   });
 
+  describe('read-only toggle behavior', () => {
+    it('does not destroy toolbar DOM when toggleReadOnly(true) is called', () => {
+      const toolbarWrapper = (toolbar as unknown as { nodes: typeof toolbar['nodes'] }).nodes.wrapper;
+
+      expect(toolbarWrapper).toBeInstanceOf(HTMLElement);
+
+      const destroySpy = vi.spyOn(
+        toolbar as unknown as { destroy: () => void },
+        'destroy'
+      );
+
+      toolbar.toggleReadOnly(true);
+
+      expect(destroySpy).not.toHaveBeenCalled();
+
+      const nodesAfter = (toolbar as unknown as { nodes: typeof toolbar['nodes'] }).nodes;
+
+      expect(nodesAfter.wrapper).toBe(toolbarWrapper);
+    });
+
+    it('does not call BlockSettings.destroy when toggleReadOnly(true) is called', () => {
+      const blok = getBlok();
+      const blockSettingsDestroy = vi.fn();
+
+      (blok.BlockSettings as unknown as { destroy: () => void }).destroy = blockSettingsDestroy;
+
+      toolbar.toggleReadOnly(true);
+
+      expect(blockSettingsDestroy).not.toHaveBeenCalled();
+    });
+
+    it('hides the plus button when toggleReadOnly(true) is called', () => {
+      const plusButton = (toolbar as unknown as { nodes: typeof toolbar['nodes'] }).nodes.plusButton;
+
+      expect(plusButton).toBeInstanceOf(HTMLElement);
+
+      toolbar.toggleReadOnly(true);
+
+      // Plus button should not be visible in read-only mode.
+      // Check for inline display:none OR a hidden CSS class — either satisfies the requirement.
+      const isHidden = plusButton?.style.display === 'none'
+        || plusButton?.classList.contains('hidden')
+        || plusButton?.hasAttribute('hidden');
+
+      expect(isHidden).toBe(true);
+    });
+
+    it('exposes moveAndOpen after toggleReadOnly(true) and does not throw when called with no args', () => {
+      toolbar.toggleReadOnly(true);
+
+      expect(typeof toolbar.moveAndOpen).toBe('function');
+
+      (toolbar as unknown as { toolboxInstance: null }).toolboxInstance = null;
+
+      expect(() => toolbar.moveAndOpen()).not.toThrow();
+    });
+  });
+
   describe('discardPlusContext', () => {
     // Regression guard: if preToolboxBlock survives a programmatic
     // close-and-reopen of the toolbox (e.g. slashPressed -> activateToolbox),

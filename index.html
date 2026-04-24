@@ -2058,6 +2058,12 @@
             width: 40,
             alignment: 'left',
           } }] },
+          { label: 'Loading', blocks: [{ id: 'im-loading', type: 'image', data: {
+            url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800',
+            alt: 'Loading image',
+            width: 40,
+            alignment: 'center',
+          } }] },
           { label: 'Broken URL', blocks: [{ id: 'im-broken', type: 'image', data: {
             url: '/this-image-does-not-exist.png',
             alt: 'Missing',
@@ -2102,6 +2108,21 @@
         minHeight: 0,
       });
       blockStatesInstances.push(instance);
+
+      // Force persistent loading overlay on the "Loading" image state demo.
+      // Clone the <img> to strip load/error listeners (so overlay can't clear),
+      // then blank the src and set data-loading on the figure.
+      instance.isReady.then(() => {
+        const figure = holder.querySelector('[data-blok-id="im-loading"] .blok-image-inner');
+        if (!figure) return;
+        const img = figure.querySelector('img');
+        if (img) {
+          const clone = img.cloneNode(false);
+          clone.removeAttribute('src');
+          img.replaceWith(clone);
+        }
+        figure.setAttribute('data-loading', 'true');
+      });
     }
 
     function initBlockStatesGallery(initialTool) {

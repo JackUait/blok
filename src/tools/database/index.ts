@@ -260,12 +260,11 @@ export class DatabaseTool implements BlockTool {
   }
 
   /**
-   * Returns the outer wrapper element as the toolbar anchor so the toolbar
-   * vertically centers on the block's visual top, not on a deeply nested
-   * descendant (or falls back to pluginsContent when no contenteditable exists).
+   * Returns the title element so the block toolbar vertically centers on the
+   * database title line rather than on the outer wrapper's top edge.
    */
   getToolbarAnchorElement(): HTMLElement | undefined {
-    return this.element ?? undefined;
+    return this.titleElement ?? undefined;
   }
 
   // ---------------------------------------------------------------------------

@@ -1640,23 +1640,17 @@ describe('DatabaseTool', () => {
   });
 
   describe('getToolbarAnchorElement', () => {
-    it('returns the outer wrapper element so the toolbar positions at block top, not inside deeply nested content', () => {
+    it('returns the database title element so the toolbar vertically centers on the title line', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
       const rendered = tool.render();
 
       document.body.appendChild(rendered);
 
       const anchor = tool.getToolbarAnchorElement();
+      const titleEl = queryByData(rendered, 'data-blok-database-title');
 
-      // The anchor must be the outer wrapper (what render() returns), not an inner element
-      expect(anchor).toBe(rendered);
-
-      // Verify the board container IS a descendant, proving anchor is the outer wrapper
-      const boardContainer = queryByData(rendered, 'data-blok-database-board-container');
-
-      expect(boardContainer).not.toBeNull();
-      expect(anchor).not.toBe(boardContainer);
-      expect(anchor!.contains(boardContainer)).toBe(true);
+      expect(titleEl).not.toBeNull();
+      expect(anchor).toBe(titleEl);
 
       rendered.remove();
       tool.destroy();

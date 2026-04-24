@@ -72,6 +72,7 @@ export class ImageTool implements BlockTool {
   private lastSource: { kind: 'file'; file: File } | { kind: 'url'; url: string } | null = null;
   private brokenImage = false;
   private retrying = false;
+  private reloadAttempts = 0;
 
   constructor(options: BlockToolConstructorOptions<ImageData, ImageConfig>) {
     this.api = options.api;
@@ -233,6 +234,19 @@ export class ImageTool implements BlockTool {
     this.brokenImage = true;
     this.errorMessage = this.api.i18n.t('tools.image.errorSourceOffline');
     this.renderState();
+  }
+
+  private handleImgLoadFailure(imgEl: HTMLImageElement, figure: HTMLElement): void {
+    if (this.reloadAttempts >= 1) {
+      figure.removeAttribute('data-loading');
+      this.applyBrokenImage();
+      return;
+    }
+    this.reloadAttempts++;
+    figure.setAttribute('data-loading', 'true');
+    const src = this.data.url;
+    imgEl.setAttribute('src', '');
+    imgEl.setAttribute('src', src);
   }
 
   private retryBrokenImage(): void {
@@ -554,7 +568,9 @@ export class ImageTool implements BlockTool {
     if (imgEl) {
       imgEl.style.cursor = 'zoom-in';
       imgEl.addEventListener('click', () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, crop: this.data.crop, origin: originEl, i18n: this.api.i18n, navigation: this.collectNavigation() }));
-      imgEl.addEventListener('error', () => this.applyBrokenImage(), { once: true });
+      this.reloadAttempts = 0;
+      imgEl.addEventListener('error', () => this.handleImgLoadFailure(imgEl, figure));
+      imgEl.addEventListener('load', () => figure.removeAttribute('data-loading'));
       if (imgEl.complete && imgEl.naturalWidth === 0) {
         this.applyBrokenImage();
         return;

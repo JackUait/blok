@@ -1021,6 +1021,53 @@ describe('ImageTool — error state', () => {
   });
 });
 
+describe('ImageTool — auto-retry on img load failure', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('first img error auto-retries the same src and shows loading overlay, stays RENDERED', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    const root = tool.render();
+    const img = root.querySelector<HTMLImageElement>('img');
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+    if (!img || !figure) throw new Error('DOM missing');
+
+    img.dispatchEvent(new Event('error'));
+
+    expect(root.getAttribute('data-state')).toBe('rendered');
+    expect(figure.getAttribute('data-loading')).toBe('true');
+    expect(img.getAttribute('src')).toBe('https://x/y.png');
+    expect(root.querySelector('[data-role="error-state"]')).toBeNull();
+  });
+
+  it('load after auto-retry clears the loading overlay', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    const root = tool.render();
+    const img = root.querySelector<HTMLImageElement>('img');
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+    if (!img || !figure) throw new Error('DOM missing');
+
+    img.dispatchEvent(new Event('error'));
+    expect(figure.getAttribute('data-loading')).toBe('true');
+    img.dispatchEvent(new Event('load'));
+    expect(figure.getAttribute('data-loading')).toBeNull();
+    expect(root.getAttribute('data-state')).toBe('rendered');
+  });
+
+  it('second consecutive img error falls through to broken image state', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    const root = tool.render();
+    const img = root.querySelector<HTMLImageElement>('img');
+    if (!img) throw new Error('img missing');
+
+    img.dispatchEvent(new Event('error'));
+    img.dispatchEvent(new Event('error'));
+
+    expect(root.getAttribute('data-state')).toBe('error');
+    expect(root.querySelector('[data-role="error-state"]')).not.toBeNull();
+  });
+});
+
 describe('updateOverlayCompact', () => {
   it('sets data-compact="true" when width below threshold', () => {
     const el = document.createElement('div');

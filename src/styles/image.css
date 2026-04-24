@@ -1022,3 +1022,23 @@
   animation: blok-image-retry-spin 0.65s linear infinite;
 }
 
+/* Auto-retry loading overlay — img failed once; re-fetching. Scrim + spinner. */
+[data-blok-tool="image"] .blok-image-inner[data-loading="true"] img {
+  opacity: 0.45;
+  filter: blur(3px);
+}
+[data-blok-tool="image"] .blok-image-inner[data-loading="true"]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--blok-space-6);
+  height: var(--blok-space-6);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--blok-text-primary) 20%, transparent);
+  border-top-color: var(--blok-text-primary);
+  animation: blok-image-retry-spin 0.7s linear infinite;
+  pointer-events: none;
+}
+

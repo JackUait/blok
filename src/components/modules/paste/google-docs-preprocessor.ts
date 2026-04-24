@@ -116,10 +116,30 @@ function splitAncestorsAroundImage(img: Element, topLevel: Element): { before: N
   return reduce(img, null, null);
 }
 
+function hasTableAncestorWithin(node: Element, wrapper: HTMLElement): boolean {
+  let current: Element | null = node.parentElement;
+
+  while (current !== null && current !== wrapper) {
+    if (current.tagName === 'TABLE') {
+      return true;
+    }
+    current = current.parentElement;
+  }
+
+  return false;
+}
+
 function promoteImages(wrapper: HTMLElement): void {
   const imgs = Array.from(wrapper.querySelectorAll('img'));
 
   for (const img of imgs) {
+    /**
+     * Images inside a <table> must stay in their cell. Promoting them would
+     * split the table around the image boundary, destroying the original
+     * row/column layout and scattering the cell contents across half-tables.
+     */
+    if (hasTableAncestorWithin(img, wrapper)) continue;
+
     const topLevel = findTopLevelAncestor(img, wrapper);
 
     if (!topLevel) continue;
@@ -333,9 +353,30 @@ function buildMarkWrapper(
  *
  * @returns replacement HTML string, or `null` if the span should be left as-is
  */
+const HEADING_TAGS = new Set(['H1', 'H2', 'H3', 'H4', 'H5', 'H6']);
+
+function hasHeadingAncestor(node: Element): boolean {
+  let current: Element | null = node.parentElement;
+
+  while (current !== null) {
+    if (HEADING_TAGS.has(current.tagName)) {
+      return true;
+    }
+    current = current.parentElement;
+  }
+
+  return false;
+}
+
 function convertSpanToSemanticHtml(span: Element, isGoogleDocs: boolean): string | null {
   const style = span.getAttribute('style') ?? '';
-  const isBold = /font-weight\s*:\s*(700|bold)/i.test(style);
+  /**
+   * Headings are already rendered bold. A span with font-weight:700 inside a
+   * heading is the default weight Google Docs writes — treating it as bold
+   * would wrap the text in `<b>`, producing `<strong>` in saved data and
+   * visibly doubling the weight.
+   */
+  const isBold = /font-weight\s*:\s*(700|bold)/i.test(style) && !hasHeadingAncestor(span);
   const isItalic = /font-style\s*:\s*italic/i.test(style);
 
   const colorMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(style);

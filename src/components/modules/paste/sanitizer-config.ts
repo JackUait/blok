@@ -93,7 +93,16 @@ export class SanitizerConfigBuilder {
    * Special handling for table sanitization.
    */
   public sanitizeTable(table: HTMLElement, config: SanitizerConfig): HTMLElement | null {
-    const cleanTableHTML = clean(table.outerHTML, config);
+    /**
+     * Allow `<img>` inside table cells so pasted images (e.g. from Google Docs
+     * tables) survive sanitization and end up in the cell's paragraph content
+     * rather than being stripped silently.
+     */
+    const tableConfig: SanitizerConfig = {
+      ...config,
+      img: { src: true, alt: true, width: true, height: true },
+    };
+    const cleanTableHTML = clean(table.outerHTML, tableConfig);
     const tmpWrapper = document.createElement('div');
 
     tmpWrapper.innerHTML = cleanTableHTML;

@@ -218,7 +218,7 @@
   "tools.link.emailAddress": "Sähköpostiosoite",
   "tools.link.jumpToSection": "Siirry osioon",
   "tools.link.webLink": "Linkki verkkosivulle",
-  "tools.code.autoDetected": "auto",
+  "tools.code.autoDetected": "automaattisesti",
   "tools.code.plainText": "Pelkkä teksti",
   "tools.image.alignment": "Tasaus",
   "tools.image.alignmentLeft": "Vasen",

@@ -46,6 +46,10 @@ export interface ImageData extends BlockToolData {
   alt?: string;
   /** Original filename, when known */
   fileName?: string;
+  /** Intrinsic pixel width of the source image. Cached after first successful load. */
+  naturalWidth?: number;
+  /** Intrinsic pixel height of the source image. Cached after first successful load. */
+  naturalHeight?: number;
 }
 
 /**

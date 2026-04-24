@@ -47,6 +47,7 @@ import {
 } from './ui';
 import { openCropModal } from './crop-modal';
 import { openAltPopover } from './alt-popover';
+import { probeImageDimensions } from './probe-dimensions';
 import { renderUploadingState, type UploadingStateElement } from './uploading-state';
 import { Uploader, type UploadResult } from './uploader';
 
@@ -103,6 +104,8 @@ export class ImageTool implements BlockTool {
     if (this.data.frame !== undefined) out.frame = this.data.frame;
     if (this.data.rounded !== undefined) out.rounded = this.data.rounded;
     if (this.data.captionVisible !== undefined) out.captionVisible = this.data.captionVisible;
+    if (this.data.naturalWidth !== undefined) out.naturalWidth = this.data.naturalWidth;
+    if (this.data.naturalHeight !== undefined) out.naturalHeight = this.data.naturalHeight;
     if (this.data.crop !== undefined) {
       const { x, y, w, h, shape } = this.data.crop;
       const isFull = x === 0 && y === 0 && w === 100 && h === 100;
@@ -236,6 +239,23 @@ export class ImageTool implements BlockTool {
     this.renderState();
   }
 
+  private cacheNaturalDimensions(imgEl: HTMLImageElement): void {
+    const w = imgEl.naturalWidth;
+    const h = imgEl.naturalHeight;
+    if (w <= 0 || h <= 0) return;
+    if (this.data.naturalWidth === w && this.data.naturalHeight === h) return;
+    this.data.naturalWidth = w;
+    this.data.naturalHeight = h;
+    this.block.dispatchChange();
+  }
+
+  private applyLoadingDimensions(figure: HTMLElement, imgEl: HTMLImageElement, width: number, height: number): void {
+    if (figure.getAttribute('data-loading') !== 'true') return;
+    figure.style.setProperty('aspect-ratio', `${width} / ${height}`);
+    figure.style.setProperty('min-height', '0px');
+    imgEl.style.setProperty('min-height', '0px');
+  }
+
   private handleImgLoadFailure(imgEl: HTMLImageElement, figure: HTMLElement): void {
     if (this.reloadAttempts >= 1) {
       figure.removeAttribute('data-loading');
@@ -245,6 +265,16 @@ export class ImageTool implements BlockTool {
     this.reloadAttempts++;
     figure.setAttribute('data-loading', 'true');
     const src = this.data.url;
+    const cachedW = this.data.naturalWidth;
+    const cachedH = this.data.naturalHeight;
+    if (cachedW && cachedH) {
+      this.applyLoadingDimensions(figure, imgEl, cachedW, cachedH);
+    } else {
+      void probeImageDimensions(src).then((dims) => {
+        if (!dims) return;
+        this.applyLoadingDimensions(figure, imgEl, dims.width, dims.height);
+      });
+    }
     imgEl.setAttribute('src', '');
     imgEl.setAttribute('src', src);
   }
@@ -563,6 +593,9 @@ export class ImageTool implements BlockTool {
   private renderRendered(): void {
     if (!this.root) return;
     const figure = renderImage(this.data);
+    if (this.data.naturalWidth && this.data.naturalHeight) {
+      figure.style.setProperty('aspect-ratio', `${this.data.naturalWidth} / ${this.data.naturalHeight}`);
+    }
 
     const imgEl = figure.querySelector('img');
     // FLIP origin: the visible element. With an active crop that's the crop wrapper
@@ -573,7 +606,13 @@ export class ImageTool implements BlockTool {
       imgEl.addEventListener('click', () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, crop: this.data.crop, origin: originEl, i18n: this.api.i18n, navigation: this.collectNavigation() }));
       this.reloadAttempts = 0;
       imgEl.addEventListener('error', () => this.handleImgLoadFailure(imgEl, figure));
-      imgEl.addEventListener('load', () => figure.removeAttribute('data-loading'));
+      imgEl.addEventListener('load', () => {
+        figure.removeAttribute('data-loading');
+        figure.style.removeProperty('aspect-ratio');
+        figure.style.removeProperty('min-height');
+        imgEl.style.removeProperty('min-height');
+        this.cacheNaturalDimensions(imgEl);
+      });
       if (imgEl.complete && imgEl.naturalWidth === 0) {
         this.applyBrokenImage();
         return;

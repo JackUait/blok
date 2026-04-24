@@ -1386,3 +1386,128 @@ describe('ImageTool — lightbox navigation wiring', () => {
   });
 });
 
+describe('ImageTool — auto-retry loading dimensions', () => {
+  class MockImage {
+    public onload: (() => void) | null = null;
+    public onerror: (() => void) | null = null;
+    public naturalWidth = 0;
+    public naturalHeight = 0;
+    private _src = '';
+    public static lastInstance: MockImage | null = null;
+    constructor() {
+      MockImage.lastInstance = this;
+    }
+    public set src(value: string) {
+      this._src = value;
+    }
+    public get src(): string {
+      return this._src;
+    }
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    MockImage.lastInstance = null;
+    vi.stubGlobal('Image', MockImage);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  const flushMicrotasks = async (): Promise<void> => {
+    for (let i = 0; i < 5; i++) await Promise.resolve();
+  };
+
+  it('applies probed aspect-ratio to the figure when retry begins', async () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/cat.png' }));
+    const root = tool.render();
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+    const imgEl = root.querySelector<HTMLImageElement>('img');
+    if (!figure || !imgEl) throw new Error('figure or img missing');
+
+    imgEl.dispatchEvent(new Event('error'));
+    expect(figure.getAttribute('data-loading')).toBe('true');
+
+    await flushMicrotasks();
+    const probe = MockImage.lastInstance;
+    if (!probe) throw new Error('probe Image not constructed');
+    probe.naturalWidth = 600;
+    probe.naturalHeight = 300;
+    probe.onload?.();
+    await flushMicrotasks();
+
+    expect(figure.style.aspectRatio).toBe('600 / 300');
+    expect(figure.style.minHeight).toBe('0px');
+  });
+
+  it('does not set aspect-ratio when probe fails', async () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/bad.png' }));
+    const root = tool.render();
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+    const imgEl = root.querySelector<HTMLImageElement>('img');
+    if (!figure || !imgEl) throw new Error('figure or img missing');
+
+    imgEl.dispatchEvent(new Event('error'));
+    await flushMicrotasks();
+    const probe = MockImage.lastInstance;
+    if (!probe) throw new Error('probe Image not constructed');
+    probe.onerror?.();
+    await flushMicrotasks();
+
+    expect(figure.style.aspectRatio).toBe('');
+  });
+
+  it('pre-sizes the figure on initial render when naturalWidth/naturalHeight are cached', () => {
+    const tool = new ImageTool(createOptions({
+      url: 'https://opaque.example.com/z.png',
+      naturalWidth: 1600,
+      naturalHeight: 900,
+    }));
+    const root = tool.render();
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+    if (!figure) throw new Error('figure missing');
+    expect(figure.style.aspectRatio).toBe('1600 / 900');
+  });
+
+  it('applies aspect-ratio synchronously from persisted naturalWidth/naturalHeight', async () => {
+    const tool = new ImageTool(createOptions({
+      url: 'https://opaque.example.com/x.png',
+      naturalWidth: 1024,
+      naturalHeight: 512,
+    }));
+    const root = tool.render();
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+    const imgEl = root.querySelector<HTMLImageElement>('img');
+    if (!figure || !imgEl) throw new Error('figure or img missing');
+
+    imgEl.dispatchEvent(new Event('error'));
+    expect(figure.style.aspectRatio).toBe('1024 / 512');
+    expect(MockImage.lastInstance).toBeNull();
+  });
+
+  it('save() persists naturalWidth and naturalHeight', () => {
+    const tool = new ImageTool(createOptions({
+      url: 'https://x/y.png',
+      naturalWidth: 640,
+      naturalHeight: 480,
+    }));
+    tool.render();
+    expect(tool.save()).toMatchObject({ naturalWidth: 640, naturalHeight: 480 });
+  });
+
+  it('skips Image probe when URL query params already encode dimensions', async () => {
+    const tool = new ImageTool(createOptions({ url: 'https://cdn.example.com/cat.png?w=800&h=400' }));
+    const root = tool.render();
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+    const imgEl = root.querySelector<HTMLImageElement>('img');
+    if (!figure || !imgEl) throw new Error('figure or img missing');
+
+    imgEl.dispatchEvent(new Event('error'));
+    await flushMicrotasks();
+
+    expect(MockImage.lastInstance).toBeNull();
+    expect(figure.style.aspectRatio).toBe('800 / 400');
+  });
+});
+

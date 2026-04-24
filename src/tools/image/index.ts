@@ -38,6 +38,7 @@ import { ImageError } from './errors';
 import { attachResizeHandle, type ResizeEdge } from './resizer';
 import { widthForAspectChange } from './crop-math';
 import {
+  applyAutoFull,
   openLightbox,
   renderCaptionRow,
   renderImage,
@@ -640,8 +641,19 @@ export class ImageTool implements BlockTool {
   }
 
   private observeOverlayWidth(figure: HTMLElement, overlay: HTMLElement): void {
-    const sync = (): void => updateOverlayCompact(overlay, figure.clientWidth);
+    const img = figure.querySelector<HTMLImageElement>('img');
+    const sync = (): void => {
+      if (this.root && img && img.naturalWidth > 0) {
+        const container = this.root.parentElement;
+        const containerWidth = container?.clientWidth ?? figure.clientWidth;
+        applyAutoFull(this.root, img, containerWidth);
+      }
+      updateOverlayCompact(overlay, figure.clientWidth, figure.clientHeight);
+    };
     sync();
+    if (img && !img.complete) {
+      img.addEventListener('load', sync, { once: true });
+    }
     if (typeof ResizeObserver === 'undefined') return;
     this.overlayResizeObserver = new ResizeObserver(sync);
     this.overlayResizeObserver.observe(figure);

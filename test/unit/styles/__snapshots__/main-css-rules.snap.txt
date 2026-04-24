@@ -2991,6 +2991,10 @@
   width: 100%;
 }
 
+[data-blok-tool="image"][data-auto-full="true"] .blok-image-inner {
+  width: 100%;
+}
+
 [data-blok-tool="image"] .blok-image-inner img {
   display: block;
   width: 100%;

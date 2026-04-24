@@ -916,13 +916,57 @@ export interface OverlayState {
  * to comfortably fit the full row (roughly sm-size territory).
  */
 export const OVERLAY_COMPACT_THRESHOLD = 230;
+/**
+ * Below this figure height the overlay collapses too — a short image can't
+ * fit the ~46px toolbar row without colliding with the resize handles.
+ */
+export const OVERLAY_COMPACT_HEIGHT_THRESHOLD = 80;
+
+/**
+ * Predict whether an image would still render too short at full container
+ * width (data-size="full"). Used to force the layout to full + compact
+ * overlay for banner-shaped / tiny-natural images that otherwise collide
+ * with the resize handles and toolbar row.
+ */
+export function isTinyImage(
+  naturalWidth: number,
+  naturalHeight: number,
+  containerWidth: number,
+  heightThreshold: number = OVERLAY_COMPACT_HEIGHT_THRESHOLD
+): boolean {
+  if (naturalWidth <= 0 || naturalHeight <= 0 || containerWidth <= 0) return false;
+  const fullWidthHeight = containerWidth * (naturalHeight / naturalWidth);
+  return fullWidthHeight < heightThreshold;
+}
+
+/**
+ * Flag the block root for auto-full layout when the source image is too
+ * short to host the toolbar + resize handles at its default size. CSS keys
+ * off the attribute to override `data-size` and stretch the figure to the
+ * full container width.
+ */
+export function applyAutoFull(
+  root: HTMLElement,
+  img: Pick<HTMLImageElement, 'naturalWidth' | 'naturalHeight'>,
+  containerWidth: number
+): void {
+  if (isTinyImage(img.naturalWidth, img.naturalHeight, containerWidth)) {
+    root.setAttribute('data-auto-full', 'true');
+  } else {
+    root.removeAttribute('data-auto-full');
+  }
+}
 
 export function updateOverlayCompact(
   overlay: HTMLElement,
   width: number,
-  threshold: number = OVERLAY_COMPACT_THRESHOLD
+  height?: number,
+  threshold: number = OVERLAY_COMPACT_THRESHOLD,
+  heightThreshold: number = OVERLAY_COMPACT_HEIGHT_THRESHOLD
 ): void {
-  if (width > 0 && width < threshold) {
+  const tooNarrow = width > 0 && width < threshold;
+  const tooShort = height !== undefined && height > 0 && height < heightThreshold;
+  if (tooNarrow || tooShort) {
     overlay.setAttribute('data-compact', 'true');
   } else {
     overlay.removeAttribute('data-compact');

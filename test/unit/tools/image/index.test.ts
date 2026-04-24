@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { ImageTool } from '../../../../src/tools/image';
-import { updateOverlayCompact } from '../../../../src/tools/image/ui';
+import { updateOverlayCompact, isTinyImage, applyAutoFull } from '../../../../src/tools/image/ui';
 import type { ImageData, ImageConfig } from '../../../../types/tools/image';
 import type { API, BlockToolConstructorOptions, BlockAPI, FilePasteEvent, HTMLPasteEvent, PatternPasteEvent } from '../../../../types';
 
@@ -1039,6 +1039,57 @@ describe('updateOverlayCompact', () => {
     const el = document.createElement('div');
     updateOverlayCompact(el, 0);
     expect(el.getAttribute('data-compact')).toBeNull();
+  });
+
+  it('sets data-compact when height below threshold even if width is wide', () => {
+    const el = document.createElement('div');
+    updateOverlayCompact(el, 600, 50);
+    expect(el.getAttribute('data-compact')).toBe('true');
+  });
+
+  it('does not force compact when height omitted', () => {
+    const el = document.createElement('div');
+    updateOverlayCompact(el, 600);
+    expect(el.getAttribute('data-compact')).toBeNull();
+  });
+
+  it('removes data-compact when both dimensions are comfortable', () => {
+    const el = document.createElement('div');
+    el.setAttribute('data-compact', 'true');
+    updateOverlayCompact(el, 600, 200);
+    expect(el.getAttribute('data-compact')).toBeNull();
+  });
+});
+
+describe('isTinyImage', () => {
+  it('returns true when full-width render height is below threshold', () => {
+    // 1400x80 natural image, 1000px container → rendered 57px tall
+    expect(isTinyImage(1400, 80, 1000)).toBe(true);
+  });
+
+  it('returns false when full-width render height clears threshold', () => {
+    // 1000x600 natural, 800px container → rendered 480px
+    expect(isTinyImage(1000, 600, 800)).toBe(false);
+  });
+
+  it('returns false when any dimension is missing', () => {
+    expect(isTinyImage(0, 80, 1000)).toBe(false);
+    expect(isTinyImage(1400, 0, 1000)).toBe(false);
+    expect(isTinyImage(1400, 80, 0)).toBe(false);
+  });
+});
+
+describe('applyAutoFull', () => {
+  it('sets data-auto-full="true" on root when image is tiny', () => {
+    const root = document.createElement('div');
+    applyAutoFull(root, { naturalWidth: 1400, naturalHeight: 80 } as HTMLImageElement, 1000);
+    expect(root.getAttribute('data-auto-full')).toBe('true');
+  });
+
+  it('does not set data-auto-full when image height is ample', () => {
+    const root = document.createElement('div');
+    applyAutoFull(root, { naturalWidth: 1000, naturalHeight: 600 } as HTMLImageElement, 800);
+    expect(root.getAttribute('data-auto-full')).toBeNull();
   });
 });
 

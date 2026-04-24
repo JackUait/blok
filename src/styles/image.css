@@ -19,6 +19,9 @@
 [data-blok-tool="image"][data-size="md"]   .blok-image-inner { width: 520px; }
 [data-blok-tool="image"][data-size="lg"]   .blok-image-inner { width: 100%; }
 [data-blok-tool="image"][data-size="full"] .blok-image-inner { width: 100%; }
+/* banner-shaped / tiny-natural images: force full width so resize handles
+   and toolbar row don't collide with a short figure. */
+[data-blok-tool="image"][data-auto-full="true"] .blok-image-inner { width: 100%; }
 
 [data-blok-tool="image"] .blok-image-inner img {
   display: block;

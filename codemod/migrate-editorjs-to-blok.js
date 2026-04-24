@@ -973,7 +973,8 @@ const BLOCK_TYPE_TRANSFORMS = {
  *
  *   - `withBorder: true`  → `frame: 'border'` (false: drop, default is 'none')
  *   - `withBackground`    → drop entirely (no Blok equivalent)
- *   - `stretched: true`   → `size: 'full'`   (false: drop)
+ *   - `stretched`         → drop; every migrated image defaults to `size: 'full'`
+ *                           unless the source already carried an explicit `size`.
  *
  * Unknown fields pass through untouched. Other block types pass through too;
  * type renames are handled separately.
@@ -997,7 +998,7 @@ function migrateLegacyBlockShape(block) {
     file: _file,
     withBorder,
     withBackground: _withBackground,
-    stretched,
+    stretched: _stretched,
     ...rest
   } = block.data;
 
@@ -1005,9 +1006,9 @@ function migrateLegacyBlockShape(block) {
     ...block,
     data: {
       url: file.url,
+      size: 'full',
       ...rest,
       ...(withBorder === true ? { frame: 'border' } : {}),
-      ...(stretched === true ? { size: 'full' } : {}),
     },
   };
 }

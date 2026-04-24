@@ -1303,15 +1303,35 @@ test('drops withBackground: true without any Blok equivalent', () => {
   assertEqual(parsed.blocks[0].data.withBackground, undefined, 'withBackground must be dropped');
 });
 
-test('drops stretched: false without adding size', () => {
+test('defaults legacy image to size: full when stretched is absent', () => {
+  const input = JSON.stringify({
+    blocks: [{ type: 'image', data: { file: { url: 'u' }, caption: 'c' } }],
+  }, null, 2);
+  const result = applyBlockTypeTransforms(input);
+  const parsed = JSON.parse(result);
+  assertEqual(parsed.blocks[0].data.url, 'u');
+  assertEqual(parsed.blocks[0].data.size, 'full', 'size defaults to full');
+});
+
+test('overrides stretched: false with default size: full', () => {
   const input = JSON.stringify({
     blocks: [{ type: 'image', data: { file: { url: 'u' }, stretched: false } }],
   }, null, 2);
   const result = applyBlockTypeTransforms(input);
   const parsed = JSON.parse(result);
   assertEqual(parsed.blocks[0].data.url, 'u');
-  assertEqual(parsed.blocks[0].data.size, undefined, 'no size on stretched: false');
+  assertEqual(parsed.blocks[0].data.size, 'full', 'default full even when stretched: false');
   assertEqual(parsed.blocks[0].data.stretched, undefined, 'stretched must be dropped');
+});
+
+test('preserves explicit size in legacy image data', () => {
+  const input = JSON.stringify({
+    blocks: [{ type: 'image', data: { file: { url: 'u' }, size: 'medium' } }],
+  }, null, 2);
+  const result = applyBlockTypeTransforms(input);
+  const parsed = JSON.parse(result);
+  assertEqual(parsed.blocks[0].data.url, 'u');
+  assertEqual(parsed.blocks[0].data.size, 'medium', 'explicit size wins over default');
 });
 
 test('passes unknown legacy image fields through (future-proof)', () => {

@@ -1313,14 +1313,14 @@ test('defaults legacy image to size: full when stretched is absent', () => {
   assertEqual(parsed.blocks[0].data.size, 'full', 'size defaults to full');
 });
 
-test('overrides stretched: false with default size: full', () => {
+test('inherits stretched: false as size: lg', () => {
   const input = JSON.stringify({
     blocks: [{ type: 'image', data: { file: { url: 'u' }, stretched: false } }],
   }, null, 2);
   const result = applyBlockTypeTransforms(input);
   const parsed = JSON.parse(result);
   assertEqual(parsed.blocks[0].data.url, 'u');
-  assertEqual(parsed.blocks[0].data.size, 'full', 'default full even when stretched: false');
+  assertEqual(parsed.blocks[0].data.size, 'lg', 'stretched:false inherits as lg');
   assertEqual(parsed.blocks[0].data.stretched, undefined, 'stretched must be dropped');
 });
 

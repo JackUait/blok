@@ -973,8 +973,10 @@ const BLOCK_TYPE_TRANSFORMS = {
  *
  *   - `withBorder: true`  → `frame: 'border'` (false: drop, default is 'none')
  *   - `withBackground`    → drop entirely (no Blok equivalent)
- *   - `stretched`         → drop; every migrated image defaults to `size: 'full'`
- *                           unless the source already carried an explicit `size`.
+ *   - `stretched: true`   → `size: 'full'`
+ *   - `stretched: false`  → `size: 'lg'` (inherit non-stretched intent)
+ *   - `stretched` absent  → `size: 'full'` (default)
+ *   Explicit `size` in source data always wins.
  *
  * Unknown fields pass through untouched. Other block types pass through too;
  * type renames are handled separately.
@@ -998,15 +1000,17 @@ function migrateLegacyBlockShape(block) {
     file: _file,
     withBorder,
     withBackground: _withBackground,
-    stretched: _stretched,
+    stretched,
     ...rest
   } = block.data;
+
+  const inheritedSize = stretched === false ? 'lg' : 'full';
 
   return {
     ...block,
     data: {
       url: file.url,
-      size: 'full',
+      size: inheritedSize,
       ...rest,
       ...(withBorder === true ? { frame: 'border' } : {}),
     },

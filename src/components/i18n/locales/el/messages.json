@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Σμίκρυνση",
   "tools.image.resetZoom": "Επαναφορά ζουμ",
   "tools.image.errorUploadFailed": "Η μεταφόρτωση απέτυχε",
+  "tools.image.errorUploadFailedTitle": "Η μεταφόρτωση απέτυχε",
   "tools.image.errorSourceOffline": "Η πηγή μπορεί να έχει μετακινηθεί ή να είναι εκτός σύνδεσης.",
   "tools.image.errorUnavailable": "Η εικόνα δεν είναι διαθέσιμη",
+  "tools.image.errorImageFailedToLoad": "Αποτυχία φόρτωσης εικόνας",
   "tools.image.errorDefaultTitle": "Αδυναμία φόρτωσης εικόνας",
   "tools.image.errorDefaultMessage": "Το URL επέστρεψε σφάλμα. Δοκιμάστε άλλη πηγή ή μεταφορτώστε ξανά το αρχείο.",
   "tools.image.errorRetry": "Επανάληψη",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Ολοκληρώθηκε",
   "tools.database.defaultViewBoard": "Πίνακας"
 }
-

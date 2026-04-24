@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "បង្រួម",
   "tools.image.resetZoom": "កំណត់ពង្រីកឡើងវិញ",
   "tools.image.errorUploadFailed": "ការបញ្ជូនបរាជ័យ",
+  "tools.image.errorUploadFailedTitle": "ការបញ្ចូលបានបរាជ័យ",
   "tools.image.errorSourceOffline": "ប្រភពអាចត្រូវបានផ្លាស់ទី ឬនៅក្រៅបណ្ដាញ។",
   "tools.image.errorUnavailable": "រូបភាពមិនមាន",
+  "tools.image.errorImageFailedToLoad": "មិនអាចផ្ទុករូបភាពបានទេ",
   "tools.image.errorDefaultTitle": "មិនអាចផ្ទុករូបភាពបាន",
   "tools.image.errorDefaultMessage": "URL បានត្រឡប់កំហុស។ សូមព្យាយាមប្រភពផ្សេង ឬបញ្ជូនឯកសារឡើងវិញ។",
   "tools.image.errorRetry": "ព្យាយាមម្ដងទៀត",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "រួចរាល់",
   "tools.database.defaultViewBoard": "ក្ដារ"
 }
-

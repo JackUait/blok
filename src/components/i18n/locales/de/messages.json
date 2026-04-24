@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Verkleinern",
   "tools.image.resetZoom": "Zoom zurücksetzen",
   "tools.image.errorUploadFailed": "Upload fehlgeschlagen",
+  "tools.image.errorUploadFailedTitle": "Upload fehlgeschlagen",
   "tools.image.errorSourceOffline": "Die Quelle wurde möglicherweise verschoben oder ist offline.",
   "tools.image.errorUnavailable": "Bild nicht verfügbar",
+  "tools.image.errorImageFailedToLoad": "Bild konnte nicht geladen werden",
   "tools.image.errorDefaultTitle": "Bild konnte nicht geladen werden",
   "tools.image.errorDefaultMessage": "Die URL hat einen Fehler zurückgegeben. Versuche eine andere Quelle oder lade die Datei erneut hoch.",
   "tools.image.errorRetry": "Erneut versuchen",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Erledigt",
   "tools.database.defaultViewBoard": "Board"
 }
-

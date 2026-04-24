@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Kicsinyítés",
   "tools.image.resetZoom": "Nagyítás visszaállítása",
   "tools.image.errorUploadFailed": "A feltöltés sikertelen",
+  "tools.image.errorUploadFailedTitle": "A feltöltés sikertelen",
   "tools.image.errorSourceOffline": "Lehet, hogy a forrás elérhetetlen vagy megszűnt.",
   "tools.image.errorUnavailable": "A kép nem elérhető",
+  "tools.image.errorImageFailedToLoad": "A kép betöltése sikertelen",
   "tools.image.errorDefaultTitle": "A kép betöltése sikertelen",
   "tools.image.errorDefaultMessage": "A megadott URL hibát adott vissza. Próbálj másik forrást, vagy töltsd fel újra a fájlt.",
   "tools.image.errorRetry": "Újra",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Kész",
   "tools.database.defaultViewBoard": "Tábla"
 }
-

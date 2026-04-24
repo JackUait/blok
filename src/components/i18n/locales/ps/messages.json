@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "کوچنی کول",
   "tools.image.resetZoom": "زوم بیا تنظیم",
   "tools.image.errorUploadFailed": "اپلوډ ناکام شو",
+  "tools.image.errorUploadFailedTitle": "اپلوډول ناکام شو",
   "tools.image.errorSourceOffline": "ممکنه دی چې سرچینه لیږدول شوې یا آفلاین وي.",
   "tools.image.errorUnavailable": "انځور شتون نه لري",
+  "tools.image.errorImageFailedToLoad": "انځور نشو پورته کولی",
   "tools.image.errorDefaultTitle": "انځور بار نشو",
   "tools.image.errorDefaultMessage": "URL یوه تېروتنه راوستله. بله سرچینه وازمویئ یا فایل بیا اپلوډ کړئ.",
   "tools.image.errorRetry": "بیا هڅه",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "بشپړ",
   "tools.database.defaultViewBoard": "بورډ"
 }
-

@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "സൂം ഔട്ട്",
   "tools.image.resetZoom": "സൂം റീസെറ്റ്",
   "tools.image.errorUploadFailed": "അപ്‌ലോഡ് പരാജയപ്പെട്ടു",
+  "tools.image.errorUploadFailedTitle": "അപ്‌ലോഡ് പരാജയപ്പെട്ടു",
   "tools.image.errorSourceOffline": "ഉറവിടം മാറ്റിയതോ ഓഫ്‌ലൈനിലോ ആകാം.",
   "tools.image.errorUnavailable": "ചിത്രം ലഭ്യമല്ല",
+  "tools.image.errorImageFailedToLoad": "ചിത്രം ലോഡ് ചെയ്യാനായില്ല",
   "tools.image.errorDefaultTitle": "ചിത്രം ലോഡ് ചെയ്യാനായില്ല",
   "tools.image.errorDefaultMessage": "URL ഒരു പിശക് നൽകി. മറ്റൊരു ഉറവിടം പരീക്ഷിക്കുക അല്ലെങ്കിൽ ഫയൽ വീണ്ടും അപ്‌ലോഡ് ചെയ്യുക.",
   "tools.image.errorRetry": "വീണ്ടും ശ്രമിക്കുക",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "പൂർത്തിയായി",
   "tools.database.defaultViewBoard": "ബോർഡ്"
 }
-

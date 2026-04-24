@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Loitonna",
   "tools.image.resetZoom": "Nollaa zoomaus",
   "tools.image.errorUploadFailed": "Lataus epäonnistui",
+  "tools.image.errorUploadFailedTitle": "Lataus epäonnistui",
   "tools.image.errorSourceOffline": "Lähde on voitu siirtää tai se on offline-tilassa.",
   "tools.image.errorUnavailable": "Kuva ei ole saatavilla",
+  "tools.image.errorImageFailedToLoad": "Kuvan lataaminen epäonnistui",
   "tools.image.errorDefaultTitle": "Kuvaa ei voitu ladata",
   "tools.image.errorDefaultMessage": "URL palautti virheen. Kokeile toista lähdettä tai lataa tiedosto uudelleen.",
   "tools.image.errorRetry": "Yritä uudelleen",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Valmis",
   "tools.database.defaultViewBoard": "Taulu"
 }
-

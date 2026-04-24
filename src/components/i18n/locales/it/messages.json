@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Zoom indietro",
   "tools.image.resetZoom": "Reimposta zoom",
   "tools.image.errorUploadFailed": "Caricamento non riuscito",
+  "tools.image.errorUploadFailedTitle": "Caricamento non riuscito",
   "tools.image.errorSourceOffline": "La fonte potrebbe essere stata spostata o non essere raggiungibile.",
   "tools.image.errorUnavailable": "Immagine non disponibile",
+  "tools.image.errorImageFailedToLoad": "Impossibile caricare l'immagine",
   "tools.image.errorDefaultTitle": "Impossibile caricare l’immagine",
   "tools.image.errorDefaultMessage": "L’URL ha restituito un errore. Prova con un’altra fonte o ricarica il file.",
   "tools.image.errorRetry": "Riprova",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Completato",
   "tools.database.defaultViewBoard": "Bacheca"
 }
-

@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Thu nhỏ",
   "tools.image.resetZoom": "Đặt lại thu phóng",
   "tools.image.errorUploadFailed": "Tải lên thất bại",
+  "tools.image.errorUploadFailedTitle": "Tải lên thất bại",
   "tools.image.errorSourceOffline": "Nguồn có thể đã di chuyển hoặc ngoại tuyến.",
   "tools.image.errorUnavailable": "Không có hình ảnh",
+  "tools.image.errorImageFailedToLoad": "Không thể tải ảnh",
   "tools.image.errorDefaultTitle": "Không thể tải hình ảnh",
   "tools.image.errorDefaultMessage": "URL trả về lỗi. Hãy thử nguồn khác hoặc tải lại tệp.",
   "tools.image.errorRetry": "Thử lại",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Hoàn thành",
   "tools.database.defaultViewBoard": "Bảng"
 }
-

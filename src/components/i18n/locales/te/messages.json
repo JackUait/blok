@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "జూమ్ అవుట్",
   "tools.image.resetZoom": "జూమ్ రీసెట్",
   "tools.image.errorUploadFailed": "అప్‌లోడ్ విఫలమైంది",
+  "tools.image.errorUploadFailedTitle": "అప్‌లోడ్ విఫలమైంది",
   "tools.image.errorSourceOffline": "మూలం తరలించబడి ఉండవచ్చు లేదా ఆఫ్‌లైన్‌లో ఉండవచ్చు.",
   "tools.image.errorUnavailable": "చిత్రం అందుబాటులో లేదు",
+  "tools.image.errorImageFailedToLoad": "చిత్రాన్ని లోడ్ చేయడంలో విఫలమైంది",
   "tools.image.errorDefaultTitle": "చిత్రాన్ని లోడ్ చేయలేకపోయాము",
   "tools.image.errorDefaultMessage": "URL లోపాన్ని తిరిగి ఇచ్చింది. వేరే మూలాన్ని ప్రయత్నించండి లేదా ఫైల్‌ను మళ్లీ అప్‌లోడ్ చేయండి.",
   "tools.image.errorRetry": "మళ్లీ ప్రయత్నించు",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "పూర్తయింది",
   "tools.database.defaultViewBoard": "బోర్డ్"
 }
-

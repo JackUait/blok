@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Pomanjšaj",
   "tools.image.resetZoom": "Ponastavi povečavo",
   "tools.image.errorUploadFailed": "Nalaganje ni uspelo",
+  "tools.image.errorUploadFailedTitle": "Nalaganje ni uspelo",
   "tools.image.errorSourceOffline": "Vir je morda premaknjen ali nedosegljiv.",
   "tools.image.errorUnavailable": "Slika ni na voljo",
+  "tools.image.errorImageFailedToLoad": "Slike ni bilo mogoče naložiti",
   "tools.image.errorDefaultTitle": "Slike ni mogoče naložiti",
   "tools.image.errorDefaultMessage": "Strežnik je vrnil napako. Poskusite drug vir ali znova naložite datoteko.",
   "tools.image.errorRetry": "Poskusi znova",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Končano",
   "tools.database.defaultViewBoard": "Tabla"
 }
-

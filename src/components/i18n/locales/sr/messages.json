@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Умањи",
   "tools.image.resetZoom": "Поништи увећање",
   "tools.image.errorUploadFailed": "Отпремање није успело",
+  "tools.image.errorUploadFailedTitle": "Отпремање није успело",
   "tools.image.errorSourceOffline": "Извор је можда премештен или недоступан.",
   "tools.image.errorUnavailable": "Слика није доступна",
+  "tools.image.errorImageFailedToLoad": "Слика се не може учитати",
   "tools.image.errorDefaultTitle": "Слика се не може учитати",
   "tools.image.errorDefaultMessage": "Сервер је вратио грешку. Пробајте други извор или поново отпремите датотеку.",
   "tools.image.errorRetry": "Покушај поново",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Готово",
   "tools.database.defaultViewBoard": "Табла"
 }
-

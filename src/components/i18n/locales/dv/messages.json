@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "ޒޫމް އައުޓް",
   "tools.image.resetZoom": "ޒޫމް ރީސެޓް",
   "tools.image.errorUploadFailed": "އަޕްލޯޑް ފެއިލްވީ",
+  "tools.image.errorUploadFailedTitle": "އަޕްލޯޑް ނާކަމިޔާބު",
   "tools.image.errorSourceOffline": "މަޞްދަރު ބަދަލުވެފައި ނުވަތަ އޮފްލައިންގައި ވެދާނެ.",
   "tools.image.errorUnavailable": "ފޮޓޯ ނުލިބޭ",
+  "tools.image.errorImageFailedToLoad": "ފޮޓޯ ލޯޑް ނުވި",
   "tools.image.errorDefaultTitle": "ފޮޓޯ ލޯޑެއް ނުވި",
   "tools.image.errorDefaultMessage": "URL އިން ގޯހެއް ދިނީ. އެހެން މަޞްދަރެއް ޓެސްޓްކުރޭ ނުވަތަ ފައިލް އަލުން އަޕްލޯޑް ކުރޭ.",
   "tools.image.errorRetry": "އަލުން ޓްރައި",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "ނިމިއްޖެ",
   "tools.database.defaultViewBoard": "ބޯޑް"
 }
-

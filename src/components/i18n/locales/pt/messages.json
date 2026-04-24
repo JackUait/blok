@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Reduzir",
   "tools.image.resetZoom": "Redefinir zoom",
   "tools.image.errorUploadFailed": "Falha no envio",
+  "tools.image.errorUploadFailedTitle": "Falha no envio",
   "tools.image.errorSourceOffline": "A fonte pode ter sido movida ou estar offline.",
   "tools.image.errorUnavailable": "Imagem indisponível",
+  "tools.image.errorImageFailedToLoad": "Falha ao carregar a imagem",
   "tools.image.errorDefaultTitle": "Não foi possível carregar a imagem",
   "tools.image.errorDefaultMessage": "A URL retornou um erro. Tente outra fonte ou reenvie o arquivo.",
   "tools.image.errorRetry": "Tentar novamente",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Concluído",
   "tools.database.defaultViewBoard": "Quadro"
 }
-

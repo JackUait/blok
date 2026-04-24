@@ -546,7 +546,10 @@ export class ImageTool implements BlockTool {
     if (!this.root) return;
     const isBroken = this.brokenImage;
     const el = renderErrorState({
-      title: isBroken ? this.api.i18n.t('tools.image.errorUnavailable') : undefined,
+      variant: isBroken ? 'broken' : 'upload',
+      title: isBroken
+        ? this.api.i18n.t('tools.image.errorImageFailedToLoad')
+        : this.api.i18n.t('tools.image.errorUploadFailedTitle'),
       message: this.errorMessage ?? undefined,
       onTryAgain: isBroken
         ? () => this.retryBrokenImage()

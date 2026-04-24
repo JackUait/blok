@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "დაპატარავება",
   "tools.image.resetZoom": "მასშტაბის გადატვირთვა",
   "tools.image.errorUploadFailed": "ატვირთვა ვერ მოხერხდა",
+  "tools.image.errorUploadFailedTitle": "ატვირთვა ვერ მოხერხდა",
   "tools.image.errorSourceOffline": "წყარო შესაძლოა გადატანილი ან ხაზგარეშე იყოს.",
   "tools.image.errorUnavailable": "სურათი მიუწვდომელია",
+  "tools.image.errorImageFailedToLoad": "სურათის ჩატვირთვა ვერ მოხერხდა",
   "tools.image.errorDefaultTitle": "სურათი ვერ ჩაიტვირთა",
   "tools.image.errorDefaultMessage": "URL-მ დააბრუნა შეცდომა. სცადეთ სხვა წყარო ან თავიდან ატვირთეთ ფაილი.",
   "tools.image.errorRetry": "გამეორება",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "დასრულდა",
   "tools.database.defaultViewBoard": "დაფა"
 }
-

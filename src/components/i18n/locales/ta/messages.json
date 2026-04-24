@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "சிறிதாக்கு",
   "tools.image.resetZoom": "பெரிதாக்கத்தை மீட்டமை",
   "tools.image.errorUploadFailed": "பதிவேற்றம் தோல்வி",
+  "tools.image.errorUploadFailedTitle": "பதிவேற்றம் தோல்வி",
   "tools.image.errorSourceOffline": "மூலம் நகர்த்தப்பட்டிருக்கலாம் அல்லது ஆஃப்லைனில் இருக்கலாம்.",
   "tools.image.errorUnavailable": "படம் கிடைக்கவில்லை",
+  "tools.image.errorImageFailedToLoad": "படத்தை ஏற்ற முடியவில்லை",
   "tools.image.errorDefaultTitle": "படத்தை ஏற்ற முடியவில்லை",
   "tools.image.errorDefaultMessage": "URL ஒரு பிழையை வழங்கியது. வேறு மூலத்தை முயற்சிக்கவும் அல்லது கோப்பை மீண்டும் பதிவேற்றவும்.",
   "tools.image.errorRetry": "மீண்டும் முயற்சி",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "முடிந்தது",
   "tools.database.defaultViewBoard": "பலகை"
 }
-

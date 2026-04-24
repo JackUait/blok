@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "ย่อ",
   "tools.image.resetZoom": "รีเซ็ตการซูม",
   "tools.image.errorUploadFailed": "อัปโหลดล้มเหลว",
+  "tools.image.errorUploadFailedTitle": "อัปโหลดไม่สำเร็จ",
   "tools.image.errorSourceOffline": "แหล่งที่มาอาจถูกย้ายหรือออฟไลน์",
   "tools.image.errorUnavailable": "ไม่มีรูปภาพ",
+  "tools.image.errorImageFailedToLoad": "โหลดรูปภาพไม่สำเร็จ",
   "tools.image.errorDefaultTitle": "ไม่สามารถโหลดรูปภาพได้",
   "tools.image.errorDefaultMessage": "URL คืนค่าผิดพลาด ลองแหล่งอื่นหรืออัปโหลดไฟล์อีกครั้ง",
   "tools.image.errorRetry": "ลองอีกครั้ง",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "เสร็จสิ้น",
   "tools.database.defaultViewBoard": "บอร์ด"
 }
-

@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Oddialiť",
   "tools.image.resetZoom": "Obnoviť priblíženie",
   "tools.image.errorUploadFailed": "Nahrávanie zlyhalo",
+  "tools.image.errorUploadFailedTitle": "Nahrávanie zlyhalo",
   "tools.image.errorSourceOffline": "Zdroj mohol byť presunutý alebo nedostupný.",
   "tools.image.errorUnavailable": "Obrázok nie je dostupný",
+  "tools.image.errorImageFailedToLoad": "Obrázok sa nepodarilo načítať",
   "tools.image.errorDefaultTitle": "Obrázok sa nepodarilo načítať",
   "tools.image.errorDefaultMessage": "Server vrátil chybu. Skúste iný zdroj alebo súbor nahrajte znova.",
   "tools.image.errorRetry": "Skúsiť znova",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Hotovo",
   "tools.database.defaultViewBoard": "Tabuľa"
 }
-

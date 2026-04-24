@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Zoom ud",
   "tools.image.resetZoom": "Nulstil zoom",
   "tools.image.errorUploadFailed": "Upload mislykkedes",
+  "tools.image.errorUploadFailedTitle": "Upload mislykkedes",
   "tools.image.errorSourceOffline": "Kilden kan være flyttet eller offline.",
   "tools.image.errorUnavailable": "Billede ikke tilgængeligt",
+  "tools.image.errorImageFailedToLoad": "Billedet kunne ikke indlæses",
   "tools.image.errorDefaultTitle": "Kunne ikke indlæse billedet",
   "tools.image.errorDefaultMessage": "URL’en returnerede en fejl. Prøv en anden kilde, eller upload filen igen.",
   "tools.image.errorRetry": "Prøv igen",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Færdig",
   "tools.database.defaultViewBoard": "Tavle"
 }
-

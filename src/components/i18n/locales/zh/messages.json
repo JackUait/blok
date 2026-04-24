@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "缩小",
   "tools.image.resetZoom": "重置缩放",
   "tools.image.errorUploadFailed": "上传失败",
+  "tools.image.errorUploadFailedTitle": "上传失败",
   "tools.image.errorSourceOffline": "来源可能已更改或离线。",
   "tools.image.errorUnavailable": "图片不可用",
+  "tools.image.errorImageFailedToLoad": "无法加载图片",
   "tools.image.errorDefaultTitle": "无法加载图片",
   "tools.image.errorDefaultMessage": "URL 返回错误。请尝试其他来源或重新上传文件。",
   "tools.image.errorRetry": "重试",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "已完成",
   "tools.database.defaultViewBoard": "看板"
 }
-

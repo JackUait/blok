@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Zum keluar",
   "tools.image.resetZoom": "Tetap semula zum",
   "tools.image.errorUploadFailed": "Muat naik gagal",
+  "tools.image.errorUploadFailedTitle": "Muat naik gagal",
   "tools.image.errorSourceOffline": "Sumber mungkin telah dipindahkan atau di luar talian.",
   "tools.image.errorUnavailable": "Imej tidak tersedia",
+  "tools.image.errorImageFailedToLoad": "Gambar gagal dimuatkan",
   "tools.image.errorDefaultTitle": "Tidak dapat memuatkan imej",
   "tools.image.errorDefaultMessage": "URL mengembalikan ralat. Cuba sumber lain atau muat naik semula fail.",
   "tools.image.errorRetry": "Cuba lagi",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Selesai",
   "tools.database.defaultViewBoard": "Papan"
 }
-

@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Reducir",
   "tools.image.resetZoom": "Restablecer zoom",
   "tools.image.errorUploadFailed": "Error al subir",
+  "tools.image.errorUploadFailedTitle": "Error al subir",
   "tools.image.errorSourceOffline": "Puede que la fuente se haya movido o esté sin conexión.",
   "tools.image.errorUnavailable": "Imagen no disponible",
+  "tools.image.errorImageFailedToLoad": "No se pudo cargar la imagen",
   "tools.image.errorDefaultTitle": "No se pudo cargar la imagen",
   "tools.image.errorDefaultMessage": "La URL devolvió un error. Prueba con otra fuente o vuelve a subir el archivo.",
   "tools.image.errorRetry": "Reintentar",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Hecho",
   "tools.database.defaultViewBoard": "Tablero"
 }
-

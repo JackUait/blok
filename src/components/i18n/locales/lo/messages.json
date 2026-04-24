@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "ຫຼຸດ",
   "tools.image.resetZoom": "ຕັ້ງຄ່າຊູມໃໝ່",
   "tools.image.errorUploadFailed": "ການອັບໂຫຼດບໍ່ສຳເລັດ",
+  "tools.image.errorUploadFailedTitle": "ອັບໂຫລດບໍ່ສຳເລັດ",
   "tools.image.errorSourceOffline": "ແຫຼ່ງຂໍ້ມູນອາດຖືກຍ້າຍ ຫຼື ອອບລາຍ.",
   "tools.image.errorUnavailable": "ຮູບບໍ່ມີ",
+  "tools.image.errorImageFailedToLoad": "ບໍ່ສາມາດໂຫລດຮູບໄດ້",
   "tools.image.errorDefaultTitle": "ບໍ່ສາມາດໂຫຼດຮູບໄດ້",
   "tools.image.errorDefaultMessage": "URL ສົ່ງຂໍ້ຜິດພາດ. ລອງແຫຼ່ງອື່ນ ຫຼື ອັບໂຫຼດໄຟລ໌ໃໝ່.",
   "tools.image.errorRetry": "ລອງໃໝ່",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "ສຳເລັດ",
   "tools.database.defaultViewBoard": "ກະດານ"
 }
-

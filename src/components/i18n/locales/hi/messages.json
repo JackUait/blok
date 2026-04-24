@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "ज़ूम आउट",
   "tools.image.resetZoom": "ज़ूम रीसेट",
   "tools.image.errorUploadFailed": "अपलोड विफल",
+  "tools.image.errorUploadFailedTitle": "अपलोड विफल",
   "tools.image.errorSourceOffline": "स्रोत स्थानांतरित हो सकता है या ऑफ़लाइन हो सकता है।",
   "tools.image.errorUnavailable": "छवि उपलब्ध नहीं",
+  "tools.image.errorImageFailedToLoad": "छवि लोड नहीं हो सकी",
   "tools.image.errorDefaultTitle": "छवि लोड नहीं हो सकी",
   "tools.image.errorDefaultMessage": "URL ने त्रुटि लौटाई। कोई अन्य स्रोत आज़माएं या फ़ाइल फिर से अपलोड करें।",
   "tools.image.errorRetry": "पुनः प्रयास करें",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "पूर्ण",
   "tools.database.defaultViewBoard": "बोर्ड"
 }
-

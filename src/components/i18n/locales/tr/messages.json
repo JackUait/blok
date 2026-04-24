@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Uzaklaştır",
   "tools.image.resetZoom": "Yakınlaştırmayı sıfırla",
   "tools.image.errorUploadFailed": "Yükleme başarısız",
+  "tools.image.errorUploadFailedTitle": "Yükleme başarısız",
   "tools.image.errorSourceOffline": "Kaynak taşınmış veya çevrimdışı olabilir.",
   "tools.image.errorUnavailable": "Görsel kullanılamıyor",
+  "tools.image.errorImageFailedToLoad": "Görsel yüklenemedi",
   "tools.image.errorDefaultTitle": "Görsel yüklenemedi",
   "tools.image.errorDefaultMessage": "URL bir hata döndürdü. Farklı bir kaynak deneyin veya dosyayı yeniden yükleyin.",
   "tools.image.errorRetry": "Yeniden dene",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Tamamlandı",
   "tools.database.defaultViewBoard": "Pano"
 }
-

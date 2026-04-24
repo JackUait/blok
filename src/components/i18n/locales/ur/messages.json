@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "زوم آؤٹ",
   "tools.image.resetZoom": "زوم ری سیٹ",
   "tools.image.errorUploadFailed": "اپ لوڈ ناکام",
+  "tools.image.errorUploadFailedTitle": "اپ لوڈ ناکام",
   "tools.image.errorSourceOffline": "ممکن ہے ذریعہ منتقل ہو گیا ہو یا آف لائن ہو۔",
   "tools.image.errorUnavailable": "تصویر دستیاب نہیں",
+  "tools.image.errorImageFailedToLoad": "تصویر لوڈ نہ ہو سکی",
   "tools.image.errorDefaultTitle": "تصویر لوڈ نہیں ہو سکی",
   "tools.image.errorDefaultMessage": "URL نے خرابی واپس کی۔ دوسرا ذریعہ آزمائیں یا فائل دوبارہ اپ لوڈ کریں۔",
   "tools.image.errorRetry": "دوبارہ کوشش کریں",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "مکمل",
   "tools.database.defaultViewBoard": "بورڈ"
 }
-

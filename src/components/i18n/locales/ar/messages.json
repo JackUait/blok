@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "تصغير",
   "tools.image.resetZoom": "إعادة ضبط التكبير",
   "tools.image.errorUploadFailed": "فشل الرفع",
+  "tools.image.errorUploadFailedTitle": "فشل الرفع",
   "tools.image.errorSourceOffline": "قد يكون المصدر قد نُقل أو غير متصل.",
   "tools.image.errorUnavailable": "الصورة غير متوفرة",
+  "tools.image.errorImageFailedToLoad": "تعذّر تحميل الصورة",
   "tools.image.errorDefaultTitle": "تعذّر تحميل الصورة",
   "tools.image.errorDefaultMessage": "أعاد الرابط خطأً. جرّب مصدرًا آخر أو أعد رفع الملف.",
   "tools.image.errorRetry": "إعادة المحاولة",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "منجز",
   "tools.database.defaultViewBoard": "لوحة"
 }
-

@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Kiçilt",
   "tools.image.resetZoom": "Yaxınlaşdırmanı sıfırla",
   "tools.image.errorUploadFailed": "Yükləmə uğursuz oldu",
+  "tools.image.errorUploadFailedTitle": "Yükləmə alınmadı",
   "tools.image.errorSourceOffline": "Mənbə köçürülmüş və ya oflayn ola bilər.",
   "tools.image.errorUnavailable": "Şəkil əlçatan deyil",
+  "tools.image.errorImageFailedToLoad": "Şəkil yüklənmədi",
   "tools.image.errorDefaultTitle": "Şəkil yüklənə bilmədi",
   "tools.image.errorDefaultMessage": "URL xəta qaytardı. Başqa mənbə sınayın və ya faylı yenidən yükləyin.",
   "tools.image.errorRetry": "Yenidən",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Tamamlandı",
   "tools.database.defaultViewBoard": "Lövhə"
 }
-

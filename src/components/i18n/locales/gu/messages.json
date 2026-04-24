@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "ઝૂમ આઉટ",
   "tools.image.resetZoom": "ઝૂમ રીસેટ",
   "tools.image.errorUploadFailed": "અપલોડ નિષ્ફળ",
+  "tools.image.errorUploadFailedTitle": "અપલોડ નિષ્ફળ",
   "tools.image.errorSourceOffline": "સ્રોત ખસેડાયો હોઈ શકે છે અથવા ઑફલાઇન હોઈ શકે છે.",
   "tools.image.errorUnavailable": "છબી ઉપલબ્ધ નથી",
+  "tools.image.errorImageFailedToLoad": "છબી લોડ થઈ શકી નથી",
   "tools.image.errorDefaultTitle": "છબી લોડ કરી શકાઈ નથી",
   "tools.image.errorDefaultMessage": "URL એ ભૂલ પરત કરી. બીજો સ્રોત અજમાવો અથવા ફાઈલ ફરી અપલોડ કરો.",
   "tools.image.errorRetry": "ફરી પ્રયાસ",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "પૂર્ણ",
   "tools.database.defaultViewBoard": "બોર્ડ"
 }
-

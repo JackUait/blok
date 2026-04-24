@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Zvogëlo",
   "tools.image.resetZoom": "Rivendos zmadhimin",
   "tools.image.errorUploadFailed": "Ngarkimi dështoi",
+  "tools.image.errorUploadFailedTitle": "Ngarkimi dështoi",
   "tools.image.errorSourceOffline": "Burimi mund të jetë zhvendosur ose offline.",
   "tools.image.errorUnavailable": "Imazhi nuk është në dispozicion",
+  "tools.image.errorImageFailedToLoad": "Imazhi nuk u ngarkua",
   "tools.image.errorDefaultTitle": "Imazhi nuk u ngarkua",
   "tools.image.errorDefaultMessage": "URL-ja ktheu një gabim. Provo një burim tjetër ose ringarko skedarin.",
   "tools.image.errorRetry": "Riprovo",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "E kryer",
   "tools.database.defaultViewBoard": "Tabelë"
 }
-

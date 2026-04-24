@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Atitolinti",
   "tools.image.resetZoom": "Atstatyti mastelį",
   "tools.image.errorUploadFailed": "Įkelti nepavyko",
+  "tools.image.errorUploadFailedTitle": "Įkelti nepavyko",
   "tools.image.errorSourceOffline": "Šaltinis galėjo būti perkeltas arba yra nepasiekiamas.",
   "tools.image.errorUnavailable": "Paveikslas nepasiekiamas",
+  "tools.image.errorImageFailedToLoad": "Nepavyko įkelti vaizdo",
   "tools.image.errorDefaultTitle": "Nepavyko įkelti paveikslo",
   "tools.image.errorDefaultMessage": "Serveris grąžino klaidą. Pabandykite kitą šaltinį arba įkelkite failą iš naujo.",
   "tools.image.errorRetry": "Bandyti dar kartą",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Atlikta",
   "tools.database.defaultViewBoard": "Lenta"
 }
-

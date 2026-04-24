@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "जुम आउट",
   "tools.image.resetZoom": "जुम रिसेट",
   "tools.image.errorUploadFailed": "अपलोड असफल",
+  "tools.image.errorUploadFailedTitle": "अपलोड असफल",
   "tools.image.errorSourceOffline": "स्रोत सारिएको वा अफलाइन हुन सक्छ।",
   "tools.image.errorUnavailable": "तस्विर उपलब्ध छैन",
+  "tools.image.errorImageFailedToLoad": "तस्बिर लोड गर्न सकिएन",
   "tools.image.errorDefaultTitle": "तस्विर लोड गर्न सकिएन",
   "tools.image.errorDefaultMessage": "URL ले त्रुटि फिर्ता गर्‍यो। फरक स्रोत प्रयास गर्नुहोस् वा फाइल पुनः अपलोड गर्नुहोस्।",
   "tools.image.errorRetry": "पुनः प्रयास",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "सकियो",
   "tools.database.defaultViewBoard": "बोर्ड"
 }
-

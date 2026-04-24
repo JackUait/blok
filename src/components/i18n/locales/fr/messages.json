@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Dézoomer",
   "tools.image.resetZoom": "Réinitialiser le zoom",
   "tools.image.errorUploadFailed": "Échec de l’envoi",
+  "tools.image.errorUploadFailedTitle": "Échec de l'envoi",
   "tools.image.errorSourceOffline": "La source a peut-être été déplacée ou est hors ligne.",
   "tools.image.errorUnavailable": "Image indisponible",
+  "tools.image.errorImageFailedToLoad": "Échec du chargement de l'image",
   "tools.image.errorDefaultTitle": "Impossible de charger l’image",
   "tools.image.errorDefaultMessage": "L’URL a renvoyé une erreur. Essayez une autre source ou importez de nouveau le fichier.",
   "tools.image.errorRetry": "Réessayer",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Terminé",
   "tools.database.defaultViewBoard": "Tableau"
 }
-

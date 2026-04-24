@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "জুম আউট",
   "tools.image.resetZoom": "জুম রিসেট",
   "tools.image.errorUploadFailed": "আপলোড ব্যর্থ",
+  "tools.image.errorUploadFailedTitle": "আপলোড ব্যর্থ হয়েছে",
   "tools.image.errorSourceOffline": "উৎসটি সরানো হয়ে থাকতে পারে বা অফলাইন হতে পারে।",
   "tools.image.errorUnavailable": "ছবি অনুপলব্ধ",
+  "tools.image.errorImageFailedToLoad": "ছবি লোড করা যায়নি",
   "tools.image.errorDefaultTitle": "ছবি লোড করা যায়নি",
   "tools.image.errorDefaultMessage": "URL একটি ত্রুটি ফিরিয়েছে। অন্য উৎস চেষ্টা করুন বা ফাইলটি পুনরায় আপলোড করুন।",
   "tools.image.errorRetry": "পুনরায় চেষ্টা",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "সম্পন্ন",
   "tools.database.defaultViewBoard": "বোর্ড"
 }
-

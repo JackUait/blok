@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Mag-zoom out",
   "tools.image.resetZoom": "I-reset ang zoom",
   "tools.image.errorUploadFailed": "Nabigo ang pag-upload",
+  "tools.image.errorUploadFailedTitle": "Nabigo ang pag-upload",
   "tools.image.errorSourceOffline": "Maaaring lumipat o offline na ang pinagmulan.",
   "tools.image.errorUnavailable": "Hindi available ang larawan",
+  "tools.image.errorImageFailedToLoad": "Hindi na-load ang larawan",
   "tools.image.errorDefaultTitle": "Hindi ma-load ang larawan",
   "tools.image.errorDefaultMessage": "Nagbalik ng error ang URL. Subukan ang ibang source o i-upload muli ang file.",
   "tools.image.errorRetry": "Subukan muli",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Tapos na",
   "tools.database.defaultViewBoard": "Board"
 }
-

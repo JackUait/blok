@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "አጥብብ",
   "tools.image.resetZoom": "ማጉላት እንደገና አስጀምር",
   "tools.image.errorUploadFailed": "መስቀል አልተሳካም",
+  "tools.image.errorUploadFailedTitle": "ሰቀላ አልተሳካም",
   "tools.image.errorSourceOffline": "ምንጩ ተንቀሳቅሷል ወይም ከመስመር ውጭ ሊሆን ይችላል።",
   "tools.image.errorUnavailable": "ምስል አይገኝም",
+  "tools.image.errorImageFailedToLoad": "ምስሉን መጫን አልተቻለም",
   "tools.image.errorDefaultTitle": "ምስል መጫን አልተቻለም",
   "tools.image.errorDefaultMessage": "URL ስህተት መለሰ። ሌላ ምንጭ ይሞክሩ ወይም ፋይሉን እንደገና ይስቀሉ።",
   "tools.image.errorRetry": "እንደገና ሞክር",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "ተጠናቋል",
   "tools.database.defaultViewBoard": "ሰሌዳ"
 }
-

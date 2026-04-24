@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Փոքրացնել",
   "tools.image.resetZoom": "Վերականգնել մասշտաբը",
   "tools.image.errorUploadFailed": "Վերբեռնումը ձախողվեց",
+  "tools.image.errorUploadFailedTitle": "Վերբեռնումը ձախողվեց",
   "tools.image.errorSourceOffline": "Աղբյուրը հնարավոր է տեղափոխված կամ անցանց լինի։",
   "tools.image.errorUnavailable": "Պատկերը հասանելի չէ",
+  "tools.image.errorImageFailedToLoad": "Չհաջողվեց բեռնել պատկերը",
   "tools.image.errorDefaultTitle": "Չհաջողվեց բեռնել պատկերը",
   "tools.image.errorDefaultMessage": "URL-ը վերադարձրեց սխալ։ Փորձեք այլ աղբյուր կամ կրկին վերբեռնեք ֆայլը։",
   "tools.image.errorRetry": "Կրկնել",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Ավարտված",
   "tools.database.defaultViewBoard": "Տախտակ"
 }
-

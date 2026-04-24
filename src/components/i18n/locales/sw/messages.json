@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Kuza nje",
   "tools.image.resetZoom": "Weka upya ukuzaji",
   "tools.image.errorUploadFailed": "Upakiaji umeshindikana",
+  "tools.image.errorUploadFailedTitle": "Upakiaji umeshindwa",
   "tools.image.errorSourceOffline": "Chanzo kinaweza kuwa kimehamishwa au nje ya mtandao.",
   "tools.image.errorUnavailable": "Picha haipatikani",
+  "tools.image.errorImageFailedToLoad": "Imeshindwa kupakia picha",
   "tools.image.errorDefaultTitle": "Haikuweza kupakia picha",
   "tools.image.errorDefaultMessage": "URL imerudisha hitilafu. Jaribu chanzo kingine au pakia faili tena.",
   "tools.image.errorRetry": "Jaribu tena",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Imekamilika",
   "tools.database.defaultViewBoard": "Ubao"
 }
-

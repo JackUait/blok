@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Uitzoomen",
   "tools.image.resetZoom": "Zoom herstellen",
   "tools.image.errorUploadFailed": "Uploaden mislukt",
+  "tools.image.errorUploadFailedTitle": "Uploaden mislukt",
   "tools.image.errorSourceOffline": "De bron is mogelijk verplaatst of offline.",
   "tools.image.errorUnavailable": "Afbeelding niet beschikbaar",
+  "tools.image.errorImageFailedToLoad": "Afbeelding kon niet worden geladen",
   "tools.image.errorDefaultTitle": "Afbeelding kon niet worden geladen",
   "tools.image.errorDefaultMessage": "De URL gaf een fout terug. Probeer een andere bron of upload het bestand opnieuw.",
   "tools.image.errorRetry": "Opnieuw",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Klaar",
   "tools.database.defaultViewBoard": "Bord"
 }
-

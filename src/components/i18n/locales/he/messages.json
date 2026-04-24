@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "התרחק",
   "tools.image.resetZoom": "אפס תצוגה",
   "tools.image.errorUploadFailed": "ההעלאה נכשלה",
+  "tools.image.errorUploadFailedTitle": "ההעלאה נכשלה",
   "tools.image.errorSourceOffline": "ייתכן שהמקור הועבר או שאינו מקוון.",
   "tools.image.errorUnavailable": "התמונה אינה זמינה",
+  "tools.image.errorImageFailedToLoad": "טעינת התמונה נכשלה",
   "tools.image.errorDefaultTitle": "לא ניתן לטעון את התמונה",
   "tools.image.errorDefaultMessage": "הכתובת החזירה שגיאה. נסה מקור אחר או העלה שוב את הקובץ.",
   "tools.image.errorRetry": "נסה שוב",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "הושלם",
   "tools.database.defaultViewBoard": "לוח"
 }
-

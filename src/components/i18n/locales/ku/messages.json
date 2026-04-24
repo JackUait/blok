@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "دوورکردنەوە",
   "tools.image.resetZoom": "ڕیسێتی زووم",
   "tools.image.errorUploadFailed": "بارکردن سەرکەوتوو نەبوو",
+  "tools.image.errorUploadFailedTitle": "Barkirin têk çû",
   "tools.image.errorSourceOffline": "لەوانەیە سەرچاوە گواستراوەتەوە یان دەرهێڵ بێت.",
   "tools.image.errorUnavailable": "وێنە بەردەست نییە",
+  "tools.image.errorImageFailedToLoad": "Wêne bar nebû",
   "tools.image.errorDefaultTitle": "وێنە نەبارا",
   "tools.image.errorDefaultMessage": "URL هەڵەیەکی گەڕاندەوە. سەرچاوەیەکی تر تاقی بکەرەوە یان فایلەکە دووبارە باربکە.",
   "tools.image.errorRetry": "دووبارە",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "تەواو",
   "tools.database.defaultViewBoard": "تەختە"
 }
-

@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "축소",
   "tools.image.resetZoom": "확대/축소 초기화",
   "tools.image.errorUploadFailed": "업로드 실패",
+  "tools.image.errorUploadFailedTitle": "업로드 실패",
   "tools.image.errorSourceOffline": "원본이 이동되었거나 오프라인일 수 있습니다.",
   "tools.image.errorUnavailable": "이미지를 사용할 수 없습니다",
+  "tools.image.errorImageFailedToLoad": "이미지를 불러오지 못했습니다",
   "tools.image.errorDefaultTitle": "이미지를 불러올 수 없습니다",
   "tools.image.errorDefaultMessage": "URL에서 오류가 반환되었습니다. 다른 원본을 시도하거나 파일을 다시 업로드하세요.",
   "tools.image.errorRetry": "다시 시도",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "완료",
   "tools.database.defaultViewBoard": "보드"
 }
-

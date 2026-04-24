@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "ਜ਼ੂਮ ਆਊਟ",
   "tools.image.resetZoom": "ਜ਼ੂਮ ਰੀਸੈੱਟ",
   "tools.image.errorUploadFailed": "ਅੱਪਲੋਡ ਅਸਫਲ",
+  "tools.image.errorUploadFailedTitle": "ਅੱਪਲੋਡ ਅਸਫਲ",
   "tools.image.errorSourceOffline": "ਸਰੋਤ ਹਟਾਇਆ ਗਿਆ ਹੋ ਸਕਦਾ ਹੈ ਜਾਂ ਔਫਲਾਈਨ ਹੋ ਸਕਦਾ ਹੈ।",
   "tools.image.errorUnavailable": "ਤਸਵੀਰ ਉਪਲਬਧ ਨਹੀਂ",
+  "tools.image.errorImageFailedToLoad": "ਤਸਵੀਰ ਲੋਡ ਨਹੀਂ ਹੋ ਸਕੀ",
   "tools.image.errorDefaultTitle": "ਤਸਵੀਰ ਲੋਡ ਨਹੀਂ ਹੋ ਸਕੀ",
   "tools.image.errorDefaultMessage": "URL ਨੇ ਇੱਕ ਗਲਤੀ ਵਾਪਸ ਕੀਤੀ। ਵੱਖਰਾ ਸਰੋਤ ਅਜ਼ਮਾਓ ਜਾਂ ਫਾਈਲ ਦੁਬਾਰਾ ਅੱਪਲੋਡ ਕਰੋ।",
   "tools.image.errorRetry": "ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "ਪੂਰਾ",
   "tools.database.defaultViewBoard": "ਬੋਰਡ"
 }
-

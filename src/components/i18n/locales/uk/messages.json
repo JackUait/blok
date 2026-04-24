@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Зменшити",
   "tools.image.resetZoom": "Скинути масштаб",
   "tools.image.errorUploadFailed": "Не вдалося завантажити",
+  "tools.image.errorUploadFailedTitle": "Помилка завантаження",
   "tools.image.errorSourceOffline": "Джерело могло бути переміщене або недоступне.",
   "tools.image.errorUnavailable": "Зображення недоступне",
+  "tools.image.errorImageFailedToLoad": "Не вдалося завантажити зображення",
   "tools.image.errorDefaultTitle": "Не вдалося завантажити зображення",
   "tools.image.errorDefaultMessage": "Сервер повернув помилку. Спробуйте інше джерело або завантажте файл знову.",
   "tools.image.errorRetry": "Повторити",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Готово",
   "tools.database.defaultViewBoard": "Дошка"
 }
-

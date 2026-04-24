@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Отдалечи",
   "tools.image.resetZoom": "Нулирай мащаба",
   "tools.image.errorUploadFailed": "Качването е неуспешно",
+  "tools.image.errorUploadFailedTitle": "Качването не бе успешно",
   "tools.image.errorSourceOffline": "Източникът може да е преместен или недостъпен.",
   "tools.image.errorUnavailable": "Изображението е недостъпно",
+  "tools.image.errorImageFailedToLoad": "Неуспешно зареждане на изображението",
   "tools.image.errorDefaultTitle": "Изображението не може да бъде заредено",
   "tools.image.errorDefaultMessage": "Сървърът върна грешка. Опитайте друг източник или качете файла отново.",
   "tools.image.errorRetry": "Опитай отново",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Готово",
   "tools.database.defaultViewBoard": "Табло"
 }
-

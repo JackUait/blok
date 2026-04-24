@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Уменьшить",
   "tools.image.resetZoom": "Сбросить масштаб",
   "tools.image.errorUploadFailed": "Не удалось загрузить",
+  "tools.image.errorUploadFailedTitle": "Ошибка загрузки",
   "tools.image.errorSourceOffline": "Источник мог быть перемещён или недоступен.",
   "tools.image.errorUnavailable": "Изображение недоступно",
+  "tools.image.errorImageFailedToLoad": "Не удалось загрузить изображение",
   "tools.image.errorDefaultTitle": "Не удалось загрузить изображение",
   "tools.image.errorDefaultMessage": "Сервер вернул ошибку. Попробуйте другой источник или загрузите файл заново.",
   "tools.image.errorRetry": "Повторить",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Готово",
   "tools.database.defaultViewBoard": "Доска"
 }
-

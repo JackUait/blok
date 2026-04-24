@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Намали",
   "tools.image.resetZoom": "Ресетирај зум",
   "tools.image.errorUploadFailed": "Подигањето не успеа",
+  "tools.image.errorUploadFailedTitle": "Прикачувањето не успеа",
   "tools.image.errorSourceOffline": "Изворот можеби е преместен или недостапен.",
   "tools.image.errorUnavailable": "Сликата е недостапна",
+  "tools.image.errorImageFailedToLoad": "Сликата не се вчита",
   "tools.image.errorDefaultTitle": "Сликата не може да се вчита",
   "tools.image.errorDefaultMessage": "Серверот врати грешка. Обидете се со друг извор или подигнете ја датотеката повторно.",
   "tools.image.errorRetry": "Обиди се повторно",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Готово",
   "tools.database.defaultViewBoard": "Табла"
 }
-

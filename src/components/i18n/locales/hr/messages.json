@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Smanji",
   "tools.image.resetZoom": "Vrati zum",
   "tools.image.errorUploadFailed": "Prijenos nije uspio",
+  "tools.image.errorUploadFailedTitle": "Prijenos nije uspio",
   "tools.image.errorSourceOffline": "Izvor je možda premješten ili nedostupan.",
   "tools.image.errorUnavailable": "Slika nije dostupna",
+  "tools.image.errorImageFailedToLoad": "Slika se ne može učitati",
   "tools.image.errorDefaultTitle": "Slika se ne može učitati",
   "tools.image.errorDefaultMessage": "Poslužitelj je vratio pogrešku. Pokušajte drugi izvor ili ponovno prenesite datoteku.",
   "tools.image.errorRetry": "Pokušaj ponovno",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Gotovo",
   "tools.database.defaultViewBoard": "Ploča"
 }
-

@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "ಜೂಮ್ ಔಟ್",
   "tools.image.resetZoom": "ಜೂಮ್ ಮರುಹೊಂದಿಸಿ",
   "tools.image.errorUploadFailed": "ಅಪ್‌ಲೋಡ್ ವಿಫಲವಾಗಿದೆ",
+  "tools.image.errorUploadFailedTitle": "ಅಪ್‌ಲೋಡ್ ವಿಫಲವಾಗಿದೆ",
   "tools.image.errorSourceOffline": "ಮೂಲ ಸ್ಥಳಾಂತರಗೊಂಡಿರಬಹುದು ಅಥವಾ ಆಫ್‌ಲೈನ್ ಆಗಿರಬಹುದು.",
   "tools.image.errorUnavailable": "ಚಿತ್ರ ಲಭ್ಯವಿಲ್ಲ",
+  "tools.image.errorImageFailedToLoad": "ಚಿತ್ರ ಲೋಡ್ ಆಗಲಿಲ್ಲ",
   "tools.image.errorDefaultTitle": "ಚಿತ್ರವನ್ನು ಲೋಡ್ ಮಾಡಲಾಗಲಿಲ್ಲ",
   "tools.image.errorDefaultMessage": "URL ದೋಷವನ್ನು ಹಿಂತಿರುಗಿಸಿದೆ. ಬೇರೆ ಮೂಲ ಪ್ರಯತ್ನಿಸಿ ಅಥವಾ ಫೈಲ್ ಮತ್ತೆ ಅಪ್‌ಲೋಡ್ ಮಾಡಿ.",
   "tools.image.errorRetry": "ಮರುಪ್ರಯತ್ನ",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "ಮುಗಿದಿದೆ",
   "tools.database.defaultViewBoard": "ಬೋರ್ಡ್"
 }
-

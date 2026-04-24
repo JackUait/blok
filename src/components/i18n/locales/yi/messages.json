@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "פארקלענערן",
   "tools.image.resetZoom": "ריסעט זום",
   "tools.image.errorUploadFailed": "אפלאד דורכגעפאלן",
+  "tools.image.errorUploadFailedTitle": "אויפֿלאָדן געפֿעלט",
   "tools.image.errorSourceOffline": "די מקור קען זיין אריבערגעטראגן אדער אפליין.",
   "tools.image.errorUnavailable": "בילד נישט דא",
+  "tools.image.errorImageFailedToLoad": "בילד האט נישט געקענט לאדן",
   "tools.image.errorDefaultTitle": "בילד האט זיך נישט געלאדן",
   "tools.image.errorDefaultMessage": "די URL האט צוריקגעקערט א טעות. פרובירט אן אנדערן מקור אדער לאדט ווידער די טעקע.",
   "tools.image.errorRetry": "פרובירט ווידער",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "פארטיק",
   "tools.database.defaultViewBoard": "ברעט"
 }
-

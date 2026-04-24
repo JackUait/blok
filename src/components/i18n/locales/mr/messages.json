@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "झूम आउट",
   "tools.image.resetZoom": "झूम रीसेट",
   "tools.image.errorUploadFailed": "अपलोड अयशस्वी",
+  "tools.image.errorUploadFailedTitle": "अपलोड अयशस्वी",
   "tools.image.errorSourceOffline": "स्रोत हलवला गेला असावा किंवा ऑफलाइन असावा.",
   "tools.image.errorUnavailable": "प्रतिमा उपलब्ध नाही",
+  "tools.image.errorImageFailedToLoad": "प्रतिमा लोड होऊ शकली नाही",
   "tools.image.errorDefaultTitle": "प्रतिमा लोड करता आली नाही",
   "tools.image.errorDefaultMessage": "URL ने त्रुटी परत केली. वेगळा स्रोत वापरून पहा किंवा फाइल पुन्हा अपलोड करा.",
   "tools.image.errorRetry": "पुन्हा प्रयत्न करा",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "पूर्ण",
   "tools.database.defaultViewBoard": "बोर्ड"
 }
-

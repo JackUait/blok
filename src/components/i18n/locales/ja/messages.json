@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "縮小",
   "tools.image.resetZoom": "ズームをリセット",
   "tools.image.errorUploadFailed": "アップロードに失敗しました",
+  "tools.image.errorUploadFailedTitle": "アップロードに失敗しました",
   "tools.image.errorSourceOffline": "ソースが移動したかオフラインの可能性があります。",
   "tools.image.errorUnavailable": "画像を利用できません",
+  "tools.image.errorImageFailedToLoad": "画像を読み込めませんでした",
   "tools.image.errorDefaultTitle": "画像を読み込めませんでした",
   "tools.image.errorDefaultMessage": "URL がエラーを返しました。別のソースを試すか、ファイルを再アップロードしてください。",
   "tools.image.errorRetry": "再試行",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "完了",
   "tools.database.defaultViewBoard": "ボード"
 }
-

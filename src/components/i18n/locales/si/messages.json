@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "කුඩාකරණය",
   "tools.image.resetZoom": "විශාලනය යළි සකසන්න",
   "tools.image.errorUploadFailed": "උඩුගත කිරීම අසාර්ථකයි",
+  "tools.image.errorUploadFailedTitle": "උඩුගත කිරීම අසාර්ථකයි",
   "tools.image.errorSourceOffline": "මූලාශ්‍රය ගෙන ගොස් හෝ නොබැඳිව තිබිය හැකිය.",
   "tools.image.errorUnavailable": "රූපය ලබා ගත නොහැක",
+  "tools.image.errorImageFailedToLoad": "රූපය පූරණය කළ නොහැක",
   "tools.image.errorDefaultTitle": "රූපය පූරණය කළ නොහැකි විය",
   "tools.image.errorDefaultMessage": "URL දෝෂයක් ලබා දුන්නේය. වෙනත් මූලාශ්‍රයක් උත්සාහ කරන්න හෝ ගොනුව නැවත උඩුගත කරන්න.",
   "tools.image.errorRetry": "නැවත උත්සාහ",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "අවසන්",
   "tools.database.defaultViewBoard": "පුවරුව"
 }
-

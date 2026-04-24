@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "ချုံ့",
   "tools.image.resetZoom": "ဇူးမ်ပြန်လည်သတ်မှတ်",
   "tools.image.errorUploadFailed": "အပ်လုဒ်မအောင်မြင်",
+  "tools.image.errorUploadFailedTitle": "တင်ခြင်း မအောင်မြင်ပါ",
   "tools.image.errorSourceOffline": "မူရင်းသည် ပြောင်းရွှေ့သွားခြင်း သို့မဟုတ် အော့ဖ်လိုင်းဖြစ်နိုင်သည်။",
   "tools.image.errorUnavailable": "ပုံမရရှိနိုင်ပါ",
+  "tools.image.errorImageFailedToLoad": "ပုံကို ဖွင့်၍မရပါ",
   "tools.image.errorDefaultTitle": "ပုံမဖွင့်နိုင်ပါ",
   "tools.image.errorDefaultMessage": "URL သည် အမှားပြန်ပို့သည်။ အခြားမူရင်းကိုသုံးပါ သို့မဟုတ် ဖိုင်ပြန်တင်ပါ။",
   "tools.image.errorRetry": "ထပ်စမ်း",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "ပြီးဆုံး",
   "tools.database.defaultViewBoard": "ဘုတ်"
 }
-

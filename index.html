@@ -2064,9 +2064,15 @@
             width: 40,
             alignment: 'center',
           } }] },
-          { label: 'Broken URL', blocks: [{ id: 'im-broken', type: 'image', data: {
+          { label: 'Failed to load', blocks: [{ id: 'im-broken', type: 'image', data: {
             url: '/this-image-does-not-exist.png',
             alt: 'Missing',
+            width: 40,
+            alignment: 'center',
+          } }] },
+          { label: 'Upload failed', blocks: [{ id: 'im-upload-error', type: 'image', data: {
+            url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400',
+            alt: 'Upload error',
             width: 40,
             alignment: 'center',
           } }] },
@@ -2114,15 +2120,48 @@
       // then blank the src and set data-loading on the figure.
       instance.isReady.then(() => {
         const figure = holder.querySelector('[data-blok-id="im-loading"] .blok-image-inner');
-        if (!figure) return;
-        const img = figure.querySelector('img');
-        if (img) {
-          const clone = img.cloneNode(false);
-          clone.removeAttribute('src');
-          img.replaceWith(clone);
+        if (figure) {
+          const img = figure.querySelector('img');
+          if (img) {
+            const clone = img.cloneNode(false);
+            clone.removeAttribute('src');
+            img.replaceWith(clone);
+          }
+          figure.setAttribute('data-loading', 'true');
         }
-        figure.setAttribute('data-loading', 'true');
+
+        // Force an "upload failed" error state demo by replacing the tool DOM.
+        const uploadErrRoot = holder.querySelector('[data-blok-id="im-upload-error"] [data-blok-tool="image"]');
+        if (uploadErrRoot) renderImageErrorDemo(uploadErrRoot, {
+          variant: 'upload',
+          title: 'Upload failed',
+          message: 'Check your connection and try again, or choose a different file.',
+        });
       });
+    }
+
+    function renderImageErrorDemo(root, { variant, title, message }) {
+      root.setAttribute('data-state', 'error');
+      root.replaceChildren();
+      const wrap = document.createElement('div');
+      wrap.className = 'blok-image-error';
+      wrap.setAttribute('data-role', 'error-state');
+      wrap.setAttribute('data-variant', variant);
+      const uploadIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 16.5A4.5 4.5 0 0 0 17 8.25a6 6 0 0 0-11.7 1.5A4 4 0 0 0 6 17.5"/><path d="M12 12v5"/><path d="m9.5 14.5 2.5-2.5 2.5 2.5"/><path d="m4 4 16 16" stroke-width="2"/></svg>';
+      const brokenIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14.5 4.5H6A2.5 2.5 0 0 0 3.5 7v10A2.5 2.5 0 0 0 6 19.5h12a2.5 2.5 0 0 0 2.5-2.5v-6.25"/><path d="m14.5 4.5 1.75 2.25 2.25-1.25 2 2.75"/><circle cx="8" cy="9" r="1.2" fill="currentColor" stroke="none"/><path d="m3.8 16.25 3.45-3.45 2.5 2.5 3.5-3.5 4 4"/></svg>';
+      wrap.innerHTML = `
+        <div class="blok-image-error__icon" aria-hidden="true">${variant === 'upload' ? uploadIcon : brokenIcon}</div>
+        <div class="blok-image-error__body">
+          <div class="blok-image-error__title"></div>
+          <div class="blok-image-error__msg"></div>
+        </div>
+        <div class="blok-image-error__actions">
+          <button type="button" class="blok-image-error__btn" data-action="retry">Retry</button>
+          <button type="button" class="blok-image-error__btn" data-action="replace">Replace</button>
+        </div>`;
+      wrap.querySelector('.blok-image-error__title').textContent = title;
+      wrap.querySelector('.blok-image-error__msg').textContent = message;
+      root.appendChild(wrap);
     }
 
     function initBlockStatesGallery(initialTool) {

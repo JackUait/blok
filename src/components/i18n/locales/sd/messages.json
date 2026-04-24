@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "زوم آئوٽ",
   "tools.image.resetZoom": "زوم ريٽ ڪريو",
   "tools.image.errorUploadFailed": "اپ لوڊ ناڪام",
+  "tools.image.errorUploadFailedTitle": "اپلوڊ ناڪام",
   "tools.image.errorSourceOffline": "ذريعو ڪاٿي ٻاهر منتقل ٿي ويو آهي يا آف لائن آهي.",
   "tools.image.errorUnavailable": "تصوير موجود ناهي",
+  "tools.image.errorImageFailedToLoad": "تصوير لوڊ نه ٿي سگھي",
   "tools.image.errorDefaultTitle": "تصوير لوڊ نه ٿي سگهي",
   "tools.image.errorDefaultMessage": "URL غلطي موٽائي ڏني. ٻيو ذريعو ڪوشش ڪريو يا فائل ٻيهر اپ لوڊ ڪريو.",
   "tools.image.errorRetry": "ٻيهر ڪوشش",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "مڪمل",
   "tools.database.defaultViewBoard": "بورڊ"
 }
-

@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Zooma ut",
   "tools.image.resetZoom": "Återställ zoom",
   "tools.image.errorUploadFailed": "Uppladdningen misslyckades",
+  "tools.image.errorUploadFailedTitle": "Uppladdningen misslyckades",
   "tools.image.errorSourceOffline": "Källan kan ha flyttats eller vara offline.",
   "tools.image.errorUnavailable": "Bild ej tillgänglig",
+  "tools.image.errorImageFailedToLoad": "Det gick inte att läsa in bilden",
   "tools.image.errorDefaultTitle": "Bilden kunde inte läsas in",
   "tools.image.errorDefaultMessage": "URL:en returnerade ett fel. Prova en annan källa eller ladda upp filen igen.",
   "tools.image.errorRetry": "Försök igen",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Klar",
   "tools.database.defaultViewBoard": "Tavla"
 }
-

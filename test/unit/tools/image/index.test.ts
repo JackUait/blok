@@ -899,6 +899,49 @@ describe('ImageTool — error state', () => {
     expect(root.querySelector('[data-action="replace"]')).not.toBeNull();
   });
 
+  it('upload error shows distinct "Upload failed" title (not the broken-image title)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const tool = new ImageTool(createOptions(
+      {},
+      { uploader: { uploadByFile: () => Promise.reject(new Error('boom')) } }
+    ));
+    const root = tool.render();
+    const file = new File([new Uint8Array(10)], 'p.png', { type: 'image/png' });
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    const title = root.querySelector('[data-role="error-state"] .blok-image-error__title');
+    expect(title?.textContent).toBe('tools.image.errorUploadFailedTitle');
+  });
+
+  it('upload error uses a distinct icon (data-variant) vs broken-image error', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const tool = new ImageTool(createOptions(
+      {},
+      { uploader: { uploadByFile: () => Promise.reject(new Error('boom')) } }
+    ));
+    const root = tool.render();
+    const file = new File([new Uint8Array(10)], 'p.png', { type: 'image/png' });
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    const errEl = root.querySelector('[data-role="error-state"]');
+    expect(errEl?.getAttribute('data-variant')).toBe('upload');
+  });
+
+  it('broken-image error carries data-variant="broken"', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    const root = tool.render();
+    const img = root.querySelector<HTMLImageElement>('img');
+    if (!img) throw new Error('img missing');
+    img.dispatchEvent(new Event('error'));
+    img.dispatchEvent(new Event('error'));
+    const errEl = root.querySelector('[data-role="error-state"]');
+    expect(errEl?.getAttribute('data-variant')).toBe('broken');
+  });
+
   it('upload error shows BOTH retry and replace buttons', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const tool = new ImageTool(createOptions(
@@ -1065,6 +1108,19 @@ describe('ImageTool — auto-retry on img load failure', () => {
 
     expect(root.getAttribute('data-state')).toBe('error');
     expect(root.querySelector('[data-role="error-state"]')).not.toBeNull();
+  });
+
+  it('broken image error explicitly says the image failed to load', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    const root = tool.render();
+    const img = root.querySelector<HTMLImageElement>('img');
+    if (!img) throw new Error('img missing');
+
+    img.dispatchEvent(new Event('error'));
+    img.dispatchEvent(new Event('error'));
+
+    const title = root.querySelector('[data-role="error-state"] .blok-image-error__title');
+    expect(title?.textContent).toBe('tools.image.errorImageFailedToLoad');
   });
 });
 

@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Perkecil",
   "tools.image.resetZoom": "Setel ulang zoom",
   "tools.image.errorUploadFailed": "Unggahan gagal",
+  "tools.image.errorUploadFailedTitle": "Unggah gagal",
   "tools.image.errorSourceOffline": "Sumber mungkin telah dipindahkan atau offline.",
   "tools.image.errorUnavailable": "Gambar tidak tersedia",
+  "tools.image.errorImageFailedToLoad": "Gambar gagal dimuat",
   "tools.image.errorDefaultTitle": "Tidak dapat memuat gambar",
   "tools.image.errorDefaultMessage": "URL mengembalikan kesalahan. Coba sumber lain atau unggah ulang berkas.",
   "tools.image.errorRetry": "Coba lagi",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Selesai",
   "tools.database.defaultViewBoard": "Papan"
 }
-

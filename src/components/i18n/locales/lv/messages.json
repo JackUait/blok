@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Tālināt",
   "tools.image.resetZoom": "Atiestatīt mērogu",
   "tools.image.errorUploadFailed": "Augšupielāde neizdevās",
+  "tools.image.errorUploadFailedTitle": "Augšupielāde neizdevās",
   "tools.image.errorSourceOffline": "Avots, iespējams, ir pārvietots vai nav pieejams.",
   "tools.image.errorUnavailable": "Attēls nav pieejams",
+  "tools.image.errorImageFailedToLoad": "Neizdevās ielādēt attēlu",
   "tools.image.errorDefaultTitle": "Attēlu neizdevās ielādēt",
   "tools.image.errorDefaultMessage": "Serveris atgrieza kļūdu. Izmēģiniet citu avotu vai augšupielādējiet failu vēlreiz.",
   "tools.image.errorRetry": "Mēģināt vēlreiz",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Gatavs",
   "tools.database.defaultViewBoard": "Tāfele"
 }
-

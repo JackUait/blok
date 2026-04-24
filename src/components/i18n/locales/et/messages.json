@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Suumi välja",
   "tools.image.resetZoom": "Lähtesta suum",
   "tools.image.errorUploadFailed": "Üleslaadimine ebaõnnestus",
+  "tools.image.errorUploadFailedTitle": "Üleslaadimine ebaõnnestus",
   "tools.image.errorSourceOffline": "Allikas võib olla teisaldatud või võrguühenduseta.",
   "tools.image.errorUnavailable": "Pilt pole saadaval",
+  "tools.image.errorImageFailedToLoad": "Pildi laadimine ebaõnnestus",
   "tools.image.errorDefaultTitle": "Pilti ei saanud laadida",
   "tools.image.errorDefaultMessage": "URL tagastas vea. Proovi teist allikat või lae fail uuesti üles.",
   "tools.image.errorRetry": "Proovi uuesti",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Valmis",
   "tools.database.defaultViewBoard": "Tahvel"
 }
-

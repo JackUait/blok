@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Zoom ut",
   "tools.image.resetZoom": "Tilbakestill zoom",
   "tools.image.errorUploadFailed": "Opplasting mislyktes",
+  "tools.image.errorUploadFailedTitle": "Opplasting mislyktes",
   "tools.image.errorSourceOffline": "Kilden kan ha blitt flyttet eller være offline.",
   "tools.image.errorUnavailable": "Bildet er ikke tilgjengelig",
+  "tools.image.errorImageFailedToLoad": "Kunne ikke laste bildet",
   "tools.image.errorDefaultTitle": "Kunne ikke laste inn bildet",
   "tools.image.errorDefaultMessage": "URL-en returnerte en feil. Prøv en annen kilde eller last opp filen på nytt.",
   "tools.image.errorRetry": "Prøv igjen",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Ferdig",
   "tools.database.defaultViewBoard": "Tavle"
 }
-

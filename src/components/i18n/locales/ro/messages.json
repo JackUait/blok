@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Micșorează",
   "tools.image.resetZoom": "Resetează zoomul",
   "tools.image.errorUploadFailed": "Încărcarea a eșuat",
+  "tools.image.errorUploadFailedTitle": "Încărcare eșuată",
   "tools.image.errorSourceOffline": "Sursa poate fi mutată sau offline.",
   "tools.image.errorUnavailable": "Imagine indisponibilă",
+  "tools.image.errorImageFailedToLoad": "Imaginea nu s-a putut încărca",
   "tools.image.errorDefaultTitle": "Imaginea nu a putut fi încărcată",
   "tools.image.errorDefaultMessage": "URL-ul a returnat o eroare. Încearcă altă sursă sau încarcă din nou fișierul.",
   "tools.image.errorRetry": "Reîncearcă",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Gata",
   "tools.database.defaultViewBoard": "Panou"
 }
-

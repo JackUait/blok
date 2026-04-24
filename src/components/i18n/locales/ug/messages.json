@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "كىچىكلىتىش",
   "tools.image.resetZoom": "چوڭايتىشنى ئەسلىگە كەلتۈرۈش",
   "tools.image.errorUploadFailed": "چىقىرىش مەغلۇپ بولدى",
+  "tools.image.errorUploadFailedTitle": "يۈكلەش مەغلۇپ بولدى",
   "tools.image.errorSourceOffline": "مەنبە يۆتكەلگەن ياكى ئوفلىن بولۇشى مۇمكىن.",
   "tools.image.errorUnavailable": "رەسىم ئىشلەتكىلى بولمايدۇ",
+  "tools.image.errorImageFailedToLoad": "رەسىمنى يۈكلىگىلى بولمىدى",
   "tools.image.errorDefaultTitle": "رەسىم يۈكلەنمىدى",
   "tools.image.errorDefaultMessage": "URL خاتالىق قايتۇردى. باشقا مەنبە سىناڭ ياكى ھۆججەتنى قايتا يۈكلەڭ.",
   "tools.image.errorRetry": "قايتا سىناش",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "تاماملاندى",
   "tools.database.defaultViewBoard": "تاختا"
 }
-

@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Жижигрүүлэх",
   "tools.image.resetZoom": "Масштабыг дахин тохируулах",
   "tools.image.errorUploadFailed": "Оруулахад алдаа гарлаа",
+  "tools.image.errorUploadFailedTitle": "Байршуулж чадсангүй",
   "tools.image.errorSourceOffline": "Эх сурвалж зөөгдсөн эсвэл офлайн байж магадгүй.",
   "tools.image.errorUnavailable": "Зураг боломжгүй",
+  "tools.image.errorImageFailedToLoad": "Зураг ачаалж чадсангүй",
   "tools.image.errorDefaultTitle": "Зургийг ачаалж чадсангүй",
   "tools.image.errorDefaultMessage": "URL алдаа буцаалаа. Өөр эх сурвалж туршиж эсвэл файлыг дахин оруулна уу.",
   "tools.image.errorRetry": "Дахин оролдох",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Дууссан",
   "tools.database.defaultViewBoard": "Самбар"
 }
-

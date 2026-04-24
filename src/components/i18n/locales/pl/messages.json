@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "Pomniejsz",
   "tools.image.resetZoom": "Resetuj powiększenie",
   "tools.image.errorUploadFailed": "Wysyłanie nie powiodło się",
+  "tools.image.errorUploadFailedTitle": "Przesyłanie nie powiodło się",
   "tools.image.errorSourceOffline": "Źródło mogło zostać przeniesione lub jest niedostępne.",
   "tools.image.errorUnavailable": "Obraz niedostępny",
+  "tools.image.errorImageFailedToLoad": "Nie udało się załadować obrazu",
   "tools.image.errorDefaultTitle": "Nie udało się załadować obrazu",
   "tools.image.errorDefaultMessage": "Serwer zwrócił błąd. Spróbuj innego źródła lub prześlij plik ponownie.",
   "tools.image.errorRetry": "Spróbuj ponownie",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "Ukończone",
   "tools.database.defaultViewBoard": "Tablica"
 }
-

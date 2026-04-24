@@ -260,8 +260,10 @@
   "tools.image.zoomOut": "کوچک‌نمایی",
   "tools.image.resetZoom": "بازنشانی بزرگ‌نمایی",
   "tools.image.errorUploadFailed": "بارگذاری ناموفق بود",
+  "tools.image.errorUploadFailedTitle": "بارگذاری ناموفق بود",
   "tools.image.errorSourceOffline": "ممکن است منبع جابه‌جا شده یا آفلاین باشد.",
   "tools.image.errorUnavailable": "تصویر در دسترس نیست",
+  "tools.image.errorImageFailedToLoad": "بارگیری تصویر ناموفق بود",
   "tools.image.errorDefaultTitle": "تصویر بارگیری نشد",
   "tools.image.errorDefaultMessage": "URL خطا برگرداند. منبع دیگری را امتحان کنید یا فایل را دوباره بارگذاری کنید.",
   "tools.image.errorRetry": "تلاش مجدد",
@@ -317,4 +319,3 @@
   "tools.database.defaultStatusDone": "انجام شد",
   "tools.database.defaultViewBoard": "تخته"
 }
-

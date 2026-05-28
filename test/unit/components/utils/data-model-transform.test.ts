@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { analyzeDataFormat, expandToHierarchical, collapseToLegacy, normalizeTableChildParents } from '../../../../src/components/utils/data-model-transform';
+import { analyzeDataFormat, expandToHierarchical, collapseToLegacy, normalizeTableChildParents, reclaimDetachedTableCells } from '../../../../src/components/utils/data-model-transform';
 import type { OutputBlockData, BlockId } from '../../../../types';
 
 describe('data-model-transform', () => {
@@ -1855,6 +1855,326 @@ describe('data-model-transform', () => {
 
       expect(result.find(b => b.id === 'child-a')?.parent).toBeUndefined();
     });
+  });
+
+  describe('reclaimDetachedTableCells', () => {
+    /**
+     * Recovery for the "migrated table content lost on save" bug. A pre-fix save
+     * dropped a migrated cell's child from `data.content[r][c].blocks` (because the
+     * child lacked `parent === tableId`) and the saver emitted it as a root block.
+     * The text was NOT destroyed — it survives as a detached top-level paragraph,
+     * and the LLM migration gave it a POSITIONAL id `cell-<row>-<col>` (1-based)
+     * that still encodes which cell it belongs to. This pass re-attaches such a
+     * detached paragraph to its empty cell, keyed on that id. It is non-destructive:
+     * only empty cells are filled, only `cell-R-C`-id root blocks are consumed, and
+     * reclamation is skipped when the target cell is ambiguous across tables.
+     */
+    const detachedDoc = (): OutputBlockData[] => [
+      {
+        id: 'table-1',
+        type: 'table',
+        data: {
+          withHeadings: false,
+          content: [
+            [{ blocks: ['cell-1-1'] }, { blocks: ['cell-1-2'] }],
+            // row 2, col 1 was emptied by a buggy save; its text floated to root
+            [{ blocks: [] as string[] }, { blocks: ['cell-2-2'] }],
+          ],
+        },
+      },
+      { id: 'cell-1-1', type: 'paragraph', data: { text: 'Author' }, parent: 'table-1' },
+      { id: 'cell-1-2', type: 'paragraph', data: { text: 'Egor' }, parent: 'table-1' },
+      { id: 'cell-2-2', type: 'paragraph', data: { text: 'Goal text' }, parent: 'table-1' },
+      // detached orphan: no parent, not referenced by any cell, positional id intact
+      { id: 'cell-2-1', type: 'paragraph', data: { text: 'Article goal' } },
+    ];
+
+    const cellBlocksAt = (block: OutputBlockData | undefined, row: number, col: number): string[] => {
+      const content = (block?.data as { content?: Array<Array<{ blocks?: string[] }>> }).content;
+
+      return content?.[row]?.[col]?.blocks ?? [];
+    };
+
+    it('re-links a detached cell paragraph back into its empty cell by positional id', () => {
+      const result = reclaimDetachedTableCells(detachedDoc());
+
+      expect(cellBlocksAt(result.find(b => b.id === 'table-1'), 1, 0)).toEqual(['cell-2-1']);
+    });
+
+    it('sets parent on the reclaimed block to the owning table', () => {
+      const result = reclaimDetachedTableCells(detachedDoc());
+
+      expect(result.find(b => b.id === 'cell-2-1')?.parent).toBe('table-1');
+    });
+
+    it('preserves the reclaimed block text', () => {
+      const result = reclaimDetachedTableCells(detachedDoc());
+      const reclaimed = result.find(b => b.id === 'cell-2-1');
+
+      expect((reclaimed?.data as { text?: string }).text).toBe('Article goal');
+    });
+
+    it('leaves cells that still have content untouched', () => {
+      const result = reclaimDetachedTableCells(detachedDoc());
+      const table = result.find(b => b.id === 'table-1');
+
+      expect(cellBlocksAt(table, 0, 0)).toEqual(['cell-1-1']);
+      expect(cellBlocksAt(table, 0, 1)).toEqual(['cell-1-2']);
+      expect(cellBlocksAt(table, 1, 1)).toEqual(['cell-2-2']);
+    });
+
+    it('does not overwrite a target cell that is not empty', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'table-1',
+          type: 'table',
+          data: { content: [[{ blocks: ['existing'] }]] },
+        },
+        { id: 'existing', type: 'paragraph', data: { text: 'kept' }, parent: 'table-1' },
+        // a stray cell-1-1 root block must NOT clobber the occupied cell
+        { id: 'cell-1-1', type: 'paragraph', data: { text: 'intruder' } },
+      ];
+
+      const result = reclaimDetachedTableCells(blocks);
+      const table = result.find(b => b.id === 'table-1');
+      const content = (table?.data as { content: Array<Array<{ blocks: string[] }>> }).content;
+
+      expect(content[0][0].blocks).toEqual(['existing']);
+      expect(result.find(b => b.id === 'cell-1-1')?.parent).toBeUndefined();
+    });
+
+    it('refuses to reclaim in a multi-table document, even when only one table has the matching empty cell', () => {
+      // The positional id `cell-R-C` encodes row/col but NOT which table. Here the
+      // orphan could plausibly belong to table-2 (whose [0][0] is occupied) yet
+      // table-1's [0][0] is empty. Re-attaching to table-1 would be a silent
+      // mis-placement, so any document with more than one table is left untouched.
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'table-1',
+          type: 'table',
+          data: { content: [[{ blocks: [] as string[] }]] }, // cell [0][0] empty
+        },
+        {
+          id: 'table-2',
+          type: 'table',
+          data: { content: [[{ blocks: ['kept'] }]] }, // cell [0][0] occupied
+        },
+        { id: 'kept', type: 'paragraph', data: { text: 'k' }, parent: 'table-2' },
+        { id: 'cell-1-1', type: 'paragraph', data: { text: 'orphan' } },
+      ];
+
+      const result = reclaimDetachedTableCells(blocks);
+
+      expect(result.find(b => b.id === 'cell-1-1')?.parent).toBeUndefined();
+      expect((result.find(b => b.id === 'table-1')?.data as { content: Array<Array<{ blocks: string[] }>> }).content[0][0].blocks).toEqual([]);
+    });
+
+    it('refuses to reclaim when two tables both have the matching empty cell', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'table-1', type: 'table', data: { content: [[{ blocks: [] as string[] }]] } },
+        { id: 'table-2', type: 'table', data: { content: [[{ blocks: [] as string[] }]] } },
+        { id: 'cell-1-1', type: 'paragraph', data: { text: 'orphan' } },
+      ];
+
+      const result = reclaimDetachedTableCells(blocks);
+
+      // Ambiguous → leave the orphan at root, do not guess.
+      expect(result.find(b => b.id === 'cell-1-1')?.parent).toBeUndefined();
+      expect((result.find(b => b.id === 'table-1')?.data as { content: Array<Array<{ blocks: string[] }>> }).content[0][0].blocks).toEqual([]);
+      expect((result.find(b => b.id === 'table-2')?.data as { content: Array<Array<{ blocks: string[] }>> }).content[0][0].blocks).toEqual([]);
+    });
+
+    it('ignores blocks whose id is not the positional cell-R-C pattern', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'table-1', type: 'table', data: { content: [[{ blocks: [] as string[] }]] } },
+        { id: 'just-a-paragraph', type: 'paragraph', data: { text: 'body' } },
+      ];
+
+      const result = reclaimDetachedTableCells(blocks);
+
+      expect(result.find(b => b.id === 'just-a-paragraph')?.parent).toBeUndefined();
+      expect((result.find(b => b.id === 'table-1')?.data as { content: Array<Array<{ blocks: string[] }>> }).content[0][0].blocks).toEqual([]);
+    });
+
+    it('ignores a cell-id block that is still referenced by a cell', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'table-1',
+          type: 'table',
+          // cell [0][0] references cell-1-1, and there is a SECOND empty cell at [0][1]
+          data: { content: [[{ blocks: ['cell-1-1'] }, { blocks: [] as string[] }]] },
+        },
+        { id: 'cell-1-1', type: 'paragraph', data: { text: 'A' } },
+      ];
+
+      const result = reclaimDetachedTableCells(blocks);
+
+      // cell-1-1 is already referenced → must not be moved to the empty [0][1] slot.
+      const content = (result.find(b => b.id === 'table-1')?.data as { content: Array<Array<{ blocks: string[] }>> }).content;
+
+      expect(content[0][0].blocks).toEqual(['cell-1-1']);
+      expect(content[0][1].blocks).toEqual([]);
+    });
+
+    it('ignores a cell-id block that already has a parent', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'table-1', type: 'table', data: { content: [[{ blocks: [] as string[] }]] } },
+        { id: 'cell-1-1', type: 'paragraph', data: { text: 'A' }, parent: 'some-other-table' },
+      ];
+
+      const result = reclaimDetachedTableCells(blocks);
+
+      expect(result.find(b => b.id === 'cell-1-1')?.parent).toBe('some-other-table');
+      expect((result.find(b => b.id === 'table-1')?.data as { content: Array<Array<{ blocks: string[] }>> }).content[0][0].blocks).toEqual([]);
+    });
+
+    it('refuses to reclaim an orphan whose id is duplicated elsewhere in the document', () => {
+      // A duplicate id is ambiguous and would be regenerated by the renderer's
+      // dedup pass after reclaim, leaving a dangling cell reference. Skip it.
+      const blocks: OutputBlockData[] = [
+        { id: 'table-1', type: 'table', data: { content: [[{ blocks: [] as string[] }]] } },
+        { id: 'cell-1-1', type: 'paragraph', data: { text: 'first' } },
+        { id: 'cell-1-1', type: 'paragraph', data: { text: 'dup' } },
+      ];
+
+      const result = reclaimDetachedTableCells(blocks);
+
+      expect(result.filter(b => b.id === 'cell-1-1').every(b => b.parent === undefined)).toBe(true);
+      expect((result.find(b => b.id === 'table-1')?.data as { content: Array<Array<{ blocks: string[] }>> }).content[0][0].blocks).toEqual([]);
+    });
+
+    it('rejects non-canonical numeric ids with leading zeros', () => {
+      // `Number('01') === 1` must NOT let `cell-01-1` masquerade as `cell-1-1`;
+      // the migration only ever mints canonical 1-based ids like `cell-2-1`.
+      const blocks: OutputBlockData[] = [
+        { id: 'table-1', type: 'table', data: { content: [[{ blocks: [] as string[] }]] } },
+        { id: 'cell-01-1', type: 'paragraph', data: { text: 'masquerade' } },
+      ];
+
+      const result = reclaimDetachedTableCells(blocks);
+
+      expect(result.find(b => b.id === 'cell-01-1')?.parent).toBeUndefined();
+      expect((result.find(b => b.id === 'table-1')?.data as { content: Array<Array<{ blocks: string[] }>> }).content[0][0].blocks).toEqual([]);
+    });
+
+    it('leaves the orphan at root when no table has that position (out of range)', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'table-1', type: 'table', data: { content: [[{ blocks: [] as string[] }]] } },
+        { id: 'cell-9-9', type: 'paragraph', data: { text: 'far' } },
+      ];
+
+      expect(() => reclaimDetachedTableCells(blocks)).not.toThrow();
+      expect(reclaimDetachedTableCells(blocks).find(b => b.id === 'cell-9-9')?.parent).toBeUndefined();
+    });
+
+    it('returns the same array reference when there is nothing to reclaim', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'p1', type: 'paragraph', data: { text: 'A' } },
+        { id: 'p2', type: 'paragraph', data: { text: 'B' } },
+      ];
+
+      expect(reclaimDetachedTableCells(blocks)).toBe(blocks);
+    });
+
+    it('does not mutate the input blocks array', () => {
+      const blocks = detachedDoc();
+      const before = JSON.stringify(blocks);
+
+      reclaimDetachedTableCells(blocks);
+
+      expect(JSON.stringify(blocks)).toBe(before);
+    });
+
+    it('reclaims multiple detached orphans into distinct empty cells of the single table', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'table-1',
+          type: 'table',
+          data: {
+            content: [
+              [{ blocks: [] as string[] }, { blocks: ['cell-1-2'] }],
+              [{ blocks: ['cell-2-1'] }, { blocks: [] as string[] }],
+            ],
+          },
+        },
+        { id: 'cell-1-2', type: 'paragraph', data: { text: 'B' }, parent: 'table-1' },
+        { id: 'cell-2-1', type: 'paragraph', data: { text: 'C' }, parent: 'table-1' },
+        // two detached orphans for the two empty cells [0][0] and [1][1]
+        { id: 'cell-1-1', type: 'paragraph', data: { text: 'A' } },
+        { id: 'cell-2-2', type: 'paragraph', data: { text: 'D' } },
+      ];
+
+      const result = reclaimDetachedTableCells(blocks);
+      const content = (result.find(b => b.id === 'table-1')?.data as { content: Array<Array<{ blocks: string[] }>> }).content;
+
+      expect(content[0][0].blocks).toEqual(['cell-1-1']);
+      expect(content[1][1].blocks).toEqual(['cell-2-2']);
+      expect(result.find(b => b.id === 'cell-1-1')?.parent).toBe('table-1');
+      expect(result.find(b => b.id === 'cell-2-2')?.parent).toBe('table-1');
+    });
+
+    it('ignores an orphan whose position is a legacy string cell (not a blocks cell)', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'table-1', type: 'table', data: { content: [['plain legacy text']] } },
+        { id: 'cell-1-1', type: 'paragraph', data: { text: 'orphan' } },
+      ];
+
+      const result = reclaimDetachedTableCells(blocks);
+
+      expect(result.find(b => b.id === 'cell-1-1')?.parent).toBeUndefined();
+    });
+
+    it('returns the same array reference on every no-op path', () => {
+      const occupied: OutputBlockData[] = [
+        { id: 'table-1', type: 'table', data: { content: [[{ blocks: ['kept'] }]] } },
+        { id: 'kept', type: 'paragraph', data: { text: 'k' }, parent: 'table-1' },
+        { id: 'cell-1-1', type: 'paragraph', data: { text: 'x' } },
+      ];
+      const multiTable: OutputBlockData[] = [
+        { id: 'table-1', type: 'table', data: { content: [[{ blocks: [] as string[] }]] } },
+        { id: 'table-2', type: 'table', data: { content: [[{ blocks: [] as string[] }]] } },
+        { id: 'cell-1-1', type: 'paragraph', data: { text: 'x' } },
+      ];
+      const outOfRange: OutputBlockData[] = [
+        { id: 'table-1', type: 'table', data: { content: [[{ blocks: [] as string[] }]] } },
+        { id: 'cell-9-9', type: 'paragraph', data: { text: 'x' } },
+      ];
+      const duplicateId: OutputBlockData[] = [
+        { id: 'table-1', type: 'table', data: { content: [[{ blocks: [] as string[] }]] } },
+        { id: 'cell-1-1', type: 'paragraph', data: { text: 'x' } },
+        { id: 'cell-1-1', type: 'paragraph', data: { text: 'y' } },
+      ];
+      const nonCanonicalId: OutputBlockData[] = [
+        { id: 'table-1', type: 'table', data: { content: [[{ blocks: [] as string[] }]] } },
+        { id: 'cell-01-1', type: 'paragraph', data: { text: 'x' } },
+      ];
+
+      // Occupied target cell: cell-1-1 is the only empty slot? No — [0][0] is occupied,
+      // so there is no empty matching cell → nothing reclaimed → same reference.
+      expect(reclaimDetachedTableCells(occupied)).toBe(occupied);
+      expect(reclaimDetachedTableCells(multiTable)).toBe(multiTable);
+      expect(reclaimDetachedTableCells(outOfRange)).toBe(outOfRange);
+      expect(reclaimDetachedTableCells(duplicateId)).toBe(duplicateId);
+      expect(reclaimDetachedTableCells(nonCanonicalId)).toBe(nonCanonicalId);
+    });
+
+    // Guards the canonical-id invariant: a future loosening of DETACHED_CELL_ID_PATTERN
+    // (e.g. back to `\d+`) would reintroduce the zero-index / leading-zero / negative /
+    // decimal consumption bug. None of these forms may ever be reclaimed.
+    it.each(['cell-0-1', 'cell-1-0', 'cell-00-1', 'cell-01-1', 'cell-1-01', 'cell--1-1', 'cell-1.5-1'])(
+      'never reclaims a non-canonical id %s',
+      (badId) => {
+        const blocks: OutputBlockData[] = [
+          { id: 'table-1', type: 'table', data: { content: [[{ blocks: [] as string[] }]] } },
+          { id: badId, type: 'paragraph', data: { text: 'x' } },
+        ];
+
+        const result = reclaimDetachedTableCells(blocks);
+
+        expect(result.find(b => b.id === badId)?.parent).toBeUndefined();
+        expect((result.find(b => b.id === 'table-1')?.data as { content: Array<Array<{ blocks: string[] }>> }).content[0][0].blocks).toEqual([]);
+      }
+    );
   });
 
   /**

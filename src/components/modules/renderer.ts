@@ -8,6 +8,7 @@ import {
   analyzeDataFormat,
   expandToHierarchical,
   normalizeTableChildParents,
+  reclaimDetachedTableCells,
   shouldExpandToHierarchical,
   type DataFormatAnalysis,
 } from '../utils/data-model-transform';
@@ -100,12 +101,17 @@ export class Renderer extends Module {
           ? expandToHierarchical(blocksData)
           : blocksData;
 
+        // Recover migrated cells whose text a pre-fix save detached to root:
+        // re-attach `cell-<row>-<col>`-id orphans back into their empty cell.
+        // Runs before normalize so reclaimed refs get parented in the same pass.
+        const reclaimedBlocks = reclaimDetachedTableCells(expandedBlocks);
+
         // Tables persist child references via `data.content[r][c].blocks = [<id>]`
         // rather than an explicit `parent` field on each child. Pre-normalize
         // those parent references so downstream code that gates on parentId
         // (read-only cell mounter, saver filter, hierarchy queries) correctly
         // recognizes the children as belonging to their table.
-        const processedBlocks = normalizeTableChildParents(expandedBlocks);
+        const processedBlocks = normalizeTableChildParents(reclaimedBlocks);
 
         // Note: Yjs data layer is loaded via BlockManager.insertMany() with the correct block IDs
 

@@ -1239,6 +1239,206 @@ export const normalizeTableChildParents = (blocks: OutputBlockData[]): OutputBlo
 };
 
 /**
+ * Positional cell-child id minted by the HTML→blok migration: `cell-<row>-<col>`
+ * with 1-based row/col (e.g. `cell-2-1` = row 2, column 1). See the migration
+ * system prompt (EditorJsHtmlConversionSystemPrompt) which instructs the model
+ * to emit one paragraph per non-empty cell with exactly this id.
+ */
+const DETACHED_CELL_ID_PATTERN = /^cell-([1-9]\d*)-([1-9]\d*)$/;
+
+interface CellPosition {
+  row: number;
+  col: number;
+}
+
+const parseDetachedCellPosition = (id: BlockId | undefined): CellPosition | null => {
+  if (typeof id !== 'string') {
+    return null;
+  }
+  const match = DETACHED_CELL_ID_PATTERN.exec(id);
+
+  if (match === null) {
+    return null;
+  }
+  const row = Number(match[1]) - 1;
+  const col = Number(match[2]) - 1;
+
+  if (row < 0 || col < 0) {
+    return null;
+  }
+  return { row, col };
+};
+
+const tableCellIsEmptyAt = (tableBlock: OutputBlockData, row: number, col: number): boolean => {
+  const rows = getTableContentRows(tableBlock.data);
+
+  if (rows === null) {
+    return false;
+  }
+  const rowCells = rows[row];
+
+  if (!Array.isArray(rowCells)) {
+    return false;
+  }
+  const cell = rowCells[col];
+
+  return isCellWithBlockRefs(cell) && cell.blocks.length === 0;
+};
+
+const collectReferencedCellChildIds = (blocks: OutputBlockData[]): Set<string> => {
+  const referenced = new Set<string>();
+
+  blocks
+    .filter(block => block.type === 'table')
+    .forEach(tableBlock => {
+      const rows = getTableContentRows(tableBlock.data);
+
+      rows?.forEach(row => {
+        if (!Array.isArray(row)) {
+          return;
+        }
+        row.forEach(cell => {
+          if (!isCellWithBlockRefs(cell)) {
+            return;
+          }
+          cell.blocks.forEach(id => {
+            if (typeof id === 'string') {
+              referenced.add(id);
+            }
+          });
+        });
+      });
+    });
+
+  return referenced;
+};
+
+/**
+ * Recover migrated table cells whose text was detached by a pre-fix save.
+ *
+ * The "migration table content loss" bug worked like this: a migrated table
+ * references its cell text via `data.content[r][c].blocks = [<childId>]`, but the
+ * child paragraph lacked `parent === tableId`. A save on an unfixed editor filtered
+ * that child out of the cell (Table.save() keeps only `parentId === tableId`) and
+ * the saver emitted it as a root-level block. The text is NOT lost — it survives
+ * as a detached top-level paragraph — but the cell now reads `{ blocks: [] }`.
+ *
+ * Crucially, the migration minted that paragraph with a POSITIONAL id
+ * (`cell-<row>-<col>`, 1-based) that still encodes which cell it came from. This
+ * pass walks every root-level block whose id matches that pattern and is no longer
+ * referenced by any cell, and — when exactly one table has a matching EMPTY cell at
+ * that position — re-attaches it: the id is restored to `content[row][col].blocks`
+ * and the block's `parent` is set to that table.
+ *
+ * Safety: only empty cells are filled (occupied cells are never overwritten), only
+ * `cell-R-C`-id root blocks are consumed (user-authored blocks never match), blocks
+ * that already carry a `parent` are skipped, and reclamation is skipped entirely
+ * when two or more tables share the matching empty cell (ambiguous — never guess).
+ * The function is non-mutating and returns the same array reference when there is
+ * nothing to reclaim.
+ * @param blocks - flat block array potentially containing detached migrated cells
+ */
+export const reclaimDetachedTableCells = (blocks: OutputBlockData[]): OutputBlockData[] => {
+  const tableBlocks = blocks.filter(
+    (block): block is OutputBlockData => block.type === 'table' && block.id !== undefined && block.id !== null
+  );
+
+  // The positional id `cell-<row>-<col>` encodes the cell but NOT which table.
+  // With two or more tables the owning table is unidentifiable, so re-attaching
+  // could silently drop text into the wrong table. Only single-table documents
+  // are unambiguous; anything else is left untouched (never guess).
+  if (tableBlocks.length !== 1) {
+    return blocks;
+  }
+
+  const referenced = collectReferencedCellChildIds(blocks);
+
+  // Count id occurrences: a duplicated id is ambiguous and would be regenerated
+  // by the renderer's dedup pass after reclaim (leaving a dangling cell ref), so
+  // such ids must never be reclaimed.
+  const idCounts = new Map<string, number>();
+
+  for (const block of blocks) {
+    if (block.id !== undefined && block.id !== null) {
+      idCounts.set(block.id, (idCounts.get(block.id) ?? 0) + 1);
+    }
+  }
+
+  const reclaimedParent = new Map<BlockId, BlockId>();
+  const cellAdditions = new Map<BlockId, Array<CellPosition & { id: BlockId }>>();
+
+  for (const block of blocks) {
+    if (block.id === undefined || block.id === null) {
+      continue;
+    }
+    if (block.parent !== undefined && block.parent !== null) {
+      continue;
+    }
+    if (referenced.has(block.id)) {
+      continue;
+    }
+    if ((idCounts.get(block.id) ?? 0) > 1) {
+      continue;
+    }
+    const position = parseDetachedCellPosition(block.id);
+
+    if (position === null) {
+      continue;
+    }
+    const matchingTables = tableBlocks.filter(table =>
+      tableCellIsEmptyAt(table, position.row, position.col)
+    );
+
+    if (matchingTables.length !== 1) {
+      continue;
+    }
+    const tableId = matchingTables[0].id as BlockId;
+
+    reclaimedParent.set(block.id, tableId);
+    const additions = cellAdditions.get(tableId) ?? [];
+
+    additions.push({ ...position, id: block.id });
+    cellAdditions.set(tableId, additions);
+  }
+
+  if (reclaimedParent.size === 0) {
+    return blocks;
+  }
+
+  return blocks.map(block => {
+    if (block.id !== undefined && block.id !== null && reclaimedParent.has(block.id)) {
+      return { ...block, parent: reclaimedParent.get(block.id) };
+    }
+
+    if (block.type === 'table' && block.id !== undefined && block.id !== null && cellAdditions.has(block.id)) {
+      const additions = cellAdditions.get(block.id) ?? [];
+      const rows = getTableContentRows(block.data);
+
+      if (rows === null) {
+        return block;
+      }
+      const newContent = rows.map((row, rowIndex) => {
+        if (!Array.isArray(row)) {
+          return row;
+        }
+        return row.map((cell, colIndex) => {
+          const addition = additions.find(a => a.row === rowIndex && a.col === colIndex);
+
+          if (addition === undefined || !isCellWithBlockRefs(cell)) {
+            return cell;
+          }
+          return { ...cell, blocks: [...cell.blocks, addition.id] };
+        });
+      });
+
+      return { ...block, data: { ...(block.data as Record<string, unknown>), content: newContent } } as OutputBlockData;
+    }
+
+    return block;
+  });
+};
+
+/**
  * Check if transformation is needed based on config and detected format
  */
 export const shouldExpandToHierarchical = (

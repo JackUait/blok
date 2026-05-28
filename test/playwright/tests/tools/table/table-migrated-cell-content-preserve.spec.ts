@@ -199,6 +199,47 @@ const mixedTableData = (): OutputData => {
   return { blocks: [tableBlock, ...childBlocks] } as OutputData;
 };
 
+// A migrated table AFTER a pre-fix buggy save: one cell was emptied
+// (`blocks: []`) and its text floated to document root as a paragraph that still
+// carries its positional migration id `cell-<row>-<col>` (1-based) but NO parent.
+// The remaining cells are intact (referenced + parented). The reclaim pass must
+// re-attach the orphan to its empty cell on load. Single table → unambiguous.
+const DETACHED_ALL_TEXTS = [
+  '<strong>Автор статьи</strong>',
+  'Егор Смазнов',
+  'Цель статьи',
+  'Установка принтера',
+];
+
+const detachedMigratedTableData = (): OutputData => {
+  const tableBlock = {
+    id: 'table-1',
+    type: 'table',
+    data: {
+      withHeadings: false,
+      withHeadingColumn: false,
+      stretched: false,
+      content: [
+        [{ blocks: ['cell-1-1'] }, { blocks: ['cell-1-2'] }],
+        // cell [1][0] (row 2, col 1) was emptied by a buggy save:
+        [{ blocks: [] as string[] }, { blocks: ['cell-2-2'] }],
+      ],
+    },
+  };
+
+  const intactChildren = [
+    { id: 'cell-1-1', type: 'paragraph', data: { text: '<strong>Автор статьи</strong>' }, parent: 'table-1' },
+    { id: 'cell-1-2', type: 'paragraph', data: { text: 'Егор Смазнов' }, parent: 'table-1' },
+    { id: 'cell-2-2', type: 'paragraph', data: { text: 'Установка принтера' }, parent: 'table-1' },
+  ];
+
+  // The detached orphan: positional id intact, no parent, no longer referenced
+  // by its cell. Sits at root in document order after the table.
+  const orphan = { id: 'cell-2-1', type: 'paragraph', data: { text: 'Цель статьи' } };
+
+  return { blocks: [tableBlock, ...intactChildren, orphan] } as OutputData;
+};
+
 const saveBlok = (page: Page): Promise<OutputData> =>
   page.evaluate(async () => {
     const blok = window.blokInstance;
@@ -296,5 +337,64 @@ test.describe('Migrated table cell content preservation', () => {
     expect(texts.filter(t => t === null || t === '')).toHaveLength(0);
     // Exactly the 4 populated references survive (the empty cell adds none).
     expect(texts).toHaveLength(MIXED_BLOCK_TEXTS.length);
+  });
+});
+
+test.describe('Migrated table detached cell recovery', () => {
+  test.beforeAll(() => {
+    ensureBlokBundleBuilt();
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto(TEST_PAGE_URL);
+    await page.waitForFunction(() => typeof window.Blok === 'function');
+  });
+
+  test('edit-mode load re-attaches the detached orphan into its empty cell on save', async ({ page }) => {
+    await createBlok(page, { tools: defaultTools, data: detachedMigratedTableData() });
+
+    const saved = await saveBlok(page);
+    const texts = cellTexts(saved);
+
+    // The detached text is back inside a cell, and every cell resolves.
+    expect(texts).toContain('Цель статьи');
+    for (const expected of DETACHED_ALL_TEXTS) {
+      expect(texts).toContain(expected);
+    }
+    expect(texts.filter(t => t === null || t === '')).toHaveLength(0);
+    // All four cells populated — the orphan now lands in [1][0], adding no extra.
+    expect(texts).toHaveLength(DETACHED_ALL_TEXTS.length);
+
+    // The orphan is now referenced specifically by cell [1][0].
+    const table = saved.blocks.find(b => b.type === 'table');
+    const content = (table?.data as { content: Array<Array<{ blocks?: string[] }>> }).content;
+
+    expect(content[1][0].blocks).toEqual(['cell-2-1']);
+  });
+
+  test('published (read-only) → edit toggle → save recovers the detached cell', async ({ page }) => {
+    // Mirrors the incident: a damaged article opened from the published view, then
+    // switched to edit and saved without touching the table.
+    await createBlok(page, { tools: defaultTools, readOnly: true, data: detachedMigratedTableData() });
+
+    await page.evaluate(async () => {
+      await window.blokInstance?.readOnly.toggle();
+    });
+    await page.waitForFunction(() => window.blokInstance?.readOnly.isEnabled === false);
+
+    const saved = await saveBlok(page);
+    const texts = cellTexts(saved);
+
+    expect(texts).toContain('Цель статьи');
+    for (const expected of DETACHED_ALL_TEXTS) {
+      expect(texts).toContain(expected);
+    }
+    expect(texts.filter(t => t === null || t === '')).toHaveLength(0);
+    expect(texts).toHaveLength(DETACHED_ALL_TEXTS.length);
+
+    const table = saved.blocks.find(b => b.type === 'table');
+    const content = (table?.data as { content: Array<Array<{ blocks?: string[] }>> }).content;
+
+    expect(content[1][0].blocks).toEqual(['cell-2-1']);
   });
 });

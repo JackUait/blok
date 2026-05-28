@@ -30,21 +30,18 @@ const ALLOWED_DIR_PREFIXES = [
   'stories' + sep,
 ];
 
-function walk(dir: string): string[] {
-  const out: string[] = [];
+const SOURCE_FILE_RE = /\.(ts|tsx|mts|cts|js|jsx)$/;
 
-  for (const entry of readdirSync(dir)) {
+function walk(dir: string): string[] {
+  return readdirSync(dir).flatMap((entry) => {
     const full = join(dir, entry);
     const s = statSync(full);
 
-    if (s.isDirectory()) {
-      out.push(...walk(full));
-    } else if (/\.(ts|tsx|mts|cts|js|jsx)$/.test(entry)) {
-      out.push(full);
-    }
-  }
+    const collectDir = (): string[] => walk(full);
+    const collectFile = (): string[] => SOURCE_FILE_RE.test(entry) ? [full] : [];
 
-  return out;
+    return s.isDirectory() ? collectDir() : collectFile();
+  });
 }
 
 function isAllowed(relPath: string): boolean {
@@ -92,18 +89,15 @@ describe('no inline <svg> outside icons layer', () => {
   }
 
   it('finds zero offenders', () => {
-    if (offenders.length > 0) {
-      const msg = offenders
-        .map((o) => `  ${o.file}: line(s) ${o.lines.join(', ')}`)
-        .join('\n');
+    const report = offenders
+      .map((o) => `  ${o.file}: line(s) ${o.lines.join(', ')}`)
+      .join('\n');
 
-      throw new Error(
-        `Inline <svg> found outside src/components/icons/index.ts.\n` +
-        `Move each icon into the shared icons layer and import it.\n` +
-        `Offenders:\n${msg}`
-      );
-    }
-
-    expect(offenders).toEqual([]);
+    expect(
+      offenders,
+      `Inline <svg> found outside src/components/icons/index.ts.\n` +
+      `Move each icon into the shared icons layer and import it.\n` +
+      `Offenders:\n${report}`
+    ).toEqual([]);
   });
 });

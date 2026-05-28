@@ -796,9 +796,16 @@ describe("UI module", () => {
 
     it("disables keyboard but keeps block hover enabled when toggling on read-only mode", () => {
       const { ui } = createUI();
-      const keyboardDisableSpy = vi.fn();
-      const blockHoverDisableSpy = vi.fn();
-      const blockHoverEnableSpy = vi.fn();
+      const listenerState = { keyboardEnabled: true, blockHoverEnabled: true };
+      const keyboardDisableSpy = vi.fn(() => {
+        listenerState.keyboardEnabled = false;
+      });
+      const blockHoverDisableSpy = vi.fn(() => {
+        listenerState.blockHoverEnabled = false;
+      });
+      const blockHoverEnableSpy = vi.fn(() => {
+        listenerState.blockHoverEnabled = true;
+      });
 
       (
         ui as unknown as { keyboardController: { disable: () => void } }
@@ -822,6 +829,10 @@ describe("UI module", () => {
       expect(keyboardDisableSpy).toHaveBeenCalledTimes(1);
       expect(blockHoverDisableSpy).not.toHaveBeenCalled();
       expect(blockHoverEnableSpy).toHaveBeenCalled();
+
+      // Verify observable outcome: keyboard listeners are off, block-hover stays on.
+      expect(listenerState.keyboardEnabled).toBe(false);
+      expect(listenerState.blockHoverEnabled).toBe(true);
     });
   });
 

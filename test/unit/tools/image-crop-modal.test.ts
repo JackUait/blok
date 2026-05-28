@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { openCropModal } from '../../../src/tools/image/crop-modal';
+import { simulateMousedown, simulateMouseup, simulateClick } from '../../helpers/simulate';
 
 // jsdom lacks HTML Popover API implementations; stub minimal shape for promoteToTopLayer.
 beforeEach(() => {
@@ -66,8 +67,8 @@ describe('openCropModal', () => {
     const backdrop = document.body.querySelector<HTMLElement>(
       '.blok-image-crop-modal-backdrop'
     )!;
-    backdrop.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    backdrop.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    simulateMousedown(backdrop);
+    simulateClick(backdrop);
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(document.body.querySelector('.blok-image-crop-modal-backdrop')).toBeNull();
     detach();
@@ -77,8 +78,8 @@ describe('openCropModal', () => {
     const onCancel = vi.fn();
     const detach = open({ onCancel });
     const dialog = document.body.querySelector<HTMLElement>('[role="dialog"]')!;
-    dialog.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    dialog.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    simulateMousedown(dialog);
+    simulateClick(dialog);
     expect(onCancel).not.toHaveBeenCalled();
     detach();
   });
@@ -90,9 +91,9 @@ describe('openCropModal', () => {
     const backdrop = document.body.querySelector<HTMLElement>(
       '.blok-image-crop-modal-backdrop'
     )!;
-    handle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    backdrop.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-    backdrop.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    simulateMousedown(handle);
+    simulateMouseup(backdrop);
+    simulateClick(backdrop);
     expect(onCancel).not.toHaveBeenCalled();
     expect(document.body.querySelector('.blok-image-crop-modal-backdrop')).not.toBeNull();
     detach();

@@ -1,5 +1,6 @@
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderIconGallery } from '../../../src/playground/icon-gallery';
+import { simulateKeydown, simulateInput } from '../../helpers/simulate';
 
 const ICONS: Record<string, string> = {
   IconCheck: '<svg data-icon="check"><path /></svg>',
@@ -68,7 +69,7 @@ describe('playground icon gallery', () => {
 
     expect(lightbox).not.toBeNull();
 
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    simulateKeydown(document, 'Escape');
 
     expect(document.querySelector(`[data-testid="${LIGHTBOX_TESTID}"]`)).toBe(lightbox);
     expect(lightbox?.classList.contains('icon-lightbox--closing')).toBe(true);
@@ -186,7 +187,7 @@ describe('playground icon gallery', () => {
 
     if (slider) {
       slider.value = '48';
-      slider.dispatchEvent(new Event('input', { bubbles: true }));
+      simulateInput(slider);
     }
 
     const svgEl = document.querySelector<SVGElement>(`[data-testid="${LIGHTBOX_TESTID}"] .icon-lightbox__preview svg`);
@@ -207,7 +208,7 @@ describe('playground icon gallery', () => {
 
     if (color) {
       color.value = '#ff0000';
-      color.dispatchEvent(new Event('input', { bubbles: true }));
+      simulateInput(color);
     }
 
     const preview = document.querySelector<HTMLElement>(`[data-testid="${LIGHTBOX_TESTID}"] .icon-lightbox__preview`);
@@ -215,14 +216,17 @@ describe('playground icon gallery', () => {
     expect(preview?.style.color).toBe('rgb(255, 0, 0)');
   });
 
-  test('clicking download triggers anchor with svg filename', () => {
-    const createObjectURL = vi.fn(() => 'blob:mock-url');
+  test('clicking download builds an svg blob URL, triggers the download, then revokes it', () => {
+    const createdBlobs: Blob[] = [];
+    const createObjectURL = vi.fn((blob: Blob) => {
+      createdBlobs.push(blob);
+
+      return 'blob:mock-url';
+    });
     const revokeObjectURL = vi.fn();
 
     Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectURL });
     Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectURL });
-
-    const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
     renderIconGallery({ container, iconGroups: GROUPS, icons: ICONS });
 
@@ -234,9 +238,17 @@ describe('playground icon gallery', () => {
 
     download?.click();
 
+    // The blob carries the icon's SVG markup as image/svg+xml.
     expect(createObjectURL).toHaveBeenCalledTimes(1);
-    expect(anchorClick).toHaveBeenCalledTimes(1);
+    expect(createdBlobs[0]?.type).toBe('image/svg+xml');
+
+    // The generated object URL is revoked once the download has been triggered.
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
+
+    // The download surfaces user-visible feedback once complete.
+    const feedback = document.querySelector(`[data-testid="${LIGHTBOX_TESTID}"] [data-testid="icon-lightbox-feedback"]`);
+
+    expect(feedback?.textContent).toContain('Downloaded');
   });
 
   test('background toggle cycles preview background', () => {
@@ -275,14 +287,14 @@ describe('playground icon gallery', () => {
     expect(getName()).toBe('IconCheck');
     expect(getSvgMarker()).toBe('check');
 
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    simulateKeydown(document, 'ArrowRight');
     expect(getName()).toBe('IconCross');
     expect(getSvgMarker()).toBe('cross');
 
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    simulateKeydown(document, 'ArrowRight');
     expect(getName()).toBe('IconCheck');
 
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+    simulateKeydown(document, 'ArrowLeft');
     expect(getName()).toBe('IconCross');
   });
 });

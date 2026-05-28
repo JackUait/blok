@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { simulateKeydown } from '../../helpers/simulate';
 
 vi.mock('../../../src/components/utils/tooltip', () => ({
   onHover: vi.fn(),
@@ -147,10 +148,10 @@ describe('openLightbox navigation', () => {
         startIndex: 0,
       },
     });
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    simulateKeydown(document, 'ArrowRight');
     let img = document.querySelector<HTMLImageElement>('[role="dialog"] img');
     expect(img?.getAttribute('src')).toBe('https://x/b.png');
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+    simulateKeydown(document, 'ArrowLeft');
     img = document.querySelector<HTMLImageElement>('[role="dialog"] img');
     expect(img?.getAttribute('src')).toBe('https://x/a.png');
     close();

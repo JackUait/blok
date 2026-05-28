@@ -1,7 +1,7 @@
 // test/playwright/tests/tools/image.spec.ts
 
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
@@ -45,6 +45,16 @@ const createBlok = async (page: Page, data?: OutputData): Promise<void> => {
     },
     { holder: HOLDER_ID, initialData: data ?? null }
   );
+};
+
+type BoundingBox = { x: number; y: number; width: number; height: number };
+
+const requireBoundingBox = async (locator: Locator, label: string): Promise<BoundingBox> => {
+  const box = await locator.boundingBox();
+
+  expect(box, `${label} bounding box missing`).not.toBeNull();
+
+  return box as BoundingBox;
 };
 
 test.beforeEach(async ({ page }) => {
@@ -142,9 +152,8 @@ test('image controls only show when hovering image or caption, not surrounding w
   expect(await toolbar.evaluate((el) => getComputedStyle(el).opacity)).toBe('0');
 
   // Hover empty space inside the tool root but outside the image figure.
-  const rootBox = await imageBlock.boundingBox();
-  const figureBox = await imageBlock.locator('[data-role="image-figure"]').boundingBox();
-  if (!rootBox || !figureBox) throw new Error('box missing');
+  const rootBox = await requireBoundingBox(imageBlock, 'image block root');
+  const figureBox = await requireBoundingBox(imageBlock.locator('[data-role="image-figure"]'), 'image figure');
   const whitespaceX = rootBox.x + 4;
   const whitespaceY = figureBox.y + figureBox.height / 2;
   await page.mouse.move(whitespaceX, whitespaceY);

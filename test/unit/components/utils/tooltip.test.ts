@@ -85,7 +85,89 @@ const setWindowScrollY = (value?: number): void => {
   });
 };
 
+interface PopoverPolyfill {
+  showPopover: ReturnType<typeof vi.fn>;
+  hidePopover: ReturnType<typeof vi.fn>;
+  /** Restores `HTMLElement.prototype` to its pre-polyfill shape. */
+  restore: () => void;
+}
+
+const POPOVER_PROPS = ['popover', 'showPopover', 'hidePopover'] as const;
+
+/**
+ * jsdom does not implement the HTML Popover API. This installs a minimal
+ * polyfill on `HTMLElement.prototype` so the production feature-detection
+ * (`'popover' in HTMLElement.prototype`) succeeds and `showPopover()` is
+ * callable. The returned `restore()` reinstates the original prototype
+ * descriptors (or removes the props via `Reflect.deleteProperty` when none
+ * existed) so the polyfill cannot leak into other suites.
+ */
+const installPopoverPolyfill = (): PopoverPolyfill => {
+  const originalDescriptors = new Map<string, PropertyDescriptor | undefined>();
+
+  for (const prop of POPOVER_PROPS) {
+    originalDescriptors.set(prop, Object.getOwnPropertyDescriptor(HTMLElement.prototype, prop));
+  }
+
+  const showPopover = vi.fn();
+  const hidePopover = vi.fn();
+
+  Object.defineProperty(HTMLElement.prototype, 'popover', {
+    configurable: true,
+    get(this: HTMLElement) { return this.getAttribute('popover'); },
+    set(this: HTMLElement, value: string | null) {
+      if (value === null) {
+        this.removeAttribute('popover');
+      } else {
+        this.setAttribute('popover', value);
+      }
+    },
+  });
+  Object.defineProperty(HTMLElement.prototype, 'showPopover', {
+    configurable: true, writable: true, value: showPopover,
+  });
+  Object.defineProperty(HTMLElement.prototype, 'hidePopover', {
+    configurable: true, writable: true, value: hidePopover,
+  });
+
+  const restore = (): void => {
+    for (const prop of POPOVER_PROPS) {
+      const original = originalDescriptors.get(prop);
+
+      if (original === undefined) {
+        Reflect.deleteProperty(HTMLElement.prototype, prop);
+      } else {
+        Object.defineProperty(HTMLElement.prototype, prop, original);
+      }
+    }
+  };
+
+  return { showPopover, hidePopover, restore };
+};
+
+/**
+ * Scans raw `main.css` source for a CSS rule whose selector targets
+ * `[data-blok-top-layer][popover]` and whose body resets the UA popover
+ * modal-dialog defaults (`inset: auto; margin: 0;`). Returns true when such a
+ * reset rule exists. Kept outside the test body so the matching loop holds no
+ * in-test branching.
+ */
+const hasTopLayerPopoverReset = (cssSource: string): boolean => {
+  const ruleRegex = /([^{}]+)\{([^}]*)\}/g;
+  const markerSelectorRegex = /\[data-blok-top-layer\]\s*\[popover\]/;
+  const insetRegex = /inset\s*:\s*auto\s*;/;
+  const marginRegex = /margin\s*:\s*0\s*;/;
+
+  const rules = [...cssSource.matchAll(ruleRegex)];
+
+  return rules.some(([ , selectorList, body ]) =>
+    insetRegex.test(body) && marginRegex.test(body) && markerSelectorRegex.test(selectorList)
+  );
+};
+
 describe('Tooltip utility', () => {
+  let popoverPolyfill: PopoverPolyfill | null = null;
+
   afterEach(() => {
     const wrapper = getTooltipWrapper();
 
@@ -100,6 +182,8 @@ describe('Tooltip utility', () => {
     }
     document.body.scrollTop = 0;
     setWindowScrollY(undefined);
+    popoverPolyfill?.restore();
+    popoverPolyfill = null;
     vi.restoreAllMocks();
     vi.useRealTimers();
   });
@@ -522,23 +606,7 @@ describe('Tooltip utility', () => {
   it('uses viewport-relative coords (no scroll add) when promoted to Top Layer', () => {
     // Polyfill the Popover API on the prototype so the production code's
     // feature-detection succeeds inside jsdom.
-    Object.defineProperty(HTMLElement.prototype, 'popover', {
-      configurable: true,
-      get(this: HTMLElement) { return this.getAttribute('popover'); },
-      set(this: HTMLElement, value: string | null) {
-        if (value === null) {
-          this.removeAttribute('popover');
-        } else {
-          this.setAttribute('popover', value);
-        }
-      },
-    });
-    Object.defineProperty(HTMLElement.prototype, 'showPopover', {
-      configurable: true, writable: true, value: vi.fn(),
-    });
-    Object.defineProperty(HTMLElement.prototype, 'hidePopover', {
-      configurable: true, writable: true, value: vi.fn(),
-    });
+    popoverPolyfill = installPopoverPolyfill();
 
     const target = createTargetElement({ left: 15, bottom: 75, width: 120 });
 
@@ -559,41 +627,15 @@ describe('Tooltip utility', () => {
     // viewport. `getBoundingClientRect()` is already viewport-relative, so
     // adding scrollY would shift the tooltip off-screen. Expect raw rect coords.
     expect(wrapper.style.top).toBe('93px');
-
-    // Cleanup
-    delete (HTMLElement.prototype as unknown as Record<string, unknown>).popover;
-    delete (HTMLElement.prototype as unknown as Record<string, unknown>).showPopover;
-    delete (HTMLElement.prototype as unknown as Record<string, unknown>).hidePopover;
   });
 
   it('promotes tooltip wrapper to CSS Top Layer on show so it renders above open popovers', () => {
-    const showPopoverSpy = vi.fn();
-    const hidePopoverSpy = vi.fn();
-
     // jsdom (as of 28) does not implement the HTML Popover API. Polyfill enough
     // of it on the prototype so the production feature-detection (`'popover' in
     // HTMLElement.prototype`) succeeds and `showPopover()` is callable.
-    Object.defineProperty(HTMLElement.prototype, 'popover', {
-      configurable: true,
-      get(this: HTMLElement) { return this.getAttribute('popover'); },
-      set(this: HTMLElement, value: string | null) {
-        if (value === null) {
-          this.removeAttribute('popover');
-        } else {
-          this.setAttribute('popover', value);
-        }
-      },
-    });
-    Object.defineProperty(HTMLElement.prototype, 'showPopover', {
-      configurable: true,
-      writable: true,
-      value: showPopoverSpy,
-    });
-    Object.defineProperty(HTMLElement.prototype, 'hidePopover', {
-      configurable: true,
-      writable: true,
-      value: hidePopoverSpy,
-    });
+    popoverPolyfill = installPopoverPolyfill();
+
+    const { showPopover: showPopoverSpy } = popoverPolyfill;
 
     const target = createTargetElement();
 
@@ -606,11 +648,6 @@ describe('Tooltip utility', () => {
     // CSS z-index can't beat an open popover that's already in the Top Layer.
     expect(wrapper?.getAttribute('popover')).toBe('manual');
     expect(showPopoverSpy).toHaveBeenCalled();
-
-    // Cleanup: remove polyfilled props so they don't leak into other suites.
-    delete (HTMLElement.prototype as unknown as Record<string, unknown>).popover;
-    delete (HTMLElement.prototype as unknown as Record<string, unknown>).showPopover;
-    delete (HTMLElement.prototype as unknown as Record<string, unknown>).hidePopover;
   });
 
   it('handles rapid show/hide/show cycles correctly', () => {
@@ -655,24 +692,7 @@ describe('Tooltip utility', () => {
     const cssPath = path.resolve(__dirname, '../../../../src/styles/main.css');
     const cssSource = fs.readFileSync(cssPath, 'utf-8');
 
-    const ruleRegex = /([^{}]+)\{([^}]*)\}/g;
-    const markerSelectorRegex = /\[data-blok-top-layer\]\s*\[popover\]/;
-    const insetRegex = /inset\s*:\s*auto\s*;/;
-    const marginRegex = /margin\s*:\s*0\s*;/;
-
-    let foundReset = false;
-    let match: RegExpExecArray | null = ruleRegex.exec(cssSource);
-
-    while (match !== null) {
-      const [ , selectorList, body ] = match;
-
-      if (insetRegex.test(body) && marginRegex.test(body) && markerSelectorRegex.test(selectorList)) {
-        foundReset = true;
-        break;
-      }
-
-      match = ruleRegex.exec(cssSource);
-    }
+    const foundReset = hasTopLayerPopoverReset(cssSource);
 
     expect(
       foundReset,
@@ -688,23 +708,7 @@ describe('Tooltip utility', () => {
    * with a known offset rect.
    */
   it('places tooltip with viewport-relative coords for placement:top when in Top Layer', () => {
-    Object.defineProperty(HTMLElement.prototype, 'popover', {
-      configurable: true,
-      get(this: HTMLElement) { return this.getAttribute('popover'); },
-      set(this: HTMLElement, value: string | null) {
-        if (value === null) {
-          this.removeAttribute('popover');
-        } else {
-          this.setAttribute('popover', value);
-        }
-      },
-    });
-    Object.defineProperty(HTMLElement.prototype, 'showPopover', {
-      configurable: true, writable: true, value: vi.fn(),
-    });
-    Object.defineProperty(HTMLElement.prototype, 'hidePopover', {
-      configurable: true, writable: true, value: vi.fn(),
-    });
+    popoverPolyfill = installPopoverPolyfill();
 
     const target = createTargetElement({
       left: 200,
@@ -733,10 +737,5 @@ describe('Tooltip utility', () => {
     expect(wrapper.style.left).toBe('180px');
     expect(wrapper.style.top).toBe('266px');
     expect(wrapper.getAttribute('data-blok-placement')).toBe('top');
-
-    // Cleanup polyfill so it does not leak into other suites.
-    delete (HTMLElement.prototype as unknown as Record<string, unknown>).popover;
-    delete (HTMLElement.prototype as unknown as Record<string, unknown>).showPopover;
-    delete (HTMLElement.prototype as unknown as Record<string, unknown>).hidePopover;
   });
 });

@@ -8,6 +8,7 @@ vi.mock('../../../../src/components/utils/tooltip', () => ({
 
 import { renderImage, renderCaption, renderCaptionRow, openLightbox } from '../../../../src/tools/image/ui';
 import * as tooltip from '../../../../src/components/utils/tooltip';
+import { simulateKeydown, simulateMousedown } from '../../../helpers/simulate';
 
 describe('renderImage', () => {
   it('returns figure with <img> carrying url and alt; width is set on figure so container fits image', () => {
@@ -220,7 +221,7 @@ describe('openLightbox', () => {
 
   it('closes on Escape key', () => {
     openLightbox({ url: 'u' });
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    simulateKeydown(document, 'Escape');
     expect(document.querySelector('[role="dialog"][aria-modal="true"]')).toBeNull();
   });
 
@@ -228,7 +229,7 @@ describe('openLightbox', () => {
     const close = openLightbox({ url: 'u' });
     const img = document.querySelector<HTMLImageElement>('[role="dialog"] img');
     if (!img) throw new Error('img missing');
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: '-' }));
+    simulateKeydown(document, '-');
     const match = img.style.transform.match(/scale\(([^)]+)\)/);
     if (!match) throw new Error('no scale');
     expect(parseFloat(match[1])).toBeLessThan(1);
@@ -239,7 +240,7 @@ describe('openLightbox', () => {
     const close = openLightbox({ url: 'u' });
     const img = document.querySelector<HTMLImageElement>('[role="dialog"] img');
     if (!img) throw new Error('img missing');
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: '+' }));
+    simulateKeydown(document, '+');
     const match = img.style.transform.match(/scale\(([^)]+)\)/);
     if (!match) throw new Error('no scale');
     expect(parseFloat(match[1])).toBeGreaterThan(1);
@@ -250,7 +251,7 @@ describe('openLightbox', () => {
     const close = openLightbox({ url: 'u' });
     const img = document.querySelector<HTMLImageElement>('[role="dialog"] img');
     if (!img) throw new Error('img missing');
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: '=' }));
+    simulateKeydown(document, '=');
     const match = img.style.transform.match(/scale\(([^)]+)\)/);
     if (!match) throw new Error('no scale');
     expect(parseFloat(match[1])).toBeGreaterThan(1);
@@ -262,7 +263,7 @@ describe('openLightbox', () => {
     close();
     const img = document.querySelector<HTMLImageElement>('[role="dialog"] img');
     expect(img).toBeNull();
-    expect(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: '+' }))).not.toThrow();
+    expect(() => simulateKeydown(document, '+')).not.toThrow();
   });
 
   it('closes on backdrop click', () => {
@@ -354,21 +355,43 @@ describe('openLightbox', () => {
     close();
   });
 
-  it('download button uses url and fileName on an anchor', () => {
+  it('download button uses url and fileName on an anchor that is triggered then cleaned up', () => {
     const close = openLightbox({ url: 'https://x/y.png', fileName: 'pic.png' });
     const download = document.querySelector<HTMLButtonElement>('[data-action="lightbox-download"]');
     if (!download) throw new Error('download missing');
-    const clicks: Array<{ href: string; download: string }> = [];
-    const originalAppend = HTMLBodyElement.prototype.appendChild;
-    const spy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
-      clicks.push({ href: this.getAttribute('href') ?? '', download: this.getAttribute('download') ?? '' });
-    });
+
+    // Observe the real download mechanism: an anchor appended to the body.
+    // Capture it on append and spy on that specific instance's click (a public
+    // seam on the generated element, not the shared prototype).
+    const appended: HTMLAnchorElement[] = [];
+    const clicks: HTMLAnchorElement[] = [];
+    const appendSpy = vi
+      .spyOn(document.body, 'appendChild')
+      .mockImplementation(<T extends Node>(node: T): T => {
+        if (node instanceof HTMLAnchorElement) {
+          const anchor: HTMLAnchorElement = node;
+          appended.push(anchor);
+          vi.spyOn(anchor, 'click').mockImplementation(() => {
+            clicks.push(anchor);
+          });
+        }
+
+        return node;
+      });
+
     download.click();
-    expect(clicks).toHaveLength(1);
-    expect(clicks[0].href).toBe('https://x/y.png');
-    expect(clicks[0].download).toBe('pic.png');
-    spy.mockRestore();
-    void originalAppend;
+
+    expect(appended).toHaveLength(1);
+    const anchor = appended[0];
+    expect(anchor.getAttribute('href')).toBe('https://x/y.png');
+    expect(anchor.getAttribute('download')).toBe('pic.png');
+    expect(anchor.getAttribute('target')).toBe('_blank');
+    expect(anchor.getAttribute('rel')).toBe('noopener');
+    // The anchor was actually triggered and then detached again.
+    expect(clicks).toEqual([anchor]);
+    expect(anchor.isConnected).toBe(false);
+
+    appendSpy.mockRestore();
     close();
   });
 });
@@ -496,7 +519,7 @@ describe('renderOverlay', () => {
     if (!trigger || !popover) throw new Error('dom missing');
     trigger.click();
     expect(popover.hidden).toBe(false);
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    simulateKeydown(document, 'Escape');
     expect(popover.hidden).toBe(true);
   });
 
@@ -555,7 +578,13 @@ describe('renderOverlay', () => {
       vi.mocked(tooltip.hide).mockClear();
       const overlay = renderOverlay(makeOverlayOpts());
       document.body.appendChild(overlay);
-      overlay.querySelector<HTMLButtonElement>('[data-action="align-trigger"]')?.click();
+      const trigger = overlay.querySelector<HTMLButtonElement>('[data-action="align-trigger"]');
+      const popover = overlay.querySelector<HTMLElement>('[data-role="align-popover"]');
+      if (!trigger || !popover) throw new Error('dom missing');
+      trigger.click();
+      // Observable effect of opening: popover becomes visible and the tooltip is hidden.
+      expect(popover.hidden).toBe(false);
+      expect(trigger.getAttribute('aria-expanded')).toBe('true');
       expect(tooltip.hide).toHaveBeenCalled();
     });
 
@@ -589,11 +618,18 @@ describe('renderOverlay', () => {
     });
 
     it('hides tooltip when an alignment option is clicked so option hint disappears immediately', () => {
-      const overlay = renderOverlay(makeOverlayOpts());
+      const onAlign = vi.fn();
+      const overlay = renderOverlay(makeOverlayOpts({ onAlign }));
       document.body.appendChild(overlay);
-      overlay.querySelector<HTMLButtonElement>('[data-action="align-trigger"]')?.click();
+      const trigger = overlay.querySelector<HTMLButtonElement>('[data-action="align-trigger"]');
+      const popover = overlay.querySelector<HTMLElement>('[data-role="align-popover"]');
+      if (!trigger || !popover) throw new Error('dom missing');
+      trigger.click();
       vi.mocked(tooltip.hide).mockClear();
       overlay.querySelector<HTMLButtonElement>('[data-action="align-center"]')?.click();
+      // Observable effect of selecting an option: alignment applied, popover closed, tooltip hidden.
+      expect(onAlign).toHaveBeenCalledWith('center');
+      expect(popover.hidden).toBe(true);
       expect(tooltip.hide).toHaveBeenCalled();
     });
 
@@ -623,7 +659,7 @@ describe('renderOverlay', () => {
     if (!trigger || !popover) throw new Error('dom missing');
     trigger.click();
     expect(popover.hidden).toBe(false);
-    outside.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    simulateMousedown(outside);
     expect(popover.hidden).toBe(true);
   });
 });
@@ -715,7 +751,7 @@ describe('English fallback when i18n is omitted', () => {
     });
     const trigger = overlay.querySelector<HTMLElement>('[data-action="align-trigger"]');
     expect(trigger?.getAttribute('aria-label')).toBe('Alignment');
-    trigger?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    trigger?.click();
     const popover = overlay.querySelector<HTMLElement>('[data-role="align-popover"]');
     expect(popover?.getAttribute('aria-label')).toBe('Alignment');
     const optLabels: Record<string, string> = {

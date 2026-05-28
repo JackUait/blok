@@ -117,16 +117,17 @@ function splitAncestorsAroundImage(img: Element, topLevel: Element): { before: N
 }
 
 function hasTableAncestorWithin(node: Element, wrapper: HTMLElement): boolean {
-  let current: Element | null = node.parentElement;
+  const parent = node.parentElement;
 
-  while (current !== null && current !== wrapper) {
-    if (current.tagName === 'TABLE') {
-      return true;
-    }
-    current = current.parentElement;
+  if (parent === null || parent === wrapper) {
+    return false;
   }
 
-  return false;
+  if (parent.tagName === 'TABLE') {
+    return true;
+  }
+
+  return hasTableAncestorWithin(parent, wrapper);
 }
 
 function promoteImages(wrapper: HTMLElement): void {
@@ -356,16 +357,17 @@ function buildMarkWrapper(
 const HEADING_TAGS = new Set(['H1', 'H2', 'H3', 'H4', 'H5', 'H6']);
 
 function hasHeadingAncestor(node: Element): boolean {
-  let current: Element | null = node.parentElement;
+  const parent = node.parentElement;
 
-  while (current !== null) {
-    if (HEADING_TAGS.has(current.tagName)) {
-      return true;
-    }
-    current = current.parentElement;
+  if (parent === null) {
+    return false;
   }
 
-  return false;
+  if (HEADING_TAGS.has(parent.tagName)) {
+    return true;
+  }
+
+  return hasHeadingAncestor(parent);
 }
 
 function convertSpanToSemanticHtml(span: Element, isGoogleDocs: boolean): string | null {

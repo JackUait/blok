@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mountCropEditor } from '../../../src/tools/image/crop-editor';
+import { simulateKeydown } from '../../helpers/simulate';
 
 const stubRect = (): void => {
   HTMLElement.prototype.getBoundingClientRect = function (): DOMRect {
@@ -63,10 +64,14 @@ describe('mountCropEditor', () => {
     document.body.appendChild(host);
     const onApply = vi.fn();
     const onCancel = vi.fn();
-    mountCropEditor(host, { url: 'x.png', onApply, onCancel });
+    mountCropEditor(host, { url: 'x.png', initial: { x: 10, y: 10, w: 80, h: 80 }, onApply, onCancel });
     host.querySelector<HTMLButtonElement>('[data-action="cancel"]')!.click();
     expect(onCancel).toHaveBeenCalled();
     expect(onApply).not.toHaveBeenCalled();
+    // Cancel leaves the editor mounted with the rect untouched (no destructive state change).
+    const rect = host.querySelector<HTMLElement>('.blok-image-crop-editor__rect')!;
+    expect(rect.style.left).toBe('10%');
+    expect(rect.style.width).toBe('80%');
   });
 
   it('Reset restores full rect, then Done applies null', () => {
@@ -88,23 +93,36 @@ describe('mountCropEditor', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const onCancel = vi.fn();
-    mountCropEditor(host, { url: 'x.png', onApply: vi.fn(), onCancel });
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    const onApply = vi.fn();
+    mountCropEditor(host, { url: 'x.png', onApply, onCancel });
+    simulateKeydown(document, 'Escape');
     expect(onCancel).toHaveBeenCalled();
+    // Escape routes to cancel only — it must not apply the crop.
+    expect(onApply).not.toHaveBeenCalled();
+    // Editor stays mounted (teardown is the caller's responsibility via detach).
+    const editor = host.querySelector('.blok-image-crop-editor');
+    expect(editor).toBeTruthy();
   });
 
   it('Enter key triggers onApply', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const onApply = vi.fn();
+    const onCancel = vi.fn();
     mountCropEditor(host, {
       url: 'x.png',
       initial: { x: 10, y: 10, w: 50, h: 50 },
       onApply,
-      onCancel: vi.fn(),
+      onCancel,
     });
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    // The rect DOM reflects the initial crop that Enter will apply.
+    const rect = host.querySelector<HTMLElement>('.blok-image-crop-editor__rect')!;
+    expect(rect.style.left).toBe('10%');
+    expect(rect.style.width).toBe('50%');
+    simulateKeydown(document, 'Enter');
     expect(onApply).toHaveBeenCalledWith({ x: 10, y: 10, w: 50, h: 50 });
+    // Enter routes to apply only — it must not cancel.
+    expect(onCancel).not.toHaveBeenCalled();
   });
 
   it('circle/ellipse shape-mask lives outside rectEl so corner handles are not clipped', () => {
@@ -199,7 +217,7 @@ describe('mountCropEditor', () => {
     const detach = mountCropEditor(host, { url: 'x.png', onApply: vi.fn(), onCancel });
     detach();
     expect(host.querySelector('.blok-image-crop-editor')).toBeNull();
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    simulateKeydown(document, 'Escape');
     expect(onCancel).not.toHaveBeenCalled();
   });
 });

@@ -30,6 +30,22 @@ export function simulateMousedown(element: EventTarget): void {
 }
 
 /**
+ * Simulate a mouseup event on an element.
+ */
+export function simulateMouseup(element: EventTarget): void {
+  element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+}
+
+/**
+ * Simulate a click event on an element.
+ * Prefer the native element.click() for plain clicks; use this when the click
+ * must carry bubbling MouseEvent semantics on a non-button target.
+ */
+export function simulateClick(element: EventTarget): void {
+  element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+}
+
+/**
  * Simulate a change event on an element.
  * Use after setting the element's value property.
  */

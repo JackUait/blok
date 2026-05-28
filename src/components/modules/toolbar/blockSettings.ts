@@ -201,11 +201,17 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       const activeEntry = hasMultipleBlocksSelected
         ? undefined
         : await block.getActiveToolboxEntry();
-      const contextLabel = hasMultipleBlocksSelected
-        ? `${selectedBlocks.length} blocks`
-        : activeEntry
-          ? translateToolTitle(this.Blok.I18n, activeEntry, block.name)
-          : translateToolName(this.Blok.I18n, undefined, block.name);
+      const contextLabel = ((): string => {
+        if (hasMultipleBlocksSelected) {
+          return `${selectedBlocks.length} blocks`;
+        }
+
+        if (activeEntry) {
+          return translateToolTitle(this.Blok.I18n, activeEntry, block.name);
+        }
+
+        return translateToolName(this.Blok.I18n, undefined, block.name);
+      })();
 
       const PopoverClass = isMobileScreen() ? PopoverMobile : PopoverDesktop;
       const popoverParams: PopoverParams & { flipper?: Flipper } = {

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { openLightbox } from '../../../src/tools/image/ui';
+import { simulateMousedown } from '../../helpers/simulate';
 
 afterEach(() => {
   document.body.replaceChildren();
@@ -73,20 +74,26 @@ describe('openLightbox toolbar', () => {
     document.body.addEventListener('mousedown', docMousedown);
     const close = openAtBody({ url: 'https://example.com/pic.jpg' });
     const dialog = document.body.querySelector('.blok-image-lightbox') as HTMLElement;
-    dialog.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
+    simulateMousedown(dialog);
     expect(docMousedown).not.toHaveBeenCalled();
     document.body.removeEventListener('mousedown', docMousedown);
     close();
   });
 
   it('still lets toolbar mousedown bubble (so toolbar buttons keep working as expected)', () => {
-    const docMousedown = vi.fn();
-    document.body.addEventListener('mousedown', docMousedown);
+    const bubbledTargets: EventTarget[] = [];
+    const listener = (event: Event): void => {
+      if (event.target !== null) {
+        bubbledTargets.push(event.target);
+      }
+    };
+    document.body.addEventListener('mousedown', listener);
     const close = openAtBody({ url: 'https://example.com/pic.jpg' });
     const btn = bar().querySelector<HTMLButtonElement>('[data-action="zoom-in"]')!;
-    btn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
-    expect(docMousedown).toHaveBeenCalled();
-    document.body.removeEventListener('mousedown', docMousedown);
+    simulateMousedown(btn);
+    // The mousedown propagated all the way to document.body carrying the button as target.
+    expect(bubbledTargets).toContain(btn);
+    document.body.removeEventListener('mousedown', listener);
     close();
   });
 

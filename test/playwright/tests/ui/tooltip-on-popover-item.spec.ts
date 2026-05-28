@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { ElementHandle, Locator, Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { BLOK_INTERFACE_SELECTOR, TOOLTIP_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
@@ -70,6 +70,60 @@ const openBlockSettings = async (page: Page): Promise<void> => {
   await expect(popover).toBeVisible();
 };
 
+type BoundingBox = { x: number; y: number; width: number; height: number };
+
+const requireBoundingBox = async (
+  target: Locator | ElementHandle<HTMLElement>,
+  label: string
+): Promise<BoundingBox> => {
+  const box = await target.boundingBox();
+
+  expect(box, `${label} has no bounding box`).not.toBeNull();
+
+  return box as BoundingBox;
+};
+
+/**
+ * Resolve the exact element the keyboard-shortcut tooltip is bound to: the inner
+ * glyph span of the Delete tune's secondary-title (see the onHover() call in
+ * popover-item-default.ts). The Delete tune always ships with a 'Del' shortcut,
+ * so `[data-blok-item-name="delete"]` is a unique, position-free target.
+ */
+const resolveTooltipTrigger = async (page: Page): Promise<ElementHandle<HTMLElement>> => {
+  const deleteItem = page.locator(`${POPOVER_ITEM_SELECTOR}[data-blok-item-name="delete"]`);
+
+  await expect(deleteItem).toBeVisible();
+
+  const secondaryTitle = deleteItem.locator(SECONDARY_TITLE_SELECTOR);
+
+  await expect(secondaryTitle).toBeVisible();
+
+  const triggerHandle = await secondaryTitle.evaluateHandle((el) => {
+    return (el.firstElementChild ?? el) as HTMLElement;
+  });
+  const triggerElement = triggerHandle.asElement();
+
+  expect(triggerElement, 'Could not resolve tooltip trigger element').not.toBeNull();
+
+  return triggerElement;
+};
+
+/**
+ * Parse the alpha channel from a computed `background-color` string.
+ * rgb(...) has no alpha (implicitly opaque → 1); rgba(...) carries it as the 4th part.
+ */
+const parseAlpha = (backgroundColor: string): number => {
+  const match = backgroundColor.match(/rgba?\(([^)]+)\)/);
+
+  if (match === null) {
+    return 1;
+  }
+
+  const parts = match[1].split(',').map((s) => s.trim());
+
+  return parts.length === 4 ? Number(parts[3]) : 1;
+};
+
 test.describe('Tooltip on a popover item with a keyboard-shortcut glyph', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
@@ -93,43 +147,8 @@ test.describe('Tooltip on a popover item with a keyboard-shortcut glyph', () => 
     await createBlok(page, [{ type: 'paragraph', data: { text: 'Hello world' } }]);
     await openBlockSettings(page);
 
-    /**
-     * Find a popover item that has a non-empty secondary-title (keyboard
-     * shortcut glyph) — that's the element wired up with a tooltip via the
-     * onHover() call in popover-item-default.ts. The Delete tune always ships
-     * with `secondaryLabel: 'Del'`, so it's a reliable target.
-     */
-    const itemWithShortcut = page
-      .locator(POPOVER_ITEM_SELECTOR)
-      .filter({ has: page.locator(SECONDARY_TITLE_SELECTOR) })
-      .first();
-
-    await expect(itemWithShortcut).toBeVisible();
-
-    const secondaryTitle = itemWithShortcut.locator(SECONDARY_TITLE_SELECTOR);
-
-    await expect(secondaryTitle).toBeVisible();
-
-    /**
-     * The tooltip is anchored to the inner glyph span (the visible shortcut
-     * keys), not the padded outer container — see the onHover() call in
-     * popover-item-default.ts. Hovering the inner span fires the mouseenter
-     * handler that calls tooltip.show().
-     */
-    const triggerHandle = await secondaryTitle.evaluateHandle((el) => {
-      return (el.firstElementChild ?? el) as HTMLElement;
-    });
-    const triggerElement = triggerHandle.asElement();
-
-    if (triggerElement === null) {
-      throw new Error('Could not resolve tooltip trigger element');
-    }
-
-    const triggerBox = await triggerElement.boundingBox();
-
-    if (triggerBox === null) {
-      throw new Error('Tooltip trigger element has no bounding box');
-    }
+    const triggerElement = await resolveTooltipTrigger(page);
+    const triggerBox = await requireBoundingBox(triggerElement, 'Tooltip trigger element');
 
     /**
      * Move the mouse to the trigger's center to fire `mouseenter` on the
@@ -145,11 +164,7 @@ test.describe('Tooltip on a popover item with a keyboard-shortcut glyph', () => 
 
     await expect(tooltip).toBeVisible();
 
-    const tooltipBox = await tooltip.boundingBox();
-
-    if (tooltipBox === null) {
-      throw new Error('Tooltip has no bounding box');
-    }
+    const tooltipBox = await requireBoundingBox(tooltip, 'Tooltip');
 
     const triggerCenterX = triggerBox.x + triggerBox.width / 2;
     const triggerCenterY = triggerBox.y + triggerBox.height / 2;
@@ -179,25 +194,8 @@ test.describe('Tooltip on a popover item with a keyboard-shortcut glyph', () => 
     await createBlok(page, [{ type: 'paragraph', data: { text: 'Hello world' } }]);
     await openBlockSettings(page);
 
-    const itemWithShortcut = page
-      .locator(POPOVER_ITEM_SELECTOR)
-      .filter({ has: page.locator(SECONDARY_TITLE_SELECTOR) })
-      .first();
-    const secondaryTitle = itemWithShortcut.locator(SECONDARY_TITLE_SELECTOR);
-    const triggerHandle = await secondaryTitle.evaluateHandle((el) => {
-      return (el.firstElementChild ?? el) as HTMLElement;
-    });
-    const triggerElement = triggerHandle.asElement();
-
-    if (triggerElement === null) {
-      throw new Error('Could not resolve tooltip trigger element');
-    }
-
-    const triggerBox = await triggerElement.boundingBox();
-
-    if (triggerBox === null) {
-      throw new Error('Tooltip trigger element has no bounding box');
-    }
+    const triggerElement = await resolveTooltipTrigger(page);
+    const triggerBox = await requireBoundingBox(triggerElement, 'Tooltip trigger element');
 
     await page.mouse.move(
       triggerBox.x + triggerBox.width / 2,
@@ -221,9 +219,7 @@ test.describe('Tooltip on a popover item with a keyboard-shortcut glyph', () => 
     expect(backgroundColor).not.toBe('transparent');
     expect(backgroundColor).not.toBe('');
 
-    const alphaMatch = backgroundColor.match(/rgba?\(([^)]+)\)/);
-    const parts = alphaMatch !== null ? alphaMatch[1].split(',').map((s) => s.trim()) : [];
-    const alpha = parts.length === 4 ? Number(parts[3]) : 1;
+    const alpha = parseAlpha(backgroundColor);
 
     expect(alpha).toBeGreaterThan(0);
   });

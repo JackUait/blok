@@ -52,6 +52,9 @@ describe('renderErrorState', () => {
     const el = renderErrorState({ onTryAgain });
     const btn = el.querySelector<HTMLButtonElement>('[data-action="retry"]');
     if (!btn) throw new Error('retry button missing');
+    // Observable render output: labelled retry button inside the actions wrapper.
+    expect(btn.textContent).toBe('Retry');
+    expect(el.querySelector('.blok-image-error__actions')?.contains(btn)).toBe(true);
     btn.click();
     expect(onTryAgain).toHaveBeenCalledTimes(1);
   });
@@ -61,6 +64,9 @@ describe('renderErrorState', () => {
     const el = renderErrorState({ onSwap });
     const btn = el.querySelector<HTMLButtonElement>('[data-action="replace"]');
     if (!btn) throw new Error('replace button missing');
+    // Observable render output: labelled replace button inside the actions wrapper.
+    expect(btn.textContent).toBe('Replace');
+    expect(el.querySelector('.blok-image-error__actions')?.contains(btn)).toBe(true);
     btn.click();
     expect(onSwap).toHaveBeenCalledTimes(1);
   });

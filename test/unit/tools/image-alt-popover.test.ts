@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { openAltPopover } from '../../../src/tools/image/alt-popover';
+import { simulateKeydown, simulateMousedown } from '../../helpers/simulate';
 
 beforeEach(() => {
   if (!('popover' in HTMLElement.prototype)) {
@@ -81,9 +82,7 @@ describe('openAltPopover', () => {
       '[data-role="image-alt-popover"] textarea'
     )!;
     textarea.value = 'typed';
-    textarea.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
-    );
+    simulateKeydown(textarea, 'Enter', { cancelable: true });
     expect(onSave).toHaveBeenCalledWith('typed');
     expect(document.body.querySelector('[data-role="image-alt-popover"]')).toBeNull();
     detach();
@@ -96,9 +95,7 @@ describe('openAltPopover', () => {
       '[data-role="image-alt-popover"] textarea'
     )!;
     textarea.value = 'line one';
-    textarea.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true })
-    );
+    simulateKeydown(textarea, 'Enter', { shiftKey: true, cancelable: true });
     expect(onSave).not.toHaveBeenCalled();
     expect(document.body.querySelector('[data-role="image-alt-popover"]')).not.toBeNull();
     detach();
@@ -112,9 +109,7 @@ describe('openAltPopover', () => {
       '[data-role="image-alt-popover"] textarea'
     )!;
     textarea.value = 'changed';
-    textarea.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
-    );
+    simulateKeydown(textarea, 'Escape', { cancelable: true });
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(onSave).not.toHaveBeenCalled();
     expect(document.body.querySelector('[data-role="image-alt-popover"]')).toBeNull();
@@ -128,7 +123,7 @@ describe('openAltPopover', () => {
       '[data-role="image-alt-popover"] textarea'
     )!;
     textarea.value = 'committed';
-    document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    simulateMousedown(document.body);
     expect(onSave).toHaveBeenCalledWith('committed');
     expect(document.body.querySelector('[data-role="image-alt-popover"]')).toBeNull();
     detach();

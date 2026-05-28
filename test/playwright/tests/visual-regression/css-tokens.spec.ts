@@ -83,10 +83,10 @@ test.describe('CSS tokens — visual regression baselines', () => {
       { type: 'paragraph', data: { text: 'Hover target' } },
     ]);
 
-    const block = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"]`).first();
+    const block = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"]`);
     await block.hover();
 
-    const plusButton = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`).first();
+    const plusButton = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`);
     await expect(plusButton).toBeVisible();
 
     await expect(page.locator(BLOK_INTERFACE_SELECTOR)).toHaveScreenshot('toolbar-plus.png', SCREENSHOT_OPTIONS);
@@ -97,13 +97,13 @@ test.describe('CSS tokens — visual regression baselines', () => {
       { type: 'paragraph', data: { text: 'Tooltip target' } },
     ]);
 
-    const block = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"]`).first();
+    const block = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"]`);
     await block.hover();
 
-    const plusButton = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`).first();
+    const plusButton = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`);
     await plusButton.hover();
 
-    const tooltip = page.locator('[data-blok-interface=tooltip]').first();
+    const tooltip = page.locator('[data-blok-interface=tooltip]');
     await expect(tooltip).toBeVisible();
 
     await expect(page).toHaveScreenshot('tooltip.png', SCREENSHOT_OPTIONS);
@@ -117,7 +117,7 @@ test.describe('CSS tokens — visual regression baselines', () => {
       { type: 'list', data: { style: 'unordered', items: [{ content: 'One' }, { content: 'Two' }] } },
     ]);
 
-    const list = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="list"]`).first();
+    const list = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="list"]`);
     await expect(list).toBeVisible();
 
     await expect(page.locator(BLOK_INTERFACE_SELECTOR)).toHaveScreenshot('editor-shell.png', SCREENSHOT_OPTIONS);

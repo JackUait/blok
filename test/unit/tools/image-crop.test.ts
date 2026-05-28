@@ -99,8 +99,16 @@ describe('renderOverlay crop button', () => {
     });
     const btn = overlay.querySelector<HTMLButtonElement>('[data-action="crop"]')!;
     expect(btn).not.toBeNull();
+    // Observable render output: accessible label and an icon glyph.
+    expect(btn.getAttribute('aria-label')).toBe('Crop');
+    expect(btn.innerHTML).not.toBe('');
+
+    // The handler stops propagation so an ancestor click listener must not fire.
+    const ancestorClick = vi.fn();
+    overlay.addEventListener('click', ancestorClick);
     btn.click();
     expect(onCrop).toHaveBeenCalled();
+    expect(ancestorClick).not.toHaveBeenCalled();
   });
 });
 

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
@@ -57,6 +57,16 @@ const BLOCK_DATA: OutputData['blocks'] = [
     },
   },
 ];
+
+type BoundingBox = { x: number; y: number; width: number; height: number };
+
+const requireBoundingBox = async (locator: Locator, label: string): Promise<BoundingBox> => {
+  const box = await locator.boundingBox();
+
+  expect(box, `${label} bounding box not found`).not.toBeNull();
+
+  return box as BoundingBox;
+};
 
 const getCaretLineInfo = async (page: Page) => {
   return page.evaluate((holder) => {
@@ -119,11 +129,7 @@ test.describe('Code block — click line to focus', () => {
     await createBlok(page, BLOCK_DATA);
 
     const codeEl = page.locator('[data-blok-testid="code-content"]');
-    const box = await codeEl.boundingBox();
-
-    if (!box) {
-      throw new Error('code element bounding box not found');
-    }
+    const box = await requireBoundingBox(codeEl, 'code element');
 
     const lineHeight = box.height / 3;
     const targetY = box.y + lineHeight * 0.5 + lineHeight * 2; // third line
@@ -150,13 +156,9 @@ test.describe('Code block — click line to focus', () => {
     ]);
 
     const wrapper = page.locator('[data-blok-testid="code-content"]').locator('xpath=ancestor::*[contains(@class,"group/code")]');
-    const wrapperBox = await wrapper.boundingBox();
+    const wrapperBox = await requireBoundingBox(wrapper, 'wrapper');
     const codeEl = page.locator('[data-blok-testid="code-content"]');
-    const codeBox = await codeEl.boundingBox();
-
-    if (!wrapperBox || !codeBox) {
-      throw new Error('bounding box not found');
-    }
+    const codeBox = await requireBoundingBox(codeEl, 'code element');
 
     const lineHeight = codeBox.height / 3;
     const targetY = codeBox.y + lineHeight * 0.5 + lineHeight * 1; // second line

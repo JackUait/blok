@@ -50,6 +50,9 @@ describe('renderUploadingState', () => {
     const el = renderUploadingState({ fileName: 'photo.png', onCancel });
     const btn = el.querySelector<HTMLButtonElement>('[data-action="cancel"]');
     if (!btn) throw new Error('cancel button missing');
+    // Observable render output: accessible label and an icon glyph.
+    expect(btn.getAttribute('aria-label')).toBe('Cancel upload');
+    expect(btn.innerHTML).not.toBe('');
     btn.click();
     expect(onCancel).toHaveBeenCalledTimes(1);
   });

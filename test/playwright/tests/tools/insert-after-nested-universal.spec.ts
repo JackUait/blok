@@ -141,7 +141,7 @@ const NESTING_SCENARIOS: NestingScenario[] = [
   {
     label: 'table',
     extraTools: ['table'],
-    nestedChildSelector: '[data-blok-tool="table"] [data-blok-nested-blocks] [data-blok-component="paragraph"]',
+    nestedChildSelector: '[data-blok-tool="table"] [data-blok-table-cell-row="0"][data-blok-table-cell-col="0"] [data-blok-nested-blocks] [data-blok-component="paragraph"]',
     build: (text) => {
       const cellWith = (t: string): { blocks: Array<{ type: string; data: { text: string } }> } => ({
         blocks: [{ type: 'paragraph', data: { text: t } }],
@@ -229,7 +229,7 @@ for (const scenario of NESTING_SCENARIOS) {
   test.describe(`new block after ${scenario.label}'s auto-child must not leak into nested container`, () => {
     test(`Enter at offset 0 of follower paragraph (${scenario.label})`, async ({ page }) => {
       await createBlok(page, scenario.build('outside'), scenario.extraTools);
-      await expect(page.locator(scenario.nestedChildSelector).first()).toBeVisible();
+      await expect(page.locator(scenario.nestedChildSelector)).toBeVisible();
 
       const before = await captureBlockIds(page);
 
@@ -241,7 +241,7 @@ for (const scenario of NESTING_SCENARIOS) {
 
     test(`paste plain text at offset 0 of follower paragraph (${scenario.label})`, async ({ page }) => {
       await createBlok(page, scenario.build('outside'), scenario.extraTools);
-      await expect(page.locator(scenario.nestedChildSelector).first()).toBeVisible();
+      await expect(page.locator(scenario.nestedChildSelector)).toBeVisible();
 
       const before = await captureBlockIds(page);
 
@@ -277,7 +277,7 @@ for (const scenario of NESTING_SCENARIOS) {
 
     test(`programmatic api insert top-level block above follower (${scenario.label})`, async ({ page }) => {
       await createBlok(page, scenario.build('outside'), scenario.extraTools);
-      await expect(page.locator(scenario.nestedChildSelector).first()).toBeVisible();
+      await expect(page.locator(scenario.nestedChildSelector)).toBeVisible();
 
       const before = await captureBlockIds(page);
 

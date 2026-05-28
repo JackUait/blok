@@ -262,19 +262,15 @@ const cellTexts = (saved: OutputData): Array<string | null> => {
   }
 
   const rows = (table.data as { content: Array<Array<{ blocks?: string[] }>> }).content;
-  const out: Array<string | null> = [];
 
-  for (const row of rows) {
-    for (const cell of row) {
-      for (const id of cell.blocks ?? []) {
-        const child = byId.get(id);
+  const cellRefTexts = (cell: { blocks?: string[] }): Array<string | null> =>
+    (cell.blocks ?? []).map(id => {
+      const child = byId.get(id);
 
-        out.push((child?.data as { text?: string } | undefined)?.text ?? null);
-      }
-    }
-  }
+      return (child?.data as { text?: string } | undefined)?.text ?? null;
+    });
 
-  return out;
+  return rows.flatMap(row => row.flatMap(cellRefTexts));
 };
 
 test.describe('Migrated table cell content preservation', () => {
@@ -369,7 +365,7 @@ test.describe('Migrated table detached cell recovery', () => {
     const table = saved.blocks.find(b => b.type === 'table');
     const content = (table?.data as { content: Array<Array<{ blocks?: string[] }>> }).content;
 
-    expect(content[1][0].blocks).toEqual(['cell-2-1']);
+    expect(content[1][0].blocks).toStrictEqual(['cell-2-1']);
   });
 
   test('published (read-only) → edit toggle → save recovers the detached cell', async ({ page }) => {
@@ -395,6 +391,6 @@ test.describe('Migrated table detached cell recovery', () => {
     const table = saved.blocks.find(b => b.type === 'table');
     const content = (table?.data as { content: Array<Array<{ blocks?: string[] }>> }).content;
 
-    expect(content[1][0].blocks).toEqual(['cell-2-1']);
+    expect(content[1][0].blocks).toStrictEqual(['cell-2-1']);
   });
 });

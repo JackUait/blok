@@ -842,6 +842,8 @@ describe('CodeTool', () => {
       });
 
       expect(mockCleanup1).not.toHaveBeenCalled();
+      // Observable outcome: the edited content survives the same-language re-highlight.
+      expect(tool.save(el).code).toBe('x=2');
     });
 
     it('invokes prior cleanup when re-highlighting with a different language', async () => {
@@ -855,7 +857,7 @@ describe('CodeTool', () => {
 
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'x=1', language: 'javascript' }));
-      tool.render();
+      const el = tool.render();
       tool.rendered();
 
       await vi.waitFor(() => {
@@ -871,6 +873,9 @@ describe('CodeTool', () => {
       });
 
       expect(mockCleanupJs).toHaveBeenCalled();
+      // Observable outcome: the language switch is reflected in save data and the language button label.
+      expect(tool.save(el).language).toBe('python');
+      expect(el.querySelector('[data-blok-testid="code-language-btn"] span')!.textContent).toBe('Python');
     });
   });
 

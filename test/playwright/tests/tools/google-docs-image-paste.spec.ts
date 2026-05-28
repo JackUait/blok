@@ -90,7 +90,7 @@ test.describe('Paste Google Docs image', () => {
   test('creates an image block from a Google Docs HTML paste', async ({ page }) => {
     await createBlok(page);
 
-    const paragraphInput = page.locator(PARAGRAPH_BLOCK_SELECTOR).locator('[contenteditable]').first();
+    const paragraphInput = page.locator(PARAGRAPH_BLOCK_SELECTOR).locator('[contenteditable]');
     await paragraphInput.click();
 
     await simulatePaste(page, GDOCS_IMG_HTML);
@@ -98,14 +98,14 @@ test.describe('Paste Google Docs image', () => {
     // The image block is created — its <img> may be replaced by the broken-image
     // fallback because googleusercontent.com is unreachable from the test runner;
     // what matters is that the image tool block was inserted (url persisted by save()).
-    const image = page.locator(IMAGE_BLOCK_SELECTOR).first();
+    const image = page.locator(IMAGE_BLOCK_SELECTOR);
     await expect(image).toBeAttached();
   });
 
   test('save() exposes an image block with the pasted url', async ({ page }) => {
     await createBlok(page);
 
-    const paragraphInput = page.locator(PARAGRAPH_BLOCK_SELECTOR).locator('[contenteditable]').first();
+    const paragraphInput = page.locator(PARAGRAPH_BLOCK_SELECTOR).locator('[contenteditable]');
     await paragraphInput.click();
 
     await simulatePaste(page, GDOCS_IMG_HTML);

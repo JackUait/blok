@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { BLOK_INTERFACE_SELECTOR, TOOLTIP_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
@@ -42,6 +42,16 @@ const createBlok = async (page: Page, data?: OutputData): Promise<void> => {
     },
     { holder: HOLDER_ID, initialData: data ?? null }
   );
+};
+
+type BoundingBox = { x: number; y: number; width: number; height: number };
+
+const requireBoundingBox = async (locator: Locator, label: string): Promise<BoundingBox> => {
+  const box = await locator.boundingBox();
+
+  expect(box, `${label} has no bounding box`).not.toBeNull();
+
+  return box as BoundingBox;
 };
 
 test.describe('Tooltip stays anchored to its trigger on a scrolled page', () => {
@@ -105,11 +115,7 @@ test.describe('Tooltip stays anchored to its trigger on a scrolled page', () => 
 
     await expect(trigger).toBeVisible();
 
-    const triggerBox = await trigger.boundingBox();
-
-    if (triggerBox === null) {
-      throw new Error('Alignment trigger has no bounding box');
-    }
+    const triggerBox = await requireBoundingBox(trigger, 'Alignment trigger');
 
     await page.mouse.move(
       triggerBox.x + triggerBox.width / 2,
@@ -121,11 +127,7 @@ test.describe('Tooltip stays anchored to its trigger on a scrolled page', () => 
     await expect(tooltip).toBeVisible();
     await expect(tooltip).toHaveText('Alignment');
 
-    const tooltipBox = await tooltip.boundingBox();
-
-    if (tooltipBox === null) {
-      throw new Error('Tooltip has no bounding box');
-    }
+    const tooltipBox = await requireBoundingBox(tooltip, 'Tooltip');
 
     // Tooltip should sit BELOW the trigger (placement: bottom), horizontally
     // centered on it. Before the fix, on a scrolled page the tooltip landed

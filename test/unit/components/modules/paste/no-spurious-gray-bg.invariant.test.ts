@@ -335,26 +335,27 @@ describe('paste invariant: no spurious gray background', () => {
     vi.restoreAllMocks();
   });
 
-  for (const fixture of fixtures) {
-    if (fixture.allowGrayBg) {
-      it(`PRESERVES gray bg when source HTML has explicit gray highlight: ${fixture.name}`, async () => {
-        const container = await pasteHtml(fixture.html);
+  const grayBgFixtures = fixtures.filter((fixture) => fixture.allowGrayBg);
+  const noGrayBgFixtures = fixtures.filter((fixture) => !fixture.allowGrayBg);
 
-        /**
-         * Positive control — when the source HTML carried an explicit
-         * gray-toned highlight, the migration MUST emit
-         * `var(--blok-color-gray-bg)` on the surviving <mark>.
-         */
-        expect(container.innerHTML).toContain('--blok-color-gray-bg');
+  for (const fixture of grayBgFixtures) {
+    it(`PRESERVES gray bg when source HTML has explicit gray highlight: ${fixture.name}`, async () => {
+      const container = await pasteHtml(fixture.html);
 
-        const marks = container.querySelectorAll('mark');
+      /**
+       * Positive control — when the source HTML carried an explicit
+       * gray-toned highlight, the migration MUST emit
+       * `var(--blok-color-gray-bg)` on the surviving <mark>.
+       */
+      expect(container.innerHTML).toContain('--blok-color-gray-bg');
 
-        expect(marks.length).toBeGreaterThan(0);
-      });
+      const marks = container.querySelectorAll('mark');
 
-      continue;
-    }
+      expect(marks.length).toBeGreaterThan(0);
+    });
+  }
 
+  for (const fixture of noGrayBgFixtures) {
     it(`does NOT introduce gray bg from default page background: ${fixture.name}`, async () => {
       const container = await pasteHtml(fixture.html);
 

@@ -277,7 +277,7 @@ test.describe('Toolbar position invariant: any stretched block aligns with the c
         firstBlock.stretched = true;
       });
 
-      const editable = page.locator(scenario.focusSelector).first();
+      const editable = page.locator(scenario.focusSelector);
 
       await editable.click();
 

@@ -6,16 +6,10 @@ class MockImage {
   public onerror: (() => void) | null = null;
   public naturalWidth = 0;
   public naturalHeight = 0;
-  private _src = '';
+  public src = '';
   public static lastInstance: MockImage | null = null;
   constructor() {
     MockImage.lastInstance = this;
-  }
-  public set src(value: string) {
-    this._src = value;
-  }
-  public get src(): string {
-    return this._src;
   }
 }
 

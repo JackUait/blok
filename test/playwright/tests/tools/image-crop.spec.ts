@@ -21,6 +21,14 @@ test.beforeAll(() => {
   ensureBlokBundleBuilt();
 });
 
+const saveBlok = async (page: Page): Promise<OutputData> => {
+  const saved = await page.evaluate(() => window.blokInstance?.save());
+
+  expect(saved, 'no blok instance').toBeTruthy();
+
+  return saved as OutputData;
+};
+
 const seedImage = async (
   page: Page,
   crop?: { x: number; y: number; w: number; h: number }
@@ -54,8 +62,7 @@ test('crop flow: Done with unchanged full rect → no crop saved', async ({ page
   await expect(image).toBeVisible();
   await dialog.locator('[data-action="done"]').click();
   await expect(dialog).toHaveCount(0);
-  const saved = await page.evaluate(() => window.blokInstance?.save());
-  if (!saved) throw new Error('no blok instance');
+  const saved = await saveBlok(page);
   const first = saved.blocks[0].data as { crop?: unknown };
   expect(first.crop).toBeUndefined();
 });
@@ -72,8 +79,7 @@ test('crop flow: Reset clears existing crop', async ({ page }) => {
   await expect(dialog).toBeVisible();
   await dialog.locator('[data-action="reset"]').click();
   await dialog.locator('[data-action="done"]').click();
-  const saved = await page.evaluate(() => window.blokInstance?.save());
-  if (!saved) throw new Error('no blok instance');
+  const saved = await saveBlok(page);
   const first = saved.blocks[0].data as { crop?: unknown };
   expect(first.crop).toBeUndefined();
 });
@@ -87,10 +93,9 @@ test('crop flow: Cancel preserves existing crop', async ({ page }) => {
   await cropBtn.click();
   const dialog = page.getByRole('dialog', { name: 'Crop image' });
   await dialog.locator('[data-action="cancel"]').click();
-  const saved = await page.evaluate(() => window.blokInstance?.save());
-  if (!saved) throw new Error('no blok instance');
+  const saved = await saveBlok(page);
   const first = saved.blocks[0].data as { crop?: { w: number; h: number } };
-  expect(first.crop).toEqual({ x: 10, y: 10, w: 60, h: 60 });
+  expect(first.crop).toStrictEqual({ x: 10, y: 10, w: 60, h: 60 });
 });
 
 test('crop flow: backdrop click cancels', async ({ page }) => {
@@ -103,8 +108,7 @@ test('crop flow: backdrop click cancels', async ({ page }) => {
   // Click near the top-left corner of the backdrop (outside the centered dialog)
   await backdrop.click({ position: { x: 10, y: 10 } });
   await expect(page.getByRole('dialog', { name: 'Crop image' })).toHaveCount(0);
-  const saved = await page.evaluate(() => window.blokInstance?.save());
-  if (!saved) throw new Error('no blok instance');
+  const saved = await saveBlok(page);
   const first = saved.blocks[0].data as { crop?: { w: number; h: number } };
-  expect(first.crop).toEqual({ x: 10, y: 10, w: 60, h: 60 });
+  expect(first.crop).toStrictEqual({ x: 10, y: 10, w: 60, h: 60 });
 });

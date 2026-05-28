@@ -63,7 +63,7 @@ describe('openLightbox drag-to-pan', () => {
     d.dispatchEvent(pointer('pointerdown', 100, 100));
     d.dispatchEvent(pointer('pointermove', 101, 101));
     d.dispatchEvent(pointer('pointerup', 101, 101));
-    d.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    d.click();
     expect(document.body.querySelector('.blok-image-lightbox')).toBeNull();
     close();
   });
@@ -74,7 +74,7 @@ describe('openLightbox drag-to-pan', () => {
     d.dispatchEvent(pointer('pointerdown', 100, 100));
     d.dispatchEvent(pointer('pointermove', 150, 140));
     d.dispatchEvent(pointer('pointerup', 150, 140));
-    d.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    d.click();
     expect(document.body.querySelector('.blok-image-lightbox')).not.toBeNull();
     close();
   });
@@ -144,7 +144,7 @@ describe('openLightbox drag-to-pan', () => {
     d.dispatchEvent(pointer('pointerdown', 100, 100));
     d.dispatchEvent(pointer('pointermove', 102, 101)); // hypot = ~2.24 < 3
     d.dispatchEvent(pointer('pointerup', 102, 101));
-    d.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    d.click();
     expect(document.body.querySelector('.blok-image-lightbox')).toBeNull();
     close();
   });

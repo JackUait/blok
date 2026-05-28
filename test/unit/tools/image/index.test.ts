@@ -3,6 +3,7 @@ import { ImageTool } from '../../../../src/tools/image';
 import { updateOverlayCompact, isTinyImage, applyAutoFull } from '../../../../src/tools/image/ui';
 import type { ImageData, ImageConfig } from '../../../../types/tools/image';
 import type { API, BlockToolConstructorOptions, BlockAPI, FilePasteEvent, HTMLPasteEvent, PatternPasteEvent } from '../../../../types';
+import { simulateClick, simulateKeydown } from '../../../helpers/simulate';
 
 const createMockApi = (): API => ({
   styles: { block: 'blok-block' },
@@ -614,10 +615,10 @@ describe('ImageTool — fullscreen triggers', () => {
     const root = tool.render();
     const img = root.querySelector('img');
     if (!img) throw new Error('img missing');
-    img.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    img.click();
     expect(document.querySelector('[role="dialog"][aria-modal="true"]')).not.toBeNull();
     const dialog = document.querySelector('[role="dialog"]');
-    if (dialog) dialog.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    if (dialog) simulateClick(dialog);
   });
 });
 
@@ -726,9 +727,7 @@ describe('ImageTool — alt button next to caption', () => {
     );
     expect(textarea).not.toBeNull();
     textarea!.value = 'pretty picture';
-    textarea!.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
-    );
+    simulateKeydown(textarea!, 'Enter', { cancelable: true });
     expect(tool.save().alt).toBe('pretty picture');
     expect(block.dispatchChange).toHaveBeenCalled();
     expect(document.body.querySelector('[data-role="image-alt-popover"]')).toBeNull();
@@ -782,9 +781,7 @@ describe('ImageTool — overlay stays visible while alt popover open', () => {
       '[data-role="image-alt-popover"] textarea'
     )!;
     textarea.value = 'alt';
-    textarea.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
-    );
+    simulateKeydown(textarea, 'Enter', { cancelable: true });
     expect(root.getAttribute('data-alt-open')).toBeNull();
     root.remove();
   });
@@ -797,9 +794,7 @@ describe('ImageTool — overlay stays visible while alt popover open', () => {
     const textarea = document.body.querySelector<HTMLTextAreaElement>(
       '[data-role="image-alt-popover"] textarea'
     )!;
-    textarea.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
-    );
+    simulateKeydown(textarea, 'Escape', { cancelable: true });
     expect(root.getAttribute('data-alt-open')).toBeNull();
     root.remove();
   });
@@ -1392,16 +1387,10 @@ describe('ImageTool — auto-retry loading dimensions', () => {
     public onerror: (() => void) | null = null;
     public naturalWidth = 0;
     public naturalHeight = 0;
-    private _src = '';
+    public src = '';
     public static lastInstance: MockImage | null = null;
     constructor() {
       MockImage.lastInstance = this;
-    }
-    public set src(value: string) {
-      this._src = value;
-    }
-    public get src(): string {
-      return this._src;
     }
   }
 

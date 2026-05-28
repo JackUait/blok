@@ -1,10 +1,8 @@
-import { IconImageBroken } from '../../components/icons';
+import { IconImageBroken, IconUploadFailed } from '../../components/icons';
 import type { I18nInstance } from '../../components/utils/tools';
 import { tr } from './i18n';
 
 export type ErrorVariant = 'broken' | 'upload';
-
-const IconUploadFailed = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 16.5A4.5 4.5 0 0 0 17 8.25a6 6 0 0 0-11.7 1.5A4 4 0 0 0 6 17.5"/><path d="M12 12v5"/><path d="m9.5 14.5 2.5-2.5 2.5 2.5"/><path d="m4 4 16 16" stroke-width="2"/></svg>';
 
 export interface ErrorStateOptions {
   title?: string;

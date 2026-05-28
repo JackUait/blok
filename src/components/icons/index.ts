@@ -733,6 +733,9 @@ export const IconCloseThick = '<svg viewBox="0 0 24 24" fill="none" stroke="curr
 // Broken image alert — error state
 export const IconImageBroken = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14.5 4.5H6A2.5 2.5 0 0 0 3.5 7v10A2.5 2.5 0 0 0 6 19.5h12a2.5 2.5 0 0 0 2.5-2.5v-6.25"/><path d="m14.5 4.5 1.75 2.25 2.25-1.25 2 2.75"/><circle cx="8" cy="9" r="1.2" fill="currentColor" stroke="none"/><path d="m3.8 16.25 3.45-3.45 2.5 2.5 3.5-3.5 4 4"/></svg>';
 
+// Cloud with a strike-through — upload-failed error state
+export const IconUploadFailed = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 16.5A4.5 4.5 0 0 0 17 8.25a6 6 0 0 0-11.7 1.5A4 4 0 0 0 6 17.5"/><path d="M12 12v5"/><path d="m9.5 14.5 2.5-2.5 2.5 2.5"/><path d="m4 4 16 16" stroke-width="2"/></svg>';
+
 export const IconUpload = wrapImageSvg('<path d="M12 4v10"/><path d="m7.5 8.5 4.5-4.5 4.5 4.5"/><path d="M5 14v3.5A2.5 2.5 0 0 0 7.5 20h9a2.5 2.5 0 0 0 2.5-2.5V14"/>');
 export const IconLinkExternal = wrapImageSvg('<path d="M10 14a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 5.5"/><path d="M14 10a5 5 0 0 0-7.07 0l-2.83 2.83a5 5 0 0 0 7.07 7.07l1.33-1.33"/>');
 export const IconArrowDownLine = wrapImageSvg('<path d="M12 4v12"/><path d="m6.5 10.5 5.5 5.5 5.5-5.5"/><path d="M4 18h16"/>');

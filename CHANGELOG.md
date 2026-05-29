@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.13.1](https://github.com/JackUait/blok/compare/v0.13.0...v0.13.1) (2026-05-29)
+
+### Features
+
+- **Image** — Auto-retry failed image loads with loading overlay; distinguish upload-failed vs broken-image error states; predict loading-placeholder dimensions from URL, SVG, and cache; pipe upload progress to bar (#41)
+- **Codemod** — Default migrated images to `size: 'full'` and inherit the stretched flag into migrated image size
+- **Block Link** — Highlight pulse on hash-link arrival
+- **Read-Only** — Show copy-link menu on block hover
+- **Playground** — Add loading image state demo in block-states gallery
+
+### Bug Fixes
+
+- **Image** — Force full width and compact overlay for short images; reuse looping-arrows glyph for replace icon
+- **Paste** — Keep Google Docs images inside tables and stop double-bolding headings; prevent default page background collapsing to gray preset
+- **Table** — Recover migrated cell text detached by a pre-fix save
+- **Toolbar** — Align plus/drag handle with content lane for stretched blocks
+- **Block Settings** — Anchor popover to trigger instead of (0,0); translate popover context label
+- **Database** — Center block toolbar on the title line
+
+### Maintenance
+
+- **i18n** — Translate strings identical to English across 25 locales
+- **Lint** — Resolve all ESLint and tsc problems
+- **Image** — Move inline upload-failed SVG to icons module
+- **Tests** — Cover migrated cell content surviving load→save round-trip; fix CSS guard test failures from image loading shimmer
+
 ## [0.12.0](https://github.com/JackUait/blok/compare/v0.11.1...v0.12.0) (2026-04-22)
 
 ### Features

@@ -383,6 +383,23 @@ describe("UI module", () => {
 
       expect(bindSpy).toHaveBeenCalledTimes(1);
     });
+
+    it("collapses bottom zone min-height in read-only mode and restores it when editing", () => {
+      const { ui } = createUI({ configOverrides: { minHeight: 120 } });
+      const bottomZone = (ui as { nodes: UI["nodes"] }).nodes.bottomZone;
+
+      // Read-write mode keeps the configured min-height (clickable add-block area)
+      ui.toggleReadOnly(false);
+      expect(bottomZone.style.minHeight).toBe("120px");
+
+      // Read-only mode collapses the zone — it has no purpose without the click handler
+      ui.toggleReadOnly(true);
+      expect(bottomZone.style.minHeight).toBe("0px");
+
+      // Returning to read-write restores the configured min-height
+      ui.toggleReadOnly(false);
+      expect(bottomZone.style.minHeight).toBe("120px");
+    });
   });
 
   describe("state updates and getters", () => {

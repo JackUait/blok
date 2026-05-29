@@ -412,6 +412,25 @@ test.describe('blok configuration options', () => {
     expect(minHeight).toBe('300px');
   });
 
+  test('collapses bottom zone min-height when initialized in read-only mode', async ({ page }) => {
+    await createBlok(page, {
+      config: {
+        minHeight: 180,
+        readOnly: true,
+      },
+    });
+
+    const minHeight = await page.evaluate(() => {
+      const bottomZone = document.querySelector('[data-blok-bottom-zone]');
+
+      return (bottomZone as HTMLElement)?.style.minHeight ?? '';
+    });
+
+    // The bottom zone only provides a clickable add-block area, which is disabled
+    // in read-only mode, so it should not reserve any vertical space.
+    expect(minHeight).toBe('0px');
+  });
+
   test('respects logLevel configuration', async ({ page }) => {
     const consoleMessages: { type: string; text: string }[] = [];
 

@@ -257,6 +257,15 @@ export class UI extends Module<UINodes> {
    */
   public toggleReadOnly(readOnlyEnabled: boolean): void {
     /**
+     * Collapse the bottom zone in read-only mode. Its only purpose is to act as
+     * a clickable area below the last block for adding/focusing a block, which is
+     * disabled in read-only mode. Restore the configured min-height when editing.
+     */
+    if (this.nodes.bottomZone) {
+      this.nodes.bottomZone.style.minHeight = readOnlyEnabled ? '0px' : `${this.config.minHeight}px`;
+    }
+
+    /**
      * Prepare components based on read-only state
      */
     if (readOnlyEnabled) {

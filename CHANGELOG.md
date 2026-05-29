@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.13.2](https://github.com/JackUait/blok/compare/v0.13.1...v0.13.2) (2026-05-30)
+
+### Bug Fixes
+
+- **Read-Only** — Collapse the empty bottom click-to-add zone to 0px in read-only mode and restore the configured min-height when editing
+
 ## [0.13.1](https://github.com/JackUait/blok/compare/v0.13.0...v0.13.1) (2026-05-29)
 
 ### Features

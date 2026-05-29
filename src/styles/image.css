@@ -1073,11 +1073,10 @@
 [data-blok-tool="image"] .blok-image-inner[data-loading="true"]::after {
   content: "";
   position: absolute;
-  top: 50%;
-  left: 50%;
+  inset: 0;
   width: 34px;
   height: 34px;
-  margin: -17px 0 0 -17px;
+  margin: auto;
   border-radius: 50%;
   border: 2px solid color-mix(in srgb, var(--blok-text-primary) 14%, transparent);
   border-top-color: var(--blok-text-primary);

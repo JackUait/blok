@@ -216,10 +216,11 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Pre-split baseline captured 2026-04-22 immediately before the split refactor
     // started. Overhead budget covers per-file headers/comments added during
     // extraction plus later feature additions (crop-modal close animation,
-    // image caption readOnly carve-out, [data-blok-top-layer] scope selectors).
+    // image caption readOnly carve-out, [data-blok-top-layer] scope selectors,
+    // image loading shimmer placeholder + keyframes (#41)).
     // Shrinking below the baseline is always acceptable.
     const PRE_SPLIT_BYTES = 389475;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.03);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.05);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

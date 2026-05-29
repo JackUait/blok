@@ -46,6 +46,16 @@
   to { opacity: 1; transform: translateY(0) scale(1) }
 }
 
+@keyframes blok-image-loading-pulse {
+  0%, 100% { opacity: 0.85 }
+  50% { opacity: 1 }
+}
+
+@keyframes blok-image-loading-sheen {
+  0% { background-position: 0 0, 120% 0 }
+  100% { background-position: 0 0, -120% 0 }
+}
+
 @keyframes blok-image-retry-spin {
   to { transform: rotate(360deg) }
 }

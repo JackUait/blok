@@ -3,7 +3,7 @@ import type {
   BlockTool,
   BlockToolConstructorOptions,
 } from '../../../types';
-import { COLUMN_ATTR } from '../columns-shared';
+import { COLUMN_ATTR, unwrapColumnListIfCollapsed } from '../columns-shared';
 import { mountChildBlocks } from '../nested-blocks';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { twMerge } from '../../components/utils/tw';
@@ -18,12 +18,14 @@ export class Column implements BlockTool {
   private readonly api: API;
   private _data: ColumnData;
   private readonly blockId: string;
+  private readonly parentId: string | null;
   private childContainer: HTMLElement | null = null;
 
   constructor({ data, api, block }: BlockToolConstructorOptions<ColumnData>) {
     this.api = api;
     this._data = { ...data };
     this.blockId = block.id;
+    this.parentId = (block as unknown as { parentId?: string | null }).parentId ?? null;
   }
 
   public render(): HTMLElement {
@@ -74,6 +76,13 @@ export class Column implements BlockTool {
 
   public validate(_data: ColumnData): boolean {
     return true;
+  }
+
+  public removed(): void {
+    if (this.parentId !== null) {
+      // Fire-and-forget: the lifecycle hook is synchronous, the unwrap is not.
+      void unwrapColumnListIfCollapsed(this.api, this.parentId);
+    }
   }
 
   public static get isReadOnlySupported(): boolean {

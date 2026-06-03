@@ -94,4 +94,37 @@ describe('Column tool', () => {
 
     expect(insertInsideParent).not.toHaveBeenCalled();
   });
+
+  it('attempts to unwrap its parent column_list when removed', async () => {
+    const getChildren = vi.fn()
+      .mockReturnValueOnce([{ id: 'colA' }])  // column_list now has 1 column
+      .mockReturnValueOnce([{ id: 'p1' }]);   // surviving column's child
+    const setBlockParent = vi.fn();
+    const remove = vi.fn().mockResolvedValue(undefined);
+    const indexById: Record<string, number> = { colA: 2, 'cl-1': 1 };
+    const api = createMockAPI({
+      blocks: {
+        getChildren,
+        getBlockIndex: vi.fn().mockImplementation((id: string) => indexById[id] ?? 0),
+        setBlockParent,
+        delete: remove,
+        insertInsideParent: vi.fn(),
+      },
+      caret: { setToBlock: vi.fn() },
+    } as unknown as Partial<API>);
+
+    // parentId is needed so removed() knows which column_list to check
+    const options = createColumnOptions({}, api);
+    (options.block as unknown as { parentId: string }).parentId = 'cl-1';
+
+    const column = new Column(options);
+    column.render();
+    column.removed();
+
+    // removed() fires the async unwrap without awaiting; let microtasks drain
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(remove).toHaveBeenCalledWith(1); // column_list index
+  });
 });

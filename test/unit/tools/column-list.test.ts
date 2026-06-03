@@ -114,4 +114,18 @@ describe('ColumnList tool', () => {
 
     expect(insert).not.toHaveBeenCalled();
   });
+
+  it('exposes toolbox presets for 2–5 columns with columnCount data overrides', () => {
+    const toolbox = ColumnList.toolbox;
+    const entries = Array.isArray(toolbox) ? toolbox : [toolbox];
+
+    // One generic entry + four presets (2,3,4,5)
+    const counts = entries
+      .map(e => (e.data as { columnCount?: number } | undefined)?.columnCount)
+      .filter((c): c is number => typeof c === 'number')
+      .sort((a, b) => a - b);
+
+    expect(counts).toEqual([2, 3, 4, 5]);
+    entries.forEach(e => expect(typeof e.icon).toBe('string'));
+  });
 });

@@ -95,12 +95,25 @@ export class ColumnList implements BlockTool {
   }
 
   public static get toolbox(): ToolboxConfig {
-    return {
+    const base = {
       icon: IconColumns,
-      titleKey: 'columns',
-      name: 'column_list',
       searchTerms: ['columns', 'cols', 'layout', 'grid'],
     };
+
+    return [
+      {
+        ...base,
+        titleKey: 'columns',
+        name: 'column_list',
+      },
+      ...[2, 3, 4, 5].map(count => ({
+        ...base,
+        titleKey: `tools.columns.col${count}`,
+        name: `column_list-${count}`,
+        data: { columnCount: count },
+        searchTerms: [...base.searchTerms, `${count}c`, `c${count}`],
+      })),
+    ];
   }
 
   public static get isReadOnlySupported(): boolean {

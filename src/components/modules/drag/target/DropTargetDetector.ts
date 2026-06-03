@@ -298,12 +298,94 @@ export class DropTargetDetector {
 
     const edge: 'left' | 'right' = nearLeft ? 'left' : 'right';
 
+    // Collapse each internal column boundary to a SINGLE anchor. A right side-drop
+    // on a column that has a right-neighbor inserts the new column between the two
+    // — identical to a left side-drop on that neighbor. Both cursor positions sit
+    // either side of the same gutter, so without this the indicator flickers
+    // across the gutter as the cursor crosses it (reading as two lines). Canonical
+    // anchor = the right column's left edge. The last column's right edge (no
+    // neighbor) and any left edge are already unambiguous.
+    if (edge === 'right') {
+      const collapsed = this.collapseToColumnBoundary(targetBlock);
+
+      if (collapsed !== null) {
+        return collapsed;
+      }
+    }
+
     return {
       block: targetBlock,
       edge,
       depth: 0,
       parentId: this.findEnclosingColumnId(targetBlock),
     };
+  }
+
+  /**
+   * For a right side-drop on a block inside a column, returns a 'left' side-drop
+   * on the FIRST block of the next column (so the indicator anchors to the right
+   * column's left edge — one stable line in the gutter). Returns null when the
+   * block is not in a column or its column is the last one (no neighbor to
+   * collapse to), leaving the original right-edge drop in place.
+   */
+  private collapseToColumnBoundary(targetBlock: Block): DropTarget | null {
+    const columnWrapper = targetBlock.holder.closest('[data-blok-column]');
+
+    if (!(columnWrapper instanceof HTMLElement)) {
+      return null;
+    }
+
+    const columnHolder = columnWrapper.closest(createSelector(DATA_ATTR.element));
+
+    if (!(columnHolder instanceof HTMLElement)) {
+      return null;
+    }
+
+    const nextColumnHolder = this.nextColumnHolder(columnHolder);
+    const nextChild = nextColumnHolder !== null
+      ? this.firstBlockInColumnHolder(nextColumnHolder)
+      : undefined;
+
+    if (nextChild === undefined) {
+      return null;
+    }
+
+    return {
+      block: nextChild,
+      edge: 'left',
+      depth: 0,
+      parentId: this.findEnclosingColumnId(nextChild),
+    };
+  }
+
+  /**
+   * The next sibling column holder after `columnHolder` within a column_list,
+   * skipping the resize separator that sits between columns. Null if none.
+   */
+  private nextColumnHolder(element: Element): HTMLElement | null {
+    const sibling = element.nextElementSibling;
+
+    if (sibling === null) {
+      return null;
+    }
+
+    if (sibling instanceof HTMLElement && sibling.matches(createSelector(DATA_ATTR.element))) {
+      return sibling;
+    }
+
+    return this.nextColumnHolder(sibling);
+  }
+
+  /**
+   * The first content block inside a column's holder element, or undefined when
+   * the column has no resolvable child block.
+   */
+  private firstBlockInColumnHolder(columnHolder: HTMLElement): Block | undefined {
+    const childHolder = columnHolder.querySelector(createSelector(DATA_ATTR.element));
+
+    return childHolder instanceof HTMLElement
+      ? this.blockManager.blocks.find(block => block.holder === childHolder)
+      : undefined;
   }
 
   /**
@@ -335,17 +417,11 @@ export class DropTargetDetector {
       return null;
     }
 
-    // The separator sits between two column holders; its next sibling is the
-    // right-adjacent column. Its first descendant block is the side-drop target.
-    const rightColumnHolder = resizer.nextElementSibling;
-
-    if (!(rightColumnHolder instanceof HTMLElement)) {
-      return null;
-    }
-
-    const childHolder = rightColumnHolder.querySelector(createSelector(DATA_ATTR.element));
-    const childBlock = childHolder instanceof HTMLElement
-      ? this.blockManager.blocks.find(block => block.holder === childHolder)
+    // The separator sits between two column holders; the next one is the
+    // right-adjacent column. Its first child block is the side-drop target.
+    const rightColumnHolder = this.nextColumnHolder(resizer);
+    const childBlock = rightColumnHolder !== null
+      ? this.firstBlockInColumnHolder(rightColumnHolder)
       : undefined;
 
     if (childBlock === undefined) {

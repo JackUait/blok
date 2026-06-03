@@ -1552,6 +1552,118 @@ describe('DropTargetDetector', () => {
       document.body.removeChild(columns);
     });
 
+    /**
+     * Builds a full two-column row: [data-blok-columns] containing the left
+     * column holder (wrapping its child), a resize separator, and the right
+     * column holder (wrapping its child). Mirrors the real DOM closely enough for
+     * the boundary-canonicalization walk (child → [data-blok-column] → column
+     * holder → next column holder). Stubs the row rect so the vertical band check
+     * passes at clientY 150. Returns the row and its separator.
+     */
+    const buildColumnRow = (
+      leftColumn: Block,
+      leftChild: Block,
+      rightColumn: Block,
+      rightChild: Block
+    ): { columns: HTMLElement; resizer: HTMLElement } => {
+      const columns = document.createElement('div');
+      columns.setAttribute('data-blok-columns', '');
+      vi.spyOn(columns, 'getBoundingClientRect').mockReturnValue({
+        top: 100, bottom: 200, left: 300, right: 760, width: 460, height: 100, x: 300, y: 100, toJSON: () => ({}),
+      });
+
+      const wrapLeft = document.createElement('div');
+      wrapLeft.setAttribute('data-blok-column', '');
+      wrapLeft.appendChild(leftChild.holder);
+      leftColumn.holder.appendChild(wrapLeft);
+
+      const resizer = document.createElement('div');
+      resizer.setAttribute('data-blok-column-resizer', '');
+
+      const wrapRight = document.createElement('div');
+      wrapRight.setAttribute('data-blok-column', '');
+      wrapRight.appendChild(rightChild.holder);
+      rightColumn.holder.appendChild(wrapRight);
+
+      columns.append(leftColumn.holder, resizer, rightColumn.holder);
+
+      return { columns, resizer };
+    };
+
+    it('collapses an internal column boundary to ONE anchor (both sides of the gutter target the right column)', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const leftColumn = createSideTestBlock({ id: 'col-left', name: 'column' });
+      const leftChild = createSideTestBlock({ id: 'left-child', parentId: 'col-left' });
+      const rightColumn = createSideTestBlock({ id: 'col-right', name: 'column' });
+      const rightChild = createSideTestBlock({ id: 'right-child', parentId: 'col-right' });
+
+      const { columns } = buildColumnRow(leftColumn, leftChild, rightColumn, rightChild);
+
+      // Left column content box 300..500, right column 560..760 (gutter between).
+      stubWideHolder(leftChild);
+      stubContentRect(leftChild, 300, 500);
+      stubWideHolder(rightChild);
+      stubContentRect(rightChild, 560, 760);
+
+      const bm = createSideBlockManager([leftColumn, leftChild, rightColumn, rightChild, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(columns);
+      const innerLeft = document.createElement('div');
+      leftChild.holder.appendChild(innerLeft);
+      const innerRight = document.createElement('div');
+      rightChild.holder.appendChild(innerRight);
+
+      // A RIGHT side-drop on the left column and a LEFT side-drop on the right
+      // column are the same insertion (between the two). Both must resolve to the
+      // SAME anchor — the right column's child, 'left' edge — so the indicator
+      // doesn't flicker across the gutter as the cursor crosses it.
+      const fromLeftColumn = det.determineDropTarget(innerLeft, 480, 150, source);
+      const fromRightColumn = det.determineDropTarget(innerRight, 580, 150, source);
+
+      expect(fromLeftColumn?.edge).toBe('left');
+      expect(fromLeftColumn?.block).toBe(rightChild);
+      expect(fromLeftColumn?.parentId).toBe('col-right');
+
+      expect(fromRightColumn?.edge).toBe('left');
+      expect(fromRightColumn?.block).toBe(rightChild);
+      expect(fromRightColumn?.parentId).toBe('col-right');
+
+      document.body.removeChild(columns);
+    });
+
+    it('keeps a right side-drop on the LAST column as-is (no right neighbor to collapse to)', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const leftColumn = createSideTestBlock({ id: 'col-left', name: 'column' });
+      const leftChild = createSideTestBlock({ id: 'left-child', parentId: 'col-left' });
+      const rightColumn = createSideTestBlock({ id: 'col-right', name: 'column' });
+      const rightChild = createSideTestBlock({ id: 'right-child', parentId: 'col-right' });
+
+      const { columns } = buildColumnRow(leftColumn, leftChild, rightColumn, rightChild);
+
+      stubWideHolder(rightChild);
+      stubContentRect(rightChild, 560, 760);
+
+      const bm = createSideBlockManager([leftColumn, leftChild, rightColumn, rightChild, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(columns);
+      const innerRight = document.createElement('div');
+      rightChild.holder.appendChild(innerRight);
+
+      // Right edge of the last column → append a column at the end. No neighbor to
+      // collapse to, so it stays a 'right' drop on the last column.
+      const result = det.determineDropTarget(innerRight, 740, 150, source);
+
+      expect(result?.edge).toBe('right');
+      expect(result?.block).toBe(rightChild);
+      expect(result?.parentId).toBe('col-right');
+
+      document.body.removeChild(columns);
+    });
+
     it('does NOT redirect a gutter drop below 651px (columns stack, no separators)', () => {
       Object.defineProperty(window, 'innerWidth', { value: 650, writable: true, configurable: true });
 

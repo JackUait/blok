@@ -465,8 +465,11 @@ test.describe('Columns tool', () => {
     // The row is meaningfully taller than the short block (precondition).
     expect(rowHeight).toBeGreaterThan(shortBox.height + 40);
 
-    // Begin dragging the root "Newcomer" toward the right edge of the short
-    // column, then pause mid-drag to inspect the live indicator.
+    // Begin dragging the root "Newcomer" toward the LEFT edge of the short column,
+    // then pause mid-drag to inspect the live indicator. The left edge of the
+    // first column has no neighbor to collapse to, so the indicator stays on the
+    // short block itself — exactly the case we want: a short block's side
+    // indicator must still span the full row height.
     const source = page.getByTestId('block-wrapper').filter({ hasText: 'Newcomer' });
     await source.hover();
     const handle = page.locator(SETTINGS_BUTTON);
@@ -479,16 +482,16 @@ test.describe('Columns tool', () => {
 
     await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
     await page.mouse.down();
-    await page.mouse.move(contentBox.x + contentBox.width - 4, shortBox.y + shortBox.height / 2, { steps: 15 });
+    await page.mouse.move(contentBox.x + 4, shortBox.y + shortBox.height / 2, { steps: 15 });
 
     await page.waitForFunction(
       () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') === 'true',
       { timeout: 2000 }
     );
 
-    // The short block's holder carries the right-side indicator, and its
-    // ::before bar spans the full column-row height (within a few px), NOT just
-    // the short block's own height.
+    // The short block's holder carries the left-side indicator, and its ::before
+    // bar spans the full column-row height (within a few px), NOT just the short
+    // block's own height.
     const indicator = await shortHolder.evaluate(el => {
       const before = getComputedStyle(el, '::before');
 
@@ -500,7 +503,7 @@ test.describe('Columns tool', () => {
 
     await page.mouse.up();
 
-    expect(indicator.edge).toBe('right');
+    expect(indicator.edge).toBe('left');
     expect(Math.abs(indicator.beforeHeight - rowHeight)).toBeLessThan(8);
   });
 
@@ -560,6 +563,74 @@ test.describe('Columns tool', () => {
     expect(newcomerParent).toBe(columnOrder[1]);
     expect(columnOrder[0]).toBe('c1');
     expect(columnOrder[2]).toBe('c2');
+  });
+
+  test('the gutter drop indicator stays on ONE anchor as the cursor crosses the gutter (no flicker)', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['a'] },
+        { id: 'a', type: 'paragraph', data: { text: 'Col A' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['b'] },
+        { id: 'b', type: 'paragraph', data: { text: 'Col B' }, parent: 'c2' },
+        { id: 'newcomer', type: 'paragraph', data: { text: 'Newcomer' } },
+      ],
+    });
+
+    const source = page.getByTestId('block-wrapper').filter({ hasText: 'Newcomer' });
+    await source.hover();
+    const handle = page.locator(SETTINGS_BUTTON);
+    await expect(handle).toBeVisible();
+    const sourceBox = await handle.boundingBox();
+
+    const resizer = page.getByTestId('column-resizer').first();
+    const gutterBox = await resizer.boundingBox();
+
+    if (!sourceBox || !gutterBox) {
+      throw new Error('missing bounding box');
+    }
+
+    const midY = gutterBox.y + gutterBox.height / 2;
+
+    // Sample the single drop indicator: its count and the left edge of the holder
+    // it sits on (so two different anchors would report different positions).
+    const sampleIndicator = async (): Promise<{ count: number; left: number | null; edge: string | null }> =>
+      page.evaluate(() => {
+        const els = document.querySelectorAll('[data-drop-indicator]');
+        const el = els[0] as HTMLElement | undefined;
+        const rect = el?.getBoundingClientRect();
+
+        return {
+          count: els.length,
+          left: rect ? Math.round(rect.left) : null,
+          edge: el?.getAttribute('data-drop-indicator') ?? null,
+        };
+      });
+
+    await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+    await page.mouse.down();
+
+    // Just LEFT of the gutter (in the left column's right zone).
+    await page.mouse.move(gutterBox.x - 6, midY, { steps: 10 });
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') === 'true',
+      { timeout: 2000 }
+    );
+    const left = await sampleIndicator();
+
+    // Just RIGHT of the gutter (in the right column's left zone).
+    await page.mouse.move(gutterBox.x + gutterBox.width + 6, midY, { steps: 10 });
+    const right = await sampleIndicator();
+
+    await page.mouse.up();
+
+    // One indicator on each side, and the SAME anchor (same edge, same position
+    // within a px) — the blue line doesn't jump across the gutter.
+    expect(left.count).toBe(1);
+    expect(right.count).toBe(1);
+    expect(left.edge).toBe(right.edge);
+    expect(Math.abs((left.left ?? 0) - (right.left ?? 0))).toBeLessThan(2);
   });
 
   test('hides the resize handle during a block drag so only ONE indicator shows in the gutter', async ({ page }) => {

@@ -81,7 +81,9 @@ export class Column implements BlockTool {
   public removed(): void {
     if (this.parentId !== null) {
       // Fire-and-forget: the lifecycle hook is synchronous, the unwrap is not.
-      void unwrapColumnListIfCollapsed(this.api, this.parentId);
+      // Pass blockId as excludeId: removed() fires before the flat array splice,
+      // so getChildren still includes this block; exclude it for the count check.
+      void unwrapColumnListIfCollapsed(this.api, this.parentId, this.blockId);
     }
   }
 

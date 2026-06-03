@@ -13,7 +13,7 @@
 <body>
   <script type="module">
     import { Blok, DATA_ATTR, version } from '/dist/blok.mjs?_v=1';
-    import { Header, Paragraph, List, Table, Toggle, Callout, Quote, Code, Bold, Italic, Link, Convert, Marker, Underline, Strikethrough, InlineCode, Database, DatabaseRow, Image } from '/dist/tools.mjs?_v=1';
+    import { Header, Paragraph, List, Table, Toggle, Callout, Quote, Code, Bold, Italic, Link, Convert, Marker, Underline, Strikethrough, InlineCode, Database, DatabaseRow, Image, ColumnList, Column } from '/dist/tools.mjs?_v=1';
 
     // Create default tools configuration (mimics pre-modular behavior)
     // Block tools with inlineToolbar enabled
@@ -48,6 +48,12 @@
       },
       image: {
         class: Image,
+      },
+      column_list: {
+        class: ColumnList,
+      },
+      column: {
+        class: Column,
       },
     };
 
@@ -98,6 +104,8 @@
     window.BlokStrikethrough = Strikethrough;
     window.BlokDatabase = Database;
     window.BlokDatabaseRow = DatabaseRow;
+    window.BlokColumnList = ColumnList;
+    window.BlokColumn = Column;
     window.BlokDataAttr = DATA_ATTR;
     window.BlokVersion = version;
     window.defaultTools = defaultTools;

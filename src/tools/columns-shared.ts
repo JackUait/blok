@@ -60,9 +60,13 @@ export const isInsideColumn = (
  */
 export const unwrapColumnListIfCollapsed = async (
   api: API,
-  columnListId: string
+  columnListId: string,
+  excludeId?: string
 ): Promise<boolean> => {
-  const columns = api.blocks.getChildren(columnListId);
+  const allColumns = api.blocks.getChildren(columnListId);
+  const columns = excludeId !== undefined
+    ? allColumns.filter(c => c.id !== excludeId)
+    : allColumns;
 
   if (columns.length !== 1) {
     return false;
@@ -74,6 +78,10 @@ export const unwrapColumnListIfCollapsed = async (
   for (const child of survivingBlocks) {
     api.blocks.setBlockParent(child.id, null);
   }
+
+  // Detach the surviving column from cl before deleting it so that its
+  // removed() hook does not trigger a recursive unwrap call.
+  api.blocks.setBlockParent(survivingColumn.id, null);
 
   const columnIndex = api.blocks.getBlockIndex(survivingColumn.id);
 

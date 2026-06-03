@@ -101,6 +101,7 @@ const LOGIC_TESTS = [
   '**/tools/block-tool.spec.ts',
   '**/tools/block-tune.spec.ts',
   '**/tools/callout.spec.ts',
+  '**/tools/columns.spec.ts',
   '**/tools/header.spec.ts',
   '**/tools/inline-tool.spec.ts',
   '**/tools/list.spec.ts',

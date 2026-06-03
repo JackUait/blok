@@ -214,12 +214,14 @@ export class DropTargetDetector {
   /**
    * Detects a horizontal (side) drop near the left/right edge of the target.
    *
-   * Returns a DropTarget with edge 'left' or 'right' when the cursor is inside
-   * the outer DRAG_CONFIG.sideZoneRatio of the content-box width (Notion-style
-   * side regions, floored at sideZoneMin) AND inside the central vertical band
-   * (DRAG_CONFIG.sideBandRatio of the block height), to avoid fighting top/bottom
-   * near corners. Side-drops are disabled below 651px (columns stack) and for
-   * container blocks (column / column_list), which are never drop targets.
+   * Returns a DropTarget with edge 'left' or 'right' when the cursor is on the
+   * left/right side of the content box — the outer DRAG_CONFIG.sideZoneRatio of
+   * the content width (floored at sideZoneMin) AND the whole margin beyond it, at
+   * any distance — while inside the central vertical band (DRAG_CONFIG.sideBandRatio
+   * of the block height) to avoid fighting top/bottom near corners. Only the
+   * central reorder band between the two side zones falls through to top/bottom.
+   * Side-drops are disabled below 651px (columns stack) and for container blocks
+   * (column / column_list), which are never drop targets.
    *
    * @param targetBlock - The resolved target block
    * @param blockHolder - The target block's holder element
@@ -259,9 +261,13 @@ export class DropTargetDetector {
       return null;
     }
 
+    // No inner bound: anything left of the left zone boundary counts as a left
+    // side-drop (including the entire left margin, at any distance), and likewise
+    // on the right. Only the central reorder band between the two zones falls
+    // through to top/bottom.
     const sideZone = Math.max(rect.width * DRAG_CONFIG.sideZoneRatio, DRAG_CONFIG.sideZoneMin);
-    const nearLeft = clientX >= rect.left && clientX <= rect.left + sideZone;
-    const nearRight = clientX <= rect.right && clientX >= rect.right - sideZone;
+    const nearLeft = clientX <= rect.left + sideZone;
+    const nearRight = clientX >= rect.right - sideZone;
 
     if (!nearLeft && !nearRight) {
       return null;

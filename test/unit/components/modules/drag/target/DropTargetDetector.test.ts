@@ -1434,11 +1434,11 @@ describe('DropTargetDetector', () => {
       document.body.removeChild(target.holder);
     });
 
-    it('should NOT detect a side edge near the holder edge when far from the content box', () => {
+    it('should detect a side edge at ANY distance into the margin (left/right of the content box)', () => {
       const source = createSideTestBlock({ id: 'source' });
       const target = createSideTestBlock({ id: 'target' });
-      stubWideHolder(target);
-      stubContentRect(target, 300, 900);
+      stubWideHolder(target);          // holder spans 0..1200
+      stubContentRect(target, 300, 900); // content box centered at 300..900
 
       const bm = createSideBlockManager([target, source]);
       const det = new DropTargetDetector(createSideUIAdapter(), bm);
@@ -1448,11 +1448,14 @@ describe('DropTargetDetector', () => {
       const inner = document.createElement('div');
       target.holder.appendChild(inner);
 
-      // clientX=20 is within 48px of the holder LEFT (0) but 280px from the
-      // content left (300) — the old full-width logic would wrongly fire here.
-      const result = det.determineDropTarget(inner, 20, 150, source);
+      // x=20 is deep in the LEFT margin (280px left of the content box) — must
+      // still create a left column, no matter how far from the content edge.
+      const farLeft = det.determineDropTarget(inner, 20, 150, source);
+      expect(farLeft?.edge).toBe('left');
 
-      expect(['top', 'bottom']).toContain(result?.edge);
+      // x=1150 is deep in the RIGHT margin — must create a right column.
+      const farRight = det.determineDropTarget(inner, 1150, 150, source);
+      expect(farRight?.edge).toBe('right');
 
       document.body.removeChild(target.holder);
     });

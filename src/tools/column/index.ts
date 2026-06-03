@@ -52,6 +52,19 @@ export class Column implements BlockTool {
 
     const children = this.api.blocks.getChildren(this.blockId);
 
+    if (children.length === 0) {
+      const blockIndex = this.api.blocks.getBlockIndex(this.blockId);
+
+      if (blockIndex !== undefined) {
+        const paragraph = this.api.blocks.insertInsideParent(this.blockId, blockIndex + 1);
+
+        this.childContainer.appendChild(paragraph.holder);
+        this.api.caret.setToBlock(paragraph.id, 'start');
+      }
+
+      return;
+    }
+
     mountChildBlocks(this.childContainer, children);
   }
 

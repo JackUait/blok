@@ -55,4 +55,43 @@ describe('Column tool', () => {
   it('supports read-only mode', () => {
     expect(Column.isReadOnlySupported).toBe(true);
   });
+
+  it('seeds an empty paragraph child when it has no children', () => {
+    const insertInsideParent = vi.fn().mockReturnValue({ id: 'p-1', holder: document.createElement('div') });
+    const setToBlock = vi.fn();
+    const api = createMockAPI({
+      blocks: {
+        getChildren: vi.fn().mockReturnValue([]),
+        getBlockIndex: vi.fn().mockReturnValue(3),
+        insertInsideParent,
+      },
+      caret: { setToBlock },
+    } as unknown as Partial<API>);
+
+    const column = new Column(createColumnOptions({}, api));
+    column.render();
+    column.rendered();
+
+    expect(insertInsideParent).toHaveBeenCalledWith('col-1', 4);
+    expect(setToBlock).toHaveBeenCalledWith('p-1', 'start');
+  });
+
+  it('does NOT seed when it already has children', () => {
+    const insertInsideParent = vi.fn();
+    const existingChild = { id: 'p-existing', holder: document.createElement('div') };
+    const api = createMockAPI({
+      blocks: {
+        getChildren: vi.fn().mockReturnValue([existingChild]),
+        getBlockIndex: vi.fn().mockReturnValue(3),
+        insertInsideParent,
+      },
+      caret: { setToBlock: vi.fn() },
+    } as unknown as Partial<API>);
+
+    const column = new Column(createColumnOptions({}, api));
+    column.render();
+    column.rendered();
+
+    expect(insertInsideParent).not.toHaveBeenCalled();
+  });
 });

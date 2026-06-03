@@ -73,7 +73,7 @@ export class ColumnList implements BlockTool {
     // Clear the transient seed so a later re-render never re-seeds.
     this._data = { ...this._data, columnCount: undefined };
 
-    Array.from({ length: count }).forEach((_unused, i) => {
+    Array.from({ length: count }).forEach((_, i) => {
       const column = this.api.blocks.insert(
         COLUMN_TOOL,
         {},

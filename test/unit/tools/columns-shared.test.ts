@@ -1,6 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { isInsideColumn, COLUMN_TOOL, unwrapColumnListIfCollapsed } from '../../../src/tools/columns-shared';
 import type { API } from '../../../types';
+
+beforeEach(() => vi.clearAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 interface FakeBlock {
   id: string;
@@ -42,6 +45,11 @@ describe('isInsideColumn', () => {
     ]);
     expect(isInsideColumn('a', lookup)).toBe(false);
   });
+
+  it('returns false for a block that does not exist', () => {
+    const lookup = makeTree([]);
+    expect(isInsideColumn('ghost', lookup)).toBe(false);
+  });
 });
 
 describe('unwrapColumnListIfCollapsed', () => {
@@ -67,9 +75,10 @@ describe('unwrapColumnListIfCollapsed', () => {
     expect(didUnwrap).toBe(true);
     // surviving paragraph promoted to root (null parent)
     expect(setBlockParent).toHaveBeenCalledWith('p1', null);
-    // both wrappers deleted by index (column first, then list)
-    expect(remove).toHaveBeenCalledWith(8);
-    expect(remove).toHaveBeenCalledWith(7);
+    // both wrappers deleted by index, column FIRST then list (order matters:
+    // deleting the column shifts the list's index, which is why it's re-read)
+    expect(remove).toHaveBeenNthCalledWith(1, 8);
+    expect(remove).toHaveBeenNthCalledWith(2, 7);
   });
 
   it('does nothing when 2+ columns remain', async () => {

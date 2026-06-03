@@ -92,6 +92,7 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.image.emptyUpload',
     'tools.image.emptyLink',
     'tools.database.defaultStatusProperty',
+    'searchTerms.layout',
   ]),
   de: new Set([
     'tools.colorPicker.color.orange',
@@ -103,6 +104,7 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.database.propertyTypeText',
     'tools.database.defaultStatusProperty',
     'tools.database.defaultViewBoard',
+    'searchTerms.layout',
   ]),
   es: new Set(['tools.stub.error', 'tools.table.cellColor', 'tools.callout.color']),
   et: new Set(['tools.image.emptyLink']),
@@ -116,6 +118,7 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.database.listView',
     'tools.database.kanbanBoard',
     'tools.database.defaultViewBoard',
+    'searchTerms.layout',
   ]),
   fr: new Set([
     'tools.colorPicker.color.orange',
@@ -130,6 +133,7 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.database.propertyTypeDate',
   ]),
   id: new Set(['tools.image.cropRatioOval', 'tools.database.defaultStatusProperty']),
+  it: new Set(['searchTerms.layout']),
   ms: new Set(['tools.database.defaultStatusProperty']),
   nl: new Set([
     'toolNames.link',
@@ -150,7 +154,7 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.image.emptyLink',
     'tools.database.defaultStatusProperty',
   ]),
-  pt: new Set(['toolNames.link', 'tools.image.emptyLink', 'tools.image.cropRatioOval']),
+  pt: new Set(['toolNames.link', 'tools.image.emptyLink', 'tools.image.cropRatioOval', 'searchTerms.layout']),
   ro: new Set([
     'toolNames.text',
     'toolNames.link',
@@ -170,6 +174,7 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.image.sizeFull',
     'tools.database.propertyTypeText',
     'tools.database.defaultStatusProperty',
+    'searchTerms.layout',
   ]),
   tr: new Set(['searchTerms.program', 'tools.image.cropRatioOval']),
 };

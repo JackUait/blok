@@ -4274,6 +4274,16 @@
   animation: blok-image-retry-spin 1.4s linear infinite;
 }
 
+[data-blok-columns] > [data-blok-element] {
+  flex-basis: 100%;
+  flex-shrink: 0;
+}
+
+[@media (min-width: 651px)] [data-blok-columns] > [data-blok-element] {
+  flex-basis: 0;
+  flex-shrink: 1;
+}
+
 [data-blok-tool="image"] .blok-image-toolbar {
   position: absolute;
   top: 10px;

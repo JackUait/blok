@@ -296,6 +296,7 @@
 @import './emoji-picker.css';
 @import './database.css';
 @import './image.css';
+@import './columns.css';
 
 /*
   Image tool — selectors audited by unit tests (no backdrop-filter regression,

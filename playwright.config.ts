@@ -71,6 +71,7 @@ const CROSS_BROWSER_TESTS = [
 
   // UI interactions involving hover, viewport, mouse events
   '**/ui/mobile-and-readonly-coordination.spec.ts',
+  '**/tools/columns.spec.ts', // responsive vertical-stack assertion is layout/engine-dependent
   '**/ui/toolbar-nested-list-positioning.spec.ts',
   '**/ui/toolbar-rubber-band-hover.spec.ts',
   '**/ui/toolbar-always-visible.spec.ts',
@@ -101,7 +102,6 @@ const LOGIC_TESTS = [
   '**/tools/block-tool.spec.ts',
   '**/tools/block-tune.spec.ts',
   '**/tools/callout.spec.ts',
-  '**/tools/columns.spec.ts',
   '**/tools/header.spec.ts',
   '**/tools/inline-tool.spec.ts',
   '**/tools/list.spec.ts',

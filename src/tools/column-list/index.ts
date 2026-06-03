@@ -37,39 +37,7 @@ export class ColumnList implements BlockTool {
 
     this.container = container;
 
-    ColumnList.ensureResponsiveStyles();
-
     return container;
-  }
-
-  /**
-   * Injects a <style> tag (once per page) with responsive flex-item rules for
-   * the direct block-holder children of a column_list.
-   *
-   * The Column tool applies `basis-full shrink-0` to its own rendered element
-   * ([data-blok-column]), but the FLEX CHILDREN of the column_list container
-   * are the block holder wrappers ([data-blok-element]), not [data-blok-column]
-   * itself. This rule targets those holders so `flex-wrap` forces stacking on
-   * narrow viewports.
-   */
-  private static ensureResponsiveStyles(): void {
-    const id = 'blok-column-list-responsive';
-
-    if (document.getElementById(id) !== null) {
-      return;
-    }
-
-    const style = document.createElement('style');
-
-    style.id = id;
-    style.textContent = [
-      '[data-blok-columns] > [data-blok-element]{flex-basis:100%;flex-shrink:0}',
-      '@media (min-width:651px){',
-      '[data-blok-columns] > [data-blok-element]{flex-basis:0;flex-shrink:1}',
-      '}',
-    ].join('');
-
-    document.head.appendChild(style);
   }
 
   public rendered(): void {

@@ -75,10 +75,52 @@ describe('unwrapColumnListIfCollapsed', () => {
     expect(didUnwrap).toBe(true);
     // surviving paragraph promoted to root (null parent)
     expect(setBlockParent).toHaveBeenCalledWith('p1', null);
+    // surviving column is also detached from the list BEFORE deletion, so its
+    // own removed() hook sees parentId=null and does not recurse into unwrap
+    expect(setBlockParent).toHaveBeenCalledWith('colA', null);
+    // exactly two reparents: the child, then the surviving column
+    expect(setBlockParent).toHaveBeenCalledTimes(2);
     // both wrappers deleted by index, column FIRST then list (order matters:
     // deleting the column shifts the list's index, which is why it's re-read)
     expect(remove).toHaveBeenNthCalledWith(1, 8);
     expect(remove).toHaveBeenNthCalledWith(2, 7);
+  });
+
+  it('excludes the being-removed block from the column count (excludeId)', async () => {
+    // removed() fires BEFORE the flat-array splice, so getChildren still
+    // returns the block being deleted; excludeId filters it out for the
+    // 1-column threshold check.
+    const survivingChild = { id: 'p1' };
+    const getChildren = vi.fn()
+      .mockReturnValueOnce([{ id: 'colA' }, { id: 'colB' }]) // colB is being removed
+      .mockReturnValueOnce([survivingChild]);                // colA's child
+    const indexById: Record<string, number> = { colA: 8, 'cl-1': 7 };
+    const getBlockIndex = vi.fn().mockImplementation((id: string) => indexById[id]);
+    const setBlockParent = vi.fn();
+    const remove = vi.fn().mockResolvedValue(undefined);
+    const api = {
+      blocks: { getChildren, getBlockIndex, setBlockParent, delete: remove },
+    } as unknown as API;
+
+    const didUnwrap = await unwrapColumnListIfCollapsed(api, 'cl-1', 'colB');
+
+    // After excluding colB, only colA remains → unwrap proceeds
+    expect(didUnwrap).toBe(true);
+    expect(setBlockParent).toHaveBeenCalledWith('p1', null);
+    expect(setBlockParent).toHaveBeenCalledWith('colA', null);
+  });
+
+  it('does NOT unwrap when excludeId still leaves 2+ columns', async () => {
+    const getChildren = vi.fn().mockReturnValue([{ id: 'colA' }, { id: 'colB' }, { id: 'colC' }]);
+    const setBlockParent = vi.fn();
+    const remove = vi.fn().mockResolvedValue(undefined);
+    const api = {
+      blocks: { getChildren, getBlockIndex: vi.fn(), setBlockParent, delete: remove },
+    } as unknown as API;
+
+    // Removing colC still leaves colA + colB → no unwrap
+    expect(await unwrapColumnListIfCollapsed(api, 'cl-1', 'colC')).toBe(false);
+    expect(remove).not.toHaveBeenCalled();
   });
 
   it('does nothing when 2+ columns remain', async () => {

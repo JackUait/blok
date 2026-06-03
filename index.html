@@ -1956,6 +1956,44 @@
         ],
       },
       {
+        tool: 'column_list',
+        label: 'Columns',
+        states: [
+          { label: 'Two columns', blocks: [
+            { id: 'col2', type: 'column_list', data: {}, content: ['col2-a', 'col2-b'] },
+            { id: 'col2-a', type: 'column', data: {}, content: ['col2-a-p'], parent: 'col2' },
+            { id: 'col2-a-p', type: 'paragraph', data: { text: 'First column.' }, parent: 'col2-a' },
+            { id: 'col2-b', type: 'column', data: {}, content: ['col2-b-p'], parent: 'col2' },
+            { id: 'col2-b-p', type: 'paragraph', data: { text: 'Second column.' }, parent: 'col2-b' },
+          ] },
+          { label: 'Three columns', blocks: [
+            { id: 'col3', type: 'column_list', data: {}, content: ['col3-a', 'col3-b', 'col3-c'] },
+            { id: 'col3-a', type: 'column', data: {}, content: ['col3-a-p'], parent: 'col3' },
+            { id: 'col3-a-p', type: 'paragraph', data: { text: 'One' }, parent: 'col3-a' },
+            { id: 'col3-b', type: 'column', data: {}, content: ['col3-b-p'], parent: 'col3' },
+            { id: 'col3-b-p', type: 'paragraph', data: { text: 'Two' }, parent: 'col3-b' },
+            { id: 'col3-c', type: 'column', data: {}, content: ['col3-c-p'], parent: 'col3' },
+            { id: 'col3-c-p', type: 'paragraph', data: { text: 'Three' }, parent: 'col3-c' },
+          ] },
+          { label: 'Uneven widths (2:1)', blocks: [
+            { id: 'colw', type: 'column_list', data: {}, content: ['colw-a', 'colw-b'] },
+            { id: 'colw-a', type: 'column', data: { widthRatio: 2 }, content: ['colw-a-p'], parent: 'colw' },
+            { id: 'colw-a-p', type: 'paragraph', data: { text: 'Wide column — twice the width of its neighbor.' }, parent: 'colw-a' },
+            { id: 'colw-b', type: 'column', data: { widthRatio: 1 }, content: ['colw-b-p'], parent: 'colw' },
+            { id: 'colw-b-p', type: 'paragraph', data: { text: 'Narrow.' }, parent: 'colw-b' },
+          ] },
+          { label: 'Rich content', blocks: [
+            { id: 'colr', type: 'column_list', data: {}, content: ['colr-a', 'colr-b'] },
+            { id: 'colr-a', type: 'column', data: {}, content: ['colr-a-h', 'colr-a-p'], parent: 'colr' },
+            { id: 'colr-a-h', type: 'header', data: { text: 'Features', level: 3 }, parent: 'colr-a' },
+            { id: 'colr-a-p', type: 'paragraph', data: { text: 'Each column hosts arbitrary blocks.' }, parent: 'colr-a' },
+            { id: 'colr-b', type: 'column', data: {}, content: ['colr-b-l1', 'colr-b-l2'], parent: 'colr' },
+            { id: 'colr-b-l1', type: 'list', data: { style: 'checklist', text: 'Headers', checked: true }, parent: 'colr-b' },
+            { id: 'colr-b-l2', type: 'list', data: { style: 'checklist', text: 'Lists', checked: true }, parent: 'colr-b' },
+          ] },
+        ],
+      },
+      {
         tool: 'database',
         label: 'Database',
         states: [

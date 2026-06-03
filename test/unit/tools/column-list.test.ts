@@ -91,10 +91,12 @@ describe('ColumnList tool', () => {
     } as unknown as Partial<API>);
 
     const list = new ColumnList(createColumnListOptions({}, api));
-    list.render();
+    const el = list.render();
     list.rendered();
 
     expect(insert).toHaveBeenCalledTimes(2);
+    // Observable: both seeded column holders are mounted into the container
+    expect(el.children).toHaveLength(2);
   });
 
   it('does NOT seed columns when children already exist', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { isInsideColumn, COLUMN_TOOL, unwrapColumnListIfCollapsed } from '../../../src/tools/columns-shared';
+import { isInsideColumn, COLUMN_TOOL, unwrapColumnListIfCollapsed, resizeColumnGrow } from '../../../src/tools/columns-shared';
 import type { API } from '../../../types';
 
 beforeEach(() => vi.clearAllMocks());
@@ -133,5 +133,69 @@ describe('unwrapColumnListIfCollapsed', () => {
 
     expect(await unwrapColumnListIfCollapsed(api, 'cl-1')).toBe(false);
     expect(remove).not.toHaveBeenCalled();
+  });
+});
+
+describe('resizeColumnGrow', () => {
+  it('leaves the grow split unchanged for a zero delta', () => {
+    const next = resizeColumnGrow({
+      leftWidth: 200,
+      rightWidth: 200,
+      leftGrow: 1,
+      rightGrow: 1,
+      delta: 0,
+      minWidth: 40,
+    });
+
+    expect(next.leftGrow).toBeCloseTo(1);
+    expect(next.rightGrow).toBeCloseTo(1);
+  });
+
+  it('grows the left and shrinks the right while preserving the pair grow sum', () => {
+    const next = resizeColumnGrow({
+      leftWidth: 200,
+      rightWidth: 200,
+      leftGrow: 1,
+      rightGrow: 1,
+      delta: 50, // left 200->250, right 200->150 of a 400px pair
+      minWidth: 40,
+    });
+
+    // grows redistribute by width fraction: 2 * 250/400 and 2 * 150/400
+    expect(next.leftGrow).toBeCloseTo(1.25);
+    expect(next.rightGrow).toBeCloseTo(0.75);
+    // the pair's total grow is unchanged so other columns are unaffected
+    expect(next.leftGrow + next.rightGrow).toBeCloseTo(2);
+  });
+
+  it('clamps so neither column drops below minWidth', () => {
+    const next = resizeColumnGrow({
+      leftWidth: 200,
+      rightWidth: 200,
+      leftGrow: 1,
+      rightGrow: 1,
+      delta: 1000, // would push right column to negative width
+      minWidth: 40,
+    });
+
+    // left capped at pairWidth - minWidth = 360, right floored at 40
+    expect(next.leftGrow).toBeCloseTo(2 * 360 / 400);
+    expect(next.rightGrow).toBeCloseTo(2 * 40 / 400);
+  });
+
+  it('preserves an uneven starting grow ratio', () => {
+    const next = resizeColumnGrow({
+      leftWidth: 300,
+      rightWidth: 150,
+      leftGrow: 2,
+      rightGrow: 1,
+      delta: 0,
+      minWidth: 40,
+    });
+
+    // sum stays 3, split by current widths
+    expect(next.leftGrow + next.rightGrow).toBeCloseTo(3);
+    expect(next.leftGrow).toBeCloseTo(3 * 300 / 450);
+    expect(next.rightGrow).toBeCloseTo(3 * 150 / 450);
   });
 });

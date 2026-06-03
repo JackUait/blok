@@ -4,6 +4,50 @@ export const COLUMN_LIST_TOOL = 'column_list';
 export const COLUMN_TOOL = 'column';
 export const COLUMNS_ATTR = 'data-blok-columns';
 export const COLUMN_ATTR = 'data-blok-column';
+export const COLUMN_RESIZER_ATTR = 'data-blok-column-resizer';
+
+/**
+ * Smallest width (px) a column may be squeezed to while dragging a resizer.
+ * Keeps both columns of the resized pair usable instead of collapsing one.
+ */
+export const COLUMN_MIN_WIDTH = 40;
+
+/**
+ * Redistribute the flex-grow of two adjacent columns as their shared separator
+ * is dragged by `delta` px. The pair's total grow is preserved so columns
+ * outside the pair keep their width; widths are clamped to `minWidth` so
+ * neither column collapses.
+ *
+ * Width-driven because the columns use `flex-basis: 0` — width is proportional
+ * to flex-grow, so the new grows are the pair's grow sum split by the new
+ * width fractions.
+ */
+export const resizeColumnGrow = (params: {
+  leftWidth: number;
+  rightWidth: number;
+  leftGrow: number;
+  rightGrow: number;
+  delta: number;
+  minWidth: number;
+}): { leftGrow: number; rightGrow: number } => {
+  const pairWidth = params.leftWidth + params.rightWidth;
+  const growSum = params.leftGrow + params.rightGrow;
+
+  if (pairWidth <= 0 || growSum <= 0) {
+    return { leftGrow: params.leftGrow, rightGrow: params.rightGrow };
+  }
+
+  const leftWidth = Math.max(
+    params.minWidth,
+    Math.min(pairWidth - params.minWidth, params.leftWidth + params.delta)
+  );
+  const rightWidth = pairWidth - leftWidth;
+
+  return {
+    leftGrow: (growSum * leftWidth) / pairWidth,
+    rightGrow: (growSum * rightWidth) / pairWidth,
+  };
+};
 
 /**
  * Minimal block view the helpers need — kept structural so callers can pass

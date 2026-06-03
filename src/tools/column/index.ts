@@ -75,8 +75,16 @@ export class Column implements BlockTool {
   }
 
   public save(): ColumnData {
-    return this._data.widthRatio !== undefined
-      ? { widthRatio: this._data.widthRatio }
+    // The resizer mutates the holder's flex-grow live, so the holder is the
+    // source of truth once rendered. Fall back to the seeded data before the
+    // holder exists. An even-split grow of 1 is the default — omit it.
+    const liveGrow = this.block.holder?.style.flexGrow;
+    const ratio = liveGrow !== undefined && liveGrow !== ''
+      ? Number(liveGrow)
+      : this._data.widthRatio;
+
+    return ratio !== undefined && ratio !== 1
+      ? { widthRatio: ratio }
       : {};
   }
 

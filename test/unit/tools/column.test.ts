@@ -78,6 +78,43 @@ describe('Column tool', () => {
     expect(without.save()).toEqual({});
   });
 
+  it('saves the live resized flex-grow from the holder', () => {
+    // The resizer mutates the holder's flex-grow directly; save() must read it
+    // back so a drag persists into the output without an api.blocks.update.
+    const api = createMockAPI({
+      blocks: {
+        getChildren: vi.fn().mockReturnValue([{ id: 'p', holder: document.createElement('div') }]),
+        getBlockIndex: vi.fn().mockReturnValue(0),
+        insertInsideParent: vi.fn(),
+      },
+    } as unknown as Partial<API>);
+    const options = createColumnOptions({}, api);
+    const column = new Column(options);
+    column.render();
+    column.rendered();
+
+    // simulate a resize handle setting the grow
+    options.block.holder.style.flexGrow = '1.6';
+
+    expect(column.save()).toEqual({ widthRatio: 1.6 });
+  });
+
+  it('saves an empty object when the holder grow is the default even split', () => {
+    const api = createMockAPI({
+      blocks: {
+        getChildren: vi.fn().mockReturnValue([{ id: 'p', holder: document.createElement('div') }]),
+        getBlockIndex: vi.fn().mockReturnValue(0),
+        insertInsideParent: vi.fn(),
+      },
+    } as unknown as Partial<API>);
+    const options = createColumnOptions({}, api);
+    const column = new Column(options);
+    column.render();
+    column.rendered(); // sets holder flex-grow to the default '1'
+
+    expect(column.save()).toEqual({});
+  });
+
   it('supports read-only mode', () => {
     expect(Column.isReadOnlySupported).toBe(true);
   });

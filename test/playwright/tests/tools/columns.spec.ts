@@ -171,4 +171,85 @@ test.describe('Columns tool', () => {
     expect(Math.abs(w1 - w2)).toBeLessThan(2);
     expect(Math.abs(w2 - w3)).toBeLessThan(2);
   });
+
+  test('renders a resize separator between each pair of columns', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2', 'c3'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['p1'] },
+        { id: 'p1', type: 'paragraph', data: { text: 'A' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['p2'] },
+        { id: 'p2', type: 'paragraph', data: { text: 'B' }, parent: 'c2' },
+        { id: 'c3', type: 'column', data: {}, parent: 'cl1', content: ['p3'] },
+        { id: 'p3', type: 'paragraph', data: { text: 'C' }, parent: 'c3' },
+      ],
+    });
+
+    const resizers = page.getByTestId('column-resizer');
+
+    // 3 columns -> 2 separators
+    await expect(resizers).toHaveCount(2);
+    await expect(resizers.first()).toHaveAttribute('role', 'separator');
+    await expect(resizers.first()).toHaveAttribute('aria-orientation', 'vertical');
+  });
+
+  test('dragging a separator resizes the columns and persists across reload', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['p1'] },
+        { id: 'p1', type: 'paragraph', data: { text: 'Left' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['p2'] },
+        { id: 'p2', type: 'paragraph', data: { text: 'Right' }, parent: 'c2' },
+      ],
+    });
+
+    const columns = page.locator('[data-blok-column]');
+    const widthsBefore = await columns.evaluateAll(els =>
+      els.map(el => el.getBoundingClientRect().width)
+    );
+
+    // Equal to start
+    expect(Math.abs(widthsBefore[0] - widthsBefore[1])).toBeLessThan(2);
+
+    const resizer = page.getByTestId('column-resizer').first();
+    const box = await resizer.boundingBox();
+
+    if (!box) {
+      throw new Error('resizer not found');
+    }
+
+    const centerY = box.y + box.height / 2;
+    const startX = box.x + box.width / 2;
+
+    await page.mouse.move(startX, centerY);
+    await page.mouse.down();
+    await page.mouse.move(startX + 120, centerY, { steps: 8 });
+    await page.mouse.up();
+
+    const widthsAfter = await columns.evaluateAll(els =>
+      els.map(el => el.getBoundingClientRect().width)
+    );
+
+    // Left column grew, right column shrank by roughly the drag distance
+    expect(widthsAfter[0]).toBeGreaterThan(widthsBefore[0] + 80);
+    expect(widthsAfter[1]).toBeLessThan(widthsBefore[1] - 80);
+
+    // The resized ratio persists into the saved output
+    const saved = await saveBlok(page);
+    const leftColumn = saved.blocks.find(b => b.id === 'c1');
+    expect((leftColumn?.data as { widthRatio?: number }).widthRatio).toBeGreaterThan(1);
+
+    // Reloading the saved tree restores the uneven widths
+    await createBlok(page, saved);
+
+    const reloaded = page.locator('[data-blok-column]');
+    const widthsReloaded = await reloaded.evaluateAll(els =>
+      els.map(el => el.getBoundingClientRect().width)
+    );
+
+    expect(widthsReloaded[0]).toBeGreaterThan(widthsReloaded[1] + 80);
+  });
 });

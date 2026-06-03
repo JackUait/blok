@@ -95,8 +95,13 @@ describe('ColumnList tool', () => {
     list.rendered();
 
     expect(insert).toHaveBeenCalledTimes(2);
-    // Observable: both seeded column holders are mounted into the container
-    expect(el.children).toHaveLength(2);
+    // Observable: both seeded column holders are mounted, plus one resize
+    // separator sitting in the gutter between them (2 columns -> 1 separator).
+    const mountedColumns = Array.from(el.children).filter(
+      child => !child.hasAttribute('data-blok-column-resizer')
+    );
+    expect(mountedColumns).toHaveLength(2);
+    expect(el.querySelectorAll('[data-blok-column-resizer]')).toHaveLength(1);
   });
 
   it('does NOT seed columns when children already exist', () => {
@@ -149,6 +154,81 @@ describe('ColumnList tool', () => {
 
     // Caret goes to the FIRST column's first paragraph, not the last column's
     expect(setToBlock).toHaveBeenCalledWith('p-first', 'start');
+  });
+
+  it('inserts a resize separator between each pair of mounted columns', () => {
+    const h1 = document.createElement('div');
+    const h2 = document.createElement('div');
+    const h3 = document.createElement('div');
+    const api = createMockAPI({
+      blocks: {
+        getChildren: vi.fn().mockReturnValue([
+          { id: 'c1', holder: h1 },
+          { id: 'c2', holder: h2 },
+          { id: 'c3', holder: h3 },
+        ]),
+        getBlockIndex: vi.fn().mockReturnValue(0),
+        insert: vi.fn(),
+        setBlockParent: vi.fn(),
+      },
+    } as unknown as Partial<API>);
+
+    const list = new ColumnList(createColumnListOptions({}, api));
+    const container = list.render();
+    list.rendered();
+
+    const resizers = container.querySelectorAll('[data-blok-column-resizer]');
+
+    // 3 columns -> 2 separators, each sitting between two column holders
+    expect(resizers).toHaveLength(2);
+    expect(resizers[0].previousElementSibling).toBe(h1);
+    expect(resizers[0].nextElementSibling).toBe(h2);
+    expect(resizers[1].previousElementSibling).toBe(h2);
+    expect(resizers[1].nextElementSibling).toBe(h3);
+  });
+
+  it('does not insert resize separators in read-only mode', () => {
+    const api = createMockAPI({
+      blocks: {
+        getChildren: vi.fn().mockReturnValue([
+          { id: 'c1', holder: document.createElement('div') },
+          { id: 'c2', holder: document.createElement('div') },
+        ]),
+        getBlockIndex: vi.fn().mockReturnValue(0),
+        insert: vi.fn(),
+        setBlockParent: vi.fn(),
+      },
+    } as unknown as Partial<API>);
+
+    const options = createColumnListOptions({}, api);
+    options.readOnly = true;
+    const list = new ColumnList(options);
+    const container = list.render();
+    list.rendered();
+
+    expect(container.querySelectorAll('[data-blok-column-resizer]')).toHaveLength(0);
+  });
+
+  it('marks the separator as a vertical separator for assistive tech', () => {
+    const api = createMockAPI({
+      blocks: {
+        getChildren: vi.fn().mockReturnValue([
+          { id: 'c1', holder: document.createElement('div') },
+          { id: 'c2', holder: document.createElement('div') },
+        ]),
+        getBlockIndex: vi.fn().mockReturnValue(0),
+        insert: vi.fn(),
+        setBlockParent: vi.fn(),
+      },
+    } as unknown as Partial<API>);
+
+    const list = new ColumnList(createColumnListOptions({}, api));
+    const container = list.render();
+    list.rendered();
+
+    const resizer = container.querySelector('[data-blok-column-resizer]');
+    expect(resizer).toHaveAttribute('role', 'separator');
+    expect(resizer).toHaveAttribute('aria-orientation', 'vertical');
   });
 
   it('exposes toolbox presets for 2–5 columns with columnCount data overrides', () => {

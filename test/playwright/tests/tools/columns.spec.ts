@@ -562,6 +562,57 @@ test.describe('Columns tool', () => {
     expect(columnOrder[2]).toBe('c2');
   });
 
+  test('hides the resize handle during a block drag so only ONE indicator shows in the gutter', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['a'] },
+        { id: 'a', type: 'paragraph', data: { text: 'Col A' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['b'] },
+        { id: 'b', type: 'paragraph', data: { text: 'Col B' }, parent: 'c2' },
+        { id: 'newcomer', type: 'paragraph', data: { text: 'Newcomer' } },
+      ],
+    });
+
+    const source = page.getByTestId('block-wrapper').filter({ hasText: 'Newcomer' });
+    await source.hover();
+    const handle = page.locator(SETTINGS_BUTTON);
+    await expect(handle).toBeVisible();
+    const sourceBox = await handle.boundingBox();
+
+    const resizer = page.getByTestId('column-resizer').first();
+    const gutterBox = await resizer.boundingBox();
+
+    if (!sourceBox || !gutterBox) {
+      throw new Error('missing bounding box for gutter drag');
+    }
+
+    // Drag onto the gutter and pause mid-drag to inspect what's drawn there.
+    await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(gutterBox.x + gutterBox.width / 2, gutterBox.y + gutterBox.height / 2, { steps: 18 });
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') === 'true',
+      { timeout: 2000 }
+    );
+
+    const drawn = await page.evaluate(() => {
+      const indicators = document.querySelectorAll('[data-drop-indicator]').length;
+      const handleOpacities = Array.from(document.querySelectorAll('[data-blok-column-resizer]'))
+        .map(el => getComputedStyle(el, '::before').opacity);
+
+      return { indicators, handleOpacities };
+    });
+
+    await page.mouse.up();
+
+    // Exactly one drop indicator, and NO resize handle is revealed during the drag —
+    // otherwise the gray handle bar reads as a second drop target beside the blue one.
+    expect(drawn.indicators).toBe(1);
+    expect(drawn.handleOpacities.every(o => o === '0')).toBe(true);
+  });
+
   test('dragging a column child to a root position moves it out of the column', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     await createBlok(page, {

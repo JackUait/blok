@@ -57,6 +57,18 @@
   background-color: var(--blok-active-icon);
 }
 
+/*
+ * While a block is being dragged, suppress the gutter handle entirely. Otherwise
+ * the cursor passing over a separator triggers :hover and reveals the gray handle
+ * bar right next to the blue drop indicator — reading as two drop targets in the
+ * gutter. Higher specificity than the :hover rule (three attributes), so it wins
+ * without !important. A real resize drag sets [data-dragging] on the resizer, not
+ * data-blok-dragging on the interface, so this never hides the active resize.
+ */
+[data-blok-interface][data-blok-dragging="true"] [data-blok-column-resizer]::before {
+  opacity: 0;
+}
+
 /* Columns stack vertically below the breakpoint, so the gutter handle hides. */
 @media (max-width: 650px) {
   [data-blok-column-resizer] {

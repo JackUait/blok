@@ -4331,6 +4331,10 @@
   background-color: var(--blok-active-icon);
 }
 
+[data-blok-interface][data-blok-dragging="true"] [data-blok-column-resizer]::before {
+  opacity: 0;
+}
+
 [@media (max-width: 650px)] [data-blok-column-resizer] {
   display: none;
 }

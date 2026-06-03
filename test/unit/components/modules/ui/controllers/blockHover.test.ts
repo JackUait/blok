@@ -740,6 +740,84 @@ describe('BlockHoverController', () => {
     });
   });
 
+  describe('column container hover', () => {
+    it('resolves a hovered column block up to its parent column_list', () => {
+      /**
+       * A column is a structural container, not an independent block: it must
+       * not own a drag handle / settings menu. Hovering a column resolves to
+       * its parent column_list so only the layout (and the inner blocks) are
+       * draggable — never the column itself.
+       */
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+      const columnListBlock = createMockBlock('cl-1', 100, 400);
+      const columnBlock = createMockBlock('col-1', 100, 400);
+
+      (columnBlock as unknown as { name: string }).name = 'column';
+      (columnBlock as unknown as { parentId: string }).parentId = 'cl-1';
+
+      const columnWrapper = columnBlock.holder;
+
+      columnWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+      document.body.appendChild(columnWrapper);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [columnListBlock, columnBlock];
+      vi.mocked(blok.BlockManager.getBlockByChildNode).mockReturnValue(columnBlock);
+      (blok.BlockManager as unknown as { getBlockById: ReturnType<typeof vi.fn> }).getBlockById =
+        vi.fn().mockReturnValue(columnListBlock);
+
+      const event = new MouseEvent('mousemove', {
+        clientX: 200,
+        clientY: 200,
+        bubbles: true,
+      });
+      Object.defineProperty(event, 'target', { value: columnWrapper });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: columnListBlock,
+        target: columnWrapper,
+      });
+    });
+
+    it('keeps a column child block as its own hover target', () => {
+      /**
+       * Blocks INSIDE a column keep their own toolbar so the user can add,
+       * move, or convert them. Only the column wrapper itself is suppressed.
+       */
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+      const childBlock = createMockBlock('p-1', 100, 200);
+
+      const childWrapper = childBlock.holder;
+
+      childWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+      document.body.appendChild(childWrapper);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [childBlock];
+      vi.mocked(blok.BlockManager.getBlockByChildNode).mockReturnValue(childBlock);
+
+      const event = new MouseEvent('mousemove', {
+        clientX: 200,
+        clientY: 150,
+        bubbles: true,
+      });
+      Object.defineProperty(event, 'target', { value: childWrapper });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: childBlock,
+        target: childWrapper,
+      });
+    });
+  });
+
   describe('edge cases', () => {
     it('handles MouseEvent type check', () => {
       const { controller, blok, eventsDispatcher } = createBlockHoverController();

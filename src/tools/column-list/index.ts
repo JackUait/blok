@@ -73,7 +73,7 @@ export class ColumnList implements BlockTool {
     // Clear the transient seed so a later re-render never re-seeds.
     this._data = { ...this._data, columnCount: undefined };
 
-    Array.from({ length: count }).forEach((_, i) => {
+    const columns = Array.from({ length: count }).map((_, i) => {
       const column = this.api.blocks.insert(
         COLUMN_TOOL,
         {},
@@ -85,7 +85,19 @@ export class ColumnList implements BlockTool {
 
       this.api.blocks.setBlockParent(column.id, this.blockId);
       container.appendChild(column.holder);
+
+      return column;
     });
+
+    // Each column's rendered() hook seeds a paragraph and focuses it, so the
+    // last column wins by default. Override: place the caret in the FIRST
+    // column's first paragraph.
+    const [firstColumn] = columns;
+    const firstChild = this.api.blocks.getChildren(firstColumn.id)[0];
+
+    if (firstChild !== undefined) {
+      this.api.caret.setToBlock(firstChild.id, 'start');
+    }
   }
 
   public save(): ColumnListData {

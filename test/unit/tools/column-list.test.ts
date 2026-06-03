@@ -117,6 +117,40 @@ describe('ColumnList tool', () => {
     expect(insert).not.toHaveBeenCalled();
   });
 
+  it('places the caret in the first column after seeding', () => {
+    let counter = 0;
+    const insert = vi.fn().mockImplementation(() => {
+      counter += 1;
+
+      return { id: `col-${counter}`, holder: document.createElement('div') };
+    });
+    const setToBlock = vi.fn();
+    const getChildren = vi.fn().mockImplementation((id: string) => {
+      if (id === 'col-1') {
+        // first column's seeded paragraph (created by its own rendered() hook)
+        return [{ id: 'p-first', holder: document.createElement('div') }];
+      }
+
+      return []; // column_list starts empty; other columns irrelevant here
+    });
+    const api = createMockAPI({
+      blocks: {
+        getChildren,
+        getBlockIndex: vi.fn().mockReturnValue(0),
+        insert,
+        setBlockParent: vi.fn(),
+      },
+      caret: { setToBlock },
+    } as unknown as Partial<API>);
+
+    const list = new ColumnList(createColumnListOptions({ columnCount: 3 }, api));
+    list.render();
+    list.rendered();
+
+    // Caret goes to the FIRST column's first paragraph, not the last column's
+    expect(setToBlock).toHaveBeenCalledWith('p-first', 'start');
+  });
+
   it('exposes toolbox presets for 2–5 columns with columnCount data overrides', () => {
     const toolbox = ColumnList.toolbox;
     const entries = Array.isArray(toolbox) ? toolbox : [toolbox];

@@ -142,4 +142,33 @@ test.describe('Columns tool', () => {
     // Stacked: second column sits below the first
     expect(boxB?.y).toBeGreaterThan((boxA?.y ?? 0) + (boxA?.height ?? 0) - 1);
   });
+
+  test('splits the available width evenly across equal columns', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2', 'c3'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['p1'] },
+        { id: 'p1', type: 'paragraph', data: { text: 'A' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['p2'] },
+        { id: 'p2', type: 'paragraph', data: { text: 'Much longer content in the middle column' }, parent: 'c2' },
+        { id: 'c3', type: 'column', data: {}, parent: 'cl1', content: ['p3'] },
+        { id: 'p3', type: 'paragraph', data: { text: 'C' }, parent: 'c3' },
+      ],
+    });
+
+    const columns = page.locator('[data-blok-column]');
+
+    await expect(columns).toHaveCount(3);
+
+    const boxes = await columns.evaluateAll(els =>
+      els.map(el => el.getBoundingClientRect().width)
+    );
+
+    // Equal columns share the row evenly regardless of content length.
+    const [w1, w2, w3] = boxes;
+
+    expect(Math.abs(w1 - w2)).toBeLessThan(2);
+    expect(Math.abs(w2 - w3)).toBeLessThan(2);
+  });
 });

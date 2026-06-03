@@ -19,6 +19,7 @@ export class Column implements BlockTool {
   private _data: ColumnData;
   private readonly blockId: string;
   private readonly parentId: string | null;
+  private readonly block: BlockToolConstructorOptions<ColumnData>['block'];
   private childContainer: HTMLElement | null = null;
 
   constructor({ data, api, block }: BlockToolConstructorOptions<ColumnData>) {
@@ -26,14 +27,14 @@ export class Column implements BlockTool {
     this._data = { ...data };
     this.blockId = block.id;
     this.parentId = block.parentId;
+    this.block = block;
   }
 
   public render(): HTMLElement {
     const wrapper = document.createElement('div');
 
-    wrapper.className = twMerge('flex', 'flex-col', 'min-w-0', 'basis-0');
+    wrapper.className = twMerge('flex', 'flex-col', 'min-w-0');
     wrapper.setAttribute(COLUMN_ATTR, '');
-    wrapper.style.flexGrow = String(this._data.widthRatio ?? 1);
 
     const childContainer = document.createElement('div');
 
@@ -49,6 +50,11 @@ export class Column implements BlockTool {
     if (this.childContainer === null) {
       return;
     }
+
+    // The flex item is the block holder, not the rendered wrapper, and the
+    // holder only exists once the block is composed (post-render). Grow it so
+    // sibling columns split the row evenly; widthRatio biases the split.
+    this.block.holder.style.flexGrow = String(this._data.widthRatio ?? 1);
 
     const children = this.api.blocks.getChildren(this.blockId);
 

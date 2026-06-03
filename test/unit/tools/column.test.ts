@@ -22,7 +22,7 @@ const createColumnOptions = (
   config: {},
   api,
   readOnly: false,
-  block: { id: 'col-1' } as never,
+  block: { id: 'col-1', holder: document.createElement('div') } as never,
 });
 
 describe('Column tool', () => {
@@ -33,13 +33,39 @@ describe('Column tool', () => {
     const column = new Column(createColumnOptions());
     const el = column.render();
     expect(el).toHaveAttribute('data-blok-column');
-    expect(el.style.flexGrow).toBe('1');
   });
 
-  it('applies flex from widthRatio when set', () => {
-    const column = new Column(createColumnOptions({ widthRatio: 0.25 }));
-    const el = column.render();
-    expect(el.style.flexGrow).toBe('0.25');
+  it('grows the holder evenly by default so columns split space equally', () => {
+    // The flex item is the block holder, not the rendered wrapper. flex-grow
+    // must land on the holder or columns collapse to their content width. The
+    // holder only exists post-compose, so grow is applied in rendered().
+    const api = createMockAPI({
+      blocks: {
+        getChildren: vi.fn().mockReturnValue([{ id: 'p', holder: document.createElement('div') }]),
+        getBlockIndex: vi.fn().mockReturnValue(0),
+        insertInsideParent: vi.fn(),
+      },
+    } as unknown as Partial<API>);
+    const options = createColumnOptions({}, api);
+    const column = new Column(options);
+    column.render();
+    column.rendered();
+    expect(options.block.holder.style.flexGrow).toBe('1');
+  });
+
+  it('grows the holder by widthRatio when set', () => {
+    const api = createMockAPI({
+      blocks: {
+        getChildren: vi.fn().mockReturnValue([{ id: 'p', holder: document.createElement('div') }]),
+        getBlockIndex: vi.fn().mockReturnValue(0),
+        insertInsideParent: vi.fn(),
+      },
+    } as unknown as Partial<API>);
+    const options = createColumnOptions({ widthRatio: 2 }, api);
+    const column = new Column(options);
+    column.render();
+    column.rendered();
+    expect(options.block.holder.style.flexGrow).toBe('2');
   });
 
   it('saves widthRatio when set, empty object otherwise', () => {

@@ -504,6 +504,64 @@ test.describe('Columns tool', () => {
     expect(Math.abs(indicator.beforeHeight - rowHeight)).toBeLessThan(8);
   });
 
+  test('dropping a block on the inter-column gutter inserts a new column between the two columns', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['a'] },
+        { id: 'a', type: 'paragraph', data: { text: 'Col A' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['b'] },
+        { id: 'b', type: 'paragraph', data: { text: 'Col B' }, parent: 'c2' },
+        { id: 'newcomer', type: 'paragraph', data: { text: 'Newcomer' } },
+      ],
+    });
+
+    const columns = page.locator('[data-blok-column]');
+    await expect(columns).toHaveCount(2);
+
+    // Drop "Newcomer" squarely on the resize separator dividing the two columns —
+    // the natural "between columns" gesture.
+    const source = page.getByTestId('block-wrapper').filter({ hasText: 'Newcomer' });
+    await source.hover();
+    const handle = page.locator(SETTINGS_BUTTON);
+    await expect(handle).toBeVisible();
+    const sourceBox = await handle.boundingBox();
+
+    const resizer = page.getByTestId('column-resizer').first();
+    const gutterBox = await resizer.boundingBox();
+
+    if (!sourceBox || !gutterBox) {
+      throw new Error('missing bounding box for gutter drop');
+    }
+
+    await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(gutterBox.x + gutterBox.width / 2, gutterBox.y + gutterBox.height / 2, { steps: 15 });
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') === 'true',
+      { timeout: 2000 }
+    );
+    await page.mouse.up();
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') !== 'true',
+      { timeout: 2000 }
+    );
+
+    await expect(columns).toHaveCount(3);
+
+    // The new column lands BETWEEN the originals: column document order is
+    // [c1, <new>, c2], and Newcomer is the sole child of that middle column.
+    const saved = await saveBlok(page);
+    const columnOrder = saved.blocks.filter(b => b.type === 'column').map(b => b.id);
+    const newcomerParent = saved.blocks.find(b => b.id === 'newcomer')?.parent;
+
+    expect(columnOrder).toHaveLength(3);
+    expect(newcomerParent).toBe(columnOrder[1]);
+    expect(columnOrder[0]).toBe('c1');
+    expect(columnOrder[2]).toBe('c2');
+  });
+
   test('dragging a column child to a root position moves it out of the column', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     await createBlok(page, {

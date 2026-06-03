@@ -1504,6 +1504,77 @@ describe('DropTargetDetector', () => {
       document.body.removeChild(columns);
     });
 
+    /**
+     * Builds the real column-row DOM around two columns divided by a resize
+     * separator: [data-blok-columns] > [leftHolder, resizer, rightColumn.holder].
+     * The right column holder contains its first inner child block holder, since a
+     * gutter drop targets that child with a 'left' side-drop to insert a column
+     * before the right column (i.e. between the two columns). Returns the resizer.
+     */
+    const buildGutter = (rightColumn: Block, rightChild: Block): { columns: HTMLElement; resizer: HTMLElement } => {
+      const columns = document.createElement('div');
+      columns.setAttribute('data-blok-columns', '');
+
+      const leftHolder = document.createElement('div');
+      leftHolder.setAttribute(DATA_ATTR.element, 'block');
+
+      const resizer = document.createElement('div');
+      resizer.setAttribute('data-blok-column-resizer', '');
+
+      rightColumn.holder.appendChild(rightChild.holder);
+      columns.append(leftHolder, resizer, rightColumn.holder);
+
+      return { columns, resizer };
+    };
+
+    it('redirects a drop on the inter-column resizer gutter to a between-columns side-drop', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const rightColumn = createSideTestBlock({ id: 'col-right', name: 'column' });
+      const rightChild = createSideTestBlock({ id: 'right-child', parentId: 'col-right' });
+
+      const { columns, resizer } = buildGutter(rightColumn, rightChild);
+
+      const bm = createSideBlockManager([rightColumn, rightChild, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(columns);
+
+      // Cursor sits on the resize separator dividing the two columns. The drop must
+      // insert a NEW column between them: target the right column's child with a
+      // 'left' edge → addColumnToList(rightColumn, 'left') inserts before it.
+      const result = det.determineDropTarget(resizer, 510, 150, source);
+
+      expect(result?.edge).toBe('left');
+      expect(result?.parentId).toBe('col-right');
+      expect(result?.block).toBe(rightChild);
+
+      document.body.removeChild(columns);
+    });
+
+    it('does NOT redirect a gutter drop below 651px (columns stack, no separators)', () => {
+      Object.defineProperty(window, 'innerWidth', { value: 650, writable: true, configurable: true });
+
+      const source = createSideTestBlock({ id: 'source' });
+      const rightColumn = createSideTestBlock({ id: 'col-right', name: 'column' });
+      const rightChild = createSideTestBlock({ id: 'right-child', parentId: 'col-right' });
+
+      const { columns, resizer } = buildGutter(rightColumn, rightChild);
+
+      const bm = createSideBlockManager([rightColumn, rightChild, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(columns);
+
+      const result = det.determineDropTarget(resizer, 510, 150, source);
+
+      // No between-insertion on a stacked layout — must not produce a 'left' edge.
+      expect(result?.edge).not.toBe('left');
+
+      document.body.removeChild(columns);
+    });
+
     it('should NOT produce a horizontal edge when window is narrower than 651px', () => {
       Object.defineProperty(window, 'innerWidth', { value: 650, writable: true, configurable: true });
 

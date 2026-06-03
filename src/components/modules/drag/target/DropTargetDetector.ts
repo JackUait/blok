@@ -146,6 +146,17 @@ export class DropTargetDetector {
     clientY: number,
     sourceBlock: Block
   ): DropTarget | null {
+    // A drop on the inter-column gutter (a resize separator) inserts a NEW column
+    // between the two columns it divides — the natural "drop on the divider"
+    // gesture. Without this, the separator resolves to the column_list holder and
+    // the side-drop is rejected, leaving the gutter a dead zone. Runs first, before
+    // findDropTargetBlock climbs to the column_list.
+    const gapTarget = this.determineColumnGapTarget(elementUnderCursor);
+
+    if (gapTarget && gapTarget.block !== sourceBlock) {
+      return gapTarget;
+    }
+
     const { block: targetBlock, holder: blockHolder } = this.findDropTargetBlock(elementUnderCursor, clientX, clientY);
 
     if (!blockHolder || !targetBlock || targetBlock === sourceBlock) {
@@ -292,6 +303,60 @@ export class DropTargetDetector {
       edge,
       depth: 0,
       parentId: this.findEnclosingColumnId(targetBlock),
+    };
+  }
+
+  /**
+   * Detects a drop on the inter-column gutter — a resize separator that divides
+   * two columns — and routes it to a "between columns" side-drop.
+   *
+   * The separator's next sibling is the right-adjacent column's holder. We target
+   * that column's FIRST inner block with a 'left' edge so the integrator inserts a
+   * new column BEFORE it (addColumnToList side 'left'), i.e. between the two
+   * columns the separator divides. Reusing a real child block keeps the indicator
+   * and drop path identical to an inner-edge side-drop.
+   *
+   * Returns null (fall through to normal detection) when not on a separator, on a
+   * stacked layout (< 651px, separators hidden), or the right column has no
+   * resolvable child block.
+   *
+   * @param elementUnderCursor - Element directly under the cursor
+   * @returns A horizontal DropTarget that inserts between columns, or null
+   */
+  private determineColumnGapTarget(elementUnderCursor: Element): DropTarget | null {
+    // Columns stack below this breakpoint — separators are hidden, no gutter.
+    if (window.innerWidth < 651) {
+      return null;
+    }
+
+    const resizer = elementUnderCursor.closest('[data-blok-column-resizer]');
+
+    if (!(resizer instanceof HTMLElement)) {
+      return null;
+    }
+
+    // The separator sits between two column holders; its next sibling is the
+    // right-adjacent column. Its first descendant block is the side-drop target.
+    const rightColumnHolder = resizer.nextElementSibling;
+
+    if (!(rightColumnHolder instanceof HTMLElement)) {
+      return null;
+    }
+
+    const childHolder = rightColumnHolder.querySelector(createSelector(DATA_ATTR.element));
+    const childBlock = childHolder instanceof HTMLElement
+      ? this.blockManager.blocks.find(block => block.holder === childHolder)
+      : undefined;
+
+    if (childBlock === undefined) {
+      return null;
+    }
+
+    return {
+      block: childBlock,
+      edge: 'left',
+      depth: 0,
+      parentId: this.findEnclosingColumnId(childBlock),
     };
   }
 

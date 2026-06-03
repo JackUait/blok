@@ -319,6 +319,17 @@ export class BlockHierarchy {
       return;
     }
 
+    // Columns are a flex layout: the column_list block, its column children, and
+    // every block inside a column are positioned by flex, not block-tree depth.
+    // Depth-based margin would push the column holders off their even split and
+    // indent the column content. Keep them flush.
+    if (block.name === 'column_list' || holder.closest('[data-blok-columns]')) {
+      holder.style.marginLeft = '';
+      holder.setAttribute('data-blok-depth', '0');
+
+      return;
+    }
+
     const depth = this.getBlockDepth(block);
     const indentationPx = depth * 24; // 24px per level
 

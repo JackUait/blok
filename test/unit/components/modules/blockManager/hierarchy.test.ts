@@ -703,6 +703,32 @@ describe('BlockHierarchy', () => {
 
       expect(block.holder.style.marginLeft).toBe('');
     });
+
+    it('skips visual indentation for blocks inside a column ([data-blok-columns])', () => {
+      // A block inside a column is positioned by the flex layout; depth-based
+      // margin would push it (and the column holder) off the column's left edge.
+      const columnsContainer = document.createElement('div');
+      columnsContainer.setAttribute('data-blok-columns', '');
+
+      const block = requireBlock('grandchild'); // depth 2 normally → 48px
+      columnsContainer.appendChild(block.holder);
+
+      hierarchy.updateBlockIndentation(block);
+
+      expect(block.holder.style.marginLeft).toBe('');
+      expect(block.holder).toHaveAttribute('data-blok-depth', '0');
+    });
+
+    it('skips visual indentation for a column_list block itself', () => {
+      const block = requireBlock('child'); // depth 1 normally → 24px
+
+      (block as unknown as { name: string }).name = 'column_list';
+
+      hierarchy.updateBlockIndentation(block);
+
+      expect(block.holder.style.marginLeft).toBe('');
+      expect(block.holder).toHaveAttribute('data-blok-depth', '0');
+    });
   });
 
   describe('setBlockParent() DOM placement', () => {

@@ -10,7 +10,7 @@ import { ListItemDepth } from '../utils/ListItemDepth';
 
 export interface DropTarget {
   block: Block;
-  edge: 'top' | 'bottom';
+  edge: 'top' | 'bottom' | 'left' | 'right';
   depth: number;
   parentId: string | null;
 }
@@ -171,6 +171,16 @@ export class DropTargetDetector {
       return this.redirectToTableBlock(targetCellContainer, clientY);
     }
 
+    // Horizontal (side) drop detection: when the cursor hovers near the left/right
+    // edge of a target within its central vertical band, route the drop sideways so
+    // the integrator can create / extend a column layout. Columns stack below 651px,
+    // so disable side-drops entirely on narrow viewports.
+    const horizontalTarget = this.determineHorizontalTarget(targetBlock, blockHolder, clientX, clientY);
+
+    if (horizontalTarget) {
+      return horizontalTarget;
+    }
+
     // Determine edge (top or bottom half of block)
     const rect = blockHolder.getBoundingClientRect();
     const isTopHalf = clientY < rect.top + rect.height / 2;
@@ -199,6 +209,96 @@ export class DropTargetDetector {
     const targetDepth = this.calculateTargetDepth(targetBlock, edge, sourceBlock);
 
     return this.resolveToggleNesting({ block: targetBlock, edge, depth: targetDepth, parentId: null }, elementUnderCursor);
+  }
+
+  /**
+   * Detects a horizontal (side) drop near the left/right edge of the target.
+   *
+   * Returns a DropTarget with edge 'left' or 'right' when the cursor is within
+   * DRAG_CONFIG.sideDropZone of an edge AND inside the central vertical band
+   * (DRAG_CONFIG.sideBandRatio of the block height), to avoid fighting top/bottom
+   * near corners. Side-drops are disabled below 651px (columns stack) and for
+   * container blocks (column / column_list), which are never drop targets.
+   *
+   * @param targetBlock - The resolved target block
+   * @param blockHolder - The target block's holder element
+   * @param clientX - Cursor X position
+   * @param clientY - Cursor Y position
+   * @returns A horizontal DropTarget, or null to fall through to top/bottom logic
+   */
+  private determineHorizontalTarget(
+    targetBlock: Block,
+    blockHolder: HTMLElement,
+    clientX: number,
+    clientY: number
+  ): DropTarget | null {
+    // Columns stack below this breakpoint — no side-by-side layout.
+    if (window.innerWidth < 651) {
+      return null;
+    }
+
+    // Container blocks are never drop targets themselves.
+    if (targetBlock.name === 'column' || targetBlock.name === 'column_list') {
+      return null;
+    }
+
+    // Measure side zones against the visible content box, not the holder. The
+    // holder spans the full editor width (gutters included) while content is
+    // centered/narrower, so holder-edge zones never sit where the user actually
+    // drops. Fall back to the holder when no content element exists (test stubs,
+    // tools without the standard wrapper).
+    const contentEl = blockHolder.querySelector('[data-blok-element-content]');
+    const rect = contentEl instanceof HTMLElement
+      ? contentEl.getBoundingClientRect()
+      : blockHolder.getBoundingClientRect();
+    const bandInset = rect.height * (1 - DRAG_CONFIG.sideBandRatio) / 2;
+    const inBand = clientY >= rect.top + bandInset && clientY <= rect.bottom - bandInset;
+
+    if (!inBand) {
+      return null;
+    }
+
+    const nearLeft = clientX >= rect.left && clientX <= rect.left + DRAG_CONFIG.sideDropZone;
+    const nearRight = clientX <= rect.right && clientX >= rect.right - DRAG_CONFIG.sideDropZone;
+
+    if (!nearLeft && !nearRight) {
+      return null;
+    }
+
+    const edge: 'left' | 'right' = nearLeft ? 'left' : 'right';
+
+    return {
+      block: targetBlock,
+      edge,
+      depth: 0,
+      parentId: this.findEnclosingColumnId(targetBlock),
+    };
+  }
+
+  /**
+   * Walks up the parentId chain from a target block to find the nearest
+   * ancestor block whose name is 'column'. Returns that column's id, or null
+   * if the target is not inside a column.
+   */
+  private findEnclosingColumnId(targetBlock: Block): string | null {
+    const walk = (parentId: string | null): string | null => {
+      if (parentId === null) {
+        return null;
+      }
+
+      const parent = this.blockManager.getBlockById(parentId);
+
+      if (parent === undefined) {
+        return null;
+      }
+      if (parent.name === 'column') {
+        return parent.id;
+      }
+
+      return walk(parent.parentId);
+    };
+
+    return walk(targetBlock.parentId);
   }
 
   /**

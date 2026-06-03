@@ -187,6 +187,29 @@
   transform: translateY(-50%);
 }
 
+/*
+ * Horizontal (side) drop indicator: a vertical bar on the left or right edge of
+ * the holder, signalling a column-layout drop. Overrides the height/width and
+ * left/right insets of the shared ::before rule above.
+ */
+[data-drop-indicator="left"]::before,
+[data-drop-indicator="right"]::before {
+  @apply content-[''] absolute top-0 bottom-0 h-auto w-[3px] rounded-xs pointer-events-none z-10;
+  background-color: var(--blok-active-icon);
+  left: auto;
+  right: auto;
+}
+
+[data-drop-indicator="left"]::before {
+  left: var(--drop-indicator-side-left, 0);
+  transform: translateX(-50%);
+}
+
+[data-drop-indicator="right"]::before {
+  right: var(--drop-indicator-side-right, 0);
+  transform: translateX(50%);
+}
+
 /* Spring-loaded: flash selection highlight on toggle after it auto-expands */
 [data-blok-spring-loaded] [data-blok-element-content] {
   animation: spring-loaded-flash 700ms ease-out forwards;

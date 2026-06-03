@@ -18,7 +18,7 @@ export type DragStateType =
 /**
  * Drop edge position
  */
-export type DropEdge = 'top' | 'bottom';
+export type DropEdge = 'top' | 'bottom' | 'left' | 'right';
 
 /**
  * Drag state data for each state

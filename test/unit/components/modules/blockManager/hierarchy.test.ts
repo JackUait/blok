@@ -891,6 +891,68 @@ describe('BlockHierarchy', () => {
       expect(toggleContainer.contains(claimedBlock.holder)).toBe(false);
     });
 
+    it('mounts a reparented block\'s holder into a column\'s [data-blok-nested-blocks] container', () => {
+      // Columns render their child container with [data-blok-nested-blocks] only
+      // (no [data-blok-toggle-children]). Reparenting a block INTO a column must
+      // mount its holder into that container, symmetric with how toggles work.
+      repository = createRepositoryWithBlocks([
+        { id: 'column', parentId: null, contentIds: [] },
+        { id: 'new-child', parentId: null, contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const column = requireBlock('column');
+      const newChild = requireBlock('new-child');
+
+      // Mimic a column: wrapper holder with a [data-blok-nested-blocks] child container
+      const nestedContainer = document.createElement('div');
+      nestedContainer.setAttribute('data-blok-nested-blocks', '');
+      column.holder.appendChild(nestedContainer);
+
+      // Place the child somewhere outside the column
+      const externalWrapper = document.createElement('div');
+      externalWrapper.appendChild(newChild.holder);
+
+      hierarchy.setBlockParent(newChild, 'column');
+
+      expect(newChild.holder.parentElement).toBe(nestedContainer);
+      expect(externalWrapper.contains(newChild.holder)).toBe(false);
+    });
+
+    it('preserves flat-array order when mounting into a [data-blok-nested-blocks] container', () => {
+      // Two children already in the column container; A is dropped between them.
+      // Flat array (moveBlocks ran first) is [column, c1, a, c2]. Mounting must
+      // honour flat order: DOM should be [c1, a, c2], NOT [c1, c2, a].
+      repository = createRepositoryWithBlocks([
+        { id: 'column', parentId: null, contentIds: ['c1', 'c2'] },
+        { id: 'c1', parentId: 'column', contentIds: [] },
+        { id: 'a', parentId: null, contentIds: [] },
+        { id: 'c2', parentId: 'column', contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const column = requireBlock('column');
+      const c1 = requireBlock('c1');
+      const a = requireBlock('a');
+      const c2 = requireBlock('c2');
+
+      const editorWrapper = document.createElement('div');
+      const nestedContainer = document.createElement('div');
+      nestedContainer.setAttribute('data-blok-nested-blocks', '');
+      nestedContainer.appendChild(c1.holder);
+      nestedContainer.appendChild(c2.holder);
+      column.holder.appendChild(nestedContainer);
+      editorWrapper.appendChild(column.holder);
+      editorWrapper.appendChild(a.holder);
+
+      hierarchy.setBlockParent(a, 'column');
+
+      const children = Array.from(nestedContainer.children);
+      expect(children[0]).toBe(c1.holder);
+      expect(children[1]).toBe(a.holder);
+      expect(children[2]).toBe(c2.holder);
+    });
+
     it('does NOT move block.holder when the new parent has no [data-blok-toggle-children] container', () => {
       repository = createRepositoryWithBlocks([
         { id: 'plain-parent', parentId: null, contentIds: [] },

@@ -4,6 +4,49 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 
 const HOLDER_ID = 'blok';
+const SETTINGS_BUTTON = '[data-blok-interface=blok] [data-blok-testid="settings-toggler"]';
+
+/**
+ * Drag the block whose drag handle is `sourceHandle` onto the left/right edge
+ * of `targetBlock`, in its vertical mid-band, to trigger a column (side) drop.
+ */
+const performSideDrop = async (
+  page: Page,
+  sourceHandle: ReturnType<Page['locator']>,
+  targetBlock: ReturnType<Page['locator']>,
+  side: 'left' | 'right'
+): Promise<void> => {
+  const sourceBox = await sourceHandle.boundingBox();
+  // Side detection measures the visible content box, not the full-width holder
+  // (the holder spans the editor gutters). Target the content element's edge so
+  // the cursor lands inside the side drop zone.
+  const targetBox = await targetBlock.locator('[data-blok-element-content]').first().boundingBox();
+
+  if (!sourceBox || !targetBox) {
+    throw new Error('missing bounding box for side drop');
+  }
+
+  const sourceX = sourceBox.x + sourceBox.width / 2;
+  const sourceY = sourceBox.y + sourceBox.height / 2;
+  const targetX = side === 'right' ? targetBox.x + targetBox.width - 4 : targetBox.x + 4;
+  const targetY = targetBox.y + targetBox.height / 2;
+
+  await page.mouse.move(sourceX, sourceY);
+  await page.mouse.down();
+  await page.mouse.move(targetX, targetY, { steps: 15 });
+
+  await page.waitForFunction(
+    () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') === 'true',
+    { timeout: 2000 }
+  );
+
+  await page.mouse.up();
+
+  await page.waitForFunction(
+    () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') !== 'true',
+    { timeout: 2000 }
+  );
+};
 
 declare global {
   interface Window {
@@ -251,5 +294,125 @@ test.describe('Columns tool', () => {
     );
 
     expect(widthsReloaded[0]).toBeGreaterThan(widthsReloaded[1] + 80);
+  });
+
+  test('drag-beside a top-level block creates a 2-column layout and persists', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'p1', type: 'paragraph', data: { text: 'Left para' } },
+        { id: 'p2', type: 'paragraph', data: { text: 'Right para' } },
+      ],
+    });
+
+    // Drag "Right para" onto the right edge of "Left para" → [Left, Right] columns.
+    const source = page.getByTestId('block-wrapper').filter({ hasText: 'Right para' });
+    await source.hover();
+    const handle = page.locator(SETTINGS_BUTTON);
+    await expect(handle).toBeVisible();
+
+    const target = page.getByTestId('block-wrapper').filter({ hasText: 'Left para' });
+    await performSideDrop(page, handle, target, 'right');
+
+    const columns = page.locator('[data-blok-column]');
+    await expect(columns).toHaveCount(2);
+    await expect(page.getByTestId('column-list')).toBeVisible();
+
+    const saved = await saveBlok(page);
+    const list = saved.blocks.find(b => b.type === 'column_list');
+    expect(list).toBeDefined();
+    expect(saved.blocks.filter(b => b.type === 'column')).toHaveLength(2);
+    // both paragraphs now live inside columns (have a parent)
+    expect(saved.blocks.find(b => b.id === 'p1')?.parent).toBeDefined();
+    expect(saved.blocks.find(b => b.id === 'p2')?.parent).toBeDefined();
+
+    // Reload round-trips the layout
+    await createBlok(page, saved);
+    await expect(page.locator('[data-blok-column]')).toHaveCount(2);
+    await expect(page.getByText('Left para')).toBeVisible();
+    await expect(page.getByText('Right para')).toBeVisible();
+  });
+
+  test('drag-beside a block already in a column adds a third column', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['a'] },
+        { id: 'a', type: 'paragraph', data: { text: 'Col A' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['b'] },
+        { id: 'b', type: 'paragraph', data: { text: 'Col B' }, parent: 'c2' },
+        { id: 'newcomer', type: 'paragraph', data: { text: 'Newcomer' } },
+      ],
+    });
+
+    await expect(page.locator('[data-blok-column]')).toHaveCount(2);
+
+    // Drag the root "Newcomer" onto the right edge of "Col B" (inside column c2).
+    const source = page.getByTestId('block-wrapper').filter({ hasText: 'Newcomer' });
+    await source.hover();
+    const handle = page.locator(SETTINGS_BUTTON);
+    await expect(handle).toBeVisible();
+
+    // .last() = the innermost wrapper (the paragraph), since the column_list and
+    // column wrappers also contain this text.
+    const target = page.getByTestId('block-wrapper').filter({ hasText: 'Col B' }).last();
+    await performSideDrop(page, handle, target, 'right');
+
+    await expect(page.locator('[data-blok-column]')).toHaveCount(3);
+
+    const saved = await saveBlok(page);
+    expect(saved.blocks.filter(b => b.type === 'column')).toHaveLength(3);
+    // Newcomer is now inside a column
+    expect(saved.blocks.find(b => b.id === 'newcomer')?.parent).toBeDefined();
+  });
+
+  test('dragging a column child to a root position moves it out of the column', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'top', type: 'paragraph', data: { text: 'Top root' } },
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['a1', 'a2'] },
+        { id: 'a1', type: 'paragraph', data: { text: 'A one' }, parent: 'c1' },
+        { id: 'a2', type: 'paragraph', data: { text: 'A two' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['b1'] },
+        { id: 'b1', type: 'paragraph', data: { text: 'B one' }, parent: 'c2' },
+      ],
+    });
+
+    // Drag "A two" (inside column c1) to the bottom edge of the root "Top root".
+    // .last() = the innermost wrapper (the paragraph itself).
+    const source = page.getByTestId('block-wrapper').filter({ hasText: 'A two' }).last();
+    await source.hover();
+    const handle = page.locator(SETTINGS_BUTTON);
+    await expect(handle).toBeVisible();
+
+    const sourceBox = await handle.boundingBox();
+    const target = page.getByTestId('block-wrapper').filter({ hasText: 'Top root' });
+    const targetBox = await target.boundingBox();
+
+    if (!sourceBox || !targetBox) {
+      throw new Error('missing bounding box');
+    }
+
+    await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+    await page.mouse.down();
+    // Drop at the bottom edge (vertical drop) of the root block, horizontal center
+    await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height - 1, { steps: 15 });
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') === 'true',
+      { timeout: 2000 }
+    );
+    await page.mouse.up();
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') !== 'true',
+      { timeout: 2000 }
+    );
+
+    const saved = await saveBlok(page);
+    // A two left the column → now at root (no parent), c1 keeps A one
+    expect(saved.blocks.find(b => b.id === 'a2')?.parent).toBeUndefined();
+    expect(saved.blocks.find(b => b.id === 'a1')?.parent).toBe('c1');
   });
 });

@@ -4,6 +4,7 @@ import { DATA_ATTR } from '../../constants';
 import { announce } from '../../utils/announcer';
 import { hide as hideTooltip } from '../../utils/tooltip';
 
+import { addColumnToList, wrapInNewColumnList } from '../../../tools/column-drop';
 import { DragA11y } from './a11y/DragA11y';
 import { DragOperations } from './operations/DragOperations';
 import { DragPreview } from './preview/DragPreview';
@@ -362,6 +363,7 @@ export class DragController extends Module {
     if (currentState.type === 'dragging' && currentState.targetBlock) {
       currentState.targetBlock.holder.removeAttribute('data-drop-indicator');
       currentState.targetBlock.holder.style.removeProperty('--drop-indicator-depth');
+      this.clearSideIndicatorOffsets(currentState.targetBlock);
     }
 
     // Find element under cursor (temporarily hide preview)
@@ -390,7 +392,7 @@ export class DragController extends Module {
     }
 
     // Update state with new target
-    this.stateMachine.updateTarget(dropTarget.block, dropTarget.edge);
+    this.stateMachine.updateTarget(dropTarget.block, dropTarget.edge, dropTarget.parentId);
     // Spring-load closed toggles: auto-expand after 500ms hover
     this.springLoader.update(dropTarget.block);
 
@@ -398,10 +400,50 @@ export class DragController extends Module {
     dropTarget.block.holder.setAttribute('data-drop-indicator', dropTarget.edge);
     dropTarget.block.holder.style.setProperty('--drop-indicator-depth', String(dropTarget.depth));
 
+    // For side (column) drops, align the vertical bar to the visible content box
+    // edges rather than the full-width holder edges. The holder spans the editor
+    // gutters, so a holder-anchored bar would draw off in the margins.
+    if (dropTarget.edge === 'left' || dropTarget.edge === 'right') {
+      this.applySideIndicatorOffsets(dropTarget.block);
+    }
+
     // Announce drop position change to screen readers
     if (this.a11y) {
       this.a11y.announceDropPosition(dropTarget.block, dropTarget.edge);
     }
+  }
+
+  /**
+   * Sets the `--drop-indicator-side-left/right` custom properties on a block's
+   * holder so the side drop bar lands on the visible content-box edges instead
+   * of the full-width holder edges. Falls back to no offset when the standard
+   * content wrapper is absent.
+   *
+   * @param block - The drop target block
+   */
+  private applySideIndicatorOffsets(block: Block): void {
+    const content = block.holder.querySelector('[data-blok-element-content]');
+
+    if (!(content instanceof HTMLElement)) {
+      return;
+    }
+
+    const holderRect = block.holder.getBoundingClientRect();
+    const contentRect = content.getBoundingClientRect();
+
+    block.holder.style.setProperty('--drop-indicator-side-left', `${contentRect.left - holderRect.left}px`);
+    block.holder.style.setProperty('--drop-indicator-side-right', `${holderRect.right - contentRect.right}px`);
+  }
+
+  /**
+   * Removes the side-drop offset custom properties set by
+   * {@link applySideIndicatorOffsets}.
+   *
+   * @param block - The block to clear
+   */
+  private clearSideIndicatorOffsets(block: Block): void {
+    block.holder.style.removeProperty('--drop-indicator-side-left');
+    block.holder.style.removeProperty('--drop-indicator-side-right');
   }
 
   private onMouseUp(e: MouseEvent): void {
@@ -414,7 +456,11 @@ export class DragController extends Module {
       return;
     }
 
-    const { targetBlock, targetEdge } = state as { targetBlock: Block | null; targetEdge: 'top' | 'bottom' | null };
+    const { targetBlock, targetEdge, targetParentId } = state as {
+      targetBlock: Block | null;
+      targetEdge: 'top' | 'bottom' | 'left' | 'right' | null;
+      targetParentId: string | null;
+    };
 
     if (!targetBlock || !targetEdge) {
       this.cleanup();
@@ -428,6 +474,14 @@ export class DragController extends Module {
       return;
     }
 
+    // Horizontal drops route to the column-drop helper (wired by integration),
+    // never to moveBlocks — its signature stays 'top' | 'bottom'.
+    if (targetEdge === 'left' || targetEdge === 'right') {
+      this.handleColumnDrop(sourceBlock, sourceBlocks, targetBlock, targetEdge, targetParentId);
+      this.cleanup(false, e.altKey);
+      return;
+    }
+
     if (e.altKey) {
       void this.handleDuplicate(sourceBlocks, targetBlock, targetEdge);
     } else {
@@ -435,6 +489,43 @@ export class DragController extends Module {
     }
 
     this.cleanup(false, e.altKey);
+  }
+
+  /**
+   * Handles a horizontal (side) drop near a block's left/right edge.
+   *
+   * @param sourceBlock - The primary block being dragged
+   * @param sourceBlocks - All blocks being dragged
+   * @param targetBlock - The block whose side was targeted
+   * @param edge - Which side of the target the drop occurred on
+   * @param targetParentId - The enclosing column id, or null if the target is at root
+   */
+  private handleColumnDrop(
+    sourceBlock: Block,
+    sourceBlocks: Block[],
+    targetBlock: Block,
+    edge: 'left' | 'right',
+    targetParentId: string | null
+  ): void {
+    const api = this.Blok.API.methods;
+
+    // Sources are the dragged blocks in document order; never the target.
+    const sourceIds = (sourceBlocks.length > 0 ? sourceBlocks : [sourceBlock])
+      .map(block => block.id)
+      .filter(id => id !== targetBlock.id);
+
+    if (sourceIds.length === 0) {
+      return;
+    }
+
+    // targetParentId is the enclosing column when the target already lives in a
+    // column_list (→ add a sibling column), or null for a top-level target
+    // (→ wrap target + sources into a brand new column_list).
+    if (targetParentId !== null) {
+      addColumnToList(api, targetParentId, sourceIds, edge);
+    } else {
+      wrapInNewColumnList(api, targetBlock.id, sourceIds, edge);
+    }
   }
 
   private handleDrop(
@@ -821,6 +912,7 @@ export class DragController extends Module {
     if ((state.type === 'dragging' || state.type === 'dropped') && state.targetBlock) {
       state.targetBlock.holder.removeAttribute('data-drop-indicator');
       state.targetBlock.holder.style.removeProperty('--drop-indicator-depth');
+      this.clearSideIndicatorOffsets(state.targetBlock);
     }
 
     this.springLoader.cancel();

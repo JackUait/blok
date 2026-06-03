@@ -7,4 +7,11 @@ export interface ColumnListData extends BlockToolData {
    * lives in the block's contentIds (the column children).
    */
   columnCount?: number;
+
+  /**
+   * Transient flag: suppress the default column auto-seed on first render.
+   * Set by drag-beside (which inserts the column_list and then fills it with
+   * explicit columns); never persisted.
+   */
+  noSeed?: boolean;
 }

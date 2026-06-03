@@ -268,13 +268,33 @@ export class BlockHierarchy {
       }
     }
 
-    // Move block holder into toggle child container if the new parent has one,
-    // honouring the flat-array order so the DOM order matches the logical order.
-    // Skip if the holder is already claimed by another nested-blocks container
-    // (e.g. a table cell) — moving it would steal it from that container.
-    if (sanitizedParentId !== null && newParent !== undefined && !block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`)) {
-      const newContainer = newParent.holder.querySelector('[data-blok-toggle-children]');
-      if (newContainer) {
+    // Move block holder into the new parent's direct child container, honouring
+    // the flat-array order so the DOM order matches the logical order.
+    //
+    // The target container may be a toggle/callout container ([data-blok-toggle-children])
+    // or a generic nested-blocks container ([data-blok-nested-blocks], used by
+    // columns and column_list). querySelector returns the FIRST match in
+    // document order: because a parent's own child container is a direct child of
+    // its wrapper, it always precedes any grandchild container (which lives INSIDE
+    // it, deeper in document order). So this resolves to the parent's own direct
+    // container, never a deeper one belonging to a nested block.
+    //
+    // Skip guard: keep the original behaviour of refusing to move a holder that
+    // is already claimed by SOME nested-blocks container (e.g. a table cell) —
+    // moving it would steal it from that container. The one loosening Track C
+    // needs is to still mount when the target is the holder's CURRENT container
+    // already (a no-op insertBefore that re-asserts flat order); we express that
+    // by only skipping when the holder's nearest nested container is DIFFERENT
+    // from the target container.
+    if (sanitizedParentId !== null && newParent !== undefined) {
+      const newContainer = newParent.holder.querySelector(
+        '[data-blok-toggle-children], [data-blok-nested-blocks]'
+      );
+      const currentNestedContainer = block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`);
+      const claimedByOtherContainer =
+        currentNestedContainer !== null && currentNestedContainer !== newContainer;
+
+      if (newContainer && !claimedByOtherContainer) {
         const allBlocks = this.repository.blocks;
         const blockIdx = allBlocks.indexOf(block);
         const nextSiblingHolder = allBlocks.slice(blockIdx + 1).find(

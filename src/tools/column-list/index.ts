@@ -59,7 +59,11 @@ export class ColumnList implements BlockTool {
     const children = this.api.blocks.getChildren(this.blockId);
 
     if (children.length === 0) {
-      this.seedColumns();
+      // Drag-beside inserts the list and then fills it with explicit columns,
+      // so it opts out of the default auto-seed via the transient noSeed flag.
+      if (this._data.noSeed !== true) {
+        this.seedColumns();
+      }
 
       return;
     }

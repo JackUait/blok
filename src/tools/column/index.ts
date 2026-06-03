@@ -58,7 +58,7 @@ export class Column implements BlockTool {
 
     const children = this.api.blocks.getChildren(this.blockId);
 
-    if (children.length === 0) {
+    if (children.length === 0 && !this._data.noSeed) {
       const blockIndex = this.api.blocks.getBlockIndex(this.blockId);
 
       if (blockIndex !== undefined) {

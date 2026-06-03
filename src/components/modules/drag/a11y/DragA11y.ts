@@ -43,7 +43,15 @@ export class DragA11y {
    * @param targetBlock - Current drop target block
    * @param targetEdge - Edge of target ('top' or 'bottom')
    */
-  announceDropPosition(targetBlock: Block, targetEdge: 'top' | 'bottom'): void {
+  announceDropPosition(targetBlock: Block, targetEdge: 'top' | 'bottom' | 'left' | 'right'): void {
+    // Horizontal (column-creating) drops do not reorder by index, so the
+    // position announcement does not apply. A dedicated phrasing needs new
+    // i18n keys across all 68 locales; that string round is deferred together
+    // with the rest of the columns a11y work, so skip the announcement here.
+    if (targetEdge === 'left' || targetEdge === 'right') {
+      return;
+    }
+
     const targetIndex = this.blockManager.getBlockIndex(targetBlock);
     const dropIndex = targetEdge === 'top' ? targetIndex : targetIndex + 1;
 

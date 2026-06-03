@@ -139,6 +139,31 @@ describe('Column tool', () => {
     expect(setToBlock).toHaveBeenCalledWith('p-1', 'start');
   });
 
+  it('does NOT seed a paragraph when data.noSeed is true', () => {
+    const insertInsideParent = vi.fn();
+    const api = createMockAPI({
+      blocks: {
+        getChildren: vi.fn().mockReturnValue([]),
+        getBlockIndex: vi.fn().mockReturnValue(3),
+        insertInsideParent,
+      },
+      caret: { setToBlock: vi.fn() },
+    } as unknown as Partial<API>);
+
+    const column = new Column(createColumnOptions({ noSeed: true }, api));
+    column.render();
+    column.rendered();
+
+    expect(insertInsideParent).not.toHaveBeenCalled();
+  });
+
+  it('never emits noSeed from save()', () => {
+    const column = new Column(createColumnOptions({ noSeed: true }));
+    column.render();
+
+    expect(column.save()).not.toHaveProperty('noSeed');
+  });
+
   it('does NOT seed when it already has children', () => {
     const insertInsideParent = vi.fn();
     const existingChild = { id: 'p-existing', holder: document.createElement('div') };

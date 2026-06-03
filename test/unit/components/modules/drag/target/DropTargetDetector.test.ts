@@ -1127,6 +1127,376 @@ describe('DropTargetDetector', () => {
       document.body.removeChild(child.holder);
     });
 
+  });
+
+  describe('horizontal (side) drop detection', () => {
+    let originalInnerWidth: number;
+
+    /**
+     * Creates a block stub for horizontal-drop tests.
+     */
+    const createSideTestBlock = (options: {
+      id?: string;
+      parentId?: string | null;
+      name?: string;
+    } = {}): Block => {
+      const holder = document.createElement('div');
+      holder.setAttribute(DATA_ATTR.element, 'block');
+
+      return {
+        id: options.id ?? `block-${Math.random().toString(36).slice(2)}`,
+        parentId: options.parentId ?? null,
+        contentIds: [],
+        holder,
+        name: options.name ?? 'paragraph',
+        selected: false,
+        stretched: false,
+      } as unknown as Block;
+    };
+
+    const createSideBlockManager = (blocks: Block[]): BlockManagerAdapter => ({
+      blocks,
+      getBlockByIndex: (index: number) => blocks[index],
+      getBlockIndex: (block: Block) => blocks.indexOf(block),
+      getBlockById: (id: string) => blocks.find(b => b.id === id),
+    });
+
+    const createSideUIAdapter = (): { contentRect: { left: number } } => ({
+      contentRect: { left: 0 },
+    });
+
+    /**
+     * Rect with top=100, bottom=200 (height 100), left=300, right=500 (width 200).
+     * Mid-band (60%) spans clientY from 100 + 20 = 120 to 200 - 20 = 180.
+     */
+    const stubRect = (block: Block): void => {
+      vi.spyOn(block.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 100, bottom: 200, left: 300, right: 500, width: 200, height: 100, x: 300, y: 100, toJSON: () => ({}),
+      });
+    };
+
+    beforeEach(() => {
+      originalInnerWidth = window.innerWidth;
+      Object.defineProperty(window, 'innerWidth', { value: 1200, writable: true, configurable: true });
+    });
+
+    afterEach(() => {
+      Object.defineProperty(window, 'innerWidth', { value: originalInnerWidth, writable: true, configurable: true });
+      vi.restoreAllMocks();
+    });
+
+    it('should detect right edge when cursor is near right within mid-band', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const target = createSideTestBlock({ id: 'target' });
+      stubRect(target);
+
+      const bm = createSideBlockManager([target, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(target.holder);
+      const inner = document.createElement('div');
+      target.holder.appendChild(inner);
+
+      // clientX=480 (within 48px of right=500), clientY=150 (mid-band 120..180)
+      const result = det.determineDropTarget(inner, 480, 150, source);
+
+      expect(result).not.toBeNull();
+      expect(result?.edge).toBe('right');
+      expect(result?.block).toBe(target);
+      expect(result?.depth).toBe(0);
+      expect(result?.parentId).toBeNull();
+
+      document.body.removeChild(target.holder);
+    });
+
+    it('should detect left edge when cursor is near left within mid-band', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const target = createSideTestBlock({ id: 'target' });
+      stubRect(target);
+
+      const bm = createSideBlockManager([target, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(target.holder);
+      const inner = document.createElement('div');
+      target.holder.appendChild(inner);
+
+      // clientX=320 (within 48px of left=300), clientY=150 (mid-band)
+      const result = det.determineDropTarget(inner, 320, 150, source);
+
+      expect(result).not.toBeNull();
+      expect(result?.edge).toBe('left');
+      expect(result?.block).toBe(target);
+
+      document.body.removeChild(target.holder);
+    });
+
+    it('should fall back to top/bottom when cursor is near right edge but OUTSIDE mid-band', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const target = createSideTestBlock({ id: 'target' });
+      stubRect(target);
+
+      const bm = createSideBlockManager([target, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(target.holder);
+      const inner = document.createElement('div');
+      target.holder.appendChild(inner);
+
+      // clientX=480 (near right), clientY=105 (above mid-band start 120 → near top corner)
+      const result = det.determineDropTarget(inner, 480, 105, source);
+
+      expect(result).not.toBeNull();
+      expect(['top', 'bottom']).toContain(result?.edge);
+
+      document.body.removeChild(target.holder);
+    });
+
+    it('should use top/bottom when cursor is in the horizontal center', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const target = createSideTestBlock({ id: 'target' });
+      stubRect(target);
+
+      const bm = createSideBlockManager([target, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(target.holder);
+      const inner = document.createElement('div');
+      target.holder.appendChild(inner);
+
+      // clientX=400 (center, not near either side), clientY=150
+      const result = det.determineDropTarget(inner, 400, 150, source);
+
+      expect(result).not.toBeNull();
+      expect(['top', 'bottom']).toContain(result?.edge);
+
+      document.body.removeChild(target.holder);
+    });
+
+    it('should NOT produce a horizontal edge when target is a column or column_list', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const column = createSideTestBlock({ id: 'col', name: 'column' });
+      stubRect(column);
+
+      const bm = createSideBlockManager([column, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(column.holder);
+      const inner = document.createElement('div');
+      column.holder.appendChild(inner);
+
+      const colResult = det.determineDropTarget(inner, 480, 150, source);
+      expect(['top', 'bottom']).toContain(colResult?.edge);
+
+      document.body.removeChild(column.holder);
+
+      const columnList = createSideTestBlock({ id: 'col-list', name: 'column_list' });
+      stubRect(columnList);
+      const bm2 = createSideBlockManager([columnList, source]);
+      const det2 = new DropTargetDetector(createSideUIAdapter(), bm2);
+      det2.setSourceBlocks([source]);
+
+      document.body.appendChild(columnList.holder);
+      const inner2 = document.createElement('div');
+      columnList.holder.appendChild(inner2);
+
+      const listResult = det2.determineDropTarget(inner2, 480, 150, source);
+      expect(['top', 'bottom']).toContain(listResult?.edge);
+
+      document.body.removeChild(columnList.holder);
+    });
+
+    it('should set parentId to enclosing column id when target is inside a column, null at top level', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const column = createSideTestBlock({ id: 'col-1', name: 'column' });
+      const target = createSideTestBlock({ id: 'target', parentId: 'col-1' });
+      stubRect(target);
+
+      const bm = createSideBlockManager([column, target, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(target.holder);
+      const inner = document.createElement('div');
+      target.holder.appendChild(inner);
+
+      const result = det.determineDropTarget(inner, 480, 150, source);
+
+      expect(result?.edge).toBe('right');
+      expect(result?.parentId).toBe('col-1');
+
+      document.body.removeChild(target.holder);
+
+      // Top-level target (no column ancestor) → parentId null
+      const target2 = createSideTestBlock({ id: 'target2' });
+      stubRect(target2);
+      const bm2 = createSideBlockManager([target2, source]);
+      const det2 = new DropTargetDetector(createSideUIAdapter(), bm2);
+      det2.setSourceBlocks([source]);
+
+      document.body.appendChild(target2.holder);
+      const inner2 = document.createElement('div');
+      target2.holder.appendChild(inner2);
+
+      const result2 = det2.determineDropTarget(inner2, 480, 150, source);
+
+      expect(result2?.edge).toBe('right');
+      expect(result2?.parentId).toBeNull();
+
+      document.body.removeChild(target2.holder);
+    });
+
+    /**
+     * Appends a `[data-blok-element-content]` child to a block's holder and
+     * stubs its rect to the given horizontal bounds (vertical bounds match the
+     * holder's 100..200 band). Models the real DOM where the holder spans the
+     * full editor width but the visible content box is narrower and centered.
+     */
+    const stubContentRect = (block: Block, left: number, right: number): HTMLElement => {
+      const content = document.createElement('div');
+      content.setAttribute('data-blok-element-content', '');
+      block.holder.appendChild(content);
+
+      vi.spyOn(content, 'getBoundingClientRect').mockReturnValue({
+        top: 100, bottom: 200, left, right, width: right - left, height: 100, x: left, y: 100, toJSON: () => ({}),
+      });
+
+      return content;
+    };
+
+    /**
+     * Stubs the holder rect to the FULL editor width (left=0, right=1200) — the
+     * real-world geometry where the holder spans edge-to-edge while content is
+     * centered. Used to prove side detection measures the content box, not the
+     * full-width holder.
+     */
+    const stubWideHolder = (block: Block): void => {
+      vi.spyOn(block.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 100, bottom: 200, left: 0, right: 1200, width: 1200, height: 100, x: 0, y: 100, toJSON: () => ({}),
+      });
+    };
+
+    it('should detect side edge near the CONTENT box edge, not the full-width holder', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const target = createSideTestBlock({ id: 'target' });
+      stubWideHolder(target);
+      stubContentRect(target, 300, 900); // visible content box
+
+      const bm = createSideBlockManager([target, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(target.holder);
+      const inner = document.createElement('div');
+      target.holder.appendChild(inner);
+
+      // clientX=880 is within 48px of the CONTENT right edge (900), but ~320px
+      // from the holder right edge (1200). Must detect a right side-drop.
+      const result = det.determineDropTarget(inner, 880, 150, source);
+
+      expect(result?.edge).toBe('right');
+
+      document.body.removeChild(target.holder);
+    });
+
+    it('should NOT detect a side edge near the holder edge when far from the content box', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const target = createSideTestBlock({ id: 'target' });
+      stubWideHolder(target);
+      stubContentRect(target, 300, 900);
+
+      const bm = createSideBlockManager([target, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(target.holder);
+      const inner = document.createElement('div');
+      target.holder.appendChild(inner);
+
+      // clientX=20 is within 48px of the holder LEFT (0) but 280px from the
+      // content left (300) — the old full-width logic would wrongly fire here.
+      const result = det.determineDropTarget(inner, 20, 150, source);
+
+      expect(['top', 'bottom']).toContain(result?.edge);
+
+      document.body.removeChild(target.holder);
+    });
+
+    it('should NOT produce a horizontal edge when window is narrower than 651px', () => {
+      Object.defineProperty(window, 'innerWidth', { value: 650, writable: true, configurable: true });
+
+      const source = createSideTestBlock({ id: 'source' });
+      const target = createSideTestBlock({ id: 'target' });
+      stubRect(target);
+
+      const bm = createSideBlockManager([target, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(target.holder);
+      const inner = document.createElement('div');
+      target.holder.appendChild(inner);
+
+      const result = det.determineDropTarget(inner, 480, 150, source);
+
+      expect(result).not.toBeNull();
+      expect(['top', 'bottom']).toContain(result?.edge);
+
+      document.body.removeChild(target.holder);
+    });
+  });
+
+  describe('more toggle nesting detection', () => {
+    /**
+     * Creates a block stub for toggle nesting tests.
+     */
+    const createToggleTestBlock = (options: {
+      id?: string;
+      parentId?: string | null;
+      contentIds?: string[];
+      toggleOpen?: boolean;
+      name?: string;
+    } = {}): Block => {
+      const holder = document.createElement('div');
+      holder.setAttribute(DATA_ATTR.element, 'block');
+
+      if (options.toggleOpen !== undefined) {
+        const toggleWrapper = document.createElement('div');
+        toggleWrapper.setAttribute('data-blok-toggle-open', String(options.toggleOpen));
+        holder.appendChild(toggleWrapper);
+      }
+
+      return {
+        id: options.id ?? `block-${Math.random().toString(36).slice(2)}`,
+        parentId: options.parentId ?? null,
+        contentIds: options.contentIds ?? [],
+        holder,
+        name: options.name ?? 'paragraph',
+        selected: false,
+        stretched: false,
+      } as unknown as Block;
+    };
+
+    const createToggleBlockManager = (blocks: Block[]): BlockManagerAdapter => ({
+      blocks,
+      getBlockByIndex: (index: number) => blocks[index],
+      getBlockIndex: (block: Block) => blocks.indexOf(block),
+      getBlockById: (id: string) => blocks.find(b => b.id === id),
+    });
+
+    const createToggleUIAdapter = (): { contentRect: { left: number } } => ({
+      contentRect: { left: 0 },
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
     it('should NOT trap a toggle child inside the toggle when cursor is at top half of the next external block (multi-child toggle)', () => {
       // Scenario: toggle T has two children [childA, childD].
       // User drags childA. cursor is at the TOP HALF of the external block C (right after T).

@@ -43,3 +43,48 @@ export const isInsideColumn = (
 
   return false;
 };
+
+import type { API } from '../../types';
+
+/**
+ * If a column_list has collapsed to a single column, dissolve it:
+ * promote the surviving column's child blocks to root level and delete
+ * both the column and the column_list.
+ *
+ * `api.blocks.delete` is index-based and async, so ids are resolved to
+ * indices on demand; the column is deleted before the list, and the list's
+ * index is re-read afterwards because the earlier delete shifts positions.
+ *
+ * Returns true when an unwrap occurred.
+ */
+export const unwrapColumnListIfCollapsed = async (
+  api: API,
+  columnListId: string
+): Promise<boolean> => {
+  const columns = api.blocks.getChildren(columnListId);
+
+  if (columns.length !== 1) {
+    return false;
+  }
+
+  const [survivingColumn] = columns;
+  const survivingBlocks = api.blocks.getChildren(survivingColumn.id);
+
+  for (const child of survivingBlocks) {
+    api.blocks.setBlockParent(child.id, null);
+  }
+
+  const columnIndex = api.blocks.getBlockIndex(survivingColumn.id);
+
+  if (columnIndex !== undefined) {
+    await api.blocks.delete(columnIndex);
+  }
+
+  const listIndex = api.blocks.getBlockIndex(columnListId);
+
+  if (listIndex !== undefined) {
+    await api.blocks.delete(listIndex);
+  }
+
+  return true;
+};

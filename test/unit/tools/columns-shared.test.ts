@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { isInsideColumn, COLUMN_TOOL } from '../../../src/tools/columns-shared';
+import { describe, it, expect, vi } from 'vitest';
+import { isInsideColumn, COLUMN_TOOL, unwrapColumnListIfCollapsed } from '../../../src/tools/columns-shared';
+import type { API } from '../../../types';
 
 interface FakeBlock {
   id: string;
@@ -40,5 +41,46 @@ describe('isInsideColumn', () => {
       { id: 'b', name: 'paragraph', parentId: 'a' },
     ]);
     expect(isInsideColumn('a', lookup)).toBe(false);
+  });
+});
+
+describe('unwrapColumnListIfCollapsed', () => {
+  it('promotes the surviving column blocks and deletes both wrappers when 1 column remains', async () => {
+    const survivingChild = { id: 'p1' };
+    const remainingColumn = { id: 'colA' };
+
+    const getChildren = vi.fn()
+      .mockReturnValueOnce([remainingColumn])        // column_list has 1 column
+      .mockReturnValueOnce([survivingChild]);        // that column has 1 paragraph
+    // delete() is index-based; resolve ids to indices on demand
+    const indexById: Record<string, number> = { colA: 8, 'cl-1': 7 };
+    const getBlockIndex = vi.fn().mockImplementation((id: string) => indexById[id]);
+    const setBlockParent = vi.fn();
+    const remove = vi.fn().mockResolvedValue(undefined);
+
+    const api = {
+      blocks: { getChildren, getBlockIndex, setBlockParent, delete: remove },
+    } as unknown as API;
+
+    const didUnwrap = await unwrapColumnListIfCollapsed(api, 'cl-1');
+
+    expect(didUnwrap).toBe(true);
+    // surviving paragraph promoted to root (null parent)
+    expect(setBlockParent).toHaveBeenCalledWith('p1', null);
+    // both wrappers deleted by index (column first, then list)
+    expect(remove).toHaveBeenCalledWith(8);
+    expect(remove).toHaveBeenCalledWith(7);
+  });
+
+  it('does nothing when 2+ columns remain', async () => {
+    const getChildren = vi.fn().mockReturnValue([{ id: 'a' }, { id: 'b' }]);
+    const setBlockParent = vi.fn();
+    const remove = vi.fn().mockResolvedValue(undefined);
+    const api = {
+      blocks: { getChildren, getBlockIndex: vi.fn(), setBlockParent, delete: remove },
+    } as unknown as API;
+
+    expect(await unwrapColumnListIfCollapsed(api, 'cl-1')).toBe(false);
+    expect(remove).not.toHaveBeenCalled();
   });
 });

@@ -30,6 +30,8 @@ export const Database: BlockToolConstructable;
 export const DatabaseRow: BlockToolConstructable;  // DatabaseRowTool (block tool), distinct from DatabaseRow interface in types/tools/database.d.ts
 export const Image: BlockToolConstructable;
 export const Code: BlockToolConstructable;
+export const ColumnList: BlockToolConstructable;
+export const Column: BlockToolConstructable;
 
 // Re-export data and config types for convenience
 export { HeaderData, HeaderConfig } from './tools/header';
@@ -42,6 +44,8 @@ export { CalloutData, CalloutConfig } from './tools/callout';
 export { QuoteData } from './tools/quote';
 export { DatabaseData, DatabaseConfig, DatabaseAdapter, DatabaseViewConfig, DatabaseRowData } from './tools/database';
 export { ImageData, ImageConfig, ImageUploader, ImageAlignment, ImageSize, ImageFrame, ImageCrop, ImageCropShape } from './tools/image';
+export type { ColumnListData } from '../src/tools/column-list/types';
+export type { ColumnData } from '../src/tools/column/types';
 
 // Inline tools
 export const Bold: InlineToolConstructable;

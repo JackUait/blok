@@ -707,6 +707,8 @@ export class BlockOperations {
      */
     const newToolCanHostChildren = newTool === 'toggle' ||
       newTool === 'callout' ||
+      newTool === 'column_list' ||
+      newTool === 'column' ||
       (newTool === 'header' && (data as { isToggleable?: boolean }).isToggleable === true);
 
     if (oldContentIds.length > 0 && !newToolCanHostChildren) {

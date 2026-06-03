@@ -57,7 +57,9 @@ export class ColumnList implements BlockTool {
   }
 
   private seedColumns(): void {
-    if (this.container === null) {
+    const container = this.container;
+
+    if (container === null) {
       return;
     }
 
@@ -71,7 +73,7 @@ export class ColumnList implements BlockTool {
     // Clear the transient seed so a later re-render never re-seeds.
     this._data = { ...this._data, columnCount: undefined };
 
-    for (let i = 0; i < count; i += 1) {
+    Array.from({ length: count }).forEach((_unused, i) => {
       const column = this.api.blocks.insert(
         COLUMN_TOOL,
         {},
@@ -82,8 +84,8 @@ export class ColumnList implements BlockTool {
       );
 
       this.api.blocks.setBlockParent(column.id, this.blockId);
-      this.container.appendChild(column.holder);
-    }
+      container.appendChild(column.holder);
+    });
   }
 
   public save(): ColumnListData {

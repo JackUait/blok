@@ -1,3 +1,5 @@
+import type { API } from '../../types';
+
 export const COLUMN_LIST_TOOL = 'column_list';
 export const COLUMN_TOOL = 'column';
 export const COLUMNS_ATTR = 'data-blok-columns';
@@ -22,13 +24,12 @@ export const isInsideColumn = (
   blockId: string,
   lookup: (id: string) => BlockNode | undefined
 ): boolean => {
-  const visited = new Set<string>();
-  let current = lookup(blockId)?.parentId ?? null;
+  const walk = (parentId: string | null, visited: Set<string>): boolean => {
+    if (parentId === null || visited.has(parentId)) {
+      return false;
+    }
 
-  while (current !== null && !visited.has(current)) {
-    visited.add(current);
-
-    const node = lookup(current);
+    const node = lookup(parentId);
 
     if (node === undefined) {
       return false;
@@ -38,13 +39,13 @@ export const isInsideColumn = (
       return true;
     }
 
-    current = node.parentId;
-  }
+    visited.add(parentId);
 
-  return false;
+    return walk(node.parentId, visited);
+  };
+
+  return walk(lookup(blockId)?.parentId ?? null, new Set<string>());
 };
-
-import type { API } from '../../types';
 
 /**
  * If a column_list has collapsed to a single column, dissolve it:

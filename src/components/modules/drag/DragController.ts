@@ -363,7 +363,7 @@ export class DragController extends Module {
     if (currentState.type === 'dragging' && currentState.targetBlock) {
       currentState.targetBlock.holder.removeAttribute('data-drop-indicator');
       currentState.targetBlock.holder.style.removeProperty('--drop-indicator-depth');
-      this.clearSideIndicatorOffsets(currentState.targetBlock);
+      this.clearContentIndicatorOffsets(currentState.targetBlock);
     }
 
     // Find element under cursor (temporarily hide preview)
@@ -400,12 +400,11 @@ export class DragController extends Module {
     dropTarget.block.holder.setAttribute('data-drop-indicator', dropTarget.edge);
     dropTarget.block.holder.style.setProperty('--drop-indicator-depth', String(dropTarget.depth));
 
-    // For side (column) drops, align the vertical bar to the visible content box
-    // edges rather than the full-width holder edges. The holder spans the editor
-    // gutters, so a holder-anchored bar would draw off in the margins.
-    if (dropTarget.edge === 'left' || dropTarget.edge === 'right') {
-      this.applySideIndicatorOffsets(dropTarget.block);
-    }
+    // Confine the indicator to the visible content box. The holder spans the
+    // full editor width (gutters included), so without these offsets the
+    // top/bottom reorder line stretches across the whole screen and the side
+    // bars land out in the margins. Applies to every edge.
+    this.applyContentIndicatorOffsets(dropTarget.block);
 
     // Announce drop position change to screen readers
     if (this.a11y) {
@@ -415,13 +414,13 @@ export class DragController extends Module {
 
   /**
    * Sets the `--drop-indicator-side-left/right` custom properties on a block's
-   * holder so the side drop bar lands on the visible content-box edges instead
-   * of the full-width holder edges. Falls back to no offset when the standard
-   * content wrapper is absent.
+   * holder so the drop indicator (top/bottom line and left/right side bars) is
+   * confined to the visible content box instead of the full-width holder. Falls
+   * back to no offset when the standard content wrapper is absent.
    *
    * @param block - The drop target block
    */
-  private applySideIndicatorOffsets(block: Block): void {
+  private applyContentIndicatorOffsets(block: Block): void {
     const content = block.holder.querySelector('[data-blok-element-content]');
 
     if (!(content instanceof HTMLElement)) {
@@ -437,11 +436,11 @@ export class DragController extends Module {
 
   /**
    * Removes the side-drop offset custom properties set by
-   * {@link applySideIndicatorOffsets}.
+   * {@link applyContentIndicatorOffsets}.
    *
    * @param block - The block to clear
    */
-  private clearSideIndicatorOffsets(block: Block): void {
+  private clearContentIndicatorOffsets(block: Block): void {
     block.holder.style.removeProperty('--drop-indicator-side-left');
     block.holder.style.removeProperty('--drop-indicator-side-right');
   }
@@ -912,7 +911,7 @@ export class DragController extends Module {
     if ((state.type === 'dragging' || state.type === 'dropped') && state.targetBlock) {
       state.targetBlock.holder.removeAttribute('data-drop-indicator');
       state.targetBlock.holder.style.removeProperty('--drop-indicator-depth');
-      this.clearSideIndicatorOffsets(state.targetBlock);
+      this.clearContentIndicatorOffsets(state.targetBlock);
     }
 
     this.springLoader.cancel();

@@ -214,8 +214,9 @@ export class DropTargetDetector {
   /**
    * Detects a horizontal (side) drop near the left/right edge of the target.
    *
-   * Returns a DropTarget with edge 'left' or 'right' when the cursor is within
-   * DRAG_CONFIG.sideDropZone of an edge AND inside the central vertical band
+   * Returns a DropTarget with edge 'left' or 'right' when the cursor is inside
+   * the outer DRAG_CONFIG.sideZoneRatio of the content-box width (Notion-style
+   * side regions, floored at sideZoneMin) AND inside the central vertical band
    * (DRAG_CONFIG.sideBandRatio of the block height), to avoid fighting top/bottom
    * near corners. Side-drops are disabled below 651px (columns stack) and for
    * container blocks (column / column_list), which are never drop targets.
@@ -258,8 +259,9 @@ export class DropTargetDetector {
       return null;
     }
 
-    const nearLeft = clientX >= rect.left && clientX <= rect.left + DRAG_CONFIG.sideDropZone;
-    const nearRight = clientX <= rect.right && clientX >= rect.right - DRAG_CONFIG.sideDropZone;
+    const sideZone = Math.max(rect.width * DRAG_CONFIG.sideZoneRatio, DRAG_CONFIG.sideZoneMin);
+    const nearLeft = clientX >= rect.left && clientX <= rect.left + sideZone;
+    const nearRight = clientX <= rect.right && clientX >= rect.right - sideZone;
 
     if (!nearLeft && !nearRight) {
       return null;

@@ -15,8 +15,13 @@ export const DRAG_CONFIG = {
   announcementThrottleMs: 300,
   /** Horizontal distance to the left of blocks where drop is still valid */
   leftDropZone: 50,
-  /** Distance (px) from a block's left/right edge within which a side-drop triggers */
-  sideDropZone: 48,
+  /**
+   * Fraction of the content-box width on each side that triggers a side-drop
+   * (Notion-style outer regions). The central remainder is reorder (top/bottom).
+   */
+  sideZoneRatio: 0.25,
+  /** Minimum side-zone width (px) so the zone stays usable on narrow content */
+  sideZoneMin: 48,
   /** Only trigger side-drop when the cursor is within this central fraction of the block's height */
   sideBandRatio: 0.6,
 } as const;

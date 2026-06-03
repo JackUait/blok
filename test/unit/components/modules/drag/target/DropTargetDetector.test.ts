@@ -1404,6 +1404,36 @@ describe('DropTargetDetector', () => {
       document.body.removeChild(target.holder);
     });
 
+    it('should treat the outer quarter of the content box as the side zone (Notion-style), not a thin edge strip', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const target = createSideTestBlock({ id: 'target' });
+      stubWideHolder(target);
+      stubContentRect(target, 300, 900); // content width 600 → outer 25% = 150px each side
+
+      const bm = createSideBlockManager([target, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(target.holder);
+      const inner = document.createElement('div');
+      target.holder.appendChild(inner);
+
+      // clientX=420 is 120px from the content left (300) — inside the 150px outer
+      // zone but well outside any 48px edge strip. Must read as a left side-drop.
+      const left = det.determineDropTarget(inner, 420, 150, source);
+      expect(left?.edge).toBe('left');
+
+      // clientX=780 is 120px from the content right (900) — inside the right zone.
+      const right = det.determineDropTarget(inner, 780, 150, source);
+      expect(right?.edge).toBe('right');
+
+      // clientX=600 is dead center (300px from each edge) — reorder, not side.
+      const center = det.determineDropTarget(inner, 600, 150, source);
+      expect(['top', 'bottom']).toContain(center?.edge);
+
+      document.body.removeChild(target.holder);
+    });
+
     it('should NOT detect a side edge near the holder edge when far from the content box', () => {
       const source = createSideTestBlock({ id: 'source' });
       const target = createSideTestBlock({ id: 'target' });

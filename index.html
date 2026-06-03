@@ -1135,6 +1135,99 @@
       },
       {
         type: "header",
+        id: "columns-section-header",
+        data: {
+          text: "Columns",
+          level: 2
+        }
+      },
+      {
+        id: "columns-description",
+        type: "paragraph",
+        data: {
+          text: "Lay blocks out side by side. Drag the separator to resize a column, or drop a block to the left or right of another to create a new column."
+        }
+      },
+      {
+        id: "columns-example",
+        type: "column_list",
+        data: {},
+        content: ["columns-col-1", "columns-col-2", "columns-col-3"]
+      },
+      {
+        id: "columns-col-1",
+        type: "column",
+        data: {},
+        parent: "columns-example",
+        content: ["columns-col-1-header", "columns-col-1-body"]
+      },
+      {
+        id: "columns-col-1-header",
+        type: "header",
+        data: {
+          text: "Plan",
+          level: 3
+        },
+        parent: "columns-col-1"
+      },
+      {
+        id: "columns-col-1-body",
+        type: "paragraph",
+        data: {
+          text: "Outline the work and break it into blocks before you start."
+        },
+        parent: "columns-col-1"
+      },
+      {
+        id: "columns-col-2",
+        type: "column",
+        data: {},
+        parent: "columns-example",
+        content: ["columns-col-2-header", "columns-col-2-body"]
+      },
+      {
+        id: "columns-col-2-header",
+        type: "header",
+        data: {
+          text: "Build",
+          level: 3
+        },
+        parent: "columns-col-2"
+      },
+      {
+        id: "columns-col-2-body",
+        type: "paragraph",
+        data: {
+          text: "Every column can hold any block — headers, lists, images, even tables."
+        },
+        parent: "columns-col-2"
+      },
+      {
+        id: "columns-col-3",
+        type: "column",
+        data: {},
+        parent: "columns-example",
+        content: ["columns-col-3-header", "columns-col-3-body"]
+      },
+      {
+        id: "columns-col-3-header",
+        type: "header",
+        data: {
+          text: "Ship",
+          level: 3
+        },
+        parent: "columns-col-3"
+      },
+      {
+        id: "columns-col-3-body",
+        type: "paragraph",
+        data: {
+          text: "Resize columns by dragging the separator that appears between them."
+        },
+        parent: "columns-col-3"
+      },
+      {
+        type: "header",
         id: "table-section-header",
         data: {
           text: "Tables",

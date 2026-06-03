@@ -40,15 +40,21 @@
   left: 50%;
   width: 3px;
   border-radius: 9999px;
-  background-color: rgb(55 53 47 / 0.16);
+  /* Theme-aware so the handle stays visible on both light and dark surfaces. */
+  background-color: var(--blok-border-strong);
   transform: translateX(-50%);
   opacity: 0;
-  transition: opacity 120ms ease;
+  transition: opacity 120ms ease, background-color 120ms ease;
 }
 
 [data-blok-column-resizer]:hover::before,
 [data-blok-column-resizer][data-dragging]::before {
   opacity: 1;
+}
+
+/* Accent the handle while actively dragging for clear feedback. */
+[data-blok-column-resizer][data-dragging]::before {
+  background-color: var(--blok-active-icon);
 }
 
 /* Columns stack vertically below the breakpoint, so the gutter handle hides. */

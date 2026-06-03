@@ -25,7 +25,7 @@ export class Column implements BlockTool {
     this.api = api;
     this._data = { ...data };
     this.blockId = block.id;
-    this.parentId = (block as unknown as { parentId?: string | null }).parentId ?? null;
+    this.parentId = block.parentId;
   }
 
   public render(): HTMLElement {

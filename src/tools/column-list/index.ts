@@ -47,7 +47,43 @@ export class ColumnList implements BlockTool {
 
     const children = this.api.blocks.getChildren(this.blockId);
 
+    if (children.length === 0) {
+      this.seedColumns();
+
+      return;
+    }
+
     mountChildBlocks(this.container, children);
+  }
+
+  private seedColumns(): void {
+    if (this.container === null) {
+      return;
+    }
+
+    const count = this._data.columnCount ?? 2;
+    const baseIndex = this.api.blocks.getBlockIndex(this.blockId);
+
+    if (baseIndex === undefined) {
+      return;
+    }
+
+    // Clear the transient seed so a later re-render never re-seeds.
+    this._data = { ...this._data, columnCount: undefined };
+
+    for (let i = 0; i < count; i += 1) {
+      const column = this.api.blocks.insert(
+        'column',
+        {},
+        {},
+        baseIndex + 1 + i,
+        false,
+        false
+      );
+
+      this.api.blocks.setBlockParent(column.id, this.blockId);
+      this.container.appendChild(column.holder);
+    }
   }
 
   public save(): ColumnListData {

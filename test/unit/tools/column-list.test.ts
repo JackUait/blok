@@ -47,4 +47,71 @@ describe('ColumnList tool', () => {
   it('supports read-only mode', () => {
     expect(ColumnList.isReadOnlySupported).toBe(true);
   });
+
+  it('seeds N typed column children on first render from columnCount', () => {
+    let counter = 0;
+    const insert = vi.fn().mockImplementation(() => {
+      counter += 1;
+
+      return { id: `col-${counter}`, holder: document.createElement('div') };
+    });
+    const setBlockParent = vi.fn();
+    const api = createMockAPI({
+      blocks: {
+        getChildren: vi.fn().mockReturnValue([]),
+        getBlockIndex: vi.fn().mockReturnValue(5),
+        insert,
+        setBlockParent,
+      },
+      caret: { setToBlock: vi.fn() },
+    } as unknown as Partial<API>);
+
+    const list = new ColumnList(createColumnListOptions({ columnCount: 3 }, api));
+    list.render();
+    list.rendered();
+
+    // Three column blocks inserted, each of type 'column'
+    expect(insert).toHaveBeenCalledTimes(3);
+    expect(insert.mock.calls[0][0]).toBe('column');
+    // Each reparented under the column_list
+    expect(setBlockParent).toHaveBeenCalledTimes(3);
+    expect(setBlockParent).toHaveBeenCalledWith('col-1', 'cl-1');
+  });
+
+  it('defaults to 2 columns when columnCount is absent', () => {
+    const insert = vi.fn().mockImplementation(() => ({ id: 'c', holder: document.createElement('div') }));
+    const api = createMockAPI({
+      blocks: {
+        getChildren: vi.fn().mockReturnValue([]),
+        getBlockIndex: vi.fn().mockReturnValue(0),
+        insert,
+        setBlockParent: vi.fn(),
+      },
+      caret: { setToBlock: vi.fn() },
+    } as unknown as Partial<API>);
+
+    const list = new ColumnList(createColumnListOptions({}, api));
+    list.render();
+    list.rendered();
+
+    expect(insert).toHaveBeenCalledTimes(2);
+  });
+
+  it('does NOT seed columns when children already exist', () => {
+    const insert = vi.fn();
+    const api = createMockAPI({
+      blocks: {
+        getChildren: vi.fn().mockReturnValue([{ id: 'c1', holder: document.createElement('div') }]),
+        getBlockIndex: vi.fn().mockReturnValue(0),
+        insert,
+        setBlockParent: vi.fn(),
+      },
+    } as unknown as Partial<API>);
+
+    const list = new ColumnList(createColumnListOptions({ columnCount: 4 }, api));
+    list.render();
+    list.rendered();
+
+    expect(insert).not.toHaveBeenCalled();
+  });
 });

@@ -1460,6 +1460,50 @@ describe('DropTargetDetector', () => {
       document.body.removeChild(target.holder);
     });
 
+    /**
+     * Wraps a block holder inside a `[data-blok-columns]` container whose rect is
+     * TALLER than the block — models a short block sitting in a column_list whose
+     * row height is set by a taller sibling column. Returns the container.
+     */
+    const wrapInColumns = (block: Block, top: number, bottom: number): HTMLElement => {
+      const columns = document.createElement('div');
+      columns.setAttribute('data-blok-columns', '');
+      columns.appendChild(block.holder);
+
+      vi.spyOn(columns, 'getBoundingClientRect').mockReturnValue({
+        top, bottom, left: 300, right: 900, width: 600, height: bottom - top, x: 300, y: top, toJSON: () => ({}),
+      });
+
+      return columns;
+    };
+
+    it('treats the FULL column height as the side-drop zone for a block inside a column', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const column = createSideTestBlock({ id: 'col-1', name: 'column' });
+      const target = createSideTestBlock({ id: 'target', parentId: 'col-1' });
+      stubWideHolder(target);              // block band is only 100..200
+      stubContentRect(target, 300, 500);   // column-width content box
+      const columns = wrapInColumns(target, 50, 400); // row spans 50..400
+
+      const bm = createSideBlockManager([column, target, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(columns);
+      const inner = document.createElement('div');
+      target.holder.appendChild(inner);
+
+      // clientY=370 is far below the block's own 100..200 band but still inside
+      // the column row (50..400). Near the content right edge (500). Must read as
+      // a right side-drop because the WHOLE column height is the drop target.
+      const result = det.determineDropTarget(inner, 480, 370, source);
+
+      expect(result?.edge).toBe('right');
+      expect(result?.parentId).toBe('col-1');
+
+      document.body.removeChild(columns);
+    });
+
     it('should NOT produce a horizontal edge when window is narrower than 651px', () => {
       Object.defineProperty(window, 'innerWidth', { value: 650, writable: true, configurable: true });
 

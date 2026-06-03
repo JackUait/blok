@@ -406,6 +406,10 @@ export class DragController extends Module {
     // bars land out in the margins. Applies to every edge.
     this.applyContentIndicatorOffsets(dropTarget.block);
 
+    // For a column side-drop, stretch the vertical indicator bar to the full
+    // height of the column row, not just the single target block.
+    this.applySideIndicatorHeight(dropTarget.block, dropTarget.edge);
+
     // Announce drop position change to screen readers
     if (this.a11y) {
       this.a11y.announceDropPosition(dropTarget.block, dropTarget.edge);
@@ -435,14 +439,44 @@ export class DragController extends Module {
   }
 
   /**
+   * For a left/right (column) drop whose target sits inside a column_list,
+   * stretch the vertical indicator bar to the full height of the column row by
+   * setting `--drop-indicator-side-top/bottom` to the row container's top/bottom
+   * offset relative to the block holder (negative, so the bar grows past the
+   * single block). No-op for top/bottom edges or targets outside a column.
+   *
+   * @param block - The drop target block
+   * @param edge - The resolved drop edge
+   */
+  private applySideIndicatorHeight(block: Block, edge: 'top' | 'bottom' | 'left' | 'right'): void {
+    if (edge !== 'left' && edge !== 'right') {
+      return;
+    }
+
+    const columns = block.holder.closest('[data-blok-columns]');
+
+    if (!(columns instanceof HTMLElement)) {
+      return;
+    }
+
+    const holderRect = block.holder.getBoundingClientRect();
+    const columnsRect = columns.getBoundingClientRect();
+
+    block.holder.style.setProperty('--drop-indicator-side-top', `${columnsRect.top - holderRect.top}px`);
+    block.holder.style.setProperty('--drop-indicator-side-bottom', `${holderRect.bottom - columnsRect.bottom}px`);
+  }
+
+  /**
    * Removes the side-drop offset custom properties set by
-   * {@link applyContentIndicatorOffsets}.
+   * {@link applyContentIndicatorOffsets} and {@link applySideIndicatorHeight}.
    *
    * @param block - The block to clear
    */
   private clearContentIndicatorOffsets(block: Block): void {
     block.holder.style.removeProperty('--drop-indicator-side-left');
     block.holder.style.removeProperty('--drop-indicator-side-right');
+    block.holder.style.removeProperty('--drop-indicator-side-top');
+    block.holder.style.removeProperty('--drop-indicator-side-bottom');
   }
 
   private onMouseUp(e: MouseEvent): void {

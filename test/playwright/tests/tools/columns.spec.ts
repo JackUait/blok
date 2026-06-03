@@ -433,6 +433,77 @@ test.describe('Columns tool', () => {
     expect(withRatio).toHaveLength(0);
   });
 
+  test('side-drop indicator spans the full column-row height, not one block', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        // Short column: a single line.
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['short'] },
+        { id: 'short', type: 'paragraph', data: { text: 'Short' }, parent: 'c1' },
+        // Tall column: several blocks, so the row is much taller than 'short'.
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['t1', 't2', 't3', 't4'] },
+        { id: 't1', type: 'paragraph', data: { text: 'Tall line one' }, parent: 'c2' },
+        { id: 't2', type: 'paragraph', data: { text: 'Tall line two' }, parent: 'c2' },
+        { id: 't3', type: 'paragraph', data: { text: 'Tall line three' }, parent: 'c2' },
+        { id: 't4', type: 'paragraph', data: { text: 'Tall line four' }, parent: 'c2' },
+        { id: 'newcomer', type: 'paragraph', data: { text: 'Newcomer' } },
+      ],
+    });
+
+    const rowHeight = await page.getByTestId('column-list').first().evaluate(
+      el => el.getBoundingClientRect().height
+    );
+    const shortHolder = page.getByTestId('block-wrapper').filter({ hasText: 'Short' }).last();
+    const shortBox = await shortHolder.boundingBox();
+    const contentBox = await shortHolder.locator('[data-blok-element-content]').first().boundingBox();
+
+    if (!shortBox || !contentBox) {
+      throw new Error('missing bounding box');
+    }
+
+    // The row is meaningfully taller than the short block (precondition).
+    expect(rowHeight).toBeGreaterThan(shortBox.height + 40);
+
+    // Begin dragging the root "Newcomer" toward the right edge of the short
+    // column, then pause mid-drag to inspect the live indicator.
+    const source = page.getByTestId('block-wrapper').filter({ hasText: 'Newcomer' });
+    await source.hover();
+    const handle = page.locator(SETTINGS_BUTTON);
+    await expect(handle).toBeVisible();
+    const sourceBox = await handle.boundingBox();
+
+    if (!sourceBox) {
+      throw new Error('missing handle box');
+    }
+
+    await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(contentBox.x + contentBox.width - 4, shortBox.y + shortBox.height / 2, { steps: 15 });
+
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') === 'true',
+      { timeout: 2000 }
+    );
+
+    // The short block's holder carries the right-side indicator, and its
+    // ::before bar spans the full column-row height (within a few px), NOT just
+    // the short block's own height.
+    const indicator = await shortHolder.evaluate(el => {
+      const before = getComputedStyle(el, '::before');
+
+      return {
+        edge: el.getAttribute('data-drop-indicator'),
+        beforeHeight: parseFloat(before.height),
+      };
+    });
+
+    await page.mouse.up();
+
+    expect(indicator.edge).toBe('right');
+    expect(Math.abs(indicator.beforeHeight - rowHeight)).toBeLessThan(8);
+  });
+
   test('dragging a column child to a root position moves it out of the column', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     await createBlok(page, {

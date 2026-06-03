@@ -197,10 +197,15 @@
  */
 [data-drop-indicator="left"]::before,
 [data-drop-indicator="right"]::before {
-  @apply content-[''] absolute top-0 bottom-0 h-auto w-[3px] rounded-xs pointer-events-none z-10;
+  @apply content-[''] absolute h-auto w-[3px] rounded-xs pointer-events-none z-10;
   background-color: var(--blok-active-icon);
   left: auto;
   right: auto;
+  /* Span the full column-row height when the target sits in a column_list: the
+   * controller sets these to the row's top/bottom offset (negative, so the bar
+   * grows past the single block). Default 0/0 → the bar matches the block. */
+  top: var(--drop-indicator-side-top, 0);
+  bottom: var(--drop-indicator-side-bottom, 0);
 }
 
 [data-drop-indicator="left"]::before {

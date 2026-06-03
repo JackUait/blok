@@ -254,8 +254,20 @@ export class DropTargetDetector {
     const rect = contentEl instanceof HTMLElement
       ? contentEl.getBoundingClientRect()
       : blockHolder.getBoundingClientRect();
-    const bandInset = rect.height * (1 - DRAG_CONFIG.sideBandRatio) / 2;
-    const inBand = clientY >= rect.top + bandInset && clientY <= rect.bottom - bandInset;
+
+    // The vertical band is where a side-drop is allowed. For a block inside a
+    // column_list the WHOLE column-row height is a valid side-drop target (the
+    // new column spans the full row), so measure the band against the row
+    // container with no inset. For a standalone block, keep the central band so
+    // top/bottom reorder wins near the block's own top/bottom corners.
+    const columnsContainer = blockHolder.closest('[data-blok-columns]');
+    const bandRect = columnsContainer instanceof HTMLElement
+      ? columnsContainer.getBoundingClientRect()
+      : rect;
+    const bandInset = columnsContainer instanceof HTMLElement
+      ? 0
+      : rect.height * (1 - DRAG_CONFIG.sideBandRatio) / 2;
+    const inBand = clientY >= bandRect.top + bandInset && clientY <= bandRect.bottom - bandInset;
 
     if (!inBand) {
       return null;

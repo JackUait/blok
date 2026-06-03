@@ -741,19 +741,16 @@ describe('BlockHoverController', () => {
   });
 
   describe('column container hover', () => {
-    it('resolves a hovered column block up to its parent column_list', () => {
+    it('does NOT emit a hover for a column block (container is not selectable)', () => {
       /**
        * A column is a structural container, not an independent block: it must
-       * not own a drag handle / settings menu. Hovering a column resolves to
-       * its parent column_list so only the layout (and the inner blocks) are
-       * draggable — never the column itself.
+       * not own a drag handle / settings menu. Hovering the column chrome emits
+       * nothing so no toolbar attaches to the column itself.
        */
       const { controller, blok, eventsDispatcher } = createBlockHoverController();
-      const columnListBlock = createMockBlock('cl-1', 100, 400);
       const columnBlock = createMockBlock('col-1', 100, 400);
 
       (columnBlock as unknown as { name: string }).name = 'column';
-      (columnBlock as unknown as { parentId: string }).parentId = 'cl-1';
 
       const columnWrapper = columnBlock.holder;
 
@@ -762,10 +759,8 @@ describe('BlockHoverController', () => {
 
       (controller as unknown as { enable: () => void }).enable();
 
-      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [columnListBlock, columnBlock];
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [columnBlock];
       vi.mocked(blok.BlockManager.getBlockByChildNode).mockReturnValue(columnBlock);
-      (blok.BlockManager as unknown as { getBlockById: ReturnType<typeof vi.fn> }).getBlockById =
-        vi.fn().mockReturnValue(columnListBlock);
 
       const event = new MouseEvent('mousemove', {
         clientX: 200,
@@ -777,9 +772,74 @@ describe('BlockHoverController', () => {
       document.dispatchEvent(event);
       vi.runAllTimers();
 
+      expect(eventsDispatcher.emit).not.toHaveBeenCalled();
+    });
+
+    it('does NOT emit a hover for a column_list block (container is not selectable)', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+      const columnListBlock = createMockBlock('cl-1', 100, 400);
+
+      (columnListBlock as unknown as { name: string }).name = 'column_list';
+
+      const listWrapper = columnListBlock.holder;
+
+      listWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+      document.body.appendChild(listWrapper);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [columnListBlock];
+      vi.mocked(blok.BlockManager.getBlockByChildNode).mockReturnValue(columnListBlock);
+
+      const event = new MouseEvent('mousemove', {
+        clientX: 200,
+        clientY: 200,
+        bubbles: true,
+      });
+      Object.defineProperty(event, 'target', { value: listWrapper });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).not.toHaveBeenCalled();
+    });
+
+    it('excludes column/column_list from nearest-block detection, keeping the inner child', () => {
+      /**
+       * When the cursor is in the left gutter beside a column, nearest-block
+       * detection must target the block INSIDE the column, never the column or
+       * its column_list wrapper.
+       */
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+      const columnListBlock = createMockBlock('cl-1', 100, 300);
+      const columnBlock = createMockBlock('col-1', 100, 300);
+      const childBlock = createMockBlock('p-1', 140, 200);
+
+      (columnListBlock as unknown as { name: string }).name = 'column_list';
+      (columnBlock as unknown as { name: string }).name = 'column';
+
+      const nonBlockElement = document.createElement('div');
+
+      document.body.appendChild(nonBlockElement);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [columnListBlock, columnBlock, childBlock];
+
+      // Cursor in the left gutter at the child's Y range
+      const event = new MouseEvent('mousemove', {
+        clientX: 50,
+        clientY: 170,
+        bubbles: true,
+      });
+      Object.defineProperty(event, 'target', { value: nonBlockElement });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
       expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
-        block: columnListBlock,
-        target: columnWrapper,
+        block: childBlock,
+        target: childBlock.holder,
       });
     });
 

@@ -131,13 +131,20 @@ export class BlockHoverController extends Controller {
         return;
       }
 
-      const hoveredBlock = this.Blok.BlockManager.getBlockByChildNode(hoveredBlockElement);
+      const block = this.Blok.BlockManager.getBlockByChildNode(hoveredBlockElement);
 
-      if (!hoveredBlock) {
+      if (!block) {
         return;
       }
 
-      const block = this.resolveColumnToList(hoveredBlock);
+      /**
+       * Columns are structural containers, not selectable blocks. Skip the
+       * event so neither the column nor its column_list ever gets a toolbar —
+       * only the blocks inside a column are selectable (Notion-style).
+       */
+      if (BlockHoverController.isColumnContainer(block)) {
+        return;
+      }
 
       /**
        * For multi-block selection, still emit 'block-hovered' event so toolbar can follow the hovered block.
@@ -177,15 +184,9 @@ export class BlockHoverController extends Controller {
    * @param clientY - Cursor Y position
    */
   private emitNearestBlockHovered(clientY: number): void {
-    const nearest = this.findNearestBlock(clientY);
+    const nearestBlock = this.findNearestBlock(clientY);
 
-    if (nearest === null) {
-      return;
-    }
-
-    const nearestBlock = this.resolveColumnToList(nearest);
-
-    if (this.blockHoveredState.lastHoveredBlockId === nearestBlock.id) {
+    if (nearestBlock === null || this.blockHoveredState.lastHoveredBlockId === nearestBlock.id) {
       return;
     }
 
@@ -198,19 +199,14 @@ export class BlockHoverController extends Controller {
   }
 
   /**
-   * A column is a structural container, not an independent block: it must not
-   * own a drag handle, settings menu, or "convert to" option. When a hovered
-   * block is a column, resolve up to its parent column_list so only the layout
-   * (and the blocks inside each column) are draggable — never the column.
-   * @param block - the directly hovered or nearest block
-   * @returns the column_list owning the toolbar, or the block unchanged
+   * Columns are structural containers, not independent blocks: neither a
+   * `column` nor its `column_list` may own a drag handle, settings menu, or
+   * "convert to" option. Only the blocks inside a column are selectable.
+   * @param block - a hovered or candidate block
+   * @returns true when the block is a column layout container
    */
-  private resolveColumnToList(block: Block): Block {
-    if (block.name !== 'column' || block.parentId === null) {
-      return block;
-    }
-
-    return this.Blok.BlockManager.getBlockById(block.parentId) ?? block;
+  private static isColumnContainer(block: Block): boolean {
+    return block.name === 'column' || block.name === 'column_list';
   }
 
   /**
@@ -222,7 +218,8 @@ export class BlockHoverController extends Controller {
   private emitNearestBlockHoveredInZone(clientX: number, clientY: number): void {
     const blocks = this.Blok.BlockManager.blocks;
     const topLevelBlocks = blocks.filter(block =>
-      block.holder.closest('[data-blok-table-cell-blocks], [data-blok-toggle-children]') === null
+      !BlockHoverController.isColumnContainer(block)
+      && block.holder.closest('[data-blok-table-cell-blocks], [data-blok-toggle-children]') === null
     );
 
     if (topLevelBlocks.length === 0) {
@@ -270,7 +267,8 @@ export class BlockHoverController extends Controller {
      * This matches the direct-hit path which also resolves nested blocks to their parent.
      */
     const topLevelBlocks = blocks.filter(block =>
-      block.holder.closest('[data-blok-table-cell-blocks], [data-blok-toggle-children]') === null
+      !BlockHoverController.isColumnContainer(block)
+      && block.holder.closest('[data-blok-table-cell-blocks], [data-blok-toggle-children]') === null
     );
 
     if (topLevelBlocks.length === 0) {

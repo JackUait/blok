@@ -17,7 +17,8 @@ jobs:
       - name: Push to mirror
         run: |
           git remote add mirror https://x-access-token:${{ secrets.MIRROR_PAT }}@github.com/dodopizza/blok.git
-          # Recreate local branch refs from the fetched remote-tracking refs (checkout is detached HEAD)
-          git fetch origin '+refs/heads/*:refs/heads/*'
-          git push mirror --all --force
-          git push mirror --tags --force
+          # Push from the remote-tracking ref (always present with fetch-depth: 0), so this works
+          # on both branch-push (local master checked out) and tag-push (detached HEAD) events.
+          # Avoids --mirror, which deletes the mirror's master when no local master exists.
+          git push mirror "+refs/remotes/origin/master:refs/heads/master"
+          git push mirror "+refs/tags/*:refs/tags/*"

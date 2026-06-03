@@ -17,4 +17,7 @@ jobs:
       - name: Push to mirror
         run: |
           git remote add mirror https://x-access-token:${{ secrets.MIRROR_PAT }}@github.com/dodopizza/blok.git
-          git push mirror --mirror
+          # Recreate local branch refs from the fetched remote-tracking refs (checkout is detached HEAD)
+          git fetch origin '+refs/heads/*:refs/heads/*'
+          git push mirror --all --force
+          git push mirror --tags --force

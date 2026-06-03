@@ -145,7 +145,12 @@ jobs:
           merge-multiple: true
 
       - name: Merge into unified HTML report
-        run: npx playwright merge-reports --reporter html ./all-blob-reports
+        run: |
+          if [ -d ./all-blob-reports ] && [ -n "$(ls -A ./all-blob-reports 2>/dev/null)" ]; then
+            npx playwright merge-reports --reporter html ./all-blob-reports
+          else
+            echo "No blob reports found (e2e tests were skipped or cancelled); nothing to merge."
+          fi
 
       - name: Upload unified HTML report
         uses: actions/upload-artifact@v4

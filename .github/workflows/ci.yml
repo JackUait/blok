@@ -41,6 +41,7 @@ jobs:
 
   unit-tests:
     name: Unit Tests
+    needs: [build]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -48,6 +49,12 @@ jobs:
 
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
 
       - name: Build CLI
         run: yarn build:cli

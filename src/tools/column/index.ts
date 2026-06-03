@@ -18,7 +18,6 @@ export class Column implements BlockTool {
   private readonly api: API;
   private _data: ColumnData;
   private readonly blockId: string;
-  private wrapper: HTMLElement | null = null;
   private childContainer: HTMLElement | null = null;
 
   constructor({ data, api, block }: BlockToolConstructorOptions<ColumnData>) {
@@ -39,7 +38,6 @@ export class Column implements BlockTool {
     childContainer.setAttribute(DATA_ATTR.nestedBlocks, '');
     wrapper.appendChild(childContainer);
 
-    this.wrapper = wrapper;
     this.childContainer = childContainer;
 
     return wrapper;

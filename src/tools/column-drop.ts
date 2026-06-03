@@ -1,5 +1,5 @@
 import type { API } from '../../types';
-import { COLUMN_LIST_TOOL, COLUMN_TOOL } from './columns-shared';
+import { COLUMN_LIST_TOOL, COLUMN_TOOL, resetColumnsToEvenWidth } from './columns-shared';
 
 export type ColumnDropSide = 'left' | 'right';
 
@@ -148,6 +148,10 @@ export const addColumnToList = (
     for (const sourceId of sourceIds) {
       api.blocks.setBlockParent(sourceId, column.id);
     }
+
+    // A column was added, so the row re-splits evenly — the only non-resize
+    // case where widths recalculate.
+    resetColumnsToEvenWidth(api, columnListId);
   });
 
   return created.columnId;

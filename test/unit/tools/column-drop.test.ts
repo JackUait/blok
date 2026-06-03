@@ -43,6 +43,11 @@ const createMockAPI = (nodes: FakeBlockNode[]) => {
 
   const getBlockIndex = vi.fn().mockImplementation((id: string) => byId.get(id)?.index);
 
+  const childrenByParent = new Map<string, Array<{ id: string; holder: HTMLElement }>>();
+  const getChildren = vi.fn().mockImplementation(
+    (parentId: string) => childrenByParent.get(parentId) ?? []
+  );
+
   const api = {
     blocks: {
       insert,
@@ -51,10 +56,11 @@ const createMockAPI = (nodes: FakeBlockNode[]) => {
       transact,
       getById,
       getBlockIndex,
+      getChildren,
     },
   } as unknown as API;
 
-  return { api, insert, setBlockParent, move, transact, getById, getBlockIndex };
+  return { api, insert, setBlockParent, move, transact, getById, getBlockIndex, getChildren, childrenByParent };
 };
 
 describe('wrapInNewColumnList', () => {
@@ -249,6 +255,34 @@ describe('addColumnToList', () => {
     const leftIndex = Number(mock.insert.mock.calls[0][3]);
     const rightIndex = Number(rightMock.insert.mock.calls[0][3]);
     expect(leftIndex).toBeLessThan(rightIndex);
+  });
+
+  it('re-splits the row evenly: every column holder flex-grow reset to 1 after a column is added', () => {
+    const mock = createMockAPI([
+      { id: 'cl', parentId: null, index: 2 },
+      { id: 'neighbor', parentId: 'cl', index: 3 },
+      { id: 's1', parentId: null, index: 9 },
+    ]);
+
+    // Existing columns carry uneven custom widths from a prior resize.
+    const makeColumn = (id: string, grow: string) => {
+      const holder = document.createElement('div');
+
+      holder.style.flexGrow = grow;
+
+      return { id, holder };
+    };
+    const existingA = makeColumn('neighbor', '2');
+    const existingB = makeColumn('colB', '0.5');
+    const newColumn = makeColumn('column-new-1', '1');
+
+    mock.childrenByParent.set('cl', [existingA, existingB, newColumn]);
+
+    addColumnToList(mock.api, 'neighbor', ['s1'], side('right'));
+
+    expect(mock.getChildren).toHaveBeenCalledWith('cl');
+    expect([existingA, existingB, newColumn].map(c => c.holder.style.flexGrow))
+      .toEqual(['1', '1', '1']);
   });
 
   it('returns null when the neighbor is stale (getBlockIndex undefined)', () => {

@@ -50,6 +50,19 @@ export const resizeColumnGrow = (params: {
 };
 
 /**
+ * Re-split a column_list evenly: reset every child column's holder flex-grow
+ * to 1. Called only when a column is added, so the row re-balances; resize is
+ * the only OTHER place widths change. The holder's flex-grow is the persisted
+ * source of truth (Column.save reads it back), so setting it to 1 both resizes
+ * live and drops any stored widthRatio on the next save.
+ */
+export const resetColumnsToEvenWidth = (api: API, columnListId: string): void => {
+  for (const column of api.blocks.getChildren(columnListId)) {
+    column.holder.style.flexGrow = '1';
+  }
+};
+
+/**
  * Minimal block view the helpers need — kept structural so callers can pass
  * either real Blocks or test fakes.
  */

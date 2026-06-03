@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { isInsideColumn, COLUMN_TOOL, unwrapColumnListIfCollapsed, resizeColumnGrow } from '../../../src/tools/columns-shared';
+import { isInsideColumn, COLUMN_TOOL, unwrapColumnListIfCollapsed, resizeColumnGrow, resetColumnsToEvenWidth } from '../../../src/tools/columns-shared';
 import type { API } from '../../../types';
 
 beforeEach(() => vi.clearAllMocks());
@@ -197,5 +197,37 @@ describe('resizeColumnGrow', () => {
     expect(next.leftGrow + next.rightGrow).toBeCloseTo(3);
     expect(next.leftGrow).toBeCloseTo(3 * 300 / 450);
     expect(next.rightGrow).toBeCloseTo(3 * 150 / 450);
+  });
+});
+
+describe('resetColumnsToEvenWidth', () => {
+  const makeColumn = (id: string, grow: string) => {
+    const holder = document.createElement('div');
+
+    holder.style.flexGrow = grow;
+
+    return { id, holder };
+  };
+
+  it('resets every column holder flex-grow to 1 so the row splits evenly', () => {
+    const columns = [
+      makeColumn('c1', '2'),
+      makeColumn('c2', '0.5'),
+      makeColumn('c3', ''),
+    ];
+    const getChildren = vi.fn().mockReturnValue(columns);
+    const api = { blocks: { getChildren } } as unknown as API;
+
+    resetColumnsToEvenWidth(api, 'cl');
+
+    expect(getChildren).toHaveBeenCalledWith('cl');
+    expect(columns.map(c => c.holder.style.flexGrow)).toEqual(['1', '1', '1']);
+  });
+
+  it('no-ops for a list with no columns', () => {
+    const getChildren = vi.fn().mockReturnValue([]);
+    const api = { blocks: { getChildren } } as unknown as API;
+
+    expect(() => resetColumnsToEvenWidth(api, 'cl')).not.toThrow();
   });
 });

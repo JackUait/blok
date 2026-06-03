@@ -367,6 +367,72 @@ test.describe('Columns tool', () => {
     expect(saved.blocks.find(b => b.id === 'newcomer')?.parent).toBeDefined();
   });
 
+  test('adding a column re-splits the row evenly even after a prior resize', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['a'] },
+        { id: 'a', type: 'paragraph', data: { text: 'Col A' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['b'] },
+        { id: 'b', type: 'paragraph', data: { text: 'Col B' }, parent: 'c2' },
+        { id: 'newcomer', type: 'paragraph', data: { text: 'Newcomer' } },
+      ],
+    });
+
+    // Make the two columns uneven by dragging the separator right.
+    const resizer = page.getByTestId('column-resizer').first();
+    const box = await resizer.boundingBox();
+
+    if (!box) {
+      throw new Error('resizer not found');
+    }
+
+    const centerY = box.y + box.height / 2;
+    const startX = box.x + box.width / 2;
+
+    await page.mouse.move(startX, centerY);
+    await page.mouse.down();
+    await page.mouse.move(startX + 140, centerY, { steps: 8 });
+    await page.mouse.up();
+
+    const columns = page.locator('[data-blok-column]');
+    const unevenWidths = await columns.evaluateAll(els =>
+      els.map(el => el.getBoundingClientRect().width)
+    );
+
+    // Precondition: the resize made them genuinely uneven.
+    expect(Math.abs(unevenWidths[0] - unevenWidths[1])).toBeGreaterThan(80);
+
+    // Now drag a root block beside Col B to add a third column.
+    const source = page.getByTestId('block-wrapper').filter({ hasText: 'Newcomer' });
+    await source.hover();
+    const handle = page.locator(SETTINGS_BUTTON);
+    await expect(handle).toBeVisible();
+
+    const target = page.getByTestId('block-wrapper').filter({ hasText: 'Col B' }).last();
+    await performSideDrop(page, handle, target, 'right');
+
+    await expect(columns).toHaveCount(3);
+
+    // All three columns are now even again.
+    const evenWidths = await columns.evaluateAll(els =>
+      els.map(el => el.getBoundingClientRect().width)
+    );
+    const max = Math.max(...evenWidths);
+    const min = Math.min(...evenWidths);
+
+    expect(max - min).toBeLessThan(8);
+
+    // The even split persists: no column keeps a custom widthRatio.
+    const saved = await saveBlok(page);
+    const withRatio = saved.blocks.filter(
+      b => b.type === 'column' && (b.data as { widthRatio?: number }).widthRatio !== undefined
+    );
+
+    expect(withRatio).toHaveLength(0);
+  });
+
   test('dragging a column child to a root position moves it out of the column', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     await createBlok(page, {

@@ -4,7 +4,7 @@ import type {
   BlockToolConstructorOptions,
   ToolboxConfig,
 } from '../../../types';
-import { COLUMNS_ATTR } from '../columns-shared';
+import { COLUMNS_ATTR, COLUMN_TOOL } from '../columns-shared';
 import { mountChildBlocks } from '../nested-blocks';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { IconColumns } from '../../components/icons';
@@ -73,7 +73,7 @@ export class ColumnList implements BlockTool {
 
     for (let i = 0; i < count; i += 1) {
       const column = this.api.blocks.insert(
-        'column',
+        COLUMN_TOOL,
         {},
         {},
         baseIndex + 1 + i,
@@ -98,6 +98,7 @@ export class ColumnList implements BlockTool {
     const base = {
       icon: IconColumns,
       searchTerms: ['columns', 'cols', 'layout', 'grid'],
+      searchTermKeys: ['columns', 'layout'],
     };
 
     return [

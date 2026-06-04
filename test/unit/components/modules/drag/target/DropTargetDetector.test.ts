@@ -1769,6 +1769,61 @@ describe('DropTargetDetector', () => {
       document.body.removeChild(columns);
     });
 
+    /**
+     * Adds a `[data-blok-element-content]` element to a child holder and stubs its
+     * rect to a fixed vertical span. Used to give two columns DIFFERENT content
+     * heights so the dead gap below the shorter one can be targeted.
+     */
+    const stubChildContent = (block: Block, top: number, bottom: number): void => {
+      const content = document.createElement('div');
+      content.setAttribute('data-blok-element-content', '');
+      block.holder.appendChild(content);
+      vi.spyOn(content, 'getBoundingClientRect').mockReturnValue({
+        top, bottom, left: 300, right: 500, width: 200, height: bottom - top, x: 300, y: top, toJSON: () => ({}),
+      });
+    };
+
+    it('stacks a gutter drop into the column whose dead gap it lands in, instead of inserting a new column', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const leftColumn = createSideTestBlock({ id: 'col-left', name: 'column' });
+      const leftChild = createSideTestBlock({ id: 'left-child', parentId: 'col-left' });
+      const rightColumn = createSideTestBlock({ id: 'col-right', name: 'column' });
+      const rightChild = createSideTestBlock({ id: 'right-child', parentId: 'col-right' });
+
+      const { columns, resizer } = buildColumnRow(leftColumn, leftChild, rightColumn, rightChild);
+
+      // Left column content ends at y160; right column content fills to y200. The
+      // separator spans the full row (100..200), so its lower strip (160..200)
+      // overlaps the EMPTY gap below the left column — the bug zone where a drop
+      // used to insert a new column between the two.
+      stubChildContent(leftChild, 100, 160);
+      stubChildContent(rightChild, 100, 200);
+
+      const bm = createSideBlockManager([leftColumn, leftChild, rightColumn, rightChild, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(columns);
+
+      // Cursor on the separator at y180 — inside the left column's dead gap (its
+      // content ended at 160) while the right column still has content. This must
+      // stack INTO the left column (bottom of its last child), NOT side-drop.
+      const inGap = det.determineDropTarget(resizer, 510, 180, source);
+
+      expect(inGap?.edge).toBe('bottom');
+      expect(inGap?.block).toBe(leftChild);
+
+      // Higher up (y130), both columns have content beside the separator — the
+      // gutter still inserts a NEW column between them (unchanged behaviour).
+      const betweenContent = det.determineDropTarget(resizer, 510, 130, source);
+
+      expect(betweenContent?.edge).toBe('left');
+      expect(betweenContent?.block).toBe(rightChild);
+      expect(betweenContent?.parentId).toBe('col-right');
+
+      document.body.removeChild(columns);
+    });
+
     it('does NOT redirect a gutter drop below 651px (columns stack, no separators)', () => {
       Object.defineProperty(window, 'innerWidth', { value: 650, writable: true, configurable: true });
 

@@ -1193,6 +1193,82 @@ test.describe('Columns tool', () => {
     expect(membership['B one']).toBe(1);
   });
 
+  test('dropping on the separator in the empty gap below a short column stacks into that column (no new column)', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    // c1 holds one block (short); c2 holds two (tall). The column_list equalises
+    // row height, so the resize separator — which spans the FULL row — runs down
+    // past the bottom of c1's only block, through c1's empty gap. A drop on that
+    // lower strip of the separator used to insert a NEW column between c1 and c2;
+    // it should instead stack into c1, the column whose gap it visually lands in.
+    await createBlok(page, {
+      blocks: [
+        { id: 'top', type: 'paragraph', data: { text: 'Loner root' } },
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['a1'] },
+        { id: 'a1', type: 'paragraph', data: { text: 'A one' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['b1', 'b2'] },
+        { id: 'b1', type: 'paragraph', data: { text: 'B one' }, parent: 'c2' },
+        { id: 'b2', type: 'paragraph', data: { text: 'B two — a longer second line so column two is clearly taller' }, parent: 'c2' },
+      ],
+    });
+
+    const source = page.getByTestId('block-wrapper').filter({ hasText: 'Loner root' });
+    await source.hover();
+    const handle = page.locator(SETTINGS_BUTTON);
+    await expect(handle).toBeVisible();
+    const sourceBox = await handle.boundingBox();
+
+    // The resize separator rect and c1's only block content bottom, read via the
+    // DOM (a `>`-combinator locator would be a raw CSS selector, disallowed here).
+    const resizer = await page.evaluate(() => {
+      const rez = document.querySelector('[data-blok-column-resizer]');
+      const rect = rez?.getBoundingClientRect();
+
+      return rect ? { x: rect.x, y: rect.y, width: rect.width, height: rect.height, bottom: rect.bottom } : null;
+    });
+    const aContent = await page.getByTestId('block-wrapper').filter({ hasText: 'A one' }).last()
+      .locator('[data-blok-element-content]').first().boundingBox();
+
+    if (!sourceBox || !resizer || !aContent) {
+      throw new Error('missing bounding box');
+    }
+
+    // Aim at the horizontal center of the separator, vertically in the gap BELOW
+    // c1's block ("A one") but still within the (taller) row.
+    const targetX = resizer.x + resizer.width / 2;
+    const targetY = (aContent.y + aContent.height + resizer.bottom) / 2;
+
+    await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(targetX, targetY, { steps: 18 });
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') === 'true',
+      { timeout: 2000 }
+    );
+
+    // ONE horizontal drop indicator (stack into c1) — never a vertical new-column bar.
+    expect(await page.locator('[data-drop-indicator]').count()).toBe(1);
+    await expect(page.locator('[data-drop-indicator]').first()).toHaveAttribute('data-drop-indicator', 'bottom');
+
+    await page.mouse.up();
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') !== 'true',
+      { timeout: 2000 }
+    );
+
+    const saved = await saveBlok(page);
+    const columnOrder = saved.blocks.filter(b => b.type === 'column').map(b => b.id);
+
+    // No new column — the block joined c1 (the column whose gap it was dropped in).
+    expect(columnOrder).toEqual(['c1', 'c2']);
+    expect(saved.blocks.find(b => b.id === 'top')?.parent).toBe('c1');
+
+    // LIVE DOM: "Loner root" mounts inside the FIRST column (index 0), beside A one.
+    const membership = await domColumnMembership(page);
+    expect(membership['Loner root']).toBe(0);
+    expect(membership['A one']).toBe(0);
+  });
+
   test('dragging a block from one column into another moves it across columns (column to column)', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     await createBlok(page, {

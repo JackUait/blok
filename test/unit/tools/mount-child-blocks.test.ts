@@ -78,6 +78,32 @@ describe('mountChildBlocks', () => {
     document.body.removeChild(otherContainer);
   });
 
+  it('should claim a holder stranded in an ANCESTOR nested container (drag reparent into a column)', async () => {
+    const { mountChildBlocks } = await import('../../../src/tools/nested-blocks');
+
+    // The column_list row is itself a nested-blocks container; a column's own
+    // child container is nested inside it. A drag reparent can leave the moved
+    // holder directly in the row (the ancestor), where it renders as a rogue
+    // new column. mountChildBlocks must pull it down into the column's container.
+    const ancestorRow = createContainer();
+
+    ancestorRow.setAttribute('data-blok-columns', '');
+    const columnContainer = createContainer();
+
+    ancestorRow.appendChild(columnContainer);
+    const holder = createHolder('block-a');
+
+    ancestorRow.appendChild(holder); // stranded in the ancestor row
+    document.body.appendChild(ancestorRow);
+
+    mountChildBlocks(columnContainer, [{ holder }] as { holder: HTMLElement }[]);
+
+    expect(columnContainer.contains(holder)).toBe(true);
+    expect(holder.parentElement).toBe(columnContainer);
+
+    document.body.removeChild(ancestorRow);
+  });
+
   it('should mount a holder that is detached from the DOM', async () => {
     const { mountChildBlocks } = await import('../../../src/tools/nested-blocks');
 

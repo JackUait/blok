@@ -263,10 +263,16 @@ export class Blocks {
        * caller's intended DOM container is when the predecessor is DOM-nested
        * (inside a callout, toggle, header-toggleable, table cell, or any future
        * nesting tool's `[data-blok-nested-blocks]` container) AND the successor
-       * is at workingArea root. In that case, anchoring `afterend previous`
-       * would leak the new holder into the nested container even though the
-       * caller's logical intent is a top-level sibling. Route to the successor
-       * instead, which correctly anchors at workingArea root.
+       * lives in a DIFFERENT container than the predecessor. In that case,
+       * anchoring `afterend previous` would leak the new holder into the
+       * predecessor's container even though the caller's logical intent places
+       * it at the container boundary. Route to the successor instead, which
+       * correctly anchors in the successor's container. This covers:
+       *   - successor at workingArea root (the original Enter-after-nested fix), and
+       *   - successor in a SIBLING nested container — e.g. a new `column`
+       *     inserted between the last child of the left column and the right
+       *     column: its flat predecessor is that nested child, but it belongs
+       *     in the column_list beside the right column, not inside the left one.
        *
        * Every OTHER configuration stays on the original `afterend previous`
        * rule, which preserves:
@@ -282,10 +288,10 @@ export class Blocks {
        * path that does NOT explicitly set forceTopLevel.
        */
       const prevIsAtRoot = previousBlock.holder.parentElement === this.workingArea;
-      const nextIsAtRoot = nextBlock !== undefined
-        && nextBlock.holder.parentElement === this.workingArea;
+      const nextInDifferentContainer = nextBlock !== undefined
+        && nextBlock.holder.parentElement !== previousBlock.holder.parentElement;
 
-      if (!prevIsAtRoot && nextIsAtRoot && nextBlock !== undefined) {
+      if (!prevIsAtRoot && nextInDifferentContainer && nextBlock !== undefined) {
         this.insertToDOM(block, 'beforebegin', nextBlock);
 
         return;

@@ -553,8 +553,41 @@ test.describe('Columns tool', () => {
 
     await expect(columns).toHaveCount(3);
 
-    // The new column lands BETWEEN the originals: column document order is
-    // [c1, <new>, c2], and Newcomer is the sole child of that middle column.
+    // REGRESSION: the new column must be DOM-mounted as a sibling of c1/c2 inside
+    // the column row — NOT physically nested inside the left column. The saved
+    // model can read "between" while the holder is actually mounted inside c1
+    // (the flat-index insert anchors on the nested predecessor and the reparent
+    // re-mount is then skipped), which renders the block INSIDE the left column.
+    // Assert the live DOM, not just save().
+    const domColumnOrder = await page.evaluate(() => {
+      const row = document.querySelector('[data-blok-columns]');
+
+      if (!row) {
+        return null;
+      }
+
+      // Direct-child column holders only (skip the resize separators).
+      return Array.from(row.children)
+        .filter((el): el is HTMLElement => el instanceof HTMLElement && el.matches('[data-blok-element]'))
+        .map((holder): string => {
+          const text = holder.textContent ?? '';
+
+          if (text.includes('Col A')) {
+            return 'c1';
+          }
+
+          if (text.includes('Col B')) {
+            return 'c2';
+          }
+
+          return text.includes('Newcomer') ? 'new' : '?';
+        });
+    });
+
+    expect(domColumnOrder).toEqual(['c1', 'new', 'c2']);
+
+    // The new column lands BETWEEN the originals in the saved model too: column
+    // document order is [c1, <new>, c2], Newcomer the sole child of the middle.
     const saved = await saveBlok(page);
     const columnOrder = saved.blocks.filter(b => b.type === 'column').map(b => b.id);
     const newcomerParent = saved.blocks.find(b => b.id === 'newcomer')?.parent;

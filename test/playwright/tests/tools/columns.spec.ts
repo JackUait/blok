@@ -937,4 +937,143 @@ test.describe('Columns tool', () => {
     expect(columnOrder[0]).toBe('c1');
     expect(columnOrder[2]).toBe('c2');
   });
+
+  /**
+   * Reports, for every block holder mounted inside a [data-blok-column] wrapper,
+   * which enclosing column holder it lives in — keyed by the block's text. Proves
+   * the LIVE DOM placement, not just the saved model (the divergence that let a
+   * "model-correct, DOM-wrong" column bug pass every prior test).
+   */
+  const domColumnMembership = async (page: Page): Promise<Record<string, number>> => {
+    return await page.evaluate(() => {
+      const columnHolders = Array.from(document.querySelectorAll('[data-blok-columns] > [data-blok-element]'));
+      const membership: Record<string, number> = {};
+
+      document.querySelectorAll('[data-blok-column] [data-blok-element]').forEach((holder) => {
+        const ownColumn = holder.closest('[data-blok-column]')?.closest('[data-blok-element]');
+
+        if (!(ownColumn instanceof HTMLElement)) {
+          return;
+        }
+        const columnIndex = columnHolders.indexOf(ownColumn);
+        const text = (holder.textContent ?? '').trim();
+
+        if (text.length > 0 && columnIndex !== -1) {
+          membership[text] = columnIndex;
+        }
+      });
+
+      return membership;
+    });
+  };
+
+  test('dropping a root block on a column block edge stacks it inside that column (into a column)', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'top', type: 'paragraph', data: { text: 'Loner root' } },
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['a1'] },
+        { id: 'a1', type: 'paragraph', data: { text: 'A one' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['b1'] },
+        { id: 'b1', type: 'paragraph', data: { text: 'B one' }, parent: 'c2' },
+      ],
+    });
+
+    const source = page.getByTestId('block-wrapper').filter({ hasText: 'Loner root' });
+    await source.hover();
+    const handle = page.locator(SETTINGS_BUTTON);
+    await expect(handle).toBeVisible();
+    const sourceBox = await handle.boundingBox();
+
+    // The bottom edge of "B one" (last block in column c2). The thin top/bottom
+    // reorder margin of a column block is the "stack inside this column" zone.
+    const bContent = await page.getByTestId('block-wrapper').filter({ hasText: 'B one' }).last()
+      .locator('[data-blok-element-content]').first().boundingBox();
+
+    if (!sourceBox || !bContent) {
+      throw new Error('missing bounding box');
+    }
+
+    await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(bContent.x + bContent.width / 2, bContent.y + bContent.height - 1, { steps: 18 });
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') === 'true',
+      { timeout: 2000 }
+    );
+    await page.mouse.up();
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') !== 'true',
+      { timeout: 2000 }
+    );
+
+    const saved = await saveBlok(page);
+    const columnOrder = saved.blocks.filter(b => b.type === 'column').map(b => b.id);
+
+    // Still exactly two columns — the block joined c2, it did NOT create a third.
+    expect(columnOrder).toEqual(['c1', 'c2']);
+    expect(saved.blocks.find(b => b.id === 'top')?.parent).toBe('c2');
+    expect(saved.blocks.find(b => b.id === 'b1')?.parent).toBe('c2');
+
+    // LIVE DOM: "Loner root" is mounted inside the SECOND column (index 1), beside B one.
+    const membership = await domColumnMembership(page);
+    expect(membership['Loner root']).toBe(1);
+    expect(membership['B one']).toBe(1);
+  });
+
+  test('dragging a block from one column into another moves it across columns (column to column)', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['a1', 'a2'] },
+        { id: 'a1', type: 'paragraph', data: { text: 'A one' }, parent: 'c1' },
+        { id: 'a2', type: 'paragraph', data: { text: 'A two' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['b1'] },
+        { id: 'b1', type: 'paragraph', data: { text: 'B one' }, parent: 'c2' },
+      ],
+    });
+
+    // Drag "A two" (in column c1) onto the bottom edge of "B one" (in column c2).
+    const source = page.getByTestId('block-wrapper').filter({ hasText: 'A two' }).last();
+    await source.hover();
+    const handle = page.locator(SETTINGS_BUTTON);
+    await expect(handle).toBeVisible();
+    const sourceBox = await handle.boundingBox();
+
+    const bContent = await page.getByTestId('block-wrapper').filter({ hasText: 'B one' }).last()
+      .locator('[data-blok-element-content]').first().boundingBox();
+
+    if (!sourceBox || !bContent) {
+      throw new Error('missing bounding box');
+    }
+
+    await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(bContent.x + bContent.width / 2, bContent.y + bContent.height - 1, { steps: 18 });
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') === 'true',
+      { timeout: 2000 }
+    );
+    await page.mouse.up();
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') !== 'true',
+      { timeout: 2000 }
+    );
+
+    const saved = await saveBlok(page);
+    const columnOrder = saved.blocks.filter(b => b.type === 'column').map(b => b.id);
+
+    // Still two columns; A two left c1 and joined c2; A one stays in c1.
+    expect(columnOrder).toEqual(['c1', 'c2']);
+    expect(saved.blocks.find(b => b.id === 'a2')?.parent).toBe('c2');
+    expect(saved.blocks.find(b => b.id === 'a1')?.parent).toBe('c1');
+
+    // LIVE DOM: A two is now mounted in the SECOND column (index 1), A one stays first.
+    const membership = await domColumnMembership(page);
+    expect(membership['A two']).toBe(1);
+    expect(membership['A one']).toBe(0);
+    expect(membership['B one']).toBe(1);
+  });
 });

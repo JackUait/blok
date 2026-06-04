@@ -953,6 +953,46 @@ describe('BlockHierarchy', () => {
       expect(children[2]).toBe(c2.holder);
     });
 
+    it('moves a block holder from one column container into another (column to column)', () => {
+      // A block living inside column A's child container is reparented to column
+      // B. Both child containers carry [data-blok-nested-blocks] (the universal
+      // anti-stealing marker), so the broad "claimed by another container" guard
+      // used to refuse the move — leaving the holder stranded in A's DOM while
+      // the model said B. A column child container is identifiable because its
+      // PARENT is the [data-blok-column] wrapper; that distinguishes a legitimate
+      // column→column drag from cross-tool corrupted-data stealing.
+      repository = createRepositoryWithBlocks([
+        { id: 'col-a', parentId: null, contentIds: ['moving'] },
+        { id: 'moving', parentId: 'col-a', contentIds: [] },
+        { id: 'col-b', parentId: null, contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const colA = requireBlock('col-a');
+      const colB = requireBlock('col-b');
+      const moving = requireBlock('moving');
+
+      const buildColumn = (column: typeof colA): HTMLElement => {
+        const wrapper = document.createElement('div');
+        wrapper.setAttribute('data-blok-column', '');
+        const container = document.createElement('div');
+        container.setAttribute('data-blok-nested-blocks', '');
+        wrapper.appendChild(container);
+        column.holder.appendChild(wrapper);
+
+        return container;
+      };
+
+      const containerA = buildColumn(colA);
+      const containerB = buildColumn(colB);
+      containerA.appendChild(moving.holder);
+
+      hierarchy.setBlockParent(moving, 'col-b');
+
+      expect(containerB.contains(moving.holder)).toBe(true);
+      expect(containerA.contains(moving.holder)).toBe(false);
+    });
+
     it('does NOT move block.holder when the new parent has no [data-blok-toggle-children] container', () => {
       repository = createRepositoryWithBlocks([
         { id: 'plain-parent', parentId: null, contentIds: [] },

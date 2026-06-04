@@ -291,8 +291,20 @@ export class BlockHierarchy {
         '[data-blok-toggle-children], [data-blok-nested-blocks]'
       );
       const currentNestedContainer = block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`);
+
+      // A column→column move is a legitimate reparent driven by the drag system:
+      // the holder must follow the model into the destination column. The
+      // anti-stealing guard targets corrupted multi-references across tool
+      // containers (table cell / toggle / callout / header), never the columns
+      // flex layout. A column's child container is identifiable because its
+      // PARENT is the [data-blok-column] wrapper — that precisely separates the
+      // two cases (a toggle nested inside a column would not match).
+      const isColumnContainer = (container: Element | null): boolean =>
+        container?.parentElement?.matches('[data-blok-column]') === true;
       const claimedByOtherContainer =
-        currentNestedContainer !== null && currentNestedContainer !== newContainer;
+        currentNestedContainer !== null &&
+        currentNestedContainer !== newContainer &&
+        !(isColumnContainer(currentNestedContainer) && isColumnContainer(newContainer));
 
       if (newContainer && !claimedByOtherContainer) {
         const allBlocks = this.repository.blocks;

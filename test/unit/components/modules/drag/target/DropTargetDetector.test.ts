@@ -1477,12 +1477,12 @@ describe('DropTargetDetector', () => {
       return columns;
     };
 
-    it('treats the FULL column height as the side-drop zone for a block inside a column', () => {
+    it('splits a column block body at its content midline (body center is a side-drop, not a reorder)', () => {
       const source = createSideTestBlock({ id: 'source' });
       const column = createSideTestBlock({ id: 'col-1', name: 'column' });
       const target = createSideTestBlock({ id: 'target', parentId: 'col-1' });
       stubWideHolder(target);              // block band is only 100..200
-      stubContentRect(target, 300, 500);   // column-width content box
+      stubContentRect(target, 300, 500);   // column-width content box, midline=400
       const columns = wrapInColumns(target, 50, 400); // row spans 50..400
 
       const bm = createSideBlockManager([column, target, source]);
@@ -1493,13 +1493,42 @@ describe('DropTargetDetector', () => {
       const inner = document.createElement('div');
       target.holder.appendChild(inner);
 
-      // clientY=370 is far below the block's own 100..200 band but still inside
-      // the column row (50..400). Near the content right edge (500). Must read as
-      // a right side-drop because the WHOLE column height is the drop target.
-      const result = det.determineDropTarget(inner, 480, 370, source);
+      // A block inside a column is a horizontal layout: dropping over its BODY
+      // means "place a column here", split at the content midline (400). The dead
+      // center of the right half (clientX=450, clientY=150 mid-band) must read as
+      // a right side-drop — NOT the old central reorder trap.
+      const right = det.determineDropTarget(inner, 450, 150, source);
+      expect(right?.edge).toBe('right');
+      expect(right?.parentId).toBe('col-1');
 
-      expect(result?.edge).toBe('right');
-      expect(result?.parentId).toBe('col-1');
+      // Left half (clientX=350) → left side-drop.
+      const left = det.determineDropTarget(inner, 350, 150, source);
+      expect(left?.edge).toBe('left');
+      expect(left?.parentId).toBe('col-1');
+
+      document.body.removeChild(columns);
+    });
+
+    it('reserves a thin top/bottom margin of a column block for stack-inside reorder', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const column = createSideTestBlock({ id: 'col-1', name: 'column' });
+      const target = createSideTestBlock({ id: 'target', parentId: 'col-1' });
+      stubWideHolder(target);
+      stubContentRect(target, 300, 500); // content vertical band 100..200
+      const columns = wrapInColumns(target, 50, 400);
+
+      const bm = createSideBlockManager([column, target, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(columns);
+      const inner = document.createElement('div');
+      target.holder.appendChild(inner);
+
+      // Within 10px of the block's own top edge (100) → falls through to a
+      // top/bottom reorder so dragging to stack within a column still works.
+      const result = det.determineDropTarget(inner, 450, 104, source);
+      expect(['top', 'bottom']).toContain(result?.edge);
 
       document.body.removeChild(columns);
     });

@@ -847,4 +847,61 @@ test.describe('Columns tool', () => {
     expect(saved.blocks.find(b => b.id === 'a2')?.parent).toBeUndefined();
     expect(saved.blocks.find(b => b.id === 'a1')?.parent).toBe('c1');
   });
+
+  test('dropping over a column body creates a column between, never stacks inside it', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'desc', type: 'paragraph', data: { text: 'Intro root' } },
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['a'] },
+        { id: 'a', type: 'paragraph', data: { text: 'Plan stuff here' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['b'] },
+        { id: 'b', type: 'paragraph', data: { text: 'Build stuff here' }, parent: 'c2' },
+      ],
+    });
+
+    const source = page.getByTestId('block-wrapper').filter({ hasText: 'Intro root' });
+    await source.hover();
+    const handle = page.locator(SETTINGS_BUTTON);
+    await expect(handle).toBeVisible();
+    const sourceBox = await handle.boundingBox();
+
+    // Right HALF of Col A's content body — the user's "between Plan and Build"
+    // gesture. The dead center of the column body must NOT stack the block
+    // inside Col A; it must create a new column between A and B.
+    const aContent = await page.getByTestId('block-wrapper').filter({ hasText: 'Plan stuff here' }).last()
+      .locator('[data-blok-element-content]').first().boundingBox();
+
+    if (!sourceBox || !aContent) {
+      throw new Error('missing bounding box');
+    }
+
+    await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+    await page.mouse.down();
+    // Horizontal center of the right half, vertical middle — squarely in the old
+    // "central reorder" trap that used to drop the block inside the column.
+    await page.mouse.move(aContent.x + aContent.width * 0.65, aContent.y + aContent.height / 2, { steps: 18 });
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') === 'true',
+      { timeout: 2000 }
+    );
+    await page.mouse.up();
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') !== 'true',
+      { timeout: 2000 }
+    );
+
+    const saved = await saveBlok(page);
+    const columnOrder = saved.blocks.filter(b => b.type === 'column').map(b => b.id);
+    const descParent = saved.blocks.find(b => b.id === 'desc')?.parent;
+
+    // A NEW column sits between A and B; the source is its only child — NOT a
+    // second block stacked inside column A.
+    expect(columnOrder).toHaveLength(3);
+    expect(descParent).toBe(columnOrder[1]);
+    expect(descParent).not.toBe('c1');
+    expect(columnOrder[0]).toBe('c1');
+    expect(columnOrder[2]).toBe('c2');
+  });
 });

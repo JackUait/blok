@@ -266,19 +266,42 @@ export class DropTargetDetector {
       ? contentEl.getBoundingClientRect()
       : blockHolder.getBoundingClientRect();
 
-    // The vertical band is where a side-drop is allowed. For a block inside a
-    // column_list the WHOLE column-row height is a valid side-drop target (the
-    // new column spans the full row), so measure the band against the row
-    // container with no inset. For a standalone block, keep the central band so
-    // top/bottom reorder wins near the block's own top/bottom corners.
+    // A block INSIDE a column_list is part of a horizontal layout, so dropping
+    // anywhere over its body means "place a column here" — never "stack inside
+    // it". Split the content box at its horizontal midline (left half inserts
+    // before, right half collapses to the gutter / inserts after) and reserve
+    // only a thin margin at the block's own top/bottom edges for vertical
+    // reorder, so dragging to stack within a column still works. The old wide
+    // central reorder band trapped drops aimed at the gutter inside the column —
+    // the bug this fixes.
     const columnsContainer = blockHolder.closest('[data-blok-columns]');
-    const bandRect = columnsContainer instanceof HTMLElement
-      ? columnsContainer.getBoundingClientRect()
-      : rect;
-    const bandInset = columnsContainer instanceof HTMLElement
-      ? 0
-      : rect.height * (1 - DRAG_CONFIG.sideBandRatio) / 2;
-    const inBand = clientY >= bandRect.top + bandInset && clientY <= bandRect.bottom - bandInset;
+
+    if (columnsContainer instanceof HTMLElement) {
+      const reorderEdge = Math.min(rect.height * 0.25, 10);
+
+      if (clientY <= rect.top + reorderEdge || clientY >= rect.bottom - reorderEdge) {
+        return null;
+      }
+
+      const edge: 'left' | 'right' = clientX < rect.left + rect.width / 2 ? 'left' : 'right';
+
+      // Collapse a right-half drop to the right column's left edge so both sides
+      // of a gutter resolve to ONE anchor (no flicker). See collapseToColumnBoundary.
+      const collapsed = edge === 'right' ? this.collapseToColumnBoundary(targetBlock) : null;
+
+      return collapsed ?? {
+        block: targetBlock,
+        edge,
+        depth: 0,
+        parentId: this.findEnclosingColumnId(targetBlock),
+      };
+    }
+
+    // Standalone block (not in a column): keep the Notion-style outer side zones
+    // with a central reorder band, gated to the central vertical band so a
+    // top/bottom reorder wins near the block's own top/bottom corners.
+    const bandInset = rect.height * (1 - DRAG_CONFIG.sideBandRatio) / 2;
+    const inBand = clientY >= rect.top + bandInset && clientY <= rect.bottom - bandInset;
 
     if (!inBand) {
       return null;
@@ -297,21 +320,6 @@ export class DropTargetDetector {
     }
 
     const edge: 'left' | 'right' = nearLeft ? 'left' : 'right';
-
-    // Collapse each internal column boundary to a SINGLE anchor. A right side-drop
-    // on a column that has a right-neighbor inserts the new column between the two
-    // — identical to a left side-drop on that neighbor. Both cursor positions sit
-    // either side of the same gutter, so without this the indicator flickers
-    // across the gutter as the cursor crosses it (reading as two lines). Canonical
-    // anchor = the right column's left edge. The last column's right edge (no
-    // neighbor) and any left edge are already unambiguous.
-    if (edge === 'right') {
-      const collapsed = this.collapseToColumnBoundary(targetBlock);
-
-      if (collapsed !== null) {
-        return collapsed;
-      }
-    }
 
     return {
       block: targetBlock,

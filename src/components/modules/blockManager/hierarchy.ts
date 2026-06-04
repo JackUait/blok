@@ -301,10 +301,22 @@ export class BlockHierarchy {
       // two cases (a toggle nested inside a column would not match).
       const isColumnContainer = (container: Element | null): boolean =>
         container?.parentElement?.matches('[data-blok-column]') === true;
+      // The column_list's own child container is the columns row. A `column`
+      // block always belongs to a columns row, so mounting one into a row is a
+      // legitimate structural reparent — never a steal. This is the case the
+      // drag-beside "add a column" path hits: api.blocks.insert anchors the new
+      // column's holder next to a SIBLING column's child block (the new column's
+      // flat index falls inside that sibling's child range), so the holder lands
+      // inside that sibling column's container. Without this allowance the guard
+      // below refuses to move it out, stranding the new column nested INSIDE its
+      // sibling instead of placing it beside it in the row.
+      const isColumnsRow = (container: Element | null): boolean =>
+        container?.matches('[data-blok-columns]') === true;
       const claimedByOtherContainer =
         currentNestedContainer !== null &&
         currentNestedContainer !== newContainer &&
-        !(isColumnContainer(currentNestedContainer) && isColumnContainer(newContainer));
+        !(isColumnContainer(currentNestedContainer) && isColumnContainer(newContainer)) &&
+        !isColumnsRow(newContainer);
 
       if (newContainer && !claimedByOtherContainer) {
         const allBlocks = this.repository.blocks;

@@ -444,6 +444,80 @@ test.describe('Columns tool', () => {
     expect(saved.blocks.find(b => b.id === 'newcomer')?.parent).toBeDefined();
   });
 
+  test('drag-beside adds a third AND fourth column as direct siblings in the row, never nested inside a column', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['a'] },
+        { id: 'a', type: 'paragraph', data: { text: 'Col A' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['b'] },
+        { id: 'b', type: 'paragraph', data: { text: 'Col B' }, parent: 'c2' },
+        { id: 'third', type: 'paragraph', data: { text: 'Third' } },
+        { id: 'fourth', type: 'paragraph', data: { text: 'Fourth' } },
+      ],
+    });
+
+    // The number of column wrappers mounted as DIRECT children of the columns
+    // row. The LIVE DOM is the source of truth here: the saved model can report
+    // the right column count while the holders are physically nested INSIDE a
+    // sibling column — the divergence that let the original bug ship. A nested
+    // column is not a direct row child, so this count stays behind the model.
+    const directRowColumns = (): Promise<number> =>
+      page.evaluate(() =>
+        // Direct-child block holders of the row only — a column nested inside a
+        // sibling column is a DESCENDANT, not a direct child, so it does not
+        // count here even though it still renders a [data-blok-column] wrapper.
+        document.querySelectorAll('[data-blok-columns] > [data-blok-element]').length
+      );
+
+    await expect(page.locator('[data-blok-column]')).toHaveCount(2);
+    expect(await directRowColumns()).toBe(2);
+
+    // Add a THIRD column by dropping a root block on the right edge of Col B.
+    const handle = page.locator(SETTINGS_BUTTON);
+    const third = page.getByTestId('block-wrapper').filter({ hasText: 'Third' });
+
+    await third.hover();
+    await expect(handle).toBeVisible();
+    await performSideDrop(
+      page,
+      handle,
+      page.getByTestId('block-wrapper').filter({ hasText: 'Col B' }).last(),
+      'right'
+    );
+
+    await expect(page.locator('[data-blok-column]')).toHaveCount(3);
+    // REGRESSION: the new column must be a DIRECT child of the row, not nested
+    // inside Col A. Before the fix this stayed at 2 (the third column's holder
+    // was stranded inside the first column's container).
+    expect(await directRowColumns()).toBe(3);
+
+    // Add a FOURTH column the same way. This only works if the third column is a
+    // real last-column sibling in the DOM — the right-edge side-drop detector is
+    // DOM-driven (isLastColumnChild walks holder siblings), so a nested third
+    // column makes the fourth drop fall back to stacking INTO a column instead.
+    const fourth = page.getByTestId('block-wrapper').filter({ hasText: 'Fourth' });
+
+    await fourth.hover();
+    await expect(handle).toBeVisible();
+    await performSideDrop(
+      page,
+      handle,
+      page.getByTestId('block-wrapper').filter({ hasText: 'Third' }).last(),
+      'right'
+    );
+
+    await expect(page.locator('[data-blok-column]')).toHaveCount(4);
+    expect(await directRowColumns()).toBe(4);
+
+    // The saved model agrees: four columns, each dragged block now parented.
+    const saved = await saveBlok(page);
+    expect(saved.blocks.filter(b => b.type === 'column')).toHaveLength(4);
+    expect(saved.blocks.find(b => b.id === 'third')?.parent).toBeDefined();
+    expect(saved.blocks.find(b => b.id === 'fourth')?.parent).toBeDefined();
+  });
+
   test('adding a column re-splits the row evenly even after a prior resize', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     await createBlok(page, {

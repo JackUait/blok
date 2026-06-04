@@ -34,10 +34,50 @@ export class SelectionController extends Controller {
   }
 
   /**
+   * Whether a pointer is currently pressed (an in-progress drag selection).
+   * While true, the inline toolbar is kept hidden so it doesn't pop up mid-drag;
+   * it appears the moment the pointer is released.
+   */
+  private isPointerDown = false;
+
+  /**
+   * Remember that a drag may be starting so the inline toolbar stays hidden
+   * until the pointer is released.
+   */
+  private handlePointerDown = (): void => {
+    this.isPointerDown = true;
+  };
+
+  /**
+   * Show the inline toolbar the moment a pointer drag-selection is released.
+   *
+   * While the pointer is down the debounced selectionchange handler suppresses
+   * the toolbar (see handleSelectionChange), so it never flickers mid-drag.
+   * Clearing the flag and running the handler synchronously here makes the
+   * toolbar appear instantly on release.
+   */
+  private handlePointerUp = (): void => {
+    this.isPointerDown = false;
+    this.handleSelectionChange();
+  };
+
+  /**
+   * A cancelled pointer interaction (e.g. the gesture is taken over by the
+   * browser) never fires pointerup, so clear the flag to avoid stranding the
+   * toolbar in a permanently-suppressed state.
+   */
+  private handlePointerCancel = (): void => {
+    this.isPointerDown = false;
+  };
+
+  /**
    * Enable selection change listeners
    */
   public override enable(): void {
     this.listeners.on(document, 'selectionchange', this.selectionChangeDebounced);
+    this.listeners.on(document, 'pointerdown', this.handlePointerDown);
+    this.listeners.on(document, 'pointerup', this.handlePointerUp);
+    this.listeners.on(document, 'pointercancel', this.handlePointerCancel);
   }
 
   /**
@@ -135,6 +175,16 @@ export class SelectionController extends Controller {
      */
     if (this.shouldUpdateCurrentBlock()) {
       this.Blok.BlockManager.setCurrentBlockByChildNode(focusedElement);
+    }
+
+    /**
+     * While the pointer is held down the user is still dragging out the
+     * selection. Keep the toolbar hidden until they release (handlePointerUp),
+     * so it appears in one motion at the final selection rather than popping up
+     * mid-drag.
+     */
+    if (this.isPointerDown) {
+      return;
     }
 
     void this.Blok.InlineToolbar.tryToShow(true);

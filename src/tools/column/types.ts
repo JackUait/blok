@@ -14,4 +14,13 @@ export interface ColumnData extends BlockToolData {
    * returned from save().
    */
   noSeed?: boolean;
+
+  /**
+   * Transient flag: seed the empty paragraph but do NOT move the caret into it.
+   * Columns render asynchronously, so when a column_list seeds several columns
+   * the LAST one's self-focus would otherwise win the race. Setting this on
+   * every column except the first lets only the first column claim the caret.
+   * Never persisted — not returned from save().
+   */
+  noFocus?: boolean;
 }

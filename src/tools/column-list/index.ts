@@ -107,9 +107,13 @@ export class ColumnList implements BlockTool {
     this._data = { ...this._data, columnCount: undefined };
 
     const columns = Array.from({ length: count }).map((_, i) => {
+      // Columns render asynchronously, so each column's rendered() hook seeds
+      // and focuses its paragraph after this loop returns — the LAST one would
+      // win the focus race. Tag every column except the first with noFocus so
+      // only the first column claims the caret, deterministically.
       const column = this.api.blocks.insert(
         COLUMN_TOOL,
-        {},
+        { noFocus: i !== 0 },
         {},
         baseIndex + 1 + i,
         false,
@@ -121,16 +125,6 @@ export class ColumnList implements BlockTool {
 
       return column;
     });
-
-    // Each column's rendered() hook seeds a paragraph and focuses it, so the
-    // last column wins by default. Override: place the caret in the FIRST
-    // column's first paragraph.
-    const [firstColumn] = columns;
-    const firstChild = this.api.blocks.getChildren(firstColumn.id)[0];
-
-    if (firstChild !== undefined) {
-      this.api.caret.setToBlock(firstChild.id, 'start');
-    }
 
     buildColumnResizers(container, columns.map(column => column.holder), this.readOnly);
   }

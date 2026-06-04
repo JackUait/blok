@@ -122,38 +122,35 @@ describe('ColumnList tool', () => {
     expect(insert).not.toHaveBeenCalled();
   });
 
-  it('places the caret in the first column after seeding', () => {
+  it('seeds only the first column with focus, the rest with noFocus', () => {
     let counter = 0;
     const insert = vi.fn().mockImplementation(() => {
       counter += 1;
 
       return { id: `col-${counter}`, holder: document.createElement('div') };
     });
-    const setToBlock = vi.fn();
-    const getChildren = vi.fn().mockImplementation((id: string) => {
-      if (id === 'col-1') {
-        // first column's seeded paragraph (created by its own rendered() hook)
-        return [{ id: 'p-first', holder: document.createElement('div') }];
-      }
-
-      return []; // column_list starts empty; other columns irrelevant here
-    });
     const api = createMockAPI({
       blocks: {
-        getChildren,
+        getChildren: vi.fn().mockReturnValue([]),
         getBlockIndex: vi.fn().mockReturnValue(0),
         insert,
         setBlockParent: vi.fn(),
       },
-      caret: { setToBlock },
+      caret: { setToBlock: vi.fn() },
     } as unknown as Partial<API>);
 
     const list = new ColumnList(createColumnListOptions({ columnCount: 3 }, api));
     list.render();
     list.rendered();
 
-    // Caret goes to the FIRST column's first paragraph, not the last column's
-    expect(setToBlock).toHaveBeenCalledWith('p-first', 'start');
+    // Columns render asynchronously and each self-focuses its seeded paragraph,
+    // so the LAST one would win the focus race. seedColumns defends against that
+    // by tagging every column but the first with noFocus, so only the FIRST
+    // column claims the caret when it renders.
+    expect(insert).toHaveBeenCalledTimes(3);
+    expect(insert.mock.calls[0][1]).toEqual({ noFocus: false });
+    expect(insert.mock.calls[1][1]).toEqual({ noFocus: true });
+    expect(insert.mock.calls[2][1]).toEqual({ noFocus: true });
   });
 
   it('inserts a resize separator between each pair of mounted columns', () => {

@@ -139,6 +139,29 @@ describe('Column tool', () => {
     expect(setToBlock).toHaveBeenCalledWith('p-1', 'start');
   });
 
+  it('seeds the paragraph but does NOT claim the caret when data.noFocus is true', () => {
+    const insertInsideParent = vi.fn().mockReturnValue({ id: 'p-1', holder: document.createElement('div') });
+    const setToBlock = vi.fn();
+    const api = createMockAPI({
+      blocks: {
+        getChildren: vi.fn().mockReturnValue([]),
+        getBlockIndex: vi.fn().mockReturnValue(3),
+        insertInsideParent,
+      },
+      caret: { setToBlock },
+    } as unknown as Partial<API>);
+
+    const column = new Column(createColumnOptions({ noFocus: true }, api));
+    column.render();
+    column.rendered();
+
+    // The paragraph is still seeded so the column is never empty...
+    expect(insertInsideParent).toHaveBeenCalledWith('col-1', 4);
+    // ...but the caret is NOT moved here: a non-first seeded column must not win
+    // the focus race over the first column.
+    expect(setToBlock).not.toHaveBeenCalled();
+  });
+
   it('does NOT seed a paragraph when data.noSeed is true', () => {
     const insertInsideParent = vi.fn();
     const api = createMockAPI({

@@ -66,19 +66,33 @@ export class Column implements BlockTool {
     const children = this.api.blocks.getChildren(this.blockId);
 
     if (children.length === 0 && !this._data.noSeed) {
-      const blockIndex = this.api.blocks.getBlockIndex(this.blockId);
-
-      if (blockIndex !== undefined) {
-        const paragraph = this.api.blocks.insertInsideParent(this.blockId, blockIndex + 1);
-
-        this.childContainer.appendChild(paragraph.holder);
-        this.api.caret.setToBlock(paragraph.id, 'start');
-      }
+      this.seedParagraph();
 
       return;
     }
 
     mountChildBlocks(this.childContainer, children);
+  }
+
+  /**
+   * Seed the empty column with a paragraph. The first seeded column of a freshly
+   * created column_list claims the caret; siblings carry noFocus so the
+   * asynchronous last column never steals it (see {@link ColumnData}).
+   */
+  private seedParagraph(): void {
+    const blockIndex = this.api.blocks.getBlockIndex(this.blockId);
+
+    if (blockIndex === undefined || this.childContainer === null) {
+      return;
+    }
+
+    const paragraph = this.api.blocks.insertInsideParent(this.blockId, blockIndex + 1);
+
+    this.childContainer.appendChild(paragraph.holder);
+
+    if (this._data.noFocus !== true) {
+      this.api.caret.setToBlock(paragraph.id, 'start');
+    }
   }
 
   public save(): ColumnData {

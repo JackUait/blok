@@ -1570,4 +1570,38 @@ test.describe('Columns tool', () => {
     expect(membership['A one']).toBe(0);
     expect(membership['B one']).toBe(1);
   });
+
+  test('focuses the FIRST column after creating columns from the slash menu', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [{ id: 'p0', type: 'paragraph', data: { text: '' } }],
+    });
+
+    // Open the slash menu from the empty paragraph.
+    await page.locator('[data-blok-interface=blok] [contenteditable]').first().focus();
+    await page.keyboard.type('/');
+
+    const popover = page.getByTestId('toolbox-popover');
+    await expect(popover).toHaveAttribute('data-blok-popover-opened', 'true');
+
+    // Pick the 3-column preset.
+    await popover.locator('[data-blok-item-name="column_list-3"]').click();
+
+    const columns = page.locator('[data-blok-column]');
+    await expect(columns).toHaveCount(3);
+
+    // The caret must land in the FIRST column. Each column's rendered() hook
+    // seeds and self-focuses a paragraph asynchronously, so without the fix the
+    // LAST column wins the focus race; assert the active element resolves into
+    // column index 0.
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const cols = Array.from(document.querySelectorAll('[data-blok-column]'));
+          const active = document.activeElement;
+
+          return active === null ? -1 : cols.findIndex(col => col.contains(active));
+        })
+      )
+      .toBe(0);
+  });
 });

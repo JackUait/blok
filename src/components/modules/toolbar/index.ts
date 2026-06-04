@@ -1197,7 +1197,18 @@ export class Toolbar extends Module<ToolbarNodes> {
       const currentBlock = this.Blok.BlockManager.currentBlock;
 
       if (currentBlock && currentBlock.inputs.length > 0) {
-        this.Blok.Caret.setToBlock(currentBlock, this.Blok.Caret.positions.END);
+        // If a freshly inserted tool already placed the caret inside its own
+        // subtree (e.g. a column_list focusing its FIRST column), keep it.
+        // Restore focus only when it has actually fallen outside the block —
+        // to document.body on non-keyboard close paths — which is what this
+        // branch defends against. Restoring to END would otherwise jump a
+        // multi-input container like columns to its LAST input.
+        const active = document.activeElement;
+        const focusAlreadyInBlock = active instanceof Node && currentBlock.holder.contains(active);
+
+        if (!focusAlreadyInBlock) {
+          this.Blok.Caret.setToBlock(currentBlock, this.Blok.Caret.positions.END);
+        }
       }
     });
 

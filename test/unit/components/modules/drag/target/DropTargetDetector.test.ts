@@ -1551,6 +1551,57 @@ describe('DropTargetDetector', () => {
       document.body.removeChild(columns);
     });
 
+    it('redirects a drop in the empty space below a column to the column\'s LAST child (into-column), not the column container', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const column = createSideTestBlock({ id: 'col-1', name: 'column' });
+      const child1 = createSideTestBlock({ id: 'child-1', parentId: 'col-1' });
+      const child2 = createSideTestBlock({ id: 'child-2', parentId: 'col-1' });
+
+      // The column spans y 100..400, but its last block (child2) ends at y 240,
+      // leaving ~160px of EMPTY column space below it — the bug zone. A cursor in
+      // that gap resolves (via closest) to the column CONTAINER block, which used
+      // to give a container-bottom indicator AND a drop that spawned a new column.
+      vi.spyOn(column.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 100, bottom: 400, left: 300, right: 500, width: 200, height: 300, x: 300, y: 100, toJSON: () => ({}),
+      });
+      vi.spyOn(child2.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 200, bottom: 240, left: 300, right: 500, width: 200, height: 40, x: 300, y: 200, toJSON: () => ({}),
+      });
+      const child2Content = document.createElement('div');
+      child2Content.setAttribute('data-blok-element-content', '');
+      child2.holder.appendChild(child2Content);
+      vi.spyOn(child2Content, 'getBoundingClientRect').mockReturnValue({
+        top: 200, bottom: 240, left: 300, right: 500, width: 200, height: 40, x: 300, y: 200, toJSON: () => ({}),
+      });
+
+      const columns = document.createElement('div');
+      columns.setAttribute('data-blok-columns', '');
+      const wrapper = document.createElement('div');
+      wrapper.setAttribute('data-blok-column', '');
+      wrapper.append(child1.holder, child2.holder);
+      column.holder.appendChild(wrapper);
+      columns.appendChild(column.holder);
+
+      // The empty-space element sits inside the column wrapper, below the blocks.
+      const emptyZone = document.createElement('div');
+      wrapper.appendChild(emptyZone);
+      document.body.appendChild(columns);
+
+      const bm = createSideBlockManager([column, child1, child2, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      // Cursor at x=400 (body center), y=320 (deep in the empty gap). The drop
+      // must land at the BOTTOM of the column's last child — one indicator that
+      // matches the drop (append into the column), never the container itself.
+      const result = det.determineDropTarget(emptyZone, 400, 320, source);
+
+      expect(result?.block).toBe(child2);
+      expect(result?.edge).toBe('bottom');
+
+      document.body.removeChild(columns);
+    });
+
     /**
      * Builds the real column-row DOM around two columns divided by a resize
      * separator: [data-blok-columns] > [leftHolder, resizer, rightColumn.holder].

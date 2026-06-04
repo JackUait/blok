@@ -157,11 +157,22 @@ export class DropTargetDetector {
       return gapTarget;
     }
 
-    const { block: targetBlock, holder: blockHolder } = this.findDropTargetBlock(elementUnderCursor, clientX, clientY);
+    const resolved = this.findDropTargetBlock(elementUnderCursor, clientX, clientY);
 
-    if (!blockHolder || !targetBlock || targetBlock === sourceBlock) {
+    if (!resolved.holder || !resolved.block || resolved.block === sourceBlock) {
       return null;
     }
+
+    // Empty space below a column's blocks resolves (via closest) to the column
+    // CONTAINER block, whose holder is itself a [data-blok-element]. Left as-is,
+    // a top/bottom drop on the container shows an indicator at the column's
+    // bottom edge AND reparents at the column_list level — spawning a NEW column
+    // beside the one the cursor is over (resolveParentForDrop reads the
+    // container's parentId). Redirect into the column instead: target its LAST
+    // child with a bottom edge, so the single indicator and the drop both land at
+    // the end of the column (stack INTO it), matching a drop over a real block.
+    const { block: targetBlock, holder: blockHolder } =
+      this.redirectColumnContainerTarget(resolved.block, resolved.holder);
 
     // Prevent dropping into the middle of a multi-block selection
     if (this.sourceBlocks.length > 1 && this.sourceBlocks.includes(targetBlock)) {
@@ -424,6 +435,45 @@ export class DropTargetDetector {
     return childHolder instanceof HTMLElement
       ? this.blockManager.blocks.find(block => block.holder === childHolder)
       : undefined;
+  }
+
+  /**
+   * The LAST child block of a column, in document order, or undefined when the
+   * column has no children. Uses the flat block list filtered by parentId rather
+   * than the DOM — a column's children are contiguous and ordered there, and this
+   * avoids the column's multi-level wrapper nesting (and nested grandchild blocks,
+   * e.g. list items) confusing a DOM walk.
+   */
+  private lastChildOfColumn(columnBlock: Block): Block | undefined {
+    const children = this.blockManager.blocks.filter(block => block.parentId === columnBlock.id);
+
+    return children[children.length - 1];
+  }
+
+  /**
+   * Redirects a drop that resolved to a column CONTAINER block into the column
+   * itself. The empty space below a column's blocks resolves (via closest) to the
+   * column block, whose holder is a [data-blok-element]; a top/bottom drop there
+   * shows a container-edge indicator and spawns a new column. Instead, anchor on
+   * the column's LAST child with the caller's later top/bottom logic so the drop
+   * appends INTO the column. Non-column targets, and columns with no usable child
+   * (or whose last child is itself being dragged), pass through unchanged.
+   */
+  private redirectColumnContainerTarget(
+    block: Block,
+    holder: HTMLElement
+  ): { block: Block; holder: HTMLElement } {
+    if (block.name !== 'column') {
+      return { block, holder };
+    }
+
+    const lastChild = this.lastChildOfColumn(block);
+
+    if (lastChild === undefined || this.sourceBlocks.includes(lastChild)) {
+      return { block, holder };
+    }
+
+    return { block: lastChild, holder: lastChild.holder };
   }
 
   /**

@@ -1119,6 +1119,80 @@ test.describe('Columns tool', () => {
     expect(membership['B one']).toBe(1);
   });
 
+  test('dropping a root block into the empty space below a short column stacks it inside that column (one position, no new column)', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    // c1 holds two blocks (tall); c2 holds one (short). The column_list equalises
+    // row height, so c2's holder stretches BELOW "B one" — the empty gap that used
+    // to resolve to the column CONTAINER, showing a container-bottom indicator and
+    // spawning a NEW column instead of stacking into c2.
+    await createBlok(page, {
+      blocks: [
+        { id: 'top', type: 'paragraph', data: { text: 'Loner root' } },
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['a1', 'a2'] },
+        { id: 'a1', type: 'paragraph', data: { text: 'A one' }, parent: 'c1' },
+        { id: 'a2', type: 'paragraph', data: { text: 'A two — a longer second line so column one is clearly taller' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['b1'] },
+        { id: 'b1', type: 'paragraph', data: { text: 'B one' }, parent: 'c2' },
+      ],
+    });
+
+    const source = page.getByTestId('block-wrapper').filter({ hasText: 'Loner root' });
+    await source.hover();
+    const handle = page.locator(SETTINGS_BUTTON);
+    await expect(handle).toBeVisible();
+    const sourceBox = await handle.boundingBox();
+
+    // Second column holder rect, read via the DOM (a Playwright locator with a
+    // `>` combinator would be a raw CSS selector — disallowed in these tests).
+    const c2Holder = await page.evaluate(() => {
+      const holders = Array.from(document.querySelectorAll('[data-blok-columns] > [data-blok-element]'));
+      const rect = holders[1]?.getBoundingClientRect();
+
+      return rect ? { x: rect.x, y: rect.y, width: rect.width, height: rect.height } : null;
+    });
+    const b1Content = await page.getByTestId('block-wrapper').filter({ hasText: 'B one' }).last()
+      .locator('[data-blok-element-content]').first().boundingBox();
+
+    if (!sourceBox || !c2Holder || !b1Content) {
+      throw new Error('missing bounding box');
+    }
+
+    // Aim at the horizontal center of c2, vertically in the EMPTY gap between the
+    // bottom of "B one" and the bottom of the (stretched) column holder.
+    const gapY = (b1Content.y + b1Content.height + c2Holder.y + c2Holder.height) / 2;
+    const targetX = c2Holder.x + c2Holder.width / 2;
+
+    await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(targetX, gapY, { steps: 18 });
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') === 'true',
+      { timeout: 2000 }
+    );
+
+    // ONE drop indicator while hovering the empty gap — never a second anchor.
+    expect(await page.locator('[data-drop-indicator]').count()).toBe(1);
+
+    await page.mouse.up();
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') !== 'true',
+      { timeout: 2000 }
+    );
+
+    const saved = await saveBlok(page);
+    const columnOrder = saved.blocks.filter(b => b.type === 'column').map(b => b.id);
+
+    // No new column — the block joined c2 (the column whose gap it was dropped in).
+    expect(columnOrder).toEqual(['c1', 'c2']);
+    expect(saved.blocks.find(b => b.id === 'top')?.parent).toBe('c2');
+
+    // LIVE DOM: "Loner root" mounts inside the SECOND column (index 1), beside B one.
+    const membership = await domColumnMembership(page);
+    expect(membership['Loner root']).toBe(1);
+    expect(membership['B one']).toBe(1);
+  });
+
   test('dragging a block from one column into another moves it across columns (column to column)', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     await createBlok(page, {

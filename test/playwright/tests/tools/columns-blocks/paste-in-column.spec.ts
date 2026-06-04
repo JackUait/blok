@@ -168,8 +168,8 @@ test.describe('Pasting multi-block content into a column', () => {
     await target.click();
 
     // HTML that visually looks like a multi-column / multi-block structure. It
-    // must normalize to allowed blocks INSIDE the column, never produce a nested
-    // column_list (the unsupported case the isInsideColumn guard forbids).
+    // must normalize to plain blocks INSIDE the column: no paste parser emits a
+    // column_list, so column-shaped HTML never synthesizes one on paste.
     await paste(target, {
       'text/html': [
         '<div style="display:flex">',

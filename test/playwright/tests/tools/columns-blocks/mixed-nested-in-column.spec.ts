@@ -226,13 +226,7 @@ test.describe('Mixed and nested column_list inside a column', () => {
     expect(membership['Nested left EDITED']).toBeGreaterThanOrEqual(0);
   });
 
-  // FIXME(nested-columns): deleting a nested column_list corrupts the tree.
-  // unwrapColumnListIfCollapsed promotes children to root (setBlockParent(child,
-  // null)) instead of to the list's parent column, and the index-based deletes
-  // then shift onto the wrong blocks — leaving rogue `column` blocks orphaned at
-  // root. Nested column_lists render/save/reload fine; only their removal breaks.
-  // Unskip once columns are nestable (the planned nested-columns work).
-  test.fixme('removing the block leaves the column_list intact with the remaining paragraph', async ({ page }) => {
+  test('removing the block leaves the column_list intact with the remaining paragraph', async ({ page }) => {
     await createBlok(page, buildNestedTree());
 
     // Delete the nested column_list by its flat index. delete() is index-based.
@@ -339,12 +333,7 @@ test.describe('Mixed and nested column_list inside a column', () => {
     expect(textOf(findBlock(after, 's-h')?.data)).toBe('Stacked header');
   });
 
-  // FIXME(nested-columns): the render/save/reload half of this passes, but
-  // removing an inner column triggers unwrapColumnListIfCollapsed, which promotes
-  // to root and mis-indexes its deletes — corrupting the OUTER column_list (it
-  // loses a column and flings that column's paragraph to root). Unskip once
-  // columns are nestable (the planned nested-columns work). See columns-shared.ts.
-  test.fixme('a nested column_list inside the column renders, saves with the parent chain, reloads, and an inner column can be removed', async ({ page }) => {
+  test('a nested column_list inside the column renders, saves with the parent chain, reloads, and an inner column can be removed', async ({ page }) => {
     await createBlok(page, buildNestedTree());
 
     // Deepest-nesting render: 2 column_lists, 4 columns.

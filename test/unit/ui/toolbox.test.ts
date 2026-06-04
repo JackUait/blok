@@ -1579,7 +1579,7 @@ describe('Toolbox', () => {
     });
   });
 
-  describe('column_list restriction inside a column', () => {
+  describe('column_list nesting inside a column', () => {
     /**
      * Builds a column block adapter and wires the blocks API so getById walks a
      * paragraph -> column chain, putting the current block inside a column.
@@ -1600,10 +1600,11 @@ describe('Toolbox', () => {
     const columnListTools = (): ToolsCollection<BlockToolAdapter> => {
       const columnListAdapter = {
         name: 'column_list',
-        toolbox: {
-          title: 'Columns',
-          icon: '<svg>cols</svg>',
-        },
+        toolbox: [
+          { title: 'Columns', icon: '<svg>cols</svg>', name: 'column_list' },
+          { title: '2 columns', icon: '<svg>cols</svg>', name: 'column_list-2', data: { columnCount: 2 } },
+          { title: '3 columns', icon: '<svg>cols</svg>', name: 'column_list-3', data: { columnCount: 3 } },
+        ],
       } as unknown as BlockToolAdapter;
 
       return createToolsCollection([
@@ -1612,7 +1613,7 @@ describe('Toolbox', () => {
       ]);
     };
 
-    it('hides the column_list entry when opened inside a column', () => {
+    it('does not hide any column_list preset when opened inside a column', () => {
       wireInsideColumn();
 
       const toolbox = new Toolbox({
@@ -1624,72 +1625,13 @@ describe('Toolbox', () => {
 
       toolbox.open();
 
-      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('column_list', true);
-    });
-
-    it('hides EVERY column_list preset (count variants included) inside a column', () => {
-      wireInsideColumn();
-
-      const multiPresetAdapter = {
-        name: 'column_list',
-        toolbox: [
-          { title: 'Columns', icon: '<svg>cols</svg>', name: 'column_list' },
-          { title: '2 columns', icon: '<svg>cols</svg>', name: 'column_list-2', data: { columnCount: 2 } },
-          { title: '3 columns', icon: '<svg>cols</svg>', name: 'column_list-3', data: { columnCount: 3 } },
-        ],
-      } as unknown as BlockToolAdapter;
-
-      const toolbox = new Toolbox({
-        api: mocks.api,
-        tools: createToolsCollection([
-          ['testTool', mocks.blockToolAdapter],
-          ['column_list', multiPresetAdapter],
-        ]),
-        i18nLabels,
-        i18n: mockI18n,
-      });
-
-      toolbox.open();
-
-      // Every preset name is hidden — not just the bare "column_list", which
-      // alone would leave the count presets insertable inside a column.
-      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('column_list', true);
-      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('column_list-2', true);
-      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('column_list-3', true);
-    });
-
-    it('does not hide the column_list entry when opened outside a column', () => {
-      const toolbox = new Toolbox({
-        api: mocks.api,
-        tools: columnListTools(),
-        i18nLabels,
-        i18n: mockI18n,
-      });
-
-      toolbox.open();
-
+      // Columns inside columns are allowed: no preset is hidden.
       expect(mockPopoverInstance.toggleItemHiddenByName).not.toHaveBeenCalledWith('column_list', true);
+      expect(mockPopoverInstance.toggleItemHiddenByName).not.toHaveBeenCalledWith('column_list-2', true);
+      expect(mockPopoverInstance.toggleItemHiddenByName).not.toHaveBeenCalledWith('column_list-3', true);
     });
 
-    it('restores the column_list entry on close', () => {
-      wireInsideColumn();
-
-      const toolbox = new Toolbox({
-        api: mocks.api,
-        tools: columnListTools(),
-        i18nLabels,
-        i18n: mockI18n,
-      });
-
-      toolbox.open();
-      mockPopoverInstance.toggleItemHiddenByName.mockClear();
-
-      toolbox.close();
-
-      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('column_list', false);
-    });
-
-    it('rejects inserting a column_list when the current block is inside a column', async () => {
+    it('inserts a column_list when the current block is inside a column', async () => {
       wireInsideColumn();
 
       const toolbox = new Toolbox({
@@ -1701,7 +1643,11 @@ describe('Toolbox', () => {
 
       await toolbox.toolButtonActivated('column_list', {});
 
-      expect(mocks.api.blocks.insert).not.toHaveBeenCalled();
+      const columnListInsert = vi
+        .mocked(mocks.api.blocks.insert)
+        .mock.calls.find(call => call[0] === 'column_list');
+
+      expect(columnListInsert).toBeDefined();
     });
 
     it('still inserts other block types when inside a column', async () => {

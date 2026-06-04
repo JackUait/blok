@@ -18,8 +18,8 @@ import {
  * that is a child of a column and assert the inserted block is parented to that
  * SAME column (not stranded at root), that container blocks seed their own
  * children one level deeper, that a non-text Divider keeps the flow sane, and
- * that a Columns (column_list) preset is rejected — never producing the nested
- * column_list the model cannot safely remove.
+ * that a Columns (column_list) preset nests a new column_list inside the column
+ * (columns inside columns are allowed).
  *
  * A failing assertion here is a real bug to surface (TDD). Do not weaken it.
  */
@@ -173,39 +173,60 @@ test.describe('Toolbox insertion inside a column', () => {
     expect(childrenOf(after, reloadedCallout?.id ?? '').length).toBeGreaterThan(0);
   });
 
-  test('the Columns (column_list) preset is rejected inside a column — no nested column_list is created', async ({ page }) => {
+  test('a Columns (column_list) preset inserts a nested column_list inside the column', async ({ page }) => {
     await createBlok(page, buildTwoColumns());
 
     await openToolboxInLeftColumn(page);
 
-    // isInsideColumn() forbids a column_list inside a column. The toolbox must
-    // either hide/disable the Columns entry or refuse the insert. Either way the
-    // user must not be able to create a nested column_list from live UI.
-    // The ColumnList tool registers several presets (column_list, column_list-2
-    // … column_list-5); ALL of them must be unreachable inside a column, so
-    // match every entry whose name starts with "column_list" — not just the
-    // bare "column_list", which alone would let the count presets slip through.
+    // Columns inside columns are allowed. Every column_list preset must be
+    // reachable while the caret is inside a column — none hidden. The ColumnList
+    // tool registers several presets (column_list, column_list-2 … column_list-5);
+    // match every entry whose name starts with "column_list".
     const columnsPresets = `${TOOLBOX_POPOVER} [data-blok-testid="popover-item"][data-blok-item-name^="column_list"]`;
-    const allColumnsPresets = page.locator(columnsPresets);
     const visibleColumnsPresets = page.locator(`${columnsPresets}:not([data-blok-hidden="true"])`);
 
-    // The presets are registered in the menu...
-    expect(await allColumnsPresets.count()).toBeGreaterThan(0);
-    // ...but every one of them is hidden while the caret is inside a column.
-    await expect(visibleColumnsPresets).toHaveCount(0);
+    expect(await visibleColumnsPresets.count()).toBeGreaterThan(0);
 
-    // Even if one tried to click it, no second column_list may appear: exactly
-    // one column_list, exactly two columns, no column_list nested in a column.
+    // Insert a 2-column preset inside the left column.
+    await page.locator(toolboxItem('column_list-2')).click();
+
     const saved = await saveBlok(page);
 
-    expect(saved.blocks.filter((block) => block.type === 'column_list')).toHaveLength(1);
-    expect(saved.blocks.filter((block) => block.type === 'column')).toHaveLength(2);
+    // A SECOND column_list now exists, nested inside the left column (c1).
+    const columnLists = saved.blocks.filter((block) => block.type === 'column_list');
 
-    const nestedColumnList = saved.blocks.find(
-      (block) => block.type === 'column_list' && block.parent !== undefined
+    expect(columnLists).toHaveLength(2);
+
+    const nested = columnLists.find((block) => block.id !== 'cl1');
+
+    expect(nested).toBeDefined();
+    expect(nested?.parent).toBe('c1');
+    expect(childrenOf(saved, 'c1')).toContain(nested?.id);
+
+    // The nested column_list seeds its own two columns, each with a paragraph.
+    const nestedColumns = childrenOf(saved, nested?.id ?? '');
+
+    expect(nestedColumns).toHaveLength(2);
+    for (const colId of nestedColumns) {
+      expect(findBlock(saved, colId)?.type).toBe('column');
+      expect(findBlock(saved, colId)?.parent).toBe(nested?.id);
+      expect(childrenOf(saved, colId).length).toBeGreaterThan(0);
+    }
+
+    // Four columns total: the two outer + the two nested. The right column is
+    // untouched.
+    expect(saved.blocks.filter((block) => block.type === 'column')).toHaveLength(4);
+    expect(childrenOf(saved, 'c2')).toEqual(['right']);
+    await expect(page.locator('[data-blok-column]')).toHaveCount(4);
+
+    // The nested column > column_list > column > paragraph chain round-trips.
+    const after = await reloadFromSave(page);
+    const reloadedNested = after.blocks.find(
+      (block) => block.type === 'column_list' && block.parent === 'c1'
     );
 
-    expect(nestedColumnList).toBeUndefined();
+    expect(reloadedNested?.parent).toBe('c1');
+    expect(childrenOf(after, reloadedNested?.id ?? '')).toHaveLength(2);
   });
 
   test('inserting a Divider from the slash menu places it in the column and keeps the flow sane', async ({ page }) => {

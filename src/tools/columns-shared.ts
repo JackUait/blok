@@ -169,48 +169,6 @@ export const resetColumnsToEvenWidth = (api: API, columnListId: string): void =>
 };
 
 /**
- * Minimal block view the helpers need — kept structural so callers can pass
- * either real Blocks or test fakes.
- */
-export interface BlockNode {
-  name: string;
-  parentId: string | null;
-}
-
-/**
- * Walk the parentId chain from `blockId` upward; return true if any ancestor
- * is a `column` block. Cycle-safe via a visited set.
- *
- * Used to reject placing a column_list inside a column (no nested columns).
- */
-export const isInsideColumn = (
-  blockId: string,
-  lookup: (id: string) => BlockNode | undefined
-): boolean => {
-  const walk = (parentId: string | null, visited: Set<string>): boolean => {
-    if (parentId === null || visited.has(parentId)) {
-      return false;
-    }
-
-    const node = lookup(parentId);
-
-    if (node === undefined) {
-      return false;
-    }
-
-    if (node.name === COLUMN_TOOL) {
-      return true;
-    }
-
-    visited.add(parentId);
-
-    return walk(node.parentId, visited);
-  };
-
-  return walk(lookup(blockId)?.parentId ?? null, new Set<string>());
-};
-
-/**
  * Delete a block by id. `api.blocks.delete` is index-based and async, and any
  * preceding delete shifts the flat array, so the id is re-resolved to its
  * CURRENT index immediately before the call. Resolving by id (never a stale

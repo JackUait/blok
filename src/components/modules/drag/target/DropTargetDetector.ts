@@ -266,16 +266,17 @@ export class DropTargetDetector {
       ? contentEl.getBoundingClientRect()
       : blockHolder.getBoundingClientRect();
 
-    // A block INSIDE a column_list uses the SAME zone model as a standalone
-    // block: only the narrow left/right side zones create a new column, while the
-    // wide central body falls through to a top/bottom reorder. A center drop
-    // reorders relative to a column child, which reparents the dropped block INTO
-    // that column (resolveParentForDrop) — so dropping over a column's body adds
-    // to the column instead of spawning a new one. Drops aimed at the gutter
-    // BETWEEN columns are handled separately by determineColumnGapTarget, which
-    // runs first, so the body no longer has to absorb them. The old design made
-    // nearly the whole body a side-drop (new column) with only a 10px stack-in
-    // margin — the bug this fixes.
+    // A block INSIDE a column_list gives a SINGLE, unambiguous indicator over a
+    // column body: it always falls through to a top/bottom reorder, which
+    // reparents the dropped block INTO that column (resolveParentForDrop). The
+    // ONLY side-drop (new column) that fires over a body is at the OUTER edge of
+    // the whole row — the left edge of the first column or the right edge of the
+    // last — which appends a column at the start/end. Between-column insertion is
+    // the gutter separator's job (determineColumnGapTarget, runs first). Inner
+    // body edges deliberately do NOT side-drop: they used to, which made the
+    // indicator flip between a horizontal "stack in" line and a vertical "new
+    // column" line as the cursor crossed a column boundary — read by users as
+    // "two drop lines". This removes that flip.
     const columnsContainer = blockHolder.closest('[data-blok-columns]');
 
     if (columnsContainer instanceof HTMLElement) {
@@ -290,22 +291,18 @@ export class DropTargetDetector {
       const nearLeft = clientX <= rect.left + sideZone;
       const nearRight = clientX >= rect.right - sideZone;
 
-      if (!nearLeft && !nearRight) {
-        return null;
+      // Left edge fires only on the FIRST column, right edge only on the LAST —
+      // the row's outer edges. Every inner position (including inner edges)
+      // falls through to into-column.
+      if (nearLeft && this.isFirstColumnChild(targetBlock)) {
+        return { block: targetBlock, edge: 'left', depth: 0, parentId: this.findEnclosingColumnId(targetBlock) };
       }
 
-      const edge: 'left' | 'right' = nearLeft ? 'left' : 'right';
+      if (nearRight && this.isLastColumnChild(targetBlock)) {
+        return { block: targetBlock, edge: 'right', depth: 0, parentId: this.findEnclosingColumnId(targetBlock) };
+      }
 
-      // Collapse a right-edge drop to the right column's left edge so both sides
-      // of a gutter resolve to ONE anchor (no flicker). See collapseToColumnBoundary.
-      const collapsed = edge === 'right' ? this.collapseToColumnBoundary(targetBlock) : null;
-
-      return collapsed ?? {
-        block: targetBlock,
-        edge,
-        depth: 0,
-        parentId: this.findEnclosingColumnId(targetBlock),
-      };
+      return null;
     }
 
     // Standalone block (not in a column): keep the Notion-style outer side zones
@@ -341,13 +338,11 @@ export class DropTargetDetector {
   }
 
   /**
-   * For a right side-drop on a block inside a column, returns a 'left' side-drop
-   * on the FIRST block of the next column (so the indicator anchors to the right
-   * column's left edge — one stable line in the gutter). Returns null when the
-   * block is not in a column or its column is the last one (no neighbor to
-   * collapse to), leaving the original right-edge drop in place.
+   * The column holder element that owns a block, or null if the block is not a
+   * direct child of a column. Walks block holder → [data-blok-column] wrapper →
+   * enclosing [data-blok-element] (the column's holder).
    */
-  private collapseToColumnBoundary(targetBlock: Block): DropTarget | null {
+  private columnHolderOf(targetBlock: Block): HTMLElement | null {
     const columnWrapper = targetBlock.holder.closest('[data-blok-column]');
 
     if (!(columnWrapper instanceof HTMLElement)) {
@@ -356,25 +351,30 @@ export class DropTargetDetector {
 
     const columnHolder = columnWrapper.closest(createSelector(DATA_ATTR.element));
 
-    if (!(columnHolder instanceof HTMLElement)) {
-      return null;
-    }
+    return columnHolder instanceof HTMLElement ? columnHolder : null;
+  }
 
-    const nextColumnHolder = this.nextColumnHolder(columnHolder);
-    const nextChild = nextColumnHolder !== null
-      ? this.firstBlockInColumnHolder(nextColumnHolder)
-      : undefined;
+  /**
+   * Whether a block sits in the FIRST column of its row — i.e. there is no
+   * preceding sibling column holder (only separators / nothing before it). Used
+   * to gate the left outer-edge side-drop so only the row's far-left edge spawns
+   * a column at the start. False when the block is not in a column.
+   */
+  private isFirstColumnChild(targetBlock: Block): boolean {
+    const columnHolder = this.columnHolderOf(targetBlock);
 
-    if (nextChild === undefined) {
-      return null;
-    }
+    return columnHolder !== null && this.previousColumnHolder(columnHolder) === null;
+  }
 
-    return {
-      block: nextChild,
-      edge: 'left',
-      depth: 0,
-      parentId: this.findEnclosingColumnId(nextChild),
-    };
+  /**
+   * Whether a block sits in the LAST column of its row — no following sibling
+   * column holder. Gates the right outer-edge side-drop. False when not in a
+   * column.
+   */
+  private isLastColumnChild(targetBlock: Block): boolean {
+    const columnHolder = this.columnHolderOf(targetBlock);
+
+    return columnHolder !== null && this.nextColumnHolder(columnHolder) === null;
   }
 
   /**
@@ -393,6 +393,25 @@ export class DropTargetDetector {
     }
 
     return this.nextColumnHolder(sibling);
+  }
+
+  /**
+   * The previous sibling column holder before `columnHolder` within a
+   * column_list, skipping the resize separator. Null if none (the block is in
+   * the first column).
+   */
+  private previousColumnHolder(element: Element): HTMLElement | null {
+    const sibling = element.previousElementSibling;
+
+    if (sibling === null) {
+      return null;
+    }
+
+    if (sibling instanceof HTMLElement && sibling.matches(createSelector(DATA_ATTR.element))) {
+      return sibling;
+    }
+
+    return this.previousColumnHolder(sibling);
   }
 
   /**

@@ -1461,14 +1461,24 @@ describe('DropTargetDetector', () => {
     });
 
     /**
-     * Wraps a block holder inside a `[data-blok-columns]` container whose rect is
-     * TALLER than the block — models a short block sitting in a column_list whose
-     * row height is set by a taller sibling column. Returns the container.
+     * Wraps a block holder inside a single-column `[data-blok-columns]` row whose
+     * rect is TALLER than the block — models a short block sitting in a
+     * column_list whose row height is set by a taller sibling column. Builds the
+     * real nesting (columns > column holder > [data-blok-column] > block) so the
+     * first/last-column edge gating resolves; a lone column is both first AND
+     * last. Returns the container.
      */
     const wrapInColumns = (block: Block, top: number, bottom: number): HTMLElement => {
       const columns = document.createElement('div');
       columns.setAttribute('data-blok-columns', '');
-      columns.appendChild(block.holder);
+
+      const columnHolder = document.createElement('div');
+      columnHolder.setAttribute(DATA_ATTR.element, 'block');
+      const wrapper = document.createElement('div');
+      wrapper.setAttribute('data-blok-column', '');
+      wrapper.appendChild(block.holder);
+      columnHolder.appendChild(wrapper);
+      columns.appendChild(columnHolder);
 
       vi.spyOn(columns, 'getBoundingClientRect').mockReturnValue({
         top, bottom, left: 300, right: 900, width: 600, height: bottom - top, x: 300, y: top, toJSON: () => ({}),
@@ -1627,7 +1637,7 @@ describe('DropTargetDetector', () => {
       return { columns, resizer };
     };
 
-    it('collapses an internal column boundary to ONE anchor (both sides of the gutter target the right column)', () => {
+    it('inner column edges fall through to into-column; only the row outer edges side-drop', () => {
       const source = createSideTestBlock({ id: 'source' });
       const leftColumn = createSideTestBlock({ id: 'col-left', name: 'column' });
       const leftChild = createSideTestBlock({ id: 'left-child', parentId: 'col-left' });
@@ -1652,25 +1662,33 @@ describe('DropTargetDetector', () => {
       const innerRight = document.createElement('div');
       rightChild.holder.appendChild(innerRight);
 
-      // A RIGHT side-drop on the left column and a LEFT side-drop on the right
-      // column are the same insertion (between the two). Both must resolve to the
-      // SAME anchor — the right column's child, 'left' edge — so the indicator
-      // doesn't flicker across the gutter as the cursor crosses it.
-      const fromLeftColumn = det.determineDropTarget(innerLeft, 480, 150, source);
-      const fromRightColumn = det.determineDropTarget(innerRight, 580, 150, source);
+      // The INNER edges between the two columns NO LONGER side-drop — they fall
+      // through to a top/bottom reorder (stack INTO the column). Between-column
+      // insertion is the gutter separator's job, so the indicator never flips to
+      // a vertical "new column" bar as the cursor crosses a column body edge.
+      const leftInnerEdge = det.determineDropTarget(innerLeft, 480, 150, source);
+      expect(['top', 'bottom']).toContain(leftInnerEdge?.edge);
 
-      expect(fromLeftColumn?.edge).toBe('left');
-      expect(fromLeftColumn?.block).toBe(rightChild);
-      expect(fromLeftColumn?.parentId).toBe('col-right');
+      const rightInnerEdge = det.determineDropTarget(innerRight, 580, 150, source);
+      expect(['top', 'bottom']).toContain(rightInnerEdge?.edge);
 
-      expect(fromRightColumn?.edge).toBe('left');
-      expect(fromRightColumn?.block).toBe(rightChild);
-      expect(fromRightColumn?.parentId).toBe('col-right');
+      // The OUTER edges DO side-drop: the first column's left edge appends a
+      // column at the start...
+      const firstOuter = det.determineDropTarget(innerLeft, 320, 150, source);
+      expect(firstOuter?.edge).toBe('left');
+      expect(firstOuter?.block).toBe(leftChild);
+      expect(firstOuter?.parentId).toBe('col-left');
+
+      // ...and the last column's right edge appends one at the end.
+      const lastOuter = det.determineDropTarget(innerRight, 740, 150, source);
+      expect(lastOuter?.edge).toBe('right');
+      expect(lastOuter?.block).toBe(rightChild);
+      expect(lastOuter?.parentId).toBe('col-right');
 
       document.body.removeChild(columns);
     });
 
-    it('keeps a right side-drop on the LAST column as-is (no right neighbor to collapse to)', () => {
+    it('keeps a right side-drop on the LAST column as-is (outer edge appends a column at the end)', () => {
       const source = createSideTestBlock({ id: 'source' });
       const leftColumn = createSideTestBlock({ id: 'col-left', name: 'column' });
       const leftChild = createSideTestBlock({ id: 'left-child', parentId: 'col-left' });
@@ -1690,8 +1708,7 @@ describe('DropTargetDetector', () => {
       const innerRight = document.createElement('div');
       rightChild.holder.appendChild(innerRight);
 
-      // Right edge of the last column → append a column at the end. No neighbor to
-      // collapse to, so it stays a 'right' drop on the last column.
+      // Right edge of the last column → append a column at the end (outer edge).
       const result = det.determineDropTarget(innerRight, 740, 150, source);
 
       expect(result?.edge).toBe('right');

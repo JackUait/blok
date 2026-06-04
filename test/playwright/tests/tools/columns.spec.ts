@@ -598,7 +598,7 @@ test.describe('Columns tool', () => {
     expect(columnOrder[2]).toBe('c2');
   });
 
-  test('dropping at a column inner side-zone inserts a column between, not inside the column', async ({ page }) => {
+  test('dropping at a non-outer column edge stacks into that column (between-insertion is gutter-only)', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     await createBlok(page, {
       blocks: [
@@ -617,8 +617,11 @@ test.describe('Columns tool', () => {
     await expect(handle).toBeVisible();
     const sourceBox = await handle.boundingBox();
 
-    // Right edge of Col A's content box — the side-zone that should create a
-    // column between A and B (collapses to B's left edge).
+    // Right edge of Col A's content box — an INNER edge (between A and B). This is
+    // NOT an outer edge of the row, so it no longer creates a column; it stacks
+    // INTO Col A. A new column between A and B is reachable only via the gutter
+    // separator (covered by the gutter test). This removes the horizontal/vertical
+    // indicator flip the user reported as "two drop lines".
     const aContent = await page.getByTestId('block-wrapper').filter({ hasText: 'Col A' }).last()
       .locator('[data-blok-element-content]').first().boundingBox();
 
@@ -643,13 +646,13 @@ test.describe('Columns tool', () => {
     const columnOrder = saved.blocks.filter(b => b.type === 'column').map(b => b.id);
     const descParent = saved.blocks.find(b => b.id === 'desc')?.parent;
 
-    // A NEW column was created between A and B; the source is its child — NOT a
-    // second block dumped inside column A.
-    expect(columnOrder).toHaveLength(3);
-    expect(descParent).toBe(columnOrder[1]);
-    expect(descParent).not.toBe('c1');
-    expect(columnOrder[0]).toBe('c1');
-    expect(columnOrder[2]).toBe('c2');
+    // NO new column — still exactly two; the source stacked INTO column A (c1).
+    expect(columnOrder).toEqual(['c1', 'c2']);
+    expect(descParent).toBe('c1');
+
+    // LIVE DOM: "Description root" is mounted inside the FIRST column (index 0).
+    const membership = await domColumnMembership(page);
+    expect(membership['Description root']).toBe(0);
   });
 
   test('centers the between-columns drop indicator in the gutter (on the separator)', async ({ page }) => {
@@ -713,7 +716,7 @@ test.describe('Columns tool', () => {
     expect(Math.abs((barCenter ?? 0) - gutterCenter)).toBeLessThan(6);
   });
 
-  test('the gutter drop indicator stays on ONE anchor as the cursor crosses the gutter (no flicker)', async ({ page }) => {
+  test('the between-column indicator stays on ONE anchor while the cursor is on the gutter (no flicker)', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     await createBlok(page, {
       blocks: [
@@ -759,26 +762,28 @@ test.describe('Columns tool', () => {
     await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
     await page.mouse.down();
 
-    // Just LEFT of the gutter (in the left column's right zone).
-    await page.mouse.move(gutterBox.x - 6, midY, { steps: 10 });
+    // Near the LEFT side of the gutter (still on the resizer).
+    await page.mouse.move(gutterBox.x + 4, midY, { steps: 10 });
     await page.waitForFunction(
       () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') === 'true',
       { timeout: 2000 }
     );
-    const left = await sampleIndicator();
+    const nearLeft = await sampleIndicator();
 
-    // Just RIGHT of the gutter (in the right column's left zone).
-    await page.mouse.move(gutterBox.x + gutterBox.width + 6, midY, { steps: 10 });
-    const right = await sampleIndicator();
+    // Near the RIGHT side of the gutter (still on the resizer).
+    await page.mouse.move(gutterBox.x + gutterBox.width - 4, midY, { steps: 10 });
+    const nearRight = await sampleIndicator();
 
     await page.mouse.up();
 
-    // One indicator on each side, and the SAME anchor (same edge, same position
-    // within a px) — the blue line doesn't jump across the gutter.
-    expect(left.count).toBe(1);
-    expect(right.count).toBe(1);
-    expect(left.edge).toBe(right.edge);
-    expect(Math.abs((left.left ?? 0) - (right.left ?? 0))).toBeLessThan(2);
+    // While the cursor is on the gutter the between-column insertion is a single,
+    // stable vertical line: one indicator, same 'left' edge, same anchor position
+    // (within a px) — the line doesn't jump as the cursor moves across the gutter.
+    expect(nearLeft.count).toBe(1);
+    expect(nearRight.count).toBe(1);
+    expect(nearLeft.edge).toBe('left');
+    expect(nearRight.edge).toBe('left');
+    expect(Math.abs((nearLeft.left ?? 0) - (nearRight.left ?? 0))).toBeLessThan(2);
   });
 
   test('hides the resize handle during a block drag so only ONE indicator shows in the gutter', async ({ page }) => {

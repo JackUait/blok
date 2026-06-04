@@ -11,9 +11,28 @@ import {
 } from '../columns-shared';
 import { mountChildBlocks } from '../nested-blocks';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
-import { IconColumns } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
 import type { ColumnListData } from './types';
+
+/**
+ * Build a toolbox icon for a column preset: one rounded frame split by
+ * `count - 1` evenly spaced dividers, so it reads as a container holding
+ * exactly `count` columns and keeps a constant stroke weight at any count
+ * (avoids the cramped barcode look of N separate bars).
+ */
+function columnsIcon(count: number): string {
+  const x = 3;
+  const y = 4;
+  const w = 18;
+  const h = 16;
+  const step = w / count;
+  const dividers = Array.from({ length: count - 1 }, (_, i) => {
+    const dx = +(x + step * (i + 1)).toFixed(2);
+    return `<line x1="${dx}" y1="${y}" x2="${dx}" y2="${y + h}"/>`;
+  }).join('');
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2"/>${dividers}</svg>`;
+}
 
 /**
  * ColumnList block — horizontal container that hosts column children.
@@ -126,25 +145,18 @@ export class ColumnList implements BlockTool {
 
   public static get toolbox(): ToolboxConfig {
     const base = {
-      icon: IconColumns,
       searchTerms: ['columns', 'cols', 'layout', 'grid'],
       searchTermKeys: ['columns', 'layout'],
     };
 
-    return [
-      {
-        ...base,
-        titleKey: 'columns',
-        name: 'column_list',
-      },
-      ...[2, 3, 4, 5].map(count => ({
-        ...base,
-        titleKey: `tools.columns.col${count}`,
-        name: `column_list-${count}`,
-        data: { columnCount: count },
-        searchTerms: [...base.searchTerms, `${count}c`, `c${count}`],
-      })),
-    ];
+    return [2, 3, 4, 5].map(count => ({
+      ...base,
+      icon: columnsIcon(count),
+      titleKey: `tools.columns.col${count}`,
+      name: `column_list-${count}`,
+      data: { columnCount: count },
+      searchTerms: [...base.searchTerms, `${count}c`, `c${count}`],
+    }));
   }
 
   public static get isReadOnlySupported(): boolean {

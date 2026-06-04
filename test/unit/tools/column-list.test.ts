@@ -231,37 +231,42 @@ describe('ColumnList tool', () => {
     expect(resizer).toHaveAttribute('aria-orientation', 'vertical');
   });
 
-  it('exposes a generic Columns preset plus the 2–5 column presets', () => {
+  it('exposes only the 2–5 column presets — no generic Columns entry', () => {
     const toolbox = ColumnList.toolbox;
     const entries = Array.isArray(toolbox) ? toolbox : [toolbox];
 
-    // Generic "Columns" entry + four count presets (2,3,4,5).
-    expect(entries).toHaveLength(5);
+    // Four count presets only (2,3,4,5); the generic "Columns" entry is removed.
+    expect(entries).toHaveLength(4);
 
-    // The generic entry is named exactly "column_list" and carries no columnCount.
-    const generic = entries.find(e => e.name === 'column_list');
+    // No bare "column_list" entry remains.
+    expect(entries.find(e => e.name === 'column_list')).toBeUndefined();
 
-    expect(generic).toBeDefined();
-    expect((generic?.data as { columnCount?: number } | undefined)?.columnCount).toBeUndefined();
-
-    // The count presets are column_list-2 … column_list-5 with matching data.
+    // Every preset is column_list-2 … column_list-5 with matching columnCount.
     const counts = entries
-      .filter(e => e.name !== 'column_list')
       .map(e => (e.data as { columnCount?: number } | undefined)?.columnCount)
       .sort((a, b) => (a ?? 0) - (b ?? 0));
 
     expect(counts).toEqual([2, 3, 4, 5]);
   });
 
-  it('uses the shared static columns icon for every preset (no inline per-count SVG)', () => {
+  it('renders an icon that depicts the column count for each preset', () => {
     const toolbox = ColumnList.toolbox;
     const entries = Array.isArray(toolbox) ? toolbox : [toolbox];
 
-    // All presets share one icon sourced from the icons layer — the icon does
-    // not vary per count (which would mean an inline-generated SVG in the tool).
+    // Each icon is a single rounded frame split by `count - 1` internal
+    // dividers, so it reads as a columns container holding exactly `count`
+    // columns — and icons differ per count.
+    entries.forEach(e => {
+      const count = (e.data as { columnCount?: number }).columnCount as number;
+      const svg = e.icon ?? '';
+      const frameCount = (svg.match(/<rect/g) ?? []).length;
+      const dividerCount = (svg.match(/<line/g) ?? []).length;
+      expect(frameCount).toBe(1);
+      expect(dividerCount).toBe(count - 1);
+    });
+
     const icons = entries.map(e => e.icon);
 
-    icons.forEach(icon => expect(typeof icon).toBe('string'));
-    expect(new Set(icons).size).toBe(1);
+    expect(new Set(icons).size).toBe(entries.length);
   });
 });

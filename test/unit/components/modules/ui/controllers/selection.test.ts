@@ -160,8 +160,13 @@ describe('SelectionController', () => {
 
       (controller as unknown as { enable: () => void }).enable();
 
-      blok.InlineToolbar.opened = false;
-      (blok.InlineToolbar as { hasNestedPopoverOpen: boolean }).hasNestedPopoverOpen = false;
+      const inlineToolbar = blok.InlineToolbar as {
+        opened: boolean;
+        hasNestedPopoverOpen: boolean;
+      };
+
+      inlineToolbar.opened = false;
+      inlineToolbar.hasNestedPopoverOpen = false;
 
       vi.spyOn(Selection, 'anchorElement', 'get').mockReturnValue(blockContent);
       vi.spyOn(Selection, 'get').mockReturnValue({

@@ -7,9 +7,7 @@ import type {
 import {
   COLUMNS_ATTR,
   COLUMN_TOOL,
-  COLUMN_RESIZER_ATTR,
-  COLUMN_MIN_WIDTH,
-  resizeColumnGrow,
+  buildColumnResizers,
 } from '../columns-shared';
 import { mountChildBlocks } from '../nested-blocks';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
@@ -69,7 +67,7 @@ export class ColumnList implements BlockTool {
     }
 
     mountChildBlocks(this.container, children);
-    this.buildResizers(children.map(child => child.holder));
+    buildColumnResizers(this.container, children.map(child => child.holder), this.readOnly);
   }
 
   private seedColumns(): void {
@@ -115,102 +113,7 @@ export class ColumnList implements BlockTool {
       this.api.caret.setToBlock(firstChild.id, 'start');
     }
 
-    this.buildResizers(columns.map(column => column.holder));
-  }
-
-  /**
-   * Place a drag-to-resize separator between each adjacent pair of column
-   * holders. Rebuilt from scratch so repeated renders never stack duplicates.
-   * Skipped in read-only mode — columns are not resizable there.
-   */
-  private buildResizers(holders: HTMLElement[]): void {
-    const container = this.container;
-
-    if (container === null || this.readOnly) {
-      return;
-    }
-
-    container
-      .querySelectorAll(`[${COLUMN_RESIZER_ATTR}]`)
-      .forEach(resizer => resizer.remove());
-
-    holders.slice(1).forEach((rightHolder, index) => {
-      const leftHolder = holders[index];
-      const resizer = this.createResizer(leftHolder, rightHolder);
-
-      container.insertBefore(resizer, rightHolder);
-    });
-  }
-
-  private createResizer(leftHolder: HTMLElement, rightHolder: HTMLElement): HTMLElement {
-    const resizer = document.createElement('div');
-
-    resizer.setAttribute(COLUMN_RESIZER_ATTR, '');
-    resizer.setAttribute('data-blok-testid', 'column-resizer');
-    resizer.setAttribute('role', 'separator');
-    resizer.setAttribute('aria-orientation', 'vertical');
-
-    resizer.addEventListener('pointerdown', event => {
-      this.startResize(event, resizer, leftHolder, rightHolder);
-    });
-
-    return resizer;
-  }
-
-  /**
-   * Drag handler: redistribute flex-grow between the two neighbouring columns
-   * as the separator moves. Pointer capture keeps the move/up events flowing to
-   * the resizer even when the cursor leaves it. The holder's flex-grow is the
-   * persisted source of truth, so no api.blocks.update is needed.
-   */
-  private startResize(
-    event: PointerEvent,
-    resizer: HTMLElement,
-    leftHolder: HTMLElement,
-    rightHolder: HTMLElement
-  ): void {
-    if (event.button !== 0) {
-      return;
-    }
-
-    event.preventDefault();
-
-    // Alias the holders to locals so the move handler mutates their flex-grow
-    // without tripping no-param-reassign on the parameters.
-    const leftEl = leftHolder;
-    const rightEl = rightHolder;
-    const startX = event.clientX;
-    const leftWidth = leftEl.getBoundingClientRect().width;
-    const rightWidth = rightEl.getBoundingClientRect().width;
-    const leftGrow = Number(leftEl.style.flexGrow) || 1;
-    const rightGrow = Number(rightEl.style.flexGrow) || 1;
-
-    resizer.setPointerCapture(event.pointerId);
-    resizer.setAttribute('data-dragging', '');
-
-    const onMove = (moveEvent: PointerEvent): void => {
-      const next = resizeColumnGrow({
-        leftWidth,
-        rightWidth,
-        leftGrow,
-        rightGrow,
-        delta: moveEvent.clientX - startX,
-        minWidth: COLUMN_MIN_WIDTH,
-      });
-
-      leftEl.style.flexGrow = String(next.leftGrow);
-      rightEl.style.flexGrow = String(next.rightGrow);
-    };
-
-    const onUp = (upEvent: PointerEvent): void => {
-      resizer.releasePointerCapture(upEvent.pointerId);
-      resizer.removeAttribute('data-dragging');
-      resizer.removeEventListener('pointermove', onMove);
-      resizer.removeEventListener('pointerup', onUp);
-    };
-
-    resizer.addEventListener('pointermove', onMove);
-    resizer.addEventListener('pointerup', onUp);
+    buildColumnResizers(container, columns.map(column => column.holder), this.readOnly);
   }
 
   public save(): ColumnListData {

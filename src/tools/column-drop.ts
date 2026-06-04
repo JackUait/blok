@@ -1,5 +1,27 @@
 import type { API } from '../../types';
-import { COLUMN_LIST_TOOL, COLUMN_TOOL, resetColumnsToEvenWidth } from './columns-shared';
+import {
+  COLUMNS_ATTR,
+  COLUMN_LIST_TOOL,
+  COLUMN_TOOL,
+  buildColumnResizers,
+  resetColumnsToEvenWidth,
+} from './columns-shared';
+
+/**
+ * Rebuild the resize separators of an already-rendered column_list. The list's
+ * rendered() hook fires only once, so adding a column to a live list never
+ * re-triggers it — the separators must be rebuilt here or the new column lands
+ * without a handle. The columns row is the element carrying COLUMNS_ATTR; reach
+ * it from any child column holder.
+ */
+const rebuildColumnResizers = (api: API, columnListId: string): void => {
+  const holders = api.blocks.getChildren(columnListId).map(column => column.holder);
+  const container = holders[0]?.closest(`[${COLUMNS_ATTR}]`);
+
+  if (container instanceof HTMLElement) {
+    buildColumnResizers(container, holders, api.readOnly.isEnabled);
+  }
+};
 
 export type ColumnDropSide = 'left' | 'right';
 
@@ -152,6 +174,10 @@ export const addColumnToList = (
     // A column was added, so the row re-splits evenly — the only non-resize
     // case where widths recalculate.
     resetColumnsToEvenWidth(api, columnListId);
+
+    // The list was already rendered, so its rendered() hook won't fire again to
+    // build a separator for the new column — rebuild the full N-1 set here.
+    rebuildColumnResizers(api, columnListId);
   });
 
   return created.columnId;

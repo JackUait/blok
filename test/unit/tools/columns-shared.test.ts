@@ -65,9 +65,11 @@ describe('unwrapColumnListIfCollapsed', () => {
     const getBlockIndex = vi.fn().mockImplementation((id: string) => indexById[id]);
     const setBlockParent = vi.fn();
     const remove = vi.fn().mockResolvedValue(undefined);
+    // Top-level list: its own parent is root → survivors promote to null.
+    const getById = vi.fn().mockReturnValue({ parentId: null });
 
     const api = {
-      blocks: { getChildren, getBlockIndex, setBlockParent, delete: remove },
+      blocks: { getChildren, getBlockIndex, getById, setBlockParent, delete: remove },
     } as unknown as API;
 
     const didUnwrap = await unwrapColumnListIfCollapsed(api, 'cl-1');
@@ -80,10 +82,61 @@ describe('unwrapColumnListIfCollapsed', () => {
     expect(setBlockParent).toHaveBeenCalledWith('colA', null);
     // exactly two reparents: the child, then the surviving column
     expect(setBlockParent).toHaveBeenCalledTimes(2);
-    // both wrappers deleted by index, column FIRST then list (order matters:
-    // deleting the column shifts the list's index, which is why it's re-read)
+    // both wrappers deleted by id-resolved index, column FIRST then list (order
+    // matters: deleting the column shifts the list's index, which is re-read)
     expect(remove).toHaveBeenNthCalledWith(1, 8);
     expect(remove).toHaveBeenNthCalledWith(2, 7);
+  });
+
+  it('promotes survivors into the ENCLOSING column when the collapsing list is nested', async () => {
+    // A nested column_list (cl-1) lives inside an outer column "outerCol". When
+    // it collapses, its surviving child must be promoted into outerCol, NOT to
+    // the document root.
+    const survivingChild = { id: 'np1' };
+    const getChildren = vi.fn()
+      .mockReturnValueOnce([{ id: 'ncolA' }])  // nested list has 1 column left
+      .mockReturnValueOnce([survivingChild]);  // that column's child
+    const indexById: Record<string, number> = { ncolA: 5, 'cl-1': 4 };
+    const getBlockIndex = vi.fn().mockImplementation((id: string) => indexById[id]);
+    const setBlockParent = vi.fn();
+    const remove = vi.fn().mockResolvedValue(undefined);
+    // The nested list's own parent is the enclosing outer column.
+    const getById = vi.fn().mockReturnValue({ parentId: 'outerCol' });
+
+    const api = {
+      blocks: { getChildren, getBlockIndex, getById, setBlockParent, delete: remove },
+    } as unknown as API;
+
+    await unwrapColumnListIfCollapsed(api, 'cl-1');
+
+    // Survivor goes into the enclosing column, not root.
+    expect(setBlockParent).toHaveBeenCalledWith('np1', 'outerCol');
+    // The surviving column itself is still detached to root before deletion.
+    expect(setBlockParent).toHaveBeenCalledWith('ncolA', null);
+  });
+
+  it('re-resolves the list index by id AFTER the column delete (delete-by-id, not stale index)', async () => {
+    // Deleting the column shifts the flat array, so the list's index must be
+    // read again from its id — a stale captured index would target a sibling.
+    const getChildren = vi.fn()
+      .mockReturnValueOnce([{ id: 'colA' }])
+      .mockReturnValueOnce([{ id: 'p1' }]);
+    const setBlockParent = vi.fn();
+    const remove = vi.fn().mockResolvedValue(undefined);
+    const getById = vi.fn().mockReturnValue({ parentId: null });
+    // colA initially at 8; after it is deleted the list shifts from 7 → 6.
+    const getBlockIndex = vi.fn()
+      .mockReturnValueOnce(8)  // colA
+      .mockReturnValueOnce(6); // cl-1, re-read post column delete
+
+    const api = {
+      blocks: { getChildren, getBlockIndex, getById, setBlockParent, delete: remove },
+    } as unknown as API;
+
+    await unwrapColumnListIfCollapsed(api, 'cl-1');
+
+    expect(remove).toHaveBeenNthCalledWith(1, 8);
+    expect(remove).toHaveBeenNthCalledWith(2, 6);
   });
 
   it('excludes the being-removed block from the column count (excludeId)', async () => {
@@ -98,8 +151,9 @@ describe('unwrapColumnListIfCollapsed', () => {
     const getBlockIndex = vi.fn().mockImplementation((id: string) => indexById[id]);
     const setBlockParent = vi.fn();
     const remove = vi.fn().mockResolvedValue(undefined);
+    const getById = vi.fn().mockReturnValue({ parentId: null });
     const api = {
-      blocks: { getChildren, getBlockIndex, setBlockParent, delete: remove },
+      blocks: { getChildren, getBlockIndex, getById, setBlockParent, delete: remove },
     } as unknown as API;
 
     const didUnwrap = await unwrapColumnListIfCollapsed(api, 'cl-1', 'colB');

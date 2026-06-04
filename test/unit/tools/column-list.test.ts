@@ -231,17 +231,37 @@ describe('ColumnList tool', () => {
     expect(resizer).toHaveAttribute('aria-orientation', 'vertical');
   });
 
-  it('exposes toolbox presets for 2–5 columns with columnCount data overrides', () => {
+  it('exposes a generic Columns preset plus the 2–5 column presets', () => {
     const toolbox = ColumnList.toolbox;
     const entries = Array.isArray(toolbox) ? toolbox : [toolbox];
 
-    // One generic entry + four presets (2,3,4,5)
+    // Generic "Columns" entry + four count presets (2,3,4,5).
+    expect(entries).toHaveLength(5);
+
+    // The generic entry is named exactly "column_list" and carries no columnCount.
+    const generic = entries.find(e => e.name === 'column_list');
+
+    expect(generic).toBeDefined();
+    expect((generic?.data as { columnCount?: number } | undefined)?.columnCount).toBeUndefined();
+
+    // The count presets are column_list-2 … column_list-5 with matching data.
     const counts = entries
+      .filter(e => e.name !== 'column_list')
       .map(e => (e.data as { columnCount?: number } | undefined)?.columnCount)
-      .filter((c): c is number => typeof c === 'number')
-      .sort((a, b) => a - b);
+      .sort((a, b) => (a ?? 0) - (b ?? 0));
 
     expect(counts).toEqual([2, 3, 4, 5]);
-    entries.forEach(e => expect(typeof e.icon).toBe('string'));
+  });
+
+  it('uses the shared static columns icon for every preset (no inline per-count SVG)', () => {
+    const toolbox = ColumnList.toolbox;
+    const entries = Array.isArray(toolbox) ? toolbox : [toolbox];
+
+    // All presets share one icon sourced from the icons layer — the icon does
+    // not vary per count (which would mean an inline-generated SVG in the tool).
+    const icons = entries.map(e => e.icon);
+
+    icons.forEach(icon => expect(typeof icon).toBe('string'));
+    expect(new Set(icons).size).toBe(1);
   });
 });

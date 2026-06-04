@@ -2268,4 +2268,85 @@ describe("DragManager - Component Integration", () => {
       expect(outsideWrites).toEqual([]);
     });
   });
+
+  describe("column side-drop reparents only top-level dragged blocks", () => {
+    /**
+     * Regression: side-dropping a container (callout) beside a block must wrap
+     * BOTH into columns while the callout carries its subtree along. The drag
+     * system includes the container's descendants in sourceBlocks so they move
+     * together — but handleColumnDrop must NOT reparent a descendant directly
+     * into the new column (that strands the child under the column instead of
+     * the callout). Only the top-level dragged block goes into the column; its
+     * children ride along by tracking their unchanged parent.
+     */
+    it("does not reparent a dragged callout's child into the new column (child rides along)", () => {
+      const para = createBlockStub({ id: "p1", name: "paragraph", parentId: null });
+      const callout = createBlockStub({
+        id: "callout1",
+        name: "callout",
+        parentId: null,
+        contentIds: ["callout1-child"],
+      });
+      const child = createBlockStub({
+        id: "callout1-child",
+        name: "paragraph",
+        parentId: "callout1",
+      });
+
+      const allBlocks = [para, callout, child];
+
+      const setBlockParent = vi.fn();
+      const insert = vi.fn((type: string) => ({
+        id: `${type}-new-${insert.mock.calls.length}`,
+        holder: document.createElement("div"),
+      }));
+      const getById = vi.fn((id: string) => {
+        const b = allBlocks.find((blk) => blk.id === id);
+
+        return b ? { id: b.id, parentId: b.parentId } : null;
+      });
+      const getBlockIndex = vi.fn((id: string) => {
+        const idx = allBlocks.findIndex((blk) => blk.id === id);
+
+        return idx === -1 ? undefined : idx;
+      });
+
+      const apiBlocks = {
+        insert,
+        setBlockParent,
+        getById,
+        getBlockIndex,
+        getChildren: vi.fn(() => []),
+        transact: vi.fn((fn: () => void) => fn()),
+      };
+
+      const { dragManager } = createDragManager({
+        API: { methods: { blocks: apiBlocks } } as unknown as BlokModules["API"],
+      });
+
+      // The drag system supplies sourceBlocks = [callout, child] (descendant
+      // included). Invoke the private side-drop handler directly.
+      (
+        dragManager as unknown as {
+          handleColumnDrop: (
+            sourceBlock: Block,
+            sourceBlocks: Block[],
+            targetBlock: Block,
+            edge: "left" | "right",
+            targetParentId: string | null,
+          ) => void;
+        }
+      ).handleColumnDrop(callout, [callout, child], para, "right", null);
+
+      // The callout (top-level) is reparented into one of the two new columns.
+      const calloutReparent = setBlockParent.mock.calls.find((c) => c[0] === "callout1");
+
+      expect(calloutReparent).toBeDefined();
+
+      // The child is NEVER reparented — it stays under the callout, riding along.
+      const childReparent = setBlockParent.mock.calls.find((c) => c[0] === "callout1-child");
+
+      expect(childReparent).toBeUndefined();
+    });
+  });
 });

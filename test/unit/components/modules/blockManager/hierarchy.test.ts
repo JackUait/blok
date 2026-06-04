@@ -1057,5 +1057,157 @@ describe('BlockHierarchy', () => {
       expect(externalWrapper.contains(child.holder)).toBe(true);
       expect(plainParent.holder.contains(child.holder)).toBe(false);
     });
+
+    /**
+     * Enter/split-in-column strand regression.
+     *
+     * Pressing Enter inside a column inserts the new block via the split path,
+     * which anchors its holder 'beforebegin' the SIBLING column in the
+     * column_list's flex row (the [data-blok-columns] container). The new
+     * block's model parent is the column, but its holder is stranded directly
+     * in the columns row — it renders as a rogue extra column.
+     *
+     * setBlockParent(newBlock, column) must pull the stranded holder DOWN into
+     * the target column's [data-blok-nested-blocks] container. The columns row
+     * is itself a nested-blocks container, so the anti-stealing guard must not
+     * mistake it for a legitimate claim: a holder sitting in the row whose
+     * destination is a real column child container was never claimed.
+     */
+    it('relocates a holder stranded in the [data-blok-columns] row into the target column container', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'cl', parentId: null, contentIds: ['c1', 'c2'] },
+        { id: 'c1', parentId: 'cl', contentIds: ['p1'] },
+        { id: 'p1', parentId: 'c1', contentIds: [] },
+        { id: 'new', parentId: null, contentIds: [] },
+        { id: 'c2', parentId: 'cl', contentIds: ['c2p1'] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const cl = requireBlock('cl');
+      const c1 = requireBlock('c1');
+      const p1 = requireBlock('p1');
+      const newBlock = requireBlock('new');
+      const c2 = requireBlock('c2');
+
+      const workingArea = document.createElement('div');
+      // column_list holder > [data-blok-columns][data-blok-nested-blocks] row
+      const columnsRow = document.createElement('div');
+      columnsRow.setAttribute('data-blok-columns', '');
+      columnsRow.setAttribute('data-blok-nested-blocks', '');
+      cl.holder.appendChild(columnsRow);
+
+      const buildColumn = (col: Block): HTMLElement => {
+        const wrapper = document.createElement('div');
+        wrapper.setAttribute('data-blok-column', '');
+        const container = document.createElement('div');
+        container.setAttribute('data-blok-nested-blocks', '');
+        wrapper.appendChild(container);
+        col.holder.appendChild(wrapper);
+        columnsRow.appendChild(col.holder);
+
+        return container;
+      };
+
+      const c1Container = buildColumn(c1);
+      buildColumn(c2);
+
+      c1Container.appendChild(p1.holder);
+
+      // The Enter strand: the new holder lands in the columns row, before c2.
+      columnsRow.insertBefore(newBlock.holder, c2.holder);
+      workingArea.appendChild(cl.holder);
+
+      // Model says the new block belongs to the first column.
+      newBlock.parentId = null;
+      hierarchy.setBlockParent(newBlock, 'c1');
+
+      // Holder is pulled into c1's container, no longer stranded in the row.
+      expect(c1Container.contains(newBlock.holder)).toBe(true);
+      expect(newBlock.holder.parentElement).not.toBe(columnsRow);
+    });
+
+    /**
+     * Toggle-child-rides-along regression (toggle dragged between columns).
+     *
+     * When a toggle is moved (e.g. dragged from one column to another), its
+     * child is moved as part of the same subtree and DragController re-asserts
+     * the child's parent via setBlockParent(child, sameToggle) purely to fix
+     * DOM placement. Because the parent is UNCHANGED, the child is merely
+     * following its relocated parent — it must stay nested inside the toggle's
+     * [data-blok-toggle-children] container.
+     *
+     * Before the fix, the oldContainer reorder branch fired whenever the holder
+     * sat in a toggle-children container, yanking the child OUT to root even
+     * though it still belongs to the toggle. Guard: only relocate out when the
+     * block is actually LEAVING its toggle parent.
+     */
+    it('keeps a toggle child nested in its toggle when the toggle is moved between columns (child rides along)', () => {
+      // Mirrors DragController dragging a toggle (with a child) from the left
+      // column to the right one: moveBlocks reorders the flat array, then the
+      // controller reparents the dragged toggle (toggle -> c2) and re-asserts
+      // the child's SAME parent (tc -> toggle) purely to fix DOM placement.
+      repository = createRepositoryWithBlocks([
+        { id: 'cl', parentId: null, contentIds: ['c1', 'c2'] },
+        { id: 'c1', parentId: 'cl', contentIds: [] },
+        { id: 'c2', parentId: 'cl', contentIds: ['anchor'] },
+        { id: 'anchor', parentId: 'c2', contentIds: [] },
+        { id: 'toggle', parentId: 'c1', contentIds: ['tc'] },
+        { id: 'tc', parentId: 'toggle', contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const cl = requireBlock('cl');
+      const c1 = requireBlock('c1');
+      const c2 = requireBlock('c2');
+      const anchor = requireBlock('anchor');
+      const toggle = requireBlock('toggle');
+      const tc = requireBlock('tc');
+
+      const workingArea = document.createElement('div');
+      const columnsRow = document.createElement('div');
+      columnsRow.setAttribute('data-blok-columns', '');
+      columnsRow.setAttribute('data-blok-nested-blocks', '');
+      cl.holder.appendChild(columnsRow);
+
+      const buildColumn = (col: Block): HTMLElement => {
+        const wrapper = document.createElement('div');
+        wrapper.setAttribute('data-blok-column', '');
+        const container = document.createElement('div');
+        container.setAttribute('data-blok-nested-blocks', '');
+        wrapper.appendChild(container);
+        col.holder.appendChild(wrapper);
+        columnsRow.appendChild(col.holder);
+
+        return container;
+      };
+
+      const c1Container = buildColumn(c1);
+      const c2Container = buildColumn(c2);
+
+      c2Container.appendChild(anchor.holder);
+
+      // toggle (with its toggle-children container) starts in the left column;
+      // its child holder lives inside the toggle-children container.
+      const toggleContainer = document.createElement('div');
+      toggleContainer.setAttribute('data-blok-toggle-children', '');
+      toggleContainer.setAttribute('data-blok-nested-blocks', '');
+      toggle.holder.appendChild(toggleContainer);
+      toggleContainer.appendChild(tc.holder);
+      c1Container.appendChild(toggle.holder);
+
+      workingArea.appendChild(cl.holder);
+
+      // DragController order: reparent the dragged toggle to the right column,
+      // then re-assert the child's unchanged parent to fix its DOM placement.
+      hierarchy.setBlockParent(toggle, 'c2');
+      hierarchy.setBlockParent(tc, 'toggle');
+
+      // The child must NOT be yanked out into the column container — it stays
+      // nested inside the toggle, which now lives in the right column.
+      expect(toggleContainer.contains(tc.holder)).toBe(true);
+      expect(tc.holder.parentElement).toBe(toggleContainer);
+      expect(c2Container.contains(toggle.holder)).toBe(true);
+      expect(tc.parentId).toBe('toggle');
+    });
   });
 });

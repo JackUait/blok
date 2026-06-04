@@ -212,7 +212,18 @@ export class BlockHierarchy {
     // If old parent had a toggle child container and this block was in it, move it to the
     // position indicated by the flat array. moveBlocks() updates the flat array before
     // setBlockParent() is called, so getBlockIndex() reflects the intended drop position.
-    const oldContainer = oldParent !== undefined ? oldParent.holder.querySelector('[data-blok-toggle-children]') : null;
+    //
+    // Guard: only relocate the holder OUT of the toggle when the block is actually
+    // LEAVING its toggle parent (new parent differs from the old one). When the
+    // parent is unchanged the block is merely following its own relocated parent —
+    // e.g. a toggle dragged between columns carries its child along, and
+    // DragController re-asserts the child's parent via setBlockParent(child, sameToggle)
+    // to fix DOM placement. Yanking it to root here would strand the child outside
+    // the toggle even though it still belongs to it (the toggle-child-rides-along bug).
+    const oldContainer =
+      oldParent !== undefined && sanitizedParentId !== oldParentId
+        ? oldParent.holder.querySelector('[data-blok-toggle-children]')
+        : null;
 
     if (oldContainer && block.holder.parentElement === oldContainer) {
       // Scan backwards in the flat array for the nearest block whose holder is at root
@@ -312,11 +323,22 @@ export class BlockHierarchy {
       // sibling instead of placing it beside it in the row.
       const isColumnsRow = (container: Element | null): boolean =>
         container?.matches('[data-blok-columns]') === true;
+      // A block whose model parent is a column but whose holder is currently
+      // stranded in the column_list's flex row (the columns row) must be
+      // relocated INTO the target column's child container. This is the
+      // Enter/split-in-column strand: the split insert anchors the new holder
+      // 'beforebegin' the sibling column in the row, so its nearest nested
+      // container resolves to the columns row, not a real column. Allow the
+      // move when the holder sits in the row and the destination is a genuine
+      // column child container — it was never legitimately "claimed" by the row.
+      const strandedInColumnsRow =
+        isColumnsRow(currentNestedContainer) && isColumnContainer(newContainer);
       const claimedByOtherContainer =
         currentNestedContainer !== null &&
         currentNestedContainer !== newContainer &&
         !(isColumnContainer(currentNestedContainer) && isColumnContainer(newContainer)) &&
-        !isColumnsRow(newContainer);
+        !isColumnsRow(newContainer) &&
+        !strandedInColumnsRow;
 
       if (newContainer && !claimedByOtherContainer) {
         const allBlocks = this.repository.blocks;

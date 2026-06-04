@@ -194,6 +194,8 @@ describe('Column tool', () => {
       blocks: {
         getChildren,
         getBlockIndex: vi.fn().mockImplementation((id: string) => indexById[id] ?? 0),
+        // Top-level list: its own parent is root, so survivors promote to null.
+        getById: vi.fn().mockReturnValue({ parentId: null }),
         setBlockParent,
         delete: remove,
         insertInsideParent: vi.fn(),

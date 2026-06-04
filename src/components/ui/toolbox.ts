@@ -1,4 +1,5 @@
 import { getRestrictedTools } from '../../tools/table/table-restrictions';
+import { COLUMN_LIST_TOOL, isInsideColumn, type BlockNode } from '../../tools/columns-shared';
 import { Dom } from '../dom';
 import { BlokMobileLayoutToggled } from '../events';
 import { SelectionUtils } from '../selection';
@@ -235,6 +236,13 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   private isInsideTableCell = false;
 
   /**
+   * Whether the toolbox was opened while the caret sits inside a column.
+   * A column_list cannot be nested inside a column, so its toolbox entry is
+   * hidden while open and restored on close.
+   */
+  private isInsideColumn = false;
+
+  /**
    * Whether the toolbox was opened in slash-search mode (via "/" key or existing slash paragraph).
    * When false (opened via plus button), the input filter uses the full block text as the query
    * instead of requiring a leading "/" and does not close on missing slash.
@@ -406,6 +414,17 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     }
 
     /**
+     * Hide the Columns (column_list) preset when the caret is inside a column —
+     * a nested column_list is not allowed and the model cannot safely remove it.
+     */
+    this.isInsideColumn = currentBlock !== undefined
+      && isInsideColumn(currentBlock.id, this.lookupBlockNode);
+
+    if (this.isInsideColumn) {
+      this.toggleColumnListHidden(true);
+    }
+
+    /**
      * Always anchor the popover to a rect derived from the current context,
      * never from the trigger element (plus button). The trigger rect is fragile:
      * it can be hidden, offscreen, misaligned with the caret in nested containers
@@ -471,6 +490,11 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     if (this.isInsideTableCell) {
       this.toggleRestrictedToolsHidden(false);
       this.isInsideTableCell = false;
+    }
+
+    if (this.isInsideColumn) {
+      this.toggleColumnListHidden(false);
+      this.isInsideColumn = false;
     }
 
     this.stopListeningToBlockInput();
@@ -568,6 +592,11 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       this.isInsideTableCell = false;
     }
 
+    if (this.isInsideColumn) {
+      this.toggleColumnListHidden(false);
+      this.isInsideColumn = false;
+    }
+
     this.stopListeningToBlockInput();
     this.opened = false;
     this.emit(ToolboxEvent.Closed);
@@ -602,6 +631,48 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       }
     }
   }
+
+  /**
+   * Toggle hidden state for EVERY column_list toolbox preset while the caret is
+   * inside a column. The ColumnList tool registers several entries with custom
+   * names (column_list, column_list-2 … column_list-5), so hiding by the bare
+   * tool name 'column_list' would leave the count presets visible — a nested
+   * column_list must be unreachable from any of them. Insertion is also
+   * hard-rejected in insertNewBlock as defense in depth.
+   */
+  private toggleColumnListHidden(isHidden: boolean): void {
+    const columnListTool = this.toolsToBeDisplayed.find(tool => tool.name === COLUMN_LIST_TOOL);
+    const toolboxEntries = columnListTool?.toolbox;
+
+    if (!toolboxEntries) {
+      return;
+    }
+
+    const entries = Array.isArray(toolboxEntries) ? toolboxEntries : [toolboxEntries];
+
+    for (const entry of entries) {
+      this.popover?.toggleItemHiddenByName(entry.name ?? COLUMN_LIST_TOOL, isHidden);
+    }
+  }
+
+  /**
+   * Resolves a block id to the structural node ({ name, parentId }) that
+   * isInsideColumn walks. Returns undefined when the block is not found so the
+   * parentId chain terminates cleanly.
+   * @param id - block id to look up
+   */
+  private lookupBlockNode = (id: string): BlockNode | undefined => {
+    const block = this.api.blocks.getById(id);
+
+    if (block === null) {
+      return undefined;
+    }
+
+    return {
+      name: block.name,
+      parentId: block.parentId,
+    };
+  };
 
   /**
    * Returns list of tools that enables the Toolbox (by specifying the 'toolbox' getter)
@@ -770,6 +841,15 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     const currentBlock = this.api.blocks.getBlockByIndex(currentBlockIndex);
 
     if (!currentBlock) {
+      return;
+    }
+
+    /**
+     * A column_list cannot be nested inside a column — reject the insert so a
+     * nested column_list can never be created (the model cannot safely remove
+     * it). Covers both the toolbox click and the keyboard shortcut paths.
+     */
+    if (toolName === COLUMN_LIST_TOOL && isInsideColumn(currentBlock.id, this.lookupBlockNode)) {
       return;
     }
 

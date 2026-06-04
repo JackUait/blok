@@ -518,6 +518,102 @@ test.describe('Columns tool', () => {
     expect(saved.blocks.find(b => b.id === 'fourth')?.parent).toBeDefined();
   });
 
+  test('drag-beside rebuilds a resize handle between every adjacent column pair', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['a'] },
+        { id: 'a', type: 'paragraph', data: { text: 'Col A' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['b'] },
+        { id: 'b', type: 'paragraph', data: { text: 'Col B' }, parent: 'c2' },
+        { id: 'third', type: 'paragraph', data: { text: 'Third' } },
+        { id: 'fourth', type: 'paragraph', data: { text: 'Fourth' } },
+      ],
+    });
+
+    const resizers = page.getByTestId('column-resizer');
+    const handle = page.locator(SETTINGS_BUTTON);
+
+    // Baseline: 2 columns -> 1 separator.
+    await expect(page.locator('[data-blok-column]')).toHaveCount(2);
+    await expect(resizers).toHaveCount(1);
+
+    // Add a THIRD column by dropping a root block on the right edge of Col B.
+    await page.getByTestId('block-wrapper').filter({ hasText: 'Third' }).hover();
+    await expect(handle).toBeVisible();
+    await performSideDrop(
+      page,
+      handle,
+      page.getByTestId('block-wrapper').filter({ hasText: 'Col B' }).last(),
+      'right'
+    );
+
+    await expect(page.locator('[data-blok-column]')).toHaveCount(3);
+    // REGRESSION: drag-beside reparents but never re-rendered the column_list,
+    // so the new column got NO separator. 3 columns must have 2 separators.
+    await expect(resizers).toHaveCount(2);
+
+    // Add a FOURTH column the same way.
+    await page.getByTestId('block-wrapper').filter({ hasText: 'Fourth' }).hover();
+    await expect(handle).toBeVisible();
+    await performSideDrop(
+      page,
+      handle,
+      page.getByTestId('block-wrapper').filter({ hasText: 'Third' }).last(),
+      'right'
+    );
+
+    await expect(page.locator('[data-blok-column]')).toHaveCount(4);
+    // 4 columns must have 3 separators, one between each adjacent pair.
+    await expect(resizers).toHaveCount(3);
+
+    // Every separator sits BETWEEN two column holders (never at an edge), so the
+    // row alternates column, resizer, column, resizer, ... A handle stranded at
+    // the start/end would mean a pairing bug.
+    const rowChildClasses = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('[data-blok-columns] > *')).map(el => {
+        if (el.hasAttribute('data-blok-column-resizer')) {
+          return 'resizer';
+        }
+
+        const isColumn = el.hasAttribute('data-blok-column') || el.querySelector('[data-blok-column]') !== null;
+
+        return isColumn ? 'column' : 'other';
+      })
+    );
+
+    expect(rowChildClasses).toEqual(['column', 'resizer', 'column', 'resizer', 'column', 'resizer', 'column']);
+  });
+
+  test('drag-beside that wraps two root blocks builds a resize handle between the pair', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'one', type: 'paragraph', data: { text: 'One' } },
+        { id: 'two', type: 'paragraph', data: { text: 'Two' } },
+      ],
+    });
+
+    const handle = page.locator(SETTINGS_BUTTON);
+
+    // Drop "Two" on the right edge of "One" to wrap both in a fresh column_list.
+    await page.getByTestId('block-wrapper').filter({ hasText: 'Two' }).hover();
+    await expect(handle).toBeVisible();
+    await performSideDrop(
+      page,
+      handle,
+      page.getByTestId('block-wrapper').filter({ hasText: 'One' }).last(),
+      'right'
+    );
+
+    await expect(page.locator('[data-blok-column]')).toHaveCount(2);
+    // REGRESSION: a from-scratch drag-beside wrap rendered the column_list before
+    // its columns existed (noSeed), so no separator was ever built. 2 columns
+    // must have 1 separator.
+    await expect(page.getByTestId('column-resizer')).toHaveCount(1);
+  });
+
   test('adding a column re-splits the row evenly even after a prior resize', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     await createBlok(page, {

@@ -593,9 +593,20 @@ export class DragController extends Module {
     const api = this.Blok.API.methods;
 
     // Sources are the dragged blocks in document order; never the target.
-    const sourceIds = (sourceBlocks.length > 0 ? sourceBlocks : [sourceBlock])
-      .map(block => block.id)
-      .filter(id => id !== targetBlock.id);
+    const dragged = (sourceBlocks.length > 0 ? sourceBlocks : [sourceBlock])
+      .filter(block => block.id !== targetBlock.id);
+    const draggedIds = new Set(dragged.map(block => block.id));
+
+    // Drop only the TOP-LEVEL dragged blocks into the new/added column. A
+    // container's descendants are included in sourceBlocks (e.g. a callout
+    // carries its child paragraph), but they must ride along with their parent —
+    // reparenting them directly into the column would steal them out of their
+    // container, stranding the grandchild under the column instead of the
+    // callout. Mirrors the previewBlocks filter and handleDropImpl's
+    // parentIsBeingMoved skip.
+    const sourceIds = dragged
+      .filter(block => block.parentId === null || !draggedIds.has(block.parentId))
+      .map(block => block.id);
 
     if (sourceIds.length === 0) {
       return;

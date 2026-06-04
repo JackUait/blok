@@ -523,9 +523,40 @@ export class Caret extends Module {
       return true;
     }
 
-    const getBlockToNavigate = (): Block | null => {
-      if (nextBlock !== null) {
+    /**
+     * Horizontal navigation across a container boundary must NOT slide into a
+     * sibling cell/column. When the next flat-array block belongs to the same
+     * outermost container (e.g. a sibling column of the same column_list) but a
+     * DIFFERENT DOM container than the current block, resolve to the block after
+     * the whole container instead. Sibling blocks stacked in the SAME column
+     * (same DOM container) keep their normal in-place move.
+     */
+    const resolveNextAcrossContainer = (): Block | null => {
+      if (nextBlock === null || currentBlock.parentId === null) {
         return nextBlock;
+      }
+
+      const sameDomContainer = currentBlock.holder.parentElement !== null &&
+        currentBlock.holder.parentElement === nextBlock.holder.parentElement;
+
+      if (sameDomContainer) {
+        return nextBlock;
+      }
+
+      const containerId = this.resolveContainerToExit(currentBlock.parentId);
+
+      if (!this.shouldExitContainer(currentBlock, nextBlock, containerId)) {
+        return nextBlock;
+      }
+
+      return this.findFirstBlockAfterParent(containerId);
+    };
+
+    const getBlockToNavigate = (): Block | null => {
+      const resolvedNextBlock = resolveNextAcrossContainer();
+
+      if (resolvedNextBlock !== null) {
+        return resolvedNextBlock;
       }
 
       /**
@@ -591,8 +622,39 @@ export class Caret extends Module {
       return true;
     }
 
-    if (previousBlock !== null && navigationAllowed) {
-      this.setToBlock(previousBlock, this.positions.END);
+    /**
+     * Horizontal navigation across a container boundary must NOT slide into a
+     * sibling cell/column. When the previous flat-array block belongs to the
+     * same outermost container (e.g. a sibling column of the same column_list)
+     * but a DIFFERENT DOM container, resolve to the block before the whole
+     * container instead. Sibling blocks stacked in the SAME column keep their
+     * normal in-place move.
+     */
+    const resolvePreviousAcrossContainer = (): Block | null => {
+      if (previousBlock === null || currentBlock.parentId === null) {
+        return previousBlock;
+      }
+
+      const sameDomContainer = currentBlock.holder.parentElement !== null &&
+        currentBlock.holder.parentElement === previousBlock.holder.parentElement;
+
+      if (sameDomContainer) {
+        return previousBlock;
+      }
+
+      const containerId = this.resolveContainerToExit(currentBlock.parentId);
+
+      if (!this.shouldExitContainer(currentBlock, previousBlock, containerId)) {
+        return previousBlock;
+      }
+
+      return this.findFirstBlockBeforeParent(containerId);
+    };
+
+    const blockToNavigate = resolvePreviousAcrossContainer();
+
+    if (blockToNavigate !== null && navigationAllowed) {
+      this.setToBlock(blockToNavigate, this.positions.END);
 
       return true;
     }
@@ -694,27 +756,26 @@ export class Caret extends Module {
     }
 
     /**
-     * If current block is inside a table cell (has parentId), check if we should
-     * exit the table. This handles two cases:
-     * 1. nextBlock is in a different cell of the same table → skip to block after table
-     * 2. nextBlock is null (last block in flat list) → table is at the end
+     * If current block is inside a container (has parentId), check if we should
+     * exit the whole container. This handles:
+     * 1. nextBlock is in a different cell/column of the same container → skip to
+     *    the block after the container (never slide into a sibling column)
+     * 2. nextBlock is null (last block in flat list) → container is at the end
      */
-    const shouldExitParent = currentBlock.parentId !== null && (
-      nextBlock === null ||
-      nextBlock.parentId === currentBlock.parentId ||
-      nextBlock.id === currentBlock.parentId
-    );
+    const containerToExit = currentBlock.parentId !== null
+      ? this.resolveContainerToExit(currentBlock.parentId)
+      : null;
 
-    if (shouldExitParent && currentBlock.parentId !== null) {
-      const blockAfterTable = this.findFirstBlockAfterParent(currentBlock.parentId);
+    if (containerToExit !== null && this.shouldExitContainer(currentBlock, nextBlock, containerToExit)) {
+      const blockAfterContainer = this.findFirstBlockAfterParent(containerToExit);
 
-      if (blockAfterTable !== null) {
-        this.setToBlockAtXPosition(blockAfterTable, caretX, true);
+      if (blockAfterContainer !== null) {
+        this.setToBlockAtXPosition(blockAfterContainer, caretX, true);
 
         return true;
       }
 
-      // No block after table — create one
+      // No block after the container — create one
       const newBlock = BlockManager.insertAtEnd();
 
       this.setToBlock(newBlock, this.positions.START);
@@ -820,18 +881,17 @@ export class Caret extends Module {
 
     /**
      * If current block is inside a container, the "previous block" in the flat
-     * array may belong to a DIFFERENT cell of the SAME parent (e.g., a sibling
-     * cell of the same table). Navigating to it would jump across cells, which
-     * Notion-style navigation should treat as exiting the container UP.
+     * array may belong to a DIFFERENT cell/column of the SAME container (e.g., a
+     * sibling column of the same column_list). Navigating to it would jump
+     * across the layout, which Notion-style navigation should treat as exiting
+     * the WHOLE container UP — past the column_list, not into a sibling column.
      */
-    const shouldExitParent = currentBlock.parentId !== null && (
-      previousBlock === null ||
-      previousBlock.parentId === currentBlock.parentId ||
-      previousBlock.id === currentBlock.parentId
-    );
+    const containerToExit = currentBlock.parentId !== null
+      ? this.resolveContainerToExit(currentBlock.parentId)
+      : null;
 
-    if (shouldExitParent && currentBlock.parentId !== null) {
-      const blockBeforeContainer = this.findFirstBlockBeforeParent(currentBlock.parentId);
+    if (containerToExit !== null && this.shouldExitContainer(currentBlock, previousBlock, containerToExit)) {
+      const blockBeforeContainer = this.findFirstBlockBeforeParent(containerToExit);
 
       if (blockBeforeContainer !== null) {
         this.setToBlockAtXPosition(blockBeforeContainer, caretX, false);
@@ -872,8 +932,14 @@ export class Caret extends Module {
   }
 
   /**
-   * Find the first block after a parent block (e.g., a table) by scanning the flat
-   * block array and skipping blocks whose parentId matches.
+   * Find the first block after a parent container by scanning the flat block
+   * array and skipping every block that belongs to the container's subtree.
+   *
+   * The container may be a single-level nest (table cell) or a multi-level nest
+   * (column_list > column > block). A block belongs to the container when the
+   * container's id appears anywhere on its ancestor chain, so blocks nested two
+   * levels deep (a paragraph inside a column inside the column_list) are skipped
+   * too — without that, ArrowDown/ArrowRight would land back inside the layout.
    */
   private findFirstBlockAfterParent(parentBlockId: string): Block | null {
     const { BlockManager } = this.Blok;
@@ -884,7 +950,103 @@ export class Caret extends Module {
       return null;
     }
 
-    return blocks.slice(parentIndex + 1).find(b => b.parentId !== parentBlockId) ?? null;
+    return blocks
+      .slice(parentIndex + 1)
+      .find(b => !this.isWithinContainer(b, parentBlockId)) ?? null;
+  }
+
+  /**
+   * Resolves the outermost container block that a nested block should exit when
+   * vertical/horizontal navigation crosses out of it.
+   *
+   * For a single-level nest (table cell) this is just `parentId`. For a
+   * multi-level nest (a block inside a `column`, the column inside a
+   * `column_list`) we must climb to the `column_list` so navigation exits the
+   * WHOLE layout instead of sliding into the sibling column. We climb the
+   * parentId chain to the topmost ancestor block that is still resolvable;
+   * when the immediate parent block is not registered (as in the table case),
+   * the parentId itself is the container to exit.
+   * @param parentId - immediate parentId of the navigating block
+   */
+  private resolveContainerToExit(parentId: string): string {
+    const getBlockById = this.Blok.BlockManager.getBlockById?.bind(this.Blok.BlockManager);
+
+    if (getBlockById === undefined) {
+      return parentId;
+    }
+
+    const parent = getBlockById(parentId);
+
+    if (parent === undefined || parent.parentId === null) {
+      return parentId;
+    }
+
+    return this.resolveContainerToExit(parent.parentId);
+  }
+
+  /**
+   * Whether `block` lives inside the container identified by `containerId`,
+   * i.e. the container appears anywhere on the block's parentId chain. Used to
+   * decide when a flat-array neighbour belongs to the same layout we are
+   * exiting (e.g. a sibling column of the same column_list).
+   * @param block - candidate block to test
+   * @param containerId - id of the container to test against
+   */
+  private isWithinContainer(block: Block, containerId: string): boolean {
+    const ancestorId = block.parentId;
+
+    if (ancestorId === null) {
+      return false;
+    }
+
+    if (ancestorId === containerId) {
+      return true;
+    }
+
+    const getBlockById = this.Blok.BlockManager.getBlockById?.bind(this.Blok.BlockManager);
+
+    if (getBlockById === undefined) {
+      return false;
+    }
+
+    const ancestor = getBlockById(ancestorId);
+
+    if (ancestor === undefined) {
+      return false;
+    }
+
+    return this.isWithinContainer(ancestor, containerId);
+  }
+
+  /**
+   * Decides whether navigating from a nested `currentBlock` to its flat-array
+   * neighbour `candidate` should be treated as exiting the whole container
+   * rather than an in-place caret move. True when:
+   * - there is no neighbour (the layout is at the document edge), or
+   * - the neighbour belongs to the SAME outermost container subtree (e.g. a
+   *   sibling column of the same column_list), or
+   * - the neighbour IS the container itself (an ancestor of the current block).
+   *
+   * Same-DOM-container sibling moves are handled earlier by the fast path and
+   * never reach this check.
+   * @param currentBlock - the block the caret is leaving
+   * @param candidate - the flat-array neighbour caret would move to
+   * @param containerId - outermost container resolved for currentBlock
+   */
+  private shouldExitContainer(currentBlock: Block, candidate: Block | null, containerId: string): boolean {
+    if (currentBlock.parentId === null) {
+      return false;
+    }
+
+    if (candidate === null) {
+      return true;
+    }
+
+    if (candidate.id === containerId) {
+      return true;
+    }
+
+    return this.isWithinContainer(candidate, containerId);
   }
 
   /**

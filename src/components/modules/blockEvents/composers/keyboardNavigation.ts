@@ -236,6 +236,19 @@ export class KeyboardNavigation extends BlockEventComposer {
     }
 
     /**
+     * Columns must never be unwrapped by Enter. A 'column' is a single-child
+     * non-toggle container whose own parent is a 'column_list'. Promoting its
+     * empty sole child after the parent index would insert a new block at the
+     * document root (parentId=null), escaping the column and stranding the
+     * holder at the workingArea root. Returning null falls through to the
+     * normal Case 2 path, which re-parents the new sibling into the same
+     * column and leaves the column_list intact.
+     */
+    if (parentBlock.name === 'column' || parentBlock.name === 'column_list') {
+      return null;
+    }
+
+    /**
      * Non-toggle containers (e.g. callout): when the only child is empty,
      * exit by inserting a new block after the container. The container and
      * its child are preserved so the user can return to it.

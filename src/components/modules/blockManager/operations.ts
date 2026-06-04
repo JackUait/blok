@@ -311,6 +311,31 @@ export class BlockOperations {
     }
 
     /**
+     * Non-replace insert positioned directly after a block that lives inside a
+     * `column` must inherit that column as its parent. The block-settings
+     * "Duplicate" action inserts the copy at the source block's index + 1 with
+     * no follow-up reparent; without this, the copy keeps a null parentId and
+     * the Saver emits it as a root sibling — orphaned out of the column even
+     * though the store already mounted its holder inside the column DOM.
+     *
+     * Scoped to a column predecessor (not every parented predecessor) so that
+     * internal callers which seed/reparent explicitly — split, paste,
+     * insertInsideParent, column seeding (whose predecessor is the column_list,
+     * not a column) — are untouched and never see a transient wrong-parent
+     * state. `forceTopLevel` callers opt out entirely.
+     */
+    if (!replace && !forceTopLevel && block.parentId === null) {
+      const predecessor = this.repository.getBlockByIndex(targetIndex - 1);
+      const predecessorParent = predecessor?.parentId !== null && predecessor?.parentId !== undefined
+        ? this.repository.getBlockById(predecessor.parentId)
+        : undefined;
+
+      if (predecessorParent !== undefined && predecessorParent.name === 'column') {
+        this.hierarchy.setBlockParent(block, predecessorParent.id);
+      }
+    }
+
+    /**
      * Update the raw currentBlockIndex BEFORE firing the mutation event so
      * that listeners (e.g. TableCellBlocks.handleBlockMutation) see the
      * index of the newly inserted block. We bypass the setter to avoid
@@ -434,19 +459,57 @@ export class BlockOperations {
         parentBlock.contentIds = parentBlock.contentIds.filter(id => id !== block.id);
       }
 
-      // Promote children to root level when a parent block is removed
-      for (const childId of block.contentIds) {
-        const childBlock = this.repository.getBlockById(childId);
+      /**
+       * Removing a columns wrapper (`column` or `column_list`) drops its ENTIRE
+       * descendant subtree rather than promoting children to root.
+       *
+       * A column / column_list is pure layout: its children only make sense
+       * inside it. Promoting them (the generic toggle/callout behaviour below)
+       * leaks the deleted column's content out to the document root and — for a
+       * nested column_list — strands structurally-invalid `column` blocks at
+       * root (a column may only live inside a column_list). The flat blocks
+       * array is the Saver's source of truth, so descendants left in it
+       * resurface in the output even though their holders were detached when the
+       * wrapper's holder was removed. Splice the whole subtree out so nothing
+       * survives orphaned.
+       *
+       * Other container tools (toggle, callout, toggleable header) keep the
+       * promote-to-root behaviour: deleting the container preserves its body.
+       */
+      const isColumnsWrapper = block.name === 'column' || block.name === 'column_list';
+      const descendants = isColumnsWrapper ? this.collectDescendants(block) : [];
 
-        if (childBlock === undefined) {
-          continue;
+      if (isColumnsWrapper) {
+        // Detach every block in the subtree first so a nested column /
+        // column_list descendant's removed() hook finds no children and its
+        // auto-unwrap is a no-op while we tear the subtree down.
+        for (const descendant of descendants) {
+          descendant.parentId = null;
+          descendant.contentIds = [];
         }
-
-        childBlock.parentId = null;
-        childBlock.holder.classList.remove('hidden');
+      } else {
+        // Promote children to root level when a (non-columns) parent block is removed
+        this.promoteChildrenToRoot(block.contentIds);
       }
 
       blocksStore.remove(index);
+
+      // Splice the columns subtree's descendants out of the flat array + Yjs.
+      // The wrapper's holder.remove() above already detached their DOM; this
+      // removes their model entries so the Saver never re-emits them.
+      for (const descendant of descendants) {
+        const descendantIndex = this.repository.getBlockIndex(descendant);
+
+        if (descendantIndex < 0) {
+          continue;
+        }
+
+        blocksStore.remove(descendantIndex);
+
+        if (!skipYjsSync) {
+          this.dependencies.YjsManager.removeBlock(descendant.id);
+        }
+      }
 
       /**
        * Force call of didMutated event on Block removal
@@ -615,6 +678,59 @@ export class BlockOperations {
    * @param childIds - Array of child block IDs to reparent
    * @param newParentId - New parent block ID
    */
+  /**
+   * Depth-first collection of every descendant block beneath `block`,
+   * resolved through the live `contentIds` links. Cycle-safe via a visited
+   * set. Used to drop a whole columns subtree (column / column_list) on
+   * removal so no descendant is left orphaned in the flat blocks array.
+   * @param block - root of the subtree (excluded from the result)
+   */
+  private collectDescendants(block: Block): Block[] {
+    const result: Block[] = [];
+    const visited = new Set<string>([block.id]);
+    const stack = [...block.contentIds];
+
+    while (stack.length > 0) {
+      const childId = stack.pop();
+
+      if (childId === undefined || visited.has(childId)) {
+        continue;
+      }
+
+      visited.add(childId);
+
+      const childBlock = this.repository.getBlockById(childId);
+
+      if (childBlock === undefined) {
+        continue;
+      }
+
+      result.push(childBlock);
+      stack.push(...childBlock.contentIds);
+    }
+
+    return result;
+  }
+
+  /**
+   * Promote the given child blocks to root level (parentId = null) and unhide
+   * their holders. Used when a non-columns container (toggle/callout/header) is
+   * removed so its body survives at root.
+   * @param childIds - ids of the removed container's direct children
+   */
+  private promoteChildrenToRoot(childIds: string[]): void {
+    for (const childId of childIds) {
+      const childBlock = this.repository.getBlockById(childId);
+
+      if (childBlock === undefined) {
+        continue;
+      }
+
+      childBlock.parentId = null;
+      childBlock.holder.classList.remove('hidden');
+    }
+  }
+
   private reparentChildren(childIds: string[], newParentId: string): void {
     for (const childId of childIds) {
       const childBlock = this.repository.getBlockById(childId);
@@ -792,6 +908,42 @@ export class BlockOperations {
      * and rescues every other caller (keyboard moveUp/Down, public api).
      */
     const destinationParentId = neighborBlock !== undefined ? neighborBlock.parentId : null;
+
+    /**
+     * Column-boundary clamp (keyboard / public-api move only).
+     *
+     * A column's blocks sit contiguously in the flat array, immediately
+     * before the next sibling column's blocks. A naive flat move-down on the
+     * LAST block of a column (or move-up on the FIRST) lands it next to a
+     * block in the ADJACENT column; the cross-container auto-heal below would
+     * then re-parent it into that sibling column — ejecting it out of its own
+     * column. Block-settings "move down/up" and the keyboard shortcuts must
+     * reorder WITHIN the column only, never cross the column edge.
+     *
+     * Clamp to a no-op when: the moving block lives in a `column`, and the
+     * destination neighbour belongs to a DIFFERENT parent (the move would
+     * cross the column boundary). Within-column reorders keep the same parent,
+     * so they are never clamped.
+     *
+     * Skipped while a Yjs move group is open (the drag path): DragController
+     * legitimately drags blocks across columns and assigns the parent itself.
+     */
+    if (
+      movingBlock !== undefined
+      && !this.dependencies.YjsManager.isInMoveGroup
+    ) {
+      const movingParent = movingBlock.parentId !== null
+        ? this.repository.getBlockById(movingBlock.parentId)
+        : undefined;
+
+      if (
+        movingParent !== undefined
+        && movingParent.name === 'column'
+        && destinationParentId !== movingBlock.parentId
+      ) {
+        return;
+      }
+    }
 
     // Suppress stopCapturing to keep DOM + Yjs move as single undo entry
     this.suppressStopCapturing = true;

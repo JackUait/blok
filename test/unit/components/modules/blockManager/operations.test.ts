@@ -600,6 +600,40 @@ describe('BlockOperations', () => {
       }
     });
 
+    it('inherits the column parent when a non-replace insert lands after a block inside a column (duplicate-in-column)', () => {
+      // column_list > column > paragraph. Duplicating the paragraph inserts a
+      // copy at the paragraph's flat index + 1 with replace=false and no
+      // follow-up reparent — the exact shape of a block-settings "Duplicate".
+      // The copy must inherit the column as its parent, not strand at root.
+      const columnList = createMockBlock({ id: 'cl1', name: 'column_list', contentIds: ['c1'] });
+      const column = createMockBlock({ id: 'c1', name: 'column', parentId: 'cl1', contentIds: ['l1'] });
+      const child = createMockBlock({ id: 'l1', name: 'paragraph', parentId: 'c1', data: { text: 'Original left' } });
+
+      blocksStore = createBlocksStore([columnList, column, child]);
+      repository = new BlockRepository();
+      repository.initialize(blocksStore);
+      hierarchy = new BlockHierarchy(repository);
+      operations = new BlockOperations(
+        dependencies,
+        repository,
+        factory,
+        hierarchy,
+        blockDidMutatedSpy,
+        0
+      );
+      operations.setYjsSync(yjsSync);
+
+      const childIndex = repository.getBlockIndex(child); // flat index of l1
+
+      const copy = operations.insert(
+        { tool: 'paragraph', data: { text: 'Original left' }, index: childIndex + 1, needToFocus: false },
+        blocksStore
+      );
+
+      expect(copy.parentId).toBe('c1');
+      expect(column.contentIds).toContain(copy.id);
+    });
+
     it('allows restricted tools to insert outside table cells', () => {
       // Register 'header' tool in the factory so it can be composed
       const headerAdapter = createMockBlockToolAdapter('header');

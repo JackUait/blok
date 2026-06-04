@@ -386,6 +386,37 @@ export class BlockHierarchy {
   }
 
   /**
+   * Walks the block's parentId chain and returns true if any ancestor is a
+   * `column` or `column_list` block — i.e. the block lives inside a columns
+   * layout in the block tree, regardless of whether its holder has been
+   * mounted into the columns DOM yet. Cycle-safe via a visited set.
+   * @param block - the block to test
+   * @returns true if a column/column_list ancestor exists
+   */
+  private hasColumnAncestor(block: Block): boolean {
+    const walk = (parentId: string | null, visited: Set<string>): boolean => {
+      if (parentId === null || visited.has(parentId)) {
+        return false;
+      }
+      visited.add(parentId);
+
+      const parent = this.repository.getBlockById(parentId);
+
+      if (parent === undefined) {
+        return false;
+      }
+
+      if (parent.name === 'column' || parent.name === 'column_list') {
+        return true;
+      }
+
+      return walk(parent.parentId, visited);
+    };
+
+    return walk(block.parentId, new Set<string>());
+  }
+
+  /**
    * Updates the visual indentation of a block based on its depth in the hierarchy.
    * @param block - the block to update indentation for
    */
@@ -413,7 +444,17 @@ export class BlockHierarchy {
     // every block inside a column are positioned by flex, not block-tree depth.
     // Depth-based margin would push the column holders off their even split and
     // indent the column content. Keep them flush.
-    if (block.name === 'column_list' || holder.closest('[data-blok-columns]')) {
+    //
+    // The DOM check (`closest`) misses blocks indented BEFORE their holder is
+    // mounted into the columns container — e.g. a toolbox-seeded paragraph,
+    // whose indentation runs during insertInsideParent, before the Column tool
+    // appends it. The column ancestry is always in the block tree, so consult
+    // that too rather than relying on DOM placement timing.
+    if (
+      block.name === 'column_list' ||
+      holder.closest('[data-blok-columns]') ||
+      this.hasColumnAncestor(block)
+    ) {
       holder.style.marginLeft = '';
       holder.setAttribute('data-blok-depth', '0');
 

@@ -729,6 +729,32 @@ describe('BlockHierarchy', () => {
       expect(block.holder.style.marginLeft).toBe('');
       expect(block.holder).toHaveAttribute('data-blok-depth', '0');
     });
+
+    it('skips visual indentation for a block inside a column even when its holder is not yet mounted in the columns DOM', () => {
+      // Regression: toolbox-created columns seed their first paragraph via
+      // insertInsideParent, which runs updateBlockIndentation BEFORE the
+      // paragraph holder is appended into the column container. The DOM-only
+      // `closest('[data-blok-columns]')` guard misses it, so the block wrongly
+      // gets depth-based margin (the visible inner indent). The column ancestry
+      // lives in the block tree, so the guard must consult it, not just the DOM.
+      repository = createRepositoryWithBlocks([
+        { id: 'list', parentId: null, contentIds: ['col'] },
+        { id: 'col', parentId: 'list', contentIds: ['para'] },
+        { id: 'para', parentId: 'col' },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      (requireBlock('list') as unknown as { name: string }).name = 'column_list';
+      (requireBlock('col') as unknown as { name: string }).name = 'column';
+
+      const para = requireBlock('para'); // depth 2 normally → 48px
+
+      // Holder deliberately NOT appended into any [data-blok-columns] container.
+      hierarchy.updateBlockIndentation(para);
+
+      expect(para.holder.style.marginLeft).toBe('');
+      expect(para.holder).toHaveAttribute('data-blok-depth', '0');
+    });
   });
 
   describe('setBlockParent() DOM placement', () => {

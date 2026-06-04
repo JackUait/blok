@@ -724,12 +724,15 @@ export class BlockOperations {
    * nested, a promoted child's holder would be wiped, leaving the model saying
    * "at root" while the live holder no longer exists.
    *
-   * The lift is SCOPED to holders inside a toggle-children container — the
-   * promote-and-preserve tools (toggle/callout/toggleable-header) all use it.
+   * The lift is SCOPED to children whose IMMEDIATE container is a
+   * toggle-children container — the promote-and-preserve tools
+   * (toggle/callout/toggleable-header) all mount their direct children there.
    * Self-managing containers like table/database keep their children in their
    * own cell containers and tear that subtree down themselves, so their holders
-   * must stay nested and are deliberately not lifted (a table deleted inside a
-   * column would otherwise leak its cells to root).
+   * must stay nested and are deliberately not lifted. The match must be on the
+   * IMMEDIATE container, not any ancestor: a table cell block sitting inside a
+   * toggle has an ANCESTOR toggle-children container, but its immediate
+   * container is the cell — lifting it would leak the table's cells to root.
    * @param container - the block being removed
    * @param childIds - ids of the removed container's direct children
    */
@@ -746,7 +749,7 @@ export class BlockOperations {
       childBlock.parentId = null;
       childBlock.holder.classList.remove('hidden');
 
-      if (containerInDom && childBlock.holder.closest('[data-blok-toggle-children]') !== null) {
+      if (containerInDom && childBlock.holder.parentElement?.matches('[data-blok-toggle-children]') === true) {
         container.holder.before(childBlock.holder);
       }
     }

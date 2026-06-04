@@ -764,6 +764,83 @@ describe('BlockOperations', () => {
 
       expect(repository.length).toBeGreaterThan(0);
     });
+
+    /**
+     * Regression: a self-managing container (table/database) nested inside a
+     * toggle/callout/toggleable-header must NOT have its own cell/row children
+     * DOM-lifted out when it is removed. The table tears down its own cell
+     * subtree; lifting a cell block out before the table holder is removed
+     * orphans the cell content at the toggle level (model parentId=null + a
+     * stray holder) instead of letting it die with the table.
+     *
+     * The bug was an unbounded `closest('[data-blok-toggle-children]')` match:
+     * a table cell block's holder has an ancestor toggle-children container
+     * (the outer toggle), so the promote-lift fired on it even though its
+     * IMMEDIATE container is the table cell, not the toggle body.
+     */
+    it('does not lift a nested table cell out when removing a table inside a toggle', async () => {
+      const toggleBlock = createMockBlock({
+        id: 'toggle-host',
+        name: 'toggle',
+        contentIds: ['table-host'],
+      });
+      const tableBlock = createMockBlock({
+        id: 'table-host',
+        name: 'table',
+        parentId: 'toggle-host',
+        contentIds: ['cell-para'],
+      });
+      const cellParagraph = createMockBlock({
+        id: 'cell-para',
+        name: 'paragraph',
+        parentId: 'table-host',
+      });
+
+      const testStore = createBlocksStore([toggleBlock, tableBlock, cellParagraph]);
+      const testRepo = new BlockRepository();
+      testRepo.initialize(testStore);
+      const testHierarchy = new BlockHierarchy(testRepo);
+      const testOps = new BlockOperations(
+        dependencies,
+        testRepo,
+        factory,
+        testHierarchy,
+        blockDidMutatedSpy,
+        0
+      );
+      testOps.setYjsSync(yjsSync);
+
+      // Wire the DOM nesting AFTER the store is built (push() re-parents each
+      // holder into its workingArea, which would otherwise flatten the tree):
+      // toggle holder -> [data-blok-toggle-children] -> table holder ->
+      // [data-blok-table-cell-blocks] -> cell paragraph holder.
+      const toggleChildren = document.createElement('div');
+      toggleChildren.setAttribute('data-blok-toggle-children', '');
+      toggleBlock.holder.appendChild(toggleChildren);
+      toggleChildren.appendChild(tableBlock.holder);
+
+      const cellContainer = document.createElement('div');
+      cellContainer.setAttribute('data-blok-table-cell-blocks', '');
+      cellContainer.setAttribute('data-blok-nested-blocks', '');
+      tableBlock.holder.appendChild(cellContainer);
+      cellContainer.appendChild(cellParagraph.holder);
+
+      document.body.appendChild(toggleBlock.holder);
+
+      const tableToRemove = testRepo.getBlockById('table-host');
+      if (!tableToRemove) {
+        throw new Error('Test setup failed: table-host not found');
+      }
+
+      await testOps.removeBlock(tableToRemove, false, false, testStore);
+
+      // The cell paragraph must stay nested in its table cell (so it dies with
+      // the table), NOT lifted into the toggle body.
+      expect(cellParagraph.holder.parentElement).toBe(cellContainer);
+      expect(cellParagraph.holder.closest('[data-blok-toggle-children]')).toBeNull();
+
+      document.body.removeChild(toggleBlock.holder);
+    });
   });
 
   describe('update', () => {

@@ -630,9 +630,13 @@ export class BlockYjsSync {
         childBlock.parentId = null;
         childBlock.holder.classList.remove('hidden');
 
+        // Every branch keys on the IMMEDIATE container, never an ancestor: a
+        // table/database cell sitting inside a toggle or column has a
+        // preserve-body ANCESTOR, but its immediate container is the cell —
+        // lifting it would leak the self-managing container's cells to root.
         const immediateContainer = childBlock.holder.parentElement;
         const isPreserveBodyChild =
-          childBlock.holder.closest('[data-blok-toggle-children]') !== null ||
+          immediateContainer?.matches('[data-blok-toggle-children]') === true ||
           immediateContainer?.matches('[data-blok-columns]') === true ||
           immediateContainer?.parentElement?.matches('[data-blok-column]') === true;
 

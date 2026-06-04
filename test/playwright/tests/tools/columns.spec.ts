@@ -565,6 +565,121 @@ test.describe('Columns tool', () => {
     expect(columnOrder[2]).toBe('c2');
   });
 
+  test('dropping at a column inner side-zone inserts a column between, not inside the column', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'desc', type: 'paragraph', data: { text: 'Description root' } },
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['a'] },
+        { id: 'a', type: 'paragraph', data: { text: 'Col A' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['b'] },
+        { id: 'b', type: 'paragraph', data: { text: 'Col B' }, parent: 'c2' },
+      ],
+    });
+
+    const source = page.getByTestId('block-wrapper').filter({ hasText: 'Description root' });
+    await source.hover();
+    const handle = page.locator(SETTINGS_BUTTON);
+    await expect(handle).toBeVisible();
+    const sourceBox = await handle.boundingBox();
+
+    // Right edge of Col A's content box — the side-zone that should create a
+    // column between A and B (collapses to B's left edge).
+    const aContent = await page.getByTestId('block-wrapper').filter({ hasText: 'Col A' }).last()
+      .locator('[data-blok-element-content]').first().boundingBox();
+
+    if (!sourceBox || !aContent) {
+      throw new Error('missing bounding box');
+    }
+
+    await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(aContent.x + aContent.width - 4, aContent.y + aContent.height / 2, { steps: 18 });
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') === 'true',
+      { timeout: 2000 }
+    );
+    await page.mouse.up();
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') !== 'true',
+      { timeout: 2000 }
+    );
+
+    const saved = await saveBlok(page);
+    const columnOrder = saved.blocks.filter(b => b.type === 'column').map(b => b.id);
+    const descParent = saved.blocks.find(b => b.id === 'desc')?.parent;
+
+    // A NEW column was created between A and B; the source is its child — NOT a
+    // second block dumped inside column A.
+    expect(columnOrder).toHaveLength(3);
+    expect(descParent).toBe(columnOrder[1]);
+    expect(descParent).not.toBe('c1');
+    expect(columnOrder[0]).toBe('c1');
+    expect(columnOrder[2]).toBe('c2');
+  });
+
+  test('centers the between-columns drop indicator in the gutter (on the separator)', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['a'] },
+        { id: 'a', type: 'paragraph', data: { text: 'Col A' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['b'] },
+        { id: 'b', type: 'paragraph', data: { text: 'Col B' }, parent: 'c2' },
+        { id: 'newcomer', type: 'paragraph', data: { text: 'Newcomer' } },
+      ],
+    });
+
+    const source = page.getByTestId('block-wrapper').filter({ hasText: 'Newcomer' });
+    await source.hover();
+    const handle = page.locator(SETTINGS_BUTTON);
+    await expect(handle).toBeVisible();
+    const sourceBox = await handle.boundingBox();
+
+    const resizer = page.getByTestId('column-resizer').first();
+    const gutterBox = await resizer.boundingBox();
+
+    if (!sourceBox || !gutterBox) {
+      throw new Error('missing bounding box');
+    }
+
+    const gutterCenter = gutterBox.x + gutterBox.width / 2;
+
+    await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(gutterCenter, gutterBox.y + gutterBox.height / 2, { steps: 15 });
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') === 'true',
+      { timeout: 2000 }
+    );
+
+    // The indicator bar's horizontal center must sit on the gutter (separator)
+    // center — between the columns — not at the right column's content edge.
+    const barCenter = await page.evaluate(() => {
+      const el = document.querySelector('[data-drop-indicator]');
+
+      if (!(el instanceof HTMLElement)) {
+        return null;
+      }
+
+      const before = getComputedStyle(el, '::before');
+      const holderRect = el.getBoundingClientRect();
+      // ::before is positioned by `left: var(--drop-indicator-side-left)`; resolve
+      // its absolute center from the holder's left + that offset + half its width.
+      const offset = parseFloat(before.left);
+      const width = parseFloat(before.width);
+
+      return holderRect.left + offset + width / 2;
+    });
+
+    await page.mouse.up();
+
+    expect(barCenter).not.toBeNull();
+    expect(Math.abs((barCenter ?? 0) - gutterCenter)).toBeLessThan(6);
+  });
+
   test('the gutter drop indicator stays on ONE anchor as the cursor crosses the gutter (no flicker)', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     await createBlok(page, {

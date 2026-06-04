@@ -410,6 +410,10 @@ export class DragController extends Module {
     // height of the column row, not just the single target block.
     this.applySideIndicatorHeight(dropTarget.block, dropTarget.edge);
 
+    // ...and center it on the gutter between the columns, so the line clearly
+    // marks an insertion BETWEEN them rather than at one column's edge.
+    this.centerSideIndicatorInGutter(dropTarget.block, dropTarget.edge);
+
     // Announce drop position change to screen readers
     if (this.a11y) {
       this.a11y.announceDropPosition(dropTarget.block, dropTarget.edge);
@@ -464,6 +468,52 @@ export class DragController extends Module {
 
     block.holder.style.setProperty('--drop-indicator-side-top', `${columnsRect.top - holderRect.top}px`);
     block.holder.style.setProperty('--drop-indicator-side-bottom', `${holderRect.bottom - columnsRect.bottom}px`);
+  }
+
+  /**
+   * Centers a column side-drop indicator on the gutter (the resize separator)
+   * between the two columns it divides, instead of sitting on the target column's
+   * content edge. The indicator marks an insertion BETWEEN columns, so the bar
+   * belongs in the gutter — overrides `--drop-indicator-side-left/right` to the
+   * separator's horizontal center. No-op when the edge isn't horizontal or there
+   * is no adjacent separator (an outer edge of the first/last column).
+   *
+   * @param block - The drop target block
+   * @param edge - The resolved drop edge
+   */
+  private centerSideIndicatorInGutter(block: Block, edge: 'top' | 'bottom' | 'left' | 'right'): void {
+    if (edge !== 'left' && edge !== 'right') {
+      return;
+    }
+
+    const columnWrapper = block.holder.closest('[data-blok-column]');
+    const columnHolder = columnWrapper instanceof HTMLElement
+      ? columnWrapper.closest('[data-blok-element]')
+      : null;
+
+    if (!(columnHolder instanceof HTMLElement)) {
+      return;
+    }
+
+    const separator = edge === 'left'
+      ? columnHolder.previousElementSibling
+      : columnHolder.nextElementSibling;
+
+    if (!(separator instanceof HTMLElement) || !separator.hasAttribute('data-blok-column-resizer')) {
+      return;
+    }
+
+    const holderRect = block.holder.getBoundingClientRect();
+    const separatorRect = separator.getBoundingClientRect();
+    const separatorCenter = separatorRect.left + separatorRect.width / 2;
+    // The bar is 3px wide; offset by half so its center lands on the separator.
+    const halfBar = 1.5;
+
+    if (edge === 'left') {
+      block.holder.style.setProperty('--drop-indicator-side-left', `${separatorCenter - holderRect.left - halfBar}px`);
+    } else {
+      block.holder.style.setProperty('--drop-indicator-side-right', `${holderRect.right - separatorCenter - halfBar}px`);
+    }
   }
 
   /**

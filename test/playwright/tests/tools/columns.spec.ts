@@ -48,6 +48,52 @@ const performSideDrop = async (
   );
 };
 
+/**
+ * Drag the block whose handle is `sourceHandle` into the OUTER editor gutter —
+ * the full-width margin to the left/right of the centered content row, beside an
+ * existing column_list. The cursor lands well outside the content box, where the
+ * full-width container holder (not a narrow column child) sits under the pointer,
+ * exercising the same dropzone an empty editor exposes. Left → prepend a column,
+ * right → append one.
+ */
+const performColumnListMarginDrop = async (
+  page: Page,
+  sourceHandle: ReturnType<Page['locator']>,
+  side: 'left' | 'right'
+): Promise<void> => {
+  const sourceBox = await sourceHandle.boundingBox();
+  // The column_list's block holder spans the full editor width; the columns row
+  // is the narrower, centered content. Drop in the gutter between them.
+  const listHolder = page.locator('[data-blok-element]:has([data-blok-columns])').first();
+  const holderBox = await listHolder.boundingBox();
+  const rowBox = await page.getByTestId('column-list').boundingBox();
+
+  if (!sourceBox || !holderBox || !rowBox) {
+    throw new Error('missing bounding box for margin drop');
+  }
+
+  const sourceX = sourceBox.x + sourceBox.width / 2;
+  const sourceY = sourceBox.y + sourceBox.height / 2;
+  const targetX = side === 'left' ? holderBox.x + 6 : holderBox.x + holderBox.width - 6;
+  const targetY = rowBox.y + rowBox.height / 2;
+
+  await page.mouse.move(sourceX, sourceY);
+  await page.mouse.down();
+  await page.mouse.move(targetX, targetY, { steps: 15 });
+
+  await page.waitForFunction(
+    () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') === 'true',
+    { timeout: 2000 }
+  );
+
+  await page.mouse.up();
+
+  await page.waitForFunction(
+    () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') !== 'true',
+    { timeout: 2000 }
+  );
+};
+
 declare global {
   interface Window {
     blokInstance?: Blok;
@@ -441,6 +487,82 @@ test.describe('Columns tool', () => {
     const saved = await saveBlok(page);
     expect(saved.blocks.filter(b => b.type === 'column')).toHaveLength(3);
     // Newcomer is now inside a column
+    expect(saved.blocks.find(b => b.id === 'newcomer')?.parent).toBeDefined();
+  });
+
+  test('dropping in the far-left editor margin beside existing columns prepends a new column', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['a'] },
+        { id: 'a', type: 'paragraph', data: { text: 'Col A' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['b'] },
+        { id: 'b', type: 'paragraph', data: { text: 'Col B' }, parent: 'c2' },
+        { id: 'newcomer', type: 'paragraph', data: { text: 'Newcomer' } },
+      ],
+    });
+
+    await expect(page.locator('[data-blok-column]')).toHaveCount(2);
+
+    // Drag "Newcomer" deep into the LEFT editor gutter — far outside any column's
+    // content, where the cursor resolves to the full-width column_list holder.
+    // This is the bug: once columns exist, that outer margin used to stop acting
+    // as a new-column dropzone. It must prepend a column at the row's START.
+    const source = page.getByTestId('block-wrapper').filter({ hasText: 'Newcomer' });
+    await source.hover();
+    await expect(page.locator(SETTINGS_BUTTON)).toBeVisible();
+    await performColumnListMarginDrop(page, page.locator(SETTINGS_BUTTON), 'left');
+
+    await expect(page.locator('[data-blok-column]')).toHaveCount(3);
+
+    // The new column is the FIRST direct child of the row (prepended), and holds
+    // the dropped block.
+    const firstColumnText = await page.evaluate(() => {
+      const first = document.querySelector('[data-blok-columns] > [data-blok-element]');
+
+      return first?.textContent ?? '';
+    });
+    expect(firstColumnText).toContain('Newcomer');
+
+    const saved = await saveBlok(page);
+    expect(saved.blocks.filter(b => b.type === 'column')).toHaveLength(3);
+    expect(saved.blocks.find(b => b.id === 'newcomer')?.parent).toBeDefined();
+  });
+
+  test('dropping in the far-right editor margin beside existing columns appends a new column', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['a'] },
+        { id: 'a', type: 'paragraph', data: { text: 'Col A' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['b'] },
+        { id: 'b', type: 'paragraph', data: { text: 'Col B' }, parent: 'c2' },
+        { id: 'newcomer', type: 'paragraph', data: { text: 'Newcomer' } },
+      ],
+    });
+
+    await expect(page.locator('[data-blok-column]')).toHaveCount(2);
+
+    // Drop in the RIGHT editor gutter → append a column at the row's END.
+    const source = page.getByTestId('block-wrapper').filter({ hasText: 'Newcomer' });
+    await source.hover();
+    await expect(page.locator(SETTINGS_BUTTON)).toBeVisible();
+    await performColumnListMarginDrop(page, page.locator(SETTINGS_BUTTON), 'right');
+
+    await expect(page.locator('[data-blok-column]')).toHaveCount(3);
+
+    // The new column is the LAST direct child of the row (appended).
+    const lastColumnText = await page.evaluate(() => {
+      const columns = document.querySelectorAll('[data-blok-columns] > [data-blok-element]');
+
+      return columns[columns.length - 1]?.textContent ?? '';
+    });
+    expect(lastColumnText).toContain('Newcomer');
+
+    const saved = await saveBlok(page);
+    expect(saved.blocks.filter(b => b.type === 'column')).toHaveLength(3);
     expect(saved.blocks.find(b => b.id === 'newcomer')?.parent).toBeDefined();
   });
 

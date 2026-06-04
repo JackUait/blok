@@ -262,8 +262,19 @@ export class DropTargetDetector {
       return null;
     }
 
-    // Container blocks are never drop targets themselves.
-    if (targetBlock.name === 'column' || targetBlock.name === 'column_list') {
+    // A drop in the OUTER editor margin beside a whole column_list resolves (via
+    // elementFromPoint hitting the full-width container holder, not a narrow
+    // column child, which only lives inside the content row) to the column_list
+    // block itself. Treat the entire left/right margin as a new-column dropzone —
+    // identical to a standalone block in an empty editor — so existing columns
+    // get the SAME outer dropzone: far-left prepends a column at the row's start,
+    // far-right appends one at its end.
+    if (targetBlock.name === 'column_list') {
+      return this.outerColumnListTarget(targetBlock, blockHolder, clientX, clientY);
+    }
+
+    // The column container itself is never a drop target.
+    if (targetBlock.name === 'column') {
       return null;
     }
 
@@ -346,6 +357,65 @@ export class DropTargetDetector {
       depth: 0,
       parentId: this.findEnclosingColumnId(targetBlock),
     };
+  }
+
+  /**
+   * Side-drop detection for a drop that resolved to a whole column_list block —
+   * i.e. the cursor is in the outer editor margin beside the row, where the
+   * full-width container holder (not a narrow column child) sits under the
+   * pointer. Mirrors the standalone-block outer zones exactly (central vertical
+   * band, outer sideZone with no inner bound so the whole margin is live) so the
+   * dropzone is identical whether or not columns already exist.
+   *
+   * A left margin drop prepends a new column at the start of the row, a right
+   * margin drop appends one at the end. It does so by targeting the first/last
+   * column's first child block with a 'left'/'right' edge and that column's id as
+   * parentId — exactly the shape the row's inner outer-edge side-drop produces,
+   * so handleColumnDrop routes both through addColumnToList. Returns null when
+   * the row has no resolvable column child, or the cursor falls in the central
+   * reorder band / outside the vertical band (→ top/bottom reorders the list).
+   */
+  private outerColumnListTarget(
+    columnListBlock: Block,
+    blockHolder: HTMLElement,
+    clientX: number,
+    clientY: number
+  ): DropTarget | null {
+    const contentEl = blockHolder.querySelector('[data-blok-element-content]');
+    const rect = contentEl instanceof HTMLElement
+      ? contentEl.getBoundingClientRect()
+      : blockHolder.getBoundingClientRect();
+
+    const bandInset = rect.height * (1 - DRAG_CONFIG.sideBandRatio) / 2;
+    const inBand = clientY >= rect.top + bandInset && clientY <= rect.bottom - bandInset;
+
+    if (!inBand) {
+      return null;
+    }
+
+    const sideZone = Math.max(rect.width * DRAG_CONFIG.sideZoneRatio, DRAG_CONFIG.sideZoneMin);
+    const nearLeft = clientX <= rect.left + sideZone;
+    const nearRight = clientX >= rect.right - sideZone;
+
+    if (!nearLeft && !nearRight) {
+      return null;
+    }
+
+    const edge: 'left' | 'right' = nearLeft ? 'left' : 'right';
+    const columns = this.blockManager.blocks.filter(block => block.parentId === columnListBlock.id);
+    const column = edge === 'left' ? columns[0] : columns[columns.length - 1];
+
+    if (column === undefined) {
+      return null;
+    }
+
+    const child = this.blockManager.blocks.find(block => block.parentId === column.id);
+
+    if (child === undefined) {
+      return null;
+    }
+
+    return { block: child, edge, depth: 0, parentId: column.id };
   }
 
   /**

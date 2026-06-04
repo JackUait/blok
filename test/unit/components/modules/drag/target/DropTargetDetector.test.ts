@@ -1277,7 +1277,7 @@ describe('DropTargetDetector', () => {
       document.body.removeChild(target.holder);
     });
 
-    it('should NOT produce a horizontal edge when target is a column or column_list', () => {
+    it('should NOT produce a horizontal edge for the column container, or a childless column_list', () => {
       const source = createSideTestBlock({ id: 'source' });
       const column = createSideTestBlock({ id: 'col', name: 'column' });
       stubRect(column);
@@ -1295,6 +1295,10 @@ describe('DropTargetDetector', () => {
 
       document.body.removeChild(column.holder);
 
+      // A column_list with resolvable columns DOES side-drop at its outer
+      // margins (covered by the "OUTER editor margin" tests below); here it has
+      // no column children, so the margin side-drop has nothing to target and
+      // falls back to a top/bottom reorder of the list itself.
       const columnList = createSideTestBlock({ id: 'col-list', name: 'column_list' });
       stubRect(columnList);
       const bm2 = createSideBlockManager([columnList, source]);
@@ -1767,6 +1771,114 @@ describe('DropTargetDetector', () => {
       expect(result?.parentId).toBe('col-right');
 
       document.body.removeChild(columns);
+    });
+
+    /**
+     * Builds a column_list block whose holder spans the FULL editor width (the
+     * real container holder is edge-to-edge) with a narrower, centered content
+     * row, plus N real column children each holding one child block. Models the
+     * geometry where the OUTER editor margins beside the row resolve (via
+     * elementFromPoint) to the full-width container holder, NOT to a narrow
+     * column child. Returns the column_list block + its child columns/blocks.
+     */
+    const buildColumnListWithColumns = (
+      columnCount: number
+    ): { columnList: Block; columns: Block[]; children: Block[] } => {
+      const columnList = createSideTestBlock({ id: 'cl', name: 'column_list' });
+
+      stubWideHolder(columnList);            // holder 0..1200 (full editor width)
+      stubContentRect(columnList, 300, 900); // content row 300..900 → sideZone 150
+
+      const columns: Block[] = [];
+      const children: Block[] = [];
+
+      for (let i = 0; i < columnCount; i += 1) {
+        const column = createSideTestBlock({ id: `col-${i}`, name: 'column', parentId: 'cl' });
+        const child = createSideTestBlock({ id: `child-${i}`, parentId: column.id });
+
+        columns.push(column);
+        children.push(child);
+      }
+
+      return { columnList, columns, children };
+    };
+
+    it('treats the OUTER editor margin beside an existing column_list as a new-column dropzone (far-left → prepend)', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const { columnList, columns, children } = buildColumnListWithColumns(2);
+
+      const bm = createSideBlockManager([columnList, ...columns, ...children, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(columnList.holder);
+      const inner = document.createElement('div');
+      columnList.holder.appendChild(inner);
+
+      // x=20 is deep in the LEFT editor margin, beside the whole column_list. No
+      // narrow column child lives out here, so the cursor resolves to the
+      // full-width container holder. It must behave exactly like the no-columns
+      // case: a left side-drop that prepends a NEW column at the START of the row
+      // (addColumnToList against the first column, side 'left').
+      const result = det.determineDropTarget(inner, 20, 150, source);
+
+      expect(result?.edge).toBe('left');
+      expect(result?.parentId).toBe('col-0');
+      expect(result?.block).toBe(children[0]);
+
+      document.body.removeChild(columnList.holder);
+    });
+
+    it('treats the OUTER editor margin beside an existing column_list as a new-column dropzone (far-right → append)', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const { columnList, columns, children } = buildColumnListWithColumns(2);
+
+      const bm = createSideBlockManager([columnList, ...columns, ...children, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(columnList.holder);
+      const inner = document.createElement('div');
+      columnList.holder.appendChild(inner);
+
+      // x=1150 is deep in the RIGHT editor margin → append a NEW column at the
+      // END of the row (addColumnToList against the last column, side 'right').
+      const result = det.determineDropTarget(inner, 1150, 150, source);
+
+      expect(result?.edge).toBe('right');
+      expect(result?.parentId).toBe('col-1');
+      expect(result?.block).toBe(children[1]);
+
+      document.body.removeChild(columnList.holder);
+    });
+
+    it('side-drops on a column_list outer margin at ANY distance into the margin', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const { columnList, columns, children } = buildColumnListWithColumns(3);
+
+      const bm = createSideBlockManager([columnList, ...columns, ...children, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(columnList.holder);
+      const inner = document.createElement('div');
+      columnList.holder.appendChild(inner);
+
+      // Just past the content edge and far into the margin both side-drop —
+      // the whole margin is live, matching the standalone (no-columns) zone.
+      for (const x of [299, 100, 5]) {
+        expect(det.determineDropTarget(inner, x, 150, source)?.edge).toBe('left');
+      }
+      for (const x of [901, 1100, 1199]) {
+        expect(det.determineDropTarget(inner, x, 150, source)?.edge).toBe('right');
+      }
+
+      // A drop ABOVE the central band (near the row's top corner) still reorders
+      // the whole list (top/bottom), never side-drops.
+      const aboveBand = det.determineDropTarget(inner, 20, 105, source);
+      expect(['top', 'bottom']).toContain(aboveBand?.edge);
+
+      document.body.removeChild(columnList.holder);
     });
 
     /**

@@ -1666,6 +1666,65 @@ describe('Toolbox', () => {
     });
   });
 
+  describe('column_list restriction inside a table cell', () => {
+    const columnListAdapter = {
+      name: 'column_list',
+      toolbox: [
+        { title: 'Columns', icon: '<svg>cols</svg>', name: 'column_list' },
+        { title: '2 columns', icon: '<svg>cols</svg>', name: 'column_list-2', data: { columnCount: 2 } },
+        { title: '3 columns', icon: '<svg>cols</svg>', name: 'column_list-3', data: { columnCount: 3 } },
+      ],
+    } as unknown as BlockToolAdapter;
+
+    it('hides all column_list presets when opened inside a table cell', () => {
+      const tools = createToolsCollection([
+        ['testTool', mocks.blockToolAdapter],
+        ['column_list', columnListAdapter],
+      ]);
+
+      // Wrap the block holder in a table cell container.
+      const cellBlocksContainer = document.createElement('div');
+
+      cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+      cellBlocksContainer.appendChild(mocks.blockAPI.holder);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+
+      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('column_list', true);
+      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('column_list-2', true);
+      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('column_list-3', true);
+
+      cellBlocksContainer.remove();
+    });
+
+    it('does not hide column_list presets when opened outside a table cell', () => {
+      const tools = createToolsCollection([
+        ['testTool', mocks.blockToolAdapter],
+        ['column_list', columnListAdapter],
+      ]);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+
+      expect(mockPopoverInstance.toggleItemHiddenByName).not.toHaveBeenCalledWith('column_list', true);
+      expect(mockPopoverInstance.toggleItemHiddenByName).not.toHaveBeenCalledWith('column_list-2', true);
+      expect(mockPopoverInstance.toggleItemHiddenByName).not.toHaveBeenCalledWith('column_list-3', true);
+    });
+  });
+
   describe('shortcut handler', () => {
     it('should convert block when conversion is possible', async () => {
       new Toolbox({

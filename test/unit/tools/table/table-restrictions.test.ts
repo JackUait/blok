@@ -77,6 +77,10 @@ describe('table-restrictions', () => {
       expect(isRestrictedInTableCell('table')).toBe(true);
     });
 
+    it('returns true for column_list tool', () => {
+      expect(isRestrictedInTableCell('column_list')).toBe(true);
+    });
+
     it('returns false for paragraph tool', () => {
       expect(isRestrictedInTableCell('paragraph')).toBe(false);
     });
@@ -182,7 +186,8 @@ describe('table-restrictions', () => {
 
       expect(tools).toContain('header');
       expect(tools).toContain('table');
-      expect(tools).toHaveLength(2);
+      expect(tools).toContain('column_list');
+      expect(tools).toHaveLength(3);
     });
 
     it('includes additional registered tools', () => {
@@ -192,9 +197,10 @@ describe('table-restrictions', () => {
 
       expect(tools).toContain('header');
       expect(tools).toContain('table');
+      expect(tools).toContain('column_list');
       expect(tools).toContain('list');
       expect(tools).toContain('checklist');
-      expect(tools).toHaveLength(4);
+      expect(tools).toHaveLength(5);
     });
   });
 

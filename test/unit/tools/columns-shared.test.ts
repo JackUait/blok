@@ -183,6 +183,21 @@ describe('resizeColumnGrow', () => {
     expect(next.rightGrow).toBeCloseTo(2 * 40 / 400);
   });
 
+  it('lets a column collapse fully when minWidth is 0 (no min-width restriction)', () => {
+    const next = resizeColumnGrow({
+      leftWidth: 200,
+      rightWidth: 200,
+      leftGrow: 1,
+      rightGrow: 1,
+      delta: -1000, // drag hard left, past any floor
+      minWidth: 0,
+    });
+
+    // left collapses to 0 grow, right takes the whole pair grow sum
+    expect(next.leftGrow).toBeCloseTo(0);
+    expect(next.rightGrow).toBeCloseTo(2);
+  });
+
   it('preserves an uneven starting grow ratio', () => {
     const next = resizeColumnGrow({
       leftWidth: 300,

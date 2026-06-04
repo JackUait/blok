@@ -296,6 +296,44 @@ test.describe('Columns tool', () => {
     expect(widthsReloaded[0]).toBeGreaterThan(widthsReloaded[1] + 80);
   });
 
+  test('dragging a separator can shrink a column below the old min width (no min-width restriction)', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['p1'] },
+        { id: 'p1', type: 'paragraph', data: { text: 'Left' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['p2'] },
+        { id: 'p2', type: 'paragraph', data: { text: 'Right' }, parent: 'c2' },
+      ],
+    });
+
+    const columns = page.locator('[data-blok-column]');
+
+    const resizer = page.getByTestId('column-resizer').first();
+    const box = await resizer.boundingBox();
+
+    if (!box) {
+      throw new Error('resizer not found');
+    }
+
+    const centerY = box.y + box.height / 2;
+    const startX = box.x + box.width / 2;
+
+    // Drag the separator hard left, far past where a 40px min would floor it.
+    await page.mouse.move(startX, centerY);
+    await page.mouse.down();
+    await page.mouse.move(startX - 600, centerY, { steps: 12 });
+    await page.mouse.up();
+
+    const widthsAfter = await columns.evaluateAll(els =>
+      els.map(el => el.getBoundingClientRect().width)
+    );
+
+    // Left column squeezed below the old 40px floor — no min-width restriction.
+    expect(widthsAfter[0]).toBeLessThan(40);
+  });
+
   test('drag-beside a top-level block creates a 2-column layout and persists', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     await createBlok(page, {

@@ -8,9 +8,11 @@ export const COLUMN_RESIZER_ATTR = 'data-blok-column-resizer';
 
 /**
  * Smallest width (px) a column may be squeezed to while dragging a resizer.
- * Keeps both columns of the resized pair usable instead of collapsing one.
+ * Zero means no min-width restriction — a column can be dragged all the way
+ * to collapse. The resize math still clamps to [0, pairWidth] so widths never
+ * go negative or overflow the pair.
  */
-export const COLUMN_MIN_WIDTH = 40;
+export const COLUMN_MIN_WIDTH = 0;
 
 /**
  * Redistribute the flex-grow of two adjacent columns as their shared separator

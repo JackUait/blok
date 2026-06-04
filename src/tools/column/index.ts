@@ -33,7 +33,10 @@ export class Column implements BlockTool {
   public render(): HTMLElement {
     const wrapper = document.createElement('div');
 
-    wrapper.className = twMerge('flex', 'flex-col', 'min-w-0');
+    // `break-words` lets long unbreakable words reflow so a column can be
+    // resized arbitrarily thin instead of being held open at its min-content
+    // width. overflow-wrap is inherited, so descendant text picks it up.
+    wrapper.className = twMerge('flex', 'flex-col', 'min-w-0', 'break-words');
     wrapper.setAttribute(COLUMN_ATTR, '');
 
     const childContainer = document.createElement('div');
@@ -55,6 +58,10 @@ export class Column implements BlockTool {
     // holder only exists once the block is composed (post-render). Grow it so
     // sibling columns split the row evenly; widthRatio biases the split.
     this.block.holder.style.flexGrow = String(this._data.widthRatio ?? 1);
+    // A flex item defaults to min-width:auto (its min-content), which would
+    // floor the column at the width of its widest content. Allow it to shrink
+    // freely so the resizer has no min-width restriction.
+    this.block.holder.style.minWidth = '0';
 
     const children = this.api.blocks.getChildren(this.blockId);
 

@@ -993,6 +993,50 @@ describe('BlockHierarchy', () => {
       expect(containerA.contains(moving.holder)).toBe(false);
     });
 
+    it('moves a block holder out of a column container to the workingArea root (out of a column)', () => {
+      // A column child dragged to a root position: moveBlocks has already
+      // reordered the flat array so the block sits at root (before its old
+      // column), and setBlockParent(block, null) syncs the model. But the
+      // positional blocksStore.move() skips the DOM move while the holder is
+      // nested, and the mount-into-container branch only runs for a non-null
+      // parent — so without a root-escape branch the holder stays stranded in
+      // the column's [data-blok-nested-blocks] container.
+      repository = createRepositoryWithBlocks([
+        { id: 'before', parentId: null, contentIds: [] },
+        { id: 'moving', parentId: 'col', contentIds: [] },
+        { id: 'col', parentId: null, contentIds: [] },
+        { id: 'after', parentId: null, contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const before = requireBlock('before');
+      const col = requireBlock('col');
+      const moving = requireBlock('moving');
+      const after = requireBlock('after');
+
+      const workingArea = document.createElement('div');
+      // Column DOM: holder > [data-blok-column] wrapper > [data-blok-nested-blocks] container
+      const wrapper = document.createElement('div');
+      wrapper.setAttribute('data-blok-column', '');
+      const columnContainer = document.createElement('div');
+      columnContainer.setAttribute('data-blok-nested-blocks', '');
+      wrapper.appendChild(columnContainer);
+      col.holder.appendChild(wrapper);
+      columnContainer.appendChild(moving.holder);
+
+      workingArea.appendChild(before.holder);
+      workingArea.appendChild(col.holder);
+      workingArea.appendChild(after.holder);
+
+      hierarchy.setBlockParent(moving, null);
+
+      // The holder left the column and now sits at workingArea root, right after
+      // its preceding root block (matching the flat-array order).
+      expect(columnContainer.contains(moving.holder)).toBe(false);
+      expect(moving.holder.parentElement).toBe(workingArea);
+      expect(before.holder.nextElementSibling).toBe(moving.holder);
+    });
+
     it('does NOT move block.holder when the new parent has no [data-blok-toggle-children] container', () => {
       repository = createRepositoryWithBlocks([
         { id: 'plain-parent', parentId: null, contentIds: [] },

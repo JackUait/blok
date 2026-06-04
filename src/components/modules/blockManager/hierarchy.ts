@@ -318,6 +318,30 @@ export class BlockHierarchy {
       }
     }
 
+    // Escaping a column for ROOT. The positional blocksStore.move() skips the
+    // DOM move while the holder is nested (it follows its parent container by
+    // default — correct for table cells), and the mount-into-container branch
+    // above only runs for a non-null parent — so a block dragged OUT of a
+    // column to root would otherwise stay stranded in the column's container
+    // while the model says root (a model-vs-DOM divergence). Relocate the
+    // holder to the workingArea at its flat-array position. Toggle/callout/
+    // header escapes are handled by the [data-blok-toggle-children] block near
+    // the top of this method; table cells manage their own DOM and block
+    // cross-cell drops upstream — so this is scoped to columns only.
+    if (sanitizedParentId === null && block.holder.closest('[data-blok-column]') !== null) {
+      const allBlocks = this.repository.blocks;
+      const blockIndex = allBlocks.indexOf(block);
+      const isAtRoot = (b: Block): boolean => b.holder.closest(`[${DATA_ATTR.nestedBlocks}]`) === null;
+      const precedingRoot = allBlocks.slice(0, blockIndex).reverse().find(isAtRoot);
+      const followingRoot = allBlocks.slice(blockIndex + 1).find(isAtRoot);
+
+      if (precedingRoot !== undefined) {
+        precedingRoot.holder.insertAdjacentElement('afterend', block.holder);
+      } else if (followingRoot !== undefined) {
+        followingRoot.holder.insertAdjacentElement('beforebegin', block.holder);
+      }
+    }
+
     // Update visual indentation
     this.updateBlockIndentation(block);
 

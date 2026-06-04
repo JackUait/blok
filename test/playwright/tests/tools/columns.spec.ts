@@ -879,6 +879,95 @@ test.describe('Columns tool', () => {
     // A two left the column → now at root (no parent), c1 keeps A one
     expect(saved.blocks.find(b => b.id === 'a2')?.parent).toBeUndefined();
     expect(saved.blocks.find(b => b.id === 'a1')?.parent).toBe('c1');
+
+    // LIVE DOM: A two's holder must physically leave the column and sit at the
+    // workingArea root — not stay stranded inside the column (model-vs-DOM
+    // divergence). A one stays in the first column.
+    const aTwoAtRoot = await page.evaluate(() => {
+      const holders = Array.from(document.querySelectorAll('[data-blok-element]'));
+      const aTwo = holders.find(h => (h.textContent ?? '').includes('A two'));
+
+      if (!(aTwo instanceof HTMLElement)) {
+        return false;
+      }
+
+      return aTwo.closest('[data-blok-column]') === null;
+    });
+    expect(aTwoAtRoot).toBe(true);
+    expect(await domColumnMembership(page)).not.toHaveProperty('A two');
+  });
+
+  test('dragging a column child into a root gap between two root blocks lands it at root, in order', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'head', type: 'paragraph', data: { text: 'Heading root' } },
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['a1'] },
+        { id: 'a1', type: 'paragraph', data: { text: 'A one' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['b1'] },
+        { id: 'b1', type: 'paragraph', data: { text: 'Movable b' }, parent: 'c2' },
+        { id: 'tail', type: 'paragraph', data: { text: 'Tail root' } },
+      ],
+    });
+
+    // Drag "Movable b" (in column c2) to the bottom edge of "Heading root" — the
+    // root gap between the heading and the column_list, exactly as in the report.
+    const source = page.getByTestId('block-wrapper').filter({ hasText: 'Movable b' }).last();
+    await source.hover();
+    const handle = page.locator(SETTINGS_BUTTON);
+    await expect(handle).toBeVisible();
+    const sourceBox = await handle.boundingBox();
+    const target = page.getByTestId('block-wrapper').filter({ hasText: 'Heading root' });
+    const targetBox = await target.boundingBox();
+
+    if (!sourceBox || !targetBox) {
+      throw new Error('missing bounding box');
+    }
+
+    await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height - 1, { steps: 18 });
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') === 'true',
+      { timeout: 2000 }
+    );
+    await page.mouse.up();
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') !== 'true',
+      { timeout: 2000 }
+    );
+
+    const saved = await saveBlok(page);
+    // Model: Movable b left c2 for root; the columns survive (c1 keeps A one).
+    expect(saved.blocks.find(b => b.id === 'b1')?.parent).toBeUndefined();
+    expect(saved.blocks.find(b => b.id === 'a1')?.parent).toBe('c1');
+
+    // LIVE DOM: the moved holder is a direct workingArea child — out of every
+    // column — and sits between the heading and the column_list, matching the
+    // flat-array order.
+    const domRootOrder = await page.evaluate(() => {
+      const workingArea = document.querySelector('[data-blok-redactor]');
+
+      if (!(workingArea instanceof HTMLElement)) {
+        return null;
+      }
+
+      return Array.from(workingArea.children)
+        .filter((el): el is HTMLElement => el instanceof HTMLElement && el.matches('[data-blok-element]'))
+        .map((holder): string => {
+          const text = (holder.textContent ?? '').trim();
+          if (text.startsWith('Heading root')) { return 'head'; }
+          if (text.startsWith('Movable b')) { return 'moved'; }
+          if (text.startsWith('Tail root')) { return 'tail'; }
+
+          return text.includes('A one') ? 'columns' : '?';
+        });
+    });
+
+    expect(domRootOrder).not.toBeNull();
+    expect(domRootOrder).toEqual(['head', 'moved', 'columns', 'tail']);
+    expect(await domColumnMembership(page)).not.toHaveProperty('Movable b');
   });
 
   test('dropping over a column body creates a column between, never stacks inside it', async ({ page }) => {

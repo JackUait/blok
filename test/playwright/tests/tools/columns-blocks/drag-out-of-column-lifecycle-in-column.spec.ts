@@ -416,17 +416,12 @@ test.describe('Dragging a block OUT of a column back to root', () => {
     expect(childStillNested).toBe(true);
   });
 
-  // FIXME(columns/container-delete): CONFIRMED PRODUCT BREAK. Deleting a container in-place
-  // (toggle/callout/toggleable-header) leaks its promoted child's DOM holder. operations.ts
-  // promoteChildrenToRoot() (~:721-732) sets childBlock.parentId = null in the MODEL only and
-  // never re-mounts the child holder out of the container; removeBlock -> blocks.ts remove()
-  // (~:435) then does container.holder.remove(), destroying the child holder still nested inside
-  // [data-blok-toggle-children]. Result: model says child at root, live DOM holder is GONE
-  // (domColumnIndexById -> -2 instead of -1). Generic delete path, not column-specific. The
-  // sibling RELOAD test passes only because save->reload rebuilds the DOM from JSON, masking it.
-  // Fix: in promoteChildrenToRoot, relocate each child holder into the redactor root before the
-  // container holder is removed. Un-fixme once fixed.
-  test.fixme('CONTAINER EDIT+REMOVE: the ejected toggle edits at root, then deletes promoting its child to root', async ({ page }) => {
+  // Regression: deleting a container in-place (toggle/callout/toggleable-header) used to leak its
+  // promoted child's DOM holder — operations.ts promoteChildrenToRoot() set parentId = null in the
+  // model only, so removeBlock -> blocks.ts remove() destroyed the child holder still nested inside
+  // the container (model said "at root", live holder was gone). Fixed by routing promotion through
+  // hierarchy.setBlockParent(child, null), which relocates the holder out before removal.
+  test('CONTAINER EDIT+REMOVE: the ejected toggle edits at root, then deletes promoting its child to root', async ({ page }) => {
     await createBlok(page, toggleInColumnFixture());
 
     const handle = await grabContainerHandle(page, 'toggle1');

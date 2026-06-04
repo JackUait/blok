@@ -489,7 +489,7 @@ export class BlockOperations {
         }
       } else {
         // Promote children to root level when a (non-columns) parent block is removed
-        this.promoteChildrenToRoot(block.contentIds);
+        this.promoteChildrenToRoot(block, block.contentIds);
       }
 
       blocksStore.remove(index);
@@ -716,9 +716,26 @@ export class BlockOperations {
    * Promote the given child blocks to root level (parentId = null) and unhide
    * their holders. Used when a non-columns container (toggle/callout/header) is
    * removed so its body survives at root.
+   *
+   * Lift each surviving child's holder out of the container's
+   * `[data-blok-toggle-children]` container to immediately before the
+   * container's own holder, BEFORE the caller's `blocksStore.remove()` runs
+   * `container.holder.remove()` — which destroys EVERY descendant holder. Left
+   * nested, a promoted child's holder would be wiped, leaving the model saying
+   * "at root" while the live holder no longer exists.
+   *
+   * The lift is SCOPED to holders inside a toggle-children container — the
+   * promote-and-preserve tools (toggle/callout/toggleable-header) all use it.
+   * Self-managing containers like table/database keep their children in their
+   * own cell containers and tear that subtree down themselves, so their holders
+   * must stay nested and are deliberately not lifted (a table deleted inside a
+   * column would otherwise leak its cells to root).
+   * @param container - the block being removed
    * @param childIds - ids of the removed container's direct children
    */
-  private promoteChildrenToRoot(childIds: string[]): void {
+  private promoteChildrenToRoot(container: Block, childIds: string[]): void {
+    const containerInDom = container.holder.parentElement !== null;
+
     for (const childId of childIds) {
       const childBlock = this.repository.getBlockById(childId);
 
@@ -728,6 +745,10 @@ export class BlockOperations {
 
       childBlock.parentId = null;
       childBlock.holder.classList.remove('hidden');
+
+      if (containerInDom && childBlock.holder.closest('[data-blok-toggle-children]') !== null) {
+        container.holder.before(childBlock.holder);
+      }
     }
   }
 

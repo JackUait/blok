@@ -273,17 +273,13 @@ test.describe('Duplicate / undo / redo after dropping a block into a column', ()
     expect(dupPlacement[copyId]).toBe(headerColumnIndex);
   });
 
-  // FIXME(columns/undo-drop): CONFIRMED PRODUCT BREAK. Undoing the column-creating drop tears
-  // down the column_list + its column blocks, but the children's DOM holders are not relocated
-  // out of the doomed subtree. yjs-sync.ts handleYjsRemove (~:582-620) promotes children in the
-  // MODEL only (raw childBlock.parentId = null, strip 'hidden' at ~:602-611), never routing
-  // through hierarchy.ts setBlockParent's escape-to-root relocation (~:365-377). It then calls
-  // blocksStore.remove -> blocks.ts remove() (~:409-438) column.holder.remove(), which wipes the
-  // whole column subtree including the still-nested leaf holders. Net: model intact (header/p at
-  // root, save round-trips) but the live DOM is emptied (querySelectorAll('[data-blok-id]') == [],
-  // columnCount 0) -> domColumnIndexById -> -2 instead of -1. Fix: route handleYjsRemove's child
-  // promotion through setBlockParent so the holders relocate to root. Un-fixme once fixed.
-  test.fixme('Undo then redo of the drop + duplicate keeps column membership consistent at every step', async ({ page }) => {
+  // Regression: undoing the column-creating drop tears down the column_list + its columns, and
+  // their leaf holders used to be wiped from the DOM along with the doomed subtree — handleYjsRemove
+  // promoted children in the model only (raw parentId = null), so blocksStore.remove ->
+  // column.holder.remove() destroyed the still-nested survivors (model said "at root", DOM emptied).
+  // Fixed by lifting each direct child's holder out of the parent's subtree (parent-first cascade
+  // walks every survivor to the document root) before the parent holder is removed.
+  test('Undo then redo of the drop + duplicate keeps column membership consistent at every step', async ({ page }) => {
     await createBlok(page, {
       blocks: [
         { id: 'p1', type: 'paragraph', data: { text: 'Left para' } },

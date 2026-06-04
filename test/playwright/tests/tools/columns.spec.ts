@@ -970,7 +970,7 @@ test.describe('Columns tool', () => {
     expect(await domColumnMembership(page)).not.toHaveProperty('Movable b');
   });
 
-  test('dropping over a column body creates a column between, never stacks inside it', async ({ page }) => {
+  test('dropping over a column body center stacks the block inside that column (no new column)', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     await createBlok(page, {
       blocks: [
@@ -989,9 +989,9 @@ test.describe('Columns tool', () => {
     await expect(handle).toBeVisible();
     const sourceBox = await handle.boundingBox();
 
-    // Right HALF of Col A's content body — the user's "between Plan and Build"
-    // gesture. The dead center of the column body must NOT stack the block
-    // inside Col A; it must create a new column between A and B.
+    // Dead center of Col A's content body — the user's "drop into this column"
+    // gesture. Only the narrow left/right edges create a new column; the body
+    // center must ADD the block into Col A, not spawn a new column.
     const aContent = await page.getByTestId('block-wrapper').filter({ hasText: 'Plan stuff here' }).last()
       .locator('[data-blok-element-content]').first().boundingBox();
 
@@ -1001,9 +1001,9 @@ test.describe('Columns tool', () => {
 
     await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
     await page.mouse.down();
-    // Horizontal center of the right half, vertical middle — squarely in the old
-    // "central reorder" trap that used to drop the block inside the column.
-    await page.mouse.move(aContent.x + aContent.width * 0.65, aContent.y + aContent.height / 2, { steps: 18 });
+    // Horizontal center, vertical middle — squarely in the body, away from the
+    // edge side-zones, so the block stacks into the column it was dropped on.
+    await page.mouse.move(aContent.x + aContent.width / 2, aContent.y + aContent.height / 2, { steps: 18 });
     await page.waitForFunction(
       () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') === 'true',
       { timeout: 2000 }
@@ -1018,13 +1018,16 @@ test.describe('Columns tool', () => {
     const columnOrder = saved.blocks.filter(b => b.type === 'column').map(b => b.id);
     const descParent = saved.blocks.find(b => b.id === 'desc')?.parent;
 
-    // A NEW column sits between A and B; the source is its only child — NOT a
-    // second block stacked inside column A.
-    expect(columnOrder).toHaveLength(3);
-    expect(descParent).toBe(columnOrder[1]);
-    expect(descParent).not.toBe('c1');
-    expect(columnOrder[0]).toBe('c1');
-    expect(columnOrder[2]).toBe('c2');
+    // No new column — still exactly two; the source joined column c1 (the column
+    // it was dropped on), it did NOT spawn a third column between A and B.
+    expect(columnOrder).toEqual(['c1', 'c2']);
+    expect(descParent).toBe('c1');
+
+    // LIVE DOM: "Intro root" is mounted inside the FIRST column (index 0), beside
+    // "Plan stuff here".
+    const membership = await domColumnMembership(page);
+    expect(membership['Intro root']).toBe(0);
+    expect(membership['Plan stuff here']).toBe(0);
   });
 
   /**

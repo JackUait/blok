@@ -1477,12 +1477,12 @@ describe('DropTargetDetector', () => {
       return columns;
     };
 
-    it('splits a column block body at its content midline (body center is a side-drop, not a reorder)', () => {
+    it('treats the column block body center as into-column reorder; only the narrow edges are side-drops', () => {
       const source = createSideTestBlock({ id: 'source' });
       const column = createSideTestBlock({ id: 'col-1', name: 'column' });
       const target = createSideTestBlock({ id: 'target', parentId: 'col-1' });
       stubWideHolder(target);              // block band is only 100..200
-      stubContentRect(target, 300, 500);   // column-width content box, midline=400
+      stubContentRect(target, 300, 500);   // content box width 200 → sideZone=max(50,48)=50
       const columns = wrapInColumns(target, 50, 400); // row spans 50..400
 
       const bm = createSideBlockManager([column, target, source]);
@@ -1493,28 +1493,33 @@ describe('DropTargetDetector', () => {
       const inner = document.createElement('div');
       target.holder.appendChild(inner);
 
-      // A block inside a column is a horizontal layout: dropping over its BODY
-      // means "place a column here", split at the content midline (400). The dead
-      // center of the right half (clientX=450, clientY=150 mid-band) must read as
-      // a right side-drop — NOT the old central reorder trap.
-      const right = det.determineDropTarget(inner, 450, 150, source);
-      expect(right?.edge).toBe('right');
-      expect(right?.parentId).toBe('col-1');
+      // Dead center of the body (clientX=400, clientY=150 mid-band) is NOT a
+      // side-drop — it falls through to a top/bottom reorder so the block stacks
+      // INTO this column. This is the user-facing fix: dropping over a column's
+      // body adds to the column, it does not spawn a new column.
+      const center = det.determineDropTarget(inner, 400, 150, source);
+      expect(['top', 'bottom']).toContain(center?.edge);
 
-      // Left half (clientX=350) → left side-drop.
-      const left = det.determineDropTarget(inner, 350, 150, source);
+      // Only the narrow left edge (within 50px of left=300) reads as a left
+      // side-drop that creates a new column.
+      const left = det.determineDropTarget(inner, 320, 150, source);
       expect(left?.edge).toBe('left');
       expect(left?.parentId).toBe('col-1');
+
+      // Likewise the narrow right edge (within 50px of right=500).
+      const right = det.determineDropTarget(inner, 480, 150, source);
+      expect(right?.edge).toBe('right');
+      expect(right?.parentId).toBe('col-1');
 
       document.body.removeChild(columns);
     });
 
-    it('reserves a thin top/bottom margin of a column block for stack-inside reorder', () => {
+    it('keeps stack-inside reorder available across the WHOLE column block body, not just a thin edge', () => {
       const source = createSideTestBlock({ id: 'source' });
       const column = createSideTestBlock({ id: 'col-1', name: 'column' });
       const target = createSideTestBlock({ id: 'target', parentId: 'col-1' });
       stubWideHolder(target);
-      stubContentRect(target, 300, 500); // content vertical band 100..200
+      stubContentRect(target, 300, 500); // content box 300..500, center zone 350..450
       const columns = wrapInColumns(target, 50, 400);
 
       const bm = createSideBlockManager([column, target, source]);
@@ -1525,10 +1530,13 @@ describe('DropTargetDetector', () => {
       const inner = document.createElement('div');
       target.holder.appendChild(inner);
 
-      // Within 10px of the block's own top edge (100) → falls through to a
-      // top/bottom reorder so dragging to stack within a column still works.
-      const result = det.determineDropTarget(inner, 450, 104, source);
-      expect(['top', 'bottom']).toContain(result?.edge);
+      // Multiple interior x positions across the central band all reorder (stack
+      // inside) — the into-column zone is the dominant body region, the opposite
+      // of the old design where only a 10px margin stacked inside.
+      for (const x of [370, 400, 430]) {
+        const result = det.determineDropTarget(inner, x, 150, source);
+        expect(['top', 'bottom']).toContain(result?.edge);
+      }
 
       document.body.removeChild(columns);
     });

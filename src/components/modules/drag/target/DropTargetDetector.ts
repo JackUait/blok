@@ -266,26 +266,37 @@ export class DropTargetDetector {
       ? contentEl.getBoundingClientRect()
       : blockHolder.getBoundingClientRect();
 
-    // A block INSIDE a column_list is part of a horizontal layout, so dropping
-    // anywhere over its body means "place a column here" — never "stack inside
-    // it". Split the content box at its horizontal midline (left half inserts
-    // before, right half collapses to the gutter / inserts after) and reserve
-    // only a thin margin at the block's own top/bottom edges for vertical
-    // reorder, so dragging to stack within a column still works. The old wide
-    // central reorder band trapped drops aimed at the gutter inside the column —
-    // the bug this fixes.
+    // A block INSIDE a column_list uses the SAME zone model as a standalone
+    // block: only the narrow left/right side zones create a new column, while the
+    // wide central body falls through to a top/bottom reorder. A center drop
+    // reorders relative to a column child, which reparents the dropped block INTO
+    // that column (resolveParentForDrop) — so dropping over a column's body adds
+    // to the column instead of spawning a new one. Drops aimed at the gutter
+    // BETWEEN columns are handled separately by determineColumnGapTarget, which
+    // runs first, so the body no longer has to absorb them. The old design made
+    // nearly the whole body a side-drop (new column) with only a 10px stack-in
+    // margin — the bug this fixes.
     const columnsContainer = blockHolder.closest('[data-blok-columns]');
 
     if (columnsContainer instanceof HTMLElement) {
-      const reorderEdge = Math.min(rect.height * 0.25, 10);
+      const bandInset = rect.height * (1 - DRAG_CONFIG.sideBandRatio) / 2;
+      const inBand = clientY >= rect.top + bandInset && clientY <= rect.bottom - bandInset;
 
-      if (clientY <= rect.top + reorderEdge || clientY >= rect.bottom - reorderEdge) {
+      if (!inBand) {
         return null;
       }
 
-      const edge: 'left' | 'right' = clientX < rect.left + rect.width / 2 ? 'left' : 'right';
+      const sideZone = Math.max(rect.width * DRAG_CONFIG.sideZoneRatio, DRAG_CONFIG.sideZoneMin);
+      const nearLeft = clientX <= rect.left + sideZone;
+      const nearRight = clientX >= rect.right - sideZone;
 
-      // Collapse a right-half drop to the right column's left edge so both sides
+      if (!nearLeft && !nearRight) {
+        return null;
+      }
+
+      const edge: 'left' | 'right' = nearLeft ? 'left' : 'right';
+
+      // Collapse a right-edge drop to the right column's left edge so both sides
       // of a gutter resolve to ONE anchor (no flicker). See collapseToColumnBoundary.
       const collapsed = edge === 'right' ? this.collapseToColumnBoundary(targetBlock) : null;
 

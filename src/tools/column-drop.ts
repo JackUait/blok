@@ -4,6 +4,7 @@ import {
   COLUMN_LIST_TOOL,
   COLUMN_TOOL,
   buildColumnResizers,
+  playColumnEnterAnimation,
   resetColumnsToEvenWidth,
 } from './columns-shared';
 
@@ -83,7 +84,10 @@ export const wrapInNewColumnList = (
     return null;
   }
 
-  const created: { listId: string | null } = { listId: null };
+  const created: { listId: string | null; sourcesColumnId: string | null } = {
+    listId: null,
+    sourcesColumnId: null,
+  };
 
   runTransacted(api, () => {
     // The column_list opts out of its default auto-seed; we fill it with
@@ -103,12 +107,24 @@ export const wrapInNewColumnList = (
     const targetColumn = side === 'left' ? secondColumn : firstColumn;
     const sourcesColumn = side === 'left' ? firstColumn : secondColumn;
 
+    created.sourcesColumnId = sourcesColumn.id;
+
     api.blocks.setBlockParent(targetId, targetColumn.id);
 
     for (const sourceId of sourceIds) {
       api.blocks.setBlockParent(sourceId, sourcesColumn.id);
     }
   });
+
+  // Slide the new column in once the tree has settled; the target column reflows
+  // from full width to its share for free as the new column's grow animates up.
+  if (created.sourcesColumnId !== null) {
+    const holder = api.blocks.getById(created.sourcesColumnId)?.holder;
+
+    if (holder !== undefined) {
+      playColumnEnterAnimation(holder);
+    }
+  }
 
   return created.listId;
 };
@@ -179,6 +195,15 @@ export const addColumnToList = (
     // build a separator for the new column — rebuild the full N-1 set here.
     rebuildColumnResizers(api, columnListId);
   });
+
+  // Slide the new column in; siblings reflow to make room as its grow animates.
+  if (created.columnId !== null) {
+    const holder = api.blocks.getById(created.columnId)?.holder;
+
+    if (holder !== undefined) {
+      playColumnEnterAnimation(holder);
+    }
+  }
 
   return created.columnId;
 };

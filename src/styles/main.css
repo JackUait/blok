@@ -170,9 +170,24 @@
   @apply relative;
 }
 
+/*
+ * Shared drop-line look for every orientation. The bar is a rounded rule whose
+ * colour and thickness come from the design tokens, so the horizontal
+ * (top/bottom) and vertical (left/right) indicators are visually identical;
+ * each orientation rule below only sets which axis the thickness applies to and
+ * where the bar is pinned.
+ */
 [data-drop-indicator]::before {
-  @apply content-[''] absolute h-1.5 rounded-xs pointer-events-none z-10;
+  @apply content-[''] absolute rounded-xs pointer-events-none z-10;
   background-color: var(--blok-dnd-drop-indicator-bg);
+}
+
+/*
+ * Horizontal drop indicator: a rule across the top or bottom edge of the block.
+ */
+[data-drop-indicator="top"]::before,
+[data-drop-indicator="bottom"]::before {
+  height: var(--blok-dnd-drop-indicator-thickness);
   /* Confine the line to the content box: the holder spans the editor gutters,
    * so the side offsets pull the line in to the visible content width. The
    * depth indent (list nesting) is added on top of the content-left offset. */
@@ -191,16 +206,13 @@
 }
 
 /*
- * Horizontal (side) drop indicator: a vertical bar on the left or right edge of
- * the holder, signalling a column-layout drop. Overrides the height/width and
- * left/right insets of the shared ::before rule above.
+ * Vertical drop indicator: a bar on the left or right edge of the holder,
+ * signalling a column-layout drop. Same look as the horizontal rule, only the
+ * thickness applies to the width and the bar is pinned to a side edge.
  */
 [data-drop-indicator="left"]::before,
 [data-drop-indicator="right"]::before {
-  @apply content-[''] absolute h-auto w-[3px] rounded-xs pointer-events-none z-10;
-  background-color: var(--blok-active-icon);
-  left: auto;
-  right: auto;
+  width: var(--blok-dnd-drop-indicator-thickness);
   /* Span the full column-row height when the target sits in a column_list: the
    * controller sets these to the row's top/bottom offset (negative, so the bar
    * grows past the single block). Default 0/0 → the bar matches the block. */
@@ -209,12 +221,13 @@
 }
 
 [data-drop-indicator="left"]::before {
-  left: var(--drop-indicator-side-left, 0);
+  /* Pull the bar out into the gutter so it sits clear of the content edge. */
+  left: calc(var(--drop-indicator-side-left, 0px) - var(--blok-space-2));
   transform: translateX(-50%);
 }
 
 [data-drop-indicator="right"]::before {
-  right: var(--drop-indicator-side-right, 0);
+  right: calc(var(--drop-indicator-side-right, 0px) - var(--blok-space-2));
   transform: translateX(50%);
 }
 

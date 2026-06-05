@@ -5,6 +5,24 @@ export const COLUMN_TOOL = 'column';
 export const COLUMNS_ATTR = 'data-blok-columns';
 export const COLUMN_ATTR = 'data-blok-column';
 export const COLUMN_RESIZER_ATTR = 'data-blok-column-resizer';
+/** Trigger attribute the CSS keyframes hook onto to play the new-column entry. */
+export const COLUMN_ENTER_ATTR = 'data-blok-column-enter';
+
+/**
+ * Play the one-shot "new column" entry animation on a freshly added column
+ * holder, à la Notion: the bar expands its flex-grow from 0 to its natural
+ * share while fading in, so neighbours reflow smoothly to make room. The
+ * trigger attribute is stripped once the animation ends, returning the column
+ * to its static state so the effect never replays on a later re-render.
+ */
+export const playColumnEnterAnimation = (holder: HTMLElement): void => {
+  holder.setAttribute(COLUMN_ENTER_ATTR, '');
+  holder.addEventListener(
+    'animationend',
+    () => holder.removeAttribute(COLUMN_ENTER_ATTR),
+    { once: true }
+  );
+};
 
 /**
  * Smallest width (px) a column may be squeezed to while dragging a resizer.

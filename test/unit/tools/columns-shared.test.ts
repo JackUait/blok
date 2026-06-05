@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { unwrapColumnListIfCollapsed, resizeColumnGrow, resetColumnsToEvenWidth } from '../../../src/tools/columns-shared';
+import {
+  unwrapColumnListIfCollapsed,
+  resizeColumnGrow,
+  resetColumnsToEvenWidth,
+  playColumnEnterAnimation,
+  COLUMN_ENTER_ATTR,
+} from '../../../src/tools/columns-shared';
 import type { API } from '../../../types';
 
 beforeEach(() => vi.clearAllMocks());
@@ -140,6 +146,25 @@ describe('unwrapColumnListIfCollapsed', () => {
 
     expect(await unwrapColumnListIfCollapsed(api, 'cl-1')).toBe(false);
     expect(remove).not.toHaveBeenCalled();
+  });
+});
+
+describe('playColumnEnterAnimation', () => {
+  it('marks the holder with the enter-animation attribute', () => {
+    const holder = document.createElement('div');
+
+    playColumnEnterAnimation(holder);
+
+    expect(holder.hasAttribute(COLUMN_ENTER_ATTR)).toBe(true);
+  });
+
+  it('strips the attribute once the animation finishes so it never replays', () => {
+    const holder = document.createElement('div');
+
+    playColumnEnterAnimation(holder);
+    holder.dispatchEvent(new Event('animationend'));
+
+    expect(holder.hasAttribute(COLUMN_ENTER_ATTR)).toBe(false);
   });
 });
 

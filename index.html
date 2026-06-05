@@ -744,7 +744,7 @@
 
   <script type="module">
     import { Blok } from './src/blok.ts';
-    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Quote, Code, Image, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Quote, Code, Image, ColumnList, Column, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
@@ -769,6 +769,7 @@
         quote: true,
         code: true,
         image: true,
+        columns: true,
       },
     };
 
@@ -1131,6 +1132,99 @@
           text: "This toggle heading starts collapsed. Click the arrow to expand."
         },
         parent: "toggle-h3-example"
+      },
+      {
+        type: "header",
+        id: "columns-section-header",
+        data: {
+          text: "Columns",
+          level: 2
+        }
+      },
+      {
+        id: "columns-description",
+        type: "paragraph",
+        data: {
+          text: "Lay blocks out side by side. Drag the separator to resize a column, or drop a block to the left or right of another to create a new column."
+        }
+      },
+      {
+        id: "columns-example",
+        type: "column_list",
+        data: {},
+        content: ["columns-col-1", "columns-col-2", "columns-col-3"]
+      },
+      {
+        id: "columns-col-1",
+        type: "column",
+        data: {},
+        parent: "columns-example",
+        content: ["columns-col-1-header", "columns-col-1-body"]
+      },
+      {
+        id: "columns-col-1-header",
+        type: "header",
+        data: {
+          text: "Plan",
+          level: 3
+        },
+        parent: "columns-col-1"
+      },
+      {
+        id: "columns-col-1-body",
+        type: "paragraph",
+        data: {
+          text: "Outline the work and break it into blocks before you start."
+        },
+        parent: "columns-col-1"
+      },
+      {
+        id: "columns-col-2",
+        type: "column",
+        data: {},
+        parent: "columns-example",
+        content: ["columns-col-2-header", "columns-col-2-body"]
+      },
+      {
+        id: "columns-col-2-header",
+        type: "header",
+        data: {
+          text: "Build",
+          level: 3
+        },
+        parent: "columns-col-2"
+      },
+      {
+        id: "columns-col-2-body",
+        type: "paragraph",
+        data: {
+          text: "Every column can hold any block — headers, lists, images, even tables."
+        },
+        parent: "columns-col-2"
+      },
+      {
+        id: "columns-col-3",
+        type: "column",
+        data: {},
+        parent: "columns-example",
+        content: ["columns-col-3-header", "columns-col-3-body"]
+      },
+      {
+        id: "columns-col-3-header",
+        type: "header",
+        data: {
+          text: "Ship",
+          level: 3
+        },
+        parent: "columns-col-3"
+      },
+      {
+        id: "columns-col-3-body",
+        type: "paragraph",
+        data: {
+          text: "Resize columns by dragging the separator that appears between them."
+        },
+        parent: "columns-col-3"
       },
       {
         type: "header",
@@ -1503,6 +1597,10 @@
       if (state.tools.quote) tools.quote = { class: Quote, inlineToolbar: true };
       if (state.tools.code) tools.code = { class: Code, inlineToolbar: false };
       if (state.tools.image) tools.image = Image;
+      if (state.tools.columns) {
+        tools.column_list = ColumnList;
+        tools.column = Column;
+      }
       return {
         readOnly: state.readOnly,
         holder: 'blok',
@@ -1812,7 +1910,7 @@
       'UI & Navigation': ['IconCheck', 'IconWand', 'IconCross', 'IconCrossSmall', 'IconMenu', 'IconPlus', 'IconChevronLeft', 'IconChevronRight', 'IconChevronRightSmall', 'IconChevronDown', 'IconSearch', 'IconArrowUp', 'IconArrowDownLine', 'IconMoreHorizontal', 'IconCloseThick', 'IconDice'],
       'Inline Formatting': ['IconBold', 'IconItalic', 'IconUnderline', 'IconStrikethrough', 'IconLink', 'IconLinkExternal', 'IconLinkCopy', 'IconMarker', 'IconReplace', 'IconGlobe', 'IconMail', 'IconHash', 'IconCode'],
       'Headings': ['IconHeading', 'IconH1', 'IconH2', 'IconH3', 'IconH4', 'IconH5', 'IconH6'],
-      'Block Tools': ['IconText', 'IconListBulleted', 'IconListNumbered', 'IconListChecklist', 'IconTable', 'IconToggleList', 'IconCallout', 'IconDatabase', 'IconBoard', 'IconGallery', 'IconList', 'IconDivider', 'IconQuote', 'IconCodeBlock', 'IconCalendar'],
+      'Block Tools': ['IconText', 'IconListBulleted', 'IconListNumbered', 'IconListChecklist', 'IconTable', 'IconToggleList', 'IconCallout', 'IconDatabase', 'IconBoard', 'IconGallery', 'IconList', 'IconDivider', 'IconQuote', 'IconCodeBlock', 'IconColumns', 'IconCalendar'],
       'Media': ['IconImage', 'IconImageBroken', 'IconUploadFailed', 'IconImageAlignLeft', 'IconImageAlignCenter', 'IconImageAlignRight', 'IconCaption', 'IconCrop', 'IconReplaceImage', 'IconExpandFullscreen', 'IconCollapseFullscreen', 'IconZoomIn', 'IconZoomOut', 'IconDownload', 'IconUpload'],
       'Toggle Headings': ['IconToggleH1', 'IconToggleH2', 'IconToggleH3'],
       'Table Actions': ['IconHeaderRow', 'IconHeaderColumn', 'IconInsertAbove', 'IconInsertBelow', 'IconInsertLeft', 'IconInsertRight', 'IconMoveUp', 'IconMoveDown', 'IconMoveLeft', 'IconMoveRight', 'IconMergeCells', 'IconSplitCell', 'IconPlacement'],
@@ -1948,6 +2046,44 @@
           { label: 'Colored bg', blocks: [{ id: 'c-bg', type: 'callout', data: { text: 'Heads up — background color set.', emoji: '⚠️', backgroundColor: 'yellow' } }] },
           { label: 'Colored text', blocks: [{ id: 'c-text', type: 'callout', data: { text: 'Red text on plain background.', emoji: '🔥', textColor: 'red' } }] },
           { label: 'Both colors', blocks: [{ id: 'c-both', type: 'callout', data: { text: 'Both colors set.', emoji: '✨', backgroundColor: 'blue', textColor: 'white' } }] },
+        ],
+      },
+      {
+        tool: 'column_list',
+        label: 'Columns',
+        states: [
+          { label: 'Two columns', blocks: [
+            { id: 'col2', type: 'column_list', data: {}, content: ['col2-a', 'col2-b'] },
+            { id: 'col2-a', type: 'column', data: {}, content: ['col2-a-p'], parent: 'col2' },
+            { id: 'col2-a-p', type: 'paragraph', data: { text: 'First column.' }, parent: 'col2-a' },
+            { id: 'col2-b', type: 'column', data: {}, content: ['col2-b-p'], parent: 'col2' },
+            { id: 'col2-b-p', type: 'paragraph', data: { text: 'Second column.' }, parent: 'col2-b' },
+          ] },
+          { label: 'Three columns', blocks: [
+            { id: 'col3', type: 'column_list', data: {}, content: ['col3-a', 'col3-b', 'col3-c'] },
+            { id: 'col3-a', type: 'column', data: {}, content: ['col3-a-p'], parent: 'col3' },
+            { id: 'col3-a-p', type: 'paragraph', data: { text: 'One' }, parent: 'col3-a' },
+            { id: 'col3-b', type: 'column', data: {}, content: ['col3-b-p'], parent: 'col3' },
+            { id: 'col3-b-p', type: 'paragraph', data: { text: 'Two' }, parent: 'col3-b' },
+            { id: 'col3-c', type: 'column', data: {}, content: ['col3-c-p'], parent: 'col3' },
+            { id: 'col3-c-p', type: 'paragraph', data: { text: 'Three' }, parent: 'col3-c' },
+          ] },
+          { label: 'Uneven widths (2:1)', blocks: [
+            { id: 'colw', type: 'column_list', data: {}, content: ['colw-a', 'colw-b'] },
+            { id: 'colw-a', type: 'column', data: { widthRatio: 2 }, content: ['colw-a-p'], parent: 'colw' },
+            { id: 'colw-a-p', type: 'paragraph', data: { text: 'Wide column — twice the width of its neighbor.' }, parent: 'colw-a' },
+            { id: 'colw-b', type: 'column', data: { widthRatio: 1 }, content: ['colw-b-p'], parent: 'colw' },
+            { id: 'colw-b-p', type: 'paragraph', data: { text: 'Narrow.' }, parent: 'colw-b' },
+          ] },
+          { label: 'Rich content', blocks: [
+            { id: 'colr', type: 'column_list', data: {}, content: ['colr-a', 'colr-b'] },
+            { id: 'colr-a', type: 'column', data: {}, content: ['colr-a-h', 'colr-a-p'], parent: 'colr' },
+            { id: 'colr-a-h', type: 'header', data: { text: 'Features', level: 3 }, parent: 'colr-a' },
+            { id: 'colr-a-p', type: 'paragraph', data: { text: 'Each column hosts arbitrary blocks.' }, parent: 'colr-a' },
+            { id: 'colr-b', type: 'column', data: {}, content: ['colr-b-l1', 'colr-b-l2'], parent: 'colr' },
+            { id: 'colr-b-l1', type: 'list', data: { style: 'checklist', text: 'Headers', checked: true }, parent: 'colr-b' },
+            { id: 'colr-b-l2', type: 'list', data: { style: 'checklist', text: 'Lists', checked: true }, parent: 'colr-b' },
+          ] },
         ],
       },
       {
@@ -2103,6 +2239,8 @@
           quote: Quote,
           code: Code,
           image: Image,
+          column_list: ColumnList,
+          column: Column,
           bold: Bold,
           italic: Italic,
           underline: Underline,

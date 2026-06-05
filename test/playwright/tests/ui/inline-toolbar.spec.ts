@@ -833,6 +833,41 @@ test.describe('inline toolbar', () => {
     expect(Math.abs(toolbarBox.x - selectionRect.left)).toBeLessThanOrEqual(2);
   });
 
+  test('appears without an entrance animation', async ({ page }) => {
+    await createBlok(page, {
+      data: {
+        blocks: [
+          {
+            type: 'paragraph',
+            data: {
+              text: 'Some text to select',
+            },
+          },
+        ],
+      },
+    });
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+    await selectText(paragraph, 'text to select');
+
+    const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
+
+    await expect(toolbar).toBeVisible();
+
+    const motion = await toolbar.evaluate((element) => {
+      const style = getComputedStyle(element);
+
+      return {
+        transitionDuration: style.transitionDuration,
+        transform: style.transform,
+      };
+    });
+
+    expect(motion.transitionDuration).toBe('0s');
+    expect(['none', '']).toContain(motion.transform);
+  });
+
   // Firefox has different text layout behavior for selections near line wraps,
   // causing the selection bounding box to be positioned differently than in Chromium/WebKit
   test('should align with the right edge when toolbar width exceeds available space', async ({ page, browserName }) => {

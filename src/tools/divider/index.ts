@@ -37,6 +37,7 @@ export class DividerTool implements BlockTool {
 
     const hr = document.createElement('hr');
 
+    hr.setAttribute('data-blok-divider', '');
     hr.className = twMerge('border-t', 'border-border-primary', 'border-b-0', 'border-l-0', 'border-r-0');
     wrapper.appendChild(hr);
     this.element = wrapper;

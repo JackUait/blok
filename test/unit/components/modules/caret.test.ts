@@ -15,8 +15,10 @@ type BlockManagerStub = {
   nextVisibleBlock: Block | null;
   previousVisibleBlock: Block | null;
   lastBlock?: Block;
+  blocks: Block[];
   insertAtEnd: ReturnType<typeof vi.fn>;
   setCurrentBlockByChildNode: ReturnType<typeof vi.fn>;
+  getBlockById: ReturnType<typeof vi.fn>;
 };
 
 type BlockSelectionStub = {
@@ -31,6 +33,7 @@ type CaretSetup = {
 };
 
 type BlockOptions = {
+  id?: string;
   focusable?: boolean;
   isEmpty?: boolean;
   hidden?: boolean;
@@ -82,6 +85,7 @@ const createBlock = (options: BlockOptions = {}): Block => {
 
   const blockStub = {
     holder,
+    id: options.id ?? `block-${Math.random().toString(36).slice(2)}`,
     focusable: options.focusable ?? true,
     isEmpty: options.isEmpty ?? false,
     parentId: options.parentId ?? null,
@@ -104,8 +108,10 @@ const createCaret = (overrides: Partial<BlokModules> = {}): CaretSetup => {
     nextVisibleBlock: null,
     previousVisibleBlock: null,
     lastBlock: undefined,
+    blocks: [],
     insertAtEnd: vi.fn(),
     setCurrentBlockByChildNode: vi.fn(),
+    getBlockById: vi.fn(),
   };
 
   const blockSelection: BlockSelectionStub = {
@@ -750,6 +756,157 @@ describe('Caret module', () => {
       expect(result).toBe(true);
       expect(findFirstBlockBeforeParent).toHaveBeenCalledWith('table-1');
       expect(setToBlockAtXPosition).toHaveBeenCalledWith(blockBeforeTable, 50, false);
+    });
+  });
+
+  describe('navigation across a two-level column_list > column nest exits the whole layout', () => {
+    /**
+     * Builds the canonical column layout in document order:
+     *   column_list (cl1) > [ column c1 > paragraph l1, column c2 > paragraph r1 ]
+     * optionally bracketed by root paragraphs above/below. Wires the manager
+     * stub's flat `blocks` array and `getBlockById` registry so the caret module
+     * can climb the parentId chain to the column_list.
+     */
+    const buildColumnLayout = (
+      options: { above?: boolean; below?: boolean } = {}
+    ): {
+      l1: Block;
+      r1: Block;
+      above: Block | null;
+      below: Block | null;
+      blocks: Block[];
+      getBlockById: (id: string) => Block | undefined;
+    } => {
+      const columnsRoot = document.createElement('div');
+
+      columnsRoot.setAttribute('data-blok-columns', '');
+      document.body.appendChild(columnsRoot);
+
+      const c1Inner = document.createElement('div');
+      const c2Inner = document.createElement('div');
+
+      columnsRoot.appendChild(c1Inner);
+      columnsRoot.appendChild(c2Inner);
+
+      const cl1 = createBlock({ id: 'cl1', focusable: false });
+      const c1 = createBlock({ id: 'c1', parentId: 'cl1', focusable: false });
+      const c2 = createBlock({ id: 'c2', parentId: 'cl1', focusable: false });
+      const l1 = createBlock({ id: 'l1', parentId: 'c1', inputs: { current: createContentEditable('left') } });
+      const r1 = createBlock({ id: 'r1', parentId: 'c2', inputs: { current: createContentEditable('right') } });
+
+      // Each paragraph holder lives in its own column DOM container.
+      c1Inner.appendChild(l1.holder);
+      c2Inner.appendChild(r1.holder);
+
+      const above = options.above ? createBlock({ id: 'above', inputs: { current: createContentEditable('above') } }) : null;
+      const below = options.below ? createBlock({ id: 'below', inputs: { current: createContentEditable('below') } }) : null;
+
+      const ordered: Block[] = [];
+
+      if (above) {
+        ordered.push(above);
+      }
+      ordered.push(cl1, c1, l1, c2, r1);
+      if (below) {
+        ordered.push(below);
+      }
+
+      const registry = new Map(ordered.map(b => [ b.id, b ]));
+
+      return {
+        l1,
+        r1,
+        above,
+        below,
+        blocks: ordered,
+        getBlockById: (id: string): Block | undefined => registry.get(id),
+      };
+    };
+
+    it('ArrowDown from the last block of a column exits past the column_list, never into the sibling column', () => {
+      const { caret, blockManager } = createCaret();
+      const { l1, r1, below, blocks, getBlockById } = buildColumnLayout({ below: true });
+
+      blockManager.blocks = blocks;
+      blockManager.getBlockById.mockImplementation(getBlockById);
+      blockManager.currentBlock = l1;
+      // Flat-array next block is the sibling column c2.
+      blockManager.nextVisibleBlock = getBlockById('c2') ?? null;
+
+      vi.spyOn(caretUtils, 'isCaretAtLastLine').mockReturnValue(true);
+      vi.spyOn(caretUtils, 'getCaretXPosition').mockReturnValue(50);
+
+      const setToBlockAtXPosition = vi.spyOn(caret, 'setToBlockAtXPosition').mockImplementation(() => undefined);
+
+      const result = caret.navigateVerticalNext();
+
+      expect(result).toBe(true);
+      // Lands at the root block BELOW the whole layout — not in the right column.
+      expect(setToBlockAtXPosition).toHaveBeenCalledWith(below, 50, true);
+      expect(setToBlockAtXPosition).not.toHaveBeenCalledWith(r1, expect.anything(), expect.anything());
+    });
+
+    it('ArrowUp from the first block of a column exits past the column_list to the root above', () => {
+      const { caret, blockManager } = createCaret();
+      const { r1, above, blocks, getBlockById } = buildColumnLayout({ above: true });
+
+      blockManager.blocks = blocks;
+      blockManager.getBlockById.mockImplementation(getBlockById);
+      blockManager.currentBlock = r1;
+      // Flat-array previous block is the left column's paragraph l1.
+      blockManager.previousVisibleBlock = getBlockById('l1') ?? null;
+
+      vi.spyOn(caretUtils, 'isCaretAtFirstLine').mockReturnValue(true);
+      vi.spyOn(caretUtils, 'getCaretXPosition').mockReturnValue(50);
+
+      const setToBlockAtXPosition = vi.spyOn(caret, 'setToBlockAtXPosition').mockImplementation(() => undefined);
+
+      const result = caret.navigateVerticalPrevious();
+
+      expect(result).toBe(true);
+      expect(setToBlockAtXPosition).toHaveBeenCalledWith(above, 50, false);
+    });
+
+    it('ArrowRight at end of a column block does not teleport into the adjacent column', () => {
+      const { caret, blockManager } = createCaret();
+      const { l1, r1, below, blocks, getBlockById } = buildColumnLayout({ below: true });
+
+      blockManager.blocks = blocks;
+      blockManager.getBlockById.mockImplementation(getBlockById);
+      blockManager.currentBlock = l1;
+      blockManager.nextVisibleBlock = getBlockById('c2') ?? null;
+
+      vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      const setToBlock = vi.spyOn(caret, 'setToBlock').mockImplementation(() => undefined);
+
+      const result = caret.navigateNext();
+
+      expect(result).toBe(true);
+      // Resolves to the root block after the column_list, never the right column.
+      expect(setToBlock).toHaveBeenCalledWith(below, caret.positions.START);
+      expect(setToBlock).not.toHaveBeenCalledWith(r1, expect.anything());
+    });
+
+    it('ArrowLeft at start of a column block does not teleport into the adjacent column', () => {
+      const { caret, blockManager } = createCaret();
+      const { l1, r1, above, blocks, getBlockById } = buildColumnLayout({ above: true });
+
+      blockManager.blocks = blocks;
+      blockManager.getBlockById.mockImplementation(getBlockById);
+      blockManager.currentBlock = r1;
+      blockManager.previousVisibleBlock = getBlockById('l1') ?? null;
+
+      vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+      const setToBlock = vi.spyOn(caret, 'setToBlock').mockImplementation(() => undefined);
+
+      const result = caret.navigatePrevious();
+
+      expect(result).toBe(true);
+      // Resolves to the root block before the column_list, never the left column.
+      expect(setToBlock).toHaveBeenCalledWith(above, caret.positions.END);
+      expect(setToBlock).not.toHaveBeenCalledWith(l1, expect.anything());
     });
   });
 

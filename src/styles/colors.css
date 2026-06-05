@@ -241,6 +241,9 @@
   /* Small UI surfaces that can't reach a var via Tailwind arbitrary syntax. */
   --blok-button-focus-bg-hover: #fbfcfe;
   --blok-dnd-drop-indicator-bg: #d4e3fc;
+  /* Drop-line geometry shared by the horizontal (top/bottom) and vertical
+     (left/right) indicators so both bars render identically. */
+  --blok-dnd-drop-indicator-thickness: 6px;
 
   /* Direct-usage surface tokens extracted in B1.6. Light-theme values match
      the dark overrides below; they are rarely applied outside the dark theme. */

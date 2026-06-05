@@ -263,10 +263,16 @@ export class Blocks {
        * caller's intended DOM container is when the predecessor is DOM-nested
        * (inside a callout, toggle, header-toggleable, table cell, or any future
        * nesting tool's `[data-blok-nested-blocks]` container) AND the successor
-       * is at workingArea root. In that case, anchoring `afterend previous`
-       * would leak the new holder into the nested container even though the
-       * caller's logical intent is a top-level sibling. Route to the successor
-       * instead, which correctly anchors at workingArea root.
+       * lives in a DIFFERENT container than the predecessor. In that case,
+       * anchoring `afterend previous` would leak the new holder into the
+       * predecessor's container even though the caller's logical intent places
+       * it at the container boundary. Route to the successor instead, which
+       * correctly anchors in the successor's container. This covers:
+       *   - successor at workingArea root (the original Enter-after-nested fix), and
+       *   - successor in a SIBLING nested container — e.g. a new `column`
+       *     inserted between the last child of the left column and the right
+       *     column: its flat predecessor is that nested child, but it belongs
+       *     in the column_list beside the right column, not inside the left one.
        *
        * Every OTHER configuration stays on the original `afterend previous`
        * rule, which preserves:
@@ -282,10 +288,27 @@ export class Blocks {
        * path that does NOT explicitly set forceTopLevel.
        */
       const prevIsAtRoot = previousBlock.holder.parentElement === this.workingArea;
-      const nextIsAtRoot = nextBlock !== undefined
-        && nextBlock.holder.parentElement === this.workingArea;
+      const nextContainer = nextBlock?.holder.parentElement ?? null;
+      /**
+       * Only reroute to the successor when its container ENCLOSES the
+       * predecessor — i.e. the new block is exiting outward to a shallower
+       * container shared with the predecessor. This covers:
+       *   - successor at workingArea root (Enter-after-nested / toggle exit), and
+       *   - successor in an ancestor container (a new `column` whose flat
+       *     predecessor is the previous column's last nested child, but which
+       *     belongs in the enclosing column_list beside it).
+       *
+       * It deliberately EXCLUDES sibling containers that merely differ from the
+       * predecessor's — e.g. two adjacent table cells. There the predecessor's
+       * flat successor is the next cell's first block, and rerouting would leak
+       * the new block into that sibling cell instead of keeping it in the cell
+       * the user pressed Enter in (regression: table-cell Enter cross-cell leak).
+       */
+      const nextEnclosesPrev = nextContainer !== null
+        && nextContainer !== previousBlock.holder.parentElement
+        && nextContainer.contains(previousBlock.holder);
 
-      if (!prevIsAtRoot && nextIsAtRoot && nextBlock !== undefined) {
+      if (!prevIsAtRoot && nextEnclosesPrev && nextBlock !== undefined) {
         this.insertToDOM(block, 'beforebegin', nextBlock);
 
         return;

@@ -236,6 +236,19 @@ export class KeyboardNavigation extends BlockEventComposer {
     }
 
     /**
+     * Columns must never be unwrapped by Enter. A 'column' is a single-child
+     * non-toggle container whose own parent is a 'column_list'. Promoting its
+     * empty sole child after the parent index would insert a new block at the
+     * document root (parentId=null), escaping the column and stranding the
+     * holder at the workingArea root. Returning null falls through to the
+     * normal Case 2 path, which re-parents the new sibling into the same
+     * column and leaves the column_list intact.
+     */
+    if (parentBlock.name === 'column' || parentBlock.name === 'column_list') {
+      return null;
+    }
+
+    /**
      * Non-toggle containers (e.g. callout): when the only child is empty,
      * exit by inserting a new block after the container. The container and
      * its child are preserved so the user can return to it.
@@ -372,14 +385,19 @@ export class KeyboardNavigation extends BlockEventComposer {
      *
      * Skip this guard for table cell blocks — they use a separate mechanism.
      */
-    if (currentBlock.parentId != null && !this.isCurrentBlockInsideTableCell) {
-      if (previousBlock === null || previousBlock.parentId !== currentBlock.parentId) {
-        this.removeEmptyToggleChildAndFocusNext(currentBlock);
+    const hasNoPreviousSiblingInParent = previousBlock === null ||
+      previousBlock.parentId !== currentBlock.parentId;
 
-        return;
+    if (currentBlock.parentId != null && !this.isCurrentBlockInsideTableCell && hasNoPreviousSiblingInParent) {
+      // A column's sole empty child collapses the column itself; otherwise
+      // fall back to the toggle-child behaviour (remove + focus next sibling).
+      if (!this.removeSoleEmptyColumnChild(currentBlock)) {
+        this.removeEmptyToggleChildAndFocusNext(currentBlock);
       }
-      // Previous sibling exists in the same parent — fall through to merge/remove logic
+
+      return;
     }
+    // Previous sibling exists in the same parent — fall through to merge/remove logic
 
     /**
      * Don't merge across table cell boundaries.
@@ -525,7 +543,15 @@ export class KeyboardNavigation extends BlockEventComposer {
        */
       const prevBlock = BlockManager.previousBlock;
 
-      if (currentBlock.parentId !== null && (prevBlock === null || prevBlock.parentId !== currentBlock.parentId)) {
+      const hasNoPrevSiblingInParent = prevBlock === null || prevBlock.parentId !== currentBlock.parentId;
+
+      if (currentBlock.parentId !== null && hasNoPrevSiblingInParent) {
+        // A column's sole empty child collapses the column itself rather than
+        // being a no-op like a toggle child.
+        const collapsed = this.removeSoleEmptyColumnChild(currentBlock);
+
+        collapsed && this.closeToolbarIfNotInTableCell();
+
         return;
       }
 
@@ -877,6 +903,41 @@ export class KeyboardNavigation extends BlockEventComposer {
       void BlockManager.removeBlock(block);
       Caret.setToBlock(nextBlock, Caret.positions.START);
     }
+  }
+
+  /**
+   * When `block` is the SOLE child of a `column` and is empty, remove it so the
+   * now-empty column is dropped: a column is pure layout and must not linger
+   * empty. BlockManager.removeBlock cascades — deleting the last child removes
+   * the column, which unwraps the column_list if it collapses to one column.
+   *
+   * Returns true when it handled the removal. A column with OTHER children is
+   * left to the generic empty-child path so the column survives, so this only
+   * fires for the sole-child case (returns false otherwise — including for
+   * non-column parents such as toggles/callouts).
+   */
+  private removeSoleEmptyColumnChild(block: Block): boolean {
+    if (!block.isEmpty || block.parentId === null) {
+      return false;
+    }
+
+    const parentBlock = this.Blok.BlockManager.getBlockById(block.parentId);
+
+    if (parentBlock === undefined || parentBlock.name !== 'column' || parentBlock.contentIds.length > 1) {
+      return false;
+    }
+
+    const { BlockManager, Caret } = this.Blok;
+
+    void BlockManager.removeBlock(block);
+
+    const newCurrentBlock = BlockManager.currentBlock;
+
+    if (newCurrentBlock) {
+      Caret.setToBlock(newCurrentBlock, Caret.positions.END);
+    }
+
+    return true;
   }
 
 }

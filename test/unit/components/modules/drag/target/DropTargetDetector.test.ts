@@ -1127,6 +1127,908 @@ describe('DropTargetDetector', () => {
       document.body.removeChild(child.holder);
     });
 
+  });
+
+  describe('horizontal (side) drop detection', () => {
+    let originalInnerWidth: number;
+
+    /**
+     * Creates a block stub for horizontal-drop tests.
+     */
+    const createSideTestBlock = (options: {
+      id?: string;
+      parentId?: string | null;
+      name?: string;
+    } = {}): Block => {
+      const holder = document.createElement('div');
+      holder.setAttribute(DATA_ATTR.element, 'block');
+
+      return {
+        id: options.id ?? `block-${Math.random().toString(36).slice(2)}`,
+        parentId: options.parentId ?? null,
+        contentIds: [],
+        holder,
+        name: options.name ?? 'paragraph',
+        selected: false,
+        stretched: false,
+      } as unknown as Block;
+    };
+
+    const createSideBlockManager = (blocks: Block[]): BlockManagerAdapter => ({
+      blocks,
+      getBlockByIndex: (index: number) => blocks[index],
+      getBlockIndex: (block: Block) => blocks.indexOf(block),
+      getBlockById: (id: string) => blocks.find(b => b.id === id),
+    });
+
+    const createSideUIAdapter = (): { contentRect: { left: number } } => ({
+      contentRect: { left: 0 },
+    });
+
+    /**
+     * Rect with top=100, bottom=200 (height 100), left=300, right=500 (width 200).
+     * Mid-band (60%) spans clientY from 100 + 20 = 120 to 200 - 20 = 180.
+     */
+    const stubRect = (block: Block): void => {
+      vi.spyOn(block.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 100, bottom: 200, left: 300, right: 500, width: 200, height: 100, x: 300, y: 100, toJSON: () => ({}),
+      });
+    };
+
+    beforeEach(() => {
+      originalInnerWidth = window.innerWidth;
+      Object.defineProperty(window, 'innerWidth', { value: 1200, writable: true, configurable: true });
+    });
+
+    afterEach(() => {
+      Object.defineProperty(window, 'innerWidth', { value: originalInnerWidth, writable: true, configurable: true });
+      vi.restoreAllMocks();
+    });
+
+    it('should detect right edge when cursor is near right within mid-band', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const target = createSideTestBlock({ id: 'target' });
+      stubRect(target);
+
+      const bm = createSideBlockManager([target, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(target.holder);
+      const inner = document.createElement('div');
+      target.holder.appendChild(inner);
+
+      // clientX=480 (within 48px of right=500), clientY=150 (mid-band 120..180)
+      const result = det.determineDropTarget(inner, 480, 150, source);
+
+      expect(result).not.toBeNull();
+      expect(result?.edge).toBe('right');
+      expect(result?.block).toBe(target);
+      expect(result?.depth).toBe(0);
+      expect(result?.parentId).toBeNull();
+
+      document.body.removeChild(target.holder);
+    });
+
+    it('should detect left edge when cursor is near left within mid-band', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const target = createSideTestBlock({ id: 'target' });
+      stubRect(target);
+
+      const bm = createSideBlockManager([target, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(target.holder);
+      const inner = document.createElement('div');
+      target.holder.appendChild(inner);
+
+      // clientX=320 (within 48px of left=300), clientY=150 (mid-band)
+      const result = det.determineDropTarget(inner, 320, 150, source);
+
+      expect(result).not.toBeNull();
+      expect(result?.edge).toBe('left');
+      expect(result?.block).toBe(target);
+
+      document.body.removeChild(target.holder);
+    });
+
+    it('should fall back to top/bottom when cursor is near right edge but OUTSIDE mid-band', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const target = createSideTestBlock({ id: 'target' });
+      stubRect(target);
+
+      const bm = createSideBlockManager([target, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(target.holder);
+      const inner = document.createElement('div');
+      target.holder.appendChild(inner);
+
+      // clientX=480 (near right), clientY=105 (above mid-band start 120 → near top corner)
+      const result = det.determineDropTarget(inner, 480, 105, source);
+
+      expect(result).not.toBeNull();
+      expect(['top', 'bottom']).toContain(result?.edge);
+
+      document.body.removeChild(target.holder);
+    });
+
+    it('should use top/bottom when cursor is in the horizontal center', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const target = createSideTestBlock({ id: 'target' });
+      stubRect(target);
+
+      const bm = createSideBlockManager([target, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(target.holder);
+      const inner = document.createElement('div');
+      target.holder.appendChild(inner);
+
+      // clientX=400 (center, not near either side), clientY=150
+      const result = det.determineDropTarget(inner, 400, 150, source);
+
+      expect(result).not.toBeNull();
+      expect(['top', 'bottom']).toContain(result?.edge);
+
+      document.body.removeChild(target.holder);
+    });
+
+    it('should NOT produce a horizontal edge for the column container, or a childless column_list', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const column = createSideTestBlock({ id: 'col', name: 'column' });
+      stubRect(column);
+
+      const bm = createSideBlockManager([column, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(column.holder);
+      const inner = document.createElement('div');
+      column.holder.appendChild(inner);
+
+      const colResult = det.determineDropTarget(inner, 480, 150, source);
+      expect(['top', 'bottom']).toContain(colResult?.edge);
+
+      document.body.removeChild(column.holder);
+
+      // A column_list with resolvable columns DOES side-drop at its outer
+      // margins (covered by the "OUTER editor margin" tests below); here it has
+      // no column children, so the margin side-drop has nothing to target and
+      // falls back to a top/bottom reorder of the list itself.
+      const columnList = createSideTestBlock({ id: 'col-list', name: 'column_list' });
+      stubRect(columnList);
+      const bm2 = createSideBlockManager([columnList, source]);
+      const det2 = new DropTargetDetector(createSideUIAdapter(), bm2);
+      det2.setSourceBlocks([source]);
+
+      document.body.appendChild(columnList.holder);
+      const inner2 = document.createElement('div');
+      columnList.holder.appendChild(inner2);
+
+      const listResult = det2.determineDropTarget(inner2, 480, 150, source);
+      expect(['top', 'bottom']).toContain(listResult?.edge);
+
+      document.body.removeChild(columnList.holder);
+    });
+
+    it('should set parentId to enclosing column id when target is inside a column, null at top level', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const column = createSideTestBlock({ id: 'col-1', name: 'column' });
+      const target = createSideTestBlock({ id: 'target', parentId: 'col-1' });
+      stubRect(target);
+
+      const bm = createSideBlockManager([column, target, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(target.holder);
+      const inner = document.createElement('div');
+      target.holder.appendChild(inner);
+
+      const result = det.determineDropTarget(inner, 480, 150, source);
+
+      expect(result?.edge).toBe('right');
+      expect(result?.parentId).toBe('col-1');
+
+      document.body.removeChild(target.holder);
+
+      // Top-level target (no column ancestor) → parentId null
+      const target2 = createSideTestBlock({ id: 'target2' });
+      stubRect(target2);
+      const bm2 = createSideBlockManager([target2, source]);
+      const det2 = new DropTargetDetector(createSideUIAdapter(), bm2);
+      det2.setSourceBlocks([source]);
+
+      document.body.appendChild(target2.holder);
+      const inner2 = document.createElement('div');
+      target2.holder.appendChild(inner2);
+
+      const result2 = det2.determineDropTarget(inner2, 480, 150, source);
+
+      expect(result2?.edge).toBe('right');
+      expect(result2?.parentId).toBeNull();
+
+      document.body.removeChild(target2.holder);
+    });
+
+    /**
+     * Appends a `[data-blok-element-content]` child to a block's holder and
+     * stubs its rect to the given horizontal bounds (vertical bounds match the
+     * holder's 100..200 band). Models the real DOM where the holder spans the
+     * full editor width but the visible content box is narrower and centered.
+     */
+    const stubContentRect = (block: Block, left: number, right: number): HTMLElement => {
+      const content = document.createElement('div');
+      content.setAttribute('data-blok-element-content', '');
+      block.holder.appendChild(content);
+
+      vi.spyOn(content, 'getBoundingClientRect').mockReturnValue({
+        top: 100, bottom: 200, left, right, width: right - left, height: 100, x: left, y: 100, toJSON: () => ({}),
+      });
+
+      return content;
+    };
+
+    /**
+     * Stubs the holder rect to the FULL editor width (left=0, right=1200) — the
+     * real-world geometry where the holder spans edge-to-edge while content is
+     * centered. Used to prove side detection measures the content box, not the
+     * full-width holder.
+     */
+    const stubWideHolder = (block: Block): void => {
+      vi.spyOn(block.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 100, bottom: 200, left: 0, right: 1200, width: 1200, height: 100, x: 0, y: 100, toJSON: () => ({}),
+      });
+    };
+
+    it('should detect side edge near the CONTENT box edge, not the full-width holder', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const target = createSideTestBlock({ id: 'target' });
+      stubWideHolder(target);
+      stubContentRect(target, 300, 900); // visible content box
+
+      const bm = createSideBlockManager([target, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(target.holder);
+      const inner = document.createElement('div');
+      target.holder.appendChild(inner);
+
+      // clientX=880 is within 48px of the CONTENT right edge (900), but ~320px
+      // from the holder right edge (1200). Must detect a right side-drop.
+      const result = det.determineDropTarget(inner, 880, 150, source);
+
+      expect(result?.edge).toBe('right');
+
+      document.body.removeChild(target.holder);
+    });
+
+    it('should treat the outer quarter of the content box as the side zone (Notion-style), not a thin edge strip', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const target = createSideTestBlock({ id: 'target' });
+      stubWideHolder(target);
+      stubContentRect(target, 300, 900); // content width 600 → outer 25% = 150px each side
+
+      const bm = createSideBlockManager([target, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(target.holder);
+      const inner = document.createElement('div');
+      target.holder.appendChild(inner);
+
+      // clientX=420 is 120px from the content left (300) — inside the 150px outer
+      // zone but well outside any 48px edge strip. Must read as a left side-drop.
+      const left = det.determineDropTarget(inner, 420, 150, source);
+      expect(left?.edge).toBe('left');
+
+      // clientX=780 is 120px from the content right (900) — inside the right zone.
+      const right = det.determineDropTarget(inner, 780, 150, source);
+      expect(right?.edge).toBe('right');
+
+      // clientX=600 is dead center (300px from each edge) — reorder, not side.
+      const center = det.determineDropTarget(inner, 600, 150, source);
+      expect(['top', 'bottom']).toContain(center?.edge);
+
+      document.body.removeChild(target.holder);
+    });
+
+    it('should detect a side edge at ANY distance into the margin (left/right of the content box)', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const target = createSideTestBlock({ id: 'target' });
+      stubWideHolder(target);          // holder spans 0..1200
+      stubContentRect(target, 300, 900); // content box centered at 300..900
+
+      const bm = createSideBlockManager([target, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(target.holder);
+      const inner = document.createElement('div');
+      target.holder.appendChild(inner);
+
+      // x=20 is deep in the LEFT margin (280px left of the content box) — must
+      // still create a left column, no matter how far from the content edge.
+      const farLeft = det.determineDropTarget(inner, 20, 150, source);
+      expect(farLeft?.edge).toBe('left');
+
+      // x=1150 is deep in the RIGHT margin — must create a right column.
+      const farRight = det.determineDropTarget(inner, 1150, 150, source);
+      expect(farRight?.edge).toBe('right');
+
+      document.body.removeChild(target.holder);
+    });
+
+    /**
+     * Wraps a block holder inside a single-column `[data-blok-columns]` row whose
+     * rect is TALLER than the block — models a short block sitting in a
+     * column_list whose row height is set by a taller sibling column. Builds the
+     * real nesting (columns > column holder > [data-blok-column] > block) so the
+     * first/last-column edge gating resolves; a lone column is both first AND
+     * last. Returns the container.
+     */
+    const wrapInColumns = (block: Block, top: number, bottom: number): HTMLElement => {
+      const columns = document.createElement('div');
+      columns.setAttribute('data-blok-columns', '');
+
+      const columnHolder = document.createElement('div');
+      columnHolder.setAttribute(DATA_ATTR.element, 'block');
+      const wrapper = document.createElement('div');
+      wrapper.setAttribute('data-blok-column', '');
+      wrapper.appendChild(block.holder);
+      columnHolder.appendChild(wrapper);
+      columns.appendChild(columnHolder);
+
+      vi.spyOn(columns, 'getBoundingClientRect').mockReturnValue({
+        top, bottom, left: 300, right: 900, width: 600, height: bottom - top, x: 300, y: top, toJSON: () => ({}),
+      });
+
+      return columns;
+    };
+
+    it('treats the column block body center as into-column reorder; only the narrow edges are side-drops', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const column = createSideTestBlock({ id: 'col-1', name: 'column' });
+      const target = createSideTestBlock({ id: 'target', parentId: 'col-1' });
+      stubWideHolder(target);              // block band is only 100..200
+      stubContentRect(target, 300, 500);   // content box width 200 → sideZone=max(50,48)=50
+      const columns = wrapInColumns(target, 50, 400); // row spans 50..400
+
+      const bm = createSideBlockManager([column, target, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(columns);
+      const inner = document.createElement('div');
+      target.holder.appendChild(inner);
+
+      // Dead center of the body (clientX=400, clientY=150 mid-band) is NOT a
+      // side-drop — it falls through to a top/bottom reorder so the block stacks
+      // INTO this column. This is the user-facing fix: dropping over a column's
+      // body adds to the column, it does not spawn a new column.
+      const center = det.determineDropTarget(inner, 400, 150, source);
+      expect(['top', 'bottom']).toContain(center?.edge);
+
+      // Only the narrow left edge (within 50px of left=300) reads as a left
+      // side-drop that creates a new column.
+      const left = det.determineDropTarget(inner, 320, 150, source);
+      expect(left?.edge).toBe('left');
+      expect(left?.parentId).toBe('col-1');
+
+      // Likewise the narrow right edge (within 50px of right=500).
+      const right = det.determineDropTarget(inner, 480, 150, source);
+      expect(right?.edge).toBe('right');
+      expect(right?.parentId).toBe('col-1');
+
+      document.body.removeChild(columns);
+    });
+
+    it('keeps stack-inside reorder available across the WHOLE column block body, not just a thin edge', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const column = createSideTestBlock({ id: 'col-1', name: 'column' });
+      const target = createSideTestBlock({ id: 'target', parentId: 'col-1' });
+      stubWideHolder(target);
+      stubContentRect(target, 300, 500); // content box 300..500, center zone 350..450
+      const columns = wrapInColumns(target, 50, 400);
+
+      const bm = createSideBlockManager([column, target, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(columns);
+      const inner = document.createElement('div');
+      target.holder.appendChild(inner);
+
+      // Multiple interior x positions across the central band all reorder (stack
+      // inside) — the into-column zone is the dominant body region, the opposite
+      // of the old design where only a 10px margin stacked inside.
+      for (const x of [370, 400, 430]) {
+        const result = det.determineDropTarget(inner, x, 150, source);
+        expect(['top', 'bottom']).toContain(result?.edge);
+      }
+
+      document.body.removeChild(columns);
+    });
+
+    it('redirects a drop in the empty space below a column to the column\'s LAST child (into-column), not the column container', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const column = createSideTestBlock({ id: 'col-1', name: 'column' });
+      const child1 = createSideTestBlock({ id: 'child-1', parentId: 'col-1' });
+      const child2 = createSideTestBlock({ id: 'child-2', parentId: 'col-1' });
+
+      // The column spans y 100..400, but its last block (child2) ends at y 240,
+      // leaving ~160px of EMPTY column space below it — the bug zone. A cursor in
+      // that gap resolves (via closest) to the column CONTAINER block, which used
+      // to give a container-bottom indicator AND a drop that spawned a new column.
+      vi.spyOn(column.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 100, bottom: 400, left: 300, right: 500, width: 200, height: 300, x: 300, y: 100, toJSON: () => ({}),
+      });
+      vi.spyOn(child2.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 200, bottom: 240, left: 300, right: 500, width: 200, height: 40, x: 300, y: 200, toJSON: () => ({}),
+      });
+      const child2Content = document.createElement('div');
+      child2Content.setAttribute('data-blok-element-content', '');
+      child2.holder.appendChild(child2Content);
+      vi.spyOn(child2Content, 'getBoundingClientRect').mockReturnValue({
+        top: 200, bottom: 240, left: 300, right: 500, width: 200, height: 40, x: 300, y: 200, toJSON: () => ({}),
+      });
+
+      const columns = document.createElement('div');
+      columns.setAttribute('data-blok-columns', '');
+      const wrapper = document.createElement('div');
+      wrapper.setAttribute('data-blok-column', '');
+      wrapper.append(child1.holder, child2.holder);
+      column.holder.appendChild(wrapper);
+      columns.appendChild(column.holder);
+
+      // The empty-space element sits inside the column wrapper, below the blocks.
+      const emptyZone = document.createElement('div');
+      wrapper.appendChild(emptyZone);
+      document.body.appendChild(columns);
+
+      const bm = createSideBlockManager([column, child1, child2, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      // Cursor at x=400 (body center), y=320 (deep in the empty gap). The drop
+      // must land at the BOTTOM of the column's last child — one indicator that
+      // matches the drop (append into the column), never the container itself.
+      const result = det.determineDropTarget(emptyZone, 400, 320, source);
+
+      expect(result?.block).toBe(child2);
+      expect(result?.edge).toBe('bottom');
+
+      document.body.removeChild(columns);
+    });
+
+    /**
+     * Builds the real column-row DOM around two columns divided by a resize
+     * separator: [data-blok-columns] > [leftHolder, resizer, rightColumn.holder].
+     * The right column holder contains its first inner child block holder, since a
+     * gutter drop targets that child with a 'left' side-drop to insert a column
+     * before the right column (i.e. between the two columns). Returns the resizer.
+     */
+    const buildGutter = (rightColumn: Block, rightChild: Block): { columns: HTMLElement; resizer: HTMLElement } => {
+      const columns = document.createElement('div');
+      columns.setAttribute('data-blok-columns', '');
+
+      const leftHolder = document.createElement('div');
+      leftHolder.setAttribute(DATA_ATTR.element, 'block');
+
+      const resizer = document.createElement('div');
+      resizer.setAttribute('data-blok-column-resizer', '');
+
+      rightColumn.holder.appendChild(rightChild.holder);
+      columns.append(leftHolder, resizer, rightColumn.holder);
+
+      return { columns, resizer };
+    };
+
+    it('redirects a drop on the inter-column resizer gutter to a between-columns side-drop', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const rightColumn = createSideTestBlock({ id: 'col-right', name: 'column' });
+      const rightChild = createSideTestBlock({ id: 'right-child', parentId: 'col-right' });
+
+      const { columns, resizer } = buildGutter(rightColumn, rightChild);
+
+      const bm = createSideBlockManager([rightColumn, rightChild, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(columns);
+
+      // Cursor sits on the resize separator dividing the two columns. The drop must
+      // insert a NEW column between them: target the right column's child with a
+      // 'left' edge → addColumnToList(rightColumn, 'left') inserts before it.
+      const result = det.determineDropTarget(resizer, 510, 150, source);
+
+      expect(result?.edge).toBe('left');
+      expect(result?.parentId).toBe('col-right');
+      expect(result?.block).toBe(rightChild);
+
+      document.body.removeChild(columns);
+    });
+
+    /**
+     * Builds a full two-column row: [data-blok-columns] containing the left
+     * column holder (wrapping its child), a resize separator, and the right
+     * column holder (wrapping its child). Mirrors the real DOM closely enough for
+     * the boundary-canonicalization walk (child → [data-blok-column] → column
+     * holder → next column holder). Stubs the row rect so the vertical band check
+     * passes at clientY 150. Returns the row and its separator.
+     */
+    const buildColumnRow = (
+      leftColumn: Block,
+      leftChild: Block,
+      rightColumn: Block,
+      rightChild: Block
+    ): { columns: HTMLElement; resizer: HTMLElement } => {
+      const columns = document.createElement('div');
+      columns.setAttribute('data-blok-columns', '');
+      vi.spyOn(columns, 'getBoundingClientRect').mockReturnValue({
+        top: 100, bottom: 200, left: 300, right: 760, width: 460, height: 100, x: 300, y: 100, toJSON: () => ({}),
+      });
+
+      const wrapLeft = document.createElement('div');
+      wrapLeft.setAttribute('data-blok-column', '');
+      wrapLeft.appendChild(leftChild.holder);
+      leftColumn.holder.appendChild(wrapLeft);
+
+      const resizer = document.createElement('div');
+      resizer.setAttribute('data-blok-column-resizer', '');
+
+      const wrapRight = document.createElement('div');
+      wrapRight.setAttribute('data-blok-column', '');
+      wrapRight.appendChild(rightChild.holder);
+      rightColumn.holder.appendChild(wrapRight);
+
+      columns.append(leftColumn.holder, resizer, rightColumn.holder);
+
+      return { columns, resizer };
+    };
+
+    it('inner column edges fall through to into-column; only the row outer edges side-drop', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const leftColumn = createSideTestBlock({ id: 'col-left', name: 'column' });
+      const leftChild = createSideTestBlock({ id: 'left-child', parentId: 'col-left' });
+      const rightColumn = createSideTestBlock({ id: 'col-right', name: 'column' });
+      const rightChild = createSideTestBlock({ id: 'right-child', parentId: 'col-right' });
+
+      const { columns } = buildColumnRow(leftColumn, leftChild, rightColumn, rightChild);
+
+      // Left column content box 300..500, right column 560..760 (gutter between).
+      stubWideHolder(leftChild);
+      stubContentRect(leftChild, 300, 500);
+      stubWideHolder(rightChild);
+      stubContentRect(rightChild, 560, 760);
+
+      const bm = createSideBlockManager([leftColumn, leftChild, rightColumn, rightChild, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(columns);
+      const innerLeft = document.createElement('div');
+      leftChild.holder.appendChild(innerLeft);
+      const innerRight = document.createElement('div');
+      rightChild.holder.appendChild(innerRight);
+
+      // The INNER edges between the two columns NO LONGER side-drop — they fall
+      // through to a top/bottom reorder (stack INTO the column). Between-column
+      // insertion is the gutter separator's job, so the indicator never flips to
+      // a vertical "new column" bar as the cursor crosses a column body edge.
+      const leftInnerEdge = det.determineDropTarget(innerLeft, 480, 150, source);
+      expect(['top', 'bottom']).toContain(leftInnerEdge?.edge);
+
+      const rightInnerEdge = det.determineDropTarget(innerRight, 580, 150, source);
+      expect(['top', 'bottom']).toContain(rightInnerEdge?.edge);
+
+      // The OUTER edges DO side-drop: the first column's left edge appends a
+      // column at the start...
+      const firstOuter = det.determineDropTarget(innerLeft, 320, 150, source);
+      expect(firstOuter?.edge).toBe('left');
+      expect(firstOuter?.block).toBe(leftChild);
+      expect(firstOuter?.parentId).toBe('col-left');
+
+      // ...and the last column's right edge appends one at the end.
+      const lastOuter = det.determineDropTarget(innerRight, 740, 150, source);
+      expect(lastOuter?.edge).toBe('right');
+      expect(lastOuter?.block).toBe(rightChild);
+      expect(lastOuter?.parentId).toBe('col-right');
+
+      document.body.removeChild(columns);
+    });
+
+    it('keeps a right side-drop on the LAST column as-is (outer edge appends a column at the end)', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const leftColumn = createSideTestBlock({ id: 'col-left', name: 'column' });
+      const leftChild = createSideTestBlock({ id: 'left-child', parentId: 'col-left' });
+      const rightColumn = createSideTestBlock({ id: 'col-right', name: 'column' });
+      const rightChild = createSideTestBlock({ id: 'right-child', parentId: 'col-right' });
+
+      const { columns } = buildColumnRow(leftColumn, leftChild, rightColumn, rightChild);
+
+      stubWideHolder(rightChild);
+      stubContentRect(rightChild, 560, 760);
+
+      const bm = createSideBlockManager([leftColumn, leftChild, rightColumn, rightChild, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(columns);
+      const innerRight = document.createElement('div');
+      rightChild.holder.appendChild(innerRight);
+
+      // Right edge of the last column → append a column at the end (outer edge).
+      const result = det.determineDropTarget(innerRight, 740, 150, source);
+
+      expect(result?.edge).toBe('right');
+      expect(result?.block).toBe(rightChild);
+      expect(result?.parentId).toBe('col-right');
+
+      document.body.removeChild(columns);
+    });
+
+    /**
+     * Builds a column_list block whose holder spans the FULL editor width (the
+     * real container holder is edge-to-edge) with a narrower, centered content
+     * row, plus N real column children each holding one child block. Models the
+     * geometry where the OUTER editor margins beside the row resolve (via
+     * elementFromPoint) to the full-width container holder, NOT to a narrow
+     * column child. Returns the column_list block + its child columns/blocks.
+     */
+    const buildColumnListWithColumns = (
+      columnCount: number
+    ): { columnList: Block; columns: Block[]; children: Block[] } => {
+      const columnList = createSideTestBlock({ id: 'cl', name: 'column_list' });
+
+      stubWideHolder(columnList);            // holder 0..1200 (full editor width)
+      stubContentRect(columnList, 300, 900); // content row 300..900 → sideZone 150
+
+      const columns: Block[] = [];
+      const children: Block[] = [];
+
+      for (let i = 0; i < columnCount; i += 1) {
+        const column = createSideTestBlock({ id: `col-${i}`, name: 'column', parentId: 'cl' });
+        const child = createSideTestBlock({ id: `child-${i}`, parentId: column.id });
+
+        columns.push(column);
+        children.push(child);
+      }
+
+      return { columnList, columns, children };
+    };
+
+    it('treats the OUTER editor margin beside an existing column_list as a new-column dropzone (far-left → prepend)', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const { columnList, columns, children } = buildColumnListWithColumns(2);
+
+      const bm = createSideBlockManager([columnList, ...columns, ...children, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(columnList.holder);
+      const inner = document.createElement('div');
+      columnList.holder.appendChild(inner);
+
+      // x=20 is deep in the LEFT editor margin, beside the whole column_list. No
+      // narrow column child lives out here, so the cursor resolves to the
+      // full-width container holder. It must behave exactly like the no-columns
+      // case: a left side-drop that prepends a NEW column at the START of the row
+      // (addColumnToList against the first column, side 'left').
+      const result = det.determineDropTarget(inner, 20, 150, source);
+
+      expect(result?.edge).toBe('left');
+      expect(result?.parentId).toBe('col-0');
+      expect(result?.block).toBe(children[0]);
+
+      document.body.removeChild(columnList.holder);
+    });
+
+    it('treats the OUTER editor margin beside an existing column_list as a new-column dropzone (far-right → append)', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const { columnList, columns, children } = buildColumnListWithColumns(2);
+
+      const bm = createSideBlockManager([columnList, ...columns, ...children, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(columnList.holder);
+      const inner = document.createElement('div');
+      columnList.holder.appendChild(inner);
+
+      // x=1150 is deep in the RIGHT editor margin → append a NEW column at the
+      // END of the row (addColumnToList against the last column, side 'right').
+      const result = det.determineDropTarget(inner, 1150, 150, source);
+
+      expect(result?.edge).toBe('right');
+      expect(result?.parentId).toBe('col-1');
+      expect(result?.block).toBe(children[1]);
+
+      document.body.removeChild(columnList.holder);
+    });
+
+    it('side-drops on a column_list outer margin at ANY distance into the margin', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const { columnList, columns, children } = buildColumnListWithColumns(3);
+
+      const bm = createSideBlockManager([columnList, ...columns, ...children, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(columnList.holder);
+      const inner = document.createElement('div');
+      columnList.holder.appendChild(inner);
+
+      // Just past the content edge and far into the margin both side-drop —
+      // the whole margin is live, matching the standalone (no-columns) zone.
+      for (const x of [299, 100, 5]) {
+        expect(det.determineDropTarget(inner, x, 150, source)?.edge).toBe('left');
+      }
+      for (const x of [901, 1100, 1199]) {
+        expect(det.determineDropTarget(inner, x, 150, source)?.edge).toBe('right');
+      }
+
+      // A drop ABOVE the central band (near the row's top corner) still reorders
+      // the whole list (top/bottom), never side-drops.
+      const aboveBand = det.determineDropTarget(inner, 20, 105, source);
+      expect(['top', 'bottom']).toContain(aboveBand?.edge);
+
+      document.body.removeChild(columnList.holder);
+    });
+
+    /**
+     * Adds a `[data-blok-element-content]` element to a child holder and stubs its
+     * rect to a fixed vertical span. Used to give two columns DIFFERENT content
+     * heights so the dead gap below the shorter one can be targeted.
+     */
+    const stubChildContent = (block: Block, top: number, bottom: number): void => {
+      const content = document.createElement('div');
+      content.setAttribute('data-blok-element-content', '');
+      block.holder.appendChild(content);
+      vi.spyOn(content, 'getBoundingClientRect').mockReturnValue({
+        top, bottom, left: 300, right: 500, width: 200, height: bottom - top, x: 300, y: top, toJSON: () => ({}),
+      });
+    };
+
+    it('stacks a gutter drop into the column whose dead gap it lands in, instead of inserting a new column', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const leftColumn = createSideTestBlock({ id: 'col-left', name: 'column' });
+      const leftChild = createSideTestBlock({ id: 'left-child', parentId: 'col-left' });
+      const rightColumn = createSideTestBlock({ id: 'col-right', name: 'column' });
+      const rightChild = createSideTestBlock({ id: 'right-child', parentId: 'col-right' });
+
+      const { columns, resizer } = buildColumnRow(leftColumn, leftChild, rightColumn, rightChild);
+
+      // Left column content ends at y160; right column content fills to y200. The
+      // separator spans the full row (100..200), so its lower strip (160..200)
+      // overlaps the EMPTY gap below the left column — the bug zone where a drop
+      // used to insert a new column between the two.
+      stubChildContent(leftChild, 100, 160);
+      stubChildContent(rightChild, 100, 200);
+
+      const bm = createSideBlockManager([leftColumn, leftChild, rightColumn, rightChild, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(columns);
+
+      // Cursor on the separator at y180 — inside the left column's dead gap (its
+      // content ended at 160) while the right column still has content. This must
+      // stack INTO the left column (bottom of its last child), NOT side-drop.
+      const inGap = det.determineDropTarget(resizer, 510, 180, source);
+
+      expect(inGap?.edge).toBe('bottom');
+      expect(inGap?.block).toBe(leftChild);
+
+      // Higher up (y130), both columns have content beside the separator — the
+      // gutter still inserts a NEW column between them (unchanged behaviour).
+      const betweenContent = det.determineDropTarget(resizer, 510, 130, source);
+
+      expect(betweenContent?.edge).toBe('left');
+      expect(betweenContent?.block).toBe(rightChild);
+      expect(betweenContent?.parentId).toBe('col-right');
+
+      document.body.removeChild(columns);
+    });
+
+    it('does NOT redirect a gutter drop below 651px (columns stack, no separators)', () => {
+      Object.defineProperty(window, 'innerWidth', { value: 650, writable: true, configurable: true });
+
+      const source = createSideTestBlock({ id: 'source' });
+      const rightColumn = createSideTestBlock({ id: 'col-right', name: 'column' });
+      const rightChild = createSideTestBlock({ id: 'right-child', parentId: 'col-right' });
+
+      const { columns, resizer } = buildGutter(rightColumn, rightChild);
+
+      const bm = createSideBlockManager([rightColumn, rightChild, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(columns);
+
+      const result = det.determineDropTarget(resizer, 510, 150, source);
+
+      // No between-insertion on a stacked layout — must not produce a 'left' edge.
+      expect(result?.edge).not.toBe('left');
+
+      document.body.removeChild(columns);
+    });
+
+    it('should NOT produce a horizontal edge when window is narrower than 651px', () => {
+      Object.defineProperty(window, 'innerWidth', { value: 650, writable: true, configurable: true });
+
+      const source = createSideTestBlock({ id: 'source' });
+      const target = createSideTestBlock({ id: 'target' });
+      stubRect(target);
+
+      const bm = createSideBlockManager([target, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(target.holder);
+      const inner = document.createElement('div');
+      target.holder.appendChild(inner);
+
+      const result = det.determineDropTarget(inner, 480, 150, source);
+
+      expect(result).not.toBeNull();
+      expect(['top', 'bottom']).toContain(result?.edge);
+
+      document.body.removeChild(target.holder);
+    });
+  });
+
+  describe('more toggle nesting detection', () => {
+    /**
+     * Creates a block stub for toggle nesting tests.
+     */
+    const createToggleTestBlock = (options: {
+      id?: string;
+      parentId?: string | null;
+      contentIds?: string[];
+      toggleOpen?: boolean;
+      name?: string;
+    } = {}): Block => {
+      const holder = document.createElement('div');
+      holder.setAttribute(DATA_ATTR.element, 'block');
+
+      if (options.toggleOpen !== undefined) {
+        const toggleWrapper = document.createElement('div');
+        toggleWrapper.setAttribute('data-blok-toggle-open', String(options.toggleOpen));
+        holder.appendChild(toggleWrapper);
+      }
+
+      return {
+        id: options.id ?? `block-${Math.random().toString(36).slice(2)}`,
+        parentId: options.parentId ?? null,
+        contentIds: options.contentIds ?? [],
+        holder,
+        name: options.name ?? 'paragraph',
+        selected: false,
+        stretched: false,
+      } as unknown as Block;
+    };
+
+    const createToggleBlockManager = (blocks: Block[]): BlockManagerAdapter => ({
+      blocks,
+      getBlockByIndex: (index: number) => blocks[index],
+      getBlockIndex: (block: Block) => blocks.indexOf(block),
+      getBlockById: (id: string) => blocks.find(b => b.id === id),
+    });
+
+    const createToggleUIAdapter = (): { contentRect: { left: number } } => ({
+      contentRect: { left: 0 },
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
     it('should NOT trap a toggle child inside the toggle when cursor is at top half of the next external block (multi-child toggle)', () => {
       // Scenario: toggle T has two children [childA, childD].
       // User drags childA. cursor is at the TOP HALF of the external block C (right after T).

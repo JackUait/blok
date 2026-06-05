@@ -119,6 +119,103 @@ describe('SelectionController', () => {
 
       expect(onSpy).toHaveBeenCalledWith(document, 'selectionchange', expect.any(Function));
     });
+
+    it('binds pointerup listener on enable', () => {
+      const { controller } = createSelectionController();
+
+      const onSpy = vi.spyOn(
+        (controller as unknown as { listeners: { on: ReturnType<typeof vi.fn> } }).listeners,
+        'on'
+      );
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      expect(onSpy).toHaveBeenCalledWith(document, 'pointerup', expect.any(Function));
+    });
+
+    it('binds pointerdown listener on enable', () => {
+      const { controller } = createSelectionController();
+
+      const onSpy = vi.spyOn(
+        (controller as unknown as { listeners: { on: ReturnType<typeof vi.fn> } }).listeners,
+        'on'
+      );
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      expect(onSpy).toHaveBeenCalledWith(document, 'pointerdown', expect.any(Function));
+    });
+  });
+
+  describe('instant show on pointer release', () => {
+    const setupValidSelection = (
+      controller: SelectionController,
+      blok: BlokModules,
+      wrapper: HTMLElement
+    ): void => {
+      const blockContent = document.createElement('div');
+
+      blockContent.setAttribute('data-blok-testid', 'block-content');
+      wrapper.appendChild(blockContent);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      const inlineToolbar = blok.InlineToolbar as {
+        opened: boolean;
+        hasNestedPopoverOpen: boolean;
+      };
+
+      inlineToolbar.opened = false;
+      inlineToolbar.hasNestedPopoverOpen = false;
+
+      vi.spyOn(Selection, 'anchorElement', 'get').mockReturnValue(blockContent);
+      vi.spyOn(Selection, 'get').mockReturnValue({
+        isCollapsed: false,
+      } as unknown as ReturnType<typeof Selection.get>);
+      vi.spyOn(Selection, 'text', 'get').mockReturnValue('selected text');
+    };
+
+    it('shows inline toolbar synchronously on pointerup without waiting for debounce', () => {
+      const { controller, blok, wrapper } = createSelectionController();
+
+      setupValidSelection(controller, blok, wrapper);
+
+      // Release the pointer after a drag-selection — toolbar must appear immediately,
+      // without advancing the selectionchange debounce timers.
+      document.dispatchEvent(new Event('pointerup'));
+
+      expect(blok.InlineToolbar.tryToShow).toHaveBeenCalledWith(true);
+    });
+
+    it('does not show inline toolbar on selectionchange while the pointer is held down', () => {
+      const { controller, blok, wrapper } = createSelectionController();
+
+      setupValidSelection(controller, blok, wrapper);
+
+      // User is still dragging: pointer is down and the selection grows. Even if the
+      // selectionchange debounce fires mid-drag (e.g. a pause), the toolbar must stay hidden.
+      document.dispatchEvent(new Event('pointerdown'));
+      document.dispatchEvent(new Event('selectionchange'));
+      vi.runAllTimers();
+
+      expect(blok.InlineToolbar.tryToShow).not.toHaveBeenCalled();
+    });
+
+    it('shows inline toolbar only once the pointer is released after dragging', () => {
+      const { controller, blok, wrapper } = createSelectionController();
+
+      setupValidSelection(controller, blok, wrapper);
+
+      document.dispatchEvent(new Event('pointerdown'));
+      document.dispatchEvent(new Event('selectionchange'));
+      vi.runAllTimers();
+
+      expect(blok.InlineToolbar.tryToShow).not.toHaveBeenCalled();
+
+      document.dispatchEvent(new Event('pointerup'));
+
+      expect(blok.InlineToolbar.tryToShow).toHaveBeenCalledWith(true);
+    });
   });
 
   describe('selection change handling', () => {

@@ -32,6 +32,8 @@ export { DividerTool as Divider } from './divider';
 export { Quote } from './quote';
 export { CodeTool as Code } from './code';
 export { ImageTool as Image } from './image';
+export { ColumnList } from './column-list';
+export { Column } from './column';
 
 // Inline tools
 export { BoldInlineTool as Bold } from '../components/inline-tools/inline-tool-bold';
@@ -58,6 +60,8 @@ export const defaultBlockTools = {
   quote: {},
   code: { inlineToolbar: false },
   image: {},
+  column_list: {},
+  column: {},
 } as const;
 
 export const defaultInlineTools = {

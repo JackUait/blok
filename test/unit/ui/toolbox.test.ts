@@ -233,6 +233,7 @@ describe('Toolbox', () => {
       blocks: {
         getCurrentBlockIndex: vi.fn(() => 0),
         getBlockByIndex: vi.fn(() => blockAPI),
+        getById: vi.fn(() => null),
         convert: vi.fn(),
         composeBlockData: vi.fn(async () => ({})),
         insert: vi.fn(() => blockAPI),
@@ -1575,6 +1576,152 @@ describe('Toolbox', () => {
 
       expect(mockPopoverInstance.toggleItemHiddenByName).not.toHaveBeenCalledWith('header-1', true);
       expect(mockPopoverInstance.toggleItemHiddenByName).not.toHaveBeenCalledWith('header-2', true);
+    });
+  });
+
+  describe('column_list nesting inside a column', () => {
+    /**
+     * Builds a column block adapter and wires the blocks API so getById walks a
+     * paragraph -> column chain, putting the current block inside a column.
+     */
+    const wireInsideColumn = (): void => {
+      vi.mocked(mocks.api.blocks.getById).mockImplementation((id: string) => {
+        if (id === mocks.blockAPI.id) {
+          return { id, name: 'paragraph', parentId: 'col-1' } as unknown as BlockAPI;
+        }
+        if (id === 'col-1') {
+          return { id, name: 'column', parentId: 'cl-1' } as unknown as BlockAPI;
+        }
+
+        return null;
+      });
+    };
+
+    const columnListTools = (): ToolsCollection<BlockToolAdapter> => {
+      const columnListAdapter = {
+        name: 'column_list',
+        toolbox: [
+          { title: 'Columns', icon: '<svg>cols</svg>', name: 'column_list' },
+          { title: '2 columns', icon: '<svg>cols</svg>', name: 'column_list-2', data: { columnCount: 2 } },
+          { title: '3 columns', icon: '<svg>cols</svg>', name: 'column_list-3', data: { columnCount: 3 } },
+        ],
+      } as unknown as BlockToolAdapter;
+
+      return createToolsCollection([
+        ['testTool', mocks.blockToolAdapter],
+        ['column_list', columnListAdapter],
+      ]);
+    };
+
+    it('does not hide any column_list preset when opened inside a column', () => {
+      wireInsideColumn();
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: columnListTools(),
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+
+      // Columns inside columns are allowed: no preset is hidden.
+      expect(mockPopoverInstance.toggleItemHiddenByName).not.toHaveBeenCalledWith('column_list', true);
+      expect(mockPopoverInstance.toggleItemHiddenByName).not.toHaveBeenCalledWith('column_list-2', true);
+      expect(mockPopoverInstance.toggleItemHiddenByName).not.toHaveBeenCalledWith('column_list-3', true);
+    });
+
+    it('inserts a column_list when the current block is inside a column', async () => {
+      wireInsideColumn();
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: columnListTools(),
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      await toolbox.toolButtonActivated('column_list', {});
+
+      const columnListInsert = vi
+        .mocked(mocks.api.blocks.insert)
+        .mock.calls.find(call => call[0] === 'column_list');
+
+      expect(columnListInsert).toBeDefined();
+    });
+
+    it('still inserts other block types when inside a column', async () => {
+      wireInsideColumn();
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: columnListTools(),
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      await toolbox.toolButtonActivated('testTool', {});
+
+      expect(mocks.api.blocks.insert).toHaveBeenCalled();
+    });
+  });
+
+  describe('column_list restriction inside a table cell', () => {
+    const columnListAdapter = {
+      name: 'column_list',
+      toolbox: [
+        { title: 'Columns', icon: '<svg>cols</svg>', name: 'column_list' },
+        { title: '2 columns', icon: '<svg>cols</svg>', name: 'column_list-2', data: { columnCount: 2 } },
+        { title: '3 columns', icon: '<svg>cols</svg>', name: 'column_list-3', data: { columnCount: 3 } },
+      ],
+    } as unknown as BlockToolAdapter;
+
+    it('hides all column_list presets when opened inside a table cell', () => {
+      const tools = createToolsCollection([
+        ['testTool', mocks.blockToolAdapter],
+        ['column_list', columnListAdapter],
+      ]);
+
+      // Wrap the block holder in a table cell container.
+      const cellBlocksContainer = document.createElement('div');
+
+      cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+      cellBlocksContainer.appendChild(mocks.blockAPI.holder);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+
+      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('column_list', true);
+      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('column_list-2', true);
+      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('column_list-3', true);
+
+      cellBlocksContainer.remove();
+    });
+
+    it('does not hide column_list presets when opened outside a table cell', () => {
+      const tools = createToolsCollection([
+        ['testTool', mocks.blockToolAdapter],
+        ['column_list', columnListAdapter],
+      ]);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+
+      expect(mockPopoverInstance.toggleItemHiddenByName).not.toHaveBeenCalledWith('column_list', true);
+      expect(mockPopoverInstance.toggleItemHiddenByName).not.toHaveBeenCalledWith('column_list-2', true);
+      expect(mockPopoverInstance.toggleItemHiddenByName).not.toHaveBeenCalledWith('column_list-3', true);
     });
   });
 

@@ -4,6 +4,7 @@ import { DATA_ATTR } from '../../constants';
 import { announce } from '../../utils/announcer';
 import { hide as hideTooltip } from '../../utils/tooltip';
 
+import { addColumnToList, wrapInNewColumnList } from '../../../tools/column-drop';
 import { DragA11y } from './a11y/DragA11y';
 import { DragOperations } from './operations/DragOperations';
 import { DragPreview } from './preview/DragPreview';
@@ -362,6 +363,7 @@ export class DragController extends Module {
     if (currentState.type === 'dragging' && currentState.targetBlock) {
       currentState.targetBlock.holder.removeAttribute('data-drop-indicator');
       currentState.targetBlock.holder.style.removeProperty('--drop-indicator-depth');
+      this.clearContentIndicatorOffsets(currentState.targetBlock);
     }
 
     // Find element under cursor (temporarily hide preview)
@@ -390,7 +392,7 @@ export class DragController extends Module {
     }
 
     // Update state with new target
-    this.stateMachine.updateTarget(dropTarget.block, dropTarget.edge);
+    this.stateMachine.updateTarget(dropTarget.block, dropTarget.edge, dropTarget.parentId);
     // Spring-load closed toggles: auto-expand after 500ms hover
     this.springLoader.update(dropTarget.block);
 
@@ -398,10 +400,133 @@ export class DragController extends Module {
     dropTarget.block.holder.setAttribute('data-drop-indicator', dropTarget.edge);
     dropTarget.block.holder.style.setProperty('--drop-indicator-depth', String(dropTarget.depth));
 
+    // Confine the indicator to the visible content box. The holder spans the
+    // full editor width (gutters included), so without these offsets the
+    // top/bottom reorder line stretches across the whole screen and the side
+    // bars land out in the margins. Applies to every edge.
+    this.applyContentIndicatorOffsets(dropTarget.block);
+
+    // For a column side-drop, stretch the vertical indicator bar to the full
+    // height of the column row, not just the single target block.
+    this.applySideIndicatorHeight(dropTarget.block, dropTarget.edge);
+
+    // ...and center it on the gutter between the columns, so the line clearly
+    // marks an insertion BETWEEN them rather than at one column's edge.
+    this.centerSideIndicatorInGutter(dropTarget.block, dropTarget.edge);
+
     // Announce drop position change to screen readers
     if (this.a11y) {
       this.a11y.announceDropPosition(dropTarget.block, dropTarget.edge);
     }
+  }
+
+  /**
+   * Sets the `--drop-indicator-side-left/right` custom properties on a block's
+   * holder so the drop indicator (top/bottom line and left/right side bars) is
+   * confined to the visible content box instead of the full-width holder. Falls
+   * back to no offset when the standard content wrapper is absent.
+   *
+   * @param block - The drop target block
+   */
+  private applyContentIndicatorOffsets(block: Block): void {
+    const content = block.holder.querySelector('[data-blok-element-content]');
+
+    if (!(content instanceof HTMLElement)) {
+      return;
+    }
+
+    const holderRect = block.holder.getBoundingClientRect();
+    const contentRect = content.getBoundingClientRect();
+
+    block.holder.style.setProperty('--drop-indicator-side-left', `${contentRect.left - holderRect.left}px`);
+    block.holder.style.setProperty('--drop-indicator-side-right', `${holderRect.right - contentRect.right}px`);
+  }
+
+  /**
+   * For a left/right (column) drop whose target sits inside a column_list,
+   * stretch the vertical indicator bar to the full height of the column row by
+   * setting `--drop-indicator-side-top/bottom` to the row container's top/bottom
+   * offset relative to the block holder (negative, so the bar grows past the
+   * single block). No-op for top/bottom edges or targets outside a column.
+   *
+   * @param block - The drop target block
+   * @param edge - The resolved drop edge
+   */
+  private applySideIndicatorHeight(block: Block, edge: 'top' | 'bottom' | 'left' | 'right'): void {
+    if (edge !== 'left' && edge !== 'right') {
+      return;
+    }
+
+    const columns = block.holder.closest('[data-blok-columns]');
+
+    if (!(columns instanceof HTMLElement)) {
+      return;
+    }
+
+    const holderRect = block.holder.getBoundingClientRect();
+    const columnsRect = columns.getBoundingClientRect();
+
+    block.holder.style.setProperty('--drop-indicator-side-top', `${columnsRect.top - holderRect.top}px`);
+    block.holder.style.setProperty('--drop-indicator-side-bottom', `${holderRect.bottom - columnsRect.bottom}px`);
+  }
+
+  /**
+   * Centers a column side-drop indicator on the gutter (the resize separator)
+   * between the two columns it divides, instead of sitting on the target column's
+   * content edge. The indicator marks an insertion BETWEEN columns, so the bar
+   * belongs in the gutter — overrides `--drop-indicator-side-left/right` to the
+   * separator's horizontal center. No-op when the edge isn't horizontal or there
+   * is no adjacent separator (an outer edge of the first/last column).
+   *
+   * @param block - The drop target block
+   * @param edge - The resolved drop edge
+   */
+  private centerSideIndicatorInGutter(block: Block, edge: 'top' | 'bottom' | 'left' | 'right'): void {
+    if (edge !== 'left' && edge !== 'right') {
+      return;
+    }
+
+    const columnWrapper = block.holder.closest('[data-blok-column]');
+    const columnHolder = columnWrapper instanceof HTMLElement
+      ? columnWrapper.closest('[data-blok-element]')
+      : null;
+
+    if (!(columnHolder instanceof HTMLElement)) {
+      return;
+    }
+
+    const separator = edge === 'left'
+      ? columnHolder.previousElementSibling
+      : columnHolder.nextElementSibling;
+
+    if (!(separator instanceof HTMLElement) || !separator.hasAttribute('data-blok-column-resizer')) {
+      return;
+    }
+
+    const holderRect = block.holder.getBoundingClientRect();
+    const separatorRect = separator.getBoundingClientRect();
+    const separatorCenter = separatorRect.left + separatorRect.width / 2;
+    // The bar is 3px wide; offset by half so its center lands on the separator.
+    const halfBar = 1.5;
+
+    if (edge === 'left') {
+      block.holder.style.setProperty('--drop-indicator-side-left', `${separatorCenter - holderRect.left - halfBar}px`);
+    } else {
+      block.holder.style.setProperty('--drop-indicator-side-right', `${holderRect.right - separatorCenter - halfBar}px`);
+    }
+  }
+
+  /**
+   * Removes the side-drop offset custom properties set by
+   * {@link applyContentIndicatorOffsets} and {@link applySideIndicatorHeight}.
+   *
+   * @param block - The block to clear
+   */
+  private clearContentIndicatorOffsets(block: Block): void {
+    block.holder.style.removeProperty('--drop-indicator-side-left');
+    block.holder.style.removeProperty('--drop-indicator-side-right');
+    block.holder.style.removeProperty('--drop-indicator-side-top');
+    block.holder.style.removeProperty('--drop-indicator-side-bottom');
   }
 
   private onMouseUp(e: MouseEvent): void {
@@ -414,7 +539,11 @@ export class DragController extends Module {
       return;
     }
 
-    const { targetBlock, targetEdge } = state as { targetBlock: Block | null; targetEdge: 'top' | 'bottom' | null };
+    const { targetBlock, targetEdge, targetParentId } = state as {
+      targetBlock: Block | null;
+      targetEdge: 'top' | 'bottom' | 'left' | 'right' | null;
+      targetParentId: string | null;
+    };
 
     if (!targetBlock || !targetEdge) {
       this.cleanup();
@@ -428,6 +557,14 @@ export class DragController extends Module {
       return;
     }
 
+    // Horizontal drops route to the column-drop helper (wired by integration),
+    // never to moveBlocks — its signature stays 'top' | 'bottom'.
+    if (targetEdge === 'left' || targetEdge === 'right') {
+      this.handleColumnDrop(sourceBlock, sourceBlocks, targetBlock, targetEdge, targetParentId);
+      this.cleanup(false, e.altKey);
+      return;
+    }
+
     if (e.altKey) {
       void this.handleDuplicate(sourceBlocks, targetBlock, targetEdge);
     } else {
@@ -435,6 +572,85 @@ export class DragController extends Module {
     }
 
     this.cleanup(false, e.altKey);
+  }
+
+  /**
+   * Handles a horizontal (side) drop near a block's left/right edge.
+   *
+   * @param sourceBlock - The primary block being dragged
+   * @param sourceBlocks - All blocks being dragged
+   * @param targetBlock - The block whose side was targeted
+   * @param edge - Which side of the target the drop occurred on
+   * @param targetParentId - The enclosing column id, or null if the target is at root
+   */
+  private handleColumnDrop(
+    sourceBlock: Block,
+    sourceBlocks: Block[],
+    targetBlock: Block,
+    edge: 'left' | 'right',
+    targetParentId: string | null
+  ): void {
+    const api = this.Blok.API.methods;
+
+    // Sources are the dragged blocks in document order; never the target.
+    const dragged = (sourceBlocks.length > 0 ? sourceBlocks : [sourceBlock])
+      .filter(block => block.id !== targetBlock.id);
+    const draggedIds = new Set(dragged.map(block => block.id));
+
+    // Drop only the TOP-LEVEL dragged blocks into the new/added column. A
+    // container's descendants are included in sourceBlocks (e.g. a callout
+    // carries its child paragraph), but they must ride along with their parent —
+    // reparenting them directly into the column would steal them out of their
+    // container, stranding the grandchild under the column instead of the
+    // callout. Mirrors the previewBlocks filter and handleDropImpl's
+    // parentIsBeingMoved skip.
+    const sourceIds = dragged
+      .filter(block => block.parentId === null || !draggedIds.has(block.parentId))
+      .map(block => block.id);
+
+    if (sourceIds.length === 0) {
+      return;
+    }
+
+    // Snapshot the sources' current parent columns before the move. When a source
+    // is the LAST block of its column, moving it into the new column empties that
+    // source column — and unlike the vertical-drop path (handleDropImpl re-renders
+    // affected parents), this side-drop reparents via raw setBlockParent and never
+    // touches the emptied source. Re-seed those columns afterwards so they never
+    // become dead, uninteractable empty boxes.
+    const sourceParentIds = new Set(
+      sourceIds
+        .map(id => this.Blok.BlockManager.getBlockById(id)?.parentId)
+        .filter((parentId): parentId is string => parentId !== null && parentId !== undefined)
+    );
+
+    // targetParentId is the enclosing column when the target already lives in a
+    // column_list (→ add a sibling column), or null for a top-level target
+    // (→ wrap target + sources into a brand new column_list).
+    if (targetParentId !== null) {
+      addColumnToList(api, targetParentId, sourceIds, edge);
+    } else {
+      wrapInNewColumnList(api, targetBlock.id, sourceIds, edge);
+    }
+
+    this.reseedEmptiedColumns(sourceParentIds);
+  }
+
+  /**
+   * Re-seed any column among `columnIds` that a move left childless. A column is
+   * pure layout that always hosts at least one block; an empty one is a dead box
+   * the user can't click into. Firing the column's rendered() hook re-runs its
+   * empty-column seed, inserting a fresh empty paragraph — the same recovery the
+   * vertical-drop path gets for free when it re-renders affected parents.
+   */
+  private reseedEmptiedColumns(columnIds: Set<string>): void {
+    for (const columnId of columnIds) {
+      const column = this.Blok.BlockManager.getBlockById(columnId);
+
+      if (column !== undefined && column.name === 'column' && column.contentIds.length === 0) {
+        column.call('rendered');
+      }
+    }
   }
 
   private handleDrop(
@@ -821,6 +1037,7 @@ export class DragController extends Module {
     if ((state.type === 'dragging' || state.type === 'dropped') && state.targetBlock) {
       state.targetBlock.holder.removeAttribute('data-drop-indicator');
       state.targetBlock.holder.style.removeProperty('--drop-indicator-depth');
+      this.clearContentIndicatorOffsets(state.targetBlock);
     }
 
     this.springLoader.cancel();

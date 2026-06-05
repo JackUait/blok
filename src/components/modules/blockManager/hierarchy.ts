@@ -212,7 +212,18 @@ export class BlockHierarchy {
     // If old parent had a toggle child container and this block was in it, move it to the
     // position indicated by the flat array. moveBlocks() updates the flat array before
     // setBlockParent() is called, so getBlockIndex() reflects the intended drop position.
-    const oldContainer = oldParent !== undefined ? oldParent.holder.querySelector('[data-blok-toggle-children]') : null;
+    //
+    // Guard: only relocate the holder OUT of the toggle when the block is actually
+    // LEAVING its toggle parent (new parent differs from the old one). When the
+    // parent is unchanged the block is merely following its own relocated parent —
+    // e.g. a toggle dragged between columns carries its child along, and
+    // DragController re-asserts the child's parent via setBlockParent(child, sameToggle)
+    // to fix DOM placement. Yanking it to root here would strand the child outside
+    // the toggle even though it still belongs to it (the toggle-child-rides-along bug).
+    const oldContainer =
+      oldParent !== undefined && sanitizedParentId !== oldParentId
+        ? oldParent.holder.querySelector('[data-blok-toggle-children]')
+        : null;
 
     if (oldContainer && block.holder.parentElement === oldContainer) {
       // Scan backwards in the flat array for the nearest block whose holder is at root
@@ -268,13 +279,68 @@ export class BlockHierarchy {
       }
     }
 
-    // Move block holder into toggle child container if the new parent has one,
-    // honouring the flat-array order so the DOM order matches the logical order.
-    // Skip if the holder is already claimed by another nested-blocks container
-    // (e.g. a table cell) — moving it would steal it from that container.
-    if (sanitizedParentId !== null && newParent !== undefined && !block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`)) {
-      const newContainer = newParent.holder.querySelector('[data-blok-toggle-children]');
-      if (newContainer) {
+    // Move block holder into the new parent's direct child container, honouring
+    // the flat-array order so the DOM order matches the logical order.
+    //
+    // The target container may be a toggle/callout container ([data-blok-toggle-children])
+    // or a generic nested-blocks container ([data-blok-nested-blocks], used by
+    // columns and column_list). querySelector returns the FIRST match in
+    // document order: because a parent's own child container is a direct child of
+    // its wrapper, it always precedes any grandchild container (which lives INSIDE
+    // it, deeper in document order). So this resolves to the parent's own direct
+    // container, never a deeper one belonging to a nested block.
+    //
+    // Skip guard: keep the original behaviour of refusing to move a holder that
+    // is already claimed by SOME nested-blocks container (e.g. a table cell) —
+    // moving it would steal it from that container. The one loosening Track C
+    // needs is to still mount when the target is the holder's CURRENT container
+    // already (a no-op insertBefore that re-asserts flat order); we express that
+    // by only skipping when the holder's nearest nested container is DIFFERENT
+    // from the target container.
+    if (sanitizedParentId !== null && newParent !== undefined) {
+      const newContainer = newParent.holder.querySelector(
+        '[data-blok-toggle-children], [data-blok-nested-blocks]'
+      );
+      const currentNestedContainer = block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`);
+
+      // A column→column move is a legitimate reparent driven by the drag system:
+      // the holder must follow the model into the destination column. The
+      // anti-stealing guard targets corrupted multi-references across tool
+      // containers (table cell / toggle / callout / header), never the columns
+      // flex layout. A column's child container is identifiable because its
+      // PARENT is the [data-blok-column] wrapper — that precisely separates the
+      // two cases (a toggle nested inside a column would not match).
+      const isColumnContainer = (container: Element | null): boolean =>
+        container?.parentElement?.matches('[data-blok-column]') === true;
+      // The column_list's own child container is the columns row. A `column`
+      // block always belongs to a columns row, so mounting one into a row is a
+      // legitimate structural reparent — never a steal. This is the case the
+      // drag-beside "add a column" path hits: api.blocks.insert anchors the new
+      // column's holder next to a SIBLING column's child block (the new column's
+      // flat index falls inside that sibling's child range), so the holder lands
+      // inside that sibling column's container. Without this allowance the guard
+      // below refuses to move it out, stranding the new column nested INSIDE its
+      // sibling instead of placing it beside it in the row.
+      const isColumnsRow = (container: Element | null): boolean =>
+        container?.matches('[data-blok-columns]') === true;
+      // A block whose model parent is a column but whose holder is currently
+      // stranded in the column_list's flex row (the columns row) must be
+      // relocated INTO the target column's child container. This is the
+      // Enter/split-in-column strand: the split insert anchors the new holder
+      // 'beforebegin' the sibling column in the row, so its nearest nested
+      // container resolves to the columns row, not a real column. Allow the
+      // move when the holder sits in the row and the destination is a genuine
+      // column child container — it was never legitimately "claimed" by the row.
+      const strandedInColumnsRow =
+        isColumnsRow(currentNestedContainer) && isColumnContainer(newContainer);
+      const claimedByOtherContainer =
+        currentNestedContainer !== null &&
+        currentNestedContainer !== newContainer &&
+        !(isColumnContainer(currentNestedContainer) && isColumnContainer(newContainer)) &&
+        !isColumnsRow(newContainer) &&
+        !strandedInColumnsRow;
+
+      if (newContainer && !claimedByOtherContainer) {
         const allBlocks = this.repository.blocks;
         const blockIdx = allBlocks.indexOf(block);
         const nextSiblingHolder = allBlocks.slice(blockIdx + 1).find(
@@ -286,6 +352,30 @@ export class BlockHierarchy {
       }
     }
 
+    // Escaping a column for ROOT. The positional blocksStore.move() skips the
+    // DOM move while the holder is nested (it follows its parent container by
+    // default — correct for table cells), and the mount-into-container branch
+    // above only runs for a non-null parent — so a block dragged OUT of a
+    // column to root would otherwise stay stranded in the column's container
+    // while the model says root (a model-vs-DOM divergence). Relocate the
+    // holder to the workingArea at its flat-array position. Toggle/callout/
+    // header escapes are handled by the [data-blok-toggle-children] block near
+    // the top of this method; table cells manage their own DOM and block
+    // cross-cell drops upstream — so this is scoped to columns only.
+    if (sanitizedParentId === null && block.holder.closest('[data-blok-column]') !== null) {
+      const allBlocks = this.repository.blocks;
+      const blockIndex = allBlocks.indexOf(block);
+      const isAtRoot = (b: Block): boolean => b.holder.closest(`[${DATA_ATTR.nestedBlocks}]`) === null;
+      const precedingRoot = allBlocks.slice(0, blockIndex).reverse().find(isAtRoot);
+      const followingRoot = allBlocks.slice(blockIndex + 1).find(isAtRoot);
+
+      if (precedingRoot !== undefined) {
+        precedingRoot.holder.insertAdjacentElement('afterend', block.holder);
+      } else if (followingRoot !== undefined) {
+        followingRoot.holder.insertAdjacentElement('beforebegin', block.holder);
+      }
+    }
+
     // Update visual indentation
     this.updateBlockIndentation(block);
 
@@ -293,6 +383,37 @@ export class BlockHierarchy {
     if (sanitizedParentId !== null && this.onParentChanged !== undefined) {
       this.onParentChanged(sanitizedParentId);
     }
+  }
+
+  /**
+   * Walks the block's parentId chain and returns true if any ancestor is a
+   * `column` or `column_list` block — i.e. the block lives inside a columns
+   * layout in the block tree, regardless of whether its holder has been
+   * mounted into the columns DOM yet. Cycle-safe via a visited set.
+   * @param block - the block to test
+   * @returns true if a column/column_list ancestor exists
+   */
+  private hasColumnAncestor(block: Block): boolean {
+    const walk = (parentId: string | null, visited: Set<string>): boolean => {
+      if (parentId === null || visited.has(parentId)) {
+        return false;
+      }
+      visited.add(parentId);
+
+      const parent = this.repository.getBlockById(parentId);
+
+      if (parent === undefined) {
+        return false;
+      }
+
+      if (parent.name === 'column' || parent.name === 'column_list') {
+        return true;
+      }
+
+      return walk(parent.parentId, visited);
+    };
+
+    return walk(block.parentId, new Set<string>());
   }
 
   /**
@@ -315,6 +436,27 @@ export class BlockHierarchy {
     if (holder.closest('[data-blok-toggle-children]')) {
       holder.style.marginLeft = '';
       holder.setAttribute('data-blok-depth', String(this.getBlockDepth(block)));
+
+      return;
+    }
+
+    // Columns are a flex layout: the column_list block, its column children, and
+    // every block inside a column are positioned by flex, not block-tree depth.
+    // Depth-based margin would push the column holders off their even split and
+    // indent the column content. Keep them flush.
+    //
+    // The DOM check (`closest`) misses blocks indented BEFORE their holder is
+    // mounted into the columns container — e.g. a toolbox-seeded paragraph,
+    // whose indentation runs during insertInsideParent, before the Column tool
+    // appends it. The column ancestry is always in the block tree, so consult
+    // that too rather than relying on DOM placement timing.
+    if (
+      block.name === 'column_list' ||
+      holder.closest('[data-blok-columns]') ||
+      this.hasColumnAncestor(block)
+    ) {
+      holder.style.marginLeft = '';
+      holder.setAttribute('data-blok-depth', '0');
 
       return;
     }

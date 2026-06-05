@@ -5,7 +5,8 @@ import { BlockAPI } from '../../block/api';
 import { Dom as $ } from '../../dom';
 import { BlockSettingsClosed, BlockSettingsOpened, BlokMobileLayoutToggled } from '../../events';
 import { Flipper } from '../../flipper';
-import { IconReplace, IconTrash } from '../../icons';
+import { IconColumns, IconReplace, IconTrash } from '../../icons';
+import { wrapBlocksInColumns } from '../../../tools/column-drop';
 import { SelectionUtils } from '../../selection/index';
 import type { BlockToolAdapter } from '../../tools/block';
 import { isMobileScreen, keyCodes } from '../../utils';
@@ -13,7 +14,7 @@ import { getConvertibleToolsForBlock, getConvertibleToolsForBlocks } from '../..
 import type { PopoverItemParams, Popover } from '../../utils/popover';
 import { PopoverDesktop, PopoverMobile, PopoverItemType } from '../../utils/popover';
 import { css as popoverItemCls } from '../../utils/popover/components/popover-item';
-import { translateToolName, translateToolTitle } from '../../utils/tools';
+import { isToolConvertable, translateToolName, translateToolTitle } from '../../utils/tools';
 
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -203,7 +204,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         : await block.getActiveToolboxEntry();
       const contextLabel = ((): string => {
         if (hasMultipleBlocksSelected) {
-          return `${selectedBlocks.length} blocks`;
+          return this.Blok.I18n.t('blockSettings.blocksSelected', { count: selectedBlocks.length });
         }
 
         if (activeEntry) {
@@ -457,6 +458,51 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       return result;
     }, []);
 
+    /**
+     * For a multi-block selection, "Turn into columns" belongs in the same
+     * "Convert to" submenu as the other tool conversions. The selected ids are
+     * captured HERE, at build time — reading BlockSelection.selectedBlocks
+     * inside onActivate returns an empty list, because the document mousedown
+     * that fires when the popover item is clicked clears the block selection
+     * before onActivate runs.
+     */
+    if (hasMultipleBlocksSelected) {
+      const selectedBlockIds = selectedBlocks.map((selected) => selected.id);
+
+      convertToItems.push({
+        icon: IconColumns,
+        title: this.Blok.I18n.t('toolNames.columns'),
+        name: 'turn-into-columns',
+        closeOnActivate: true,
+        onActivate: () => {
+          const { Caret, Toolbar, BlockManager } = this.Blok;
+          const api = this.Blok.API.methods;
+
+          const listId = wrapBlocksInColumns(api, selectedBlockIds);
+
+          if (listId === null) {
+            Toolbar.close();
+
+            return;
+          }
+
+          const firstColumn = api.blocks.getChildren(listId)[0];
+          const firstChild = firstColumn !== undefined
+            ? api.blocks.getChildren(firstColumn.id)[0]
+            : undefined;
+          const block = firstChild !== undefined
+            ? BlockManager.getBlockById(firstChild.id)
+            : undefined;
+
+          if (block !== undefined) {
+            Caret.setToBlock(block, Caret.positions.START);
+          }
+
+          Toolbar.close();
+        },
+      });
+    }
+
     if (convertToItems.length > 0) {
       items.push({
         icon: IconReplace,
@@ -668,6 +714,30 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     }
 
     /**
+     * Convert only the "roots" of the selection that can actually convert.
+     * Mirrors {@link getConvertibleToolsForBlocks}: a block nested under another
+     * selected block (e.g. the contents of a selected column_list) rides with
+     * its container and must be left intact, and a non-convertible container
+     * block (no «export» rule) is skipped. Without this filter the merge path
+     * would pull a columns block's inner paragraphs out into the merged block,
+     * tearing the columns apart.
+     */
+    const selectedIds = new Set(blocks.map((block) => block.id));
+    const convertibleBlocks = blocks.filter((block) => {
+      if (block.parentId !== null && selectedIds.has(block.parentId)) {
+        return false;
+      }
+
+      const blockTool = Tools.blockTools.get(block.name);
+
+      return blockTool === undefined || isToolConvertable(blockTool, 'export');
+    });
+
+    if (convertibleBlocks.length === 0) {
+      return null;
+    }
+
+    /**
      * Check if the target tool's conversion config import function can handle
      * newline-separated content to create multiple items (like lists do).
      * We detect this by checking if the import function returns data with an 'items' array.
@@ -676,13 +746,13 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     const shouldMergeIntoSingleBlock = targetTool && this.canToolMergeMultipleItems(targetTool);
 
     if (shouldMergeIntoSingleBlock) {
-      return this.convertBlocksToSingleMergedBlock(blocks, targetToolName, toolboxData);
+      return this.convertBlocksToSingleMergedBlock(convertibleBlocks, targetToolName, toolboxData);
     }
 
     /**
      * Convert each block individually, maintaining them as separate blocks
      */
-    return this.convertBlocksIndividually(blocks, targetToolName, toolboxData);
+    return this.convertBlocksIndividually(convertibleBlocks, targetToolName, toolboxData);
   }
 
   /**

@@ -1702,6 +1702,109 @@ describe('Blocks', () => {
       expect(newBlock.holder.parentElement).not.toBe(workingArea);
     });
 
+    it('keeps an Enter-inserted block inside the same table cell when the next flat block lives in a sibling cell', () => {
+      const blocks = createBlocks();
+
+      /**
+       * Regression for the table-cell Enter bug: pressing Enter at the end of
+       * the last block in cell A created the new block inside cell B (the next
+       * cell), because cell A's flat successor is cell B's first block.
+       *
+       * Flat array: [tableBlock(0), cellAPara(1), cellBPara(2)]
+       *   - cellAContainer and cellBContainer are SIBLING cell containers
+       *     inside the table grid (neither is an ancestor of the other).
+       *
+       * insert(2, newBlock) (Enter after cellAPara) must anchor the new block
+       * INSIDE cellAContainer, not leak into the sibling cellBContainer. The
+       * successor-reroute only applies when the successor's container ENCLOSES
+       * the predecessor (root-exit / column_list), never for sibling cells.
+       */
+      const tableBlock = createMockBlock('table-1', 'table');
+      const cellAPara = createMockBlock('cell-a-1', 'paragraph');
+      const cellBPara = createMockBlock('cell-b-1', 'paragraph');
+
+      blocks.push(tableBlock);
+
+      const cellAContainer = document.createElement('div');
+      const cellBContainer = document.createElement('div');
+
+      cellAContainer.setAttribute('data-blok-table-cell-blocks', '');
+      cellBContainer.setAttribute('data-blok-table-cell-blocks', '');
+      tableBlock.holder.appendChild(cellAContainer);
+      tableBlock.holder.appendChild(cellBContainer);
+      cellAContainer.appendChild(cellAPara.holder);
+      cellBContainer.appendChild(cellBPara.holder);
+      blocks.blocks.push(cellAPara, cellBPara);
+
+      const newBlock = createMockBlock('new-1', 'paragraph');
+
+      blocks.insert(2, newBlock);
+
+      // Must stay in cell A, directly after cellAPara
+      expect(newBlock.holder.parentElement).toBe(cellAContainer);
+      expect(cellAPara.holder.nextElementSibling).toBe(newBlock.holder);
+      // Must NOT leak into the sibling cell B
+      expect(cellBContainer.contains(newBlock.holder)).toBe(false);
+    });
+
+    it('reroutes a new column into the enclosing column_list, not inside the previous column', () => {
+      const blocks = createBlocks();
+
+      /**
+       * Counterpart to the sibling-cell test above: the successor-reroute MUST
+       * still fire when the successor's container ENCLOSES the predecessor.
+       *
+       * Inserting a new column between two existing columns: its flat
+       * predecessor is the left column's last nested child, but it belongs in
+       * the column_list beside the right column. The column_list nested
+       * container encloses the left column's child, so the new column reroutes
+       * to sit before the right column at the column_list level — it must NOT
+       * land inside the left column.
+       *
+       * Regression guard for fix(columns) 26ed689c. Locks the discriminator
+       * from the opposite side of the table-cell test: a future change that
+       * disables the reroute to "fix" table cells would silently re-break the
+       * between-columns drop, and this test would catch it.
+       */
+      const columnList = createMockBlock('collist-1', 'column_list');
+      const leftColumn = createMockBlock('col-left', 'column');
+      const leftChild = createMockBlock('left-child', 'paragraph');
+      const rightColumn = createMockBlock('col-right', 'column');
+
+      blocks.push(columnList);
+
+      // column_list's nested container holds the column holders
+      const listContainer = document.createElement('div');
+
+      listContainer.setAttribute('data-blok-nested-blocks', '');
+      columnList.holder.appendChild(listContainer);
+
+      // left column with its own nested container + a child block
+      const leftColContainer = document.createElement('div');
+
+      leftColContainer.setAttribute('data-blok-nested-blocks', '');
+      leftColumn.holder.appendChild(leftColContainer);
+      leftColContainer.appendChild(leftChild.holder);
+      listContainer.appendChild(leftColumn.holder);
+
+      // right column, sibling of left column inside the list container
+      listContainer.appendChild(rightColumn.holder);
+
+      // Flat array: [columnList(0), leftColumn(1), leftChild(2), rightColumn(3)]
+      blocks.blocks.push(leftColumn, leftChild, rightColumn);
+
+      // Insert a new column at the right column's index (3)
+      const newColumn = createMockBlock('col-new', 'column');
+
+      blocks.insert(3, newColumn);
+
+      // New column must mount at the column_list level, immediately before the
+      // right column — NOT inside the left column's nested container.
+      expect(newColumn.holder.parentElement).toBe(listContainer);
+      expect(newColumn.holder.nextElementSibling).toBe(rightColumn.holder);
+      expect(leftColContainer.contains(newColumn.holder)).toBe(false);
+    });
+
     it('should place new top-level block at workingArea root when previous block is nested inside a callout', () => {
       const blocks = createBlocks();
 

@@ -1,0 +1,105 @@
+/*
+ * Columns layout tool — responsive stacking.
+ *
+ * The flex children of a column_list are the block-holder wrappers
+ * ([data-blok-element]), not the [data-blok-column] elements the Column tool
+ * renders. Target the holders directly so flex-wrap forces vertical stacking
+ * on narrow viewports and restores side-by-side distribution above the
+ * project's mobile breakpoint (651px, matching the `not-mobile` variant).
+ */
+[data-blok-columns] > [data-blok-element] {
+  flex-basis: 100%;
+  flex-shrink: 0;
+}
+
+@media (min-width: 651px) {
+  [data-blok-columns] > [data-blok-element] {
+    flex-basis: 0;
+    flex-shrink: 1;
+  }
+}
+
+/*
+ * New-column entry animation (Notion-style): a freshly added column slides in by
+ * growing its flex share from 0 while fading in, so the existing columns reflow
+ * to make room. The trigger attribute is set on the column holder when the
+ * column is created and stripped on animationend — see playColumnEnterAnimation.
+ */
+@keyframes blok-column-enter {
+  from {
+    flex-grow: 0;
+    opacity: 0;
+  }
+
+  to {
+    flex-grow: 1;
+    opacity: 1;
+  }
+}
+
+[data-blok-columns] > [data-blok-element][data-blok-column-enter] {
+  animation: blok-column-enter 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-columns] > [data-blok-element][data-blok-column-enter] {
+    animation: none;
+  }
+}
+
+/*
+ * Resize separator — a fixed-width flex item that forms the gutter between two
+ * columns. The visible bar is hidden until the gutter is hovered or dragged,
+ * matching Notion. The bar is wider than its hit feel via the full-width
+ * col-resize cursor zone.
+ */
+[data-blok-column-resizer] {
+  flex: 0 0 1.5rem;
+  align-self: stretch;
+  position: relative;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+[data-blok-column-resizer]::before {
+  content: '';
+  position: absolute;
+  inset-block: 0.25rem;
+  left: 50%;
+  width: 3px;
+  border-radius: 9999px;
+  /* Theme-aware so the handle stays visible on both light and dark surfaces. */
+  background-color: var(--blok-border-strong);
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 120ms ease, background-color 120ms ease;
+}
+
+[data-blok-column-resizer]:hover::before,
+[data-blok-column-resizer][data-dragging]::before {
+  opacity: 1;
+}
+
+/* Accent the handle while actively dragging for clear feedback. */
+[data-blok-column-resizer][data-dragging]::before {
+  background-color: var(--blok-active-icon);
+}
+
+/*
+ * While a block is being dragged, suppress the gutter handle entirely. Otherwise
+ * the cursor passing over a separator triggers :hover and reveals the gray handle
+ * bar right next to the blue drop indicator — reading as two drop targets in the
+ * gutter. Higher specificity than the :hover rule (three attributes), so it wins
+ * without !important. A real resize drag sets [data-dragging] on the resizer, not
+ * data-blok-dragging on the interface, so this never hides the active resize.
+ */
+[data-blok-interface][data-blok-dragging="true"] [data-blok-column-resizer]::before {
+  opacity: 0;
+}
+
+/* Columns stack vertically below the breakpoint, so the gutter handle hides. */
+@media (max-width: 650px) {
+  [data-blok-column-resizer] {
+    display: none;
+  }
+}

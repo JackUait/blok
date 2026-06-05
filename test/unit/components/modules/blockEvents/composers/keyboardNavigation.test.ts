@@ -518,6 +518,94 @@ describe('KeyboardNavigation', () => {
       isCaretAtEndOfInputSpy.mockRestore();
     });
 
+    it('does not promote the empty sole child of a column out to root — re-parents the new block into the same column', () => {
+      const columnId = 'c1';
+      const childBlockId = 'p1';
+
+      const columnHolder = document.createElement('div');
+      // A column is NOT a toggle: no data-blok-toggle-open marker.
+      const column = createBlock({
+        id: columnId,
+        name: 'column',
+        contentIds: [childBlockId],
+        holder: columnHolder,
+      });
+
+      const emptyChild = createBlock({
+        id: childBlockId,
+        name: 'paragraph',
+        isEmpty: true,
+        parentId: columnId,
+        currentInput: (() => {
+          const input = document.createElement('div');
+          input.contentEditable = 'true';
+          return input;
+        })(),
+      });
+
+      const newBlock = createBlock({ id: 'new-block' });
+      const setBlockParent = vi.fn();
+      const move = vi.fn();
+      const removeBlock = vi.fn();
+      const insertDefaultBlockAtIndex = vi.fn((_index: number, ..._rest: boolean[]): Block => newBlock);
+      const getBlockIndex = vi.fn((block: Block) => {
+        if (block === column) return 1;
+        if (block === emptyChild) return 2;
+        return -1;
+      });
+      const getBlockById = vi.fn((id: string) => {
+        if (id === columnId) return column;
+        if (id === childBlockId) return emptyChild;
+        return undefined;
+      });
+
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: emptyChild,
+          currentBlockIndex: 2,
+          insertDefaultBlockAtIndex,
+          split: vi.fn(),
+          setBlockParent,
+          move,
+          removeBlock,
+          getBlockIndex,
+          getBlockById,
+          transactForTool: vi.fn((fn: () => void) => fn()),
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          setToBlock: vi.fn(),
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          moveAndOpen: vi.fn(),
+        } as unknown as BlokModules['Toolbar'],
+        YjsManager: {
+          stopCapturing: vi.fn(),
+          markCaretBeforeChange: vi.fn(),
+        } as unknown as BlokModules['YjsManager'],
+      });
+
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Enter' });
+
+      const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(false);
+      const isCaretAtEndOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleEnter(event);
+
+      // Must NOT promote out of the column: the new block is inserted right after
+      // the empty child (index 2 + 1 = 3), NOT after the column (which would be root).
+      expect(insertDefaultBlockAtIndex.mock.calls[0][0]).toBe(3);
+      // New block re-parented INTO the same column — never to root (null).
+      expect(setBlockParent).toHaveBeenCalledWith(newBlock, columnId);
+      expect(setBlockParent).not.toHaveBeenCalledWith(newBlock, null);
+      expect(move).not.toHaveBeenCalled();
+      expect(removeBlock).not.toHaveBeenCalled();
+
+      isCaretAtStartOfInputSpy.mockRestore();
+      isCaretAtEndOfInputSpy.mockRestore();
+    });
+
     it('does not promote when callout has multiple children (last child empty)', () => {
       const calloutParentId = 'callout-parent';
       const firstChildId = 'first-child';

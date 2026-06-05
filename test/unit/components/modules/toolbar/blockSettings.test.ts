@@ -114,6 +114,7 @@ vi.mock('@/types/utils/popover/popover-event', () => ({
 }));
 
 vi.mock('../../../../../src/components/icons', () => ({
+  IconColumns: '<svg data-blok-icon="columns" />',
   IconReplace: '<svg data-blok-icon="replace" />',
   IconTrash: '<svg data-blok-icon="trash" />',
 }));

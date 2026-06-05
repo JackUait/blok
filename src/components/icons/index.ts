@@ -753,3 +753,27 @@ export const IconCrossSmall = '<svg width="14" height="14" viewBox="0 0 14 14" f
 
 // Toggle expand/collapse chevron — 12×12 so it fits the toggle arrow button
 export const IconChevronRightSmall = '<svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 2.5L8.5 6L4.5 9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+// Columns layout tool — two side-by-side column rectangles
+export const IconColumns = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="16" rx="1"/><rect x="14" y="4" width="7" height="16" rx="1"/></svg>`;
+
+/**
+ * Builds a columns-preset icon: one rounded frame split by `count - 1` evenly
+ * spaced dividers, so it reads as a container holding exactly `count` columns
+ * and keeps a constant stroke weight at any count (avoids the cramped barcode
+ * look of N separate bars). Used by the ColumnList toolbox presets (2–5).
+ */
+export const buildIconColumnsCount = (count: number): string => {
+  const x = 3;
+  const y = 4;
+  const w = 18;
+  const h = 16;
+  const step = w / count;
+  const dividers = Array.from({ length: count - 1 }, (_, i) => {
+    const dx = +(x + step * (i + 1)).toFixed(2);
+
+    return `<line x1="${dx}" y1="${y}" x2="${dx}" y2="${y + h}"/>`;
+  }).join('');
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2"/>${dividers}</svg>`;
+};

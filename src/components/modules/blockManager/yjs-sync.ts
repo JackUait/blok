@@ -596,9 +596,30 @@ export class BlockYjsSync {
 
       // Promote children to root level before removing the parent block.
       // This matches removeBlock() in operations.ts — without this,
-      // children whose DOM is inside the toggle's container are destroyed
+      // children whose DOM is inside the parent's container are destroyed
       // along with the parent, and children in the blocks array become
       // orphaned with a stale parentId pointing to a deleted block.
+      //
+      // Beyond the model promotion (parentId = null), the child's DOM holder
+      // must be LIFTED out of the parent's subtree before blocksStore.remove()
+      // calls parent.holder.remove() — that destroys EVERY descendant holder,
+      // including children that survive at root (e.g. when undo tears down a
+      // column_list and its columns, the leaf holders nested inside the doomed
+      // column subtree would be wiped even though the model promotes them to
+      // root, leaving model "at root" but the live holder gone). Yjs deletes a
+      // nested structure parent-first, so lifting each direct child one level —
+      // to immediately before the parent's own holder — walks every surviving
+      // descendant out to the document root across the cascade.
+      //
+      // Scope the lift to children whose IMMEDIATE container is a preserve-body
+      // container: a toggle-children container (toggle/callout/header) or a
+      // columns structure (a column inside the columns row, or a leaf inside a
+      // column's own container). Self-managing containers (table/database) keep
+      // their children in their own cell containers and tear that subtree down
+      // themselves — their cells must stay nested, so they are not lifted (a
+      // table deleted inside a column would otherwise leak its cells to root).
+      const parentHolderInDom = block.holder.parentElement !== null;
+
       for (const childId of block.contentIds) {
         const childBlock = this.repository.getBlockById(childId);
 
@@ -608,6 +629,20 @@ export class BlockYjsSync {
 
         childBlock.parentId = null;
         childBlock.holder.classList.remove('hidden');
+
+        // Every branch keys on the IMMEDIATE container, never an ancestor: a
+        // table/database cell sitting inside a toggle or column has a
+        // preserve-body ANCESTOR, but its immediate container is the cell —
+        // lifting it would leak the self-managing container's cells to root.
+        const immediateContainer = childBlock.holder.parentElement;
+        const isPreserveBodyChild =
+          immediateContainer?.matches('[data-blok-toggle-children]') === true ||
+          immediateContainer?.matches('[data-blok-columns]') === true ||
+          immediateContainer?.parentElement?.matches('[data-blok-column]') === true;
+
+        if (parentHolderInDom && isPreserveBodyChild && block.holder.contains(childBlock.holder)) {
+          block.holder.before(childBlock.holder);
+        }
       }
 
       // Remove from DOM

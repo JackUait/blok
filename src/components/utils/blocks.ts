@@ -191,20 +191,34 @@ export const getConvertibleToolsForBlocks = async (blocks: BlockAPI[], allBlockT
   }
 
   /**
-   * Check that all blocks have export conversion config
+   * Only the "roots" of the selection constrain the conversion targets:
+   *
+   * - A block nested under another selected block rides with its container
+   *   (e.g. the contents of a selected column_list) and must NOT be converted
+   *   on its own — so it's ignored here.
+   * - A block whose tool has no «export» rule (e.g. container blocks like
+   *   column_list/column) cannot convert and is left untouched — ignored too,
+   *   NOT used to suppress every target for the whole selection.
    */
-  for (const block of blocks) {
+  const selectedIds = new Set(blocks.map((block) => block.id));
+  const convertibleBlocks = blocks.filter((block) => {
+    if (block.parentId !== null && selectedIds.has(block.parentId)) {
+      return false;
+    }
+
     const blockTool = allBlockTools.find((tool) => tool.name === block.name);
 
-    if (blockTool !== undefined && !isToolConvertable(blockTool, 'export')) {
-      return [];
-    }
+    return blockTool === undefined || isToolConvertable(blockTool, 'export');
+  });
+
+  if (convertibleBlocks.length === 0) {
+    return [];
   }
 
   /**
-   * Get the set of tool names that all blocks currently use
+   * Get the set of tool names that the convertible blocks currently use
    */
-  const blockToolNames = new Set(blocks.map((block) => block.name));
+  const blockToolNames = new Set(convertibleBlocks.map((block) => block.name));
 
   /**
    * Filter tools that have import conversion config and valid toolbox

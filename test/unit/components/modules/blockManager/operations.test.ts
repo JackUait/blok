@@ -600,6 +600,40 @@ describe('BlockOperations', () => {
       }
     });
 
+    it('inherits the column parent when a non-replace insert lands after a block inside a column (duplicate-in-column)', () => {
+      // column_list > column > paragraph. Duplicating the paragraph inserts a
+      // copy at the paragraph's flat index + 1 with replace=false and no
+      // follow-up reparent — the exact shape of a block-settings "Duplicate".
+      // The copy must inherit the column as its parent, not strand at root.
+      const columnList = createMockBlock({ id: 'cl1', name: 'column_list', contentIds: ['c1'] });
+      const column = createMockBlock({ id: 'c1', name: 'column', parentId: 'cl1', contentIds: ['l1'] });
+      const child = createMockBlock({ id: 'l1', name: 'paragraph', parentId: 'c1', data: { text: 'Original left' } });
+
+      blocksStore = createBlocksStore([columnList, column, child]);
+      repository = new BlockRepository();
+      repository.initialize(blocksStore);
+      hierarchy = new BlockHierarchy(repository);
+      operations = new BlockOperations(
+        dependencies,
+        repository,
+        factory,
+        hierarchy,
+        blockDidMutatedSpy,
+        0
+      );
+      operations.setYjsSync(yjsSync);
+
+      const childIndex = repository.getBlockIndex(child); // flat index of l1
+
+      const copy = operations.insert(
+        { tool: 'paragraph', data: { text: 'Original left' }, index: childIndex + 1, needToFocus: false },
+        blocksStore
+      );
+
+      expect(copy.parentId).toBe('c1');
+      expect(column.contentIds).toContain(copy.id);
+    });
+
     it('allows restricted tools to insert outside table cells', () => {
       // Register 'header' tool in the factory so it can be composed
       const headerAdapter = createMockBlockToolAdapter('header');
@@ -729,6 +763,147 @@ describe('BlockOperations', () => {
       await operations.removeBlock(singleBlock, true, false, singleBlockStore);
 
       expect(repository.length).toBeGreaterThan(0);
+    });
+
+    /**
+     * Regression: a self-managing container (table/database) nested inside a
+     * toggle/callout/toggleable-header must NOT have its own cell/row children
+     * DOM-lifted out when it is removed. The table tears down its own cell
+     * subtree; lifting a cell block out before the table holder is removed
+     * orphans the cell content at the toggle level (model parentId=null + a
+     * stray holder) instead of letting it die with the table.
+     *
+     * The bug was an unbounded `closest('[data-blok-toggle-children]')` match:
+     * a table cell block's holder has an ancestor toggle-children container
+     * (the outer toggle), so the promote-lift fired on it even though its
+     * IMMEDIATE container is the table cell, not the toggle body.
+     */
+    it('does not lift a nested table cell out when removing a table inside a toggle', async () => {
+      const toggleBlock = createMockBlock({
+        id: 'toggle-host',
+        name: 'toggle',
+        contentIds: ['table-host'],
+      });
+      const tableBlock = createMockBlock({
+        id: 'table-host',
+        name: 'table',
+        parentId: 'toggle-host',
+        contentIds: ['cell-para'],
+      });
+      const cellParagraph = createMockBlock({
+        id: 'cell-para',
+        name: 'paragraph',
+        parentId: 'table-host',
+      });
+
+      const testStore = createBlocksStore([toggleBlock, tableBlock, cellParagraph]);
+      const testRepo = new BlockRepository();
+      testRepo.initialize(testStore);
+      const testHierarchy = new BlockHierarchy(testRepo);
+      const testOps = new BlockOperations(
+        dependencies,
+        testRepo,
+        factory,
+        testHierarchy,
+        blockDidMutatedSpy,
+        0
+      );
+      testOps.setYjsSync(yjsSync);
+
+      // Wire the DOM nesting AFTER the store is built (push() re-parents each
+      // holder into its workingArea, which would otherwise flatten the tree):
+      // toggle holder -> [data-blok-toggle-children] -> table holder ->
+      // [data-blok-table-cell-blocks] -> cell paragraph holder.
+      const toggleChildren = document.createElement('div');
+      toggleChildren.setAttribute('data-blok-toggle-children', '');
+      toggleBlock.holder.appendChild(toggleChildren);
+      toggleChildren.appendChild(tableBlock.holder);
+
+      const cellContainer = document.createElement('div');
+      cellContainer.setAttribute('data-blok-table-cell-blocks', '');
+      cellContainer.setAttribute('data-blok-nested-blocks', '');
+      tableBlock.holder.appendChild(cellContainer);
+      cellContainer.appendChild(cellParagraph.holder);
+
+      document.body.appendChild(toggleBlock.holder);
+
+      const tableToRemove = testRepo.getBlockById('table-host');
+      if (!tableToRemove) {
+        throw new Error('Test setup failed: table-host not found');
+      }
+
+      await testOps.removeBlock(tableToRemove, false, false, testStore);
+
+      // The cell paragraph must stay nested in its table cell (so it dies with
+      // the table), NOT lifted into the toggle body.
+      expect(cellParagraph.holder.parentElement).toBe(cellContainer);
+      expect(cellParagraph.holder.closest('[data-blok-toggle-children]')).toBeNull();
+
+      document.body.removeChild(toggleBlock.holder);
+    });
+
+    /**
+     * A `column` is pure layout — it only exists to host child blocks. Removing
+     * its LAST child leaves an empty column with nothing to lay out, so the
+     * column itself must be removed too (which, in the live editor, unwraps the
+     * column_list when it collapses to a single column).
+     */
+    it('removes the parent column when its last child is removed', async () => {
+      const columnList = createMockBlock({ id: 'cl1', name: 'column_list', contentIds: ['c1', 'c2'] });
+      const column1 = createMockBlock({ id: 'c1', name: 'column', parentId: 'cl1', contentIds: ['p1'] });
+      const para1 = createMockBlock({ id: 'p1', name: 'paragraph', parentId: 'c1', isEmpty: true });
+      const column2 = createMockBlock({ id: 'c2', name: 'column', parentId: 'cl1', contentIds: ['p2'] });
+      const para2 = createMockBlock({ id: 'p2', name: 'paragraph', parentId: 'c2' });
+
+      const store = createBlocksStore([columnList, column1, para1, column2, para2]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const hier = new BlockHierarchy(repo);
+      const ops = new BlockOperations(dependencies, repo, factory, hier, blockDidMutatedSpy, 0);
+      ops.setYjsSync(yjsSync);
+
+      const target = repo.getBlockById('p1');
+      if (!target) {
+        throw new Error('Test setup failed: p1 not found');
+      }
+
+      await ops.removeBlock(target, false, false, store);
+
+      // The emptied child is gone AND its now-childless column is removed too.
+      expect(repo.getBlockById('p1')).toBeUndefined();
+      expect(repo.getBlockById('c1')).toBeUndefined();
+      // The sibling column and the list survive (collapse-to-one unwrap is the
+      // column's removed() hook, not exercised by the mock blocks here).
+      expect(repo.getBlockById('c2')).toBeDefined();
+      expect(columnList.contentIds).not.toContain('c1');
+    });
+
+    it('keeps the parent column when a non-last child is removed', async () => {
+      const columnList = createMockBlock({ id: 'cl1', name: 'column_list', contentIds: ['c1', 'c2'] });
+      const column1 = createMockBlock({ id: 'c1', name: 'column', parentId: 'cl1', contentIds: ['p1', 'p1b'] });
+      const para1 = createMockBlock({ id: 'p1', name: 'paragraph', parentId: 'c1', isEmpty: true });
+      const para1b = createMockBlock({ id: 'p1b', name: 'paragraph', parentId: 'c1' });
+      const column2 = createMockBlock({ id: 'c2', name: 'column', parentId: 'cl1', contentIds: ['p2'] });
+      const para2 = createMockBlock({ id: 'p2', name: 'paragraph', parentId: 'c2' });
+
+      const store = createBlocksStore([columnList, column1, para1, para1b, column2, para2]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const hier = new BlockHierarchy(repo);
+      const ops = new BlockOperations(dependencies, repo, factory, hier, blockDidMutatedSpy, 0);
+      ops.setYjsSync(yjsSync);
+
+      const target = repo.getBlockById('p1');
+      if (!target) {
+        throw new Error('Test setup failed: p1 not found');
+      }
+
+      await ops.removeBlock(target, false, false, store);
+
+      // The column still hosts its other child, so it must survive.
+      expect(repo.getBlockById('p1')).toBeUndefined();
+      expect(repo.getBlockById('c1')).toBeDefined();
+      expect(repo.getBlockById('p1b')).toBeDefined();
     });
   });
 

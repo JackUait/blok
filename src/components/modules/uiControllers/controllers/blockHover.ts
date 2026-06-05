@@ -138,6 +138,15 @@ export class BlockHoverController extends Controller {
       }
 
       /**
+       * Columns are structural containers, not selectable blocks. Skip the
+       * event so neither the column nor its column_list ever gets a toolbar —
+       * only the blocks inside a column are selectable (Notion-style).
+       */
+      if (BlockHoverController.isColumnContainer(block)) {
+        return;
+      }
+
+      /**
        * For multi-block selection, still emit 'block-hovered' event so toolbar can follow the hovered block.
        * The toolbar module will handle the logic of whether to move or not.
        */
@@ -190,6 +199,17 @@ export class BlockHoverController extends Controller {
   }
 
   /**
+   * Columns are structural containers, not independent blocks: neither a
+   * `column` nor its `column_list` may own a drag handle, settings menu, or
+   * "convert to" option. Only the blocks inside a column are selectable.
+   * @param block - a hovered or candidate block
+   * @returns true when the block is a column layout container
+   */
+  private static isColumnContainer(block: Block): boolean {
+    return block.name === 'column' || block.name === 'column_list';
+  }
+
+  /**
    * Emits a BlockHovered event for the nearest block, but only if the cursor
    * is within the extended hover zone (HOVER_ZONE_SIZE px from content edges).
    * @param clientX - Cursor X position
@@ -198,7 +218,8 @@ export class BlockHoverController extends Controller {
   private emitNearestBlockHoveredInZone(clientX: number, clientY: number): void {
     const blocks = this.Blok.BlockManager.blocks;
     const topLevelBlocks = blocks.filter(block =>
-      block.holder.closest('[data-blok-table-cell-blocks], [data-blok-toggle-children]') === null
+      !BlockHoverController.isColumnContainer(block)
+      && block.holder.closest('[data-blok-table-cell-blocks], [data-blok-toggle-children]') === null
     );
 
     if (topLevelBlocks.length === 0) {
@@ -246,7 +267,8 @@ export class BlockHoverController extends Controller {
      * This matches the direct-hit path which also resolves nested blocks to their parent.
      */
     const topLevelBlocks = blocks.filter(block =>
-      block.holder.closest('[data-blok-table-cell-blocks], [data-blok-toggle-children]') === null
+      !BlockHoverController.isColumnContainer(block)
+      && block.holder.closest('[data-blok-table-cell-blocks], [data-blok-toggle-children]') === null
     );
 
     if (topLevelBlocks.length === 0) {

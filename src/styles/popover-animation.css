@@ -26,6 +26,14 @@
   transform: scale(0.98);
 }
 
+/* Inline toolbar appears instantly — no entrance animation.
+   Direct child only, so nested inline popovers keep their animation. */
+[data-blok-popover-inline] > [data-blok-popover-container],
+[data-blok-popover-inline]:not([data-blok-popover-opened='true']) > [data-blok-popover-container] {
+  transition: none;
+  transform: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-blok-popover-container] {
     transition: none;

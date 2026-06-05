@@ -2364,6 +2364,71 @@ describe('BlockYjsSync', () => {
         expect(childA.holder.classList.contains('hidden')).toBe(false);
         expect(childB.holder.classList.contains('hidden')).toBe(false);
       });
+
+      it('does not lift a nested table cell out when removing a table inside a toggle', () => {
+        /**
+         * Regression: undo/redo deletes flow through handleYjsRemove. When a
+         * self-managing container (table/database) sits inside a toggle and is
+         * removed, its own cell/row children must NOT be DOM-lifted — the table
+         * tears down its cell subtree itself. The promote-lift must key on the
+         * child's IMMEDIATE container, not any preserve-body ANCESTOR: a table
+         * cell block has an ancestor toggle-children container (the outer
+         * toggle) but its immediate container is the cell, so lifting it would
+         * leak the table's cells to root.
+         */
+        const toggleBlock = createMockBlock({ id: 'toggle-host', contentIds: ['table-host'] });
+        const tableBlock = createMockBlock({
+          id: 'table-host',
+          parentId: 'toggle-host',
+          contentIds: ['cell-para'],
+        });
+        const cellParagraph = createMockBlock({ id: 'cell-para', parentId: 'table-host' });
+
+        const testBlocksStore = createBlocksStore([toggleBlock, tableBlock, cellParagraph]);
+
+        repository = new BlockRepository();
+        repository.initialize(testBlocksStore);
+
+        // Wire the DOM nesting AFTER the store is built (push re-parents holders):
+        // toggle -> [data-blok-toggle-children] -> table -> [data-blok-table-cell-blocks] -> cell para
+        const toggleChildren = document.createElement('div');
+        toggleChildren.setAttribute('data-blok-toggle-children', '');
+        toggleBlock.holder.appendChild(toggleChildren);
+        toggleChildren.appendChild(tableBlock.holder);
+
+        const cellContainer = document.createElement('div');
+        cellContainer.setAttribute('data-blok-table-cell-blocks', '');
+        cellContainer.setAttribute('data-blok-nested-blocks', '');
+        tableBlock.holder.appendChild(cellContainer);
+        cellContainer.appendChild(cellParagraph.holder);
+
+        document.body.appendChild(toggleBlock.holder);
+
+        mockHandlers.getBlockIndex = vi.fn(() => 1);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          testBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        callback({ blockId: 'table-host', type: 'remove', origin: 'undo' });
+
+        // The cell paragraph stays nested in its table cell (dies with the
+        // table), NOT lifted into the toggle body.
+        expect(cellParagraph.holder.parentElement).toBe(cellContainer);
+        expect(cellParagraph.holder.closest('[data-blok-toggle-children]')).toBeNull();
+
+        document.body.removeChild(toggleBlock.holder);
+      });
     });
 
     describe('reconcileOrphanedChildren', () => {

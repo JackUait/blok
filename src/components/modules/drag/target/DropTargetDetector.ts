@@ -10,7 +10,7 @@ import { ListItemDepth } from '../utils/ListItemDepth';
 
 export interface DropTarget {
   block: Block;
-  edge: 'top' | 'bottom';
+  edge: 'top' | 'bottom' | 'left' | 'right';
   depth: number;
   parentId: string | null;
 }
@@ -146,11 +146,33 @@ export class DropTargetDetector {
     clientY: number,
     sourceBlock: Block
   ): DropTarget | null {
-    const { block: targetBlock, holder: blockHolder } = this.findDropTargetBlock(elementUnderCursor, clientX, clientY);
+    // A drop on the inter-column gutter (a resize separator) inserts a NEW column
+    // between the two columns it divides — the natural "drop on the divider"
+    // gesture. Without this, the separator resolves to the column_list holder and
+    // the side-drop is rejected, leaving the gutter a dead zone. Runs first, before
+    // findDropTargetBlock climbs to the column_list.
+    const gapTarget = this.determineColumnGapTarget(elementUnderCursor, clientY);
 
-    if (!blockHolder || !targetBlock || targetBlock === sourceBlock) {
+    if (gapTarget && gapTarget.block !== sourceBlock) {
+      return gapTarget;
+    }
+
+    const resolved = this.findDropTargetBlock(elementUnderCursor, clientX, clientY);
+
+    if (!resolved.holder || !resolved.block || resolved.block === sourceBlock) {
       return null;
     }
+
+    // Empty space below a column's blocks resolves (via closest) to the column
+    // CONTAINER block, whose holder is itself a [data-blok-element]. Left as-is,
+    // a top/bottom drop on the container shows an indicator at the column's
+    // bottom edge AND reparents at the column_list level — spawning a NEW column
+    // beside the one the cursor is over (resolveParentForDrop reads the
+    // container's parentId). Redirect into the column instead: target its LAST
+    // child with a bottom edge, so the single indicator and the drop both land at
+    // the end of the column (stack INTO it), matching a drop over a real block.
+    const { block: targetBlock, holder: blockHolder } =
+      this.redirectColumnContainerTarget(resolved.block, resolved.holder);
 
     // Prevent dropping into the middle of a multi-block selection
     if (this.sourceBlocks.length > 1 && this.sourceBlocks.includes(targetBlock)) {
@@ -169,6 +191,16 @@ export class DropTargetDetector {
 
     if (isTargetInCell && isCrossCellDrop) {
       return this.redirectToTableBlock(targetCellContainer, clientY);
+    }
+
+    // Horizontal (side) drop detection: when the cursor hovers near the left/right
+    // edge of a target within its central vertical band, route the drop sideways so
+    // the integrator can create / extend a column layout. Columns stack below 651px,
+    // so disable side-drops entirely on narrow viewports.
+    const horizontalTarget = this.determineHorizontalTarget(targetBlock, blockHolder, clientX, clientY);
+
+    if (horizontalTarget) {
+      return horizontalTarget;
     }
 
     // Determine edge (top or bottom half of block)
@@ -199,6 +231,484 @@ export class DropTargetDetector {
     const targetDepth = this.calculateTargetDepth(targetBlock, edge, sourceBlock);
 
     return this.resolveToggleNesting({ block: targetBlock, edge, depth: targetDepth, parentId: null }, elementUnderCursor);
+  }
+
+  /**
+   * Detects a horizontal (side) drop near the left/right edge of the target.
+   *
+   * Returns a DropTarget with edge 'left' or 'right' when the cursor is on the
+   * left/right side of the content box — the outer DRAG_CONFIG.sideZoneRatio of
+   * the content width (floored at sideZoneMin) AND the whole margin beyond it, at
+   * any distance — while inside the central vertical band (DRAG_CONFIG.sideBandRatio
+   * of the block height) to avoid fighting top/bottom near corners. Only the
+   * central reorder band between the two side zones falls through to top/bottom.
+   * Side-drops are disabled below 651px (columns stack) and for container blocks
+   * (column / column_list), which are never drop targets.
+   *
+   * @param targetBlock - The resolved target block
+   * @param blockHolder - The target block's holder element
+   * @param clientX - Cursor X position
+   * @param clientY - Cursor Y position
+   * @returns A horizontal DropTarget, or null to fall through to top/bottom logic
+   */
+  private determineHorizontalTarget(
+    targetBlock: Block,
+    blockHolder: HTMLElement,
+    clientX: number,
+    clientY: number
+  ): DropTarget | null {
+    // Columns stack below this breakpoint — no side-by-side layout.
+    if (window.innerWidth < 651) {
+      return null;
+    }
+
+    // A drop in the OUTER editor margin beside a whole column_list resolves (via
+    // elementFromPoint hitting the full-width container holder, not a narrow
+    // column child, which only lives inside the content row) to the column_list
+    // block itself. Treat the entire left/right margin as a new-column dropzone —
+    // identical to a standalone block in an empty editor — so existing columns
+    // get the SAME outer dropzone: far-left prepends a column at the row's start,
+    // far-right appends one at its end.
+    if (targetBlock.name === 'column_list') {
+      return this.outerColumnListTarget(targetBlock, blockHolder, clientX, clientY);
+    }
+
+    // The column container itself is never a drop target.
+    if (targetBlock.name === 'column') {
+      return null;
+    }
+
+    // Measure side zones against the visible content box, not the holder. The
+    // holder spans the full editor width (gutters included) while content is
+    // centered/narrower, so holder-edge zones never sit where the user actually
+    // drops. Fall back to the holder when no content element exists (test stubs,
+    // tools without the standard wrapper).
+    const contentEl = blockHolder.querySelector('[data-blok-element-content]');
+    const rect = contentEl instanceof HTMLElement
+      ? contentEl.getBoundingClientRect()
+      : blockHolder.getBoundingClientRect();
+
+    // A block INSIDE a column_list gives a SINGLE, unambiguous indicator over a
+    // column body: it always falls through to a top/bottom reorder, which
+    // reparents the dropped block INTO that column (resolveParentForDrop). The
+    // ONLY side-drop (new column) that fires over a body is at the OUTER edge of
+    // the whole row — the left edge of the first column or the right edge of the
+    // last — which appends a column at the start/end. Between-column insertion is
+    // the gutter separator's job (determineColumnGapTarget, runs first). Inner
+    // body edges deliberately do NOT side-drop: they used to, which made the
+    // indicator flip between a horizontal "stack in" line and a vertical "new
+    // column" line as the cursor crossed a column boundary — read by users as
+    // "two drop lines". This removes that flip.
+    const columnsContainer = blockHolder.closest('[data-blok-columns]');
+
+    if (columnsContainer instanceof HTMLElement) {
+      const bandInset = rect.height * (1 - DRAG_CONFIG.sideBandRatio) / 2;
+      const inBand = clientY >= rect.top + bandInset && clientY <= rect.bottom - bandInset;
+
+      if (!inBand) {
+        return null;
+      }
+
+      const sideZone = Math.max(rect.width * DRAG_CONFIG.sideZoneRatio, DRAG_CONFIG.sideZoneMin);
+      const nearLeft = clientX <= rect.left + sideZone;
+      const nearRight = clientX >= rect.right - sideZone;
+
+      // Left edge fires only on the FIRST column, right edge only on the LAST —
+      // the row's outer edges. Every inner position (including inner edges)
+      // falls through to into-column.
+      if (nearLeft && this.isFirstColumnChild(targetBlock)) {
+        return { block: targetBlock, edge: 'left', depth: 0, parentId: this.findEnclosingColumnId(targetBlock) };
+      }
+
+      if (nearRight && this.isLastColumnChild(targetBlock)) {
+        return { block: targetBlock, edge: 'right', depth: 0, parentId: this.findEnclosingColumnId(targetBlock) };
+      }
+
+      return null;
+    }
+
+    // Standalone block (not in a column): keep the Notion-style outer side zones
+    // with a central reorder band, gated to the central vertical band so a
+    // top/bottom reorder wins near the block's own top/bottom corners.
+    const bandInset = rect.height * (1 - DRAG_CONFIG.sideBandRatio) / 2;
+    const inBand = clientY >= rect.top + bandInset && clientY <= rect.bottom - bandInset;
+
+    if (!inBand) {
+      return null;
+    }
+
+    // No inner bound: anything left of the left zone boundary counts as a left
+    // side-drop (including the entire left margin, at any distance), and likewise
+    // on the right. Only the central reorder band between the two zones falls
+    // through to top/bottom.
+    const sideZone = Math.max(rect.width * DRAG_CONFIG.sideZoneRatio, DRAG_CONFIG.sideZoneMin);
+    const nearLeft = clientX <= rect.left + sideZone;
+    const nearRight = clientX >= rect.right - sideZone;
+
+    if (!nearLeft && !nearRight) {
+      return null;
+    }
+
+    const edge: 'left' | 'right' = nearLeft ? 'left' : 'right';
+
+    return {
+      block: targetBlock,
+      edge,
+      depth: 0,
+      parentId: this.findEnclosingColumnId(targetBlock),
+    };
+  }
+
+  /**
+   * Side-drop detection for a drop that resolved to a whole column_list block —
+   * i.e. the cursor is in the outer editor margin beside the row, where the
+   * full-width container holder (not a narrow column child) sits under the
+   * pointer. Mirrors the standalone-block outer zones exactly (central vertical
+   * band, outer sideZone with no inner bound so the whole margin is live) so the
+   * dropzone is identical whether or not columns already exist.
+   *
+   * A left margin drop prepends a new column at the start of the row, a right
+   * margin drop appends one at the end. It does so by targeting the first/last
+   * column's first child block with a 'left'/'right' edge and that column's id as
+   * parentId — exactly the shape the row's inner outer-edge side-drop produces,
+   * so handleColumnDrop routes both through addColumnToList. Returns null when
+   * the row has no resolvable column child, or the cursor falls in the central
+   * reorder band / outside the vertical band (→ top/bottom reorders the list).
+   */
+  private outerColumnListTarget(
+    columnListBlock: Block,
+    blockHolder: HTMLElement,
+    clientX: number,
+    clientY: number
+  ): DropTarget | null {
+    const contentEl = blockHolder.querySelector('[data-blok-element-content]');
+    const rect = contentEl instanceof HTMLElement
+      ? contentEl.getBoundingClientRect()
+      : blockHolder.getBoundingClientRect();
+
+    const bandInset = rect.height * (1 - DRAG_CONFIG.sideBandRatio) / 2;
+    const inBand = clientY >= rect.top + bandInset && clientY <= rect.bottom - bandInset;
+
+    if (!inBand) {
+      return null;
+    }
+
+    const sideZone = Math.max(rect.width * DRAG_CONFIG.sideZoneRatio, DRAG_CONFIG.sideZoneMin);
+    const nearLeft = clientX <= rect.left + sideZone;
+    const nearRight = clientX >= rect.right - sideZone;
+
+    if (!nearLeft && !nearRight) {
+      return null;
+    }
+
+    const edge: 'left' | 'right' = nearLeft ? 'left' : 'right';
+    const columns = this.blockManager.blocks.filter(block => block.parentId === columnListBlock.id);
+    const column = edge === 'left' ? columns[0] : columns[columns.length - 1];
+
+    if (column === undefined) {
+      return null;
+    }
+
+    const child = this.blockManager.blocks.find(block => block.parentId === column.id);
+
+    if (child === undefined) {
+      return null;
+    }
+
+    return { block: child, edge, depth: 0, parentId: column.id };
+  }
+
+  /**
+   * The column holder element that owns a block, or null if the block is not a
+   * direct child of a column. Walks block holder → [data-blok-column] wrapper →
+   * enclosing [data-blok-element] (the column's holder).
+   */
+  private columnHolderOf(targetBlock: Block): HTMLElement | null {
+    const columnWrapper = targetBlock.holder.closest('[data-blok-column]');
+
+    if (!(columnWrapper instanceof HTMLElement)) {
+      return null;
+    }
+
+    const columnHolder = columnWrapper.closest(createSelector(DATA_ATTR.element));
+
+    return columnHolder instanceof HTMLElement ? columnHolder : null;
+  }
+
+  /**
+   * Whether a block sits in the FIRST column of its row — i.e. there is no
+   * preceding sibling column holder (only separators / nothing before it). Used
+   * to gate the left outer-edge side-drop so only the row's far-left edge spawns
+   * a column at the start. False when the block is not in a column.
+   */
+  private isFirstColumnChild(targetBlock: Block): boolean {
+    const columnHolder = this.columnHolderOf(targetBlock);
+
+    return columnHolder !== null && this.previousColumnHolder(columnHolder) === null;
+  }
+
+  /**
+   * Whether a block sits in the LAST column of its row — no following sibling
+   * column holder. Gates the right outer-edge side-drop. False when not in a
+   * column.
+   */
+  private isLastColumnChild(targetBlock: Block): boolean {
+    const columnHolder = this.columnHolderOf(targetBlock);
+
+    return columnHolder !== null && this.nextColumnHolder(columnHolder) === null;
+  }
+
+  /**
+   * The next sibling column holder after `columnHolder` within a column_list,
+   * skipping the resize separator that sits between columns. Null if none.
+   */
+  private nextColumnHolder(element: Element): HTMLElement | null {
+    const sibling = element.nextElementSibling;
+
+    if (sibling === null) {
+      return null;
+    }
+
+    if (sibling instanceof HTMLElement && sibling.matches(createSelector(DATA_ATTR.element))) {
+      return sibling;
+    }
+
+    return this.nextColumnHolder(sibling);
+  }
+
+  /**
+   * The previous sibling column holder before `columnHolder` within a
+   * column_list, skipping the resize separator. Null if none (the block is in
+   * the first column).
+   */
+  private previousColumnHolder(element: Element): HTMLElement | null {
+    const sibling = element.previousElementSibling;
+
+    if (sibling === null) {
+      return null;
+    }
+
+    if (sibling instanceof HTMLElement && sibling.matches(createSelector(DATA_ATTR.element))) {
+      return sibling;
+    }
+
+    return this.previousColumnHolder(sibling);
+  }
+
+  /**
+   * The first content block inside a column's holder element, or undefined when
+   * the column has no resolvable child block.
+   */
+  private firstBlockInColumnHolder(columnHolder: HTMLElement): Block | undefined {
+    const childHolder = columnHolder.querySelector(createSelector(DATA_ATTR.element));
+
+    return childHolder instanceof HTMLElement
+      ? this.blockManager.blocks.find(block => block.holder === childHolder)
+      : undefined;
+  }
+
+  /**
+   * The LAST child block of a column, in document order, or undefined when the
+   * column has no children. Uses the flat block list filtered by parentId rather
+   * than the DOM — a column's children are contiguous and ordered there, and this
+   * avoids the column's multi-level wrapper nesting (and nested grandchild blocks,
+   * e.g. list items) confusing a DOM walk.
+   */
+  private lastChildOfColumn(columnBlock: Block): Block | undefined {
+    const children = this.blockManager.blocks.filter(block => block.parentId === columnBlock.id);
+
+    return children[children.length - 1];
+  }
+
+  /**
+   * Redirects a drop that resolved to a column CONTAINER block into the column
+   * itself. The empty space below a column's blocks resolves (via closest) to the
+   * column block, whose holder is a [data-blok-element]; a top/bottom drop there
+   * shows a container-edge indicator and spawns a new column. Instead, anchor on
+   * the column's LAST child with the caller's later top/bottom logic so the drop
+   * appends INTO the column. Non-column targets, and columns with no usable child
+   * (or whose last child is itself being dragged), pass through unchanged.
+   */
+  private redirectColumnContainerTarget(
+    block: Block,
+    holder: HTMLElement
+  ): { block: Block; holder: HTMLElement } {
+    if (block.name !== 'column') {
+      return { block, holder };
+    }
+
+    const lastChild = this.lastChildOfColumn(block);
+
+    if (lastChild === undefined || this.sourceBlocks.includes(lastChild)) {
+      return { block, holder };
+    }
+
+    return { block: lastChild, holder: lastChild.holder };
+  }
+
+  /**
+   * Detects a drop on the inter-column gutter — a resize separator that divides
+   * two columns — and routes it to a "between columns" side-drop.
+   *
+   * The separator's next sibling is the right-adjacent column's holder. We target
+   * that column's FIRST inner block with a 'left' edge so the integrator inserts a
+   * new column BEFORE it (addColumnToList side 'left'), i.e. between the two
+   * columns the separator divides. Reusing a real child block keeps the indicator
+   * and drop path identical to an inner-edge side-drop.
+   *
+   * Returns null (fall through to normal detection) when not on a separator, on a
+   * stacked layout (< 651px, separators hidden), or the right column has no
+   * resolvable child block.
+   *
+   * The separator spans the FULL row height, so its lower strip overlaps the
+   * empty gap below whichever column is shorter. A drop there reads visually as
+   * "the bottom of that column", not "between the columns" — so when clientY lies
+   * in one column's dead gap (past its content but still beside the other's),
+   * stack INTO that column instead of inserting a new one. Only when both columns
+   * have content beside the cursor is it a true between-columns insertion.
+   *
+   * @param elementUnderCursor - Element directly under the cursor
+   * @param clientY - Cursor Y position
+   * @returns A DropTarget (between-columns side-drop, or into-column stack), or null
+   */
+  private determineColumnGapTarget(elementUnderCursor: Element, clientY: number): DropTarget | null {
+    // Columns stack below this breakpoint — separators are hidden, no gutter.
+    if (window.innerWidth < 651) {
+      return null;
+    }
+
+    const resizer = elementUnderCursor.closest('[data-blok-column-resizer]');
+
+    if (!(resizer instanceof HTMLElement)) {
+      return null;
+    }
+
+    // The separator divides a left and a right column. If the cursor is in the
+    // dead gap below the shorter one, redirect into it (stack at its end) rather
+    // than between the two.
+    const gapStack = this.stackIntoGapColumn(resizer, clientY);
+
+    if (gapStack !== null) {
+      return gapStack;
+    }
+
+    // The separator sits between two column holders; the next one is the
+    // right-adjacent column. Its first child block is the side-drop target.
+    const rightColumnHolder = this.nextColumnHolder(resizer);
+    const childBlock = rightColumnHolder !== null
+      ? this.firstBlockInColumnHolder(rightColumnHolder)
+      : undefined;
+
+    if (childBlock === undefined) {
+      return null;
+    }
+
+    return {
+      block: childBlock,
+      edge: 'left',
+      depth: 0,
+      parentId: this.findEnclosingColumnId(childBlock),
+    };
+  }
+
+  /**
+   * When the cursor sits on a separator but in the empty gap below one of the two
+   * columns it divides, returns a bottom-edge target stacking into that (shorter)
+   * column's last child. Returns null when the cursor is beside content on BOTH
+   * sides (a real between-columns insertion), below/above both, or either column
+   * is unresolvable — letting the caller fall back to the between-columns drop.
+   */
+  private stackIntoGapColumn(resizer: HTMLElement, clientY: number): DropTarget | null {
+    const leftHolder = this.previousColumnHolder(resizer);
+    const rightHolder = this.nextColumnHolder(resizer);
+
+    if (leftHolder === null || rightHolder === null) {
+      return null;
+    }
+
+    const leftColumn = this.blockManager.blocks.find(block => block.holder === leftHolder);
+    const rightColumn = this.blockManager.blocks.find(block => block.holder === rightHolder);
+
+    if (leftColumn === undefined || rightColumn === undefined) {
+      return null;
+    }
+
+    const leftBottom = this.columnContentBottom(leftColumn);
+    const rightBottom = this.columnContentBottom(rightColumn);
+
+    if (leftBottom === null || rightBottom === null) {
+      return null;
+    }
+
+    // Cursor past the left column's content but still beside the right's → in the
+    // left column's gap. The mirror case targets the right column.
+    if (clientY > leftBottom && clientY <= rightBottom) {
+      return this.stackIntoColumnTarget(leftColumn);
+    }
+    if (clientY > rightBottom && clientY <= leftBottom) {
+      return this.stackIntoColumnTarget(rightColumn);
+    }
+
+    return null;
+  }
+
+  /**
+   * The bottom of a column's content — the bottom of its last child's content box
+   * (falling back to the child's holder). Null when the column has no last child.
+   */
+  private columnContentBottom(columnBlock: Block): number | null {
+    const lastChild = this.lastChildOfColumn(columnBlock);
+
+    if (lastChild === undefined) {
+      return null;
+    }
+
+    const content = lastChild.holder.querySelector('[data-blok-element-content]');
+    const rect = content instanceof HTMLElement
+      ? content.getBoundingClientRect()
+      : lastChild.holder.getBoundingClientRect();
+
+    return rect.bottom;
+  }
+
+  /**
+   * A bottom-edge DropTarget that appends into a column (its last child). Null
+   * when the column has no usable last child or it is itself being dragged.
+   */
+  private stackIntoColumnTarget(columnBlock: Block): DropTarget | null {
+    const lastChild = this.lastChildOfColumn(columnBlock);
+
+    if (lastChild === undefined || this.sourceBlocks.includes(lastChild)) {
+      return null;
+    }
+
+    return { block: lastChild, edge: 'bottom', depth: 0, parentId: null };
+  }
+
+  /**
+   * Walks up the parentId chain from a target block to find the nearest
+   * ancestor block whose name is 'column'. Returns that column's id, or null
+   * if the target is not inside a column.
+   */
+  private findEnclosingColumnId(targetBlock: Block): string | null {
+    const walk = (parentId: string | null): string | null => {
+      if (parentId === null) {
+        return null;
+      }
+
+      const parent = this.blockManager.getBlockById(parentId);
+
+      if (parent === undefined) {
+        return null;
+      }
+      if (parent.name === 'column') {
+        return parent.id;
+      }
+
+      return walk(parent.parentId);
+    };
+
+    return walk(targetBlock.parentId);
   }
 
   /**

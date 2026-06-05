@@ -549,6 +549,12 @@ export class Caret extends Module {
         return nextBlock;
       }
 
+      const adjacentColumnBlock = this.findAdjacentColumnEdgeBlock(currentBlock, containerId, 'next');
+
+      if (adjacentColumnBlock !== null) {
+        return adjacentColumnBlock;
+      }
+
       return this.findFirstBlockAfterParent(containerId);
     };
 
@@ -646,6 +652,12 @@ export class Caret extends Module {
 
       if (!this.shouldExitContainer(currentBlock, previousBlock, containerId)) {
         return previousBlock;
+      }
+
+      const adjacentColumnBlock = this.findAdjacentColumnEdgeBlock(currentBlock, containerId, 'previous');
+
+      if (adjacentColumnBlock !== null) {
+        return adjacentColumnBlock;
       }
 
       return this.findFirstBlockBeforeParent(containerId);
@@ -982,6 +994,61 @@ export class Caret extends Module {
     }
 
     return this.resolveContainerToExit(parent.parentId);
+  }
+
+  /**
+   * On HORIZONTAL navigation that would exit a column, return the edge block of
+   * the adjacent sibling column instead of leaving the whole column_list. Climbs
+   * to the column wrapper (the ancestor whose own parent IS the container), finds
+   * the sibling column in the travel direction, and returns that sibling's first
+   * (next) or last (previous) child block.
+   *
+   * Returns null when there is no adjacent sibling column, or when the nest is a
+   * single-level container (e.g. a table cell, whose block.parentId already
+   * equals the container) — those keep exiting via findFirstBlock(After|Before)Parent.
+   * @param currentBlock - the block the caret is leaving
+   * @param containerId - outermost container resolved for currentBlock
+   * @param direction - 'next' for ArrowRight, 'previous' for ArrowLeft
+   */
+  private findAdjacentColumnEdgeBlock(
+    currentBlock: Block,
+    containerId: string,
+    direction: 'next' | 'previous'
+  ): Block | null {
+    const getBlockById = this.Blok.BlockManager.getBlockById?.bind(this.Blok.BlockManager);
+
+    if (getBlockById === undefined || currentBlock.parentId === null) {
+      return null;
+    }
+
+    // Climb to the column wrapper: the ancestor whose parent IS the container.
+    let columnId = currentBlock.parentId;
+    let column = getBlockById(columnId);
+
+    while (column !== undefined && column.parentId !== null && column.parentId !== containerId) {
+      columnId = column.parentId;
+      column = getBlockById(columnId);
+    }
+
+    // Genuine two-level nest only. A single-level nest (table cell) has
+    // column.parentId !== containerId here, so it is rejected and keeps exiting.
+    if (column === undefined || column.parentId !== containerId) {
+      return null;
+    }
+
+    const columns = this.Blok.BlockManager.blocks.filter(block => block.parentId === containerId);
+    const ownIndex = columns.findIndex(candidate => candidate.id === columnId);
+    const sibling = columns[direction === 'next' ? ownIndex + 1 : ownIndex - 1];
+
+    if (sibling === undefined) {
+      return null;
+    }
+
+    const siblingChildren = this.Blok.BlockManager.blocks.filter(block => block.parentId === sibling.id);
+
+    return direction === 'next'
+      ? (siblingChildren[0] ?? null)
+      : (siblingChildren[siblingChildren.length - 1] ?? null);
   }
 
   /**

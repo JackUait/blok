@@ -193,14 +193,29 @@ test.describe('caret navigation within and across columns', () => {
     expect(caret.columnIndex).toBeNull();
   });
 
-  test('ArrowLeft at offset 0 of a column block does not teleport into the adjacent column', async ({ page }) => {
-    // Caret at the very start of the right column's only block. ArrowLeft must
-    // either stay/exit within the right column's own predecessor chain (here it
-    // exits upward to the root above), but must NEVER jump horizontally into the
-    // visually-adjacent LEFT column.
+  test('ArrowRight at end of a column block moves into the next column', async ({ page }) => {
     await createBlok(page, {
       blocks: [
-        { id: 'above', type: 'paragraph', data: { text: 'Root above' } },
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['l1'] },
+        { id: 'l1', type: 'paragraph', data: { text: 'Left only' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['r1'] },
+        { id: 'r1', type: 'paragraph', data: { text: 'Right only' }, parent: 'c2' },
+      ],
+    });
+
+    await editableById(page, 'l1').click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('ArrowRight');
+
+    const caret = await expectCaretInBlock(page, 'r1');
+
+    expect(caret.columnIndex).toBe(1);
+  });
+
+  test('ArrowLeft at start of a column block moves into the previous column', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [
         { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
         { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['l1'] },
         { id: 'l1', type: 'paragraph', data: { text: 'Left only' }, parent: 'c1' },
@@ -213,19 +228,12 @@ test.describe('caret navigation within and across columns', () => {
     await page.keyboard.press('Home');
     await page.keyboard.press('ArrowLeft');
 
-    const caret = await readCaret(page);
+    const caret = await expectCaretInBlock(page, 'l1');
 
-    // The caret must NOT have hopped into the left column (index 0). It may stay
-    // in the right column at offset 0, or exit upward to the root — but never the
-    // left sibling column.
-    expect(caret?.blockId).not.toBe('l1');
-    expect(caret?.columnIndex).not.toBe(0);
+    expect(caret.columnIndex).toBe(0);
   });
 
-  test('ArrowRight at end of a column block does not teleport into the adjacent column', async ({ page }) => {
-    // Caret at the very end of the LEFT column's only block. ArrowRight must not
-    // hop horizontally into the visually-adjacent RIGHT column; it should stay in
-    // the left column (offset 0 -> end clamp) or exit downward, never into r1.
+  test('ArrowRight in the RIGHTMOST column exits the layout instead of crossing', async ({ page }) => {
     await createBlok(page, {
       blocks: [
         { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
@@ -237,14 +245,33 @@ test.describe('caret navigation within and across columns', () => {
       ],
     });
 
-    await editableById(page, 'l1').click();
+    await editableById(page, 'r1').click();
     await page.keyboard.press('End');
     await page.keyboard.press('ArrowRight');
 
-    const caret = await readCaret(page);
+    const caret = await expectCaretInBlock(page, 'below');
 
-    // Must NOT have landed in the right column block.
-    expect(caret?.blockId).not.toBe('r1');
-    expect(caret?.columnIndex).not.toBe(1);
+    expect(caret.columnIndex).toBeNull();
+  });
+
+  test('ArrowLeft in the LEFTMOST column exits the layout instead of crossing', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [
+        { id: 'above', type: 'paragraph', data: { text: 'Root above' } },
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['l1'] },
+        { id: 'l1', type: 'paragraph', data: { text: 'Left only' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['r1'] },
+        { id: 'r1', type: 'paragraph', data: { text: 'Right only' }, parent: 'c2' },
+      ],
+    });
+
+    await editableById(page, 'l1').click();
+    await page.keyboard.press('Home');
+    await page.keyboard.press('ArrowLeft');
+
+    const caret = await expectCaretInBlock(page, 'above');
+
+    expect(caret.columnIndex).toBeNull();
   });
 });

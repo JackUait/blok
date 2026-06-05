@@ -281,6 +281,70 @@ describe('resetColumnsToEvenWidth', () => {
   });
 });
 
+describe('column resizer keyboard resize + aria', () => {
+  // jsdom returns 0 for getBoundingClientRect; stub equal widths so the resize
+  // math (width-fraction based) has a non-degenerate pair to redistribute.
+  const stubWidth = (el: HTMLElement, width: number): void => {
+    el.getBoundingClientRect = () =>
+      ({ width, height: 10, top: 0, left: 0, right: width, bottom: 10, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect;
+  };
+
+  const build = (): { resizer: HTMLElement; left: HTMLElement; right: HTMLElement } => {
+    const left = document.createElement('div');
+    const right = document.createElement('div');
+
+    left.style.flexGrow = '1';
+    right.style.flexGrow = '1';
+    stubWidth(left, 200);
+    stubWidth(right, 200);
+
+    const container = document.createElement('div');
+
+    container.append(left, right);
+
+    const i18n = { t: vi.fn().mockReturnValue('Resize columns') };
+    const api = { blocks: { getChildren: vi.fn() }, i18n } as unknown as API;
+
+    buildColumnResizers(container, [left, right], false, api, 'cl-1');
+
+    const resizer = container.querySelector(`[${COLUMN_RESIZER_ATTR}]`);
+
+    if (!(resizer instanceof HTMLElement)) {
+      throw new Error('resizer not built');
+    }
+
+    return { resizer, left, right };
+  };
+
+  it('exposes an i18n aria-label, slider value bounds, and is focusable', () => {
+    const { resizer } = build();
+
+    expect(resizer.getAttribute('aria-label')).toBe('Resize columns');
+    expect(resizer.getAttribute('tabindex')).toBe('0');
+    expect(resizer.getAttribute('aria-valuemin')).toBe('0');
+    expect(resizer.getAttribute('aria-valuemax')).toBe('100');
+    expect(resizer.getAttribute('aria-valuenow')).toBe('50');
+  });
+
+  it('ArrowRight grows the left column and updates aria-valuenow', () => {
+    const { resizer, left, right } = build();
+
+    resizer.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+
+    expect(Number(left.style.flexGrow)).toBeGreaterThan(1);
+    expect(Number(right.style.flexGrow)).toBeLessThan(1);
+    expect(Number(resizer.getAttribute('aria-valuenow'))).toBeGreaterThan(50);
+  });
+
+  it('ArrowLeft shrinks the left column', () => {
+    const { resizer, left } = build();
+
+    resizer.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+
+    expect(Number(left.style.flexGrow)).toBeLessThan(1);
+  });
+});
+
 describe('column resizer dblclick equalizes widths', () => {
   const makeHolder = (grow: string): HTMLElement => {
     const el = document.createElement('div');

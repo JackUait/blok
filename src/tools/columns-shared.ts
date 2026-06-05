@@ -69,6 +69,70 @@ export const resizeColumnGrow = (params: {
   };
 };
 
+/** Update the separator's slider value to the left column's width percentage. */
+const updateResizerAria = (
+  resizer: HTMLElement,
+  leftHolder: HTMLElement,
+  rightHolder: HTMLElement
+): void => {
+  const leftGrow = Number(leftHolder.style.flexGrow) || 1;
+  const rightGrow = Number(rightHolder.style.flexGrow) || 1;
+  const growSum = leftGrow + rightGrow;
+  const percent = growSum > 0 ? Math.round((leftGrow / growSum) * 100) : 50;
+
+  resizer.setAttribute('aria-valuenow', String(percent));
+};
+
+/** Apply a px `delta` to the column pair and sync the separator's aria value. */
+const applyResizeDelta = (
+  resizer: HTMLElement,
+  leftHolder: HTMLElement,
+  rightHolder: HTMLElement,
+  delta: number
+): void => {
+  const next = resizeColumnGrow({
+    leftWidth: leftHolder.getBoundingClientRect().width,
+    rightWidth: rightHolder.getBoundingClientRect().width,
+    leftGrow: Number(leftHolder.style.flexGrow) || 1,
+    rightGrow: Number(rightHolder.style.flexGrow) || 1,
+    delta,
+    minWidth: COLUMN_MIN_WIDTH,
+  });
+
+  leftHolder.style.flexGrow = String(next.leftGrow);
+  rightHolder.style.flexGrow = String(next.rightGrow);
+  updateResizerAria(resizer, leftHolder, rightHolder);
+};
+
+/** Per-press keyboard resize step in px. */
+const KEYBOARD_RESIZE_STEP = 16;
+
+const onResizerKeydown = (
+  event: KeyboardEvent,
+  resizer: HTMLElement,
+  leftHolder: HTMLElement,
+  rightHolder: HTMLElement
+): void => {
+  const pairWidth =
+    leftHolder.getBoundingClientRect().width + rightHolder.getBoundingClientRect().width;
+
+  const deltaByKey: Record<string, number> = {
+    ArrowLeft: -KEYBOARD_RESIZE_STEP,
+    ArrowRight: KEYBOARD_RESIZE_STEP,
+    Home: -pairWidth,
+    End: pairWidth,
+  };
+
+  const delta = deltaByKey[event.key];
+
+  if (delta === undefined) {
+    return;
+  }
+
+  event.preventDefault();
+  applyResizeDelta(resizer, leftHolder, rightHolder, delta);
+};
+
 /**
  * Drag handler for a single separator: redistribute flex-grow between the two
  * neighbouring column holders as the separator moves. Pointer capture keeps the
@@ -113,6 +177,7 @@ const startColumnResize = (
 
     leftEl.style.flexGrow = String(next.leftGrow);
     rightEl.style.flexGrow = String(next.rightGrow);
+    updateResizerAria(resizer, leftEl, rightEl);
   };
 
   const onUp = (upEvent: PointerEvent): void => {
@@ -138,6 +203,11 @@ const createColumnResizer = (
   resizer.setAttribute('data-blok-testid', 'column-resizer');
   resizer.setAttribute('role', 'separator');
   resizer.setAttribute('aria-orientation', 'vertical');
+  resizer.setAttribute('tabindex', '0');
+  resizer.setAttribute('aria-label', api.i18n.t('tools.columns.resizeAriaLabel'));
+  resizer.setAttribute('aria-valuemin', '0');
+  resizer.setAttribute('aria-valuemax', '100');
+  updateResizerAria(resizer, leftHolder, rightHolder);
 
   resizer.addEventListener('pointerdown', event => {
     startColumnResize(event, resizer, leftHolder, rightHolder);
@@ -146,6 +216,10 @@ const createColumnResizer = (
   // Double-click equalizes every column in the list, à la Notion.
   resizer.addEventListener('dblclick', () => {
     resetColumnsToEvenWidth(api, columnListId);
+  });
+
+  resizer.addEventListener('keydown', event => {
+    onResizerKeydown(event, resizer, leftHolder, rightHolder);
   });
 
   return resizer;

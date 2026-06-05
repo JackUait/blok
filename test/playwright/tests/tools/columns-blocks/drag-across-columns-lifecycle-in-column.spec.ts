@@ -109,11 +109,17 @@ const TABLE_CHILD_IDS = ['tp-r0c0', 'tp-r0c1', 'tp-r1c0', 'tp-r1c1'];
  * A 2x2 table seeded in column 0, with an anchor paragraph in column 1. The
  * table is a container whose cells reference child paragraphs parented to the
  * table — moving the table across columns must carry the whole subtree.
+ *
+ * Column 0 also holds a plain "keeper" paragraph alongside the table: moving the
+ * table OUT of column 0 must not empty it, since an emptied column now deletes
+ * itself (collapsing the layout). The keeper keeps column 0 alive so this test
+ * stays focused on the cross-column move landing in the destination column.
  */
 const tableAcrossColumnsData = (): OutputData => ({
   blocks: [
     { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
-    { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['table1'] },
+    { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['c1keeper', 'table1'] },
+    { id: 'c1keeper', type: 'paragraph', data: { text: 'Left keeper' }, parent: 'c1' },
     {
       id: 'table1',
       type: 'table',
@@ -140,11 +146,17 @@ const tableAcrossColumnsData = (): OutputData => ({
 /**
  * An image seeded in column 0, with an anchor paragraph in column 1. The image
  * uses a real loadable url so it stays in the "rendered" state.
+ *
+ * As with the table fixture, column 0 also holds a plain "keeper" paragraph so
+ * moving the image OUT of column 0 leaves it non-empty — an emptied column now
+ * deletes itself, which would collapse the layout and defeat this test's focus
+ * on the cross-column move.
  */
 const imageAcrossColumnsData = (): OutputData => ({
   blocks: [
     { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
-    { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['image1'] },
+    { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['c1keeper', 'image1'] },
+    { id: 'c1keeper', type: 'paragraph', data: { text: 'Left keeper' }, parent: 'c1' },
     {
       id: 'image1',
       type: 'image',

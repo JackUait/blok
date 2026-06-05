@@ -181,7 +181,12 @@ test.describe('Dragging a container block into / between / out of columns', () =
     await createBlok(page, {
       blocks: [
         { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
-        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['toggle1'] },
+        // The left column also holds a keeper paragraph: moving the toggle OUT of
+        // it must not empty it, since an emptied column now deletes itself and
+        // would collapse the layout — defeating this test's focus on the
+        // column-to-column move landing in the destination column.
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['c1keeper', 'toggle1'] },
+        { id: 'c1keeper', type: 'paragraph', data: { text: 'Left keeper' }, parent: 'c1' },
         {
           id: 'toggle1',
           type: 'toggle',

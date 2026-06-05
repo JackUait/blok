@@ -125,10 +125,14 @@ const isHolderAtRedactorRoot = async (page: Page, blockId: string): Promise<bool
 };
 
 /**
- * Fixture: a 2-column layout. The FIRST column (c1) holds the subject block; the
- * SECOND column (c2) holds a keeper paragraph so a side drop already produced two
- * columns. A leading root paragraph ("Top root") is the drop target whose bottom
- * reorder edge ejects the subject back out to root.
+ * Fixture: a 2-column layout. The FIRST column (c1) holds the subject block PLUS
+ * a plain "c1keeper" paragraph; the SECOND column (c2) holds its own keeper. The
+ * c1 keeper matters: an emptied column now deletes itself (collapsing the layout),
+ * so the keeper ensures dragging the subject OUT leaves c1 alive — keeping these
+ * tests focused on the subject's journey to root rather than the column's demise
+ * (the dedicated delete-on-empty case is covered separately below). A leading
+ * root paragraph ("Top root") is the drop target whose bottom reorder edge ejects
+ * the subject back out to root.
  *
  * The leaf variant puts a plain Header in c1; its data shape is `{ text, level }`
  * (matches header-in-column.spec.ts) — a plain header is a leaf, no content/children.
@@ -137,8 +141,9 @@ const headerInColumnFixture = (): OutputData => ({
   blocks: [
     { id: 'top', type: 'paragraph', data: { text: 'Top root' } },
     { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
-    { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['header1'] },
+    { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['header1', 'c1keeper'] },
     { id: 'header1', type: 'header', data: { text: 'Features', level: 3 }, parent: 'c1' },
+    { id: 'c1keeper', type: 'paragraph', data: { text: 'Left keeper' }, parent: 'c1' },
     { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['keeper'] },
     { id: 'keeper', type: 'paragraph', data: { text: 'Right keeper' }, parent: 'c2' },
   ],
@@ -146,14 +151,16 @@ const headerInColumnFixture = (): OutputData => ({
 
 /**
  * The container variant: a Toggle (toggle1) WITH a child paragraph (tc1) in the
- * first column. The toggle data shape is `{ text, isOpen }` with `content: ['tc1']`
- * and the child carries `parent: 'toggle1'` (matches toggle-in-column.spec.ts).
+ * first column, alongside a plain "c1keeper" paragraph (see headerInColumnFixture
+ * for why the keeper is needed). The toggle data shape is `{ text, isOpen }` with
+ * `content: ['tc1']` and the child carries `parent: 'toggle1'` (matches
+ * toggle-in-column.spec.ts).
  */
 const toggleInColumnFixture = (): OutputData => ({
   blocks: [
     { id: 'top', type: 'paragraph', data: { text: 'Top root' } },
     { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
-    { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['toggle1'] },
+    { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['toggle1', 'c1keeper'] },
     {
       id: 'toggle1',
       type: 'toggle',
@@ -162,6 +169,7 @@ const toggleInColumnFixture = (): OutputData => ({
       content: ['tc1'],
     },
     { id: 'tc1', type: 'paragraph', data: { text: 'Inside the toggle' }, parent: 'toggle1' },
+    { id: 'c1keeper', type: 'paragraph', data: { text: 'Left keeper' }, parent: 'c1' },
     { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['keeper'] },
     { id: 'keeper', type: 'paragraph', data: { text: 'Right keeper' }, parent: 'c2' },
   ],
@@ -248,12 +256,24 @@ test.describe('Dragging a block OUT of a column back to root', () => {
     await expect(page.getByRole('heading', { name: 'Features' })).toBeVisible();
   });
 
-  // Regression: moving the LAST block out of a column used to leave the column
-  // childless — a dead, uninteractable empty box (no paragraph to click into).
-  // A column is never legitimately empty, so emptying it by drag-out must re-seed
-  // it with a fresh empty paragraph, exactly like a freshly created column.
-  test('LEAF DRAG-OUT re-seeds the emptied column with an interactive empty paragraph', async ({ page }) => {
-    await createBlok(page, headerInColumnFixture());
+  // Moving the LAST block out of a column empties it. A column is pure layout and
+  // never legitimately empty, so an emptied column DELETES itself rather than
+  // lingering as a dead, uninteractable box. Here that leaves the column_list with
+  // a single survivor, which collapses the list entirely: every block ends up at
+  // root and no column / column_list remains.
+  test('LEAF DRAG-OUT deletes the emptied column, collapsing a 2-column list to plain blocks', async ({ page }) => {
+    // Dedicated sole-child fixture: c1 holds ONLY the header, so dragging it out
+    // genuinely empties c1 (unlike the shared fixture, which keeps c1 alive).
+    await createBlok(page, {
+      blocks: [
+        { id: 'top', type: 'paragraph', data: { text: 'Top root' } },
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['header1'] },
+        { id: 'header1', type: 'header', data: { text: 'Features', level: 3 }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['keeper'] },
+        { id: 'keeper', type: 'paragraph', data: { text: 'Right keeper' }, parent: 'c2' },
+      ],
+    } as OutputData);
 
     await expect(page.locator('[data-blok-column]')).toHaveCount(2);
 
@@ -261,35 +281,27 @@ test.describe('Dragging a block OUT of a column back to root', () => {
     const handle = await grabLeafHandle(page, 'header1');
     await dragOutToRoot(page, handle);
 
+    // The emptied column deleted itself; the lone survivor collapsed the list, so
+    // no column / column_list remains in the live DOM.
+    await expect(page.locator('[data-blok-column]')).toHaveCount(0);
+    await expect(page.locator('[data-blok-columns]')).toHaveCount(0);
+
     const saved = await saveBlok(page);
 
-    // The header left for root.
+    // The header left for root, and the keeper was promoted to root by the
+    // collapse — both are now plain top-level blocks with no column ancestry.
     expect(findBlock(saved, 'header1')?.parent).toBeUndefined();
+    expect(findBlock(saved, 'keeper')?.parent ?? null).toBeNull();
+    expect(saved.blocks.filter((b) => b.type === 'column' || b.type === 'column_list')).toHaveLength(0);
 
-    // Both columns persist (no collapse) ...
-    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(2);
+    // No orphans dangle from the now-deleted column / column_list.
+    const allIds = new Set(saved.blocks.map((b) => b.id));
+    const orphans = saved.blocks.filter((b) => b.parent !== undefined && !allIds.has(b.parent));
+    expect(orphans).toEqual([]);
 
-    // ... and the emptied column c1 is NOT childless: it carries exactly one fresh
-    // empty paragraph so it can be clicked/typed into.
-    const c1Children = childrenOf(saved, 'c1');
-    expect(c1Children).toHaveLength(1);
-
-    const seeded = findBlock(saved, c1Children[0] ?? '');
-    expect(seeded?.type).toBe('paragraph');
-    expect((seeded?.data as { text?: string }).text ?? '').toBe('');
-    expect(seeded?.parent).toBe('c1');
-
-    // LIVE: the seeded paragraph is interactive — clicking it and typing persists.
-    const seededEditable = page
-      .locator(`[data-blok-id="${c1Children[0]}"] [contenteditable]`)
-      .first();
-    await seededEditable.click();
-    await page.keyboard.type('typed into reborn column');
-
-    const after = await saveBlok(page);
-    expect((findBlock(after, c1Children[0] ?? '')?.data as { text?: string }).text).toBe(
-      'typed into reborn column'
-    );
+    // LIVE: both blocks sit at the redactor root and the keeper is interactive.
+    expect(await isHolderAtRedactorRoot(page, 'header1')).toBe(true);
+    expect(await isHolderAtRedactorRoot(page, 'keeper')).toBe(true);
   });
 
   test('LEAF RELOAD: the ejected header round-trips at root through save -> reload -> save', async ({ page }) => {

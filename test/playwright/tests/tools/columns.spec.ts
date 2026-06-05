@@ -495,7 +495,7 @@ test.describe('Columns tool', () => {
   // column but never re-seeded it. The result was a dead, uninteractable empty
   // column. A column is never legitimately empty — emptying it by a side-drop
   // must re-seed it with a fresh empty paragraph, like a freshly created column.
-  test('drag-beside the sole block of a column re-seeds the emptied source column', async ({ page }) => {
+  test('drag-beside the sole block of a column deletes the emptied source column', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     await createBlok(page, {
       blocks: [
@@ -510,7 +510,7 @@ test.describe('Columns tool', () => {
     await expect(page.locator('[data-blok-column]')).toHaveCount(2);
 
     // Drag "Col A" (the SOLE child of column c1) onto the right edge of "Col B"
-    // (in column c2) → creates a third column for "Col A", emptying c1.
+    // (in column c2) → "Col A" gets its own column, emptying c1.
     const source = page.getByTestId('block-wrapper').filter({ hasText: 'Col A' }).last();
     await source.hover();
     const handle = page.locator(SETTINGS_BUTTON);
@@ -519,23 +519,18 @@ test.describe('Columns tool', () => {
     const target = page.getByTestId('block-wrapper').filter({ hasText: 'Col B' }).last();
     await performSideDrop(page, handle, target, 'right');
 
-    // The layout now has three columns and "Col A" has left c1.
-    await expect(page.locator('[data-blok-column]')).toHaveCount(3);
+    // c1 emptied, so it deletes itself: the count returns to two columns ("Col B"
+    // and the new "Col A" column) instead of leaving a dead third box.
+    await expect(page.locator('[data-blok-column]')).toHaveCount(2);
 
     const saved = await saveBlok(page);
+    // c1 is gone from the tree entirely; "Col A" lives in a new column, not c1.
+    expect(saved.blocks.find(b => b.id === 'c1')).toBeUndefined();
     expect(saved.blocks.find(b => b.id === 'a')?.parent).not.toBe('c1');
-
-    // c1 survives but is NOT childless: it is re-seeded with one empty paragraph
-    // so it stays interactive.
-    const c1 = saved.blocks.find(b => b.id === 'c1');
-    expect(c1).toBeDefined();
-    expect(c1?.content).toHaveLength(1);
-
-    const seededId = c1?.content?.[0] ?? '';
-    const seeded = saved.blocks.find(b => b.id === seededId);
-    expect(seeded?.type).toBe('paragraph');
-    expect((seeded?.data as { text?: string }).text ?? '').toBe('');
-    expect(seeded?.parent).toBe('c1');
+    expect(saved.blocks.find(b => b.id === 'a')?.parent).toBeDefined();
+    // "Col B" stays put in c2; the list is intact with two columns.
+    expect(saved.blocks.find(b => b.id === 'b')?.parent).toBe('c2');
+    expect(saved.blocks.filter(b => b.type === 'column')).toHaveLength(2);
   });
 
   // Regression (reported via screen recording): create columns by dragging a
@@ -546,7 +541,7 @@ test.describe('Columns tool', () => {
   // leaving a dead, ZERO-HEIGHT, uninteractable column. noSeed must be a one-shot
   // creation hint: once spent, an emptied column re-seeds an interactive empty
   // paragraph, exactly like a column that was never wrapped.
-  test('a column created by drag-beside then emptied by a drag-out re-seeds an interactive paragraph', async ({ page }) => {
+  test('a column emptied by a drag-out deletes itself, collapsing a 2-column list back to plain blocks', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     await createBlok(page, {
       blocks: [
@@ -594,37 +589,28 @@ test.describe('Columns tool', () => {
       { timeout: 2000 }
     );
 
-    // Both columns survive, and the emptied one is NOT a zero-height dead box: it
-    // carries a freshly-seeded empty paragraph, so it has real height.
-    const columns = page.locator('[data-blok-column]');
-    await expect(columns).toHaveCount(2);
+    // Dragging "Header Levels" out empties its column, so that column deletes
+    // itself. That leaves the list with a single survivor ("Intro keeper"), which
+    // collapses the column_list entirely — no dead, uninteractable box remains.
+    await expect(page.locator('[data-blok-column]')).toHaveCount(0);
+    await expect(page.locator('[data-blok-columns]')).toHaveCount(0);
 
-    const heights = await columns.evaluateAll(els =>
-      els.map(el => Math.round(el.getBoundingClientRect().height))
-    );
-    expect(Math.min(...heights)).toBeGreaterThan(10);
-
-    // The emptied column is genuinely interactive: clicking it and typing lands
-    // text in a paragraph parented to that column.
-    const emptyCol = columns.filter({ hasNotText: 'Intro keeper' });
-    const emptyBox = await emptyCol.boundingBox();
-
-    if (!emptyBox) {
-      throw new Error('emptied column has no box');
-    }
-
-    await page.mouse.click(emptyBox.x + emptyBox.width / 2, emptyBox.y + emptyBox.height / 2);
-    await page.keyboard.type('Recovered');
-
+    // The blocks survive as plain root-level paragraphs — nothing is orphaned and
+    // no column / column_list lingers in the saved tree.
     const saved = await saveBlok(page);
-    const recovered = saved.blocks.find(
-      b => b.type === 'paragraph' && (b.data as { text?: string }).text === 'Recovered'
-    );
-    expect(recovered).toBeDefined();
+    const columnish = saved.blocks.filter(b => b.type === 'column' || b.type === 'column_list');
+    expect(columnish).toHaveLength(0);
 
-    const columnIds = saved.blocks.filter(b => b.type === 'column').map(b => b.id);
-    expect(recovered?.parent).toBeDefined();
-    expect(columnIds).toContain(recovered?.parent);
+    const texts = saved.blocks
+      .filter(b => b.type === 'paragraph')
+      .map(b => (b.data as { text?: string }).text);
+    expect(texts).toEqual(expect.arrayContaining(['Intro keeper', 'Middle block', 'Header Levels']));
+
+    // The promoted survivor is genuinely at root (no stale parent pointer).
+    const intro = saved.blocks.find(
+      b => b.type === 'paragraph' && (b.data as { text?: string }).text === 'Intro keeper'
+    );
+    expect(intro?.parent ?? null).toBeNull();
   });
 
   test('dropping in the far-left editor margin beside existing columns prepends a new column', async ({ page }) => {
@@ -1450,13 +1436,15 @@ test.describe('Columns tool', () => {
     );
 
     const saved = await saveBlok(page);
-    // Model: Movable b left c2 for root; the columns survive (c1 keeps A one).
+    // Model: "Movable b" left c2 for root, emptying c2. c2 deletes itself, leaving
+    // c1 as the sole column — which collapses the whole list, promoting "A one" to
+    // root. Both blocks end up at root; no column / column_list survives.
     expect(saved.blocks.find(b => b.id === 'b1')?.parent).toBeUndefined();
-    expect(saved.blocks.find(b => b.id === 'a1')?.parent).toBe('c1');
+    expect(saved.blocks.find(b => b.id === 'a1')?.parent ?? null).toBeNull();
+    expect(saved.blocks.filter(b => b.type === 'column' || b.type === 'column_list')).toHaveLength(0);
 
-    // LIVE DOM: the moved holder is a direct workingArea child — out of every
-    // column — and sits between the heading and the column_list, matching the
-    // flat-array order.
+    // LIVE DOM: both former column children are now direct workingArea children,
+    // ordered head → moved "Movable b" → promoted "A one" → tail.
     const domRootOrder = await page.evaluate(() => {
       const workingArea = document.querySelector('[data-blok-redactor]');
 
@@ -1472,13 +1460,13 @@ test.describe('Columns tool', () => {
           if (text.startsWith('Movable b')) { return 'moved'; }
           if (text.startsWith('Tail root')) { return 'tail'; }
 
-          return text.includes('A one') ? 'columns' : '?';
+          return text.includes('A one') ? 'aone' : '?';
         });
     });
 
     expect(domRootOrder).not.toBeNull();
-    expect(domRootOrder).toEqual(['head', 'moved', 'columns', 'tail']);
-    expect(await domColumnMembership(page)).not.toHaveProperty('Movable b');
+    expect(domRootOrder).toEqual(['head', 'moved', 'aone', 'tail']);
+    expect(await domColumnMembership(page)).toEqual({});
   });
 
   test('dropping over a column body center stacks the block inside that column (no new column)', async ({ page }) => {

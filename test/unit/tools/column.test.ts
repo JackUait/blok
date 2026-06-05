@@ -234,9 +234,11 @@ describe('Column tool', () => {
     column.render();
     column.removed();
 
-    // removed() fires the async unwrap without awaiting; let microtasks drain
-    await Promise.resolve();
-    await Promise.resolve();
+    // removed() defers the unwrap to a microtask, which then awaits two chained
+    // id-based deletes (the surviving column, then the column_list). A single
+    // macrotask tick flushes the whole microtask chain so both deletes resolve,
+    // regardless of how many ticks the defer + awaits add.
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(remove).toHaveBeenCalledWith(1); // column_list index
   });

@@ -248,6 +248,50 @@ test.describe('Dragging a block OUT of a column back to root', () => {
     await expect(page.getByRole('heading', { name: 'Features' })).toBeVisible();
   });
 
+  // Regression: moving the LAST block out of a column used to leave the column
+  // childless — a dead, uninteractable empty box (no paragraph to click into).
+  // A column is never legitimately empty, so emptying it by drag-out must re-seed
+  // it with a fresh empty paragraph, exactly like a freshly created column.
+  test('LEAF DRAG-OUT re-seeds the emptied column with an interactive empty paragraph', async ({ page }) => {
+    await createBlok(page, headerInColumnFixture());
+
+    await expect(page.locator('[data-blok-column]')).toHaveCount(2);
+
+    // Drag the column's SOLE child out to root, emptying column c1.
+    const handle = await grabLeafHandle(page, 'header1');
+    await dragOutToRoot(page, handle);
+
+    const saved = await saveBlok(page);
+
+    // The header left for root.
+    expect(findBlock(saved, 'header1')?.parent).toBeUndefined();
+
+    // Both columns persist (no collapse) ...
+    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(2);
+
+    // ... and the emptied column c1 is NOT childless: it carries exactly one fresh
+    // empty paragraph so it can be clicked/typed into.
+    const c1Children = childrenOf(saved, 'c1');
+    expect(c1Children).toHaveLength(1);
+
+    const seeded = findBlock(saved, c1Children[0] ?? '');
+    expect(seeded?.type).toBe('paragraph');
+    expect((seeded?.data as { text?: string }).text ?? '').toBe('');
+    expect(seeded?.parent).toBe('c1');
+
+    // LIVE: the seeded paragraph is interactive — clicking it and typing persists.
+    const seededEditable = page
+      .locator(`[data-blok-id="${c1Children[0]}"] [contenteditable]`)
+      .first();
+    await seededEditable.click();
+    await page.keyboard.type('typed into reborn column');
+
+    const after = await saveBlok(page);
+    expect((findBlock(after, c1Children[0] ?? '')?.data as { text?: string }).text).toBe(
+      'typed into reborn column'
+    );
+  });
+
   test('LEAF RELOAD: the ejected header round-trips at root through save -> reload -> save', async ({ page }) => {
     await createBlok(page, headerInColumnFixture());
 

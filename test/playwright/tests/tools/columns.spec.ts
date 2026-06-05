@@ -490,6 +490,54 @@ test.describe('Columns tool', () => {
     expect(saved.blocks.find(b => b.id === 'newcomer')?.parent).toBeDefined();
   });
 
+  // Regression: dragging the SOLE block out of a column to create a new column
+  // (the side-drop path: handleColumnDrop -> addColumnToList) emptied the source
+  // column but never re-seeded it. The result was a dead, uninteractable empty
+  // column. A column is never legitimately empty — emptying it by a side-drop
+  // must re-seed it with a fresh empty paragraph, like a freshly created column.
+  test('drag-beside the sole block of a column re-seeds the emptied source column', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['a'] },
+        { id: 'a', type: 'paragraph', data: { text: 'Col A' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['b'] },
+        { id: 'b', type: 'paragraph', data: { text: 'Col B' }, parent: 'c2' },
+      ],
+    });
+
+    await expect(page.locator('[data-blok-column]')).toHaveCount(2);
+
+    // Drag "Col A" (the SOLE child of column c1) onto the right edge of "Col B"
+    // (in column c2) → creates a third column for "Col A", emptying c1.
+    const source = page.getByTestId('block-wrapper').filter({ hasText: 'Col A' }).last();
+    await source.hover();
+    const handle = page.locator(SETTINGS_BUTTON);
+    await expect(handle).toBeVisible();
+
+    const target = page.getByTestId('block-wrapper').filter({ hasText: 'Col B' }).last();
+    await performSideDrop(page, handle, target, 'right');
+
+    // The layout now has three columns and "Col A" has left c1.
+    await expect(page.locator('[data-blok-column]')).toHaveCount(3);
+
+    const saved = await saveBlok(page);
+    expect(saved.blocks.find(b => b.id === 'a')?.parent).not.toBe('c1');
+
+    // c1 survives but is NOT childless: it is re-seeded with one empty paragraph
+    // so it stays interactive.
+    const c1 = saved.blocks.find(b => b.id === 'c1');
+    expect(c1).toBeDefined();
+    expect(c1?.content).toHaveLength(1);
+
+    const seededId = c1?.content?.[0] ?? '';
+    const seeded = saved.blocks.find(b => b.id === seededId);
+    expect(seeded?.type).toBe('paragraph');
+    expect((seeded?.data as { text?: string }).text ?? '').toBe('');
+    expect(seeded?.parent).toBe('c1');
+  });
+
   test('dropping in the far-left editor margin beside existing columns prepends a new column', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     await createBlok(page, {

@@ -612,6 +612,18 @@ export class DragController extends Module {
       return;
     }
 
+    // Snapshot the sources' current parent columns before the move. When a source
+    // is the LAST block of its column, moving it into the new column empties that
+    // source column — and unlike the vertical-drop path (handleDropImpl re-renders
+    // affected parents), this side-drop reparents via raw setBlockParent and never
+    // touches the emptied source. Re-seed those columns afterwards so they never
+    // become dead, uninteractable empty boxes.
+    const sourceParentIds = new Set(
+      sourceIds
+        .map(id => this.Blok.BlockManager.getBlockById(id)?.parentId)
+        .filter((parentId): parentId is string => parentId !== null && parentId !== undefined)
+    );
+
     // targetParentId is the enclosing column when the target already lives in a
     // column_list (→ add a sibling column), or null for a top-level target
     // (→ wrap target + sources into a brand new column_list).
@@ -619,6 +631,25 @@ export class DragController extends Module {
       addColumnToList(api, targetParentId, sourceIds, edge);
     } else {
       wrapInNewColumnList(api, targetBlock.id, sourceIds, edge);
+    }
+
+    this.reseedEmptiedColumns(sourceParentIds);
+  }
+
+  /**
+   * Re-seed any column among `columnIds` that a move left childless. A column is
+   * pure layout that always hosts at least one block; an empty one is a dead box
+   * the user can't click into. Firing the column's rendered() hook re-runs its
+   * empty-column seed, inserting a fresh empty paragraph — the same recovery the
+   * vertical-drop path gets for free when it re-renders affected parents.
+   */
+  private reseedEmptiedColumns(columnIds: Set<string>): void {
+    for (const columnId of columnIds) {
+      const column = this.Blok.BlockManager.getBlockById(columnId);
+
+      if (column !== undefined && column.name === 'column' && column.contentIds.length === 0) {
+        column.call('rendered');
+      }
     }
   }
 

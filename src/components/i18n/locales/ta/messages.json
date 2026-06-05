@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 நெடுவரிசைகள்",
   "tools.columns.col4": "4 நெடுவரிசைகள்",
   "tools.columns.col5": "5 நெடுவரிசைகள்",
+  "tools.columns.resizeAriaLabel": "நெடுவரிசைகளின் அளவை மாற்று",
+  "tools.columns.turnInto": "நெடுவரிசைகளாக மாற்று",
   "searchTerms.columns": "நெடுவரிசைகள்",
   "searchTerms.layout": "தளவமைப்பு",
   "searchTerms.divider": "பிரிப்பான்",

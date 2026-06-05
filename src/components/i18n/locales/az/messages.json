@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 sütun",
   "tools.columns.col4": "4 sütun",
   "tools.columns.col5": "5 sütun",
+  "tools.columns.resizeAriaLabel": "Sütunları yenidən ölçülandır",
+  "tools.columns.turnInto": "Sütunlara çevir",
   "searchTerms.columns": "sütunlar",
   "searchTerms.layout": "düzən",
   "searchTerms.divider": "bölücü",

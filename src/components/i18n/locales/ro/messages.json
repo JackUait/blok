@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 coloane",
   "tools.columns.col4": "4 coloane",
   "tools.columns.col5": "5 coloane",
+  "tools.columns.resizeAriaLabel": "Redimensionează coloanele",
+  "tools.columns.turnInto": "Convertește în coloane",
   "searchTerms.columns": "coloane",
   "searchTerms.layout": "aspect",
   "searchTerms.divider": "divizor",

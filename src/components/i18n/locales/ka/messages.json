@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 სვეტი",
   "tools.columns.col4": "4 სვეტი",
   "tools.columns.col5": "5 სვეტი",
+  "tools.columns.resizeAriaLabel": "სვეტების ზომის შეცვლა",
+  "tools.columns.turnInto": "სვეტებად გადაყვანა",
   "searchTerms.columns": "სვეტები",
   "searchTerms.layout": "განლაგება",
   "searchTerms.divider": "გამყოფი",

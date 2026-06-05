@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 أعمدة",
   "tools.columns.col4": "4 أعمدة",
   "tools.columns.col5": "5 أعمدة",
+  "tools.columns.resizeAriaLabel": "تغيير حجم الأعمدة",
+  "tools.columns.turnInto": "تحويل إلى أعمدة",
   "searchTerms.columns": "أعمدة",
   "searchTerms.layout": "تخطيط",
   "searchTerms.divider": "فاصل",

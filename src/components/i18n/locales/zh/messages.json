@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 列",
   "tools.columns.col4": "4 列",
   "tools.columns.col5": "5 列",
+  "tools.columns.resizeAriaLabel": "调整列宽",
+  "tools.columns.turnInto": "转换为列",
   "searchTerms.columns": "分栏",
   "searchTerms.layout": "布局",
   "searchTerms.divider": "分割线",

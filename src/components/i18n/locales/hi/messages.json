@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 कॉलम",
   "tools.columns.col4": "4 कॉलम",
   "tools.columns.col5": "5 कॉलम",
+  "tools.columns.resizeAriaLabel": "कॉलम का आकार बदलें",
+  "tools.columns.turnInto": "कॉलम में बदलें",
   "searchTerms.columns": "कॉलम",
   "searchTerms.layout": "लेआउट",
   "searchTerms.divider": "विभाजक",

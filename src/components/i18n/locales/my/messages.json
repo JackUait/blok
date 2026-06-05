@@ -104,6 +104,8 @@
   "tools.columns.col3": "ကော်လံ ၃ ခု",
   "tools.columns.col4": "ကော်လံ ၄ ခု",
   "tools.columns.col5": "ကော်လံ ၅ ခု",
+  "tools.columns.resizeAriaLabel": "ကော်လံများ အရွယ်အစား ချိန်ညှိ",
+  "tools.columns.turnInto": "ကော်လံများ အဖြစ်ပြောင်းလဲ",
   "searchTerms.columns": "ကော်လံ",
   "searchTerms.layout": "အပြင်အဆင်",
   "searchTerms.divider": "ပိုင်းခြားမျဉ်း",

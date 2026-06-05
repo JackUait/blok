@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 колони",
   "tools.columns.col4": "4 колони",
   "tools.columns.col5": "5 колони",
+  "tools.columns.resizeAriaLabel": "Промени ги димензиите на колоните",
+  "tools.columns.turnInto": "Претвори во колони",
   "searchTerms.columns": "колони",
   "searchTerms.layout": "распоред",
   "searchTerms.divider": "разделувач",

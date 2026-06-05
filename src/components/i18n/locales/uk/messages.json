@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 стовпці",
   "tools.columns.col4": "4 стовпці",
   "tools.columns.col5": "5 стовпців",
+  "tools.columns.resizeAriaLabel": "Змінити розмір колонок",
+  "tools.columns.turnInto": "Перетворити на колонки",
   "searchTerms.columns": "стовпці",
   "searchTerms.layout": "макет",
   "searchTerms.divider": "роздільник",

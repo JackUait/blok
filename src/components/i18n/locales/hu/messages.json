@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 oszlop",
   "tools.columns.col4": "4 oszlop",
   "tools.columns.col5": "5 oszlop",
+  "tools.columns.resizeAriaLabel": "Oszlopok átméretezése",
+  "tools.columns.turnInto": "Konvertálás oszlopokká",
   "searchTerms.columns": "oszlopok",
   "searchTerms.layout": "elrendezés",
   "searchTerms.divider": "elválasztó",

@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 ئىستون",
   "tools.columns.col4": "4 ئىستون",
   "tools.columns.col5": "5 ئىستون",
+  "tools.columns.resizeAriaLabel": "ئىستونلار ئۆلچىمىنى ئۆزگەرتىش",
+  "tools.columns.turnInto": "ئىستونلارغا ئايلاندۇرۇش",
   "searchTerms.columns": "ئىستونلار",
   "searchTerms.layout": "تەرتىپ",
   "searchTerms.divider": "بۆلگۈچ",

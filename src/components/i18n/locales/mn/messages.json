@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 багана",
   "tools.columns.col4": "4 багана",
   "tools.columns.col5": "5 багана",
+  "tools.columns.resizeAriaLabel": "Баганын хэмжээг өөрчлөх",
+  "tools.columns.turnInto": "Баганад хөрвүүлэх",
   "searchTerms.columns": "багана",
   "searchTerms.layout": "зохион байгуулалт",
   "searchTerms.divider": "хуваагч",

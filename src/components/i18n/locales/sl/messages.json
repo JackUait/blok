@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 stolpci",
   "tools.columns.col4": "4 stolpci",
   "tools.columns.col5": "5 stolpcev",
+  "tools.columns.resizeAriaLabel": "Spremeni velikost stolpcev",
+  "tools.columns.turnInto": "Pretvori v stolpce",
   "searchTerms.columns": "stolpci",
   "searchTerms.layout": "postavitev",
   "searchTerms.divider": "ločilnik",

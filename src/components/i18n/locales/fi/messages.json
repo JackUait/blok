@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 saraketta",
   "tools.columns.col4": "4 saraketta",
   "tools.columns.col5": "5 saraketta",
+  "tools.columns.resizeAriaLabel": "Muuta sarakkeiden kokoa",
+  "tools.columns.turnInto": "Muuta sarakkeiksi",
   "searchTerms.columns": "sarakkeet",
   "searchTerms.layout": "asettelu",
   "searchTerms.divider": "jakolinja",

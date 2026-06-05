@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 kolum",
   "tools.columns.col4": "4 kolum",
   "tools.columns.col5": "5 kolum",
+  "tools.columns.resizeAriaLabel": "Baguhin ang laki ng mga kolum",
+  "tools.columns.turnInto": "I-convert sa mga kolum",
   "searchTerms.columns": "kolum",
   "searchTerms.layout": "layout",
   "searchTerms.divider": "panghati",

@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 ዓምዶች",
   "tools.columns.col4": "4 ዓምዶች",
   "tools.columns.col5": "5 ዓምዶች",
+  "tools.columns.resizeAriaLabel": "ዓምዶችን መጠን ቀይር",
+  "tools.columns.turnInto": "ወደ ዓምዶች ቀይር",
   "searchTerms.columns": "ዓምዶች",
   "searchTerms.layout": "አቀማመጥ",
   "searchTerms.divider": "ከፋፋይ",

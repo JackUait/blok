@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 kolonnas",
   "tools.columns.col4": "4 kolonnas",
   "tools.columns.col5": "5 kolonnas",
+  "tools.columns.resizeAriaLabel": "Mainīt kolonnu izmēru",
+  "tools.columns.turnInto": "Konvertēt kolonnās",
   "searchTerms.columns": "kolonnas",
   "searchTerms.layout": "izkārtojums",
   "searchTerms.divider": "atdalītājs",

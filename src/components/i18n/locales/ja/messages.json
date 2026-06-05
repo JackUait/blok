@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 列",
   "tools.columns.col4": "4 列",
   "tools.columns.col5": "5 列",
+  "tools.columns.resizeAriaLabel": "列のサイズを変更",
+  "tools.columns.turnInto": "列に変換",
   "searchTerms.columns": "段組み",
   "searchTerms.layout": "レイアウト",
   "searchTerms.divider": "区切り",

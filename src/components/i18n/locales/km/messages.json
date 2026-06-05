@@ -104,6 +104,8 @@
   "tools.columns.col3": "៣ ជួរ",
   "tools.columns.col4": "៤ ជួរ",
   "tools.columns.col5": "៥ ជួរ",
+  "tools.columns.resizeAriaLabel": "ប្ដូរទំហំជួរឈរ",
+  "tools.columns.turnInto": "បំប្លែងជាជួរឈរ",
   "searchTerms.columns": "ជួរឈរ",
   "searchTerms.layout": "ប្លង់",
   "searchTerms.divider": "បន្ទាត់ចែក",

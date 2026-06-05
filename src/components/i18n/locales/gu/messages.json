@@ -104,6 +104,8 @@
   "tools.columns.col3": "૩ કૉલમ",
   "tools.columns.col4": "૪ કૉલમ",
   "tools.columns.col5": "૫ કૉલમ",
+  "tools.columns.resizeAriaLabel": "કૉલમ્સ કદ બદલો",
+  "tools.columns.turnInto": "કૉલમ્સમાં ફેરવો",
   "searchTerms.columns": "કૉલમ",
   "searchTerms.layout": "લેઆઉટ",
   "searchTerms.divider": "વિભાજક",

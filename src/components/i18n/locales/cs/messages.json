@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 sloupce",
   "tools.columns.col4": "4 sloupce",
   "tools.columns.col5": "5 sloupců",
+  "tools.columns.resizeAriaLabel": "Změnit velikost sloupců",
+  "tools.columns.turnInto": "Převést na sloupce",
   "searchTerms.columns": "sloupce",
   "searchTerms.layout": "rozložení",
   "searchTerms.divider": "oddělovač",

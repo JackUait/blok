@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 colonne",
   "tools.columns.col4": "4 colonne",
   "tools.columns.col5": "5 colonne",
+  "tools.columns.resizeAriaLabel": "Ridimensiona colonne",
+  "tools.columns.turnInto": "Converti in colonne",
   "searchTerms.columns": "colonne",
   "searchTerms.layout": "layout",
   "searchTerms.divider": "divisore",

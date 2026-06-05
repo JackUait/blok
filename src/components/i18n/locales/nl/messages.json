@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 kolommen",
   "tools.columns.col4": "4 kolommen",
   "tools.columns.col5": "5 kolommen",
+  "tools.columns.resizeAriaLabel": "Kolommen aanpassen",
+  "tools.columns.turnInto": "Omzetten naar kolommen",
   "searchTerms.columns": "kolommen",
   "searchTerms.layout": "indeling",
   "searchTerms.divider": "scheidslijn",

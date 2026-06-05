@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 ކޮލަމް",
   "tools.columns.col4": "4 ކޮލަމް",
   "tools.columns.col5": "5 ކޮލަމް",
+  "tools.columns.resizeAriaLabel": "ކޮލަމްތައް ބަދަލުކުރޭ",
+  "tools.columns.turnInto": "ކޮލަމްތަކަށް ބަދަލުކޮށްލޭ",
   "searchTerms.columns": "ކޮލަމް",
   "searchTerms.layout": "ތަރުތީބު",
   "searchTerms.divider": "ބައިކުރާ ރޮނގު",

@@ -104,6 +104,8 @@
   "tools.columns.col3": "۳ ستون",
   "tools.columns.col4": "۴ ستون",
   "tools.columns.col5": "۵ ستون",
+  "tools.columns.resizeAriaLabel": "تغییر اندازه ستون‌ها",
+  "tools.columns.turnInto": "تبدیل به ستون‌ها",
   "searchTerms.columns": "ستون‌ها",
   "searchTerms.layout": "طرح‌بندی",
   "searchTerms.divider": "خط جداکننده",

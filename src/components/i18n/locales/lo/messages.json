@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 ຖັນ",
   "tools.columns.col4": "4 ຖັນ",
   "tools.columns.col5": "5 ຖັນ",
+  "tools.columns.resizeAriaLabel": "ປ່ຽນຂະໜາດຖັນ",
+  "tools.columns.turnInto": "ປ່ຽນເປັນຖັນ",
   "searchTerms.columns": "ຖັນ",
   "searchTerms.layout": "ເຄ້າໂຄງ",
   "searchTerms.divider": "ເສັ້ນແບ່ງ",

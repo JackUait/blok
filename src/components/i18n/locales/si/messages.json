@@ -104,6 +104,8 @@
   "tools.columns.col3": "තීරු 3",
   "tools.columns.col4": "තීරු 4",
   "tools.columns.col5": "තීරු 5",
+  "tools.columns.resizeAriaLabel": "තීරු ප්‍රමාණය වෙනස් කරන්න",
+  "tools.columns.turnInto": "තීරු බවට පරිවර්තනය කරන්න",
   "searchTerms.columns": "තීරු",
   "searchTerms.layout": "පිරිසැලසුම",
   "searchTerms.divider": "බෙදුම්කරු",

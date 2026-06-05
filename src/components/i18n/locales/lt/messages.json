@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 stulpeliai",
   "tools.columns.col4": "4 stulpeliai",
   "tools.columns.col5": "5 stulpeliai",
+  "tools.columns.resizeAriaLabel": "Keisti stulpelių dydį",
+  "tools.columns.turnInto": "Konvertuoti į stulpelius",
   "searchTerms.columns": "stulpeliai",
   "searchTerms.layout": "išdėstymas",
   "searchTerms.divider": "skirtukas",

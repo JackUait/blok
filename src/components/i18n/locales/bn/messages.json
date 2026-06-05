@@ -104,6 +104,8 @@
   "tools.columns.col3": "৩ কলাম",
   "tools.columns.col4": "৪ কলাম",
   "tools.columns.col5": "৫ কলাম",
+  "tools.columns.resizeAriaLabel": "কলামের আকার পরিবর্তন করুন",
+  "tools.columns.turnInto": "কলামে রূপান্তর করুন",
   "searchTerms.columns": "কলাম",
   "searchTerms.layout": "লেআউট",
   "searchTerms.divider": "বিভাজক",

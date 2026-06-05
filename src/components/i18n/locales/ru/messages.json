@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 колонки",
   "tools.columns.col4": "4 колонки",
   "tools.columns.col5": "5 колонок",
+  "tools.columns.resizeAriaLabel": "Изменить размер колонок",
+  "tools.columns.turnInto": "Преобразовать в колонки",
   "searchTerms.columns": "колонки",
   "searchTerms.layout": "макет",
   "searchTerms.divider": "разделитель",

@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 kolona",
   "tools.columns.col4": "4 kolona",
   "tools.columns.col5": "5 kolona",
+  "tools.columns.resizeAriaLabel": "Ndrysho madhësinë e kolonave",
+  "tools.columns.turnInto": "Konverto në kolona",
   "searchTerms.columns": "kolona",
   "searchTerms.layout": "paraqitje",
   "searchTerms.divider": "ndarës",

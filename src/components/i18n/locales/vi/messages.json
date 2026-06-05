@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 cột",
   "tools.columns.col4": "4 cột",
   "tools.columns.col5": "5 cột",
+  "tools.columns.resizeAriaLabel": "Thay đổi kích thước cột",
+  "tools.columns.turnInto": "Chuyển thành cột",
   "searchTerms.columns": "cột",
   "searchTerms.layout": "bố cục",
   "searchTerms.divider": "đường phân chia",

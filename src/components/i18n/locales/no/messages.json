@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 kolonner",
   "tools.columns.col4": "4 kolonner",
   "tools.columns.col5": "5 kolonner",
+  "tools.columns.resizeAriaLabel": "Endre kolonnebredde",
+  "tools.columns.turnInto": "Konverter til kolonner",
   "searchTerms.columns": "kolonner",
   "searchTerms.layout": "oppsett",
   "searchTerms.divider": "skillelinje",

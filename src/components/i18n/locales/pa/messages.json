@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 ਕਾਲਮ",
   "tools.columns.col4": "4 ਕਾਲਮ",
   "tools.columns.col5": "5 ਕਾਲਮ",
+  "tools.columns.resizeAriaLabel": "ਕਾਲਮਾਂ ਦਾ ਆਕਾਰ ਬਦਲੋ",
+  "tools.columns.turnInto": "ਕਾਲਮਾਂ ਵਿੱਚ ਬਦਲੋ",
   "searchTerms.columns": "ਕਾਲਮ",
   "searchTerms.layout": "ਖਾਕਾ",
   "searchTerms.divider": "ਵੰਡਣ ਵਾਲਾ",

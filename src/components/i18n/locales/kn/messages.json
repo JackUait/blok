@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 ಕಾಲಂ",
   "tools.columns.col4": "4 ಕಾಲಂ",
   "tools.columns.col5": "5 ಕಾಲಂ",
+  "tools.columns.resizeAriaLabel": "ಕಾಲಮ್‌ಗಳ ಗಾತ್ರ ಬದಲಿಸಿ",
+  "tools.columns.turnInto": "ಕಾಲಮ್‌ಗಳಿಗೆ ಪರಿವರ್ತಿಸಿ",
   "searchTerms.columns": "ಕಾಲಂಗಳು",
   "searchTerms.layout": "ವಿನ್ಯಾಸ",
   "searchTerms.divider": "ವಿಭಜಕ",

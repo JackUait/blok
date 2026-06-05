@@ -104,6 +104,8 @@
   "tools.columns.col3": "३ स्तंभ",
   "tools.columns.col4": "४ स्तंभ",
   "tools.columns.col5": "५ स्तंभ",
+  "tools.columns.resizeAriaLabel": "स्तंभांचा आकार बदला",
+  "tools.columns.turnInto": "स्तंभांमध्ये रूपांतरित करा",
   "searchTerms.columns": "स्तंभ",
   "searchTerms.layout": "मांडणी",
   "searchTerms.divider": "विभाजक",

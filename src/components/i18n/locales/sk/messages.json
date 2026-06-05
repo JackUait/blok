@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 stĺpce",
   "tools.columns.col4": "4 stĺpce",
   "tools.columns.col5": "5 stĺpcov",
+  "tools.columns.resizeAriaLabel": "Zmeniť veľkosť stĺpcov",
+  "tools.columns.turnInto": "Previesť na stĺpce",
   "searchTerms.columns": "stĺpce",
   "searchTerms.layout": "rozloženie",
   "searchTerms.divider": "oddeľovač",

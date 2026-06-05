@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 stupca",
   "tools.columns.col4": "4 stupca",
   "tools.columns.col5": "5 stupaca",
+  "tools.columns.resizeAriaLabel": "Promijeni veličinu stupaca",
+  "tools.columns.turnInto": "Pretvori u stupce",
   "searchTerms.columns": "stupci",
   "searchTerms.layout": "raspored",
   "searchTerms.divider": "razdjelnik",

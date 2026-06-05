@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 սյունակ",
   "tools.columns.col4": "4 սյունակ",
   "tools.columns.col5": "5 սյունակ",
+  "tools.columns.resizeAriaLabel": "Փոխել սյունակների չափը",
+  "tools.columns.turnInto": "Վերածել սյունակների",
   "searchTerms.columns": "սյունակներ",
   "searchTerms.layout": "դասավորություն",
   "searchTerms.divider": "բաժանարար",

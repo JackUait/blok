@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 kolumner",
   "tools.columns.col4": "4 kolumner",
   "tools.columns.col5": "5 kolumner",
+  "tools.columns.resizeAriaLabel": "Ändra kolumnstorlek",
+  "tools.columns.turnInto": "Konvertera till kolumner",
   "searchTerms.columns": "kolumner",
   "searchTerms.layout": "layout",
   "searchTerms.divider": "skiljelinje",

@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 Spalten",
   "tools.columns.col4": "4 Spalten",
   "tools.columns.col5": "5 Spalten",
+  "tools.columns.resizeAriaLabel": "Spalten skalieren",
+  "tools.columns.turnInto": "In Spalten umwandeln",
   "searchTerms.columns": "spalten",
   "searchTerms.layout": "layout",
   "searchTerms.divider": "Trennlinie",

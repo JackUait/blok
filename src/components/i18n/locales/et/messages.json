@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 veergu",
   "tools.columns.col4": "4 veergu",
   "tools.columns.col5": "5 veergu",
+  "tools.columns.resizeAriaLabel": "Muuda veergude suurust",
+  "tools.columns.turnInto": "Teisenda veergudeks",
   "searchTerms.columns": "veerud",
   "searchTerms.layout": "paigutus",
   "searchTerms.divider": "eraldaja",

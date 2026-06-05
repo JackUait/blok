@@ -104,6 +104,8 @@
   "tools.columns.col3": "3단",
   "tools.columns.col4": "4단",
   "tools.columns.col5": "5단",
+  "tools.columns.resizeAriaLabel": "열 크기 조정",
+  "tools.columns.turnInto": "열로 변환",
   "searchTerms.columns": "다단",
   "searchTerms.layout": "레이아웃",
   "searchTerms.divider": "구분선",

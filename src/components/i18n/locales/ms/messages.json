@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 lajur",
   "tools.columns.col4": "4 lajur",
   "tools.columns.col5": "5 lajur",
+  "tools.columns.resizeAriaLabel": "Ubah saiz lajur",
+  "tools.columns.turnInto": "Tukar kepada lajur",
   "searchTerms.columns": "lajur",
   "searchTerms.layout": "tataletak",
   "searchTerms.divider": "pembahagi",

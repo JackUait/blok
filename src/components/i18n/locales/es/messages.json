@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 columnas",
   "tools.columns.col4": "4 columnas",
   "tools.columns.col5": "5 columnas",
+  "tools.columns.resizeAriaLabel": "Cambiar tamaño de columnas",
+  "tools.columns.turnInto": "Convertir en columnas",
   "searchTerms.columns": "columnas",
   "searchTerms.layout": "diseño",
   "searchTerms.divider": "divisor",

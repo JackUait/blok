@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 നിരകൾ",
   "tools.columns.col4": "4 നിരകൾ",
   "tools.columns.col5": "5 നിരകൾ",
+  "tools.columns.resizeAriaLabel": "നിരകളുടെ വലുപ്പം മാറ്റുക",
+  "tools.columns.turnInto": "നിരകളാക്കി മാറ്റുക",
   "searchTerms.columns": "നിരകൾ",
   "searchTerms.layout": "ലേഔട്ട്",
   "searchTerms.divider": "വിഭജിക്കൽ",

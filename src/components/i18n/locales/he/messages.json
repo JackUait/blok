@@ -104,6 +104,8 @@
   "tools.columns.col3": "3 עמודות",
   "tools.columns.col4": "4 עמודות",
   "tools.columns.col5": "5 עמודות",
+  "tools.columns.resizeAriaLabel": "שנה גודל עמודות",
+  "tools.columns.turnInto": "המר לעמודות",
   "searchTerms.columns": "עמודות",
   "searchTerms.layout": "פריסה",
   "searchTerms.divider": "מפריד",

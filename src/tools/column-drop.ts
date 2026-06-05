@@ -130,6 +130,66 @@ export const wrapInNewColumnList = (
 };
 
 /**
+ * Wrap N top-level `blockIds` into a brand new `column_list`, one block per
+ * column, preserving selection order. Each block keeps its subtree (children
+ * track their parent). All work runs in a single undo entry via `transact`.
+ *
+ * Aborts (returns null, no mutation) when: fewer than 2 ids, any id is stale
+ * (no flat index), or any id is not top-level (already inside a container).
+ */
+export const wrapBlocksInColumns = (
+  api: API,
+  blockIds: string[]
+): string | null => {
+  if (blockIds.length < 2) {
+    return null;
+  }
+
+  for (const blockId of blockIds) {
+    if (api.blocks.getBlockIndex(blockId) === undefined) {
+      return null;
+    }
+
+    if (api.blocks.getById(blockId)?.parentId !== null) {
+      return null;
+    }
+  }
+
+  const baseIndex = api.blocks.getBlockIndex(blockIds[0]);
+
+  if (baseIndex === undefined) {
+    return null;
+  }
+
+  const created: { listId: string | null } = { listId: null };
+
+  runTransacted(api, () => {
+    const list = api.blocks.insert(COLUMN_LIST_TOOL, { noSeed: true }, {}, baseIndex, false, false);
+
+    created.listId = list.id;
+
+    const columns = blockIds.map((_, i) =>
+      api.blocks.insert(COLUMN_TOOL, { noSeed: true }, {}, baseIndex + 1 + i, false, false)
+    );
+
+    for (const column of columns) {
+      api.blocks.setBlockParent(column.id, list.id);
+    }
+
+    blockIds.forEach((blockId, i) => {
+      api.blocks.setBlockParent(blockId, columns[i].id);
+    });
+
+    // New list: rendered() already fired with zero children, so it never built
+    // separators — rebuild the N-1 set and even the widths.
+    resetColumnsToEvenWidth(api, list.id);
+    rebuildColumnResizers(api, list.id);
+  });
+
+  return created.listId;
+};
+
+/**
  * Add ONE new `column` beside an existing `neighborColumnId` inside its
  * `column_list`, then move the dragged `sourceIds` into it (in order).
  *

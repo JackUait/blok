@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   wrapInNewColumnList,
   addColumnToList,
+  wrapBlocksInColumns,
   type ColumnDropSide,
 } from '../../../src/tools/column-drop';
 import { COLUMN_LIST_TOOL, COLUMN_TOOL } from '../../../src/tools/columns-shared';
@@ -305,6 +306,58 @@ describe('addColumnToList', () => {
     const result = addColumnToList(mock.api, 'neighbor', [], side('right'));
 
     expect(result).toBeNull();
+    expect(mock.insert).not.toHaveBeenCalled();
+  });
+});
+
+describe('wrapBlocksInColumns', () => {
+  it('creates one column per selected block under a new column_list, in order', () => {
+    const mock = createMockAPI([
+      { id: 'a', parentId: null, index: 2 },
+      { id: 'b', parentId: null, index: 3 },
+      { id: 'c', parentId: null, index: 4 },
+    ]);
+
+    const result = wrapBlocksInColumns(mock.api, ['a', 'b', 'c']);
+
+    expect(mock.transact).toHaveBeenCalledTimes(1);
+    // 1 list + 3 columns
+    expect(mock.insert).toHaveBeenCalledTimes(4);
+    expect(mock.insert.mock.calls[0][0]).toBe(COLUMN_LIST_TOOL);
+    expect(mock.insert.mock.calls[0][3]).toBe(2); // list at first block's index
+    expect(mock.insert.mock.calls[1][0]).toBe(COLUMN_TOOL);
+    expect(mock.insert.mock.calls[2][0]).toBe(COLUMN_TOOL);
+    expect(mock.insert.mock.calls[3][0]).toBe(COLUMN_TOOL);
+
+    // each block reparented into its own created column, in selection order
+    expect(mock.setBlockParent).toHaveBeenCalledWith('a', 'column-new-2');
+    expect(mock.setBlockParent).toHaveBeenCalledWith('b', 'column-new-3');
+    expect(mock.setBlockParent).toHaveBeenCalledWith('c', 'column-new-4');
+
+    expect(result).toBe('column_list-new-1');
+  });
+
+  it('aborts (returns null, no mutation) for fewer than 2 blocks', () => {
+    const mock = createMockAPI([{ id: 'a', parentId: null, index: 0 }]);
+
+    expect(wrapBlocksInColumns(mock.api, ['a'])).toBeNull();
+    expect(mock.insert).not.toHaveBeenCalled();
+  });
+
+  it('aborts when any block is not top-level', () => {
+    const mock = createMockAPI([
+      { id: 'a', parentId: null, index: 0 },
+      { id: 'b', parentId: 'some-col', index: 1 },
+    ]);
+
+    expect(wrapBlocksInColumns(mock.api, ['a', 'b'])).toBeNull();
+    expect(mock.insert).not.toHaveBeenCalled();
+  });
+
+  it('aborts when any block id is stale', () => {
+    const mock = createMockAPI([{ id: 'a', parentId: null, index: 0 }]);
+
+    expect(wrapBlocksInColumns(mock.api, ['a', 'ghost'])).toBeNull();
     expect(mock.insert).not.toHaveBeenCalled();
   });
 });

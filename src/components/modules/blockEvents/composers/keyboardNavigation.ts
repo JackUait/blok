@@ -385,18 +385,19 @@ export class KeyboardNavigation extends BlockEventComposer {
      *
      * Skip this guard for table cell blocks — they use a separate mechanism.
      */
-    if (currentBlock.parentId != null && !this.isCurrentBlockInsideTableCell) {
-      if (previousBlock === null || previousBlock.parentId !== currentBlock.parentId) {
-        // A column's sole empty child collapses the column itself; otherwise
-        // fall back to the toggle-child behaviour (remove + focus next sibling).
-        if (!this.removeSoleEmptyColumnChild(currentBlock)) {
-          this.removeEmptyToggleChildAndFocusNext(currentBlock);
-        }
+    const hasNoPreviousSiblingInParent = previousBlock === null ||
+      previousBlock.parentId !== currentBlock.parentId;
 
-        return;
+    if (currentBlock.parentId != null && !this.isCurrentBlockInsideTableCell && hasNoPreviousSiblingInParent) {
+      // A column's sole empty child collapses the column itself; otherwise
+      // fall back to the toggle-child behaviour (remove + focus next sibling).
+      if (!this.removeSoleEmptyColumnChild(currentBlock)) {
+        this.removeEmptyToggleChildAndFocusNext(currentBlock);
       }
-      // Previous sibling exists in the same parent — fall through to merge/remove logic
+
+      return;
     }
+    // Previous sibling exists in the same parent — fall through to merge/remove logic
 
     /**
      * Don't merge across table cell boundaries.
@@ -542,12 +543,14 @@ export class KeyboardNavigation extends BlockEventComposer {
        */
       const prevBlock = BlockManager.previousBlock;
 
-      if (currentBlock.parentId !== null && (prevBlock === null || prevBlock.parentId !== currentBlock.parentId)) {
+      const hasNoPrevSiblingInParent = prevBlock === null || prevBlock.parentId !== currentBlock.parentId;
+
+      if (currentBlock.parentId !== null && hasNoPrevSiblingInParent) {
         // A column's sole empty child collapses the column itself rather than
         // being a no-op like a toggle child.
-        if (this.removeSoleEmptyColumnChild(currentBlock)) {
-          this.closeToolbarIfNotInTableCell();
-        }
+        const collapsed = this.removeSoleEmptyColumnChild(currentBlock);
+
+        collapsed && this.closeToolbarIfNotInTableCell();
 
         return;
       }

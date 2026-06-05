@@ -217,9 +217,11 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // started. Overhead budget covers per-file headers/comments added during
     // extraction plus later feature additions (crop-modal close animation,
     // image caption readOnly carve-out, [data-blok-top-layer] scope selectors,
-    // image loading shimmer placeholder + keyframes (#41)).
+    // image loading shimmer placeholder + keyframes (#41), columns tool:
+    // columns.css + vertical drop-indicator rules + column-enter keyframes +
+    // inline-popover instant-open rule).
     // Shrinking below the baseline is always acceptable.
-    const PRE_SPLIT_BYTES = 389475;
+    const PRE_SPLIT_BYTES = 390050;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.05);
     const actual = localImportedByteBudget(ENTRY);
 

@@ -160,7 +160,10 @@ test.describe('Quote drop lifecycle inside a column', () => {
     const list = saved.blocks.find((b) => b.type === 'column_list');
     expect(list).toBeDefined();
 
-    const columnIds = saved.blocks.filter((b) => b.type === 'column').map((b) => b.id);
+    const columnIds = saved.blocks
+      .filter((b) => b.type === 'column')
+      .map((b) => b.id)
+      .filter((id): id is string => id !== undefined);
     expect(columnIds).toHaveLength(2);
 
     // The column_list references both columns in order: [target column | quote column].
@@ -197,7 +200,10 @@ test.describe('Quote drop lifecycle inside a column', () => {
     const list = saved.blocks.find((b) => b.type === 'column_list');
     expect(list?.type).toBe('column_list');
 
-    const columnIds = saved.blocks.filter((b) => b.type === 'column').map((b) => b.id);
+    const columnIds = saved.blocks
+      .filter((b) => b.type === 'column')
+      .map((b) => b.id)
+      .filter((id): id is string => id !== undefined);
     expect(columnIds).toHaveLength(2);
 
     // Every column is parented to the column_list.
@@ -220,7 +226,10 @@ test.describe('Quote drop lifecycle inside a column', () => {
     const after = await reloadFromSave(page);
 
     // MODEL: two columns survive; the quote is still the sole child of a column.
-    const columnIds = after.blocks.filter((b) => b.type === 'column').map((b) => b.id);
+    const columnIds = after.blocks
+      .filter((b) => b.type === 'column')
+      .map((b) => b.id)
+      .filter((id): id is string => id !== undefined);
     expect(columnIds).toHaveLength(2);
 
     const quoteParent = findBlock(after, 'quote1')?.parent;
@@ -253,7 +262,10 @@ test.describe('Quote drop lifecycle inside a column', () => {
 
     // MODEL: the edit landed and the quote is still parented to its column.
     expect(quoteText(quote)).toBe('A block is everything.');
-    const columnIds = saved.blocks.filter((b) => b.type === 'column').map((b) => b.id);
+    const columnIds = saved.blocks
+      .filter((b) => b.type === 'column')
+      .map((b) => b.id)
+      .filter((id): id is string => id !== undefined);
     expect(columnIds).toHaveLength(2);
     expect(quote?.parent).toBe(columnIds[1]);
 

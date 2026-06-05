@@ -288,10 +288,27 @@ export class Blocks {
        * path that does NOT explicitly set forceTopLevel.
        */
       const prevIsAtRoot = previousBlock.holder.parentElement === this.workingArea;
-      const nextInDifferentContainer = nextBlock !== undefined
-        && nextBlock.holder.parentElement !== previousBlock.holder.parentElement;
+      const nextContainer = nextBlock?.holder.parentElement ?? null;
+      /**
+       * Only reroute to the successor when its container ENCLOSES the
+       * predecessor — i.e. the new block is exiting outward to a shallower
+       * container shared with the predecessor. This covers:
+       *   - successor at workingArea root (Enter-after-nested / toggle exit), and
+       *   - successor in an ancestor container (a new `column` whose flat
+       *     predecessor is the previous column's last nested child, but which
+       *     belongs in the enclosing column_list beside it).
+       *
+       * It deliberately EXCLUDES sibling containers that merely differ from the
+       * predecessor's — e.g. two adjacent table cells. There the predecessor's
+       * flat successor is the next cell's first block, and rerouting would leak
+       * the new block into that sibling cell instead of keeping it in the cell
+       * the user pressed Enter in (regression: table-cell Enter cross-cell leak).
+       */
+      const nextEnclosesPrev = nextContainer !== null
+        && nextContainer !== previousBlock.holder.parentElement
+        && nextContainer.contains(previousBlock.holder);
 
-      if (!prevIsAtRoot && nextInDifferentContainer && nextBlock !== undefined) {
+      if (!prevIsAtRoot && nextEnclosesPrev && nextBlock !== undefined) {
         this.insertToDOM(block, 'beforebegin', nextBlock);
 
         return;

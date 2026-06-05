@@ -151,7 +151,10 @@ const dropListBesideTarget = async (page: Page): Promise<{ columnIds: string[] }
   await expect(page.getByTestId('column-list')).toBeVisible();
 
   const saved = await saveBlok(page);
-  const columnIds = saved.blocks.filter((b) => b.type === 'column').map((b) => b.id);
+  const columnIds = saved.blocks
+    .filter((b) => b.type === 'column')
+    .map((b) => b.id)
+    .filter((id): id is string => id !== undefined);
 
   return { columnIds };
 };

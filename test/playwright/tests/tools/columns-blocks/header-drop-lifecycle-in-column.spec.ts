@@ -158,7 +158,10 @@ test.describe('Header block drop lifecycle inside a column', () => {
     const list = saved.blocks.find((b) => b.type === 'column_list');
 
     expect(list).toBeDefined();
-    const columnIds = saved.blocks.filter((b) => b.type === 'column').map((b) => b.id);
+    const columnIds = saved.blocks
+      .filter((b) => b.type === 'column')
+      .map((b) => b.id)
+      .filter((id): id is string => id !== undefined);
 
     expect(columnIds).toHaveLength(2);
 

@@ -163,7 +163,10 @@ const sideDropTableBesideTarget = async (
   await expect(page.locator('[data-blok-column]')).toHaveCount(2);
 
   const saved = await saveBlok(page);
-  const columnIds = saved.blocks.filter((b) => b.type === 'column').map((b) => b.id);
+  const columnIds = saved.blocks
+    .filter((b) => b.type === 'column')
+    .map((b) => b.id)
+    .filter((id): id is string => id !== undefined);
   const tableColumnId = findBlock(saved, 'table1')?.parent;
 
   return { saved, columnIds, tableColumnId };

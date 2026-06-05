@@ -23,6 +23,11 @@
   transform: scale(0.98);
 }
 
+[data-blok-popover-inline] > [data-blok-popover-container], [data-blok-popover-inline]:not([data-blok-popover-opened='true']) > [data-blok-popover-container] {
+  transition: none;
+  transform: none;
+}
+
 [@media (prefers-reduced-motion: reduce)] [data-blok-popover-container] {
   transition: none;
   transform: none;
@@ -1187,6 +1192,7 @@
   --blok-database-card-actions-bg: #1e2533;
   --blok-button-focus-bg-hover: #fbfcfe;
   --blok-dnd-drop-indicator-bg: #d4e3fc;
+  --blok-dnd-drop-indicator-thickness: 6px;
   --blok-table-add-pill-border: rgba(55, 53, 47, 0.17);
   --blok-database-card-menu-hover-bg: rgba(0, 0, 0, 0.04);
   --blok-database-column-pill-text: rgba(55, 53, 47, 0.9);
@@ -1689,6 +1695,10 @@
 
 [data-drop-indicator]::before {
   background-color: var(--blok-dnd-drop-indicator-bg);
+}
+
+[data-drop-indicator="top"]::before, [data-drop-indicator="bottom"]::before {
+  height: var(--blok-dnd-drop-indicator-thickness);
   left: calc(var(--drop-indicator-side-left, 0px) + var(--drop-indicator-depth, 0) * var(--blok-space-3));
   right: var(--drop-indicator-side-right, 0px);
 }
@@ -1702,20 +1712,18 @@
 }
 
 [data-drop-indicator="left"]::before, [data-drop-indicator="right"]::before {
-  background-color: var(--blok-active-icon);
-  left: auto;
-  right: auto;
+  width: var(--blok-dnd-drop-indicator-thickness);
   top: var(--drop-indicator-side-top, 0);
   bottom: var(--drop-indicator-side-bottom, 0);
 }
 
 [data-drop-indicator="left"]::before {
-  left: var(--drop-indicator-side-left, 0);
+  left: calc(var(--drop-indicator-side-left, 0px) - var(--blok-space-2));
   transform: translateX(-50%);
 }
 
 [data-drop-indicator="right"]::before {
-  right: var(--drop-indicator-side-right, 0);
+  right: calc(var(--drop-indicator-side-right, 0px) - var(--blok-space-2));
   transform: translateX(50%);
 }
 
@@ -4300,6 +4308,14 @@
 [@media (min-width: 651px)] [data-blok-columns] > [data-blok-element] {
   flex-basis: 0;
   flex-shrink: 1;
+}
+
+[data-blok-columns] > [data-blok-element][data-blok-column-enter] {
+  animation: blok-column-enter 200ms ease-out;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-columns] > [data-blok-element][data-blok-column-enter] {
+  animation: none;
 }
 
 [data-blok-column-resizer] {

@@ -1702,6 +1702,51 @@ describe('Blocks', () => {
       expect(newBlock.holder.parentElement).not.toBe(workingArea);
     });
 
+    it('keeps an Enter-inserted block inside the same table cell when the next flat block lives in a sibling cell', () => {
+      const blocks = createBlocks();
+
+      /**
+       * Regression for the table-cell Enter bug: pressing Enter at the end of
+       * the last block in cell A created the new block inside cell B (the next
+       * cell), because cell A's flat successor is cell B's first block.
+       *
+       * Flat array: [tableBlock(0), cellAPara(1), cellBPara(2)]
+       *   - cellAContainer and cellBContainer are SIBLING cell containers
+       *     inside the table grid (neither is an ancestor of the other).
+       *
+       * insert(2, newBlock) (Enter after cellAPara) must anchor the new block
+       * INSIDE cellAContainer, not leak into the sibling cellBContainer. The
+       * successor-reroute only applies when the successor's container ENCLOSES
+       * the predecessor (root-exit / column_list), never for sibling cells.
+       */
+      const tableBlock = createMockBlock('table-1', 'table');
+      const cellAPara = createMockBlock('cell-a-1', 'paragraph');
+      const cellBPara = createMockBlock('cell-b-1', 'paragraph');
+
+      blocks.push(tableBlock);
+
+      const cellAContainer = document.createElement('div');
+      const cellBContainer = document.createElement('div');
+
+      cellAContainer.setAttribute('data-blok-table-cell-blocks', '');
+      cellBContainer.setAttribute('data-blok-table-cell-blocks', '');
+      tableBlock.holder.appendChild(cellAContainer);
+      tableBlock.holder.appendChild(cellBContainer);
+      cellAContainer.appendChild(cellAPara.holder);
+      cellBContainer.appendChild(cellBPara.holder);
+      blocks.blocks.push(cellAPara, cellBPara);
+
+      const newBlock = createMockBlock('new-1', 'paragraph');
+
+      blocks.insert(2, newBlock);
+
+      // Must stay in cell A, directly after cellAPara
+      expect(newBlock.holder.parentElement).toBe(cellAContainer);
+      expect(cellAPara.holder.nextElementSibling).toBe(newBlock.holder);
+      // Must NOT leak into the sibling cell B
+      expect(cellBContainer.contains(newBlock.holder)).toBe(false);
+    });
+
     it('should place new top-level block at workingArea root when previous block is nested inside a callout', () => {
       const blocks = createBlocks();
 

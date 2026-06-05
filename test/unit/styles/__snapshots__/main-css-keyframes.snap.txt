@@ -12,6 +12,11 @@
   100% { transform: scale(1) }
 }
 
+@keyframes blok-column-enter {
+  from { flex-grow: 0; opacity: 0 }
+  to { flex-grow: 1; opacity: 1 }
+}
+
 @keyframes blok-crop-modal-backdrop-in {
   from { opacity: 0 }
   to { opacity: 1 }

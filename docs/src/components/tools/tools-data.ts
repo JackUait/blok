@@ -605,6 +605,76 @@ const editor = new Blok({
     usageExample: "tools: { image: { class: Image, config: { endpoints: { byFile: '/upload', byUrl: '/fetch' } } } }",
   },
 
+  {
+    id: 'column_list',
+    exportName: 'ColumnList',
+    type: 'block',
+    badge: 'Block Tool',
+    title: 'Columns',
+    description:
+      'A layout block that arranges its children into side-by-side columns. The column list itself holds no content — each column is a child `column` block, and the blocks you write live inside those columns (via `contentIds`). Create columns from the toolbox, by dragging a block beside another, or by selecting multiple blocks and choosing "Turn into columns". Column widths are resizable via the separators between columns.',
+    importExample: `import { ColumnList } from '@jackuait/blok/tools';`,
+    configOptions: [],
+    saveDataShape: `interface ColumnListData {
+  // No persisted fields. The structure lives in the block's contentIds,
+  // which reference the child column blocks.
+  // (columnCount and noSeed are transient seed hints, never saved.)
+}`,
+    saveDataExample: `{
+  "id": "col001",
+  "type": "column_list",
+  "data": {},
+  "contentIds": ["column1", "column2"]
+}`,
+    usageExample: `import { Blok } from '@jackuait/blok';
+import { ColumnList, Column } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    column_list: {
+      class: ColumnList,
+    },
+    column: {
+      class: Column,
+    },
+  },
+});`,
+  },
+  {
+    id: 'column',
+    exportName: 'Column',
+    type: 'block',
+    badge: 'Block Tool',
+    title: 'Column',
+    description:
+      'A single column inside a column list. Not user-insertable on its own — columns are created and managed by the parent `column_list` block. Child blocks are nested inside the column via `contentIds`. The optional `widthRatio` controls the column’s width relative to its siblings (applied as flex-grow); omit it for equal width.',
+    importExample: `import { Column } from '@jackuait/blok/tools';`,
+    configOptions: [],
+    saveDataShape: `interface ColumnData {
+  widthRatio?: number; // Width relative to siblings (flex-grow). Omitted = equal width.
+}
+// Child blocks are referenced via the block's contentIds, not stored here.`,
+    saveDataExample: `{
+  "id": "column1",
+  "type": "column",
+  "data": {
+    "widthRatio": 1.5
+  },
+  "contentIds": ["block1", "block2"]
+}`,
+    usageExample: `// Column is not inserted directly — it is created by the ColumnList tool.
+import { ColumnList, Column } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    column_list: { class: ColumnList },
+    column: { class: Column },
+  },
+});`,
+  },
+
   // ── Inline Tools ──────────────────────────────────────────────────────────
   {
     id: 'bold',

@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.14.0](https://github.com/JackUait/blok/compare/v0.13.2...v0.14.0) (2026-06-05)
+
+### Features
+
+- **Columns** — New side-by-side layout tool (#67). Create 2–5 column presets from the toolbox, or drag a block beside another to spawn a column. Drop anywhere left/right of a block to make a new column, or into a column body to stack inside it. Columns nest, auto-unwrap when emptied, and stack vertically on narrow viewports.
+- **Columns** — "Turn into columns" command wraps a multi-block selection into a column layout, available from the Convert-to menu.
+- **Columns** — Hover-revealed resize separators between columns: drag to resize, keyboard-resizable with ARIA slider semantics, double-click a divider to equalize widths.
+- **Columns** — Horizontal arrow keys traverse between sibling columns; new columns animate in Notion-style.
+- **Inline Toolbar** — Appears instantly on selection release, no animation delay.
+
+### Bug Fixes
+
+- **Inline Toolbar** — Removed entry animation that delayed appearance.
+
+### Maintenance
+
+- **i18n** — Column resize aria-labels and turn-into-columns strings across all locales.
+- **CI** — Repair unit tests, e2e merge, and mirror push on master; mirror push works for both branch and tag events.
+- **Tests** — Exhaustive block-in-column compatibility suite, live-drag lifecycle specs for every block type, multi-select block-settings header i18n regression.
+- **Playground** — Columns example in the editor demo and block-states gallery.
+
 ## [0.13.2](https://github.com/JackUait/blok/compare/v0.13.1...v0.13.2) (2026-05-30)
 
 ### Bug Fixes

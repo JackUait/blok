@@ -18,7 +18,6 @@ export class Column implements BlockTool {
   private readonly api: API;
   private _data: ColumnData;
   private readonly blockId: string;
-  private readonly parentId: string | null;
   private readonly block: BlockToolConstructorOptions<ColumnData>['block'];
   private childContainer: HTMLElement | null = null;
 
@@ -26,7 +25,6 @@ export class Column implements BlockTool {
     this.api = api;
     this._data = { ...data };
     this.blockId = block.id;
-    this.parentId = block.parentId;
     this.block = block;
   }
 
@@ -114,12 +112,25 @@ export class Column implements BlockTool {
   }
 
   public removed(): void {
-    if (this.parentId !== null) {
-      // Fire-and-forget: the lifecycle hook is synchronous, the unwrap is not.
-      // Pass blockId as excludeId: removed() fires before the flat array splice,
-      // so getChildren still includes this block; exclude it for the count check.
-      void unwrapColumnListIfCollapsed(this.api, this.parentId, this.blockId);
-    }
+    // removed() runs INSIDE blocksStore.remove, BEFORE this block is spliced
+    // out of the flat array. The unwrap below issues index-based deletes
+    // (deleteById) of the surviving column + the column_list; running them now
+    // would splice the array mid-removal, shifting indices so the outer splice
+    // hits the wrong slot — the storm that drops innocent blocks when an empty
+    // column collapses. Defer to a microtask so the triggering removal finishes
+    // its splice first and every nested delete runs on a stable array.
+    //
+    // Read the LIVE parent id (off the block) at fire time, not the id captured
+    // at construction: a column detached to root before deletion must skip.
+    queueMicrotask(() => {
+      const parentId = this.block.parentId;
+
+      if (parentId !== null) {
+        // Pass blockId as excludeId so a not-yet-spliced self is excluded from
+        // the surviving-column count.
+        void unwrapColumnListIfCollapsed(this.api, parentId, this.blockId);
+      }
+    });
   }
 
   public static get isReadOnlySupported(): boolean {

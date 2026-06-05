@@ -286,59 +286,41 @@ test.describe('Image block: full drag-drop lifecycle inside a column', () => {
     expect(placement['image1']).toBe(1);
   });
 
-  test('REMOVE: deleting the image leaves its column childless without reseeding or unwrapping (model + live DOM)', async ({ page }) => {
+  test('REMOVE: deleting the image collapses the emptied column and unwraps the layout', async ({ page }) => {
     await createBlok(page, dropFixture());
 
     await dropImageBesideTarget(page);
 
-    const beforeDelete = await saveBlok(page);
-    const imageColumn = imageColumnId(beforeDelete) as string;
-    const listId = beforeDelete.blocks.find((b) => b.type === 'column_list')?.id as string;
-    const columnIdsBefore = beforeDelete.blocks.filter((b) => b.type === 'column').map((b) => b.id);
-
     // Delete the image by its flat index through the public blocks API.
     await page.evaluate(async () => {
       if (!window.blokInstance) {
-        return;
+        throw new Error('Blok instance not found');
       }
       const index = window.blokInstance.blocks.getBlockIndex('image1');
       await window.blokInstance.blocks.delete(index);
     });
 
-    // Wait until the image leaves the flat block array.
-    await page.waitForFunction(
-      () => window.blokInstance !== undefined &&
-        window.blokInstance.blocks.getBlockIndex('image1') === undefined
-    );
+    // Deleting the sole child empties its column, which is removed; the list drops
+    // to one column and unwraps. The unwrap is fire-and-forget async.
+    await expect
+      .poll(async () => (await saveBlok(page)).blocks.filter((b) => b.type === 'column_list').length, { timeout: 3000 })
+      .toBe(0);
 
     const saved = await saveBlok(page);
 
-    // The image is gone everywhere.
     expect(findBlock(saved, 'image1')).toBeUndefined();
-    expect(saved.blocks.some((b) => b.type === 'image')).toBe(false);
+    expect(saved.blocks.filter((b) => b.type === 'column_list')).toHaveLength(0);
+    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(0);
 
-    // PRODUCT RULE: deleting a column's SOLE child leaves the column CHILDLESS —
-    // no reseed, no unwrap. The column_list and BOTH columns survive.
-    expect(findBlock(saved, listId)?.type).toBe('column_list');
-    const columnIdsAfter = saved.blocks.filter((b) => b.type === 'column').map((b) => b.id);
-    expect(columnIdsAfter).toEqual(columnIdsBefore);
-    expect(childrenOf(saved, listId)).toEqual(columnIdsBefore);
+    // The pre-existing target paragraph is promoted to ROOT, content intact.
+    expect(findBlock(saved, 'target')?.parent ?? null).toBeNull();
+    expect((findBlock(saved, 'target')?.data as { text?: string }).text).toBe('Target');
 
-    // The image's column is now childless (no reseed); the target keeps its place.
-    expect(childrenOf(saved, imageColumn)).toEqual([]);
-    expect(findBlock(saved, 'target')?.parent).toBe(columnIdsBefore[0]);
+    const allIds = new Set(saved.blocks.map((b) => b.id));
+    const orphans = saved.blocks.filter((b) => b.parent !== undefined && b.parent !== null && !allIds.has(b.parent));
+    expect(orphans).toEqual([]);
 
-    // No orphaned children: every non-root block points at an existing parent.
-    const ids = new Set(saved.blocks.map((b) => b.id));
-    const orphans = saved.blocks.filter(
-      (block) => block.parent !== undefined && !ids.has(block.parent)
-    );
-    expect(orphans).toStrictEqual([]);
-
-    // LIVE DOM: the image holder is gone, and the two columns are still present.
-    await expect(page.locator('[data-blok-column]')).toHaveCount(2);
-    const placement = await domColumnIndexById(page, ['image1', 'target']);
-    expect(placement['image1']).toBe(-2);
-    expect(placement['target']).toBe(0);
+    // LIVE DOM: no columns remain.
+    await expect(page.locator('[data-blok-column]')).toHaveCount(0);
   });
 });

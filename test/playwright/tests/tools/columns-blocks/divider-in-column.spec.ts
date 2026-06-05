@@ -145,7 +145,7 @@ test.describe('Divider inside a column', () => {
     await expect(page.locator('[data-blok-column]').nth(0).locator('[data-blok-divider]')).toHaveCount(1);
   });
 
-  test('removing the block leaves the column_list intact with the remaining paragraph', async ({ page }) => {
+  test('removing the block collapses the emptied column and unwraps the layout', async ({ page }) => {
     await createBlok(page, dividerInColumnFixture);
 
     await page.evaluate(async () => {
@@ -156,11 +156,10 @@ test.describe('Divider inside a column', () => {
       await window.blokInstance.blocks.delete(index);
     });
 
-    // The delete + any column normalization is async; wait until the divider block
-    // is gone from the flat block array.
+    // Deleting the sole child empties the column, which is removed; the list drops
+    // to one column and unwraps. The unwrap is fire-and-forget async.
     await page.waitForFunction(
-      () => window.blokInstance !== undefined &&
-        window.blokInstance.blocks.getBlockIndex('divider1') === undefined
+      () => window.blokInstance !== undefined && window.blokInstance.blocks.getBlockIndex('cl1') === undefined
     );
 
     const saved = await saveBlok(page);
@@ -168,45 +167,18 @@ test.describe('Divider inside a column', () => {
     // The divider is gone.
     expect(findBlock(saved, 'divider1')).toBeUndefined();
     expect(saved.blocks.some((b) => b.type === 'divider')).toBe(false);
+    expect(saved.blocks.filter((b) => b.type === 'column_list')).toHaveLength(0);
+    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(0);
 
-    // The second column's paragraph survives with its text.
+    // The other column's paragraph is promoted to ROOT, content intact.
     const survivor = findBlock(saved, 'c2-p');
-    expect(survivor).toBeDefined();
+    expect(survivor?.parent ?? null).toBeNull();
     expect((survivor?.data as { text?: string }).text).toBe('Right column.');
 
-    // The column_list is still valid: the first column emptied by the delete must
-    // not vanish — deleting the sole child of a column does not unwrap the layout.
-    // So both columns remain and the column_list still wraps them.
-    const columnList = findBlock(saved, 'cl1');
-    expect(columnList?.type).toBe('column_list');
-    expect(findBlock(saved, 'c1')?.parent).toBe('cl1');
-    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(2);
-    expect(childrenOf(saved, 'cl1')).toEqual(['c1', 'c2']);
-
-    // The emptied first column does not re-seed or vanish: it may be left child-less,
-    // or hold a single empty paragraph. At most one child remains, and every survivor
-    // under c1 must be an empty paragraph.
-    const c1Children = childrenOf(saved, 'c1');
-
-    expect(c1Children.length).toBeLessThanOrEqual(1);
-
-    const c1Survivors = c1Children.map((childId) => {
-      const seeded = findBlock(saved, childId);
-
-      return {
-        type: seeded?.type,
-        text: (seeded?.data as { text?: string }).text ?? '',
-      };
-    });
-    const expectedSurvivors = c1Children.map(() => ({ type: 'paragraph', text: '' }));
-
-    expect(c1Survivors).toEqual(expectedSurvivors);
-    expect(childrenOf(saved, 'c2')).toEqual(['c2-p']);
-
     // No block references a non-existent parent (no orphans).
-    const liveIds = new Set(saved.blocks.map((b) => b.id));
+    const allIds = new Set(saved.blocks.map((b) => b.id));
     const orphans = saved.blocks.filter(
-      (b) => b.parent !== undefined && !liveIds.has(b.parent)
+      (b) => b.parent !== undefined && b.parent !== null && !allIds.has(b.parent)
     );
 
     expect(orphans).toEqual([]);

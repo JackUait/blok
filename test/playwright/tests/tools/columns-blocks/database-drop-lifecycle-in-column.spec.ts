@@ -372,8 +372,8 @@ test.describe('Database drop lifecycle in a column', () => {
     expect(placement['database1']).toBe(1);
   });
 
-  test('REMOVE: deleting the database leaves its column childless without unwrapping the layout', async ({ page }) => {
-    const databaseColumn = await dropDatabaseBesideTarget(page);
+  test('REMOVE: deleting the database collapses the emptied column and unwraps the layout', async ({ page }) => {
+    await dropDatabaseBesideTarget(page);
 
     // Delete the database block by its flat index via the public API.
     await page.evaluate(async () => {
@@ -384,14 +384,17 @@ test.describe('Database drop lifecycle in a column', () => {
       await window.blokInstance.blocks.delete(index);
     });
 
-    await page.waitForFunction(
-      () => window.blokInstance !== undefined && window.blokInstance.blocks.getBlockIndex('database1') === undefined
-    );
+    // Deleting the database (the sole child of its column) empties that column,
+    // which is removed; the list drops to one column and unwraps. The unwrap is
+    // fire-and-forget async — poll until the scaffold dissolves.
+    await expect
+      .poll(async () => (await saveBlok(page)).blocks.filter((b) => b.type === 'column_list').length, { timeout: 3000 })
+      .toBe(0);
 
-    // Live DOM: the board is gone; the target paragraph and both columns survive.
+    // Live DOM: the board is gone; the target paragraph remains; no columns left.
     await expect(databaseBoard(page)).toHaveCount(0);
     await expect(page.getByText('Target')).toBeVisible();
-    await expect(page.locator('[data-blok-column]')).toHaveCount(2);
+    await expect(page.locator('[data-blok-column]')).toHaveCount(0);
 
     const saved = await saveBlok(page);
 
@@ -399,37 +402,22 @@ test.describe('Database drop lifecycle in a column', () => {
     expect(findBlock(saved, 'database1')).toBeUndefined();
     expect(saved.blocks.filter((b) => b.type === 'database')).toHaveLength(0);
 
-    // The column_list survives with both columns; the target keeps its column.
-    const list = saved.blocks.find((b) => b.type === 'column_list');
-    expect(list).toBeDefined();
-    if (!list?.id) {
-      throw new Error('column_list id missing');
-    }
-    const columnIds = saved.blocks.filter((b) => b.type === 'column').map((b) => b.id);
-    expect(columnIds).toHaveLength(2);
-    expect(childrenOf(saved, list.id)).toEqual(columnIds);
-    expect(findBlock(saved, 'target')?.parent).toBe(columnIds[0]);
+    // Known data-integrity smell: the database's rows are promoted to root rather
+    // than cascade-deleted.
+    expect(findBlock(saved, 'dbrow1')?.parent ?? null).toBeNull();
+    expect(findBlock(saved, 'dbrow2')?.parent ?? null).toBeNull();
 
-    // Product rule: deleting a column's sole child leaves the column CHILDLESS
-    // (no reseed, no unwrap) — or holds a single empty paragraph. Never an
-    // orphan; whatever remains under the column must still be parented to it.
-    const survivors = childrenOf(saved, databaseColumn);
-    expect(survivors.length).toBeLessThanOrEqual(1);
+    // The columns scaffold dissolves: no column_list, no column survives.
+    expect(saved.blocks.filter((b) => b.type === 'column_list')).toHaveLength(0);
+    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(0);
 
-    const survivorShapes = survivors.map((childId) => {
-      const seeded = findBlock(saved, childId);
+    // The other column's target paragraph is promoted to ROOT, content intact.
+    expect(findBlock(saved, 'target')?.parent ?? null).toBeNull();
+    expect((findBlock(saved, 'target')?.data as { text?: string }).text).toBe('Target');
 
-      return {
-        type: seeded?.type,
-        parent: seeded?.parent,
-        text: (seeded?.data as { text?: string }).text ?? '',
-      };
-    });
-    const expectedShapes = survivors.map(() => ({ type: 'paragraph', parent: databaseColumn, text: '' }));
-    expect(survivorShapes).toEqual(expectedShapes);
-
-    // Live DOM: the column is still present and the database holder is gone.
-    const placement = await domColumnIndexById(page, ['database1']);
-    expect(placement['database1']).toBe(-2);
+    // No orphaned blocks.
+    const allIds = new Set(saved.blocks.map((b) => b.id));
+    const orphans = saved.blocks.filter((b) => b.parent !== undefined && b.parent !== null && !allIds.has(b.parent));
+    expect(orphans).toEqual([]);
   });
 });

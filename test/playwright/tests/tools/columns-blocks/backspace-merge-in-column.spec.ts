@@ -153,7 +153,7 @@ test.describe('Backspace/Delete merge at column boundaries', () => {
     expect(orphans).toEqual([]);
   });
 
-  test('Backspace on the sole emptied paragraph of a column does not promote the other column to root', async ({ page }) => {
+  test('Backspace on the sole emptied paragraph of a column removes the column and unwraps the list', async ({ page }) => {
     await createBlok(page, {
       blocks: [
         { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
@@ -166,35 +166,32 @@ test.describe('Backspace/Delete merge at column boundaries', () => {
 
     await expect(page.locator('[data-blok-column]')).toHaveCount(2);
 
-    // Backspace on the only (empty) block of the left column.
+    // Backspace on the only (empty) block of the left column. The emptied column
+    // is removed; with one column left the list unwraps, promoting the right
+    // column's content to root.
     await backspaceAtStartOf(page, 'left1');
+
+    // The unwrap is fire-and-forget async — wait for the list to dissolve.
+    await expect
+      .poll(async () => (await saveBlok(page)).blocks.filter(b => b.type === 'column_list').length, { timeout: 3000 })
+      .toBe(0);
 
     const saved = await saveBlok(page);
 
-    // Whatever the documented empty-column behavior is, the right column's content
-    // must NOT be promoted to root, and must NOT change parent or text.
-    expect(findBlock(saved, 'right1')?.parent).toBe('c2');
+    // No column or column_list survives.
+    expect(saved.blocks.filter(b => b.type === 'column')).toHaveLength(0);
+
+    // The right column's content is promoted to ROOT, content intact.
+    expect(findBlock(saved, 'right1')?.parent ?? null).toBeNull();
     expect(textOf(saved, 'right1')).toBe('Right block');
 
-    // No block escaped to root.
-    const rootParagraphs = saved.blocks.filter(b => b.type === 'paragraph' && b.parent === undefined);
-    expect(rootParagraphs).toHaveLength(0);
+    // The emptied paragraph and its column are gone.
+    expect(findBlock(saved, 'left1')).toBeUndefined();
+    expect(findBlock(saved, 'c1')).toBeUndefined();
 
     // No orphaned blocks: every parent reference still resolves to a present block.
     const allIds = new Set(saved.blocks.map(b => b.id));
-    const orphans = saved.blocks.filter(b => b.parent !== undefined && !allIds.has(b.parent));
+    const orphans = saved.blocks.filter(b => b.parent !== undefined && b.parent !== null && !allIds.has(b.parent));
     expect(orphans).toEqual([]);
-
-    // The layout stays well-formed: either the column_list survives and still owns
-    // the right column, OR it collapsed (single-column auto-unwrap) leaving neither
-    // a column_list nor a column behind — never a half-built tree. Express both
-    // valid shapes as a single boolean so there is no conditional expect.
-    const listSurvives =
-      childrenOf(saved, 'cl1').includes('c2') && findBlock(saved, 'c2')?.parent === 'cl1';
-    const fullyCollapsed =
-      !saved.blocks.some(b => b.type === 'column_list') &&
-      !saved.blocks.some(b => b.type === 'column');
-
-    expect(listSurvives || fullyCollapsed).toBe(true);
   });
 });

@@ -226,10 +226,11 @@ test.describe('Mixed and nested column_list inside a column', () => {
     expect(membership['Nested left EDITED']).toBeGreaterThanOrEqual(0);
   });
 
-  test('removing the block leaves the column_list intact with the remaining paragraph', async ({ page }) => {
+  test('removing the block collapses the emptied column and unwraps the layout', async ({ page }) => {
     await createBlok(page, buildNestedTree());
 
     // Delete the nested column_list by its flat index. delete() is index-based.
+    // It is the sole child of the first OUTER column, so removing it empties c1.
     await page.evaluate(async ({ nestedId }) => {
       if (!window.blokInstance) {
         throw new Error('Blok instance not found');
@@ -238,29 +239,31 @@ test.describe('Mixed and nested column_list inside a column', () => {
       await window.blokInstance.blocks.delete(index);
     }, { nestedId: NESTED_LIST });
 
-    // The removal cascade is fire-and-forget async. Wait until the nested list
-    // block disappears from the flat block array.
+    // Deleting the sole child empties the outer column, which is removed; the outer
+    // list drops to one column and unwraps. The unwrap is fire-and-forget async.
     await page.waitForFunction(
-      ({ nestedId }) => window.blokInstance !== undefined &&
-        window.blokInstance.blocks.getBlockIndex(nestedId) === undefined,
-      { nestedId: NESTED_LIST }
+      ({ outerId }) => window.blokInstance !== undefined &&
+        window.blokInstance.blocks.getBlockIndex(outerId) === undefined,
+      { outerId: OUTER_LIST }
     );
 
     const saved = await saveBlok(page);
 
-    // The nested column_list is gone.
+    // The nested column_list is gone, and so is the whole columns scaffold.
     expect(findBlock(saved, NESTED_LIST)).toBeUndefined();
+    expect(saved.blocks.filter((b) => b.type === 'column_list')).toHaveLength(0);
+    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(0);
 
-    // The outer right column's paragraph survives untouched.
+    // The outer right column's paragraph is promoted to ROOT, content intact.
     const survivor = findBlock(saved, 'p-c2');
     expect(textOf(survivor?.data)).toBe('Outer right column');
-    expect(survivor?.parent).toBe(OUTER_COLUMN_RIGHT);
+    expect(survivor?.parent ?? null).toBeNull();
 
     // No orphaned children remain: every block with a `parent` must point at an
-    // existing block. Surfaces the column_list-has-no-removed()-hook orphan bug.
-    const presentIds = new Set(saved.blocks.map((b) => b.id));
-    const orphans = saved.blocks.filter((b) => b.parent !== undefined && !presentIds.has(b.parent));
-    expect(orphans.map((b) => b.id)).toEqual([]);
+    // existing block.
+    const allIds = new Set(saved.blocks.map((b) => b.id));
+    const orphans = saved.blocks.filter((b) => b.parent !== undefined && b.parent !== null && !allIds.has(b.parent));
+    expect(orphans).toEqual([]);
 
     // None of the nested subtree ids may linger.
     for (const ghost of ['mn-c1', 'mn-c2', 'mn-p1', 'mn-p2']) {

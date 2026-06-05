@@ -191,22 +191,22 @@ test.describe('Table inside a column', () => {
     expect(textOf(findBlock(saved, 'tp-r1c1'))).toBe('Cell B2');
   });
 
-  test('removing the block leaves the column_list intact with the remaining paragraph', async ({ page }) => {
+  test('removing the block collapses the emptied column and unwraps the layout', async ({ page }) => {
     await createBlok(page, tableInColumnData());
 
     // Delete the table via its flat index (mirrors the columns.spec pattern).
     await page.evaluate(async () => {
       if (!window.blokInstance) {
-        return;
+        throw new Error('Blok instance not found');
       }
       const index = window.blokInstance.blocks.getBlockIndex('table1');
       await window.blokInstance.blocks.delete(index);
     });
 
-    // The delete + any container teardown is async; wait until the table block
-    // is gone from the flat array.
+    // Deleting the sole child empties the column, which is removed; the list drops
+    // to one column and unwraps. The unwrap is fire-and-forget async.
     await page.waitForFunction(
-      () => window.blokInstance !== undefined && window.blokInstance.blocks.getBlockIndex('table1') === undefined
+      () => window.blokInstance !== undefined && window.blokInstance.blocks.getBlockIndex('cl1') === undefined
     );
 
     const saved = await saveBlok(page);
@@ -216,27 +216,24 @@ test.describe('Table inside a column', () => {
     for (const id of TABLE_CHILD_IDS) {
       expect(findBlock(saved, id)).toBeUndefined();
     }
-    // No orphaned children left dangling with parent "table1".
-    expect(childrenOf(saved, 'table1')).toEqual([]);
+    expect(saved.blocks.filter((b) => b.type === 'column_list')).toHaveLength(0);
+    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(0);
 
     // No table renders in the DOM anymore, and its cell text is gone.
     await expect(page.locator('[data-blok-tool="table"]')).toHaveCount(0);
     await expect(page.getByText('Cell A1')).toHaveCount(0);
 
-    // The column_list survives with both columns — removing a column's CHILD does
-    // not collapse the list (only removing a whole column does). The first column
-    // remains (reseeded empty by column.rendered()), the second keeps its paragraph.
-    expect(findBlock(saved, 'cl1')?.type).toBe('column_list');
-    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(2);
-    expect(childrenOf(saved, 'cl1')).toEqual(['c1', 'c2']);
-    expect(findBlock(saved, 'c1')?.type).toBe('column');
-
-    // Right column's paragraph is untouched.
-    expect(findBlock(saved, 'c2p1')?.parent).toBe('c2');
+    // The other column's paragraph is promoted to ROOT, content intact.
+    expect(findBlock(saved, 'c2p1')?.parent ?? null).toBeNull();
+    expect((findBlock(saved, 'c2p1')?.data as { text?: string }).text).toBe('Right column text');
     await expect(page.getByText('Right column text')).toBeVisible();
 
-    // Two column holders still render side by side.
-    await expect(page.locator('[data-blok-column]')).toHaveCount(2);
+    const allIds = new Set(saved.blocks.map((b) => b.id));
+    const orphans = saved.blocks.filter((b) => b.parent !== undefined && b.parent !== null && !allIds.has(b.parent));
+    expect(orphans).toEqual([]);
+
+    // No column holders render anymore.
+    await expect(page.locator('[data-blok-column]')).toHaveCount(0);
   });
 
   test("the block's own children stay correctly parented after a reload inside the column", async ({ page }) => {

@@ -262,12 +262,10 @@ test.describe('Quote drop lifecycle inside a column', () => {
     expect(after['quote1']).toBe(1);
   });
 
-  test('removing the dropped quote leaves its column childless without unwrapping the layout', async ({ page }) => {
+  test('removing the dropped quote collapses the emptied column and unwraps the layout', async ({ page }) => {
     await createBlok(page, twoRootBlocks());
 
-    const dropped = await dropQuoteBesideTarget(page);
-    const droppedColumnIds = dropped.blocks.filter((b) => b.type === 'column').map((b) => b.id);
-    const quoteColumnId = droppedColumnIds[1];
+    await dropQuoteBesideTarget(page);
 
     // Delete the quote via the public block API (index-based).
     await page.evaluate(async () => {
@@ -278,10 +276,12 @@ test.describe('Quote drop lifecycle inside a column', () => {
       await window.blokInstance.blocks.delete(index);
     });
 
-    await page.waitForFunction(
-      () => window.blokInstance !== undefined &&
-        window.blokInstance.blocks.getBlockIndex('quote1') === undefined
-    );
+    // Deleting the sole child empties its column, which is removed; the list drops
+    // to one column and unwraps. The unwrap is fire-and-forget async, so poll the
+    // saved output until no column_list remains (its id is auto-generated).
+    await expect
+      .poll(async () => (await saveBlok(page)).blocks.filter((b) => b.type === 'column_list').length, { timeout: 3000 })
+      .toBe(0);
 
     const saved = await saveBlok(page);
 
@@ -289,32 +289,20 @@ test.describe('Quote drop lifecycle inside a column', () => {
     expect(findBlock(saved, 'quote1')).toBeUndefined();
     await expect(page.locator('[data-blok-tool="quote"]')).toHaveCount(0);
 
-    // The column_list and BOTH columns survive — deleting a column's sole child
-    // does NOT unwrap the layout (unwrap only fires when a whole COLUMN is gone).
-    const list = saved.blocks.find((b) => b.type === 'column_list');
-    expect(list?.type).toBe('column_list');
+    // The whole columns scaffold dissolved.
+    expect(saved.blocks.filter((b) => b.type === 'column_list')).toHaveLength(0);
+    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(0);
 
-    const columnIds = saved.blocks.filter((b) => b.type === 'column').map((b) => b.id);
-    expect(columnIds).toHaveLength(2);
-    expect(columnIds).toContain(quoteColumnId);
-    expect(list?.content).toEqual(columnIds);
-    expect(findBlock(saved, quoteColumnId)?.parent).toBe(list?.id);
+    // The pre-existing target paragraph is promoted to ROOT, content intact.
+    expect(findBlock(saved, 'target')?.parent ?? null).toBeNull();
+    expect(quoteText(findBlock(saved, 'target'))).toBe('Target');
 
-    // The emptied column does not re-seed: it is left child-less, or holds at most
-    // one empty paragraph. No orphan points back at the removed quote.
-    const survivors = childrenOf(saved, quoteColumnId);
-    expect(survivors.length).toBeLessThanOrEqual(1);
+    // No orphan points back at a removed block.
+    const allIds = new Set(saved.blocks.map((b) => b.id));
+    const orphans = saved.blocks.filter((b) => b.parent !== undefined && b.parent !== null && !allIds.has(b.parent));
+    expect(orphans).toEqual([]);
 
-    const survivorShapes = survivors.map((id) => {
-      const block = findBlock(saved, id);
-
-      return { type: block?.type, text: quoteText(block) };
-    });
-    const expectedShapes = survivors.map(() => ({ type: 'paragraph', text: '' }));
-    expect(survivorShapes).toEqual(expectedShapes);
-    expect(childrenOf(saved, 'quote1')).toEqual([]);
-
-    // LIVE DOM: two columns still rendered after the removal.
-    await expect(page.locator('[data-blok-column]')).toHaveCount(2);
+    // LIVE DOM: no columns remain.
+    await expect(page.locator('[data-blok-column]')).toHaveCount(0);
   });
 });

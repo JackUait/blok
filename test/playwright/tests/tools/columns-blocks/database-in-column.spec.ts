@@ -287,7 +287,7 @@ test.describe('Database inside a column', () => {
     expect(childrenOf(saved, 'c1')).toEqual(['database1']);
   });
 
-  test('removing the block leaves the column_list intact with the remaining paragraph', async ({ page }) => {
+  test('removing the block collapses the emptied column and unwraps the layout', async ({ page }) => {
     await createBlokWithDatabase(page, buildBlocks());
 
     // Delete the database block by its flat index via the public API.
@@ -299,9 +299,11 @@ test.describe('Database inside a column', () => {
       await window.blokInstance.blocks.delete(index);
     });
 
-    // Wait until the database block leaves the flat block array.
+    // Deleting the database (the sole child of column c1) empties c1, so the
+    // column is removed; the list then has one column and unwraps. The unwrap is
+    // fire-and-forget async — wait for the whole scaffold to dissolve.
     await page.waitForFunction(
-      () => window.blokInstance !== undefined && window.blokInstance.blocks.getBlockIndex('database1') === undefined
+      () => window.blokInstance !== undefined && window.blokInstance.blocks.getBlockIndex('cl1') === undefined
     );
 
     // The board is gone from the DOM, the surviving paragraph is still visible.
@@ -322,34 +324,17 @@ test.describe('Database inside a column', () => {
     expect(findBlock(saved, 'dbrow1')?.parent).toBeUndefined();
     expect(findBlock(saved, 'dbrow2')?.parent).toBeUndefined();
 
-    // The column_list survives with both columns; c2 keeps its paragraph.
-    expect(childrenOf(saved, 'cl1')).toEqual(['c1', 'c2']);
-    const columnIds = saved.blocks.filter((b) => b.type === 'column').map((b) => b.id);
-    expect(columnIds).toEqual(['c1', 'c2']);
-    expect(findBlock(saved, 'cl1')?.type).toBe('column_list');
-    expect(findBlock(saved, 'p1')?.parent).toBe('c2');
-    expect(childrenOf(saved, 'c2')).toEqual(['p1']);
+    // The columns scaffold dissolves: no column_list, no column survives.
+    expect(saved.blocks.filter((b) => b.type === 'column_list')).toHaveLength(0);
+    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(0);
 
-    // c1 is left childless (no reseed) or holds a single empty paragraph — never
-    // a dangling orphan. Whatever remains under c1 must still be parented to c1.
-    const c1Children = childrenOf(saved, 'c1');
-    expect(c1Children.length).toBeLessThanOrEqual(1);
+    // The other column's paragraph is promoted to ROOT, content intact.
+    expect(findBlock(saved, 'p1')?.parent ?? null).toBeNull();
 
-    // Describe every survivor under c1. In the 0-child case this is an empty
-    // array; in the 1-child case it must be a single empty paragraph. Comparing
-    // against an array of empty-paragraph descriptors of the same length asserts
-    // both cases unconditionally without weakening either branch.
-    const c1Survivors = c1Children.map((childId) => {
-      const seeded = findBlock(saved, childId);
-
-      return {
-        type: seeded?.type,
-        text: (seeded?.data as { text?: string }).text ?? '',
-      };
-    });
-    const expectedSurvivors = c1Children.map(() => ({ type: 'paragraph', text: '' }));
-
-    expect(c1Survivors).toEqual(expectedSurvivors);
+    // No orphaned blocks: every parented block resolves to a live parent.
+    const allIds = new Set(saved.blocks.map((b) => b.id));
+    const orphans = saved.blocks.filter((b) => b.parent !== undefined && b.parent !== null && !allIds.has(b.parent));
+    expect(orphans).toEqual([]);
   });
 
   test("the block's own children stay correctly parented after a reload inside the column", async ({ page }) => {

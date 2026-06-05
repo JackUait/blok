@@ -156,7 +156,7 @@ test.describe('Callout inside a column', () => {
     expect(findBlock(saved, 'callout1-child')?.parent).toBe('callout1');
   });
 
-  test('removing the block leaves the column_list intact with the remaining paragraph', async ({ page }) => {
+  test('removing the block collapses the emptied column and unwraps the layout', async ({ page }) => {
     await createBlok(page, buildLayout());
 
     // Delete the callout by its flat index.
@@ -171,9 +171,11 @@ test.describe('Callout inside a column', () => {
       }
     });
 
-    // Wait until the deletion is reflected in the flat block array.
+    // Deleting the callout (the sole child of column c1) empties c1, so the
+    // column is removed; the list drops to one column and unwraps. The unwrap is
+    // fire-and-forget async — wait for the whole scaffold to dissolve.
     await page.waitForFunction(
-      () => window.blokInstance !== undefined && window.blokInstance.blocks.getBlockIndex('callout1') === undefined
+      () => window.blokInstance !== undefined && window.blokInstance.blocks.getBlockIndex('cl1') === undefined
     );
 
     const saved = await saveBlok(page);
@@ -181,22 +183,19 @@ test.describe('Callout inside a column', () => {
     // The callout block is gone.
     expect(findBlock(saved, 'callout1')).toBeUndefined();
 
-    // The second column and its paragraph survive untouched.
-    expect(findBlock(saved, 'c2')?.parent).toBe('cl1');
-    expect(findBlock(saved, 'p2')?.parent).toBe('c2');
-    expect((findBlock(saved, 'p2')?.data as TextData).text).toBe('Right column');
+    // The columns scaffold dissolves: no column_list, no column survives.
+    expect(saved.blocks.filter((b) => b.type === 'column_list')).toHaveLength(0);
+    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(0);
 
-    // The column_list is still valid: it still owns both columns. (Removing a
-    // column's child block does not unwrap the column — only removing a *column*
-    // does — so c1 survives as a still-valid column.)
-    expect(findBlock(saved, 'cl1')?.type).toBe('column_list');
-    expect(childrenOf(saved, 'cl1')).toEqual(['c1', 'c2']);
+    // The other column's paragraph is promoted to ROOT, content intact.
+    expect(findBlock(saved, 'p2')?.parent ?? null).toBeNull();
+    expect((findBlock(saved, 'p2')?.data as TextData).text).toBe('Right column');
 
     // The callout's child is PROMOTED to root (not cascade-deleted): it survives
     // with no parent rather than leaving an orphan still pointing at the callout.
     const promoted = findBlock(saved, 'callout1-child');
     expect(promoted).toBeDefined();
-    expect(promoted?.parent).toBeUndefined();
+    expect(promoted?.parent ?? null).toBeNull();
 
     // No block remains orphaned under the deleted callout.
     expect(childrenOf(saved, 'callout1')).toEqual([]);

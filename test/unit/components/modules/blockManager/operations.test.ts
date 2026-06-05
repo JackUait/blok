@@ -841,6 +841,70 @@ describe('BlockOperations', () => {
 
       document.body.removeChild(toggleBlock.holder);
     });
+
+    /**
+     * A `column` is pure layout — it only exists to host child blocks. Removing
+     * its LAST child leaves an empty column with nothing to lay out, so the
+     * column itself must be removed too (which, in the live editor, unwraps the
+     * column_list when it collapses to a single column).
+     */
+    it('removes the parent column when its last child is removed', async () => {
+      const columnList = createMockBlock({ id: 'cl1', name: 'column_list', contentIds: ['c1', 'c2'] });
+      const column1 = createMockBlock({ id: 'c1', name: 'column', parentId: 'cl1', contentIds: ['p1'] });
+      const para1 = createMockBlock({ id: 'p1', name: 'paragraph', parentId: 'c1', isEmpty: true });
+      const column2 = createMockBlock({ id: 'c2', name: 'column', parentId: 'cl1', contentIds: ['p2'] });
+      const para2 = createMockBlock({ id: 'p2', name: 'paragraph', parentId: 'c2' });
+
+      const store = createBlocksStore([columnList, column1, para1, column2, para2]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const hier = new BlockHierarchy(repo);
+      const ops = new BlockOperations(dependencies, repo, factory, hier, blockDidMutatedSpy, 0);
+      ops.setYjsSync(yjsSync);
+
+      const target = repo.getBlockById('p1');
+      if (!target) {
+        throw new Error('Test setup failed: p1 not found');
+      }
+
+      await ops.removeBlock(target, false, false, store);
+
+      // The emptied child is gone AND its now-childless column is removed too.
+      expect(repo.getBlockById('p1')).toBeUndefined();
+      expect(repo.getBlockById('c1')).toBeUndefined();
+      // The sibling column and the list survive (collapse-to-one unwrap is the
+      // column's removed() hook, not exercised by the mock blocks here).
+      expect(repo.getBlockById('c2')).toBeDefined();
+      expect(columnList.contentIds).not.toContain('c1');
+    });
+
+    it('keeps the parent column when a non-last child is removed', async () => {
+      const columnList = createMockBlock({ id: 'cl1', name: 'column_list', contentIds: ['c1', 'c2'] });
+      const column1 = createMockBlock({ id: 'c1', name: 'column', parentId: 'cl1', contentIds: ['p1', 'p1b'] });
+      const para1 = createMockBlock({ id: 'p1', name: 'paragraph', parentId: 'c1', isEmpty: true });
+      const para1b = createMockBlock({ id: 'p1b', name: 'paragraph', parentId: 'c1' });
+      const column2 = createMockBlock({ id: 'c2', name: 'column', parentId: 'cl1', contentIds: ['p2'] });
+      const para2 = createMockBlock({ id: 'p2', name: 'paragraph', parentId: 'c2' });
+
+      const store = createBlocksStore([columnList, column1, para1, para1b, column2, para2]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const hier = new BlockHierarchy(repo);
+      const ops = new BlockOperations(dependencies, repo, factory, hier, blockDidMutatedSpy, 0);
+      ops.setYjsSync(yjsSync);
+
+      const target = repo.getBlockById('p1');
+      if (!target) {
+        throw new Error('Test setup failed: p1 not found');
+      }
+
+      await ops.removeBlock(target, false, false, store);
+
+      // The column still hosts its other child, so it must survive.
+      expect(repo.getBlockById('p1')).toBeUndefined();
+      expect(repo.getBlockById('c1')).toBeDefined();
+      expect(repo.getBlockById('p1b')).toBeDefined();
+    });
   });
 
   describe('update', () => {

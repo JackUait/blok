@@ -173,10 +173,10 @@ test.describe('Header inside a column', () => {
     expect(header?.parent).toBe('c1');
   });
 
-  test('removing the block leaves the column_list intact with the remaining paragraph', async ({ page }) => {
+  test('removing the block collapses the emptied column and unwraps the layout', async ({ page }) => {
     await createBlok(page, headerInColumnFixture());
 
-    // Delete the header by its flat index.
+    // Delete the header (the sole child of column c1) by its flat index.
     await page.evaluate(async () => {
       if (!window.blokInstance) {
         throw new Error('Blok instance not found');
@@ -186,53 +186,27 @@ test.describe('Header inside a column', () => {
       await window.blokInstance.blocks.delete(index);
     });
 
-    // The delete + column re-seed is async; wait until the header is gone from the
-    // flat block array.
+    // Deleting the sole child empties c1, so the column is removed; the list now
+    // has a single column and unwraps. The unwrap is fire-and-forget async — wait
+    // for the whole scaffold to dissolve before saving.
     await page.waitForFunction(
-      () => window.blokInstance !== undefined &&
-        window.blokInstance.blocks.getBlockIndex('header1') === undefined
+      () => window.blokInstance !== undefined && window.blokInstance.blocks.getBlockIndex('cl1') === undefined
     );
 
     const saved = await saveBlok(page);
 
-    // The header block is gone.
+    // The deleted block is gone and no column/column_list survives.
     expect(findBlock(saved, 'header1')).toBeUndefined();
+    expect(saved.blocks.filter((b) => b.type === 'column_list')).toHaveLength(0);
+    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(0);
 
-    // Both columns survive, so the column_list stays — deleting the sole child of a
-    // column does not unwrap the layout.
-    expect(findBlock(saved, 'cl1')?.type).toBe('column_list');
-    expect(findBlock(saved, 'c1')?.parent).toBe('cl1');
-    const columnOrder = saved.blocks.filter(b => b.type === 'column').map(b => b.id);
-
-    expect(columnOrder).toEqual(['c1', 'c2']);
-
-    // The second column's paragraph survives untouched.
-    expect(findBlock(saved, 'c2-p')?.parent).toBe('c2');
+    // The other column's paragraph is promoted to ROOT, content intact.
+    expect(findBlock(saved, 'c2-p')?.parent ?? null).toBeNull();
     expect((findBlock(saved, 'c2-p')?.data as { text?: string }).text).toBe('Second column.');
 
-    // The now-empty first column does not re-seed or unwrap: it may be left
-    // child-less, or hold a single empty paragraph. Either way it gains no stray
-    // children beyond that single optional seed, and every survivor under it must be
-    // an empty paragraph still parented to c1.
-    const c1Children = childrenOf(saved, 'c1');
-
-    expect(c1Children.length).toBeLessThanOrEqual(1);
-
-    const c1Survivors = c1Children.map((childId) => {
-      const seeded = findBlock(saved, childId);
-
-      return {
-        type: seeded?.type,
-        text: (seeded?.data as { text?: string }).text ?? '',
-      };
-    });
-    const expectedSurvivors = c1Children.map(() => ({ type: 'paragraph', text: '' }));
-
-    expect(c1Survivors).toEqual(expectedSurvivors);
-
-    // No orphaned blocks: every non-root block points at a parent that still exists.
-    const allIds = new Set(saved.blocks.map(b => b.id));
-    const orphans = saved.blocks.filter(b => b.parent !== undefined && !allIds.has(b.parent));
+    // No orphaned blocks.
+    const allIds = new Set(saved.blocks.map((b) => b.id));
+    const orphans = saved.blocks.filter((b) => b.parent !== undefined && b.parent !== null && !allIds.has(b.parent));
 
     expect(orphans).toEqual([]);
   });

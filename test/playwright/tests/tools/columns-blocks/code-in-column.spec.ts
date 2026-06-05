@@ -206,7 +206,7 @@ test.describe('Code inside a column', () => {
     expect(childrenOf(saved, 'c1')).toContain('code1');
   });
 
-  test('removing the block leaves the column_list intact with the remaining paragraph', async ({ page }) => {
+  test('removing the block collapses the emptied column and unwraps the layout', async ({ page }) => {
     await createBlok(page, buildFixture());
 
     // Delete the code block by its flat index.
@@ -219,12 +219,13 @@ test.describe('Code inside a column', () => {
       await window.blokInstance.blocks.delete(index);
     });
 
-    // The removal (and any column reseed/collapse) is async; wait until the code
-    // block is gone from the flat block array.
+    // Deleting the code block (the sole child of column c1) empties c1, so the
+    // column is removed; the list drops to one column and unwraps. The unwrap is
+    // fire-and-forget async — wait for the whole scaffold to dissolve.
     await page.waitForFunction(
       () =>
         window.blokInstance !== undefined &&
-        window.blokInstance.blocks.getBlockIndex('code1') === undefined
+        window.blokInstance.blocks.getBlockIndex('cl1') === undefined
     );
 
     const saved = await saveBlok(page);
@@ -232,25 +233,22 @@ test.describe('Code inside a column', () => {
     // The code block is gone.
     expect(findBlock(saved, 'code1')).toBeUndefined();
 
-    // The sibling column's paragraph survives.
+    // The columns scaffold dissolves: no column_list, no column survives.
+    expect(saved.blocks.filter((b) => b.type === 'column_list')).toHaveLength(0);
+    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(0);
+
+    // The sibling column's paragraph is promoted to ROOT, content intact.
     const survivor = saved.blocks.find(
       (b) => (b.data as { text?: string }).text === 'Right column paragraph'
     );
 
     expect(survivor).toBeDefined();
-
-    // With two columns and one emptied, the column tool keeps the layout valid:
-    // the column_list still exists and the emptied column reseeds an empty
-    // paragraph rather than vanishing (matching the column auto-unwrap pattern
-    // where a column reseeds rather than disappearing).
-    expect(findBlock(saved, 'cl1')?.type).toBe('column_list');
-    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(2);
-    expect(findBlock(saved, 'c1')?.type).toBe('column');
+    expect(survivor?.parent ?? null).toBeNull();
 
     // No orphaned children: every block carrying a `parent` points at a block
     // that still exists in the saved tree.
     const ids = new Set(saved.blocks.map((b) => b.id));
-    const orphans = saved.blocks.filter((b) => b.parent !== undefined && !ids.has(b.parent));
+    const orphans = saved.blocks.filter((b) => b.parent !== undefined && b.parent !== null && !ids.has(b.parent));
 
     expect(orphans).toHaveLength(0);
   });

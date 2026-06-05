@@ -195,22 +195,22 @@ test.describe('Image inside a column', () => {
     expect(childrenOf(saved, 'c1')).toEqual(['image1']);
   });
 
-  test('removing the block leaves the column_list intact with the remaining paragraph', async ({ page }) => {
+  test('removing the block collapses the emptied column and unwraps the layout', async ({ page }) => {
     await createBlok(page, imageInColumnData());
 
     // Delete the image by its flat index.
     await page.evaluate(async () => {
       if (!window.blokInstance) {
-        return;
+        throw new Error('Blok instance not found');
       }
       const index = window.blokInstance.blocks.getBlockIndex('image1');
       await window.blokInstance.blocks.delete(index);
     });
 
-    // Wait until the image leaves the flat block array.
+    // Deleting the sole child empties the column, which is removed; the list drops
+    // to one column and unwraps. The unwrap is fire-and-forget async.
     await page.waitForFunction(
-      () => window.blokInstance !== undefined &&
-        window.blokInstance.blocks.getBlockIndex('image1') === undefined
+      () => window.blokInstance !== undefined && window.blokInstance.blocks.getBlockIndex('cl1') === undefined
     );
 
     const saved = await saveBlok(page);
@@ -218,22 +218,19 @@ test.describe('Image inside a column', () => {
     // The image is gone.
     expect(findBlock(saved, 'image1')).toBeUndefined();
     expect(saved.blocks.some((b) => b.type === 'image')).toBe(false);
+    expect(saved.blocks.filter((b) => b.type === 'column_list')).toHaveLength(0);
+    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(0);
 
-    // The column_list and both columns survive; the second column keeps its
-    // paragraph. The first column no longer references the deleted image.
-    expect(findBlock(saved, 'cl1')?.type).toBe('column_list');
-    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(2);
-    expect(findBlock(saved, 'p1')?.parent).toBe('c2');
-    expect(childrenOf(saved, 'c2')).toEqual(['p1']);
-    expect(childrenOf(saved, 'c1')).not.toContain('image1');
+    // The other column's paragraph is promoted to ROOT, content intact.
+    expect(findBlock(saved, 'p1')?.parent ?? null).toBeNull();
+    expect((findBlock(saved, 'p1')?.data as { text?: string }).text).toBe('Second column paragraph');
 
     // No orphaned children: every non-root block points at an existing parent.
-    const ids = new Set(saved.blocks.map((b) => b.id));
-
+    const allIds = new Set(saved.blocks.map((b) => b.id));
     const orphans = saved.blocks.filter(
-      (block) => block.parent !== undefined && !ids.has(block.parent)
+      (block) => block.parent !== undefined && block.parent !== null && !allIds.has(block.parent)
     );
 
-    expect(orphans).toStrictEqual([]);
+    expect(orphans).toEqual([]);
   });
 });

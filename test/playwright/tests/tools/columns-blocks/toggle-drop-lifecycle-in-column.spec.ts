@@ -292,57 +292,41 @@ test.describe('Toggle block — live drop lifecycle inside a column', () => {
     expect(placement['tc1']).toBe(1);
   });
 
-  test('REMOVE: deleting the toggle leaves its column childless (no reseed, no unwrap) and the layout intact', async ({ page }) => {
+  test('REMOVE: deleting the toggle collapses the emptied column and unwraps the layout', async ({ page }) => {
     await createBlok(page, seedTree());
     await dropToggleBesideTarget(page);
 
-    const before = await saveBlok(page);
-    const toggleParent = findBlock(before, 'toggle1')?.parent ?? '';
-
-    // Delete the toggle by its flat index. Deleting a container promotes its
-    // children to root, so tc1 survives at the top level with no parent.
+    // Delete the toggle by its flat index. The toggle is a container, so deleting
+    // it removes its child subtree too — leaving its column empty, which is then
+    // removed; the list drops to one column and unwraps.
     await page.evaluate(async () => {
       if (!window.blokInstance) {
-        return;
+        throw new Error('Blok instance not found');
       }
       const index = window.blokInstance.blocks.getBlockIndex('toggle1');
       await window.blokInstance.blocks.delete(index);
     });
 
-    await page.waitForFunction(
-      () =>
-        window.blokInstance !== undefined &&
-        window.blokInstance.blocks.getBlockIndex('toggle1') === undefined
-    );
+    // The unwrap is fire-and-forget async.
+    await expect
+      .poll(async () => (await saveBlok(page)).blocks.filter((b) => b.type === 'column_list').length, { timeout: 3000 })
+      .toBe(0);
 
     const saved = await saveBlok(page);
 
-    // The toggle is gone; no toggle blocks remain.
     expect(findBlock(saved, 'toggle1')).toBeUndefined();
-    expect(saved.blocks.some((b) => b.type === 'toggle')).toBe(false);
+    expect(saved.blocks.filter((b) => b.type === 'column_list')).toHaveLength(0);
+    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(0);
 
-    // The column_list survives with BOTH columns — no auto-unwrap when a
-    // column's sole child is removed.
-    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(2);
-    expect(saved.blocks.find((b) => b.type === 'column_list')).toBeDefined();
+    // The pre-existing target paragraph is promoted to ROOT, content intact.
+    expect(findBlock(saved, 'target')?.parent ?? null).toBeNull();
+    expect((findBlock(saved, 'target')?.data as { text?: string }).text).toBe('Target');
 
-    // The column that held the toggle is left childless (no reseed): at most one
-    // empty paragraph survives in it.
-    const survivors = childrenOf(saved, toggleParent);
-    expect(survivors.length).toBeLessThanOrEqual(1);
-    survivors.forEach((childId) => {
-      const survivor = findBlock(saved, childId);
-      expect(survivor?.type).toBe('paragraph');
-      expect((survivor?.data as { text?: string }).text ?? '').toBe('');
-    });
+    const allIds = new Set(saved.blocks.map((b) => b.id));
+    const orphans = saved.blocks.filter((b) => b.parent !== undefined && b.parent !== null && !allIds.has(b.parent));
+    expect(orphans).toEqual([]);
 
-    // No child remains orphaned/parented to the removed toggle.
-    expect(childrenOf(saved, 'toggle1')).toEqual([]);
-
-    // LIVE DOM: the toggle holder is gone, but the layout still shows 2 columns.
-    await expect(page.locator('[data-blok-column]')).toHaveCount(2);
-    const placement = await domColumnIndexById(page, ['toggle1', 'target']);
-    expect(placement['toggle1']).toBe(-2);
-    expect(placement['target']).toBe(0);
+    // LIVE DOM: no columns remain.
+    await expect(page.locator('[data-blok-column]')).toHaveCount(0);
   });
 });

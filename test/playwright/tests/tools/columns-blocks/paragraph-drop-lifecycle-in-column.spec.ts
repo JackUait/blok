@@ -267,70 +267,38 @@ test.describe('Paragraph drop lifecycle inside a column (live drag)', () => {
     expect(placement['para1']).toBe(1);
   });
 
-  test('REMOVE: deleting the column\'s sole paragraph leaves both columns standing, the empty one not unwrapped (model + live DOM)', async ({ page }) => {
-    const saved = await dropParagraphBesideTarget(page);
-    const list = saved.blocks.find((b) => b.type === 'column_list');
-    const columnIds = saved.blocks.filter((b) => b.type === 'column').map((b) => b.id);
-    expect(columnIds).toHaveLength(2);
-    const paraColumn = paraColumnId(saved);
-    expect(columnIds).toContain(paraColumn);
+  test('REMOVE: deleting the column\'s sole paragraph collapses the emptied column and unwraps the layout', async ({ page }) => {
+    await dropParagraphBesideTarget(page);
 
-    // Delete the paragraph through the public API (index-based, async).
     await page.evaluate(async () => {
       if (!window.blokInstance) {
         throw new Error('Blok instance not found');
       }
       const index = window.blokInstance.blocks.getBlockIndex('para1');
-
-      if (index === undefined) {
-        throw new Error('para1 not found');
-      }
       await window.blokInstance.blocks.delete(index);
     });
 
-    await page.waitForFunction(
-      () => window.blokInstance !== undefined && window.blokInstance.blocks.getBlockIndex('para1') === undefined,
-      { timeout: 3000 }
-    );
+    // Deleting the sole child empties its column, which is removed; the list drops
+    // to one column and unwraps. The unwrap is fire-and-forget async.
+    await expect
+      .poll(async () => (await saveBlok(page)).blocks.filter((b) => b.type === 'column_list').length, { timeout: 3000 })
+      .toBe(0);
 
-    const afterRemove = await saveBlok(page);
+    const saved = await saveBlok(page);
 
-    // The paragraph is gone.
-    expect(findBlock(afterRemove, 'para1')).toBeUndefined();
+    expect(findBlock(saved, 'para1')).toBeUndefined();
+    expect(saved.blocks.filter((b) => b.type === 'column_list')).toHaveLength(0);
+    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(0);
 
-    // Both columns survive — deleting the sole child of ONE column does NOT unwrap
-    // the layout (unwrap fires only when a whole COLUMN is removed leaving one).
-    expect(findBlock(afterRemove, list?.id ?? '')?.type).toBe('column_list');
-    const columnsAfter = afterRemove.blocks.filter((b) => b.type === 'column').map((b) => b.id);
-    expect(columnsAfter).toEqual(columnIds);
+    // The pre-existing target paragraph is promoted to ROOT, content intact.
+    expect(findBlock(saved, 'target')?.parent ?? null).toBeNull();
+    expect((findBlock(saved, 'target')?.data as { text?: string }).text).toBe('Target');
 
-    // The now-empty column does not re-home the other column's content: it is left
-    // childless OR re-seeded with a single EMPTY paragraph still parented to it.
-    const emptyChildren = childrenOf(afterRemove, paraColumn ?? '');
-    expect(emptyChildren.length).toBeLessThanOrEqual(1);
-
-    const seed = emptyChildren.length === 1 ? findBlock(afterRemove, emptyChildren[0]) : undefined;
-    const wellFormed =
-      emptyChildren.length === 0 ||
-      (seed?.type === 'paragraph' &&
-        ((seed?.data as { text?: string }).text ?? '') === '' &&
-        seed?.parent === paraColumn);
-    expect(wellFormed).toBe(true);
-
-    // The sibling column keeps "Target", untouched.
-    const otherColumn = columnIds.find((id) => id !== paraColumn);
-    expect(childrenOf(afterRemove, otherColumn ?? '')).toEqual(['target']);
-    expect((findBlock(afterRemove, 'target')?.data as { text?: string }).text).toBe('Target');
-
-    // No orphans after the delete.
-    const ids = new Set(afterRemove.blocks.map((b) => b.id));
-    const orphans = afterRemove.blocks.filter((b) => b.parent !== undefined && b.parent !== null && !ids.has(b.parent));
+    const allIds = new Set(saved.blocks.map((b) => b.id));
+    const orphans = saved.blocks.filter((b) => b.parent !== undefined && b.parent !== null && !allIds.has(b.parent));
     expect(orphans).toEqual([]);
 
-    // LIVE DOM: still two columns mounted; the deleted paragraph holder is gone.
-    await expect(page.locator('[data-blok-column]')).toHaveCount(2);
-    const placement = await domColumnIndexById(page, ['para1', 'target']);
-    expect(placement['para1']).toBe(-2);
-    expect(placement['target']).toBeGreaterThanOrEqual(0);
+    // LIVE DOM: no columns remain.
+    await expect(page.locator('[data-blok-column]')).toHaveCount(0);
   });
 });

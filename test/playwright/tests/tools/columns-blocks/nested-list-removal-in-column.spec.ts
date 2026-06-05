@@ -99,40 +99,33 @@ test.describe('Nested column_list removal inside a column', () => {
     await page.goto(TEST_PAGE_URL);
   });
 
-  test('deleting a nested column_list keeps the outer column_list intact and orphans nothing', async ({ page }) => {
+  test('deleting a nested column_list empties its enclosing column, collapsing the whole layout', async ({ page }) => {
     await createNestedLayout(page);
 
     // Two outer columns; inside the left one, two nested columns → 4 total.
     await expect(page.locator('[data-blok-column]')).toHaveCount(4);
 
-    // Delete the entire nested column_list subtree. The outer list must survive
-    // with both its columns; nothing may be flung to root.
+    // Delete the entire nested column_list — the SOLE child of the outer-left
+    // column oc1. That empties oc1, so oc1 is removed; the outer list then has a
+    // single column and unwraps, promoting the outer-right paragraph to root.
+    // The whole nested + outer scaffold dissolves.
     await deleteBlockById(page, 'ncl');
-    await waitForBlockGone(page, 'ncl');
+    await waitForBlockGone(page, 'outer');
 
     const saved = await saveBlok(page);
 
-    // The outer list and BOTH its columns survive — no collapse of the outer.
-    expect(findBlock(saved, 'outer')).toBeDefined();
-    expect(childrenOf(saved, 'outer')).toEqual(['oc1', 'oc2']);
+    // No column_list or column survives anywhere.
+    expect(saved.blocks.filter(b => b.type === 'column_list')).toHaveLength(0);
+    expect(saved.blocks.filter(b => b.type === 'column')).toHaveLength(0);
 
-    // The right outer column is untouched: still holds its original paragraph.
-    expect(childrenOf(saved, 'oc2')).toEqual(['op2']);
+    // The outer-right paragraph is promoted to ROOT, content intact.
+    expect(findBlock(saved, 'op2')?.parent ?? null).toBeNull();
     expect((findBlock(saved, 'op2')?.data as { text?: string }).text).toBe('Outer right body');
 
-    // The nested subtree is fully gone — no nested list, no nested columns, no
-    // nested paragraphs re-homed anywhere.
-    expect(findBlock(saved, 'ncl')).toBeUndefined();
-    expect(findBlock(saved, 'nc1')).toBeUndefined();
-    expect(findBlock(saved, 'nc2')).toBeUndefined();
-    expect(findBlock(saved, 'np1')).toBeUndefined();
-    expect(findBlock(saved, 'np2')).toBeUndefined();
-
-    // No rogue column blocks flung to root from a mis-targeted index delete.
-    const rootColumns = saved.blocks.filter(
-      b => b.type === 'column' && (b.parent === undefined || b.parent === null)
-    );
-    expect(rootColumns).toHaveLength(0);
+    // The nested subtree and every wrapper are fully gone — nothing re-homed.
+    for (const id of ['ncl', 'nc1', 'nc2', 'np1', 'np2', 'oc1', 'oc2', 'outer']) {
+      expect(findBlock(saved, id)).toBeUndefined();
+    }
 
     // No orphans: every parented block resolves to a live parent.
     expectNoOrphans(saved);
@@ -187,32 +180,29 @@ test.describe('Nested column_list removal inside a column', () => {
     // Edit a nested leaf (re-render path), then delete the whole nested list.
     await editParagraphLikeText(page, 'Nested left', 'Edited nested leaf');
     await deleteBlockById(page, 'ncl');
-    await waitForBlockGone(page, 'ncl');
+    await waitForBlockGone(page, 'outer');
 
     const saved = await saveBlok(page);
 
-    // Outer list intact with both columns; the edit did not corrupt structure.
-    expect(findBlock(saved, 'outer')).toBeDefined();
-    expect(childrenOf(saved, 'outer')).toEqual(['oc1', 'oc2']);
+    // Deleting the nested list empties oc1 → oc1 removed → outer collapses and
+    // unwraps: no column_list or column survives, the edit did not corrupt it.
+    expect(saved.blocks.filter(b => b.type === 'column_list')).toHaveLength(0);
+    expect(saved.blocks.filter(b => b.type === 'column')).toHaveLength(0);
 
-    // Right outer column and its untouched paragraph survive.
-    expect(childrenOf(saved, 'oc2')).toEqual(['op2']);
+    // The outer-right paragraph is promoted to root, content intact.
+    expect(findBlock(saved, 'op2')?.parent ?? null).toBeNull();
     expect((findBlock(saved, 'op2')?.data as { text?: string }).text).toBe('Outer right body');
 
     // No ghost of the (edited) nested subtree lingers anywhere.
-    expect(findBlock(saved, 'ncl')).toBeUndefined();
-    expect(findBlock(saved, 'np1')).toBeUndefined();
-    expect(findBlock(saved, 'np2')).toBeUndefined();
+    for (const id of ['ncl', 'nc1', 'nc2', 'np1', 'np2', 'oc1', 'oc2', 'outer']) {
+      expect(findBlock(saved, id)).toBeUndefined();
+    }
     const editedGhost = saved.blocks.find(
       b => (b.data as { text?: string } | undefined)?.text === 'Edited nested leaf'
     );
     expect(editedGhost).toBeUndefined();
 
-    // No rogue column at root; no orphans after the edit+delete combo.
-    const rootColumns = saved.blocks.filter(
-      b => b.type === 'column' && (b.parent === undefined || b.parent === null)
-    );
-    expect(rootColumns).toHaveLength(0);
+    // No orphans after the edit+delete combo.
     expectNoOrphans(saved);
   });
 });

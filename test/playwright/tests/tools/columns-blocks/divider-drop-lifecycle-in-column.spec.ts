@@ -280,13 +280,8 @@ test.describe('Divider drop lifecycle inside a column', () => {
     await expect(page.locator('[data-blok-column]').nth(0).locator('[data-blok-divider]')).toHaveCount(0);
   });
 
-  test('REMOVE: deleting the divider leaves its column childless without unwrapping the layout', async ({ page }) => {
+  test('REMOVE: deleting the divider collapses the emptied column and unwraps the layout', async ({ page }) => {
     await dropDividerBesideTarget(page);
-
-    const beforeDelete = await saveBlok(page);
-    const list = beforeDelete.blocks.find((b) => b.type === 'column_list');
-    const listId = list?.id ?? '';
-    const [firstCol, secondCol] = childrenOf(beforeDelete, listId);
 
     await page.evaluate(async () => {
       if (!window.blokInstance) {
@@ -296,52 +291,27 @@ test.describe('Divider drop lifecycle inside a column', () => {
       await window.blokInstance.blocks.delete(index);
     });
 
-    await page.waitForFunction(
-      () => window.blokInstance !== undefined &&
-        window.blokInstance.blocks.getBlockIndex('divider1') === undefined
-    );
+    // Deleting the sole child empties its column, which is removed; the list drops
+    // to one column and unwraps. The unwrap is fire-and-forget async.
+    await expect
+      .poll(async () => (await saveBlok(page)).blocks.filter((b) => b.type === 'column_list').length, { timeout: 3000 })
+      .toBe(0);
 
     const saved = await saveBlok(page);
 
-    // The divider is gone entirely.
     expect(findBlock(saved, 'divider1')).toBeUndefined();
-    expect(saved.blocks.some((b) => b.type === 'divider')).toBe(false);
+    expect(saved.blocks.filter((b) => b.type === 'column_list')).toHaveLength(0);
+    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(0);
 
-    // The column_list survives with BOTH columns — deleting a column's sole child
-    // does NOT unwrap the layout (unwrap only fires when a whole COLUMN is removed
-    // leaving one). The columns keep their identity.
-    const savedList = findBlock(saved, listId);
-    expect(savedList?.type).toBe('column_list');
-    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(2);
-    expect(childrenOf(saved, listId)).toEqual([firstCol, secondCol]);
-    expect(findBlock(saved, firstCol)?.parent).toBe(listId);
-    expect(findBlock(saved, secondCol)?.parent).toBe(listId);
-
-    // The target paragraph survives in the first column.
-    expect(childrenOf(saved, firstCol)).toEqual(['target']);
+    // The pre-existing target paragraph is promoted to ROOT, content intact.
+    expect(findBlock(saved, 'target')?.parent ?? null).toBeNull();
     expect((findBlock(saved, 'target')?.data as { text?: string }).text).toBe('Target');
 
-    // The emptied second column does not re-seed or vanish: at most one child
-    // remains, and every survivor must be an empty paragraph (no reseed of content).
-    const secondColChildren = childrenOf(saved, secondCol);
-    expect(secondColChildren.length).toBeLessThanOrEqual(1);
-    const secondColSurvivors = secondColChildren.map((childId) => {
-      const seeded = findBlock(saved, childId);
-
-      return { type: seeded?.type, text: (seeded?.data as { text?: string }).text ?? '' };
-    });
-    const expectedSurvivors = secondColChildren.map(() => ({ type: 'paragraph', text: '' }));
-    expect(secondColSurvivors).toEqual(expectedSurvivors);
-
-    // No orphans after the delete.
-    const liveIds = new Set(saved.blocks.map((b) => b.id));
-    const orphans = saved.blocks.filter((b) => b.parent !== undefined && !liveIds.has(b.parent));
+    const allIds = new Set(saved.blocks.map((b) => b.id));
+    const orphans = saved.blocks.filter((b) => b.parent !== undefined && b.parent !== null && !allIds.has(b.parent));
     expect(orphans).toEqual([]);
 
-    // LIVE DOM: two columns remain, no divider rule anywhere, target still visible.
-    const columns = page.locator('[data-blok-column]');
-    await expect(columns).toHaveCount(2);
-    await expect(page.locator('[data-blok-column] [data-blok-divider]')).toHaveCount(0);
-    await expect(page.getByText('Target')).toBeVisible();
+    // LIVE DOM: no columns remain.
+    await expect(page.locator('[data-blok-column]')).toHaveCount(0);
   });
 });

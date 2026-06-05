@@ -307,16 +307,10 @@ test.describe('Code block drop lifecycle inside a column', () => {
     expect(placement['code1']).toBe(1);
   });
 
-  test('REMOVE: deleting the sole code child leaves its column childless without unwrapping the list', async ({ page }) => {
+  test('REMOVE: deleting the sole code child collapses the emptied column and unwraps the layout', async ({ page }) => {
     await createBlok(page, buildTwoRoots());
 
     await dropCodeBesideTarget(page);
-
-    const dropped = await saveBlok(page);
-    const codeColumn = findBlock(dropped, 'code1')?.parent;
-    const columnList = list(dropped)?.id;
-    expect(codeColumn).toBeDefined();
-    expect(columnList).toBeDefined();
 
     // Delete the code block by its flat index.
     await page.evaluate(async () => {
@@ -328,39 +322,31 @@ test.describe('Code block drop lifecycle inside a column', () => {
       await window.blokInstance.blocks.delete(index);
     });
 
-    await page.waitForFunction(
-      () =>
-        window.blokInstance !== undefined &&
-        window.blokInstance.blocks.getBlockIndex('code1') === undefined
-    );
+    // Deleting the code block (the sole child of its column) empties that column,
+    // which is removed; the list drops to one column and unwraps. The unwrap is
+    // fire-and-forget async — poll until the scaffold dissolves.
+    await expect
+      .poll(async () => (await saveBlok(page)).blocks.filter((b) => b.type === 'column_list').length, { timeout: 3000 })
+      .toBe(0);
 
     const saved = await saveBlok(page);
 
     // The code block is gone.
     expect(findBlock(saved, 'code1')).toBeUndefined();
 
-    // The column_list survives and both columns remain (deleting a column's sole
-    // child does NOT unwrap the list — unwrap only fires when a whole COLUMN is
-    // removed leaving one).
-    expect(findBlock(saved, columnList ?? '')?.type).toBe('column_list');
-    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(2);
-    expect(findBlock(saved, codeColumn ?? '')?.type).toBe('column');
+    // The columns scaffold dissolves: no column_list, no column survives.
+    expect(saved.blocks.filter((b) => b.type === 'column_list')).toHaveLength(0);
+    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(0);
 
-    // The emptied column is now CHILDLESS — no reseed.
-    expect(childrenOf(saved, codeColumn ?? '')).toEqual([]);
-
-    // The sibling target paragraph survives in the first column.
-    expect(findBlock(saved, 'target')?.parent).toBeDefined();
+    // The sibling target paragraph is promoted to ROOT, content intact.
+    expect(findBlock(saved, 'target')?.parent ?? null).toBeNull();
 
     // No orphaned children.
     const ids = new Set(saved.blocks.map((b) => b.id));
-    const orphans = saved.blocks.filter((b) => b.parent !== undefined && !ids.has(b.parent));
+    const orphans = saved.blocks.filter((b) => b.parent !== undefined && b.parent !== null && !ids.has(b.parent));
     expect(orphans).toHaveLength(0);
 
-    // LIVE DOM: the code holder is no longer mounted anywhere; the two columns
-    // still render.
-    const placement = await domColumnIndexById(page, ['code1']);
-    expect(placement['code1']).toBe(-2);
-    await expect(page.locator('[data-blok-column]')).toHaveCount(2);
+    // LIVE DOM: no columns remain.
+    await expect(page.locator('[data-blok-column]')).toHaveCount(0);
   });
 });

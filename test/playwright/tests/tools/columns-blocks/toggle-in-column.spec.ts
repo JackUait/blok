@@ -215,56 +215,49 @@ test.describe('Toggle inside a column', () => {
     expect((findBlock(saved, 'tc1')?.data as { text?: string }).text).toBe('Inside the toggle');
   });
 
-  test('removing the block leaves the column_list intact with the remaining paragraph', async ({ page }) => {
+  test('removing the block collapses the emptied column and unwraps the layout', async ({ page }) => {
     await createBlok(page, seedTree());
 
-    // Delete the toggle by its flat index. Deleting a container promotes its
-    // children to root, so tc1 survives at the top level with no parent.
+    // Delete the toggle (the sole child of column c1) by its flat index. Deleting
+    // a container promotes its children, so tc1 survives.
     await page.evaluate(async () => {
       if (!window.blokInstance) {
-        return;
+        throw new Error('Blok instance not found');
       }
       const index = window.blokInstance.blocks.getBlockIndex('toggle1');
       await window.blokInstance.blocks.delete(index);
     });
 
-    // Wait until the toggle has actually left the flat block array.
+    // Deleting the sole child empties c1, so the column is removed; the list now
+    // has a single column and unwraps. The unwrap is fire-and-forget async — wait
+    // for the whole scaffold to dissolve before saving.
     await page.waitForFunction(
-      () =>
-        window.blokInstance !== undefined &&
-        window.blokInstance.blocks.getBlockIndex('toggle1') === undefined
+      () => window.blokInstance !== undefined && window.blokInstance.blocks.getBlockIndex('cl1') === undefined
     );
 
     const saved = await saveBlok(page);
 
-    // The toggle is gone, but its child is promoted to root (not cascade-deleted):
-    // tc1 survives at the top level with no parent.
+    // The deleted toggle is gone and no column/column_list survives.
     expect(findBlock(saved, 'toggle1')).toBeUndefined();
+    expect(saved.blocks.some((b) => b.type === 'toggle')).toBe(false);
+    expect(saved.blocks.filter((b) => b.type === 'column_list')).toHaveLength(0);
+    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(0);
+
+    // The toggle's child is promoted to ROOT (not cascade-deleted), content intact.
     const promoted = findBlock(saved, 'tc1');
     expect(promoted).toBeDefined();
-    expect(promoted?.parent).toBeUndefined();
-    expect(saved.blocks.some((b) => b.type === 'toggle')).toBe(false);
+    expect(promoted?.parent ?? null).toBeNull();
+    expect((promoted?.data as { text?: string }).text).toBe('Inside the toggle');
 
-    // The column_list survives with both columns — so the layout does NOT
-    // auto-unwrap. The left column is left childless after the toggle leaves
-    // (no reseed), so it holds at most an empty paragraph.
-    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(2);
-    expect(findBlock(saved, 'cl1')?.type).toBe('column_list');
-
-    const leftColumnChildren = childrenOf(saved, 'c1');
-    expect(leftColumnChildren.length).toBeLessThanOrEqual(1);
-    leftColumnChildren.forEach((childId) => {
-      const survivor = findBlock(saved, childId);
-      expect(survivor?.type).toBe('paragraph');
-      expect((survivor?.data as { text?: string }).text ?? '').toBe('');
-    });
-
-    // The right column keeps its paragraph.
-    expect(findBlock(saved, 'p2')?.parent).toBe('c2');
+    // The other column's paragraph is promoted to ROOT, content intact.
+    expect(findBlock(saved, 'p2')?.parent ?? null).toBeNull();
     expect((findBlock(saved, 'p2')?.data as { text?: string }).text).toBe('Right column');
 
-    // No orphaned children remain parented to the removed toggle.
-    expect(childrenOf(saved, 'toggle1')).toEqual([]);
+    // No orphaned blocks.
+    const allIds = new Set(saved.blocks.map((b) => b.id));
+    const orphans = saved.blocks.filter((b) => b.parent !== undefined && b.parent !== null && !allIds.has(b.parent));
+
+    expect(orphans).toEqual([]);
   });
 
   test('the block\'s own children stay correctly parented after a reload inside the column', async ({ page }) => {

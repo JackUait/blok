@@ -54,7 +54,7 @@ test.describe('Removing blocks until a column empties / the list collapses', () 
     await page.goto(TEST_PAGE_URL);
   });
 
-  test('removing the last block of one column in a 2-column list leaves a well-formed empty column', async ({ page }) => {
+  test('removing the last block of one column in a 2-column list collapses the column and unwraps the list', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     await createBlok(page, {
       blocks: [
@@ -68,36 +68,28 @@ test.describe('Removing blocks until a column empties / the list collapses', () 
 
     await expect(page.locator('[data-blok-column]')).toHaveCount(2);
 
-    // Delete the sole child of the LEFT column. The list still has TWO columns,
-    // so this must NOT trigger an unwrap — the left column simply empties (and
-    // may be re-seeded with one empty paragraph).
+    // Delete the sole child of the LEFT column. A column is pure layout — once
+    // empty it is removed. That drops the list to a single column, which unwraps:
+    // the right column's content is promoted to root and the whole columns
+    // scaffold dissolves.
     await deleteBlockById(page, 'p1');
-    await waitForBlockGone(page, 'p1');
+    await waitForBlockGone(page, 'cl1');
 
     const saved = await saveBlok(page);
 
-    // The column_list and BOTH columns survive — no collapse.
-    expect(findBlock(saved, 'cl1')).toBeDefined();
-    expect(childrenOf(saved, 'cl1')).toEqual(['c1', 'c2']);
+    // No column or column_list survives.
+    expect(saved.blocks.filter(b => b.type === 'column_list')).toHaveLength(0);
+    expect(saved.blocks.filter(b => b.type === 'column')).toHaveLength(0);
 
-    // Right column is untouched: still holds exactly its original paragraph.
-    expect(childrenOf(saved, 'c2')).toEqual(['p2']);
-    expect((findBlock(saved, 'p2')?.data as { text?: string }).text).toBe('Right keep me');
+    // The surviving column's content is promoted to ROOT, content intact.
+    const survivor = findBlock(saved, 'p2');
+    expect(survivor).toBeDefined();
+    expect(survivor?.parent ?? null).toBeNull();
+    expect((survivor?.data as { text?: string }).text).toBe('Right keep me');
 
-    // Left column is well-formed: either childless or a single EMPTY paragraph
-    // parented to c1 — never carrying the right column's content (no index-shift
-    // orphaning). Express the valid shape as one boolean (no conditional expect).
-    const leftChildren = childrenOf(saved, 'c1');
-    expect(leftChildren.length).toBeLessThanOrEqual(1);
-
-    const seed = leftChildren.length === 1 ? findBlock(saved, leftChildren[0]) : undefined;
-    const leftWellFormed =
-      leftChildren.length === 0 ||
-      (seed?.type === 'paragraph' &&
-        ((seed?.data as { text?: string }).text ?? '') === '' &&
-        seed?.parent === 'c1');
-
-    expect(leftWellFormed).toBe(true);
+    // The deleted paragraph and the emptied column are gone, not re-homed.
+    expect(findBlock(saved, 'p1')).toBeUndefined();
+    expect(findBlock(saved, 'c1')).toBeUndefined();
 
     // No orphans: every non-root block resolves to a live parent.
     const ids = new Set(saved.blocks.map(b => b.id));
@@ -106,9 +98,44 @@ test.describe('Removing blocks until a column empties / the list collapses', () 
     );
 
     expect(orphans).toEqual([]);
+  });
 
-    // The deleted paragraph did not re-home anywhere — it is gone.
-    expect(findBlock(saved, 'p1')).toBeUndefined();
+  test('emptying the MIDDLE column of a 3-column list removes only that column, keeping the layout', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2', 'c3'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['p1'] },
+        { id: 'p1', type: 'paragraph', data: { text: 'First' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['p2'] },
+        { id: 'p2', type: 'paragraph', data: { text: 'Middle doomed' }, parent: 'c2' },
+        { id: 'c3', type: 'column', data: {}, parent: 'cl1', content: ['p3'] },
+        { id: 'p3', type: 'paragraph', data: { text: 'Third' }, parent: 'c3' },
+      ],
+    });
+
+    await expect(page.locator('[data-blok-column]')).toHaveCount(3);
+
+    // Empty the MIDDLE column. With two columns still left, no unwrap fires —
+    // the empty column is removed and the list keeps its remaining two columns.
+    await deleteBlockById(page, 'p2');
+    await waitForBlockGone(page, 'c2');
+
+    const saved = await saveBlok(page);
+
+    // The list survives with exactly the two remaining columns, in order.
+    expect(findBlock(saved, 'cl1')?.type).toBe('column_list');
+    expect(childrenOf(saved, 'cl1')).toEqual(['c1', 'c3']);
+    expect(saved.blocks.filter(b => b.type === 'column').map(b => b.id)).toEqual(['c1', 'c3']);
+
+    // The two surviving columns keep their content; nothing escaped to root.
+    expect(childrenOf(saved, 'c1')).toEqual(['p1']);
+    expect(childrenOf(saved, 'c3')).toEqual(['p3']);
+    expect(saved.blocks.filter(b => b.type === 'paragraph' && (b.parent === undefined || b.parent === null))).toHaveLength(0);
+
+    // The doomed middle column and its content are gone, not re-homed.
+    expect(findBlock(saved, 'p2')).toBeUndefined();
+    expect(findBlock(saved, 'c2')).toBeUndefined();
   });
 
   test('removing an entire column so only one remains unwraps the survivor to root preserving order', async ({ page }) => {

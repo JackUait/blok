@@ -272,13 +272,8 @@ test.describe('Header block drop lifecycle inside a column', () => {
     expect(placement['header1']).toBe(1);
   });
 
-  test('REMOVE: deleting the dropped header leaves its column childless without reseed or unwrap', async ({ page }) => {
+  test('REMOVE: deleting the dropped header collapses the emptied column and unwraps the layout', async ({ page }) => {
     await dropHeaderRightOfTarget(page);
-
-    const beforeDelete = await saveBlok(page);
-    const headerColumn = findBlock(beforeDelete, 'header1')?.parent;
-
-    expect(headerColumn).toBeDefined();
 
     // Delete the header by its flat index.
     await page.evaluate(async () => {
@@ -290,46 +285,33 @@ test.describe('Header block drop lifecycle inside a column', () => {
       await window.blokInstance.blocks.delete(index);
     });
 
-    // The delete is async; wait until the header leaves the flat block array.
-    await page.waitForFunction(
-      () =>
-        window.blokInstance !== undefined &&
-        window.blokInstance.blocks.getBlockIndex('header1') === undefined
-    );
+    // Deleting the sole child empties its column, which is removed; the list drops
+    // to one column and unwraps. The unwrap is fire-and-forget async, so poll the
+    // saved output until no column_list remains (its id is auto-generated).
+    await expect
+      .poll(async () => (await saveBlok(page)).blocks.filter((b) => b.type === 'column_list').length, { timeout: 3000 })
+      .toBe(0);
 
     const saved = await saveBlok(page);
 
     // The header block is gone.
     expect(findBlock(saved, 'header1')).toBeUndefined();
 
-    // Both columns survive — deleting a column's sole child does NOT unwrap the
-    // layout (unwrap only fires when a whole COLUMN is deleted leaving one).
-    const list = saved.blocks.find((b) => b.type === 'column_list');
+    // The whole columns scaffold dissolved.
+    expect(saved.blocks.filter((b) => b.type === 'column_list')).toHaveLength(0);
+    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(0);
 
-    expect(list).toBeDefined();
-    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(2);
-
-    // The header's column is now CHILDLESS — no reseed (no stray empty paragraph)
-    // and no unwrap.
-    expect(childrenOf(saved, headerColumn ?? '')).toEqual([]);
-
-    // The target paragraph survives in the other column.
+    // The pre-existing target paragraph is promoted to ROOT, content intact.
+    expect(findBlock(saved, 'target')?.parent ?? null).toBeNull();
     expect((findBlock(saved, 'target')?.data as { text?: string }).text).toBe('Target');
-    const columnIds = saved.blocks.filter((b) => b.type === 'column').map((b) => b.id);
-
-    expect(columnIds).toContain(findBlock(saved, 'target')?.parent);
 
     // No orphaned blocks remain.
     const allIds = new Set(saved.blocks.map((b) => b.id));
-    const orphans = saved.blocks.filter((b) => b.parent !== undefined && !allIds.has(b.parent));
+    const orphans = saved.blocks.filter((b) => b.parent !== undefined && b.parent !== null && !allIds.has(b.parent));
 
     expect(orphans).toEqual([]);
 
-    // LIVE DOM: the header holder is gone, and the columns row still has 2 columns.
-    const placement = await domColumnIndexById(page, ['header1', 'target']);
-
-    expect(placement['header1']).toBe(-2);
-    expect(placement['target']).toBe(0);
-    await expect(page.locator('[data-blok-column]')).toHaveCount(2);
+    // LIVE DOM: no columns remain.
+    await expect(page.locator('[data-blok-column]')).toHaveCount(0);
   });
 });

@@ -557,6 +557,27 @@ export class BlockOperations {
         this.currentBlockIndexValue = 0;
       }
 
+      /**
+       * A `column` is pure layout — it exists only to host child blocks. When
+       * the block just removed was its LAST child, the now-empty column has
+       * nothing to lay out, so remove it too. Deleting the column fires its
+       * removed() hook, which unwraps the column_list when this drops the list
+       * to a single column (see Column.removed -> unwrapColumnListIfCollapsed).
+       *
+       * `parentBlock.contentIds` was already pruned of the removed child above,
+       * so an empty list means a childless column. Fire-and-forget, mirroring
+       * the async unwrap it may trigger; the recursive remove re-resolves the
+       * column's index, so a shifted flat array never targets the wrong block.
+       */
+      if (
+        parentBlock !== undefined &&
+        parentBlock.name === 'column' &&
+        parentBlock.contentIds.length === 0 &&
+        this.repository.getBlockIndex(parentBlock) >= 0
+      ) {
+        void this.removeBlock(parentBlock, addLastBlock, skipYjsSync, blocksStore);
+      }
+
       this.assertHierarchyInvariantInDev('removeBlock');
 
       resolve();

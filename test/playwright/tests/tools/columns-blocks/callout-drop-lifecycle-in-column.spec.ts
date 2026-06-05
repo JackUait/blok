@@ -272,13 +272,8 @@ test.describe('Callout drop lifecycle inside a column', () => {
     expect(placement['callout1-child']).toBe(1);
   });
 
-  test('REMOVE: deleting the callout leaves its column childless without unwrapping the layout', async ({ page }) => {
+  test('REMOVE: deleting the callout collapses the emptied column and unwraps the layout', async ({ page }) => {
     await dropCalloutBesideTarget(page);
-
-    const seeded = await saveBlok(page);
-    const seededColumns = seeded.blocks.filter((b) => b.type === 'column').map((b) => b.id);
-    const calloutColumn = seededColumns[1];
-    const listId = seeded.blocks.find((b) => b.type === 'column_list')?.id ?? '';
 
     // Delete the callout by its flat index.
     await page.evaluate(async () => {
@@ -292,29 +287,32 @@ test.describe('Callout drop lifecycle inside a column', () => {
       }
     });
 
-    await page.waitForFunction(
-      () => window.blokInstance !== undefined && window.blokInstance.blocks.getBlockIndex('callout1') === undefined
-    );
+    // Deleting the callout (the sole child of its column) empties that column,
+    // which is removed; the list drops to one column and unwraps. The unwrap is
+    // fire-and-forget async — poll until the scaffold dissolves.
+    await expect
+      .poll(async () => (await saveBlok(page)).blocks.filter((b) => b.type === 'column_list').length, { timeout: 3000 })
+      .toBe(0);
 
     const saved = await saveBlok(page);
 
     // The callout block is gone.
     expect(findBlock(saved, 'callout1')).toBeUndefined();
 
-    // Product rule: deleting a column's sole child leaves the column CHILDLESS —
-    // no reseed, no unwrap. The column_list still owns BOTH columns.
-    expect(findBlock(saved, listId)?.type).toBe('column_list');
-    expect(childrenOf(saved, listId)).toEqual(seededColumns);
-    expect(findBlock(saved, calloutColumn)?.parent).toBe(listId);
-    expect(childrenOf(saved, calloutColumn)).toEqual([]);
+    // The columns scaffold dissolves: no column_list, no column survives.
+    expect(saved.blocks.filter((b) => b.type === 'column_list')).toHaveLength(0);
+    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(0);
 
-    // The neighbour column keeps its target paragraph.
-    expect(findBlock(saved, 'target')?.parent).toBe(seededColumns[0]);
+    // The neighbour column's target paragraph is promoted to ROOT, content intact.
+    expect(findBlock(saved, 'target')?.parent ?? null).toBeNull();
+    expect((findBlock(saved, 'target')?.data as { text?: string }).text).toBe('Target');
 
-    // LIVE DOM: both columns still rendered; the callout holder is gone entirely.
-    await expect(page.locator('[data-blok-column]')).toHaveCount(2);
-    const placement = await domColumnIndexById(page, ['callout1', 'target']);
-    expect(placement['callout1']).toBe(-2);
-    expect(placement['target']).toBe(0);
+    // No orphaned blocks.
+    const allIds = new Set(saved.blocks.map((b) => b.id));
+    const orphans = saved.blocks.filter((b) => b.parent !== undefined && b.parent !== null && !allIds.has(b.parent));
+    expect(orphans).toEqual([]);
+
+    // LIVE DOM: no columns remain.
+    await expect(page.locator('[data-blok-column]')).toHaveCount(0);
   });
 });

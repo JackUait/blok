@@ -296,17 +296,10 @@ test.describe('List block drop lifecycle inside a column', () => {
     expect(placement['list1']).toBeGreaterThanOrEqual(0);
   });
 
-  test('REMOVE: deleting the lone list leaves its column childless without reseed or unwrap', async ({ page }) => {
+  test('REMOVE: deleting the lone list collapses the emptied column and unwraps the layout', async ({ page }) => {
     await createBlok(page, buildFlatRoots());
 
     await dropListBesideTarget(page);
-
-    const before = await saveBlok(page);
-    const listColumn = findBlock(before, 'list1')?.parent;
-    const targetColumn = findBlock(before, 'target')?.parent;
-
-    expect(listColumn).toBeDefined();
-    expect(targetColumn).toBeDefined();
 
     // Delete the list block by its flat index (delete is index-based).
     await page.evaluate(async () => {
@@ -318,10 +311,12 @@ test.describe('List block drop lifecycle inside a column', () => {
       await window.blokInstance.blocks.delete(index);
     });
 
-    await page.waitForFunction(
-      () => window.blokInstance !== undefined &&
-        window.blokInstance.blocks.getBlockIndex('list1') === undefined
-    );
+    // Deleting the sole child empties its column, which is removed; the list drops
+    // to one column and unwraps. The unwrap is fire-and-forget async, so poll the
+    // saved output until no column_list remains (its id is auto-generated).
+    await expect
+      .poll(async () => (await saveBlok(page)).blocks.filter((b) => b.type === 'column_list').length, { timeout: 3000 })
+      .toBe(0);
 
     const saved = await saveBlok(page);
 
@@ -329,38 +324,24 @@ test.describe('List block drop lifecycle inside a column', () => {
     expect(findBlock(saved, 'list1')).toBeUndefined();
     expect(saved.blocks.some((b) => b.type === 'list')).toBe(false);
 
-    // Per product rules: deleting a column's sole child leaves the column
-    // CHILDLESS — no reseed, no unwrap. Both columns survive.
-    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(2);
-    const columnList = saved.blocks.find((b) => b.type === 'column_list');
-    expect(columnList).toBeDefined();
-    const survivingColumns = childrenOf(saved, columnList?.id ?? '');
-    expect(survivingColumns).toHaveLength(2);
-    expect(survivingColumns).toContain(targetColumn);
-    expect(survivingColumns).toContain(listColumn);
+    // The whole columns scaffold dissolved.
+    expect(saved.blocks.filter((b) => b.type === 'column_list')).toHaveLength(0);
+    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(0);
 
-    // The target column is untouched — still owns its paragraph.
-    expect(findBlock(saved, 'target')?.parent).toBe(targetColumn);
-    expect(childrenOf(saved, targetColumn ?? '')).toEqual(['target']);
-
-    // The list's former column is now CHILDLESS — no reseeded paragraph, no orphan.
-    expect(childrenOf(saved, listColumn ?? '')).toEqual([]);
+    // The pre-existing target paragraph is promoted to ROOT, content intact.
+    expect(findBlock(saved, 'target')?.parent ?? null).toBeNull();
+    expect((findBlock(saved, 'target')?.data as { text?: string }).text).toBe('Target');
 
     // No orphaned children anywhere.
     const ids = new Set(saved.blocks.map((b) => b.id));
     const orphanParents = saved.blocks
-      .filter((block) => block.parent !== undefined)
+      .filter((block) => block.parent !== undefined && block.parent !== null)
       .map((block) => block.parent)
       .filter((parent) => !ids.has(parent));
 
     expect(orphanParents).toEqual([]);
 
-    // LIVE DOM: the list holder is gone (-2); the target's holder still lives in a
-    // column; the now-childless column is still present in the DOM.
-    const placement = await domColumnIndexById(page, ['list1', 'target']);
-    expect(placement['list1']).toBe(-2);
-    expect(placement['target']).toBeGreaterThanOrEqual(0);
-
-    await expect(page.locator('[data-blok-column]')).toHaveCount(2);
+    // LIVE DOM: no columns remain.
+    await expect(page.locator('[data-blok-column]')).toHaveCount(0);
   });
 });

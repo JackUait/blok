@@ -177,10 +177,10 @@ test.describe('Quote inside a column', () => {
     expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(2);
   });
 
-  test('removing the block leaves the column_list intact with the remaining paragraph', async ({ page }) => {
+  test('removing the block collapses the emptied column and unwraps the layout', async ({ page }) => {
     await createBlok(page, nestedTree());
 
-    // Index-based delete: resolve the quote's flat index first.
+    // Delete the quote (the sole child of column c1) by its flat index.
     await page.evaluate(async () => {
       if (!window.blokInstance) {
         throw new Error('Blok instance not found');
@@ -189,57 +189,31 @@ test.describe('Quote inside a column', () => {
       await window.blokInstance.blocks.delete(index);
     });
 
-    // Wait until the quote block is gone from the flat block array.
+    // Deleting the sole child empties c1, so the column is removed; the list now
+    // has a single column and unwraps. The unwrap is fire-and-forget async — wait
+    // for the whole scaffold to dissolve before saving.
     await page.waitForFunction(
-      () => window.blokInstance !== undefined &&
-        window.blokInstance.blocks.getBlockIndex('quote1') === undefined
+      () => window.blokInstance !== undefined && window.blokInstance.blocks.getBlockIndex('cl1') === undefined
     );
 
     const saved = await saveBlok(page);
 
-    // The quote is gone.
+    // The deleted block is gone and no column/column_list survives.
     expect(findBlock(saved, 'quote1')).toBeUndefined();
-    await expect(page.locator('[data-blok-tool="quote"]')).toHaveCount(0);
+    expect(saved.blocks.filter((b) => b.type === 'column_list')).toHaveLength(0);
+    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(0);
 
-    // The second column's paragraph survives, still parented to c2.
-    const c2Para = findBlock(saved, 'c2p1');
-    expect(c2Para?.type).toBe('paragraph');
-    expect(c2Para?.parent).toBe('c2');
-    expect(quoteText(c2Para)).toBe('Second column.');
+    // The other column's paragraph is promoted to ROOT, content intact.
+    expect(findBlock(saved, 'c2p1')?.parent ?? null).toBeNull();
+    expect(quoteText(findBlock(saved, 'c2p1'))).toBe('Second column.');
 
-    // The column_list is still valid: deleting the sole child of a column does not
-    // unwrap the layout, so c1 must still exist and stay parented to the column_list.
-    const c1 = findBlock(saved, 'c1');
-    expect(c1?.type).toBe('column');
-    expect(c1?.parent).toBe('cl1');
+    // No orphaned blocks.
+    const allIds = new Set(saved.blocks.map((b) => b.id));
+    const orphans = saved.blocks.filter((b) => b.parent !== undefined && b.parent !== null && !allIds.has(b.parent));
 
-    const list = findBlock(saved, 'cl1');
-    expect(list?.type).toBe('column_list');
-    expect(list?.content).toEqual(['c1', 'c2']);
+    expect(orphans).toEqual([]);
 
-    // The emptied first column does not re-seed or vanish: it may be left child-less,
-    // or hold a single empty paragraph. Every survivor under c1 must be an empty
-    // paragraph, and there can be at most one.
-    const c1Children = childrenOf(saved, 'c1');
-
-    expect(c1Children.length).toBeLessThanOrEqual(1);
-
-    const c1Survivors = c1Children.map((childId) => {
-      const seeded = findBlock(saved, childId);
-
-      return {
-        type: seeded?.type,
-        text: quoteText(seeded),
-      };
-    });
-    const expectedSurvivors = c1Children.map(() => ({ type: 'paragraph', text: '' }));
-
-    expect(c1Survivors).toEqual(expectedSurvivors);
-
-    // No orphaned children point at the removed quote.
-    expect(childrenOf(saved, 'quote1')).toEqual([]);
-
-    // Two columns still rendered in the DOM.
-    await expect(page.locator('[data-blok-column]')).toHaveCount(2);
+    // The entire columns scaffold has dissolved in the live DOM.
+    await expect(page.locator('[data-blok-column]')).toHaveCount(0);
   });
 });

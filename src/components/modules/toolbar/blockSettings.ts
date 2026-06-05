@@ -204,7 +204,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         : await block.getActiveToolboxEntry();
       const contextLabel = ((): string => {
         if (hasMultipleBlocksSelected) {
-          return `${selectedBlocks.length} blocks`;
+          return this.Blok.I18n.t('blockSettings.blocksSelected', { count: selectedBlocks.length });
         }
 
         if (activeEntry) {
@@ -458,39 +458,27 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       return result;
     }, []);
 
-    if (convertToItems.length > 0) {
-      items.push({
-        icon: IconReplace,
-        name: 'convert-to',
-        title: this.Blok.I18n.t('popover.convertTo'),
-        children: {
-          items: convertToItems,
-          minWidth: '200px',
-        },
-      });
-      items.push({
-        type: PopoverItemType.Separator,
-      });
-    }
-
     /**
-     * For single block selection, show common tunes (delete, move, etc.)
-     * For multiple blocks, only show delete option with multi-block delete behavior
+     * For a multi-block selection, "Turn into columns" belongs in the same
+     * "Convert to" submenu as the other tool conversions. The selected ids are
+     * captured HERE, at build time — reading BlockSelection.selectedBlocks
+     * inside onActivate returns an empty list, because the document mousedown
+     * that fires when the popover item is clicked clears the block selection
+     * before onActivate runs.
      */
-    if (!hasMultipleBlocksSelected) {
-      items.push(...commonTunes);
-    } else {
-      items.push({
+    if (hasMultipleBlocksSelected) {
+      const selectedBlockIds = selectedBlocks.map((selected) => selected.id);
+
+      convertToItems.push({
         icon: IconColumns,
-        title: this.Blok.I18n.t('tools.columns.turnInto'),
+        title: this.Blok.I18n.t('toolNames.columns'),
         name: 'turn-into-columns',
         closeOnActivate: true,
         onActivate: () => {
-          const { BlockSelection, Caret, Toolbar, BlockManager } = this.Blok;
+          const { Caret, Toolbar, BlockManager } = this.Blok;
           const api = this.Blok.API.methods;
-          const ids = BlockSelection.selectedBlocks.map(selected => selected.id);
 
-          const listId = wrapBlocksInColumns(api, ids);
+          const listId = wrapBlocksInColumns(api, selectedBlockIds);
 
           if (listId === null) {
             Toolbar.close();
@@ -513,6 +501,30 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
           Toolbar.close();
         },
       });
+    }
+
+    if (convertToItems.length > 0) {
+      items.push({
+        icon: IconReplace,
+        name: 'convert-to',
+        title: this.Blok.I18n.t('popover.convertTo'),
+        children: {
+          items: convertToItems,
+          minWidth: '200px',
+        },
+      });
+      items.push({
+        type: PopoverItemType.Separator,
+      });
+    }
+
+    /**
+     * For single block selection, show common tunes (delete, move, etc.)
+     * For multiple blocks, only show delete option with multi-block delete behavior
+     */
+    if (!hasMultipleBlocksSelected) {
+      items.push(...commonTunes);
+    } else {
       items.push({
         icon: IconTrash,
         title: this.Blok.I18n.t('blockSettings.delete'),

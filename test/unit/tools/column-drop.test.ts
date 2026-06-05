@@ -344,7 +344,7 @@ describe('wrapBlocksInColumns', () => {
     expect(mock.insert).not.toHaveBeenCalled();
   });
 
-  it('aborts when any block is not top-level', () => {
+  it('aborts when fewer than 2 top-level blocks remain after ignoring nested ones', () => {
     const mock = createMockAPI([
       { id: 'a', parentId: null, index: 0 },
       { id: 'b', parentId: 'some-col', index: 1 },
@@ -359,5 +359,53 @@ describe('wrapBlocksInColumns', () => {
 
     expect(wrapBlocksInColumns(mock.api, ['a', 'ghost'])).toBeNull();
     expect(mock.insert).not.toHaveBeenCalled();
+  });
+
+  it('wraps a selected column_list as one nested column, ignoring its descendant columns present in the selection', () => {
+    // A cross-block selection spanning a column_list also marks its nested
+    // columns selected (the selection walks the flat block array). Only the
+    // TOP-LEVEL blocks should each become a column; the column_list rides into
+    // a single column with its sub-tree intact.
+    const mock = createMockAPI([
+      { id: 'cl', parentId: null, index: 2 },
+      { id: 'colA', parentId: 'cl', index: 3 },
+      { id: 'colB', parentId: 'cl', index: 4 },
+      { id: 'p', parentId: null, index: 5 },
+    ]);
+
+    const result = wrapBlocksInColumns(mock.api, ['cl', 'colA', 'colB', 'p']);
+
+    expect(result).toBe('column_list-new-1');
+    // 1 new list + 2 columns (one per top-level block), NOT one per selected id
+    expect(mock.insert).toHaveBeenCalledTimes(3);
+    expect(mock.insert.mock.calls[0][0]).toBe(COLUMN_LIST_TOOL);
+    expect(mock.insert.mock.calls[0][3]).toBe(2); // list at the column_list's index
+
+    // column_list nests as a single column; the paragraph gets its own
+    expect(mock.setBlockParent).toHaveBeenCalledWith('cl', 'column-new-2');
+    expect(mock.setBlockParent).toHaveBeenCalledWith('p', 'column-new-3');
+
+    // descendant columns are never reparented — they ride inside cl
+    expect(mock.setBlockParent).not.toHaveBeenCalledWith('colA', expect.anything());
+    expect(mock.setBlockParent).not.toHaveBeenCalledWith('colB', expect.anything());
+  });
+
+  it('wraps two selected column_lists as two nested columns, ignoring all their descendants', () => {
+    const mock = createMockAPI([
+      { id: 'clX', parentId: null, index: 2 },
+      { id: 'xA', parentId: 'clX', index: 3 },
+      { id: 'clY', parentId: null, index: 4 },
+      { id: 'yA', parentId: 'clY', index: 5 },
+    ]);
+
+    const result = wrapBlocksInColumns(mock.api, ['clX', 'xA', 'clY', 'yA']);
+
+    expect(result).toBe('column_list-new-1');
+    expect(mock.insert).toHaveBeenCalledTimes(3); // list + 2 columns
+    expect(mock.setBlockParent).toHaveBeenCalledWith('clX', 'column-new-2');
+    expect(mock.setBlockParent).toHaveBeenCalledWith('clY', 'column-new-3');
+
+    expect(mock.setBlockParent).not.toHaveBeenCalledWith('xA', expect.anything());
+    expect(mock.setBlockParent).not.toHaveBeenCalledWith('yA', expect.anything());
   });
 });

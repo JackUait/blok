@@ -130,32 +130,36 @@ export const wrapInNewColumnList = (
 };
 
 /**
- * Wrap N top-level `blockIds` into a brand new `column_list`, one block per
+ * Wrap the top-level `blockIds` into a brand new `column_list`, one block per
  * column, preserving selection order. Each block keeps its subtree (children
- * track their parent). All work runs in a single undo entry via `transact`.
+ * track their parent), so a selected `column_list` rides into a single column
+ * as a nested list. All work runs in a single undo entry via `transact`.
  *
- * Aborts (returns null, no mutation) when: fewer than 2 ids, any id is stale
- * (no flat index), or any id is not top-level (already inside a container).
+ * Non-top-level ids are IGNORED, not rejected: a cross-block selection that
+ * spans a container also marks the container's descendants selected (the
+ * selection walks the flat block array), and those descendants ride along
+ * inside their container — wrapping them again would tear the subtree apart.
+ *
+ * Aborts (returns null, no mutation) when fewer than 2 top-level, non-stale
+ * blocks remain after filtering.
  */
 export const wrapBlocksInColumns = (
   api: API,
   blockIds: string[]
 ): string | null => {
-  if (blockIds.length < 2) {
+  const topLevelIds = blockIds.filter((blockId) => {
+    if (api.blocks.getBlockIndex(blockId) === undefined) {
+      return false;
+    }
+
+    return api.blocks.getById(blockId)?.parentId === null;
+  });
+
+  if (topLevelIds.length < 2) {
     return null;
   }
 
-  for (const blockId of blockIds) {
-    if (api.blocks.getBlockIndex(blockId) === undefined) {
-      return null;
-    }
-
-    if (api.blocks.getById(blockId)?.parentId !== null) {
-      return null;
-    }
-  }
-
-  const baseIndex = api.blocks.getBlockIndex(blockIds[0]);
+  const baseIndex = api.blocks.getBlockIndex(topLevelIds[0]);
 
   if (baseIndex === undefined) {
     return null;
@@ -168,7 +172,7 @@ export const wrapBlocksInColumns = (
 
     created.listId = list.id;
 
-    const columns = blockIds.map((_, i) =>
+    const columns = topLevelIds.map((_, i) =>
       api.blocks.insert(COLUMN_TOOL, { noSeed: true }, {}, baseIndex + 1 + i, false, false)
     );
 
@@ -176,7 +180,7 @@ export const wrapBlocksInColumns = (
       api.blocks.setBlockParent(column.id, list.id);
     }
 
-    blockIds.forEach((blockId, i) => {
+    topLevelIds.forEach((blockId, i) => {
       api.blocks.setBlockParent(blockId, columns[i].id);
     });
 

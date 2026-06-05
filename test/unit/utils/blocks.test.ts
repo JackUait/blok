@@ -1214,7 +1214,7 @@ describe('blocks utilities', () => {
       expect(result[0].name).toBe('header');
     });
 
-    it('should return empty array when any block has no export conversion config', async () => {
+    it('should return empty array when NO selected block has export conversion config', async () => {
       const mockTool1 = {
         name: 'header',
         conversionConfig: {
@@ -1245,6 +1245,111 @@ describe('blocks utilities', () => {
       const allBlockTools: BlockToolAdapter[] = [mockTool1, mockTool2];
       const mockBlock1 = createMockBlock('paragraph');
       const mockBlock2 = createMockBlock('paragraph');
+
+      const result = await getConvertibleToolsForBlocks([mockBlock1, mockBlock2], allBlockTools);
+
+      expect(result).toEqual([]);
+    });
+
+    it('ignores blocks whose tool has no export config and returns targets for the remaining convertible blocks', async () => {
+      // A container block like column_list has no conversionConfig: it cannot
+      // convert and should be left untouched, NOT suppress every target.
+      const headerTool = {
+        name: 'header',
+        conversionConfig: { export: 'text', import: 'text' },
+        toolbox: [{ icon: 'H', title: 'Header' }],
+      } as unknown as BlockToolAdapter;
+
+      const paragraphTool = {
+        name: 'paragraph',
+        conversionConfig: { export: 'text', import: 'text' },
+        toolbox: [{ icon: 'P', title: 'Paragraph' }],
+      } as unknown as BlockToolAdapter;
+
+      const columnListTool = {
+        name: 'column_list',
+        // no conversionConfig — not convertible
+        toolbox: [{ icon: 'C', title: 'Columns' }],
+      } as unknown as BlockToolAdapter;
+
+      const allBlockTools: BlockToolAdapter[] = [headerTool, paragraphTool, columnListTool];
+      const mockBlock1 = createMockBlock('paragraph');
+      const mockBlock2 = createMockBlock('column_list');
+
+      const result = await getConvertibleToolsForBlocks([mockBlock1, mockBlock2], allBlockTools);
+
+      // Only the paragraph constrains targets → header is offered. (paragraph
+      // itself is excluded because the sole convertible block is already one.)
+      expect(result.map((tool) => tool.name)).toEqual(['header']);
+    });
+
+    it('excludes blocks nested under another selected block (they ride with their container)', async () => {
+      // Mirrors a cross-selection over a columns structure: the column_list and
+      // ALL its descendants are selected. Only the free-standing header should
+      // drive the targets; the inner paragraphs must NOT (converting them would
+      // tear them out of the columns).
+      const headerTool = {
+        name: 'header',
+        conversionConfig: { export: 'text', import: 'text' },
+        toolbox: [{ icon: 'H', title: 'Header' }],
+      } as unknown as BlockToolAdapter;
+
+      const paragraphTool = {
+        name: 'paragraph',
+        conversionConfig: { export: 'text', import: 'text' },
+        toolbox: [{ icon: 'P', title: 'Paragraph' }],
+      } as unknown as BlockToolAdapter;
+
+      const columnListTool = {
+        name: 'column_list',
+        toolbox: [{ icon: 'C', title: 'Columns' }],
+      } as unknown as BlockToolAdapter;
+
+      const columnTool = {
+        name: 'column',
+        toolbox: [{ icon: 'c', title: 'Column' }],
+      } as unknown as BlockToolAdapter;
+
+      const allBlockTools: BlockToolAdapter[] = [headerTool, paragraphTool, columnListTool, columnTool];
+
+      const block = (id: string, name: string, parentId: string | null): BlockAPI =>
+        ({ id, name, parentId, save: mockSave } as unknown as BlockAPI);
+
+      const blocks = [
+        block('para-top', 'paragraph', null),
+        block('cl', 'column_list', null),
+        block('col', 'column', 'cl'),
+        block('head-in-col', 'header', 'col'),
+      ];
+
+      const result = await getConvertibleToolsForBlocks(blocks, allBlockTools);
+
+      // Only 'para-top' participates. If the nested header were (wrongly) counted,
+      // both header AND paragraph would be offered; excluding it leaves header only
+      // (the sole participating block is already a paragraph).
+      expect(result.map((tool) => tool.name)).toEqual(['header']);
+    });
+
+    it('returns empty when every selected block is a non-convertible container', async () => {
+      const headerTool = {
+        name: 'header',
+        conversionConfig: { export: 'text', import: 'text' },
+        toolbox: [{ icon: 'H', title: 'Header' }],
+      } as unknown as BlockToolAdapter;
+
+      const columnListTool = {
+        name: 'column_list',
+        toolbox: [{ icon: 'C', title: 'Columns' }],
+      } as unknown as BlockToolAdapter;
+
+      const columnTool = {
+        name: 'column',
+        toolbox: [{ icon: 'C', title: 'Column' }],
+      } as unknown as BlockToolAdapter;
+
+      const allBlockTools: BlockToolAdapter[] = [headerTool, columnListTool, columnTool];
+      const mockBlock1 = createMockBlock('column_list');
+      const mockBlock2 = createMockBlock('column');
 
       const result = await getConvertibleToolsForBlocks([mockBlock1, mockBlock2], allBlockTools);
 

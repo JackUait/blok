@@ -1747,6 +1747,64 @@ describe('Blocks', () => {
       expect(cellBContainer.contains(newBlock.holder)).toBe(false);
     });
 
+    it('reroutes a new column into the enclosing column_list, not inside the previous column', () => {
+      const blocks = createBlocks();
+
+      /**
+       * Counterpart to the sibling-cell test above: the successor-reroute MUST
+       * still fire when the successor's container ENCLOSES the predecessor.
+       *
+       * Inserting a new column between two existing columns: its flat
+       * predecessor is the left column's last nested child, but it belongs in
+       * the column_list beside the right column. The column_list nested
+       * container encloses the left column's child, so the new column reroutes
+       * to sit before the right column at the column_list level — it must NOT
+       * land inside the left column.
+       *
+       * Regression guard for fix(columns) 26ed689c. Locks the discriminator
+       * from the opposite side of the table-cell test: a future change that
+       * disables the reroute to "fix" table cells would silently re-break the
+       * between-columns drop, and this test would catch it.
+       */
+      const columnList = createMockBlock('collist-1', 'column_list');
+      const leftColumn = createMockBlock('col-left', 'column');
+      const leftChild = createMockBlock('left-child', 'paragraph');
+      const rightColumn = createMockBlock('col-right', 'column');
+
+      blocks.push(columnList);
+
+      // column_list's nested container holds the column holders
+      const listContainer = document.createElement('div');
+
+      listContainer.setAttribute('data-blok-nested-blocks', '');
+      columnList.holder.appendChild(listContainer);
+
+      // left column with its own nested container + a child block
+      const leftColContainer = document.createElement('div');
+
+      leftColContainer.setAttribute('data-blok-nested-blocks', '');
+      leftColumn.holder.appendChild(leftColContainer);
+      leftColContainer.appendChild(leftChild.holder);
+      listContainer.appendChild(leftColumn.holder);
+
+      // right column, sibling of left column inside the list container
+      listContainer.appendChild(rightColumn.holder);
+
+      // Flat array: [columnList(0), leftColumn(1), leftChild(2), rightColumn(3)]
+      blocks.blocks.push(leftColumn, leftChild, rightColumn);
+
+      // Insert a new column at the right column's index (3)
+      const newColumn = createMockBlock('col-new', 'column');
+
+      blocks.insert(3, newColumn);
+
+      // New column must mount at the column_list level, immediately before the
+      // right column — NOT inside the left column's nested container.
+      expect(newColumn.holder.parentElement).toBe(listContainer);
+      expect(newColumn.holder.nextElementSibling).toBe(rightColumn.holder);
+      expect(leftColContainer.contains(newColumn.holder)).toBe(false);
+    });
+
     it('should place new top-level block at workingArea root when previous block is nested inside a callout', () => {
       const blocks = createBlocks();
 

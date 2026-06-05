@@ -538,6 +538,95 @@ test.describe('Columns tool', () => {
     expect(seeded?.parent).toBe('c1');
   });
 
+  // Regression (reported via screen recording): create columns by dragging a
+  // root block beside another (handleColumnDrop -> wrapInNewColumnList), THEN
+  // drag that block back OUT to root. The block leaves, emptying its column. The
+  // column was created with noSeed:true (the wrap fills it explicitly), and that
+  // flag used to persist forever — so the later emptying refused to re-seed,
+  // leaving a dead, ZERO-HEIGHT, uninteractable column. noSeed must be a one-shot
+  // creation hint: once spent, an emptied column re-seeds an interactive empty
+  // paragraph, exactly like a column that was never wrapped.
+  test('a column created by drag-beside then emptied by a drag-out re-seeds an interactive paragraph', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'para', type: 'paragraph', data: { text: 'Intro keeper' } },
+        { id: 'mid', type: 'paragraph', data: { text: 'Middle block' } },
+        { id: 'hdr', type: 'paragraph', data: { text: 'Header Levels' } },
+      ],
+    });
+
+    const handle = page.locator(SETTINGS_BUTTON);
+
+    // Drag "Header Levels" onto the right edge of "Intro keeper" -> 2 columns.
+    await page.getByTestId('block-wrapper').filter({ hasText: 'Header Levels' }).hover();
+    await expect(handle).toBeVisible();
+    await performSideDrop(
+      page,
+      handle,
+      page.getByTestId('block-wrapper').filter({ hasText: 'Intro keeper' }),
+      'right'
+    );
+
+    await expect(page.locator('[data-blok-column]')).toHaveCount(2);
+
+    // Drag "Header Levels" back OUT — drop it below "Middle block" at root.
+    await page.getByTestId('block-wrapper').filter({ hasText: 'Header Levels' }).last().hover();
+    await expect(handle).toBeVisible();
+    const sourceBox = await handle.boundingBox();
+    const midContent = await page.getByTestId('block-wrapper').filter({ hasText: 'Middle block' })
+      .locator('[data-blok-element-content]').first().boundingBox();
+
+    if (!sourceBox || !midContent) {
+      throw new Error('missing bounding box for drag-out');
+    }
+
+    await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(midContent.x + midContent.width / 2, midContent.y + midContent.height - 3, { steps: 15 });
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') === 'true',
+      { timeout: 2000 }
+    );
+    await page.mouse.up();
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') !== 'true',
+      { timeout: 2000 }
+    );
+
+    // Both columns survive, and the emptied one is NOT a zero-height dead box: it
+    // carries a freshly-seeded empty paragraph, so it has real height.
+    const columns = page.locator('[data-blok-column]');
+    await expect(columns).toHaveCount(2);
+
+    const heights = await columns.evaluateAll(els =>
+      els.map(el => Math.round(el.getBoundingClientRect().height))
+    );
+    expect(Math.min(...heights)).toBeGreaterThan(10);
+
+    // The emptied column is genuinely interactive: clicking it and typing lands
+    // text in a paragraph parented to that column.
+    const emptyCol = columns.filter({ hasNotText: 'Intro keeper' });
+    const emptyBox = await emptyCol.boundingBox();
+
+    if (!emptyBox) {
+      throw new Error('emptied column has no box');
+    }
+
+    await page.mouse.click(emptyBox.x + emptyBox.width / 2, emptyBox.y + emptyBox.height / 2);
+    await page.keyboard.type('Recovered');
+
+    const saved = await saveBlok(page);
+    const recovered = saved.blocks.find(
+      b => b.type === 'paragraph' && (b.data as { text?: string }).text === 'Recovered'
+    );
+    expect(recovered).toBeDefined();
+
+    const columnIds = saved.blocks.filter(b => b.type === 'column').map(b => b.id);
+    expect(recovered?.parent).toBeDefined();
+    expect(columnIds).toContain(recovered?.parent);
+  });
+
   test('dropping in the far-left editor margin beside existing columns prepends a new column', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     await createBlok(page, {

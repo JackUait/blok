@@ -180,6 +180,34 @@ describe('Column tool', () => {
     expect(insertInsideParent).not.toHaveBeenCalled();
   });
 
+  it('treats noSeed as a one-shot creation hint: re-seeds when emptied after the first render', () => {
+    // noSeed suppresses the seed ONLY for the initial mount (the wrap fills the
+    // column explicitly right after). It must NOT persist: once the column has
+    // rendered once, a later emptying (e.g. dragging its sole block out, which
+    // re-fires rendered()) has to re-seed an empty paragraph so the column never
+    // becomes a dead, zero-height, uninteractable box.
+    const insertInsideParent = vi.fn().mockReturnValue({ id: 'p-1', holder: document.createElement('div') });
+    const api = createMockAPI({
+      blocks: {
+        getChildren: vi.fn().mockReturnValue([]),
+        getBlockIndex: vi.fn().mockReturnValue(3),
+        insertInsideParent,
+      },
+      caret: { setToBlock: vi.fn() },
+    } as unknown as Partial<API>);
+
+    const column = new Column(createColumnOptions({ noSeed: true }, api));
+    column.render();
+
+    // First render: noSeed suppresses the seed (the wrap is about to fill it).
+    column.rendered();
+    expect(insertInsideParent).not.toHaveBeenCalled();
+
+    // Second render after being emptied: noSeed is spent, so the column re-seeds.
+    column.rendered();
+    expect(insertInsideParent).toHaveBeenCalledWith('col-1', 4);
+  });
+
   it('never emits noSeed from save()', () => {
     const column = new Column(createColumnOptions({ noSeed: true }));
     column.render();

@@ -61,9 +61,18 @@ export class Column implements BlockTool {
     // freely so the resizer has no min-width restriction.
     this.block.holder.style.minWidth = '0';
 
+    // noSeed is a one-shot creation hint: it suppresses the seed only for this
+    // first render, because the caller (a column-list wrap / add-column) fills
+    // the column explicitly right afterwards. Consume it now so a LATER emptying
+    // — dragging the column's sole block out re-fires rendered() — re-seeds an
+    // empty paragraph instead of leaving a dead, zero-height, uninteractable box.
+    const suppressSeed = this._data.noSeed === true;
+
+    this._data.noSeed = false;
+
     const children = this.api.blocks.getChildren(this.blockId);
 
-    if (children.length === 0 && !this._data.noSeed) {
+    if (children.length === 0 && !suppressSeed) {
       this.seedParagraph();
 
       return;

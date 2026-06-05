@@ -1022,13 +1022,17 @@ export class Caret extends Module {
     }
 
     // Climb to the column wrapper: the ancestor whose parent IS the container.
-    let columnId = currentBlock.parentId;
-    let column = getBlockById(columnId);
+    const climbToColumn = (blockId: string): Block | undefined => {
+      const candidate = getBlockById(blockId);
 
-    while (column !== undefined && column.parentId !== null && column.parentId !== containerId) {
-      columnId = column.parentId;
-      column = getBlockById(columnId);
-    }
+      if (candidate === undefined || candidate.parentId === null || candidate.parentId === containerId) {
+        return candidate;
+      }
+
+      return climbToColumn(candidate.parentId);
+    };
+
+    const column = climbToColumn(currentBlock.parentId);
 
     // Genuine two-level nest only. A single-level nest (table cell) has
     // column.parentId !== containerId here, so it is rejected and keeps exiting.
@@ -1037,7 +1041,7 @@ export class Caret extends Module {
     }
 
     const columns = this.Blok.BlockManager.blocks.filter(block => block.parentId === containerId);
-    const ownIndex = columns.findIndex(candidate => candidate.id === columnId);
+    const ownIndex = columns.findIndex(candidate => candidate.id === column.id);
     const sibling = columns[direction === 'next' ? ownIndex + 1 : ownIndex - 1];
 
     if (sibling === undefined) {

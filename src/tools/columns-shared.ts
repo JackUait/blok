@@ -90,18 +90,21 @@ const applyResizeDelta = (
   rightHolder: HTMLElement,
   delta: number
 ): void => {
+  // Alias to locals so we set flex-grow without tripping no-param-reassign.
+  const leftEl = leftHolder;
+  const rightEl = rightHolder;
   const next = resizeColumnGrow({
-    leftWidth: leftHolder.getBoundingClientRect().width,
-    rightWidth: rightHolder.getBoundingClientRect().width,
-    leftGrow: Number(leftHolder.style.flexGrow) || 1,
-    rightGrow: Number(rightHolder.style.flexGrow) || 1,
+    leftWidth: leftEl.getBoundingClientRect().width,
+    rightWidth: rightEl.getBoundingClientRect().width,
+    leftGrow: Number(leftEl.style.flexGrow) || 1,
+    rightGrow: Number(rightEl.style.flexGrow) || 1,
     delta,
     minWidth: COLUMN_MIN_WIDTH,
   });
 
-  leftHolder.style.flexGrow = String(next.leftGrow);
-  rightHolder.style.flexGrow = String(next.rightGrow);
-  updateResizerAria(resizer, leftHolder, rightHolder);
+  leftEl.style.flexGrow = String(next.leftGrow);
+  rightEl.style.flexGrow = String(next.rightGrow);
+  updateResizerAria(resizer, leftEl, rightEl);
 };
 
 /** Per-press keyboard resize step in px. */

@@ -285,8 +285,11 @@ describe('column resizer keyboard resize + aria', () => {
   // jsdom returns 0 for getBoundingClientRect; stub equal widths so the resize
   // math (width-fraction based) has a non-degenerate pair to redistribute.
   const stubWidth = (el: HTMLElement, width: number): void => {
-    el.getBoundingClientRect = () =>
-      ({ width, height: 10, top: 0, left: 0, right: width, bottom: 10, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect;
+    Object.defineProperty(el, 'getBoundingClientRect', {
+      configurable: true,
+      value: () =>
+        ({ width, height: 10, top: 0, left: 0, right: width, bottom: 10, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect,
+    });
   };
 
   const build = (): { resizer: HTMLElement; left: HTMLElement; right: HTMLElement } => {

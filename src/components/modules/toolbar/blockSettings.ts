@@ -5,7 +5,8 @@ import { BlockAPI } from '../../block/api';
 import { Dom as $ } from '../../dom';
 import { BlockSettingsClosed, BlockSettingsOpened, BlokMobileLayoutToggled } from '../../events';
 import { Flipper } from '../../flipper';
-import { IconReplace, IconTrash } from '../../icons';
+import { IconColumns, IconReplace, IconTrash } from '../../icons';
+import { wrapBlocksInColumns } from '../../../tools/column-drop';
 import { SelectionUtils } from '../../selection/index';
 import type { BlockToolAdapter } from '../../tools/block';
 import { isMobileScreen, keyCodes } from '../../utils';
@@ -479,6 +480,39 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     if (!hasMultipleBlocksSelected) {
       items.push(...commonTunes);
     } else {
+      items.push({
+        icon: IconColumns,
+        title: this.Blok.I18n.t('tools.columns.turnInto'),
+        name: 'turn-into-columns',
+        closeOnActivate: true,
+        onActivate: () => {
+          const { BlockSelection, Caret, Toolbar, BlockManager } = this.Blok;
+          const api = this.Blok.API.methods;
+          const ids = BlockSelection.selectedBlocks.map(selected => selected.id);
+
+          const listId = wrapBlocksInColumns(api, ids);
+
+          if (listId === null) {
+            Toolbar.close();
+
+            return;
+          }
+
+          const firstColumn = api.blocks.getChildren(listId)[0];
+          const firstChild = firstColumn !== undefined
+            ? api.blocks.getChildren(firstColumn.id)[0]
+            : undefined;
+          const block = firstChild !== undefined
+            ? BlockManager.getBlockById(firstChild.id)
+            : undefined;
+
+          if (block !== undefined) {
+            Caret.setToBlock(block, Caret.positions.START);
+          }
+
+          Toolbar.close();
+        },
+      });
       items.push({
         icon: IconTrash,
         title: this.Blok.I18n.t('blockSettings.delete'),

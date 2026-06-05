@@ -86,7 +86,7 @@ export class ColumnList implements BlockTool {
     }
 
     mountChildBlocks(this.container, children);
-    buildColumnResizers(this.container, children.map(child => child.holder), this.readOnly);
+    buildColumnResizers(this.container, children.map(child => child.holder), this.readOnly, this.api, this.blockId);
   }
 
   private seedColumns(): void {
@@ -126,7 +126,7 @@ export class ColumnList implements BlockTool {
       return column;
     });
 
-    buildColumnResizers(container, columns.map(column => column.holder), this.readOnly);
+    buildColumnResizers(container, columns.map(column => column.holder), this.readOnly, this.api, this.blockId);
   }
 
   public save(): ColumnListData {

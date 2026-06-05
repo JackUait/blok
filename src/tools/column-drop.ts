@@ -20,7 +20,7 @@ const rebuildColumnResizers = (api: API, columnListId: string): void => {
   const container = holders[0]?.closest(`[${COLUMNS_ATTR}]`);
 
   if (container instanceof HTMLElement) {
-    buildColumnResizers(container, holders, api.readOnly.isEnabled);
+    buildColumnResizers(container, holders, api.readOnly.isEnabled, api, columnListId);
   }
 };
 

@@ -4,7 +4,9 @@ import {
   resizeColumnGrow,
   resetColumnsToEvenWidth,
   playColumnEnterAnimation,
+  buildColumnResizers,
   COLUMN_ENTER_ATTR,
+  COLUMN_RESIZER_ATTR,
 } from '../../../src/tools/columns-shared';
 import type { API } from '../../../types';
 
@@ -276,5 +278,42 @@ describe('resetColumnsToEvenWidth', () => {
     const api = { blocks: { getChildren } } as unknown as API;
 
     expect(() => resetColumnsToEvenWidth(api, 'cl')).not.toThrow();
+  });
+});
+
+describe('column resizer dblclick equalizes widths', () => {
+  const makeHolder = (grow: string): HTMLElement => {
+    const el = document.createElement('div');
+
+    el.style.flexGrow = grow;
+
+    return el;
+  };
+
+  it('double-clicking a resizer resets all sibling columns to even width', () => {
+    const left = makeHolder('3');
+    const right = makeHolder('1');
+    const container = document.createElement('div');
+
+    container.append(left, right);
+
+    const columns = [left, right].map((holder, i) => ({ id: `c${i}`, holder }));
+    const getChildren = vi.fn().mockReturnValue(columns);
+    const i18n = { t: vi.fn().mockReturnValue('Resize columns') };
+    const api = { blocks: { getChildren }, i18n } as unknown as API;
+
+    buildColumnResizers(container, [left, right], false, api, 'cl-1');
+
+    const resizer = container.querySelector(`[${COLUMN_RESIZER_ATTR}]`);
+
+    if (!(resizer instanceof HTMLElement)) {
+      throw new Error('resizer not built');
+    }
+
+    resizer.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+    expect(getChildren).toHaveBeenCalledWith('cl-1');
+    expect(left.style.flexGrow).toBe('1');
+    expect(right.style.flexGrow).toBe('1');
   });
 });

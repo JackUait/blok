@@ -126,7 +126,12 @@ const startColumnResize = (
   resizer.addEventListener('pointerup', onUp);
 };
 
-const createColumnResizer = (leftHolder: HTMLElement, rightHolder: HTMLElement): HTMLElement => {
+const createColumnResizer = (
+  leftHolder: HTMLElement,
+  rightHolder: HTMLElement,
+  api: API,
+  columnListId: string
+): HTMLElement => {
   const resizer = document.createElement('div');
 
   resizer.setAttribute(COLUMN_RESIZER_ATTR, '');
@@ -136,6 +141,11 @@ const createColumnResizer = (leftHolder: HTMLElement, rightHolder: HTMLElement):
 
   resizer.addEventListener('pointerdown', event => {
     startColumnResize(event, resizer, leftHolder, rightHolder);
+  });
+
+  // Double-click equalizes every column in the list, à la Notion.
+  resizer.addEventListener('dblclick', () => {
+    resetColumnsToEvenWidth(api, columnListId);
   });
 
   return resizer;
@@ -155,7 +165,9 @@ const createColumnResizer = (leftHolder: HTMLElement, rightHolder: HTMLElement):
 export const buildColumnResizers = (
   container: HTMLElement,
   holders: HTMLElement[],
-  readOnly: boolean
+  readOnly: boolean,
+  api: API,
+  columnListId: string
 ): void => {
   if (readOnly) {
     return;
@@ -167,7 +179,7 @@ export const buildColumnResizers = (
 
   holders.slice(1).forEach((rightHolder, index) => {
     const leftHolder = holders[index];
-    const resizer = createColumnResizer(leftHolder, rightHolder);
+    const resizer = createColumnResizer(leftHolder, rightHolder, api, columnListId);
 
     container.insertBefore(resizer, rightHolder);
   });

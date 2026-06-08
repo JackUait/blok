@@ -563,6 +563,31 @@ describe('tools module', () => {
       expect((slot as unknown as { constructable: typeof CustomSlot }).constructable.marker).toBe('custom');
     });
 
+    it('explicit entry wins when registered BEFORE the group (clobber guard)', async () => {
+      class CustomSlot {
+        public static marker = 'custom-before';
+
+        public render(): HTMLElement {
+          return document.createElement('div');
+        }
+      }
+
+      const module = createModule({
+        tools: {
+          // explicit FIRST, group SECOND — only the in-`out` guard protects this order
+          slot: CustomSlot as unknown as ToolConstructable,
+          group: Group as unknown as ToolConstructable,
+        },
+      });
+
+      await module.prepare();
+
+      const slot = module.blockTools.get('slot');
+
+      expect(slot).toBeDefined();
+      expect((slot as unknown as { constructable: typeof CustomSlot }).constructable.marker).toBe('custom-before');
+    });
+
     it('passes non-group tools through untouched', async () => {
       const module = createModule({
         tools: {

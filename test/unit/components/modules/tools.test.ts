@@ -5,7 +5,7 @@ import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
 import type { ModuleConfig } from '../../../../src/types-internal/module-config';
 import type { BlokConfig } from '../../../../types';
-import type { ToolConstructable } from '../../../../types/tools';
+import type { ToolConstructable, ToolSettings } from '../../../../types/tools';
 import type { BlokEventMap } from '../../../../src/components/events';
 
 /**
@@ -598,6 +598,29 @@ describe('tools module', () => {
       await module.prepare();
 
       expect(module.blockTools.has('slot')).toBe(true);
+    });
+
+    it('forwards group settings to each provided sub-tool', async () => {
+      const module = createModule({
+        tools: {
+          group: { class: Group, shortcut: 'CMD+SHIFT+X' } as unknown as ToolSettings,
+        },
+      });
+
+      await module.prepare();
+
+      const row = module.blockTools.get('row');
+      const slot = module.blockTools.get('slot');
+
+      // Both sub-tools must be registered (expansion ran).
+      expect(row).toBeDefined();
+      expect(slot).toBeDefined();
+
+      // `shortcut` is a public getter on BaseToolAdapter; it returns undefined when
+      // neither the tool class nor the per-tool settings provide one.  If settings
+      // forwarding works, both adapters must expose the group's shortcut value.
+      expect(row!.shortcut).toBe('CMD+SHIFT+X');
+      expect(slot!.shortcut).toBe('CMD+SHIFT+X');
     });
   });
 

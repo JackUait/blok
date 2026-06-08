@@ -319,18 +319,19 @@ export class Tools extends Module {
       }
 
       const groupSettings: Record<string, unknown> = isObject(entry)
-        ? Object.fromEntries(Object.entries(entry).filter(([key]) => key !== 'class'))
+        ? Object.fromEntries(
+            // never forward the class ref or the internal-tool flag to sub-tools
+            Object.entries(entry).filter(([key]) => key !== 'class' && key !== 'isInternal')
+          )
         : {};
 
       const hasGroupSettings = Object.keys(groupSettings).length > 0;
 
-      Object.keys(provides).forEach(blockType => {
+      Object.entries(provides).forEach(([blockType, providedClass]) => {
         // Never clobber an entry already present — explicit registration wins.
         if (blockType in out) {
           return;
         }
-
-        const providedClass = provides[blockType];
 
         out[blockType] = hasGroupSettings ? { class: providedClass, ...groupSettings } : providedClass;
       });

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.14.1](https://github.com/JackUait/blok/compare/v0.14.0...v0.14.1) (2026-06-08)
+
+### Features
+
+- **Tools** — Register the Columns tool with a single `Columns` group key. Tool-group "provides" manifests expand into their underlying block tools during `prepare()`, so consumers add one key instead of wiring each block.
+
+### Bug Fixes
+
+- **Tools** — Export `Columns` from public types for single-key registration; keep `defaultBlockTools` settings-only so the group key forwards settings without re-registering.
+
 ## [0.14.0](https://github.com/JackUait/blok/compare/v0.13.2...v0.14.0) (2026-06-05)
 
 ### Features

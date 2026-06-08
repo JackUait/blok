@@ -622,6 +622,23 @@ describe('tools module', () => {
       expect(row!.shortcut).toBe('CMD+SHIFT+X');
       expect(slot!.shortcut).toBe('CMD+SHIFT+X');
     });
+
+    it('registers column_list and column from a single columns: Columns entry', async () => {
+      const { Columns } = await import('../../../../src/tools/columns');
+
+      const module = createModule({
+        tools: {
+          columns: Columns as unknown as ToolConstructable,
+        },
+      });
+
+      await module.prepare();
+
+      expect(module.blockTools.has('column_list')).toBe(true);
+      expect(module.blockTools.has('column')).toBe(true);
+      expect(module.blockTools.has('columns')).toBe(false);
+    });
+
   });
 
   describe('flat config normalization', () => {

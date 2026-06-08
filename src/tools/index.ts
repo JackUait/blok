@@ -19,8 +19,6 @@
  * });
  */
 
-import { Columns } from './columns';
-
 // Block tools
 export { Paragraph } from './paragraph';
 export { Header } from './header';
@@ -63,7 +61,8 @@ export const defaultBlockTools = {
   quote: {},
   code: { inlineToolbar: false },
   image: {},
-  columns: Columns,
+  column_list: {},
+  column: {},
 } as const;
 
 export const defaultInlineTools = {

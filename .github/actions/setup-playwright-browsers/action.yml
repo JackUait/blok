@@ -1,0 +1,59 @@
+name: "Setup Playwright Browsers"
+description: "Version-keyed cache + install of Playwright browsers. One source of truth for browser set, cache key, and install command."
+
+inputs:
+  browsers:
+    description: "Space-separated browser list (e.g. 'chromium' or 'chromium firefox webkit'). Only install what the job runs — installing extras triggers slow CDN-throttled downloads."
+    required: false
+    default: "chromium firefox webkit"
+  download:
+    description: "true = download + cache browsers on miss (use in install/single jobs). false = restore from an already-populated cache and install OS deps only (use in test-only jobs)."
+    required: false
+    default: "true"
+  cache-key-prefix:
+    description: "Cache key prefix. Use a distinct prefix per browser set so a chromium-only cache never satisfies a job expecting all browsers."
+    required: false
+    default: "playwright"
+
+outputs:
+  cache-hit:
+    description: "Whether the browser cache was hit."
+    value: ${{ steps.cache.outputs.cache-hit || steps.cache-restore.outputs.cache-hit }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Get Playwright version
+      id: pw
+      shell: bash
+      run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> $GITHUB_OUTPUT
+
+    - name: Cache Playwright Browsers
+      if: inputs.download == 'true'
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+    - name: Restore Playwright Browsers
+      if: inputs.download != 'true'
+      id: cache-restore
+      uses: actions/cache/restore@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-${{ steps.pw.outputs.version }}
+        fail-on-cache-miss: true
+
+    # Cache miss: download the browser binaries (+ OS deps) for exactly the requested set.
+    - name: Install Playwright Browsers
+      if: inputs.download == 'true' && steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: npx playwright install --with-deps ${{ inputs.browsers }}
+
+    # Browser binaries are cached in ~/.cache/ms-playwright, but apt OS deps are not —
+    # so on a cache hit (and on every restore-only test job) we still install OS deps.
+    - name: Install Browser OS Dependencies
+      if: (inputs.download == 'true' && steps.cache.outputs.cache-hit == 'true') || inputs.download != 'true'
+      shell: bash
+      run: npx playwright install-deps ${{ inputs.browsers }}

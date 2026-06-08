@@ -105,6 +105,7 @@ jobs:
   storybook-tests:
     name: Storybook Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -112,22 +113,13 @@ jobs:
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
 
-      - name: Cache Playwright Browsers
-        id: playwright-cache
-        uses: actions/cache@v4
+      # Storybook tests only run in chromium (see vitest.config.ts). Installing all
+      # browsers triggered ~2h CDN-throttled downloads that never finished.
+      - name: Setup Playwright Browsers
+        uses: ./.github/actions/setup-playwright-browsers
         with:
-          path: ~/.cache/ms-playwright
-          key: playwright-browsers-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            playwright-browsers-
-
-      - name: Install Playwright Browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps
-
-      - name: Install Playwright Browser Dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps
+          browsers: chromium
+          cache-key-prefix: playwright-storybook
 
       - name: Run Storybook Tests
         run: yarn storybook:test

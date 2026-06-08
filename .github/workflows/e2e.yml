@@ -21,20 +21,10 @@ jobs:
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
 
-      - name: Get Playwright version
-        id: pw
-        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> $GITHUB_OUTPUT
-
-      - name: Cache Playwright Browsers
-        id: playwright-cache
-        uses: actions/cache@v4
+      - name: Setup Playwright Browsers
+        uses: ./.github/actions/setup-playwright-browsers
         with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
-
-      - name: Install Playwright Browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install chromium firefox webkit --with-deps
+          browsers: chromium firefox webkit
 
   e2e-tests:
     name: E2E (${{ matrix.project }}${{ matrix.shard && format(' {0}', matrix.shard) || '' }})
@@ -92,19 +82,11 @@ jobs:
       - name: Build React Vendor Files
         run: node scripts/build-react-vendor.mjs
 
-      - name: Get Playwright version
-        id: pw
-        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> $GITHUB_OUTPUT
-
-      - name: Restore Playwright Browsers from Cache
-        uses: actions/cache/restore@v4
+      - name: Restore Playwright Browsers
+        uses: ./.github/actions/setup-playwright-browsers
         with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
-          fail-on-cache-miss: true
-
-      - name: Install Browser Dependencies
-        run: npx playwright install-deps ${{ matrix.browser }}
+          browsers: ${{ matrix.browser }}
+          download: 'false'
 
       - name: Run E2E Tests
         run: yarn playwright test --project=${{ matrix.project }} --shard=${{ matrix.shard }}

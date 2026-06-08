@@ -148,7 +148,9 @@ export class Tools extends Module {
      */
     const userTools = this.config.tools ?? {};
 
-    this.config.tools = deepMerge({}, this.internalTools, userTools);
+    this.config.tools = this.expandToolGroups(
+      deepMerge({}, this.internalTools, userTools)
+    );
 
     this.validateTools();
 
@@ -282,6 +284,60 @@ export class Tools extends Module {
         isInternal: true,
       },
     };
+  }
+
+  /**
+   * Expand any registered tool "group" into the real block tools it provides.
+   *
+   * A tool class may expose a static `provides` map of `{ blockType: ToolClass }`.
+   * Registering such a class under any key (e.g. `columns: Columns`) registers
+   * the provided block tools (`column_list`, `column`) instead, and drops the
+   * group handle key — no block ever has the handle's type. Settings on the
+   * group entry forward to each provided sub-tool.
+   *
+   * Explicit direct entries always win: the group never clobbers a key already
+   * in the output, and a later explicit pass-through overwrites a group-provided
+   * entry — so order does not matter.
+   */
+  private expandToolGroups(
+    tools: Record<string, ToolConstructable | ToolSettings>
+  ): Record<string, ToolConstructable | ToolSettings> {
+    const out: Record<string, ToolConstructable | ToolSettings> = {};
+
+    for (const name in tools) {
+      if (!Object.prototype.hasOwnProperty.call(tools, name)) {
+        continue;
+      }
+
+      const entry = tools[name];
+      const toolClass = isObject(entry) ? (entry as ToolSettings).class : entry;
+      const provides = (toolClass as { provides?: Record<string, ToolConstructable> } | undefined)?.provides;
+
+      if (!provides) {
+        out[name] = entry;
+        continue;
+      }
+
+      const groupSettings: Record<string, unknown> = isObject(entry)
+        ? Object.fromEntries(Object.entries(entry).filter(([key]) => key !== 'class'))
+        : {};
+
+      const hasGroupSettings = Object.keys(groupSettings).length > 0;
+
+      Object.keys(provides).forEach(blockType => {
+        // Never clobber an entry already present — explicit registration wins.
+        if (blockType in out) {
+          return;
+        }
+
+        const providedClass = provides[blockType];
+
+        out[blockType] = hasGroupSettings ? { class: providedClass, ...groupSettings } : providedClass;
+      });
+      // The group handle key (`name`) is intentionally dropped: not a block type.
+    }
+
+    return out;
   }
 
   /**

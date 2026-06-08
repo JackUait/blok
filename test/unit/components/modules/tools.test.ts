@@ -504,6 +504,78 @@ describe('tools module', () => {
     });
   });
 
+  describe('tool group expansion (provides)', () => {
+    class Slot {
+      public render(): HTMLElement {
+        return document.createElement('div');
+      }
+    }
+
+    class Row {
+      public render(): HTMLElement {
+        return document.createElement('div');
+      }
+    }
+
+    class Group {
+      public static get provides(): Record<string, unknown> {
+        return { row: Row, slot: Slot };
+      }
+    }
+
+    it('expands a provides group into its block tools and drops the handle', async () => {
+      const module = createModule({
+        tools: {
+          group: Group as unknown as ToolConstructable,
+        },
+      });
+
+      await module.prepare();
+
+      expect(module.blockTools.has('row')).toBe(true);
+      expect(module.blockTools.has('slot')).toBe(true);
+      expect(module.blockTools.has('group')).toBe(false);
+    });
+
+    it('lets an explicit block-tool entry override a group-provided one', async () => {
+      class CustomSlot {
+        public static marker = 'custom';
+
+        public render(): HTMLElement {
+          return document.createElement('div');
+        }
+      }
+
+      const module = createModule({
+        tools: {
+          group: Group as unknown as ToolConstructable,
+          slot: CustomSlot as unknown as ToolConstructable,
+        },
+      });
+
+      await module.prepare();
+
+      const slot = module.blockTools.get('slot');
+
+      expect(slot).toBeDefined();
+      // The explicit CustomSlot wins over the group's Slot.
+      // Access the underlying constructable via cast (no public .class getter on the adapter).
+      expect((slot as unknown as { constructable: typeof CustomSlot }).constructable.marker).toBe('custom');
+    });
+
+    it('passes non-group tools through untouched', async () => {
+      const module = createModule({
+        tools: {
+          slot: Slot as unknown as ToolConstructable,
+        },
+      });
+
+      await module.prepare();
+
+      expect(module.blockTools.has('slot')).toBe(true);
+    });
+  });
+
   describe('flat config normalization', () => {
     it('extracts tool-specific options from flat config into nested config', async () => {
       class HeaderTool {

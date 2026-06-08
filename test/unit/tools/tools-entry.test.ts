@@ -12,6 +12,12 @@ describe('tools entry exports', () => {
     });
   });
 
+  describe('Columns group export', () => {
+    it('exports Columns', () => {
+      expect(toolsEntry).toHaveProperty('Columns');
+    });
+  });
+
   describe('block tune exports', () => {
     it('does not export Delete (internal-only tune)', () => {
       expect(toolsEntry).not.toHaveProperty('Delete');

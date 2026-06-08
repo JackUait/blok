@@ -295,9 +295,8 @@ export class Tools extends Module {
    * group handle key — no block ever has the handle's type. Settings on the
    * group entry forward to each provided sub-tool.
    *
-   * Explicit direct entries always win: the group never clobbers a key already
-   * in the output, and a later explicit pass-through overwrites a group-provided
-   * entry — so order does not matter.
+   * Explicit entries always win over group-provided entries regardless of order.
+   * If two groups provide the same block type, the first-registered group wins.
    */
   private expandToolGroups(
     tools: Record<string, ToolConstructable | ToolSettings>

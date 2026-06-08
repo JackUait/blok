@@ -34,6 +34,13 @@ export const Image: BlockToolConstructable;
 export const Code: BlockToolConstructable;
 export const ColumnList: ColumnListConstructable;
 export const Column: ColumnConstructable;
+/**
+ * Columns group manifest: a single registration handle that expands to the
+ * `column_list` and `column` block tools. Register as `tools: { columns: Columns }`.
+ */
+export const Columns: BlockToolConstructable & {
+  readonly provides: { readonly [blockType: string]: BlockToolConstructable };
+};
 
 // Re-export data and config types for convenience
 export { HeaderData, HeaderConfig } from './tools/header';

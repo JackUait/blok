@@ -15,13 +15,6 @@ test.describe('Columns single-key registration', () => {
     // 1. Boot an editor registering ONLY paragraph + the single `columns` group key
     //    (never `column` / `column_list` directly). Inline tools fold into `tools`.
     const ready = await page.evaluate(async () => {
-      const tools = await import('/dist/tools.mjs?_v=1') as Record<string, { provides?: Record<string, unknown>; new(...args: unknown[]): unknown }>;
-      const Columns = tools['Columns'];
-
-      const holder = document.createElement('div');
-      holder.id = 'single-key-editor';
-      document.body.appendChild(holder);
-
       const win = window as unknown as {
         BlokOriginal: new (cfg: unknown) => {
           isReady: Promise<void>;
@@ -29,15 +22,20 @@ test.describe('Columns single-key registration', () => {
           save: () => Promise<unknown>;
         };
         BlokParagraph: unknown;
+        BlokColumns: new (...args: unknown[]) => unknown;
         defaultInlineTools: Record<string, unknown>;
       };
+
+      const holder = document.createElement('div');
+      holder.id = 'single-key-editor';
+      document.body.appendChild(holder);
 
       const editor = new win.BlokOriginal({
         holder: 'single-key-editor',
         tools: {
           paragraph: { class: win.BlokParagraph, inlineToolbar: true, config: { preserveBlank: true } },
           // SINGLE KEY — no `column` / `column_list` entries:
-          columns: { class: Columns as new (...args: unknown[]) => unknown },
+          columns: { class: win.BlokColumns },
           // Inline tools fold into the tools map (no separate inlineTools config key).
           ...win.defaultInlineTools,
         },

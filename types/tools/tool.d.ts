@@ -58,6 +58,18 @@ export interface BaseToolConstructable {
   titleKey?: string;
 
   /**
+   * Optional manifest declaring the block types this class supplies. A class
+   * with `provides` is a registration group/handle, not a renderable block:
+   * registering it under any key expands to the listed block tools, and the
+   * handle key itself is dropped (it is not a block type). Used to register a
+   * multi-block feature (e.g. columns -> column_list + column) under one key.
+   *
+   * Typed as BaseToolConstructable to avoid a circular import with
+   * BlockToolConstructable; the provided classes are block tools at runtime.
+   */
+  provides?: { [blockType: string]: BaseToolConstructable };
+
+  /**
    * Tool`s prepare method. Can be async
    * @param data
    */

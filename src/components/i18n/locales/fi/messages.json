@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Esikatselua ei voitu ladata",
   "tools.embed.empty": "Upota liittämällä linkki",
   "tools.embed.openOriginal": "Avaa alkuperäinen",
-  "tools.embed.captionPlaceholder": "Kirjoita kuvateksti…"
+  "tools.embed.captionPlaceholder": "Kirjoita kuvateksti…",
+  "tools.linkPaste.plain": "Säilytä linkkinä",
+  "tools.linkPaste.bookmark": "Luo kirjanmerkki",
+  "tools.linkPaste.embed": "Upota",
+  "tools.linkPaste.mention": "Maininta"
 }

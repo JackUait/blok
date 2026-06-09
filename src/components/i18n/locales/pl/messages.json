@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Nie można załadować podglądu linku",
   "tools.embed.empty": "Wklej link, aby go osadzić",
   "tools.embed.openOriginal": "Otwórz oryginał",
-  "tools.embed.captionPlaceholder": "Wpisz podpis…"
+  "tools.embed.captionPlaceholder": "Wpisz podpis…",
+  "tools.linkPaste.plain": "Zachowaj jako link",
+  "tools.linkPaste.bookmark": "Utwórz zakładkę",
+  "tools.linkPaste.embed": "Utwórz osadzenie",
+  "tools.linkPaste.mention": "Wzmianka"
 }

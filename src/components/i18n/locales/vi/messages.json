@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Không thể tải bản xem trước liên kết",
   "tools.embed.empty": "Dán liên kết để nhúng",
   "tools.embed.openOriginal": "Mở bản gốc",
-  "tools.embed.captionPlaceholder": "Viết chú thích…"
+  "tools.embed.captionPlaceholder": "Viết chú thích…",
+  "tools.linkPaste.plain": "Giữ làm liên kết",
+  "tools.linkPaste.bookmark": "Tạo dấu trang",
+  "tools.linkPaste.embed": "Tạo nhúng",
+  "tools.linkPaste.mention": "Nhắc đến"
 }

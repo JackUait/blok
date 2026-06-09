@@ -334,5 +334,9 @@
   "tools.bookmark.error": "പ്രിവ്യൂ ലോഡ് ചെയ്യാനായില്ല",
   "tools.embed.empty": "എംബെഡ് ചെയ്യാൻ ലിങ്ക് ഒട്ടിക്കുക",
   "tools.embed.openOriginal": "ഒറിജിനൽ തുറക്കുക",
-  "tools.embed.captionPlaceholder": "അടിക്കുറിപ്പ് എഴുതുക…"
+  "tools.embed.captionPlaceholder": "അടിക്കുറിപ്പ് എഴുതുക…",
+  "tools.linkPaste.plain": "ലിങ്കായി നിലനിർത്തുക",
+  "tools.linkPaste.bookmark": "ബുക്ക്മാർക്ക് സൃഷ്ടിക്കുക",
+  "tools.linkPaste.embed": "എംബെഡ് സൃഷ്ടിക്കുക",
+  "tools.linkPaste.mention": "പരാമർശം"
 }

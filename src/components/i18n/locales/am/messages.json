@@ -334,5 +334,9 @@
   "tools.bookmark.error": "የአገናኝ ቅድመ-እይታ መጫን አልተቻለም",
   "tools.embed.empty": "ለማስገባት አገናኝ ይለጥፉ",
   "tools.embed.openOriginal": "ዋናውን ክፈት",
-  "tools.embed.captionPlaceholder": "መግለጫ ይጻፉ…"
+  "tools.embed.captionPlaceholder": "መግለጫ ይጻፉ…",
+  "tools.linkPaste.plain": "እንደ አገናኝ አቆይ",
+  "tools.linkPaste.bookmark": "ዕልባት ፍጠር",
+  "tools.linkPaste.embed": "ማስገቢያ ፍጠር",
+  "tools.linkPaste.mention": "ጥቀስ"
 }

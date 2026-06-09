@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Previzualizarea linkului nu a putut fi încărcată",
   "tools.embed.empty": "Lipiți un link pentru a-l încorpora",
   "tools.embed.openOriginal": "Deschide originalul",
-  "tools.embed.captionPlaceholder": "Scrieți o descriere…"
+  "tools.embed.captionPlaceholder": "Scrieți o descriere…",
+  "tools.linkPaste.plain": "Păstrează ca link",
+  "tools.linkPaste.bookmark": "Creează marcaj",
+  "tools.linkPaste.embed": "Creează încorporare",
+  "tools.linkPaste.mention": "Mențiune"
 }

@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Չհաջողվեց բեռնել նախադիտումը",
   "tools.embed.empty": "Տեղադրեք հղումը՝ ներդրման համար",
   "tools.embed.openOriginal": "Բացել բնօրինակը",
-  "tools.embed.captionPlaceholder": "Գրեք ենթագիր…"
+  "tools.embed.captionPlaceholder": "Գրեք ենթագիր…",
+  "tools.linkPaste.plain": "Թողնել որպես հղում",
+  "tools.linkPaste.bookmark": "Ստեղծել էջանիշ",
+  "tools.linkPaste.embed": "Ստեղծել ներդրում",
+  "tools.linkPaste.mention": "Հիշատակում"
 }

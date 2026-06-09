@@ -334,5 +334,9 @@
   "tools.bookmark.error": "לא ניתן לטעון תצוגה מקדימה",
   "tools.embed.empty": "הדביקו קישור להטמעה",
   "tools.embed.openOriginal": "פתח את המקור",
-  "tools.embed.captionPlaceholder": "כתוב כיתוב…"
+  "tools.embed.captionPlaceholder": "כתוב כיתוב…",
+  "tools.linkPaste.plain": "השאר כקישור",
+  "tools.linkPaste.bookmark": "צור סימנייה",
+  "tools.linkPaste.embed": "הטמע",
+  "tools.linkPaste.mention": "אזכור"
 }

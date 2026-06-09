@@ -334,5 +334,9 @@
   "tools.bookmark.error": "ບໍ່ສາມາດໂຫຼດຕົວຢ່າງໄດ້",
   "tools.embed.empty": "ວາງລິ້ງເພື່ອຝັງ",
   "tools.embed.openOriginal": "ເປີດຕົ້ນສະບັບ",
-  "tools.embed.captionPlaceholder": "ຂຽນຄຳບັນຍາຍ…"
+  "tools.embed.captionPlaceholder": "ຂຽນຄຳບັນຍາຍ…",
+  "tools.linkPaste.plain": "ຮັກສາໄວ້ເປັນລິ້ງ",
+  "tools.linkPaste.bookmark": "ສ້າງບຸກມາກ",
+  "tools.linkPaste.embed": "ສ້າງການຝັງ",
+  "tools.linkPaste.mention": "ກ່າວເຖິງ"
 }

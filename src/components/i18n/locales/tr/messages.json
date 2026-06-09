@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Bağlantı önizlemesi yüklenemedi",
   "tools.embed.empty": "Yerleştirmek için bağlantı yapıştırın",
   "tools.embed.openOriginal": "Orijinali aç",
-  "tools.embed.captionPlaceholder": "Altyazı yazın…"
+  "tools.embed.captionPlaceholder": "Altyazı yazın…",
+  "tools.linkPaste.plain": "Bağlantı olarak tut",
+  "tools.linkPaste.bookmark": "Yer işareti oluştur",
+  "tools.linkPaste.embed": "Yerleştirme oluştur",
+  "tools.linkPaste.mention": "Bahset"
 }

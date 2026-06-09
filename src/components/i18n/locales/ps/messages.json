@@ -334,5 +334,9 @@
   "tools.bookmark.error": "د لینک مخکتنه پورته نه شوه",
   "tools.embed.empty": "د ځای پرځای کولو لپاره یوه لینک پیست کړئ",
   "tools.embed.openOriginal": "اصلي پرانیستل",
-  "tools.embed.captionPlaceholder": "سرلیک ولیکئ…"
+  "tools.embed.captionPlaceholder": "سرلیک ولیکئ…",
+  "tools.linkPaste.plain": "د لینک په توګه وساتئ",
+  "tools.linkPaste.bookmark": "نښلونه جوړه کړئ",
+  "tools.linkPaste.embed": "ځای پرځای کول جوړ کړئ",
+  "tools.linkPaste.mention": "یادونه"
 }

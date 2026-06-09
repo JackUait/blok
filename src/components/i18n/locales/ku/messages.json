@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Pêşdîtin nehate barkirin",
   "tools.embed.empty": "Girêdanekê pê ve bike da ku bicî bikî",
   "tools.embed.openOriginal": "Ya resen veke",
-  "tools.embed.captionPlaceholder": "Sernavekê binivîse…"
+  "tools.embed.captionPlaceholder": "Sernavekê binivîse…",
+  "tools.linkPaste.plain": "Wek girêdan bihêle",
+  "tools.linkPaste.bookmark": "Şûnpelê çêbike",
+  "tools.linkPaste.embed": "Bicîkirinê çêbike",
+  "tools.linkPaste.mention": "Behs bike"
 }

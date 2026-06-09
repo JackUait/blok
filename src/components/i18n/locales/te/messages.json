@@ -334,5 +334,9 @@
   "tools.bookmark.error": "లింక్ ప్రివ్యూను లోడ్ చేయలేకపోయాం",
   "tools.embed.empty": "పొందుపరచడానికి లింక్‌ను అతికించండి",
   "tools.embed.openOriginal": "అసలును తెరువు",
-  "tools.embed.captionPlaceholder": "శీర్షికను వ్రాయండి…"
+  "tools.embed.captionPlaceholder": "శీర్షికను వ్రాయండి…",
+  "tools.linkPaste.plain": "లింక్‌గానే ఉంచు",
+  "tools.linkPaste.bookmark": "బుక్‌మార్క్ సృష్టించు",
+  "tools.linkPaste.embed": "ఎంబెడ్ సృష్టించు",
+  "tools.linkPaste.mention": "ప్రస్తావించు"
 }

@@ -334,5 +334,9 @@
   "tools.bookmark.error": "लिङ्क पूर्वावलोकन लोड गर्न सकिएन",
   "tools.embed.empty": "इम्बेड गर्न लिङ्क टाँस्नुहोस्",
   "tools.embed.openOriginal": "मूल खोल्नुहोस्",
-  "tools.embed.captionPlaceholder": "क्याप्शन लेख्नुहोस्…"
+  "tools.embed.captionPlaceholder": "क्याप्शन लेख्नुहोस्…",
+  "tools.linkPaste.plain": "लिङ्कको रूपमा राख्नुहोस्",
+  "tools.linkPaste.bookmark": "बुकमार्क बनाउनुहोस्",
+  "tools.linkPaste.embed": "इम्बेड बनाउनुहोस्",
+  "tools.linkPaste.mention": "उल्लेख"
 }

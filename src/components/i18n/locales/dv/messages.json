@@ -334,5 +334,9 @@
   "tools.bookmark.error": "ލިންކް ޕްރިވިއު ލޯޑެއް ނުކުރެވުނު",
   "tools.embed.empty": "އެމްބެޑްކުރުމަށް ލިންކެއް ޕޭސްޓްކުރައްވާ",
   "tools.embed.openOriginal": "އަސްލު ހުޅުވާ",
-  "tools.embed.captionPlaceholder": "ކެޕްޝަނެއް ލިޔުއްވާ…"
+  "tools.embed.captionPlaceholder": "ކެޕްޝަނެއް ލިޔުއްވާ…",
+  "tools.linkPaste.plain": "ލިންކެއް ގޮތުގައި ބަހައްޓާ",
+  "tools.linkPaste.bookmark": "ބުކްމާކެއް ހަދާ",
+  "tools.linkPaste.embed": "އެމްބެޑެއް ހަދާ",
+  "tools.linkPaste.mention": "ފާހަގަކުރޭ"
 }

@@ -334,5 +334,9 @@
   "tools.bookmark.error": "ئۇلانما ئالدىن كۆرۈشنى يۈكلىگىلى بولمىدى",
   "tools.embed.empty": "سىڭدۈرۈش ئۈچۈن ئۇلانما چاپلاڭ",
   "tools.embed.openOriginal": "ئەسلىنى ئېچىش",
-  "tools.embed.captionPlaceholder": "ئىزاھات يېزىڭ…"
+  "tools.embed.captionPlaceholder": "ئىزاھات يېزىڭ…",
+  "tools.linkPaste.plain": "ئۇلانما پېتى ساقلاش",
+  "tools.linkPaste.bookmark": "خەتكۈش قۇرۇش",
+  "tools.linkPaste.embed": "سىڭدۈرۈش قۇرۇش",
+  "tools.linkPaste.mention": "تىلغا ئېلىش"
 }

@@ -1,4 +1,4 @@
-import { IconGlobe, IconLink } from '../../../components/icons';
+import { IconBookmark, IconGlobe, IconLink } from '../../../components/icons';
 
 import type { PasteMenuActionType, PasteMenuOption } from './options';
 
@@ -31,11 +31,11 @@ interface PasteMenuItemPresentation {
 const presentationFor = (type: PasteMenuActionType): PasteMenuItemPresentation => {
   switch (type) {
     case 'plain':
-      return { labelKey: 'toolNames.link', icon: IconLink };
+      return { labelKey: 'tools.linkPaste.plain', icon: IconLink };
     case 'bookmark':
-      return { labelKey: 'toolNames.bookmark', icon: IconLink };
+      return { labelKey: 'tools.linkPaste.bookmark', icon: IconBookmark };
     case 'embed':
-      return { labelKey: 'toolNames.embed', icon: IconGlobe };
+      return { labelKey: 'tools.linkPaste.embed', icon: IconGlobe };
     case 'mention':
       return { labelKey: 'tools.linkPaste.mention', icon: IconLink };
   }

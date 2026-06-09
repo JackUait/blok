@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Impossibile caricare l'anteprima del link",
   "tools.embed.empty": "Incolla un link da incorporare",
   "tools.embed.openOriginal": "Apri originale",
-  "tools.embed.captionPlaceholder": "Scrivi una didascalia…"
+  "tools.embed.captionPlaceholder": "Scrivi una didascalia…",
+  "tools.linkPaste.plain": "Mantieni come link",
+  "tools.linkPaste.bookmark": "Crea segnalibro",
+  "tools.linkPaste.embed": "Crea incorporamento",
+  "tools.linkPaste.mention": "Menziona"
 }

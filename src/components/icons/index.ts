@@ -460,6 +460,13 @@ export const IconGlobe = `
 </svg>
 `;
 
+// Bookmark icon (ribbon — link bookmark card)
+export const IconBookmark = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M6.5 4.5h7a1 1 0 0 1 1 1v10l-4.5-2.75L5.5 15.5v-10a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Mail icon (email link type)
 export const IconMail = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">

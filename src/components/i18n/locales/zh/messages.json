@@ -334,5 +334,9 @@
   "tools.bookmark.error": "无法加载链接预览",
   "tools.embed.empty": "粘贴链接以嵌入",
   "tools.embed.openOriginal": "打开原文",
-  "tools.embed.captionPlaceholder": "添加说明…"
+  "tools.embed.captionPlaceholder": "添加说明…",
+  "tools.linkPaste.plain": "保留为链接",
+  "tools.linkPaste.bookmark": "创建书签",
+  "tools.linkPaste.embed": "创建嵌入",
+  "tools.linkPaste.mention": "提及"
 }

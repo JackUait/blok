@@ -334,5 +334,9 @@
   "tools.bookmark.error": "লিঙ্ক প্রিভিউ লোড করা যায়নি",
   "tools.embed.empty": "এম্বেড করতে একটি লিঙ্ক পেস্ট করুন",
   "tools.embed.openOriginal": "মূল উৎস খুলুন",
-  "tools.embed.captionPlaceholder": "ক্যাপশন লিখুন…"
+  "tools.embed.captionPlaceholder": "ক্যাপশন লিখুন…",
+  "tools.linkPaste.plain": "লিঙ্ক হিসেবে রাখুন",
+  "tools.linkPaste.bookmark": "বুকমার্ক তৈরি করুন",
+  "tools.linkPaste.embed": "এম্বেড তৈরি করুন",
+  "tools.linkPaste.mention": "উল্লেখ"
 }

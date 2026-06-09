@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Não foi possível carregar a pré-visualização do link",
   "tools.embed.empty": "Cole um link para incorporar",
   "tools.embed.openOriginal": "Abrir original",
-  "tools.embed.captionPlaceholder": "Escreva uma legenda…"
+  "tools.embed.captionPlaceholder": "Escreva uma legenda…",
+  "tools.linkPaste.plain": "Manter como link",
+  "tools.linkPaste.bookmark": "Criar marcador",
+  "tools.linkPaste.embed": "Criar incorporação",
+  "tools.linkPaste.mention": "Menção"
 }

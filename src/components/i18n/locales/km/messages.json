@@ -334,5 +334,9 @@
   "tools.bookmark.error": "មិនអាចផ្ទុកការមើលជាមុនបានទេ",
   "tools.embed.empty": "បិទភ្ជាប់តំណ ដើម្បីបង្កប់",
   "tools.embed.openOriginal": "បើកច្បាប់ដើម",
-  "tools.embed.captionPlaceholder": "សរសេរចំណងជើង…"
+  "tools.embed.captionPlaceholder": "សរសេរចំណងជើង…",
+  "tools.linkPaste.plain": "រក្សាជាតំណ",
+  "tools.linkPaste.bookmark": "បង្កើតចំណាំ",
+  "tools.linkPaste.embed": "បង្កើតការបង្កប់",
+  "tools.linkPaste.mention": "លើកឡើង"
 }

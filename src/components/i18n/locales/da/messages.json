@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Linkeksemplet kunne ikke indlæses",
   "tools.embed.empty": "Indsæt et link for at integrere",
   "tools.embed.openOriginal": "Åbn original",
-  "tools.embed.captionPlaceholder": "Skriv en billedtekst…"
+  "tools.embed.captionPlaceholder": "Skriv en billedtekst…",
+  "tools.linkPaste.plain": "Behold som link",
+  "tools.linkPaste.bookmark": "Opret bogmærke",
+  "tools.linkPaste.embed": "Opret integration",
+  "tools.linkPaste.mention": "Omtal"
 }

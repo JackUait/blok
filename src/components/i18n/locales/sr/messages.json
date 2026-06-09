@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Преглед везе није могуће учитати",
   "tools.embed.empty": "Налепите везу за уметање",
   "tools.embed.openOriginal": "Отвори оригинал",
-  "tools.embed.captionPlaceholder": "Упишите натпис…"
+  "tools.embed.captionPlaceholder": "Упишите натпис…",
+  "tools.linkPaste.plain": "Задржи као везу",
+  "tools.linkPaste.bookmark": "Направи обележивач",
+  "tools.linkPaste.embed": "Направи уметање",
+  "tools.linkPaste.mention": "Помињање"
 }

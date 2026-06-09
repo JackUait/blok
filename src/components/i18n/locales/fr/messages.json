@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Impossible de charger l’aperçu",
   "tools.embed.empty": "Collez un lien à intégrer",
   "tools.embed.openOriginal": "Ouvrir l’original",
-  "tools.embed.captionPlaceholder": "Ajoutez une légende…"
+  "tools.embed.captionPlaceholder": "Ajoutez une légende…",
+  "tools.linkPaste.plain": "Conserver comme lien",
+  "tools.linkPaste.bookmark": "Créer un signet",
+  "tools.linkPaste.embed": "Intégrer",
+  "tools.linkPaste.mention": "Mentionner"
 }

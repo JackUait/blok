@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Kunne ikke laste forhåndsvisning av lenke",
   "tools.embed.empty": "Lim inn en lenke for å bygge inn",
   "tools.embed.openOriginal": "Åpne original",
-  "tools.embed.captionPlaceholder": "Skriv en bildetekst…"
+  "tools.embed.captionPlaceholder": "Skriv en bildetekst…",
+  "tools.linkPaste.plain": "Behold som lenke",
+  "tools.linkPaste.bookmark": "Opprett bokmerke",
+  "tools.linkPaste.embed": "Opprett innbygging",
+  "tools.linkPaste.mention": "Omtale"
 }

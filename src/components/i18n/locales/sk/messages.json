@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Náhľad odkazu sa nepodarilo načítať",
   "tools.embed.empty": "Prilepte odkaz na vloženie",
   "tools.embed.openOriginal": "Otvoriť originál",
-  "tools.embed.captionPlaceholder": "Napíšte popis…"
+  "tools.embed.captionPlaceholder": "Napíšte popis…",
+  "tools.linkPaste.plain": "Ponechať ako odkaz",
+  "tools.linkPaste.bookmark": "Vytvoriť záložku",
+  "tools.linkPaste.embed": "Vytvoriť vloženie",
+  "tools.linkPaste.mention": "Zmienka"
 }

@@ -334,5 +334,9 @@
   "tools.bookmark.error": "ไม่สามารถโหลดตัวอย่างลิงก์ได้",
   "tools.embed.empty": "วางลิงก์เพื่อฝัง",
   "tools.embed.openOriginal": "เปิดต้นฉบับ",
-  "tools.embed.captionPlaceholder": "เขียนคำบรรยาย…"
+  "tools.embed.captionPlaceholder": "เขียนคำบรรยาย…",
+  "tools.linkPaste.plain": "เก็บเป็นลิงก์",
+  "tools.linkPaste.bookmark": "สร้างบุ๊กมาร์ก",
+  "tools.linkPaste.embed": "สร้างการฝัง",
+  "tools.linkPaste.mention": "กล่าวถึง"
 }

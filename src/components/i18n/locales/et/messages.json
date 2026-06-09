@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Eelvaadet ei õnnestunud laadida",
   "tools.embed.empty": "Manustamiseks kleebi link",
   "tools.embed.openOriginal": "Ava algallikas",
-  "tools.embed.captionPlaceholder": "Kirjuta pealdis…"
+  "tools.embed.captionPlaceholder": "Kirjuta pealdis…",
+  "tools.linkPaste.plain": "Jäta lingiks",
+  "tools.linkPaste.bookmark": "Loo järjehoidja",
+  "tools.linkPaste.embed": "Manusta",
+  "tools.linkPaste.mention": "Maini"
 }

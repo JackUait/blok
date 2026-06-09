@@ -334,5 +334,9 @@
   "tools.bookmark.error": "تعذّر تحميل معاينة الرابط",
   "tools.embed.empty": "الصق رابطًا للتضمين",
   "tools.embed.openOriginal": "فتح المصدر الأصلي",
-  "tools.embed.captionPlaceholder": "اكتب تعليقًا…"
+  "tools.embed.captionPlaceholder": "اكتب تعليقًا…",
+  "tools.linkPaste.plain": "إبقاء كرابط",
+  "tools.linkPaste.bookmark": "إنشاء إشارة مرجعية",
+  "tools.linkPaste.embed": "إنشاء تضمين",
+  "tools.linkPaste.mention": "إشارة"
 }

@@ -334,5 +334,9 @@
   "tools.bookmark.error": "لنڪ جو نمونو لوڊ نه ٿي سگهيو",
   "tools.embed.empty": "شامل ڪرڻ لاءِ لنڪ پيسٽ ڪريو",
   "tools.embed.openOriginal": "اصل کوليو",
-  "tools.embed.captionPlaceholder": "ڪيپشن لکو…"
+  "tools.embed.captionPlaceholder": "ڪيپشن لکو…",
+  "tools.linkPaste.plain": "لنڪ طور رکو",
+  "tools.linkPaste.bookmark": "بُڪ مارڪ ٺاهيو",
+  "tools.linkPaste.embed": "ايمبيڊ ٺاهيو",
+  "tools.linkPaste.mention": "ذڪر"
 }

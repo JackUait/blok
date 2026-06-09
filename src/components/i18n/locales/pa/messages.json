@@ -334,5 +334,9 @@
   "tools.bookmark.error": "ਲਿੰਕ ਝਲਕ ਲੋਡ ਨਹੀਂ ਹੋ ਸਕੀ",
   "tools.embed.empty": "ਏਮਬੈੱਡ ਕਰਨ ਲਈ ਲਿੰਕ ਪੇਸਟ ਕਰੋ",
   "tools.embed.openOriginal": "ਮੂਲ ਖੋਲ੍ਹੋ",
-  "tools.embed.captionPlaceholder": "ਕੈਪਸ਼ਨ ਲਿਖੋ…"
+  "tools.embed.captionPlaceholder": "ਕੈਪਸ਼ਨ ਲਿਖੋ…",
+  "tools.linkPaste.plain": "ਲਿੰਕ ਵਜੋਂ ਰੱਖੋ",
+  "tools.linkPaste.bookmark": "ਬੁੱਕਮਾਰਕ ਬਣਾਓ",
+  "tools.linkPaste.embed": "ਏਮਬੈੱਡ ਬਣਾਓ",
+  "tools.linkPaste.mention": "ਜ਼ਿਕਰ"
 }

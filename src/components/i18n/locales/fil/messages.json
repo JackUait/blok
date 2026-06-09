@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Hindi ma-load ang preview",
   "tools.embed.empty": "Mag-paste ng link para i-embed",
   "tools.embed.openOriginal": "Buksan ang orihinal",
-  "tools.embed.captionPlaceholder": "Magsulat ng caption…"
+  "tools.embed.captionPlaceholder": "Magsulat ng caption…",
+  "tools.linkPaste.plain": "Panatilihing link",
+  "tools.linkPaste.bookmark": "Gumawa ng bookmark",
+  "tools.linkPaste.embed": "I-embed",
+  "tools.linkPaste.mention": "Banggitin"
 }

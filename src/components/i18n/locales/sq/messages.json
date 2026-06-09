@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Pamja paraprake e lidhjes nuk u ngarkua dot",
   "tools.embed.empty": "Ngjit një lidhje për ta ngulitur",
   "tools.embed.openOriginal": "Hap origjinalin",
-  "tools.embed.captionPlaceholder": "Shkruani një titull…"
+  "tools.embed.captionPlaceholder": "Shkruani një titull…",
+  "tools.linkPaste.plain": "Mbaje si lidhje",
+  "tools.linkPaste.bookmark": "Krijo faqerojtës",
+  "tools.linkPaste.embed": "Krijo ngulitje",
+  "tools.linkPaste.mention": "Përmendje"
 }

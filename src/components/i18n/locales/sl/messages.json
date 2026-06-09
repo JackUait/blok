@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Predogleda povezave ni bilo mogoče naložiti",
   "tools.embed.empty": "Prilepite povezavo za vstavitev",
   "tools.embed.openOriginal": "Odpri izvirnik",
-  "tools.embed.captionPlaceholder": "Napišite napis…"
+  "tools.embed.captionPlaceholder": "Napišite napis…",
+  "tools.linkPaste.plain": "Ohrani kot povezavo",
+  "tools.linkPaste.bookmark": "Ustvari zaznamek",
+  "tools.linkPaste.embed": "Ustvari vstavek",
+  "tools.linkPaste.mention": "Omemba"
 }

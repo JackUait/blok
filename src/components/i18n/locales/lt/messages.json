@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Nepavyko įkelti peržiūros",
   "tools.embed.empty": "Įklijuokite nuorodą įterpti",
   "tools.embed.openOriginal": "Atidaryti originalą",
-  "tools.embed.captionPlaceholder": "Įrašykite antraštę…"
+  "tools.embed.captionPlaceholder": "Įrašykite antraštę…",
+  "tools.linkPaste.plain": "Palikti kaip nuorodą",
+  "tools.linkPaste.bookmark": "Sukurti žymę",
+  "tools.linkPaste.embed": "Sukurti įterpinį",
+  "tools.linkPaste.mention": "Paminėti"
 }

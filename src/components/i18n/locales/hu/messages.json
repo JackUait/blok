@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Az előnézet nem tölthető be",
   "tools.embed.empty": "Illessz be egy linket a beágyazáshoz",
   "tools.embed.openOriginal": "Eredeti megnyitása",
-  "tools.embed.captionPlaceholder": "Írj képaláírást…"
+  "tools.embed.captionPlaceholder": "Írj képaláírást…",
+  "tools.linkPaste.plain": "Megtartás hivatkozásként",
+  "tools.linkPaste.bookmark": "Könyvjelző létrehozása",
+  "tools.linkPaste.embed": "Beágyazás",
+  "tools.linkPaste.mention": "Említés"
 }

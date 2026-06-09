@@ -334,5 +334,9 @@
   "tools.bookmark.error": "සබැඳි පෙරදසුන පූරණය කළ නොහැකි විය",
   "tools.embed.empty": "කාවැද්දීමට සබැඳියක් අලවන්න",
   "tools.embed.openOriginal": "මුල් පිටපත විවෘත කරන්න",
-  "tools.embed.captionPlaceholder": "සිරැසියක් ලියන්න…"
+  "tools.embed.captionPlaceholder": "සිරැසියක් ලියන්න…",
+  "tools.linkPaste.plain": "සබැඳිය ලෙස තබන්න",
+  "tools.linkPaste.bookmark": "පිටු සලකුණක් සාදන්න",
+  "tools.linkPaste.embed": "කාවැද්දීමක් සාදන්න",
+  "tools.linkPaste.mention": "සඳහන් කිරීම"
 }

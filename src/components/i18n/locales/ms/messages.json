@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Tidak dapat memuatkan pratonton pautan",
   "tools.embed.empty": "Tampal pautan untuk membenam",
   "tools.embed.openOriginal": "Buka asal",
-  "tools.embed.captionPlaceholder": "Tulis kapsyen…"
+  "tools.embed.captionPlaceholder": "Tulis kapsyen…",
+  "tools.linkPaste.plain": "Kekalkan sebagai pautan",
+  "tools.linkPaste.bookmark": "Cipta penanda halaman",
+  "tools.linkPaste.embed": "Cipta benaman",
+  "tools.linkPaste.mention": "Sebutan"
 }

@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Δεν ήταν δυνατή η φόρτωση της προεπισκόπησης",
   "tools.embed.empty": "Επικολλήστε σύνδεσμο για ενσωμάτωση",
   "tools.embed.openOriginal": "Άνοιγμα πρωτότυπου",
-  "tools.embed.captionPlaceholder": "Γράψτε λεζάντα…"
+  "tools.embed.captionPlaceholder": "Γράψτε λεζάντα…",
+  "tools.linkPaste.plain": "Διατήρηση ως σύνδεσμος",
+  "tools.linkPaste.bookmark": "Δημιουργία σελιδοδείκτη",
+  "tools.linkPaste.embed": "Δημιουργία ενσωμάτωσης",
+  "tools.linkPaste.mention": "Αναφορά"
 }

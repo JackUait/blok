@@ -48,11 +48,21 @@ describe('buildPasteMenuItems', () => {
     );
 
     expect(titles).toEqual([
-      'toolNames.link',
-      'toolNames.bookmark',
-      'toolNames.embed',
+      'tools.linkPaste.plain',
+      'tools.linkPaste.bookmark',
+      'tools.linkPaste.embed',
       'tools.linkPaste.mention',
     ]);
+  });
+
+  it('gives the bookmark option a distinct icon from the plain link option', () => {
+    const options: PasteMenuOption[] = [{ type: 'plain' }, { type: 'bookmark' }];
+
+    const [plain, bookmark] = buildPasteMenuItems(options, identityI18n, vi.fn()).map(
+      (item) => asDefaultItem(item).icon
+    );
+
+    expect(plain).not.toBe(bookmark);
   });
 
   it('sets name, closeOnActivate and a non-empty icon for each item', () => {

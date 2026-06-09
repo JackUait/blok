@@ -334,5 +334,9 @@
   "tools.bookmark.error": "No se pudo cargar la vista previa del enlace",
   "tools.embed.empty": "Pega un enlace para insertarlo",
   "tools.embed.openOriginal": "Abrir original",
-  "tools.embed.captionPlaceholder": "Escribe una leyenda…"
+  "tools.embed.captionPlaceholder": "Escribe una leyenda…",
+  "tools.linkPaste.plain": "Mantener como enlace",
+  "tools.linkPaste.bookmark": "Crear marcador",
+  "tools.linkPaste.embed": "Insertar",
+  "tools.linkPaste.mention": "Mencionar"
 }

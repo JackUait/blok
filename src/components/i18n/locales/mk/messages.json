@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Прегледот не може да се вчита",
   "tools.embed.empty": "Залепете врска за вметнување",
   "tools.embed.openOriginal": "Отвори оригинал",
-  "tools.embed.captionPlaceholder": "Напишете опис…"
+  "tools.embed.captionPlaceholder": "Напишете опис…",
+  "tools.linkPaste.plain": "Задржи како врска",
+  "tools.linkPaste.bookmark": "Создај обележувач",
+  "tools.linkPaste.embed": "Создај вградување",
+  "tools.linkPaste.mention": "Спомнување"
 }

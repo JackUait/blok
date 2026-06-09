@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Linkvorschau konnte nicht geladen werden",
   "tools.embed.empty": "Link zum Einbetten einfügen",
   "tools.embed.openOriginal": "Original öffnen",
-  "tools.embed.captionPlaceholder": "Beschriftung schreiben…"
+  "tools.embed.captionPlaceholder": "Beschriftung schreiben…",
+  "tools.linkPaste.plain": "Als Link behalten",
+  "tools.linkPaste.bookmark": "Lesezeichen erstellen",
+  "tools.linkPaste.embed": "Einbettung erstellen",
+  "tools.linkPaste.mention": "Erwähnen"
 }

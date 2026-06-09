@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Kan linkvoorbeeld niet laden",
   "tools.embed.empty": "Plak een link om in te sluiten",
   "tools.embed.openOriginal": "Origineel openen",
-  "tools.embed.captionPlaceholder": "Schrijf een bijschrift…"
+  "tools.embed.captionPlaceholder": "Schrijf een bijschrift…",
+  "tools.linkPaste.plain": "Als link behouden",
+  "tools.linkPaste.bookmark": "Bladwijzer maken",
+  "tools.linkPaste.embed": "Insluiting maken",
+  "tools.linkPaste.mention": "Vermelding"
 }

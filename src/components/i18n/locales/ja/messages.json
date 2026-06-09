@@ -334,5 +334,9 @@
   "tools.bookmark.error": "プレビューを読み込めませんでした",
   "tools.embed.empty": "埋め込むリンクを貼り付け",
   "tools.embed.openOriginal": "元のページを開く",
-  "tools.embed.captionPlaceholder": "キャプションを入力…"
+  "tools.embed.captionPlaceholder": "キャプションを入力…",
+  "tools.linkPaste.plain": "リンクのままにする",
+  "tools.linkPaste.bookmark": "ブックマークを作成",
+  "tools.linkPaste.embed": "埋め込みを作成",
+  "tools.linkPaste.mention": "メンション"
 }

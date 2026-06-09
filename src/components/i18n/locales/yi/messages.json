@@ -334,5 +334,9 @@
   "tools.bookmark.error": "מע האָט נישט געקענט לאָדן דעם לינק־פֿאָרױסבליק",
   "tools.embed.empty": "פּעיסט אַ לינק צו אײַנבעטן",
   "tools.embed.openOriginal": "עפֿן אָריגינאַל",
-  "tools.embed.captionPlaceholder": "שרײַב אַ קעפּל…"
+  "tools.embed.captionPlaceholder": "שרײַב אַ קעפּל…",
+  "tools.linkPaste.plain": "האַלט ווי אַ לינק",
+  "tools.linkPaste.bookmark": "שאַף אַ צייכן",
+  "tools.linkPaste.embed": "שאַף אַן אײַנבעטונג",
+  "tools.linkPaste.mention": "דערמאָנונג"
 }

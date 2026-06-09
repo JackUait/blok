@@ -334,5 +334,9 @@
   "tools.bookmark.error": "પૂર્વાવલોકન લોડ થઈ શક્યું નહીં",
   "tools.embed.empty": "એમ્બેડ કરવા લિંક પેસ્ટ કરો",
   "tools.embed.openOriginal": "મૂળ ખોલો",
-  "tools.embed.captionPlaceholder": "કૅપ્શન લખો…"
+  "tools.embed.captionPlaceholder": "કૅપ્શન લખો…",
+  "tools.linkPaste.plain": "લિંક તરીકે રાખો",
+  "tools.linkPaste.bookmark": "બુકમાર્ક બનાવો",
+  "tools.linkPaste.embed": "એમ્બેડ કરો",
+  "tools.linkPaste.mention": "ઉલ્લેખ કરો"
 }

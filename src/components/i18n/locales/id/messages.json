@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Tidak dapat memuat pratinjau",
   "tools.embed.empty": "Tempel tautan untuk disematkan",
   "tools.embed.openOriginal": "Buka asli",
-  "tools.embed.captionPlaceholder": "Tulis keterangan…"
+  "tools.embed.captionPlaceholder": "Tulis keterangan…",
+  "tools.linkPaste.plain": "Pertahankan sebagai tautan",
+  "tools.linkPaste.bookmark": "Buat markah",
+  "tools.linkPaste.embed": "Buat sematan",
+  "tools.linkPaste.mention": "Sebutkan"
 }

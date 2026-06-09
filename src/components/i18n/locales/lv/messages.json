@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Neizdevās ielādēt priekšskatījumu",
   "tools.embed.empty": "Ielīmējiet saiti, lai to iegultu",
   "tools.embed.openOriginal": "Atvērt oriģinālu",
-  "tools.embed.captionPlaceholder": "Ierakstiet parakstu…"
+  "tools.embed.captionPlaceholder": "Ierakstiet parakstu…",
+  "tools.linkPaste.plain": "Paturēt kā saiti",
+  "tools.linkPaste.bookmark": "Izveidot grāmatzīmi",
+  "tools.linkPaste.embed": "Izveidot iegultni",
+  "tools.linkPaste.mention": "Pieminējums"
 }

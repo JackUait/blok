@@ -334,5 +334,9 @@
   "tools.bookmark.error": "بارگذاری پیش‌نمایش ناموفق بود",
   "tools.embed.empty": "برای جاسازی، پیوند را بچسبانید",
   "tools.embed.openOriginal": "باز کردن نسخه اصلی",
-  "tools.embed.captionPlaceholder": "نوشتن زیرنویس…"
+  "tools.embed.captionPlaceholder": "نوشتن زیرنویس…",
+  "tools.linkPaste.plain": "نگه‌داشتن به‌صورت پیوند",
+  "tools.linkPaste.bookmark": "ساخت نشانک",
+  "tools.linkPaste.embed": "جاسازی",
+  "tools.linkPaste.mention": "اشاره"
 }

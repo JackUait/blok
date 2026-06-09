@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Визуализацията на връзката не можа да се зареди",
   "tools.embed.empty": "Поставете връзка за вграждане",
   "tools.embed.openOriginal": "Отвори оригинала",
-  "tools.embed.captionPlaceholder": "Въведете надпис…"
+  "tools.embed.captionPlaceholder": "Въведете надпис…",
+  "tools.linkPaste.plain": "Запази като връзка",
+  "tools.linkPaste.bookmark": "Създай отметка",
+  "tools.linkPaste.embed": "Създай вграждане",
+  "tools.linkPaste.mention": "Спомени"
 }

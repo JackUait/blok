@@ -334,5 +334,9 @@
   "tools.bookmark.error": "ಪೂರ್ವವೀಕ್ಷಣೆ ಲೋಡ್ ಮಾಡಲಾಗಲಿಲ್ಲ",
   "tools.embed.empty": "ಎಂಬೆಡ್ ಮಾಡಲು ಲಿಂಕ್ ಅಂಟಿಸಿ",
   "tools.embed.openOriginal": "ಮೂಲವನ್ನು ತೆರೆಯಿರಿ",
-  "tools.embed.captionPlaceholder": "ಶೀರ್ಷಿಕೆ ಬರೆಯಿರಿ…"
+  "tools.embed.captionPlaceholder": "ಶೀರ್ಷಿಕೆ ಬರೆಯಿರಿ…",
+  "tools.linkPaste.plain": "ಲಿಂಕ್ ಆಗಿ ಉಳಿಸಿ",
+  "tools.linkPaste.bookmark": "ಬುಕ್‌ಮಾರ್ಕ್ ರಚಿಸಿ",
+  "tools.linkPaste.embed": "ಎಂಬೆಡ್ ರಚಿಸಿ",
+  "tools.linkPaste.mention": "ಉಲ್ಲೇಖಿಸಿ"
 }

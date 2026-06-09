@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Could not load link preview",
   "tools.embed.empty": "Paste a link to embed",
   "tools.embed.openOriginal": "Open original",
-  "tools.embed.captionPlaceholder": "Write a caption…"
+  "tools.embed.captionPlaceholder": "Write a caption…",
+  "tools.linkPaste.plain": "Keep as link",
+  "tools.linkPaste.bookmark": "Create bookmark",
+  "tools.linkPaste.embed": "Create embed",
+  "tools.linkPaste.mention": "Mention"
 }

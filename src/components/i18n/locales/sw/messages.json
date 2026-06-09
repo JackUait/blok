@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Imeshindwa kupakia onyesho la kiungo",
   "tools.embed.empty": "Bandika kiungo ili kupachika",
   "tools.embed.openOriginal": "Fungua asili",
-  "tools.embed.captionPlaceholder": "Andika maelezo…"
+  "tools.embed.captionPlaceholder": "Andika maelezo…",
+  "tools.linkPaste.plain": "Weka kama kiungo",
+  "tools.linkPaste.bookmark": "Unda alamisho",
+  "tools.linkPaste.embed": "Pachika",
+  "tools.linkPaste.mention": "Taja"
 }

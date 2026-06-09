@@ -334,5 +334,9 @@
   "tools.bookmark.error": "미리보기를 불러올 수 없습니다",
   "tools.embed.empty": "임베드할 링크 붙여넣기",
   "tools.embed.openOriginal": "원본 열기",
-  "tools.embed.captionPlaceholder": "캡션 입력…"
+  "tools.embed.captionPlaceholder": "캡션 입력…",
+  "tools.linkPaste.plain": "링크로 유지",
+  "tools.linkPaste.bookmark": "북마크 생성",
+  "tools.linkPaste.embed": "임베드 생성",
+  "tools.linkPaste.mention": "멘션"
 }

@@ -334,5 +334,9 @@
   "tools.bookmark.error": "მიმოხილვის ჩატვირთვა ვერ მოხერხდა",
   "tools.embed.empty": "ჩასვით ბმული ჩასაშენებლად",
   "tools.embed.openOriginal": "ორიგინალის გახსნა",
-  "tools.embed.captionPlaceholder": "დაწერეთ წარწერა…"
+  "tools.embed.captionPlaceholder": "დაწერეთ წარწერა…",
+  "tools.linkPaste.plain": "დატოვება ბმულად",
+  "tools.linkPaste.bookmark": "სანიშნის შექმნა",
+  "tools.linkPaste.embed": "ჩაშენების შექმნა",
+  "tools.linkPaste.mention": "ხსენება"
 }

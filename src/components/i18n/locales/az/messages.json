@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Keçid önizləməsi yüklənmədi",
   "tools.embed.empty": "Yerləşdirmək üçün keçid yapışdırın",
   "tools.embed.openOriginal": "Orijinalı aç",
-  "tools.embed.captionPlaceholder": "Başlıq yazın…"
+  "tools.embed.captionPlaceholder": "Başlıq yazın…",
+  "tools.linkPaste.plain": "Keçid kimi saxla",
+  "tools.linkPaste.bookmark": "Əlfəcin yarat",
+  "tools.linkPaste.embed": "Yerləşdirmə yarat",
+  "tools.linkPaste.mention": "Qeyd et"
 }

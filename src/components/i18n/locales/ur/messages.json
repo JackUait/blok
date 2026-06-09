@@ -334,5 +334,9 @@
   "tools.bookmark.error": "لنک پیش منظر لوڈ نہیں ہو سکا",
   "tools.embed.empty": "ایمبیڈ کرنے کے لیے لنک پیسٹ کریں",
   "tools.embed.openOriginal": "اصل کھولیں",
-  "tools.embed.captionPlaceholder": "کیپشن لکھیں…"
+  "tools.embed.captionPlaceholder": "کیپشن لکھیں…",
+  "tools.linkPaste.plain": "بطور لنک رکھیں",
+  "tools.linkPaste.bookmark": "بک مارک بنائیں",
+  "tools.linkPaste.embed": "ایمبیڈ بنائیں",
+  "tools.linkPaste.mention": "تذکرہ"
 }

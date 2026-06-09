@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Pregled linka nije moguće učitati",
   "tools.embed.empty": "Zalijepite link za ugradnju",
   "tools.embed.openOriginal": "Otvori original",
-  "tools.embed.captionPlaceholder": "Unesite natpis…"
+  "tools.embed.captionPlaceholder": "Unesite natpis…",
+  "tools.linkPaste.plain": "Zadrži kao link",
+  "tools.linkPaste.bookmark": "Kreiraj knjižnu oznaku",
+  "tools.linkPaste.embed": "Kreiraj ugradnju",
+  "tools.linkPaste.mention": "Spomeni"
 }

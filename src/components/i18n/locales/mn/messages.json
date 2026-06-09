@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Холбоосын урьдчилсан харагдацыг ачаалж чадсангүй",
   "tools.embed.empty": "Шигтгэхийн тулд холбоос буулгана уу",
   "tools.embed.openOriginal": "Эх сурвалжийг нээх",
-  "tools.embed.captionPlaceholder": "Тайлбар бичих…"
+  "tools.embed.captionPlaceholder": "Тайлбар бичих…",
+  "tools.linkPaste.plain": "Холбоосоор үлдээх",
+  "tools.linkPaste.bookmark": "Хавчуурга үүсгэх",
+  "tools.linkPaste.embed": "Шигтгээ үүсгэх",
+  "tools.linkPaste.mention": "Дурдах"
 }

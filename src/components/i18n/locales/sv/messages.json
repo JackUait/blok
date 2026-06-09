@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Det gick inte att läsa in förhandsvisningen",
   "tools.embed.empty": "Klistra in en länk att bädda in",
   "tools.embed.openOriginal": "Öppna originalet",
-  "tools.embed.captionPlaceholder": "Skriv en bildtext…"
+  "tools.embed.captionPlaceholder": "Skriv en bildtext…",
+  "tools.linkPaste.plain": "Behåll som länk",
+  "tools.linkPaste.bookmark": "Skapa bokmärke",
+  "tools.linkPaste.embed": "Skapa inbäddning",
+  "tools.linkPaste.mention": "Omnämnande"
 }

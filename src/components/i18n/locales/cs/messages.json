@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Náhled odkazu se nepodařilo načíst",
   "tools.embed.empty": "Vložte odkaz k vložení",
   "tools.embed.openOriginal": "Otevřít originál",
-  "tools.embed.captionPlaceholder": "Zadejte popisek…"
+  "tools.embed.captionPlaceholder": "Zadejte popisek…",
+  "tools.linkPaste.plain": "Ponechat jako odkaz",
+  "tools.linkPaste.bookmark": "Vytvořit záložku",
+  "tools.linkPaste.embed": "Vytvořit vložení",
+  "tools.linkPaste.mention": "Zmínka"
 }

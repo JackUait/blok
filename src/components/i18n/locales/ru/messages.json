@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Не удалось загрузить превью ссылки",
   "tools.embed.empty": "Вставьте ссылку для встраивания",
   "tools.embed.openOriginal": "Открыть оригинал",
-  "tools.embed.captionPlaceholder": "Добавьте подпись…"
+  "tools.embed.captionPlaceholder": "Добавьте подпись…",
+  "tools.linkPaste.plain": "Оставить ссылкой",
+  "tools.linkPaste.bookmark": "Создать закладку",
+  "tools.linkPaste.embed": "Создать встраивание",
+  "tools.linkPaste.mention": "Упоминание"
 }

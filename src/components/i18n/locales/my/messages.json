@@ -334,5 +334,9 @@
   "tools.bookmark.error": "လင့်ခ် အစမ်းကြည့်ရှုမှုကို ဖွင့်၍မရပါ",
   "tools.embed.empty": "ထည့်သွင်းရန် လင့်ခ်ကို ကူးထည့်ပါ",
   "tools.embed.openOriginal": "မူရင်းကို ဖွင့်ရန်",
-  "tools.embed.captionPlaceholder": "စာတန်းရေးပါ…"
+  "tools.embed.captionPlaceholder": "စာတန်းရေးပါ…",
+  "tools.linkPaste.plain": "လင့်ခ်အဖြစ် ထားရှိရန်",
+  "tools.linkPaste.bookmark": "မှတ်သားချက် ဖန်တီးရန်",
+  "tools.linkPaste.embed": "ထည့်သွင်းမှု ဖန်တီးရန်",
+  "tools.linkPaste.mention": "ဖော်ပြချက်"
 }

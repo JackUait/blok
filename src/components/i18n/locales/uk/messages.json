@@ -334,5 +334,9 @@
   "tools.bookmark.error": "Не вдалося завантажити попередній перегляд",
   "tools.embed.empty": "Вставте посилання, щоб вбудувати",
   "tools.embed.openOriginal": "Відкрити оригінал",
-  "tools.embed.captionPlaceholder": "Введіть підпис…"
+  "tools.embed.captionPlaceholder": "Введіть підпис…",
+  "tools.linkPaste.plain": "Залишити як посилання",
+  "tools.linkPaste.bookmark": "Створити закладку",
+  "tools.linkPaste.embed": "Вбудувати",
+  "tools.linkPaste.mention": "Згадка"
 }

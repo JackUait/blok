@@ -12,6 +12,20 @@ function escapeHtml(text: string): string {
 }
 
 /**
+ * URL schemes that can execute script when used in href/src.
+ * Markdown output is inserted without going through the paste sanitizer,
+ * so these must be filtered here at the source.
+ */
+const UNSAFE_URL_SCHEME = /^\s*(?:javascript\s*:|vbscript\s*:|data\s*:\s*text\s*\/\s*html)/i;
+
+/**
+ * Returns the URL when it is safe to use in an href/src, otherwise null.
+ */
+function safeUrl(url: string): string | null {
+  return UNSAFE_URL_SCHEME.test(url) ? null : url;
+}
+
+/**
  * Serialize an array of mdast phrasing (inline) nodes to an HTML string.
  * Produces the HTML that Blok stores in block `text` fields.
  */
@@ -36,17 +50,37 @@ function serializeNode(node: PhrasingContent): string {
     case 'inlineCode':
       return `<code>${escapeHtml(node.value)}</code>`;
 
-    case 'link':
-      return `<a href="${escapeHtml(node.url)}" target="_blank" rel="nofollow">${phrasingToHtml(node.children)}</a>`;
+    case 'link': {
+      const url = safeUrl(node.url);
+      const children = phrasingToHtml(node.children);
+
+      // Unsafe scheme → drop the anchor, keep the visible text.
+      if (url === null) {
+        return children;
+      }
+
+      return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer nofollow">${children}</a>`;
+    }
 
     case 'break':
       return '<br>';
 
-    case 'image':
-      return `<img src="${escapeHtml(node.url)}" alt="${escapeHtml(node.alt ?? '')}">`;
+    case 'image': {
+      const url = safeUrl(node.url);
+
+      // Unsafe scheme → drop the image entirely.
+      if (url === null) {
+        return '';
+      }
+
+      return `<img src="${escapeHtml(url)}" alt="${escapeHtml(node.alt ?? '')}">`;
+    }
 
     case 'html':
-      return node.value;
+      // Raw inline HTML from the source is not sanitized downstream (markdown
+      // paste bypasses the paste sanitizer), so escape it the same way
+      // block-level raw HTML is escaped in mdast-to-blocks.
+      return escapeHtml(node.value);
 
     case 'inlineMath':
     case 'footnoteReference':

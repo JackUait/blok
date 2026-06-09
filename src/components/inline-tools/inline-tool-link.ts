@@ -613,7 +613,20 @@ export class LinkInlineTool implements InlineTool {
     /**
      * Don't allow spaces
      */
-    return !/\s/.test(str);
+    if (/\s/.test(str)) {
+      return false;
+    }
+
+    /**
+     * Reject URL schemes that execute script when the anchor is clicked.
+     * The anchor is inserted into the live document before any save-time
+     * sanitization runs, so an unfiltered `javascript:` href is clickable XSS.
+     */
+    if (/^(?:javascript|vbscript|data\s*:\s*text\s*\/\s*html):?/i.test(str.trim())) {
+      return false;
+    }
+
+    return true;
   }
 
   /**

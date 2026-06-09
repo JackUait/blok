@@ -260,6 +260,28 @@ describe('LinkInlineTool', () => {
     expect(insertLinkSpy).not.toHaveBeenCalled();
   });
 
+  it.each([
+    'javascript:alert(1)',
+    'JavaScript:alert(1)',
+    'data:text/html,<script>alert(1)</script>',
+    'vbscript:msgbox(1)',
+  ])('rejects unsafe URL scheme %s', (unsafeUrl) => {
+    const { tool, notifier } = createTool();
+    const renderResult = tool.render() as unknown as LinkToolRenderResult;
+    const input = getInputFromWrapper(renderResult.children.items[0].element);
+    const insertLinkSpy = vi.spyOn(tool as unknown as { insertLink(link: string): void }, 'insertLink');
+
+    input.value = unsafeUrl;
+
+    (tool as unknown as { enterPressed(event: KeyboardEvent): void }).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
+
+    expect(notifier.show).toHaveBeenCalledWith({
+      message: 'tools.link.invalidLink',
+      style: 'error',
+    });
+    expect(insertLinkSpy).not.toHaveBeenCalled();
+  });
+
   it('inserts prepared link and collapses selection when URL is valid', () => {
     const { tool, selection, inlineToolbar } = createTool();
     const renderResult = tool.render() as unknown as LinkToolRenderResult;

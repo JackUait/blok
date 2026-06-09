@@ -62,7 +62,7 @@ describe('phrasingToHtml', () => {
     }];
 
     expect(phrasingToHtml(nodes)).toBe(
-      '<a href="https://example.com" target="_blank" rel="nofollow">click here</a>'
+      '<a href="https://example.com" target="_blank" rel="noopener noreferrer nofollow">click here</a>'
     );
   });
 
@@ -74,8 +74,32 @@ describe('phrasingToHtml', () => {
     }];
 
     expect(phrasingToHtml(nodes)).toBe(
-      '<a href="https://example.com/?a=&quot;b&quot;" target="_blank" rel="nofollow">link</a>'
+      '<a href="https://example.com/?a=&quot;b&quot;" target="_blank" rel="noopener noreferrer nofollow">link</a>'
     );
+  });
+
+  it('drops javascript: scheme in link URLs (XSS)', () => {
+    const nodes: PhrasingContent[] = [{
+      type: 'link',
+      url: 'javascript:alert(1)',
+      children: [{ type: 'text', value: 'click here' }],
+    }];
+
+    const html = phrasingToHtml(nodes);
+
+    expect(html).not.toContain('javascript');
+    expect(html).not.toContain('href');
+    expect(html).toContain('click here');
+  });
+
+  it('drops javascript: scheme regardless of case/whitespace', () => {
+    const nodes: PhrasingContent[] = [{
+      type: 'link',
+      url: '  JaVaScRiPt:alert(1)',
+      children: [{ type: 'text', value: 'x' }],
+    }];
+
+    expect(phrasingToHtml(nodes).toLowerCase()).not.toContain('javascript');
   });
 
   it('serializes break to <br>', () => {
@@ -98,10 +122,33 @@ describe('phrasingToHtml', () => {
     expect(phrasingToHtml(nodes)).toBe('<img src="https://img.com/pic.png" alt="a picture">');
   });
 
-  it('passes through inline HTML as-is', () => {
-    const nodes: PhrasingContent[] = [{ type: 'html', value: '<sub>subscript</sub>' }];
+  it('drops image with javascript: scheme (XSS)', () => {
+    const nodes: PhrasingContent[] = [{
+      type: 'image',
+      url: 'javascript:alert(1)',
+      alt: 'x',
+    }];
 
-    expect(phrasingToHtml(nodes)).toBe('<sub>subscript</sub>');
+    expect(phrasingToHtml(nodes)).not.toContain('javascript');
+  });
+
+  it('escapes inline raw HTML instead of passing it through (XSS)', () => {
+    const nodes: PhrasingContent[] = [{ type: 'html', value: '<img src=x onerror="alert(1)">' }];
+
+    const html = phrasingToHtml(nodes);
+
+    // Raw HTML must be neutralised — escaped to inert text, no live <img> tag.
+    expect(html).not.toContain('<img');
+    expect(html).toContain('&lt;img');
+  });
+
+  it('escapes inline <script> raw HTML (XSS)', () => {
+    const nodes: PhrasingContent[] = [{ type: 'html', value: '<script>alert(1)</script>' }];
+
+    const html = phrasingToHtml(nodes);
+
+    expect(html).not.toContain('<script>');
+    expect(html).toContain('&lt;script&gt;');
   });
 
   it('handles nested formatting', () => {

@@ -23,8 +23,7 @@ export const IconCross = `
 export const IconBold = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path
-    transform="translate(0,-1)"
-    d="M6 11h4.9231c.6528 0 1.2789-.3161 1.7405-.8787.4617-.56259.721-1.32565.721-2.1213 0-.79565-.2593-1.55871-.721-2.12132C12.202 5.31607 11.5759 5 10.9231 5H6v6Zm0 0h5.5385c.6528 0 1.2789.3161 1.7405.8787.4617.5626.721 1.3257.721 2.1213 0 .7956-.2593 1.5587-.721 2.1213-.4616.5626-1.0877.8787-1.7405.8787H6v-6Z"
+    d="M6 10h4.9231c.6528 0 1.2789-.3161 1.7405-.8787.4617-.56259.721-1.32565.721-2.1213 0-.79565-.2593-1.55871-.721-2.12132C12.202 4.31607 11.5759 4 10.9231 4H6v6Zm0 0h5.5385c.6528 0 1.2789.3161 1.7405.8787.4617.5626.721 1.3257.721 2.1213 0 .7956-.2593 1.5587-.721 2.1213-.4616.5626-1.0877.8787-1.7405.8787H6v-6Z"
     stroke="currentColor"
     stroke-width="1.25"
     stroke-linecap="round"
@@ -66,8 +65,8 @@ export const IconMarker = `
 // Underline icon
 export const IconUnderline = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M5.5 3.5v7.5a4.5 4.5 0 0 0 9 0V3.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M3.5 18.5h13" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M6 3.5V10a4 4 0 0 0 8 0V3.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4.5 16.5h11" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
 </svg>
 `;
 
@@ -229,11 +228,11 @@ export const IconHeading = `
 </svg>
 `;
 
-// Text/Paragraph icon
+// Text/Paragraph icon — plain T at heading height (5-15)
 export const IconText = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path
-    d="M14.5 7.28571V6h-9v1.28571M10 6v9m0 0H8.71429M10 15h1.2857"
+    d="M5.5 5h9M10 5v10"
     stroke="currentColor"
     stroke-width="1.25"
     stroke-linecap="round"
@@ -507,7 +506,7 @@ export const IconCallout = `
 `;
 
 export const IconPaintRoller = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
-  <rect x="2.5" y="3" width="12" height="6" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
+  <rect x="3" y="3" width="11.5" height="6" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
   <path d="M14.5 6H16a1 1 0 0 1 1 1v3.5a1 1 0 0 1-1 1h-6a1 1 0 0 0-1 1V14" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
   <rect x="8" y="14" width="3" height="3.5" rx="0.75" stroke="currentColor" stroke-width="1.25"/>
 </svg>`;
@@ -631,12 +630,13 @@ export const IconGallery = `
 </svg>
 `;
 
+// Database list view — stacked row cards (matches the IconBoard/IconGallery
+// view family; distinct from IconListBulleted, the list block tool)
 export const IconList = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <circle cx="4.5" cy="6.5" r="1" fill="currentColor"/>
-  <circle cx="4.5" cy="10" r="1" fill="currentColor"/>
-  <circle cx="4.5" cy="13.5" r="1" fill="currentColor"/>
-  <path d="M7.5 6.5h9M7.5 10h9M7.5 13.5h9" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <rect x="3" y="4" width="14" height="3" rx="1" stroke="currentColor" stroke-width="1.25"/>
+  <rect x="3" y="8.5" width="14" height="3" rx="1" stroke="currentColor" stroke-width="1.25"/>
+  <rect x="3" y="13" width="14" height="3" rx="1" stroke="currentColor" stroke-width="1.25"/>
 </svg>
 `;
 
@@ -740,7 +740,7 @@ export const IconCloseThick = '<svg viewBox="0 0 24 24" fill="none" stroke="curr
 export const IconImageBroken = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14.5 4.5H6A2.5 2.5 0 0 0 3.5 7v10A2.5 2.5 0 0 0 6 19.5h12a2.5 2.5 0 0 0 2.5-2.5v-6.25"/><path d="m14.5 4.5 1.75 2.25 2.25-1.25 2 2.75"/><circle cx="8" cy="9" r="1.2" fill="currentColor" stroke="none"/><path d="m3.8 16.25 3.45-3.45 2.5 2.5 3.5-3.5 4 4"/></svg>';
 
 // Cloud with a strike-through — upload-failed error state
-export const IconUploadFailed = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 16.5A4.5 4.5 0 0 0 17 8.25a6 6 0 0 0-11.7 1.5A4 4 0 0 0 6 17.5"/><path d="M12 12v5"/><path d="m9.5 14.5 2.5-2.5 2.5 2.5"/><path d="m4 4 16 16" stroke-width="2"/></svg>';
+export const IconUploadFailed = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 16.5A4.5 4.5 0 0 0 17 8.25a6 6 0 0 0-11.7 1.5A4 4 0 0 0 6 17.5"/><path d="M12 12v5"/><path d="m9.5 14.5 2.5-2.5 2.5 2.5"/><path d="m4 4 16 16"/></svg>';
 
 export const IconUpload = wrapImageSvg('<path d="M12 4v10"/><path d="m7.5 8.5 4.5-4.5 4.5 4.5"/><path d="M5 14v3.5A2.5 2.5 0 0 0 7.5 20h9a2.5 2.5 0 0 0 2.5-2.5V14"/>');
 // External link — rounded square with arrow exiting top-right (open original)

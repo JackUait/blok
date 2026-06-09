@@ -59,6 +59,22 @@ describe('MetadataFetcher', () => {
     });
   });
 
+  it('falls back to the requested url when the response link uses an unsafe scheme', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      okResponse({
+        success: 1,
+        link: 'javascript:alert(1)',
+        meta: { title: 'Title' },
+      })
+    );
+    const fetcher = new MetadataFetcher({ endpoint: 'https://api.test/unfurl' });
+
+    const meta = await fetcher.fetch('https://example.com/article');
+
+    expect(meta.url).toBe('https://example.com/article');
+    expect(meta.url).not.toContain('javascript:');
+  });
+
   it('rejects when the backend reports success: 0', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(okResponse({ success: 0 }));
     const fetcher = new MetadataFetcher({ endpoint: 'https://api.test/unfurl' });

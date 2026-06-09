@@ -417,6 +417,68 @@ describe('table-cell-clipboard', () => {
         '<mark style="color: rgb(68, 131, 97); background-color: transparent;"><i><strong>Done</strong></i></mark>'
       );
     });
+
+    it('should sanitize <img onerror> XSS payload out of cell block text', () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{ blocks: [{ tool: 'paragraph', data: { text: '<img src=x onerror=alert(1)>' } }] }]],
+      };
+
+      const html = buildClipboardHtml(payload);
+      const result = parseClipboardHtml(html);
+
+      expect(result).not.toBeNull();
+
+      const text = result?.cells[0][0].blocks[0].data.text;
+
+      expect(typeof text).toBe('string');
+      expect(text).not.toContain('<img');
+      expect(text).not.toContain('onerror=');
+    });
+
+    it('should strip <script> from cell block text', () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{ blocks: [{ tool: 'paragraph', data: { text: 'A<script>alert(1)</script>B' } }] }]],
+      };
+
+      const html = buildClipboardHtml(payload);
+      const result = parseClipboardHtml(html);
+
+      expect(result).not.toBeNull();
+
+      const text = result?.cells[0][0].blocks[0].data.text;
+
+      expect(typeof text).toBe('string');
+      expect(text).not.toContain('<script');
+      expect(text).not.toContain('alert(1)');
+    });
+
+    it('should preserve legitimate inline formatting in cell block text', () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{
+          blocks: [{
+            tool: 'paragraph',
+            data: { text: '<b>bold</b> <a href="https://x.com">l</a>' },
+          }],
+        }]],
+      };
+
+      const html = buildClipboardHtml(payload);
+      const result = parseClipboardHtml(html);
+
+      expect(result).not.toBeNull();
+
+      const text = result?.cells[0][0].blocks[0].data.text;
+
+      expect(typeof text).toBe('string');
+      expect(text).toContain('<b>bold</b>');
+      expect(text).toContain('href="https://x.com"');
+    });
   });
 
   // ---------------------------------------------------------------------------

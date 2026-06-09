@@ -454,8 +454,30 @@ export function parseClipboardHtml(html: string): TableCellsClipboard | null {
       .replace(/&gt;/g, '>')
       .replace(/&amp;/g, '&');
 
-    return JSON.parse(jsonStr) as TableCellsClipboard;
+    const payload = JSON.parse(jsonStr) as TableCellsClipboard;
+
+    return sanitizeClipboardPayload(payload);
   } catch {
     return null;
   }
+}
+
+/**
+ * Sanitize every cell block's `data.text` in a parsed clipboard payload.
+ *
+ * The `data-blok-table-cells` fast path bypasses the generic-table sanitizer,
+ * so untrusted clipboard markup could otherwise reach the DOM verbatim. Run
+ * each string `data.text` through {@link clean} with {@link CELL_SANITIZE_CONFIG}
+ * to neutralize XSS while preserving allowed inline formatting.
+ */
+function sanitizeClipboardPayload(payload: TableCellsClipboard): TableCellsClipboard {
+  const blocks = payload.cells.flatMap(row => row.flatMap(cell => cell.blocks));
+
+  for (const block of blocks) {
+    if (typeof block.data.text === 'string') {
+      block.data.text = clean(block.data.text, CELL_SANITIZE_CONFIG);
+    }
+  }
+
+  return payload;
 }

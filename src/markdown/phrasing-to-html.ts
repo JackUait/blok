@@ -1,4 +1,5 @@
 import type { PhrasingContent } from 'mdast';
+import { safeHref, safeImageSrc } from '../components/utils/sanitize-url';
 
 /**
  * Escape HTML special characters to prevent XSS.
@@ -9,20 +10,6 @@ function escapeHtml(text: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-}
-
-/**
- * URL schemes that can execute script when used in href/src.
- * Markdown output is inserted without going through the paste sanitizer,
- * so these must be filtered here at the source.
- */
-const UNSAFE_URL_SCHEME = /^\s*(?:javascript\s*:|vbscript\s*:|data\s*:\s*text\s*\/\s*html)/i;
-
-/**
- * Returns the URL when it is safe to use in an href/src, otherwise null.
- */
-function safeUrl(url: string): string | null {
-  return UNSAFE_URL_SCHEME.test(url) ? null : url;
 }
 
 /**
@@ -51,7 +38,7 @@ function serializeNode(node: PhrasingContent): string {
       return `<code>${escapeHtml(node.value)}</code>`;
 
     case 'link': {
-      const url = safeUrl(node.url);
+      const url = safeHref(node.url);
       const children = phrasingToHtml(node.children);
 
       // Unsafe scheme → drop the anchor, keep the visible text.
@@ -66,7 +53,7 @@ function serializeNode(node: PhrasingContent): string {
       return '<br>';
 
     case 'image': {
-      const url = safeUrl(node.url);
+      const url = safeImageSrc(node.url);
 
       // Unsafe scheme → drop the image entirely.
       if (url === null) {

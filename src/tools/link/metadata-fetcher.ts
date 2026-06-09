@@ -1,3 +1,5 @@
+import { isHttpUrl } from './registry';
+
 /**
  * Bookmark metadata fetcher.
  *
@@ -58,7 +60,7 @@ export class MetadataFetcher {
     const meta = body.meta ?? {};
 
     return {
-      url: body.link ?? url,
+      url: body.link && isHttpUrl(body.link) ? body.link : url,
       title: meta.title,
       description: meta.description,
       image: meta.image?.url,

@@ -332,8 +332,18 @@ export class DatabaseTool implements BlockTool {
     this.sync = new DatabaseBackendSync(
       this.config.adapter,
       (error) => {
+        // The notifier renders `message` as raw HTML (innerHTML). The error
+        // comes from a consumer-supplied backend adapter (untrusted), so escape
+        // it to inert text before display to prevent HTML/script injection.
+        const message = String(error)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+
         this.api.notifier.show({
-          message: String(error),
+          message,
           style: 'error',
         });
       },

@@ -1662,4 +1662,41 @@ describe('DatabaseTool', () => {
       expect(tool.getToolbarAnchorElement()).toBeUndefined();
     });
   });
+
+  describe('backend error notification is HTML-escaped (XSS)', () => {
+    it('escapes backend error message before passing it to notifier.show', async () => {
+      const error = new Error('<img src=x onerror=alert(document.domain)>');
+      const mockAdapter = {
+        loadDatabase: vi.fn().mockResolvedValue({ schema: [], views: [] }),
+        createRow: vi.fn().mockRejectedValue(error),
+        updateRow: vi.fn(), moveRow: vi.fn(), deleteRow: vi.fn(),
+        createProperty: vi.fn(), updateProperty: vi.fn(), deleteProperty: vi.fn(),
+        createView: vi.fn(), updateView: vi.fn(), deleteView: vi.fn(),
+      };
+
+      const options = createDatabaseOptions({}, { adapter: mockAdapter });
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      // Adding a card triggers sync.syncCreateRow, which rejects and fires onError.
+      const addCardBtn = queryByData(element, 'data-blok-database-add-card')!;
+
+      addCardBtn.click();
+
+      const showMock = options.api.notifier.show as ReturnType<typeof vi.fn>;
+
+      await vi.waitFor(() => {
+        expect(showMock).toHaveBeenCalled();
+      });
+
+      const message = (showMock.mock.calls[0][0] as { message: string }).message;
+
+      // Raw HTML must NOT reach the notifier (it would be injected via innerHTML).
+      expect(message).not.toContain('<img');
+      // Special chars must be entity-escaped instead.
+      expect(message).toContain('&lt;img');
+
+      tool.destroy();
+    });
+  });
 });

@@ -102,6 +102,31 @@ describe('phrasingToHtml', () => {
     expect(phrasingToHtml(nodes).toLowerCase()).not.toContain('javascript');
   });
 
+  it('drops scheme smuggled with a newline inside the keyword (XSS)', () => {
+    // mdast decodes &NewLine; to a literal "\n" before serialization; the
+    // browser strips it from the href, reconstituting javascript:.
+    const nodes: PhrasingContent[] = [{
+      type: 'link',
+      url: 'java\nscript:alert(1)',
+      children: [{ type: 'text', value: 'click here' }],
+    }];
+
+    const html = phrasingToHtml(nodes);
+
+    expect(html).not.toContain('href');
+    expect(html).toContain('click here');
+  });
+
+  it('drops a data: scheme in a link href (XSS)', () => {
+    const nodes: PhrasingContent[] = [{
+      type: 'link',
+      url: 'data:text/html,<script>alert(1)</script>',
+      children: [{ type: 'text', value: 'x' }],
+    }];
+
+    expect(phrasingToHtml(nodes)).not.toContain('href');
+  });
+
   it('serializes break to <br>', () => {
     const nodes: PhrasingContent[] = [
       { type: 'text', value: 'line one' },
@@ -130,6 +155,26 @@ describe('phrasingToHtml', () => {
     }];
 
     expect(phrasingToHtml(nodes)).not.toContain('javascript');
+  });
+
+  it('drops a data:image/svg+xml image (SVG can execute script)', () => {
+    const nodes: PhrasingContent[] = [{
+      type: 'image',
+      url: 'data:image/svg+xml;base64,PHN2Zz48c2NyaXB0PmFsZXJ0KDEpPC9zY3JpcHQ+PC9zdmc+',
+      alt: 'x',
+    }];
+
+    expect(phrasingToHtml(nodes)).not.toContain('<img');
+  });
+
+  it('keeps a raster data:image (no script risk)', () => {
+    const nodes: PhrasingContent[] = [{
+      type: 'image',
+      url: 'data:image/png;base64,iVBORw0KGgo=',
+      alt: 'pic',
+    }];
+
+    expect(phrasingToHtml(nodes)).toBe('<img src="data:image/png;base64,iVBORw0KGgo=" alt="pic">');
   });
 
   it('escapes inline raw HTML instead of passing it through (XSS)', () => {

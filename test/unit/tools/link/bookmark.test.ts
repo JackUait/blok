@@ -146,4 +146,29 @@ describe('Bookmark tool', () => {
     expect(root.querySelector('[data-blok-testid="bookmark-card"]')).not.toBeNull();
     expect(root.textContent).toContain('Stored');
   });
+
+  it('sets the card href for a valid https url', () => {
+    const tool = new Bookmark(
+      createOptions({ url: 'https://example.com/article', title: 'Stored' })
+    );
+
+    const root = tool.render();
+    const card = root.querySelector<HTMLAnchorElement>('[data-blok-testid="bookmark-card"]');
+
+    expect(card).not.toBeNull();
+    expect(card?.getAttribute('href')).toBe('https://example.com/article');
+  });
+
+  it('does not set a javascript: href on the card (XSS guard)', () => {
+    const tool = new Bookmark(
+      createOptions({ url: 'javascript:alert(1)', title: 'Stored' })
+    );
+
+    const root = tool.render();
+    const card = root.querySelector<HTMLAnchorElement>('[data-blok-testid="bookmark-card"]');
+
+    expect(card).not.toBeNull();
+    expect(card?.getAttribute('href')).toBeNull();
+    expect(card?.href ?? '').not.toContain('javascript:');
+  });
 });

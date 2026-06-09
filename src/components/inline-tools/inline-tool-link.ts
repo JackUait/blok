@@ -10,6 +10,7 @@ import { IconLink, IconGlobe, IconMail, IconHash } from '../icons';
 import { SelectionUtils } from '../selection/index';
 import { log } from '../utils';
 import { PopoverItemType } from '../utils/popover';
+import { hasUnsafeScheme } from '../utils/sanitize-url';
 import { twMerge } from '../utils/tw';
 
 const SUGGESTION_ROW_VALID = 'flex items-center gap-2 w-full mt-0.5 px-1.5 py-1.5 rounded-md text-left cursor-pointer can-hover:hover:bg-item-hover-bg transition-colors';
@@ -620,9 +621,11 @@ export class LinkInlineTool implements InlineTool {
     /**
      * Reject URL schemes that execute script when the anchor is clicked.
      * The anchor is inserted into the live document before any save-time
-     * sanitization runs, so an unfiltered `javascript:` href is clickable XSS.
+     * sanitization runs, so an unfiltered `javascript:`/`data:` href is
+     * clickable XSS. An allowlist of safe schemes is used because denylists
+     * keep losing to scheme smuggling (e.g. `data:image/svg+xml`).
      */
-    if (/^(?:javascript|vbscript|data\s*:\s*text\s*\/\s*html):?/i.test(str.trim())) {
+    if (hasUnsafeScheme(str)) {
       return false;
     }
 

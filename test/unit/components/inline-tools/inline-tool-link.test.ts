@@ -264,6 +264,7 @@ describe('LinkInlineTool', () => {
     'javascript:alert(1)',
     'JavaScript:alert(1)',
     'data:text/html,<script>alert(1)</script>',
+    'data:image/svg+xml;base64,PHN2Zz48c2NyaXB0PmFsZXJ0KDEpPC9zY3JpcHQ+PC9zdmc+',
     'vbscript:msgbox(1)',
   ])('rejects unsafe URL scheme %s', (unsafeUrl) => {
     const { tool, notifier } = createTool();

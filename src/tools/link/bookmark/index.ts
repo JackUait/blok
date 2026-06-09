@@ -168,7 +168,12 @@ export class Bookmark implements BlockTool {
     const card = document.createElement('a');
 
     card.setAttribute('data-blok-testid', 'bookmark-card');
-    card.href = this.data.url;
+
+    // Only navigate http(s) URLs. Saved JSON or a compromised unfurl endpoint
+    // could carry a javascript:/data: URL; leaving href unset prevents XSS.
+    if (isHttpUrl(this.data.url)) {
+      card.href = this.data.url;
+    }
     card.target = '_blank';
     card.rel = 'noopener noreferrer';
 

@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "सुरू झाले नाही",
   "tools.database.defaultStatusInProgress": "प्रगतीपथावर",
   "tools.database.defaultStatusDone": "पूर्ण",
-  "tools.database.defaultViewBoard": "बोर्ड"
+  "tools.database.defaultViewBoard": "बोर्ड",
+  "toolNames.bookmark": "बुकमार्क",
+  "toolNames.embed": "एम्बेड",
+  "tools.bookmark.empty": "बुकमार्क तयार करण्यासाठी लिंक पेस्ट करा",
+  "tools.bookmark.loading": "लिंक पूर्वावलोकन लोड होत आहे",
+  "tools.bookmark.error": "लिंक पूर्वावलोकन लोड करता आले नाही",
+  "tools.embed.empty": "एम्बेड करण्यासाठी लिंक पेस्ट करा",
+  "tools.embed.openOriginal": "मूळ उघडा",
+  "tools.embed.captionPlaceholder": "कॅप्शन लिहा…"
 }

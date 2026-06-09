@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "시작 전",
   "tools.database.defaultStatusInProgress": "진행 중",
   "tools.database.defaultStatusDone": "완료",
-  "tools.database.defaultViewBoard": "보드"
+  "tools.database.defaultViewBoard": "보드",
+  "toolNames.bookmark": "북마크",
+  "toolNames.embed": "임베드",
+  "tools.bookmark.empty": "링크를 붙여넣어 북마크 만들기",
+  "tools.bookmark.loading": "미리보기 불러오는 중",
+  "tools.bookmark.error": "미리보기를 불러올 수 없습니다",
+  "tools.embed.empty": "임베드할 링크 붙여넣기",
+  "tools.embed.openOriginal": "원본 열기",
+  "tools.embed.captionPlaceholder": "캡션 입력…"
 }

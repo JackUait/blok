@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Nierozpoczęte",
   "tools.database.defaultStatusInProgress": "W toku",
   "tools.database.defaultStatusDone": "Ukończone",
-  "tools.database.defaultViewBoard": "Tablica"
+  "tools.database.defaultViewBoard": "Tablica",
+  "toolNames.bookmark": "Zakładka",
+  "toolNames.embed": "Osadź",
+  "tools.bookmark.empty": "Wklej link, aby utworzyć zakładkę",
+  "tools.bookmark.loading": "Ładowanie podglądu linku",
+  "tools.bookmark.error": "Nie można załadować podglądu linku",
+  "tools.embed.empty": "Wklej link, aby go osadzić",
+  "tools.embed.openOriginal": "Otwórz oryginał",
+  "tools.embed.captionPlaceholder": "Wpisz podpis…"
 }

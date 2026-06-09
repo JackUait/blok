@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Не е започнато",
   "tools.database.defaultStatusInProgress": "В процес",
   "tools.database.defaultStatusDone": "Готово",
-  "tools.database.defaultViewBoard": "Табло"
+  "tools.database.defaultViewBoard": "Табло",
+  "toolNames.bookmark": "Отметка",
+  "toolNames.embed": "Вграждане",
+  "tools.bookmark.empty": "Поставете връзка, за да създадете отметка",
+  "tools.bookmark.loading": "Зареждане на визуализацията на връзката",
+  "tools.bookmark.error": "Визуализацията на връзката не можа да се зареди",
+  "tools.embed.empty": "Поставете връзка за вграждане",
+  "tools.embed.openOriginal": "Отвори оригинала",
+  "tools.embed.captionPlaceholder": "Въведете надпис…"
 }

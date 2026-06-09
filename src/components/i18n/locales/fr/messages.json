@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Non commencé",
   "tools.database.defaultStatusInProgress": "En cours",
   "tools.database.defaultStatusDone": "Terminé",
-  "tools.database.defaultViewBoard": "Tableau"
+  "tools.database.defaultViewBoard": "Tableau",
+  "toolNames.bookmark": "Signet",
+  "toolNames.embed": "Intégration",
+  "tools.bookmark.empty": "Collez un lien pour créer un signet",
+  "tools.bookmark.loading": "Chargement de l’aperçu",
+  "tools.bookmark.error": "Impossible de charger l’aperçu",
+  "tools.embed.empty": "Collez un lien à intégrer",
+  "tools.embed.openOriginal": "Ouvrir l’original",
+  "tools.embed.captionPlaceholder": "Ajoutez une légende…"
 }

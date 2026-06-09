@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "شروع نه ٿيو",
   "tools.database.defaultStatusInProgress": "جاري",
   "tools.database.defaultStatusDone": "مڪمل",
-  "tools.database.defaultViewBoard": "بورڊ"
+  "tools.database.defaultViewBoard": "بورڊ",
+  "toolNames.bookmark": "بُڪ مارڪ",
+  "toolNames.embed": "شامل ڪريو",
+  "tools.bookmark.empty": "بُڪ مارڪ ٺاهڻ لاءِ لنڪ پيسٽ ڪريو",
+  "tools.bookmark.loading": "لنڪ جو نمونو لوڊ ٿي رهيو آهي",
+  "tools.bookmark.error": "لنڪ جو نمونو لوڊ نه ٿي سگهيو",
+  "tools.embed.empty": "شامل ڪرڻ لاءِ لنڪ پيسٽ ڪريو",
+  "tools.embed.openOriginal": "اصل کوليو",
+  "tools.embed.captionPlaceholder": "ڪيپشن لکو…"
 }

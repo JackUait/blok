@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "ਸ਼ੁਰੂ ਨਹੀਂ ਹੋਇਆ",
   "tools.database.defaultStatusInProgress": "ਚੱਲ ਰਿਹਾ",
   "tools.database.defaultStatusDone": "ਪੂਰਾ",
-  "tools.database.defaultViewBoard": "ਬੋਰਡ"
+  "tools.database.defaultViewBoard": "ਬੋਰਡ",
+  "toolNames.bookmark": "ਬੁੱਕਮਾਰਕ",
+  "toolNames.embed": "ਏਮਬੈੱਡ",
+  "tools.bookmark.empty": "ਬੁੱਕਮਾਰਕ ਬਣਾਉਣ ਲਈ ਲਿੰਕ ਪੇਸਟ ਕਰੋ",
+  "tools.bookmark.loading": "ਲਿੰਕ ਝਲਕ ਲੋਡ ਹੋ ਰਹੀ ਹੈ",
+  "tools.bookmark.error": "ਲਿੰਕ ਝਲਕ ਲੋਡ ਨਹੀਂ ਹੋ ਸਕੀ",
+  "tools.embed.empty": "ਏਮਬੈੱਡ ਕਰਨ ਲਈ ਲਿੰਕ ਪੇਸਟ ਕਰੋ",
+  "tools.embed.openOriginal": "ਮੂਲ ਖੋਲ੍ਹੋ",
+  "tools.embed.captionPlaceholder": "ਕੈਪਸ਼ਨ ਲਿਖੋ…"
 }

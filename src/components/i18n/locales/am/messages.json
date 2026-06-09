@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "አልተጀመረም",
   "tools.database.defaultStatusInProgress": "በሂደት ላይ",
   "tools.database.defaultStatusDone": "ተጠናቋል",
-  "tools.database.defaultViewBoard": "ሰሌዳ"
+  "tools.database.defaultViewBoard": "ሰሌዳ",
+  "toolNames.bookmark": "ዕልባት",
+  "toolNames.embed": "አስገባ",
+  "tools.bookmark.empty": "ዕልባት ለመፍጠር አገናኝ ይለጥፉ",
+  "tools.bookmark.loading": "የአገናኝ ቅድመ-እይታ በመጫን ላይ",
+  "tools.bookmark.error": "የአገናኝ ቅድመ-እይታ መጫን አልተቻለም",
+  "tools.embed.empty": "ለማስገባት አገናኝ ይለጥፉ",
+  "tools.embed.openOriginal": "ዋናውን ክፈት",
+  "tools.embed.captionPlaceholder": "መግለጫ ይጻፉ…"
 }

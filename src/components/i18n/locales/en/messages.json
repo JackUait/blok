@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Not started",
   "tools.database.defaultStatusInProgress": "In progress",
   "tools.database.defaultStatusDone": "Done",
-  "tools.database.defaultViewBoard": "Board"
+  "tools.database.defaultViewBoard": "Board",
+  "toolNames.bookmark": "Bookmark",
+  "toolNames.embed": "Embed",
+  "tools.bookmark.empty": "Paste a link to create a bookmark",
+  "tools.bookmark.loading": "Loading link preview",
+  "tools.bookmark.error": "Could not load link preview",
+  "tools.embed.empty": "Paste a link to embed",
+  "tools.embed.openOriginal": "Open original",
+  "tools.embed.captionPlaceholder": "Write a caption…"
 }

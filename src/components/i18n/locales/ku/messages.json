@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "دەستی پێ نەکردووە",
   "tools.database.defaultStatusInProgress": "لە بەردەوام بوون",
   "tools.database.defaultStatusDone": "تەواو",
-  "tools.database.defaultViewBoard": "تەختە"
+  "tools.database.defaultViewBoard": "تەختە",
+  "toolNames.bookmark": "Şûnpel",
+  "toolNames.embed": "Bicîkirin",
+  "tools.bookmark.empty": "Girêdanekê pê ve bike da ku şûnpelekê çêbikî",
+  "tools.bookmark.loading": "Pêşdîtin tê barkirin",
+  "tools.bookmark.error": "Pêşdîtin nehate barkirin",
+  "tools.embed.empty": "Girêdanekê pê ve bike da ku bicî bikî",
+  "tools.embed.openOriginal": "Ya resen veke",
+  "tools.embed.captionPlaceholder": "Sernavekê binivîse…"
 }

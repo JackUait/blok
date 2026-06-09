@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Niet gestart",
   "tools.database.defaultStatusInProgress": "Bezig",
   "tools.database.defaultStatusDone": "Klaar",
-  "tools.database.defaultViewBoard": "Bord"
+  "tools.database.defaultViewBoard": "Bord",
+  "toolNames.bookmark": "Bladwijzer",
+  "toolNames.embed": "Insluiten",
+  "tools.bookmark.empty": "Plak een link om een bladwijzer te maken",
+  "tools.bookmark.loading": "Linkvoorbeeld laden",
+  "tools.bookmark.error": "Kan linkvoorbeeld niet laden",
+  "tools.embed.empty": "Plak een link om in te sluiten",
+  "tools.embed.openOriginal": "Origineel openen",
+  "tools.embed.captionPlaceholder": "Schrijf een bijschrift…"
 }

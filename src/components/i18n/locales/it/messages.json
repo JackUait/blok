@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Non iniziato",
   "tools.database.defaultStatusInProgress": "In corso",
   "tools.database.defaultStatusDone": "Completato",
-  "tools.database.defaultViewBoard": "Bacheca"
+  "tools.database.defaultViewBoard": "Bacheca",
+  "toolNames.bookmark": "Segnalibro",
+  "toolNames.embed": "Incorpora",
+  "tools.bookmark.empty": "Incolla un link per creare un segnalibro",
+  "tools.bookmark.loading": "Caricamento anteprima del link",
+  "tools.bookmark.error": "Impossibile caricare l'anteprima del link",
+  "tools.embed.empty": "Incolla un link da incorporare",
+  "tools.embed.openOriginal": "Apri originale",
+  "tools.embed.captionPlaceholder": "Scrivi una didascalia…"
 }

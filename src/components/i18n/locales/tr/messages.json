@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Başlanmadı",
   "tools.database.defaultStatusInProgress": "Devam ediyor",
   "tools.database.defaultStatusDone": "Tamamlandı",
-  "tools.database.defaultViewBoard": "Pano"
+  "tools.database.defaultViewBoard": "Pano",
+  "toolNames.bookmark": "Yer işareti",
+  "toolNames.embed": "Yerleştir",
+  "tools.bookmark.empty": "Yer işareti oluşturmak için bağlantı yapıştırın",
+  "tools.bookmark.loading": "Bağlantı önizlemesi yükleniyor",
+  "tools.bookmark.error": "Bağlantı önizlemesi yüklenemedi",
+  "tools.embed.empty": "Yerleştirmek için bağlantı yapıştırın",
+  "tools.embed.openOriginal": "Orijinali aç",
+  "tools.embed.captionPlaceholder": "Altyazı yazın…"
 }

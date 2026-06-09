@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Ikke startet",
   "tools.database.defaultStatusInProgress": "Pågår",
   "tools.database.defaultStatusDone": "Ferdig",
-  "tools.database.defaultViewBoard": "Tavle"
+  "tools.database.defaultViewBoard": "Tavle",
+  "toolNames.bookmark": "Bokmerke",
+  "toolNames.embed": "Bygg inn",
+  "tools.bookmark.empty": "Lim inn en lenke for å opprette et bokmerke",
+  "tools.bookmark.loading": "Laster inn forhåndsvisning av lenke",
+  "tools.bookmark.error": "Kunne ikke laste forhåndsvisning av lenke",
+  "tools.embed.empty": "Lim inn en lenke for å bygge inn",
+  "tools.embed.openOriginal": "Åpne original",
+  "tools.embed.captionPlaceholder": "Skriv en bildetekst…"
 }

@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Belum bermula",
   "tools.database.defaultStatusInProgress": "Sedang berjalan",
   "tools.database.defaultStatusDone": "Selesai",
-  "tools.database.defaultViewBoard": "Papan"
+  "tools.database.defaultViewBoard": "Papan",
+  "toolNames.bookmark": "Penanda halaman",
+  "toolNames.embed": "Benam",
+  "tools.bookmark.empty": "Tampal pautan untuk membuat penanda halaman",
+  "tools.bookmark.loading": "Memuatkan pratonton pautan",
+  "tools.bookmark.error": "Tidak dapat memuatkan pratonton pautan",
+  "tools.embed.empty": "Tampal pautan untuk membenam",
+  "tools.embed.openOriginal": "Buka asal",
+  "tools.embed.captionPlaceholder": "Tulis kapsyen…"
 }

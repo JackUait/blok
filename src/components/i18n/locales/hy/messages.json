@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Չի սկսվել",
   "tools.database.defaultStatusInProgress": "Ընթացքում",
   "tools.database.defaultStatusDone": "Ավարտված",
-  "tools.database.defaultViewBoard": "Տախտակ"
+  "tools.database.defaultViewBoard": "Տախտակ",
+  "toolNames.bookmark": "Էջանիշ",
+  "toolNames.embed": "Ներդրում",
+  "tools.bookmark.empty": "Տեղադրեք հղումը՝ էջանիշ ստեղծելու համար",
+  "tools.bookmark.loading": "Նախադիտման բեռնում",
+  "tools.bookmark.error": "Չհաջողվեց բեռնել նախադիտումը",
+  "tools.embed.empty": "Տեղադրեք հղումը՝ ներդրման համար",
+  "tools.embed.openOriginal": "Բացել բնօրինակը",
+  "tools.embed.captionPlaceholder": "Գրեք ենթագիր…"
 }

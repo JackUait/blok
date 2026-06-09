@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "မစတင်ရသေး",
   "tools.database.defaultStatusInProgress": "ဆောင်ရွက်ဆဲ",
   "tools.database.defaultStatusDone": "ပြီးဆုံး",
-  "tools.database.defaultViewBoard": "ဘုတ်"
+  "tools.database.defaultViewBoard": "ဘုတ်",
+  "toolNames.bookmark": "မှတ်သားချက်",
+  "toolNames.embed": "ထည့်သွင်းရန်",
+  "tools.bookmark.empty": "မှတ်သားချက်ဖန်တီးရန် လင့်ခ်ကို ကူးထည့်ပါ",
+  "tools.bookmark.loading": "လင့်ခ် အစမ်းကြည့်ရှုမှု ဖွင့်နေသည်",
+  "tools.bookmark.error": "လင့်ခ် အစမ်းကြည့်ရှုမှုကို ဖွင့်၍မရပါ",
+  "tools.embed.empty": "ထည့်သွင်းရန် လင့်ခ်ကို ကူးထည့်ပါ",
+  "tools.embed.openOriginal": "မူရင်းကို ဖွင့်ရန်",
+  "tools.embed.captionPlaceholder": "စာတန်းရေးပါ…"
 }

@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Nije započeto",
   "tools.database.defaultStatusInProgress": "U toku",
   "tools.database.defaultStatusDone": "Gotovo",
-  "tools.database.defaultViewBoard": "Tabla"
+  "tools.database.defaultViewBoard": "Tabla",
+  "toolNames.bookmark": "Knjižna oznaka",
+  "toolNames.embed": "Ugradi",
+  "tools.bookmark.empty": "Zalijepite link da kreirate knjižnu oznaku",
+  "tools.bookmark.loading": "Učitavanje pregleda linka",
+  "tools.bookmark.error": "Pregled linka nije moguće učitati",
+  "tools.embed.empty": "Zalijepite link za ugradnju",
+  "tools.embed.openOriginal": "Otvori original",
+  "tools.embed.captionPlaceholder": "Unesite natpis…"
 }

@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "لم يبدأ",
   "tools.database.defaultStatusInProgress": "قيد التنفيذ",
   "tools.database.defaultStatusDone": "منجز",
-  "tools.database.defaultViewBoard": "لوحة"
+  "tools.database.defaultViewBoard": "لوحة",
+  "toolNames.bookmark": "إشارة مرجعية",
+  "toolNames.embed": "تضمين",
+  "tools.bookmark.empty": "الصق رابطًا لإنشاء إشارة مرجعية",
+  "tools.bookmark.loading": "جارٍ تحميل معاينة الرابط",
+  "tools.bookmark.error": "تعذّر تحميل معاينة الرابط",
+  "tools.embed.empty": "الصق رابطًا للتضمين",
+  "tools.embed.openOriginal": "فتح المصدر الأصلي",
+  "tools.embed.captionPlaceholder": "اكتب تعليقًا…"
 }

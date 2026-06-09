@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Није започето",
   "tools.database.defaultStatusInProgress": "У току",
   "tools.database.defaultStatusDone": "Готово",
-  "tools.database.defaultViewBoard": "Табла"
+  "tools.database.defaultViewBoard": "Табла",
+  "toolNames.bookmark": "Обележивач",
+  "toolNames.embed": "Уметни",
+  "tools.bookmark.empty": "Налепите везу да бисте направили обележивач",
+  "tools.bookmark.loading": "Учитавање прегледа везе",
+  "tools.bookmark.error": "Преглед везе није могуће учитати",
+  "tools.embed.empty": "Налепите везу за уметање",
+  "tools.embed.openOriginal": "Отвори оригинал",
+  "tools.embed.captionPlaceholder": "Упишите натпис…"
 }

@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Alustamata",
   "tools.database.defaultStatusInProgress": "Pooleli",
   "tools.database.defaultStatusDone": "Valmis",
-  "tools.database.defaultViewBoard": "Tahvel"
+  "tools.database.defaultViewBoard": "Tahvel",
+  "toolNames.bookmark": "Järjehoidja",
+  "toolNames.embed": "Manus",
+  "tools.bookmark.empty": "Järjehoidja loomiseks kleebi link",
+  "tools.bookmark.loading": "Eelvaate laadimine",
+  "tools.bookmark.error": "Eelvaadet ei õnnestunud laadida",
+  "tools.embed.empty": "Manustamiseks kleebi link",
+  "tools.embed.openOriginal": "Ava algallikas",
+  "tools.embed.captionPlaceholder": "Kirjuta pealdis…"
 }

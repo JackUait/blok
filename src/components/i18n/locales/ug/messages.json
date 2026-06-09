@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "باشلانمىدى",
   "tools.database.defaultStatusInProgress": "داۋاملىشىۋاتىدۇ",
   "tools.database.defaultStatusDone": "تاماملاندى",
-  "tools.database.defaultViewBoard": "تاختا"
+  "tools.database.defaultViewBoard": "تاختا",
+  "toolNames.bookmark": "خەتكۈش",
+  "toolNames.embed": "سىڭدۈرۈش",
+  "tools.bookmark.empty": "خەتكۈش قۇرۇش ئۈچۈن ئۇلانما چاپلاڭ",
+  "tools.bookmark.loading": "ئۇلانما ئالدىن كۆرۈش يۈكلىنىۋاتىدۇ",
+  "tools.bookmark.error": "ئۇلانما ئالدىن كۆرۈشنى يۈكلىگىلى بولمىدى",
+  "tools.embed.empty": "سىڭدۈرۈش ئۈچۈن ئۇلانما چاپلاڭ",
+  "tools.embed.openOriginal": "ئەسلىنى ئېچىش",
+  "tools.embed.captionPlaceholder": "ئىزاھات يېزىڭ…"
 }

@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Nepradėta",
   "tools.database.defaultStatusInProgress": "Vykdoma",
   "tools.database.defaultStatusDone": "Atlikta",
-  "tools.database.defaultViewBoard": "Lenta"
+  "tools.database.defaultViewBoard": "Lenta",
+  "toolNames.bookmark": "Žymė",
+  "toolNames.embed": "Įterpti",
+  "tools.bookmark.empty": "Įklijuokite nuorodą žymei sukurti",
+  "tools.bookmark.loading": "Įkeliama peržiūra",
+  "tools.bookmark.error": "Nepavyko įkelti peržiūros",
+  "tools.embed.empty": "Įklijuokite nuorodą įterpti",
+  "tools.embed.openOriginal": "Atidaryti originalą",
+  "tools.embed.captionPlaceholder": "Įrašykite antraštę…"
 }

@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Sin empezar",
   "tools.database.defaultStatusInProgress": "En curso",
   "tools.database.defaultStatusDone": "Hecho",
-  "tools.database.defaultViewBoard": "Tablero"
+  "tools.database.defaultViewBoard": "Tablero",
+  "toolNames.bookmark": "Marcador",
+  "toolNames.embed": "Insertar",
+  "tools.bookmark.empty": "Pega un enlace para crear un marcador",
+  "tools.bookmark.loading": "Cargando vista previa del enlace",
+  "tools.bookmark.error": "No se pudo cargar la vista previa del enlace",
+  "tools.embed.empty": "Pega un enlace para insertarlo",
+  "tools.embed.openOriginal": "Abrir original",
+  "tools.embed.captionPlaceholder": "Escribe una leyenda…"
 }

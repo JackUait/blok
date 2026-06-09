@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "נישט אנגעהויבן",
   "tools.database.defaultStatusInProgress": "אין פארשריט",
   "tools.database.defaultStatusDone": "פארטיק",
-  "tools.database.defaultViewBoard": "ברעט"
+  "tools.database.defaultViewBoard": "ברעט",
+  "toolNames.bookmark": "צייכן",
+  "toolNames.embed": "אײַנבעטן",
+  "tools.bookmark.empty": "פּעיסט אַ לינק צו שאַפֿן אַ צייכן",
+  "tools.bookmark.loading": "לאָדן לינק־פֿאָרױסבליק",
+  "tools.bookmark.error": "מע האָט נישט געקענט לאָדן דעם לינק־פֿאָרױסבליק",
+  "tools.embed.empty": "פּעיסט אַ לינק צו אײַנבעטן",
+  "tools.embed.openOriginal": "עפֿן אָריגינאַל",
+  "tools.embed.captionPlaceholder": "שרײַב אַ קעפּל…"
 }

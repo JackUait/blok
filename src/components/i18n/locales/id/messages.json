@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Belum dimulai",
   "tools.database.defaultStatusInProgress": "Sedang berjalan",
   "tools.database.defaultStatusDone": "Selesai",
-  "tools.database.defaultViewBoard": "Papan"
+  "tools.database.defaultViewBoard": "Papan",
+  "toolNames.bookmark": "Markah",
+  "toolNames.embed": "Sematan",
+  "tools.bookmark.empty": "Tempel tautan untuk membuat markah",
+  "tools.bookmark.loading": "Memuat pratinjau",
+  "tools.bookmark.error": "Tidak dapat memuat pratinjau",
+  "tools.embed.empty": "Tempel tautan untuk disematkan",
+  "tools.embed.openOriginal": "Buka asli",
+  "tools.embed.captionPlaceholder": "Tulis keterangan…"
 }

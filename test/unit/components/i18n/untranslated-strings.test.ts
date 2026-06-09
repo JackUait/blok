@@ -119,6 +119,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.database.kanbanBoard',
     'tools.database.defaultViewBoard',
     'searchTerms.layout',
+    // "Bookmark" is the standard loanword in Filipino UIs (Tagalog).
+    'toolNames.bookmark',
   ]),
   fr: new Set([
     'tools.colorPicker.color.orange',

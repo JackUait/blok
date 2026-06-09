@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "தொடங்கவில்லை",
   "tools.database.defaultStatusInProgress": "செயலில்",
   "tools.database.defaultStatusDone": "முடிந்தது",
-  "tools.database.defaultViewBoard": "பலகை"
+  "tools.database.defaultViewBoard": "பலகை",
+  "toolNames.bookmark": "புக்மார்க்",
+  "toolNames.embed": "உட்பொதி",
+  "tools.bookmark.empty": "புக்மார்க் உருவாக்க இணைப்பை ஒட்டவும்",
+  "tools.bookmark.loading": "இணைப்பு முன்னோட்டம் ஏற்றப்படுகிறது",
+  "tools.bookmark.error": "இணைப்பு முன்னோட்டத்தை ஏற்ற முடியவில்லை",
+  "tools.embed.empty": "உட்பொதிக்க இணைப்பை ஒட்டவும்",
+  "tools.embed.openOriginal": "மூலத்தைத் திற",
+  "tools.embed.captionPlaceholder": "தலைப்புரை எழுதவும்…"
 }

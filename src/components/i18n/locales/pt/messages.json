@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Não iniciado",
   "tools.database.defaultStatusInProgress": "Em andamento",
   "tools.database.defaultStatusDone": "Concluído",
-  "tools.database.defaultViewBoard": "Quadro"
+  "tools.database.defaultViewBoard": "Quadro",
+  "toolNames.bookmark": "Marcador",
+  "toolNames.embed": "Incorporar",
+  "tools.bookmark.empty": "Cole um link para criar um marcador",
+  "tools.bookmark.loading": "Carregando pré-visualização do link",
+  "tools.bookmark.error": "Não foi possível carregar a pré-visualização do link",
+  "tools.embed.empty": "Cole um link para incorporar",
+  "tools.embed.openOriginal": "Abrir original",
+  "tools.embed.captionPlaceholder": "Escreva uma legenda…"
 }

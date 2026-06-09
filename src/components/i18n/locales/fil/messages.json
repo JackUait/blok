@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Hindi pa nagsisimula",
   "tools.database.defaultStatusInProgress": "Ginagawa",
   "tools.database.defaultStatusDone": "Tapos na",
-  "tools.database.defaultViewBoard": "Board"
+  "tools.database.defaultViewBoard": "Board",
+  "toolNames.bookmark": "Bookmark",
+  "toolNames.embed": "I-embed",
+  "tools.bookmark.empty": "Mag-paste ng link para gumawa ng bookmark",
+  "tools.bookmark.loading": "Nilo-load ang preview",
+  "tools.bookmark.error": "Hindi ma-load ang preview",
+  "tools.embed.empty": "Mag-paste ng link para i-embed",
+  "tools.embed.openOriginal": "Buksan ang orihinal",
+  "tools.embed.captionPlaceholder": "Magsulat ng caption…"
 }

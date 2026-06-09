@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "ފަށާފައެއް ނެތް",
   "tools.database.defaultStatusInProgress": "ކުރިއަށް",
   "tools.database.defaultStatusDone": "ނިމިއްޖެ",
-  "tools.database.defaultViewBoard": "ބޯޑް"
+  "tools.database.defaultViewBoard": "ބޯޑް",
+  "toolNames.bookmark": "ބުކްމާކް",
+  "toolNames.embed": "އެމްބެޑް",
+  "tools.bookmark.empty": "ބުކްމާކެއް ހެދުމަށް ލިންކެއް ޕޭސްޓްކުރައްވާ",
+  "tools.bookmark.loading": "ލިންކް ޕްރިވިއު ލޯޑްވަނީ",
+  "tools.bookmark.error": "ލިންކް ޕްރިވިއު ލޯޑެއް ނުކުރެވުނު",
+  "tools.embed.empty": "އެމްބެޑްކުރުމަށް ލިންކެއް ޕޭސްޓްކުރައްވާ",
+  "tools.embed.openOriginal": "އަސްލު ހުޅުވާ",
+  "tools.embed.captionPlaceholder": "ކެޕްޝަނެއް ލިޔުއްވާ…"
 }

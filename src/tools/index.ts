@@ -35,6 +35,8 @@ export { ImageTool as Image } from './image';
 export { ColumnList } from './column-list';
 export { Column } from './column';
 export { Columns } from './columns';
+export { Embed } from './link/embed';
+export { Bookmark } from './link/bookmark';
 
 // Inline tools
 export { BoldInlineTool as Bold } from '../components/inline-tools/inline-tool-bold';
@@ -63,6 +65,8 @@ export const defaultBlockTools = {
   image: {},
   column_list: {},
   column: {},
+  embed: {},
+  bookmark: {},
 } as const;
 
 export const defaultInlineTools = {

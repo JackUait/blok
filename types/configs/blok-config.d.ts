@@ -125,6 +125,19 @@ export interface BlokConfig {
   i18n?: I18nConfig;
 
   /**
+   * Notion-style link-paste behavior.
+   */
+  linkPaste?: {
+    /**
+     * When true, pasting a URL opens a small menu (Plain link / Bookmark / Embed)
+     * instead of auto-inserting the first matching block. Requires an interactive
+     * DOM. Leave off for headless/programmatic use to keep deterministic auto-claim.
+     * @default false
+     */
+    menu?: boolean;
+  };
+
+  /**
    * Fires when Blok is ready to work
    */
   onReady?(): void;

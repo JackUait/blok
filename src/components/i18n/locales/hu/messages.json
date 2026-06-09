@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Nem indult",
   "tools.database.defaultStatusInProgress": "Folyamatban",
   "tools.database.defaultStatusDone": "Kész",
-  "tools.database.defaultViewBoard": "Tábla"
+  "tools.database.defaultViewBoard": "Tábla",
+  "toolNames.bookmark": "Könyvjelző",
+  "toolNames.embed": "Beágyazás",
+  "tools.bookmark.empty": "Illessz be egy linket könyvjelző létrehozásához",
+  "tools.bookmark.loading": "Előnézet betöltése",
+  "tools.bookmark.error": "Az előnézet nem tölthető be",
+  "tools.embed.empty": "Illessz be egy linket a beágyazáshoz",
+  "tools.embed.openOriginal": "Eredeti megnyitása",
+  "tools.embed.captionPlaceholder": "Írj képaláírást…"
 }

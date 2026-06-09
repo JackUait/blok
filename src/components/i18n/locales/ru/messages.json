@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Не начато",
   "tools.database.defaultStatusInProgress": "В работе",
   "tools.database.defaultStatusDone": "Готово",
-  "tools.database.defaultViewBoard": "Доска"
+  "tools.database.defaultViewBoard": "Доска",
+  "toolNames.bookmark": "Закладка",
+  "toolNames.embed": "Встраивание",
+  "tools.bookmark.empty": "Вставьте ссылку, чтобы создать закладку",
+  "tools.bookmark.loading": "Загрузка превью ссылки",
+  "tools.bookmark.error": "Не удалось загрузить превью ссылки",
+  "tools.embed.empty": "Вставьте ссылку для встраивания",
+  "tools.embed.openOriginal": "Открыть оригинал",
+  "tools.embed.captionPlaceholder": "Добавьте подпись…"
 }

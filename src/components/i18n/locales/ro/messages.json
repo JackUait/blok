@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Neînceput",
   "tools.database.defaultStatusInProgress": "În lucru",
   "tools.database.defaultStatusDone": "Gata",
-  "tools.database.defaultViewBoard": "Panou"
+  "tools.database.defaultViewBoard": "Panou",
+  "toolNames.bookmark": "Marcaj",
+  "toolNames.embed": "Încorporare",
+  "tools.bookmark.empty": "Lipiți un link pentru a crea un marcaj",
+  "tools.bookmark.loading": "Se încarcă previzualizarea linkului",
+  "tools.bookmark.error": "Previzualizarea linkului nu a putut fi încărcată",
+  "tools.embed.empty": "Lipiți un link pentru a-l încorpora",
+  "tools.embed.openOriginal": "Deschide originalul",
+  "tools.embed.captionPlaceholder": "Scrieți o descriere…"
 }

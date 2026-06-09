@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Ej påbörjad",
   "tools.database.defaultStatusInProgress": "Pågår",
   "tools.database.defaultStatusDone": "Klar",
-  "tools.database.defaultViewBoard": "Tavla"
+  "tools.database.defaultViewBoard": "Tavla",
+  "toolNames.bookmark": "Bokmärke",
+  "toolNames.embed": "Bädda in",
+  "tools.bookmark.empty": "Klistra in en länk för att skapa ett bokmärke",
+  "tools.bookmark.loading": "Läser in förhandsvisning av länk",
+  "tools.bookmark.error": "Det gick inte att läsa in förhandsvisningen",
+  "tools.embed.empty": "Klistra in en länk att bädda in",
+  "tools.embed.openOriginal": "Öppna originalet",
+  "tools.embed.captionPlaceholder": "Skriv en bildtext…"
 }

@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Эхлээгүй",
   "tools.database.defaultStatusInProgress": "Хийгдэж байна",
   "tools.database.defaultStatusDone": "Дууссан",
-  "tools.database.defaultViewBoard": "Самбар"
+  "tools.database.defaultViewBoard": "Самбар",
+  "toolNames.bookmark": "Хавчуурга",
+  "toolNames.embed": "Шигтгээ",
+  "tools.bookmark.empty": "Хавчуурга үүсгэхийн тулд холбоос буулгана уу",
+  "tools.bookmark.loading": "Холбоосын урьдчилсан харагдацыг ачаалж байна",
+  "tools.bookmark.error": "Холбоосын урьдчилсан харагдацыг ачаалж чадсангүй",
+  "tools.embed.empty": "Шигтгэхийн тулд холбоос буулгана уу",
+  "tools.embed.openOriginal": "Эх сурвалжийг нээх",
+  "tools.embed.captionPlaceholder": "Тайлбар бичих…"
 }

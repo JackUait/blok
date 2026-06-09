@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Chưa bắt đầu",
   "tools.database.defaultStatusInProgress": "Đang thực hiện",
   "tools.database.defaultStatusDone": "Hoàn thành",
-  "tools.database.defaultViewBoard": "Bảng"
+  "tools.database.defaultViewBoard": "Bảng",
+  "toolNames.bookmark": "Dấu trang",
+  "toolNames.embed": "Nhúng",
+  "tools.bookmark.empty": "Dán liên kết để tạo dấu trang",
+  "tools.bookmark.loading": "Đang tải bản xem trước liên kết",
+  "tools.bookmark.error": "Không thể tải bản xem trước liên kết",
+  "tools.embed.empty": "Dán liên kết để nhúng",
+  "tools.embed.openOriginal": "Mở bản gốc",
+  "tools.embed.captionPlaceholder": "Viết chú thích…"
 }

@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Не розпочато",
   "tools.database.defaultStatusInProgress": "У роботі",
   "tools.database.defaultStatusDone": "Готово",
-  "tools.database.defaultViewBoard": "Дошка"
+  "tools.database.defaultViewBoard": "Дошка",
+  "toolNames.bookmark": "Закладка",
+  "toolNames.embed": "Вбудувати",
+  "tools.bookmark.empty": "Вставте посилання, щоб створити закладку",
+  "tools.bookmark.loading": "Завантаження попереднього перегляду",
+  "tools.bookmark.error": "Не вдалося завантажити попередній перегляд",
+  "tools.embed.empty": "Вставте посилання, щоб вбудувати",
+  "tools.embed.openOriginal": "Відкрити оригінал",
+  "tools.embed.captionPlaceholder": "Введіть підпис…"
 }

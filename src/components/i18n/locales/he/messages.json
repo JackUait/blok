@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "לא התחיל",
   "tools.database.defaultStatusInProgress": "בתהליך",
   "tools.database.defaultStatusDone": "הושלם",
-  "tools.database.defaultViewBoard": "לוח"
+  "tools.database.defaultViewBoard": "לוח",
+  "toolNames.bookmark": "סימנייה",
+  "toolNames.embed": "הטמעה",
+  "tools.bookmark.empty": "הדביקו קישור כדי ליצור סימנייה",
+  "tools.bookmark.loading": "טוען תצוגה מקדימה",
+  "tools.bookmark.error": "לא ניתן לטעון תצוגה מקדימה",
+  "tools.embed.empty": "הדביקו קישור להטמעה",
+  "tools.embed.openOriginal": "פתח את המקור",
+  "tools.embed.captionPlaceholder": "כתוב כיתוב…"
 }

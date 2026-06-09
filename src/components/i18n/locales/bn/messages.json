@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "শুরু হয়নি",
   "tools.database.defaultStatusInProgress": "চলমান",
   "tools.database.defaultStatusDone": "সম্পন্ন",
-  "tools.database.defaultViewBoard": "বোর্ড"
+  "tools.database.defaultViewBoard": "বোর্ড",
+  "toolNames.bookmark": "বুকমার্ক",
+  "toolNames.embed": "এম্বেড",
+  "tools.bookmark.empty": "বুকমার্ক তৈরি করতে একটি লিঙ্ক পেস্ট করুন",
+  "tools.bookmark.loading": "লিঙ্ক প্রিভিউ লোড হচ্ছে",
+  "tools.bookmark.error": "লিঙ্ক প্রিভিউ লোড করা যায়নি",
+  "tools.embed.empty": "এম্বেড করতে একটি লিঙ্ক পেস্ট করুন",
+  "tools.embed.openOriginal": "মূল উৎস খুলুন",
+  "tools.embed.captionPlaceholder": "ক্যাপশন লিখুন…"
 }

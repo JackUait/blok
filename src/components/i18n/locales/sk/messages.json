@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Nezačaté",
   "tools.database.defaultStatusInProgress": "Prebieha",
   "tools.database.defaultStatusDone": "Hotovo",
-  "tools.database.defaultViewBoard": "Tabuľa"
+  "tools.database.defaultViewBoard": "Tabuľa",
+  "toolNames.bookmark": "Záložka",
+  "toolNames.embed": "Vložiť",
+  "tools.bookmark.empty": "Prilepte odkaz na vytvorenie záložky",
+  "tools.bookmark.loading": "Načítava sa náhľad odkazu",
+  "tools.bookmark.error": "Náhľad odkazu sa nepodarilo načítať",
+  "tools.embed.empty": "Prilepte odkaz na vloženie",
+  "tools.embed.openOriginal": "Otvoriť originál",
+  "tools.embed.captionPlaceholder": "Napíšte popis…"
 }

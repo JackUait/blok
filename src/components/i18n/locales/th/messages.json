@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "ยังไม่เริ่ม",
   "tools.database.defaultStatusInProgress": "กำลังดำเนินการ",
   "tools.database.defaultStatusDone": "เสร็จสิ้น",
-  "tools.database.defaultViewBoard": "บอร์ด"
+  "tools.database.defaultViewBoard": "บอร์ด",
+  "toolNames.bookmark": "บุ๊กมาร์ก",
+  "toolNames.embed": "ฝัง",
+  "tools.bookmark.empty": "วางลิงก์เพื่อสร้างบุ๊กมาร์ก",
+  "tools.bookmark.loading": "กำลังโหลดตัวอย่างลิงก์",
+  "tools.bookmark.error": "ไม่สามารถโหลดตัวอย่างลิงก์ได้",
+  "tools.embed.empty": "วางลิงก์เพื่อฝัง",
+  "tools.embed.openOriginal": "เปิดต้นฉบับ",
+  "tools.embed.captionPlaceholder": "เขียนคำบรรยาย…"
 }

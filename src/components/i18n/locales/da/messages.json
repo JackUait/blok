@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Ikke startet",
   "tools.database.defaultStatusInProgress": "I gang",
   "tools.database.defaultStatusDone": "Færdig",
-  "tools.database.defaultViewBoard": "Tavle"
+  "tools.database.defaultViewBoard": "Tavle",
+  "toolNames.bookmark": "Bogmærke",
+  "toolNames.embed": "Integrer",
+  "tools.bookmark.empty": "Indsæt et link for at oprette et bogmærke",
+  "tools.bookmark.loading": "Indlæser linkeksempel",
+  "tools.bookmark.error": "Linkeksemplet kunne ikke indlæses",
+  "tools.embed.empty": "Indsæt et link for at integrere",
+  "tools.embed.openOriginal": "Åbn original",
+  "tools.embed.captionPlaceholder": "Skriv en billedtekst…"
 }

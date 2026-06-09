@@ -744,7 +744,7 @@
 
   <script type="module">
     import { Blok } from './src/blok.ts';
-    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Quote, Code, Image, ColumnList, Column, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Quote, Code, Image, ColumnList, Column, Embed, Bookmark, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
@@ -1601,12 +1601,17 @@
         tools.column_list = ColumnList;
         tools.column = Column;
       }
+      // Link-paste tools. Embed works standalone; Bookmark is contract-only and
+      // needs a metadata backend at `endpoint` (none here → it shows ERROR state).
+      tools.embed = Embed;
+      tools.bookmark = { class: Bookmark, config: { endpoint: '/unfurl' } };
       return {
         readOnly: state.readOnly,
         holder: 'blok',
         tools,
         autofocus: state.autofocus,
         notifierPosition: state.notifierPosition,
+        linkPaste: { menu: true },
         style: { contentAlign: 'center' },
         data: { blocks: structuredClone(DEFAULT_BLOCKS) },
         onChange(api, event) {

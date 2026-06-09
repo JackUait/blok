@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Nav sākts",
   "tools.database.defaultStatusInProgress": "Procesā",
   "tools.database.defaultStatusDone": "Gatavs",
-  "tools.database.defaultViewBoard": "Tāfele"
+  "tools.database.defaultViewBoard": "Tāfele",
+  "toolNames.bookmark": "Grāmatzīme",
+  "toolNames.embed": "Iegult",
+  "tools.bookmark.empty": "Ielīmējiet saiti, lai izveidotu grāmatzīmi",
+  "tools.bookmark.loading": "Notiek priekšskatījuma ielāde",
+  "tools.bookmark.error": "Neizdevās ielādēt priekšskatījumu",
+  "tools.embed.empty": "Ielīmējiet saiti, lai to iegultu",
+  "tools.embed.openOriginal": "Atvērt oriģinālu",
+  "tools.embed.captionPlaceholder": "Ierakstiet parakstu…"
 }

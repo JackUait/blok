@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Δεν ξεκίνησε",
   "tools.database.defaultStatusInProgress": "Σε εξέλιξη",
   "tools.database.defaultStatusDone": "Ολοκληρώθηκε",
-  "tools.database.defaultViewBoard": "Πίνακας"
+  "tools.database.defaultViewBoard": "Πίνακας",
+  "toolNames.bookmark": "Σελιδοδείκτης",
+  "toolNames.embed": "Ενσωμάτωση",
+  "tools.bookmark.empty": "Επικολλήστε σύνδεσμο για δημιουργία σελιδοδείκτη",
+  "tools.bookmark.loading": "Φόρτωση προεπισκόπησης συνδέσμου",
+  "tools.bookmark.error": "Δεν ήταν δυνατή η φόρτωση της προεπισκόπησης",
+  "tools.embed.empty": "Επικολλήστε σύνδεσμο για ενσωμάτωση",
+  "tools.embed.openOriginal": "Άνοιγμα πρωτότυπου",
+  "tools.embed.captionPlaceholder": "Γράψτε λεζάντα…"
 }

@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "未开始",
   "tools.database.defaultStatusInProgress": "进行中",
   "tools.database.defaultStatusDone": "已完成",
-  "tools.database.defaultViewBoard": "看板"
+  "tools.database.defaultViewBoard": "看板",
+  "toolNames.bookmark": "书签",
+  "toolNames.embed": "嵌入",
+  "tools.bookmark.empty": "粘贴链接以创建书签",
+  "tools.bookmark.loading": "正在加载链接预览",
+  "tools.bookmark.error": "无法加载链接预览",
+  "tools.embed.empty": "粘贴链接以嵌入",
+  "tools.embed.openOriginal": "打开原文",
+  "tools.embed.captionPlaceholder": "添加说明…"
 }

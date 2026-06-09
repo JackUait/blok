@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "شروع نہیں ہوا",
   "tools.database.defaultStatusInProgress": "جاری ہے",
   "tools.database.defaultStatusDone": "مکمل",
-  "tools.database.defaultViewBoard": "بورڈ"
+  "tools.database.defaultViewBoard": "بورڈ",
+  "toolNames.bookmark": "بک مارک",
+  "toolNames.embed": "ایمبیڈ",
+  "tools.bookmark.empty": "بک مارک بنانے کے لیے لنک پیسٹ کریں",
+  "tools.bookmark.loading": "لنک پیش منظر لوڈ ہو رہا ہے",
+  "tools.bookmark.error": "لنک پیش منظر لوڈ نہیں ہو سکا",
+  "tools.embed.empty": "ایمبیڈ کرنے کے لیے لنک پیسٹ کریں",
+  "tools.embed.openOriginal": "اصل کھولیں",
+  "tools.embed.captionPlaceholder": "کیپشن لکھیں…"
 }

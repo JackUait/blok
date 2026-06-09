@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Ni začeto",
   "tools.database.defaultStatusInProgress": "V teku",
   "tools.database.defaultStatusDone": "Končano",
-  "tools.database.defaultViewBoard": "Tabla"
+  "tools.database.defaultViewBoard": "Tabla",
+  "toolNames.bookmark": "Zaznamek",
+  "toolNames.embed": "Vstavi",
+  "tools.bookmark.empty": "Prilepite povezavo za izdelavo zaznamka",
+  "tools.bookmark.loading": "Nalaganje predogleda povezave",
+  "tools.bookmark.error": "Predogleda povezave ni bilo mogoče naložiti",
+  "tools.embed.empty": "Prilepite povezavo za vstavitev",
+  "tools.embed.openOriginal": "Odpri izvirnik",
+  "tools.embed.captionPlaceholder": "Napišite napis…"
 }

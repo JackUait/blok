@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "ຍັງບໍ່ໄດ້ເລີ່ມ",
   "tools.database.defaultStatusInProgress": "ກຳລັງດຳເນີນ",
   "tools.database.defaultStatusDone": "ສຳເລັດ",
-  "tools.database.defaultViewBoard": "ກະດານ"
+  "tools.database.defaultViewBoard": "ກະດານ",
+  "toolNames.bookmark": "ບຸກມາກ",
+  "toolNames.embed": "ຝັງ",
+  "tools.bookmark.empty": "ວາງລິ້ງເພື່ອສ້າງບຸກມາກ",
+  "tools.bookmark.loading": "ກຳລັງໂຫຼດຕົວຢ່າງ",
+  "tools.bookmark.error": "ບໍ່ສາມາດໂຫຼດຕົວຢ່າງໄດ້",
+  "tools.embed.empty": "ວາງລິ້ງເພື່ອຝັງ",
+  "tools.embed.openOriginal": "ເປີດຕົ້ນສະບັບ",
+  "tools.embed.captionPlaceholder": "ຂຽນຄຳບັນຍາຍ…"
 }

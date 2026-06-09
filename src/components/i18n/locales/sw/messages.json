@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Haijaanza",
   "tools.database.defaultStatusInProgress": "Inaendelea",
   "tools.database.defaultStatusDone": "Imekamilika",
-  "tools.database.defaultViewBoard": "Ubao"
+  "tools.database.defaultViewBoard": "Ubao",
+  "toolNames.bookmark": "Alamisho",
+  "toolNames.embed": "Pachika",
+  "tools.bookmark.empty": "Bandika kiungo ili kuunda alamisho",
+  "tools.bookmark.loading": "Inapakia onyesho la kiungo",
+  "tools.bookmark.error": "Imeshindwa kupakia onyesho la kiungo",
+  "tools.embed.empty": "Bandika kiungo ili kupachika",
+  "tools.embed.openOriginal": "Fungua asili",
+  "tools.embed.captionPlaceholder": "Andika maelezo…"
 }

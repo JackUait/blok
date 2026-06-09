@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "ప్రారంభం కాలేదు",
   "tools.database.defaultStatusInProgress": "ప్రగతిలో",
   "tools.database.defaultStatusDone": "పూర్తయింది",
-  "tools.database.defaultViewBoard": "బోర్డ్"
+  "tools.database.defaultViewBoard": "బోర్డ్",
+  "toolNames.bookmark": "బుక్‌మార్క్",
+  "toolNames.embed": "పొందుపరచు",
+  "tools.bookmark.empty": "బుక్‌మార్క్ సృష్టించడానికి లింక్‌ను అతికించండి",
+  "tools.bookmark.loading": "లింక్ ప్రివ్యూ లోడ్ అవుతోంది",
+  "tools.bookmark.error": "లింక్ ప్రివ్యూను లోడ్ చేయలేకపోయాం",
+  "tools.embed.empty": "పొందుపరచడానికి లింక్‌ను అతికించండి",
+  "tools.embed.openOriginal": "అసలును తెరువు",
+  "tools.embed.captionPlaceholder": "శీర్షికను వ్రాయండి…"
 }

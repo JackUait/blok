@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "未着手",
   "tools.database.defaultStatusInProgress": "進行中",
   "tools.database.defaultStatusDone": "完了",
-  "tools.database.defaultViewBoard": "ボード"
+  "tools.database.defaultViewBoard": "ボード",
+  "toolNames.bookmark": "ブックマーク",
+  "toolNames.embed": "埋め込み",
+  "tools.bookmark.empty": "リンクを貼り付けてブックマークを作成",
+  "tools.bookmark.loading": "プレビューを読み込み中",
+  "tools.bookmark.error": "プレビューを読み込めませんでした",
+  "tools.embed.empty": "埋め込むリンクを貼り付け",
+  "tools.embed.openOriginal": "元のページを開く",
+  "tools.embed.captionPlaceholder": "キャプションを入力…"
 }

@@ -219,10 +219,12 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // image caption readOnly carve-out, [data-blok-top-layer] scope selectors,
     // image loading shimmer placeholder + keyframes (#41), columns tool:
     // columns.css + vertical drop-indicator rules + column-enter keyframes +
-    // inline-popover instant-open rule).
+    // inline-popover instant-open rule, embed tool: embed.css full-width figure
+    // + edge resize-handle rules + hover toolbar (alignment/caption/open-original/
+    // more popover) + caption field rules).
     // Shrinking below the baseline is always acceptable.
     const PRE_SPLIT_BYTES = 390050;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.05);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.07);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

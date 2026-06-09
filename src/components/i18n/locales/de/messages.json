@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Nicht begonnen",
   "tools.database.defaultStatusInProgress": "In Arbeit",
   "tools.database.defaultStatusDone": "Erledigt",
-  "tools.database.defaultViewBoard": "Board"
+  "tools.database.defaultViewBoard": "Board",
+  "toolNames.bookmark": "Lesezeichen",
+  "toolNames.embed": "Einbetten",
+  "tools.bookmark.empty": "Link einfügen, um ein Lesezeichen zu erstellen",
+  "tools.bookmark.loading": "Linkvorschau wird geladen",
+  "tools.bookmark.error": "Linkvorschau konnte nicht geladen werden",
+  "tools.embed.empty": "Link zum Einbetten einfügen",
+  "tools.embed.openOriginal": "Original öffnen",
+  "tools.embed.captionPlaceholder": "Beschriftung schreiben…"
 }

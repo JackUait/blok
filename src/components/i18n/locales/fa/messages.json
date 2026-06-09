@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "شروع نشده",
   "tools.database.defaultStatusInProgress": "در حال انجام",
   "tools.database.defaultStatusDone": "انجام شد",
-  "tools.database.defaultViewBoard": "تخته"
+  "tools.database.defaultViewBoard": "تخته",
+  "toolNames.bookmark": "نشانک",
+  "toolNames.embed": "جاسازی",
+  "tools.bookmark.empty": "برای ساخت نشانک، پیوند را بچسبانید",
+  "tools.bookmark.loading": "در حال بارگذاری پیش‌نمایش",
+  "tools.bookmark.error": "بارگذاری پیش‌نمایش ناموفق بود",
+  "tools.embed.empty": "برای جاسازی، پیوند را بچسبانید",
+  "tools.embed.openOriginal": "باز کردن نسخه اصلی",
+  "tools.embed.captionPlaceholder": "نوشتن زیرنویس…"
 }

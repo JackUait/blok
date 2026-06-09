@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "არ დაწყებულა",
   "tools.database.defaultStatusInProgress": "მიმდინარეობს",
   "tools.database.defaultStatusDone": "დასრულდა",
-  "tools.database.defaultViewBoard": "დაფა"
+  "tools.database.defaultViewBoard": "დაფა",
+  "toolNames.bookmark": "სანიშნე",
+  "toolNames.embed": "ჩაშენება",
+  "tools.bookmark.empty": "ჩასვით ბმული სანიშნის შესაქმნელად",
+  "tools.bookmark.loading": "მიმოხილვის ჩატვირთვა",
+  "tools.bookmark.error": "მიმოხილვის ჩატვირთვა ვერ მოხერხდა",
+  "tools.embed.empty": "ჩასვით ბმული ჩასაშენებლად",
+  "tools.embed.openOriginal": "ორიგინალის გახსნა",
+  "tools.embed.captionPlaceholder": "დაწერეთ წარწერა…"
 }

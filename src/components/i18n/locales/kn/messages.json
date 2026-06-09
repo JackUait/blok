@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "ಪ್ರಾರಂಭವಾಗಿಲ್ಲ",
   "tools.database.defaultStatusInProgress": "ಪ್ರಗತಿಯಲ್ಲಿದೆ",
   "tools.database.defaultStatusDone": "ಮುಗಿದಿದೆ",
-  "tools.database.defaultViewBoard": "ಬೋರ್ಡ್"
+  "tools.database.defaultViewBoard": "ಬೋರ್ಡ್",
+  "toolNames.bookmark": "ಬುಕ್‌ಮಾರ್ಕ್",
+  "toolNames.embed": "ಎಂಬೆಡ್",
+  "tools.bookmark.empty": "ಬುಕ್‌ಮಾರ್ಕ್ ರಚಿಸಲು ಲಿಂಕ್ ಅಂಟಿಸಿ",
+  "tools.bookmark.loading": "ಪೂರ್ವವೀಕ್ಷಣೆ ಲೋಡ್ ಆಗುತ್ತಿದೆ",
+  "tools.bookmark.error": "ಪೂರ್ವವೀಕ್ಷಣೆ ಲೋಡ್ ಮಾಡಲಾಗಲಿಲ್ಲ",
+  "tools.embed.empty": "ಎಂಬೆಡ್ ಮಾಡಲು ಲಿಂಕ್ ಅಂಟಿಸಿ",
+  "tools.embed.openOriginal": "ಮೂಲವನ್ನು ತೆರೆಯಿರಿ",
+  "tools.embed.captionPlaceholder": "ಶೀರ್ಷಿಕೆ ಬರೆಯಿರಿ…"
 }

@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "មិនទាន់ចាប់ផ្ដើម",
   "tools.database.defaultStatusInProgress": "កំពុងដំណើរការ",
   "tools.database.defaultStatusDone": "រួចរាល់",
-  "tools.database.defaultViewBoard": "ក្ដារ"
+  "tools.database.defaultViewBoard": "ក្ដារ",
+  "toolNames.bookmark": "ចំណាំ",
+  "toolNames.embed": "បង្កប់",
+  "tools.bookmark.empty": "បិទភ្ជាប់តំណ ដើម្បីបង្កើតចំណាំ",
+  "tools.bookmark.loading": "កំពុងផ្ទុកការមើលជាមុន",
+  "tools.bookmark.error": "មិនអាចផ្ទុកការមើលជាមុនបានទេ",
+  "tools.embed.empty": "បិទភ្ជាប់តំណ ដើម្បីបង្កប់",
+  "tools.embed.openOriginal": "បើកច្បាប់ដើម",
+  "tools.embed.captionPlaceholder": "សរសេរចំណងជើង…"
 }

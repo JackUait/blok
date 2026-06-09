@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "ندی پیل شوی",
   "tools.database.defaultStatusInProgress": "روان دی",
   "tools.database.defaultStatusDone": "بشپړ",
-  "tools.database.defaultViewBoard": "بورډ"
+  "tools.database.defaultViewBoard": "بورډ",
+  "toolNames.bookmark": "نښلونه",
+  "toolNames.embed": "ځای پرځای کول",
+  "tools.bookmark.empty": "د نښلونې جوړولو لپاره یوه لینک پیست کړئ",
+  "tools.bookmark.loading": "د لینک مخکتنه پورته کیږي",
+  "tools.bookmark.error": "د لینک مخکتنه پورته نه شوه",
+  "tools.embed.empty": "د ځای پرځای کولو لپاره یوه لینک پیست کړئ",
+  "tools.embed.openOriginal": "اصلي پرانیستل",
+  "tools.embed.captionPlaceholder": "سرلیک ولیکئ…"
 }

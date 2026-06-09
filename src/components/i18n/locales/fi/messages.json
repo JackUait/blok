@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Aloittamatta",
   "tools.database.defaultStatusInProgress": "Käynnissä",
   "tools.database.defaultStatusDone": "Valmis",
-  "tools.database.defaultViewBoard": "Taulu"
+  "tools.database.defaultViewBoard": "Taulu",
+  "toolNames.bookmark": "Kirjanmerkki",
+  "toolNames.embed": "Upotus",
+  "tools.bookmark.empty": "Luo kirjanmerkki liittämällä linkki",
+  "tools.bookmark.loading": "Ladataan esikatselua",
+  "tools.bookmark.error": "Esikatselua ei voitu ladata",
+  "tools.embed.empty": "Upota liittämällä linkki",
+  "tools.embed.openOriginal": "Avaa alkuperäinen",
+  "tools.embed.captionPlaceholder": "Kirjoita kuvateksti…"
 }

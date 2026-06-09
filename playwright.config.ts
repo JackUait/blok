@@ -38,6 +38,7 @@ const CROSS_BROWSER_TESTS = [
   // Browser-specific event handling
   '**/drag-drop.spec.ts',
   '**/copy-paste.spec.ts',
+  '**/tools/link-paste.spec.ts',
   '**/tools/code-block-paste.spec.ts',
   '**/tools/code-block-enter.spec.ts',
   '**/tools/code-block-no-inline-toolbar.spec.ts',

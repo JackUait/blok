@@ -326,5 +326,13 @@
   "tools.database.defaultStatusNotStarted": "Başlanmayıb",
   "tools.database.defaultStatusInProgress": "Davam edir",
   "tools.database.defaultStatusDone": "Tamamlandı",
-  "tools.database.defaultViewBoard": "Lövhə"
+  "tools.database.defaultViewBoard": "Lövhə",
+  "toolNames.bookmark": "Əlfəcin",
+  "toolNames.embed": "Yerləşdir",
+  "tools.bookmark.empty": "Əlfəcin yaratmaq üçün keçid yapışdırın",
+  "tools.bookmark.loading": "Keçid önizləməsi yüklənir",
+  "tools.bookmark.error": "Keçid önizləməsi yüklənmədi",
+  "tools.embed.empty": "Yerləşdirmək üçün keçid yapışdırın",
+  "tools.embed.openOriginal": "Orijinalı aç",
+  "tools.embed.captionPlaceholder": "Başlıq yazın…"
 }

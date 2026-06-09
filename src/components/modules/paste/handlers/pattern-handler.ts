@@ -65,7 +65,7 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
     // Notion-style menu: on a URL paste, offer the view choice instead of
     // auto-claiming. Opt-in (linkPaste.menu); requires a collapsed caret.
     if (this.isLinkMenuEnabled() && isHttpUrl(data) && !this.hasSelection()) {
-      this.openLinkPasteMenu(data, context);
+      this.openLinkPasteMenu(data);
 
       return true;
     }
@@ -125,23 +125,48 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
     return holder ? holder.getBoundingClientRect() : null;
   }
 
-  private openLinkPasteMenu(url: string, context: HandlerContext): void {
+  private openLinkPasteMenu(url: string): void {
     // Capture the paste target now: opening the popover moves focus out of the
     // block, so currentBlock may drift before the user picks (notably in WebKit).
     const targetBlock = this.Blok.BlockManager.currentBlock ?? null;
 
+    // Show the link straight away and anchor the menu at its end, like Notion:
+    // the pasted link stays visible while the user chooses bookmark/embed/plain.
+    const linkBlock = this.insertPlainLink(url, targetBlock);
+
     this.menu.open({
       url,
       hasSelection: this.hasSelection(),
-      position: this.getCaretRect(),
-      ...(targetBlock?.holder ? { trigger: targetBlock.holder } : {}),
+      position: this.getLinkEndRect(linkBlock) ?? this.getCaretRect(),
+      ...(linkBlock?.holder ? { trigger: linkBlock.holder } : {}),
       onSelect: (type: PasteMenuActionType): void => {
-        void this.applyMenuAction(type, url, context, targetBlock);
+        void this.applyMenuAction(type, url, linkBlock);
       },
       onDismiss: (): void => {
-        this.insertPlainLink(url, targetBlock);
+        // The link is already inserted; dismissing simply keeps it as-is.
       },
     });
+  }
+
+  /**
+   * The end of the just-inserted link, used to anchor the menu right after it.
+   * Prefers the last client rect so a wrapped link anchors at its visual end.
+   */
+  private getLinkEndRect(block: TargetBlock): DOMRect | null {
+    const anchor = block?.holder?.querySelector('a');
+
+    if (!anchor) {
+      return null;
+    }
+
+    const rects = anchor.getClientRects();
+    const rect = rects.length > 0 ? rects[rects.length - 1] : anchor.getBoundingClientRect();
+
+    if (rect.width === 0 && rect.height === 0) {
+      return null;
+    }
+
+    return new DOMRect(rect.right, rect.top, 0, rect.height);
   }
 
   private restoreTarget(targetBlock: TargetBlock): void {
@@ -153,20 +178,17 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
   private async applyMenuAction(
     type: PasteMenuActionType,
     url: string,
-    context: HandlerContext,
-    targetBlock: TargetBlock
+    linkBlock: TargetBlock
   ): Promise<void> {
-    this.restoreTarget(targetBlock);
-
     switch (type) {
       case 'bookmark':
-        await this.insertForcedPatternBlock('bookmark', url, context.canReplaceCurrentBlock);
-        break;
       case 'embed':
-        await this.insertForcedPatternBlock('embed', url, context.canReplaceCurrentBlock);
+        // Replace the visible link block in place with the chosen rich view.
+        this.restoreTarget(linkBlock);
+        await this.insertForcedPatternBlock(type, url, true);
         break;
       case 'plain':
-        this.insertPlainLink(url, targetBlock);
+        // The link is already shown; nothing more to do.
         break;
       case 'mention':
         // Built + unit-tested, but not yet served live (see PasteMenuController).
@@ -180,7 +202,7 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
     await this.insertPatternBlock({ key: tool, data: url, tool, event }, canReplace);
   }
 
-  private insertPlainLink(url: string, targetBlock: TargetBlock): void {
+  private insertPlainLink(url: string, targetBlock: TargetBlock): TargetBlock {
     this.restoreTarget(targetBlock);
 
     const anchor = document.createElement('a');
@@ -192,7 +214,7 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
 
     // Replace the empty paste target with a default block holding the link.
     // Caret-independent so it survives the popover's focus changes (Escape).
-    this.Blok.BlockManager.insert({
+    return this.Blok.BlockManager.insert({
       data: { text: anchor.outerHTML },
       replace: true,
       needToFocus: true,

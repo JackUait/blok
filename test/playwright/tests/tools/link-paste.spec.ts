@@ -234,6 +234,34 @@ test.describe('Link paste menu (opt-in)', () => {
     await stubUnfurl(page);
   });
 
+  test('shows the pasted link immediately and anchors the menu at its end', async ({ page }) => {
+    await createBlok(page, undefined, MENU_CONFIG);
+    const editable = firstEditable(page);
+
+    await editable.click();
+    await pasteText(editable, 'https://example.com/article');
+
+    // The link itself is visible right away — before any pick.
+    const link = page.getByRole('link', { name: 'https://example.com/article', exact: true });
+
+    await expect(link).toBeVisible();
+
+    // The menu is open alongside the link, offering the view choices.
+    const bookmarkItem = page.locator('[data-blok-item-name="paste-menu-bookmark"]');
+
+    await expect(bookmarkItem).toBeVisible();
+
+    // The menu sits at the end of the link (after it, not above it).
+    const linkBox = await link.boundingBox();
+    const menuBox = await bookmarkItem.boundingBox();
+
+    if (!linkBox || !menuBox) {
+      throw new Error('missing layout boxes');
+    }
+    expect(menuBox.y).toBeGreaterThanOrEqual(linkBox.y - 1);
+    expect(menuBox.x).toBeGreaterThanOrEqual(linkBox.x);
+  });
+
   test('pasting a generic URL opens the menu, and Bookmark inserts a card', async ({ page }) => {
     await createBlok(page, undefined, MENU_CONFIG);
     const editable = firstEditable(page);

@@ -14,12 +14,25 @@ import type { HandlerContext } from '../../../../../src/components/modules/paste
  */
 describe('PatternHandler — link paste menu gating', () => {
   const pasteMock = vi.fn();
+  const insertMock = vi.fn();
   let menuOpen: PasteMenuOpenParams | null = null;
+
+  const makeLinkHolder = (): HTMLElement => {
+    const holder = document.createElement('div');
+    const anchor = document.createElement('a');
+
+    anchor.href = 'https://example.com/article';
+    anchor.textContent = 'https://example.com/article';
+    holder.appendChild(anchor);
+
+    return holder;
+  };
 
   const createBlok = (): BlokModules =>
     ({
       BlockManager: {
         paste: pasteMock.mockResolvedValue({ id: 'b1' }),
+        insert: insertMock.mockReturnValue({ id: 'link1', holder: makeLinkHolder() }),
         currentBlock: { holder: document.createElement('div') },
         setCurrentBlockByChildNode: vi.fn(),
       },
@@ -73,6 +86,44 @@ describe('PatternHandler — link paste menu gating', () => {
     expect(handled).toBe(true);
     expect(fakeMenu.open).toHaveBeenCalledTimes(1);
     expect(menuOpen?.url).toBe('https://example.com/article');
+    expect(pasteMock).not.toHaveBeenCalled();
+  });
+
+  it('inserts the link immediately so it stays visible while the menu is open', async () => {
+    const handler = makeHandler({ linkPaste: { menu: true } });
+
+    await handler.handle('https://example.com/article', context);
+
+    // The link is shown the moment the menu opens (Notion-style), not deferred to a pick.
+    expect(insertMock).toHaveBeenCalledTimes(1);
+    const inserted = insertMock.mock.calls[0][0] as { data: { text: string }; replace?: boolean };
+
+    expect(inserted.data.text).toContain('href="https://example.com/article"');
+    expect(inserted.replace).toBe(true);
+  });
+
+  it('keeps the already-shown link without re-inserting when dismissed', async () => {
+    const handler = makeHandler({ linkPaste: { menu: true } });
+
+    await handler.handle('https://example.com/article', context);
+    expect(insertMock).toHaveBeenCalledTimes(1);
+
+    menuOpen?.onDismiss();
+
+    expect(insertMock).toHaveBeenCalledTimes(1);
+    expect(pasteMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps the already-shown link without re-inserting when Plain is chosen', async () => {
+    const handler = makeHandler({ linkPaste: { menu: true } });
+
+    await handler.handle('https://example.com/article', context);
+    expect(insertMock).toHaveBeenCalledTimes(1);
+
+    menuOpen?.onSelect('plain');
+    await Promise.resolve();
+
+    expect(insertMock).toHaveBeenCalledTimes(1);
     expect(pasteMock).not.toHaveBeenCalled();
   });
 

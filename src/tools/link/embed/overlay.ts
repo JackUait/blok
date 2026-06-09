@@ -1,9 +1,9 @@
 import {
-  IconCaption,
+  IconCaptionImage,
   IconImageAlignCenter,
   IconImageAlignLeft,
   IconImageAlignRight,
-  IconLinkCopy,
+  IconLink,
   IconLinkExternal,
   IconMoreHorizontal,
   IconTrash,
@@ -58,7 +58,7 @@ export function renderEmbedOverlay(opts: EmbedOverlayOptions): HTMLElement {
   appendIconButton(root, {
     action: 'caption-toggle',
     label: opts.i18n.t('tools.image.toggleCaption'),
-    icon: IconCaption,
+    icon: IconCaptionImage,
     pressed: opts.captionVisible,
     onClick: opts.onToggleCaption,
   });
@@ -159,7 +159,7 @@ function appendMoreMenu(root: HTMLElement, opts: EmbedOverlayOptions): void {
   appendMenuItem(popover, {
     action: 'copy-link',
     label: opts.i18n.t('tools.image.copyUrl'),
-    icon: IconLinkCopy,
+    icon: IconLink,
     onClick: () => {
       toggle(false);
       opts.onCopyLink();

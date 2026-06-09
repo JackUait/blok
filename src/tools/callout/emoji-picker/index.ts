@@ -22,7 +22,7 @@ const CATEGORY_I18N_KEYS: Readonly<Record<string, string>> = {
   flags: EMOJI_CATEGORY_FLAGS_KEY,
 };
 import {
-  IconCrossSmall,
+  IconCloseThick,
   IconDice,
   IconSearch,
   IconEmojiStar,
@@ -30,9 +30,9 @@ import {
   IconEmojiSprout,
   IconEmojiUtensils,
   IconEmojiBall,
-  IconEmojiGlobe,
+  IconGlobe,
   IconEmojiLightbulb,
-  IconEmojiHash,
+  IconHash,
   IconEmojiFlag,
 } from '../../../components/icons';
 
@@ -54,9 +54,9 @@ const CATEGORY_NAV: ReadonlyArray<readonly [id: string, icon: string]> = [
   ['nature', IconEmojiSprout],
   ['foods', IconEmojiUtensils],
   ['activity', IconEmojiBall],
-  ['places', IconEmojiGlobe],
+  ['places', IconGlobe],
   ['objects', IconEmojiLightbulb],
-  ['symbols', IconEmojiHash],
+  ['symbols', IconHash],
   ['flags', IconEmojiFlag],
 ];
 
@@ -306,7 +306,7 @@ export class EmojiPicker {
       'theme-dark:hover:bg-neutral-800 theme-dark:hover:text-neutral-300',
       'transition-colors duration-100 cursor-pointer',
     ].join(' ');
-    removeBtn.innerHTML = IconCrossSmall;
+    removeBtn.innerHTML = IconCloseThick;
     removeBtn.addEventListener('click', () => {
       this.onRemove();
       this.close();

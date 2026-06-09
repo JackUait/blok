@@ -20,16 +20,16 @@ import type {
   ImageSize,
 } from '../../../types/tools/image';
 import {
+  IconAlignCenter,
+  IconAlignLeft,
+  IconAlignRight,
   IconCaption,
   IconCopy,
   IconCrop,
   IconDownload,
   IconExpandFullscreen,
   IconImage,
-  IconImageAlignCenter,
-  IconImageAlignLeft,
-  IconImageAlignRight,
-  IconReplaceImage,
+  IconReplace,
 } from '../../components/icons';
 import { DEFAULT_CAPTION_PLACEHOLDER, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
@@ -308,13 +308,13 @@ export class ImageTool implements BlockTool {
     const currentAlignment: ImageAlignment = this.data.alignment ?? 'center';
     const captionVisible = this.data.captionVisible !== false;
     const alignments: { value: ImageAlignment; title: string; icon: string }[] = [
-      { value: 'left',   title: i18n.t('tools.image.alignmentLeft'),   icon: IconImageAlignLeft },
-      { value: 'center', title: i18n.t('tools.image.alignmentCenter'), icon: IconImageAlignCenter },
-      { value: 'right',  title: i18n.t('tools.image.alignmentRight'),  icon: IconImageAlignRight },
+      { value: 'left',   title: i18n.t('tools.image.alignmentLeft'),   icon: IconAlignLeft },
+      { value: 'center', title: i18n.t('tools.image.alignmentCenter'), icon: IconAlignCenter },
+      { value: 'right',  title: i18n.t('tools.image.alignmentRight'),  icon: IconAlignRight },
     ];
     const iconAlignment = alignments.find((a) => a.value === currentAlignment)?.icon ?? alignments[1].icon;
     const iconCaption = IconCaption;
-    const iconReplace = IconReplaceImage;
+    const iconReplace = IconReplace;
     const iconCrop = IconCrop;
     const iconFullscreen = IconExpandFullscreen;
     const iconDownload = IconDownload;

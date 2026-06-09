@@ -7,13 +7,13 @@ type ImageAlign = 'left' | 'center' | 'right';
 import { onHover as tooltipOnHover, hide as tooltipHide } from '../../components/utils/tooltip';
 import type { I18nInstance } from '../../components/utils/tools';
 import {
-  IconCaption,
+  IconCaptionImage,
   IconChevronLeft,
   IconChevronRight,
   IconCollapseFullscreen,
-  IconCrop,
-  IconDownload,
-  IconExpandFullscreen,
+  IconCropImage,
+  IconDownloadImage,
+  IconExpandFullscreenImage,
   IconImageAlignCenter,
   IconImageAlignLeft,
   IconImageAlignRight,
@@ -772,7 +772,7 @@ function renderLightboxToolbar(opts: LightboxToolbarOptions): HTMLElement {
 
   const iconMinus = IconZoomOut;
   const iconPlus = IconZoomIn;
-  const iconDownload = IconDownload;
+  const iconDownload = IconDownloadImage;
   const iconCopy = IconLinkCopy;
   const iconCollapse = IconCollapseFullscreen;
 
@@ -1004,7 +1004,7 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
     action: 'caption-toggle',
     label: tr(opts.i18n, 'tools.image.toggleCaption'),
     pressed: opts.state.captionVisible,
-    icon: IconCaption,
+    icon: IconCaptionImage,
     onClick: opts.onToggleCaption,
   });
   appendSimpleButton(root, {
@@ -1016,19 +1016,19 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
   appendSimpleButton(root, {
     action: 'crop',
     label: tr(opts.i18n, 'tools.image.crop'),
-    icon: IconCrop,
+    icon: IconCropImage,
     onClick: opts.onCrop,
   });
   appendSimpleButton(root, {
     action: 'fullscreen',
     label: tr(opts.i18n, 'tools.image.viewFullscreen'),
-    icon: IconExpandFullscreen,
+    icon: IconExpandFullscreenImage,
     onClick: opts.onFullscreen,
   });
   appendSimpleButton(root, {
     action: 'download',
     label: tr(opts.i18n, 'tools.image.downloadOriginal'),
-    icon: IconDownload,
+    icon: IconDownloadImage,
     onClick: opts.onDownload,
   });
 

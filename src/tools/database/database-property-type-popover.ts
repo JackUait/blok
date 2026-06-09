@@ -1,8 +1,8 @@
 import {
   IconText,
   IconHash,
-  IconList,
-  IconListBulleted,
+  IconSelect,
+  IconMultiSelect,
   IconCalendar,
   IconListChecklist,
   IconGlobe,
@@ -19,8 +19,8 @@ interface PropertyTypeOption {
 const PROPERTY_TYPES: PropertyTypeOption[] = [
   { type: 'text', icon: IconText, labelKey: 'tools.database.propertyTypeText' },
   { type: 'number', icon: IconHash, labelKey: 'tools.database.propertyTypeNumber' },
-  { type: 'select', icon: IconList, labelKey: 'tools.database.propertyTypeSelect' },
-  { type: 'multiSelect', icon: IconListBulleted, labelKey: 'tools.database.propertyTypeMultiSelect' },
+  { type: 'select', icon: IconSelect, labelKey: 'tools.database.propertyTypeSelect' },
+  { type: 'multiSelect', icon: IconMultiSelect, labelKey: 'tools.database.propertyTypeMultiSelect' },
   { type: 'date', icon: IconCalendar, labelKey: 'tools.database.propertyTypeDate' },
   { type: 'checkbox', icon: IconListChecklist, labelKey: 'tools.database.propertyTypeCheckbox' },
   { type: 'url', icon: IconGlobe, labelKey: 'tools.database.propertyTypeUrl' },

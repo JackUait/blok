@@ -1,7 +1,7 @@
 import {
   IconArrowDownLine,
   IconArrowUp,
-  IconLinkExternal,
+  IconLinkCopy,
   IconUpload,
 } from '../../components/icons';
 import { DEFAULT_MIME_TYPES } from './constants';
@@ -221,7 +221,7 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
     const fieldIcon = document.createElement('span');
     fieldIcon.className = 'blok-image-empty__embed-icon';
     fieldIcon.setAttribute('aria-hidden', 'true');
-    fieldIcon.innerHTML = IconLinkExternal;
+    fieldIcon.innerHTML = IconLinkCopy;
 
     const urlInput = document.createElement('input');
     urlInput.type = 'url';

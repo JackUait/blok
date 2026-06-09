@@ -87,9 +87,6 @@ export type CodeViewMode = 'code' | 'preview' | 'split';
 export const VIEW_MODE_CONTAINER_STYLES = 'flex items-center rounded-lg border border-border-secondary p-0.5 gap-0.5';
 export const VIEW_MODE_BUTTON_STYLES = 'p-1 rounded cursor-pointer bg-transparent border-0 text-gray-text transition-colors flex items-center justify-center';
 export const VIEW_MODE_BUTTON_ACTIVE_STYLES = 'p-1 rounded cursor-pointer bg-item-hover-bg border-0 text-primary transition-colors flex items-center justify-center';
-// Preview icon is 16x16 (vs 20x20 for code/split), so extra 2px padding keeps containers equal
-export const VIEW_MODE_PREVIEW_BUTTON_STYLES = 'p-[6px] rounded cursor-pointer bg-transparent border-0 text-gray-text transition-colors flex items-center justify-center';
-export const VIEW_MODE_PREVIEW_BUTTON_ACTIVE_STYLES = 'p-[6px] rounded cursor-pointer bg-item-hover-bg border-0 text-primary transition-colors flex items-center justify-center';
 
 // CSS — split container
 export const SPLIT_CONTAINER_STYLES = 'flex flex-col overflow-hidden';

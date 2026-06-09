@@ -13,8 +13,6 @@ import {
   VIEW_MODE_CONTAINER_STYLES,
   VIEW_MODE_BUTTON_STYLES,
   VIEW_MODE_BUTTON_ACTIVE_STYLES,
-  VIEW_MODE_PREVIEW_BUTTON_STYLES,
-  VIEW_MODE_PREVIEW_BUTTON_ACTIVE_STYLES,
   SPLIT_CONTAINER_STYLES,
   SPLIT_HALF_STYLES,
 } from './constants';
@@ -72,10 +70,9 @@ function buildViewModeElements(
 
   for (const { mode, icon, label } of modes) {
     const button = document.createElement('button');
-    const isPreview = mode === 'preview';
 
     button.type = 'button';
-    button.className = isPreview ? VIEW_MODE_PREVIEW_BUTTON_STYLES : VIEW_MODE_BUTTON_STYLES;
+    button.className = VIEW_MODE_BUTTON_STYLES;
     button.innerHTML = icon;
     button.setAttribute('aria-label', label);
     button.setAttribute('aria-pressed', 'false');
@@ -107,15 +104,9 @@ export function setActiveViewMode(viewModeContainer: HTMLElement, mode: CodeView
 
   for (const btn of buttons) {
     const isActive = btn.getAttribute('data-mode') === mode;
-    const isPreview = btn.getAttribute('data-mode') === 'preview';
 
     btn.setAttribute('aria-pressed', String(isActive));
-
-    if (isPreview) {
-      btn.className = isActive ? VIEW_MODE_PREVIEW_BUTTON_ACTIVE_STYLES : VIEW_MODE_PREVIEW_BUTTON_STYLES;
-    } else {
-      btn.className = isActive ? VIEW_MODE_BUTTON_ACTIVE_STYLES : VIEW_MODE_BUTTON_STYLES;
-    }
+    btn.className = isActive ? VIEW_MODE_BUTTON_ACTIVE_STYLES : VIEW_MODE_BUTTON_STYLES;
   }
 }
 

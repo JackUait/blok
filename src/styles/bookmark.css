@@ -10,7 +10,7 @@
   width: 100%;
   overflow: hidden;
   border: 1px solid var(--blok-popover-border);
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-md-plus);
   color: inherit;
   text-decoration: none;
   cursor: pointer;
@@ -87,7 +87,7 @@
 /* empty / loading / error states — same shell, muted text */
 [data-blok-tool="bookmark"] .blok-bookmark__placeholder {
   border: 1px solid var(--blok-popover-border);
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-md-plus);
   padding: var(--blok-space-3) var(--blok-space-3-5);
   color: var(--blok-text-secondary);
   font-size: 14px;

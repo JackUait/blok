@@ -33,10 +33,21 @@
     body { background-color: #ffffff; }
     body.dark-mode { background-color: #191919; }
 
-    /* Theme switch cross-fade: applied for ~300ms around the dark-mode toggle
-       so every region (header, content, drawer, footer) fades in lockstep
-       instead of flipping piecemeal. Pseudo-elements (e.g. toggle knobs)
-       keep their own transitions. */
+    /* Theme switch: the whole viewport cross-fades as one snapshot via the
+       View Transitions API, so every region flips simultaneously. Underlying
+       per-element transitions are suppressed during the swap so the "new"
+       snapshot is already in its final state. */
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+      animation-duration: 240ms;
+      animation-timing-function: ease;
+    }
+    body.pg-no-transition,
+    body.pg-no-transition * {
+      transition: none !important;
+    }
+
+    /* Fallback for browsers without View Transitions: brief uniform fade */
     @media (prefers-reduced-motion: no-preference) {
       body.pg-theme-fade,
       body.pg-theme-fade * {
@@ -1956,16 +1967,9 @@
      */
     let themeFadeTimer = null;
 
-    function applyDarkMode(enabled, { animate = false } = {}) {
+    function setDarkMode(enabled) {
       state.darkMode = enabled;
       toggleDark.checked = enabled;
-      if (animate) {
-        document.body.classList.add('pg-theme-fade');
-        clearTimeout(themeFadeTimer);
-        themeFadeTimer = setTimeout(() => {
-          document.body.classList.remove('pg-theme-fade');
-        }, 320);
-      }
       document.body.classList.toggle('dark-mode', enabled);
       if (enabled) {
         document.documentElement.setAttribute('data-blok-theme', 'dark');
@@ -1979,6 +1983,33 @@
           document.documentElement.removeAttribute('data-blok-theme');
         }
       }
+    }
+
+    function applyDarkMode(enabled, { animate = false } = {}) {
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      if (!animate || reducedMotion) {
+        setDarkMode(enabled);
+        return;
+      }
+
+      if (document.startViewTransition) {
+        // Snapshot old/new states and cross-fade them as single images —
+        // the entire viewport switches simultaneously. Per-element
+        // transitions are suppressed so the new snapshot is final-state.
+        document.body.classList.add('pg-no-transition');
+        const vt = document.startViewTransition(() => setDarkMode(enabled));
+        vt.finished.finally(() => document.body.classList.remove('pg-no-transition'));
+        return;
+      }
+
+      // Fallback: brief uniform transition on everything
+      document.body.classList.add('pg-theme-fade');
+      clearTimeout(themeFadeTimer);
+      themeFadeTimer = setTimeout(() => {
+        document.body.classList.remove('pg-theme-fade');
+      }, 320);
+      setDarkMode(enabled);
     }
 
     // Apply initial dark mode based on system preference

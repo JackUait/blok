@@ -363,6 +363,95 @@ describe('createUnfurlHandler', () => {
 
     expect(parsePayload(res)).toEqual({ success: 0 });
   });
+
+  /**
+   * Some sites (YouTube) serve an empty shell page to unknown user-agents but
+   * full OpenGraph metadata to link-preview crawlers, while others (Wikipedia)
+   * 403 spoofed crawler UAs — so the handler retries with a crawler UA only
+   * when the primary parse is missing title or image, and keeps whichever
+   * parse is richer.
+   */
+  describe('crawler user-agent retry', () => {
+    const shellHtml = '<title> - YouTube</title>';
+    const fullHtml = `
+      <meta property="og:title" content="Real Video Title">
+      <meta property="og:description" content="Real description">
+      <meta property="og:image" content="https://i.ytimg.com/vi/abc/maxresdefault.jpg">
+    `;
+
+    it('retries with a crawler user-agent when the primary parse lacks an image', async () => {
+      const fetchMock = vi
+        .fn<(url: string, init?: RequestInit) => Promise<Response>>()
+        .mockResolvedValueOnce(htmlResponse(shellHtml))
+        .mockResolvedValueOnce(htmlResponse(fullHtml));
+      const handler = createUnfurlHandler(fetchMock);
+      const res = createFakeRes();
+
+      await handler(createFakeReq(`/?url=${encodeURIComponent('https://example.com/watch')}`), res);
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+
+      const retryInit = fetchMock.mock.calls[1][1];
+
+      expect(retryInit?.headers).toMatchObject({
+        'user-agent': expect.stringContaining('facebookexternalhit') as unknown as string,
+      });
+
+      const payload = parsePayload(res);
+
+      expect(payload.success).toBe(1);
+      expect(payload.meta?.title).toBe('Real Video Title');
+      expect(payload.meta?.image).toEqual({ url: 'https://i.ytimg.com/vi/abc/maxresdefault.jpg' });
+    });
+
+    it('keeps the primary metadata when the crawler retry is rejected upstream', async () => {
+      const fetchMock = vi
+        .fn<(url: string, init?: RequestInit) => Promise<Response>>()
+        .mockResolvedValueOnce(htmlResponse('<title>Primary Title</title>'))
+        .mockResolvedValueOnce(htmlResponse('', { ok: false, status: 403 } as Partial<Response>));
+      const handler = createUnfurlHandler(fetchMock);
+      const res = createFakeRes();
+
+      await handler(createFakeReq(`/?url=${encodeURIComponent('https://example.com/page')}`), res);
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+
+      const payload = parsePayload(res);
+
+      expect(payload.success).toBe(1);
+      expect(payload.meta?.title).toBe('Primary Title');
+    });
+
+    it('keeps the primary metadata when the retry parse is poorer', async () => {
+      const fetchMock = vi
+        .fn<(url: string, init?: RequestInit) => Promise<Response>>()
+        .mockResolvedValueOnce(htmlResponse('<title>Primary Title</title>'))
+        .mockResolvedValueOnce(htmlResponse(''));
+      const handler = createUnfurlHandler(fetchMock);
+      const res = createFakeRes();
+
+      await handler(createFakeReq(`/?url=${encodeURIComponent('https://example.com/page')}`), res);
+
+      const payload = parsePayload(res);
+
+      expect(payload.success).toBe(1);
+      expect(payload.meta?.title).toBe('Primary Title');
+    });
+
+    it('does not retry when the primary parse already has title and image', async () => {
+      const fetchMock = vi
+        .fn<(url: string, init?: RequestInit) => Promise<Response>>()
+        .mockResolvedValue(htmlResponse(fullHtml));
+      const handler = createUnfurlHandler(fetchMock);
+
+      await handler(
+        createFakeReq(`/?url=${encodeURIComponent('https://example.com/rich')}`),
+        createFakeRes()
+      );
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+  });
 });
 
 describe('unfurlPlugin', () => {

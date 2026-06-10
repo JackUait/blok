@@ -15,7 +15,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=PT+Mono&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=PT+Mono&display=swap" rel="stylesheet">
   <style>
     /* Prevent FOUC: body hidden until module script adds .ready */
     body:not(.ready) { visibility: hidden !important; }
@@ -27,6 +27,7 @@
       --pg-line: #ebebeb;
       --pg-line-strong: #dddddd;
       --pg-hover: #f7f7f7;
+      --pg-font: 'Plus Jakarta Sans', 'Inter', sans-serif;
     }
 
     body { background-color: #ffffff; }
@@ -55,8 +56,9 @@
 
     /* Playground header */
     .playground-header {
-      height: 64px;
+      height: 80px;
       background: #ffffff;
+      font-family: var(--pg-font);
       position: sticky;
       top: 0;
       z-index: 20;
@@ -69,9 +71,8 @@
     .dark-mode .playground-header { background: #191919; }
 
     .playground-wordmark {
-      font-family: 'Inter', sans-serif;
       font-weight: 700;
-      font-size: 15px;
+      font-size: 16px;
       letter-spacing: -0.02em;
       display: inline-flex;
       align-items: center;
@@ -100,44 +101,74 @@
       background: #2a2a2a;
     }
 
-    /* Playground tabs */
+    /* Playground nav: centered floating pill */
+    .playground-nav {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px;
+      background: #ffffff;
+      border: 1px solid var(--pg-line);
+      border-radius: 999px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05);
+      transition: box-shadow 0.2s ease;
+    }
+    .playground-nav:hover {
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08), 0 6px 16px rgba(0,0,0,0.09);
+    }
     .playground-tab {
-      position: relative;
-      padding: 0 14px;
-      height: 64px;
-      line-height: 64px;
+      display: block;
+      padding: 9px 18px;
       font-size: 14px;
       font-weight: 500;
+      line-height: 1.2;
       color: var(--pg-muted);
+      border-radius: 999px;
       cursor: pointer;
-      transition: color 0.18s ease;
+      transition: color 0.18s ease, background 0.18s ease;
       background: none;
       border: none;
       text-decoration: none;
+      white-space: nowrap;
     }
-    .playground-tab:hover { color: var(--pg-ink); }
-    .playground-tab[aria-selected="true"] { color: var(--pg-ink); }
-    .playground-tab::after {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      left: 50%;
-      width: 0;
-      height: 2px;
+    .playground-tab:hover { color: var(--pg-ink); background: var(--pg-hover); }
+    .playground-tab[aria-selected="true"] {
+      color: #ffffff;
       background: var(--pg-ink);
-      border-radius: 2px 2px 0 0;
-      transition: width 0.22s ease, left 0.22s ease;
     }
-    .playground-tab[aria-selected="true"]::after {
-      width: calc(100% - 28px);
-      left: 14px;
+    .playground-tab[aria-selected="true"]:hover {
+      color: #ffffff;
+      background: var(--pg-ink);
+    }
+    @media (max-width: 860px) {
+      .playground-nav {
+        position: static;
+        transform: none;
+        margin-left: auto;
+        margin-right: 8px;
+      }
+      .playground-tab { padding: 8px 10px; font-size: 13px; }
+      .playground-wordmark__tag { display: none; }
+      .playground-header .playground-wordmark { margin-right: 12px; }
     }
 
-    /* Dark mode tab overrides */
+    /* Dark mode nav overrides */
+    .dark-mode .playground-nav {
+      background: #1f1f1f;
+      border-color: #2f2f2f;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.3);
+    }
     .dark-mode .playground-tab { color: #a8a8a8; }
-    .dark-mode .playground-tab:hover { color: #ffffff; }
-    .dark-mode .playground-tab[aria-selected="true"] { color: #ffffff; }
-    .dark-mode .playground-tab::after { background: #ffffff; }
+    .dark-mode .playground-tab:hover { color: #ffffff; background: rgba(255,255,255,0.06); }
+    .dark-mode .playground-tab[aria-selected="true"],
+    .dark-mode .playground-tab[aria-selected="true"]:hover {
+      color: #191919;
+      background: #ffffff;
+    }
 
     /* Pill toggle switch */
     .pill-toggle {
@@ -203,7 +234,7 @@
       margin-bottom: 40px;
       border-bottom: 1px solid var(--pg-line);
       position: sticky;
-      top: 64px;
+      top: 80px;
       background: rgba(255,255,255,0.94);
       backdrop-filter: saturate(180%) blur(10px);
       -webkit-backdrop-filter: saturate(180%) blur(10px);
@@ -217,6 +248,7 @@
       border-bottom-color: #2f2f2f;
     }
     .block-states-tab {
+      font-family: var(--pg-font);
       font-size: 13px;
       font-weight: 500;
       padding: 7px 15px;
@@ -255,13 +287,14 @@
     @media (max-width: 768px) {
       .icon-gallery.pg-sheet { padding: 32px 20px 64px; }
     }
-    .icon-group { margin-bottom: 48px; }
+    .icon-group { margin-bottom: 56px; }
     .icon-group-title {
-      font-size: 18px;
+      font-family: var(--pg-font);
+      font-size: 22px;
       font-weight: 600;
       letter-spacing: -0.01em;
       color: var(--pg-ink);
-      margin-bottom: 16px;
+      margin-bottom: 18px;
     }
     .icon-grid {
       display: grid;
@@ -339,6 +372,7 @@
       box-shadow: 0 8px 28px rgba(0,0,0,0.28);
       min-width: 360px;
       position: relative;
+      font-family: var(--pg-font);
     }
     .icon-lightbox__preview {
       color: #1a1a1a;
@@ -506,24 +540,28 @@
       justify-content: center;
       gap: 8px;
       margin-top: 24px;
-      padding: 24px 30px 40px;
+      padding: 28px 30px;
       border-top: 1px solid var(--pg-line);
-      font-size: 13px;
-      color: var(--pg-muted);
+      background: var(--pg-hover);
+      font-family: var(--pg-font);
+      font-size: 14px;
+      color: var(--pg-ink);
     }
-    .playground-footer__sep { color: var(--pg-muted); }
+    .playground-footer__sep { color: var(--pg-ink); }
     .playground-footer a {
-      color: var(--pg-muted);
+      color: var(--pg-ink);
       text-decoration: none;
       transition: color 0.15s;
     }
-    .playground-footer a:hover { color: var(--pg-ink); text-decoration: underline; }
-    .dark-mode .playground-footer { color: #a8a8a8; border-top-color: #2f2f2f; }
-    .dark-mode .playground-footer a { color: #a8a8a8; }
+    .playground-footer a:hover { text-decoration: underline; }
+    .dark-mode .playground-footer { color: #e0e0e0; border-top-color: #2f2f2f; background: #1f1f1f; }
+    .dark-mode .playground-footer__sep { color: #e0e0e0; }
+    .dark-mode .playground-footer a { color: #e0e0e0; }
     .dark-mode .playground-footer a:hover { color: #ffffff; }
 
     /* Settings panel polish */
     #settings-panel {
+      font-family: var(--pg-font);
       box-shadow: -8px 0 24px -8px rgba(0,0,0,0.06), -1px 0 0 0 rgba(0,0,0,0.04);
     }
     .dark-mode #settings-panel {
@@ -669,6 +707,7 @@
 
     /* Settings side-tab handle */
     #settings-tab {
+      font-family: var(--pg-font);
       transition:
         transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
         opacity 220ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -707,13 +746,13 @@
 <body class="m-0 text-black transition-colors duration-150" style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; font-size: 14px; line-height: 1.6;">
   <div class="text-base transition-[margin] duration-200 ease-in-out" id="main-content">
     <!-- Header -->
-    <div class="playground-header flex items-center px-[30px] max-md:px-5 border-b border-[#ebebeb] dark-mode:border-[#2f2f2f] transition-colors duration-150">
+    <div class="playground-header relative flex items-center px-[30px] max-md:px-5 border-b border-[#ebebeb] dark-mode:border-[#2f2f2f] transition-colors duration-150">
       <span class="playground-wordmark text-inherit mr-7 select-none">
         <img class="playground-wordmark__logo" src="/favicon.svg" alt="" aria-hidden="true">
         Blok
         <span class="playground-wordmark__tag" aria-hidden="true">Playground</span>
       </span>
-      <nav role="tablist" class="flex gap-1">
+      <nav role="tablist" class="playground-nav">
         <a class="playground-tab" role="tab" aria-selected="true" href="/editor" data-tab="editor">Editor</a>
         <a class="playground-tab" role="tab" aria-selected="false" href="/block-states" data-tab="block-states">Block States</a>
         <a class="playground-tab" role="tab" aria-selected="false" href="/icons" data-tab="icons">Icons</a>
@@ -761,7 +800,7 @@
 
   <!-- Settings side panel: drawer -->
   <div id="settings-panel" class="fixed right-0 top-0 bottom-0 w-[300px] bg-white dark-mode:bg-[#191919] border-l border-[#ebebeb] dark-mode:border-[#2f2f2f] translate-x-full transition-transform duration-[240ms] ease-[cubic-bezier(0.4,0.0,0.2,1)] z-10 overflow-y-auto" style="transform: translateX(100%)" aria-label="Settings panel">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-[#ebebeb] settings-divider dark-mode:border-[#2f2f2f] mt-[64px]">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-[#ebebeb] settings-divider dark-mode:border-[#2f2f2f] mt-[80px]">
       <span class="text-[15px] font-semibold tracking-tight dark-mode:text-[#ffffff]" style="letter-spacing: -0.015em;">Settings</span>
       <button id="settings-close" type="button" aria-label="Close settings panel" title="Close (Esc)">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>

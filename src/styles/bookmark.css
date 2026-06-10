@@ -74,8 +74,8 @@
 
 /* right cover image — fills its flex cell */
 [data-blok-tool="bookmark"] .blok-bookmark__image {
-  flex: 1 1 180px;
-  max-width: 33%;
+  flex: 0 0 140px;
+  max-width: 25%;
 }
 [data-blok-tool="bookmark"] .blok-bookmark__image img {
   display: block;

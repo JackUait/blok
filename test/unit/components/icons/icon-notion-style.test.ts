@@ -128,5 +128,41 @@ describe('notion-style heading / list / toggle icons', () => {
     it('should keep the three list lines', () => {
       expect(IconListNumbered).toContain('M8 5h9M8 10h9M8 15h9');
     });
+
+    it('should leave breathing room between stacked digits', () => {
+      const digitPaths = paths(IconListNumbered).filter((p) => p.getAttribute('fill') === 'currentColor');
+
+      // SVGPathPen emits absolute commands; collect Y values per command type
+      const yRange = (p: SVGPathElement): [number, number] => {
+        const d = p.getAttribute('d') ?? '';
+        const ys: number[] = [];
+
+        for (const match of d.matchAll(/([MLQCVH])((?:\s*-?\d+(?:\.\d+)?)+)/g)) {
+          const cmd = match[1];
+          const nums = match[2].match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+
+          if (cmd === 'H') {
+            continue;
+          }
+
+          if (cmd === 'V') {
+            ys.push(...nums);
+            continue;
+          }
+
+          ys.push(...nums.filter((_value, i) => i % 2 === 1));
+        }
+
+        return [Math.min(...ys), Math.max(...ys)];
+      };
+
+      const ranges = digitPaths.map(yRange).sort((a, b) => a[0] - b[0]);
+
+      for (let i = 1; i < ranges.length; i++) {
+        const gap = ranges[i][0] - ranges[i - 1][1];
+
+        expect(gap).toBeGreaterThanOrEqual(0.8);
+      }
+    });
   });
 });

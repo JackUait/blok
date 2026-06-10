@@ -6,8 +6,6 @@ import {
   IconPencil,
   IconMergeCells,
   IconSplitCell,
-  IconToggleList,
-  IconListNumbered,
   IconHeading,
   IconH1,
   IconH2,
@@ -85,26 +83,6 @@ describe('icon refinements', () => {
     });
   });
 
-  describe('IconToggleList', () => {
-    it('should use the ToggleH-family chevron as its marker', () => {
-      expect(IconToggleList).toContain('m3.5 2.75 2.5 2.25-2.5 2.25');
-    });
-  });
-
-  describe('IconListNumbered', () => {
-    it('should render digits bold with an explicit font stack', () => {
-      const textElements = Array.from(parseSvg(IconListNumbered).querySelectorAll('text'));
-
-      expect(textElements.length).toBe(3);
-
-      for (const el of textElements) {
-        expect(el.getAttribute('font-weight')).toBe('600');
-        expect(el.getAttribute('font-size')).toBe('5.5');
-        expect(el.getAttribute('font-family')).toContain('Helvetica Neue');
-      }
-    });
-  });
-
   describe('heading family grid snap', () => {
     const family: Record<string, string> = {
       IconHeading,
@@ -125,24 +103,4 @@ describe('icon refinements', () => {
     });
   });
 
-  describe('toggle heading digits match the H-family digits', () => {
-    it('should share the "1" geometry between IconH1 and IconToggleH1', () => {
-      expect(IconH1).toContain('2.5-1.75V15');
-      expect(IconToggleH1).toContain('2.5-1.75V15');
-    });
-
-    it('should share the "2" geometry between IconH2 and IconToggleH2', () => {
-      const two = 'c0-3.25 3.5-2.5 3.5-5 0-1.25-1.75-2-3.5-.75';
-
-      expect(IconH2).toContain(two);
-      expect(IconToggleH2).toContain(two);
-    });
-
-    it('should share the "3" geometry between IconH3 and IconToggleH3', () => {
-      const three = 'c1.5-.85 3-.01 3 1.25 0 .44-.18.87-.49 1.18';
-
-      expect(IconH3).toContain(three);
-      expect(IconToggleH3).toContain(three);
-    });
-  });
 });

@@ -4539,7 +4539,7 @@
   line-height: 16px;
   color: var(--blok-text-secondary);
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -4568,8 +4568,8 @@
 }
 
 [data-blok-tool="bookmark"] .blok-bookmark__image {
-  flex: 0 0 140px;
-  max-width: 25%;
+  flex: 0 0 160px;
+  max-width: 29%;
 }
 
 [data-blok-tool="bookmark"] .blok-bookmark__image img {

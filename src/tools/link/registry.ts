@@ -5,7 +5,10 @@
  * an `embedUrl` template (with a `<%= remote_id %>` placeholder), and an optional
  * `id(groups)` that derives the remote id from the regex capture groups.
  *
- * Providers are added incrementally as the embed tool's tests require them.
+ * Every regex is anchored to the start of the pasted text (host lookalikes and
+ * URLs nested inside foreign URLs must not match) and consumes trailing query
+ * params with `\S*`, because the paste pipeline only claims a pattern when the
+ * match covers the entire pasted text (see PasteToolRegistry.findToolForPattern).
  */
 export type EmbedKind = 'iframe' | 'script';
 
@@ -21,7 +24,7 @@ export interface EmbedService {
   /** Default iframe height. */
   height?: number;
   /** Derives the remote id from regex capture groups (defaults to the first group). */
-  id?: (groups: string[]) => string;
+  id?: (groups: Array<string | undefined>) => string;
 }
 
 export interface EmbedMatch {
@@ -33,70 +36,164 @@ export interface EmbedMatch {
 
 const REMOTE_ID_TEMPLATE = /<%=\s*remote_id\s*%>/;
 
+/**
+ * Parses a YouTube `t=`/`start=` value from a URL tail into whole seconds.
+ * Supports plain seconds (43), `43s`, and composite `1h5m20s` forms.
+ */
+function parseYoutubeStart(tail: string): number | null {
+  const raw = /[?&](?:t|start)=([0-9hms]+)/.exec(tail)?.[1];
+
+  if (raw === undefined) {
+    return null;
+  }
+
+  if (/^\d+$/.test(raw)) {
+    return Number(raw);
+  }
+
+  const parts = /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/.exec(raw);
+
+  if (!parts || (parts[1] === undefined && parts[2] === undefined && parts[3] === undefined)) {
+    return null;
+  }
+
+  return Number(parts[1] ?? 0) * 3600 + Number(parts[2] ?? 0) * 60 + Number(parts[3] ?? 0);
+}
+
 export const EMBED_SERVICES: Record<string, EmbedService> = {
   youtube: {
-    regex: /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?(?:.*&)?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]+)/,
+    regex: /^(?:https?:\/\/)?(?:(?:www|m|music)\.)?(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]+)(\S*)/,
     embedUrl: 'https://www.youtube.com/embed/<%= remote_id %>',
+    id: (groups) => {
+      const start = parseYoutubeStart(groups[1] ?? '');
+
+      return start !== null && start > 0 ? `${groups[0]}?start=${start}` : groups[0] ?? '';
+    },
+    width: 580,
+    height: 320,
+  },
+  youtubeplaylist: {
+    regex: /^(?:https?:\/\/)?(?:(?:www|m|music)\.)?youtube\.com\/playlist\?(?:.*&)?list=([\w-]+)\S*/,
+    embedUrl: 'https://www.youtube.com/embed/videoseries?list=<%= remote_id %>',
     width: 580,
     height: 320,
   },
   vimeo: {
-    regex: /(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(\d+)/,
+    regex: /^(?:https?:\/\/)?(?:www\.)?(?:player\.)?vimeo\.com\/(?:(?:groups\/[\w-]+\/videos|album\/\d+\/video|showcase\/\d+\/video|video)\/)?(\d+)(?:\/([0-9a-f]+))?\S*/,
     embedUrl: 'https://player.vimeo.com/video/<%= remote_id %>',
+    id: (groups) => (groups[1] !== undefined ? `${groups[0]}?h=${groups[1]}` : groups[0] ?? ''),
+    width: 580,
+    height: 320,
+  },
+  vimeoshowcase: {
+    regex: /^(?:https?:\/\/)?(?:www\.)?vimeo\.com\/showcase\/(\d+)\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://vimeo.com/showcase/<%= remote_id %>/embed',
+    width: 580,
+    height: 320,
+  },
+  vimeoevent: {
+    regex: /^(?:https?:\/\/)?(?:www\.)?vimeo\.com\/event\/(\d+)\S*/,
+    embedUrl: 'https://vimeo.com/event/<%= remote_id %>/embed',
     width: 580,
     height: 320,
   },
   rutube: {
-    regex: /(?:https?:\/\/)?(?:www\.)?rutube\.ru\/video\/(\w+)\/?/,
+    // Rutube ids are 32-char hex hashes; the length guard keeps listing pages
+    // (/video/category/..., /video/person/...) from being claimed.
+    regex: /^(?:https?:\/\/)?(?:www\.)?rutube\.ru\/(?:video\/private\/|(?:video|shorts|play\/embed)\/|live\/video\/)([0-9a-f]{32})\/?(?:\?(?:.*&)?p=([\w-]+))?\S*/,
     embedUrl: 'https://rutube.ru/play/embed/<%= remote_id %>',
+    id: (groups) => (groups[1] !== undefined ? `${groups[0]}/?p=${groups[1]}` : groups[0] ?? ''),
     width: 580,
     height: 320,
   },
   vkvideo: {
     // NOTE: VK normally also needs a `hash` param that is not derivable from the
-    // pasted URL. Public videos usually render without it.
-    regex: /(?:https?:\/\/)?(?:www\.)?vk\.com\/video(-?\d+)_(\d+)/,
+    // pasted URL (it IS kept when a video_ext.php iframe src is pasted directly).
+    // Public videos usually render without it.
+    regex: /^(?:https?:\/\/)?(?:[\w-]+\.)*(?:vk\.(?:com|ru)|vkvideo\.ru)\/(?:(?:video|clip)(-?\d+)_(\d+)\S*|video_ext\.php\?(\S+)|\S*?[?&]z=(?:video|clip)(-?\d+)_(\d+)\S*)/,
     embedUrl: 'https://vk.com/video_ext.php?oid=<%= remote_id %>',
-    id: (groups) => `${groups[0]}&id=${groups[1]}`,
+    id: (groups) => {
+      if (groups[2] !== undefined) {
+        const params = new URLSearchParams(groups[2]);
+        const hash = params.get('hash');
+
+        return `${params.get('oid') ?? ''}&id=${params.get('id') ?? ''}${hash !== null ? `&hash=${hash}` : ''}`;
+      }
+
+      return `${groups[0] ?? groups[3] ?? ''}&id=${groups[1] ?? groups[4] ?? ''}`;
+    },
     width: 580,
     height: 320,
   },
   codepen: {
-    regex: /(?:https?:\/\/)?(?:www\.)?codepen\.io\/([^/]+)\/pen\/([^/?#]+)/,
+    regex: /^(?:https?:\/\/)?(?:www\.)?codepen\.io\/((?:team\/|editor\/)?[\w-]+)\/(?:pen|full|details|debug)\/([\w-]+)(?:\/([0-9a-f]+))?\S*/,
     embedUrl: 'https://codepen.io/<%= remote_id %>?default-tab=result',
-    id: (groups) => `${groups[0]}/embed/${groups[1]}`,
+    id: (groups) => `${groups[0]}/embed/${groups[1]}${groups[2] !== undefined ? `/${groups[2]}` : ''}`,
     width: 580,
     height: 320,
   },
   loom: {
-    regex: /(?:https?:\/\/)?(?:www\.)?loom\.com\/share\/([^/?#]+)/,
+    // Loom video ids are 32-char hex; folder links (loom.com/share/folder/...)
+    // are not embeddable and must fall through to the bookmark tool.
+    regex: /^(?:https?:\/\/)?(?:www\.)?loom\.com\/(?:share|embed)\/([0-9a-f]{32})\S*/,
     embedUrl: 'https://www.loom.com/embed/<%= remote_id %>',
     width: 580,
     height: 320,
   },
   figma: {
-    regex: /(?:https?:\/\/)?(?:www\.)?figma\.com\/(design|board|proto|file)\/([^/?#]+)/,
+    regex: /^(?:https?:\/\/)?(?:www\.)?figma\.com\/(design|board|proto|file|slides|deck)\/([^/?#]+)\S*/,
     embedUrl: 'https://embed.figma.com/<%= remote_id %>?embed-host=blok',
     id: (groups) => `${groups[0]}/${groups[1]}`,
     width: 580,
     height: 400,
   },
   spotify: {
-    regex: /(?:https?:\/\/)?open\.spotify\.com\/(track|album|playlist|episode|show|artist)\/([^/?#]+)/,
+    regex: /^(?:https?:\/\/)?open\.spotify\.com\/(?:intl-[\w-]+\/)?(?:embed\/)?(track|album|playlist|episode|show|artist)\/([^/?#]+)\S*/,
     embedUrl: 'https://open.spotify.com/embed/<%= remote_id %>',
     id: (groups) => `${groups[0]}/${groups[1]}`,
     width: 580,
     height: 152,
   },
   googledrive: {
-    regex: /(?:https?:\/\/)?drive\.google\.com\/file\/d\/([^/?#]+)/,
+    regex: /^(?:https?:\/\/)?drive\.google\.com\/(?:file\/(?:u\/\d+\/)?d\/([\w-]+)|open\?(?:.*&)?id=([\w-]+))\S*/,
     embedUrl: 'https://drive.google.com/file/d/<%= remote_id %>/preview',
+    id: (groups) => groups[0] ?? groups[1] ?? '',
+    width: 580,
+    height: 480,
+  },
+  googledrivefolder: {
+    regex: /^(?:https?:\/\/)?drive\.google\.com\/drive\/(?:u\/\d+\/)?folders\/([\w-]+)\S*/,
+    embedUrl: 'https://drive.google.com/embeddedfolderview?id=<%= remote_id %>#list',
+    width: 580,
+    height: 480,
+  },
+  googledocs: {
+    regex: /^(?:https?:\/\/)?docs\.google\.com\/document\/(?:u\/\d+\/)?d\/([\w-]+)\S*/,
+    embedUrl: 'https://docs.google.com/document/d/<%= remote_id %>/preview',
+    width: 580,
+    height: 480,
+  },
+  googlesheets: {
+    regex: /^(?:https?:\/\/)?docs\.google\.com\/spreadsheets\/(?:u\/\d+\/)?d\/([\w-]+)\S*/,
+    embedUrl: 'https://docs.google.com/spreadsheets/d/<%= remote_id %>/preview',
+    width: 580,
+    height: 480,
+  },
+  googleslides: {
+    regex: /^(?:https?:\/\/)?docs\.google\.com\/presentation\/(?:u\/\d+\/)?d\/([\w-]+)\S*/,
+    embedUrl: 'https://docs.google.com/presentation/d/<%= remote_id %>/embed?start=false&loop=false&delayms=3000',
+    width: 580,
+    height: 480,
+  },
+  googleforms: {
+    regex: /^(?:https?:\/\/)?docs\.google\.com\/forms\/d\/e\/([\w-]+)\/viewform\S*/,
+    embedUrl: 'https://docs.google.com/forms/d/e/<%= remote_id %>/viewform?embedded=true',
     width: 580,
     height: 480,
   },
   twitter: {
     // Script-only: rendered via platform.twitter.com/widgets.js, not an iframe.
-    regex: /(?:https?:\/\/)?(?:www\.)?(?:twitter|x)\.com\/\w+\/status\/(\d+)/,
+    regex: /^(?:https?:\/\/)?(?:(?:www|mobile)\.)?(?:twitter|x)\.com\/(?:i\/web|\w+)\/status\/(\d+)\S*/,
     embedUrl: 'https://twitter.com/i/status/<%= remote_id %>',
     kind: 'script',
     width: 550,
@@ -104,7 +201,10 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   },
   telegram: {
     // Script-only: rendered via telegram.org/js/telegram-widget.js.
-    regex: /(?:https?:\/\/)?t\.me\/([\w]+)\/(\d+)/,
+    // t.me/c/... private links are excluded: the post widget renders only
+    // public channels/groups, so those must fall back to the bookmark tool.
+    // Forum links (t.me/<group>/<topicId>/<msgId>) target the final message id.
+    regex: /^(?:https?:\/\/)?(?:www\.)?(?:t\.me|telegram\.(?:me|dog))\/(?:s\/)?(?!c\/)(\w+)\/(?:\d+\/)?(\d+)\S*/,
     embedUrl: 'https://t.me/<%= remote_id %>',
     kind: 'script',
     id: (groups) => `${groups[0]}/${groups[1]}`,

@@ -138,28 +138,23 @@ export class Bookmark implements BlockTool {
   }
 
   private buildEmpty(): HTMLElement {
-    const el = document.createElement('div');
-
-    el.setAttribute('data-blok-testid', 'bookmark-empty');
-    el.textContent = this.api.i18n.t('tools.bookmark.empty');
-
-    return el;
+    return this.buildPlaceholder('bookmark-empty', 'tools.bookmark.empty');
   }
 
   private buildLoading(): HTMLElement {
-    const el = document.createElement('div');
-
-    el.setAttribute('data-blok-testid', 'bookmark-loading');
-    el.textContent = this.api.i18n.t('tools.bookmark.loading');
-
-    return el;
+    return this.buildPlaceholder('bookmark-loading', 'tools.bookmark.loading');
   }
 
   private buildError(): HTMLElement {
+    return this.buildPlaceholder('bookmark-error', 'tools.bookmark.error');
+  }
+
+  private buildPlaceholder(testId: string, i18nKey: string): HTMLElement {
     const el = document.createElement('div');
 
-    el.setAttribute('data-blok-testid', 'bookmark-error');
-    el.textContent = this.api.i18n.t('tools.bookmark.error');
+    el.classList.add('blok-bookmark__placeholder');
+    el.setAttribute('data-blok-testid', testId);
+    el.textContent = this.api.i18n.t(i18nKey);
 
     return el;
   }
@@ -167,6 +162,7 @@ export class Bookmark implements BlockTool {
   private buildCard(): HTMLElement {
     const card = document.createElement('a');
 
+    card.classList.add('blok-bookmark');
     card.setAttribute('data-blok-testid', 'bookmark-card');
 
     // Only navigate http(s) URLs. Saved JSON or a compromised unfurl endpoint
@@ -177,34 +173,77 @@ export class Bookmark implements BlockTool {
     card.target = '_blank';
     card.rel = 'noopener noreferrer';
 
+    const content = document.createElement('div');
+
+    content.classList.add('blok-bookmark__content');
+    content.setAttribute('data-role', 'bookmark-content');
+
     const title = document.createElement('div');
 
-    title.textContent = this.data.title ?? this.data.url;
-    card.appendChild(title);
+    title.classList.add('blok-bookmark__title');
+    title.setAttribute('data-role', 'bookmark-title');
+    title.textContent = this.data.title ?? this.fallbackTitle();
+    content.appendChild(title);
 
     if (this.data.description) {
       const description = document.createElement('div');
 
+      description.classList.add('blok-bookmark__description');
+      description.setAttribute('data-role', 'bookmark-description');
       description.textContent = this.data.description;
-      card.appendChild(description);
+      content.appendChild(description);
     }
+
+    const linkRow = document.createElement('div');
+
+    linkRow.classList.add('blok-bookmark__link-row');
+    linkRow.setAttribute('data-role', 'bookmark-link-row');
 
     if (this.data.favicon) {
       const favicon = document.createElement('img');
 
+      favicon.classList.add('blok-bookmark__favicon');
+      favicon.setAttribute('data-role', 'bookmark-favicon');
       favicon.src = this.data.favicon;
       favicon.alt = '';
-      card.appendChild(favicon);
+      linkRow.appendChild(favicon);
     }
 
+    const urlText = document.createElement('span');
+
+    urlText.classList.add('blok-bookmark__url');
+    urlText.setAttribute('data-role', 'bookmark-url');
+    urlText.textContent = this.data.url;
+    linkRow.appendChild(urlText);
+    content.appendChild(linkRow);
+
+    card.appendChild(content);
+
     if (this.data.image) {
+      const imageContainer = document.createElement('div');
+
+      imageContainer.classList.add('blok-bookmark__image');
+      imageContainer.setAttribute('data-role', 'bookmark-image');
+
       const image = document.createElement('img');
 
       image.src = this.data.image;
       image.alt = '';
-      card.appendChild(image);
+      imageContainer.appendChild(image);
+      card.appendChild(imageContainer);
     }
 
     return card;
+  }
+
+  /** Notion reduces a URL-ish title to the hostname; raw url if unparseable. */
+  private fallbackTitle(): string {
+    try {
+      const { hostname } = new URL(this.data.url);
+
+      return hostname || this.data.url;
+    } catch {
+      return this.data.url;
+    }
   }
 }

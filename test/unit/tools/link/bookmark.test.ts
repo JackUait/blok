@@ -171,4 +171,145 @@ describe('Bookmark tool', () => {
     expect(card?.getAttribute('href')).toBeNull();
     expect(card?.href ?? '').not.toContain('javascript:');
   });
+
+  describe('card DOM structure (Notion parity)', () => {
+    const fullMeta: Partial<BookmarkData> = {
+      url: 'https://example.com/article',
+      title: 'Hello Title',
+      description: 'Hello Description',
+      image: 'https://example.com/og.png',
+      favicon: 'https://example.com/favicon.ico',
+      domain: 'example.com',
+    };
+
+    const renderCard = (data: Partial<BookmarkData>): HTMLAnchorElement => {
+      const tool = new Bookmark(createOptions(data));
+      const root = tool.render();
+      const card = root.querySelector<HTMLAnchorElement>('[data-blok-testid="bookmark-card"]');
+
+      if (card === null) {
+        throw new Error('bookmark card was not rendered');
+      }
+
+      return card;
+    };
+
+    it('renders the blok-bookmark card with a content column holding title, description and link row in order', () => {
+      const card = renderCard(fullMeta);
+
+      expect(card.classList.contains('blok-bookmark')).toBe(true);
+
+      const content = card.querySelector('[data-role="bookmark-content"]');
+
+      expect(content).not.toBeNull();
+      expect(content?.classList.contains('blok-bookmark__content')).toBe(true);
+
+      const roles = Array.from(content?.children ?? []).map((child) =>
+        child.getAttribute('data-role')
+      );
+
+      expect(roles).toEqual(['bookmark-title', 'bookmark-description', 'bookmark-link-row']);
+    });
+
+    it('places the favicon inside the link row and shows the full url text', () => {
+      const card = renderCard(fullMeta);
+
+      const linkRow = card.querySelector('[data-role="bookmark-link-row"]');
+
+      expect(linkRow).not.toBeNull();
+
+      const favicon = linkRow?.querySelector<HTMLImageElement>('img[data-role="bookmark-favicon"]');
+
+      expect(favicon).not.toBeNull();
+      expect(favicon?.classList.contains('blok-bookmark__favicon')).toBe(true);
+      expect(favicon?.getAttribute('alt')).toBe('');
+
+      const urlSpan = linkRow?.querySelector('[data-role="bookmark-url"]');
+
+      expect(urlSpan).not.toBeNull();
+      expect(urlSpan?.tagName).toBe('SPAN');
+      expect(urlSpan?.classList.contains('blok-bookmark__url')).toBe(true);
+      expect(urlSpan?.textContent).toBe('https://example.com/article');
+    });
+
+    it('renders the cover image in its own container outside the content column', () => {
+      const card = renderCard(fullMeta);
+
+      const imageContainer = card.querySelector('[data-role="bookmark-image"]');
+
+      expect(imageContainer).not.toBeNull();
+      expect(imageContainer?.classList.contains('blok-bookmark__image')).toBe(true);
+      expect(imageContainer?.closest('[data-role="bookmark-content"]')).toBeNull();
+
+      const img = imageContainer?.querySelector('img');
+
+      expect(img).not.toBeNull();
+      expect(img?.getAttribute('src')).toBe('https://example.com/og.png');
+      expect(img?.getAttribute('alt')).toBe('');
+    });
+
+    it('falls back to the hostname when metadata has no title', () => {
+      const card = renderCard({ url: 'https://example.com/article' });
+
+      const title = card.querySelector('[data-role="bookmark-title"]');
+
+      expect(title?.textContent).toBe('example.com');
+    });
+
+    it('falls back to the raw url string when the url cannot be parsed', () => {
+      const card = renderCard({ url: 'not-a-url' });
+
+      const title = card.querySelector('[data-role="bookmark-title"]');
+
+      expect(title?.textContent).toBe('not-a-url');
+    });
+
+    it('omits description, favicon and image elements when metadata lacks them', () => {
+      const card = renderCard({ url: 'https://example.com/article', title: 'Hello Title' });
+
+      expect(card.querySelector('[data-role="bookmark-description"]')).toBeNull();
+      expect(card.querySelector('[data-role="bookmark-favicon"]')).toBeNull();
+      expect(card.querySelector('[data-role="bookmark-image"]')).toBeNull();
+
+      const urlSpan = card.querySelector('[data-role="bookmark-link-row"] [data-role="bookmark-url"]');
+
+      expect(urlSpan?.textContent).toBe('https://example.com/article');
+    });
+  });
+
+  describe('placeholder states share the styled placeholder class', () => {
+    it('marks the empty state with blok-bookmark__placeholder', () => {
+      const tool = new Bookmark(createOptions());
+      const root = tool.render();
+
+      const empty = root.querySelector('[data-blok-testid="bookmark-empty"]');
+
+      expect(empty?.classList.contains('blok-bookmark__placeholder')).toBe(true);
+    });
+
+    it('marks the loading state with blok-bookmark__placeholder', () => {
+      vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
+      const tool = new Bookmark(createOptions());
+      const root = tool.render();
+
+      tool.onPaste(patternEvent('https://example.com/article'));
+
+      const loading = root.querySelector('[data-blok-testid="bookmark-loading"]');
+
+      expect(loading?.classList.contains('blok-bookmark__placeholder')).toBe(true);
+    });
+
+    it('marks the error state with blok-bookmark__placeholder', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(okResponse({ success: 0 }));
+      const tool = new Bookmark(createOptions());
+      const root = tool.render();
+
+      tool.onPaste(patternEvent('https://example.com/article'));
+      await flush();
+
+      const error = root.querySelector('[data-blok-testid="bookmark-error"]');
+
+      expect(error?.classList.contains('blok-bookmark__placeholder')).toBe(true);
+    });
+  });
 });

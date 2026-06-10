@@ -5,6 +5,7 @@ import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 import license from 'rollup-plugin-license';
+import unfurlPlugin from './scripts/unfurl/vite-plugin-unfurl.mjs';
 
 import * as pkg from './package.json';
 
@@ -123,6 +124,7 @@ export default defineConfig(({ mode }) => {
     },
 
     plugins: [
+      unfurlPlugin(),
       tailwindcss(),
       cssInjectedByJsPlugin({
         jsAssetsFilterFunction: (outputChunk) => {

@@ -158,12 +158,12 @@
 
     /* Dark mode nav overrides */
     .dark-mode .playground-nav {
-      background: #1f1f1f;
-      border-color: #2f2f2f;
+      background: #232323;
+      border-color: #3a3a3a;
       box-shadow: 0 1px 2px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.3);
     }
-    .dark-mode .playground-tab { color: #a8a8a8; }
-    .dark-mode .playground-tab:hover { color: #ffffff; background: rgba(255,255,255,0.06); }
+    .dark-mode .playground-tab { color: #c0c0c0; }
+    .dark-mode .playground-tab:hover { color: #ffffff; background: rgba(255,255,255,0.07); }
     .dark-mode .playground-tab[aria-selected="true"],
     .dark-mode .playground-tab[aria-selected="true"]:hover {
       color: #191919;
@@ -730,8 +730,8 @@
 
     /* Dark mode overrides */
     .dark-mode .playground-header { border-color: #2f2f2f; }
-    .dark-mode #main-content > div.playground-header a { color: #a8a8a8; }
-    .dark-mode #main-content > div.playground-header a:hover { color: #ffffff; }
+    .dark-mode #main-content > div.playground-header a:not(.playground-tab) { color: #a8a8a8; }
+    .dark-mode #main-content > div.playground-header a:not(.playground-tab):hover { color: #ffffff; }
     .dark-mode #settings-tab { background: #191919; border-color: #2f2f2f; }
     .dark-mode #settings-tab:hover { background: #1f1f1f; }
     .dark-mode #settings-tab svg,

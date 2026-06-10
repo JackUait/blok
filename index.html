@@ -33,6 +33,23 @@
     body { background-color: #ffffff; }
     body.dark-mode { background-color: #191919; }
 
+    /* Theme switch cross-fade: applied for ~300ms around the dark-mode toggle
+       so every region (header, content, drawer, footer) fades in lockstep
+       instead of flipping piecemeal. Pseudo-elements (e.g. toggle knobs)
+       keep their own transitions. */
+    @media (prefers-reduced-motion: no-preference) {
+      body.pg-theme-fade,
+      body.pg-theme-fade * {
+        transition:
+          background-color 240ms ease,
+          color 240ms ease,
+          border-color 240ms ease,
+          fill 240ms ease,
+          stroke 240ms ease,
+          box-shadow 240ms ease !important;
+      }
+    }
+
     /* Centered content column */
     .pg-sheet {
       max-width: 1000px;
@@ -1937,9 +1954,18 @@
      * Single source of truth used by the manual toggle and the system
      * preference change listener.
      */
-    function applyDarkMode(enabled) {
+    let themeFadeTimer = null;
+
+    function applyDarkMode(enabled, { animate = false } = {}) {
       state.darkMode = enabled;
       toggleDark.checked = enabled;
+      if (animate) {
+        document.body.classList.add('pg-theme-fade');
+        clearTimeout(themeFadeTimer);
+        themeFadeTimer = setTimeout(() => {
+          document.body.classList.remove('pg-theme-fade');
+        }, 320);
+      }
       document.body.classList.toggle('dark-mode', enabled);
       if (enabled) {
         document.documentElement.setAttribute('data-blok-theme', 'dark');
@@ -1960,7 +1986,7 @@
 
     // Keep in sync when the system preference changes
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-      applyDarkMode(e.matches);
+      applyDarkMode(e.matches, { animate: true });
     });
 
     toggleReadonly.addEventListener('change', async () => {
@@ -1969,7 +1995,7 @@
     });
 
     toggleDark.addEventListener('change', () => {
-      applyDarkMode(toggleDark.checked);
+      applyDarkMode(toggleDark.checked, { animate: true });
     });
 
     toggleAutofocus.addEventListener('change', () => {

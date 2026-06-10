@@ -21,12 +21,37 @@
     body:not(.ready) { visibility: hidden !important; }
   </style>
   <style>
+    :root {
+      --pg-paper: #faf9f7;
+      --pg-ink: #1a1a1a;
+      --pg-accent: #e45735;
+      --pg-line: #eae7e2;
+      --pg-muted: #8a8580;
+    }
+
+    body { background: var(--pg-paper); }
+    body.dark-mode { background: #191919; }
+
+    /* One-time page load reveal */
+    @media (prefers-reduced-motion: no-preference) {
+      body.ready .playground-header { animation: pg-fade-down 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+      body.ready #main-content > [role="tabpanel"]:not(.hidden) { animation: pg-fade-up 0.45s 0.06s cubic-bezier(0.22, 1, 0.36, 1) both; }
+    }
+    @keyframes pg-fade-down {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pg-fade-up {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
     /* Playground header */
     .playground-header {
       height: 56px;
       backdrop-filter: saturate(180%) blur(12px);
       -webkit-backdrop-filter: saturate(180%) blur(12px);
-      background: rgba(255,255,255,0.78);
+      background: rgba(250,249,247,0.82);
       position: sticky;
       top: 0;
       z-index: 20;
@@ -52,6 +77,24 @@
       height: 20px;
       display: block;
       flex-shrink: 0;
+    }
+    .playground-wordmark__tag {
+      font-family: 'PT Mono', monospace;
+      font-weight: 400;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--pg-accent);
+      border: 1px solid rgba(228,87,53,0.35);
+      border-radius: 999px;
+      padding: 3px 7px 2px;
+      line-height: 1;
+      margin-left: 2px;
+      transform: translateY(1px);
+    }
+    .dark-mode .playground-wordmark__tag {
+      color: #f08a6e;
+      border-color: rgba(240,138,110,0.35);
     }
 
     /* Playground tabs */
@@ -80,7 +123,7 @@
       left: 50%;
       width: 0;
       height: 2px;
-      background: #0a0a0a;
+      background: var(--pg-accent);
       border-radius: 2px 2px 0 0;
       transition: width 0.22s ease, left 0.22s ease;
     }
@@ -93,7 +136,7 @@
     .dark-mode .playground-tab { color: #8a8580; }
     .dark-mode .playground-tab:hover { color: #ffffff; }
     .dark-mode .playground-tab[aria-selected="true"] { color: #ffffff; }
-    .dark-mode .playground-tab::after { background: #ffffff; }
+    .dark-mode .playground-tab::after { background: #f08a6e; }
 
     /* Pill toggle switch */
     .pill-toggle {
@@ -151,10 +194,10 @@
       flex-wrap: wrap;
       padding-bottom: 16px;
       margin-bottom: 32px;
-      border-bottom: 1px solid #ececec;
+      border-bottom: 1px solid var(--pg-line);
       position: sticky;
       top: 56px;
-      background: rgba(255,255,255,0.9);
+      background: rgba(250,249,247,0.92);
       backdrop-filter: saturate(180%) blur(10px);
       -webkit-backdrop-filter: saturate(180%) blur(10px);
       z-index: 5;
@@ -179,12 +222,11 @@
       cursor: pointer;
       transition: color 0.15s, background 0.15s, border-color 0.15s;
     }
-    .block-states-tab:hover { color: #1a1a1a; background: rgba(0,0,0,0.03); }
+    .block-states-tab:hover { color: #1a1a1a; background: rgba(228,87,53,0.07); }
     .block-states-tab[aria-selected="true"] {
-      color: #0a0a0a;
-      background: #0a0a0a;
+      background: var(--pg-ink);
       color: #ffffff;
-      border-color: #0a0a0a;
+      border-color: var(--pg-ink);
     }
     .dark-mode .block-states-tab { color: #a39e98; }
     .dark-mode .block-states-tab:hover { color: #ffffff; background: rgba(255,255,255,0.04); }
@@ -211,11 +253,22 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.14em;
-      color: #8a8580;
+      color: var(--pg-muted);
       margin-bottom: 24px;
       padding-bottom: 12px;
-      border-bottom: 1px solid #ececec;
+      border-bottom: 1px solid var(--pg-line);
       font-family: 'PT Mono', monospace;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .icon-group-title::before {
+      content: '';
+      width: 10px;
+      height: 2px;
+      border-radius: 1px;
+      background: var(--pg-accent);
+      flex-shrink: 0;
     }
     .icon-grid {
       display: grid;
@@ -229,7 +282,11 @@
       gap: 10px;
       padding: 20px 12px;
       cursor: pointer;
+      border-radius: 10px;
+      transition: background 0.15s ease;
     }
+    .icon-cell:hover { background: rgba(26,26,26,0.035); }
+    .icon-cell:active { background: rgba(26,26,26,0.06); }
     .icon-cell .icon-preview {
       display: flex;
       align-items: center;
@@ -237,11 +294,13 @@
       color: #1a1a1a;
     }
     .icon-cell .icon-preview svg {
-      border: 1px dashed #d0d0d0;
+      border: 1px dashed #d8d3cc;
       border-radius: 2px;
+      transition: border-color 0.15s ease, transform 0.18s cubic-bezier(0.2, 0.9, 0.3, 1.2);
     }
     .icon-cell:hover .icon-preview svg {
-      border-color: #999;
+      border-color: rgba(228,87,53,0.55);
+      transform: scale(1.4);
     }
     .icon-cell .icon-name {
       font-size: 10px;
@@ -251,13 +310,18 @@
       word-break: break-all;
       transition: color 0.15s;
     }
+    .icon-cell:hover .icon-name { color: #1a1a1a; }
 
     /* Dark mode icon gallery */
     .dark-mode .icon-group-title { color: #a39e98; border-bottom-color: #37352f; }
+    .dark-mode .icon-group-title::before { background: #f08a6e; }
+    .dark-mode .icon-cell:hover { background: rgba(255,255,255,0.045); }
+    .dark-mode .icon-cell:active { background: rgba(255,255,255,0.07); }
     .dark-mode .icon-cell .icon-preview svg { border-color: #37352f; }
-    .dark-mode .icon-cell:hover .icon-preview svg { border-color: #a39e98; }
+    .dark-mode .icon-cell:hover .icon-preview svg { border-color: rgba(240,138,110,0.6); }
     .dark-mode .icon-cell .icon-preview { color: #ffffff; }
-     .dark-mode .icon-cell .icon-name { color: #a39e98; }
+    .dark-mode .icon-cell .icon-name { color: #a39e98; }
+    .dark-mode .icon-cell:hover .icon-name { color: #ffffff; }
 
     /* Icon lightbox */
     .icon-lightbox {
@@ -463,8 +527,19 @@
       color: #8a8580;
       font-family: 'PT Mono', monospace;
       margin-bottom: 14px;
-      display: block;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
+    .settings-section-label::before {
+      content: '';
+      width: 10px;
+      height: 2px;
+      border-radius: 1px;
+      background: var(--pg-accent);
+      flex-shrink: 0;
+    }
+    .dark-mode .settings-section-label::before { background: #f08a6e; }
     .dark-mode .settings-section-label { color: #8a8580; }
 
     .settings-row {
@@ -486,9 +561,9 @@
       font-size: 10px;
       line-height: 1;
       padding: 3px 5px;
-      border: 1px solid #e6e4e0;
+      border: 1px solid #e6e2dc;
       border-radius: 4px;
-      background: #fafaf8;
+      background: #f6f4f0;
       color: #8a8580;
       letter-spacing: 0.02em;
       white-space: nowrap;
@@ -591,10 +666,10 @@
       gap: 8px;
       letter-spacing: -0.005em;
     }
-    #reset-content:hover { border-color: #1a1a1a; color: #1a1a1a; background: rgba(0,0,0,0.02); }
+    #reset-content:hover { border-color: var(--pg-accent); color: var(--pg-accent); background: rgba(228,87,53,0.05); }
     #reset-content:active { transform: scale(0.985); }
     .dark-mode #reset-content { border-color: #37352f; color: #a39e98; }
-    .dark-mode #reset-content:hover { border-color: #a39e98; color: #ffffff; background: rgba(255,255,255,0.03); }
+    .dark-mode #reset-content:hover { border-color: rgba(240,138,110,0.6); color: #f08a6e; background: rgba(240,138,110,0.06); }
 
     /* Settings side-tab handle */
     #settings-tab {
@@ -633,13 +708,14 @@
    </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 </head>
-<body class="m-0 bg-white text-black transition-colors duration-150" style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; font-size: 14px; line-height: 1.6;">
+<body class="m-0 text-black transition-colors duration-150" style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; font-size: 14px; line-height: 1.6;">
   <div class="text-base transition-[margin] duration-200 ease-in-out" id="main-content">
     <!-- Header -->
-    <div class="playground-header flex items-center px-[30px] max-md:px-5 border-b border-[#ececec] dark-mode:border-[#2a2826] transition-colors duration-150">
+    <div class="playground-header flex items-center px-[30px] max-md:px-5 border-b border-[#eae7e2] dark-mode:border-[#2a2826] transition-colors duration-150">
       <span class="playground-wordmark text-inherit mr-7 select-none">
         <img class="playground-wordmark__logo" src="/favicon.svg" alt="" aria-hidden="true">
         Blok
+        <span class="playground-wordmark__tag" aria-hidden="true">playground</span>
       </span>
       <nav role="tablist" class="flex gap-1">
         <a class="playground-tab" role="tab" aria-selected="true" href="/editor" data-tab="editor">Editor</a>
@@ -2218,6 +2294,81 @@
           } }] },
         ],
       },
+      {
+        tool: 'bookmark',
+        label: 'Bookmark',
+        states: [
+          { label: 'Empty', blocks: [{ id: 'bm-empty', type: 'bookmark', data: { url: '' } }] },
+          { label: 'Full card', blocks: [{ id: 'bm-full', type: 'bookmark', data: {
+            url: 'https://github.com/jackuait/blok',
+            title: 'Blok — headless block-based rich text editor',
+            description: 'Notion-style editor where every content entity is a block. Content is clean JSON, not HTML.',
+            image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800',
+            favicon: 'https://github.com/favicon.ico',
+            domain: 'github.com',
+          } }] },
+          { label: 'No image', blocks: [{ id: 'bm-no-image', type: 'bookmark', data: {
+            url: 'https://developer.mozilla.org/en-US/docs/Web/API',
+            title: 'Web APIs | MDN',
+            description: 'Reference documentation for every interface the web platform exposes to JavaScript.',
+            favicon: 'https://developer.mozilla.org/favicon-48x48.png',
+            domain: 'developer.mozilla.org',
+          } }] },
+          { label: 'Title only', blocks: [{ id: 'bm-title-only', type: 'bookmark', data: {
+            url: 'https://example.com/article',
+            title: 'An article with no other metadata',
+          } }] },
+          { label: 'URL only', blocks: [{ id: 'bm-url-only', type: 'bookmark', data: {
+            url: 'https://example.com/bare-link-no-metadata',
+          } }] },
+        ],
+      },
+      {
+        tool: 'embed',
+        label: 'Embed',
+        states: [
+          { label: 'Empty', blocks: [{ id: 'em-empty', type: 'embed', data: {} }] },
+          { label: 'YouTube', blocks: [{ id: 'em-youtube', type: 'embed', data: {
+            service: 'youtube',
+            source: 'https://www.youtube.com/watch?v=L229QDxDakU',
+            embed: 'https://www.youtube.com/embed/L229QDxDakU',
+            width: 580,
+            height: 320,
+          } }] },
+          { label: 'Resized (60%)', blocks: [{ id: 'em-resized', type: 'embed', data: {
+            service: 'youtube',
+            source: 'https://www.youtube.com/watch?v=L229QDxDakU',
+            embed: 'https://www.youtube.com/embed/L229QDxDakU',
+            width: 580,
+            height: 320,
+            widthPercent: 60,
+          } }] },
+          { label: 'Left aligned', blocks: [{ id: 'em-left', type: 'embed', data: {
+            service: 'youtube',
+            source: 'https://www.youtube.com/watch?v=L229QDxDakU',
+            embed: 'https://www.youtube.com/embed/L229QDxDakU',
+            width: 580,
+            height: 320,
+            widthPercent: 50,
+            alignment: 'left',
+          } }] },
+          { label: 'With caption', blocks: [{ id: 'em-caption', type: 'embed', data: {
+            service: 'youtube',
+            source: 'https://www.youtube.com/watch?v=L229QDxDakU',
+            embed: 'https://www.youtube.com/embed/L229QDxDakU',
+            width: 580,
+            height: 320,
+            caption: 'Embeds keep the provider aspect ratio while resizing.',
+            captionVisible: true,
+          } }] },
+          { label: 'Twitter (script)', blocks: [{ id: 'em-twitter', type: 'embed', data: {
+            service: 'twitter',
+            source: 'https://twitter.com/jack/status/20',
+            embed: 'https://twitter.com/i/status/20',
+            kind: 'script',
+          } }] },
+        ],
+      },
     ];
 
     const BLOCK_STATES_SPEC = BLOCK_STATES_RAW.map(entry => flattenStates(entry.tool, entry.label, entry.states));
@@ -2245,6 +2396,8 @@
           image: Image,
           column_list: ColumnList,
           column: Column,
+          embed: Embed,
+          bookmark: { class: Bookmark, config: { endpoint: '/unfurl' } },
           bold: Bold,
           italic: Italic,
           underline: Underline,

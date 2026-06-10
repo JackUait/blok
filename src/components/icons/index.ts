@@ -141,7 +141,7 @@ export const IconSearch = `
 export const IconH1 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path
-    d="M3.33334 10H10m-6.66666 5V5M10 15V5m4.1667 5 2.5-1.66667V15"
+    d="M3.5 10H10M3.5 15V5M10 15V5m4 4.75 2.5-1.75V15"
     stroke="currentColor"
     stroke-width="1.25"
     stroke-linecap="round"
@@ -154,7 +154,7 @@ export const IconH1 = `
 export const IconH2 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path
-    d="M3.33334 10H10m-6.66666 5V5M10 15V5m7.5 10h-3.3333c0-3.3333 3.3333-2.5 3.3333-5 0-1.25-1.6667-2.08333-3.3333-.83333"
+    d="M3.5 10H10M3.5 15V5M10 15V5m7.5 10H14c0-3.25 3.5-2.5 3.5-5 0-1.25-1.75-2-3.5-.75"
     stroke="currentColor"
     stroke-width="1.25"
     stroke-linecap="round"
@@ -167,7 +167,7 @@ export const IconH2 = `
 export const IconH3 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path
-    d="M3.33334 10H10m-6.66666 5V5M10 15V5m4.5833 3.75C16 7.91667 17.5 8.75 17.5 10c0 .442-.1756.866-.4882 1.1785-.3125.3126-.7364.4882-1.1785.4882.4421 0 .866.1756 1.1785.4881.3126.3126.4882.7365.4882 1.1785 0 1.5-1.6667 2.5-3.3333 1.25"
+    d="M3.5 10H10M3.5 15V5M10 15V5m4.5 3.75c1.5-.85 3-.01 3 1.25 0 .44-.18.87-.49 1.18-.31.31-.74.49-1.18.49.44 0 .87.18 1.18.49.31.31.49.74.49 1.18 0 1.5-1.75 2.5-3.5 1.25"
     stroke="currentColor"
     stroke-width="1.25"
     stroke-linecap="round"
@@ -180,7 +180,7 @@ export const IconH3 = `
 export const IconH4 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path
-    d="M10 15V5M14.1667 8.33333V10.8333C14.1667 11.0543 14.2545 11.2663 14.4107 11.4226C14.567 11.5789 14.779 11.6667 15 11.6667H17.5M17.5 8.33333V15M3.33334 10H10M3.33334 15V5"
+    d="M3.5 10H10M3.5 15V5M10 15V5M14 8.25v2.6c0 .22.09.43.24.59.16.15.37.24.59.24h2.67M17.5 8.25V15"
     stroke="currentColor"
     stroke-width="1.25"
     stroke-linecap="round"
@@ -193,7 +193,7 @@ export const IconH4 = `
 export const IconH5 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path
-    d="M3.33334 10H10M3.33334 15V5M10 15V5M17.5 8.33333H14.1667V10.8333H15.25C16.5 10.8333 17.5 11.75 17.5 12.9167C17.5 14.0833 16.5 15 15.25 15C14.8333 15 14.5 14.9167 14.1667 14.75"
+    d="M3.5 10H10M3.5 15V5M10 15V5M17.5 8.25H14v2.6h1.25c1.25 0 2.25.9 2.25 2.05 0 1.15-1 2.1-2.25 2.1-.42 0-.75-.08-1.08-.25"
     stroke="currentColor"
     stroke-width="1.25"
     stroke-linecap="round"
@@ -206,7 +206,7 @@ export const IconH5 = `
 export const IconH6 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path
-    d="M3.33334 10H10m-6.66666 5V5M10 15V5m4.1667 8.3333c0 .9205.7462 1.6667 1.6666 1.6667.9205 0 1.6667-.7462 1.6667-1.6667 0-.9204-.7462-1.6666-1.6667-1.6666-.9204 0-1.6666.7462-1.6666 1.6666Zm0 0c0-2.0833.8333-3.3333 2.5-4.99997"
+    d="M3.5 10H10M3.5 15V5M10 15V5m4 8.25c0 .97.78 1.75 1.75 1.75s1.75-.78 1.75-1.75-.78-1.75-1.75-1.75S14 12.28 14 13.25Zm0 0c0-2.1.85-3.4 2.5-5"
     stroke="currentColor"
     stroke-width="1.25"
     stroke-linecap="round"
@@ -219,7 +219,7 @@ export const IconH6 = `
 export const IconHeading = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path
-    d="M6.5 10h6.6667M6.5 15V5m6.6667 10V5"
+    d="M6.75 10h6.5M6.75 15V5m6.5 10V5"
     stroke="currentColor"
     stroke-width="1.25"
     stroke-linecap="round"
@@ -254,7 +254,7 @@ export const IconWarning = `
 export const IconToggleList = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path
-    d="M3 3l3 2-3 2M9 5h8M6 10h11M6 15h11"
+    d="m3.5 2.75 2.5 2.25-2.5 2.25M9 5h8M6 10h11M6 15h11"
     stroke="currentColor"
     stroke-width="1.25"
     stroke-linecap="round"
@@ -282,9 +282,9 @@ export const IconListBulleted = `
 export const IconListNumbered = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path d="M8 5h9M8 10h9M8 15h9" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
-  <text x="4" y="6" fill="currentColor" font-size="5" font-family="sans-serif" text-anchor="middle" dominant-baseline="central">1</text>
-  <text x="4" y="11" fill="currentColor" font-size="5" font-family="sans-serif" text-anchor="middle" dominant-baseline="central">2</text>
-  <text x="4" y="16" fill="currentColor" font-size="5" font-family="sans-serif" text-anchor="middle" dominant-baseline="central">3</text>
+  <text x="4" y="6" fill="currentColor" font-size="5.5" font-weight="600" font-family="'Helvetica Neue', Arial, sans-serif" text-anchor="middle" dominant-baseline="central">1</text>
+  <text x="4" y="11" fill="currentColor" font-size="5.5" font-weight="600" font-family="'Helvetica Neue', Arial, sans-serif" text-anchor="middle" dominant-baseline="central">2</text>
+  <text x="4" y="16" fill="currentColor" font-size="5.5" font-weight="600" font-family="'Helvetica Neue', Arial, sans-serif" text-anchor="middle" dominant-baseline="central">3</text>
 </svg>
 `;
 
@@ -402,7 +402,8 @@ export const IconCopy = `
 // Pencil/Rename icon
 export const IconPencil = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M12.5 5.5l2 2M4.5 13.5l8-8 2 2-8 8H4.5v-2z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4.4 12.9 13.6 3.7a1.65 1.65 0 0 1 2.33 0l.37.37a1.65 1.65 0 0 1 0 2.33L7.1 15.6l-3.6 1 .9-3.7Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m12.3 5 2.7 2.7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
 </svg>
 `;
 
@@ -429,7 +430,7 @@ export const IconDotsHorizontal = `
 // Toggle Heading 1 icon (H1 with toggle arrow)
 export const IconToggleH1 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M2.5 10h5M2.5 15V5M7.5 15V5m3.5 5 2-1.5V15" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M2.5 10H8M2.5 15V5M8 15V5m3 4.75 2.5-1.75V15" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M16 7l2.5 3-2.5 3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
@@ -437,7 +438,7 @@ export const IconToggleH1 = `
 // Toggle Heading 2 icon (H2 with toggle arrow)
 export const IconToggleH2 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M2.5 10h5M2.5 15V5M7.5 15V5m7 10h-3c0-3 3-2.25 3-4.5 0-1.125-1.5-1.875-3-.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M2.5 10H8M2.5 15V5M8 15V5m6.5 10H11c0-3.25 3.5-2.5 3.5-5 0-1.25-1.75-2-3.5-.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M16 7l2.5 3-2.5 3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
@@ -445,8 +446,8 @@ export const IconToggleH2 = `
 // Toggle Heading 3 icon (H3 with toggle arrow)
 export const IconToggleH3 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M2.5 10h5M2.5 15V5M7.5 15V5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M11 8.5c1.25-.75 2.5-.25 2.5.75 0 .75-1 1.25-1 1.25s1 .5 1 1.25c0 1-1.25 1.5-2.5.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M2.5 10H8M2.5 15V5M8 15V5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M11 8.75c1.5-.85 3-.01 3 1.25 0 .44-.18.87-.49 1.18-.31.31-.74.49-1.18.49.44 0 .87.18 1.18.49.31.31.49.74.49 1.18 0 1.5-1.75 2.5-3.5 1.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M16 7l2.5 3-2.5 3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
@@ -489,7 +490,7 @@ export const IconHash = `
 // Quote icon
 export const IconQuote = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M4 4v12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+  <rect x="3.5" y="4" width="2.25" height="12" rx="1.125" fill="currentColor"/>
   <path d="M9 6h7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
   <path d="M9 10h7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
   <path d="M9 14h5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
@@ -655,18 +656,18 @@ export const IconCalendar = `
 // Merge cells icon (two cells merging into one)
 export const IconMergeCells = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M10 4v12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-dasharray="1.5 2"/>
-  <path d="M5.5 7 8.5 10 5.5 13" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M14.5 7 11.5 10 14.5 13" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M10 4.25v11.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-dasharray="0.1 2.6"/>
+  <path d="M4.5 7.5 7 10 4.5 12.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M15.5 7.5 13 10 15.5 12.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
 // Split cell icon (one cell splitting into two) — mirror of IconMergeCells
 export const IconSplitCell = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M10 4v12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-dasharray="1.5 2"/>
-  <path d="M8.5 7 5.5 10 8.5 13" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M11.5 7 14.5 10 11.5 13" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M10 4.25v11.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-dasharray="0.1 2.6"/>
+  <path d="M7 7.5 4.5 10 7 12.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M13 7.5 15.5 10 13 12.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
@@ -723,7 +724,7 @@ export const IconLinkCopy = wrapImageSvg('<path d="M10 13a4 4 0 0 1 0-5.66l3-3a4
 export const IconCollapseFullscreen = wrapImageSvg('<path d="M9 3v6H3"/><path d="M21 9h-6V3"/><path d="M3 15h6v6"/><path d="M15 21v-6h6"/>');
 export const IconExpandFullscreenImage = wrapImageSvg('<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/>');
 export const IconDownloadImage = wrapImageSvg('<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>');
-export const IconCaptionImage = wrapImageSvg('<rect x="3" y="3.5" width="18" height="12" rx="2.5"/><path d="M5 19h14"/><path d="M8 22h8"/>');
+export const IconCaptionImage = wrapImageSvg('<rect x="3" y="3.5" width="18" height="12" rx="2.5"/><circle cx="7.5" cy="7.5" r="1.2" fill="currentColor" stroke="none"/><path d="m4 13.6 3.4-3.2 2.4 2.2 3.6-3.3 4.4 4"/><path d="M5 19h14"/><path d="M5 22h8"/>');
 // Replace (image) — IconReplace geometry scaled to the 24×24 / 1.75-stroke
 // image-toolbar spec so it sits at the same optical size as its neighbours.
 export const IconReplaceImage = wrapImageSvg('<path d="m17.5 8 2.5-2.5L17.5 3"/><path d="M20 5.5h-5.5a6 6 0 0 0-6 6V13"/><path d="m6.5 16-2.5 2.5L6.5 21"/><path d="M4 18.5h5.5a6 6 0 0 0 6-6V11"/>');
@@ -777,11 +778,13 @@ export const IconAlignRight = `
 </svg>
 `;
 
-// Caption — media panel with caption lines underneath
+// Caption — image panel (sun + ridge) with left-aligned caption lines underneath
 export const IconCaption = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <rect x="3" y="3" width="14" height="9" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
-  <path d="M5 14.5h10M7.5 17h5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <circle cx="6.1" cy="5.9" r=".9" fill="currentColor"/>
+  <path d="M3.6 10.4 6.4 7.8l1.9 1.7 2.9-2.6 3.2 2.9" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4.5 14.5h11M4.5 17h6.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
 </svg>
 `;
 

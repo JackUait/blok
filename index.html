@@ -1575,6 +1575,46 @@
       },
       {
         type: "header",
+        id: "links-section-header",
+        data: {
+          text: "Links, Embeds & Bookmarks",
+          level: 2
+        }
+      },
+      {
+        type: "paragraph",
+        id: "links-section-intro",
+        data: {
+          text: "Paste a URL and Blok offers to keep it as a plain link, turn it into a rich <a href=\"https://github.com/jackuait/blok\" target=\"_blank\" rel=\"nofollow\">bookmark</a> card, or embed it inline. Select any text and press the link button to add an inline link like this one."
+        }
+      },
+      {
+        id: "embed-youtube-example",
+        type: "embed",
+        data: {
+          service: "youtube",
+          source: "https://www.youtube.com/watch?v=L229QDxDakU",
+          embed: "https://www.youtube.com/embed/L229QDxDakU",
+          width: 580,
+          height: 320,
+          caption: "Embeds keep the provider's native aspect ratio while you resize them.",
+          captionVisible: true
+        }
+      },
+      {
+        id: "bookmark-example",
+        type: "bookmark",
+        data: {
+          url: "https://github.com/jackuait/blok",
+          title: "Blok — headless block-based rich text editor",
+          description: "Notion-style editor where every content entity is a block. Content is clean JSON, not HTML.",
+          image: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800",
+          favicon: "https://github.com/favicon.ico",
+          domain: "github.com"
+        }
+      },
+      {
+        type: "header",
         id: "database-section-header",
          data: {
            text: "Database (Kanban Board & List)",

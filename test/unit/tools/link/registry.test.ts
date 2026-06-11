@@ -1127,6 +1127,1385 @@ describe('link registry', () => {
     });
   });
 
+  describe('Reddit URL variants', () => {
+    it('matches a post permalink via embed.reddit.com', () => {
+      const result = matchEmbedService('https://www.reddit.com/r/programming/comments/1abc2de/some_title_slug/');
+
+      expect(result?.service).toBe('reddit');
+      expect(result?.embedUrl).toBe('https://embed.reddit.com/r/programming/comments/1abc2de/some_title_slug?embed=true&ref_source=embed&ref=share');
+    });
+
+    it('matches old.reddit and slugless permalinks, stripping share params', () => {
+      expect(matchEmbedService('https://old.reddit.com/r/AskReddit/comments/xyz123/')?.embedUrl)
+        .toBe('https://embed.reddit.com/r/AskReddit/comments/xyz123?embed=true&ref_source=embed&ref=share');
+      expect(matchEmbedService('https://www.reddit.com/r/programming/comments/1abc2de/some_title_slug/?utm_source=share&utm_medium=web2x')?.embedUrl)
+        .toBe('https://embed.reddit.com/r/programming/comments/1abc2de/some_title_slug?embed=true&ref_source=embed&ref=share');
+    });
+
+    it('does not match mobile /s/ share tokens, redd.it or non-post pages', () => {
+      expect(matchEmbedService('https://www.reddit.com/r/programming/s/AbCdEfGh')).toBeNull();
+      expect(matchEmbedService('https://redd.it/1abc2de')).toBeNull();
+      expect(matchEmbedService('https://www.reddit.com/r/programming/')).toBeNull();
+      expect(matchEmbedService('https://www.reddit.com/user/spez/')).toBeNull();
+    });
+  });
+
+  describe('Instagram URL variants', () => {
+    it('matches a post URL via the captioned embed endpoint', () => {
+      const result = matchEmbedService('https://www.instagram.com/p/C8zXq1NMabc/');
+
+      expect(result?.service).toBe('instagram');
+      expect(result?.embedUrl).toBe('https://www.instagram.com/p/C8zXq1NMabc/embed/captioned/');
+    });
+
+    it('normalizes reel, reels, tv and instagr.am forms onto /p/', () => {
+      expect(matchEmbedService('https://www.instagram.com/reel/C8zXq1NMabc/?igsh=xyz123')?.embedUrl)
+        .toBe('https://www.instagram.com/p/C8zXq1NMabc/embed/captioned/');
+      expect(matchEmbedService('https://www.instagram.com/reels/C8zXq1NMabc/')?.embedUrl)
+        .toBe('https://www.instagram.com/p/C8zXq1NMabc/embed/captioned/');
+      expect(matchEmbedService('https://www.instagram.com/tv/B8zXq1NMabc/')?.embedUrl)
+        .toBe('https://www.instagram.com/p/B8zXq1NMabc/embed/captioned/');
+      expect(matchEmbedService('https://instagr.am/p/C8zXq1NMabc/')?.embedUrl)
+        .toBe('https://www.instagram.com/p/C8zXq1NMabc/embed/captioned/');
+    });
+
+    it('does not match profiles, stories or lookalike hosts', () => {
+      expect(matchEmbedService('https://www.instagram.com/zuck/')).toBeNull();
+      expect(matchEmbedService('https://www.instagram.com/stories/zuck/3141592653589793238/')).toBeNull();
+      expect(matchEmbedService('https://notinstagram.com/p/C8zXq1NMabc/')).toBeNull();
+    });
+  });
+
+  describe('Facebook video URL variants', () => {
+    it('matches a page video URL and encodes the canonical href into the plugin', () => {
+      const result = matchEmbedService('https://www.facebook.com/facebook/videos/10153231379946729/');
+
+      expect(result?.service).toBe('facebookvideo');
+      expect(result?.embedUrl).toBe(
+        'https://www.facebook.com/plugins/video.php?href=https%3A%2F%2Fwww.facebook.com%2Ffacebook%2Fvideos%2F10153231379946729%2F'
+      );
+    });
+
+    it('matches watch?v= and reel forms', () => {
+      expect(matchEmbedService('https://www.facebook.com/watch/?v=10153231379946729')?.embedUrl)
+        .toBe('https://www.facebook.com/plugins/video.php?href=https%3A%2F%2Fwww.facebook.com%2Fwatch%2F%3Fv%3D10153231379946729');
+      expect(matchEmbedService('https://www.facebook.com/watch?v=10153231379946729')?.service).toBe('facebookvideo');
+      expect(matchEmbedService('https://www.facebook.com/reel/3065759583668375')?.embedUrl)
+        .toBe('https://www.facebook.com/plugins/video.php?href=https%3A%2F%2Fwww.facebook.com%2Freel%2F3065759583668375');
+    });
+
+    it('matches mobile and slugged video URLs onto the canonical form', () => {
+      expect(matchEmbedService('https://m.facebook.com/page.name/videos/123456/')?.embedUrl)
+        .toBe('https://www.facebook.com/plugins/video.php?href=https%3A%2F%2Fwww.facebook.com%2Fpage.name%2Fvideos%2F123456%2F');
+      expect(matchEmbedService('https://www.facebook.com/SomePage/videos/funny-clip-title/123456789/')?.embedUrl)
+        .toBe('https://www.facebook.com/plugins/video.php?href=https%3A%2F%2Fwww.facebook.com%2FSomePage%2Fvideos%2F123456789%2F');
+    });
+
+    it('does not match opaque fb.watch short links', () => {
+      expect(matchEmbedService('https://fb.watch/abc123/')).toBeNull();
+    });
+  });
+
+  describe('Facebook post URL variants', () => {
+    it('matches a page post URL and encodes the permalink into the plugin', () => {
+      const result = matchEmbedService('https://www.facebook.com/zuck/posts/pfbid02abcDEF123xyz');
+
+      expect(result?.service).toBe('facebookpost');
+      expect(result?.embedUrl).toBe(
+        'https://www.facebook.com/plugins/post.php?href=https%3A%2F%2Fwww.facebook.com%2Fzuck%2Fposts%2Fpfbid02abcDEF123xyz&show_text=true'
+      );
+    });
+
+    it('matches permalink.php with params in either order', () => {
+      const expected =
+        'https://www.facebook.com/plugins/post.php?href=https%3A%2F%2Fwww.facebook.com%2Fpermalink.php%3Fstory_fbid%3Dpfbid0abc123%26id%3D100044112233&show_text=true';
+
+      expect(matchEmbedService('https://www.facebook.com/permalink.php?story_fbid=pfbid0abc123&id=100044112233')?.embedUrl).toBe(expected);
+      expect(matchEmbedService('https://www.facebook.com/permalink.php?id=100044112233&story_fbid=pfbid0abc123')?.embedUrl).toBe(expected);
+    });
+
+    it('matches photo.php links keeping only the fbid', () => {
+      const expected =
+        'https://www.facebook.com/plugins/post.php?href=https%3A%2F%2Fwww.facebook.com%2Fphoto.php%3Ffbid%3D1234567890&show_text=true';
+
+      expect(matchEmbedService('https://www.facebook.com/photo.php?fbid=1234567890&set=a.456&type=3')?.embedUrl).toBe(expected);
+      expect(matchEmbedService('https://www.facebook.com/photo/?fbid=1234567890')?.embedUrl).toBe(expected);
+    });
+
+    it('routes video URLs to facebookvideo, never facebookpost', () => {
+      expect(matchEmbedService('https://www.facebook.com/facebook/videos/10153231379946729/')?.service).toBe('facebookvideo');
+      expect(matchEmbedService('https://www.facebook.com/watch/?v=10153231379946729')?.service).toBe('facebookvideo');
+    });
+
+    it('does not match opaque /share/p/ tokens or group pages', () => {
+      expect(matchEmbedService('https://www.facebook.com/share/p/AbCdEf123/')).toBeNull();
+      expect(matchEmbedService('https://www.facebook.com/share/v/AbCdEf123/')).toBeNull();
+      expect(matchEmbedService('https://www.facebook.com/groups/123456/')).toBeNull();
+    });
+  });
+
+  describe('LinkedIn URL variants', () => {
+    it('matches a posts share slug and extracts the activity id', () => {
+      const result = matchEmbedService('https://www.linkedin.com/posts/john-doe-123_great-stuff-activity-7123456789012345678-AbCd?utm_source=share');
+
+      expect(result?.service).toBe('linkedin');
+      expect(result?.embedUrl).toBe('https://www.linkedin.com/embed/feed/update/urn:li:activity:7123456789012345678');
+    });
+
+    it('matches feed/update urn links and mirrors the urn type', () => {
+      expect(matchEmbedService('https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678/')?.embedUrl)
+        .toBe('https://www.linkedin.com/embed/feed/update/urn:li:activity:7123456789012345678');
+      expect(matchEmbedService('https://www.linkedin.com/feed/update/urn:li:ugcPost:7123456789012345678')?.embedUrl)
+        .toBe('https://www.linkedin.com/embed/feed/update/urn:li:ugcPost:7123456789012345678');
+      expect(matchEmbedService('https://www.linkedin.com/feed/update/urn:li:share:7123456789012345678')?.embedUrl)
+        .toBe('https://www.linkedin.com/embed/feed/update/urn:li:share:7123456789012345678');
+    });
+
+    it('does not match lnkd.in short links, profiles or lookalike hosts', () => {
+      expect(matchEmbedService('https://lnkd.in/abc123')).toBeNull();
+      expect(matchEmbedService('https://www.linkedin.com/in/john-doe/')).toBeNull();
+      expect(matchEmbedService('https://notlinkedin.com/posts/x-activity-7123456789012345678-AbCd')).toBeNull();
+    });
+  });
+
+  describe('Mastodon URL variants', () => {
+    it('matches a status on an allowlisted instance via its /embed endpoint', () => {
+      const result = matchEmbedService('https://mastodon.social/@Gargron/100254678717223630');
+
+      expect(result?.service).toBe('mastodon');
+      expect(result?.embedUrl).toBe('https://mastodon.social/@Gargron/100254678717223630/embed');
+    });
+
+    it('matches other allowlisted instances and remote-account statuses', () => {
+      expect(matchEmbedService('https://hachyderm.io/@nova/109372843329177955?x=1')?.embedUrl)
+        .toBe('https://hachyderm.io/@nova/109372843329177955/embed');
+      expect(matchEmbedService('https://mastodon.social/@user@example.com/100254678717223630')?.embedUrl)
+        .toBe('https://mastodon.social/@user@example.com/100254678717223630/embed');
+    });
+
+    it('does not match non-allowlisted instances or profile pages', () => {
+      expect(matchEmbedService('https://myrandominstance.xyz/@user/100254678717223630')).toBeNull();
+      expect(matchEmbedService('https://mastodon.social/@Gargron')).toBeNull();
+      expect(matchEmbedService('https://notmastodon.social/@user/100254678717223630')).toBeNull();
+    });
+  });
+
+  describe('Pinterest URL variants', () => {
+    it('matches a pin URL via the assets embed endpoint', () => {
+      const result = matchEmbedService('https://www.pinterest.com/pin/99360735500167749/');
+
+      expect(result?.service).toBe('pinterest');
+      expect(result?.embedUrl).toBe('https://assets.pinterest.com/ext/embed.html?id=99360735500167749');
+    });
+
+    it('matches regional subdomains and TLDs', () => {
+      expect(matchEmbedService('https://ru.pinterest.com/pin/99360735500167749/')?.embedUrl)
+        .toBe('https://assets.pinterest.com/ext/embed.html?id=99360735500167749');
+      expect(matchEmbedService('https://pinterest.co.uk/pin/99360735500167749')?.embedUrl)
+        .toBe('https://assets.pinterest.com/ext/embed.html?id=99360735500167749');
+    });
+
+    it('does not match pin.it short links, boards or lookalike hosts', () => {
+      expect(matchEmbedService('https://pin.it/AbCd123')).toBeNull();
+      expect(matchEmbedService('https://www.pinterest.com/someuser/board-name/')).toBeNull();
+      expect(matchEmbedService('https://pinterest.evil.com/pin/99360735500167749/')).toBeNull();
+    });
+  });
+
+  describe('Snapchat URL variants', () => {
+    it('matches a spotlight URL by appending /embed', () => {
+      const result = matchEmbedService('https://www.snapchat.com/spotlight/W7_EDlXWTBiXAEEniNoMPwAAYdWxucXBwZGZoAZSjJAfsAZSjJAJBAAAAAA');
+
+      expect(result?.service).toBe('snapchat');
+      expect(result?.embedUrl).toBe('https://www.snapchat.com/spotlight/W7_EDlXWTBiXAEEniNoMPwAAYdWxucXBwZGZoAZSjJAfsAZSjJAJBAAAAAA/embed');
+    });
+
+    it('matches a 32-hex lens URL', () => {
+      expect(matchEmbedService('https://www.snapchat.com/lens/0123456789abcdef0123456789abcdef?type=SNAPCODE')?.embedUrl)
+        .toBe('https://www.snapchat.com/lens/0123456789abcdef0123456789abcdef/embed');
+    });
+
+    it('does not match profiles or non-hex lens ids', () => {
+      expect(matchEmbedService('https://www.snapchat.com/add/someuser')).toBeNull();
+      expect(matchEmbedService('https://www.snapchat.com/@someuser')).toBeNull();
+      expect(matchEmbedService('https://www.snapchat.com/lens/notahex')).toBeNull();
+    });
+  });
+
+  describe('Substack URL variants', () => {
+    it('matches a post URL via the publication /embed/p/ endpoint', () => {
+      const result = matchEmbedService('https://astralcodexten.substack.com/p/some-post-slug');
+
+      expect(result?.service).toBe('substack');
+      expect(result?.embedUrl).toBe('https://astralcodexten.substack.com/embed/p/some-post-slug');
+    });
+
+    it('strips share params and tolerates a trailing slash', () => {
+      expect(matchEmbedService('https://astralcodexten.substack.com/p/some-post-slug?utm_source=share')?.embedUrl)
+        .toBe('https://astralcodexten.substack.com/embed/p/some-post-slug');
+      expect(matchEmbedService('https://my-pub.substack.com/p/hello-world/')?.embedUrl)
+        .toBe('https://my-pub.substack.com/embed/p/hello-world');
+    });
+
+    it('does not match www/open hosts or non-post pages', () => {
+      expect(matchEmbedService('https://www.substack.com/p/foo')).toBeNull();
+      expect(matchEmbedService('https://open.substack.com/pub/astralcodexten/p/some-post-slug')).toBeNull();
+      expect(matchEmbedService('https://astralcodexten.substack.com/about')).toBeNull();
+      expect(matchEmbedService('https://astralcodexten.substack.com/archive')).toBeNull();
+    });
+  });
+
+  describe('Threads URL variants', () => {
+    it('flags Threads as a script embed and keeps the canonical post URL', () => {
+      const result = matchEmbedService('https://www.threads.com/@zuck/post/C8z2Qq0Rk1x');
+
+      expect(result?.service).toBe('threads');
+      expect(result?.remoteId).toBe('@zuck/post/C8z2Qq0Rk1x');
+      expect(result?.embedUrl).toBe('https://www.threads.com/@zuck/post/C8z2Qq0Rk1x');
+      expect(result?.kind).toBe('script');
+    });
+
+    it('normalizes the threads.net mirror onto threads.com', () => {
+      expect(matchEmbedService('https://www.threads.net/@zuck/post/C8z2Qq0Rk1x?xmt=AQGz')?.embedUrl)
+        .toBe('https://www.threads.com/@zuck/post/C8z2Qq0Rk1x');
+      expect(matchEmbedService('threads.net/@mosseri/post/DCxyz_-123')?.embedUrl)
+        .toBe('https://www.threads.com/@mosseri/post/DCxyz_-123');
+    });
+
+    it('does not match profiles or lookalike hosts', () => {
+      expect(matchEmbedService('https://www.threads.com/@zuck')).toBeNull();
+      expect(matchEmbedService('https://notthreads.com/@zuck/post/C8z2Qq0Rk1x')).toBeNull();
+    });
+  });
+
+  describe('TED URL variants', () => {
+    it('matches a talk URL via the embed.ted.com host', () => {
+      const result = matchEmbedService('https://www.ted.com/talks/amy_cuddy_your_body_language_may_shape_who_you_are');
+
+      expect(result?.service).toBe('ted');
+      expect(result?.embedUrl).toBe('https://embed.ted.com/talks/amy_cuddy_your_body_language_may_shape_who_you_are');
+    });
+
+    it('consumes language params and transcript sub-pages', () => {
+      expect(matchEmbedService('https://www.ted.com/talks/sir_ken_robinson_do_schools_kill_creativity?language=es')?.embedUrl).toBe('https://embed.ted.com/talks/sir_ken_robinson_do_schools_kill_creativity');
+      expect(matchEmbedService('https://www.ted.com/talks/sir_ken_robinson_do_schools_kill_creativity/transcript')?.embedUrl).toBe('https://embed.ted.com/talks/sir_ken_robinson_do_schools_kill_creativity');
+    });
+
+    it('does not match the bare /talks index or other site sections', () => {
+      expect(matchEmbedService('https://www.ted.com/talks')).toBeNull();
+      expect(matchEmbedService('https://www.ted.com/talks/')).toBeNull();
+      expect(matchEmbedService('https://www.ted.com/speakers/amy_cuddy')).toBeNull();
+    });
+  });
+
+  describe('Internet Archive URL variants', () => {
+    it('matches a details URL via the /embed/ player', () => {
+      const result = matchEmbedService('https://archive.org/details/BigBuckBunny_124');
+
+      expect(result?.service).toBe('internetarchive');
+      expect(result?.embedUrl).toBe('https://archive.org/embed/BigBuckBunny_124');
+    });
+
+    it('keeps only the item identifier from a deep file link', () => {
+      expect(matchEmbedService('https://archive.org/details/night.of.the.living.dead_1968/night.of.the.living.dead.mp4')?.embedUrl).toBe('https://archive.org/embed/night.of.the.living.dead_1968');
+    });
+
+    it('matches an already-embed URL', () => {
+      expect(matchEmbedService('https://archive.org/embed/BigBuckBunny_124')?.embedUrl).toBe('https://archive.org/embed/BigBuckBunny_124');
+    });
+
+    it('does not match non-item site pages', () => {
+      expect(matchEmbedService('https://archive.org/details/')).toBeNull();
+      expect(matchEmbedService('https://archive.org/about/')).toBeNull();
+    });
+  });
+
+  describe('Kick URL variants', () => {
+    it('matches a live channel URL via player.kick.com', () => {
+      const result = matchEmbedService('https://kick.com/xqc');
+
+      expect(result?.service).toBe('kick');
+      expect(result?.embedUrl).toBe('https://player.kick.com/xqc?autoplay=false');
+    });
+
+    it('handles a trailing slash and query params', () => {
+      expect(matchEmbedService('https://www.kick.com/trainwreckstv/')?.embedUrl).toBe('https://player.kick.com/trainwreckstv?autoplay=false');
+      expect(matchEmbedService('https://kick.com/asmongold?followed=true')?.embedUrl).toBe('https://player.kick.com/asmongold?autoplay=false');
+    });
+
+    it('does not match reserved site paths', () => {
+      expect(matchEmbedService('https://kick.com/browse')).toBeNull();
+      expect(matchEmbedService('https://kick.com/categories')).toBeNull();
+      expect(matchEmbedService('https://kick.com/category/just-chatting')).toBeNull();
+      expect(matchEmbedService('https://kick.com/search?query=xqc')).toBeNull();
+      expect(matchEmbedService('https://kick.com/community-guidelines')).toBeNull();
+    });
+
+    it('does not match VOD pages under a channel', () => {
+      expect(matchEmbedService('https://kick.com/xqc/videos/abc-def-123')).toBeNull();
+    });
+  });
+
+  describe('PeerTube URL variants', () => {
+    it('matches a /w/ short link on an allowlisted instance', () => {
+      const result = matchEmbedService('https://framatube.org/w/kkGMgK9ZtnKfYAgnEtQxbv');
+
+      expect(result?.service).toBe('peertube');
+      expect(result?.embedUrl).toBe('https://framatube.org/videos/embed/kkGMgK9ZtnKfYAgnEtQxbv');
+    });
+
+    it('matches a legacy /videos/watch/ UUID link', () => {
+      expect(matchEmbedService('https://video.blender.org/videos/watch/9c9de5e8-0a1e-484a-b099-e80766180a6d')?.embedUrl).toBe('https://video.blender.org/videos/embed/9c9de5e8-0a1e-484a-b099-e80766180a6d');
+    });
+
+    it('matches the other allowlisted instances', () => {
+      expect(matchEmbedService('https://tilvids.com/w/abc123XYZ?start=1m')?.embedUrl).toBe('https://tilvids.com/videos/embed/abc123XYZ');
+      expect(matchEmbedService('https://makertube.net/w/abc123XYZ')?.embedUrl).toBe('https://makertube.net/videos/embed/abc123XYZ');
+    });
+
+    it('does not match unknown instances or non-video pages', () => {
+      expect(matchEmbedService('https://someotherpeertube.example/w/abc123')).toBeNull();
+      expect(matchEmbedService('https://framatube.org/videos/local')).toBeNull();
+    });
+  });
+
+  describe('Odysee URL variants', () => {
+    it('matches a channel + video claim path via $/embed', () => {
+      const result = matchEmbedService('https://odysee.com/@samtime:1/apple-fans-react-to-vision-pro:0');
+
+      expect(result?.service).toBe('odysee');
+      expect(result?.embedUrl).toBe('https://odysee.com/$/embed/@samtime:1/apple-fans-react-to-vision-pro:0');
+    });
+
+    it('matches an anonymous claim path and consumes share params', () => {
+      expect(matchEmbedService('https://odysee.com/what-is-odysee:6f7b8d9e')?.embedUrl).toBe('https://odysee.com/$/embed/what-is-odysee:6f7b8d9e');
+      expect(matchEmbedService('https://odysee.com/@NafO:a/Odysee101:a?r=ABC')?.embedUrl).toBe('https://odysee.com/$/embed/@NafO:a/Odysee101:a');
+    });
+
+    it('decodes %3A-encoded colons in the claim path', () => {
+      expect(matchEmbedService('https://odysee.com/what-is-odysee%3A6f7b8d9e')?.embedUrl).toBe('https://odysee.com/$/embed/what-is-odysee:6f7b8d9e');
+    });
+
+    it('does not match $/ app paths or channel-only URLs', () => {
+      expect(matchEmbedService('https://odysee.com/$/invite/abc')).toBeNull();
+      expect(matchEmbedService('https://odysee.com/$/embed/foo:1')).toBeNull();
+      expect(matchEmbedService('https://odysee.com/@samtime:1')).toBeNull();
+      expect(matchEmbedService('https://odysee.com/@samtime:1/')).toBeNull();
+      expect(matchEmbedService('https://odysee.com/plainword')).toBeNull();
+    });
+  });
+
+  describe('SOOP URL variants', () => {
+    it('matches a sooplive.co.kr VOD and normalizes onto sooplive.com', () => {
+      const result = matchEmbedService('https://vod.sooplive.co.kr/player/123456789');
+
+      expect(result?.service).toBe('soop');
+      expect(result?.embedUrl).toBe('https://vod.sooplive.com/player/123456789');
+    });
+
+    it('matches global and legacy afreecatv hosts', () => {
+      expect(matchEmbedService('https://vod.sooplive.com/player/123456789?change_second=10')?.embedUrl).toBe('https://vod.sooplive.com/player/123456789');
+      expect(matchEmbedService('https://vod.afreecatv.com/player/98765432')?.embedUrl).toBe('https://vod.sooplive.com/player/98765432');
+    });
+
+    it('does not match non-numeric ids or other soop hosts', () => {
+      expect(matchEmbedService('https://vod.sooplive.com/player/notdigits')).toBeNull();
+      expect(matchEmbedService('https://play.sooplive.co.kr/channelid')).toBeNull();
+    });
+  });
+
+  describe('Coub URL variants', () => {
+    it('matches a view URL via the /embed path', () => {
+      const result = matchEmbedService('https://coub.com/view/1cmal');
+
+      expect(result?.service).toBe('coub');
+      expect(result?.embedUrl).toBe('https://coub.com/embed/1cmal');
+    });
+
+    it('consumes share params', () => {
+      expect(matchEmbedService('https://coub.com/view/2pc24rpb?from=share')?.embedUrl).toBe('https://coub.com/embed/2pc24rpb');
+    });
+
+    it('does not match tag or listing pages', () => {
+      expect(matchEmbedService('https://coub.com/view/')).toBeNull();
+      expect(matchEmbedService('https://coub.com/tags/funny')).toBeNull();
+    });
+  });
+
+  describe('BitChute URL variants', () => {
+    it('matches a video URL via the /embed path', () => {
+      const result = matchEmbedService('https://www.bitchute.com/video/UGlrf9d3vKHK/');
+
+      expect(result?.service).toBe('bitchute');
+      expect(result?.embedUrl).toBe('https://www.bitchute.com/embed/UGlrf9d3vKHK/');
+    });
+
+    it('matches ids containing hyphens and underscores without a trailing slash', () => {
+      expect(matchEmbedService('https://bitchute.com/video/some-id_OK')?.embedUrl).toBe('https://www.bitchute.com/embed/some-id_OK/');
+    });
+
+    it('does not match channel pages or the bare video path', () => {
+      expect(matchEmbedService('https://www.bitchute.com/channel/someone/')).toBeNull();
+      expect(matchEmbedService('https://www.bitchute.com/video/')).toBeNull();
+    });
+  });
+
+  describe('Tidal URL variants', () => {
+    it('matches a browse track URL and pluralizes the type segment', () => {
+      const result = matchEmbedService('https://tidal.com/browse/track/46757219');
+
+      expect(result?.service).toBe('tidal');
+      expect(result?.embedUrl).toBe('https://embed.tidal.com/tracks/46757219');
+    });
+
+    it('matches listen.tidal.com and browse-less album links', () => {
+      expect(matchEmbedService('https://listen.tidal.com/album/79925210')?.embedUrl)
+        .toBe('https://embed.tidal.com/albums/79925210');
+      expect(matchEmbedService('https://tidal.com/album/79925210')?.embedUrl)
+        .toBe('https://embed.tidal.com/albums/79925210');
+    });
+
+    it('matches UUID playlist and video links', () => {
+      expect(matchEmbedService('https://tidal.com/browse/playlist/55b2c563-a238-4ebf-9a45-284fc5fa1e44')?.embedUrl)
+        .toBe('https://embed.tidal.com/playlists/55b2c563-a238-4ebf-9a45-284fc5fa1e44');
+      expect(matchEmbedService('https://tidal.com/browse/video/123456789')?.embedUrl)
+        .toBe('https://embed.tidal.com/videos/123456789');
+    });
+
+    it('does not match mix or artist pages (no verified embed mapping)', () => {
+      expect(matchEmbedService('https://tidal.com/browse/mix/0144d8b1a72f51c4f6f30e9b8b1a1e')).toBeNull();
+      expect(matchEmbedService('https://tidal.com/browse/artist/3503597')).toBeNull();
+    });
+  });
+
+  describe('Spotify for Creators URL variants', () => {
+    it('matches a creators.spotify.com episode and inserts /embed before /episodes', () => {
+      const result = matchEmbedService('https://creators.spotify.com/pod/show/myshow/episodes/Ep-Title-e2abc1d');
+
+      expect(result?.service).toBe('spotifypodcasters');
+      expect(result?.embedUrl).toBe('https://creators.spotify.com/pod/show/myshow/embed/episodes/Ep-Title-e2abc1d');
+    });
+
+    it('matches legacy podcasters.spotify.com and anchor.fm hosts', () => {
+      expect(matchEmbedService('https://podcasters.spotify.com/pod/show/myshow/episodes/Ep-Title-e2abc1d')?.embedUrl)
+        .toBe('https://creators.spotify.com/pod/show/myshow/embed/episodes/Ep-Title-e2abc1d');
+      expect(matchEmbedService('https://anchor.fm/myshow/episodes/Ep-Title-e2abc1d')?.embedUrl)
+        .toBe('https://creators.spotify.com/pod/show/myshow/embed/episodes/Ep-Title-e2abc1d');
+    });
+
+    it('does not match bare show pages', () => {
+      expect(matchEmbedService('https://creators.spotify.com/pod/show/myshow')).toBeNull();
+    });
+
+    it('still routes open.spotify.com URLs to the spotify entry', () => {
+      expect(matchEmbedService('https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT')?.service).toBe('spotify');
+      expect(matchEmbedService('https://open.spotify.com/show/4rOoJ6Egrf8K2IrywzwOMk')?.service).toBe('spotify');
+    });
+  });
+
+  describe('Pocket Casts URL variants', () => {
+    it('matches a share code via the /embed/ path', () => {
+      const result = matchEmbedService('https://pca.st/itl5093f');
+
+      expect(result?.service).toBe('pocketcasts');
+      expect(result?.embedUrl).toBe('https://pca.st/embed/itl5093f');
+    });
+
+    it('does not match reserved site pages', () => {
+      expect(matchEmbedService('https://pca.st/discover')).toBeNull();
+      expect(matchEmbedService('https://pca.st/podcasts')).toBeNull();
+      expect(matchEmbedService('https://pca.st/sign-in')).toBeNull();
+      expect(matchEmbedService('https://pca.st/podcast/abc123')).toBeNull();
+    });
+  });
+
+  describe('iHeart URL variants', () => {
+    it('matches a podcast show page and appends ?embed=true', () => {
+      const result = matchEmbedService('https://www.iheart.com/podcast/105-stuff-you-should-know-26940277/');
+
+      expect(result?.service).toBe('iheart');
+      expect(result?.embedUrl).toBe('https://www.iheart.com/podcast/105-stuff-you-should-know-26940277/?embed=true');
+    });
+
+    it('matches episode and live-station pages', () => {
+      expect(matchEmbedService('https://www.iheart.com/podcast/105-stuff-you-should-know-26940277/episode/selects-how-crime-scene-cleanup-118729610/')?.embedUrl)
+        .toBe('https://www.iheart.com/podcast/105-stuff-you-should-know-26940277/episode/selects-how-crime-scene-cleanup-118729610/?embed=true');
+      expect(matchEmbedService('https://www.iheart.com/live/z100-1469/')?.embedUrl)
+        .toBe('https://www.iheart.com/live/z100-1469/?embed=true');
+    });
+
+    it('does not match artist or listing pages', () => {
+      expect(matchEmbedService('https://www.iheart.com/artist/drake-31061/')).toBeNull();
+      expect(matchEmbedService('https://www.iheart.com/podcast/')).toBeNull();
+    });
+  });
+
+  describe('Acast URL variants', () => {
+    it('matches an episode URL and drops the /episodes/ segment in the embed', () => {
+      const result = matchEmbedService('https://shows.acast.com/dansnowshistoryhit/episodes/the-battle-of-britain');
+
+      expect(result?.service).toBe('acast');
+      expect(result?.embedUrl).toBe('https://embed.acast.com/dansnowshistoryhit/the-battle-of-britain');
+    });
+
+    it('matches older episode links without /episodes/', () => {
+      expect(matchEmbedService('https://shows.acast.com/dansnowshistoryhit/the-battle-of-britain')?.embedUrl)
+        .toBe('https://embed.acast.com/dansnowshistoryhit/the-battle-of-britain');
+    });
+
+    it('does not match show pages or the episodes listing', () => {
+      expect(matchEmbedService('https://shows.acast.com/dansnowshistoryhit')).toBeNull();
+      expect(matchEmbedService('https://shows.acast.com/dansnowshistoryhit/episodes')).toBeNull();
+    });
+  });
+
+  describe('Podbean URL variants', () => {
+    it('matches an /ew/ share link via the player-v2 widget', () => {
+      const result = matchEmbedService('https://www.podbean.com/ew/pb-k3gmv-14a8e2b');
+
+      expect(result?.service).toBe('podbean');
+      expect(result?.embedUrl).toBe('https://www.podbean.com/player-v2/?i=pb-k3gmv-14a8e2b');
+    });
+
+    it('does not match per-show subdomain episode pages', () => {
+      expect(matchEmbedService('https://myshow.podbean.com/e/episode-title/')).toBeNull();
+    });
+  });
+
+  describe('Spreaker URL variants', () => {
+    it('matches a slug URL and extracts the trailing numeric id', () => {
+      const result = matchEmbedService('https://www.spreaker.com/episode/the-best-episode-ever--58444864');
+
+      expect(result?.service).toBe('spreaker');
+      expect(result?.embedUrl).toBe('https://widget.spreaker.com/player?episode_id=58444864');
+    });
+
+    it('matches legacy numeric-only episode links', () => {
+      expect(matchEmbedService('https://www.spreaker.com/episode/58444864')?.embedUrl)
+        .toBe('https://widget.spreaker.com/player?episode_id=58444864');
+    });
+
+    it('does not match show pages or slug-only links', () => {
+      expect(matchEmbedService('https://www.spreaker.com/podcast/my-show--5644222')).toBeNull();
+      expect(matchEmbedService('https://www.spreaker.com/episode/slug-no-id')).toBeNull();
+    });
+  });
+
+  describe('Buzzsprout URL variants', () => {
+    it('matches an episode URL and appends the small-player query', () => {
+      const result = matchEmbedService('https://www.buzzsprout.com/1121972/episodes/15967567-our-best-episode');
+
+      expect(result?.service).toBe('buzzsprout');
+      expect(result?.embedUrl).toBe('https://www.buzzsprout.com/1121972/episodes/15967567-our-best-episode?client_source=small_player&iframe=true');
+    });
+
+    it('matches older links without /episodes/ or without a slug', () => {
+      expect(matchEmbedService('https://www.buzzsprout.com/1121972/15967567-our-best-episode')?.embedUrl)
+        .toBe('https://www.buzzsprout.com/1121972/15967567-our-best-episode?client_source=small_player&iframe=true');
+      expect(matchEmbedService('https://www.buzzsprout.com/1121972/episodes/15967567')?.embedUrl)
+        .toBe('https://www.buzzsprout.com/1121972/episodes/15967567?client_source=small_player&iframe=true');
+    });
+
+    it('does not match podcast home or site pages', () => {
+      expect(matchEmbedService('https://www.buzzsprout.com/1121972')).toBeNull();
+      expect(matchEmbedService('https://www.buzzsprout.com/pricing')).toBeNull();
+    });
+  });
+
+  describe('Castbox URL variants', () => {
+    it('matches an episode URL and extracts the trailing channel/episode id pair', () => {
+      const result = matchEmbedService('https://castbox.fm/episode/Ep.-100%3A-The-Finale-id1234567-id987654321?country=us');
+
+      expect(result?.service).toBe('castbox');
+      expect(result?.embedUrl).toBe('https://castbox.fm/app/castbox/player/id1234567/id987654321?v=8.22.11&autoplay=0');
+    });
+
+    it('matches a channel URL with a single id', () => {
+      expect(matchEmbedService('https://castbox.fm/channel/The-Daily-id4525925')?.embedUrl)
+        .toBe('https://castbox.fm/app/castbox/player/id4525925?v=8.22.11&autoplay=0');
+    });
+
+    it('takes the trailing id pair when the slug itself contains -idN tokens', () => {
+      expect(matchEmbedService('https://castbox.fm/episode/weird-id1-id2-id345-id678')?.embedUrl)
+        .toBe('https://castbox.fm/app/castbox/player/id345/id678?v=8.22.11&autoplay=0');
+    });
+
+    it('does not match id-less episode URLs or site pages', () => {
+      expect(matchEmbedService('https://castbox.fm/episode/no-ids-here')).toBeNull();
+      expect(matchEmbedService('https://castbox.fm/home')).toBeNull();
+    });
+  });
+
+  describe('Transistor URL variants', () => {
+    it('rewrites a share /s/ page onto the frameable /e/ player', () => {
+      const result = matchEmbedService('https://share.transistor.fm/s/9b4dde55');
+
+      expect(result?.service).toBe('transistor');
+      expect(result?.embedUrl).toBe('https://share.transistor.fm/e/9b4dde55');
+    });
+
+    it('matches an already-embed /e/ URL', () => {
+      expect(matchEmbedService('https://share.transistor.fm/e/9b4dde55')?.embedUrl)
+        .toBe('https://share.transistor.fm/e/9b4dde55');
+    });
+
+    it('does not match the marketing site', () => {
+      expect(matchEmbedService('https://transistor.fm/features/')).toBeNull();
+    });
+  });
+
+  describe('Audioboom URL variants', () => {
+    it('matches a post URL via the v4 embed', () => {
+      const result = matchEmbedService('https://audioboom.com/posts/8730423-our-great-episode');
+
+      expect(result?.service).toBe('audioboom');
+      expect(result?.embedUrl).toBe('https://embeds.audioboom.com/posts/8730423/embed/v4');
+    });
+
+    it('does not match channel pages', () => {
+      expect(matchEmbedService('https://audioboom.com/channels/5025217')).toBeNull();
+    });
+  });
+
+  describe('TuneIn URL variants', () => {
+    it('matches a station URL and extracts the s-id', () => {
+      const result = matchEmbedService('https://tunein.com/radio/Jazz24-s34682/');
+
+      expect(result?.service).toBe('tunein');
+      expect(result?.embedUrl).toBe('https://tunein.com/embed/player/s34682/');
+    });
+
+    it('does not match podcast/program (p-id) pages', () => {
+      expect(matchEmbedService('https://tunein.com/podcasts/News--Politics/The-Daily-p1001329/')).toBeNull();
+      expect(matchEmbedService('https://tunein.com/radio/home/')).toBeNull();
+    });
+  });
+
+  describe('Beatport URL variants', () => {
+    it('matches a track URL via the embed player query', () => {
+      const result = matchEmbedService('https://www.beatport.com/track/strobe/1696999');
+
+      expect(result?.service).toBe('beatport');
+      expect(result?.embedUrl).toBe('https://embed.beatport.com/?id=1696999&type=track');
+    });
+
+    it('does not match releases or id-less track URLs', () => {
+      expect(matchEmbedService('https://www.beatport.com/release/some-release/1234567')).toBeNull();
+      expect(matchEmbedService('https://www.beatport.com/track/strobe')).toBeNull();
+    });
+  });
+
+  describe('NetEase Music URL variants', () => {
+    it('matches a song URL via the outchain player', () => {
+      const result = matchEmbedService('https://music.163.com/song?id=347230');
+
+      expect(result?.service).toBe('netease');
+      expect(result?.embedUrl).toBe('https://music.163.com/outchain/player?type=2&id=347230&auto=0&height=66');
+    });
+
+    it('matches the SPA hash form and non-leading id params', () => {
+      expect(matchEmbedService('https://music.163.com/#/song?id=347230&userid=1')?.embedUrl)
+        .toBe('https://music.163.com/outchain/player?type=2&id=347230&auto=0&height=66');
+      expect(matchEmbedService('music.163.com/#/song?userid=1&id=347230')?.embedUrl)
+        .toBe('https://music.163.com/outchain/player?type=2&id=347230&auto=0&height=66');
+    });
+
+    it('does not match album or playlist hash routes', () => {
+      expect(matchEmbedService('https://music.163.com/#/album?id=34209')).toBeNull();
+      expect(matchEmbedService('https://music.163.com/#/playlist?id=2884035')).toBeNull();
+    });
+  });
+
+  describe('Suno URL variants', () => {
+    it('matches a song UUID URL via the /embed/ path', () => {
+      const result = matchEmbedService('https://suno.com/song/df9e2bc9-8e2e-4b9a-a1c3-0123456789ab');
+
+      expect(result?.service).toBe('suno');
+      expect(result?.embedUrl).toBe('https://suno.com/embed/df9e2bc9-8e2e-4b9a-a1c3-0123456789ab');
+    });
+
+    it('does not match playlists or non-UUID song paths', () => {
+      expect(matchEmbedService('https://suno.com/playlist/df9e2bc9-8e2e-4b9a-a1c3-0123456789ab')).toBeNull();
+      expect(matchEmbedService('https://suno.com/song/not-a-uuid')).toBeNull();
+    });
+  });
+
+  describe('hearthis.at URL variants', () => {
+    it('matches a track URL and appends /embed/', () => {
+      const result = matchEmbedService('https://hearthis.at/djmix/summer-session-2024/');
+
+      expect(result?.service).toBe('hearthis');
+      expect(result?.embedUrl).toBe('https://hearthis.at/djmix/summer-session-2024/embed/');
+    });
+
+    it('does not match profile pages or reserved site sections', () => {
+      expect(matchEmbedService('https://hearthis.at/djmix/')).toBeNull();
+      expect(matchEmbedService('https://hearthis.at/categories/drumandbass/')).toBeNull();
+      expect(matchEmbedService('https://hearthis.at/charts/week/')).toBeNull();
+      expect(matchEmbedService('https://hearthis.at/search/?t=jazz')).toBeNull();
+      expect(matchEmbedService('https://hearthis.at/pages/imprint/')).toBeNull();
+      expect(matchEmbedService('https://hearthis.at/set/user/myset/')).toBeNull();
+    });
+  });
+
+  describe('Boomplay URL variants', () => {
+    it('matches a song URL via the /embed/<id>/MUSIC player', () => {
+      const result = matchEmbedService('https://www.boomplay.com/songs/129188941?srModel=COPYLINK');
+
+      expect(result?.service).toBe('boomplay');
+      expect(result?.embedUrl).toBe('https://www.boomplay.com/embed/129188941/MUSIC');
+    });
+
+    it('does not match album or artist pages', () => {
+      expect(matchEmbedService('https://www.boomplay.com/albums/12345678')).toBeNull();
+      expect(matchEmbedService('https://www.boomplay.com/artists/1234')).toBeNull();
+    });
+  });
+
+  describe('Calendly URL variants', () => {
+    it('matches a scheduling page and appends the inline-embed params', () => {
+      const result = matchEmbedService('https://calendly.com/acme-team');
+
+      expect(result?.service).toBe('calendly');
+      expect(result?.embedUrl).toBe('https://calendly.com/acme-team?embed_domain=blok&embed_type=Inline');
+    });
+
+    it('matches an event-type page and strips share query params', () => {
+      const result = matchEmbedService('https://calendly.com/acme-team/30min?month=2026-06');
+
+      expect(result?.embedUrl).toBe('https://calendly.com/acme-team/30min?embed_domain=blok&embed_type=Inline');
+    });
+
+    it('matches a one-off /d/<code>/<slug> link', () => {
+      const result = matchEmbedService('https://calendly.com/d/cmgh-3xb/intro-call');
+
+      expect(result?.embedUrl).toBe('https://calendly.com/d/cmgh-3xb/intro-call?embed_domain=blok&embed_type=Inline');
+    });
+
+    it('does not match reserved site sections', () => {
+      expect(matchEmbedService('https://calendly.com/pricing')).toBeNull();
+      expect(matchEmbedService('https://calendly.com/features')).toBeNull();
+      expect(matchEmbedService('https://calendly.com/app/login')).toBeNull();
+      expect(matchEmbedService('https://calendly.com/event_types/user/me')).toBeNull();
+      expect(matchEmbedService('https://calendly.com/blog')).toBeNull();
+    });
+
+    it('does not match lookalike or nested hosts', () => {
+      expect(matchEmbedService('https://notcalendly.com/acme-team')).toBeNull();
+      expect(matchEmbedService('https://example.com/calendly.com/acme')).toBeNull();
+    });
+  });
+
+  describe('Tally URL variants', () => {
+    it('matches a share /r/ link via the embed endpoint', () => {
+      const result = matchEmbedService('https://tally.so/r/wMNDgn');
+
+      expect(result?.service).toBe('tally');
+      expect(result?.embedUrl).toBe('https://tally.so/embed/wMNDgn');
+    });
+
+    it('matches a pasted embed URL and strips widget params', () => {
+      expect(matchEmbedService('https://tally.so/embed/wMNDgn?alignLeft=1')?.embedUrl).toBe('https://tally.so/embed/wMNDgn');
+    });
+
+    it('does not match site pages', () => {
+      expect(matchEmbedService('https://tally.so/templates')).toBeNull();
+      expect(matchEmbedService('https://tally.so/')).toBeNull();
+    });
+  });
+
+  describe('JotForm URL variants', () => {
+    it('matches a form.jotform.com link', () => {
+      const result = matchEmbedService('https://form.jotform.com/241234567890123');
+
+      expect(result?.service).toBe('jotform');
+      expect(result?.embedUrl).toBe('https://form.jotform.com/241234567890123');
+    });
+
+    it('normalizes www and eu hosts onto form.jotform.com', () => {
+      expect(matchEmbedService('https://www.jotform.com/241234567890123')?.embedUrl).toBe('https://form.jotform.com/241234567890123');
+      expect(matchEmbedService('https://eu.jotform.com/241234567890123')?.embedUrl).toBe('https://form.jotform.com/241234567890123');
+    });
+
+    it('does not match slug-based forms or site pages', () => {
+      expect(matchEmbedService('https://form.jotform.com/my-cool-form')).toBeNull();
+      expect(matchEmbedService('https://www.jotform.com/form-templates/registration')).toBeNull();
+      expect(matchEmbedService('https://www.jotform.com/myforms')).toBeNull();
+    });
+  });
+
+  describe('Whimsical URL variants', () => {
+    it('matches a slugged board URL and extracts the trailing token', () => {
+      const result = matchEmbedService('https://whimsical.com/my-roadmap-Q3xL9mTzKvB2aWcRpD8uHn');
+
+      expect(result?.service).toBe('whimsical');
+      expect(result?.embedUrl).toBe('https://whimsical.com/embed/Q3xL9mTzKvB2aWcRpD8uHn');
+    });
+
+    it('matches a bare-token URL and strips share query params', () => {
+      expect(matchEmbedService('https://whimsical.com/Q3xL9mTzKvB2aWcRpD8uHn')?.embedUrl).toBe('https://whimsical.com/embed/Q3xL9mTzKvB2aWcRpD8uHn');
+      expect(matchEmbedService('https://whimsical.com/roadmap-Q3xL9mTzKvB2aWcRpD8uHn?from=share')?.embedUrl).toBe('https://whimsical.com/embed/Q3xL9mTzKvB2aWcRpD8uHn');
+    });
+
+    it('does not match marketing pages or short non-token slugs', () => {
+      expect(matchEmbedService('https://whimsical.com/mind-maps')).toBeNull();
+      expect(matchEmbedService('https://whimsical.com/templates')).toBeNull();
+      expect(matchEmbedService('https://whimsical.com/pricing')).toBeNull();
+      expect(matchEmbedService('https://whimsical.com/blog')).toBeNull();
+      expect(matchEmbedService('https://whimsical.com/short-Ab1')).toBeNull();
+    });
+  });
+
+  describe('Excalidraw URL variants', () => {
+    it('passes a #json= share link through with its doc id and key', () => {
+      const result = matchEmbedService('https://excalidraw.com/#json=AbC123dEf456GhI789jK,XyZ987wVu654TsR321qP');
+
+      expect(result?.service).toBe('excalidraw');
+      expect(result?.embedUrl).toBe('https://excalidraw.com/#json=AbC123dEf456GhI789jK,XyZ987wVu654TsR321qP');
+    });
+
+    it('does not match #room= collab sessions or the bare app', () => {
+      expect(matchEmbedService('https://excalidraw.com/#room=abc123def456,XyZ987wVu654TsR321qP')).toBeNull();
+      expect(matchEmbedService('https://excalidraw.com/')).toBeNull();
+    });
+  });
+
+  describe('tldraw URL variants', () => {
+    it('matches a room link and keeps the kind segment', () => {
+      const result = matchEmbedService('https://www.tldraw.com/r/AbCdEf123456');
+
+      expect(result?.service).toBe('tldraw');
+      expect(result?.embedUrl).toBe('https://www.tldraw.com/r/AbCdEf123456');
+    });
+
+    it('matches read-only, snapshot and published links', () => {
+      expect(matchEmbedService('https://tldraw.com/ro/AbCdEf123456')?.embedUrl).toBe('https://www.tldraw.com/ro/AbCdEf123456');
+      expect(matchEmbedService('https://www.tldraw.com/v/AbCdEf123456?d=v123')?.embedUrl).toBe('https://www.tldraw.com/v/AbCdEf123456');
+      expect(matchEmbedService('https://www.tldraw.com/p/AbCdEf123456')?.embedUrl).toBe('https://www.tldraw.com/p/AbCdEf123456');
+    });
+
+    it('does not match auth-only /f/ file links', () => {
+      expect(matchEmbedService('https://www.tldraw.com/f/AbCdEf123456')).toBeNull();
+    });
+  });
+
+  describe('Mentimeter URL variants', () => {
+    it('matches a presentation link via the /embed viewer', () => {
+      const result = matchEmbedService('https://www.mentimeter.com/app/presentation/alxyz1u2abcdefg');
+
+      expect(result?.service).toBe('mentimeter');
+      expect(result?.embedUrl).toBe('https://www.mentimeter.com/app/presentation/alxyz1u2abcdefg/embed');
+    });
+
+    it('drops a trailing slide id (embed plays the whole deck)', () => {
+      expect(matchEmbedService('https://www.mentimeter.com/app/presentation/alxyz1u2abcdefg/slide123')?.embedUrl)
+        .toBe('https://www.mentimeter.com/app/presentation/alxyz1u2abcdefg/embed');
+    });
+
+    it('does not match menti.com voting codes or site pages', () => {
+      expect(matchEmbedService('https://www.menti.com/alxyz1u2abcd')).toBeNull();
+      expect(matchEmbedService('https://www.mentimeter.com/templates')).toBeNull();
+    });
+  });
+
+  describe('Behance URL variants', () => {
+    it('matches a project gallery URL via the embed/project endpoint', () => {
+      const result = matchEmbedService('https://www.behance.net/gallery/123456789/Brand-Identity');
+
+      expect(result?.service).toBe('behance');
+      expect(result?.embedUrl).toBe('https://www.behance.net/embed/project/123456789');
+    });
+
+    it('strips tracking query params', () => {
+      expect(matchEmbedService('https://behance.net/gallery/123456789/Brand-Identity?tracking_source=search')?.embedUrl)
+        .toBe('https://www.behance.net/embed/project/123456789');
+    });
+
+    it('does not match listing or profile pages', () => {
+      expect(matchEmbedService('https://www.behance.net/galleries/graphic-design')).toBeNull();
+      expect(matchEmbedService('https://www.behance.net/someuser')).toBeNull();
+    });
+  });
+
+  describe('Chromatic URL variants', () => {
+    it('rebuilds a story permalink onto the iframe.html endpoint', () => {
+      const result = matchEmbedService('https://5ccbc373887ca40020446347-abcdef.chromatic.com/?path=/story/button--primary');
+
+      expect(result?.service).toBe('chromatic');
+      expect(result?.embedUrl).toBe('https://5ccbc373887ca40020446347-abcdef.chromatic.com/iframe.html?id=button--primary&viewMode=story');
+    });
+
+    it('uses viewMode=docs for docs paths', () => {
+      expect(matchEmbedService('https://main--abc123.chromatic.com/?path=/docs/button--docs')?.embedUrl)
+        .toBe('https://main--abc123.chromatic.com/iframe.html?id=button--docs&viewMode=docs');
+    });
+
+    it('finds path= among other query params', () => {
+      expect(matchEmbedService('https://main--abc123.chromatic.com/?foo=1&path=/story/button--primary&bar=2')?.embedUrl)
+        .toBe('https://main--abc123.chromatic.com/iframe.html?id=button--primary&viewMode=story');
+    });
+
+    it('does not match bare build roots or the marketing site', () => {
+      expect(matchEmbedService('https://abc123.chromatic.com/')).toBeNull();
+      expect(matchEmbedService('https://www.chromatic.com/builds?appId=123')).toBeNull();
+    });
+  });
+
+  describe('Plunker URL variants', () => {
+    it('matches an editor URL via the embed host with preview', () => {
+      const result = matchEmbedService('https://plnkr.co/edit/abc123XYZ');
+
+      expect(result?.service).toBe('plunker');
+      expect(result?.embedUrl).toBe('https://embed.plnkr.co/abc123XYZ?show=preview');
+    });
+
+    it('matches plunk share and direct embed-host URLs', () => {
+      expect(matchEmbedService('https://plnkr.co/plunk/abc123XYZ')?.embedUrl).toBe('https://embed.plnkr.co/abc123XYZ?show=preview');
+      expect(matchEmbedService('https://embed.plnkr.co/abc123XYZ?show=preview')?.embedUrl).toBe('https://embed.plnkr.co/abc123XYZ?show=preview');
+    });
+
+    it('does not match the site root', () => {
+      expect(matchEmbedService('https://plnkr.co/')).toBeNull();
+    });
+  });
+
+  describe('Datawrapper URL variants', () => {
+    it('matches a dwcdn chart URL and drops the version segment', () => {
+      const result = matchEmbedService('https://datawrapper.dwcdn.net/OhYbA/4/');
+
+      expect(result?.service).toBe('datawrapper');
+      expect(result?.embedUrl).toBe('https://datawrapper.dwcdn.net/OhYbA/');
+    });
+
+    it('matches a www.datawrapper.de/_/ share link', () => {
+      expect(matchEmbedService('https://www.datawrapper.de/_/OhYbA/')?.embedUrl)
+        .toBe('https://datawrapper.dwcdn.net/OhYbA/');
+    });
+
+    it('does not match site pages or non-5-char ids', () => {
+      expect(matchEmbedService('https://www.datawrapper.de/pricing')).toBeNull();
+      expect(matchEmbedService('https://www.datawrapper.de/')).toBeNull();
+      expect(matchEmbedService('https://datawrapper.dwcdn.net/toolong/')).toBeNull();
+    });
+  });
+
+  describe('Flourish URL variants', () => {
+    it('matches a visualisation URL via the flo.uri.sh embed host', () => {
+      const result = matchEmbedService('https://public.flourish.studio/visualisation/1234567/');
+
+      expect(result?.service).toBe('flourish');
+      expect(result?.embedUrl).toBe('https://flo.uri.sh/visualisation/1234567/embed');
+    });
+
+    it('matches a story URL', () => {
+      expect(matchEmbedService('https://public.flourish.studio/story/123456/')?.embedUrl)
+        .toBe('https://flo.uri.sh/story/123456/embed');
+    });
+
+    it('does not match the bare host or marketing pages', () => {
+      expect(matchEmbedService('https://public.flourish.studio/')).toBeNull();
+      expect(matchEmbedService('https://flourish.studio/examples/')).toBeNull();
+    });
+  });
+
+  describe('Our World in Data URL variants', () => {
+    it('matches a grapher URL preserving chart-state query params', () => {
+      const result = matchEmbedService('https://ourworldindata.org/grapher/life-expectancy?tab=chart&country=~USA');
+
+      expect(result?.service).toBe('ourworldindata');
+      expect(result?.embedUrl).toBe('https://ourworldindata.org/grapher/life-expectancy?tab=chart&country=~USA');
+    });
+
+    it('matches an explorer URL', () => {
+      expect(matchEmbedService('https://ourworldindata.org/explorers/migration?facet=none&country=USA~GBR')?.embedUrl)
+        .toBe('https://ourworldindata.org/explorers/migration?facet=none&country=USA~GBR');
+    });
+
+    it('does not match article pages or the bare host', () => {
+      expect(matchEmbedService('https://ourworldindata.org/covid-deaths')).toBeNull();
+      expect(matchEmbedService('https://ourworldindata.org/')).toBeNull();
+    });
+  });
+
+  describe('GeoGebra URL variants', () => {
+    it('matches a material (/m/) URL as a passthrough', () => {
+      const result = matchEmbedService('https://www.geogebra.org/m/cAsHWvWS');
+
+      expect(result?.service).toBe('geogebra');
+      expect(result?.embedUrl).toBe('https://www.geogebra.org/m/cAsHWvWS');
+    });
+
+    it('matches calculator and classic URLs', () => {
+      expect(matchEmbedService('https://geogebra.org/calculator/nbjqsducc')?.embedUrl)
+        .toBe('https://www.geogebra.org/calculator/nbjqsducc');
+      expect(matchEmbedService('https://www.geogebra.org/classic/qcfwqupe')?.embedUrl)
+        .toBe('https://www.geogebra.org/classic/qcfwqupe');
+    });
+
+    it('does not match site pages', () => {
+      expect(matchEmbedService('https://www.geogebra.org/download')).toBeNull();
+      expect(matchEmbedService('https://www.geogebra.org/')).toBeNull();
+    });
+  });
+
+  describe('Scratch URL variants', () => {
+    it('matches a project URL via the /embed player', () => {
+      const result = matchEmbedService('https://scratch.mit.edu/projects/1090231983/');
+
+      expect(result?.service).toBe('scratch');
+      expect(result?.embedUrl).toBe('https://scratch.mit.edu/projects/1090231983/embed');
+    });
+
+    it('matches a project editor URL', () => {
+      expect(matchEmbedService('https://scratch.mit.edu/projects/1090231983/editor/')?.embedUrl)
+        .toBe('https://scratch.mit.edu/projects/1090231983/embed');
+    });
+
+    it('does not match studios or the bare editor', () => {
+      expect(matchEmbedService('https://scratch.mit.edu/studios/27205657/')).toBeNull();
+      expect(matchEmbedService('https://scratch.mit.edu/projects/editor/')).toBeNull();
+    });
+  });
+
+  describe('Kahoot URL variants', () => {
+    it('matches a details URL via the embed host', () => {
+      const result = matchEmbedService('https://create.kahoot.it/details/965a7a4f-1c81-4d63-a2db-1a4d8f1e0f12');
+
+      expect(result?.service).toBe('kahoot');
+      expect(result?.embedUrl).toBe('https://embed.kahoot.it/965a7a4f-1c81-4d63-a2db-1a4d8f1e0f12');
+    });
+
+    it('matches a share URL with a slug segment', () => {
+      expect(matchEmbedService('https://create.kahoot.it/share/science-quiz/965a7a4f-1c81-4d63-a2db-1a4d8f1e0f12')?.embedUrl)
+        .toBe('https://embed.kahoot.it/965a7a4f-1c81-4d63-a2db-1a4d8f1e0f12');
+    });
+
+    it('does not match challenge links or non-UUID paths', () => {
+      expect(matchEmbedService('https://kahoot.it/challenge/0857294')).toBeNull();
+      expect(matchEmbedService('https://create.kahoot.it/details/not-a-uuid')).toBeNull();
+    });
+  });
+
+  describe('Genially URL variants', () => {
+    it('matches a view URL and drops the slug tail', () => {
+      const result = matchEmbedService('https://view.genially.com/64fb1c8a2d3e4f0011aabbcc/interactive-image');
+
+      expect(result?.service).toBe('genially');
+      expect(result?.embedUrl).toBe('https://view.genially.com/64fb1c8a2d3e4f0011aabbcc');
+    });
+
+    it('matches the legacy view.genial.ly domain', () => {
+      expect(matchEmbedService('https://view.genial.ly/64fb1c8a2d3e4f0011aabbcc')?.embedUrl)
+        .toBe('https://view.genially.com/64fb1c8a2d3e4f0011aabbcc');
+    });
+
+    it('does not match editor links or non-24-hex ids', () => {
+      expect(matchEmbedService('https://app.genially.com/editor/64fb1c8a2d3e4f0011aabbcc')).toBeNull();
+      expect(matchEmbedService('https://view.genially.com/short')).toBeNull();
+    });
+  });
+
+  describe('Infogram URL variants', () => {
+    it('matches a project URL keeping the full slug', () => {
+      const result = matchEmbedService('https://infogram.com/monthly-report-1h7g6k0e9q5o2oy');
+
+      expect(result?.service).toBe('infogram');
+      expect(result?.embedUrl).toBe('https://e.infogram.com/monthly-report-1h7g6k0e9q5o2oy?src=embed');
+    });
+
+    it('does not match reserved site paths', () => {
+      expect(matchEmbedService('https://infogram.com/blog')).toBeNull();
+      expect(matchEmbedService('https://infogram.com/pricing')).toBeNull();
+      expect(matchEmbedService('https://infogram.com/templates/charts')).toBeNull();
+    });
+
+    it('does not match multi-segment paths or the bare host', () => {
+      expect(matchEmbedService('https://infogram.com/user/some-chart-1h7g6k0e9q5o2oy')).toBeNull();
+      expect(matchEmbedService('https://infogram.com/')).toBeNull();
+    });
+  });
+
+  describe('ArcGIS StoryMaps URL variants', () => {
+    it('matches a story URL as a passthrough', () => {
+      const result = matchEmbedService('https://storymaps.arcgis.com/stories/0123456789abcdef0123456789abcdef');
+
+      expect(result?.service).toBe('arcgisstorymaps');
+      expect(result?.embedUrl).toBe('https://storymaps.arcgis.com/stories/0123456789abcdef0123456789abcdef');
+    });
+
+    it('matches a collection URL and strips query params', () => {
+      expect(matchEmbedService('https://storymaps.arcgis.com/collections/abcdefabcdefabcdefabcdefabcdef12?item=2')?.embedUrl)
+        .toBe('https://storymaps.arcgis.com/collections/abcdefabcdefabcdefabcdefabcdef12');
+    });
+
+    it('does not match listing pages or the bare host', () => {
+      expect(matchEmbedService('https://storymaps.arcgis.com/stories')).toBeNull();
+      expect(matchEmbedService('https://storymaps.arcgis.com/')).toBeNull();
+    });
+  });
+
+  describe('Felt URL variants', () => {
+    it('matches a map share URL via the /embed/map/ path', () => {
+      const result = matchEmbedService('https://felt.com/map/My-Cool-Map-9BCQglnQTleNJxRhmJWUDCA');
+
+      expect(result?.service).toBe('felt');
+      expect(result?.embedUrl).toBe('https://felt.com/embed/map/My-Cool-Map-9BCQglnQTleNJxRhmJWUDCA');
+    });
+
+    it('matches an already-embed URL', () => {
+      expect(matchEmbedService('https://felt.com/embed/map/My-Cool-Map-9BCQglnQTleNJxRhmJWUDCA')?.embedUrl)
+        .toBe('https://felt.com/embed/map/My-Cool-Map-9BCQglnQTleNJxRhmJWUDCA');
+    });
+
+    it('does not match site pages or the bare host', () => {
+      expect(matchEmbedService('https://felt.com/pricing')).toBeNull();
+      expect(matchEmbedService('https://felt.com/')).toBeNull();
+    });
+  });
+
+  describe('p5.js editor URL variants', () => {
+    it('matches a sketch URL via the chrome-less /full/ view', () => {
+      const result = matchEmbedService('https://editor.p5js.org/p5/sketches/Hk7tg4q7l');
+
+      expect(result?.service).toBe('p5js');
+      expect(result?.embedUrl).toBe('https://editor.p5js.org/p5/full/Hk7tg4q7l');
+    });
+
+    it('matches full, embed and present variants', () => {
+      expect(matchEmbedService('https://editor.p5js.org/jane.doe/full/Hk7tg4q7l')?.embedUrl)
+        .toBe('https://editor.p5js.org/jane.doe/full/Hk7tg4q7l');
+      expect(matchEmbedService('https://editor.p5js.org/p5/embed/Hk7tg4q7l')?.embedUrl)
+        .toBe('https://editor.p5js.org/p5/full/Hk7tg4q7l');
+      expect(matchEmbedService('https://editor.p5js.org/p5/present/Hk7tg4q7l')?.embedUrl)
+        .toBe('https://editor.p5js.org/p5/full/Hk7tg4q7l');
+    });
+
+    it('does not match collections or sketch listings', () => {
+      expect(matchEmbedService('https://editor.p5js.org/p5/collections/abc')).toBeNull();
+      expect(matchEmbedService('https://editor.p5js.org/p5/sketches')).toBeNull();
+    });
+  });
+
+  describe('Wakelet URL variants', () => {
+    it('matches a wake URL via the embed list view', () => {
+      const result = matchEmbedService('https://wakelet.com/wake/4t7Vy9hDFLbacQHRSrSmVA');
+
+      expect(result?.service).toBe('wakelet');
+      expect(result?.embedUrl).toBe('https://embed.wakelet.com/wakes/4t7Vy9hDFLbacQHRSrSmVA/list');
+    });
+
+    it('does not match profile pages or the bare host', () => {
+      expect(matchEmbedService('https://wakelet.com/@someuser')).toBeNull();
+      expect(matchEmbedService('https://wakelet.com/')).toBeNull();
+    });
+  });
+
+  describe('Poll Everywhere URL variants', () => {
+    it('matches a presenter URL via the embeds host', () => {
+      const result = matchEmbedService('https://pollev.com/teachername123');
+
+      expect(result?.service).toBe('pollev');
+      expect(result?.embedUrl).toBe('https://pollev-embeds.com/teachername123');
+    });
+
+    it('does not match reserved site paths', () => {
+      expect(matchEmbedService('https://pollev.com/login')).toBeNull();
+      expect(matchEmbedService('https://pollev.com/proctor')).toBeNull();
+    });
+
+    it('does not match multi-segment, uppercase or bare-host URLs', () => {
+      expect(matchEmbedService('https://pollev.com/jsmith/extra')).toBeNull();
+      expect(matchEmbedService('https://pollev.com/JSmith')).toBeNull();
+      expect(matchEmbedService('https://pollev.com/')).toBeNull();
+    });
+  });
+
+  describe('Wolfram Cloud URL variants', () => {
+    it('matches a published object URL as a passthrough', () => {
+      const result = matchEmbedService('https://www.wolframcloud.com/obj/demonstrations/CellularAutomaton-source.nb');
+
+      expect(result?.service).toBe('wolframcloud');
+      expect(result?.embedUrl).toBe('https://www.wolframcloud.com/obj/demonstrations/CellularAutomaton-source.nb');
+    });
+
+    it('normalizes onto the www host and keeps deep paths with query params', () => {
+      expect(matchEmbedService('https://wolframcloud.com/obj/user-1a2b/Published/widget?x=1')?.embedUrl)
+        .toBe('https://www.wolframcloud.com/obj/user-1a2b/Published/widget?x=1');
+    });
+
+    it('does not match the bare host or an empty object path', () => {
+      expect(matchEmbedService('https://www.wolframcloud.com/')).toBeNull();
+      expect(matchEmbedService('https://www.wolframcloud.com/obj/')).toBeNull();
+    });
+  });
+
+  describe('Sketchfab URL variants', () => {
+    it('matches a 3d-models slug URL and extracts the trailing hex id', () => {
+      const result = matchEmbedService('https://sketchfab.com/3d-models/vintage-camera-cf2da81e2cd44e87b9e69eb9d6e6cab6');
+
+      expect(result?.service).toBe('sketchfab');
+      expect(result?.embedUrl).toBe('https://sketchfab.com/models/cf2da81e2cd44e87b9e69eb9d6e6cab6/embed');
+    });
+
+    it('matches a bare /models/ URL', () => {
+      expect(matchEmbedService('https://www.sketchfab.com/models/cf2da81e2cd44e87b9e69eb9d6e6cab6')?.embedUrl)
+        .toBe('https://sketchfab.com/models/cf2da81e2cd44e87b9e69eb9d6e6cab6/embed');
+    });
+
+    it('does not match category, tag or feed pages', () => {
+      expect(matchEmbedService('https://sketchfab.com/3d-models/categories/animals-pets')).toBeNull();
+      expect(matchEmbedService('https://sketchfab.com/tags/car')).toBeNull();
+      expect(matchEmbedService('https://sketchfab.com/feed')).toBeNull();
+    });
+  });
+
+  describe('OpenStreetMap URL variants', () => {
+    it('converts a #map view into a 580x420 bbox export embed', () => {
+      const result = matchEmbedService('https://www.openstreetmap.org/#map=13/51.5000/-0.1100');
+
+      expect(result?.service).toBe('openstreetmap');
+      expect(result?.embedUrl).toBe(
+        'https://www.openstreetmap.org/export/embed.html?bbox=-0.159782,51.477559,-0.060218,51.522441&layer=mapnik'
+      );
+    });
+
+    it('carries ?mlat/&mlon marker params into the embed', () => {
+      const result = matchEmbedService('https://www.openstreetmap.org/?mlat=51.5074&mlon=-0.1278#map=15/51.5074/-0.1278');
+
+      expect(result?.embedUrl).toBe(
+        'https://www.openstreetmap.org/export/embed.html?bbox=-0.140245,51.501791,-0.115355,51.513009&layer=mapnik&marker=51.5074,-0.1278'
+      );
+    });
+
+    it('clamps the bbox to world bounds at low zoom', () => {
+      expect(matchEmbedService('https://www.openstreetmap.org/#map=1/84.0/179.0')?.embedUrl)
+        .toBe('https://www.openstreetmap.org/export/embed.html?bbox=-24.906250,68.565719,180.000000,85.000000&layer=mapnik');
+    });
+
+    it('does not match object pages or the bare host', () => {
+      expect(matchEmbedService('https://www.openstreetmap.org/')).toBeNull();
+      expect(matchEmbedService('https://www.openstreetmap.org/relation/65606')).toBeNull();
+      expect(matchEmbedService('https://www.openstreetmap.org/about')).toBeNull();
+    });
+  });
+
+  describe('Tencent Video URL variants', () => {
+    it('matches a cover watch URL and extracts the trailing vid', () => {
+      const result = matchEmbedService('https://v.qq.com/x/cover/mzc00200xj9k3pa/j0032qtxztf.html');
+
+      expect(result?.service).toBe('tencentvideo');
+      expect(result?.embedUrl).toBe('https://v.qq.com/txp/iframe/player.html?vid=j0032qtxztf');
+    });
+
+    it('matches a single-video page URL', () => {
+      expect(matchEmbedService('https://v.qq.com/x/page/j0032qtxztf.html?ptag=share')?.embedUrl)
+        .toBe('https://v.qq.com/txp/iframe/player.html?vid=j0032qtxztf');
+    });
+
+    it('matches a mobile play URL with the vid in the query', () => {
+      expect(matchEmbedService('https://m.v.qq.com/x/m/play?cid=mzc00200xj9k3pa&vid=j0032qtxztf')?.embedUrl)
+        .toBe('https://v.qq.com/txp/iframe/player.html?vid=j0032qtxztf');
+    });
+
+    it('does not match channel pages or a mobile URL without a vid', () => {
+      expect(matchEmbedService('https://v.qq.com/channel/movie')).toBeNull();
+      expect(matchEmbedService('https://m.v.qq.com/x/m/play?cid=mzc00200xj9k3pa')).toBeNull();
+    });
+  });
+
+  describe('Douyin URL variants', () => {
+    it('matches a video URL via the open.douyin.com player', () => {
+      const result = matchEmbedService('https://www.douyin.com/video/7331122334455667788');
+
+      expect(result?.service).toBe('douyin');
+      expect(result?.embedUrl).toBe('https://open.douyin.com/player/video?vid=7331122334455667788&autoplay=0');
+    });
+
+    it('does not match opaque short links or non-video pages', () => {
+      expect(matchEmbedService('https://v.douyin.com/iYxA3Fn/')).toBeNull();
+      expect(matchEmbedService('https://www.iesdouyin.com/share/video/7331122334455667788/')).toBeNull();
+      expect(matchEmbedService('https://www.douyin.com/note/7331122334455667788')).toBeNull();
+      expect(matchEmbedService('https://www.douyin.com/user/MS4wLjABAAAA')).toBeNull();
+    });
+  });
+
+  describe('Kinescope URL variants', () => {
+    it('matches a share URL via the /embed/ path', () => {
+      const result = matchEmbedService('https://kinescope.io/0sjQ4cSGrqMVKj3KMTAn2g');
+
+      expect(result?.service).toBe('kinescope');
+      expect(result?.embedUrl).toBe('https://kinescope.io/embed/0sjQ4cSGrqMVKj3KMTAn2g');
+    });
+
+    it('matches an already-embed URL', () => {
+      expect(matchEmbedService('https://kinescope.io/embed/0sjQ4cSGrqMVKj3KMTAn2g')?.embedUrl)
+        .toBe('https://kinescope.io/embed/0sjQ4cSGrqMVKj3KMTAn2g');
+    });
+
+    it('does not match short-token site pages or the bare host', () => {
+      expect(matchEmbedService('https://kinescope.io/pricing')).toBeNull();
+      expect(matchEmbedService('https://kinescope.io/blog/how-to-embed')).toBeNull();
+      expect(matchEmbedService('https://kinescope.io/')).toBeNull();
+    });
+  });
+
+  describe('Vidio URL variants', () => {
+    it('matches a watch URL and embeds the numeric id only', () => {
+      const result = matchEmbedService('https://www.vidio.com/watch/7448242-keluarga-superior-eps-1?utm_source=share');
+
+      expect(result?.service).toBe('vidio');
+      expect(result?.embedUrl).toBe('https://www.vidio.com/embed/7448242');
+    });
+
+    it('does not match live channels or non-numeric paths', () => {
+      expect(matchEmbedService('https://www.vidio.com/live/204-sctv')).toBeNull();
+      expect(matchEmbedService('https://www.vidio.com/watch/abc-not-numeric')).toBeNull();
+    });
+  });
+
+  describe('Mail.ru video URL variants', () => {
+    it('matches a mail-user video page via the /video/embed/ form', () => {
+      const result = matchEmbedService('https://my.mail.ru/mail/somename/video/_myvideo/123.html');
+
+      expect(result?.service).toBe('mailru');
+      expect(result?.embedUrl).toBe('https://my.mail.ru/mail/somename/video/embed/_myvideo/123');
+    });
+
+    it('matches community and catalog (v) pages', () => {
+      expect(matchEmbedService('https://my.mail.ru/community/funpage/video/12/789.html?from=share')?.embedUrl)
+        .toBe('https://my.mail.ru/community/funpage/video/embed/12/789');
+      expect(matchEmbedService('https://my.mail.ru/v/topclips/video/embedded/456.html')?.embedUrl)
+        .toBe('https://my.mail.ru/v/topclips/video/embed/embedded/456');
+    });
+
+    it('matches inbox, bk and list account domains', () => {
+      expect(matchEmbedService('https://my.mail.ru/inbox/some.name/video/9/100.html')?.service).toBe('mailru');
+      expect(matchEmbedService('https://my.mail.ru/bk/user-name/video/1/2.html')?.service).toBe('mailru');
+      expect(matchEmbedService('https://my.mail.ru/list/listuser/video/3/4.html')?.service).toBe('mailru');
+    });
+
+    it('does not match album pages, photos or unknown account types', () => {
+      expect(matchEmbedService('https://my.mail.ru/mail/somename/video/_myvideo')).toBeNull();
+      expect(matchEmbedService('https://my.mail.ru/mail/somename/photo/1/2.html')).toBeNull();
+      expect(matchEmbedService('https://my.mail.ru/other/somename/video/1/2.html')).toBeNull();
+    });
+  });
+
+  describe('Smotrim URL variants', () => {
+    it('matches a video page via the player iframe', () => {
+      const result = matchEmbedService('https://smotrim.ru/video/2898424');
+
+      expect(result?.service).toBe('smotrim');
+      expect(result?.embedUrl).toBe('https://player.smotrim.ru/iframe/video/id/2898424/sid/smotrim');
+    });
+
+    it('does not match brand/article pages or the bare host', () => {
+      expect(matchEmbedService('https://smotrim.ru/brand/60851')).toBeNull();
+      expect(matchEmbedService('https://smotrim.ru/article/4509050')).toBeNull();
+      expect(matchEmbedService('https://smotrim.ru/')).toBeNull();
+    });
+  });
+
   describe('paste pattern full-match contract', () => {
     // findToolForPattern requires the regex to consume the entire pasted text,
     // so share URLs with trailing query params must match fully to become embeds.
@@ -1186,6 +2565,25 @@ describe('link registry', () => {
       expect(fullMatch('desmos', 'https://www.desmos.com/calculator/qy6jc8mfi9?lang=ru')).toBe(true);
       expect(fullMatch('observable', 'https://observablehq.com/@mbostock/embedded-notebook?collection=@observablehq/embeds')).toBe(true);
       expect(fullMatch('jsfiddle', 'https://jsfiddle.net/josewirewax/2rqnsdd6/')).toBe(true);
+    });
+
+    it('consumes the entire URL on the new provider patterns', () => {
+      expect(fullMatch('ted', 'https://www.ted.com/talks/amy_cuddy_your_body_language_may_shape_who_you_are?language=es')).toBe(true);
+      expect(fullMatch('internetarchive', 'https://archive.org/details/msdos_Prince_of_Persia_1990?some=param')).toBe(true);
+      expect(fullMatch('kick', 'https://kick.com/asmongold?followed=true')).toBe(true);
+      expect(fullMatch('peertube', 'https://tilvids.com/w/abc123XYZ?start=1m')).toBe(true);
+      expect(fullMatch('odysee', 'https://odysee.com/@NafO:a/Odysee101:a?r=ABC')).toBe(true);
+      expect(fullMatch('soop', 'https://vod.sooplive.com/player/123456789?change_second=10')).toBe(true);
+      expect(fullMatch('coub', 'https://coub.com/view/2pc24rpb?from=share')).toBe(true);
+      expect(fullMatch('bitchute', 'https://www.bitchute.com/video/UGlrf9d3vKHK/')).toBe(true);
+      expect(fullMatch('reddit', 'https://www.reddit.com/r/programming/comments/1abc2de/some_title_slug/?utm_source=share')).toBe(true);
+      expect(fullMatch('instagram', 'https://www.instagram.com/reel/C8zXq1NMabc/?igsh=xyz123')).toBe(true);
+      expect(fullMatch('tidal', 'https://tidal.com/browse/track/46757219?u')).toBe(true);
+      expect(fullMatch('calendly', 'https://calendly.com/acme-team/30min?month=2026-06')).toBe(true);
+      expect(fullMatch('datawrapper', 'https://datawrapper.dwcdn.net/OhYbA/4/')).toBe(true);
+      expect(fullMatch('openstreetmap', 'https://www.openstreetmap.org/#map=13/51.5000/-0.1100')).toBe(true);
+      expect(fullMatch('tencentvideo', 'https://v.qq.com/x/page/j0032qtxztf.html?ptag=share')).toBe(true);
+      expect(fullMatch('threads', 'https://www.threads.net/@zuck/post/C8z2Qq0Rk1x?xmt=AQGz')).toBe(true);
     });
   });
 

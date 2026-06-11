@@ -32,6 +32,7 @@ export interface EmbedData extends BlockToolData {
 
 const TELEGRAM_WIDGET_SRC = 'https://telegram.org/js/telegram-widget.js?22';
 const TWITTER_WIDGET_SRC = 'https://platform.twitter.com/widgets.js';
+const THREADS_WIDGET_SRC = 'https://www.threads.com/embed.js';
 
 const DEFAULT_WIDTH = 580;
 const DEFAULT_HEIGHT = 320;
@@ -216,6 +217,31 @@ export class Embed implements BlockTool {
       script.setAttribute('data-telegram-post', remoteId);
       script.setAttribute('data-width', '100%');
       container.appendChild(script);
+
+      return container;
+    }
+
+    if (this.data.service === 'threads') {
+      // Threads: text-post-media blockquote scanned and replaced by embed.js.
+      // The permalink uses the canonical .com embed URL so pasted .net links
+      // still produce the official markup.
+      const threadsQuote = document.createElement('blockquote');
+
+      threadsQuote.className = 'text-post-media';
+      threadsQuote.setAttribute('data-text-post-permalink', this.data.embed ?? '');
+      threadsQuote.setAttribute('data-text-post-version', '0');
+
+      const threadsAnchor = document.createElement('a');
+
+      threadsAnchor.href = this.data.embed ?? '';
+      threadsQuote.appendChild(threadsAnchor);
+      container.appendChild(threadsQuote);
+
+      const threadsScript = document.createElement('script');
+
+      threadsScript.async = true;
+      threadsScript.src = THREADS_WIDGET_SRC;
+      container.appendChild(threadsScript);
 
       return container;
     }

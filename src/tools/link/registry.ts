@@ -500,6 +500,638 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     width: 580,
     height: 400,
   },
+  reddit: {
+    // Mobile share /s/<token> links and redd.it shortcodes are opaque
+    // redirects and excluded; only canonical /r/<sub>/comments/<id>/ permalinks
+    // are claimed.
+    regex: /^(?:https?:\/\/)?(?:(?:www|old|new|np)\.)?reddit\.com\/(r\/\w+\/comments\/\w+(?:\/[^/?#\s]+)?)\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://embed.reddit.com/<%= remote_id %>?embed=true&ref_source=embed&ref=share',
+    width: 580,
+    height: 500,
+  },
+  instagram: {
+    // The server sends X-Frame-Options: DENY only to requests without
+    // Sec-Fetch-Dest: iframe — browsers embed fine, naive curl checks
+    // false-negative. All post kinds (p/reel/reels/tv, + instagr.am) embed
+    // via the same /p/<code>/embed/captioned/ endpoint.
+    regex: /^(?:https?:\/\/)?(?:www\.)?(?:instagram\.com|instagr\.am)\/(?:p|reels?|tv)\/([\w-]+)\S*/,
+    embedUrl: 'https://www.instagram.com/p/<%= remote_id %>/embed/captioned/',
+    width: 400,
+    height: 620,
+    fixedWidth: true,
+  },
+  facebookvideo: {
+    // The plugin takes the canonical watch URL percent-encoded in ?href=.
+    // Opaque fb.watch short links resolve only via redirect and are excluded.
+    regex: /^(?:https?:\/\/)?(?:(?:www|m|web|mbasic)\.)?facebook\.com\/(?:([\w.-]+)\/videos\/(?:[\w.-]+\/)?(\d+)|watch\/?\?(?:\S*?&)?v=(\d+)|reel\/(\d+))\S*/,
+    embedUrl: 'https://www.facebook.com/plugins/video.php?href=<%= remote_id %>',
+    id: (groups) => {
+      const [page, pageVideoId, watchId, reelId] = groups;
+
+      if (watchId !== undefined) {
+        return encodeURIComponent(`https://www.facebook.com/watch/?v=${watchId}`);
+      }
+
+      if (reelId !== undefined) {
+        return encodeURIComponent(`https://www.facebook.com/reel/${reelId}`);
+      }
+
+      return encodeURIComponent(`https://www.facebook.com/${page}/videos/${pageVideoId}/`);
+    },
+    width: 580,
+    height: 320,
+  },
+  facebookpost: {
+    // The plugin takes the canonical permalink percent-encoded in ?href=.
+    // Opaque /share/p/<token> share links resolve only via redirect and are
+    // excluded. Must stay after facebookvideo so /videos|watch|reel URLs are
+    // never up for grabs here.
+    regex: /^(?:https?:\/\/)?(?:(?:www|m|web|mbasic)\.)?facebook\.com\/(?:([\w.-]+)\/posts\/([\w-]+)|permalink\.php\?(\S+)|photo(?:\.php)?\/?\?(\S+))\S*/,
+    embedUrl: 'https://www.facebook.com/plugins/post.php?href=<%= remote_id %>&show_text=true',
+    id: (groups) => {
+      const [page, postToken, permalinkQuery, photoQuery] = groups;
+
+      if (permalinkQuery !== undefined) {
+        const params = new URLSearchParams(permalinkQuery);
+
+        return encodeURIComponent(
+          `https://www.facebook.com/permalink.php?story_fbid=${params.get('story_fbid') ?? ''}&id=${params.get('id') ?? ''}`
+        );
+      }
+
+      if (photoQuery !== undefined) {
+        const params = new URLSearchParams(photoQuery);
+
+        return encodeURIComponent(`https://www.facebook.com/photo.php?fbid=${params.get('fbid') ?? ''}`);
+      }
+
+      return encodeURIComponent(`https://www.facebook.com/${page}/posts/${postToken}`);
+    },
+    width: 500,
+    height: 600,
+  },
+  linkedin: {
+    // Both share forms carry the numeric activity id; the urn type
+    // (activity/share/ugcPost) is mirrored into the embed path. Opaque
+    // lnkd.in short links are excluded.
+    regex: /^(?:https?:\/\/)?(?:[\w-]+\.)?linkedin\.com\/(?:posts\/[\w%~.-]+-activity-(\d+)|feed\/update\/urn:li:(activity|share|ugcPost):(\d+))\S*/,
+    embedUrl: 'https://www.linkedin.com/embed/feed/update/urn:li:<%= remote_id %>',
+    id: (groups) => (groups[0] !== undefined ? `activity:${groups[0]}` : `${groups[1]}:${groups[2]}`),
+    width: 504,
+    height: 540,
+  },
+  mastodon: {
+    // Curated instance allowlist: any host can run Mastodon, so only
+    // known-frameable instances are claimed. The remote id carries host+path
+    // because each instance serves its own /embed endpoint.
+    regex: /^(?:https?:\/\/)?(mastodon\.social|mastodon\.online|mstdn\.social|hachyderm\.io|fosstodon\.org|infosec\.exchange|mas\.to|mastodon\.world|techhub\.social)\/(@\w+(?:@[\w.-]+)?)\/(\d+)\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://<%= remote_id %>/embed',
+    id: (groups) => `${groups[0]}/${groups[1]}/${groups[2]}`,
+    width: 580,
+    height: 320,
+  },
+  pinterest: {
+    // Regional TLDs and subdomains (ru.pinterest.com, pinterest.co.uk) share
+    // the same numeric pin id. Opaque pin.it short links are excluded.
+    regex: /^(?:https?:\/\/)?(?:[\w-]+\.)?pinterest\.(?:[a-z]{2,3}|co\.[a-z]{2}|com\.[a-z]{2})\/pin\/(\d+)(?:[/?#]\S*)?$/,
+    embedUrl: 'https://assets.pinterest.com/ext/embed.html?id=<%= remote_id %>',
+    width: 345,
+    height: 560,
+    fixedWidth: true,
+  },
+  snapchat: {
+    // CSP frame-ancestors * overrides the bogus X-Frame-Options header, so
+    // framing works. The embed is the share URL itself + /embed; lens ids are
+    // 32-char hex.
+    regex: /^(?:https?:\/\/)?(?:www\.)?snapchat\.com\/(spotlight\/[\w-]+|lens\/[0-9a-f]{32})\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://www.snapchat.com/<%= remote_id %>/embed',
+    width: 416,
+    height: 692,
+    fixedWidth: true,
+  },
+  substack: {
+    // Post pages lock frame-ancestors to substack — only the /embed/p/
+    // preview card is open (renders a card, not the full post). Publications
+    // on custom domains can't be claimed (no recognizable host).
+    regex: /^(?:https?:\/\/)?(?!(?:www|open)\.)([\w-]+)\.substack\.com\/p\/([\w-]+)\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://<%= remote_id %>',
+    id: (groups) => `${groups[0]}.substack.com/embed/p/${groups[1]}`,
+    width: 580,
+    height: 280,
+  },
+  ted: {
+    // Slug is required — the bare /talks index page must fall through to bookmark.
+    regex: /^(?:https?:\/\/)?(?:www\.)?ted\.com\/talks\/([\w-]+)\S*/,
+    embedUrl: 'https://embed.ted.com/talks/<%= remote_id %>',
+    width: 580,
+    height: 320,
+  },
+  internetarchive: {
+    // Identifiers are case-sensitive and may contain dots; deep links
+    // (/details/<id>/<file>) keep only the first path segment — the embed
+    // player takes the bare item identifier.
+    regex: /^(?:https?:\/\/)?(?:www\.)?archive\.org\/(?:details|embed)\/([^\s/?#]+)\S*/,
+    embedUrl: 'https://archive.org/embed/<%= remote_id %>',
+    width: 580,
+    height: 320,
+  },
+  kick: {
+    // Live channel pages are single-segment, so /<channel>/videos/... VODs and
+    // reserved site paths fall through to the bookmark tool. player.kick.com
+    // needs no parent param (unlike twitch). Cloudflare bot-walls curl/headless
+    // requests — never smoke-test this embed live.
+    regex: /^(?:https?:\/\/)?(?:www\.)?kick\.com\/(?!(?:browse|categories|category|video|clips|search|support|terms|privacy|community-guidelines|dmca|help|about|blog|store|transparency)(?:[/?#]|$))([\w-]+)\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://player.kick.com/<%= remote_id %>?autoplay=false',
+    width: 580,
+    height: 320,
+  },
+  peertube: {
+    // PeerTube is federated — only verified flagship instances are allowlisted.
+    // The remote id carries the host (each instance embeds via its own
+    // /videos/embed/ path), so the template is a bare https:// prefix.
+    regex: /^(?:https?:\/\/)?(framatube\.org|tilvids\.com|video\.blender\.org|makertube\.net)\/(?:w|videos\/watch)\/([\w-]+)\S*/,
+    embedUrl: 'https://<%= remote_id %>',
+    id: (groups) => `${groups[0]}/videos/embed/${groups[1]}`,
+    width: 580,
+    height: 320,
+  },
+  odysee: {
+    // Claim paths carry @ and : (colons sometimes %3A-encoded when copied) and
+    // are passed through to $/embed verbatim. $/... app paths and channel-only
+    // URLs (single @segment, no video) are excluded; the anonymous single-segment
+    // form requires a colon, which keeps plain site pages out.
+    regex: /^(?:https?:\/\/)?(?:www\.)?odysee\.com\/(@[^\s/?#]+\/[^\s/?#]+|[^\s/@$?#][^\s/?#]*(?::|%3A)[^\s/?#]+)\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://odysee.com/$/embed/<%= remote_id %>',
+    id: (groups) => (groups[0] ?? '').replace(/%3A/gi, ':'),
+    width: 580,
+    height: 320,
+  },
+  soop: {
+    // Legacy afreecatv.com and Korean sooplive.co.kr hosts normalize onto the
+    // global sooplive.com player. The player page itself is frameable;
+    // gated/missing VODs error gracefully inside the frame.
+    regex: /^(?:https?:\/\/)?vod\.(?:sooplive\.co\.kr|sooplive\.com|afreecatv\.com)\/player\/(\d+)\S*/,
+    embedUrl: 'https://vod.sooplive.com/player/<%= remote_id %>',
+    width: 580,
+    height: 320,
+  },
+  coub: {
+    // /embed serves X-Frame-Options: ALLOWALL.
+    regex: /^(?:https?:\/\/)?(?:www\.)?coub\.com\/view\/(\w+)\S*/,
+    embedUrl: 'https://coub.com/embed/<%= remote_id %>',
+    width: 580,
+    height: 320,
+  },
+  bitchute: {
+    // Ids may contain - and _; the embed path keeps the trailing slash.
+    regex: /^(?:https?:\/\/)?(?:www\.)?bitchute\.com\/video\/([\w-]+)\/?\S*/,
+    embedUrl: 'https://www.bitchute.com/embed/<%= remote_id %>/',
+    width: 580,
+    height: 320,
+  },
+  tidal: {
+    // Numeric ids for track/album/video, UUID for playlist; the embed host
+    // pluralizes the type segment (track -> tracks). Mix pages have no verified
+    // embed.tidal.com mapping and are excluded. Natural player heights differ
+    // per type (track 120, video 320, album/playlist 400) but one entry gets
+    // one height, so the tallest (400) is used for all.
+    regex: /^(?:https?:\/\/)?(?:www\.|listen\.)?tidal\.com\/(?:browse\/)?(track|album|playlist|video)\/([\w-]+)\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://embed.tidal.com/<%= remote_id %>',
+    id: (groups) => `${groups[0]}s/${groups[1]}`,
+    width: 580,
+    height: 400,
+  },
+  spotifypodcasters: {
+    // Spotify for Creators (ex Podcasters, ex Anchor). All three hosts carry the
+    // same <show>/episodes/<slug>-<episodeId> shape; the embed form inserts
+    // /embed before /episodes on the current creators.spotify.com host.
+    regex: /^(?:https?:\/\/)?(?:(?:creators|podcasters)\.spotify\.com\/pod\/show|(?:www\.)?anchor\.fm)\/([\w-]+)\/episodes\/([\w-]+)\S*/,
+    embedUrl: 'https://creators.spotify.com/pod/show/<%= remote_id %>',
+    id: (groups) => `${groups[0]}/embed/episodes/${groups[1]}`,
+    width: 580,
+    height: 152,
+  },
+  pocketcasts: {
+    // Share codes are short opaque tokens in the root path, so known site pages
+    // must be excluded explicitly to keep them on the bookmark fallback.
+    regex: /^(?:https?:\/\/)?pca\.st\/(?!(?:discover|search|podcasts?|episode|support|sign-in|register|get|plus|about|privacy|terms)(?:[/?#]|$))([\w-]+)\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://pca.st/embed/<%= remote_id %>',
+    width: 580,
+    height: 200,
+  },
+  iheart: {
+    // Podcast shows, episodes and live stations all embed as the original page
+    // path with ?embed=true appended; ids are the trailing -<digits> of each slug.
+    regex: /^(?:https?:\/\/)?(?:www\.)?iheart\.com\/(podcast\/[\w-]+-\d+(?:\/episode\/[\w-]+-\d+)?|live\/[\w-]+-\d+)\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://www.iheart.com/<%= remote_id %>/?embed=true',
+    width: 580,
+    height: 250,
+  },
+  acast: {
+    // Episode pages live at shows.acast.com/<show>/episodes/<episode> (the
+    // /episodes/ segment is optional on older links); the embed host drops it.
+    // Bare show pages and the /episodes listing are excluded.
+    regex: /^(?:https?:\/\/)?shows\.acast\.com\/([\w-]+)\/(?:episodes\/)?(?!episodes(?:[/?#]|$))([\w-]+)\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://embed.acast.com/<%= remote_id %>',
+    id: (groups) => `${groups[0]}/${groups[1]}`,
+    width: 580,
+    height: 190,
+  },
+  podbean: {
+    // Only /ew/pb-... share links carry the player key; per-show subdomain
+    // episode pages (myshow.podbean.com/e/...) have no derivable key and fall
+    // through to the bookmark tool.
+    regex: /^(?:https?:\/\/)?(?:www\.)?podbean\.com\/ew\/(pb-[a-z0-9]+-[a-z0-9]+)\S*/,
+    embedUrl: 'https://www.podbean.com/player-v2/?i=<%= remote_id %>',
+    width: 580,
+    height: 150,
+  },
+  spreaker: {
+    // The widget wants the numeric episode id: trailing --<id> on current slug
+    // URLs, the whole segment on legacy /episode/<id> links.
+    regex: /^(?:https?:\/\/)?(?:www\.)?spreaker\.com\/episode\/(?:[\w-]*?--)?(\d+)\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://widget.spreaker.com/player?episode_id=<%= remote_id %>',
+    width: 580,
+    height: 200,
+  },
+  buzzsprout: {
+    // Episode pages embed as-is with the small-player query appended; the
+    // /episodes/ segment is optional and the -slug suffix may be absent.
+    regex: /^(?:https?:\/\/)?(?:www\.)?buzzsprout\.com\/(\d+\/(?:episodes\/)?\d+(?:-[\w-]+)?)\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://www.buzzsprout.com/<%= remote_id %>?client_source=small_player&iframe=true',
+    width: 580,
+    height: 200,
+  },
+  castbox: {
+    // Ids are the trailing -id<channel>-id<episode> (episode) or -id<channel>
+    // (channel) of the slug; slugs may carry percent-encoded punctuation, so the
+    // slug part is consumed lazily and only the trailing id pair is captured.
+    regex: /^(?:https?:\/\/)?(?:www\.)?castbox\.fm\/(?:episode\/\S*?-id(\d+)-id(\d+)|channel\/\S*?-id(\d+))\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://castbox.fm/app/castbox/player/<%= remote_id %>?v=8.22.11&autoplay=0',
+    id: (groups) => (groups[2] !== undefined ? `id${groups[2]}` : `id${groups[0]}/id${groups[1]}`),
+    width: 580,
+    height: 500,
+  },
+  transistor: {
+    // /s/ share pages send frame-ancestors 'self' — the rewrite onto the /e/
+    // embed path is mandatory, not cosmetic.
+    regex: /^(?:https?:\/\/)?share\.transistor\.fm\/(?:s|e)\/([0-9a-f]+)\S*/,
+    embedUrl: 'https://share.transistor.fm/e/<%= remote_id %>',
+    width: 580,
+    height: 180,
+  },
+  audioboom: {
+    // The numeric post id leads the slug; the v4 player lives on the
+    // embeds.audioboom.com subdomain.
+    regex: /^(?:https?:\/\/)?(?:www\.)?audioboom\.com\/posts\/(\d+)\S*/,
+    embedUrl: 'https://embeds.audioboom.com/posts/<%= remote_id %>/embed/v4',
+    width: 580,
+    height: 150,
+  },
+  tunein: {
+    // Stations only: the trailing s<digits> of the slug is the station id.
+    // Program/podcast pages use p-ids and have no station player — excluded.
+    regex: /^(?:https?:\/\/)?(?:www\.)?tunein\.com\/radio\/(?:[\w-]+-)?s(\d+)\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://tunein.com/embed/player/s<%= remote_id %>/',
+    width: 580,
+    height: 100,
+  },
+  beatport: {
+    // The numeric id after the slug feeds the embed player query.
+    regex: /^(?:https?:\/\/)?(?:www\.)?beatport\.com\/track\/[^/?#\s]+\/(\d+)\S*/,
+    embedUrl: 'https://embed.beatport.com/?id=<%= remote_id %>&type=track',
+    width: 580,
+    height: 162,
+  },
+  netease: {
+    // Song pages are SPA hash routes (#/song?id=) but share links also occur
+    // without the hash; both carry id= in the query. type=2 is the song player.
+    regex: /^(?:https?:\/\/)?music\.163\.com\/(?:#\/)?song\?(?:.*&)?id=(\d+)\S*/,
+    embedUrl: 'https://music.163.com/outchain/player?type=2&id=<%= remote_id %>&auto=0&height=66',
+    width: 580,
+    height: 86,
+  },
+  suno: {
+    // Song ids are full UUIDs; the strict shape keeps other /song-ish pages out.
+    regex: /^(?:https?:\/\/)?(?:www\.)?suno\.com\/song\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\S*/,
+    embedUrl: 'https://suno.com/embed/<%= remote_id %>',
+    width: 580,
+    height: 240,
+  },
+  hearthis: {
+    // Tracks are exactly /<user>/<slug>/; the player is the same path + /embed/.
+    // Known two-segment site sections are excluded; profile pages (one segment)
+    // and set pages (three segments) never fit the shape.
+    regex: /^(?:https?:\/\/)?(?:www\.)?hearthis\.at\/(?!(?:categories|charts|search|pages|set)(?:[/?#]|$))([\w.-]+)\/([\w-]+)\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://hearthis.at/<%= remote_id %>/embed/',
+    id: (groups) => `${groups[0]}/${groups[1]}`,
+    width: 580,
+    height: 150,
+  },
+  boomplay: {
+    // Songs only; the /MUSIC suffix is the player's content-type discriminator.
+    regex: /^(?:https?:\/\/)?(?:www\.)?boomplay\.com\/songs\/(\d+)\S*/,
+    embedUrl: 'https://www.boomplay.com/embed/<%= remote_id %>/MUSIC',
+    width: 580,
+    height: 130,
+  },
+  calendly: {
+    // Scheduling pages are frameable as-is once embed_domain/embed_type are
+    // appended (same params Calendly's own inline widget passes). Shapes:
+    // /<user>[/<event-type>] and one-off /d/<code>/<slug> links. Reserved
+    // site sections are excluded so marketing pages fall back to the bookmark.
+    regex: /^(?:https?:\/\/)?(?:www\.)?calendly\.com\/(?:(d\/[\w-]+\/[\w-]+)|(?!(?:app|event_types|login|signup|integrations|pricing|blog|help|features|teams|solutions|customers|resources|legal|security|api|embed|d)(?:[/?#]|$))([\w-]+(?:\/[\w-]+)?))\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://calendly.com/<%= remote_id %>?embed_domain=blok&embed_type=Inline',
+    id: (groups) => groups[0] ?? groups[1] ?? '',
+    width: 580,
+    height: 700,
+  },
+  tally: {
+    // Share links are /r/<formId>; the iframe endpoint is /embed/<formId>
+    // (also accepted directly when pasted from Tally's embed snippet).
+    regex: /^(?:https?:\/\/)?tally\.so\/(?:r|embed)\/(\w+)\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://tally.so/embed/<%= remote_id %>',
+    width: 580,
+    height: 500,
+  },
+  jotform: {
+    // Numeric form ids only — slug-based form URLs share their shape with
+    // marketing pages and are too risky to claim. All regional hosts
+    // (form./www./eu.) serve the same form; normalized onto form.jotform.com.
+    regex: /^(?:https?:\/\/)?(?:form|www|eu)\.jotform\.com\/(\d+)\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://form.jotform.com/<%= remote_id %>',
+    width: 580,
+    height: 540,
+  },
+  whimsical: {
+    // Board ids are the trailing base62 token after the last hyphen of the
+    // slug (or the whole segment for bare links). The 16+ length guard plus
+    // the reserved-path exclusion keeps marketing pages on the bookmark tool.
+    regex: /^(?:https?:\/\/)?(?:www\.)?whimsical\.com\/(?!(?:wireframes|templates|learn|blog|pricing|mind-maps|flowcharts|docs|ai|downloads|careers|contact|terms|privacy)(?:[/?#]|$))(?:[\w-]*-)?([A-Za-z0-9]{16,})\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://whimsical.com/embed/<%= remote_id %>',
+    width: 580,
+    height: 420,
+  },
+  excalidraw: {
+    // Shareable #json= links carry the scene E2E-encrypted: the decryption
+    // key lives in the fragment and never reaches the server, so the whole
+    // <docId>,<key> pair must be passed through verbatim. #room= collab
+    // links are live sessions, not documents, and are excluded.
+    regex: /^(?:https?:\/\/)?(?:www\.)?excalidraw\.com\/#json=([\w-]+),([\w-]+)$/,
+    embedUrl: 'https://excalidraw.com/#json=<%= remote_id %>',
+    id: (groups) => `${groups[0]},${groups[1]}`,
+    width: 580,
+    height: 420,
+  },
+  tldraw: {
+    // Share kinds: r (editable room), ro (read-only), v (snapshot), p (publish).
+    // /f/ file links are auth-only and excluded; the kind segment is kept
+    // because each renders through a different route.
+    regex: /^(?:https?:\/\/)?(?:www\.)?tldraw\.com\/(ro|r|v|p)\/([\w-]+)\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://www.tldraw.com/<%= remote_id %>',
+    id: (groups) => `${groups[0]}/${groups[1]}`,
+    width: 580,
+    height: 420,
+  },
+  mentimeter: {
+    // Public presentation links append /embed for the frameable viewer; an
+    // optional trailing slide id is dropped (the embed plays the whole deck).
+    // menti.com voting-code URLs are a different product surface and excluded.
+    regex: /^(?:https?:\/\/)?(?:www\.)?mentimeter\.com\/app\/presentation\/([\w-]+)(?:\/[\w-]+)?\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://www.mentimeter.com/app/presentation/<%= remote_id %>/embed',
+    width: 580,
+    height: 400,
+  },
+  behance: {
+    // Project pages are /gallery/<digits>/<slug>; only the numeric id feeds
+    // the /embed/project endpoint.
+    regex: /^(?:https?:\/\/)?(?:www\.)?behance\.net\/gallery\/(\d+)(?:[/?#]\S*)?$/,
+    embedUrl: 'https://www.behance.net/embed/project/<%= remote_id %>',
+    width: 580,
+    height: 460,
+  },
+  chromatic: {
+    // Published Storybook permalinks live on per-build subdomains; the
+    // ?path= value contains slashes, so the story/docs id is captured after
+    // its /story/ or /docs/ marker and rebuilt onto the iframe.html endpoint
+    // of the same host (full host+path in remote_id, as with typeform).
+    regex: /^(?:https?:\/\/)?([\w-]+)\.chromatic\.com\/\?(?:.*&)?path=\/(story|docs)\/([^\s&]+)\S*/,
+    embedUrl: 'https://<%= remote_id %>',
+    id: (groups) => `${groups[0]}.chromatic.com/iframe.html?id=${groups[2]}&viewMode=${groups[1] === 'docs' ? 'docs' : 'story'}`,
+    width: 580,
+    height: 400,
+  },
+  plunker: {
+    // Editor (/edit/), share (/plunk/) and direct embed-host links all map
+    // onto embed.plnkr.co; ?show=preview opens on the rendered output.
+    regex: /^(?:https?:\/\/)?(?:(?:www\.)?plnkr\.co\/(?:edit|plunk)\/|embed\.plnkr\.co\/)([\w-]+)\S*/,
+    embedUrl: 'https://embed.plnkr.co/<%= remote_id %>?show=preview',
+    width: 580,
+    height: 400,
+  },
+  datawrapper: {
+    // dwcdn ids are 5-char alnum; the optional numeric path segment is a chart
+    // version and is dropped (the bare id serves the latest published version).
+    regex: /^(?:https?:\/\/)?(?:datawrapper\.dwcdn\.net\/([A-Za-z0-9]{5})|(?:www\.)?datawrapper\.de\/_\/([A-Za-z0-9]{5}))(?:[/?#]\S*)?$/,
+    embedUrl: 'https://datawrapper.dwcdn.net/<%= remote_id %>/',
+    id: (groups) => groups[0] ?? groups[1] ?? '',
+    width: 580,
+    height: 400,
+  },
+  flourish: {
+    // /story/ links use the same flo.uri.sh embed shape as visualisations;
+    // the story render is unverified but the template is documented.
+    regex: /^(?:https?:\/\/)?public\.flourish\.studio\/(visualisation|story)\/(\d+)\S*/,
+    embedUrl: 'https://flo.uri.sh/<%= remote_id %>/embed',
+    id: (groups) => `${groups[0]}/${groups[1]}`,
+    width: 580,
+    height: 450,
+  },
+  ourworldindata: {
+    // Grapher/explorer pages are frameable as-is; query params encode chart
+    // state (countries, time range, tab) and must be preserved.
+    regex: /^(?:https?:\/\/)?(?:www\.)?ourworldindata\.org\/(grapher|explorers)\/([\w-]+)\/?(\?[^#\s]*)?(?:#\S*)?$/,
+    embedUrl: 'https://ourworldindata.org/<%= remote_id %>',
+    id: (groups) => `${groups[0]}/${groups[1]}${groups[2] ?? ''}`,
+    width: 580,
+    height: 480,
+  },
+  geogebra: {
+    // The dedicated /material/iframe/id/ embed endpoint is 410-dead, so the
+    // resource page is framed as-is (site chrome shows inside the frame).
+    regex: /^(?:https?:\/\/)?(?:www\.)?geogebra\.org\/(m|calculator|classic)\/(\w+)\S*/,
+    embedUrl: 'https://www.geogebra.org/<%= remote_id %>',
+    id: (groups) => `${groups[0]}/${groups[1]}`,
+    width: 580,
+    height: 480,
+  },
+  scratch: {
+    // The /embed player renders at its fixed 485x402 stage size.
+    regex: /^(?:https?:\/\/)?scratch\.mit\.edu\/projects\/(\d+)\S*/,
+    embedUrl: 'https://scratch.mit.edu/projects/<%= remote_id %>/embed',
+    width: 485,
+    height: 402,
+    fixedWidth: true,
+  },
+  kahoot: {
+    // Share pages send X-Frame-Options: DENY — the rewrite onto
+    // embed.kahoot.it is mandatory. The kahoot id is the trailing UUID.
+    regex: /^(?:https?:\/\/)?create\.kahoot\.it\/(?:details|share)\/(?:[\w-]+\/)?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\S*/,
+    embedUrl: 'https://embed.kahoot.it/<%= remote_id %>',
+    width: 580,
+    height: 420,
+  },
+  genially: {
+    // Ids are 24-char hex; legacy view.genial.ly links carry the same id.
+    // The bare view URL is frameable, the slug tail is dropped.
+    regex: /^(?:https?:\/\/)?view\.(?:genially\.com|genial\.ly)\/([0-9a-f]{24})\S*/,
+    embedUrl: 'https://view.genially.com/<%= remote_id %>',
+    width: 580,
+    height: 420,
+  },
+  infogram: {
+    // The embed host wants the FULL slug — the trailing id token alone 404s.
+    // Reserved site paths are excluded to keep them on the bookmark fallback.
+    regex: /^(?:https?:\/\/)?(?:www\.)?infogram\.com\/(?!(?:blog|examples|templates|features|create|api|pricing|login|signup|app|charts|maps|dashboards|reports|infographics|teams|education|about|careers|contact|terms|privacy|webinars|academy)(?:[/?#]|$))([\w-]+)\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://e.infogram.com/<%= remote_id %>?src=embed',
+    width: 580,
+    height: 480,
+  },
+  arcgisstorymaps: {
+    // Sends X-Frame-Options: SAMEORIGIN, but the CSP frame-ancestors https:
+    // directive overrides it in browsers (browser-verified) — passthrough works.
+    regex: /^(?:https?:\/\/)?storymaps\.arcgis\.com\/(stories|collections)\/([0-9a-f]{32})\S*/,
+    embedUrl: 'https://storymaps.arcgis.com/<%= remote_id %>',
+    id: (groups) => `${groups[0]}/${groups[1]}`,
+    width: 580,
+    height: 480,
+  },
+  felt: {
+    // Share pages send X-Frame-Options: SAMEORIGIN — the rewrite onto the
+    // /embed/map/ path is mandatory.
+    regex: /^(?:https?:\/\/)?(?:www\.)?felt\.com\/(?:embed\/)?map\/([\w-]+)\S*/,
+    embedUrl: 'https://felt.com/embed/map/<%= remote_id %>',
+    width: 580,
+    height: 480,
+  },
+  p5js: {
+    // /full/ is the chrome-less running sketch; sketch editor pages and
+    // /embed / /present variants all carry the same <user>/<id> pair.
+    regex: /^(?:https?:\/\/)?editor\.p5js\.org\/([\w.-]+)\/(?:sketches|full|embed|present)\/([\w-]+)\S*/,
+    embedUrl: 'https://editor.p5js.org/<%= remote_id %>',
+    id: (groups) => `${groups[0]}/full/${groups[1]}`,
+    width: 580,
+    height: 420,
+  },
+  wakelet: {
+    regex: /^(?:https?:\/\/)?(?:www\.)?wakelet\.com\/wake\/([\w-]+)\S*/,
+    embedUrl: 'https://embed.wakelet.com/wakes/<%= remote_id %>/list',
+    width: 580,
+    height: 480,
+  },
+  pollev: {
+    // Embeds the presenter's currently active poll. Usernames are a single
+    // lowercase segment; reserved site paths fall through to the bookmark tool.
+    regex: /^(?:https?:\/\/)?(?:www\.)?pollev\.com\/(?!(?:home|login|signup|register|app|features|pricing|support|mobile|proctor|clear|terms|privacy)(?:[/?#]|$))([a-z0-9]+)\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://pollev-embeds.com/<%= remote_id %>',
+    width: 580,
+    height: 480,
+  },
+  wolframcloud: {
+    // Published objects are frameable as-is; non-public objects 302 to a
+    // Wolfram login page inside the frame.
+    regex: /^(?:https?:\/\/)?(?:www\.)?wolframcloud\.com\/obj\/(\S+)/,
+    embedUrl: 'https://www.wolframcloud.com/obj/<%= remote_id %>',
+    width: 580,
+    height: 480,
+  },
+  sketchfab: {
+    // Model ids are the 32-char hex tail of the slug. Share pages send
+    // X-Frame-Options: SAMEORIGIN — the /embed rewrite is mandatory.
+    regex: /^(?:https?:\/\/)?(?:www\.)?sketchfab\.com\/(?:3d-models\/(?:[\w-]+-)?([0-9a-f]{32})|models\/([0-9a-f]{32}))\S*/,
+    embedUrl: 'https://sketchfab.com/models/<%= remote_id %>/embed',
+    id: (groups) => groups[0] ?? groups[1] ?? '',
+    width: 580,
+    height: 400,
+  },
+  openstreetmap: {
+    // The view URL only carries zoom/lat/lon, but export/embed.html wants a
+    // bbox, so id() reconstructs the 580x420 viewport in degrees (Mercator
+    // approximation: latitude degrees-per-pixel shrink by cos(lat)), clamped
+    // to world bounds. ?mlat/&mlon marker params are carried over as &marker=.
+    regex: /^(?:https?:\/\/)?(?:www\.)?openstreetmap\.org\/(?:\?(?:[^#\s]*&)?mlat=(-?[\d.]+)&mlon=(-?[\d.]+)[^#\s]*)?#map=(\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)\S*/,
+    embedUrl: 'https://www.openstreetmap.org/export/embed.html?<%= remote_id %>',
+    id: (groups) => {
+      const [mlat, mlon, zoom, lat, lon] = groups.map((value) => (value !== undefined ? Number(value) : undefined));
+      const degPerPx = 360 / (256 * 2 ** (zoom ?? 0));
+      const halfWidth = (580 / 2) * degPerPx;
+      const halfHeight = (420 / 2) * degPerPx * Math.cos(((lat ?? 0) * Math.PI) / 180);
+      const clamp = (value: number, limit: number): string => Math.min(limit, Math.max(-limit, value)).toFixed(6);
+      const bbox = `${clamp((lon ?? 0) - halfWidth, 180)},${clamp((lat ?? 0) - halfHeight, 85)},${clamp((lon ?? 0) + halfWidth, 180)},${clamp((lat ?? 0) + halfHeight, 85)}`;
+      const marker = mlat !== undefined && mlon !== undefined ? `&marker=${mlat},${mlon}` : '';
+
+      return `bbox=${bbox}&layer=mapnik${marker}`;
+    },
+    width: 580,
+    height: 420,
+  },
+  tencentvideo: {
+    // vid is the last path token on both cover and page URLs; mobile pages
+    // carry it in ?vid=. Like youku, many streams play mainland-China-only
+    // at stream level; the txp player itself frames anywhere.
+    regex: /^(?:https?:\/\/)?(?:m\.)?v\.qq\.com\/x\/(?:(?:cover\/\w+\/|page\/)([a-z0-9]+)\.html?|m\/play\?(?:.*&)?vid=([a-z0-9]+))\S*/,
+    embedUrl: 'https://v.qq.com/txp/iframe/player.html?vid=<%= remote_id %>',
+    id: (groups) => groups[0] ?? groups[1] ?? '',
+    width: 580,
+    height: 320,
+  },
+  douyin: {
+    // Official no-permission iframe player (developer.open-douyin.com).
+    // Opaque v.douyin.com / iesdouyin.com short links resolve only via
+    // redirect and are excluded.
+    regex: /^(?:https?:\/\/)?(?:www\.)?douyin\.com\/video\/(\d+)\S*/,
+    embedUrl: 'https://open.douyin.com/player/video?vid=<%= remote_id %>&autoplay=0',
+    width: 325,
+    height: 580,
+    fixedWidth: true,
+  },
+  kinescope: {
+    // Video ids are long base62 tokens; the length guard keeps site pages
+    // (kinescope.io/pricing, /blog, ...) on the bookmark fallback. Per-video
+    // domain-allowlist/DRM are customer options — restricted videos error
+    // inside the frame.
+    regex: /^(?:https?:\/\/)?(?:www\.)?kinescope\.io\/(?:embed\/)?([A-Za-z0-9]{16,})\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://kinescope.io/embed/<%= remote_id %>',
+    width: 580,
+    height: 320,
+  },
+  vidio: {
+    // Watch pages are /watch/<numericId>-<slug>; only the numeric id feeds
+    // the embed. The embed host sends X-Frame-Options: ALLOWALL; premium/DRM
+    // titles show an upsell inside the frame.
+    regex: /^(?:https?:\/\/)?(?:www\.)?vidio\.com\/watch\/(\d+)-[\w-]+\S*/,
+    embedUrl: 'https://www.vidio.com/embed/<%= remote_id %>',
+    width: 580,
+    height: 320,
+  },
+  mailru: {
+    // Portal pages send X-Frame-Options: DENY — only the /video/embed/ form
+    // is frameable (insert embed/ after /video/, drop .html). Legacy
+    // videoapi.my.mail.ru embed links 301 onto this same form.
+    regex: /^(?:https?:\/\/)?my\.mail\.ru\/(mail|inbox|list|bk|community|v)\/([\w.-]+)\/video\/([\w-]+)\/(\d+)\.html?\S*/,
+    embedUrl: 'https://my.mail.ru/<%= remote_id %>',
+    id: (groups) => `${groups[0]}/${groups[1]}/video/embed/${groups[2]}/${groups[3]}`,
+    width: 580,
+    height: 320,
+  },
+  smotrim: {
+    // The player shell 200s for any id (invalid ids error inside the frame);
+    // many streams are RU/CIS-geo-locked at stream level.
+    regex: /^(?:https?:\/\/)?(?:www\.)?smotrim\.ru\/video\/(\d+)\S*/,
+    embedUrl: 'https://player.smotrim.ru/iframe/video/id/<%= remote_id %>/sid/smotrim',
+    width: 580,
+    height: 320,
+  },
   twitter: {
     // Script-only: rendered via platform.twitter.com/widgets.js, not an iframe.
     regex: /^(?:https?:\/\/)?(?:(?:www|mobile)\.)?(?:twitter|x)\.com\/(?:i\/web|\w+)\/status\/(\d+)\S*/,
@@ -518,6 +1150,16 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     kind: 'script',
     id: (groups) => `${groups[0]}/${groups[1]}`,
     width: 580,
+    height: 0,
+  },
+  threads: {
+    // Script-only: rendered via www.threads.com/embed.js scanning a
+    // text-post-media blockquote. The .net mirror is normalized onto .com.
+    regex: /^(?:https?:\/\/)?(?:www\.)?threads\.(?:com|net)\/(@[\w.]+)\/post\/([\w-]+)\S*/,
+    embedUrl: 'https://www.threads.com/<%= remote_id %>',
+    kind: 'script',
+    id: (groups) => `${groups[0]}/post/${groups[1]}`,
+    width: 550,
     height: 0,
   },
 };

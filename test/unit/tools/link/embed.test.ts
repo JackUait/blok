@@ -153,6 +153,56 @@ describe('Embed tool', () => {
     expect(script?.getAttribute('src')).toContain('twitter.com');
   });
 
+  it('resolves a pasted Threads URL as a script embed', () => {
+    const tool = new Embed(createOptions());
+
+    tool.onPaste(patternEvent('threads', 'https://www.threads.com/@zuck/post/C8z2Qq0Rk1x'));
+
+    expect(tool.save()).toMatchObject({
+      service: 'threads',
+      kind: 'script',
+      embed: 'https://www.threads.com/@zuck/post/C8z2Qq0Rk1x',
+    });
+  });
+
+  it('renders the official text-post blockquote + embed.js script for a Threads embed', () => {
+    const tool = new Embed(
+      createOptions({
+        service: 'threads',
+        source: 'https://www.threads.net/@zuck/post/C8z2Qq0Rk1x',
+        embed: 'https://www.threads.com/@zuck/post/C8z2Qq0Rk1x',
+        kind: 'script',
+      })
+    );
+
+    const root = tool.render();
+    const blockquote = root.querySelector('blockquote');
+    const script = root.querySelector('script');
+
+    expect(root.querySelector('iframe')).toBeNull();
+    expect(blockquote?.className).toBe('text-post-media');
+    expect(blockquote?.getAttribute('data-text-post-permalink')).toBe('https://www.threads.com/@zuck/post/C8z2Qq0Rk1x');
+    expect(blockquote?.getAttribute('data-text-post-version')).toBe('0');
+    expect(blockquote?.querySelector('a')?.getAttribute('href')).toBe('https://www.threads.com/@zuck/post/C8z2Qq0Rk1x');
+    expect(script?.getAttribute('src')).toBe('https://www.threads.com/embed.js');
+  });
+
+  it('keeps the embed-script testid container for a Threads embed', () => {
+    const tool = new Embed(
+      createOptions({
+        service: 'threads',
+        source: 'https://www.threads.com/@zuck/post/C8z2Qq0Rk1x',
+        embed: 'https://www.threads.com/@zuck/post/C8z2Qq0Rk1x',
+        kind: 'script',
+      })
+    );
+
+    const root = tool.render();
+
+    expect(root.querySelector('[data-blok-testid="embed-script"]')).not.toBeNull();
+    expect(root.querySelector('blockquote.twitter-tweet')).toBeNull();
+  });
+
   it('validates only when source and embed are present', () => {
     const tool = new Embed(createOptions());
 

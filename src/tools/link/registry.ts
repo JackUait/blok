@@ -167,27 +167,66 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     width: 580,
     height: 480,
   },
+  googledocspublished: {
+    // "Publish to the web" links carry a 2PACX token under d/e/ that is not a
+    // document id: /preview 404s for them, Google's own embed code is /pub?embedded=true.
+    regex: /^(?:https?:\/\/)?docs\.google\.com\/document\/(?:u\/\d+\/)?d\/e\/([\w-]+)\S*/,
+    embedUrl: 'https://docs.google.com/document/d/e/<%= remote_id %>/pub?embedded=true',
+    width: 580,
+    height: 480,
+  },
   googledocs: {
-    regex: /^(?:https?:\/\/)?docs\.google\.com\/document\/(?:u\/\d+\/)?d\/([\w-]+)\S*/,
+    // (?!e\/) keeps published d/e/ links out of this entry regardless of registry order.
+    regex: /^(?:https?:\/\/)?docs\.google\.com\/document\/(?:u\/\d+\/)?d\/(?!e\/)([\w-]+)\S*/,
     embedUrl: 'https://docs.google.com/document/d/<%= remote_id %>/preview',
     width: 580,
     height: 480,
   },
   googlesheets: {
-    regex: /^(?:https?:\/\/)?docs\.google\.com\/spreadsheets\/(?:u\/\d+\/)?d\/([\w-]+)\S*/,
-    embedUrl: 'https://docs.google.com/spreadsheets/d/<%= remote_id %>/preview',
+    // Branch 1 claims published d/e/<2PACX token> links (embedded via Google's own
+    // pubhtml?widget=true&headers=false endpoint), branch 2 normal d/<fileId> links.
+    regex: /^(?:https?:\/\/)?docs\.google\.com\/spreadsheets\/(?:u\/\d+\/)?d\/(?:e\/([\w-]+)|([\w-]+))\S*/,
+    embedUrl: 'https://docs.google.com/spreadsheets/d/<%= remote_id %>',
+    id: (groups) =>
+      groups[0] !== undefined
+        ? `e/${groups[0]}/pubhtml?widget=true&headers=false`
+        : `${groups[1]}/preview`,
     width: 580,
     height: 480,
   },
   googleslides: {
-    regex: /^(?:https?:\/\/)?docs\.google\.com\/presentation\/(?:u\/\d+\/)?d\/([\w-]+)\S*/,
+    // Published links keep the literal e/ segment inside the id, so the same
+    // /embed template serves both d/<id> and d/e/<2PACX token> URLs.
+    regex: /^(?:https?:\/\/)?docs\.google\.com\/presentation\/(?:u\/\d+\/)?d\/((?:e\/)?[\w-]+)\S*/,
     embedUrl: 'https://docs.google.com/presentation/d/<%= remote_id %>/embed?start=false&loop=false&delayms=3000',
     width: 580,
     height: 480,
   },
   googleforms: {
-    regex: /^(?:https?:\/\/)?docs\.google\.com\/forms\/d\/e\/([\w-]+)\/viewform\S*/,
-    embedUrl: 'https://docs.google.com/forms/d/e/<%= remote_id %>/viewform?embedded=true',
+    // Legacy d/<editId>/viewform links work because Google 301s them to the
+    // canonical d/e/ embed URL with the query string preserved.
+    regex: /^(?:https?:\/\/)?docs\.google\.com\/forms\/(?:u\/\d+\/)?d\/((?:e\/)?[\w-]+)\/viewform\S*/,
+    embedUrl: 'https://docs.google.com/forms/d/<%= remote_id %>/viewform?embedded=true',
+    width: 580,
+    height: 480,
+  },
+  drawio: {
+    // Frameable only on viewer.diagrams.net (app.diagrams.net sends frame-ancestors),
+    // so every variant is normalized onto the viewer host. #G drive refs are rewritten
+    // to the same #U published-link form draw.io itself generates (file must be
+    // link-shared). #H (GitHub) / #W (OneDrive) refs are auth-bound and excluded.
+    // Note: #R inline-XML links over 450 chars never reach the registry (paste cap).
+    regex: /^(?:https?:\/\/)?(?:(?:viewer|app)\.diagrams\.net|(?:www\.)?draw\.io)\/(\?[^#\s]*)?#(?:([UR])(\S+)|G([\w-]+)\S*)/,
+    embedUrl: 'https://viewer.diagrams.net/<%= remote_id %>',
+    id: (groups) => {
+      const [query, urType, urPayload, driveId] = groups;
+
+      if (driveId !== undefined) {
+        return `?tags=%7B%7D&lightbox=1&highlight=0000ff&layers=1&nav=1#Uhttps%3A%2F%2Fdrive.google.com%2Fuc%3Fid%3D${driveId}%26export%3Ddownload`;
+      }
+
+      return `${query ?? '?lightbox=1&nav=1'}#${urType}${urPayload}`;
+    },
     width: 580,
     height: 480,
   },
@@ -250,7 +289,8 @@ export function buildEmbedUrl(service: string, remoteId: string): string {
     throw new Error(`Unknown embed service: ${service}`);
   }
 
-  return config.embedUrl.replace(REMOTE_ID_TEMPLATE, remoteId);
+  // Replacer fn so remote ids containing `$&`-style patterns are inserted literally.
+  return config.embedUrl.replace(REMOTE_ID_TEMPLATE, () => remoteId);
 }
 
 /**

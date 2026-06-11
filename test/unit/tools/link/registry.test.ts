@@ -419,6 +419,141 @@ describe('link registry', () => {
       expect(result?.service).toBe('googleforms');
       expect(result?.embedUrl).toBe('https://docs.google.com/forms/d/e/1FAIpQLSdummyFormId123/viewform?embedded=true');
     });
+
+    it('matches a Google Forms link with an account-index segment', () => {
+      const result = matchEmbedService('https://docs.google.com/forms/u/1/d/e/1FAIpQLSdummyFormId123/viewform');
+
+      expect(result?.service).toBe('googleforms');
+      expect(result?.embedUrl).toBe('https://docs.google.com/forms/d/e/1FAIpQLSdummyFormId123/viewform?embedded=true');
+    });
+
+    it('matches a legacy Google Forms link without the e/ segment', () => {
+      const result = matchEmbedService('https://docs.google.com/forms/d/1r5zrO4VnIu8NGfNVIbjkWjRqsBubSh-JgehSL1vDm1k/viewform');
+
+      expect(result?.service).toBe('googleforms');
+      expect(result?.embedUrl).toBe('https://docs.google.com/forms/d/1r5zrO4VnIu8NGfNVIbjkWjRqsBubSh-JgehSL1vDm1k/viewform?embedded=true');
+    });
+
+    it('does not match forms.gle short links or form editor links', () => {
+      expect(matchEmbedService('https://forms.gle/Ab3dEfGh12')).toBeNull();
+      expect(matchEmbedService('https://docs.google.com/forms/d/1r5zrO4VnIu8NGfNVIbjkWjRqsBubSh-JgehSL1vDm1k/edit')).toBeNull();
+    });
+  });
+
+  describe('Published Google Workspace (d/e/2PACX) URL variants', () => {
+    const DOCS_TOKEN = '2PACX-1vQpBF5Z9a02DALDxXD652Vic622H';
+    const SHEETS_TOKEN = '2PACX-1vTFW5Q43lfOxIM3DkQU68ROWGR2NKo';
+
+    it('embeds a published Google Doc via its pub?embedded=true endpoint', () => {
+      const result = matchEmbedService(`https://docs.google.com/document/d/e/${DOCS_TOKEN}/pub`);
+
+      expect(result?.service).toBe('googledocspublished');
+      expect(result?.embedUrl).toBe(`https://docs.google.com/document/d/e/${DOCS_TOKEN}/pub?embedded=true`);
+    });
+
+    it('matches published Google Doc account-index and protocol-less variants', () => {
+      expect(matchEmbedService(`https://docs.google.com/document/u/0/d/e/${DOCS_TOKEN}/pub`)?.service).toBe('googledocspublished');
+      expect(matchEmbedService(`docs.google.com/document/d/e/${DOCS_TOKEN}/pub?embedded=true`)?.service).toBe('googledocspublished');
+    });
+
+    it('still routes a doc id starting with the letter e to googledocs', () => {
+      const result = matchEmbedService('https://docs.google.com/document/d/eAbCdEf1234567890qwerty/edit');
+
+      expect(result?.service).toBe('googledocs');
+      expect(result?.embedUrl).toBe('https://docs.google.com/document/d/eAbCdEf1234567890qwerty/preview');
+    });
+
+    it('embeds a published Google Sheet via pubhtml?widget=true&headers=false', () => {
+      const result = matchEmbedService(`https://docs.google.com/spreadsheets/d/e/${SHEETS_TOKEN}/pubhtml`);
+
+      expect(result?.service).toBe('googlesheets');
+      expect(result?.embedUrl).toBe(`https://docs.google.com/spreadsheets/d/e/${SHEETS_TOKEN}/pubhtml?widget=true&headers=false`);
+    });
+
+    it('normalizes published Google Sheet export links to the pubhtml embed', () => {
+      const result = matchEmbedService(`https://docs.google.com/spreadsheets/d/e/${SHEETS_TOKEN}/pub?output=csv`);
+
+      expect(result?.embedUrl).toBe(`https://docs.google.com/spreadsheets/d/e/${SHEETS_TOKEN}/pubhtml?widget=true&headers=false`);
+    });
+
+    it('keeps the /preview embed for a normal Google Sheet link', () => {
+      const result = matchEmbedService('https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit#gid=0');
+
+      expect(result?.embedUrl).toBe('https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/preview');
+    });
+
+    it('embeds a published Google Slides deck keeping the e/ prefix', () => {
+      const result = matchEmbedService(`https://docs.google.com/presentation/d/e/${DOCS_TOKEN}/pub?start=false&loop=false&delayms=3000`);
+
+      expect(result?.service).toBe('googleslides');
+      expect(result?.embedUrl).toBe(`https://docs.google.com/presentation/d/e/${DOCS_TOKEN}/embed?start=false&loop=false&delayms=3000`);
+    });
+
+    it('still routes a presentation id starting with the letter e to the plain embed', () => {
+      const result = matchEmbedService('https://docs.google.com/presentation/d/eXyZ123-abc/edit');
+
+      expect(result?.embedUrl).toBe('https://docs.google.com/presentation/d/eXyZ123-abc/embed?start=false&loop=false&delayms=3000');
+    });
+  });
+
+  describe('draw.io / diagrams.net URL variants', () => {
+    const VIEWER_PUBLISHED =
+      'https://viewer.diagrams.net/?tags=%7B%7D&lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1&title=arch.drawio#Uhttps%3A%2F%2Fdrive.google.com%2Fuc%3Fid%3D1AbCdEfGhIjKlMnOp%26export%3Ddownload';
+
+    it('embeds a published viewer link as-is', () => {
+      const result = matchEmbedService(VIEWER_PUBLISHED);
+
+      expect(result?.service).toBe('drawio');
+      expect(result?.embedUrl).toBe(VIEWER_PUBLISHED);
+    });
+
+    it('adds lightbox params to a bare viewer #U link', () => {
+      const result = matchEmbedService('https://viewer.diagrams.net/#Uhttps%3A%2F%2Fexample.com%2Fd.drawio');
+
+      expect(result?.embedUrl).toBe('https://viewer.diagrams.net/?lightbox=1&nav=1#Uhttps%3A%2F%2Fexample.com%2Fd.drawio');
+    });
+
+    it('swaps app.diagrams.net editor links onto the frameable viewer host', () => {
+      const result = matchEmbedService(
+        'https://app.diagrams.net/?lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fjgraph%2Fdrawio%2Fmaster%2FTEMPLATE.drawio'
+      );
+
+      expect(result?.service).toBe('drawio');
+      expect(result?.embedUrl).toBe(
+        'https://viewer.diagrams.net/?lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fjgraph%2Fdrawio%2Fmaster%2FTEMPLATE.drawio'
+      );
+    });
+
+    it('rewrites a #G Google Drive ref to the published-link viewer form', () => {
+      const result = matchEmbedService('https://app.diagrams.net/#G1SkVL90deLHGYpv8hQ7uYHWZk6Ad7Q2BU');
+
+      expect(result?.service).toBe('drawio');
+      expect(result?.embedUrl).toBe(
+        'https://viewer.diagrams.net/?tags=%7B%7D&lightbox=1&highlight=0000ff&layers=1&nav=1#Uhttps%3A%2F%2Fdrive.google.com%2Fuc%3Fid%3D1SkVL90deLHGYpv8hQ7uYHWZk6Ad7Q2BU%26export%3Ddownload'
+      );
+    });
+
+    it('supports protocol-less and legacy draw.io hosts', () => {
+      expect(matchEmbedService('app.diagrams.net/#G1SkVL90deLHGYpv8hQ7uYHWZk6Ad7Q2BU')?.service).toBe('drawio');
+
+      const legacy = matchEmbedService('https://www.draw.io/?lightbox=1&edit=_blank#R7VtZc4JADP41Pj');
+
+      expect(legacy?.service).toBe('drawio');
+      expect(legacy?.embedUrl).toBe('https://viewer.diagrams.net/?lightbox=1&edit=_blank#R7VtZc4JADP41Pj');
+    });
+
+    it('does not match non-diagram diagrams.net pages or auth-bound refs', () => {
+      expect(matchEmbedService('https://www.drawio.com/blog/publish-link')).toBeNull();
+      expect(matchEmbedService('https://app.diagrams.net/')).toBeNull();
+      expect(matchEmbedService('https://app.diagrams.net/#Hjgraph%2Fdrawio%2Fmaster%2FTEMPLATE.drawio')).toBeNull();
+      expect(matchEmbedService('https://app.diagrams.net/#W!s!sequence-123')).toBeNull();
+    });
+
+    it('does not match lookalike or nested hosts', () => {
+      expect(matchEmbedService('https://notapp.diagrams.net/#G12345')).toBeNull();
+      expect(matchEmbedService('https://embed.diagrams.net/#G123')).toBeNull();
+      expect(matchEmbedService('https://example.com/?u=https://viewer.diagrams.net/#Uhttps%3A%2F%2Fx')).toBeNull();
+    });
   });
 
   describe('Twitter/X URL variants', () => {
@@ -479,6 +614,15 @@ describe('link registry', () => {
       expect(fullMatch('twitter', 'https://x.com/user/status/123?s=20')).toBe(true);
       expect(fullMatch('telegram', 'https://t.me/durov/123?single')).toBe(true);
     });
+
+    it('consumes the entire URL on the new published-google and drawio patterns', () => {
+      expect(fullMatch('googledocspublished', 'https://docs.google.com/document/d/e/2PACX-1vQpBF5Z9a02DAL/pub?embedded=true')).toBe(true);
+      expect(fullMatch('googlesheets', 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTFW5Q43lfOxIM/pubhtml?gid=0&single=true')).toBe(true);
+      expect(fullMatch('googleslides', 'https://docs.google.com/presentation/d/e/2PACX-1vRxK9_aBcDeF/pub?start=false&loop=false&delayms=3000')).toBe(true);
+      expect(fullMatch('googleforms', 'https://docs.google.com/forms/u/0/d/e/1FAIpQLSdummy/viewform?embedded=true')).toBe(true);
+      expect(fullMatch('drawio', 'https://app.diagrams.net/#G1SkVL90deLHGYpv8hQ7uYHWZk6Ad7Q2BU')).toBe(true);
+      expect(fullMatch('drawio', 'https://viewer.diagrams.net/?lightbox=1&nav=1#Uhttps%3A%2F%2Fexample.com%2Fd.drawio')).toBe(true);
+    });
   });
 
   describe('buildEmbedUrl', () => {
@@ -496,6 +640,10 @@ describe('link registry', () => {
 
     it('throws for an unknown service', () => {
       expect(() => buildEmbedUrl('nope', 'x')).toThrow();
+    });
+
+    it('inserts remote ids containing replacement patterns literally', () => {
+      expect(buildEmbedUrl('youtube', 'a$&b')).toBe('https://www.youtube.com/embed/a$&b');
     });
   });
 

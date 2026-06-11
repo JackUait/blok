@@ -298,6 +298,21 @@
 }
 
 /**
+ * Embed selection styles
+ * The embed figure can be narrower than the content box (percent width +
+ * alignment), so painting the selection on the full-width content wrapper
+ * highlights empty gutters. Drop the wrapper background and draw a padded
+ * selection rectangle that hugs the figure's real dimensions instead.
+ */
+[data-blok-selected="true"] [data-blok-element-content]:has([data-role="embed-figure"]) {
+  @apply bg-transparent;
+}
+
+[data-blok-selected="true"] [data-role="embed-figure"]::before {
+  @apply content-[''] absolute -inset-2 rounded-md bg-selection pointer-events-none;
+}
+
+/**
  * Child-container heading overrides (callout, toggle heading)
  * Inside [data-blok-toggle-children], headings should match paragraph spacing
  * rather than using their large root-level top margins (mt-8, mt-[26px], etc.).

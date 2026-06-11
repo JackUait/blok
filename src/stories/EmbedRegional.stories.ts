@@ -29,6 +29,12 @@ const REGIONAL_SAMPLES = {
   dailymotion: 'https://www.dailymotion.com/video/xaduou6',
   okru: 'https://ok.ru/video/11338458073644',
   arte: 'https://www.arte.tv/en/videos/110989-000-A/steven-spielberg/',
+  tencentvideo: 'https://v.qq.com/x/cover/mzc00200xj9k3pa/j0032qtxztf.html',
+  douyin: 'https://www.douyin.com/video/7331122334455667788',
+  kinescope: 'https://kinescope.io/0sjQ4cSGrqMVKj3KMTAn2g',
+  vidio: 'https://www.vidio.com/watch/7448242-keluarga-superior-eps-1?utm_source=share',
+  mailru: 'https://my.mail.ru/mail/somename/video/_myvideo/123.html',
+  smotrim: 'https://smotrim.ru/video/2898424',
 } as const;
 
 type RegionalService = keyof typeof REGIONAL_SAMPLES;
@@ -125,3 +131,21 @@ export const Dailymotion: Story = createServiceStory('dailymotion');
 export const OkRu: Story = createServiceStory('okru');
 
 export const Arte: Story = createServiceStory('arte');
+
+/** Cover URLs carry the vid as the last path token — only the vid feeds the txp player. */
+export const TencentVideo: Story = createServiceStory('tencentvideo');
+
+/** fixedWidth vertical player (325x580) — the block must not stretch it to full width. */
+export const Douyin: Story = createServiceStory('douyin');
+
+/** Share URL is the bare long base62 token; the embed form just prefixes /embed/. */
+export const Kinescope: Story = createServiceStory('kinescope');
+
+/** Watch path is /watch/<numericId>-<slug>; only the numeric id feeds the embed. */
+export const Vidio: Story = createServiceStory('vidio');
+
+/** Multi-segment path id — embed/ is spliced after /video/ and .html dropped. */
+export const MailRu: Story = createServiceStory('mailru');
+
+/** Player lives on a separate host with a /sid/smotrim suffix appended to the id. */
+export const Smotrim: Story = createServiceStory('smotrim');

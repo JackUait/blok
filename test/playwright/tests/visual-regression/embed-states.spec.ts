@@ -242,6 +242,21 @@ test.describe('Embed states — visual regression', () => {
     await expect(page).toHaveScreenshot('embed-state-script-telegram.png', { ...SCREENSHOT_OPTIONS, clip: SCRIPT_EMBED_CLIP });
   });
 
+  test('script kind: threads', async ({ page }) => {
+    await createEmbedBlok(page, {
+      service: 'threads',
+      source: 'https://www.threads.com/@zuck/post/C2QBoRaRmR1',
+      embed: 'https://www.threads.com/@zuck/post/C2QBoRaRmR1',
+      kind: 'script',
+      width: 550,
+      height: 0,
+    });
+
+    await expect(page.locator('[data-blok-testid="embed-script"]')).toBeAttached();
+
+    await expect(page).toHaveScreenshot('embed-state-script-threads.png', { ...SCREENSHOT_OPTIONS, clip: SCRIPT_EMBED_CLIP });
+  });
+
   test('hover: resize handles revealed', async ({ page }) => {
     await createEmbedBlok(page, youtubeData());
     const figure = await waitForFrameLoaded(page);

@@ -4,12 +4,12 @@ import { EMBED_SERVICES, matchEmbedService, type EmbedMatch } from '../../../../
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 
 /**
- * Visual regression — one screenshot per audio/music embed service.
+ * Visual regression — one screenshot per productivity embed service.
  *
  * Every external request is stubbed with a deterministic gray page, so the
  * screenshot captures the block chrome plus each service's characteristic
- * aspect ratio (audio players are short/wide) without depending on live
- * provider markup.
+ * aspect ratio (scheduling/forms/whiteboards are tall) without depending on
+ * live provider markup.
  *
  * Sample URLs mirror the positive cases proven by
  * test/unit/tools/link/registry.test.ts; block data is built exactly the way
@@ -33,33 +33,17 @@ const SCREENSHOT_OPTIONS = {
   caret: 'hide' as const,
 };
 
-const AUDIO_SERVICES: ReadonlyArray<{ service: string; source: string }> = [
-  { service: 'spotify', source: 'https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT' },
-  { service: 'yandexmusic', source: 'https://music.yandex.ru/album/11904129/track/70471675' },
-  { service: 'deezer', source: 'https://www.deezer.com/track/3135556' },
-  { service: 'soundcloud', source: 'https://soundcloud.com/forss/flickermood' },
-  { service: 'mixcloud', source: 'https://www.mixcloud.com/spartacus/party-time/' },
-  { service: 'applemusic', source: 'https://music.apple.com/us/album/1989-taylors-version/1708308989' },
-  { service: 'applepodcasts', source: 'https://podcasts.apple.com/us/podcast/the-daily/id1200361736' },
-  { service: 'audiomack', source: 'https://audiomack.com/innercatmusic/song/allegro-in-b-flat-k-3' },
-  { service: 'anghami', source: 'https://play.anghami.com/song/45385197' },
-  { service: 'tidal', source: 'https://tidal.com/browse/track/46757219' },
-  { service: 'spotifypodcasters', source: 'https://creators.spotify.com/pod/show/myshow/episodes/Ep-Title-e2abc1d' },
-  { service: 'pocketcasts', source: 'https://pca.st/itl5093f' },
-  { service: 'iheart', source: 'https://www.iheart.com/podcast/105-stuff-you-should-know-26940277/' },
-  { service: 'acast', source: 'https://shows.acast.com/dansnowshistoryhit/episodes/the-battle-of-britain' },
-  { service: 'podbean', source: 'https://www.podbean.com/ew/pb-k3gmv-14a8e2b' },
-  { service: 'spreaker', source: 'https://www.spreaker.com/episode/the-best-episode-ever--58444864' },
-  { service: 'buzzsprout', source: 'https://www.buzzsprout.com/1121972/episodes/15967567-our-best-episode' },
-  { service: 'castbox', source: 'https://castbox.fm/episode/Ep.-100%3A-The-Finale-id1234567-id987654321?country=us' },
-  { service: 'transistor', source: 'https://share.transistor.fm/s/9b4dde55' },
-  { service: 'audioboom', source: 'https://audioboom.com/posts/8730423-our-great-episode' },
-  { service: 'tunein', source: 'https://tunein.com/radio/Jazz24-s34682/' },
-  { service: 'beatport', source: 'https://www.beatport.com/track/strobe/1696999' },
-  { service: 'netease', source: 'https://music.163.com/song?id=347230' },
-  { service: 'suno', source: 'https://suno.com/song/df9e2bc9-8e2e-4b9a-a1c3-0123456789ab' },
-  { service: 'hearthis', source: 'https://hearthis.at/djmix/summer-session-2024/' },
-  { service: 'boomplay', source: 'https://www.boomplay.com/songs/129188941?srModel=COPYLINK' },
+const PRODUCTIVITY_SERVICES: ReadonlyArray<{ service: string; source: string }> = [
+  { service: 'calendly', source: 'https://calendly.com/acme-team' },
+  { service: 'tally', source: 'https://tally.so/r/wMNDgn' },
+  { service: 'jotform', source: 'https://form.jotform.com/241234567890123' },
+  { service: 'whimsical', source: 'https://whimsical.com/my-roadmap-Q3xL9mTzKvB2aWcRpD8uHn' },
+  { service: 'excalidraw', source: 'https://excalidraw.com/#json=AbC123dEf456GhI789jK,XyZ987wVu654TsR321qP' },
+  { service: 'tldraw', source: 'https://www.tldraw.com/r/AbCdEf123456' },
+  { service: 'mentimeter', source: 'https://www.mentimeter.com/app/presentation/alxyz1u2abcdefg' },
+  { service: 'behance', source: 'https://www.behance.net/gallery/123456789/Brand-Identity' },
+  { service: 'chromatic', source: 'https://5ccbc373887ca40020446347-abcdef.chromatic.com/?path=/story/button--primary' },
+  { service: 'plunker', source: 'https://plnkr.co/edit/abc123XYZ' },
 ];
 
 /**
@@ -76,7 +60,7 @@ const resolveMatch = (source: string): EmbedMatch => {
   return match;
 };
 
-test.describe('Embed services (audio) — visual regression', () => {
+test.describe('Embed services (productivity) — visual regression', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
   });
@@ -91,7 +75,7 @@ test.describe('Embed services (audio) — visual regression', () => {
     await page.goto(TEST_PAGE_URL);
   });
 
-  for (const { service, source } of AUDIO_SERVICES) {
+  for (const { service, source } of PRODUCTIVITY_SERVICES) {
     test(service, async ({ page }) => {
       const match = resolveMatch(source);
 

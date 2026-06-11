@@ -235,3 +235,25 @@ export const TelegramScript: Story = {
     }, WAIT_OPTIONS);
   },
 };
+
+/**
+ * Script-kind embed for Threads: a text-post-media blockquote upgraded by embed.js.
+ * Data matches exactly what the tool produces after pasting a threads.com post URL.
+ */
+export const ThreadsScript: Story = {
+  args: {
+    data: createEmbedData('embed-threads', {
+      service: 'threads',
+      source: 'https://www.threads.com/@zuck/post/C2QBoRaRmR1',
+      embed: 'https://www.threads.com/@zuck/post/C2QBoRaRmR1',
+      kind: 'script',
+      width: 550,
+      height: 0,
+    }),
+  },
+  play: async ({ canvasElement }) => {
+    await waitFor(() => {
+      expect(canvasElement.querySelector(SCRIPT_SELECTOR)).not.toBeNull();
+    }, WAIT_OPTIONS);
+  },
+};

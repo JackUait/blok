@@ -77,6 +77,12 @@ const REGIONAL_SERVICES: ReadonlyArray<{ service: string; source: string }> = [
   { service: 'dailymotion', source: 'https://www.dailymotion.com/video/xaduou6' },
   { service: 'okru', source: 'https://ok.ru/video/11338458073644' },
   { service: 'arte', source: 'https://www.arte.tv/en/videos/110989-000-A/steven-spielberg/' },
+  { service: 'tencentvideo', source: 'https://v.qq.com/x/cover/mzc00200xj9k3pa/j0032qtxztf.html' },
+  { service: 'douyin', source: 'https://www.douyin.com/video/7331122334455667788' },
+  { service: 'kinescope', source: 'https://kinescope.io/0sjQ4cSGrqMVKj3KMTAn2g' },
+  { service: 'vidio', source: 'https://www.vidio.com/watch/7448242-keluarga-superior-eps-1?utm_source=share' },
+  { service: 'mailru', source: 'https://my.mail.ru/mail/somename/video/_myvideo/123.html' },
+  { service: 'smotrim', source: 'https://smotrim.ru/video/2898424' },
 ];
 
 test.describe('Embed services (regional) — visual regression', () => {

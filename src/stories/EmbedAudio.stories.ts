@@ -30,6 +30,23 @@ const AUDIO_SOURCES: Record<string, string> = {
   applepodcasts: 'https://podcasts.apple.com/us/podcast/the-daily/id1200361736',
   audiomack: 'https://audiomack.com/innercatmusic/song/allegro-in-b-flat-k-3',
   anghami: 'https://play.anghami.com/song/45385197',
+  tidal: 'https://tidal.com/browse/track/46757219',
+  spotifypodcasters: 'https://creators.spotify.com/pod/show/myshow/episodes/Ep-Title-e2abc1d',
+  pocketcasts: 'https://pca.st/itl5093f',
+  iheart: 'https://www.iheart.com/podcast/105-stuff-you-should-know-26940277/',
+  acast: 'https://shows.acast.com/dansnowshistoryhit/episodes/the-battle-of-britain',
+  podbean: 'https://www.podbean.com/ew/pb-k3gmv-14a8e2b',
+  spreaker: 'https://www.spreaker.com/episode/the-best-episode-ever--58444864',
+  buzzsprout: 'https://www.buzzsprout.com/1121972/episodes/15967567-our-best-episode',
+  castbox: 'https://castbox.fm/episode/Ep.-100%3A-The-Finale-id1234567-id987654321?country=us',
+  transistor: 'https://share.transistor.fm/s/9b4dde55',
+  audioboom: 'https://audioboom.com/posts/8730423-our-great-episode',
+  tunein: 'https://tunein.com/radio/Jazz24-s34682/',
+  beatport: 'https://www.beatport.com/track/strobe/1696999',
+  netease: 'https://music.163.com/song?id=347230',
+  suno: 'https://suno.com/song/df9e2bc9-8e2e-4b9a-a1c3-0123456789ab',
+  hearthis: 'https://hearthis.at/djmix/summer-session-2024/',
+  boomplay: 'https://www.boomplay.com/songs/129188941?srModel=COPYLINK',
 };
 
 /**
@@ -155,3 +172,97 @@ export const Audiomack: Story = createServiceStory('audiomack');
  * Anghami song via the widget.anghami.com host (play.anghami.com denies framing).
  */
 export const Anghami: Story = createServiceStory('anghami');
+
+/**
+ * Tidal track via the embed.tidal.com host — the type segment is pluralized
+ * (track → tracks).
+ */
+export const Tidal: Story = createServiceStory('tidal');
+
+/**
+ * Spotify for Creators episode — /embed is inserted before /episodes; legacy
+ * podcasters.spotify.com and anchor.fm hosts normalize to creators.spotify.com.
+ */
+export const SpotifyPodcasters: Story = createServiceStory('spotifypodcasters');
+
+/**
+ * Pocket Casts share code rewritten onto the /embed/ path.
+ */
+export const PocketCasts: Story = createServiceStory('pocketcasts');
+
+/**
+ * iHeart podcast page — the same page is frameable once ?embed=true is appended.
+ */
+export const IHeart: Story = createServiceStory('iheart');
+
+/**
+ * Acast episode via the embed.acast.com host — the /episodes/ path segment is
+ * dropped in the embed URL.
+ */
+export const Acast: Story = createServiceStory('acast');
+
+/**
+ * Podbean /ew/ share link — the pb-id moves into the player-v2 ?i= query.
+ */
+export const Podbean: Story = createServiceStory('podbean');
+
+/**
+ * Spreaker episode — the trailing numeric id is extracted into the
+ * widget.spreaker.com player query.
+ */
+export const Spreaker: Story = createServiceStory('spreaker');
+
+/**
+ * Buzzsprout episode — same URL with the small-player query
+ * (client_source=small_player&iframe=true) appended.
+ */
+export const Buzzsprout: Story = createServiceStory('buzzsprout');
+
+/**
+ * Castbox episode — the trailing -idN-idN pair is extracted into the
+ * /app/castbox/player path.
+ */
+export const Castbox: Story = createServiceStory('castbox');
+
+/**
+ * Transistor share page rewritten from /s/ to the /e/ player (the /s/ share
+ * page sends X-Frame-Options and refuses to frame).
+ */
+export const Transistor: Story = createServiceStory('transistor');
+
+/**
+ * Audioboom post via the embeds.audioboom.com subdomain (/embed/v4 player).
+ */
+export const Audioboom: Story = createServiceStory('audioboom');
+
+/**
+ * TuneIn station — the s-id is extracted into the /embed/player/ path
+ * (podcast p-ids have no embed and are rejected).
+ */
+export const TuneIn: Story = createServiceStory('tunein');
+
+/**
+ * Beatport track via the embed.beatport.com query player (?id=&type=track).
+ */
+export const Beatport: Story = createServiceStory('beatport');
+
+/**
+ * NetEase Cloud Music song via the outchain player query (handles the SPA
+ * /#/song hash form too).
+ */
+export const NetEase: Story = createServiceStory('netease');
+
+/**
+ * Suno AI song — the UUID is rewritten onto the /embed/ path.
+ */
+export const Suno: Story = createServiceStory('suno');
+
+/**
+ * hearthis.at track — /embed/ is appended to the artist/track path.
+ */
+export const HearThis: Story = createServiceStory('hearthis');
+
+/**
+ * Boomplay song via the /embed/<id>/MUSIC player path.
+ */
+export const Boomplay: Story = createServiceStory('boomplay');

@@ -58,6 +58,14 @@ const VIDEO_SERVICES: ReadonlyArray<{ service: string; source: string }> = [
   { service: 'wistia', source: 'https://support.wistia.com/medias/h1z3uqsjal' },
   { service: 'vidyard', source: 'https://share.vidyard.com/watch/h2NqLfsfpLszhtLg1mXnAZ' },
   { service: 'giphy', source: 'https://giphy.com/gifs/lustig-witzig-funny-reaction-cJhDKXoHvzahcGPgiK' },
+  { service: 'ted', source: 'https://www.ted.com/talks/amy_cuddy_your_body_language_may_shape_who_you_are' },
+  { service: 'internetarchive', source: 'https://archive.org/details/BigBuckBunny_124' },
+  { service: 'kick', source: 'https://kick.com/xqc' },
+  { service: 'peertube', source: 'https://framatube.org/w/kkGMgK9ZtnKfYAgnEtQxbv' },
+  { service: 'odysee', source: 'https://odysee.com/@samtime:1/apple-fans-react-to-vision-pro:0' },
+  { service: 'soop', source: 'https://vod.sooplive.co.kr/player/123456789' },
+  { service: 'coub', source: 'https://coub.com/view/1cmal' },
+  { service: 'bitchute', source: 'https://www.bitchute.com/video/UGlrf9d3vKHK/' },
 ];
 
 /**

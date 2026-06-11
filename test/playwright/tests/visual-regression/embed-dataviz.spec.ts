@@ -4,11 +4,11 @@ import { EMBED_SERVICES, matchEmbedService, type EmbedMatch } from '../../../../
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 
 /**
- * Visual regression — one screenshot per audio/music embed service.
+ * Visual regression — one screenshot per data-viz/education embed service.
  *
  * Every external request is stubbed with a deterministic gray page, so the
  * screenshot captures the block chrome plus each service's characteristic
- * aspect ratio (audio players are short/wide) without depending on live
+ * aspect ratio (charts and interactives are tall) without depending on live
  * provider markup.
  *
  * Sample URLs mirror the positive cases proven by
@@ -33,33 +33,23 @@ const SCREENSHOT_OPTIONS = {
   caret: 'hide' as const,
 };
 
-const AUDIO_SERVICES: ReadonlyArray<{ service: string; source: string }> = [
-  { service: 'spotify', source: 'https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT' },
-  { service: 'yandexmusic', source: 'https://music.yandex.ru/album/11904129/track/70471675' },
-  { service: 'deezer', source: 'https://www.deezer.com/track/3135556' },
-  { service: 'soundcloud', source: 'https://soundcloud.com/forss/flickermood' },
-  { service: 'mixcloud', source: 'https://www.mixcloud.com/spartacus/party-time/' },
-  { service: 'applemusic', source: 'https://music.apple.com/us/album/1989-taylors-version/1708308989' },
-  { service: 'applepodcasts', source: 'https://podcasts.apple.com/us/podcast/the-daily/id1200361736' },
-  { service: 'audiomack', source: 'https://audiomack.com/innercatmusic/song/allegro-in-b-flat-k-3' },
-  { service: 'anghami', source: 'https://play.anghami.com/song/45385197' },
-  { service: 'tidal', source: 'https://tidal.com/browse/track/46757219' },
-  { service: 'spotifypodcasters', source: 'https://creators.spotify.com/pod/show/myshow/episodes/Ep-Title-e2abc1d' },
-  { service: 'pocketcasts', source: 'https://pca.st/itl5093f' },
-  { service: 'iheart', source: 'https://www.iheart.com/podcast/105-stuff-you-should-know-26940277/' },
-  { service: 'acast', source: 'https://shows.acast.com/dansnowshistoryhit/episodes/the-battle-of-britain' },
-  { service: 'podbean', source: 'https://www.podbean.com/ew/pb-k3gmv-14a8e2b' },
-  { service: 'spreaker', source: 'https://www.spreaker.com/episode/the-best-episode-ever--58444864' },
-  { service: 'buzzsprout', source: 'https://www.buzzsprout.com/1121972/episodes/15967567-our-best-episode' },
-  { service: 'castbox', source: 'https://castbox.fm/episode/Ep.-100%3A-The-Finale-id1234567-id987654321?country=us' },
-  { service: 'transistor', source: 'https://share.transistor.fm/s/9b4dde55' },
-  { service: 'audioboom', source: 'https://audioboom.com/posts/8730423-our-great-episode' },
-  { service: 'tunein', source: 'https://tunein.com/radio/Jazz24-s34682/' },
-  { service: 'beatport', source: 'https://www.beatport.com/track/strobe/1696999' },
-  { service: 'netease', source: 'https://music.163.com/song?id=347230' },
-  { service: 'suno', source: 'https://suno.com/song/df9e2bc9-8e2e-4b9a-a1c3-0123456789ab' },
-  { service: 'hearthis', source: 'https://hearthis.at/djmix/summer-session-2024/' },
-  { service: 'boomplay', source: 'https://www.boomplay.com/songs/129188941?srModel=COPYLINK' },
+const DATA_VIZ_SERVICES: ReadonlyArray<{ service: string; source: string }> = [
+  { service: 'datawrapper', source: 'https://datawrapper.dwcdn.net/OhYbA/4/' },
+  { service: 'flourish', source: 'https://public.flourish.studio/visualisation/1234567/' },
+  { service: 'ourworldindata', source: 'https://ourworldindata.org/grapher/life-expectancy?tab=chart&country=~USA' },
+  { service: 'geogebra', source: 'https://www.geogebra.org/m/cAsHWvWS' },
+  { service: 'scratch', source: 'https://scratch.mit.edu/projects/1090231983/' },
+  { service: 'kahoot', source: 'https://create.kahoot.it/details/965a7a4f-1c81-4d63-a2db-1a4d8f1e0f12' },
+  { service: 'genially', source: 'https://view.genially.com/64fb1c8a2d3e4f0011aabbcc/interactive-image' },
+  { service: 'infogram', source: 'https://infogram.com/monthly-report-1h7g6k0e9q5o2oy' },
+  { service: 'arcgisstorymaps', source: 'https://storymaps.arcgis.com/stories/0123456789abcdef0123456789abcdef' },
+  { service: 'felt', source: 'https://felt.com/map/My-Cool-Map-9BCQglnQTleNJxRhmJWUDCA' },
+  { service: 'p5js', source: 'https://editor.p5js.org/p5/sketches/Hk7tg4q7l' },
+  { service: 'wakelet', source: 'https://wakelet.com/wake/4t7Vy9hDFLbacQHRSrSmVA' },
+  { service: 'pollev', source: 'https://pollev.com/teachername123' },
+  { service: 'wolframcloud', source: 'https://www.wolframcloud.com/obj/demonstrations/CellularAutomaton-source.nb' },
+  { service: 'sketchfab', source: 'https://sketchfab.com/3d-models/vintage-camera-cf2da81e2cd44e87b9e69eb9d6e6cab6' },
+  { service: 'openstreetmap', source: 'https://www.openstreetmap.org/#map=13/51.5000/-0.1100' },
 ];
 
 /**
@@ -76,7 +66,7 @@ const resolveMatch = (source: string): EmbedMatch => {
   return match;
 };
 
-test.describe('Embed services (audio) — visual regression', () => {
+test.describe('Embed services (data-viz) — visual regression', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
   });
@@ -91,7 +81,7 @@ test.describe('Embed services (audio) — visual regression', () => {
     await page.goto(TEST_PAGE_URL);
   });
 
-  for (const { service, source } of AUDIO_SERVICES) {
+  for (const { service, source } of DATA_VIZ_SERVICES) {
     test(service, async ({ page }) => {
       const match = resolveMatch(source);
 

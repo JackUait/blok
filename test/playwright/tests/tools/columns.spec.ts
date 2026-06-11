@@ -907,14 +907,19 @@ test.describe('Columns tool', () => {
 
     await expect(columns).toHaveCount(3);
 
-    // All three columns are now even again.
-    const evenWidths = await columns.evaluateAll(els =>
-      els.map(el => el.getBoundingClientRect().width)
-    );
-    const max = Math.max(...evenWidths);
-    const min = Math.min(...evenWidths);
+    // All three columns are now even again. Poll: the new column plays a
+    // 200ms enter animation (flex-grow 0 → 1), so widths settle only after it
+    // finishes. Polling also stays robust under prefers-reduced-motion, where
+    // animationend never fires.
+    await expect
+      .poll(async () => {
+        const evenWidths = await columns.evaluateAll(els =>
+          els.map(el => el.getBoundingClientRect().width)
+        );
 
-    expect(max - min).toBeLessThan(8);
+        return Math.max(...evenWidths) - Math.min(...evenWidths);
+      })
+      .toBeLessThan(8);
 
     // The even split persists: no column keeps a custom widthRatio.
     const saved = await saveBlok(page);

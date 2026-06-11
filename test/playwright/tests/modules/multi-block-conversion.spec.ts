@@ -638,7 +638,7 @@ test.describe('multi-block conversion', () => {
   });
 
   test.describe('conversion availability', () => {
-    test('hides convert option when no common conversion target exists', async ({ page }) => {
+    test('offers only "Turn into columns" when no common conversion target exists', async ({ page }) => {
       const toolWithoutExport = `
         (() => {
           return class ToolWithoutExport {
@@ -680,7 +680,17 @@ test.describe('multi-block conversion', () => {
 
       const convertToOption = page.locator(CONVERT_TO_OPTION_SELECTOR);
 
-      await expect(convertToOption).toHaveCount(0);
+      await expect(convertToOption).toBeVisible();
+
+      await convertToOption.dispatchEvent('mouseover');
+
+      const nestedItems = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-testid="popover-item"]`);
+
+      await expect(nestedItems).toHaveCount(1);
+
+      const columnsOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="turn-into-columns"]`);
+
+      await expect(columnsOption).toBeVisible();
     });
 
     test('shows convert option for mixed block types with common conversion target', async ({ page }) => {

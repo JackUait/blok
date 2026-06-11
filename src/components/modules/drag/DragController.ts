@@ -506,13 +506,18 @@ export class DragController extends Module {
     const holderRect = block.holder.getBoundingClientRect();
     const separatorRect = separator.getBoundingClientRect();
     const separatorCenter = separatorRect.left + separatorRect.width / 2;
-    // The bar is 3px wide; offset by half so its center lands on the separator.
-    const halfBar = 1.5;
+    /*
+     * The CSS pulls side bars out into the gutter by −var(--blok-space-2)
+     * (content-edge anchoring). Here the offset is already the exact separator
+     * center, so add the nudge back to cancel it. translateX(±50%) centers the
+     * bar on the computed position, so no half-width offset is needed.
+     */
+    const nudge = parseFloat(getComputedStyle(block.holder).getPropertyValue('--blok-space-2')) || 0;
 
     if (edge === 'left') {
-      block.holder.style.setProperty('--drop-indicator-side-left', `${separatorCenter - holderRect.left - halfBar}px`);
+      block.holder.style.setProperty('--drop-indicator-side-left', `${separatorCenter - holderRect.left + nudge}px`);
     } else {
-      block.holder.style.setProperty('--drop-indicator-side-right', `${holderRect.right - separatorCenter - halfBar}px`);
+      block.holder.style.setProperty('--drop-indicator-side-right', `${holderRect.right - separatorCenter + nudge}px`);
     }
   }
 

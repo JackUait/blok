@@ -880,10 +880,15 @@ test.describe('copy and paste', () => {
         'text/html': '<table><tr><td>Cell 1</td><td>Cell 2</td></tr></table>',
       });
 
-      // Table structure should be preserved
-      const blocks = page.locator(BLOCK_SELECTOR);
+      // Table structure should be preserved: one top-level table block.
+      // Direct-child xpath excludes the table's nested cell paragraph blocks,
+      // which also carry data-blok-testid="block-wrapper".
+      const topLevelBlocks = page.locator('xpath=//*[@data-blok-interface="blok"]//*[@data-blok-testid="redactor"]/*[@data-blok-testid="block-wrapper"]');
 
-      await expect(blocks).toHaveCount(1);
+      await expect(topLevelBlocks).toHaveCount(1);
+      await expect(topLevelBlocks).toHaveAttribute('data-blok-component', 'table');
+      await expect(topLevelBlocks).toContainText('Cell 1');
+      await expect(topLevelBlocks).toContainText('Cell 2');
     });
 
     test('should handle HTML with comments', async ({ page }) => {

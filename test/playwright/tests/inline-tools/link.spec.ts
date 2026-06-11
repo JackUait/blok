@@ -723,9 +723,7 @@ test.describe('inline tool link', () => {
     await expect(page.locator(LINK_INPUT_SELECTOR)).toBeHidden();
   });
 
-  test('should allow javascript: links (security check)', async ({ page }) => {
-    // This test documents current behavior.
-    // If the policy changes to disallow javascript: links, this test should be updated to expect failure/sanitization.
+  test('should reject javascript: links (security check)', async ({ page }) => {
     await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
@@ -742,10 +740,9 @@ test.describe('inline tool link', () => {
     await ensureLinkInputOpen(page);
     await submitLink(page, url);
 
-    const anchor = paragraph.getByRole('link');
-
-    // Current implementation does not strip javascript: protocol
-    await expect(anchor).toHaveAttribute('href', url);
+    // javascript: URLs are rejected at input time — no anchor is created
+    await expect(paragraph.getByRole('link')).toHaveCount(0);
+    await expect(page.getByText('Invalid link')).toBeVisible();
   });
 });
 

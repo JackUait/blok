@@ -244,7 +244,7 @@ test.describe('inline tool link - edge cases', () => {
     await expect(anchor).toHaveAttribute('href', 'https://bing.com');
   });
 
-  test('should sanitize javascript: URLs on save', async ({ page }) => {
+  test('should reject javascript: URLs at input time', async ({ page }) => {
     await createBlokWithBlocks(page, [ {
       type: 'paragraph',
       data: { text: 'XSS test' },
@@ -260,12 +260,10 @@ test.describe('inline tool link - edge cases', () => {
     await linkInput.fill('javascript:alert(1)');
     await linkInput.press('Enter');
 
-    // In the DOM, it might exist
-    const anchor = paragraph.getByRole('link');
+    // javascript: URLs are rejected at input time — no anchor is inserted
+    await expect(page.locator(NOTIFIER_SELECTOR)).toContainText('Invalid link');
+    await expect(paragraph.getByRole('link')).toHaveCount(0);
 
-    await expect(anchor).toHaveAttribute('href', 'javascript:alert(1)');
-
-     
     const savedData = await page.evaluate(async () => {
       const data = await window.blokInstance?.save();
       if (!data || !data.blocks[0]) {
@@ -277,8 +275,7 @@ test.describe('inline tool link - edge cases', () => {
     const firstBlock = savedData.blocks[0];
     const blockData = (firstBlock.data as { text: string }).text;
 
-    // Blok sanitizer should strip javascript: hrefs
-    expect(blockData).not.toContain('href="javascript:alert(1)"');
+    expect(blockData).not.toContain('javascript:alert(1)');
   });
 
   test('should handle multiple links in one block', async ({ page }) => {

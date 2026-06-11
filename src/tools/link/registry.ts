@@ -740,9 +740,11 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   podbean: {
     // Only /ew/pb-... share links carry the player key; per-show subdomain
     // episode pages (myshow.podbean.com/e/...) have no derivable key and fall
-    // through to the bookmark tool.
-    regex: /^(?:https?:\/\/)?(?:www\.)?podbean\.com\/ew\/(pb-[a-z0-9]+-[a-z0-9]+)\S*/,
+    // through to the bookmark tool. The player-v2 widget rejects the share
+    // key verbatim — the pb- prefix must move to the tail (pb-a-b → a-b-pb).
+    regex: /^(?:https?:\/\/)?(?:www\.)?podbean\.com\/ew\/pb-([a-z0-9]+)-([a-z0-9]+)\S*/,
     embedUrl: 'https://www.podbean.com/player-v2/?i=<%= remote_id %>',
+    id: (groups) => `${groups[0]}-${groups[1]}-pb`,
     width: 580,
     height: 150,
   },

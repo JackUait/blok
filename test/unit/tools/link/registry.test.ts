@@ -1660,11 +1660,11 @@ describe('link registry', () => {
   });
 
   describe('Podbean URL variants', () => {
-    it('matches an /ew/ share link via the player-v2 widget', () => {
+    it('matches an /ew/ share link and rearranges the key for the player-v2 widget', () => {
       const result = matchEmbedService('https://www.podbean.com/ew/pb-k3gmv-14a8e2b');
 
       expect(result?.service).toBe('podbean');
-      expect(result?.embedUrl).toBe('https://www.podbean.com/player-v2/?i=pb-k3gmv-14a8e2b');
+      expect(result?.embedUrl).toBe('https://www.podbean.com/player-v2/?i=k3gmv-14a8e2b-pb');
     });
 
     it('does not match per-show subdomain episode pages', () => {

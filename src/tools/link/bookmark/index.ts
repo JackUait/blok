@@ -99,6 +99,14 @@ export class Bookmark implements BlockTool {
     return typeof data.url === 'string' && data.url.length > 0;
   }
 
+  /**
+   * The bookmark card is a static, non-editable anchor in both modes, so the
+   * in-place read-only toggle needs no DOM changes. The method must still
+   * exist: the editor only takes the in-place toggle path (instead of a full
+   * save/clear/render) when EVERY registered tool implements setReadOnly.
+   */
+  public setReadOnly(_state: boolean): void {}
+
   private startFetch(url: string): void {
     this.data = { url };
     this.state = 'LOADING';

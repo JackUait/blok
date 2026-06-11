@@ -266,4 +266,45 @@ describe('ColumnList tool', () => {
 
     expect(new Set(icons).size).toBe(entries.length);
   });
+
+  describe('setReadOnly (in-place read-only toggle)', () => {
+    const createMountedList = (): { list: ColumnList; container: HTMLElement } => {
+      const api = createMockAPI({
+        blocks: {
+          getChildren: vi.fn().mockReturnValue([
+            { id: 'c1', holder: document.createElement('div') },
+            { id: 'c2', holder: document.createElement('div') },
+          ]),
+          getBlockIndex: vi.fn().mockReturnValue(0),
+          insert: vi.fn(),
+          setBlockParent: vi.fn(),
+        },
+      } as unknown as Partial<API>);
+      const list = new ColumnList(createColumnListOptions({}, api));
+      const container = list.render();
+
+      list.rendered();
+
+      return { list, container };
+    };
+
+    it('removes resize separators when entering read-only', () => {
+      const { list, container } = createMountedList();
+
+      expect(container.querySelectorAll('[data-blok-column-resizer]')).toHaveLength(1);
+
+      list.setReadOnly(true);
+
+      expect(container.querySelectorAll('[data-blok-column-resizer]')).toHaveLength(0);
+    });
+
+    it('rebuilds resize separators when exiting read-only', () => {
+      const { list, container } = createMountedList();
+
+      list.setReadOnly(true);
+      list.setReadOnly(false);
+
+      expect(container.querySelectorAll('[data-blok-column-resizer]')).toHaveLength(1);
+    });
+  });
 });

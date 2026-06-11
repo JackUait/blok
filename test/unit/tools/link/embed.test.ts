@@ -463,4 +463,56 @@ describe('Embed toolbar integration', () => {
 
     expect(del).toHaveBeenCalledWith('embed-1');
   });
+
+  describe('setReadOnly (in-place read-only toggle)', () => {
+    it('removes resize handles and overlay when entering read-only', () => {
+      const tool = new Embed(createOptions(iframeData()));
+      const root = tool.render();
+
+      expect(root.querySelectorAll('[data-role="resize-handle"]').length).toBe(2);
+      expect(root.querySelector('[data-role="embed-overlay"]')).not.toBeNull();
+
+      tool.setReadOnly(true);
+
+      expect(root.querySelectorAll('[data-role="resize-handle"]').length).toBe(0);
+      expect(root.querySelector('[data-role="embed-overlay"]')).toBeNull();
+    });
+
+    it('restores resize handles and overlay when exiting read-only', () => {
+      const tool = new Embed(createOptions(iframeData(), { readOnly: true }));
+      const root = tool.render();
+
+      tool.setReadOnly(false);
+
+      expect(root.querySelectorAll('[data-role="resize-handle"]').length).toBe(2);
+      expect(root.querySelector('[data-role="embed-overlay"]')).not.toBeNull();
+    });
+
+    it('toggles caption contenteditable and preserves uncommitted caption edits', () => {
+      const tool = new Embed(createOptions(iframeData({ captionVisible: true })));
+      const root = tool.render();
+      const caption = root.querySelector<HTMLElement>('[data-role="embed-caption"]');
+
+      if (!caption) {
+        throw new Error('caption missing');
+      }
+
+      // Live edit that has NOT been committed via blur yet
+      caption.textContent = 'Edited live';
+
+      tool.setReadOnly(true);
+
+      const readOnlyCaption = root.querySelector<HTMLElement>('[data-role="embed-caption"]');
+
+      expect(readOnlyCaption?.getAttribute('contenteditable')).toBe('false');
+      expect(readOnlyCaption?.textContent).toBe('Edited live');
+
+      tool.setReadOnly(false);
+
+      const editableCaption = root.querySelector<HTMLElement>('[data-role="embed-caption"]');
+
+      expect(editableCaption?.getAttribute('contenteditable')).toBe('true');
+      expect(tool.save().caption).toBe('Edited live');
+    });
+  });
 });

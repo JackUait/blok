@@ -312,4 +312,15 @@ describe('Bookmark tool', () => {
       expect(error?.classList.contains('blok-bookmark__placeholder')).toBe(true);
     });
   });
+
+  describe('setReadOnly (in-place read-only toggle)', () => {
+    it('has setReadOnly method that does not throw', () => {
+      const tool = new Bookmark(createOptions({ url: 'https://example.com' }));
+
+      tool.render();
+
+      expect(() => tool.setReadOnly(true)).not.toThrow();
+      expect(() => tool.setReadOnly(false)).not.toThrow();
+    });
+  });
 });

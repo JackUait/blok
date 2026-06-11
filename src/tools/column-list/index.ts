@@ -6,6 +6,7 @@ import type {
 } from '../../../types';
 import {
   COLUMNS_ATTR,
+  COLUMN_RESIZER_ATTR,
   COLUMN_TOOL,
   buildColumnResizers,
 } from '../columns-shared';
@@ -23,7 +24,7 @@ export class ColumnList implements BlockTool {
   private readonly api: API;
   private _data: ColumnListData;
   private readonly blockId: string;
-  private readonly readOnly: boolean;
+  private readOnly: boolean;
   private container: HTMLElement | null = null;
 
   constructor({ data, api, block, readOnly }: BlockToolConstructorOptions<ColumnListData>) {
@@ -108,6 +109,31 @@ export class ColumnList implements BlockTool {
     });
 
     buildColumnResizers(container, columns.map(column => column.holder), this.readOnly, this.api, this.blockId);
+  }
+
+  /**
+   * Toggle read-only mode in place: the columns themselves are pure layout,
+   * only the resize separators are interactive — drop them when entering
+   * read-only, rebuild them when leaving.
+   */
+  public setReadOnly(state: boolean): void {
+    this.readOnly = state;
+
+    if (this.container === null) {
+      return;
+    }
+
+    if (state) {
+      this.container
+        .querySelectorAll(`[${COLUMN_RESIZER_ATTR}]`)
+        .forEach(resizer => resizer.remove());
+
+      return;
+    }
+
+    const children = this.api.blocks.getChildren(this.blockId);
+
+    buildColumnResizers(this.container, children.map(child => child.holder), false, this.api, this.blockId);
   }
 
   public save(): ColumnListData {

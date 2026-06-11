@@ -303,4 +303,15 @@ describe('Column tool', () => {
 
     expect(remove).toHaveBeenCalledWith(1); // column_list index
   });
+
+  describe('setReadOnly (in-place read-only toggle)', () => {
+    it('has setReadOnly method that does not throw', () => {
+      const column = new Column(createColumnOptions());
+
+      column.render();
+
+      expect(() => column.setReadOnly(true)).not.toThrow();
+      expect(() => column.setReadOnly(false)).not.toThrow();
+    });
+  });
 });

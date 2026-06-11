@@ -50,7 +50,7 @@ const IFRAME_ALLOW = 'encrypted-media; fullscreen; picture-in-picture';
 export class Embed implements BlockTool {
   private readonly api: API;
   private readonly block: BlockAPI;
-  private readonly readOnly: boolean;
+  private readOnly: boolean;
   private data: Partial<EmbedData>;
   private root: HTMLElement | null = null;
   private resizeDetach: (() => void)[] = [];
@@ -134,6 +134,29 @@ export class Embed implements BlockTool {
 
   public validate(data: EmbedData): boolean {
     return Boolean(data.source) && Boolean(data.embed);
+  }
+
+  /**
+   * Toggle read-only mode in place (no save/clear/render of the whole editor).
+   * Rebuilds the figure so resize handles, the overlay toolbar and caption
+   * editability follow the new state; the tool's root element is preserved.
+   */
+  public setReadOnly(state: boolean): void {
+    this.readOnly = state;
+
+    // renderState() replaces the caption node, which would drop a live edit
+    // that has not been committed via blur yet — commit it to data first.
+    const caption = this.root?.querySelector<HTMLElement>('[data-role="embed-caption"]');
+
+    if (caption) {
+      const next = caption.textContent ?? '';
+
+      if (next !== (this.data.caption ?? '')) {
+        this.data.caption = next;
+      }
+    }
+
+    this.renderState();
   }
 
   /**

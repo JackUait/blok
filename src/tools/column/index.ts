@@ -159,6 +159,15 @@ export class Column implements BlockTool {
     return true;
   }
 
+  /**
+   * A column is pure layout with no interactive chrome of its own (the resize
+   * separators belong to the parent column_list), so the in-place read-only
+   * toggle needs no DOM changes. The method must still exist: the editor only
+   * takes the in-place toggle path (instead of a full save/clear/render) when
+   * EVERY registered tool implements setReadOnly.
+   */
+  public setReadOnly(_state: boolean): void {}
+
   public removed(): void {
     // removed() runs INSIDE blocksStore.remove, BEFORE this block is spliced
     // out of the flat array. The unwrap below issues index-based deletes

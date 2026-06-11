@@ -834,6 +834,8 @@ describe('link registry', () => {
 
     it('does not match playlist pages (no widget feed)', () => {
       expect(matchEmbedService('https://www.mixcloud.com/spartacus/playlists/best-of/')).toBeNull();
+      expect(matchEmbedService('https://www.mixcloud.com/spartacus/playlists')).toBeNull();
+      expect(matchEmbedService('https://www.mixcloud.com/spartacus/playlists?tab=shows')).toBeNull();
     });
   });
 
@@ -1116,6 +1118,12 @@ describe('link registry', () => {
     it('matches anonymous and revisioned fiddles', () => {
       expect(matchEmbedService('https://jsfiddle.net/BDC9Q/328/')?.embedUrl).toBe('https://jsfiddle.net/BDC9Q/328/embedded/');
       expect(matchEmbedService('https://jsfiddle.net/2rqnsdd6/')?.embedUrl).toBe('https://jsfiddle.net/2rqnsdd6/embedded/');
+    });
+
+    it('does not match site pages like about or docs', () => {
+      expect(matchEmbedService('https://jsfiddle.net/about')).toBeNull();
+      expect(matchEmbedService('https://jsfiddle.net/docs')).toBeNull();
+      expect(matchEmbedService('https://jsfiddle.net/user/login/')).toBeNull();
     });
   });
 

@@ -338,7 +338,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   },
   mixcloud: {
     // Only shows have widget feeds; playlist pages are excluded.
-    regex: /^(?:https?:\/\/)?(?:(?:www|m)\.)?mixcloud\.com\/([\w-]+)\/(?!playlists\/)([\w-]+)\/?(?:[?#]\S*)?$/,
+    regex: /^(?:https?:\/\/)?(?:(?:www|m)\.)?mixcloud\.com\/([\w-]+)\/(?!playlists(?:[/?#]|$))([\w-]+)\/?(?:[?#]\S*)?$/,
     embedUrl: 'https://www.mixcloud.com/widget/iframe/?feed=<%= remote_id %>&hide_cover=1',
     id: (groups) => encodeURIComponent(`https://www.mixcloud.com/${groups[0]}/${groups[1]}/`),
     width: 580,
@@ -487,7 +487,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   jsfiddle: {
     // Shapes: /<id>/, /<user>/<id>/, /<user>/<id>/<rev>/ — captured whole and
     // suffixed with /embedded/. Reserved site paths are excluded.
-    regex: /^(?:https?:\/\/)?(?:www\.)?jsfiddle\.net\/(?!(?:embedded|api|user|docs|blog|about)[/?#])(\w+(?:\/\w+){0,2})\/?(?:[?#]\S*)?$/,
+    regex: /^(?:https?:\/\/)?(?:www\.)?jsfiddle\.net\/(?!(?:embedded|api|user|docs|blog|about)(?:[/?#]|$))(\w+(?:\/\w+){0,2})\/?(?:[?#]\S*)?$/,
     embedUrl: 'https://jsfiddle.net/<%= remote_id %>/embedded/',
     width: 580,
     height: 400,

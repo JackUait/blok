@@ -1771,6 +1771,14 @@
 
 }
 
+[data-blok-selected="true"] [data-blok-element-content]:has([data-role="embed-figure"]) {
+
+}
+
+[data-blok-selected="true"] [data-role="embed-figure"]::before {
+
+}
+
 [data-blok-toggle-children] :is(h1, h2, h3, h4, h5, h6) {
 
 }

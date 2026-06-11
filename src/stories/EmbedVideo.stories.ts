@@ -27,7 +27,7 @@ const VIDEO_SAMPLES = {
   vimeoshowcase: 'https://vimeo.com/showcase/7008490',
   vimeoevent: 'https://vimeo.com/event/1082764',
   rutube: 'https://rutube.ru/video/2d6e5b618ad70e0995f52f5e1276a07d/',
-  vkvideo: 'https://vk.com/video-22822305_456243154',
+  vkvideo: 'https://vk.com/video_ext.php?oid=-22822305&id=456243154&hash=a53d5925ac2b0d7584',
   loom: 'https://www.loom.com/share/e5b8c04bca094dd8a5507925ab887002',
   streamable: 'https://streamable.com/moo',
   tiktok: 'https://www.tiktok.com/@javiercazarez/video/7469789434322455863',

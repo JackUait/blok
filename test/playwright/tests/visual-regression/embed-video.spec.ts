@@ -51,7 +51,7 @@ const VIDEO_SERVICES: ReadonlyArray<{ service: string; source: string }> = [
   { service: 'vimeoshowcase', source: 'https://vimeo.com/showcase/7008490' },
   { service: 'vimeoevent', source: 'https://vimeo.com/event/1082764' },
   { service: 'rutube', source: 'https://rutube.ru/video/2d6e5b618ad70e0995f52f5e1276a07d/' },
-  { service: 'vkvideo', source: 'https://vk.com/video-22822305_456243154' },
+  { service: 'vkvideo', source: 'https://vk.com/video_ext.php?oid=-22822305&id=456243154&hash=a53d5925ac2b0d7584' },
   { service: 'loom', source: 'https://www.loom.com/share/e5b8c04bca094dd8a5507925ab887002' },
   { service: 'streamable', source: 'https://streamable.com/moo' },
   { service: 'tiktok', source: 'https://www.tiktok.com/@javiercazarez/video/7469789434322455863' },

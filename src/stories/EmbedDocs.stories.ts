@@ -18,19 +18,22 @@ const DEFAULT_HEIGHT = 320;
 
 /**
  * One canonical source URL per docs/productivity embed service.
- * Each URL is a positive sample proven to match its registry entry
- * in test/unit/tools/link/registry.test.ts.
+ * Every URL points at a REAL public document (Google API sample docs,
+ * Figma's embed-docs demo file, jgraph's example diagrams, a public
+ * press-kit Drive folder) so the live story renders actual content —
+ * all verified frameable on 2026-06-11. Each is also proven to match
+ * its registry entry at module init via buildEmbedData's throw.
  */
 const SAMPLE_SOURCES: Record<string, string> = {
-  figma: 'https://www.figma.com/design/KEY123/My-File',
-  googledrive: 'https://drive.google.com/file/d/FILEID/view?usp=sharing',
-  googledrivefolder: 'https://drive.google.com/drive/folders/1A2b3C4d5E6f7G8h9I0jKLMNOPqrstuv?usp=sharing',
-  googledocspublished: 'https://docs.google.com/document/d/e/2PACX-1vQpBF5Z9a02DALDxXD652Vic622H/pub',
-  googledocs: 'https://docs.google.com/document/d/1A2b3C4d5E6f7G8h9I0jKLMNOPqrstuv/edit?usp=sharing',
+  figma: 'https://www.figma.com/design/nrPSsILSYjesyc5UHjYYa4/Embed-Kit-2.0-examples',
+  googledrive: 'https://drive.google.com/file/d/1FvQYrw5zS1oFEucQFY8p7nRKi7A5ImaO/view?usp=sharing',
+  googledrivefolder: 'https://drive.google.com/drive/folders/1YDr3IpvVvx4UCyrRTTXs0EgH-a2zl2oo',
+  googledocspublished: 'https://docs.google.com/document/d/e/2PACX-1vR_M_Xekjo_wnoITwiz2Bj0ARq4nR4OO1Isb3sBH2-mnAJIm8FXw9no9ed4R-_Nk6d4PcyHNMLgGIc3/pub',
+  googledocs: 'https://docs.google.com/document/d/195j9eDD3ccgjQRttHhJPymLJUCOUjs-jmwTrekvdjFE/edit',
   googlesheets: 'https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit#gid=0',
-  googleslides: 'https://docs.google.com/presentation/d/1A2b3C4d5E6f7G8h9I0jKLMNOPqrstuv/edit?usp=sharing',
-  googleforms: 'https://docs.google.com/forms/d/e/1FAIpQLSdummyFormId123/viewform?usp=sf_link',
-  drawio: 'https://app.diagrams.net/?lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fjgraph%2Fdrawio%2Fmaster%2FTEMPLATE.drawio',
+  googleslides: 'https://docs.google.com/presentation/d/1EAYk18WDjIG-zp_0vLm3CsfQh_i8eXc67Jo2O9C6Vuc/edit',
+  googleforms: 'https://docs.google.com/forms/d/e/1FAIpQLSd0iBLPh4suZoGW938EU1WIxzObQv_jXto0nT2U8HH2KsI5dg/viewform',
+  drawio: 'https://app.diagrams.net/?lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fjgraph%2Fdrawio-diagrams%2Fdev%2Fexamples%2Faws-simple-architecture.drawio',
 };
 
 /**

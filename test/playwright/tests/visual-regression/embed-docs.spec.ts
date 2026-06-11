@@ -27,19 +27,20 @@ const SCREENSHOT_OPTIONS = {
 };
 
 /**
- * One canonical source URL per service, mined from the positive samples in
- * test/unit/tools/link/registry.test.ts.
+ * One canonical source URL per service — the same REAL public documents the
+ * EmbedDocs stories use (network is stubbed here, but keeping the tables
+ * identical means one set of known-good samples).
  */
 const SERVICES: ReadonlyArray<{ service: string; source: string }> = [
-  { service: 'figma', source: 'https://www.figma.com/design/KEY123/My-File' },
-  { service: 'googledrive', source: 'https://drive.google.com/file/d/FILEID/view?usp=sharing' },
-  { service: 'googledrivefolder', source: 'https://drive.google.com/drive/folders/1A2b3C4d5E6f7G8h9I0jKLMNOPqrstuv?usp=sharing' },
-  { service: 'googledocspublished', source: 'https://docs.google.com/document/d/e/2PACX-1vQpBF5Z9a02DALDxXD652Vic622H/pub' },
-  { service: 'googledocs', source: 'https://docs.google.com/document/d/1A2b3C4d5E6f7G8h9I0jKLMNOPqrstuv/edit?usp=sharing' },
+  { service: 'figma', source: 'https://www.figma.com/design/nrPSsILSYjesyc5UHjYYa4/Embed-Kit-2.0-examples' },
+  { service: 'googledrive', source: 'https://drive.google.com/file/d/1FvQYrw5zS1oFEucQFY8p7nRKi7A5ImaO/view?usp=sharing' },
+  { service: 'googledrivefolder', source: 'https://drive.google.com/drive/folders/1YDr3IpvVvx4UCyrRTTXs0EgH-a2zl2oo' },
+  { service: 'googledocspublished', source: 'https://docs.google.com/document/d/e/2PACX-1vR_M_Xekjo_wnoITwiz2Bj0ARq4nR4OO1Isb3sBH2-mnAJIm8FXw9no9ed4R-_Nk6d4PcyHNMLgGIc3/pub' },
+  { service: 'googledocs', source: 'https://docs.google.com/document/d/195j9eDD3ccgjQRttHhJPymLJUCOUjs-jmwTrekvdjFE/edit' },
   { service: 'googlesheets', source: 'https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit#gid=0' },
-  { service: 'googleslides', source: 'https://docs.google.com/presentation/d/1A2b3C4d5E6f7G8h9I0jKLMNOPqrstuv/edit?usp=sharing' },
-  { service: 'googleforms', source: 'https://docs.google.com/forms/d/e/1FAIpQLSdummyFormId123/viewform?usp=sf_link' },
-  { service: 'drawio', source: 'https://app.diagrams.net/?lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fjgraph%2Fdrawio%2Fmaster%2FTEMPLATE.drawio' },
+  { service: 'googleslides', source: 'https://docs.google.com/presentation/d/1EAYk18WDjIG-zp_0vLm3CsfQh_i8eXc67Jo2O9C6Vuc/edit' },
+  { service: 'googleforms', source: 'https://docs.google.com/forms/d/e/1FAIpQLSd0iBLPh4suZoGW938EU1WIxzObQv_jXto0nT2U8HH2KsI5dg/viewform' },
+  { service: 'drawio', source: 'https://app.diagrams.net/?lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fjgraph%2Fdrawio-diagrams%2Fdev%2Fexamples%2Faws-simple-architecture.drawio' },
 ];
 
 /**

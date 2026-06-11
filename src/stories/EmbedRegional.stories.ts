@@ -26,7 +26,7 @@ const REGIONAL_SAMPLES = {
   youku: 'https://v.youku.com/v_show/id_XODU1NzgzMTg0.html',
   navertv: 'https://tv.naver.com/v/8565915',
   kakaotv: 'https://tv.kakao.com/v/451075687',
-  dailymotion: 'https://www.dailymotion.com/video/xaehrai',
+  dailymotion: 'https://www.dailymotion.com/video/xaduou6',
   okru: 'https://ok.ru/video/11338458073644',
   arte: 'https://www.arte.tv/en/videos/110989-000-A/steven-spielberg/',
 } as const;

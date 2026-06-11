@@ -74,7 +74,7 @@ const REGIONAL_SERVICES: ReadonlyArray<{ service: string; source: string }> = [
   { service: 'youku', source: 'https://v.youku.com/v_show/id_XODU1NzgzMTg0.html' },
   { service: 'navertv', source: 'https://tv.naver.com/v/8565915' },
   { service: 'kakaotv', source: 'https://tv.kakao.com/v/451075687' },
-  { service: 'dailymotion', source: 'https://www.dailymotion.com/video/xaehrai' },
+  { service: 'dailymotion', source: 'https://www.dailymotion.com/video/xaduou6' },
   { service: 'okru', source: 'https://ok.ru/video/11338458073644' },
   { service: 'arte', source: 'https://www.arte.tv/en/videos/110989-000-A/steven-spielberg/' },
 ];

@@ -356,6 +356,9 @@ export class Embed implements BlockTool {
 
   private attachResizeHandles(figure: HTMLElement): void {
     const edges: ResizeEdge[] = ['left', 'right'];
+    const minWidthPx = this.data.service !== undefined
+      ? EMBED_SERVICES[this.data.service]?.minWidth
+      : undefined;
 
     for (const edge of edges) {
       const handle = document.createElement('div');
@@ -370,6 +373,7 @@ export class Embed implements BlockTool {
         container: figure.parentElement ?? figure,
         edge,
         alignment: this.data.alignment ?? 'center',
+        minWidthPx,
         onPreview: (percent) => {
           figure.style.setProperty('width', `${percent}%`);
         },

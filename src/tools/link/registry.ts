@@ -45,6 +45,14 @@ export interface EmbedService {
   width?: number;
   /** Default iframe height. */
   height?: number;
+  /**
+   * Smallest usable rendered width in pixels. The resize handles refuse to
+   * shrink the embed below this (converted to a percent of the live container),
+   * so a provider's player/canvas never collapses past the point where its
+   * controls or content become unusable. Omit for script-rendered providers,
+   * which are not iframe-resizable.
+   */
+  minWidth?: number;
   /** Derives the remote id from regex capture groups (defaults to the first group). */
   id?: (groups: Array<string | undefined>) => string;
   /**
@@ -105,6 +113,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
       return start !== null && start > 0 ? `${groups[0]}?start=${start}` : groups[0] ?? '';
     },
     width: 580,
+    minWidth: 200,
     height: 320,
   },
   youtubeplaylist: {
@@ -113,6 +122,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:(?:www|m|music)\.)?youtube\.com\/playlist\?(?:.*&)?list=([\w-]+)\S*/,
     embedUrl: 'https://www.youtube.com/embed/videoseries?list=<%= remote_id %>',
     width: 580,
+    minWidth: 200,
     height: 320,
   },
   vimeo: {
@@ -122,6 +132,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://player.vimeo.com/video/<%= remote_id %>',
     id: (groups) => (groups[1] !== undefined ? `${groups[0]}?h=${groups[1]}` : groups[0] ?? ''),
     width: 580,
+    minWidth: 300,
     height: 320,
   },
   vimeoshowcase: {
@@ -130,6 +141,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?vimeo\.com\/showcase\/(\d+)\/?(?:[?#]\S*)?$/,
     embedUrl: 'https://vimeo.com/showcase/<%= remote_id %>/embed',
     width: 580,
+    minWidth: 300,
     height: 320,
   },
   vimeoevent: {
@@ -138,6 +150,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?vimeo\.com\/event\/(\d+)\S*/,
     embedUrl: 'https://vimeo.com/event/<%= remote_id %>/embed',
     width: 580,
+    minWidth: 300,
     height: 320,
   },
   rutube: {
@@ -149,6 +162,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://rutube.ru/play/embed/<%= remote_id %>',
     id: (groups) => (groups[1] !== undefined ? `${groups[0]}/?p=${groups[1]}` : groups[0] ?? ''),
     width: 580,
+    minWidth: 280,
     height: 320,
   },
   vkvideo: {
@@ -170,6 +184,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
       return `${groups[0] ?? groups[3] ?? ''}&id=${groups[1] ?? groups[4] ?? ''}`;
     },
     width: 580,
+    minWidth: 280,
     height: 320,
   },
   codepen: {
@@ -179,6 +194,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://codepen.io/<%= remote_id %>?default-tab=result',
     id: (groups) => `${groups[0]}/embed/${groups[1]}${groups[2] !== undefined ? `/${groups[2]}` : ''}`,
     width: 580,
+    minWidth: 480,
     height: 320,
   },
   loom: {
@@ -189,6 +205,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?loom\.com\/(?:share|embed)\/([0-9a-f]{32})\S*/,
     embedUrl: 'https://www.loom.com/embed/<%= remote_id %>',
     width: 580,
+    minWidth: 280,
     height: 320,
   },
   figma: {
@@ -198,6 +215,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://embed.figma.com/<%= remote_id %>?embed-host=blok',
     id: (groups) => `${groups[0]}/${groups[1]}`,
     width: 580,
+    minWidth: 400,
     height: 400,
   },
   spotify: {
@@ -207,6 +225,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://open.spotify.com/embed/<%= remote_id %>',
     id: (groups) => `${groups[0]}/${groups[1]}`,
     width: 580,
+    minWidth: 250,
     height: 152,
   },
   googledrive: {
@@ -216,6 +235,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://drive.google.com/file/d/<%= remote_id %>/preview',
     id: (groups) => groups[0] ?? groups[1] ?? '',
     width: 580,
+    minWidth: 320,
     height: 480,
   },
   googledrivefolder: {
@@ -224,6 +244,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?drive\.google\.com\/drive\/(?:u\/\d+\/)?folders\/([\w-]+)\S*/,
     embedUrl: 'https://drive.google.com/embeddedfolderview?id=<%= remote_id %>#list',
     width: 580,
+    minWidth: 320,
     height: 480,
   },
   googledocspublished: {
@@ -234,6 +255,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?docs\.google\.com\/document\/(?:u\/\d+\/)?d\/e\/([\w-]+)\S*/,
     embedUrl: 'https://docs.google.com/document/d/e/<%= remote_id %>/pub?embedded=true',
     width: 580,
+    minWidth: 320,
     height: 480,
   },
   googledocs: {
@@ -243,6 +265,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?docs\.google\.com\/document\/(?:u\/\d+\/)?d\/(?!e\/)([\w-]+)\S*/,
     embedUrl: 'https://docs.google.com/document/d/<%= remote_id %>/preview',
     width: 580,
+    minWidth: 320,
     height: 480,
   },
   googlesheets: {
@@ -257,6 +280,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
         ? `e/${groups[0]}/pubhtml?widget=true&headers=false`
         : `${groups[1]}/preview`,
     width: 580,
+    minWidth: 400,
     height: 480,
   },
   googleslides: {
@@ -267,6 +291,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?docs\.google\.com\/presentation\/(?:u\/\d+\/)?d\/((?:e\/)?[\w-]+)\S*/,
     embedUrl: 'https://docs.google.com/presentation/d/<%= remote_id %>/embed?start=false&loop=false&delayms=3000',
     width: 580,
+    minWidth: 480,
     height: 480,
   },
   googleforms: {
@@ -277,6 +302,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?docs\.google\.com\/forms\/(?:u\/\d+\/)?d\/((?:e\/)?[\w-]+)\/viewform\S*/,
     embedUrl: 'https://docs.google.com/forms/d/<%= remote_id %>/viewform?embedded=true',
     width: 580,
+    minWidth: 400,
     height: 480,
   },
   drawio: {
@@ -299,6 +325,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
       return `${query ?? '?lightbox=1&nav=1'}#${urType}${urPayload}`;
     },
     width: 580,
+    minWidth: 350,
     height: 480,
   },
   bilibili: {
@@ -312,6 +339,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://player.bilibili.com/player.html?<%= remote_id %>',
     id: (groups) => (groups[0] !== undefined ? `bvid=${groups[0]}&autoplay=0` : `aid=${groups[1]}&autoplay=0`),
     width: 580,
+    minWidth: 300,
     height: 320,
   },
   niconico: {
@@ -322,6 +350,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:(?:www|sp)\.nicovideo\.jp\/watch|nico\.ms)\/((?:sm|nm|so)\d+)\S*/,
     embedUrl: 'https://embed.nicovideo.jp/watch/<%= remote_id %>',
     width: 580,
+    minWidth: 280,
     height: 320,
   },
   youku: {
@@ -333,6 +362,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://player.youku.com/embed/<%= remote_id %>',
     id: (groups) => (groups[0] ?? '').replace(/%3D/g, '='),
     width: 580,
+    minWidth: 300,
     height: 320,
   },
   navertv: {
@@ -342,6 +372,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?tv\.naver\.com\/(?:v|embed)\/(\d+)\S*/,
     embedUrl: 'https://tv.naver.com/embed/<%= remote_id %>?autoPlay=false',
     width: 580,
+    minWidth: 280,
     height: 320,
   },
   kakaotv: {
@@ -352,6 +383,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?tv\.kakao\.com\/(?:v|channel\/\d+\/cliplink)\/(\d+)\S*/,
     embedUrl: 'https://play-tv.kakao.com/embed/player/cliplink/<%= remote_id %>?service=player_share',
     width: 580,
+    minWidth: 280,
     height: 320,
   },
   dailymotion: {
@@ -361,6 +393,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:(?:www\.)?dailymotion\.com\/video|dai\.ly)\/([a-z0-9]+)\S*/,
     embedUrl: 'https://geo.dailymotion.com/player.html?video=<%= remote_id %>',
     width: 580,
+    minWidth: 320,
     height: 320,
   },
   okru: {
@@ -371,6 +404,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:(?:www|m|mobile)\.)?(?:ok\.ru|odnoklassniki\.ru)\/(?:video|videoembed|live)\/(\d+(?:-\d+)?)\S*/,
     embedUrl: 'https://ok.ru/videoembed/<%= remote_id %>',
     width: 580,
+    minWidth: 280,
     height: 320,
   },
   yandexmusic: {
@@ -394,6 +428,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
       return `playlist/${login}/${kind}`;
     },
     width: 580,
+    minWidth: 280,
     height: 180,
   },
   arte: {
@@ -404,6 +439,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://www.arte.tv/embeds/<%= remote_id %>',
     id: (groups) => `${groups[0]}/${groups[1]}`,
     width: 580,
+    minWidth: 280,
     height: 320,
   },
   deezer: {
@@ -414,6 +450,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://widget.deezer.com/widget/auto/<%= remote_id %>',
     id: (groups) => `${groups[0]}/${groups[1]}`,
     width: 580,
+    minWidth: 270,
     height: 300,
   },
   soundcloud: {
@@ -427,6 +464,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     id: (groups) =>
       encodeURIComponent(`https://soundcloud.com/${groups[0]}/${groups[1] !== undefined ? 'sets/' : ''}${groups[2]}`),
     width: 580,
+    minWidth: 300,
     height: 166,
   },
   mixcloud: {
@@ -437,6 +475,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://www.mixcloud.com/widget/iframe/?feed=<%= remote_id %>&hide_cover=1',
     id: (groups) => encodeURIComponent(`https://www.mixcloud.com/${groups[0]}/${groups[1]}/`),
     width: 580,
+    minWidth: 180,
     height: 120,
   },
   applemusic: {
@@ -452,6 +491,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
       return trackId !== undefined ? `${groups[0]}?i=${trackId}` : groups[0] ?? '';
     },
     width: 580,
+    minWidth: 300,
     height: 450,
   },
   applepodcasts: {
@@ -466,6 +506,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
       return episodeId !== undefined ? `${groups[0]}?i=${episodeId}` : groups[0] ?? '';
     },
     width: 580,
+    minWidth: 290,
     height: 450,
   },
   audiomack: {
@@ -476,6 +517,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://audiomack.com/embed/<%= remote_id %>',
     id: (groups) => `${groups[1]}/${groups[0]}/${groups[2]}`,
     width: 580,
+    minWidth: 280,
     height: 252,
   },
   anghami: {
@@ -487,6 +529,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://widget.anghami.com/<%= remote_id %>',
     id: (groups) => `${groups[0]}/${groups[1]}`,
     width: 580,
+    minWidth: 280,
     height: 170,
   },
   streamable: {
@@ -497,6 +540,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?streamable\.com\/(?:e\/)?(?!(?:login|signup|recover|documentation)(?:[/?#]|$))([a-z0-9]+)\/?(?:[?#]\S*)?$/,
     embedUrl: 'https://streamable.com/e/<%= remote_id %>',
     width: 580,
+    minWidth: 280,
     height: 320,
   },
   tiktok: {
@@ -507,6 +551,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?tiktok\.com\/@[\w.-]+\/video\/(\d+)\S*/,
     embedUrl: 'https://www.tiktok.com/embed/v2/<%= remote_id %>',
     width: 325,
+    minWidth: 325,
     height: 580,
     fixedWidth: true,
   },
@@ -517,6 +562,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:[\w-]+\.)?wistia\.(?:com|net)\/(?:medias|embed\/iframe)\/([A-Za-z0-9]+)\S*/,
     embedUrl: 'https://fast.wistia.net/embed/iframe/<%= remote_id %>',
     width: 580,
+    minWidth: 300,
     height: 320,
   },
   vidyard: {
@@ -527,6 +573,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?[\w-]+\.vidyard\.com\/(?:[\w-]+\/)?watch\/([\w-]+)\S*/,
     embedUrl: 'https://play.vidyard.com/<%= remote_id %>.html',
     width: 580,
+    minWidth: 300,
     height: 320,
   },
   giphy: {
@@ -539,6 +586,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://giphy.com/embed/<%= remote_id %>',
     id: (groups) => groups[0] ?? groups[1] ?? '',
     width: 480,
+    minWidth: 200,
     height: 360,
   },
   codesandbox: {
@@ -548,6 +596,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?codesandbox\.io\/(?:s|p\/sandbox|embed)\/([\w-]+)\S*/,
     embedUrl: 'https://codesandbox.io/embed/<%= remote_id %>',
     width: 580,
+    minWidth: 480,
     height: 500,
   },
   stackblitz: {
@@ -558,6 +607,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://stackblitz.com/edit/<%= remote_id %>',
     id: (groups) => `${groups[0]}?embed=1${groups[1] !== undefined ? `&${groups[1]}` : ''}`,
     width: 580,
+    minWidth: 480,
     height: 500,
   },
   typeform: {
@@ -569,6 +619,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://<%= remote_id %>',
     id: (groups) => `${groups[0]}.typeform.com/to/${groups[1]}`,
     width: 580,
+    minWidth: 320,
     height: 500,
   },
   airtable: {
@@ -580,6 +631,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://airtable.com/embed/<%= remote_id %>',
     id: (groups) => (groups[0] !== undefined ? `${groups[0]}/${groups[1]}` : groups[1] ?? ''),
     width: 580,
+    minWidth: 450,
     height: 533,
   },
   miro: {
@@ -591,6 +643,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://miro.com/app/live-embed/<%= remote_id %>/',
     id: (groups) => (groups[0] ?? '').replace(/%3D/g, '='),
     width: 580,
+    minWidth: 400,
     height: 500,
   },
   desmos: {
@@ -600,6 +653,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?desmos\.com\/calculator\/([a-z0-9]+)\S*/,
     embedUrl: 'https://www.desmos.com/calculator/<%= remote_id %>?embed',
     width: 580,
+    minWidth: 256,
     height: 450,
   },
   observable: {
@@ -610,6 +664,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?observablehq\.com\/(?:embed\/)?(@[\w-]+\/[\w-]+)\S*/,
     embedUrl: 'https://observablehq.com/embed/<%= remote_id %>',
     width: 580,
+    minWidth: 320,
     height: 500,
   },
   jsfiddle: {
@@ -620,6 +675,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?jsfiddle\.net\/(?!(?:embedded|api|user|docs|blog|about)(?:[/?#]|$))(\w+(?:\/\w+){0,2})\/?(?:[?#]\S*)?$/,
     embedUrl: 'https://jsfiddle.net/<%= remote_id %>/embedded/',
     width: 580,
+    minWidth: 400,
     height: 400,
   },
   reddit: {
@@ -631,6 +687,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:(?:www|old|new|np)\.)?reddit\.com\/(r\/\w+\/comments\/\w+(?:\/[^/?#\s]+)?)\/?(?:[?#]\S*)?$/,
     embedUrl: 'https://embed.reddit.com/<%= remote_id %>?embed=true&ref_source=embed&ref=share',
     width: 580,
+    minWidth: 320,
     height: 500,
   },
   instagram: {
@@ -643,6 +700,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?(?:instagram\.com|instagr\.am)\/(?:p|reels?|tv)\/([\w-]+)\S*/,
     embedUrl: 'https://www.instagram.com/p/<%= remote_id %>/embed/captioned/',
     width: 400,
+    minWidth: 326,
     height: 620,
     fixedWidth: true,
   },
@@ -667,6 +725,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
       return encodeURIComponent(`https://www.facebook.com/${page}/videos/${pageVideoId}/`);
     },
     width: 580,
+    minWidth: 220,
     height: 320,
   },
   facebookpost: {
@@ -698,6 +757,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
       return encodeURIComponent(`https://www.facebook.com/${page}/posts/${postToken}`);
     },
     width: 500,
+    minWidth: 350,
     height: 600,
   },
   linkedin: {
@@ -710,6 +770,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://www.linkedin.com/embed/feed/update/urn:li:<%= remote_id %>',
     id: (groups) => (groups[0] !== undefined ? `activity:${groups[0]}` : `${groups[1]}:${groups[2]}`),
     width: 504,
+    minWidth: 400,
     height: 540,
   },
   mastodon: {
@@ -722,6 +783,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://<%= remote_id %>/embed',
     id: (groups) => `${groups[0]}/${groups[1]}/${groups[2]}`,
     width: 580,
+    minWidth: 270,
     height: 320,
   },
   pinterest: {
@@ -732,6 +794,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:[\w-]+\.)?pinterest\.(?:[a-z]{2,3}|co\.[a-z]{2}|com\.[a-z]{2})\/pin\/(\d+)(?:[/?#]\S*)?$/,
     embedUrl: 'https://assets.pinterest.com/ext/embed.html?id=<%= remote_id %>',
     width: 345,
+    minWidth: 236,
     height: 560,
     fixedWidth: true,
   },
@@ -744,6 +807,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?snapchat\.com\/(spotlight\/[\w-]+|lens\/[0-9a-f]{32})\/?(?:[?#]\S*)?$/,
     embedUrl: 'https://www.snapchat.com/<%= remote_id %>/embed',
     width: 416,
+    minWidth: 326,
     height: 692,
     fixedWidth: true,
   },
@@ -757,6 +821,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://<%= remote_id %>',
     id: (groups) => `${groups[0]}.substack.com/embed/p/${groups[1]}`,
     width: 580,
+    minWidth: 320,
     height: 280,
   },
   ted: {
@@ -766,6 +831,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?ted\.com\/talks\/([\w-]+)\S*/,
     embedUrl: 'https://embed.ted.com/talks/<%= remote_id %>',
     width: 580,
+    minWidth: 320,
     height: 320,
   },
   internetarchive: {
@@ -777,6 +843,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?archive\.org\/(?:details|embed)\/([^\s/?#]+)\S*/,
     embedUrl: 'https://archive.org/embed/<%= remote_id %>',
     width: 580,
+    minWidth: 320,
     height: 320,
   },
   kick: {
@@ -789,6 +856,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?kick\.com\/(?!(?:browse|categories|category|video|clips|search|support|terms|privacy|community-guidelines|dmca|help|about|blog|store|transparency)(?:[/?#]|$))([\w-]+)\/?(?:[?#]\S*)?$/,
     embedUrl: 'https://player.kick.com/<%= remote_id %>?autoplay=false',
     width: 580,
+    minWidth: 320,
     height: 320,
   },
   peertube: {
@@ -801,6 +869,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://<%= remote_id %>',
     id: (groups) => `${groups[0]}/videos/embed/${groups[1]}`,
     width: 580,
+    minWidth: 300,
     height: 320,
   },
   odysee: {
@@ -814,6 +883,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://odysee.com/$/embed/<%= remote_id %>',
     id: (groups) => (groups[0] ?? '').replace(/%3A/gi, ':'),
     width: 580,
+    minWidth: 320,
     height: 320,
   },
   soop: {
@@ -825,6 +895,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?vod\.(?:sooplive\.co\.kr|sooplive\.com|afreecatv\.com)\/player\/(\d+)\S*/,
     embedUrl: 'https://vod.sooplive.com/player/<%= remote_id %>',
     width: 580,
+    minWidth: 320,
     height: 320,
   },
   coub: {
@@ -834,6 +905,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?coub\.com\/view\/(\w+)\S*/,
     embedUrl: 'https://coub.com/embed/<%= remote_id %>',
     width: 580,
+    minWidth: 320,
     height: 320,
   },
   bitchute: {
@@ -843,6 +915,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?bitchute\.com\/video\/([\w-]+)\/?\S*/,
     embedUrl: 'https://www.bitchute.com/embed/<%= remote_id %>/',
     width: 580,
+    minWidth: 320,
     height: 320,
   },
   tidal: {
@@ -857,6 +930,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://embed.tidal.com/<%= remote_id %>',
     id: (groups) => `${groups[0]}s/${groups[1]}`,
     width: 580,
+    minWidth: 300,
     height: 400,
   },
   spotifypodcasters: {
@@ -869,6 +943,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://creators.spotify.com/pod/show/<%= remote_id %>',
     id: (groups) => `${groups[0]}/embed/episodes/${groups[1]}`,
     width: 580,
+    minWidth: 200,
     height: 152,
   },
   pocketcasts: {
@@ -879,6 +954,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?pca\.st\/(?!(?:discover|search|podcasts?|episode|support|sign-in|register|get|plus|about|privacy|terms)(?:[/?#]|$))([\w-]+)\/?(?:[?#]\S*)?$/,
     embedUrl: 'https://pca.st/embed/<%= remote_id %>',
     width: 580,
+    minWidth: 300,
     height: 200,
   },
   iheart: {
@@ -889,6 +965,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?iheart\.com\/(podcast\/[\w-]+-\d+(?:\/episode\/[\w-]+-\d+)?|live\/[\w-]+-\d+)\/?(?:[?#]\S*)?$/,
     embedUrl: 'https://www.iheart.com/<%= remote_id %>/?embed=true',
     width: 580,
+    minWidth: 300,
     height: 250,
   },
   acast: {
@@ -901,6 +978,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://embed.acast.com/<%= remote_id %>',
     id: (groups) => `${groups[0]}/${groups[1]}`,
     width: 580,
+    minWidth: 300,
     height: 190,
   },
   podbean: {
@@ -914,6 +992,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://www.podbean.com/player-v2/?i=<%= remote_id %>',
     id: (groups) => `${groups[0]}-${groups[1]}-pb`,
     width: 580,
+    minWidth: 300,
     height: 150,
   },
   spreaker: {
@@ -924,6 +1003,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?spreaker\.com\/episode\/(?:[\w-]*?--)?(\d+)\/?(?:[?#]\S*)?$/,
     embedUrl: 'https://widget.spreaker.com/player?episode_id=<%= remote_id %>',
     width: 580,
+    minWidth: 200,
     height: 200,
   },
   buzzsprout: {
@@ -934,6 +1014,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?buzzsprout\.com\/(\d+\/(?:episodes\/)?\d+(?:-[\w-]+)?)\/?(?:[?#]\S*)?$/,
     embedUrl: 'https://www.buzzsprout.com/<%= remote_id %>?client_source=small_player&iframe=true',
     width: 580,
+    minWidth: 300,
     height: 200,
   },
   castbox: {
@@ -946,6 +1027,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://castbox.fm/app/castbox/player/<%= remote_id %>?v=8.22.11&autoplay=0',
     id: (groups) => (groups[2] !== undefined ? `id${groups[2]}` : `id${groups[0]}/id${groups[1]}`),
     width: 580,
+    minWidth: 300,
     height: 500,
   },
   transistor: {
@@ -956,6 +1038,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?share\.transistor\.fm\/(?:s|e)\/([0-9a-f]+)\S*/,
     embedUrl: 'https://share.transistor.fm/e/<%= remote_id %>',
     width: 580,
+    minWidth: 300,
     height: 180,
   },
   audioboom: {
@@ -966,6 +1049,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?audioboom\.com\/posts\/(\d+)\S*/,
     embedUrl: 'https://embeds.audioboom.com/posts/<%= remote_id %>/embed/v4',
     width: 580,
+    minWidth: 300,
     height: 150,
   },
   tunein: {
@@ -976,6 +1060,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?tunein\.com\/radio\/(?:[\w-]+-)?s(\d+)\/?(?:[?#]\S*)?$/,
     embedUrl: 'https://tunein.com/embed/player/s<%= remote_id %>/',
     width: 580,
+    minWidth: 300,
     height: 100,
   },
   beatport: {
@@ -985,6 +1070,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?beatport\.com\/track\/[^/?#\s]+\/(\d+)\S*/,
     embedUrl: 'https://embed.beatport.com/?id=<%= remote_id %>&type=track',
     width: 580,
+    minWidth: 300,
     height: 162,
   },
   netease: {
@@ -995,6 +1081,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?music\.163\.com\/(?:#\/)?song\?(?:.*&)?id=(\d+)\S*/,
     embedUrl: 'https://music.163.com/outchain/player?type=2&id=<%= remote_id %>&auto=0&height=66',
     width: 580,
+    minWidth: 330,
     height: 86,
   },
   suno: {
@@ -1004,6 +1091,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?suno\.com\/song\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\S*/,
     embedUrl: 'https://suno.com/embed/<%= remote_id %>',
     width: 580,
+    minWidth: 300,
     height: 240,
   },
   hearthis: {
@@ -1016,6 +1104,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://hearthis.at/<%= remote_id %>/embed/',
     id: (groups) => `${groups[0]}/${groups[1]}`,
     width: 580,
+    minWidth: 300,
     height: 150,
   },
   boomplay: {
@@ -1025,6 +1114,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?boomplay\.com\/songs\/(\d+)\S*/,
     embedUrl: 'https://www.boomplay.com/embed/<%= remote_id %>/MUSIC',
     width: 580,
+    minWidth: 300,
     height: 130,
   },
   calendly: {
@@ -1038,6 +1128,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://calendly.com/<%= remote_id %>?embed_domain=blok&embed_type=Inline',
     id: (groups) => groups[0] ?? groups[1] ?? '',
     width: 580,
+    minWidth: 360,
     height: 700,
   },
   tally: {
@@ -1048,6 +1139,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?tally\.so\/(?:r|embed)\/(\w+)\/?(?:[?#]\S*)?$/,
     embedUrl: 'https://tally.so/embed/<%= remote_id %>',
     width: 580,
+    minWidth: 400,
     height: 500,
   },
   jotform: {
@@ -1059,6 +1151,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:form|www|eu)\.jotform\.com\/(\d+)\/?(?:[?#]\S*)?$/,
     embedUrl: 'https://form.jotform.com/<%= remote_id %>',
     width: 580,
+    minWidth: 400,
     height: 540,
   },
   whimsical: {
@@ -1070,6 +1163,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?whimsical\.com\/(?!(?:wireframes|templates|learn|blog|pricing|mind-maps|flowcharts|docs|ai|downloads|careers|contact|terms|privacy)(?:[/?#]|$))(?:[\w-]*-)?([A-Za-z0-9]{16,})\/?(?:[?#]\S*)?$/,
     embedUrl: 'https://whimsical.com/embed/<%= remote_id %>',
     width: 580,
+    minWidth: 400,
     height: 420,
   },
   excalidraw: {
@@ -1083,6 +1177,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://excalidraw.com/#json=<%= remote_id %>',
     id: (groups) => `${groups[0]},${groups[1]}`,
     width: 580,
+    minWidth: 380,
     height: 420,
   },
   tldraw: {
@@ -1095,6 +1190,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://www.tldraw.com/<%= remote_id %>',
     id: (groups) => `${groups[0]}/${groups[1]}`,
     width: 580,
+    minWidth: 400,
     height: 420,
   },
   mentimeter: {
@@ -1106,6 +1202,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?mentimeter\.com\/app\/presentation\/([\w-]+)(?:\/[\w-]+)?\/?(?:[?#]\S*)?$/,
     embedUrl: 'https://www.mentimeter.com/app/presentation/<%= remote_id %>/embed',
     width: 580,
+    minWidth: 420,
     height: 400,
   },
   behance: {
@@ -1116,6 +1213,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?behance\.net\/gallery\/(\d+)(?:[/?#]\S*)?$/,
     embedUrl: 'https://www.behance.net/embed/project/<%= remote_id %>',
     width: 580,
+    minWidth: 400,
     height: 460,
   },
   chromatic: {
@@ -1129,6 +1227,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://<%= remote_id %>',
     id: (groups) => `${groups[0]}.chromatic.com/iframe.html?id=${groups[2]}&viewMode=${groups[1] === 'docs' ? 'docs' : 'story'}`,
     width: 580,
+    minWidth: 320,
     height: 400,
   },
   plunker: {
@@ -1139,6 +1238,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:(?:www\.)?plnkr\.co\/(?:edit|plunk)\/|embed\.plnkr\.co\/)([\w-]+)\S*/,
     embedUrl: 'https://embed.plnkr.co/<%= remote_id %>?show=preview',
     width: 580,
+    minWidth: 480,
     height: 400,
   },
   datawrapper: {
@@ -1150,6 +1250,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://datawrapper.dwcdn.net/<%= remote_id %>/',
     id: (groups) => groups[0] ?? groups[1] ?? '',
     width: 580,
+    minWidth: 320,
     height: 400,
   },
   flourish: {
@@ -1161,6 +1262,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://flo.uri.sh/<%= remote_id %>/embed',
     id: (groups) => `${groups[0]}/${groups[1]}`,
     width: 580,
+    minWidth: 320,
     height: 450,
   },
   ourworldindata: {
@@ -1172,6 +1274,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://ourworldindata.org/<%= remote_id %>',
     id: (groups) => `${groups[0]}/${groups[1]}${groups[2] ?? ''}`,
     width: 580,
+    minWidth: 360,
     height: 480,
   },
   geogebra: {
@@ -1183,6 +1286,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://www.geogebra.org/<%= remote_id %>',
     id: (groups) => `${groups[0]}/${groups[1]}`,
     width: 580,
+    minWidth: 320,
     height: 480,
   },
   scratch: {
@@ -1192,6 +1296,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?scratch\.mit\.edu\/projects\/(\d+)\S*/,
     embedUrl: 'https://scratch.mit.edu/projects/<%= remote_id %>/embed',
     width: 485,
+    minWidth: 400,
     height: 402,
     fixedWidth: true,
   },
@@ -1203,6 +1308,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?create\.kahoot\.it\/(?:details|share)\/(?:[\w-]+\/)?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\S*/,
     embedUrl: 'https://embed.kahoot.it/<%= remote_id %>',
     width: 580,
+    minWidth: 480,
     height: 420,
   },
   genially: {
@@ -1213,6 +1319,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?view\.(?:genially\.com|genial\.ly)\/([0-9a-f]{24})\S*/,
     embedUrl: 'https://view.genially.com/<%= remote_id %>',
     width: 580,
+    minWidth: 400,
     height: 420,
   },
   infogram: {
@@ -1223,6 +1330,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?infogram\.com\/(?!(?:blog|examples|templates|features|create|api|pricing|login|signup|app|charts|maps|dashboards|reports|infographics|teams|education|about|careers|contact|terms|privacy|webinars|academy)(?:[/?#]|$))([\w-]+)\/?(?:[?#]\S*)?$/,
     embedUrl: 'https://e.infogram.com/<%= remote_id %>?src=embed',
     width: 580,
+    minWidth: 320,
     height: 480,
   },
   arcgisstorymaps: {
@@ -1234,6 +1342,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://storymaps.arcgis.com/<%= remote_id %>',
     id: (groups) => `${groups[0]}/${groups[1]}`,
     width: 580,
+    minWidth: 480,
     height: 480,
   },
   felt: {
@@ -1244,6 +1353,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?felt\.com\/(?:embed\/)?map\/([\w-]+)\S*/,
     embedUrl: 'https://felt.com/embed/map/<%= remote_id %>',
     width: 580,
+    minWidth: 360,
     height: 480,
   },
   p5js: {
@@ -1255,6 +1365,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://editor.p5js.org/<%= remote_id %>',
     id: (groups) => `${groups[0]}/full/${groups[1]}`,
     width: 580,
+    minWidth: 400,
     height: 420,
   },
   wakelet: {
@@ -1263,6 +1374,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?wakelet\.com\/wake\/([\w-]+)\S*/,
     embedUrl: 'https://embed.wakelet.com/wakes/<%= remote_id %>/list',
     width: 580,
+    minWidth: 320,
     height: 480,
   },
   pollev: {
@@ -1273,6 +1385,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?pollev\.com\/(?!(?:home|login|signup|register|app|features|pricing|support|mobile|proctor|clear|terms|privacy)(?:[/?#]|$))([a-z0-9]+)\/?(?:[?#]\S*)?$/,
     embedUrl: 'https://pollev-embeds.com/<%= remote_id %>',
     width: 580,
+    minWidth: 400,
     height: 480,
   },
   wolframcloud: {
@@ -1283,6 +1396,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?wolframcloud\.com\/obj\/(\S+)/,
     embedUrl: 'https://www.wolframcloud.com/obj/<%= remote_id %>',
     width: 580,
+    minWidth: 480,
     height: 480,
   },
   sketchfab: {
@@ -1294,6 +1408,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://sketchfab.com/models/<%= remote_id %>/embed',
     id: (groups) => groups[0] ?? groups[1] ?? '',
     width: 580,
+    minWidth: 400,
     height: 400,
   },
   openstreetmap: {
@@ -1317,6 +1432,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
       return `bbox=${bbox}&layer=mapnik${marker}`;
     },
     width: 580,
+    minWidth: 300,
     height: 420,
   },
   tencentvideo: {
@@ -1329,6 +1445,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://v.qq.com/txp/iframe/player.html?vid=<%= remote_id %>',
     id: (groups) => groups[0] ?? groups[1] ?? '',
     width: 580,
+    minWidth: 320,
     height: 320,
   },
   douyin: {
@@ -1340,6 +1457,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?douyin\.com\/video\/(\d+)\S*/,
     embedUrl: 'https://open.douyin.com/player/video?vid=<%= remote_id %>&autoplay=0',
     width: 325,
+    minWidth: 325,
     height: 580,
     fixedWidth: true,
   },
@@ -1353,6 +1471,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?kinescope\.io\/(?:embed\/)?([A-Za-z0-9]{16,})\/?(?:[?#]\S*)?$/,
     embedUrl: 'https://kinescope.io/embed/<%= remote_id %>',
     width: 580,
+    minWidth: 320,
     height: 320,
   },
   vidio: {
@@ -1364,6 +1483,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?vidio\.com\/watch\/(\d+)-[\w-]+\S*/,
     embedUrl: 'https://www.vidio.com/embed/<%= remote_id %>',
     width: 580,
+    minWidth: 320,
     height: 320,
   },
   mailru: {
@@ -1376,6 +1496,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://my.mail.ru/<%= remote_id %>',
     id: (groups) => `${groups[0]}/${groups[1]}/video/embed/${groups[2]}/${groups[3]}`,
     width: 580,
+    minWidth: 320,
     height: 320,
   },
   smotrim: {
@@ -1386,6 +1507,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     regex: /^(?:https?:\/\/)?(?:www\.)?smotrim\.ru\/video\/(\d+)\S*/,
     embedUrl: 'https://player.smotrim.ru/iframe/video/id/<%= remote_id %>/sid/smotrim',
     width: 580,
+    minWidth: 320,
     height: 320,
   },
   twitter: {

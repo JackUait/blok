@@ -21,10 +21,22 @@ export interface ComputeWidthInput {
   currentX: number;
   /** Alignment anchor as a fraction [0..1] of the container. Centered → symmetric resize. */
   alignFrac?: number;
+  /**
+   * Per-source hard minimum in pixels (e.g. an embed provider's smallest usable
+   * player width). Converted to a percent of the live container and used as the
+   * lower clamp instead of the global floor.
+   */
+  minWidthPx?: number;
 }
 
-export function clampPercent(value: number): number {
-  if (value < MIN_WIDTH_PERCENT) return MIN_WIDTH_PERCENT;
+/**
+ * Clamps a width percent into the resizable range. `minPercent` raises the lower
+ * bound for sources with a per-instance minimum, but never below the global floor
+ * and never above the max (a minimum wider than the container pins the width full).
+ */
+export function clampPercent(value: number, minPercent: number = MIN_WIDTH_PERCENT): number {
+  const floor = Math.min(Math.max(minPercent, MIN_WIDTH_PERCENT), MAX_WIDTH_PERCENT);
+  if (value < floor) return floor;
   if (value > MAX_WIDTH_PERCENT) return MAX_WIDTH_PERCENT;
   return value;
 }
@@ -42,7 +54,10 @@ export function computeWidthPercent(input: ComputeWidthInput): number {
   const deltaX = input.currentX - input.startX;
   const signedDelta = multiplier * (input.edge === 'right' ? deltaX : -deltaX);
   const nextWidth = input.startWidth + signedDelta;
-  return clampPercent(Math.round((nextWidth / input.containerWidth) * 100));
+  const minPercent = input.minWidthPx !== undefined
+    ? Math.round((input.minWidthPx / input.containerWidth) * 100)
+    : MIN_WIDTH_PERCENT;
+  return clampPercent(Math.round((nextWidth / input.containerWidth) * 100), minPercent);
 }
 
 export interface AttachResizeHandleOptions {
@@ -51,6 +66,8 @@ export interface AttachResizeHandleOptions {
   container: HTMLElement;
   edge: ResizeEdge;
   alignment?: ImageAlignment;
+  /** Per-source hard minimum width in pixels; floors the resize lower bound. */
+  minWidthPx?: number;
   onPreview(percent: number): void;
   onCommit(percent: number): void;
 }
@@ -93,6 +110,7 @@ export function attachResizeHandle(opts: AttachResizeHandleOptions): () => void 
       startX: state.startX,
       currentX: event.clientX,
       alignFrac,
+      minWidthPx: opts.minWidthPx,
     });
     state.lastPercent = next;
     opts.onPreview(next);

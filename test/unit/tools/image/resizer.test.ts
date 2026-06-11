@@ -16,6 +16,18 @@ describe('clampPercent', () => {
   it('passes through in-range', () => {
     expect(clampPercent(42)).toBe(42);
   });
+  it('raises the floor to a custom minPercent', () => {
+    expect(clampPercent(20, 40)).toBe(40);
+  });
+  it('passes through a value above a custom minPercent', () => {
+    expect(clampPercent(55, 40)).toBe(55);
+  });
+  it('never lets a custom minPercent drop below the global floor', () => {
+    expect(clampPercent(3, 5)).toBe(10);
+  });
+  it('caps a custom minPercent that exceeds the max', () => {
+    expect(clampPercent(50, 150)).toBe(100);
+  });
 });
 
 describe('computeWidthPercent', () => {
@@ -131,6 +143,34 @@ describe('computeWidthPercent', () => {
         currentX: 5000,
       })
     ).toBe(100);
+  });
+
+  it('clamps to a per-source minWidthPx floor instead of the global 10%', () => {
+    // minWidthPx 300 on a 1000px container → 30% floor.
+    expect(
+      computeWidthPercent({
+        edge: 'right',
+        containerWidth: 1000,
+        startWidth: 500,
+        startX: 600,
+        currentX: 0,
+        minWidthPx: 300,
+      })
+    ).toBe(30);
+  });
+
+  it('ignores minWidthPx when the computed width stays above the floor', () => {
+    expect(
+      computeWidthPercent({
+        edge: 'right',
+        containerWidth: 1000,
+        startWidth: 500,
+        startX: 600,
+        currentX: 700,
+        alignFrac: 0,
+        minWidthPx: 300,
+      })
+    ).toBe(60);
   });
 });
 
@@ -289,6 +329,44 @@ describe('attachResizeHandle', () => {
 
     expect(updates[updates.length - 1]).toBe(60);
     expect(figure.style.transform).toBe('');
+    detach();
+  });
+
+  it('honours a per-source minWidthPx floor while dragging smaller', () => {
+    const parent = document.createElement('div');
+    const figure = document.createElement('div');
+    parent.appendChild(figure);
+    Object.defineProperty(parent, 'getBoundingClientRect', {
+      value: () => makeRect(1000, 0),
+    });
+    Object.defineProperty(figure, 'getBoundingClientRect', {
+      value: () => makeRect(1000, 0),
+    });
+    const handle = document.createElement('div');
+    figure.appendChild(handle);
+    handle.setPointerCapture = (): void => undefined;
+    handle.releasePointerCapture = (): void => undefined;
+
+    const updates: number[] = [];
+    let committed: number | undefined;
+    const detach = attachResizeHandle({
+      handle,
+      figure,
+      container: parent,
+      edge: 'right',
+      alignment: 'left',
+      minWidthPx: 400,
+      onPreview: (p) => updates.push(p),
+      onCommit: (p) => { committed = p; },
+    });
+
+    // Drag the right edge far left; without a floor this would shrink past 40%.
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 1000, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 100, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 100, bubbles: true }));
+
+    expect(updates[updates.length - 1]).toBe(40);
+    expect(committed).toBe(40);
     detach();
   });
 });

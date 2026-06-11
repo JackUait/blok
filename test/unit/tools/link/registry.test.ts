@@ -2625,4 +2625,32 @@ describe('link registry', () => {
       expect(isHttpUrl('just text')).toBe(false);
     });
   });
+
+  describe('per-service minimum resize width', () => {
+    const iframeServices = Object.entries(EMBED_SERVICES).filter(
+      ([, config]) => config.kind !== 'script'
+    );
+
+    it('defines a positive minWidth on every iframe service', () => {
+      const missing = iframeServices
+        .filter(([, config]) => typeof config.minWidth !== 'number' || config.minWidth <= 0)
+        .map(([key]) => key);
+
+      expect(missing).toEqual([]);
+    });
+
+    it('never sets a minWidth above the service default width', () => {
+      const violations = iframeServices
+        .filter(([, config]) => config.width !== undefined && (config.minWidth ?? 0) > config.width)
+        .map(([key]) => key);
+
+      expect(violations).toEqual([]);
+    });
+
+    it('leaves script-rendered services without a resize minimum', () => {
+      expect(EMBED_SERVICES.twitter.minWidth).toBeUndefined();
+      expect(EMBED_SERVICES.telegram.minWidth).toBeUndefined();
+      expect(EMBED_SERVICES.threads.minWidth).toBeUndefined();
+    });
+  });
 });

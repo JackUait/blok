@@ -322,6 +322,36 @@ describe('Embed sizing & resize', () => {
     expect(dispatchChange).toHaveBeenCalled();
     expect(tool.save().widthPercent).toBe(60);
   });
+
+  it('clamps resize to the per-service minimum width instead of the global floor', () => {
+    const dispatchChange = vi.fn();
+    // YouTube's registry minWidth is 200px → 20% of a 1000px container.
+    const tool = new Embed(createOptions(iframeData(), { dispatchChange }));
+    const root = tool.render();
+    const figure = figureOf(root);
+
+    if (!figure) {
+      throw new Error('figure missing');
+    }
+
+    Object.defineProperty(root, 'getBoundingClientRect', { value: () => makeRect(1000, 0) });
+    Object.defineProperty(figure, 'getBoundingClientRect', { value: () => makeRect(1000, 0) });
+
+    const handle = root.querySelector<HTMLElement>('[data-role="resize-handle"][data-edge="right"]');
+
+    if (!handle) {
+      throw new Error('handle missing');
+    }
+    handle.setPointerCapture = (): void => undefined;
+    handle.releasePointerCapture = (): void => undefined;
+
+    // Drag the right edge hard left; uncapped this collapses well below 20%.
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 1000, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 0, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 0, bubbles: true }));
+
+    expect(tool.save().widthPercent).toBe(20);
+  });
 });
 
 describe('Embed block toolbar anchoring', () => {

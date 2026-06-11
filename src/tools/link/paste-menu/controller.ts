@@ -55,10 +55,15 @@ export class PasteMenuController implements LinkPasteMenu {
     // Mutable flags held on a const object (the lint config forbids `let`).
     const state = { picked: false, closed: false };
 
-    const items = buildPasteMenuItems(options, this.i18n, (type) => {
-      state.picked = true;
-      params.onSelect(type);
-    });
+    const items = buildPasteMenuItems(
+      options,
+      this.i18n,
+      (type) => {
+        state.picked = true;
+        params.onSelect(type);
+      },
+      params.url
+    );
 
     const popover = new PopoverDesktop({
       items,

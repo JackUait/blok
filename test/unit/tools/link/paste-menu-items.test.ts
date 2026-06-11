@@ -11,8 +11,8 @@ const identityI18n: PasteMenuI18n = { t: (key: string): string => key };
  */
 const asDefaultItem = (
   item: PopoverItemParams
-): { name?: string; title?: string; icon?: string; closeOnActivate?: boolean; onActivate?: (a: unknown, b?: unknown) => void } =>
-  item as { name?: string; title?: string; icon?: string; closeOnActivate?: boolean; onActivate?: (a: unknown, b?: unknown) => void };
+): { name?: string; title?: string; secondaryLabel?: string; icon?: string; closeOnActivate?: boolean; onActivate?: (a: unknown, b?: unknown) => void } =>
+  item as { name?: string; title?: string; secondaryLabel?: string; icon?: string; closeOnActivate?: boolean; onActivate?: (a: unknown, b?: unknown) => void };
 
 describe('buildPasteMenuItems', () => {
   it('builds one item per option, preserving order', () => {
@@ -101,5 +101,66 @@ describe('buildPasteMenuItems', () => {
     expect(onSelect).toHaveBeenCalledWith('embed');
 
     expect(onSelect).toHaveBeenCalledTimes(2);
+  });
+
+  describe('embed item presentation for a recognized provider url', () => {
+    const youtubeUrl = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+
+    it('shows the provider name as title and the embed action as secondary label', () => {
+      const items = buildPasteMenuItems([{ type: 'embed' }], identityI18n, vi.fn(), youtubeUrl);
+      const embed = asDefaultItem(items[0]);
+
+      expect(embed.title).toBe('YouTube');
+      expect(embed.secondaryLabel).toBe('tools.linkPaste.embed');
+    });
+
+    it('uses a link-type icon distinct from the generic embed globe', () => {
+      const [withUrl] = buildPasteMenuItems([{ type: 'embed' }], identityI18n, vi.fn(), youtubeUrl);
+      const [generic] = buildPasteMenuItems([{ type: 'embed' }], identityI18n, vi.fn());
+
+      expect(asDefaultItem(withUrl).icon).not.toBe(asDefaultItem(generic).icon);
+      expect(asDefaultItem(withUrl).icon).toContain('<svg');
+    });
+
+    it('gives different link types different icons', () => {
+      const [video] = buildPasteMenuItems([{ type: 'embed' }], identityI18n, vi.fn(), youtubeUrl);
+      const [audio] = buildPasteMenuItems(
+        [{ type: 'embed' }],
+        identityI18n,
+        vi.fn(),
+        'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC'
+      );
+
+      expect(asDefaultItem(video).icon).not.toBe(asDefaultItem(audio).icon);
+    });
+
+    it('leaves bookmark and plain items unchanged by the url', () => {
+      const withUrl = buildPasteMenuItems(
+        [{ type: 'bookmark' }, { type: 'plain' }],
+        identityI18n,
+        vi.fn(),
+        youtubeUrl
+      );
+      const generic = buildPasteMenuItems([{ type: 'bookmark' }, { type: 'plain' }], identityI18n, vi.fn());
+
+      withUrl.forEach((item, index) => {
+        expect(asDefaultItem(item).title).toBe(asDefaultItem(generic[index]).title);
+        expect(asDefaultItem(item).icon).toBe(asDefaultItem(generic[index]).icon);
+        expect(asDefaultItem(item).secondaryLabel).toBeUndefined();
+      });
+    });
+
+    it('falls back to the generic embed presentation for an unrecognized url', () => {
+      const [item] = buildPasteMenuItems(
+        [{ type: 'embed' }],
+        identityI18n,
+        vi.fn(),
+        'https://example.com/article'
+      );
+      const [generic] = buildPasteMenuItems([{ type: 'embed' }], identityI18n, vi.fn());
+
+      expect(asDefaultItem(item).title).toBe(asDefaultItem(generic).title);
+      expect(asDefaultItem(item).icon).toBe(asDefaultItem(generic).icon);
+    });
   });
 });

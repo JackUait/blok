@@ -811,6 +811,55 @@ export const IconColumns = `
 </svg>
 `;
 
+// Video / player icon — framed player with a play triangle (link-type: video)
+export const IconVideo = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <rect x="2.5" y="4.5" width="15" height="11" rx="2" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M8.5 7.75v4.5l3.9-2.25-3.9-2.25Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Music / audio icon — beamed eighth notes (link-type: audio)
+export const IconMusic = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M7.5 15.5V5.5l8-1.5v10" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="5.75" cy="15.5" r="1.75" stroke="currentColor" stroke-width="1.25"/>
+  <circle cx="13.75" cy="14" r="1.75" stroke="currentColor" stroke-width="1.25"/>
+</svg>
+`;
+
+// Map icon — trifold map with fold lines (link-type: map)
+export const IconMap = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3 5.5 7.5 4l5 1.5L17 4v10.5L12.5 16l-5-1.5L3 16V5.5Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M7.5 4v10.5M12.5 5.5V16" stroke="currentColor" stroke-width="1.25"/>
+</svg>
+`;
+
+// Chart icon — baseline with three bars (link-type: chart / data-viz)
+export const IconChart = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3.5 16.5h13" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M6 13.5V10M10 13.5V5.5M14 13.5V8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
+// Message / speech bubble icon — social post (link-type: social)
+export const IconMessage = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M6 4.5h8A2.5 2.5 0 0 1 16.5 7v4a2.5 2.5 0 0 1-2.5 2.5H8.75L5.25 16.25v-2.92A2.5 2.5 0 0 1 3.5 11V7A2.5 2.5 0 0 1 6 4.5Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// File / document icon — page with a folded corner and text lines (link-type: document)
+export const IconFile = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M5 4A1.5 1.5 0 0 1 6.5 2.5h4.75L15 6.25V16a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 5 16V4Z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
+  <path d="M11.25 2.5v3.75H15" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
+  <path d="M7.5 10.5h5M7.5 13h5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
 /**
  * Builds a columns-preset icon: one rounded frame split by `count - 1` evenly
  * spaced dividers, so it reads as a container holding exactly `count` columns

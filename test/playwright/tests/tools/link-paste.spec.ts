@@ -293,6 +293,8 @@ test.describe('Link paste menu (opt-in)', () => {
     const embedItem = page.locator('[data-blok-item-name="paste-menu-embed"]');
 
     await expect(embedItem).toBeVisible();
+    // The menu names the recognized provider instead of a generic "Embed" label.
+    await expect(embedItem).toContainText('YouTube');
     await embedItem.click();
 
     const iframe = page.locator('[data-blok-testid="embed-frame"]');

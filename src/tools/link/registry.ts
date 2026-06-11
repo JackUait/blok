@@ -12,7 +12,29 @@
  */
 export type EmbedKind = 'iframe' | 'script';
 
+/**
+ * Link-type category of a provider's content. Drives which icon the paste UI
+ * shows next to the provider name.
+ */
+export type EmbedServiceType =
+  | 'video'
+  | 'audio'
+  | 'image'
+  | 'social'
+  | 'document'
+  | 'table'
+  | 'form'
+  | 'code'
+  | 'design'
+  | 'chart'
+  | 'map'
+  | 'calendar';
+
 export interface EmbedService {
+  /** Official, consumer-facing provider name (e.g. "YouTube") shown in the paste UI. */
+  title: string;
+  /** Link-type category of the provider's content. */
+  type: EmbedServiceType;
   /** Claims a pasted URL and captures the remote id parts. */
   regex: RegExp;
   /** Embed URL template; `<%= remote_id %>` is replaced with the remote id. */
@@ -39,6 +61,10 @@ export interface EmbedMatch {
   remoteId: string;
   embedUrl: string;
   kind: EmbedKind;
+  /** Display name of the matched provider (e.g. "YouTube"). */
+  title: string;
+  /** Link-type category of the matched provider. */
+  type: EmbedServiceType;
 }
 
 const REMOTE_ID_TEMPLATE = /<%=\s*remote_id\s*%>/;
@@ -69,6 +95,8 @@ function parseYoutubeStart(tail: string): number | null {
 
 export const EMBED_SERVICES: Record<string, EmbedService> = {
   youtube: {
+    title: 'YouTube',
+    type: 'video',
     regex: /^(?:https?:\/\/)?(?:(?:www|m|music)\.)?(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]+)(\S*)/,
     embedUrl: 'https://www.youtube.com/embed/<%= remote_id %>',
     id: (groups) => {
@@ -80,12 +108,16 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   youtubeplaylist: {
+    title: 'YouTube',
+    type: 'video',
     regex: /^(?:https?:\/\/)?(?:(?:www|m|music)\.)?youtube\.com\/playlist\?(?:.*&)?list=([\w-]+)\S*/,
     embedUrl: 'https://www.youtube.com/embed/videoseries?list=<%= remote_id %>',
     width: 580,
     height: 320,
   },
   vimeo: {
+    title: 'Vimeo',
+    type: 'video',
     regex: /^(?:https?:\/\/)?(?:www\.)?(?:player\.)?vimeo\.com\/(?:(?:groups\/[\w-]+\/videos|album\/\d+\/video|showcase\/\d+\/video|video)\/)?(\d+)(?:\/([0-9a-f]+))?\S*/,
     embedUrl: 'https://player.vimeo.com/video/<%= remote_id %>',
     id: (groups) => (groups[1] !== undefined ? `${groups[0]}?h=${groups[1]}` : groups[0] ?? ''),
@@ -93,18 +125,24 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   vimeoshowcase: {
+    title: 'Vimeo',
+    type: 'video',
     regex: /^(?:https?:\/\/)?(?:www\.)?vimeo\.com\/showcase\/(\d+)\/?(?:[?#]\S*)?$/,
     embedUrl: 'https://vimeo.com/showcase/<%= remote_id %>/embed',
     width: 580,
     height: 320,
   },
   vimeoevent: {
+    title: 'Vimeo',
+    type: 'video',
     regex: /^(?:https?:\/\/)?(?:www\.)?vimeo\.com\/event\/(\d+)\S*/,
     embedUrl: 'https://vimeo.com/event/<%= remote_id %>/embed',
     width: 580,
     height: 320,
   },
   rutube: {
+    title: 'RUTUBE',
+    type: 'video',
     // Rutube ids are 32-char hex hashes; the length guard keeps listing pages
     // (/video/category/..., /video/person/...) from being claimed.
     regex: /^(?:https?:\/\/)?(?:www\.)?rutube\.ru\/(?:video\/private\/|(?:video|shorts|play\/embed)\/|live\/video\/)([0-9a-f]{32})\/?(?:\?(?:.*&)?p=([\w-]+))?\S*/,
@@ -114,6 +152,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   vkvideo: {
+    title: 'VK Video',
+    type: 'video',
     // NOTE: VK normally also needs a `hash` param that is not derivable from the
     // pasted URL (it IS kept when a video_ext.php iframe src is pasted directly).
     // Public videos usually render without it.
@@ -133,6 +173,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   codepen: {
+    title: 'CodePen',
+    type: 'code',
     regex: /^(?:https?:\/\/)?(?:www\.)?codepen\.io\/((?:team\/|editor\/)?[\w-]+)\/(?:pen|full|details|debug)\/([\w-]+)(?:\/([0-9a-f]+))?\S*/,
     embedUrl: 'https://codepen.io/<%= remote_id %>?default-tab=result',
     id: (groups) => `${groups[0]}/embed/${groups[1]}${groups[2] !== undefined ? `/${groups[2]}` : ''}`,
@@ -140,6 +182,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   loom: {
+    title: 'Loom',
+    type: 'video',
     // Loom video ids are 32-char hex; folder links (loom.com/share/folder/...)
     // are not embeddable and must fall through to the bookmark tool.
     regex: /^(?:https?:\/\/)?(?:www\.)?loom\.com\/(?:share|embed)\/([0-9a-f]{32})\S*/,
@@ -148,6 +192,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   figma: {
+    title: 'Figma',
+    type: 'design',
     regex: /^(?:https?:\/\/)?(?:www\.)?figma\.com\/(design|board|proto|file|slides|deck)\/([^/?#]+)\S*/,
     embedUrl: 'https://embed.figma.com/<%= remote_id %>?embed-host=blok',
     id: (groups) => `${groups[0]}/${groups[1]}`,
@@ -155,6 +201,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 400,
   },
   spotify: {
+    title: 'Spotify',
+    type: 'audio',
     regex: /^(?:https?:\/\/)?open\.spotify\.com\/(?:intl-[\w-]+\/)?(?:embed\/)?(track|album|playlist|episode|show|artist)\/([^/?#]+)\S*/,
     embedUrl: 'https://open.spotify.com/embed/<%= remote_id %>',
     id: (groups) => `${groups[0]}/${groups[1]}`,
@@ -162,6 +210,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 152,
   },
   googledrive: {
+    title: 'Google Drive',
+    type: 'document',
     regex: /^(?:https?:\/\/)?drive\.google\.com\/(?:file\/(?:u\/\d+\/)?d\/([\w-]+)|open\?(?:.*&)?id=([\w-]+))\S*/,
     embedUrl: 'https://drive.google.com/file/d/<%= remote_id %>/preview',
     id: (groups) => groups[0] ?? groups[1] ?? '',
@@ -169,12 +219,16 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 480,
   },
   googledrivefolder: {
+    title: 'Google Drive',
+    type: 'document',
     regex: /^(?:https?:\/\/)?drive\.google\.com\/drive\/(?:u\/\d+\/)?folders\/([\w-]+)\S*/,
     embedUrl: 'https://drive.google.com/embeddedfolderview?id=<%= remote_id %>#list',
     width: 580,
     height: 480,
   },
   googledocspublished: {
+    title: 'Google Docs',
+    type: 'document',
     // "Publish to the web" links carry a 2PACX token under d/e/ that is not a
     // document id: /preview 404s for them, Google's own embed code is /pub?embedded=true.
     regex: /^(?:https?:\/\/)?docs\.google\.com\/document\/(?:u\/\d+\/)?d\/e\/([\w-]+)\S*/,
@@ -183,6 +237,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 480,
   },
   googledocs: {
+    title: 'Google Docs',
+    type: 'document',
     // (?!e\/) keeps published d/e/ links out of this entry regardless of registry order.
     regex: /^(?:https?:\/\/)?docs\.google\.com\/document\/(?:u\/\d+\/)?d\/(?!e\/)([\w-]+)\S*/,
     embedUrl: 'https://docs.google.com/document/d/<%= remote_id %>/preview',
@@ -190,6 +246,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 480,
   },
   googlesheets: {
+    title: 'Google Sheets',
+    type: 'table',
     // Branch 1 claims published d/e/<2PACX token> links (embedded via Google's own
     // pubhtml?widget=true&headers=false endpoint), branch 2 normal d/<fileId> links.
     regex: /^(?:https?:\/\/)?docs\.google\.com\/spreadsheets\/(?:u\/\d+\/)?d\/(?:e\/([\w-]+)|([\w-]+))\S*/,
@@ -202,6 +260,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 480,
   },
   googleslides: {
+    title: 'Google Slides',
+    type: 'document',
     // Published links keep the literal e/ segment inside the id, so the same
     // /embed template serves both d/<id> and d/e/<2PACX token> URLs.
     regex: /^(?:https?:\/\/)?docs\.google\.com\/presentation\/(?:u\/\d+\/)?d\/((?:e\/)?[\w-]+)\S*/,
@@ -210,6 +270,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 480,
   },
   googleforms: {
+    title: 'Google Forms',
+    type: 'form',
     // Legacy d/<editId>/viewform links work because Google 301s them to the
     // canonical d/e/ embed URL with the query string preserved.
     regex: /^(?:https?:\/\/)?docs\.google\.com\/forms\/(?:u\/\d+\/)?d\/((?:e\/)?[\w-]+)\/viewform\S*/,
@@ -218,6 +280,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 480,
   },
   drawio: {
+    title: 'draw.io',
+    type: 'design',
     // Frameable only on viewer.diagrams.net (app.diagrams.net sends frame-ancestors),
     // so every variant is normalized onto the viewer host. #G drive refs are rewritten
     // to the same #U published-link form draw.io itself generates (file must be
@@ -238,6 +302,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 480,
   },
   bilibili: {
+    title: 'bilibili',
+    type: 'video',
     // BV ids are base58 (no 0/O/I/l); legacy av ids are numeric. Opaque b23.tv
     // shortcodes resolve only via redirect and are excluded; literal-id b23.tv
     // links carry the id in the path and are claimed. Player autoplays by
@@ -249,6 +315,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   niconico: {
+    title: 'niconico',
+    type: 'video',
     // Ids keep their sm/nm/so prefix; nico.ms short links carry the id in the
     // path. so (official channel) videos may refuse embedding per-publisher.
     regex: /^(?:https?:\/\/)?(?:(?:www|sp)\.nicovideo\.jp\/watch|nico\.ms)\/((?:sm|nm|so)\d+)\S*/,
@@ -257,6 +325,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   youku: {
+    title: 'Youku',
+    type: 'video',
     // Ids are base64-ish (may end in = padding, sometimes %3D-encoded when
     // copied). Playback of many videos is mainland-China-only at stream level.
     regex: /^(?:https?:\/\/)?(?:v|m)\.youku\.com\/(?:v_show|video|alipay_video)\/id_((?:%3D|[A-Za-z0-9+=])+)\.html?\S*/,
@@ -266,6 +336,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   navertv: {
+    title: 'Naver TV',
+    type: 'video',
     // Param is camelCase autoPlay; the embed host is the same tv.naver.com.
     regex: /^(?:https?:\/\/)?tv\.naver\.com\/(?:v|embed)\/(\d+)\S*/,
     embedUrl: 'https://tv.naver.com/embed/<%= remote_id %>?autoPlay=false',
@@ -273,6 +345,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   kakaotv: {
+    title: 'KakaoTV',
+    type: 'video',
     // tv.kakao.com itself sends X-Frame-Options: DENY — only the
     // play-tv.kakao.com embed host is frameable.
     regex: /^(?:https?:\/\/)?tv\.kakao\.com\/(?:v|channel\/\d+\/cliplink)\/(\d+)\S*/,
@@ -281,6 +355,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   dailymotion: {
+    title: 'Dailymotion',
+    type: 'video',
     // dai.ly short links carry the video id literally in the path.
     regex: /^(?:https?:\/\/)?(?:(?:www\.)?dailymotion\.com\/video|dai\.ly)\/([a-z0-9]+)\S*/,
     embedUrl: 'https://geo.dailymotion.com/player.html?video=<%= remote_id %>',
@@ -288,6 +364,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   okru: {
+    title: 'OK.ru',
+    type: 'video',
     // m.ok.ru pages send X-Frame-Options: DENY — always rewrite onto the
     // ok.ru/videoembed endpoint. Ids may carry a -N suffix.
     regex: /^(?:https?:\/\/)?(?:(?:www|m|mobile)\.)?(?:ok\.ru|odnoklassniki\.ru)\/(?:video|videoembed|live)\/(\d+(?:-\d+)?)\S*/,
@@ -296,6 +374,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   yandexmusic: {
+    title: 'Yandex Music',
+    type: 'audio',
     // The iframe widget reverses the share-URL slot order for tracks:
     // /album/<albumId>/track/<trackId> embeds as /iframe/track/<trackId>/<albumId>.
     regex: /^(?:https?:\/\/)?music\.yandex\.(?:ru|com|kz|by|uz)\/(?:album\/(\d+)(?:\/track\/(\d+))?|users\/([\w.-]+)\/playlists\/(\d+))\S*/,
@@ -317,6 +397,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 180,
   },
   arte: {
+    title: 'ARTE',
+    type: 'video',
     // Program ids are NNNNNN-NNN-L; geo-rights vary per program inside the player.
     regex: /^(?:https?:\/\/)?(?:www\.)?arte\.tv\/(fr|de|en|es|pl|it)\/videos\/(\d{6}-\d{3}-[A-Z])\S*/,
     embedUrl: 'https://www.arte.tv/embeds/<%= remote_id %>',
@@ -325,6 +407,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   deezer: {
+    title: 'Deezer',
+    type: 'audio',
     // link.deezer.com short links are opaque redirects and excluded.
     regex: /^(?:https?:\/\/)?(?:www\.)?deezer\.com\/(?:[a-z]{2}\/)?(track|album|playlist|artist|episode)\/(\d+)\S*/,
     embedUrl: 'https://widget.deezer.com/widget/auto/<%= remote_id %>',
@@ -333,6 +417,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 300,
   },
   soundcloud: {
+    title: 'SoundCloud',
+    type: 'audio',
     // The widget takes the whole permalink percent-encoded in ?url=. Profile
     // tab pages (tracks/albums/likes/...) and opaque on.soundcloud.com short
     // links are excluded; the latter resolve only via redirect.
@@ -344,6 +430,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 166,
   },
   mixcloud: {
+    title: 'Mixcloud',
+    type: 'audio',
     // Only shows have widget feeds; playlist pages are excluded.
     regex: /^(?:https?:\/\/)?(?:(?:www|m)\.)?mixcloud\.com\/([\w-]+)\/(?!playlists(?:[/?#]|$))([\w-]+)\/?(?:[?#]\S*)?$/,
     embedUrl: 'https://www.mixcloud.com/widget/iframe/?feed=<%= remote_id %>&hide_cover=1',
@@ -352,6 +440,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 120,
   },
   applemusic: {
+    title: 'Apple Music',
+    type: 'audio',
     // Pure host swap onto embed.music.apple.com; ?i= selects a single track
     // inside an album embed and must be preserved.
     regex: /^(?:https?:\/\/)?music\.apple\.com\/([a-z]{2}\/(?:album|playlist|song)\/[^\s/?]+\/(?:pl\.[\w-]+|\d+))(?:\?(\S*))?$/,
@@ -365,6 +455,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 450,
   },
   applepodcasts: {
+    title: 'Apple Podcasts',
+    type: 'audio',
     // Pure host swap onto embed.podcasts.apple.com; ?i= selects an episode.
     regex: /^(?:https?:\/\/)?podcasts\.apple\.com\/([a-z]{2}\/podcast\/[^\s/?]+\/id\d+)(?:\?(\S*))?$/,
     embedUrl: 'https://embed.podcasts.apple.com/<%= remote_id %>',
@@ -377,6 +469,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 450,
   },
   audiomack: {
+    title: 'Audiomack',
+    type: 'audio',
     // Share path /<artist>/<type>/<slug> rearranges to /embed/<type>/<artist>/<slug>.
     regex: /^(?:https?:\/\/)?(?:www\.)?audiomack\.com\/([\w-]+)\/(song|album|playlist)\/([\w-]+)\S*/,
     embedUrl: 'https://audiomack.com/embed/<%= remote_id %>',
@@ -385,6 +479,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 252,
   },
   anghami: {
+    title: 'Anghami',
+    type: 'audio',
     // play.anghami.com/embed/... sends X-Frame-Options: DENY on its redirect —
     // only the widget.anghami.com host is frameable.
     regex: /^(?:https?:\/\/)?play\.anghami\.com\/(song|album|playlist|artist)\/(\d+)\S*/,
@@ -394,6 +490,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 170,
   },
   streamable: {
+    title: 'Streamable',
+    type: 'video',
     // Codes are short lowercase alnum, so common site pages must be excluded
     // explicitly to keep them on the bookmark fallback.
     regex: /^(?:https?:\/\/)?(?:www\.)?streamable\.com\/(?:e\/)?(?!(?:login|signup|recover|documentation)(?:[/?#]|$))([a-z0-9]+)\/?(?:[?#]\S*)?$/,
@@ -402,6 +500,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   tiktok: {
+    title: 'TikTok',
+    type: 'video',
     // Opaque vm./vt. short links resolve only via redirect and are excluded;
     // photo posts render inconsistently in embed/v2 and are excluded too.
     regex: /^(?:https?:\/\/)?(?:www\.)?tiktok\.com\/@[\w.-]+\/video\/(\d+)\S*/,
@@ -411,6 +511,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     fixedWidth: true,
   },
   wistia: {
+    title: 'Wistia',
+    type: 'video',
     // Account subdomains are arbitrary; both wistia.com and wistia.net occur.
     regex: /^(?:https?:\/\/)?(?:[\w-]+\.)?wistia\.(?:com|net)\/(?:medias|embed\/iframe)\/([A-Za-z0-9]+)\S*/,
     embedUrl: 'https://fast.wistia.net/embed/iframe/<%= remote_id %>',
@@ -418,6 +520,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   vidyard: {
+    title: 'Vidyard',
+    type: 'video',
     // Share hosts are per-customer subdomains, optionally with one path segment
     // before /watch/. The embed host returns 200 even for bogus ids.
     regex: /^(?:https?:\/\/)?[\w-]+\.vidyard\.com\/(?:[\w-]+\/)?watch\/([\w-]+)\S*/,
@@ -426,6 +530,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   giphy: {
+    title: 'GIPHY',
+    type: 'image',
     // The id is the trailing token after the last hyphen of the slug. Direct
     // media.giphy.com links carry the id as a path segment. gph.is short links
     // are opaque redirects and excluded.
@@ -436,6 +542,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 360,
   },
   codesandbox: {
+    title: 'CodeSandbox',
+    type: 'code',
     // /p/devbox/ URLs are excluded: their /embed/ mapping is unverified.
     regex: /^(?:https?:\/\/)?codesandbox\.io\/(?:s|p\/sandbox|embed)\/([\w-]+)\S*/,
     embedUrl: 'https://codesandbox.io/embed/<%= remote_id %>',
@@ -443,6 +551,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 500,
   },
   stackblitz: {
+    title: 'StackBlitz',
+    type: 'code',
     // embed=1 is appended ahead of any user params (file=, view=, ...).
     regex: /^(?:https?:\/\/)?stackblitz\.com\/edit\/([\w-]+)(?:\?(\S+))?$/,
     embedUrl: 'https://stackblitz.com/edit/<%= remote_id %>',
@@ -451,6 +561,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 500,
   },
   typeform: {
+    title: 'Typeform',
+    type: 'form',
     // Form pages are frameable as-is; the original subdomain must be kept
     // (private forms 301 to a marketing page, which simply renders inside).
     regex: /^(?:https?:\/\/)?([\w-]+)\.typeform\.com\/to\/(\w+)\S*/,
@@ -460,6 +572,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 500,
   },
   airtable: {
+    title: 'Airtable',
+    type: 'table',
     // Only shr... share links are embeddable; app/tbl/viw workspace URLs are
     // auth-only. The optional app prefix is kept (airtable 302s to it anyway).
     regex: /^(?:https?:\/\/)?(?:www\.)?airtable\.com\/(?:embed\/)?(?:(app\w+)\/)?(shr\w+)\S*/,
@@ -469,6 +583,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 533,
   },
   miro: {
+    title: 'Miro',
+    type: 'design',
     // Board ids often end in = padding (sometimes %3D-encoded). Boards must be
     // link-shared to render; private boards show a login wall inside the frame.
     regex: /^(?:https?:\/\/)?miro\.com\/app\/(?:board|live-embed)\/((?:%3D|[\w=-])+)\/?\S*/,
@@ -478,6 +594,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 500,
   },
   desmos: {
+    title: 'Desmos',
+    type: 'chart',
     // ?embed strips the site chrome down to the graph + keypad.
     regex: /^(?:https?:\/\/)?(?:www\.)?desmos\.com\/calculator\/([a-z0-9]+)\S*/,
     embedUrl: 'https://www.desmos.com/calculator/<%= remote_id %>?embed',
@@ -485,6 +603,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 450,
   },
   observable: {
+    title: 'Observable',
+    type: 'code',
     // Notebook app pages send frame-ancestors 'none'; /embed/ sends
     // frame-ancestors *. Profile pages (single @user segment) are excluded.
     regex: /^(?:https?:\/\/)?(?:www\.)?observablehq\.com\/(?:embed\/)?(@[\w-]+\/[\w-]+)\S*/,
@@ -493,6 +613,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 500,
   },
   jsfiddle: {
+    title: 'JSFiddle',
+    type: 'code',
     // Shapes: /<id>/, /<user>/<id>/, /<user>/<id>/<rev>/ — captured whole and
     // suffixed with /embedded/. Reserved site paths are excluded.
     regex: /^(?:https?:\/\/)?(?:www\.)?jsfiddle\.net\/(?!(?:embedded|api|user|docs|blog|about)(?:[/?#]|$))(\w+(?:\/\w+){0,2})\/?(?:[?#]\S*)?$/,
@@ -501,6 +623,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 400,
   },
   reddit: {
+    title: 'Reddit',
+    type: 'social',
     // Mobile share /s/<token> links and redd.it shortcodes are opaque
     // redirects and excluded; only canonical /r/<sub>/comments/<id>/ permalinks
     // are claimed.
@@ -510,6 +634,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 500,
   },
   instagram: {
+    title: 'Instagram',
+    type: 'social',
     // The server sends X-Frame-Options: DENY only to requests without
     // Sec-Fetch-Dest: iframe — browsers embed fine, naive curl checks
     // false-negative. All post kinds (p/reel/reels/tv, + instagr.am) embed
@@ -521,6 +647,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     fixedWidth: true,
   },
   facebookvideo: {
+    title: 'Facebook',
+    type: 'video',
     // The plugin takes the canonical watch URL percent-encoded in ?href=.
     // Opaque fb.watch short links resolve only via redirect and are excluded.
     regex: /^(?:https?:\/\/)?(?:(?:www|m|web|mbasic)\.)?facebook\.com\/(?:([\w.-]+)\/videos\/(?:[\w.-]+\/)?(\d+)|watch\/?\?(?:\S*?&)?v=(\d+)|reel\/(\d+))\S*/,
@@ -542,6 +670,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   facebookpost: {
+    title: 'Facebook',
+    type: 'social',
     // The plugin takes the canonical permalink percent-encoded in ?href=.
     // Opaque /share/p/<token> share links resolve only via redirect and are
     // excluded. Must stay after facebookvideo so /videos|watch|reel URLs are
@@ -571,6 +701,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 600,
   },
   linkedin: {
+    title: 'LinkedIn',
+    type: 'social',
     // Both share forms carry the numeric activity id; the urn type
     // (activity/share/ugcPost) is mirrored into the embed path. Opaque
     // lnkd.in short links are excluded.
@@ -581,6 +713,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 540,
   },
   mastodon: {
+    title: 'Mastodon',
+    type: 'social',
     // Curated instance allowlist: any host can run Mastodon, so only
     // known-frameable instances are claimed. The remote id carries host+path
     // because each instance serves its own /embed endpoint.
@@ -591,6 +725,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   pinterest: {
+    title: 'Pinterest',
+    type: 'social',
     // Regional TLDs and subdomains (ru.pinterest.com, pinterest.co.uk) share
     // the same numeric pin id. Opaque pin.it short links are excluded.
     regex: /^(?:https?:\/\/)?(?:[\w-]+\.)?pinterest\.(?:[a-z]{2,3}|co\.[a-z]{2}|com\.[a-z]{2})\/pin\/(\d+)(?:[/?#]\S*)?$/,
@@ -600,6 +736,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     fixedWidth: true,
   },
   snapchat: {
+    title: 'Snapchat',
+    type: 'social',
     // CSP frame-ancestors * overrides the bogus X-Frame-Options header, so
     // framing works. The embed is the share URL itself + /embed; lens ids are
     // 32-char hex.
@@ -610,6 +748,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     fixedWidth: true,
   },
   substack: {
+    title: 'Substack',
+    type: 'document',
     // Post pages lock frame-ancestors to substack — only the /embed/p/
     // preview card is open (renders a card, not the full post). Publications
     // on custom domains can't be claimed (no recognizable host).
@@ -620,6 +760,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 280,
   },
   ted: {
+    title: 'TED',
+    type: 'video',
     // Slug is required — the bare /talks index page must fall through to bookmark.
     regex: /^(?:https?:\/\/)?(?:www\.)?ted\.com\/talks\/([\w-]+)\S*/,
     embedUrl: 'https://embed.ted.com/talks/<%= remote_id %>',
@@ -627,6 +769,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   internetarchive: {
+    title: 'Internet Archive',
+    type: 'video',
     // Identifiers are case-sensitive and may contain dots; deep links
     // (/details/<id>/<file>) keep only the first path segment — the embed
     // player takes the bare item identifier.
@@ -636,6 +780,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   kick: {
+    title: 'Kick',
+    type: 'video',
     // Live channel pages are single-segment, so /<channel>/videos/... VODs and
     // reserved site paths fall through to the bookmark tool. player.kick.com
     // needs no parent param (unlike twitch). Cloudflare bot-walls curl/headless
@@ -646,6 +792,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   peertube: {
+    title: 'PeerTube',
+    type: 'video',
     // PeerTube is federated — only verified flagship instances are allowlisted.
     // The remote id carries the host (each instance embeds via its own
     // /videos/embed/ path), so the template is a bare https:// prefix.
@@ -656,6 +804,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   odysee: {
+    title: 'Odysee',
+    type: 'video',
     // Claim paths carry @ and : (colons sometimes %3A-encoded when copied) and
     // are passed through to $/embed verbatim. $/... app paths and channel-only
     // URLs (single @segment, no video) are excluded; the anonymous single-segment
@@ -667,6 +817,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   soop: {
+    title: 'SOOP',
+    type: 'video',
     // Legacy afreecatv.com and Korean sooplive.co.kr hosts normalize onto the
     // global sooplive.com player. The player page itself is frameable;
     // gated/missing VODs error gracefully inside the frame.
@@ -676,6 +828,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   coub: {
+    title: 'Coub',
+    type: 'video',
     // /embed serves X-Frame-Options: ALLOWALL.
     regex: /^(?:https?:\/\/)?(?:www\.)?coub\.com\/view\/(\w+)\S*/,
     embedUrl: 'https://coub.com/embed/<%= remote_id %>',
@@ -683,6 +837,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   bitchute: {
+    title: 'BitChute',
+    type: 'video',
     // Ids may contain - and _; the embed path keeps the trailing slash.
     regex: /^(?:https?:\/\/)?(?:www\.)?bitchute\.com\/video\/([\w-]+)\/?\S*/,
     embedUrl: 'https://www.bitchute.com/embed/<%= remote_id %>/',
@@ -690,6 +846,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   tidal: {
+    title: 'TIDAL',
+    type: 'audio',
     // Numeric ids for track/album/video, UUID for playlist; the embed host
     // pluralizes the type segment (track -> tracks). Mix pages have no verified
     // embed.tidal.com mapping and are excluded. Natural player heights differ
@@ -702,6 +860,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 400,
   },
   spotifypodcasters: {
+    title: 'Spotify for Creators',
+    type: 'audio',
     // Spotify for Creators (ex Podcasters, ex Anchor). All three hosts carry the
     // same <show>/episodes/<slug>-<episodeId> shape; the embed form inserts
     // /embed before /episodes on the current creators.spotify.com host.
@@ -712,6 +872,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 152,
   },
   pocketcasts: {
+    title: 'Pocket Casts',
+    type: 'audio',
     // Share codes are short opaque tokens in the root path, so known site pages
     // must be excluded explicitly to keep them on the bookmark fallback.
     regex: /^(?:https?:\/\/)?pca\.st\/(?!(?:discover|search|podcasts?|episode|support|sign-in|register|get|plus|about|privacy|terms)(?:[/?#]|$))([\w-]+)\/?(?:[?#]\S*)?$/,
@@ -720,6 +882,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 200,
   },
   iheart: {
+    title: 'iHeart',
+    type: 'audio',
     // Podcast shows, episodes and live stations all embed as the original page
     // path with ?embed=true appended; ids are the trailing -<digits> of each slug.
     regex: /^(?:https?:\/\/)?(?:www\.)?iheart\.com\/(podcast\/[\w-]+-\d+(?:\/episode\/[\w-]+-\d+)?|live\/[\w-]+-\d+)\/?(?:[?#]\S*)?$/,
@@ -728,6 +892,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 250,
   },
   acast: {
+    title: 'Acast',
+    type: 'audio',
     // Episode pages live at shows.acast.com/<show>/episodes/<episode> (the
     // /episodes/ segment is optional on older links); the embed host drops it.
     // Bare show pages and the /episodes listing are excluded.
@@ -738,6 +904,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 190,
   },
   podbean: {
+    title: 'Podbean',
+    type: 'audio',
     // Only /ew/pb-... share links carry the player key; per-show subdomain
     // episode pages (myshow.podbean.com/e/...) have no derivable key and fall
     // through to the bookmark tool. The player-v2 widget rejects the share
@@ -749,6 +917,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 150,
   },
   spreaker: {
+    title: 'Spreaker',
+    type: 'audio',
     // The widget wants the numeric episode id: trailing --<id> on current slug
     // URLs, the whole segment on legacy /episode/<id> links.
     regex: /^(?:https?:\/\/)?(?:www\.)?spreaker\.com\/episode\/(?:[\w-]*?--)?(\d+)\/?(?:[?#]\S*)?$/,
@@ -757,6 +927,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 200,
   },
   buzzsprout: {
+    title: 'Buzzsprout',
+    type: 'audio',
     // Episode pages embed as-is with the small-player query appended; the
     // /episodes/ segment is optional and the -slug suffix may be absent.
     regex: /^(?:https?:\/\/)?(?:www\.)?buzzsprout\.com\/(\d+\/(?:episodes\/)?\d+(?:-[\w-]+)?)\/?(?:[?#]\S*)?$/,
@@ -765,6 +937,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 200,
   },
   castbox: {
+    title: 'Castbox',
+    type: 'audio',
     // Ids are the trailing -id<channel>-id<episode> (episode) or -id<channel>
     // (channel) of the slug; slugs may carry percent-encoded punctuation, so the
     // slug part is consumed lazily and only the trailing id pair is captured.
@@ -775,6 +949,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 500,
   },
   transistor: {
+    title: 'Transistor',
+    type: 'audio',
     // /s/ share pages send frame-ancestors 'self' — the rewrite onto the /e/
     // embed path is mandatory, not cosmetic.
     regex: /^(?:https?:\/\/)?share\.transistor\.fm\/(?:s|e)\/([0-9a-f]+)\S*/,
@@ -783,6 +959,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 180,
   },
   audioboom: {
+    title: 'Audioboom',
+    type: 'audio',
     // The numeric post id leads the slug; the v4 player lives on the
     // embeds.audioboom.com subdomain.
     regex: /^(?:https?:\/\/)?(?:www\.)?audioboom\.com\/posts\/(\d+)\S*/,
@@ -791,6 +969,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 150,
   },
   tunein: {
+    title: 'TuneIn',
+    type: 'audio',
     // Stations only: the trailing s<digits> of the slug is the station id.
     // Program/podcast pages use p-ids and have no station player — excluded.
     regex: /^(?:https?:\/\/)?(?:www\.)?tunein\.com\/radio\/(?:[\w-]+-)?s(\d+)\/?(?:[?#]\S*)?$/,
@@ -799,6 +979,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 100,
   },
   beatport: {
+    title: 'Beatport',
+    type: 'audio',
     // The numeric id after the slug feeds the embed player query.
     regex: /^(?:https?:\/\/)?(?:www\.)?beatport\.com\/track\/[^/?#\s]+\/(\d+)\S*/,
     embedUrl: 'https://embed.beatport.com/?id=<%= remote_id %>&type=track',
@@ -806,6 +988,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 162,
   },
   netease: {
+    title: 'NetEase Cloud Music',
+    type: 'audio',
     // Song pages are SPA hash routes (#/song?id=) but share links also occur
     // without the hash; both carry id= in the query. type=2 is the song player.
     regex: /^(?:https?:\/\/)?music\.163\.com\/(?:#\/)?song\?(?:.*&)?id=(\d+)\S*/,
@@ -814,6 +998,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 86,
   },
   suno: {
+    title: 'Suno',
+    type: 'audio',
     // Song ids are full UUIDs; the strict shape keeps other /song-ish pages out.
     regex: /^(?:https?:\/\/)?(?:www\.)?suno\.com\/song\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\S*/,
     embedUrl: 'https://suno.com/embed/<%= remote_id %>',
@@ -821,6 +1007,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 240,
   },
   hearthis: {
+    title: 'hearthis.at',
+    type: 'audio',
     // Tracks are exactly /<user>/<slug>/; the player is the same path + /embed/.
     // Known two-segment site sections are excluded; profile pages (one segment)
     // and set pages (three segments) never fit the shape.
@@ -831,6 +1019,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 150,
   },
   boomplay: {
+    title: 'Boomplay',
+    type: 'audio',
     // Songs only; the /MUSIC suffix is the player's content-type discriminator.
     regex: /^(?:https?:\/\/)?(?:www\.)?boomplay\.com\/songs\/(\d+)\S*/,
     embedUrl: 'https://www.boomplay.com/embed/<%= remote_id %>/MUSIC',
@@ -838,6 +1028,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 130,
   },
   calendly: {
+    title: 'Calendly',
+    type: 'calendar',
     // Scheduling pages are frameable as-is once embed_domain/embed_type are
     // appended (same params Calendly's own inline widget passes). Shapes:
     // /<user>[/<event-type>] and one-off /d/<code>/<slug> links. Reserved
@@ -849,6 +1041,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 700,
   },
   tally: {
+    title: 'Tally',
+    type: 'form',
     // Share links are /r/<formId>; the iframe endpoint is /embed/<formId>
     // (also accepted directly when pasted from Tally's embed snippet).
     regex: /^(?:https?:\/\/)?tally\.so\/(?:r|embed)\/(\w+)\/?(?:[?#]\S*)?$/,
@@ -857,6 +1051,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 500,
   },
   jotform: {
+    title: 'Jotform',
+    type: 'form',
     // Numeric form ids only — slug-based form URLs share their shape with
     // marketing pages and are too risky to claim. All regional hosts
     // (form./www./eu.) serve the same form; normalized onto form.jotform.com.
@@ -866,6 +1062,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 540,
   },
   whimsical: {
+    title: 'Whimsical',
+    type: 'design',
     // Board ids are the trailing base62 token after the last hyphen of the
     // slug (or the whole segment for bare links). The 16+ length guard plus
     // the reserved-path exclusion keeps marketing pages on the bookmark tool.
@@ -875,6 +1073,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 420,
   },
   excalidraw: {
+    title: 'Excalidraw',
+    type: 'design',
     // Shareable #json= links carry the scene E2E-encrypted: the decryption
     // key lives in the fragment and never reaches the server, so the whole
     // <docId>,<key> pair must be passed through verbatim. #room= collab
@@ -886,6 +1086,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 420,
   },
   tldraw: {
+    title: 'tldraw',
+    type: 'design',
     // Share kinds: r (editable room), ro (read-only), v (snapshot), p (publish).
     // /f/ file links are auth-only and excluded; the kind segment is kept
     // because each renders through a different route.
@@ -896,6 +1098,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 420,
   },
   mentimeter: {
+    title: 'Mentimeter',
+    type: 'form',
     // Public presentation links append /embed for the frameable viewer; an
     // optional trailing slide id is dropped (the embed plays the whole deck).
     // menti.com voting-code URLs are a different product surface and excluded.
@@ -905,6 +1109,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 400,
   },
   behance: {
+    title: 'Behance',
+    type: 'design',
     // Project pages are /gallery/<digits>/<slug>; only the numeric id feeds
     // the /embed/project endpoint.
     regex: /^(?:https?:\/\/)?(?:www\.)?behance\.net\/gallery\/(\d+)(?:[/?#]\S*)?$/,
@@ -913,6 +1119,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 460,
   },
   chromatic: {
+    title: 'Chromatic',
+    type: 'code',
     // Published Storybook permalinks live on per-build subdomains; the
     // ?path= value contains slashes, so the story/docs id is captured after
     // its /story/ or /docs/ marker and rebuilt onto the iframe.html endpoint
@@ -924,6 +1132,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 400,
   },
   plunker: {
+    title: 'Plunker',
+    type: 'code',
     // Editor (/edit/), share (/plunk/) and direct embed-host links all map
     // onto embed.plnkr.co; ?show=preview opens on the rendered output.
     regex: /^(?:https?:\/\/)?(?:(?:www\.)?plnkr\.co\/(?:edit|plunk)\/|embed\.plnkr\.co\/)([\w-]+)\S*/,
@@ -932,6 +1142,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 400,
   },
   datawrapper: {
+    title: 'Datawrapper',
+    type: 'chart',
     // dwcdn ids are 5-char alnum; the optional numeric path segment is a chart
     // version and is dropped (the bare id serves the latest published version).
     regex: /^(?:https?:\/\/)?(?:datawrapper\.dwcdn\.net\/([A-Za-z0-9]{5})|(?:www\.)?datawrapper\.de\/_\/([A-Za-z0-9]{5}))(?:[/?#]\S*)?$/,
@@ -941,6 +1153,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 400,
   },
   flourish: {
+    title: 'Flourish',
+    type: 'chart',
     // /story/ links use the same flo.uri.sh embed shape as visualisations;
     // the story render is unverified but the template is documented.
     regex: /^(?:https?:\/\/)?public\.flourish\.studio\/(visualisation|story)\/(\d+)\S*/,
@@ -950,6 +1164,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 450,
   },
   ourworldindata: {
+    title: 'Our World in Data',
+    type: 'chart',
     // Grapher/explorer pages are frameable as-is; query params encode chart
     // state (countries, time range, tab) and must be preserved.
     regex: /^(?:https?:\/\/)?(?:www\.)?ourworldindata\.org\/(grapher|explorers)\/([\w-]+)\/?(\?[^#\s]*)?(?:#\S*)?$/,
@@ -959,6 +1175,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 480,
   },
   geogebra: {
+    title: 'GeoGebra',
+    type: 'chart',
     // The dedicated /material/iframe/id/ embed endpoint is 410-dead, so the
     // resource page is framed as-is (site chrome shows inside the frame).
     regex: /^(?:https?:\/\/)?(?:www\.)?geogebra\.org\/(m|calculator|classic)\/(\w+)\S*/,
@@ -968,6 +1186,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 480,
   },
   scratch: {
+    title: 'Scratch',
+    type: 'code',
     // The /embed player renders at its fixed 485x402 stage size.
     regex: /^(?:https?:\/\/)?scratch\.mit\.edu\/projects\/(\d+)\S*/,
     embedUrl: 'https://scratch.mit.edu/projects/<%= remote_id %>/embed',
@@ -976,6 +1196,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     fixedWidth: true,
   },
   kahoot: {
+    title: 'Kahoot!',
+    type: 'form',
     // Share pages send X-Frame-Options: DENY — the rewrite onto
     // embed.kahoot.it is mandatory. The kahoot id is the trailing UUID.
     regex: /^(?:https?:\/\/)?create\.kahoot\.it\/(?:details|share)\/(?:[\w-]+\/)?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\S*/,
@@ -984,6 +1206,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 420,
   },
   genially: {
+    title: 'Genially',
+    type: 'document',
     // Ids are 24-char hex; legacy view.genial.ly links carry the same id.
     // The bare view URL is frameable, the slug tail is dropped.
     regex: /^(?:https?:\/\/)?view\.(?:genially\.com|genial\.ly)\/([0-9a-f]{24})\S*/,
@@ -992,6 +1216,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 420,
   },
   infogram: {
+    title: 'Infogram',
+    type: 'chart',
     // The embed host wants the FULL slug — the trailing id token alone 404s.
     // Reserved site paths are excluded to keep them on the bookmark fallback.
     regex: /^(?:https?:\/\/)?(?:www\.)?infogram\.com\/(?!(?:blog|examples|templates|features|create|api|pricing|login|signup|app|charts|maps|dashboards|reports|infographics|teams|education|about|careers|contact|terms|privacy|webinars|academy)(?:[/?#]|$))([\w-]+)\/?(?:[?#]\S*)?$/,
@@ -1000,6 +1226,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 480,
   },
   arcgisstorymaps: {
+    title: 'ArcGIS StoryMaps',
+    type: 'map',
     // Sends X-Frame-Options: SAMEORIGIN, but the CSP frame-ancestors https:
     // directive overrides it in browsers (browser-verified) — passthrough works.
     regex: /^(?:https?:\/\/)?storymaps\.arcgis\.com\/(stories|collections)\/([0-9a-f]{32})\S*/,
@@ -1009,6 +1237,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 480,
   },
   felt: {
+    title: 'Felt',
+    type: 'map',
     // Share pages send X-Frame-Options: SAMEORIGIN — the rewrite onto the
     // /embed/map/ path is mandatory.
     regex: /^(?:https?:\/\/)?(?:www\.)?felt\.com\/(?:embed\/)?map\/([\w-]+)\S*/,
@@ -1017,6 +1247,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 480,
   },
   p5js: {
+    title: 'p5.js',
+    type: 'code',
     // /full/ is the chrome-less running sketch; sketch editor pages and
     // /embed / /present variants all carry the same <user>/<id> pair.
     regex: /^(?:https?:\/\/)?editor\.p5js\.org\/([\w.-]+)\/(?:sketches|full|embed|present)\/([\w-]+)\S*/,
@@ -1026,12 +1258,16 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 420,
   },
   wakelet: {
+    title: 'Wakelet',
+    type: 'document',
     regex: /^(?:https?:\/\/)?(?:www\.)?wakelet\.com\/wake\/([\w-]+)\S*/,
     embedUrl: 'https://embed.wakelet.com/wakes/<%= remote_id %>/list',
     width: 580,
     height: 480,
   },
   pollev: {
+    title: 'Poll Everywhere',
+    type: 'form',
     // Embeds the presenter's currently active poll. Usernames are a single
     // lowercase segment; reserved site paths fall through to the bookmark tool.
     regex: /^(?:https?:\/\/)?(?:www\.)?pollev\.com\/(?!(?:home|login|signup|register|app|features|pricing|support|mobile|proctor|clear|terms|privacy)(?:[/?#]|$))([a-z0-9]+)\/?(?:[?#]\S*)?$/,
@@ -1040,6 +1276,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 480,
   },
   wolframcloud: {
+    title: 'Wolfram Cloud',
+    type: 'code',
     // Published objects are frameable as-is; non-public objects 302 to a
     // Wolfram login page inside the frame.
     regex: /^(?:https?:\/\/)?(?:www\.)?wolframcloud\.com\/obj\/(\S+)/,
@@ -1048,6 +1286,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 480,
   },
   sketchfab: {
+    title: 'Sketchfab',
+    type: 'design',
     // Model ids are the 32-char hex tail of the slug. Share pages send
     // X-Frame-Options: SAMEORIGIN — the /embed rewrite is mandatory.
     regex: /^(?:https?:\/\/)?(?:www\.)?sketchfab\.com\/(?:3d-models\/(?:[\w-]+-)?([0-9a-f]{32})|models\/([0-9a-f]{32}))\S*/,
@@ -1057,6 +1297,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 400,
   },
   openstreetmap: {
+    title: 'OpenStreetMap',
+    type: 'map',
     // The view URL only carries zoom/lat/lon, but export/embed.html wants a
     // bbox, so id() reconstructs the 580x420 viewport in degrees (Mercator
     // approximation: latitude degrees-per-pixel shrink by cos(lat)), clamped
@@ -1078,6 +1320,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 420,
   },
   tencentvideo: {
+    title: 'Tencent Video',
+    type: 'video',
     // vid is the last path token on both cover and page URLs; mobile pages
     // carry it in ?vid=. Like youku, many streams play mainland-China-only
     // at stream level; the txp player itself frames anywhere.
@@ -1088,6 +1332,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   douyin: {
+    title: 'Douyin',
+    type: 'video',
     // Official no-permission iframe player (developer.open-douyin.com).
     // Opaque v.douyin.com / iesdouyin.com short links resolve only via
     // redirect and are excluded.
@@ -1098,6 +1344,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     fixedWidth: true,
   },
   kinescope: {
+    title: 'Kinescope',
+    type: 'video',
     // Video ids are long base62 tokens; the length guard keeps site pages
     // (kinescope.io/pricing, /blog, ...) on the bookmark fallback. Per-video
     // domain-allowlist/DRM are customer options — restricted videos error
@@ -1108,6 +1356,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   vidio: {
+    title: 'Vidio',
+    type: 'video',
     // Watch pages are /watch/<numericId>-<slug>; only the numeric id feeds
     // the embed. The embed host sends X-Frame-Options: ALLOWALL; premium/DRM
     // titles show an upsell inside the frame.
@@ -1117,6 +1367,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   mailru: {
+    title: 'Mail.ru',
+    type: 'video',
     // Portal pages send X-Frame-Options: DENY — only the /video/embed/ form
     // is frameable (insert embed/ after /video/, drop .html). Legacy
     // videoapi.my.mail.ru embed links 301 onto this same form.
@@ -1127,6 +1379,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   smotrim: {
+    title: 'Smotrim',
+    type: 'video',
     // The player shell 200s for any id (invalid ids error inside the frame);
     // many streams are RU/CIS-geo-locked at stream level.
     regex: /^(?:https?:\/\/)?(?:www\.)?smotrim\.ru\/video\/(\d+)\S*/,
@@ -1135,6 +1389,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 320,
   },
   twitter: {
+    title: 'X (Twitter)',
+    type: 'social',
     // Script-only: rendered via platform.twitter.com/widgets.js, not an iframe.
     regex: /^(?:https?:\/\/)?(?:(?:www|mobile)\.)?(?:twitter|x)\.com\/(?:i\/web|\w+)\/status\/(\d+)\S*/,
     embedUrl: 'https://twitter.com/i/status/<%= remote_id %>',
@@ -1143,6 +1399,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 0,
   },
   telegram: {
+    title: 'Telegram',
+    type: 'social',
     // Script-only: rendered via telegram.org/js/telegram-widget.js.
     // t.me/c/... private links are excluded: the post widget renders only
     // public channels/groups, so those must fall back to the bookmark tool.
@@ -1155,6 +1413,8 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     height: 0,
   },
   threads: {
+    title: 'Threads',
+    type: 'social',
     // Script-only: rendered via www.threads.com/embed.js scanning a
     // text-post-media blockquote. The .net mirror is normalized onto .com.
     regex: /^(?:https?:\/\/)?(?:www\.)?threads\.(?:com|net)\/(@[\w.]+)\/post\/([\w-]+)\S*/,
@@ -1186,6 +1446,8 @@ export function matchEmbedService(url: string): EmbedMatch | null {
       remoteId,
       embedUrl: buildEmbedUrl(service, remoteId),
       kind: config.kind ?? 'iframe',
+      title: config.title,
+      type: config.type,
     };
   }
 

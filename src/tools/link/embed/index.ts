@@ -110,6 +110,7 @@ export class Embed implements BlockTool {
   public render(): HTMLElement {
     const root = document.createElement('div');
 
+    root.className = 'my-1';
     root.setAttribute('data-blok-tool', 'embed');
     this.root = root;
     this.renderState();

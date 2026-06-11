@@ -76,6 +76,7 @@ export class Bookmark implements BlockTool {
 
   public render(): HTMLElement {
     const root = document.createElement('div');
+    root.className = 'my-1';
     root.setAttribute('data-blok-tool', 'bookmark');
     this.root = root;
     this.renderState();

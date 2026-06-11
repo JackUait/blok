@@ -200,8 +200,8 @@ export const TwitterScript: Story = {
   args: {
     data: createEmbedData('embed-twitter', {
       service: 'twitter',
-      source: 'https://twitter.com/user/status/1234567890123456789',
-      embed: 'https://twitter.com/i/status/1234567890123456789',
+      source: 'https://twitter.com/jack/status/20',
+      embed: 'https://twitter.com/i/status/20',
       kind: 'script',
       width: 550,
       height: 0,

@@ -75,7 +75,7 @@ const REGIONAL_SERVICES: ReadonlyArray<{ service: string; source: string }> = [
   { service: 'navertv', source: 'https://tv.naver.com/v/8565915' },
   { service: 'kakaotv', source: 'https://tv.kakao.com/v/451075687' },
   { service: 'dailymotion', source: 'https://www.dailymotion.com/video/xaehrai' },
-  { service: 'okru', source: 'https://ok.ru/video/7692086741685' },
+  { service: 'okru', source: 'https://ok.ru/video/11338458073644' },
   { service: 'arte', source: 'https://www.arte.tv/en/videos/110989-000-A/steven-spielberg/' },
 ];
 

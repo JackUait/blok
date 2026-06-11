@@ -453,6 +453,27 @@ describe('Embed toolbar integration', () => {
     expect(tool.save().captionVisible).toBe(true);
   });
 
+  it('hides the caption when toggled off even though it still has text', () => {
+    const tool = new Embed(createOptions(iframeData({ caption: 'My clip', captionVisible: true })));
+    const root = tool.render();
+
+    expect(root.querySelector('[data-role="embed-caption"]')).not.toBeNull();
+
+    click(root.querySelector('[data-action="caption-toggle"]'));
+
+    // Toggling off must hide the caption; the text is kept in data for re-toggling.
+    expect(root.querySelector('[data-role="embed-caption"]')).toBeNull();
+    expect(tool.save().captionVisible).toBe(false);
+    expect(tool.save().caption).toBe('My clip');
+  });
+
+  it('shows a caption with text when captionVisible is unset (legacy data)', () => {
+    const tool = new Embed(createOptions(iframeData({ caption: 'Legacy' })));
+    const root = tool.render();
+
+    expect(root.querySelector('[data-role="embed-caption"]')?.textContent).toBe('Legacy');
+  });
+
   it('saves edited caption text', () => {
     const tool = new Embed(createOptions(iframeData({ captionVisible: true })));
     const root = tool.render();

@@ -387,14 +387,22 @@ export class Embed implements BlockTool {
     }
   }
 
-  private buildCaption(): HTMLElement | null {
-    const visible = this.data.captionVisible === true;
-    const value = this.data.caption ?? '';
+  /**
+   * Caption visibility is driven by `captionVisible`: explicit `false` hides it
+   * even when it still holds text (the toggle would otherwise look dead), and
+   * explicit `true` shows it even while empty (so the user can start typing).
+   * When the flag is unset (legacy data), fall back to "show if it has text".
+   */
+  private isCaptionVisible(): boolean {
+    return this.data.captionVisible ?? (this.data.caption ?? '') !== '';
+  }
 
-    if (!visible && value === '') {
+  private buildCaption(): HTMLElement | null {
+    if (!this.isCaptionVisible()) {
       return null;
     }
 
+    const value = this.data.caption ?? '';
     const caption = document.createElement('div');
 
     caption.setAttribute('data-role', 'embed-caption');
@@ -420,7 +428,7 @@ export class Embed implements BlockTool {
   private buildOverlay(): HTMLElement {
     return renderEmbedOverlay({
       alignment: this.data.alignment ?? 'center',
-      captionVisible: this.data.captionVisible === true,
+      captionVisible: this.isCaptionVisible(),
       source: this.data.source ?? '',
       i18n: this.api.i18n,
       onAlign: (next) => this.setAlignment(next),
@@ -504,7 +512,7 @@ export class Embed implements BlockTool {
   }
 
   private toggleCaption(): void {
-    this.data.captionVisible = this.data.captionVisible !== true;
+    this.data.captionVisible = !this.isCaptionVisible();
     this.renderState();
     this.block.dispatchChange();
   }

@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Behåll som länk",
   "tools.linkPaste.bookmark": "Skapa bokmärke",
   "tools.linkPaste.embed": "Skapa inbäddning",
+  "tools.linkPaste.embedVideo": "Bädda in {provider}-video",
+  "tools.linkPaste.embedAudio": "Bädda in {provider}-ljud",
+  "tools.linkPaste.embedImage": "Bädda in {provider}-bild",
+  "tools.linkPaste.embedSocial": "Bädda in {provider}-inlägg",
+  "tools.linkPaste.embedDocument": "Bädda in {provider}-dokument",
+  "tools.linkPaste.embedTable": "Bädda in {provider}-tabell",
+  "tools.linkPaste.embedForm": "Bädda in {provider}-formulär",
+  "tools.linkPaste.embedCode": "Bädda in {provider}-kod",
+  "tools.linkPaste.embedDesign": "Bädda in {provider}-design",
+  "tools.linkPaste.embedChart": "Bädda in {provider}-diagram",
+  "tools.linkPaste.embedMap": "Bädda in {provider}-karta",
+  "tools.linkPaste.embedCalendar": "Bädda in {provider}-kalender",
   "tools.linkPaste.mention": "Omnämnande"
 }

@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "ލިންކެއް ގޮތުގައި ބަހައްޓާ",
   "tools.linkPaste.bookmark": "ބުކްމާކެއް ހަދާ",
   "tools.linkPaste.embed": "އެމްބެޑެއް ހަދާ",
+  "tools.linkPaste.embedVideo": "{provider} ވީޑިއޯ އެމްބެޑްކުރޭ",
+  "tools.linkPaste.embedAudio": "{provider} އޯޑިއޯ އެމްބެޑްކުރޭ",
+  "tools.linkPaste.embedImage": "{provider} ފޮޓޯ އެމްބެޑްކުރޭ",
+  "tools.linkPaste.embedSocial": "{provider} ޕޯސްޓް އެމްބެޑްކުރޭ",
+  "tools.linkPaste.embedDocument": "{provider} ޑޮކިއުމަންޓް އެމްބެޑްކުރޭ",
+  "tools.linkPaste.embedTable": "{provider} ޓޭބަލް އެމްބެޑްކުރޭ",
+  "tools.linkPaste.embedForm": "{provider} ފޯމް އެމްބެޑްކުރޭ",
+  "tools.linkPaste.embedCode": "{provider} ކޯޑް އެމްބެޑްކުރޭ",
+  "tools.linkPaste.embedDesign": "{provider} ޑިޒައިން އެމްބެޑްކުރޭ",
+  "tools.linkPaste.embedChart": "{provider} ޗާޓް އެމްބެޑްކުރޭ",
+  "tools.linkPaste.embedMap": "{provider} މެޕް އެމްބެޑްކުރޭ",
+  "tools.linkPaste.embedCalendar": "{provider} ކަލަންޑަރު އެމްބެޑްކުރޭ",
   "tools.linkPaste.mention": "ފާހަގަކުރޭ"
 }

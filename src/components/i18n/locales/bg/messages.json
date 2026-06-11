@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Запази като връзка",
   "tools.linkPaste.bookmark": "Създай отметка",
   "tools.linkPaste.embed": "Създай вграждане",
+  "tools.linkPaste.embedVideo": "Вгради видео от {provider}",
+  "tools.linkPaste.embedAudio": "Вгради аудио от {provider}",
+  "tools.linkPaste.embedImage": "Вгради изображение от {provider}",
+  "tools.linkPaste.embedSocial": "Вгради публикация от {provider}",
+  "tools.linkPaste.embedDocument": "Вгради документ от {provider}",
+  "tools.linkPaste.embedTable": "Вгради таблица от {provider}",
+  "tools.linkPaste.embedForm": "Вгради формуляр от {provider}",
+  "tools.linkPaste.embedCode": "Вгради код от {provider}",
+  "tools.linkPaste.embedDesign": "Вгради дизайн от {provider}",
+  "tools.linkPaste.embedChart": "Вгради диаграма от {provider}",
+  "tools.linkPaste.embedMap": "Вгради карта от {provider}",
+  "tools.linkPaste.embedCalendar": "Вгради календар от {provider}",
   "tools.linkPaste.mention": "Спомени"
 }

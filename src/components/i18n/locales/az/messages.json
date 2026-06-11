@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Keçid kimi saxla",
   "tools.linkPaste.bookmark": "Əlfəcin yarat",
   "tools.linkPaste.embed": "Yerləşdirmə yarat",
+  "tools.linkPaste.embedVideo": "{provider} videosunu yerləşdir",
+  "tools.linkPaste.embedAudio": "{provider} audiosunu yerləşdir",
+  "tools.linkPaste.embedImage": "{provider} şəklini yerləşdir",
+  "tools.linkPaste.embedSocial": "{provider} paylaşımını yerləşdir",
+  "tools.linkPaste.embedDocument": "{provider} sənədini yerləşdir",
+  "tools.linkPaste.embedTable": "{provider} cədvəlini yerləşdir",
+  "tools.linkPaste.embedForm": "{provider} formasını yerləşdir",
+  "tools.linkPaste.embedCode": "{provider} kodunu yerləşdir",
+  "tools.linkPaste.embedDesign": "{provider} dizaynını yerləşdir",
+  "tools.linkPaste.embedChart": "{provider} qrafikini yerləşdir",
+  "tools.linkPaste.embedMap": "{provider} xəritəsini yerləşdir",
+  "tools.linkPaste.embedCalendar": "{provider} təqvimini yerləşdir",
   "tools.linkPaste.mention": "Qeyd et"
 }

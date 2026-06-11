@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Säilytä linkkinä",
   "tools.linkPaste.bookmark": "Luo kirjanmerkki",
   "tools.linkPaste.embed": "Upota",
+  "tools.linkPaste.embedVideo": "Upota {provider}-video",
+  "tools.linkPaste.embedAudio": "Upota {provider}-äänite",
+  "tools.linkPaste.embedImage": "Upota {provider}-kuva",
+  "tools.linkPaste.embedSocial": "Upota {provider}-julkaisu",
+  "tools.linkPaste.embedDocument": "Upota {provider}-dokumentti",
+  "tools.linkPaste.embedTable": "Upota {provider}-taulukko",
+  "tools.linkPaste.embedForm": "Upota {provider}-lomake",
+  "tools.linkPaste.embedCode": "Upota {provider}-koodi",
+  "tools.linkPaste.embedDesign": "Upota {provider}-design",
+  "tools.linkPaste.embedChart": "Upota {provider}-kaavio",
+  "tools.linkPaste.embedMap": "Upota {provider}-kartta",
+  "tools.linkPaste.embedCalendar": "Upota {provider}-kalenteri",
   "tools.linkPaste.mention": "Maininta"
 }

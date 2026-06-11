@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Wek girêdan bihêle",
   "tools.linkPaste.bookmark": "Şûnpelê çêbike",
   "tools.linkPaste.embed": "Bicîkirinê çêbike",
+  "tools.linkPaste.embedVideo": "Vîdyoya {provider} bi cî bike",
+  "tools.linkPaste.embedAudio": "Dengê {provider} bi cî bike",
+  "tools.linkPaste.embedImage": "Wêneyê {provider} bi cî bike",
+  "tools.linkPaste.embedSocial": "Posta {provider} bi cî bike",
+  "tools.linkPaste.embedDocument": "Belgeya {provider} bi cî bike",
+  "tools.linkPaste.embedTable": "Tabloya {provider} bi cî bike",
+  "tools.linkPaste.embedForm": "Forma {provider} bi cî bike",
+  "tools.linkPaste.embedCode": "Kodê {provider} bi cî bike",
+  "tools.linkPaste.embedDesign": "Dîzayna {provider} bi cî bike",
+  "tools.linkPaste.embedChart": "Grafîka {provider} bi cî bike",
+  "tools.linkPaste.embedMap": "Nexşeya {provider} bi cî bike",
+  "tools.linkPaste.embedCalendar": "Salnameya {provider} bi cî bike",
   "tools.linkPaste.mention": "Behs bike"
 }

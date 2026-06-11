@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "લિંક તરીકે રાખો",
   "tools.linkPaste.bookmark": "બુકમાર્ક બનાવો",
   "tools.linkPaste.embed": "એમ્બેડ કરો",
+  "tools.linkPaste.embedVideo": "{provider} વીડિયો એમ્બેડ કરો",
+  "tools.linkPaste.embedAudio": "{provider} ઑડિયો એમ્બેડ કરો",
+  "tools.linkPaste.embedImage": "{provider} છબી એમ્બેડ કરો",
+  "tools.linkPaste.embedSocial": "{provider} પોસ્ટ એમ્બેડ કરો",
+  "tools.linkPaste.embedDocument": "{provider} દસ્તાવેજ એમ્બેડ કરો",
+  "tools.linkPaste.embedTable": "{provider} કોષ્ટક એમ્બેડ કરો",
+  "tools.linkPaste.embedForm": "{provider} ફોર્મ એમ્બેડ કરો",
+  "tools.linkPaste.embedCode": "{provider} કોડ એમ્બેડ કરો",
+  "tools.linkPaste.embedDesign": "{provider} ડિઝાઇન એમ્બેડ કરો",
+  "tools.linkPaste.embedChart": "{provider} ચાર્ટ એમ્બેડ કરો",
+  "tools.linkPaste.embedMap": "{provider} નકશો એમ્બેડ કરો",
+  "tools.linkPaste.embedCalendar": "{provider} કૅલેન્ડર એમ્બેડ કરો",
   "tools.linkPaste.mention": "ઉલ્લેખ કરો"
 }

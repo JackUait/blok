@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Bağlantı olarak tut",
   "tools.linkPaste.bookmark": "Yer işareti oluştur",
   "tools.linkPaste.embed": "Yerleştirme oluştur",
+  "tools.linkPaste.embedVideo": "{provider} videosunu yerleştir",
+  "tools.linkPaste.embedAudio": "{provider} sesini yerleştir",
+  "tools.linkPaste.embedImage": "{provider} görselini yerleştir",
+  "tools.linkPaste.embedSocial": "{provider} gönderisini yerleştir",
+  "tools.linkPaste.embedDocument": "{provider} belgesini yerleştir",
+  "tools.linkPaste.embedTable": "{provider} tablosunu yerleştir",
+  "tools.linkPaste.embedForm": "{provider} formunu yerleştir",
+  "tools.linkPaste.embedCode": "{provider} kodunu yerleştir",
+  "tools.linkPaste.embedDesign": "{provider} tasarımını yerleştir",
+  "tools.linkPaste.embedChart": "{provider} grafiğini yerleştir",
+  "tools.linkPaste.embedMap": "{provider} haritasını yerleştir",
+  "tools.linkPaste.embedCalendar": "{provider} takvimini yerleştir",
   "tools.linkPaste.mention": "Bahset"
 }

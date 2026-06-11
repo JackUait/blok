@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "เก็บเป็นลิงก์",
   "tools.linkPaste.bookmark": "สร้างบุ๊กมาร์ก",
   "tools.linkPaste.embed": "สร้างการฝัง",
+  "tools.linkPaste.embedVideo": "ฝังวิดีโอจาก {provider}",
+  "tools.linkPaste.embedAudio": "ฝังเสียงจาก {provider}",
+  "tools.linkPaste.embedImage": "ฝังรูปภาพจาก {provider}",
+  "tools.linkPaste.embedSocial": "ฝังโพสต์จาก {provider}",
+  "tools.linkPaste.embedDocument": "ฝังเอกสารจาก {provider}",
+  "tools.linkPaste.embedTable": "ฝังตารางจาก {provider}",
+  "tools.linkPaste.embedForm": "ฝังแบบฟอร์มจาก {provider}",
+  "tools.linkPaste.embedCode": "ฝังโค้ดจาก {provider}",
+  "tools.linkPaste.embedDesign": "ฝังงานออกแบบจาก {provider}",
+  "tools.linkPaste.embedChart": "ฝังแผนภูมิจาก {provider}",
+  "tools.linkPaste.embedMap": "ฝังแผนที่จาก {provider}",
+  "tools.linkPaste.embedCalendar": "ฝังปฏิทินจาก {provider}",
   "tools.linkPaste.mention": "กล่าวถึง"
 }

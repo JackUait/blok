@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Mantener como enlace",
   "tools.linkPaste.bookmark": "Crear marcador",
   "tools.linkPaste.embed": "Insertar",
+  "tools.linkPaste.embedVideo": "Insertar vídeo de {provider}",
+  "tools.linkPaste.embedAudio": "Insertar audio de {provider}",
+  "tools.linkPaste.embedImage": "Insertar imagen de {provider}",
+  "tools.linkPaste.embedSocial": "Insertar publicación de {provider}",
+  "tools.linkPaste.embedDocument": "Insertar documento de {provider}",
+  "tools.linkPaste.embedTable": "Insertar tabla de {provider}",
+  "tools.linkPaste.embedForm": "Insertar formulario de {provider}",
+  "tools.linkPaste.embedCode": "Insertar código de {provider}",
+  "tools.linkPaste.embedDesign": "Insertar diseño de {provider}",
+  "tools.linkPaste.embedChart": "Insertar gráfico de {provider}",
+  "tools.linkPaste.embedMap": "Insertar mapa de {provider}",
+  "tools.linkPaste.embedCalendar": "Insertar calendario de {provider}",
   "tools.linkPaste.mention": "Mencionar"
 }

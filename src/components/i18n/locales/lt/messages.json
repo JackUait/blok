@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Palikti kaip nuorodą",
   "tools.linkPaste.bookmark": "Sukurti žymę",
   "tools.linkPaste.embed": "Sukurti įterpinį",
+  "tools.linkPaste.embedVideo": "Įterpti {provider} vaizdo įrašą",
+  "tools.linkPaste.embedAudio": "Įterpti {provider} garso įrašą",
+  "tools.linkPaste.embedImage": "Įterpti {provider} paveikslėlį",
+  "tools.linkPaste.embedSocial": "Įterpti {provider} įrašą",
+  "tools.linkPaste.embedDocument": "Įterpti {provider} dokumentą",
+  "tools.linkPaste.embedTable": "Įterpti {provider} lentelę",
+  "tools.linkPaste.embedForm": "Įterpti {provider} formą",
+  "tools.linkPaste.embedCode": "Įterpti {provider} kodą",
+  "tools.linkPaste.embedDesign": "Įterpti {provider} dizainą",
+  "tools.linkPaste.embedChart": "Įterpti {provider} diagramą",
+  "tools.linkPaste.embedMap": "Įterpti {provider} žemėlapį",
+  "tools.linkPaste.embedCalendar": "Įterpti {provider} kalendorių",
   "tools.linkPaste.mention": "Paminėti"
 }

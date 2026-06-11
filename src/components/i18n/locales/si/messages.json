@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "සබැඳිය ලෙස තබන්න",
   "tools.linkPaste.bookmark": "පිටු සලකුණක් සාදන්න",
   "tools.linkPaste.embed": "කාවැද්දීමක් සාදන්න",
+  "tools.linkPaste.embedVideo": "{provider} වීඩියෝව කාවද්දන්න",
+  "tools.linkPaste.embedAudio": "{provider} ඕඩියෝව කාවද්දන්න",
+  "tools.linkPaste.embedImage": "{provider} රූපය කාවද්දන්න",
+  "tools.linkPaste.embedSocial": "{provider} පළ කිරීම කාවද්දන්න",
+  "tools.linkPaste.embedDocument": "{provider} ලේඛනය කාවද්දන්න",
+  "tools.linkPaste.embedTable": "{provider} වගුව කාවද්දන්න",
+  "tools.linkPaste.embedForm": "{provider} පෝරමය කාවද්දන්න",
+  "tools.linkPaste.embedCode": "{provider} කේතය කාවද්දන්න",
+  "tools.linkPaste.embedDesign": "{provider} නිර්මාණය කාවද්දන්න",
+  "tools.linkPaste.embedChart": "{provider} ප්‍රස්ථාරය කාවද්දන්න",
+  "tools.linkPaste.embedMap": "{provider} සිතියම කාවද්දන්න",
+  "tools.linkPaste.embedCalendar": "{provider} දින දර්ශනය කාවද්දන්න",
   "tools.linkPaste.mention": "සඳහන් කිරීම"
 }

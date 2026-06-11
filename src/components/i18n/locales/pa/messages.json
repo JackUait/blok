@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "ਲਿੰਕ ਵਜੋਂ ਰੱਖੋ",
   "tools.linkPaste.bookmark": "ਬੁੱਕਮਾਰਕ ਬਣਾਓ",
   "tools.linkPaste.embed": "ਏਮਬੈੱਡ ਬਣਾਓ",
+  "tools.linkPaste.embedVideo": "{provider} ਵੀਡੀਓ ਏਮਬੈੱਡ ਕਰੋ",
+  "tools.linkPaste.embedAudio": "{provider} ਆਡੀਓ ਏਮਬੈੱਡ ਕਰੋ",
+  "tools.linkPaste.embedImage": "{provider} ਚਿੱਤਰ ਏਮਬੈੱਡ ਕਰੋ",
+  "tools.linkPaste.embedSocial": "{provider} ਪੋਸਟ ਏਮਬੈੱਡ ਕਰੋ",
+  "tools.linkPaste.embedDocument": "{provider} ਦਸਤਾਵੇਜ਼ ਏਮਬੈੱਡ ਕਰੋ",
+  "tools.linkPaste.embedTable": "{provider} ਸਾਰਣੀ ਏਮਬੈੱਡ ਕਰੋ",
+  "tools.linkPaste.embedForm": "{provider} ਫਾਰਮ ਏਮਬੈੱਡ ਕਰੋ",
+  "tools.linkPaste.embedCode": "{provider} ਕੋਡ ਏਮਬੈੱਡ ਕਰੋ",
+  "tools.linkPaste.embedDesign": "{provider} ਡਿਜ਼ਾਈਨ ਏਮਬੈੱਡ ਕਰੋ",
+  "tools.linkPaste.embedChart": "{provider} ਚਾਰਟ ਏਮਬੈੱਡ ਕਰੋ",
+  "tools.linkPaste.embedMap": "{provider} ਨਕਸ਼ਾ ਏਮਬੈੱਡ ਕਰੋ",
+  "tools.linkPaste.embedCalendar": "{provider} ਕੈਲੰਡਰ ਏਮਬੈੱਡ ਕਰੋ",
   "tools.linkPaste.mention": "ਜ਼ਿਕਰ"
 }

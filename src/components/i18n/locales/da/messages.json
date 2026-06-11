@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Behold som link",
   "tools.linkPaste.bookmark": "Opret bogmærke",
   "tools.linkPaste.embed": "Opret integration",
+  "tools.linkPaste.embedVideo": "Indlejr {provider}-video",
+  "tools.linkPaste.embedAudio": "Indlejr {provider}-lyd",
+  "tools.linkPaste.embedImage": "Indlejr {provider}-billede",
+  "tools.linkPaste.embedSocial": "Indlejr {provider}-opslag",
+  "tools.linkPaste.embedDocument": "Indlejr {provider}-dokument",
+  "tools.linkPaste.embedTable": "Indlejr {provider}-tabel",
+  "tools.linkPaste.embedForm": "Indlejr {provider}-formular",
+  "tools.linkPaste.embedCode": "Indlejr {provider}-kode",
+  "tools.linkPaste.embedDesign": "Indlejr {provider}-design",
+  "tools.linkPaste.embedChart": "Indlejr {provider}-diagram",
+  "tools.linkPaste.embedMap": "Indlejr {provider}-kort",
+  "tools.linkPaste.embedCalendar": "Indlejr {provider}-kalender",
   "tools.linkPaste.mention": "Omtal"
 }

@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Задржи како врска",
   "tools.linkPaste.bookmark": "Создај обележувач",
   "tools.linkPaste.embed": "Создај вградување",
+  "tools.linkPaste.embedVideo": "Вметни видео од {provider}",
+  "tools.linkPaste.embedAudio": "Вметни аудио од {provider}",
+  "tools.linkPaste.embedImage": "Вметни слика од {provider}",
+  "tools.linkPaste.embedSocial": "Вметни објава од {provider}",
+  "tools.linkPaste.embedDocument": "Вметни документ од {provider}",
+  "tools.linkPaste.embedTable": "Вметни табела од {provider}",
+  "tools.linkPaste.embedForm": "Вметни формулар од {provider}",
+  "tools.linkPaste.embedCode": "Вметни код од {provider}",
+  "tools.linkPaste.embedDesign": "Вметни дизајн од {provider}",
+  "tools.linkPaste.embedChart": "Вметни графикон од {provider}",
+  "tools.linkPaste.embedMap": "Вметни мапа од {provider}",
+  "tools.linkPaste.embedCalendar": "Вметни календар од {provider}",
   "tools.linkPaste.mention": "Спомнување"
 }

@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "د لینک په توګه وساتئ",
   "tools.linkPaste.bookmark": "نښلونه جوړه کړئ",
   "tools.linkPaste.embed": "ځای پرځای کول جوړ کړئ",
+  "tools.linkPaste.embedVideo": "د {provider} ویډیو ځای پرځای کړئ",
+  "tools.linkPaste.embedAudio": "د {provider} آډیو ځای پرځای کړئ",
+  "tools.linkPaste.embedImage": "د {provider} انځور ځای پرځای کړئ",
+  "tools.linkPaste.embedSocial": "د {provider} پوسټ ځای پرځای کړئ",
+  "tools.linkPaste.embedDocument": "د {provider} سند ځای پرځای کړئ",
+  "tools.linkPaste.embedTable": "د {provider} جدول ځای پرځای کړئ",
+  "tools.linkPaste.embedForm": "د {provider} فورمه ځای پرځای کړئ",
+  "tools.linkPaste.embedCode": "د {provider} کوډ ځای پرځای کړئ",
+  "tools.linkPaste.embedDesign": "د {provider} ډیزاین ځای پرځای کړئ",
+  "tools.linkPaste.embedChart": "د {provider} چارټ ځای پرځای کړئ",
+  "tools.linkPaste.embedMap": "د {provider} نقشه ځای پرځای کړئ",
+  "tools.linkPaste.embedCalendar": "د {provider} جنتري ځای پرځای کړئ",
   "tools.linkPaste.mention": "یادونه"
 }

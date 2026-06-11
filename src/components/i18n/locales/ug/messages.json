@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "ئۇلانما پېتى ساقلاش",
   "tools.linkPaste.bookmark": "خەتكۈش قۇرۇش",
   "tools.linkPaste.embed": "سىڭدۈرۈش قۇرۇش",
+  "tools.linkPaste.embedVideo": "{provider} سىنىنى سىڭدۈرۈش",
+  "tools.linkPaste.embedAudio": "{provider} ئاۋازىنى سىڭدۈرۈش",
+  "tools.linkPaste.embedImage": "{provider} رەسىمىنى سىڭدۈرۈش",
+  "tools.linkPaste.embedSocial": "{provider} يازمىسىنى سىڭدۈرۈش",
+  "tools.linkPaste.embedDocument": "{provider} ھۆججىتىنى سىڭدۈرۈش",
+  "tools.linkPaste.embedTable": "{provider} جەدۋىلىنى سىڭدۈرۈش",
+  "tools.linkPaste.embedForm": "{provider} فورمىسىنى سىڭدۈرۈش",
+  "tools.linkPaste.embedCode": "{provider} كودىنى سىڭدۈرۈش",
+  "tools.linkPaste.embedDesign": "{provider} لايىھىسىنى سىڭدۈرۈش",
+  "tools.linkPaste.embedChart": "{provider} دىئاگراممىسىنى سىڭدۈرۈش",
+  "tools.linkPaste.embedMap": "{provider} خەرىتىسىنى سىڭدۈرۈش",
+  "tools.linkPaste.embedCalendar": "{provider} كالېندارىنى سىڭدۈرۈش",
   "tools.linkPaste.mention": "تىلغا ئېلىش"
 }

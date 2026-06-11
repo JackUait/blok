@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "လင့်ခ်အဖြစ် ထားရှိရန်",
   "tools.linkPaste.bookmark": "မှတ်သားချက် ဖန်တီးရန်",
   "tools.linkPaste.embed": "ထည့်သွင်းမှု ဖန်တီးရန်",
+  "tools.linkPaste.embedVideo": "{provider} ဗီဒီယို ထည့်သွင်းရန်",
+  "tools.linkPaste.embedAudio": "{provider} အသံ ထည့်သွင်းရန်",
+  "tools.linkPaste.embedImage": "{provider} ပုံ ထည့်သွင်းရန်",
+  "tools.linkPaste.embedSocial": "{provider} ပို့စ် ထည့်သွင်းရန်",
+  "tools.linkPaste.embedDocument": "{provider} စာရွက်စာတမ်း ထည့်သွင်းရန်",
+  "tools.linkPaste.embedTable": "{provider} ဇယား ထည့်သွင်းရန်",
+  "tools.linkPaste.embedForm": "{provider} ဖောင် ထည့်သွင်းရန်",
+  "tools.linkPaste.embedCode": "{provider} ကုဒ် ထည့်သွင်းရန်",
+  "tools.linkPaste.embedDesign": "{provider} ဒီဇိုင်း ထည့်သွင်းရန်",
+  "tools.linkPaste.embedChart": "{provider} ကားချပ် ထည့်သွင်းရန်",
+  "tools.linkPaste.embedMap": "{provider} မြေပုံ ထည့်သွင်းရန်",
+  "tools.linkPaste.embedCalendar": "{provider} ပြက္ခဒိန် ထည့်သွင်းရန်",
   "tools.linkPaste.mention": "ဖော်ပြချက်"
 }

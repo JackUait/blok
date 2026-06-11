@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Ohrani kot povezavo",
   "tools.linkPaste.bookmark": "Ustvari zaznamek",
   "tools.linkPaste.embed": "Ustvari vstavek",
+  "tools.linkPaste.embedVideo": "Vstavi video iz {provider}",
+  "tools.linkPaste.embedAudio": "Vstavi zvok iz {provider}",
+  "tools.linkPaste.embedImage": "Vstavi sliko iz {provider}",
+  "tools.linkPaste.embedSocial": "Vstavi objavo iz {provider}",
+  "tools.linkPaste.embedDocument": "Vstavi dokument iz {provider}",
+  "tools.linkPaste.embedTable": "Vstavi tabelo iz {provider}",
+  "tools.linkPaste.embedForm": "Vstavi obrazec iz {provider}",
+  "tools.linkPaste.embedCode": "Vstavi kodo iz {provider}",
+  "tools.linkPaste.embedDesign": "Vstavi dizajn iz {provider}",
+  "tools.linkPaste.embedChart": "Vstavi grafikon iz {provider}",
+  "tools.linkPaste.embedMap": "Vstavi zemljevid iz {provider}",
+  "tools.linkPaste.embedCalendar": "Vstavi koledar iz {provider}",
   "tools.linkPaste.mention": "Omemba"
 }

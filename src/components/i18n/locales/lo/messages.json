@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "ຮັກສາໄວ້ເປັນລິ້ງ",
   "tools.linkPaste.bookmark": "ສ້າງບຸກມາກ",
   "tools.linkPaste.embed": "ສ້າງການຝັງ",
+  "tools.linkPaste.embedVideo": "ຝັງວິດີໂອຈາກ {provider}",
+  "tools.linkPaste.embedAudio": "ຝັງສຽງຈາກ {provider}",
+  "tools.linkPaste.embedImage": "ຝັງຮູບພາບຈາກ {provider}",
+  "tools.linkPaste.embedSocial": "ຝັງໂພສຈາກ {provider}",
+  "tools.linkPaste.embedDocument": "ຝັງເອກະສານຈາກ {provider}",
+  "tools.linkPaste.embedTable": "ຝັງຕາຕະລາງຈາກ {provider}",
+  "tools.linkPaste.embedForm": "ຝັງແບບຟອມຈາກ {provider}",
+  "tools.linkPaste.embedCode": "ຝັງໂຄ້ດຈາກ {provider}",
+  "tools.linkPaste.embedDesign": "ຝັງການອອກແບບຈາກ {provider}",
+  "tools.linkPaste.embedChart": "ຝັງແຜນວາດຈາກ {provider}",
+  "tools.linkPaste.embedMap": "ຝັງແຜນທີ່ຈາກ {provider}",
+  "tools.linkPaste.embedCalendar": "ຝັງປະຕິທິນຈາກ {provider}",
   "tools.linkPaste.mention": "ກ່າວເຖິງ"
 }

@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "إبقاء كرابط",
   "tools.linkPaste.bookmark": "إنشاء إشارة مرجعية",
   "tools.linkPaste.embed": "إنشاء تضمين",
+  "tools.linkPaste.embedVideo": "تضمين فيديو من {provider}",
+  "tools.linkPaste.embedAudio": "تضمين مقطع صوتي من {provider}",
+  "tools.linkPaste.embedImage": "تضمين صورة من {provider}",
+  "tools.linkPaste.embedSocial": "تضمين منشور من {provider}",
+  "tools.linkPaste.embedDocument": "تضمين مستند من {provider}",
+  "tools.linkPaste.embedTable": "تضمين جدول من {provider}",
+  "tools.linkPaste.embedForm": "تضمين نموذج من {provider}",
+  "tools.linkPaste.embedCode": "تضمين كود من {provider}",
+  "tools.linkPaste.embedDesign": "تضمين تصميم من {provider}",
+  "tools.linkPaste.embedChart": "تضمين رسم بياني من {provider}",
+  "tools.linkPaste.embedMap": "تضمين خريطة من {provider}",
+  "tools.linkPaste.embedCalendar": "تضمين تقويم من {provider}",
   "tools.linkPaste.mention": "إشارة"
 }

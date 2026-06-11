@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Mbaje si lidhje",
   "tools.linkPaste.bookmark": "Krijo faqerojtës",
   "tools.linkPaste.embed": "Krijo ngulitje",
+  "tools.linkPaste.embedVideo": "Fut video nga {provider}",
+  "tools.linkPaste.embedAudio": "Fut audio nga {provider}",
+  "tools.linkPaste.embedImage": "Fut imazh nga {provider}",
+  "tools.linkPaste.embedSocial": "Fut postim nga {provider}",
+  "tools.linkPaste.embedDocument": "Fut dokument nga {provider}",
+  "tools.linkPaste.embedTable": "Fut tabelë nga {provider}",
+  "tools.linkPaste.embedForm": "Fut formular nga {provider}",
+  "tools.linkPaste.embedCode": "Fut kod nga {provider}",
+  "tools.linkPaste.embedDesign": "Fut dizajn nga {provider}",
+  "tools.linkPaste.embedChart": "Fut grafik nga {provider}",
+  "tools.linkPaste.embedMap": "Fut hartë nga {provider}",
+  "tools.linkPaste.embedCalendar": "Fut kalendar nga {provider}",
   "tools.linkPaste.mention": "Përmendje"
 }

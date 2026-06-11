@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Giữ làm liên kết",
   "tools.linkPaste.bookmark": "Tạo dấu trang",
   "tools.linkPaste.embed": "Tạo nhúng",
+  "tools.linkPaste.embedVideo": "Nhúng video {provider}",
+  "tools.linkPaste.embedAudio": "Nhúng âm thanh {provider}",
+  "tools.linkPaste.embedImage": "Nhúng hình ảnh {provider}",
+  "tools.linkPaste.embedSocial": "Nhúng bài đăng {provider}",
+  "tools.linkPaste.embedDocument": "Nhúng tài liệu {provider}",
+  "tools.linkPaste.embedTable": "Nhúng bảng {provider}",
+  "tools.linkPaste.embedForm": "Nhúng biểu mẫu {provider}",
+  "tools.linkPaste.embedCode": "Nhúng mã {provider}",
+  "tools.linkPaste.embedDesign": "Nhúng thiết kế {provider}",
+  "tools.linkPaste.embedChart": "Nhúng biểu đồ {provider}",
+  "tools.linkPaste.embedMap": "Nhúng bản đồ {provider}",
+  "tools.linkPaste.embedCalendar": "Nhúng lịch {provider}",
   "tools.linkPaste.mention": "Nhắc đến"
 }

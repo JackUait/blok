@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Als link behouden",
   "tools.linkPaste.bookmark": "Bladwijzer maken",
   "tools.linkPaste.embed": "Insluiting maken",
+  "tools.linkPaste.embedVideo": "{provider}-video insluiten",
+  "tools.linkPaste.embedAudio": "{provider}-audio insluiten",
+  "tools.linkPaste.embedImage": "{provider}-afbeelding insluiten",
+  "tools.linkPaste.embedSocial": "{provider}-bericht insluiten",
+  "tools.linkPaste.embedDocument": "{provider}-document insluiten",
+  "tools.linkPaste.embedTable": "{provider}-tabel insluiten",
+  "tools.linkPaste.embedForm": "{provider}-formulier insluiten",
+  "tools.linkPaste.embedCode": "{provider}-code insluiten",
+  "tools.linkPaste.embedDesign": "{provider}-ontwerp insluiten",
+  "tools.linkPaste.embedChart": "{provider}-grafiek insluiten",
+  "tools.linkPaste.embedMap": "{provider}-kaart insluiten",
+  "tools.linkPaste.embedCalendar": "{provider}-agenda insluiten",
   "tools.linkPaste.mention": "Vermelding"
 }

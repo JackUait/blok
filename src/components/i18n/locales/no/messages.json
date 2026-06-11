@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Behold som lenke",
   "tools.linkPaste.bookmark": "Opprett bokmerke",
   "tools.linkPaste.embed": "Opprett innbygging",
+  "tools.linkPaste.embedVideo": "Bygg inn {provider}-video",
+  "tools.linkPaste.embedAudio": "Bygg inn {provider}-lyd",
+  "tools.linkPaste.embedImage": "Bygg inn {provider}-bilde",
+  "tools.linkPaste.embedSocial": "Bygg inn {provider}-innlegg",
+  "tools.linkPaste.embedDocument": "Bygg inn {provider}-dokument",
+  "tools.linkPaste.embedTable": "Bygg inn {provider}-tabell",
+  "tools.linkPaste.embedForm": "Bygg inn {provider}-skjema",
+  "tools.linkPaste.embedCode": "Bygg inn {provider}-kode",
+  "tools.linkPaste.embedDesign": "Bygg inn {provider}-design",
+  "tools.linkPaste.embedChart": "Bygg inn {provider}-diagram",
+  "tools.linkPaste.embedMap": "Bygg inn {provider}-kart",
+  "tools.linkPaste.embedCalendar": "Bygg inn {provider}-kalender",
   "tools.linkPaste.mention": "Omtale"
 }

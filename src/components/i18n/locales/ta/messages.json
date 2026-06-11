@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "இணைப்பாகவே வைத்திரு",
   "tools.linkPaste.bookmark": "புக்மார்க் உருவாக்கு",
   "tools.linkPaste.embed": "உட்பொதி உருவாக்கு",
+  "tools.linkPaste.embedVideo": "{provider} வீடியோவை உட்பொதி",
+  "tools.linkPaste.embedAudio": "{provider} ஆடியோவை உட்பொதி",
+  "tools.linkPaste.embedImage": "{provider} படத்தை உட்பொதி",
+  "tools.linkPaste.embedSocial": "{provider} பதிவை உட்பொதி",
+  "tools.linkPaste.embedDocument": "{provider} ஆவணத்தை உட்பொதி",
+  "tools.linkPaste.embedTable": "{provider} அட்டவணையை உட்பொதி",
+  "tools.linkPaste.embedForm": "{provider} படிவத்தை உட்பொதி",
+  "tools.linkPaste.embedCode": "{provider} குறியீட்டை உட்பொதி",
+  "tools.linkPaste.embedDesign": "{provider} வடிவமைப்பை உட்பொதி",
+  "tools.linkPaste.embedChart": "{provider} விளக்கப்படத்தை உட்பொதி",
+  "tools.linkPaste.embedMap": "{provider} வரைபடத்தை உட்பொதி",
+  "tools.linkPaste.embedCalendar": "{provider} நாட்காட்டியை உட்பொதி",
   "tools.linkPaste.mention": "குறிப்பிடு"
 }

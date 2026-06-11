@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Оставить ссылкой",
   "tools.linkPaste.bookmark": "Создать закладку",
   "tools.linkPaste.embed": "Создать встраивание",
+  "tools.linkPaste.embedVideo": "Вставить {provider}-видео",
+  "tools.linkPaste.embedAudio": "Вставить аудио из {provider}",
+  "tools.linkPaste.embedImage": "Вставить изображение из {provider}",
+  "tools.linkPaste.embedSocial": "Вставить пост из {provider}",
+  "tools.linkPaste.embedDocument": "Вставить документ из {provider}",
+  "tools.linkPaste.embedTable": "Вставить таблицу из {provider}",
+  "tools.linkPaste.embedForm": "Вставить форму из {provider}",
+  "tools.linkPaste.embedCode": "Вставить код из {provider}",
+  "tools.linkPaste.embedDesign": "Вставить макет из {provider}",
+  "tools.linkPaste.embedChart": "Вставить график из {provider}",
+  "tools.linkPaste.embedMap": "Вставить карту из {provider}",
+  "tools.linkPaste.embedCalendar": "Вставить календарь из {provider}",
   "tools.linkPaste.mention": "Упоминание"
 }

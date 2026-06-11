@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Залишити як посилання",
   "tools.linkPaste.bookmark": "Створити закладку",
   "tools.linkPaste.embed": "Вбудувати",
+  "tools.linkPaste.embedVideo": "Вставити відео з {provider}",
+  "tools.linkPaste.embedAudio": "Вставити аудіо з {provider}",
+  "tools.linkPaste.embedImage": "Вставити зображення з {provider}",
+  "tools.linkPaste.embedSocial": "Вставити допис із {provider}",
+  "tools.linkPaste.embedDocument": "Вставити документ із {provider}",
+  "tools.linkPaste.embedTable": "Вставити таблицю з {provider}",
+  "tools.linkPaste.embedForm": "Вставити форму з {provider}",
+  "tools.linkPaste.embedCode": "Вставити код із {provider}",
+  "tools.linkPaste.embedDesign": "Вставити макет із {provider}",
+  "tools.linkPaste.embedChart": "Вставити графік із {provider}",
+  "tools.linkPaste.embedMap": "Вставити карту з {provider}",
+  "tools.linkPaste.embedCalendar": "Вставити календар із {provider}",
   "tools.linkPaste.mention": "Згадка"
 }

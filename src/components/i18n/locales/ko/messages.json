@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "링크로 유지",
   "tools.linkPaste.bookmark": "북마크 생성",
   "tools.linkPaste.embed": "임베드 생성",
+  "tools.linkPaste.embedVideo": "{provider} 동영상 임베드",
+  "tools.linkPaste.embedAudio": "{provider} 오디오 임베드",
+  "tools.linkPaste.embedImage": "{provider} 이미지 임베드",
+  "tools.linkPaste.embedSocial": "{provider} 게시물 임베드",
+  "tools.linkPaste.embedDocument": "{provider} 문서 임베드",
+  "tools.linkPaste.embedTable": "{provider} 표 임베드",
+  "tools.linkPaste.embedForm": "{provider} 양식 임베드",
+  "tools.linkPaste.embedCode": "{provider} 코드 임베드",
+  "tools.linkPaste.embedDesign": "{provider} 디자인 임베드",
+  "tools.linkPaste.embedChart": "{provider} 차트 임베드",
+  "tools.linkPaste.embedMap": "{provider} 지도 임베드",
+  "tools.linkPaste.embedCalendar": "{provider} 캘린더 임베드",
   "tools.linkPaste.mention": "멘션"
 }

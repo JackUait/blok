@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "השאר כקישור",
   "tools.linkPaste.bookmark": "צור סימנייה",
   "tools.linkPaste.embed": "הטמע",
+  "tools.linkPaste.embedVideo": "הטמע סרטון מ-{provider}",
+  "tools.linkPaste.embedAudio": "הטמע אודיו מ-{provider}",
+  "tools.linkPaste.embedImage": "הטמע תמונה מ-{provider}",
+  "tools.linkPaste.embedSocial": "הטמע פוסט מ-{provider}",
+  "tools.linkPaste.embedDocument": "הטמע מסמך מ-{provider}",
+  "tools.linkPaste.embedTable": "הטמע טבלה מ-{provider}",
+  "tools.linkPaste.embedForm": "הטמע טופס מ-{provider}",
+  "tools.linkPaste.embedCode": "הטמע קוד מ-{provider}",
+  "tools.linkPaste.embedDesign": "הטמע עיצוב מ-{provider}",
+  "tools.linkPaste.embedChart": "הטמע תרשים מ-{provider}",
+  "tools.linkPaste.embedMap": "הטמע מפה מ-{provider}",
+  "tools.linkPaste.embedCalendar": "הטמע לוח שנה מ-{provider}",
   "tools.linkPaste.mention": "אזכור"
 }

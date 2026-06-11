@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Keep as link",
   "tools.linkPaste.bookmark": "Create bookmark",
   "tools.linkPaste.embed": "Create embed",
+  "tools.linkPaste.embedVideo": "Embed {provider} video",
+  "tools.linkPaste.embedAudio": "Embed {provider} audio",
+  "tools.linkPaste.embedImage": "Embed {provider} image",
+  "tools.linkPaste.embedSocial": "Embed {provider} post",
+  "tools.linkPaste.embedDocument": "Embed {provider} document",
+  "tools.linkPaste.embedTable": "Embed {provider} table",
+  "tools.linkPaste.embedForm": "Embed {provider} form",
+  "tools.linkPaste.embedCode": "Embed {provider} code",
+  "tools.linkPaste.embedDesign": "Embed {provider} design",
+  "tools.linkPaste.embedChart": "Embed {provider} chart",
+  "tools.linkPaste.embedMap": "Embed {provider} map",
+  "tools.linkPaste.embedCalendar": "Embed {provider} calendar",
   "tools.linkPaste.mention": "Mention"
 }

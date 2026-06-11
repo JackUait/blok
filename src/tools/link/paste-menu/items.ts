@@ -42,22 +42,23 @@ interface PasteMenuItemPresentation {
 }
 
 /**
- * Icon for each link-type category a registry service can declare, shown on the
- * embed item so the menu reads as "what kind of content this link is".
+ * Per link-type presentation of the embed item: the icon and the i18n key of an
+ * action template with a `{provider}` placeholder (e.g. "Embed {provider} video"),
+ * so the menu reads as "what this link will become".
  */
-const EMBED_TYPE_ICONS: Record<EmbedServiceType, string> = {
-  video: IconVideo,
-  audio: IconMusic,
-  image: IconImage,
-  social: IconMessage,
-  document: IconFile,
-  table: IconTable,
-  form: IconListChecklist,
-  code: IconCode,
-  design: IconPencil,
-  chart: IconChart,
-  map: IconMap,
-  calendar: IconCalendar,
+const EMBED_TYPE_PRESENTATION: Record<EmbedServiceType, { icon: string; labelKey: string }> = {
+  video: { icon: IconVideo, labelKey: 'tools.linkPaste.embedVideo' },
+  audio: { icon: IconMusic, labelKey: 'tools.linkPaste.embedAudio' },
+  image: { icon: IconImage, labelKey: 'tools.linkPaste.embedImage' },
+  social: { icon: IconMessage, labelKey: 'tools.linkPaste.embedSocial' },
+  document: { icon: IconFile, labelKey: 'tools.linkPaste.embedDocument' },
+  table: { icon: IconTable, labelKey: 'tools.linkPaste.embedTable' },
+  form: { icon: IconListChecklist, labelKey: 'tools.linkPaste.embedForm' },
+  code: { icon: IconCode, labelKey: 'tools.linkPaste.embedCode' },
+  design: { icon: IconPencil, labelKey: 'tools.linkPaste.embedDesign' },
+  chart: { icon: IconChart, labelKey: 'tools.linkPaste.embedChart' },
+  map: { icon: IconMap, labelKey: 'tools.linkPaste.embedMap' },
+  calendar: { icon: IconCalendar, labelKey: 'tools.linkPaste.embedCalendar' },
 };
 
 /**
@@ -81,9 +82,9 @@ const presentationFor = (type: PasteMenuActionType): PasteMenuItemPresentation =
  * Maps paste-menu options to Popover item params, preserving order.
  * Each item closes the popover on activation and reports its type to `onSelect`.
  *
- * When `url` matches a registered embed provider, the embed item names the
- * provider (e.g. "YouTube") with its link-type icon, and the generic "Embed"
- * label moves to the secondary label.
+ * When `url` matches a registered embed provider, the embed item is titled with
+ * the provider's link-type action template (e.g. "Embed YouTube video") and
+ * shows the link-type icon instead of the generic globe.
  */
 export function buildPasteMenuItems(
   options: PasteMenuOption[],
@@ -94,12 +95,14 @@ export function buildPasteMenuItems(
   return options.map(({ type }) => {
     const { labelKey, icon } = presentationFor(type);
     const embedMatch = type === 'embed' && url !== undefined ? matchEmbedService(url) : null;
+    const typed = embedMatch ? EMBED_TYPE_PRESENTATION[embedMatch.type] : null;
 
     return {
       name: `paste-menu-${type}`,
-      title: embedMatch ? embedMatch.title : i18n.t(labelKey),
-      icon: embedMatch ? EMBED_TYPE_ICONS[embedMatch.type] : icon,
-      ...(embedMatch ? { secondaryLabel: i18n.t(labelKey) } : {}),
+      title: typed && embedMatch
+        ? i18n.t(typed.labelKey).replace('{provider}', embedMatch.title)
+        : i18n.t(labelKey),
+      icon: typed ? typed.icon : icon,
       closeOnActivate: true,
       onActivate: (): void => {
         onSelect(type);

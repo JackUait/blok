@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "लिङ्कको रूपमा राख्नुहोस्",
   "tools.linkPaste.bookmark": "बुकमार्क बनाउनुहोस्",
   "tools.linkPaste.embed": "इम्बेड बनाउनुहोस्",
+  "tools.linkPaste.embedVideo": "{provider} भिडियो इम्बेड गर्नुहोस्",
+  "tools.linkPaste.embedAudio": "{provider} अडियो इम्बेड गर्नुहोस्",
+  "tools.linkPaste.embedImage": "{provider} तस्बिर इम्बेड गर्नुहोस्",
+  "tools.linkPaste.embedSocial": "{provider} पोस्ट इम्बेड गर्नुहोस्",
+  "tools.linkPaste.embedDocument": "{provider} कागजात इम्बेड गर्नुहोस्",
+  "tools.linkPaste.embedTable": "{provider} तालिका इम्बेड गर्नुहोस्",
+  "tools.linkPaste.embedForm": "{provider} फारम इम्बेड गर्नुहोस्",
+  "tools.linkPaste.embedCode": "{provider} कोड इम्बेड गर्नुहोस्",
+  "tools.linkPaste.embedDesign": "{provider} डिजाइन इम्बेड गर्नुहोस्",
+  "tools.linkPaste.embedChart": "{provider} चार्ट इम्बेड गर्नुहोस्",
+  "tools.linkPaste.embedMap": "{provider} नक्सा इम्बेड गर्नुहोस्",
+  "tools.linkPaste.embedCalendar": "{provider} पात्रो इम्बेड गर्नुहोस्",
   "tools.linkPaste.mention": "उल्लेख"
 }

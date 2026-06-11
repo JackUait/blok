@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Холбоосоор үлдээх",
   "tools.linkPaste.bookmark": "Хавчуурга үүсгэх",
   "tools.linkPaste.embed": "Шигтгээ үүсгэх",
+  "tools.linkPaste.embedVideo": "{provider} видеог шигтгэх",
+  "tools.linkPaste.embedAudio": "{provider} аудиог шигтгэх",
+  "tools.linkPaste.embedImage": "{provider} зургийг шигтгэх",
+  "tools.linkPaste.embedSocial": "{provider} нийтлэлийг шигтгэх",
+  "tools.linkPaste.embedDocument": "{provider} баримтыг шигтгэх",
+  "tools.linkPaste.embedTable": "{provider} хүснэгтийг шигтгэх",
+  "tools.linkPaste.embedForm": "{provider} маягтыг шигтгэх",
+  "tools.linkPaste.embedCode": "{provider} кодыг шигтгэх",
+  "tools.linkPaste.embedDesign": "{provider} дизайныг шигтгэх",
+  "tools.linkPaste.embedChart": "{provider} графикийг шигтгэх",
+  "tools.linkPaste.embedMap": "{provider} газрын зургийг шигтгэх",
+  "tools.linkPaste.embedCalendar": "{provider} хуанлийг шигтгэх",
   "tools.linkPaste.mention": "Дурдах"
 }

@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Paturēt kā saiti",
   "tools.linkPaste.bookmark": "Izveidot grāmatzīmi",
   "tools.linkPaste.embed": "Izveidot iegultni",
+  "tools.linkPaste.embedVideo": "Iegult {provider} video",
+  "tools.linkPaste.embedAudio": "Iegult {provider} audio",
+  "tools.linkPaste.embedImage": "Iegult {provider} attēlu",
+  "tools.linkPaste.embedSocial": "Iegult {provider} ierakstu",
+  "tools.linkPaste.embedDocument": "Iegult {provider} dokumentu",
+  "tools.linkPaste.embedTable": "Iegult {provider} tabulu",
+  "tools.linkPaste.embedForm": "Iegult {provider} veidlapu",
+  "tools.linkPaste.embedCode": "Iegult {provider} kodu",
+  "tools.linkPaste.embedDesign": "Iegult {provider} dizainu",
+  "tools.linkPaste.embedChart": "Iegult {provider} diagrammu",
+  "tools.linkPaste.embedMap": "Iegult {provider} karti",
+  "tools.linkPaste.embedCalendar": "Iegult {provider} kalendāru",
   "tools.linkPaste.mention": "Pieminējums"
 }

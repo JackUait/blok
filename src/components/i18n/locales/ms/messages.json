@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Kekalkan sebagai pautan",
   "tools.linkPaste.bookmark": "Cipta penanda halaman",
   "tools.linkPaste.embed": "Cipta benaman",
+  "tools.linkPaste.embedVideo": "Benamkan video {provider}",
+  "tools.linkPaste.embedAudio": "Benamkan audio {provider}",
+  "tools.linkPaste.embedImage": "Benamkan imej {provider}",
+  "tools.linkPaste.embedSocial": "Benamkan hantaran {provider}",
+  "tools.linkPaste.embedDocument": "Benamkan dokumen {provider}",
+  "tools.linkPaste.embedTable": "Benamkan jadual {provider}",
+  "tools.linkPaste.embedForm": "Benamkan borang {provider}",
+  "tools.linkPaste.embedCode": "Benamkan kod {provider}",
+  "tools.linkPaste.embedDesign": "Benamkan reka bentuk {provider}",
+  "tools.linkPaste.embedChart": "Benamkan carta {provider}",
+  "tools.linkPaste.embedMap": "Benamkan peta {provider}",
+  "tools.linkPaste.embedCalendar": "Benamkan kalendar {provider}",
   "tools.linkPaste.mention": "Sebutan"
 }

@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Zadrži kao poveznicu",
   "tools.linkPaste.bookmark": "Stvori knjižnu oznaku",
   "tools.linkPaste.embed": "Ugradi",
+  "tools.linkPaste.embedVideo": "Ugradi {provider} video",
+  "tools.linkPaste.embedAudio": "Ugradi {provider} audio",
+  "tools.linkPaste.embedImage": "Ugradi {provider} sliku",
+  "tools.linkPaste.embedSocial": "Ugradi {provider} objavu",
+  "tools.linkPaste.embedDocument": "Ugradi {provider} dokument",
+  "tools.linkPaste.embedTable": "Ugradi {provider} tablicu",
+  "tools.linkPaste.embedForm": "Ugradi {provider} obrazac",
+  "tools.linkPaste.embedCode": "Ugradi {provider} kod",
+  "tools.linkPaste.embedDesign": "Ugradi {provider} dizajn",
+  "tools.linkPaste.embedChart": "Ugradi {provider} grafikon",
+  "tools.linkPaste.embedMap": "Ugradi {provider} kartu",
+  "tools.linkPaste.embedCalendar": "Ugradi {provider} kalendar",
   "tools.linkPaste.mention": "Spomeni"
 }

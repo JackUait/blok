@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "保留为链接",
   "tools.linkPaste.bookmark": "创建书签",
   "tools.linkPaste.embed": "创建嵌入",
+  "tools.linkPaste.embedVideo": "嵌入 {provider} 视频",
+  "tools.linkPaste.embedAudio": "嵌入 {provider} 音频",
+  "tools.linkPaste.embedImage": "嵌入 {provider} 图片",
+  "tools.linkPaste.embedSocial": "嵌入 {provider} 帖子",
+  "tools.linkPaste.embedDocument": "嵌入 {provider} 文档",
+  "tools.linkPaste.embedTable": "嵌入 {provider} 表格",
+  "tools.linkPaste.embedForm": "嵌入 {provider} 表单",
+  "tools.linkPaste.embedCode": "嵌入 {provider} 代码",
+  "tools.linkPaste.embedDesign": "嵌入 {provider} 设计",
+  "tools.linkPaste.embedChart": "嵌入 {provider} 图表",
+  "tools.linkPaste.embedMap": "嵌入 {provider} 地图",
+  "tools.linkPaste.embedCalendar": "嵌入 {provider} 日历",
   "tools.linkPaste.mention": "提及"
 }

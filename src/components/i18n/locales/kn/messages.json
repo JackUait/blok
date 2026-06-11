@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "ಲಿಂಕ್ ಆಗಿ ಉಳಿಸಿ",
   "tools.linkPaste.bookmark": "ಬುಕ್‌ಮಾರ್ಕ್ ರಚಿಸಿ",
   "tools.linkPaste.embed": "ಎಂಬೆಡ್ ರಚಿಸಿ",
+  "tools.linkPaste.embedVideo": "{provider} ವೀಡಿಯೊವನ್ನು ಎಂಬೆಡ್ ಮಾಡಿ",
+  "tools.linkPaste.embedAudio": "{provider} ಆಡಿಯೊವನ್ನು ಎಂಬೆಡ್ ಮಾಡಿ",
+  "tools.linkPaste.embedImage": "{provider} ಚಿತ್ರವನ್ನು ಎಂಬೆಡ್ ಮಾಡಿ",
+  "tools.linkPaste.embedSocial": "{provider} ಪೋಸ್ಟ್ ಅನ್ನು ಎಂಬೆಡ್ ಮಾಡಿ",
+  "tools.linkPaste.embedDocument": "{provider} ಡಾಕ್ಯುಮೆಂಟ್ ಅನ್ನು ಎಂಬೆಡ್ ಮಾಡಿ",
+  "tools.linkPaste.embedTable": "{provider} ಕೋಷ್ಟಕವನ್ನು ಎಂಬೆಡ್ ಮಾಡಿ",
+  "tools.linkPaste.embedForm": "{provider} ಫಾರ್ಮ್ ಅನ್ನು ಎಂಬೆಡ್ ಮಾಡಿ",
+  "tools.linkPaste.embedCode": "{provider} ಕೋಡ್ ಅನ್ನು ಎಂಬೆಡ್ ಮಾಡಿ",
+  "tools.linkPaste.embedDesign": "{provider} ವಿನ್ಯಾಸವನ್ನು ಎಂಬೆಡ್ ಮಾಡಿ",
+  "tools.linkPaste.embedChart": "{provider} ಚಾರ್ಟ್ ಅನ್ನು ಎಂಬೆಡ್ ಮಾಡಿ",
+  "tools.linkPaste.embedMap": "{provider} ನಕ್ಷೆಯನ್ನು ಎಂಬೆಡ್ ಮಾಡಿ",
+  "tools.linkPaste.embedCalendar": "{provider} ಕ್ಯಾಲೆಂಡರ್ ಅನ್ನು ಎಂಬೆಡ್ ಮಾಡಿ",
   "tools.linkPaste.mention": "ಉಲ್ಲೇಖಿಸಿ"
 }

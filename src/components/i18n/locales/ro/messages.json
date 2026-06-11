@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Păstrează ca link",
   "tools.linkPaste.bookmark": "Creează marcaj",
   "tools.linkPaste.embed": "Creează încorporare",
+  "tools.linkPaste.embedVideo": "Încorporează videoclip de pe {provider}",
+  "tools.linkPaste.embedAudio": "Încorporează audio de pe {provider}",
+  "tools.linkPaste.embedImage": "Încorporează imagine de pe {provider}",
+  "tools.linkPaste.embedSocial": "Încorporează postare de pe {provider}",
+  "tools.linkPaste.embedDocument": "Încorporează document din {provider}",
+  "tools.linkPaste.embedTable": "Încorporează tabel din {provider}",
+  "tools.linkPaste.embedForm": "Încorporează formular din {provider}",
+  "tools.linkPaste.embedCode": "Încorporează cod din {provider}",
+  "tools.linkPaste.embedDesign": "Încorporează design din {provider}",
+  "tools.linkPaste.embedChart": "Încorporează grafic din {provider}",
+  "tools.linkPaste.embedMap": "Încorporează hartă din {provider}",
+  "tools.linkPaste.embedCalendar": "Încorporează calendar din {provider}",
   "tools.linkPaste.mention": "Mențiune"
 }

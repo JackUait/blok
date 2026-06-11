@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Panatilihing link",
   "tools.linkPaste.bookmark": "Gumawa ng bookmark",
   "tools.linkPaste.embed": "I-embed",
+  "tools.linkPaste.embedVideo": "I-embed ang video mula sa {provider}",
+  "tools.linkPaste.embedAudio": "I-embed ang audio mula sa {provider}",
+  "tools.linkPaste.embedImage": "I-embed ang larawan mula sa {provider}",
+  "tools.linkPaste.embedSocial": "I-embed ang post mula sa {provider}",
+  "tools.linkPaste.embedDocument": "I-embed ang dokumento mula sa {provider}",
+  "tools.linkPaste.embedTable": "I-embed ang talahanayan mula sa {provider}",
+  "tools.linkPaste.embedForm": "I-embed ang form mula sa {provider}",
+  "tools.linkPaste.embedCode": "I-embed ang code mula sa {provider}",
+  "tools.linkPaste.embedDesign": "I-embed ang disenyo mula sa {provider}",
+  "tools.linkPaste.embedChart": "I-embed ang tsart mula sa {provider}",
+  "tools.linkPaste.embedMap": "I-embed ang mapa mula sa {provider}",
+  "tools.linkPaste.embedCalendar": "I-embed ang kalendaryo mula sa {provider}",
   "tools.linkPaste.mention": "Banggitin"
 }

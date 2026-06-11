@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "រក្សាជាតំណ",
   "tools.linkPaste.bookmark": "បង្កើតចំណាំ",
   "tools.linkPaste.embed": "បង្កើតការបង្កប់",
+  "tools.linkPaste.embedVideo": "បង្កប់វីដេអូពី {provider}",
+  "tools.linkPaste.embedAudio": "បង្កប់សំឡេងពី {provider}",
+  "tools.linkPaste.embedImage": "បង្កប់រូបភាពពី {provider}",
+  "tools.linkPaste.embedSocial": "បង្កប់ការបង្ហោះពី {provider}",
+  "tools.linkPaste.embedDocument": "បង្កប់ឯកសារពី {provider}",
+  "tools.linkPaste.embedTable": "បង្កប់តារាងពី {provider}",
+  "tools.linkPaste.embedForm": "បង្កប់ទម្រង់ពី {provider}",
+  "tools.linkPaste.embedCode": "បង្កប់កូដពី {provider}",
+  "tools.linkPaste.embedDesign": "បង្កប់ការរចនាពី {provider}",
+  "tools.linkPaste.embedChart": "បង្កប់គំនូសតាងពី {provider}",
+  "tools.linkPaste.embedMap": "បង្កប់ផែនទីពី {provider}",
+  "tools.linkPaste.embedCalendar": "បង្កប់ប្រតិទិនពី {provider}",
   "tools.linkPaste.mention": "លើកឡើង"
 }

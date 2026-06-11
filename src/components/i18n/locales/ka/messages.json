@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "დატოვება ბმულად",
   "tools.linkPaste.bookmark": "სანიშნის შექმნა",
   "tools.linkPaste.embed": "ჩაშენების შექმნა",
+  "tools.linkPaste.embedVideo": "{provider}-ის ვიდეოს ჩაშენება",
+  "tools.linkPaste.embedAudio": "{provider}-ის აუდიოს ჩაშენება",
+  "tools.linkPaste.embedImage": "{provider}-ის სურათის ჩაშენება",
+  "tools.linkPaste.embedSocial": "{provider}-ის პოსტის ჩაშენება",
+  "tools.linkPaste.embedDocument": "{provider}-ის დოკუმენტის ჩაშენება",
+  "tools.linkPaste.embedTable": "{provider}-ის ცხრილის ჩაშენება",
+  "tools.linkPaste.embedForm": "{provider}-ის ფორმის ჩაშენება",
+  "tools.linkPaste.embedCode": "{provider}-ის კოდის ჩაშენება",
+  "tools.linkPaste.embedDesign": "{provider}-ის დიზაინის ჩაშენება",
+  "tools.linkPaste.embedChart": "{provider}-ის დიაგრამის ჩაშენება",
+  "tools.linkPaste.embedMap": "{provider}-ის რუკის ჩაშენება",
+  "tools.linkPaste.embedCalendar": "{provider}-ის კალენდრის ჩაშენება",
   "tools.linkPaste.mention": "ხსენება"
 }

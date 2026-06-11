@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Megtartás hivatkozásként",
   "tools.linkPaste.bookmark": "Könyvjelző létrehozása",
   "tools.linkPaste.embed": "Beágyazás",
+  "tools.linkPaste.embedVideo": "{provider}-videó beágyazása",
+  "tools.linkPaste.embedAudio": "{provider}-hanganyag beágyazása",
+  "tools.linkPaste.embedImage": "{provider}-kép beágyazása",
+  "tools.linkPaste.embedSocial": "{provider}-bejegyzés beágyazása",
+  "tools.linkPaste.embedDocument": "{provider}-dokumentum beágyazása",
+  "tools.linkPaste.embedTable": "{provider}-táblázat beágyazása",
+  "tools.linkPaste.embedForm": "{provider}-űrlap beágyazása",
+  "tools.linkPaste.embedCode": "{provider}-kód beágyazása",
+  "tools.linkPaste.embedDesign": "{provider}-dizájn beágyazása",
+  "tools.linkPaste.embedChart": "{provider}-diagram beágyazása",
+  "tools.linkPaste.embedMap": "{provider}-térkép beágyazása",
+  "tools.linkPaste.embedCalendar": "{provider}-naptár beágyazása",
   "tools.linkPaste.mention": "Említés"
 }

@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "لنڪ طور رکو",
   "tools.linkPaste.bookmark": "بُڪ مارڪ ٺاهيو",
   "tools.linkPaste.embed": "ايمبيڊ ٺاهيو",
+  "tools.linkPaste.embedVideo": "{provider} جي وڊيو ايمبيڊ ڪريو",
+  "tools.linkPaste.embedAudio": "{provider} جو آڊيو ايمبيڊ ڪريو",
+  "tools.linkPaste.embedImage": "{provider} جي تصوير ايمبيڊ ڪريو",
+  "tools.linkPaste.embedSocial": "{provider} جي پوسٽ ايمبيڊ ڪريو",
+  "tools.linkPaste.embedDocument": "{provider} جو دستاويز ايمبيڊ ڪريو",
+  "tools.linkPaste.embedTable": "{provider} جو جدول ايمبيڊ ڪريو",
+  "tools.linkPaste.embedForm": "{provider} جو فارم ايمبيڊ ڪريو",
+  "tools.linkPaste.embedCode": "{provider} جو ڪوڊ ايمبيڊ ڪريو",
+  "tools.linkPaste.embedDesign": "{provider} جو ڊيزائن ايمبيڊ ڪريو",
+  "tools.linkPaste.embedChart": "{provider} جو چارٽ ايمبيڊ ڪريو",
+  "tools.linkPaste.embedMap": "{provider} جو نقشو ايمبيڊ ڪريو",
+  "tools.linkPaste.embedCalendar": "{provider} جو ڪئلينڊر ايمبيڊ ڪريو",
   "tools.linkPaste.mention": "ذڪر"
 }

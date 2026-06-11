@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "האַלט ווי אַ לינק",
   "tools.linkPaste.bookmark": "שאַף אַ צייכן",
   "tools.linkPaste.embed": "שאַף אַן אײַנבעטונג",
+  "tools.linkPaste.embedVideo": "בעט אײַן אַ ווידעאָ פֿון {provider}",
+  "tools.linkPaste.embedAudio": "בעט אײַן אַודיאָ פֿון {provider}",
+  "tools.linkPaste.embedImage": "בעט אײַן אַ בילד פֿון {provider}",
+  "tools.linkPaste.embedSocial": "בעט אײַן אַ פּאָסט פֿון {provider}",
+  "tools.linkPaste.embedDocument": "בעט אײַן אַ דאָקומענט פֿון {provider}",
+  "tools.linkPaste.embedTable": "בעט אײַן אַ טאַבעלע פֿון {provider}",
+  "tools.linkPaste.embedForm": "בעט אײַן אַ פֿאָרמולאַר פֿון {provider}",
+  "tools.linkPaste.embedCode": "בעט אײַן קאָד פֿון {provider}",
+  "tools.linkPaste.embedDesign": "בעט אײַן אַ דיזײַן פֿון {provider}",
+  "tools.linkPaste.embedChart": "בעט אײַן אַ דיאַגראַמע פֿון {provider}",
+  "tools.linkPaste.embedMap": "בעט אײַן אַ מאַפּע פֿון {provider}",
+  "tools.linkPaste.embedCalendar": "בעט אײַן אַ קאַלענדאַר פֿון {provider}",
   "tools.linkPaste.mention": "דערמאָנונג"
 }

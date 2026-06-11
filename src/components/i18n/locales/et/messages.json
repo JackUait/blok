@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Jäta lingiks",
   "tools.linkPaste.bookmark": "Loo järjehoidja",
   "tools.linkPaste.embed": "Manusta",
+  "tools.linkPaste.embedVideo": "Manusta {provider}-video",
+  "tools.linkPaste.embedAudio": "Manusta {provider}-heli",
+  "tools.linkPaste.embedImage": "Manusta {provider}-pilt",
+  "tools.linkPaste.embedSocial": "Manusta {provider}-postitus",
+  "tools.linkPaste.embedDocument": "Manusta {provider}-dokument",
+  "tools.linkPaste.embedTable": "Manusta {provider}-tabel",
+  "tools.linkPaste.embedForm": "Manusta {provider}-vorm",
+  "tools.linkPaste.embedCode": "Manusta {provider}-kood",
+  "tools.linkPaste.embedDesign": "Manusta {provider}-kujundus",
+  "tools.linkPaste.embedChart": "Manusta {provider}-diagramm",
+  "tools.linkPaste.embedMap": "Manusta {provider}-kaart",
+  "tools.linkPaste.embedCalendar": "Manusta {provider}-kalender",
   "tools.linkPaste.mention": "Maini"
 }

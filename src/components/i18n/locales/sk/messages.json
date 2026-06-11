@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Ponechať ako odkaz",
   "tools.linkPaste.bookmark": "Vytvoriť záložku",
   "tools.linkPaste.embed": "Vytvoriť vloženie",
+  "tools.linkPaste.embedVideo": "Vložiť video z {provider}",
+  "tools.linkPaste.embedAudio": "Vložiť audio z {provider}",
+  "tools.linkPaste.embedImage": "Vložiť obrázok z {provider}",
+  "tools.linkPaste.embedSocial": "Vložiť príspevok z {provider}",
+  "tools.linkPaste.embedDocument": "Vložiť dokument z {provider}",
+  "tools.linkPaste.embedTable": "Vložiť tabuľku z {provider}",
+  "tools.linkPaste.embedForm": "Vložiť formulár z {provider}",
+  "tools.linkPaste.embedCode": "Vložiť kód z {provider}",
+  "tools.linkPaste.embedDesign": "Vložiť návrh z {provider}",
+  "tools.linkPaste.embedChart": "Vložiť graf z {provider}",
+  "tools.linkPaste.embedMap": "Vložiť mapu z {provider}",
+  "tools.linkPaste.embedCalendar": "Vložiť kalendár z {provider}",
   "tools.linkPaste.mention": "Zmienka"
 }

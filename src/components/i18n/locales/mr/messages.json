@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "दुवा म्हणून ठेवा",
   "tools.linkPaste.bookmark": "बुकमार्क तयार करा",
   "tools.linkPaste.embed": "एम्बेड तयार करा",
+  "tools.linkPaste.embedVideo": "{provider} व्हिडिओ एम्बेड करा",
+  "tools.linkPaste.embedAudio": "{provider} ऑडिओ एम्बेड करा",
+  "tools.linkPaste.embedImage": "{provider} प्रतिमा एम्बेड करा",
+  "tools.linkPaste.embedSocial": "{provider} पोस्ट एम्बेड करा",
+  "tools.linkPaste.embedDocument": "{provider} दस्तऐवज एम्बेड करा",
+  "tools.linkPaste.embedTable": "{provider} सारणी एम्बेड करा",
+  "tools.linkPaste.embedForm": "{provider} फॉर्म एम्बेड करा",
+  "tools.linkPaste.embedCode": "{provider} कोड एम्बेड करा",
+  "tools.linkPaste.embedDesign": "{provider} डिझाइन एम्बेड करा",
+  "tools.linkPaste.embedChart": "{provider} चार्ट एम्बेड करा",
+  "tools.linkPaste.embedMap": "{provider} नकाशा एम्बेड करा",
+  "tools.linkPaste.embedCalendar": "{provider} कॅलेंडर एम्बेड करा",
   "tools.linkPaste.mention": "उल्लेख"
 }

@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "بطور لنک رکھیں",
   "tools.linkPaste.bookmark": "بک مارک بنائیں",
   "tools.linkPaste.embed": "ایمبیڈ بنائیں",
+  "tools.linkPaste.embedVideo": "{provider} کی ویڈیو ایمبیڈ کریں",
+  "tools.linkPaste.embedAudio": "{provider} کا آڈیو ایمبیڈ کریں",
+  "tools.linkPaste.embedImage": "{provider} کی تصویر ایمبیڈ کریں",
+  "tools.linkPaste.embedSocial": "{provider} کی پوسٹ ایمبیڈ کریں",
+  "tools.linkPaste.embedDocument": "{provider} کی دستاویز ایمبیڈ کریں",
+  "tools.linkPaste.embedTable": "{provider} کا جدول ایمبیڈ کریں",
+  "tools.linkPaste.embedForm": "{provider} کا فارم ایمبیڈ کریں",
+  "tools.linkPaste.embedCode": "{provider} کا کوڈ ایمبیڈ کریں",
+  "tools.linkPaste.embedDesign": "{provider} کا ڈیزائن ایمبیڈ کریں",
+  "tools.linkPaste.embedChart": "{provider} کا چارٹ ایمبیڈ کریں",
+  "tools.linkPaste.embedMap": "{provider} کا نقشہ ایمبیڈ کریں",
+  "tools.linkPaste.embedCalendar": "{provider} کا کیلنڈر ایمبیڈ کریں",
   "tools.linkPaste.mention": "تذکرہ"
 }

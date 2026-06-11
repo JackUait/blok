@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "ലിങ്കായി നിലനിർത്തുക",
   "tools.linkPaste.bookmark": "ബുക്ക്മാർക്ക് സൃഷ്ടിക്കുക",
   "tools.linkPaste.embed": "എംബെഡ് സൃഷ്ടിക്കുക",
+  "tools.linkPaste.embedVideo": "{provider} വീഡിയോ എംബെഡ് ചെയ്യുക",
+  "tools.linkPaste.embedAudio": "{provider} ഓഡിയോ എംബെഡ് ചെയ്യുക",
+  "tools.linkPaste.embedImage": "{provider} ചിത്രം എംബെഡ് ചെയ്യുക",
+  "tools.linkPaste.embedSocial": "{provider} പോസ്റ്റ് എംബെഡ് ചെയ്യുക",
+  "tools.linkPaste.embedDocument": "{provider} ഡോക്യുമെന്റ് എംബെഡ് ചെയ്യുക",
+  "tools.linkPaste.embedTable": "{provider} പട്ടിക എംബെഡ് ചെയ്യുക",
+  "tools.linkPaste.embedForm": "{provider} ഫോം എംബെഡ് ചെയ്യുക",
+  "tools.linkPaste.embedCode": "{provider} കോഡ് എംബെഡ് ചെയ്യുക",
+  "tools.linkPaste.embedDesign": "{provider} ഡിസൈൻ എംബെഡ് ചെയ്യുക",
+  "tools.linkPaste.embedChart": "{provider} ചാർട്ട് എംബെഡ് ചെയ്യുക",
+  "tools.linkPaste.embedMap": "{provider} മാപ്പ് എംബെഡ് ചെയ്യുക",
+  "tools.linkPaste.embedCalendar": "{provider} കലണ്ടർ എംബെഡ് ചെയ്യുക",
   "tools.linkPaste.mention": "പരാമർശം"
 }

@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "نگه‌داشتن به‌صورت پیوند",
   "tools.linkPaste.bookmark": "ساخت نشانک",
   "tools.linkPaste.embed": "جاسازی",
+  "tools.linkPaste.embedVideo": "جاسازی ویدیو از {provider}",
+  "tools.linkPaste.embedAudio": "جاسازی فایل صوتی از {provider}",
+  "tools.linkPaste.embedImage": "جاسازی تصویر از {provider}",
+  "tools.linkPaste.embedSocial": "جاسازی پست از {provider}",
+  "tools.linkPaste.embedDocument": "جاسازی سند از {provider}",
+  "tools.linkPaste.embedTable": "جاسازی جدول از {provider}",
+  "tools.linkPaste.embedForm": "جاسازی فرم از {provider}",
+  "tools.linkPaste.embedCode": "جاسازی کد از {provider}",
+  "tools.linkPaste.embedDesign": "جاسازی طرح از {provider}",
+  "tools.linkPaste.embedChart": "جاسازی نمودار از {provider}",
+  "tools.linkPaste.embedMap": "جاسازی نقشه از {provider}",
+  "tools.linkPaste.embedCalendar": "جاسازی تقویم از {provider}",
   "tools.linkPaste.mention": "اشاره"
 }

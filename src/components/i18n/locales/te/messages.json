@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "లింక్‌గానే ఉంచు",
   "tools.linkPaste.bookmark": "బుక్‌మార్క్ సృష్టించు",
   "tools.linkPaste.embed": "ఎంబెడ్ సృష్టించు",
+  "tools.linkPaste.embedVideo": "{provider} వీడియోను ఎంబెడ్ చేయి",
+  "tools.linkPaste.embedAudio": "{provider} ఆడియోను ఎంబెడ్ చేయి",
+  "tools.linkPaste.embedImage": "{provider} చిత్రాన్ని ఎంబెడ్ చేయి",
+  "tools.linkPaste.embedSocial": "{provider} పోస్ట్‌ను ఎంబెడ్ చేయి",
+  "tools.linkPaste.embedDocument": "{provider} పత్రాన్ని ఎంబెడ్ చేయి",
+  "tools.linkPaste.embedTable": "{provider} పట్టికను ఎంబెడ్ చేయి",
+  "tools.linkPaste.embedForm": "{provider} ఫారమ్‌ను ఎంబెడ్ చేయి",
+  "tools.linkPaste.embedCode": "{provider} కోడ్‌ను ఎంబెడ్ చేయి",
+  "tools.linkPaste.embedDesign": "{provider} డిజైన్‌ను ఎంబెడ్ చేయి",
+  "tools.linkPaste.embedChart": "{provider} చార్ట్‌ను ఎంబెడ్ చేయి",
+  "tools.linkPaste.embedMap": "{provider} మ్యాప్‌ను ఎంబెడ్ చేయి",
+  "tools.linkPaste.embedCalendar": "{provider} క్యాలెండర్‌ను ఎంబెడ్ చేయి",
   "tools.linkPaste.mention": "ప్రస్తావించు"
 }

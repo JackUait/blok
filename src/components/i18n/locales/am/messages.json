@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "እንደ አገናኝ አቆይ",
   "tools.linkPaste.bookmark": "ዕልባት ፍጠር",
   "tools.linkPaste.embed": "ማስገቢያ ፍጠር",
+  "tools.linkPaste.embedVideo": "የ{provider} ቪዲዮ አስገባ",
+  "tools.linkPaste.embedAudio": "የ{provider} ኦዲዮ አስገባ",
+  "tools.linkPaste.embedImage": "የ{provider} ምስል አስገባ",
+  "tools.linkPaste.embedSocial": "የ{provider} ልጥፍ አስገባ",
+  "tools.linkPaste.embedDocument": "የ{provider} ሰነድ አስገባ",
+  "tools.linkPaste.embedTable": "የ{provider} ሰንጠረዥ አስገባ",
+  "tools.linkPaste.embedForm": "የ{provider} ቅጽ አስገባ",
+  "tools.linkPaste.embedCode": "የ{provider} ኮድ አስገባ",
+  "tools.linkPaste.embedDesign": "የ{provider} ዲዛይን አስገባ",
+  "tools.linkPaste.embedChart": "የ{provider} ገበታ አስገባ",
+  "tools.linkPaste.embedMap": "የ{provider} ካርታ አስገባ",
+  "tools.linkPaste.embedCalendar": "የ{provider} ቀን መቁጠሪያ አስገባ",
   "tools.linkPaste.mention": "ጥቀስ"
 }

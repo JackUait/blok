@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "リンクのままにする",
   "tools.linkPaste.bookmark": "ブックマークを作成",
   "tools.linkPaste.embed": "埋め込みを作成",
+  "tools.linkPaste.embedVideo": "{provider}の動画を埋め込む",
+  "tools.linkPaste.embedAudio": "{provider}のオーディオを埋め込む",
+  "tools.linkPaste.embedImage": "{provider}の画像を埋め込む",
+  "tools.linkPaste.embedSocial": "{provider}の投稿を埋め込む",
+  "tools.linkPaste.embedDocument": "{provider}のドキュメントを埋め込む",
+  "tools.linkPaste.embedTable": "{provider}の表を埋め込む",
+  "tools.linkPaste.embedForm": "{provider}のフォームを埋め込む",
+  "tools.linkPaste.embedCode": "{provider}のコードを埋め込む",
+  "tools.linkPaste.embedDesign": "{provider}のデザインを埋め込む",
+  "tools.linkPaste.embedChart": "{provider}のグラフを埋め込む",
+  "tools.linkPaste.embedMap": "{provider}の地図を埋め込む",
+  "tools.linkPaste.embedCalendar": "{provider}のカレンダーを埋め込む",
   "tools.linkPaste.mention": "メンション"
 }

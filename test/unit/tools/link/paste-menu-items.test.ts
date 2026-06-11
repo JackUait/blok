@@ -106,12 +106,37 @@ describe('buildPasteMenuItems', () => {
   describe('embed item presentation for a recognized provider url', () => {
     const youtubeUrl = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
 
-    it('shows the provider name as title and the embed action as secondary label', () => {
-      const items = buildPasteMenuItems([{ type: 'embed' }], identityI18n, vi.fn(), youtubeUrl);
+    /** Resolves the per-type embed templates the way a real locale would. */
+    const templateI18n: PasteMenuI18n = {
+      t: (key: string): string => {
+        if (key === 'tools.linkPaste.embedVideo') {
+          return 'Embed {provider} video';
+        }
+        if (key === 'tools.linkPaste.embedAudio') {
+          return 'Embed {provider} audio';
+        }
+
+        return key;
+      },
+    };
+
+    it('titles the embed item with the localized type template naming the provider', () => {
+      const items = buildPasteMenuItems([{ type: 'embed' }], templateI18n, vi.fn(), youtubeUrl);
       const embed = asDefaultItem(items[0]);
 
-      expect(embed.title).toBe('YouTube');
-      expect(embed.secondaryLabel).toBe('tools.linkPaste.embed');
+      expect(embed.title).toBe('Embed YouTube video');
+      expect(embed.secondaryLabel).toBeUndefined();
+    });
+
+    it('picks the template matching the link type', () => {
+      const [audio] = buildPasteMenuItems(
+        [{ type: 'embed' }],
+        templateI18n,
+        vi.fn(),
+        'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC'
+      );
+
+      expect(asDefaultItem(audio).title).toBe('Embed Spotify audio');
     });
 
     it('uses a link-type icon distinct from the generic embed globe', () => {

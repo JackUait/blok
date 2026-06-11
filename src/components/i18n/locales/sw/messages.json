@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Weka kama kiungo",
   "tools.linkPaste.bookmark": "Unda alamisho",
   "tools.linkPaste.embed": "Pachika",
+  "tools.linkPaste.embedVideo": "Pachika video ya {provider}",
+  "tools.linkPaste.embedAudio": "Pachika sauti ya {provider}",
+  "tools.linkPaste.embedImage": "Pachika picha ya {provider}",
+  "tools.linkPaste.embedSocial": "Pachika chapisho la {provider}",
+  "tools.linkPaste.embedDocument": "Pachika hati ya {provider}",
+  "tools.linkPaste.embedTable": "Pachika jedwali la {provider}",
+  "tools.linkPaste.embedForm": "Pachika fomu ya {provider}",
+  "tools.linkPaste.embedCode": "Pachika msimbo wa {provider}",
+  "tools.linkPaste.embedDesign": "Pachika muundo wa {provider}",
+  "tools.linkPaste.embedChart": "Pachika chati ya {provider}",
+  "tools.linkPaste.embedMap": "Pachika ramani ya {provider}",
+  "tools.linkPaste.embedCalendar": "Pachika kalenda ya {provider}",
   "tools.linkPaste.mention": "Taja"
 }

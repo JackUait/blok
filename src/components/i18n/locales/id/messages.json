@@ -338,5 +338,17 @@
   "tools.linkPaste.plain": "Pertahankan sebagai tautan",
   "tools.linkPaste.bookmark": "Buat markah",
   "tools.linkPaste.embed": "Buat sematan",
+  "tools.linkPaste.embedVideo": "Sematkan video {provider}",
+  "tools.linkPaste.embedAudio": "Sematkan audio {provider}",
+  "tools.linkPaste.embedImage": "Sematkan gambar {provider}",
+  "tools.linkPaste.embedSocial": "Sematkan postingan {provider}",
+  "tools.linkPaste.embedDocument": "Sematkan dokumen {provider}",
+  "tools.linkPaste.embedTable": "Sematkan tabel {provider}",
+  "tools.linkPaste.embedForm": "Sematkan formulir {provider}",
+  "tools.linkPaste.embedCode": "Sematkan kode {provider}",
+  "tools.linkPaste.embedDesign": "Sematkan desain {provider}",
+  "tools.linkPaste.embedChart": "Sematkan bagan {provider}",
+  "tools.linkPaste.embedMap": "Sematkan peta {provider}",
+  "tools.linkPaste.embedCalendar": "Sematkan kalender {provider}",
   "tools.linkPaste.mention": "Sebutkan"
 }

@@ -34,16 +34,16 @@ const SCREENSHOT_OPTIONS = {
 };
 
 const PRODUCTIVITY_SERVICES: ReadonlyArray<{ service: string; source: string }> = [
-  { service: 'calendly', source: 'https://calendly.com/acme-team' },
-  { service: 'tally', source: 'https://tally.so/r/wMNDgn' },
-  { service: 'jotform', source: 'https://form.jotform.com/241234567890123' },
-  { service: 'whimsical', source: 'https://whimsical.com/my-roadmap-Q3xL9mTzKvB2aWcRpD8uHn' },
-  { service: 'excalidraw', source: 'https://excalidraw.com/#json=AbC123dEf456GhI789jK,XyZ987wVu654TsR321qP' },
+  { service: 'calendly', source: 'https://calendly.com/candu/25min' },
+  { service: 'tally', source: 'https://tally.so/r/3qDpEY' },
+  { service: 'jotform', source: 'https://form.jotform.com/53551153366151' },
+  { service: 'whimsical', source: 'https://whimsical.com/GLf4vMMWPzCZUXdwxdut7J' },
+  { service: 'excalidraw', source: 'https://excalidraw.com/#json=5649116445016064,yOfExolZoMhtGnysT3-LWA' },
   { service: 'tldraw', source: 'https://www.tldraw.com/r/AbCdEf123456' },
-  { service: 'mentimeter', source: 'https://www.mentimeter.com/app/presentation/alxyz1u2abcdefg' },
-  { service: 'behance', source: 'https://www.behance.net/gallery/123456789/Brand-Identity' },
-  { service: 'chromatic', source: 'https://5ccbc373887ca40020446347-abcdef.chromatic.com/?path=/story/button--primary' },
-  { service: 'plunker', source: 'https://plnkr.co/edit/abc123XYZ' },
+  { service: 'mentimeter', source: 'https://www.mentimeter.com/app/presentation/68fea24fc2526ebe22a2d6be8f543353' },
+  { service: 'behance', source: 'https://www.behance.net/gallery/123456789/Logo-Design-For-an-Artist' },
+  { service: 'chromatic', source: 'https://master--5ccbc373887ca40020446347.chromatic.com/?path=/story/button--basic' },
+  { service: 'plunker', source: 'https://plnkr.co/edit/Nj94IM' },
 ];
 
 /**

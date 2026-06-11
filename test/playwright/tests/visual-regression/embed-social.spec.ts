@@ -42,18 +42,18 @@ const SCREENSHOT_OPTIONS = {
 const SCRIPT_EMBED_CLIP = { x: 0, y: 0, width: 800, height: 300 };
 
 const SOCIAL_SERVICES: ReadonlyArray<{ service: string; source: string }> = [
-  { service: 'reddit', source: 'https://www.reddit.com/r/programming/comments/1abc2de/some_title_slug/' },
-  { service: 'instagram', source: 'https://www.instagram.com/p/C8zXq1NMabc/' },
+  { service: 'reddit', source: 'https://www.reddit.com/r/IAmA/comments/z1c9z/i_am_barack_obama_president_of_the_united_states/' },
+  { service: 'instagram', source: 'https://www.instagram.com/p/BsOGulcndj-/' },
   { service: 'facebookvideo', source: 'https://www.facebook.com/facebook/videos/10153231379946729/' },
-  { service: 'facebookpost', source: 'https://www.facebook.com/zuck/posts/pfbid02abcDEF123xyz' },
-  { service: 'linkedin', source: 'https://www.linkedin.com/posts/john-doe-123_great-stuff-activity-7123456789012345678-AbCd?utm_source=share' },
+  { service: 'facebookpost', source: 'https://www.facebook.com/zuck/posts/10113961365418581' },
+  { service: 'linkedin', source: 'https://www.linkedin.com/posts/williamhgates_the-last-chapter-of-my-career-activity-7326660324483289089-2c0f?utm_source=share' },
   { service: 'mastodon', source: 'https://mastodon.social/@Gargron/100254678717223630' },
   { service: 'pinterest', source: 'https://www.pinterest.com/pin/99360735500167749/' },
-  { service: 'snapchat', source: 'https://www.snapchat.com/spotlight/W7_EDlXWTBiXAEEniNoMPwAAYdWxucXBwZGZoAZSjJAfsAZSjJAJBAAAAAA' },
-  { service: 'substack', source: 'https://astralcodexten.substack.com/p/some-post-slug' },
+  { service: 'snapchat', source: 'https://www.snapchat.com/spotlight/W7_EDlXWTBiXAEEniNoMPwAAYYmplb211YmdvAZ01kChEAZ01kCgkAAAAAQ' },
+  { service: 'substack', source: 'https://astralcodexten.substack.com/p/still-alive' },
 ];
 
-const THREADS_SOURCE = 'https://www.threads.com/@zuck/post/C8z2Qq0Rk1x';
+const THREADS_SOURCE = 'https://www.threads.com/@zuck/post/C2QBoRaRmR1';
 
 /**
  * Resolves a sample URL through the registry; throws (instead of branching

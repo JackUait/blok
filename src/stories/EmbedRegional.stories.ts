@@ -30,10 +30,10 @@ const REGIONAL_SAMPLES = {
   okru: 'https://ok.ru/video/11338458073644',
   arte: 'https://www.arte.tv/en/videos/110989-000-A/steven-spielberg/',
   tencentvideo: 'https://v.qq.com/x/cover/mzc00200xj9k3pa/j0032qtxztf.html',
-  douyin: 'https://www.douyin.com/video/7331122334455667788',
-  kinescope: 'https://kinescope.io/0sjQ4cSGrqMVKj3KMTAn2g',
-  vidio: 'https://www.vidio.com/watch/7448242-keluarga-superior-eps-1?utm_source=share',
-  mailru: 'https://my.mail.ru/mail/somename/video/_myvideo/123.html',
+  douyin: 'https://www.douyin.com/video/6961737553342991651',
+  kinescope: 'https://kinescope.io/2N2Apx7RkMBG2BQHQc1oKn',
+  vidio: 'https://www.vidio.com/watch/7448242-karen-vendela-bikin-video-buanglah-sampah-pada-tempatnya-sindir-mantan-atau?utm_source=share',
+  mailru: 'https://my.mail.ru/community/gotivim.mm/video/_groupvideo/262.html',
   smotrim: 'https://smotrim.ru/video/2898424',
 } as const;
 

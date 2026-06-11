@@ -62,10 +62,10 @@ const VIDEO_SERVICES: ReadonlyArray<{ service: string; source: string }> = [
   { service: 'internetarchive', source: 'https://archive.org/details/BigBuckBunny_124' },
   { service: 'kick', source: 'https://kick.com/xqc' },
   { service: 'peertube', source: 'https://framatube.org/w/kkGMgK9ZtnKfYAgnEtQxbv' },
-  { service: 'odysee', source: 'https://odysee.com/@samtime:1/apple-fans-react-to-vision-pro:0' },
-  { service: 'soop', source: 'https://vod.sooplive.co.kr/player/123456789' },
-  { service: 'coub', source: 'https://coub.com/view/1cmal' },
-  { service: 'bitchute', source: 'https://www.bitchute.com/video/UGlrf9d3vKHK/' },
+  { service: 'odysee', source: 'https://odysee.com/@veritasium:f/how-electricity-actually-works:b' },
+  { service: 'soop', source: 'https://vod.sooplive.co.kr/player/189220507' },
+  { service: 'coub', source: 'https://coub.com/view/17txps' },
+  { service: 'bitchute', source: 'https://www.bitchute.com/video/VAD9enZVfmf5/' },
 ];
 
 /**

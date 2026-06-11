@@ -38,10 +38,10 @@ const VIDEO_SAMPLES = {
   internetarchive: 'https://archive.org/details/BigBuckBunny_124',
   kick: 'https://kick.com/xqc',
   peertube: 'https://framatube.org/w/kkGMgK9ZtnKfYAgnEtQxbv',
-  odysee: 'https://odysee.com/@samtime:1/apple-fans-react-to-vision-pro:0',
-  soop: 'https://vod.sooplive.co.kr/player/123456789',
-  coub: 'https://coub.com/view/1cmal',
-  bitchute: 'https://www.bitchute.com/video/UGlrf9d3vKHK/',
+  odysee: 'https://odysee.com/@veritasium:f/how-electricity-actually-works:b',
+  soop: 'https://vod.sooplive.co.kr/player/189220507',
+  coub: 'https://coub.com/view/17txps',
+  bitchute: 'https://www.bitchute.com/video/VAD9enZVfmf5/',
 } as const;
 
 type VideoService = keyof typeof VIDEO_SAMPLES;

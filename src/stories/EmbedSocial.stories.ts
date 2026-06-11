@@ -21,16 +21,16 @@ const DEFAULT_HEIGHT = 320;
  * samples proven by test/unit/tools/link/registry.test.ts.
  */
 const SOCIAL_SOURCES: Record<string, string> = {
-  reddit: 'https://www.reddit.com/r/programming/comments/1abc2de/some_title_slug/',
-  instagram: 'https://www.instagram.com/p/C8zXq1NMabc/',
+  reddit: 'https://www.reddit.com/r/IAmA/comments/z1c9z/i_am_barack_obama_president_of_the_united_states/',
+  instagram: 'https://www.instagram.com/p/BsOGulcndj-/',
   facebookvideo: 'https://www.facebook.com/facebook/videos/10153231379946729/',
-  facebookpost: 'https://www.facebook.com/zuck/posts/pfbid02abcDEF123xyz',
-  linkedin: 'https://www.linkedin.com/posts/john-doe-123_great-stuff-activity-7123456789012345678-AbCd?utm_source=share',
+  facebookpost: 'https://www.facebook.com/zuck/posts/10113961365418581',
+  linkedin: 'https://www.linkedin.com/posts/williamhgates_the-last-chapter-of-my-career-activity-7326660324483289089-2c0f?utm_source=share',
   mastodon: 'https://mastodon.social/@Gargron/100254678717223630',
   pinterest: 'https://www.pinterest.com/pin/99360735500167749/',
-  snapchat: 'https://www.snapchat.com/spotlight/W7_EDlXWTBiXAEEniNoMPwAAYdWxucXBwZGZoAZSjJAfsAZSjJAJBAAAAAA',
-  substack: 'https://astralcodexten.substack.com/p/some-post-slug',
-  threads: 'https://www.threads.com/@zuck/post/C8z2Qq0Rk1x',
+  snapchat: 'https://www.snapchat.com/spotlight/W7_EDlXWTBiXAEEniNoMPwAAYYmplb211YmdvAZ01kChEAZ01kCgkAAAAAQ',
+  substack: 'https://astralcodexten.substack.com/p/still-alive',
+  threads: 'https://www.threads.com/@zuck/post/C2QBoRaRmR1',
 };
 
 /**

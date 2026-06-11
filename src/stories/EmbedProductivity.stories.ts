@@ -21,16 +21,16 @@ const DEFAULT_HEIGHT = 320;
  * samples proven by test/unit/tools/link/registry.test.ts.
  */
 const PRODUCTIVITY_SOURCES: Record<string, string> = {
-  calendly: 'https://calendly.com/acme-team',
-  tally: 'https://tally.so/r/wMNDgn',
-  jotform: 'https://form.jotform.com/241234567890123',
-  whimsical: 'https://whimsical.com/my-roadmap-Q3xL9mTzKvB2aWcRpD8uHn',
-  excalidraw: 'https://excalidraw.com/#json=AbC123dEf456GhI789jK,XyZ987wVu654TsR321qP',
+  calendly: 'https://calendly.com/candu/25min',
+  tally: 'https://tally.so/r/3qDpEY',
+  jotform: 'https://form.jotform.com/53551153366151',
+  whimsical: 'https://whimsical.com/GLf4vMMWPzCZUXdwxdut7J',
+  excalidraw: 'https://excalidraw.com/#json=5649116445016064,yOfExolZoMhtGnysT3-LWA',
   tldraw: 'https://www.tldraw.com/r/AbCdEf123456',
-  mentimeter: 'https://www.mentimeter.com/app/presentation/alxyz1u2abcdefg',
-  behance: 'https://www.behance.net/gallery/123456789/Brand-Identity',
-  chromatic: 'https://5ccbc373887ca40020446347-abcdef.chromatic.com/?path=/story/button--primary',
-  plunker: 'https://plnkr.co/edit/abc123XYZ',
+  mentimeter: 'https://www.mentimeter.com/app/presentation/68fea24fc2526ebe22a2d6be8f543353',
+  behance: 'https://www.behance.net/gallery/123456789/Logo-Design-For-an-Artist',
+  chromatic: 'https://master--5ccbc373887ca40020446347.chromatic.com/?path=/story/button--basic',
+  plunker: 'https://plnkr.co/edit/Nj94IM',
 };
 
 /**

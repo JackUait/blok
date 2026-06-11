@@ -135,6 +135,31 @@ export class Embed implements BlockTool {
     return Boolean(data.source) && Boolean(data.embed);
   }
 
+  /**
+   * Anchors the block toolbar (+ / ⋮⋮) to the embed figure so it centers at
+   * the embed's top edge rather than on the caption's contenteditable line.
+   */
+  public getToolbarAnchorElement(): HTMLElement | undefined {
+    return this.root?.querySelector<HTMLElement>('[data-role="embed-figure"]') ?? undefined;
+  }
+
+  /**
+   * Shifts the block toolbar to the figure's left edge when the embed is
+   * narrower than the content column (centered / right-aligned / fixed-width).
+   */
+  public getContentOffset(_hoveredElement: Element): { left: number } | undefined {
+    const root = this.root;
+    const figure = root?.querySelector<HTMLElement>('[data-role="embed-figure"]');
+
+    if (!root || !figure) {
+      return undefined;
+    }
+
+    const delta = figure.getBoundingClientRect().left - root.getBoundingClientRect().left;
+
+    return delta > 0 ? { left: delta } : undefined;
+  }
+
   private renderState(): void {
     if (!this.root) {
       return;
@@ -232,9 +257,17 @@ export class Embed implements BlockTool {
   private buildIframeFigure(): HTMLElement {
     const figure = document.createElement('figure');
 
+    const w = this.data.width && this.data.width > 0 ? this.data.width : DEFAULT_WIDTH;
+    const h = this.data.height && this.data.height > 0 ? this.data.height : DEFAULT_HEIGHT;
+    const fixedWidth = this.data.service !== undefined
+      && EMBED_SERVICES[this.data.service]?.fixedWidth === true;
+
     figure.setAttribute('data-role', 'embed-figure');
     figure.style.position = 'relative';
-    figure.style.maxWidth = '100%';
+    // Fixed-content providers (e.g. TikTok) don't scale with the iframe, so the
+    // figure is capped at the natural width to keep handles on the visible card.
+    // The percent-based width never exceeds the container, so a px cap is safe.
+    figure.style.maxWidth = fixedWidth ? `${w}px` : '100%';
     figure.style.width = `${this.data.widthPercent ?? FULL_WIDTH_PERCENT}%`;
 
     const alignment = this.data.alignment ?? 'center';
@@ -243,8 +276,6 @@ export class Embed implements BlockTool {
     figure.style.marginRight = alignment === 'right' ? '0' : 'auto';
 
     const aspect = document.createElement('div');
-    const w = this.data.width && this.data.width > 0 ? this.data.width : DEFAULT_WIDTH;
-    const h = this.data.height && this.data.height > 0 ? this.data.height : DEFAULT_HEIGHT;
 
     aspect.setAttribute('data-role', 'embed-aspect');
     aspect.style.position = 'relative';

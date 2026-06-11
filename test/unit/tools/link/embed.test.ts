@@ -182,6 +182,28 @@ describe('Embed sizing & resize', () => {
     expect(figureOf(tool.render())?.style.width).toBe('50%');
   });
 
+  it('caps the figure at the provider natural width for fixed-content services (tiktok)', () => {
+    const tool = new Embed(
+      createOptions({
+        service: 'tiktok',
+        source: 'https://www.tiktok.com/@user/video/7469789434322455863',
+        embed: 'https://www.tiktok.com/embed/v2/7469789434322455863',
+        width: 325,
+        height: 580,
+      })
+    );
+
+    const figure = figureOf(tool.render());
+
+    expect(figure?.style.maxWidth).toBe('325px');
+  });
+
+  it('keeps fluid max-width for services whose content scales with the iframe', () => {
+    const tool = new Embed(createOptions(iframeData()));
+
+    expect(figureOf(tool.render())?.style.maxWidth).toBe('100%');
+  });
+
   it('keeps the provider aspect ratio on the iframe box', () => {
     const tool = new Embed(createOptions(iframeData({ width: 580, height: 320 })));
 
@@ -249,6 +271,66 @@ describe('Embed sizing & resize', () => {
     expect(figure.style.width).toBe('60%');
     expect(dispatchChange).toHaveBeenCalled();
     expect(tool.save().widthPercent).toBe(60);
+  });
+});
+
+describe('Embed block toolbar anchoring', () => {
+  it('getToolbarAnchorElement() returns the embed figure so the block toolbar centers at the embed top, not on the caption', () => {
+    const tool = new Embed(createOptions(iframeData({ captionVisible: true })));
+    const root = tool.render();
+    const figure = root.querySelector('[data-role="embed-figure"]');
+
+    expect(figure).not.toBeNull();
+    expect(tool.getToolbarAnchorElement()).toBe(figure);
+  });
+
+  it('getToolbarAnchorElement() returns undefined when there is no figure (empty / script states)', () => {
+    const empty = new Embed(createOptions());
+
+    empty.render();
+    expect(empty.getToolbarAnchorElement()).toBeUndefined();
+
+    const script = new Embed(
+      createOptions({ service: 'telegram', source: 'https://t.me/d/1', embed: 'https://t.me/d/1', kind: 'script' })
+    );
+
+    script.render();
+    expect(script.getToolbarAnchorElement()).toBeUndefined();
+  });
+
+  it('getContentOffset() returns the horizontal offset of the figure relative to the tool root so + / ⋮⋮ align with the embed left edge', () => {
+    const tool = new Embed(createOptions(iframeData()));
+    const root = tool.render();
+    const figure = root.querySelector<HTMLElement>('[data-role="embed-figure"]');
+
+    if (!figure) {
+      throw new Error('figure missing');
+    }
+    Object.defineProperty(root, 'getBoundingClientRect', { value: () => makeRect(1000, 0) });
+    Object.defineProperty(figure, 'getBoundingClientRect', { value: () => makeRect(325, 120) });
+
+    expect(tool.getContentOffset(figure)).toEqual({ left: 120 });
+  });
+
+  it('getContentOffset() returns undefined when the figure fills the content area', () => {
+    const tool = new Embed(createOptions(iframeData()));
+    const root = tool.render();
+    const figure = root.querySelector<HTMLElement>('[data-role="embed-figure"]');
+
+    if (!figure) {
+      throw new Error('figure missing');
+    }
+    Object.defineProperty(root, 'getBoundingClientRect', { value: () => makeRect(1000, 0) });
+    Object.defineProperty(figure, 'getBoundingClientRect', { value: () => makeRect(1000, 0) });
+
+    expect(tool.getContentOffset(figure)).toBeUndefined();
+  });
+
+  it('getContentOffset() returns undefined when there is no figure (empty state)', () => {
+    const tool = new Embed(createOptions());
+
+    tool.render();
+    expect(tool.getContentOffset(document.createElement('div'))).toBeUndefined();
   });
 });
 

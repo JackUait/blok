@@ -25,6 +25,13 @@ export interface EmbedService {
   height?: number;
   /** Derives the remote id from regex capture groups (defaults to the first group). */
   id?: (groups: Array<string | undefined>) => string;
+  /**
+   * Provider page renders its content at a fixed natural width instead of
+   * scaling with the iframe (e.g. TikTok's card). The embed figure is capped
+   * at `width` px so resize handles and the block toolbar hug the visible
+   * content rather than an oversized empty frame.
+   */
+  fixedWidth?: boolean;
 }
 
 export interface EmbedMatch {
@@ -401,6 +408,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     embedUrl: 'https://www.tiktok.com/embed/v2/<%= remote_id %>',
     width: 325,
     height: 580,
+    fixedWidth: true,
   },
   wistia: {
     // Account subdomains are arbitrary; both wistia.com and wistia.net occur.

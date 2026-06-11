@@ -483,6 +483,41 @@ describe('Embed toolbar integration', () => {
     expect(tool.save().alignment).toBe('right');
   });
 
+  it('preserves the live iframe element across an alignment change (no reload blink)', () => {
+    const tool = new Embed(createOptions(iframeData()));
+    const root = tool.render();
+    const before = root.querySelector('iframe');
+
+    click(root.querySelector('[data-action="align-trigger"]'));
+    click(root.querySelector('[data-action="align-right"]'));
+
+    const after = root.querySelector('iframe');
+
+    expect(before).not.toBeNull();
+    // Same node instance ⇒ the frame was never detached/recreated, so it never reloads.
+    expect(after).toBe(before);
+  });
+
+  it('keeps exactly two resize handles after an alignment change', () => {
+    const tool = new Embed(createOptions(iframeData()));
+    const root = tool.render();
+
+    click(root.querySelector('[data-action="align-trigger"]'));
+    click(root.querySelector('[data-action="align-left"]'));
+
+    expect(root.querySelectorAll('[data-role="resize-handle"]').length).toBe(2);
+  });
+
+  it('updates the overlay active alignment in place after a change', () => {
+    const tool = new Embed(createOptions(iframeData()));
+    const root = tool.render();
+
+    click(root.querySelector('[data-action="align-trigger"]'));
+    click(root.querySelector('[data-action="align-right"]'));
+
+    expect(root.querySelector('[data-action="align-trigger"]')?.getAttribute('data-current')).toBe('right');
+  });
+
   it('deletes the block through the more menu', () => {
     const del = vi.fn();
     const tool = new Embed(createOptions(iframeData(), { blocksDelete: del, blockId: 'embed-1' }));

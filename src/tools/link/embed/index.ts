@@ -431,9 +431,76 @@ export class Embed implements BlockTool {
   }
 
   private setAlignment(next: EmbedAlignment): void {
+    if ((this.data.alignment ?? 'center') === next) {
+      return;
+    }
+
+    const figure = this.root?.querySelector<HTMLElement>('[data-role="embed-figure"]');
+
+    // No live figure (empty / script embed) — fall back to a full rebuild.
+    if (!figure) {
+      this.data.alignment = next;
+      this.renderState();
+      this.block.dispatchChange();
+
+      return;
+    }
+
+    // FLIP origin: where the figure sits before the layout shift.
+    const prevRect = figure.getBoundingClientRect();
+
     this.data.alignment = next;
-    this.renderState();
     this.block.dispatchChange();
+
+    // Re-place in place rather than via renderState(): rebuilding the figure
+    // recreates the iframe, which detaches & reloads the embed (a visible
+    // "blink"). Mutating the margins keeps the live frame mounted.
+    figure.style.marginLeft = next === 'left' ? '0' : 'auto';
+    figure.style.marginRight = next === 'right' ? '0' : 'auto';
+
+    // The overlay's active state and the resize handles both capture alignment
+    // at build time, so refresh that chrome — without touching the iframe.
+    this.refreshChrome(figure);
+
+    // FLIP: slide from the old position to the new one (mirrors the image tool).
+    const nextRect = figure.getBoundingClientRect();
+    const dx = prevRect.left - nextRect.left;
+
+    if (Math.abs(dx) < 0.5) {
+      return;
+    }
+
+    figure.style.transition = 'none';
+    figure.style.transform = `translateX(${dx}px)`;
+    void figure.offsetWidth;
+    figure.style.transition = 'transform 320ms cubic-bezier(0.22, 1, 0.36, 1)';
+    figure.style.transform = 'translateX(0)';
+
+    const cleanup = (): void => {
+      figure.style.transition = '';
+      figure.style.transform = '';
+      figure.removeEventListener('transitionend', cleanup);
+    };
+
+    figure.addEventListener('transitionend', cleanup);
+  }
+
+  /**
+   * Rebuilds the resize handles and hover overlay for the current alignment
+   * without recreating the iframe. detachResizers() only strips listeners, so
+   * the old handle/overlay nodes are removed explicitly to avoid duplicates.
+   */
+  private refreshChrome(figure: HTMLElement): void {
+    if (this.readOnly) {
+      return;
+    }
+
+    this.detachResizers();
+    figure.querySelectorAll('[data-role="resize-handle"]').forEach((el) => el.remove());
+    figure.querySelector('[data-role="embed-overlay"]')?.remove();
+
+    this.attachResizeHandles(figure);
+    figure.appendChild(this.buildOverlay());
   }
 
   private toggleCaption(): void {

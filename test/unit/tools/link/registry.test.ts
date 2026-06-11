@@ -595,6 +595,530 @@ describe('link registry', () => {
     });
   });
 
+  describe('Bilibili URL variants', () => {
+    it('matches a BV watch URL and builds the player query', () => {
+      const result = matchEmbedService('https://www.bilibili.com/video/BV1GJ411x7h7/?spm_id_from=333.337');
+
+      expect(result?.service).toBe('bilibili');
+      expect(result?.embedUrl).toBe('https://player.bilibili.com/player.html?bvid=BV1GJ411x7h7&autoplay=0');
+    });
+
+    it('matches a legacy av-id URL via the aid param', () => {
+      const result = matchEmbedService('https://www.bilibili.com/video/av170001');
+
+      expect(result?.embedUrl).toBe('https://player.bilibili.com/player.html?aid=170001&autoplay=0');
+    });
+
+    it('matches mobile and b23.tv literal-id short links', () => {
+      expect(matchEmbedService('https://m.bilibili.com/video/BV1GJ411x7h7')?.service).toBe('bilibili');
+      expect(matchEmbedService('https://b23.tv/BV1GJ411x7h7')?.service).toBe('bilibili');
+    });
+
+    it('does not match opaque b23.tv shortcodes or lookalike hosts', () => {
+      expect(matchEmbedService('https://b23.tv/x7GqkBz')).toBeNull();
+      expect(matchEmbedService('https://notbilibili.com/video/BV1GJ411x7h7')).toBeNull();
+    });
+  });
+
+  describe('Niconico URL variants', () => {
+    it('matches a watch URL and keeps the prefixed id', () => {
+      const result = matchEmbedService('https://www.nicovideo.jp/watch/sm9');
+
+      expect(result?.service).toBe('niconico');
+      expect(result?.embedUrl).toBe('https://embed.nicovideo.jp/watch/sm9');
+    });
+
+    it('matches nico.ms short links and mobile sp. URLs', () => {
+      expect(matchEmbedService('https://nico.ms/sm9')?.embedUrl).toBe('https://embed.nicovideo.jp/watch/sm9');
+      expect(matchEmbedService('https://sp.nicovideo.jp/watch/so46397782')?.service).toBe('niconico');
+    });
+
+    it('does not match watch URLs without an sm/nm/so prefix', () => {
+      expect(matchEmbedService('https://www.nicovideo.jp/watch/12345')).toBeNull();
+    });
+  });
+
+  describe('Youku URL variants', () => {
+    it('matches a v_show watch URL and extracts the base64-ish id', () => {
+      const result = matchEmbedService('https://v.youku.com/v_show/id_XODU1NzgzMTg0.html?spm=a2hbt.13141534.app.5~5!2~5!2~5~5~A');
+
+      expect(result?.service).toBe('youku');
+      expect(result?.embedUrl).toBe('https://player.youku.com/embed/XODU1NzgzMTg0');
+    });
+
+    it('keeps = padding and decodes %3D-encoded padding', () => {
+      expect(matchEmbedService('https://v.youku.com/v_show/id_XNDM0NzA5NTc2OA==.html')?.embedUrl)
+        .toBe('https://player.youku.com/embed/XNDM0NzA5NTc2OA==');
+      expect(matchEmbedService('https://v.youku.com/v_show/id_XNDM0NzA5NTc2OA%3D%3D.html')?.embedUrl)
+        .toBe('https://player.youku.com/embed/XNDM0NzA5NTc2OA==');
+    });
+
+    it('matches mobile video URLs', () => {
+      expect(matchEmbedService('https://m.youku.com/video/id_XODU1NzgzMTg0.html')?.service).toBe('youku');
+      expect(matchEmbedService('https://m.youku.com/alipay_video/id_XODU1NzgzMTg0.html')?.service).toBe('youku');
+    });
+  });
+
+  describe('Naver TV URL variants', () => {
+    it('matches a clip URL and disables autoplay in the embed', () => {
+      const result = matchEmbedService('https://tv.naver.com/v/8565915');
+
+      expect(result?.service).toBe('navertv');
+      expect(result?.embedUrl).toBe('https://tv.naver.com/embed/8565915?autoPlay=false');
+    });
+
+    it('matches an already-embed URL', () => {
+      expect(matchEmbedService('https://tv.naver.com/embed/8565915')?.service).toBe('navertv');
+    });
+
+    it('does not match opaque naver.me short links', () => {
+      expect(matchEmbedService('https://naver.me/xyzAbc12')).toBeNull();
+    });
+  });
+
+  describe('KakaoTV URL variants', () => {
+    it('matches a short /v/ URL onto the play-tv embed host', () => {
+      const result = matchEmbedService('https://tv.kakao.com/v/451075687');
+
+      expect(result?.service).toBe('kakaotv');
+      expect(result?.embedUrl).toBe('https://play-tv.kakao.com/embed/player/cliplink/451075687?service=player_share');
+    });
+
+    it('matches a canonical channel cliplink URL', () => {
+      const result = matchEmbedService('https://tv.kakao.com/channel/462787/cliplink/451075687?metaObjectType=Clip');
+
+      expect(result?.embedUrl).toBe('https://play-tv.kakao.com/embed/player/cliplink/451075687?service=player_share');
+    });
+  });
+
+  describe('Dailymotion URL variants', () => {
+    it('matches a watch URL via the geo player', () => {
+      const result = matchEmbedService('https://www.dailymotion.com/video/xaehrai');
+
+      expect(result?.service).toBe('dailymotion');
+      expect(result?.embedUrl).toBe('https://geo.dailymotion.com/player.html?video=xaehrai');
+    });
+
+    it('matches a dai.ly short link (id is in the path)', () => {
+      expect(matchEmbedService('https://dai.ly/x9pecme')?.embedUrl).toBe('https://geo.dailymotion.com/player.html?video=x9pecme');
+    });
+
+    it('does not match playlist pages', () => {
+      expect(matchEmbedService('https://www.dailymotion.com/playlist/x5v0d4')).toBeNull();
+    });
+  });
+
+  describe('OK.ru URL variants', () => {
+    it('matches a video URL via the videoembed endpoint', () => {
+      const result = matchEmbedService('https://ok.ru/video/7692086741685');
+
+      expect(result?.service).toBe('okru');
+      expect(result?.embedUrl).toBe('https://ok.ru/videoembed/7692086741685');
+    });
+
+    it('matches mobile, suffixed-id and legacy-domain URLs', () => {
+      expect(matchEmbedService('https://m.ok.ru/video/157394084601186-0')?.embedUrl).toBe('https://ok.ru/videoembed/157394084601186-0');
+      expect(matchEmbedService('https://odnoklassniki.ru/video/7692086741685')?.service).toBe('okru');
+      expect(matchEmbedService('https://ok.ru/videoembed/7692086741685')?.service).toBe('okru');
+    });
+
+    it('does not match lookalike hosts', () => {
+      expect(matchEmbedService('https://notok.ru/video/7692086741685')).toBeNull();
+    });
+  });
+
+  describe('Yandex Music URL variants', () => {
+    it('matches a track URL and reverses the track/album slot order', () => {
+      const result = matchEmbedService('https://music.yandex.ru/album/11904129/track/70471675');
+
+      expect(result?.service).toBe('yandexmusic');
+      expect(result?.embedUrl).toBe('https://music.yandex.ru/iframe/track/70471675/11904129');
+    });
+
+    it('matches an album URL', () => {
+      expect(matchEmbedService('https://music.yandex.ru/album/11904129')?.embedUrl)
+        .toBe('https://music.yandex.ru/iframe/album/11904129');
+    });
+
+    it('matches a user playlist URL', () => {
+      expect(matchEmbedService('https://music.yandex.ru/users/yamusic-bestsongs/playlists/1000')?.embedUrl)
+        .toBe('https://music.yandex.ru/iframe/playlist/yamusic-bestsongs/1000');
+    });
+
+    it('matches the .com international mirror', () => {
+      expect(matchEmbedService('https://music.yandex.com/album/11904129/track/70471675')?.service).toBe('yandexmusic');
+    });
+  });
+
+  describe('Arte URL variants', () => {
+    it('matches a program URL and keeps the language in the embed path', () => {
+      const result = matchEmbedService('https://www.arte.tv/en/videos/110989-000-A/steven-spielberg/');
+
+      expect(result?.service).toBe('arte');
+      expect(result?.embedUrl).toBe('https://www.arte.tv/embeds/en/110989-000-A');
+    });
+
+    it('matches other site languages', () => {
+      expect(matchEmbedService('https://www.arte.tv/fr/videos/110989-000-A/')?.embedUrl)
+        .toBe('https://www.arte.tv/embeds/fr/110989-000-A');
+    });
+
+    it('does not match non-video pages', () => {
+      expect(matchEmbedService('https://www.arte.tv/en/guide/')).toBeNull();
+    });
+  });
+
+  describe('Deezer URL variants', () => {
+    it('matches a track URL via the auto-theme widget', () => {
+      const result = matchEmbedService('https://www.deezer.com/track/3135556');
+
+      expect(result?.service).toBe('deezer');
+      expect(result?.embedUrl).toBe('https://widget.deezer.com/widget/auto/track/3135556');
+    });
+
+    it('matches locale-prefixed album, playlist and episode URLs', () => {
+      expect(matchEmbedService('https://www.deezer.com/en/album/302127')?.embedUrl)
+        .toBe('https://widget.deezer.com/widget/auto/album/302127');
+      expect(matchEmbedService('https://www.deezer.com/ru/playlist/1306931615')?.embedUrl)
+        .toBe('https://widget.deezer.com/widget/auto/playlist/1306931615');
+      expect(matchEmbedService('https://www.deezer.com/en/episode/452631745')?.embedUrl)
+        .toBe('https://widget.deezer.com/widget/auto/episode/452631745');
+    });
+
+    it('does not match opaque link.deezer.com short links', () => {
+      expect(matchEmbedService('https://link.deezer.com/s/30abc123xyz')).toBeNull();
+    });
+  });
+
+  describe('SoundCloud URL variants', () => {
+    it('matches a track URL and percent-encodes it into the widget url param', () => {
+      const result = matchEmbedService('https://soundcloud.com/forss/flickermood');
+
+      expect(result?.service).toBe('soundcloud');
+      expect(result?.embedUrl).toBe(
+        'https://w.soundcloud.com/player/?url=https%3A%2F%2Fsoundcloud.com%2Fforss%2Fflickermood'
+      );
+    });
+
+    it('matches a playlist (sets) URL', () => {
+      const result = matchEmbedService('https://soundcloud.com/soundcloud/sets/tracks-of-the-week');
+
+      expect(result?.embedUrl).toBe(
+        'https://w.soundcloud.com/player/?url=https%3A%2F%2Fsoundcloud.com%2Fsoundcloud%2Fsets%2Ftracks-of-the-week'
+      );
+    });
+
+    it('strips share query params before encoding', () => {
+      const result = matchEmbedService('https://soundcloud.com/forss/flickermood?si=abc&utm_source=clipboard');
+
+      expect(result?.embedUrl).toBe(
+        'https://w.soundcloud.com/player/?url=https%3A%2F%2Fsoundcloud.com%2Fforss%2Fflickermood'
+      );
+    });
+
+    it('does not match profile tab pages or opaque short links', () => {
+      expect(matchEmbedService('https://soundcloud.com/forss/tracks')).toBeNull();
+      expect(matchEmbedService('https://on.soundcloud.com/0elNQxGgHZWep2hzUT')).toBeNull();
+    });
+  });
+
+  describe('Mixcloud URL variants', () => {
+    it('matches a show URL and encodes the permalink into the feed param', () => {
+      const result = matchEmbedService('https://www.mixcloud.com/spartacus/party-time/');
+
+      expect(result?.service).toBe('mixcloud');
+      expect(result?.embedUrl).toBe(
+        'https://www.mixcloud.com/widget/iframe/?feed=https%3A%2F%2Fwww.mixcloud.com%2Fspartacus%2Fparty-time%2F&hide_cover=1'
+      );
+    });
+
+    it('does not match playlist pages (no widget feed)', () => {
+      expect(matchEmbedService('https://www.mixcloud.com/spartacus/playlists/best-of/')).toBeNull();
+    });
+  });
+
+  describe('Apple Music URL variants', () => {
+    it('matches an album URL via the embed subdomain', () => {
+      const result = matchEmbedService('https://music.apple.com/us/album/1989-taylors-version/1708308989');
+
+      expect(result?.service).toBe('applemusic');
+      expect(result?.embedUrl).toBe('https://embed.music.apple.com/us/album/1989-taylors-version/1708308989');
+    });
+
+    it('keeps the ?i= track selector of a song-in-album link', () => {
+      const result = matchEmbedService('https://music.apple.com/us/album/1989-taylors-version/1708308989?i=1708308990');
+
+      expect(result?.embedUrl).toBe('https://embed.music.apple.com/us/album/1989-taylors-version/1708308989?i=1708308990');
+    });
+
+    it('matches direct song and playlist links', () => {
+      expect(matchEmbedService('https://music.apple.com/us/song/welcome-to-new-york-taylors-version/1708308990')?.embedUrl)
+        .toBe('https://embed.music.apple.com/us/song/welcome-to-new-york-taylors-version/1708308990');
+      expect(matchEmbedService('https://music.apple.com/us/playlist/todays-hits/pl.f4d106fed2bd41149aaacabb233eb5eb')?.embedUrl)
+        .toBe('https://embed.music.apple.com/us/playlist/todays-hits/pl.f4d106fed2bd41149aaacabb233eb5eb');
+    });
+  });
+
+  describe('Apple Podcasts URL variants', () => {
+    it('matches a show URL via the embed subdomain', () => {
+      const result = matchEmbedService('https://podcasts.apple.com/us/podcast/the-daily/id1200361736');
+
+      expect(result?.service).toBe('applepodcasts');
+      expect(result?.embedUrl).toBe('https://embed.podcasts.apple.com/us/podcast/the-daily/id1200361736');
+    });
+
+    it('keeps the ?i= episode selector', () => {
+      const result = matchEmbedService('https://podcasts.apple.com/us/podcast/the-daily/id1200361736?i=1000772009313');
+
+      expect(result?.embedUrl).toBe('https://embed.podcasts.apple.com/us/podcast/the-daily/id1200361736?i=1000772009313');
+    });
+  });
+
+  describe('Audiomack URL variants', () => {
+    it('matches a song URL and rearranges path slots into the embed form', () => {
+      const result = matchEmbedService('https://audiomack.com/innercatmusic/song/allegro-in-b-flat-k-3');
+
+      expect(result?.service).toBe('audiomack');
+      expect(result?.embedUrl).toBe('https://audiomack.com/embed/song/innercatmusic/allegro-in-b-flat-k-3');
+    });
+
+    it('matches album and playlist URLs', () => {
+      expect(matchEmbedService('https://audiomack.com/asakemusic/album/mney-1073854')?.embedUrl)
+        .toBe('https://audiomack.com/embed/album/asakemusic/mney-1073854');
+      expect(matchEmbedService('https://audiomack.com/audiomack-hip-hop/playlist/verified-hh')?.embedUrl)
+        .toBe('https://audiomack.com/embed/playlist/audiomack-hip-hop/verified-hh');
+    });
+  });
+
+  describe('Anghami URL variants', () => {
+    it('matches a song URL via the widget host', () => {
+      const result = matchEmbedService('https://play.anghami.com/song/45385197');
+
+      expect(result?.service).toBe('anghami');
+      expect(result?.embedUrl).toBe('https://widget.anghami.com/song/45385197');
+    });
+
+    it('matches album, playlist and artist URLs', () => {
+      expect(matchEmbedService('https://play.anghami.com/album/1010655195')?.embedUrl).toBe('https://widget.anghami.com/album/1010655195');
+      expect(matchEmbedService('https://play.anghami.com/playlist/170320738')?.embedUrl).toBe('https://widget.anghami.com/playlist/170320738');
+      expect(matchEmbedService('https://play.anghami.com/artist/859')?.embedUrl).toBe('https://widget.anghami.com/artist/859');
+    });
+  });
+
+  describe('Streamable URL variants', () => {
+    it('matches a short video URL via the /e/ embed path', () => {
+      const result = matchEmbedService('https://streamable.com/moo');
+
+      expect(result?.service).toBe('streamable');
+      expect(result?.embedUrl).toBe('https://streamable.com/e/moo');
+    });
+
+    it('matches an already-embed /e/ URL', () => {
+      expect(matchEmbedService('https://streamable.com/e/moo')?.embedUrl).toBe('https://streamable.com/e/moo');
+    });
+
+    it('does not match site pages like login or signup', () => {
+      expect(matchEmbedService('https://streamable.com/login')).toBeNull();
+      expect(matchEmbedService('https://streamable.com/signup')).toBeNull();
+    });
+  });
+
+  describe('TikTok URL variants', () => {
+    it('matches a video URL via the embed/v2 endpoint', () => {
+      const result = matchEmbedService('https://www.tiktok.com/@javiercazarez/video/7469789434322455863');
+
+      expect(result?.service).toBe('tiktok');
+      expect(result?.embedUrl).toBe('https://www.tiktok.com/embed/v2/7469789434322455863');
+    });
+
+    it('does not match opaque vm./vt. short links or photo posts', () => {
+      expect(matchEmbedService('https://vm.tiktok.com/ZMabc123/')).toBeNull();
+      expect(matchEmbedService('https://vt.tiktok.com/ZSabc123/')).toBeNull();
+      expect(matchEmbedService('https://www.tiktok.com/@user/photo/7469789434322455863')).toBeNull();
+    });
+  });
+
+  describe('Wistia URL variants', () => {
+    it('matches an account medias URL via fast.wistia.net', () => {
+      const result = matchEmbedService('https://support.wistia.com/medias/h1z3uqsjal');
+
+      expect(result?.service).toBe('wistia');
+      expect(result?.embedUrl).toBe('https://fast.wistia.net/embed/iframe/h1z3uqsjal');
+    });
+
+    it('matches pasted embed iframe URLs on both wistia hosts', () => {
+      expect(matchEmbedService('https://fast.wistia.net/embed/iframe/a74mrwu4wi')?.embedUrl)
+        .toBe('https://fast.wistia.net/embed/iframe/a74mrwu4wi');
+      expect(matchEmbedService('https://fast.wistia.com/embed/iframe/a74mrwu4wi')?.service).toBe('wistia');
+    });
+  });
+
+  describe('Vidyard URL variants', () => {
+    it('matches a share watch URL via the play host', () => {
+      const result = matchEmbedService('https://share.vidyard.com/watch/h2NqLfsfpLszhtLg1mXnAZ');
+
+      expect(result?.service).toBe('vidyard');
+      expect(result?.embedUrl).toBe('https://play.vidyard.com/h2NqLfsfpLszhtLg1mXnAZ.html');
+    });
+
+    it('matches custom-subdomain and prefixed watch URLs', () => {
+      expect(matchEmbedService('https://video.vidyard.com/watch/CjSiQ8JRYjt9QYTTgnUUqT')?.service).toBe('vidyard');
+      expect(matchEmbedService('https://learn.vidyard.com/gettingstarted/watch/RyjoKvH8QTAPtYrfejha95')?.embedUrl)
+        .toBe('https://play.vidyard.com/RyjoKvH8QTAPtYrfejha95.html');
+    });
+
+    it('strips share query params from the captured id', () => {
+      expect(matchEmbedService('https://share.vidyard.com/watch/h2NqLfsfpLszhtLg1mXnAZ?second=30')?.embedUrl)
+        .toBe('https://play.vidyard.com/h2NqLfsfpLszhtLg1mXnAZ.html');
+    });
+  });
+
+  describe('Giphy URL variants', () => {
+    it('matches a gif page URL and captures the trailing id token', () => {
+      const result = matchEmbedService('https://giphy.com/gifs/lustig-witzig-funny-reaction-cJhDKXoHvzahcGPgiK');
+
+      expect(result?.service).toBe('giphy');
+      expect(result?.embedUrl).toBe('https://giphy.com/embed/cJhDKXoHvzahcGPgiK');
+    });
+
+    it('matches slugless gif, clip and sticker URLs', () => {
+      expect(matchEmbedService('https://giphy.com/gifs/cJhDKXoHvzahcGPgiK')?.embedUrl).toBe('https://giphy.com/embed/cJhDKXoHvzahcGPgiK');
+      expect(matchEmbedService('https://giphy.com/clips/some-clip-cJhDKXoHvzahcGPgiK')?.service).toBe('giphy');
+      expect(matchEmbedService('https://giphy.com/stickers/some-sticker-cJhDKXoHvzahcGPgiK')?.service).toBe('giphy');
+    });
+
+    it('matches a direct media.giphy.com GIF link', () => {
+      expect(matchEmbedService('https://media.giphy.com/media/cJhDKXoHvzahcGPgiK/giphy.gif')?.embedUrl)
+        .toBe('https://giphy.com/embed/cJhDKXoHvzahcGPgiK');
+    });
+
+    it('does not match opaque gph.is short links', () => {
+      expect(matchEmbedService('https://gph.is/2x6lvCS')).toBeNull();
+    });
+  });
+
+  describe('CodeSandbox URL variants', () => {
+    it('matches a legacy /s/ sandbox URL via the embed path', () => {
+      const result = matchEmbedService('https://codesandbox.io/s/vanilla');
+
+      expect(result?.service).toBe('codesandbox');
+      expect(result?.embedUrl).toBe('https://codesandbox.io/embed/vanilla');
+    });
+
+    it('matches current /p/sandbox/ and already-embed URLs', () => {
+      expect(matchEmbedService('https://codesandbox.io/p/sandbox/vanilla')?.embedUrl).toBe('https://codesandbox.io/embed/vanilla');
+      expect(matchEmbedService('https://codesandbox.io/embed/my-app-x7k2v')?.embedUrl).toBe('https://codesandbox.io/embed/my-app-x7k2v');
+    });
+
+    it('does not match devbox URLs (embed mapping unverified)', () => {
+      expect(matchEmbedService('https://codesandbox.io/p/devbox/my-devbox-abc123')).toBeNull();
+    });
+  });
+
+  describe('StackBlitz URL variants', () => {
+    it('matches an edit URL and appends embed=1', () => {
+      const result = matchEmbedService('https://stackblitz.com/edit/react-ts');
+
+      expect(result?.service).toBe('stackblitz');
+      expect(result?.embedUrl).toBe('https://stackblitz.com/edit/react-ts?embed=1');
+    });
+
+    it('preserves existing query params like file=', () => {
+      expect(matchEmbedService('https://stackblitz.com/edit/vitejs-vite-y8mdxg?file=src%2FApp.tsx')?.embedUrl)
+        .toBe('https://stackblitz.com/edit/vitejs-vite-y8mdxg?embed=1&file=src%2FApp.tsx');
+    });
+  });
+
+  describe('Typeform URL variants', () => {
+    it('matches a form URL keeping the original subdomain', () => {
+      const result = matchEmbedService('https://form.typeform.com/to/LQcTJr');
+
+      expect(result?.service).toBe('typeform');
+      expect(result?.embedUrl).toBe('https://form.typeform.com/to/LQcTJr');
+    });
+
+    it('matches custom workspace subdomains', () => {
+      expect(matchEmbedService('https://mycompany.typeform.com/to/OeM7lVCD')?.embedUrl)
+        .toBe('https://mycompany.typeform.com/to/OeM7lVCD');
+    });
+  });
+
+  describe('Airtable URL variants', () => {
+    it('matches a bare share link via the embed path', () => {
+      const result = matchEmbedService('https://airtable.com/shr5EBHUmHzStubDx');
+
+      expect(result?.service).toBe('airtable');
+      expect(result?.embedUrl).toBe('https://airtable.com/embed/shr5EBHUmHzStubDx');
+    });
+
+    it('keeps the app prefix of expanded share links', () => {
+      expect(matchEmbedService('https://airtable.com/appQ01ZB5fUkC9w7q/shr5EBHUmHzStubDx')?.embedUrl)
+        .toBe('https://airtable.com/embed/appQ01ZB5fUkC9w7q/shr5EBHUmHzStubDx');
+    });
+
+    it('does not match auth-only workspace URLs without a share id', () => {
+      expect(matchEmbedService('https://airtable.com/appQ01ZB5fUkC9w7q/tblXYZ/viwABC')).toBeNull();
+    });
+  });
+
+  describe('Miro URL variants', () => {
+    it('matches a board URL via the live-embed path', () => {
+      const result = matchEmbedService('https://miro.com/app/board/uXjVOUbVyFY=/');
+
+      expect(result?.service).toBe('miro');
+      expect(result?.embedUrl).toBe('https://miro.com/app/live-embed/uXjVOUbVyFY=/');
+    });
+
+    it('decodes a percent-encoded board id and strips share params', () => {
+      expect(matchEmbedService('https://miro.com/app/board/uXjVOUbVyFY%3D/?share_link_id=123')?.embedUrl)
+        .toBe('https://miro.com/app/live-embed/uXjVOUbVyFY=/');
+    });
+  });
+
+  describe('Desmos URL variants', () => {
+    it('matches a calculator graph URL and appends ?embed', () => {
+      const result = matchEmbedService('https://www.desmos.com/calculator/qy6jc8mfi9');
+
+      expect(result?.service).toBe('desmos');
+      expect(result?.embedUrl).toBe('https://www.desmos.com/calculator/qy6jc8mfi9?embed');
+    });
+
+    it('does not match the bare calculator page', () => {
+      expect(matchEmbedService('https://www.desmos.com/calculator')).toBeNull();
+    });
+  });
+
+  describe('Observable URL variants', () => {
+    it('matches a notebook URL via the embed path', () => {
+      const result = matchEmbedService('https://observablehq.com/@mbostock/embedded-notebook');
+
+      expect(result?.service).toBe('observable');
+      expect(result?.embedUrl).toBe('https://observablehq.com/embed/@mbostock/embedded-notebook');
+    });
+
+    it('matches an already-embed URL', () => {
+      expect(matchEmbedService('https://observablehq.com/embed/@mbostock/embedded-notebook')?.service).toBe('observable');
+    });
+
+    it('does not match bare profile pages', () => {
+      expect(matchEmbedService('https://observablehq.com/@mbostock')).toBeNull();
+    });
+  });
+
+  describe('JSFiddle URL variants', () => {
+    it('matches a user fiddle URL via the embedded path', () => {
+      const result = matchEmbedService('https://jsfiddle.net/josewirewax/2rqnsdd6/');
+
+      expect(result?.service).toBe('jsfiddle');
+      expect(result?.embedUrl).toBe('https://jsfiddle.net/josewirewax/2rqnsdd6/embedded/');
+    });
+
+    it('matches anonymous and revisioned fiddles', () => {
+      expect(matchEmbedService('https://jsfiddle.net/BDC9Q/328/')?.embedUrl).toBe('https://jsfiddle.net/BDC9Q/328/embedded/');
+      expect(matchEmbedService('https://jsfiddle.net/2rqnsdd6/')?.embedUrl).toBe('https://jsfiddle.net/2rqnsdd6/embedded/');
+    });
+  });
+
   describe('paste pattern full-match contract', () => {
     // findToolForPattern requires the regex to consume the entire pasted text,
     // so share URLs with trailing query params must match fully to become embeds.
@@ -622,6 +1146,38 @@ describe('link registry', () => {
       expect(fullMatch('googleforms', 'https://docs.google.com/forms/u/0/d/e/1FAIpQLSdummy/viewform?embedded=true')).toBe(true);
       expect(fullMatch('drawio', 'https://app.diagrams.net/#G1SkVL90deLHGYpv8hQ7uYHWZk6Ad7Q2BU')).toBe(true);
       expect(fullMatch('drawio', 'https://viewer.diagrams.net/?lightbox=1&nav=1#Uhttps%3A%2F%2Fexample.com%2Fd.drawio')).toBe(true);
+    });
+
+    it('consumes the entire URL on the worldwide service patterns', () => {
+      expect(fullMatch('bilibili', 'https://www.bilibili.com/video/BV1GJ411x7h7/?spm_id_from=333.337&vd_source=abc')).toBe(true);
+      expect(fullMatch('niconico', 'https://www.nicovideo.jp/watch/sm9?ref=search')).toBe(true);
+      expect(fullMatch('youku', 'https://v.youku.com/v_show/id_XODU1NzgzMTg0.html?spm=a2hbt.13141534')).toBe(true);
+      expect(fullMatch('navertv', 'https://tv.naver.com/v/8565915?playlistNo=12')).toBe(true);
+      expect(fullMatch('kakaotv', 'https://tv.kakao.com/channel/462787/cliplink/451075687?metaObjectType=Clip')).toBe(true);
+      expect(fullMatch('dailymotion', 'https://www.dailymotion.com/video/xaehrai?playlist=x5v0d4')).toBe(true);
+      expect(fullMatch('okru', 'https://ok.ru/video/7692086741685?fromTime=10')).toBe(true);
+      expect(fullMatch('yandexmusic', 'https://music.yandex.ru/album/11904129/track/70471675?utm_medium=copy_link')).toBe(true);
+      expect(fullMatch('arte', 'https://www.arte.tv/en/videos/110989-000-A/steven-spielberg/')).toBe(true);
+      expect(fullMatch('deezer', 'https://www.deezer.com/en/track/3135556?utm_campaign=clipboard-generic')).toBe(true);
+      expect(fullMatch('soundcloud', 'https://soundcloud.com/forss/flickermood?si=abc&utm_source=clipboard')).toBe(true);
+      expect(fullMatch('mixcloud', 'https://www.mixcloud.com/spartacus/party-time/?utm_source=widget')).toBe(true);
+      expect(fullMatch('applemusic', 'https://music.apple.com/us/album/1989-taylors-version/1708308989?i=1708308990')).toBe(true);
+      expect(fullMatch('applepodcasts', 'https://podcasts.apple.com/us/podcast/the-daily/id1200361736?i=1000772009313')).toBe(true);
+      expect(fullMatch('audiomack', 'https://audiomack.com/asakemusic/album/mney-1073854?utm_source=share')).toBe(true);
+      expect(fullMatch('anghami', 'https://play.anghami.com/song/45385197?refer=share')).toBe(true);
+      expect(fullMatch('streamable', 'https://streamable.com/moo?src=player-page-share')).toBe(true);
+      expect(fullMatch('tiktok', 'https://www.tiktok.com/@javiercazarez/video/7469789434322455863?is_from_webapp=1&sender_device=pc')).toBe(true);
+      expect(fullMatch('wistia', 'https://support.wistia.com/medias/h1z3uqsjal?wtime=30s')).toBe(true);
+      expect(fullMatch('vidyard', 'https://share.vidyard.com/watch/h2NqLfsfpLszhtLg1mXnAZ?second=30')).toBe(true);
+      expect(fullMatch('giphy', 'https://giphy.com/gifs/lustig-witzig-funny-reaction-cJhDKXoHvzahcGPgiK?utm_source=share')).toBe(true);
+      expect(fullMatch('codesandbox', 'https://codesandbox.io/p/sandbox/vanilla?file=%2Findex.js')).toBe(true);
+      expect(fullMatch('stackblitz', 'https://stackblitz.com/edit/vitejs-vite-y8mdxg?file=src%2FApp.tsx')).toBe(true);
+      expect(fullMatch('typeform', 'https://form.typeform.com/to/LQcTJr?typeform-source=google.com')).toBe(true);
+      expect(fullMatch('airtable', 'https://airtable.com/shr5EBHUmHzStubDx?backgroundColor=blue')).toBe(true);
+      expect(fullMatch('miro', 'https://miro.com/app/board/uXjVOUbVyFY=/?share_link_id=123456')).toBe(true);
+      expect(fullMatch('desmos', 'https://www.desmos.com/calculator/qy6jc8mfi9?lang=ru')).toBe(true);
+      expect(fullMatch('observable', 'https://observablehq.com/@mbostock/embedded-notebook?collection=@observablehq/embeds')).toBe(true);
+      expect(fullMatch('jsfiddle', 'https://jsfiddle.net/josewirewax/2rqnsdd6/')).toBe(true);
     });
   });
 

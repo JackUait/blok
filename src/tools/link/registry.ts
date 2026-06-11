@@ -230,6 +230,268 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     width: 580,
     height: 480,
   },
+  bilibili: {
+    // BV ids are base58 (no 0/O/I/l); legacy av ids are numeric. Opaque b23.tv
+    // shortcodes resolve only via redirect and are excluded; literal-id b23.tv
+    // links carry the id in the path and are claimed. Player autoplays by
+    // default, so autoplay=0 is forced into the query.
+    regex: /^(?:https?:\/\/)?(?:(?:(?:www|m)\.)?bilibili\.com\/video|b23\.tv)\/(?:(BV[1-9A-HJ-NP-Za-km-z]{10})|av(\d+))\/?\S*/,
+    embedUrl: 'https://player.bilibili.com/player.html?<%= remote_id %>',
+    id: (groups) => (groups[0] !== undefined ? `bvid=${groups[0]}&autoplay=0` : `aid=${groups[1]}&autoplay=0`),
+    width: 580,
+    height: 320,
+  },
+  niconico: {
+    // Ids keep their sm/nm/so prefix; nico.ms short links carry the id in the
+    // path. so (official channel) videos may refuse embedding per-publisher.
+    regex: /^(?:https?:\/\/)?(?:(?:www|sp)\.nicovideo\.jp\/watch|nico\.ms)\/((?:sm|nm|so)\d+)\S*/,
+    embedUrl: 'https://embed.nicovideo.jp/watch/<%= remote_id %>',
+    width: 580,
+    height: 320,
+  },
+  youku: {
+    // Ids are base64-ish (may end in = padding, sometimes %3D-encoded when
+    // copied). Playback of many videos is mainland-China-only at stream level.
+    regex: /^(?:https?:\/\/)?(?:v|m)\.youku\.com\/(?:v_show|video|alipay_video)\/id_((?:%3D|[A-Za-z0-9+=])+)\.html?\S*/,
+    embedUrl: 'https://player.youku.com/embed/<%= remote_id %>',
+    id: (groups) => (groups[0] ?? '').replace(/%3D/g, '='),
+    width: 580,
+    height: 320,
+  },
+  navertv: {
+    // Param is camelCase autoPlay; the embed host is the same tv.naver.com.
+    regex: /^(?:https?:\/\/)?tv\.naver\.com\/(?:v|embed)\/(\d+)\S*/,
+    embedUrl: 'https://tv.naver.com/embed/<%= remote_id %>?autoPlay=false',
+    width: 580,
+    height: 320,
+  },
+  kakaotv: {
+    // tv.kakao.com itself sends X-Frame-Options: DENY — only the
+    // play-tv.kakao.com embed host is frameable.
+    regex: /^(?:https?:\/\/)?tv\.kakao\.com\/(?:v|channel\/\d+\/cliplink)\/(\d+)\S*/,
+    embedUrl: 'https://play-tv.kakao.com/embed/player/cliplink/<%= remote_id %>?service=player_share',
+    width: 580,
+    height: 320,
+  },
+  dailymotion: {
+    // dai.ly short links carry the video id literally in the path.
+    regex: /^(?:https?:\/\/)?(?:(?:www\.)?dailymotion\.com\/video|dai\.ly)\/([a-z0-9]+)\S*/,
+    embedUrl: 'https://geo.dailymotion.com/player.html?video=<%= remote_id %>',
+    width: 580,
+    height: 320,
+  },
+  okru: {
+    // m.ok.ru pages send X-Frame-Options: DENY — always rewrite onto the
+    // ok.ru/videoembed endpoint. Ids may carry a -N suffix.
+    regex: /^(?:https?:\/\/)?(?:(?:www|m|mobile)\.)?(?:ok\.ru|odnoklassniki\.ru)\/(?:video|videoembed|live)\/(\d+(?:-\d+)?)\S*/,
+    embedUrl: 'https://ok.ru/videoembed/<%= remote_id %>',
+    width: 580,
+    height: 320,
+  },
+  yandexmusic: {
+    // The iframe widget reverses the share-URL slot order for tracks:
+    // /album/<albumId>/track/<trackId> embeds as /iframe/track/<trackId>/<albumId>.
+    regex: /^(?:https?:\/\/)?music\.yandex\.(?:ru|com|kz|by|uz)\/(?:album\/(\d+)(?:\/track\/(\d+))?|users\/([\w.-]+)\/playlists\/(\d+))\S*/,
+    embedUrl: 'https://music.yandex.ru/iframe/<%= remote_id %>',
+    id: (groups) => {
+      const [albumId, trackId, login, kind] = groups;
+
+      if (trackId !== undefined) {
+        return `track/${trackId}/${albumId}`;
+      }
+
+      if (albumId !== undefined) {
+        return `album/${albumId}`;
+      }
+
+      return `playlist/${login}/${kind}`;
+    },
+    width: 580,
+    height: 180,
+  },
+  arte: {
+    // Program ids are NNNNNN-NNN-L; geo-rights vary per program inside the player.
+    regex: /^(?:https?:\/\/)?(?:www\.)?arte\.tv\/(fr|de|en|es|pl|it)\/videos\/(\d{6}-\d{3}-[A-Z])\S*/,
+    embedUrl: 'https://www.arte.tv/embeds/<%= remote_id %>',
+    id: (groups) => `${groups[0]}/${groups[1]}`,
+    width: 580,
+    height: 320,
+  },
+  deezer: {
+    // link.deezer.com short links are opaque redirects and excluded.
+    regex: /^(?:https?:\/\/)?(?:www\.)?deezer\.com\/(?:[a-z]{2}\/)?(track|album|playlist|artist|episode)\/(\d+)\S*/,
+    embedUrl: 'https://widget.deezer.com/widget/auto/<%= remote_id %>',
+    id: (groups) => `${groups[0]}/${groups[1]}`,
+    width: 580,
+    height: 300,
+  },
+  soundcloud: {
+    // The widget takes the whole permalink percent-encoded in ?url=. Profile
+    // tab pages (tracks/albums/likes/...) and opaque on.soundcloud.com short
+    // links are excluded; the latter resolve only via redirect.
+    regex: /^(?:https?:\/\/)?(?:(?:www|m)\.)?soundcloud\.com\/([\w-]+)\/(?!(?:tracks|albums|reposts|likes|followers|following|comments|popular-tracks)(?:[/?#]|$))(sets\/)?([\w-]+)\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://w.soundcloud.com/player/?url=<%= remote_id %>',
+    id: (groups) =>
+      encodeURIComponent(`https://soundcloud.com/${groups[0]}/${groups[1] !== undefined ? 'sets/' : ''}${groups[2]}`),
+    width: 580,
+    height: 166,
+  },
+  mixcloud: {
+    // Only shows have widget feeds; playlist pages are excluded.
+    regex: /^(?:https?:\/\/)?(?:(?:www|m)\.)?mixcloud\.com\/([\w-]+)\/(?!playlists\/)([\w-]+)\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://www.mixcloud.com/widget/iframe/?feed=<%= remote_id %>&hide_cover=1',
+    id: (groups) => encodeURIComponent(`https://www.mixcloud.com/${groups[0]}/${groups[1]}/`),
+    width: 580,
+    height: 120,
+  },
+  applemusic: {
+    // Pure host swap onto embed.music.apple.com; ?i= selects a single track
+    // inside an album embed and must be preserved.
+    regex: /^(?:https?:\/\/)?music\.apple\.com\/([a-z]{2}\/(?:album|playlist|song)\/[^\s/?]+\/(?:pl\.[\w-]+|\d+))(?:\?(\S*))?$/,
+    embedUrl: 'https://embed.music.apple.com/<%= remote_id %>',
+    id: (groups) => {
+      const trackId = /(?:^|&)i=(\d+)/.exec(groups[1] ?? '')?.[1];
+
+      return trackId !== undefined ? `${groups[0]}?i=${trackId}` : groups[0] ?? '';
+    },
+    width: 580,
+    height: 450,
+  },
+  applepodcasts: {
+    // Pure host swap onto embed.podcasts.apple.com; ?i= selects an episode.
+    regex: /^(?:https?:\/\/)?podcasts\.apple\.com\/([a-z]{2}\/podcast\/[^\s/?]+\/id\d+)(?:\?(\S*))?$/,
+    embedUrl: 'https://embed.podcasts.apple.com/<%= remote_id %>',
+    id: (groups) => {
+      const episodeId = /(?:^|&)i=(\d+)/.exec(groups[1] ?? '')?.[1];
+
+      return episodeId !== undefined ? `${groups[0]}?i=${episodeId}` : groups[0] ?? '';
+    },
+    width: 580,
+    height: 450,
+  },
+  audiomack: {
+    // Share path /<artist>/<type>/<slug> rearranges to /embed/<type>/<artist>/<slug>.
+    regex: /^(?:https?:\/\/)?(?:www\.)?audiomack\.com\/([\w-]+)\/(song|album|playlist)\/([\w-]+)\S*/,
+    embedUrl: 'https://audiomack.com/embed/<%= remote_id %>',
+    id: (groups) => `${groups[1]}/${groups[0]}/${groups[2]}`,
+    width: 580,
+    height: 252,
+  },
+  anghami: {
+    // play.anghami.com/embed/... sends X-Frame-Options: DENY on its redirect —
+    // only the widget.anghami.com host is frameable.
+    regex: /^(?:https?:\/\/)?play\.anghami\.com\/(song|album|playlist|artist)\/(\d+)\S*/,
+    embedUrl: 'https://widget.anghami.com/<%= remote_id %>',
+    id: (groups) => `${groups[0]}/${groups[1]}`,
+    width: 580,
+    height: 170,
+  },
+  streamable: {
+    // Codes are short lowercase alnum, so common site pages must be excluded
+    // explicitly to keep them on the bookmark fallback.
+    regex: /^(?:https?:\/\/)?(?:www\.)?streamable\.com\/(?:e\/)?(?!(?:login|signup|recover|documentation)(?:[/?#]|$))([a-z0-9]+)\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://streamable.com/e/<%= remote_id %>',
+    width: 580,
+    height: 320,
+  },
+  tiktok: {
+    // Opaque vm./vt. short links resolve only via redirect and are excluded;
+    // photo posts render inconsistently in embed/v2 and are excluded too.
+    regex: /^(?:https?:\/\/)?(?:www\.)?tiktok\.com\/@[\w.-]+\/video\/(\d+)\S*/,
+    embedUrl: 'https://www.tiktok.com/embed/v2/<%= remote_id %>',
+    width: 325,
+    height: 580,
+  },
+  wistia: {
+    // Account subdomains are arbitrary; both wistia.com and wistia.net occur.
+    regex: /^(?:https?:\/\/)?(?:[\w-]+\.)?wistia\.(?:com|net)\/(?:medias|embed\/iframe)\/([A-Za-z0-9]+)\S*/,
+    embedUrl: 'https://fast.wistia.net/embed/iframe/<%= remote_id %>',
+    width: 580,
+    height: 320,
+  },
+  vidyard: {
+    // Share hosts are per-customer subdomains, optionally with one path segment
+    // before /watch/. The embed host returns 200 even for bogus ids.
+    regex: /^(?:https?:\/\/)?[\w-]+\.vidyard\.com\/(?:[\w-]+\/)?watch\/([\w-]+)\S*/,
+    embedUrl: 'https://play.vidyard.com/<%= remote_id %>.html',
+    width: 580,
+    height: 320,
+  },
+  giphy: {
+    // The id is the trailing token after the last hyphen of the slug. Direct
+    // media.giphy.com links carry the id as a path segment. gph.is short links
+    // are opaque redirects and excluded.
+    regex: /^(?:https?:\/\/)?(?:www\.)?giphy\.com\/(?:gifs|clips|stickers)\/(?:[\w-]+-)?([A-Za-z0-9]+)\/?(?:[?#]\S*)?$|^(?:https?:\/\/)?media\d*\.giphy\.com\/media\/([A-Za-z0-9]+)\/\S+/,
+    embedUrl: 'https://giphy.com/embed/<%= remote_id %>',
+    id: (groups) => groups[0] ?? groups[1] ?? '',
+    width: 480,
+    height: 360,
+  },
+  codesandbox: {
+    // /p/devbox/ URLs are excluded: their /embed/ mapping is unverified.
+    regex: /^(?:https?:\/\/)?codesandbox\.io\/(?:s|p\/sandbox|embed)\/([\w-]+)\S*/,
+    embedUrl: 'https://codesandbox.io/embed/<%= remote_id %>',
+    width: 580,
+    height: 500,
+  },
+  stackblitz: {
+    // embed=1 is appended ahead of any user params (file=, view=, ...).
+    regex: /^(?:https?:\/\/)?stackblitz\.com\/edit\/([\w-]+)(?:\?(\S+))?$/,
+    embedUrl: 'https://stackblitz.com/edit/<%= remote_id %>',
+    id: (groups) => `${groups[0]}?embed=1${groups[1] !== undefined ? `&${groups[1]}` : ''}`,
+    width: 580,
+    height: 500,
+  },
+  typeform: {
+    // Form pages are frameable as-is; the original subdomain must be kept
+    // (private forms 301 to a marketing page, which simply renders inside).
+    regex: /^(?:https?:\/\/)?([\w-]+)\.typeform\.com\/to\/(\w+)\S*/,
+    embedUrl: 'https://<%= remote_id %>',
+    id: (groups) => `${groups[0]}.typeform.com/to/${groups[1]}`,
+    width: 580,
+    height: 500,
+  },
+  airtable: {
+    // Only shr... share links are embeddable; app/tbl/viw workspace URLs are
+    // auth-only. The optional app prefix is kept (airtable 302s to it anyway).
+    regex: /^(?:https?:\/\/)?(?:www\.)?airtable\.com\/(?:embed\/)?(?:(app\w+)\/)?(shr\w+)\S*/,
+    embedUrl: 'https://airtable.com/embed/<%= remote_id %>',
+    id: (groups) => (groups[0] !== undefined ? `${groups[0]}/${groups[1]}` : groups[1] ?? ''),
+    width: 580,
+    height: 533,
+  },
+  miro: {
+    // Board ids often end in = padding (sometimes %3D-encoded). Boards must be
+    // link-shared to render; private boards show a login wall inside the frame.
+    regex: /^(?:https?:\/\/)?miro\.com\/app\/(?:board|live-embed)\/((?:%3D|[\w=-])+)\/?\S*/,
+    embedUrl: 'https://miro.com/app/live-embed/<%= remote_id %>/',
+    id: (groups) => (groups[0] ?? '').replace(/%3D/g, '='),
+    width: 580,
+    height: 500,
+  },
+  desmos: {
+    // ?embed strips the site chrome down to the graph + keypad.
+    regex: /^(?:https?:\/\/)?(?:www\.)?desmos\.com\/calculator\/([a-z0-9]+)\S*/,
+    embedUrl: 'https://www.desmos.com/calculator/<%= remote_id %>?embed',
+    width: 580,
+    height: 450,
+  },
+  observable: {
+    // Notebook app pages send frame-ancestors 'none'; /embed/ sends
+    // frame-ancestors *. Profile pages (single @user segment) are excluded.
+    regex: /^(?:https?:\/\/)?(?:www\.)?observablehq\.com\/(?:embed\/)?(@[\w-]+\/[\w-]+)\S*/,
+    embedUrl: 'https://observablehq.com/embed/<%= remote_id %>',
+    width: 580,
+    height: 500,
+  },
+  jsfiddle: {
+    // Shapes: /<id>/, /<user>/<id>/, /<user>/<id>/<rev>/ — captured whole and
+    // suffixed with /embedded/. Reserved site paths are excluded.
+    regex: /^(?:https?:\/\/)?(?:www\.)?jsfiddle\.net\/(?!(?:embedded|api|user|docs|blog|about)[/?#])(\w+(?:\/\w+){0,2})\/?(?:[?#]\S*)?$/,
+    embedUrl: 'https://jsfiddle.net/<%= remote_id %>/embedded/',
+    width: 580,
+    height: 400,
+  },
   twitter: {
     // Script-only: rendered via platform.twitter.com/widgets.js, not an iframe.
     regex: /^(?:https?:\/\/)?(?:(?:www|mobile)\.)?(?:twitter|x)\.com\/(?:i\/web|\w+)\/status\/(\d+)\S*/,

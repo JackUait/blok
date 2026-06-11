@@ -675,6 +675,112 @@ const editor = new Blok({
 });`,
   },
 
+  {
+    id: 'embed',
+    exportName: 'Embed',
+    type: 'block',
+    badge: 'Block Tool',
+    title: 'Embed',
+    description:
+      'A live interactive iframe for a pasted provider URL (YouTube, Vimeo, Figma, CodePen, and 100+ other services), like Notion’s "Create embed". Pure client-side: the URL is matched against a built-in embed registry and resolved into a provider-sanctioned iframe URL — only registry-matched URLs are ever embedded. Supports resizing, alignment (left/center/right), and an optional caption.',
+    importExample: `import { Embed } from '@jackuait/blok/tools';`,
+    configOptions: [],
+    saveDataShape: `interface EmbedData {
+  service: string;        // Registry service key, e.g. "youtube"
+  source: string;         // Original pasted URL
+  embed: string;          // Resolved provider iframe URL
+  kind?: 'iframe' | 'script'; // How the embed is rendered
+  width?: number;         // Intrinsic width in pixels
+  height?: number;        // Intrinsic height in pixels
+  widthPercent?: number;  // Rendered width as % of the editor column (default 100)
+  alignment?: 'left' | 'center' | 'right'; // Placement (default center)
+  caption?: string;       // Caption HTML content
+  captionVisible?: boolean; // Whether the caption field is shown
+}`,
+    saveDataExample: `{
+  "id": "emb001",
+  "type": "embed",
+  "data": {
+    "service": "youtube",
+    "source": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "embed": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    "kind": "iframe",
+    "width": 580,
+    "height": 320
+  }
+}`,
+    usageExample: `import { Blok } from '@jackuait/blok';
+import { Embed } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    embed: {
+      class: Embed,
+    },
+  },
+});`,
+  },
+  {
+    id: 'bookmark',
+    exportName: 'Bookmark',
+    type: 'block',
+    badge: 'Block Tool',
+    title: 'Bookmark',
+    description:
+      'A static OpenGraph card for a pasted link, like Notion’s "Create bookmark". Shows the page title, description, preview image, favicon, and domain. Metadata is fetched from a consumer-supplied unfurl endpoint (CORS makes a backend mandatory) — Blok ships only the contract.',
+    importExample: `import { Bookmark } from '@jackuait/blok/tools';`,
+    configOptions: [
+      {
+        option: 'endpoint',
+        type: 'string',
+        default: '""',
+        description:
+          'Consumer-supplied unfurl endpoint. Required. Called as `endpoint?url=<encoded>` and expected to return `{ success, link, meta: { title, description, image, favicon, domain } }`.',
+      },
+      {
+        option: 'headers',
+        type: 'Record<string, string>',
+        default: 'undefined',
+        description: 'Optional headers (e.g. auth) sent with the metadata request.',
+      },
+    ],
+    saveDataShape: `interface BookmarkData {
+  url: string;          // The bookmarked URL
+  title?: string;       // Page title
+  description?: string; // Page description
+  image?: string;       // Preview image URL
+  favicon?: string;     // Favicon URL
+  domain?: string;      // Page domain, e.g. "example.com"
+}`,
+    saveDataExample: `{
+  "id": "bkm001",
+  "type": "bookmark",
+  "data": {
+    "url": "https://example.com/article",
+    "title": "An Interesting Article",
+    "description": "A short summary of the page.",
+    "image": "https://example.com/preview.png",
+    "favicon": "https://example.com/favicon.ico",
+    "domain": "example.com"
+  }
+}`,
+    usageExample: `import { Blok } from '@jackuait/blok';
+import { Bookmark } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    bookmark: {
+      class: Bookmark,
+      config: {
+        endpoint: 'https://your-backend.example.com/unfurl',
+      },
+    },
+  },
+});`,
+  },
+
   // ── Inline Tools ──────────────────────────────────────────────────────────
   {
     id: 'bold',

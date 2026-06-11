@@ -467,6 +467,33 @@ describe('Embed toolbar integration', () => {
     expect(tool.save().caption).toBe('My clip');
   });
 
+  it('preserves the live iframe element across a caption toggle (no reload blink)', () => {
+    const tool = new Embed(createOptions(iframeData()));
+    const root = tool.render();
+    const before = root.querySelector('iframe');
+
+    click(root.querySelector('[data-action="caption-toggle"]'));
+    const afterOn = root.querySelector('iframe');
+
+    click(root.querySelector('[data-action="caption-toggle"]'));
+    const afterOff = root.querySelector('iframe');
+
+    expect(before).not.toBeNull();
+    // Same node instance ⇒ the frame was never detached/recreated, so it never reloads.
+    expect(afterOn).toBe(before);
+    expect(afterOff).toBe(before);
+  });
+
+  it('keeps exactly two resize handles after a caption toggle', () => {
+    const tool = new Embed(createOptions(iframeData()));
+    const root = tool.render();
+
+    click(root.querySelector('[data-action="caption-toggle"]'));
+    click(root.querySelector('[data-action="caption-toggle"]'));
+
+    expect(root.querySelectorAll('[data-role="resize-handle"]').length).toBe(2);
+  });
+
   it('shows a caption with text when captionVisible is unset (legacy data)', () => {
     const tool = new Embed(createOptions(iframeData({ caption: 'Legacy' })));
     const root = tool.render();

@@ -513,8 +513,32 @@ export class Embed implements BlockTool {
 
   private toggleCaption(): void {
     this.data.captionVisible = !this.isCaptionVisible();
-    this.renderState();
     this.block.dispatchChange();
+
+    const figure = this.root?.querySelector<HTMLElement>('[data-role="embed-figure"]');
+
+    // No live figure (empty / script embed) — fall back to a full rebuild.
+    if (!figure) {
+      this.renderState();
+
+      return;
+    }
+
+    // Add/remove the caption in place rather than via renderState(): rebuilding
+    // the figure recreates the iframe, which detaches & reloads the embed (a
+    // visible "blink"). Swap only the caption node and keep the live frame mounted.
+    figure.querySelector('[data-role="embed-caption"]')?.remove();
+
+    const caption = this.buildCaption();
+
+    if (caption) {
+      // Sit the caption directly under the aspect box, ahead of the chrome.
+      figure.querySelector('[data-role="embed-aspect"]')?.after(caption);
+    }
+
+    // The overlay caption button's pressed state is captured at build time, so
+    // refresh that chrome — without touching the iframe.
+    this.refreshChrome(figure);
   }
 
   private copyLink(): void {

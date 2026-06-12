@@ -2984,9 +2984,9 @@ __metadata:
   linkType: hard
 
 "smol-toml@npm:^1.6.0":
-  version: 1.6.0
-  resolution: "smol-toml@npm:1.6.0"
-  checksum: 10c0/baf33bb6cd914d481329e31998a12829cd126541458ba400791212c80f1245d5b27dac04a56a52c02b287d2a494f1628c05fc19643286b258b2e0bb9fe67747c
+  version: 1.6.1
+  resolution: "smol-toml@npm:1.6.1"
+  checksum: 10c0/511a78722f99c7616fdb46af708de3d7e81434b5a3d58061166da73f28bfc6cae4f0cd04683f60515b9c490cd10152fce72287c960b337419c0299cc1f0f2a22
   languageName: node
   linkType: hard
 
@@ -3548,8 +3548,8 @@ __metadata:
   linkType: hard
 
 "ws@npm:^8.18.0":
-  version: 8.19.0
-  resolution: "ws@npm:8.19.0"
+  version: 8.21.0
+  resolution: "ws@npm:8.21.0"
   peerDependencies:
     bufferutil: ^4.0.1
     utf-8-validate: ">=5.0.2"
@@ -3558,7 +3558,7 @@ __metadata:
       optional: true
     utf-8-validate:
       optional: true
-  checksum: 10c0/4741d9b9bc3f9c791880882414f96e36b8b254e34d4b503279d6400d9a4b87a033834856dbdd94ee4b637944df17ea8afc4bce0ff4a1560d2166be8855da5b04
+  checksum: 10c0/ef4a243476283fc49bc7550966c4af4aa0eef56273837211e700de3b664e08604a760cdddcb5ba43c049140e74ccfec5b0ee0bb439e08c2adf9138902fdde5f9
   languageName: node
   linkType: hard
 

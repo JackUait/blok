@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.15.0](https://github.com/JackUait/blok/compare/v0.14.1...v0.15.0) (2026-06-12)
+
+### Features
+
+- **Link Paste** — Pasting a URL now offers a Notion-style menu to keep it as a link, or convert it into a Bookmark card or rich Embed block. The pasted link shows immediately with the menu anchored at its end, and menu labels name the detected link type via provider metadata.
+- **Embed** — Worldwide embed registry covering ~115 services across video, audio, social, documents, design and developer domains, including Google published docs/forms and draw.io. Per-source minimum resize widths keep each provider's iframe legible, and fixed-width providers hug their content with figure, handles and toolbar.
+- **Bookmark** — Notion-parity bookmark card with a dev unfurl endpoint; crawler-UA retry recovers metadata from bot-blocked sites.
+- **Playground** — Smooth cross-fade theme switching via View Transitions, plus an Airbnb-style neutral redesign.
+
+### Bug Fixes
+
+- **Embed** — Preserve the live iframe across every editor action: caption and alignment toggles now apply in place instead of reloading the player. Selection highlight hugs the figure dimensions.
+- **Drag & Drop** — FLIP-animate the column drop moment and slim the vertical drop bar to read like the horizontal line.
+- **Security** — Harden URL-scheme filtering and neutralize XSS gaps in markdown paste, the inline link tool, and the paste/render pipeline.
+- **Tools** — Implement `setReadOnly` on embed, bookmark and column tools so read-only toggles in place without a full re-render.
+- **Icons** — Unify the icon set on the 20×20 / 1.25 house spec; refine heading family, quote, caption, pencil, cells, toggles, and numbered-list glyphs.
+- **CI** — Pin Node 24.14.1 to dodge a Playwright install hang; share Playwright setup to stop Storybook browser install hanging; repair 6 failing CI specs (5 stale expectations, 1 real drop-indicator regression).
+
+### Maintenance
+
+- **Dependencies** — Resolve all 52 open Dependabot alerts; bump brace-expansion, ws, smol-toml.
+- **Tests** — Embed/bookmark/link stories with screenshot baselines, wave-2 embed visual-regression baselines, verified real sample URLs replacing fixtures, refreshed `main.css` golden snapshot.
+- **Docs & Playground** — Embed, bookmark and link entries in tools data and the editor demo.
+
 ## [0.14.1](https://github.com/JackUait/blok/compare/v0.14.0...v0.14.1) (2026-06-08)
 
 ### Features

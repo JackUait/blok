@@ -208,11 +208,12 @@
 /*
  * Vertical drop indicator: a bar on the left or right edge of the holder,
  * signalling a column-layout drop. Same look as the horizontal rule, only the
- * thickness applies to the width and the bar is pinned to a side edge.
+ * thickness applies to the width and the bar is pinned to a side edge. The bar
+ * is short, so it uses a slimmer width to read like the horizontal line.
  */
 [data-drop-indicator="left"]::before,
 [data-drop-indicator="right"]::before {
-  width: var(--blok-dnd-drop-indicator-thickness);
+  width: var(--blok-dnd-drop-indicator-thickness-vertical);
   /* Span the full column-row height when the target sits in a column_list: the
    * controller sets these to the row's top/bottom offset (negative, so the bar
    * grows past the single block). Default 0/0 → the bar matches the block. */

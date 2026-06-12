@@ -367,6 +367,27 @@ describe('DragPreview', () => {
     });
   });
 
+  describe('release', () => {
+    it('hands the element over and forgets it, so destroy() no longer removes it', () => {
+      const contentElement = document.createElement('div');
+      const preview = dragPreview.createSingle(contentElement, false);
+      document.body.appendChild(preview);
+
+      const released = dragPreview.release();
+
+      expect(released).toBe(preview);
+      expect(dragPreview.exists()).toBe(false);
+
+      dragPreview.destroy();
+
+      expect(document.body.contains(preview)).toBe(true);
+    });
+
+    it('returns null when no preview exists', () => {
+      expect(dragPreview.release()).toBeNull();
+    });
+  });
+
   describe('destroy', () => {
     it('should remove preview from DOM', () => {
       const contentElement = document.createElement('div');

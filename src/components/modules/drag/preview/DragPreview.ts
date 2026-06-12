@@ -19,6 +19,8 @@ export class DragPreview {
    */
   createSingle(contentElement: HTMLElement, isStretched: boolean, block?: Block): HTMLElement {
     const preview = $.make('div', PREVIEW_STYLES.base);
+
+    preview.setAttribute('data-blok-testid', 'drag-preview');
     const clone = contentElement.cloneNode(true) as HTMLElement;
 
     // Remove toggle children container — it causes visual duplication in the ghost
@@ -67,6 +69,8 @@ export class DragPreview {
    */
   createMulti(blocks: Block[]): HTMLElement {
     const preview = $.make('div', PREVIEW_STYLES.base);
+
+    preview.setAttribute('data-blok-testid', 'drag-preview');
 
     // Get block holder dimensions to capture actual spacing
     const blockInfo = blocks.map((block) => {
@@ -198,6 +202,19 @@ export class DragPreview {
    */
   exists(): boolean {
     return this.element !== null;
+  }
+
+  /**
+   * Hand the element over to a caller-driven animation (e.g. the column-drop
+   * ghost settle) and forget it, so a later destroy() won't remove it mid-flight.
+   * @returns The preview element, or null when none exists
+   */
+  release(): HTMLElement | null {
+    const element = this.element;
+
+    this.element = null;
+
+    return element;
   }
 
   /**

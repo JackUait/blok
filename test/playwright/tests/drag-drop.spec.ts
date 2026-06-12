@@ -105,6 +105,12 @@ const performDragDrop = async (
     const wrapper = document.querySelector('[data-blok-interface=blok]');
     return wrapper?.getAttribute('data-blok-dragging') !== 'true';
   }, { timeout: 2000 });
+
+  // The drop motion (ghost settle) finishes before assertions run.
+  await page.waitForFunction(
+    () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
+    { timeout: 2000 }
+  );
 };
 
 /**
@@ -161,6 +167,12 @@ const performAltDragDrop = async (
     const wrapper = document.querySelector('[data-blok-interface=blok]');
     return wrapper?.getAttribute('data-blok-dragging') !== 'true';
   }, { timeout: 2000 });
+
+  // The drop motion (ghost settle) finishes before assertions run.
+  await page.waitForFunction(
+    () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
+    { timeout: 2000 }
+  );
 };
 
 type CreateBlokOptions = {
@@ -1678,6 +1690,12 @@ test.describe('drag and drop', () => {
         return wrapper?.getAttribute('data-blok-dragging') !== 'true';
       }, { timeout: 2000 });
 
+      // The drop motion (ghost settle) finishes before assertions run.
+      await page.waitForFunction(
+        () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
+        { timeout: 2000 }
+      );
+
       // Move mouse outside the editor first, then hover over a different block
       // This ensures a fresh BlockHovered event is triggered
       await page.mouse.move(0, 0);
@@ -2183,6 +2201,12 @@ test.describe('drag and drop', () => {
         return wrapper?.getAttribute('data-blok-dragging') !== 'true';
       }, { timeout: 2000 });
 
+      // The drop motion (ghost settle) finishes before assertions run.
+      await page.waitForFunction(
+        () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
+        { timeout: 2000 }
+      );
+
       // Verify: No duplication occurred (still just 1 block)
       await expect(page.getByTestId('block-wrapper')).toHaveCount(1);
     });
@@ -2344,6 +2368,12 @@ test.describe('drag and drop', () => {
         const wrapper = document.querySelector('[data-blok-interface=blok]');
         return wrapper?.getAttribute('data-blok-dragging') !== 'true';
       }, { timeout: 2000 });
+
+      // The drop motion (ghost settle) finishes before assertions run.
+      await page.waitForFunction(
+        () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
+        { timeout: 2000 }
+      );
     });
 
     test('should cancel spring-load when moving away before 500ms', async ({ page }) => {
@@ -2449,6 +2479,12 @@ test.describe('drag and drop', () => {
         const wrapper = document.querySelector('[data-blok-interface=blok]');
         return wrapper?.getAttribute('data-blok-dragging') !== 'true';
       }, { timeout: 2000 });
+
+      // The drop motion (ghost settle) finishes before assertions run.
+      await page.waitForFunction(
+        () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
+        { timeout: 2000 }
+      );
 
       // Verify para is now a child of the toggle
       const savedData = await page.evaluate(() => window.blokInstance?.save());

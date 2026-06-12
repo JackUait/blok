@@ -15,6 +15,21 @@ import type { Block } from "../../../../../src/components/block";
 import { DATA_ATTR } from "../../../../../src/components/constants";
 import * as tooltip from "../../../../../src/components/utils/tooltip";
 import * as announcer from "../../../../../src/components/utils/announcer";
+import {
+  finishColumnDropAnimations,
+  settleDragPreview,
+} from "../../../../../src/components/modules/drag/utils/ColumnDropAnimation";
+
+vi.mock(
+  "../../../../../src/components/modules/drag/utils/ColumnDropAnimation",
+  () => ({
+    animateColumnWidths: vi.fn(),
+    captureSiblingTops: vi.fn().mockReturnValue([]),
+    playSiblingShift: vi.fn(),
+    settleDragPreview: vi.fn(),
+    finishColumnDropAnimations: vi.fn(),
+  }),
+);
 
 /**
  * Store for original document.elementFromPoint
@@ -2347,6 +2362,128 @@ describe("DragManager - Component Integration", () => {
       const childReparent = setBlockParent.mock.calls.find((c) => c[0] === "callout1-child");
 
       expect(childReparent).toBeUndefined();
+    });
+  });
+
+  describe("column side-drop ghost settle", () => {
+    beforeEach(() => {
+      // The file-level beforeEach restores spies but never clears module-mock
+      // call history — do it here so settle assertions don't see prior tests.
+      vi.mocked(settleDragPreview).mockClear();
+      vi.mocked(finishColumnDropAnimations).mockClear();
+    });
+
+    type ColumnDropInvoker = {
+      preview: {
+        createSingle: (content: HTMLElement, stretched: boolean) => HTMLElement;
+      };
+      handleColumnDrop: (
+        sourceBlock: Block,
+        sourceBlocks: Block[],
+        targetBlock: Block,
+        edge: "left" | "right",
+        targetParentId: string | null,
+      ) => void;
+      startActualDrag: (blockCount: number) => void;
+    };
+
+    const setupColumnDrop = (): {
+      dragManager: ColumnDropInvoker;
+      para: Block;
+      src: Block;
+      previewElement: HTMLElement;
+    } => {
+      const para = createBlockStub({ id: "p1", parentId: null });
+      const src = createBlockStub({ id: "s1", parentId: null });
+      const allBlocks = [para, src];
+
+      const insert = vi.fn((type: string) => ({
+        id: `${type}-new-${insert.mock.calls.length}`,
+        holder: document.createElement("div"),
+      }));
+      const apiBlocks = {
+        insert,
+        setBlockParent: vi.fn(),
+        getById: vi.fn((id: string) => {
+          const b = allBlocks.find((blk) => blk.id === id);
+
+          return b ? { id: b.id, parentId: b.parentId } : null;
+        }),
+        getBlockIndex: vi.fn((id: string) => {
+          const idx = allBlocks.findIndex((blk) => blk.id === id);
+
+          return idx === -1 ? undefined : idx;
+        }),
+        getChildren: vi.fn(() => []),
+        transact: vi.fn((fn: () => void) => fn()),
+      };
+
+      const blockManager = {
+        blocks: allBlocks,
+        getBlockIndex: vi.fn((block: Block) => allBlocks.indexOf(block)),
+        getBlockByIndex: vi.fn((index: number) => allBlocks[index]),
+        getBlockById: vi.fn((id: string) => allBlocks.find((b) => b.id === id)),
+        move: vi.fn(),
+        insert: vi.fn(),
+        setBlockParent: vi.fn(),
+      };
+
+      const { dragManager } = createDragManager({
+        API: { methods: { blocks: apiBlocks } } as unknown as BlokModules["API"],
+        BlockManager: blockManager as unknown as BlokModules["BlockManager"],
+      });
+
+      const invoker = dragManager as unknown as ColumnDropInvoker;
+      const previewElement = invoker.preview.createSingle(
+        document.createElement("div"),
+        false,
+      );
+
+      document.body.appendChild(previewElement);
+
+      return { dragManager: invoker, para, src, previewElement };
+    };
+
+    it("flies the preview to the dropped block instead of destroying it instantly", () => {
+      const { dragManager, para, src, previewElement } = setupColumnDrop();
+
+      dragManager.handleColumnDrop(src, [src], para, "right", null);
+
+      expect(settleDragPreview).toHaveBeenCalledWith({
+        preview: previewElement,
+        targetRect: expect.objectContaining({
+          left: expect.any(Number),
+          top: expect.any(Number),
+        }),
+      });
+    });
+
+    it("does not settle the preview when the drop aborts", () => {
+      const { dragManager, src } = setupColumnDrop();
+
+      // Self-drop: the wrap helper aborts and returns null.
+      dragManager.handleColumnDrop(src, [src], src, "right", null);
+
+      expect(settleDragPreview).not.toHaveBeenCalled();
+    });
+
+    it("flushes in-flight drop animations on destroy so no ghost outlives the editor", () => {
+      const { dragManager } = setupColumnDrop();
+
+      (dragManager as unknown as { destroy: () => void }).destroy();
+
+      expect(finishColumnDropAnimations).toHaveBeenCalled();
+    });
+
+    it("flushes in-flight drop animations when a new drag actually starts", () => {
+      const { dragManager } = setupColumnDrop();
+
+      // The state machine rejects starting from idle (no mousedown tracking
+      // here); the flush MUST run before that transition, so it has already
+      // happened by the time the throw surfaces.
+      expect(() => dragManager.startActualDrag(1)).toThrow();
+
+      expect(finishColumnDropAnimations).toHaveBeenCalled();
     });
   });
 });

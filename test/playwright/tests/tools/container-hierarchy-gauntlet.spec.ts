@@ -288,6 +288,12 @@ test.describe('Container hierarchy invariant gauntlet', () => {
 
       return wrapper?.getAttribute('data-blok-dragging') !== 'true';
     }, { timeout: 2000 });
+
+    // The drop motion (ghost settle) finishes before assertions run.
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
+      { timeout: 2000 }
+    );
   };
 
   const performAltDragDrop = async (
@@ -336,6 +342,12 @@ test.describe('Container hierarchy invariant gauntlet', () => {
 
       return wrapper?.getAttribute('data-blok-dragging') !== 'true';
     }, { timeout: 2000 });
+
+    // The drop motion (ghost settle) finishes before assertions run.
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
+      { timeout: 2000 }
+    );
   };
 
   test('drag-and-drop: paragraph reparents into callout with invariant intact', async ({ page }) => {

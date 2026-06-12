@@ -6,7 +6,18 @@ import {
   type ColumnDropSide,
 } from '../../../src/tools/column-drop';
 import { COLUMN_LIST_TOOL, COLUMN_TOOL } from '../../../src/tools/columns-shared';
+import {
+  animateColumnWidths,
+  captureSiblingTops,
+  playSiblingShift,
+} from '../../../src/components/modules/drag/utils/ColumnDropAnimation';
 import type { API } from '../../../types';
+
+vi.mock('../../../src/components/modules/drag/utils/ColumnDropAnimation', () => ({
+  animateColumnWidths: vi.fn(),
+  captureSiblingTops: vi.fn().mockReturnValue([]),
+  playSiblingShift: vi.fn(),
+}));
 
 beforeEach(() => vi.clearAllMocks());
 afterEach(() => vi.restoreAllMocks());
@@ -15,6 +26,7 @@ interface FakeBlockNode {
   id: string;
   parentId: string | null;
   index: number;
+  holder?: HTMLElement;
 }
 
 /**
@@ -39,7 +51,7 @@ const createMockAPI = (nodes: FakeBlockNode[]) => {
   const getById = vi.fn().mockImplementation((id: string) => {
     const node = byId.get(id);
 
-    return node ? { id: node.id, parentId: node.parentId } : null;
+    return node ? { id: node.id, parentId: node.parentId, holder: node.holder } : null;
   });
 
   const getBlockIndex = vi.fn().mockImplementation((id: string) => byId.get(id)?.index);
@@ -390,6 +402,17 @@ describe('wrapBlocksInColumns', () => {
     expect(mock.setBlockParent).not.toHaveBeenCalledWith('colB', expect.anything());
   });
 
+  it('animates nothing (keyboard path keeps instant layout)', () => {
+    const mock = createMockAPI([
+      { id: 'a', parentId: null, index: 2 },
+      { id: 'b', parentId: null, index: 3 },
+    ]);
+
+    wrapBlocksInColumns(mock.api, ['a', 'b']);
+
+    expect(animateColumnWidths).not.toHaveBeenCalled();
+  });
+
   it('wraps two selected column_lists as two nested columns, ignoring all their descendants', () => {
     const mock = createMockAPI([
       { id: 'clX', parentId: null, index: 2 },
@@ -407,5 +430,152 @@ describe('wrapBlocksInColumns', () => {
 
     expect(mock.setBlockParent).not.toHaveBeenCalledWith('xA', expect.anything());
     expect(mock.setBlockParent).not.toHaveBeenCalledWith('yA', expect.anything());
+  });
+});
+
+describe('drop animation wiring', () => {
+  const makeMeasuredHolder = (width: number): HTMLElement => {
+    const holder = document.createElement('div');
+
+    vi.spyOn(holder, 'getBoundingClientRect').mockReturnValue({ width, top: 0 } as DOMRect);
+
+    return holder;
+  };
+
+  describe('wrapInNewColumnList', () => {
+    it('side right: animates [target, sources] columns from [targetWidth, 0]', () => {
+      const targetHolder = makeMeasuredHolder(600);
+      const mock = createMockAPI([
+        { id: 'target', parentId: null, index: 4, holder: targetHolder },
+        { id: 'src', parentId: null, index: 9 },
+      ]);
+
+      wrapInNewColumnList(mock.api, 'target', ['src'], 'right');
+
+      const firstColumnHolder = mock.insert.mock.results[1].value.holder;
+      const secondColumnHolder = mock.insert.mock.results[2].value.holder;
+
+      expect(animateColumnWidths).toHaveBeenCalledWith({
+        holders: [firstColumnHolder, secondColumnHolder],
+        startWidths: [600, 0],
+        newColumnHolder: secondColumnHolder,
+      });
+    });
+
+    it('side left: sources column is first, so start widths reverse', () => {
+      const targetHolder = makeMeasuredHolder(600);
+      const mock = createMockAPI([
+        { id: 'target', parentId: null, index: 4, holder: targetHolder },
+        { id: 'src', parentId: null, index: 9 },
+      ]);
+
+      wrapInNewColumnList(mock.api, 'target', ['src'], 'left');
+
+      const firstColumnHolder = mock.insert.mock.results[1].value.holder;
+      const secondColumnHolder = mock.insert.mock.results[2].value.holder;
+
+      expect(animateColumnWidths).toHaveBeenCalledWith({
+        holders: [firstColumnHolder, secondColumnHolder],
+        startWidths: [0, 600],
+        newColumnHolder: firstColumnHolder,
+      });
+    });
+
+    it('captures sibling tops from the target BEFORE the mutation and plays the shift after', () => {
+      const targetHolder = makeMeasuredHolder(600);
+      const captured = [{ element: document.createElement('div'), top: 42 }];
+
+      vi.mocked(captureSiblingTops).mockReturnValueOnce(captured);
+
+      const mock = createMockAPI([
+        { id: 'target', parentId: null, index: 4, holder: targetHolder },
+        { id: 'src', parentId: null, index: 9 },
+      ]);
+
+      wrapInNewColumnList(mock.api, 'target', ['src'], 'right');
+
+      expect(captureSiblingTops).toHaveBeenCalledWith(targetHolder);
+      expect(playSiblingShift).toHaveBeenCalledWith(captured);
+    });
+
+    it('skips the animation when the target holder is unavailable', () => {
+      const mock = createMockAPI([
+        { id: 'target', parentId: null, index: 4 },
+        { id: 'src', parentId: null, index: 9 },
+      ]);
+
+      wrapInNewColumnList(mock.api, 'target', ['src'], 'right');
+
+      expect(animateColumnWidths).not.toHaveBeenCalled();
+      expect(playSiblingShift).not.toHaveBeenCalled();
+    });
+
+    it('does not animate on an aborted (self-drop) wrap', () => {
+      const mock = createMockAPI([
+        { id: 'target', parentId: null, index: 4, holder: makeMeasuredHolder(600) },
+      ]);
+
+      wrapInNewColumnList(mock.api, 'target', ['target'], 'right');
+
+      expect(animateColumnWidths).not.toHaveBeenCalled();
+      expect(playSiblingShift).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('addColumnToList', () => {
+    const seedList = () => {
+      const listHolder = makeMeasuredHolder(620);
+      const holderA = makeMeasuredHolder(400);
+      const holderB = makeMeasuredHolder(200);
+      const newHolder = makeMeasuredHolder(0);
+      const mock = createMockAPI([
+        { id: 'cl', parentId: null, index: 2, holder: listHolder },
+        { id: 'neighbor', parentId: 'cl', index: 3, holder: holderA },
+        { id: 's1', parentId: null, index: 9 },
+      ]);
+
+      mock.childrenByParent.set('cl', [
+        { id: 'neighbor', holder: holderA },
+        { id: 'colB', holder: holderB },
+        { id: 'column-new-1', holder: newHolder },
+      ]);
+
+      return { mock, listHolder, holderA, holderB, newHolder };
+    };
+
+    it('animates the grown row from the pre-drop widths, new column at 0', () => {
+      const { mock, holderA, holderB, newHolder } = seedList();
+
+      addColumnToList(mock.api, 'neighbor', ['s1'], 'right');
+
+      expect(animateColumnWidths).toHaveBeenCalledWith({
+        holders: [holderA, holderB, newHolder],
+        startWidths: [400, 200, 0],
+        newColumnHolder: newHolder,
+      });
+    });
+
+    it('captures sibling tops from the column_list holder and plays the shift', () => {
+      const { mock, listHolder } = seedList();
+      const captured = [{ element: document.createElement('div'), top: 7 }];
+
+      vi.mocked(captureSiblingTops).mockReturnValueOnce(captured);
+
+      addColumnToList(mock.api, 'neighbor', ['s1'], 'right');
+
+      expect(captureSiblingTops).toHaveBeenCalledWith(listHolder);
+      expect(playSiblingShift).toHaveBeenCalledWith(captured);
+    });
+
+    it('does not animate on an aborted add (stale neighbor)', () => {
+      const mock = createMockAPI([
+        { id: 's1', parentId: null, index: 9 },
+      ]);
+
+      addColumnToList(mock.api, 'neighbor', ['s1'], 'right');
+
+      expect(animateColumnWidths).not.toHaveBeenCalled();
+      expect(playSiblingShift).not.toHaveBeenCalled();
+    });
   });
 });

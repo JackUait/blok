@@ -180,6 +180,12 @@ const performBlockDragDrop = async (
 
     return wrapper?.getAttribute('data-blok-dragging') !== 'true';
   }, { timeout: 5000 });
+
+  // The drop motion (ghost settle) finishes before assertions run.
+  await page.waitForFunction(
+    () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
+    { timeout: 2000 }
+  );
 };
 
 const defaultTools: Record<string, SerializableToolConfig> = {

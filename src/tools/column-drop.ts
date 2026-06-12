@@ -1,10 +1,14 @@
 import type { API } from '../../types';
 import {
+  animateColumnWidths,
+  captureSiblingTops,
+  playSiblingShift,
+} from '../components/modules/drag/utils/ColumnDropAnimation';
+import {
   COLUMNS_ATTR,
   COLUMN_LIST_TOOL,
   COLUMN_TOOL,
   buildColumnResizers,
-  playColumnEnterAnimation,
   resetColumnsToEvenWidth,
 } from './columns-shared';
 
@@ -84,9 +88,20 @@ export const wrapInNewColumnList = (
     return null;
   }
 
-  const created: { listId: string | null; sourcesColumnId: string | null } = {
+  // FLIP capture: the target's pre-drop width seeds the new row's start state,
+  // and the tops of the blocks below it drive their glide to the new layout.
+  const targetHolder = api.blocks.getById(targetId)?.holder;
+  const targetStartWidth = targetHolder?.getBoundingClientRect().width ?? 0;
+  const siblingTops = targetHolder !== undefined ? captureSiblingTops(targetHolder) : null;
+
+  const created: {
+    listId: string | null;
+    columnHolders: HTMLElement[];
+    sourcesColumnHolder: HTMLElement | null;
+  } = {
     listId: null,
-    sourcesColumnId: null,
+    columnHolders: [],
+    sourcesColumnHolder: null,
   };
 
   runTransacted(api, () => {
@@ -107,7 +122,8 @@ export const wrapInNewColumnList = (
     const targetColumn = side === 'left' ? secondColumn : firstColumn;
     const sourcesColumn = side === 'left' ? firstColumn : secondColumn;
 
-    created.sourcesColumnId = sourcesColumn.id;
+    created.columnHolders = [firstColumn.holder, secondColumn.holder];
+    created.sourcesColumnHolder = sourcesColumn.holder;
 
     api.blocks.setBlockParent(targetId, targetColumn.id);
 
@@ -116,13 +132,18 @@ export const wrapInNewColumnList = (
     }
   });
 
-  // Slide the new column in once the tree has settled; the target column reflows
-  // from full width to its share for free as the new column's grow animates up.
-  if (created.sourcesColumnId !== null) {
-    const holder = api.blocks.getById(created.sourcesColumnId)?.holder;
+  // Play the drop motion: the target column starts at the target's old full
+  // width, the sources column grows in from zero, and the blocks below glide
+  // to their shifted slots — all on one clock.
+  if (targetHolder !== undefined && created.columnHolders.length === 2) {
+    animateColumnWidths({
+      holders: created.columnHolders,
+      startWidths: side === 'left' ? [0, targetStartWidth] : [targetStartWidth, 0],
+      newColumnHolder: created.sourcesColumnHolder,
+    });
 
-    if (holder !== undefined) {
-      playColumnEnterAnimation(holder);
+    if (siblingTops !== null) {
+      playSiblingShift(siblingTops);
     }
   }
 
@@ -234,6 +255,17 @@ export const addColumnToList = (
 
   const insertIndex = side === 'left' ? neighborIndex : neighborIndex + 1;
 
+  // FLIP capture: the columns' pre-drop widths seed the row's start state, and
+  // the tops of the blocks below the list drive their glide after the mutation.
+  const listHolder = api.blocks.getById(columnListId)?.holder;
+  const startWidthByHolder = new Map(
+    api.blocks.getChildren(columnListId).map(column => [
+      column.holder,
+      column.holder.getBoundingClientRect().width,
+    ])
+  );
+  const siblingTops = listHolder !== undefined ? captureSiblingTops(listHolder) : null;
+
   const created: { columnId: string | null } = { columnId: null };
 
   runTransacted(api, () => {
@@ -260,12 +292,20 @@ export const addColumnToList = (
     rebuildColumnResizers(api, columnListId);
   });
 
-  // Slide the new column in; siblings reflow to make room as its grow animates.
+  // Play the drop motion: existing columns glide from their pre-drop widths to
+  // the even re-split, the new column grows in from zero, and the blocks below
+  // the list glide to their shifted slots — all on one clock.
   if (created.columnId !== null) {
-    const holder = api.blocks.getById(created.columnId)?.holder;
+    const finalChildren = api.blocks.getChildren(columnListId);
 
-    if (holder !== undefined) {
-      playColumnEnterAnimation(holder);
+    animateColumnWidths({
+      holders: finalChildren.map(column => column.holder),
+      startWidths: finalChildren.map(column => startWidthByHolder.get(column.holder) ?? 0),
+      newColumnHolder: finalChildren.find(column => column.id === created.columnId)?.holder ?? null,
+    });
+
+    if (siblingTops !== null) {
+      playSiblingShift(siblingTops);
     }
   }
 

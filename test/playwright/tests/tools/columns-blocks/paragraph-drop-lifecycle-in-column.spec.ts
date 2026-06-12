@@ -53,6 +53,12 @@ const performSideDrop = async (
     () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') !== 'true',
     { timeout: 2000 }
   );
+
+  // The drop motion (ghost settle) finishes before assertions run.
+  await page.waitForFunction(
+    () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
+    { timeout: 2000 }
+  );
 };
 
 /**

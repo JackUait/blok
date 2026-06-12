@@ -90,6 +90,12 @@ const performTouchLikeDragDrop = async (
     const wrapper = document.querySelector('[data-blok-interface=blok]');
     return wrapper?.getAttribute('data-blok-dragging') !== 'true';
   }, { timeout: 2000 });
+
+  // The drop motion (ghost settle) finishes before assertions run.
+  await page.waitForFunction(
+    () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
+    { timeout: 2000 }
+  );
 };
 
 type CreateBlokOptions = {
@@ -247,6 +253,12 @@ test.describe('touch-based drag and drop', () => {
       return wrapper?.getAttribute('data-blok-dragging') !== 'true';
     }, { timeout: 2000 });
 
+    // The drop motion (ghost settle) finishes before assertions run.
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
+      { timeout: 2000 }
+    );
+
     // Verify dragging state is cleared
     await expect(blokWrapper).toHaveCount(0);
   });
@@ -341,6 +353,12 @@ test.describe('touch-based drag and drop', () => {
       const wrapper = document.querySelector('[data-blok-interface=blok]');
       return wrapper?.getAttribute('data-blok-dragging') !== 'true';
     }, { timeout: 2000 });
+
+    // The drop motion (ghost settle) finishes before assertions run.
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
+      { timeout: 2000 }
+    );
 
     // Verify block moved (not duplicated)
     await expect(page.getByTestId('block-wrapper')).toHaveCount(2);

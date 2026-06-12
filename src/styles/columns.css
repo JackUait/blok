@@ -20,34 +20,6 @@
 }
 
 /*
- * New-column entry animation (Notion-style): a freshly added column slides in by
- * growing its flex share from 0 while fading in, so the existing columns reflow
- * to make room. The trigger attribute is set on the column holder when the
- * column is created and stripped on animationend — see playColumnEnterAnimation.
- */
-@keyframes blok-column-enter {
-  from {
-    flex-grow: 0;
-    opacity: 0;
-  }
-
-  to {
-    flex-grow: 1;
-    opacity: 1;
-  }
-}
-
-[data-blok-columns] > [data-blok-element][data-blok-column-enter] {
-  animation: blok-column-enter 200ms ease-out;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  [data-blok-columns] > [data-blok-element][data-blok-column-enter] {
-    animation: none;
-  }
-}
-
-/*
  * Resize separator — a fixed-width flex item that forms the gutter between two
  * columns. The visible bar is hidden until the gutter is hovered or dragged,
  * matching Notion. The bar is wider than its hit feel via the full-width

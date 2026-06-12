@@ -11,6 +11,10 @@ import { DragPreview } from './preview/DragPreview';
 import { DragStateMachine, isActuallyDragging, isDragActive } from './state/DragStateMachine';
 import { DropTargetDetector } from './target/DropTargetDetector';
 import { AutoScroll } from './utils/AutoScroll';
+import {
+  finishColumnDropAnimations,
+  settleDragPreview,
+} from './utils/ColumnDropAnimation';
 import { ToggleSpringLoader } from './utils/ToggleSpringLoader';
 import { hasPassedThreshold } from './utils/drag.constants';
 import { findScrollableAncestor } from './utils/findScrollableAncestor';
@@ -307,6 +311,10 @@ export class DragController extends Module {
   }
 
   private startActualDrag(blockCount: number): void {
+    // A previous drop's motion may still be in flight; finish it instantly so
+    // this drag measures settled rects, not mid-animation ones.
+    finishColumnDropAnimations();
+
     this.stateMachine.startDrag();
 
     // Prevent settings menu from opening after drag completes
@@ -632,13 +640,44 @@ export class DragController extends Module {
     // targetParentId is the enclosing column when the target already lives in a
     // column_list (→ add a sibling column), or null for a top-level target
     // (→ wrap target + sources into a brand new column_list).
-    if (targetParentId !== null) {
-      addColumnToList(api, targetParentId, sourceIds, edge);
-    } else {
-      wrapInNewColumnList(api, targetBlock.id, sourceIds, edge);
-    }
+    const createdId = targetParentId !== null
+      ? addColumnToList(api, targetParentId, sourceIds, edge)
+      : wrapInNewColumnList(api, targetBlock.id, sourceIds, edge);
 
     this.reseedEmptiedColumns(sourceParentIds);
+
+    if (createdId !== null) {
+      this.settleDroppedPreview(sourceIds[0]);
+    }
+  }
+
+  /**
+   * Fly the drag preview to the first dropped block's landed position instead
+   * of letting cleanup() vanish it on mouseup. The element is released from
+   * DragPreview first so the upcoming cleanup() can't double-destroy it
+   * mid-flight.
+   *
+   * @param firstDroppedId - The first top-level block that moved into the new column
+   */
+  private settleDroppedPreview(firstDroppedId: string): void {
+    const preview = this.preview.release();
+
+    if (preview === null) {
+      return;
+    }
+
+    const holder = this.Blok.BlockManager.getBlockById(firstDroppedId)?.holder;
+    const content = holder?.querySelector('[data-blok-element-content]') ?? holder;
+
+    if (content === undefined || content === null) {
+      preview.remove();
+
+      return;
+    }
+
+    const rect = content.getBoundingClientRect();
+
+    settleDragPreview({ preview, targetRect: { left: rect.left, top: rect.top } });
   }
 
   /**
@@ -1109,6 +1148,9 @@ export class DragController extends Module {
   }
 
   public destroy(): void {
+    // A settling ghost / row interpolation is detached from the preview's
+    // lifecycle; finish it now so nothing outlives the editor instance.
+    finishColumnDropAnimations();
     this.cleanup();
   }
 }

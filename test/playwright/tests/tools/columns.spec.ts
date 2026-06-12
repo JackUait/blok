@@ -46,6 +46,12 @@ const performSideDrop = async (
     () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') !== 'true',
     { timeout: 2000 }
   );
+
+  // The drop motion (ghost settle) finishes before assertions run.
+  await page.waitForFunction(
+    () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
+    { timeout: 2000 }
+  );
 };
 
 /**
@@ -90,6 +96,12 @@ const performColumnListMarginDrop = async (
 
   await page.waitForFunction(
     () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') !== 'true',
+    { timeout: 2000 }
+  );
+
+  // The drop motion (ghost settle) finishes before assertions run.
+  await page.waitForFunction(
+    () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
     { timeout: 2000 }
   );
 };
@@ -456,6 +468,75 @@ test.describe('Columns tool', () => {
     await expect(page.getByText('Right para')).toBeVisible();
   });
 
+  test('drag-beside plays the column-drop animation and the ghost settles into place', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'p1', type: 'paragraph', data: { text: 'Left para' } },
+        { id: 'p2', type: 'paragraph', data: { text: 'Right para' } },
+      ],
+    });
+
+    // The animating attribute lives for ~200ms — record its appearance with an
+    // observer installed BEFORE the drop, instead of racing an assertion.
+    await page.evaluate(() => {
+      const seen = { animatingAttr: false };
+
+      (window as unknown as { __dropAnimSeen: typeof seen }).__dropAnimSeen = seen;
+      const observer = new MutationObserver(() => {
+        if (document.querySelector('[data-blok-column-drop-animating]') !== null) {
+          seen.animatingAttr = true;
+        }
+      });
+
+      observer.observe(document.body, {
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['data-blok-column-drop-animating'],
+      });
+    });
+
+    const source = page.getByTestId('block-wrapper').filter({ hasText: 'Right para' });
+    await source.hover();
+    const handle = page.locator(SETTINGS_BUTTON);
+    await expect(handle).toBeVisible();
+
+    const target = page.getByTestId('block-wrapper').filter({ hasText: 'Left para' });
+    await performSideDrop(page, handle, target, 'right');
+
+    // The row interpolation ran...
+    expect(
+      await page.evaluate(
+        () => (window as unknown as { __dropAnimSeen: { animatingAttr: boolean } }).__dropAnimSeen.animatingAttr
+      )
+    ).toBe(true);
+
+    // ...and fully settled: marker gone, no inline transition left behind,
+    // grows back on the even split.
+    await expect(page.locator('[data-blok-column-drop-animating]')).toHaveCount(0);
+    await expect.poll(async () =>
+      page.evaluate(() =>
+        Array.from(document.querySelector('[data-blok-columns]')?.children ?? [])
+          .filter(child => child.hasAttribute('data-blok-element'))
+          .map(holder => ({
+            transition: (holder as HTMLElement).style.transition,
+            flexGrow: (holder as HTMLElement).style.flexGrow,
+          }))
+      )
+    ).toEqual([
+      { transition: '', flexGrow: '1' },
+      { transition: '', flexGrow: '1' },
+    ]);
+
+    // The ghost settled and removed itself instead of lingering.
+    await expect(page.getByTestId('drag-preview')).toHaveCount(0);
+
+    // The animation never corrupted the saved tree.
+    const saved = await saveBlok(page);
+
+    expect(saved.blocks.filter(b => b.type === 'column')).toHaveLength(2);
+  });
+
   test('drag-beside a block already in a column adds a third column', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     await createBlok(page, {
@@ -586,6 +667,12 @@ test.describe('Columns tool', () => {
     await page.mouse.up();
     await page.waitForFunction(
       () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') !== 'true',
+      { timeout: 2000 }
+    );
+
+    // The drop motion (ghost settle) finishes before assertions run.
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
       { timeout: 2000 }
     );
 
@@ -1048,6 +1135,12 @@ test.describe('Columns tool', () => {
       { timeout: 2000 }
     );
 
+    // The drop motion (ghost settle) finishes before assertions run.
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
+      { timeout: 2000 }
+    );
+
     await expect(columns).toHaveCount(3);
 
     // REGRESSION: the new column must be DOM-mounted as a sibling of c1/c2 inside
@@ -1136,6 +1229,12 @@ test.describe('Columns tool', () => {
     await page.mouse.up();
     await page.waitForFunction(
       () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') !== 'true',
+      { timeout: 2000 }
+    );
+
+    // The drop motion (ghost settle) finishes before assertions run.
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
       { timeout: 2000 }
     );
 
@@ -1377,6 +1476,12 @@ test.describe('Columns tool', () => {
       { timeout: 2000 }
     );
 
+    // The drop motion (ghost settle) finishes before assertions run.
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
+      { timeout: 2000 }
+    );
+
     const saved = await saveBlok(page);
     // A two left the column → now at root (no parent), c1 keeps A one
     expect(saved.blocks.find(b => b.id === 'a2')?.parent).toBeUndefined();
@@ -1437,6 +1542,12 @@ test.describe('Columns tool', () => {
     await page.mouse.up();
     await page.waitForFunction(
       () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') !== 'true',
+      { timeout: 2000 }
+    );
+
+    // The drop motion (ghost settle) finishes before assertions run.
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
       { timeout: 2000 }
     );
 
@@ -1515,6 +1626,12 @@ test.describe('Columns tool', () => {
     await page.mouse.up();
     await page.waitForFunction(
       () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') !== 'true',
+      { timeout: 2000 }
+    );
+
+    // The drop motion (ghost settle) finishes before assertions run.
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
       { timeout: 2000 }
     );
 
@@ -1604,6 +1721,12 @@ test.describe('Columns tool', () => {
       { timeout: 2000 }
     );
 
+    // The drop motion (ghost settle) finishes before assertions run.
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
+      { timeout: 2000 }
+    );
+
     const saved = await saveBlok(page);
     const columnOrder = saved.blocks.filter(b => b.type === 'column').map(b => b.id);
 
@@ -1676,6 +1799,12 @@ test.describe('Columns tool', () => {
     await page.mouse.up();
     await page.waitForFunction(
       () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') !== 'true',
+      { timeout: 2000 }
+    );
+
+    // The drop motion (ghost settle) finishes before assertions run.
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
       { timeout: 2000 }
     );
 
@@ -1755,6 +1884,12 @@ test.describe('Columns tool', () => {
       { timeout: 2000 }
     );
 
+    // The drop motion (ghost settle) finishes before assertions run.
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
+      { timeout: 2000 }
+    );
+
     const saved = await saveBlok(page);
     const columnOrder = saved.blocks.filter(b => b.type === 'column').map(b => b.id);
 
@@ -1805,6 +1940,12 @@ test.describe('Columns tool', () => {
     await page.mouse.up();
     await page.waitForFunction(
       () => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') !== 'true',
+      { timeout: 2000 }
+    );
+
+    // The drop motion (ghost settle) finishes before assertions run.
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-testid="drag-preview"]') === null,
       { timeout: 2000 }
     );
 

@@ -32,6 +32,8 @@ export const Database: BlockToolConstructable;
 export const DatabaseRow: BlockToolConstructable;  // DatabaseRowTool (block tool), distinct from DatabaseRow interface in types/tools/database.d.ts
 export const Image: BlockToolConstructable;
 export const Code: BlockToolConstructable;
+export const Embed: BlockToolConstructable;
+export const Bookmark: BlockToolConstructable;
 export const ColumnList: ColumnListConstructable;
 export const Column: ColumnConstructable;
 /**
@@ -84,6 +86,8 @@ export const defaultBlockTools: {
   readonly image: {};
   readonly column_list: {};
   readonly column: {};
+  readonly embed: {};
+  readonly bookmark: {};
 };
 
 /**

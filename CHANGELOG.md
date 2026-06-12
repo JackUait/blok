@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.15.1](https://github.com/JackUait/blok/compare/v0.15.0...v0.15.1) (2026-06-13)
+
+### Bug Fixes
+
+- **Types** — Declare `Embed` and `Bookmark` (and their `defaultBlockTools` entries) in the published `@jackuait/blok/tools` types. The runtime exported them in 0.15.0 but the `.d.ts` did not, so `import { Embed, Bookmark }` failed to typecheck.
+
 ## [0.15.0](https://github.com/JackUait/blok/compare/v0.14.1...v0.15.0) (2026-06-12)
 
 ### Features

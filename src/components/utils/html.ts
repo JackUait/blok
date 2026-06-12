@@ -36,3 +36,70 @@ export const stripFakeBackgroundElements = (html: string): string => {
 
   return tempDiv.innerHTML;
 };
+
+interface StatefulMoveParent extends Element {
+  moveBefore?(node: Node, reference: Node | null): void;
+}
+
+/**
+ * Repositions an already-attached node within `parent`, inserting it before
+ * `reference` (or at the end when `reference` is null), while preserving the
+ * node's live state — an iframe keeps its loaded document, media keeps playing,
+ * form fields keep focus and value.
+ *
+ * A plain insertBefore/appendChild detaches and re-attaches the node, which
+ * resets exactly that state (re-parented iframes reload). The browser's
+ * state-preserving move (`moveBefore`, Chrome 133+) avoids the detach; we fall
+ * back to insertBefore where it is unavailable or throws (e.g. cross-document
+ * moves, or a node that is not connected).
+ */
+const statefulMove = (parent: StatefulMoveParent, node: Node, reference: Node | null): void => {
+  if (reference === node) {
+    return;
+  }
+
+  if (typeof parent.moveBefore === 'function' && node.isConnected && parent.isConnected) {
+    try {
+      parent.moveBefore(node, reference);
+
+      return;
+    } catch {
+      // moveBefore enforces stricter invariants than insertBefore (same
+      // document, connected node); fall back to a plain, state-resetting insert.
+    }
+  }
+
+  parent.insertBefore(node, reference);
+};
+
+/**
+ * Moves `node` to sit immediately before `reference`, preserving live state.
+ * @see statefulMove
+ */
+export const moveElementBefore = (node: Node, reference: Element): void => {
+  const parent = reference.parentNode;
+
+  if (parent instanceof Element) {
+    statefulMove(parent, node, reference);
+  }
+};
+
+/**
+ * Moves `node` to sit immediately after `reference`, preserving live state.
+ * @see statefulMove
+ */
+export const moveElementAfter = (node: Node, reference: Element): void => {
+  const parent = reference.parentNode;
+
+  if (parent instanceof Element) {
+    statefulMove(parent, node, reference.nextSibling);
+  }
+};
+
+/**
+ * Moves `node` to the end of `parent`'s children, preserving live state.
+ * @see statefulMove
+ */
+export const moveElementToEnd = (parent: Element, node: Node): void => {
+  statefulMove(parent, node, null);
+};

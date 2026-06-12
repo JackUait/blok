@@ -7,6 +7,7 @@ import type { Map as YMap } from 'yjs';
 
 import { BlockToolAPI } from '../../block';
 import type { Block } from '../../block';
+import { moveElementBefore } from '../../utils/html';
 import type { YjsManager } from '../yjs';
 import type { BlockChangeEvent } from '../yjs/types';
 
@@ -641,7 +642,7 @@ export class BlockYjsSync {
           immediateContainer?.parentElement?.matches('[data-blok-column]') === true;
 
         if (parentHolderInDom && isPreserveBodyChild && block.holder.contains(childBlock.holder)) {
-          block.holder.before(childBlock.holder);
+          moveElementBefore(childBlock.holder, block.holder);
         }
       }
 

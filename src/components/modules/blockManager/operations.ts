@@ -15,6 +15,7 @@ import { BlockToolAPI } from '../../block';
 import { Dom as $ } from '../../dom';
 import type { BlokEventMap } from '../../events';
 import { isEmpty, isObject, isString, log, generateBlockId } from '../../utils';
+import { moveElementBefore } from '../../utils/html';
 import { announce } from '../../utils/announcer';
 import { convertStringToBlockData, isBlockConvertable } from '../../utils/blocks';
 import { validateHierarchy } from '../../utils/hierarchy-invariant';
@@ -771,7 +772,7 @@ export class BlockOperations {
       childBlock.holder.classList.remove('hidden');
 
       if (containerInDom && childBlock.holder.parentElement?.matches('[data-blok-toggle-children]') === true) {
-        container.holder.before(childBlock.holder);
+        moveElementBefore(childBlock.holder, container.holder);
       }
     }
   }

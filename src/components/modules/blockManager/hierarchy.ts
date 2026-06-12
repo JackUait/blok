@@ -6,6 +6,7 @@
 import type { Block } from '../../block';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { logLabeled } from '../../utils';
+import { moveElementAfter, moveElementBefore, moveElementToEnd } from '../../utils/html';
 
 import type { BlockRepository } from './repository';
 
@@ -235,9 +236,9 @@ export class BlockHierarchy {
       );
 
       if (anchor) {
-        anchor.holder.insertAdjacentElement('afterend', block.holder);
+        moveElementAfter(block.holder, anchor.holder);
       } else if (oldParent !== undefined) {
-        oldParent.holder.after(block.holder);
+        moveElementAfter(block.holder, oldParent.holder);
       }
     }
 
@@ -347,8 +348,11 @@ export class BlockHierarchy {
           b => b.holder.parentElement === newContainer
         )?.holder ?? null;
 
-        // insertBefore(el, null) is equivalent to appendChild
-        newContainer.insertBefore(block.holder, nextSiblingHolder);
+        if (nextSiblingHolder !== null) {
+          moveElementBefore(block.holder, nextSiblingHolder);
+        } else {
+          moveElementToEnd(newContainer, block.holder);
+        }
       }
     }
 
@@ -370,9 +374,9 @@ export class BlockHierarchy {
       const followingRoot = allBlocks.slice(blockIndex + 1).find(isAtRoot);
 
       if (precedingRoot !== undefined) {
-        precedingRoot.holder.insertAdjacentElement('afterend', block.holder);
+        moveElementAfter(block.holder, precedingRoot.holder);
       } else if (followingRoot !== undefined) {
-        followingRoot.holder.insertAdjacentElement('beforebegin', block.holder);
+        moveElementBefore(block.holder, followingRoot.holder);
       }
     }
 

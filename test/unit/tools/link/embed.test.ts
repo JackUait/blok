@@ -601,6 +601,21 @@ describe('Embed toolbar integration', () => {
       expect(root.querySelector('[data-role="embed-overlay"]')).not.toBeNull();
     });
 
+    it('preserves the live iframe element across a read-only toggle (no reload blink)', () => {
+      const tool = new Embed(createOptions(iframeData()));
+      const root = tool.render();
+      const before = root.querySelector('iframe');
+
+      tool.setReadOnly(true);
+      tool.setReadOnly(false);
+
+      const after = root.querySelector('iframe');
+
+      expect(before).not.toBeNull();
+      // Same node instance ⇒ the frame was never detached/recreated, so it never reloads.
+      expect(after).toBe(before);
+    });
+
     it('toggles caption contenteditable and preserves uncommitted caption edits', () => {
       const tool = new Embed(createOptions(iframeData({ captionVisible: true })));
       const root = tool.render();

@@ -1,5 +1,6 @@
 import type { Block } from './block';
 import { BlockToolAPI } from './block';
+import { moveElementBefore, moveElementToEnd } from './utils/html';
 
 
 /**
@@ -663,7 +664,7 @@ export class Blocks {
     const nextBlock = this.blocks[toIndex];
 
     if (nextBlock === undefined) {
-      this.workingArea.appendChild(block.holder);
+      moveElementToEnd(this.workingArea, block.holder);
     } else if (block.holder.contains(nextBlock.holder)) {
       // Self-reference: next block is nested inside the block being moved
       // (e.g. moving a toggle forward; blocks[toIndex] is one of its children).
@@ -671,10 +672,10 @@ export class Blocks {
       const nextSibling = block.holder.nextElementSibling;
 
       if (nextSibling !== null) {
-        nextSibling.insertAdjacentElement('beforebegin', block.holder);
+        moveElementBefore(block.holder, nextSibling);
       }
     } else {
-      nextBlock.holder.insertAdjacentElement('beforebegin', block.holder);
+      moveElementBefore(block.holder, nextBlock.holder);
     }
 
     block.call(BlockToolAPI.RENDERED);

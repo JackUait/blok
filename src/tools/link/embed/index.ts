@@ -139,25 +139,53 @@ export class Embed implements BlockTool {
 
   /**
    * Toggle read-only mode in place (no save/clear/render of the whole editor).
-   * Rebuilds the figure so resize handles, the overlay toolbar and caption
-   * editability follow the new state; the tool's root element is preserved.
+   * Swaps the caption node and the editing chrome so resize handles, the overlay
+   * toolbar and caption editability follow the new state — without recreating the
+   * iframe, which would detach & reload the embed (a visible "blink").
    */
   public setReadOnly(state: boolean): void {
     this.readOnly = state;
 
-    // renderState() replaces the caption node, which would drop a live edit
-    // that has not been committed via blur yet — commit it to data first.
-    const caption = this.root?.querySelector<HTMLElement>('[data-role="embed-caption"]');
+    const figure = this.root?.querySelector<HTMLElement>('[data-role="embed-figure"]');
 
-    if (caption) {
-      const next = caption.textContent ?? '';
+    // No live figure (empty / script embed) — fall back to a full rebuild.
+    if (!figure) {
+      this.renderState();
+
+      return;
+    }
+
+    // Rebuilding the caption replaces its node, which would drop a live edit that
+    // has not been committed via blur yet — commit it to data first.
+    const existingCaption = figure.querySelector<HTMLElement>('[data-role="embed-caption"]');
+
+    if (existingCaption) {
+      const next = existingCaption.textContent ?? '';
 
       if (next !== (this.data.caption ?? '')) {
         this.data.caption = next;
       }
     }
 
-    this.renderState();
+    // Rebuild the caption so its contenteditable & blur wiring follow the new mode.
+    existingCaption?.remove();
+
+    const caption = this.buildCaption();
+
+    if (caption) {
+      figure.querySelector('[data-role="embed-aspect"]')?.after(caption);
+    }
+
+    // Read-only strips the editing chrome; editable restores it. Mirrors
+    // refreshChrome() but also handles the removal-only (read-only) direction.
+    this.detachResizers();
+    figure.querySelectorAll('[data-role="resize-handle"]').forEach((el) => el.remove());
+    figure.querySelector('[data-role="embed-overlay"]')?.remove();
+
+    if (!state) {
+      this.attachResizeHandles(figure);
+      figure.appendChild(this.buildOverlay());
+    }
   }
 
   /**

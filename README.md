@@ -14,7 +14,7 @@ It's headless on purpose. Blok ships the editing engine and a set of tools; it d
 
 ## What's in the box
 
-| | |
+| Feature | What you get |
 | --- | --- |
 | **Block tools** | Paragraph, heading, list, quote, callout, code, image, divider, table, toggle, and a column layout. Plus a Notion-style database block (rows are child blocks) and embed/bookmark blocks for pasted links. |
 | **Inline formatting** | Bold, italic, underline, strikethrough, inline code, link, and a highlight marker. |

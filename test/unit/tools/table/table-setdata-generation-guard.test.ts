@@ -411,7 +411,7 @@ describe('Table setData generation guard', () => {
     const gridEl = (element.firstElementChild as HTMLElement).firstElementChild as HTMLElement;
     const action: RowColAction = { type: 'delete-row', index: 0 };
 
-    (table as unknown as { handleRowColAction: (grid: HTMLElement, a: RowColAction) => void })
+    ((table as unknown as { subsystems: unknown }).subsystems as { handleRowColAction: (grid: HTMLElement, a: RowColAction) => void })
       .handleRowColAction(gridEl, action);
 
     const finalWrapper = container.firstElementChild as HTMLElement;
@@ -473,7 +473,7 @@ describe('Table setData generation guard', () => {
     const gridEl = (element.firstElementChild as HTMLElement).firstElementChild as HTMLElement;
     const action: RowColAction = { type: 'delete-col', index: 0 };
 
-    (table as unknown as { handleRowColAction: (grid: HTMLElement, a: RowColAction) => void })
+    ((table as unknown as { subsystems: unknown }).subsystems as { handleRowColAction: (grid: HTMLElement, a: RowColAction) => void })
       .handleRowColAction(gridEl, action);
 
     const finalWrapper = container.firstElementChild as HTMLElement;

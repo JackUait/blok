@@ -3475,7 +3475,7 @@ describe('Table Tool', () => {
 
       const action: RowColAction = { type: 'move-row', fromIndex: 0, toIndex: 2 };
 
-      (table as unknown as { handleRowColAction: (grid: HTMLElement, a: RowColAction) => void })
+      ((table as unknown as { subsystems: unknown }).subsystems as { handleRowColAction: (grid: HTMLElement, a: RowColAction) => void })
         .handleRowColAction(gridEl, action);
 
       // Wait for requestAnimationFrame in selection highlight
@@ -3497,7 +3497,7 @@ describe('Table Tool', () => {
 
       const action: RowColAction = { type: 'move-col', fromIndex: 0, toIndex: 2 };
 
-      (table as unknown as { handleRowColAction: (grid: HTMLElement, a: RowColAction) => void })
+      ((table as unknown as { subsystems: unknown }).subsystems as { handleRowColAction: (grid: HTMLElement, a: RowColAction) => void })
         .handleRowColAction(gridEl, action);
 
       // Wait for requestAnimationFrame in selection highlight
@@ -3519,7 +3519,7 @@ describe('Table Tool', () => {
 
       const action: RowColAction = { type: 'move-row', fromIndex: 0, toIndex: 2 };
 
-      (table as unknown as { handleRowColAction: (grid: HTMLElement, a: RowColAction) => void })
+      ((table as unknown as { subsystems: unknown }).subsystems as { handleRowColAction: (grid: HTMLElement, a: RowColAction) => void })
         .handleRowColAction(gridEl, action);
 
       // Wait for requestAnimationFrame in setActiveGrip
@@ -3540,7 +3540,7 @@ describe('Table Tool', () => {
 
       const action: RowColAction = { type: 'move-col', fromIndex: 0, toIndex: 2 };
 
-      (table as unknown as { handleRowColAction: (grid: HTMLElement, a: RowColAction) => void })
+      ((table as unknown as { subsystems: unknown }).subsystems as { handleRowColAction: (grid: HTMLElement, a: RowColAction) => void })
         .handleRowColAction(gridEl, action);
 
       await vi.advanceTimersByTimeAsync(16);
@@ -4546,9 +4546,9 @@ describe('Table Tool', () => {
       expect(isCellWithBlocks(savedBefore.content[1][0]) && savedBefore.content[1][0].textColor).toBe('#787774');
 
       // Access the cell selection to programmatically select a row, then press Delete
-      const tableInternal = table as unknown as { cellSelection: TableCellSelection };
+      const tableInternal = table as unknown as { subsystems: { cellSelectionSubsystem: TableCellSelection } };
 
-      tableInternal.cellSelection.selectRow(0);
+      tableInternal.subsystems.cellSelectionSubsystem.selectRow(0);
 
       // Dispatch Delete key from a cell so event.target has getAttribute
       // (avoids Flipper's shouldSkipTarget error in jsdom when target is document)
@@ -4623,7 +4623,7 @@ describe('Table Tool', () => {
         getData: (type: string) => dataMap[type] ?? '',
       } as unknown as DataTransfer;
 
-      (table as unknown as { handleCellCopy: (cells: HTMLElement[], cd: DataTransfer) => void })
+      ((table as unknown as { subsystems: unknown }).subsystems as { handleCellCopy: (cells: HTMLElement[], cd: DataTransfer) => void })
         .handleCellCopy([firstCell], mockClipboardData);
 
       // The HTML clipboard payload should contain a paragraph block whose text

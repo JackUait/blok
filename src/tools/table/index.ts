@@ -12,32 +12,19 @@ import { IconTable } from '../../components/icons';
 import { mapToNearestPresetColor } from '../../components/utils/color-mapping';
 import { twMerge } from '../../components/utils/tw';
 
-import { TableAddControls } from './table-add-controls';
 import { TableCellBlocks, CELL_BLOCKS_ATTR } from './table-cell-blocks';
 import {
-  serializeCellsToClipboard,
-  buildClipboardHtml,
-  buildClipboardPlainText,
-  parseClipboardHtml,
-  parseGenericHtmlTable,
   isDefaultBlack,
   ALLOWED_MARK_STYLE_PROPS,
 } from './table-cell-clipboard';
-import type { CellColorMode } from './table-cell-color-picker';
-import { TableCellSelection } from './table-cell-selection';
 import { TableGrid, ROW_ATTR, CELL_ATTR, CELL_ROW_ATTR, CELL_COL_ATTR } from './table-core';
 import {
   applyCellColors,
   applyCellPlacements,
   applyPixelWidths,
-  computeHalfAvgWidth,
   computeInitialColWidth,
-  enableScrollOverflow,
   getBlockIdsInColumn,
   getBlockIdsInRow,
-  getCellPosition,
-  isColumnEmpty,
-  isRowEmpty,
   mountCellBlocksReadOnly,
   normalizeTableData,
   populateNewCells,
@@ -48,15 +35,10 @@ import {
   updateHeadingStyles,
 } from './table-operations';
 import { TableModel } from './table-model';
-import { TableResize } from './table-resize';
-import { executeRowColAction } from './table-row-col-action-handler';
-import type { PendingHighlight } from './table-row-col-action-handler';
-import { TableRowColControls } from './table-row-col-controls';
-import type { RowColAction } from './table-row-col-controls';
 import { registerAdditionalRestrictedTools } from './table-restrictions';
-import { TableCornerDrag } from './table-corner-drag';
-import { TableScrollHaze } from './table-scroll-haze';
-import type { CellPlacement, ClipboardBlockData, LegacyCellContent, TableCellsClipboard, TableData, TableConfig } from './types';
+import { TableSubsystems } from './table-subsystems';
+import type { TableHost } from './table-subsystems';
+import type { LegacyCellContent, TableData, TableConfig } from './types';
 import { isCellWithBlocks } from './types';
 
 const DEFAULT_ROWS = 3;
@@ -90,22 +72,15 @@ export class Table implements BlockTool {
   private initialContent: LegacyCellContent[][] | null = null;
   private grid: TableGrid;
   private model: TableModel;
-  private resize: TableResize | null = null;
-  private addControls: TableAddControls | null = null;
-  private rowColControls: TableRowColControls | null = null;
+  private subsystems: TableSubsystems;
   private cellBlocks: TableCellBlocks | null = null;
-  private cellSelection: TableCellSelection | null = null;
-  private cornerDrag: TableCornerDrag | null = null;
-  private scrollHaze: TableScrollHaze | null = null;
   private element: HTMLDivElement | null = null;
   private gridElement: HTMLElement | null = null;
   private scrollContainer: HTMLDivElement | null = null;
   private gripOverlay: HTMLDivElement | null = null;
   private blockId: string | undefined;
-  private pendingHighlight: PendingHighlight | null = null;
   private isNewTable = false;
   private unregisterRestrictedTools: (() => void) | null = null;
-  private gridPasteCleanup: (() => void) | null = null;
   private keyboardNavCleanup: (() => void) | null = null;
 
   /**
@@ -133,10 +108,38 @@ export class Table implements BlockTool {
     this.grid = new TableGrid({ readOnly });
     this.model = new TableModel(normalized);
     this.blockId = block?.id;
+    this.subsystems = new TableSubsystems(this.createSubsystemHost());
 
     if (this.config.restrictedTools !== undefined) {
       this.unregisterRestrictedTools = registerAdditionalRestrictedTools(this.config.restrictedTools);
     }
+  }
+
+  /**
+   * Build the {@link TableHost} adapter handed to {@link TableSubsystems}.
+   * Uses live getters so the manager always reads current DOM refs / state
+   * without reaching into Table's private fields directly.
+   */
+  private createSubsystemHost(): TableHost {
+    const self = this;
+
+    return {
+      get api() { return self.api; },
+      get readOnly() { return self.readOnly; },
+      get blockId() { return self.blockId; },
+      get model() { return self.model; },
+      get grid() { return self.grid; },
+      get cellBlocks() { return self.cellBlocks; },
+      get element() { return self.element; },
+      get gridElement() { return self.gridElement; },
+      get scrollContainer() { return self.scrollContainer; },
+      get gripOverlay() { return self.gripOverlay; },
+      get setDataGeneration() { return self.setDataGeneration; },
+      runStructuralOp: <T>(fn: () => T, discard?: boolean): T => self.runStructuralOp(fn, discard),
+      runTransactedStructuralOp: <T>(fn: () => T, discard?: boolean): T => self.runTransactedStructuralOp(fn, discard),
+      ensureScrollContainer: (): HTMLDivElement => self.ensureScrollContainer(),
+      rebuildTableBody: (): void => self.rebuildTableBody(),
+    };
   }
 
   /**
@@ -194,20 +197,7 @@ export class Table implements BlockTool {
    * destroy(). Does NOT tear down cellBlocks — that has special Yjs handling.
    */
   private teardownSubsystems(): void {
-    this.resize?.destroy();
-    this.resize = null;
-    this.addControls?.destroy();
-    this.addControls = null;
-    this.cornerDrag?.destroy();
-    this.cornerDrag = null;
-    this.rowColControls?.destroy();
-    this.rowColControls = null;
-    this.cellSelection?.destroy();
-    this.cellSelection = null;
-    this.scrollHaze?.destroy();
-    this.scrollHaze = null;
-    this.gridPasteCleanup?.();
-    this.gridPasteCleanup = null;
+    this.subsystems.teardown();
     this.keyboardNavCleanup?.();
     this.keyboardNavCleanup = null;
   }
@@ -329,21 +319,6 @@ export class Table implements BlockTool {
     return this.grid.createGrid(rows, cols, this.model.colWidths);
   }
 
-  /**
-   * Initialize all visual subsystems on a grid element.
-   * Shared by rendered(), setData(), and onPaste() to ensure consistent
-   * subsystem initialization order.
-   */
-  private initSubsystems(gridEl: HTMLElement): void {
-    this.initResize(gridEl);
-    this.initAddControls(gridEl);
-    this.initCornerDrag(gridEl);
-    this.initRowColControls(gridEl);
-    this.initCellSelection(gridEl);
-    this.initGridPasteListener(gridEl);
-    this.initScrollHaze();
-  }
-
   public static get toolbox(): ToolboxConfig {
     return {
       icon: IconTable,
@@ -419,9 +394,9 @@ export class Table implements BlockTool {
 
     // Keep add-button positions in sync when the user scrolls horizontally.
     // addControls may be null when the scroll container is first created during
-    // initSubsystems() (initResize runs before initAddControls). In that case,
+    // initAll() (initResize runs before initAddControls). In that case,
     // initAddControls() will call attachScrollContainer() once addControls exists.
-    this.addControls?.attachScrollContainer(sc);
+    this.subsystems.attachScrollContainer(sc);
 
     return sc;
   }
@@ -522,7 +497,7 @@ export class Table implements BlockTool {
       const snap = this.model.snapshot();
       applyCellColors(gridEl, snap.content);
       applyCellPlacements(gridEl, snap.content);
-      this.initScrollHaze();
+      this.subsystems.initScrollHazeOnly();
 
       return;
     }
@@ -562,13 +537,13 @@ export class Table implements BlockTool {
         : undefined);
     }
 
-    this.initSubsystems(gridEl);
+    this.subsystems.initAll(gridEl);
     const snapInit = this.model.snapshot();
     applyCellColors(gridEl, snapInit.content);
     applyCellPlacements(gridEl, snapInit.content);
 
     if (this.isNewTable) {
-      this.cellSelection?.selectRange({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 0 });
+      this.subsystems.cellSelectionSubsystem?.selectRange({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 0 });
     }
   }
 
@@ -626,7 +601,7 @@ export class Table implements BlockTool {
       // Initialize cell blocks and subsystems
       this.initCellBlocks(gridEl);
       this.keyboardNavCleanup = setupKeyboardNavigation(gridEl, this.cellBlocks);
-      this.initSubsystems(gridEl);
+      this.subsystems.initAll(gridEl);
     }
   }
 
@@ -772,8 +747,8 @@ export class Table implements BlockTool {
       return;
     }
 
-    const savedSelectionRange = this.cellSelection?.getSelectedRange() ?? null;
-    const savedGripIndices = this.rowColControls?.getVisibleGripIndices() ?? null;
+    const savedSelectionRange = this.subsystems.cellSelectionSubsystem?.getSelectedRange() ?? null;
+    const savedGripIndices = this.subsystems.rowColControlsSubsystem?.getVisibleGripIndices() ?? null;
 
     this.teardownSubsystems();
 
@@ -846,14 +821,18 @@ export class Table implements BlockTool {
       return;
     }
 
-    this.initSubsystems(gridEl);
+    this.subsystems.initAll(gridEl);
 
-    if (savedSelectionRange !== null && this.cellSelection !== null) {
-      this.cellSelection.selectRange(savedSelectionRange);
+    const cellSelection = this.subsystems.cellSelectionSubsystem;
+
+    if (savedSelectionRange !== null && cellSelection !== null) {
+      cellSelection.selectRange(savedSelectionRange);
     }
 
-    if (savedGripIndices !== null && this.rowColControls !== null) {
-      this.rowColControls.restoreVisibleGrips(savedGripIndices.col, savedGripIndices.row);
+    const rowColControls = this.subsystems.rowColControlsSubsystem;
+
+    if (savedGripIndices !== null && rowColControls !== null) {
+      rowColControls.restoreVisibleGrips(savedGripIndices.col, savedGripIndices.row);
     }
 
     const snapSet = this.model.snapshot();
@@ -967,7 +946,7 @@ export class Table implements BlockTool {
         });
       }, true);
 
-      this.initSubsystems(gridEl);
+      this.subsystems.initAll(gridEl);
       const snapPaste = this.model.snapshot();
       applyCellColors(gridEl, snapPaste.content);
       applyCellPlacements(gridEl, snapPaste.content);
@@ -1035,488 +1014,6 @@ export class Table implements BlockTool {
     return getBlockIdsInColumn(this.element, this.cellBlocks, colIndex);
   }
 
-  private initAddControls(gridEl: HTMLElement): void {
-    this.addControls?.destroy();
-
-    if (!this.element) {
-      return;
-    }
-
-    const dragState = { addedCols: 0 };
-
-    this.addControls = new TableAddControls({
-      wrapper: this.element,
-      grid: gridEl,
-      i18n: this.api.i18n,
-      getTableSize: () => ({
-        rows: this.model.rows,
-        cols: this.model.cols,
-      }),
-      getNewColumnWidth: () => {
-        const colWidths = this.model.colWidths ?? readPixelWidths(gridEl);
-
-        return this.model.initialColWidth !== undefined
-          ? Math.round((this.model.initialColWidth / 2) * 100) / 100
-          : computeHalfAvgWidth(colWidths);
-      },
-      onAddRow: () => {
-        this.runTransactedStructuralOp(() => {
-          this.grid.addRow(gridEl);
-          this.model.addRow();
-          populateNewCells(gridEl, this.cellBlocks);
-          updateHeadingStyles(this.gridElement, this.model.withHeadings);
-          updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
-          this.initResize(gridEl);
-          this.addControls?.syncRowButtonWidth();
-          this.rowColControls?.refresh();
-        });
-      },
-      onAddColumn: () => {
-        this.runTransactedStructuralOp(() => {
-          const colWidths = this.model.colWidths ?? readPixelWidths(gridEl);
-          const halfWidth = this.model.initialColWidth !== undefined
-            ? Math.round((this.model.initialColWidth / 2) * 100) / 100
-            : computeHalfAvgWidth(colWidths);
-
-          this.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
-          this.model.addColumn(undefined, halfWidth);
-          this.model.setColWidths([...colWidths, halfWidth]);
-          populateNewCells(gridEl, this.cellBlocks);
-          updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
-          this.initResize(gridEl);
-          this.rowColControls?.refresh();
-
-          if (this.scrollContainer) {
-            this.scrollContainer.scrollLeft = this.scrollContainer.scrollWidth;
-          }
-
-          this.addControls?.syncRowButtonWidth();
-        });
-      },
-      onDragStart: () => {
-        if (this.resize) {
-          this.resize.enabled = false;
-        }
-        this.rowColControls?.hideAllGrips();
-        this.rowColControls?.setGripsDisplay(false);
-      },
-      onDragAddRow: () => {
-        this.runTransactedStructuralOp(() => {
-          this.grid.addRow(gridEl);
-          this.model.addRow();
-          populateNewCells(gridEl, this.cellBlocks);
-          updateHeadingStyles(this.gridElement, this.model.withHeadings);
-          updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
-        });
-      },
-      onDragRemoveRow: () => {
-        this.runTransactedStructuralOp(() => {
-          const rowCount = this.grid.getRowCount(gridEl);
-
-          if (rowCount > 1 && isRowEmpty(gridEl, rowCount - 1)) {
-            const { blocksToDelete } = this.model.deleteRow(rowCount - 1);
-
-            this.cellBlocks?.deleteBlocks(blocksToDelete);
-            this.grid.deleteRow(gridEl, rowCount - 1);
-          }
-        });
-      },
-      onDragAddCol: () => {
-        this.runTransactedStructuralOp(() => {
-          const colWidths = this.model.colWidths ?? readPixelWidths(gridEl);
-          const halfWidth = this.model.initialColWidth !== undefined
-            ? Math.round((this.model.initialColWidth / 2) * 100) / 100
-            : computeHalfAvgWidth(colWidths);
-
-          const newWidths = [...colWidths, halfWidth];
-
-          this.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
-          this.model.addColumn(undefined, halfWidth);
-          this.model.setColWidths(newWidths);
-          applyPixelWidths(gridEl, newWidths);
-          populateNewCells(gridEl, this.cellBlocks);
-          updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
-          this.initResize(gridEl);
-
-          dragState.addedCols++;
-
-          if (this.scrollContainer) {
-            this.scrollContainer.scrollLeft = this.scrollContainer.scrollWidth;
-          }
-        });
-      },
-      onDragRemoveCol: () => {
-        this.runTransactedStructuralOp(() => {
-          const colCount = this.grid.getColumnCount(gridEl);
-
-          if (colCount <= 1 || !isColumnEmpty(gridEl, colCount - 1)) {
-            return;
-          }
-
-          // model.deleteColumn() already removes the width internally,
-          // so no additional syncColWidthsAfterDeleteColumn is needed.
-          const { blocksToDelete } = this.model.deleteColumn(colCount - 1);
-
-          this.cellBlocks?.deleteBlocks(blocksToDelete);
-          this.grid.deleteColumn(gridEl, colCount - 1);
-
-          const updatedWidths = this.model.colWidths;
-
-          if (updatedWidths) {
-            applyPixelWidths(gridEl, updatedWidths);
-          }
-
-          this.initResize(gridEl);
-
-          dragState.addedCols--;
-        });
-      },
-      onDragEnd: () => {
-        this.initResize(gridEl);
-        this.rowColControls?.refresh();
-
-        if (this.scrollContainer) {
-          this.scrollContainer.scrollLeft = dragState.addedCols > 0 ? this.scrollContainer.scrollWidth : 0;
-        }
-
-        this.addControls?.syncRowButtonWidth();
-        dragState.addedCols = 0;
-      },
-    });
-
-    // If the scroll container already exists (pixel-mode table loaded from data),
-    // attach the scroll listener now. For percent-mode tables the listener is
-    // attached later inside ensureScrollContainer() when the first column is added.
-    if (this.scrollContainer) {
-      this.addControls.attachScrollContainer(this.scrollContainer);
-    }
-  }
-
-  private initCornerDrag(gridEl: HTMLElement): void {
-    this.cornerDrag?.destroy();
-
-    if (!this.element) {
-      return;
-    }
-
-    this.cornerDrag = new TableCornerDrag({
-      wrapper: this.element,
-      gridEl,
-      onAddRow: () => {
-        this.runStructuralOp(() => {
-          this.grid.addRow(gridEl);
-          this.model.addRow();
-          populateNewCells(gridEl, this.cellBlocks);
-          updateHeadingStyles(this.gridElement, this.model.withHeadings);
-          updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
-        });
-      },
-      onAddColumn: () => {
-        this.runStructuralOp(() => {
-          const colWidths = this.model.colWidths ?? readPixelWidths(gridEl);
-          const halfWidth = this.model.initialColWidth !== undefined
-            ? Math.round((this.model.initialColWidth / 2) * 100) / 100
-            : computeHalfAvgWidth(colWidths);
-          const newWidths = [...colWidths, halfWidth];
-
-          this.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
-          this.model.addColumn(undefined, halfWidth);
-          this.model.setColWidths(newWidths);
-          applyPixelWidths(gridEl, newWidths);
-          enableScrollOverflow(this.ensureScrollContainer());
-          populateNewCells(gridEl, this.cellBlocks);
-          updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
-        });
-      },
-      onRemoveLastRow: () => {
-        this.runStructuralOp(() => {
-          const rowCount = this.grid.getRowCount(gridEl);
-
-          if (rowCount <= 1) {
-            return;
-          }
-
-          const { blocksToDelete } = this.model.deleteRow(rowCount - 1);
-
-          this.cellBlocks?.deleteBlocks(blocksToDelete);
-          this.grid.deleteRow(gridEl, rowCount - 1);
-        });
-      },
-      onRemoveLastColumn: () => {
-        this.runStructuralOp(() => {
-          const colCount = this.grid.getColumnCount(gridEl);
-
-          if (colCount <= 1) {
-            return;
-          }
-
-          const { blocksToDelete } = this.model.deleteColumn(colCount - 1);
-
-          this.cellBlocks?.deleteBlocks(blocksToDelete);
-          this.grid.deleteColumn(gridEl, colCount - 1);
-
-          const updatedWidths = this.model.colWidths;
-
-          if (updatedWidths) {
-            applyPixelWidths(gridEl, updatedWidths);
-          }
-        });
-      },
-      onDragStart: () => {
-        if (this.resize) {
-          this.resize.enabled = false;
-        }
-        this.rowColControls?.hideAllGrips();
-        this.rowColControls?.setGripsDisplay(false);
-        this.addControls?.setDisplay(false);
-      },
-      onDragEnd: () => {
-        this.initResize(gridEl);
-        this.rowColControls?.refresh();
-        this.addControls?.setDisplay(true);
-        this.addControls?.syncRowButtonWidth();
-      },
-      getTableSize: () => {
-        return { rows: this.model.rows, cols: this.model.cols };
-      },
-      canRemoveLastRow: () => {
-        return this.model.rows > 1 && isRowEmpty(gridEl, this.model.rows - 1);
-      },
-      canRemoveLastColumn: () => {
-        return this.model.cols > 1 && isColumnEmpty(gridEl, this.model.cols - 1);
-      },
-      onClickAdd: () => {
-        this.runTransactedStructuralOp(() => {
-          // Add row
-          this.grid.addRow(gridEl);
-          this.model.addRow();
-          populateNewCells(gridEl, this.cellBlocks);
-          updateHeadingStyles(this.gridElement, this.model.withHeadings);
-          updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
-
-          // Add column
-          const colWidths = this.model.colWidths ?? readPixelWidths(gridEl);
-          const halfWidth = this.model.initialColWidth !== undefined
-            ? Math.round((this.model.initialColWidth / 2) * 100) / 100
-            : computeHalfAvgWidth(colWidths);
-          const newWidths = [...colWidths, halfWidth];
-
-          this.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
-          this.model.addColumn(undefined, halfWidth);
-          this.model.setColWidths(newWidths);
-          applyPixelWidths(gridEl, newWidths);
-          populateNewCells(gridEl, this.cellBlocks);
-          updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
-
-          // Refresh subsystems
-          this.initResize(gridEl);
-          this.rowColControls?.refresh();
-          this.addControls?.syncRowButtonWidth();
-        });
-      },
-    });
-  }
-
-  private initRowColControls(gridEl: HTMLElement): void {
-    this.rowColControls?.destroy();
-
-    if (!this.element) {
-      return;
-    }
-
-    this.rowColControls = new TableRowColControls({
-      grid: gridEl,
-      overlay: this.gripOverlay ?? undefined,
-      scrollContainer: this.scrollContainer ?? undefined,
-      getColumnCount: () => this.grid.getColumnCount(gridEl),
-      getRowCount: () => this.grid.getRowCount(gridEl),
-      isHeadingRow: () => this.model.withHeadings,
-      isHeadingColumn: () => this.model.withHeadingColumn,
-      i18n: this.api.i18n,
-      onAction: (action: RowColAction) => this.handleRowColAction(gridEl, action),
-      onDragStateChange: (isDragging: boolean) => {
-        if (this.resize) {
-          this.resize.enabled = !isDragging;
-        }
-
-        this.addControls?.setDisplay(!isDragging);
-        this.cornerDrag?.setDisplay(!isDragging);
-
-        if (isDragging) {
-          this.api.toolbar.close({ setExplicitlyClosed: false });
-        }
-      },
-      onGripClick: (type, index) => {
-        if (type === 'row') {
-          this.cellSelection?.selectRow(index);
-        } else {
-          this.cellSelection?.selectColumn(index);
-        }
-      },
-      onGripPopoverClose: () => {
-        if (this.pendingHighlight) {
-          const { type, index } = this.pendingHighlight;
-
-          this.pendingHighlight = null;
-
-          // Lock the grip synchronously so the unlock listener is registered
-          // before any external click can race with a deferred RAF
-          this.rowColControls?.setActiveGrip(type, index);
-
-          // Wait for layout so newly inserted cells have dimensions
-          requestAnimationFrame(() => {
-            if (type === 'row') {
-              this.cellSelection?.selectRow(index);
-            } else {
-              this.cellSelection?.selectColumn(index);
-            }
-          });
-        } else {
-          this.cellSelection?.clearActiveSelection();
-        }
-      },
-    });
-  }
-
-  private handleRowColAction(gridEl: HTMLElement, action: RowColAction): void {
-    const generationAtStart = this.setDataGeneration;
-
-    this.runTransactedStructuralOp(() => {
-      if (generationAtStart !== this.setDataGeneration || this.gridElement !== gridEl) {
-        return;
-      }
-
-      // Capture colWidths BEFORE the model mutation so the action handler
-      // receives pre-mutation widths. Model methods (addColumn, deleteColumn,
-      // moveColumn) update colWidths internally, and the handler functions
-      // (syncColWidthsAfterMove, syncColWidthsAfterDeleteColumn, computeInsertColumnWidths)
-      // also transform widths — passing post-mutation widths would double-apply
-      // the transformation.
-      const colWidthsBeforeMutation = this.model.colWidths;
-
-      // Sync model structural operation before DOM changes
-      const { blocksToDelete } = this.syncModelForAction(action);
-
-      const result = executeRowColAction(
-        gridEl,
-        action,
-        {
-          grid: this.grid,
-          data: {
-            colWidths: colWidthsBeforeMutation,
-            withHeadings: this.model.withHeadings,
-            withHeadingColumn: this.model.withHeadingColumn,
-            initialColWidth: this.model.initialColWidth,
-          },
-          cellBlocks: this.cellBlocks,
-          blocksToDelete,
-        },
-      );
-
-      if (generationAtStart !== this.setDataGeneration || this.gridElement !== gridEl) {
-        return;
-      }
-
-      this.model.setColWidths(result.colWidths);
-      this.model.setWithHeadings(result.withHeadings);
-      this.model.setWithHeadingColumn(result.withHeadingColumn);
-      this.pendingHighlight = result.pendingHighlight;
-
-      updateHeadingStyles(this.gridElement, this.model.withHeadings);
-      updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
-      this.initResize(gridEl);
-      this.addControls?.syncRowButtonWidth();
-
-      // Heading toggles don't change grid structure (no rows/columns
-      // added/removed/moved), so grips don't need to be recreated.
-      // Skipping refresh() keeps the popover's trigger element intact.
-      const isHeadingToggle = action.type === 'toggle-heading' || action.type === 'toggle-heading-column';
-
-      if (!isHeadingToggle) {
-        this.rowColControls?.refresh();
-      }
-
-      if (!result.moveSelection) {
-        return;
-      }
-
-      // After move operations, select the moved row/column to show where it landed
-      const { type: moveType, index: moveIndex } = result.moveSelection;
-
-      if (moveType === 'row') {
-        this.cellSelection?.selectRow(moveIndex);
-      } else {
-        this.cellSelection?.selectColumn(moveIndex);
-      }
-
-      this.rowColControls?.setActiveGrip(moveType, moveIndex);
-    });
-  }
-
-  private syncModelForAction(action: RowColAction): { blocksToDelete?: string[] } {
-    switch (action.type) {
-      case 'insert-row-above':
-        this.model.addRow(action.index);
-        break;
-      case 'insert-row-below':
-        this.model.addRow(action.index + 1);
-        break;
-      case 'insert-col-left':
-        this.model.addColumn(action.index);
-        break;
-      case 'insert-col-right':
-        this.model.addColumn(action.index + 1);
-        break;
-      case 'move-row':
-        this.model.moveRow(action.fromIndex, action.toIndex);
-        break;
-      case 'move-col':
-        this.model.moveColumn(action.fromIndex, action.toIndex);
-        break;
-      case 'delete-row':
-        return this.model.deleteRow(action.index);
-      case 'delete-col':
-        return this.model.deleteColumn(action.index);
-      case 'toggle-heading':
-      case 'toggle-heading-column':
-        // Metadata only — handled after executeRowColAction
-        break;
-    }
-
-    return {};
-  }
-
-  private initResize(gridEl: HTMLElement): void {
-    this.resize?.destroy();
-
-    const isPercentMode = this.model.colWidths === undefined;
-    const widths = this.model.colWidths ?? readPixelWidths(gridEl);
-
-    if (!isPercentMode) {
-      enableScrollOverflow(this.ensureScrollContainer());
-    }
-
-    this.resize = new TableResize(
-      gridEl,
-      widths,
-      (newWidths: number[]) => {
-        this.model.setColWidths(newWidths);
-        enableScrollOverflow(this.ensureScrollContainer());
-        this.rowColControls?.positionGrips();
-        this.addControls?.syncRowButtonWidth();
-        this.scrollHaze?.update();
-      },
-      () => {
-        this.rowColControls?.hideAllGrips();
-      },
-      () => {
-        this.addControls?.syncRowButtonWidth();
-        this.scrollHaze?.update();
-      },
-      isPercentMode,
-    );
-  }
-
   private initCellBlocks(gridEl: HTMLElement): void {
     this.cellBlocks = new TableCellBlocks({
       api: this.api,
@@ -1527,559 +1024,6 @@ export class Table implements BlockTool {
     });
   }
 
-  private handleCellCopy(cells: HTMLElement[], clipboardData: DataTransfer): void {
-    const entries = this.collectCellBlockData(cells);
-
-    if (entries.length === 0) {
-      return;
-    }
-
-    const payload = serializeCellsToClipboard(entries);
-
-    clipboardData.setData('text/html', buildClipboardHtml(payload));
-    clipboardData.setData('text/plain', buildClipboardPlainText(payload));
-  }
-
-  private handleCellCopyViaButton(cells: HTMLElement[]): void {
-    const entries = this.collectCellBlockData(cells);
-
-    if (entries.length === 0) {
-      return;
-    }
-
-    const payload = serializeCellsToClipboard(entries);
-    const html = buildClipboardHtml(payload);
-    const plainText = buildClipboardPlainText(payload);
-
-    const htmlBlob = new Blob([html], { type: 'text/html' });
-    const textBlob = new Blob([plainText], { type: 'text/plain' });
-
-    void navigator.clipboard.write([
-      new ClipboardItem({
-        'text/html': htmlBlob,
-        'text/plain': textBlob,
-      }),
-    ]);
-  }
-
-  private handleCellColorChange(cells: HTMLElement[], color: string | null, mode: CellColorMode): void {
-    const gridEl = this.gridElement;
-
-    if (!gridEl) {
-      return;
-    }
-
-    this.runTransactedStructuralOp(() => {
-      for (const cell of cells) {
-        const coord = getCellPosition(gridEl, cell);
-
-        if (!coord) {
-          continue;
-        }
-
-        if (mode === 'backgroundColor') {
-          this.model.setCellColor(coord.row, coord.col, color ?? undefined);
-          cell.style.backgroundColor = color ?? '';
-        } else {
-          this.model.setCellTextColor(coord.row, coord.col, color ?? undefined);
-          cell.style.color = color ?? '';
-        }
-      }
-    });
-  }
-
-  private handleCellPlacementChange(cells: HTMLElement[], placement: CellPlacement): void {
-    const gridEl = this.gridElement;
-
-    if (!gridEl) {
-      return;
-    }
-
-    this.runTransactedStructuralOp(() => {
-      for (const cell of cells) {
-        const coord = getCellPosition(gridEl, cell);
-
-        if (!coord) {
-          continue;
-        }
-
-        this.model.setCellPlacement(coord.row, coord.col, placement === 'top-left' ? undefined : placement);
-
-        const blocksContainer = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
-
-        if (!blocksContainer) {
-          continue;
-        }
-
-        if (placement === 'top-left') {
-          blocksContainer.removeAttribute('data-blok-cell-placement');
-        } else {
-          blocksContainer.setAttribute('data-blok-cell-placement', placement);
-        }
-      }
-    });
-  }
-
-  private collectCellBlockData(
-    cells: HTMLElement[],
-  ): Array<{ row: number; col: number; blocks: ClipboardBlockData[]; color?: string; textColor?: string }> {
-    const gridEl = this.gridElement;
-
-    if (!gridEl) {
-      return [];
-    }
-
-    return cells.map(cell => {
-      const rowIndex = parseInt(cell.getAttribute(CELL_ROW_ATTR) ?? '0', 10);
-      const colIndex = parseInt(cell.getAttribute(CELL_COL_ATTR) ?? '0', 10);
-
-      const container = cell.querySelector(`[${CELL_BLOCKS_ATTR}]`);
-      const blocks: ClipboardBlockData[] = [];
-
-      if (!container) {
-        return { row: rowIndex, col: colIndex, blocks };
-      }
-
-      container.querySelectorAll('[data-blok-id]').forEach(blockEl => {
-        const blockId = blockEl.getAttribute('data-blok-id');
-
-        if (!blockId) {
-          return;
-        }
-
-        const blockIndex = this.api.blocks.getBlockIndex(blockId);
-
-        if (blockIndex === undefined) {
-          return;
-        }
-
-        const block = this.api.blocks.getBlockByIndex(blockIndex);
-
-        if (!block) {
-          return;
-        }
-
-        blocks.push({
-          tool: block.name,
-          data: block.preservedData,
-          ...(Object.keys(block.preservedTunes).length > 0
-            ? { tunes: block.preservedTunes }
-            : {}),
-        });
-      });
-
-      // Read-only legacy cells can render plain text without mounted block holders.
-      const text = blocks.length === 0 ? (container.innerHTML ?? '').trim() : '';
-
-      if (blocks.length === 0 && text.length > 0) {
-        blocks.push({
-          tool: 'paragraph',
-          data: { text },
-        });
-      }
-
-      const color = this.model.getCellColor(rowIndex, colIndex);
-      const textColor = this.model.getCellTextColor(rowIndex, colIndex);
-
-      return {
-        row: rowIndex,
-        col: colIndex,
-        blocks,
-        ...(color !== undefined ? { color } : {}),
-        ...(textColor !== undefined ? { textColor } : {}),
-      };
-    });
-  }
-
-  private initCellSelection(gridEl: HTMLElement): void {
-    this.cellSelection?.destroy();
-
-    // Get RectangleSelection from API
-    const rectangleSelection = this.api.rectangleSelection;
-
-    this.cellSelection = new TableCellSelection({
-      grid: gridEl,
-      rectangleSelection, // Pass reference
-      i18n: this.api.i18n,
-      isPopoverOpen: () => this.rowColControls?.isPopoverOpen ?? false,
-      onPointerDragActiveChange: (active) => {
-        this.api.blocks.setPointerDragActive?.(active);
-      },
-      onSelectionActiveChange: (hasSelection) => {
-        if (this.resize) {
-          this.resize.enabled = !hasSelection;
-        }
-
-        this.addControls?.setInteractive(!hasSelection);
-        this.cornerDrag?.setInteractive(!hasSelection);
-        this.rowColControls?.setGripsDisplay(!hasSelection);
-      },
-      onSelectionRangeChange: () => {
-        // Selection finalized — restore grips so hover works normally
-        this.rowColControls?.setGripsDisplay(true);
-      },
-      onClearContent: (cells) => {
-        const cellBlocks = this.cellBlocks;
-
-        if (!cellBlocks) {
-          return;
-        }
-
-        this.runTransactedStructuralOp(() => {
-          const blockIds = cellBlocks.getBlockIdsFromCells(cells);
-
-          cellBlocks.deleteBlocks(blockIds);
-
-          const gridEl = this.gridElement;
-
-          if (!gridEl) {
-            return;
-          }
-
-          for (const cell of cells) {
-            const coord = getCellPosition(gridEl, cell);
-
-            if (!coord) {
-              continue;
-            }
-
-            this.model.setCellColor(coord.row, coord.col, undefined);
-            this.model.setCellTextColor(coord.row, coord.col, undefined);
-            cell.style.backgroundColor = '';
-            cell.style.color = '';
-          }
-        });
-      },
-      onCopy: (cells, clipboardData) => {
-        this.handleCellCopy(cells, clipboardData);
-      },
-      onCut: (cells, clipboardData) => {
-        this.handleCellCopy(cells, clipboardData);
-      },
-      onCopyViaButton: (cells) => {
-        this.handleCellCopyViaButton(cells);
-      },
-      onColorChange: (cells, color, mode) => {
-        this.handleCellColorChange(cells, color, mode);
-      },
-      onPlacementChange: (cells, placement) => {
-        this.handleCellPlacementChange(cells, placement);
-      },
-      getCellPlacement: (row, col) => {
-        return this.model.getCellPlacement(row, col);
-      },
-      canMergeCells: (range) => {
-        return this.model.canMergeCells(range);
-      },
-      onMergeCells: (range) => {
-        this.runTransactedStructuralOp(() => {
-          this.model.mergeCells(range);
-          this.rebuildTableBody();
-        });
-      },
-      isMergedCell: (row, col) => {
-        return this.model.isMergedCell(row, col);
-      },
-      onSplitCell: (row, col) => {
-        this.runTransactedStructuralOp(() => {
-          this.model.splitCell(row, col);
-          this.rebuildTableBody();
-        });
-      },
-      getCellSpan: (row, col) => {
-        return this.model.getCellSpan(row, col);
-      },
-    });
-  }
-
-  private initScrollHaze(): void {
-    this.scrollHaze?.destroy();
-
-    if (!this.element || !this.scrollContainer) {
-      return;
-    }
-
-    this.scrollHaze = new TableScrollHaze();
-    this.scrollHaze.init(this.element, this.scrollContainer);
-  }
-
-  private initGridPasteListener(gridEl: HTMLElement): void {
-    const handler = (e: ClipboardEvent): void => {
-      this.handleGridPaste(e, gridEl);
-    };
-
-    gridEl.addEventListener('paste', handler);
-    this.gridPasteCleanup = () => {
-      gridEl.removeEventListener('paste', handler);
-    };
-  }
-
-  private handleGridPaste(e: ClipboardEvent, gridEl: HTMLElement): void {
-    if (this.readOnly || !e.clipboardData || e.defaultPrevented) {
-      return;
-    }
-
-    const html = e.clipboardData.getData('text/html');
-    const blokPayload = parseClipboardHtml(html);
-    const externalPayload = blokPayload === null ? parseGenericHtmlTable(html) : null;
-    const payload = blokPayload ?? externalPayload;
-
-    if (!payload) {
-      return;
-    }
-
-    /**
-     * If the pasted HTML contains multiple tables (e.g. from Google Docs),
-     * don't intercept — let the Paste module handle it as a document-level paste
-     * so each table becomes a separate block without overwriting existing cells.
-     */
-    if (
-      externalPayload !== null &&
-      new DOMParser().parseFromString(html, 'text/html').querySelectorAll('table').length > 1
-    ) {
-      return;
-    }
-
-    const activeElement = document.activeElement as HTMLElement | null;
-
-    if (!activeElement) {
-      return;
-    }
-
-    const targetCell = activeElement.closest<HTMLElement>(`[${CELL_ATTR}]`);
-
-    if (!targetCell || !gridEl.contains(targetCell)) {
-      return;
-    }
-
-    if (!targetCell.closest(`[${ROW_ATTR}]`)) {
-      return;
-    }
-
-    /**
-     * Single-cell (1×1) payloads should insert content inline at the caret
-     * position rather than replacing the entire target cell. This matches user
-     * expectations: copying one cell and pasting into another cell (or the same
-     * cell) appends/inserts the text instead of overwriting.
-     */
-    if (payload.rows === 1 && payload.cols === 1) {
-      e.preventDefault();
-      e.stopPropagation();
-      this.insertSingleCellPayloadInline(payload.cells[0][0]);
-
-      return;
-    }
-
-    e.preventDefault();
-    e.stopPropagation();
-
-    // Read true model coordinates from stamped data attributes
-    const targetRowIndex = parseInt(targetCell.getAttribute(CELL_ROW_ATTR) ?? '0', 10);
-    const targetColIndex = parseInt(targetCell.getAttribute(CELL_COL_ATTR) ?? '0', 10);
-
-    this.pastePayloadIntoCells(gridEl, payload, targetRowIndex, targetColIndex);
-  }
-
-  /**
-   * Insert the content of a single clipboard cell at the current caret position.
-   * Extracts text from each block and joins with line breaks.
-   */
-  private insertSingleCellPayloadInline(cell: { blocks: ClipboardBlockData[] }): void {
-    const html = cell.blocks
-      .map((block) => {
-        if (typeof block.data.text === 'string') {
-          return block.data.text;
-        }
-
-        return '';
-      })
-      .filter(Boolean)
-      .join('<br>');
-
-    if (!html) {
-      return;
-    }
-
-    const selection = window.getSelection();
-
-    if (!selection || selection.rangeCount === 0) {
-      return;
-    }
-
-    const range = selection.getRangeAt(0);
-
-    if (!range.collapsed) {
-      range.deleteContents();
-    }
-
-    const fragment = document.createDocumentFragment();
-    const wrapper = document.createElement('div');
-
-    wrapper.innerHTML = html;
-
-    Array.from(wrapper.childNodes).forEach((child) => fragment.appendChild(child));
-
-    if (fragment.childNodes.length === 0) {
-      fragment.appendChild(new Text());
-    }
-
-    const lastChild = fragment.lastChild as ChildNode;
-
-    range.insertNode(fragment);
-
-    const newRange = document.createRange();
-    const nodeToSetCaret = lastChild.nodeType === Node.TEXT_NODE ? lastChild : lastChild.firstChild;
-
-    if (nodeToSetCaret !== null && nodeToSetCaret.textContent !== null) {
-      newRange.setStart(nodeToSetCaret, nodeToSetCaret.textContent.length);
-    }
-
-    selection.removeAllRanges();
-    selection.addRange(newRange);
-  }
-
-  private pastePayloadIntoCells(
-    gridEl: HTMLElement,
-    payload: TableCellsClipboard,
-    startRow: number,
-    startCol: number,
-  ): void {
-    this.runTransactedStructuralOp(() => {
-      this.expandGridForPaste(gridEl, startRow + payload.rows, startCol + payload.cols);
-
-      // Paste block data into target cells
-      const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
-
-      Array.from({ length: payload.rows }, (_, r) => r).forEach((r) => {
-        const row = rows[startRow + r];
-
-        if (!row) {
-          return;
-        }
-
-        const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
-
-        Array.from({ length: payload.cols }, (_, c) => c).forEach((c) => {
-          const cell = cells[startCol + c] as HTMLElement | undefined;
-
-          if (cell) {
-            const cellPayload = payload.cells[r][c];
-
-            this.pasteCellPayload(cell, cellPayload);
-
-            // Sync pasted block IDs to model
-            const blockIds = this.cellBlocks?.getBlockIdsFromCells([cell]) ?? [];
-
-            this.model.setCellBlocks(startRow + r, startCol + c, blockIds);
-
-            // Restore cell colors from clipboard
-            const destRow = startRow + r;
-            const destCol = startCol + c;
-
-            this.model.setCellColor(destRow, destCol, cellPayload.color);
-            cell.style.backgroundColor = cellPayload.color ?? '';
-
-            this.model.setCellTextColor(destRow, destCol, cellPayload.textColor);
-            cell.style.color = cellPayload.textColor ?? '';
-          }
-        });
-      });
-
-      // Update table state after paste
-      this.initResize(gridEl);
-      this.addControls?.syncRowButtonWidth();
-      this.rowColControls?.refresh();
-    });
-
-    // Caret placement outside the lock (no structural mutation)
-    const updatedRows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
-    const lastRow = updatedRows[startRow + payload.rows - 1];
-    const lastCell = lastRow?.querySelectorAll(`[${CELL_ATTR}]`)[startCol + payload.cols - 1] as HTMLElement | undefined;
-
-    if (!lastCell || !this.cellBlocks || !this.api.caret) {
-      return;
-    }
-
-    const blockIds = this.cellBlocks.getBlockIdsFromCells([lastCell]);
-    const lastBlockId = blockIds[blockIds.length - 1];
-
-    if (lastBlockId === undefined) {
-      return;
-    }
-
-    this.api.caret.setToBlock(lastBlockId, 'end');
-  }
-
-  /**
-   * Expand the grid to have at least the required number of rows and columns.
-   */
-  private expandGridForPaste(gridEl: HTMLElement, neededRows: number, neededCols: number): void {
-    const currentRowCount = this.grid.getRowCount(gridEl);
-    const currentColCount = this.grid.getColumnCount(gridEl);
-
-    // Auto-expand rows
-    Array.from({ length: Math.max(0, neededRows - currentRowCount) }).forEach(() => {
-      this.grid.addRow(gridEl);
-      this.model.addRow();
-      populateNewCells(gridEl, this.cellBlocks);
-      updateHeadingStyles(this.gridElement, this.model.withHeadings);
-      updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
-    });
-
-    // Auto-expand columns
-    Array.from({ length: Math.max(0, neededCols - currentColCount) }).forEach(() => {
-      const colWidths = this.model.colWidths ?? readPixelWidths(gridEl);
-      const halfWidth = this.model.initialColWidth !== undefined
-        ? Math.round((this.model.initialColWidth / 2) * 100) / 100
-        : computeHalfAvgWidth(colWidths);
-
-      this.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
-      this.model.addColumn(undefined, halfWidth);
-      this.model.setColWidths([...colWidths, halfWidth]);
-      populateNewCells(gridEl, this.cellBlocks);
-      updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
-    });
-  }
-
-  /**
-   * Replace the contents of a single cell with data from the clipboard payload.
-   */
-  private pasteCellPayload(
-    cell: HTMLElement,
-    payloadCell: { blocks: ClipboardBlockData[] },
-  ): void {
-    // Clear existing blocks in this cell
-    if (this.cellBlocks) {
-      const existingIds = this.cellBlocks.getBlockIdsFromCells([cell]);
-
-      this.cellBlocks.deleteBlocks(existingIds);
-    }
-
-    const container = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
-
-    if (!container) {
-      return;
-    }
-
-    if (payloadCell.blocks.length === 0) {
-      this.cellBlocks?.ensureCellHasBlock(cell);
-
-      return;
-    }
-
-    for (const blockData of payloadCell.blocks) {
-      const block = this.api.blocks.insert(
-        blockData.tool,
-        blockData.data,
-        {},
-        this.api.blocks.getBlocksCount(),
-        false,
-      );
-
-      container.appendChild(block.holder);
-      this.api.blocks.setBlockParent(block.id, this.blockId ?? '');
-    }
-  }
 }
 
 export { isInsideTableCell, isRestrictedInTableCell, convertToParagraph } from './table-restrictions';

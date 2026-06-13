@@ -85,10 +85,13 @@ const createTableWithColWidths = (
 };
 
 /**
- * Invoke the private handleRowColAction method on a Table instance.
+ * Invoke the private handleRowColAction method, which now lives on the
+ * TableSubsystems manager owned by the Table instance.
  */
 const invokeAction = (table: Table, gridEl: HTMLElement, action: RowColAction): void => {
-  (table as unknown as { handleRowColAction: (grid: HTMLElement, a: RowColAction) => void })
+  const subsystems = (table as unknown as { subsystems: unknown }).subsystems;
+
+  (subsystems as { handleRowColAction: (grid: HTMLElement, a: RowColAction) => void })
     .handleRowColAction(gridEl, action);
 };
 

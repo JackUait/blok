@@ -14,27 +14,19 @@ It's headless on purpose. Blok ships the editing engine and a set of tools; it d
 
 ## What's in the box
 
-**Block tools.** Paragraph, heading, list, quote, callout, code, image, divider, table, toggle, and a column layout. There's also a Notion-style database block (with rows as child blocks), plus embed and bookmark blocks for pasted links.
-
-**Inline formatting.** Bold, italic, underline, strikethrough, inline code, link, and a highlight marker.
-
-**Slash menu and markdown shortcuts.** Type `/` in an empty block to search and insert. Or type markdown — `#`, `-`, `1.`, `[]`, `>` — and it converts on space.
-
-**Drag and drop.** Pointer-based reordering (not the flaky HTML5 drag API). Grab multiple blocks at once, hold Alt to duplicate while dragging, and it auto-scrolls near the edges. Keyboard works too.
-
-**Undo/redo on Yjs.** History is backed by a CRDT, so undo restores the caret where you left it, groups small edits sensibly, and you can batch changes atomically with `blocks.transact()`.
-
-**68 locales, RTL included.** Blok reads the browser language, lazy-loads the matching locale, and lays out right-to-left scripts correctly.
-
-**Plugin system.** Three extension points — block tools, inline tools, and block tunes — each with lifecycle hooks, paste handling, and conversion rules. Tools talk to the editor through 18 API namespaces (`blocks`, `caret`, `selection`, `history`, and so on).
-
-**Paste that doesn't mangle things.** A handler chain keeps block structure intact when you paste from Blok itself, strips the noise out of Google Docs HTML, and lets tools claim specific file types or patterns.
-
-**Block conversion.** Turn one block type into another from the inline toolbar or in code, one block or a whole selection at a time.
-
-**Read-only mode.** Call `readOnly.set(true)` and the editor re-renders without any editing affordances.
-
-**Accessibility.** ARIA live announcements for drag and block operations, Notion-style vertical caret movement, and semantic data attributes you can hook tests onto.
+| | |
+| --- | --- |
+| **Block tools** | Paragraph, heading, list, quote, callout, code, image, divider, table, toggle, and a column layout. Plus a Notion-style database block (rows are child blocks) and embed/bookmark blocks for pasted links. |
+| **Inline formatting** | Bold, italic, underline, strikethrough, inline code, link, and a highlight marker. |
+| **Slash menu & markdown** | Type `/` in an empty block to search and insert, or type markdown (`#`, `-`, `1.`, `[]`, `>`) and it converts on space. |
+| **Drag and drop** | Pointer-based reordering (not the flaky HTML5 drag API). Grab multiple blocks, hold Alt to duplicate while dragging, auto-scrolls near edges. Keyboard works too. |
+| **Undo/redo on Yjs** | History is CRDT-backed: undo restores the caret, groups small edits, and batches atomically via `blocks.transact()`. |
+| **68 locales, RTL** | Reads the browser language, lazy-loads the matching locale, and lays out right-to-left scripts correctly. |
+| **Plugin system** | Three extension points — block tools, inline tools, block tunes — with lifecycle hooks, paste handling, and conversion rules. Tools reach the editor through 18 API namespaces (`blocks`, `caret`, `selection`, …). |
+| **Smart paste** | A handler chain keeps block structure intact on internal paste, strips Google Docs HTML noise, and lets tools claim specific file types or patterns. |
+| **Block conversion** | Turn one block type into another from the inline toolbar or in code, one block or a whole selection at a time. |
+| **Read-only mode** | Call `readOnly.set(true)` and the editor re-renders without editing affordances. |
+| **Accessibility** | ARIA live announcements for drag and block ops, Notion-style vertical caret movement, semantic data attributes for tests. |
 
 ## Installation
 

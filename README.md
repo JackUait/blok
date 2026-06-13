@@ -6,90 +6,94 @@
 
 ## It's Blok!
 
-**Blok** is a headless, highly extensible rich text editor built for developers who need to implement a block-based editing experience (similar to Notion) without building it from scratch.
+Blok is a headless, block-based rich text editor for the web. If you've used Notion, you know the feel: every paragraph, heading, image, or list is its own block that you can drag around, nest, and convert into something else.
 
-Unlike traditional `contenteditable` solutions that treat text as a single HTML blob, Blok treats every piece of content—paragraphs, headings, images, lists—as an individual Block. This architecture allows for drag-and-drop reordering, complex nesting, and a strictly typed data structure.
+The difference from a normal `contenteditable` setup is the data. A `contenteditable` field hands you one HTML blob and leaves you to parse it. Blok stores content as typed JSON blocks instead, so the output is the same whether you save it to a database, diff it, or render it on a server that never touches the DOM.
 
-**Key Features:**
+It's headless on purpose. Blok ships the editing engine and a set of tools; it does not impose a chrome or a theme. You wire it into your own UI.
 
-**🧱 Block Architecture** — Content is structured as JSON blocks, not HTML, making it easy to store, transform, and render on any platform.
+## What's in the box
 
-**🛠️ Built-in Tools** — Ships with paragraph, header, list, table, and toggle blocks, plus inline formatting (bold, italic, link, marker) — all configurable.
+**Block tools.** Paragraph, heading, list, quote, callout, code, image, divider, table, toggle, and a column layout. There's also a Notion-style database block (with rows as child blocks), plus embed and bookmark blocks for pasted links.
 
-**⚡ Slash Commands & Markdown Shortcuts** — Type `/` to search and insert blocks, or use markdown syntax (`#`, `-`, `1.`, `[]`, `>`) that auto-converts on space.
+**Inline formatting.** Bold, italic, underline, strikethrough, inline code, link, and a highlight marker.
 
-**🖱️ Drag & Drop** — Pointer-based block reordering with multi-block drag, Alt+drag to duplicate, auto-scroll near edges, and full keyboard accessibility.
+**Slash menu and markdown shortcuts.** Type `/` in an empty block to search and insert. Or type markdown — `#`, `-`, `1.`, `[]`, `>` — and it converts on space.
 
-**🔄 CRDT-Powered History** — Undo/redo built on Yjs with caret restoration, smart edit grouping, and atomic transactions via `blocks.transact()`.
+**Drag and drop.** Pointer-based reordering (not the flaky HTML5 drag API). Grab multiple blocks at once, hold Alt to duplicate while dragging, and it auto-scrolls near the edges. Keyboard works too.
 
-**🌍 68 Locales & RTL** — Auto-detects browser language, lazy-loads locale data, and supports right-to-left languages out of the box.
+**Undo/redo on Yjs.** History is backed by a CRDT, so undo restores the caret where you left it, groups small edits sensibly, and you can batch changes atomically with `blocks.transact()`.
 
-**🔌 Extensible Plugin System** — Three tool types (BlockTool, InlineTool, BlockTune) with lifecycle hooks, paste configs, conversion configs, and access to 17 public API modules.
+**68 locales, RTL included.** Blok reads the browser language, lazy-loads the matching locale, and lays out right-to-left scripts correctly.
 
-**📦 Pre-configured Bundles** — Import `@jackuait/blok/full` for batteries-included setup with `defaultTools` or `allTools`, or import individual tools for full control.
+**Plugin system.** Three extension points — block tools, inline tools, and block tunes — each with lifecycle hooks, paste handling, and conversion rules. Tools talk to the editor through 18 API namespaces (`blocks`, `caret`, `selection`, `history`, and so on).
 
-**📋 Smart Paste** — Priority-based handler chain that preserves block structure on internal paste, cleans Google Docs HTML, and supports tool-specific file/pattern matching.
+**Paste that doesn't mangle things.** A handler chain keeps block structure intact when you paste from Blok itself, strips the noise out of Google Docs HTML, and lets tools claim specific file types or patterns.
 
-**🔀 Block Conversion** — Convert between block types from the inline toolbar or programmatically, with multi-block batch conversion support.
+**Block conversion.** Turn one block type into another from the inline toolbar or in code, one block or a whole selection at a time.
 
-**👁️ Read-Only Mode** — Toggle at runtime with `readOnly.set()` — re-renders all blocks with editing UI hidden.
+**Read-only mode.** Call `readOnly.set(true)` and the editor re-renders without any editing affordances.
 
-**♿ Accessible** — ARIA live announcements for drag and block operations, full keyboard navigation (Notion-style vertical caret movement), and semantic data attributes throughout.
+**Accessibility.** ARIA live announcements for drag and block operations, Notion-style vertical caret movement, and semantic data attributes you can hook tests onto.
 
 ## Installation
 
-**npm / yarn / pnpm (bundler):**
+With a bundler (Vite, webpack, Rollup, etc.):
 
 ```bash
 npm install @jackuait/blok
-# or
-yarn add @jackuait/blok
-# or
-pnpm add @jackuait/blok
+# or: yarn add @jackuait/blok / pnpm add @jackuait/blok
 ```
 
 ```js
-// ESM (Vite, webpack, Rollup, …)
+// ESM
 import Blok from '@jackuait/blok';
 
-// CommonJS (Node.js, Jest, …)
+// CommonJS
 const { Blok } = require('@jackuait/blok');
 ```
 
-**CDN (no bundler, `<script>` tag):**
+The core package ships the engine but no tools, so you choose what to load. Import individual tools from `@jackuait/blok/tools`, or grab the batteries-included bundle:
+
+```js
+import { Blok, defaultTools, defaultInlineTools } from '@jackuait/blok/full';
+
+new Blok({
+  holder: 'editor',
+  tools: defaultTools,
+  inlineTools: defaultInlineTools,
+});
+```
+
+### Other entry points
+
+- `@jackuait/blok/react` — a `useBlok` hook and a `BlokContent` component for React 18/19.
+- `@jackuait/blok/markdown` — `markdownToBlocks(md)` to import Markdown (GFM, with optional math) as Blok data.
+- `@jackuait/blok/locales` — locale data, if you'd rather load it yourself.
+
+### CDN (no bundler)
 
 ```html
-<!-- unpkg -->
 <script src="https://unpkg.com/@jackuait/blok/dist/blok.iife.js"></script>
-
-<!-- jsDelivr -->
-<script src="https://cdn.jsdelivr.net/npm/@jackuait/blok/dist/blok.iife.js"></script>
+<!-- or jsDelivr: https://cdn.jsdelivr.net/npm/@jackuait/blok/dist/blok.iife.js -->
 
 <script>
   const editor = new BlokEditor.Blok({ holder: 'editor' });
 </script>
 ```
 
-The IIFE bundle exposes everything under the `BlokEditor` global.
+The IIFE build puts everything under the `BlokEditor` global.
 
 ## Documentation
 
-📚 **Full documentation is available at [blokeditor.com](https://blokeditor.com)**
-
-Visit the documentation site for:
-- Complete API reference
-- Interactive demo
-- Usage guides and examples
-- Migration guide from Editor.js
+Full docs live at [blokeditor.com](https://blokeditor.com): API reference, an interactive demo, usage guides, and a migration guide if you're coming from Editor.js.
 
 ## Community
 
-💬 **Join the Telegram channel**: [t.me/that_ai_guy](https://t.me/that_ai_guy)
-
-Follow for updates, discussions, and insights about Blok and other projects.
+There's a Telegram channel at [t.me/that_ai_guy](https://t.me/that_ai_guy) for updates and questions about Blok and related projects.
 
 ## License & Attribution
 
-Blok is licensed under the [Apache License 2.0](./LICENSE). See the [NOTICE](./NOTICE) file for attribution details.
+Blok is licensed under the [Apache License 2.0](./LICENSE). See [NOTICE](./NOTICE) for attribution.
 
-Blok was originally forked from [Editor.js](https://github.com/codex-team/editor.js) by [CodeX](https://codex.so/) in November 2025 and has been substantially reworked since. The Editor.js codebase remains © CodeX under Apache-2.0; subsequent Blok-specific changes are © JackUait, also under Apache-2.0.
+Blok was forked from [Editor.js](https://github.com/codex-team/editor.js) by [CodeX](https://codex.so/) in November 2025 and reworked heavily since. The original Editor.js code remains © CodeX under Apache-2.0; Blok-specific changes are © JackUait, also under Apache-2.0.

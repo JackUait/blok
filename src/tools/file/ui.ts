@@ -9,6 +9,21 @@ export interface CaptionRowOptions {
   onChange(next: string): void;
 }
 
+/**
+ * Returns the url only when it carries an http(s) scheme, else null. Persisted
+ * block data is untrusted: a stored `javascript:`/`data:` url would execute on
+ * click, so it must never reach an anchor's href.
+ */
+function safeHttpHref(raw: string): string | null {
+  try {
+    const url = new URL(raw, window.location.href);
+
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Renders the static download card: type icon, filename, size, download affordance. */
 export function renderFileCard(data: Partial<FileData> & { url: string }): HTMLElement {
   const wrapper = document.createElement('div');
@@ -19,7 +34,10 @@ export function renderFileCard(data: Partial<FileData> & { url: string }): HTMLE
   link.className = 'blok-file-card';
   link.setAttribute('data-role', 'file-card');
   link.setAttribute('data-action', 'download');
-  link.setAttribute('href', data.url);
+  const href = safeHttpHref(data.url);
+  if (href !== null) {
+    link.setAttribute('href', href);
+  }
   link.setAttribute('target', '_blank');
   link.setAttribute('rel', 'noopener noreferrer');
   if (data.fileName) {

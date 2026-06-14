@@ -25,6 +25,27 @@ describe('renderFileCard', () => {
     const card = renderFileCard({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf' });
     expect(card.querySelector('[data-role="file-size"]')).toBeNull();
   });
+
+  it.each([
+    'javascript:alert(1)',
+    'JavaScript:alert(1)',
+    'javascript:alert(1)',
+    'data:text/html,<script>alert(1)</script>',
+    'vbscript:msgbox(1)',
+    'file:///etc/passwd',
+  ])('neutralizes non-http(s) scheme %s so it is not clickable', (url) => {
+    const card = renderFileCard({ url, fileName: 'x' });
+    const link = card.querySelector<HTMLAnchorElement>('a[data-action="download"]');
+    expect(link?.hasAttribute('href')).toBe(false);
+  });
+
+  it('preserves http and https schemes on the href', () => {
+    expect(
+      renderFileCard({ url: 'http://cdn/doc.pdf' })
+        .querySelector('a[data-action="download"]')
+        ?.getAttribute('href'),
+    ).toBe('http://cdn/doc.pdf');
+  });
 });
 
 describe('renderCaptionRow', () => {

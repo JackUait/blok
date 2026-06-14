@@ -91,6 +91,9 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.callout.colorOrange',
     'tools.image.emptyUpload',
     'tools.image.emptyLink',
+    // "Upload"/"Link" are the standard loanwords in Danish UIs.
+    'tools.file.emptyUpload',
+    'tools.file.emptyLink',
     'tools.database.defaultStatusProperty',
     'searchTerms.layout',
   ]),
@@ -100,6 +103,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'toolNames.code',
     'tools.code.codeTab',
     'tools.image.emptyLink',
+    // "Link" is the standard loanword for a hyperlink in German UIs.
+    'tools.file.emptyLink',
     'tools.database.viewTypeBoard',
     'tools.database.propertyTypeText',
     'tools.database.defaultStatusProperty',
@@ -107,12 +112,15 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'searchTerms.layout',
   ]),
   es: new Set(['tools.stub.error', 'tools.table.cellColor', 'tools.callout.color']),
-  et: new Set(['tools.image.emptyLink']),
+  et: new Set(['tools.image.emptyLink', 'tools.file.emptyLink']),
   fil: new Set([
     'tools.link.emailAddress',
     'tools.code.autoDetected',
     'tools.image.emptyLink',
     'tools.image.cropAspectRatio',
+    // "File"/"Link" are the standard loanwords in Filipino (Tagalog) UIs.
+    'toolNames.file',
+    'tools.file.emptyLink',
     'tools.database.viewTypeBoard',
     'tools.database.propertyTypeCheckbox',
     'tools.database.listView',
@@ -135,7 +143,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.database.propertyTypeDate',
   ]),
   id: new Set(['tools.image.cropRatioOval', 'tools.database.defaultStatusProperty']),
-  it: new Set(['searchTerms.layout']),
+  // "File" is the standard computing loanword in Italian (Notion/Google Docs).
+  it: new Set(['searchTerms.layout', 'toolNames.file']),
   ms: new Set(['tools.database.defaultStatusProperty']),
   nl: new Set([
     'toolNames.link',
@@ -144,6 +153,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.code.codeTab',
     'searchTerms.code',
     'tools.image.emptyLink',
+    // "Link" is the standard loanword for a hyperlink in Dutch UIs.
+    'tools.file.emptyLink',
     'tools.database.defaultStatusProperty',
   ]),
   no: new Set([
@@ -154,9 +165,11 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   pl: new Set([
     'toolNames.link',
     'tools.image.emptyLink',
+    // "Link" is the standard loanword for a hyperlink in Polish UIs.
+    'tools.file.emptyLink',
     'tools.database.defaultStatusProperty',
   ]),
-  pt: new Set(['toolNames.link', 'tools.image.emptyLink', 'tools.image.cropRatioOval', 'searchTerms.layout']),
+  pt: new Set(['toolNames.link', 'tools.image.emptyLink', 'tools.file.emptyLink', 'tools.image.cropRatioOval', 'searchTerms.layout']),
   ro: new Set([
     'toolNames.text',
     'toolNames.link',
@@ -164,6 +177,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'searchTerms.separator',
     'searchTerms.program',
     'tools.image.emptyLink',
+    // "Link" is the standard loanword for a hyperlink in Romanian UIs.
+    'tools.file.emptyLink',
     'tools.image.cropRatioOval',
     'tools.database.propertyTypeText',
   ]),

@@ -29,7 +29,6 @@ export class FileTool implements BlockTool {
   private root: HTMLElement | null = null;
   private state: ToolState;
   private uploadingEl: UploadingStateElement | null = null;
-  private emptyStateEl: EmptyStateElement | null = null;
   private lastFileName: string | null = null;
 
   constructor(options: BlockToolConstructorOptions<FileData, FileConfig>) {
@@ -185,7 +184,19 @@ export class FileTool implements BlockTool {
 
   private download(): void {
     const link = this.root?.querySelector<HTMLAnchorElement>('a[data-action="download"]');
-    link?.click();
+    if (link) {
+      link.click();
+      return;
+    }
+    if (!this.data.url) {
+      return;
+    }
+    const anchor = document.createElement('a');
+    anchor.href = this.data.url;
+    anchor.download = this.data.fileName ?? '';
+    anchor.target = '_blank';
+    anchor.rel = 'noopener noreferrer';
+    anchor.click();
   }
 
   private renderState(): void {
@@ -194,7 +205,6 @@ export class FileTool implements BlockTool {
     }
     this.root.innerHTML = '';
     this.uploadingEl = null;
-    this.emptyStateEl = null;
 
     if (this.state === 'EMPTY') {
       this.root.appendChild(this.buildEmpty());
@@ -214,7 +224,7 @@ export class FileTool implements BlockTool {
 
   private buildEmpty(): EmptyStateElement {
     const i18n = this.api.i18n;
-    const el = renderEmptyState({
+    return renderEmptyState({
       accept: this.config.types?.join(',') ?? '*',
       labels: {
         upload: i18n.t('tools.file.emptyUpload'),
@@ -228,8 +238,6 @@ export class FileTool implements BlockTool {
       onFile: (file) => this.startUpload(file),
       onUrl: (url) => this.startUrl(url),
     });
-    this.emptyStateEl = el;
-    return el;
   }
 
   private buildUploading(): UploadingStateElement {
@@ -257,7 +265,7 @@ export class FileTool implements BlockTool {
     const retry = document.createElement('button');
     retry.type = 'button';
     retry.className = 'blok-file-retry';
-    retry.setAttribute('data-action', 'retry');
+    retry.setAttribute('data-action', 'replace');
     retry.textContent = i18n.t('tools.file.errorReplace');
     retry.addEventListener('click', () => this.transitionToEmpty());
 

@@ -60,6 +60,14 @@ export const MigrationSteps: React.FC = () => {
           </p>
         </div>
 
+        <div className="migration-note" data-blok-testid="alias-note">
+          <h3 className="migration-note-title">{t('migration.aliasNoteTitle')}</h3>
+          <p className="migration-note-description">
+            {t('migration.aliasNoteDescription')}
+          </p>
+          <code className="migration-note-code">{t('migration.aliasNoteCode')}</code>
+        </div>
+
         <div className="changes-grid" data-blok-testid="changes-grid">
           {changeItems.map((item, index) => (
             <article
@@ -143,6 +151,118 @@ export const MigrationSteps: React.FC = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section
+        className="migration-section migration-section--surface"
+        data-blok-testid="custom-tools-section"
+      >
+        <div className="migration-section-header">
+          <span className="migration-section-badge">
+            {t('migration.step4Badge')}
+          </span>
+          <h2 className="migration-section-title">{t('migration.step4Title')}</h2>
+          <p className="migration-section-description">
+            {t('migration.step4Description')}
+          </p>
+        </div>
+
+        <div className="changes-grid" data-blok-testid="custom-tools-grid">
+          <article className="change-card" data-blok-testid="custom-tool-card">
+            <div className="change-card-header">
+              <span className="change-card-icon">@</span>
+              <h3 className="change-card-title">{t('migration.customInlineToolTitle')}</h3>
+            </div>
+            <div className="change-card-content">
+              <div className="diff-block">
+                <div className="diff-removed">
+                  <span className="diff-accent-bar" aria-hidden="true" />
+                  <span className="diff-marker" aria-label={t('migration.removed')}>−</span>
+                  <code>{t('migration.customInlineToolBefore')}</code>
+                </div>
+                <div className="diff-added">
+                  <span className="diff-accent-bar" aria-hidden="true" />
+                  <span className="diff-marker" aria-label={t('migration.added')}>+</span>
+                  <code>{t('migration.customInlineToolAfter')}</code>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article className="change-card" data-blok-testid="custom-tool-card">
+            <div className="change-card-header">
+              <span className="change-card-icon">⚡</span>
+              <h3 className="change-card-title">{t('migration.customInlineToolFastPathTitle')}</h3>
+            </div>
+            <div className="change-card-content">
+              <p className="migration-section-description">
+                {t('migration.customInlineToolFastPathNote')}
+              </p>
+              <code className="migration-note-code">{t('migration.customInlineToolFastPathCode')}</code>
+            </div>
+          </article>
+
+          <article className="change-card" data-blok-testid="custom-tool-card">
+            <div className="change-card-header">
+              <span className="change-card-icon">✓</span>
+              <h3 className="change-card-title">{t('migration.customBlockToolTitle')}</h3>
+            </div>
+            <div className="change-card-content">
+              <p className="migration-section-description">
+                {t('migration.customBlockToolNote')}
+              </p>
+            </div>
+          </article>
+        </div>
+
+        <div className="migration-note" data-blok-testid="dropped-fields-note">
+          <h3 className="migration-note-title">{t('migration.droppedFieldsTitle')}</h3>
+          <p className="migration-note-description">
+            {t('migration.droppedFieldsWarning')}
+          </p>
+          <div className="reference-mappings">
+            <div className="reference-mapping">
+              <div className="reference-mapping-old">
+                <code>{t('migration.droppedFieldsColBlock')}</code>
+              </div>
+              <div className="reference-mapping-new">
+                <code>{t('migration.droppedFieldsColFields')}</code>
+              </div>
+            </div>
+            <div className="reference-mapping">
+              <div className="reference-mapping-old">
+                <code>{t('migration.droppedFieldsQuoteBlock')}</code>
+              </div>
+              <div className="reference-mapping-new">
+                <code>{t('migration.droppedFieldsQuoteFields')}</code>
+              </div>
+            </div>
+            <div className="reference-mapping">
+              <div className="reference-mapping-old">
+                <code>{t('migration.droppedFieldsImageBlock')}</code>
+              </div>
+              <div className="reference-mapping-new">
+                <code>{t('migration.droppedFieldsImageFields')}</code>
+              </div>
+            </div>
+            <div className="reference-mapping">
+              <div className="reference-mapping-old">
+                <code>{t('migration.droppedFieldsLinkToolBlock')}</code>
+              </div>
+              <div className="reference-mapping-new">
+                <code>{t('migration.droppedFieldsLinkToolFields')}</code>
+              </div>
+            </div>
+            <div className="reference-mapping">
+              <div className="reference-mapping-old">
+                <code>{t('migration.droppedFieldsListBlock')}</code>
+              </div>
+              <div className="reference-mapping-new">
+                <code>{t('migration.droppedFieldsListFields')}</code>
+              </div>
+            </div>
           </div>
         </div>
       </section>

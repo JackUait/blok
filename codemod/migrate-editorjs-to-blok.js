@@ -961,6 +961,9 @@ function splitBlokImports(content) {
 }
 
 // Block type mappings for saved article data (JSON)
+// Note: editor.js `checklist` is intentionally NOT listed here. It needs 1:N
+// per-item block expansion, which the runtime handles automatically
+// (expandChecklistToHierarchical) — not the codemod's flat JSON type-rename pass.
 const BLOCK_TYPE_TRANSFORMS = {
   delimiter: 'divider',
 };
@@ -986,6 +989,9 @@ const BLOCK_TYPE_TRANSFORMS = {
 function migrateLegacyBlockShape(block) {
   if (!block || typeof block !== 'object' || Array.isArray(block)) {
     return block;
+  }
+  if (block.type === 'linkTool' && block.data && typeof block.data === 'object') {
+    return migrateLinkToolToBookmark(block);
   }
   if (block.type !== 'image' || !block.data || typeof block.data !== 'object') {
     return block;
@@ -1013,6 +1019,40 @@ function migrateLegacyBlockShape(block) {
       size: inheritedSize,
       ...rest,
       ...(withBorder === true ? { frame: 'border' } : {}),
+    },
+  };
+}
+
+/**
+ * Migrate a legacy editor.js linkTool block to a Blok bookmark block.
+ * Mirrors the runtime expansion in
+ * src/components/utils/data-model-transform.ts (expandLinkToolToHierarchical):
+ *
+ *   { type: 'linkTool', data: { link, meta: { title?, description?,
+ *       image: { url }? | string, favicon?, domain? } } }
+ *   → { type: 'bookmark', data: { url: link, title?, description?,
+ *       image?, favicon?, domain? } }
+ *
+ * `meta.image` is flattened to its `url` (object) or passed through (string).
+ * `meta.site_name` and any field with no bookmark equivalent are dropped.
+ * No meta → `{ url }` only.
+ * @param {Object} block - linkTool block object with `data`
+ * @returns {Object} bookmark block
+ */
+function migrateLinkToolToBookmark(block) {
+  const meta = block.data.meta && typeof block.data.meta === 'object' ? block.data.meta : {};
+  const image = typeof meta.image === 'object' && meta.image !== null ? meta.image.url : meta.image;
+
+  return {
+    ...block,
+    type: 'bookmark',
+    data: {
+      url: block.data.link,
+      ...(meta.title !== undefined ? { title: meta.title } : {}),
+      ...(meta.description !== undefined ? { description: meta.description } : {}),
+      ...(typeof image === 'string' ? { image } : {}),
+      ...(meta.favicon !== undefined ? { favicon: meta.favicon } : {}),
+      ...(meta.domain !== undefined ? { domain: meta.domain } : {}),
     },
   };
 }

@@ -186,6 +186,21 @@ export { DATA_ATTR, DataAttrKey, DataAttrValue, createSelector };
 export const version: string;
 
 /**
+ * Compatibility shim for migrating Editor.js custom inline tools.
+ * Adapts a legacy Editor.js-style inline tool class (render()→HTMLElement plus
+ * surround()/checkState()) into a Blok-compatible inline tool whose render()
+ * returns a MenuConfig.
+ * @param LegacyToolClass - an Editor.js-style inline tool class
+ */
+export function wrapLegacyInlineTool(
+  LegacyToolClass: new (options: InlineToolConstructorOptions) => {
+    render(): HTMLElement | null | undefined;
+    surround?(range: Range): void;
+    checkState?(selection: Selection | null): boolean;
+  }
+): InlineToolConstructable;
+
+/**
  * Main Blok class
  */
 export class Blok {
@@ -248,3 +263,6 @@ export class Blok {
    */
   public destroy(): void;
 }
+
+export { Blok as EditorJS };
+export default Blok;

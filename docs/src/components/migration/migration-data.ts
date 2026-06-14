@@ -52,6 +52,18 @@ export const CHANGE_ITEMS: ChangeItem[] = [
     removed: "data-id",
     added: "data-blok-id",
   },
+  {
+    icon: "7",
+    title: "Inline Tool render()",
+    removed: "render() { /* returns an HTMLElement button */ }",
+    added: "render() { return { icon, name, onActivate, isActive }; }",
+  },
+  {
+    icon: "8",
+    title: "Block Tools (unchanged)",
+    removed: "// no change needed",
+    added: "// render/save/validate + statics read by the same keys",
+  },
 ];
 
 export const CODEMOD_OPTIONS: CodemodOption[] = [

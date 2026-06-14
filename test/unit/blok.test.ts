@@ -141,7 +141,8 @@ vi.mock('@babel/register', () => ({}));
 vi.mock('../../src/components/polyfills', () => ({}));
 
 // Import Blok after mocks are set up
-import { Blok } from '../../src/blok';
+import { Blok, EditorJS } from '../../src/blok';
+import DefaultExport from '../../src/blok';
 
 describe('Blok', () => {
   // Get mocked instances
@@ -1188,6 +1189,25 @@ describe('Blok', () => {
     it('should expose version as static property', () => {
       expect(Blok.version).toBeDefined();
       expect(typeof Blok.version).toBe('string');
+    });
+  });
+
+  describe('Editor.js parity exports', () => {
+    it('should expose the default export as the Blok class', () => {
+      expect(DefaultExport).toBe(Blok);
+    });
+
+    it('should expose the EditorJS named alias as the Blok class', () => {
+      expect(EditorJS).toBe(Blok);
+    });
+
+    it('should construct via the EditorJS alias and expose isReady', async () => {
+      const editor = new EditorJS();
+
+      expect(editor).toBeInstanceOf(Blok);
+      expect(editor.isReady).toBeInstanceOf(Promise);
+
+      await editor.isReady;
     });
   });
 });

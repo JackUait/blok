@@ -183,4 +183,65 @@ describe('MigrationSteps', () => {
     // Count is interpolated: "{count} selectors" with CSS_MAPPINGS.length = 8
     expect(within(referenceCard).getByText(m.selectorsCount.replace('{count}', '8'))).toBeInTheDocument();
   });
+
+  it('should render the Custom Tools section heading and description', () => {
+    renderMigrationSteps();
+
+    const section = screen.getByTestId('custom-tools-section');
+    expect(within(section).getByText(m.step4Title)).toBeInTheDocument();
+    expect(within(section).getByText(m.step4Description)).toBeInTheDocument();
+  });
+
+  it('should render the inline-tool render → MenuConfig before/after sample', () => {
+    renderMigrationSteps();
+
+    const section = screen.getByTestId('custom-tools-section');
+    // Heading naming the inline-tool change
+    expect(within(section).getByText(m.customInlineToolTitle)).toBeInTheDocument();
+    // Before: returns an HTMLElement; After: returns a MenuConfig
+    expect(within(section).getByText(m.customInlineToolBefore)).toBeInTheDocument();
+    expect(within(section).getByText(m.customInlineToolAfter)).toBeInTheDocument();
+  });
+
+  it('should reassure that custom block tools port largely unchanged', () => {
+    renderMigrationSteps();
+
+    const section = screen.getByTestId('custom-tools-section');
+    expect(within(section).getByText(m.customBlockToolTitle)).toBeInTheDocument();
+    expect(within(section).getByText(m.customBlockToolNote)).toBeInTheDocument();
+  });
+
+  it('should render the drop-in EditorJS alias note', () => {
+    renderMigrationSteps();
+
+    const note = screen.getByTestId('alias-note');
+    expect(within(note).getByText(m.aliasNoteTitle)).toBeInTheDocument();
+    expect(within(note).getByText(m.aliasNoteDescription)).toBeInTheDocument();
+    expect(within(note).getByText(m.aliasNoteCode)).toBeInTheDocument();
+  });
+
+  it('should render the wrapLegacyInlineTool fast-path card', () => {
+    renderMigrationSteps();
+
+    const section = screen.getByTestId('custom-tools-section');
+    expect(within(section).getByText(m.customInlineToolFastPathTitle)).toBeInTheDocument();
+    expect(within(section).getByText(m.customInlineToolFastPathNote)).toBeInTheDocument();
+    expect(within(section).getByText(m.customInlineToolFastPathCode)).toBeInTheDocument();
+  });
+
+  it('should render the dropped-fields warnings note', () => {
+    renderMigrationSteps();
+
+    const note = screen.getByTestId('dropped-fields-note');
+    expect(within(note).getByText(m.droppedFieldsTitle)).toBeInTheDocument();
+    expect(within(note).getByText(m.droppedFieldsWarning)).toBeInTheDocument();
+  });
+
+  it('should render the linkTool.meta.site_name dropped field row', () => {
+    renderMigrationSteps();
+
+    const note = screen.getByTestId('dropped-fields-note');
+    expect(within(note).getByText('linkTool')).toBeInTheDocument();
+    expect(within(note).getByText('meta.site_name')).toBeInTheDocument();
+  });
 });

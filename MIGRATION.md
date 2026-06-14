@@ -11,6 +11,12 @@ This guide covers the breaking changes when migrating from EditorJS to Blok.
   - [Tool Configuration](#tool-configuration)
   - [Lifecycle Hooks](#lifecycle-hooks)
   - [Delimiter → Divider](#delimiter--divider)
+- [Migrating Custom Tools](#migrating-custom-tools)
+  - [Custom Block Tools (port unchanged)](#custom-block-tools-port-unchanged)
+  - [Custom Inline Tools (breaking rewrite)](#custom-inline-tools-breaking-rewrite)
+- [Saved Content / Data Migration](#saved-content--data-migration)
+  - [Auto-Migrated on Load](#auto-migrated-on-load)
+  - [Dropped Fields](#dropped-fields)
 - [Configuration Defaults](#configuration-defaults)
 - [New API Methods](#new-api-methods)
 - [DOM Selectors](#dom-selectors)
@@ -29,6 +35,17 @@ This guide covers the breaking changes when migrating from EditorJS to Blok.
 - const editor = new EditorJS({ ... });
 + const editor = new Blok({ ... });
 ```
+
+`Blok` is also exported as the **default export** and under an `EditorJS` alias, so you can keep your existing variable name and only change the import path — a minimal-diff, drop-in migration:
+
+```diff
+- import EditorJS from '@editorjs/editorjs';
++ import { EditorJS } from '@jackuait/blok';
+
+  const editor = new EditorJS({ ... }); // unchanged
+```
+
+`import Blok`, `import { Blok }`, and `import { EditorJS }` all resolve to the same class.
 
 ### Default Holder
 
@@ -292,6 +309,182 @@ const editor = new Blok({
 ```
 
 > **Note:** Blok automatically recognizes `"delimiter"` blocks and renders them as dividers, so existing articles work without data migration. However, renaming the type in your database is recommended for consistency.
+
+---
+
+## Migrating Custom Tools
+
+If your project ships its own tools, here's what changes and what doesn't.
+
+### Custom Block Tools (port unchanged)
+
+**Custom block tools work as-is.** Blok's `BlockTool` interface keeps the same shape as EditorJS, read by the **same keys**:
+
+- Methods: `render()`, `save()`, `validate()`, `renderSettings()`, `merge()`, `onPaste()`, and the lifecycle hooks `rendered()`, `updated()`, `removed()`, `moved()`.
+- Statics: `toolbox`, `conversionConfig`, `pasteConfig`, `isReadOnlySupported`, `enableLineBreaks`.
+
+In most cases you can drop your existing block tool into Blok without touching its code.
+
+#### New optional `setReadOnly(state)` method
+
+Blok adds an **optional** `setReadOnly(state: boolean)` method. It is not a breaking change:
+
+- **If you omit it**, read-only toggling still works — Blok falls back to a full re-render of the block (graceful degradation).
+- **If you implement it**, Blok performs a cheaper in-place toggle instead of re-rendering.
+
+```typescript
+class MyTool {
+  // ...render / save / validate as before...
+
+  // Optional: enables the cheaper in-place read-only toggle
+  setReadOnly(state: boolean): void {
+    this.input.contentEditable = state ? 'false' : 'true';
+  }
+}
+```
+
+#### New optional statics
+
+Two new **optional** statics exist for advanced cases; existing tools never need them:
+
+- `titleKey` — a translation key for the tool's toolbox title (i18n).
+- `provides` — lets one class register multiple block types.
+
+### Custom Inline Tools
+
+**This is the one API difference for custom tools.** EditorJS inline tools built a DOM button and used imperative `surround` / `checkState` / `renderActions` / `clear` methods. Blok's `InlineTool` (`types/tools/inline-tool.d.ts`) instead expects `render()` to return a declarative `MenuConfig` object with `onActivate` / `isActive` callbacks.
+
+You have two paths:
+
+#### Fast path — wrap with `wrapLegacyInlineTool`
+
+To keep an existing EditorJS inline tool working without a rewrite, wrap its class:
+
+```typescript
+import { wrapLegacyInlineTool } from '@jackuait/blok';
+import MarkerTool from './marker-tool'; // your existing EditorJS inline tool
+
+const editor = new Blok({
+  tools: {
+    marker: wrapLegacyInlineTool(MarkerTool),
+  },
+});
+```
+
+The shim adapts the legacy contract automatically: it calls your tool's `render()` for the icon, routes `onActivate` → `surround(range)` and `isActive` → `checkState(selection)`, and forwards the static `title` / `shortcut` / `sanitize`. Without wrapping, Blok silently skips a legacy `render()` that returns an `HTMLElement`, so the tool would vanish from the inline toolbar. `renderActions()` / `clear()` are not bridged.
+
+#### Native path — rewrite to `MenuConfig` (recommended)
+
+For full access to Blok features (nested items, confirmation), port to the native shape:
+
+#### Before (EditorJS)
+
+```typescript
+class MarkerTool {
+  static get isInline() { return true; }
+  static get title() { return 'Marker'; }
+
+  private button: HTMLButtonElement;
+
+  render(): HTMLElement {
+    this.button = document.createElement('button');
+    this.button.innerHTML = '<svg>...</svg>';
+    return this.button;
+  }
+
+  // Apply / remove formatting on the current range
+  surround(range: Range): void {
+    document.execCommand('backColor', false, '#ffd700');
+  }
+
+  // Reflect active state by inspecting the selection
+  checkState(selection: Selection): boolean {
+    const isActive = /* ...inspect selection... */;
+    this.button.classList.toggle('active', isActive);
+    return isActive;
+  }
+
+  renderActions(): HTMLElement { /* extra UI */ }
+  clear(): void { /* reset extra UI */ }
+}
+```
+
+#### After (Blok)
+
+```typescript
+import type { InlineTool, MenuConfig } from '@jackuait/blok';
+
+class MarkerTool implements InlineTool {
+  static isInline = true;
+  static title = 'Marker';
+  static titleKey = 'marker'; // optional i18n key
+
+  // render() now returns a MenuConfig object, not an HTMLElement
+  render(): MenuConfig {
+    return {
+      icon: '<svg>...</svg>',
+      name: 'marker',
+      // surround(range) logic moves here
+      onActivate: () => {
+        document.execCommand('backColor', false, '#ffd700');
+      },
+      // checkState(selection) logic moves here
+      isActive: () => {
+        const selection = window.getSelection();
+        return selection ? /* ...inspect selection... */ false : false;
+      },
+    };
+  }
+}
+```
+
+> See `src/components/inline-tools/inline-tool-bold.ts` for Blok's canonical inline tool. Its `render()` returns a `MenuConfig` with `onActivate` (apply/remove bold) and `isActive` (read the selection).
+
+#### Mapping reference
+
+| EditorJS | Blok |
+|----------|------|
+| `render()` returns an `HTMLElement` button | `render()` returns a `MenuConfig` `{ icon, name, onActivate, isActive }` |
+| `surround(range)` | logic moves into `onActivate()` |
+| `checkState(selection)` | logic moves into `isActive()` |
+| `renderActions()` / `clear()` | **removed** — no direct equivalent; use `MenuConfig` `children` for nested items |
+| `static get isInline()` / `static get title()` | still apply (plus optional `titleKey` for i18n) |
+
+---
+
+## Saved Content / Data Migration
+
+Existing EditorJS output data keeps working. Blok converts legacy block shapes to its own format **automatically when the block renders** — no migration script needed.
+
+### Auto-Migrated on Load
+
+These EditorJS block types and data shapes are recognized and converted on `render()`:
+
+| EditorJS block / shape | Becomes in Blok |
+|------------------------|-----------------|
+| `list` (nested items **and** string-array items) | Blok `list` |
+| `checklist` (standalone tool) | Blok `list` (checklist style) |
+| `image` `{ file: { url }, withBorder, stretched }` | Blok `image` |
+| `table` (HTML-string cells) | Blok `table` |
+| `header` | Blok `header` |
+| `code` | Blok `code` |
+| `delimiter` | Blok `divider` |
+| `linkTool` | Blok `bookmark` |
+
+No action is required — load your existing data and it renders correctly.
+
+### Dropped Fields
+
+A few EditorJS fields have no Blok equivalent and are **dropped** on load. The block still renders; only these specific fields are lost:
+
+| Block | Dropped field(s) |
+|-------|------------------|
+| `quote` | `caption`, `alignment` |
+| `image` | `withBackground` |
+| `linkTool` | `meta.site_name` |
+| `list` item | `meta` |
+
+When migration drops one of these, Blok emits a `console.warn` (prefixed `[Blok migration]`) naming the block type and field, so the loss is visible in the console rather than silent. If you depend on any of these, capture them before migrating.
 
 ---
 

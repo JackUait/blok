@@ -40,6 +40,33 @@ interface LegacyListData {
 }
 
 /**
+ * Standalone editor.js checklist data structure.
+ * Old format: { type: "checklist", data: { items: [{ text, checked }] } }
+ * Blok has no dedicated checklist tool — checklist is a style of the List tool —
+ * so this is expanded into per-item flat `list` blocks with style 'checklist'.
+ */
+interface LegacyChecklistData {
+  items: LegacyListItem[];
+}
+
+/**
+ * Editor.js linkTool (the @editorjs/link block) data structure.
+ * Old format: { type: "linkTool", data: { link, meta: { title, description, image: { url }, favicon, domain } } }
+ * Maps to Blok's flat Bookmark data shape (see types BookmarkMeta).
+ */
+interface LegacyLinkToolData {
+  link: string;
+  meta?: {
+    title?: string;
+    description?: string;
+    image?: { url?: string } | string;
+    favicon?: string;
+    domain?: string;
+    site_name?: string;
+  };
+}
+
+/**
  * Legacy toggle list data structure for data model transformation.
  * Old format: { title: string, isExpanded?: boolean, body: { blocks: [], time, version }, titleVariant?: number }
  */
@@ -97,6 +124,69 @@ const BG_PRESET_TO_VARIANT: Record<string, string> = {
  * Default emoji for callout blocks
  */
 const CALLOUT_DEFAULT_EMOJI = '💡';
+
+/**
+ * Emit a one-time `console.warn` per (blockType, field) pair during a single
+ * migration pass, recording emitted keys in `warned` so the same lossy field
+ * isn't reported twice. Lets users SEE what Editor.js data was dropped — the
+ * fields themselves are still dropped (no Blok equivalent), this only adds
+ * visibility.
+ */
+const warnLossyField = (
+  warned: Set<string>,
+  blockType: string,
+  field: string,
+  verb: 'dropped' | 'ignored'
+): void => {
+  const key = `${blockType}.${field}`;
+
+  if (warned.has(key)) {
+    return;
+  }
+  warned.add(key);
+
+  console.warn(`[Blok migration] ${blockType} block ${verb} unsupported field "${field}" (no Blok equivalent)`);
+};
+
+/**
+ * Type guard for object with a string property under `key`.
+ */
+const hasNonEmptyString = (data: unknown, key: string): boolean => {
+  if (typeof data !== 'object' || data === null) {
+    return false;
+  }
+  const value = (data as Record<string, unknown>)[key];
+
+  return typeof value === 'string' && value.length > 0;
+};
+
+/**
+ * Type guard: object has the given key defined (not undefined).
+ */
+const hasDefinedField = (data: unknown, key: string): boolean => {
+  if (typeof data !== 'object' || data === null) {
+    return false;
+  }
+
+  return (data as Record<string, unknown>)[key] !== undefined;
+};
+
+/**
+ * Warn for Editor.js quote fields Blok's quote tool (which uses { text, size })
+ * silently ignores. The block still passes through unchanged — this only adds
+ * visibility of the loss.
+ */
+const warnLossyQuoteFields = (block: OutputBlockData, warned: Set<string>): void => {
+  if (block.type !== 'quote') {
+    return;
+  }
+  if (hasNonEmptyString(block.data, 'caption')) {
+    warnLossyField(warned, 'quote', 'caption', 'ignored');
+  }
+  if (hasDefinedField(block.data, 'alignment')) {
+    warnLossyField(warned, 'quote', 'alignment', 'ignored');
+  }
+};
 
 /**
  * Result of analyzing the input data format
@@ -203,6 +293,30 @@ const isLegacyListBlock = (block: OutputBlockData): block is OutputBlockData<str
 };
 
 /**
+ * Check if a block is a standalone editor.js checklist (type "checklist" with items[])
+ */
+const isLegacyChecklistBlock = (block: OutputBlockData): block is OutputBlockData<string, LegacyChecklistData> => {
+  return (
+    block.type === 'checklist' &&
+    typeof block.data === 'object' &&
+    block.data !== null &&
+    Array.isArray((block.data as { items?: unknown }).items)
+  );
+};
+
+/**
+ * Check if a block is an editor.js linkTool (type "linkTool" with a string link)
+ */
+const isLegacyLinkToolBlock = (block: OutputBlockData): block is OutputBlockData<string, LegacyLinkToolData> => {
+  return (
+    block.type === 'linkTool' &&
+    typeof block.data === 'object' &&
+    block.data !== null &&
+    typeof (block.data as { link?: unknown }).link === 'string'
+  );
+};
+
+/**
  * Check if a block is in legacy toggleList format
  * Legacy format: { type: "toggleList", data: { title: "...", body: { blocks: [...] } } }
  */
@@ -297,7 +411,14 @@ export const analyzeDataFormat = (blocks: OutputBlockData[]): DataFormatAnalysis
   // Check if any block uses legacy image format (has data.file.url)
   const foundLegacyImage = blocks.some(isLegacyImageBlock);
 
-  const hasLegacyBlocks = foundLegacyList || foundLegacyToggle || foundLegacyCallout || foundLegacyImage;
+  // Check if any block is a standalone editor.js checklist
+  const foundLegacyChecklist = blocks.some(isLegacyChecklistBlock);
+
+  // Check if any block is an editor.js linkTool
+  const foundLegacyLinkTool = blocks.some(isLegacyLinkToolBlock);
+
+  const hasLegacyBlocks =
+    foundLegacyList || foundLegacyToggle || foundLegacyCallout || foundLegacyImage || foundLegacyChecklist || foundLegacyLinkTool;
 
   if (foundHierarchicalRefs && !hasLegacyBlocks) {
     return { format: 'hierarchical', hasHierarchy: true };
@@ -568,15 +689,19 @@ const expandCalloutToHierarchical = (
  * All other unknown fields pass through untouched so future editor.js data
  * can't silently lose information.
  */
-const expandImageToHierarchical = (block: OutputBlockData): OutputBlockData => {
+const expandImageToHierarchical = (block: OutputBlockData, warned: Set<string>): OutputBlockData => {
   const rawData = (block.data ?? {}) as Record<string, unknown>;
   const {
     file,
     withBorder,
-    withBackground: _withBackground,
+    withBackground,
     stretched,
     ...rest
   } = rawData;
+
+  if (withBackground === true) {
+    warnLossyField(warned, 'image', 'withBackground', 'dropped');
+  }
   const fileUrl = typeof file === 'object' && file !== null
     ? (file as { url?: unknown }).url
     : undefined;
@@ -595,12 +720,59 @@ const expandImageToHierarchical = (block: OutputBlockData): OutputBlockData => {
 };
 
 /**
+ * Expand a standalone editor.js checklist block into per-item flat `list`
+ * blocks with style 'checklist'. Blok has no dedicated checklist tool, so the
+ * items are routed through the same flattening used for legacy lists (which
+ * already normalizes the `{ text, checked }` item shape).
+ */
+const expandChecklistToHierarchical = (
+  data: LegacyChecklistData,
+  tunes?: OutputBlockData['tunes']
+): OutputBlockData[] => {
+  return expandListToHierarchical({ style: 'checklist', items: data.items }, tunes);
+};
+
+/**
+ * Expand an editor.js linkTool block into a Blok bookmark block. Maps
+ * `{ link, meta: { title, description, image: { url }, favicon, domain } }`
+ * to the flat bookmark shape `{ url, title?, description?, image?, favicon?, domain? }`.
+ * Fields with no Blok equivalent (e.g. meta.site_name) are dropped.
+ */
+const expandLinkToolToHierarchical = (
+  block: OutputBlockData<string, LegacyLinkToolData>,
+  warned: Set<string>
+): OutputBlockData => {
+  const meta = block.data.meta ?? {};
+  const image = typeof meta.image === 'object' && meta.image !== null ? meta.image.url : meta.image;
+
+  if (meta.site_name !== undefined) {
+    warnLossyField(warned, 'linkTool', 'site_name', 'dropped');
+  }
+
+  return {
+    ...block,
+    id: block.id ?? generateBlockId(),
+    type: 'bookmark',
+    data: {
+      url: block.data.link,
+      ...(meta.title !== undefined ? { title: meta.title } : {}),
+      ...(meta.description !== undefined ? { description: meta.description } : {}),
+      ...(typeof image === 'string' ? { image } : {}),
+      ...(meta.favicon !== undefined ? { favicon: meta.favicon } : {}),
+      ...(meta.domain !== undefined ? { domain: meta.domain } : {}),
+    },
+  };
+};
+
+/**
  * Expand legacy nested format to hierarchical flat-with-references format
  * @param blocks - array of blocks potentially containing nested structures
  * @returns expanded array of flat blocks with parent/content references
  */
 export const expandToHierarchical = (blocks: OutputBlockData[]): OutputBlockData[] => {
   const expandedBlocks: OutputBlockData[] = [];
+  // Dedupe lossy-field warnings to one per (blockType, field) for this pass.
+  const warnedFields = new Set<string>();
 
   for (const block of blocks) {
     if (isLegacyListBlock(block)) {
@@ -609,6 +781,14 @@ export const expandToHierarchical = (blocks: OutputBlockData[]): OutputBlockData
       const expanded = expandListToHierarchical(block.data, block.tunes);
 
       expandedBlocks.push(...expanded);
+    } else if (isLegacyChecklistBlock(block)) {
+      // Expand standalone editor.js checklist to flat list blocks (style 'checklist')
+      const expanded = expandChecklistToHierarchical(block.data, block.tunes);
+
+      expandedBlocks.push(...expanded);
+    } else if (isLegacyLinkToolBlock(block)) {
+      // Expand editor.js linkTool to a Blok bookmark block
+      expandedBlocks.push(expandLinkToolToHierarchical(block, warnedFields));
     } else if (isLegacyToggleListBlock(block)) {
       // Expand toggleList to flat toggle + child blocks
       const expanded = expandToggleListToHierarchical(block);
@@ -621,9 +801,12 @@ export const expandToHierarchical = (blocks: OutputBlockData[]): OutputBlockData
       expandedBlocks.push(...expanded);
     } else if (isLegacyImageBlock(block)) {
       // Expand legacy image (data.file.url → data.url) to new flat image shape
-      expandedBlocks.push(expandImageToHierarchical(block));
+      expandedBlocks.push(expandImageToHierarchical(block, warnedFields));
     } else {
-      // Non-list blocks pass through unchanged (with guaranteed ID)
+      // Non-list blocks pass through unchanged (with guaranteed ID).
+      // Editor.js quote blocks carry { caption, alignment } that Blok ignores.
+      warnLossyQuoteFields(block, warnedFields);
+
       expandedBlocks.push({
         ...block,
         id: block.id ?? generateBlockId(),

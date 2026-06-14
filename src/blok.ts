@@ -444,3 +444,12 @@ class Blok {
 }
 
 export { Blok };
+export { Blok as EditorJS };
+export default Blok;
+
+/**
+ * Compatibility shim for migrating Editor.js custom inline tools.
+ * Adapts a legacy `render()→HTMLElement` + `surround`/`checkState` tool
+ * into Blok's `render()→MenuConfig` inline tool contract.
+ */
+export { wrapLegacyInlineTool } from './components/inline-tools/wrap-legacy-inline-tool';

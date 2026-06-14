@@ -1357,6 +1357,106 @@ test('leaves already-migrated image blocks unchanged', () => {
 });
 
 // ============================================================================
+// Block Data Migration - linkTool → bookmark
+// ============================================================================
+
+test('migrates full linkTool to bookmark with all meta fields', () => {
+  const input = JSON.stringify({
+    blocks: [
+      {
+        id: 'b1',
+        type: 'linkTool',
+        data: {
+          link: 'https://example.com',
+          meta: {
+            title: 'Example',
+            description: 'A site',
+            image: { url: 'https://example.com/og.png' },
+            favicon: 'https://example.com/favicon.ico',
+            domain: 'example.com',
+          },
+        },
+      },
+    ],
+  }, null, 2);
+  const result = applyBlockTypeTransforms(input);
+  const parsed = JSON.parse(result);
+  const block = parsed.blocks[0];
+  assertEqual(block.id, 'b1', 'block id preserved');
+  assertEqual(block.type, 'bookmark');
+  assertEqual(block.data.url, 'https://example.com');
+  assertEqual(block.data.title, 'Example');
+  assertEqual(block.data.description, 'A site');
+  assertEqual(block.data.image, 'https://example.com/og.png', 'image object flattened to url string');
+  assertEqual(block.data.favicon, 'https://example.com/favicon.ico');
+  assertEqual(block.data.domain, 'example.com');
+  assertEqual(block.data.link, undefined, 'link key must be dropped');
+  assertEqual(block.data.meta, undefined, 'meta wrapper must be dropped');
+});
+
+test('migrates linkTool with string image (not object)', () => {
+  const input = JSON.stringify({
+    blocks: [
+      {
+        type: 'linkTool',
+        data: { link: 'https://x.io', meta: { image: 'https://x.io/p.png' } },
+      },
+    ],
+  }, null, 2);
+  const result = applyBlockTypeTransforms(input);
+  const parsed = JSON.parse(result);
+  assertEqual(parsed.blocks[0].type, 'bookmark');
+  assertEqual(parsed.blocks[0].data.url, 'https://x.io');
+  assertEqual(parsed.blocks[0].data.image, 'https://x.io/p.png', 'string image passed through');
+});
+
+test('drops meta.site_name and unknown meta fields silently', () => {
+  const input = JSON.stringify({
+    blocks: [
+      {
+        type: 'linkTool',
+        data: {
+          link: 'https://x.io',
+          meta: { title: 'T', site_name: 'X', somethingElse: 'y' },
+        },
+      },
+    ],
+  }, null, 2);
+  const result = applyBlockTypeTransforms(input);
+  const parsed = JSON.parse(result);
+  assertEqual(parsed.blocks[0].type, 'bookmark');
+  assertEqual(parsed.blocks[0].data.title, 'T');
+  assertEqual(parsed.blocks[0].data.site_name, undefined, 'site_name must be dropped');
+  assertEqual(parsed.blocks[0].data.somethingElse, undefined, 'unknown meta field must be dropped');
+});
+
+test('migrates linkTool with no meta to bookmark with only url', () => {
+  const input = JSON.stringify({
+    blocks: [
+      { type: 'linkTool', data: { link: 'https://only.url' } },
+    ],
+  }, null, 2);
+  const result = applyBlockTypeTransforms(input);
+  const parsed = JSON.parse(result);
+  assertEqual(parsed.blocks[0].type, 'bookmark');
+  assertEqual(parsed.blocks[0].data.url, 'https://only.url');
+  assertEqual(parsed.blocks[0].data.title, undefined, 'no title when no meta');
+  assertEqual(parsed.blocks[0].data.image, undefined, 'no image when no meta');
+});
+
+test('drops meta.image when it is an object without a url', () => {
+  const input = JSON.stringify({
+    blocks: [
+      { type: 'linkTool', data: { link: 'https://x.io', meta: { image: {} } } },
+    ],
+  }, null, 2);
+  const result = applyBlockTypeTransforms(input);
+  const parsed = JSON.parse(result);
+  assertEqual(parsed.blocks[0].type, 'bookmark');
+  assertEqual(parsed.blocks[0].data.image, undefined, 'image dropped when no url string');
+});
+
+// ============================================================================
 // Summary
 // ============================================================================
 

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { analyzeDataFormat, expandToHierarchical, collapseToLegacy, normalizeTableChildParents, reclaimDetachedTableCells } from '../../../../src/components/utils/data-model-transform';
 import type { OutputBlockData, BlockId } from '../../../../types';
 
@@ -3118,6 +3118,274 @@ describe('data-model-transform', () => {
       expect(result).toHaveLength(1);
       expect(result[0].type).toBe('image');
       expect(result[0].id).toBe('broken');
+    });
+  });
+  describe('analyzeDataFormat - legacy checklist', () => {
+    it('detects legacy format when a standalone checklist block is present', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          type: 'checklist',
+          data: { items: [{ text: 'a', checked: true }] },
+        },
+      ];
+
+      const result = analyzeDataFormat(blocks);
+
+      expect(result.format).toBe('legacy');
+    });
+  });
+  describe('expandToHierarchical - legacy checklist', () => {
+    it('converts a standalone editor.js checklist into per-item flat list blocks with checklist style', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          type: 'checklist',
+          data: {
+            items: [
+              { text: 'Buy milk', checked: true },
+              { text: 'Walk dog', checked: false },
+            ],
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].type).toBe('list');
+      expect(result[0].data).toEqual({ text: 'Buy milk', checked: true, style: 'checklist' });
+      expect(result[1].type).toBe('list');
+      expect(result[1].data).toEqual({ text: 'Walk dog', checked: false, style: 'checklist' });
+    });
+
+    it('generates ids for each produced checklist item block', () => {
+      const blocks: OutputBlockData[] = [
+        { type: 'checklist', data: { items: [{ text: 'only', checked: false }] } },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      expect(result[0].id).toBeDefined();
+      expect(typeof result[0].id).toBe('string');
+    });
+  });
+  describe('analyzeDataFormat - legacy linkTool', () => {
+    it('detects legacy format when a linkTool block is present', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          type: 'linkTool',
+          data: { link: 'https://example.com', meta: { title: 'Example' } },
+        },
+      ];
+
+      const result = analyzeDataFormat(blocks);
+
+      expect(result.format).toBe('legacy');
+    });
+  });
+  describe('expandToHierarchical - legacy linkTool', () => {
+    it('converts editor.js linkTool { link, meta } into a Blok bookmark block', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          type: 'linkTool',
+          data: {
+            link: 'https://example.com',
+            meta: {
+              title: 'Example',
+              description: 'An example site',
+              image: { url: 'https://example.com/og.png' },
+              favicon: 'https://example.com/favicon.ico',
+              domain: 'example.com',
+            },
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe('bookmark');
+      expect(result[0].data).toEqual({
+        url: 'https://example.com',
+        title: 'Example',
+        description: 'An example site',
+        image: 'https://example.com/og.png',
+        favicon: 'https://example.com/favicon.ico',
+        domain: 'example.com',
+      });
+    });
+
+    it('falls back to just the url when linkTool has no meta', () => {
+      const blocks: OutputBlockData[] = [
+        { type: 'linkTool', data: { link: 'https://example.com' } },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      expect(result[0].type).toBe('bookmark');
+      expect(result[0].data).toEqual({ url: 'https://example.com' });
+    });
+
+    it('preserves an existing id on a linkTool block', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'lt-1' as BlockId,
+          type: 'linkTool',
+          data: { link: 'https://example.com' },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      expect(result[0].id).toBe('lt-1');
+    });
+  });
+
+  describe('expandToHierarchical - lossy field migration warnings', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('warns when a legacy image block carries withBackground: true (and still drops it)', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          type: 'image',
+          data: {
+            file: { url: 'https://example.com/pic.png' },
+            withBackground: true,
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+      const data = result[0].data as Record<string, unknown>;
+
+      expect('withBackground' in data).toBe(false);
+      expect(console.warn).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(console.warn).mock.calls[0][0]).toContain('withBackground');
+    });
+
+    it('does NOT warn when a legacy image block has no withBackground', () => {
+      const blocks: OutputBlockData[] = [
+        { type: 'image', data: { file: { url: 'https://example.com/pic.png' } } },
+      ];
+
+      expandToHierarchical(blocks);
+
+      expect(console.warn).not.toHaveBeenCalled();
+    });
+
+    it('does NOT warn when a legacy image block has withBackground: false', () => {
+      const blocks: OutputBlockData[] = [
+        { type: 'image', data: { file: { url: 'u' }, withBackground: false } },
+      ];
+
+      expandToHierarchical(blocks);
+
+      expect(console.warn).not.toHaveBeenCalled();
+    });
+
+    it('warns when a linkTool block carries meta.site_name (and still drops it)', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          type: 'linkTool',
+          data: {
+            link: 'https://example.com',
+            meta: {
+              title: 'Example',
+              site_name: 'Example Inc',
+            },
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+      const data = result[0].data as Record<string, unknown>;
+
+      expect('site_name' in data).toBe(false);
+      expect(console.warn).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(console.warn).mock.calls[0][0]).toContain('site_name');
+    });
+
+    it('does NOT warn when a linkTool block has no meta.site_name', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          type: 'linkTool',
+          data: { link: 'https://example.com', meta: { title: 'Example' } },
+        },
+      ];
+
+      expandToHierarchical(blocks);
+
+      expect(console.warn).not.toHaveBeenCalled();
+    });
+
+    it('warns when a quote block carries a caption (quote passes through)', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'q-1' as BlockId,
+          type: 'quote',
+          data: { text: 'To be or not to be', caption: 'Shakespeare' },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe('quote');
+      expect(console.warn).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(console.warn).mock.calls[0][0]).toContain('caption');
+    });
+
+    it('warns when a quote block carries an alignment', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          type: 'quote',
+          data: { text: 'Quote text', alignment: 'center' },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      expect(result[0].type).toBe('quote');
+      expect(console.warn).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(console.warn).mock.calls[0][0]).toContain('alignment');
+    });
+
+    it('does NOT warn for a quote block with neither caption nor alignment', () => {
+      const blocks: OutputBlockData[] = [
+        { type: 'quote', data: { text: 'Quote text' } },
+      ];
+
+      expandToHierarchical(blocks);
+
+      expect(console.warn).not.toHaveBeenCalled();
+    });
+
+    it('does NOT warn for a quote block with an empty-string caption', () => {
+      const blocks: OutputBlockData[] = [
+        { type: 'quote', data: { text: 'Quote text', caption: '' } },
+      ];
+
+      expandToHierarchical(blocks);
+
+      expect(console.warn).not.toHaveBeenCalled();
+    });
+
+    it('does NOT warn for a clean document with no lossy fields', () => {
+      const blocks: OutputBlockData[] = [
+        { type: 'paragraph', data: { text: 'hello' } },
+        { type: 'image', data: { file: { url: 'u' }, withBorder: true } },
+        { type: 'linkTool', data: { link: 'https://example.com', meta: { title: 't' } } },
+      ];
+
+      expandToHierarchical(blocks);
+
+      expect(console.warn).not.toHaveBeenCalled();
     });
   });
 });

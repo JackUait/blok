@@ -69,6 +69,15 @@ export class FileTool implements BlockTool {
     this.renderState();
   }
 
+  /**
+   * Anchor the +/drag toolbar to the file card at the top. The caption row
+   * below is contenteditable, so the default contenteditable-descendant search
+   * would otherwise center the toolbar on the caption at the block's bottom.
+   */
+  public getToolbarAnchorElement(): HTMLElement | undefined {
+    return this.root?.querySelector<HTMLElement>('[data-role="file-card"]') ?? undefined;
+  }
+
   public onPaste(event: PasteEvent): void {
     if (event.type === 'file') {
       this.startUpload((event as FilePasteEvent).detail.file);

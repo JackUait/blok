@@ -51,6 +51,20 @@ describe('FileTool — rendering', () => {
     expect(link?.getAttribute('href')).toBe('https://cdn/doc.pdf');
     expect(root.querySelector('[data-role="file-name"]')?.textContent).toBe('doc.pdf');
   });
+
+  it('anchors the toolbar to the file card, not the bottom caption', () => {
+    // The caption row is contenteditable and sits below the card. Without an
+    // explicit anchor the toolbar's contenteditable-descendant search would
+    // center the +/drag handle on the caption (block bottom). The tool must
+    // anchor the toolbar to the card at the top instead.
+    const tool = new FileTool(createOptions({
+      url: 'https://cdn/doc.pdf', fileName: 'doc.pdf', caption: 'hello', captionVisible: true,
+    }));
+    const root = tool.render();
+
+    expect(root.querySelector('[data-role="file-caption"]')).not.toBeNull();
+    expect(tool.getToolbarAnchorElement()).toBe(root.querySelector('[data-role="file-card"]'));
+  });
 });
 
 describe('FileTool — save & validate', () => {

@@ -780,6 +780,80 @@ const editor = new Blok({
   },
 });`,
   },
+  {
+    id: 'file',
+    exportName: 'File',
+    type: 'block',
+    badge: 'Block Tool',
+    title: 'File',
+    description:
+      'An attachment card for any uploaded file. Shows a type icon, filename, human-readable size, a download action, and an optional caption. Files are sent through a consumer-supplied uploader; when none is provided the tool falls back to a local blob URL (uploadByFile) or the pasted URL itself (uploadByUrl). An optional MIME allowlist and max size can gate what is accepted.',
+    importExample: `import { File } from '@jackuait/blok/tools';`,
+    configOptions: [
+      {
+        option: 'uploader',
+        type: 'FileUploader',
+        default: 'undefined',
+        description:
+          'Consumer-supplied uploader with optional `uploadByFile(file, ctx)` and `uploadByUrl(url, ctx)` methods, each resolving to `{ url, fileName?, size?, mimeType? }`. The `ctx.onProgress(percent)` callback reports upload progress. When omitted, files fall back to a blob URL or the pasted URL.',
+      },
+      {
+        option: 'types',
+        type: 'string[]',
+        default: 'undefined',
+        description: 'Optional MIME allowlist. When omitted, files of any type are accepted.',
+      },
+      {
+        option: 'maxSize',
+        type: 'number',
+        default: 'undefined',
+        description: 'Optional max file size in bytes. When omitted, files of any size are accepted.',
+      },
+      {
+        option: 'captionPlaceholder',
+        type: 'string',
+        default: 'undefined',
+        description: 'Placeholder text shown in the caption field.',
+      },
+    ],
+    saveDataShape: `interface FileData {
+  url: string;             // File source URL — http(s) or blob:
+  fileName?: string;       // Original filename, when known
+  size?: number;           // File size in bytes; rendered human-readable
+  mimeType?: string;       // MIME type; used to pick the type icon
+  caption?: string;        // Plain-text caption
+  captionVisible?: boolean; // Caption visible in the rendered state (default true)
+}`,
+    saveDataExample: `{
+  "id": "fil001",
+  "type": "file",
+  "data": {
+    "url": "https://example.com/files/report.pdf",
+    "fileName": "report.pdf",
+    "size": 184320,
+    "mimeType": "application/pdf"
+  }
+}`,
+    usageExample: `import { Blok } from '@jackuait/blok';
+import { File } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    file: {
+      class: File,
+      config: {
+        uploader: {
+          async uploadByFile(file) {
+            const url = await myUpload(file);
+            return { url, fileName: file.name, size: file.size, mimeType: file.type };
+          },
+        },
+      },
+    },
+  },
+});`,
+  },
 
   // ── Inline Tools ──────────────────────────────────────────────────────────
   {

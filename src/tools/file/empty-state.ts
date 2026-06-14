@@ -1,4 +1,4 @@
-import { IconFile } from '../../components/icons';
+import { IconUpload } from '../../components/icons';
 
 export interface EmptyStateLabels {
   upload: string;
@@ -51,7 +51,7 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
   choose.type = 'button';
   choose.className = 'blok-file-choose';
   choose.setAttribute('data-action', 'choose-file');
-  choose.innerHTML = `${IconFile}<span>${opts.labels.chooseFile}</span>`;
+  choose.innerHTML = `${IconUpload}<span>${opts.labels.chooseFile}</span>`;
   choose.addEventListener('click', (ev) => {
     ev.stopPropagation();
     input.click();

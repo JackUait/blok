@@ -176,6 +176,12 @@
   --blok-color-accent: #2383e2;
   --blok-color-danger: #e24a4a;
 
+  /* File tool — Airbnb "Rausch" coral signature: warm accent for the file
+     icon tile, primary insert button, and progress fill. */
+  --blok-file-accent: #ff385c;
+  --blok-file-accent-hover: #e31c5f;
+  --blok-file-accent-soft: rgba(255, 56, 92, 0.1);
+
   /* Overlay tokens (for dark-on-image chrome: toolbars, badges, shimmer).
      These surfaces stay dark regardless of page theme, so their foreground
      token (`fg-strong`) must always be light — never `--blok-bg-primary`. */
@@ -262,6 +268,7 @@
   --blok-radius-sm: 3px;
   --blok-radius-md: 6px;
   --blok-radius-lg: 12px;
+  --blok-radius-xl: 16px;
   --blok-radius-pill: 999px;
 
   /* Image resize-handle surface colors (Notion-style dark pill + white rim). */
@@ -512,6 +519,11 @@
     --blok-color-accent: #4c9fff;
     --blok-color-danger: #ff6b6b;
 
+    /* File tool — coral signature, brightened for dark surfaces. */
+    --blok-file-accent: #ff5a76;
+    --blok-file-accent-hover: #ff385c;
+    --blok-file-accent-soft: rgba(255, 90, 118, 0.16);
+
     /* Image-tool — dark elevation + denser overlay chrome with hairline ring. */
     --blok-image-shadow-resting: 0 10px 28px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.05);
     --blok-image-shadow-toolbar: 0 12px 28px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
@@ -676,6 +688,11 @@
   --blok-text-tertiary: #6e6e68;
   --blok-color-accent: #4c9fff;
   --blok-color-danger: #ff6b6b;
+
+  /* File tool — coral signature, brightened for dark surfaces. */
+  --blok-file-accent: #ff5a76;
+  --blok-file-accent-hover: #ff385c;
+  --blok-file-accent-soft: rgba(255, 90, 118, 0.16);
 
   /* Image-tool — dark elevation + denser overlay chrome with hairline ring. */
   --blok-image-shadow-resting: 0 10px 28px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.05);

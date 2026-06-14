@@ -1,9 +1,12 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { isBuiltin } from 'node:module'
-import { resolve, join } from 'node:path'
+import { resolve, join, dirname } from 'node:path'
 import { describe, it, expect } from 'vitest'
 
-const dist = resolve(__dirname, '../../../dist')
+const repoRoot = resolve(__dirname, '../../../')
+const dist = resolve(repoRoot, 'dist')
+const typesDir = resolve(repoRoot, 'types')
+const srcDir = resolve(repoRoot, 'src')
 
 /**
  * Walk every emitted JS file in dist and collect the set of *external* packages
@@ -61,6 +64,101 @@ function collectDistExternals(): Set<string> {
   return externals
 }
 
+/** Recursively list every emitted declaration (.d.ts) file under a directory. */
+function listDtsFiles(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = join(dir, entry.name)
+    if (entry.isDirectory()) {
+      return listDtsFiles(full)
+    }
+    return entry.name.endsWith('.d.ts') ? [full] : []
+  })
+}
+
+/** Every module specifier (relative or bare) referenced by a source/declaration file. */
+function specifiersInSource(source: string): string[] {
+  return [...source.matchAll(SPECIFIER_RE)].map((match) => match[1])
+}
+
+/** Resolve a relative specifier from a file to an on-disk module path, or null. */
+function resolveRelativeModule(fromFile: string, spec: string): string | null {
+  const base = resolve(dirname(fromFile), spec)
+  for (const candidate of [`${base}.ts`, join(base, 'index.ts'), `${base}.d.ts`, base]) {
+    if (existsSync(candidate)) {
+      return candidate
+    }
+  }
+  return null
+}
+
+/**
+ * The published `types/*.d.ts` re-export symbols straight from `src/*.ts`, so a
+ * consumer that imports those entry points pulls the referenced src modules into
+ * its own type program — and therefore must be able to resolve every external
+ * package those src modules import. Walk the src graph reachable from the
+ * published declarations and collect those externals: each one legitimately
+ * belongs in `dependencies` even though the bundle inlines it.
+ */
+/** Resolve a file's relative imports to the src modules they reference. */
+function resolvedSrcImports(file: string): string[] {
+  return specifiersInSource(readFileSync(file, 'utf-8'))
+    .filter((spec) => spec.startsWith('.'))
+    .map((spec) => resolveRelativeModule(file, spec))
+    .filter((module): module is string => module !== null && module.startsWith(srcDir))
+}
+
+/** External package names a file imports via bare specifiers. */
+function externalImports(file: string): string[] {
+  return specifiersInSource(readFileSync(file, 'utf-8'))
+    .filter((spec) => !spec.startsWith('.'))
+    .map((spec) => externalPackageName(spec))
+    .filter((pkg): pkg is string => pkg !== null)
+}
+
+function srcModulesReferencedByPublishedTypes(): string[] {
+  return listDtsFiles(typesDir).flatMap((dts) => resolvedSrcImports(dts))
+}
+
+/**
+ * Relative references in a published declaration file that resolve to a module
+ * outside the published `files` set (or not at all). These break a consumer's
+ * type resolution — e.g. a `../src/...` re-export once `src` is dropped from
+ * the published tarball.
+ */
+function danglingRefsInDeclaration(dts: string, publishedRoots: Set<string>): string[] {
+  return specifiersInSource(readFileSync(dts, 'utf-8'))
+    .filter((spec) => spec.startsWith('.'))
+    .map((spec) => {
+      const resolved = resolveRelativeModule(dts, spec)
+      if (resolved === null) {
+        return `${dts} -> ${spec} (unresolved)`
+      }
+      const topLevel = resolved.slice(repoRoot.length + 1).split('/')[0]
+      return publishedRoots.has(topLevel)
+        ? null
+        : `${dts} -> ${spec} (resolves into unpublished "${topLevel}/")`
+    })
+    .filter((entry): entry is string => entry !== null)
+}
+
+function collectTypeSurfaceExternals(): Set<string> {
+  const externals = new Set<string>()
+  const visited = new Set<string>()
+  const queue = srcModulesReferencedByPublishedTypes()
+  while (queue.length > 0) {
+    const file = queue.pop()
+    if (file === undefined || visited.has(file) || !file.endsWith('.ts')) {
+      continue
+    }
+    visited.add(file)
+    for (const pkg of externalImports(file)) {
+      externals.add(pkg)
+    }
+    queue.push(...resolvedSrcImports(file).filter((next) => !visited.has(next)))
+  }
+  return externals
+}
+
 describe('CJS bundle outputs', () => {
   it('produces blok.cjs', () => {
     expect(existsSync(resolve(dist, 'blok.cjs'))).toBe(true)
@@ -86,6 +184,24 @@ describe('CJS bundle outputs', () => {
 describe('IIFE bundle output', () => {
   it('produces blok.iife.js', () => {
     expect(existsSync(resolve(dist, 'blok.iife.js'))).toBe(true)
+  })
+})
+
+describe('UMD drop-in global output (Editor.js compatibility)', () => {
+  it('produces blok.umd.js', () => {
+    expect(existsSync(resolve(dist, 'blok.umd.js'))).toBe(true)
+  })
+
+  it('exposes the EditorJS global as the constructor itself (not a namespace)', () => {
+    const umd = readFileSync(resolve(dist, 'blok.umd.js'), 'utf-8')
+    // Vite/Rollup UMD wrapper references the global name in its factory boilerplate.
+    expect(umd).toMatch(/EditorJS/)
+    // With `output.exports: 'default'` the global is assigned the default export
+    // directly: `global.EditorJS = factory()`. A namespace build would instead
+    // produce `global.EditorJS = {}` then attach members (`.default`, `.Blok`),
+    // which would force `new EditorJS.default(...)`. Guard against that regression.
+    expect(umd).not.toMatch(/EditorJS\s*=\s*\{\s*\}/)
+    expect(umd).not.toMatch(/EditorJS\.default\s*=/)
   })
 })
 
@@ -130,6 +246,10 @@ describe('package.json exports include require conditions', () => {
   it('"./markdown" export has "require" condition', () => {
     expect((packageJson.exports['./markdown'] as Record<string, string>)['require']).toBe('./dist/markdown.cjs')
   })
+
+  it('"./umd" export points at the drop-in global bundle', () => {
+    expect((packageJson.exports['./umd'] as Record<string, string>)['default']).toBe('./dist/blok.umd.js')
+  })
 })
 
 describe('package.json top-level fields for CJS + IIFE', () => {
@@ -152,18 +272,23 @@ describe('package.json top-level fields for CJS + IIFE', () => {
 
 describe('published package is self-contained (install footprint)', () => {
   const manifest = packageJson as {
+    files?: string[]
     dependencies?: Record<string, string>
     peerDependencies?: Record<string, string>
   }
   const runtimeDeps = Object.keys(manifest.dependencies ?? {})
   const peerDeps = Object.keys(manifest.peerDependencies ?? {})
+  const publishedRoots = new Set(manifest.files ?? [])
 
-  it('every runtime dependency is actually imported by dist (no redundant bundled deps)', () => {
-    // Bundled-but-undeclared-as-external deps make consumers install packages
-    // that are never imported. Anything in `dependencies` must show up as a real
-    // external import in the built output.
-    const externals = collectDistExternals()
-    const redundant = runtimeDeps.filter((dep) => !externals.has(dep))
+  it('every runtime dependency is needed by the published output (no redundant bundled deps)', () => {
+    // A runtime dependency is justified only if a consumer actually needs it
+    // installed: either dist imports it as a real external (not inlined), or the
+    // published type declarations re-export src modules that import it. Heavy
+    // build-only libs that are fully inlined into dist (e.g. mermaid, katex,
+    // prismjs) belong in devDependencies — listing them here forces consumers
+    // (and tools like bundlephobia) to install hundreds of MB never imported.
+    const justified = new Set([...collectDistExternals(), ...collectTypeSurfaceExternals()])
+    const redundant = runtimeDeps.filter((dep) => !justified.has(dep))
     expect(redundant).toEqual([])
   })
 
@@ -172,5 +297,29 @@ describe('published package is self-contained (install footprint)', () => {
     const declared = new Set([...runtimeDeps, ...peerDeps])
     const undeclared = externals.filter((pkg) => !declared.has(pkg))
     expect(undeclared).toEqual([])
+  })
+
+  it('every external imported via the published type surface is a declared dependency', () => {
+    // types/*.d.ts re-export from src/*.ts; consumers type-checking those entries
+    // must resolve the external packages those src modules import. Transitive type
+    // providers arrive through the declared ones, so only require that the direct
+    // type-surface externals which are also npm package roots are declared.
+    const declared = new Set([...runtimeDeps, ...peerDeps])
+    const undeclared = [...collectTypeSurfaceExternals()].filter(
+      (pkg) => !declared.has(pkg) && existsSync(resolve(repoRoot, 'node_modules', pkg, 'package.json')),
+    )
+    // Only direct dependencies must be declared; transitive providers (e.g.
+    // micromark-util-types, @types/mdast) are pulled in by the declared cluster.
+    const transitiveOnly = new Set(['mdast', 'micromark-util-types', '@types/mdast', '@types/unist'])
+    expect(undeclared.filter((pkg) => !transitiveOnly.has(pkg))).toEqual([])
+  })
+
+  it('no published type declaration references a path outside the published files', () => {
+    // Removing `src` from `files` while types/*.d.ts still re-export from `../src`
+    // leaves dangling module references that break consumers' type resolution.
+    const dangling = listDtsFiles(typesDir).flatMap((dts) =>
+      danglingRefsInDeclaration(dts, publishedRoots),
+    )
+    expect(dangling).toEqual([])
   })
 })

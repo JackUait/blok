@@ -56,6 +56,9 @@
       "types": "./types/markdown.d.ts",
       "import": "./dist/markdown.mjs",
       "require": "./dist/markdown.cjs"
+    },
+    "./umd": {
+      "default": "./dist/blok.umd.js"
     }
   },
   "bin": {
@@ -64,6 +67,7 @@
   "files": [
     "dist",
     "types",
+    "src",
     "codemod",
     "NOTICE"
   ],
@@ -90,9 +94,9 @@
   "scripts": {
     "serve": "vite --no-open",
     "serve:docs": "cd docs && vite --port 8080",
-    "build": "node scripts/generate-fonts.mjs && vite build --mode production && vite build --config vite.config.iife.mjs --mode production && node scripts/build-locales.mjs",
+    "build": "node scripts/generate-fonts.mjs && vite build --mode production && vite build --config vite.config.iife.mjs --mode production && vite build --config vite.config.umd.mjs --mode production && node scripts/build-locales.mjs",
     "build:cli": "node scripts/build-cli.mjs",
-    "build:test": "node scripts/generate-fonts.mjs && vite build --mode test && vite build --config vite.config.iife.mjs --mode test && node scripts/build-locales.mjs test && node scripts/build-react-vendor.mjs",
+    "build:test": "node scripts/generate-fonts.mjs && vite build --mode test && vite build --config vite.config.iife.mjs --mode test && vite build --config vite.config.umd.mjs --mode test && node scripts/build-locales.mjs test && node scripts/build-react-vendor.mjs",
     "lint": "sh -c 'eslint .; ESLINT_EXIT=$?; tsc --noEmit; TSC_EXIT=$?; if [ $ESLINT_EXIT -ne 0 ] || [ $TSC_EXIT -ne 0 ]; then exit 1; fi'",
     "lint:fix": "eslint . --fix",
     "lint:tests": "eslint test/",
@@ -140,6 +144,14 @@
     "type": "git",
     "url": "git+https://github.com/JackUait/blok.git"
   },
+  "dependencies": {
+    "mdast-util-from-markdown": "^2.0.3",
+    "mdast-util-gfm": "^3.1.0",
+    "mdast-util-math": "^3.0.0",
+    "micromark-extension-gfm": "^3.0.0",
+    "micromark-extension-math": "^3.1.0",
+    "nanoid": "5.1.9"
+  },
   "devDependencies": {
     "@axe-core/playwright": "4.11.2",
     "@babel/register": "7.28.6",
@@ -186,13 +198,7 @@
     "jscpd": "4.0.9",
     "jsdom": "28.1.0",
     "katex": "^0.16.44",
-    "mdast-util-from-markdown": "^2.0.3",
-    "mdast-util-gfm": "^3.1.0",
-    "mdast-util-math": "^3.0.0",
     "mermaid": "^11.15.0",
-    "micromark-extension-gfm": "^3.0.0",
-    "micromark-extension-math": "^3.1.0",
-    "nanoid": "5.1.9",
     "playwright": "1.59.1",
     "postcss": "8.5.10",
     "prismjs": "^1.30.0",

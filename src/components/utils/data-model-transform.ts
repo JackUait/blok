@@ -149,18 +149,6 @@ const warnLossyField = (
 };
 
 /**
- * Type guard for object with a string property under `key`.
- */
-const hasNonEmptyString = (data: unknown, key: string): boolean => {
-  if (typeof data !== 'object' || data === null) {
-    return false;
-  }
-  const value = (data as Record<string, unknown>)[key];
-
-  return typeof value === 'string' && value.length > 0;
-};
-
-/**
  * Type guard: object has the given key defined (not undefined).
  */
 const hasDefinedField = (data: unknown, key: string): boolean => {
@@ -172,16 +160,14 @@ const hasDefinedField = (data: unknown, key: string): boolean => {
 };
 
 /**
- * Warn for Editor.js quote fields Blok's quote tool (which uses { text, size })
- * silently ignores. The block still passes through unchanged — this only adds
- * visibility of the loss.
+ * Warn for the Editor.js quote `alignment` field, which Blok's quote tool
+ * (which uses { text, size }) has no equivalent for and drops. The quote
+ * `caption` is NOT warned here: it is rescued by expandQuoteToHierarchical into
+ * a following paragraph block, so it is migrated rather than lost.
  */
 const warnLossyQuoteFields = (block: OutputBlockData, warned: Set<string>): void => {
   if (block.type !== 'quote') {
     return;
-  }
-  if (hasNonEmptyString(block.data, 'caption')) {
-    warnLossyField(warned, 'quote', 'caption', 'ignored');
   }
   if (hasDefinedField(block.data, 'alignment')) {
     warnLossyField(warned, 'quote', 'alignment', 'ignored');
@@ -346,9 +332,23 @@ const isLegacyCalloutBlock = (block: OutputBlockData): block is OutputBlockData<
 };
 
 /**
- * Check if a block is in legacy image format
- * Legacy editor.js shape: { type: "image", data: { file: { url: "..." }, caption?, withBorder?, withBackground?, stretched? } }
- * New shape: { type: "image", data: { url, caption?, ... } }
+ * Check if a block is an editor.js quote carrying fields Blok's quote tool
+ * ({ text, size }) doesn't understand — `caption` and/or `alignment`.
+ * Editor.js quote shape: { type: "quote", data: { text, caption, alignment } }.
+ * Such quotes are routed through expandQuoteToHierarchical, which strips those
+ * fields (migrating a non-empty caption into a following paragraph).
+ */
+const isLegacyQuoteBlock = (block: OutputBlockData): boolean => {
+  return block.type === 'quote' && (hasDefinedField(block.data, 'caption') || hasDefinedField(block.data, 'alignment'));
+};
+
+/**
+ * Check if a block is in legacy image format. Two editor.js sources qualify:
+ *   - @editorjs/image:        { file: { url }, caption?, withBorder?, withBackground?, stretched? }
+ *   - @editorjs/simple-image: { url, caption?, withBorder?, withBackground?, stretched? }  (flat url, NO file wrapper)
+ * Blok-native shape is also flat ({ url, frame?, size? }), so a flat-url block is
+ * only legacy when it still carries an editor.js-only flag (withBorder/
+ * withBackground/stretched) — otherwise it is already migrated and left alone.
  */
 const isLegacyImageBlock = (block: OutputBlockData): boolean => {
   if (block.type !== 'image') {
@@ -363,11 +363,69 @@ const isLegacyImageBlock = (block: OutputBlockData): boolean => {
 
   const file = (data as { file?: unknown }).file;
 
-  if (typeof file !== 'object' || file === null) {
+  if (typeof file === 'object' && file !== null && typeof (file as { url?: unknown }).url === 'string') {
+    return true;
+  }
+
+  // @editorjs/simple-image: flat top-level url + at least one editor.js-only flag.
+  const hasFlatUrl = typeof (data as { url?: unknown }).url === 'string';
+  const hasLegacyFlag = 'withBorder' in data || 'withBackground' in data || 'stretched' in data;
+
+  return hasFlatUrl && hasLegacyFlag;
+};
+
+/**
+ * Editor.js @editorjs/table stores cells as HTML strings (`content: string[][]`),
+ * whereas Blok's Table references child blocks per cell
+ * (`content[r][c] = { blocks: [id] }`, see src/tools/table/types.ts). A table with
+ * at least one string cell is legacy and must be rewritten by
+ * expandTableToHierarchical; a table already in block-ref shape is Blok-native.
+ */
+const isLegacyTableBlock = (block: OutputBlockData): boolean => {
+  if (block.type !== 'table') {
     return false;
   }
 
-  return typeof (file as { url?: unknown }).url === 'string';
+  const rows = getTableContentRows(block.data);
+
+  if (rows === null) {
+    return false;
+  }
+
+  return rows.some(row => Array.isArray(row) && row.some(cell => typeof cell === 'string'));
+};
+
+/**
+ * Editor.js @editorjs/raw block: `{ html }`. Blok has no raw tool; the HTML is
+ * migrated into a code block (source shown verbatim) by expandRawToHierarchical.
+ */
+const isLegacyRawBlock = (block: OutputBlockData): boolean => {
+  return block.type === 'raw' && hasDefinedField(block.data, 'html');
+};
+
+/**
+ * Editor.js @editorjs/warning block: `{ title, message }`. Blok has no warning
+ * tool; it is migrated into a callout (⚠️ + orange) with title/message child
+ * paragraphs by expandWarningToHierarchical.
+ */
+const isLegacyWarningBlock = (block: OutputBlockData): boolean => {
+  return block.type === 'warning' && typeof block.data === 'object' && block.data !== null;
+};
+
+/**
+ * Editor.js @editorjs/attaches block: `{ file: { url, name, size, extension }, title }`.
+ * Blok has no attaches tool; the link is migrated into a bookmark by
+ * expandAttachesToHierarchical (file metadata is dropped + warned).
+ */
+const isLegacyAttachesBlock = (block: OutputBlockData): boolean => {
+  if (block.type !== 'attaches') {
+    return false;
+  }
+
+  const data = block.data as Record<string, unknown> | null | undefined;
+  const file = typeof data === 'object' && data !== null ? (data as { file?: unknown }).file : undefined;
+
+  return typeof file === 'object' && file !== null && typeof (file as { url?: unknown }).url === 'string';
 };
 
 /**
@@ -417,8 +475,21 @@ export const analyzeDataFormat = (blocks: OutputBlockData[]): DataFormatAnalysis
   // Check if any block is an editor.js linkTool
   const foundLegacyLinkTool = blocks.some(isLegacyLinkToolBlock);
 
+  // Check if any block is an editor.js quote with caption/alignment to strip
+  const foundLegacyQuote = blocks.some(isLegacyQuoteBlock);
+
+  // Check if any block is an editor.js table with HTML-string cells
+  const foundLegacyTable = blocks.some(isLegacyTableBlock);
+
+  // Check if any block is an editor.js raw / warning / attaches block (no
+  // same-named Blok tool — each is remapped to code / callout / bookmark)
+  const foundLegacyRaw = blocks.some(isLegacyRawBlock);
+  const foundLegacyWarning = blocks.some(isLegacyWarningBlock);
+  const foundLegacyAttaches = blocks.some(isLegacyAttachesBlock);
+
   const hasLegacyBlocks =
-    foundLegacyList || foundLegacyToggle || foundLegacyCallout || foundLegacyImage || foundLegacyChecklist || foundLegacyLinkTool;
+    foundLegacyList || foundLegacyToggle || foundLegacyCallout || foundLegacyImage || foundLegacyChecklist ||
+    foundLegacyLinkTool || foundLegacyQuote || foundLegacyTable || foundLegacyRaw || foundLegacyWarning || foundLegacyAttaches;
 
   if (foundHierarchicalRefs && !hasLegacyBlocks) {
     return { format: 'hierarchical', hasHierarchy: true };
@@ -426,7 +497,7 @@ export const analyzeDataFormat = (blocks: OutputBlockData[]): DataFormatAnalysis
 
   if (hasLegacyBlocks) {
     // Check if there's actual nesting for the hasHierarchy flag
-    const hasNesting = foundHierarchicalRefs || blocks.some(hasNestedItems) || blocks.some(block =>
+    const hasNesting = foundHierarchicalRefs || foundLegacyTable || foundLegacyWarning || blocks.some(hasNestedItems) || blocks.some(block =>
       isLegacyToggleListBlock(block) && block.data.body?.blocks !== undefined && block.data.body.blocks.length > 0
     ) || blocks.some(block =>
       isLegacyCalloutBlock(block) && block.data.body?.blocks !== undefined && block.data.body.blocks.length > 0
@@ -693,6 +764,7 @@ const expandImageToHierarchical = (block: OutputBlockData, warned: Set<string>):
   const rawData = (block.data ?? {}) as Record<string, unknown>;
   const {
     file,
+    url: flatUrl,
     withBorder,
     withBackground,
     stretched,
@@ -702,10 +774,13 @@ const expandImageToHierarchical = (block: OutputBlockData, warned: Set<string>):
   if (withBackground === true) {
     warnLossyField(warned, 'image', 'withBackground', 'dropped');
   }
+  // @editorjs/image nests the url under `file`; @editorjs/simple-image puts it
+  // at the top level. Prefer file.url, then fall back to the flat url.
   const fileUrl = typeof file === 'object' && file !== null
     ? (file as { url?: unknown }).url
     : undefined;
-  const url = typeof fileUrl === 'string' ? fileUrl : '';
+  const resolvedUrl = typeof fileUrl === 'string' ? fileUrl : flatUrl;
+  const url = typeof resolvedUrl === 'string' ? resolvedUrl : '';
 
   return {
     ...block,
@@ -765,6 +840,208 @@ const expandLinkToolToHierarchical = (
 };
 
 /**
+ * Expand an editor.js quote block that carries a non-empty `caption` into the
+ * Blok quote block plus a following `paragraph` sibling holding the caption.
+ *
+ * Blok's quote tool data is `{ text, size }` — it has no `caption` field — so a
+ * caption would otherwise be dropped. The most faithful Blok representation is a
+ * separate paragraph immediately after the quote (the caption text is regular
+ * rich content). The quote keeps `text`/`size`; `caption` is moved out and
+ * `alignment` (no Blok equivalent) is dropped + warned via warnLossyQuoteFields.
+ *
+ * Mirrors the 1:N expansion contract of expandListToHierarchical /
+ * expandChecklistToHierarchical: returns an ordered array (quote first, then the
+ * caption paragraph when the caption is non-empty) that the caller spreads into
+ * the output. A quote with only `alignment` (or an empty caption) yields just
+ * the cleaned quote block — no trailing paragraph.
+ */
+const expandQuoteToHierarchical = (block: OutputBlockData, warned: Set<string>): OutputBlockData[] => {
+  warnLossyQuoteFields(block, warned);
+
+  const rawData = (block.data ?? {}) as Record<string, unknown>;
+  const { caption, alignment: _alignment, ...rest } = rawData;
+
+  const quoteBlock: OutputBlockData = {
+    ...block,
+    id: block.id ?? generateBlockId(),
+    data: rest,
+  };
+
+  if (typeof caption !== 'string' || caption.length === 0) {
+    return [quoteBlock];
+  }
+
+  const captionBlock: OutputBlockData = {
+    id: generateBlockId(),
+    type: 'paragraph',
+    data: { text: caption },
+  };
+
+  return [quoteBlock, captionBlock];
+};
+
+/**
+ * Expand an editor.js table (HTML-string cells) into a Blok-native table whose
+ * cells reference child paragraph blocks by id, plus those child paragraph
+ * blocks. Editor.js shape `{ withHeadings, content: string[][] }` is rewritten so
+ * each non-empty cell becomes `{ blocks: [<childId>] }` with a sibling paragraph
+ * (`parent === tableId`) holding the cell text; empty cells become `{ blocks: [] }`
+ * with no child. Cells already in block-ref shape pass through untouched.
+ *
+ * Child ids are freshly generated (NOT positional `cell-<r>-<c>`) so multiple
+ * migrated tables in one document never collide on cell ids — the parent/content
+ * invariant is set explicitly here, so the positional reclaim net
+ * (reclaimDetachedTableCells) is not relied upon for this path. Returns
+ * [table, ...childParagraphs] in document order (matches the 1:N expansion
+ * contract of expandToggleListToHierarchical / expandCalloutToHierarchical).
+ */
+const expandTableToHierarchical = (block: OutputBlockData): OutputBlockData[] => {
+  const tableId = block.id ?? generateBlockId();
+  const rawData = (block.data ?? {}) as Record<string, unknown>;
+  const { content: _content, withHeadings, withHeadingColumn, stretched, ...restData } = rawData;
+  const rows = getTableContentRows(rawData) ?? [];
+  const childBlocks: OutputBlockData[] = [];
+
+  const newContent = rows.map(row => {
+    if (!Array.isArray(row)) {
+      return row;
+    }
+
+    return row.map(cell => {
+      if (isCellWithBlockRefs(cell)) {
+        return cell;
+      }
+
+      const text = typeof cell === 'string' ? cell : '';
+
+      if (text.length === 0) {
+        return { blocks: [] };
+      }
+
+      const cellId = generateBlockId();
+
+      childBlocks.push({
+        id: cellId,
+        type: 'paragraph',
+        data: { text },
+        parent: tableId,
+      });
+
+      return { blocks: [cellId] };
+    });
+  });
+
+  const tableBlock: OutputBlockData = {
+    ...block,
+    id: tableId,
+    data: {
+      ...restData,
+      withHeadings: withHeadings === true,
+      withHeadingColumn: withHeadingColumn === true,
+      ...(stretched === true ? { stretched: true } : {}),
+      content: newContent,
+    },
+  };
+
+  return [tableBlock, ...childBlocks];
+};
+
+/**
+ * Expand an editor.js raw block (`{ html }`) into a Blok code block, preserving
+ * the raw HTML as the code text (shown verbatim as source). Blok has no raw
+ * tool; code is the least-lossy faithful representation. The code tool defaults
+ * language/lineNumbers at construction, so emitting `{ code }` alone suffices.
+ */
+const expandRawToHierarchical = (block: OutputBlockData): OutputBlockData => {
+  const html = (block.data as { html?: unknown } | null | undefined)?.html;
+
+  return {
+    ...block,
+    id: block.id ?? generateBlockId(),
+    type: 'code',
+    data: { code: typeof html === 'string' ? html : '' },
+  };
+};
+
+/**
+ * Default emoji for callouts migrated from editor.js warning blocks.
+ */
+const WARNING_EMOJI = '⚠️';
+
+/**
+ * Expand an editor.js warning block (`{ title, message }`) into a Blok callout
+ * (⚠️ emoji, orange background) whose title and message become child paragraph
+ * blocks. Mirrors the flat callout shape produced by expandCalloutToHierarchical
+ * (`{ emoji, textColor, backgroundColor }` + `content[]` child refs). Empty
+ * title/message fields are skipped (no empty paragraph child).
+ */
+const expandWarningToHierarchical = (block: OutputBlockData): OutputBlockData[] => {
+  const calloutId = block.id ?? generateBlockId();
+  const data = (block.data ?? {}) as Record<string, unknown>;
+  const title = typeof data.title === 'string' ? data.title : '';
+  const message = typeof data.message === 'string' ? data.message : '';
+
+  const childBlocks: OutputBlockData[] = [];
+
+  for (const text of [title, message]) {
+    if (text.length === 0) {
+      continue;
+    }
+
+    childBlocks.push({
+      id: generateBlockId(),
+      type: 'paragraph',
+      data: { text },
+      parent: calloutId,
+    });
+  }
+
+  const childIds = childBlocks.map(child => child.id as BlockId);
+
+  const calloutBlock: OutputBlockData = {
+    id: calloutId,
+    type: 'callout',
+    data: {
+      emoji: WARNING_EMOJI,
+      textColor: null,
+      backgroundColor: 'orange',
+    },
+    ...(block.tunes !== undefined ? { tunes: block.tunes } : {}),
+    ...(childIds.length > 0 ? { content: childIds } : {}),
+  };
+
+  return [calloutBlock, ...childBlocks];
+};
+
+/**
+ * Expand an editor.js attaches block
+ * (`{ file: { url, name, size, extension }, title }`) into a Blok bookmark
+ * (`{ url, title? }`). Blok has no file-attachment tool, so the link is
+ * preserved as a bookmark; file metadata (name/size/extension) has no bookmark
+ * equivalent and is dropped + warned once per pass.
+ */
+const expandAttachesToHierarchical = (block: OutputBlockData, warned: Set<string>): OutputBlockData => {
+  const data = (block.data ?? {}) as Record<string, unknown>;
+  const file = (typeof data.file === 'object' && data.file !== null ? data.file : {}) as Record<string, unknown>;
+  const url = typeof file.url === 'string' ? file.url : '';
+  const title = typeof data.title === 'string' ? data.title : undefined;
+
+  if (file.name !== undefined || file.size !== undefined || file.extension !== undefined) {
+    warnLossyField(warned, 'attaches', 'file metadata', 'dropped');
+  }
+
+  return {
+    ...block,
+    id: block.id ?? generateBlockId(),
+    type: 'bookmark',
+    data: {
+      url,
+      ...(title !== undefined ? { title } : {}),
+    },
+  };
+};
+
+/**
  * Expand legacy nested format to hierarchical flat-with-references format
  * @param blocks - array of blocks potentially containing nested structures
  * @returns expanded array of flat blocks with parent/content references
@@ -802,11 +1079,27 @@ export const expandToHierarchical = (blocks: OutputBlockData[]): OutputBlockData
     } else if (isLegacyImageBlock(block)) {
       // Expand legacy image (data.file.url → data.url) to new flat image shape
       expandedBlocks.push(expandImageToHierarchical(block, warnedFields));
-    } else {
-      // Non-list blocks pass through unchanged (with guaranteed ID).
-      // Editor.js quote blocks carry { caption, alignment } that Blok ignores.
-      warnLossyQuoteFields(block, warnedFields);
+    } else if (isLegacyQuoteBlock(block)) {
+      // Editor.js quote carries { caption, alignment } Blok's quote tool lacks.
+      // Strip them: a non-empty caption becomes a following paragraph sibling,
+      // alignment is dropped + warned.
+      const expanded = expandQuoteToHierarchical(block, warnedFields);
 
+      expandedBlocks.push(...expanded);
+    } else if (isLegacyTableBlock(block)) {
+      // Editor.js table HTML-string cells → Blok cell-block-refs + child paragraphs
+      expandedBlocks.push(...expandTableToHierarchical(block));
+    } else if (isLegacyRawBlock(block)) {
+      // Editor.js raw { html } → Blok code block (source shown verbatim)
+      expandedBlocks.push(expandRawToHierarchical(block));
+    } else if (isLegacyWarningBlock(block)) {
+      // Editor.js warning { title, message } → Blok callout + child paragraphs
+      expandedBlocks.push(...expandWarningToHierarchical(block));
+    } else if (isLegacyAttachesBlock(block)) {
+      // Editor.js attaches { file, title } → Blok bookmark (file metadata dropped)
+      expandedBlocks.push(expandAttachesToHierarchical(block, warnedFields));
+    } else {
+      // Other blocks pass through unchanged (with guaranteed ID).
       expandedBlocks.push({
         ...block,
         id: block.id ?? generateBlockId(),

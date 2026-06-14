@@ -1356,6 +1356,32 @@ test('leaves already-migrated image blocks unchanged', () => {
   assertEqual(parsed.blocks[0].data.caption, 'c');
 });
 
+test('maps @editorjs/simple-image (flat url + flags) to new image shape', () => {
+  const input = JSON.stringify({
+    blocks: [
+      {
+        type: 'image',
+        data: {
+          url: 'simple.png',
+          caption: 'c',
+          withBorder: true,
+          withBackground: true,
+          stretched: true,
+        },
+      },
+    ],
+  }, null, 2);
+  const result = applyBlockTypeTransforms(input);
+  const parsed = JSON.parse(result);
+  assertEqual(parsed.blocks[0].data.url, 'simple.png', 'flat url preserved');
+  assertEqual(parsed.blocks[0].data.caption, 'c');
+  assertEqual(parsed.blocks[0].data.frame, 'border', 'withBorder -> frame');
+  assertEqual(parsed.blocks[0].data.size, 'full', 'stretched -> size full');
+  assertEqual(parsed.blocks[0].data.withBorder, undefined, 'withBorder dropped');
+  assertEqual(parsed.blocks[0].data.withBackground, undefined, 'withBackground dropped');
+  assertEqual(parsed.blocks[0].data.stretched, undefined, 'stretched dropped');
+});
+
 // ============================================================================
 // Block Data Migration - linkTool → bookmark
 // ============================================================================
@@ -1454,6 +1480,183 @@ test('drops meta.image when it is an object without a url', () => {
   const parsed = JSON.parse(result);
   assertEqual(parsed.blocks[0].type, 'bookmark');
   assertEqual(parsed.blocks[0].data.image, undefined, 'image dropped when no url string');
+});
+
+console.log('\n☑️  Checklist Block Expansion (Saved Data)\n');
+
+test('expands checklist block into N flat list blocks with style checklist', () => {
+  const input = JSON.stringify({
+    blocks: [
+      {
+        type: 'checklist',
+        data: {
+          items: [
+            { text: 'Buy milk', checked: true },
+            { text: 'Walk dog', checked: false },
+          ],
+        },
+      },
+    ],
+  }, null, 2);
+  const result = applyBlockTypeTransforms(input);
+  const parsed = JSON.parse(result);
+
+  assertEqual(parsed.blocks.length, 2, '2 items expand to 2 list blocks');
+
+  assertEqual(parsed.blocks[0].type, 'list');
+  assertEqual(parsed.blocks[0].data.text, 'Buy milk');
+  assertEqual(parsed.blocks[0].data.checked, true, 'checked state preserved');
+  assertEqual(parsed.blocks[0].data.style, 'checklist', 'style is checklist');
+  assertEqual(typeof parsed.blocks[0].id, 'string', 'each list block has an id');
+  assertEqual(parsed.blocks[0].id.length, 10, 'id is nanoid-compatible 10 chars');
+
+  assertEqual(parsed.blocks[1].type, 'list');
+  assertEqual(parsed.blocks[1].data.text, 'Walk dog');
+  assertEqual(parsed.blocks[1].data.checked, false, 'unchecked state preserved');
+  assertEqual(parsed.blocks[1].data.style, 'checklist', 'style is checklist');
+
+  assertEqual(parsed.blocks[0].id !== parsed.blocks[1].id, true, 'each block gets a unique id');
+});
+
+test('expands empty checklist to zero list blocks without crashing', () => {
+  const input = JSON.stringify({
+    blocks: [
+      { type: 'checklist', data: { items: [] } },
+      { type: 'paragraph', data: { text: 'after' } },
+    ],
+  }, null, 2);
+  const result = applyBlockTypeTransforms(input);
+  const parsed = JSON.parse(result);
+
+  assertEqual(parsed.blocks.length, 1, 'empty checklist produces zero list blocks');
+  assertEqual(parsed.blocks[0].type, 'paragraph', 'surrounding blocks are untouched');
+  assertEqual(parsed.blocks[0].data.text, 'after');
+});
+
+test('preserves checklist block tunes on each expanded list block', () => {
+  const input = JSON.stringify({
+    blocks: [
+      {
+        type: 'checklist',
+        tunes: { anchor: 'a1' },
+        data: { items: [{ text: 'one', checked: false }] },
+      },
+    ],
+  }, null, 2);
+  const result = applyBlockTypeTransforms(input);
+  const parsed = JSON.parse(result);
+
+  assertEqual(parsed.blocks.length, 1);
+  assertEqual(parsed.blocks[0].type, 'list');
+  assertEqual(parsed.blocks[0].data.text, 'one');
+  assertEqual(parsed.blocks[0].tunes.anchor, 'a1', 'tunes carried onto expanded block');
+});
+
+test('does not modify documents without checklist blocks', () => {
+  const input = JSON.stringify({
+    blocks: [{ type: 'paragraph', data: { text: 'hello' } }],
+  }, null, 2);
+  const result = applyBlockTypeTransforms(input);
+  const parsed = JSON.parse(result);
+
+  assertEqual(parsed.blocks.length, 1, 'no extra blocks added');
+  assertEqual(parsed.blocks[0].type, 'paragraph', 'paragraph passes through');
+  assertEqual(parsed.blocks[0].data.text, 'hello');
+});
+
+console.log('\n🧱  Raw / Warning / Attaches / Table Mapping (Saved Data)\n');
+
+test('maps raw block to a code block, preserving html as code text', () => {
+  const input = JSON.stringify({
+    blocks: [{ id: 'raw-1', type: 'raw', data: { html: '<div class="legacy">hi</div>' } }],
+  }, null, 2);
+  const parsed = JSON.parse(applyBlockTypeTransforms(input));
+
+  assertEqual(parsed.blocks.length, 1);
+  assertEqual(parsed.blocks[0].type, 'code', 'raw becomes code');
+  assertEqual(parsed.blocks[0].data.code, '<div class="legacy">hi</div>', 'html preserved as code');
+  assertEqual(parsed.blocks[0].id, 'raw-1', 'id preserved');
+});
+
+test('maps attaches block to a bookmark with url + title; file metadata dropped', () => {
+  const input = JSON.stringify({
+    blocks: [{
+      id: 'att-1',
+      type: 'attaches',
+      data: { file: { url: 'https://x.com/r.pdf', name: 'r', size: 1024, extension: 'pdf' }, title: 'Report' },
+    }],
+  }, null, 2);
+  const parsed = JSON.parse(applyBlockTypeTransforms(input));
+
+  assertEqual(parsed.blocks[0].type, 'bookmark', 'attaches becomes bookmark');
+  assertEqual(parsed.blocks[0].data.url, 'https://x.com/r.pdf', 'url mapped from file.url');
+  assertEqual(parsed.blocks[0].data.title, 'Report', 'title preserved');
+  assertEqual(parsed.blocks[0].data.size, undefined, 'file size dropped');
+  assertEqual(parsed.blocks[0].data.extension, undefined, 'file extension dropped');
+});
+
+test('expands warning block into callout + title/message child paragraphs', () => {
+  const input = JSON.stringify({
+    blocks: [{ id: 'warn-1', type: 'warning', data: { title: 'Note', message: 'Be careful' } }],
+  }, null, 2);
+  const parsed = JSON.parse(applyBlockTypeTransforms(input));
+
+  assertEqual(parsed.blocks.length, 3, 'callout + 2 child paragraphs');
+  assertEqual(parsed.blocks[0].type, 'callout', 'warning becomes callout');
+  assertEqual(parsed.blocks[0].id, 'warn-1', 'callout keeps warning id');
+  assertEqual(parsed.blocks[0].data.emoji, '⚠️', 'warning emoji');
+  assertEqual(parsed.blocks[0].data.backgroundColor, 'orange', 'orange background');
+  assertEqual(parsed.blocks[1].type, 'paragraph', 'title child paragraph');
+  assertEqual(parsed.blocks[1].data.text, 'Note');
+  assertEqual(parsed.blocks[1].parent, 'warn-1', 'child parented to callout');
+  assertEqual(parsed.blocks[2].data.text, 'Be careful', 'message child paragraph');
+  assertEqual(parsed.blocks[0].content[0], parsed.blocks[1].id, 'callout references title child');
+  assertEqual(parsed.blocks[0].content[1], parsed.blocks[2].id, 'callout references message child');
+});
+
+test('expands string-cell table into Blok cell-block-refs + child paragraphs', () => {
+  const input = JSON.stringify({
+    blocks: [{
+      id: 'table-1',
+      type: 'table',
+      data: { withHeadings: true, content: [['Name', 'Age'], ['Alice', '30']] },
+    }],
+  }, null, 2);
+  const parsed = JSON.parse(applyBlockTypeTransforms(input));
+
+  const table = parsed.blocks.find((b) => b.type === 'table');
+  const children = parsed.blocks.filter((b) => b.type === 'paragraph' && b.parent === 'table-1');
+
+  assertEqual(table.data.withHeadings, true, 'withHeadings preserved');
+  assertEqual(Array.isArray(table.data.content[0][0].blocks), true, 'cell is a block-ref');
+  assertEqual(table.data.content[0][0].blocks.length, 1, 'non-empty cell references one child');
+  assertEqual(children.length, 4, 'one child paragraph per non-empty cell');
+  const texts = children.map((b) => b.data.text).sort();
+
+  assertEqual(JSON.stringify(texts), JSON.stringify(['30', 'Age', 'Alice', 'Name']), 'cell texts carried into children');
+});
+
+test('emits empty table cells as { blocks: [] } with no child paragraph', () => {
+  const input = JSON.stringify({
+    blocks: [{ id: 'table-2', type: 'table', data: { withHeadings: false, content: [['A', '']] } }],
+  }, null, 2);
+  const parsed = JSON.parse(applyBlockTypeTransforms(input));
+
+  const table = parsed.blocks.find((b) => b.type === 'table');
+  const children = parsed.blocks.filter((b) => b.type === 'paragraph' && b.parent === 'table-2');
+
+  assertEqual(JSON.stringify(table.data.content[0][1].blocks), '[]', 'empty cell is { blocks: [] }');
+  assertEqual(children.length, 1, 'only the non-empty cell gets a child');
+});
+
+test('leaves an already-Blok-native table (block-ref cells) untouched', () => {
+  const input = JSON.stringify({
+    blocks: [{ id: 't', type: 'table', data: { withHeadings: false, content: [[{ blocks: ['x'] }]] } }],
+  }, null, 2);
+  const parsed = JSON.parse(applyBlockTypeTransforms(input));
+
+  assertEqual(parsed.blocks.length, 1, 'no child paragraphs minted for native table');
+  assertEqual(parsed.blocks[0].data.content[0][0].blocks[0], 'x', 'existing block-ref preserved');
 });
 
 // ============================================================================

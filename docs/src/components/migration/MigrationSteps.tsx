@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { CSS_MAPPINGS } from "./migration-data";
+import { CSS_MAPPINGS, VERSION_COMPATIBILITY } from "./migration-data";
 import { useI18n } from "../../contexts/I18nContext";
 
 export const MigrationSteps: React.FC = () => {
@@ -265,6 +265,58 @@ export const MigrationSteps: React.FC = () => {
             </div>
           </div>
         </div>
+      </section>
+
+      <section
+        className="migration-section"
+        data-blok-testid="supported-versions-section"
+      >
+        <div className="migration-section-header">
+          <span className="migration-section-badge">
+            {t('migration.supportedVersionsBadge')}
+          </span>
+          <h2 className="migration-section-title">{t('migration.supportedVersionsTitle')}</h2>
+          <p className="migration-section-description">
+            {t('migration.supportedVersionsDescription')}
+          </p>
+        </div>
+
+        <div className="migration-note" data-blok-testid="supported-versions-target">
+          <h3 className="migration-note-title">{t('migration.supportedVersionsTargetTitle')}</h3>
+          <p className="migration-note-description">
+            {t('migration.supportedVersionsTarget')}
+          </p>
+        </div>
+
+        <div className="reference-card" data-blok-testid="compatibility-matrix">
+          <div className="reference-mappings">
+            {VERSION_COMPATIBILITY.map((row, index) => (
+              <div
+                key={index}
+                className="reference-mapping"
+                data-blok-testid="compatibility-row"
+                style={{ animationDelay: `${index * 0.05}s` }}
+              >
+                <div className="reference-mapping-old">
+                  <code>{row.tool}</code>
+                </div>
+                <div className="reference-mapping-connector">
+                  <span className="reference-mapping-line" />
+                  <svg className="reference-mapping-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </div>
+                <div className="reference-mapping-new">
+                  <span>{t(row.statusKey)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <p className="migration-section-description" data-blok-testid="compatibility-stub-note">
+          {t('migration.supportedVersionsStubNote')}
+        </p>
       </section>
     </>
   );

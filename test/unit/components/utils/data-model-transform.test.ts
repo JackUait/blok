@@ -3324,12 +3324,39 @@ describe('data-model-transform', () => {
       expect(console.warn).not.toHaveBeenCalled();
     });
 
-    it('warns when a quote block carries a caption (quote passes through)', () => {
+    it('migrates a quote caption into a following paragraph (no caption warning)', () => {
       const blocks: OutputBlockData[] = [
         {
           id: 'q-1' as BlockId,
           type: 'quote',
-          data: { text: 'To be or not to be', caption: 'Shakespeare' },
+          data: { text: 'To be or not to be', caption: 'Shakespeare', size: 'default' },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      // Quote block preserved (text + size), with no caption field left on it.
+      expect(result).toHaveLength(2);
+      expect(result[0].type).toBe('quote');
+      expect(result[0].id).toBe('q-1');
+      expect(result[0].data).toEqual({ text: 'To be or not to be', size: 'default' });
+
+      // Caption rescued as a following paragraph sibling.
+      expect(result[1].type).toBe('paragraph');
+      expect((result[1].data as Record<string, unknown>).text).toBe('Shakespeare');
+      expect(typeof result[1].id).toBe('string');
+      expect((result[1].id as string).length).toBeGreaterThan(0);
+
+      // Caption is migrated, not lost — so it must NOT be warned as dropped.
+      expect(vi.mocked(console.warn).mock.calls.some(call => String(call[0]).includes('caption'))).toBe(false);
+    });
+
+    it('does NOT emit a paragraph for a quote with an empty caption', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'q-2' as BlockId,
+          type: 'quote',
+          data: { text: 'Quote text', caption: '', size: 'large' },
         },
       ];
 
@@ -3337,8 +3364,42 @@ describe('data-model-transform', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].type).toBe('quote');
-      expect(console.warn).toHaveBeenCalledTimes(1);
-      expect(vi.mocked(console.warn).mock.calls[0][0]).toContain('caption');
+      expect(result[0].data).toEqual({ text: 'Quote text', size: 'large' });
+    });
+
+    it('does NOT emit a paragraph for a quote with no caption at all', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'q-3' as BlockId, type: 'quote', data: { text: 'Quote text' } },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe('quote');
+    });
+
+    it('still migrates the caption when alignment is also present (alignment dropped + warned, caption not warned)', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 'q-4' as BlockId,
+          type: 'quote',
+          data: { text: 'Quote text', caption: 'Author', alignment: 'center' },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].type).toBe('quote');
+      const quoteData = result[0].data as Record<string, unknown>;
+      expect('alignment' in quoteData).toBe(false);
+      expect('caption' in quoteData).toBe(false);
+      expect(result[1].type).toBe('paragraph');
+      expect((result[1].data as Record<string, unknown>).text).toBe('Author');
+
+      const warnArgs = vi.mocked(console.warn).mock.calls.map(call => String(call[0]));
+      expect(warnArgs.some(arg => arg.includes('alignment'))).toBe(true);
+      expect(warnArgs.some(arg => arg.includes('caption'))).toBe(false);
     });
 
     it('warns when a quote block carries an alignment', () => {

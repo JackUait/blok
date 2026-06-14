@@ -993,17 +993,31 @@ function migrateLegacyBlockShape(block) {
   if (block.type === 'linkTool' && block.data && typeof block.data === 'object') {
     return migrateLinkToolToBookmark(block);
   }
+  if (block.type === 'raw' && block.data && typeof block.data === 'object') {
+    return migrateRawToCode(block);
+  }
+  if (block.type === 'attaches' && block.data && typeof block.data === 'object') {
+    return migrateAttachesToBookmark(block);
+  }
   if (block.type !== 'image' || !block.data || typeof block.data !== 'object') {
     return block;
   }
   const file = block.data.file;
+  const hasFileUrl = file && typeof file === 'object' && typeof file.url === 'string';
+  // @editorjs/simple-image stores the url flat (no `file` wrapper). Only treat a
+  // flat-url block as legacy when it still carries an editor.js-only flag —
+  // otherwise it is already in Blok-native shape and must be left alone.
+  const hasLegacySimpleImage =
+    typeof block.data.url === 'string' &&
+    ('withBorder' in block.data || 'withBackground' in block.data || 'stretched' in block.data);
 
-  if (!file || typeof file !== 'object' || typeof file.url !== 'string') {
+  if (!hasFileUrl && !hasLegacySimpleImage) {
     return block;
   }
 
   const {
     file: _file,
+    url: flatUrl,
     withBorder,
     withBackground: _withBackground,
     stretched,
@@ -1015,7 +1029,7 @@ function migrateLegacyBlockShape(block) {
   return {
     ...block,
     data: {
-      url: file.url,
+      url: hasFileUrl ? file.url : flatUrl,
       size: inheritedSize,
       ...rest,
       ...(withBorder === true ? { frame: 'border' } : {}),
@@ -1057,6 +1071,278 @@ function migrateLinkToolToBookmark(block) {
   };
 }
 
+// nanoid-compatible alphabet (URL-safe), matching the runtime's nanoid() ids.
+const BLOCK_ID_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';
+const BLOCK_ID_LENGTH = 10;
+
+/**
+ * Generate a nanoid-compatible 10-character block id (A-Z, a-z, 0-9, _, -).
+ * Mirrors the runtime generateBlockId() output format so statically-migrated
+ * JSON carries ids in the same shape the runtime emits. No nanoid dependency
+ * here (the codemod is a zero-dep standalone script), so ids are minted locally.
+ * @returns {string} a 10-char block id
+ */
+function generateBlockId() {
+  let id = '';
+
+  for (let i = 0; i < BLOCK_ID_LENGTH; i++) {
+    id += BLOCK_ID_ALPHABET[Math.floor(Math.random() * BLOCK_ID_ALPHABET.length)];
+  }
+
+  return id;
+}
+
+/**
+ * Expand a legacy editor.js checklist block into per-item flat `list` blocks
+ * with style 'checklist'. Mirrors the runtime expansion in
+ * src/components/utils/data-model-transform.ts
+ * (expandChecklistToHierarchical → expandListToHierarchical):
+ *
+ *   { type: 'checklist', data: { items: [{ text, checked }, ...] } }
+ *   → [{ id, type: 'list', data: { text, checked, style: 'checklist' } }, ...]
+ *
+ * Blok has no dedicated checklist tool — checklist is a style of the List tool —
+ * so each item becomes its own flat `list` block. One checklist expands to N
+ * list blocks (N === items.length); an empty checklist expands to zero blocks.
+ * The block's `tunes` (if any) are carried onto every expanded item, matching
+ * the runtime which threads `block.tunes` through to each emitted list block.
+ * @param {Object} block - checklist block object with `data.items`
+ * @returns {Array<Object>} expanded list blocks
+ */
+function migrateChecklistToList(block) {
+  const items = Array.isArray(block.data.items) ? block.data.items : [];
+
+  return items.map((item) => ({
+    id: generateBlockId(),
+    type: 'list',
+    data: {
+      text: item.text,
+      checked: item.checked,
+      style: 'checklist',
+    },
+    ...(block.tunes !== undefined ? { tunes: block.tunes } : {}),
+  }));
+}
+
+/**
+ * Returns true when the block is a legacy editor.js checklist block carrying an
+ * `items` array. These need 1:N expansion (one checklist → N list blocks), which
+ * happens at the array level rather than the generic 1:1 object transform.
+ * @param {Object} block - candidate block object
+ * @returns {boolean} whether the block is an editor.js checklist
+ */
+function isLegacyChecklistBlock(block) {
+  return (
+    block !== null &&
+    typeof block === 'object' &&
+    !Array.isArray(block) &&
+    block.type === 'checklist' &&
+    block.data !== null &&
+    typeof block.data === 'object' &&
+    Array.isArray(block.data.items)
+  );
+}
+
+/**
+ * Migrate a legacy editor.js raw block into a Blok code block. Blok has no raw
+ * tool; the HTML is preserved as code text (source shown verbatim). Mirrors the
+ * runtime expandRawToHierarchical.
+ *
+ *   { type: 'raw', data: { html } } → { type: 'code', data: { code: html } }
+ * @param {Object} block - raw block object with `data.html`
+ * @returns {Object} code block
+ */
+function migrateRawToCode(block) {
+  const html = typeof block.data.html === 'string' ? block.data.html : '';
+
+  return {
+    ...block,
+    type: 'code',
+    data: { code: html },
+  };
+}
+
+/**
+ * Migrate a legacy editor.js attaches block into a Blok bookmark. Blok has no
+ * file-attachment tool, so the link is preserved as a bookmark; file metadata
+ * (name/size/extension) has no bookmark equivalent and is dropped. Mirrors the
+ * runtime expandAttachesToHierarchical.
+ *
+ *   { type: 'attaches', data: { file: { url }, title } }
+ *   → { type: 'bookmark', data: { url, title? } }
+ * @param {Object} block - attaches block object with `data.file`
+ * @returns {Object} bookmark block
+ */
+function migrateAttachesToBookmark(block) {
+  const file = block.data.file && typeof block.data.file === 'object' ? block.data.file : {};
+  const url = typeof file.url === 'string' ? file.url : '';
+  const title = typeof block.data.title === 'string' ? block.data.title : undefined;
+
+  return {
+    ...block,
+    type: 'bookmark',
+    data: {
+      url,
+      ...(title !== undefined ? { title } : {}),
+    },
+  };
+}
+
+/**
+ * Returns true when the block is a legacy editor.js warning block. Warnings need
+ * 1:N expansion (warning → callout + child paragraphs), handled at the array
+ * level rather than the generic 1:1 object transform.
+ * @param {Object} block - candidate block object
+ * @returns {boolean} whether the block is an editor.js warning
+ */
+function isLegacyWarningBlock(block) {
+  return (
+    block !== null &&
+    typeof block === 'object' &&
+    !Array.isArray(block) &&
+    block.type === 'warning' &&
+    block.data !== null &&
+    typeof block.data === 'object'
+  );
+}
+
+/**
+ * Expand a legacy editor.js warning block into a Blok callout (⚠️ + orange) with
+ * the title and message as child paragraph blocks. Mirrors the runtime
+ * expandWarningToHierarchical (flat callout `{ emoji, textColor, backgroundColor }`
+ * + `content[]` child refs). Empty title/message fields are skipped.
+ *
+ *   { type: 'warning', data: { title, message } }
+ *   → [{ id, type: 'callout', data: {...}, content: [ids] }, ...childParagraphs]
+ * @param {Object} block - warning block object with `data.title`/`data.message`
+ * @returns {Array<Object>} callout block followed by child paragraph blocks
+ */
+function migrateWarningToCallout(block) {
+  const calloutId = block.id || generateBlockId();
+  const title = typeof block.data.title === 'string' ? block.data.title : '';
+  const message = typeof block.data.message === 'string' ? block.data.message : '';
+
+  const children = [];
+
+  for (const text of [title, message]) {
+    if (text.length === 0) {
+      continue;
+    }
+    children.push({
+      id: generateBlockId(),
+      type: 'paragraph',
+      data: { text },
+      parent: calloutId,
+    });
+  }
+
+  const childIds = children.map((child) => child.id);
+
+  const callout = {
+    id: calloutId,
+    type: 'callout',
+    data: {
+      emoji: '⚠️',
+      textColor: null,
+      backgroundColor: 'orange',
+    },
+    ...(block.tunes !== undefined ? { tunes: block.tunes } : {}),
+    ...(childIds.length > 0 ? { content: childIds } : {}),
+  };
+
+  return [callout, ...children];
+}
+
+/**
+ * Returns true when the block is a legacy editor.js table carrying HTML-string
+ * cells. Such tables need 1:N expansion (table → table + child paragraphs),
+ * since Blok tables reference cell text via child blocks, not inline strings.
+ * @param {Object} block - candidate block object
+ * @returns {boolean} whether the block is an editor.js string-cell table
+ */
+function isLegacyTableBlock(block) {
+  if (
+    block === null ||
+    typeof block !== 'object' ||
+    Array.isArray(block) ||
+    block.type !== 'table' ||
+    block.data === null ||
+    typeof block.data !== 'object' ||
+    !Array.isArray(block.data.content)
+  ) {
+    return false;
+  }
+
+  return block.data.content.some(
+    (row) => Array.isArray(row) && row.some((cell) => typeof cell === 'string')
+  );
+}
+
+/**
+ * Expand a legacy editor.js table (HTML-string cells) into a Blok-native table
+ * whose cells reference child paragraph blocks by id, plus those paragraphs.
+ * Mirrors the runtime expandTableToHierarchical: each non-empty cell becomes
+ * `{ blocks: [<childId>] }` with a sibling paragraph (`parent === tableId`)
+ * holding the text; empty cells become `{ blocks: [] }`; block-ref cells pass
+ * through. Child ids are freshly generated so multiple tables never collide.
+ *
+ *   { type: 'table', data: { withHeadings, content: string[][] } }
+ *   → [{ type: 'table', data: { ..., content: cellRefs } }, ...childParagraphs]
+ * @param {Object} block - table block object with `data.content`
+ * @returns {Array<Object>} table block followed by cell child paragraph blocks
+ */
+function migrateTableToCellBlocks(block) {
+  const tableId = block.id || generateBlockId();
+  const data = block.data;
+  const rows = Array.isArray(data.content) ? data.content : [];
+  const children = [];
+
+  const newContent = rows.map((row) => {
+    if (!Array.isArray(row)) {
+      return row;
+    }
+
+    return row.map((cell) => {
+      if (cell !== null && typeof cell === 'object' && Array.isArray(cell.blocks)) {
+        return cell;
+      }
+
+      const text = typeof cell === 'string' ? cell : '';
+
+      if (text.length === 0) {
+        return { blocks: [] };
+      }
+
+      const cellId = generateBlockId();
+
+      children.push({
+        id: cellId,
+        type: 'paragraph',
+        data: { text },
+        parent: tableId,
+      });
+
+      return { blocks: [cellId] };
+    });
+  });
+
+  const { content: _content, withHeadings, withHeadingColumn, stretched, ...rest } = data;
+
+  const table = {
+    ...block,
+    id: tableId,
+    data: {
+      ...rest,
+      withHeadings: withHeadings === true,
+      withHeadingColumn: withHeadingColumn === true,
+      ...(stretched === true ? { stretched: true } : {}),
+      content: newContent,
+    },
+  };
+
+  return [table, ...children];
+}
+
 /**
  * Apply block type transforms to JSON article data.
  * Renames legacy EditorJS block types to their Blok equivalents.
@@ -1068,7 +1354,22 @@ function applyBlockTypeTransforms(jsonString) {
     const data = JSON.parse(jsonString);
     const transformBlocks = (obj) => {
       if (Array.isArray(obj)) {
-        return obj.map(transformBlocks);
+        // Expand checklist blocks (1 → N list blocks) before recursing into each
+        // element. The flatMap lets a single checklist become several siblings,
+        // mirroring the runtime's expandChecklistToHierarchical.
+        return obj.flatMap((item) => {
+          if (isLegacyChecklistBlock(item)) {
+            return migrateChecklistToList(item);
+          }
+          if (isLegacyWarningBlock(item)) {
+            return migrateWarningToCallout(item);
+          }
+          if (isLegacyTableBlock(item)) {
+            return migrateTableToCellBlocks(item);
+          }
+
+          return [transformBlocks(item)];
+        });
       }
       if (obj !== null && typeof obj === 'object') {
         // Migrate legacy block shapes (e.g. image { data: { file: { url } } })
@@ -1753,4 +2054,9 @@ module.exports = {
   TEXT_TRANSFORMS,
   BLOCK_TYPE_TRANSFORMS,
   applyBlockTypeTransforms,
+  migrateChecklistToList,
+  migrateRawToCode,
+  migrateAttachesToBookmark,
+  migrateWarningToCallout,
+  migrateTableToCellBlocks,
 };

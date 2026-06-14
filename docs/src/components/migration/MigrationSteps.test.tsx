@@ -244,4 +244,26 @@ describe('MigrationSteps', () => {
     expect(within(note).getByText('linkTool')).toBeInTheDocument();
     expect(within(note).getByText('meta.site_name')).toBeInTheDocument();
   });
+
+  it('should render the supported Editor.js versions section', () => {
+    renderMigrationSteps();
+
+    const section = screen.getByTestId('supported-versions-section');
+    expect(within(section).getByText(m.supportedVersionsTitle)).toBeInTheDocument();
+    expect(within(section).getByText(m.supportedVersionsDescription)).toBeInTheDocument();
+    // Target line statement names the 2.x line
+    expect(within(section).getByText(m.supportedVersionsTarget)).toBeInTheDocument();
+  });
+
+  it('should render the compatibility matrix rows', () => {
+    renderMigrationSteps();
+
+    const matrix = screen.getByTestId('compatibility-matrix');
+    const rows = within(matrix).getAllByTestId('compatibility-row');
+    expect(rows.length).toBeGreaterThanOrEqual(8);
+    // Grounded rows: a drop-in tool, a runtime-migrated tool, and a not-bundled tool
+    expect(within(matrix).getByText('paragraph')).toBeInTheDocument();
+    expect(within(matrix).getByText('linkTool')).toBeInTheDocument();
+    expect(within(matrix).getByText('checklist')).toBeInTheDocument();
+  });
 });

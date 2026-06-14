@@ -197,6 +197,8 @@ export function wrapLegacyInlineTool(
     render(): HTMLElement | null | undefined;
     surround?(range: Range): void;
     checkState?(selection: Selection | null): boolean;
+    renderActions?(): HTMLElement | null | undefined;
+    clear?(): void;
   }
 ): InlineToolConstructable;
 

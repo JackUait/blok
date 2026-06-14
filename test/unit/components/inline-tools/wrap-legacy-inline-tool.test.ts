@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { wrapLegacyInlineTool } from '../../../../src/components/inline-tools/wrap-legacy-inline-tool';
 import type { API, SanitizerConfig, ToolConfig } from '../../../../types';
-import type { PopoverItemDefaultBaseParams } from '../../../../types/utils/popover';
+import type { PopoverItemDefaultBaseParams, PopoverItemChildren, PopoverItemHtmlParams } from '../../../../types/utils/popover';
+import { PopoverItemType } from '../../../../src/components/utils/popover';
 
 /**
  * Minimal fake Editor.js-style inline tool.
@@ -58,6 +59,46 @@ class MinimalLegacyTool {
     return document.createElement('button');
   }
 }
+
+/**
+ * Legacy tool exposing a secondary actions UI via renderActions() and a clear() reset hook.
+ * Mirrors the Editor.js link-tool contract.
+ */
+const ACTIONS_TESTID = 'fake-legacy-actions';
+
+class ActionsLegacyTool {
+  public static title = 'With Actions';
+
+  public clearCallCount = 0;
+  private readonly actionsElement: HTMLElement;
+
+  constructor() {
+    this.actionsElement = document.createElement('div');
+    this.actionsElement.setAttribute('data-testid', ACTIONS_TESTID);
+    const input = document.createElement('input');
+
+    this.actionsElement.appendChild(input);
+  }
+
+  public render(): HTMLElement {
+    return document.createElement('button');
+  }
+
+  public renderActions(): HTMLElement {
+    return this.actionsElement;
+  }
+
+  public clear(): void {
+    this.clearCallCount += 1;
+  }
+}
+
+/**
+ * Type guard narrowing a MenuConfig item to one that carries a `children` block.
+ */
+const hasChildren = (
+  config: PopoverItemDefaultBaseParams | { children: PopoverItemChildren }
+): config is { children: PopoverItemChildren } => 'children' in config;
 
 const fakeApi = {} as API;
 const fakeConfig = { placeholder: 'x' } as ToolConfig;
@@ -206,5 +247,79 @@ describe('wrapLegacyInlineTool', () => {
     const config = instance.render() as PopoverItemDefaultBaseParams;
 
     expect(config.icon).toBe('');
+  });
+
+  it('surfaces the legacy renderActions() element through children as an Html popover item', () => {
+    const Wrapped = wrapLegacyInlineTool(ActionsLegacyTool);
+    const instance = new Wrapped({ api: fakeApi, config: fakeConfig });
+    const config = instance.render() as PopoverItemDefaultBaseParams | { children: PopoverItemChildren };
+
+    expect(hasChildren(config)).toBe(true);
+
+    if (!hasChildren(config)) {
+      return;
+    }
+
+    const { children } = config;
+
+    expect(children.hideChevron).toBe(true);
+    expect(Array.isArray(children.items)).toBe(true);
+
+    const [htmlItem] = children.items ?? [];
+
+    expect(htmlItem).toBeDefined();
+    expect((htmlItem as PopoverItemHtmlParams).type).toBe(PopoverItemType.Html);
+
+    const element = (htmlItem as PopoverItemHtmlParams).element;
+
+    expect(element).toBeInstanceOf(HTMLElement);
+    expect(element.getAttribute('data-testid')).toBe(ACTIONS_TESTID);
+  });
+
+  it('invokes the legacy clear() through the children onClose hook', () => {
+    const Wrapped = wrapLegacyInlineTool(ActionsLegacyTool);
+    const instance = new Wrapped({ api: fakeApi, config: fakeConfig });
+    const config = instance.render() as PopoverItemDefaultBaseParams | { children: PopoverItemChildren };
+
+    expect(hasChildren(config)).toBe(true);
+
+    if (!hasChildren(config)) {
+      return;
+    }
+
+    const legacy = (instance as unknown as { legacyInstance: ActionsLegacyTool }).legacyInstance;
+
+    expect(legacy.clearCallCount).toBe(0);
+
+    config.children.onClose?.();
+
+    expect(legacy.clearCallCount).toBe(1);
+  });
+
+  it('does not add a children block when the legacy tool has no renderActions', () => {
+    const Wrapped = wrapLegacyInlineTool(FakeLegacyTool);
+    const instance = new Wrapped({ api: fakeApi, config: fakeConfig });
+    const config = instance.render() as PopoverItemDefaultBaseParams | { children: PopoverItemChildren };
+
+    expect('children' in config).toBe(false);
+  });
+
+  it('does not throw when only clear is implemented without renderActions (no children, no regression)', () => {
+    class ClearOnlyTool {
+      public render(): HTMLElement {
+        return document.createElement('button');
+      }
+
+      public clear(): void {
+        // no-op
+      }
+    }
+
+    const Wrapped = wrapLegacyInlineTool(ClearOnlyTool);
+    const instance = new Wrapped({ api: fakeApi, config: fakeConfig });
+    const config = instance.render() as PopoverItemDefaultBaseParams | { children: PopoverItemChildren };
+
+    // Without an actions element there is nothing to host children, so clear cannot be wired.
+    expect('children' in config).toBe(false);
   });
 });

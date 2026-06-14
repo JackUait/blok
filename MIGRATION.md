@@ -4,6 +4,7 @@ This guide covers the breaking changes when migrating from EditorJS to Blok.
 
 ## Table of Contents
 
+- [Supported Editor.js Versions](#supported-editorjs-versions)
 - [Core Changes](#core-changes)
 - [Data Attributes](#data-attributes)
 - [CSS Classes](#css-classes)
@@ -21,6 +22,39 @@ This guide covers the breaking changes when migrating from EditorJS to Blok.
 - [New API Methods](#new-api-methods)
 - [DOM Selectors](#dom-selectors)
 - [E2E Test Selectors](#e2e-test-selectors)
+
+---
+
+## Supported Editor.js Versions
+
+Blok targets the **Editor.js 2.x** line. The [codemod](./codemod) is built against the package versions a typical Editor.js 2.x project ships — `@editorjs/editorjs@^2.28.x`, `@editorjs/header@^2.8.x`, `@editorjs/paragraph@^2.11.x`, `@editorjs/list@^1.9.x` — and the runtime auto-migration reads the saved-data shapes those versions produce. Older 2.x data formats are still recognized; the matrix below describes coverage per block/tool, not per Editor.js point release.
+
+There is no pinned single source version: Blok is API-compatible with the Editor.js 2.x `BlockTool` / `InlineTool` contracts, so what matters is **which tools your content uses**, covered below.
+
+### Compatibility Matrix
+
+How each Editor.js block/tool is handled. "Auto-migrated at runtime" means the conversion happens on `render()` with no script needed; "Codemod" means the [codemod](./codemod) rewrites saved JSON; "Drop-in unchanged" means the data passes through as-is; "Not bundled" means Blok ships no equivalent tool, so you must register your own (a ported Editor.js block tool works unchanged — see [Migrating Custom Tools](#migrating-custom-tools)) or the block renders as a preserved stub with a `console.warn` and round-trips untouched on save.
+
+| Editor.js block / tool | Migration status | Notes |
+|------------------------|------------------|-------|
+| `paragraph` | Drop-in unchanged | Bundled as `Blok.Paragraph` (the default block). |
+| `header` | Drop-in unchanged | Bundled as `Blok.Header`. |
+| `list` (nested **and** string-array items) | Auto-migrated at runtime | Each item expands to a flat `list` block. |
+| `checklist` (standalone tool) | Auto-migrated at runtime | Becomes `list` blocks with checklist style. Handled by the runtime only, not the codemod. |
+| `image`, `simple-image` | Auto-migrated at runtime **+** codemod | `file.url` (or `simple-image`'s flat `url`) → `url`; `withBorder` → `frame`, `stretched` → `size`. `withBackground` is dropped (warns). |
+| `linkTool` | Auto-migrated at runtime **+** codemod → `bookmark` | `meta` flattens onto the bookmark shape; `meta.site_name` is dropped (warns). |
+| `delimiter` | Codemod renames type → `divider` | Data format is identical (`{}`). Also recognized at render, so existing data works without the rename. |
+| `quote` | Auto-migrated at runtime **+** codemod | `caption` becomes a trailing `paragraph` sibling; `alignment` is dropped (warns). The quote text/size render unchanged. |
+| `code` | Drop-in unchanged | Passes through to Blok's bundled `code` tool. |
+| `table` (HTML-string cells) | Auto-migrated at runtime **+** codemod | Each non-empty cell becomes a `{ blocks: [id] }` cell-ref plus a child `paragraph` (`parent` = table id); empty cells become `{ blocks: [] }`. `withHeadings` is preserved. Cells already in block-ref shape pass through. |
+| `embed` | Drop-in unchanged | Bundled as `Blok.Embed`. `{ service, source, embed, width, height, caption }` map 1:1; iframe providers render correctly (Blok-only fields default). |
+| `raw` | Auto-migrated at runtime **+** codemod → `code` | Blok has no raw tool; `{ html }` becomes a `code` block showing the markup as source verbatim. |
+| `warning` | Auto-migrated at runtime **+** codemod → `callout` | Becomes a ⚠️ orange `callout`; `title` and `message` become child `paragraph` blocks. |
+| `attaches` | Auto-migrated at runtime **+** codemod → `bookmark` | `file.url` + `title` map to a `bookmark`; file metadata (`name`/`size`/`extension`) is dropped (warns). |
+| `marker`, `inlineCode` (inline) | Not bundled | Register your own (port unchanged or wrap with `wrapLegacyInlineTool`). See [Custom Inline Tools](#custom-inline-tools). |
+| Other third-party block tools (`personality`, `button`, audio, …) | Not bundled | No built-in equivalent. Register a tool to render them; otherwise the block is preserved as a stub (warns) and survives a save/load round-trip. |
+
+> **Heads-up:** any block type Blok doesn't recognize and has no registered tool for renders as a stub and logs `Tool «<name>» is not found`. Its data is preserved, so registering the tool later restores the block.
 
 ---
 

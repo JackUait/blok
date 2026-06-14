@@ -1,5 +1,6 @@
 import type { API, InlineTool, SanitizerConfig, ToolConfig } from '../../../types';
 import type { MenuConfig } from '../../../types/tools';
+import { PopoverItemType } from '../utils/popover';
 
 /**
  * Subset of the legacy (Editor.js-style) inline tool instance contract.
@@ -21,6 +22,17 @@ interface LegacyInlineToolInstance {
    * Reports whether the formatting is active for the current selection.
    */
   checkState?(selection: Selection | null): boolean;
+
+  /**
+   * Returns a secondary UI element shown below the button while the tool is active
+   * (e.g. the link tool's URL input, a color picker).
+   */
+  renderActions?(): HTMLElement | null | undefined;
+
+  /**
+   * Resets the actions UI. Called when the toolbar closes / the tool deactivates.
+   */
+  clear?(): void;
 }
 
 /**
@@ -96,9 +108,14 @@ export function wrapLegacyInlineTool(
 
     /**
      * Build the Blok MenuConfig from the legacy instance.
+     *
+     * The legacy `renderActions()` element (if any) is surfaced through the
+     * MenuConfig `children` block as an Html popover item — the same affordance
+     * Blok's native link tool uses for its URL input. `clear()` is wired to the
+     * children `onClose` hook so the actions UI resets when the popover closes.
      */
     public render(): MenuConfig {
-      return {
+      const baseConfig = {
         name: toolName,
         title: LegacyToolClass.title,
         icon: extractIcon(this.legacyInstance),
@@ -121,6 +138,34 @@ export function wrapLegacyInlineTool(
           }
 
           return Boolean(this.legacyInstance.checkState(window.getSelection()));
+        },
+      };
+
+      const actionsElement = typeof this.legacyInstance.renderActions === 'function'
+        ? this.legacyInstance.renderActions()
+        : null;
+
+      if (!(actionsElement instanceof HTMLElement)) {
+        return baseConfig;
+      }
+
+      const { onActivate: _onActivate, ...withoutActivate } = baseConfig;
+
+      return {
+        ...withoutActivate,
+        children: {
+          hideChevron: true,
+          items: [
+            {
+              type: PopoverItemType.Html,
+              element: actionsElement,
+            },
+          ],
+          onClose: (): void => {
+            if (typeof this.legacyInstance.clear === 'function') {
+              this.legacyInstance.clear();
+            }
+          },
         },
       };
     }

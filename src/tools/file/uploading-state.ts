@@ -19,7 +19,7 @@ function clamp(value: number): number {
 }
 
 export function renderUploadingState(opts: UploadingStateOptions): UploadingStateElement {
-  const root = document.createElement('div') as UploadingStateElement;
+  const root = document.createElement('div') as unknown as UploadingStateElement;
   root.className = 'blok-file-uploading';
 
   const label = document.createElement('span');

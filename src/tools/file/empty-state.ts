@@ -22,7 +22,7 @@ export interface EmptyStateElement extends HTMLElement {
 }
 
 export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
-  const root = document.createElement('div') as EmptyStateElement;
+  const root = document.createElement('div') as unknown as EmptyStateElement;
   root.className = 'blok-file-empty';
 
   const tabs = document.createElement('div');
@@ -39,6 +39,7 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
   input.type = 'file';
   input.accept = opts.accept;
   input.hidden = true;
+  input.setAttribute('data-blok-testid', 'file-input');
   input.addEventListener('change', () => {
     const file = input.files?.[0];
     if (file) {

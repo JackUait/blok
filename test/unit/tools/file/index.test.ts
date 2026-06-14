@@ -91,13 +91,16 @@ describe('FileTool — toolbox & paste config', () => {
   });
 
   it('pasteConfig claims non-image files and never image/*', () => {
-    const files = FileTool.pasteConfig.files;
-    expect(files?.mimeTypes).toContain('application/*');
-    expect(files?.mimeTypes).not.toContain('image/*');
+    const { pasteConfig } = FileTool;
+    if (pasteConfig === false) throw new Error('pasteConfig is false');
+    expect(pasteConfig.files?.mimeTypes).toContain('application/*');
+    expect(pasteConfig.files?.mimeTypes).not.toContain('image/*');
   });
 
   it('pasteConfig declares no URL patterns (avoids hijacking links)', () => {
-    expect(FileTool.pasteConfig.patterns).toBeUndefined();
+    const { pasteConfig } = FileTool;
+    if (pasteConfig === false) throw new Error('pasteConfig is false');
+    expect(pasteConfig.patterns).toBeUndefined();
   });
 });
 

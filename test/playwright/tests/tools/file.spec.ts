@@ -47,6 +47,7 @@ const createBlokWithFile = async (page: Page, data?: OutputData): Promise<void> 
   await page.waitForFunction(() => typeof window.Blok === 'function');
   await page.evaluate(
     async ({ holder, initialData }) => {
+      // @ts-expect-error built bundle has no TS types — runtime-only dynamic import
       const { File: FileTool, Image: ImageTool } = await import('/dist/tools.mjs?_v=1') as Record<string, new (...args: unknown[]) => unknown>;
       const blok = new window.Blok({
         holder,
@@ -88,7 +89,7 @@ test('upload renders a download card with correct filename and download attribut
   await expect(fileBlock).toBeVisible();
 
   // The file input is hidden — setInputFiles works on hidden inputs
-  const fileInput = fileBlock.locator('input[type="file"]');
+  const fileInput = fileBlock.getByTestId('file-input');
   await fileInput.setInputFiles({
     name: 'report.pdf',
     mimeType: 'application/pdf',

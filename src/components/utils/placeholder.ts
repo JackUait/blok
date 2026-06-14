@@ -145,18 +145,3 @@ export const setupPlaceholder = (
     element.removeAttribute(attributeName);
   };
 };
-
-/**
- * Apply placeholder attribute to an element
- *
- * @param element - The element to apply placeholder to
- * @param placeholder - The placeholder text
- * @param attributeName - The attribute name (default: 'data-placeholder')
- */
-export const applyPlaceholderAttribute = (
-  element: HTMLElement,
-  placeholder: string,
-  attributeName: 'data-placeholder' | 'data-blok-placeholder-active' = 'data-placeholder'
-): void => {
-  element.setAttribute(attributeName, placeholder);
-};

@@ -69,13 +69,7 @@ export const CODE_TAB_KEY = 'tools.code.codeTab';
 export const PREVIEW_TAB_KEY = 'tools.code.previewTab';
 
 // CSS — preview tab styles
-export const TAB_STYLES = 'px-2 py-0.5 rounded text-xs font-medium cursor-pointer border-0 transition-colors select-none';
-export const TAB_ACTIVE_STYLES = 'bg-blue-500 text-white';
-export const TAB_INACTIVE_STYLES = 'bg-transparent text-gray-text can-hover:hover:bg-item-hover-bg';
 export const PREVIEW_AREA_STYLES = 'px-4 py-3 overflow-x-auto min-h-[1.5em] flex justify-center';
-
-// i18n key — preview toggle
-export const PREVIEW_TOGGLE_KEY = 'tools.code.previewToggle';
 
 // i18n key — side-by-side view mode
 export const SIDE_BY_SIDE_KEY = 'tools.code.sideBySide';

@@ -174,14 +174,3 @@ export function shortcutToReadable(shortcut: string): string {
     })
     .join('+');
 }
-
-/**
- * Creates a DOM element containing the SVG glyph icons for a shortcut.
- */
-export function makeShortcutElement(shortcut: string): HTMLElement {
-  const el = document.createElement('span');
-
-  el.innerHTML = makeShortcutHtml(shortcut);
-
-  return el.firstElementChild as HTMLElement ?? el;
-}

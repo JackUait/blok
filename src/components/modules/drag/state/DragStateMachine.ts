@@ -6,16 +6,6 @@
 import type { Block } from '../../../block';
 
 /**
- * Drag operation states
- */
-export type DragStateType =
-  | 'idle'
-  | 'tracking'
-  | 'dragging'
-  | 'dropped'
-  | 'cancelled';
-
-/**
  * Drop edge position
  */
 export type DropEdge = 'top' | 'bottom' | 'left' | 'right';

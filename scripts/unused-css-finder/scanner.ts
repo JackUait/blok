@@ -53,13 +53,6 @@ export const clearEnumValueCache = (): void => {
 };
 
 /**
- * Get the function return cache (for testing)
- */
-export const getFunctionReturnCache = (): Map<string, string[]> => {
-  return functionReturnCache;
-};
-
-/**
  * Remove single-line comments and multi-line comments
  */
 const stripComments = (code: string): string => {

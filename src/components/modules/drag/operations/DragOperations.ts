@@ -5,11 +5,6 @@
 import { BlockToolAPI } from '../../../block';
 import type { Block } from '../../../block';
 
-export interface SavedBlockData {
-  data: Record<string, unknown>;
-  tunes: Record<string, unknown>;
-}
-
 export interface MoveResult {
   movedBlocks: Block[];
   targetIndex: number;

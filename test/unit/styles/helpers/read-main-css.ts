@@ -43,5 +43,3 @@ export function readMainCss(): string {
   cached = inline(STYLES_ENTRY, new Set());
   return cached;
 }
-
-export const MAIN_CSS_ENTRY = STYLES_ENTRY;

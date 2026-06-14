@@ -112,36 +112,3 @@ export const ShortcutKeys: React.FC<ShortcutKeysProps> = ({ keys, className }) =
     </span>
   );
 };
-
-/**
- * Parses a shortcut string (e.g. "⌘ + B" or "⌘B") into tokens and renders
- * them as SVG glyph icons.
- */
-export const ShortcutString: React.FC<{ shortcut: string; className?: string }> = ({
-  shortcut,
-  className,
-}) => {
-  const modifierPattern =
-    /([⌘⇧⌥⌃⌫⏎⎋⌦↑↓←→↵⇥])|([^⌘⇧⌥⌃⌫⏎⎋⌦↑↓←→↵⇥]+)/gu;
-
-  const tokens: string[] = shortcut.split(' + ').flatMap((segment) => {
-    const result: string[] = [];
-
-    for (const match of segment.matchAll(modifierPattern)) {
-      const token = match[0].trim();
-
-      if (token) {
-        result.push(token);
-      }
-    }
-
-    return result;
-  });
-
-  return (
-    <ShortcutKeys
-      keys={tokens.length > 0 ? tokens : [shortcut]}
-      className={className}
-    />
-  );
-};

@@ -158,26 +158,6 @@ export const createEditorContainer = (options: EditorFactoryOptions = {}): HTMLE
 };
 
 /**
- * Gets the current shared editor instance (if available)
- */
-export const getSharedEditor = (): Blok | null => editorState.editor;
-
-/**
- * Cleans up the shared editor instance
- */
-export const destroySharedEditor = async (): Promise<void> => {
-  if (editorState.editor) {
-    try {
-      await editorState.editor.destroy();
-    } catch {
-      // Editor may already be destroyed
-    }
-    editorState.editor = null;
-    editorState.holder = null;
-  }
-};
-
-/**
  * Simulates a full click sequence (mousedown → mouseup → click) with proper event bubbling.
  * This is needed because userEvent.click() doesn't properly trigger mousedown events
  * in headless browser environments like Chromatic.
@@ -296,34 +276,6 @@ export const dispatchKeyboardEvent = (
   const targetElement = options.target ?? document.activeElement ?? document.body;
 
   targetElement.dispatchEvent(event);
-};
-
-/**
- * Simulates typing text by dispatching keyboard events and input events.
- * This is needed for search/filter functionality that listens to document-level events.
- * @param text - The text to type
- */
-export const simulateTyping = (text: string): void => {
-  for (const char of text) {
-    const keydownEvent = new KeyboardEvent('keydown', {
-      bubbles: true,
-      cancelable: true,
-      key: char,
-      code: `Key${char.toUpperCase()}`,
-    });
-
-    document.dispatchEvent(keydownEvent);
-
-    // Also dispatch keypress for compatibility
-    const keypressEvent = new KeyboardEvent('keypress', {
-      bubbles: true,
-      cancelable: true,
-      key: char,
-      code: `Key${char.toUpperCase()}`,
-    });
-
-    document.dispatchEvent(keypressEvent);
-  }
 };
 
 /**

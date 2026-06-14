@@ -461,4 +461,4 @@ export { InlineSelectionValidator } from './selection-validator';
 export { InlinePopoverBuilder } from './popover-builder';
 export { InlineKeyboardHandler } from './keyboard-handler';
 export { InlineLifecycleManager } from './lifecycle-manager';
-export type { InlineToolbarNodes, InlinePositioningOptions, SelectionValidationResult } from './types';
+export type { InlineToolbarNodes } from './types';

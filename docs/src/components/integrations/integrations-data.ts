@@ -10,11 +10,6 @@ export interface IntegrationSection {
   customType?: 'install';
 }
 
-export interface SidebarSection {
-  title: string;
-  links: { id: string; label: string }[];
-}
-
 // ─── React integration data ────────────────────────────────────────────────
 
 const REACT_INSTALL_EXAMPLE = `# Install blok + peer dependency
@@ -200,19 +195,3 @@ export const REACT_SECTIONS: IntegrationSection[] = [
   },
 ];
 
-// ─── Sidebar config ────────────────────────────────────────────────────────
-
-export const INTEGRATIONS_SIDEBAR: SidebarSection[] = [
-  {
-    title: 'React',
-    links: [
-      { id: 'react-install',     label: 'Installation' },
-      { id: 'react-quickstart',  label: 'Quick Start' },
-      { id: 'react-use-blok',    label: 'useBlok' },
-      { id: 'react-blok-content',label: 'BlokContent' },
-      { id: 'react-read-only',   label: 'Read-Only Mode' },
-      { id: 'react-deps',        label: 'Switching Documents' },
-      { id: 'react-full-example',label: 'Complete Example' },
-    ],
-  },
-];

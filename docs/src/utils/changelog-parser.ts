@@ -340,23 +340,3 @@ const getHighlight = (
   );
   return highlightChange?.description;
 };
-
-/**
- * Parse CHANGELOG.md and return releases
- * This function uses fetch to load the CHANGELOG.md content at runtime
- *
- * Note: In production, consider building the changelog into the bundle
- */
-export const loadChangelog = async (): Promise<Release[]> => {
-  try {
-    const response = await fetch("/CHANGELOG.md");
-    if (!response.ok) {
-      throw new Error(`Failed to load CHANGELOG.md: ${response.statusText}`);
-    }
-    const changelogContent = await response.text();
-    return parseChangelog(changelogContent);
-  } catch (error) {
-    console.error("Error loading changelog:", error);
-    return [];
-  }
-};

@@ -19,14 +19,3 @@ export interface SearchIndexItem {
   hash?: string;
   keywords: string[];
 }
-
-export type SearchCategory = 'guide' | 'core' | 'api' | 'data' | 'page' | 'recipe';
-
-export const SEARCH_CATEGORIES: Record<SearchCategory, string> = {
-  guide: 'Guide',
-  core: 'Core',
-  api: 'API',
-  data: 'Data',
-  page: 'Page',
-  recipe: 'Recipe',
-} as const;

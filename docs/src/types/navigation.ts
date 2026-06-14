@@ -5,8 +5,3 @@ export interface NavLink {
   external?: boolean;
   active?: boolean;
 }
-
-export interface NavProps {
-  currentPath: string;
-  links: NavLink[];
-}

@@ -1,6 +1,4 @@
 export * from './hint';
 export type {
-  HintParams,
-  HintPosition,
-  HintTextAlignment
+  HintPosition
 } from '@/types/utils/popover/hint';

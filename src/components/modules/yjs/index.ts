@@ -435,5 +435,5 @@ export class YjsManager extends Module {
 }
 
 // Re-export types for consumers
-export type { BlockChangeEvent, CaretSnapshot, TransactionOrigin } from './types';
+export type { CaretSnapshot } from './types';
 export type { YjsOutputBlockData };

@@ -2,7 +2,6 @@
  * Re-export DATA_ATTR from the single source of truth
  */
 export { DATA_ATTR, createSelector } from './constants/data-attributes';
-export type { DataAttrKey, DataAttrValue } from './constants/data-attributes';
 
 /**
  * Debounce timeout for selection change event

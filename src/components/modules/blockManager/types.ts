@@ -63,54 +63,12 @@ export interface InsertBlockOptions {
 }
 
 /**
- * Result of a block operation
- */
-export interface BlockOperationResult {
-  /** Type of operation */
-  type: 'insert' | 'remove' | 'update' | 'move' | 'replace' | 'split' | 'merge';
-  /** Block affected by operation */
-  block?: Block;
-  /** Block id */
-  blockId?: string;
-  /** Index in the blocks array */
-  index: number;
-  /** Block that was removed */
-  removedBlock?: Block;
-  /** From index (for move operations) */
-  fromIndex?: number;
-  /** To index (for move operations) */
-  toIndex?: number;
-  /** New block created by operation */
-  newBlock?: Block;
-}
-
-/**
  * Block mutation event detail without target field
  */
 export type BlockMutationEventDetailWithoutTarget<Type extends BlockMutationType> = Omit<
   BlockMutationEventMap[Type]['detail'],
   'target'
 >;
-
-/**
- * Options for updating a block
- */
-export interface UpdateBlockOptions {
-  /** New data (optional) */
-  data?: Partial<BlockToolData>;
-  /** New tune data (optional) */
-  tunes?: { [name: string]: BlockTuneData };
-}
-
-/**
- * Options for converting a block
- */
-export interface ConvertBlockOptions {
-  /** Target tool name */
-  targetToolName: string;
-  /** Optional new Block data overrides */
-  blockDataOverrides?: BlockToolData;
-}
 
 /**
  * Block storage with indexed access

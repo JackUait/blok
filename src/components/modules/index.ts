@@ -41,57 +41,6 @@ import { ThemeManager } from './themeManager';
 import { YjsManager } from './yjs';
 
 /**
- * Named exports for better tree-shaking.
- * Consumers can import only the modules they need.
- */
-export {
-  // API Modules
-  BlocksAPI,
-  CaretAPI,
-  EventsAPI,
-  HistoryAPI,
-  I18nAPI,
-  API,
-  InlineToolbarAPI,
-  ListenersAPI,
-  NotifierAPI,
-  ReadOnlyAPI,
-  SanitizerAPI,
-  SaverAPI,
-  SelectionAPI,
-  ToolsAPI,
-  StylesAPI,
-  ToolbarAPI,
-  TooltipAPI,
-  UiAPI,
-  ThemeAPI,
-
-  // Toolbar Modules
-  BlockSettings,
-  Toolbar,
-  InlineToolbar,
-
-  // Modules
-  I18n,
-  BlockEvents,
-  BlockManager,
-  BlockSelection,
-  Caret,
-  CrossBlockSelection,
-  DragManager,
-  ModificationsObserver,
-  Paste,
-  ReadOnly,
-  RectangleSelection,
-  Renderer,
-  Saver,
-  Tools,
-  UI,
-  ThemeManager,
-  YjsManager,
-};
-
-/**
  * Default export for backwards compatibility and internal use.
  */
 export const Modules = {

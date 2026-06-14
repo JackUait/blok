@@ -1025,5 +1025,3 @@ export class Table implements BlockTool {
   }
 
 }
-
-export { isInsideTableCell, isRestrictedInTableCell, convertToParagraph } from './table-restrictions';

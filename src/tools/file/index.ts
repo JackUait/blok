@@ -16,6 +16,7 @@ import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { renderUploadingState, type UploadingStateElement } from './uploading-state';
 import { renderCaptionRow, renderFileCard } from './ui';
 import { Uploader } from './uploader';
+import { safeHttpHref } from './url';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -188,11 +189,12 @@ export class FileTool implements BlockTool {
       link.click();
       return;
     }
-    if (!this.data.url) {
+    const href = safeHttpHref(this.data.url);
+    if (href === null) {
       return;
     }
     const anchor = document.createElement('a');
-    anchor.href = this.data.url;
+    anchor.href = href;
     anchor.download = this.data.fileName ?? '';
     anchor.target = '_blank';
     anchor.rel = 'noopener noreferrer';

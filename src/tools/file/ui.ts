@@ -1,27 +1,13 @@
 import { IconDownload, IconFile } from '../../components/icons';
 import type { FileData } from '../../../types/tools/file';
 import { humanFileSize } from './format';
+import { safeHttpHref } from './url';
 
 export interface CaptionRowOptions {
   value: string;
   placeholder: string;
   readOnly: boolean;
   onChange(next: string): void;
-}
-
-/**
- * Returns the url only when it carries an http(s) scheme, else null. Persisted
- * block data is untrusted: a stored `javascript:`/`data:` url would execute on
- * click, so it must never reach an anchor's href.
- */
-function safeHttpHref(raw: string): string | null {
-  try {
-    const url = new URL(raw, window.location.href);
-
-    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null;
-  } catch {
-    return null;
-  }
 }
 
 /** Renders the static download card: type icon, filename, size, download affordance. */

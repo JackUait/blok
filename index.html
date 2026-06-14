@@ -891,7 +891,7 @@
 
   <script type="module">
     import { Blok } from './src/blok.ts';
-    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Quote, Code, Image, ColumnList, Column, Embed, Bookmark, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Quote, Code, Image, File as FileBlock, ColumnList, Column, Embed, Bookmark, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
@@ -919,6 +919,7 @@
         quote: true,
         code: true,
         image: true,
+        file: true,
         columns: true,
       },
     };
@@ -1787,6 +1788,19 @@
       if (state.tools.quote) tools.quote = { class: Quote, inlineToolbar: true };
       if (state.tools.code) tools.code = { class: Code, inlineToolbar: false };
       if (state.tools.image) tools.image = Image;
+      if (state.tools.file) tools.file = {
+        class: FileBlock,
+        config: {
+          uploader: {
+            uploadByFile: async (file) => ({
+              url: URL.createObjectURL(file),
+              fileName: file.name,
+              size: file.size,
+              mimeType: file.type,
+            }),
+          },
+        },
+      };
       if (state.tools.columns) {
         tools.column_list = ColumnList;
         tools.column = Column;

@@ -1,0 +1,288 @@
+import type {
+  API,
+  BlockAPI,
+  BlockTool,
+  BlockToolConstructorOptions,
+  FilePasteEvent,
+  PasteConfig,
+  PasteEvent,
+  ToolboxConfig,
+} from '../../../types';
+import type { MenuConfig } from '../../../types/tools/menu-config';
+import type { FileConfig, FileData, FileUploadResult } from '../../../types/tools/file';
+import { IconCaption, IconCopy, IconDownload, IconFile, IconReplace } from '../../components/icons';
+import { DEFAULT_CAPTION_PLACEHOLDER, PASTE_EXTENSIONS, PASTE_MIME_TYPES } from './constants';
+import { renderEmptyState, type EmptyStateElement } from './empty-state';
+import { renderUploadingState, type UploadingStateElement } from './uploading-state';
+import { renderCaptionRow, renderFileCard } from './ui';
+import { Uploader } from './uploader';
+
+type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
+
+export class FileTool implements BlockTool {
+  private readonly api: API;
+  private readonly block: BlockAPI;
+  private readonly config: FileConfig;
+  private readonly uploader: Uploader;
+  private data: FileData;
+  private readOnly: boolean;
+  private root: HTMLElement | null = null;
+  private state: ToolState;
+  private uploadingEl: UploadingStateElement | null = null;
+  private emptyStateEl: EmptyStateElement | null = null;
+  private lastFileName: string | null = null;
+
+  constructor(options: BlockToolConstructorOptions<FileData, FileConfig>) {
+    this.api = options.api;
+    this.block = options.block;
+    this.config = options.config ?? {};
+    this.readOnly = options.readOnly;
+    this.data = { ...options.data, url: options.data?.url ?? '' };
+    this.state = this.data.url ? 'RENDERED' : 'EMPTY';
+    this.uploader = new Uploader(this.config);
+  }
+
+  public render(): HTMLElement {
+    const root = document.createElement('div');
+    root.setAttribute('data-blok-tool', 'file');
+    this.root = root;
+    this.renderState();
+    return root;
+  }
+
+  public save(): FileData {
+    const out: FileData = { url: this.data.url };
+    if (this.data.fileName !== undefined) out.fileName = this.data.fileName;
+    if (this.data.size !== undefined) out.size = this.data.size;
+    if (this.data.mimeType !== undefined) out.mimeType = this.data.mimeType;
+    if (this.data.caption !== undefined && this.data.caption !== '') out.caption = this.data.caption;
+    if (this.data.captionVisible !== undefined) out.captionVisible = this.data.captionVisible;
+    return out;
+  }
+
+  public validate(data: FileData): boolean {
+    return typeof data.url === 'string' && data.url.length > 0;
+  }
+
+  public setReadOnly(state: boolean): void {
+    this.readOnly = state;
+    this.renderState();
+  }
+
+  public onPaste(event: PasteEvent): void {
+    if (event.type === 'file') {
+      this.startUpload((event as FilePasteEvent).detail.file);
+    }
+  }
+
+  public renderSettings(): MenuConfig {
+    const i18n = this.api.i18n;
+    const captionVisible = this.data.captionVisible !== false;
+    return [
+      {
+        icon: IconCaption,
+        title: i18n.t('tools.file.toggleCaption'),
+        name: 'file-caption',
+        isActive: captionVisible,
+        closeOnActivate: true,
+        onActivate: (): void => this.toggleCaption(),
+      },
+      {
+        icon: IconReplace,
+        title: i18n.t('tools.file.replace'),
+        name: 'file-replace',
+        closeOnActivate: true,
+        onActivate: (): void => this.transitionToEmpty(),
+      },
+      {
+        icon: IconDownload,
+        title: i18n.t('tools.file.download'),
+        name: 'file-download',
+        closeOnActivate: true,
+        onActivate: (): void => this.download(),
+      },
+      {
+        icon: IconCopy,
+        title: i18n.t('tools.file.copyUrl'),
+        name: 'file-copy-url',
+        closeOnActivate: true,
+        onActivate: (): void => void navigator.clipboard?.writeText(this.data.url),
+      },
+    ];
+  }
+
+  public static get toolbox(): ToolboxConfig {
+    return {
+      icon: IconFile,
+      titleKey: 'file',
+      searchTerms: ['file', 'attachment', 'upload', 'download', 'pdf', 'document'],
+    };
+  }
+
+  public static get isReadOnlySupported(): boolean {
+    return true;
+  }
+
+  public static get pasteConfig(): PasteConfig {
+    return {
+      files: {
+        mimeTypes: [...PASTE_MIME_TYPES],
+        extensions: [...PASTE_EXTENSIONS],
+      },
+    };
+  }
+
+  private startUpload(file: File): void {
+    this.lastFileName = file.name;
+    this.state = 'LOADING';
+    this.renderState();
+    void this.uploader
+      .handleFile(file, { onProgress: (p) => this.uploadingEl?.setProgress(p) })
+      .then((result) => this.applyResult(result))
+      .catch(() => this.applyError());
+  }
+
+  private startUrl(url: string): void {
+    this.lastFileName = null;
+    this.state = 'LOADING';
+    this.renderState();
+    void this.uploader
+      .handleUrl(url, { onProgress: (p) => this.uploadingEl?.setProgress(p) })
+      .then((result) => this.applyResult(result))
+      .catch(() => this.applyError());
+  }
+
+  private applyResult(result: FileUploadResult): void {
+    this.data = {
+      ...this.data,
+      url: result.url,
+      fileName: result.fileName ?? this.lastFileName ?? this.data.fileName,
+      size: result.size ?? this.data.size,
+      mimeType: result.mimeType ?? this.data.mimeType,
+    };
+    this.state = 'RENDERED';
+    this.renderState();
+    this.block.dispatchChange();
+  }
+
+  private applyError(): void {
+    this.state = 'ERROR';
+    this.renderState();
+  }
+
+  private transitionToEmpty(): void {
+    this.data = { ...this.data, url: '' };
+    this.state = 'EMPTY';
+    this.renderState();
+    this.block.dispatchChange();
+  }
+
+  private toggleCaption(): void {
+    this.data = { ...this.data, captionVisible: this.data.captionVisible === false };
+    this.renderState();
+    this.block.dispatchChange();
+  }
+
+  private download(): void {
+    const link = this.root?.querySelector<HTMLAnchorElement>('a[data-action="download"]');
+    link?.click();
+  }
+
+  private renderState(): void {
+    if (!this.root) {
+      return;
+    }
+    this.root.innerHTML = '';
+    this.uploadingEl = null;
+    this.emptyStateEl = null;
+
+    if (this.state === 'EMPTY') {
+      this.root.appendChild(this.buildEmpty());
+      return;
+    }
+    if (this.state === 'LOADING') {
+      this.uploadingEl = this.buildUploading();
+      this.root.appendChild(this.uploadingEl);
+      return;
+    }
+    if (this.state === 'ERROR') {
+      this.root.appendChild(this.buildError());
+      return;
+    }
+    this.root.appendChild(this.buildRendered());
+  }
+
+  private buildEmpty(): EmptyStateElement {
+    const i18n = this.api.i18n;
+    const el = renderEmptyState({
+      accept: this.config.types?.join(',') ?? '*',
+      labels: {
+        upload: i18n.t('tools.file.emptyUpload'),
+        link: i18n.t('tools.file.emptyLink'),
+        chooseFile: i18n.t('tools.file.emptyChooseFile'),
+        dropHint: i18n.t('tools.file.emptyDropHint'),
+        urlPlaceholder: i18n.t('tools.file.emptyUrlPlaceholder'),
+        urlAria: i18n.t('tools.file.emptyUrlAria'),
+        insert: i18n.t('tools.file.emptyInsert'),
+      },
+      onFile: (file) => this.startUpload(file),
+      onUrl: (url) => this.startUrl(url),
+    });
+    this.emptyStateEl = el;
+    return el;
+  }
+
+  private buildUploading(): UploadingStateElement {
+    const i18n = this.api.i18n;
+    return renderUploadingState({
+      fileName: this.lastFileName,
+      labels: {
+        uploading: i18n.t('tools.file.uploading'),
+        cancel: i18n.t('tools.file.cancelUpload'),
+        progress: i18n.t('tools.file.uploadProgress'),
+      },
+      onCancel: () => this.transitionToEmpty(),
+    });
+  }
+
+  private buildError(): HTMLElement {
+    const i18n = this.api.i18n;
+    const wrap = document.createElement('div');
+    wrap.className = 'blok-file-error-state';
+    wrap.setAttribute('data-role', 'file-error');
+
+    const message = document.createElement('span');
+    message.textContent = i18n.t('tools.file.errorUploadFailed');
+
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'blok-file-retry';
+    retry.setAttribute('data-action', 'retry');
+    retry.textContent = i18n.t('tools.file.errorReplace');
+    retry.addEventListener('click', () => this.transitionToEmpty());
+
+    wrap.append(message, retry);
+    return wrap;
+  }
+
+  private buildRendered(): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.className = 'blok-file-rendered';
+    wrap.appendChild(renderFileCard(this.data));
+
+    if (this.data.captionVisible !== false) {
+      wrap.appendChild(renderCaptionRow({
+        value: this.data.caption ?? '',
+        placeholder: this.config.captionPlaceholder ?? DEFAULT_CAPTION_PLACEHOLDER,
+        readOnly: this.readOnly,
+        onChange: (next) => {
+          if (next !== this.data.caption) {
+            this.data = { ...this.data, caption: next };
+            this.block.dispatchChange();
+          }
+        },
+      }));
+    }
+    return wrap;
+  }
+}

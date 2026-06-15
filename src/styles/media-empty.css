@@ -84,6 +84,13 @@
   position: relative;
   transition: border-color var(--blok-duration-standard) ease, background var(--blok-duration-standard) ease;
 }
+/* clip content while the panel height eases between Upload/Link layouts;
+   drop the Upload min-height floor (specificity beats [data-active-tab]) so the
+   WAAPI height tween is visible on expand instead of snapping to full height */
+.blok-media-empty__card[data-active-tab] .blok-media-empty__panel.is-swapping {
+  overflow: hidden;
+  min-height: 0;
+}
 .blok-media-empty__card[data-active-tab="upload"] .blok-media-empty__panel {
   cursor: pointer;
   flex-direction: column;

@@ -351,6 +351,39 @@ describe('Embed tool — replace source', () => {
   });
 });
 
+describe('Embed tool — empty state', () => {
+  const mount = (tool: Embed): HTMLElement => {
+    const el = tool.render();
+
+    document.body.appendChild(el);
+
+    return el;
+  };
+
+  it('flags the URL bar valid once the field holds a link', () => {
+    const tool = new Embed(createOptions({}));
+    const root = mount(tool);
+    const bar = root.querySelector<HTMLElement>('[data-role="embed-url-bar"]');
+    const input = root.querySelector<HTMLInputElement>('[data-role="embed-url-input"]');
+
+    expect(bar?.getAttribute('data-valid')).toBe('false');
+
+    if (input) {
+      input.value = 'https://vimeo.com/123';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    expect(bar?.getAttribute('data-valid')).toBe('true');
+
+    if (input) {
+      input.value = '   ';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    expect(bar?.getAttribute('data-valid')).toBe('false');
+  });
+});
+
 describe('Embed sizing & resize', () => {
   const figureOf = (root: HTMLElement): HTMLElement | null =>
     root.querySelector('[data-role="embed-figure"]');

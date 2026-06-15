@@ -9,7 +9,7 @@ import type {
   PatternPasteEvent,
   ToolboxConfig,
 } from '../../../../types';
-import { IconGlobe } from '../../../components/icons';
+import { IconGlobe, IconLinkCopy } from '../../../components/icons';
 import { attachResizeHandle, type ResizeEdge } from '../../image/resizer';
 import { renderEmbedOverlay, type EmbedAlignment } from './overlay';
 import { EMBED_SERVICES, matchEmbedService, isHttpUrl, type EmbedKind } from '../registry';
@@ -351,39 +351,116 @@ export class Embed implements BlockTool {
     const el = document.createElement('div');
 
     el.setAttribute('data-blok-testid', 'embed-empty');
+    el.className = 'blok-embed-empty';
 
     if (this.readOnly) {
-      el.textContent = this.api.i18n.t('tools.embed.empty');
+      el.classList.add('blok-embed-empty--readonly');
+
+      const note = document.createElement('span');
+
+      note.className = 'blok-embed-empty__readonly';
+      note.innerHTML = `<span class="blok-embed-empty__readonly-glyph" aria-hidden="true">${IconGlobe}</span>`;
+
+      const text = document.createElement('span');
+
+      text.textContent = this.api.i18n.t('tools.embed.empty');
+      note.appendChild(text);
+      el.appendChild(note);
 
       return el;
     }
 
+    const card = document.createElement('div');
+
+    card.className = 'blok-embed-empty__card';
+
+    const glyph = document.createElement('span');
+
+    glyph.className = 'blok-embed-empty__glyph';
+    glyph.setAttribute('aria-hidden', 'true');
+    glyph.innerHTML = IconGlobe;
+
+    const title = document.createElement('span');
+
+    title.className = 'blok-embed-empty__title';
+    title.textContent = this.api.i18n.t('toolNames.embed');
+
     const form = document.createElement('form');
 
     form.setAttribute('data-role', 'embed-url-form');
+    form.className = 'blok-embed-empty__form';
+
+    const bar = document.createElement('div');
+
+    bar.setAttribute('data-role', 'embed-url-bar');
+    bar.setAttribute('data-valid', 'false');
+    bar.className = 'blok-embed-empty__bar';
+
+    const fieldIcon = document.createElement('span');
+
+    fieldIcon.className = 'blok-embed-empty__bar-icon';
+    fieldIcon.setAttribute('aria-hidden', 'true');
+    fieldIcon.innerHTML = IconLinkCopy;
 
     const input = document.createElement('input');
 
     input.type = 'url';
     input.setAttribute('data-role', 'embed-url-input');
+    input.className = 'blok-embed-empty__input';
     input.setAttribute('placeholder', this.api.i18n.t('tools.embed.urlPlaceholder'));
     input.setAttribute('aria-label', this.api.i18n.t('tools.embed.urlPlaceholder'));
+    input.autocomplete = 'off';
+    input.spellcheck = false;
 
     const submit = document.createElement('button');
 
     submit.type = 'submit';
     submit.setAttribute('data-role', 'embed-url-submit');
-    submit.textContent = this.api.i18n.t('tools.embed.urlSubmit');
+    submit.className = 'blok-embed-empty__submit';
 
-    form.append(input, submit);
+    const submitLabel = document.createElement('span');
+
+    submitLabel.className = 'blok-embed-empty__submit-label';
+    submitLabel.textContent = this.api.i18n.t('tools.embed.urlSubmit');
+
+    const kbd = document.createElement('kbd');
+
+    kbd.className = 'blok-embed-empty__kbd';
+    kbd.setAttribute('aria-hidden', 'true');
+    kbd.textContent = '↵';
+    submit.append(submitLabel, kbd);
+
+    input.addEventListener('input', () => {
+      bar.setAttribute('data-valid', this.looksLikeUrl(input.value) ? 'true' : 'false');
+    });
+
+    bar.append(fieldIcon, input, submit);
+    form.appendChild(bar);
     form.addEventListener('submit', (event) => {
       event.preventDefault();
       this.submitUrl(input.value.trim(), el);
     });
 
-    el.appendChild(form);
+    card.append(glyph, title, form);
+    el.appendChild(card);
 
     return el;
+  }
+
+  /**
+   * Lenient "is this URL-ish" check that only drives the input's affordance
+   * (accent ring + ↵ hint). Accepts bare hosts like `vimeo.com/123` so the
+   * cue lights up before the user types a scheme; real validation still runs
+   * through `resolveAndSet` on submit.
+   */
+  private looksLikeUrl(raw: string): boolean {
+    const value = raw.trim();
+
+    if (value === '') {
+      return false;
+    }
+
+    return isHttpUrl(value) || /^[\w-]+(\.[\w-]+)+([/?#].*)?$/i.test(value);
   }
 
   private submitUrl(url: string, container: HTMLElement): void {

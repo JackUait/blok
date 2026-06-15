@@ -136,6 +136,49 @@ function isInteractive(target: EventTarget | null): boolean {
   return target.closest('button, a, input, textarea, select, [role="button"], [role="tab"]') !== null;
 }
 
+const SWAP_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
+
+function canAnimate(el: Element): el is Element & { animate: HTMLElement['animate'] } {
+  return typeof (el as HTMLElement).animate === 'function';
+}
+
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined'
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/**
+ * Cross-fades the new panel content in while easing the panel's height between
+ * the two tab layouts (the Upload dropzone is much taller than the Link bar).
+ * `startHeight` is captured before the content swaps; degrades to an instant
+ * swap when WAAPI is unavailable or reduced motion is requested.
+ */
+function animatePanelSwap(panel: HTMLElement, startHeight: number): void {
+  const endHeight = panel.getBoundingClientRect().height;
+
+  panel.classList.add('is-swapping');
+  const sizing = panel.animate(
+    [{ height: `${startHeight}px` }, { height: `${endHeight}px` }],
+    { duration: 260, easing: SWAP_EASING }
+  );
+  const restore = (): void => {
+    panel.classList.remove('is-swapping');
+  };
+
+  sizing.finished.then(restore).catch(restore);
+
+  // Fade the incoming content in promptly (no delay/offset) so it reveals as
+  // the panel grows rather than popping in once the height tween settles.
+  for (const child of Array.from(panel.children)) {
+    if (!canAnimate(child)) continue;
+    child.animate(
+      [{ opacity: 0 }, { opacity: 1 }],
+      { duration: 150, easing: 'ease-out', fill: 'backwards' }
+    );
+  }
+}
+
 export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyStateElement {
   const { labels } = opts;
   const types = opts.acceptTypes;
@@ -315,7 +358,11 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     queueMicrotask(() => urlInput.focus());
   };
 
-  const activate = (kind: SourceKind): void => {
+  const activate = (kind: SourceKind, animate = false): void => {
+    const startHeight = animate && canAnimate(panel) && !prefersReducedMotion()
+      ? panel.getBoundingClientRect().height
+      : null;
+
     const activeTab = tabList[tabKinds.indexOf(kind)];
     for (const tab of tabList) {
       const isActive = tab === activeTab;
@@ -328,12 +375,16 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     card.setAttribute('data-active-tab', kind);
     if (kind === 'upload') renderUpload();
     else renderEmbed();
+
+    if (startHeight !== null) {
+      animatePanelSwap(panel, startHeight);
+    }
   };
 
   tabList.forEach((tab, idx) => {
     tab.addEventListener('click', (ev) => {
       ev.stopPropagation();
-      activate(tabKinds[idx]);
+      activate(tabKinds[idx], true);
       tab.focus();
     });
     tab.addEventListener('keydown', (ev) => {
@@ -341,16 +392,16 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
         ev.preventDefault();
         const dir = ev.key === 'ArrowRight' ? 1 : -1;
         const next = (idx + dir + tabList.length) % tabList.length;
-        activate(tabKinds[next]);
+        activate(tabKinds[next], true);
         tabList[next].focus();
       } else if (ev.key === 'Home') {
         ev.preventDefault();
-        activate(tabKinds[0]);
+        activate(tabKinds[0], true);
         tabList[0].focus();
       } else if (ev.key === 'End') {
         ev.preventDefault();
         const last = tabList.length - 1;
-        activate(tabKinds[last]);
+        activate(tabKinds[last], true);
         tabList[last].focus();
       }
     });

@@ -230,10 +230,12 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // typography (heading scale, reading column, styled tables/code/quotes,
     // segmented Rendered/Raw control) + advanced markdown preview features
     // (GitHub alert callouts in 5 semantic palette colours + footnotes trailer
-    // styling)).
+    // styling)), embed tool empty state: hero card (glyph + label + URL pill
+    // with inline submit + ↵ reveal + read-only chip), media empty state:
+    // tab-swap height/cross-fade animation clip rule.
     // Shrinking below the baseline is always acceptable.
     const PRE_SPLIT_BYTES = 390050;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.15);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.18);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

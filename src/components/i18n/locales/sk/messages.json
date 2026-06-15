@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Nahrávanie zlyhalo",
   "tools.file.errorReplace": "Nahradiť",
   "tools.file.preview": "Náhľad",
-  "tools.file.previewClose": "Zavrieť náhľad"
+  "tools.file.previewClose": "Zavrieť náhľad",
+  "tools.file.previewRaw": "Zdroj",
+  "tools.file.previewRender": "Náhľad",
+  "tools.file.previewLoading": "Načítava sa náhľad…",
+  "tools.file.previewError": "Náhľad sa nepodarilo načítať",
+  "tools.file.previewDownload": "Stiahnuť"
 }

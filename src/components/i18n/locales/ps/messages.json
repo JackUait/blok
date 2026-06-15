@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "اپلوډ ناکام",
   "tools.file.errorReplace": "بدلول",
   "tools.file.preview": "مخکتنه",
-  "tools.file.previewClose": "مخکتنه وتړئ"
+  "tools.file.previewClose": "مخکتنه وتړئ",
+  "tools.file.previewRaw": "خام",
+  "tools.file.previewRender": "ښودل شوی",
+  "tools.file.previewLoading": "د مخکتنې بارول…",
+  "tools.file.previewError": "مخکتنه بار نشوه",
+  "tools.file.previewDownload": "ډاونلوډ"
 }

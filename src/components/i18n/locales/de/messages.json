@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Upload fehlgeschlagen",
   "tools.file.errorReplace": "Ersetzen",
   "tools.file.preview": "Vorschau",
-  "tools.file.previewClose": "Vorschau schließen"
+  "tools.file.previewClose": "Vorschau schließen",
+  "tools.file.previewRaw": "Quelltext",
+  "tools.file.previewRender": "Vorschau",
+  "tools.file.previewLoading": "Vorschau wird geladen…",
+  "tools.file.previewError": "Vorschau konnte nicht geladen werden",
+  "tools.file.previewDownload": "Herunterladen"
 }

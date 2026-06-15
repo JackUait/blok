@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "အပ်လုဒ်မအောင်မြင်",
   "tools.file.errorReplace": "အစားထိုး",
   "tools.file.preview": "အစမ်းကြည့်ရှုခြင်း",
-  "tools.file.previewClose": "အစမ်းကြည့်ရှုခြင်းကို ပိတ်ပါ"
+  "tools.file.previewClose": "အစမ်းကြည့်ရှုခြင်းကို ပိတ်ပါ",
+  "tools.file.previewRaw": "မူရင်းစာသား",
+  "tools.file.previewRender": "ပြသထားသည်",
+  "tools.file.previewLoading": "အစမ်းကြည့်ရှုမှုကို တင်နေသည်…",
+  "tools.file.previewError": "အစမ်းကြည့်ရှုမှုကို တင်၍မရပါ",
+  "tools.file.previewDownload": "ဒေါင်းလုဒ်"
 }

@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "ಅಪ್‌ಲೋಡ್ ವಿಫಲವಾಗಿದೆ",
   "tools.file.errorReplace": "ಬದಲಿಸಿ",
   "tools.file.preview": "ಮುನ್ನೋಟ",
-  "tools.file.previewClose": "ಮುನ್ನೋಟ ಮುಚ್ಚಿ"
+  "tools.file.previewClose": "ಮುನ್ನೋಟ ಮುಚ್ಚಿ",
+  "tools.file.previewRaw": "ಕಚ್ಚಾ",
+  "tools.file.previewRender": "ಪ್ರದರ್ಶಿತ",
+  "tools.file.previewLoading": "ಮುನ್ನೋಟ ಲೋಡ್ ಆಗುತ್ತಿದೆ…",
+  "tools.file.previewError": "ಮುನ್ನೋಟ ಲೋಡ್ ಮಾಡಲಾಗಲಿಲ್ಲ",
+  "tools.file.previewDownload": "ಡೌನ್‌ಲೋಡ್"
 }

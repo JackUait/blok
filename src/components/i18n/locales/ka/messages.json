@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "ატვირთვა ვერ მოხერხდა",
   "tools.file.errorReplace": "ჩანაცვლება",
   "tools.file.preview": "გადახედვა",
-  "tools.file.previewClose": "გადახედვის დახურვა"
+  "tools.file.previewClose": "გადახედვის დახურვა",
+  "tools.file.previewRaw": "დაუმუშავებელი",
+  "tools.file.previewRender": "დამუშავებული",
+  "tools.file.previewLoading": "მიმდინარეობს გადახედვის ჩატვირთვა…",
+  "tools.file.previewError": "გადახედვის ჩატვირთვა ვერ მოხერხდა",
+  "tools.file.previewDownload": "ჩამოტვირთვა"
 }

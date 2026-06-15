@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "अपलोड अयशस्वी",
   "tools.file.errorReplace": "बदला",
   "tools.file.preview": "पूर्वावलोकन",
-  "tools.file.previewClose": "पूर्वावलोकन बंद करा"
+  "tools.file.previewClose": "पूर्वावलोकन बंद करा",
+  "tools.file.previewRaw": "स्रोत",
+  "tools.file.previewRender": "रेंडर केलेले",
+  "tools.file.previewLoading": "पूर्वावलोकन लोड होत आहे…",
+  "tools.file.previewError": "पूर्वावलोकन लोड करता आले नाही",
+  "tools.file.previewDownload": "डाउनलोड"
 }

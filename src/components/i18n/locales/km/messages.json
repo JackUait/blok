@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "ការបញ្ជូនបរាជ័យ",
   "tools.file.errorReplace": "ជំនួស",
   "tools.file.preview": "មើលជាមុន",
-  "tools.file.previewClose": "បិទការមើលជាមុន"
+  "tools.file.previewClose": "បិទការមើលជាមុន",
+  "tools.file.previewRaw": "ដើម",
+  "tools.file.previewRender": "បានបង្ហាញ",
+  "tools.file.previewLoading": "កំពុងផ្ទុកការមើលជាមុន…",
+  "tools.file.previewError": "មិនអាចផ្ទុកការមើលជាមុនបានទេ",
+  "tools.file.previewDownload": "ទាញយក"
 }

@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Prijenos nije uspio",
   "tools.file.errorReplace": "Zamijeni",
   "tools.file.preview": "Pregled",
-  "tools.file.previewClose": "Zatvori pregled"
+  "tools.file.previewClose": "Zatvori pregled",
+  "tools.file.previewRaw": "Izvor",
+  "tools.file.previewRender": "Pregled",
+  "tools.file.previewLoading": "Učitavanje pregleda…",
+  "tools.file.previewError": "Pregled nije moguće učitati",
+  "tools.file.previewDownload": "Preuzmi"
 }

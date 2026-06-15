@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Wysyłanie nie powiodło się",
   "tools.file.errorReplace": "Zamień",
   "tools.file.preview": "Podgląd",
-  "tools.file.previewClose": "Zamknij podgląd"
+  "tools.file.previewClose": "Zamknij podgląd",
+  "tools.file.previewRaw": "Źródło",
+  "tools.file.previewRender": "Podgląd",
+  "tools.file.previewLoading": "Ładowanie podglądu…",
+  "tools.file.previewError": "Nie udało się załadować podglądu",
+  "tools.file.previewDownload": "Pobierz"
 }

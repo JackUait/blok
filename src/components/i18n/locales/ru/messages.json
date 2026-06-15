@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Ошибка загрузки",
   "tools.file.errorReplace": "Заменить",
   "tools.file.preview": "Предпросмотр",
-  "tools.file.previewClose": "Закрыть предпросмотр"
+  "tools.file.previewClose": "Закрыть предпросмотр",
+  "tools.file.previewRaw": "Исходный код",
+  "tools.file.previewRender": "Просмотр",
+  "tools.file.previewLoading": "Загрузка предпросмотра…",
+  "tools.file.previewError": "Не удалось загрузить предпросмотр",
+  "tools.file.previewDownload": "Скачать"
 }

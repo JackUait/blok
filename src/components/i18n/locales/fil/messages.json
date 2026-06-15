@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Nabigo ang pag-upload",
   "tools.file.errorReplace": "Palitan",
   "tools.file.preview": "Preview",
-  "tools.file.previewClose": "Isara ang preview"
+  "tools.file.previewClose": "Isara ang preview",
+  "tools.file.previewRaw": "Raw",
+  "tools.file.previewRender": "Naka-render",
+  "tools.file.previewLoading": "Nilo-load ang preview…",
+  "tools.file.previewError": "Hindi ma-load ang preview",
+  "tools.file.previewDownload": "I-download"
 }

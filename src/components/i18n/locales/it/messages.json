@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Caricamento non riuscito",
   "tools.file.errorReplace": "Sostituisci",
   "tools.file.preview": "Anteprima",
-  "tools.file.previewClose": "Chiudi anteprima"
+  "tools.file.previewClose": "Chiudi anteprima",
+  "tools.file.previewRaw": "Grezzo",
+  "tools.file.previewRender": "Formattato",
+  "tools.file.previewLoading": "Caricamento anteprima…",
+  "tools.file.previewError": "Impossibile caricare l'anteprima",
+  "tools.file.previewDownload": "Scarica"
 }

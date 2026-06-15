@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Tải lên thất bại",
   "tools.file.errorReplace": "Thay thế",
   "tools.file.preview": "Xem trước",
-  "tools.file.previewClose": "Đóng bản xem trước"
+  "tools.file.previewClose": "Đóng bản xem trước",
+  "tools.file.previewRaw": "Mã nguồn",
+  "tools.file.previewRender": "Đã kết xuất",
+  "tools.file.previewLoading": "Đang tải bản xem trước…",
+  "tools.file.previewError": "Không thể tải bản xem trước",
+  "tools.file.previewDownload": "Tải xuống"
 }

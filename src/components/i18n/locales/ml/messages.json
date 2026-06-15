@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "അപ്‌ലോഡ് പരാജയപ്പെട്ടു",
   "tools.file.errorReplace": "മാറ്റുക",
   "tools.file.preview": "പ്രിവ്യൂ",
-  "tools.file.previewClose": "പ്രിവ്യൂ അടയ്ക്കുക"
+  "tools.file.previewClose": "പ്രിവ്യൂ അടയ്ക്കുക",
+  "tools.file.previewRaw": "സോഴ്സ്",
+  "tools.file.previewRender": "റെൻഡർ ചെയ്തത്",
+  "tools.file.previewLoading": "പ്രിവ്യൂ ലോഡ് ചെയ്യുന്നു…",
+  "tools.file.previewError": "പ്രിവ്യൂ ലോഡ് ചെയ്യാനായില്ല",
+  "tools.file.previewDownload": "ഡൗൺലോഡ്"
 }

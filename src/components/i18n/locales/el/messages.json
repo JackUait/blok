@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Η μεταφόρτωση απέτυχε",
   "tools.file.errorReplace": "Αντικατάσταση",
   "tools.file.preview": "Προεπισκόπηση",
-  "tools.file.previewClose": "Κλείσιμο προεπισκόπησης"
+  "tools.file.previewClose": "Κλείσιμο προεπισκόπησης",
+  "tools.file.previewRaw": "Πηγαίος κώδικας",
+  "tools.file.previewRender": "Προεπισκόπηση",
+  "tools.file.previewLoading": "Φόρτωση προεπισκόπησης…",
+  "tools.file.previewError": "Δεν ήταν δυνατή η φόρτωση της προεπισκόπησης",
+  "tools.file.previewDownload": "Λήψη"
 }

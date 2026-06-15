@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Falha no envio",
   "tools.file.errorReplace": "Substituir",
   "tools.file.preview": "Pré-visualização",
-  "tools.file.previewClose": "Fechar pré-visualização"
+  "tools.file.previewClose": "Fechar pré-visualização",
+  "tools.file.previewRaw": "Código",
+  "tools.file.previewRender": "Renderizado",
+  "tools.file.previewLoading": "Carregando pré-visualização…",
+  "tools.file.previewError": "Não foi possível carregar a pré-visualização",
+  "tools.file.previewDownload": "Baixar"
 }

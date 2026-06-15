@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Muat naik gagal",
   "tools.file.errorReplace": "Ganti",
   "tools.file.preview": "Pratonton",
-  "tools.file.previewClose": "Tutup pratonton"
+  "tools.file.previewClose": "Tutup pratonton",
+  "tools.file.previewRaw": "Sumber",
+  "tools.file.previewRender": "Dipaparkan",
+  "tools.file.previewLoading": "Memuatkan pratonton…",
+  "tools.file.previewError": "Tidak dapat memuatkan pratonton",
+  "tools.file.previewDownload": "Muat turun"
 }

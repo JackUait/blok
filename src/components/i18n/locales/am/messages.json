@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "መስቀል አልተሳካም",
   "tools.file.errorReplace": "ተካ",
   "tools.file.preview": "ቅድመ ዕይታ",
-  "tools.file.previewClose": "ቅድመ ዕይታ ዝጋ"
+  "tools.file.previewClose": "ቅድመ ዕይታ ዝጋ",
+  "tools.file.previewRaw": "ጥሬ",
+  "tools.file.previewRender": "የተቀረጸ",
+  "tools.file.previewLoading": "ቅድመ ዕይታ በመጫን ላይ…",
+  "tools.file.previewError": "ቅድመ ዕይታ መጫን አልተቻለም",
+  "tools.file.previewDownload": "አውርድ"
 }

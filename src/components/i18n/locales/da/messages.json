@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Upload mislykkedes",
   "tools.file.errorReplace": "Erstat",
   "tools.file.preview": "Forhåndsvisning",
-  "tools.file.previewClose": "Luk forhåndsvisning"
+  "tools.file.previewClose": "Luk forhåndsvisning",
+  "tools.file.previewRaw": "Kilde",
+  "tools.file.previewRender": "Gengivet",
+  "tools.file.previewLoading": "Indlæser forhåndsvisning…",
+  "tools.file.previewError": "Kunne ikke indlæse forhåndsvisning",
+  "tools.file.previewDownload": "Hent"
 }

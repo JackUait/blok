@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Подигањето не успеа",
   "tools.file.errorReplace": "Замени",
   "tools.file.preview": "Преглед",
-  "tools.file.previewClose": "Затвори преглед"
+  "tools.file.previewClose": "Затвори преглед",
+  "tools.file.previewRaw": "Изворен текст",
+  "tools.file.previewRender": "Прикажано",
+  "tools.file.previewLoading": "Прегледот се вчитува…",
+  "tools.file.previewError": "Прегледот не може да се вчита",
+  "tools.file.previewDownload": "Преземи"
 }

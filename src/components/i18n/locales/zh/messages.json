@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "上传失败",
   "tools.file.errorReplace": "替换",
   "tools.file.preview": "预览",
-  "tools.file.previewClose": "关闭预览"
+  "tools.file.previewClose": "关闭预览",
+  "tools.file.previewRaw": "源码",
+  "tools.file.previewRender": "渲染",
+  "tools.file.previewLoading": "正在加载预览…",
+  "tools.file.previewError": "无法加载预览",
+  "tools.file.previewDownload": "下载"
 }

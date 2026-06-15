@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Nalaganje ni uspelo",
   "tools.file.errorReplace": "Zamenjaj",
   "tools.file.preview": "Predogled",
-  "tools.file.previewClose": "Zapri predogled"
+  "tools.file.previewClose": "Zapri predogled",
+  "tools.file.previewRaw": "Izvorna koda",
+  "tools.file.previewRender": "Predogled",
+  "tools.file.previewLoading": "Nalaganje predogleda…",
+  "tools.file.previewError": "Predogleda ni bilo mogoče naložiti",
+  "tools.file.previewDownload": "Prenesi"
 }

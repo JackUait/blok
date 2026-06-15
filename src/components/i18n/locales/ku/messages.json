@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "بارکردن سەرکەوتوو نەبوو",
   "tools.file.errorReplace": "گۆڕین",
   "tools.file.preview": "پێشبینین",
-  "tools.file.previewClose": "پێشبینین دابخە"
+  "tools.file.previewClose": "پێشبینین دابخە",
+  "tools.file.previewRaw": "خاو",
+  "tools.file.previewRender": "ڕەندەرکراو",
+  "tools.file.previewLoading": "پێشبینین باردەکرێت…",
+  "tools.file.previewError": "نەتوانرا پێشبینین باربکرێت",
+  "tools.file.previewDownload": "داگرتن"
 }

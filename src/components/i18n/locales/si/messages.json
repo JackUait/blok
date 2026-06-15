@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "උඩුගත කිරීම අසාර්ථකයි",
   "tools.file.errorReplace": "ප්‍රතිස්ථාපනය",
   "tools.file.preview": "පෙරදසුන",
-  "tools.file.previewClose": "පෙරදසුන වසන්න"
+  "tools.file.previewClose": "පෙරදසුන වසන්න",
+  "tools.file.previewRaw": "මූලාශ්‍රය",
+  "tools.file.previewRender": "පෙළගස්වන ලද",
+  "tools.file.previewLoading": "පෙරදසුන පූරණය වෙමින්…",
+  "tools.file.previewError": "පෙරදසුන පූරණය කළ නොහැකි විය",
+  "tools.file.previewDownload": "බාගන්න"
 }

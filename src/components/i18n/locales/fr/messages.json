@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Échec de l'envoi",
   "tools.file.errorReplace": "Remplacer",
   "tools.file.preview": "Aperçu",
-  "tools.file.previewClose": "Fermer l’aperçu"
+  "tools.file.previewClose": "Fermer l’aperçu",
+  "tools.file.previewRaw": "Source",
+  "tools.file.previewRender": "Aperçu",
+  "tools.file.previewLoading": "Chargement de l’aperçu…",
+  "tools.file.previewError": "Impossible de charger l’aperçu",
+  "tools.file.previewDownload": "Télécharger"
 }

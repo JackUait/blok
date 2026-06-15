@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Opplasting mislyktes",
   "tools.file.errorReplace": "Erstatt",
   "tools.file.preview": "Forhåndsvisning",
-  "tools.file.previewClose": "Lukk forhåndsvisning"
+  "tools.file.previewClose": "Lukk forhåndsvisning",
+  "tools.file.previewRaw": "Kildetekst",
+  "tools.file.previewRender": "Gjengitt",
+  "tools.file.previewLoading": "Laster forhåndsvisning…",
+  "tools.file.previewError": "Kunne ikke laste forhåndsvisning",
+  "tools.file.previewDownload": "Last ned"
 }

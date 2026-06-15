@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Վերբեռնումը ձախողվեց",
   "tools.file.errorReplace": "Փոխարինել",
   "tools.file.preview": "Նախադիտում",
-  "tools.file.previewClose": "Փակել նախադիտումը"
+  "tools.file.previewClose": "Փակել նախադիտումը",
+  "tools.file.previewRaw": "Չմշակված",
+  "tools.file.previewRender": "Մշակված",
+  "tools.file.previewLoading": "Բեռնվում է նախադիտումը…",
+  "tools.file.previewError": "Չհաջողվեց բեռնել նախադիտումը",
+  "tools.file.previewDownload": "Ներբեռնել"
 }

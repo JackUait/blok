@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "فشل الرفع",
   "tools.file.errorReplace": "استبدال",
   "tools.file.preview": "معاينة",
-  "tools.file.previewClose": "إغلاق المعاينة"
+  "tools.file.previewClose": "إغلاق المعاينة",
+  "tools.file.previewRaw": "المصدر",
+  "tools.file.previewRender": "معاينة",
+  "tools.file.previewLoading": "جارٍ تحميل المعاينة…",
+  "tools.file.previewError": "تعذّر تحميل المعاينة",
+  "tools.file.previewDownload": "تنزيل"
 }

@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Upakiaji umeshindikana",
   "tools.file.errorReplace": "Badilisha",
   "tools.file.preview": "Onyesho la awali",
-  "tools.file.previewClose": "Funga onyesho la awali"
+  "tools.file.previewClose": "Funga onyesho la awali",
+  "tools.file.previewRaw": "Msimbo ghafi",
+  "tools.file.previewRender": "Iliyofumbuliwa",
+  "tools.file.previewLoading": "Inapakia onyesho la awali…",
+  "tools.file.previewError": "Imeshindwa kupakia onyesho la awali",
+  "tools.file.previewDownload": "Pakua"
 }

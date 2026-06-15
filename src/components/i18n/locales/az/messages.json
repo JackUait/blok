@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Yükləmə uğursuz oldu",
   "tools.file.errorReplace": "Dəyişdir",
   "tools.file.preview": "Önizləmə",
-  "tools.file.previewClose": "Önizləməni bağla"
+  "tools.file.previewClose": "Önizləməni bağla",
+  "tools.file.previewRaw": "Mənbə",
+  "tools.file.previewRender": "Önizləmə",
+  "tools.file.previewLoading": "Önizləmə yüklənir…",
+  "tools.file.previewError": "Önizləmə yüklənmədi",
+  "tools.file.previewDownload": "Yüklə"
 }

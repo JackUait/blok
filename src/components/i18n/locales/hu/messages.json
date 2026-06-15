@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "A feltöltés sikertelen",
   "tools.file.errorReplace": "Csere",
   "tools.file.preview": "Előnézet",
-  "tools.file.previewClose": "Előnézet bezárása"
+  "tools.file.previewClose": "Előnézet bezárása",
+  "tools.file.previewRaw": "Forrás",
+  "tools.file.previewRender": "Előnézet",
+  "tools.file.previewLoading": "Előnézet betöltése…",
+  "tools.file.previewError": "Az előnézet nem tölthető be",
+  "tools.file.previewDownload": "Letöltés"
 }

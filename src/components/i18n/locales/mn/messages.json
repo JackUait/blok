@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Оруулахад алдаа гарлаа",
   "tools.file.errorReplace": "Солих",
   "tools.file.preview": "Урьдчилан харах",
-  "tools.file.previewClose": "Урьдчилан харахыг хаах"
+  "tools.file.previewClose": "Урьдчилан харахыг хаах",
+  "tools.file.previewRaw": "Эх бичвэр",
+  "tools.file.previewRender": "Үзүүлсэн",
+  "tools.file.previewLoading": "Урьдчилан харахыг ачаалж байна…",
+  "tools.file.previewError": "Урьдчилан харахыг ачаалж чадсангүй",
+  "tools.file.previewDownload": "Татах"
 }

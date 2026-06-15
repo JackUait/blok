@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "అప్‌లోడ్ విఫలమైంది",
   "tools.file.errorReplace": "భర్తీ చేయి",
   "tools.file.preview": "మునుజూపు",
-  "tools.file.previewClose": "మునుజూపును మూసివేయి"
+  "tools.file.previewClose": "మునుజూపును మూసివేయి",
+  "tools.file.previewRaw": "మూలం",
+  "tools.file.previewRender": "రెండర్ చేయబడింది",
+  "tools.file.previewLoading": "మునుజూపు లోడ్ అవుతోంది…",
+  "tools.file.previewError": "మునుజూపును లోడ్ చేయడం సాధ్యం కాలేదు",
+  "tools.file.previewDownload": "డౌన్‌లోడ్"
 }

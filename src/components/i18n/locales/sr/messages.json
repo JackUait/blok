@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Отпремање није успело",
   "tools.file.errorReplace": "Замени",
   "tools.file.preview": "Преглед",
-  "tools.file.previewClose": "Затвори преглед"
+  "tools.file.previewClose": "Затвори преглед",
+  "tools.file.previewRaw": "Извор",
+  "tools.file.previewRender": "Приказано",
+  "tools.file.previewLoading": "Учитавање прегледа…",
+  "tools.file.previewError": "Није могуће учитати преглед",
+  "tools.file.previewDownload": "Преузми"
 }

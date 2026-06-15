@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "يۈكلەش مەغلۇپ بولدى",
   "tools.file.errorReplace": "ئالماشتۇرۇش",
   "tools.file.preview": "ئالدىن كۆرۈش",
-  "tools.file.previewClose": "ئالدىن كۆرۈشنى ياپ"
+  "tools.file.previewClose": "ئالدىن كۆرۈشنى ياپ",
+  "tools.file.previewRaw": "ئەسلى",
+  "tools.file.previewRender": "بىر تەرەپ قىلىنغان",
+  "tools.file.previewLoading": "ئالدىن كۆرۈش يۈكلىنىۋاتىدۇ…",
+  "tools.file.previewError": "ئالدىن كۆرۈشنى يۈكلىگىلى بولمىدى",
+  "tools.file.previewDownload": "چۈشۈرۈش"
 }

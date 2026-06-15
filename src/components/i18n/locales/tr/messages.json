@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Yükleme başarısız",
   "tools.file.errorReplace": "Değiştir",
   "tools.file.preview": "Önizleme",
-  "tools.file.previewClose": "Önizlemeyi kapat"
+  "tools.file.previewClose": "Önizlemeyi kapat",
+  "tools.file.previewRaw": "Ham",
+  "tools.file.previewRender": "İşlenmiş",
+  "tools.file.previewLoading": "Önizleme yükleniyor…",
+  "tools.file.previewError": "Önizleme yüklenemedi",
+  "tools.file.previewDownload": "İndir"
 }

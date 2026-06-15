@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "אפלאד דורכגעפאלן",
   "tools.file.errorReplace": "אויסבייטן",
   "tools.file.preview": "פאַרויסזע",
-  "tools.file.previewClose": "מאַך צו די פאַרויסזע"
+  "tools.file.previewClose": "מאַך צו די פאַרויסזע",
+  "tools.file.previewRaw": "רוי",
+  "tools.file.previewRender": "געווידעמט",
+  "tools.file.previewLoading": "לאָדט פאַרויסזע…",
+  "tools.file.previewError": "מע האָט נישט געקענט לאָדן די פאַרויסזע",
+  "tools.file.previewDownload": "אראפלאדן"
 }

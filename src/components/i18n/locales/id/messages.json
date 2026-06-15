@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Unggahan gagal",
   "tools.file.errorReplace": "Ganti",
   "tools.file.preview": "Pratinjau",
-  "tools.file.previewClose": "Tutup pratinjau"
+  "tools.file.previewClose": "Tutup pratinjau",
+  "tools.file.previewRaw": "Mentah",
+  "tools.file.previewRender": "Terformat",
+  "tools.file.previewLoading": "Memuat pratinjau…",
+  "tools.file.previewError": "Tidak dapat memuat pratinjau",
+  "tools.file.previewDownload": "Unduh"
 }

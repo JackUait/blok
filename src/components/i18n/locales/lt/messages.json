@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Įkelti nepavyko",
   "tools.file.errorReplace": "Pakeisti",
   "tools.file.preview": "Peržiūra",
-  "tools.file.previewClose": "Uždaryti peržiūrą"
+  "tools.file.previewClose": "Uždaryti peržiūrą",
+  "tools.file.previewRaw": "Neapdorotas",
+  "tools.file.previewRender": "Apdorotas",
+  "tools.file.previewLoading": "Įkeliama peržiūra…",
+  "tools.file.previewError": "Nepavyko įkelti peržiūros",
+  "tools.file.previewDownload": "Atsisiųsti"
 }

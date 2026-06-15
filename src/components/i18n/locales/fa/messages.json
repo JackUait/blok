@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "بارگذاری ناموفق بود",
   "tools.file.errorReplace": "جایگزین",
   "tools.file.preview": "پیش‌نمایش",
-  "tools.file.previewClose": "بستن پیش‌نمایش"
+  "tools.file.previewClose": "بستن پیش‌نمایش",
+  "tools.file.previewRaw": "متن خام",
+  "tools.file.previewRender": "پیش‌نمایش",
+  "tools.file.previewLoading": "در حال بارگذاری پیش‌نمایش…",
+  "tools.file.previewError": "بارگذاری پیش‌نمایش ممکن نشد",
+  "tools.file.previewDownload": "دانلود"
 }

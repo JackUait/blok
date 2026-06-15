@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Lataus epäonnistui",
   "tools.file.errorReplace": "Korvaa",
   "tools.file.preview": "Esikatselu",
-  "tools.file.previewClose": "Sulje esikatselu"
+  "tools.file.previewClose": "Sulje esikatselu",
+  "tools.file.previewRaw": "Lähdeteksti",
+  "tools.file.previewRender": "Esikatselu",
+  "tools.file.previewLoading": "Ladataan esikatselua…",
+  "tools.file.previewError": "Esikatselua ei voitu ladata",
+  "tools.file.previewDownload": "Lataa"
 }

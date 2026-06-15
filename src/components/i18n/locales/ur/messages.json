@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "اپ لوڈ ناکام",
   "tools.file.errorReplace": "تبدیل کریں",
   "tools.file.preview": "پیش نظارہ",
-  "tools.file.previewClose": "پیش نظارہ بند کریں"
+  "tools.file.previewClose": "پیش نظارہ بند کریں",
+  "tools.file.previewRaw": "خام",
+  "tools.file.previewRender": "پیش کردہ",
+  "tools.file.previewLoading": "پیش نظارہ لوڈ ہو رہا ہے…",
+  "tools.file.previewError": "پیش نظارہ لوڈ نہیں ہو سکا",
+  "tools.file.previewDownload": "ڈاؤن لوڈ"
 }

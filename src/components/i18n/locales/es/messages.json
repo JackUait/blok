@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Error al subir",
   "tools.file.errorReplace": "Sustituir",
   "tools.file.preview": "Vista previa",
-  "tools.file.previewClose": "Cerrar vista previa"
+  "tools.file.previewClose": "Cerrar vista previa",
+  "tools.file.previewRaw": "Código",
+  "tools.file.previewRender": "Vista previa",
+  "tools.file.previewLoading": "Cargando vista previa…",
+  "tools.file.previewError": "No se pudo cargar la vista previa",
+  "tools.file.previewDownload": "Descargar"
 }

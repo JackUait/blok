@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "ההעלאה נכשלה",
   "tools.file.errorReplace": "החלף",
   "tools.file.preview": "תצוגה מקדימה",
-  "tools.file.previewClose": "סגירת התצוגה המקדימה"
+  "tools.file.previewClose": "סגירת התצוגה המקדימה",
+  "tools.file.previewRaw": "מקור",
+  "tools.file.previewRender": "תצוגה מקדימה",
+  "tools.file.previewLoading": "טוען תצוגה מקדימה…",
+  "tools.file.previewError": "לא ניתן לטעון את התצוגה המקדימה",
+  "tools.file.previewDownload": "הורדה"
 }

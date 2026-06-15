@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "อัปโหลดล้มเหลว",
   "tools.file.errorReplace": "แทนที่",
   "tools.file.preview": "ตัวอย่าง",
-  "tools.file.previewClose": "ปิดตัวอย่าง"
+  "tools.file.previewClose": "ปิดตัวอย่าง",
+  "tools.file.previewRaw": "ต้นฉบับ",
+  "tools.file.previewRender": "แสดงผลแล้ว",
+  "tools.file.previewLoading": "กำลังโหลดตัวอย่าง…",
+  "tools.file.previewError": "ไม่สามารถโหลดตัวอย่างได้",
+  "tools.file.previewDownload": "ดาวน์โหลด"
 }

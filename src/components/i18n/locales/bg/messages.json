@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Качването е неуспешно",
   "tools.file.errorReplace": "Замяна",
   "tools.file.preview": "Преглед",
-  "tools.file.previewClose": "Затвори прегледа"
+  "tools.file.previewClose": "Затвори прегледа",
+  "tools.file.previewRaw": "Изходен код",
+  "tools.file.previewRender": "Преглед",
+  "tools.file.previewLoading": "Зареждане на прегледа…",
+  "tools.file.previewError": "Прегледът не можа да се зареди",
+  "tools.file.previewDownload": "Изтегли"
 }

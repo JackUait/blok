@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "ਅੱਪਲੋਡ ਅਸਫਲ",
   "tools.file.errorReplace": "ਬਦਲੋ",
   "tools.file.preview": "ਝਲਕ",
-  "tools.file.previewClose": "ਝਲਕ ਬੰਦ ਕਰੋ"
+  "tools.file.previewClose": "ਝਲਕ ਬੰਦ ਕਰੋ",
+  "tools.file.previewRaw": "ਸਰੋਤ",
+  "tools.file.previewRender": "ਰੈਂਡਰ ਕੀਤਾ",
+  "tools.file.previewLoading": "ਝਲਕ ਲੋਡ ਹੋ ਰਹੀ ਹੈ…",
+  "tools.file.previewError": "ਝਲਕ ਲੋਡ ਨਹੀਂ ਹੋ ਸਕੀ",
+  "tools.file.previewDownload": "ਡਾਊਨਲੋਡ"
 }

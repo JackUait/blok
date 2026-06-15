@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Üleslaadimine ebaõnnestus",
   "tools.file.errorReplace": "Asenda",
   "tools.file.preview": "Eelvaade",
-  "tools.file.previewClose": "Sulge eelvaade"
+  "tools.file.previewClose": "Sulge eelvaade",
+  "tools.file.previewRaw": "Lähtetekst",
+  "tools.file.previewRender": "Eelvaade",
+  "tools.file.previewLoading": "Eelvaate laadimine…",
+  "tools.file.previewError": "Eelvaadet ei õnnestunud laadida",
+  "tools.file.previewDownload": "Laadi alla"
 }

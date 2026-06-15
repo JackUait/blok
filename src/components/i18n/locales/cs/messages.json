@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Nahrávání selhalo",
   "tools.file.errorReplace": "Nahradit",
   "tools.file.preview": "Náhled",
-  "tools.file.previewClose": "Zavřít náhled"
+  "tools.file.previewClose": "Zavřít náhled",
+  "tools.file.previewRaw": "Zdroj",
+  "tools.file.previewRender": "Náhled",
+  "tools.file.previewLoading": "Načítání náhledu…",
+  "tools.file.previewError": "Náhled se nepodařilo načíst",
+  "tools.file.previewDownload": "Stáhnout"
 }

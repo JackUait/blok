@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Uploaden mislukt",
   "tools.file.errorReplace": "Vervangen",
   "tools.file.preview": "Voorbeeld",
-  "tools.file.previewClose": "Voorbeeld sluiten"
+  "tools.file.previewClose": "Voorbeeld sluiten",
+  "tools.file.previewRaw": "Broncode",
+  "tools.file.previewRender": "Weergegeven",
+  "tools.file.previewLoading": "Voorbeeld laden…",
+  "tools.file.previewError": "Kan voorbeeld niet laden",
+  "tools.file.previewDownload": "Downloaden"
 }

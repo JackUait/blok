@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "আপলোড ব্যর্থ",
   "tools.file.errorReplace": "প্রতিস্থাপন",
   "tools.file.preview": "প্রিভিউ",
-  "tools.file.previewClose": "প্রিভিউ বন্ধ করুন"
+  "tools.file.previewClose": "প্রিভিউ বন্ধ করুন",
+  "tools.file.previewRaw": "সোর্স",
+  "tools.file.previewRender": "রেন্ডার করা",
+  "tools.file.previewLoading": "প্রিভিউ লোড হচ্ছে…",
+  "tools.file.previewError": "প্রিভিউ লোড করা যায়নি",
+  "tools.file.previewDownload": "ডাউনলোড"
 }

@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Ngarkimi dështoi",
   "tools.file.errorReplace": "Zëvendëso",
   "tools.file.preview": "Pamje paraprake",
-  "tools.file.previewClose": "Mbyll pamjen paraprake"
+  "tools.file.previewClose": "Mbyll pamjen paraprake",
+  "tools.file.previewRaw": "Burimi",
+  "tools.file.previewRender": "E renderuar",
+  "tools.file.previewLoading": "Po ngarkohet pamja paraprake…",
+  "tools.file.previewError": "Pamja paraprake nuk u ngarkua dot",
+  "tools.file.previewDownload": "Shkarko"
 }

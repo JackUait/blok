@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "અપલોડ નિષ્ફળ",
   "tools.file.errorReplace": "બદલો",
   "tools.file.preview": "પૂર્વાવલોકન",
-  "tools.file.previewClose": "પૂર્વાવલોકન બંધ કરો"
+  "tools.file.previewClose": "પૂર્વાવલોકન બંધ કરો",
+  "tools.file.previewRaw": "સ્રોત",
+  "tools.file.previewRender": "પૂર્વાવલોકન",
+  "tools.file.previewLoading": "પૂર્વાવલોકન લોડ થઈ રહ્યું છે…",
+  "tools.file.previewError": "પૂર્વાવલોકન લોડ કરી શકાયું નથી",
+  "tools.file.previewDownload": "ડાઉનલોડ"
 }

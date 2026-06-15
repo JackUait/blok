@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Încărcare eșuată",
   "tools.file.errorReplace": "Înlocuiește",
   "tools.file.preview": "Previzualizare",
-  "tools.file.previewClose": "Închide previzualizarea"
+  "tools.file.previewClose": "Închide previzualizarea",
+  "tools.file.previewRaw": "Sursă",
+  "tools.file.previewRender": "Randat",
+  "tools.file.previewLoading": "Se încarcă previzualizarea…",
+  "tools.file.previewError": "Previzualizarea nu a putut fi încărcată",
+  "tools.file.previewDownload": "Descarcă"
 }

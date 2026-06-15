@@ -370,5 +370,10 @@
   "tools.file.errorUploadFailed": "Uppladdningen misslyckades",
   "tools.file.errorReplace": "Ersätt",
   "tools.file.preview": "Förhandsgranskning",
-  "tools.file.previewClose": "Stäng förhandsgranskning"
+  "tools.file.previewClose": "Stäng förhandsgranskning",
+  "tools.file.previewRaw": "Källkod",
+  "tools.file.previewRender": "Återgiven",
+  "tools.file.previewLoading": "Läser in förhandsgranskning…",
+  "tools.file.previewError": "Det gick inte att läsa in förhandsgranskningen",
+  "tools.file.previewDownload": "Ladda ner"
 }

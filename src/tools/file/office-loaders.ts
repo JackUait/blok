@@ -11,6 +11,9 @@ export async function loadDocxRenderer(): Promise<
     mod.renderAsync(data, bodyContainer, undefined, {
       inWrapper: true,
       className: 'blok-docx',
+      // Shrink each page to its content height instead of enforcing the full
+      // paper height — otherwise a half-page document leaves a tall white void.
+      ignoreHeight: true,
     });
 }
 

@@ -80,7 +80,7 @@ docx.file(
   'word/document.xml',
   `${XML}
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-<w:body>${docxBody}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body>
+<w:body>${docxBody}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1080" w:right="1080" w:bottom="1080" w:left="1080" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body>
 </w:document>`,
 );
 writeFileSync(join(OUT, 'service-agreement.docx'), await docx.generateAsync({ type: 'nodebuffer' }));

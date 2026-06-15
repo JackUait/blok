@@ -6,6 +6,7 @@ import { extToPrismLang } from './code-languages';
 import { tokenizePrism, isHighlightable } from '../code/prism-loader';
 import { applyPrismHighlight, ensurePrismStyles } from '../code/prism-applier';
 import { markdownToHtml } from '../../markdown/markdownToHtml';
+import { IconFile, IconCross } from '../../components/icons';
 
 /** Time budget for the close animation before forcing teardown (ms). */
 const CLOSE_ANIMATION_FALLBACK_MS = 260;
@@ -269,15 +270,26 @@ function buildElements(opts: FilePreviewOptions): PreviewElements {
 
   const title = document.createElement('span');
   title.className = 'blok-file-preview-title';
+
+  const titleIcon = document.createElement('span');
+  titleIcon.className = 'blok-file-preview-title-icon';
+  titleIcon.setAttribute('aria-hidden', 'true');
+  titleIcon.innerHTML = IconFile;
+
+  const titleText = document.createElement('span');
+  titleText.className = 'blok-file-preview-title-text';
   if (opts.fileName) {
-    title.textContent = opts.fileName;
+    titleText.textContent = opts.fileName;
   }
+
+  title.append(titleIcon, titleText);
 
   const closeButton = document.createElement('button');
   closeButton.type = 'button';
   closeButton.className = 'blok-file-preview-close';
   closeButton.setAttribute('data-action', 'close-preview');
   closeButton.setAttribute('aria-label', opts.labels.close);
+  closeButton.innerHTML = IconCross;
 
   header.append(title, closeButton);
 

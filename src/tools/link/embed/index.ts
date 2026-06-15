@@ -12,7 +12,7 @@ import type {
 import { IconGlobe } from '../../../components/icons';
 import { attachResizeHandle, type ResizeEdge } from '../../image/resizer';
 import { renderEmbedOverlay, type EmbedAlignment } from './overlay';
-import { EMBED_SERVICES, matchEmbedService, type EmbedKind } from '../registry';
+import { EMBED_SERVICES, matchEmbedService, isHttpUrl, type EmbedKind } from '../registry';
 
 export interface EmbedData extends BlockToolData {
   service: string;
@@ -87,24 +87,53 @@ export class Embed implements BlockTool {
       return;
     }
 
-    const url = (event as PatternPasteEvent).detail.data;
+    this.resolveAndSet((event as PatternPasteEvent).detail.data);
+  }
+
+  /**
+   * Resolves a URL into embed data and re-renders. A registry match always wins;
+   * an unmatched safe http(s) URL becomes a generic sandboxed iframe only when the
+   * host opted in via `linkPaste.allowGenericEmbed`. Returns whether the URL
+   * resolved to an embeddable source.
+   */
+  private resolveAndSet(url: string): boolean {
     const match = matchEmbedService(url);
 
-    if (!match) {
-      return;
+    if (match) {
+      const config = EMBED_SERVICES[match.service];
+
+      this.data = {
+        service: match.service,
+        source: url,
+        embed: match.embedUrl,
+        kind: match.kind,
+        width: config.width ?? DEFAULT_WIDTH,
+        height: config.height ?? DEFAULT_HEIGHT,
+      };
+      this.renderState();
+
+      return true;
     }
 
-    const config = EMBED_SERVICES[match.service];
+    if (this.isGenericAllowed() && isHttpUrl(url)) {
+      this.data = {
+        service: '',
+        source: url,
+        embed: url,
+        kind: 'iframe',
+        width: DEFAULT_WIDTH,
+        height: DEFAULT_HEIGHT,
+      };
+      this.renderState();
 
-    this.data = {
-      service: match.service,
-      source: url,
-      embed: match.embedUrl,
-      kind: match.kind,
-      width: config.width ?? DEFAULT_WIDTH,
-      height: config.height ?? DEFAULT_HEIGHT,
-    };
-    this.renderState();
+      return true;
+    }
+
+    return false;
+  }
+
+  private isGenericAllowed(): boolean {
+    return this.api.config?.linkPaste?.allowGenericEmbed === true;
   }
 
   public render(): HTMLElement {

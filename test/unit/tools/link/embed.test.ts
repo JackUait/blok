@@ -1,11 +1,15 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Embed, type EmbedData } from '../../../../src/tools/link/embed';
 import type { API, BlockToolConstructorOptions, PatternPasteEvent } from '../../../../types';
 
-const createMockAPI = (blocksDelete?: (id: string) => void): API =>
+const createMockAPI = (
+  blocksDelete?: (id: string) => void,
+  allowGenericEmbed = false
+): API =>
   ({
     i18n: { t: (key: string) => key, has: () => false },
     blocks: { delete: blocksDelete ?? ((): void => undefined) },
+    config: { linkPaste: { allowGenericEmbed } },
   }) as unknown as API;
 
 const createOptions = (
@@ -15,10 +19,11 @@ const createOptions = (
     dispatchChange?: () => void;
     blocksDelete?: (id: string) => void;
     blockId?: string;
+    allowGenericEmbed?: boolean;
   } = {}
 ): BlockToolConstructorOptions<EmbedData> =>
   ({
-    api: createMockAPI(overrides.blocksDelete),
+    api: createMockAPI(overrides.blocksDelete, overrides.allowGenericEmbed ?? false),
     block: {
       id: overrides.blockId ?? 'embed-block',
       dispatchChange: overrides.dispatchChange ?? ((): void => undefined),
@@ -53,6 +58,10 @@ function makeRect(width: number, left = 0): DOMRect {
 
 const patternEvent = (key: string, url: string): PatternPasteEvent =>
   ({ type: 'pattern', detail: { key, data: url } }) as PatternPasteEvent;
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe('Embed tool', () => {
   it('registers per-service paste patterns including Russian providers', () => {
@@ -210,6 +219,45 @@ describe('Embed tool', () => {
       tool.validate({ service: 'youtube', source: 'a', embed: 'b' } as EmbedData)
     ).toBe(true);
     expect(tool.validate({ service: 'youtube', source: '', embed: '' } as EmbedData)).toBe(false);
+  });
+});
+
+describe('Embed tool — generic embed', () => {
+  it('frames an unmatched http URL when generic embeds are allowed', () => {
+    const tool = new Embed(createOptions({}, { allowGenericEmbed: true }));
+
+    tool.onPaste(patternEvent('embed', 'https://example.com/page'));
+
+    expect(tool.save()).toMatchObject({
+      service: '',
+      source: 'https://example.com/page',
+      embed: 'https://example.com/page',
+      kind: 'iframe',
+    });
+  });
+
+  it('does not frame an unmatched URL when generic embeds are disabled', () => {
+    const tool = new Embed(createOptions({}, { allowGenericEmbed: false }));
+
+    tool.onPaste(patternEvent('embed', 'https://example.com/page'));
+
+    expect(tool.save().embed).toBe('');
+  });
+
+  it('rejects a non-http URL even when generic embeds are allowed', () => {
+    const tool = new Embed(createOptions({}, { allowGenericEmbed: true }));
+
+    tool.onPaste(patternEvent('embed', 'javascript:alert(1)'));
+
+    expect(tool.save().embed).toBe('');
+  });
+
+  it('still resolves a known provider regardless of the flag', () => {
+    const tool = new Embed(createOptions({}, { allowGenericEmbed: false }));
+
+    tool.onPaste(patternEvent('youtube', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'));
+
+    expect(tool.save().service).toBe('youtube');
   });
 });
 

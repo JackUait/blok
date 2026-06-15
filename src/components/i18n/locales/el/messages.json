@@ -368,5 +368,7 @@
   "tools.file.download": "Λήψη",
   "tools.file.copyUrl": "Αντιγραφή URL",
   "tools.file.errorUploadFailed": "Η μεταφόρτωση απέτυχε",
-  "tools.file.errorReplace": "Αντικατάσταση"
+  "tools.file.errorReplace": "Αντικατάσταση",
+  "tools.file.preview": "Προεπισκόπηση",
+  "tools.file.previewClose": "Κλείσιμο προεπισκόπησης"
 }

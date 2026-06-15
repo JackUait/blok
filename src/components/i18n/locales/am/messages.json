@@ -368,5 +368,7 @@
   "tools.file.download": "አውርድ",
   "tools.file.copyUrl": "URL ቅዳ",
   "tools.file.errorUploadFailed": "መስቀል አልተሳካም",
-  "tools.file.errorReplace": "ተካ"
+  "tools.file.errorReplace": "ተካ",
+  "tools.file.preview": "ቅድመ ዕይታ",
+  "tools.file.previewClose": "ቅድመ ዕይታ ዝጋ"
 }

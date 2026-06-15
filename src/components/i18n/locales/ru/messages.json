@@ -368,5 +368,7 @@
   "tools.file.download": "Скачать",
   "tools.file.copyUrl": "Копировать URL",
   "tools.file.errorUploadFailed": "Ошибка загрузки",
-  "tools.file.errorReplace": "Заменить"
+  "tools.file.errorReplace": "Заменить",
+  "tools.file.preview": "Предпросмотр",
+  "tools.file.previewClose": "Закрыть предпросмотр"
 }

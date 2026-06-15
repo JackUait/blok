@@ -368,5 +368,7 @@
   "tools.file.download": "Atsisiųsti",
   "tools.file.copyUrl": "Kopijuoti URL",
   "tools.file.errorUploadFailed": "Įkelti nepavyko",
-  "tools.file.errorReplace": "Pakeisti"
+  "tools.file.errorReplace": "Pakeisti",
+  "tools.file.preview": "Peržiūra",
+  "tools.file.previewClose": "Uždaryti peržiūrą"
 }

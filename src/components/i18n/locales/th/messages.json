@@ -368,5 +368,7 @@
   "tools.file.download": "ดาวน์โหลด",
   "tools.file.copyUrl": "คัดลอก URL",
   "tools.file.errorUploadFailed": "อัปโหลดล้มเหลว",
-  "tools.file.errorReplace": "แทนที่"
+  "tools.file.errorReplace": "แทนที่",
+  "tools.file.preview": "ตัวอย่าง",
+  "tools.file.previewClose": "ปิดตัวอย่าง"
 }

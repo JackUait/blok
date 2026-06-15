@@ -368,5 +368,7 @@
   "tools.file.download": "ჩამოტვირთვა",
   "tools.file.copyUrl": "URL-ის კოპირება",
   "tools.file.errorUploadFailed": "ატვირთვა ვერ მოხერხდა",
-  "tools.file.errorReplace": "ჩანაცვლება"
+  "tools.file.errorReplace": "ჩანაცვლება",
+  "tools.file.preview": "გადახედვა",
+  "tools.file.previewClose": "გადახედვის დახურვა"
 }

@@ -368,5 +368,7 @@
   "tools.file.download": "ダウンロード",
   "tools.file.copyUrl": "URL をコピー",
   "tools.file.errorUploadFailed": "アップロードに失敗しました",
-  "tools.file.errorReplace": "置き換え"
+  "tools.file.errorReplace": "置き換え",
+  "tools.file.preview": "プレビュー",
+  "tools.file.previewClose": "プレビューを閉じる"
 }

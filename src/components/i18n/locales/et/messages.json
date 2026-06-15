@@ -368,5 +368,7 @@
   "tools.file.download": "Laadi alla",
   "tools.file.copyUrl": "Kopeeri URL",
   "tools.file.errorUploadFailed": "Üleslaadimine ebaõnnestus",
-  "tools.file.errorReplace": "Asenda"
+  "tools.file.errorReplace": "Asenda",
+  "tools.file.preview": "Eelvaade",
+  "tools.file.previewClose": "Sulge eelvaade"
 }

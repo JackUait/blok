@@ -368,5 +368,7 @@
   "tools.file.download": "பதிவிறக்கு",
   "tools.file.copyUrl": "URL நகலெடு",
   "tools.file.errorUploadFailed": "பதிவேற்றம் தோல்வி",
-  "tools.file.errorReplace": "மாற்று"
+  "tools.file.errorReplace": "மாற்று",
+  "tools.file.preview": "முன்னோட்டம்",
+  "tools.file.previewClose": "முன்னோட்டத்தை மூடு"
 }

@@ -368,5 +368,7 @@
   "tools.file.download": "Letöltés",
   "tools.file.copyUrl": "URL másolása",
   "tools.file.errorUploadFailed": "A feltöltés sikertelen",
-  "tools.file.errorReplace": "Csere"
+  "tools.file.errorReplace": "Csere",
+  "tools.file.preview": "Előnézet",
+  "tools.file.previewClose": "Előnézet bezárása"
 }

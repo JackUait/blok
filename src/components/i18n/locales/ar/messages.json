@@ -368,5 +368,7 @@
   "tools.file.download": "تنزيل",
   "tools.file.copyUrl": "نسخ الرابط",
   "tools.file.errorUploadFailed": "فشل الرفع",
-  "tools.file.errorReplace": "استبدال"
+  "tools.file.errorReplace": "استبدال",
+  "tools.file.preview": "معاينة",
+  "tools.file.previewClose": "إغلاق المعاينة"
 }

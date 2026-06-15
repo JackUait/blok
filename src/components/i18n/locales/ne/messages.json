@@ -368,5 +368,7 @@
   "tools.file.download": "डाउनलोड",
   "tools.file.copyUrl": "URL कपी गर्नुहोस्",
   "tools.file.errorUploadFailed": "अपलोड असफल",
-  "tools.file.errorReplace": "बदल्नुहोस्"
+  "tools.file.errorReplace": "बदल्नुहोस्",
+  "tools.file.preview": "पूर्वावलोकन",
+  "tools.file.previewClose": "पूर्वावलोकन बन्द गर्नुहोस्"
 }

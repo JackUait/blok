@@ -368,5 +368,7 @@
   "tools.file.download": "Prenesi",
   "tools.file.copyUrl": "Kopiraj URL",
   "tools.file.errorUploadFailed": "Nalaganje ni uspelo",
-  "tools.file.errorReplace": "Zamenjaj"
+  "tools.file.errorReplace": "Zamenjaj",
+  "tools.file.preview": "Predogled",
+  "tools.file.previewClose": "Zapri predogled"
 }

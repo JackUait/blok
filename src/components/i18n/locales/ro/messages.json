@@ -368,5 +368,7 @@
   "tools.file.download": "Descarcă",
   "tools.file.copyUrl": "Copiază URL-ul",
   "tools.file.errorUploadFailed": "Încărcare eșuată",
-  "tools.file.errorReplace": "Înlocuiește"
+  "tools.file.errorReplace": "Înlocuiește",
+  "tools.file.preview": "Previzualizare",
+  "tools.file.previewClose": "Închide previzualizarea"
 }

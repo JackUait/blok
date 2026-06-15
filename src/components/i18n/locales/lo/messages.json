@@ -368,5 +368,7 @@
   "tools.file.download": "ດາວໂຫຼດ",
   "tools.file.copyUrl": "ສຳເນົາ URL",
   "tools.file.errorUploadFailed": "ການອັບໂຫຼດບໍ່ສຳເລັດ",
-  "tools.file.errorReplace": "ແທນທີ່"
+  "tools.file.errorReplace": "ແທນທີ່",
+  "tools.file.preview": "ເບິ່ງຕົວຢ່າງ",
+  "tools.file.previewClose": "ປິດການເບິ່ງຕົວຢ່າງ"
 }

@@ -2,12 +2,55 @@ import { describe, it, expect, vi } from 'vitest';
 import { renderFileCard, renderCaptionRow } from '../../../../src/tools/file/ui';
 
 describe('renderFileCard', () => {
-  it('renders a download anchor pointing at the url with the download attribute', () => {
+  it('renders a separate download anchor pointing at the url with the download attribute', () => {
     const card = renderFileCard({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf', size: 2048 });
-    const link = card.querySelector<HTMLAnchorElement>('a[data-action="download"]');
-    expect(link).not.toBeNull();
-    expect(link?.getAttribute('href')).toBe('https://cdn/doc.pdf');
-    expect(link?.getAttribute('download')).toBe('doc.pdf');
+    const download = card.querySelector<HTMLAnchorElement>('a.blok-file-download[data-action="download"]');
+    expect(download).not.toBeNull();
+    expect(download?.getAttribute('href')).toBe('https://cdn/doc.pdf');
+    expect(download?.getAttribute('download')).toBe('doc.pdf');
+  });
+
+  it('renders the card body as a download anchor when no onPreview is given', () => {
+    const card = renderFileCard({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf', size: 2048 });
+    const body = card.querySelector('[data-role="file-card"]');
+    expect(body?.tagName).toBe('A');
+    expect(body?.getAttribute('data-action')).toBe('download');
+  });
+
+  it('renders the card body as a preview button when onPreview is given', () => {
+    const onPreview = vi.fn();
+    const card = renderFileCard({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf', size: 2048 }, onPreview);
+    const body = card.querySelector('[data-role="file-card"]');
+    expect(body?.tagName).toBe('BUTTON');
+    expect(body?.getAttribute('data-action')).toBe('preview');
+  });
+
+  it('invokes the preview callback when the preview body is clicked', () => {
+    let opened = false;
+    const onPreview = (): void => {
+      opened = true;
+    };
+    const card = renderFileCard({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf', size: 2048 }, onPreview);
+    const body = card.querySelector<HTMLButtonElement>('[data-role="file-card"]');
+    if (!body) throw new Error('body missing');
+    body.click();
+    expect(opened).toBe(true);
+  });
+
+  it('keeps the separate download link present when onPreview is given', () => {
+    const onPreview = vi.fn();
+    const card = renderFileCard({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf', size: 2048 }, onPreview);
+    const download = card.querySelector<HTMLAnchorElement>('a.blok-file-download[data-action="download"]');
+    expect(download).not.toBeNull();
+    expect(download?.getAttribute('href')).toBe('https://cdn/doc.pdf');
+  });
+
+  it('has no nested anchors inside any anchor', () => {
+    const card = renderFileCard({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf', size: 2048 });
+    const anchors = card.querySelectorAll('a');
+    anchors.forEach((anchor) => {
+      expect(anchor.querySelector('a')).toBeNull();
+    });
   });
 
   it('shows the filename and human-readable size', () => {
@@ -29,20 +72,27 @@ describe('renderFileCard', () => {
   it.each([
     'javascript:alert(1)',
     'JavaScript:alert(1)',
-    'javascript:alert(1)',
+    'javascript:alert(1)',
     'data:text/html,<script>alert(1)</script>',
     'vbscript:msgbox(1)',
     'file:///etc/passwd',
   ])('neutralizes non-http(s) scheme %s so it is not clickable', (url) => {
     const card = renderFileCard({ url, fileName: 'x' });
-    const link = card.querySelector<HTMLAnchorElement>('a[data-action="download"]');
-    expect(link?.hasAttribute('href')).toBe(false);
+    const download = card.querySelector<HTMLAnchorElement>('a.blok-file-download[data-action="download"]');
+    expect(download?.hasAttribute('href')).toBe(false);
   });
 
-  it('preserves http and https schemes on the href', () => {
+  it('neutralizes non-http(s) scheme on the body anchor too', () => {
+    const card = renderFileCard({ url: 'javascript:alert(1)', fileName: 'x' });
+    const body = card.querySelector<HTMLAnchorElement>('[data-role="file-card"]');
+    expect(body?.tagName).toBe('A');
+    expect(body?.hasAttribute('href')).toBe(false);
+  });
+
+  it('preserves http and https schemes on the download href', () => {
     expect(
       renderFileCard({ url: 'http://cdn/doc.pdf' })
-        .querySelector('a[data-action="download"]')
+        .querySelector('a.blok-file-download[data-action="download"]')
         ?.getAttribute('href'),
     ).toBe('http://cdn/doc.pdf');
   });

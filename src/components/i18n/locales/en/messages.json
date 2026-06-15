@@ -317,6 +317,8 @@
   "tools.file.copyUrl": "Copy URL",
   "tools.file.errorUploadFailed": "Upload failed",
   "tools.file.errorReplace": "Replace",
+  "tools.file.preview": "Preview",
+  "tools.file.previewClose": "Close preview",
   "tools.database.titlePlaceholder": "New database",
   "tools.database.renameView": "Rename",
   "tools.database.duplicateView": "Duplicate",

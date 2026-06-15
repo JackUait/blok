@@ -368,5 +368,7 @@
   "tools.file.download": "ډاونلوډ",
   "tools.file.copyUrl": "URL کاپي",
   "tools.file.errorUploadFailed": "اپلوډ ناکام",
-  "tools.file.errorReplace": "بدلول"
+  "tools.file.errorReplace": "بدلول",
+  "tools.file.preview": "مخکتنه",
+  "tools.file.previewClose": "مخکتنه وتړئ"
 }

@@ -368,5 +368,7 @@
   "tools.file.download": "Scarica",
   "tools.file.copyUrl": "Copia URL",
   "tools.file.errorUploadFailed": "Caricamento non riuscito",
-  "tools.file.errorReplace": "Sostituisci"
+  "tools.file.errorReplace": "Sostituisci",
+  "tools.file.preview": "Anteprima",
+  "tools.file.previewClose": "Chiudi anteprima"
 }

@@ -368,5 +368,7 @@
   "tools.file.download": "Изтегли",
   "tools.file.copyUrl": "Копирай URL",
   "tools.file.errorUploadFailed": "Качването е неуспешно",
-  "tools.file.errorReplace": "Замяна"
+  "tools.file.errorReplace": "Замяна",
+  "tools.file.preview": "Преглед",
+  "tools.file.previewClose": "Затвори прегледа"
 }

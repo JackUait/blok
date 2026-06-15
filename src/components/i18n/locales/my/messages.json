@@ -368,5 +368,7 @@
   "tools.file.download": "ဒေါင်းလုဒ်",
   "tools.file.copyUrl": "URL ကူးယူ",
   "tools.file.errorUploadFailed": "အပ်လုဒ်မအောင်မြင်",
-  "tools.file.errorReplace": "အစားထိုး"
+  "tools.file.errorReplace": "အစားထိုး",
+  "tools.file.preview": "အစမ်းကြည့်ရှုခြင်း",
+  "tools.file.previewClose": "အစမ်းကြည့်ရှုခြင်းကို ပိတ်ပါ"
 }

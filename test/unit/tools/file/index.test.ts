@@ -165,3 +165,46 @@ describe('FileTool — caption & read-only', () => {
     expect(root.querySelector('[data-role="file-caption"]')?.getAttribute('contenteditable')).toBe('false');
   });
 });
+
+describe('FileTool — preview', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.querySelectorAll('[data-role="file-preview-backdrop"]').forEach((el) => el.remove());
+  });
+
+  it('opens a preview dialog when a PDF card body is clicked', () => {
+    const tool = new FileTool(createOptions({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf', mimeType: 'application/pdf' }));
+    const root = tool.render();
+    const body = root.querySelector<HTMLElement>('[data-role="file-card"]');
+    expect(body?.tagName).toBe('BUTTON');
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    body?.click();
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+  });
+
+  it('does not open a dialog for a non-previewable file; card body stays a download link', () => {
+    const tool = new FileTool(createOptions({ url: 'https://cdn/a.zip', fileName: 'a.zip' }));
+    const root = tool.render();
+    const body = root.querySelector<HTMLElement>('[data-role="file-card"]');
+    expect(body?.tagName).toBe('A');
+    body?.click();
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it('labels the separate download link for assistive tech', () => {
+    const tool = new FileTool(createOptions({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf', mimeType: 'application/pdf' }));
+    const root = tool.render();
+    const link = root.querySelector<HTMLAnchorElement>('a[data-action="download"]');
+    expect(link?.getAttribute('aria-label')).toBe('tools.file.download');
+  });
+
+  it('removed() tears down an open preview', () => {
+    const tool = new FileTool(createOptions({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf', mimeType: 'application/pdf' }));
+    const root = tool.render();
+    root.querySelector<HTMLElement>('[data-role="file-card"]')?.click();
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+    tool.removed();
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+  });
+});

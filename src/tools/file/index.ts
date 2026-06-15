@@ -17,6 +17,8 @@ import { renderUploadingState, type UploadingStateElement } from './uploading-st
 import { renderCaptionRow, renderFileCard } from './ui';
 import { Uploader } from './uploader';
 import { safeHttpHref } from './url';
+import { isPreviewable } from './preview';
+import { openFilePreview } from './preview-modal';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -31,6 +33,7 @@ export class FileTool implements BlockTool {
   private state: ToolState;
   private uploadingEl: UploadingStateElement | null = null;
   private lastFileName: string | null = null;
+  private previewTeardown: (() => void) | null = null;
 
   constructor(options: BlockToolConstructorOptions<FileData, FileConfig>) {
     this.api = options.api;
@@ -210,10 +213,26 @@ export class FileTool implements BlockTool {
     anchor.click();
   }
 
+  private openPreview(): void {
+    this.previewTeardown?.();
+    this.previewTeardown = openFilePreview({
+      url: this.data.url,
+      fileName: this.data.fileName,
+      labels: { close: this.api.i18n.t('tools.file.previewClose') },
+    });
+  }
+
+  public removed(): void {
+    this.previewTeardown?.();
+    this.previewTeardown = null;
+  }
+
   private renderState(): void {
     if (!this.root) {
       return;
     }
+    this.previewTeardown?.();
+    this.previewTeardown = null;
     this.root.innerHTML = '';
     this.uploadingEl = null;
 
@@ -287,7 +306,8 @@ export class FileTool implements BlockTool {
   private buildRendered(): HTMLElement {
     const wrap = document.createElement('div');
     wrap.className = 'blok-file-rendered';
-    wrap.appendChild(renderFileCard(this.data));
+    const onPreview = isPreviewable(this.data) ? (): void => this.openPreview() : undefined;
+    wrap.appendChild(renderFileCard(this.data, onPreview, this.api.i18n.t('tools.file.download')));
 
     if (this.data.captionVisible !== false) {
       wrap.appendChild(renderCaptionRow({

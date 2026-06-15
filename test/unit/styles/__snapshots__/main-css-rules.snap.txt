@@ -4612,18 +4612,30 @@
   --file-action-size: 32px;
 }
 
+[data-blok-tool="file"] .blok-file-card-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
 [data-blok-tool="file"] .blok-file-card {
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   gap: var(--blok-space-3-5);
+  width: 100%;
   padding: var(--blok-space-3) var(--blok-space-3-5);
+  padding-inline-end: calc(var(--file-action-size) + var(--blok-space-3-5) + var(--blok-space-3));
   border: 1px solid var(--blok-border-subtle);
   border-radius: var(--blok-radius-xl);
   background: var(--blok-bg-primary);
   box-shadow: var(--blok-image-shadow-resting);
+  font: inherit;
+  text-align: start;
   color: inherit;
   text-decoration: none;
   cursor: pointer;
+  appearance: none;
   transition: border-color var(--blok-duration-base) var(--blok-ease-standard), background-color var(--blok-duration-base) var(--blok-ease-standard);
 }
 
@@ -4674,6 +4686,10 @@
 }
 
 [data-blok-tool="file"] .blok-file-download {
+  position: absolute;
+  inset-inline-end: var(--blok-space-3);
+  top: 50%;
+  transform: translateY(-50%);
   flex: 0 0 auto;
   display: flex;
   align-items: center;
@@ -4682,6 +4698,7 @@
   height: var(--file-action-size);
   border-radius: var(--blok-radius-pill);
   color: var(--blok-text-secondary);
+  text-decoration: none;
   transition: color var(--blok-duration-base) var(--blok-ease-standard), background-color var(--blok-duration-base) var(--blok-ease-standard);
 }
 
@@ -4690,7 +4707,12 @@
   height: 18px;
 }
 
-[data-blok-tool="file"] .blok-file-card:hover .blok-file-download {
+[data-blok-tool="file"] .blok-file-card-wrapper:hover .blok-file-download {
+  color: var(--blok-file-accent);
+  background: var(--blok-file-accent-soft);
+}
+
+[data-blok-tool="file"] .blok-file-download:hover {
   color: var(--blok-file-accent);
   background: var(--blok-file-accent-soft);
 }
@@ -4928,6 +4950,97 @@
   font-weight: var(--blok-font-weight-semibold);
   color: var(--blok-text-primary);
   cursor: pointer;
+}
+
+.blok-file-preview-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--blok-z-drawer);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--blok-space-6);
+  background: var(--blok-overlay-dark);
+}
+
+.blok-file-preview {
+  display: flex;
+  flex-direction: column;
+  width: min(960px, 100%);
+  height: min(90vh, 100%);
+  overflow: hidden;
+  border-radius: var(--blok-radius-xl);
+  background: var(--blok-bg-primary);
+  box-shadow: var(--blok-image-shadow-resting);
+}
+
+.blok-file-preview-header {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-3);
+  padding: var(--blok-space-3) var(--blok-space-4);
+  border-bottom: 1px solid var(--blok-border-subtle);
+}
+
+.blok-file-preview-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--blok-font-size-body);
+  font-weight: var(--blok-font-weight-medium);
+  color: var(--blok-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.blok-file-preview-close {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--file-action-size, 32px);
+  height: var(--file-action-size, 32px);
+  border: 0;
+  border-radius: var(--blok-radius-pill);
+  background: transparent;
+  color: var(--blok-text-secondary);
+  font: inherit;
+  cursor: pointer;
+  appearance: none;
+  transition: background-color var(--blok-duration-base) var(--blok-ease-standard);
+}
+
+.blok-file-preview-close::before {
+  content: "✕";
+  font-size: 16px;
+  line-height: 1;
+}
+
+.blok-file-preview-close:hover {
+  background: var(--blok-bg-hover);
+  color: var(--blok-text-primary);
+}
+
+.blok-file-preview-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  background: var(--blok-bg-secondary);
+}
+
+.blok-file-preview-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.blok-file-preview-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: var(--blok-space-6);
+  color: var(--blok-text-secondary);
+  font-size: var(--blok-font-size-body);
 }
 
 [data-blok-columns] > [data-blok-element] {

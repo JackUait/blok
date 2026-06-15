@@ -368,5 +368,7 @@
   "tools.file.download": "ഡൗൺലോഡ്",
   "tools.file.copyUrl": "URL പകർത്തുക",
   "tools.file.errorUploadFailed": "അപ്‌ലോഡ് പരാജയപ്പെട്ടു",
-  "tools.file.errorReplace": "മാറ്റുക"
+  "tools.file.errorReplace": "മാറ്റുക",
+  "tools.file.preview": "പ്രിവ്യൂ",
+  "tools.file.previewClose": "പ്രിവ്യൂ അടയ്ക്കുക"
 }

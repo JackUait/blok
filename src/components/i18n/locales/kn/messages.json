@@ -368,5 +368,7 @@
   "tools.file.download": "ಡೌನ್‌ಲೋಡ್",
   "tools.file.copyUrl": "URL ನಕಲಿಸಿ",
   "tools.file.errorUploadFailed": "ಅಪ್‌ಲೋಡ್ ವಿಫಲವಾಗಿದೆ",
-  "tools.file.errorReplace": "ಬದಲಿಸಿ"
+  "tools.file.errorReplace": "ಬದಲಿಸಿ",
+  "tools.file.preview": "ಮುನ್ನೋಟ",
+  "tools.file.previewClose": "ಮುನ್ನೋಟ ಮುಚ್ಚಿ"
 }

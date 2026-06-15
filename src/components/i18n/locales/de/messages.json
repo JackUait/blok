@@ -368,5 +368,7 @@
   "tools.file.download": "Herunterladen",
   "tools.file.copyUrl": "URL kopieren",
   "tools.file.errorUploadFailed": "Upload fehlgeschlagen",
-  "tools.file.errorReplace": "Ersetzen"
+  "tools.file.errorReplace": "Ersetzen",
+  "tools.file.preview": "Vorschau",
+  "tools.file.previewClose": "Vorschau schließen"
 }

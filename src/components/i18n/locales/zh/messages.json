@@ -368,5 +368,7 @@
   "tools.file.download": "下载",
   "tools.file.copyUrl": "复制链接",
   "tools.file.errorUploadFailed": "上传失败",
-  "tools.file.errorReplace": "替换"
+  "tools.file.errorReplace": "替换",
+  "tools.file.preview": "预览",
+  "tools.file.previewClose": "关闭预览"
 }

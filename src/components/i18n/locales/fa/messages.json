@@ -368,5 +368,7 @@
   "tools.file.download": "دانلود",
   "tools.file.copyUrl": "کپی URL",
   "tools.file.errorUploadFailed": "بارگذاری ناموفق بود",
-  "tools.file.errorReplace": "جایگزین"
+  "tools.file.errorReplace": "جایگزین",
+  "tools.file.preview": "پیش‌نمایش",
+  "tools.file.previewClose": "بستن پیش‌نمایش"
 }

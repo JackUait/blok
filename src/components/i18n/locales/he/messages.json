@@ -368,5 +368,7 @@
   "tools.file.download": "הורדה",
   "tools.file.copyUrl": "העתק URL",
   "tools.file.errorUploadFailed": "ההעלאה נכשלה",
-  "tools.file.errorReplace": "החלף"
+  "tools.file.errorReplace": "החלף",
+  "tools.file.preview": "תצוגה מקדימה",
+  "tools.file.previewClose": "סגירת התצוגה המקדימה"
 }

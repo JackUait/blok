@@ -368,5 +368,7 @@
   "tools.file.download": "ទាញយក",
   "tools.file.copyUrl": "ចម្លង URL",
   "tools.file.errorUploadFailed": "ការបញ្ជូនបរាជ័យ",
-  "tools.file.errorReplace": "ជំនួស"
+  "tools.file.errorReplace": "ជំនួស",
+  "tools.file.preview": "មើលជាមុន",
+  "tools.file.previewClose": "បិទការមើលជាមុន"
 }

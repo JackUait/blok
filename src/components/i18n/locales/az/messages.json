@@ -368,5 +368,7 @@
   "tools.file.download": "Yüklə",
   "tools.file.copyUrl": "URL-i kopyala",
   "tools.file.errorUploadFailed": "Yükləmə uğursuz oldu",
-  "tools.file.errorReplace": "Dəyişdir"
+  "tools.file.errorReplace": "Dəyişdir",
+  "tools.file.preview": "Önizləmə",
+  "tools.file.previewClose": "Önizləməni bağla"
 }

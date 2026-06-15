@@ -368,5 +368,7 @@
   "tools.file.download": "Татах",
   "tools.file.copyUrl": "URL хуулах",
   "tools.file.errorUploadFailed": "Оруулахад алдаа гарлаа",
-  "tools.file.errorReplace": "Солих"
+  "tools.file.errorReplace": "Солих",
+  "tools.file.preview": "Урьдчилан харах",
+  "tools.file.previewClose": "Урьдчилан харахыг хаах"
 }

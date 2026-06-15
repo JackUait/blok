@@ -368,5 +368,7 @@
   "tools.file.download": "Unduh",
   "tools.file.copyUrl": "Salin URL",
   "tools.file.errorUploadFailed": "Unggahan gagal",
-  "tools.file.errorReplace": "Ganti"
+  "tools.file.errorReplace": "Ganti",
+  "tools.file.preview": "Pratinjau",
+  "tools.file.previewClose": "Tutup pratinjau"
 }

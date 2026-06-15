@@ -368,5 +368,7 @@
   "tools.file.download": "Преземи",
   "tools.file.copyUrl": "Копирај URL",
   "tools.file.errorUploadFailed": "Подигањето не успеа",
-  "tools.file.errorReplace": "Замени"
+  "tools.file.errorReplace": "Замени",
+  "tools.file.preview": "Преглед",
+  "tools.file.previewClose": "Затвори преглед"
 }

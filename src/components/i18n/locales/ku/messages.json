@@ -368,5 +368,7 @@
   "tools.file.download": "داگرتن",
   "tools.file.copyUrl": "کۆپیی URL",
   "tools.file.errorUploadFailed": "بارکردن سەرکەوتوو نەبوو",
-  "tools.file.errorReplace": "گۆڕین"
+  "tools.file.errorReplace": "گۆڕین",
+  "tools.file.preview": "پێشبینین",
+  "tools.file.previewClose": "پێشبینین دابخە"
 }

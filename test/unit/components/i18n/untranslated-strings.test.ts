@@ -118,9 +118,10 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.code.autoDetected',
     'tools.image.emptyLink',
     'tools.image.cropAspectRatio',
-    // "File"/"Link" are the standard loanwords in Filipino (Tagalog) UIs.
+    // "File"/"Link"/"Preview" are the standard loanwords in Filipino (Tagalog) UIs.
     'toolNames.file',
     'tools.file.emptyLink',
+    'tools.file.preview',
     'tools.database.viewTypeBoard',
     'tools.database.propertyTypeCheckbox',
     'tools.database.listView',

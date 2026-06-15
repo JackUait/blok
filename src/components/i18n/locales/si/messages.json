@@ -368,5 +368,7 @@
   "tools.file.download": "බාගන්න",
   "tools.file.copyUrl": "URL පිටපත් කරන්න",
   "tools.file.errorUploadFailed": "උඩුගත කිරීම අසාර්ථකයි",
-  "tools.file.errorReplace": "ප්‍රතිස්ථාපනය"
+  "tools.file.errorReplace": "ප්‍රතිස්ථාපනය",
+  "tools.file.preview": "පෙරදසුන",
+  "tools.file.previewClose": "පෙරදසුන වසන්න"
 }

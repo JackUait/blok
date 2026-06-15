@@ -10,27 +10,47 @@ export interface CaptionRowOptions {
   onChange(next: string): void;
 }
 
+/** Builds the card body as a preview-triggering button. */
+function createPreviewBody(onPreview: () => void): HTMLElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.setAttribute('data-action', 'preview');
+  button.addEventListener('click', () => {
+    onPreview();
+  });
+  return button;
+}
+
+/** Builds the card body as a download anchor. */
+function createDownloadBody(href: string | null, downloadName: string): HTMLElement {
+  const anchor = document.createElement('a');
+  anchor.setAttribute('data-action', 'download');
+  if (href !== null) {
+    anchor.setAttribute('href', href);
+  }
+  anchor.setAttribute('target', '_blank');
+  anchor.setAttribute('rel', 'noopener noreferrer');
+  anchor.setAttribute('download', downloadName);
+  return anchor;
+}
+
 /** Renders the static download card: type icon, filename, size, download affordance. */
-export function renderFileCard(data: Partial<FileData> & { url: string }): HTMLElement {
+export function renderFileCard(
+  data: Partial<FileData> & { url: string },
+  onPreview?: () => void,
+  downloadLabel?: string,
+): HTMLElement {
   const wrapper = document.createElement('div');
   wrapper.className = 'blok-file-card-wrapper';
   wrapper.setAttribute('data-role', 'file-card-wrapper');
 
-  const link = document.createElement('a');
-  link.className = 'blok-file-card';
-  link.setAttribute('data-role', 'file-card');
-  link.setAttribute('data-action', 'download');
   const href = safeHttpHref(data.url);
-  if (href !== null) {
-    link.setAttribute('href', href);
-  }
-  link.setAttribute('target', '_blank');
-  link.setAttribute('rel', 'noopener noreferrer');
-  if (data.fileName) {
-    link.setAttribute('download', data.fileName);
-  } else {
-    link.setAttribute('download', '');
-  }
+  const downloadName = data.fileName ?? '';
+
+  // Card body: a preview button when previewing is possible, otherwise a download anchor.
+  const body = onPreview ? createPreviewBody(onPreview) : createDownloadBody(href, downloadName);
+  body.className = 'blok-file-card';
+  body.setAttribute('data-role', 'file-card');
 
   const icon = document.createElement('span');
   icon.className = 'blok-file-icon';
@@ -55,13 +75,24 @@ export function renderFileCard(data: Partial<FileData> & { url: string }): HTMLE
     meta.appendChild(size);
   }
 
-  const download = document.createElement('span');
+  body.append(icon, meta);
+
+  // Download affordance: always a separate link so the card body can be a preview trigger.
+  const download = document.createElement('a');
   download.className = 'blok-file-download';
-  download.setAttribute('aria-hidden', 'true');
+  download.setAttribute('data-action', 'download');
+  if (href !== null) {
+    download.setAttribute('href', href);
+  }
+  download.setAttribute('target', '_blank');
+  download.setAttribute('rel', 'noopener noreferrer');
+  download.setAttribute('download', downloadName);
+  if (downloadLabel !== undefined) {
+    download.setAttribute('aria-label', downloadLabel);
+  }
   download.innerHTML = IconDownload;
 
-  link.append(icon, meta, download);
-  wrapper.appendChild(link);
+  wrapper.append(body, download);
   return wrapper;
 }
 

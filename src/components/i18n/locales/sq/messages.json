@@ -368,5 +368,7 @@
   "tools.file.download": "Shkarko",
   "tools.file.copyUrl": "Kopjo URL-në",
   "tools.file.errorUploadFailed": "Ngarkimi dështoi",
-  "tools.file.errorReplace": "Zëvendëso"
+  "tools.file.errorReplace": "Zëvendëso",
+  "tools.file.preview": "Pamje paraprake",
+  "tools.file.previewClose": "Mbyll pamjen paraprake"
 }

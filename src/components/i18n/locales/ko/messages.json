@@ -368,5 +368,7 @@
   "tools.file.download": "다운로드",
   "tools.file.copyUrl": "URL 복사",
   "tools.file.errorUploadFailed": "업로드 실패",
-  "tools.file.errorReplace": "교체"
+  "tools.file.errorReplace": "교체",
+  "tools.file.preview": "미리 보기",
+  "tools.file.previewClose": "미리 보기 닫기"
 }

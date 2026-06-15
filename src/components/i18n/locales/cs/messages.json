@@ -368,5 +368,7 @@
   "tools.file.download": "Stáhnout",
   "tools.file.copyUrl": "Kopírovat URL",
   "tools.file.errorUploadFailed": "Nahrávání selhalo",
-  "tools.file.errorReplace": "Nahradit"
+  "tools.file.errorReplace": "Nahradit",
+  "tools.file.preview": "Náhled",
+  "tools.file.previewClose": "Zavřít náhled"
 }

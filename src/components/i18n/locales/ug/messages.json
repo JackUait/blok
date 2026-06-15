@@ -368,5 +368,7 @@
   "tools.file.download": "چۈشۈرۈش",
   "tools.file.copyUrl": "URL نى كۆچۈرۈش",
   "tools.file.errorUploadFailed": "يۈكلەش مەغلۇپ بولدى",
-  "tools.file.errorReplace": "ئالماشتۇرۇش"
+  "tools.file.errorReplace": "ئالماشتۇرۇش",
+  "tools.file.preview": "ئالدىن كۆرۈش",
+  "tools.file.previewClose": "ئالدىن كۆرۈشنى ياپ"
 }

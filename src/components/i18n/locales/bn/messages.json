@@ -368,5 +368,7 @@
   "tools.file.download": "ডাউনলোড",
   "tools.file.copyUrl": "URL কপি করুন",
   "tools.file.errorUploadFailed": "আপলোড ব্যর্থ",
-  "tools.file.errorReplace": "প্রতিস্থাপন"
+  "tools.file.errorReplace": "প্রতিস্থাপন",
+  "tools.file.preview": "প্রিভিউ",
+  "tools.file.previewClose": "প্রিভিউ বন্ধ করুন"
 }

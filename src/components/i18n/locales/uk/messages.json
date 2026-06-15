@@ -368,5 +368,7 @@
   "tools.file.download": "Завантажити",
   "tools.file.copyUrl": "Копіювати URL",
   "tools.file.errorUploadFailed": "Не вдалося завантажити",
-  "tools.file.errorReplace": "Замінити"
+  "tools.file.errorReplace": "Замінити",
+  "tools.file.preview": "Попередній перегляд",
+  "tools.file.previewClose": "Закрити попередній перегляд"
 }

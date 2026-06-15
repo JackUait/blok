@@ -368,5 +368,7 @@
   "tools.file.download": "Hent",
   "tools.file.copyUrl": "Kopiér URL",
   "tools.file.errorUploadFailed": "Upload mislykkedes",
-  "tools.file.errorReplace": "Erstat"
+  "tools.file.errorReplace": "Erstat",
+  "tools.file.preview": "Forhåndsvisning",
+  "tools.file.previewClose": "Luk forhåndsvisning"
 }

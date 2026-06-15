@@ -368,5 +368,7 @@
   "tools.file.download": "Ներբեռնել",
   "tools.file.copyUrl": "Պատճենել URL-ն",
   "tools.file.errorUploadFailed": "Վերբեռնումը ձախողվեց",
-  "tools.file.errorReplace": "Փոխարինել"
+  "tools.file.errorReplace": "Փոխարինել",
+  "tools.file.preview": "Նախադիտում",
+  "tools.file.previewClose": "Փակել նախադիտումը"
 }

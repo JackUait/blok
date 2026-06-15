@@ -368,5 +368,7 @@
   "tools.file.download": "Lataa",
   "tools.file.copyUrl": "Kopioi URL",
   "tools.file.errorUploadFailed": "Lataus epäonnistui",
-  "tools.file.errorReplace": "Korvaa"
+  "tools.file.errorReplace": "Korvaa",
+  "tools.file.preview": "Esikatselu",
+  "tools.file.previewClose": "Sulje esikatselu"
 }

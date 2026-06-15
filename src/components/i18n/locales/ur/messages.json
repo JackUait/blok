@@ -368,5 +368,7 @@
   "tools.file.download": "ڈاؤن لوڈ",
   "tools.file.copyUrl": "URL کاپی کریں",
   "tools.file.errorUploadFailed": "اپ لوڈ ناکام",
-  "tools.file.errorReplace": "تبدیل کریں"
+  "tools.file.errorReplace": "تبدیل کریں",
+  "tools.file.preview": "پیش نظارہ",
+  "tools.file.previewClose": "پیش نظارہ بند کریں"
 }

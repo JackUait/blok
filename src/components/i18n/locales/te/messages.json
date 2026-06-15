@@ -368,5 +368,7 @@
   "tools.file.download": "డౌన్‌లోడ్",
   "tools.file.copyUrl": "URL కాపీ చేయి",
   "tools.file.errorUploadFailed": "అప్‌లోడ్ విఫలమైంది",
-  "tools.file.errorReplace": "భర్తీ చేయి"
+  "tools.file.errorReplace": "భర్తీ చేయి",
+  "tools.file.preview": "మునుజూపు",
+  "tools.file.previewClose": "మునుజూపును మూసివేయి"
 }

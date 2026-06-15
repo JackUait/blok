@@ -368,5 +368,7 @@
   "tools.file.download": "ડાઉનલોડ",
   "tools.file.copyUrl": "URL કૉપિ કરો",
   "tools.file.errorUploadFailed": "અપલોડ નિષ્ફળ",
-  "tools.file.errorReplace": "બદલો"
+  "tools.file.errorReplace": "બદલો",
+  "tools.file.preview": "પૂર્વાવલોકન",
+  "tools.file.previewClose": "પૂર્વાવલોકન બંધ કરો"
 }

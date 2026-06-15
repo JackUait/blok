@@ -368,5 +368,7 @@
   "tools.file.download": "Muat turun",
   "tools.file.copyUrl": "Salin URL",
   "tools.file.errorUploadFailed": "Muat naik gagal",
-  "tools.file.errorReplace": "Ganti"
+  "tools.file.errorReplace": "Ganti",
+  "tools.file.preview": "Pratonton",
+  "tools.file.previewClose": "Tutup pratonton"
 }

@@ -368,5 +368,7 @@
   "tools.file.download": "אראפלאדן",
   "tools.file.copyUrl": "קאפיר URL",
   "tools.file.errorUploadFailed": "אפלאד דורכגעפאלן",
-  "tools.file.errorReplace": "אויסבייטן"
+  "tools.file.errorReplace": "אויסבייטן",
+  "tools.file.preview": "פאַרויסזע",
+  "tools.file.previewClose": "מאַך צו די פאַרויסזע"
 }

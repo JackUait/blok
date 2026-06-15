@@ -368,5 +368,7 @@
   "tools.file.download": "ޑައުންލޯޑް",
   "tools.file.copyUrl": "URL ކޮޕީ",
   "tools.file.errorUploadFailed": "އަޕްލޯޑް ފެއިލްވީ",
-  "tools.file.errorReplace": "ބަދަލުކުރޭ"
+  "tools.file.errorReplace": "ބަދަލުކުރޭ",
+  "tools.file.preview": "ޕްރިވިއު",
+  "tools.file.previewClose": "ޕްރިވިއު ބަންދުކުރޭ"
 }

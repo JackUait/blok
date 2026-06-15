@@ -368,5 +368,7 @@
   "tools.file.download": "Lejupielādēt",
   "tools.file.copyUrl": "Kopēt URL",
   "tools.file.errorUploadFailed": "Augšupielāde neizdevās",
-  "tools.file.errorReplace": "Aizstāt"
+  "tools.file.errorReplace": "Aizstāt",
+  "tools.file.preview": "Priekšskatījums",
+  "tools.file.previewClose": "Aizvērt priekšskatījumu"
 }

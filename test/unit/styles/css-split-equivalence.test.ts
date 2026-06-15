@@ -228,10 +228,12 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // text/code/markdown preview modal styles (loading, pre, md, raw/render
     // toggle, error+download, task-list items) + editorial markdown document
     // typography (heading scale, reading column, styled tables/code/quotes,
-    // segmented Rendered/Raw control)).
+    // segmented Rendered/Raw control) + advanced markdown preview features
+    // (GitHub alert callouts in 5 semantic palette colours + footnotes trailer
+    // styling)).
     // Shrinking below the baseline is always acceptable.
     const PRE_SPLIT_BYTES = 390050;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.14);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.15);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

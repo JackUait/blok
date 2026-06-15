@@ -23,15 +23,6 @@
   position: relative;
   display: flex;
   align-items: center;
-  transition: transform var(--blok-duration-standard) var(--blok-ease-spring);
-}
-/* lift the whole card — body + download ride together — and settle on press */
-[data-blok-tool="file"] .blok-file-card-wrapper:hover {
-  transform: translateY(-1px);
-}
-[data-blok-tool="file"] .blok-file-card-wrapper:active {
-  transform: translateY(0);
-  transition-duration: var(--blok-duration-fast);
 }
 
 [data-blok-tool="file"] .blok-file-card {
@@ -142,11 +133,6 @@
 
 /* Honour reduced-motion: keep the colour cues, drop the movement. */
 @media (prefers-reduced-motion: reduce) {
-  [data-blok-tool="file"] .blok-file-card-wrapper,
-  [data-blok-tool="file"] .blok-file-card-wrapper:hover,
-  [data-blok-tool="file"] .blok-file-card-wrapper:active {
-    transform: none;
-  }
   [data-blok-tool="file"] .blok-file-download:hover,
   [data-blok-tool="file"] .blok-file-download:active {
     transform: translateY(-50%);
@@ -609,7 +595,8 @@
 .blok-file-preview-md ol,
 .blok-file-preview-md blockquote,
 .blok-file-preview-md pre,
-.blok-file-preview-md table {
+.blok-file-preview-md table,
+.blok-file-preview-md .blok-md-alert {
   margin: 0 0 1em;
 }
 
@@ -803,4 +790,81 @@
   align-items: flex-start;
   gap: var(--blok-space-2);
   list-style: none;
+}
+
+/* GitHub-style alerts: a tinted callout with a coloured left rule and a
+   semantic title. Kind colours come from the shared palette tokens so they
+   adapt to light/dark automatically. */
+.blok-md-alert {
+  padding: var(--blok-space-3) var(--blok-space-4);
+  border-left: 3px solid var(--blok-color-blue-text);
+  border-radius: var(--blok-radius-sm);
+  background: var(--blok-color-blue-bg);
+}
+
+.blok-md-alert > :last-child {
+  margin-bottom: 0;
+}
+
+.blok-md-alert-title {
+  margin: 0 0 var(--blok-space-1);
+  font-weight: var(--blok-font-weight-semibold);
+  color: var(--blok-color-blue-text);
+}
+
+.blok-md-alert-tip {
+  border-left-color: var(--blok-color-green-text);
+  background: var(--blok-color-green-bg);
+}
+
+.blok-md-alert-tip .blok-md-alert-title {
+  color: var(--blok-color-green-text);
+}
+
+.blok-md-alert-important {
+  border-left-color: var(--blok-color-purple-text);
+  background: var(--blok-color-purple-bg);
+}
+
+.blok-md-alert-important .blok-md-alert-title {
+  color: var(--blok-color-purple-text);
+}
+
+.blok-md-alert-warning {
+  border-left-color: var(--blok-color-yellow-text);
+  background: var(--blok-color-yellow-bg);
+}
+
+.blok-md-alert-warning .blok-md-alert-title {
+  color: var(--blok-color-yellow-text);
+}
+
+.blok-md-alert-caution {
+  border-left-color: var(--blok-color-red-text);
+  background: var(--blok-color-red-bg);
+}
+
+.blok-md-alert-caution .blok-md-alert-title {
+  color: var(--blok-color-red-text);
+}
+
+/* Footnotes trailer: a quieter, smaller list anchored at the document foot. */
+.blok-md-footnotes {
+  margin-top: 2em;
+  font-size: 0.85em;
+  color: var(--blok-text-secondary);
+}
+
+.blok-md-footnotes ol {
+  padding-left: 1.25em;
+}
+
+.blok-md-fnref a,
+.blok-md-fnback {
+  color: var(--blok-color-accent);
+  text-decoration: none;
+}
+
+.blok-md-fnback {
+  margin-left: var(--blok-space-1);
 }

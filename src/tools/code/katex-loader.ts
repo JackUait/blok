@@ -31,8 +31,17 @@ async function loadKatex(): Promise<typeof KatexType> {
 
 /**
  * Render a LaTeX string to HTML. Lazy-loads KaTeX and its CSS on first call.
+ *
+ * Options are hardened for untrusted input: `trust: false` forbids the
+ * markup-injecting commands (\href, \includegraphics, \html*), `maxExpand`
+ * caps macro expansion, and `maxSize` caps element sizing so a crafted file
+ * can't bomb the layout. `throwOnError: false` renders malformed math as
+ * escaped source rather than blowing up the whole preview.
  */
-export async function renderLatex(latex: string): Promise<string> {
+export async function renderLatex(
+  latex: string,
+  options: { displayMode?: boolean } = {},
+): Promise<string> {
   injectCss();
 
   try {
@@ -40,7 +49,11 @@ export async function renderLatex(latex: string): Promise<string> {
 
     return katex.renderToString(latex, {
       throwOnError: false,
-      displayMode: true,
+      trust: false,
+      strict: 'ignore',
+      maxSize: 50,
+      maxExpand: 1000,
+      displayMode: options.displayMode ?? true,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';

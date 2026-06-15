@@ -935,8 +935,13 @@
   box-shadow: var(--blok-image-shadow-resting);
 }
 
-/* --- xlsx: a single crisp data card --------------------------------------- */
+/* --- xlsx: a single crisp data card, centred on the desk ------------------ */
+/* The sheet is usually far smaller than the modal; centring keeps it from
+   stranding in the top-left corner amid a sea of empty space. */
 .blok-file-preview-xlsx {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: var(--blok-space-6);
 }
 
@@ -958,6 +963,12 @@
   border-right: 1px solid var(--blok-border-subtle);
   border-bottom: 1px solid var(--blok-border-subtle);
   white-space: pre;
+}
+
+/* Numbers right-align with tabular figures so columns read like a spreadsheet. */
+.blok-file-preview-xlsx-table td.blok-file-preview-xlsx-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .blok-file-preview-xlsx-table td:last-child {

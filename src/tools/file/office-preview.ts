@@ -52,13 +52,24 @@ function sharedString(si: Element): string {
   return Array.from(si.getElementsByTagName('t')).map((t) => t.textContent ?? '').join('');
 }
 
+/** Whether a cell holds a real number (so it can be right-aligned like a sheet). */
+function isNumericCell(cell: Element, text: string): boolean {
+  const type = cell.getAttribute('t');
+  if (type === 's' || type === 'inlineStr' || type === 'str') {
+    return false;
+  }
+
+  return text.trim() !== '' && Number.isFinite(Number(text));
+}
+
 /** Build one `<tr>` from a `<row>` element, placing cells at their A1 column. */
 function buildRow(rowEl: Element, shared: string[]): HTMLTableRowElement {
   const cells = Array.from(rowEl.getElementsByTagName('c'));
-  const byColumn = new Map<number, string>();
+  const byColumn = new Map<number, { text: string; numeric: boolean }>();
   cells.forEach((cell, i) => {
     const ref = cell.getAttribute('r');
-    byColumn.set(ref === null ? i + 1 : columnIndex(ref), cellText(cell, shared));
+    const text = cellText(cell, shared);
+    byColumn.set(ref === null ? i + 1 : columnIndex(ref), { text, numeric: isNumericCell(cell, text) });
   });
   const lastColumn = cells.reduce((max, cell) => {
     const ref = cell.getAttribute('r');
@@ -69,7 +80,11 @@ function buildRow(rowEl: Element, shared: string[]): HTMLTableRowElement {
   const tr = document.createElement('tr');
   for (const col of range(lastColumn)) {
     const td = document.createElement('td');
-    td.textContent = byColumn.get(col) ?? '';
+    const value = byColumn.get(col);
+    td.textContent = value?.text ?? '';
+    if (value?.numeric === true) {
+      td.className = 'blok-file-preview-xlsx-num';
+    }
     tr.appendChild(td);
   }
 

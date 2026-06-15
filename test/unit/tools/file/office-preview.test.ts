@@ -101,4 +101,14 @@ describe('renderXlsxInto', () => {
     const cells = Array.from(container.querySelectorAll('td')).map((td) => td.textContent);
     expect(cells).toEqual(['<b>x</b>', 'y', '42']);
   });
+
+  it('flags numeric cells (not text) so they can be right-aligned', async () => {
+    const container = document.createElement('div');
+    await renderXlsxInto(new ArrayBuffer(4), container);
+    const cells = Array.from(container.querySelectorAll('td'));
+    const NUM = 'blok-file-preview-xlsx-num';
+    expect(cells[0].classList.contains(NUM)).toBe(false); // shared-string text
+    expect(cells[1].classList.contains(NUM)).toBe(false); // shared-string text
+    expect(cells[2].classList.contains(NUM)).toBe(true); //  inline number 42
+  });
 });

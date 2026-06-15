@@ -224,8 +224,12 @@ export class TableSubsystems {
           updateHeadingStyles(this.host.gridElement, this.host.model.withHeadings);
           updateHeadingColumnStyles(this.host.gridElement, this.host.model.withHeadingColumn);
         });
+
+        return true;
       },
       onDragRemoveRow: () => {
+        let removed = false;
+
         this.host.runTransactedStructuralOp(() => {
           const rowCount = this.host.grid.getRowCount(gridEl);
 
@@ -234,8 +238,11 @@ export class TableSubsystems {
 
             this.host.cellBlocks?.deleteBlocks(blocksToDelete);
             this.host.grid.deleteRow(gridEl, rowCount - 1);
+            removed = true;
           }
         });
+
+        return removed;
       },
       onDragAddCol: () => {
         this.host.runTransactedStructuralOp(() => {
@@ -260,8 +267,12 @@ export class TableSubsystems {
             this.host.scrollContainer.scrollLeft = this.host.scrollContainer.scrollWidth;
           }
         });
+
+        return true;
       },
       onDragRemoveCol: () => {
+        let removed = false;
+
         this.host.runTransactedStructuralOp(() => {
           const colCount = this.host.grid.getColumnCount(gridEl);
 
@@ -285,7 +296,10 @@ export class TableSubsystems {
           this.initResize(gridEl);
 
           dragState.addedCols--;
+          removed = true;
         });
+
+        return removed;
       },
       onDragEnd: () => {
         this.initResize(gridEl);
@@ -342,6 +356,9 @@ export class TableSubsystems {
           enableScrollOverflow(this.host.ensureScrollContainer());
           populateNewCells(gridEl, this.host.cellBlocks);
           updateHeadingColumnStyles(this.host.gridElement, this.host.model.withHeadingColumn);
+          // Refresh the overflow haze so the right-edge scroll affordance
+          // appears immediately when the new column overflows the container.
+          this.scrollHaze?.update();
         });
       },
       onRemoveLastRow: () => {
@@ -391,6 +408,9 @@ export class TableSubsystems {
         this.rowColControls?.refresh();
         this.addControls?.setDisplay(true);
         this.addControls?.syncRowButtonWidth();
+        // Drag may have grown the table past the container without scrolling;
+        // recompute the haze so the scroll affordance is correct on release.
+        this.scrollHaze?.update();
       },
       getTableSize: () => {
         return { rows: this.host.model.rows, cols: this.host.model.cols };
@@ -428,6 +448,7 @@ export class TableSubsystems {
           this.initResize(gridEl);
           this.rowColControls?.refresh();
           this.addControls?.syncRowButtonWidth();
+          this.scrollHaze?.update();
         });
       },
     });
@@ -523,6 +544,7 @@ export class TableSubsystems {
             withHeadings: this.host.model.withHeadings,
             withHeadingColumn: this.host.model.withHeadingColumn,
             initialColWidth: this.host.model.initialColWidth,
+            hasMerges: this.host.model.hasMerges(),
           },
           cellBlocks: this.host.cellBlocks,
           blocksToDelete,
@@ -584,10 +606,16 @@ export class TableSubsystems {
         this.host.model.addColumn(action.index + 1);
         break;
       case 'move-row':
-        this.host.model.moveRow(action.fromIndex, action.toIndex);
+        // Skip on merged grids; the DOM move is blocked too, so moving the
+        // model here would desync them (see executeRowColAction).
+        if (!this.host.model.hasMerges()) {
+          this.host.model.moveRow(action.fromIndex, action.toIndex);
+        }
         break;
       case 'move-col':
-        this.host.model.moveColumn(action.fromIndex, action.toIndex);
+        if (!this.host.model.hasMerges()) {
+          this.host.model.moveColumn(action.fromIndex, action.toIndex);
+        }
         break;
       case 'delete-row':
         return this.host.model.deleteRow(action.index);
@@ -968,20 +996,30 @@ export class TableSubsystems {
      * expectations: copying one cell and pasting into another cell (or the same
      * cell) appends/inserts the text instead of overwriting.
      */
-    if (payload.rows === 1 && payload.cols === 1) {
-      e.preventDefault();
-      e.stopPropagation();
-      this.insertSingleCellPayloadInline(payload.cells[0][0]);
-
-      return;
-    }
-
     e.preventDefault();
     e.stopPropagation();
 
     // Read true model coordinates from stamped data attributes
     const targetRowIndex = parseInt(targetCell.getAttribute(CELL_ROW_ATTR) ?? '0', 10);
     const targetColIndex = parseInt(targetCell.getAttribute(CELL_COL_ATTR) ?? '0', 10);
+
+    if (payload.rows === 1 && payload.cols === 1) {
+      const singleCell = payload.cells[0][0];
+      // Inline caret-insert only works for text blocks. A non-text block
+      // (image/embed/list/code) has no data.text and would be silently dropped,
+      // so recreate it as a real block in the target cell instead.
+      const isTextOnly = singleCell.blocks.every(block => typeof block.data.text === 'string');
+
+      if (isTextOnly) {
+        this.insertSingleCellPayloadInline(singleCell);
+
+        return;
+      }
+
+      this.pastePayloadIntoCells(gridEl, payload, targetRowIndex, targetColIndex);
+
+      return;
+    }
 
     this.pastePayloadIntoCells(gridEl, payload, targetRowIndex, targetColIndex);
   }
@@ -1053,24 +1091,23 @@ export class TableSubsystems {
     this.host.runTransactedStructuralOp(() => {
       this.expandGridForPaste(gridEl, startRow + payload.rows, startCol + payload.cols);
 
-      // Paste block data into target cells
-      const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
-
+      // Paste block data into target cells. Resolve each target by LOGICAL
+      // coordinate (merge-safe getCell) so the DOM cell we write matches the
+      // logical model write below — a physical NodeList index would diverge in
+      // any merge-touched row and drop or misplace the pasted blocks.
       Array.from({ length: payload.rows }, (_, r) => r).forEach((r) => {
-        const row = rows[startRow + r];
-
-        if (!row) {
-          return;
-        }
-
-        const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
-
         Array.from({ length: payload.cols }, (_, c) => c).forEach((c) => {
-          const cell = cells[startCol + c] as HTMLElement | undefined;
+          const cellPayload = payload.cells[r][c];
+
+          // Skip merge-covered source positions: they are not real cells, so
+          // pasting them would wipe whatever sits at the destination.
+          if (cellPayload.covered) {
+            return;
+          }
+
+          const cell = this.host.grid.getCell(gridEl, startRow + r, startCol + c);
 
           if (cell) {
-            const cellPayload = payload.cells[r][c];
-
             this.pasteCellPayload(cell, cellPayload);
 
             // Sync pasted block IDs to model
@@ -1097,10 +1134,13 @@ export class TableSubsystems {
       this.rowColControls?.refresh();
     });
 
-    // Caret placement outside the lock (no structural mutation)
-    const updatedRows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
-    const lastRow = updatedRows[startRow + payload.rows - 1];
-    const lastCell = lastRow?.querySelectorAll(`[${CELL_ATTR}]`)[startCol + payload.cols - 1] as HTMLElement | undefined;
+    // Caret placement outside the lock (no structural mutation). Resolve the
+    // last pasted cell by logical coordinate to stay merge-safe.
+    const lastCell = this.host.grid.getCell(
+      gridEl,
+      startRow + payload.rows - 1,
+      startCol + payload.cols - 1,
+    );
 
     if (!lastCell || !this.host.cellBlocks || !this.host.api.caret) {
       return;

@@ -95,5 +95,5 @@ export interface ClipboardBlockData {
 export interface TableCellsClipboard {
   rows: number;
   cols: number;
-  cells: Array<Array<{ blocks: ClipboardBlockData[]; color?: string; textColor?: string; placement?: CellPlacement }>>;
+  cells: Array<Array<{ blocks: ClipboardBlockData[]; color?: string; textColor?: string; placement?: CellPlacement; covered?: boolean }>>;
 }

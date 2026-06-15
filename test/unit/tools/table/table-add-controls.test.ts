@@ -52,17 +52,17 @@ const createGridAndWrapper = (rows: number, cols: number): { wrapper: HTMLDivEle
 
 const defaultDragCallbacks = (): {
   onDragStart: () => void;
-  onDragAddRow: () => void;
-  onDragRemoveRow: () => void;
-  onDragAddCol: () => void;
-  onDragRemoveCol: () => void;
+  onDragAddRow: () => boolean;
+  onDragRemoveRow: () => boolean;
+  onDragAddCol: () => boolean;
+  onDragRemoveCol: () => boolean;
   onDragEnd: () => void;
 } => ({
   onDragStart: vi.fn(),
-  onDragAddRow: vi.fn(),
-  onDragRemoveRow: vi.fn(),
-  onDragAddCol: vi.fn(),
-  onDragRemoveCol: vi.fn(),
+  onDragAddRow: vi.fn(() => true),
+  onDragRemoveRow: vi.fn(() => true),
+  onDragAddCol: vi.fn(() => true),
+  onDragRemoveCol: vi.fn(() => true),
   onDragEnd: vi.fn(),
 });
 
@@ -1425,7 +1425,11 @@ describe('TableAddControls', () => {
 
       let currentSize = { rows: 2, cols: 3 };
       const getTableSize = vi.fn(() => currentSize);
-      const onDragAddRow = vi.fn(() => { currentSize = { rows: currentSize.rows + 1, cols: currentSize.cols }; });
+      const onDragAddRow = vi.fn(() => {
+        currentSize = { rows: currentSize.rows + 1, cols: currentSize.cols };
+
+        return true;
+      });
 
       const rows = grid.querySelectorAll('[data-blok-table-row]');
 

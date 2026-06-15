@@ -24,6 +24,11 @@ export interface ActionData {
   withHeadings: boolean;
   withHeadingColumn: boolean;
   initialColWidth?: number;
+  /**
+   * True when the table contains any merged cell. Physical-index row/column
+   * reordering cannot stay consistent on a merged grid, so moves are blocked.
+   */
+  hasMerges?: boolean;
 }
 
 interface ActionContext {
@@ -76,12 +81,25 @@ const handleInsertCol = (
   };
 };
 
+const noOpResult = (ctx: ActionContext): ActionResult => ({
+  pendingHighlight: null,
+  moveSelection: null,
+  colWidths: ctx.data.colWidths,
+  withHeadings: ctx.data.withHeadings,
+  withHeadingColumn: ctx.data.withHeadingColumn,
+});
+
 const handleMoveRow = (
   gridEl: HTMLElement,
   fromIndex: number,
   toIndex: number,
   ctx: ActionContext,
 ): ActionResult => {
+  // Merged grids can't be safely reordered with physical indices — bail.
+  if (ctx.data.hasMerges) {
+    return noOpResult(ctx);
+  }
+
   ctx.grid.moveRow(gridEl, fromIndex, toIndex);
 
   return {
@@ -99,6 +117,12 @@ const handleMoveCol = (
   toIndex: number,
   ctx: ActionContext,
 ): ActionResult => {
+  // Merged grids can't be safely reordered with physical indices, and a width
+  // reorder must not be applied to an unchanged model — bail entirely.
+  if (ctx.data.hasMerges) {
+    return noOpResult(ctx);
+  }
+
   ctx.grid.moveColumn(gridEl, fromIndex, toIndex);
 
   return {

@@ -21,6 +21,7 @@ const createMockModel = (): TableModel => ({
   setStretched: vi.fn(),
   setColWidths: vi.fn(),
   setInitialColWidth: vi.fn(),
+  isSpannedCell: vi.fn(() => false),
   rows: 0,
   cols: 0,
 } as unknown as TableModel);

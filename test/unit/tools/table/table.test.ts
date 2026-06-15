@@ -144,6 +144,81 @@ describe('Table Tool', () => {
     });
   });
 
+  describe('stretched (L1)', () => {
+    const renderWithStretched = (stretched: boolean): boolean => {
+      let captured = false;
+      const block = {
+        id: 'tbl-stretch',
+        get stretched(): boolean {
+          return captured;
+        },
+        set stretched(v: boolean) {
+          captured = v;
+        },
+      };
+      const table = new Table({
+        data: { withHeadings: false, withHeadingColumn: false, stretched, content: [['A']] } as TableData,
+        config: {},
+        api: createMockAPI(),
+        readOnly: false,
+        block: block as never,
+      });
+
+      table.render();
+      table.rendered();
+
+      return captured;
+    };
+
+    it('applies block.stretched when the table data is stretched', () => {
+      expect(renderWithStretched(true)).toBe(true);
+    });
+
+    it('leaves block.stretched false when not stretched', () => {
+      expect(renderWithStretched(false)).toBe(false);
+    });
+  });
+
+  describe('validate', () => {
+    it('rejects empty content', () => {
+      const table = new Table(createTableOptions());
+
+      expect(table.validate({ withHeadings: false, withHeadingColumn: false, content: [] })).toBe(false);
+    });
+
+    it('rejects a degenerate zero-column table ([[]])', () => {
+      const table = new Table(createTableOptions());
+
+      // 1 row, 0 columns — passed the old length-only check and then desynced
+      // a 3-column DOM fallback against a 0-column model.
+      expect(table.validate({ withHeadings: false, withHeadingColumn: false, content: [[]] })).toBe(false);
+    });
+
+    it('rejects content with any zero-width row', () => {
+      const table = new Table(createTableOptions());
+
+      expect(
+        table.validate({
+          withHeadings: false,
+          withHeadingColumn: false,
+          content: [[{ blocks: [] }], []],
+        })
+      ).toBe(false);
+    });
+
+    it('accepts content with at least one populated row', () => {
+      const table = new Table(createTableOptions());
+
+      expect(
+        table.validate({
+          withHeadings: false,
+          withHeadingColumn: false,
+          content: [[{ blocks: [] }, { blocks: [] }]],
+        })
+      ).toBe(true);
+    });
+  });
+
   describe('restrictedTools config', () => {
     afterEach(() => {
       clearAdditionalRestrictedTools();

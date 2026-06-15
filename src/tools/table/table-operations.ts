@@ -60,22 +60,30 @@ export const applyPixelWidths = (gridEl: HTMLElement, widths: number[]): void =>
 };
 
 export const getCellPosition = (gridEl: HTMLElement, cell: HTMLElement): { row: number; col: number } | null => {
-  const rows = Array.from(gridEl.querySelectorAll(`[${ROW_ATTR}]`));
+  const rowEl = cell.closest<HTMLElement>(`[${ROW_ATTR}]`);
 
-  const rowIndex = rows.findIndex(row => {
-    const cells = Array.from(row.querySelectorAll(`[${CELL_ATTR}]`));
-
-    return cells.includes(cell);
-  });
-
-  if (rowIndex === -1) {
+  if (!rowEl || !gridEl.contains(rowEl)) {
     return null;
   }
 
-  const cells = Array.from(rows[rowIndex].querySelectorAll(`[${CELL_ATTR}]`));
-  const colIndex = cells.indexOf(cell);
+  // Rows always render (rowspan never removes a <tr>), so the physical row
+  // index equals the logical row. Columns DIVERGE: merged cells are not
+  // rendered as <td>, so a physical NodeList index would be wrong in any
+  // merge-touched row. Read the LOGICAL column the cell carries instead.
+  const row = Array.from(gridEl.querySelectorAll(`[${ROW_ATTR}]`)).indexOf(rowEl);
+  const colAttr = cell.getAttribute(CELL_COL_ATTR);
 
-  return { row: rowIndex, col: colIndex };
+  if (row < 0 || colAttr === null) {
+    return null;
+  }
+
+  const col = parseInt(colAttr, 10);
+
+  if (Number.isNaN(col)) {
+    return null;
+  }
+
+  return { row, col };
 };
 
 // ─── Cell emptiness ─────────────────────────────────────────────────
@@ -383,7 +391,12 @@ export const normalizeTableData = (
   const tableData = data as TableData;
   const cols = tableData.content?.[0]?.length;
   const colWidths = tableData.colWidths;
-  const validWidths = colWidths && cols && colWidths.length === cols ? colWidths : undefined;
+  const validWidths = colWidths
+    && cols
+    && colWidths.length === cols
+    && colWidths.every(w => Number.isFinite(w) && w > 0)
+    ? colWidths
+    : undefined;
 
   return {
     withHeadings: tableData.withHeadings ?? config.withHeadings ?? false,

@@ -1,5 +1,6 @@
 import type {
   API,
+  BlockAPI,
   BlockTool,
   BlockToolConstructorOptions,
   HTMLPasteEvent,
@@ -79,6 +80,7 @@ export class Table implements BlockTool {
   private scrollContainer: HTMLDivElement | null = null;
   private gripOverlay: HTMLDivElement | null = null;
   private blockId: string | undefined;
+  private block: BlockAPI | undefined;
   private isNewTable = false;
   private unregisterRestrictedTools: (() => void) | null = null;
   private keyboardNavCleanup: (() => void) | null = null;
@@ -108,6 +110,7 @@ export class Table implements BlockTool {
     this.grid = new TableGrid({ readOnly });
     this.model = new TableModel(normalized);
     this.blockId = block?.id;
+    this.block = block;
     this.subsystems = new TableSubsystems(this.createSubsystemHost());
 
     if (this.config.restrictedTools !== undefined) {
@@ -482,6 +485,12 @@ export class Table implements BlockTool {
       return;
     }
 
+    // Apply full-width via the core Block.stretched setter. The model
+    // round-trips the flag but only the core style manager renders it.
+    if (this.block) {
+      this.block.stretched = this.model.stretched;
+    }
+
     const gridEl = this.gridElement;
 
     if (!gridEl) {
@@ -717,7 +726,13 @@ export class Table implements BlockTool {
   }
 
   public validate(savedData: TableData): boolean {
-    return savedData.content.length > 0;
+    // Require at least one row AND every row to have columns. A zero-column
+    // row (e.g. [[]]) passes a naive length check but then desyncs the
+    // DEFAULT_COLS DOM fallback against a 0-column model.
+    return (
+      savedData.content.length > 0 &&
+      savedData.content.every(row => Array.isArray(row) && row.length > 0)
+    );
   }
 
   /**

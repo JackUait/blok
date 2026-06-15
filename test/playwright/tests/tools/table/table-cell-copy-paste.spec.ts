@@ -931,6 +931,74 @@ test.describe('Table cell copy/paste', () => {
     await expect(targetEditable).toContainText('TYPED', { timeout: 3000 });
   });
 
+  test('multi-cell paste targets correct logical columns past a horizontal merge (H4)', async ({ page }) => {
+    // 2-row, 3-col table; row-0 cols 0+1 merged (colspan=2). Row 0 has 2 physical
+    // <td> but 3 logical columns, so a physical paste index mistargets/loses data.
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [
+                [
+                  { blocks: [], colspan: 2, text: 'Merged' },
+                  { blocks: [], mergedInto: [0, 0] as [number, number] },
+                  { blocks: [], text: 'TopRight' },
+                ],
+                [
+                  { blocks: [], text: 'A' },
+                  { blocks: [], text: 'B' },
+                  { blocks: [], text: 'C' },
+                ],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+    // Copy a 1x2 range from row 1: cells [1,0] and [1,1] => "A","B"
+    await selectCells(page, 1, 0, 1, 1);
+    const { html, plain } = await performCopyAndCapture(page);
+
+    expect(plain).toContain('A');
+    expect(plain).toContain('B');
+
+    // Paste anchored at the post-merge cell: logical (0,2). Auto-expands to col 3.
+    const anchorCell = page.locator(
+      `${TABLE_SELECTOR} [data-blok-table-cell-row="0"][data-blok-table-cell-col="2"]`
+    );
+
+    await anchorCell.click();
+    await dispatchPasteEvent(page, html, plain);
+
+    // The pasted values must land in logical columns 2 and 3 of row 0, not be
+    // dropped or scattered to the wrong physical cells.
+    const dest2 = page.locator(
+      `${TABLE_SELECTOR} [data-blok-table-cell-row="0"][data-blok-table-cell-col="2"] [contenteditable="true"]`
+    );
+    const dest3 = page.locator(
+      `${TABLE_SELECTOR} [data-blok-table-cell-row="0"][data-blok-table-cell-col="3"] [contenteditable="true"]`
+    );
+
+    await expect(dest2).toHaveText('A', { timeout: 3000 });
+    await expect(dest3).toHaveText('B', { timeout: 3000 });
+
+    // The post-merge cell (logical col 2) must remain editable and non-empty —
+    // i.e. the pasted blocks were not mistargeted to a spanned coordinate and
+    // silently dropped, and the cell stays usable afterwards.
+    await dest2.click();
+    await page.keyboard.press('End');
+    await page.keyboard.type('!');
+
+    await expect(dest2).toHaveText('A!', { timeout: 3000 });
+  });
+
   test('should not intercept copy when user has text selected inside a single cell block', async ({ page }) => {
     // Regression test: when a user selects text within a cell's contenteditable and presses
     // Cmd+C, the table cell selection handler must NOT override the native copy.

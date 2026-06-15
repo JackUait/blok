@@ -905,13 +905,14 @@ describe('table-operations', () => {
   describe('setupKeyboardNavigation', () => {
     it('should return a cleanup function that removes the keydown listener', async () => {
       const { setupKeyboardNavigation } = await import('../../../../src/tools/table/table-operations');
-      const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
 
       const gridEl = document.createElement('div');
       const row = document.createElement('div');
       row.setAttribute(ROW_ATTR, '');
       const cell = document.createElement('div');
       cell.setAttribute(CELL_ATTR, '');
+      cell.setAttribute(CELL_COL_ATTR, '0');
       row.appendChild(cell);
       gridEl.appendChild(row);
 

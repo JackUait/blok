@@ -274,6 +274,10 @@ export class TableModel {
       return;
     }
 
+    if (this.isSpannedCell(row, col)) {
+      return;
+    }
+
     if (color === undefined) {
       delete this.contentGrid[row][col].color;
     } else if (isValidCssColor(color)) {
@@ -300,6 +304,10 @@ export class TableModel {
       return;
     }
 
+    if (this.isSpannedCell(row, col)) {
+      return;
+    }
+
     if (color === undefined) {
       delete this.contentGrid[row][col].textColor;
     } else if (isValidCssColor(color)) {
@@ -320,6 +328,9 @@ export class TableModel {
 
   setCellPlacement(row: number, col: number, placement: CellPlacement | undefined): void {
     if (!this.isInBounds(row, col)) {
+      return;
+    }
+    if (this.isSpannedCell(row, col)) {
       return;
     }
     if (placement === undefined) {
@@ -644,6 +655,10 @@ export class TableModel {
           gridCell.mergedInto = [minRow, minCol];
           delete gridCell.colspan;
           delete gridCell.rowspan;
+          // Scrub styling so it cannot resurface when the cell is later freed.
+          delete gridCell.color;
+          delete gridCell.textColor;
+          delete gridCell.placement;
         }
       });
     });
@@ -717,6 +732,19 @@ export class TableModel {
   }
 
   /**
+   * Returns true if the table contains ANY merged cell (a colspan/rowspan
+   * origin or a covered cell). Used to disable physical-index row/column
+   * reordering, which cannot stay consistent on a merged grid.
+   */
+  hasMerges(): boolean {
+    return this.contentGrid.some(row =>
+      row.some(cell =>
+        (cell.colspan ?? 1) > 1 || (cell.rowspan ?? 1) > 1 || cell.mergedInto !== undefined
+      )
+    );
+  }
+
+  /**
    * Get the colspan and rowspan of the cell at (row, col).
    * Returns {colspan: 1, rowspan: 1} for regular/spanned cells.
    */
@@ -758,6 +786,9 @@ export class TableModel {
         delete spanned.mergedInto;
         spanned.blocks = [];
         delete spanned.placement;
+        // Scrub styling so a color set before the merge does not reappear.
+        delete spanned.color;
+        delete spanned.textColor;
       });
     });
 

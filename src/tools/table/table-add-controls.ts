@@ -51,10 +51,11 @@ interface TableAddControlsOptions {
   onAddRow: () => void;
   onAddColumn: () => void;
   onDragStart: () => void;
-  onDragAddRow: () => void;
-  onDragRemoveRow: () => void;
-  onDragAddCol: () => void;
-  onDragRemoveCol: () => void;
+  /** Returns true if a row/column was actually added or removed. */
+  onDragAddRow: () => boolean;
+  onDragRemoveRow: () => boolean;
+  onDragAddCol: () => boolean;
+  onDragRemoveCol: () => boolean;
   onDragEnd: () => void;
   getTableSize: () => { rows: number; cols: number };
   /** Returns the pixel width of a newly added column, used as the drag unit size. */
@@ -85,10 +86,10 @@ export class TableAddControls {
   private boundAddRowClick: () => void;
   private boundAddColClick: () => void;
   private onDragStart: () => void;
-  private onDragAddRow: () => void;
-  private onDragRemoveRow: () => void;
-  private onDragAddCol: () => void;
-  private onDragRemoveCol: () => void;
+  private onDragAddRow: () => boolean;
+  private onDragRemoveRow: () => boolean;
+  private onDragAddCol: () => boolean;
+  private onDragRemoveCol: () => boolean;
   private onDragEnd: () => void;
   private boundPointerMove: (e: PointerEvent) => void;
   private boundPointerUp: (e: PointerEvent) => void;
@@ -374,21 +375,25 @@ export class TableAddControls {
     const delta = currentPos - startPos;
     const targetCount = Math.floor(delta / unitSize);
 
+    // Only adjust the counter when the operation ACTUALLY happened. A remove
+    // can be a guarded no-op (e.g. the last column is non-empty); decrementing
+    // regardless desyncs the counter and re-adds phantom rows/cols on the next
+    // drag. When the op is refused, stop — nothing further will succeed.
     while (this.dragState.addedCount < targetCount) {
-      if (axis === 'row') {
-        this.onDragAddRow();
-      } else {
-        this.onDragAddCol();
+      const added = axis === 'row' ? this.onDragAddRow() : this.onDragAddCol();
+
+      if (!added) {
+        break;
       }
 
       this.dragState.addedCount++;
     }
 
     while (this.dragState.addedCount > targetCount) {
-      if (axis === 'row') {
-        this.onDragRemoveRow();
-      } else {
-        this.onDragRemoveCol();
+      const removed = axis === 'row' ? this.onDragRemoveRow() : this.onDragRemoveCol();
+
+      if (!removed) {
+        break;
       }
 
       this.dragState.addedCount--;

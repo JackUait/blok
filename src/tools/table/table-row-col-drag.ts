@@ -66,7 +66,7 @@ export class TableRowColDrag {
   private dragStartX = 0;
   private dragStartY = 0;
   private dropIndicator: HTMLElement | null = null;
-  private dragOverlayCells: HTMLElement[] = [];
+  private dragOverlayCells: Array<{ el: HTMLElement; originalBg: string }> = [];
   private ghostEl: HTMLElement | null = null;
   private ghostOffsetX = 0;
   private ghostOffsetY = 0;
@@ -117,10 +117,9 @@ export class TableRowColDrag {
     this.grid.style.userSelect = '';
     document.body.style.cursor = '';
 
-    this.dragOverlayCells.forEach(overlayCell => {
-      const el: HTMLElement = overlayCell;
-
-      el.style.backgroundColor = '';
+    this.dragOverlayCells.forEach(({ el, originalBg }) => {
+      // Restore the user's original inline color rather than blanking it.
+      el.style.backgroundColor = originalBg;
       el.style.opacity = '';
     });
     this.dragOverlayCells = [];
@@ -218,9 +217,9 @@ export class TableRowColDrag {
     cells.forEach(node => {
       const cellEl = node as HTMLElement;
 
+      this.dragOverlayCells.push({ el: cellEl, originalBg: cellEl.style.backgroundColor });
       cellEl.style.backgroundColor = dragBg;
       cellEl.style.opacity = '0.7';
-      this.dragOverlayCells.push(cellEl);
     });
   }
 
@@ -234,9 +233,9 @@ export class TableRowColDrag {
         return;
       }
 
+      this.dragOverlayCells.push({ el: cellEl, originalBg: cellEl.style.backgroundColor });
       cellEl.style.backgroundColor = dragBg;
       cellEl.style.opacity = '0.7';
-      this.dragOverlayCells.push(cellEl);
     });
   }
 

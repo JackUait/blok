@@ -2,6 +2,7 @@ import type { API } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 
 import { CELL_ATTR, ROW_ATTR, CELL_ROW_ATTR, CELL_COL_ATTR } from './table-core';
+import { getCellPosition } from './table-operations';
 import type { TableModel } from './table-model';
 import type { LegacyCellContent, CellContent } from './types';
 import { isCellWithBlocks } from './types';
@@ -147,21 +148,10 @@ export class TableCellBlocks {
    * Handle Tab navigation to next cell
    */
   private handleTabNavigation(position: CellPosition): void {
-    const nextCol = position.col + 1;
-    const totalCols = this.getColumnCount();
+    const target = this.findAdjacentLogicalCell(position, 1);
 
-    // Navigate to next column in same row
-    if (nextCol < totalCols) {
-      this.navigateToCell({ row: position.row, col: nextCol });
-
-      return;
-    }
-
-    // Wrap to first column of next row
-    const nextRow = position.row + 1;
-
-    if (nextRow < this.getRowCount()) {
-      this.navigateToCell({ row: nextRow, col: 0 });
+    if (target) {
+      this.navigateToCell(target);
 
       return;
     }
@@ -174,26 +164,49 @@ export class TableCellBlocks {
    * Handle Shift+Tab navigation to previous cell
    */
   private handleShiftTabNavigation(position: CellPosition): void {
-    const prevCol = position.col - 1;
+    const target = this.findAdjacentLogicalCell(position, -1);
 
-    // Navigate to previous column in same row
-    if (prevCol >= 0) {
-      this.navigateToCell({ row: position.row, col: prevCol }, true);
-
-      return;
-    }
-
-    // Wrap to last column of previous row
-    const prevRow = position.row - 1;
-
-    if (prevRow >= 0) {
-      this.navigateToCell({ row: prevRow, col: this.getColumnCount() - 1 }, true);
+    if (target) {
+      this.navigateToCell(target, true);
 
       return;
     }
 
     // At the very first cell — exit the table by focusing the block above
     this.exitTableBackward();
+  }
+
+  /**
+   * Walk the logical grid from `position` in reading order (direction +1) or
+   * reverse (-1), skipping merge-covered columns, and return the first
+   * non-spanned cell. Returns null when the walk runs past the grid edge,
+   * signalling the caller to exit the table.
+   */
+  private findAdjacentLogicalCell(position: CellPosition, direction: 1 | -1): CellPosition | null {
+    const totalCols = this.getColumnCount();
+    const totalRows = this.getRowCount();
+
+    let { row, col } = position;
+
+    for (;;) {
+      col += direction;
+
+      if (col >= totalCols) {
+        row += 1;
+        col = 0;
+      } else if (col < 0) {
+        row -= 1;
+        col = totalCols - 1;
+      }
+
+      if (row < 0 || row >= totalRows) {
+        return null;
+      }
+
+      if (!this.model.isSpannedCell(row, col)) {
+        return { row, col };
+      }
+    }
   }
 
   /**
@@ -924,30 +937,14 @@ export class TableCellBlocks {
   }
 
   /**
-   * Get the row/col position of a cell element within the grid.
+   * Get the LOGICAL row/col position of a cell element within the grid.
+   *
+   * Delegates to the shared helper, which reads the cell's stamped logical
+   * coordinate. A physical NodeList index would diverge from the model column
+   * in any row touched by a merge, dropping blocks added to post-merge cells.
    */
   private getCellPosition(cell: HTMLElement): { row: number; col: number } | null {
-    const row = cell.closest<HTMLElement>(`[${ROW_ATTR}]`);
-
-    if (!row) {
-      return null;
-    }
-
-    const rows = Array.from(this.gridElement.querySelectorAll(`[${ROW_ATTR}]`));
-    const rowIndex = rows.indexOf(row);
-
-    if (rowIndex < 0) {
-      return null;
-    }
-
-    const cells = Array.from(row.querySelectorAll(`[${CELL_ATTR}]`));
-    const colIndex = cells.indexOf(cell);
-
-    if (colIndex < 0) {
-      return null;
-    }
-
-    return { row: rowIndex, col: colIndex };
+    return getCellPosition(this.gridElement, cell);
   }
 
   /**

@@ -57,9 +57,12 @@ export function serializeCellsToClipboard(entries: CellEntry[]): TableCellsClipb
   const rows = maxRow - minRow + 1;
   const cols = maxCol - minCol + 1;
 
-  // Pre-fill with empty cells
+  // Pre-fill positions as "covered": any position without a physical cell
+  // entry is a merge-covered coordinate, NOT an empty cell. Flagging it lets
+  // paste skip it instead of wiping the destination cell. Real entries below
+  // overwrite this with an un-flagged cell.
   const cells: TableCellsClipboard['cells'] = Array.from({ length: rows }, () =>
-    Array.from({ length: cols }, () => ({ blocks: [] as ClipboardBlockData[] }))
+    Array.from({ length: cols }, () => ({ blocks: [] as ClipboardBlockData[], covered: true }))
   );
 
   for (const entry of entries) {

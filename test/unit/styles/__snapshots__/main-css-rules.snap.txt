@@ -5038,6 +5038,7 @@
 
 .blok-file-preview-title {
   grid-column: 1;
+  grid-row: 1;
   min-width: 0;
   font-size: var(--blok-font-size-body);
   font-weight: var(--blok-font-weight-medium);
@@ -5049,6 +5050,7 @@
 
 .blok-file-preview-close {
   grid-column: 3;
+  grid-row: 1;
   justify-self: end;
   display: flex;
   align-items: center;
@@ -5271,6 +5273,7 @@
 
 .blok-file-preview-toggle {
   grid-column: 2;
+  grid-row: 1;
   display: inline-flex;
   gap: var(--blok-space-0-5);
   padding: var(--blok-space-0-5);

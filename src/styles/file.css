@@ -560,6 +560,7 @@
 .blok-file-preview-pre[data-role="file-preview-md-raw"] {
   white-space: pre-wrap;
   word-break: break-word;
+  animation: blok-file-preview-view-in 200ms var(--blok-ease-standard);
 }
 
 .blok-file-preview-pre[data-role="file-preview-md-raw"] code {
@@ -588,6 +589,20 @@
   background: var(--blok-bg-primary);
   white-space: normal;
   word-break: break-word;
+  animation: blok-file-preview-view-in 200ms var(--blok-ease-standard);
+}
+
+/* Crossfade Rendered ⇄ Raw: the outgoing view is display:none'd (which resets
+   its animation), so the incoming view replays this fade-up on every toggle. */
+@keyframes blok-file-preview-view-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .blok-file-preview-pre[data-role="file-preview-md-raw"],
+  .blok-file-preview-md {
+    animation: none;
+  }
 }
 
 .blok-file-preview-md p,

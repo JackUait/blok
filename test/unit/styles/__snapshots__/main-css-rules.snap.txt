@@ -5110,6 +5110,7 @@
 .blok-file-preview-pre[data-role="file-preview-md-raw"] {
   white-space: pre-wrap;
   word-break: break-word;
+  animation: blok-file-preview-view-in 200ms var(--blok-ease-standard);
 }
 
 .blok-file-preview-pre[data-role="file-preview-md-raw"] code {
@@ -5127,6 +5128,11 @@
   background: var(--blok-bg-primary);
   white-space: normal;
   word-break: break-word;
+  animation: blok-file-preview-view-in 200ms var(--blok-ease-standard);
+}
+
+[@media (prefers-reduced-motion: reduce)] .blok-file-preview-pre[data-role="file-preview-md-raw"], .blok-file-preview-md {
+  animation: none;
 }
 
 .blok-file-preview-md p, .blok-file-preview-md ul, .blok-file-preview-md ol, .blok-file-preview-md blockquote, .blok-file-preview-md pre, .blok-file-preview-md table, .blok-file-preview-md .blok-md-alert {

@@ -262,18 +262,9 @@ export class FileTool implements BlockTool {
   }
 
   private buildEmpty(): EmptyStateElement {
-    const i18n = this.api.i18n;
     return renderEmptyState({
-      accept: this.config.types?.join(',') ?? '*',
-      labels: {
-        upload: i18n.t('tools.file.emptyUpload'),
-        link: i18n.t('tools.file.emptyLink'),
-        chooseFile: i18n.t('tools.file.emptyChooseFile'),
-        dropHint: i18n.t('tools.file.emptyDropHint'),
-        urlPlaceholder: i18n.t('tools.file.emptyUrlPlaceholder'),
-        urlAria: i18n.t('tools.file.emptyUrlAria'),
-        insert: i18n.t('tools.file.emptyInsert'),
-      },
+      acceptTypes: this.config.types ?? [],
+      i18n: this.api.i18n,
       onFile: (file) => this.startUpload(file),
       onUrl: (url) => this.startUrl(url),
     });

@@ -2,9 +2,9 @@
   File tool — Airbnb-flavoured attachment block. Warm, soft, generous: a
   rounded card with a coral file-type tile, medium-weight filename, quiet
   size meta, and a circular download affordance that warms on hover. The
-  empty state is a soft dashed dropzone with a segmented Upload / Link
-  control and a coral primary Insert button. Scoped to
-  [data-blok-tool="file"]; all colour + radius via palette tokens.
+  empty/upload state is the shared media uploader (see media-empty.css +
+  components/utils/media-empty-state.ts). Scoped to [data-blok-tool="file"];
+  all colour + radius via palette tokens.
 */
 
 [data-blok-tool="file"] {
@@ -159,139 +159,6 @@
   color: var(--blok-text-tertiary);
 }
 
-/* ─── Empty: dropzone + tabs ──────────────────────────────────────── */
-
-[data-blok-tool="file"] .blok-file-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--blok-space-3-5);
-  padding: var(--blok-space-5) var(--blok-space-4);
-  border: 1px dashed var(--blok-border-primary);
-  border-radius: var(--blok-radius-xl);
-  background: var(--blok-bg-secondary);
-  text-align: center;
-  transition:
-    border-color var(--blok-duration-base) var(--blok-ease-standard),
-    background-color var(--blok-duration-base) var(--blok-ease-standard);
-}
-[data-blok-tool="file"] .blok-file-empty.is-dragover {
-  border-color: var(--blok-file-accent);
-  background: var(--blok-file-accent-soft);
-}
-
-/* segmented Upload / Link control */
-[data-blok-tool="file"] .blok-file-tabs {
-  display: inline-flex;
-  gap: var(--blok-space-1);
-  padding: var(--blok-space-1);
-  border-radius: var(--blok-radius-pill);
-  background: var(--blok-bg-hover);
-}
-[data-blok-tool="file"] .blok-file-tab {
-  border: 0;
-  padding: var(--blok-space-1-5) var(--blok-space-3-5);
-  border-radius: var(--blok-radius-pill);
-  background: transparent;
-  font-size: var(--blok-font-size-ui-label);
-  font-weight: var(--blok-font-weight-medium);
-  color: var(--blok-text-secondary);
-  cursor: pointer;
-  transition: color var(--blok-duration-base) var(--blok-ease-standard);
-}
-[data-blok-tool="file"] .blok-file-tab:hover {
-  color: var(--blok-text-primary);
-}
-[data-blok-tool="file"] .blok-file-tab.is-active {
-  background: var(--blok-bg-primary);
-  color: var(--blok-text-primary);
-  box-shadow: var(--blok-image-shadow-resting);
-}
-
-[data-blok-tool="file"] .blok-file-panel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--blok-space-2);
-  width: 100%;
-}
-
-/* pill "Choose file" button */
-[data-blok-tool="file"] .blok-file-choose {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--blok-space-2);
-  padding: var(--blok-space-2-5) var(--blok-space-4);
-  border: 1px solid var(--blok-border-strong);
-  border-radius: var(--blok-radius-pill);
-  background: var(--blok-bg-primary);
-  font-size: var(--blok-font-size-body);
-  font-weight: var(--blok-font-weight-semibold);
-  color: var(--blok-text-primary);
-  cursor: pointer;
-  transition:
-    border-color var(--blok-duration-base) var(--blok-ease-standard),
-    background-color var(--blok-duration-base) var(--blok-ease-standard);
-}
-[data-blok-tool="file"] .blok-file-choose:hover {
-  border-color: var(--blok-text-primary);
-  background: var(--blok-bg-hover);
-}
-[data-blok-tool="file"] .blok-file-choose svg {
-  width: 18px;
-  height: 18px;
-}
-[data-blok-tool="file"] .blok-file-hint {
-  font-size: var(--blok-font-size-ui-compact);
-  color: var(--blok-text-tertiary);
-}
-
-/* link panel — input + coral Insert */
-[data-blok-tool="file"] .blok-file-panel[data-panel="link"] {
-  flex-direction: row;
-  gap: var(--blok-space-2);
-}
-[data-blok-tool="file"] .blok-file-url {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding: var(--blok-space-2-5) var(--blok-space-3-5);
-  border: 1px solid var(--blok-border-primary);
-  border-radius: var(--blok-radius-lg);
-  background: var(--blok-bg-primary);
-  font-size: var(--blok-font-size-body);
-  color: var(--blok-text-primary);
-  transition:
-    border-color var(--blok-duration-base) var(--blok-ease-standard),
-    box-shadow var(--blok-duration-base) var(--blok-ease-standard);
-}
-[data-blok-tool="file"] .blok-file-url::placeholder {
-  color: var(--blok-text-tertiary);
-}
-[data-blok-tool="file"] .blok-file-url:focus {
-  outline: none;
-  border-color: var(--blok-file-accent);
-  box-shadow: 0 0 0 3px var(--blok-file-accent-soft);
-}
-[data-blok-tool="file"] .blok-file-submit {
-  flex: 0 0 auto;
-  padding: var(--blok-space-2-5) var(--blok-space-4);
-  border: 0;
-  border-radius: var(--blok-radius-pill);
-  background: var(--blok-file-accent);
-  font-size: var(--blok-font-size-body);
-  font-weight: var(--blok-font-weight-semibold);
-  color: var(--blok-text-on-dark);
-  cursor: pointer;
-  transition: background-color var(--blok-duration-base) var(--blok-ease-standard);
-}
-[data-blok-tool="file"] .blok-file-submit:hover {
-  background: var(--blok-file-accent-hover);
-}
-
-[data-blok-tool="file"] .blok-file-error {
-  font-size: var(--blok-font-size-ui-compact);
-  color: var(--blok-item-destructive-text);
-}
 
 /* ─── Uploading ───────────────────────────────────────────────────── */
 

@@ -42,7 +42,7 @@ describe('FileTool — rendering', () => {
   it('renders the empty state when data.url is empty', () => {
     const root = new FileTool(createOptions()).render();
     expect(root.querySelector('input[type="file"]')).not.toBeNull();
-    expect(root.querySelector('[data-tab="link"]')).not.toBeNull();
+    expect(root.querySelector('[data-tab="embed"]')).not.toBeNull();
   });
 
   it('renders the download card when data.url is present', () => {

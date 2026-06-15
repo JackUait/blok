@@ -17,7 +17,7 @@ interface FileArgs extends EditorFactoryOptions {
 // ── Constants ────────────────────────────────────────────────────────
 
 const CARD_SELECTOR = '[data-role="file-card"]';
-const EMPTY_SELECTOR = '.blok-file-empty';
+const EMPTY_SELECTOR = '.blok-media-empty';
 
 const TIMEOUT_INIT = { timeout: 5000 };
 

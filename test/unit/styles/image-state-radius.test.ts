@@ -28,7 +28,7 @@ const extractRadius = (body: string | null): string | null => {
 
 describe('Image state card radius (src/styles/main.css)', () => {
   it('empty state card uses the shared --blok-radius-lg token', () => {
-    const radius = extractRadius(findRuleBody(css, '.blok-image-empty__card'));
+    const radius = extractRadius(findRuleBody(css, '.blok-media-empty__card'));
 
     expect(radius).toBe('var(--blok-radius-lg)');
   });
@@ -52,13 +52,13 @@ describe('Image state card radius (src/styles/main.css)', () => {
   });
 
   it('empty-state source tabs (Upload / Link) use the softer --blok-radius-md token so their pill shape harmonises with the 12px outer card', () => {
-    const radius = extractRadius(findRuleBody(css, '.blok-image-empty__tab'));
+    const radius = extractRadius(findRuleBody(css, '.blok-media-empty__tab'));
 
     expect(radius).toBe('var(--blok-radius-md)');
   });
 
   it('empty-state inner panel matches the outer card radius so both curves feel of the same family', () => {
-    const radius = extractRadius(findRuleBody(css, '.blok-image-empty__panel'));
+    const radius = extractRadius(findRuleBody(css, '.blok-media-empty__panel'));
 
     expect(radius).toBe('var(--blok-radius-lg)');
   });

@@ -224,10 +224,12 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // more popover) + caption field rules, bookmark tool: bookmark.css Notion-style
     // link preview card + placeholder states, file tool: file.css Airbnb-style
     // attachment card + coral icon tile + dropzone empty state + segmented
-    // upload/link tabs + uploading/error states).
+    // upload/link tabs + uploading/error states + card hover/press animations +
+    // text/code/markdown preview modal styles (loading, pre, md, raw/render
+    // toggle, error+download, task-list items)).
     // Shrinking below the baseline is always acceptable.
     const PRE_SPLIT_BYTES = 390050;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.12);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.13);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

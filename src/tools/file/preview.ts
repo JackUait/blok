@@ -22,7 +22,7 @@ export type PreviewKind = 'pdf' | 'docx' | 'xlsx' | 'pptx' | 'markdown' | 'code'
 
 /**
  * Classify a File block's file into a preview kind, or null when it can only
- * be downloaded. Resolution order: pdf → markdown → code → text → null.
+ * be downloaded. Resolution order: pdf → docx → xlsx → pptx → markdown → code → text → null.
  */
 export function getPreviewKind(data: Partial<FileData>): PreviewKind | null {
   const source = data.fileName ?? data.url;

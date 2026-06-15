@@ -99,4 +99,10 @@ describe('getPreviewKind', () => {
     expect(getPreviewKind({ fileName: 'a.xls' })).toBeNull();
     expect(getPreviewKind({ fileName: 'a.ppt' })).toBeNull();
   });
+
+  it('matches office extensions case-insensitively', () => {
+    expect(getPreviewKind({ fileName: 'A.DOCX' })).toBe('docx');
+    expect(getPreviewKind({ fileName: 'A.XLSX' })).toBe('xlsx');
+    expect(getPreviewKind({ fileName: 'A.PPTX' })).toBe('pptx');
+  });
 });

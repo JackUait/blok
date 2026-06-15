@@ -189,6 +189,16 @@ export class FileTool implements BlockTool {
     this.block.dispatchChange();
   }
 
+  private renameFile(next: string): void {
+    if (next === this.data.fileName) {
+      return;
+    }
+    this.data = { ...this.data, fileName: next };
+    // Re-render so the download attribute and preview title pick up the new name.
+    this.renderState();
+    this.block.dispatchChange();
+  }
+
   private toggleCaption(): void {
     const visible = this.data.captionVisible ?? ((this.data.caption ?? '') !== '');
     this.data = { ...this.data, captionVisible: !visible };
@@ -308,7 +318,8 @@ export class FileTool implements BlockTool {
     const wrap = document.createElement('div');
     wrap.className = 'blok-file-rendered';
     const onPreview = isPreviewable(this.data) ? (): void => this.openPreview() : undefined;
-    wrap.appendChild(renderFileCard(this.data, onPreview, this.api.i18n.t('tools.file.download')));
+    const onRename = this.readOnly ? undefined : (next: string): void => this.renameFile(next);
+    wrap.appendChild(renderFileCard(this.data, onPreview, this.api.i18n.t('tools.file.download'), onRename));
 
     const hasCaption = (this.data.caption ?? '') !== '';
     // Hidden by default: the row shows only when explicitly toggled on or when

@@ -67,6 +67,36 @@ describe('FileTool — rendering', () => {
   });
 });
 
+describe('FileTool — rename filename', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('persists an inline filename edit and dispatches a change', () => {
+    const block = createMockBlock();
+    const tool = new FileTool(createOptions({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf' }, {}, block));
+    const root = tool.render();
+
+    const name = root.querySelector<HTMLElement>('[data-role="file-name"]');
+    expect(name?.getAttribute('contenteditable')).toBe('true');
+    if (!name) throw new Error('name missing');
+    name.textContent = 'renamed.pdf';
+    name.dispatchEvent(new Event('blur'));
+
+    expect(block.dispatchChange).toHaveBeenCalled();
+    expect(tool.save().fileName).toBe('renamed.pdf');
+  });
+
+  it('does not allow editing the filename in read-only mode', () => {
+    const tool = new FileTool({
+      ...createOptions({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf' }),
+      readOnly: true,
+    });
+    const root = tool.render();
+    const name = root.querySelector<HTMLElement>('[data-role="file-name"]');
+    expect(name?.getAttribute('contenteditable')).not.toBe('true');
+  });
+});
+
 describe('FileTool — save & validate', () => {
   beforeEach(() => vi.clearAllMocks());
 

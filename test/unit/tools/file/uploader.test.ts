@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Uploader } from '../../../../src/tools/file/uploader';
 import type { FileToolError } from '../../../../src/tools/file/errors';
 
@@ -69,5 +69,146 @@ describe('Uploader.handleUrl', () => {
 
   it('throws INVALID_URL for an unparseable string', async () => {
     await expect(new Uploader({}).handleUrl('not a url')).rejects.toMatchObject({ code: 'INVALID_URL' });
+  });
+});
+
+describe('Uploader — endpoint upload (handleFile)', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  const okJson = (body: unknown): Response =>
+    ({ ok: true, status: 200, json: async () => body } as unknown as Response);
+
+  it('POSTs the file as multipart to a string endpoint and returns the parsed result', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okJson({ url: 'https://cdn/a.pdf', size: 9 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await new Uploader({ endpoints: 'https://api/upload' }).handleFile(makeFile('a.pdf', 'application/pdf', 5));
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://api/upload');
+    expect(init.method).toBe('POST');
+    expect(init.body).toBeInstanceOf(FormData);
+    expect((init.body as FormData).get('file')).toBeInstanceOf(File);
+    expect(result).toEqual({ url: 'https://cdn/a.pdf', fileName: 'a.pdf', size: 9, mimeType: 'application/pdf' });
+  });
+
+  it('uses endpoints.byFile when an object is given', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okJson({ url: 'https://cdn/a.pdf' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await new Uploader({ endpoints: { byFile: '/up/file', byUrl: '/up/url' } }).handleFile(makeFile());
+
+    expect((fetchMock.mock.calls[0] as [string])[0]).toBe('/up/file');
+  });
+
+  it('uses a configurable form field name', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okJson({ url: 'https://cdn/a.pdf' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await new Uploader({ endpoints: '/up', field: 'document' }).handleFile(makeFile());
+
+    const body = (fetchMock.mock.calls[0] as [string, RequestInit])[1].body as FormData;
+    expect(body.get('document')).toBeInstanceOf(File);
+  });
+
+  it('merges additionalRequestHeaders into the request', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okJson({ url: 'https://cdn/a.pdf' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await new Uploader({ endpoints: '/up', additionalRequestHeaders: { Authorization: 'Bearer x' } }).handleFile(makeFile());
+
+    const init = (fetchMock.mock.calls[0] as [string, RequestInit])[1];
+    expect(init.headers).toMatchObject({ Authorization: 'Bearer x' });
+  });
+
+  it('throws UPLOAD_FAILED when the endpoint responds non-ok', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({}) } as unknown as Response));
+    await expect(new Uploader({ endpoints: '/up' }).handleFile(makeFile()))
+      .rejects.toMatchObject({ code: 'UPLOAD_FAILED' });
+  });
+
+  it('throws UPLOAD_FAILED when the response lacks a url', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(okJson({ fileName: 'a.pdf' })));
+    await expect(new Uploader({ endpoints: '/up' }).handleFile(makeFile()))
+      .rejects.toMatchObject({ code: 'UPLOAD_FAILED' });
+  });
+
+  it('prefers an explicit uploader.uploadByFile over the endpoint', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const uploadByFile = vi.fn().mockResolvedValue({ url: 'https://cdn/custom' });
+
+    const result = await new Uploader({ endpoints: '/up', uploader: { uploadByFile } }).handleFile(makeFile());
+
+    expect(uploadByFile).toHaveBeenCalledOnce();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.url).toBe('https://cdn/custom');
+  });
+
+  it('falls back to a blob URL when no uploader and no endpoint are configured', async () => {
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:none');
+    const result = await new Uploader({}).handleFile(makeFile());
+    expect(result.url).toBe('blob:none');
+  });
+});
+
+describe('Uploader — endpoint upload (handleUrl)', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  const okJson = (body: unknown): Response =>
+    ({ ok: true, status: 200, json: async () => body } as unknown as Response);
+
+  it('POSTs the url as JSON to a string endpoint and returns the parsed result', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okJson({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await new Uploader({ endpoints: 'https://api/upload' }).handleUrl('https://site.com/doc.pdf');
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://api/upload');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual({ url: 'https://site.com/doc.pdf' });
+    expect(result).toEqual({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf' });
+  });
+
+  it('uses endpoints.byUrl when an object is given', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okJson({ url: 'https://cdn/doc.pdf' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await new Uploader({ endpoints: { byFile: '/up/file', byUrl: '/up/url' } }).handleUrl('https://site.com/doc.pdf');
+
+    expect((fetchMock.mock.calls[0] as [string])[0]).toBe('/up/url');
+  });
+
+  it('does not call the file endpoint for a URL when only byFile is set (falls back to raw url)', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await new Uploader({ endpoints: { byFile: '/up/file' } }).handleUrl('https://site.com/doc.pdf');
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result).toEqual({ url: 'https://site.com/doc.pdf' });
+  });
+
+  it('prefers an explicit uploader.uploadByUrl over the endpoint', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const uploadByUrl = vi.fn().mockResolvedValue({ url: 'https://cdn/custom' });
+
+    const result = await new Uploader({ endpoints: '/up', uploader: { uploadByUrl } }).handleUrl('https://site.com/doc.pdf');
+
+    expect(uploadByUrl).toHaveBeenCalledOnce();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.url).toBe('https://cdn/custom');
+  });
+
+  it('still validates the URL scheme before hitting the endpoint', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(new Uploader({ endpoints: '/up' }).handleUrl('ftp://x/y')).rejects.toMatchObject({ code: 'INVALID_URL' });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

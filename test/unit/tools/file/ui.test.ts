@@ -109,6 +109,68 @@ describe('renderFileCard', () => {
   });
 });
 
+describe('renderFileCard — editable filename', () => {
+  it('makes the name editable when an onRename callback is given', () => {
+    const card = renderFileCard({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf' }, undefined, undefined, vi.fn());
+    const name = card.querySelector('[data-role="file-name"]');
+    expect(name?.getAttribute('contenteditable')).toBe('true');
+  });
+
+  it('leaves the name non-editable when no onRename callback is given', () => {
+    const card = renderFileCard({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf' });
+    const name = card.querySelector('[data-role="file-name"]');
+    expect(name?.getAttribute('contenteditable')).not.toBe('true');
+  });
+
+  it('calls onRename with the trimmed new name on blur', () => {
+    const onRename = vi.fn();
+    const card = renderFileCard({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf' }, undefined, undefined, onRename);
+    const name = card.querySelector<HTMLElement>('[data-role="file-name"]');
+    if (!name) throw new Error('name missing');
+    name.textContent = '  report.pdf  ';
+    name.dispatchEvent(new Event('blur'));
+    expect(onRename).toHaveBeenCalledWith('report.pdf');
+  });
+
+  it('does not call onRename when the name is unchanged', () => {
+    const onRename = vi.fn();
+    const card = renderFileCard({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf' }, undefined, undefined, onRename);
+    const name = card.querySelector<HTMLElement>('[data-role="file-name"]');
+    if (!name) throw new Error('name missing');
+    name.dispatchEvent(new Event('blur'));
+    expect(onRename).not.toHaveBeenCalled();
+  });
+
+  it('does not trigger preview when the editable name is clicked', () => {
+    const onPreview = vi.fn();
+    const card = renderFileCard({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf' }, onPreview, undefined, vi.fn());
+    const name = card.querySelector<HTMLElement>('[data-role="file-name"]');
+    if (!name) throw new Error('name missing');
+    name.click();
+    expect(onPreview).not.toHaveBeenCalled();
+  });
+
+  it('cancels the default download navigation when the editable name is clicked', () => {
+    const card = renderFileCard({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf' }, undefined, undefined, vi.fn());
+    const name = card.querySelector<HTMLElement>('[data-role="file-name"]');
+    if (!name) throw new Error('name missing');
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+    name.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('ignores an emptied name and restores the previous filename', () => {
+    const onRename = vi.fn();
+    const card = renderFileCard({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf' }, undefined, undefined, onRename);
+    const name = card.querySelector<HTMLElement>('[data-role="file-name"]');
+    if (!name) throw new Error('name missing');
+    name.textContent = '   ';
+    name.dispatchEvent(new Event('blur'));
+    expect(onRename).not.toHaveBeenCalled();
+    expect(name.textContent).toBe('doc.pdf');
+  });
+});
+
 describe('renderCaptionRow', () => {
   it('renders an editable caption when not read-only', () => {
     const row = renderCaptionRow({ value: 'hi', placeholder: 'Caption…', readOnly: false, onChange: vi.fn() });

@@ -40,6 +40,7 @@ export function renderFileCard(
   data: Partial<FileData> & { url: string },
   onPreview?: () => void,
   downloadLabel?: string,
+  onRename?: (next: string) => void,
 ): HTMLElement {
   const wrapper = document.createElement('div');
   wrapper.className = 'blok-file-card-wrapper';
@@ -66,7 +67,33 @@ export function renderFileCard(
   const name = document.createElement('span');
   name.className = 'blok-file-name';
   name.setAttribute('data-role', 'file-name');
-  name.textContent = data.fileName ?? data.url;
+  const displayName = data.fileName ?? data.url;
+  name.textContent = displayName;
+  if (onRename) {
+    name.setAttribute('contenteditable', 'true');
+    name.setAttribute('role', 'textbox');
+    // The name lives inside the card body (a button or download anchor). Block
+    // the click from bubbling to the preview button and cancel the anchor's
+    // default navigation, so clicking the name only places the edit caret.
+    name.addEventListener('click', (event) => {
+      event.stopPropagation();
+      event.preventDefault();
+    });
+    name.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        name.blur();
+      }
+    });
+    name.addEventListener('blur', () => {
+      const next = (name.textContent ?? '').trim();
+      if (next === '' || next === displayName) {
+        name.textContent = displayName;
+        return;
+      }
+      onRename(next);
+    });
+  }
   meta.appendChild(name);
 
   const sizeText = humanFileSize(data.size);

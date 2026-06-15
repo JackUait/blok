@@ -123,9 +123,17 @@
   font-weight: var(--blok-font-weight-medium);
   line-height: var(--blok-line-height-option);
   color: var(--blok-text-primary);
+  /* Shrink to the title text instead of stretching across the flex column, so
+   * the (editable) field is exactly as wide as the filename, capped at the row. */
+  align-self: flex-start;
+  max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+/* Editable filename: text caret on hover so it reads as an edit target. */
+[data-blok-tool="file"] .blok-file-name[contenteditable="true"]:hover {
+  cursor: text;
 }
 [data-blok-tool="file"] .blok-file-size {
   font-size: var(--blok-font-size-ui-compact);

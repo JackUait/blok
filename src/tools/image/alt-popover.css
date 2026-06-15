@@ -5,11 +5,11 @@
   max-width: min(90vw, 360px);
   padding: var(--blok-space-3);
   margin: 0;
-  background: var(--blok-surface-strong, #1e1e1e);
-  color: var(--blok-text-primary, #f5f5f5);
-  border: 1px solid var(--blok-border-primary, rgba(255, 255, 255, 0.08));
+  background: var(--blok-popover-bg, #fff);
+  color: var(--blok-text-primary, #1d1d1d);
+  border: 1px solid var(--blok-border-primary, #e0ddd6);
   border-radius: var(--blok-space-2-5);
-  box-shadow: var(--blok-alt-popover-shadow);
+  box-shadow: var(--blok-popover-box-shadow);
   z-index: 9999;
   display: grid;
   gap: var(--blok-space-2-5);
@@ -19,7 +19,7 @@
   margin: 0;
   font-size: 13px;
   line-height: 1.4;
-  color: var(--blok-text-secondary, rgba(255, 255, 255, 0.75));
+  color: var(--blok-text-secondary, #707684);
 }
 
 .blok-image-alt-popover__input {
@@ -28,9 +28,9 @@
   font: inherit;
   font-size: 14px;
   line-height: 1.4;
-  color: var(--blok-text-primary, #fff);
-  background: var(--blok-surface-muted, rgba(255, 255, 255, 0.05));
-  border: 1px solid var(--blok-border-primary, rgba(255, 255, 255, 0.12));
+  color: var(--blok-text-primary, #1d1d1d);
+  background: var(--blok-bg-hover, rgba(15, 15, 14, 0.04));
+  border: 1px solid var(--blok-border-primary, #e0ddd6);
   border-radius: var(--blok-space-1-5);
   resize: vertical;
   box-sizing: border-box;

@@ -176,27 +176,27 @@
   --blok-color-accent: #2383e2;
   --blok-color-danger: #e24a4a;
 
-  /* File tool — Airbnb "Rausch" coral signature: warm accent for the file
-     icon tile, primary insert button, and progress fill. */
-  --blok-file-accent: #ff385c;
-  --blok-file-accent-hover: #e31c5f;
-  --blok-file-accent-soft: rgba(255, 56, 92, 0.1);
+  /* File tool — Notion-style neutral chrome: the icon tile + download
+     affordance read in greys, and only the upload progress fill carries the
+     blue accent (--blok-color-accent). No standalone file accent token. */
 
-  /* Overlay tokens (for dark-on-image chrome: toolbars, badges, shimmer).
-     These surfaces stay dark regardless of page theme, so their foreground
-     token (`fg-strong`) must always be light — never `--blok-bg-primary`. */
+  /* Overlay chrome that sits ON the image pixels (lightbox backdrop, loading
+     shimmer, resize-handle ring) stays dark regardless of page theme. */
   --blok-overlay-dark: rgba(25, 25, 24, 0.92);
-  --blok-overlay-dark-strong: #1f1f1e;
-  --blok-overlay-ring: rgba(255, 255, 255, 0.06);
-  --blok-overlay-fg: rgba(255, 255, 255, 0.82);
-  --blok-overlay-fg-strong: #ffffff;
-  --blok-overlay-fg-hover: rgba(255, 255, 255, 0.13);
-  --blok-overlay-fg-pressed: rgba(255, 255, 255, 0.22);
-  --blok-overlay-divider: rgba(255, 255, 255, 0.14);
   --blok-overlay-shimmer: rgba(255, 255, 255, 0.5);
   --blok-overlay-handle-ring: rgba(255, 255, 255, 0.9);
-  --blok-overlay-danger-bg: rgba(255, 80, 80, 0.22);
-  --blok-overlay-danger-fg: #ff8a8a;
+
+  /* Floating media toolbar chrome (image + embed). Theme-aware: light surface
+     with dark glyphs in light theme; dark blocks below override to the inverse. */
+  --blok-overlay-surface: #ffffff;
+  --blok-overlay-ring: rgba(15, 15, 14, 0.08);
+  --blok-overlay-fg: rgba(15, 15, 14, 0.62);
+  --blok-overlay-fg-strong: #1d1d1d;
+  --blok-overlay-fg-hover: rgba(15, 15, 14, 0.06);
+  --blok-overlay-fg-pressed: rgba(15, 15, 14, 0.1);
+  --blok-overlay-divider: rgba(15, 15, 14, 0.1);
+  --blok-overlay-danger-bg: rgba(226, 74, 74, 0.12);
+  --blok-overlay-danger-fg: #e24a4a;
 
   /* Image-tool composite shadow tokens. */
   --blok-image-shadow-resting: 0 8px 24px -10px rgba(15, 15, 14, 0.25), 0 0 0 1px rgba(15, 15, 14, 0.04);
@@ -363,13 +363,11 @@
 
   /*
     Generic surface / accent hooks consumed with a fallback by plugin-owned
-    CSS (image lightbox, alt popover, crop editor). Declared here so the
-    var-resolution audit sees them as valid tokens.
+    CSS (image lightbox, crop editor). Declared here so the var-resolution
+    audit sees them as valid tokens.
   */
   --blok-accent: var(--blok-color-accent);
   --blok-bg-tertiary: var(--blok-bg-light);
-  --blok-surface-muted: rgba(255, 255, 255, 0.05);
-  --blok-surface-strong: #1e1e1e;
 
   /* Image lightbox chrome (dark, independent of page theme). */
   --blok-image-lightbox-backdrop: rgba(25, 25, 24, 0.92);
@@ -393,12 +391,6 @@
   --blok-crop-handle-edge-halo: 0 0 0 3px rgba(255, 255, 255, 0.18);
   --blok-crop-handle-edge-drop-hover: 0 2px 6px rgba(0, 0, 0, 0.3);
   --blok-crop-pill-fg: #fff;
-
-  /* Alt-popover surface composite shadow (dark surface). */
-  --blok-alt-popover-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
-
-  /* Image error-state inset highlight. */
-  --blok-image-error-inset-highlight: #fff;
 
   /* Crop-modal button shadow. */
   --blok-crop-modal-btn-shadow: rgba(0, 0, 0, 0.3);
@@ -519,21 +511,23 @@
     --blok-color-accent: #4c9fff;
     --blok-color-danger: #ff6b6b;
 
-    /* File tool — coral signature, brightened for dark surfaces. */
-    --blok-file-accent: #ff5a76;
-    --blok-file-accent-hover: #ff385c;
-    --blok-file-accent-soft: rgba(255, 90, 118, 0.16);
+    /* File tool — Notion-style neutral chrome; progress fill uses the blue
+       accent (--blok-color-accent). No standalone file accent token. */
 
     /* Image-tool — dark elevation + denser overlay chrome with hairline ring. */
     --blok-image-shadow-resting: 0 10px 28px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.05);
     --blok-image-shadow-toolbar: 0 12px 28px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
     --blok-image-shadow-popover: 0 24px 48px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06);
     --blok-overlay-dark: rgba(44, 44, 42, 0.92);
-    --blok-overlay-dark-strong: #2c2c2a;
+    --blok-overlay-surface: #2c2c2a;
     --blok-overlay-ring: rgba(255, 255, 255, 0.1);
     --blok-overlay-fg: rgba(255, 255, 255, 0.86);
+    --blok-overlay-fg-strong: #ffffff;
     --blok-overlay-fg-hover: rgba(255, 255, 255, 0.14);
     --blok-overlay-fg-pressed: rgba(255, 255, 255, 0.24);
+    --blok-overlay-divider: rgba(255, 255, 255, 0.14);
+    --blok-overlay-danger-bg: rgba(255, 80, 80, 0.22);
+    --blok-overlay-danger-fg: #ff8a8a;
 
     /* Marker colors — dark theme */
     --blok-color-gray-text: #9b9b9b;
@@ -689,21 +683,23 @@
   --blok-color-accent: #4c9fff;
   --blok-color-danger: #ff6b6b;
 
-  /* File tool — coral signature, brightened for dark surfaces. */
-  --blok-file-accent: #ff5a76;
-  --blok-file-accent-hover: #ff385c;
-  --blok-file-accent-soft: rgba(255, 90, 118, 0.16);
+  /* File tool — Notion-style neutral chrome; progress fill uses the blue
+     accent (--blok-color-accent). No standalone file accent token. */
 
   /* Image-tool — dark elevation + denser overlay chrome with hairline ring. */
   --blok-image-shadow-resting: 0 10px 28px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.05);
   --blok-image-shadow-toolbar: 0 12px 28px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
   --blok-image-shadow-popover: 0 24px 48px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06);
   --blok-overlay-dark: rgba(44, 44, 42, 0.92);
-  --blok-overlay-dark-strong: #2c2c2a;
+  --blok-overlay-surface: #2c2c2a;
   --blok-overlay-ring: rgba(255, 255, 255, 0.1);
   --blok-overlay-fg: rgba(255, 255, 255, 0.86);
+  --blok-overlay-fg-strong: #ffffff;
   --blok-overlay-fg-hover: rgba(255, 255, 255, 0.14);
   --blok-overlay-fg-pressed: rgba(255, 255, 255, 0.24);
+  --blok-overlay-divider: rgba(255, 255, 255, 0.14);
+  --blok-overlay-danger-bg: rgba(255, 80, 80, 0.22);
+  --blok-overlay-danger-fg: #ff8a8a;
 
   /* Marker colors — dark theme */
   --blok-color-gray-text: #9b9b9b;

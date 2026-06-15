@@ -500,11 +500,10 @@
 /* ----- Error state ----- */
 .blok-image-error {
   padding: var(--blok-space-3);
-  background:
-    radial-gradient(60% 80% at 0% 0%, color-mix(in srgb, var(--blok-color-danger) 10%, transparent) 0%, transparent 60%),
-    radial-gradient(50% 70% at 100% 100%, color-mix(in srgb, var(--blok-color-danger) 7%, transparent) 0%, transparent 60%),
-    var(--blok-bg-secondary);
-  border: 1px solid color-mix(in srgb, var(--blok-color-danger) 30%, var(--blok-border-subtle));
+  /* Flat soft-danger surface (Notion-style callout): the alert reads through a
+     quiet tint + restrained border, not a gradient wash. */
+  background: color-mix(in srgb, var(--blok-color-danger) 6%, var(--blok-bg-secondary));
+  border: 1px solid color-mix(in srgb, var(--blok-color-danger) 18%, var(--blok-border-subtle));
   border-radius: var(--blok-radius-lg);
   display: flex; gap: var(--blok-space-3); align-items: center;
   color: var(--blok-text-primary);
@@ -515,16 +514,10 @@
   width: 40px; height: 40px;
   display: grid; place-items: center;
   color: var(--blok-color-danger);
-  background:
-    linear-gradient(180deg,
-      color-mix(in srgb, var(--blok-color-danger) 14%, transparent) 0%,
-      color-mix(in srgb, var(--blok-color-danger) 6%, transparent) 100%),
-    var(--blok-bg-secondary);
+  /* Flat soft tile + a single hairline danger ring — no gradient or drop shadow. */
+  background: color-mix(in srgb, var(--blok-color-danger) 12%, var(--blok-bg-secondary));
   border-radius: var(--blok-radius-md-plus, calc(var(--blok-radius-md) + 2px));
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--blok-color-danger) 28%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--blok-image-error-inset-highlight) 14%, transparent),
-    0 1px 2px color-mix(in srgb, var(--blok-color-danger) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blok-color-danger) 22%, transparent);
 }
 .blok-image-error__icon svg { width: 22px; height: 22px; opacity: 0.92; }
 .blok-image-error__body {
@@ -599,32 +592,28 @@
      `cursor: zoom-in` set in renderRendered(). */
   cursor: default !important;
 }
+/* Flat neutral skeleton shimmer — a soft light bar sweeping across, no
+   spotlight vignette. Reads like a Notion loading placeholder. */
 [data-blok-tool="image"] .blok-image-inner[data-loading="true"]::before {
   content: "";
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(
-      120% 80% at 50% 50%,
-      color-mix(in srgb, var(--blok-bg-primary) 55%, transparent) 0%,
-      color-mix(in srgb, var(--blok-bg-secondary) 45%, transparent) 55%,
-      transparent 100%
-    ),
-    linear-gradient(
-      115deg,
-      transparent 20%,
-      color-mix(in srgb, var(--blok-text-primary) 10%, transparent) 48%,
-      color-mix(in srgb, var(--blok-text-primary) 14%, transparent) 50%,
-      color-mix(in srgb, var(--blok-text-primary) 10%, transparent) 52%,
-      transparent 80%
-    );
-  background-size: 100% 100%, 220% 100%;
-  background-position: 0 0, 120% 0;
+  background: linear-gradient(
+    115deg,
+    transparent 20%,
+    color-mix(in srgb, var(--blok-text-primary) 8%, transparent) 48%,
+    color-mix(in srgb, var(--blok-text-primary) 12%, transparent) 50%,
+    color-mix(in srgb, var(--blok-text-primary) 8%, transparent) 52%,
+    transparent 80%
+  );
+  background-size: 220% 100%;
+  background-position: 120% 0;
   background-repeat: no-repeat;
   animation: blok-image-loading-sheen 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   pointer-events: none;
   z-index: 1;
 }
+/* Plain neutral spinner — no accent glow. */
 [data-blok-tool="image"] .blok-image-inner[data-loading="true"]::after {
   content: "";
   position: absolute;
@@ -635,10 +624,6 @@
   border-radius: 50%;
   border: 2px solid color-mix(in srgb, var(--blok-text-primary) 14%, transparent);
   border-top-color: var(--blok-text-primary);
-  border-right-color: color-mix(in srgb, var(--blok-text-primary) 55%, transparent);
-  box-shadow:
-    0 0 0 6px color-mix(in srgb, var(--blok-bg-primary) 22%, transparent),
-    0 8px 28px color-mix(in srgb, var(--blok-color-accent, var(--blok-text-primary)) 22%, transparent);
   animation:
     blok-image-retry-spin 0.9s cubic-bezier(0.65, 0, 0.35, 1) infinite,
     blok-image-loading-pulse 1.8s ease-in-out infinite;
@@ -646,8 +631,8 @@
   z-index: 2;
 }
 @keyframes blok-image-loading-sheen {
-  0%   { background-position: 0 0, 120% 0; }
-  100% { background-position: 0 0, -120% 0; }
+  0%   { background-position: 120% 0; }
+  100% { background-position: -120% 0; }
 }
 @keyframes blok-image-loading-pulse {
   0%, 100% { opacity: 0.85; }

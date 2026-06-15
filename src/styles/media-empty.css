@@ -14,10 +14,7 @@
   position: relative;
   container-type: inline-size;
   display: flex; flex-direction: column;
-  background:
-    radial-gradient(60% 80% at 0% 0%, color-mix(in srgb, var(--blok-color-accent) 12%, transparent) 0%, transparent 60%),
-    radial-gradient(50% 70% at 100% 100%, color-mix(in srgb, var(--blok-color-accent) 9%, transparent) 0%, transparent 60%),
-    var(--blok-bg-secondary);
+  background: var(--blok-bg-secondary);
   border: 1px solid var(--blok-border-subtle);
   border-radius: var(--blok-radius-lg);
   overflow: hidden;

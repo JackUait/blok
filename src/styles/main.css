@@ -374,7 +374,7 @@
   position: absolute;
   top: 10px; right: 10px;
   display: inline-flex;
-  background: var(--blok-overlay-dark-strong);
+  background: var(--blok-overlay-surface);
   border-radius: var(--blok-space-2);
   padding: var(--blok-space-1);
   opacity: 0;
@@ -394,7 +394,7 @@
   display: inline-flex;
   gap: var(--blok-space-0-5);
   padding: var(--blok-space-1);
-  background: var(--blok-overlay-dark-strong);
+  background: var(--blok-overlay-surface);
   border-radius: var(--blok-space-2);
   box-shadow:
     inset 0 0 0 1px var(--blok-overlay-ring),

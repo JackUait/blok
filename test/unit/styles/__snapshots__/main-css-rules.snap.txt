@@ -668,11 +668,11 @@
   max-width: min(90vw, 360px);
   padding: var(--blok-space-3);
   margin: 0;
-  background: var(--blok-surface-strong, #1e1e1e);
-  color: var(--blok-text-primary, #f5f5f5);
-  border: 1px solid var(--blok-border-primary, rgba(255, 255, 255, 0.08));
+  background: var(--blok-popover-bg, #fff);
+  color: var(--blok-text-primary, #1d1d1d);
+  border: 1px solid var(--blok-border-primary, #e0ddd6);
   border-radius: var(--blok-space-2-5);
-  box-shadow: var(--blok-alt-popover-shadow);
+  box-shadow: var(--blok-popover-box-shadow);
   z-index: 9999;
   display: grid;
   gap: var(--blok-space-2-5);
@@ -682,7 +682,7 @@
   margin: 0;
   font-size: 13px;
   line-height: 1.4;
-  color: var(--blok-text-secondary, rgba(255, 255, 255, 0.75));
+  color: var(--blok-text-secondary, #707684);
 }
 
 .blok-image-alt-popover__input {
@@ -691,9 +691,9 @@
   font: inherit;
   font-size: 14px;
   line-height: 1.4;
-  color: var(--blok-text-primary, #fff);
-  background: var(--blok-surface-muted, rgba(255, 255, 255, 0.05));
-  border: 1px solid var(--blok-border-primary, rgba(255, 255, 255, 0.12));
+  color: var(--blok-text-primary, #1d1d1d);
+  background: var(--blok-bg-hover, rgba(15, 15, 14, 0.04));
+  border: 1px solid var(--blok-border-primary, #e0ddd6);
   border-radius: var(--blok-space-1-5);
   resize: vertical;
   box-sizing: border-box;
@@ -1146,21 +1146,18 @@
   --blok-text-tertiary: #a3a39e;
   --blok-color-accent: #2383e2;
   --blok-color-danger: #e24a4a;
-  --blok-file-accent: #ff385c;
-  --blok-file-accent-hover: #e31c5f;
-  --blok-file-accent-soft: rgba(255, 56, 92, 0.1);
   --blok-overlay-dark: rgba(25, 25, 24, 0.92);
-  --blok-overlay-dark-strong: #1f1f1e;
-  --blok-overlay-ring: rgba(255, 255, 255, 0.06);
-  --blok-overlay-fg: rgba(255, 255, 255, 0.82);
-  --blok-overlay-fg-strong: #ffffff;
-  --blok-overlay-fg-hover: rgba(255, 255, 255, 0.13);
-  --blok-overlay-fg-pressed: rgba(255, 255, 255, 0.22);
-  --blok-overlay-divider: rgba(255, 255, 255, 0.14);
   --blok-overlay-shimmer: rgba(255, 255, 255, 0.5);
   --blok-overlay-handle-ring: rgba(255, 255, 255, 0.9);
-  --blok-overlay-danger-bg: rgba(255, 80, 80, 0.22);
-  --blok-overlay-danger-fg: #ff8a8a;
+  --blok-overlay-surface: #ffffff;
+  --blok-overlay-ring: rgba(15, 15, 14, 0.08);
+  --blok-overlay-fg: rgba(15, 15, 14, 0.62);
+  --blok-overlay-fg-strong: #1d1d1d;
+  --blok-overlay-fg-hover: rgba(15, 15, 14, 0.06);
+  --blok-overlay-fg-pressed: rgba(15, 15, 14, 0.1);
+  --blok-overlay-divider: rgba(15, 15, 14, 0.1);
+  --blok-overlay-danger-bg: rgba(226, 74, 74, 0.12);
+  --blok-overlay-danger-fg: #e24a4a;
   --blok-image-shadow-resting: 0 8px 24px -10px rgba(15, 15, 14, 0.25), 0 0 0 1px rgba(15, 15, 14, 0.04);
   --blok-image-shadow-toolbar: 0 8px 20px rgba(0, 0, 0, 0.25);
   --blok-image-shadow-popover: 0 20px 40px -12px rgba(15, 15, 14, 0.22), 0 0 0 1px rgba(15, 15, 14, 0.06);
@@ -1279,8 +1276,6 @@
   --blok-line-height-option: 1.3;
   --blok-accent: var(--blok-color-accent);
   --blok-bg-tertiary: var(--blok-bg-light);
-  --blok-surface-muted: rgba(255, 255, 255, 0.05);
-  --blok-surface-strong: #1e1e1e;
   --blok-image-lightbox-backdrop: rgba(25, 25, 24, 0.92);
   --blok-image-lightbox-toolbar-bg: #252525;
   --blok-image-lightbox-toolbar-fg: #e2e0dc;
@@ -1298,8 +1293,6 @@
   --blok-crop-handle-edge-halo: 0 0 0 3px rgba(255, 255, 255, 0.18);
   --blok-crop-handle-edge-drop-hover: 0 2px 6px rgba(0, 0, 0, 0.3);
   --blok-crop-pill-fg: #fff;
-  --blok-alt-popover-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
-  --blok-image-error-inset-highlight: #fff;
   --blok-crop-modal-btn-shadow: rgba(0, 0, 0, 0.3);
   --blok-radius-md-plus: 8px;
 }
@@ -1397,18 +1390,19 @@
   --blok-text-tertiary: #6e6e68;
   --blok-color-accent: #4c9fff;
   --blok-color-danger: #ff6b6b;
-  --blok-file-accent: #ff5a76;
-  --blok-file-accent-hover: #ff385c;
-  --blok-file-accent-soft: rgba(255, 90, 118, 0.16);
   --blok-image-shadow-resting: 0 10px 28px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.05);
   --blok-image-shadow-toolbar: 0 12px 28px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
   --blok-image-shadow-popover: 0 24px 48px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06);
   --blok-overlay-dark: rgba(44, 44, 42, 0.92);
-  --blok-overlay-dark-strong: #2c2c2a;
+  --blok-overlay-surface: #2c2c2a;
   --blok-overlay-ring: rgba(255, 255, 255, 0.1);
   --blok-overlay-fg: rgba(255, 255, 255, 0.86);
+  --blok-overlay-fg-strong: #ffffff;
   --blok-overlay-fg-hover: rgba(255, 255, 255, 0.14);
   --blok-overlay-fg-pressed: rgba(255, 255, 255, 0.24);
+  --blok-overlay-divider: rgba(255, 255, 255, 0.14);
+  --blok-overlay-danger-bg: rgba(255, 80, 80, 0.22);
+  --blok-overlay-danger-fg: #ff8a8a;
   --blok-color-gray-text: #9b9b9b;
   --blok-color-gray-bg: #2f2f2f;
   --blok-color-brown-text: #c59177;
@@ -1539,18 +1533,19 @@
   --blok-text-tertiary: #6e6e68;
   --blok-color-accent: #4c9fff;
   --blok-color-danger: #ff6b6b;
-  --blok-file-accent: #ff5a76;
-  --blok-file-accent-hover: #ff385c;
-  --blok-file-accent-soft: rgba(255, 90, 118, 0.16);
   --blok-image-shadow-resting: 0 10px 28px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.05);
   --blok-image-shadow-toolbar: 0 12px 28px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
   --blok-image-shadow-popover: 0 24px 48px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06);
   --blok-overlay-dark: rgba(44, 44, 42, 0.92);
-  --blok-overlay-dark-strong: #2c2c2a;
+  --blok-overlay-surface: #2c2c2a;
   --blok-overlay-ring: rgba(255, 255, 255, 0.1);
   --blok-overlay-fg: rgba(255, 255, 255, 0.86);
+  --blok-overlay-fg-strong: #ffffff;
   --blok-overlay-fg-hover: rgba(255, 255, 255, 0.14);
   --blok-overlay-fg-pressed: rgba(255, 255, 255, 0.24);
+  --blok-overlay-divider: rgba(255, 255, 255, 0.14);
+  --blok-overlay-danger-bg: rgba(255, 80, 80, 0.22);
+  --blok-overlay-danger-fg: #ff8a8a;
   --blok-color-gray-text: #9b9b9b;
   --blok-color-gray-bg: #2f2f2f;
   --blok-color-brown-text: #c59177;
@@ -3010,7 +3005,7 @@
   container-type: inline-size;
   display: flex;
   flex-direction: column;
-  background: radial-gradient(60% 80% at 0% 0%, color-mix(in srgb, var(--blok-color-accent) 12%, transparent) 0%, transparent 60%), radial-gradient(50% 70% at 100% 100%, color-mix(in srgb, var(--blok-color-accent) 9%, transparent) 0%, transparent 60%), var(--blok-bg-secondary);
+  background: var(--blok-bg-secondary);
   border: 1px solid var(--blok-border-subtle);
   border-radius: var(--blok-radius-lg);
   overflow: hidden;
@@ -3749,6 +3744,12 @@
   pointer-events: auto;
 }
 
+[data-blok-tool="image"] .blok-image-inner[data-loading="true"] .blok-image-toolbar {
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+}
+
 [data-blok-tool="image"] .blok-image-toolbar button {
   width: 28px;
   height: 28px;
@@ -4156,8 +4157,8 @@
 
 .blok-image-error {
   padding: var(--blok-space-3);
-  background: radial-gradient(60% 80% at 0% 0%, color-mix(in srgb, var(--blok-color-danger) 10%, transparent) 0%, transparent 60%), radial-gradient(50% 70% at 100% 100%, color-mix(in srgb, var(--blok-color-danger) 7%, transparent) 0%, transparent 60%), var(--blok-bg-secondary);
-  border: 1px solid color-mix(in srgb, var(--blok-color-danger) 30%, var(--blok-border-subtle));
+  background: color-mix(in srgb, var(--blok-color-danger) 6%, var(--blok-bg-secondary));
+  border: 1px solid color-mix(in srgb, var(--blok-color-danger) 18%, var(--blok-border-subtle));
   border-radius: var(--blok-radius-lg);
   display: flex;
   gap: var(--blok-space-3);
@@ -4173,9 +4174,9 @@
   display: grid;
   place-items: center;
   color: var(--blok-color-danger);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--blok-color-danger) 14%, transparent) 0%, color-mix(in srgb, var(--blok-color-danger) 6%, transparent) 100%), var(--blok-bg-secondary);
+  background: color-mix(in srgb, var(--blok-color-danger) 12%, var(--blok-bg-secondary));
   border-radius: var(--blok-radius-md-plus, calc(var(--blok-radius-md) + 2px));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blok-color-danger) 28%, transparent), inset 0 1px 0 color-mix(in srgb, var(--blok-image-error-inset-highlight) 14%, transparent), 0 1px 2px color-mix(in srgb, var(--blok-color-danger) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blok-color-danger) 22%, transparent);
 }
 
 .blok-image-error__icon svg {
@@ -4279,15 +4280,16 @@
   filter: blur(18px) saturate(1.1);
   transform: scale(1.08);
   color: transparent;
+  cursor: default !important;
 }
 
 [data-blok-tool="image"] .blok-image-inner[data-loading="true"]::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient( 120% 80% at 50% 50%, color-mix(in srgb, var(--blok-bg-primary) 55%, transparent) 0%, color-mix(in srgb, var(--blok-bg-secondary) 45%, transparent) 55%, transparent 100% ), linear-gradient( 115deg, transparent 20%, color-mix(in srgb, var(--blok-text-primary) 10%, transparent) 48%, color-mix(in srgb, var(--blok-text-primary) 14%, transparent) 50%, color-mix(in srgb, var(--blok-text-primary) 10%, transparent) 52%, transparent 80% );
-  background-size: 100% 100%, 220% 100%;
-  background-position: 0 0, 120% 0;
+  background: linear-gradient( 115deg, transparent 20%, color-mix(in srgb, var(--blok-text-primary) 8%, transparent) 48%, color-mix(in srgb, var(--blok-text-primary) 12%, transparent) 50%, color-mix(in srgb, var(--blok-text-primary) 8%, transparent) 52%, transparent 80% );
+  background-size: 220% 100%;
+  background-position: 120% 0;
   background-repeat: no-repeat;
   animation: blok-image-loading-sheen 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   pointer-events: none;
@@ -4304,8 +4306,6 @@
   border-radius: 50%;
   border: 2px solid color-mix(in srgb, var(--blok-text-primary) 14%, transparent);
   border-top-color: var(--blok-text-primary);
-  border-right-color: color-mix(in srgb, var(--blok-text-primary) 55%, transparent);
-  box-shadow: 0 0 0 6px color-mix(in srgb, var(--blok-bg-primary) 22%, transparent), 0 8px 28px color-mix(in srgb, var(--blok-color-accent, var(--blok-text-primary)) 22%, transparent);
   animation: blok-image-retry-spin 0.9s cubic-bezier(0.65, 0, 0.35, 1) infinite, blok-image-loading-pulse 1.8s ease-in-out infinite;
   pointer-events: none;
   z-index: 2;
@@ -4383,7 +4383,7 @@
   right: 10px;
   display: inline-flex;
   align-items: center;
-  background: var(--blok-overlay-dark-strong);
+  background: var(--blok-overlay-surface);
   border-radius: var(--blok-space-2);
   padding: var(--blok-space-1);
   opacity: 0;
@@ -4452,7 +4452,7 @@
   display: inline-flex;
   gap: var(--blok-space-0-5);
   padding: var(--blok-space-1);
-  background: var(--blok-overlay-dark-strong);
+  background: var(--blok-overlay-surface);
   border-radius: var(--blok-space-2);
   box-shadow: inset 0 0 0 1px var(--blok-overlay-ring), var(--blok-image-shadow-toolbar);
   z-index: 4;
@@ -4464,7 +4464,7 @@
   right: 0;
   min-width: 160px;
   padding: var(--blok-space-1);
-  background: var(--blok-overlay-dark-strong);
+  background: var(--blok-overlay-surface);
   border-radius: var(--blok-space-2);
   box-shadow: inset 0 0 0 1px var(--blok-overlay-ring), var(--blok-image-shadow-toolbar);
   z-index: 4;
@@ -4652,8 +4652,8 @@
   width: var(--file-tile-size);
   height: var(--file-tile-size);
   border-radius: var(--blok-radius-md);
-  background: var(--blok-file-accent-soft);
-  color: var(--blok-file-accent);
+  background: var(--blok-bg-secondary);
+  color: var(--blok-text-secondary);
 }
 
 [data-blok-tool="file"] .blok-file-icon svg {
@@ -4709,8 +4709,8 @@
 }
 
 [data-blok-tool="file"] .blok-file-download:hover {
-  color: var(--blok-file-accent);
-  background: var(--blok-file-accent-soft);
+  color: var(--blok-text-primary);
+  background: var(--blok-bg-hover);
   transform: translateY(-50%) scale(1.04);
 }
 
@@ -4778,10 +4778,25 @@
 }
 
 [data-blok-tool="file"] .blok-file-bar-fill {
+  position: relative;
   height: 100%;
   border-radius: var(--blok-radius-pill);
-  background: var(--blok-file-accent);
+  background: var(--blok-color-accent);
+  overflow: hidden;
   transition: width var(--blok-duration-standard) var(--blok-ease-standard);
+}
+
+[data-blok-tool="file"] .blok-file-bar-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient( 90deg, transparent 0%, var(--blok-overlay-shimmer) 50%, transparent 100% );
+  transform: translateX(-100%);
+  animation: blok-file-bar-sheen 1.15s var(--blok-ease-standard) infinite;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-tool="file"] .blok-file-bar-fill::after {
+  animation: none;
 }
 
 [data-blok-tool="file"] .blok-file-cancel {
@@ -4841,7 +4856,9 @@
   justify-content: center;
   padding: var(--blok-space-6);
   background: var(--blok-overlay-dark);
-  animation: blok-file-preview-backdrop-in 160ms ease;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: blok-file-preview-backdrop-in 200ms ease;
 }
 
 .blok-file-preview-backdrop[data-blok-closing], .blok-file-preview-backdrop[data-blok-closing][data-blok-top-layer][popover] {
@@ -4867,7 +4884,8 @@
   border-radius: var(--blok-radius-xl);
   background: var(--blok-bg-primary);
   box-shadow: var(--blok-image-shadow-resting);
-  animation: blok-file-preview-dialog-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: center bottom;
+  animation: blok-file-preview-dialog-in 360ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .blok-file-preview-backdrop[data-blok-closing] .blok-file-preview {
@@ -4917,10 +4935,16 @@
   text-overflow: ellipsis;
 }
 
-.blok-file-preview-close {
+.blok-file-preview-actions {
   grid-column: 3;
   grid-row: 1;
   justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+}
+
+.blok-file-preview-open, .blok-file-preview-close {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4931,17 +4955,18 @@
   background: transparent;
   color: var(--blok-text-secondary);
   font: inherit;
+  text-decoration: none;
   cursor: pointer;
   appearance: none;
   transition: background-color var(--blok-duration-base) var(--blok-ease-standard), color var(--blok-duration-base) var(--blok-ease-standard);
 }
 
-.blok-file-preview-close svg {
+.blok-file-preview-open svg, .blok-file-preview-close svg {
   width: 18px;
   height: 18px;
 }
 
-.blok-file-preview-close:hover {
+.blok-file-preview-open:hover, .blok-file-preview-close:hover {
   background: var(--blok-bg-hover);
   color: var(--blok-text-primary);
 }
@@ -5343,7 +5368,7 @@
   top: 10px;
   right: 10px;
   display: inline-flex;
-  background: var(--blok-overlay-dark-strong);
+  background: var(--blok-overlay-surface);
   border-radius: var(--blok-space-2);
   padding: var(--blok-space-1);
   opacity: 0;
@@ -5362,7 +5387,7 @@
   display: inline-flex;
   gap: var(--blok-space-0-5);
   padding: var(--blok-space-1);
-  background: var(--blok-overlay-dark-strong);
+  background: var(--blok-overlay-surface);
   border-radius: var(--blok-space-2);
   box-shadow: inset 0 0 0 1px var(--blok-overlay-ring), var(--blok-image-shadow-toolbar);
   z-index: 3;

@@ -1,8 +1,9 @@
 /*
-  File tool — Airbnb-flavoured attachment block. Warm, soft, generous: a
-  rounded card with a coral file-type tile, medium-weight filename, quiet
-  size meta, and a circular download affordance that warms on hover. The
-  empty/upload state is the shared media uploader (see media-empty.css +
+  File tool — Notion-flavoured attachment block. Calm, neutral, generous: a
+  rounded card with a grey file-type tile, medium-weight filename, quiet
+  size meta, and a circular download affordance with a neutral hover. Only
+  the upload progress fill carries the blue accent. The empty/upload state is
+  the shared media uploader (see media-empty.css +
   components/utils/media-empty-state.ts). Scoped to [data-blok-tool="file"];
   all colour + radius via palette tokens.
 */
@@ -52,7 +53,7 @@
   background: var(--blok-bg-hover);
 }
 
-/* coral file-type tile — the one pop of Airbnb identity */
+/* neutral file-type tile — Notion reads the document glyph in greys */
 [data-blok-tool="file"] .blok-file-icon {
   flex: 0 0 auto;
   display: flex;
@@ -61,8 +62,8 @@
   width: var(--file-tile-size);
   height: var(--file-tile-size);
   border-radius: var(--blok-radius-md);
-  background: var(--blok-file-accent-soft);
-  color: var(--blok-file-accent);
+  background: var(--blok-bg-secondary);
+  color: var(--blok-text-secondary);
 }
 [data-blok-tool="file"] .blok-file-icon svg {
   width: 20px;
@@ -91,7 +92,7 @@
   color: var(--blok-text-secondary);
 }
 
-/* circular download button — pinned to the trailing edge, warms on hover */
+/* circular download button — pinned to the trailing edge, neutral hover */
 [data-blok-tool="file"] .blok-file-download {
   position: absolute;
   inset-inline-end: var(--blok-space-3);
@@ -118,8 +119,8 @@
   transition: transform var(--blok-duration-standard) var(--blok-ease-spring);
 }
 [data-blok-tool="file"] .blok-file-download:hover {
-  color: var(--blok-file-accent);
-  background: var(--blok-file-accent-soft);
+  color: var(--blok-text-primary);
+  background: var(--blok-bg-hover);
   transform: translateY(-50%) scale(1.04);
 }
 /* arrow dips down on hover — a small "download" cue */
@@ -189,10 +190,35 @@
   overflow: hidden;
 }
 [data-blok-tool="file"] .blok-file-bar-fill {
+  position: relative;
   height: 100%;
   border-radius: var(--blok-radius-pill);
-  background: var(--blok-file-accent);
+  background: var(--blok-color-accent);
+  overflow: hidden;
   transition: width var(--blok-duration-standard) var(--blok-ease-standard);
+}
+/* A highlight band sweeps across the filled portion on a loop, so the bar
+   reads as "still working" even when the width sits at a value between
+   progress updates. */
+[data-blok-tool="file"] .blok-file-bar-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--blok-overlay-shimmer) 50%,
+    transparent 100%
+  );
+  transform: translateX(-100%);
+  animation: blok-file-bar-sheen 1.15s var(--blok-ease-standard) infinite;
+}
+@keyframes blok-file-bar-sheen {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-tool="file"] .blok-file-bar-fill::after { animation: none; }
 }
 [data-blok-tool="file"] .blok-file-cancel {
   flex: 0 0 auto;

@@ -226,10 +226,12 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // attachment card + coral icon tile + dropzone empty state + segmented
     // upload/link tabs + uploading/error states + card hover/press animations +
     // text/code/markdown preview modal styles (loading, pre, md, raw/render
-    // toggle, error+download, task-list items)).
+    // toggle, error+download, task-list items) + editorial markdown document
+    // typography (heading scale, reading column, styled tables/code/quotes,
+    // segmented Rendered/Raw control)).
     // Shrinking below the baseline is always acceptable.
     const PRE_SPLIT_BYTES = 390050;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.13);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.14);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

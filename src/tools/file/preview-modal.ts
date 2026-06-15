@@ -1,6 +1,6 @@
 import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
 import { safePreviewSrc, safeHttpHref } from './url';
-import { getPreviewKind, type PreviewKind } from './preview';
+import { extOf, getPreviewKind, type PreviewKind } from './preview';
 import { loadTextPreview } from './text-preview';
 import { extToPrismLang } from './code-languages';
 import { tokenizePrism, isHighlightable } from '../code/prism-loader';
@@ -144,6 +144,8 @@ async function renderMarkdown(body: HTMLElement, text: string, opts: FilePreview
 
   const toolbar = document.createElement('div');
   toolbar.className = 'blok-file-preview-toggle';
+  toolbar.setAttribute('role', 'group');
+  toolbar.setAttribute('aria-label', `${opts.labels.render ?? 'Rendered'} / ${opts.labels.raw ?? 'Raw'}`);
   const renderBtn = document.createElement('button');
   renderBtn.type = 'button';
   renderBtn.setAttribute('data-action', 'preview-render');
@@ -207,7 +209,7 @@ async function fillTextBody(
   if (kind === 'markdown') {
     await renderMarkdown(body, result.text, opts);
   } else if (kind === 'code') {
-    const ext = (opts.fileName ?? opts.url).split('?')[0].split('#')[0].split('.').pop() ?? '';
+    const ext = extOf(opts.fileName ?? opts.url);
     await renderCode(body, result.text, extToPrismLang(ext) ?? 'plain');
   } else {
     renderPlainText(body, result.text);

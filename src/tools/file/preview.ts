@@ -5,7 +5,7 @@ const MARKDOWN_EXTS = new Set(['md', 'markdown']);
 const TEXT_EXTS = new Set(['txt', 'csv', 'log', 'ini', 'conf', 'env']);
 
 /** Lower-cased extension from a path, with ?query and #hash stripped. '' when none. */
-function extOf(value: string): string {
+export function extOf(value: string): string {
   const path = value.split('?')[0].split('#')[0];
   const dot = path.lastIndexOf('.');
   if (dot < 0 || dot === path.length - 1) {

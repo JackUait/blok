@@ -596,16 +596,21 @@
    its animation), so the incoming view replays its slide on every toggle. Each
    view slides in from the side its segment sits on — Rendered (left button)
    from the left, Raw (right button) from the right — so the content tracks the
-   pill. Expo-out easing decelerates into place for a soft landing. The
-   `backwards` fill applies the `from` state before the first frame, so the
-   incoming view never flashes fully-opaque for a frame before sliding in. */
+   pill. Expo-out easing decelerates into place for a soft landing.
+
+   The slide runs at full opacity — no fade. Fading would blink: the outgoing
+   view is display:none'd instantly while a fading-in view is briefly
+   transparent, so the eye catches an empty frame between them. An opaque slide
+   has no transparent state, so the swap reads as one continuous motion. The
+   `backwards` fill applies the offset before the first frame so it never pops
+   in un-slid. */
 @keyframes blok-file-preview-view-in-left {
-  from { opacity: 0; transform: translate3d(-14px, 0, 0); }
-  to { opacity: 1; transform: none; }
+  from { transform: translate3d(-14px, 0, 0); }
+  to { transform: none; }
 }
 @keyframes blok-file-preview-view-in-right {
-  from { opacity: 0; transform: translate3d(14px, 0, 0); }
-  to { opacity: 1; transform: none; }
+  from { transform: translate3d(14px, 0, 0); }
+  to { transform: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .blok-file-preview-pre[data-role="file-preview-md-raw"],

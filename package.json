@@ -180,6 +180,7 @@
     "@vitest/ui": "4.1.8",
     "chromatic": "16.5.0",
     "cldr-annotations-full": "^48.2.0",
+    "dompurify": "^3.4.8",
     "eslint": "10.2.1",
     "eslint-plugin-import": "2.32.0",
     "eslint-plugin-jest": "29.15.2",

@@ -30,10 +30,38 @@ describe('markdownToHtml', () => {
     expect(html).toContain('click');
   });
 
-  it('escapes raw HTML to prevent XSS', async () => {
-    const html = await markdownToHtml('<script>alert(1)</script>');
-    expect(html).not.toContain('<script>');
-    expect(html).toContain('&lt;script&gt;');
+  it('strips dangerous tags from block-level raw HTML', async () => {
+    const html = await markdownToHtml('<div>ok</div>\n\n<script>alert(1)</script>');
+    expect(html).toContain('ok');
+    expect(html).not.toContain('<script');
+    expect(html).not.toContain('alert(1)');
+  });
+
+  it('renders a safe subset of block-level raw HTML (centered logo)', async () => {
+    const html = await markdownToHtml('<p align="center"><img alt="Logo" src="https://example.com/logo.png"></p>');
+    expect(html).toContain('<img');
+    expect(html).toContain('src="https://example.com/logo.png"');
+    expect(html).toContain('alt="Logo"');
+  });
+
+  it('resolves relative raw-HTML URLs against the base URL', async () => {
+    const html = await markdownToHtml(
+      '<p><img alt="L" src="./static/blok.png"></p>',
+      { baseUrl: 'https://raw.githubusercontent.com/o/r/master/README.md' },
+    );
+    expect(html).toContain('src="https://raw.githubusercontent.com/o/r/master/static/blok.png"');
+  });
+
+  it('drops unsafe URLs in raw HTML but keeps the element text', async () => {
+    const html = await markdownToHtml('<p><a href="javascript:alert(1)">x</a></p>');
+    expect(html).not.toContain('javascript:');
+    expect(html).toContain('x');
+  });
+
+  it('escapes inline raw HTML to prevent XSS', async () => {
+    const html = await markdownToHtml('a <b onclick="alert(1)">x</b> b');
+    expect(html).not.toContain('<b onclick');
+    expect(html).toContain('&lt;b');
   });
 
   it('renders GFM tables', async () => {

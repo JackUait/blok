@@ -11,6 +11,7 @@ import { isHighlightable, tokenizePrism } from '../tools/code/prism-loader';
 import { extToPrismLang } from '../tools/file/code-languages';
 import { renderLatex } from '../tools/code/katex-loader';
 import { safeHref, safeImageSrc } from '../components/utils/sanitize-url';
+import { sanitizeBlockHtml } from './sanitize-html';
 
 /**
  * Math mdast nodes (block `math`, `inlineMath`) come from mdast-util-math and
@@ -42,6 +43,12 @@ interface RenderContext {
   footnoteOrder: string[];
   footnoteNumbers: Map<string, number>;
   slug: (text: string) => string;
+  baseUrl?: string;
+}
+
+export interface MarkdownPreviewOptions {
+  /** Source document URL, used to resolve relative URLs in raw HTML. */
+  baseUrl?: string;
 }
 
 function escapeHtml(text: string): string {
@@ -114,11 +121,12 @@ async function loadMathExtensions(): Promise<{
 
 /**
  * Render a Markdown string to a sanitized HTML string for inline preview.
- * Inline content is escaped and URLs validated; raw HTML nodes are escaped
- * (never rendered — the preview is a top-layer host-origin sink). KaTeX,
- * GFM references, footnotes, and GitHub alerts are supported.
+ * Inline content is escaped and URLs validated. Block-level raw HTML is passed
+ * through a strict allowlist (so README layout markup like a centred-logo
+ * `<p><img></p>` renders) while inline raw HTML stays escaped. KaTeX, GFM
+ * references, footnotes, and GitHub alerts are supported.
  */
-export async function markdownToHtml(md: string): Promise<string> {
+export async function markdownToHtml(md: string, opts: MarkdownPreviewOptions = {}): Promise<string> {
   const extensions: Array<MicromarkExtension | MicromarkExtension[]> = [gfm()];
   const mdastExtensions: Array<MdastExtension | MdastExtension[]> = [gfmFromMarkdown()];
 
@@ -138,6 +146,7 @@ export async function markdownToHtml(md: string): Promise<string> {
     footnoteOrder: [],
     footnoteNumbers: new Map(),
     slug: createSlugger(),
+    baseUrl: opts.baseUrl,
   };
 
   // Prepass: collect definitions and footnote definitions so references can
@@ -187,7 +196,7 @@ async function nodeToHtml(node: BlockNode, ctx: RenderContext): Promise<string> 
     return tableToHtml(node, ctx);
   }
   if (node.type === 'html') {
-    return escapeHtml(node.value);
+    return sanitizeBlockHtml(node.value, ctx.baseUrl);
   }
 
   // `definition` and `footnoteDefinition` are handled in the prepass / trailer.

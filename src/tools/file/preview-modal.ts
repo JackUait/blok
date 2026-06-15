@@ -190,7 +190,7 @@ async function renderMarkdown(
   show(false);
 
   ensurePrismStyles();
-  renderView.innerHTML = await markdownToHtml(text);
+  renderView.innerHTML = await markdownToHtml(text, { baseUrl: opts.url });
 
   const mdRaw = await tokenizePrism(text, 'markdown');
   if (mdRaw !== null) {

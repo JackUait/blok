@@ -903,3 +903,43 @@
 .blok-md-fnback {
   margin-left: var(--blok-space-1);
 }
+
+/* Office previews (docx/xlsx/pptx) render into this scroll container inside the
+   modal body. Mirrors the textual-preview layout: fill the body, own scrolling,
+   neutral surface. The renderers build their own DOM inside. */
+.blok-file-preview-office {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--blok-space-6);
+  background: var(--blok-bg-primary);
+  color: var(--blok-text-primary);
+}
+
+/* docx-preview wraps each page in its own .docx section; centre the column. */
+.blok-file-preview-docx {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.blok-file-preview-xlsx-table {
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  line-height: var(--blok-line-height-tight);
+}
+
+.blok-file-preview-xlsx-table td {
+  min-width: 3rem;
+  padding: var(--blok-space-1) var(--blok-space-2-5);
+  border: 1px solid var(--blok-border-subtle);
+  white-space: pre;
+}
+
+/* pptx-renderer emits one element per slide; stack them centred with breathing room. */
+.blok-file-preview-pptx {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--blok-space-5);
+}

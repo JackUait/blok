@@ -1,3 +1,4 @@
+import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
 import { safePreviewSrc } from './url';
 
 export interface FilePreviewOptions {
@@ -81,6 +82,7 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
   const teardown = (): void => {
     document.removeEventListener('keydown', onKeyDown);
     if (backdrop.parentNode) {
+      removeFromTopLayer(backdrop);
       backdrop.parentNode.removeChild(backdrop);
     }
     if (previouslyFocused instanceof HTMLElement && previouslyFocused.isConnected) {
@@ -103,6 +105,10 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
   document.addEventListener('keydown', onKeyDown);
 
   document.body.appendChild(backdrop);
+  // Promote into the CSS Top Layer so the modal renders above all editor and
+  // host-page content, and so the `[data-blok-top-layer]` marker lets the
+  // scoped design tokens (tint, radius, spacing) resolve on a body-mounted node.
+  promoteToTopLayer(backdrop);
   closeButton.focus();
 
   return teardown;

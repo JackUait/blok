@@ -25,8 +25,14 @@ const esc = (s) =>
 
 // ---- docx: a short service agreement -------------------------------------
 const docxPara = (text, { bold = false, heading = false } = {}) => {
-  const pPr = heading ? '<w:pPr><w:spacing w:before="240" w:after="120"/></w:pPr>' : '';
-  const rPr = bold || heading ? `<w:rPr><w:b/>${heading ? '<w:sz w:val="32"/>' : ''}</w:rPr>` : '';
+  // Heading = the document title; bold = a numbered section header; otherwise body.
+  const spacing = heading
+    ? '<w:spacing w:after="240" w:line="276" w:lineRule="auto"/>'
+    : bold
+      ? '<w:spacing w:before="280" w:after="80" w:line="276" w:lineRule="auto"/>'
+      : '<w:spacing w:after="160" w:line="276" w:lineRule="auto"/>';
+  const pPr = `<w:pPr>${spacing}</w:pPr>`;
+  const rPr = bold || heading ? `<w:rPr><w:b/>${heading ? '<w:sz w:val="40"/>' : '<w:sz w:val="24"/>'}</w:rPr>` : '';
   return `<w:p>${pPr}<w:r>${rPr}<w:t xml:space="preserve">${esc(text)}</w:t></w:r></w:p>`;
 };
 
@@ -74,7 +80,7 @@ docx.file(
   'word/document.xml',
   `${XML}
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-<w:body>${docxBody}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body>
+<w:body>${docxBody}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body>
 </w:document>`,
 );
 writeFileSync(join(OUT, 'service-agreement.docx'), await docx.generateAsync({ type: 'nodebuffer' }));

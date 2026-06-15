@@ -905,41 +905,98 @@
 }
 
 /* Office previews (docx/xlsx/pptx) render into this scroll container inside the
-   modal body. Mirrors the textual-preview layout: fill the body, own scrolling,
-   neutral surface. The renderers build their own DOM inside. */
+   modal body. Each format reads like a document on a desk: a soft neutral
+   canvas behind crisp, lightly-shadowed "paper". The renderers build their own
+   DOM inside; per-kind rules below dress that DOM with our tokens. */
 .blok-file-preview-office {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  padding: var(--blok-space-6);
-  background: var(--blok-bg-primary);
   color: var(--blok-text-primary);
+  background: var(--blok-bg-secondary);
 }
 
-/* docx-preview wraps each page in its own .docx section; centre the column. */
+/* --- docx: paper pages centred on the desk -------------------------------- */
+/* docx-preview emits a .blok-docx-wrapper (its own grey desk) wrapping one
+   section.blok-docx per page. Our two-class selectors out-specify the library's
+   single-class injected styles, so we reclaim the desk tone and page chrome. */
 .blok-file-preview-docx {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  padding: 0;
+}
+
+.blok-file-preview-docx .blok-docx-wrapper {
+  background: transparent;
+  padding: clamp(var(--blok-space-5), 4vw, var(--blok-space-10)) var(--blok-space-5);
+}
+
+.blok-file-preview-docx .blok-docx {
+  border: 1px solid var(--blok-border-subtle);
+  border-radius: var(--blok-radius-lg);
+  box-shadow: var(--blok-image-shadow-resting);
+}
+
+/* --- xlsx: a single crisp data card --------------------------------------- */
+.blok-file-preview-xlsx {
+  padding: var(--blok-space-6);
 }
 
 .blok-file-preview-xlsx-table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.8125rem;
   line-height: var(--blok-line-height-tight);
+  background: var(--blok-bg-primary);
+  border: 1px solid var(--blok-border-subtle);
+  border-radius: var(--blok-radius-md);
+  box-shadow: var(--blok-image-shadow-resting);
+  overflow: hidden;
 }
 
 .blok-file-preview-xlsx-table td {
   min-width: 3rem;
-  padding: var(--blok-space-1) var(--blok-space-2-5);
-  border: 1px solid var(--blok-border-subtle);
+  padding: var(--blok-space-2) var(--blok-space-3);
+  border-right: 1px solid var(--blok-border-subtle);
+  border-bottom: 1px solid var(--blok-border-subtle);
   white-space: pre;
 }
 
-/* pptx-renderer emits one element per slide; stack them centred with breathing room. */
+.blok-file-preview-xlsx-table td:last-child {
+  border-right: 0;
+}
+
+.blok-file-preview-xlsx-table tr:last-child td {
+  border-bottom: 0;
+}
+
+/* First row reads as the header band; alternating rows aid horizontal scanning. */
+.blok-file-preview-xlsx-table tr:first-child td {
+  font-weight: 600;
+  color: var(--blok-text-primary);
+  background: var(--blok-bg-secondary);
+}
+
+.blok-file-preview-xlsx-table tr:nth-child(even) td {
+  background: var(--blok-bg-secondary);
+}
+
+/* --- pptx: stacked slide cards -------------------------------------------- */
+/* pptx-renderer emits one element per slide and hard-sizes each to the
+   container's clientWidth (padding included), so horizontal padding here would
+   push slides past the edge. Keep the sides flush, breathe vertically, and let
+   box-sizing absorb the frame border so the fixed slide width never overflows. */
 .blok-file-preview-pptx {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--blok-space-5);
+  gap: var(--blok-space-6);
+  padding: var(--blok-space-6) 0;
+}
+
+/* No border: the renderer hard-sizes slide width to clientWidth, so a border
+   would add 2px and trip a horizontal scrollbar. The shadow + radius (which
+   don't affect layout width) carry the card framing instead. */
+.blok-file-preview-pptx > * {
+  border-radius: var(--blok-radius-lg);
+  box-shadow: var(--blok-image-shadow-resting);
+  overflow: hidden;
 }

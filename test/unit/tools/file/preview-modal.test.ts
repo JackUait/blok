@@ -4,6 +4,9 @@ import { openFilePreview } from '../../../../src/tools/file/preview-modal';
 vi.mock('../../../../src/tools/file/text-preview', () => ({
   loadTextPreview: vi.fn(),
 }));
+vi.mock('../../../../src/tools/file/office-preview', () => ({
+  fillOfficeBody: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock('../../../../src/markdown/markdownToHtml', () => ({
   markdownToHtml: vi.fn(),
 }));
@@ -19,6 +22,7 @@ vi.mock('../../../../src/tools/code/prism-applier', () => ({
 
 import { loadTextPreview } from '../../../../src/tools/file/text-preview';
 import { markdownToHtml } from '../../../../src/markdown/markdownToHtml';
+import { fillOfficeBody } from '../../../../src/tools/file/office-preview';
 
 const labels = { close: 'Close preview' };
 
@@ -235,5 +239,22 @@ describe('openFilePreview — text kinds', () => {
     resolve({ ok: true, text: 'late' });
     await Promise.resolve();
     expect(document.querySelector('[data-role="file-preview-text"]')).toBeNull();
+  });
+
+  it('routes docx files to fillOfficeBody', async () => {
+    const teardown = openFilePreview({ url: 'blob:x', fileName: 'a.docx', labels: LABELS });
+    expect(fillOfficeBody).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({ fileName: 'a.docx' }),
+      'docx',
+      expect.any(Function),
+    );
+    teardown();
+  });
+
+  it('does not route pdf files to fillOfficeBody', () => {
+    const teardown = openFilePreview({ url: 'blob:x', fileName: 'a.pdf', labels: LABELS });
+    expect(fillOfficeBody).not.toHaveBeenCalled();
+    teardown();
   });
 });

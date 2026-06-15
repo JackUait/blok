@@ -1,5 +1,5 @@
 import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
-import { safePreviewSrc, safeHttpHref } from './url';
+import { safePreviewSrc } from './url';
 import { extOf, getPreviewKind, type PreviewKind } from './preview';
 import { loadTextPreview } from './text-preview';
 import { extToPrismLang } from './code-languages';
@@ -7,6 +7,8 @@ import { tokenizePrism, isHighlightable } from '../code/prism-loader';
 import { applyPrismHighlight, ensurePrismStyles } from '../code/prism-applier';
 import { markdownToHtml } from '../../markdown/markdownToHtml';
 import { IconFile, IconCross, IconLinkExternal } from '../../components/icons';
+import { buildErrorInto } from './preview-error';
+import { fillOfficeBody, type OfficeKind } from './office-preview';
 
 /** Time budget for the close animation before forcing teardown (ms). */
 const CLOSE_ANIMATION_FALLBACK_MS = 260;
@@ -93,27 +95,6 @@ function buildBody(opts: FilePreviewOptions, kind: PreviewKind): HTMLElement {
   return body;
 }
 
-function buildErrorInto(body: HTMLElement, opts: FilePreviewOptions): void {
-  body.replaceChildren();
-  const error = document.createElement('div');
-  error.className = 'blok-file-preview-error';
-  error.setAttribute('data-role', 'file-preview-error');
-  error.textContent = opts.labels.error ?? "Couldn't load preview";
-
-  const href = safeHttpHref(opts.url);
-  if (href !== null) {
-    const download = document.createElement('a');
-    download.className = 'blok-file-preview-download';
-    download.setAttribute('data-action', 'preview-download');
-    download.href = href;
-    download.download = opts.fileName ?? '';
-    download.target = '_blank';
-    download.rel = 'noopener noreferrer';
-    download.textContent = opts.labels.download ?? 'Download';
-    error.appendChild(download);
-  }
-  body.appendChild(error);
-}
 
 function renderPlainText(body: HTMLElement, text: string): void {
   body.replaceChildren();
@@ -328,7 +309,9 @@ function buildElements(opts: FilePreviewOptions): PreviewElements {
 export function openFilePreview(opts: FilePreviewOptions): () => void {
   const previouslyFocused = document.activeElement;
   const { backdrop, dialog, header, closeButton, body, kind } = buildElements(opts);
-  const textualKind = kind === null || kind === 'pdf' ? null : kind;
+  const officeKinds: OfficeKind[] = ['docx', 'xlsx', 'pptx'];
+  const officeKind = kind !== null && officeKinds.includes(kind as OfficeKind) ? (kind as OfficeKind) : null;
+  const textualKind = kind === null || kind === 'pdf' || officeKind !== null ? null : kind;
 
   // Remember the caller's inline overflow so scroll lock restores it exactly.
   const previousBodyOverflow = document.body.style.overflow;
@@ -419,7 +402,9 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
   promoteToTopLayer(backdrop);
   closeButton.focus();
 
-  if (textualKind !== null) {
+  if (officeKind !== null) {
+    void fillOfficeBody(body, opts, officeKind, () => state.closed);
+  } else if (textualKind !== null) {
     void fillTextBody(body, header, opts, textualKind, () => state.closed);
   }
 

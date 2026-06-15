@@ -1,5 +1,6 @@
-import { IconDownload, IconFile } from '../../components/icons';
+import { IconDownload } from '../../components/icons';
 import type { FileData } from '../../../types/tools/file';
+import { resolveFileIcon } from './file-icon';
 import { humanFileSize } from './format';
 import { safeHttpHref } from './url';
 
@@ -52,10 +53,12 @@ export function renderFileCard(
   body.className = 'blok-file-card';
   body.setAttribute('data-role', 'file-card');
 
+  const { category, icon: typeIcon } = resolveFileIcon(data);
   const icon = document.createElement('span');
   icon.className = 'blok-file-icon';
   icon.setAttribute('aria-hidden', 'true');
-  icon.innerHTML = IconFile;
+  icon.setAttribute('data-file-category', category);
+  icon.innerHTML = typeIcon;
 
   const meta = document.createElement('span');
   meta.className = 'blok-file-meta';

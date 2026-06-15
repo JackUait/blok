@@ -2193,6 +2193,7 @@
       'Utility': ['IconCopy', 'IconTrash', 'IconPencil', 'IconWarning', 'IconPaintRoller', 'IconPreview', 'IconSplitView', 'IconDotsHorizontal'],
       'Emoji Picker': ['IconEmojiStar', 'IconEmojiSmile', 'IconEmojiSprout', 'IconEmojiUtensils', 'IconEmojiBall', 'IconEmojiLightbulb', 'IconEmojiFlag'],
       'Link Types': ['IconVideo', 'IconMusic', 'IconMap', 'IconChart', 'IconMessage', 'IconFile'],
+      'File Types': ['IconFilePdf', 'IconFileDoc', 'IconFileSheet', 'IconFileSlides', 'IconFileArchive'],
     };
 
     renderIconGallery({
@@ -2503,11 +2504,65 @@
             size: 1016315,
             mimeType: 'application/pdf',
           } }] },
-          { label: 'Document (download)', blocks: [{ id: 'fl-doc', type: 'file', data: {
+          { label: 'Markdown / text', blocks: [{ id: 'fl-doc', type: 'file', data: {
             url: 'https://raw.githubusercontent.com/jackuait/blok/master/README.md',
             fileName: 'README.md',
             size: 8421,
             mimeType: 'text/markdown',
+          } }] },
+          { label: 'Word document', blocks: [{ id: 'fl-docx', type: 'file', data: {
+            url: 'https://example.com/contract.docx',
+            fileName: 'contract.docx',
+            size: 45200,
+            mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          } }] },
+          { label: 'Spreadsheet', blocks: [{ id: 'fl-xlsx', type: 'file', data: {
+            url: 'https://example.com/budget.xlsx',
+            fileName: 'budget.xlsx',
+            size: 38912,
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          } }] },
+          { label: 'Presentation', blocks: [{ id: 'fl-pptx', type: 'file', data: {
+            url: 'https://example.com/pitch-deck.pptx',
+            fileName: 'pitch-deck.pptx',
+            size: 2310000,
+            mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          } }] },
+          { label: 'Archive', blocks: [{ id: 'fl-zip', type: 'file', data: {
+            url: 'https://example.com/assets.zip',
+            fileName: 'assets.zip',
+            size: 8421000,
+            mimeType: 'application/zip',
+          } }] },
+          { label: 'Audio', blocks: [{ id: 'fl-audio', type: 'file', data: {
+            url: 'https://example.com/podcast-ep-12.mp3',
+            fileName: 'podcast-ep-12.mp3',
+            size: 18400000,
+            mimeType: 'audio/mpeg',
+          } }] },
+          { label: 'Video', blocks: [{ id: 'fl-video', type: 'file', data: {
+            url: 'https://example.com/product-demo.mp4',
+            fileName: 'product-demo.mp4',
+            size: 64200000,
+            mimeType: 'video/mp4',
+          } }] },
+          { label: 'Image', blocks: [{ id: 'fl-image', type: 'file', data: {
+            url: 'https://example.com/architecture-diagram.png',
+            fileName: 'architecture-diagram.png',
+            size: 845000,
+            mimeType: 'image/png',
+          } }] },
+          { label: 'Source code', blocks: [{ id: 'fl-code', type: 'file', data: {
+            url: 'https://example.com/main.ts',
+            fileName: 'main.ts',
+            size: 12400,
+            mimeType: 'text/plain',
+          } }] },
+          { label: 'Plain text', blocks: [{ id: 'fl-text', type: 'file', data: {
+            url: 'https://example.com/release-notes.txt',
+            fileName: 'release-notes.txt',
+            size: 2048,
+            mimeType: 'text/plain',
           } }] },
           { label: 'With caption', blocks: [{ id: 'fl-caption', type: 'file', data: {
             url: 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf',

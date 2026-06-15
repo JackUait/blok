@@ -69,6 +69,17 @@ describe('renderFileCard', () => {
     expect(card.querySelector('[data-role="file-size"]')).toBeNull();
   });
 
+  it('tags the icon tile with the resolved file-type category', () => {
+    const pdf = renderFileCard({ url: 'https://cdn/doc.pdf', fileName: 'doc.pdf' });
+    expect(pdf.querySelector('.blok-file-icon')?.getAttribute('data-file-category')).toBe('pdf');
+
+    const sheet = renderFileCard({ url: 'https://cdn/data.xlsx', fileName: 'data.xlsx' });
+    expect(sheet.querySelector('.blok-file-icon')?.getAttribute('data-file-category')).toBe('spreadsheet');
+
+    const unknown = renderFileCard({ url: 'https://cdn/thing.xyz', fileName: 'thing.xyz' });
+    expect(unknown.querySelector('.blok-file-icon')?.getAttribute('data-file-category')).toBe('generic');
+  });
+
   it.each([
     'javascript:alert(1)',
     'JavaScript:alert(1)',

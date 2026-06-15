@@ -860,6 +860,55 @@ export const IconFile = `
 </svg>
 `;
 
+// ============================================================================
+// File-type icons (20×20 / 1.25 house spec) — chosen by File block per
+// extension/MIME category. Monochrome currentColor; the File block tints them
+// per category via the .blok-file-icon[data-file-category] CSS rules.
+// ============================================================================
+
+// PDF — page with folded corner and a solid label chip
+export const IconFilePdf = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M5 4A1.5 1.5 0 0 1 6.5 2.5h4.75L15 6.25V16a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 5 16V4Z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
+  <path d="M11.25 2.5v3.75H15" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
+  <rect x="6.75" y="10.75" width="6.5" height="3.75" rx="1" fill="currentColor"/>
+</svg>
+`;
+
+// Word-processing document — page with folded corner and three text lines
+export const IconFileDoc = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M5 4A1.5 1.5 0 0 1 6.5 2.5h4.75L15 6.25V16a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 5 16V4Z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
+  <path d="M11.25 2.5v3.75H15" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
+  <path d="M7.5 9.5h5M7.5 11.75h5M7.5 14h3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
+// Spreadsheet — framed sheet with a 2×2 cell grid
+export const IconFileSheet = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <rect x="3.5" y="3" width="13" height="14" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M3.5 8h13M3.5 12h13M10 3v14" stroke="currentColor" stroke-width="1.25"/>
+</svg>
+`;
+
+// Presentation — framed slide on a stand
+export const IconFileSlides = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <rect x="3" y="3.5" width="14" height="9" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M10 12.5v2.5M7.5 17l2.5-2 2.5 2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Archive — box with a centered zipper and pull tab
+export const IconFileArchive = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <rect x="4" y="2.5" width="12" height="15" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M10 2.5v2.25M10 6.5v1.5M10 9.75v1.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <rect x="8.5" y="11.75" width="3" height="3.5" rx="0.75" stroke="currentColor" stroke-width="1.25"/>
+</svg>
+`;
+
 /**
  * Builds a columns-preset icon: one rounded frame split by `count - 1` evenly
  * spaced dividers, so it reads as a container holding exactly `count` columns

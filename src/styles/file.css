@@ -71,6 +71,46 @@
   height: 20px;
 }
 
+/* Subtle per-type tint: the glyph carries the category hue, the tile shows a
+ * faint wash of it. color-mix against the neutral tile keeps both light and
+ * dark themes legible. text/generic keep the neutral default above. */
+[data-blok-tool="file"] .blok-file-icon[data-file-category="pdf"] {
+  color: #d93025;
+  background: color-mix(in srgb, #d93025 12%, var(--blok-bg-secondary));
+}
+[data-blok-tool="file"] .blok-file-icon[data-file-category="document"] {
+  color: #2563eb;
+  background: color-mix(in srgb, #2563eb 12%, var(--blok-bg-secondary));
+}
+[data-blok-tool="file"] .blok-file-icon[data-file-category="spreadsheet"] {
+  color: #16a34a;
+  background: color-mix(in srgb, #16a34a 12%, var(--blok-bg-secondary));
+}
+[data-blok-tool="file"] .blok-file-icon[data-file-category="presentation"] {
+  color: #ea580c;
+  background: color-mix(in srgb, #ea580c 12%, var(--blok-bg-secondary));
+}
+[data-blok-tool="file"] .blok-file-icon[data-file-category="archive"] {
+  color: #ca8a04;
+  background: color-mix(in srgb, #ca8a04 12%, var(--blok-bg-secondary));
+}
+[data-blok-tool="file"] .blok-file-icon[data-file-category="audio"] {
+  color: #db2777;
+  background: color-mix(in srgb, #db2777 12%, var(--blok-bg-secondary));
+}
+[data-blok-tool="file"] .blok-file-icon[data-file-category="video"] {
+  color: #7c3aed;
+  background: color-mix(in srgb, #7c3aed 12%, var(--blok-bg-secondary));
+}
+[data-blok-tool="file"] .blok-file-icon[data-file-category="image"] {
+  color: #0891b2;
+  background: color-mix(in srgb, #0891b2 12%, var(--blok-bg-secondary));
+}
+[data-blok-tool="file"] .blok-file-icon[data-file-category="code"] {
+  color: #4f46e5;
+  background: color-mix(in srgb, #4f46e5 12%, var(--blok-bg-secondary));
+}
+
 [data-blok-tool="file"] .blok-file-meta {
   display: flex;
   flex-direction: column;

@@ -1,5 +1,5 @@
 import type { PptxViewer } from '@aiden0z/pptx-renderer';
-import type { Workbook as ExcelWorkbook } from 'exceljs';
+import type JSZip from 'jszip';
 
 /** Dynamic-import docx-preview's renderAsync (code-split out of the main bundle). */
 export async function loadDocxRenderer(): Promise<
@@ -14,11 +14,21 @@ export async function loadDocxRenderer(): Promise<
     });
 }
 
-/** Dynamic-import ExcelJS's Workbook (code-split out of the main bundle). */
-export async function loadXlsxRenderer(): Promise<new () => ExcelWorkbook> {
-  const mod = await import('exceljs');
+/**
+ * Dynamic-import JSZip (code-split out of the main bundle). We parse .xlsx as a
+ * raw OOXML zip rather than via a spreadsheet library: ExcelJS's reader breaks
+ * when re-bundled by Vite (its worksheet reader throws on `_processWorksheetEntry`
+ * once polyfills are double-bundled), and SheetJS dropped the npm registry. JSZip
+ * is already pulled in (and proven in-browser) by docx-preview and pptx-renderer.
+ */
+export async function loadZip(): Promise<typeof JSZip> {
+  const mod = await import('jszip');
 
-  return mod.Workbook;
+  // JSZip is CJS — interop lands the constructor on `.default` under some
+  // bundlers and at the top level under others. Accept either.
+  const candidate = mod as unknown as { default?: typeof JSZip } & typeof JSZip;
+
+  return candidate.default ?? candidate;
 }
 
 /** Dynamic-import pptx-renderer's viewer + recommended zip limits. */

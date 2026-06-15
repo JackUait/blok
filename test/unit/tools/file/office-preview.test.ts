@@ -1,18 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type JSZip from 'jszip';
 
 vi.mock('../../../../src/tools/file/binary-preview', () => ({
   loadBinaryPreview: vi.fn(),
 }));
 vi.mock('../../../../src/tools/file/office-loaders', () => ({
   loadDocxRenderer: vi.fn(),
-  loadXlsxRenderer: vi.fn(),
+  loadZip: vi.fn(),
   loadPptxRenderer: vi.fn(),
 }));
 
-import type { Workbook as ExcelWorkbook } from 'exceljs';
-import { fillOfficeBody } from '../../../../src/tools/file/office-preview';
+import { fillOfficeBody, renderXlsxInto } from '../../../../src/tools/file/office-preview';
 import { loadBinaryPreview } from '../../../../src/tools/file/binary-preview';
-import { loadDocxRenderer, loadPptxRenderer, loadXlsxRenderer } from '../../../../src/tools/file/office-loaders';
+import { loadDocxRenderer, loadPptxRenderer, loadZip } from '../../../../src/tools/file/office-loaders';
 
 const OPTS = { url: 'blob:x', fileName: 'a.docx', labels: { close: 'Close', error: 'Error', download: 'Download' } };
 
@@ -57,26 +57,48 @@ describe('fillOfficeBody', () => {
 });
 
 describe('renderXlsxInto', () => {
-  it('builds a table from cell text using textContent only', async () => {
-    const { renderXlsxInto } = await import('../../../../src/tools/file/office-preview');
-    const ws = {
-      name: 'Sheet1', rowCount: 1, columnCount: 2,
-      eachRow: (_opts: unknown, cb: (row: { getCell: (c: number) => { text: string } }, n: number) => void) => {
-        cb({ getCell: (c: number) => ({ text: c === 1 ? '<b>x</b>' : 'y' }) }, 1);
-      },
-    };
-    const workbookInstance = { worksheets: [ws], xlsx: { load: vi.fn().mockResolvedValue(undefined) } };
-    class FakeWorkbook {
-      worksheets = workbookInstance.worksheets;
-      xlsx = workbookInstance.xlsx;
-    }
-    vi.mocked(loadXlsxRenderer).mockResolvedValue(
-      FakeWorkbook as unknown as new () => ExcelWorkbook,
+  beforeEach(() => { vi.clearAllMocks(); });
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  /** A shared string deliberately carrying markup, XML-escaped so its text is the literal "<b>x</b>". */
+  const sharedXml = '<?xml version="1.0"?><sst><si><t>&lt;b&gt;x&lt;/b&gt;</t></si><si><t>y</t></si></sst>';
+  // A1 + B1 reference shared strings 0 and 1; C1 carries an inline number.
+  const sheetXml = '<?xml version="1.0"?><worksheet><sheetData>'
+    + '<row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c><c r="C1"><v>42</v></c></row>'
+    + '</sheetData></worksheet>';
+
+  const fakeZip = {
+    files: { 'xl/worksheets/sheet1.xml': {}, 'xl/sharedStrings.xml': {} },
+    file: (name: string): { async: () => Promise<string> } | null => {
+      if (name === 'xl/sharedStrings.xml') {
+        return { async: () => Promise.resolve(sharedXml) };
+      }
+      if (name === 'xl/worksheets/sheet1.xml') {
+        return { async: () => Promise.resolve(sheetXml) };
+      }
+
+      return null;
+    },
+  };
+
+  beforeEach(() => {
+    vi.mocked(loadZip).mockResolvedValue(
+      { loadAsync: vi.fn().mockResolvedValue(fakeZip) } as unknown as typeof JSZip,
     );
+  });
+
+  it('renders shared-string cells as literal text, never parsed HTML', async () => {
     const container = document.createElement('div');
     await renderXlsxInto(new ArrayBuffer(4), container);
     const cell = container.querySelector('td');
-    expect(cell?.textContent).toBe('<b>x</b>');        // literal text, not parsed HTML
-    expect(cell?.querySelector('b')).toBeNull();        // no injection
+    expect(cell?.textContent).toBe('<b>x</b>');   // literal text
+    expect(cell?.querySelector('b')).toBeNull();  // not injected as an element
+  });
+
+  it('resolves shared strings and inline values across the row', async () => {
+    const container = document.createElement('div');
+    await renderXlsxInto(new ArrayBuffer(4), container);
+    const cells = Array.from(container.querySelectorAll('td')).map((td) => td.textContent);
+    expect(cells).toEqual(['<b>x</b>', 'y', '42']);
   });
 });

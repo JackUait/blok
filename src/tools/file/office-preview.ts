@@ -1,7 +1,7 @@
 import type { PreviewKind } from './preview';
 import type { FilePreviewOptions } from './preview-modal';
 import { loadBinaryPreview } from './binary-preview';
-import { loadDocxRenderer, loadXlsxRenderer, loadPptxRenderer } from './office-loaders';
+import { loadDocxRenderer, loadZip, loadPptxRenderer } from './office-loaders';
 import { buildErrorInto } from './preview-error';
 
 export type OfficeKind = Extract<PreviewKind, 'docx' | 'xlsx' | 'pptx'>;
@@ -13,26 +13,108 @@ export function isOfficeKind(kind: PreviewKind | null): kind is OfficeKind {
   return kind !== null && OFFICE_KINDS.has(kind as OfficeKind);
 }
 
-/** Build the xlsx grid as a DOM table — textContent only, never innerHTML. */
-export async function renderXlsxInto(buf: ArrayBuffer, container: HTMLElement): Promise<void> {
-  const Workbook = await loadXlsxRenderer();
-  const workbook = new Workbook();
-  await workbook.xlsx.load(buf);
+const COLUMN_LETTERS = /^([A-Z]+)/;
 
-  for (const ws of workbook.worksheets) {
-    const table = document.createElement('table');
-    table.className = 'blok-file-preview-xlsx-table';
-    const cols = ws.columnCount;
-    ws.eachRow({ includeEmpty: true }, (row) => {
-      const tr = document.createElement('tr');
-      Array.from({ length: cols }, (_, i) => i + 1).forEach((c) => {
-        const td = document.createElement('td');
-        td.textContent = row.getCell(c).text;
-        tr.appendChild(td);
-      });
-      table.appendChild(tr);
-    });
-    container.appendChild(table);
+/** 1-based numbers 1..n. */
+function range(n: number): number[] {
+  return Array.from({ length: Math.max(0, n) }, (_, i) => i + 1);
+}
+
+/** The numeric suffix of an `xl/worksheets/sheetN.xml` path, for ordering. */
+function sheetNumber(path: string): number {
+  return Number(/sheet(\d+)\.xml$/.exec(path)?.[1] ?? '0');
+}
+
+/** Convert an A1-style cell ref's column letters to a 1-based column index. */
+function columnIndex(ref: string): number {
+  const letters = COLUMN_LETTERS.exec(ref)?.[1] ?? '';
+
+  return Array.from(letters).reduce((acc, ch) => acc * 26 + (ch.charCodeAt(0) - 64), 0);
+}
+
+/** Resolve a `<c>` cell's display text: shared-string, inline string, or value. */
+function cellText(cell: Element, shared: string[]): string {
+  const type = cell.getAttribute('t');
+  if (type === 's') {
+    const index = Number(cell.getElementsByTagName('v')[0]?.textContent ?? '');
+
+    return shared[index] ?? '';
+  }
+  if (type === 'inlineStr') {
+    return Array.from(cell.getElementsByTagName('t')).map((t) => t.textContent ?? '').join('');
+  }
+
+  return cell.getElementsByTagName('v')[0]?.textContent ?? '';
+}
+
+/** Concatenate the `<t>` runs of a shared-string `<si>` element. */
+function sharedString(si: Element): string {
+  return Array.from(si.getElementsByTagName('t')).map((t) => t.textContent ?? '').join('');
+}
+
+/** Build one `<tr>` from a `<row>` element, placing cells at their A1 column. */
+function buildRow(rowEl: Element, shared: string[]): HTMLTableRowElement {
+  const cells = Array.from(rowEl.getElementsByTagName('c'));
+  const byColumn = new Map<number, string>();
+  cells.forEach((cell, i) => {
+    const ref = cell.getAttribute('r');
+    byColumn.set(ref === null ? i + 1 : columnIndex(ref), cellText(cell, shared));
+  });
+  const lastColumn = cells.reduce((max, cell) => {
+    const ref = cell.getAttribute('r');
+
+    return ref === null ? max : Math.max(max, columnIndex(ref));
+  }, cells.length);
+
+  const tr = document.createElement('tr');
+  for (const col of range(lastColumn)) {
+    const td = document.createElement('td');
+    td.textContent = byColumn.get(col) ?? '';
+    tr.appendChild(td);
+  }
+
+  return tr;
+}
+
+/** Build one worksheet `<table>` from a parsed sheet document. */
+function buildSheetTable(doc: Document, shared: string[]): HTMLTableElement {
+  const table = document.createElement('table');
+  table.className = 'blok-file-preview-xlsx-table';
+  for (const rowEl of Array.from(doc.getElementsByTagName('row'))) {
+    table.appendChild(buildRow(rowEl, shared));
+  }
+
+  return table;
+}
+
+/**
+ * Render an .xlsx as DOM tables by parsing the OOXML zip directly (JSZip +
+ * DOMParser) — textContent only, never innerHTML. One table per worksheet; cells
+ * are placed at their A1 column so sparse rows stay aligned.
+ */
+export async function renderXlsxInto(buf: ArrayBuffer, container: HTMLElement): Promise<void> {
+  const JSZipCtor = await loadZip();
+  const zip = await JSZipCtor.loadAsync(buf);
+  const parser = new DOMParser();
+
+  const sharedFile = zip.file('xl/sharedStrings.xml');
+  const shared = sharedFile === null
+    ? []
+    : Array.from(
+      parser.parseFromString(await sharedFile.async('text'), 'application/xml').getElementsByTagName('si'),
+    ).map(sharedString);
+
+  const sheetPaths = Object.keys(zip.files)
+    .filter((path) => /^xl\/worksheets\/sheet\d+\.xml$/.test(path))
+    .sort((a, b) => sheetNumber(a) - sheetNumber(b));
+
+  for (const path of sheetPaths) {
+    const sheetFile = zip.file(path);
+    if (sheetFile === null) {
+      continue;
+    }
+    const doc = parser.parseFromString(await sheetFile.async('text'), 'application/xml');
+    container.appendChild(buildSheetTable(doc, shared));
   }
 }
 

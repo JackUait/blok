@@ -1,10 +1,14 @@
 // test/playwright/tests/tools/file.spec.ts
 
+import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+
+// Playwright runs from the repo root, so resolve fixtures relative to cwd.
+const OFFICE_FIXTURES = join(process.cwd(), 'test/playwright/fixtures/office');
 
 const HOLDER_ID = 'blok';
 const FILE_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="file"]`;
@@ -266,4 +270,67 @@ test('Markdown file preview toggles between rendered and raw views', async ({ pa
   await dialog.getByRole('button', { name: 'Raw' }).click();
   const rawView = dialog.locator('[data-role="file-preview-md-raw"]');
   await expect(rawView).toContainText('# Hello');
+});
+
+// ---------------------------------------------------------------------------
+// 5. Office previews: docx / xlsx / pptx render inline in the modal
+// ---------------------------------------------------------------------------
+
+/** Inserts an empty File block and uploads the given fixture file by path. */
+const uploadFixture = async (page: Page, fixture: string): Promise<void> => {
+  await createBlokWithFile(page);
+
+  const defaultParagraph = page.locator(
+    `${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"] [contenteditable]`
+  );
+  await defaultParagraph.click();
+  await page.keyboard.type('/file', { delay: 50 });
+
+  const fileMenuItem = page.locator('[data-blok-item-name="file"]');
+  await expect(fileMenuItem).toBeVisible();
+  await fileMenuItem.click();
+
+  const fileBlock = page.locator(FILE_BLOCK_SELECTOR);
+  await expect(fileBlock).toBeVisible();
+
+  await fileBlock.getByTestId('file-input').setInputFiles(join(OFFICE_FIXTURES, fixture));
+};
+
+test('docx file renders an inline preview', async ({ page }) => {
+  await uploadFixture(page, 'sample.docx');
+
+  await page.getByRole('button', { name: /sample\.docx/i }).click();
+
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  const preview = dialog.locator('[data-role="file-preview-docx"]');
+  await expect(preview).toBeVisible();
+  await expect(preview).toContainText('Blok docx preview fixture');
+});
+
+test('xlsx file renders an inline table preview', async ({ page }) => {
+  await uploadFixture(page, 'sample.xlsx');
+
+  await page.getByRole('button', { name: /sample\.xlsx/i }).click();
+
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  const preview = dialog.locator('[data-role="file-preview-xlsx"]');
+  await expect(preview).toBeVisible();
+  // The first sheet's A1/B1 cells render as table cells (role "cell").
+  await expect(preview.getByRole('cell', { name: 'Hello' })).toBeVisible();
+  await expect(preview.getByRole('cell', { name: 'World' })).toBeVisible();
+});
+
+test('pptx file renders an inline slide preview', async ({ page }) => {
+  await uploadFixture(page, 'sample.pptx');
+
+  await page.getByRole('button', { name: /sample\.pptx/i }).click();
+
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  // The pptx container mounts (proves fetch + renderer dispatch, not the error
+  // fallback). pptx-renderer paints slides asynchronously into this container.
+  const preview = dialog.locator('[data-role="file-preview-pptx"]');
+  await expect(preview).toBeVisible();
 });

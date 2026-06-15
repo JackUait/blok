@@ -9,19 +9,64 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import ExcelJS from 'exceljs';
 import JSZip from 'jszip';
 
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'test', 'playwright', 'fixtures', 'office');
 mkdirSync(OUT, { recursive: true });
 
 // ---- xlsx ----------------------------------------------------------------
-const wb = new ExcelJS.Workbook();
-const ws = wb.addWorksheet('Sheet1');
-ws.getCell('A1').value = 'Hello';
-ws.getCell('B1').value = 'World';
-const xlsxBuf = await wb.xlsx.writeBuffer();
-writeFileSync(join(OUT, 'sample.xlsx'), Buffer.from(xlsxBuf));
+// Assembled as a minimal OOXML zip (same approach as docx/pptx below) so the
+// generator needs no spreadsheet library — the runtime preview parses these
+// same parts (sharedStrings + worksheet) via JSZip.
+const xlsx = new JSZip();
+xlsx.file(
+  '[Content_Types].xml',
+  `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
+</Types>`,
+);
+xlsx.file(
+  '_rels/.rels',
+  `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`,
+);
+xlsx.file(
+  'xl/workbook.xml',
+  `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets>
+</workbook>`,
+);
+xlsx.file(
+  'xl/_rels/workbook.xml.rels',
+  `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
+</Relationships>`,
+);
+xlsx.file(
+  'xl/sharedStrings.xml',
+  `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="2" uniqueCount="2">
+<si><t>Hello</t></si><si><t>World</t></si>
+</sst>`,
+);
+xlsx.file(
+  'xl/worksheets/sheet1.xml',
+  `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<sheetData><row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c></row></sheetData>
+</worksheet>`,
+);
+writeFileSync(join(OUT, 'sample.xlsx'), await xlsx.generateAsync({ type: 'nodebuffer' }));
 
 // ---- docx ----------------------------------------------------------------
 const docx = new JSZip();

@@ -127,7 +127,7 @@ async function loadMathExtensions(): Promise<{
  * references, footnotes, and GitHub alerts are supported.
  */
 export async function markdownToHtml(md: string, opts: MarkdownPreviewOptions = {}): Promise<string> {
-  const extensions: Array<MicromarkExtension | MicromarkExtension[]> = [gfm()];
+  const extensions: MicromarkExtension[] = [gfm()];
   const mdastExtensions: Array<MdastExtension | MdastExtension[]> = [gfmFromMarkdown()];
 
   if (MATH_SIGNAL.test(md)) {

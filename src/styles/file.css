@@ -936,12 +936,13 @@
 }
 
 /* --- xlsx: a single crisp data card, centred on the desk ------------------ */
-/* The sheet is usually far smaller than the modal; centring keeps it from
-   stranding in the top-left corner amid a sea of empty space. */
+/* A small sheet centres in the modal instead of stranding in the top-left; the
+   `safe` keyword makes a sheet larger than the viewport fall back to start
+   alignment (scrollable) rather than clipping its first rows/columns. */
 .blok-file-preview-xlsx {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: safe center;
+  justify-content: safe center;
   padding: var(--blok-space-6);
 }
 

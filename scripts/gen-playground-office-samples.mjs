@@ -86,15 +86,34 @@ docx.file(
 writeFileSync(join(OUT, 'service-agreement.docx'), await docx.generateAsync({ type: 'nodebuffer' }));
 
 // ---- xlsx: a quarterly budget --------------------------------------------
-// 2D grid; strings become shared strings, numbers stay inline numeric.
-const grid = [
-  ['Department', 'Q1', 'Q2', 'Q3', 'Q4', 'Total'],
-  ['Engineering', 120000, 132000, 128000, 140000, 520000],
-  ['Marketing', 64000, 71000, 68000, 80000, 283000],
-  ['Sales', 90000, 95000, 102000, 110000, 397000],
-  ['Operations', 38000, 41000, 39000, 44000, 162000],
-  ['Total', 312000, 339000, 337000, 374000, 1362000],
+// 2D grid; strings become shared strings, numbers stay inline numeric. The
+// data rows are generated deterministically (no RNG, so the fixture is stable)
+// across many teams and metric columns to exercise a realistically wide sheet.
+const HEADER = ['Department', 'Q1', 'Q2', 'Q3', 'Q4', 'FY Total', 'Prior FY', 'YoY %', 'Headcount'];
+const DEPARTMENTS = [
+  'Engineering', 'Platform', 'Mobile', 'Data & ML', 'Security',
+  'Design', 'Product', 'Marketing', 'Growth', 'Sales',
+  'Customer Success', 'Support', 'Finance', 'People Ops', 'Recruiting',
+  'Legal', 'IT', 'Facilities', 'Operations', 'Research',
+  'Partnerships', 'Procurement',
 ];
+const dataRows = DEPARTMENTS.map((name, i) => {
+  const base = 40000 + i * 6500;
+  const quarters = [0, 1, 2, 3].map((q) => base + q * 3200 + ((i * (q + 1) * 131) % 9000));
+  const fyTotal = quarters.reduce((a, b) => a + b, 0);
+  const priorFY = Math.round(fyTotal / (1.05 + (i % 6) * 0.015));
+  const yoy = Math.round(((fyTotal - priorFY) / priorFY) * 1000) / 10;
+  const headcount = 5 + ((i * 7) % 48);
+  return [name, ...quarters, fyTotal, priorFY, yoy, headcount];
+});
+const sumCol = (c) => dataRows.reduce((acc, row) => acc + row[c], 0);
+const totalFy = sumCol(5);
+const totalPrior = sumCol(6);
+const totalRow = [
+  'Total', sumCol(1), sumCol(2), sumCol(3), sumCol(4), totalFy, totalPrior,
+  Math.round(((totalFy - totalPrior) / totalPrior) * 1000) / 10, sumCol(8),
+];
+const grid = [HEADER, ...dataRows, totalRow];
 
 const sharedList = [];
 const sharedIndex = new Map();

@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Iliyofumbuliwa",
   "tools.file.previewLoading": "Inapakia onyesho la awali…",
   "tools.file.previewError": "Imeshindwa kupakia onyesho la awali",
-  "tools.file.previewDownload": "Pakua"
+  "tools.file.previewDownload": "Pakua",
+  "tools.file.previewOpenInNewTab": "Fungua katika kichupo kipya",
+  "tools.file.previewOpenInNewTab": "Fungua katika kichupo kipya"
 }

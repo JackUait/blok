@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Gjengitt",
   "tools.file.previewLoading": "Laster forhåndsvisning…",
   "tools.file.previewError": "Kunne ikke laste forhåndsvisning",
-  "tools.file.previewDownload": "Last ned"
+  "tools.file.previewDownload": "Last ned",
+  "tools.file.previewOpenInNewTab": "Åpne i ny fane",
+  "tools.file.previewOpenInNewTab": "Åpne i ny fane"
 }

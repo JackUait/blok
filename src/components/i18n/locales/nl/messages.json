@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Weergegeven",
   "tools.file.previewLoading": "Voorbeeld laden…",
   "tools.file.previewError": "Kan voorbeeld niet laden",
-  "tools.file.previewDownload": "Downloaden"
+  "tools.file.previewDownload": "Downloaden",
+  "tools.file.previewOpenInNewTab": "Openen in nieuw tabblad",
+  "tools.file.previewOpenInNewTab": "Openen in nieuw tabblad"
 }

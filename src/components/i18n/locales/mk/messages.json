@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Прикажано",
   "tools.file.previewLoading": "Прегледот се вчитува…",
   "tools.file.previewError": "Прегледот не може да се вчита",
-  "tools.file.previewDownload": "Преземи"
+  "tools.file.previewDownload": "Преземи",
+  "tools.file.previewOpenInNewTab": "Отвори во нов таб",
+  "tools.file.previewOpenInNewTab": "Отвори во нов таб"
 }

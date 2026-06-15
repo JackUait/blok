@@ -378,5 +378,7 @@
   "tools.file.previewRender": "రెండర్ చేయబడింది",
   "tools.file.previewLoading": "మునుజూపు లోడ్ అవుతోంది…",
   "tools.file.previewError": "మునుజూపును లోడ్ చేయడం సాధ్యం కాలేదు",
-  "tools.file.previewDownload": "డౌన్‌లోడ్"
+  "tools.file.previewDownload": "డౌన్‌లోడ్",
+  "tools.file.previewOpenInNewTab": "కొత్త ట్యాబ్‌లో తెరవండి",
+  "tools.file.previewOpenInNewTab": "కొత్త ట్యాబ్‌లో తెరవండి"
 }

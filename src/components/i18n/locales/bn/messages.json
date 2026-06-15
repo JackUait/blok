@@ -378,5 +378,7 @@
   "tools.file.previewRender": "রেন্ডার করা",
   "tools.file.previewLoading": "প্রিভিউ লোড হচ্ছে…",
   "tools.file.previewError": "প্রিভিউ লোড করা যায়নি",
-  "tools.file.previewDownload": "ডাউনলোড"
+  "tools.file.previewDownload": "ডাউনলোড",
+  "tools.file.previewOpenInNewTab": "নতুন ট্যাবে খুলুন",
+  "tools.file.previewOpenInNewTab": "নতুন ট্যাবে খুলুন"
 }

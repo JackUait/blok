@@ -227,6 +227,7 @@ export class FileTool implements BlockTool {
         loading: this.api.i18n.t('tools.file.previewLoading'),
         error: this.api.i18n.t('tools.file.previewError'),
         download: this.api.i18n.t('tools.file.previewDownload'),
+        openInNewTab: this.api.i18n.t('tools.file.previewOpenInNewTab'),
       },
     });
   }

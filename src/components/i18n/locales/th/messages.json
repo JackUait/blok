@@ -378,5 +378,7 @@
   "tools.file.previewRender": "แสดงผลแล้ว",
   "tools.file.previewLoading": "กำลังโหลดตัวอย่าง…",
   "tools.file.previewError": "ไม่สามารถโหลดตัวอย่างได้",
-  "tools.file.previewDownload": "ดาวน์โหลด"
+  "tools.file.previewDownload": "ดาวน์โหลด",
+  "tools.file.previewOpenInNewTab": "เปิดในแท็บใหม่",
+  "tools.file.previewOpenInNewTab": "เปิดในแท็บใหม่"
 }

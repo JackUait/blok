@@ -378,5 +378,7 @@
   "tools.file.previewRender": "بىر تەرەپ قىلىنغان",
   "tools.file.previewLoading": "ئالدىن كۆرۈش يۈكلىنىۋاتىدۇ…",
   "tools.file.previewError": "ئالدىن كۆرۈشنى يۈكلىگىلى بولمىدى",
-  "tools.file.previewDownload": "چۈشۈرۈش"
+  "tools.file.previewDownload": "چۈشۈرۈش",
+  "tools.file.previewOpenInNewTab": "يېڭى بەتكۈچتە ئېچىش",
+  "tools.file.previewOpenInNewTab": "يېڭى بەتكۈچتە ئېچىش"
 }

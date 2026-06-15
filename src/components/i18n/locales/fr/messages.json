@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Aperçu",
   "tools.file.previewLoading": "Chargement de l’aperçu…",
   "tools.file.previewError": "Impossible de charger l’aperçu",
-  "tools.file.previewDownload": "Télécharger"
+  "tools.file.previewDownload": "Télécharger",
+  "tools.file.previewOpenInNewTab": "Ouvrir dans un nouvel onglet",
+  "tools.file.previewOpenInNewTab": "Ouvrir dans un nouvel onglet"
 }

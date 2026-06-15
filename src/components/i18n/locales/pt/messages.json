@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Renderizado",
   "tools.file.previewLoading": "Carregando pré-visualização…",
   "tools.file.previewError": "Não foi possível carregar a pré-visualização",
-  "tools.file.previewDownload": "Baixar"
+  "tools.file.previewDownload": "Baixar",
+  "tools.file.previewOpenInNewTab": "Abrir em nova aba",
+  "tools.file.previewOpenInNewTab": "Abrir em nova aba"
 }

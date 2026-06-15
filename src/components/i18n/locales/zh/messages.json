@@ -378,5 +378,7 @@
   "tools.file.previewRender": "渲染",
   "tools.file.previewLoading": "正在加载预览…",
   "tools.file.previewError": "无法加载预览",
-  "tools.file.previewDownload": "下载"
+  "tools.file.previewDownload": "下载",
+  "tools.file.previewOpenInNewTab": "在新标签页中打开",
+  "tools.file.previewOpenInNewTab": "在新标签页中打开"
 }

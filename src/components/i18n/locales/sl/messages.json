@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Predogled",
   "tools.file.previewLoading": "Nalaganje predogleda…",
   "tools.file.previewError": "Predogleda ni bilo mogoče naložiti",
-  "tools.file.previewDownload": "Prenesi"
+  "tools.file.previewDownload": "Prenesi",
+  "tools.file.previewOpenInNewTab": "Odpri v novem zavihku",
+  "tools.file.previewOpenInNewTab": "Odpri v novem zavihku"
 }

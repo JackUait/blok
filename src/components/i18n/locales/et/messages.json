@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Eelvaade",
   "tools.file.previewLoading": "Eelvaate laadimine…",
   "tools.file.previewError": "Eelvaadet ei õnnestunud laadida",
-  "tools.file.previewDownload": "Laadi alla"
+  "tools.file.previewDownload": "Laadi alla",
+  "tools.file.previewOpenInNewTab": "Ava uuel kaardil",
+  "tools.file.previewOpenInNewTab": "Ava uuel kaardil"
 }

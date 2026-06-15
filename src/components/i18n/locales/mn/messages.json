@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Үзүүлсэн",
   "tools.file.previewLoading": "Урьдчилан харахыг ачаалж байна…",
   "tools.file.previewError": "Урьдчилан харахыг ачаалж чадсангүй",
-  "tools.file.previewDownload": "Татах"
+  "tools.file.previewDownload": "Татах",
+  "tools.file.previewOpenInNewTab": "Шинэ табд нээх",
+  "tools.file.previewOpenInNewTab": "Шинэ табд нээх"
 }

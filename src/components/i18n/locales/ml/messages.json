@@ -378,5 +378,7 @@
   "tools.file.previewRender": "റെൻഡർ ചെയ്തത്",
   "tools.file.previewLoading": "പ്രിവ്യൂ ലോഡ് ചെയ്യുന്നു…",
   "tools.file.previewError": "പ്രിവ്യൂ ലോഡ് ചെയ്യാനായില്ല",
-  "tools.file.previewDownload": "ഡൗൺലോഡ്"
+  "tools.file.previewDownload": "ഡൗൺലോഡ്",
+  "tools.file.previewOpenInNewTab": "പുതിയ ടാബിൽ തുറക്കുക",
+  "tools.file.previewOpenInNewTab": "പുതിയ ടാബിൽ തുറക്കുക"
 }

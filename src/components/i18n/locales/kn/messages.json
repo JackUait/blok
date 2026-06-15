@@ -378,5 +378,7 @@
   "tools.file.previewRender": "ಪ್ರದರ್ಶಿತ",
   "tools.file.previewLoading": "ಮುನ್ನೋಟ ಲೋಡ್ ಆಗುತ್ತಿದೆ…",
   "tools.file.previewError": "ಮುನ್ನೋಟ ಲೋಡ್ ಮಾಡಲಾಗಲಿಲ್ಲ",
-  "tools.file.previewDownload": "ಡೌನ್‌ಲೋಡ್"
+  "tools.file.previewDownload": "ಡೌನ್‌ಲೋಡ್",
+  "tools.file.previewOpenInNewTab": "ಹೊಸ ಟ್ಯಾಬ್‌ನಲ್ಲಿ ತೆರೆಯಿರಿ",
+  "tools.file.previewOpenInNewTab": "ಹೊಸ ಟ್ಯಾಬ್‌ನಲ್ಲಿ ತೆರೆಯಿರಿ"
 }

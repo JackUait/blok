@@ -257,7 +257,11 @@
   justify-content: center;
   padding: var(--blok-space-6);
   background: var(--blok-overlay-dark);
-  animation: blok-file-preview-backdrop-in 160ms ease;
+  /* Soft frost behind the dialog so the page recedes; the opacity keyframe
+     fades the scrim and the blur in together. */
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: blok-file-preview-backdrop-in 200ms ease;
 }
 /* Exit: fade the scrim out, then JS detaches on animationend. */
 .blok-file-preview-backdrop[data-blok-closing],
@@ -297,14 +301,18 @@
   border-radius: var(--blok-radius-xl);
   background: var(--blok-bg-primary);
   box-shadow: var(--blok-image-shadow-resting);
-  animation: blok-file-preview-dialog-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: center bottom;
+  /* Springy ease (gentle overshoot) so the dialog "settles" in rather than
+     stopping flat — reads more alive than a plain decel curve. */
+  animation: blok-file-preview-dialog-in 360ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .blok-file-preview-backdrop[data-blok-closing] .blok-file-preview {
   animation: blok-file-preview-dialog-out 180ms cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 @keyframes blok-file-preview-dialog-in {
-  from { opacity: 0; transform: translateY(8px) scale(0.985); }
-  to { opacity: 1; transform: none; }
+  0% { opacity: 0; transform: translateY(20px) scale(0.92); }
+  55% { opacity: 1; }
+  100% { opacity: 1; transform: none; }
 }
 @keyframes blok-file-preview-dialog-out {
   from { opacity: 1; transform: none; }
@@ -365,10 +373,17 @@
   text-overflow: ellipsis;
 }
 
-.blok-file-preview-close {
+.blok-file-preview-actions {
   grid-column: 3;
   grid-row: 1;
   justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+}
+
+.blok-file-preview-open,
+.blok-file-preview-close {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -379,16 +394,19 @@
   background: transparent;
   color: var(--blok-text-secondary);
   font: inherit;
+  text-decoration: none;
   cursor: pointer;
   appearance: none;
   transition:
     background-color var(--blok-duration-base) var(--blok-ease-standard),
     color var(--blok-duration-base) var(--blok-ease-standard);
 }
+.blok-file-preview-open svg,
 .blok-file-preview-close svg {
   width: 18px;
   height: 18px;
 }
+.blok-file-preview-open:hover,
 .blok-file-preview-close:hover {
   background: var(--blok-bg-hover);
   color: var(--blok-text-primary);

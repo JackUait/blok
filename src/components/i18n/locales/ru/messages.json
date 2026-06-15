@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Просмотр",
   "tools.file.previewLoading": "Загрузка предпросмотра…",
   "tools.file.previewError": "Не удалось загрузить предпросмотр",
-  "tools.file.previewDownload": "Скачать"
+  "tools.file.previewDownload": "Скачать",
+  "tools.file.previewOpenInNewTab": "Открыть в новой вкладке",
+  "tools.file.previewOpenInNewTab": "Открыть в новой вкладке"
 }

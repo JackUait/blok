@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Formattato",
   "tools.file.previewLoading": "Caricamento anteprima…",
   "tools.file.previewError": "Impossibile caricare l'anteprima",
-  "tools.file.previewDownload": "Scarica"
+  "tools.file.previewDownload": "Scarica",
+  "tools.file.previewOpenInNewTab": "Apri in una nuova scheda",
+  "tools.file.previewOpenInNewTab": "Apri in una nuova scheda"
 }

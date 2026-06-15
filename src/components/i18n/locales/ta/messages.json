@@ -378,5 +378,7 @@
   "tools.file.previewRender": "வழங்கப்பட்டது",
   "tools.file.previewLoading": "முன்னோட்டம் ஏற்றப்படுகிறது…",
   "tools.file.previewError": "முன்னோட்டத்தை ஏற்ற முடியவில்லை",
-  "tools.file.previewDownload": "பதிவிறக்கு"
+  "tools.file.previewDownload": "பதிவிறக்கு",
+  "tools.file.previewOpenInNewTab": "புதிய தாவலில் திற",
+  "tools.file.previewOpenInNewTab": "புதிய தாவலில் திற"
 }

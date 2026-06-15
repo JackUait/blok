@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Önizləmə",
   "tools.file.previewLoading": "Önizləmə yüklənir…",
   "tools.file.previewError": "Önizləmə yüklənmədi",
-  "tools.file.previewDownload": "Yüklə"
+  "tools.file.previewDownload": "Yüklə",
+  "tools.file.previewOpenInNewTab": "Yeni vərəqdə aç",
+  "tools.file.previewOpenInNewTab": "Yeni vərəqdə aç"
 }

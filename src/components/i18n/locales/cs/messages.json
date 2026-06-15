@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Náhled",
   "tools.file.previewLoading": "Načítání náhledu…",
   "tools.file.previewError": "Náhled se nepodařilo načíst",
-  "tools.file.previewDownload": "Stáhnout"
+  "tools.file.previewDownload": "Stáhnout",
+  "tools.file.previewOpenInNewTab": "Otevřít na nové kartě",
+  "tools.file.previewOpenInNewTab": "Otevřít na nové kartě"
 }

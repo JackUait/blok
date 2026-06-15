@@ -378,5 +378,7 @@
   "tools.file.previewRender": "תצוגה מקדימה",
   "tools.file.previewLoading": "טוען תצוגה מקדימה…",
   "tools.file.previewError": "לא ניתן לטעון את התצוגה המקדימה",
-  "tools.file.previewDownload": "הורדה"
+  "tools.file.previewDownload": "הורדה",
+  "tools.file.previewOpenInNewTab": "פתח בכרטיסייה חדשה",
+  "tools.file.previewOpenInNewTab": "פתח בכרטיסייה חדשה"
 }

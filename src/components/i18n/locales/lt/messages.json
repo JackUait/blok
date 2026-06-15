@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Apdorotas",
   "tools.file.previewLoading": "Įkeliama peržiūra…",
   "tools.file.previewError": "Nepavyko įkelti peržiūros",
-  "tools.file.previewDownload": "Atsisiųsti"
+  "tools.file.previewDownload": "Atsisiųsti",
+  "tools.file.previewOpenInNewTab": "Atidaryti naujame skirtuke",
+  "tools.file.previewOpenInNewTab": "Atidaryti naujame skirtuke"
 }

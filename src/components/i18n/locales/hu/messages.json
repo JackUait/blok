@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Előnézet",
   "tools.file.previewLoading": "Előnézet betöltése…",
   "tools.file.previewError": "Az előnézet nem tölthető be",
-  "tools.file.previewDownload": "Letöltés"
+  "tools.file.previewDownload": "Letöltés",
+  "tools.file.previewOpenInNewTab": "Megnyitás új lapon",
+  "tools.file.previewOpenInNewTab": "Megnyitás új lapon"
 }

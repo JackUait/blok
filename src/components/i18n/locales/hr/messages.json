@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Pregled",
   "tools.file.previewLoading": "Učitavanje pregleda…",
   "tools.file.previewError": "Pregled nije moguće učitati",
-  "tools.file.previewDownload": "Preuzmi"
+  "tools.file.previewDownload": "Preuzmi",
+  "tools.file.previewOpenInNewTab": "Otvori u novoj kartici",
+  "tools.file.previewOpenInNewTab": "Otvori u novoj kartici"
 }

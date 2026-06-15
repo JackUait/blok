@@ -378,5 +378,7 @@
   "tools.file.previewRender": "पूर्वावलोकन",
   "tools.file.previewLoading": "पूर्वावलोकन लोड हो रहा है…",
   "tools.file.previewError": "पूर्वावलोकन लोड नहीं हो सका",
-  "tools.file.previewDownload": "डाउनलोड"
+  "tools.file.previewDownload": "डाउनलोड",
+  "tools.file.previewOpenInNewTab": "नए टैब में खोलें",
+  "tools.file.previewOpenInNewTab": "नए टैब में खोलें"
 }

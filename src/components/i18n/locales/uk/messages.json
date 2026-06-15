@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Відображено",
   "tools.file.previewLoading": "Завантаження попереднього перегляду…",
   "tools.file.previewError": "Не вдалося завантажити попередній перегляд",
-  "tools.file.previewDownload": "Завантажити"
+  "tools.file.previewDownload": "Завантажити",
+  "tools.file.previewOpenInNewTab": "Відкрити в новій вкладці",
+  "tools.file.previewOpenInNewTab": "Відкрити в новій вкладці"
 }

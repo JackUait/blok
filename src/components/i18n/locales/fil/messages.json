@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Naka-render",
   "tools.file.previewLoading": "Nilo-load ang preview…",
   "tools.file.previewError": "Hindi ma-load ang preview",
-  "tools.file.previewDownload": "I-download"
+  "tools.file.previewDownload": "I-download",
+  "tools.file.previewOpenInNewTab": "Buksan sa bagong tab",
+  "tools.file.previewOpenInNewTab": "Buksan sa bagong tab"
 }

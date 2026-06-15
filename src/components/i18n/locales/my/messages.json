@@ -378,5 +378,7 @@
   "tools.file.previewRender": "ပြသထားသည်",
   "tools.file.previewLoading": "အစမ်းကြည့်ရှုမှုကို တင်နေသည်…",
   "tools.file.previewError": "အစမ်းကြည့်ရှုမှုကို တင်၍မရပါ",
-  "tools.file.previewDownload": "ဒေါင်းလုဒ်"
+  "tools.file.previewDownload": "ဒေါင်းလုဒ်",
+  "tools.file.previewOpenInNewTab": "တက်ဘ်အသစ်တွင် ဖွင့်ပါ",
+  "tools.file.previewOpenInNewTab": "တက်ဘ်အသစ်တွင် ဖွင့်ပါ"
 }

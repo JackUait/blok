@@ -327,6 +327,7 @@
   "tools.file.previewLoading": "Loading preview…",
   "tools.file.previewError": "Couldn't load preview",
   "tools.file.previewDownload": "Download",
+  "tools.file.previewOpenInNewTab": "Open in new tab",
   "tools.database.titlePlaceholder": "New database",
   "tools.database.renameView": "Rename",
   "tools.database.duplicateView": "Duplicate",

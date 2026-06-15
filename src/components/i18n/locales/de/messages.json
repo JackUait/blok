@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Vorschau",
   "tools.file.previewLoading": "Vorschau wird geladen…",
   "tools.file.previewError": "Vorschau konnte nicht geladen werden",
-  "tools.file.previewDownload": "Herunterladen"
+  "tools.file.previewDownload": "Herunterladen",
+  "tools.file.previewOpenInNewTab": "In neuem Tab öffnen",
+  "tools.file.previewOpenInNewTab": "In neuem Tab öffnen"
 }

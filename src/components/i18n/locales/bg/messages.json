@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Преглед",
   "tools.file.previewLoading": "Зареждане на прегледа…",
   "tools.file.previewError": "Прегледът не можа да се зареди",
-  "tools.file.previewDownload": "Изтегли"
+  "tools.file.previewDownload": "Изтегли",
+  "tools.file.previewOpenInNewTab": "Отваряне в нов раздел",
+  "tools.file.previewOpenInNewTab": "Отваряне в нов раздел"
 }

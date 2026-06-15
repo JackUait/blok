@@ -378,5 +378,7 @@
   "tools.file.previewRender": "معاينة",
   "tools.file.previewLoading": "جارٍ تحميل المعاينة…",
   "tools.file.previewError": "تعذّر تحميل المعاينة",
-  "tools.file.previewDownload": "تنزيل"
+  "tools.file.previewDownload": "تنزيل",
+  "tools.file.previewOpenInNewTab": "فتح في علامة تبويب جديدة",
+  "tools.file.previewOpenInNewTab": "فتح في علامة تبويب جديدة"
 }

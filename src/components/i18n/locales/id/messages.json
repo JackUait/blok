@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Terformat",
   "tools.file.previewLoading": "Memuat pratinjau…",
   "tools.file.previewError": "Tidak dapat memuat pratinjau",
-  "tools.file.previewDownload": "Unduh"
+  "tools.file.previewDownload": "Unduh",
+  "tools.file.previewOpenInNewTab": "Buka di tab baru",
+  "tools.file.previewOpenInNewTab": "Buka di tab baru"
 }

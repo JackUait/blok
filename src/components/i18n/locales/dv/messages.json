@@ -378,5 +378,7 @@
   "tools.file.previewRender": "ޕްރިވިއު",
   "tools.file.previewLoading": "ޕްރިވިއު ލޯޑުވަނީ…",
   "tools.file.previewError": "ޕްރިވިއު ލޯޑެއް ނުކުރެވުނު",
-  "tools.file.previewDownload": "ޑައުންލޯޑް"
+  "tools.file.previewDownload": "ޑައުންލޯޑް",
+  "tools.file.previewOpenInNewTab": "އައު ޓެބެއްގައި ހުޅުވާ",
+  "tools.file.previewOpenInNewTab": "އައު ޓެބެއްގައި ހުޅުވާ"
 }

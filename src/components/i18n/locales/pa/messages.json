@@ -378,5 +378,7 @@
   "tools.file.previewRender": "ਰੈਂਡਰ ਕੀਤਾ",
   "tools.file.previewLoading": "ਝਲਕ ਲੋਡ ਹੋ ਰਹੀ ਹੈ…",
   "tools.file.previewError": "ਝਲਕ ਲੋਡ ਨਹੀਂ ਹੋ ਸਕੀ",
-  "tools.file.previewDownload": "ਡਾਊਨਲੋਡ"
+  "tools.file.previewDownload": "ਡਾਊਨਲੋਡ",
+  "tools.file.previewOpenInNewTab": "ਨਵੀਂ ਟੈਬ ਵਿੱਚ ਖੋਲ੍ਹੋ",
+  "tools.file.previewOpenInNewTab": "ਨਵੀਂ ਟੈਬ ਵਿੱਚ ਖੋਲ੍ਹੋ"
 }

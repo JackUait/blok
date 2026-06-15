@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Podgląd",
   "tools.file.previewLoading": "Ładowanie podglądu…",
   "tools.file.previewError": "Nie udało się załadować podglądu",
-  "tools.file.previewDownload": "Pobierz"
+  "tools.file.previewDownload": "Pobierz",
+  "tools.file.previewOpenInNewTab": "Otwórz w nowej karcie",
+  "tools.file.previewOpenInNewTab": "Otwórz w nowej karcie"
 }

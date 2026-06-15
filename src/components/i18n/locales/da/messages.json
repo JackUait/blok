@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Gengivet",
   "tools.file.previewLoading": "Indlæser forhåndsvisning…",
   "tools.file.previewError": "Kunne ikke indlæse forhåndsvisning",
-  "tools.file.previewDownload": "Hent"
+  "tools.file.previewDownload": "Hent",
+  "tools.file.previewOpenInNewTab": "Åbn i ny fane",
+  "tools.file.previewOpenInNewTab": "Åbn i ny fane"
 }

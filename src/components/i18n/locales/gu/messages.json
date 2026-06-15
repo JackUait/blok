@@ -378,5 +378,7 @@
   "tools.file.previewRender": "પૂર્વાવલોકન",
   "tools.file.previewLoading": "પૂર્વાવલોકન લોડ થઈ રહ્યું છે…",
   "tools.file.previewError": "પૂર્વાવલોકન લોડ કરી શકાયું નથી",
-  "tools.file.previewDownload": "ડાઉનલોડ"
+  "tools.file.previewDownload": "ડાઉનલોડ",
+  "tools.file.previewOpenInNewTab": "નવી ટૅબમાં ખોલો",
+  "tools.file.previewOpenInNewTab": "નવી ટૅબમાં ખોલો"
 }

@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Đã kết xuất",
   "tools.file.previewLoading": "Đang tải bản xem trước…",
   "tools.file.previewError": "Không thể tải bản xem trước",
-  "tools.file.previewDownload": "Tải xuống"
+  "tools.file.previewDownload": "Tải xuống",
+  "tools.file.previewOpenInNewTab": "Mở trong tab mới",
+  "tools.file.previewOpenInNewTab": "Mở trong tab mới"
 }

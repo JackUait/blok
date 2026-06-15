@@ -6,7 +6,7 @@ import { extToPrismLang } from './code-languages';
 import { tokenizePrism, isHighlightable } from '../code/prism-loader';
 import { applyPrismHighlight, ensurePrismStyles } from '../code/prism-applier';
 import { markdownToHtml } from '../../markdown/markdownToHtml';
-import { IconFile, IconCross } from '../../components/icons';
+import { IconFile, IconCross, IconLinkExternal } from '../../components/icons';
 
 /** Time budget for the close animation before forcing teardown (ms). */
 const CLOSE_ANIMATION_FALLBACK_MS = 260;
@@ -47,6 +47,7 @@ export interface FilePreviewOptions {
     loading?: string;
     error?: string;
     download?: string;
+    openInNewTab?: string;
   };
 }
 
@@ -291,9 +292,31 @@ function buildElements(opts: FilePreviewOptions): PreviewElements {
   closeButton.setAttribute('aria-label', opts.labels.close);
   closeButton.innerHTML = IconCross;
 
-  header.append(title, closeButton);
+  const actions = document.createElement('div');
+  actions.className = 'blok-file-preview-actions';
 
   const kind = getPreviewKind({ url: opts.url, fileName: opts.fileName, mimeType: opts.mimeType });
+
+  // PDFs render in a sandboxed iframe with no browser chrome of their own — give
+  // readers a one-click escape into a full browser tab with native zoom/print.
+  const openHref = kind === 'pdf' ? safePreviewSrc(opts.url) : null;
+  if (openHref !== null) {
+    const open = document.createElement('a');
+    open.className = 'blok-file-preview-open';
+    open.setAttribute('data-action', 'preview-open-tab');
+    open.href = openHref;
+    open.target = '_blank';
+    open.rel = 'noopener noreferrer';
+    if (opts.labels.openInNewTab) {
+      open.setAttribute('aria-label', opts.labels.openInNewTab);
+      open.title = opts.labels.openInNewTab;
+    }
+    open.innerHTML = IconLinkExternal;
+    actions.appendChild(open);
+  }
+  actions.appendChild(closeButton);
+  header.append(title, actions);
+
   const body = buildBody(opts, kind ?? 'text');
 
   dialog.append(header, body);

@@ -378,5 +378,7 @@
   "tools.file.previewRender": "געווידעמט",
   "tools.file.previewLoading": "לאָדט פאַרויסזע…",
   "tools.file.previewError": "מע האָט נישט געקענט לאָדן די פאַרויסזע",
-  "tools.file.previewDownload": "אראפלאדן"
+  "tools.file.previewDownload": "אראפלאדן",
+  "tools.file.previewOpenInNewTab": "עפֿן אין נײַעם טאַב",
+  "tools.file.previewOpenInNewTab": "עפֿן אין נײַעם טאַב"
 }

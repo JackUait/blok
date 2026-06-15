@@ -378,5 +378,7 @@
   "tools.file.previewRender": "පෙළගස්වන ලද",
   "tools.file.previewLoading": "පෙරදසුන පූරණය වෙමින්…",
   "tools.file.previewError": "පෙරදසුන පූරණය කළ නොහැකි විය",
-  "tools.file.previewDownload": "බාගන්න"
+  "tools.file.previewDownload": "බාගන්න",
+  "tools.file.previewOpenInNewTab": "නව පටිත්තක විවෘත කරන්න",
+  "tools.file.previewOpenInNewTab": "නව පටිත්තක විවෘත කරන්න"
 }

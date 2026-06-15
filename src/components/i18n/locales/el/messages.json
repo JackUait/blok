@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Προεπισκόπηση",
   "tools.file.previewLoading": "Φόρτωση προεπισκόπησης…",
   "tools.file.previewError": "Δεν ήταν δυνατή η φόρτωση της προεπισκόπησης",
-  "tools.file.previewDownload": "Λήψη"
+  "tools.file.previewDownload": "Λήψη",
+  "tools.file.previewOpenInNewTab": "Άνοιγμα σε νέα καρτέλα",
+  "tools.file.previewOpenInNewTab": "Άνοιγμα σε νέα καρτέλα"
 }

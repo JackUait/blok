@@ -378,5 +378,7 @@
   "tools.file.previewRender": "ښودل شوی",
   "tools.file.previewLoading": "د مخکتنې بارول…",
   "tools.file.previewError": "مخکتنه بار نشوه",
-  "tools.file.previewDownload": "ډاونلوډ"
+  "tools.file.previewDownload": "ډاونلوډ",
+  "tools.file.previewOpenInNewTab": "په نوي ټب کې پرانیزئ",
+  "tools.file.previewOpenInNewTab": "په نوي ټب کې پرانیزئ"
 }

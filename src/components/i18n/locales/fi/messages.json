@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Esikatselu",
   "tools.file.previewLoading": "Ladataan esikatselua…",
   "tools.file.previewError": "Esikatselua ei voitu ladata",
-  "tools.file.previewDownload": "Lataa"
+  "tools.file.previewDownload": "Lataa",
+  "tools.file.previewOpenInNewTab": "Avaa uudessa välilehdessä",
+  "tools.file.previewOpenInNewTab": "Avaa uudessa välilehdessä"
 }

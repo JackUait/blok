@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Randat",
   "tools.file.previewLoading": "Se încarcă previzualizarea…",
   "tools.file.previewError": "Previzualizarea nu a putut fi încărcată",
-  "tools.file.previewDownload": "Descarcă"
+  "tools.file.previewDownload": "Descarcă",
+  "tools.file.previewOpenInNewTab": "Deschide în filă nouă",
+  "tools.file.previewOpenInNewTab": "Deschide în filă nouă"
 }

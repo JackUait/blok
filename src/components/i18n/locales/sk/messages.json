@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Náhľad",
   "tools.file.previewLoading": "Načítava sa náhľad…",
   "tools.file.previewError": "Náhľad sa nepodarilo načítať",
-  "tools.file.previewDownload": "Stiahnuť"
+  "tools.file.previewDownload": "Stiahnuť",
+  "tools.file.previewOpenInNewTab": "Otvoriť na novej karte",
+  "tools.file.previewOpenInNewTab": "Otvoriť na novej karte"
 }

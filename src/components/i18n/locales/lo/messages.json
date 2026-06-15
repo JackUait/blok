@@ -378,5 +378,7 @@
   "tools.file.previewRender": "ສະແດງຜົນ",
   "tools.file.previewLoading": "ກຳລັງໂຫຼດການເບິ່ງຕົວຢ່າງ…",
   "tools.file.previewError": "ບໍ່ສາມາດໂຫຼດການເບິ່ງຕົວຢ່າງໄດ້",
-  "tools.file.previewDownload": "ດາວໂຫຼດ"
+  "tools.file.previewDownload": "ດາວໂຫຼດ",
+  "tools.file.previewOpenInNewTab": "ເປີດໃນແທັບໃໝ່",
+  "tools.file.previewOpenInNewTab": "ເປີດໃນແທັບໃໝ່"
 }

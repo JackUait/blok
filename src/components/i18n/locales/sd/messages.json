@@ -378,5 +378,7 @@
   "tools.file.previewRender": "پيش ڪيل",
   "tools.file.previewLoading": "اڳ ڏيک لوڊ ٿي رهيو آهي…",
   "tools.file.previewError": "اڳ ڏيک لوڊ نه ٿي سگهيو",
-  "tools.file.previewDownload": "ڊائون لوڊ"
+  "tools.file.previewDownload": "ڊائون لوڊ",
+  "tools.file.previewOpenInNewTab": "نئين ٽئب ۾ کوليو",
+  "tools.file.previewOpenInNewTab": "نئين ٽئب ۾ کوليو"
 }

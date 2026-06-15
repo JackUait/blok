@@ -378,5 +378,7 @@
   "tools.file.previewRender": "ڕەندەرکراو",
   "tools.file.previewLoading": "پێشبینین باردەکرێت…",
   "tools.file.previewError": "نەتوانرا پێشبینین باربکرێت",
-  "tools.file.previewDownload": "داگرتن"
+  "tools.file.previewDownload": "داگرتن",
+  "tools.file.previewOpenInNewTab": "Di hilfirîneke nû de veke",
+  "tools.file.previewOpenInNewTab": "Di hilfirîneke nû de veke"
 }

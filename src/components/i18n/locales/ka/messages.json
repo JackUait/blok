@@ -378,5 +378,7 @@
   "tools.file.previewRender": "დამუშავებული",
   "tools.file.previewLoading": "მიმდინარეობს გადახედვის ჩატვირთვა…",
   "tools.file.previewError": "გადახედვის ჩატვირთვა ვერ მოხერხდა",
-  "tools.file.previewDownload": "ჩამოტვირთვა"
+  "tools.file.previewDownload": "ჩამოტვირთვა",
+  "tools.file.previewOpenInNewTab": "ახალ ჩანართში გახსნა",
+  "tools.file.previewOpenInNewTab": "ახალ ჩანართში გახსნა"
 }

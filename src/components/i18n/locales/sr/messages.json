@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Приказано",
   "tools.file.previewLoading": "Учитавање прегледа…",
   "tools.file.previewError": "Није могуће учитати преглед",
-  "tools.file.previewDownload": "Преузми"
+  "tools.file.previewDownload": "Преузми",
+  "tools.file.previewOpenInNewTab": "Отвори у новој картици",
+  "tools.file.previewOpenInNewTab": "Отвори у новој картици"
 }

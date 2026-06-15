@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Atveidots",
   "tools.file.previewLoading": "Notiek priekšskatījuma ielāde…",
   "tools.file.previewError": "Neizdevās ielādēt priekšskatījumu",
-  "tools.file.previewDownload": "Lejupielādēt"
+  "tools.file.previewDownload": "Lejupielādēt",
+  "tools.file.previewOpenInNewTab": "Atvērt jaunā cilnē",
+  "tools.file.previewOpenInNewTab": "Atvērt jaunā cilnē"
 }

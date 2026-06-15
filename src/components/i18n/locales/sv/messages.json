@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Återgiven",
   "tools.file.previewLoading": "Läser in förhandsgranskning…",
   "tools.file.previewError": "Det gick inte att läsa in förhandsgranskningen",
-  "tools.file.previewDownload": "Ladda ner"
+  "tools.file.previewDownload": "Ladda ner",
+  "tools.file.previewOpenInNewTab": "Öppna i ny flik",
+  "tools.file.previewOpenInNewTab": "Öppna i ny flik"
 }

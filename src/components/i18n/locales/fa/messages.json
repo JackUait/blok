@@ -378,5 +378,7 @@
   "tools.file.previewRender": "پیش‌نمایش",
   "tools.file.previewLoading": "در حال بارگذاری پیش‌نمایش…",
   "tools.file.previewError": "بارگذاری پیش‌نمایش ممکن نشد",
-  "tools.file.previewDownload": "دانلود"
+  "tools.file.previewDownload": "دانلود",
+  "tools.file.previewOpenInNewTab": "باز کردن در زبانه جدید",
+  "tools.file.previewOpenInNewTab": "باز کردن در زبانه جدید"
 }

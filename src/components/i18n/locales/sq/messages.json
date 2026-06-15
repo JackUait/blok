@@ -378,5 +378,7 @@
   "tools.file.previewRender": "E renderuar",
   "tools.file.previewLoading": "Po ngarkohet pamja paraprake…",
   "tools.file.previewError": "Pamja paraprake nuk u ngarkua dot",
-  "tools.file.previewDownload": "Shkarko"
+  "tools.file.previewDownload": "Shkarko",
+  "tools.file.previewOpenInNewTab": "Hap në skedë të re",
+  "tools.file.previewOpenInNewTab": "Hap në skedë të re"
 }

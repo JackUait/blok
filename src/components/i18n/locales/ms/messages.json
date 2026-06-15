@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Dipaparkan",
   "tools.file.previewLoading": "Memuatkan pratonton…",
   "tools.file.previewError": "Tidak dapat memuatkan pratonton",
-  "tools.file.previewDownload": "Muat turun"
+  "tools.file.previewDownload": "Muat turun",
+  "tools.file.previewOpenInNewTab": "Buka dalam tab baharu",
+  "tools.file.previewOpenInNewTab": "Buka dalam tab baharu"
 }

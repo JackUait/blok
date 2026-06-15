@@ -64,6 +64,32 @@ describe('openFilePreview', () => {
     expect(document.body.querySelector('[data-role="file-preview-error"]')).not.toBeNull();
   });
 
+  it('renders an open-in-new-tab anchor for a pdf pointing at the file', () => {
+    openFilePreview({ url: 'https://example.com/a.pdf', fileName: 'a.pdf', labels: { ...labels, openInNewTab: 'Open in new tab' } });
+
+    const open = document.body.querySelector<HTMLAnchorElement>('[data-action="preview-open-tab"]');
+    expect(open).not.toBeNull();
+    expect(open?.getAttribute('href')).toBe('https://example.com/a.pdf');
+    expect(open?.target).toBe('_blank');
+    expect(open?.rel).toContain('noopener');
+    expect(open?.getAttribute('aria-label')).toBe('Open in new tab');
+  });
+
+  it('renders the open-in-new-tab anchor for a blob: pdf', () => {
+    openFilePreview({ url: 'blob:https://example.com/abc-123', mimeType: 'application/pdf', labels: { ...labels, openInNewTab: 'Open in new tab' } });
+
+    const open = document.body.querySelector<HTMLAnchorElement>('[data-action="preview-open-tab"]');
+    expect(open?.getAttribute('href')).toBe('blob:https://example.com/abc-123');
+  });
+
+  it('omits the open-in-new-tab anchor for a text file', () => {
+    vi.mocked(loadTextPreview).mockResolvedValue({ ok: true, text: '' });
+    const teardown = openFilePreview({ url: 'notes.txt', fileName: 'notes.txt', labels: { ...labels, openInNewTab: 'Open in new tab' } });
+
+    expect(document.body.querySelector('[data-action="preview-open-tab"]')).toBeNull();
+    teardown();
+  });
+
   it('closes on Escape keydown', () => {
     openFilePreview({ url: 'https://example.com/a.pdf', labels });
     expect(getDialog()).not.toBeNull();

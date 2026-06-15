@@ -378,5 +378,7 @@
   "tools.file.previewRender": "미리 보기",
   "tools.file.previewLoading": "미리 보기를 불러오는 중…",
   "tools.file.previewError": "미리 보기를 불러올 수 없습니다",
-  "tools.file.previewDownload": "다운로드"
+  "tools.file.previewDownload": "다운로드",
+  "tools.file.previewOpenInNewTab": "새 탭에서 열기",
+  "tools.file.previewOpenInNewTab": "새 탭에서 열기"
 }

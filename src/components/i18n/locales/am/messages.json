@@ -378,5 +378,7 @@
   "tools.file.previewRender": "የተቀረጸ",
   "tools.file.previewLoading": "ቅድመ ዕይታ በመጫን ላይ…",
   "tools.file.previewError": "ቅድመ ዕይታ መጫን አልተቻለም",
-  "tools.file.previewDownload": "አውርድ"
+  "tools.file.previewDownload": "አውርድ",
+  "tools.file.previewOpenInNewTab": "በአዲስ ትር ክፈት",
+  "tools.file.previewOpenInNewTab": "በአዲስ ትር ክፈት"
 }

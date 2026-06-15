@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Մշակված",
   "tools.file.previewLoading": "Բեռնվում է նախադիտումը…",
   "tools.file.previewError": "Չհաջողվեց բեռնել նախադիտումը",
-  "tools.file.previewDownload": "Ներբեռնել"
+  "tools.file.previewDownload": "Ներբեռնել",
+  "tools.file.previewOpenInNewTab": "Բացել նոր ներդիրում",
+  "tools.file.previewOpenInNewTab": "Բացել նոր ներդիրում"
 }

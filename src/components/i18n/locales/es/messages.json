@@ -378,5 +378,7 @@
   "tools.file.previewRender": "Vista previa",
   "tools.file.previewLoading": "Cargando vista previa…",
   "tools.file.previewError": "No se pudo cargar la vista previa",
-  "tools.file.previewDownload": "Descargar"
+  "tools.file.previewDownload": "Descargar",
+  "tools.file.previewOpenInNewTab": "Abrir en una pestaña nueva",
+  "tools.file.previewOpenInNewTab": "Abrir en una pestaña nueva"
 }

@@ -24,6 +24,11 @@ if (!window.cancelIdleCallback) {
   }) as unknown as typeof window.cancelIdleCallback;
 }
 
+// Polyfill document.adoptedStyleSheets for jsdom environment
+if (!document.adoptedStyleSheets) {
+  document.adoptedStyleSheets = [];
+}
+
 // Polyfill ResizeObserver for jsdom environment
 if (!window.ResizeObserver) {
   window.ResizeObserver = class ResizeObserver {

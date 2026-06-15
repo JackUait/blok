@@ -104,7 +104,8 @@ const DARK_RULES = `
 .dark .blok-code.lang-mermaid .token.string { color: inherit; }
 `;
 
-function ensureStylesheet(): void {
+/** Adopt the Prism token-color stylesheet (idempotent). */
+export function ensurePrismStyles(): void {
   if (stylesheet) return;
   stylesheet = new CSSStyleSheet();
   stylesheet.replaceSync(LIGHT_RULES + DARK_RULES);
@@ -150,7 +151,7 @@ function setCaretOffset(el: HTMLElement, offset: number): void {
  * to scope language-specific CSS rules (e.g. Mermaid token colors).
  */
 export function applyPrismHighlight(el: HTMLElement, highlightedHtml: string, lang?: string): () => void {
-  ensureStylesheet();
+  ensurePrismStyles();
 
   const plainText = el.textContent ?? '';
   const caretOffset = getCaretOffset(el);

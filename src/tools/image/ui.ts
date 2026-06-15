@@ -171,6 +171,12 @@ export interface LightboxNavigationItem {
   alt?: string;
   fileName?: string;
   crop?: ImageCrop;
+  /**
+   * The inline thumbnail for this item, used to re-target the FLIP morph when
+   * navigating. Closing the lightbox animates back into the current item's
+   * thumbnail, not the one the lightbox was originally opened on.
+   */
+  origin?: HTMLElement;
 }
 
 export interface LightboxOptions {
@@ -388,6 +394,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
     currentItem.alt = item.alt;
     currentItem.fileName = item.fileName;
     currentItem.crop = item.crop;
+    retargetOrigin(item.origin ?? null);
     zoomState.value = 1;
     panState.x = 0;
     panState.y = 0;
@@ -479,8 +486,23 @@ export function openLightbox(opts: LightboxOptions): () => void {
     nav: null,
     closing: false,
   };
-  const origin = opts.origin && opts.origin.isConnected ? opts.origin : null;
-  const originPrevOpacity = origin ? origin.style.opacity : '';
+  const initialOrigin = opts.origin && opts.origin.isConnected ? opts.origin : null;
+  const originState: { el: HTMLElement | null; prevOpacity: string } = {
+    el: initialOrigin,
+    prevOpacity: initialOrigin ? initialOrigin.style.opacity : '',
+  };
+
+  // Re-point the FLIP origin at the navigated item's thumbnail. The previously
+  // hidden thumbnail is revealed and the new one hidden, so the open-time
+  // opacity dance stays balanced and close morphs into the image on screen.
+  const retargetOrigin = (next: HTMLElement | null): void => {
+    const target = next && next.isConnected ? next : null;
+    if (target === originState.el) return;
+    if (originState.el) originState.el.style.opacity = originState.prevOpacity;
+    originState.el = target;
+    originState.prevOpacity = target ? target.style.opacity : '';
+    if (target) target.style.opacity = '0';
+  };
 
   const cancelRunning = (): void => {
     animState.img?.cancel();
@@ -524,12 +546,12 @@ export function openLightbox(opts: LightboxOptions): () => void {
   };
 
   const playOpen = (): void => {
-    if (origin && canAnimate(displayState.el)) {
-      const srcRect = origin.getBoundingClientRect();
+    if (originState.el && canAnimate(displayState.el)) {
+      const srcRect = originState.el.getBoundingClientRect();
       const destRect = displayState.el.getBoundingClientRect();
       if (srcRect.width > 0 && srcRect.height > 0 && destRect.width > 0 && destRect.height > 0) {
         const from = toTransform(flipTransform(srcRect, destRect));
-        origin.style.opacity = '0';
+        originState.el.style.opacity = '0';
         animState.img = displayState.el.animate(
           [{ transform: from }, { transform: 'translate(0px, 0px) scale(1)' }],
           { duration: OPEN_DURATION, easing: OPEN_EASING, fill: 'backwards' }
@@ -558,7 +580,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
     document.removeEventListener('keydown', onKey);
     removeFromTopLayer(dialog);
     dialog.remove();
-    if (origin) origin.style.opacity = originPrevOpacity;
+    if (originState.el) originState.el.style.opacity = originState.prevOpacity;
     previousFocus?.focus?.();
   };
 
@@ -613,7 +635,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
     if (animState.closing) return;
     animState.closing = true;
     cancelRunning();
-    if (origin && canAnimate(displayState.el)) closeWithFlip(origin);
+    if (originState.el && canAnimate(displayState.el)) closeWithFlip(originState.el);
     else closeFadeOnly();
   };
 

@@ -396,11 +396,11 @@ export class ImageTool implements BlockTool {
     });
   }
 
-  private collectNavigation(): { items: Array<{ url: string; alt?: string; fileName?: string; crop?: ImageCrop }>; startIndex: number } | undefined {
+  private collectNavigation(): { items: Array<{ url: string; alt?: string; fileName?: string; crop?: ImageCrop; origin?: HTMLElement }>; startIndex: number } | undefined {
     const blocksApi = (this.api as API & { blocks?: { getBlocksCount(): number; getBlockByIndex(i: number): BlockAPI | undefined } }).blocks;
     if (!blocksApi?.getBlocksCount || !blocksApi.getBlockByIndex) return undefined;
     const count = blocksApi.getBlocksCount();
-    type Collected = { blockId: string; item: { url: string; alt?: string; fileName?: string; crop?: ImageCrop } };
+    type Collected = { blockId: string; item: { url: string; alt?: string; fileName?: string; crop?: ImageCrop; origin?: HTMLElement } };
     const collected: Collected[] = Array.from({ length: count }, (_, i) => blocksApi.getBlockByIndex(i))
       .filter((b): b is BlockAPI => b !== undefined && b.name === 'image')
       .map((b): Collected | null => {
@@ -408,15 +408,17 @@ export class ImageTool implements BlockTool {
         if (toolRoot?.getAttribute('data-state') === 'error') return null;
         const img = b.holder?.querySelector<HTMLImageElement>('.blok-image-inner img');
         if (img && img.complete && img.naturalWidth === 0) return null;
+        // FLIP origin for this thumbnail: the crop wrapper when cropped, else the img.
+        const origin = b.holder?.querySelector<HTMLElement>('.blok-image-crop') ?? img ?? undefined;
         const preserved = b.preservedData as Partial<ImageData> | undefined;
         const preservedUrl = typeof preserved?.url === 'string' ? preserved.url : '';
         if (preservedUrl) {
-          return { blockId: b.id, item: { url: preservedUrl, alt: preserved?.alt, fileName: preserved?.fileName, crop: preserved?.crop } };
+          return { blockId: b.id, item: { url: preservedUrl, alt: preserved?.alt, fileName: preserved?.fileName, crop: preserved?.crop, origin } };
         }
         const src = img?.getAttribute('src') ?? '';
         if (!src) return null;
         const alt = img?.getAttribute('alt') ?? undefined;
-        return { blockId: b.id, item: { url: src, alt, fileName: preserved?.fileName, crop: preserved?.crop } };
+        return { blockId: b.id, item: { url: src, alt, fileName: preserved?.fileName, crop: preserved?.crop, origin } };
       })
       .filter((entry): entry is Collected => entry !== null);
     if (collected.length < 2) return undefined;

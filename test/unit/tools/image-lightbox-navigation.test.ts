@@ -173,4 +173,61 @@ describe('openLightbox navigation', () => {
     next.click();
     expect(document.querySelector('[role="dialog"][aria-modal="true"]')).not.toBeNull();
   });
+
+  describe('close-after-navigate FLIP origin', () => {
+    const makeOrigin = (left: number): HTMLElement => {
+      const el = document.createElement('div');
+      document.body.appendChild(el);
+      vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
+        left, top: 0, right: left + 100, bottom: 100, width: 100, height: 100, x: left, y: 0, toJSON: () => ({}),
+      } as DOMRect);
+      return el;
+    };
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      Reflect.deleteProperty(HTMLElement.prototype, 'animate');
+      document.querySelectorAll('div').forEach((el) => el.remove());
+    });
+
+    it('morphs back into the navigated image thumbnail, not the one opened on', () => {
+      // Web Animations API is absent in jsdom; stub a no-op so canAnimate() is true,
+      // the FLIP close path (closeWithFlip) runs, and the dialog is not removed
+      // (the fake animation never fires onfinish) so we can read the final transform.
+      const fakeAnim = { onfinish: null, oncancel: null, cancel: () => {} } as unknown as Animation;
+      Reflect.set(HTMLElement.prototype, 'animate', () => fakeAnim);
+
+      const originA = makeOrigin(0); // thumbnail centre x = 50
+      const originB = makeOrigin(1000); // thumbnail centre x = 1050
+
+      const close = openLightbox({
+        url: 'https://x/a.png',
+        origin: originA,
+        navigation: {
+          items: [
+            { url: 'https://x/a.png', alt: 'a', origin: originA },
+            { url: 'https://x/b.png', alt: 'b', origin: originB },
+          ],
+          startIndex: 0,
+        },
+      });
+
+      const next = document.querySelector<HTMLButtonElement>('[data-action="lightbox-next"]');
+      if (!next) throw new Error('next missing');
+      next.click();
+
+      close();
+
+      // closeWithFlip commits the reverse-FLIP destination onto the displayed
+      // image's inline transform. The displayed element's identity rect is the
+      // jsdom zero-rect, so the translate equals the target thumbnail's centre:
+      // image B → translate(1050px, 50px), image A would be translate(50px, 50px).
+      const img = document.querySelector<HTMLImageElement>('[role="dialog"] img');
+      if (!img) throw new Error('displayed image missing');
+      expect(img.style.transform).toContain('translate(1050px, 50px)');
+      expect(img.style.transform).not.toContain('translate(50px, 50px)');
+
+      close();
+    });
+  });
 });

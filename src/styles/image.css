@@ -138,6 +138,14 @@
   transform: translateY(0);
   pointer-events: auto;
 }
+/* While the image bytes are still loading (spinner state), keep the floating
+   toolbar hidden so its controls don't sit over the loading placeholder, even
+   when the block is hovered/selected. Mirrors the caption-row hide above. */
+[data-blok-tool="image"] .blok-image-inner[data-loading="true"] .blok-image-toolbar {
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+}
 [data-blok-tool="image"] .blok-image-toolbar button {
   width: 28px; height: 28px;
   display: grid; place-items: center;
@@ -587,6 +595,9 @@
   filter: blur(18px) saturate(1.1);
   transform: scale(1.08);
   color: transparent; /* suppress alt-text fallback while loading */
+  /* No zoom affordance until the image is ready; overrides the inline
+     `cursor: zoom-in` set in renderRendered(). */
+  cursor: default !important;
 }
 [data-blok-tool="image"] .blok-image-inner[data-loading="true"]::before {
   content: "";

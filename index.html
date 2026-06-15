@@ -1616,6 +1616,43 @@
       },
       {
         type: "header",
+        id: "file-section-header",
+        data: {
+          text: "File Attachments",
+          level: 2
+        }
+      },
+      {
+        type: "paragraph",
+        id: "file-section-intro",
+        data: {
+          text: "Drop or upload any file. PDFs get an inline preview modal — click the file to open it. Other types show a download affordance."
+        }
+      },
+      {
+        id: "file-pdf-example",
+        type: "file",
+        data: {
+          url: "https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf",
+          fileName: "tracemonkey-paper.pdf",
+          size: 1016315,
+          mimeType: "application/pdf",
+          caption: "Click to preview this PDF inline.",
+          captionVisible: true
+        }
+      },
+      {
+        id: "file-doc-example",
+        type: "file",
+        data: {
+          url: "https://raw.githubusercontent.com/jackuait/blok/master/README.md",
+          fileName: "README.md",
+          size: 8421,
+          mimeType: "text/markdown"
+        }
+      },
+      {
+        type: "header",
         id: "database-section-header",
          data: {
            text: "Database (Kanban Board & List)",
@@ -2454,6 +2491,42 @@
         ],
       },
       {
+        tool: 'file',
+        label: 'File',
+        states: [
+          { label: 'Empty (upload)', blocks: [{ id: 'fl-empty', type: 'file', data: { url: '' } }] },
+          { label: 'PDF (previewable)', blocks: [{ id: 'fl-pdf', type: 'file', data: {
+            url: 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf',
+            fileName: 'tracemonkey-paper.pdf',
+            size: 1016315,
+            mimeType: 'application/pdf',
+          } }] },
+          { label: 'Document (download)', blocks: [{ id: 'fl-doc', type: 'file', data: {
+            url: 'https://raw.githubusercontent.com/jackuait/blok/master/README.md',
+            fileName: 'README.md',
+            size: 8421,
+            mimeType: 'text/markdown',
+          } }] },
+          { label: 'With caption', blocks: [{ id: 'fl-caption', type: 'file', data: {
+            url: 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf',
+            fileName: 'annual-report.pdf',
+            size: 1016315,
+            mimeType: 'application/pdf',
+            caption: 'Financial summary for the 2025 fiscal year.',
+            captionVisible: true,
+          } }] },
+          { label: 'Large file', blocks: [{ id: 'fl-large', type: 'file', data: {
+            url: 'https://example.com/dataset.zip',
+            fileName: 'dataset.zip',
+            size: 52428800,
+            mimeType: 'application/zip',
+          } }] },
+          { label: 'URL only (no metadata)', blocks: [{ id: 'fl-bare', type: 'file', data: {
+            url: 'https://example.com/files/attachment.bin',
+          } }] },
+        ],
+      },
+      {
         tool: 'bookmark',
         label: 'Bookmark',
         states: [
@@ -2553,6 +2626,19 @@
           quote: Quote,
           code: Code,
           image: Image,
+          file: {
+            class: FileBlock,
+            config: {
+              uploader: {
+                uploadByFile: async (file) => ({
+                  url: URL.createObjectURL(file),
+                  fileName: file.name,
+                  size: file.size,
+                  mimeType: file.type,
+                }),
+              },
+            },
+          },
           column_list: ColumnList,
           column: Column,
           embed: Embed,

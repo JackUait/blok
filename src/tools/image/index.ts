@@ -53,6 +53,15 @@ import { Uploader, type UploadResult } from './uploader';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
+function canAnimate(el: Element | null): el is Element & { animate: HTMLElement['animate'] } {
+  return el != null && typeof (el as HTMLElement).animate === 'function';
+}
+
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined'
+    && !!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+}
+
 export class ImageTool implements BlockTool {
   private readonly api: API;
   private readonly block: BlockAPI;
@@ -803,14 +812,52 @@ export class ImageTool implements BlockTool {
   }
 
   private transitionToEmpty(): void {
+    const outgoing = this.root?.firstElementChild ?? null;
     this.data = { ...this.data, url: '' };
     this.state = 'EMPTY';
     this.errorMessage = null;
     this.brokenImage = false;
     this.lastSource = null;
     this.lastFileName = null;
-    this.renderState();
+    this.swapToEmptyAnimated(outgoing);
     this.block.dispatchChange();
+  }
+
+  /**
+   * Cross-fade the current content (rendered image / error / uploader) out,
+   * then render the empty uploader and fade it in. Falls back to an instant
+   * swap when motion is reduced or WAAPI is unavailable (e.g. jsdom), so the
+   * end DOM state is identical regardless of animation support.
+   */
+  private swapToEmptyAnimated(outgoing: Element | null): void {
+    const swapIn = (): void => {
+      this.renderState();
+      const incoming = this.emptyStateEl;
+      if (canAnimate(incoming)) {
+        incoming.animate(
+          [
+            { opacity: 0, transform: 'scale(0.97)' },
+            { opacity: 1, transform: 'scale(1)' },
+          ],
+          { duration: 200, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+        );
+      }
+    };
+
+    if (prefersReducedMotion() || !canAnimate(outgoing)) {
+      swapIn();
+      return;
+    }
+
+    const exit = outgoing.animate(
+      [
+        { opacity: 1, transform: 'scale(1)' },
+        { opacity: 0, transform: 'scale(0.98)' },
+      ],
+      { duration: 140, easing: 'cubic-bezier(0.4, 0, 1, 1)' },
+    );
+    exit.onfinish = swapIn;
+    exit.oncancel = swapIn;
   }
 
   private promptAlt(): void {

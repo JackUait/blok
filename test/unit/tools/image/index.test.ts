@@ -266,6 +266,37 @@ describe('ImageTool — overlay actions', () => {
     expect(root.querySelector('input[type="file"]')).not.toBeNull();
   });
 
+  it('replace plays an exit animation, deferring the swap to EMPTY until it finishes', () => {
+    // jsdom has no Web Animations API, so stub it to exercise the animated path.
+    const fakes: { onfinish: (() => void) | null; oncancel: (() => void) | null }[] = [];
+    const animate = vi.fn((): Animation => {
+      const fake = { onfinish: null as (() => void) | null, oncancel: null as (() => void) | null };
+      fakes.push(fake);
+      return fake as unknown as Animation;
+    });
+    const proto = HTMLElement.prototype as { animate?: typeof animate };
+    proto.animate = animate;
+    try {
+      const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+      const root = tool.render();
+      const replace = root.querySelector<HTMLButtonElement>('[data-action="replace"]');
+      if (!replace) throw new Error('replace missing');
+      replace.click();
+
+      // Exit animation started; the image is still mounted and no uploader yet.
+      expect(animate).toHaveBeenCalled();
+      expect(root.querySelector('img')).not.toBeNull();
+      expect(root.querySelector('input[type="file"]')).toBeNull();
+
+      // Finishing the exit animation performs the swap to the empty uploader.
+      fakes[0].onfinish?.();
+      expect(root.querySelector('img')).toBeNull();
+      expect(root.querySelector('input[type="file"]')).not.toBeNull();
+    } finally {
+      delete proto.animate;
+    }
+  });
+
   it('img is a direct child of .blok-image-inner — no frame wrapper, image itself is the container', () => {
     const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
     const root = tool.render();

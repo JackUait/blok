@@ -331,6 +331,24 @@ describe('Embed tool — replace source', () => {
     expect(tool.save().embed).toBe('');
     expect(root.querySelector('[data-role="embed-url-error"]')).not.toBeNull();
   });
+
+  it('gives the URL input an accessible name and announces errors', () => {
+    const tool = new Embed(createOptions(iframeData(), { allowGenericEmbed: false }));
+    const root = mount(tool);
+
+    openReplace(root);
+    const input = root.querySelector<HTMLInputElement>('[data-role="embed-url-input"]');
+
+    expect(input?.getAttribute('aria-label')).toBeTruthy();
+
+    if (input) {
+      input.value = 'https://example.com/page';
+    }
+    root.querySelector<HTMLFormElement>('[data-role="embed-url-form"]')
+      ?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+    expect(root.querySelector('[data-role="embed-url-error"]')?.getAttribute('role')).toBe('alert');
+  });
 });
 
 describe('Embed sizing & resize', () => {

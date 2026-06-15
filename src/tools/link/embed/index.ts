@@ -367,6 +367,7 @@ export class Embed implements BlockTool {
     input.type = 'url';
     input.setAttribute('data-role', 'embed-url-input');
     input.setAttribute('placeholder', this.api.i18n.t('tools.embed.urlPlaceholder'));
+    input.setAttribute('aria-label', this.api.i18n.t('tools.embed.urlPlaceholder'));
 
     const submit = document.createElement('button');
 
@@ -395,6 +396,7 @@ export class Embed implements BlockTool {
     const error = document.createElement('div');
 
     error.setAttribute('data-role', 'embed-url-error');
+    error.setAttribute('role', 'alert');
     error.textContent = this.api.i18n.t('tools.embed.invalidUrl');
     container.appendChild(error);
   }

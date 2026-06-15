@@ -6,6 +6,13 @@ import { buildErrorInto } from './preview-error';
 
 export type OfficeKind = Extract<PreviewKind, 'docx' | 'xlsx' | 'pptx'>;
 
+const OFFICE_KINDS = new Set<OfficeKind>(['docx', 'xlsx', 'pptx']);
+
+/** Narrow a PreviewKind to an OfficeKind. */
+export function isOfficeKind(kind: PreviewKind | null): kind is OfficeKind {
+  return kind !== null && OFFICE_KINDS.has(kind as OfficeKind);
+}
+
 /** Build the xlsx grid as a DOM table — textContent only, never innerHTML. */
 export async function renderXlsxInto(buf: ArrayBuffer, container: HTMLElement): Promise<void> {
   const Workbook = await loadXlsxRenderer();
@@ -69,7 +76,8 @@ export async function fillOfficeBody(
 
   try {
     await renderInto(result.buf, container, kind);
-  } catch {
+  } catch (e) {
+    console.warn(`[blok] Failed to render ${kind} preview:`, e);
     if (!isClosed()) {
       buildErrorInto(body, opts);
     }

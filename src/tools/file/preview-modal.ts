@@ -8,7 +8,7 @@ import { applyPrismHighlight, ensurePrismStyles } from '../code/prism-applier';
 import { markdownToHtml } from '../../markdown/markdownToHtml';
 import { IconFile, IconCross, IconLinkExternal } from '../../components/icons';
 import { buildErrorInto } from './preview-error';
-import { fillOfficeBody, type OfficeKind } from './office-preview';
+import { fillOfficeBody, isOfficeKind } from './office-preview';
 
 /** Time budget for the close animation before forcing teardown (ms). */
 const CLOSE_ANIMATION_FALLBACK_MS = 260;
@@ -94,7 +94,6 @@ function buildBody(opts: FilePreviewOptions, kind: PreviewKind): HTMLElement {
 
   return body;
 }
-
 
 function renderPlainText(body: HTMLElement, text: string): void {
   body.replaceChildren();
@@ -309,8 +308,7 @@ function buildElements(opts: FilePreviewOptions): PreviewElements {
 export function openFilePreview(opts: FilePreviewOptions): () => void {
   const previouslyFocused = document.activeElement;
   const { backdrop, dialog, header, closeButton, body, kind } = buildElements(opts);
-  const officeKinds: OfficeKind[] = ['docx', 'xlsx', 'pptx'];
-  const officeKind = kind !== null && officeKinds.includes(kind as OfficeKind) ? (kind as OfficeKind) : null;
+  const officeKind = isOfficeKind(kind) ? kind : null;
   const textualKind = kind === null || kind === 'pdf' || officeKind !== null ? null : kind;
 
   // Remember the caller's inline overflow so scroll lock restores it exactly.

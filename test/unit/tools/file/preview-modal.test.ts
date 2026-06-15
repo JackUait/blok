@@ -4,9 +4,13 @@ import { openFilePreview } from '../../../../src/tools/file/preview-modal';
 vi.mock('../../../../src/tools/file/text-preview', () => ({
   loadTextPreview: vi.fn(),
 }));
-vi.mock('../../../../src/tools/file/office-preview', () => ({
-  fillOfficeBody: vi.fn().mockResolvedValue(undefined),
-}));
+vi.mock('../../../../src/tools/file/office-preview', async () => {
+  const actual = await vi.importActual<Record<string, unknown>>('../../../../src/tools/file/office-preview');
+  return {
+    ...actual,
+    fillOfficeBody: vi.fn().mockResolvedValue(undefined),
+  };
+});
 vi.mock('../../../../src/markdown/markdownToHtml', () => ({
   markdownToHtml: vi.fn(),
 }));
@@ -249,6 +253,18 @@ describe('openFilePreview — text kinds', () => {
       'docx',
       expect.any(Function),
     );
+    teardown();
+  });
+
+  it('routes xlsx files to fillOfficeBody', () => {
+    const teardown = openFilePreview({ url: 'blob:x', fileName: 'a.xlsx', labels: LABELS });
+    expect(fillOfficeBody).toHaveBeenCalledWith(expect.any(HTMLElement), expect.any(Object), 'xlsx', expect.any(Function));
+    teardown();
+  });
+
+  it('routes pptx files to fillOfficeBody', () => {
+    const teardown = openFilePreview({ url: 'blob:x', fileName: 'a.pptx', labels: LABELS });
+    expect(fillOfficeBody).toHaveBeenCalledWith(expect.any(HTMLElement), expect.any(Object), 'pptx', expect.any(Function));
     teardown();
   });
 

@@ -33,6 +33,12 @@ describe('isPreviewable', () => {
   it('returns false for empty data', () => {
     expect(isPreviewable({})).toBe(false);
   });
+
+  it('returns true for docx, xlsx, pptx files', () => {
+    expect(isPreviewable({ fileName: 'a.docx' })).toBe(true);
+    expect(isPreviewable({ fileName: 'a.xlsx' })).toBe(true);
+    expect(isPreviewable({ fileName: 'a.pptx' })).toBe(true);
+  });
 });
 
 describe('getPreviewKind', () => {
@@ -63,7 +69,6 @@ describe('getPreviewKind', () => {
   });
 
   it('returns null for non-previewable files', () => {
-    expect(getPreviewKind({ url: 'sheet.xlsx' })).toBeNull();
     expect(getPreviewKind({ url: 'photo.png' })).toBeNull();
     expect(getPreviewKind({ url: 'archive.zip' })).toBeNull();
     expect(getPreviewKind({})).toBeNull();
@@ -72,5 +77,26 @@ describe('getPreviewKind', () => {
   it('isPreviewable is true exactly when a kind resolves', () => {
     expect(isPreviewable({ url: 'a.md' })).toBe(true);
     expect(isPreviewable({ url: 'a.zip' })).toBe(false);
+  });
+
+  it('classifies docx by extension and OOXML mime', () => {
+    expect(getPreviewKind({ fileName: 'a.docx' })).toBe('docx');
+    expect(getPreviewKind({ url: 'x', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })).toBe('docx');
+  });
+
+  it('classifies xlsx by extension and OOXML mime', () => {
+    expect(getPreviewKind({ fileName: 'a.xlsx' })).toBe('xlsx');
+    expect(getPreviewKind({ url: 'x', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })).toBe('xlsx');
+  });
+
+  it('classifies pptx by extension and OOXML mime', () => {
+    expect(getPreviewKind({ fileName: 'a.pptx' })).toBe('pptx');
+    expect(getPreviewKind({ url: 'x', mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' })).toBe('pptx');
+  });
+
+  it('leaves legacy doc/xls/ppt download-only', () => {
+    expect(getPreviewKind({ fileName: 'a.doc' })).toBeNull();
+    expect(getPreviewKind({ fileName: 'a.xls' })).toBeNull();
+    expect(getPreviewKind({ fileName: 'a.ppt' })).toBeNull();
   });
 });

@@ -545,14 +545,33 @@
   overflow: auto;
 }
 
+/* Source pane — shared by the markdown raw view, code-file previews, and
+   plain-text previews. Reads like a code editor: comfortable monospace,
+   generous gutters, small tab stops. Code/text keep `pre` so columns stay
+   intact and overflow scrolls horizontally. */
 .blok-file-preview-pre {
-  padding: var(--blok-space-4);
-  font-size: 0.8125rem;
-  line-height: 1.6;
+  padding: var(--blok-space-5) var(--blok-space-6);
+  font-size: 0.875rem;
+  line-height: 1.7;
+  tab-size: 2;
   white-space: pre;
   font-family: var(--blok-font-mono, ui-monospace, monospace);
   color: var(--blok-text-primary);
   background: var(--blok-bg-primary);
+}
+
+/* Markdown source is prose, not code: soft-wrap it so long lines stop
+   clipping off the right edge, and centre it in the same reading column
+   as the rendered view so toggling Rendered ⇄ Raw feels continuous. */
+.blok-file-preview-pre[data-role="file-preview-md-raw"] {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.blok-file-preview-pre[data-role="file-preview-md-raw"] code {
+  display: block;
+  max-width: 50rem;
+  margin-inline: auto;
 }
 
 /* ─── Rendered markdown document ──────────────────────────────────────

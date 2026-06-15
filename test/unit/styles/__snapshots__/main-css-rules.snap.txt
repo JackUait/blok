@@ -5107,13 +5107,25 @@
 }
 
 .blok-file-preview-pre {
-  padding: var(--blok-space-4);
-  font-size: 0.8125rem;
-  line-height: 1.6;
+  padding: var(--blok-space-5) var(--blok-space-6);
+  font-size: 0.875rem;
+  line-height: 1.7;
+  tab-size: 2;
   white-space: pre;
   font-family: var(--blok-font-mono, ui-monospace, monospace);
   color: var(--blok-text-primary);
   background: var(--blok-bg-primary);
+}
+
+.blok-file-preview-pre[data-role="file-preview-md-raw"] {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.blok-file-preview-pre[data-role="file-preview-md-raw"] code {
+  display: block;
+  max-width: 50rem;
+  margin-inline: auto;
 }
 
 .blok-file-preview-md {

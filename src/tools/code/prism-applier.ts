@@ -6,7 +6,7 @@
 // eslint-disable-next-line no-restricted-syntax -- module singleton, must be reassignable
 let stylesheet: CSSStyleSheet | null = null;
 
-const LIGHT_RULES = `
+export const LIGHT_RULES = `
 .blok-code .token.comment,
 .blok-code .token.prolog,
 .blok-code .token.doctype,
@@ -39,6 +39,53 @@ const LIGHT_RULES = `
 
 .blok-code .token.punctuation { color: #374151; }
 
+/* --- Extended coverage: token classes Prism emits that the base palette missed.
+ * Grouped into the same hue families above so highlighting stays coherent
+ * across every supported language. (See test/unit/tools/code/prism-coverage.test.ts.) */
+
+/* string family (green) — template/interpolated/literal string containers, imports, links, inline code */
+.blok-code .token.template-string,
+.blok-code .token.string-interpolation,
+.blok-code .token.string-literal,
+.blok-code .token.command-literal,
+.blok-code .token.regex-literal,
+.blok-code .token.import,
+.blok-code .token.url,
+.blok-code .token.code { color: #059669; }
+
+/* function / class-name family (blue) — namespaces, definitions, code structures, types */
+.blok-code .token.namespace,
+.blok-code .token.method-definition,
+.blok-code .token.expression,
+.blok-code .token.scalar,
+.blok-code .token.code-block,
+.blok-code .token.base-clause,
+.blok-code .token.generic-function { color: #2563eb; }
+
+/* builtin family (pink) — decorators, package markers, markup entities */
+.blok-code .token.decorator,
+.blok-code .token.entity,
+.blok-code .token.package { color: #db2777; }
+
+/* attr-name / property family (orange) — interpolation, parameters, attributes, mapping keys */
+.blok-code .token.interpolation,
+.blok-code .token.parameter,
+.blok-code .token.attribute,
+.blok-code .token.atrule,
+.blok-code .token.key,
+.blok-code .token.property-query { color: #ea580c; }
+
+/* keyword family (purple) — generics, at-rules, instructions, emphasis */
+.blok-code .token.generics,
+.blok-code .token.rule,
+.blok-code .token.instruction,
+.blok-code .token.code-language { color: #7c3aed; }
+.blok-code .token.bold { color: #7c3aed; font-weight: 700; }
+.blok-code .token.italic { color: #7c3aed; font-style: italic; }
+
+/* pure syntax wrapper — match default text so it is covered without changing appearance */
+.blok-code .token.php { color: #000000; }
+
 /* Mermaid-specific tokens — scoped to lang-mermaid to avoid polluting other languages.
  * Colors use Atom One Light palette:
  *   @hue-1 = #0184bc  (cyan)
@@ -55,7 +102,7 @@ const LIGHT_RULES = `
 .blok-code.lang-mermaid .token.string { color: inherit; }
 `;
 
-const DARK_RULES = `
+export const DARK_RULES = `
 .dark .blok-code .token.comment,
 .dark .blok-code .token.prolog,
 .dark .blok-code .token.doctype,
@@ -87,6 +134,51 @@ const DARK_RULES = `
 .dark .blok-code .token.variable { color: #fb923c; }
 
 .dark .blok-code .token.punctuation { color: #d1d5db; }
+
+/* --- Extended coverage (dark) — mirrors the light-theme groups above. */
+
+/* string family (green) */
+.dark .blok-code .token.template-string,
+.dark .blok-code .token.string-interpolation,
+.dark .blok-code .token.string-literal,
+.dark .blok-code .token.command-literal,
+.dark .blok-code .token.regex-literal,
+.dark .blok-code .token.import,
+.dark .blok-code .token.url,
+.dark .blok-code .token.code { color: #34d399; }
+
+/* function / class-name family (blue) */
+.dark .blok-code .token.namespace,
+.dark .blok-code .token.method-definition,
+.dark .blok-code .token.expression,
+.dark .blok-code .token.scalar,
+.dark .blok-code .token.code-block,
+.dark .blok-code .token.base-clause,
+.dark .blok-code .token.generic-function { color: #60a5fa; }
+
+/* builtin family (pink) */
+.dark .blok-code .token.decorator,
+.dark .blok-code .token.entity,
+.dark .blok-code .token.package { color: #f472b6; }
+
+/* attr-name / property family (orange) */
+.dark .blok-code .token.interpolation,
+.dark .blok-code .token.parameter,
+.dark .blok-code .token.attribute,
+.dark .blok-code .token.atrule,
+.dark .blok-code .token.key,
+.dark .blok-code .token.property-query { color: #fb923c; }
+
+/* keyword family (purple) */
+.dark .blok-code .token.generics,
+.dark .blok-code .token.rule,
+.dark .blok-code .token.instruction,
+.dark .blok-code .token.code-language { color: #a78bfa; }
+.dark .blok-code .token.bold { color: #a78bfa; font-weight: 700; }
+.dark .blok-code .token.italic { color: #a78bfa; font-style: italic; }
+
+/* pure syntax wrapper — match dark default text */
+.dark .blok-code .token.php { color: #e2e0dc; }
 
 /* Mermaid-specific tokens — dark mode.
  * Colors use Atom One Dark palette:

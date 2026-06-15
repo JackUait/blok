@@ -617,6 +617,9 @@
   .blok-file-preview-md {
     animation: none;
   }
+  .blok-file-preview-toggle-indicator {
+    transition: none;
+  }
 }
 
 .blok-file-preview-md p,
@@ -765,6 +768,7 @@
 /* Segmented Rendered / Raw switch — a pill track in the header's centre
    slot, with the active segment lifted onto the primary surface. */
 .blok-file-preview-toggle {
+  position: relative;
   grid-column: 2;
   grid-row: 1;
   display: inline-flex;
@@ -774,7 +778,26 @@
   border-radius: var(--blok-radius-pill);
 }
 
+/* The lifted pill, glided under the active segment by JS (it sets width +
+   translateX from the live button geometry). Painted behind the labels. */
+.blok-file-preview-toggle-indicator {
+  position: absolute;
+  top: var(--blok-space-0-5);
+  bottom: var(--blok-space-0-5);
+  left: 0;
+  width: 0;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-bg-primary);
+  box-shadow: 0 1px 2px var(--blok-checklist-shadow);
+  transition:
+    transform var(--blok-duration-standard) var(--blok-ease-popover),
+    width var(--blok-duration-standard) var(--blok-ease-popover);
+  pointer-events: none;
+}
+
 .blok-file-preview-toggle button {
+  position: relative;
+  z-index: 1;
   border: 0;
   background: transparent;
   padding: var(--blok-space-1) var(--blok-space-3);
@@ -783,9 +806,7 @@
   font-weight: var(--blok-font-weight-medium);
   color: var(--blok-text-secondary);
   cursor: pointer;
-  transition:
-    background-color var(--blok-duration-base) var(--blok-ease-standard),
-    color var(--blok-duration-base) var(--blok-ease-standard);
+  transition: color var(--blok-duration-base) var(--blok-ease-standard);
 }
 
 .blok-file-preview-toggle button:hover {
@@ -793,9 +814,7 @@
 }
 
 .blok-file-preview-toggle button[aria-pressed="true"] {
-  background: var(--blok-bg-primary);
   color: var(--blok-text-primary);
-  box-shadow: 0 1px 2px var(--blok-checklist-shadow);
 }
 
 .blok-file-preview-error {

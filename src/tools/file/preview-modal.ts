@@ -162,7 +162,14 @@ async function renderMarkdown(
   rawBtn.type = 'button';
   rawBtn.setAttribute('data-action', 'preview-raw');
   rawBtn.textContent = opts.labels.raw ?? 'Raw';
-  toolbar.append(renderBtn, rawBtn);
+  // Sliding pill that glides under the active segment. Sits behind the labels
+  // (the buttons paint above it) and is measured/moved in JS because the two
+  // labels have different widths across locales — a fixed 50/50 split would
+  // misalign.
+  const indicator = document.createElement('span');
+  indicator.className = 'blok-file-preview-toggle-indicator';
+  indicator.setAttribute('aria-hidden', 'true');
+  toolbar.append(indicator, renderBtn, rawBtn);
 
   const renderView = document.createElement('div');
   renderView.className = 'blok-file-preview-md';
@@ -179,11 +186,29 @@ async function renderMarkdown(
   header.appendChild(toolbar);
   body.append(renderView, rawView);
 
+  // Glide the pill to the active segment. The first call positions it without
+  // a transition so it doesn't slide in from the track's left edge on open.
+  let indicatorReady = false;
+  const moveIndicator = (raw: boolean): void => {
+    const target = raw ? rawBtn : renderBtn;
+    if (!indicatorReady) {
+      indicator.style.transition = 'none';
+    }
+    indicator.style.width = `${target.offsetWidth}px`;
+    indicator.style.transform = `translateX(${target.offsetLeft}px)`;
+    if (!indicatorReady) {
+      void indicator.offsetWidth;
+      indicator.style.transition = '';
+      indicatorReady = true;
+    }
+  };
+
   const show = (raw: boolean): void => {
     rawView.hidden = !raw;
     renderView.hidden = raw;
     renderBtn.setAttribute('aria-pressed', String(!raw));
     rawBtn.setAttribute('aria-pressed', String(raw));
+    moveIndicator(raw);
   };
   renderBtn.addEventListener('click', () => show(false));
   rawBtn.addEventListener('click', () => show(true));

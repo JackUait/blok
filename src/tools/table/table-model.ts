@@ -732,6 +732,29 @@ export class TableModel {
   }
 
   /**
+   * Resolve the merge origin covering (row, col): the cell itself if it is a
+   * merge origin, the cell pointed to by mergedInto if it is covered, or null
+   * if the cell is not part of any merge.
+   */
+  getMergeOrigin(row: number, col: number): [number, number] | null {
+    if (!this.isInBounds(row, col)) {
+      return null;
+    }
+
+    const cell = this.contentGrid[row][col];
+
+    if (cell.mergedInto !== undefined) {
+      return [cell.mergedInto[0], cell.mergedInto[1]];
+    }
+
+    if ((cell.colspan ?? 1) > 1 || (cell.rowspan ?? 1) > 1) {
+      return [row, col];
+    }
+
+    return null;
+  }
+
+  /**
    * Returns true if the table contains ANY merged cell (a colspan/rowspan
    * origin or a covered cell). Used to disable physical-index row/column
    * reordering, which cannot stay consistent on a merged grid.

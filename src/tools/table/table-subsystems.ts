@@ -1084,6 +1084,46 @@ export class TableSubsystems {
     selection.addRange(newRange);
   }
 
+  /**
+   * Split every merge whose origin sits inside, or whose span reaches into, the
+   * rectangle [startRow..startRow+rows-1] × [startCol..startCol+cols-1], then
+   * rebuild the DOM so the freed cells get real <td>s. Used before a paste so no
+   * destination coordinate is merge-covered (which would drop that payload cell).
+   */
+  private splitMergesInRegion(
+    startRow: number,
+    startCol: number,
+    rows: number,
+    cols: number,
+  ): void {
+    const originKeys = new Set<string>();
+    const origins: Array<[number, number]> = [];
+
+    for (let r = startRow; r < startRow + rows; r++) {
+      for (let c = startCol; c < startCol + cols; c++) {
+        const origin = this.host.model.getMergeOrigin(r, c);
+
+        if (origin === null) {
+          continue;
+        }
+
+        const key = `${origin[0]}:${origin[1]}`;
+
+        if (!originKeys.has(key)) {
+          originKeys.add(key);
+          origins.push(origin);
+        }
+      }
+    }
+
+    if (origins.length === 0) {
+      return;
+    }
+
+    origins.forEach(([r, c]) => this.host.model.splitCell(r, c));
+    this.host.rebuildTableBody();
+  }
+
   private pastePayloadIntoCells(
     gridEl: HTMLElement,
     payload: TableCellsClipboard,
@@ -1092,6 +1132,12 @@ export class TableSubsystems {
   ): void {
     this.host.runTransactedStructuralOp(() => {
       this.expandGridForPaste(gridEl, startRow + payload.rows, startCol + payload.cols);
+
+      // Split any merge overlapping the destination region BEFORE pasting.
+      // A merge-covered destination coordinate has no <td> (grid.getCell returns
+      // null), so its payload cell would be silently dropped. Splitting first
+      // turns every target into a real cell so no pasted data is lost.
+      this.splitMergesInRegion(startRow, startCol, payload.rows, payload.cols);
 
       // Paste block data into target cells. Resolve each target by LOGICAL
       // coordinate (merge-safe getCell) so the DOM cell we write matches the

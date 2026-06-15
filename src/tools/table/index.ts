@@ -600,6 +600,23 @@ export class Table implements BlockTool {
 
       // Initialize cell blocks and subsystems
       this.initCellBlocks(gridEl);
+
+      // The read-only mount path synthesizes no block for empty cells
+      // ({ blocks: [] } — produced by migrating empty source cells), so after
+      // restoring edit mode those cells would have no contenteditable target
+      // and be impossible to click into or type in. Mirror the fresh-render
+      // edit path (initializeCells) by guaranteeing every cell holds at least
+      // one editable paragraph. Wrapped in a structural op so the freshly
+      // constructed cellBlocks mutation handler defers the synthesized
+      // block-added events instead of double-claiming them.
+      // (regression: published-article tables with empty cells became
+      // un-editable on the read-only→edit toggle.)
+      this.runTransactedStructuralOp(() => {
+        gridEl.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`).forEach(cell => {
+          this.cellBlocks?.ensureCellHasBlock(cell);
+        });
+      }, true);
+
       this.keyboardNavCleanup = setupKeyboardNavigation(gridEl, this.cellBlocks);
       this.subsystems.initAll(gridEl);
     }

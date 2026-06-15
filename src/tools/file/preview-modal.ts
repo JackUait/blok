@@ -9,6 +9,7 @@ import { markdownToHtml } from '../../markdown/markdownToHtml';
 import { IconFile, IconCross, IconLinkExternal } from '../../components/icons';
 import { buildErrorInto } from './preview-error';
 import { fillOfficeBody, isOfficeKind } from './office-preview';
+import { ScrollHaze } from './preview-scroll-haze';
 
 /** Time budget for the close animation before forcing teardown (ms). */
 const CLOSE_ANIMATION_FALLBACK_MS = 260;
@@ -315,6 +316,10 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
   const previousBodyOverflow = document.body.style.overflow;
   const state = { closed: false };
 
+  // Edge haze that marks the previewable content as scrollable. PDFs render in
+  // an iframe with its own scrollbar, so they opt out.
+  const haze = new ScrollHaze();
+
   // Immediate teardown — used for the close animation's end and for the
   // programmatic teardown the host calls when the block is removed/re-rendered.
   const finalize = (): void => {
@@ -322,6 +327,7 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
       return;
     }
     state.closed = true;
+    haze.destroy();
     document.removeEventListener('keydown', onKeyDown);
     document.body.style.overflow = previousBodyOverflow;
     if (backdrop.parentNode) {
@@ -400,11 +406,26 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
   promoteToTopLayer(backdrop);
   closeButton.focus();
 
-  if (officeKind !== null) {
-    void fillOfficeBody(body, opts, officeKind, () => state.closed);
-  } else if (textualKind !== null) {
-    void fillTextBody(body, header, opts, textualKind, () => state.closed);
-  }
+  const startFill = (): Promise<void> => {
+    if (officeKind !== null) {
+      return fillOfficeBody(body, opts, officeKind, () => state.closed);
+    }
+    if (textualKind !== null) {
+      return fillTextBody(body, header, opts, textualKind, () => state.closed);
+    }
+
+    return Promise.resolve();
+  };
+
+  // Mount the scroll haze only once the body holds its rendered view — the fill
+  // helpers call body.replaceChildren(), which would otherwise wipe the strips.
+  // The haze's own MutationObserver then tracks later changes (e.g. the markdown
+  // Rendered ⇄ Raw toggle). PDFs scroll inside their iframe, so they opt out.
+  void startFill().then(() => {
+    if (!state.closed && kind !== 'pdf') {
+      haze.init(body);
+    }
+  });
 
   return finalize;
 }

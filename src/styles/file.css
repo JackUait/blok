@@ -488,6 +488,7 @@
 }
 
 .blok-file-preview-body {
+  position: relative;
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
@@ -498,6 +499,62 @@
      always fully cover the body, so this is invisible except during that
      animation. */
   background: var(--blok-bg-primary);
+}
+
+/* Scroll haze: gradient strips pinned to the body edges, faded in (by JS) only
+   while the active view has hidden content past that edge. `--blok-haze-color`
+   is set inline to the scrolling surface's own background so the haze melts into
+   paper, desk, or editor alike; the fallback covers the first paint. */
+.blok-file-preview-haze {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.blok-file-preview-haze[data-blok-haze-visible] {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blok-file-preview-haze {
+    transition: none;
+  }
+}
+
+.blok-file-preview-haze[data-blok-haze='top'],
+.blok-file-preview-haze[data-blok-haze='bottom'] {
+  left: 0;
+  right: 0;
+  height: var(--blok-space-6);
+}
+
+.blok-file-preview-haze[data-blok-haze='left'],
+.blok-file-preview-haze[data-blok-haze='right'] {
+  top: 0;
+  bottom: 0;
+  width: var(--blok-space-6);
+}
+
+.blok-file-preview-haze[data-blok-haze='top'] {
+  top: 0;
+  background: linear-gradient(to bottom, var(--blok-haze-color, var(--blok-bg-primary)), transparent);
+}
+
+.blok-file-preview-haze[data-blok-haze='bottom'] {
+  bottom: 0;
+  background: linear-gradient(to top, var(--blok-haze-color, var(--blok-bg-primary)), transparent);
+}
+
+.blok-file-preview-haze[data-blok-haze='left'] {
+  left: 0;
+  background: linear-gradient(to right, var(--blok-haze-color, var(--blok-bg-primary)), transparent);
+}
+
+.blok-file-preview-haze[data-blok-haze='right'] {
+  right: 0;
+  background: linear-gradient(to left, var(--blok-haze-color, var(--blok-bg-primary)), transparent);
 }
 
 .blok-file-preview-frame {

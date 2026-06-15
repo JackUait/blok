@@ -45,7 +45,7 @@ const ALIGN_ORDER: EmbedAlignment[] = ['left', 'center', 'right'];
 
 /**
  * Hover toolbar for an iframe embed — alignment, caption toggle, "open original"
- * and a "more" menu (copy link / delete). Modeled on the image overlay but
+ * and a "more" menu (replace / copy link / delete). Modeled on the image overlay but
  * scoped to the embed tool. Pure builder: it wires the provided callbacks and
  * manages only its own popover open/close state.
  */

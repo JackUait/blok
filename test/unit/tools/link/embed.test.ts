@@ -252,12 +252,84 @@ describe('Embed tool — generic embed', () => {
     expect(tool.save().embed).toBe('');
   });
 
+  it('renders the generic iframe with the sandbox attribute', () => {
+    const tool = new Embed(createOptions({}, { allowGenericEmbed: true }));
+    const el = tool.render();
+
+    document.body.appendChild(el);
+    tool.onPaste(patternEvent('embed', 'https://example.com/page'));
+
+    const frame = el.querySelector<HTMLIFrameElement>('[data-blok-testid="embed-frame"]');
+
+    expect(frame).not.toBeNull();
+    expect(frame?.getAttribute('sandbox')).toBeTruthy();
+  });
+
   it('still resolves a known provider regardless of the flag', () => {
     const tool = new Embed(createOptions({}, { allowGenericEmbed: false }));
 
     tool.onPaste(patternEvent('youtube', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'));
 
     expect(tool.save().service).toBe('youtube');
+  });
+});
+
+describe('Embed tool — replace source', () => {
+  const mount = (tool: Embed): HTMLElement => {
+    const el = tool.render();
+
+    document.body.appendChild(el);
+
+    return el;
+  };
+
+  const openReplace = (root: HTMLElement): void => {
+    root.querySelector<HTMLElement>('[data-action="more"]')?.click();
+    root.querySelector<HTMLElement>('[data-action="replace"]')?.click();
+  };
+
+  it('clears the embed and shows a URL input when replace is invoked', () => {
+    const tool = new Embed(createOptions(iframeData()));
+    const root = mount(tool);
+
+    openReplace(root);
+
+    expect(root.querySelector('[data-blok-testid="embed-frame"]')).toBeNull();
+    expect(root.querySelector<HTMLInputElement>('[data-role="embed-url-input"]')).not.toBeNull();
+    expect(tool.save().embed).toBe('');
+  });
+
+  it('re-resolves a provider URL submitted in the empty input', () => {
+    const tool = new Embed(createOptions(iframeData()));
+    const root = mount(tool);
+
+    openReplace(root);
+    const input = root.querySelector<HTMLInputElement>('[data-role="embed-url-input"]');
+
+    if (input) {
+      input.value = 'https://vimeo.com/123';
+    }
+    root.querySelector<HTMLFormElement>('[data-role="embed-url-form"]')
+      ?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+    expect(tool.save()).toMatchObject({ service: 'vimeo' });
+  });
+
+  it('keeps the input and shows a message for an unsupported URL', () => {
+    const tool = new Embed(createOptions(iframeData(), { allowGenericEmbed: false }));
+    const root = mount(tool);
+
+    openReplace(root);
+    const input = root.querySelector<HTMLInputElement>('[data-role="embed-url-input"]');
+
+    if (input) {
+      input.value = 'https://example.com/page';
+    }
+    root.querySelector<HTMLFormElement>('[data-role="embed-url-form"]')
+      ?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+    expect(tool.save().embed).toBe('');
+    expect(root.querySelector('[data-role="embed-url-error"]')).not.toBeNull();
   });
 });
 

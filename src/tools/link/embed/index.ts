@@ -351,9 +351,52 @@ export class Embed implements BlockTool {
     const el = document.createElement('div');
 
     el.setAttribute('data-blok-testid', 'embed-empty');
-    el.textContent = this.api.i18n.t('tools.embed.empty');
+
+    if (this.readOnly) {
+      el.textContent = this.api.i18n.t('tools.embed.empty');
+
+      return el;
+    }
+
+    const form = document.createElement('form');
+
+    form.setAttribute('data-role', 'embed-url-form');
+
+    const input = document.createElement('input');
+
+    input.type = 'url';
+    input.setAttribute('data-role', 'embed-url-input');
+    input.setAttribute('placeholder', this.api.i18n.t('tools.embed.urlPlaceholder'));
+
+    const submit = document.createElement('button');
+
+    submit.type = 'submit';
+    submit.setAttribute('data-role', 'embed-url-submit');
+    submit.textContent = this.api.i18n.t('tools.embed.urlSubmit');
+
+    form.append(input, submit);
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      this.submitUrl(input.value.trim(), el);
+    });
+
+    el.appendChild(form);
 
     return el;
+  }
+
+  private submitUrl(url: string, container: HTMLElement): void {
+    container.querySelector('[data-role="embed-url-error"]')?.remove();
+
+    if (url !== '' && this.resolveAndSet(url)) {
+      return;
+    }
+
+    const error = document.createElement('div');
+
+    error.setAttribute('data-role', 'embed-url-error');
+    error.textContent = this.api.i18n.t('tools.embed.invalidUrl');
+    container.appendChild(error);
   }
 
   /**
@@ -491,8 +534,15 @@ export class Embed implements BlockTool {
       onAlign: (next) => this.setAlignment(next),
       onToggleCaption: () => this.toggleCaption(),
       onCopyLink: () => this.copyLink(),
+      onReplace: () => this.replaceSource(),
       onDelete: () => this.deleteBlock(),
     });
+  }
+
+  private replaceSource(): void {
+    this.data = { ...this.data, embed: '', source: '' };
+    this.block.dispatchChange();
+    this.renderState();
   }
 
   private setAlignment(next: EmbedAlignment): void {

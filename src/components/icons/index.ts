@@ -866,12 +866,13 @@ export const IconFile = `
 // per category via the .blok-file-icon[data-file-category] CSS rules.
 // ============================================================================
 
-// PDF — page with folded corner and a solid label chip
+// PDF — the generic file glyph (page with folded corner and text lines); the
+// File block tints it red via .blok-file-icon[data-file-category="pdf"]
 export const IconFilePdf = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path d="M5 4A1.5 1.5 0 0 1 6.5 2.5h4.75L15 6.25V16a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 5 16V4Z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
   <path d="M11.25 2.5v3.75H15" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
-  <rect x="6.75" y="10.75" width="6.5" height="3.75" rx="1" fill="currentColor"/>
+  <path d="M7.5 10.5h5M7.5 13h5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
 </svg>
 `;
 

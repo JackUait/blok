@@ -10,13 +10,16 @@ export interface PasteMenuOption {
 export interface PasteMenuContext {
   /** Whether the paste lands on a non-collapsed text selection. */
   hasSelection: boolean;
+  /** When true, an unmatched http(s) URL also offers a generic iframe embed. */
+  allowGenericEmbed?: boolean;
 }
 
 /**
  * Decides which paste-menu options apply to a pasted URL.
  *
  * - With a text selection, Notion simply hyperlinks it — only `plain`.
- * - `embed` only for a registered provider (most specific, listed first).
+ * - `embed` for a registered provider, or any safe http(s) URL when generic
+ *   embeds are enabled (most specific, listed first).
  * - `bookmark` and `mention` for any safe http(s) URL.
  * - `plain` is always available (dismiss / keep as link).
  */
@@ -30,7 +33,7 @@ export function buildPasteMenuOptions(
 
   const options: PasteMenuOption[] = [];
 
-  if (matchEmbedService(url)) {
+  if (matchEmbedService(url) || context.allowGenericEmbed === true) {
     options.push({ type: 'embed' });
   }
 

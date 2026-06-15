@@ -9,6 +9,8 @@ export interface PasteMenuOpenParams {
   url: string;
   /** Whether the paste landed on a non-collapsed selection. */
   hasSelection: boolean;
+  /** When true, unmatched URLs also offer a generic embed. */
+  allowGenericEmbed?: boolean;
   /** Caret rect to anchor the popover at, or null to let the popover self-place. */
   position: DOMRect | null;
   /**
@@ -49,8 +51,10 @@ export class PasteMenuController implements LinkPasteMenu {
   public open(params: PasteMenuOpenParams): void {
     this.closeExisting();
 
-    const options = buildPasteMenuOptions(params.url, { hasSelection: params.hasSelection })
-      .filter((option) => LIVE_ACTIONS.has(option.type));
+    const options = buildPasteMenuOptions(params.url, {
+      hasSelection: params.hasSelection,
+      allowGenericEmbed: params.allowGenericEmbed === true,
+    }).filter((option) => LIVE_ACTIONS.has(option.type));
 
     // Mutable flags held on a const object (the lint config forbids `let`).
     const state = { picked: false, closed: false };

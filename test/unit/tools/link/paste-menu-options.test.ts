@@ -35,3 +35,24 @@ describe('buildPasteMenuOptions', () => {
     expect(types('not a url')).toEqual(['plain']);
   });
 });
+
+const typesWith = (url: string, allowGenericEmbed: boolean): string[] =>
+  buildPasteMenuOptions(url, { hasSelection: false, allowGenericEmbed }).map((o) => o.type);
+
+describe('buildPasteMenuOptions — generic embed flag', () => {
+  it('offers embed for an unmatched URL when allowGenericEmbed is true', () => {
+    const result = typesWith('https://example.com/article', true);
+
+    expect(result).toContain('embed');
+    expect(result).toContain('bookmark');
+    expect(result.indexOf('embed')).toBeLessThan(result.indexOf('bookmark'));
+  });
+
+  it('still hides embed for an unmatched URL when the flag is false', () => {
+    expect(typesWith('https://example.com/article', false)).not.toContain('embed');
+  });
+
+  it('does not offer embed for a non-http string even when the flag is true', () => {
+    expect(typesWith('not a url', true)).toEqual(['plain']);
+  });
+});

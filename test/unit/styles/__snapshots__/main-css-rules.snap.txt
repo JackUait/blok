@@ -5069,7 +5069,7 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: var(--blok-bg-secondary);
+  background: var(--blok-bg-primary);
 }
 
 .blok-file-preview-frame {

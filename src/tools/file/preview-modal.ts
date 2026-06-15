@@ -1,5 +1,11 @@
 import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
-import { safePreviewSrc } from './url';
+import { safePreviewSrc, safeHttpHref } from './url';
+import { getPreviewKind, type PreviewKind } from './preview';
+import { loadTextPreview } from './text-preview';
+import { extToPrismLang } from './code-languages';
+import { tokenizePrism, isHighlightable } from '../code/prism-loader';
+import { applyPrismHighlight, ensurePrismStyles } from '../code/prism-applier';
+import { markdownToHtml } from '../../markdown/markdownToHtml';
 
 /** Time budget for the close animation before forcing teardown (ms). */
 const CLOSE_ANIMATION_FALLBACK_MS = 260;
@@ -32,37 +38,180 @@ function prefersReducedMotion(): boolean {
 export interface FilePreviewOptions {
   url: string;
   fileName?: string;
-  labels: { close: string };
+  mimeType?: string;
+  labels: {
+    close: string;
+    raw?: string;
+    render?: string;
+    loading?: string;
+    error?: string;
+    download?: string;
+  };
 }
 
 interface PreviewElements {
   backdrop: HTMLElement;
   dialog: HTMLElement;
   closeButton: HTMLButtonElement;
+  body: HTMLElement;
+  kind: PreviewKind | null;
 }
 
-function buildBody(url: string, fileName: string | undefined, fallbackTitle: string): HTMLElement {
+function buildBody(opts: FilePreviewOptions, kind: PreviewKind): HTMLElement {
   const body = document.createElement('div');
   body.className = 'blok-file-preview-body';
 
-  const src = safePreviewSrc(url);
-  if (src === null) {
-    const error = document.createElement('div');
-    error.className = 'blok-file-preview-error';
-    error.setAttribute('data-role', 'file-preview-error');
-    body.appendChild(error);
+  if (kind === 'pdf') {
+    const src = safePreviewSrc(opts.url);
+    if (src === null) {
+      const error = document.createElement('div');
+      error.className = 'blok-file-preview-error';
+      error.setAttribute('data-role', 'file-preview-error');
+      body.appendChild(error);
+
+      return body;
+    }
+    const frame = document.createElement('iframe');
+    frame.className = 'blok-file-preview-frame';
+    frame.setAttribute('data-role', 'file-preview-frame');
+    frame.setAttribute('title', opts.fileName ?? opts.labels.close);
+    frame.src = src;
+    body.appendChild(frame);
 
     return body;
   }
 
-  const frame = document.createElement('iframe');
-  frame.className = 'blok-file-preview-frame';
-  frame.setAttribute('data-role', 'file-preview-frame');
-  frame.setAttribute('title', fileName ?? fallbackTitle);
-  frame.src = src;
-  body.appendChild(frame);
+  const loading = document.createElement('div');
+  loading.className = 'blok-file-preview-loading';
+  loading.setAttribute('data-role', 'file-preview-loading');
+  loading.textContent = opts.labels.loading ?? 'Loading…';
+  body.appendChild(loading);
 
   return body;
+}
+
+function buildErrorInto(body: HTMLElement, opts: FilePreviewOptions): void {
+  body.replaceChildren();
+  const error = document.createElement('div');
+  error.className = 'blok-file-preview-error';
+  error.setAttribute('data-role', 'file-preview-error');
+  error.textContent = opts.labels.error ?? "Couldn't load preview";
+
+  const href = safeHttpHref(opts.url);
+  if (href !== null) {
+    const download = document.createElement('a');
+    download.className = 'blok-file-preview-download';
+    download.setAttribute('data-action', 'preview-download');
+    download.href = href;
+    download.download = opts.fileName ?? '';
+    download.target = '_blank';
+    download.rel = 'noopener noreferrer';
+    download.textContent = opts.labels.download ?? 'Download';
+    error.appendChild(download);
+  }
+  body.appendChild(error);
+}
+
+function renderPlainText(body: HTMLElement, text: string): void {
+  body.replaceChildren();
+  const pre = document.createElement('pre');
+  pre.className = 'blok-file-preview-pre';
+  pre.setAttribute('data-role', 'file-preview-text');
+  pre.textContent = text;
+  body.appendChild(pre);
+}
+
+async function renderCode(body: HTMLElement, text: string, lang: string): Promise<void> {
+  body.replaceChildren();
+  const pre = document.createElement('pre');
+  pre.className = 'blok-file-preview-pre';
+  pre.setAttribute('data-role', 'file-preview-code');
+  const code = document.createElement('code');
+  code.textContent = text;
+  pre.appendChild(code);
+  body.appendChild(pre);
+
+  if (isHighlightable(lang)) {
+    const html = await tokenizePrism(text, lang);
+    if (html !== null) {
+      applyPrismHighlight(code, html, lang);
+    }
+  }
+}
+
+async function renderMarkdown(body: HTMLElement, text: string, opts: FilePreviewOptions): Promise<void> {
+  body.replaceChildren();
+
+  const toolbar = document.createElement('div');
+  toolbar.className = 'blok-file-preview-toggle';
+  const renderBtn = document.createElement('button');
+  renderBtn.type = 'button';
+  renderBtn.setAttribute('data-action', 'preview-render');
+  renderBtn.textContent = opts.labels.render ?? 'Rendered';
+  const rawBtn = document.createElement('button');
+  rawBtn.type = 'button';
+  rawBtn.setAttribute('data-action', 'preview-raw');
+  rawBtn.textContent = opts.labels.raw ?? 'Raw';
+  toolbar.append(renderBtn, rawBtn);
+
+  const renderView = document.createElement('div');
+  renderView.className = 'blok-file-preview-md';
+  renderView.setAttribute('data-role', 'file-preview-md-render');
+
+  const rawView = document.createElement('pre');
+  rawView.className = 'blok-file-preview-pre';
+  rawView.setAttribute('data-role', 'file-preview-md-raw');
+  const rawCode = document.createElement('code');
+  rawCode.textContent = text;
+  rawView.appendChild(rawCode);
+  rawView.hidden = true;
+
+  body.append(toolbar, renderView, rawView);
+
+  const show = (raw: boolean): void => {
+    rawView.hidden = !raw;
+    renderView.hidden = raw;
+    renderBtn.setAttribute('aria-pressed', String(!raw));
+    rawBtn.setAttribute('aria-pressed', String(raw));
+  };
+  renderBtn.addEventListener('click', () => show(false));
+  rawBtn.addEventListener('click', () => show(true));
+  show(false);
+
+  ensurePrismStyles();
+  renderView.innerHTML = await markdownToHtml(text);
+
+  const mdRaw = await tokenizePrism(text, 'markdown');
+  if (mdRaw !== null) {
+    applyPrismHighlight(rawCode, mdRaw, 'markdown');
+  }
+}
+
+/** Fetch and render a text/code/markdown body, unless the modal was torn down. */
+async function fillTextBody(
+  body: HTMLElement,
+  opts: FilePreviewOptions,
+  kind: Exclude<PreviewKind, 'pdf'>,
+  isClosed: () => boolean,
+): Promise<void> {
+  const result = await loadTextPreview(opts.url);
+  if (isClosed()) {
+    return;
+  }
+  if (!result.ok) {
+    buildErrorInto(body, opts);
+
+    return;
+  }
+
+  if (kind === 'markdown') {
+    await renderMarkdown(body, result.text, opts);
+  } else if (kind === 'code') {
+    const ext = (opts.fileName ?? opts.url).split('?')[0].split('#')[0].split('.').pop() ?? '';
+    await renderCode(body, result.text, extToPrismLang(ext) ?? 'plain');
+  } else {
+    renderPlainText(body, result.text);
+  }
 }
 
 function buildElements(opts: FilePreviewOptions): PreviewElements {
@@ -95,17 +244,19 @@ function buildElements(opts: FilePreviewOptions): PreviewElements {
 
   header.append(title, closeButton);
 
-  const body = buildBody(opts.url, opts.fileName, opts.labels.close);
+  const kind = getPreviewKind({ url: opts.url, fileName: opts.fileName, mimeType: opts.mimeType });
+  const body = buildBody(opts, kind ?? 'text');
 
   dialog.append(header, body);
   backdrop.appendChild(dialog);
 
-  return { backdrop, dialog, closeButton };
+  return { backdrop, dialog, closeButton, body, kind };
 }
 
 export function openFilePreview(opts: FilePreviewOptions): () => void {
   const previouslyFocused = document.activeElement;
-  const { backdrop, dialog, closeButton } = buildElements(opts);
+  const { backdrop, dialog, closeButton, body, kind } = buildElements(opts);
+  const textualKind = kind === null || kind === 'pdf' ? null : kind;
 
   // Remember the caller's inline overflow so scroll lock restores it exactly.
   const previousBodyOverflow = document.body.style.overflow;
@@ -195,6 +346,10 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
   // scoped design tokens (tint, radius, spacing) resolve on a body-mounted node.
   promoteToTopLayer(backdrop);
   closeButton.focus();
+
+  if (textualKind !== null) {
+    void fillTextBody(body, opts, textualKind, () => state.closed);
+  }
 
   return finalize;
 }

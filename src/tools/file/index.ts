@@ -219,7 +219,15 @@ export class FileTool implements BlockTool {
     this.previewTeardown = openFilePreview({
       url: this.data.url,
       fileName: this.data.fileName,
-      labels: { close: this.api.i18n.t('tools.file.previewClose') },
+      mimeType: this.data.mimeType,
+      labels: {
+        close: this.api.i18n.t('tools.file.previewClose'),
+        raw: this.api.i18n.t('tools.file.previewRaw'),
+        render: this.api.i18n.t('tools.file.previewRender'),
+        loading: this.api.i18n.t('tools.file.previewLoading'),
+        error: this.api.i18n.t('tools.file.previewError'),
+        download: this.api.i18n.t('tools.file.previewDownload'),
+      },
     });
   }
 

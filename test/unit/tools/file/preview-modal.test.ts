@@ -1,7 +1,31 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { openFilePreview } from '../../../../src/tools/file/preview-modal';
 
+vi.mock('../../../../src/tools/file/text-preview', () => ({
+  loadTextPreview: vi.fn(),
+}));
+vi.mock('../../../../src/markdown/markdownToHtml', () => ({
+  markdownToHtml: vi.fn(),
+}));
+vi.mock('../../../../src/tools/code/prism-loader', () => ({
+  tokenizePrism: vi.fn().mockResolvedValue('<span class="token">x</span>'),
+  isHighlightable: vi.fn().mockReturnValue(true),
+}));
+vi.mock('../../../../src/tools/code/prism-applier', () => ({
+  // eslint-disable-next-line no-param-reassign
+  applyPrismHighlight: vi.fn((el: HTMLElement, html: string) => { el.innerHTML = html; return () => {}; }),
+  ensurePrismStyles: vi.fn(),
+}));
+
+import { loadTextPreview } from '../../../../src/tools/file/text-preview';
+import { markdownToHtml } from '../../../../src/markdown/markdownToHtml';
+
 const labels = { close: 'Close preview' };
+
+const LABELS = {
+  close: 'Close', raw: 'Raw', render: 'Rendered',
+  loading: 'Loading…', error: 'Error', download: 'Download',
+};
 
 function getDialog(): HTMLElement | null {
   return document.body.querySelector<HTMLElement>('[role="dialog"]');
@@ -26,7 +50,7 @@ describe('openFilePreview', () => {
   });
 
   it('accepts a blob: url as the iframe src', () => {
-    openFilePreview({ url: 'blob:https://example.com/abc-123', labels });
+    openFilePreview({ url: 'blob:https://example.com/abc-123', mimeType: 'application/pdf', labels });
 
     const frame = document.body.querySelector<HTMLIFrameElement>('[data-role="file-preview-frame"]');
     expect(frame).not.toBeNull();
@@ -34,7 +58,7 @@ describe('openFilePreview', () => {
   });
 
   it('renders an error fallback and no iframe for a data: url', () => {
-    openFilePreview({ url: 'data:text/html,<script>alert(1)</script>', labels });
+    openFilePreview({ url: 'data:text/html,<script>alert(1)</script>', mimeType: 'application/pdf', labels });
 
     expect(document.body.querySelector('[data-role="file-preview-frame"]')).toBeNull();
     expect(document.body.querySelector('[data-role="file-preview-error"]')).not.toBeNull();
@@ -119,5 +143,71 @@ describe('openFilePreview', () => {
     close.click();
 
     expect(document.body.style.overflow).toBe('');
+  });
+});
+
+describe('openFilePreview — text kinds', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+    document.body.style.overflow = '';
+    vi.clearAllMocks();
+  });
+
+  it('renders a plain <pre> for a text file', async () => {
+    vi.mocked(loadTextPreview).mockResolvedValue({ ok: true, text: 'plain body' });
+    const teardown = openFilePreview({ url: 'notes.txt', fileName: 'notes.txt', labels: LABELS });
+    await vi.waitFor(() => {
+      const pre = document.querySelector('[data-role="file-preview-text"]');
+      expect(pre?.textContent).toBe('plain body');
+    });
+    teardown();
+  });
+
+  it('highlights a code file via Prism', async () => {
+    vi.mocked(loadTextPreview).mockResolvedValue({ ok: true, text: 'const x = 1;' });
+    const teardown = openFilePreview({ url: 'app.ts', fileName: 'app.ts', labels: LABELS });
+    await vi.waitFor(() => {
+      expect(document.querySelector('[data-role="file-preview-code"] .token')).not.toBeNull();
+    });
+    teardown();
+  });
+
+  it('shows the Markdown render view by default and toggles to raw', async () => {
+    vi.mocked(loadTextPreview).mockResolvedValue({ ok: true, text: '# Hi' });
+    vi.mocked(markdownToHtml).mockResolvedValue('<h1>Hi</h1>');
+    const teardown = openFilePreview({ url: 'readme.md', fileName: 'readme.md', labels: LABELS });
+
+    await vi.waitFor(() => {
+      expect(document.querySelector('[data-role="file-preview-md-render"]')?.innerHTML).toContain('<h1>Hi</h1>');
+    });
+
+    const rawBtn = document.querySelector<HTMLButtonElement>('[data-action="preview-raw"]');
+    rawBtn?.click();
+    await vi.waitFor(() => {
+      const raw = document.querySelector('[data-role="file-preview-md-raw"]');
+      expect(raw).not.toBeNull();
+      expect((raw as HTMLElement).hidden).toBe(false);
+    });
+    teardown();
+  });
+
+  it('shows an error with a download link when the fetch fails', async () => {
+    vi.mocked(loadTextPreview).mockResolvedValue({ ok: false, reason: 'fetch-error' });
+    const teardown = openFilePreview({ url: 'notes.txt', fileName: 'notes.txt', labels: LABELS });
+    await vi.waitFor(() => {
+      expect(document.querySelector('[data-role="file-preview-error"]')).not.toBeNull();
+      expect(document.querySelector('[data-action="preview-download"]')).not.toBeNull();
+    });
+    teardown();
+  });
+
+  it('does not write to the DOM if torn down before the fetch resolves', async () => {
+    let resolve!: (v: { ok: true; text: string }) => void;
+    vi.mocked(loadTextPreview).mockReturnValue(new Promise(r => { resolve = r; }));
+    const teardown = openFilePreview({ url: 'notes.txt', fileName: 'notes.txt', labels: LABELS });
+    teardown();
+    resolve({ ok: true, text: 'late' });
+    await Promise.resolve();
+    expect(document.querySelector('[data-role="file-preview-text"]')).toBeNull();
   });
 });

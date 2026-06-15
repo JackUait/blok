@@ -370,21 +370,6 @@ export class Embed implements BlockTool {
       return el;
     }
 
-    const card = document.createElement('div');
-
-    card.className = 'blok-embed-empty__card';
-
-    const glyph = document.createElement('span');
-
-    glyph.className = 'blok-embed-empty__glyph';
-    glyph.setAttribute('aria-hidden', 'true');
-    glyph.innerHTML = IconGlobe;
-
-    const title = document.createElement('span');
-
-    title.className = 'blok-embed-empty__title';
-    title.textContent = this.api.i18n.t('toolNames.embed');
-
     const form = document.createElement('form');
 
     form.setAttribute('data-role', 'embed-url-form');
@@ -441,8 +426,7 @@ export class Embed implements BlockTool {
       this.submitUrl(input.value.trim(), el);
     });
 
-    card.append(glyph, title, form);
-    el.appendChild(card);
+    el.appendChild(form);
 
     return el;
   }

@@ -52,6 +52,7 @@ export interface FilePreviewOptions {
 interface PreviewElements {
   backdrop: HTMLElement;
   dialog: HTMLElement;
+  header: HTMLElement;
   closeButton: HTMLButtonElement;
   body: HTMLElement;
   kind: PreviewKind | null;
@@ -139,9 +140,16 @@ async function renderCode(body: HTMLElement, text: string, lang: string): Promis
   }
 }
 
-async function renderMarkdown(body: HTMLElement, text: string, opts: FilePreviewOptions): Promise<void> {
+async function renderMarkdown(
+  body: HTMLElement,
+  header: HTMLElement,
+  text: string,
+  opts: FilePreviewOptions,
+): Promise<void> {
   body.replaceChildren();
 
+  // The Rendered/Raw switch lives in the header (centre slot), not in a
+  // band of its own — see buildElements for the header grid.
   const toolbar = document.createElement('div');
   toolbar.className = 'blok-file-preview-toggle';
   toolbar.setAttribute('role', 'group');
@@ -168,7 +176,8 @@ async function renderMarkdown(body: HTMLElement, text: string, opts: FilePreview
   rawView.appendChild(rawCode);
   rawView.hidden = true;
 
-  body.append(toolbar, renderView, rawView);
+  header.appendChild(toolbar);
+  body.append(renderView, rawView);
 
   const show = (raw: boolean): void => {
     rawView.hidden = !raw;
@@ -192,6 +201,7 @@ async function renderMarkdown(body: HTMLElement, text: string, opts: FilePreview
 /** Fetch and render a text/code/markdown body, unless the modal was torn down. */
 async function fillTextBody(
   body: HTMLElement,
+  header: HTMLElement,
   opts: FilePreviewOptions,
   kind: Exclude<PreviewKind, 'pdf'>,
   isClosed: () => boolean,
@@ -207,7 +217,7 @@ async function fillTextBody(
   }
 
   if (kind === 'markdown') {
-    await renderMarkdown(body, result.text, opts);
+    await renderMarkdown(body, header, result.text, opts);
   } else if (kind === 'code') {
     const ext = extOf(opts.fileName ?? opts.url);
     await renderCode(body, result.text, extToPrismLang(ext) ?? 'plain');
@@ -252,12 +262,12 @@ function buildElements(opts: FilePreviewOptions): PreviewElements {
   dialog.append(header, body);
   backdrop.appendChild(dialog);
 
-  return { backdrop, dialog, closeButton, body, kind };
+  return { backdrop, dialog, header, closeButton, body, kind };
 }
 
 export function openFilePreview(opts: FilePreviewOptions): () => void {
   const previouslyFocused = document.activeElement;
-  const { backdrop, dialog, closeButton, body, kind } = buildElements(opts);
+  const { backdrop, dialog, header, closeButton, body, kind } = buildElements(opts);
   const textualKind = kind === null || kind === 'pdf' ? null : kind;
 
   // Remember the caller's inline overflow so scroll lock restores it exactly.
@@ -350,7 +360,7 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
   closeButton.focus();
 
   if (textualKind !== null) {
-    void fillTextBody(body, opts, textualKind, () => state.closed);
+    void fillTextBody(body, header, opts, textualKind, () => state.closed);
   }
 
   return finalize;

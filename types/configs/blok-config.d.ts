@@ -135,6 +135,14 @@ export interface BlokConfig {
      * @default false
      */
     menu?: boolean;
+
+    /**
+     * When true, pasting a URL that matches no registered embed provider still
+     * offers "Create embed", framing it in a sandboxed iframe. Default false keeps
+     * blok's registry-only embed guarantee.
+     * @default false
+     */
+    allowGenericEmbed?: boolean;
   };
 
   /**

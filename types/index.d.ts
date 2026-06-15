@@ -167,6 +167,8 @@ export interface API {
   readOnly: ReadOnly;
   ui: Ui;
   theme: Theme;
+  /** Read-only view of selected editor configuration. */
+  config: Readonly<Pick<BlokConfig, 'linkPaste'>>;
   rectangleSelection: {
     cancelActiveSelection: () => void;
     isRectActivated: () => boolean;

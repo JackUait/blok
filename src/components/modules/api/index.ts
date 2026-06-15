@@ -16,6 +16,8 @@ export class API extends Module {
    * Blok Core API modules
    */
   public get methods(): APIInterfaces {
+    const apiConfig = this.config;
+
     return {
       blocks: this.Blok.BlocksAPI.methods,
       caret: this.Blok.CaretAPI.methods,
@@ -35,6 +37,11 @@ export class API extends Module {
       readOnly: this.Blok.ReadOnlyAPI.methods,
       ui: this.Blok.UiAPI.methods,
       theme: this.Blok.ThemeAPI.methods,
+      config: {
+        get linkPaste() {
+          return apiConfig.linkPaste;
+        },
+      },
       rectangleSelection: this.Blok.RectangleSelection,
     };
   }

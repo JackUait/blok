@@ -10,6 +10,7 @@ function getDialog(): HTMLElement | null {
 afterEach(() => {
   document.body.querySelectorAll('[role="dialog"], .blok-file-preview-backdrop').forEach((el) => el.remove());
   document.body.innerHTML = '';
+  document.body.style.overflow = '';
 });
 
 describe('openFilePreview', () => {
@@ -97,5 +98,26 @@ describe('openFilePreview', () => {
     teardown();
     expect(() => teardown()).not.toThrow();
     expect(getDialog()).toBeNull();
+  });
+
+  it('locks body scroll while open and restores the prior value on close', () => {
+    document.body.style.overflow = 'scroll';
+
+    const teardown = openFilePreview({ url: 'https://example.com/a.pdf', labels });
+    expect(document.body.style.overflow).toBe('hidden');
+
+    teardown();
+    expect(document.body.style.overflow).toBe('scroll');
+  });
+
+  it('restores body scroll when closed via the close button', () => {
+    openFilePreview({ url: 'https://example.com/a.pdf', labels });
+    expect(document.body.style.overflow).toBe('hidden');
+
+    const close = document.body.querySelector<HTMLButtonElement>('[data-action="close-preview"]');
+    if (!close) throw new Error('close button missing');
+    close.click();
+
+    expect(document.body.style.overflow).toBe('');
   });
 });

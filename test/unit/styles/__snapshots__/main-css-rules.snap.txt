@@ -4956,6 +4956,12 @@
   justify-content: center;
   padding: var(--blok-space-6);
   background: var(--blok-overlay-dark);
+  animation: blok-file-preview-backdrop-in 160ms ease;
+}
+
+.blok-file-preview-backdrop[data-blok-closing], .blok-file-preview-backdrop[data-blok-closing][data-blok-top-layer][popover] {
+  animation: blok-file-preview-backdrop-out 180ms ease forwards;
+  pointer-events: none;
 }
 
 .blok-file-preview-backdrop[data-blok-top-layer][popover] {
@@ -4976,6 +4982,15 @@
   border-radius: var(--blok-radius-xl);
   background: var(--blok-bg-primary);
   box-shadow: var(--blok-image-shadow-resting);
+  animation: blok-file-preview-dialog-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.blok-file-preview-backdrop[data-blok-closing] .blok-file-preview {
+  animation: blok-file-preview-dialog-out 180ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+[@media (prefers-reduced-motion: reduce)] .blok-file-preview-backdrop, .blok-file-preview-backdrop[data-blok-top-layer][popover], .blok-file-preview-backdrop[data-blok-closing], .blok-file-preview, .blok-file-preview-backdrop[data-blok-closing] .blok-file-preview {
+  animation: none;
 }
 
 .blok-file-preview-header {

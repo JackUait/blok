@@ -1,6 +1,34 @@
 import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
 import { safePreviewSrc } from './url';
 
+/** Time budget for the close animation before forcing teardown (ms). */
+const CLOSE_ANIMATION_FALLBACK_MS = 260;
+
+function readAnimationName(el: Element): string {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+  try {
+    return window.getComputedStyle(el).animationName || '';
+  } catch {
+    return '';
+  }
+}
+
+/** jsdom has no animation engine; skip the wait there so closes stay synchronous. */
+function supportsAnimations(): boolean {
+  if (typeof navigator === 'undefined') {
+    return false;
+  }
+
+  return !/jsdom/i.test(navigator.userAgent);
+}
+
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined'
+    && !!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+}
+
 export interface FilePreviewOptions {
   url: string;
   fileName?: string;
@@ -79,8 +107,19 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
   const previouslyFocused = document.activeElement;
   const { backdrop, dialog, closeButton } = buildElements(opts);
 
-  const teardown = (): void => {
+  // Remember the caller's inline overflow so scroll lock restores it exactly.
+  const previousBodyOverflow = document.body.style.overflow;
+  const state = { closed: false };
+
+  // Immediate teardown — used for the close animation's end and for the
+  // programmatic teardown the host calls when the block is removed/re-rendered.
+  const finalize = (): void => {
+    if (state.closed) {
+      return;
+    }
+    state.closed = true;
     document.removeEventListener('keydown', onKeyDown);
+    document.body.style.overflow = previousBodyOverflow;
     if (backdrop.parentNode) {
       removeFromTopLayer(backdrop);
       backdrop.parentNode.removeChild(backdrop);
@@ -90,26 +129,72 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
     }
   };
 
+  // User-initiated close — plays the exit animation, then finalizes. Falls back
+  // to an immediate finalize when motion is reduced or unsupported (jsdom).
+  const closeAnimated = (): void => {
+    if (state.closed) {
+      return;
+    }
+    backdrop.setAttribute('data-blok-closing', 'true');
+
+    if (prefersReducedMotion() || !supportsAnimations()) {
+      finalize();
+
+      return;
+    }
+
+    const animationName = readAnimationName(dialog);
+    if (animationName === '' || animationName === 'none') {
+      finalize();
+
+      return;
+    }
+
+    const settle = { done: false, fallback: 0 };
+    const onAnimationEnd = (event: AnimationEvent): void => {
+      if (event.target !== dialog) {
+        return;
+      }
+      finishClose();
+    };
+    const finishClose = (): void => {
+      if (settle.done) {
+        return;
+      }
+      settle.done = true;
+      dialog.removeEventListener('animationend', onAnimationEnd);
+      if (settle.fallback !== 0) {
+        window.clearTimeout(settle.fallback);
+      }
+      finalize();
+    };
+
+    dialog.addEventListener('animationend', onAnimationEnd);
+    settle.fallback = window.setTimeout(finishClose, CLOSE_ANIMATION_FALLBACK_MS);
+  };
+
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.key === 'Escape') {
-      teardown();
+      closeAnimated();
     }
   };
 
   backdrop.addEventListener('click', (event) => {
     if (!dialog.contains(event.target instanceof Node ? event.target : null)) {
-      teardown();
+      closeAnimated();
     }
   });
-  closeButton.addEventListener('click', () => teardown());
+  closeButton.addEventListener('click', () => closeAnimated());
   document.addEventListener('keydown', onKeyDown);
 
   document.body.appendChild(backdrop);
+  // Lock page scroll so the content behind the modal stays put.
+  document.body.style.overflow = 'hidden';
   // Promote into the CSS Top Layer so the modal renders above all editor and
   // host-page content, and so the `[data-blok-top-layer]` marker lets the
   // scoped design tokens (tint, radius, spacing) resolve on a body-mounted node.
   promoteToTopLayer(backdrop);
   closeButton.focus();
 
-  return teardown;
+  return finalize;
 }

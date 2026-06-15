@@ -5314,9 +5314,9 @@
   z-index: 1;
   border: 0;
   background: transparent;
-  padding: var(--blok-space-1-5) var(--blok-space-4);
+  padding: var(--blok-space-1) var(--blok-space-3);
   border-radius: var(--blok-radius-pill);
-  font-size: var(--blok-font-size-body);
+  font-size: var(--blok-font-size-ui-small);
   font-weight: var(--blok-font-weight-medium);
   color: var(--blok-text-secondary);
   cursor: pointer;

@@ -218,3 +218,52 @@ test('read-only mode sets file caption to contenteditable="false"', async ({ pag
   // Caption must now be non-editable
   await expect(caption).toHaveAttribute('contenteditable', 'false');
 });
+
+// ---------------------------------------------------------------------------
+// 4. Markdown preview: rendered view by default, Raw toggle shows source
+// ---------------------------------------------------------------------------
+test('Markdown file preview toggles between rendered and raw views', async ({ page }) => {
+  await createBlokWithFile(page);
+
+  const dropTarget = page.locator(
+    `${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"]`
+  ).first();
+
+  await dropTarget.evaluate((element: HTMLElement) => {
+    const file = new File([ '# Hello\n\nSome **bold** text.' ], 'readme.md', { type: 'text/markdown' });
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(file);
+
+    const makeEvent = (type: string): DragEvent => {
+      const ev = new DragEvent(type, { bubbles: true, cancelable: true });
+      Object.defineProperty(ev, 'dataTransfer', {
+        value: dataTransfer,
+        writable: false,
+        configurable: true,
+      });
+      return ev;
+    };
+
+    element.dispatchEvent(makeEvent('dragenter'));
+    element.dispatchEvent(makeEvent('dragover'));
+    element.dispatchEvent(makeEvent('drop'));
+  });
+
+  // The previewable file card renders as a button showing the filename.
+  const fileCard = page.getByRole('button', { name: /readme\.md/i });
+  await expect(fileCard).toBeVisible();
+  await fileCard.click();
+
+  // The preview opens in a top-layer modal dialog.
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+
+  // Rendered view is shown by default with the formatted heading.
+  const renderView = dialog.locator('[data-role="file-preview-md-render"]');
+  await expect(renderView.locator('h1')).toHaveText('Hello');
+
+  // Switching to Raw reveals the markdown source.
+  await dialog.getByRole('button', { name: 'Raw' }).click();
+  const rawView = dialog.locator('[data-role="file-preview-md-raw"]');
+  await expect(rawView).toContainText('# Hello');
+});

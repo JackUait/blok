@@ -89,7 +89,7 @@ export class FileTool implements BlockTool {
 
   public renderSettings(): MenuConfig {
     const i18n = this.api.i18n;
-    const captionVisible = this.data.captionVisible !== false;
+    const captionVisible = this.data.captionVisible ?? ((this.data.caption ?? '') !== '');
     return [
       {
         icon: IconCaption,
@@ -190,7 +190,8 @@ export class FileTool implements BlockTool {
   }
 
   private toggleCaption(): void {
-    this.data = { ...this.data, captionVisible: this.data.captionVisible === false };
+    const visible = this.data.captionVisible ?? ((this.data.caption ?? '') !== '');
+    this.data = { ...this.data, captionVisible: !visible };
     this.renderState();
     this.block.dispatchChange();
   }
@@ -309,7 +310,12 @@ export class FileTool implements BlockTool {
     const onPreview = isPreviewable(this.data) ? (): void => this.openPreview() : undefined;
     wrap.appendChild(renderFileCard(this.data, onPreview, this.api.i18n.t('tools.file.download')));
 
-    if (this.data.captionVisible !== false) {
+    const hasCaption = (this.data.caption ?? '') !== '';
+    // Hidden by default: the row shows only when explicitly toggled on or when
+    // existing data carries caption text. In read-only the placeholder is no
+    // longer an affordance, so an empty caption is dropped entirely.
+    const captionVisible = this.data.captionVisible ?? hasCaption;
+    if (captionVisible && (!this.readOnly || hasCaption)) {
       wrap.appendChild(renderCaptionRow({
         value: this.data.caption ?? '',
         placeholder: this.config.captionPlaceholder ?? DEFAULT_CAPTION_PLACEHOLDER,

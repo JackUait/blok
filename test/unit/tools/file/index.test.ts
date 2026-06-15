@@ -148,7 +148,7 @@ describe('FileTool — caption & read-only', () => {
 
   it('persists the caption on blur', () => {
     const block = createMockBlock();
-    const tool = new FileTool(createOptions({ url: 'https://cdn/doc.pdf' }, {}, block));
+    const tool = new FileTool(createOptions({ url: 'https://cdn/doc.pdf', captionVisible: true }, {}, block));
     const root = tool.render();
     const caption = root.querySelector<HTMLElement>('[data-role="file-caption"]');
     if (!caption) throw new Error('caption missing');
@@ -158,11 +158,43 @@ describe('FileTool — caption & read-only', () => {
     expect(block.dispatchChange).toHaveBeenCalled();
   });
 
+  it('hides the caption in edit mode by default', () => {
+    // A fresh file block shows no caption affordance until the user opts in
+    // via the block settings toggle.
+    const root = new FileTool(createOptions({ url: 'https://cdn/doc.pdf' })).render();
+    expect(root.querySelector('[data-role="file-caption"]')).toBeNull();
+  });
+
+  it('shows the caption in edit mode once toggled visible', () => {
+    const root = new FileTool(createOptions({ url: 'https://cdn/doc.pdf', captionVisible: true })).render();
+    expect(root.querySelector('[data-role="file-caption"]')).not.toBeNull();
+  });
+
+  it('shows an existing caption in edit mode even without the visible flag', () => {
+    // Legacy/saved data carries caption text but no captionVisible flag; the
+    // text itself must keep the row visible.
+    const root = new FileTool(createOptions({ url: 'https://cdn/doc.pdf', caption: 'kept' })).render();
+    expect(root.querySelector('[data-role="file-caption"]')?.textContent).toBe('kept');
+  });
+
   it('setReadOnly(true) makes the caption non-editable', () => {
-    const tool = new FileTool(createOptions({ url: 'https://cdn/doc.pdf' }));
+    const tool = new FileTool(createOptions({ url: 'https://cdn/doc.pdf', caption: 'a caption' }));
     const root = tool.render();
     tool.setReadOnly(true);
     expect(root.querySelector('[data-role="file-caption"]')?.getAttribute('contenteditable')).toBe('false');
+  });
+
+  it('read-only with an empty caption hides the caption row entirely', () => {
+    // Even with the visible flag on, an empty caption has nothing to show a
+    // reader, so the row must not render in read-only.
+    const roRoot = new FileTool({ ...createOptions({ url: 'https://cdn/doc.pdf', captionVisible: true }), readOnly: true }).render();
+    expect(roRoot.querySelector('[data-role="file-caption"]')).toBeNull();
+  });
+
+  it('read-only with a non-empty caption still renders it', () => {
+    const tool = new FileTool({ ...createOptions({ url: 'https://cdn/doc.pdf', caption: 'hello' }), readOnly: true });
+    const root = tool.render();
+    expect(root.querySelector('[data-role="file-caption"]')?.textContent).toBe('hello');
   });
 });
 

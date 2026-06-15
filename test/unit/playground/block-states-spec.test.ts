@@ -91,6 +91,24 @@ describe('playground block states spec (index.html)', () => {
     });
   });
 
+  describe('file entry', () => {
+    test('has a file tab', () => {
+      expect(rawSpec).toContain("tool: 'file'");
+    });
+
+    test('covers the "Long title" state', () => {
+      expect(sectionFor('file')).toContain("label: 'Long title'");
+    });
+
+    test('long-title state carries a filename long enough to truncate', () => {
+      const section = sectionFor('file');
+      const match = /id: 'fl-long'[\s\S]*?fileName: '([^']+)'/.exec(section);
+
+      expect(match, "fl-long fileName").not.toBeNull();
+      expect(match?.[1].length ?? 0).toBeGreaterThan(60);
+    });
+  });
+
   describe('gallery preview tools', () => {
     test('mountStatePreview registers the embed tool', () => {
       expect(mountTools).toContain('embed: Embed');

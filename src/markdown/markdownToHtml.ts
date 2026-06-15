@@ -51,27 +51,36 @@ async function nodesToHtml(nodes: RootContent[]): Promise<string> {
   return parts.join('');
 }
 
+// mdast RootContent is a wide union; we render the block-level node types a
+// document preview cares about and drop the rest. An if-chain (mirroring
+// mdast-to-blocks.ts) keeps this readable without an exhaustive switch.
 async function nodeToHtml(node: RootContent): Promise<string> {
-  switch (node.type) {
-    case 'heading':
-      return `<h${node.depth}>${phrasingToHtml(node.children)}</h${node.depth}>`;
-    case 'paragraph':
-      return `<p>${phrasingToHtml(node.children)}</p>`;
-    case 'thematicBreak':
-      return '<hr>';
-    case 'blockquote':
-      return `<blockquote>${await nodesToHtml(node.children as RootContent[])}</blockquote>`;
-    case 'list':
-      return listToHtml(node);
-    case 'code':
-      return codeToHtml(node);
-    case 'table':
-      return tableToHtml(node);
-    case 'html':
-      return escapeHtml(node.value);
-    default:
-      return '';
+  if (node.type === 'heading') {
+    return `<h${node.depth}>${phrasingToHtml(node.children)}</h${node.depth}>`;
   }
+  if (node.type === 'paragraph') {
+    return `<p>${phrasingToHtml(node.children)}</p>`;
+  }
+  if (node.type === 'thematicBreak') {
+    return '<hr>';
+  }
+  if (node.type === 'blockquote') {
+    return `<blockquote>${await nodesToHtml(node.children as RootContent[])}</blockquote>`;
+  }
+  if (node.type === 'list') {
+    return listToHtml(node);
+  }
+  if (node.type === 'code') {
+    return codeToHtml(node);
+  }
+  if (node.type === 'table') {
+    return tableToHtml(node);
+  }
+  if (node.type === 'html') {
+    return escapeHtml(node.value);
+  }
+
+  return '';
 }
 
 async function listToHtml(list: List): Promise<string> {

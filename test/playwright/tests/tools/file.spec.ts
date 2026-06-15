@@ -260,7 +260,7 @@ test('Markdown file preview toggles between rendered and raw views', async ({ pa
 
   // Rendered view is shown by default with the formatted heading.
   const renderView = dialog.locator('[data-role="file-preview-md-render"]');
-  await expect(renderView.locator('h1')).toHaveText('Hello');
+  await expect(renderView.getByRole('heading', { name: 'Hello' })).toBeVisible();
 
   // Switching to Raw reveals the markdown source.
   await dialog.getByRole('button', { name: 'Raw' }).click();

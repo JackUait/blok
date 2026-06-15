@@ -9,6 +9,7 @@ const baseOptions = (overrides: Partial<EmbedOverlayOptions> = {}): EmbedOverlay
   onAlign: vi.fn(),
   onToggleCaption: vi.fn(),
   onCopyLink: vi.fn(),
+  onReplace: vi.fn(),
   onDelete: vi.fn(),
   ...overrides,
 });
@@ -89,5 +90,22 @@ describe('renderEmbedOverlay', () => {
     q(overlay, 'more')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     q(overlay, 'delete')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('renderEmbedOverlay — replace', () => {
+  it('renders a replace menu item', () => {
+    const overlay = renderEmbedOverlay(baseOptions());
+
+    expect(overlay.querySelector('[data-action="replace"]')).not.toBeNull();
+  });
+
+  it('invokes onReplace when the replace item is clicked', () => {
+    const onReplace = vi.fn();
+    const overlay = renderEmbedOverlay(baseOptions({ onReplace }));
+
+    overlay.querySelector<HTMLElement>('[data-action="replace"]')?.click();
+
+    expect(onReplace).toHaveBeenCalledTimes(1);
   });
 });

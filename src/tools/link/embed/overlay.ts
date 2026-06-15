@@ -6,6 +6,7 @@ import {
   IconLink,
   IconLinkExternal,
   IconMoreHorizontal,
+  IconReplace,
   IconTrash,
 } from '../../../components/icons';
 
@@ -24,6 +25,7 @@ export interface EmbedOverlayOptions {
   onAlign(next: EmbedAlignment): void;
   onToggleCaption(): void;
   onCopyLink(): void;
+  onReplace(): void;
   onDelete(): void;
 }
 
@@ -156,6 +158,15 @@ function appendMoreMenu(root: HTMLElement, opts: EmbedOverlayOptions): void {
 
   const toggle = bindPopover(trigger, popover);
 
+  appendMenuItem(popover, {
+    action: 'replace',
+    label: opts.i18n.t('tools.embed.replace'),
+    icon: IconReplace,
+    onClick: () => {
+      toggle(false);
+      opts.onReplace();
+    },
+  });
   appendMenuItem(popover, {
     action: 'copy-link',
     label: opts.i18n.t('tools.image.copyUrl'),

@@ -32,4 +32,17 @@ describe('TableModel.hasMerges', () => {
       ]).hasMerges()
     ).toBe(true);
   });
+
+  it('returns true for a half-torn merge: mergedInto set but origin span already cleared', () => {
+    // Guards the third OR-clause (cell.mergedInto !== undefined) in isolation —
+    // the origin carries NO colspan/rowspan here, so the colspan/rowspan clauses
+    // cannot catch this. A merge whose origin span was wrongly cleared must still
+    // block reordering, otherwise a physical-index move corrupts the torn grid.
+    expect(
+      make([
+        [{ blocks: [] }, { blocks: [], mergedInto: [0, 0] }],
+        [{ blocks: [] }, { blocks: [] }],
+      ]).hasMerges()
+    ).toBe(true);
+  });
 });

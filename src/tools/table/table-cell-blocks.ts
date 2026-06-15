@@ -382,6 +382,17 @@ export class TableCellBlocks {
       const normalizedRow: CellContent[] = [];
 
       rowData.forEach((cellContent, colIndex) => {
+        // A merge-covered cell has no rendered <td> (createGridFromModel skips
+        // spanned cells). Preserve its placeholder so the rebuilt model keeps
+        // the merge structure and column count — otherwise loading a saved
+        // merged table flattens the merge out of the model while the DOM still
+        // carries the colspan/rowspan, desyncing the two.
+        if (isCellWithBlocks(cellContent) && cellContent.mergedInto !== undefined) {
+          normalizedRow.push({ blocks: [], mergedInto: [...cellContent.mergedInto] });
+
+          return;
+        }
+
         const cell = row.querySelector<HTMLElement>(`[${CELL_COL_ATTR}="${colIndex}"]`);
 
         if (!cell) {
@@ -402,6 +413,10 @@ export class TableCellBlocks {
           : { mountedIds: [] as string[], replacements: new Map<string, string>() };
 
         const cellColorProps: Pick<CellContent, 'color' | 'textColor'> = {};
+        // Span + placement metadata the model round-trips but initializeCells
+        // would otherwise drop on the rendered() rebuild (merge-origin colspan/
+        // rowspan, vertical/horizontal placement).
+        const cellMetaProps: Pick<CellContent, 'colspan' | 'rowspan' | 'placement'> = {};
 
         if (isCellWithBlocks(cellContent)) {
           if (cellContent.color !== undefined) {
@@ -409,6 +424,15 @@ export class TableCellBlocks {
           }
           if (cellContent.textColor !== undefined) {
             cellColorProps.textColor = cellContent.textColor;
+          }
+          if (cellContent.colspan !== undefined && cellContent.colspan > 1) {
+            cellMetaProps.colspan = cellContent.colspan;
+          }
+          if (cellContent.rowspan !== undefined && cellContent.rowspan > 1) {
+            cellMetaProps.rowspan = cellContent.rowspan;
+          }
+          if (cellContent.placement !== undefined) {
+            cellMetaProps.placement = cellContent.placement;
           }
         }
 
@@ -418,7 +442,7 @@ export class TableCellBlocks {
             ? baseIds.map(id => replacements.get(id) ?? id)
             : baseIds;
 
-          normalizedRow.push({ blocks: blockIds, ...cellColorProps });
+          normalizedRow.push({ blocks: blockIds, ...cellColorProps, ...cellMetaProps });
         } else {
           const text = typeof cellContent === 'string'
             ? cellContent
@@ -440,6 +464,7 @@ export class TableCellBlocks {
               ? ids
               : [...referencedBlockIds, ...ids],
             ...cellColorProps,
+            ...cellMetaProps,
           });
         }
 

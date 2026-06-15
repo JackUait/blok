@@ -408,9 +408,6 @@ export class TableSubsystems {
         this.rowColControls?.refresh();
         this.addControls?.setDisplay(true);
         this.addControls?.syncRowButtonWidth();
-        // Drag may have grown the table past the container without scrolling;
-        // recompute the haze so the scroll affordance is correct on release.
-        this.scrollHaze?.update();
       },
       getTableSize: () => {
         return { rows: this.host.model.rows, cols: this.host.model.cols };
@@ -448,7 +445,6 @@ export class TableSubsystems {
           this.initResize(gridEl);
           this.rowColControls?.refresh();
           this.addControls?.syncRowButtonWidth();
-          this.scrollHaze?.update();
         });
       },
     });
@@ -659,6 +655,12 @@ export class TableSubsystems {
       },
       isPercentMode,
     );
+
+    // Every structural grow path (grip insert-col, +button drag, corner drag,
+    // paste-grow) funnels through initResize. Refresh the overflow haze here so
+    // the right-edge scroll affordance is always correct after the table grows,
+    // instead of spot-patching each call site (and missing some).
+    this.scrollHaze?.update();
   }
 
   private handleCellCopy(cells: HTMLElement[], clipboardData: DataTransfer): void {

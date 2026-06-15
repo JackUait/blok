@@ -358,6 +358,10 @@
   position: fixed;
   inset: 0;
   z-index: var(--blok-z-drawer);
+  /* border-box so 100vh sizing keeps the padding inside the viewport — with
+     content-box the padding adds to 100vh, overflowing and offsetting the
+     vertically-centred dialog. */
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;

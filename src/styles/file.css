@@ -560,7 +560,7 @@
 .blok-file-preview-pre[data-role="file-preview-md-raw"] {
   white-space: pre-wrap;
   word-break: break-word;
-  animation: blok-file-preview-view-in-right 260ms var(--blok-ease-popover);
+  animation: blok-file-preview-view-in-right 260ms var(--blok-ease-popover) backwards;
 }
 
 .blok-file-preview-pre[data-role="file-preview-md-raw"] code {
@@ -589,14 +589,16 @@
   background: var(--blok-bg-primary);
   white-space: normal;
   word-break: break-word;
-  animation: blok-file-preview-view-in-left 260ms var(--blok-ease-popover);
+  animation: blok-file-preview-view-in-left 260ms var(--blok-ease-popover) backwards;
 }
 
 /* Crossfade Rendered ⇄ Raw: the outgoing view is display:none'd (which resets
    its animation), so the incoming view replays its slide on every toggle. Each
    view slides in from the side its segment sits on — Rendered (left button)
    from the left, Raw (right button) from the right — so the content tracks the
-   pill. Expo-out easing decelerates into place for a soft landing. */
+   pill. Expo-out easing decelerates into place for a soft landing. The
+   `backwards` fill applies the `from` state before the first frame, so the
+   incoming view never flashes fully-opaque for a frame before sliding in. */
 @keyframes blok-file-preview-view-in-left {
   from { opacity: 0; transform: translate3d(-14px, 0, 0); }
   to { opacity: 1; transform: none; }

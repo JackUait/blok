@@ -895,6 +895,7 @@
     import * as Icons from './src/components/icons/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
+    import { renderUploadingState as renderFileUploadingState } from './src/tools/file/uploading-state.ts';
     import { version } from './package.json';
 
     document.getElementById('pg-version').textContent = `v${version}`;
@@ -2495,6 +2496,7 @@
         label: 'File',
         states: [
           { label: 'Empty (upload)', blocks: [{ id: 'fl-empty', type: 'file', data: { url: '' } }] },
+          { label: 'Uploading', blocks: [{ id: 'fl-uploading', type: 'file', data: { url: '' } }] },
           { label: 'PDF (previewable)', blocks: [{ id: 'fl-pdf', type: 'file', data: {
             url: 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf',
             fileName: 'tracemonkey-paper.pdf',
@@ -2683,6 +2685,20 @@
           title: 'Upload failed',
           message: 'Check your connection and try again, or choose a different file.',
         });
+
+        // Force the transient file-upload loading state. The uploader resolves
+        // instantly here, so render the real uploading UI at a fixed progress.
+        const fileUploadingRoot = holder.querySelector('[data-blok-id="fl-uploading"] [data-blok-tool="file"]');
+        if (fileUploadingRoot) {
+          fileUploadingRoot.replaceChildren();
+          const uploadingEl = renderFileUploadingState({
+            fileName: 'tracemonkey-paper.pdf',
+            labels: { uploading: 'Uploading', cancel: 'Cancel', progress: 'Upload progress' },
+            onCancel: () => {},
+          });
+          uploadingEl.setProgress(64);
+          fileUploadingRoot.appendChild(uploadingEl);
+        }
       });
     }
 

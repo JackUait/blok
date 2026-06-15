@@ -69,3 +69,6 @@ docs/plans/
 nohup.out
 e2e-results.log
 docs/superpowers/
+
+# Scheduled tasks lock (local only)
+.claude/scheduled_tasks.lock

@@ -1042,7 +1042,7 @@ describe('table-operations', () => {
       const merged = [
         [{ blocks: [], colspan: 2 }, { blocks: [], mergedInto: [0, 0] }],
         [cell('a'), cell('b')],
-      ];
+      ] as unknown as Parameters<typeof rectangularizeContent>[0];
 
       expect(rectangularizeContent(merged)).toBe(merged);
     });

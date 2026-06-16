@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.16.0](https://github.com/JackUait/blok/compare/v0.15.1...v0.16.0) (2026-06-16)
+
+### Features
+
+- **File** — New File block tool. Tabbed empty state with upload (validation, progress bar, cancel), URL and drag-and-drop; per-type icon and tint; editable filename; consumer upload endpoints and download card. Rich preview modal dispatched by kind: PDF (top-layer modal with open-in-new-tab), Office (docx/xlsx/pptx via lazy renderers, xlsx parsed through JSZip), and text/code/markdown — including advanced markdown (math, footnotes, references, alerts, anchors, safe block-level raw HTML) with an animated Rendered ⇄ Raw toggle. Read-only support, i18n in every locale, and Storybook stories.
+- **Embed** — Generic embed: frame arbitrary URLs through a gated resolver, offered in the paste menu behind the `linkPaste.allowGenericEmbed` flag with an `api.config` accessor. Replace the source via an empty-state URL bar and an overlay more-menu item.
+- **Migration** — Complete Editor.js block-type coverage plus a drop-in UMD build; adapt legacy Editor.js inline tools and `linkTool` data.
+- **Playground** — Block-states selector as a fixed left side menu; real docx/xlsx/pptx, code and text samples for the File block; richer quarterly-budget sheet; File block wired into the editor demo.
+
+### Bug Fixes
+
+- **Table** — Resolve merged-cell coordinate bugs; preserve merges on load; split overlapped merges on paste so no destination data is dropped; keep empty cells editable on the read-only→edit toggle; harden input, clipboard and move-guard handling.
+- **File** — Unbreak pptx preview; vertically center the preview modal; stop wrong-colour strips and toggle flicker during preview transitions; block `javascript:` URLs in download hrefs.
+- **Build** — Make the published install self-contained (ship `src`, keep markdown and nanoid as runtime deps) so bundlephobia can build; green the self-contained-install and css-token audits.
+
+### Maintenance
+
+- **Refactor** — Extract table visual-subsystem orchestration into `TableSubsystems`; split `BlockOperations` into focused worker classes; share the media uploader empty state across the image and file tools.
+- **Code** — Cover every Prism token in both the light and dark themes.
+- **Lint** — Resolve all lint errors by root cause and mute advisory-only rules.
+- **Docs** — Refresh the README tool list and entry points; add a File block tool reference entry.
+
 ## [0.15.1](https://github.com/JackUait/blok/compare/v0.15.0...v0.15.1) (2026-06-13)
 
 ### Bug Fixes

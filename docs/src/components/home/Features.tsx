@@ -444,7 +444,7 @@ console.log(editor.readOnly.isEnabled);`,
             <button
               type="button"
               key={feature.accent}
-              className={`feature-card feature-card--${feature.accent}${index === 0 ? ' feature-card--featured' : ''}`}
+              className={`feature-card feature-card--${feature.accent}`}
               data-feature-card
               style={{ "--animation-order": index } as React.CSSProperties}
               onClick={() => handleFeatureClick(feature)}

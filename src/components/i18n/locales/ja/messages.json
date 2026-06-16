@@ -4,7 +4,7 @@
   "blockSettings.clickOrShortcutToOpenMenu": "クリックまたは {shortcut} でメニューを開く",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
-  "toolbox.addBelow": "ブロックを追加",
+  "toolbox.addBelow": "クリックして下に追加",
   "toolbox.optionAddAbove": "⌥ 上に追加",
   "toolbox.ctrlAddAbove": "Ctrl 上に追加",
   "toolbox.typeToSearch": "入力して検索",
@@ -378,11 +378,10 @@
   "tools.file.errorReplace": "置き換え",
   "tools.file.preview": "プレビュー",
   "tools.file.previewClose": "プレビューを閉じる",
-  "tools.file.previewRaw": "ソース",
-  "tools.file.previewRender": "プレビュー",
+  "tools.file.previewRaw": "未加工",
+  "tools.file.previewRender": "レンダリング",
   "tools.file.previewLoading": "プレビューを読み込み中…",
   "tools.file.previewError": "プレビューを読み込めませんでした",
   "tools.file.previewDownload": "ダウンロード",
-  "tools.file.previewOpenInNewTab": "新しいタブで開く",
   "tools.file.previewOpenInNewTab": "新しいタブで開く"
 }

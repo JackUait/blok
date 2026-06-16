@@ -4,7 +4,7 @@
   "blockSettings.clickOrShortcutToOpenMenu": "Clicca o {shortcut} per aprire il menu",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
-  "toolbox.addBelow": "Aggiungi blocco",
+  "toolbox.addBelow": "Clicca per aggiungere sotto",
   "toolbox.optionAddAbove": "⌥ — aggiungi sopra",
   "toolbox.ctrlAddAbove": "Ctrl — aggiungi sopra",
   "toolbox.typeToSearch": "Digita per cercare",
@@ -54,7 +54,7 @@
   "tools.list.placeholder": "Elenco",
   "tools.paragraph.placeholder": "Scrivi qualcosa o premi / per selezionare",
   "tools.toggle.placeholder": "A scomparsa",
-  "tools.toggle.bodyPlaceholder": "Toggle vuoto. Fare clic o trascinare blocchi all'interno.",
+  "tools.toggle.bodyPlaceholder": "Blocco a scomparsa vuoto. Clicca o trascina blocchi all’interno.",
   "tools.toggle.ariaLabelCollapse": "Comprimi",
   "tools.toggle.ariaLabelExpand": "Espandi",
   "tools.table.title": "Tabella",
@@ -383,6 +383,5 @@
   "tools.file.previewLoading": "Caricamento anteprima…",
   "tools.file.previewError": "Impossibile caricare l'anteprima",
   "tools.file.previewDownload": "Scarica",
-  "tools.file.previewOpenInNewTab": "Apri in una nuova scheda",
   "tools.file.previewOpenInNewTab": "Apri in una nuova scheda"
 }

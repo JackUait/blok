@@ -402,7 +402,7 @@ describe('I18n Module', () => {
       // Russian base translations should be available
       expect(i18n.getLocale()).toBe('ru');
       expect(i18n.t('popover.search')).toBe('Поиск');
-      expect(i18n.t('toolbox.addBelow')).toBe('Добавить блок');
+      expect(i18n.t('toolbox.addBelow')).toBe('Нажмите, чтобы добавить ниже');
     });
 
     it('uses specified locale when provided', async () => {

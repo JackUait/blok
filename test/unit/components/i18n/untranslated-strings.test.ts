@@ -82,12 +82,17 @@ const UNIVERSAL_SYMBOL_KEYS = new Set<string>([
  * translation gap and fails the test.
  */
 const COGNATE_RETENTIONS: Record<string, Set<string>> = {
+  // Swatch labels are placeholder-only ("{default} {mode}") and read naturally
+  // in the English source order, so an identical value is correct here.
+  am: new Set(['tools.colorPicker.defaultSwatchLabel', 'tools.colorPicker.colorSwatchLabel']),
   az: new Set(['tools.image.cropRatioOval', 'tools.database.defaultStatusProperty']),
-  bs: new Set(['tools.image.cropRatioOval', 'tools.database.defaultStatusProperty']),
+  bg: new Set(['tools.colorPicker.defaultSwatchLabel', 'tools.colorPicker.colorSwatchLabel']),
   cs: new Set(['tools.database.propertyTypeText']),
   da: new Set([
     'tools.colorPicker.color.orange',
     'toolNames.database',
+    // "Link" is the standard loanword for a hyperlink in Danish UIs.
+    'toolNames.link',
     'tools.callout.colorOrange',
     'tools.image.emptyUpload',
     'tools.image.emptyLink',
@@ -96,14 +101,18 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.file.emptyLink',
     'tools.database.defaultStatusProperty',
     'searchTerms.layout',
+    // Placeholder-only swatch labels read naturally in source order.
+    'tools.colorPicker.defaultSwatchLabel',
+    'tools.colorPicker.colorSwatchLabel',
   ]),
   de: new Set([
     'tools.colorPicker.color.orange',
     'tools.callout.colorOrange',
     'toolNames.code',
+    // "Link" is the standard loanword for a hyperlink in German UIs.
+    'toolNames.link',
     'tools.code.codeTab',
     'tools.image.emptyLink',
-    // "Link" is the standard loanword for a hyperlink in German UIs.
     'tools.file.emptyLink',
     'tools.database.viewTypeBoard',
     'tools.database.propertyTypeText',
@@ -112,16 +121,25 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'searchTerms.layout',
   ]),
   es: new Set(['tools.stub.error', 'tools.table.cellColor', 'tools.callout.color']),
-  et: new Set(['tools.image.emptyLink', 'tools.file.emptyLink']),
+  // "Link" is the standard loanword for a hyperlink in Estonian UIs.
+  et: new Set(['toolNames.link', 'tools.image.emptyLink', 'tools.file.emptyLink']),
   fil: new Set([
     'tools.link.emailAddress',
     'tools.code.autoDetected',
     'tools.image.emptyLink',
     'tools.image.cropAspectRatio',
-    // "File"/"Link"/"Preview" are the standard loanwords in Filipino (Tagalog) UIs.
+    'tools.image.cropRatioOval',
+    // "File"/"Link"/"Preview"/"Board"/"Embed"/"Toggle"/"Raw" are the standard
+    // English loanwords in Filipino (Tagalog) product UIs.
     'toolNames.file',
+    'toolNames.link',
+    'toolNames.board',
+    'toolNames.embed',
+    'tools.code.previewTab',
+    'tools.toggle.placeholder',
     'tools.file.emptyLink',
     'tools.file.preview',
+    'tools.file.previewRaw',
     'tools.database.viewTypeBoard',
     'tools.database.propertyTypeCheckbox',
     'tools.database.listView',
@@ -146,7 +164,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   id: new Set(['tools.image.cropRatioOval', 'tools.database.defaultStatusProperty']),
   // "File" is the standard computing loanword in Italian (Notion/Google Docs).
   it: new Set(['searchTerms.layout', 'toolNames.file']),
-  ms: new Set(['tools.database.defaultStatusProperty']),
+  // "grid" is a common search keyword loanword for the table tool in Malay UIs.
+  ms: new Set(['tools.database.defaultStatusProperty', 'searchTerms.grid']),
   nl: new Set([
     'toolNames.link',
     'toolNames.database',

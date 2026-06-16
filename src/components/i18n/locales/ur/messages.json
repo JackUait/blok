@@ -77,7 +77,7 @@
   "tools.toggle.ariaLabelExpand": "پھیلائیں",
   "tools.table.title": "ٹیبل",
   "tools.table.clearSelection": "صاف کریں",
-  "tools.table.copySelection": "کاپی",
+  "tools.table.copySelection": "کاپی کریں",
   "tools.table.cellColor": "رنگ",
   "tools.table.mergeCells": "خانے ضم کریں",
   "tools.table.splitCell": "خانہ تقسیم کریں",
@@ -383,6 +383,5 @@
   "tools.file.previewLoading": "پیش نظارہ لوڈ ہو رہا ہے…",
   "tools.file.previewError": "پیش نظارہ لوڈ نہیں ہو سکا",
   "tools.file.previewDownload": "ڈاؤن لوڈ",
-  "tools.file.previewOpenInNewTab": "نئے ٹیب میں کھولیں",
   "tools.file.previewOpenInNewTab": "نئے ٹیب میں کھولیں"
 }

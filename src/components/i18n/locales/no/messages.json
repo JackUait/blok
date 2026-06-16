@@ -54,7 +54,7 @@
   "tools.list.placeholder": "Liste",
   "tools.paragraph.placeholder": "Skriv noe eller trykk / for å velge",
   "tools.toggle.placeholder": "Sammenleggbar",
-  "tools.toggle.bodyPlaceholder": "Tom veksler. Klikk eller slipp blokker inni.",
+  "tools.toggle.bodyPlaceholder": "Tom sammenleggbar blokk. Klikk eller slipp blokker inni.",
   "tools.toggle.ariaLabelCollapse": "Skjul",
   "tools.toggle.ariaLabelExpand": "Utvid",
   "tools.table.title": "Tabell",
@@ -378,11 +378,10 @@
   "tools.file.errorReplace": "Erstatt",
   "tools.file.preview": "Forhåndsvisning",
   "tools.file.previewClose": "Lukk forhåndsvisning",
-  "tools.file.previewRaw": "Kildetekst",
+  "tools.file.previewRaw": "Råtekst",
   "tools.file.previewRender": "Gjengitt",
   "tools.file.previewLoading": "Laster forhåndsvisning…",
   "tools.file.previewError": "Kunne ikke laste forhåndsvisning",
   "tools.file.previewDownload": "Last ned",
-  "tools.file.previewOpenInNewTab": "Åpne i ny fane",
   "tools.file.previewOpenInNewTab": "Åpne i ny fane"
 }

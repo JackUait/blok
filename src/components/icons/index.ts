@@ -765,6 +765,45 @@ export const IconExpandFullscreen = `
 </svg>
 `;
 
+// Exit fullscreen — arrows pulling inward (matches IconExpandFullscreen)
+export const IconPlayerFullscreenExit = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M16.5 7.5h-4v-4M3.5 12.5h4v4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m12.5 7.5 4-4M7.5 12.5l-4 4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
+// Media play — filled triangle
+export const IconPlayerPlay = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M6.5 4.7v10.6a.6.6 0 0 0 .92.5l8.2-5.3a.6.6 0 0 0 0-1l-8.2-5.3a.6.6 0 0 0-.92.5Z" fill="currentColor"/>
+</svg>
+`;
+
+// Media pause — two filled bars
+export const IconPlayerPause = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <rect x="5.75" y="4.5" width="3" height="11" rx="1" fill="currentColor"/>
+  <rect x="11.25" y="4.5" width="3" height="11" rx="1" fill="currentColor"/>
+</svg>
+`;
+
+// Volume on — speaker + sound waves
+export const IconPlayerVolume = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M4 7.5h2.5L10 4.5v11L6.5 12.5H4a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5Z" fill="currentColor"/>
+  <path d="M12.5 7.75a3 3 0 0 1 0 4.5M14.5 5.5a6 6 0 0 1 0 9" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
+// Volume muted — speaker + cross
+export const IconPlayerVolumeMute = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M4 7.5h2.5L10 4.5v11L6.5 12.5H4a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5Z" fill="currentColor"/>
+  <path d="m13 8 4 4M17 8l-4 4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
 // Download — arrow into tray
 export const IconDownload = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

@@ -33,6 +33,7 @@ export { Quote } from './quote';
 export { CodeTool as Code } from './code';
 export { ImageTool as Image } from './image';
 export { FileTool as File } from './file';
+export { VideoTool as Video } from './video';
 export { ColumnList } from './column-list';
 export { Column } from './column';
 export { Columns } from './columns';
@@ -65,6 +66,7 @@ export const defaultBlockTools = {
   code: { inlineToolbar: false },
   image: {},
   file: {},
+  video: {},
   column_list: {},
   column: {},
   embed: {},

@@ -179,6 +179,65 @@ describe('FileTool — upload flow', () => {
   });
 });
 
+describe('FileTool — video auto-convert', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  const videoFile = (name = 'clip.mp4', type = 'video/mp4'): File =>
+    new File([new Uint8Array(4)], name, { type });
+
+  it('replaces the File block with a Video block when a video file is uploaded', async () => {
+    const uploadByFile = vi.fn().mockResolvedValue({ url: 'https://cdn/clip.mp4', fileName: 'clip.mp4' });
+    const api = createMockApi();
+    const tool = new FileTool(createOptions({}, { uploader: { uploadByFile } }, undefined, api));
+    const root = tool.render();
+
+    tool.onPaste(filePasteEvent(videoFile()));
+    await flush();
+
+    expect(api.blocks.insert).toHaveBeenCalledWith(
+      'video',
+      expect.objectContaining({ url: 'https://cdn/clip.mp4', fileName: 'clip.mp4' }),
+      {},
+      0,
+      false,
+      true
+    );
+    expect(root.querySelector('[data-role="file-name"]')).toBeNull();
+  });
+
+  it('converts via the filename extension when the mime type is empty', async () => {
+    const uploadByFile = vi.fn().mockResolvedValue({ url: 'https://cdn/clip.webm', fileName: 'clip.webm' });
+    const api = createMockApi();
+    const tool = new FileTool(createOptions({}, { uploader: { uploadByFile } }, undefined, api));
+    tool.render();
+
+    tool.onPaste(filePasteEvent(videoFile('clip.webm', '')));
+    await flush();
+
+    expect(api.blocks.insert).toHaveBeenCalledWith(
+      'video',
+      expect.objectContaining({ url: 'https://cdn/clip.webm' }),
+      {},
+      0,
+      false,
+      true
+    );
+  });
+
+  it('does NOT convert a non-video, non-image file', async () => {
+    const uploadByFile = vi.fn().mockResolvedValue({ url: 'https://cdn/a.pdf', fileName: 'a.pdf' });
+    const api = createMockApi();
+    const tool = new FileTool(createOptions({}, { uploader: { uploadByFile } }, undefined, api));
+    tool.render();
+
+    tool.onPaste(filePasteEvent(new File([new Uint8Array(4)], 'a.pdf', { type: 'application/pdf' })));
+    await flush();
+
+    expect(api.blocks.insert).not.toHaveBeenCalled();
+  });
+});
+
 describe('FileTool — image auto-convert', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());

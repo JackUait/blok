@@ -1,0 +1,71 @@
+import type { VideoConfig } from '../../../types/tools/video';
+import { DEFAULT_MAX_SIZE, DEFAULT_MIME_TYPES } from './constants';
+
+export interface UploadResult {
+  url: string;
+  fileName?: string;
+}
+
+export interface UploadOptions {
+  onProgress?: (percent: number) => void;
+}
+
+export class VideoUploadError extends Error {
+  constructor(public readonly code: string, detail?: string) {
+    super(detail ? `${code}: ${detail}` : code);
+    this.name = 'VideoUploadError';
+  }
+}
+
+function parseUrl(raw: string): URL | null {
+  try {
+    return new URL(raw);
+  } catch {
+    return null;
+  }
+}
+
+export class Uploader {
+  constructor(private readonly config: VideoConfig) {}
+
+  public async handleUrl(raw: string, options: UploadOptions = {}): Promise<UploadResult> {
+    this.validateUrl(raw);
+    if (this.config.uploader?.uploadByUrl) {
+      return this.config.uploader.uploadByUrl(raw, { onProgress: options.onProgress });
+    }
+
+    return { url: raw };
+  }
+
+  public async handleFile(file: File, options: UploadOptions = {}): Promise<UploadResult> {
+    this.validateFile(file);
+    if (this.config.uploader?.uploadByFile) {
+      return this.config.uploader.uploadByFile(file, { onProgress: options.onProgress });
+    }
+
+    return { url: URL.createObjectURL(file), fileName: file.name };
+  }
+
+  private validateUrl(raw: string): void {
+    const parsed = parseUrl(raw);
+
+    if (!parsed) {
+      throw new VideoUploadError('INVALID_URL', raw);
+    }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new VideoUploadError('INVALID_URL', parsed.protocol);
+    }
+  }
+
+  private validateFile(file: File): void {
+    const types = this.config.types ?? [...DEFAULT_MIME_TYPES];
+    const maxSize = this.config.maxSize ?? DEFAULT_MAX_SIZE;
+
+    if (file.type && !types.includes(file.type)) {
+      throw new VideoUploadError('UNSUPPORTED_TYPE', file.type);
+    }
+    if (file.size > maxSize) {
+      throw new VideoUploadError('FILE_TOO_LARGE', `${file.size} > ${maxSize}`);
+    }
+  }
+}

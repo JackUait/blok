@@ -1,0 +1,203 @@
+import {
+  IconExpandFullscreen,
+  IconPlayerFullscreenExit,
+  IconPlayerPause,
+  IconPlayerPlay,
+  IconPlayerVolume,
+  IconPlayerVolumeMute,
+} from '../../components/icons';
+
+export interface ControlsOptions {
+  video: HTMLVideoElement;
+  figure: HTMLElement;
+}
+
+export interface ControlsHandle {
+  element: HTMLElement;
+  destroy(): void;
+}
+
+/** Format a seconds value into `m:ss` (e.g. 125 → "2:05"). */
+export function formatTime(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds <= 0) return '0:00';
+  const total = Math.floor(seconds);
+  const mins = Math.floor(total / 60);
+  const secs = total % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+function button(action: string, label: string, icon: string, extraClass = ''): HTMLButtonElement {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.setAttribute('data-action', action);
+  btn.setAttribute('aria-label', label);
+  btn.className = `blok-video-controls__btn ${extraClass}`.trim();
+  btn.innerHTML = icon;
+  return btn;
+}
+
+/**
+ * Build an Airbnb-inspired custom control surface for a `<video>` element and
+ * wire it to the media. The native `controls` attribute is intentionally
+ * absent — this fully replaces it (play/pause, scrubber, time, volume,
+ * fullscreen). Returns the control element plus a teardown that detaches every
+ * media listener.
+ */
+export function attachControls({ video, figure }: ControlsOptions): ControlsHandle {
+  const root = document.createElement('div');
+  root.className = 'blok-video-controls';
+  root.setAttribute('data-role', 'video-controls');
+
+  // Big centred play affordance, shown while paused.
+  const center = button('play-toggle', 'Play', IconPlayerPlay, 'blok-video-controls__center');
+  center.setAttribute('data-role', 'center-play');
+  root.appendChild(center);
+
+  // Bottom scrim + control bar.
+  const bar = document.createElement('div');
+  bar.className = 'blok-video-controls__bar';
+
+  const playToggle = button('play-toggle', 'Play', IconPlayerPlay);
+
+  const seek = document.createElement('input');
+  seek.type = 'range';
+  seek.min = '0';
+  seek.max = '0';
+  seek.step = 'any';
+  seek.value = '0';
+  seek.className = 'blok-video-controls__seek';
+  seek.setAttribute('data-role', 'seek');
+  seek.setAttribute('aria-label', 'Seek');
+
+  const time = document.createElement('span');
+  time.className = 'blok-video-controls__time';
+  time.setAttribute('data-role', 'time');
+  time.textContent = '0:00 / 0:00';
+
+  const muteToggle = button('mute-toggle', 'Mute', IconPlayerVolume);
+  muteToggle.setAttribute('aria-pressed', 'false');
+
+  const volume = document.createElement('input');
+  volume.type = 'range';
+  volume.min = '0';
+  volume.max = '1';
+  volume.step = '0.05';
+  volume.value = '1';
+  volume.className = 'blok-video-controls__volume';
+  volume.setAttribute('data-role', 'volume');
+  volume.setAttribute('aria-label', 'Volume');
+
+  const fullscreen = button('fullscreen', 'Fullscreen', IconExpandFullscreen);
+
+  const volumeWrap = document.createElement('div');
+  volumeWrap.className = 'blok-video-controls__volume-wrap';
+  volumeWrap.append(muteToggle, volume);
+
+  bar.append(playToggle, time, seek, volumeWrap, fullscreen);
+  root.appendChild(bar);
+
+  // ----- state sync -----
+  // `media` aliases the param so the property writes below are not flagged as
+  // parameter reassignment.
+  const media = video;
+  const state = { playing: false };
+
+  const setPlaying = (next: boolean): void => {
+    state.playing = next;
+    figure.setAttribute('data-playing', String(next));
+    const icon = next ? IconPlayerPause : IconPlayerPlay;
+    playToggle.innerHTML = icon;
+    playToggle.setAttribute('aria-label', next ? 'Pause' : 'Play');
+    center.setAttribute('aria-label', next ? 'Pause' : 'Play');
+  };
+  setPlaying(false);
+
+  const renderTime = (): void => {
+    time.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
+  };
+
+  // Paint the elapsed portion of the scrubber with the accent colour.
+  const paintSeek = (): void => {
+    const max = Number(seek.max) || 0;
+    const pct = max > 0 ? (Number(seek.value) / max) * 100 : 0;
+    seek.style.setProperty('--blok-seek-pct', `${pct}%`);
+  };
+
+  const onLoadedMetadata = (): void => {
+    const dur = Number.isFinite(video.duration) ? video.duration : 0;
+    seek.max = String(dur);
+    paintSeek();
+    renderTime();
+  };
+  const onTimeUpdate = (): void => {
+    seek.value = String(video.currentTime);
+    paintSeek();
+    renderTime();
+  };
+  const onPlay = (): void => setPlaying(true);
+  const onPause = (): void => setPlaying(false);
+  const onVolumeChange = (): void => {
+    const muted = video.muted || video.volume === 0;
+    muteToggle.setAttribute('aria-pressed', String(muted));
+    muteToggle.innerHTML = muted ? IconPlayerVolumeMute : IconPlayerVolume;
+    muteToggle.setAttribute('aria-label', muted ? 'Unmute' : 'Mute');
+    if (!video.muted) volume.value = String(video.volume);
+  };
+
+  const onFullscreenChange = (): void => {
+    const isFull = document.fullscreenElement === figure;
+    figure.setAttribute('data-fullscreen', String(isFull));
+    fullscreen.innerHTML = isFull ? IconPlayerFullscreenExit : IconExpandFullscreen;
+    fullscreen.setAttribute('aria-label', isFull ? 'Exit fullscreen' : 'Fullscreen');
+  };
+
+  // ----- intent -----
+  const togglePlay = (): void => {
+    if (state.playing) media.pause();
+    else void media.play();
+  };
+  const onSeekInput = (): void => {
+    media.currentTime = Number(seek.value);
+    paintSeek();
+  };
+  const onMuteClick = (): void => {
+    media.muted = !media.muted;
+    onVolumeChange();
+  };
+  const onVolumeInput = (): void => {
+    const v = Number(volume.value);
+    media.volume = v;
+    media.muted = v === 0;
+    onVolumeChange();
+  };
+  const onFullscreen = (): void => {
+    if (document.fullscreenElement === figure) void document.exitFullscreen?.();
+    else void figure.requestFullscreen?.();
+  };
+
+  playToggle.addEventListener('click', togglePlay);
+  center.addEventListener('click', togglePlay);
+  seek.addEventListener('input', onSeekInput);
+  muteToggle.addEventListener('click', onMuteClick);
+  volume.addEventListener('input', onVolumeInput);
+  fullscreen.addEventListener('click', onFullscreen);
+
+  video.addEventListener('loadedmetadata', onLoadedMetadata);
+  video.addEventListener('timeupdate', onTimeUpdate);
+  video.addEventListener('play', onPlay);
+  video.addEventListener('pause', onPause);
+  video.addEventListener('volumechange', onVolumeChange);
+  document.addEventListener('fullscreenchange', onFullscreenChange);
+
+  const destroy = (): void => {
+    video.removeEventListener('loadedmetadata', onLoadedMetadata);
+    video.removeEventListener('timeupdate', onTimeUpdate);
+    video.removeEventListener('play', onPlay);
+    video.removeEventListener('pause', onPause);
+    video.removeEventListener('volumechange', onVolumeChange);
+    document.removeEventListener('fullscreenchange', onFullscreenChange);
+    root.remove();
+  };
+
+  return { element: root, destroy };
+}

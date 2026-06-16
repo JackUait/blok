@@ -216,6 +216,45 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   tr: new Set(['searchTerms.program', 'tools.image.cropRatioOval']),
 };
 
+/**
+ * Video tool cognates. "Video", "Upload", "Link" and "URL" are the standard
+ * loanwords in these locales — identical to the English source for the same
+ * reason their already-retained image/file siblings (e.g. tools.image.emptyLink)
+ * are. Merged in additively so the per-locale sets above stay readable.
+ */
+const VIDEO_COGNATE_RETENTIONS: Record<string, string[]> = {
+  az: ['toolNames.video'],
+  bs: ['toolNames.video'],
+  cs: ['toolNames.video'],
+  da: ['toolNames.video', 'tools.video.emptyUpload', 'tools.video.emptyLink'],
+  de: ['toolNames.video', 'tools.video.emptyLink'],
+  et: ['toolNames.video', 'tools.video.emptyLink', 'tools.video.emptyUrlAria'],
+  fi: ['toolNames.video'],
+  fil: ['toolNames.video', 'tools.video.emptyLink'],
+  hr: ['toolNames.video'],
+  id: ['toolNames.video'],
+  it: ['toolNames.video'],
+  lv: ['toolNames.video', 'tools.video.emptyUrlAria'],
+  ms: ['toolNames.video'],
+  nl: ['toolNames.video', 'tools.video.emptyLink'],
+  no: ['toolNames.video'],
+  pl: ['tools.video.emptyLink'],
+  pt: ['tools.video.emptyLink'],
+  ro: ['tools.video.emptyLink'],
+  sk: ['toolNames.video'],
+  sl: ['toolNames.video'],
+  sq: ['toolNames.video'],
+  sv: ['toolNames.video'],
+  sw: ['toolNames.video'],
+  tr: ['toolNames.video'],
+  vi: ['toolNames.video'],
+};
+
+for (const [locale, keys] of Object.entries(VIDEO_COGNATE_RETENTIONS)) {
+  const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
+  for (const key of keys) set.add(key);
+}
+
 describe('locale values are translated (identical-to-en only when cognate)', () => {
   const english = loadLocaleMessages('en');
   const nonEnglish = listLocaleCodes().filter(code => code !== 'en');

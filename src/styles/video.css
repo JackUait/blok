@@ -1,0 +1,423 @@
+
+/* =================================================
+   Video block tool
+
+   Airbnb-grade media frame: generous radius, a soft resting shadow that
+   lifts the player off the page, refined caption typography, and a dark
+   floating toolbar that mirrors the Image block chrome for product
+   cohesion. The native `<video controls>` bar is intentional — we render a
+   real HTML5 player, not custom JS controls.
+   ================================================= */
+[data-blok-tool="video"] {
+  position: relative;
+  margin: var(--blok-space-2-5) 0;
+}
+[data-blok-tool="video"][data-align="left"]   { text-align: left; }
+[data-blok-tool="video"][data-align="center"] { text-align: center; }
+[data-blok-tool="video"][data-align="right"]  { text-align: right; }
+
+/* figure wrapper — shrinks to the player, anchors the toolbar + handles */
+[data-blok-tool="video"] .blok-video-inner {
+  display: inline-block;
+  position: relative;
+  max-width: 100%;
+  vertical-align: top;
+}
+
+/* media box — hugs the player, rounds + clips the overlaid chrome, casts the
+   soft resting shadow that lifts the player off the page */
+[data-blok-tool="video"] .blok-video-media {
+  position: relative;
+  border-radius: var(--blok-radius-lg);
+  overflow: hidden;
+  background: var(--blok-video-stage);
+  box-shadow: var(--blok-image-shadow-resting);
+  transition: box-shadow 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+[data-blok-tool="video"] .blok-video-inner:hover .blok-video-media {
+  box-shadow: var(--blok-video-shadow-hover);
+}
+[data-blok-tool="video"][data-selected="true"] .blok-video-media {
+  box-shadow:
+    0 0 0 2px var(--blok-color-accent),
+    0 0 0 4px color-mix(in srgb, var(--blok-color-accent) 20%, transparent);
+}
+[data-blok-tool="video"] .blok-video-media video {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--blok-video-stage);
+  outline: none;
+}
+
+/* Block-selection highlight: paint the figure box only, not the full zone. */
+[data-blok-element-content].bg-selection:has([data-blok-tool="video"]) {
+  background-color: transparent;
+}
+[data-blok-element-content].bg-selection:has([data-blok-tool="video"]) .blok-video-inner {
+  background-color: var(--blok-selection);
+  border-radius: var(--blok-space-1);
+}
+
+/* ----- caption ----- */
+[data-blok-tool="video"] .blok-video-caption-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--blok-space-2);
+}
+[data-blok-tool="video"] .blok-video-caption {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: block;
+  margin-top: var(--blok-space-2);
+  font-size: 13.5px;
+  color: var(--blok-text-secondary);
+  line-height: 1.5;
+  outline: none;
+  min-height: 1em;
+}
+[data-blok-tool="video"] .blok-video-caption[contenteditable="true"]:empty::before {
+  content: attr(data-placeholder);
+  color: var(--blok-text-tertiary);
+}
+[data-blok-tool="video"][data-caption="off"] .blok-video-caption-row,
+[data-blok-tool="video"][data-caption="off"] .blok-video-caption { display: none; }
+
+/* Only the rendered state carries a player; hide caption otherwise. */
+[data-blok-tool="video"]:not([data-state="rendered"]) .blok-video-caption-row { display: none; }
+
+/* ----- floating toolbar (align / caption / replace / more) ----- */
+[data-blok-tool="video"] .blok-video-toolbar {
+  position: absolute;
+  top: 10px; right: 10px;
+  display: inline-flex;
+  background: var(--blok-overlay-surface);
+  border-radius: var(--blok-space-2);
+  padding: var(--blok-space-1);
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 1px var(--blok-overlay-ring),
+    var(--blok-image-shadow-toolbar);
+  z-index: 2;
+}
+[data-blok-tool="video"] .blok-video-inner:hover .blok-video-toolbar,
+[data-blok-tool="video"][data-selected="true"] .blok-video-toolbar,
+[data-blok-tool="video"][data-settings-open="true"] .blok-video-toolbar,
+[data-blok-tool="video"][data-align-open="true"] .blok-video-toolbar {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+[data-blok-tool="video"] .blok-video-toolbar button {
+  width: 28px; height: 28px;
+  display: grid; place-items: center;
+  color: var(--blok-overlay-fg);
+  background: transparent;
+  border: 0;
+  border-radius: var(--blok-space-1);
+  cursor: pointer;
+  transition: background 80ms ease, color 80ms ease;
+}
+[data-blok-tool="video"] .blok-video-toolbar button:hover {
+  background: var(--blok-overlay-fg-hover);
+  color: var(--blok-overlay-fg-strong);
+}
+[data-blok-tool="video"] .blok-video-toolbar button svg { width: 14px; height: 14px; }
+[data-blok-tool="video"] .blok-video-toolbar button[aria-pressed="true"],
+[data-blok-tool="video"] .blok-video-toolbar button[aria-expanded="true"] {
+  background: var(--blok-overlay-fg-pressed);
+  color: var(--blok-overlay-fg-strong);
+}
+[data-blok-tool="video"] .blok-video-toolbar__divider {
+  width: 1px; align-self: stretch;
+  margin: var(--blok-space-1) var(--blok-space-0-5);
+  background: var(--blok-overlay-divider);
+}
+
+/* ----- alignment popover — floats under the trigger on the same dark surface ----- */
+[data-blok-tool="video"] .blok-video-toolbar__align { position: relative; }
+[data-blok-tool="video"] .blok-video-toolbar__align-popover {
+  position: absolute;
+  top: calc(100% + var(--blok-space-1));
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  gap: var(--blok-space-0-5);
+  padding: var(--blok-space-1);
+  background: var(--blok-overlay-surface);
+  border-radius: var(--blok-space-2);
+  box-shadow:
+    inset 0 0 0 1px var(--blok-overlay-ring),
+    var(--blok-image-shadow-toolbar);
+  z-index: 3;
+}
+[data-blok-tool="video"] .blok-video-toolbar__align-popover[hidden] { display: none; }
+[data-blok-tool="video"] .blok-video-toolbar__align-popover button {
+  width: 28px; height: 28px;
+  display: grid; place-items: center;
+  color: var(--blok-overlay-fg);
+  background: transparent;
+  border: 0;
+  border-radius: var(--blok-space-1);
+  cursor: pointer;
+  transition: background 80ms ease, color 80ms ease;
+}
+[data-blok-tool="video"] .blok-video-toolbar__align-popover button:hover {
+  background: var(--blok-overlay-fg-hover);
+  color: var(--blok-overlay-fg-strong);
+}
+[data-blok-tool="video"] .blok-video-toolbar__align-popover button[aria-pressed="true"] {
+  background: var(--blok-overlay-fg-pressed);
+  color: var(--blok-overlay-fg-strong);
+}
+[data-blok-tool="video"] .blok-video-toolbar__align-popover button svg { width: 14px; height: 14px; }
+
+/* ----- resize handle — Notion-style pill straddling the edge ----- */
+[data-blok-tool="video"] [data-role="resize-handle"] {
+  position: absolute;
+  top: 50%;
+  width: 6px;
+  height: clamp(24px, 25%, 50px);
+  background: var(--blok-handle-bg-default);
+  border: 1px solid var(--blok-handle-fg-default);
+  border-radius: var(--blok-radius-pill);
+  cursor: ew-resize;
+  opacity: 0;
+  transform: translateY(-50%) scale(1);
+  transform-origin: center;
+  transition:
+    opacity 120ms ease,
+    background-color 120ms ease,
+    transform 140ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: 2;
+}
+[data-blok-tool="video"] [data-role="resize-handle"]::before {
+  content: '';
+  position: absolute;
+  inset: -8px -6px;
+}
+[data-blok-tool="video"] [data-role="resize-handle"][data-edge="left"]  { left: 8px; }
+[data-blok-tool="video"] [data-role="resize-handle"][data-edge="right"] { right: 8px; }
+[data-blok-tool="video"] .blok-video-inner:hover [data-role="resize-handle"],
+[data-blok-tool="video"][data-selected="true"] [data-role="resize-handle"],
+[data-blok-tool="video"][data-settings-open="true"] [data-role="resize-handle"],
+[data-blok-tool="video"][data-align-open="true"] [data-role="resize-handle"] {
+  opacity: 1;
+}
+[data-blok-tool="video"] [data-role="resize-handle"]:hover {
+  background: var(--blok-handle-bg-hover);
+  transform: translateY(-50%) scale(1.15);
+}
+[data-blok-tool="video"] [data-role="resize-handle"]:active {
+  background: var(--blok-handle-bg-active);
+  transform: translateY(-50%) scale(1.15);
+  transition-duration: 0s;
+}
+
+/* ----- error state — flat soft-danger callout (mirrors image error) ----- */
+[data-blok-tool="video"] .blok-video-error-state {
+  padding: var(--blok-space-3);
+  background: color-mix(in srgb, var(--blok-color-danger) 6%, var(--blok-bg-secondary));
+  border: 1px solid color-mix(in srgb, var(--blok-color-danger) 18%, var(--blok-border-subtle));
+  border-radius: var(--blok-radius-lg);
+  display: flex; gap: var(--blok-space-3); align-items: center;
+  color: var(--blok-text-primary);
+  font-family: var(--blok-font-family, var(--blok-font-sans));
+  text-align: left;
+}
+[data-blok-tool="video"] .blok-video-retry {
+  margin-left: auto;
+  flex-shrink: 0;
+  appearance: none;
+  padding: var(--blok-space-1-5) var(--blok-space-3);
+  border-radius: var(--blok-radius-md);
+  border: 1px solid var(--blok-border-subtle);
+  background: var(--blok-bg-primary);
+  color: var(--blok-text-primary);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background var(--blok-duration-base) ease, border-color var(--blok-duration-base) ease;
+}
+[data-blok-tool="video"] .blok-video-retry:hover {
+  background: var(--blok-bg-hover);
+  border-color: var(--blok-border-primary);
+}
+[data-blok-tool="video"] .blok-video-retry:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 40%, transparent);
+}
+
+/* =================================================
+   Custom player controls — Airbnb-inspired
+
+   Replaces native browser chrome: a big frosted centre play affordance while
+   paused, and a bottom scrim + control bar (play/pause, scrubber, time,
+   volume, fullscreen) that fades in on hover. White glyphs on a dark scrim,
+   pill geometry, and the brand coral on the progress fill.
+   ================================================= */
+[data-blok-tool="video"] .blok-video-controls {
+  --blok-seek-pct: 0%;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  font-family: var(--blok-font-family, var(--blok-font-sans));
+}
+
+/* centre play — frosted disc, only while paused */
+[data-blok-tool="video"] .blok-video-controls__center {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 64px; height: 64px;
+  display: grid; place-items: center;
+  color: var(--blok-video-center-fg);
+  background: var(--blok-video-center-bg);
+  border: 0;
+  border-radius: var(--blok-radius-pill);
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: var(--blok-video-center-shadow);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  transition: transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 160ms ease;
+}
+[data-blok-tool="video"] .blok-video-controls__center svg { width: 28px; height: 28px; margin-left: 2px; }
+[data-blok-tool="video"] .blok-video-controls__center:hover { transform: translate(-50%, -50%) scale(1.06); }
+[data-blok-tool="video"] .blok-video-controls__center:active { transform: translate(-50%, -50%) scale(0.97); }
+[data-blok-tool="video"] .blok-video-inner[data-playing="true"] .blok-video-controls__center {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* bottom scrim + bar */
+[data-blok-tool="video"] .blok-video-controls__bar {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2-5);
+  padding: var(--blok-space-5) var(--blok-space-3) var(--blok-space-2-5);
+  background: linear-gradient(to top, var(--blok-video-scrim-strong) 0%, var(--blok-video-scrim-mid) 55%, transparent 100%);
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+[data-blok-tool="video"] .blok-video-inner:hover .blok-video-controls__bar,
+[data-blok-tool="video"] .blok-video-controls:focus-within .blok-video-controls__bar,
+[data-blok-tool="video"] .blok-video-inner:not([data-playing="true"]) .blok-video-controls__bar {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+[data-blok-tool="video"] .blok-video-controls__btn {
+  flex-shrink: 0;
+  width: 32px; height: 32px;
+  display: grid; place-items: center;
+  color: var(--blok-video-control-fg);
+  background: transparent;
+  border: 0;
+  border-radius: var(--blok-radius-pill);
+  cursor: pointer;
+  transition: background 120ms ease, transform 120ms ease;
+}
+[data-blok-tool="video"] .blok-video-controls__btn:hover { background: var(--blok-video-control-bg-hover); }
+[data-blok-tool="video"] .blok-video-controls__btn:active { transform: scale(0.92); }
+[data-blok-tool="video"] .blok-video-controls__btn svg { width: 18px; height: 18px; }
+
+[data-blok-tool="video"] .blok-video-controls__time {
+  flex-shrink: 0;
+  color: var(--blok-video-time-fg);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  user-select: none;
+}
+
+/* scrubber — flex-grows; coral elapsed fill, white thumb */
+[data-blok-tool="video"] .blok-video-controls__seek {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 4px;
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: linear-gradient(
+    to right,
+    var(--blok-video-accent) var(--blok-seek-pct),
+    var(--blok-video-track) var(--blok-seek-pct)
+  );
+  border-radius: var(--blok-radius-pill);
+  cursor: pointer;
+  outline: none;
+}
+[data-blok-tool="video"] .blok-video-controls__seek::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 13px; height: 13px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-video-thumb);
+  box-shadow: var(--blok-video-thumb-shadow);
+  transition: transform 120ms ease;
+}
+[data-blok-tool="video"] .blok-video-controls__seek:hover::-webkit-slider-thumb { transform: scale(1.2); }
+[data-blok-tool="video"] .blok-video-controls__seek::-moz-range-thumb {
+  width: 13px; height: 13px;
+  border: 0;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-video-thumb);
+  box-shadow: var(--blok-video-thumb-shadow);
+}
+[data-blok-tool="video"] .blok-video-controls__seek:focus-visible {
+  box-shadow: 0 0 0 3px var(--blok-video-focus-ring);
+}
+
+/* volume — slider reveals on hover of the cluster */
+[data-blok-tool="video"] .blok-video-controls__volume-wrap {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+}
+[data-blok-tool="video"] .blok-video-controls__volume {
+  width: 0;
+  height: 4px;
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--blok-video-volume-track);
+  border-radius: var(--blok-radius-pill);
+  opacity: 0;
+  cursor: pointer;
+  transition: width 160ms ease, opacity 160ms ease;
+}
+[data-blok-tool="video"] .blok-video-controls__volume-wrap:hover .blok-video-controls__volume,
+[data-blok-tool="video"] .blok-video-controls__volume:focus-visible {
+  width: 64px;
+  opacity: 1;
+}
+[data-blok-tool="video"] .blok-video-controls__volume::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 11px; height: 11px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-video-thumb);
+}
+[data-blok-tool="video"] .blok-video-controls__volume::-moz-range-thumb {
+  width: 11px; height: 11px;
+  border: 0;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-video-thumb);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-tool="video"] .blok-video-controls__bar,
+  [data-blok-tool="video"] .blok-video-controls__center,
+  [data-blok-tool="video"] .blok-video-controls__volume { transition: none; }
+}

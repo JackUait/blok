@@ -232,10 +232,14 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // (GitHub alert callouts in 5 semantic palette colours + footnotes trailer
     // styling)), embed tool empty state: hero card (glyph + label + URL pill
     // with inline submit + ↵ reveal + read-only chip), media empty state:
-    // tab-swap height/cross-fade animation clip rule.
+    // tab-swap height/cross-fade animation clip rule, video tool: video.css
+    // (Airbnb-style media frame + caption + alignment + resize handles + error
+    // state + custom Airbnb-inspired player controls: frosted centre play,
+    // bottom scrim, coral scrubber, time, volume cluster, fullscreen) +
+    // always-on video-player palette tokens in colors.css.
     // Shrinking below the baseline is always acceptable.
     const PRE_SPLIT_BYTES = 390050;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.18);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.25);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

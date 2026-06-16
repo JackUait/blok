@@ -11,6 +11,7 @@ import type {
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import type { FileConfig, FileData, FileUploadResult } from '../../../types/tools/file';
 import type { ImageData } from '../../../types/tools/image';
+import type { VideoData } from '../../../types/tools/video';
 import { IconCaption, IconCopy, IconDownload, IconFile, IconReplace } from '../../components/icons';
 import { DEFAULT_CAPTION_PLACEHOLDER, PASTE_EXTENSIONS, PASTE_MIME_TYPES } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
@@ -26,6 +27,9 @@ type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 /** Image filenames/URLs that should auto-convert the File block into an Image. */
 const IMAGE_EXTENSION_RE = /\.(png|jpe?g|gif|webp|svg)(?:[?#]|$)/i;
 
+/** Video filenames/URLs that should auto-convert the File block into a Video. */
+const VIDEO_EXTENSION_RE = /\.(mp4|webm|ogg|mov|m4v)(?:[?#]|$)/i;
+
 export class FileTool implements BlockTool {
   private readonly api: API;
   private readonly block: BlockAPI;
@@ -40,6 +44,8 @@ export class FileTool implements BlockTool {
   private previewTeardown: (() => void) | null = null;
   /** When the pending upload is an image, the result converts to an Image block. */
   private pendingImageConversion = false;
+  /** When the pending upload is a video, the result converts to a Video block. */
+  private pendingVideoConversion = false;
 
   constructor(options: BlockToolConstructorOptions<FileData, FileConfig>) {
     this.api = options.api;
@@ -153,6 +159,7 @@ export class FileTool implements BlockTool {
   private startUpload(file: File): void {
     this.lastFileName = file.name;
     this.pendingImageConversion = file.type.startsWith('image/') || IMAGE_EXTENSION_RE.test(file.name);
+    this.pendingVideoConversion = file.type.startsWith('video/') || VIDEO_EXTENSION_RE.test(file.name);
     this.state = 'LOADING';
     this.renderState();
     void this.uploader
@@ -164,6 +171,7 @@ export class FileTool implements BlockTool {
   private startUrl(url: string): void {
     this.lastFileName = null;
     this.pendingImageConversion = IMAGE_EXTENSION_RE.test(url);
+    this.pendingVideoConversion = VIDEO_EXTENSION_RE.test(url);
     this.state = 'LOADING';
     this.renderState();
     void this.uploader
@@ -180,6 +188,9 @@ export class FileTool implements BlockTool {
       size: result.size ?? this.data.size,
       mimeType: result.mimeType ?? this.data.mimeType,
     };
+    if (this.pendingVideoConversion && this.convertToVideo()) {
+      return;
+    }
     if (this.pendingImageConversion && this.convertToImage()) {
       return;
     }
@@ -204,6 +215,26 @@ export class FileTool implements BlockTool {
     if ((this.data.caption ?? '') !== '') imageData.caption = this.data.caption;
     if (this.data.captionVisible !== undefined) imageData.captionVisible = this.data.captionVisible;
     this.api.blocks.insert('image', imageData, {}, index, false, true);
+    return true;
+  }
+
+  /**
+   * Swap this File block for a Video block carrying the just-uploaded url.
+   * Mirrors {@link convertToImage}: File and Video declare no conversionConfig,
+   * so we replace in place. Returns false (keep the file card) when the block
+   * can no longer be located.
+   */
+  private convertToVideo(): boolean {
+    const index = this.api.blocks.getBlockIndex(this.block.id);
+    if (index === undefined) {
+      return false;
+    }
+    const videoData: VideoData = { url: this.data.url };
+    if (this.data.fileName !== undefined) videoData.fileName = this.data.fileName;
+    if (this.data.mimeType !== undefined) videoData.mimeType = this.data.mimeType;
+    if ((this.data.caption ?? '') !== '') videoData.caption = this.data.caption;
+    if (this.data.captionVisible !== undefined) videoData.captionVisible = this.data.captionVisible;
+    this.api.blocks.insert('video', videoData, {}, index, false, true);
     return true;
   }
 

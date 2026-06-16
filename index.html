@@ -931,7 +931,7 @@
 
   <script type="module">
     import { Blok } from './src/blok.ts';
-    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Quote, Code, Image, File as FileBlock, ColumnList, Column, Embed, Bookmark, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Quote, Code, Image, File as FileBlock, Video, ColumnList, Column, Embed, Bookmark, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
@@ -961,6 +961,7 @@
         code: true,
         image: true,
         file: true,
+        video: true,
         columns: true,
       },
     };
@@ -1879,6 +1880,17 @@
           },
         },
       };
+      if (state.tools.video) tools.video = {
+        class: Video,
+        config: {
+          uploader: {
+            uploadByFile: async (file) => ({
+              url: URL.createObjectURL(file),
+              fileName: file.name,
+            }),
+          },
+        },
+      };
       if (state.tools.columns) {
         tools.column_list = ColumnList;
         tools.column = Column;
@@ -2227,7 +2239,7 @@
       'Inline Formatting': ['IconBold', 'IconItalic', 'IconUnderline', 'IconStrikethrough', 'IconLink', 'IconBookmark', 'IconLinkExternal', 'IconLinkCopy', 'IconMarker', 'IconReplace', 'IconGlobe', 'IconMail', 'IconHash', 'IconCode'],
       'Headings': ['IconHeading', 'IconH1', 'IconH2', 'IconH3', 'IconH4', 'IconH5', 'IconH6'],
       'Block Tools': ['IconText', 'IconListBulleted', 'IconListNumbered', 'IconListChecklist', 'IconTable', 'IconToggleList', 'IconCallout', 'IconDatabase', 'IconBoard', 'IconGallery', 'IconList', 'IconSelect', 'IconMultiSelect', 'IconDivider', 'IconQuote', 'IconCodeBlock', 'IconColumns', 'IconCalendar'],
-      'Media': ['IconImage', 'IconImageBroken', 'IconUploadFailed', 'IconImageAlignLeft', 'IconImageAlignCenter', 'IconImageAlignRight', 'IconAlignLeft', 'IconAlignCenter', 'IconAlignRight', 'IconCaption', 'IconCaptionImage', 'IconCrop', 'IconCropImage', 'IconReplaceImage', 'IconExpandFullscreen', 'IconExpandFullscreenImage', 'IconCollapseFullscreen', 'IconZoomIn', 'IconZoomOut', 'IconDownload', 'IconDownloadImage', 'IconUpload'],
+      'Media': ['IconImage', 'IconImageBroken', 'IconUploadFailed', 'IconImageAlignLeft', 'IconImageAlignCenter', 'IconImageAlignRight', 'IconAlignLeft', 'IconAlignCenter', 'IconAlignRight', 'IconCaption', 'IconCaptionImage', 'IconCrop', 'IconCropImage', 'IconReplaceImage', 'IconExpandFullscreen', 'IconExpandFullscreenImage', 'IconCollapseFullscreen', 'IconPlayerFullscreenExit', 'IconPlayerPlay', 'IconPlayerPause', 'IconPlayerVolume', 'IconPlayerVolumeMute', 'IconZoomIn', 'IconZoomOut', 'IconDownload', 'IconDownloadImage', 'IconUpload'],
       'Toggle Headings': ['IconToggleH1', 'IconToggleH2', 'IconToggleH3'],
       'Table Actions': ['IconHeaderRow', 'IconHeaderColumn', 'IconInsertAbove', 'IconInsertBelow', 'IconInsertLeft', 'IconInsertRight', 'IconMoveUp', 'IconMoveDown', 'IconMoveLeft', 'IconMoveRight', 'IconMergeCells', 'IconSplitCell', 'IconPlacement'],
       'Utility': ['IconCopy', 'IconTrash', 'IconPencil', 'IconWarning', 'IconPaintRoller', 'IconPreview', 'IconSplitView', 'IconDotsHorizontal'],
@@ -2533,6 +2545,40 @@
         ],
       },
       {
+        tool: 'video',
+        label: 'Video',
+        states: [
+          { label: 'Empty (upload)', blocks: [{ id: 'vd-empty', type: 'video', data: {} }] },
+          { label: 'Loaded', blocks: [{ id: 'vd-loaded', type: 'video', data: {
+            url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+            width: 80,
+            alignment: 'center',
+          } }] },
+          { label: 'With caption', blocks: [{ id: 'vd-caption', type: 'video', data: {
+            url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+            caption: 'Elephants Dream — open movie sample',
+            captionVisible: true,
+            width: 80,
+            alignment: 'center',
+          } }] },
+          { label: 'Small', blocks: [{ id: 'vd-sm', type: 'video', data: {
+            url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+            width: 35,
+            alignment: 'center',
+          } }] },
+          { label: 'Left aligned', blocks: [{ id: 'vd-left', type: 'video', data: {
+            url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+            width: 45,
+            alignment: 'left',
+          } }] },
+          { label: 'Upload failed', blocks: [{ id: 'vd-upload-error', type: 'video', data: {
+            url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+            width: 45,
+            alignment: 'center',
+          } }] },
+        ],
+      },
+      {
         tool: 'file',
         label: 'File',
         states: [
@@ -2723,6 +2769,17 @@
           quote: Quote,
           code: Code,
           image: Image,
+          video: {
+            class: Video,
+            config: {
+              uploader: {
+                uploadByFile: async (file) => ({
+                  url: URL.createObjectURL(file),
+                  fileName: file.name,
+                }),
+              },
+            },
+          },
           file: {
             class: FileBlock,
             config: {
@@ -2774,6 +2831,25 @@
           title: 'Upload failed',
           message: 'Check your connection and try again, or choose a different file.',
         });
+
+        // Force a video "upload failed" error state demo by replacing the tool DOM.
+        const videoErrRoot = holder.querySelector('[data-blok-id="vd-upload-error"] [data-blok-tool="video"]');
+        if (videoErrRoot) {
+          videoErrRoot.setAttribute('data-state', 'error');
+          videoErrRoot.replaceChildren();
+          const wrap = document.createElement('div');
+          wrap.className = 'blok-video-error-state';
+          wrap.setAttribute('data-role', 'video-error');
+          const msg = document.createElement('span');
+          msg.textContent = 'Upload failed';
+          const retry = document.createElement('button');
+          retry.type = 'button';
+          retry.className = 'blok-video-retry';
+          retry.setAttribute('data-action', 'replace');
+          retry.textContent = 'Replace';
+          wrap.append(msg, retry);
+          videoErrRoot.appendChild(wrap);
+        }
 
         // Force the transient file-upload loading state. The uploader resolves
         // instantly here, so render the real uploading UI at a fixed progress.

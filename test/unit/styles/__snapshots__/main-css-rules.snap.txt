@@ -4558,6 +4558,24 @@
   display: none;
 }
 
+[data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--blok-video-stage);
+}
+
+[data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] .blok-video-media {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+[data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] .blok-video-media video {
+  height: 100%;
+}
+
 [data-blok-tool="video"] [data-role="resize-handle"] {
   position: absolute;
   top: 50%;

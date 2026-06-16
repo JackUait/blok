@@ -185,6 +185,27 @@
   display: none;
 }
 
+/* The figure fills the screen (UA :fullscreen); centre the player inside it so
+   a clip that doesn't match the screen aspect is letterboxed on all sides
+   instead of pinned to the top-left. The media box fills the figure and the
+   <video> keeps its UA object-fit:contain, which centres + letterboxes the
+   frame within that box. */
+[data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--blok-video-stage);
+}
+[data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] .blok-video-media {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  box-shadow: none;
+}
+[data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] .blok-video-media video {
+  height: 100%;
+}
+
 /* ----- resize handle — Notion-style pill straddling the edge ----- */
 [data-blok-tool="video"] [data-role="resize-handle"] {
   position: absolute;

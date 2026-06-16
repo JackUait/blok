@@ -130,6 +130,17 @@ test('fullscreen hides editor chrome and keeps only playback controls', async ({
   // Playback controls survive — that is the whole point of fullscreen.
   await expect(display(videoBlock.locator('[data-role="video-controls"]'))).resolves.not.toBe('none');
   await expect(videoBlock.locator('[data-action="fullscreen"]')).toBeAttached();
+
+  // The figure centers its player both axes so it fits any screen aspect
+  // (object-fit:contain — the <video> UA default — then letterboxes the frame).
+  const layout = await figure.evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { display: s.display, alignItems: s.alignItems, justifyContent: s.justifyContent };
+  });
+  expect(layout).toEqual({ display: 'flex', alignItems: 'center', justifyContent: 'center' });
+  await expect(
+    videoBlock.getByTestId('video-player').evaluate((el) => getComputedStyle(el).objectFit)
+  ).resolves.toBe('contain');
 });
 
 test('persists video data across save and reload', async ({ page }) => {

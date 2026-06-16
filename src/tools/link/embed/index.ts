@@ -9,7 +9,8 @@ import type {
   PatternPasteEvent,
   ToolboxConfig,
 } from '../../../../types';
-import { IconGlobe, IconLinkCopy } from '../../../components/icons';
+import type { MenuConfig } from '../../../../types/tools/menu-config';
+import { IconCopy, IconGlobe, IconLinkCopy, IconReplace } from '../../../components/icons';
 import { attachResizeHandle, type ResizeEdge } from '../../image/resizer';
 import { renderEmbedOverlay, type EmbedAlignment } from './overlay';
 import { EMBED_SERVICES, matchEmbedService, isHttpUrl, type EmbedKind } from '../registry';
@@ -589,17 +590,72 @@ export class Embed implements BlockTool {
   }
 
   private buildOverlay(): HTMLElement {
-    return renderEmbedOverlay({
+    const overlay = renderEmbedOverlay({
       alignment: this.data.alignment ?? 'center',
       captionVisible: this.isCaptionVisible(),
       source: this.data.source ?? '',
       i18n: this.api.i18n,
       onAlign: (next) => this.setAlignment(next),
       onToggleCaption: () => this.toggleCaption(),
-      onCopyLink: () => this.copyLink(),
-      onReplace: () => this.replaceSource(),
-      onDelete: () => this.deleteBlock(),
     });
+
+    // The "more" button opens the shared block-tunes popover (same as the image
+    // block); embed-specific actions are contributed via renderSettings().
+    const moreBtn = overlay.querySelector<HTMLButtonElement>('[data-action="more"]');
+
+    moreBtn?.addEventListener('click', (event) => {
+      event.stopPropagation();
+      this.openBlockSettings(moreBtn);
+    });
+
+    return overlay;
+  }
+
+  public renderSettings(): MenuConfig {
+    const i18n = this.api.i18n;
+
+    return [
+      {
+        icon: IconReplace,
+        title: i18n.t('tools.embed.replace'),
+        name: 'embed-replace',
+        closeOnActivate: true,
+        onActivate: (): void => this.replaceSource(),
+      },
+      {
+        icon: IconCopy,
+        title: i18n.t('tools.image.copyUrl'),
+        name: 'embed-copy-url',
+        closeOnActivate: true,
+        onActivate: (): void => this.copyLink(),
+      },
+    ];
+  }
+
+  private openBlockSettings(trigger?: HTMLElement): void {
+    const toolbar = (this.api as unknown as {
+      toolbar?: {
+        toggleBlockSettings?: (
+          state: boolean,
+          trigger?: HTMLElement,
+          options?: { placeLeftOfAnchor?: boolean }
+        ) => void;
+      };
+    }).toolbar;
+
+    if (!toolbar?.toggleBlockSettings) {
+      return;
+    }
+    this.root?.setAttribute('data-settings-open', 'true');
+    trigger?.setAttribute('aria-expanded', 'true');
+    const onClosed = (): void => {
+      this.root?.removeAttribute('data-settings-open');
+      trigger?.setAttribute('aria-expanded', 'false');
+      this.api.events.off('block-settings-closed', onClosed);
+    };
+
+    this.api.events.on('block-settings-closed', onClosed);
+    toolbar.toggleBlockSettings(true, trigger, { placeLeftOfAnchor: false });
   }
 
   private replaceSource(): void {
@@ -715,11 +771,5 @@ export class Embed implements BlockTool {
     const clip = (navigator as Navigator & { clipboard?: { writeText(text: string): Promise<void> } }).clipboard;
 
     void clip?.writeText(this.data.source ?? '');
-  }
-
-  private deleteBlock(): void {
-    const blocks = (this.api as unknown as { blocks?: { delete?: (id: string) => void } }).blocks;
-
-    blocks?.delete?.(this.block.id);
   }
 }

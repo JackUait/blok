@@ -124,7 +124,8 @@ test.describe('Generic embed + replace source', () => {
 
     await expect(iframe).toBeVisible();
 
-    // Reveal the hover overlay, open the more-menu, choose Replace.
+    // Reveal the hover overlay, open the more-menu (the shared block-tunes
+    // popover), choose Replace.
     const figure = page.locator('[data-role="embed-figure"]');
 
     await figure.hover();
@@ -133,7 +134,13 @@ test.describe('Generic embed + replace source', () => {
 
     await expect(overlay).toBeVisible();
     await overlay.locator('[data-action="more"]').click();
-    await overlay.locator('[data-action="replace"]').click();
+
+    const tunes = page
+      .getByTestId('block-tunes-popover')
+      .and(page.locator('[data-blok-popover-opened="true"]'));
+
+    await expect(tunes).toHaveCount(1);
+    await tunes.locator('[data-blok-item-name="embed-replace"]').click();
 
     // The block reverts to the empty URL-input state and the iframe is gone.
     const input = page.locator('[data-role="embed-url-input"]');
@@ -149,5 +156,43 @@ test.describe('Generic embed + replace source', () => {
 
     await expect(newIframe).toBeVisible();
     await expect(newIframe).toHaveAttribute('src', /vimeo/);
+  });
+
+  test('the embed more button opens the shared block-tunes popover with embed-specific items', async ({ page }) => {
+    await createBlok(page, undefined, EMBED_CONFIG);
+    const editable = firstEditable(page);
+
+    await editable.click();
+    await pasteText(editable, 'https://example.com/page');
+
+    const embedItem = page.locator('[data-blok-item-name="paste-menu-embed"]');
+
+    await expect(embedItem).toBeVisible();
+    await embedItem.click();
+
+    await expect(page.locator('[data-blok-testid="embed-frame"]')).toBeVisible();
+
+    const figure = page.locator('[data-role="embed-figure"]');
+
+    await figure.hover();
+
+    const overlay = figure.locator('[data-role="embed-overlay"]');
+
+    await overlay.locator('[data-action="more"]').click();
+
+    // Shared infrastructure: the very same block-tunes popover the image block opens.
+    const tunes = page
+      .getByTestId('block-tunes-popover')
+      .and(page.locator('[data-blok-popover-opened="true"]'));
+
+    await expect(tunes).toHaveCount(1);
+
+    // Embed contributes its own items via renderSettings() — different content
+    // from the image block, identical styling.
+    await expect(tunes.locator('[data-blok-item-name="embed-replace"]')).toBeVisible();
+    await expect(tunes.locator('[data-blok-item-name="embed-copy-url"]')).toBeVisible();
+
+    // Standard block tunes ride along for free.
+    await expect(tunes.locator('[data-blok-item-name="delete"]')).toBeVisible();
   });
 });

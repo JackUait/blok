@@ -3,11 +3,8 @@ import {
   IconImageAlignCenter,
   IconImageAlignLeft,
   IconImageAlignRight,
-  IconLink,
   IconLinkExternal,
   IconMoreHorizontal,
-  IconReplace,
-  IconTrash,
 } from '../../../components/icons';
 
 export type EmbedAlignment = 'left' | 'center' | 'right';
@@ -24,9 +21,6 @@ export interface EmbedOverlayOptions {
   i18n: EmbedOverlayI18n;
   onAlign(next: EmbedAlignment): void;
   onToggleCaption(): void;
-  onCopyLink(): void;
-  onReplace(): void;
-  onDelete(): void;
 }
 
 const ALIGN_ICON: Record<EmbedAlignment, string> = {
@@ -45,9 +39,9 @@ const ALIGN_ORDER: EmbedAlignment[] = ['left', 'center', 'right'];
 
 /**
  * Hover toolbar for an iframe embed — alignment, caption toggle, "open original"
- * and a "more" menu (replace / copy link / delete). Modeled on the image overlay but
- * scoped to the embed tool. Pure builder: it wires the provided callbacks and
- * manages only its own popover open/close state.
+ * and a "more" button. Modeled on the image overlay and scoped to the embed tool.
+ * Pure builder: it wires the provided callbacks. The "more" button only carries
+ * the trigger markup; the tool wires it to the shared block-tunes popover.
  */
 export function renderEmbedOverlay(opts: EmbedOverlayOptions): HTMLElement {
   const root = document.createElement('div');
@@ -66,7 +60,7 @@ export function renderEmbedOverlay(opts: EmbedOverlayOptions): HTMLElement {
   });
   appendOpenOriginal(root, opts);
   appendDivider(root);
-  appendMoreMenu(root, opts);
+  appendMoreButton(root, opts);
 
   return root;
 }
@@ -133,62 +127,22 @@ function appendOpenOriginal(root: HTMLElement, opts: EmbedOverlayOptions): void 
   root.appendChild(anchor);
 }
 
-function appendMoreMenu(root: HTMLElement, opts: EmbedOverlayOptions): void {
-  const wrapper = document.createElement('div');
-
-  wrapper.className = 'blok-embed-toolbar__more';
-  wrapper.style.position = 'relative';
-
+/**
+ * "More options" trigger. Carries only the markup — the embed tool attaches the
+ * click handler that opens the shared block-tunes popover, so the rich menu
+ * (search, sections, shortcuts, footer) is identical to the image block's.
+ */
+function appendMoreButton(root: HTMLElement, opts: EmbedOverlayOptions): void {
   const trigger = document.createElement('button');
 
   trigger.type = 'button';
+  trigger.className = 'blok-embed-toolbar__btn';
   trigger.setAttribute('data-action', 'more');
   trigger.setAttribute('aria-label', opts.i18n.t('tools.image.moreOptions'));
   trigger.setAttribute('aria-haspopup', 'menu');
   trigger.setAttribute('aria-expanded', 'false');
   trigger.innerHTML = IconMoreHorizontal;
-  wrapper.appendChild(trigger);
-
-  const popover = document.createElement('div');
-
-  popover.setAttribute('data-role', 'more-popover');
-  popover.setAttribute('role', 'menu');
-  popover.className = 'blok-embed-toolbar__more-popover';
-  popover.hidden = true;
-
-  const toggle = bindPopover(trigger, popover);
-
-  appendMenuItem(popover, {
-    action: 'replace',
-    label: opts.i18n.t('tools.embed.replace'),
-    icon: IconReplace,
-    onClick: () => {
-      toggle(false);
-      opts.onReplace();
-    },
-  });
-  appendMenuItem(popover, {
-    action: 'copy-link',
-    label: opts.i18n.t('tools.image.copyUrl'),
-    icon: IconLink,
-    onClick: () => {
-      toggle(false);
-      opts.onCopyLink();
-    },
-  });
-  appendMenuItem(popover, {
-    action: 'delete',
-    label: opts.i18n.t('blockSettings.delete'),
-    icon: IconTrash,
-    danger: true,
-    onClick: () => {
-      toggle(false);
-      opts.onDelete();
-    },
-  });
-
-  wrapper.appendChild(popover);
-  root.appendChild(wrapper);
+  root.appendChild(trigger);
 }
 
 interface IconButtonSpec {
@@ -210,43 +164,6 @@ function appendIconButton(parent: HTMLElement, spec: IconButtonSpec): void {
     btn.setAttribute('aria-pressed', spec.pressed ? 'true' : 'false');
   }
   btn.innerHTML = spec.icon;
-  btn.addEventListener('click', (event) => {
-    event.stopPropagation();
-    spec.onClick();
-  });
-  parent.appendChild(btn);
-}
-
-interface MenuItemSpec {
-  action: string;
-  label: string;
-  icon: string;
-  danger?: boolean;
-  onClick(): void;
-}
-
-function appendMenuItem(parent: HTMLElement, spec: MenuItemSpec): void {
-  const btn = document.createElement('button');
-
-  btn.type = 'button';
-  btn.setAttribute('role', 'menuitem');
-  btn.setAttribute('data-action', spec.action);
-  btn.setAttribute('aria-label', spec.label);
-  btn.className = spec.danger
-    ? 'blok-embed-toolbar__menu-item is-danger'
-    : 'blok-embed-toolbar__menu-item';
-
-  const icon = document.createElement('span');
-
-  icon.className = 'blok-embed-toolbar__menu-icon';
-  icon.setAttribute('aria-hidden', 'true');
-  icon.innerHTML = spec.icon;
-
-  const text = document.createElement('span');
-
-  text.textContent = spec.label;
-
-  btn.append(icon, text);
   btn.addEventListener('click', (event) => {
     event.stopPropagation();
     spec.onClick();

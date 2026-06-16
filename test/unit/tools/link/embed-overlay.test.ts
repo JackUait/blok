@@ -8,9 +8,6 @@ const baseOptions = (overrides: Partial<EmbedOverlayOptions> = {}): EmbedOverlay
   i18n: { t: (key: string): string => key },
   onAlign: vi.fn(),
   onToggleCaption: vi.fn(),
-  onCopyLink: vi.fn(),
-  onReplace: vi.fn(),
-  onDelete: vi.fn(),
   ...overrides,
 });
 
@@ -74,38 +71,16 @@ describe('renderEmbedOverlay', () => {
     expect(onToggleCaption).toHaveBeenCalledTimes(1);
   });
 
-  it('opens the more menu and reports copy-link and delete', () => {
-    const onCopyLink = vi.fn();
-    const onDelete = vi.fn();
-    const overlay = renderEmbedOverlay(baseOptions({ onCopyLink, onDelete }));
-    const popover = overlay.querySelector<HTMLElement>('[data-role="more-popover"]');
-
-    expect(popover?.hidden).toBe(true);
-    q(overlay, 'more')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(popover?.hidden).toBe(false);
-
-    q(overlay, 'copy-link')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(onCopyLink).toHaveBeenCalledTimes(1);
-
-    q(overlay, 'more')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    q(overlay, 'delete')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(onDelete).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe('renderEmbedOverlay — replace', () => {
-  it('renders a replace menu item', () => {
+  it('renders the "more" button as a menu trigger without a bespoke popover', () => {
     const overlay = renderEmbedOverlay(baseOptions());
+    const more = q(overlay, 'more');
 
-    expect(overlay.querySelector('[data-action="replace"]')).not.toBeNull();
-  });
-
-  it('invokes onReplace when the replace item is clicked', () => {
-    const onReplace = vi.fn();
-    const overlay = renderEmbedOverlay(baseOptions({ onReplace }));
-
-    overlay.querySelector<HTMLElement>('[data-action="replace"]')?.click();
-
-    expect(onReplace).toHaveBeenCalledTimes(1);
+    expect(more).not.toBeNull();
+    expect(more?.getAttribute('aria-haspopup')).toBe('menu');
+    // The rich menu is the shared block-tunes popover, wired by the tool — the
+    // overlay no longer ships its own popover or menu items.
+    expect(overlay.querySelector('[data-role="more-popover"]')).toBeNull();
+    expect(overlay.querySelector('[data-action="replace"]')).toBeNull();
+    expect(overlay.querySelector('[data-action="copy-link"]')).toBeNull();
   });
 });

@@ -283,16 +283,24 @@ describe('Embed tool — replace source', () => {
     return el;
   };
 
-  const openReplace = (root: HTMLElement): void => {
-    root.querySelector<HTMLElement>('[data-action="more"]')?.click();
-    root.querySelector<HTMLElement>('[data-action="replace"]')?.click();
+  // Replace now lives in the shared block-tunes popover (renderSettings), so the
+  // tool no longer ships its own menu item — drive it through renderSettings().
+  const openReplace = (tool: Embed): void => {
+    const settings = tool.renderSettings();
+    const items = (Array.isArray(settings) ? settings : [settings]) as Array<{
+      name?: string;
+      onActivate?: (...args: unknown[]) => void;
+    }>;
+    const replace = items.find((item) => item.name === 'embed-replace');
+
+    replace?.onActivate?.(replace, new MouseEvent('click'));
   };
 
   it('clears the embed and shows a URL input when replace is invoked', () => {
     const tool = new Embed(createOptions(iframeData()));
     const root = mount(tool);
 
-    openReplace(root);
+    openReplace(tool);
 
     expect(root.querySelector('[data-blok-testid="embed-frame"]')).toBeNull();
     expect(root.querySelector<HTMLInputElement>('[data-role="embed-url-input"]')).not.toBeNull();
@@ -303,7 +311,7 @@ describe('Embed tool — replace source', () => {
     const tool = new Embed(createOptions(iframeData()));
     const root = mount(tool);
 
-    openReplace(root);
+    openReplace(tool);
     const input = root.querySelector<HTMLInputElement>('[data-role="embed-url-input"]');
 
     if (input) {
@@ -319,7 +327,7 @@ describe('Embed tool — replace source', () => {
     const tool = new Embed(createOptions(iframeData(), { allowGenericEmbed: false }));
     const root = mount(tool);
 
-    openReplace(root);
+    openReplace(tool);
     const input = root.querySelector<HTMLInputElement>('[data-role="embed-url-input"]');
 
     if (input) {
@@ -336,7 +344,7 @@ describe('Embed tool — replace source', () => {
     const tool = new Embed(createOptions(iframeData(), { allowGenericEmbed: false }));
     const root = mount(tool);
 
-    openReplace(root);
+    openReplace(tool);
     const input = root.querySelector<HTMLInputElement>('[data-role="embed-url-input"]');
 
     expect(input?.getAttribute('aria-label')).toBeTruthy();
@@ -735,17 +743,6 @@ describe('Embed toolbar integration', () => {
     click(root.querySelector('[data-action="align-right"]'));
 
     expect(root.querySelector('[data-action="align-trigger"]')?.getAttribute('data-current')).toBe('right');
-  });
-
-  it('deletes the block through the more menu', () => {
-    const del = vi.fn();
-    const tool = new Embed(createOptions(iframeData(), { blocksDelete: del, blockId: 'embed-1' }));
-    const root = tool.render();
-
-    click(root.querySelector('[data-action="more"]'));
-    click(root.querySelector('[data-action="delete"]'));
-
-    expect(del).toHaveBeenCalledWith('embed-1');
   });
 
   describe('setReadOnly (in-place read-only toggle)', () => {

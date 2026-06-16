@@ -120,13 +120,12 @@
   background: var(--blok-overlay-divider);
 }
 
-/* alignment + more popovers — solid dark surface below the trigger */
-[data-blok-tool="embed"] .blok-embed-toolbar__align,
-[data-blok-tool="embed"] .blok-embed-toolbar__more {
+/* alignment popover — solid dark surface below the trigger. The "more" button
+   opens the shared block-tunes popover, so it needs no bespoke menu styling. */
+[data-blok-tool="embed"] .blok-embed-toolbar__align {
   position: relative;
 }
-[data-blok-tool="embed"] .blok-embed-toolbar__align-popover[hidden],
-[data-blok-tool="embed"] .blok-embed-toolbar__more-popover[hidden] {
+[data-blok-tool="embed"] .blok-embed-toolbar__align-popover[hidden] {
   display: none;
 }
 [data-blok-tool="embed"] .blok-embed-toolbar__align-popover {
@@ -143,49 +142,6 @@
     inset 0 0 0 1px var(--blok-overlay-ring),
     var(--blok-image-shadow-toolbar);
   z-index: 4;
-}
-[data-blok-tool="embed"] .blok-embed-toolbar__more-popover {
-  position: absolute;
-  top: calc(100% + var(--blok-space-1));
-  right: 0;
-  min-width: 160px;
-  padding: var(--blok-space-1);
-  background: var(--blok-overlay-surface);
-  border-radius: var(--blok-space-2);
-  box-shadow:
-    inset 0 0 0 1px var(--blok-overlay-ring),
-    var(--blok-image-shadow-toolbar);
-  z-index: 4;
-}
-[data-blok-tool="embed"] .blok-embed-toolbar__menu-item {
-  display: flex;
-  align-items: center;
-  gap: var(--blok-space-2);
-  width: 100%;
-  height: auto;
-  padding: var(--blok-space-1) var(--blok-space-2);
-  color: var(--blok-overlay-fg);
-  background: transparent;
-  border: 0;
-  border-radius: var(--blok-space-1);
-  cursor: pointer;
-  text-align: left;
-}
-[data-blok-tool="embed"] .blok-embed-toolbar__menu-item:hover {
-  background: var(--blok-overlay-fg-hover);
-  color: var(--blok-overlay-fg-strong);
-}
-[data-blok-tool="embed"] .blok-embed-toolbar__menu-item.is-danger:hover {
-  background: var(--blok-overlay-danger-bg);
-  color: var(--blok-overlay-danger-fg);
-}
-[data-blok-tool="embed"] .blok-embed-toolbar__menu-icon {
-  display: grid;
-  place-items: center;
-}
-[data-blok-tool="embed"] .blok-embed-toolbar__menu-icon svg {
-  width: 14px;
-  height: 14px;
 }
 
 /* ----- Empty state: hero card with a URL pill ----- */

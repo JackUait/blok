@@ -93,7 +93,7 @@
   "a11y.atBottom": "Ang block ay nasa ibaba na, hindi mailipat pababa",
   "blockSettings.convertWithChildrenWarning": "Ang block na ito ay may {count} na mga nested block. Kapag na-convert, ililipat ang mga ito sa pinakamataas na antas. Ituloy?",
   "toolNames.underline": "Salungguhit",
-  "toolNames.strikethrough": "Guhit sa Gitna",
+  "toolNames.strikethrough": "May guhit",
   "toolNames.callout": "Paalala",
   "toolNames.database": "Talaan ng datos",
   "toolNames.board": "Board",

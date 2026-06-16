@@ -4724,6 +4724,35 @@
   animation: blok-video-burst-glyph 460ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
+[data-blok-tool="video"] .blok-video-controls__speed {
+  position: absolute;
+  top: var(--blok-space-3);
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  padding: var(--blok-space-1) var(--blok-space-2-5);
+  border-radius: var(--blok-radius-pill);
+  color: var(--blok-video-burst-fg);
+  background: var(--blok-video-burst-bg);
+  box-shadow: var(--blok-video-burst-shadow);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  opacity: 0;
+  transform: translate(-50%, -8px);
+  pointer-events: none;
+  z-index: 1;
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+[data-blok-tool="video"] .blok-video-controls__speed.is-active {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
 [data-blok-tool="video"] .blok-video-controls__bar {
   position: absolute;
   left: 0;
@@ -4865,7 +4894,7 @@
   background: var(--blok-video-thumb);
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-tool="video"] .blok-video-controls__bar, [data-blok-tool="video"] .blok-video-controls__volume {
+[@media (prefers-reduced-motion: reduce)] [data-blok-tool="video"] .blok-video-controls__bar, [data-blok-tool="video"] .blok-video-controls__volume, [data-blok-tool="video"] .blok-video-controls__speed {
   transition: none;
 }
 

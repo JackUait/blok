@@ -56,6 +56,15 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
   burst.setAttribute('aria-hidden', 'true');
   root.appendChild(burst);
 
+  // Press-and-hold speed badge — surfaces "2×" while the user holds the video
+  // down to scrub through at double speed (à la mobile YouTube), then fades.
+  const speedBadge = document.createElement('div');
+  speedBadge.className = 'blok-video-controls__speed';
+  speedBadge.setAttribute('data-role', 'speed-badge');
+  speedBadge.setAttribute('aria-hidden', 'true');
+  speedBadge.textContent = '2×';
+  root.appendChild(speedBadge);
+
   // Bottom scrim + control bar.
   const bar = document.createElement('div');
   bar.className = 'blok-video-controls__bar';
@@ -176,6 +185,43 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
     else void media.play();
     flashBurst(willPlay);
   };
+
+  // ----- press-and-hold to play at 2× -----
+  // Holding the video past a short threshold ramps playback to double speed and
+  // keeps it playing; releasing restores 1×. A press shorter than the threshold
+  // stays a plain click (play/pause toggle).
+  const HOLD_MS = 220;
+  const hold = { timer: 0, active: false, suppressClick: false };
+
+  const engageHold = (): void => {
+    hold.active = true;
+    if (!state.playing) void media.play();
+    media.playbackRate = 2;
+    speedBadge.classList.add('is-active');
+  };
+  // Drop back to 1× and clear any pending threshold timer. Does not, on its own,
+  // swallow the trailing click — only a real pointerup release does (below).
+  const releaseHold = (): void => {
+    if (hold.timer) { clearTimeout(hold.timer); hold.timer = 0; }
+    if (!hold.active) return;
+    hold.active = false;
+    media.playbackRate = 1;
+    speedBadge.classList.remove('is-active');
+  };
+  const onPointerDown = (event: PointerEvent): void => {
+    if (event.button) return; // primary button only
+    hold.timer = window.setTimeout(engageHold, HOLD_MS);
+  };
+  const onPointerUp = (): void => {
+    // A pointerup after an engaged hold is followed by a click — suppress that
+    // one click so the gesture doesn't also toggle play/pause.
+    if (hold.active) hold.suppressClick = true;
+    releaseHold();
+  };
+  const onVideoClick = (): void => {
+    if (hold.suppressClick) { hold.suppressClick = false; return; }
+    togglePlay();
+  };
   const onSeekInput = (): void => {
     media.currentTime = Number(seek.value);
     paintSeek();
@@ -197,8 +243,15 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
 
   playToggle.addEventListener('click', togglePlay);
   // Click anywhere on the video to play/pause (the control bar sits above with
-  // its own pointer-events, so its hits never reach the media).
-  video.addEventListener('click', togglePlay);
+  // its own pointer-events, so its hits never reach the media). A click after a
+  // press-and-hold is swallowed by onVideoClick.
+  video.addEventListener('click', onVideoClick);
+  video.addEventListener('pointerdown', onPointerDown);
+  video.addEventListener('pointerup', onPointerUp);
+  // Pointer leaving / cancelling restores 1× but is NOT a release, so it must not
+  // suppress the next legitimate click.
+  video.addEventListener('pointerleave', releaseHold);
+  video.addEventListener('pointercancel', releaseHold);
   burst.addEventListener('animationend', onBurstEnd);
   seek.addEventListener('input', onSeekInput);
   muteToggle.addEventListener('click', onMuteClick);
@@ -213,7 +266,12 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
   document.addEventListener('fullscreenchange', onFullscreenChange);
 
   const destroy = (): void => {
-    video.removeEventListener('click', togglePlay);
+    if (hold.timer) clearTimeout(hold.timer);
+    video.removeEventListener('click', onVideoClick);
+    video.removeEventListener('pointerdown', onPointerDown);
+    video.removeEventListener('pointerup', onPointerUp);
+    video.removeEventListener('pointerleave', releaseHold);
+    video.removeEventListener('pointercancel', releaseHold);
     video.removeEventListener('loadedmetadata', onLoadedMetadata);
     video.removeEventListener('timeupdate', onTimeUpdate);
     video.removeEventListener('play', onPlay);

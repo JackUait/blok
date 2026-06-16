@@ -115,6 +115,63 @@ describe('video controls — centre burst', () => {
   });
 });
 
+describe('video controls — press-and-hold 2x', () => {
+  let h: Harness;
+  beforeEach(() => { vi.clearAllMocks(); h = mount(); });
+  afterEach(() => { vi.useRealTimers(); h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
+
+  it('holding the video plays it at 2x speed', () => {
+    vi.useFakeTimers();
+    h.video.dispatchEvent(new Event('pointerdown'));
+    vi.advanceTimersByTime(300);
+    expect(h.video.playbackRate).toBe(2);
+    expect(h.video.play).toHaveBeenCalled();
+  });
+
+  it('shows the speed badge only while held', () => {
+    vi.useFakeTimers();
+    const badge = q(h.controls, '[data-role="speed-badge"]');
+    expect(badge.classList.contains('is-active')).toBe(false);
+    h.video.dispatchEvent(new Event('pointerdown'));
+    vi.advanceTimersByTime(300);
+    expect(badge.classList.contains('is-active')).toBe(true);
+    h.video.dispatchEvent(new Event('pointerup'));
+    expect(badge.classList.contains('is-active')).toBe(false);
+  });
+
+  it('releasing the hold restores 1x and suppresses the trailing toggle', () => {
+    vi.useFakeTimers();
+    h.video.dispatchEvent(new Event('pointerdown'));
+    vi.advanceTimersByTime(300);
+    const playCalls = (h.video.play as ReturnType<typeof vi.fn>).mock.calls.length;
+    h.video.dispatchEvent(new Event('pointerup'));
+    expect(h.video.playbackRate).toBe(1);
+    // The click the browser fires after the hold must NOT toggle playback.
+    h.video.click();
+    expect(h.video.play).toHaveBeenCalledTimes(playCalls);
+    expect(h.video.pause).not.toHaveBeenCalled();
+  });
+
+  it('a quick tap never engages 2x and still toggles playback', () => {
+    vi.useFakeTimers();
+    h.video.dispatchEvent(new Event('pointerdown'));
+    h.video.dispatchEvent(new Event('pointerup'));
+    expect(h.video.playbackRate).toBe(1);
+    h.video.click();
+    expect(h.video.play).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaving the video mid-hold restores 1x without eating the next click', () => {
+    vi.useFakeTimers();
+    h.video.dispatchEvent(new Event('pointerdown'));
+    vi.advanceTimersByTime(300);
+    h.video.dispatchEvent(new Event('pointerleave'));
+    expect(h.video.playbackRate).toBe(1);
+    h.video.click();
+    expect(h.video.play).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('video controls — playback', () => {
   let h: Harness;
   beforeEach(() => { vi.clearAllMocks(); h = mount(); });

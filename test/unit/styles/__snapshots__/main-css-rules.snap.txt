@@ -4554,6 +4554,10 @@
   height: 14px;
 }
 
+[data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] .blok-video-toolbar, [data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] .blok-video-caption-row, [data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] [data-role="resize-handle"] {
+  display: none;
+}
+
 [data-blok-tool="video"] [data-role="resize-handle"] {
   position: absolute;
   top: 50%;

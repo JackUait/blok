@@ -102,6 +102,36 @@ test('uploads a video file via the picker and renders a player', async ({ page }
   await expect(player).toHaveAttribute('src', /^blob:/);
 });
 
+test('fullscreen hides editor chrome and keeps only playback controls', async ({ page }) => {
+  await createBlok(page, {
+    blocks: [{ type: 'video', data: { url: SAMPLE_VIDEO_URL, caption: 'My clip', alignment: 'center' } }],
+  } as OutputData);
+
+  const videoBlock = page.locator(VIDEO_BLOCK_SELECTOR);
+  await expect(videoBlock).toHaveAttribute('data-state', 'rendered');
+
+  const figure = videoBlock.locator('[data-role="video-figure"]');
+  const display = (locator: ReturnType<Page['locator']>): Promise<string> =>
+    locator.evaluate((el) => getComputedStyle(el).display);
+
+  // Editor chrome is visible (in the DOM, not display:none) before fullscreen.
+  await expect(display(videoBlock.locator('[data-role="video-overlay"]'))).resolves.not.toBe('none');
+  await expect(display(videoBlock.locator('[data-role="video-caption-row"]'))).resolves.not.toBe('none');
+
+  // Enter fullscreen by flipping the flag the controls toggle (matches
+  // controls.ts onFullscreenChange) — avoids the headless requestFullscreen gate.
+  await figure.evaluate((el) => el.setAttribute('data-fullscreen', 'true'));
+
+  // Edit chrome + caption + resize handles drop out of the fullscreen view.
+  await expect(display(videoBlock.locator('[data-role="video-overlay"]'))).resolves.toBe('none');
+  await expect(display(videoBlock.locator('[data-role="video-caption-row"]'))).resolves.toBe('none');
+  await expect(display(videoBlock.locator('[data-role="resize-handle"]').first())).resolves.toBe('none');
+
+  // Playback controls survive — that is the whole point of fullscreen.
+  await expect(display(videoBlock.locator('[data-role="video-controls"]'))).resolves.not.toBe('none');
+  await expect(videoBlock.locator('[data-action="fullscreen"]')).toBeAttached();
+});
+
 test('persists video data across save and reload', async ({ page }) => {
   await createBlok(page, {
     blocks: [{ type: 'video', data: { url: SAMPLE_VIDEO_URL, caption: 'My clip', alignment: 'center' } }],

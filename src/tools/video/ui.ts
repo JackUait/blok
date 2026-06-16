@@ -67,6 +67,7 @@ export interface CaptionRowOptions {
 export function renderCaptionRow(opts: CaptionRowOptions): HTMLElement {
   const row = document.createElement('div');
   row.className = 'blok-video-caption-row';
+  row.setAttribute('data-role', 'video-caption-row');
 
   const caption = document.createElement('div');
   caption.className = 'blok-video-caption';

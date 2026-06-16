@@ -175,6 +175,16 @@
 }
 [data-blok-tool="video"] .blok-video-toolbar__align-popover button svg { width: 14px; height: 14px; }
 
+/* ----- fullscreen — strip the editor chrome down to the playback bar -----
+   Native fullscreen promotes the whole figure, dragging the edit toolbar,
+   caption row, and resize pills into the viewing surface. None of those belong
+   in a fullscreen player, so hide them and leave only the playback controls. */
+[data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] .blok-video-toolbar,
+[data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] .blok-video-caption-row,
+[data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] [data-role="resize-handle"] {
+  display: none;
+}
+
 /* ----- resize handle — Notion-style pill straddling the edge ----- */
 [data-blok-tool="video"] [data-role="resize-handle"] {
   position: absolute;

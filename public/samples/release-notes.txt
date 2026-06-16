@@ -1,0 +1,49 @@
+Blok — Release Notes
+====================
+
+v0.15.0  ·  2026-06-16
+----------------------
+
+Highlights
+
+  This release rounds out the File block's inline preview. Drop in a
+  document and Blok renders it in place — no download round-trip, no
+  third-party viewer, no leaving the editor.
+
+New
+
+  • Inline preview for source code, with syntax highlighting for 40+
+    languages. Open a .ts, .py, .rs, or .sql file and read it the way
+    you wrote it.
+
+  • Inline preview for plain-text files (.txt, .log, .csv, .env). The
+    text renders in a clean monospace pane with the same scroll haze
+    used across the other preview kinds.
+
+  • Editable filenames. Click a file's name in the card to rename it
+    without re-uploading.
+
+Fixed
+
+  • PowerPoint previews no longer clip slide bodies down to the title
+    band. Decks now scale to fit the modal and re-fit on resize.
+
+  • Word documents shrink to their content height instead of padding
+    out a full sheet of empty paper.
+
+  • Spreadsheet cells stay aligned to their real columns when a row
+    skips a cell.
+
+Under the hood
+
+  • Office renderers (docx, xlsx, pptx) are code-split out of the main
+    bundle and loaded on demand — the editor stays lightweight until
+    you actually open a preview.
+
+  • Every preview kind shares one modal, one scroll container, and one
+    error path, so they all look and behave the same.
+
+----------------------------------------------------------------------
+
+Thanks for building with Blok. File an issue or open a PR at
+github.com/jackuait/blok — we read every one.

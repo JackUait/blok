@@ -1,9 +1,1 @@
-/* Global styles - imported from assets/styles.css */
-@import '../assets/styles.css';
-
-/* Additional React-specific styles */
-#root {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
+/* styles removed */

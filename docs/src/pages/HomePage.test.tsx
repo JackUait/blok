@@ -14,7 +14,7 @@ describe('HomePage', () => {
       </MemoryRouter>
     );
 
-    const nav = screen.getByRole('navigation');
+    const nav = screen.getByTestId('nav');
     expect(nav).toBeInTheDocument();
   });
 
@@ -120,7 +120,11 @@ describe('HomePage', () => {
       </MemoryRouter>
     );
 
-    const nav = screen.getByRole('navigation');
-    expect(nav).toBeInTheDocument();
+    // Primary site nav plus the Airbnb-style category bar are both landmarks
+    const navs = screen.getAllByRole('navigation');
+    expect(navs.length).toBeGreaterThanOrEqual(2);
+    expect(
+      screen.getByRole('navigation', { name: /browse the documentation/i })
+    ).toBeInTheDocument();
   });
 });

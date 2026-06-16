@@ -322,6 +322,18 @@
       "mascotAlt": "Blok mascot - a friendly orange character with pink yarn",
       "mascotAriaLabel": "Try the demo"
     },
+    "categories": {
+      "label": "Browse the documentation",
+      "getStarted": "Get started",
+      "blocks": "Blocks",
+      "tools": "Tools",
+      "inlineTools": "Inline tools",
+      "api": "API",
+      "events": "Events",
+      "recipes": "Recipes",
+      "integrations": "Integrations",
+      "migration": "Migration"
+    },
     "features": {
       "eyebrow": "Why Blok",
       "title1": "Built for developers,",

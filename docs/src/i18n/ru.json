@@ -321,6 +321,18 @@
       "mascotAlt": "Маскот Blok — дружелюбный оранжевый персонаж с розовой пряжей",
       "mascotAriaLabel": "Открыть демо"
     },
+    "categories": {
+      "label": "Обзор документации",
+      "getStarted": "Начало работы",
+      "blocks": "Блоки",
+      "tools": "Инструменты",
+      "inlineTools": "Инлайн-инструменты",
+      "api": "API",
+      "events": "События",
+      "recipes": "Рецепты",
+      "integrations": "Интеграции",
+      "migration": "Миграция"
+    },
     "features": {
       "eyebrow": "Почему Blok",
       "title1": "Для разработчиков —",

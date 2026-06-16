@@ -87,6 +87,9 @@ describe('Nav', () => {
       </TestWrapper>
     );
 
+    // GitHub lives in the account menu dropdown — open it first
+    fireEvent.click(screen.getByLabelText('Toggle menu'));
+
     const githubLink = screen.getByRole('link', { name: 'GitHub' });
     expect(githubLink).toHaveAttribute('href', 'https://github.com/JackUait/blok');
     expect(githubLink).toHaveAttribute('target', '_blank');

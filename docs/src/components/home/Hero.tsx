@@ -1,20 +1,8 @@
-import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { use3DTilt } from '../../hooks/use3DTilt';
-import { WaveDivider } from '../common/WaveDivider';
 import { useI18n } from '../../contexts/I18nContext';
 
 export const Hero: React.FC = () => {
   const { t } = useI18n();
-  const mascotTilt = use3DTilt({
-    maxTilt: 20,
-    scale: 1.08,
-    transitionSpeed: 500,
-  });
-
-  const mascotRef = useCallback((node: HTMLAnchorElement | null) => {
-    mascotTilt.ref(node);
-  }, [mascotTilt.ref]);
 
   const handleScrollToQuickStart = (e: React.MouseEvent<HTMLAnchorElement>): void => {
     e.preventDefault();
@@ -24,10 +12,9 @@ export const Hero: React.FC = () => {
 
   return (
     <section className="hero">
-      <div className="hero-bg">
-        <div className="hero-blur hero-blur-1"></div>
-        <div className="hero-blur hero-blur-2"></div>
-        <div className="hero-blur hero-blur-3"></div>
+      <div className="hero-bg" aria-hidden="true">
+        <div className="hero-wash" />
+        <div className="hero-grain" />
       </div>
       <div className="hero-container">
         <div className="hero-content" data-blok-testid="hero-content">
@@ -66,38 +53,32 @@ export const Hero: React.FC = () => {
         <div className="hero-demo" data-blok-testid="hero-demo">
           <Link
             to="/demo"
-            ref={mascotRef}
-            className={`hero-mascot hero-mascot-3d ${mascotTilt.isHovered ? 'hero-mascot-hovered' : ''}`}
-            onMouseMove={mascotTilt.onMouseMove}
-            onMouseEnter={mascotTilt.onMouseEnter}
-            onMouseLeave={mascotTilt.onMouseLeave}
-            style={mascotTilt.style}
+            className="hero-mascot-card"
             aria-label={t('home.hero.mascotAriaLabel')}
           >
-            {/* Sparkle particles */}
-            <div className="hero-mascot-sparkles" aria-hidden="true">
-              <span className="sparkle sparkle-1" />
-              <span className="sparkle sparkle-2" />
-              <span className="sparkle sparkle-3" />
-              <span className="sparkle sparkle-4" />
-              <span className="sparkle sparkle-5" />
-            </div>
             <img
               src="/mascot.png"
               alt={t('home.hero.mascotAlt')}
               className="hero-mascot-image"
             />
-            {/* Floating shadow that moves with tilt */}
-            <div className="hero-mascot-shadow" aria-hidden="true" />
+            <span className="hero-mascot-chip">
+              {t('home.hero.ctaTryItOut')}
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                aria-hidden="true"
+              >
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </span>
           </Link>
         </div>
       </div>
-      <WaveDivider
-        variant="soft"
-        fillColor="var(--color-wave-fill)"
-        height={120}
-        position="bottom"
-      />
     </section>
   );
 };

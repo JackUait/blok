@@ -2,11 +2,11 @@ import { useEffect } from 'react';
 import { Nav } from '../components/layout/Nav';
 import { Footer } from '../components/layout/Footer';
 import { Hero } from '../components/home/Hero';
+import { CategoryBar } from '../components/home/CategoryBar';
 import { Features } from '../components/home/Features';
 import { QuickStart } from '../components/home/QuickStart';
 import { ApiPreview } from '../components/home/ApiPreview';
 import { MigrationCard } from '../components/home/MigrationCard';
-import { WaveDivider } from '../components/common/WaveDivider';
 import { NAV_LINKS } from '../utils/constants';
 
 export const HomePage: React.FC = () => {
@@ -55,32 +55,15 @@ export const HomePage: React.FC = () => {
       <Nav links={NAV_LINKS} />
       <main>
         <Hero />
+        <CategoryBar />
         <div className="section-wrapper section-wrapper--features">
           <Features />
-          <WaveDivider
-            variant="layered"
-            fillColor="var(--color-background)"
-            height={100}
-            position="bottom"
-          />
         </div>
         <div className="section-wrapper section-wrapper--quickstart">
           <QuickStart />
-          <WaveDivider
-            variant="curved"
-            fillColor="var(--color-surface)"
-            height={90}
-            position="bottom"
-          />
         </div>
         <div className="section-wrapper section-wrapper--api">
           <ApiPreview />
-          <WaveDivider
-            variant="asymmetric"
-            fillColor="var(--color-background)"
-            height={80}
-            position="bottom"
-          />
         </div>
         <MigrationCard />
       </main>

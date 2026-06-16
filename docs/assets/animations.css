@@ -52,7 +52,7 @@
 
 .section-wrapper--features .features {
   padding-top: var(--spacing-4xl);
-  padding-bottom: calc(var(--spacing-4xl) + 60px);
+  padding-bottom: var(--spacing-4xl);
 }
 
 /* QuickStart section wrapper */
@@ -60,17 +60,9 @@
   position: relative;
 }
 
-.section-wrapper--quickstart .quick-start {
-  padding-bottom: calc(var(--spacing-4xl) + 50px);
-}
-
 /* API section wrapper */
 .section-wrapper--api {
   position: relative;
-}
-
-.section-wrapper--api .api {
-  padding-bottom: calc(var(--spacing-4xl) + 40px);
 }
 
 /* ============================================

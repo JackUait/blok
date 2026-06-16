@@ -108,8 +108,13 @@ export function renderBlockStatesGallery({
     });
   });
 
-  container.appendChild(tabBar);
-  container.appendChild(panelsWrap);
+  const layout = document.createElement('div');
+
+  layout.className = 'block-states-layout';
+  layout.appendChild(tabBar);
+  layout.appendChild(panelsWrap);
+
+  container.appendChild(layout);
 
   return {
     setActiveTool(tool: string) {

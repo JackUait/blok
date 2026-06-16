@@ -35,6 +35,25 @@ describe('playground block states gallery', () => {
     vi.restoreAllMocks();
   });
 
+  test('lays tabs and panels out in a side-menu wrapper with tabs first', () => {
+    const renderBlock = vi.fn();
+
+    renderBlockStatesGallery({ container, spec: buildSpec(), renderBlock });
+
+    const layout = container.querySelector<HTMLElement>('.block-states-layout');
+
+    expect(layout).not.toBeNull();
+
+    const tabBar = layout?.querySelector('.block-states-tabs');
+    const panels = layout?.querySelector('.block-states-panels');
+
+    expect(tabBar).not.toBeNull();
+    expect(panels).not.toBeNull();
+    // sidebar (tabs) comes before the content (panels) in DOM order
+    expect(layout?.firstElementChild).toBe(tabBar);
+    expect(layout?.children[1]).toBe(panels);
+  });
+
   test('renders one sub-tab per tool', () => {
     const renderBlock = vi.fn();
 

@@ -1146,6 +1146,16 @@
   --blok-text-tertiary: #a3a39e;
   --blok-color-accent: #2383e2;
   --blok-color-danger: #e24a4a;
+  --blok-file-icon-pdf: #d93025;
+  --blok-file-icon-document: #2563eb;
+  --blok-file-icon-spreadsheet: #16a34a;
+  --blok-file-icon-presentation: #ea580c;
+  --blok-file-icon-archive: #ca8a04;
+  --blok-file-icon-audio: #db2777;
+  --blok-file-icon-video: #7c3aed;
+  --blok-file-icon-image: #0891b2;
+  --blok-file-icon-code: #4f46e5;
+  --blok-haze-color: var(--blok-bg-primary);
   --blok-overlay-dark: rgba(25, 25, 24, 0.92);
   --blok-overlay-shimmer: rgba(255, 255, 255, 0.5);
   --blok-overlay-handle-ring: rgba(255, 255, 255, 0.9);
@@ -4861,48 +4871,48 @@
 }
 
 [data-blok-tool="file"] .blok-file-icon[data-file-category="pdf"] {
-  color: #d93025;
-  background: color-mix(in srgb, #d93025 12%, var(--blok-bg-secondary));
+  color: var(--blok-file-icon-pdf);
+  background: color-mix(in srgb, var(--blok-file-icon-pdf) 12%, var(--blok-bg-secondary));
 }
 
 [data-blok-tool="file"] .blok-file-icon[data-file-category="document"] {
-  color: #2563eb;
-  background: color-mix(in srgb, #2563eb 12%, var(--blok-bg-secondary));
+  color: var(--blok-file-icon-document);
+  background: color-mix(in srgb, var(--blok-file-icon-document) 12%, var(--blok-bg-secondary));
 }
 
 [data-blok-tool="file"] .blok-file-icon[data-file-category="spreadsheet"] {
-  color: #16a34a;
-  background: color-mix(in srgb, #16a34a 12%, var(--blok-bg-secondary));
+  color: var(--blok-file-icon-spreadsheet);
+  background: color-mix(in srgb, var(--blok-file-icon-spreadsheet) 12%, var(--blok-bg-secondary));
 }
 
 [data-blok-tool="file"] .blok-file-icon[data-file-category="presentation"] {
-  color: #ea580c;
-  background: color-mix(in srgb, #ea580c 12%, var(--blok-bg-secondary));
+  color: var(--blok-file-icon-presentation);
+  background: color-mix(in srgb, var(--blok-file-icon-presentation) 12%, var(--blok-bg-secondary));
 }
 
 [data-blok-tool="file"] .blok-file-icon[data-file-category="archive"] {
-  color: #ca8a04;
-  background: color-mix(in srgb, #ca8a04 12%, var(--blok-bg-secondary));
+  color: var(--blok-file-icon-archive);
+  background: color-mix(in srgb, var(--blok-file-icon-archive) 12%, var(--blok-bg-secondary));
 }
 
 [data-blok-tool="file"] .blok-file-icon[data-file-category="audio"] {
-  color: #db2777;
-  background: color-mix(in srgb, #db2777 12%, var(--blok-bg-secondary));
+  color: var(--blok-file-icon-audio);
+  background: color-mix(in srgb, var(--blok-file-icon-audio) 12%, var(--blok-bg-secondary));
 }
 
 [data-blok-tool="file"] .blok-file-icon[data-file-category="video"] {
-  color: #7c3aed;
-  background: color-mix(in srgb, #7c3aed 12%, var(--blok-bg-secondary));
+  color: var(--blok-file-icon-video);
+  background: color-mix(in srgb, var(--blok-file-icon-video) 12%, var(--blok-bg-secondary));
 }
 
 [data-blok-tool="file"] .blok-file-icon[data-file-category="image"] {
-  color: #0891b2;
-  background: color-mix(in srgb, #0891b2 12%, var(--blok-bg-secondary));
+  color: var(--blok-file-icon-image);
+  background: color-mix(in srgb, var(--blok-file-icon-image) 12%, var(--blok-bg-secondary));
 }
 
 [data-blok-tool="file"] .blok-file-icon[data-file-category="code"] {
-  color: #4f46e5;
-  background: color-mix(in srgb, #4f46e5 12%, var(--blok-bg-secondary));
+  color: var(--blok-file-icon-code);
+  background: color-mix(in srgb, var(--blok-file-icon-code) 12%, var(--blok-bg-secondary));
 }
 
 [data-blok-tool="file"] .blok-file-meta {
@@ -5697,6 +5707,7 @@
 }
 
 .blok-file-preview-pptx > * {
+  flex-shrink: 0;
   border-radius: var(--blok-radius-lg);
   box-shadow: var(--blok-image-shadow-resting);
   overflow: hidden;

@@ -295,7 +295,17 @@ describe('published package is self-contained (install footprint)', () => {
   it('every external import in dist is declared as a runtime or peer dependency', () => {
     const externals = [...collectDistExternals()]
     const declared = new Set([...runtimeDeps, ...peerDeps])
-    const undeclared = externals.filter((pkg) => !declared.has(pkg))
+    // Known false positive: `echarts` is never imported by dist. It only appears
+    // as string-literal source emitted by the bundled @aiden0z/pptx-renderer
+    // chunk — its ChartRenderer generates echarts code as JS-source strings
+    // (e.g. `" } from 'echarts/components';\necharts.use(...)"`). The regex-based
+    // scraper sees those string fragments and mistakes them for real imports.
+    // echarts is genuinely not a runtime dependency, so exclude it here rather
+    // than declaring it in package.json.
+    const knownStringLiteralFalsePositives = new Set(['echarts'])
+    const undeclared = externals.filter(
+      (pkg) => !declared.has(pkg) && !knownStringLiteralFalsePositives.has(pkg),
+    )
     expect(undeclared).toEqual([])
   })
 

@@ -177,8 +177,25 @@
   --blok-color-danger: #e24a4a;
 
   /* File tool — Notion-style neutral chrome: the icon tile + download
-     affordance read in greys, and only the upload progress fill carries the
-     blue accent (--blok-color-accent). No standalone file accent token. */
+     affordance read in greys, and the upload progress fill carries the blue
+     accent (--blok-color-accent). The previewable-type icon glyphs pick up a
+     per-category accent below (theme-independent — the tinted tile is built
+     with color-mix against --blok-bg-secondary, so one value reads on both
+     light and dark surfaces). */
+  --blok-file-icon-pdf: #d93025;
+  --blok-file-icon-document: #2563eb;
+  --blok-file-icon-spreadsheet: #16a34a;
+  --blok-file-icon-presentation: #ea580c;
+  --blok-file-icon-archive: #ca8a04;
+  --blok-file-icon-audio: #db2777;
+  --blok-file-icon-video: #7c3aed;
+  --blok-file-icon-image: #0891b2;
+  --blok-file-icon-code: #4f46e5;
+
+  /* Scroll-haze gradient color. JS sets this inline per preview surface to that
+     surface's own background so the haze melts into it; declared here as the
+     page background so the var resolves even before/without the inline set. */
+  --blok-haze-color: var(--blok-bg-primary);
 
   /* Overlay chrome that sits ON the image pixels (lightbox backdrop, loading
      shimmer, resize-handle ring) stays dark regardless of page theme. */

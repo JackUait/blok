@@ -145,9 +145,6 @@
     "url": "git+https://github.com/JackUait/blok.git"
   },
   "dependencies": {
-    "@aiden0z/pptx-renderer": "^1.1.0",
-    "docx-preview": "^0.3.7",
-    "jszip": "^3.10.1",
     "mdast-util-from-markdown": "^2.0.3",
     "mdast-util-gfm": "^3.1.0",
     "mdast-util-math": "^3.0.0",
@@ -156,6 +153,7 @@
     "nanoid": "5.1.9"
   },
   "devDependencies": {
+    "@aiden0z/pptx-renderer": "^1.1.0",
     "@axe-core/playwright": "4.11.2",
     "@babel/register": "7.28.6",
     "@commitlint/cli": "20.5.0",
@@ -183,6 +181,7 @@
     "@vitest/ui": "4.1.8",
     "chromatic": "16.5.0",
     "cldr-annotations-full": "^48.2.0",
+    "docx-preview": "^0.3.7",
     "dompurify": "^3.4.8",
     "eslint": "10.2.1",
     "eslint-plugin-import": "2.32.0",
@@ -201,6 +200,7 @@
     "i18next": "26.0.6",
     "jscpd": "4.0.9",
     "jsdom": "28.1.0",
+    "jszip": "^3.10.1",
     "katex": "^0.16.44",
     "mermaid": "^11.15.0",
     "playwright": "1.59.1",

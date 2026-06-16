@@ -48,6 +48,14 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
   root.className = 'blok-video-controls';
   root.setAttribute('data-role', 'video-controls');
 
+  // Momentary centre burst — flashes the action's glyph (à la native players)
+  // each time playback toggles, then animates out.
+  const burst = document.createElement('div');
+  burst.className = 'blok-video-controls__burst';
+  burst.setAttribute('data-role', 'play-burst');
+  burst.setAttribute('aria-hidden', 'true');
+  root.appendChild(burst);
+
   // Bottom scrim + control bar.
   const bar = document.createElement('div');
   bar.className = 'blok-video-controls__bar';
@@ -145,10 +153,22 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
     fullscreen.setAttribute('aria-label', isFull ? 'Exit fullscreen' : 'Fullscreen');
   };
 
+  // Flash the just-taken action's glyph in the centre, restarting the CSS
+  // animation each call (remove class → force reflow → re-add).
+  const flashBurst = (willPlay: boolean): void => {
+    burst.innerHTML = willPlay ? IconPlayerPlay : IconPlayerPause;
+    burst.classList.remove('is-active');
+    void burst.offsetWidth;
+    burst.classList.add('is-active');
+  };
+  const onBurstEnd = (): void => burst.classList.remove('is-active');
+
   // ----- intent -----
   const togglePlay = (): void => {
+    const willPlay = !state.playing;
     if (state.playing) media.pause();
     else void media.play();
+    flashBurst(willPlay);
   };
   const onSeekInput = (): void => {
     media.currentTime = Number(seek.value);
@@ -173,6 +193,7 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
   // Click anywhere on the video to play/pause (the control bar sits above with
   // its own pointer-events, so its hits never reach the media).
   video.addEventListener('click', togglePlay);
+  burst.addEventListener('animationend', onBurstEnd);
   seek.addEventListener('input', onSeekInput);
   muteToggle.addEventListener('click', onMuteClick);
   volume.addEventListener('input', onVolumeInput);

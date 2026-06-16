@@ -81,6 +81,40 @@ describe('video controls — click-to-toggle', () => {
   });
 });
 
+describe('video controls — centre burst', () => {
+  let h: Harness;
+  beforeEach(() => { vi.clearAllMocks(); h = mount(); });
+  afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
+
+  it('flashes a play burst when starting playback', () => {
+    const burst = q(h.controls, '[data-role="play-burst"]');
+    expect(burst.classList.contains('is-active')).toBe(false);
+    h.video.click();
+    expect(burst.classList.contains('is-active')).toBe(true);
+    // Play glyph is a single triangle <path>, no <rect> bars.
+    expect(burst.querySelector('path')).toBeTruthy();
+    expect(burst.querySelectorAll('rect')).toHaveLength(0);
+  });
+
+  it('flashes a pause burst when pausing', () => {
+    h.video.dispatchEvent(new Event('play'));
+    q(h.controls, '[data-role="play-burst"]').classList.remove('is-active');
+    h.video.click();
+    const burst = q(h.controls, '[data-role="play-burst"]');
+    expect(burst.classList.contains('is-active')).toBe(true);
+    // Pause glyph is two vertical <rect> bars.
+    expect(burst.querySelectorAll('rect')).toHaveLength(2);
+  });
+
+  it('clears the burst once its animation ends', () => {
+    h.video.click();
+    const burst = q(h.controls, '[data-role="play-burst"]');
+    expect(burst.classList.contains('is-active')).toBe(true);
+    burst.dispatchEvent(new Event('animationend'));
+    expect(burst.classList.contains('is-active')).toBe(false);
+  });
+});
+
 describe('video controls — playback', () => {
   let h: Harness;
   beforeEach(() => { vi.clearAllMocks(); h = mount(); });

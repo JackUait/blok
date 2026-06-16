@@ -169,21 +169,11 @@ async function renderMarkdown(
   header.appendChild(toolbar);
   body.append(renderView, rawView);
 
-  // Glide the pill to the active segment. The first call positions it without
-  // a transition so it doesn't slide in from the track's left edge on open.
-  let indicatorReady = false;
+  // Glide the pill to the active segment.
   const moveIndicator = (raw: boolean): void => {
     const target = raw ? rawBtn : renderBtn;
-    if (!indicatorReady) {
-      indicator.style.transition = 'none';
-    }
     indicator.style.width = `${target.offsetWidth}px`;
     indicator.style.transform = `translateX(${target.offsetLeft}px)`;
-    if (!indicatorReady) {
-      void indicator.offsetWidth;
-      indicator.style.transition = '';
-      indicatorReady = true;
-    }
   };
 
   const show = (raw: boolean): void => {
@@ -195,7 +185,13 @@ async function renderMarkdown(
   };
   renderBtn.addEventListener('click', () => show(false));
   rawBtn.addEventListener('click', () => show(true));
+
+  // Position the pill without a transition so it doesn't slide in from the
+  // track's left edge on open, then restore the transition for later moves.
+  indicator.style.transition = 'none';
   show(false);
+  void indicator.offsetWidth;
+  indicator.style.transition = '';
 
   ensurePrismStyles();
   renderView.innerHTML = await markdownToHtml(text, { baseUrl: opts.url });

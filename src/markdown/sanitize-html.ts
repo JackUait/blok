@@ -47,48 +47,66 @@ function resolveUrl(url: string, base: string | undefined): string {
   }
 }
 
-// `currentBase` is read by the synchronous afterSanitizeAttributes hook. Because
+// `current.base` is read by the synchronous afterSanitizeAttributes hook. Because
 // DOMPurify.sanitize runs synchronously, setting it immediately before each call
-// is race-free even across concurrent renders.
-let currentBase: string | undefined;
-let purifyPromise: Promise<PurifyLike> | null = null;
+// is race-free even across concurrent renders. A const holder lets the hook share
+// the active base without module-level reassignment. `current.purify` memoizes the
+// loaded DOMPurify instance so the dynamic import and hook registration happen once.
+const current: { base: string | undefined; purify: Promise<PurifyLike> | null } = {
+  base: undefined,
+  purify: null,
+};
+
+/** Harden a sanitized anchor: resolve its href, drop unsafe schemes, prevent tab-nabbing. */
+function hardenAnchor(node: PurifyHookNode): void {
+  if (node.tagName !== 'A' || !node.hasAttribute('href')) {
+    return;
+  }
+  const safe = safeHref(resolveUrl(node.getAttribute('href') ?? '', current.base));
+  if (safe === null) {
+    node.removeAttribute('href');
+
+    return;
+  }
+  node.setAttribute('href', safe);
+  node.setAttribute('target', '_blank');
+  node.setAttribute('rel', 'noopener noreferrer nofollow');
+}
+
+/** Harden a sanitized image: strip srcset and resolve/validate its src. */
+function hardenImage(node: PurifyHookNode): void {
+  if (node.tagName !== 'IMG') {
+    return;
+  }
+  node.removeAttribute('srcset');
+  if (!node.hasAttribute('src')) {
+    return;
+  }
+  const safe = safeImageSrc(resolveUrl(node.getAttribute('src') ?? '', current.base));
+  if (safe === null) {
+    node.removeAttribute('src');
+  } else {
+    node.setAttribute('src', safe);
+  }
+}
 
 async function getPurify(): Promise<PurifyLike> {
-  if (purifyPromise === null) {
-    purifyPromise = import('dompurify').then(({ default: DOMPurify }) => {
+  if (current.purify === null) {
+    current.purify = import('dompurify').then(({ default: DOMPurify }) => {
       const purify = DOMPurify as unknown as PurifyLike;
 
       // Re-apply Blok's URL policy after sanitizing: resolve relative URLs to
       // absolute, drop unsafe schemes, and harden anchors against tab-nabbing.
       purify.addHook('afterSanitizeAttributes', (node) => {
-        if (node.tagName === 'A' && node.hasAttribute('href')) {
-          const safe = safeHref(resolveUrl(node.getAttribute('href') ?? '', currentBase));
-          if (safe === null) {
-            node.removeAttribute('href');
-          } else {
-            node.setAttribute('href', safe);
-            node.setAttribute('target', '_blank');
-            node.setAttribute('rel', 'noopener noreferrer nofollow');
-          }
-        }
-        if (node.tagName === 'IMG') {
-          node.removeAttribute('srcset');
-          if (node.hasAttribute('src')) {
-            const safe = safeImageSrc(resolveUrl(node.getAttribute('src') ?? '', currentBase));
-            if (safe === null) {
-              node.removeAttribute('src');
-            } else {
-              node.setAttribute('src', safe);
-            }
-          }
-        }
+        hardenAnchor(node);
+        hardenImage(node);
       });
 
       return purify;
     });
   }
 
-  return purifyPromise;
+  return current.purify;
 }
 
 /**
@@ -100,7 +118,7 @@ async function getPurify(): Promise<PurifyLike> {
 export async function sanitizeBlockHtml(raw: string, baseUrl?: string): Promise<string> {
   const purify = await getPurify();
 
-  currentBase = baseUrl;
+  current.base = baseUrl;
 
   return purify.sanitize(raw, {
     ALLOWED_TAGS,

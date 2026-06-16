@@ -217,6 +217,20 @@ describe('Table Tool', () => {
         })
       ).toBe(true);
     });
+
+    it('returns true for table with content', () => {
+      const options = createTableOptions();
+      const table = new Table(options);
+
+      expect(table.validate({ withHeadings: false, withHeadingColumn: false, content: [['A']] })).toBe(true);
+    });
+
+    it('returns false for table with no content rows', () => {
+      const options = createTableOptions();
+      const table = new Table(options);
+
+      expect(table.validate({ withHeadings: false, withHeadingColumn: false, content: [] })).toBe(false);
+    });
   });
 
   describe('restrictedTools config', () => {
@@ -841,22 +855,6 @@ describe('Table Tool', () => {
       const saved = table.save(element);
 
       expect(saved.withHeadingColumn).toBe(false);
-    });
-  });
-
-  describe('validate', () => {
-    it('returns true for table with content', () => {
-      const options = createTableOptions();
-      const table = new Table(options);
-
-      expect(table.validate({ withHeadings: false, withHeadingColumn: false, content: [['A']] })).toBe(true);
-    });
-
-    it('returns false for table with no content rows', () => {
-      const options = createTableOptions();
-      const table = new Table(options);
-
-      expect(table.validate({ withHeadings: false, withHeadingColumn: false, content: [] })).toBe(false);
     });
   });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { TableGrid, CELL_ATTR, CELL_COL_ATTR, CELL_ROW_ATTR } from '../../../../src/tools/table/table-core';
+import { TableGrid, CELL_COL_ATTR, CELL_ROW_ATTR } from '../../../../src/tools/table/table-core';
 import { TableModel } from '../../../../src/tools/table/table-model';
 import { TableCellBlocks, CELL_BLOCKS_ATTR } from '../../../../src/tools/table/table-cell-blocks';
 import type { TableData } from '../../../../src/tools/table/types';
@@ -14,7 +14,6 @@ import type { TableData } from '../../../../src/tools/table/types';
  */
 describe('TableCellBlocks block sync on merged grids', () => {
   let blockChangedHandler: ((data: unknown) => void) | undefined;
-  let instance: TableCellBlocks | undefined;
 
   const makeApi = () => ({
     events: {
@@ -73,7 +72,9 @@ describe('TableCellBlocks block sync on merged grids', () => {
 
     document.body.appendChild(table);
 
-    instance = new TableCellBlocks({
+    // Constructed for its side effect: it subscribes to the 'block changed'
+    // event (populating blockChangedHandler) so emitBlockAdded can drive sync.
+    new TableCellBlocks({
       api: makeApi() as never,
       gridElement: table,
       tableBlockId: 'table-block',
@@ -85,7 +86,6 @@ describe('TableCellBlocks block sync on merged grids', () => {
 
   beforeEach(() => {
     blockChangedHandler = undefined;
-    instance = undefined;
   });
 
   afterEach(() => {

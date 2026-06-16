@@ -105,10 +105,7 @@ test.describe('Generic embed + replace source', () => {
     await expect(iframe).toBeVisible();
     await expect(iframe).toHaveAttribute('src', /example\.com\/page/);
 
-    const sandbox = await iframe.getAttribute('sandbox');
-
-    expect(sandbox).toBeTruthy();
-    expect(sandbox?.length ?? 0).toBeGreaterThan(0);
+    await expect(iframe).toHaveAttribute('sandbox', /.+/);
   });
 
   test('the embed more-menu Replace reverts to a URL input and re-resolves a new source', async ({ page }) => {

@@ -228,21 +228,20 @@ export class TableSubsystems {
         return true;
       },
       onDragRemoveRow: () => {
-        let removed = false;
-
-        this.host.runTransactedStructuralOp(() => {
+        return this.host.runTransactedStructuralOp(() => {
           const rowCount = this.host.grid.getRowCount(gridEl);
 
-          if (rowCount > 1 && isRowEmpty(gridEl, rowCount - 1)) {
-            const { blocksToDelete } = this.host.model.deleteRow(rowCount - 1);
-
-            this.host.cellBlocks?.deleteBlocks(blocksToDelete);
-            this.host.grid.deleteRow(gridEl, rowCount - 1);
-            removed = true;
+          if (rowCount <= 1 || !isRowEmpty(gridEl, rowCount - 1)) {
+            return false;
           }
-        });
 
-        return removed;
+          const { blocksToDelete } = this.host.model.deleteRow(rowCount - 1);
+
+          this.host.cellBlocks?.deleteBlocks(blocksToDelete);
+          this.host.grid.deleteRow(gridEl, rowCount - 1);
+
+          return true;
+        });
       },
       onDragAddCol: () => {
         this.host.runTransactedStructuralOp(() => {
@@ -271,13 +270,11 @@ export class TableSubsystems {
         return true;
       },
       onDragRemoveCol: () => {
-        let removed = false;
-
-        this.host.runTransactedStructuralOp(() => {
+        return this.host.runTransactedStructuralOp(() => {
           const colCount = this.host.grid.getColumnCount(gridEl);
 
           if (colCount <= 1 || !isColumnEmpty(gridEl, colCount - 1)) {
-            return;
+            return false;
           }
 
           // model.deleteColumn() already removes the width internally,
@@ -296,10 +293,9 @@ export class TableSubsystems {
           this.initResize(gridEl);
 
           dragState.addedCols--;
-          removed = true;
-        });
 
-        return removed;
+          return true;
+        });
       },
       onDragEnd: () => {
         this.initResize(gridEl);
@@ -1096,31 +1092,25 @@ export class TableSubsystems {
     rows: number,
     cols: number,
   ): void {
-    const originKeys = new Set<string>();
-    const origins: Array<[number, number]> = [];
+    const rowOffsets = Array.from({ length: rows }, (_, i) => startRow + i);
+    const colOffsets = Array.from({ length: cols }, (_, i) => startCol + i);
+    const originsByKey = new Map<string, [number, number]>();
 
-    for (let r = startRow; r < startRow + rows; r++) {
-      for (let c = startCol; c < startCol + cols; c++) {
+    rowOffsets.forEach((r) => {
+      colOffsets.forEach((c) => {
         const origin = this.host.model.getMergeOrigin(r, c);
 
-        if (origin === null) {
-          continue;
+        if (origin !== null) {
+          originsByKey.set(`${origin[0]}:${origin[1]}`, origin);
         }
+      });
+    });
 
-        const key = `${origin[0]}:${origin[1]}`;
-
-        if (!originKeys.has(key)) {
-          originKeys.add(key);
-          origins.push(origin);
-        }
-      }
-    }
-
-    if (origins.length === 0) {
+    if (originsByKey.size === 0) {
       return;
     }
 
-    origins.forEach(([r, c]) => this.host.model.splitCell(r, c));
+    originsByKey.forEach(([r, c]) => this.host.model.splitCell(r, c));
     this.host.rebuildTableBody();
   }
 

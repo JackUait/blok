@@ -55,6 +55,7 @@ const apiMethodsStub: ToolApiMethods = {
   ui: {} as ToolApiMethods['ui'],
   theme: {} as ToolApiMethods['theme'],
   rectangleSelection: {} as ToolApiMethods['rectangleSelection'],
+  config: {},
 };
 
 const apiMock: Pick<ApiModule, 'methods'> = {

@@ -185,28 +185,35 @@ export class TableCellBlocks {
   private findAdjacentLogicalCell(position: CellPosition, direction: 1 | -1): CellPosition | null {
     const totalCols = this.getColumnCount();
     const totalRows = this.getRowCount();
+    const next = this.stepLogicalCell(position, direction, totalCols);
 
-    let { row, col } = position;
-
-    for (;;) {
-      col += direction;
-
-      if (col >= totalCols) {
-        row += 1;
-        col = 0;
-      } else if (col < 0) {
-        row -= 1;
-        col = totalCols - 1;
-      }
-
-      if (row < 0 || row >= totalRows) {
-        return null;
-      }
-
-      if (!this.model.isSpannedCell(row, col)) {
-        return { row, col };
-      }
+    if (next.row < 0 || next.row >= totalRows) {
+      return null;
     }
+
+    if (this.model.isSpannedCell(next.row, next.col)) {
+      return this.findAdjacentLogicalCell(next, direction);
+    }
+
+    return next;
+  }
+
+  /**
+   * Advance a logical cursor by one cell in reading order (direction +1) or
+   * reverse (-1), wrapping across row boundaries.
+   */
+  private stepLogicalCell(position: CellPosition, direction: 1 | -1, totalCols: number): CellPosition {
+    const col = position.col + direction;
+
+    if (col >= totalCols) {
+      return { row: position.row + 1, col: 0 };
+    }
+
+    if (col < 0) {
+      return { row: position.row - 1, col: totalCols - 1 };
+    }
+
+    return { row: position.row, col };
   }
 
   /**

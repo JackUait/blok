@@ -274,7 +274,7 @@ describe('ImageTool — overlay actions', () => {
       fakes.push(fake);
       return fake as unknown as Animation;
     });
-    const proto = HTMLElement.prototype as { animate?: typeof animate };
+    const proto = HTMLElement.prototype as unknown as { animate?: typeof animate };
     proto.animate = animate;
     try {
       const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));

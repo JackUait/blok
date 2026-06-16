@@ -43,7 +43,7 @@ describe('TableRowColDrag restores user cell color after a drag', () => {
 
     drag = new TableRowColDrag({ grid: table, onAction: vi.fn() });
 
-    drag.beginTracking('col', 0, 0, 0);
+    void drag.beginTracking('col', 0, 0, 0);
 
     // Move past the drag threshold to trigger source-cell highlight.
     document.dispatchEvent(Object.assign(new Event('pointermove'), { clientX: 100, clientY: 0 }));

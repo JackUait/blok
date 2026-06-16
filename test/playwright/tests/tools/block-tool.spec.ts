@@ -163,6 +163,7 @@ const createApiStub = (): API => ({
   ui: {} as API['ui'],
   theme: {} as API['theme'],
   rectangleSelection: {} as API['rectangleSelection'],
+  config: {},
 });
 
 /**

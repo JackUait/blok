@@ -117,10 +117,12 @@ export class TableRowColDrag {
     this.grid.style.userSelect = '';
     document.body.style.cursor = '';
 
-    this.dragOverlayCells.forEach(({ el, originalBg }) => {
+    this.dragOverlayCells.forEach(overlay => {
+      const cellEl = overlay.el;
+
       // Restore the user's original inline color rather than blanking it.
-      el.style.backgroundColor = originalBg;
-      el.style.opacity = '';
+      cellEl.style.backgroundColor = overlay.originalBg;
+      cellEl.style.opacity = '';
     });
     this.dragOverlayCells = [];
 

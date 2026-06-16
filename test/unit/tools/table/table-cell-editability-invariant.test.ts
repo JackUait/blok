@@ -436,7 +436,7 @@ describe('Table cell editability invariant', () => {
       // Origin cell (0,0) spans 2 columns and is EMPTY; (0,1) is covered by the
       // merge. Rendered via the merge-aware grid path (createGridFromModel).
       const content: CellContent[][] = [
-        [{ blocks: [], colspan: 2 }, { mergedInto: [0, 0] }],
+        [{ blocks: [], colspan: 2 }, { blocks: [], mergedInto: [0, 0] }],
         [{ blocks: [] }, { blocks: [] }],
       ];
 

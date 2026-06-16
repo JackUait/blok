@@ -40,8 +40,8 @@ describe('getCellPosition on merged grids (table-operations)', () => {
 
     // Row 0 has 2 physical <td>: the colspan=2 cell (logical col 0) and logical col 2.
     const row0Cells = Array.from(
-      table.querySelectorAll(`[data-blok-table-row]`)[0].querySelectorAll(`[${CELL_ATTR}]`)
-    ) as HTMLElement[];
+      table.querySelectorAll(`[data-blok-table-row]`)[0].querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`)
+    );
 
     expect(row0Cells).toHaveLength(2);
 
@@ -61,8 +61,8 @@ describe('getCellPosition on merged grids (table-operations)', () => {
 
     // Row 1 has 1 physical <td> (logical col 1); col 0 is covered by the rowspan.
     const row1Cells = Array.from(
-      table.querySelectorAll(`[data-blok-table-row]`)[1].querySelectorAll(`[${CELL_ATTR}]`)
-    ) as HTMLElement[];
+      table.querySelectorAll(`[data-blok-table-row]`)[1].querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`)
+    );
 
     expect(row1Cells).toHaveLength(1);
 

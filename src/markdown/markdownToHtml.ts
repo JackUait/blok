@@ -374,6 +374,9 @@ async function inlineToHtml(node: InlineNode, ctx: RenderContext): Promise<strin
     case 'inlineMath':
       return renderLatex(node.value, { displayMode: false });
 
+    case 'math':
+      return renderLatex(node.value, { displayMode: true });
+
     case 'html':
       // Raw inline HTML is escaped, never rendered (XSS-safe preview).
       return escapeHtml(node.value);

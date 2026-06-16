@@ -112,6 +112,19 @@ describe('Hero', () => {
     expect(mascot).toHaveAttribute('src', '/mascot.png');
   });
 
+  it('should render the floating info chips', () => {
+    render(
+      <I18nProvider>
+        <MemoryRouter>
+          <Hero />
+        </MemoryRouter>
+      </I18nProvider>
+    );
+
+    expect(screen.getByText('JSON output')).toBeInTheDocument();
+    expect(screen.getByText('~3 KB core')).toBeInTheDocument();
+  });
+
   it('should render Russian strings when locale is ru', () => {
     localStorage.setItem('blok-docs-locale', 'ru');
     render(

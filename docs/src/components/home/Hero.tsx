@@ -51,32 +51,52 @@ export const Hero: React.FC = () => {
           </div>
         </div>
         <div className="hero-demo" data-blok-testid="hero-demo">
-          <Link
-            to="/demo"
-            className="hero-mascot-card"
-            aria-label={t('home.hero.mascotAriaLabel')}
-          >
-            <img
-              src="/mascot.png"
-              alt={t('home.hero.mascotAlt')}
-              className="hero-mascot-image"
-            />
-            <span className="hero-mascot-chip">
-              {t('home.hero.ctaTryItOut')}
+          <div className="hero-stage">
+            <div className="hero-stage-glow" aria-hidden="true" />
+            <Link
+              to="/demo"
+              className="hero-mascot-card"
+              aria-label={t('home.hero.mascotAriaLabel')}
+            >
+              <img
+                src="/mascot.png"
+                alt={t('home.hero.mascotAlt')}
+                className="hero-mascot-image"
+              />
+              <span className="hero-mascot-chip">
+                {t('home.hero.ctaTryItOut')}
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  aria-hidden="true"
+                >
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
+                </svg>
+              </span>
+            </Link>
+            <div className="hero-float hero-float--json" aria-hidden="true">
+              <span className="hero-float-glyph">{'{ }'}</span>
+              {t('home.hero.chipJson')}
+            </div>
+            <div className="hero-float hero-float--size" aria-hidden="true">
               <svg
                 width="14"
                 height="14"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="2.5"
-                aria-hidden="true"
+                strokeWidth="2.2"
               >
-                <line x1="5" y1="12" x2="19" y2="12" />
-                <polyline points="12 5 19 12 12 19" />
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
               </svg>
-            </span>
-          </Link>
+              {t('home.hero.chipSize')}
+            </div>
+          </div>
         </div>
       </div>
     </section>

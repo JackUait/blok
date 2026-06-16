@@ -347,4 +347,28 @@
   background: var(--color-text-tertiary);
 }
 
+/* Narrow screens: keep the Mac-style window chrome from overflowing the card.
+   Inside the indented quick-start step cards there isn't room for the window
+   dots, the language label, the package-manager toggle AND the copy button,
+   so the toggle (the only interactive control) wins and the redundant label
+   is dropped. Spacing is tightened so nothing clips past the card edge. */
+@media (max-width: 600px) {
+  .code-block-header {
+    gap: var(--spacing-sm);
+    padding: 10px var(--spacing-sm);
+  }
+
+  /* Drop the redundant language label and the decorative window dots when the
+     package toggle is present — the toggle and copy button are the controls
+     that matter and both must stay fully visible. */
+  .code-block-header:has(.code-block-package-toggle) .code-block-language,
+  .code-block-header:has(.code-block-package-toggle) .code-block-controls {
+    display: none;
+  }
+
+  .package-manager-option {
+    padding: 6px 10px;
+  }
+}
+
 /* API Section */

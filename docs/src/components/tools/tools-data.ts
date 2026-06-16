@@ -606,6 +606,82 @@ const editor = new Blok({
   },
 
   {
+    id: 'video',
+    exportName: 'Video',
+    type: 'block',
+    badge: 'Block Tool',
+    title: 'Video',
+    description:
+      'Embed a video from a URL or an uploaded file. The browser chrome is replaced with a custom Airbnb-style control surface (play/pause, seek, time, volume) and the block supports an optional caption, percentage width, and left/center/right alignment. Provide an `uploader` in config to send files to your backend; without one the tool falls back to blob URLs (file) or direct embedding (URL).',
+    importExample: "import { Video } from '@jackuait/blok/tools';",
+    configOptions: [
+      {
+        option: 'uploader',
+        type: 'VideoUploader',
+        default: 'undefined',
+        description: 'Consumer-supplied { uploadByFile?, uploadByUrl? }. When absent, files become blob URLs and URLs are embedded directly.',
+      },
+      {
+        option: 'types',
+        type: 'string[]',
+        default: "['video/mp4', 'video/webm', 'video/ogg']",
+        description: 'Accepted MIME types for file uploads.',
+      },
+      {
+        option: 'maxSize',
+        type: 'number',
+        default: '104857600',
+        description: 'Maximum upload size in bytes (default 100 MiB).',
+      },
+      {
+        option: 'captionPlaceholder',
+        type: 'string',
+        default: "'Write a caption…'",
+        description: 'Placeholder text shown in the empty caption field.',
+      },
+    ],
+    saveDataShape: `interface VideoData {
+  url: string;                          // http(s) or blob: source
+  caption?: string;                     // plain-text caption
+  captionVisible?: boolean;             // caption shown in rendered state (default true)
+  width?: number;                       // width as percent of container, 10–100 (default 100)
+  alignment?: 'left' | 'center' | 'right';
+  fileName?: string;                    // original filename, when known
+  mimeType?: string;                    // source MIME type, when known
+}`,
+    saveDataExample: `{
+  "id": "vid001",
+  "type": "video",
+  "data": {
+    "url": "https://example.com/clip.mp4",
+    "caption": "Product demo",
+    "captionVisible": true,
+    "width": 80,
+    "alignment": "center"
+  }
+}`,
+    usageExample: `import { Blok } from '@jackuait/blok';
+import { Video } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    video: {
+      class: Video,
+      config: {
+        uploader: {
+          async uploadByFile(file) {
+            const url = await sendToServer(file);
+            return { url, fileName: file.name };
+          },
+        },
+      },
+    },
+  },
+});`,
+  },
+
+  {
     id: 'column_list',
     exportName: 'ColumnList',
     type: 'block',

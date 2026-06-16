@@ -36,6 +36,15 @@ interface ActionContext {
   data: ActionData;
   cellBlocks: TableCellBlocks | null;
   blocksToDelete?: string[];
+  /**
+   * Rebuild the whole <tbody> from the current model. Used for deletes on a
+   * merged grid: the physical-index DOM delete (grid.deleteRow/deleteColumn)
+   * cannot create a <td> for a cell the model PROMOTES out of a merge (a
+   * previously-covered cell becoming standalone), leaving it non-editable with
+   * an orphaned holder. Rebuilding from the post-delete model renders every
+   * revealed cell and runs the editability backstop.
+   */
+  rebuildTableBody?: () => void;
 }
 
 interface ActionResult {
@@ -140,7 +149,14 @@ const handleDeleteRow = (
   ctx: ActionContext,
 ): ActionResult => {
   ctx.cellBlocks?.deleteBlocks(ctx.blocksToDelete ?? []);
-  ctx.grid.deleteRow(gridEl, index);
+
+  // On a merged grid the physical-index DOM delete can't render cells the model
+  // promotes out of a merge. Rebuild from the (already-updated) model instead.
+  if (ctx.data.hasMerges && ctx.rebuildTableBody) {
+    ctx.rebuildTableBody();
+  } else {
+    ctx.grid.deleteRow(gridEl, index);
+  }
 
   const newRowCount = ctx.grid.getRowCount(gridEl);
   const neighborRow = index < newRowCount ? index : index - 1;
@@ -160,7 +176,14 @@ const handleDeleteCol = (
   ctx: ActionContext,
 ): ActionResult => {
   ctx.cellBlocks?.deleteBlocks(ctx.blocksToDelete ?? []);
-  ctx.grid.deleteColumn(gridEl, index);
+
+  // See handleDeleteRow: merged grids must rebuild from the model so promoted
+  // cells render with an editable target instead of vanishing.
+  if (ctx.data.hasMerges && ctx.rebuildTableBody) {
+    ctx.rebuildTableBody();
+  } else {
+    ctx.grid.deleteColumn(gridEl, index);
+  }
 
   const colWidths = syncColWidthsAfterDeleteColumn(ctx.data.colWidths, index);
 

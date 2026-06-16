@@ -30,6 +30,7 @@ import {
   normalizeTableData,
   populateNewCells,
   readPixelWidths,
+  rectangularizeContent,
   SCROLL_OVERFLOW_CLASSES,
   setupKeyboardNavigation,
   updateHeadingColumnStyles,
@@ -247,8 +248,43 @@ export class Table implements BlockTool {
 
     this.mountBlockHoldersInNewTbody(content, newTbody, blockHolders);
 
+    // Reconcile the <colgroup> when the column COUNT changed (delete-col /
+    // insert-col on a merged grid route through here). Only swapping <tbody>
+    // would leave a stale <col> count, so the rendered grid width and
+    // getColumnCount() would disagree with the model. Scoped to count changes
+    // so same-width rebuilds (merge/split) keep their existing <col> widths
+    // untouched (avoids resetting custom percent/pixel widths).
+    const oldColgroup = gridEl.querySelector('colgroup');
+    const newColgroup = newTable.querySelector('colgroup');
+
+    if (
+      oldColgroup
+      && newColgroup
+      && oldColgroup.querySelectorAll('col').length !== newColgroup.querySelectorAll('col').length
+    ) {
+      oldColgroup.replaceWith(newColgroup);
+    }
+
     // Replace old tbody with new
     oldTbody.replaceWith(newTbody);
+
+    // Editability backstop. splitCell empties the revealed cells (blocks: []),
+    // and mountBlockHoldersInNewTbody only re-mounts EXISTING holders — so a
+    // revealed (or merged-into-empty origin) cell would have no paragraph and
+    // be impossible to click into or type in. The initializeCells completeness
+    // sweep cannot cover this: it is skipped for merge tables and the split
+    // path never runs it. Mirror the read-only→edit fix by guaranteeing every
+    // rendered cell holds at least one editable block. Skipped in read-only
+    // (no editing surface) — merge/split are edit-only anyway. Wrapped in a
+    // structural op so the synthesized block-added events are deferred instead
+    // of being double-claimed by the cell mutation handler.
+    if (!this.readOnly) {
+      this.runTransactedStructuralOp(() => {
+        newTbody.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`).forEach(cell => {
+          this.cellBlocks?.ensureCellHasBlock(cell);
+        });
+      }, true);
+    }
   }
 
   /**
@@ -931,7 +967,7 @@ export class Table implements BlockTool {
     const hasThHeadings = rows[0]?.querySelector('th') !== null;
     const withHeadings = hasTheadHeadings || hasThHeadings;
 
-    this.initialContent = tableContent;
+    this.initialContent = rectangularizeContent(tableContent);
     this.model.setWithHeadings(withHeadings);
     this.model.setWithHeadingColumn(false);
     this.model.setColWidths(undefined);

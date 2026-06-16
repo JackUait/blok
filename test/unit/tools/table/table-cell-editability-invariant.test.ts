@@ -459,6 +459,65 @@ describe('Table cell editability invariant', () => {
     });
   });
 
+  describe('Scenario 10 — ragged/jagged rows (live KB shape)', () => {
+    it('synthesizes editable targets for trailing gap cells in short rows', () => {
+      // Mirrors the deployed KB table (block DQfJHidzTi): a 3-column-wide grid
+      // whose later rows store FEWER cells than the widest row. The widest row
+      // sets the rendered column count, so createGrid pads every short row out
+      // to 3 DOM cells — but initializeCells() iterates only the STORED (short)
+      // row, so the trailing gap cells were never visited and got no paragraph
+      // block → zero contenteditable target → impossible to click into or type.
+      const content: CellContent[][] = [
+        [{ blocks: [] }, { blocks: [] }, { blocks: [] }], // 3 cols (widest)
+        [{ blocks: [] }, { blocks: [] }],                 // 2 cols — col 2 is a gap
+        [{ blocks: [] }],                                 // 1 col  — cols 1,2 are gaps
+      ];
+
+      const options = createTableOptions({ content });
+      const table = new Table(options);
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      // The gap cells the stored rows never described must still be editable.
+      expect(countEditables(getCell(element, 1, 2))).toBeGreaterThan(0);
+      expect(countEditables(getCell(element, 2, 1))).toBeGreaterThan(0);
+      expect(countEditables(getCell(element, 2, 2))).toBeGreaterThan(0);
+
+      assertEveryCellEditable(element);
+    });
+  });
+
+  describe('Scenario 11 — ragged HTML paste (uneven <td> counts)', () => {
+    it('pads short pasted rows so every cell is editable', () => {
+      const options = createTableOptions({ content: [['A']] });
+      const table = new Table(options);
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      // Pasted HTML where the first row is widest (3 cells) and later rows are
+      // short — the gap cells must still synthesize an editable target.
+      const pasteEvent = createPasteEvent([
+        ['X', 'Y', 'Z'],
+        ['P', 'Q'],
+        ['R'],
+      ]);
+
+      table.onPaste(pasteEvent);
+
+      const newWrapper = container.firstElementChild as HTMLElement;
+
+      expect(countEditables(getCell(newWrapper, 1, 2))).toBeGreaterThan(0);
+      expect(countEditables(getCell(newWrapper, 2, 1))).toBeGreaterThan(0);
+      expect(countEditables(getCell(newWrapper, 2, 2))).toBeGreaterThan(0);
+
+      assertEveryCellEditable(newWrapper);
+    });
+  });
+
   describe('Scenario 9 — empty heading cells through read-only → edit toggle', () => {
     it('empty header row and header column cells become editable after toggling', () => {
       // First row are headings, first column is a heading column. All cells
@@ -489,6 +548,266 @@ describe('Table cell editability invariant', () => {
       expect(countEditables(getCell(element, 0, 0))).toBeGreaterThan(0);
       expect(countEditables(getCell(element, 0, 1))).toBeGreaterThan(0);
       assertEveryCellEditable(element);
+    });
+  });
+
+  describe('Scenario 12 — empty rows widen via grid fallback (maxCols 0)', () => {
+    it('keeps every rendered cell editable when stored rows carry no cells', () => {
+      // Pathological-but-possible stored shape: rows exist but each is empty, so
+      // maxCols === 0. createFlatGrid then falls back to DEFAULT_COLS, rendering
+      // columns the model never described. If model width is not reconciled with
+      // the rendered grid, those cells get no block → non-editable. This is the
+      // same model-vs-grid mismatch class as ragged rows, via a different door.
+      const content: CellContent[][] = [[], []];
+
+      const options = createTableOptions({ content });
+      const table = new Table(options);
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      assertEveryCellEditable(element);
+    });
+  });
+
+  describe('Scenario 14 — split (unmerge) reveals editable cells', () => {
+    it('gives every revealed cell an editable target after merge → split', () => {
+      // Merge collapses N cells into one origin (revealed cells -> blocks: []),
+      // then split restores them. splitCellInternal deliberately empties the
+      // revealed cells and rebuildTableBody only re-mounts EXISTING holders — so
+      // without a backstop the revealed cells have no paragraph and cannot be
+      // clicked into or typed in. This is the same non-editable-cell bug class
+      // via the merge/split door (the initializeCells sweep skips merge tables).
+      const content: CellContent[][] = [
+        [{ blocks: [] }, { blocks: [] }],
+        [{ blocks: [] }, { blocks: [] }],
+      ];
+
+      const table = new Table(createTableOptions({ content }));
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      const internals = table as unknown as {
+        model: {
+          mergeCells: (r: { minRow: number; maxRow: number; minCol: number; maxCol: number }) => void;
+          splitCell: (r: number, c: number) => void;
+        };
+        rebuildTableBody: () => void;
+      };
+
+      internals.model.mergeCells({ minRow: 0, maxRow: 1, minCol: 0, maxCol: 1 });
+      internals.rebuildTableBody();
+
+      internals.model.splitCell(0, 0);
+      internals.rebuildTableBody();
+
+      // Every revealed cell — not just the origin — must be editable again.
+      expect(countEditables(getCell(element, 0, 1))).toBeGreaterThan(0);
+      expect(countEditables(getCell(element, 1, 0))).toBeGreaterThan(0);
+      expect(countEditables(getCell(element, 1, 1))).toBeGreaterThan(0);
+      assertEveryCellEditable(element);
+
+      // Save integrity: the backstop must not duplicate any block holder, and
+      // the split must leave no merge metadata behind in the persisted model.
+      const holderIds = Array.from(element.querySelectorAll('[data-blok-id]'))
+        .map(el => el.getAttribute('data-blok-id'));
+
+      expect(new Set(holderIds).size).toBe(holderIds.length);
+
+      element.querySelectorAll('td').forEach(td => {
+        expect(td.colSpan).toBeLessThanOrEqual(1);
+        expect(td.rowSpan).toBeLessThanOrEqual(1);
+      });
+    });
+  });
+
+  describe('Scenario 15 — delete a row/col straddling a merge reveals editable cells', () => {
+    const getGridEl = (wrapper: HTMLElement): HTMLElement => {
+      const scrollContainer = wrapper.firstElementChild as HTMLElement;
+
+      return scrollContainer.firstElementChild as HTMLElement;
+    };
+
+    const invokeAction = (table: Table, gridEl: HTMLElement, action: unknown): void => {
+      const subsystems = (table as unknown as {
+        subsystems: { handleRowColAction: (g: HTMLElement, a: unknown) => void };
+      }).subsystems;
+
+      subsystems.handleRowColAction(gridEl, action);
+    };
+
+    it('keeps the promoted cell editable after deleting the origin row of a vertical merge', () => {
+      // Vertical merge: cell (0,0) rowspan 2 covers (1,0). Deleting row 0 (the
+      // merge-origin row) makes the model promote the covered cell (1,0) into a
+      // real standalone cell with blocks. But the DOM delete path (grid.deleteRow)
+      // only removes the <tr> + reindexes — it never creates a <td> for the
+      // promoted cell, so it has no editable target and its block holder is
+      // orphaned. rebuildTableBody (used by merge/split) is the only primitive
+      // that re-creates <td>s for revealed cells + runs the editability backstop.
+      const content: CellContent[][] = [
+        [{ blocks: [], rowspan: 2 }, { blocks: [] }],
+        [{ blocks: [], mergedInto: [0, 0] }, { blocks: [] }],
+      ];
+
+      const table = new Table(createTableOptions({ content }));
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      const gridEl = getGridEl(element);
+
+      invokeAction(table, gridEl, { type: 'delete-row', index: 0 });
+
+      // One row remains; the model has 2 columns, so the DOM must render 2 cells
+      // and BOTH must be editable (the promoted cell is the one that used to be
+      // merge-covered).
+      const rows = element.querySelectorAll<HTMLElement>('[data-blok-table-row]');
+
+      expect(rows).toHaveLength(1);
+      expect(rows[0].querySelectorAll('[data-blok-table-cell]')).toHaveLength(2);
+      assertEveryCellEditable(element);
+    });
+
+    it('keeps the promoted cell editable after deleting the origin column of a horizontal merge', () => {
+      // Horizontal mirror: cell (0,0) colspan 2 covers (0,1). Deleting column 0
+      // promotes the covered cell; the DOM must re-render it editable.
+      const content: CellContent[][] = [
+        [{ blocks: [], colspan: 2 }, { blocks: [], mergedInto: [0, 0] }],
+        [{ blocks: [] }, { blocks: [] }],
+      ];
+
+      const table = new Table(createTableOptions({ content }));
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      const gridEl = getGridEl(element);
+
+      invokeAction(table, gridEl, { type: 'delete-col', index: 0 });
+
+      const rows = element.querySelectorAll<HTMLElement>('[data-blok-table-row]');
+
+      expect(rows).toHaveLength(2);
+      rows.forEach(row => {
+        expect(row.querySelectorAll('[data-blok-table-cell]')).toHaveLength(1);
+      });
+      assertEveryCellEditable(element);
+
+      // The rebuild must also reconcile the <colgroup>: one column remains, so
+      // exactly one <col> must survive — a stale extra <col> desyncs the grid
+      // width and getColumnCount() from the model.
+      expect(gridEl.querySelectorAll('colgroup col')).toHaveLength(1);
+    });
+  });
+
+  describe('Scenario 13 — fuzz: arbitrary jagged shapes across every entry point', () => {
+    // The durable regression net. Any future code path that lets the stored
+    // model and the rendered grid disagree on width re-opens the non-editable
+    // cell bug. This drives a deterministic spread of jagged shapes through
+    // EVERY edit-mode entry point and asserts the invariant holds for all of
+    // them, so the bug class cannot silently return in a new shape.
+    //
+    // Seeded LCG (Date.now/Math.random are unavailable) → identical shapes every
+    // run, so a regression reproduces deterministically.
+    let seed = 0x5eed;
+    const next = (): number => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+    const makeJaggedShape = (): CellContent[][] => {
+      const rowCount = 1 + Math.floor(next() * 4); // 1..4 rows
+      const widest = 1 + Math.floor(next() * 3);   // 1..3 cols on the widest row
+
+      return Array.from({ length: rowCount }, (_, r) => {
+        // First row is the widest so the grid column count is deterministic;
+        // later rows are randomly shorter (the ragged gap), down to 1 cell.
+        const len = r === 0 ? widest : 1 + Math.floor(next() * widest);
+
+        return Array.from({ length: len }, () => ({ blocks: [] as string[] }));
+      });
+    };
+
+    it('constructor render: every cell editable for all shapes', () => {
+      for (let t = 0; t < 20; t++) {
+        const local = document.createElement('div');
+
+        document.body.appendChild(local);
+
+        const table = new Table(createTableOptions({ content: makeJaggedShape() }));
+        const element = table.render();
+
+        local.appendChild(element);
+        table.rendered();
+
+        assertEveryCellEditable(element);
+        local.remove();
+      }
+    });
+
+    it('setData in edit mode: every cell editable for all shapes', () => {
+      for (let t = 0; t < 20; t++) {
+        const local = document.createElement('div');
+
+        document.body.appendChild(local);
+
+        // Start from a simple table, then replace its data with a jagged shape.
+        const table = new Table(createTableOptions({ content: [['seed']] }));
+        const element = table.render();
+
+        local.appendChild(element);
+        table.rendered();
+
+        table.setData({ content: makeJaggedShape() });
+
+        const wrapper = local.firstElementChild as HTMLElement;
+
+        assertEveryCellEditable(wrapper);
+        local.remove();
+      }
+    });
+
+    it('onPaste: every cell editable for all shapes', () => {
+      for (let t = 0; t < 20; t++) {
+        const local = document.createElement('div');
+
+        document.body.appendChild(local);
+
+        const table = new Table(createTableOptions({ content: [['seed']] }));
+        const element = table.render();
+
+        local.appendChild(element);
+        table.rendered();
+
+        const shape = makeJaggedShape().map(row => row.map((_, i) => `c${i}`));
+
+        table.onPaste(createPasteEvent(shape));
+
+        const wrapper = local.firstElementChild as HTMLElement;
+
+        assertEveryCellEditable(wrapper);
+        local.remove();
+      }
+    });
+
+    it('read-only render then setReadOnly(false): every cell editable for all shapes', () => {
+      for (let t = 0; t < 20; t++) {
+        const local = document.createElement('div');
+
+        document.body.appendChild(local);
+
+        const table = new Table(createTableOptions({ content: makeJaggedShape() }, {}, {}, true));
+        const element = table.render();
+
+        local.appendChild(element);
+        table.rendered();
+
+        table.setReadOnly(false);
+
+        assertEveryCellEditable(element);
+        local.remove();
+      }
     });
   });
 });

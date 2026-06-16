@@ -378,6 +378,10 @@ export class TableCellBlocks {
   ): CellContent[][] {
     const rowElements = this.gridElement.querySelectorAll(`[${ROW_ATTR}]`);
     const normalizedContent: CellContent[][] = [];
+    // Every (row, col) the model-driven loop below describes. The completeness
+    // sweep uses this to find rendered cells the model never covered — without
+    // depending on DOM/holder state, which varies across call sites and tests.
+    const visited = new Set<string>();
 
     content.forEach((rowData, rowIndex) => {
       const row = rowElements[rowIndex];
@@ -389,6 +393,8 @@ export class TableCellBlocks {
       const normalizedRow: CellContent[] = [];
 
       rowData.forEach((cellContent, colIndex) => {
+        visited.add(`${rowIndex}:${colIndex}`);
+
         // A merge-covered cell has no rendered <td> (createGridFromModel skips
         // spanned cells). Preserve its placeholder so the rebuilt model keeps
         // the merge structure and column count — otherwise loading a saved
@@ -480,6 +486,65 @@ export class TableCellBlocks {
 
       normalizedContent.push(normalizedRow);
     });
+
+    // ── Model==grid completeness sweep ──────────────────────────────────
+    // The loop above is driven by the STORED model, so it only touches cells
+    // the model actually describes. When the rendered grid is WIDER (ragged
+    // rows) or has columns the model never had (empty rows that make
+    // createFlatGrid fall back to DEFAULT_COLS), those extra DOM cells get no
+    // block → zero contenteditable target → impossible to click into or type.
+    // Walk every rendered cell and synthesize a paragraph for any still-empty,
+    // non-merge cell, recording it into the returned model so save/reload stays
+    // rectangular. This is the invariant enforcer that makes the non-editable
+    // cell bug impossible regardless of HOW the model and grid widths diverged
+    // — it backstops rectangularizeContent at the consuming layer and also
+    // covers any future code path that bypasses it.
+    //
+    // Skipped during a Yjs sync replay: fabricating blocks there orphans the
+    // blocks Yjs is about to restore via separate ops (regression:
+    // table-undo-redo-orphans). That path reconciles empty cells on its own.
+    //
+    // Skipped for merge tables: their rows are already full-width via mergedInto
+    // placeholders (so the bug cannot occur), and CELL_COL_ATTR is physical- vs
+    // logical-column ambiguous under merges — driving a model write off it would
+    // corrupt colspan/rowspan/mergedInto metadata.
+    if (!this.api.blocks.isSyncingFromYjs && !this.model.hasMerges()) {
+      rowElements.forEach((row, rowIndex) => {
+        const normalizedRow = normalizedContent[rowIndex] ?? (normalizedContent[rowIndex] = []);
+        const cellElements = row.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`);
+
+        cellElements.forEach(cell => {
+          const colIndex = Number(cell.getAttribute(CELL_COL_ATTR));
+
+          if (!Number.isInteger(colIndex) || visited.has(`${rowIndex}:${colIndex}`)) {
+            return;
+          }
+
+          const container = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
+
+          // No container → merge-covered cell (no editable target by design).
+          if (!container) {
+            return;
+          }
+
+          const block = this.api.blocks.insert('paragraph', { text: '' }, {}, this.api.blocks.getBlocksCount(), false);
+
+          container.appendChild(block.holder);
+          this.api.blocks.setBlockParent(block.id, this.tableBlockId);
+          this.stripPlaceholders(container);
+
+          normalizedRow[colIndex] = { blocks: [block.id] };
+        });
+
+        // A covered/skipped column can leave an undefined hole between filled
+        // cells; rebuild the row dense so the persisted width matches the
+        // rendered grid and no index is left undefined.
+        normalizedContent[rowIndex] = Array.from(
+          { length: normalizedRow.length },
+          (_, col) => normalizedRow[col] ?? { blocks: [] }
+        );
+      });
+    }
 
     return normalizedContent;
   }

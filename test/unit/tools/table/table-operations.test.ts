@@ -963,4 +963,118 @@ describe('table-operations', () => {
       expect(element.classList.contains('overflow-x-auto')).toBe(true);
     });
   });
+
+  describe('rectangularizeContent', () => {
+    // The single funnel that enforces the model==grid-width invariant. If this
+    // ever lets a jagged/null row through, initializeCells iterates the stored
+    // row length and leaves trailing DOM cells with no editable block (live bug:
+    // KB table block DQfJHidzTi). Every content ingestion point (constructor,
+    // setData, onPaste) routes through this, so it is the choke point that makes
+    // the non-editable-cell bug class impossible at the data layer.
+    const cell = (text: string): { blocks: never[]; text: string } => ({ blocks: [], text });
+
+    it('pads every short row up to the widest row width with empty cells', async () => {
+      const { rectangularizeContent } = await import('../../../../src/tools/table/table-operations');
+
+      const result = rectangularizeContent([
+        [cell('a'), cell('b'), cell('c')],
+        [cell('d'), cell('e')],
+        [cell('f')],
+      ]);
+
+      expect(result.map(row => row.length)).toEqual([3, 3, 3]);
+      // Real values are preserved in place; gaps are filled with empty cells.
+      expect(result[1][2]).toEqual({ blocks: [] });
+      expect(result[2][1]).toEqual({ blocks: [] });
+      expect(result[2][2]).toEqual({ blocks: [] });
+      expect(result[0]).toEqual([cell('a'), cell('b'), cell('c')]);
+    });
+
+    it('returns already-rectangular content untouched (same reference)', async () => {
+      const { rectangularizeContent } = await import('../../../../src/tools/table/table-operations');
+
+      const content = [
+        [cell('a'), cell('b')],
+        [cell('c'), cell('d')],
+      ];
+
+      // No allocation when nothing is jagged — cheap fast path on the hot
+      // constructor/setData route.
+      expect(rectangularizeContent(content)).toBe(content);
+    });
+
+    it('treats null/undefined rows as work and replaces them with full empty rows', async () => {
+      const { rectangularizeContent } = await import('../../../../src/tools/table/table-operations');
+
+      // Cast through unknown: null/undefined rows are off-type but exactly the
+      // malformed input the helper must survive without crashing initializeCells.
+      const jagged = [
+        [cell('a'), cell('b'), cell('c')],
+        null,
+        undefined,
+      ] as unknown as Parameters<typeof rectangularizeContent>[0];
+
+      const result = rectangularizeContent(jagged);
+
+      expect(result.map(row => row.length)).toEqual([3, 3, 3]);
+      expect(result[1]).toEqual([{ blocks: [] }, { blocks: [] }, { blocks: [] }]);
+      expect(result[2]).toEqual([{ blocks: [] }, { blocks: [] }, { blocks: [] }]);
+    });
+
+    it('normalizes an all-null grid to empty rows instead of leaving null (would crash initializeCells)', async () => {
+      const { rectangularizeContent } = await import('../../../../src/tools/table/table-operations');
+
+      const allNull = [
+        null,
+        null,
+      ] as unknown as Parameters<typeof rectangularizeContent>[0];
+
+      const result = rectangularizeContent(allNull);
+
+      // maxCols === 0 → every row becomes an empty array, never null.
+      expect(result).toEqual([[], []]);
+      expect(result.every(row => Array.isArray(row))).toBe(true);
+    });
+
+    it('leaves a merge table untouched (rows already full-width via mergedInto placeholders)', async () => {
+      const { rectangularizeContent } = await import('../../../../src/tools/table/table-operations');
+
+      const merged = [
+        [{ blocks: [], colspan: 2 }, { blocks: [], mergedInto: [0, 0] }],
+        [cell('a'), cell('b')],
+      ];
+
+      expect(rectangularizeContent(merged)).toBe(merged);
+    });
+
+    it('returns an empty grid unchanged', async () => {
+      const { rectangularizeContent } = await import('../../../../src/tools/table/table-operations');
+
+      expect(rectangularizeContent([])).toEqual([]);
+    });
+
+    it('guarantees a uniform width for arbitrary jagged shapes (fuzz)', async () => {
+      const { rectangularizeContent } = await import('../../../../src/tools/table/table-operations');
+
+      // Deterministic pseudo-random shapes (no Date.now/Math.random — seeded LCG)
+      // so any future regression reproduces identically.
+      let seed = 1234567;
+      const next = (): number => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+
+      for (let t = 0; t < 50; t++) {
+        const rowCount = 1 + Math.floor(next() * 6);
+        const shape = Array.from({ length: rowCount }, () => {
+          const len = Math.floor(next() * 5); // 0..4, includes empty rows
+          return Array.from({ length: len }, (_, i) => cell(`r${t}c${i}`));
+        });
+
+        const result = rectangularizeContent(shape);
+        const widths = new Set(result.map(row => row.length));
+
+        // Invariant: every row ends at exactly one common width, no nulls.
+        expect(widths.size).toBe(1);
+        expect(result.every(row => Array.isArray(row))).toBe(true);
+      }
+    });
+  });
 });

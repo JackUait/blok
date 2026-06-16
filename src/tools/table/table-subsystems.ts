@@ -522,6 +522,10 @@ export class TableSubsystems {
       // also transform widths — passing post-mutation widths would double-apply
       // the transformation.
       const colWidthsBeforeMutation = this.host.model.colWidths;
+      // Capture BEFORE the model mutation: deleting a merge-origin row/column
+      // can remove the last merge, so a post-mutation read would miss that the
+      // delete straddled a merge and the DOM needs a full rebuild.
+      const hasMergesBeforeMutation = this.host.model.hasMerges();
 
       // Sync model structural operation before DOM changes
       const { blocksToDelete } = this.syncModelForAction(action);
@@ -536,10 +540,11 @@ export class TableSubsystems {
             withHeadings: this.host.model.withHeadings,
             withHeadingColumn: this.host.model.withHeadingColumn,
             initialColWidth: this.host.model.initialColWidth,
-            hasMerges: this.host.model.hasMerges(),
+            hasMerges: hasMergesBeforeMutation,
           },
           cellBlocks: this.host.cellBlocks,
           blocksToDelete,
+          rebuildTableBody: () => this.host.rebuildTableBody(),
         },
       );
 

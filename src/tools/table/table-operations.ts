@@ -373,6 +373,54 @@ export const mountCellBlocksReadOnly = (
 
 // ─── Data normalization ─────────────────────────────────────────────
 
+/**
+ * Pad ragged rows out to the widest row's column count with empty
+ * `{ blocks: [] }` cells, producing a rectangular grid.
+ *
+ * Older published articles (and HTML-pasted tables with rowspan/colspan) can
+ * store rows SHORTER than the widest row — e.g. a 3-column table whose later
+ * rows only carry 1–2 cells. The grid is rendered to the widest row's column
+ * count, so createGrid pads every short row out to full width in the DOM, but
+ * initializeCells() iterates the STORED row, never visiting the padded trailing
+ * cells. Those gap cells get no paragraph block → zero contenteditable target →
+ * the cell is impossible to click into or type in (observed live: KB table
+ * block DQfJHidzTi). Rectangularizing up front makes the whole edit pipeline
+ * (grid, model, initializeCells, save) see one rectangular grid so every cell
+ * is editable.
+ *
+ * Rows already at or above the max width (including merge tables, whose rows
+ * carry full-width mergedInto placeholders) are returned untouched.
+ */
+export const rectangularizeContent = (
+  content: LegacyCellContent[][],
+): LegacyCellContent[][] => {
+  const maxCols = content.reduce((max, row) => Math.max(max, row?.length ?? 0), 0);
+
+  // A null/undefined row would crash initializeCells' `rowData.forEach`, so it
+  // counts as needing work even when it is not strictly shorter than maxCols
+  // (e.g. an all-null grid where maxCols === 0). Bailing only on length checks
+  // would let those rows slip through untouched.
+  if (!content.some(row => row == null || row.length < maxCols)) {
+    return content;
+  }
+
+  return content.map(row => {
+    const cells = row ?? [];
+
+    if (cells.length >= maxCols) {
+      return cells;
+    }
+
+    const padded = [...cells];
+
+    while (padded.length < maxCols) {
+      padded.push({ blocks: [] });
+    }
+
+    return padded;
+  });
+};
+
 export const normalizeTableData = (
   data: TableData | Record<string, never>,
   config: { withHeadings?: boolean; stretched?: boolean },
@@ -389,7 +437,8 @@ export const normalizeTableData = (
   }
 
   const tableData = data as TableData;
-  const cols = tableData.content?.[0]?.length;
+  const content = rectangularizeContent(tableData.content ?? []);
+  const cols = content[0]?.length;
   const colWidths = tableData.colWidths;
   const validWidths = colWidths
     && cols
@@ -402,7 +451,7 @@ export const normalizeTableData = (
     withHeadings: tableData.withHeadings ?? config.withHeadings ?? false,
     withHeadingColumn: tableData.withHeadingColumn ?? false,
     stretched: tableData.stretched ?? config.stretched ?? false,
-    content: tableData.content ?? [],
+    content,
     colWidths: validWidths,
     initialColWidth: tableData.initialColWidth,
   };

@@ -286,10 +286,10 @@
 /* =================================================
    Custom player controls — Airbnb-inspired
 
-   Replaces native browser chrome: a big frosted centre play affordance while
-   paused, and a bottom scrim + control bar (play/pause, scrubber, time,
-   volume, fullscreen) that fades in on hover. White glyphs on a dark scrim,
-   pill geometry, and the brand coral on the progress fill.
+   Replaces native browser chrome with a bottom scrim + control bar (play/pause,
+   scrubber, time, volume, fullscreen) that fades in on hover. Clicking the
+   video itself toggles play/pause — no centre overlay button. White glyphs on a
+   dark scrim, pill geometry, and the brand coral on the progress fill.
    ================================================= */
 [data-blok-tool="video"] .blok-video-controls {
   --blok-seek-pct: 0%;
@@ -299,31 +299,8 @@
   font-family: var(--blok-font-family, var(--blok-font-sans));
 }
 
-/* centre play — frosted disc, only while paused */
-[data-blok-tool="video"] .blok-video-controls__center {
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 64px; height: 64px;
-  display: grid; place-items: center;
-  color: var(--blok-video-center-fg);
-  background: var(--blok-video-center-bg);
-  border: 0;
-  border-radius: var(--blok-radius-pill);
-  cursor: pointer;
-  pointer-events: auto;
-  box-shadow: var(--blok-video-center-shadow);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-  transition: transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 160ms ease;
-}
-[data-blok-tool="video"] .blok-video-controls__center svg { width: 28px; height: 28px; margin-left: 2px; }
-[data-blok-tool="video"] .blok-video-controls__center:hover { transform: translate(-50%, -50%) scale(1.06); }
-[data-blok-tool="video"] .blok-video-controls__center:active { transform: translate(-50%, -50%) scale(0.97); }
-[data-blok-tool="video"] .blok-video-inner[data-playing="true"] .blok-video-controls__center {
-  opacity: 0;
-  pointer-events: none;
-}
+/* the media reads as a play/pause surface */
+[data-blok-tool="video"] .blok-video-media video { cursor: pointer; }
 
 /* bottom scrim + bar */
 [data-blok-tool="video"] .blok-video-controls__bar {
@@ -449,6 +426,5 @@
 
 @media (prefers-reduced-motion: reduce) {
   [data-blok-tool="video"] .blok-video-controls__bar,
-  [data-blok-tool="video"] .blok-video-controls__center,
   [data-blok-tool="video"] .blok-video-controls__volume { transition: none; }
 }

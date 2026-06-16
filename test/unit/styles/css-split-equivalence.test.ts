@@ -234,7 +234,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // with inline submit + ↵ reveal + read-only chip), media empty state:
     // tab-swap height/cross-fade animation clip rule, video tool: video.css
     // (Airbnb-style media frame + caption + alignment + resize handles + error
-    // state + custom Airbnb-inspired player controls: frosted centre play,
+    // state + custom Airbnb-inspired player controls: click-to-toggle media,
     // bottom scrim, coral scrubber, time, volume cluster, fullscreen) +
     // always-on video-player palette tokens in colors.css.
     // Shrinking below the baseline is always acceptable.

@@ -48,11 +48,6 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
   root.className = 'blok-video-controls';
   root.setAttribute('data-role', 'video-controls');
 
-  // Big centred play affordance, shown while paused.
-  const center = button('play-toggle', 'Play', IconPlayerPlay, 'blok-video-controls__center');
-  center.setAttribute('data-role', 'center-play');
-  root.appendChild(center);
-
   // Bottom scrim + control bar.
   const bar = document.createElement('div');
   bar.className = 'blok-video-controls__bar';
@@ -108,7 +103,6 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
     const icon = next ? IconPlayerPause : IconPlayerPlay;
     playToggle.innerHTML = icon;
     playToggle.setAttribute('aria-label', next ? 'Pause' : 'Play');
-    center.setAttribute('aria-label', next ? 'Pause' : 'Play');
   };
   setPlaying(false);
 
@@ -176,7 +170,9 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
   };
 
   playToggle.addEventListener('click', togglePlay);
-  center.addEventListener('click', togglePlay);
+  // Click anywhere on the video to play/pause (the control bar sits above with
+  // its own pointer-events, so its hits never reach the media).
+  video.addEventListener('click', togglePlay);
   seek.addEventListener('input', onSeekInput);
   muteToggle.addEventListener('click', onMuteClick);
   volume.addEventListener('input', onVolumeInput);
@@ -190,6 +186,7 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
   document.addEventListener('fullscreenchange', onFullscreenChange);
 
   const destroy = (): void => {
+    video.removeEventListener('click', togglePlay);
     video.removeEventListener('loadedmetadata', onLoadedMetadata);
     video.removeEventListener('timeupdate', onTimeUpdate);
     video.removeEventListener('play', onPlay);

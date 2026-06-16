@@ -58,6 +58,27 @@ describe('video controls — structure', () => {
     expect(q(h.controls, '[data-action="mute-toggle"]')).toBeTruthy();
     expect(q(h.controls, '[data-action="fullscreen"]')).toBeTruthy();
   });
+
+  it('does not render a centre play affordance', () => {
+    expect(h.controls.querySelector('[data-role="center-play"]')).toBeNull();
+  });
+});
+
+describe('video controls — click-to-toggle', () => {
+  let h: Harness;
+  beforeEach(() => { vi.clearAllMocks(); h = mount(); });
+  afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
+
+  it('clicking the video starts playback while paused', () => {
+    h.video.click();
+    expect(h.video.play).toHaveBeenCalledTimes(1);
+  });
+
+  it('clicking the video pauses it once playing', () => {
+    h.video.dispatchEvent(new Event('play'));
+    h.video.click();
+    expect(h.video.pause).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('video controls — playback', () => {

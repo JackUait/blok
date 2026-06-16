@@ -10,6 +10,7 @@ import type {
 } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import type { FileConfig, FileData, FileUploadResult } from '../../../types/tools/file';
+import type { ImageData } from '../../../types/tools/image';
 import { IconCaption, IconCopy, IconDownload, IconFile, IconReplace } from '../../components/icons';
 import { DEFAULT_CAPTION_PLACEHOLDER, PASTE_EXTENSIONS, PASTE_MIME_TYPES } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
@@ -21,6 +22,9 @@ import { isPreviewable } from './preview';
 import { openFilePreview } from './preview-modal';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
+
+/** Image filenames/URLs that should auto-convert the File block into an Image. */
+const IMAGE_EXTENSION_RE = /\.(png|jpe?g|gif|webp|svg)(?:[?#]|$)/i;
 
 export class FileTool implements BlockTool {
   private readonly api: API;
@@ -34,6 +38,8 @@ export class FileTool implements BlockTool {
   private uploadingEl: UploadingStateElement | null = null;
   private lastFileName: string | null = null;
   private previewTeardown: (() => void) | null = null;
+  /** When the pending upload is an image, the result converts to an Image block. */
+  private pendingImageConversion = false;
 
   constructor(options: BlockToolConstructorOptions<FileData, FileConfig>) {
     this.api = options.api;
@@ -146,6 +152,7 @@ export class FileTool implements BlockTool {
 
   private startUpload(file: File): void {
     this.lastFileName = file.name;
+    this.pendingImageConversion = file.type.startsWith('image/') || IMAGE_EXTENSION_RE.test(file.name);
     this.state = 'LOADING';
     this.renderState();
     void this.uploader
@@ -156,6 +163,7 @@ export class FileTool implements BlockTool {
 
   private startUrl(url: string): void {
     this.lastFileName = null;
+    this.pendingImageConversion = IMAGE_EXTENSION_RE.test(url);
     this.state = 'LOADING';
     this.renderState();
     void this.uploader
@@ -172,9 +180,31 @@ export class FileTool implements BlockTool {
       size: result.size ?? this.data.size,
       mimeType: result.mimeType ?? this.data.mimeType,
     };
+    if (this.pendingImageConversion && this.convertToImage()) {
+      return;
+    }
     this.state = 'RENDERED';
     this.renderState();
     this.block.dispatchChange();
+  }
+
+  /**
+   * Swap this File block for an Image block carrying the just-uploaded url.
+   * File and Image declare no conversionConfig, so we replace in place rather
+   * than going through api.blocks.convert. Returns false (keep the file card)
+   * when the block can no longer be located.
+   */
+  private convertToImage(): boolean {
+    const index = this.api.blocks.getBlockIndex(this.block.id);
+    if (index === undefined) {
+      return false;
+    }
+    const imageData: ImageData = { url: this.data.url };
+    if (this.data.fileName !== undefined) imageData.fileName = this.data.fileName;
+    if ((this.data.caption ?? '') !== '') imageData.caption = this.data.caption;
+    if (this.data.captionVisible !== undefined) imageData.captionVisible = this.data.captionVisible;
+    this.api.blocks.insert('image', imageData, {}, index, false, true);
+    return true;
   }
 
   private applyError(): void {

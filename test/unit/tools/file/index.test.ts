@@ -3,9 +3,14 @@ import { FileTool } from '../../../../src/tools/file';
 import type { FileData, FileConfig } from '../../../../types/tools/file';
 import type { API, BlockAPI, BlockToolConstructorOptions, FilePasteEvent } from '../../../../types';
 
-const createMockApi = (): API => ({
+const createMockApi = (overrides: Partial<API> = {}): API => ({
   styles: { block: 'blok-block' },
   i18n: { t: (k: string) => k, has: () => false },
+  blocks: {
+    getBlockIndex: vi.fn(() => 0),
+    insert: vi.fn(),
+  },
+  ...overrides,
 } as unknown as API);
 
 const createMockBlock = (): BlockAPI => ({
@@ -18,11 +23,12 @@ const createMockBlock = (): BlockAPI => ({
 const createOptions = (
   data: Partial<FileData> = {},
   config: FileConfig = {},
-  block?: BlockAPI
+  block?: BlockAPI,
+  api?: API
 ): BlockToolConstructorOptions<FileData, FileConfig> => ({
   data: { url: '', ...data } as FileData,
   config,
-  api: createMockApi(),
+  api: api ?? createMockApi(),
   block: block ?? createMockBlock(),
   readOnly: false,
 });
@@ -170,6 +176,129 @@ describe('FileTool — upload flow', () => {
     tool.onPaste(filePasteEvent(new File([new Uint8Array(10)], 'a.pdf', { type: 'application/pdf' })));
     await flush();
     expect(root.querySelector('[data-role="file-error"]')).not.toBeNull();
+  });
+});
+
+describe('FileTool — image auto-convert', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  const imageFile = (name = 'pic.png', type = 'image/png'): File =>
+    new File([new Uint8Array(4)], name, { type });
+
+  it('replaces the File block with an Image block when an image file is uploaded', async () => {
+    const uploadByFile = vi.fn().mockResolvedValue({ url: 'https://cdn/pic.png', fileName: 'pic.png' });
+    const api = createMockApi();
+    const tool = new FileTool(createOptions({}, { uploader: { uploadByFile } }, undefined, api));
+    const root = tool.render();
+
+    tool.onPaste(filePasteEvent(imageFile()));
+    await flush();
+
+    expect(api.blocks.insert).toHaveBeenCalledWith(
+      'image',
+      expect.objectContaining({ url: 'https://cdn/pic.png', fileName: 'pic.png' }),
+      {},
+      0,
+      false,
+      true
+    );
+    // File card must never render — the block became an Image.
+    expect(root.querySelector('[data-role="file-name"]')).toBeNull();
+  });
+
+  it('does NOT convert a non-image file', async () => {
+    const uploadByFile = vi.fn().mockResolvedValue({ url: 'https://cdn/a.pdf', fileName: 'a.pdf' });
+    const api = createMockApi();
+    const tool = new FileTool(createOptions({}, { uploader: { uploadByFile } }, undefined, api));
+    const root = tool.render();
+
+    tool.onPaste(filePasteEvent(new File([new Uint8Array(4)], 'a.pdf', { type: 'application/pdf' })));
+    await flush();
+
+    expect(api.blocks.insert).not.toHaveBeenCalled();
+    expect(root.querySelector('[data-role="file-name"]')?.textContent).toBe('a.pdf');
+  });
+
+  it('converts via the filename extension when the mime type is empty', async () => {
+    const uploadByFile = vi.fn().mockResolvedValue({ url: 'https://cdn/pic.png', fileName: 'pic.png' });
+    const api = createMockApi();
+    const tool = new FileTool(createOptions({}, { uploader: { uploadByFile } }, undefined, api));
+    tool.render();
+
+    tool.onPaste(filePasteEvent(imageFile('pic.png', '')));
+    await flush();
+
+    expect(api.blocks.insert).toHaveBeenCalledWith(
+      'image',
+      expect.objectContaining({ url: 'https://cdn/pic.png' }),
+      {},
+      0,
+      false,
+      true
+    );
+  });
+
+  it('carries an existing caption into the Image block', async () => {
+    const uploadByFile = vi.fn().mockResolvedValue({ url: 'https://cdn/pic.png', fileName: 'pic.png' });
+    const api = createMockApi();
+    const tool = new FileTool(createOptions(
+      { caption: 'a sunset', captionVisible: true },
+      { uploader: { uploadByFile } },
+      undefined,
+      api
+    ));
+    tool.render();
+
+    tool.onPaste(filePasteEvent(imageFile()));
+    await flush();
+
+    expect(api.blocks.insert).toHaveBeenCalledWith(
+      'image',
+      expect.objectContaining({ caption: 'a sunset', captionVisible: true }),
+      {},
+      0,
+      false,
+      true
+    );
+  });
+
+  it('converts an image URL entered in the embed field', async () => {
+    const api = createMockApi();
+    const tool = new FileTool(createOptions({}, {}, undefined, api));
+    const root = tool.render();
+
+    root.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    const urlInput = root.querySelector<HTMLInputElement>('.blok-media-empty__embed-input');
+    const submit = root.querySelector<HTMLButtonElement>('[data-action="submit-url"]');
+    if (!urlInput || !submit) throw new Error('embed url field missing');
+    urlInput.value = 'https://cdn/photo.jpg';
+    submit.click();
+    await flush();
+
+    expect(api.blocks.insert).toHaveBeenCalledWith(
+      'image',
+      expect.objectContaining({ url: 'https://cdn/photo.jpg' }),
+      {},
+      0,
+      false,
+      true
+    );
+  });
+
+  it('falls back to the file card when the block index cannot be resolved', async () => {
+    const uploadByFile = vi.fn().mockResolvedValue({ url: 'https://cdn/pic.png', fileName: 'pic.png' });
+    const api = createMockApi({
+      blocks: { getBlockIndex: vi.fn(() => undefined), insert: vi.fn() },
+    } as unknown as Partial<API>);
+    const tool = new FileTool(createOptions({}, { uploader: { uploadByFile } }, undefined, api));
+    const root = tool.render();
+
+    tool.onPaste(filePasteEvent(imageFile()));
+    await flush();
+
+    expect(api.blocks.insert).not.toHaveBeenCalled();
+    expect(root.querySelector('[data-role="file-name"]')?.textContent).toBe('pic.png');
   });
 });
 

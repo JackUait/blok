@@ -161,7 +161,13 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
     void burst.offsetWidth;
     burst.classList.add('is-active');
   };
-  const onBurstEnd = (): void => burst.classList.remove('is-active');
+  // Clear on the disc's own animation only — the radiating ring (::after) ends
+  // separately and must not cut the disc short. jsdom fires a bare Event with no
+  // animationName, so an empty name still clears (keeps the unit test honest).
+  const onBurstEnd = (event: AnimationEvent): void => {
+    if (event.animationName && event.animationName !== 'blok-video-burst') return;
+    burst.classList.remove('is-active');
+  };
 
   // ----- intent -----
   const togglePlay = (): void => {

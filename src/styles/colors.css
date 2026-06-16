@@ -427,9 +427,10 @@
   --blok-video-volume-track: rgba(255, 255, 255, 0.35);
   --blok-video-thumb: #ffffff;
   --blok-video-thumb-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
-  --blok-video-burst-bg: rgba(20, 20, 19, 0.55);
+  --blok-video-burst-bg: rgba(20, 20, 19, 0.62);
   --blok-video-burst-fg: #ffffff;
   --blok-video-burst-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.55);
+  --blok-video-burst-ring: rgba(255, 255, 255, 0.6);
   --blok-video-scrim-strong: rgba(0, 0, 0, 0.72);
   --blok-video-scrim-mid: rgba(0, 0, 0, 0.32);
   --blok-video-shadow-hover: 0 14px 34px -12px rgba(15, 15, 14, 0.34), 0 0 0 1px rgba(15, 15, 14, 0.05);

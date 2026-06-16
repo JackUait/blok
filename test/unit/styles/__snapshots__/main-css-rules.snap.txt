@@ -1314,9 +1314,10 @@
   --blok-video-volume-track: rgba(255, 255, 255, 0.35);
   --blok-video-thumb: #ffffff;
   --blok-video-thumb-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
-  --blok-video-burst-bg: rgba(20, 20, 19, 0.55);
+  --blok-video-burst-bg: rgba(20, 20, 19, 0.62);
   --blok-video-burst-fg: #ffffff;
   --blok-video-burst-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.55);
+  --blok-video-burst-ring: rgba(255, 255, 255, 0.6);
   --blok-video-scrim-strong: rgba(0, 0, 0, 0.72);
   --blok-video-scrim-mid: rgba(0, 0, 0, 0.32);
   --blok-video-shadow-hover: 0 14px 34px -12px rgba(15, 15, 14, 0.34), 0 0 0 1px rgba(15, 15, 14, 0.05);
@@ -4687,14 +4688,24 @@
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   opacity: 0;
-  transform: translate(-50%, -50%) scale(0.55);
+  transform: translate(-50%, -50%) scale(0.68);
   pointer-events: none;
   z-index: 1;
+}
+
+[data-blok-tool="video"] .blok-video-controls__burst::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--blok-radius-pill);
+  border: 2px solid var(--blok-video-burst-ring);
+  opacity: 0;
 }
 
 [data-blok-tool="video"] .blok-video-controls__burst svg {
   width: 34px;
   height: 34px;
+  transform-origin: center;
 }
 
 [data-blok-tool="video"] .blok-video-controls__burst svg path:only-child {
@@ -4702,7 +4713,15 @@
 }
 
 [data-blok-tool="video"] .blok-video-controls__burst.is-active {
-  animation: blok-video-burst 460ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation: blok-video-burst 560ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+[data-blok-tool="video"] .blok-video-controls__burst.is-active::after {
+  animation: blok-video-burst-ring 540ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+[data-blok-tool="video"] .blok-video-controls__burst.is-active svg {
+  animation: blok-video-burst-glyph 460ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 [data-blok-tool="video"] .blok-video-controls__bar {
@@ -4850,7 +4869,7 @@
   transition: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-tool="video"] .blok-video-controls__burst.is-active {
+[@media (prefers-reduced-motion: reduce)] [data-blok-tool="video"] .blok-video-controls__burst.is-active, [data-blok-tool="video"] .blok-video-controls__burst.is-active::after, [data-blok-tool="video"] .blok-video-controls__burst.is-active svg {
   animation: none;
   opacity: 0;
 }

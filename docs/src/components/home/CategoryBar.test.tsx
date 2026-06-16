@@ -35,8 +35,6 @@ describe('CategoryBar', () => {
       [/inline tools/i, '/docs#inline-toolbar-api'],
       [/^api$/i, '/docs#core'],
       [/^events$/i, '/docs#events'],
-      [/^recipes$/i, '/recipes'],
-      [/^integrations$/i, '/integrations'],
       [/^migration$/i, '/migration'],
     ];
 
@@ -46,12 +44,18 @@ describe('CategoryBar', () => {
     });
   });
 
+  it('does not render recipes or integrations categories', () => {
+    renderBar();
+    expect(screen.queryByRole('link', { name: /^recipes$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /^integrations$/i })).not.toBeInTheDocument();
+  });
+
   it('marks the category matching the current route as current', () => {
     renderBar('/tools');
     const active = screen.getByRole('link', { name: /^tools$/i });
     expect(active).toHaveAttribute('aria-current', 'page');
 
-    const inactive = screen.getByRole('link', { name: /^recipes$/i });
+    const inactive = screen.getByRole('link', { name: /^migration$/i });
     expect(inactive).not.toHaveAttribute('aria-current');
   });
 

@@ -19,8 +19,6 @@ const CATEGORIES: Category[] = [
   { key: "inlineTools", href: "/docs#inline-toolbar-api", icon: "inline" },
   { key: "api", href: "/docs#core", icon: "api" },
   { key: "events", href: "/docs#events", icon: "events" },
-  { key: "recipes", href: "/recipes", icon: "page" },
-  { key: "integrations", href: "/integrations", icon: "config" },
   { key: "migration", href: "/migration", icon: "history" },
 ];
 

@@ -12,7 +12,7 @@ export interface SidebarSection {
   links: SidebarLink[];
 }
 
-export type SidebarVariant = 'api' | 'recipes' | 'tools';
+export type SidebarVariant = 'api' | 'tools';
 
 interface SidebarProps {
   sections: SidebarSection[];

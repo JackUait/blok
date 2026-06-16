@@ -1,11 +1,10 @@
 /* ============================================
    Shared Sidebar Styles
-   Used by both API docs and Recipes pages
+   Used by both API docs and Tools pages
    ============================================ */
 
 /* Base Sidebar */
 .api-sidebar,
-.recipes-sidebar,
 .tools-sidebar {
   position: sticky;
   top: 64px;
@@ -23,7 +22,6 @@
 
 /* Sidebar subtle shadow for depth */
 .api-sidebar::after,
-.recipes-sidebar::after,
 .tools-sidebar::after {
   content: '';
   position: absolute;
@@ -42,7 +40,6 @@
 
 @media (max-width: 968px) {
   .api-sidebar,
-  .recipes-sidebar,
   .tools-sidebar {
     display: none;
   }
@@ -50,7 +47,6 @@
 
 /* Sidebar Search - Premium search field, pinned at top */
 .api-sidebar-search,
-.recipes-sidebar-search,
 .tools-sidebar-search {
   position: sticky;
   top: 0;
@@ -69,7 +65,6 @@
 }
 
 .api-sidebar-search-field,
-.recipes-sidebar-search-field,
 .tools-sidebar-search-field {
   display: flex;
   align-items: center;
@@ -84,7 +79,6 @@
 }
 
 .api-sidebar-search-field:focus-within,
-.recipes-sidebar-search-field:focus-within,
 .tools-sidebar-search-field:focus-within {
   border-color: var(--color-coral);
   box-shadow: 
@@ -94,7 +88,6 @@
 }
 
 .api-sidebar-search-icon,
-.recipes-sidebar-search-icon,
 .tools-sidebar-search-icon {
   flex-shrink: 0;
   color: var(--color-text-tertiary);
@@ -102,13 +95,11 @@
 }
 
 .api-sidebar-search-field:focus-within .api-sidebar-search-icon,
-.recipes-sidebar-search-field:focus-within .recipes-sidebar-search-icon,
 .tools-sidebar-search-field:focus-within .tools-sidebar-search-icon {
   color: var(--color-coral);
 }
 
 .api-sidebar-search-input,
-.recipes-sidebar-search-input,
 .tools-sidebar-search-input {
   flex: 1;
   min-width: 0;
@@ -122,13 +113,11 @@
 }
 
 .api-sidebar-search-input::placeholder,
-.recipes-sidebar-search-input::placeholder,
 .tools-sidebar-search-input::placeholder {
   color: var(--color-text-tertiary);
 }
 
 .api-sidebar-search-clear,
-.recipes-sidebar-search-clear,
 .tools-sidebar-search-clear {
   display: flex;
   align-items: center;
@@ -145,14 +134,12 @@
 }
 
 .api-sidebar-search-clear:hover,
-.recipes-sidebar-search-clear:hover,
 .tools-sidebar-search-clear:hover {
   background: rgba(240, 123, 75, 0.1);
   color: var(--color-coral);
 }
 
 .api-sidebar-search-shortcut,
-.recipes-sidebar-search-shortcut,
 .tools-sidebar-search-shortcut {
   display: inline-flex;
   align-items: center;
@@ -170,7 +157,6 @@
 }
 
 .api-sidebar-empty,
-.recipes-sidebar-empty,
 .tools-sidebar-empty {
   padding: var(--spacing-xl);
   text-align: center;
@@ -179,7 +165,6 @@
 }
 
 .api-sidebar-empty p,
-.recipes-sidebar-empty p,
 .tools-sidebar-empty p {
   display: flex;
   flex-direction: column;
@@ -188,7 +173,6 @@
 }
 
 .api-sidebar-empty::before,
-.recipes-sidebar-empty::before,
 .tools-sidebar-empty::before {
   content: '🔍';
   font-size: 1.5rem;
@@ -197,14 +181,12 @@
 
 /* Sidebar Section */
 .api-sidebar-section,
-.recipes-sidebar-section,
 .tools-sidebar-section {
   margin-bottom: var(--spacing-xl);
   padding: 0 var(--spacing-sm);
 }
 
 .api-sidebar-title,
-.recipes-sidebar-title,
 .tools-sidebar-title {
   font-family: var(--font-family-display);
   font-size: 11px;
@@ -220,7 +202,6 @@
 }
 
 .api-sidebar-title::before,
-.recipes-sidebar-title::before,
 .tools-sidebar-title::before {
   content: '';
   width: 3px;
@@ -231,7 +212,6 @@
 
 /* Sidebar links */
 .api-sidebar-link,
-.recipes-sidebar-link,
 .tools-sidebar-link {
   display: block;
   padding: var(--spacing-sm) var(--spacing-md) var(--spacing-sm) calc(var(--spacing-md) + 11px);
@@ -245,7 +225,6 @@
 }
 
 .api-sidebar-link::before,
-.recipes-sidebar-link::before,
 .tools-sidebar-link::before {
   content: '';
   position: absolute;
@@ -261,14 +240,12 @@
 }
 
 .api-sidebar-link:hover,
-.recipes-sidebar-link:hover,
 .tools-sidebar-link:hover {
   color: var(--color-text-primary);
   background: rgba(240, 123, 75, 0.06);
 }
 
 .api-sidebar-link:hover::before,
-.recipes-sidebar-link:hover::before,
 .tools-sidebar-link:hover::before {
   background: var(--color-coral);
   opacity: 1;
@@ -276,7 +253,6 @@
 }
 
 .api-sidebar-link.active,
-.recipes-sidebar-link.active,
 .tools-sidebar-link.active {
   color: var(--color-coral);
   font-weight: 600;
@@ -284,7 +260,6 @@
 }
 
 .api-sidebar-link.active::before,
-.recipes-sidebar-link.active::before,
 .tools-sidebar-link.active::before {
   width: 6px;
   height: 6px;
@@ -296,26 +271,22 @@
 
 /* Scrollbar styling for sidebar */
 .api-sidebar::-webkit-scrollbar,
-.recipes-sidebar::-webkit-scrollbar,
 .tools-sidebar::-webkit-scrollbar {
   width: 6px;
 }
 
 .api-sidebar::-webkit-scrollbar-track,
-.recipes-sidebar::-webkit-scrollbar-track,
 .tools-sidebar::-webkit-scrollbar-track {
   background: transparent;
 }
 
 .api-sidebar::-webkit-scrollbar-thumb,
-.recipes-sidebar::-webkit-scrollbar-thumb,
 .tools-sidebar::-webkit-scrollbar-thumb {
   background: rgba(240, 123, 75, 0.2);
   border-radius: 3px;
 }
 
 .api-sidebar::-webkit-scrollbar-thumb:hover,
-.recipes-sidebar::-webkit-scrollbar-thumb:hover,
 .tools-sidebar::-webkit-scrollbar-thumb:hover {
   background: rgba(240, 123, 75, 0.4);
 }

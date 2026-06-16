@@ -56,5 +56,11 @@ describe('constants', () => {
         expect(link.href.trim().length).toBeGreaterThan(0);
       });
     });
+
+    it('should not include integrations or recipes links', () => {
+      const hrefs = NAV_LINKS.map((link) => link.href);
+      expect(hrefs).not.toContain('/integrations');
+      expect(hrefs).not.toContain('/recipes');
+    });
   });
 });

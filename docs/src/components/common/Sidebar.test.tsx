@@ -73,31 +73,6 @@ describe('Sidebar', () => {
     });
   });
 
-  describe('with recipes variant', () => {
-    it('should render an aside element with correct testid', () => {
-      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="recipes" />);
-
-      const aside = screen.getByTestId('recipes-sidebar');
-      expect(aside).toBeInTheDocument();
-      expect(aside.tagName.toLowerCase()).toBe('aside');
-    });
-
-    it('should render the search input with recipes prefix', () => {
-      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="recipes" />);
-
-      const searchInput = screen.getByTestId('recipes-sidebar-search-input');
-      expect(searchInput).toBeInTheDocument();
-      expect(searchInput).toHaveAttribute('placeholder', 'Filter...');
-    });
-
-    it('should apply active class to the active section', () => {
-      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="recipes" />);
-
-      const coreLink = screen.getByTestId('recipes-sidebar-link-core');
-      expect(coreLink).toHaveClass('active');
-    });
-  });
-
   describe('sections rendering', () => {
     it('should render all sidebar sections', () => {
       renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);

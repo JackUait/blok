@@ -3,12 +3,9 @@
     "search": "Search",
     "demo": "Demo",
     "docs": "Docs",
-    "recipes": "Recipes",
-    "integrations": "Integrations",
     "tools": "Tools",
     "migration": "Migration",
     "changelog": "Changelog",
-    "integrations": "Integrations",
     "github": "GitHub",
     "searchAriaLabel": "Search (⌘K)",
     "toggleMenu": "Toggle menu"
@@ -332,8 +329,6 @@
       "inlineTools": "Inline tools",
       "api": "API",
       "events": "Events",
-      "recipes": "Recipes",
-      "integrations": "Integrations",
       "migration": "Migration"
     },
     "features": {
@@ -603,64 +598,6 @@
     "welcomeListItem3": "Drag and drop to reorder blocks",
     "welcomeListItem4": "Clean JSON output"
   },
-  "recipes": {
-    "heroBadge": "Recipes",
-    "heroTitle": "Recipes",
-    "heroDescription": "Practical tips, patterns, and code snippets to help you get the most out of Blok. From basic setup to advanced customization.",
-    "keyboardShortcutsTitle": "Keyboard Shortcuts",
-    "communityBadge": "Community",
-    "ctaTitle": "Have a recipe to share?",
-    "ctaDescription": "Your patterns and techniques could help thousands of developers build better editors.",
-    "ctaButton": "Contribute a Recipe",
-    "sidebarQuickReference": "Quick Reference",
-    "sidebarCodeRecipes": "Code Recipes",
-    "sidebarKeyboardShortcuts": "Keyboard Shortcuts",
-    "sidebarAutosave": "Autosave with Debouncing",
-    "sidebarEvents": "Working with Events",
-    "sidebarCustomTool": "Creating a Custom Tool",
-    "sidebarStyling": "Styling with Data Attributes",
-    "sidebarReadOnly": "Read-Only Mode",
-    "sidebarLocalization": "Localization",
-    "proTip": "Pro tip",
-    "shortcuts": {
-      "title": "Keyboard Reference",
-      "subtitle": "Master Blok with these essential shortcuts",
-      "platformHint": "⌘ = Cmd (Mac) / Ctrl (Win)",
-      "moreShortcuts": "More shortcuts available in the toolbox menu",
-      "navigation": "Navigation",
-      "formatting": "Formatting",
-      "history": "History",
-      "lists": "Lists",
-      "openToolbox": "Open block toolbox",
-      "createBlock": "Create new block",
-      "deleteBlock": "Delete / merge block",
-      "bold": "Bold",
-      "italic": "Italic",
-      "underline": "Underline",
-      "link": "Link",
-      "undo": "Undo",
-      "redo": "Redo",
-      "indent": "Indent",
-      "outdent": "Outdent"
-    },
-    "autosaveTitle": "Autosave with Debouncing",
-    "autosaveDescription": "Automatically save content as users type, with debouncing to prevent excessive server requests.",
-    "autosaveTip": "A 1-second debounce is usually a good balance between responsiveness and server load.",
-    "eventsTitle": "Working with Events",
-    "eventsDescription": "Listen to editor events to integrate with your application's state management or analytics.",
-    "customToolTitle": "Creating a Custom Tool",
-    "customToolDescription": "Build your own block type to extend Blok's functionality. This example creates a simple alert/callout block.",
-    "customToolTip": "Keep tools focused on a single purpose. For complex needs, compose multiple simple tools.",
-    "stylingTitle": "Styling with Data Attributes",
-    "stylingDescription": "Customize Blok's appearance using CSS and data attributes. No need to fight with specificity.",
-    "readOnlyTitle": "Read-Only Mode",
-    "readOnlyDescription": "Display saved content without editing capabilities, or toggle between edit and preview modes.",
-    "readOnlyTip": "Read-only mode is perfect for previewing content before publishing or displaying user-generated content.",
-    "localizationTitle": "Localization with Preloading",
-    "localizationDescription": "Configure Blok for multiple languages with optional preloading for offline support or instant initialization.",
-    "localizationTip": "Most apps can use on-demand loading with buildRegistry() directly—the ~50-100ms delay is usually imperceptible.",
-    "filterLabel": "Filter recipes"
-  },
   "migration": {
     "heroFromEditorJS": "From EditorJS",
     "heroToBlok": "to",
@@ -788,66 +725,6 @@
       "italic": "Italic",
       "link": "Link",
       "marker": "Marker"
-    }
-  },
-  "integrations": {
-    "badge": "Integrations",
-    "heroTitle": "Use Blok with React",
-    "heroDescription1": "The official React adapter ships as",
-    "heroDescription2": ". It provides a",
-    "heroDescription3": "hook and a",
-    "heroDescription4": "component that manage the full editor lifecycle — including StrictMode, SSR-safe rendering, and clean teardown.",
-    "installNote": "React 18+ is a peer dependency — it is not bundled with Blok. If you already have React in your project, no extra install is needed.",
-    "parametersTitle": "Parameters",
-    "propsTitle": "Props",
-    "returnsTitle": "Returns",
-    "filterLabel": "Filter integrations",
-    "sections": {
-      "setup": {
-        "badge": "Setup",
-        "title": "Installation",
-        "description": "Install Blok and its React adapter. React 18 or higher is required as a peer dependency."
-      },
-      "quickstart": {
-        "badge": "Guide",
-        "title": "Quick Start",
-        "description": "Import useBlok and BlokContent from @jackuait/blok/react. The hook manages the editor lifecycle; the component mounts the editor DOM into your layout."
-      },
-      "useBlok": {
-        "badge": "Hook",
-        "title": "useBlok",
-        "description": "A React hook that creates and manages a Blok editor instance. Returns the editor once it is ready, or null during initialization."
-      },
-      "blokContent": {
-        "badge": "Component",
-        "title": "BlokContent",
-        "description": "A component that mounts the editor's DOM tree into your layout. Renders an empty div when editor is null, maintaining layout stability while the editor initializes."
-      },
-      "readOnly": {
-        "badge": "Guide",
-        "title": "Read-Only Mode",
-        "description": "Toggle read-only mode reactively by passing readOnly to useBlok. The editor updates via editor.readOnly.set() without recreation."
-      },
-      "switchingDocs": {
-        "badge": "Guide",
-        "title": "Switching Documents",
-        "description": "Pass a deps array as the second argument to useBlok to recreate the editor when your document changes. The old instance is destroyed cleanly before the new one is created."
-      },
-      "fullExample": {
-        "badge": "Example",
-        "title": "Complete Example",
-        "description": "A full blog editor component using useBlok and BlokContent together."
-      }
-    },
-    "sidebar": {
-      "react": "React",
-      "installation": "Installation",
-      "quickStart": "Quick Start",
-      "useBlok": "useBlok",
-      "blokContent": "BlokContent",
-      "readOnlyMode": "Read-Only Mode",
-      "switchingDocuments": "Switching Documents",
-      "completeExample": "Complete Example"
     }
   }
 }

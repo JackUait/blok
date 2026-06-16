@@ -5,8 +5,6 @@ import type { NavLink } from '@/types/navigation';
 export const NAV_LINKS: NavLink[] = [
   { href: '/docs', label: 'Docs', i18nKey: 'nav.docs' },
   { href: '/tools', label: 'Tools', i18nKey: 'nav.tools' },
-  { href: '/integrations', label: 'Integrations', i18nKey: 'nav.integrations' },
-  { href: '/recipes', label: 'Recipes', i18nKey: 'nav.recipes' },
   { href: '/demo', label: 'Demo', i18nKey: 'nav.demo' },
   { href: '/migration', label: 'Migration', i18nKey: 'nav.migration' },
   { href: '/changelog', label: 'Changelog', i18nKey: 'nav.changelog' },

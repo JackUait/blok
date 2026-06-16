@@ -1049,10 +1049,10 @@
 }
 
 /* --- pptx: stacked slide cards -------------------------------------------- */
-/* pptx-renderer emits one element per slide and hard-sizes each to the
-   container's clientWidth (padding included), so horizontal padding here would
-   push slides past the edge. Keep the sides flush, breathe vertically, and let
-   box-sizing absorb the frame border so the fixed slide width never overflows. */
+/* With fitMode: 'contain' the renderer scales each slide to the container width
+   and patches its wrapper's height to match. We stack those wrappers down the
+   desk with vertical breathing room; the sides stay flush because the renderer
+   already centres each slide via its own inline `margin: 0 auto`. */
 .blok-file-preview-pptx {
   display: flex;
   flex-direction: column;
@@ -1061,10 +1061,12 @@
   padding: var(--blok-space-6) 0;
 }
 
-/* No border: the renderer hard-sizes slide width to clientWidth, so a border
-   would add 2px and trip a horizontal scrollbar. The shadow + radius (which
-   don't affect layout width) carry the card framing instead. */
+/* flex-shrink: 0 is load-bearing — a tall deck overflows the modal, and without
+   it the flex column would compress each slide wrapper below its real height,
+   then `overflow: hidden` (for the rounded corners) would clip the slide body
+   down to just its title band. The shadow + radius carry the card framing. */
 .blok-file-preview-pptx > * {
+  flex-shrink: 0;
   border-radius: var(--blok-radius-lg);
   box-shadow: var(--blok-image-shadow-resting);
   overflow: hidden;

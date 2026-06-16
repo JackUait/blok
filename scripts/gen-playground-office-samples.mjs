@@ -189,47 +189,139 @@ xlsx.file(
 );
 writeFileSync(join(OUT, 'quarterly-budget.xlsx'), await xlsx.generateAsync({ type: 'nodebuffer' }));
 
-// ---- pptx: a short pitch deck --------------------------------------------
+// ---- pptx: a designed pitch deck -----------------------------------------
+// A short, opinionated product deck so the inline preview shows a real story:
+// title, problem, the core idea, why-it-matters, hard numbers, roadmap, close.
+// Shapes are positioned in EMU (914,400 per inch) on the 10 × 7.5in canvas; a
+// tiny layout DSL (rect / text / para / run) keeps each slide readable.
 const NS = {
   p: 'http://schemas.openxmlformats.org/presentationml/2006/main',
   a: 'http://schemas.openxmlformats.org/drawingml/2006/main',
   r: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships',
 };
+
+const IN = (n) => Math.round(n * 914400); // inches → EMU
+const INK = '1A1A1A';
+const MUTED = '6B6B6B';
+const ACCENT = 'E25C4B'; // coral, echoing the Blok house mark
+const WHITE = 'FFFFFF';
+
+// A run of text with its own size/weight/colour/letter-spacing.
+const run = (text, { sz = 2000, b = false, color = INK, spc } = {}) =>
+  `<a:r><a:rPr lang="en-US" sz="${sz}"${b ? ' b="1"' : ''}${spc ? ` spc="${spc}"` : ''}>`
+  + `<a:solidFill><a:srgbClr val="${color}"/></a:solidFill></a:rPr><a:t>${esc(text)}</a:t></a:r>`;
+
+// A paragraph: optional accent bullet, alignment, and trailing space.
+const para = (runs, { align = 'l', bullet = false, after = 600 } = {}) => {
+  const bu = bullet
+    ? `<a:buClr><a:srgbClr val="${ACCENT}"/></a:buClr><a:buFont typeface="Arial"/><a:buChar char="&#8226;"/>`
+    : '<a:buNone/>';
+  const marL = bullet ? ' marL="342900" indent="-342900"' : '';
+  return `<a:p><a:pPr${marL} algn="${align}"><a:spcAft><a:spcPts val="${after}"/></a:spcAft>${bu}</a:pPr>`
+    + `${[].concat(runs).join('')}</a:p>`;
+};
+
+let shapeId = 1;
+// A solid-fill rectangle (accent tabs, the closing slide's wash).
+const rect = (x, y, w, h, color) =>
+  `<p:sp><p:nvSpPr><p:cNvPr id="${++shapeId}" name="Rect"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>`
+  + `<p:spPr><a:xfrm><a:off x="${IN(x)}" y="${IN(y)}"/><a:ext cx="${IN(w)}" cy="${IN(h)}"/></a:xfrm>`
+  + `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="${color}"/></a:solidFill>`
+  + `<a:ln><a:noFill/></a:ln></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p/></p:txBody></p:sp>`;
+
+// A text box; `anchor` controls vertical alignment within the box.
+const text = (x, y, w, h, paras, anchor = 't') =>
+  `<p:sp><p:nvSpPr><p:cNvPr id="${++shapeId}" name="Txt"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>`
+  + `<p:spPr><a:xfrm><a:off x="${IN(x)}" y="${IN(y)}"/><a:ext cx="${IN(w)}" cy="${IN(h)}"/></a:xfrm>`
+  + `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr>`
+  + `<p:txBody><a:bodyPr wrap="square" anchor="${anchor}"><a:normAutofit/></a:bodyPr><a:lstStyle/>`
+  + `${[].concat(paras).join('')}</p:txBody></p:sp>`;
+
+const eyebrow = (label) => text(0.7, 1.0, 8.6, 0.5, para(run(label, { sz: 1300, b: true, color: ACCENT, spc: 300 })));
+const heading = (txt, sz = 4000) => text(0.7, 1.5, 8.6, 1.9, para(run(txt, { sz, b: true, color: INK })));
+const bullets = (items, y = 3.3) =>
+  text(0.7, y, 8.6, 3.6, items.map((t) => para(run(t, { sz: 2200, color: INK }), { bullet: true, after: 900 })));
+
+// One metric column: a big accent number over a muted caption.
+const metric = (x, value, label) =>
+  text(x, 3.1, 2.7, 2.2, [
+    para(run(value, { sz: 5400, b: true, color: ACCENT }), { after: 300 }),
+    para(run(label, { sz: 1500, color: MUTED })),
+  ]);
+
 const slides = [
-  { title: 'Blok', body: ['The block-based editor for modern documents'] },
-  {
-    title: 'Why Blok',
-    body: ['Everything is a block', 'Headless and framework-agnostic', 'Clean JSON output'],
-  },
-  {
-    title: 'Roadmap',
-    body: ['Inline office previews', 'Real-time collaboration', 'Database & kanban views'],
-  },
+  // 1 — title
+  [
+    rect(0.7, 1.15, 0.6, 0.13, ACCENT),
+    text(0.7, 1.5, 8.6, 1.7, para(run('Blok', { sz: 6600, b: true, color: INK }))),
+    text(0.7, 3.1, 8.6, 0.9, para(run('The block-based editor for modern documents', { sz: 2600, color: MUTED }))),
+    text(0.7, 6.35, 8.6, 0.5, para(run('PRODUCT OVERVIEW · 2026', { sz: 1300, b: true, color: ACCENT, spc: 300 }))),
+  ],
+  // 2 — the problem
+  [
+    eyebrow('THE PROBLEM'),
+    heading('Rich text shouldn’t trap your content'),
+    text(0.7, 3.5, 7.7, 1.8, para(run(
+      'Most editors serialize to tangled HTML. Move that content somewhere new and the structure — and half the formatting — breaks on the way out.',
+      { sz: 2200, color: MUTED },
+    ))),
+  ],
+  // 3 — the idea
+  [
+    eyebrow('THE IDEA'),
+    heading('Everything is a block', 4400),
+    bullets([
+      'A paragraph is a block',
+      'A table is a block',
+      'A database row is a block',
+      'A page is just a block with children',
+    ]),
+  ],
+  // 4 — why teams choose it
+  [
+    eyebrow('WHY TEAMS CHOOSE BLOK'),
+    heading('Built for developers'),
+    bullets([
+      'Headless and framework-agnostic',
+      'Clean, structured JSON — never HTML soup',
+      'Typed plugin API for custom tools',
+      'Real-time collaboration powered by Yjs',
+    ]),
+  ],
+  // 5 — hard numbers
+  [
+    eyebrow('BY THE NUMBERS'),
+    heading('Small core, serious range'),
+    metric(0.7, '15+', 'block types out of the box'),
+    metric(3.65, '100%', 'portable JSON, zero HTML'),
+    metric(6.6, '0', 'frameworks you’re locked into'),
+  ],
+  // 6 — roadmap
+  [
+    eyebrow('WHAT’S NEXT'),
+    heading('Roadmap'),
+    bullets([
+      'Inline office previews',
+      'Database & kanban views',
+      'Comments & suggestions',
+      'AI-assisted authoring',
+    ]),
+  ],
+  // 7 — close
+  [
+    rect(0, 0, 10, 7.5, ACCENT),
+    rect(0.7, 2.35, 0.6, 0.13, WHITE),
+    text(0.7, 2.7, 8.6, 1.4, para(run('Start building with Blok', { sz: 4600, b: true, color: WHITE }))),
+    text(0.7, 4.15, 8.6, 0.7, para(run('github.com/jackuait/blok', { sz: 2200, color: WHITE }))),
+  ],
 ];
 
-const textPara = (text, { title = false } = {}) =>
-  `<a:p><a:r><a:rPr lang="en-US" sz="${title ? 3600 : 2000}"${title ? ' b="1"' : ''}/><a:t>${esc(text)}</a:t></a:r></a:p>`;
-
-const slideXml = (slide) => {
-  const titleSp = `<p:sp>
-<p:nvSpPr><p:cNvPr id="2" name="Title"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
-<p:spPr><a:xfrm><a:off x="685800" y="685800"/><a:ext cx="7772400" cy="1143000"/></a:xfrm>
-<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr>
-<p:txBody><a:bodyPr/>${textPara(slide.title, { title: true })}</p:txBody>
-</p:sp>`;
-  const bodySp = `<p:sp>
-<p:nvSpPr><p:cNvPr id="3" name="Body"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
-<p:spPr><a:xfrm><a:off x="685800" y="2057400"/><a:ext cx="7772400" cy="3886200"/></a:xfrm>
-<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr>
-<p:txBody><a:bodyPr/>${slide.body.map((line) => textPara(line)).join('')}</p:txBody>
-</p:sp>`;
-  return `${XML}
+const slideXml = (shapes) => `${XML}
 <p:sld xmlns:p="${NS.p}" xmlns:a="${NS.a}" xmlns:r="${NS.r}">
 <p:cSld><p:spTree>
 <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>
-${titleSp}${bodySp}
+${shapes.join('')}
 </p:spTree></p:cSld><p:clrMapOvr><a:overrideClrMapping/></p:clrMapOvr></p:sld>`;
-};
 
 const pptx = new JSZip();
 const slideOverrides = slides

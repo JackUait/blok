@@ -43,6 +43,10 @@ export async function loadPptxRenderer(): Promise<{
   return {
     open: (buf, container) =>
       mod.PptxViewer.open(buf, container, {
+        // Scale every slide to the container width and re-fit on resize; without
+        // it the renderer lays slides out at their intrinsic 960×720, which the
+        // modal's scroll container then clips down to the title band.
+        fitMode: 'contain',
         zipLimits: mod.RECOMMENDED_ZIP_LIMITS,
         pdfjs: false,
       }),

@@ -1,4 +1,4 @@
-/* eslint-disable playwright/no-nth-methods */
+ 
 /**
  * Universal regression matrix: rapid undo/redo on any block that owns child
  * blocks via parentId must NEVER introduce new top-level blocks.

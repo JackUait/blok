@@ -434,7 +434,7 @@ describe('DragManager - Race Conditions and Timing', () => {
       dragManager.setupDragHandle(dragHandle, blocks[0]);
 
       // Press Alt before drag starts
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct keyboard event dispatching
+       
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Alt', bubbles: true }));
 
       // Start tracking
@@ -668,11 +668,11 @@ describe('DragManager - Race Conditions and Timing', () => {
 
       // Rapid Alt key toggle
       for (let i = 0; i < 5; i++) {
-        // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct keyboard event dispatching
+         
         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Alt', bubbles: true }));
         expect(wrapper).toHaveAttribute(DATA_ATTR.duplicating, 'true');
 
-        // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct keyboard event dispatching
+         
         document.dispatchEvent(new KeyboardEvent('keyup', { key: 'Alt', bubbles: true }));
         expect(wrapper).not.toHaveAttribute(DATA_ATTR.duplicating);
       }

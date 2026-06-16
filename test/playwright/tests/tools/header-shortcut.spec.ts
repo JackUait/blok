@@ -761,7 +761,7 @@ test.describe('header shortcuts', () => {
       const paragraphs = page.locator(PARAGRAPH_BLOCK_SELECTOR);
 
       // Try default markdown H1 shortcut (not configured since shortcuts is defined)
-      // eslint-disable-next-line playwright/no-nth-methods
+       
       await paragraphs.nth(0).click();
       await page.keyboard.type('# Should Stay Paragraph');
 
@@ -770,7 +770,7 @@ test.describe('header shortcuts', () => {
       await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(0);
 
       // Try H2 shortcut (configured as ##)
-      // eslint-disable-next-line playwright/no-nth-methods
+       
       await paragraphs.nth(1).click();
       await page.keyboard.type('## H2');
 

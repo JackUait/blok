@@ -1,4 +1,4 @@
-/* eslint-disable playwright/no-nth-methods */
+ 
 // Regression: selection overlay must update its height when cell content grows
 
 import { expect, test } from '@playwright/test';

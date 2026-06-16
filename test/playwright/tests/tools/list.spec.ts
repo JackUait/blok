@@ -1,4 +1,4 @@
-/* eslint-disable playwright/no-nth-methods */
+ 
 import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 

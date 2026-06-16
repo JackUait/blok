@@ -826,7 +826,7 @@ test.describe('toolbox keyboard navigation', () => {
     expect(itemsCount).toBeGreaterThan(1);
 
     // First item should be focused after toolbox opens (focusFirst called)
-    // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+     
     await expect(popoverItems.first()).toHaveAttribute('data-blok-focused', 'true');
 
     // Tab moves focus out of contenteditable, allowing Flipper to catch keyboard events
@@ -835,15 +835,15 @@ test.describe('toolbox keyboard navigation', () => {
     // Arrow down should navigate to the second item
     await page.keyboard.press('ArrowDown');
 
-    // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+     
     await expect(popoverItems.first()).not.toHaveAttribute('data-blok-focused', 'true');
-    // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+     
     await expect(popoverItems.nth(1)).toHaveAttribute('data-blok-focused', 'true');
 
     // Navigate back up
     await page.keyboard.press('ArrowUp');
 
-    // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+     
     await expect(popoverItems.first()).toHaveAttribute('data-blok-focused', 'true');
   });
 
@@ -867,7 +867,7 @@ test.describe('toolbox keyboard navigation', () => {
     expect(itemsCount).toBeGreaterThan(2);
 
     // First item should be focused after toolbox opens
-    // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+     
     await expect(popoverItems.first()).toHaveAttribute('data-blok-focused', 'true');
 
     // First Tab moves focus out of contenteditable (browser default)
@@ -876,19 +876,19 @@ test.describe('toolbox keyboard navigation', () => {
     // Now Tab navigates Flipper items - move to second item
     await page.keyboard.press('Tab');
 
-    // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+     
     await expect(popoverItems.nth(1)).toHaveAttribute('data-blok-focused', 'true');
 
     // Another Tab - move to third item
     await page.keyboard.press('Tab');
 
-    // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+     
     await expect(popoverItems.nth(2)).toHaveAttribute('data-blok-focused', 'true');
 
     // Navigate back with Shift+Tab
     await page.keyboard.press('Shift+Tab');
 
-    // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+     
     await expect(popoverItems.nth(1)).toHaveAttribute('data-blok-focused', 'true');
   });
 
@@ -1028,13 +1028,13 @@ test.describe('toolbox keyboard navigation', () => {
       await page.keyboard.press('ArrowDown');
     }
 
-    // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+     
     await expect(popoverItems.last()).toHaveAttribute('data-blok-focused', 'true');
 
     // Press ArrowDown one more time - should wrap to first item
     await page.keyboard.press('ArrowDown');
 
-    // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+     
     await expect(popoverItems.first()).toHaveAttribute('data-blok-focused', 'true');
   });
 });

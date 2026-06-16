@@ -210,7 +210,7 @@ test.describe('Paste into existing table cell — content integrity', () => {
     await expect(cells).toHaveCount(6);
 
     // Click on cell (0,0) to focus it
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to target first cell
+     
     const firstCell = cells.first();
 
     await firstCell.click();
@@ -345,7 +345,7 @@ test.describe('Paste into existing table cell — content integrity', () => {
 
     await expect(cells).toHaveCount(6);
 
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to target first cell
+     
     const firstCell = cells.first();
 
     await firstCell.click();
@@ -458,7 +458,7 @@ test.describe('Paste into existing table cell — content integrity', () => {
     await expect(cells).toHaveCount(9);
 
     // Click on cell (0,0) to focus it
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to target first cell
+     
     const firstCell = cells.first();
 
     await firstCell.click();
@@ -572,7 +572,7 @@ test.describe('Paste into existing table cell — content integrity', () => {
     await expect(cells).toHaveCount(4);
 
     // Click cell (0,0)
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to target first cell
+     
     const firstCell = cells.first();
 
     await firstCell.click();
@@ -664,7 +664,7 @@ test.describe('Paste into existing table cell — content integrity', () => {
     await expect(cells).toHaveCount(9);
 
     // Click on cell (0,0)
-    // eslint-disable-next-line playwright/no-nth-methods -- targeting first cell
+     
     const firstCell = cells.first();
 
     await firstCell.click();
@@ -706,7 +706,7 @@ test.describe('Paste into existing table cell — content integrity', () => {
     await waitForPasteComplete(page, 'gamma');
 
     // The caret should be in the last pasted cell: row 0, col 2 (the "gamma" cell)
-    // eslint-disable-next-line playwright/no-nth-methods -- nth(2) targets the specific third cell (last pasted)
+     
     const lastPastedCell = cells.nth(2);
     const lastCellEditable = lastPastedCell.locator('[contenteditable="true"]');
 
@@ -747,7 +747,7 @@ test.describe('Paste into existing table cell — content integrity', () => {
     await expect(cells).toHaveCount(6);
 
     // Click cell (0,0) to focus it
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to target first cell
+     
     const firstCell = cells.first();
 
     await firstCell.click();
@@ -779,9 +779,9 @@ test.describe('Paste into existing table cell — content integrity', () => {
     await waitForPasteComplete(page, 'Pasted-A');
 
     // After paste, verify that BOTH pasted cells still have contenteditable="true" elements
-    // eslint-disable-next-line playwright/no-nth-methods -- nth(0) and nth(1) target specific paste-destination cells
+     
     const pastedCell0 = cells.nth(0);
-    // eslint-disable-next-line playwright/no-nth-methods -- nth(1) targets the second cell
+     
     const pastedCell1 = cells.nth(1);
 
     const editable0 = pastedCell0.locator('[data-blok-table-cell-blocks] [contenteditable="true"]');
@@ -838,7 +838,7 @@ test.describe('Paste into existing table cell — content integrity', () => {
     await expect(cells).toHaveCount(4);
 
     // Click cell (0,0) to focus it
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to target first cell
+     
     const firstCell = cells.first();
 
     await firstCell.click();
@@ -882,9 +882,9 @@ test.describe('Paste into existing table cell — content integrity', () => {
     await page.waitForFunction(() => window.blokInstance?.readOnly.isEnabled === false);
 
     // After read-only roundtrip, pasted cells must still be editable
-    // eslint-disable-next-line playwright/no-nth-methods -- nth(0) and nth(1) target specific paste-destination cells
+     
     const pastedCell0 = cells.nth(0);
-    // eslint-disable-next-line playwright/no-nth-methods -- nth(1) targets second cell
+     
     const pastedCell1 = cells.nth(1);
 
     const editable0 = pastedCell0.locator('[data-blok-table-cell-blocks] [contenteditable="true"]');
@@ -939,7 +939,7 @@ test.describe('Paste into existing table cell — content integrity', () => {
 
     await expect(cells).toHaveCount(4);
 
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to target first cell
+     
     const firstCell = cells.first();
     const firstCellEditable = firstCell.locator('[contenteditable="true"]');
 
@@ -964,7 +964,7 @@ test.describe('Paste into existing table cell — content integrity', () => {
     await waitForPasteComplete(page, 'First-A');
 
     // Second paste into the same cell
-    // eslint-disable-next-line playwright/no-nth-methods -- first() targets first cell after re-querying
+     
     const firstCellEditableAfterPaste1 = cells.first().locator('[contenteditable="true"]');
 
     await firstCellEditableAfterPaste1.click();
@@ -987,9 +987,9 @@ test.describe('Paste into existing table cell — content integrity', () => {
     await waitForPasteComplete(page, 'Second-A');
 
     // After second paste, cells must be editable
-    // eslint-disable-next-line playwright/no-nth-methods -- nth(0) and nth(1) target specific paste-destination cells
+     
     const pastedCell0 = cells.nth(0);
-    // eslint-disable-next-line playwright/no-nth-methods -- nth(1) targets second cell
+     
     const pastedCell1 = cells.nth(1);
 
     const editable0 = pastedCell0.locator('[data-blok-table-cell-blocks] [contenteditable="true"]');
@@ -1045,7 +1045,7 @@ test.describe('Paste into existing table cell — content integrity', () => {
     await expect(cells).toHaveCount(4);
 
     // Click the target cell (0,1)
-    // eslint-disable-next-line playwright/no-nth-methods -- nth(1) targets second cell (destination)
+     
     const targetCell = cells.nth(1);
     const targetCellEditable = targetCell.locator('[contenteditable="true"]');
 
@@ -1121,7 +1121,7 @@ test.describe('Paste into existing table cell — content integrity', () => {
     // Intercept the actual clipboard data that would be produced by copying
     // from the first cell's contenteditable. We dispatch a copy event on the
     // source cell and capture what the browser serializes.
-    // eslint-disable-next-line playwright/no-nth-methods -- nth(0) is the source cell
+     
     const sourceCell = cells.nth(0);
     const sourceCellEditable = sourceCell.locator('[contenteditable="true"]');
 
@@ -1176,7 +1176,7 @@ test.describe('Paste into existing table cell — content integrity', () => {
     });
 
     // Click on the target cell (second cell)
-    // eslint-disable-next-line playwright/no-nth-methods -- nth(1) is the destination cell
+     
     const targetCell = cells.nth(1);
     const targetCellEditable = targetCell.locator('[contenteditable="true"]');
 

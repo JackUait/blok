@@ -347,7 +347,7 @@ test.describe('paste-into-container-child replace=true regression', () => {
 
     await expect(cells).toHaveCount(4);
 
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to target cell (0,0)
+     
     const firstCell = cells.first();
 
     await firstCell.click();

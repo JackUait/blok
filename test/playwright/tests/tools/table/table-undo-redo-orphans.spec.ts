@@ -1,4 +1,4 @@
-/* eslint-disable playwright/no-nth-methods */
+ 
 /**
  * Regression test for: undo/redo cascade creates orphan blocks outside the table
  *

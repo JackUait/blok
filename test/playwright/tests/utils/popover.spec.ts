@@ -1206,7 +1206,7 @@ test.describe('popover', () => {
       const nestedItems = nestedPopover.locator('[data-blok-testid="popover-item"]');
 
       // When opening nested popover via keyboard (Enter), first item should be auto-focused for accessibility
-      // eslint-disable-next-line playwright/no-nth-methods -- need to check first item
+       
       await expect(nestedItems.first()).toHaveAttribute('data-blok-focused', 'true');
     });
 

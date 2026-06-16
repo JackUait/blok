@@ -890,7 +890,7 @@ describe('BlockHoverController', () => {
       (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
 
       // Dispatch non-MouseEvent to verify type guard behavior
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Required to test MouseEvent type guard in event handler
+       
       document.dispatchEvent(new Event('mousemove'));
       vi.runAllTimers();
 

@@ -187,11 +187,11 @@ test.describe('Add Controls Edge Cases', () => {
     const cells = page.locator(CELL_SELECTOR);
 
     // Drag to select cells (0,0) to (1,1) to create an active selection
-    // eslint-disable-next-line playwright/no-nth-methods -- nth(0) needed for first cell
+     
     const firstCell = cells.nth(0);
     const firstBox = assertBoundingBox(await firstCell.boundingBox(), 'first cell');
 
-    // eslint-disable-next-line playwright/no-nth-methods -- nth(4) needed for cell at row 1, col 1 in a 3-column table
+     
     const targetCell = cells.nth(4);
     const targetBox = assertBoundingBox(await targetCell.boundingBox(), 'target cell (1,1)');
 

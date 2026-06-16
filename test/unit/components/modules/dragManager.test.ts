@@ -270,7 +270,7 @@ describe('DragManager', () => {
       // Start tracking
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       // Still tracking, not dragging yet
@@ -295,13 +295,13 @@ describe('DragManager', () => {
       // Start tracking
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       // Move past threshold (5px default)
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       expect(dragManager.isDragging).toBe(true);
@@ -333,7 +333,7 @@ describe('DragManager', () => {
       // Right mouse button should not start tracking
       const rightClickEvent = createMouseEvent('mousedown', { button: 2 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(rightClickEvent);
 
       // isDragging should remain false
@@ -352,13 +352,13 @@ describe('DragManager', () => {
       // After cleanup, mousedown should not start tracking
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       // Move past threshold - should not trigger drag
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       expect(dragManager.isDragging).toBe(false);
@@ -379,7 +379,7 @@ describe('DragManager', () => {
 
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       expect(dragManager.isDragging).toBe(false);
@@ -397,7 +397,7 @@ describe('DragManager', () => {
       // Start tracking
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       // Cancel tracking
@@ -406,7 +406,7 @@ describe('DragManager', () => {
       // Move past threshold - should not trigger drag since tracking was cancelled
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       expect(dragManager.isDragging).toBe(false);
@@ -426,13 +426,13 @@ describe('DragManager', () => {
       // Start tracking
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       // Move past threshold
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       expect(dragManager.isDragging).toBe(true);
@@ -463,13 +463,13 @@ describe('DragManager', () => {
       // Start tracking
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       // Move less than threshold (5px)
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 103, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       expect(dragManager.isDragging).toBe(false);
@@ -493,13 +493,13 @@ describe('DragManager', () => {
       // Start tracking
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       // Move exactly threshold (5px)
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 105, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       expect(dragManager.isDragging).toBe(true);
@@ -523,13 +523,13 @@ describe('DragManager', () => {
       // Start tracking
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       // Move 3px in each direction (diagonal distance = sqrt(18) = ~4.24px < 5px threshold)
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 103, clientY: 103 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       expect(dragManager.isDragging).toBe(false);
@@ -537,7 +537,7 @@ describe('DragManager', () => {
       // Move 4px in each direction (diagonal distance = sqrt(32) = ~5.66px > 5px threshold)
       const mouseMoveEvent2 = createMouseEvent('mousemove', { clientX: 104, clientY: 104 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent2);
 
       expect(dragManager.isDragging).toBe(true);
@@ -562,12 +562,12 @@ describe('DragManager', () => {
 
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       expect(wrapper).toHaveAttribute(DATA_ATTR.dragging, 'true');
@@ -590,12 +590,12 @@ describe('DragManager', () => {
 
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       // Verify drag state changed (observable behavior)
@@ -620,12 +620,12 @@ describe('DragManager', () => {
 
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       // Verify drag state changed (observable behavior)
@@ -650,12 +650,12 @@ describe('DragManager', () => {
 
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       // Verify drag state changed (observable behavior)
@@ -680,12 +680,12 @@ describe('DragManager', () => {
 
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       // Verify drag state changed (observable behavior)
@@ -716,12 +716,12 @@ describe('DragManager', () => {
 
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       expect(wrapper).toHaveAttribute(DATA_ATTR.draggingMulti, 'true');
@@ -748,12 +748,12 @@ describe('DragManager', () => {
 
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       // Selection should NOT be cleared for multi-block drag
@@ -837,12 +837,12 @@ describe('DragManager', () => {
 
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       expect(dragManager.isDragging).toBe(true);
@@ -869,12 +869,12 @@ describe('DragManager', () => {
 
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       // Clear previous announce calls
@@ -906,12 +906,12 @@ describe('DragManager', () => {
 
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       expect(wrapper).toHaveAttribute(DATA_ATTR.dragging, 'true');
@@ -936,12 +936,12 @@ describe('DragManager', () => {
 
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       // Preview should be in DOM during drag
@@ -968,7 +968,7 @@ describe('DragManager', () => {
 
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       // Mouse up triggers cleanup
@@ -994,13 +994,13 @@ describe('DragManager', () => {
       // Start drag
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       // Move past threshold
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       // Mock document.elementFromPoint to return target block
@@ -1047,13 +1047,13 @@ describe('DragManager', () => {
       // Start drag
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       // Move past threshold
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       // Mock document.elementFromPoint
@@ -1098,13 +1098,13 @@ describe('DragManager', () => {
       // Start drag
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       // Move past threshold
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       // Mock document.elementFromPoint to return source block
@@ -1138,13 +1138,13 @@ describe('DragManager', () => {
       // Start drag
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       // Move past threshold
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       // Mock document.elementFromPoint
@@ -1188,13 +1188,13 @@ describe('DragManager', () => {
       // Start drag
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       // Move past threshold
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       // Mock document.elementFromPoint
@@ -1254,13 +1254,13 @@ describe('DragManager', () => {
       // Start drag
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       // Move past threshold
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       // Check that multi-block dragging is set (because descendants are included)
@@ -1295,13 +1295,13 @@ describe('DragManager', () => {
       // Start drag
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       // Move past threshold
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       // Should NOT be multi-block drag since sibling is not a descendant
@@ -1328,13 +1328,13 @@ describe('DragManager', () => {
       // Start drag
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       // Move past threshold
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       expect(dragManager.isDragging).toBe(true);
@@ -1448,19 +1448,19 @@ describe('DragManager', () => {
       // Start drag
       const mouseDownEvent = createMouseEvent('mousedown', { clientX: 100, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       dragHandle.dispatchEvent(mouseDownEvent);
 
       // Move past threshold
       const mouseMoveEvent = createMouseEvent('mousemove', { clientX: 110, clientY: 100 });
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(mouseMoveEvent);
 
       expect(dragManager.isDragging).toBe(true);
 
       // Press Alt key
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Alt', bubbles: true }));
 
       expect(wrapper).toHaveAttribute(DATA_ATTR.duplicating, 'true');
@@ -1487,12 +1487,12 @@ describe('DragManager', () => {
       document.dispatchEvent(createMouseEvent('mousemove', { clientX: 110, clientY: 100 }));
 
       // Press Alt key
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Alt', bubbles: true }));
       expect(wrapper).toHaveAttribute(DATA_ATTR.duplicating, 'true');
 
       // Release Alt key
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(new KeyboardEvent('keyup', { key: 'Alt', bubbles: true }));
       expect(wrapper).not.toHaveAttribute(DATA_ATTR.duplicating);
 
@@ -1518,7 +1518,7 @@ describe('DragManager', () => {
       expect(dragManager.isDragging).toBe(false);
 
       // Press Alt key - should not set attribute since not dragging
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Alt', bubbles: true }));
 
       expect(wrapper).not.toHaveAttribute(DATA_ATTR.duplicating);
@@ -1545,7 +1545,7 @@ describe('DragManager', () => {
       document.dispatchEvent(createMouseEvent('mousemove', { clientX: 110, clientY: 100 }));
 
       // Press Alt key
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+       
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Alt', bubbles: true }));
       expect(wrapper).toHaveAttribute(DATA_ATTR.duplicating, 'true');
 

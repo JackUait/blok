@@ -412,7 +412,7 @@ test.describe('Container hierarchy invariant gauntlet', () => {
     await saveAndAssertInvariant(page, 'merge initial');
 
     // Place caret at the very start of the outside paragraph.
-    // eslint-disable-next-line playwright/no-nth-methods -- contenteditable has no role/testid
+     
     const outside = page.locator('[data-blok-id="outside1"] [contenteditable]').first();
 
     await outside.click();
@@ -480,7 +480,7 @@ test.describe('Container hierarchy invariant gauntlet', () => {
     expect(reparentedChild?.parent, 'p-root should live inside the toggle').toBe('tog1');
 
     // Undo — step out. Click into an editable area first so the editor has focus.
-    // eslint-disable-next-line playwright/no-nth-methods -- contenteditable has no role/testid
+     
     await page.locator('[data-blok-id="body1"] [contenteditable]').first().click();
 
     await page.keyboard.press(UNDO_COMBO);
@@ -500,7 +500,7 @@ test.describe('Container hierarchy invariant gauntlet', () => {
     expect(undoneToggle?.content ?? [], 'toggle should not list p-root as a child').not.toContain(reparentedId);
 
     // Re-focus the editor (save() may have stolen focus via a side effect).
-    // eslint-disable-next-line playwright/no-nth-methods -- contenteditable has no role/testid
+     
     await page.locator('[data-blok-id="body1"] [contenteditable]').first().click();
 
     // Wait past the 50ms undo/redo debounce window in the keyboard controller.
@@ -553,7 +553,7 @@ test.describe('Container hierarchy invariant gauntlet', () => {
     ]);
 
     // Focus the editor before keyboard undo.
-    // eslint-disable-next-line playwright/no-nth-methods -- contenteditable has no role/testid
+     
     await page.locator('[data-blok-id="p-a"] [contenteditable]').first().click();
 
     await page.keyboard.press(UNDO_COMBO);
@@ -566,7 +566,7 @@ test.describe('Container hierarchy invariant gauntlet', () => {
       'p-c',
     ]);
 
-    // eslint-disable-next-line playwright/no-nth-methods -- contenteditable has no role/testid
+     
     await page.locator('[data-blok-id="p-a"] [contenteditable]').first().click();
     // Wait past the 50ms undo/redo debounce window in the keyboard controller.
     // eslint-disable-next-line playwright/no-wait-for-timeout -- needed to clear the 50ms debounce
@@ -621,7 +621,7 @@ test.describe('Container hierarchy invariant gauntlet', () => {
     expect(afterAltDrag.blocks, 'alt-drag should duplicate to 4 blocks').toHaveLength(4);
 
     // Focus editor before keyboard undo.
-    // eslint-disable-next-line playwright/no-nth-methods -- contenteditable has no role/testid
+     
     await page.locator('[data-blok-id="p-a"] [contenteditable]').first().click();
 
     await page.keyboard.press(UNDO_COMBO);

@@ -274,7 +274,7 @@ test.describe('Table Configuration Options', () => {
     // 4. Wait for the table to appear and click into the first cell
     await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
 
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+     
     const firstCellEditable = page.locator(CELL_SELECTOR).first().locator('[contenteditable="true"]').first();
 
     await firstCellEditable.click();

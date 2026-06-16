@@ -203,7 +203,7 @@ test.describe('Read-Only Mode Toggle Roundtrip', () => {
     }
 
     // 8. Verify no contenteditable='true' exists inside the table cells (cells are non-editable)
-    // eslint-disable-next-line playwright/no-nth-methods -- Need first cell to check readonly attribute
+     
     const firstCell = cells.first();
     const contentEditable = firstCell.locator('[contenteditable]');
 
@@ -253,7 +253,7 @@ test.describe('Read-Only Mode Toggle Roundtrip', () => {
     // 2. Verify cells are editable in initial edit mode
     const cells = page.locator(CELL_SELECTOR);
 
-    // eslint-disable-next-line playwright/no-nth-methods -- Need first cell to check edit mode attribute
+     
     const firstCellEditable = cells.first().locator('[contenteditable]');
 
     await expect(firstCellEditable).toHaveAttribute('contenteditable', 'true');
@@ -308,17 +308,17 @@ test.describe('Read-Only Mode Toggle Roundtrip', () => {
     await expect(cellEditableAfterToggleOff).toHaveAttribute('contenteditable', 'true');
 
     // 14. Click first cell to trigger grip appearance (grips are shown on cell interaction)
-    // eslint-disable-next-line playwright/no-nth-methods -- Need first cell to trigger grip controls
+     
     await cells.first().click();
 
     // 15. Verify column grip is restored and visible after returning to edit mode
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+     
     const colGripRestored = page.locator(COL_GRIP_SELECTOR).first();
 
     await expect(colGripRestored).toBeVisible({ timeout: 2000 });
 
     // 16. Verify row grip is restored and visible after returning to edit mode
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+     
     const rowGripRestored = page.locator(ROW_GRIP_SELECTOR).first();
 
     await expect(rowGripRestored).toBeVisible({ timeout: 2000 });

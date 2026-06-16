@@ -170,7 +170,7 @@ test.describe('Drag-to-Reorder Rows and Columns', () => {
     await firstCell.click();
 
     // Wait for row grip to appear
-    // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get the first row grip
+     
     const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
 
     await expect(rowGrip).toBeVisible({ timeout: 2000 });
@@ -223,7 +223,7 @@ test.describe('Drag-to-Reorder Rows and Columns', () => {
     await firstCell.click();
 
     // Wait for column grip to appear
-    // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get the first column grip
+     
     const colGrip = page.locator(COL_GRIP_SELECTOR).first();
 
     await expect(colGrip).toBeVisible({ timeout: 2000 });
@@ -275,7 +275,7 @@ test.describe('Drag-to-Reorder Rows and Columns', () => {
 
     await firstCell.click();
 
-    // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get the first row grip
+     
     const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
 
     await expect(rowGrip).toBeVisible({ timeout: 2000 });
@@ -327,7 +327,7 @@ test.describe('Drag-to-Reorder Rows and Columns', () => {
 
     await firstCell.click();
 
-    // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get the first row grip
+     
     const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
 
     await expect(rowGrip).toBeVisible({ timeout: 2000 });

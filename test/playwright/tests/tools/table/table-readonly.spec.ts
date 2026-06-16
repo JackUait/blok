@@ -224,7 +224,7 @@ test.describe('Read-Only Mode', () => {
 
     // Verify cells are not editable — in readonly mode cells render as plain text
     // without any contenteditable elements
-    // eslint-disable-next-line playwright/no-nth-methods -- Need first cell to check readonly attribute
+     
     const firstCell = cells.first();
     const editableElements = firstCell.locator('[contenteditable="true"]');
 
@@ -342,9 +342,9 @@ test.describe('Read-Only Mode', () => {
     await expect(headingCols).toHaveCount(2);
 
     // Verify heading column content is rendered
-    // eslint-disable-next-line playwright/no-nth-methods -- nth(0) is the clearest way to target first heading column
+     
     await expect(headingCols.nth(0)).toContainText('ColH1');
-    // eslint-disable-next-line playwright/no-nth-methods -- last() is the clearest way to target last heading column
+     
     await expect(headingCols.last()).toContainText('ColH2');
   });
 
@@ -464,7 +464,7 @@ test.describe('Read-Only Mode', () => {
     await expect(cells.filter({ hasText: 'Block Content D' })).toHaveCount(1);
 
     // No contenteditable attributes on blocks inside read-only cells (should be false)
-    // eslint-disable-next-line playwright/no-nth-methods -- Need first cell to check readonly attribute
+     
     const firstCell = cells.first();
     const contentEditable = firstCell.locator('[contenteditable]');
 

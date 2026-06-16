@@ -1661,7 +1661,7 @@ describe('TableAddControls', () => {
       expect(document.body.style.cursor).toBe('');
     });
 
-    // eslint-disable-next-line internal-unit-test/require-behavior-verification
+     
     it('calls onDragEnd on pointercancel when drag was active', () => {
       ({ wrapper, grid } = createGridAndWrapper(3, 2));
 
@@ -1684,7 +1684,7 @@ describe('TableAddControls', () => {
       expect(callbacks.onDragEnd).toHaveBeenCalledTimes(1);
     });
 
-    // eslint-disable-next-line internal-unit-test/require-behavior-verification
+     
     it('nulls dragState so subsequent interactions work after pointercancel', () => {
       ({ wrapper, grid } = createGridAndWrapper(3, 2));
 
@@ -2469,7 +2469,7 @@ describe('TableAddControls', () => {
       // Move cursor near the visible right edge (x=640, near wrapper right=650)
        
       wrapper.dispatchEvent(
-        new MouseEvent('mousemove', { clientX: 640, clientY: 50, bubbles: true }) // eslint-disable-line internal-unit-test/no-direct-event-dispatch
+        new MouseEvent('mousemove', { clientX: 640, clientY: 50, bubbles: true })  
       );
 
       const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
@@ -2506,7 +2506,7 @@ describe('TableAddControls', () => {
       // But it is 280px from grid right (900) — would fail with the old code
        
       wrapper.dispatchEvent(
-        new MouseEvent('mousemove', { clientX: 620, clientY: 50, bubbles: true }) // eslint-disable-line internal-unit-test/no-direct-event-dispatch
+        new MouseEvent('mousemove', { clientX: 620, clientY: 50, bubbles: true })  
       );
 
       const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;

@@ -520,7 +520,7 @@ describe('InputManager', () => {
       nativeInput.focus();
       nativeInput.value = 'test value';
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- No DOM method exists to trigger input events in unit tests (unlike .focus() for focus). user-event library not available.
+       
       nativeInput.dispatchEvent(new Event('input', { bubbles: true }));
 
       expect(onInputEvent).toHaveBeenCalled();

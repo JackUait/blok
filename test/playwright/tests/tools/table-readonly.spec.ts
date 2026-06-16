@@ -196,7 +196,7 @@ test.describe('table readonly mode', () => {
     }
 
     // Verify cells are not editable in readonly mode
-    // eslint-disable-next-line playwright/no-nth-methods -- Need first cell to check readonly attribute
+     
     const firstCell = cells.first();
     const contentEditable = firstCell.locator('[contenteditable]');
 
@@ -274,7 +274,7 @@ test.describe('table readonly mode', () => {
     }
 
     // Verify cells are not editable in readonly mode
-    // eslint-disable-next-line playwright/no-nth-methods -- Need first cell to check readonly attribute
+     
     const firstCell = cells.first();
     const contentEditable = firstCell.locator('[contenteditable]');
 

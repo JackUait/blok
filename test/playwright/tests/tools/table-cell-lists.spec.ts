@@ -166,7 +166,7 @@ test.describe('table cells — always-blocks model', () => {
       // Each blocks container should have at least one block element inside
       // Block holders use data-blok-element attribute
       for (let i = 0; i < 4; i++) {
-        // eslint-disable-next-line playwright/no-nth-methods -- iterating over all cells by index
+         
         const container = cellBlocksContainers.nth(i);
         const blocks = container.locator(BLOCK_ELEMENT_SELECTOR);
 
@@ -178,7 +178,7 @@ test.describe('table cells — always-blocks model', () => {
       await create2x2Table(page);
 
       // Click into first cell's editable area (the paragraph block inside the cell)
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstEditable = page.locator(CELL_EDITABLE_SELECTOR).first();
 
       await firstEditable.click();
@@ -191,7 +191,7 @@ test.describe('table cells — always-blocks model', () => {
       await create2x2Table(page);
 
       // Click into first cell's editable area
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstEditable = page.locator(CELL_EDITABLE_SELECTOR).first();
 
       await firstEditable.click();
@@ -204,7 +204,7 @@ test.describe('table cells — always-blocks model', () => {
       await page.keyboard.type('Cell 2');
 
       // Verify the second cell contains the typed text
-      // eslint-disable-next-line playwright/no-nth-methods -- nth(1) needed to target second cell's editable
+       
       const secondEditable = page.locator(CELL_EDITABLE_SELECTOR).nth(1);
 
       await expect(secondEditable).toContainText('Cell 2');
@@ -220,7 +220,7 @@ test.describe('table cells — always-blocks model', () => {
       const cellCount = 4;
 
       for (let i = 0; i < cellCount; i++) {
-        // eslint-disable-next-line playwright/no-nth-methods -- iterating over all cells by index
+         
         const cell = cells.nth(i);
         const blocksContainer = cell.locator(CELL_BLOCKS_SELECTOR);
 
@@ -238,7 +238,7 @@ test.describe('table cells — always-blocks model', () => {
       await create2x2Table(page);
 
       // Click into first cell's editable area
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstEditable = page.locator(CELL_EDITABLE_SELECTOR).first();
 
       await firstEditable.click();
@@ -251,7 +251,7 @@ test.describe('table cells — always-blocks model', () => {
       await page.keyboard.type('Second line');
 
       // Verify both lines of text appear within the first cell
-      // eslint-disable-next-line playwright/no-nth-methods -- first() targets the first cell
+       
       const firstCell = page.locator(CELL_SELECTOR).first();
 
       await expect(firstCell).toContainText('First line');
@@ -279,7 +279,7 @@ test.describe('table cells — always-blocks model', () => {
     test('paragraph inside table cell shows no placeholder when focused', async ({ page }) => {
       await create2x2Table(page);
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstEditable = page.locator(CELL_EDITABLE_SELECTOR).first();
 
       await firstEditable.click();
@@ -292,7 +292,7 @@ test.describe('table cells — always-blocks model', () => {
     test('new paragraph created by Enter in table cell shows no placeholder', async ({ page }) => {
       await create2x2Table(page);
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstEditable = page.locator(CELL_EDITABLE_SELECTOR).first();
 
       await firstEditable.click();
@@ -302,14 +302,14 @@ test.describe('table cells — always-blocks model', () => {
       await page.keyboard.press('Enter');
 
       // The new paragraph's editable should have no placeholder
-      // eslint-disable-next-line playwright/no-nth-methods -- second editable in cell is the new paragraph
+       
       const firstCell = page.locator(CELL_SELECTOR).first();
       const editables = firstCell.locator('[contenteditable="true"]');
 
       // Wait for the new editable to appear
       await expect(editables).toHaveCount(2);
 
-      // eslint-disable-next-line playwright/no-nth-methods -- nth(1) targets the second (new) editable
+       
       const newEditable = editables.nth(1);
 
       const content = await getBeforePseudoContent(newEditable);
@@ -320,7 +320,7 @@ test.describe('table cells — always-blocks model', () => {
     test('paragraph placeholder does not appear after clearing text in table cell', async ({ page }) => {
       await create2x2Table(page);
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstEditable = page.locator(CELL_EDITABLE_SELECTOR).first();
 
       await firstEditable.click();
@@ -347,7 +347,7 @@ test.describe('table cells — always-blocks model', () => {
       await create2x2Table(page);
 
       // Click into a cell's editable area to give it focus
-      // eslint-disable-next-line playwright/no-nth-methods -- first() targets the first cell
+       
       const firstEditable = page.locator(CELL_EDITABLE_SELECTOR).first();
 
       await firstEditable.click();
@@ -371,7 +371,7 @@ test.describe('table cells — always-blocks model', () => {
       await create2x2Table(page);
 
       // Click into the second cell (last cell of first row)
-      // eslint-disable-next-line playwright/no-nth-methods -- nth(1) needed to target second cell's editable
+       
       const secondEditable = page.locator(CELL_EDITABLE_SELECTOR).nth(1);
 
       await secondEditable.click();
@@ -382,7 +382,7 @@ test.describe('table cells — always-blocks model', () => {
       await page.keyboard.type('Start of row 2');
 
       // Verify text landed in the first cell of the second row (cell index 2)
-      // eslint-disable-next-line playwright/no-nth-methods -- nth(2) targets the third cell (first cell of second row)
+       
       const thirdEditable = page.locator(CELL_EDITABLE_SELECTOR).nth(2);
 
       await expect(thirdEditable).toContainText('Start of row 2');

@@ -606,7 +606,7 @@ test.describe('yjs undo/redo', () => {
       await expect(
         page
           .locator(CALLOUT_SELECTOR)
-          // eslint-disable-next-line playwright/no-nth-methods -- Need the first contenteditable inside the callout (the seeded child paragraph)
+           
           .locator('[contenteditable="true"]').first()
       ).toContainText('Preserve my text through callout conversion');
 
@@ -753,7 +753,7 @@ test.describe('yjs undo/redo', () => {
             // Code uses contenteditable="plaintext-only"; paragraph/header/list/etc. use "true".
             // This selector is portable across both. `.first()` grabs the text holder (callout
             // nests its child paragraph's editable, so the first match is the seeded child).
-            // eslint-disable-next-line playwright/no-nth-methods -- portable across all tool layouts
+             
             .locator('[contenteditable]:not([contenteditable="false"])').first()
         ).toContainText(sourceText);
       });
@@ -838,7 +838,7 @@ test.describe('yjs undo/redo', () => {
         await expect(
           page
             .locator(targetSelector)
-            // eslint-disable-next-line playwright/no-nth-methods -- See paragraph matrix above
+             
             .locator('[contenteditable]:not([contenteditable="false"])').first()
         ).toContainText(sourceText);
 
@@ -850,7 +850,7 @@ test.describe('yjs undo/redo', () => {
         await expect(
           page
             .locator(sourceSelector)
-            // eslint-disable-next-line playwright/no-nth-methods -- See paragraph matrix above
+             
             .locator('[contenteditable]:not([contenteditable="false"])').first()
         ).toContainText(sourceText);
       });
@@ -2424,7 +2424,7 @@ test.describe('yjs undo/redo', () => {
       const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
 
       // Hover on paragraph to show toolbar and insert header via toolbox
-      // eslint-disable-next-line playwright/no-nth-methods
+       
       const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
       await paragraph.hover();
 

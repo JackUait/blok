@@ -186,7 +186,7 @@ test.describe('Keyboard Navigation Edge Cases', () => {
     });
 
     // 2. Click the last cell (row 1, col 1)
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to access the first editable
+     
     await getCellEditable(page, 1, 1).first().click();
 
     // 3. Press Tab
@@ -221,7 +221,7 @@ test.describe('Keyboard Navigation Edge Cases', () => {
     });
 
     // 2. Click the first cell (row 0, col 0)
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to access the first editable
+     
     await getCellEditable(page, 0, 0).first().click();
 
     // 3. Press Shift+Tab
@@ -252,7 +252,7 @@ test.describe('Keyboard Navigation Edge Cases', () => {
     });
 
     // 2. Click the first cell's contenteditable area
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to access the first editable
+     
     await getCellEditable(page, 0, 0).first().click();
 
     // 3. Type 'Line one'
@@ -268,7 +268,7 @@ test.describe('Keyboard Navigation Edge Cases', () => {
     await expect(page.locator('[data-blok-table-row]')).toHaveCount(2);
 
     // Verify both lines appear inside the first cell
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+     
     const firstCell = page.locator(CELL_SELECTOR).first();
 
     await expect(firstCell).toContainText('Line one');
@@ -302,7 +302,7 @@ test.describe('Keyboard Navigation Edge Cases', () => {
     });
 
     // 2. Click the first cell's contenteditable area
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to access the first editable
+     
     await getCellEditable(page, 0, 0).first().click();
 
     // 3. Move cursor to the very start of the cell content (Home key)
@@ -315,7 +315,7 @@ test.describe('Keyboard Navigation Edge Cases', () => {
     await expect(page.locator('[data-blok-table-row]')).toHaveCount(2);
 
     // Verify: still 2 cols per row — cells must not have been merged
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first row
+     
     const firstRow = page.locator('[data-blok-table-row]').first();
 
     await expect(firstRow.locator(CELL_SELECTOR)).toHaveCount(2);

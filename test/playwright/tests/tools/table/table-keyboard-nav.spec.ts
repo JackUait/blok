@@ -163,7 +163,7 @@ test.describe('Keyboard Navigation', () => {
     await createTable2x2(page);
 
     // 2. Click the first cell's contenteditable area
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+     
     await getCellEditable(page, 0, 0).first().click();
 
     // 3. Press Tab
@@ -197,7 +197,7 @@ test.describe('Keyboard Navigation', () => {
     await createTable2x2(page);
 
     // 2. Click the last cell in the first row (row 0, col 1)
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to access the first editable
+     
     await getCellEditable(page, 0, 1).first().click();
 
     // 3. Press Tab
@@ -231,7 +231,7 @@ test.describe('Keyboard Navigation', () => {
     await createTable2x2(page);
 
     // 2. Click the last cell (row 1, col 1)
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to access the first editable
+     
     await getCellEditable(page, 1, 1).first().click();
 
     // 3. Press Tab
@@ -266,7 +266,7 @@ test.describe('Keyboard Navigation', () => {
     await createTable2x2(page);
 
     // 2. Click the second cell (row 0, col 1)
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to access the first editable
+     
     await getCellEditable(page, 0, 1).first().click();
 
     // 3. Press Shift+Tab
@@ -300,7 +300,7 @@ test.describe('Keyboard Navigation', () => {
     await createTable2x2(page);
 
     // 2. Click the first cell of the second row (row 1, col 0)
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to access the first editable
+     
     await getCellEditable(page, 1, 0).first().click();
 
     // 3. Press Shift+Tab
@@ -351,7 +351,7 @@ test.describe('Keyboard Navigation', () => {
     });
 
     // 2. Click into the editable area of cell (0,0) to focus it
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to access the first editable
+     
     await getCellEditable(page, 0, 0).first().click();
 
     // 3. Press Enter to create a second block within the same cell

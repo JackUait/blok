@@ -499,19 +499,19 @@ test.describe('inline toolbar', () => {
       expect(itemsCount).toBeGreaterThan(1);
 
       // First item should NOT be focused by default (inline toolbar doesn't auto-focus)
-      // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+       
       await expect(toolbarItems.first()).not.toHaveAttribute('data-blok-focused', 'true');
 
       // Press Tab to focus first item
       await page.keyboard.press('Tab');
 
-      // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+       
       await expect(toolbarItems.first()).toHaveAttribute('data-blok-focused', 'true');
 
       // Navigate with Tab to next item
       await page.keyboard.press('Tab');
 
-      // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+       
       await expect(toolbarItems.nth(1)).toHaveAttribute('data-blok-focused', 'true');
     });
 
@@ -545,19 +545,19 @@ test.describe('inline toolbar', () => {
       // Press Tab to focus first item (inline toolbar doesn't auto-focus)
       await page.keyboard.press('Tab');
 
-      // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+       
       await expect(toolbarItems.first()).toHaveAttribute('data-blok-focused', 'true');
 
       // Navigate down
       await page.keyboard.press('ArrowDown');
 
-      // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+       
       await expect(toolbarItems.nth(1)).toHaveAttribute('data-blok-focused', 'true');
 
       // Navigate back up
       await page.keyboard.press('ArrowUp');
 
-      // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+       
       await expect(toolbarItems.first()).toHaveAttribute('data-blok-focused', 'true');
     });
 
@@ -776,7 +776,7 @@ test.describe('inline toolbar', () => {
       // Press Tab to focus first item
       await page.keyboard.press('Tab');
 
-      // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
+       
       await expect(toolbarItems.first()).toHaveAttribute('data-blok-focused', 'true');
 
       // Press Shift+ArrowDown - should not navigate (used for extending selection)
@@ -1304,9 +1304,9 @@ test.describe('inline toolbar', () => {
       },
     });
 
-    // eslint-disable-next-line playwright/no-nth-methods -- Testing requires selecting specific paragraph blocks
+     
     const firstParagraph = page.locator(PARAGRAPH_SELECTOR).first();
-    // eslint-disable-next-line playwright/no-nth-methods -- Testing requires selecting specific paragraph blocks
+     
     const secondParagraph = page.locator(PARAGRAPH_SELECTOR).nth(1);
 
     await expect(firstParagraph).toBeVisible();
@@ -1445,9 +1445,9 @@ test.describe('inline toolbar', () => {
       },
     });
 
-    // eslint-disable-next-line playwright/no-nth-methods -- Testing requires selecting specific paragraph blocks
+     
     const firstParagraph = page.locator(PARAGRAPH_SELECTOR).first();
-    // eslint-disable-next-line playwright/no-nth-methods -- Testing requires selecting specific paragraph blocks
+     
     const secondParagraph = page.locator(PARAGRAPH_SELECTOR).nth(1);
 
     // Rapidly change selections - the test verifies no errors occur with rapid changes
@@ -1519,9 +1519,9 @@ test.describe('inline toolbar', () => {
       },
     });
 
-    // eslint-disable-next-line playwright/no-nth-methods -- Testing requires selecting specific paragraph blocks
+     
     const firstParagraph = page.locator(PARAGRAPH_SELECTOR).first();
-    // eslint-disable-next-line playwright/no-nth-methods -- Testing requires selecting specific paragraph blocks
+     
     const secondParagraph = page.locator(PARAGRAPH_SELECTOR).nth(1);
     const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
 
@@ -1559,7 +1559,7 @@ test.describe('inline toolbar', () => {
       },
     });
 
-    // eslint-disable-next-line playwright/no-nth-methods -- Testing requires selecting specific paragraph blocks
+     
     const firstParagraph = page.locator(PARAGRAPH_SELECTOR).first();
 
     await selectText(firstParagraph, 'text');

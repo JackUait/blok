@@ -161,7 +161,7 @@ test.describe('Column Resizing', () => {
     });
 
     // Locate the first data-blok-table-resize handle and verify it is attached
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first handle
+     
     const handle = page.locator(RESIZE_HANDLE_SELECTOR).first();
 
     await expect(handle).toBeAttached();
@@ -209,7 +209,7 @@ test.describe('Column Resizing', () => {
     });
 
     // Locate the first data-blok-table-resize handle
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first handle
+     
     const handle = page.locator(RESIZE_HANDLE_SELECTOR).first();
 
     await expect(handle).toBeAttached();
@@ -257,7 +257,7 @@ test.describe('Column Resizing', () => {
     });
 
     // Locate the first data-blok-table-resize handle
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first handle
+     
     const handle = page.locator(RESIZE_HANDLE_SELECTOR).first();
 
     await expect(handle).toBeAttached();
@@ -304,7 +304,7 @@ test.describe('Column Resizing', () => {
     // Verify handles exist before toggling readOnly
     const handlesBefore = page.locator(RESIZE_HANDLE_SELECTOR);
 
-    // eslint-disable-next-line playwright/no-nth-methods -- nth(0) is the clearest way to verify at least one handle exists
+     
     await expect(handlesBefore.nth(0)).toBeAttached();
 
     // Toggle readOnly mode via blokInstance.readOnly.toggle()
@@ -379,7 +379,7 @@ test.describe('Column Resizing', () => {
     });
 
     // Locate the first data-blok-table-resize handle
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first handle
+     
     const handle = page.locator(RESIZE_HANDLE_SELECTOR).first();
 
     await expect(handle).toBeAttached();
@@ -432,7 +432,7 @@ test.describe('Column Resizing', () => {
     expect(hasPixelWidthBefore).toBe(false);
 
     // Locate the first data-blok-table-resize handle
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first handle
+     
     const handle = page.locator(RESIZE_HANDLE_SELECTOR).first();
 
     await expect(handle).toBeAttached();

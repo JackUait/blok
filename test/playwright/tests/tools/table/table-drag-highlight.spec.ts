@@ -168,11 +168,11 @@ test.describe('Drag Reorder Selection Highlighting', () => {
     await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
 
     // 2. Click first cell's contenteditable to show row grip
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get the first cell
+     
     await page.locator(CELL_SELECTOR).first().locator('[contenteditable="true"]').first().click();
 
     // Wait for row grip to become visible
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get the first visible grip
+     
     const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
 
     await expect(rowGrip).toBeVisible({ timeout: 2000 });
@@ -227,11 +227,11 @@ test.describe('Drag Reorder Selection Highlighting', () => {
     await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
 
     // 2. Click first cell's contenteditable to show column grip for col 0
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get the first cell
+     
     await page.locator(CELL_SELECTOR).first().locator('[contenteditable="true"]').first().click();
 
     // Wait for column grip to become visible
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get the first visible grip
+     
     const colGrip = page.locator(COL_GRIP_SELECTOR).first();
 
     await expect(colGrip).toBeVisible({ timeout: 2000 });

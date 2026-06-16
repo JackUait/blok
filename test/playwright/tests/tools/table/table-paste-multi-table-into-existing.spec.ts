@@ -241,7 +241,7 @@ test.describe('Multi-table paste into existing table — content preservation', 
     await expect(cells).toHaveCount(4);
 
     // Click on cell (0,0) to focus it
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to target first cell
+     
     const firstCell = cells.first();
 
     await firstCell.click();
@@ -344,7 +344,7 @@ test.describe('Multi-table paste into existing table — content preservation', 
     await expect(cells).toHaveCount(4);
 
     // Click on cell (0,0) to focus it
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to target first cell
+     
     const firstCell = cells.first();
 
     await firstCell.click();

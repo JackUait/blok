@@ -103,7 +103,7 @@ test.describe('ui.toolbar-nested-list-positioning', () => {
     // Hover over a nested list item
     const nestedItems = page.locator(LIST_ITEM_SELECTOR);
     // Get the second nested item (nested item 1.2)
-    // eslint-disable-next-line playwright/no-nth-methods
+     
     const targetItem = nestedItems.nth(1);
 
     await targetItem.hover();
@@ -147,7 +147,7 @@ test.describe('ui.toolbar-nested-list-positioning', () => {
 
     // Hover over top-level item first
     const listItems = page.locator(LIST_ITEM_SELECTOR);
-    // eslint-disable-next-line playwright/no-nth-methods
+     
     const topLevelItem = listItems.nth(0);
     await topLevelItem.hover();
 
@@ -155,7 +155,7 @@ test.describe('ui.toolbar-nested-list-positioning', () => {
     const initialTransform = await toolbarActions.evaluate((el) => el.style.transform);
 
     // Now hover over nested item
-    // eslint-disable-next-line playwright/no-nth-methods
+     
     const nestedItem = listItems.nth(1);
     await nestedItem.hover();
 
@@ -195,7 +195,7 @@ test.describe('ui.toolbar-nested-list-positioning', () => {
 
     // Hover over the deeply nested item (Level 3)
     const listItems = page.locator(LIST_ITEM_SELECTOR);
-    // eslint-disable-next-line playwright/no-nth-methods
+     
     const deepestItem = listItems.nth(2);
 
     await deepestItem.hover();
@@ -237,19 +237,19 @@ test.describe('ui.toolbar-nested-list-positioning', () => {
     const toolbar = page.locator(TOOLBAR_SELECTOR);
 
     // Rapidly hover over different items
-    // eslint-disable-next-line playwright/no-nth-methods
+     
     await listItems.nth(0).hover();
     await expect(toolbar).toBeVisible();
 
-    // eslint-disable-next-line playwright/no-nth-methods
+     
     await listItems.nth(1).hover();
     await expect(toolbar).toBeVisible();
 
-    // eslint-disable-next-line playwright/no-nth-methods
+     
     await listItems.nth(2).hover();
     await expect(toolbar).toBeVisible();
 
-    // eslint-disable-next-line playwright/no-nth-methods
+     
     await listItems.nth(3).hover();
 
     // Toolbar should still work correctly
@@ -288,7 +288,7 @@ test.describe('ui.toolbar-nested-list-positioning', () => {
     });
 
     const listItems = page.locator(LIST_ITEM_SELECTOR);
-    // eslint-disable-next-line playwright/no-nth-methods
+     
     const nestedItem = listItems.nth(1);
 
     await nestedItem.hover();
@@ -324,7 +324,7 @@ test.describe('ui.toolbar-nested-list-positioning', () => {
     });
 
     const listItems = page.locator(LIST_ITEM_SELECTOR);
-    // eslint-disable-next-line playwright/no-nth-methods
+     
     const targetItem = listItems.nth(0);
 
     // Get the position of the list item (including marker area)
@@ -359,7 +359,7 @@ test.describe('ui.toolbar-nested-list-positioning', () => {
     });
 
     const listItems = page.locator(LIST_ITEM_SELECTOR);
-    // eslint-disable-next-line playwright/no-nth-methods
+     
     const nestedItem = listItems.nth(1);
 
     await nestedItem.hover();
@@ -394,7 +394,7 @@ test.describe('ui.toolbar-nested-list-positioning', () => {
     });
 
     const listItems = page.locator(LIST_ITEM_SELECTOR);
-    // eslint-disable-next-line playwright/no-nth-methods
+     
     const firstNested = listItems.nth(1);
 
     await firstNested.hover();

@@ -420,7 +420,7 @@ describe('DatabaseTabBar', () => {
       const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
       tab.dispatchEvent(new PointerEvent('pointerdown', { clientX: 50, clientY: 15, bubbles: true }));
       document.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 15 }));
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch
+       
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
       expect(onReorder).not.toHaveBeenCalled();
       bar.destroy();
@@ -673,7 +673,7 @@ describe('DatabaseTabBar', () => {
       rename.click();
       const input = tab.querySelector('[data-blok-database-tab-rename-input]') as HTMLInputElement;
       input.value = 'Sprint';
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch
+       
       input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       expect(onRename).not.toHaveBeenCalled();
       expect(tab.querySelector('[data-blok-database-tab-name]')?.textContent).toBe('Board');

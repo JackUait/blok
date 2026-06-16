@@ -1,4 +1,4 @@
-/* eslint-disable playwright/no-nth-methods */
+ 
 // E2E tests for the table corner drag handle
 
 import { expect, test } from '@playwright/test';

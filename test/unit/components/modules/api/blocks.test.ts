@@ -528,7 +528,7 @@ describe('BlocksAPI', () => {
       expect(blok.Toolbar.close).toHaveBeenCalled();
     });
 
-    it('does not insert default block from delete — removeBlock handles it', async () => { // eslint-disable-line internal-unit-test/require-behavior-verification
+    it('does not insert default block from delete — removeBlock handles it', async () => {  
       const block = createBlockStub({ id: 'only' });
       const { blocksApi, blockManager, blok } = createBlocksApi({ blocks: [ block ] });
 

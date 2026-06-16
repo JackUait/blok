@@ -1,4 +1,4 @@
-/* eslint-disable playwright/no-nth-methods */
+ 
 // Regression: cell selection must NOT appear in readonly mode
 
 import { expect, test } from '@playwright/test';

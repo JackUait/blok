@@ -225,7 +225,7 @@ test.describe('Table Scroll Overflow', () => {
     expect(hasOverflowAutoBefore).toBe(false);
 
     // 3. Locate the first resize handle and drag it 200px to the right
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first handle
+     
     const handle = page.locator(RESIZE_HANDLE_SELECTOR).first();
 
     await expect(handle).toBeAttached();

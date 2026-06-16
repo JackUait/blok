@@ -113,7 +113,7 @@ const placeCaretAtEnd = async (locator: Locator): Promise<void> => {
 
 const selectBlocksWithShift = async (page: Page, startIndex: number, count: number): Promise<void> => {
   const startBlock = getBlockByIndex(page, startIndex);
-  // eslint-disable-next-line playwright/no-nth-methods -- Need first contenteditable element in block
+   
   const contentEditable = startBlock.locator('[contenteditable="true"]').first();
 
   await contentEditable.click();

@@ -167,7 +167,7 @@ test.describe('Paste HTML Table - Additional Scenarios', () => {
     });
 
     // Click the first paragraph contenteditable to focus it
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to target first contenteditable
+     
     const paragraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [contenteditable="true"]`).first();
 
     await paragraph.click();
@@ -202,7 +202,7 @@ test.describe('Paste HTML Table - Additional Scenarios', () => {
     });
 
     // Click the first paragraph contenteditable to focus it
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to target first contenteditable
+     
     const paragraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [contenteditable="true"]`).first();
 
     await paragraph.click();
@@ -245,7 +245,7 @@ test.describe('Paste HTML Table - Additional Scenarios', () => {
     });
 
     // Click the first cell's contenteditable to focus it
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to target first cell
+     
     const firstCellEditable = page.locator(CELL_SELECTOR).first().locator('[contenteditable="true"]').first();
 
     await firstCellEditable.click();

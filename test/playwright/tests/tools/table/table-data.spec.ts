@@ -310,7 +310,7 @@ test.describe('Data Save and Load', () => {
       },
     });
 
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell editable
+     
     const firstCellEditable = page.locator(CELL_SELECTOR).first().locator('[contenteditable="true"]').first();
 
     await firstCellEditable.click();
@@ -357,13 +357,13 @@ test.describe('Data Save and Load', () => {
     });
 
     // 2. Click first cell to show row grip
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+     
     const firstCell = page.locator(CELL_SELECTOR).first();
 
     await firstCell.click();
 
     // 3. Click row grip to open popover
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible row grip
+     
     const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
 
     await expect(rowGrip).toBeVisible({ timeout: 2000 });

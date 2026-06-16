@@ -93,7 +93,7 @@ describe('BasePasteHandler — multi-item paste undo grouping', () => {
     vi.restoreAllMocks();
   });
 
-  it('wraps the multi-item paste loop in BlockManager.transactForTool so one Cmd+Z undoes the whole paste', async () => { // eslint-disable-line internal-unit-test/require-behavior-verification
+  it('wraps the multi-item paste loop in BlockManager.transactForTool so one Cmd+Z undoes the whole paste', async () => {  
     const { blok, transactForToolMock, pasteMock } = createBlok();
     const handler = new TestHandler(blok, {} as ToolRegistry, {} as SanitizerConfigBuilder);
 

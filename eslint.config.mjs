@@ -1324,13 +1324,13 @@ export default defineConfig(
       '@typescript-eslint/no-non-null-assertion': 'off',
       // Prevent .dataset assignment, prefer .setAttribute()
       'internal-dom/no-dataset-assignment': 'error',
-      // Encourage behavior-driven testing
-      'internal-unit-test/no-direct-event-dispatch': 'warn',
-      'internal-unit-test/no-implementation-detail-spying': 'warn',
-      'internal-unit-test/no-prototype-property-binding': 'warn',
-      'internal-unit-test/no-instance-property-deletion': 'warn',
-      'internal-unit-test/prefer-public-api': 'warn',
-      'internal-unit-test/require-behavior-verification': 'warn',
+      // Encourage behavior-driven testing (advisory rules disabled: too noisy)
+      'internal-unit-test/no-direct-event-dispatch': 'off',
+      'internal-unit-test/no-implementation-detail-spying': 'off',
+      'internal-unit-test/no-prototype-property-binding': 'off',
+      'internal-unit-test/no-instance-property-deletion': 'off',
+      'internal-unit-test/prefer-public-api': 'off',
+      'internal-unit-test/require-behavior-verification': 'off',
       '@typescript-eslint/no-magic-numbers': 'off',
       'no-restricted-syntax': 'off',
       '@typescript-eslint/no-deprecated': 'off',
@@ -1494,24 +1494,24 @@ export default defineConfig(
       'playwright/prefer-native-locators': 'warn',
       'playwright/no-standalone-expect': 'error',
       'playwright/no-conditional-expect': 'error',
-      'playwright/no-conditional-in-test': 'warn',
+      'playwright/no-conditional-in-test': 'off', // Disabled: advisory test-quality noise
       'playwright/valid-expect': 'error',
       'playwright/valid-expect-in-promise': 'error',
       'playwright/prefer-to-be': 'off', // Style-only: matcher idiom preference
       'playwright/prefer-to-contain': 'off', // Style-only: matcher idiom preference
-      'playwright/prefer-to-have-count': 'warn',
+      'playwright/prefer-to-have-count': 'off', // Disabled: advisory test-quality noise
       'playwright/prefer-to-have-length': 'off', // Style-only: matcher idiom preference
-      'playwright/prefer-strict-equal': 'warn',
+      'playwright/prefer-strict-equal': 'off', // Disabled: advisory test-quality noise
       'playwright/prefer-comparison-matcher': 'off', // Style-only: matcher idiom preference
       'playwright/prefer-equality-matcher': 'off', // Style-only: matcher idiom preference
       'playwright/no-useless-not': 'off', // Style-only: double negation simplification
       'playwright/require-to-throw-message': 'warn',
       // Prevent deprecated methods
-      'playwright/no-nth-methods': 'warn',
+      'playwright/no-nth-methods': 'off', // Disabled: advisory test-quality noise
       'playwright/no-get-by-title': 'warn',
       // Enforce test organization
       'playwright/max-nested-describe': 'off', // Style-only: nesting depth convention
-      'playwright/max-expects': ['warn', { max: 20 }],
+      'playwright/max-expects': 'off', // Disabled: advisory test-quality noise
       'playwright/no-nested-step': 'off', // Style-only: organizational convention
       // Code quality
       'playwright/no-unused-locators': 'warn',
@@ -1551,7 +1551,7 @@ export default defineConfig(
     },
     rules: {
       ...vitest.configs.recommended.rules,
-      'internal-unit-test/require-behavior-verification': 'warn',
+      'internal-unit-test/require-behavior-verification': 'off',
       'no-restricted-syntax': 'off',
       '@typescript-eslint/no-magic-numbers': 'off',
       '@typescript-eslint/no-deprecated': 'off',

@@ -187,7 +187,7 @@ describe('TableCellBlocks', () => {
 
         const { cell } = buildGridWithBlock(gridEl, 'block-1');
 
-        // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing click handler on non-contenteditable cell element
+         
         cell.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
         expect(mockApi.caret.setToBlock).toHaveBeenCalledWith('block-1', 'end');
@@ -207,7 +207,7 @@ describe('TableCellBlocks', () => {
 
         const { container } = buildGridWithBlock(gridEl, 'block-2');
 
-        // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing click handler on non-contenteditable container element
+         
         container.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
         expect(mockApi.caret.setToBlock).toHaveBeenCalledWith('block-2', 'end');
@@ -227,7 +227,7 @@ describe('TableCellBlocks', () => {
 
         const { blockHolder } = buildGridWithBlock(gridEl, 'block-3');
 
-        // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing click handler on non-contenteditable cell element
+         
         blockHolder.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
         expect(mockApi.caret.setToBlock).not.toHaveBeenCalled();
@@ -266,7 +266,7 @@ describe('TableCellBlocks', () => {
         block2.setAttribute('data-blok-id', 'second-block');
         container.appendChild(block2);
 
-        // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing click handler on non-contenteditable cell element
+         
         cell.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
         expect(mockApi.caret.setToBlock).toHaveBeenCalledWith('second-block', 'end');
@@ -288,7 +288,7 @@ describe('TableCellBlocks', () => {
 
         cellBlocks.destroy();
 
-        // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing click handler on non-contenteditable cell element
+         
         cell.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
         expect(mockApi.caret.setToBlock).not.toHaveBeenCalled();

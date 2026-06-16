@@ -95,7 +95,7 @@ test.describe('TableCellsHandler: currentBlock fallback when activeElement loses
     await expect(cells).toHaveCount(4);
 
     // Click a cell to ensure the editor has a focused state, then blur.
-    // eslint-disable-next-line playwright/no-nth-methods -- nth(1) is the target cell
+     
     const targetCell = cells.nth(1);
     const targetCellEditable = targetCell.locator('[contenteditable="true"]');
 

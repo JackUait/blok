@@ -1,4 +1,4 @@
-/* eslint-disable playwright/no-nth-methods */
+ 
 // E2E regression tests for table undo/redo data preservation
 // Validates fixes for table data loss during undo/redo operations
 

@@ -990,7 +990,7 @@ describe('Toolbox', () => {
 
       // Simulate typing "/head"
       contentEditable.textContent = '/head';
-      contentEditable.dispatchEvent(new Event('input', { bubbles: true })); // eslint-disable-line internal-unit-test/no-direct-event-dispatch -- no DOM API to programmatically trigger input events on contenteditable
+      contentEditable.dispatchEvent(new Event('input', { bubbles: true }));  
 
       expect(contentEditable.getAttribute('data-blok-slash-search')).toBe('');
     });
@@ -1009,12 +1009,12 @@ describe('Toolbox', () => {
 
       // Type query
       contentEditable.textContent = '/head';
-      contentEditable.dispatchEvent(new Event('input', { bubbles: true })); // eslint-disable-line internal-unit-test/no-direct-event-dispatch -- no DOM API to programmatically trigger input events on contenteditable
+      contentEditable.dispatchEvent(new Event('input', { bubbles: true }));  
       expect(contentEditable.getAttribute('data-blok-slash-search')).toBe('');
 
       // Clear query back to just "/"
       contentEditable.textContent = '/';
-      contentEditable.dispatchEvent(new Event('input', { bubbles: true })); // eslint-disable-line internal-unit-test/no-direct-event-dispatch -- no DOM API to programmatically trigger input events on contenteditable
+      contentEditable.dispatchEvent(new Event('input', { bubbles: true }));  
       expect(contentEditable.getAttribute('data-blok-slash-search')).toBe('Type to search');
     });
   });
@@ -1841,7 +1841,7 @@ describe('Toolbox', () => {
       const contentEditable = mocks.blockAPI.holder.querySelector('[contenteditable="true"]') as HTMLElement;
 
       contentEditable.textContent = 'head';
-      contentEditable.dispatchEvent(new Event('input', { bubbles: true })); // eslint-disable-line internal-unit-test/no-direct-event-dispatch -- no DOM API to programmatically trigger input events on contenteditable
+      contentEditable.dispatchEvent(new Event('input', { bubbles: true }));  
 
       expect(toolbox.opened).toBe(true);
       expect(mockPopoverInstance.hide).not.toHaveBeenCalled();
@@ -1861,7 +1861,7 @@ describe('Toolbox', () => {
       const contentEditable = mocks.blockAPI.holder.querySelector('[contenteditable="true"]') as HTMLElement;
 
       contentEditable.textContent = 'head';
-      contentEditable.dispatchEvent(new Event('input', { bubbles: true })); // eslint-disable-line internal-unit-test/no-direct-event-dispatch -- no DOM API to programmatically trigger input events on contenteditable
+      contentEditable.dispatchEvent(new Event('input', { bubbles: true }));  
 
       expect(mockPopoverInstance.filterItems).toHaveBeenCalledWith('head');
     });
@@ -1880,7 +1880,7 @@ describe('Toolbox', () => {
       const contentEditable = mocks.blockAPI.holder.querySelector('[contenteditable="true"]') as HTMLElement;
 
       contentEditable.textContent = '';
-      contentEditable.dispatchEvent(new Event('input', { bubbles: true })); // eslint-disable-line internal-unit-test/no-direct-event-dispatch -- no DOM API to programmatically trigger input events on contenteditable
+      contentEditable.dispatchEvent(new Event('input', { bubbles: true }));  
 
       expect(toolbox.opened).toBe(true);
       expect(mockPopoverInstance.filterItems).toHaveBeenCalledWith('');
@@ -1901,7 +1901,7 @@ describe('Toolbox', () => {
       const contentEditable = mocks.blockAPI.holder.querySelector('[contenteditable="true"]') as HTMLElement;
 
       contentEditable.textContent = 'head';
-      contentEditable.dispatchEvent(new Event('input', { bubbles: true })); // eslint-disable-line internal-unit-test/no-direct-event-dispatch -- no DOM API to programmatically trigger input events on contenteditable
+      contentEditable.dispatchEvent(new Event('input', { bubbles: true }));  
 
       expect(toolbox.opened).toBe(false);
       expect(mockPopoverInstance.hide).toHaveBeenCalled();

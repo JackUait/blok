@@ -137,7 +137,7 @@ test.describe('Table Block Escape — Adding Blocks Below Tables', () => {
       },
     });
 
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to access the first editable
+     
     await getCellEditable(page, 1, 1).first().click();
     await page.keyboard.press('Tab');
 
@@ -170,7 +170,7 @@ test.describe('Table Block Escape — Adding Blocks Below Tables', () => {
       },
     });
 
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to access the first editable
+     
     await getCellEditable(page, 1, 1).first().click();
     await page.keyboard.press('Tab');
 
@@ -196,7 +196,7 @@ test.describe('Table Block Escape — Adding Blocks Below Tables', () => {
       },
     });
 
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to access the first editable
+     
     await getCellEditable(page, 0, 0).first().click();
     await page.keyboard.press('Shift+Tab');
 
@@ -218,7 +218,7 @@ test.describe('Table Block Escape — Adding Blocks Below Tables', () => {
       },
     });
 
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to access the first editable
+     
     await getCellEditable(page, 0, 0).first().click();
     await page.keyboard.press('Shift+Tab');
 
@@ -255,7 +255,7 @@ test.describe('Table Block Escape — Adding Blocks Below Tables', () => {
       },
     });
 
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to access the first editable
+     
     await getCellEditable(page, 1, 1).first().click();
     await page.keyboard.press('ArrowDown');
 
@@ -277,7 +277,7 @@ test.describe('Table Block Escape — Adding Blocks Below Tables', () => {
       },
     });
 
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to access the first editable
+     
     await getCellEditable(page, 1, 1).first().click();
     await page.keyboard.press('ArrowDown');
 
@@ -343,7 +343,7 @@ test.describe('Table Block Escape — Adding Blocks Below Tables', () => {
 
     await tableWrapper.hover();
 
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to access the first editable
+     
     await getCellEditable(page, 0, 0).first().click();
 
     const plusButton = page.locator('[data-blok-testid="plus-button"]');

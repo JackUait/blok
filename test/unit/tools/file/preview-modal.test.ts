@@ -102,7 +102,7 @@ describe('openFilePreview', () => {
     openFilePreview({ url: 'https://example.com/a.pdf', labels });
     expect(getDialog()).not.toBeNull();
 
-    // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch
+     
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
 
     expect(getDialog()).toBeNull();

@@ -283,7 +283,7 @@ test.describe('table tool', () => {
       });
 
       // Click the contenteditable paragraph block inside the first cell
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstCellEditable = page.locator(CELL_SELECTOR).first().locator('[contenteditable="true"]').first();
 
       await firstCellEditable.click();
@@ -325,16 +325,16 @@ test.describe('table tool', () => {
       });
 
       // Click the contenteditable inside the first cell to trigger focus
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstCellEditable = page.locator(CELL_SELECTOR).first().locator('[contenteditable="true"]').first();
 
       await firstCellEditable.click();
 
       // In the always-blocks model, cells are not contenteditable so they don't get
       // browser focus styling. The focused cell is indicated by visible grip pills.
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+       
       const colGrip = page.locator('[data-blok-table-grip-col]').first();
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+       
       const rowGrip = page.locator('[data-blok-table-grip-row]').first();
 
       await expect(colGrip).toBeVisible({ timeout: 2000 });
@@ -357,7 +357,7 @@ test.describe('table tool', () => {
         },
       });
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstCell = page.locator(CELL_SELECTOR).first();
 
       // Without focus, borders should be gray and no blue box-shadow
@@ -396,7 +396,7 @@ test.describe('table tool', () => {
         },
       });
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstCell = page.locator(CELL_SELECTOR).first();
 
       await firstCell.click();
@@ -427,7 +427,7 @@ test.describe('table tool', () => {
       });
 
       // Click the contenteditable inside the first cell
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstCellEditable = page.locator(CELL_SELECTOR).first().locator('[contenteditable="true"]').first();
 
       await firstCellEditable.click();
@@ -477,7 +477,7 @@ test.describe('table tool', () => {
         },
       });
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first handle
+       
       const handle = page.locator('[data-blok-table-resize]').first();
 
       await expect(handle).toBeAttached();
@@ -594,7 +594,7 @@ test.describe('table tool', () => {
         return grid?.getBoundingClientRect().width;
       });
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first handle
+       
       const handle = page.locator('[data-blok-table-resize]').first();
       const handleBox = assertBoundingBox(await handle.boundingBox(), 'Handle');
 
@@ -681,7 +681,7 @@ test.describe('table tool', () => {
       await addColBtn.click();
 
       // First row should now have 3 cells
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first row
+       
       const firstRow = page.locator('[data-blok-table-row]').first();
       const cells = firstRow.locator(CELL_SELECTOR);
 
@@ -710,7 +710,7 @@ test.describe('table tool', () => {
       await hoverNearRightEdge(page, table);
 
       // Read the initial column width (all 3 should be equal)
-      // eslint-disable-next-line playwright/no-nth-methods -- nth is the clearest way to get specific cell
+       
       const initialCell = page.locator('[data-blok-table-row]').first().locator(CELL_SELECTOR).nth(0);
       const initialBox = assertBoundingBox(await initialCell.boundingBox(), 'Initial cell');
       const initialWidth = initialBox.width;
@@ -724,7 +724,7 @@ test.describe('table tool', () => {
         await addColBtn.click();
       }
 
-      // eslint-disable-next-line playwright/no-nth-methods -- nth is the clearest way to get specific cells
+       
       const firstRow = page.locator('[data-blok-table-row]').first();
       const cells = firstRow.locator(CELL_SELECTOR);
 
@@ -734,7 +734,7 @@ test.describe('table tool', () => {
       const newWidths: number[] = [];
 
       for (let i = 3; i < 6; i++) {
-        // eslint-disable-next-line playwright/no-nth-methods -- iterating by index
+         
         const cellBox = assertBoundingBox(await cells.nth(i).boundingBox(), `New cell ${i}`);
 
         newWidths.push(cellBox.width);
@@ -865,12 +865,12 @@ test.describe('table tool', () => {
     test('column grip appears when clicking a cell', async ({ page }) => {
       await createTable2x2(page);
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstCell = page.locator(CELL_SELECTOR).first();
 
       await firstCell.click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+       
       const colGrip = page.locator(COL_GRIP_SELECTOR).first();
 
       // Grip should become visible (Playwright considers opacity:0 as hidden)
@@ -880,12 +880,12 @@ test.describe('table tool', () => {
     test('row grip appears when clicking a cell', async ({ page }) => {
       await createTable2x2(page);
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstCell = page.locator(CELL_SELECTOR).first();
 
       await firstCell.click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+       
       const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
 
       await expect(rowGrip).toBeVisible({ timeout: 2000 });
@@ -895,12 +895,12 @@ test.describe('table tool', () => {
       await createTable2x2(page);
 
       // Click cell to show grips
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstCell = page.locator(CELL_SELECTOR).first();
 
       await firstCell.click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+       
       const visibleGrip = page.locator(COL_GRIP_SELECTOR).first();
 
       await expect(visibleGrip).toBeVisible();
@@ -915,12 +915,12 @@ test.describe('table tool', () => {
     test('column popover does not show move options', async ({ page }) => {
       await createTable2x2(page);
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstCell = page.locator(CELL_SELECTOR).first();
 
       await firstCell.click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+       
       const colGrip = page.locator(COL_GRIP_SELECTOR).first();
 
       await expect(colGrip).toBeVisible();
@@ -938,12 +938,12 @@ test.describe('table tool', () => {
       await createTable2x2(page);
 
       // Click cell to show grips
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstCell = page.locator(CELL_SELECTOR).first();
 
       await firstCell.click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+       
       const visibleGrip = page.locator(ROW_GRIP_SELECTOR).first();
 
       await expect(visibleGrip).toBeVisible();
@@ -958,12 +958,12 @@ test.describe('table tool', () => {
     test('row popover does not show move options', async ({ page }) => {
       await createTable2x2(page);
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstCell = page.locator(CELL_SELECTOR).first();
 
       await firstCell.click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+       
       const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
 
       await expect(rowGrip).toBeVisible();
@@ -981,12 +981,12 @@ test.describe('table tool', () => {
       await createTable2x2(page);
 
       // Click first cell to show grips
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstCell = page.locator(CELL_SELECTOR).first();
 
       await firstCell.click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+       
       const visibleGrip = page.locator(ROW_GRIP_SELECTOR).first();
 
       await expect(visibleGrip).toBeVisible();
@@ -1002,19 +1002,19 @@ test.describe('table tool', () => {
       await createTable2x2(page);
 
       // Click first cell to show grips
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstCell = page.locator(CELL_SELECTOR).first();
 
       await firstCell.click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+       
       const visibleGrip = page.locator(COL_GRIP_SELECTOR).first();
 
       await expect(visibleGrip).toBeVisible();
       await visibleGrip.click();
       await page.getByText('Insert Column Right').click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is needed
+       
       const firstRow = page.locator('[data-blok-table-row]').first();
       const cells = firstRow.locator(CELL_SELECTOR);
 
@@ -1043,12 +1043,12 @@ test.describe('table tool', () => {
       });
 
       // Click first cell to activate table and show grips
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstCell = page.locator(CELL_SELECTOR).first();
 
       await firstCell.click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+       
       const colGrip = page.locator(COL_GRIP_SELECTOR).first();
 
       await expect(colGrip).toBeVisible();
@@ -1057,7 +1057,7 @@ test.describe('table tool', () => {
       // First insertion
       await page.getByText('Insert Column Right').click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is needed
+       
       const firstRow = page.locator('[data-blok-table-row]').first();
 
       await expect(firstRow.locator(CELL_SELECTOR)).toHaveCount(4);
@@ -1089,7 +1089,7 @@ test.describe('table tool', () => {
 
       // After both insertions and dismissal, grips must still be functional.
       // Hover a cell and verify a grip becomes visible.
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       await page.locator(CELL_SELECTOR).first().hover();
 
       const visibleGrip = page.locator(`${COL_GRIP_SELECTOR}[data-blok-table-grip-visible]`);
@@ -1115,12 +1115,12 @@ test.describe('table tool', () => {
       });
 
       // Click first cell to show grips
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstCell = page.locator(CELL_SELECTOR).first();
 
       await firstCell.click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+       
       const colGrip = page.locator(COL_GRIP_SELECTOR).first();
 
       await expect(colGrip).toBeVisible();
@@ -1133,10 +1133,10 @@ test.describe('table tool', () => {
       await scrollContainer.evaluate(el => { el.scrollTo(0, el.scrollTop); });
 
       // Click the first cell in the newly inserted column to re-trigger grips
-      // eslint-disable-next-line playwright/no-nth-methods -- first() targets the newly inserted column's cell
+       
       await page.locator(CELL_SELECTOR).first().click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() targets the newly inserted column grip
+       
       const newGrip = page.locator(COL_GRIP_SELECTOR).first();
 
       await expect(newGrip).toBeVisible();
@@ -1169,12 +1169,12 @@ test.describe('table tool', () => {
       });
 
       // Click first cell to show grips
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstCell = page.locator(CELL_SELECTOR).first();
 
       await firstCell.click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+       
       const colGrip = page.locator(COL_GRIP_SELECTOR).first();
 
       await expect(colGrip).toBeVisible();
@@ -1195,7 +1195,7 @@ test.describe('table tool', () => {
 
       // After insertion, hover over a cell in the second row to trigger mouseover and show grips,
       // then click it to ensure the focus lands in the cell
-      // eslint-disable-next-line playwright/no-nth-methods -- first() targets the first cell
+       
       const cellInSecondRow = page.locator('[data-blok-table-row]').nth(1).locator(CELL_SELECTOR).first();
 
       await cellInSecondRow.hover();
@@ -1244,7 +1244,7 @@ test.describe('table tool', () => {
     test('grip pills are capsules containing only a dots SVG icon', async ({ page }) => {
       await createTable2x2(page);
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first grip
+       
       const firstGrip = page.locator(GRIP_SELECTOR).first();
 
       // Pill should have exactly one child element (the dots SVG icon)
@@ -1261,12 +1261,12 @@ test.describe('table tool', () => {
       await createTable2x2(page);
 
       // Click cell to make grip visible so we can measure it
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstCell = page.locator(CELL_SELECTOR).first();
 
       await firstCell.click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+       
       const colGrip = page.locator(COL_GRIP_SELECTOR).first();
 
       await expect(colGrip).toBeVisible();
@@ -1282,12 +1282,12 @@ test.describe('table tool', () => {
       await createTable2x2(page);
 
       // Click cell to make grip visible so we can measure it
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstCell = page.locator(CELL_SELECTOR).first();
 
       await firstCell.click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+       
       const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
 
       await expect(rowGrip).toBeVisible();
@@ -1333,12 +1333,12 @@ test.describe('table tool', () => {
       await createTable2x2(page);
 
       // Click contenteditable inside first cell to show grips
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstCellEditable = page.locator(CELL_SELECTOR).first().locator('[contenteditable="true"]').first();
 
       await firstCellEditable.click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+       
       const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
 
       await expect(rowGrip).toBeVisible();
@@ -1355,10 +1355,10 @@ test.describe('table tool', () => {
       await expect(page.locator('[data-blok-popover]')).toHaveCount(0);
 
       // Click contenteditable inside a cell to re-show grips, then click grip again to reopen popover
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       await page.locator(CELL_SELECTOR).first().locator('[contenteditable="true"]').first().click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+       
       const rowGripAfter = page.locator(ROW_GRIP_SELECTOR).first();
 
       await expect(rowGripAfter).toBeVisible();
@@ -1379,12 +1379,12 @@ test.describe('table tool', () => {
       await createTable2x2(page);
 
       // Click first cell to show grips
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstCell = page.locator(CELL_SELECTOR).first();
 
       await firstCell.click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+       
       const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
 
       await expect(rowGrip).toBeVisible();
@@ -1403,12 +1403,12 @@ test.describe('table tool', () => {
     test('delete column removes column with single click and closes popover', async ({ page }) => {
       await createTable2x2(page);
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       const firstCell = page.locator(CELL_SELECTOR).first();
 
       await firstCell.click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+       
       const colGrip = page.locator(COL_GRIP_SELECTOR).first();
 
       await expect(colGrip).toBeVisible();
@@ -1418,7 +1418,7 @@ test.describe('table tool', () => {
       await page.getByText('Delete').click();
 
       // Column should be deleted (1 cell per row instead of 2)
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is needed
+       
       const firstRow = page.locator('[data-blok-table-row]').first();
 
       await expect(firstRow.locator(CELL_SELECTOR)).toHaveCount(1);
@@ -1430,12 +1430,12 @@ test.describe('table tool', () => {
     test('delete row removes row with single click and closes popover', async ({ page }) => {
       await createTable2x2(page);
 
-      // eslint-disable-next-line playwright/no-nth-methods -- last() targets second row to avoid header row edge cases
+       
       const lastCell = page.locator(CELL_SELECTOR).last();
 
       await lastCell.click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- last() targets the second row grip
+       
       const rowGrip = page.locator(ROW_GRIP_SELECTOR).last();
 
       await expect(rowGrip).toBeVisible();
@@ -1481,10 +1481,10 @@ test.describe('table tool', () => {
       await createTable3x3(page);
 
       // Click cell to show grip
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       await page.locator(CELL_SELECTOR).first().click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+       
       const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
 
       await expect(rowGrip).toBeVisible();
@@ -1515,10 +1515,10 @@ test.describe('table tool', () => {
       await createTable3x3(page);
 
       // Click contenteditable in second column cell to show its grip
-      // eslint-disable-next-line playwright/no-nth-methods -- nth(1) needed to target second cell
+       
       await page.locator(CELL_SELECTOR).nth(1).locator('[contenteditable="true"]').first().click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- nth(1) needed to target second column grip
+       
       const colGrip = page.locator(COL_GRIP_SELECTOR).nth(1);
 
       await expect(colGrip).toBeVisible();
@@ -1549,11 +1549,11 @@ test.describe('table tool', () => {
 
       // Column should have been reordered: A2 is now in first column
       // Verify by checking the text content of cells in the first row
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is needed
+       
       const firstRow = page.locator('[data-blok-table-row]').first();
-      // eslint-disable-next-line playwright/no-nth-methods -- nth() needed to target specific cells
+       
       const firstCellText = await firstRow.locator(CELL_SELECTOR).nth(0).textContent();
-      // eslint-disable-next-line playwright/no-nth-methods -- nth() needed to target specific cells
+       
       const secondCellText = await firstRow.locator(CELL_SELECTOR).nth(1).textContent();
 
       expect(firstCellText?.trim()).toBe('A2');
@@ -1564,10 +1564,10 @@ test.describe('table tool', () => {
       await createTable3x3(page);
 
       // Click contenteditable in first cell to show its grip
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       await page.locator(CELL_SELECTOR).first().locator('[contenteditable="true"]').first().click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+       
       const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
 
       await expect(rowGrip).toBeVisible();
@@ -1591,9 +1591,9 @@ test.describe('table tool', () => {
 
       // Row A should have moved down by one — B1 is now first row
       // Verify by checking the text content of cells
-      // eslint-disable-next-line playwright/no-nth-methods -- nth() needed to target specific rows
+       
       const firstRowFirstCell = page.locator('[data-blok-table-row]').nth(0).locator(CELL_SELECTOR).first();
-      // eslint-disable-next-line playwright/no-nth-methods -- nth() needed to target specific rows
+       
       const secondRowFirstCell = page.locator('[data-blok-table-row]').nth(1).locator(CELL_SELECTOR).first();
 
       const firstRowText = await firstRowFirstCell.textContent();
@@ -1606,10 +1606,10 @@ test.describe('table tool', () => {
     test('cursor changes to grabbing during drag', async ({ page }) => {
       await createTable3x3(page);
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+       
       await page.locator(CELL_SELECTOR).first().click();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+       
       const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
 
       await expect(rowGrip).toBeVisible();
@@ -1758,7 +1758,7 @@ test.describe('table tool', () => {
       await expect(addRowBtn).toBeVisible();
 
       // Measure the height of a row for the drag distance
-      // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get first row
+       
       const firstRow = page.locator('[data-blok-table-row]').first();
       const rowBox = assertBoundingBox(await firstRow.boundingBox(), 'First row');
 
@@ -1830,7 +1830,7 @@ test.describe('table tool', () => {
       await page.mouse.up();
 
       // First row should now have 4 cells (2 original + 2 added)
-      // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get first row
+       
       const firstRow = page.locator('[data-blok-table-row]').first();
       const cells = firstRow.locator(CELL_SELECTOR);
 
@@ -1862,7 +1862,7 @@ test.describe('table tool', () => {
 
       await expect(addRowBtn).toBeVisible();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get first row
+       
       const firstRow = page.locator('[data-blok-table-row]').first();
       const rowBox = assertBoundingBox(await firstRow.boundingBox(), 'First row');
 
@@ -2035,7 +2035,7 @@ test.describe('table tool', () => {
 
       await expect(addRowBtn).toBeVisible();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get first row
+       
       const firstRow = page.locator('[data-blok-table-row]').first();
       const rowBox = assertBoundingBox(await firstRow.boundingBox(), 'First row');
 
@@ -2083,7 +2083,7 @@ test.describe('table tool', () => {
 
       await expect(addRowBtn).toBeVisible();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get first row
+       
       const firstRow = page.locator('[data-blok-table-row]').first();
       const rowBox = assertBoundingBox(await firstRow.boundingBox(), 'First row');
 
@@ -2129,7 +2129,7 @@ test.describe('table tool', () => {
       await hoverNearRightEdge(page, table);
       await expect(addColBtn).toBeVisible();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get first cell width
+       
       const firstCell = page.locator(CELL_SELECTOR).first();
       const cellBox = assertBoundingBox(await firstCell.boundingBox(), 'First cell');
 
@@ -2147,7 +2147,7 @@ test.describe('table tool', () => {
       await page.mouse.up();
 
       // Both columns have content so neither should be removed
-      // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get first row
+       
       const firstRowCells = page.locator('[data-blok-table-row]').first().locator(CELL_SELECTOR);
 
       await expect(firstRowCells).toHaveCount(2);
@@ -2183,7 +2183,7 @@ test.describe('table tool', () => {
       await hoverNearRightEdge(page, wrapper);
       await expect(addColBtn).toBeVisible();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() for cell width
+       
       const firstCell = page.locator(CELL_SELECTOR).first();
       const cellBox = assertBoundingBox(await firstCell.boundingBox(), 'First cell');
 
@@ -2204,7 +2204,7 @@ test.describe('table tool', () => {
       await page.mouse.up();
 
       // Should have 2 columns remaining (originals with content preserved)
-      // eslint-disable-next-line playwright/no-nth-methods -- first() for first row
+       
       const finalCells = page.locator('[data-blok-table-row]').first().locator(CELL_SELECTOR);
 
       await expect(finalCells).toHaveCount(2);
@@ -2428,11 +2428,11 @@ test.describe('table tool', () => {
 
       const cells = page.locator(CELL_SELECTOR);
 
-      // eslint-disable-next-line playwright/no-nth-methods -- nth(0) needed for first cell
+       
       const firstCell = cells.nth(0);
       const firstBox = assertBoundingBox(await firstCell.boundingBox(), 'first cell');
 
-      // eslint-disable-next-line playwright/no-nth-methods -- nth(4) needed for cell at row 1, col 1
+       
       const targetCell = cells.nth(4);
       const targetBox = assertBoundingBox(await targetCell.boundingBox(), 'target cell');
 
@@ -2469,11 +2469,11 @@ test.describe('table tool', () => {
 
       const cells = page.locator(CELL_SELECTOR);
 
-      // eslint-disable-next-line playwright/no-nth-methods -- nth(0) needed for first cell
+       
       const firstCell = cells.nth(0);
       const firstBox = assertBoundingBox(await firstCell.boundingBox(), 'first cell');
 
-      // eslint-disable-next-line playwright/no-nth-methods -- nth(3) needed for last cell
+       
       const lastCell = cells.nth(3);
       const lastBox = assertBoundingBox(await lastCell.boundingBox(), 'last cell');
 
@@ -2519,11 +2519,11 @@ test.describe('table tool', () => {
 
       // Select a 2x2 interior block: cells (1,1) to (2,2)
       // In a 4-col grid: row 1 col 1 = index 5, row 2 col 2 = index 10
-      // eslint-disable-next-line playwright/no-nth-methods -- nth(5) needed for cell at row 1, col 1
+       
       const topLeft = cells.nth(5);
       const topLeftBox = assertBoundingBox(await topLeft.boundingBox(), 'top-left cell');
 
-      // eslint-disable-next-line playwright/no-nth-methods -- nth(10) needed for cell at row 2, col 2
+       
       const bottomRight = cells.nth(10);
       const bottomRightBox = assertBoundingBox(await bottomRight.boundingBox(), 'bottom-right cell');
 
@@ -2574,7 +2574,7 @@ test.describe('table tool', () => {
 
       const cells = page.locator(CELL_SELECTOR);
 
-      // eslint-disable-next-line playwright/no-nth-methods -- nth(0) needed for first cell
+       
       const firstCell = cells.nth(0);
       const firstBox = assertBoundingBox(await firstCell.boundingBox(), 'first cell');
 
@@ -2614,11 +2614,11 @@ test.describe('table tool', () => {
 
       // Select a 2x2 region at the top-left corner: cells (0,0) to (1,1)
       // In a 4-column grid, cell (0,0) is index 0, cell (1,1) is index 5
-      // eslint-disable-next-line playwright/no-nth-methods -- nth(0) needed for cell at row 0, col 0
+       
       const startCell = cells.nth(0);
       const startBox = assertBoundingBox(await startCell.boundingBox(), 'start cell');
 
-      // eslint-disable-next-line playwright/no-nth-methods -- nth(5) needed for cell at row 1, col 1
+       
       const endCell = cells.nth(5);
       const endBox = assertBoundingBox(await endCell.boundingBox(), 'end cell');
 
@@ -2693,9 +2693,9 @@ test.describe('table tool', () => {
       await expect(table).toBeVisible();
 
       // Get cell bounding boxes
-      // eslint-disable-next-line playwright/no-nth-methods -- nth(3) needed for first data cell (A)
+       
       const firstCellBox = assertBoundingBox(await cells.nth(3).boundingBox(), 'First data cell');
-      // eslint-disable-next-line playwright/no-nth-methods -- nth(5) needed for last cell in row (C)
+       
       const lastCellBox = assertBoundingBox(await cells.nth(5).boundingBox(), 'Last data cell');
 
       // Start drag in first cell
@@ -2758,7 +2758,7 @@ test.describe('table tool', () => {
 
       await expect(table).toBeVisible();
 
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get the first cell
+       
       const firstCell = table.locator(CELL_SELECTOR).first();
 
       await expect(firstCell).toBeVisible();

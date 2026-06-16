@@ -232,7 +232,7 @@ describe('BlockManager.moveCurrentBlockUp/Down (drag guard)', () => {
       moveCurrentBlockUp: moveUpSpy,
       moveCurrentBlockDown: moveDownSpy,
     };
-    // eslint-disable-next-line internal-unit-test/prefer-public-api -- guard test needs a sentinel blocksStore
+     
     (blockManager as unknown as Record<string, unknown>)._blocks = {};
 
     blockManager.state = {
@@ -374,7 +374,7 @@ describe('BlockManager.setBlockParent Yjs contentIds companion write', () => {
     priv.hierarchy = hierarchy;
     priv.repository = repository;
     priv.yjsSync = { isSyncingFromYjs: false };
-    // eslint-disable-next-line internal-unit-test/prefer-public-api -- Fix 1 test needs a seeded blocksStore without prepare()
+     
     priv._blocks = blocksStore;
     priv.operations = { suppressStopCapturing: false };
 
@@ -552,7 +552,7 @@ describe('BlockManager.insertMany hierarchy reconciliation', () => {
 
     const priv = blockManager as unknown as Record<string, unknown>;
 
-    // eslint-disable-next-line internal-unit-test/prefer-public-api -- insertMany test stubs the store to observe reconcile output directly
+     
     priv._blocks = {
       insertMany: vi.fn(),
     };

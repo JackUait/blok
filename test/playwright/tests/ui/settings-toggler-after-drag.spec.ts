@@ -138,9 +138,9 @@ test.describe("ui.settings-toggler-after-drag", () => {
       ],
     });
 
-    // eslint-disable-next-line playwright/no-nth-methods
+     
     const firstBlock = page.locator(BLOCK_SELECTOR).first();
-    // eslint-disable-next-line playwright/no-nth-methods
+     
     const secondBlock = page.locator(BLOCK_SELECTOR).nth(1);
 
     // Get the visible settings button
@@ -173,9 +173,9 @@ test.describe("ui.settings-toggler-after-drag", () => {
       ],
     });
 
-    // eslint-disable-next-line playwright/no-nth-methods
+     
     const firstBlock = page.locator(BLOCK_SELECTOR).first();
-    // eslint-disable-next-line playwright/no-nth-methods
+     
     const secondBlock = page.locator(BLOCK_SELECTOR).nth(1);
 
     // Get the visible settings button
@@ -205,9 +205,9 @@ test.describe("ui.settings-toggler-after-drag", () => {
       ],
     });
 
-    // eslint-disable-next-line playwright/no-nth-methods
+     
     const firstBlock = page.locator(BLOCK_SELECTOR).first();
-    // eslint-disable-next-line playwright/no-nth-methods
+     
     const secondBlock = page.locator(BLOCK_SELECTOR).nth(1);
 
     // Get the visible settings button
@@ -256,9 +256,9 @@ test.describe("ui.settings-toggler-after-drag", () => {
       ],
     });
 
-    // eslint-disable-next-line playwright/no-nth-methods
+     
     const firstBlock = page.locator(BLOCK_SELECTOR).first();
-    // eslint-disable-next-line playwright/no-nth-methods
+     
     const secondBlock = page.locator(BLOCK_SELECTOR).nth(1);
 
     // Get the visible settings button
@@ -293,7 +293,7 @@ test.describe("ui.settings-toggler-after-drag", () => {
     const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
 
     // Hover over the first block to make the toolbar visible
-    // eslint-disable-next-line playwright/no-nth-methods
+     
     await blocks.nth(0).hover();
     await expect(settingsButton).toBeVisible();
 
@@ -301,33 +301,33 @@ test.describe("ui.settings-toggler-after-drag", () => {
     await performDragDrop(
       page,
       settingsButton,
-      // eslint-disable-next-line playwright/no-nth-methods
+       
       blocks.nth(1),
       "bottom",
     );
 
     // Hover over the current block (now block 2) for the next drag
-    // eslint-disable-next-line playwright/no-nth-methods
+     
     await blocks.nth(2).hover();
     await expect(settingsButton).toBeVisible();
 
     await performDragDrop(
       page,
       settingsButton,
-      // eslint-disable-next-line playwright/no-nth-methods
+       
       blocks.nth(3),
       "bottom",
     );
 
     // Hover over the current block for the final drag
-    // eslint-disable-next-line playwright/no-nth-methods
+     
     await blocks.nth(1).hover();
     await expect(settingsButton).toBeVisible();
 
     await performDragDrop(
       page,
       settingsButton,
-      // eslint-disable-next-line playwright/no-nth-methods
+       
       blocks.nth(2),
       "bottom",
     );

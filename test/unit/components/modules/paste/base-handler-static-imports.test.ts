@@ -127,7 +127,7 @@ describe('BasePasteHandler static imports (regression)', () => {
       expect(sanitizedHtml).not.toContain('<script>');
     });
 
-    it('should fall back to insertBlock when no currentInput exists', async () => { // eslint-disable-line internal-unit-test/require-behavior-verification
+    it('should fall back to insertBlock when no currentInput exists', async () => {  
       const { blok } = createBlokMock();
 
       // Remove currentInput to trigger the fallback path
@@ -179,7 +179,7 @@ describe('BasePasteHandler static imports (regression)', () => {
       expect(insertContentAtCaretPosition.mock.calls[0][0]).toContain('<b>inline only</b>');
     });
 
-    it('should insert as block when tool names differ', async () => { // eslint-disable-line internal-unit-test/require-behavior-verification
+    it('should insert as block when tool names differ', async () => {  
       const { blok } = createBlokMock();
       const handler = await createTestHandler(blok);
 

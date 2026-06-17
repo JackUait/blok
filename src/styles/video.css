@@ -204,8 +204,9 @@
   border-radius: 0;
   box-shadow: none;
   transform-origin: center;
-  /* zoom the frame up from slightly inset as it takes the screen */
-  animation: blok-video-fs-zoom 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  /* let the backdrop establish, then float the frame up from slightly inset —
+     unblurring as it settles past 1.0 for a soft, tactile landing */
+  animation: blok-video-fs-zoom 460ms cubic-bezier(0.16, 1, 0.3, 1) 60ms both;
 }
 /* entrance only — native fullscreen exit snaps the figure back with no
    intermediate state to animate */
@@ -214,8 +215,9 @@
   to   { background-color: var(--blok-video-stage); }
 }
 @keyframes blok-video-fs-zoom {
-  from { opacity: 0.5; transform: scale(0.9); }
-  to   { opacity: 1; transform: scale(1); }
+  0%   { opacity: 0; transform: scale(0.92) translateY(8px); filter: blur(6px); }
+  55%  { opacity: 1; transform: scale(1.012) translateY(0); filter: blur(0); }
+  100% { transform: scale(1) translateY(0); filter: blur(0); }
 }
 [data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] .blok-video-media video {
   height: 100%;

@@ -4573,7 +4573,7 @@
   border-radius: 0;
   box-shadow: none;
   transform-origin: center;
-  animation: blok-video-fs-zoom 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: blok-video-fs-zoom 460ms cubic-bezier(0.16, 1, 0.3, 1) 60ms both;
 }
 
 [data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] .blok-video-media video {

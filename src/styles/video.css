@@ -195,12 +195,27 @@
   align-items: center;
   justify-content: center;
   background: var(--blok-video-stage);
+  /* fade the letterbox backdrop in as the player is promoted to fullscreen */
+  animation: blok-video-fs-backdrop 240ms ease both;
 }
 [data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] .blok-video-media {
   width: 100%;
   height: 100%;
   border-radius: 0;
   box-shadow: none;
+  transform-origin: center;
+  /* zoom the frame up from slightly inset as it takes the screen */
+  animation: blok-video-fs-zoom 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+/* entrance only — native fullscreen exit snaps the figure back with no
+   intermediate state to animate */
+@keyframes blok-video-fs-backdrop {
+  from { background-color: rgba(0, 0, 0, 0); }
+  to   { background-color: var(--blok-video-stage); }
+}
+@keyframes blok-video-fs-zoom {
+  from { opacity: 0.5; transform: scale(0.9); }
+  to   { opacity: 1; transform: scale(1); }
 }
 [data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] .blok-video-media video {
   height: 100%;
@@ -602,6 +617,8 @@
   [data-blok-tool="video"] .blok-video-controls__speed { transition: none; }
   [data-blok-tool="video"] .blok-video-controls__seek-flash.is-active,
   [data-blok-tool="video"] .blok-video-controls__seek-flash.is-active svg { animation: none; opacity: 0; }
+  [data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"],
+  [data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] .blok-video-media { animation: none; }
   [data-blok-tool="video"] .blok-video-controls__burst.is-active,
   [data-blok-tool="video"] .blok-video-controls__burst.is-active::after,
   [data-blok-tool="video"] .blok-video-controls__burst.is-active svg { animation: none; opacity: 0; }

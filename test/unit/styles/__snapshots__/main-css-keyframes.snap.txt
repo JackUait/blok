@@ -126,6 +126,16 @@
   100% { opacity: 0; transform: scale(1.75) }
 }
 
+@keyframes blok-video-fs-backdrop {
+  from { background-color: rgba(0, 0, 0, 0) }
+  to { background-color: var(--blok-video-stage) }
+}
+
+@keyframes blok-video-fs-zoom {
+  from { opacity: 0.5; transform: scale(0.9) }
+  to { opacity: 1; transform: scale(1) }
+}
+
 @keyframes blok-video-seek-flash-back {
   0% { opacity: 0; transform: translate(-16px, -50%) scale(0.9) }
   18% { opacity: 1; transform: translate(3px, -50%) scale(1.03) }

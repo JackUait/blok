@@ -8,8 +8,9 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ============================================================
-   Airbnb-inspired design tokens
-   Rausch coral (#FF385C) accent on a clean neutral canvas.
+   Blok-brand design tokens
+   Pulled from the Blok noodle logo: a rose-pink wordmark (#E14B6E)
+   and a warm orange glow (#E68019), on a clean neutral canvas.
    ============================================================ */
 :root {
   --radius: 0.75rem;
@@ -23,8 +24,8 @@
   --popover: #ffffff;
   --popover-foreground: #222222;
 
-  /* Rausch — Airbnb signature */
-  --primary: #ff385c;
+  /* Blok rose — the logo wordmark pink */
+  --primary: #e14b6e;
   --primary-foreground: #ffffff;
 
   --secondary: #f7f7f7;
@@ -41,17 +42,17 @@
 
   --border: #dddddd;
   --input: #dddddd;
-  --ring: #222222;
+  --ring: #e14b6e;
 
-  /* Brand gradient stops (the "Bélo" gradient) */
-  --brand-from: #e61e4d;
-  --brand-via: #e31c5f;
-  --brand-to: #bd1e59;
+  /* Brand gradient — the noodle sunset: rose-pink → orange */
+  --brand-from: #e94e7a;
+  --brand-via: #ec5f4f;
+  --brand-to: #e68019;
 
-  --chart-1: #ff385c;
-  --chart-2: #00a699;
-  --chart-3: #fc642d;
-  --chart-4: #ffb400;
+  --chart-1: #e14b6e;
+  --chart-2: #e68019;
+  --chart-3: #ec5f4f;
+  --chart-4: #f0a046;
   --chart-5: #767676;
 }
 
@@ -65,7 +66,7 @@
   --popover: #232325;
   --popover-foreground: #f7f7f7;
 
-  --primary: #ff5a76;
+  --primary: #f2698a;
   --primary-foreground: #ffffff;
 
   --secondary: #2c2c2f;
@@ -82,16 +83,16 @@
 
   --border: #333336;
   --input: #3a3a3e;
-  --ring: #d4d4d8;
+  --ring: #f2698a;
 
-  --brand-from: #ff5a76;
-  --brand-via: #ff385c;
-  --brand-to: #d61e54;
+  --brand-from: #f2698a;
+  --brand-via: #f47a5c;
+  --brand-to: #f2922e;
 
-  --chart-1: #ff5a76;
-  --chart-2: #2dd4bf;
-  --chart-3: #fc8a5d;
-  --chart-4: #ffc94d;
+  --chart-1: #f2698a;
+  --chart-2: #f2922e;
+  --chart-3: #f47a5c;
+  --chart-4: #f5b25e;
   --chart-5: #a3a3a8;
 }
 

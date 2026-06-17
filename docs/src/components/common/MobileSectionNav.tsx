@@ -72,7 +72,7 @@ export const MobileSectionNav: React.FC<MobileSectionNavProps> = ({
     >
       <button
         className={cn(
-          "flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left shadow-sm transition-all hover:shadow-card-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+          "flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left shadow-sm transition-all hover:shadow-card-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
           isOpen && "open border-foreground/20 shadow-card-hover",
         )}
         onClick={() => setIsOpen(!isOpen)}
@@ -127,7 +127,7 @@ export const MobileSectionNav: React.FC<MobileSectionNavProps> = ({
                   <button
                     key={link.id}
                     className={cn(
-                      "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-secondary",
+                      "flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-secondary",
                       isActive
                         ? "active bg-secondary text-foreground"
                         : "text-muted-foreground",

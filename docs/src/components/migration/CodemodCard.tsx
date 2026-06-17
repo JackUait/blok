@@ -55,7 +55,7 @@ export const CodemodCard: React.FC = () => {
         >
           <button
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               activeTab === "dry-run"
                 ? "active bg-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
@@ -74,7 +74,7 @@ export const CodemodCard: React.FC = () => {
           </button>
           <button
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               activeTab === "apply"
                 ? "active bg-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground",

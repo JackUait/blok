@@ -140,30 +140,38 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
           </Link>
 
           {/* Center search pill — opens the command-K search dialog.
-              Collapses to an icon-only circle on small screens. */}
+              Leading rose glyph + ⌘K hint; collapses to an icon-only circle on small screens. */}
           <button
             type="button"
-            className="flex h-10 items-center justify-center gap-4 rounded-full border border-border bg-background text-sm font-medium text-muted-foreground shadow-sm transition-all hover:border-foreground/20 hover:shadow-card-hover sm:h-11 sm:max-w-sm sm:flex-1 sm:justify-between sm:px-5 size-10 sm:size-auto"
+            className="group flex h-10 cursor-pointer items-center justify-center gap-2.5 rounded-full border border-border bg-background text-sm font-medium text-muted-foreground shadow-sm transition-all hover:border-foreground/25 hover:bg-secondary/40 hover:shadow-card-hover sm:h-11 sm:max-w-md sm:flex-1 sm:justify-start sm:px-4 size-10 sm:size-auto"
             onClick={() => setSearchOpen(true)}
             aria-label={t("nav.searchAriaLabel")}
           >
-            <span className="hidden sm:inline">{t("search.placeholder")}</span>
-            <span className="flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground">
+            <span className="flex size-5 shrink-0 items-center justify-center text-primary transition-transform group-hover:scale-110">
               {searchIcon}
             </span>
+            <span className="hidden flex-1 text-left sm:inline">{t("search.placeholder")}</span>
+            <kbd className="hidden items-center gap-0.5 rounded-md border border-border bg-secondary/70 px-1.5 py-0.5 font-sans text-[11px] font-semibold leading-none text-muted-foreground sm:inline-flex">
+              <span className="text-[13px]">⌘</span>K
+            </kbd>
           </button>
 
           {/* Right cluster: language, theme, account/menu pill */}
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex shrink-0 items-center gap-0.5">
             <LanguageSelector />
             <GitHubLink />
             <ThemeToggle />
 
-            <div className="relative ml-1" ref={menuRef}>
+            <span
+              className="mx-1.5 hidden h-5 w-px bg-border sm:block"
+              aria-hidden="true"
+            />
+
+            <div className="relative" ref={menuRef}>
               <button
                 type="button"
                 className={cn(
-                  "flex h-10 items-center gap-2.5 rounded-full border border-border bg-background py-1 pr-1 pl-3.5 transition-all hover:shadow-card-hover hover:border-foreground/20",
+                  "flex h-10 cursor-pointer items-center gap-2.5 rounded-full border border-border bg-background py-1 pr-1 pl-3.5 transition-all hover:shadow-card-hover hover:border-foreground/20",
                   menuOpen && "shadow-card-hover border-foreground/20",
                 )}
                 aria-label={t("nav.toggleMenu")}

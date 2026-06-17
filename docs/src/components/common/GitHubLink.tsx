@@ -16,7 +16,7 @@ export const GitHubLink: React.FC = () => {
       asChild
       variant="ghost"
       size="icon-sm"
-      className="rounded-full text-foreground/70 hover:text-foreground"
+      className="rounded-full text-foreground/80 hover:text-foreground"
     >
       <a
         href={GITHUB_URL}

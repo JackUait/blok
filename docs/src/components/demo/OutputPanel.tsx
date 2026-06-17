@@ -66,7 +66,7 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({ output }) => {
         </div>
         <button
           className={cn(
-            "output-copy inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-all hover:border-foreground/20 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+            "output-copy inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-all hover:border-foreground/20 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
             copied && "copied border-primary/40 bg-primary/10 text-primary",
           )}
           onClick={handleCopy}

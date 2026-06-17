@@ -87,7 +87,7 @@ export const LanguageSelector = () => {
     <div className="relative" ref={containerRef}>
       <button
         className={cn(
-          "flex size-9 items-center justify-center rounded-full text-foreground/70 transition-colors hover:bg-secondary hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+          "flex size-9 cursor-pointer items-center justify-center rounded-full text-foreground/80 transition-colors hover:bg-secondary hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
           isOpen && "bg-secondary text-foreground",
         )}
         onClick={() => setIsOpen(!isOpen)}
@@ -116,7 +116,7 @@ export const LanguageSelector = () => {
             <button
               key={loc}
               className={cn(
-                "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition-colors hover:bg-secondary",
+                "flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition-colors hover:bg-secondary",
                 active && "text-foreground",
               )}
               onClick={() => handleLocaleChange(loc)}

@@ -405,7 +405,7 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
             />
             {query && (
               <button
-                className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                 onClick={() => setQuery('')}
                 type="button"
                 aria-label={t('search.clearSearch')}>
@@ -518,7 +518,7 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
                       )}
                       <button
                         className={cn(
-                          'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-secondary',
+                          'flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-secondary',
                           index === selectedIndex && 'bg-secondary'
                         )}
                         onClick={() => handleResultClick(result)}

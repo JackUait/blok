@@ -189,7 +189,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {searchQuery ? (
             <button
               type="button"
-              className="flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
               onClick={handleClear}
               aria-label={t('common.clearSearch')}
               data-blok-testid={`${variant}-sidebar-search-clear`}

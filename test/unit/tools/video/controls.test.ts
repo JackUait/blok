@@ -652,6 +652,37 @@ describe('video controls — volume + fullscreen', () => {
     expect(slider.value).toBe('0');
   });
 
+  it('pops the mute icon when the user toggles mute', () => {
+    const btn = q(h.controls, '[data-action="mute-toggle"]');
+    expect(btn.classList.contains('is-bumped')).toBe(false);
+    btn.click();
+    expect(btn.classList.contains('is-bumped')).toBe(true);
+  });
+
+  it('clears the mute-icon pop once its animation ends', () => {
+    const btn = q(h.controls, '[data-action="mute-toggle"]');
+    btn.click();
+    expect(btn.classList.contains('is-bumped')).toBe(true);
+    btn.dispatchEvent(new Event('animationend'));
+    expect(btn.classList.contains('is-bumped')).toBe(false);
+  });
+
+  it('does not pop the mute icon for a volume change that keeps it audible', () => {
+    const btn = q(h.controls, '[data-action="mute-toggle"]');
+    const slider = q(h.controls, '[data-role="volume"]') as HTMLInputElement;
+    slider.value = '0.4';
+    slider.dispatchEvent(new Event('input'));
+    expect(btn.classList.contains('is-bumped')).toBe(false);
+  });
+
+  it('pops the mute icon when the slider is dragged to zero', () => {
+    const btn = q(h.controls, '[data-action="mute-toggle"]');
+    const slider = q(h.controls, '[data-role="volume"]') as HTMLInputElement;
+    slider.value = '0';
+    slider.dispatchEvent(new Event('input'));
+    expect(btn.classList.contains('is-bumped')).toBe(true);
+  });
+
   it('fullscreen button requests fullscreen on the figure', () => {
     const request = vi.fn();
     setProp(h.figure, 'requestFullscreen', request);

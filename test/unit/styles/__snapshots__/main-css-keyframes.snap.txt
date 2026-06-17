@@ -131,6 +131,12 @@
   to { opacity: 1; transform: translateY(0) scale(1) }
 }
 
+@keyframes blok-video-mute-pop {
+  0% { transform: scale(1) }
+  35% { transform: scale(0.78) }
+  100% { transform: scale(1) }
+}
+
 @keyframes blok-video-seek-flash-back {
   0% { opacity: 0; transform: translate(-16px, -50%) scale(0.9) }
   18% { opacity: 1; transform: translate(3px, -50%) scale(1.03) }

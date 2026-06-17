@@ -304,14 +304,31 @@ export function attachControls({ video, figure, storage, glow = 'less' }: Contro
   };
   const onPlay = (): void => setPlaying(true);
   const onPause = (): void => setPlaying(false);
+  // Pop the mute glyph when the user flips audible↔muted (à la native players).
+  const isMuted = (): boolean => video.muted || video.volume === 0;
+  const bumpMute = (): void => {
+    muteToggle.classList.remove('is-bumped');
+    void muteToggle.offsetWidth;
+    muteToggle.classList.add('is-bumped');
+  };
   const onVolumeChange = (): void => {
-    const muted = video.muted || video.volume === 0;
+    const muted = isMuted();
     muteToggle.setAttribute('aria-pressed', String(muted));
     muteToggle.innerHTML = muted ? IconPlayerVolumeMute : IconPlayerVolume;
     muteToggle.setAttribute('aria-label', muted ? 'Unmute' : 'Mute');
     // muting parks the slider at the very beginning; unmuted tracks the real volume
     volume.value = muted ? '0' : String(video.volume);
   };
+  // Run a user-driven sound change, syncing UI and popping the glyph only when the
+  // audible↔muted state actually flips. Captures state before the mutation because
+  // the media's own volumechange event fires synchronously inside it.
+  const withMuteFlip = (mutate: () => void): void => {
+    const was = isMuted();
+    mutate();
+    onVolumeChange();
+    if (isMuted() !== was) bumpMute();
+  };
+  const onMuteBumpEnd = (): void => muteToggle.classList.remove('is-bumped');
 
   const onFullscreenChange = (): void => {
     const isFull = document.fullscreenElement === figure;
@@ -429,11 +446,12 @@ export function attachControls({ video, figure, storage, glow = 'less' }: Contro
     flashSeek(delta < 0 ? 'back' : 'forward', Math.abs(delta));
   };
   const changeVolume = (delta: number): void => {
-    const next = Math.min(1, Math.max(0, media.volume + delta));
-    media.volume = next;
-    media.muted = next === 0;
-    volume.value = String(next);
-    onVolumeChange();
+    withMuteFlip(() => {
+      const next = Math.min(1, Math.max(0, media.volume + delta));
+      media.volume = next;
+      media.muted = next === 0;
+      volume.value = String(next);
+    });
   };
   const stepSpeed = (delta: number): void => {
     media.playbackRate = Math.min(SPEED_MAX, Math.max(SPEED_MIN, media.playbackRate + delta));
@@ -469,14 +487,14 @@ export function attachControls({ video, figure, storage, glow = 'less' }: Contro
     }
   };
   const onMuteClick = (): void => {
-    media.muted = !media.muted;
-    onVolumeChange();
+    withMuteFlip(() => { media.muted = !media.muted; });
   };
   const onVolumeInput = (): void => {
-    const v = Number(volume.value);
-    media.volume = v;
-    media.muted = v === 0;
-    onVolumeChange();
+    withMuteFlip(() => {
+      const v = Number(volume.value);
+      media.volume = v;
+      media.muted = v === 0;
+    });
   };
   const onFullscreen = (): void => {
     if (document.fullscreenElement === figure) void document.exitFullscreen?.();
@@ -944,6 +962,7 @@ export function attachControls({ video, figure, storage, glow = 'less' }: Contro
   seek.addEventListener('pointermove', onSeekHover);
   seek.addEventListener('pointerleave', onSeekHoverLeave);
   muteToggle.addEventListener('click', onMuteClick);
+  muteToggle.addEventListener('animationend', onMuteBumpEnd);
   volume.addEventListener('input', onVolumeInput);
   fullscreen.addEventListener('click', onFullscreen);
 
@@ -1016,6 +1035,7 @@ export function attachControls({ video, figure, storage, glow = 'less' }: Contro
     video.removeEventListener('play', onPlay);
     video.removeEventListener('pause', onPause);
     video.removeEventListener('volumechange', onVolumeChange);
+    muteToggle.removeEventListener('animationend', onMuteBumpEnd);
     document.removeEventListener('fullscreenchange', onFullscreenChange);
     document.removeEventListener('pointerdown', onTheaterOutside);
     cancelFlip();

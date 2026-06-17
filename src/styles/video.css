@@ -570,6 +570,15 @@
   border-radius: var(--blok-radius-pill);
   background: var(--blok-video-thumb);
 }
+/* mute glyph pops when the user flips audible↔muted */
+@keyframes blok-video-mute-pop {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(0.78); }
+  100% { transform: scale(1); }
+}
+[data-blok-tool="video"] .blok-video-controls__btn[data-action="mute-toggle"].is-bumped svg {
+  animation: blok-video-mute-pop 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
 
 /* gear settings popover — speed / loop */
 [data-blok-tool="video"] .blok-video-controls__menu-wrap {
@@ -948,4 +957,5 @@
   [data-blok-tool="video"] .blok-video-controls__burst.is-active,
   [data-blok-tool="video"] .blok-video-controls__burst.is-active::after,
   [data-blok-tool="video"] .blok-video-controls__burst.is-active svg { animation: none; opacity: 0; }
+  [data-blok-tool="video"] .blok-video-controls__btn[data-action="mute-toggle"].is-bumped svg { animation: none; }
 }

@@ -522,13 +522,24 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
   menuWrap.className = 'blok-video-controls__menu-wrap';
   menuWrap.append(gear, menu);
 
+  // Speeds render as a compact chip grid rather than eight stacked radio rows —
+  // a denser, more legible speed picker that the active chip lights up coral.
   const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
   const speedItems = SPEEDS.map((rate) => {
-    const item = menuItem(`speed-${rate}`, rate === 1 ? 'Normal' : `${rate}×`, 'menuitemradio');
-    item.setAttribute('aria-checked', String(rate === 1));
-    item.addEventListener('click', () => setRate(rate));
-    return item;
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'blok-video-controls__speed-chip';
+    chip.setAttribute('data-action', `speed-${rate}`);
+    chip.setAttribute('role', 'menuitemradio');
+    chip.setAttribute('aria-checked', String(rate === 1));
+    chip.textContent = `${rate}×`;
+    chip.addEventListener('click', () => setRate(rate));
+    return chip;
   });
+  const speedGrid = document.createElement('div');
+  speedGrid.className = 'blok-video-controls__speed-grid';
+  speedGrid.setAttribute('data-role', 'speed-grid');
+  speedGrid.append(...speedItems);
   const setRate = (rate: number): void => {
     state.selectedRate = rate;
     media.playbackRate = rate;
@@ -581,7 +592,7 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
 
   menu.append(
     menuSection('Speed'),
-    ...speedItems,
+    speedGrid,
     loopItem,
     menuSection('Sleep timer'),
     sleepOff,

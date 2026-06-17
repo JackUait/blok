@@ -820,11 +820,13 @@ export const IconPlayerVolumeMute = `
 </svg>
 `;
 
-// Player settings — gear
+// Player settings — sliders / tune (three adjustable tracks with knobs)
 export const IconPlayerSettings = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <circle cx="10" cy="10" r="2.25" stroke="currentColor" stroke-width="1.25"/>
-  <path d="M10 2.5v2M10 15.5v2M17.5 10h-2M4.5 10h-2M15.3 4.7l-1.4 1.4M6.1 13.9l-1.4 1.4M15.3 15.3l-1.4-1.4M6.1 6.1 4.7 4.7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M3 6h7.5M15.5 6H17M3 10h2.5M10.5 10H17M3 14h5.5M13.5 14H17" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <circle cx="13" cy="6" r="2" stroke="currentColor" stroke-width="1.25"/>
+  <circle cx="8" cy="10" r="2" stroke="currentColor" stroke-width="1.25"/>
+  <circle cx="11" cy="14" r="2" stroke="currentColor" stroke-width="1.25"/>
 </svg>
 `;
 

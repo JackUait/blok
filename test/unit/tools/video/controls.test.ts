@@ -684,6 +684,19 @@ describe('video controls — playback gear menu', () => {
     expect(q(h.controls, '[data-action="speed-1"]').getAttribute('aria-checked')).toBe('false');
   });
 
+  it('lays the speeds out as chips in a dedicated grid, not stacked menu rows', () => {
+    const grid = q(h.controls, '[data-role="speed-grid"]');
+    const chips = grid.querySelectorAll('[data-action^="speed-"]');
+    expect(chips).toHaveLength(8);
+    chips.forEach((chip) => {
+      expect(chip.classList.contains('blok-video-controls__speed-chip')).toBe(true);
+      // Chips are NOT the generic full-width menu rows.
+      expect(chip.classList.contains('blok-video-controls__menu-item')).toBe(false);
+    });
+    // Compact glyph labels — "1×" reads better in a chip than the verbose "Normal".
+    expect(q(h.controls, '[data-action="speed-1"]').textContent).toBe('1×');
+  });
+
   it('loop toggles media.loop and reflects the checked state', () => {
     const loop = q(h.controls, '[data-action="loop"]');
     expect(h.video.loop).toBe(false);

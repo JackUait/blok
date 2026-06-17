@@ -424,6 +424,7 @@
   --blok-video-control-bg-hover: rgba(255, 255, 255, 0.16);
   --blok-video-time-fg: rgba(255, 255, 255, 0.92);
   --blok-video-track: rgba(255, 255, 255, 0.3);
+  --blok-video-buffered: rgba(255, 255, 255, 0.5);
   --blok-video-volume-track: rgba(255, 255, 255, 0.35);
   --blok-video-thumb: #ffffff;
   --blok-video-thumb-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);

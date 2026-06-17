@@ -520,8 +520,43 @@
   user-select: none;
 }
 
-/* scrubber — flex-grows; coral elapsed fill, white thumb */
+/* scrubber wrap — flex-grows; layers a base track, a buffered fill, the range
+   input (transparent track so the layers show through), and a hover tooltip */
+[data-blok-tool="video"] .blok-video-controls__seek-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+/* base (unbuffered) track behind everything */
+[data-blok-tool="video"] .blok-video-controls__seek-wrap::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 4px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-video-track);
+  transition: height 120ms ease;
+}
+/* buffered-ahead fill */
+[data-blok-tool="video"] .blok-video-controls__buffered {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: var(--blok-buffered-pct, 0%);
+  height: 4px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-video-buffered);
+  pointer-events: none;
+  transition: height 120ms ease;
+}
+/* scrubber — coral elapsed fill, transparent track (layers show through) */
 [data-blok-tool="video"] .blok-video-controls__seek {
+  position: relative;
   flex: 1 1 auto;
   min-width: 0;
   height: 4px;
@@ -531,12 +566,37 @@
   background: linear-gradient(
     to right,
     var(--blok-video-accent) var(--blok-seek-pct),
-    var(--blok-video-track) var(--blok-seek-pct)
+    transparent var(--blok-seek-pct)
   );
   border-radius: var(--blok-radius-pill);
   cursor: pointer;
   outline: none;
 }
+/* the whole bar thickens on hover for an easier grab */
+[data-blok-tool="video"] .blok-video-controls__seek-wrap:hover::before,
+[data-blok-tool="video"] .blok-video-controls__seek-wrap:hover .blok-video-controls__buffered,
+[data-blok-tool="video"] .blok-video-controls__seek-wrap:hover .blok-video-controls__seek { height: 6px; }
+/* hover time bubble */
+[data-blok-tool="video"] .blok-video-controls__seek-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: var(--blok-tooltip-x, 0%);
+  transform: translateX(-50%);
+  margin-bottom: var(--blok-space-2);
+  padding: 2px 6px;
+  border-radius: var(--blok-radius-sm);
+  background: var(--blok-video-burst-bg);
+  color: var(--blok-video-burst-fg);
+  box-shadow: var(--blok-video-burst-shadow);
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+[data-blok-tool="video"] .blok-video-controls__seek-tooltip[aria-hidden="false"] { opacity: 1; }
 [data-blok-tool="video"] .blok-video-controls__seek::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
@@ -596,9 +656,28 @@
   background: var(--blok-video-thumb);
 }
 
+/* bottom mini progress — revealed by CSS only while the control bar is hidden
+   (the auto-hide bucket sets data-controls-hidden on the figure) */
+[data-blok-tool="video"] .blok-video-controls__mini {
+  position: absolute;
+  left: 0; bottom: 0;
+  height: 3px;
+  width: var(--blok-seek-pct, 0%);
+  background: var(--blok-video-accent);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+[data-blok-tool="video"] .blok-video-inner[data-controls-hidden="true"] .blok-video-controls__mini { opacity: 1; }
+
 @media (prefers-reduced-motion: reduce) {
   [data-blok-tool="video"] .blok-video-controls__bar,
   [data-blok-tool="video"] .blok-video-controls__volume,
+  [data-blok-tool="video"] .blok-video-controls__mini,
+  [data-blok-tool="video"] .blok-video-controls__seek-tooltip,
+  [data-blok-tool="video"] .blok-video-controls__seek-wrap::before,
+  [data-blok-tool="video"] .blok-video-controls__buffered,
+  [data-blok-tool="video"] .blok-video-controls__seek,
   [data-blok-tool="video"] .blok-video-controls__speed { transition: none; }
   [data-blok-tool="video"] .blok-video-controls__seek-flash.is-active,
   [data-blok-tool="video"] .blok-video-controls__seek-flash.is-active svg { animation: none; opacity: 0; }

@@ -1,5 +1,17 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { attachControls, formatTime } from '../../../../src/tools/video/controls';
+import {
+  attachControls,
+  formatTime,
+  bufferedPct,
+  timeAtRatio,
+  ratioFromPointer,
+} from '../../../../src/tools/video/controls';
+
+const fakeRanges = (pairs: [number, number][]): TimeRanges => ({
+  length: pairs.length,
+  start: (i: number): number => pairs[i][0],
+  end: (i: number): number => pairs[i][1],
+}) as TimeRanges;
 
 interface Harness {
   figure: HTMLElement;
@@ -42,6 +54,51 @@ describe('video controls — formatTime', () => {
   it('formats NaN/negative as 0:00', () => {
     expect(formatTime(NaN)).toBe('0:00');
     expect(formatTime(-4)).toBe('0:00');
+  });
+});
+
+describe('video controls — bufferedPct', () => {
+  it('returns 0 for missing or empty ranges', () => {
+    expect(bufferedPct(null, 0, 100)).toBe(0);
+    expect(bufferedPct(fakeRanges([]), 0, 100)).toBe(0);
+  });
+
+  it('uses the range containing currentTime', () => {
+    expect(bufferedPct(fakeRanges([[0, 30]]), 10, 100)).toBe(30);
+    expect(bufferedPct(fakeRanges([[0, 10], [40, 60]]), 50, 100)).toBe(60);
+  });
+
+  it('falls back to the last range ending before currentTime in a gap', () => {
+    expect(bufferedPct(fakeRanges([[0, 10], [40, 60]]), 20, 100)).toBe(10);
+  });
+
+  it('guards non-positive / non-finite duration and clamps to 100', () => {
+    expect(bufferedPct(fakeRanges([[0, 30]]), 10, 0)).toBe(0);
+    expect(bufferedPct(fakeRanges([[0, 30]]), 10, NaN)).toBe(0);
+    expect(bufferedPct(fakeRanges([[0, 30]]), 10, Infinity)).toBe(0);
+    expect(bufferedPct(fakeRanges([[0, 150]]), 10, 100)).toBe(100);
+  });
+});
+
+describe('video controls — timeAtRatio / ratioFromPointer', () => {
+  it('maps a ratio to a time and clamps the ratio', () => {
+    expect(timeAtRatio(0.5, 100)).toBe(50);
+    expect(timeAtRatio(-0.3, 100)).toBe(0);
+    expect(timeAtRatio(1.4, 100)).toBe(100);
+  });
+
+  it('returns 0 for non-positive / non-finite duration', () => {
+    expect(timeAtRatio(0.5, 0)).toBe(0);
+    expect(timeAtRatio(0.5, NaN)).toBe(0);
+    expect(timeAtRatio(0.5, Infinity)).toBe(0);
+  });
+
+  it('computes the pointer ratio within the track and guards zero width', () => {
+    expect(ratioFromPointer(50, { left: 0, width: 100 })).toBe(0.5);
+    expect(ratioFromPointer(-10, { left: 0, width: 100 })).toBe(0);
+    expect(ratioFromPointer(200, { left: 0, width: 100 })).toBe(1);
+    expect(ratioFromPointer(60, { left: 10, width: 100 })).toBe(0.5);
+    expect(ratioFromPointer(50, { left: 0, width: 0 })).toBe(0);
   });
 });
 
@@ -497,6 +554,59 @@ describe('video controls — progress + seeking', () => {
     seek.value = '40';
     seek.dispatchEvent(new Event('input', { bubbles: true }));
     expect(h.video.currentTime).toBe(40);
+  });
+});
+
+describe('video controls — buffered bar', () => {
+  let h: Harness;
+  beforeEach(() => { vi.clearAllMocks(); h = mount(); setProp(h.video, 'duration', 100); h.video.dispatchEvent(new Event('loadedmetadata')); });
+  afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
+
+  it('paints the buffered percentage on a progress event', () => {
+    setProp(h.video, 'currentTime', 10);
+    setProp(h.video, 'buffered', fakeRanges([[0, 40]]));
+    h.video.dispatchEvent(new Event('progress'));
+    const buffered = q(h.controls, '[data-role="seek-buffered"]');
+    expect(buffered.style.getPropertyValue('--blok-buffered-pct')).toBe('40%');
+  });
+
+  it('paints zero when nothing is buffered', () => {
+    setProp(h.video, 'buffered', fakeRanges([]));
+    h.video.dispatchEvent(new Event('progress'));
+    expect(q(h.controls, '[data-role="seek-buffered"]').style.getPropertyValue('--blok-buffered-pct')).toBe('0%');
+  });
+});
+
+describe('video controls — hover time tooltip', () => {
+  let h: Harness;
+  beforeEach(() => { vi.clearAllMocks(); h = mount(); setProp(h.video, 'duration', 100); h.video.dispatchEvent(new Event('loadedmetadata')); });
+  afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
+
+  it('reveals a formatted time on pointermove and hides on leave', () => {
+    const tip = q(h.controls, '[data-role="seek-tooltip"]');
+    expect(tip.getAttribute('aria-hidden')).toBe('true');
+    const seek = q(h.controls, '[data-role="seek"]');
+    // jsdom getBoundingClientRect is all-zero → ratio 0 → 0:00 (wiring proof).
+    seek.dispatchEvent(new MouseEvent('pointermove', { clientX: 0, bubbles: true }));
+    expect(tip.textContent).toBe('0:00');
+    expect(tip.getAttribute('aria-hidden')).toBe('false');
+    seek.dispatchEvent(new MouseEvent('pointerleave', { bubbles: true }));
+    expect(tip.getAttribute('aria-hidden')).toBe('true');
+  });
+});
+
+describe('video controls — mini progress', () => {
+  let h: Harness;
+  beforeEach(() => { vi.clearAllMocks(); h = mount(); });
+  afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
+
+  it('exists and reflects elapsed percentage on the controls root', () => {
+    expect(q(h.controls, '[data-role="mini-progress"]')).toBeTruthy();
+    setProp(h.video, 'duration', 100);
+    h.video.dispatchEvent(new Event('loadedmetadata'));
+    setProp(h.video, 'currentTime', 25);
+    h.video.dispatchEvent(new Event('timeupdate'));
+    expect(h.controls.style.getPropertyValue('--blok-seek-pct')).toBe('25%');
   });
 });
 

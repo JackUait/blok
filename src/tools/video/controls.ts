@@ -28,6 +28,39 @@ export function formatTime(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
+/**
+ * Buffered-ahead percentage (0..100) for the loaded bar. Picks the buffered
+ * range that contains `currentTime`; failing that, the last range ending before
+ * it (so a forward gap still shows real progress). Returns 0 for missing/empty
+ * ranges or a non-positive/non-finite duration (e.g. a live stream).
+ */
+export function bufferedPct(buffered: TimeRanges | null, currentTime: number, duration: number): number {
+  if (!buffered || buffered.length === 0) return 0;
+  if (!Number.isFinite(duration) || duration <= 0) return 0;
+  const ranges = Array.from({ length: buffered.length }, (_, i) => ({
+    start: buffered.start(i),
+    end: buffered.end(i),
+  }));
+  // Prefer the range straddling the playhead; else the last range that ended
+  // before it (a forward gap still shows real progress).
+  const containing = ranges.find((r) => r.start <= currentTime && currentTime <= r.end);
+  const before = ranges.filter((r) => r.end <= currentTime).at(-1);
+  const end = containing?.end ?? before?.end ?? 0;
+  return Math.min(100, Math.max(0, (end / duration) * 100));
+}
+
+/** Clamp a 0..1 scrubber ratio to a time, guarding non-finite duration. */
+export function timeAtRatio(ratio: number, duration: number): number {
+  if (!Number.isFinite(duration) || duration <= 0) return 0;
+  return Math.min(1, Math.max(0, ratio)) * duration;
+}
+
+/** 0..1 ratio of a pointer's x within a track rect; 0 when the rect has no width. */
+export function ratioFromPointer(clientX: number, rect: { left: number; width: number }): number {
+  if (!rect.width) return 0;
+  return Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+}
+
 function button(action: string, label: string, icon: string, extraClass = ''): HTMLButtonElement {
   const btn = document.createElement('button');
   btn.type = 'button';
@@ -91,6 +124,25 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
   seek.setAttribute('data-role', 'seek');
   seek.setAttribute('aria-label', 'Seek');
 
+  // The range input can't host a child fill, so wrap it: a buffered (loaded)
+  // layer sits behind the input's transparent track, and a hover tooltip floats
+  // above. The wrap carries the flex-grow the bare input used to.
+  const seekWrap = document.createElement('div');
+  seekWrap.className = 'blok-video-controls__seek-wrap';
+  seekWrap.setAttribute('data-role', 'seek-wrap');
+
+  const seekBuffered = document.createElement('div');
+  seekBuffered.className = 'blok-video-controls__buffered';
+  seekBuffered.setAttribute('data-role', 'seek-buffered');
+  seekBuffered.setAttribute('aria-hidden', 'true');
+
+  const seekTooltip = document.createElement('div');
+  seekTooltip.className = 'blok-video-controls__seek-tooltip';
+  seekTooltip.setAttribute('data-role', 'seek-tooltip');
+  seekTooltip.setAttribute('aria-hidden', 'true');
+
+  seekWrap.append(seekBuffered, seek, seekTooltip);
+
   const time = document.createElement('span');
   time.className = 'blok-video-controls__time';
   time.setAttribute('data-role', 'time');
@@ -115,8 +167,17 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
   volumeWrap.className = 'blok-video-controls__volume-wrap';
   volumeWrap.append(muteToggle, volume);
 
-  bar.append(playToggle, time, seek, volumeWrap, fullscreen);
+  bar.append(playToggle, time, seekWrap, volumeWrap, fullscreen);
   root.appendChild(bar);
+
+  // Thin elapsed line pinned to the player's bottom edge — reads the shared
+  // `--blok-seek-pct` and is revealed by CSS only while the control bar is
+  // hidden (the auto-hide bucket sets that state).
+  const miniProgress = document.createElement('div');
+  miniProgress.className = 'blok-video-controls__mini';
+  miniProgress.setAttribute('data-role', 'mini-progress');
+  miniProgress.setAttribute('aria-hidden', 'true');
+  root.appendChild(miniProgress);
 
   // ----- state sync -----
   // `media` aliases the param so the property writes below are not flagged as
@@ -137,23 +198,47 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
     time.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
   };
 
-  // Paint the elapsed portion of the scrubber with the accent colour.
+  // Paint the elapsed portion of the scrubber with the accent colour. The prop
+  // lives on `root` so both the seek gradient (inherited) and the bottom
+  // mini-progress bar read the same value.
   const paintSeek = (): void => {
     const max = Number(seek.max) || 0;
     const pct = max > 0 ? (Number(seek.value) / max) * 100 : 0;
-    seek.style.setProperty('--blok-seek-pct', `${pct}%`);
+    root.style.setProperty('--blok-seek-pct', `${pct}%`);
+  };
+
+  // Paint the buffered-ahead portion behind the elapsed fill.
+  const paintBuffered = (): void => {
+    const pct = bufferedPct(video.buffered, video.currentTime, video.duration);
+    seekBuffered.style.setProperty('--blok-buffered-pct', `${pct}%`);
   };
 
   const onLoadedMetadata = (): void => {
     const dur = Number.isFinite(video.duration) ? video.duration : 0;
     seek.max = String(dur);
     paintSeek();
+    paintBuffered();
     renderTime();
   };
   const onTimeUpdate = (): void => {
     seek.value = String(video.currentTime);
     paintSeek();
+    paintBuffered();
     renderTime();
+  };
+  const onProgress = (): void => paintBuffered();
+  // Float the hover tooltip over the scrubber at the cursor, reading the time at
+  // that position. jsdom yields a zero rect, so the position is a no-op there
+  // but the text wiring still proves out.
+  const onSeekHover = (event: MouseEvent): void => {
+    const rect = seek.getBoundingClientRect();
+    const ratio = ratioFromPointer(event.clientX, rect);
+    seekTooltip.textContent = formatTime(timeAtRatio(ratio, video.duration));
+    seekTooltip.style.setProperty('--blok-tooltip-x', `${ratio * 100}%`);
+    seekTooltip.setAttribute('aria-hidden', 'false');
+  };
+  const onSeekHoverLeave = (): void => {
+    seekTooltip.setAttribute('aria-hidden', 'true');
   };
   const onPlay = (): void => setPlaying(true);
   const onPause = (): void => setPlaying(false);
@@ -348,12 +433,15 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
   seekFlash.addEventListener('animationend', onSeekFlashEnd);
   burst.addEventListener('animationend', onBurstEnd);
   seek.addEventListener('input', onSeekInput);
+  seek.addEventListener('pointermove', onSeekHover);
+  seek.addEventListener('pointerleave', onSeekHoverLeave);
   muteToggle.addEventListener('click', onMuteClick);
   volume.addEventListener('input', onVolumeInput);
   fullscreen.addEventListener('click', onFullscreen);
 
   video.addEventListener('loadedmetadata', onLoadedMetadata);
   video.addEventListener('timeupdate', onTimeUpdate);
+  video.addEventListener('progress', onProgress);
   video.addEventListener('play', onPlay);
   video.addEventListener('pause', onPause);
   video.addEventListener('volumechange', onVolumeChange);
@@ -368,8 +456,11 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
     video.removeEventListener('pointercancel', releaseHold);
     video.removeEventListener('keydown', onVideoKeydown);
     seekFlash.removeEventListener('animationend', onSeekFlashEnd);
+    seek.removeEventListener('pointermove', onSeekHover);
+    seek.removeEventListener('pointerleave', onSeekHoverLeave);
     video.removeEventListener('loadedmetadata', onLoadedMetadata);
     video.removeEventListener('timeupdate', onTimeUpdate);
+    video.removeEventListener('progress', onProgress);
     video.removeEventListener('play', onPlay);
     video.removeEventListener('pause', onPause);
     video.removeEventListener('volumechange', onVolumeChange);

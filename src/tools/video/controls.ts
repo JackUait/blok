@@ -670,7 +670,12 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     flip.anim = anim;
     anim.onfinish = (): void => {
       if (flip.anim === anim) flip.anim = null;
+      // Run teardown FIRST (it swaps the figure back to its inline flow position),
+      // THEN cancel so the fill:'forwards' transform is dropped in the same frame —
+      // no flash to centre, and no collapsed transform left stuck on the figure
+      // (which would freeze the inline video shrunk and displaced below its slot).
       opts.done?.();
+      anim.cancel();
     };
   };
   const enterTheater = (): void => {

@@ -1059,7 +1059,8 @@ describe('video controls — theater entrance/exit (FLIP via Web Animations)', (
     // Still promoted + animating: the card shrinks centre→inline, backdrop fading.
     expect(h.figure.getAttribute('data-theater-leaving')).toBe('true');
     expect(hidePopover).not.toHaveBeenCalled();
-    const { keyframes, options } = lastAnim();
+    const exitAnim = lastAnim();
+    const { keyframes, options } = exitAnim;
     expect(keyframes[0].transform).toBe('translate(0px, 0px) scale(1, 1)');
     expect(keyframes[1].transform).toBe('translate(100px, 550px) scale(0.4, 0.4)');
     // fill:forwards holds the shrunk frame until teardown, so no snap-back to centre.
@@ -1074,6 +1075,10 @@ describe('video controls — theater entrance/exit (FLIP via Web Animations)', (
     expect(h.figure.getAttribute('popover')).toBeNull();
     expect(h.figure.getAttribute('data-theater')).toBe('false');
     expect(h.figure.getAttribute('data-theater-leaving')).toBeNull();
+    // The forwards-fill animation MUST be canceled on teardown — otherwise its
+    // collapsed transform stays applied after the popover closes, freezing the
+    // inline video shrunk and displaced below its slot.
+    expect(exitAnim.cancel).toHaveBeenCalledTimes(1);
   });
 });
 

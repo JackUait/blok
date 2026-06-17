@@ -21,10 +21,7 @@ export const Hero: React.FC = () => {
 
       <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-6 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="text-center lg:text-left" data-blok-testid="hero-content">
-          <p className="text-xs font-bold uppercase tracking-wide text-primary">
-            {t('home.hero.eyebrow')}
-          </p>
-          <h1 className="mt-5 text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
+          <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
             {t('home.hero.title')}
             <br />
             <span className="text-brand-gradient">{t('home.hero.titleGradient')}</span>

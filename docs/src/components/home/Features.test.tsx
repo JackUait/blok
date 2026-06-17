@@ -22,10 +22,10 @@ describe('Features', () => {
     expect(section).toBeInTheDocument();
   });
 
-  it('should render the section header', () => {
+  it('should render the section header without an eyebrow kicker', () => {
     renderFeatures();
 
-    expect(screen.getByText('Why Blok')).toBeInTheDocument();
+    expect(screen.queryByText('Why Blok')).not.toBeInTheDocument();
     // The title is split by <br /> tags
     expect(screen.getByText((content) => content.includes('Built for developers'))).toBeInTheDocument();
     expect(screen.getByText((content) => content.includes('designed for users'))).toBeInTheDocument();
@@ -35,7 +35,7 @@ describe('Features', () => {
     renderFeatures();
 
     expect(
-      screen.getByText('Everything you need to create powerful editing experiences in your applications.')
+      screen.getByText((content) => content.includes('Everything you need to ship a modern block editor'))
     ).toBeInTheDocument();
   });
 
@@ -46,100 +46,100 @@ describe('Features', () => {
     expect(featureCards).toHaveLength(9);
   });
 
-  it('should render Clean JSON Output feature', () => {
+  it('should render Clean JSON output feature', () => {
     renderFeatures();
 
-    expect(screen.getByText('Clean JSON Output')).toBeInTheDocument();
+    expect(screen.getByText('Clean JSON output')).toBeInTheDocument();
     expect(screen.getByText((content) => content.includes('typed JSON blocks'))).toBeInTheDocument();
   });
 
-  it('should render Toolbox & Slash Commands feature', () => {
+  it('should render the block library feature', () => {
     renderFeatures();
 
-    expect(screen.getByText('Toolbox & Slash Commands')).toBeInTheDocument();
+    expect(screen.getByText('Blocks for everything')).toBeInTheDocument();
     expect(
-      screen.getByText((content) => content.includes('to open the block menu'))
+      screen.getByText((content) => content.includes('Notion-style blocks'))
     ).toBeInTheDocument();
   });
 
-  it('should render Inline Toolbar feature', () => {
+  it('should render the extensibility feature', () => {
     renderFeatures();
 
-    expect(screen.getByText('Inline Toolbar')).toBeInTheDocument();
-    expect(
-      screen.getByText((content) => content.includes('Select text to format'))
-    ).toBeInTheDocument();
-  });
-
-  it('should render Drag & Drop feature', () => {
-    renderFeatures();
-
-    expect(screen.getByText('Drag & Drop')).toBeInTheDocument();
-    expect(screen.getByText((content) => content.includes('drag handles'))).toBeInTheDocument();
-  });
-
-  it('should render Custom Block Tools feature', () => {
-    renderFeatures();
-
-    const button = screen.getByRole('button', { name: 'Learn more about Custom Block Tools' });
+    const button = screen.getByRole('button', { name: 'Learn more about extending Blok' });
     const withinButton = within(button);
-    expect(withinButton.getByText('Custom Block Tools')).toBeInTheDocument();
-    expect(withinButton.getByText((content) => content.includes('custom blocks'))).toBeInTheDocument();
+    expect(withinButton.getByText('Extensible by design')).toBeInTheDocument();
+    expect(withinButton.getByText((content) => content.includes('block tunes'))).toBeInTheDocument();
   });
 
-  it('should render Read-Only Mode feature', () => {
+  it('should render Slash menu & Markdown feature', () => {
     renderFeatures();
 
-    expect(screen.getByText('Read-Only Mode')).toBeInTheDocument();
+    expect(screen.getByText('Slash menu & Markdown')).toBeInTheDocument();
     expect(
-      screen.getByText((content) => content.includes('Toggle read-only mode'))
+      screen.getByText((content) => content.includes('Markdown shortcuts'))
     ).toBeInTheDocument();
   });
 
-  it('should render Undo & Redo feature', () => {
+  it('should render Databases & boards feature', () => {
     renderFeatures();
 
-    expect(screen.getByText('Undo & Redo')).toBeInTheDocument();
+    expect(screen.getByText('Databases & boards')).toBeInTheDocument();
     expect(
-      screen.getByText((content) => content.includes('Conflict-free state tracking'))
+      screen.getByText((content) => content.includes('every row is a block'))
     ).toBeInTheDocument();
   });
 
-  it('should render 68 Languages feature', () => {
+  it('should render Tables feature', () => {
     renderFeatures();
 
-    expect(screen.getByText('68 Languages')).toBeInTheDocument();
+    expect(screen.getByText('Tables that behave')).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('Merged cells'))).toBeInTheDocument();
+  });
+
+  it('should render Embeds feature', () => {
+    renderFeatures();
+
+    expect(screen.getByText('Embeds & link previews')).toBeInTheDocument();
     expect(
-      screen.getByText((content) => content.includes('RTL support'))
+      screen.getByText((content) => content.includes('100+ services'))
     ).toBeInTheDocument();
   });
 
-  it('should render Smart Paste feature', () => {
+  it('should render Undo & redo feature', () => {
     renderFeatures();
 
-    expect(screen.getByText('Smart Paste')).toBeInTheDocument();
+    expect(screen.getByText('Undo & redo')).toBeInTheDocument();
     expect(
-      screen.getByText((content) => content.includes('sanitized and converted'))
+      screen.getByText((content) => content.includes('Yjs-backed'))
+    ).toBeInTheDocument();
+  });
+
+  it('should render 68 languages feature', () => {
+    renderFeatures();
+
+    expect(screen.getByText('68 languages, RTL-ready')).toBeInTheDocument();
+    expect(
+      screen.getByText((content) => content.includes('right-to-left support'))
     ).toBeInTheDocument();
   });
 
   it('should render feature cards with accessible labels', () => {
     renderFeatures();
 
-    const expectedTitles = [
-      'Clean JSON Output',
-      'Toolbox & Slash Commands',
-      'Inline Toolbar',
-      'Drag & Drop',
-      'Custom Block Tools',
-      'Read-Only Mode',
-      'Undo & Redo',
-      '68 Languages',
-      'Smart Paste',
+    const expectedLabels = [
+      'Learn more about Clean JSON output',
+      'Learn more about the block library',
+      'Learn more about extending Blok',
+      'Learn more about the slash menu and Markdown',
+      'Learn more about databases',
+      'Learn more about tables',
+      'Learn more about embeds',
+      'Learn more about undo and redo',
+      'Learn more about internationalization',
     ];
 
-    expectedTitles.forEach((title) => {
-      expect(screen.getByRole('button', { name: `Learn more about ${title}` })).toBeInTheDocument();
+    expectedLabels.forEach((label) => {
+      expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
     });
   });
 
@@ -150,6 +150,7 @@ describe('Features', () => {
         <Features />
       </I18nProvider>
     );
-    expect(screen.getByText('Почему Blok')).toBeInTheDocument();
+    expect(screen.queryByText('Почему Blok')).not.toBeInTheDocument();
+    expect(screen.getByText('Чистый JSON')).toBeInTheDocument();
   });
 });

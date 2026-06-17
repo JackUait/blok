@@ -54,7 +54,7 @@ describe('HomePage', () => {
     );
 
     const main = screen.getByRole('main');
-    const features = within(main).getByText(/why blok/i);
+    const features = within(main).getByText(/built for developers/i);
     expect(features).toBeInTheDocument();
   });
 

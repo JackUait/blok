@@ -332,117 +332,117 @@
       "migration": "Migration"
     },
     "features": {
-      "eyebrow": "Why Blok",
       "title1": "Built for developers,",
       "title2": "designed for users",
-      "description": "Everything you need to create powerful editing experiences in your applications.",
+      "description": "Everything you need to ship a modern block editor — clean JSON, a full block library, and a deep, typed API.",
       "sectionLabel": "Features",
+      "learnMoreLabel": "Learn more",
       "cleanJson": {
-        "title": "Clean JSON Output",
-        "description": "Content is structured as typed JSON blocks, not raw HTML. Parse, store, and render anywhere.",
-        "learnMore": "Learn more about Clean JSON Output",
+        "title": "Clean JSON output",
+        "description": "Content is typed JSON blocks, not an HTML blob. Store it, diff it, or render it on a server that never touches the DOM.",
+        "learnMore": "Learn more about Clean JSON output",
         "details": {
-          "summary": "Blok outputs clean, typed JSON data that's easy to store, transform, and render in any environment.",
-          "benefit1": "Store content in any database without HTML parsing",
-          "benefit2": "Render on server, client, or native apps",
-          "benefit3": "Full TypeScript types for all block data",
-          "benefit4": "Easy content migration and transformation"
+          "summary": "Blok is headless. Every document is a flat tree of typed blocks with stable IDs, so the output is the same whether you save it to a database, diff it in version control, or render it server-side.",
+          "benefit1": "Typed JSON output — no HTML parsing",
+          "benefit2": "Stable block IDs for diffing and version control",
+          "benefit3": "Render anywhere: server, client, or native",
+          "benefit4": "Framework-agnostic core with full TypeScript types"
         }
       },
-      "slashCommands": {
-        "title": "Toolbox & Slash Commands",
-        "description": "Press / or click + to open the block menu. Insert paragraphs, headers, lists, and custom blocks instantly.",
-        "learnMore": "Learn more about Toolbox & Slash Commands",
+      "blockLibrary": {
+        "title": "Blocks for everything",
+        "description": "Tables, databases, columns, callouts, toggles, code, media and embeds — Notion-style blocks ship in the box.",
+        "learnMore": "Learn more about the block library",
         "details": {
-          "summary": "A powerful command palette for quick block insertion. Users can type \"/\" to search and insert any block type.",
-          "benefit1": "Keyboard-first workflow with \"/\" commands",
-          "benefit2": "Searchable block menu with fuzzy matching",
-          "benefit3": "Custom shortcuts for frequently used blocks",
-          "benefit4": "Accessible with full keyboard navigation"
-        }
-      },
-      "inlineToolbar": {
-        "title": "Inline Toolbar",
-        "description": "Select text to format with bold, italic, and links. Extensible with custom inline tools.",
-        "learnMore": "Learn more about Inline Toolbar",
-        "details": {
-          "summary": "A floating toolbar appears when text is selected, providing quick access to inline formatting options.",
-          "benefit1": "Context-aware formatting options",
-          "benefit2": "Built-in bold, italic, and link tools",
-          "benefit3": "Extensible with custom inline tools",
-          "benefit4": "Smart positioning that stays in viewport"
-        }
-      },
-      "dragDrop": {
-        "title": "Drag & Drop",
-        "description": "Rearrange blocks with drag handles. Pointer-based system for desktop devices.",
-        "learnMore": "Learn more about Drag & Drop",
-        "details": {
-          "summary": "Intuitive drag and drop reordering using a pointer-based system. Currently available on desktop devices.",
-          "benefit1": "Works on desktop devices",
-          "benefit2": "Visual drop indicators",
-          "benefit3": "Smooth animations during drag",
-          "benefit4": "Accessible keyboard alternatives"
+          "summary": "Blok comes with the blocks people expect from a modern editor: nestable tables and toggles, multi-column layouts, kanban databases, syntax-highlighted code, image, video and file uploads, and live embeds — all first-class blocks.",
+          "benefit1": "Tables with merged cells, resizing and cell colors",
+          "benefit2": "Databases with kanban and list views",
+          "benefit3": "Columns, callouts, toggles and dividers",
+          "benefit4": "Code, image, video, file and 100+ embeds"
         }
       },
       "customBlocks": {
-        "title": "Custom Block Tools",
-        "description": "Extend the editor with custom blocks. Built-in paragraph, header, list tools included.",
-        "learnMore": "Learn more about Custom Block Tools",
+        "title": "Extensible by design",
+        "description": "Build your own block tools, inline tools and block tunes against a deep, typed API with full lifecycle hooks.",
+        "learnMore": "Learn more about extending Blok",
         "details": {
-          "summary": "Create any block type you need. From simple text blocks to complex interactive components.",
-          "benefit1": "Simple API for creating custom blocks",
-          "benefit2": "Built-in paragraph, header, and list tools",
-          "benefit3": "Full lifecycle hooks (render, save, validate)",
-          "benefit4": "Block tunes for additional settings"
+          "summary": "Three extension points — block tools, inline tools and block tunes — sit on a deep public API (blocks, caret, history, selection and more) with lifecycle hooks for render, save, validate and move.",
+          "benefit1": "Custom block tools with a simple render/save API",
+          "benefit2": "Custom inline tools and block tunes",
+          "benefit3": "Lifecycle hooks: rendered, updated, moved, removed",
+          "benefit4": "Deep public API for blocks, caret, history and more"
         }
       },
-      "readOnly": {
-        "title": "Read-Only Mode",
-        "description": "Toggle read-only mode at runtime. Perfect for view-only contexts or permission-based editing.",
-        "learnMore": "Learn more about Read-Only Mode",
+      "slashCommands": {
+        "title": "Slash menu & Markdown",
+        "description": "Type / to search and insert any block, or use Markdown shortcuts like #, -, 1., [] and >.",
+        "learnMore": "Learn more about the slash menu and Markdown",
         "details": {
-          "summary": "Switch between edit and read-only modes at runtime without reinitializing the editor.",
-          "benefit1": "Toggle at runtime via API",
-          "benefit2": "Perfect for permission-based editing",
-          "benefit3": "Preserves content and scroll position",
-          "benefit4": "Disables all editing interactions"
+          "summary": "A keyboard-first toolbox: press / (or click +) to fuzzy-search every block type, and Markdown shortcuts convert as you type.",
+          "benefit1": "Fuzzy-searchable / command palette",
+          "benefit2": "Markdown shortcuts: #, -, 1., [], >",
+          "benefit3": "Click + on any empty block",
+          "benefit4": "Fully keyboard accessible"
+        }
+      },
+      "databases": {
+        "title": "Databases & boards",
+        "description": "Schema-driven databases where every row is a block. Switch between kanban board and list views.",
+        "learnMore": "Learn more about databases",
+        "details": {
+          "summary": "Blok's database is a block: rows are child blocks, columns define a typed property schema, and the same data renders as a kanban board or a grouped list.",
+          "benefit1": "Rows are blocks — everything stays in the tree",
+          "benefit2": "Typed property schema (text, select, date…)",
+          "benefit3": "Kanban board and list views",
+          "benefit4": "Drag cards, columns and rows"
+        }
+      },
+      "tables": {
+        "title": "Tables that behave",
+        "description": "Merged cells, column resizing, cell colors, heading rows and full keyboard navigation.",
+        "learnMore": "Learn more about tables",
+        "details": {
+          "summary": "A production-grade table block: merge and split cells, resize columns, color cells, mark heading rows and columns, and move between cells with the keyboard.",
+          "benefit1": "Merge and split cells (colspan / rowspan)",
+          "benefit2": "Resize columns and color cells",
+          "benefit3": "Heading row and column",
+          "benefit4": "Keyboard navigation between cells"
+        }
+      },
+      "embeds": {
+        "title": "Embeds & link previews",
+        "description": "Paste a link to embed 100+ services — YouTube, Figma, Spotify, Gist — or get an OpenGraph bookmark card.",
+        "learnMore": "Learn more about embeds",
+        "details": {
+          "summary": "Paste a URL and Blok matches it against 100+ providers to render a live embed; anything else becomes a clean OpenGraph bookmark card.",
+          "benefit1": "100+ embed providers, matched client-side",
+          "benefit2": "Video, audio, social, code and design sources",
+          "benefit3": "OpenGraph bookmark cards as a fallback",
+          "benefit4": "Notion-style paste menu: link, bookmark or embed"
         }
       },
       "undoRedo": {
-        "title": "Undo & Redo",
-        "description": "CRDT-based history with ⌘Z / ⌘⇧Z. Conflict-free state tracking for reliable undo/redo.",
-        "learnMore": "Learn more about Undo & Redo",
+        "title": "Undo & redo",
+        "description": "Yjs-backed history with ⌘Z / ⌘⇧Z. Conflict-free, grouped at word boundaries, and it restores your caret.",
+        "learnMore": "Learn more about undo and redo",
         "details": {
-          "summary": "CRDT-powered undo/redo ensures conflict-free history tracking. Keyboard shortcuts and API access included.",
-          "benefit1": "CRDT-based change tracking",
-          "benefit2": "Conflict-free state management",
-          "benefit3": "Keyboard shortcuts (⌘Z / ⌘⇧Z)",
-          "benefit4": "Programmatic undo/redo via API"
+          "summary": "History is built on a Yjs CRDT: edits are grouped at word boundaries, reorders are atomic, and undo returns the caret to where you were.",
+          "benefit1": "CRDT-based, conflict-free history",
+          "benefit2": "Smart grouping at word boundaries",
+          "benefit3": "Caret restored after undo",
+          "benefit4": "⌘Z / ⌘⇧Z and a programmatic API"
         }
       },
       "languages": {
-        "title": "68 Languages",
-        "description": "Lazy-loaded i18n with RTL support. Only English bundled by default ~3KB.",
-        "learnMore": "Learn more about 68 Languages",
+        "title": "68 languages, RTL-ready",
+        "description": "Lazy-loaded translations for 68 locales with right-to-left support. Only your language ships to the browser.",
+        "learnMore": "Learn more about internationalization",
         "details": {
-          "summary": "Full internationalization with 68 languages, RTL support, and lazy loading for optimal bundle size.",
-          "benefit1": "68 supported languages",
-          "benefit2": "Full RTL layout support",
-          "benefit3": "Lazy-loaded translations (~3KB base)",
-          "benefit4": "Custom translation overrides"
-        }
-      },
-      "smartPaste": {
-        "title": "Smart Paste",
-        "description": "Paste from Google Docs or plain text. HTML is sanitized and converted to blocks.",
-        "learnMore": "Learn more about Smart Paste",
-        "details": {
-          "summary": "Paste content from Google Docs and watch it transform into clean, structured blocks automatically.",
-          "benefit1": "Works with Google Docs and plain text",
-          "benefit2": "Automatic XSS-safe HTML sanitization",
-          "benefit3": "Preserves headings, lists, and formatting",
-          "benefit4": "Extensible paste handlers for custom tools"
+          "summary": "Blok ships 68 locales with automatic browser-language detection and right-to-left layout. Locale data is lazy-loaded, so users only download the language they need.",
+          "benefit1": "68 bundled locales",
+          "benefit2": "Right-to-left layout (Arabic, Hebrew, Farsi…)",
+          "benefit3": "Lazy-loaded — minimal base bundle",
+          "benefit4": "Override any string"
         }
       }
     },

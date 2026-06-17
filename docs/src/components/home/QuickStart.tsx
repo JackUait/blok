@@ -82,10 +82,7 @@ export const QuickStart: React.FC = () => {
 
       <div className="mx-auto w-full max-w-4xl px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <span className="text-xs font-bold uppercase tracking-wide text-primary">
-            {t('home.quickStart.eyebrow')}
-          </span>
-          <h2 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">
+          <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
             {t('home.quickStart.title')}
           </h2>
           <p className="mt-5 text-lg leading-relaxed text-muted-foreground">

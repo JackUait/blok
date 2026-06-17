@@ -7,6 +7,8 @@ export interface FeatureDetail {
   title: string;
   description: string;
   learnMore: string;
+  /** Pillars that define Blok render larger than supporting capabilities. */
+  tier?: "primary" | "secondary";
   accent:
     | "coral"
     | "orange"

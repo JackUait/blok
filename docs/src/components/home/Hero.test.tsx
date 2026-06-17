@@ -8,7 +8,7 @@ describe('Hero', () => {
   afterEach(() => {
     localStorage.removeItem('blok-docs-locale');
   });
-  it('should render the eyebrow text', () => {
+  it('should not render an eyebrow kicker', () => {
     render(
       <I18nProvider>
         <MemoryRouter>
@@ -17,7 +17,7 @@ describe('Hero', () => {
       </I18nProvider>
     );
 
-    expect(screen.getByText('Open-Source Editor')).toBeInTheDocument();
+    expect(screen.queryByText('Open-Source Editor')).not.toBeInTheDocument();
   });
 
   it('should render the main title', () => {
@@ -134,6 +134,9 @@ describe('Hero', () => {
         </MemoryRouter>
       </I18nProvider>
     );
-    expect(screen.getByText('Редактор с открытым кодом')).toBeInTheDocument();
+    expect(screen.queryByText('Редактор с открытым кодом')).not.toBeInTheDocument();
+    expect(
+      screen.getByText((content) => content.includes('Создавайте красивые'))
+    ).toBeInTheDocument();
   });
 });

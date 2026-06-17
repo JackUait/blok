@@ -200,6 +200,7 @@ describe('QuickStart', () => {
         <QuickStart />
       </I18nProvider>
     );
-    expect(screen.getByText('Начало работы')).toBeInTheDocument();
+    expect(screen.queryByText('Начало работы')).not.toBeInTheDocument();
+    expect(screen.getByText('Готово за несколько минут')).toBeInTheDocument();
   });
 });

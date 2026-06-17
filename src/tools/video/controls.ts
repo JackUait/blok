@@ -1,10 +1,12 @@
 import {
+  IconCheck,
   IconExpandFullscreen,
   IconPlayerBackward,
   IconPlayerForward,
   IconPlayerFullscreenExit,
   IconPlayerPause,
   IconPlayerPlay,
+  IconPlayerSettings,
   IconPlayerVolume,
   IconPlayerVolumeMute,
 } from '../../components/icons';
@@ -183,7 +185,10 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
   // `media` aliases the param so the property writes below are not flagged as
   // parameter reassignment.
   const media = video;
-  const state = { playing: false };
+  const state = { playing: false, selectedRate: 1, sleepTimer: 0, stableVolume: false };
+  // Lazily-built Web Audio graph for loudness normalization (live-verify only —
+  // jsdom has no Web Audio, so the toggle stays state-only there).
+  const audio: { ctx: AudioContext | null; comp: DynamicsCompressorNode | null } = { ctx: null, comp: null };
 
   const setPlaying = (next: boolean): void => {
     state.playing = next;
@@ -300,7 +305,9 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
     if (hold.timer) { clearTimeout(hold.timer); hold.timer = 0; }
     if (!hold.active) return;
     hold.active = false;
-    media.playbackRate = 1;
+    // Restore the gear-menu-selected rate, not a hardcoded 1× — so holding to
+    // peek at 2× returns to whatever speed the user actually chose.
+    media.playbackRate = state.selectedRate;
     speedBadge.classList.remove('is-active');
   };
   const onPointerDown = (event: PointerEvent): void => {
@@ -418,6 +425,139 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
     else void figure.requestFullscreen?.();
   };
 
+  // ----- gear settings menu (speed / loop / sleep / stable volume) -----
+  // Viewer-accessible in-player popover (the block ☰ menu is editor-only). Built
+  // here so it shares the player's closure state.
+  const menuItem = (action: string, label: string, role: 'menuitemradio' | 'menuitemcheckbox'): HTMLButtonElement => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'blok-video-controls__menu-item';
+    item.setAttribute('data-action', action);
+    item.setAttribute('role', role);
+    item.setAttribute('aria-checked', 'false');
+    const text = document.createElement('span');
+    text.className = 'blok-video-controls__menu-label';
+    text.textContent = label;
+    const check = document.createElement('span');
+    check.className = 'blok-video-controls__menu-check';
+    check.setAttribute('aria-hidden', 'true');
+    check.innerHTML = IconCheck;
+    item.append(text, check);
+    return item;
+  };
+  const menuSection = (label: string): HTMLElement => {
+    const heading = document.createElement('div');
+    heading.className = 'blok-video-controls__menu-section';
+    heading.textContent = label;
+    return heading;
+  };
+
+  const gear = button('gear', 'Settings', IconPlayerSettings);
+  gear.setAttribute('aria-haspopup', 'menu');
+  gear.setAttribute('aria-expanded', 'false');
+
+  const menu = document.createElement('div');
+  menu.className = 'blok-video-controls__menu';
+  menu.setAttribute('data-role', 'playback-menu');
+  menu.setAttribute('role', 'menu');
+  menu.hidden = true;
+
+  const menuWrap = document.createElement('div');
+  menuWrap.className = 'blok-video-controls__menu-wrap';
+  menuWrap.append(gear, menu);
+
+  const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+  const speedItems = SPEEDS.map((rate) => {
+    const item = menuItem(`speed-${rate}`, rate === 1 ? 'Normal' : `${rate}×`, 'menuitemradio');
+    item.setAttribute('aria-checked', String(rate === 1));
+    item.addEventListener('click', () => setRate(rate));
+    return item;
+  });
+  const setRate = (rate: number): void => {
+    state.selectedRate = rate;
+    media.playbackRate = rate;
+    speedItems.forEach((item) => {
+      item.setAttribute('aria-checked', String(item.getAttribute('data-action') === `speed-${rate}`));
+    });
+  };
+
+  const loopItem = menuItem('loop', 'Loop', 'menuitemcheckbox');
+  loopItem.addEventListener('click', () => {
+    media.loop = !media.loop;
+    loopItem.setAttribute('aria-checked', String(media.loop));
+  });
+
+  const SLEEPS = [10, 15, 30, 60];
+  const sleepOff = menuItem('sleep-off', 'Off', 'menuitemradio');
+  sleepOff.setAttribute('aria-checked', 'true');
+  const sleepItems = SLEEPS.map((minutes) => {
+    const item = menuItem(`sleep-${minutes}`, `${minutes} min`, 'menuitemradio');
+    item.addEventListener('click', () => setSleep(minutes, item));
+    return item;
+  });
+  sleepOff.addEventListener('click', () => setSleep(0, sleepOff));
+  const setSleep = (minutes: number, active: HTMLElement): void => {
+    if (state.sleepTimer) { clearTimeout(state.sleepTimer); state.sleepTimer = 0; }
+    if (minutes > 0) state.sleepTimer = window.setTimeout(() => media.pause(), minutes * 60_000);
+    [sleepOff, ...sleepItems].forEach((item) => item.setAttribute('aria-checked', String(item === active)));
+  };
+
+  const stableItem = menuItem('stable-volume', 'Stable volume', 'menuitemcheckbox');
+  const AudioCtor = window.AudioContext;
+  stableItem.addEventListener('click', () => {
+    state.stableVolume = !state.stableVolume;
+    stableItem.setAttribute('aria-checked', String(state.stableVolume));
+    if (!AudioCtor) return; // no Web Audio (e.g. jsdom) — state only
+    if (!audio.ctx) {
+      try {
+        audio.ctx = new AudioCtor();
+        const source = audio.ctx.createMediaElementSource(media);
+        audio.comp = audio.ctx.createDynamicsCompressor();
+        source.connect(audio.comp);
+        audio.comp.connect(audio.ctx.destination);
+      } catch {
+        // createMediaElementSource is one-shot / blocked before a gesture
+      }
+    }
+    if (audio.comp) audio.comp.ratio.value = state.stableVolume ? 12 : 1;
+    if (state.stableVolume) void audio.ctx?.resume?.();
+  });
+
+  menu.append(
+    menuSection('Speed'),
+    ...speedItems,
+    loopItem,
+    menuSection('Sleep timer'),
+    sleepOff,
+    ...sleepItems,
+    stableItem,
+  );
+  bar.insertBefore(menuWrap, fullscreen);
+
+  const onMenuOutside = (event: MouseEvent): void => {
+    if (menu.hidden) return;
+    const target = event.target as Node | null;
+    if (target && menuWrap.contains(target)) return;
+    closeMenu();
+  };
+  const openMenu = (): void => {
+    if (!menu.hidden) return;
+    menu.hidden = false;
+    gear.setAttribute('aria-expanded', 'true');
+    document.addEventListener('mousedown', onMenuOutside);
+  };
+  const closeMenu = (): void => {
+    if (menu.hidden) return;
+    menu.hidden = true;
+    gear.setAttribute('aria-expanded', 'false');
+    document.removeEventListener('mousedown', onMenuOutside);
+  };
+  gear.addEventListener('click', (event) => {
+    event.stopPropagation();
+    if (menu.hidden) openMenu();
+    else closeMenu();
+  });
+
   playToggle.addEventListener('click', togglePlay);
   // Click anywhere on the video to play/pause (the control bar sits above with
   // its own pointer-events, so its hits never reach the media). A click after a
@@ -449,6 +589,9 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
 
   const destroy = (): void => {
     if (hold.timer) clearTimeout(hold.timer);
+    if (state.sleepTimer) clearTimeout(state.sleepTimer);
+    document.removeEventListener('mousedown', onMenuOutside);
+    void audio.ctx?.close?.();
     video.removeEventListener('click', onVideoClick);
     video.removeEventListener('pointerdown', onPointerDown);
     video.removeEventListener('pointerup', onPointerUp);

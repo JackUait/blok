@@ -633,3 +633,92 @@ describe('video controls — volume + fullscreen', () => {
     expect(request).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('video controls — playback gear menu', () => {
+  let h: Harness;
+  beforeEach(() => { vi.clearAllMocks(); h = mount(); });
+  afterEach(() => { vi.useRealTimers(); h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
+
+  const gear = (): HTMLElement => q(h.controls, '[data-action="gear"]');
+  const menu = (): HTMLElement => q(h.controls, '[data-role="playback-menu"]');
+
+  it('renders a gear button and a hidden menu', () => {
+    expect(gear().getAttribute('aria-haspopup')).toBe('menu');
+    expect(gear().getAttribute('aria-expanded')).toBe('false');
+    expect((menu() as HTMLElement & { hidden: boolean }).hidden).toBe(true);
+  });
+
+  it('opens and closes the menu on gear click', () => {
+    gear().click();
+    expect((menu() as HTMLElement & { hidden: boolean }).hidden).toBe(false);
+    expect(gear().getAttribute('aria-expanded')).toBe('true');
+    gear().click();
+    expect((menu() as HTMLElement & { hidden: boolean }).hidden).toBe(true);
+  });
+
+  it('closes the menu on an outside mousedown', () => {
+    gear().click();
+    expect((menu() as HTMLElement & { hidden: boolean }).hidden).toBe(false);
+    document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect((menu() as HTMLElement & { hidden: boolean }).hidden).toBe(true);
+  });
+
+  it('lists eight playback speeds with Normal active by default', () => {
+    expect(menu().querySelectorAll('[data-action^="speed-"]')).toHaveLength(8);
+    expect(q(h.controls, '[data-action="speed-1"]').getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('selecting a speed sets playbackRate and moves the check', () => {
+    q(h.controls, '[data-action="speed-1.5"]').click();
+    expect(h.video.playbackRate).toBe(1.5);
+    expect(q(h.controls, '[data-action="speed-1.5"]').getAttribute('aria-checked')).toBe('true');
+    expect(q(h.controls, '[data-action="speed-1"]').getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('loop toggles media.loop and reflects the checked state', () => {
+    const loop = q(h.controls, '[data-action="loop"]');
+    expect(h.video.loop).toBe(false);
+    loop.click();
+    expect(h.video.loop).toBe(true);
+    expect(loop.getAttribute('aria-checked')).toBe('true');
+    loop.click();
+    expect(h.video.loop).toBe(false);
+  });
+
+  it('sleep timer pauses playback only after the chosen duration', () => {
+    vi.useFakeTimers();
+    q(h.controls, '[data-action="sleep-30"]').click();
+    vi.advanceTimersByTime(29 * 60 * 1000);
+    expect(h.video.pause).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(60 * 1000);
+    expect(h.video.pause).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears a pending sleep timer on destroy', () => {
+    vi.useFakeTimers();
+    q(h.controls, '[data-action="sleep-60"]').click();
+    h.destroy();
+    vi.advanceTimersByTime(60 * 60 * 1000);
+    expect(h.video.pause).not.toHaveBeenCalled();
+  });
+
+  it('stable volume toggles state without throwing when Web Audio is absent', () => {
+    const sv = q(h.controls, '[data-action="stable-volume"]');
+    expect(sv.getAttribute('aria-checked')).toBe('false');
+    expect(() => sv.click()).not.toThrow();
+    expect(sv.getAttribute('aria-checked')).toBe('true');
+    sv.click();
+    expect(sv.getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('releasing a 2× hold restores the menu-selected rate, not 1×', () => {
+    vi.useFakeTimers();
+    q(h.controls, '[data-action="speed-1.5"]').click();
+    expect(h.video.playbackRate).toBe(1.5);
+    h.video.dispatchEvent(new Event('pointerdown'));
+    vi.advanceTimersByTime(300);
+    expect(h.video.playbackRate).toBe(2);
+    h.video.dispatchEvent(new Event('pointerup'));
+    expect(h.video.playbackRate).toBe(1.5);
+  });
+});

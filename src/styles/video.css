@@ -725,9 +725,11 @@
   height: fit-content;
   max-height: 94vh;
   /* reset the UA popover frame so the card centres on the video exactly and the
-     caption (top:100%) isn't clipped */
+     caption (top:100%) isn't clipped. background:transparent kills the UA popover's
+     white Canvas fill, which the rounded video now reveals as white corner slivers. */
   padding: 0;
   border: 0;
+  background: transparent;
   overflow: visible;
   z-index: 2147483000;
   box-shadow:
@@ -787,25 +789,18 @@
    two, leaving a frozen "ghost" of the small video as the card morphs out. */
 [data-blok-tool="video"] .blok-video-inner[data-theater="true"] .blok-video-media video {
   transform: translateZ(0);
+  /* the composited layer escapes the media's overflow:hidden rounding, so round
+     the <video> itself to keep the theater frame's corners soft */
+  border-radius: var(--blok-radius-lg);
 }
 [data-blok-tool="video"] .blok-video-inner[data-theater="true"] [data-role="resize-handle"],
 [data-blok-tool="video"] .blok-video-inner[data-theater="true"] .blok-video-controls__ambient {
   display: none;
 }
-/* lift the caption out of flow so the centred box is the VIDEO itself, not the
-   video-plus-caption stack — the frame lands exactly mid-viewport. The caption
-   floats just beneath, centred and lightened to read on the scrim. */
+/* theater is a presentation view — drop the caption entirely so the centred box
+   is the VIDEO itself and the frame lands exactly mid-viewport */
 [data-blok-tool="video"] .blok-video-inner[data-theater="true"] .blok-video-caption-row {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  justify-content: center;
-}
-[data-blok-tool="video"] .blok-video-inner[data-theater="true"] .blok-video-caption {
-  margin-top: var(--blok-space-2);
-  color: var(--blok-video-time-fg);
-  text-align: center;
+  display: none;
 }
 
 /* centre play affordance — shown while paused at the start */

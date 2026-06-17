@@ -749,8 +749,16 @@
   background: var(--blok-video-theater-scrim);
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
+  opacity: 1;
   /* the page dims to black like house lights going down, a touch behind the card */
   animation: blok-video-theater-curtain 300ms ease-out;
+}
+/* exit: the house lights come back up — the scrim fades out while the JS shrinks
+   the card back into its inline slot, so the page is never revealed by a hard cut */
+[data-blok-tool="video"] .blok-video-inner[data-theater="true"][data-theater-leaving="true"]:popover-open::backdrop {
+  animation: none;
+  opacity: 0;
+  transition: opacity 280ms ease;
 }
 @keyframes blok-video-theater-in {
   from { opacity: 0; transform: translateY(22px) scale(0.84); }

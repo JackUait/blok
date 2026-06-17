@@ -623,7 +623,11 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
   const canPopover = typeof figure.showPopover === 'function';
   const theaterBtn = button('theater', 'Theater mode', IconPlayerTheater);
   theaterBtn.setAttribute('aria-pressed', 'false');
-  const theater = { on: false };
+  // `inlineRect` is the figure's grid-slot rect, captured on enter (before
+  // data-theater promotes it to fixed/centre) and reused to land the exit morph.
+  const theater = { on: false, inlineRect: null as DOMRect | null };
+  const FLIP_IN = 'transform 480ms cubic-bezier(0.33, 1, 0.68, 1), opacity 320ms ease';
+  const FLIP_OUT = 'transform 300ms cubic-bezier(0.4, 0, 1, 1)';
   const onTheaterKey = (event: KeyboardEvent): void => {
     if (event.key === 'Escape') setTheater(false);
   };
@@ -632,74 +636,99 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     const target = event.target as Node | null;
     if (target && !figure.contains(target)) setTheater(false);
   };
-  // FLIP entrance: the figure jumps from its inline grid slot to the fixed,
-  // top-layer centre the instant the popover opens. Animating only a scale nudge
-  // (as a keyframe would) leaves that big position jump unanimated, so it reads as
-  // a teleport. Instead we measure the inline rect, let the popover promote, then
-  // INVERT the card back onto the inline frame and release it — it grows from its
-  // original spot into the centre. Cleared on transition end so CSS owns resting.
-  const flip = { raf: 0 };
+  // The figure jumps from its inline grid slot to the fixed, top-layer centre the
+  // instant the popover opens, so a keyframe scale-nudge leaves that big position
+  // jump unanimated (reads as a teleport). We FLIP instead: snap the centred card
+  // back onto the inline rect, force a reflow so the invert is the committed first
+  // frame (without it the first frame drops and the grow reads as steps), then
+  // release it — it grows out of its original spot into the centre, and reverses
+  // on exit. transitionend hooks are single-shot so re-entry never doubles up.
+  const flip = { onEnd: null as ((event: TransitionEvent) => void) | null };
   const resetFlipStyles = (): void => {
     figure.style.removeProperty('transition');
     figure.style.removeProperty('transform');
     figure.style.removeProperty('transform-origin');
-  };
-  const onFlipEnd = (event: TransitionEvent): void => {
-    if (event.propertyName !== 'transform') return;
-    resetFlipStyles();
-    figure.removeEventListener('transitionend', onFlipEnd);
+    figure.style.removeProperty('opacity');
+    figure.style.removeProperty('will-change');
   };
   const clearFlip = (): void => {
-    if (flip.raf) { cancelAnimationFrame(flip.raf); flip.raf = 0; }
-    figure.removeEventListener('transitionend', onFlipEnd);
+    if (flip.onEnd) { figure.removeEventListener('transitionend', flip.onEnd); flip.onEnd = null; }
     resetFlipStyles();
   };
-  // `first` is the inline rect captured BEFORE data-theater is applied — the
-  // attribute itself flips the figure to fixed/centred via CSS, so measuring after
-  // it would yield the centred rect and the FLIP would compute a zero delta.
-  const openPopover = (first: DOMRect): void => {
+  const onTransformEnd = (done: () => void) => (event: TransitionEvent): void => {
+    if (event.propertyName !== 'transform') return;
+    if (flip.onEnd) { figure.removeEventListener('transitionend', flip.onEnd); flip.onEnd = null; }
+    done();
+  };
+  const collapsed = (from: DOMRect, to: DOMRect): string =>
+    `translate(${to.left - from.left}px, ${to.top - from.top}px) scale(${to.width / from.width}, ${to.height / from.height})`;
+  const enterTheater = (): void => {
+    // Measure the inline rect BEFORE data-theater promotes the figure — the
+    // attribute applies position:fixed + full width, so a later read returns the
+    // centred rect and the morph collapses to a zero delta.
+    const inlineRect = figure.getBoundingClientRect();
+    theater.inlineRect = inlineRect;
+    figure.setAttribute('data-theater', 'true');
+    if (!canPopover) return; // popover-less fallback: the CSS keyframe owns it
     figure.setAttribute('popover', 'manual');
     try { figure.showPopover(); } catch { figure.removeAttribute('popover'); return; }
     if (reducedMotion) return;
-    const last = figure.getBoundingClientRect();
-    if (!first.width || !last.width) return;
-    const dx = first.left - last.left;
-    const dy = first.top - last.top;
-    const sx = first.width / last.width;
-    const sy = first.height / last.height;
-    figure.style.setProperty('transform-origin', 'top left');
-    figure.style.setProperty('transition', 'none');
-    figure.style.setProperty('transform', `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`);
-    figure.addEventListener('transitionend', onFlipEnd);
-    flip.raf = requestAnimationFrame(() => {
-      flip.raf = 0;
-      figure.style.setProperty('transition', 'transform 440ms cubic-bezier(0.22, 1, 0.36, 1)');
-      figure.style.setProperty('transform', 'translate(0px, 0px) scale(1, 1)');
-    });
-  };
-  const closePopover = (): void => {
+    const centre = figure.getBoundingClientRect();
+    if (!inlineRect.width || !centre.width) return;
     clearFlip();
-    if (figure.matches(':popover-open')) {
-      try { figure.hidePopover(); } catch { /* already closed */ }
+    figure.style.setProperty('transform-origin', 'top left');
+    figure.style.setProperty('will-change', 'transform, opacity');
+    figure.style.setProperty('transition', 'none');
+    figure.style.setProperty('transform', collapsed(centre, inlineRect)); // INVERT
+    figure.style.setProperty('opacity', '0.55');
+    void figure.offsetHeight; // commit the invert as the first frame, then PLAY
+    flip.onEnd = onTransformEnd(clearFlip);
+    figure.addEventListener('transitionend', flip.onEnd);
+    figure.style.setProperty('transition', FLIP_IN);
+    figure.style.setProperty('transform', 'translate(0px, 0px) scale(1, 1)');
+    figure.style.setProperty('opacity', '1');
+  };
+  const leaveTheater = (): void => {
+    // Tear down atomically (one paint) so the card never flashes back to centre.
+    const finalize = (): void => {
+      if (canPopover && figure.matches(':popover-open')) {
+        try { figure.hidePopover(); } catch { /* already closed */ }
+      }
+      figure.removeAttribute('popover');
+      figure.setAttribute('data-theater', 'false');
+      figure.removeAttribute('data-theater-leaving');
+      clearFlip();
+    };
+    const to = theater.inlineRect;
+    if (!canPopover || reducedMotion || !to || !figure.matches(':popover-open')) {
+      finalize();
+      return;
     }
-    figure.removeAttribute('popover');
+    const from = figure.getBoundingClientRect();
+    if (!from.width) { finalize(); return; }
+    clearFlip();
+    // data-theater-leaving fades the ::backdrop out alongside the card shrink.
+    figure.setAttribute('data-theater-leaving', 'true');
+    figure.style.setProperty('transform-origin', 'top left');
+    figure.style.setProperty('will-change', 'transform');
+    flip.onEnd = onTransformEnd(finalize);
+    figure.addEventListener('transitionend', flip.onEnd);
+    figure.style.setProperty('transition', FLIP_OUT);
+    figure.style.setProperty('transform', collapsed(from, to)); // shrink into the slot
   };
   const setTheater = (on: boolean): void => {
     if (on === theater.on) return;
     theater.on = on;
-    // Measure the inline rect before data-theater promotes the figure to centre.
-    const inlineRect = on && canPopover ? figure.getBoundingClientRect() : null;
-    figure.setAttribute('data-theater', String(on));
     theaterBtn.setAttribute('aria-pressed', String(on));
     theaterBtn.setAttribute('aria-label', on ? 'Exit theater mode' : 'Theater mode');
-    if (canPopover && inlineRect) openPopover(inlineRect);
-    else if (canPopover) closePopover();
     if (on) {
+      enterTheater();
       document.addEventListener('keydown', onTheaterKey);
       document.addEventListener('pointerdown', onTheaterOutside);
     } else {
       document.removeEventListener('keydown', onTheaterKey);
       document.removeEventListener('pointerdown', onTheaterOutside);
+      leaveTheater();
     }
     figure.dispatchEvent(new CustomEvent('blok-video-theater', { detail: { on } }));
   };

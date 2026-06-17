@@ -5093,7 +5093,14 @@
   background: var(--blok-video-theater-scrim);
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
+  opacity: 1;
   animation: blok-video-theater-curtain 300ms ease-out;
+}
+
+[data-blok-tool="video"] .blok-video-inner[data-theater="true"][data-theater-leaving="true"]:popover-open::backdrop {
+  animation: none;
+  opacity: 0;
+  transition: opacity 280ms ease;
 }
 
 [@media (prefers-reduced-motion: reduce)] [data-blok-tool="video"] .blok-video-inner[data-theater="true"]:not(:popover-open), [data-blok-tool="video"] .blok-video-inner[data-theater="true"]:popover-open::backdrop {

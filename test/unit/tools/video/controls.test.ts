@@ -611,6 +611,71 @@ describe('video controls — hover time tooltip', () => {
   });
 });
 
+describe('video controls — hover frame preview', () => {
+  let h: Harness;
+  const wideRect = (width: number): DOMRect => ({
+    left: 0, right: width, width, top: 0, bottom: 0, height: 0, x: 0, y: 0, toJSON: () => ({}),
+  }) as DOMRect;
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h = mount();
+    setProp(h.video, 'duration', 100);
+    h.video.dispatchEvent(new Event('loadedmetadata'));
+  });
+  afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
+
+  it('mounts a frame-preview canvas inside the tooltip', () => {
+    const thumb = q(h.controls, '[data-role="seek-thumb"]');
+    expect(thumb.tagName).toBe('CANVAS');
+    expect(q(h.controls, '[data-role="seek-tooltip"]').contains(thumb)).toBe(true);
+  });
+
+  it('seeks a hidden preview video to the hovered time once it is ready', () => {
+    const seek = q(h.controls, '[data-role="seek"]');
+    h.video.setAttribute('src', 'blob:test');
+    setProp(seek, 'getBoundingClientRect', () => wideRect(200));
+    seek.dispatchEvent(new MouseEvent('pointermove', { clientX: 100, bubbles: true }));
+    const preview = q<HTMLVideoElement>(h.controls, '[data-role="seek-preview-source"]');
+    expect(preview.getAttribute('src')).toBe('blob:test');
+    // Not yet loaded — no seek issued.
+    expect(preview.currentTime).toBe(0);
+    preview.dispatchEvent(new Event('loadeddata'));
+    expect(preview.currentTime).toBe(50);
+  });
+
+  it('skips the preview when the media has no resolvable source', () => {
+    const seek = q(h.controls, '[data-role="seek"]');
+    seek.dispatchEvent(new MouseEvent('pointermove', { clientX: 0, bubbles: true }));
+    expect(h.controls.querySelector('[data-role="seek-preview-source"]')).toBeNull();
+  });
+
+  it('chases the latest hovered time when a seek lands mid-move', () => {
+    const seek = q(h.controls, '[data-role="seek"]');
+    h.video.setAttribute('src', 'blob:test');
+    setProp(seek, 'getBoundingClientRect', () => wideRect(200));
+    seek.dispatchEvent(new MouseEvent('pointermove', { clientX: 100, bubbles: true }));
+    const preview = q<HTMLVideoElement>(h.controls, '[data-role="seek-preview-source"]');
+    preview.dispatchEvent(new Event('loadeddata'));
+    expect(preview.currentTime).toBe(50);
+    // Pointer moves on while the first seek is still in flight — gets queued.
+    seek.dispatchEvent(new MouseEvent('pointermove', { clientX: 160, bubbles: true }));
+    expect(preview.currentTime).toBe(50);
+    // When the in-flight seek lands, the queued time is chased.
+    preview.dispatchEvent(new Event('seeked'));
+    expect(preview.currentTime).toBe(80);
+  });
+
+  it('tears down the preview video on destroy', () => {
+    const seek = q(h.controls, '[data-role="seek"]');
+    h.video.setAttribute('src', 'blob:test');
+    setProp(seek, 'getBoundingClientRect', () => wideRect(200));
+    seek.dispatchEvent(new MouseEvent('pointermove', { clientX: 100, bubbles: true }));
+    expect(h.controls.querySelector('[data-role="seek-preview-source"]')).toBeTruthy();
+    h.destroy();
+    expect(h.controls.querySelector('[data-role="seek-preview-source"]')).toBeNull();
+  });
+});
+
 describe('video controls — mini progress', () => {
   let h: Harness;
   beforeEach(() => { vi.clearAllMocks(); h = mount(); });

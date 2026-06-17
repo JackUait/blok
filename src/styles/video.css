@@ -497,7 +497,11 @@
   left: var(--blok-tooltip-x, 0%);
   transform: translateX(-50%);
   margin-bottom: var(--blok-space-2);
-  padding: 2px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--blok-space-1);
+  padding: var(--blok-space-1);
   border-radius: var(--blok-radius-sm);
   background: var(--blok-video-burst-bg);
   color: var(--blok-video-burst-fg);
@@ -511,6 +515,23 @@
   transition: opacity 120ms ease;
 }
 [data-blok-tool="video"] .blok-video-controls__seek-tooltip[aria-hidden="false"] { opacity: 1; }
+/* frame preview thumbnail — only shown once a frame has been painted */
+[data-blok-tool="video"] .blok-video-controls__seek-thumb {
+  display: none;
+  width: 160px;
+  height: auto;
+  border-radius: var(--blok-radius-xs);
+  background: var(--blok-video-stage);
+}
+[data-blok-tool="video"] .blok-video-controls__seek-thumb[data-ready="true"] { display: block; }
+/* the hidden source video that frames are grabbed from */
+[data-blok-tool="video"] .blok-video-controls__preview-source {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
 [data-blok-tool="video"] .blok-video-controls__seek::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;

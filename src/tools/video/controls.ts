@@ -178,6 +178,18 @@ export function attachControls({ video, figure, storage, glow = 'less' }: Contro
   seekTooltip.setAttribute('data-role', 'seek-tooltip');
   seekTooltip.setAttribute('aria-hidden', 'true');
 
+  // Frame preview — a canvas the hover handler paints with the frame at the
+  // pointed-to time, stacked above the timecode label.
+  const seekThumb = document.createElement('canvas');
+  seekThumb.className = 'blok-video-controls__seek-thumb';
+  seekThumb.setAttribute('data-role', 'seek-thumb');
+  seekThumb.setAttribute('aria-hidden', 'true');
+
+  const seekTime = document.createElement('span');
+  seekTime.className = 'blok-video-controls__seek-time';
+  seekTime.setAttribute('data-role', 'seek-time');
+
+  seekTooltip.append(seekThumb, seekTime);
   seekWrap.append(seekBuffered, seek, seekTooltip);
 
   const time = document.createElement('span');
@@ -289,18 +301,74 @@ export function attachControls({ video, figure, storage, glow = 'less' }: Contro
     renderTime();
   };
   const onProgress = (): void => paintBuffered();
+
+  // ----- hover frame preview -----
+  // A throwaway second <video>, sharing the source, is seeked to the hovered time
+  // and painted into the tooltip canvas — a client-side stand-in for the sprite
+  // sheets native players ship. Created lazily on first hover so we don't pull the
+  // bytes twice until someone actually scrubs.
+  const THUMB_W = 160;
+  let preview: HTMLVideoElement | null = null;
+  let previewReady = false;
+  let previewBusy = false;
+  let pendingPreviewTime = -1;
+  const drawPreviewFrame = (): void => {
+    previewBusy = false;
+    const ctx = seekThumb.getContext('2d');
+    if (ctx && preview && preview.videoWidth > 0) {
+      seekThumb.width = THUMB_W;
+      seekThumb.height = Math.round(THUMB_W * (preview.videoHeight / preview.videoWidth));
+      ctx.drawImage(preview, 0, 0, seekThumb.width, seekThumb.height);
+      seekThumb.setAttribute('data-ready', 'true');
+    }
+    // The pointer may have moved on while we were seeking — chase the latest time.
+    if (pendingPreviewTime >= 0 && preview && Math.abs(preview.currentTime - pendingPreviewTime) > 0.05) {
+      seekPreviewTo(pendingPreviewTime);
+    }
+  };
+  function seekPreviewTo(time: number): void {
+    pendingPreviewTime = time;
+    if (!preview || !previewReady || previewBusy) return;
+    previewBusy = true;
+    preview.currentTime = time;
+  }
+  const ensurePreview = (): void => {
+    if (preview) return;
+    const src = video.currentSrc || video.getAttribute('src') || '';
+    if (!src) return;
+    preview = document.createElement('video');
+    preview.className = 'blok-video-controls__preview-source';
+    preview.setAttribute('data-role', 'seek-preview-source');
+    preview.muted = true;
+    preview.preload = 'auto';
+    if (video.crossOrigin) preview.crossOrigin = video.crossOrigin;
+    preview.src = src;
+    preview.addEventListener('loadeddata', () => {
+      previewReady = true;
+      if (pendingPreviewTime >= 0) seekPreviewTo(pendingPreviewTime);
+    });
+    preview.addEventListener('seeked', drawPreviewFrame);
+    root.appendChild(preview);
+  };
+
   // Float the hover tooltip over the scrubber at the cursor, reading the time at
   // that position. jsdom yields a zero rect, so the position is a no-op there
   // but the text wiring still proves out.
   const onSeekHover = (event: MouseEvent): void => {
     const rect = seek.getBoundingClientRect();
     const ratio = ratioFromPointer(event.clientX, rect);
-    seekTooltip.textContent = formatTime(timeAtRatio(ratio, video.duration));
+    const time = timeAtRatio(ratio, video.duration);
+    seekTime.textContent = formatTime(time);
     seekTooltip.style.setProperty('--blok-tooltip-x', `${ratio * 100}%`);
     seekTooltip.setAttribute('aria-hidden', 'false');
+    if (Number.isFinite(video.duration) && video.duration > 0) {
+      ensurePreview();
+      seekPreviewTo(time);
+    }
   };
   const onSeekHoverLeave = (): void => {
     seekTooltip.setAttribute('aria-hidden', 'true');
+    pendingPreviewTime = -1;
   };
   const onPlay = (): void => setPlaying(true);
   const onPause = (): void => setPlaying(false);
@@ -1029,6 +1097,13 @@ export function attachControls({ video, figure, storage, glow = 'less' }: Contro
     seekFlash.removeEventListener('animationend', onSeekFlashEnd);
     seek.removeEventListener('pointermove', onSeekHover);
     seek.removeEventListener('pointerleave', onSeekHoverLeave);
+    if (preview) {
+      preview.removeEventListener('seeked', drawPreviewFrame);
+      preview.removeAttribute('src');
+      preview.load();
+      preview.remove();
+      preview = null;
+    }
     video.removeEventListener('loadedmetadata', onLoadedMetadata);
     video.removeEventListener('timeupdate', onTimeUpdate);
     video.removeEventListener('progress', onProgress);

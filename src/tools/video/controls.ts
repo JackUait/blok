@@ -306,7 +306,8 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     muteToggle.setAttribute('aria-pressed', String(muted));
     muteToggle.innerHTML = muted ? IconPlayerVolumeMute : IconPlayerVolume;
     muteToggle.setAttribute('aria-label', muted ? 'Unmute' : 'Mute');
-    if (!video.muted) volume.value = String(video.volume);
+    // muting parks the slider at the very beginning; unmuted tracks the real volume
+    volume.value = muted ? '0' : String(video.volume);
   };
 
   const onFullscreenChange = (): void => {

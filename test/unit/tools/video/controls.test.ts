@@ -642,6 +642,16 @@ describe('video controls — volume + fullscreen', () => {
     expect(btn.getAttribute('aria-pressed')).toBe('false');
   });
 
+  it('muting drives the volume slider to the very beginning', () => {
+    const slider = q(h.controls, '[data-role="volume"]') as HTMLInputElement;
+    setProp(h.video, 'volume', 0.6);
+    h.video.dispatchEvent(new Event('volumechange'));
+    expect(slider.value).toBe('0.6');
+    q(h.controls, '[data-action="mute-toggle"]').click();
+    expect(h.video.muted).toBe(true);
+    expect(slider.value).toBe('0');
+  });
+
   it('fullscreen button requests fullscreen on the figure', () => {
     const request = vi.fn();
     setProp(h.figure, 'requestFullscreen', request);

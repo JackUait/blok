@@ -116,8 +116,9 @@ describe('video controls — structure', () => {
     expect(q(h.controls, '[data-action="fullscreen"]')).toBeTruthy();
   });
 
-  it('does not render a centre play affordance', () => {
-    expect(h.controls.querySelector('[data-role="center-play"]')).toBeNull();
+  it('renders a centre play affordance, shown while paused at the start', () => {
+    const center = q<HTMLButtonElement>(h.controls, '[data-role="center-play"]');
+    expect(center.hidden).toBe(false);
   });
 });
 
@@ -720,6 +721,84 @@ describe('video controls — playback gear menu', () => {
     expect(h.video.playbackRate).toBe(2);
     h.video.dispatchEvent(new Event('pointerup'));
     expect(h.video.playbackRate).toBe(1.5);
+  });
+});
+
+describe('video controls — idle auto-hide', () => {
+  let h: Harness;
+  beforeEach(() => { vi.clearAllMocks(); h = mount(); });
+  afterEach(() => { vi.useRealTimers(); h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
+
+  it('hides the controls after 3s of playback and reveals on pointermove', () => {
+    vi.useFakeTimers();
+    h.video.dispatchEvent(new Event('play'));
+    vi.advanceTimersByTime(3000);
+    expect(h.figure.getAttribute('data-controls-hidden')).toBe('true');
+    h.figure.dispatchEvent(new MouseEvent('pointermove', { bubbles: true }));
+    expect(h.figure.getAttribute('data-controls-hidden')).toBe('false');
+  });
+
+  it('never hides while paused', () => {
+    vi.useFakeTimers();
+    vi.advanceTimersByTime(5000);
+    expect(h.figure.getAttribute('data-controls-hidden')).toBe('false');
+  });
+
+  it('reveals immediately on pause', () => {
+    vi.useFakeTimers();
+    h.video.dispatchEvent(new Event('play'));
+    vi.advanceTimersByTime(3000);
+    h.video.dispatchEvent(new Event('pause'));
+    expect(h.figure.getAttribute('data-controls-hidden')).toBe('false');
+  });
+
+  it('clears the idle timer on destroy', () => {
+    vi.useFakeTimers();
+    h.video.dispatchEvent(new Event('play'));
+    h.destroy();
+    expect(() => vi.advanceTimersByTime(3000)).not.toThrow();
+  });
+});
+
+describe('video controls — centre play + buffer spinner', () => {
+  let h: Harness;
+  beforeEach(() => { vi.clearAllMocks(); h = mount(); });
+  afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
+
+  it('hides the centre play once playing and clicking it plays', () => {
+    const center = q<HTMLButtonElement>(h.controls, '[data-role="center-play"]');
+    center.click();
+    expect(h.video.play).toHaveBeenCalledTimes(1);
+    h.video.dispatchEvent(new Event('play'));
+    expect(center.hidden).toBe(true);
+  });
+
+  it('shows the spinner on waiting and clears it on playing', () => {
+    const spinner = q(h.controls, '[data-role="buffer-spinner"]');
+    h.video.dispatchEvent(new Event('waiting'));
+    expect(spinner.getAttribute('data-active')).toBe('true');
+    h.video.dispatchEvent(new Event('playing'));
+    expect(spinner.getAttribute('data-active')).toBe('false');
+  });
+});
+
+describe('video controls — time label toggle', () => {
+  let h: Harness;
+  beforeEach(() => { vi.clearAllMocks(); h = mount(); setProp(h.video, 'duration', 240); h.video.dispatchEvent(new Event('loadedmetadata')); });
+  afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
+
+  it('clicking the time label switches between elapsed and remaining', () => {
+    setProp(h.video, 'currentTime', 60);
+    h.video.dispatchEvent(new Event('timeupdate'));
+    const time = q(h.controls, '[data-role="time"]');
+    expect(time.textContent).toContain('1:00 / 4:00');
+    time.click();
+    expect(time.textContent).toContain('-3:00');
+    setProp(h.video, 'currentTime', 120);
+    h.video.dispatchEvent(new Event('timeupdate'));
+    expect(time.textContent).toContain('-2:00');
+    time.click();
+    expect(time.textContent).toContain('2:00 / 4:00');
   });
 });
 

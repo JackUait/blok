@@ -112,6 +112,24 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
   seekFlash.setAttribute('aria-hidden', 'true');
   root.appendChild(seekFlash);
 
+  // Large centre play affordance — shown while paused at the very start (à la
+  // native players); a click begins playback.
+  const centerPlay = document.createElement('button');
+  centerPlay.type = 'button';
+  centerPlay.className = 'blok-video-controls__center';
+  centerPlay.setAttribute('data-role', 'center-play');
+  centerPlay.setAttribute('aria-label', 'Play');
+  centerPlay.innerHTML = IconPlayerPlay;
+  root.appendChild(centerPlay);
+
+  // Buffering spinner — toggled by the media's waiting/playing/canplay events.
+  const spinner = document.createElement('div');
+  spinner.className = 'blok-video-controls__spinner';
+  spinner.setAttribute('data-role', 'buffer-spinner');
+  spinner.setAttribute('data-active', 'false');
+  spinner.setAttribute('aria-hidden', 'true');
+  root.appendChild(spinner);
+
   // Bottom scrim + control bar.
   const bar = document.createElement('div');
   bar.className = 'blok-video-controls__bar';
@@ -150,6 +168,8 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
   const time = document.createElement('span');
   time.className = 'blok-video-controls__time';
   time.setAttribute('data-role', 'time');
+  time.setAttribute('role', 'button');
+  time.setAttribute('tabindex', '0');
   time.textContent = '0:00 / 0:00';
 
   const muteToggle = button('mute-toggle', 'Mute', IconPlayerVolume);
@@ -187,7 +207,14 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
   // `media` aliases the param so the property writes below are not flagged as
   // parameter reassignment.
   const media = video;
-  const state = { playing: false, selectedRate: 1, sleepTimer: 0, stableVolume: false };
+  const state = {
+    playing: false,
+    selectedRate: 1,
+    sleepTimer: 0,
+    stableVolume: false,
+    timeMode: 'elapsed' as 'elapsed' | 'remaining',
+    idleTimer: 0,
+  };
   // Lazily-built Web Audio graph for loudness normalization (live-verify only —
   // jsdom has no Web Audio, so the toggle stays state-only there).
   const audio: { ctx: AudioContext | null; comp: DynamicsCompressorNode | null } = { ctx: null, comp: null };
@@ -202,8 +229,26 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
   setPlaying(false);
 
   const renderTime = (): void => {
-    time.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
+    if (state.timeMode === 'remaining') {
+      const dur = Number.isFinite(video.duration) ? video.duration : 0;
+      time.textContent = `-${formatTime(Math.max(0, dur - video.currentTime))}`;
+    } else {
+      time.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
+    }
   };
+  // Click / Enter / Space on the time label flips elapsed ↔ remaining.
+  const toggleTimeMode = (): void => {
+    state.timeMode = state.timeMode === 'elapsed' ? 'remaining' : 'elapsed';
+    renderTime();
+  };
+
+  // Centre play visibility + buffering spinner.
+  const updateCenter = (): void => {
+    centerPlay.hidden = state.playing || video.currentTime > 0;
+  };
+  const onWaiting = (): void => spinner.setAttribute('data-active', 'true');
+  const onPlayingMedia = (): void => { spinner.setAttribute('data-active', 'false'); updateCenter(); };
+  const onCanPlay = (): void => spinner.setAttribute('data-active', 'false');
 
   // Paint the elapsed portion of the scrubber with the accent colour. The prop
   // lives on `root` so both the seek gradient (inherited) and the bottom
@@ -623,7 +668,34 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
     video.addEventListener('leavepictureinpicture', onLeavePip);
   }
 
+  // ----- idle auto-hide -----
+  // Fade the control bar + cursor after a few idle seconds of playback; any
+  // pointer move or focus brings them back. Never hides while paused.
+  const IDLE_MS = 3000;
+  figure.setAttribute('data-controls-hidden', 'false');
+  const hideControls = (): void => {
+    if (state.playing && figure.isConnected) figure.setAttribute('data-controls-hidden', 'true');
+  };
+  const scheduleHide = (): void => {
+    if (state.idleTimer) clearTimeout(state.idleTimer);
+    state.idleTimer = window.setTimeout(hideControls, IDLE_MS);
+  };
+  const revealControls = (): void => {
+    if (state.idleTimer) { clearTimeout(state.idleTimer); state.idleTimer = 0; }
+    figure.setAttribute('data-controls-hidden', 'false');
+    if (state.playing) scheduleHide();
+  };
+
   playToggle.addEventListener('click', togglePlay);
+  centerPlay.addEventListener('click', () => { void media.play(); });
+  time.addEventListener('click', (event) => { event.stopPropagation(); toggleTimeMode(); });
+  time.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleTimeMode();
+    }
+  });
   // Click anywhere on the video to play/pause (the control bar sits above with
   // its own pointer-events, so its hits never reach the media). A click after a
   // press-and-hold is swallowed by onVideoClick.
@@ -649,19 +721,41 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
   video.addEventListener('progress', onProgress);
   video.addEventListener('play', onPlay);
   video.addEventListener('play', startAmbient);
+  video.addEventListener('play', updateCenter);
+  video.addEventListener('play', scheduleHide);
   video.addEventListener('pause', stopAmbient);
   video.addEventListener('pause', onPause);
+  video.addEventListener('pause', updateCenter);
+  video.addEventListener('pause', revealControls);
+  video.addEventListener('timeupdate', updateCenter);
+  video.addEventListener('waiting', onWaiting);
+  video.addEventListener('playing', onPlayingMedia);
+  video.addEventListener('canplay', onCanPlay);
   video.addEventListener('volumechange', onVolumeChange);
+  figure.addEventListener('pointermove', revealControls);
+  figure.addEventListener('focusin', revealControls);
   document.addEventListener('fullscreenchange', onFullscreenChange);
+  updateCenter();
 
   const destroy = (): void => {
     if (hold.timer) clearTimeout(hold.timer);
     if (state.sleepTimer) clearTimeout(state.sleepTimer);
+    if (state.idleTimer) clearTimeout(state.idleTimer);
     document.removeEventListener('mousedown', onMenuOutside);
     void audio.ctx?.close?.();
     stopAmbient();
     video.removeEventListener('play', startAmbient);
+    video.removeEventListener('play', updateCenter);
+    video.removeEventListener('play', scheduleHide);
     video.removeEventListener('pause', stopAmbient);
+    video.removeEventListener('pause', updateCenter);
+    video.removeEventListener('pause', revealControls);
+    video.removeEventListener('timeupdate', updateCenter);
+    video.removeEventListener('waiting', onWaiting);
+    video.removeEventListener('playing', onPlayingMedia);
+    video.removeEventListener('canplay', onCanPlay);
+    figure.removeEventListener('pointermove', revealControls);
+    figure.removeEventListener('focusin', revealControls);
     if (pipBtn) {
       video.removeEventListener('enterpictureinpicture', onEnterPip);
       video.removeEventListener('leavepictureinpicture', onLeavePip);

@@ -29,11 +29,9 @@ describe('constants', () => {
       expect(migrationLink?.href).toBe('/migration');
     });
 
-    it('should have a GitHub link marked as external', () => {
+    it('should not include a GitHub link (lives as a nav icon instead)', () => {
       const githubLink = NAV_LINKS.find((link) => link.label === 'GitHub');
-      expect(githubLink).toBeDefined();
-      expect(githubLink?.external).toBe(true);
-      expect(githubLink?.href).toContain('github.com');
+      expect(githubLink).toBeUndefined();
     });
 
     it('should have all required properties on each link', () => {

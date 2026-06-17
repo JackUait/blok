@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Logo } from "../common/Logo";
 import { Search } from "../common/Search";
 import { ThemeToggle } from "../common/ThemeToggle";
+import { GitHubLink } from "../common/GitHubLink";
 import { LanguageSelector } from "../common/LanguageSelector";
 import { useI18n } from "../../contexts/I18nContext";
 import type { NavLink } from "@/types/navigation";
@@ -155,6 +156,7 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
           {/* Right cluster: language, theme, account/menu pill */}
           <div className="flex shrink-0 items-center gap-1">
             <LanguageSelector />
+            <GitHubLink />
             <ThemeToggle />
 
             <div className="relative ml-1" ref={menuRef}>

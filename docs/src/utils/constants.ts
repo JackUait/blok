@@ -8,5 +8,4 @@ export const NAV_LINKS: NavLink[] = [
   { href: '/demo', label: 'Demo', i18nKey: 'nav.demo' },
   { href: '/migration', label: 'Migration', i18nKey: 'nav.migration' },
   { href: '/changelog', label: 'Changelog', i18nKey: 'nav.changelog' },
-  { href: 'https://github.com/JackUait/blok', label: 'GitHub', i18nKey: 'nav.github', external: true },
 ];

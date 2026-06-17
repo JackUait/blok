@@ -9,14 +9,13 @@ const mockLinks: NavLink[] = [
   { href: '/docs', label: 'Docs' },
   { href: '/demo', label: 'Demo' },
   { href: '/migration', label: 'Migration' },
-  { href: 'https://github.com/JackUait/blok', label: 'GitHub', external: true },
+  { href: 'https://example.com/external', label: 'External', external: true },
 ];
 
 const mockLinksWithI18nKeys: NavLink[] = [
   { href: '/docs', label: 'Docs', i18nKey: 'nav.docs' },
   { href: '/demo', label: 'Demo', i18nKey: 'nav.demo' },
   { href: '/migration', label: 'Migration', i18nKey: 'nav.migration' },
-  { href: 'https://github.com/JackUait/blok', label: 'GitHub', i18nKey: 'nav.github', external: true },
 ];
 
 const TestWrapper: React.FC<{ children: React.ReactNode; initialPath?: string }> = ({
@@ -54,7 +53,7 @@ describe('Nav', () => {
     expect(screen.getByText('Docs')).toBeInTheDocument();
     expect(screen.getByText('Demo')).toBeInTheDocument();
     expect(screen.getByText('Migration')).toBeInTheDocument();
-    expect(screen.getByText('GitHub')).toBeInTheDocument();
+    expect(screen.getByText('External')).toBeInTheDocument();
   });
 
   it('should render the Logo component', () => {
@@ -87,13 +86,13 @@ describe('Nav', () => {
       </TestWrapper>
     );
 
-    // GitHub lives in the account menu dropdown — open it first
+    // External links live in the account menu dropdown — open it first
     fireEvent.click(screen.getByLabelText('Toggle menu'));
 
-    const githubLink = screen.getByRole('link', { name: 'GitHub' });
-    expect(githubLink).toHaveAttribute('href', 'https://github.com/JackUait/blok');
-    expect(githubLink).toHaveAttribute('target', '_blank');
-    expect(githubLink).toHaveAttribute('rel', 'noopener noreferrer');
+    const externalLink = screen.getByRole('link', { name: 'External' });
+    expect(externalLink).toHaveAttribute('href', 'https://example.com/external');
+    expect(externalLink).toHaveAttribute('target', '_blank');
+    expect(externalLink).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
   it('should render a mobile menu toggle button', () => {
@@ -165,7 +164,6 @@ describe('Nav', () => {
     expect(screen.getByText('Документация')).toBeInTheDocument();
     expect(screen.getByText('Демо')).toBeInTheDocument();
     expect(screen.getByText('Миграция')).toBeInTheDocument();
-    expect(screen.getByText('GitHub')).toBeInTheDocument();
   });
 
   it('should render English labels when locale is English and i18nKey is provided', () => {
@@ -180,7 +178,6 @@ describe('Nav', () => {
     expect(screen.getByText('Docs')).toBeInTheDocument();
     expect(screen.getByText('Demo')).toBeInTheDocument();
     expect(screen.getByText('Migration')).toBeInTheDocument();
-    expect(screen.getByText('GitHub')).toBeInTheDocument();
   });
 
   it('should render search button with translated aria-label', () => {

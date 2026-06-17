@@ -71,56 +71,24 @@ describe('Features', () => {
     expect(withinButton.getByText((content) => content.includes('block tunes'))).toBeInTheDocument();
   });
 
-  it('should render Slash menu & Markdown feature', () => {
+  it('should render the secondary capabilities as title-only cards', () => {
     renderFeatures();
 
+    // Secondary cards are scannable: title present, descriptive prose removed.
     expect(screen.getByText('Slash menu & Markdown')).toBeInTheDocument();
-    expect(
-      screen.getByText((content) => content.includes('Markdown shortcuts'))
-    ).toBeInTheDocument();
-  });
-
-  it('should render Databases & boards feature', () => {
-    renderFeatures();
-
     expect(screen.getByText('Databases & boards')).toBeInTheDocument();
-    expect(
-      screen.getByText((content) => content.includes('every row is a block'))
-    ).toBeInTheDocument();
-  });
-
-  it('should render Tables feature', () => {
-    renderFeatures();
-
     expect(screen.getByText('Tables that behave')).toBeInTheDocument();
-    expect(screen.getByText((content) => content.includes('Merged cells'))).toBeInTheDocument();
-  });
-
-  it('should render Embeds feature', () => {
-    renderFeatures();
-
     expect(screen.getByText('Embeds & link previews')).toBeInTheDocument();
-    expect(
-      screen.getByText((content) => content.includes('100+ services'))
-    ).toBeInTheDocument();
-  });
-
-  it('should render Undo & redo feature', () => {
-    renderFeatures();
-
     expect(screen.getByText('Undo & redo')).toBeInTheDocument();
-    expect(
-      screen.getByText((content) => content.includes('Yjs-backed'))
-    ).toBeInTheDocument();
-  });
-
-  it('should render 68 languages feature', () => {
-    renderFeatures();
-
     expect(screen.getByText('68 languages, RTL-ready')).toBeInTheDocument();
-    expect(
-      screen.getByText((content) => content.includes('right-to-left support'))
-    ).toBeInTheDocument();
+
+    // The wordy descriptions that made the section feel crowded are gone.
+    expect(screen.queryByText((content) => content.includes('Markdown shortcuts'))).not.toBeInTheDocument();
+    expect(screen.queryByText((content) => content.includes('every row is a block'))).not.toBeInTheDocument();
+    expect(screen.queryByText((content) => content.includes('Merged cells'))).not.toBeInTheDocument();
+    expect(screen.queryByText((content) => content.includes('100+ services'))).not.toBeInTheDocument();
+    expect(screen.queryByText((content) => content.includes('Yjs-backed'))).not.toBeInTheDocument();
+    expect(screen.queryByText((content) => content.includes('right-to-left support'))).not.toBeInTheDocument();
   });
 
   it('should render feature cards with accessible labels', () => {

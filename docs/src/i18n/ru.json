@@ -461,7 +461,6 @@
     "featureModal": {
       "close": "Закрыть",
       "keyBenefits": "Ключевые преимущества",
-      "example": "Пример",
       "viewApiDocs": "Документация API →"
     }
   },

@@ -61,18 +61,24 @@ describe('FeatureModal', () => {
     expect(screen.getByText('Version control friendly')).toBeInTheDocument();
   });
 
-  it('should render the Example heading when codeExample is provided', () => {
+  it('should render the code example without a redundant "Example" heading', () => {
     renderModal();
-    expect(screen.getByText('Example')).toBeInTheDocument();
+    expect(
+      screen.getByText((content) => content.includes('editor.save()'))
+    ).toBeInTheDocument();
+    // The code block self-labels its language, so the extra heading is gone.
+    expect(screen.queryByText('Example')).not.toBeInTheDocument();
   });
 
-  it('should not render the Example heading when codeExample is absent', () => {
+  it('should not render a code block when codeExample is absent', () => {
     const featureWithoutCode: FeatureDetail = {
       ...mockFeature,
       details: { summary: 'Summary', benefits: ['Benefit'] },
     };
     renderModal(featureWithoutCode);
-    expect(screen.queryByText('Example')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText((content) => content.includes('editor.save()'))
+    ).not.toBeInTheDocument();
   });
 
   it('should render the API docs link when apiLink is provided', () => {

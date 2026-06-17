@@ -461,7 +461,6 @@
     "featureModal": {
       "close": "Close modal",
       "keyBenefits": "Key Benefits",
-      "example": "Example",
       "viewApiDocs": "View API Documentation →"
     }
   },

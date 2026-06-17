@@ -5,14 +5,40 @@ import { MemoryRouter } from 'react-router-dom';
 import App from './App';
 import { I18nProvider } from './contexts/I18nContext';
 
-vi.mock('framer-motion', () => ({
-  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  motion: {
-    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement> & { children?: React.ReactNode }) => (
-      <div {...props}>{children}</div>
-    ),
-  },
-}));
+vi.mock('framer-motion', () => {
+  // Strip motion-only props so they don't leak onto the DOM element.
+  const MOTION_PROPS = new Set([
+    'variants',
+    'initial',
+    'animate',
+    'exit',
+    'whileHover',
+    'whileTap',
+    'whileInView',
+    'transition',
+    'viewport',
+  ]);
+
+  // Render any motion.<tag> (div, button, …) as a plain passthrough element.
+  const motion = new Proxy(
+    {},
+    {
+      get:
+        (_target, tag: string) =>
+        ({ children, ...props }: Record<string, unknown> & { children?: React.ReactNode }) => {
+          const domProps = Object.fromEntries(
+            Object.entries(props).filter(([key]) => !MOTION_PROPS.has(key))
+          );
+          return React.createElement(tag, domProps, children);
+        },
+    }
+  );
+
+  return {
+    AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    motion,
+  };
+});
 
 describe('App', () => {
   let scrollIntoViewMock: ReturnType<typeof vi.fn>;

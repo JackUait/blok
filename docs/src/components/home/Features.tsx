@@ -1,6 +1,25 @@
 import { useMemo, useState } from "react";
+import { motion, type Variants } from "framer-motion";
 import { FeatureModal, type FeatureDetail } from "./FeatureModal";
 import { useI18n } from "../../contexts/I18nContext";
+
+// Cards rise + fade in sequence as the grid scrolls into view.
+const gridVariants: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+};
+
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 22 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { type: "spring", stiffness: 240, damping: 24 },
+  },
+};
+
+// Snappy spring used for hover lift + tap feedback.
+const hoverSpring = { type: "spring", stiffness: 400, damping: 28 } as const;
 
 export const Features: React.FC = () => {
   const { t } = useI18n();
@@ -279,16 +298,26 @@ new Blok({ holder: 'editor' });`,
         </div>
 
         {/* The three pillars that define Blok — large, scanned first. */}
-        <div className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-3">
+        <motion.div
+          className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-3"
+          variants={gridVariants}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-80px" }}
+        >
           {primaryFeatures.map((feature) => (
-            <button
+            <motion.button
               type="button"
               key={feature.accent}
-              className="group flex flex-col items-start gap-5 rounded-2xl border border-border bg-card p-7 text-left shadow-sm transition-all hover:-translate-y-1 hover:border-foreground/15 hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              variants={cardVariants}
+              whileHover={{ y: -6 }}
+              whileTap={{ scale: 0.98 }}
+              transition={hoverSpring}
+              className="group flex cursor-pointer flex-col items-start gap-5 rounded-2xl border border-border bg-card p-7 text-left shadow-sm transition-[border-color,box-shadow] hover:border-foreground/15 hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               onClick={() => handleFeatureClick(feature)}
               aria-label={feature.learnMore}
             >
-              <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+              <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-[colors,transform] group-hover:scale-105 group-hover:bg-primary group-hover:text-primary-foreground">
                 {feature.icon}
               </div>
               <div className="space-y-2">
@@ -313,39 +342,44 @@ new Blok({ holder: 'editor' });`,
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   aria-hidden="true"
-                  className="transition-transform group-hover:translate-x-0.5"
+                  className="transition-transform duration-200 group-hover:translate-x-1"
                 >
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
               </span>
-            </button>
+            </motion.button>
           ))}
-        </div>
+        </motion.div>
 
         {/* Supporting capabilities — compact, scanned second. */}
-        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <motion.div
+          className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          variants={gridVariants}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-60px" }}
+        >
           {secondaryFeatures.map((feature) => (
-            <button
+            <motion.button
               type="button"
               key={feature.accent}
-              className="group flex items-start gap-4 rounded-xl border border-border bg-card p-5 text-left shadow-sm transition-all hover:border-foreground/15 hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              variants={cardVariants}
+              whileHover={{ y: -3 }}
+              whileTap={{ scale: 0.97 }}
+              transition={hoverSpring}
+              className="group flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-left shadow-sm transition-[border-color,box-shadow] hover:border-foreground/15 hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               onClick={() => handleFeatureClick(feature)}
               aria-label={feature.learnMore}
             >
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
                 {feature.icon}
               </div>
-              <div>
-                <h3 className="text-base font-bold tracking-tight">
-                  {feature.title}
-                </h3>
-                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                  {feature.description}
-                </p>
-              </div>
-            </button>
+              <h3 className="text-[15px] font-semibold tracking-tight">
+                {feature.title}
+              </h3>
+            </motion.button>
           ))}
-        </div>
+        </motion.div>
       </div>
 
       <FeatureModal feature={selectedFeature} onClose={handleCloseModal} />

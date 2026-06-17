@@ -949,15 +949,29 @@ describe('video controls — theater entrance/exit (FLIP)', () => {
   let hidePopover: ReturnType<typeof vi.fn>;
   let open = false;
   let transforms: string[];
+  let rafQueue: FrameRequestCallback[];
   const inlineRect = { left: 200, top: 600, width: 320, height: 180, right: 520, bottom: 780, x: 200, y: 600, toJSON() {} } as DOMRect;
   const centreRect = { left: 100, top: 50, width: 800, height: 450, right: 900, bottom: 500, x: 100, y: 50, toJSON() {} } as DOMRect;
   const enter = (): void => q(h.controls, '[data-action="theater"]').click();
   const endTransform = (): void => h.figure.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
+  // Drain queued animation frames so the deferred grow (committed across rAFs, not
+  // a synchronous reflow) actually runs. Fixed frame budget so the self-scheduling
+  // ambient sampler can't spin the drain forever.
+  const flushRaf = (frames = 4): void => {
+    for (let i = 0; i < frames; i++) {
+      const batch = rafQueue;
+      rafQueue = [];
+      batch.forEach((cb) => cb(0));
+    }
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
     open = false;
     transforms = [];
+    rafQueue = [];
+    vi.stubGlobal('requestAnimationFrame', vi.fn((cb: FrameRequestCallback) => rafQueue.push(cb)));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
     showPopover = vi.fn(() => { open = true; });
     hidePopover = vi.fn(() => { open = false; });
     // Teach jsdom the Popover API + :popover-open matching the FLIP relies on.
@@ -976,8 +990,8 @@ describe('video controls — theater entrance/exit (FLIP)', () => {
     });
     vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false })); // motion allowed
     h = mount();
-    // The FLIP is synchronous (reflow-committed, no rAF) so it overwrites the
-    // transform within one call — record the sequence to inspect INVERT then PLAY.
+    // INVERT is applied synchronously; the PLAY (grow) is deferred to a frame, so
+    // record every transform write and drain rAFs to inspect INVERT then PLAY.
     const realSet = h.figure.style.setProperty.bind(h.figure.style);
     vi.spyOn(h.figure.style, 'setProperty').mockImplementation((prop: string, value: string) => {
       if (prop === 'transform') transforms.push(value);
@@ -1005,13 +1019,27 @@ describe('video controls — theater entrance/exit (FLIP)', () => {
     // +550)/0.4. A zero/identity invert means `inlineRect` was measured AFTER
     // data-theater promoted the figure — the ordering bug that defeats the morph.
     expect(transforms[0]).toBe('translate(100px, 550px) scale(0.4, 0.4)');
+    flushRaf();
     expect(transforms.at(-1)).toBe('translate(0px, 0px) scale(1, 1)');
     expect(h.figure.style.transformOrigin).toBe('top left');
     expect(h.figure.style.transition).toContain('transform');
   });
 
+  it('defers the grow to a frame instead of a sync reflow (no start hitch)', () => {
+    enter();
+    // The invert lands synchronously, but the grow is held for a frame: a
+    // synchronous offsetHeight reflow on the freshly top-layered <video> stalls
+    // the first frames (the "laggy at start" hitch). Only the invert exists until
+    // the rAFs drain — proving the grow is composited, not reflow-committed.
+    expect(transforms).toEqual(['translate(100px, 550px) scale(0.4, 0.4)']);
+    expect(requestAnimationFrame).toHaveBeenCalled();
+    flushRaf();
+    expect(transforms.at(-1)).toBe('translate(0px, 0px) scale(1, 1)');
+  });
+
   it('clears the inline grow styles once the entrance transition ends', () => {
     enter();
+    flushRaf();
     endTransform();
     expect(h.figure.style.transform).toBe('');
     expect(h.figure.style.transition).toBe('');
@@ -1020,6 +1048,7 @@ describe('video controls — theater entrance/exit (FLIP)', () => {
 
   it('reverse-FLIPs on exit: shrinks back into the inline slot, then hides', () => {
     enter();
+    flushRaf();
     endTransform(); // settle the entrance
     transforms.length = 0;
     q(h.controls, '[data-action="theater"]').click(); // leave

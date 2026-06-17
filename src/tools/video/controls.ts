@@ -639,11 +639,15 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
   // The figure jumps from its inline grid slot to the fixed, top-layer centre the
   // instant the popover opens, so a keyframe scale-nudge leaves that big position
   // jump unanimated (reads as a teleport). We FLIP instead: snap the centred card
-  // back onto the inline rect, force a reflow so the invert is the committed first
-  // frame (without it the first frame drops and the grow reads as steps), then
-  // release it — it grows out of its original spot into the centre, and reverses
-  // on exit. transitionend hooks are single-shot so re-entry never doubles up.
-  const flip = { onEnd: null as ((event: TransitionEvent) => void) | null };
+  // back onto the inline rect, then release it across a frame so it grows out of
+  // its original spot into the centre, and reverses on exit. transitionend hooks
+  // are single-shot so re-entry never doubles up.
+  const raf = (cb: FrameRequestCallback): number =>
+    typeof requestAnimationFrame === 'function' ? requestAnimationFrame(cb) : window.setTimeout(() => cb(0), 16);
+  const caf = (id: number): void => {
+    if (typeof cancelAnimationFrame === 'function') cancelAnimationFrame(id); else clearTimeout(id);
+  };
+  const flip = { onEnd: null as ((event: TransitionEvent) => void) | null, raf: 0 };
   const resetFlipStyles = (): void => {
     figure.style.removeProperty('transition');
     figure.style.removeProperty('transform');
@@ -652,6 +656,7 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     figure.style.removeProperty('will-change');
   };
   const clearFlip = (): void => {
+    if (flip.raf) { caf(flip.raf); flip.raf = 0; }
     if (flip.onEnd) { figure.removeEventListener('transitionend', flip.onEnd); flip.onEnd = null; }
     resetFlipStyles();
   };
@@ -681,12 +686,20 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     figure.style.setProperty('transition', 'none');
     figure.style.setProperty('transform', collapsed(centre, inlineRect)); // INVERT
     figure.style.setProperty('opacity', '0.55');
-    void figure.offsetHeight; // commit the invert as the first frame, then PLAY
     flip.onEnd = onTransformEnd(clearFlip);
     figure.addEventListener('transitionend', flip.onEnd);
-    figure.style.setProperty('transition', FLIP_IN);
-    figure.style.setProperty('transform', 'translate(0px, 0px) scale(1, 1)');
-    figure.style.setProperty('opacity', '1');
+    // Commit the invert across two frames instead of a synchronous offsetHeight
+    // reflow: forcing layout on a freshly top-layered <video> stalls the opening
+    // frames (the "laggy at start" hitch). The first frame paints the invert; the
+    // second releases the grow — composited, smooth from frame one.
+    flip.raf = raf(() => {
+      flip.raf = raf(() => {
+        flip.raf = 0;
+        figure.style.setProperty('transition', FLIP_IN);
+        figure.style.setProperty('transform', 'translate(0px, 0px) scale(1, 1)');
+        figure.style.setProperty('opacity', '1');
+      });
+    });
   };
   const leaveTheater = (): void => {
     // Tear down atomically (one paint) so the card never flashes back to centre.

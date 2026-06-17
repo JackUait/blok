@@ -415,29 +415,28 @@
   /* Image error-state radius (slightly larger than --blok-radius-md). */
   --blok-radius-md-plus: 8px;
 
-  /* Video player custom controls — sit over the video pixels, so this palette
-     is always-on (independent of page theme): white glyphs on a dark scrim,
-     coral progress fill. */
+  /* Video player custom controls — Notion-style minimal palette: white glyphs
+     on a subtle dark scrim, neutral progress fill, no coral. */
   --blok-video-stage: #000000;
-  --blok-video-accent: #ff385c;
+  --blok-video-accent: #ffffff;
   --blok-video-control-fg: #ffffff;
-  --blok-video-control-bg-hover: rgba(255, 255, 255, 0.16);
-  --blok-video-time-fg: rgba(255, 255, 255, 0.92);
-  --blok-video-track: rgba(255, 255, 255, 0.3);
-  --blok-video-buffered: rgba(255, 255, 255, 0.5);
-  --blok-video-volume-track: rgba(255, 255, 255, 0.35);
+  --blok-video-control-bg-hover: rgba(255, 255, 255, 0.1);
+  --blok-video-time-fg: rgba(255, 255, 255, 0.8);
+  --blok-video-track: rgba(255, 255, 255, 0.2);
+  --blok-video-buffered: rgba(255, 255, 255, 0.35);
+  --blok-video-volume-track: rgba(255, 255, 255, 0.25);
   --blok-video-thumb: #ffffff;
-  --blok-video-thumb-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
-  --blok-video-burst-bg: rgba(20, 20, 19, 0.62);
+  --blok-video-thumb-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --blok-video-burst-bg: rgba(0, 0, 0, 0.5);
   --blok-video-burst-fg: #ffffff;
-  --blok-video-burst-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.55);
-  --blok-video-burst-ring: rgba(255, 255, 255, 0.6);
-  --blok-video-theater-scrim: rgba(0, 0, 0, 0.84);
-  --blok-video-theater-shadow: 0 40px 90px -24px rgba(0, 0, 0, 0.7);
-  --blok-video-scrim-strong: rgba(0, 0, 0, 0.72);
-  --blok-video-scrim-mid: rgba(0, 0, 0, 0.32);
-  --blok-video-shadow-hover: 0 14px 34px -12px rgba(15, 15, 14, 0.34), 0 0 0 1px rgba(15, 15, 14, 0.05);
-  --blok-video-focus-ring: color-mix(in srgb, var(--blok-video-accent) 45%, transparent);
+  --blok-video-burst-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.4);
+  --blok-video-burst-ring: rgba(255, 255, 255, 0.4);
+  --blok-video-theater-scrim: rgba(0, 0, 0, 0.8);
+  --blok-video-theater-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.6);
+  --blok-video-scrim-strong: rgba(0, 0, 0, 0.6);
+  --blok-video-scrim-mid: rgba(0, 0, 0, 0.2);
+  --blok-video-shadow-hover: 0 8px 24px -8px rgba(0, 0, 0, 0.18);
+  --blok-video-focus-ring: color-mix(in srgb, var(--blok-video-accent) 30%, transparent);
 }
 
 /* ─── Dark theme — system preference ────────────────── */

@@ -199,7 +199,7 @@
    Replaces native browser chrome with a bottom scrim + control bar (play/pause,
    scrubber, time, volume, fullscreen) that fades in on hover. Clicking the
    video toggles play/pause; a centre play disc shows while paused at the start.
-   White glyphs on a dark scrim, pill geometry, brand coral on the progress fill.
+   White glyphs on a dark scrim, pill geometry, neutral white progress fill.
    ================================================= */
 [data-blok-tool="video"] .blok-video-controls {
   --blok-seek-pct: 0%;
@@ -468,7 +468,7 @@
   pointer-events: none;
   transition: height 120ms ease;
 }
-/* scrubber — coral elapsed fill, transparent track (layers show through) */
+/* scrubber — white elapsed fill, transparent track (layers show through) */
 [data-blok-tool="video"] .blok-video-controls__seek {
   position: relative;
   flex: 1 1 auto;
@@ -639,7 +639,7 @@
   opacity: 0.55;
 }
 
-/* speed picker — a dense segment grid, the active rate lit coral. A hairline
+/* speed picker — a dense segment grid, the active rate lit white. A hairline
    under the grid divides Speed from the toggle rows below. */
 [data-blok-tool="video"] .blok-video-controls__speed-grid {
   display: grid;

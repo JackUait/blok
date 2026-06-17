@@ -250,7 +250,13 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
     void seekFlash.offsetWidth;
     seekFlash.classList.add('is-active');
   };
-  const onSeekFlashEnd = (): void => seekFlash.classList.remove('is-active');
+  // Clear on the pill's own slide animation only — the glyph marquee (svg) ends
+  // separately and must not cut the pill short. jsdom fires a bare Event with no
+  // animationName, so an empty name still clears (keeps the unit test honest).
+  const onSeekFlashEnd = (event: AnimationEvent): void => {
+    if (event.animationName && !event.animationName.startsWith('blok-video-seek-flash-')) return;
+    seekFlash.classList.remove('is-active');
+  };
   const seekBy = (delta: number): void => {
     const dur = Number.isFinite(media.duration) ? media.duration : 0;
     const next = Math.min(dur || Infinity, Math.max(0, media.currentTime + delta));

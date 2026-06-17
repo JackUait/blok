@@ -404,18 +404,32 @@
 /* arrow-key seek indicator — a frosted pill that flashes in from the matching
    edge (rewind ← left, skip → right) when the user nudges playback 5s. Reuses
    the burst frosting tokens. Inert until the .is-active class re-arms the side
-   keyframe. */
+   keyframe. The pill slides in with a slight inward overshoot, holds, then
+   drifts back out toward its edge; the glyph marquees in the seek direction to
+   sell the motion. */
 @keyframes blok-video-seek-flash-back {
-  0%   { opacity: 0; transform: translate(-10px, -50%) scale(0.92); }
-  22%  { opacity: 1; transform: translate(0, -50%) scale(1); }
-  68%  { opacity: 1; transform: translate(0, -50%) scale(1); }
-  100% { opacity: 0; transform: translate(-12px, -50%) scale(0.96); }
+  0%   { opacity: 0; transform: translate(-16px, -50%) scale(0.9); }
+  18%  { opacity: 1; transform: translate(3px, -50%) scale(1.03); }
+  32%  { transform: translate(0, -50%) scale(1); }
+  64%  { opacity: 1; transform: translate(0, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-18px, -50%) scale(0.95); }
 }
 @keyframes blok-video-seek-flash-forward {
-  0%   { opacity: 0; transform: translate(10px, -50%) scale(0.92); }
-  22%  { opacity: 1; transform: translate(0, -50%) scale(1); }
-  68%  { opacity: 1; transform: translate(0, -50%) scale(1); }
-  100% { opacity: 0; transform: translate(12px, -50%) scale(0.96); }
+  0%   { opacity: 0; transform: translate(16px, -50%) scale(0.9); }
+  18%  { opacity: 1; transform: translate(-3px, -50%) scale(1.03); }
+  32%  { transform: translate(0, -50%) scale(1); }
+  64%  { opacity: 1; transform: translate(0, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(18px, -50%) scale(0.95); }
+}
+/* glyph marquee — the triangles drift in the seek direction and ease back, run
+   a couple of times within the pill's life to read as fast motion */
+@keyframes blok-video-seek-glyph-back {
+  0%, 100% { transform: translateX(2px); opacity: 0.8; }
+  50%      { transform: translateX(-3px); opacity: 1; }
+}
+@keyframes blok-video-seek-glyph-forward {
+  0%, 100% { transform: translateX(-2px); opacity: 0.8; }
+  50%      { transform: translateX(3px); opacity: 1; }
 }
 [data-blok-tool="video"] .blok-video-controls__seek-flash {
   position: absolute;
@@ -448,10 +462,16 @@
   transform: translate(10px, -50%);
 }
 [data-blok-tool="video"] .blok-video-controls__seek-flash.is-active[data-side="back"] {
-  animation: blok-video-seek-flash-back 620ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: blok-video-seek-flash-back 720ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 [data-blok-tool="video"] .blok-video-controls__seek-flash.is-active[data-side="forward"] {
-  animation: blok-video-seek-flash-forward 620ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: blok-video-seek-flash-forward 720ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+[data-blok-tool="video"] .blok-video-controls__seek-flash.is-active[data-side="back"] svg {
+  animation: blok-video-seek-glyph-back 340ms ease-in-out 2;
+}
+[data-blok-tool="video"] .blok-video-controls__seek-flash.is-active[data-side="forward"] svg {
+  animation: blok-video-seek-glyph-forward 340ms ease-in-out 2;
 }
 
 /* bottom scrim + bar */
@@ -580,7 +600,8 @@
   [data-blok-tool="video"] .blok-video-controls__bar,
   [data-blok-tool="video"] .blok-video-controls__volume,
   [data-blok-tool="video"] .blok-video-controls__speed { transition: none; }
-  [data-blok-tool="video"] .blok-video-controls__seek-flash.is-active { animation: none; opacity: 0; }
+  [data-blok-tool="video"] .blok-video-controls__seek-flash.is-active,
+  [data-blok-tool="video"] .blok-video-controls__seek-flash.is-active svg { animation: none; opacity: 0; }
   [data-blok-tool="video"] .blok-video-controls__burst.is-active,
   [data-blok-tool="video"] .blok-video-controls__burst.is-active::after,
   [data-blok-tool="video"] .blok-video-controls__burst.is-active svg { animation: none; opacity: 0; }

@@ -4799,11 +4799,19 @@
 }
 
 [data-blok-tool="video"] .blok-video-controls__seek-flash.is-active[data-side="back"] {
-  animation: blok-video-seek-flash-back 620ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: blok-video-seek-flash-back 720ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 [data-blok-tool="video"] .blok-video-controls__seek-flash.is-active[data-side="forward"] {
-  animation: blok-video-seek-flash-forward 620ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: blok-video-seek-flash-forward 720ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+[data-blok-tool="video"] .blok-video-controls__seek-flash.is-active[data-side="back"] svg {
+  animation: blok-video-seek-glyph-back 340ms ease-in-out 2;
+}
+
+[data-blok-tool="video"] .blok-video-controls__seek-flash.is-active[data-side="forward"] svg {
+  animation: blok-video-seek-glyph-forward 340ms ease-in-out 2;
 }
 
 [data-blok-tool="video"] .blok-video-controls__bar {
@@ -4951,7 +4959,7 @@
   transition: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-tool="video"] .blok-video-controls__seek-flash.is-active {
+[@media (prefers-reduced-motion: reduce)] [data-blok-tool="video"] .blok-video-controls__seek-flash.is-active, [data-blok-tool="video"] .blok-video-controls__seek-flash.is-active svg {
   animation: none;
   opacity: 0;
 }

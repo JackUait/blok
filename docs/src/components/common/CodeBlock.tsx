@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { cn } from "@/lib/utils";
 import { useI18n } from '../../contexts/I18nContext';
@@ -157,6 +157,8 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   const [copied, setCopied] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [packageManager, setPackageManager] = useState<PackageManager>("yarn");
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState({ left: false, right: false });
 
   // Compute the display code based on package manager selection
   const displayCode =
@@ -222,6 +224,35 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     void highlight();
   }, [displayCode, language, isDark]);
 
+  // Track horizontal overflow to fade the scroll edges
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) {
+      return;
+    }
+
+    const updateEdges = () => {
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      setEdges({
+        left: el.scrollLeft > 1,
+        right: el.scrollLeft < maxScroll - 1,
+      });
+    };
+
+    updateEdges();
+    el.addEventListener("scroll", updateEdges, { passive: true });
+    const observer =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(updateEdges)
+        : null;
+    observer?.observe(el);
+
+    return () => {
+      el.removeEventListener("scroll", updateEdges);
+      observer?.disconnect();
+    };
+  }, [highlightedCode]);
+
   const handleCopy = async () => {
     const success = await copyToClipboard(displayCode);
     if (success) {
@@ -235,28 +266,22 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
 
   return (
     <div
-      className="code-block group relative overflow-hidden rounded-2xl border border-border bg-card shadow-card"
+      className="code-block group relative overflow-hidden rounded-2xl border border-border bg-card"
       data-code-block
       data-blok-testid="code-block"
     >
-      <div className="flex items-center gap-3 border-b border-border bg-secondary/60 px-4 py-2.5">
-        <div className="flex items-center gap-1.5">
-          <span className="size-3 rounded-full bg-[#ff5f57]" />
-          <span className="size-3 rounded-full bg-[#febc2e]" />
-          <span className="size-3 rounded-full bg-[#28c840]" />
-        </div>
-        <span className="text-xs font-semibold tracking-wide text-muted-foreground">
-          {displayLanguage}
-        </span>
-        {showPackageManagerToggle && packageName && (
-          <div className="ml-1">
-            <PackageManagerToggle onChange={handlePackageManagerChange} />
-          </div>
+      <div className="flex items-center gap-3 px-3 pt-3 pb-1.5">
+        {showPackageManagerToggle && packageName ? (
+          <PackageManagerToggle onChange={handlePackageManagerChange} />
+        ) : (
+          <span className="pl-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            {displayLanguage}
+          </span>
         )}
         <button
           className={cn(
-            "ml-auto inline-flex items-center justify-center rounded-lg border border-border bg-background p-2 text-muted-foreground transition-all hover:text-foreground hover:shadow-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-            copied && "copied border-primary/40 text-primary",
+            "ml-auto inline-flex size-8 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+            copied && "text-primary",
           )}
           data-copy
           data-code={displayCode}
@@ -309,8 +334,27 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
           )}
         </button>
       </div>
-      <div className="overflow-x-auto p-4 font-mono text-sm leading-relaxed [&_pre]:!bg-transparent [&_pre]:!m-0 [&_code]:font-mono">
-        <div dangerouslySetInnerHTML={{ __html: highlightedCode }} />
+      <div className="relative">
+        <div
+          ref={scrollRef}
+          className="overflow-x-auto pt-1 pr-8 pb-4 pl-4 font-mono text-sm leading-relaxed [&_pre]:!bg-transparent [&_pre]:!m-0 [&_code]:font-mono"
+        >
+          <div dangerouslySetInnerHTML={{ __html: highlightedCode }} />
+        </div>
+        <div
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-card to-transparent transition-opacity duration-200",
+            edges.left ? "opacity-100" : "opacity-0",
+          )}
+        />
+        <div
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-card to-transparent transition-opacity duration-200",
+            edges.right ? "opacity-100" : "opacity-0",
+          )}
+        />
       </div>
     </div>
   );

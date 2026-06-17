@@ -207,3 +207,45 @@
     box-shadow: var(--shadow-card-hover);
   }
 }
+
+/* Organic blob morph for feature-card icons — runs only while the card is hovered.
+   0%/100% match the resting rounded square (43% ≈ rounded-2xl's 24px on size-14), so
+   the shape eases smoothly into and out of the blobs instead of snapping. */
+.feature-blob {
+  transition: border-radius 0.7s ease-in-out;
+}
+
+@keyframes feature-blob-morph {
+  0%,
+  100% {
+    border-radius: 43% 43% 43% 43% / 43% 43% 43% 43%;
+  }
+  13% {
+    border-radius: 67% 33% 58% 42% / 38% 71% 29% 62%;
+  }
+  29% {
+    border-radius: 31% 69% 36% 64% / 65% 33% 67% 35%;
+  }
+  41% {
+    border-radius: 58% 42% 73% 27% / 49% 56% 44% 51%;
+  }
+  56% {
+    border-radius: 36% 64% 41% 59% / 71% 28% 72% 29%;
+  }
+  68% {
+    border-radius: 70% 30% 55% 45% / 33% 64% 36% 67%;
+  }
+  84% {
+    border-radius: 44% 56% 32% 68% / 57% 47% 53% 43%;
+  }
+}
+
+.group:hover .feature-blob {
+  animation: feature-blob-morph 6.5s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .group:hover .feature-blob {
+    animation: none;
+  }
+}

@@ -317,7 +317,7 @@ new Blok({ holder: 'editor' });`,
               onClick={() => handleFeatureClick(feature)}
               aria-label={feature.learnMore}
             >
-              <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-[colors,transform] group-hover:scale-105 group-hover:bg-primary group-hover:text-primary-foreground">
+              <div className="feature-blob flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-[colors,transform] group-hover:scale-105 group-hover:bg-primary group-hover:text-primary-foreground">
                 {feature.icon}
               </div>
               <div className="space-y-2">

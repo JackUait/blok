@@ -23,7 +23,7 @@ export const PackageManagerToggle: React.FC<PackageManagerToggleProps> = ({
 
   return (
     <div
-      className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary p-1"
+      className="inline-flex items-center gap-0.5 rounded-full bg-secondary p-0.5"
       data-package-manager-toggle
     >
       {PACKAGE_MANAGERS.map((manager) => {
@@ -33,9 +33,9 @@ export const PackageManagerToggle: React.FC<PackageManagerToggleProps> = ({
             key={manager}
             type="button"
             className={cn(
-              "rounded-full px-3.5 py-1.5 text-sm font-semibold lowercase transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+              "cursor-pointer rounded-full px-3 py-1 text-[13px] font-medium lowercase transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
               isActive
-                ? "active bg-background text-foreground shadow-sm"
+                ? "active bg-background font-semibold text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
                 : "text-muted-foreground hover:text-foreground",
             )}
             onClick={() => handleClick(manager)}

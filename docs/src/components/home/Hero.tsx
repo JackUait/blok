@@ -17,19 +17,21 @@ export const Hero: React.FC = () => {
       <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
         <div className="absolute -top-32 left-1/2 size-[36rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
         <div className="absolute right-[-8rem] top-24 size-[24rem] rounded-full bg-chart-3/10 blur-3xl" />
+        {/* faint dotted grid — gives the empty space texture without noise */}
+        <div className="absolute inset-0 opacity-[0.4] [background-image:radial-gradient(var(--color-border)_1px,transparent_1px)] [background-size:26px_26px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_72%)]" />
       </div>
 
       <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-6 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="text-center lg:text-left" data-blok-testid="hero-content">
-          <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
+          <h1 className="animate-in fade-in slide-in-from-bottom-3 fill-mode-both text-4xl font-extrabold leading-[1.05] tracking-tight duration-700 sm:text-5xl lg:text-6xl">
             {t('home.hero.title')}
             <br />
             <span className="text-brand-gradient">{t('home.hero.titleGradient')}</span>
           </h1>
-          <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground lg:mx-0">
+          <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground duration-700 animate-in fade-in slide-in-from-bottom-3 fill-mode-both delay-100 lg:mx-0">
             {t('home.hero.description')}
           </p>
-          <div className="mt-9 flex flex-col items-center gap-3 sm:flex-row lg:justify-start justify-center">
+          <div className="mt-9 flex flex-col items-center justify-center gap-3 duration-700 animate-in fade-in slide-in-from-bottom-3 fill-mode-both delay-200 sm:flex-row lg:justify-start">
             <Button variant="brand" size="lg" asChild>
               <a href="#quick-start" onClick={handleScrollToQuickStart}>
                 {t('home.hero.ctaGetStarted')}
@@ -55,22 +57,100 @@ export const Hero: React.FC = () => {
         </div>
 
         <div className="relative flex justify-center lg:justify-end" data-blok-testid="hero-demo">
-          <div className="relative">
+          <div className="hero-float group relative duration-1000 animate-in fade-in zoom-in-95 fill-mode-both delay-150">
+            {/* layered offset card behind — hovering its exposed edge drives the front card */}
             <div
-              className="absolute inset-0 -z-10 scale-110 rounded-[2rem] bg-brand-gradient opacity-20 blur-2xl"
+              className="absolute inset-0 translate-x-4 translate-y-4 rounded-[2.25rem] border border-border bg-card/60 shadow-card transition-all duration-300 group-hover:translate-x-5 group-hover:translate-y-5"
+              aria-hidden="true"
+            />
+            {/* morphing gradient halo — the "noodle" glow */}
+            <div
+              className="hero-blob pointer-events-none absolute -inset-3 -z-10 bg-brand-gradient opacity-30 blur-2xl transition-opacity duration-300 group-hover:opacity-40"
               aria-hidden="true"
             />
             <Link
               to="/demo"
-              className="group relative flex aspect-square w-72 max-w-full flex-col items-center justify-center gap-6 rounded-[2rem] border border-border bg-card p-8 shadow-card transition-all hover:-translate-y-1 hover:shadow-card-hover sm:w-80"
+              className="relative block w-72 max-w-full rounded-[2.25rem] border border-border bg-card p-5 shadow-card transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-card-hover sm:w-80"
               aria-label={t('home.hero.mascotAriaLabel')}
             >
-              <img
-                src="/mascot.png"
-                alt={t('home.hero.mascotAlt')}
-                className="size-40 object-contain transition-transform duration-300 group-hover:scale-105"
+              {/* soft brand stage behind the editor window */}
+              <div
+                className="hero-blob pointer-events-none absolute left-1/2 top-1/2 -z-0 size-56 -translate-x-1/2 -translate-y-1/2 bg-brand-gradient opacity-[0.12] blur-2xl"
+                aria-hidden="true"
               />
-              <span className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background">
+
+              {/* faux Blok editor window — sells the block-based product */}
+              <div
+                className="relative overflow-hidden rounded-2xl border border-border bg-background/85 text-left backdrop-blur-sm"
+                aria-hidden="true"
+              >
+                {/* window chrome */}
+                <div className="flex items-center gap-1.5 border-b border-border/70 px-3.5 py-2.5">
+                  <span className="size-2.5 rounded-full bg-chart-3/70" />
+                  <span className="size-2.5 rounded-full bg-chart-4/70" />
+                  <span className="size-2.5 rounded-full bg-chart-5/40" />
+                  <span className="ml-2 h-2 w-16 rounded-full bg-muted" />
+                </div>
+
+                {/* editor blocks */}
+                <div className="space-y-3.5 px-4 py-4">
+                  {/* heading block with hover affordances (handle + plus) */}
+                  <div className="relative flex items-center gap-2">
+                    <div className="flex items-center gap-1 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                      <span className="flex size-4 items-center justify-center rounded-[5px] border border-border text-muted-foreground">
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                          <line x1="12" y1="5" x2="12" y2="19" />
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                      </span>
+                      <svg width="8" height="14" viewBox="0 0 6 14" className="fill-muted-foreground/50">
+                        <circle cx="1.5" cy="2" r="1.3" />
+                        <circle cx="4.5" cy="2" r="1.3" />
+                        <circle cx="1.5" cy="7" r="1.3" />
+                        <circle cx="4.5" cy="7" r="1.3" />
+                        <circle cx="1.5" cy="12" r="1.3" />
+                        <circle cx="4.5" cy="12" r="1.3" />
+                      </svg>
+                    </div>
+                    <div className="h-3.5 w-36 rounded-md bg-brand-gradient" />
+                  </div>
+
+                  {/* paragraph skeleton */}
+                  <div className="space-y-2 pl-1">
+                    <div className="h-2.5 w-full rounded-full bg-muted" />
+                    <div className="h-2.5 w-11/12 rounded-full bg-muted" />
+                    <div className="h-2.5 w-2/3 rounded-full bg-muted" />
+                  </div>
+
+                  {/* active empty block with blinking caret */}
+                  <div className="flex h-4 items-center pl-1">
+                    <span className="hero-caret h-4 w-px bg-foreground" />
+                  </div>
+                </div>
+
+                {/* slash-command menu popover — the block-based "wow" */}
+                <div className="absolute -right-6 bottom-3 w-40 rounded-xl border border-border bg-card p-1.5 shadow-card-hover transition-transform duration-300 group-hover:-translate-y-1">
+                  <div className="px-1.5 pb-1 pt-0.5 font-mono text-[10px] font-semibold text-primary">
+                    /
+                  </div>
+                  {[
+                    { c: 'bg-chart-1', w: 'w-12' },
+                    { c: 'bg-chart-2', w: 'w-16' },
+                    { c: 'bg-chart-4', w: 'w-10' },
+                  ].map((row, i) => (
+                    <div
+                      key={row.c}
+                      className={`flex items-center gap-2 rounded-lg px-1.5 py-1 ${i === 0 ? 'bg-muted' : ''}`}
+                    >
+                      <span className={`size-4 rounded-md ${row.c} opacity-80`} />
+                      <span className={`h-1.5 ${row.w} rounded-full bg-muted`} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* CTA */}
+              <span className="relative mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-4 py-2.5 text-sm font-semibold text-background transition-transform duration-300 group-hover:scale-[1.02]">
                 {t('home.hero.ctaTryItOut')}
                 <svg
                   width="14"
@@ -80,37 +160,13 @@ export const Hero: React.FC = () => {
                   stroke="currentColor"
                   strokeWidth="2.5"
                   aria-hidden="true"
+                  className="transition-transform duration-300 group-hover:translate-x-0.5"
                 >
                   <line x1="5" y1="12" x2="19" y2="12" />
                   <polyline points="12 5 19 12 12 19" />
                 </svg>
               </span>
             </Link>
-
-            <div
-              className="absolute -left-6 top-8 flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 text-xs font-semibold shadow-card"
-              aria-hidden="true"
-            >
-              <span className="font-mono text-primary">{'{ }'}</span>
-              {t('home.hero.chipJson')}
-            </div>
-            <div
-              className="absolute -right-4 bottom-10 flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 text-xs font-semibold shadow-card"
-              aria-hidden="true"
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                className="text-chart-4"
-              >
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-              </svg>
-              {t('home.hero.chipSize')}
-            </div>
           </div>
         </div>
       </div>

@@ -244,8 +244,47 @@
   animation: feature-blob-morph 6.5s ease-out infinite;
 }
 
+/* Hero stage motion — the mascot card breathes, its gradient halo morphs like a
+   noodle, and the floating chips drift on offset cycles. All slow + subtle so it
+   reads as "alive", never busy. Continuous (not hover-gated) since it's the hero. */
+.hero-blob {
+  border-radius: 60% 40% 55% 45% / 50% 55% 45% 50%;
+  animation: feature-blob-morph 14s ease-in-out infinite;
+}
+
+.hero-float {
+  animation: hero-float 7s ease-in-out infinite;
+}
+
+@keyframes hero-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-12px) rotate(-0.6deg);
+  }
+}
+
+.hero-caret {
+  animation: hero-caret-blink 1.1s step-end infinite;
+}
+
+@keyframes hero-caret-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .group:hover .feature-blob {
+  .group:hover .feature-blob,
+  .hero-blob,
+  .hero-float,
+  .hero-caret {
     animation: none;
   }
 }

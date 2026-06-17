@@ -316,9 +316,6 @@
       "description": "A production-ready, extensible rich text editor that brings Notion-like block-based editing to your app — customizable, themeable, and battle-tested.",
       "ctaGetStarted": "Get Started",
       "ctaTryItOut": "Try it out",
-      "chipJson": "JSON output",
-      "chipSize": "~3 KB core",
-      "mascotAlt": "Blok mascot - a friendly orange character with pink yarn",
       "mascotAriaLabel": "Try the demo"
     },
     "categories": {

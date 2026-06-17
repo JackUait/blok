@@ -106,13 +106,19 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
   }, []);
 
   const searchIcon = (
-    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle cx="9" cy="9" r="6.25" stroke="currentColor" strokeWidth="2.2" />
       <path
-        d="M9 17A8 8 0 1 0 9 1a8 8 0 0 0 0 16zM19 19l-4.35-4.35"
+        d="M17.5 17.5l-4-4"
         stroke="currentColor"
-        strokeWidth="2.4"
+        strokeWidth="2.2"
         strokeLinecap="round"
-        strokeLinejoin="round"
       />
     </svg>
   );
@@ -125,7 +131,9 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
           navScrolled
             ? "border-border bg-background/85 shadow-sm backdrop-blur-xl"
             : "border-transparent bg-background/60 backdrop-blur-md",
-          navHidden && !menuOpen ? "nav-hidden -translate-y-full" : "translate-y-0",
+          navHidden && !menuOpen
+            ? "nav-hidden -translate-y-full"
+            : "translate-y-0",
         )}
         data-nav
         data-blok-testid="nav"
@@ -139,22 +147,43 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
             <p>Blok</p>
           </Link>
 
-          {/* Center search pill — opens the command-K search dialog.
-              Leading rose glyph + ⌘K hint; collapses to an icon-only circle on small screens. */}
-          <button
-            type="button"
-            className="group flex h-10 cursor-pointer items-center justify-center gap-2.5 rounded-full border border-border bg-background text-sm font-medium text-muted-foreground shadow-sm transition-all hover:border-foreground/25 hover:bg-secondary/40 hover:shadow-card-hover sm:h-11 sm:max-w-md sm:flex-1 sm:justify-start sm:px-4 size-10 sm:size-auto"
-            onClick={() => setSearchOpen(true)}
-            aria-label={t("nav.searchAriaLabel")}
-          >
-            <span className="flex size-5 shrink-0 items-center justify-center text-primary transition-transform group-hover:scale-110">
-              {searchIcon}
-            </span>
-            <span className="hidden flex-1 text-left sm:inline">{t("search.placeholder")}</span>
-            <kbd className="hidden items-center gap-0.5 rounded-md border border-border bg-secondary/70 px-1.5 py-0.5 font-sans text-[11px] font-semibold leading-none text-muted-foreground sm:inline-flex">
-              <span className="text-[13px]">⌘</span>K
-            </kbd>
-          </button>
+          {/* Center search — Airbnb-style pill: dark prompt on the left, a coral
+              circular search button on the right. Expands inline into the search
+              panel (no modal); collapses to an icon-only circle on small screens. */}
+          <div className="relative flex justify-center sm:max-w-md sm:flex-1">
+            <button
+              type="button"
+              className={cn(
+                "group flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-border/80 bg-background shadow-[0_2px_8px_rgba(17,17,17,0.07)] transition-[box-shadow,border-color] duration-200 ease-out hover:border-foreground/15 hover:shadow-[0_6px_18px_rgba(17,17,17,0.13)] sm:h-12 sm:w-full sm:justify-between sm:pl-5 sm:pr-1.5",
+                searchOpen && "pointer-events-none opacity-0",
+              )}
+              onClick={() => setSearchOpen(true)}
+              aria-label={t("nav.searchAriaLabel")}
+              aria-expanded={searchOpen}
+            >
+              {/* Small screens: plain coral glyph, centered */}
+              <span className="flex size-[18px] shrink-0 items-center justify-center text-primary transition-transform duration-200 group-hover:scale-110 sm:hidden">
+                {searchIcon}
+              </span>
+
+              {/* Desktop: dark prompt text */}
+              <span className="hidden truncate text-[15px] font-semibold tracking-[-0.01em] text-foreground/75 transition-colors group-hover:text-foreground sm:inline">
+                {t("search.placeholder")}
+              </span>
+
+              {/* Desktop: ⌘K hint + coral search button */}
+              <span className="ml-3 hidden items-center gap-2.5 sm:flex">
+                <kbd className="hidden items-center gap-0.5 rounded-md bg-secondary px-1.5 py-1 font-mono text-[10px] font-semibold leading-none text-muted-foreground/70 transition-colors group-hover:bg-secondary/80 md:inline-flex">
+                  <span className="text-[12px] leading-none">⌘</span>K
+                </kbd>
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-[0_1px_3px_rgba(225,29,72,0.35)] transition-transform duration-200 group-hover:scale-105">
+                  {searchIcon}
+                </span>
+              </span>
+            </button>
+
+            <Search open={searchOpen} onClose={() => setSearchOpen(false)} />
+          </div>
 
           {/* Right cluster: language, theme, account/menu pill */}
           <div className="flex shrink-0 items-center gap-0.5">
@@ -244,7 +273,6 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
           </div>
         </div>
       </nav>
-      <Search open={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   );
 };

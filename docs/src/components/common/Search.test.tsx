@@ -48,7 +48,20 @@ describe('Search', () => {
     expect(screen.getByPlaceholderText('Search docs...')).toBeInTheDocument();
   });
 
-  it('should close when backdrop is clicked', async () => {
+  it('should render as an inline panel (no modal backdrop)', () => {
+    render(
+      <I18nProvider>
+        <MemoryRouter>
+          <Search open={true} onClose={vi.fn()} />
+        </MemoryRouter>
+      </I18nProvider>
+    );
+
+    expect(screen.queryByTestId('search-backdrop')).not.toBeInTheDocument();
+    expect(screen.getByTestId('search-dialog')).toBeInTheDocument();
+  });
+
+  it('should close when pointer goes down outside the panel', async () => {
     const onClose = vi.fn();
     render(
       <I18nProvider>
@@ -58,38 +71,15 @@ describe('Search', () => {
       </I18nProvider>
     );
 
-    const backdrop = screen.getByTestId('search-backdrop');
-    expect(backdrop).toBeInTheDocument();
+    // Pointer down outside the inline panel closes it
+    fireEvent.mouseDown(document.body);
 
-    fireEvent.click(backdrop);
-
-    // Wait for close animation to complete (CLOSE_ANIMATION_MS = 200ms)
-    await new Promise(resolve => setTimeout(resolve, 250));
+    // Wait for close animation to complete (CLOSE_ANIMATION_MS = 420ms)
+    await new Promise(resolve => setTimeout(resolve, 480));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('should close when clicking outside the dialog (on container)', async () => {
-    const onClose = vi.fn();
-    render(
-      <I18nProvider>
-        <MemoryRouter>
-          <Search open={true} onClose={onClose} />
-        </MemoryRouter>
-      </I18nProvider>
-    );
-
-    const container = screen.getByTestId('search-container');
-    expect(container).toBeInTheDocument();
-
-    // Click on the container (outside the dialog)
-    fireEvent.click(container);
-
-    // Wait for close animation to complete (CLOSE_ANIMATION_MS = 200ms)
-    await new Promise(resolve => setTimeout(resolve, 250));
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it('should not call onClose when clicking inside the dialog', () => {
+  it('should not call onClose when pointer goes down inside the panel', () => {
     const onClose = vi.fn();
     render(
       <I18nProvider>
@@ -100,7 +90,7 @@ describe('Search', () => {
     );
 
     const input = screen.getByPlaceholderText('Search docs...');
-    fireEvent.click(input);
+    fireEvent.mouseDown(input);
 
     expect(onClose).not.toHaveBeenCalled();
     // Verify the search is still open
@@ -121,8 +111,8 @@ describe('Search', () => {
 
     fireEvent.keyDown(window, { key: 'Escape' });
 
-    // Wait for close animation to complete (CLOSE_ANIMATION_MS = 200ms)
-    await new Promise(resolve => setTimeout(resolve, 250));
+    // Wait for close animation to complete (CLOSE_ANIMATION_MS = 420ms)
+    await new Promise(resolve => setTimeout(resolve, 480));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 

@@ -197,51 +197,59 @@ describe('VideoTool — EMPTY state', () => {
   });
 });
 
-describe('VideoTool — overlay actions', () => {
+describe('VideoTool — editor actions (block settings)', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());
 
-  it('renders overlay when data.url is set and not readOnly', () => {
+  type SettingsItem = {
+    name?: string;
+    onActivate?: () => void;
+    children?: { items: SettingsItem[] };
+  };
+  const settings = (tool: VideoTool): SettingsItem[] => tool.renderSettings() as unknown as SettingsItem[];
+  const find = (items: SettingsItem[], name: string): SettingsItem | undefined =>
+    items.find((i) => i.name === name);
+
+  it('never renders the floating overlay toolbar — actions live in block settings', () => {
     const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }));
     const root = tool.render();
-    expect(root.querySelector('[data-role="video-overlay"]')).not.toBeNull();
+    expect(root.querySelector('[data-role="video-overlay"]')).toBeNull();
   });
 
-  it('does not render overlay in readOnly mode', () => {
+  it('never renders the floating overlay in readOnly mode either', () => {
     const tool = new VideoTool({ ...createOptions({ url: 'https://x/y.mp4' }), readOnly: true });
     const root = tool.render();
     expect(root.querySelector('[data-role="video-overlay"]')).toBeNull();
   });
 
-  it('clicking a popover alignment option sets that exact value and dispatches change', () => {
+  it('block-settings alignment option sets that exact value and dispatches change', () => {
     const block = createMockBlock();
     const tool = new VideoTool(createOptions({ url: 'u' }, {}, block));
-    const root = tool.render();
-    const open = (): void => {
-      root.querySelector<HTMLButtonElement>('[data-action="align-trigger"]')?.click();
+    tool.render();
+    const pick = (value: string): void => {
+      find(settings(tool), 'video-alignment')?.children?.items
+        .find((c) => c.name === `video-alignment-${value}`)?.onActivate?.();
     };
-    open();
-    root.querySelector<HTMLButtonElement>('[data-action="align-right"]')?.click();
+    pick('right');
     expect(tool.save().alignment).toBe('right');
-    open();
-    root.querySelector<HTMLButtonElement>('[data-action="align-left"]')?.click();
+    pick('left');
     expect(tool.save().alignment).toBe('left');
     expect(block.dispatchChange).toHaveBeenCalled();
   });
 
-  it('caption-toggle flips captionVisible and updates data-caption', () => {
+  it('block-settings caption item flips captionVisible and updates data-caption', () => {
     const tool = new VideoTool(createOptions({ url: 'u' }));
     const root = tool.render();
     expect(root.getAttribute('data-caption')).toBe('on');
-    root.querySelector<HTMLButtonElement>('[data-action="caption-toggle"]')?.click();
+    find(settings(tool), 'video-caption')?.onActivate?.();
     expect(root.getAttribute('data-caption')).toBe('off');
     expect(tool.save().captionVisible).toBe(false);
   });
 
-  it('clicking replace returns the tool to EMPTY state', () => {
+  it('block-settings replace item returns the tool to EMPTY state', () => {
     const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }));
     const root = tool.render();
-    root.querySelector<HTMLButtonElement>('[data-action="replace"]')?.click();
+    find(settings(tool), 'video-replace')?.onActivate?.();
     expect(root.getAttribute('data-state')).toBe('empty');
     expect(root.querySelector('input[type="file"]')).not.toBeNull();
   });
@@ -291,22 +299,24 @@ describe('VideoTool — setReadOnly', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());
 
-  it('removes the overlay and locks the caption when read-only is enabled', () => {
+  it('removes editing affordances and locks the caption when read-only is enabled', () => {
     const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }));
     const root = tool.render();
-    expect(root.querySelector('[data-role="video-overlay"]')).not.toBeNull();
+    expect(root.querySelector('[data-role="resize-handle"]')).not.toBeNull();
     tool.setReadOnly(true);
-    expect(root.querySelector('[data-role="video-overlay"]')).toBeNull();
+    expect(root.querySelector('[data-role="resize-handle"]')).toBeNull();
     const caption = root.querySelector('[data-role="video-caption"]');
     expect(caption?.getAttribute('contenteditable')).toBe('false');
   });
 
-  it('restores the overlay when read-only is disabled again', () => {
+  it('restores editing affordances when read-only is disabled again', () => {
     const tool = new VideoTool({ ...createOptions({ url: 'https://x/y.mp4' }), readOnly: true });
     const root = tool.render();
-    expect(root.querySelector('[data-role="video-overlay"]')).toBeNull();
+    expect(root.querySelector('[data-role="resize-handle"]')).toBeNull();
     tool.setReadOnly(false);
-    expect(root.querySelector('[data-role="video-overlay"]')).not.toBeNull();
+    expect(root.querySelector('[data-role="resize-handle"]')).not.toBeNull();
+    const caption = root.querySelector('[data-role="video-caption"]');
+    expect(caption?.getAttribute('contenteditable')).toBe('true');
   });
 });
 

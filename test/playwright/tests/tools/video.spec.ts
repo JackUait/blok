@@ -115,15 +115,13 @@ test('fullscreen hides editor chrome and keeps only playback controls', async ({
     locator.evaluate((el) => getComputedStyle(el).display);
 
   // Editor chrome is visible (in the DOM, not display:none) before fullscreen.
-  await expect(display(videoBlock.locator('[data-role="video-overlay"]'))).resolves.not.toBe('none');
   await expect(display(videoBlock.locator('[data-role="video-caption-row"]'))).resolves.not.toBe('none');
 
   // Enter fullscreen by flipping the flag the controls toggle (matches
   // controls.ts onFullscreenChange) — avoids the headless requestFullscreen gate.
   await figure.evaluate((el) => el.setAttribute('data-fullscreen', 'true'));
 
-  // Edit chrome + caption + resize handles drop out of the fullscreen view.
-  await expect(display(videoBlock.locator('[data-role="video-overlay"]'))).resolves.toBe('none');
+  // Caption + resize handles drop out of the fullscreen view.
   await expect(display(videoBlock.locator('[data-role="video-caption-row"]'))).resolves.toBe('none');
   await expect(display(videoBlock.locator('[data-role="resize-handle"]').first())).resolves.toBe('none');
 

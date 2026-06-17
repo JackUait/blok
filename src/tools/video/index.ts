@@ -26,7 +26,7 @@ import { renderUploadingState, type UploadingStateElement } from '../image/uploa
 import { DEFAULT_CAPTION_PLACEHOLDER, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { tr } from './i18n';
-import { renderCaptionRow, renderOverlay, renderVideo } from './ui';
+import { renderCaptionRow, renderVideo } from './ui';
 import { attachControls, type ControlsHandle } from './controls';
 import { Uploader, type UploadResult } from './uploader';
 
@@ -336,19 +336,6 @@ export class VideoTool implements BlockTool {
     });
     if (this.theater) figure.setAttribute('data-theater', 'true');
 
-    if (!this.readOnly) {
-      const overlay = renderOverlay({
-        alignment: this.data.alignment ?? 'center',
-        captionVisible: this.data.captionVisible !== false,
-        onAlign: (next) => this.setAlignment(next),
-        onToggleCaption: () => this.toggleCaption(),
-        onReplace: () => this.transitionToEmpty(),
-        onMore: (trigger) => this.openBlockSettings(trigger),
-        i18n: this.api.i18n,
-      });
-      media.appendChild(overlay);
-    }
-
     const placeholder = this.config.captionPlaceholder ?? DEFAULT_CAPTION_PLACEHOLDER;
     const captionVisible = this.data.captionVisible !== false;
     if (captionVisible || !this.readOnly) {
@@ -370,15 +357,6 @@ export class VideoTool implements BlockTool {
     if (!this.readOnly) {
       this.attachResizeHandles(figure);
     }
-  }
-
-  private openBlockSettings(trigger?: HTMLElement): void {
-    const toolbar = (this.api as unknown as {
-      toolbar?: { toggleBlockSettings?: (state: boolean, trigger?: HTMLElement, options?: { placeLeftOfAnchor?: boolean }) => void };
-    }).toolbar;
-    if (!toolbar?.toggleBlockSettings) return;
-    trigger?.setAttribute('aria-expanded', 'true');
-    toolbar.toggleBlockSettings(true, trigger, { placeLeftOfAnchor: false });
   }
 
   private attachResizeHandles(figure: HTMLElement): void {

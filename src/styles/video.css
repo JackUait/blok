@@ -733,7 +733,9 @@
   box-shadow:
     0 0 0 100vmax var(--blok-video-theater-scrim),
     var(--blok-video-theater-shadow);
-  animation: blok-video-theater-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform-origin: center;
+  /* the card rises + expands into place with an easeOutExpo settle */
+  animation: blok-video-theater-in 360ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 [data-blok-tool="video"] .blok-video-inner[data-theater="true"]:popover-open {
   box-shadow: var(--blok-video-theater-shadow);
@@ -742,11 +744,24 @@
   background: var(--blok-video-theater-scrim);
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
-  animation: blok-video-theater-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* the page dims to black like house lights going down, a touch behind the card */
+  animation: blok-video-theater-curtain 300ms ease-out;
 }
 @keyframes blok-video-theater-in {
-  from { opacity: 0; transform: scale(0.97); }
-  to   { opacity: 1; transform: scale(1); }
+  from { opacity: 0; transform: translateY(22px) scale(0.84); }
+  60%  { opacity: 1; }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes blok-video-theater-curtain {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+/* honour reduced-motion: snap in, no rise/zoom/curtain */
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-tool="video"] .blok-video-inner[data-theater="true"],
+  [data-blok-tool="video"] .blok-video-inner[data-theater="true"]:popover-open::backdrop {
+    animation: none;
+  }
 }
 /* the cinema card owns its own depth via the scrim — drop the resting page
    shadow, and shed the chrome that doesn't belong in a presentation view */

@@ -161,9 +161,15 @@
   to { transform: rotate(360deg) }
 }
 
+@keyframes blok-video-theater-curtain {
+  from { opacity: 0 }
+  to { opacity: 1 }
+}
+
 @keyframes blok-video-theater-in {
-  from { opacity: 0; transform: scale(0.97) }
-  to { opacity: 1; transform: scale(1) }
+  from { opacity: 0; transform: translateY(22px) scale(0.84) }
+  60% { opacity: 1 }
+  to { opacity: 1; transform: translateY(0) scale(1) }
 }
 
 @keyframes bounceIn {

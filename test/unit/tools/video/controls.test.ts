@@ -120,6 +120,14 @@ describe('video controls — structure', () => {
     const center = q<HTMLButtonElement>(h.controls, '[data-role="center-play"]');
     expect(center.hidden).toBe(false);
   });
+
+  it('places the sound control on the left — before the scrubber, not in the right group', () => {
+    const volumeWrap = q(h.controls, '.blok-video-controls__volume-wrap');
+    const seekWrap = q(h.controls, '.blok-video-controls__seek-wrap');
+    // seek-wrap is flex:1 and pushes everything after it to the right edge, so
+    // "on the left" means the volume control must precede the scrubber in the DOM.
+    expect(volumeWrap.compareDocumentPosition(seekWrap) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
 });
 
 describe('video controls — click-to-toggle', () => {
@@ -974,7 +982,7 @@ describe('video controls — context menu + stats', () => {
     setProp(h.video, 'currentTime', 10);
     openCtx();
     q(h.controls, '[data-action="stats"]').click();
-    const stats = q(h.controls, '[data-role="video-stats"]') as HTMLElement & { hidden: boolean };
+    const stats = q(h.controls, '[data-role="video-stats"]');
     expect(stats.hidden).toBe(false);
     expect(stats.textContent).toContain('1920×1080');
     expect(stats.textContent).toContain('3 / 300');
@@ -988,14 +996,14 @@ describe('video controls — context menu + stats', () => {
 });
 
 describe('video controls — persistence', () => {
-  const makeStore = (): { data: Record<string, string>; storage: VideoStorageLike } => {
-    const data: Record<string, string> = {};
+  const makeStore = (): { data: Record<string, string | undefined>; storage: VideoStorageLike } => {
+    const data: Record<string, string | undefined> = {};
     return {
       data,
       storage: {
         getItem: (k) => data[k] ?? null,
         setItem: (k, v) => { data[k] = v; },
-        removeItem: (k) => { delete data[k]; },
+        removeItem: (k) => { data[k] = undefined; },
       },
     };
   };

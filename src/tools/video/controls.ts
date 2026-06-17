@@ -200,7 +200,7 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
   volumeWrap.className = 'blok-video-controls__volume-wrap';
   volumeWrap.append(muteToggle, volume);
 
-  bar.append(playToggle, time, seekWrap, volumeWrap, fullscreen);
+  bar.append(playToggle, volumeWrap, time, seekWrap, fullscreen);
   root.appendChild(bar);
 
   // Thin elapsed line pinned to the player's bottom edge — reads the shared

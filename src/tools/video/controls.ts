@@ -13,9 +13,18 @@ import {
   IconPlayerVolumeMute,
 } from '../../components/icons';
 
+/** Minimal storage seam (localStorage-shaped) for volume + position persistence. */
+export interface VideoStorage {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+}
+
 export interface ControlsOptions {
   video: HTMLVideoElement;
   figure: HTMLElement;
+  /** Defaults to window.localStorage; pass null to disable persistence. */
+  storage?: VideoStorage | null;
 }
 
 export interface ControlsHandle {
@@ -82,7 +91,7 @@ function button(action: string, label: string, icon: string, extraClass = ''): H
  * fullscreen). Returns the control element plus a teardown that detaches every
  * media listener.
  */
-export function attachControls({ video, figure }: ControlsOptions): ControlsHandle {
+export function attachControls({ video, figure, storage }: ControlsOptions): ControlsHandle {
   const root = document.createElement('div');
   root.className = 'blok-video-controls';
   root.setAttribute('data-role', 'video-controls');
@@ -686,6 +695,110 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
     if (state.playing) scheduleHide();
   };
 
+  // ----- right-click context menu + stats overlay -----
+  const ctxMenu = document.createElement('div');
+  ctxMenu.className = 'blok-video-controls__ctx';
+  ctxMenu.setAttribute('data-role', 'video-menu');
+  ctxMenu.setAttribute('role', 'menu');
+  ctxMenu.hidden = true;
+  const ctxItem = (action: string, label: string): HTMLButtonElement => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'blok-video-controls__ctx-item';
+    item.setAttribute('data-action', action);
+    item.setAttribute('role', 'menuitem');
+    item.textContent = label;
+    return item;
+  };
+  const ctxLoop = ctxItem('ctx-loop', 'Loop');
+  ctxLoop.setAttribute('role', 'menuitemcheckbox');
+  const ctxCopy = ctxItem('copy-url', 'Copy video URL');
+  const ctxCopyAt = ctxItem('copy-url-at-time', 'Copy video URL at current time');
+  const ctxStats = ctxItem('stats', 'Stats for nerds');
+  ctxMenu.append(ctxLoop, ctxCopy, ctxCopyAt, ctxStats);
+  root.appendChild(ctxMenu);
+
+  const statsOverlay = document.createElement('div');
+  statsOverlay.className = 'blok-video-controls__stats';
+  statsOverlay.setAttribute('data-role', 'video-stats');
+  statsOverlay.hidden = true;
+  root.appendChild(statsOverlay);
+
+  const clipboardWrite = (text: string): void => { void navigator.clipboard?.writeText?.(text); };
+  const renderStats = (): void => {
+    const quality = video.getVideoPlaybackQuality?.();
+    const dropped = quality ? `${quality.droppedVideoFrames} / ${quality.totalVideoFrames}` : 'n/a';
+    const res = video.videoWidth ? `${video.videoWidth}×${video.videoHeight}` : 'n/a';
+    const bufferedEnd = video.buffered.length ? video.buffered.end(video.buffered.length - 1) : 0;
+    const health = Math.max(0, bufferedEnd - video.currentTime).toFixed(1);
+    statsOverlay.innerHTML =
+      `<div>Resolution: ${res}</div>`
+      + `<div>Dropped frames: ${dropped}</div>`
+      + `<div>Buffer health: ${health}s</div>`
+      + `<div>Viewport: ${root.offsetWidth}×${root.offsetHeight}</div>`;
+  };
+  const toggleStats = (): void => {
+    statsOverlay.hidden = !statsOverlay.hidden;
+    if (!statsOverlay.hidden) renderStats();
+  };
+  const refreshStats = (): void => { if (!statsOverlay.hidden) renderStats(); };
+
+  const onCtxOutside = (event: MouseEvent): void => {
+    if (!ctxMenu.contains(event.target as Node)) closeCtxMenu();
+  };
+  const onCtxKeydown = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape') closeCtxMenu();
+  };
+  const closeCtxMenu = (): void => {
+    if (ctxMenu.hidden) return;
+    ctxMenu.hidden = true;
+    document.removeEventListener('mousedown', onCtxOutside);
+    document.removeEventListener('keydown', onCtxKeydown);
+  };
+  const onContextMenu = (event: MouseEvent): void => {
+    event.preventDefault();
+    ctxLoop.setAttribute('aria-checked', String(media.loop));
+    ctxMenu.style.setProperty('--blok-ctx-x', `${event.offsetX}px`);
+    ctxMenu.style.setProperty('--blok-ctx-y', `${event.offsetY}px`);
+    ctxMenu.hidden = false;
+    document.addEventListener('mousedown', onCtxOutside);
+    document.addEventListener('keydown', onCtxKeydown);
+  };
+  ctxLoop.addEventListener('click', () => { media.loop = !media.loop; ctxLoop.setAttribute('aria-checked', String(media.loop)); closeCtxMenu(); });
+  ctxCopy.addEventListener('click', () => { clipboardWrite(video.currentSrc); closeCtxMenu(); });
+  ctxCopyAt.addEventListener('click', () => { clipboardWrite(`${video.currentSrc}#t=${Math.floor(video.currentTime)}`); closeCtxMenu(); });
+  ctxStats.addEventListener('click', () => { toggleStats(); closeCtxMenu(); });
+  video.addEventListener('contextmenu', onContextMenu);
+
+  // ----- volume + position persistence -----
+  const store: VideoStorage | null = storage ?? (typeof localStorage !== 'undefined' ? localStorage : null);
+  const VOL_KEY = 'blok:video:volume';
+  const posKey = (): string | null => (video.currentSrc ? `blok:video:pos:${video.currentSrc}` : null);
+  const safeGet = (key: string): string | null => { try { return store?.getItem(key) ?? null; } catch { return null; } };
+  const safeSet = (key: string, value: string): void => { try { store?.setItem(key, value); } catch { /* private mode / quota */ } };
+  const persistVolume = (): void => safeSet(VOL_KEY, JSON.stringify({ volume: media.volume, muted: media.muted }));
+  const persistPosition = (): void => {
+    const key = posKey();
+    if (key) safeSet(key, String(media.currentTime));
+  };
+  const applyStoredVolume = (raw: string): void => {
+    const parsed = JSON.parse(raw) as { volume?: number; muted?: boolean };
+    if (typeof parsed.volume === 'number') { media.volume = parsed.volume; volume.value = String(parsed.volume); }
+    if (typeof parsed.muted === 'boolean') media.muted = parsed.muted;
+    onVolumeChange();
+  };
+  const restoreState = (): void => {
+    const raw = safeGet(VOL_KEY);
+    if (raw) { try { applyStoredVolume(raw); } catch { /* corrupt entry */ } }
+    const key = posKey();
+    const pos = key ? safeGet(key) : null;
+    if (pos !== null) {
+      const target = Number(pos);
+      const dur = Number.isFinite(media.duration) ? media.duration : 0;
+      if (Number.isFinite(target) && target > 0 && (dur === 0 || target < dur - 5)) media.currentTime = target;
+    }
+  };
+
   playToggle.addEventListener('click', togglePlay);
   centerPlay.addEventListener('click', () => { void media.play(); });
   time.addEventListener('click', (event) => { event.stopPropagation(); toggleTimeMode(); });
@@ -728,10 +841,14 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
   video.addEventListener('pause', updateCenter);
   video.addEventListener('pause', revealControls);
   video.addEventListener('timeupdate', updateCenter);
+  video.addEventListener('timeupdate', persistPosition);
+  video.addEventListener('timeupdate', refreshStats);
   video.addEventListener('waiting', onWaiting);
   video.addEventListener('playing', onPlayingMedia);
   video.addEventListener('canplay', onCanPlay);
   video.addEventListener('volumechange', onVolumeChange);
+  video.addEventListener('volumechange', persistVolume);
+  video.addEventListener('loadedmetadata', restoreState);
   figure.addEventListener('pointermove', revealControls);
   figure.addEventListener('focusin', revealControls);
   document.addEventListener('fullscreenchange', onFullscreenChange);
@@ -742,6 +859,9 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
     if (state.sleepTimer) clearTimeout(state.sleepTimer);
     if (state.idleTimer) clearTimeout(state.idleTimer);
     document.removeEventListener('mousedown', onMenuOutside);
+    document.removeEventListener('mousedown', onCtxOutside);
+    document.removeEventListener('keydown', onCtxKeydown);
+    video.removeEventListener('contextmenu', onContextMenu);
     void audio.ctx?.close?.();
     stopAmbient();
     video.removeEventListener('play', startAmbient);
@@ -751,9 +871,13 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
     video.removeEventListener('pause', updateCenter);
     video.removeEventListener('pause', revealControls);
     video.removeEventListener('timeupdate', updateCenter);
+    video.removeEventListener('timeupdate', persistPosition);
+    video.removeEventListener('timeupdate', refreshStats);
     video.removeEventListener('waiting', onWaiting);
     video.removeEventListener('playing', onPlayingMedia);
     video.removeEventListener('canplay', onCanPlay);
+    video.removeEventListener('volumechange', persistVolume);
+    video.removeEventListener('loadedmetadata', restoreState);
     figure.removeEventListener('pointermove', revealControls);
     figure.removeEventListener('focusin', revealControls);
     if (pipBtn) {

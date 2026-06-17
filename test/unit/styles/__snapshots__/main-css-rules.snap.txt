@@ -5179,9 +5179,66 @@
   cursor: pointer;
 }
 
-[data-blok-tool="video"] .blok-video-controls__btn:focus-visible, [data-blok-tool="video"] .blok-video-controls__center:focus-visible, [data-blok-tool="video"] .blok-video-controls__time:focus-visible, [data-blok-tool="video"] .blok-video-controls__menu-item:focus-visible {
+[data-blok-tool="video"] .blok-video-controls__btn:focus-visible, [data-blok-tool="video"] .blok-video-controls__center:focus-visible, [data-blok-tool="video"] .blok-video-controls__time:focus-visible, [data-blok-tool="video"] .blok-video-controls__menu-item:focus-visible, [data-blok-tool="video"] .blok-video-controls__ctx-item:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-video-focus-ring);
+}
+
+[data-blok-tool="video"] .blok-video-controls__ctx {
+  position: absolute;
+  top: var(--blok-ctx-y, 50%);
+  left: var(--blok-ctx-x, 50%);
+  min-width: 210px;
+  max-width: 90%;
+  padding: var(--blok-space-1-5);
+  border-radius: var(--blok-radius-md);
+  background: var(--blok-video-burst-bg);
+  box-shadow: var(--blok-video-burst-shadow);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  color: var(--blok-video-control-fg);
+  pointer-events: auto;
+  z-index: 4;
+}
+
+[data-blok-tool="video"] .blok-video-controls__ctx[hidden] {
+  display: none;
+}
+
+[data-blok-tool="video"] .blok-video-controls__ctx-item {
+  display: block;
+  width: 100%;
+  padding: var(--blok-space-1-5) var(--blok-space-2);
+  border: 0;
+  border-radius: var(--blok-radius-sm);
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+[data-blok-tool="video"] .blok-video-controls__ctx-item:hover {
+  background: var(--blok-video-control-bg-hover);
+}
+
+[data-blok-tool="video"] .blok-video-controls__stats {
+  position: absolute;
+  top: var(--blok-space-3);
+  left: var(--blok-space-3);
+  padding: var(--blok-space-2) var(--blok-space-2-5);
+  border-radius: var(--blok-radius-sm);
+  background: var(--blok-video-burst-bg);
+  color: var(--blok-video-control-fg);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 4;
+}
+
+[data-blok-tool="video"] .blok-video-controls__stats[hidden] {
+  display: none;
 }
 
 [data-blok-tool="video"] .blok-video-controls__mini {

@@ -923,3 +923,135 @@ describe('video controls — ambient mode', () => {
     expect(caf).toHaveBeenCalled();
   });
 });
+
+describe('video controls — context menu + stats', () => {
+  let h: Harness;
+  beforeEach(() => { vi.clearAllMocks(); h = mount(); });
+  afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
+
+  const openCtx = (): void => {
+    h.video.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+  };
+  const menu = (): HTMLElement & { hidden: boolean } => q(h.controls, '[data-role="video-menu"]');
+
+  it('opens a custom menu on contextmenu and prevents the default', () => {
+    const ev = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    h.video.dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(true);
+    expect(menu().hidden).toBe(false);
+  });
+
+  it('copies the URL and the URL at the current time', () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    setProp(h.video, 'currentSrc', 'https://x/v.mp4');
+    setProp(h.video, 'currentTime', 95);
+    openCtx();
+    q(h.controls, '[data-action="copy-url"]').click();
+    expect(writeText).toHaveBeenCalledWith('https://x/v.mp4');
+    openCtx();
+    q(h.controls, '[data-action="copy-url-at-time"]').click();
+    expect(writeText).toHaveBeenCalledWith('https://x/v.mp4#t=95');
+  });
+
+  it('toggles loop from the context menu', () => {
+    openCtx();
+    q(h.controls, '[data-action="ctx-loop"]').click();
+    expect(h.video.loop).toBe(true);
+  });
+
+  it('closes the menu on Escape', () => {
+    openCtx();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(menu().hidden).toBe(true);
+  });
+
+  it('toggles a stats overlay with readable fields', () => {
+    setProp(h.video, 'videoWidth', 1920);
+    setProp(h.video, 'videoHeight', 1080);
+    setProp(h.video, 'getVideoPlaybackQuality', () => ({ droppedVideoFrames: 3, totalVideoFrames: 300 }));
+    setProp(h.video, 'buffered', fakeRanges([[0, 50]]));
+    setProp(h.video, 'currentTime', 10);
+    openCtx();
+    q(h.controls, '[data-action="stats"]').click();
+    const stats = q(h.controls, '[data-role="video-stats"]') as HTMLElement & { hidden: boolean };
+    expect(stats.hidden).toBe(false);
+    expect(stats.textContent).toContain('1920×1080');
+    expect(stats.textContent).toContain('3 / 300');
+  });
+
+  it('detaches the document menu listeners on destroy', () => {
+    openCtx();
+    h.destroy();
+    expect(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))).not.toThrow();
+  });
+});
+
+describe('video controls — persistence', () => {
+  const makeStore = (): { data: Record<string, string>; storage: VideoStorageLike } => {
+    const data: Record<string, string> = {};
+    return {
+      data,
+      storage: {
+        getItem: (k) => data[k] ?? null,
+        setItem: (k, v) => { data[k] = v; },
+        removeItem: (k) => { delete data[k]; },
+      },
+    };
+  };
+  interface VideoStorageLike { getItem(k: string): string | null; setItem(k: string, v: string): void; removeItem(k: string): void }
+  const mountWith = (storage: VideoStorageLike): Harness => {
+    const figure = document.createElement('figure');
+    const video = document.createElement('video');
+    setProp(video, 'play', vi.fn().mockResolvedValue(undefined));
+    setProp(video, 'pause', vi.fn());
+    figure.appendChild(video);
+    document.body.appendChild(figure);
+    const handle = attachControls({ video, figure, storage });
+    figure.appendChild(handle.element);
+    return { figure, video, controls: handle.element, destroy: handle.destroy };
+  };
+  afterEach(() => { document.body.innerHTML = ''; vi.restoreAllMocks(); });
+
+  it('persists volume changes and restores them on a new mount', () => {
+    const { data, storage } = makeStore();
+    const a = mountWith(storage);
+    setProp(a.video, 'volume', 0.3);
+    a.video.dispatchEvent(new Event('volumechange'));
+    expect(data['blok:video:volume']).toContain('0.3');
+    a.destroy();
+    const b = mountWith(storage);
+    setProp(b.video, 'duration', 100);
+    b.video.dispatchEvent(new Event('loadedmetadata'));
+    expect(b.video.volume).toBeCloseTo(0.3, 5);
+    b.destroy();
+  });
+
+  it('restores the saved position for the same source', () => {
+    const { data, storage } = makeStore();
+    const a = mountWith(storage);
+    setProp(a.video, 'currentSrc', 'https://x/v.mp4');
+    setProp(a.video, 'duration', 100);
+    setProp(a.video, 'currentTime', 40);
+    a.video.dispatchEvent(new Event('timeupdate'));
+    expect(data['blok:video:pos:https://x/v.mp4']).toBeDefined();
+    a.destroy();
+    const b = mountWith(storage);
+    setProp(b.video, 'currentSrc', 'https://x/v.mp4');
+    setProp(b.video, 'duration', 100);
+    b.video.dispatchEvent(new Event('loadedmetadata'));
+    expect(b.video.currentTime).toBe(40);
+    b.destroy();
+  });
+
+  it('does not throw when storage access fails', () => {
+    const storage: VideoStorageLike = {
+      getItem: () => { throw new Error('blocked'); },
+      setItem: () => { throw new Error('blocked'); },
+      removeItem: () => {},
+    };
+    const a = mountWith(storage);
+    expect(() => { setProp(a.video, 'volume', 0.5); a.video.dispatchEvent(new Event('volumechange')); }).not.toThrow();
+    a.destroy();
+  });
+});

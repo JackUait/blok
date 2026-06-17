@@ -219,13 +219,9 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
   const state = {
     playing: false,
     selectedRate: 1,
-    stableVolume: false,
     timeMode: 'elapsed' as 'elapsed' | 'remaining',
     idleTimer: 0,
   };
-  // Lazily-built Web Audio graph for loudness normalization (live-verify only —
-  // jsdom has no Web Audio, so the toggle stays state-only there).
-  const audio: { ctx: AudioContext | null; comp: DynamicsCompressorNode | null } = { ctx: null, comp: null };
 
   const setPlaying = (next: boolean): void => {
     state.playing = next;
@@ -480,7 +476,7 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     else void figure.requestFullscreen?.();
   };
 
-  // ----- gear settings menu (speed / loop / stable volume) -----
+  // ----- gear settings menu (speed / loop) -----
   // Viewer-accessible in-player popover (the block ☰ menu is editor-only). Built
   // here so it shares the player's closure state.
   const menuItem = (action: string, label: string, role: 'menuitemradio' | 'menuitemcheckbox'): HTMLButtonElement => {
@@ -553,32 +549,10 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     loopItem.setAttribute('aria-checked', String(media.loop));
   });
 
-  const stableItem = menuItem('stable-volume', 'Stable volume', 'menuitemcheckbox');
-  const AudioCtor = window.AudioContext;
-  stableItem.addEventListener('click', () => {
-    state.stableVolume = !state.stableVolume;
-    stableItem.setAttribute('aria-checked', String(state.stableVolume));
-    if (!AudioCtor) return; // no Web Audio (e.g. jsdom) — state only
-    if (!audio.ctx) {
-      try {
-        audio.ctx = new AudioCtor();
-        const source = audio.ctx.createMediaElementSource(media);
-        audio.comp = audio.ctx.createDynamicsCompressor();
-        source.connect(audio.comp);
-        audio.comp.connect(audio.ctx.destination);
-      } catch {
-        // createMediaElementSource is one-shot / blocked before a gesture
-      }
-    }
-    if (audio.comp) audio.comp.ratio.value = state.stableVolume ? 12 : 1;
-    if (state.stableVolume) void audio.ctx?.resume?.();
-  });
-
   menu.append(
     menuSection('Speed'),
     speedGrid,
     loopItem,
-    stableItem,
   );
   bar.insertBefore(menuWrap, fullscreen);
 
@@ -853,7 +827,6 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     document.removeEventListener('mousedown', onCtxOutside);
     document.removeEventListener('keydown', onCtxKeydown);
     video.removeEventListener('contextmenu', onContextMenu);
-    void audio.ctx?.close?.();
     stopAmbient();
     video.removeEventListener('play', startAmbient);
     video.removeEventListener('play', updateCenter);

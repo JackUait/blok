@@ -712,13 +712,9 @@ describe('video controls — playback gear menu', () => {
     expect(h.controls.textContent).not.toContain('Sleep timer');
   });
 
-  it('stable volume toggles state without throwing when Web Audio is absent', () => {
-    const sv = q(h.controls, '[data-action="stable-volume"]');
-    expect(sv.getAttribute('aria-checked')).toBe('false');
-    expect(() => sv.click()).not.toThrow();
-    expect(sv.getAttribute('aria-checked')).toBe('true');
-    sv.click();
-    expect(sv.getAttribute('aria-checked')).toBe('false');
+  it('does not offer a stable-volume toggle', () => {
+    expect(h.controls.querySelector('[data-action="stable-volume"]')).toBeNull();
+    expect(h.controls.textContent).not.toContain('Stable volume');
   });
 
   it('releasing a 2× hold restores the menu-selected rate, not 1×', () => {

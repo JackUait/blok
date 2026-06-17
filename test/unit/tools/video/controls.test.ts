@@ -707,21 +707,9 @@ describe('video controls — playback gear menu', () => {
     expect(h.video.loop).toBe(false);
   });
 
-  it('sleep timer pauses playback only after the chosen duration', () => {
-    vi.useFakeTimers();
-    q(h.controls, '[data-action="sleep-30"]').click();
-    vi.advanceTimersByTime(29 * 60 * 1000);
-    expect(h.video.pause).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(60 * 1000);
-    expect(h.video.pause).toHaveBeenCalledTimes(1);
-  });
-
-  it('clears a pending sleep timer on destroy', () => {
-    vi.useFakeTimers();
-    q(h.controls, '[data-action="sleep-60"]').click();
-    h.destroy();
-    vi.advanceTimersByTime(60 * 60 * 1000);
-    expect(h.video.pause).not.toHaveBeenCalled();
+  it('does not offer a sleep timer', () => {
+    expect(h.controls.querySelectorAll('[data-action^="sleep-"]')).toHaveLength(0);
+    expect(h.controls.textContent).not.toContain('Sleep timer');
   });
 
   it('stable volume toggles state without throwing when Web Audio is absent', () => {

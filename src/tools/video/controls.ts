@@ -219,7 +219,6 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
   const state = {
     playing: false,
     selectedRate: 1,
-    sleepTimer: 0,
     stableVolume: false,
     timeMode: 'elapsed' as 'elapsed' | 'remaining',
     idleTimer: 0,
@@ -481,7 +480,7 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     else void figure.requestFullscreen?.();
   };
 
-  // ----- gear settings menu (speed / loop / sleep / stable volume) -----
+  // ----- gear settings menu (speed / loop / stable volume) -----
   // Viewer-accessible in-player popover (the block ☰ menu is editor-only). Built
   // here so it shares the player's closure state.
   const menuItem = (action: string, label: string, role: 'menuitemradio' | 'menuitemcheckbox'): HTMLButtonElement => {
@@ -554,21 +553,6 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     loopItem.setAttribute('aria-checked', String(media.loop));
   });
 
-  const SLEEPS = [10, 15, 30, 60];
-  const sleepOff = menuItem('sleep-off', 'Off', 'menuitemradio');
-  sleepOff.setAttribute('aria-checked', 'true');
-  const sleepItems = SLEEPS.map((minutes) => {
-    const item = menuItem(`sleep-${minutes}`, `${minutes} min`, 'menuitemradio');
-    item.addEventListener('click', () => setSleep(minutes, item));
-    return item;
-  });
-  sleepOff.addEventListener('click', () => setSleep(0, sleepOff));
-  const setSleep = (minutes: number, active: HTMLElement): void => {
-    if (state.sleepTimer) { clearTimeout(state.sleepTimer); state.sleepTimer = 0; }
-    if (minutes > 0) state.sleepTimer = window.setTimeout(() => media.pause(), minutes * 60_000);
-    [sleepOff, ...sleepItems].forEach((item) => item.setAttribute('aria-checked', String(item === active)));
-  };
-
   const stableItem = menuItem('stable-volume', 'Stable volume', 'menuitemcheckbox');
   const AudioCtor = window.AudioContext;
   stableItem.addEventListener('click', () => {
@@ -594,9 +578,6 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     menuSection('Speed'),
     speedGrid,
     loopItem,
-    menuSection('Sleep timer'),
-    sleepOff,
-    ...sleepItems,
     stableItem,
   );
   bar.insertBefore(menuWrap, fullscreen);
@@ -867,7 +848,6 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
 
   const destroy = (): void => {
     if (hold.timer) clearTimeout(hold.timer);
-    if (state.sleepTimer) clearTimeout(state.sleepTimer);
     if (state.idleTimer) clearTimeout(state.idleTimer);
     document.removeEventListener('mousedown', onMenuOutside);
     document.removeEventListener('mousedown', onCtxOutside);

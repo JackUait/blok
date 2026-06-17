@@ -334,7 +334,7 @@ export class VideoTool implements BlockTool {
     figure.addEventListener('blok-video-theater', (event) => {
       this.theater = (event as CustomEvent<{ on: boolean }>).detail.on;
     });
-    if (this.theater) figure.setAttribute('data-theater', 'true');
+    if (this.theater) this.controlsHandle?.setTheater(true);
 
     const placeholder = this.config.captionPlaceholder ?? DEFAULT_CAPTION_PLACEHOLDER;
     const captionVisible = this.data.captionVisible !== false;

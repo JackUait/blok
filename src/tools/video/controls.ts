@@ -29,6 +29,9 @@ export interface ControlsOptions {
 
 export interface ControlsHandle {
   element: HTMLElement;
+  /** Enter/leave theater (cinema) mode programmatically — used by the tool to
+   *  re-apply theater after a re-render. */
+  setTheater(on: boolean): void;
   destroy(): void;
 }
 
@@ -611,15 +614,33 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     ambient.raf = 0;
   };
 
-  // Theater — an ephemeral presentation toggle. Promotes the figure to a
-  // centred, backdrop-dimmed cinema view (CSS) and notifies the tool (which
-  // re-applies it across re-renders); it never touches the inline width, so the
-  // saved resize width is preserved. Escape backs out, mirroring fullscreen.
+  // Theater — an ephemeral presentation toggle. Promotes the figure into the
+  // browser top layer via the Popover API (manual mode) so it sits above all
+  // editor chrome, centres in the viewport, and gets a real ::backdrop. Dismiss
+  // is driven explicitly — an outside pointer-down or Escape — so it behaves the
+  // same with or without the Popover API and never races browser light-dismiss.
+  // It never touches the inline width, so the saved resize width is preserved.
+  const canPopover = typeof figure.showPopover === 'function';
   const theaterBtn = button('theater', 'Theater mode', IconPlayerTheater);
   theaterBtn.setAttribute('aria-pressed', 'false');
   const theater = { on: false };
   const onTheaterKey = (event: KeyboardEvent): void => {
     if (event.key === 'Escape') setTheater(false);
+  };
+  // Click anywhere off the cinema card (the dimmed backdrop) closes it.
+  const onTheaterOutside = (event: Event): void => {
+    const target = event.target as Node | null;
+    if (target && !figure.contains(target)) setTheater(false);
+  };
+  const openPopover = (): void => {
+    figure.setAttribute('popover', 'manual');
+    try { figure.showPopover(); } catch { /* unsupported / detached */ }
+  };
+  const closePopover = (): void => {
+    if (figure.matches(':popover-open')) {
+      try { figure.hidePopover(); } catch { /* already closed */ }
+    }
+    figure.removeAttribute('popover');
   };
   const setTheater = (on: boolean): void => {
     if (on === theater.on) return;
@@ -627,8 +648,15 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     figure.setAttribute('data-theater', String(on));
     theaterBtn.setAttribute('aria-pressed', String(on));
     theaterBtn.setAttribute('aria-label', on ? 'Exit theater mode' : 'Theater mode');
-    if (on) document.addEventListener('keydown', onTheaterKey);
-    else document.removeEventListener('keydown', onTheaterKey);
+    if (canPopover && on) openPopover();
+    else if (canPopover) closePopover();
+    if (on) {
+      document.addEventListener('keydown', onTheaterKey);
+      document.addEventListener('pointerdown', onTheaterOutside);
+    } else {
+      document.removeEventListener('keydown', onTheaterKey);
+      document.removeEventListener('pointerdown', onTheaterOutside);
+    }
     figure.dispatchEvent(new CustomEvent('blok-video-theater', { detail: { on } }));
   };
   theaterBtn.addEventListener('click', () => setTheater(!theater.on));
@@ -872,8 +900,12 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     video.removeEventListener('pause', onPause);
     video.removeEventListener('volumechange', onVolumeChange);
     document.removeEventListener('fullscreenchange', onFullscreenChange);
+    document.removeEventListener('pointerdown', onTheaterOutside);
+    if (canPopover && figure.matches(':popover-open')) {
+      try { figure.hidePopover(); } catch { /* already closed */ }
+    }
     root.remove();
   };
 
-  return { element: root, destroy };
+  return { element: root, setTheater, destroy };
 }

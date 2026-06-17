@@ -708,11 +708,13 @@
 }
 [data-blok-tool="video"] .blok-video-controls__ambient[data-ambient="off"] { display: none; }
 
-/* theater (cinema) — promote the player to a centred, backdrop-dimmed stage.
-   Fixed + absolute-centred (inset:0 + margin:auto) so it lands mid-viewport no
-   matter where the editor column sits; a 100vmax box-shadow paints the scrim
-   with zero extra DOM. !important only overrides renderVideo's inline
-   position/margin/width — it never mutates them, so the saved width survives. */
+/* theater (cinema) — promote the player into the browser top layer (Popover
+   API) so it sits above every editor surface, lands dead-centre in the viewport
+   (fixed + inset:0 + margin:auto), and gets a real ::backdrop that dims the page
+   and light-dismisses on an outside click. !important only overrides
+   renderVideo's inline position/margin/width — it never mutates them, so the
+   saved width survives. The 100vmax box-shadow is the scrim fallback for
+   browsers without the Popover API; once promoted, ::backdrop owns the dimming. */
 [data-blok-tool="video"] .blok-video-inner[data-theater="true"] {
   position: fixed !important;
   inset: 0;
@@ -722,10 +724,24 @@
   height: -moz-fit-content;
   height: fit-content;
   max-height: 94vh;
-  z-index: 40;
+  /* reset the UA popover frame so the card centres on the video exactly and the
+     caption (top:100%) isn't clipped */
+  padding: 0;
+  border: 0;
+  overflow: visible;
+  z-index: 2147483000;
   box-shadow:
     0 0 0 100vmax var(--blok-video-theater-scrim),
     var(--blok-video-theater-shadow);
+  animation: blok-video-theater-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+[data-blok-tool="video"] .blok-video-inner[data-theater="true"]:popover-open {
+  box-shadow: var(--blok-video-theater-shadow);
+}
+[data-blok-tool="video"] .blok-video-inner[data-theater="true"]:popover-open::backdrop {
+  background: var(--blok-video-theater-scrim);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
   animation: blok-video-theater-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 @keyframes blok-video-theater-in {
@@ -741,11 +757,18 @@
 [data-blok-tool="video"] .blok-video-inner[data-theater="true"] .blok-video-controls__ambient {
   display: none;
 }
-/* caption rides centred under the frame, lightened to read on the scrim */
+/* lift the caption out of flow so the centred box is the VIDEO itself, not the
+   video-plus-caption stack — the frame lands exactly mid-viewport. The caption
+   floats just beneath, centred and lightened to read on the scrim. */
 [data-blok-tool="video"] .blok-video-inner[data-theater="true"] .blok-video-caption-row {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
   justify-content: center;
 }
 [data-blok-tool="video"] .blok-video-inner[data-theater="true"] .blok-video-caption {
+  margin-top: var(--blok-space-2);
   color: var(--blok-video-time-fg);
   text-align: center;
 }

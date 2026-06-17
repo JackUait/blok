@@ -17,6 +17,7 @@ interface Harness {
   figure: HTMLElement;
   video: HTMLVideoElement;
   controls: HTMLElement;
+  setTheater(on: boolean): void;
   destroy(): void;
 }
 
@@ -32,9 +33,9 @@ const mount = (): Harness => {
   setProp(video, 'pause', vi.fn());
   figure.appendChild(video);
   document.body.appendChild(figure);
-  const { element, destroy } = attachControls({ video, figure });
+  const { element, setTheater, destroy } = attachControls({ video, figure });
   figure.appendChild(element);
-  return { figure, video, controls: element, destroy };
+  return { figure, video, controls: element, setTheater, destroy };
 };
 
 const q = <T extends HTMLElement>(root: HTMLElement, sel: string): T => {
@@ -882,6 +883,41 @@ describe('video controls — theater mode', () => {
     btn.click();
     btn.click();
     expect(seen).toEqual([true, false]);
+  });
+
+  it('exposes a programmatic setTheater the tool can re-apply, idempotently', () => {
+    const btn = q(h.controls, '[data-action="theater"]');
+    h.setTheater(true);
+    expect(h.figure.getAttribute('data-theater')).toBe('true');
+    expect(btn.getAttribute('aria-pressed')).toBe('true');
+    // A second enter is a no-op (no thrash, no duplicate listeners).
+    h.setTheater(true);
+    expect(h.figure.getAttribute('data-theater')).toBe('true');
+    h.setTheater(false);
+    expect(h.figure.getAttribute('data-theater')).toBe('false');
+    expect(btn.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('closes theater on a pointer-down outside the figure, ignores ones inside', () => {
+    const btn = q(h.controls, '[data-action="theater"]');
+    btn.click();
+    expect(h.figure.getAttribute('data-theater')).toBe('true');
+    // A pointer-down inside the cinema card (e.g. on the controls) keeps it open.
+    h.controls.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    expect(h.figure.getAttribute('data-theater')).toBe('true');
+    // A pointer-down on the dimmed backdrop (outside the figure) closes it.
+    document.body.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    expect(h.figure.getAttribute('data-theater')).toBe('false');
+    expect(btn.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('detaches the outside-pointer listener after leaving theater', () => {
+    const btn = q(h.controls, '[data-action="theater"]');
+    btn.click();
+    btn.click(); // leave theater
+    // A later stray outside pointer-down must not re-toggle anything.
+    document.body.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    expect(h.figure.getAttribute('data-theater')).toBe('false');
   });
 
   it('exits theater on Escape', () => {

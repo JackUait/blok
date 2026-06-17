@@ -701,8 +701,8 @@
   z-index: -1;
   width: 100%;
   height: 100%;
-  filter: blur(44px) saturate(1.5);
-  transform: scale(1.12);
+  filter: blur(28px) saturate(1.5);
+  transform: scale(1.06);
   /* glow is dark until the video plays; data-active fades it in, and dropping it
      on pause fades the bloom back out instead of freezing the last frame */
   opacity: 0;

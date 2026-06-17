@@ -234,6 +234,214 @@ describe('video controls — arrow-key seek', () => {
   });
 });
 
+describe('video controls — keyboard navigation', () => {
+  let h: Harness;
+  beforeEach(() => { vi.clearAllMocks(); h = mount(); setProp(h.video, 'duration', 100); h.video.dispatchEvent(new Event('loadedmetadata')); });
+  afterEach(() => {
+    h.destroy();
+    document.body.innerHTML = '';
+    Object.defineProperty(document, 'fullscreenElement', { value: null, configurable: true });
+    vi.restoreAllMocks();
+  });
+
+  const key = (k: string, init: KeyboardEventInit = {}): void => {
+    h.video.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, ...init }));
+  };
+
+  it('k toggles playback like Space', () => {
+    key('k');
+    expect(h.video.play).toHaveBeenCalledTimes(1);
+    h.video.dispatchEvent(new Event('play'));
+    key('k');
+    expect(h.video.pause).toHaveBeenCalledTimes(1);
+  });
+
+  it('l skips +10s and flashes a "10s" forward indicator', () => {
+    setProp(h.video, 'currentTime', 10);
+    key('l');
+    expect(h.video.currentTime).toBe(20);
+    const flash = q(h.controls, '[data-role="seek-flash"]');
+    expect(flash.getAttribute('data-side')).toBe('forward');
+    expect(flash.textContent).toContain('10s');
+  });
+
+  it('j rewinds -10s and flashes a "10s" back indicator', () => {
+    setProp(h.video, 'currentTime', 20);
+    key('j');
+    expect(h.video.currentTime).toBe(10);
+    const flash = q(h.controls, '[data-role="seek-flash"]');
+    expect(flash.getAttribute('data-side')).toBe('back');
+    expect(flash.textContent).toContain('10s');
+  });
+
+  it('l clamps at the duration, j clamps at the start', () => {
+    setProp(h.video, 'currentTime', 95);
+    key('l');
+    expect(h.video.currentTime).toBe(100);
+    setProp(h.video, 'currentTime', 4);
+    key('j');
+    expect(h.video.currentTime).toBe(0);
+  });
+
+  it('arrow seek still reads "5s" after the flash refactor', () => {
+    setProp(h.video, 'currentTime', 10);
+    key('ArrowRight');
+    expect(q(h.controls, '[data-role="seek-flash"]').textContent).toContain('5s');
+  });
+
+  it('m toggles mute', () => {
+    key('m');
+    expect(h.video.muted).toBe(true);
+    expect(q(h.controls, '[data-action="mute-toggle"]').getAttribute('aria-pressed')).toBe('true');
+    key('m');
+    expect(h.video.muted).toBe(false);
+  });
+
+  it('f requests fullscreen, and exits when already fullscreen', () => {
+    const request = vi.fn();
+    Object.defineProperty(document, 'fullscreenElement', { value: null, configurable: true });
+    setProp(h.figure, 'requestFullscreen', request);
+    key('f');
+    expect(request).toHaveBeenCalledTimes(1);
+
+    const exit = vi.fn();
+    Object.defineProperty(document, 'fullscreenElement', { value: h.figure, configurable: true });
+    Object.defineProperty(document, 'exitFullscreen', { value: exit, configurable: true });
+    key('f');
+    expect(exit).toHaveBeenCalledTimes(1);
+  });
+
+  it('ArrowUp / ArrowDown change volume by 5% and clamp', () => {
+    setProp(h.video, 'volume', 0.5);
+    key('ArrowUp');
+    expect(h.video.volume).toBeCloseTo(0.55, 5);
+    key('ArrowDown');
+    expect(h.video.volume).toBeCloseTo(0.5, 5);
+    setProp(h.video, 'volume', 0.98);
+    key('ArrowUp');
+    expect(h.video.volume).toBe(1);
+  });
+
+  it('ArrowDown to zero marks the media muted', () => {
+    setProp(h.video, 'volume', 0.03);
+    key('ArrowDown');
+    expect(h.video.volume).toBe(0);
+    expect(h.video.muted).toBe(true);
+    expect(q(h.controls, '[data-action="mute-toggle"]').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('volume keys do not flash a directional seek pill', () => {
+    setProp(h.video, 'volume', 0.5);
+    key('ArrowUp');
+    expect(q(h.controls, '[data-role="seek-flash"]').classList.contains('is-active')).toBe(false);
+  });
+
+  it('number keys seek to that percentage of the duration', () => {
+    key('5');
+    expect(h.video.currentTime).toBe(50);
+    expect(q<HTMLInputElement>(h.controls, '[data-role="seek"]').value).toBe('50');
+    expect(q(h.controls, '[data-role="time"]').textContent).toContain('0:50');
+    key('0');
+    expect(h.video.currentTime).toBe(0);
+    key('9');
+    expect(h.video.currentTime).toBe(90);
+  });
+
+  it('number keys do not flash a directional pill', () => {
+    key('5');
+    expect(q(h.controls, '[data-role="seek-flash"]').classList.contains('is-active')).toBe(false);
+  });
+
+  it('number keys no-op when the duration is unknown', () => {
+    const bare = mount();
+    setProp(bare.video, 'currentTime', 7);
+    bare.video.dispatchEvent(new KeyboardEvent('keydown', { key: '5', bubbles: true }));
+    expect(bare.video.currentTime).toBe(7);
+    bare.destroy();
+  });
+
+  it('Home seeks to start, End seeks to the duration', () => {
+    setProp(h.video, 'currentTime', 40);
+    key('Home');
+    expect(h.video.currentTime).toBe(0);
+    key('End');
+    expect(h.video.currentTime).toBe(100);
+  });
+
+  it('. and , frame-step ~1/30s while paused', () => {
+    setProp(h.video, 'currentTime', 10);
+    key('.');
+    expect(h.video.currentTime).toBeCloseTo(10 + 1 / 30, 5);
+    setProp(h.video, 'currentTime', 10);
+    key(',');
+    expect(h.video.currentTime).toBeCloseTo(10 - 1 / 30, 5);
+  });
+
+  it('frame-step is a no-op while playing', () => {
+    h.video.dispatchEvent(new Event('play'));
+    setProp(h.video, 'currentTime', 10);
+    key('.');
+    expect(h.video.currentTime).toBe(10);
+    key(',');
+    expect(h.video.currentTime).toBe(10);
+  });
+
+  it('frame-step clamps at the start', () => {
+    setProp(h.video, 'currentTime', 0);
+    key(',');
+    expect(h.video.currentTime).toBe(0);
+  });
+
+  it('Shift+. and Shift+, step playback speed by 0.25, clamped to [0.25, 2]', () => {
+    setProp(h.video, 'playbackRate', 1);
+    key('>', { shiftKey: true });
+    expect(h.video.playbackRate).toBe(1.25);
+    key('<', { shiftKey: true });
+    expect(h.video.playbackRate).toBe(1);
+    setProp(h.video, 'playbackRate', 1.9);
+    key('>', { shiftKey: true });
+    expect(h.video.playbackRate).toBe(2);
+    setProp(h.video, 'playbackRate', 0.25);
+    key('<', { shiftKey: true });
+    expect(h.video.playbackRate).toBe(0.25);
+  });
+
+  it('speed keys do not activate the press-and-hold speed badge', () => {
+    setProp(h.video, 'playbackRate', 1);
+    key('>', { shiftKey: true });
+    expect(q(h.controls, '[data-role="speed-badge"]').classList.contains('is-active')).toBe(false);
+  });
+
+  it('c is swallowed as a reserved key but changes nothing yet', () => {
+    setProp(h.video, 'currentTime', 10);
+    setProp(h.video, 'volume', 0.5);
+    setProp(h.video, 'playbackRate', 1);
+    key('c');
+    expect(h.video.currentTime).toBe(10);
+    expect(h.video.volume).toBe(0.5);
+    expect(h.video.playbackRate).toBe(1);
+    expect(h.video.play).not.toHaveBeenCalled();
+    expect(h.video.pause).not.toHaveBeenCalled();
+  });
+
+  it('Ctrl / Meta / Alt chords do not hijack the player', () => {
+    setProp(h.video, 'currentTime', 30);
+    key('l', { ctrlKey: true });
+    key('l', { metaKey: true });
+    key('l', { altKey: true });
+    expect(h.video.currentTime).toBe(30);
+  });
+
+  it('keydown on a sibling element does not drive the player', () => {
+    setProp(h.video, 'currentTime', 30);
+    const sibling = document.createElement('div');
+    h.figure.appendChild(sibling);
+    sibling.dispatchEvent(new KeyboardEvent('keydown', { key: 'l', bubbles: true }));
+    expect(h.video.currentTime).toBe(30);
+    expect(h.video.play).not.toHaveBeenCalled();
+  });
+});
+
 describe('video controls — playback', () => {
   let h: Harness;
   beforeEach(() => { vi.clearAllMocks(); h = mount(); });

@@ -48,9 +48,13 @@ export function renderVideo(data: Partial<VideoData> & { url: string }): HTMLEle
   video.setAttribute('data-blok-testid', 'video-player');
   video.setAttribute('playsinline', '');
   video.setAttribute('preload', 'metadata');
-  // Focusable so the player can field arrow-key seeking (←/→ jump 5s).
+  // Focusable so the player can field keyboard control (seek, volume, speed,
+  // play/pause, mute, fullscreen) à la a native player.
   video.setAttribute('tabindex', '0');
-  video.setAttribute('aria-keyshortcuts', 'ArrowLeft ArrowRight');
+  video.setAttribute(
+    'aria-keyshortcuts',
+    'Space k j l ArrowLeft ArrowRight ArrowUp ArrowDown m f Home End',
+  );
   video.setAttribute('src', data.url);
   video.style.width = '100%';
   video.style.display = 'block';

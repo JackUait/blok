@@ -237,13 +237,20 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
     paintSeek();
   };
 
-  // ----- arrow-key seeking -----
+  // ----- keyboard seeking + control -----
   const SEEK_STEP = 5;
+  const BIG_SEEK_STEP = 10;
+  const VOL_STEP = 0.05;
+  const FRAME = 1 / 30; // assumes ~30fps — the media API exposes no true frame duration
+  const SPEED_STEP = 0.25;
+  const SPEED_MIN = 0.25;
+  const SPEED_MAX = 2;
   // Flash the seek pill in from the side matching the jump: rewind sits left
-  // (icon then label), skip sits right (label then icon). Re-arm per press.
-  const flashSeek = (side: 'back' | 'forward'): void => {
+  // (icon then label), skip sits right (label then icon). Re-arm per press. The
+  // label magnitude is parameterised so ±5s arrows and ±10s j/l read truthfully.
+  const flashSeek = (side: 'back' | 'forward', seconds: number = SEEK_STEP): void => {
     const icon = side === 'forward' ? IconPlayerForward : IconPlayerBackward;
-    const label = `<span class="blok-video-controls__seek-flash-label">${SEEK_STEP}s</span>`;
+    const label = `<span class="blok-video-controls__seek-flash-label">${seconds}s</span>`;
     seekFlash.setAttribute('data-side', side);
     seekFlash.innerHTML = side === 'forward' ? `${label}${icon}` : `${icon}${label}`;
     seekFlash.classList.remove('is-active');
@@ -257,20 +264,59 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
     if (event.animationName && !event.animationName.startsWith('blok-video-seek-flash-')) return;
     seekFlash.classList.remove('is-active');
   };
-  const seekBy = (delta: number): void => {
+  // Absolute clamped scrub — no directional flash (used by %/Home/End/frame step).
+  const seekTo = (t: number): void => {
     const dur = Number.isFinite(media.duration) ? media.duration : 0;
-    const next = Math.min(dur || Infinity, Math.max(0, media.currentTime + delta));
+    const next = Math.min(dur || Infinity, Math.max(0, t));
     media.currentTime = next;
     seek.value = String(next);
     paintSeek();
     renderTime();
-    flashSeek(delta < 0 ? 'back' : 'forward');
+  };
+  // Relative nudge with a directional pill reading the jump magnitude.
+  const seekBy = (delta: number): void => {
+    seekTo(media.currentTime + delta);
+    flashSeek(delta < 0 ? 'back' : 'forward', Math.abs(delta));
+  };
+  const changeVolume = (delta: number): void => {
+    const next = Math.min(1, Math.max(0, media.volume + delta));
+    media.volume = next;
+    media.muted = next === 0;
+    volume.value = String(next);
+    onVolumeChange();
+  };
+  const stepSpeed = (delta: number): void => {
+    media.playbackRate = Math.min(SPEED_MAX, Math.max(SPEED_MIN, media.playbackRate + delta));
   };
   const onVideoKeydown = (event: KeyboardEvent): void => {
+    // Bail on meta/ctrl/alt chords — but NOT Shift, which `>`/`<` (speed) need.
     if (event.metaKey || event.ctrlKey || event.altKey) return;
-    if (event.key === 'ArrowRight') { event.preventDefault(); seekBy(SEEK_STEP); }
-    else if (event.key === 'ArrowLeft') { event.preventDefault(); seekBy(-SEEK_STEP); }
-    else if (event.key === ' ' || event.key === 'Spacebar') { event.preventDefault(); togglePlay(); }
+    const dur = Number.isFinite(media.duration) ? media.duration : 0;
+    switch (event.key) {
+      case 'ArrowRight': event.preventDefault(); seekBy(SEEK_STEP); break;
+      case 'ArrowLeft': event.preventDefault(); seekBy(-SEEK_STEP); break;
+      case 'l': event.preventDefault(); seekBy(BIG_SEEK_STEP); break;
+      case 'j': event.preventDefault(); seekBy(-BIG_SEEK_STEP); break;
+      case ' ':
+      case 'Spacebar':
+      case 'k': event.preventDefault(); togglePlay(); break;
+      case 'm': event.preventDefault(); onMuteClick(); break;
+      case 'f': event.preventDefault(); onFullscreen(); break;
+      case 'c': event.preventDefault(); break; // reserved — captions not implemented yet
+      case 'ArrowUp': event.preventDefault(); changeVolume(VOL_STEP); break;
+      case 'ArrowDown': event.preventDefault(); changeVolume(-VOL_STEP); break;
+      case 'Home': event.preventDefault(); seekTo(0); break;
+      case 'End': event.preventDefault(); seekTo(dur || media.currentTime); break;
+      case '.': event.preventDefault(); if (!state.playing) seekTo(media.currentTime + FRAME); break;
+      case ',': event.preventDefault(); if (!state.playing) seekTo(media.currentTime - FRAME); break;
+      case '>': event.preventDefault(); stepSpeed(SPEED_STEP); break;
+      case '<': event.preventDefault(); stepSpeed(-SPEED_STEP); break;
+      default:
+        if (event.key.length === 1 && event.key >= '0' && event.key <= '9' && dur > 0) {
+          event.preventDefault();
+          seekTo((dur * Number(event.key)) / 10);
+        }
+    }
   };
   const onMuteClick = (): void => {
     media.muted = !media.muted;

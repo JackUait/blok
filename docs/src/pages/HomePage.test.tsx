@@ -72,19 +72,6 @@ describe('HomePage', () => {
     expect(quickStart).toBeInTheDocument();
   });
 
-  it('should render the ApiPreview section', () => {
-    render(
-      <MemoryRouter>
-        <I18nProvider>
-          <HomePage />
-        </I18nProvider>
-      </MemoryRouter>
-    );
-
-    const api = screen.getByTestId('api-preview-section');
-    expect(api).toBeInTheDocument();
-  });
-
   it('should render the MigrationCard section', () => {
     render(
       <MemoryRouter>

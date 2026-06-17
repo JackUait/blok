@@ -451,33 +451,6 @@
       "title": "Up and running in minutes",
       "description": "Three simple steps to integrate Blok into your project"
     },
-    "apiPreview": {
-      "eyebrow": "Developer Experience",
-      "title1": "Powerful APIs",
-      "title2": "for every use case",
-      "description": "Access every aspect of the editor through our comprehensive API surface.",
-      "viewFullDocs": "View Full API Reference",
-      "coreMethods": {
-        "title": "Core Methods",
-        "save": "Extract content as JSON",
-        "render": "Render from JSON data",
-        "focus": "Set cursor focus",
-        "clear": "Clear all blocks"
-      },
-      "blocksApi": {
-        "title": "Blocks API",
-        "delete": "Remove specified block",
-        "insert": "Insert new block",
-        "move": "Move block to new index",
-        "update": "Update block data"
-      },
-      "events": {
-        "title": "Events",
-        "on": "Subscribe to events",
-        "off": "Unsubscribe from events",
-        "emit": "Emit custom events"
-      }
-    },
     "migrationCard": {
       "badge": "Zero downtime migration",
       "title": "Migrate from EditorJS",

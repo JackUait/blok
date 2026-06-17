@@ -5,7 +5,6 @@ import { Hero } from '../components/home/Hero';
 import { CategoryBar } from '../components/home/CategoryBar';
 import { Features } from '../components/home/Features';
 import { QuickStart } from '../components/home/QuickStart';
-import { ApiPreview } from '../components/home/ApiPreview';
 import { MigrationCard } from '../components/home/MigrationCard';
 import { NAV_LINKS } from '../utils/constants';
 
@@ -58,7 +57,6 @@ export const HomePage: React.FC = () => {
         <CategoryBar />
         <Features />
         <QuickStart />
-        <ApiPreview />
         <MigrationCard />
       </main>
       <Footer />

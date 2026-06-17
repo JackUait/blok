@@ -4730,6 +4730,7 @@
   left: 50%;
   display: inline-flex;
   align-items: center;
+  gap: var(--blok-space-1);
   padding: var(--blok-space-1) var(--blok-space-2-5);
   border-radius: var(--blok-radius-pill);
   color: var(--blok-video-burst-fg);
@@ -4746,6 +4747,12 @@
   pointer-events: none;
   z-index: 1;
   transition: opacity 140ms ease, transform 140ms ease;
+}
+
+[data-blok-tool="video"] .blok-video-controls__speed svg {
+  width: 14px;
+  height: 14px;
+  display: block;
 }
 
 [data-blok-tool="video"] .blok-video-controls__speed.is-active {

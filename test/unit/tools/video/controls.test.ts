@@ -128,6 +128,12 @@ describe('video controls — press-and-hold 2x', () => {
     expect(h.video.play).toHaveBeenCalled();
   });
 
+  it('labels the speed badge with "2×" and a forward icon', () => {
+    const badge = q(h.controls, '[data-role="speed-badge"]');
+    expect(badge.textContent).toContain('2×');
+    expect(badge.querySelector('svg')).toBeTruthy();
+  });
+
   it('shows the speed badge only while held', () => {
     vi.useFakeTimers();
     const badge = q(h.controls, '[data-role="speed-badge"]');

@@ -788,6 +788,14 @@ export const IconPlayerPause = `
 </svg>
 `;
 
+// Media fast-forward — two filled triangles
+export const IconPlayerForward = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3 5.5v9a.6.6 0 0 0 .92.5l6.3-4.5a.6.6 0 0 0 0-1L3.92 5a.6.6 0 0 0-.92.5Z" fill="currentColor"/>
+  <path d="M10 5.5v9a.6.6 0 0 0 .92.5l6.3-4.5a.6.6 0 0 0 0-1L10.92 5a.6.6 0 0 0-.92.5Z" fill="currentColor"/>
+</svg>
+`;
+
 // Volume on — speaker + sound waves
 export const IconPlayerVolume = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

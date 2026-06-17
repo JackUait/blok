@@ -1,5 +1,6 @@
 import {
   IconExpandFullscreen,
+  IconPlayerForward,
   IconPlayerFullscreenExit,
   IconPlayerPause,
   IconPlayerPlay,
@@ -62,7 +63,7 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
   speedBadge.className = 'blok-video-controls__speed';
   speedBadge.setAttribute('data-role', 'speed-badge');
   speedBadge.setAttribute('aria-hidden', 'true');
-  speedBadge.textContent = '2×';
+  speedBadge.innerHTML = `<span class="blok-video-controls__speed-label">2×</span>${IconPlayerForward}`;
   root.appendChild(speedBadge);
 
   // Bottom scrim + control bar.

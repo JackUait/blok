@@ -943,42 +943,48 @@ describe('video controls — theater mode', () => {
   });
 });
 
-describe('video controls — theater entrance/exit (FLIP)', () => {
+interface FakeAnimation {
+  keyframes: Array<Record<string, string>>;
+  options: KeyframeAnimationOptions;
+  cancel: ReturnType<typeof vi.fn>;
+  onfinish: (() => void) | null;
+}
+
+describe('video controls — theater entrance/exit (FLIP via Web Animations)', () => {
   let h: Harness;
   let showPopover: ReturnType<typeof vi.fn>;
   let hidePopover: ReturnType<typeof vi.fn>;
   let open = false;
-  let transforms: string[];
-  let opacityWrites: string[];
-  let rafQueue: FrameRequestCallback[];
+  let anims: FakeAnimation[];
   const inlineRect = { left: 200, top: 600, width: 320, height: 180, right: 520, bottom: 780, x: 200, y: 600, toJSON() {} } as DOMRect;
   const centreRect = { left: 100, top: 50, width: 800, height: 450, right: 900, bottom: 500, x: 100, y: 50, toJSON() {} } as DOMRect;
   const enter = (): void => q(h.controls, '[data-action="theater"]').click();
-  const endTransform = (): void => h.figure.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'transform' }));
-  // Drain queued animation frames so the deferred grow (committed across rAFs, not
-  // a synchronous reflow) actually runs. Fixed frame budget so the self-scheduling
-  // ambient sampler can't spin the drain forever.
-  const flushRaf = (frames = 4): void => {
-    for (let i = 0; i < frames; i++) {
-      const batch = rafQueue;
-      rafQueue = [];
-      batch.forEach((cb) => cb(0));
-    }
-  };
+  const lastAnim = (): FakeAnimation => anims[anims.length - 1];
+  // The morph is composited, not transition-driven: settle it by firing the
+  // animation's finish callback (jsdom has no real clock).
+  const finishMorph = (): void => lastAnim().onfinish?.();
 
   beforeEach(() => {
     vi.clearAllMocks();
     open = false;
-    transforms = [];
-    opacityWrites = [];
-    rafQueue = [];
-    vi.stubGlobal('requestAnimationFrame', vi.fn((cb: FrameRequestCallback) => rafQueue.push(cb)));
-    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    anims = [];
     showPopover = vi.fn(() => { open = true; });
     hidePopover = vi.fn(() => { open = false; });
     // Teach jsdom the Popover API + :popover-open matching the FLIP relies on.
     (HTMLElement.prototype as unknown as { showPopover: unknown }).showPopover = showPopover;
     (HTMLElement.prototype as unknown as { hidePopover: unknown }).hidePopover = hidePopover;
+    // Stub the Web Animations API: record keyframes/options and expose onfinish so
+    // the test drives settle deterministically. Must exist before mount() — the
+    // player feature-detects figure.animate when attachControls runs.
+    (HTMLElement.prototype as unknown as { animate: unknown }).animate = vi.fn(function (
+      this: HTMLElement,
+      keyframes: Array<Record<string, string>>,
+      options: KeyframeAnimationOptions,
+    ): FakeAnimation {
+      const anim: FakeAnimation = { keyframes, options, cancel: vi.fn(), onfinish: null };
+      anims.push(anim);
+      return anim;
+    });
     const realMatches = HTMLElement.prototype.matches;
     vi.spyOn(HTMLElement.prototype, 'matches').mockImplementation(function (this: HTMLElement, sel: string) {
       return sel === ':popover-open' ? open : realMatches.call(this, sel);
@@ -992,20 +998,13 @@ describe('video controls — theater entrance/exit (FLIP)', () => {
     });
     vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false })); // motion allowed
     h = mount();
-    // INVERT is applied synchronously; the PLAY (grow) is deferred to a frame, so
-    // record every transform write and drain rAFs to inspect INVERT then PLAY.
-    const realSet = h.figure.style.setProperty.bind(h.figure.style);
-    vi.spyOn(h.figure.style, 'setProperty').mockImplementation((prop: string, value: string) => {
-      if (prop === 'transform') transforms.push(value);
-      if (prop === 'opacity') opacityWrites.push(value);
-      realSet(prop, value);
-    });
   });
   afterEach(() => {
     h.destroy();
     document.body.innerHTML = '';
     delete (HTMLElement.prototype as Partial<{ showPopover: unknown }>).showPopover;
     delete (HTMLElement.prototype as Partial<{ hidePopover: unknown }>).hidePopover;
+    delete (HTMLElement.prototype as Partial<{ animate: unknown }>).animate;
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -1016,66 +1015,61 @@ describe('video controls — theater entrance/exit (FLIP)', () => {
     expect(h.figure.getAttribute('popover')).toBe('manual');
   });
 
-  it('FLIPs INVERT→PLAY: snaps onto the real inline rect, then grows to centre', () => {
+  it('morphs from the real inline rect to centre via explicit WAAPI keyframes', () => {
     enter();
-    // INVERT = delta of inline(200,600,320×180) → centre(100,50,800×450) = (+100,
-    // +550)/0.4. A zero/identity invert means `inlineRect` was measured AFTER
-    // data-theater promoted the figure — the ordering bug that defeats the morph.
-    expect(transforms[0]).toBe('translate(100px, 550px) scale(0.4, 0.4)');
-    flushRaf();
-    expect(transforms.at(-1)).toBe('translate(0px, 0px) scale(1, 1)');
-    expect(h.figure.style.transformOrigin).toBe('top left');
-    expect(h.figure.style.transition).toContain('transform');
+    // The start keyframe IS the inline rect (delta of inline(200,600,320×180) →
+    // centre(100,50,800×450) = (+100,+550)/0.4), named explicitly — never read off
+    // the last painted frame, which under load lags and starts the grow from a
+    // half-laid-out intermediate (the "snap to a wrong size, hold, then jump").
+    const { keyframes } = lastAnim();
+    expect(keyframes[0].transform).toBe('translate(100px, 550px) scale(0.4, 0.4)');
+    expect(keyframes[1].transform).toBe('translate(0px, 0px) scale(1, 1)');
+    expect(keyframes[0].transformOrigin).toBe('top left');
+    expect(keyframes[1].transformOrigin).toBe('top left');
   });
 
-  it('defers the grow to a frame instead of a sync reflow (no start hitch)', () => {
+  it('drives the morph on the compositor (WAAPI), not a CSS transition primed over rAF', () => {
     enter();
-    // The invert lands synchronously, but the grow is held for a frame: a
-    // synchronous offsetHeight reflow on the freshly top-layered <video> stalls
-    // the first frames (the "laggy at start" hitch). Only the invert exists until
-    // the rAFs drain — proving the grow is composited, not reflow-committed.
-    expect(transforms).toEqual(['translate(100px, 550px) scale(0.4, 0.4)']);
-    expect(requestAnimationFrame).toHaveBeenCalled();
-    flushRaf();
-    expect(transforms.at(-1)).toBe('translate(0px, 0px) scale(1, 1)');
+    // The whole point of the rewrite: one composited animation, and NO inline
+    // transition/transform styles (the rAF-primed CSS-transition path that jumped).
+    expect(h.figure.animate).toHaveBeenCalledTimes(1);
+    expect(h.figure.style.transition).toBe('');
+    expect(h.figure.style.transform).toBe('');
   });
 
-  it('morphs with transform only — no opacity cross-fade that ghosts the video', () => {
-    // A morph is pure geometry. Animating opacity 0.55→1 toggles the <video>'s
+  it('morphs with transform only — no opacity keyframe that ghosts the video', () => {
+    // A morph is pure geometry. Animating opacity toggles the <video>'s
     // hardware-overlay eligibility mid-flight, leaving a frozen copy at the inline
-    // slot ("ghost"). The FLIP must never write opacity.
+    // slot ("ghost"). No keyframe may carry opacity.
     enter();
-    flushRaf();
-    expect(opacityWrites).toEqual([]);
+    expect(lastAnim().keyframes.every((k) => !('opacity' in k))).toBe(true);
   });
 
-  it('clears the inline grow styles once the entrance transition ends', () => {
+  it('leaves no inline transform behind once the entrance finishes', () => {
     enter();
-    flushRaf();
-    endTransform();
+    finishMorph();
     expect(h.figure.style.transform).toBe('');
     expect(h.figure.style.transition).toBe('');
-    expect(h.figure.style.transformOrigin).toBe('');
   });
 
-  it('reverse-FLIPs on exit: shrinks back into the inline slot, then hides', () => {
+  it('reverse-morphs on exit: shrinks centre→inline, holds, then tears down on finish', () => {
     enter();
-    flushRaf();
-    endTransform(); // settle the entrance
-    transforms.length = 0;
+    finishMorph(); // settle the entrance
     q(h.controls, '[data-action="theater"]').click(); // leave
     // Still promoted + animating: the card shrinks centre→inline, backdrop fading.
     expect(h.figure.getAttribute('data-theater-leaving')).toBe('true');
     expect(hidePopover).not.toHaveBeenCalled();
-    expect(transforms.at(-1)).toBe('translate(100px, 550px) scale(0.4, 0.4)');
-    expect(h.figure.style.transition).toContain('transform');
+    const { keyframes, options } = lastAnim();
+    expect(keyframes[0].transform).toBe('translate(0px, 0px) scale(1, 1)');
+    expect(keyframes[1].transform).toBe('translate(100px, 550px) scale(0.4, 0.4)');
+    // fill:forwards holds the shrunk frame until teardown, so no snap-back to centre.
+    expect(options.fill).toBe('forwards');
     // The teardown only fires when the shrink finishes.
-    endTransform();
+    finishMorph();
     expect(hidePopover).toHaveBeenCalledTimes(1);
     expect(h.figure.getAttribute('popover')).toBeNull();
     expect(h.figure.getAttribute('data-theater')).toBe('false');
     expect(h.figure.getAttribute('data-theater-leaving')).toBeNull();
-    expect(h.figure.style.transform).toBe('');
   });
 });
 

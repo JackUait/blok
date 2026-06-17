@@ -626,8 +626,6 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
   // `inlineRect` is the figure's grid-slot rect, captured on enter (before
   // data-theater promotes it to fixed/centre) and reused to land the exit morph.
   const theater = { on: false, inlineRect: null as DOMRect | null };
-  const FLIP_IN = 'transform 480ms cubic-bezier(0.33, 1, 0.68, 1)';
-  const FLIP_OUT = 'transform 300ms cubic-bezier(0.4, 0, 1, 1)';
   const onTheaterKey = (event: KeyboardEvent): void => {
     if (event.key === 'Escape') setTheater(false);
   };
@@ -639,34 +637,42 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
   // The figure jumps from its inline grid slot to the fixed, top-layer centre the
   // instant the popover opens, so a keyframe scale-nudge leaves that big position
   // jump unanimated (reads as a teleport). We FLIP instead: snap the centred card
-  // back onto the inline rect, then release it across a frame so it grows out of
-  // its original spot into the centre, and reverses on exit. transitionend hooks
-  // are single-shot so re-entry never doubles up.
-  const raf = (cb: FrameRequestCallback): number =>
-    typeof requestAnimationFrame === 'function' ? requestAnimationFrame(cb) : window.setTimeout(() => cb(0), 16);
-  const caf = (id: number): void => {
-    if (typeof cancelAnimationFrame === 'function') cancelAnimationFrame(id); else clearTimeout(id);
-  };
-  const flip = { onEnd: null as ((event: TransitionEvent) => void) | null, raf: 0 };
-  const resetFlipStyles = (): void => {
-    figure.style.removeProperty('transition');
-    figure.style.removeProperty('transform');
-    figure.style.removeProperty('transform-origin');
-    figure.style.removeProperty('opacity');
-    figure.style.removeProperty('will-change');
-  };
-  const clearFlip = (): void => {
-    if (flip.raf) { caf(flip.raf); flip.raf = 0; }
-    if (flip.onEnd) { figure.removeEventListener('transitionend', flip.onEnd); flip.onEnd = null; }
-    resetFlipStyles();
-  };
-  const onTransformEnd = (done: () => void) => (event: TransitionEvent): void => {
-    if (event.propertyName !== 'transform') return;
-    if (flip.onEnd) { figure.removeEventListener('transitionend', flip.onEnd); flip.onEnd = null; }
-    done();
+  // back onto the inline rect, then grow it into the centre, reversing on exit.
+  //
+  // Driven by the Web Animations API, NOT a CSS transition primed over rAF. The
+  // keyframes name the start (inline) and end (centre) explicitly, so the morph
+  // never depends on the browser reading a "from" value off the last painted
+  // frame. Under load — promoting the whole player to the top layer, decoding the
+  // video at the new size — that paint is delayed, so a transition would start
+  // from a half-laid-out intermediate: the "snap to a wrong size, hold, then jump"
+  // we kept chasing. WAAPI transform animations also run on the compositor, immune
+  // to that main-thread jank, which is what made the opening read laggy/stepped.
+  const canAnimate = typeof figure.animate === 'function';
+  const flip = { anim: null as Animation | null };
+  const cancelFlip = (): void => {
+    if (flip.anim) { flip.anim.cancel(); flip.anim = null; }
   };
   const collapsed = (from: DOMRect, to: DOMRect): string =>
     `translate(${to.left - from.left}px, ${to.top - from.top}px) scale(${to.width / from.width}, ${to.height / from.height})`;
+  const morph = (
+    from: string,
+    to: string,
+    opts: { duration: number; easing: string; fill?: FillMode; done?: () => void },
+  ): void => {
+    cancelFlip();
+    const anim = figure.animate(
+      [
+        { transformOrigin: 'top left', transform: from },
+        { transformOrigin: 'top left', transform: to },
+      ],
+      { duration: opts.duration, easing: opts.easing, fill: opts.fill ?? 'none' },
+    );
+    flip.anim = anim;
+    anim.onfinish = (): void => {
+      if (flip.anim === anim) flip.anim = null;
+      opts.done?.();
+    };
+  };
   const enterTheater = (): void => {
     // Measure the inline rect BEFORE data-theater promotes the figure — the
     // attribute applies position:fixed + full width, so a later read returns the
@@ -675,59 +681,47 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     theater.inlineRect = inlineRect;
     figure.setAttribute('data-theater', 'true');
     if (!canPopover) return; // popover-less fallback: the CSS keyframe owns it
-    figure.setAttribute('popover', 'manual');
-    try { figure.showPopover(); } catch { figure.removeAttribute('popover'); return; }
-    if (reducedMotion) return;
+    if (!figure.matches(':popover-open')) {
+      figure.setAttribute('popover', 'manual');
+      try { figure.showPopover(); } catch { figure.removeAttribute('popover'); return; }
+    }
+    if (reducedMotion || !canAnimate) return;
     const centre = figure.getBoundingClientRect();
     if (!inlineRect.width || !centre.width) return;
-    clearFlip();
-    figure.style.setProperty('transform-origin', 'top left');
-    figure.style.setProperty('will-change', 'transform');
-    figure.style.setProperty('transition', 'none');
-    figure.style.setProperty('transform', collapsed(centre, inlineRect)); // INVERT
-    flip.onEnd = onTransformEnd(clearFlip);
-    figure.addEventListener('transitionend', flip.onEnd);
-    // Commit the invert across two frames instead of a synchronous offsetHeight
-    // reflow: forcing layout on a freshly top-layered <video> stalls the opening
-    // frames (the "laggy at start" hitch). The first frame paints the invert; the
-    // second releases the grow — composited, smooth from frame one. Pure transform,
-    // no opacity: a cross-fade toggles the <video>'s hardware-overlay eligibility
-    // and leaves a frozen ghost of the inline frame (CSS keeps it self-composited).
-    flip.raf = raf(() => {
-      flip.raf = raf(() => {
-        flip.raf = 0;
-        figure.style.setProperty('transition', FLIP_IN);
-        figure.style.setProperty('transform', 'translate(0px, 0px) scale(1, 1)');
-      });
+    // The grow ends at the natural centred transform (fill: 'none' reverts cleanly).
+    morph(collapsed(centre, inlineRect), 'translate(0px, 0px) scale(1, 1)', {
+      duration: 480,
+      easing: 'cubic-bezier(0.33, 1, 0.68, 1)',
     });
   };
   const leaveTheater = (): void => {
     // Tear down atomically (one paint) so the card never flashes back to centre.
     const finalize = (): void => {
+      cancelFlip();
       if (canPopover && figure.matches(':popover-open')) {
         try { figure.hidePopover(); } catch { /* already closed */ }
       }
       figure.removeAttribute('popover');
       figure.setAttribute('data-theater', 'false');
       figure.removeAttribute('data-theater-leaving');
-      clearFlip();
     };
     const to = theater.inlineRect;
-    if (!canPopover || reducedMotion || !to || !figure.matches(':popover-open')) {
+    if (!canPopover || reducedMotion || !canAnimate || !to || !figure.matches(':popover-open')) {
       finalize();
       return;
     }
     const from = figure.getBoundingClientRect();
     if (!from.width) { finalize(); return; }
-    clearFlip();
     // data-theater-leaving fades the ::backdrop out alongside the card shrink.
+    // fill: 'forwards' holds the shrunk transform until finalize hides the popover,
+    // so the card never snaps back to centre for a frame before teardown.
     figure.setAttribute('data-theater-leaving', 'true');
-    figure.style.setProperty('transform-origin', 'top left');
-    figure.style.setProperty('will-change', 'transform');
-    flip.onEnd = onTransformEnd(finalize);
-    figure.addEventListener('transitionend', flip.onEnd);
-    figure.style.setProperty('transition', FLIP_OUT);
-    figure.style.setProperty('transform', collapsed(from, to)); // shrink into the slot
+    morph('translate(0px, 0px) scale(1, 1)', collapsed(from, to), {
+      duration: 300,
+      easing: 'cubic-bezier(0.4, 0, 1, 1)',
+      fill: 'forwards',
+      done: finalize,
+    });
   };
   const setTheater = (on: boolean): void => {
     if (on === theater.on) return;
@@ -987,7 +981,7 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     video.removeEventListener('volumechange', onVolumeChange);
     document.removeEventListener('fullscreenchange', onFullscreenChange);
     document.removeEventListener('pointerdown', onTheaterOutside);
-    clearFlip();
+    cancelFlip();
     if (canPopover && figure.matches(':popover-open')) {
       try { figure.hidePopover(); } catch { /* already closed */ }
     }

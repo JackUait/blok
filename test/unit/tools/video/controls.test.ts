@@ -956,8 +956,14 @@ describe('video controls — theater entrance/exit (FLIP via Web Animations)', (
   let hidePopover: ReturnType<typeof vi.fn>;
   let open = false;
   let anims: FakeAnimation[];
+  // The VIDEO is a clean 16:9 (320×180 inline, 800×450 centre). The FIGURE is 28px
+  // TALLER inline because the caption sits in-flow there (it's lifted out in theater,
+  // so the theater figure is pure 16:9). The FLIP must measure the VIDEO, not the
+  // figure — measuring the figure's mismatched aspect makes the scale non-uniform
+  // (sx≠sy) and squishes the video through the whole morph ("weird at the end").
   const inlineRect = { left: 200, top: 600, width: 320, height: 180, right: 520, bottom: 780, x: 200, y: 600, toJSON() {} } as DOMRect;
   const centreRect = { left: 100, top: 50, width: 800, height: 450, right: 900, bottom: 500, x: 100, y: 50, toJSON() {} } as DOMRect;
+  const figureInlineRect = { left: 200, top: 600, width: 320, height: 208, right: 520, bottom: 808, x: 200, y: 600, toJSON() {} } as DOMRect;
   const enter = (): void => q(h.controls, '[data-action="theater"]').click();
   const lastAnim = (): FakeAnimation => anims[anims.length - 1];
   // The morph is composited, not transition-driven: settle it by firing the
@@ -994,7 +1000,10 @@ describe('video controls — theater entrance/exit (FLIP via Web Animations)', (
     // yields the centred rect — the FLIP must measure the inline rect BEFORE it.
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
       const promoted = open || this.getAttribute('data-theater') === 'true';
-      return promoted ? centreRect : inlineRect;
+      if (promoted) return centreRect;
+      // Inline, the figure is taller than the video (caption in-flow); the video is
+      // a clean 16:9. The FLIP must read the video so the scale stays uniform.
+      return this.tagName === 'VIDEO' ? inlineRect : figureInlineRect;
     });
     vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false })); // motion allowed
     h = mount();

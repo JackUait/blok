@@ -623,7 +623,7 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
   const canPopover = typeof figure.showPopover === 'function';
   const theaterBtn = button('theater', 'Theater mode', IconPlayerTheater);
   theaterBtn.setAttribute('aria-pressed', 'false');
-  // `inlineRect` is the figure's grid-slot rect, captured on enter (before
+  // `inlineRect` is the VIDEO's grid-slot rect, captured on enter (before
   // data-theater promotes it to fixed/centre) and reused to land the exit morph.
   const theater = { on: false, inlineRect: null as DOMRect | null };
   const onTheaterKey = (event: KeyboardEvent): void => {
@@ -679,10 +679,18 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     };
   };
   const enterTheater = (): void => {
-    // Measure the inline rect BEFORE data-theater promotes the figure — the
-    // attribute applies position:fixed + full width, so a later read returns the
-    // centred rect and the morph collapses to a zero delta.
-    const inlineRect = figure.getBoundingClientRect();
+    // Measure the VIDEO, not the figure: the figure is taller inline (the caption
+    // sits in-flow) but is pure 16:9 in theater (caption lifted out), so a
+    // figure-based FLIP scales x and y by different factors and squishes the video
+    // through the whole morph, snapping to true proportions only at the end ("weird
+    // at the end"). The video is a clean 16:9 in both states → uniform scale. It
+    // shares the figure's top-left (it sits at the figure top), so the transform —
+    // still applied to the figure — lands the video exactly on its slot.
+    //
+    // Measure BEFORE data-theater promotes the figure: the attribute applies
+    // position:fixed + full width, so a later read returns the centred rect and the
+    // morph collapses to a zero delta.
+    const inlineRect = video.getBoundingClientRect();
     theater.inlineRect = inlineRect;
     figure.setAttribute('data-theater', 'true');
     if (!canPopover) return; // popover-less fallback: the CSS keyframe owns it
@@ -691,7 +699,7 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
       try { figure.showPopover(); } catch { figure.removeAttribute('popover'); return; }
     }
     if (reducedMotion || !canAnimate) return;
-    const centre = figure.getBoundingClientRect();
+    const centre = video.getBoundingClientRect();
     if (!inlineRect.width || !centre.width) return;
     // The grow ends at the natural centred transform (fill: 'none' reverts cleanly).
     morph(collapsed(centre, inlineRect), 'translate(0px, 0px) scale(1, 1)', {
@@ -715,7 +723,7 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
       finalize();
       return;
     }
-    const from = figure.getBoundingClientRect();
+    const from = video.getBoundingClientRect();
     if (!from.width) { finalize(); return; }
     // data-theater-leaving fades the ::backdrop out alongside the card shrink.
     // fill: 'forwards' holds the shrunk transform until finalize hides the popover,

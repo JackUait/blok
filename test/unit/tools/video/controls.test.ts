@@ -15,6 +15,7 @@ const fakeRanges = (pairs: [number, number][]): TimeRanges => ({
 
 interface Harness {
   figure: HTMLElement;
+  slot: HTMLElement;
   video: HTMLVideoElement;
   controls: HTMLElement;
   setTheater(on: boolean): void;
@@ -32,10 +33,15 @@ const mount = (): Harness => {
   setProp(video, 'play', vi.fn().mockResolvedValue(undefined));
   setProp(video, 'pause', vi.fn());
   figure.appendChild(video);
-  document.body.appendChild(figure);
+  // The figure lives in a slot (the block wrapper in the real DOM); theater must
+  // reserve that slot's height so promoting the figure to the fixed top layer
+  // doesn't collapse it and reflow the rest of the document.
+  const slot = document.createElement('div');
+  slot.appendChild(figure);
+  document.body.appendChild(slot);
   const { element, setTheater, destroy } = attachControls({ video, figure });
   figure.appendChild(element);
-  return { figure, video, controls: element, setTheater, destroy };
+  return { figure, slot, video, controls: element, setTheater, destroy };
 };
 
 const q = <T extends HTMLElement>(root: HTMLElement, sel: string): T => {
@@ -1088,6 +1094,22 @@ describe('video controls — theater entrance/exit (FLIP via Web Animations)', (
     // collapsed transform stays applied after the popover closes, freezing the
     // inline video shrunk and displaced below its slot.
     expect(exitAnim.cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('reserves the slot height on enter and releases it on exit', () => {
+    // Promoting the figure to the fixed top layer pulls it out of flow, collapsing
+    // its slot to zero so the rest of the document shifts up to fill the gap. Reserve
+    // the figure's inline height (208) on the slot so nothing reflows, then release it
+    // on teardown so the slot tracks the figure again.
+    expect(h.slot.style.minHeight).toBe('');
+    enter();
+    expect(h.slot.style.minHeight).toBe('208px');
+    finishMorph(); // settle entrance — space stays reserved while in theater
+    expect(h.slot.style.minHeight).toBe('208px');
+    q(h.controls, '[data-action="theater"]').click(); // leave
+    expect(h.slot.style.minHeight).toBe('208px'); // still reserved mid-exit
+    finishMorph(); // teardown
+    expect(h.slot.style.minHeight).toBe('');
   });
 });
 

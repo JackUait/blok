@@ -692,6 +692,11 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     // morph collapses to a zero delta.
     const inlineRect = video.getBoundingClientRect();
     theater.inlineRect = inlineRect;
+    // Reserve the figure's vacated height on its slot. Promoting the figure to the
+    // fixed top layer pulls it out of flow, collapsing the slot to zero — without
+    // this the rest of the document shifts up to fill the gap (and back on exit).
+    const slot = figure.parentElement;
+    if (slot) slot.style.minHeight = `${figure.getBoundingClientRect().height}px`;
     figure.setAttribute('data-theater', 'true');
     if (!canPopover) return; // popover-less fallback: the CSS keyframe owns it
     if (!figure.matches(':popover-open')) {
@@ -717,6 +722,9 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
       figure.removeAttribute('popover');
       figure.setAttribute('data-theater', 'false');
       figure.removeAttribute('data-theater-leaving');
+      // Release the reserved slot height so it tracks the figure again.
+      const slot = figure.parentElement;
+      if (slot) slot.style.minHeight = '';
     };
     const to = theater.inlineRect;
     if (!canPopover || reducedMotion || !canAnimate || !to || !figure.matches(':popover-open')) {
@@ -1001,6 +1009,9 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     if (canPopover && figure.matches(':popover-open')) {
       try { figure.hidePopover(); } catch { /* already closed */ }
     }
+    // Drop any slot height reserved for an in-progress theater session.
+    const slot = figure.parentElement;
+    if (slot) slot.style.minHeight = '';
     root.remove();
   };
 

@@ -270,6 +270,7 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
     if (event.metaKey || event.ctrlKey || event.altKey) return;
     if (event.key === 'ArrowRight') { event.preventDefault(); seekBy(SEEK_STEP); }
     else if (event.key === 'ArrowLeft') { event.preventDefault(); seekBy(-SEEK_STEP); }
+    else if (event.key === ' ' || event.key === 'Spacebar') { event.preventDefault(); togglePlay(); }
   };
   const onMuteClick = (): void => {
     media.muted = !media.muted;

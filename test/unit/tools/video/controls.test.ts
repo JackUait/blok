@@ -217,6 +217,14 @@ describe('video controls — arrow-key seek', () => {
     expect(h.video.currentTime).toBe(8);
   });
 
+  it('Space toggles playback (play while paused, pause while playing)', () => {
+    key(' ');
+    expect(h.video.play).toHaveBeenCalledTimes(1);
+    h.video.dispatchEvent(new Event('play'));
+    key(' ');
+    expect(h.video.pause).toHaveBeenCalledTimes(1);
+  });
+
   it('clears the seek indicator once its animation ends', () => {
     key('ArrowRight');
     const flash = q(h.controls, '[data-role="seek-flash"]');

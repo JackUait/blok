@@ -883,6 +883,28 @@ describe('video controls — theater mode', () => {
     btn.click();
     expect(seen).toEqual([true, false]);
   });
+
+  it('exits theater on Escape', () => {
+    const btn = q(h.controls, '[data-action="theater"]');
+    btn.click();
+    expect(h.figure.getAttribute('data-theater')).toBe('true');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(h.figure.getAttribute('data-theater')).toBe('false');
+    expect(btn.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('detaches the Escape listener after leaving theater and on destroy', () => {
+    const btn = q(h.controls, '[data-action="theater"]');
+    btn.click();
+    btn.click(); // back out of theater
+    // A stray Escape now must not re-toggle anything.
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(h.figure.getAttribute('data-theater')).toBe('false');
+    // Re-enter, then destroy — the listener must be gone (no throw / no effect).
+    btn.click();
+    h.destroy();
+    expect(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))).not.toThrow();
+  });
 });
 
 describe('video controls — ambient mode', () => {

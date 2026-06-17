@@ -611,17 +611,24 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     ambient.raf = 0;
   };
 
-  // Theater — an ephemeral presentation toggle. Writes data-theater on the
-  // figure and notifies the tool (which re-applies it across re-renders); it
-  // never touches the inline width, so the saved resize width is preserved.
+  // Theater — an ephemeral presentation toggle. Promotes the figure to a
+  // centred, backdrop-dimmed cinema view (CSS) and notifies the tool (which
+  // re-applies it across re-renders); it never touches the inline width, so the
+  // saved resize width is preserved. Escape backs out, mirroring fullscreen.
   const theaterBtn = button('theater', 'Theater mode', IconPlayerTheater);
   theaterBtn.setAttribute('aria-pressed', 'false');
   const theater = { on: false };
+  const onTheaterKey = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape') setTheater(false);
+  };
   const setTheater = (on: boolean): void => {
+    if (on === theater.on) return;
     theater.on = on;
     figure.setAttribute('data-theater', String(on));
     theaterBtn.setAttribute('aria-pressed', String(on));
     theaterBtn.setAttribute('aria-label', on ? 'Exit theater mode' : 'Theater mode');
+    if (on) document.addEventListener('keydown', onTheaterKey);
+    else document.removeEventListener('keydown', onTheaterKey);
     figure.dispatchEvent(new CustomEvent('blok-video-theater', { detail: { on } }));
   };
   theaterBtn.addEventListener('click', () => setTheater(!theater.on));
@@ -826,6 +833,7 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     document.removeEventListener('mousedown', onMenuOutside);
     document.removeEventListener('mousedown', onCtxOutside);
     document.removeEventListener('keydown', onCtxKeydown);
+    document.removeEventListener('keydown', onTheaterKey);
     video.removeEventListener('contextmenu', onContextMenu);
     stopAmbient();
     video.removeEventListener('play', startAmbient);

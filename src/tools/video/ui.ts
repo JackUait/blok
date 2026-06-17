@@ -48,6 +48,9 @@ export function renderVideo(data: Partial<VideoData> & { url: string }): HTMLEle
   video.setAttribute('data-blok-testid', 'video-player');
   video.setAttribute('playsinline', '');
   video.setAttribute('preload', 'metadata');
+  // Focusable so the player can field arrow-key seeking (←/→ jump 5s).
+  video.setAttribute('tabindex', '0');
+  video.setAttribute('aria-keyshortcuts', 'ArrowLeft ArrowRight');
   video.setAttribute('src', data.url);
   video.style.width = '100%';
   video.style.display = 'block';

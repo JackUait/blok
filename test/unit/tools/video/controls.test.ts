@@ -178,6 +178,54 @@ describe('video controls — press-and-hold 2x', () => {
   });
 });
 
+describe('video controls — arrow-key seek', () => {
+  let h: Harness;
+  beforeEach(() => { vi.clearAllMocks(); h = mount(); setProp(h.video, 'duration', 100); h.video.dispatchEvent(new Event('loadedmetadata')); });
+  afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
+
+  const key = (k: string): void => { h.video.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true })); };
+
+  it('ArrowRight nudges playback +5s and flashes the forward indicator', () => {
+    setProp(h.video, 'currentTime', 10);
+    key('ArrowRight');
+    expect(h.video.currentTime).toBe(15);
+    const flash = q(h.controls, '[data-role="seek-flash"]');
+    expect(flash.classList.contains('is-active')).toBe(true);
+    expect(flash.getAttribute('data-side')).toBe('forward');
+    expect(flash.textContent).toContain('5s');
+  });
+
+  it('ArrowLeft nudges playback -5s and flashes the back indicator', () => {
+    setProp(h.video, 'currentTime', 10);
+    key('ArrowLeft');
+    expect(h.video.currentTime).toBe(5);
+    const flash = q(h.controls, '[data-role="seek-flash"]');
+    expect(flash.classList.contains('is-active')).toBe(true);
+    expect(flash.getAttribute('data-side')).toBe('back');
+  });
+
+  it('clamps the rewind at the start', () => {
+    setProp(h.video, 'currentTime', 3);
+    key('ArrowLeft');
+    expect(h.video.currentTime).toBe(0);
+  });
+
+  it('clamps the skip at the duration', () => {
+    setProp(h.video, 'duration', 8);
+    setProp(h.video, 'currentTime', 6);
+    key('ArrowRight');
+    expect(h.video.currentTime).toBe(8);
+  });
+
+  it('clears the seek indicator once its animation ends', () => {
+    key('ArrowRight');
+    const flash = q(h.controls, '[data-role="seek-flash"]');
+    expect(flash.classList.contains('is-active')).toBe(true);
+    flash.dispatchEvent(new Event('animationend'));
+    expect(flash.classList.contains('is-active')).toBe(false);
+  });
+});
+
 describe('video controls — playback', () => {
   let h: Harness;
   beforeEach(() => { vi.clearAllMocks(); h = mount(); });

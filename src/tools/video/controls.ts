@@ -1,5 +1,6 @@
 import {
   IconExpandFullscreen,
+  IconPlayerBackward,
   IconPlayerForward,
   IconPlayerFullscreenExit,
   IconPlayerPause,
@@ -65,6 +66,14 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
   speedBadge.setAttribute('aria-hidden', 'true');
   speedBadge.innerHTML = `<span class="blok-video-controls__speed-label">2×</span>${IconPlayerForward}`;
   root.appendChild(speedBadge);
+
+  // Arrow-key seek indicator — a frosted pill that flashes in from the left or
+  // right edge when the user nudges playback back/forward with the arrow keys.
+  const seekFlash = document.createElement('div');
+  seekFlash.className = 'blok-video-controls__seek-flash';
+  seekFlash.setAttribute('data-role', 'seek-flash');
+  seekFlash.setAttribute('aria-hidden', 'true');
+  root.appendChild(seekFlash);
 
   // Bottom scrim + control bar.
   const bar = document.createElement('div');
@@ -227,6 +236,35 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
     media.currentTime = Number(seek.value);
     paintSeek();
   };
+
+  // ----- arrow-key seeking -----
+  const SEEK_STEP = 5;
+  // Flash the seek pill in from the side matching the jump: rewind sits left
+  // (icon then label), skip sits right (label then icon). Re-arm per press.
+  const flashSeek = (side: 'back' | 'forward'): void => {
+    const icon = side === 'forward' ? IconPlayerForward : IconPlayerBackward;
+    const label = `<span class="blok-video-controls__seek-flash-label">${SEEK_STEP}s</span>`;
+    seekFlash.setAttribute('data-side', side);
+    seekFlash.innerHTML = side === 'forward' ? `${label}${icon}` : `${icon}${label}`;
+    seekFlash.classList.remove('is-active');
+    void seekFlash.offsetWidth;
+    seekFlash.classList.add('is-active');
+  };
+  const onSeekFlashEnd = (): void => seekFlash.classList.remove('is-active');
+  const seekBy = (delta: number): void => {
+    const dur = Number.isFinite(media.duration) ? media.duration : 0;
+    const next = Math.min(dur || Infinity, Math.max(0, media.currentTime + delta));
+    media.currentTime = next;
+    seek.value = String(next);
+    paintSeek();
+    renderTime();
+    flashSeek(delta < 0 ? 'back' : 'forward');
+  };
+  const onVideoKeydown = (event: KeyboardEvent): void => {
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    if (event.key === 'ArrowRight') { event.preventDefault(); seekBy(SEEK_STEP); }
+    else if (event.key === 'ArrowLeft') { event.preventDefault(); seekBy(-SEEK_STEP); }
+  };
   const onMuteClick = (): void => {
     media.muted = !media.muted;
     onVolumeChange();
@@ -253,6 +291,8 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
   // suppress the next legitimate click.
   video.addEventListener('pointerleave', releaseHold);
   video.addEventListener('pointercancel', releaseHold);
+  video.addEventListener('keydown', onVideoKeydown);
+  seekFlash.addEventListener('animationend', onSeekFlashEnd);
   burst.addEventListener('animationend', onBurstEnd);
   seek.addEventListener('input', onSeekInput);
   muteToggle.addEventListener('click', onMuteClick);
@@ -273,6 +313,8 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
     video.removeEventListener('pointerup', onPointerUp);
     video.removeEventListener('pointerleave', releaseHold);
     video.removeEventListener('pointercancel', releaseHold);
+    video.removeEventListener('keydown', onVideoKeydown);
+    seekFlash.removeEventListener('animationend', onSeekFlashEnd);
     video.removeEventListener('loadedmetadata', onLoadedMetadata);
     video.removeEventListener('timeupdate', onTimeUpdate);
     video.removeEventListener('play', onPlay);

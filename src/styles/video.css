@@ -401,6 +401,59 @@
   transform: translate(-50%, 0);
 }
 
+/* arrow-key seek indicator — a frosted pill that flashes in from the matching
+   edge (rewind ← left, skip → right) when the user nudges playback 5s. Reuses
+   the burst frosting tokens. Inert until the .is-active class re-arms the side
+   keyframe. */
+@keyframes blok-video-seek-flash-back {
+  0%   { opacity: 0; transform: translate(-10px, -50%) scale(0.92); }
+  22%  { opacity: 1; transform: translate(0, -50%) scale(1); }
+  68%  { opacity: 1; transform: translate(0, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-12px, -50%) scale(0.96); }
+}
+@keyframes blok-video-seek-flash-forward {
+  0%   { opacity: 0; transform: translate(10px, -50%) scale(0.92); }
+  22%  { opacity: 1; transform: translate(0, -50%) scale(1); }
+  68%  { opacity: 1; transform: translate(0, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(12px, -50%) scale(0.96); }
+}
+[data-blok-tool="video"] .blok-video-controls__seek-flash {
+  position: absolute;
+  top: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+  padding: var(--blok-space-1-5) var(--blok-space-3);
+  border-radius: var(--blok-radius-pill);
+  color: var(--blok-video-burst-fg);
+  background: var(--blok-video-burst-bg);
+  box-shadow: var(--blok-video-burst-shadow);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+[data-blok-tool="video"] .blok-video-controls__seek-flash svg { width: 16px; height: 16px; display: block; }
+[data-blok-tool="video"] .blok-video-controls__seek-flash[data-side="back"] {
+  left: var(--blok-space-5);
+  transform: translate(-10px, -50%);
+}
+[data-blok-tool="video"] .blok-video-controls__seek-flash[data-side="forward"] {
+  right: var(--blok-space-5);
+  transform: translate(10px, -50%);
+}
+[data-blok-tool="video"] .blok-video-controls__seek-flash.is-active[data-side="back"] {
+  animation: blok-video-seek-flash-back 620ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+[data-blok-tool="video"] .blok-video-controls__seek-flash.is-active[data-side="forward"] {
+  animation: blok-video-seek-flash-forward 620ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 /* bottom scrim + bar */
 [data-blok-tool="video"] .blok-video-controls__bar {
   position: absolute;
@@ -527,6 +580,7 @@
   [data-blok-tool="video"] .blok-video-controls__bar,
   [data-blok-tool="video"] .blok-video-controls__volume,
   [data-blok-tool="video"] .blok-video-controls__speed { transition: none; }
+  [data-blok-tool="video"] .blok-video-controls__seek-flash.is-active { animation: none; opacity: 0; }
   [data-blok-tool="video"] .blok-video-controls__burst.is-active,
   [data-blok-tool="video"] .blok-video-controls__burst.is-active::after,
   [data-blok-tool="video"] .blok-video-controls__burst.is-active svg { animation: none; opacity: 0; }

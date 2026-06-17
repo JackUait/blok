@@ -626,7 +626,7 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
   // `inlineRect` is the figure's grid-slot rect, captured on enter (before
   // data-theater promotes it to fixed/centre) and reused to land the exit morph.
   const theater = { on: false, inlineRect: null as DOMRect | null };
-  const FLIP_IN = 'transform 480ms cubic-bezier(0.33, 1, 0.68, 1), opacity 320ms ease';
+  const FLIP_IN = 'transform 480ms cubic-bezier(0.33, 1, 0.68, 1)';
   const FLIP_OUT = 'transform 300ms cubic-bezier(0.4, 0, 1, 1)';
   const onTheaterKey = (event: KeyboardEvent): void => {
     if (event.key === 'Escape') setTheater(false);
@@ -682,22 +682,22 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     if (!inlineRect.width || !centre.width) return;
     clearFlip();
     figure.style.setProperty('transform-origin', 'top left');
-    figure.style.setProperty('will-change', 'transform, opacity');
+    figure.style.setProperty('will-change', 'transform');
     figure.style.setProperty('transition', 'none');
     figure.style.setProperty('transform', collapsed(centre, inlineRect)); // INVERT
-    figure.style.setProperty('opacity', '0.55');
     flip.onEnd = onTransformEnd(clearFlip);
     figure.addEventListener('transitionend', flip.onEnd);
     // Commit the invert across two frames instead of a synchronous offsetHeight
     // reflow: forcing layout on a freshly top-layered <video> stalls the opening
     // frames (the "laggy at start" hitch). The first frame paints the invert; the
-    // second releases the grow — composited, smooth from frame one.
+    // second releases the grow — composited, smooth from frame one. Pure transform,
+    // no opacity: a cross-fade toggles the <video>'s hardware-overlay eligibility
+    // and leaves a frozen ghost of the inline frame (CSS keeps it self-composited).
     flip.raf = raf(() => {
       flip.raf = raf(() => {
         flip.raf = 0;
         figure.style.setProperty('transition', FLIP_IN);
         figure.style.setProperty('transform', 'translate(0px, 0px) scale(1, 1)');
-        figure.style.setProperty('opacity', '1');
       });
     });
   };

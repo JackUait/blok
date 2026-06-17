@@ -781,6 +781,13 @@
 [data-blok-tool="video"] .blok-video-inner[data-theater="true"] .blok-video-media {
   box-shadow: none;
 }
+/* Pin the <video> to its own composited layer for the whole theater session.
+   Otherwise Chromium paints it as a low-level hardware-overlay quad that doesn't
+   follow the card's FLIP transform — it lingers at the inline slot for a frame or
+   two, leaving a frozen "ghost" of the small video as the card morphs out. */
+[data-blok-tool="video"] .blok-video-inner[data-theater="true"] .blok-video-media video {
+  transform: translateZ(0);
+}
 [data-blok-tool="video"] .blok-video-inner[data-theater="true"] [data-role="resize-handle"],
 [data-blok-tool="video"] .blok-video-inner[data-theater="true"] .blok-video-controls__ambient {
   display: none;

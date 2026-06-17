@@ -5111,6 +5111,10 @@
   box-shadow: none;
 }
 
+[data-blok-tool="video"] .blok-video-inner[data-theater="true"] .blok-video-media video {
+  transform: translateZ(0);
+}
+
 [data-blok-tool="video"] .blok-video-inner[data-theater="true"] [data-role="resize-handle"], [data-blok-tool="video"] .blok-video-inner[data-theater="true"] .blok-video-controls__ambient {
   display: none;
 }

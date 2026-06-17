@@ -949,6 +949,7 @@ describe('video controls — theater entrance/exit (FLIP)', () => {
   let hidePopover: ReturnType<typeof vi.fn>;
   let open = false;
   let transforms: string[];
+  let opacityWrites: string[];
   let rafQueue: FrameRequestCallback[];
   const inlineRect = { left: 200, top: 600, width: 320, height: 180, right: 520, bottom: 780, x: 200, y: 600, toJSON() {} } as DOMRect;
   const centreRect = { left: 100, top: 50, width: 800, height: 450, right: 900, bottom: 500, x: 100, y: 50, toJSON() {} } as DOMRect;
@@ -969,6 +970,7 @@ describe('video controls — theater entrance/exit (FLIP)', () => {
     vi.clearAllMocks();
     open = false;
     transforms = [];
+    opacityWrites = [];
     rafQueue = [];
     vi.stubGlobal('requestAnimationFrame', vi.fn((cb: FrameRequestCallback) => rafQueue.push(cb)));
     vi.stubGlobal('cancelAnimationFrame', vi.fn());
@@ -995,6 +997,7 @@ describe('video controls — theater entrance/exit (FLIP)', () => {
     const realSet = h.figure.style.setProperty.bind(h.figure.style);
     vi.spyOn(h.figure.style, 'setProperty').mockImplementation((prop: string, value: string) => {
       if (prop === 'transform') transforms.push(value);
+      if (prop === 'opacity') opacityWrites.push(value);
       realSet(prop, value);
     });
   });
@@ -1035,6 +1038,15 @@ describe('video controls — theater entrance/exit (FLIP)', () => {
     expect(requestAnimationFrame).toHaveBeenCalled();
     flushRaf();
     expect(transforms.at(-1)).toBe('translate(0px, 0px) scale(1, 1)');
+  });
+
+  it('morphs with transform only — no opacity cross-fade that ghosts the video', () => {
+    // A morph is pure geometry. Animating opacity 0.55→1 toggles the <video>'s
+    // hardware-overlay eligibility mid-flight, leaving a frozen copy at the inline
+    // slot ("ghost"). The FLIP must never write opacity.
+    enter();
+    flushRaf();
+    expect(opacityWrites).toEqual([]);
   });
 
   it('clears the inline grow styles once the entrance transition ends', () => {

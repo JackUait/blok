@@ -943,6 +943,85 @@ describe('video controls — theater mode', () => {
   });
 });
 
+describe('video controls — theater entrance (FLIP)', () => {
+  let h: Harness;
+  let showPopover: ReturnType<typeof vi.fn>;
+  let hidePopover: ReturnType<typeof vi.fn>;
+  let open = false;
+  let playFrame: FrameRequestCallback | null;
+  const inlineRect = { left: 200, top: 600, width: 320, height: 180, right: 520, bottom: 780, x: 200, y: 600, toJSON() {} } as DOMRect;
+  const centreRect = { left: 100, top: 50, width: 800, height: 450, right: 900, bottom: 500, x: 100, y: 50, toJSON() {} } as DOMRect;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    open = false;
+    playFrame = null;
+    showPopover = vi.fn(() => { open = true; });
+    hidePopover = vi.fn(() => { open = false; });
+    // Teach jsdom the Popover API + :popover-open matching the FLIP relies on.
+    (HTMLElement.prototype as unknown as { showPopover: unknown }).showPopover = showPopover;
+    (HTMLElement.prototype as unknown as { hidePopover: unknown }).hidePopover = hidePopover;
+    const realMatches = HTMLElement.prototype.matches;
+    vi.spyOn(HTMLElement.prototype, 'matches').mockImplementation(function (this: HTMLElement, sel: string) {
+      return sel === ':popover-open' ? open : realMatches.call(this, sel);
+    });
+    // Model the CSS: data-theater alone promotes the figure to the centred rect
+    // (position:fixed + full width), as does :popover-open. So measuring AFTER the
+    // attribute is set yields the centred rect — the FLIP must measure BEFORE.
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      const promoted = open || this.getAttribute('data-theater') === 'true';
+      return promoted ? centreRect : inlineRect;
+    });
+    // Capture the rAF PLAY phase so the INVERT phase can be observed before flush.
+    vi.stubGlobal('requestAnimationFrame', vi.fn((cb: FrameRequestCallback) => { playFrame = cb; return 1; }));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn(() => { playFrame = null; }));
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false })); // motion allowed
+    h = mount();
+  });
+  afterEach(() => {
+    h.destroy();
+    document.body.innerHTML = '';
+    delete (HTMLElement.prototype as Partial<{ showPopover: unknown }>).showPopover;
+    delete (HTMLElement.prototype as Partial<{ hidePopover: unknown }>).hidePopover;
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('promotes the figure into the top layer via the Popover API on enter', () => {
+    q(h.controls, '[data-action="theater"]').click();
+    expect(showPopover).toHaveBeenCalledTimes(1);
+    expect(h.figure.getAttribute('popover')).toBe('manual');
+  });
+
+  it('INVERTs the card onto its real inline rect (measured before promotion)', () => {
+    q(h.controls, '[data-action="theater"]').click();
+    // Before the PLAY frame fires, the card is snapped back onto the inline frame:
+    // delta of inline(200,600,320×180) → centre(100,50,800×450) = (+100,+550)/0.4.
+    // A zero/identity invert here means `first` was measured after data-theater
+    // promoted the figure — the ordering bug that defeats the morph.
+    expect(h.figure.style.transformOrigin).toBe('top left');
+    expect(h.figure.style.transform).toBe('translate(100px, 550px) scale(0.4, 0.4)');
+  });
+
+  it('PLAYs the morph, settling on the centred frame with a transform transition', () => {
+    q(h.controls, '[data-action="theater"]').click();
+    expect(playFrame).toBeTypeOf('function');
+    playFrame?.(0);
+    expect(h.figure.style.transform).toBe('translate(0px, 0px) scale(1, 1)');
+    expect(h.figure.style.transition).toContain('transform');
+  });
+
+  it('clears the inline FLIP styles when leaving theater', () => {
+    const btn = q(h.controls, '[data-action="theater"]');
+    btn.click();
+    btn.click();
+    expect(hidePopover).toHaveBeenCalled();
+    expect(h.figure.style.transform).toBe('');
+    expect(h.figure.style.transition).toBe('');
+    expect(h.figure.getAttribute('popover')).toBeNull();
+  });
+});
+
 describe('video controls — ambient mode', () => {
   let h: Harness;
   let raf: ReturnType<typeof vi.fn>;

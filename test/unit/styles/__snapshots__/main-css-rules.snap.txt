@@ -5079,6 +5079,9 @@
   z-index: 2147483000;
   box-shadow: 0 0 0 100vmax var(--blok-video-theater-scrim), var(--blok-video-theater-shadow);
   transform-origin: center;
+}
+
+[data-blok-tool="video"] .blok-video-inner[data-theater="true"]:not(:popover-open) {
   animation: blok-video-theater-in 360ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -5093,7 +5096,7 @@
   animation: blok-video-theater-curtain 300ms ease-out;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-tool="video"] .blok-video-inner[data-theater="true"], [data-blok-tool="video"] .blok-video-inner[data-theater="true"]:popover-open::backdrop {
+[@media (prefers-reduced-motion: reduce)] [data-blok-tool="video"] .blok-video-inner[data-theater="true"]:not(:popover-open), [data-blok-tool="video"] .blok-video-inner[data-theater="true"]:popover-open::backdrop {
   animation: none;
 }
 

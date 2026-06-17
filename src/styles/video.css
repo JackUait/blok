@@ -734,9 +734,14 @@
     0 0 0 100vmax var(--blok-video-theater-scrim),
     var(--blok-video-theater-shadow);
   transform-origin: center;
-  /* the card rises + expands into place with an easeOutExpo settle */
+}
+/* Popover-less fallback (no top layer): the card can't FLIP from its inline slot,
+   so it rises + expands in place with an easeOutExpo settle. */
+[data-blok-tool="video"] .blok-video-inner[data-theater="true"]:not(:popover-open) {
   animation: blok-video-theater-in 360ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+/* Promoted (top layer): the JS FLIP morphs the card from its inline rect into the
+   centre, so no keyframe here — only shed the scrim fallback shadow. */
 [data-blok-tool="video"] .blok-video-inner[data-theater="true"]:popover-open {
   box-shadow: var(--blok-video-theater-shadow);
 }
@@ -758,7 +763,7 @@
 }
 /* honour reduced-motion: snap in, no rise/zoom/curtain */
 @media (prefers-reduced-motion: reduce) {
-  [data-blok-tool="video"] .blok-video-inner[data-theater="true"],
+  [data-blok-tool="video"] .blok-video-inner[data-theater="true"]:not(:popover-open),
   [data-blok-tool="video"] .blok-video-inner[data-theater="true"]:popover-open::backdrop {
     animation: none;
   }

@@ -632,11 +632,53 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     const target = event.target as Node | null;
     if (target && !figure.contains(target)) setTheater(false);
   };
-  const openPopover = (): void => {
+  // FLIP entrance: the figure jumps from its inline grid slot to the fixed,
+  // top-layer centre the instant the popover opens. Animating only a scale nudge
+  // (as a keyframe would) leaves that big position jump unanimated, so it reads as
+  // a teleport. Instead we measure the inline rect, let the popover promote, then
+  // INVERT the card back onto the inline frame and release it — it grows from its
+  // original spot into the centre. Cleared on transition end so CSS owns resting.
+  const flip = { raf: 0 };
+  const resetFlipStyles = (): void => {
+    figure.style.removeProperty('transition');
+    figure.style.removeProperty('transform');
+    figure.style.removeProperty('transform-origin');
+  };
+  const onFlipEnd = (event: TransitionEvent): void => {
+    if (event.propertyName !== 'transform') return;
+    resetFlipStyles();
+    figure.removeEventListener('transitionend', onFlipEnd);
+  };
+  const clearFlip = (): void => {
+    if (flip.raf) { cancelAnimationFrame(flip.raf); flip.raf = 0; }
+    figure.removeEventListener('transitionend', onFlipEnd);
+    resetFlipStyles();
+  };
+  // `first` is the inline rect captured BEFORE data-theater is applied — the
+  // attribute itself flips the figure to fixed/centred via CSS, so measuring after
+  // it would yield the centred rect and the FLIP would compute a zero delta.
+  const openPopover = (first: DOMRect): void => {
     figure.setAttribute('popover', 'manual');
-    try { figure.showPopover(); } catch { /* unsupported / detached */ }
+    try { figure.showPopover(); } catch { figure.removeAttribute('popover'); return; }
+    if (reducedMotion) return;
+    const last = figure.getBoundingClientRect();
+    if (!first.width || !last.width) return;
+    const dx = first.left - last.left;
+    const dy = first.top - last.top;
+    const sx = first.width / last.width;
+    const sy = first.height / last.height;
+    figure.style.setProperty('transform-origin', 'top left');
+    figure.style.setProperty('transition', 'none');
+    figure.style.setProperty('transform', `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`);
+    figure.addEventListener('transitionend', onFlipEnd);
+    flip.raf = requestAnimationFrame(() => {
+      flip.raf = 0;
+      figure.style.setProperty('transition', 'transform 440ms cubic-bezier(0.22, 1, 0.36, 1)');
+      figure.style.setProperty('transform', 'translate(0px, 0px) scale(1, 1)');
+    });
   };
   const closePopover = (): void => {
+    clearFlip();
     if (figure.matches(':popover-open')) {
       try { figure.hidePopover(); } catch { /* already closed */ }
     }
@@ -645,10 +687,12 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
   const setTheater = (on: boolean): void => {
     if (on === theater.on) return;
     theater.on = on;
+    // Measure the inline rect before data-theater promotes the figure to centre.
+    const inlineRect = on && canPopover ? figure.getBoundingClientRect() : null;
     figure.setAttribute('data-theater', String(on));
     theaterBtn.setAttribute('aria-pressed', String(on));
     theaterBtn.setAttribute('aria-label', on ? 'Exit theater mode' : 'Theater mode');
-    if (canPopover && on) openPopover();
+    if (canPopover && inlineRect) openPopover(inlineRect);
     else if (canPopover) closePopover();
     if (on) {
       document.addEventListener('keydown', onTheaterKey);
@@ -901,6 +945,7 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     video.removeEventListener('volumechange', onVolumeChange);
     document.removeEventListener('fullscreenchange', onFullscreenChange);
     document.removeEventListener('pointerdown', onTheaterOutside);
+    clearFlip();
     if (canPopover && figure.matches(':popover-open')) {
       try { figure.hidePopover(); } catch { /* already closed */ }
     }

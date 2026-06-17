@@ -716,9 +716,12 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     // fill: 'forwards' holds the shrunk transform until finalize hides the popover,
     // so the card never snaps back to centre for a frame before teardown.
     figure.setAttribute('data-theater-leaving', 'true');
+    // Ease-OUT (mirrors the entrance) so the shrink starts moving from frame one and
+    // decelerates into the slot. An ease-in leaves the card visibly frozen at full
+    // size for its first third, then collapses fast — reads as "it suddenly shrinks".
     morph('translate(0px, 0px) scale(1, 1)', collapsed(from, to), {
-      duration: 300,
-      easing: 'cubic-bezier(0.4, 0, 1, 1)',
+      duration: 360,
+      easing: 'cubic-bezier(0.33, 1, 0.68, 1)',
       fill: 'forwards',
       done: finalize,
     });

@@ -1064,6 +1064,10 @@ describe('video controls — theater entrance/exit (FLIP via Web Animations)', (
     expect(keyframes[1].transform).toBe('translate(100px, 550px) scale(0.4, 0.4)');
     // fill:forwards holds the shrunk frame until teardown, so no snap-back to centre.
     expect(options.fill).toBe('forwards');
+    // Ease-OUT so the shrink moves from frame one and decelerates into the slot —
+    // an ease-in holds the card big for the first ~third then collapses fast, which
+    // reads as "it suddenly shrinks". Symmetric with the entrance easing.
+    expect(options.easing).toBe('cubic-bezier(0.33, 1, 0.68, 1)');
     // The teardown only fires when the shrink finishes.
     finishMorph();
     expect(hidePopover).toHaveBeenCalledTimes(1);

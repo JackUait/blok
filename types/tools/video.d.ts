@@ -3,6 +3,9 @@ import { BlockToolData } from './block-tool-data';
 /** Horizontal alignment of the video within its container. */
 export type VideoAlignment = 'left' | 'center' | 'right';
 
+/** Ambient glow intensity behind the player. Default 'less'. */
+export type VideoGlow = 'more' | 'less' | 'none';
+
 /**
  * Persisted data shape for the Video block tool.
  */
@@ -17,6 +20,8 @@ export interface VideoData extends BlockToolData {
   width?: number;
   /** Horizontal alignment */
   alignment?: VideoAlignment;
+  /** Ambient glow intensity behind the player. Default 'less'. */
+  glow?: VideoGlow;
   /** Original filename, when known */
   fileName?: string;
   /** Source MIME type (e.g. video/mp4), when known */

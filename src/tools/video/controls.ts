@@ -12,6 +12,7 @@ import {
   IconPlayerVolume,
   IconPlayerVolumeMute,
 } from '../../components/icons';
+import type { VideoGlow } from '../../../types/tools/video';
 
 /** Minimal storage seam (localStorage-shaped) for volume + position persistence. */
 export interface VideoStorage {
@@ -25,6 +26,8 @@ export interface ControlsOptions {
   figure: HTMLElement;
   /** Defaults to window.localStorage; pass null to disable persistence. */
   storage?: VideoStorage | null;
+  /** Ambient glow intensity behind the player. Default 'less'. */
+  glow?: VideoGlow;
 }
 
 export interface ControlsHandle {
@@ -94,7 +97,7 @@ function button(action: string, label: string, icon: string, extraClass = ''): H
  * fullscreen). Returns the control element plus a teardown that detaches every
  * media listener.
  */
-export function attachControls({ video, figure, storage }: ControlsOptions): ControlsHandle {
+export function attachControls({ video, figure, storage, glow = 'less' }: ControlsOptions): ControlsHandle {
   const root = document.createElement('div');
   root.className = 'blok-video-controls';
   root.setAttribute('data-role', 'video-controls');
@@ -595,6 +598,9 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
 
   const reducedMotion = !!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
   ambientCanvas.setAttribute('data-ambient', reducedMotion ? 'off' : 'on');
+  // `data-glow` is the user's chosen intensity (more / less / none) — drives the
+  // peak opacity in CSS; 'none' hides the canvas and skips sampling entirely.
+  ambientCanvas.setAttribute('data-glow', glow);
   // `data-active` drives the glow's opacity: it fades in when the video starts
   // and fades back out the instant it pauses, so a frozen frame never lingers.
   ambientCanvas.setAttribute('data-active', 'false');
@@ -609,7 +615,7 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     ambient.raf = requestAnimationFrame(sampleAmbient);
   };
   const startAmbient = (): void => {
-    if (reducedMotion) return;
+    if (reducedMotion || glow === 'none') return;
     ambientCanvas.setAttribute('data-active', 'true');
     if (ambient.raf) return;
     ambient.raf = requestAnimationFrame(sampleAmbient);

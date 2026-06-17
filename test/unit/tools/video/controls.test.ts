@@ -26,7 +26,7 @@ const setProp = (el: HTMLElement, key: string, value: unknown): void => {
   Object.defineProperty(el, key, { value, configurable: true, writable: true });
 };
 
-const mount = (): Harness => {
+const mount = (opts: Partial<Parameters<typeof attachControls>[0]> = {}): Harness => {
   const figure = document.createElement('figure');
   const video = document.createElement('video');
   // jsdom does not implement playback — stub the methods we call.
@@ -39,7 +39,7 @@ const mount = (): Harness => {
   const slot = document.createElement('div');
   slot.appendChild(figure);
   document.body.appendChild(slot);
-  const { element, setTheater, destroy } = attachControls({ video, figure });
+  const { element, setTheater, destroy } = attachControls({ video, figure, ...opts });
   figure.appendChild(element);
   return { figure, slot, video, controls: element, setTheater, destroy };
 };
@@ -1159,6 +1159,25 @@ describe('video controls — ambient mode', () => {
     expect(canvas?.getAttribute('data-active')).toBe('true');
     h.video.dispatchEvent(new Event('pause'));
     expect(canvas?.getAttribute('data-active')).toBe('false');
+  });
+
+  it('defaults the glow level to "less"', () => {
+    const canvas = h.figure.querySelector('[data-role="video-ambient"]');
+    expect(canvas?.getAttribute('data-glow')).toBe('less');
+  });
+
+  it('reflects an explicit glow level on the ambient canvas', () => {
+    h.destroy();
+    h = mount({ glow: 'more' });
+    const canvas = h.figure.querySelector('[data-role="video-ambient"]');
+    expect(canvas?.getAttribute('data-glow')).toBe('more');
+  });
+
+  it('never samples when the glow is turned off', () => {
+    h.destroy();
+    h = mount({ glow: 'none' });
+    h.video.dispatchEvent(new Event('play'));
+    expect(raf).not.toHaveBeenCalled();
   });
 
   it('never samples under prefers-reduced-motion', () => {

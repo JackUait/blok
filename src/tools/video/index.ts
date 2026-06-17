@@ -10,7 +10,7 @@ import type {
   ToolboxConfig,
 } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
-import type { VideoAlignment, VideoConfig, VideoData } from '../../../types/tools/video';
+import type { VideoAlignment, VideoConfig, VideoData, VideoGlow } from '../../../types/tools/video';
 import {
   IconAlignCenter,
   IconAlignLeft,
@@ -20,6 +20,7 @@ import {
   IconDownload,
   IconReplace,
   IconVideo,
+  IconWand,
 } from '../../components/icons';
 import { attachResizeHandle, type ResizeEdge } from '../image/resizer';
 import { renderUploadingState, type UploadingStateElement } from '../image/uploading-state';
@@ -73,6 +74,7 @@ export class VideoTool implements BlockTool {
     if (this.data.captionVisible !== undefined) out.captionVisible = this.data.captionVisible;
     if (this.data.width !== undefined) out.width = this.data.width;
     if (this.data.alignment !== undefined) out.alignment = this.data.alignment;
+    if (this.data.glow !== undefined) out.glow = this.data.glow;
     if (this.data.fileName !== undefined) out.fileName = this.data.fileName;
     if (this.data.mimeType !== undefined) out.mimeType = this.data.mimeType;
     return out;
@@ -132,6 +134,7 @@ export class VideoTool implements BlockTool {
     const i18n = this.api.i18n;
     const current: VideoAlignment = this.data.alignment ?? 'center';
     const captionVisible = this.data.captionVisible !== false;
+    const glow: VideoGlow = this.data.glow ?? 'less';
     const alignments: { value: VideoAlignment; title: string; icon: string }[] = [
       { value: 'left', title: tr(i18n, 'tools.video.alignmentLeft', 'Align left'), icon: IconAlignLeft },
       { value: 'center', title: tr(i18n, 'tools.video.alignmentCenter', 'Align center'), icon: IconAlignCenter },
@@ -162,6 +165,24 @@ export class VideoTool implements BlockTool {
         isActive: captionVisible,
         closeOnActivate: true,
         onActivate: (): void => this.toggleCaption(),
+      },
+      {
+        icon: IconWand,
+        title: tr(i18n, 'tools.video.glow', 'Glow'),
+        name: 'video-glow',
+        children: {
+          items: ([
+            { value: 'more', title: tr(i18n, 'tools.video.glowMore', 'More') },
+            { value: 'less', title: tr(i18n, 'tools.video.glowLess', 'Less') },
+            { value: 'none', title: tr(i18n, 'tools.video.glowNone', 'None') },
+          ] as { value: VideoGlow; title: string }[]).map((g) => ({
+            title: g.title,
+            name: `video-glow-${g.value}`,
+            isActive: glow === g.value,
+            closeOnActivate: true,
+            onActivate: (): void => this.setGlow(g.value),
+          })),
+        },
       },
       {
         icon: IconReplace,
@@ -324,7 +345,7 @@ export class VideoTool implements BlockTool {
     // viewers too, so they attach regardless of read-only.
     const video = media.querySelector('video');
     if (video) {
-      this.controlsHandle = attachControls({ video, figure });
+      this.controlsHandle = attachControls({ video, figure, glow: this.data.glow ?? 'less' });
       media.appendChild(this.controlsHandle.element);
     }
 
@@ -387,6 +408,13 @@ export class VideoTool implements BlockTool {
   private setAlignment(next: VideoAlignment): void {
     if (this.data.alignment === next) return;
     this.data.alignment = next;
+    this.block.dispatchChange();
+    this.renderState();
+  }
+
+  private setGlow(next: VideoGlow): void {
+    if ((this.data.glow ?? 'less') === next) return;
+    this.data.glow = next;
     this.block.dispatchChange();
     this.renderState();
   }

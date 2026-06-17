@@ -709,7 +709,10 @@
   transition: opacity 420ms ease;
   pointer-events: none;
 }
-[data-blok-tool="video"] .blok-video-controls__ambient[data-active="true"] { opacity: 0.55; }
+/* user-chosen glow intensity (block settings → Glow): more / less / none */
+[data-blok-tool="video"] .blok-video-controls__ambient[data-glow="less"][data-active="true"] { opacity: 0.55; }
+[data-blok-tool="video"] .blok-video-controls__ambient[data-glow="more"][data-active="true"] { opacity: 0.85; }
+[data-blok-tool="video"] .blok-video-controls__ambient[data-glow="none"] { display: none; }
 [data-blok-tool="video"] .blok-video-controls__ambient[data-ambient="off"] { display: none; }
 
 /* theater (cinema) — promote the player into the browser top layer (Popover

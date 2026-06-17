@@ -246,6 +246,22 @@ describe('VideoTool — editor actions (block settings)', () => {
     expect(tool.save().captionVisible).toBe(false);
   });
 
+  it('block-settings glow option sets that exact level, dispatches, and reflects on the canvas', () => {
+    const block = createMockBlock();
+    const tool = new VideoTool(createOptions({ url: 'u' }, {}, block));
+    const root = tool.render();
+    const pick = (value: string): void => {
+      find(settings(tool), 'video-glow')?.children?.items
+        .find((c) => c.name === `video-glow-${value}`)?.onActivate?.();
+    };
+    pick('more');
+    expect(tool.save().glow).toBe('more');
+    expect(root.querySelector('[data-role="video-ambient"]')?.getAttribute('data-glow')).toBe('more');
+    pick('none');
+    expect(tool.save().glow).toBe('none');
+    expect(block.dispatchChange).toHaveBeenCalled();
+  });
+
   it('block-settings replace item returns the tool to EMPTY state', () => {
     const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }));
     const root = tool.render();
@@ -333,6 +349,7 @@ describe('VideoTool — renderSettings', () => {
     expect(names(items)).toEqual(expect.arrayContaining([
       'video-alignment',
       'video-caption',
+      'video-glow',
       'video-replace',
       'video-download',
       'video-copy-url',

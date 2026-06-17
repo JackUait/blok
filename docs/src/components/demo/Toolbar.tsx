@@ -1,5 +1,6 @@
 import React from "react";
 import { useI18n } from "../../contexts/I18nContext";
+import { Button } from "@/components/ui/button";
 
 interface ToolbarProps {
   onUndo: () => void;
@@ -20,10 +21,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 }) => {
   const { t } = useI18n();
   return (
-    <div className="demo-toolbar">
-      <div className="toolbar-group">
-        <button
-          className="toolbar-btn"
+    <div className="flex items-center gap-2 rounded-2xl border border-border bg-card p-2">
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={onUndo}
           disabled={!canUndo}
           title={t("demo.toolbar.undoTitle")}
@@ -40,9 +42,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             <path d="M9 14L4 9l5-5" />
             <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11" />
           </svg>
-        </button>
-        <button
-          className="toolbar-btn"
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={onRedo}
           disabled={!canRedo}
           title={t("demo.toolbar.redoTitle")}
@@ -59,12 +62,13 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             <path d="M15 14l5-5-5-5" />
             <path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5v0A5.5 5.5 0 0 0 9.5 20H13" />
           </svg>
-        </button>
+        </Button>
       </div>
-      <div className="toolbar-divider"></div>
-      <div className="toolbar-group">
-        <button
-          className="toolbar-btn"
+      <div className="mx-1 h-6 w-px bg-border" />
+      <div className="flex items-center gap-2">
+        <Button
+          variant="primary"
+          size="sm"
           onClick={onSave}
           title={t("demo.toolbar.saveTitle")}
           type="button"
@@ -82,9 +86,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             <polyline points="7 3 7 8 15 8" />
           </svg>
           <span>{t("demo.toolbar.saveLabel")}</span>
-        </button>
-        <button
-          className="toolbar-btn"
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
           onClick={onClear}
           title={t("demo.toolbar.clearTitle")}
           type="button"
@@ -101,7 +106,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
           </svg>
           <span>{t("demo.toolbar.clearLabel")}</span>
-        </button>
+        </Button>
       </div>
     </div>
   );

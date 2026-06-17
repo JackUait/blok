@@ -414,56 +414,58 @@ console.log(editor.readOnly.isEnabled);`,
   };
 
   return (
-    <section className="features" id="features" ref={sectionRef} aria-label={t('home.features.sectionLabel')}>
-      {/* Decorative background elements */}
-      <div className="features-bg">
-        <div className="features-blob features-blob-1" />
-        <div className="features-blob features-blob-2" />
-        <div className="features-blob features-blob-3" />
-        <div className="features-grid-pattern" />
-        {/* Floating orbs */}
-        <div className="features-orb features-orb-1" />
-        <div className="features-orb features-orb-2" />
-        <div className="features-orb features-orb-3" />
-        <div className="features-orb features-orb-4" />
-      </div>
-
-      <div className="container">
-        <div className="section-header">
-          <span className="section-eyebrow">{t('home.features.eyebrow')}</span>
-          <h2 className="section-title">
-            <span className="section-title-line">{t('home.features.title1')}</span>
-            <span className="section-title-line">{t('home.features.title2')}</span>
+    <section
+      className="relative py-20 sm:py-28"
+      id="features"
+      ref={sectionRef}
+      aria-label={t('home.features.sectionLabel')}
+    >
+      <div className="mx-auto w-full max-w-6xl px-6">
+        <div className="mx-auto max-w-2xl text-center">
+          <span className="text-xs font-bold uppercase tracking-wide text-primary">
+            {t('home.features.eyebrow')}
+          </span>
+          <h2 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">
+            <span className="block">{t('home.features.title1')}</span>
+            <span className="block">{t('home.features.title2')}</span>
           </h2>
-          <p className="section-description">
+          <p className="mt-5 text-lg leading-relaxed text-muted-foreground">
             {t('home.features.description')}
           </p>
         </div>
-        <div className="features-grid">
+        <div className="mt-14 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((feature, index) => (
             <button
               type="button"
               key={feature.accent}
-              className={`feature-card feature-card--${feature.accent}`}
+              className="group flex flex-col items-start gap-4 rounded-2xl border border-border bg-card p-6 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               data-feature-card
               style={{ "--animation-order": index } as React.CSSProperties}
               onClick={() => handleFeatureClick(feature)}
               aria-label={feature.learnMore}
             >
-              <div className="feature-card-glow" />
-              <div className="feature-card-content">
-                <div className="feature-icon">
-                  <div className="feature-icon-inner">{feature.icon}</div>
-                </div>
-                <h3 className="feature-title">{feature.title}</h3>
-                <p className="feature-description">{feature.description}</p>
+              <div className="flex size-12 items-center justify-center rounded-xl bg-secondary text-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+                {feature.icon}
               </div>
-              <div className="feature-card-shine" />
-              <div className="feature-card-arrow">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <h3 className="text-lg font-bold tracking-tight">{feature.title}</h3>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {feature.description}
+              </p>
+              <span className="mt-auto inline-flex items-center gap-1 pt-2 text-sm font-semibold text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
-              </div>
+              </span>
             </button>
           ))}
         </div>

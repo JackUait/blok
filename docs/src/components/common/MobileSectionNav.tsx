@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useI18n } from '../../contexts/I18nContext';
+import { cn } from '@/lib/utils';
 import type { SidebarSection } from '../common/Sidebar';
 
 interface MobileSectionNavProps {
@@ -64,64 +65,89 @@ export const MobileSectionNav: React.FC<MobileSectionNavProps> = ({
   };
 
   return (
-    <div 
+    <div
       ref={containerRef}
-      className="mobile-section-nav"
+      className="relative"
       data-blok-testid="mobile-section-nav"
     >
       <button
-        className={`mobile-section-nav-trigger ${isOpen ? 'open' : ''}`}
+        className={cn(
+          "flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left shadow-sm transition-all hover:shadow-card-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+          isOpen && "open border-foreground/20 shadow-card-hover",
+        )}
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         type="button"
         data-blok-testid="mobile-section-nav-trigger"
       >
-        <div className="mobile-section-nav-trigger-content">
+        <div className="flex min-w-0 flex-col">
           {currentSectionTitle && (
-            <span className="mobile-section-nav-category">{currentSectionTitle}</span>
+            <span className="text-xs font-bold uppercase tracking-wide text-primary">
+              {currentSectionTitle}
+            </span>
           )}
-          <span className="mobile-section-nav-label">{currentLabel}</span>
+          <span className="truncate text-sm font-semibold text-foreground">
+            {currentLabel}
+          </span>
         </div>
-        <svg 
-          className="mobile-section-nav-chevron"
-          width="16" 
-          height="16" 
-          viewBox="0 0 24 24" 
-          fill="none" 
-          stroke="currentColor" 
-          strokeWidth="2" 
-          strokeLinecap="round" 
+        <svg
+          className={cn(
+            "size-4 shrink-0 text-muted-foreground transition-transform duration-200",
+            isOpen && "rotate-180",
+          )}
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
           strokeLinejoin="round"
         >
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
-      
+
       {isOpen && (
-        <div 
+        <div
           ref={dropdownRef}
-          className="mobile-section-nav-dropdown"
+          className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-50 max-h-[60vh] overflow-y-auto rounded-2xl border border-border bg-popover p-2 shadow-card"
           role="listbox"
           data-blok-testid="mobile-section-nav-dropdown"
         >
           {sections.map((section) => (
-            <div key={section.title} className="mobile-section-nav-group">
-              <div className="mobile-section-nav-group-title">{section.title}</div>
-              {section.links.map((link) => (
-                <button
-                  key={link.id}
-                  className={`mobile-section-nav-item ${activeSection === link.id ? 'active' : ''}`}
-                  onClick={() => handleLinkClick(link.id)}
-                  role="option"
-                  aria-selected={activeSection === link.id}
-                  type="button"
-                  data-blok-testid={`mobile-section-nav-item-${link.id}`}
-                >
-                  <span className="mobile-section-nav-item-dot" />
-                  {link.label}
-                </button>
-              ))}
+            <div key={section.title} className="px-1 py-1.5">
+              <div className="px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                {section.title}
+              </div>
+              {section.links.map((link) => {
+                const isActive = activeSection === link.id;
+                return (
+                  <button
+                    key={link.id}
+                    className={cn(
+                      "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-secondary",
+                      isActive
+                        ? "active bg-secondary text-foreground"
+                        : "text-muted-foreground",
+                    )}
+                    onClick={() => handleLinkClick(link.id)}
+                    role="option"
+                    aria-selected={isActive}
+                    type="button"
+                    data-blok-testid={`mobile-section-nav-item-${link.id}`}
+                  >
+                    <span
+                      className={cn(
+                        "size-1.5 shrink-0 rounded-full",
+                        isActive ? "bg-primary" : "bg-border",
+                      )}
+                    />
+                    {link.label}
+                  </button>
+                );
+              })}
             </div>
           ))}
         </div>

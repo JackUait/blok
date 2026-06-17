@@ -6,7 +6,8 @@ import { OutputPanel } from '../components/demo/OutputPanel';
 import { NAV_LINKS } from '../utils/constants';
 import { useI18n } from '../contexts/I18nContext';
 import { ShortcutKeys } from '../components/common/KeyIcon';
-import '../../assets/demo.css';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface BlokEditor {
   save: () => Promise<unknown>;
@@ -69,36 +70,33 @@ export const DemoPage: React.FC = () => {
   return (
     <>
       <Nav links={NAV_LINKS} />
-      <main className="demo-page">
-        <div className="demo-bg">
-          <div className="demo-blur demo-blur-1" />
-          <div className="demo-blur demo-blur-2" />
-          <div className="demo-blur demo-blur-3" />
-        </div>
-
-        <div className="demo-container">
-          <div className="demo-header">
-            <span className="demo-live-badge">{t('demo.badge')}</span>
-            <h1 className="demo-title">
-              {t('demo.title')} <span className="demo-title-gradient">{t('demo.titleGradient')}</span>
+      <main className="min-h-screen bg-background pt-16">
+        <div className="mx-auto w-full max-w-6xl px-6 py-12 sm:py-16">
+          <div className="mx-auto mb-10 max-w-2xl text-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wide text-primary">
+              <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />
+              {t('demo.badge')}
+            </span>
+            <h1 className="mt-5 font-display text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
+              {t('demo.title')} <span className="text-brand-gradient">{t('demo.titleGradient')}</span>
             </h1>
-            <p className="demo-subtitle">
+            <p className="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
               {t('demo.subtitle')}
-              <code className="inline-code">{t('demo.subtitleCommand')}</code>
+              <code className="mx-1 rounded-md bg-muted px-1.5 py-0.5 font-mono text-[0.85em] text-foreground">{t('demo.subtitleCommand')}</code>
               {t('demo.subtitleRest')}
             </p>
           </div>
 
-          <div className="demo-workspace">
-            <div className={`demo-editor-panel ${showOutput ? 'demo-editor-panel--split' : ''}`}>
-              <div className="demo-editor-chrome">
-                <div className="demo-chrome-dots">
-                  <span className="demo-chrome-dot demo-chrome-dot--red" />
-                  <span className="demo-chrome-dot demo-chrome-dot--yellow" />
-                  <span className="demo-chrome-dot demo-chrome-dot--green" />
+          <div className={cn('grid gap-6', showOutput ? 'lg:grid-cols-2' : 'grid-cols-1')}>
+            <div className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+              <div className="flex items-center gap-3 border-b border-border bg-muted/40 px-4 py-3">
+                <div className="flex items-center gap-1.5" aria-hidden="true">
+                  <span className="size-3 rounded-full bg-[#ff5f57]" />
+                  <span className="size-3 rounded-full bg-[#febc2e]" />
+                  <span className="size-3 rounded-full bg-[#28c840]" />
                 </div>
-                <div className="demo-chrome-title">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
                     <rect x="3" y="3" width="7" height="7" rx="1" />
                     <rect x="14" y="3" width="7" height="7" rx="1" />
                     <rect x="3" y="14" width="7" height="7" rx="1" />
@@ -106,9 +104,10 @@ export const DemoPage: React.FC = () => {
                   </svg>
                   {t('demo.editorTitle')}
                 </div>
-                <div className="demo-chrome-actions">
-                  <button
-                    className="demo-action-btn"
+                <div className="ml-auto flex items-center gap-1.5">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={handleUndo}
                     title={t('demo.undoTitle')}
                     aria-label={t('demo.undoAriaLabel')}
@@ -117,9 +116,10 @@ export const DemoPage: React.FC = () => {
                       <path d="M3 7v6h6" />
                       <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
                     </svg>
-                  </button>
-                  <button
-                    className="demo-action-btn"
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={handleRedo}
                     title={t('demo.redoTitle')}
                     aria-label={t('demo.redoAriaLabel')}
@@ -128,10 +128,11 @@ export const DemoPage: React.FC = () => {
                       <path d="M21 7v6h-6" />
                       <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13" />
                     </svg>
-                  </button>
-                  <div className="demo-action-divider" />
-                  <button
-                    className="demo-action-btn demo-action-btn--primary"
+                  </Button>
+                  <div className="mx-1 h-5 w-px bg-border" aria-hidden="true" />
+                  <Button
+                    variant="primary"
+                    size="sm"
                     onClick={handleSave}
                     title={t('demo.getJsonTitle')}
                   >
@@ -143,36 +144,39 @@ export const DemoPage: React.FC = () => {
                       <polyline points="10 9 9 9 8 9" />
                     </svg>
                     <span>{t('demo.getJsonLabel')}</span>
-                  </button>
-                  <button
-                    className="demo-action-btn demo-action-btn--danger"
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={handleClear}
                     title={t('demo.clearTitle')}
+                    className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="3 6 5 6 21 6" />
                       <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                     </svg>
-                  </button>
+                  </Button>
                 </div>
               </div>
-              <div className="editor-container">
+              <div className="min-h-0 flex-1 overflow-auto px-4 py-6 sm:px-8">
                 <EditorWrapper onEditorReady={handleEditorReady} />
               </div>
             </div>
 
             {showOutput && (
-              <div className="demo-output-panel">
-                <div className="demo-output-chrome">
-                  <div className="demo-chrome-title">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <div className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+                <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/40 px-4 py-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                       <polyline points="14 2 14 8 20 8" />
                     </svg>
                     {t('demo.jsonOutputTitle')}
                   </div>
-                  <button
-                    className="demo-close-btn"
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={() => setShowOutput(false)}
                     title={t('demo.closeOutputTitle')}
                     aria-label={t('demo.closeOutputAriaLabel')}
@@ -181,60 +185,60 @@ export const DemoPage: React.FC = () => {
                       <line x1="18" y1="6" x2="6" y2="18" />
                       <line x1="6" y1="6" x2="18" y2="18" />
                     </svg>
-                  </button>
+                  </Button>
                 </div>
                 <OutputPanel output={output} />
               </div>
             )}
           </div>
 
-          <div className="demo-tips">
-            <div className="demo-tip">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 text-sm text-muted-foreground shadow-sm">
               <ShortcutKeys keys={['/']} />
               <span>{t('demo.tipOpenMenu')}</span>
             </div>
-            <div className="demo-tip">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 text-sm text-muted-foreground shadow-sm">
               <ShortcutKeys keys={['Tab']} />
               <span>{t('demo.tipIndentList')}</span>
             </div>
-            <div className="demo-tip">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 text-sm text-muted-foreground shadow-sm">
               <ShortcutKeys keys={['Ctrl', 'Z']} />
               <span>{t('demo.tipUndo')}</span>
             </div>
-            <div className="demo-tip">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 text-sm text-muted-foreground shadow-sm">
               <ShortcutKeys keys={['Ctrl', 'B']} />
               <span>{t('demo.tipBoldText')}</span>
             </div>
           </div>
 
-          <div className="features-hint">
-            <div className="hint-card" data-hint-card style={{ animationDelay: '0.1s' }}>
-              <div className="hint-icon">
+          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover" data-hint-card>
+              <div className="mb-4 inline-flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                 </svg>
               </div>
-              <div className="hint-content">
-                <strong>{t('demo.hintInstantFeedbackTitle')}</strong>
-                <p>{t('demo.hintInstantFeedbackDesc')}</p>
+              <div>
+                <strong className="block text-base font-bold text-foreground">{t('demo.hintInstantFeedbackTitle')}</strong>
+                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{t('demo.hintInstantFeedbackDesc')}</p>
               </div>
             </div>
 
-            <div className="hint-card" data-hint-card style={{ animationDelay: '0.2s' }}>
-              <div className="hint-icon">
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover" data-hint-card>
+              <div className="mb-4 inline-flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="16 18 22 12 16 6" />
                   <polyline points="8 6 2 12 8 18" />
                 </svg>
               </div>
-              <div className="hint-content">
-                <strong>{t('demo.hintCleanJsonTitle')}</strong>
-                <p>{t('demo.hintCleanJsonDesc')}</p>
+              <div>
+                <strong className="block text-base font-bold text-foreground">{t('demo.hintCleanJsonTitle')}</strong>
+                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{t('demo.hintCleanJsonDesc')}</p>
               </div>
             </div>
 
-            <div className="hint-card" data-hint-card style={{ animationDelay: '0.3s' }}>
-              <div className="hint-icon">
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover" data-hint-card>
+              <div className="mb-4 inline-flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="3" width="7" height="7" />
                   <rect x="14" y="3" width="7" height="7" />
@@ -242,9 +246,9 @@ export const DemoPage: React.FC = () => {
                   <rect x="3" y="14" width="7" height="7" />
                 </svg>
               </div>
-              <div className="hint-content">
-                <strong>{t('demo.hintBlockArchTitle')}</strong>
-                <p>{t('demo.hintBlockArchDesc')}</p>
+              <div>
+                <strong className="block text-base font-bold text-foreground">{t('demo.hintBlockArchTitle')}</strong>
+                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{t('demo.hintBlockArchDesc')}</p>
               </div>
             </div>
           </div>

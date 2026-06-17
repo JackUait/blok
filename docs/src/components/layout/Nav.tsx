@@ -6,7 +6,7 @@ import { ThemeToggle } from "../common/ThemeToggle";
 import { LanguageSelector } from "../common/LanguageSelector";
 import { useI18n } from "../../contexts/I18nContext";
 import type { NavLink } from "@/types/navigation";
-import styles from "./Nav.module.css";
+import { cn } from "@/lib/utils";
 
 interface NavProps {
   links: NavLink[];
@@ -104,14 +104,6 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const navClasses = [
-    "nav",
-    navScrolled ? "scrolled" : "",
-    navHidden && !menuOpen ? "hidden" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-
   const searchIcon = (
     <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
       <path
@@ -126,57 +118,89 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
 
   return (
     <>
-      <nav className={navClasses} data-nav data-blok-testid="nav">
-        <div className="nav-container">
-          <Link to="/" className="nav-logo">
-            <Logo size={36} />
+      <nav
+        className={cn(
+          "fixed inset-x-0 top-0 z-40 transition-[transform,box-shadow,background-color,border-color] duration-300 border-b",
+          navScrolled
+            ? "border-border bg-background/85 shadow-sm backdrop-blur-xl"
+            : "border-transparent bg-background/60 backdrop-blur-md",
+          navHidden && !menuOpen ? "nav-hidden -translate-y-full" : "translate-y-0",
+        )}
+        data-nav
+        data-blok-testid="nav"
+      >
+        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-6">
+          <Link
+            to="/"
+            className="flex shrink-0 items-center gap-2 font-display text-xl font-extrabold tracking-tight"
+          >
+            <Logo size={34} />
             <p>Blok</p>
           </Link>
 
-          {/* Center search pill — opens the command-K search dialog */}
+          {/* Center search pill — opens the command-K search dialog.
+              Collapses to an icon-only circle on small screens. */}
           <button
             type="button"
-            className={styles.searchPill}
+            className="flex h-10 items-center justify-center gap-4 rounded-full border border-border bg-background text-sm font-medium text-muted-foreground shadow-sm transition-all hover:border-foreground/20 hover:shadow-card-hover sm:h-11 sm:max-w-sm sm:flex-1 sm:justify-between sm:px-5 size-10 sm:size-auto"
             onClick={() => setSearchOpen(true)}
             aria-label={t("nav.searchAriaLabel")}
           >
-            <span className={styles.searchPillLabel}>{t("search.placeholder")}</span>
-            <span className={styles.searchPillIcon}>{searchIcon}</span>
+            <span className="hidden sm:inline">{t("search.placeholder")}</span>
+            <span className="flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              {searchIcon}
+            </span>
           </button>
 
           {/* Right cluster: language, theme, account/menu pill */}
-          <div className={styles.navRight}>
+          <div className="flex shrink-0 items-center gap-1">
             <LanguageSelector />
             <ThemeToggle />
 
-            <div className={styles.menu} ref={menuRef}>
+            <div className="relative ml-1" ref={menuRef}>
               <button
                 type="button"
-                className={`${styles.menuPill} ${menuOpen ? styles.menuPillOpen : ""}`}
+                className={cn(
+                  "flex h-10 items-center gap-2.5 rounded-full border border-border bg-background py-1 pr-1 pl-3.5 transition-all hover:shadow-card-hover hover:border-foreground/20",
+                  menuOpen && "shadow-card-hover border-foreground/20",
+                )}
                 aria-label={t("nav.toggleMenu")}
                 aria-expanded={menuOpen}
                 aria-haspopup="menu"
                 data-nav-toggle
                 onClick={() => setMenuOpen((prev) => !prev)}
               >
-                <span className={styles.menuLines} aria-hidden="true">
-                  <span />
-                  <span />
-                  <span />
+                <span
+                  className="flex flex-col items-end justify-center gap-[3px]"
+                  aria-hidden="true"
+                >
+                  <span className="block h-0.5 w-4 rounded-full bg-foreground" />
+                  <span className="block h-0.5 w-4 rounded-full bg-foreground" />
+                  <span className="block h-0.5 w-4 rounded-full bg-foreground" />
                 </span>
-                <span className={styles.menuAvatar} aria-hidden="true">
-                  <Logo size={26} />
+                <span
+                  className="flex size-7 items-center justify-center overflow-hidden rounded-full bg-secondary"
+                  aria-hidden="true"
+                >
+                  <Logo size={24} />
                 </span>
               </button>
 
               <div
-                className={`${styles.menuDropdown} ${menuOpen ? styles.menuDropdownOpen : ""}`}
+                className={cn(
+                  "absolute right-0 top-[calc(100%+0.625rem)] z-50 flex min-w-[14rem] origin-top-right flex-col rounded-2xl border border-border bg-popover p-2 shadow-card transition-all duration-150",
+                  menuOpen
+                    ? "pointer-events-auto scale-100 opacity-100"
+                    : "pointer-events-none scale-95 opacity-0",
+                )}
                 aria-hidden={!menuOpen}
               >
                 {linksWithActive.map((link) => {
-                  const itemClass = `${styles.menuItem} ${link.active ? styles.menuItemActive : ""} ${
-                    link.external ? styles.menuItemStrong : ""
-                  }`;
+                  const itemClass = cn(
+                    "rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-colors hover:bg-secondary",
+                    link.active && "active bg-secondary text-foreground",
+                    link.external && "text-foreground",
+                  );
 
                   if (link.external) {
                     return (

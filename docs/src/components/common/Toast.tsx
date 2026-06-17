@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { cn } from "@/lib/utils";
 
 interface ToastProps {
   message: string;
@@ -26,7 +27,12 @@ export const Toast: React.FC<ToastProps> = ({
 
   return (
     <div
-      className={`toast ${visible ? "visible" : ""}`}
+      className={cn(
+        "fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2.5 rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground shadow-card",
+        visible && "visible",
+      )}
+      role="status"
+      aria-live="polite"
       data-blok-testid="toast"
     >
       <svg
@@ -36,6 +42,9 @@ export const Toast: React.FC<ToastProps> = ({
         fill="none"
         stroke="currentColor"
         strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="size-5 shrink-0 text-primary"
         data-blok-testid="toast-icon"
       >
         <polyline points="20 6 9 17 4 12" />

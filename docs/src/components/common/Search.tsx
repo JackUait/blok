@@ -5,13 +5,8 @@ import { search, getSearchIndex } from '@/utils/search';
 import type { SearchResult } from '@/types/search';
 import { ModuleIcon } from './ModuleIcon';
 import { KeyIcon, ShortcutKeys } from './KeyIcon';
-import buttonStyles from './SearchButton.module.css';
-import dialogStyles from './SearchDialog.module.css';
-import resultsStyles from './SearchResults.module.css';
 import { useI18n } from '../../contexts/I18nContext';
-
-// Combined styles object consolidating the split CSS modules
-const styles = { ...buttonStyles, ...dialogStyles, ...resultsStyles };
+import { cn } from '@/lib/utils';
 
 interface SearchProps {
   open: boolean;
@@ -64,7 +59,7 @@ const highlightMatch = (text: string, query: string): React.ReactNode => {
   
   return parts.map((part, index) => 
     testRegex.test(part) ? (
-      <mark key={index} className={styles['search-highlight']}>{part}</mark>
+      <mark key={index} className="rounded bg-primary/15 px-0.5 font-semibold text-primary">{part}</mark>
     ) : (
       part
     )
@@ -350,17 +345,35 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
     e.stopPropagation();
   };
 
-  const backdropClasses = `${styles['search-backdrop']} ${isClosing ? styles['search-backdrop-closing'] : ''}`;
-  const dialogClasses = `${styles['search-dialog']} ${isClosing ? styles['search-dialog-closing'] : ''}`;
-
   return createPortal(
     <>
-      <div className={backdropClasses} onClick={handleClose} data-blok-testid="search-backdrop" />
-      <div className={styles['search-container']} onClick={handleClose} data-blok-testid="search-container">
-        <div className={dialogClasses} ref={dialogRef} onClick={handleDialogClick} data-blok-testid="search-dialog">
-          <div className={styles['search-input-wrapper']}>
+      <div
+        className={cn(
+          'fixed inset-0 z-[100] bg-foreground/40 backdrop-blur-sm',
+          isClosing ? 'animate-out fade-out duration-200' : 'animate-in fade-in duration-200'
+        )}
+        onClick={handleClose}
+        data-blok-testid="search-backdrop"
+      />
+      <div
+        className="fixed inset-0 z-[101] flex items-start justify-center overflow-y-auto px-4 pb-10 pt-[12vh]"
+        onClick={handleClose}
+        data-blok-testid="search-container"
+      >
+        <div
+          className={cn(
+            'flex max-h-[70vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card-hover',
+            isClosing
+              ? 'animate-out fade-out zoom-out-95 duration-200'
+              : 'animate-in fade-in zoom-in-95 duration-200'
+          )}
+          ref={dialogRef}
+          onClick={handleDialogClick}
+          data-blok-testid="search-dialog"
+        >
+          <div className="flex items-center gap-3 border-b border-border px-5 py-4">
             <svg
-              className={styles['search-icon']}
+              className="size-5 shrink-0 text-muted-foreground"
               width="22"
               height="22"
               viewBox="0 0 24 24"
@@ -383,7 +396,7 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
             <input
               ref={inputRef}
               type="text"
-              className={styles['search-input']}
+              className="min-w-0 flex-1 bg-transparent text-base text-foreground placeholder:text-muted-foreground focus:outline-none"
               placeholder={t('search.placeholder')}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -392,7 +405,7 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
             />
             {query && (
               <button
-                className={styles['search-clear']}
+                className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                 onClick={() => setQuery('')}
                 type="button"
                 aria-label={t('search.clearSearch')}>
@@ -411,15 +424,15 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
                 </svg>
               </button>
             )}
-            <KeyIcon className={styles['search-shortcut']}>{t('search.escKey')}</KeyIcon>
+            <KeyIcon className="shrink-0 rounded-md border border-border bg-secondary px-2 py-1 text-muted-foreground">{t('search.escKey')}</KeyIcon>
           </div>
 
-          <div className={styles['search-results']} ref={resultsRef}>
+          <div className="flex-1 overflow-y-auto p-2" ref={resultsRef}>
             {results.length === 0 ? (
-              <div className={styles['search-empty']}>
+              <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
                 {query.trim() ? (
                   <>
-                    <div className={styles['search-empty-icon']}>
+                    <div className="mb-1 flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
                       <svg
                         width="32"
                         height="32"
@@ -447,14 +460,14 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
                         />
                       </svg>
                     </div>
-                    <p className={styles['search-empty-title']}>{t('search.noResultsTitle')}</p>
-                    <p className={styles['search-empty-description']}>
+                    <p className="text-base font-semibold text-foreground">{t('search.noResultsTitle')}</p>
+                    <p className="text-sm text-muted-foreground">
                       {t('search.noResultsDescription')}
                     </p>
                   </>
                 ) : (
                   <>
-                    <div className={styles['search-empty-icon']}>
+                    <div className="mb-1 flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
                       <svg
                         width="32"
                         height="32"
@@ -476,8 +489,8 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
                         />
                       </svg>
                     </div>
-                    <p className={styles['search-empty-title']}>{t('search.emptyTitle')}</p>
-                    <p className={styles['search-empty-description']}>
+                    <p className="text-base font-semibold text-foreground">{t('search.emptyTitle')}</p>
+                    <p className="text-sm text-muted-foreground">
                       {t('search.emptyDescription')}
                     </p>
                   </>
@@ -485,8 +498,8 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
               </div>
             ) : (
               <>
-                <div className={styles['search-results-header']}>
-                  <span className={styles['search-results-count']} data-blok-testid="search-results-count">
+                <div className="px-3 pb-1 pt-2">
+                  <span className="text-xs font-medium text-muted-foreground" data-blok-testid="search-results-count">
                     {results.length} {results.length === 1 ? t('search.result') : t('search.results')}
                   </span>
                 </div>
@@ -496,17 +509,18 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
                   return (
                     <div key={result.id}>
                       {showModuleHeader && (
-                        <div className={styles['search-module-header']} data-blok-testid="search-module-header">
+                        <div className="flex items-center gap-2 px-3 pb-1 pt-3 text-xs font-bold uppercase tracking-wide text-muted-foreground" data-blok-testid="search-module-header">
                           <ModuleIcon module={result.module} />
-                          <span className={styles['search-module-title']}>
+                          <span>
                             {result.module}
                           </span>
                         </div>
                       )}
                       <button
-                        className={`${styles['search-result']} ${
-                          index === selectedIndex ? styles.selected : ''
-                        }`}
+                        className={cn(
+                          'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-secondary',
+                          index === selectedIndex && 'bg-secondary'
+                        )}
                         onClick={() => handleResultClick(result)}
                         type="button"
                         onMouseEnter={() => {
@@ -517,16 +531,16 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
                         data-search-result-index={index}
                         data-keyboard-nav={isKeyboardNavMode}
                       >
-                        <span className={styles['search-result-number']}>{index + 1}</span>
-                        <div className={styles['search-result-content']}>
-                          <span className={styles['search-result-title']}>
+                        <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-secondary text-xs font-medium text-muted-foreground">{index + 1}</span>
+                        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <span className="truncate text-sm font-semibold text-foreground">
                             {highlightMatch(result.title, query)}
                           </span>
-                          <p className={styles['search-result-description']}>
+                          <p className="truncate text-xs text-muted-foreground">
                             {highlightMatch(result.description || '', query)}
                           </p>
                         </div>
-                        <div className={styles['search-result-arrow']}>
+                        <div className="shrink-0 text-muted-foreground">
                           <svg
                             width="14"
                             height="14"
@@ -550,10 +564,10 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
             )}
           </div>
 
-          <div className={styles['search-footer']}>
-            <span className={styles['search-footer-hint']}>
+          <div className="flex items-center justify-center border-t border-border px-5 py-3">
+            <span className="flex items-center gap-2 text-xs text-muted-foreground">
               <ShortcutKeys keys={['↑', '↓']} /> {t('search.navigate')}
-              <span className={styles['search-footer-separator']} />
+              <span className="mx-1 inline-block h-3 w-px bg-border" />
               <KeyIcon>↵</KeyIcon> {t('search.select')}
             </span>
           </div>

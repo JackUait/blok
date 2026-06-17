@@ -73,7 +73,7 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
 
   return (
     <div
-      className="feature-modal-backdrop"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-foreground/40 p-4 backdrop-blur-sm sm:p-6"
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
@@ -81,16 +81,16 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
     >
       <div
         ref={modalRef}
-        className={`feature-modal feature-modal--${feature.accent}`}
+        className="relative my-auto w-full max-w-lg rounded-2xl border border-border bg-card shadow-card-hover"
       >
-        <div className="feature-modal-inner">
+        <div className="p-6 sm:p-8">
           <button
             ref={closeButtonRef}
-            className="feature-modal-close"
+            className="absolute right-4 top-4 inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             onClick={onClose}
             aria-label={t('home.featureModal.close')}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path
                 d="M18 6L6 18M6 6l12 12"
                 stroke="currentColor"
@@ -100,30 +100,58 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
             </svg>
           </button>
 
-          <div className="feature-modal-header">
-            <div className="feature-modal-icon">
-              <div className="feature-modal-icon-inner">{feature.icon}</div>
+          <div className="flex items-center gap-4 pr-10">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              {feature.icon}
             </div>
-            <h2 id="feature-modal-title" className="feature-modal-title">
+            <h2
+              id="feature-modal-title"
+              className="text-2xl font-extrabold tracking-tight"
+            >
               {feature.title}
             </h2>
           </div>
 
-          <div className="feature-modal-content">
-            <p className="feature-modal-summary">{feature.details.summary}</p>
+          <div className="mt-6 space-y-6">
+            <p className="text-base leading-relaxed text-muted-foreground">
+              {feature.details.summary}
+            </p>
 
-            <div className="feature-modal-benefits">
-              <h3>{t('home.featureModal.keyBenefits')}</h3>
-              <ul>
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wide text-primary">
+                {t('home.featureModal.keyBenefits')}
+              </h3>
+              <ul className="mt-3 space-y-2">
                 {feature.details.benefits.map((benefit) => (
-                  <li key={benefit}>{benefit}</li>
+                  <li
+                    key={benefit}
+                    className="flex items-start gap-2.5 text-sm leading-relaxed text-foreground"
+                  >
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="mt-0.5 shrink-0 text-primary"
+                      aria-hidden="true"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    {benefit}
+                  </li>
                 ))}
               </ul>
             </div>
 
             {feature.details.codeExample && (
-              <div className="feature-modal-code">
-                <h3>{t('home.featureModal.example')}</h3>
+              <div>
+                <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-primary">
+                  {t('home.featureModal.example')}
+                </h3>
                 <CodeBlock
                   code={feature.details.codeExample}
                   language="typescript"
@@ -132,7 +160,10 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
             )}
 
             {feature.details.apiLink && (
-              <a href={feature.details.apiLink} className="feature-modal-link">
+              <a
+                href={feature.details.apiLink}
+                className="inline-flex items-center gap-1 text-sm font-semibold text-primary underline-offset-4 hover:underline"
+              >
                 {t('home.featureModal.viewApiDocs')}
               </a>
             )}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { cn } from "@/lib/utils";
 import { useI18n } from '../../contexts/I18nContext';
 import {
   createHighlighter,
@@ -233,21 +234,30 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     languageDisplayNames[language.toLowerCase()] || language;
 
   return (
-    <div className="code-block" data-code-block data-blok-testid="code-block">
-      <div className="code-block-header">
-        <div className="code-block-controls">
-          <span className="code-block-control code-block-control--red" />
-          <span className="code-block-control code-block-control--yellow" />
-          <span className="code-block-control code-block-control--green" />
+    <div
+      className="code-block group relative overflow-hidden rounded-2xl border border-border bg-card shadow-card"
+      data-code-block
+      data-blok-testid="code-block"
+    >
+      <div className="flex items-center gap-3 border-b border-border bg-secondary/60 px-4 py-2.5">
+        <div className="flex items-center gap-1.5">
+          <span className="size-3 rounded-full bg-[#ff5f57]" />
+          <span className="size-3 rounded-full bg-[#febc2e]" />
+          <span className="size-3 rounded-full bg-[#28c840]" />
         </div>
-        <span className="code-block-language">{displayLanguage}</span>
+        <span className="text-xs font-semibold tracking-wide text-muted-foreground">
+          {displayLanguage}
+        </span>
         {showPackageManagerToggle && packageName && (
-          <div className="code-block-package-toggle">
+          <div className="ml-1">
             <PackageManagerToggle onChange={handlePackageManagerChange} />
           </div>
         )}
         <button
-          className={`code-copy ${copied ? "copied" : ""}`}
+          className={cn(
+            "ml-auto inline-flex items-center justify-center rounded-lg border border-border bg-background p-2 text-muted-foreground transition-all hover:text-foreground hover:shadow-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+            copied && "copied border-primary/40 text-primary",
+          )}
           data-copy
           data-code={displayCode}
           data-blok-testid="code-copy-button"
@@ -257,7 +267,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
         >
           {copied ? (
             <svg
-              className="code-copy-icon"
+              className="size-4"
               width="16"
               height="16"
               viewBox="0 0 24 24"
@@ -273,7 +283,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
             </svg>
           ) : (
             <svg
-              className="code-copy-icon"
+              className="size-4"
               width="16"
               height="16"
               viewBox="0 0 24 24"
@@ -299,7 +309,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
           )}
         </button>
       </div>
-      <div className="code-block-content">
+      <div className="overflow-x-auto p-4 font-mono text-sm leading-relaxed [&_pre]:!bg-transparent [&_pre]:!m-0 [&_code]:font-mono">
         <div dangerouslySetInnerHTML={{ __html: highlightedCode }} />
       </div>
     </div>

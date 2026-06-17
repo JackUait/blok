@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
@@ -79,7 +80,7 @@ const externalDistPlugin = (): Plugin => {
 };
 
 export default defineConfig({
-  plugins: [react(), externalDistPlugin()],
+  plugins: [react(), tailwindcss(), externalDistPlugin()],
   build: {
     outDir: "dist",
     emptyOutDir: true,

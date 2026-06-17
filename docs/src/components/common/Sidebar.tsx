@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { KeyIcon } from './KeyIcon';
 import { useI18n } from '../../contexts/I18nContext';
+import { cn } from '@/lib/utils';
 
 export interface SidebarLink {
   id: string;
@@ -150,17 +151,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside
       ref={sidebarRef}
-      className={`${variant}-sidebar`}
+      className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-2"
       data-blok-testid={`${variant}-sidebar`}
     >
       <div
         ref={searchRef}
-        className={`${variant}-sidebar-search`}
+        className="sticky top-0 z-10 -mx-1 mb-3 bg-background/85 px-1 pb-3 pt-1 backdrop-blur-sm"
         data-blok-testid={`${variant}-sidebar-search`}
       >
-        <div className={`${variant}-sidebar-search-field`}>
+        <div className="flex items-center gap-2 rounded-xl border border-input bg-card px-3 py-2 shadow-sm transition-colors focus-within:border-foreground/30">
           <svg
-            className={`${variant}-sidebar-search-icon`}
+            className="size-4 shrink-0 text-muted-foreground"
             width="16"
             height="16"
             viewBox="0 0 20 20"
@@ -178,7 +179,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <input
             ref={inputRef}
             type="text"
-            className={`${variant}-sidebar-search-input`}
+            className="min-w-0 flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
             placeholder={t('common.filter')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -188,7 +189,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {searchQuery ? (
             <button
               type="button"
-              className={`${variant}-sidebar-search-clear`}
+              className="flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
               onClick={handleClear}
               aria-label={t('common.clearSearch')}
               data-blok-testid={`${variant}-sidebar-search-clear`}
@@ -204,7 +205,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
           ) : (
             <KeyIcon
-              className={`${variant}-sidebar-search-shortcut`}
+              className="shrink-0 text-muted-foreground"
               title={t('common.pressSlashToSearch')}
               data-blok-testid={`${variant}-sidebar-search-shortcut`}
             >
@@ -215,12 +216,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
       <nav
         ref={navRef}
-        className={`${variant}-sidebar-nav`}
+        className="flex flex-col gap-6"
         data-blok-testid={`${variant}-sidebar-nav`}
       >
         {filteredSections.length === 0 ? (
           <div
-            className={`${variant}-sidebar-empty`}
+            className="px-3 py-6 text-sm text-muted-foreground"
             data-blok-testid={`${variant}-sidebar-empty`}
           >
             <p>{t('common.noResults')}</p>
@@ -229,15 +230,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
           filteredSections.map((section) => (
             <div
               key={section.title}
-              className={`${variant}-sidebar-section`}
+              className="flex flex-col gap-1"
               data-blok-testid={`${variant}-sidebar-section`}
             >
-              <h4 className={`${variant}-sidebar-title`}>{section.title}</h4>
+              <h4 className="mb-1 px-3 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                {section.title}
+              </h4>
               {section.links.map((link) => (
                 <a
                   key={link.id}
                   href={`#${link.id}`}
-                  className={`${variant}-sidebar-link ${activeSection === link.id ? 'active' : ''}`}
+                  className={cn(
+                    'block rounded-lg px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground',
+                    activeSection === link.id &&
+                      'active bg-secondary font-semibold text-foreground'
+                  )}
                   data-blok-testid={`${variant}-sidebar-link-${link.id}`}
                 >
                   {link.label}

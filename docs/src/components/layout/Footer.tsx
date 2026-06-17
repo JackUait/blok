@@ -15,36 +15,49 @@ const TelegramIcon = () => (
 
 export const Footer: React.FC = () => {
   const { t } = useI18n();
+
+  const linkClass =
+    "text-sm text-muted-foreground transition-colors hover:text-foreground";
+
   return (
-    <footer className="footer">
-      <div className="container">
-        <div className="footer-content">
-          <div className="footer-brand" data-blok-testid="footer-brand">
-            <div className="footer-logo">
-              <img src="/mascot.png" alt="Blok mascot" className="footer-mascot" />
-              <span className="footer-wordmark">Blok</span>
+    <footer className="border-t border-border bg-secondary/40">
+      <div className="mx-auto w-full max-w-6xl px-6 py-16">
+        <div className="grid grid-cols-1 gap-12 md:grid-cols-[1.4fr_2fr]">
+          <div data-blok-testid="footer-brand">
+            <div className="flex items-center gap-2.5">
+              <img src="/mascot.png" alt="Blok mascot" className="size-9 object-contain" />
+              <span className="font-display text-xl font-extrabold tracking-tight">Blok</span>
             </div>
-            <p className="footer-tagline">{t("footer.tagline")}</p>
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
+              {t("footer.tagline")}
+            </p>
           </div>
 
-          <div className="footer-links" data-blok-testid="footer-links">
-            <div className="footer-column">
-              <h4 className="footer-column-title">{t("footer.docColumnTitle")}</h4>
-              <Link to="/#quick-start" className="footer-link">
+          <div
+            className="grid grid-cols-2 gap-8 sm:grid-cols-3"
+            data-blok-testid="footer-links"
+          >
+            <div className="flex flex-col gap-3">
+              <h4 className="text-xs font-bold tracking-wide text-foreground uppercase">
+                {t("footer.docColumnTitle")}
+              </h4>
+              <Link to="/#quick-start" className={linkClass}>
                 {t("footer.quickStart")}
               </Link>
-              <Link to="/docs" className="footer-link">
+              <Link to="/docs" className={linkClass}>
                 {t("footer.apiReference")}
               </Link>
-              <Link to="/migration" className="footer-link">
+              <Link to="/migration" className={linkClass}>
                 {t("footer.migrationGuide")}
               </Link>
             </div>
-            <div className="footer-column">
-              <h4 className="footer-column-title">{t("footer.resourcesColumnTitle")}</h4>
+            <div className="flex flex-col gap-3">
+              <h4 className="text-xs font-bold tracking-wide text-foreground uppercase">
+                {t("footer.resourcesColumnTitle")}
+              </h4>
               <a
                 href="https://github.com/JackUait/blok"
-                className="footer-link"
+                className={linkClass}
                 target="_blank"
                 rel="noopener noreferrer"
                 data-blok-testid="github-link"
@@ -53,21 +66,23 @@ export const Footer: React.FC = () => {
               </a>
               <a
                 href="https://www.npmjs.com/package/@jackuait/blok"
-                className="footer-link"
+                className={linkClass}
                 target="_blank"
                 rel="noopener noreferrer"
               >
                 {t("footer.npm")}
               </a>
-              <Link to="/demo" className="footer-link">
+              <Link to="/demo" className={linkClass}>
                 {t("footer.liveDemo")}
               </Link>
             </div>
-            <div className="footer-column">
-              <h4 className="footer-column-title">{t("footer.communityColumnTitle")}</h4>
+            <div className="flex flex-col gap-3">
+              <h4 className="text-xs font-bold tracking-wide text-foreground uppercase">
+                {t("footer.communityColumnTitle")}
+              </h4>
               <a
                 href="https://github.com/JackUait/blok/issues"
-                className="footer-link"
+                className={linkClass}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -75,7 +90,7 @@ export const Footer: React.FC = () => {
               </a>
               <a
                 href="https://github.com/JackUait/blok/discussions"
-                className="footer-link"
+                className={linkClass}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -83,7 +98,7 @@ export const Footer: React.FC = () => {
               </a>
               <a
                 href="https://github.com/JackUait/blok/blob/master/CONTRIBUTING.md"
-                className="footer-link"
+                className={linkClass}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -93,26 +108,30 @@ export const Footer: React.FC = () => {
           </div>
         </div>
 
-        <div className="footer-bottom" data-blok-testid="footer-bottom">
-          <p className="footer-legal">
+        <div
+          className="mt-14 flex flex-col items-start justify-between gap-4 border-t border-border pt-8 sm:flex-row sm:items-center"
+          data-blok-testid="footer-bottom"
+        >
+          <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <span>{t("footer.copyrightText")}</span>
-            <span className="footer-dot" aria-hidden="true">·</span>
+            <span aria-hidden="true">·</span>
             <span>
               {t("footer.licensedUnder")}{" "}
               <a
                 href="https://www.apache.org/licenses/LICENSE-2.0"
                 target="_blank"
                 rel="noopener noreferrer"
+                className="font-semibold text-foreground underline-offset-4 hover:underline"
                 data-blok-testid="license-link"
               >
                 Apache 2.0
               </a>
             </span>
           </p>
-          <div className="footer-social">
+          <div className="flex items-center gap-2">
             <a
               href="https://github.com/JackUait/blok"
-              className="footer-social-link"
+              className="flex size-10 items-center justify-center rounded-full border border-border text-foreground/70 transition-colors hover:border-foreground/30 hover:text-foreground"
               target="_blank"
               rel="noopener noreferrer"
               aria-label={t("footer.githubAriaLabel")}
@@ -121,7 +140,7 @@ export const Footer: React.FC = () => {
             </a>
             <a
               href="https://t.me/that_ai_guy"
-              className="footer-social-link"
+              className="flex size-10 items-center justify-center rounded-full border border-border text-foreground/70 transition-colors hover:border-foreground/30 hover:text-foreground"
               target="_blank"
               rel="noopener noreferrer"
               aria-label={t("footer.telegramAriaLabel")}

@@ -14,71 +14,86 @@ export const ToolSection: React.FC<ToolSectionProps> = ({ section }) => {
   return (
     <section
       id={section.id}
-      className="tools-section"
+      className="scroll-mt-24"
       data-blok-testid={`tools-section-${section.id}`}
       aria-label={section.title}
     >
-      <div className="tools-section-header">
-        <div className="tools-section-badge" data-blok-testid="tools-section-badge">
+      <div className="mb-8">
+        <div
+          className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary px-3 py-1 text-xs font-bold uppercase tracking-wide text-primary"
+          data-blok-testid="tools-section-badge"
+        >
           <CategoryIcon category={section.type} size={14} />
           {section.badge}
         </div>
-        <h1 className="tools-section-title">
+        <h1 className="group flex scroll-mt-24 items-center gap-2 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
           <a
             href={`#${section.id}`}
-            className="tools-anchor-link"
+            className="text-2xl font-bold text-muted-foreground opacity-0 transition-opacity hover:text-primary group-hover:opacity-100"
             aria-label={`Link to ${section.title}`}
           >
             #
           </a>
           {section.title}
         </h1>
-        <p className="tools-section-description">{section.description}</p>
+        <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
+          {section.description}
+        </p>
       </div>
 
-      <div className="tools-block">
-        <h3 className="tools-block-title">{t('tools.import')}</h3>
+      <div className="mt-8">
+        <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-foreground">
+          {t('tools.import')}
+        </h3>
         <CodeBlock code={section.importExample} language="typescript" />
       </div>
 
       {section.configOptions.length > 0 && (
-        <div className="tools-block">
-          <h3 className="tools-block-title">{t('tools.configuration')}</h3>
-          <table className="tools-table tools-table--with-anchors">
-            <thead>
-              <tr>
-                <th>{t('tools.option')}</th>
-                <th>{t('tools.type')}</th>
-                <th>{t('tools.default')}</th>
-                <th>{t('tools.description')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {section.configOptions.map((opt) => (
-                <tr
-                  key={opt.option}
-                  className="tools-table-row"
-                  data-blok-testid={`tools-config-${section.id}-${opt.option}`}
-                >
-                  <td><code>{opt.option}</code></td>
-                  <td><code>{opt.type}</code></td>
-                  <td><code>{opt.default}</code></td>
-                  <td>{opt.description}</td>
+        <div className="mt-8">
+          <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-foreground">
+            {t('tools.configuration')}
+          </h3>
+          <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+            <table className="w-full border-collapse text-left text-sm">
+              <thead>
+                <tr className="border-b border-border bg-secondary/60">
+                  <th className="px-4 py-3 font-semibold text-foreground">{t('tools.option')}</th>
+                  <th className="px-4 py-3 font-semibold text-foreground">{t('tools.type')}</th>
+                  <th className="px-4 py-3 font-semibold text-foreground">{t('tools.default')}</th>
+                  <th className="px-4 py-3 font-semibold text-foreground">{t('tools.description')}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {section.configOptions.map((opt) => (
+                  <tr
+                    key={opt.option}
+                    className="border-b border-border last:border-0 transition-colors hover:bg-secondary/40"
+                    data-blok-testid={`tools-config-${section.id}-${opt.option}`}
+                  >
+                    <td className="px-4 py-3 align-top"><code className="rounded-md bg-secondary px-1.5 py-0.5 font-mono text-xs text-primary">{opt.option}</code></td>
+                    <td className="px-4 py-3 align-top"><code className="rounded-md bg-secondary px-1.5 py-0.5 font-mono text-xs text-foreground">{opt.type}</code></td>
+                    <td className="px-4 py-3 align-top"><code className="rounded-md bg-secondary px-1.5 py-0.5 font-mono text-xs text-muted-foreground">{opt.default}</code></td>
+                    <td className="px-4 py-3 align-top text-muted-foreground">{opt.description}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      <div className="tools-block">
-        <h3 className="tools-block-title">{t('tools.saveData')}</h3>
+      <div className="mt-8 flex flex-col gap-3">
+        <h3 className="mb-0 text-sm font-bold uppercase tracking-wide text-foreground">
+          {t('tools.saveData')}
+        </h3>
         <CodeBlock code={section.saveDataShape} language="typescript" />
         <CodeBlock code={section.saveDataExample} language="json" />
       </div>
 
-      <div className="tools-block">
-        <h3 className="tools-block-title">{t('tools.usageExample')}</h3>
+      <div className="mt-8">
+        <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-foreground">
+          {t('tools.usageExample')}
+        </h3>
         <CodeBlock code={section.usageExample} language="typescript" />
       </div>
     </section>

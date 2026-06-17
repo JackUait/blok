@@ -62,53 +62,73 @@ export const QuickStart: React.FC = () => {
   };
 
   return (
-    <section className="quick-start" id="quick-start" data-blok-testid="quick-start-section">
-      {/* Enhanced background with multiple decorative elements */}
-      <div className="quick-start-bg" data-blok-testid="quick-start-bg">
-        <div className="quick-start-blur quick-start-blur--primary" data-blok-testid="quick-start-blur"></div>
-        <div className="quick-start-blur quick-start-blur--secondary"></div>
-        <div className="quick-start-grid-pattern"></div>
-        {/* Floating decorative shapes */}
-        <div className="quick-start-shape quick-start-shape--1"></div>
-        <div className="quick-start-shape quick-start-shape--2"></div>
-        <div className="quick-start-shape quick-start-shape--3"></div>
+    <section
+      className="relative overflow-hidden bg-secondary/40 py-20 sm:py-28"
+      id="quick-start"
+      data-blok-testid="quick-start-section"
+    >
+      {/* Subtle decorative background wash */}
+      <div
+        className="pointer-events-none absolute inset-0 -z-10"
+        data-blok-testid="quick-start-bg"
+        aria-hidden="true"
+      >
+        <div
+          className="absolute -top-24 left-1/4 size-96 rounded-full bg-primary/5 blur-3xl"
+          data-blok-testid="quick-start-blur"
+        ></div>
+        <div className="absolute bottom-0 right-1/4 size-80 rounded-full bg-chart-3/5 blur-3xl"></div>
       </div>
-      
-      <div className="container">
-        <div className="section-header quick-start-header">
-          <span className="section-eyebrow">{t('home.quickStart.eyebrow')}</span>
-          <h2 className="section-title">{t('home.quickStart.title')}</h2>
-          <p className="section-description">{t('home.quickStart.description')}</p>
+
+      <div className="mx-auto w-full max-w-4xl px-6">
+        <div className="mx-auto max-w-2xl text-center">
+          <span className="text-xs font-bold uppercase tracking-wide text-primary">
+            {t('home.quickStart.eyebrow')}
+          </span>
+          <h2 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">
+            {t('home.quickStart.title')}
+          </h2>
+          <p className="mt-5 text-lg leading-relaxed text-muted-foreground">
+            {t('home.quickStart.description')}
+          </p>
         </div>
-        
-        <div className="install-steps" data-blok-testid="install-steps">
-          {/* Timeline connector - visual line between steps */}
-          <div className="install-steps-timeline" aria-hidden="true">
-            <div className="timeline-line"></div>
-            <div className="timeline-progress"></div>
-          </div>
-          
+
+        <div className="relative mt-14 flex flex-col gap-8" data-blok-testid="install-steps">
+          {/* Vertical timeline connector */}
+          <div
+            className="absolute left-5 top-5 bottom-5 w-px bg-border sm:left-6"
+            aria-hidden="true"
+          ></div>
+
           {STEPS.map((step, index) => (
             <div
               key={step.number}
-              className={`install-step install-step--${step.accent}`}
+              className="relative flex gap-5 sm:gap-6"
               data-blok-testid={`install-step-${step.number}`}
               style={{ "--step-delay": `${index * 0.15}s` } as React.CSSProperties}
             >
-              <div className="step-indicator" data-blok-testid={`step-number-${step.number}`}>
-                <div className="step-number">
+              <div
+                className="relative z-10 shrink-0"
+                data-blok-testid={`step-number-${step.number}`}
+              >
+                <div className="flex size-10 items-center justify-center rounded-full bg-foreground text-base font-bold text-background shadow-sm sm:size-12">
                   <span>{step.number}</span>
                 </div>
               </div>
-              
-              <div className="step-card" data-blok-testid={`step-content-${step.number}`}>
-                <div className="step-card-glow"></div>
-                <div className="step-card-content">
-                  <h3 className="step-title">{step.title}</h3>
-                  <p className="step-description" data-blok-testid={`step-description-${step.number}`}>
-                    {step.description}
-                  </p>
-                  
+
+              <div
+                className="min-w-0 flex-1 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6"
+                data-blok-testid={`step-content-${step.number}`}
+              >
+                <h3 className="text-lg font-bold tracking-tight">{step.title}</h3>
+                <p
+                  className="mt-1.5 text-sm leading-relaxed text-muted-foreground"
+                  data-blok-testid={`step-description-${step.number}`}
+                >
+                  {step.description}
+                </p>
+
+                <div className="mt-4">
                   {step.number === 1 && (
                     <CodeBlock
                       code={getInstallCommand(packageManager)}

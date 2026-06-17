@@ -56,15 +56,9 @@ export const HomePage: React.FC = () => {
       <main>
         <Hero />
         <CategoryBar />
-        <div className="section-wrapper section-wrapper--features">
-          <Features />
-        </div>
-        <div className="section-wrapper section-wrapper--quickstart">
-          <QuickStart />
-        </div>
-        <div className="section-wrapper section-wrapper--api">
-          <ApiPreview />
-        </div>
+        <Features />
+        <QuickStart />
+        <ApiPreview />
         <MigrationCard />
       </main>
       <Footer />

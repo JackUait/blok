@@ -187,30 +187,25 @@ export const EditorWrapper: React.FC<{
   if (error) {
     return (
       <div className="blok-editor">
-        <div
-          style={{
-            padding: "2rem",
-            textAlign: "center",
-            color: "var(--demo-text-muted, #666)",
-          }}
-        >
-          <p style={{ fontWeight: 600, marginBottom: "0.5rem" }}>
+        <div className="px-8 py-12 text-center text-muted-foreground">
+          <p className="mb-2 font-semibold text-foreground">
             {t("demo.editorWrapper.failedToLoad")}
           </p>
-          <p style={{ fontSize: 14 }}>
-            {t("demo.editorWrapper.buildHint")} <code>npm run build</code>
+          <p className="text-sm">
+            {t("demo.editorWrapper.buildHint")}{" "}
+            <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">npm run build</code>
           </p>
-          <p style={{ fontSize: 12, marginTop: "1rem" }}>{t("demo.editorWrapper.errorPrefix")} {error}</p>
+          <p className="mt-4 text-xs text-muted-foreground/80">{t("demo.editorWrapper.errorPrefix")} {error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div ref={containerRef} className="blok-editor">
+    <div ref={containerRef} className="blok-editor min-h-[24rem]">
       {loading && (
-        <div className="editor-placeholder">
-          <div className="placeholder-content">
+        <div className="editor-placeholder flex min-h-[24rem] items-center justify-center p-8">
+          <div className="flex flex-col items-center gap-4 text-center text-muted-foreground">
             <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
               <rect
                 width="64"
@@ -244,7 +239,7 @@ export const EditorWrapper: React.FC<{
                 </linearGradient>
               </defs>
             </svg>
-            <p>{t("demo.editorWrapper.loading")}</p>
+            <p className="text-sm font-medium">{t("demo.editorWrapper.loading")}</p>
           </div>
         </div>
       )}

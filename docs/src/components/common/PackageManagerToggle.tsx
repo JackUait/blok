@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useI18n } from '../../contexts/I18nContext';
+import { cn } from "@/lib/utils";
 
 export type PackageManager = "yarn" | "npm" | "bun";
 
@@ -21,19 +22,30 @@ export const PackageManagerToggle: React.FC<PackageManagerToggleProps> = ({
   };
 
   return (
-    <div className="package-manager-toggle" data-package-manager-toggle>
-      {PACKAGE_MANAGERS.map((manager) => (
-        <button
-          key={manager}
-          type="button"
-          className={`package-manager-option ${selected === manager ? "active" : ""}`}
-          onClick={() => handleClick(manager)}
-          aria-pressed={selected === manager}
-          aria-label={`${t('packageManagerToggle.switchAriaPrefix')} ${manager}`}
-        >
-          {manager}
-        </button>
-      ))}
+    <div
+      className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary p-1"
+      data-package-manager-toggle
+    >
+      {PACKAGE_MANAGERS.map((manager) => {
+        const isActive = selected === manager;
+        return (
+          <button
+            key={manager}
+            type="button"
+            className={cn(
+              "rounded-full px-3.5 py-1.5 text-sm font-semibold lowercase transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+              isActive
+                ? "active bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            onClick={() => handleClick(manager)}
+            aria-pressed={isActive}
+            aria-label={`${t('packageManagerToggle.switchAriaPrefix')} ${manager}`}
+          >
+            {manager}
+          </button>
+        );
+      })}
     </div>
   );
 };

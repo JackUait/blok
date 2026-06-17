@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { CategoryIcon } from "../common/CategoryIcon";
 import { useI18n } from "../../contexts/I18nContext";
+import { cn } from "@/lib/utils";
 
 interface Category {
   /** i18n key under home.categories */
@@ -46,22 +47,27 @@ export const CategoryBar: React.FC = () => {
 
   return (
     <nav
-      className="category-bar"
+      className="border-y border-border bg-background/80 backdrop-blur"
       aria-label={t("home.categories.label")}
       data-blok-testid="category-bar"
     >
-      <div className="category-bar-track">
+      <div className="mx-auto flex w-full max-w-6xl gap-2 overflow-x-auto px-6 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {items.map((item) => (
           <Link
             key={item.key}
             to={item.href}
-            className={`category-tab${item.active ? " category-tab--active" : ""}`}
+            className={cn(
+              "group flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all",
+              item.active
+                ? "border-foreground bg-foreground text-background"
+                : "border-border bg-card text-muted-foreground hover:border-foreground/30 hover:text-foreground",
+            )}
             aria-current={item.active ? "page" : undefined}
           >
-            <span className="category-tab-icon" aria-hidden="true">
-              <CategoryIcon category={item.icon} size={22} />
+            <span className="shrink-0" aria-hidden="true">
+              <CategoryIcon category={item.icon} size={18} />
             </span>
-            <span className="category-tab-label">{item.label}</span>
+            <span className="whitespace-nowrap">{item.label}</span>
           </Link>
         ))}
       </div>

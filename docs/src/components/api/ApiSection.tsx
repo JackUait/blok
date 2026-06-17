@@ -31,6 +31,16 @@ const generateOptionId = (sectionId: string, optionName: string): string => {
   return `${sectionId}-${cleanName}`;
 };
 
+const blockTitleClass =
+  "mb-4 font-display text-xs font-bold uppercase tracking-wide text-muted-foreground";
+const thClass =
+  "border-b border-border px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-muted-foreground";
+const tdClass = "px-4 py-3 align-top text-sm text-muted-foreground";
+const anchorCellClass =
+  "api-anchor-link api-anchor-link--table mr-1.5 inline-block w-3 text-muted-foreground opacity-0 transition-opacity hover:text-primary group-hover:opacity-100";
+const codeClass =
+  "rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[0.8125rem] text-foreground";
+
 const PACKAGE_NAME = "@jackuait/blok";
 
 const CONFIG_CODE = `import { Blok } from '@jackuait/blok';
@@ -67,60 +77,86 @@ const QuickStartContent: React.FC = () => {
     }
   };
 
+  const steps = [
+    {
+      title: t('api.quickStartSteps.install.title'),
+      description: t('api.quickStartSteps.install.description'),
+      code: (
+        <CodeBlock
+          code={getInstallCommand(packageManager)}
+          language="bash"
+          showPackageManagerToggle
+          packageName={PACKAGE_NAME}
+          onPackageManagerChange={setPackageManager}
+        />
+      ),
+    },
+    {
+      title: t('api.quickStartSteps.configure.title'),
+      description: t('api.quickStartSteps.configure.description'),
+      code: <CodeBlock code={CONFIG_CODE} language="typescript" />,
+    },
+    {
+      title: t('api.quickStartSteps.save.title'),
+      description: t('api.quickStartSteps.save.description'),
+      code: <CodeBlock code={SAVE_CODE} language="typescript" />,
+    },
+  ];
+
   return (
-    <div className="api-quickstart">
-      <div className="api-quickstart-step">
-        <div className="api-quickstart-content">
-          <h3>{t('api.quickStartSteps.install.title')}</h3>
-          <p>{t('api.quickStartSteps.install.description')}</p>
-          <CodeBlock
-            code={getInstallCommand(packageManager)}
-            language="bash"
-            showPackageManagerToggle
-            packageName={PACKAGE_NAME}
-            onPackageManagerChange={setPackageManager}
-          />
+    <div className="flex flex-col gap-10">
+      {steps.map((step, index) => (
+        <div key={index} className="flex flex-col gap-3 sm:flex-row sm:gap-5">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary font-display text-sm font-bold text-foreground">
+            {index + 1}
+          </span>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-display text-lg font-bold tracking-tight text-foreground">{step.title}</h3>
+            <p className="mt-1 mb-4 text-sm leading-relaxed text-muted-foreground">{step.description}</p>
+            {step.code}
+          </div>
         </div>
-      </div>
-      <div className="api-quickstart-step">
-        <div className="api-quickstart-content">
-          <h3>{t('api.quickStartSteps.configure.title')}</h3>
-          <p>{t('api.quickStartSteps.configure.description')}</p>
-          <CodeBlock code={CONFIG_CODE} language="typescript" />
-        </div>
-      </div>
-      <div className="api-quickstart-step">
-        <div className="api-quickstart-content">
-          <h3>{t('api.quickStartSteps.save.title')}</h3>
-          <p>{t('api.quickStartSteps.save.description')}</p>
-          <CodeBlock code={SAVE_CODE} language="typescript" />
-        </div>
-      </div>
+      ))}
     </div>
   );
 };
 
+const SectionHeader: React.FC<{ section: ApiSectionType }> = ({ section }) => (
+  <div className="flex flex-col gap-3">
+    {section.badge && (
+      <div
+        className="inline-flex w-fit items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-bold uppercase tracking-wide text-primary"
+        data-blok-testid="api-section-badge"
+      >
+        <CategoryIcon category={section.badge} size={14} />
+        {section.badge}
+      </div>
+    )}
+    <h1 className="group flex scroll-mt-24 items-center gap-2 font-display text-3xl font-extrabold tracking-tight text-foreground">
+      <a
+        href={`#${section.id}`}
+        className="api-anchor-link -ml-7 w-5 shrink-0 text-center text-2xl font-normal text-muted-foreground opacity-0 transition-opacity hover:text-primary group-hover:opacity-100"
+        aria-label={`Link to ${section.title}`}
+      >
+        #
+      </a>
+      {section.title}
+    </h1>
+    {section.description && (
+      <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">{section.description}</p>
+    )}
+  </div>
+);
+
 export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
   const { t } = useI18n();
-  
+
   // Render quick-start content specially
   if (section.customType === "quick-start") {
     return (
-      <section id={section.id} className="api-section" data-blok-testid={section.id} aria-label={section.title}>
-        <div className="api-section-header">
-          {section.badge && (
-            <div className="api-section-badge" data-blok-testid="api-section-badge">
-              <CategoryIcon category={section.badge} size={14} />
-              {section.badge}
-            </div>
-          )}
-          <h1 className="api-section-title">
-            <a href={`#${section.id}`} className="api-anchor-link" aria-label={`Link to ${section.title}`}>#</a>
-            {section.title}
-          </h1>
-          {section.description && (
-            <p className="api-section-description">{section.description}</p>
-          )}
+      <section id={section.id} className="scroll-mt-24" data-blok-testid={section.id} aria-label={section.title}>
+        <div className="mb-10">
+          <SectionHeader section={section} />
         </div>
         <QuickStartContent />
       </section>
@@ -128,105 +164,107 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
   }
 
   return (
-    <section id={section.id} className="api-section" data-blok-testid={section.id} aria-label={section.title}>
-      <div className="api-section-header">
-        {section.badge && (
-          <div className="api-section-badge" data-blok-testid="api-section-badge">
-            <CategoryIcon category={section.badge} size={14} />
-            {section.badge}
-          </div>
-        )}
-        <h1 className="api-section-title">
-          <a href={`#${section.id}`} className="api-anchor-link" aria-label={`Link to ${section.title}`}>#</a>
-          {section.title}
-        </h1>
-        {section.description && (
-          <p className="api-section-description">{section.description}</p>
-        )}
-      </div>
+    <section id={section.id} className="scroll-mt-24" data-blok-testid={section.id} aria-label={section.title}>
+      <SectionHeader section={section} />
 
       {section.methods && section.methods.length > 0 && (
-        <div className="api-block">
-          <h3 className="api-block-title">{t('api.methods')}</h3>
-          {section.methods.map((method, index) => (
-            <ApiMethodCard key={index} method={method} sectionId={section.id} />
-          ))}
+        <div className="mt-10">
+          <h3 className={blockTitleClass}>{t('api.methods')}</h3>
+          <div className="flex flex-col gap-4">
+            {section.methods.map((method, index) => (
+              <ApiMethodCard key={index} method={method} sectionId={section.id} />
+            ))}
+          </div>
         </div>
       )}
 
       {section.properties && section.properties.length > 0 && (
-        <div className="api-block">
-          <h3 className="api-block-title">{t('api.properties')}</h3>
-          <table className="api-table api-table--with-anchors">
-            <thead>
-              <tr>
-                <th>{t('api.property')}</th>
-                <th>{t('api.type')}</th>
-                <th>{t('api.description')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {section.properties.map((prop) => {
-                const propId = generatePropertyId(section.id, prop.name);
-                return (
-                  <tr key={prop.name} id={propId} className="api-table-row" data-blok-testid={propId}>
-                    <td>
-                      <a href={`#${propId}`} className="api-anchor-link api-anchor-link--table" aria-label={`Link to ${prop.name}`}>#</a>
-                      <code>{prop.name}</code>
-                    </td>
-                    <td>
-                      <code>{prop.type}</code>
-                    </td>
-                    <td>{prop.description}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="mt-10">
+          <h3 className={blockTitleClass}>{t('api.properties')}</h3>
+          <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr>
+                  <th className={thClass}>{t('api.property')}</th>
+                  <th className={thClass}>{t('api.type')}</th>
+                  <th className={thClass}>{t('api.description')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {section.properties.map((prop) => {
+                  const propId = generatePropertyId(section.id, prop.name);
+                  return (
+                    <tr
+                      key={prop.name}
+                      id={propId}
+                      className="group scroll-mt-24 border-t border-border transition-colors hover:bg-secondary/40"
+                      data-blok-testid={propId}
+                    >
+                      <td className={tdClass}>
+                        <a href={`#${propId}`} className={anchorCellClass} aria-label={`Link to ${prop.name}`}>#</a>
+                        <code className={codeClass}>{prop.name}</code>
+                      </td>
+                      <td className={tdClass}>
+                        <code className={codeClass}>{prop.type}</code>
+                      </td>
+                      <td className={tdClass}>{prop.description}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {section.example && (
-        <div className="api-block">
+        <div className="mt-8">
           <CodeBlock code={section.example} language="typescript" />
         </div>
       )}
 
       {section.table && section.table.length > 0 && (
-        <div className="api-block">
-          <h3 className="api-block-title">{section.title}</h3>
-          <table className="api-table api-table--with-anchors">
-            <thead>
-              <tr>
-                {section.id === "config" && <th>{t('api.option')}</th>}
-                <th>{section.id === "config" ? t('api.type') : t('api.property')}</th>
-                {section.id === "config" && <th>{t('api.default')}</th>}
-                <th>{t('api.description')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {section.table.map((row) => {
-                const optionId = generateOptionId(section.id, row.option);
-                return (
-                  <tr key={row.option} id={optionId} className="api-table-row" data-blok-testid={optionId}>
-                    <td>
-                      <a href={`#${optionId}`} className="api-anchor-link api-anchor-link--table" aria-label={`Link to ${row.option}`}>#</a>
-                      <code>{row.option}</code>
-                    </td>
-                    <td>
-                      <code>{row.type}</code>
-                    </td>
-                    {section.id === "config" && (
-                      <td>
-                        <code>{row.default}</code>
+        <div className="mt-10">
+          <h3 className={blockTitleClass}>{section.title}</h3>
+          <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr>
+                  {section.id === "config" && <th className={thClass}>{t('api.option')}</th>}
+                  <th className={thClass}>{section.id === "config" ? t('api.type') : t('api.property')}</th>
+                  {section.id === "config" && <th className={thClass}>{t('api.default')}</th>}
+                  <th className={thClass}>{t('api.description')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {section.table.map((row) => {
+                  const optionId = generateOptionId(section.id, row.option);
+                  return (
+                    <tr
+                      key={row.option}
+                      id={optionId}
+                      className="group scroll-mt-24 border-t border-border transition-colors hover:bg-secondary/40"
+                      data-blok-testid={optionId}
+                    >
+                      <td className={tdClass}>
+                        <a href={`#${optionId}`} className={anchorCellClass} aria-label={`Link to ${row.option}`}>#</a>
+                        <code className={codeClass}>{row.option}</code>
                       </td>
-                    )}
-                    <td>{row.description}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      <td className={tdClass}>
+                        <code className={codeClass}>{row.type}</code>
+                      </td>
+                      {section.id === "config" && (
+                        <td className={tdClass}>
+                          <code className={codeClass}>{row.default}</code>
+                        </td>
+                      )}
+                      <td className={tdClass}>{row.description}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </section>

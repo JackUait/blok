@@ -7,7 +7,6 @@ import { MobileSectionNav } from '../components/common/MobileSectionNav';
 import { ToolSection } from '../components/tools/ToolSection';
 import { useToolsTranslations } from '../hooks/useToolsTranslations';
 import { NAV_LINKS } from '../utils/constants';
-import '../../assets/tools.css';
 
 export const ToolsPage: React.FC = () => {
   const { toolSections, sidebarSections, filterLabel } = useToolsTranslations();
@@ -70,23 +69,33 @@ export const ToolsPage: React.FC = () => {
   return (
     <>
       <Nav links={NAV_LINKS} />
-      <div className="tools-docs" data-blok-testid="tools-docs">
-        <Sidebar
-          sections={sidebarSections}
-          activeSection={activeSection}
-          variant="tools"
-          filterLabel={filterLabel}
-        />
-        <div className="tools-content-wrapper">
-          <MobileSectionNav
-            sections={sidebarSections}
-            activeSection={activeSection}
-          />
-          <main className="tools-main" data-blok-testid="tools-main">
-            {toolSections.map((section) => (
-              <ToolSection key={section.id} section={section} />
-            ))}
-          </main>
+      <div
+        className="min-h-screen bg-background pt-16"
+        data-blok-testid="tools-docs"
+      >
+        <div className="mx-auto grid w-full max-w-6xl gap-10 px-6 py-10 lg:grid-cols-[16rem_minmax(0,1fr)] lg:py-14">
+          <div className="hidden lg:block">
+            <Sidebar
+              sections={sidebarSections}
+              activeSection={activeSection}
+              variant="tools"
+              filterLabel={filterLabel}
+            />
+          </div>
+          <div className="min-w-0">
+            <MobileSectionNav
+              sections={sidebarSections}
+              activeSection={activeSection}
+            />
+            <main
+              className="flex flex-col gap-16 lg:gap-24"
+              data-blok-testid="tools-main"
+            >
+              {toolSections.map((section) => (
+                <ToolSection key={section.id} section={section} />
+              ))}
+            </main>
+          </div>
         </div>
       </div>
       <Footer />

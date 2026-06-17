@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useI18n } from "../../contexts/I18nContext";
+import { Button } from "@/components/ui/button";
 
 interface ApiMethod {
   name: string;
@@ -125,49 +126,56 @@ export const ApiPreview: React.FC = () => {
   ], [t]);
 
   return (
-    <section className="api" id="api" data-blok-testid="api-preview-section">
-      <div className="container">
-        <div className="section-header">
-          <span className="section-eyebrow">{t('home.apiPreview.eyebrow')}</span>
-          <h2 className="section-title">
+    <section className="py-20 sm:py-28" id="api" data-blok-testid="api-preview-section">
+      <div className="mx-auto w-full max-w-6xl px-6">
+        <div className="mx-auto max-w-2xl text-center">
+          <span className="text-xs font-bold uppercase tracking-wide text-primary">
+            {t('home.apiPreview.eyebrow')}
+          </span>
+          <h2 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">
             {t('home.apiPreview.title1')}
             <br />
             {t('home.apiPreview.title2')}
           </h2>
-          <p className="section-description">
+          <p className="mt-5 text-lg leading-relaxed text-muted-foreground">
             {t('home.apiPreview.description')}
           </p>
         </div>
-        <div className="api-grid" data-blok-testid="api-grid">
+        <div
+          className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-3"
+          data-blok-testid="api-grid"
+        >
           {API_DATA.map((card, index) => (
             <div
               key={card.title}
-              className={`api-card api-card--${card.accentColor}`}
+              className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-card-hover"
               data-blok-testid={`api-card-${card.title.toLowerCase().replace(" ", "-")}`}
               style={{ animationDelay: `${index * 0.1}s` }}
             >
               <div
-                className="api-card-header"
+                className="flex items-center gap-3 border-b border-border px-5 py-4"
                 data-blok-testid="api-card-header"
               >
-                <span className="api-card-icon">{card.icon}</span>
-                <h3 className="api-card-title">{card.title}</h3>
+                <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  {card.icon}
+                </span>
+                <h3 className="text-base font-bold tracking-tight">{card.title}</h3>
               </div>
               <div
-                className="api-card-content"
+                className="flex flex-col divide-y divide-border"
                 data-blok-testid="api-card-content"
               >
                 {card.methods.map((method) => (
                   <Link
                     key={method.name}
                     to={`/docs#${method.anchor}`}
-                    className="api-method"
+                    className="group flex flex-col gap-1 px-5 py-3.5 transition-colors hover:bg-secondary/60"
                     data-blok-testid="api-method"
                   >
-                    <div className="api-method-signature">
-                      <span className="api-method-name">{method.name}</span>
-                    </div>
-                    <p className="api-method-description">
+                    <span className="font-mono text-sm font-semibold text-foreground group-hover:text-primary">
+                      {method.name}
+                    </span>
+                    <p className="text-sm leading-relaxed text-muted-foreground">
                       {method.description}
                     </p>
                   </Link>
@@ -176,10 +184,10 @@ export const ApiPreview: React.FC = () => {
             </div>
           ))}
         </div>
-        <div className="api-cta" data-blok-testid="api-cta">
-          <Link to="/docs" className="btn btn-secondary">
-            {t('home.apiPreview.viewFullDocs')}
-          </Link>
+        <div className="mt-12 flex justify-center" data-blok-testid="api-cta">
+          <Button variant="outline" size="lg" asChild>
+            <Link to="/docs">{t('home.apiPreview.viewFullDocs')}</Link>
+          </Button>
         </div>
       </div>
     </section>

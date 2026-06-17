@@ -7,7 +7,6 @@ import { ApiSection } from '../components/api/ApiSection';
 import { useApiTranslations } from '../hooks/useApiTranslations';
 import { useI18n } from '../contexts/I18nContext';
 import { NAV_LINKS } from '../utils/constants';
-import '../../assets/api.css';
 
 export const ApiPage: React.FC = () => {
   const { locale } = useI18n();
@@ -118,21 +117,31 @@ export const ApiPage: React.FC = () => {
   return (
     <>
       <Nav links={NAV_LINKS} />
-      <div className="api-docs" data-blok-testid="api-docs">
-        <Sidebar
-          key={`sidebar-${locale}`}
-          sections={sidebarSections}
-          activeSection={activeSection}
-          variant="api"
-          filterLabel={filterLabel}
-        />
-        <div className="api-content-wrapper">
-          <MobileSectionNav
-            key={`mobile-nav-${locale}`}
+      <div
+        className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-10 px-6 pt-24 pb-24 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-12"
+        data-blok-testid="api-docs"
+      >
+        <div className="hidden lg:block">
+          <Sidebar
+            key={`sidebar-${locale}`}
             sections={sidebarSections}
             activeSection={activeSection}
+            variant="api"
+            filterLabel={filterLabel}
           />
-          <main className="api-main" data-blok-testid="api-main">
+        </div>
+        <div className="min-w-0">
+          <div className="lg:hidden">
+            <MobileSectionNav
+              key={`mobile-nav-${locale}`}
+              sections={sidebarSections}
+              activeSection={activeSection}
+            />
+          </div>
+          <main
+            className="mx-auto flex max-w-3xl flex-col gap-20"
+            data-blok-testid="api-main"
+          >
             {apiSections.map((section) => (
               <ApiSection key={`${locale}-${section.id}`} section={section} />
             ))}

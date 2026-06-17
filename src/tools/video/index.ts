@@ -46,6 +46,8 @@ export class VideoTool implements BlockTool {
   private lastSource: { kind: 'file'; file: File } | { kind: 'url'; url: string } | null = null;
   private resizeDetach: (() => void)[] = [];
   private controlsHandle: ControlsHandle | null = null;
+  // Ephemeral theater (cinema-width) state — presentation only, never saved.
+  private theater = false;
 
   constructor(options: BlockToolConstructorOptions<VideoData, VideoConfig>) {
     this.api = options.api;
@@ -325,6 +327,14 @@ export class VideoTool implements BlockTool {
       this.controlsHandle = attachControls({ video, figure });
       media.appendChild(this.controlsHandle.element);
     }
+
+    // Theater is an ephemeral view mode: observe the player's toggle to keep our
+    // copy, and re-apply it after a re-render so alignment/caption changes don't
+    // eject the viewer. Never written to save() — presentation, not content.
+    figure.addEventListener('blok-video-theater', (event) => {
+      this.theater = (event as CustomEvent<{ on: boolean }>).detail.on;
+    });
+    if (this.theater) figure.setAttribute('data-theater', 'true');
 
     if (!this.readOnly) {
       const overlay = renderOverlay({

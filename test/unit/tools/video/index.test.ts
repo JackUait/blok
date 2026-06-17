@@ -84,6 +84,47 @@ describe('VideoTool — RENDERED state', () => {
   });
 });
 
+describe('VideoTool — theater mode', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  const figureOf = (root: HTMLElement): HTMLElement => {
+    const fig = root.querySelector<HTMLElement>('[data-role="video-figure"]');
+    if (!fig) throw new Error('figure missing');
+    return fig;
+  };
+  const enterTheater = (root: HTMLElement): void => {
+    figureOf(root).dispatchEvent(new CustomEvent('blok-video-theater', { detail: { on: true } }));
+  };
+
+  it('never persists theater state in save()', () => {
+    const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4', width: 50 }));
+    const root = tool.render();
+    enterTheater(root);
+    expect(tool.save(root)).not.toHaveProperty('theater');
+    expect(tool.save(root).width).toBe(50);
+  });
+
+  it('re-applies theater after a re-render (read-only toggle)', () => {
+    const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }));
+    const root = tool.render();
+    enterTheater(root);
+    tool.setReadOnly(true);
+    expect(figureOf(root).getAttribute('data-theater')).toBe('true');
+  });
+
+  it('does not corrupt the saved width when theater toggles', () => {
+    const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4', width: 50 }));
+    const root = tool.render();
+    const fig = figureOf(root);
+    expect(fig.style.width).toBe('50%');
+    enterTheater(root);
+    // theater widens via CSS !important — the inline width is never mutated
+    expect(fig.style.width).toBe('50%');
+    expect(tool.save(root).width).toBe(50);
+  });
+});
+
 describe('VideoTool — statics', () => {
   it('toolbox exposes the video title key', () => {
     expect(VideoTool.toolbox).toMatchObject({ titleKey: 'video' });

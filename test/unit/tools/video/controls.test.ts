@@ -722,3 +722,125 @@ describe('video controls — playback gear menu', () => {
     expect(h.video.playbackRate).toBe(1.5);
   });
 });
+
+describe('video controls — picture-in-picture', () => {
+  let h: Harness | undefined;
+  const enablePiP = (on: boolean): void => {
+    Object.defineProperty(document, 'pictureInPictureEnabled', { value: on, configurable: true });
+  };
+  afterEach(() => {
+    if (h) h.destroy();
+    h = undefined;
+    document.body.innerHTML = '';
+    Object.defineProperty(document, 'pictureInPictureEnabled', { value: false, configurable: true });
+    Object.defineProperty(document, 'pictureInPictureElement', { value: null, configurable: true, writable: true });
+    vi.restoreAllMocks();
+  });
+
+  it('renders a PiP button when picture-in-picture is supported', () => {
+    enablePiP(true);
+    h = mount();
+    expect(q(h.controls, '[data-action="picture-in-picture"]')).toBeTruthy();
+  });
+
+  it('omits the PiP button when unsupported', () => {
+    enablePiP(false);
+    h = mount();
+    expect(h.controls.querySelector('[data-action="picture-in-picture"]')).toBeNull();
+  });
+
+  it('clicking requests PiP, and exits when already active', () => {
+    enablePiP(true);
+    const exit = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(document, 'pictureInPictureElement', { value: null, configurable: true, writable: true });
+    Object.defineProperty(document, 'exitPictureInPicture', { value: exit, configurable: true });
+    h = mount();
+    setProp(h.video, 'requestPictureInPicture', vi.fn().mockResolvedValue({}));
+    const btn = q(h.controls, '[data-action="picture-in-picture"]');
+    btn.click();
+    expect(h.video.requestPictureInPicture).toHaveBeenCalledTimes(1);
+    Object.defineProperty(document, 'pictureInPictureElement', { value: h.video, configurable: true, writable: true });
+    btn.click();
+    expect(exit).toHaveBeenCalledTimes(1);
+  });
+
+  it('reflects active state on enter / leave events', () => {
+    enablePiP(true);
+    h = mount();
+    const btn = q(h.controls, '[data-action="picture-in-picture"]');
+    h.video.dispatchEvent(new Event('enterpictureinpicture'));
+    expect(btn.getAttribute('aria-pressed')).toBe('true');
+    h.video.dispatchEvent(new Event('leavepictureinpicture'));
+    expect(btn.getAttribute('aria-pressed')).toBe('false');
+  });
+});
+
+describe('video controls — theater mode', () => {
+  let h: Harness;
+  beforeEach(() => { vi.clearAllMocks(); h = mount(); });
+  afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
+
+  it('toggles figure[data-theater] and aria-pressed on click', () => {
+    const btn = q(h.controls, '[data-action="theater"]');
+    expect(btn.getAttribute('aria-pressed')).toBe('false');
+    btn.click();
+    expect(h.figure.getAttribute('data-theater')).toBe('true');
+    expect(btn.getAttribute('aria-pressed')).toBe('true');
+    btn.click();
+    expect(h.figure.getAttribute('data-theater')).toBe('false');
+    expect(btn.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('dispatches a blok-video-theater event the tool can observe', () => {
+    const seen: boolean[] = [];
+    h.figure.addEventListener('blok-video-theater', (e) => seen.push((e as CustomEvent<{ on: boolean }>).detail.on));
+    const btn = q(h.controls, '[data-action="theater"]');
+    btn.click();
+    btn.click();
+    expect(seen).toEqual([true, false]);
+  });
+});
+
+describe('video controls — ambient mode', () => {
+  let h: Harness;
+  let raf: ReturnType<typeof vi.fn>;
+  let caf: ReturnType<typeof vi.fn>;
+  beforeEach(() => {
+    vi.clearAllMocks();
+    raf = vi.fn().mockReturnValue(1);
+    caf = vi.fn();
+    vi.stubGlobal('requestAnimationFrame', raf);
+    vi.stubGlobal('cancelAnimationFrame', caf);
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false }));
+    h = mount();
+  });
+  afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+
+  it('renders an ambient canvas scaffold behind the figure', () => {
+    const canvas = h.figure.querySelector('[data-role="video-ambient"]');
+    expect(canvas).toBeInstanceOf(HTMLCanvasElement);
+    expect(canvas?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('does not sample while paused, starts on play, stops on pause', () => {
+    expect(raf).not.toHaveBeenCalled();
+    h.video.dispatchEvent(new Event('play'));
+    expect(raf).toHaveBeenCalled();
+    h.video.dispatchEvent(new Event('pause'));
+    expect(caf).toHaveBeenCalled();
+  });
+
+  it('never samples under prefers-reduced-motion', () => {
+    h.destroy();
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }));
+    h = mount();
+    h.video.dispatchEvent(new Event('play'));
+    expect(raf).not.toHaveBeenCalled();
+  });
+
+  it('cancels the sampling loop on destroy', () => {
+    h.video.dispatchEvent(new Event('play'));
+    h.destroy();
+    expect(caf).toHaveBeenCalled();
+  });
+});

@@ -5,8 +5,10 @@ import {
   IconPlayerForward,
   IconPlayerFullscreenExit,
   IconPlayerPause,
+  IconPlayerPip,
   IconPlayerPlay,
   IconPlayerSettings,
+  IconPlayerTheater,
   IconPlayerVolume,
   IconPlayerVolumeMute,
 } from '../../components/icons';
@@ -558,6 +560,69 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
     else closeMenu();
   });
 
+  // ----- view modes: ambient glow / theater / picture-in-picture -----
+  // Ambient — a blurred canvas behind the figure sampled from the current frame.
+  // Off under reduced motion; the pixel sampling itself is live-verify only.
+  const ambientCanvas = document.createElement('canvas');
+  ambientCanvas.className = 'blok-video-controls__ambient';
+  ambientCanvas.setAttribute('data-role', 'video-ambient');
+  ambientCanvas.setAttribute('aria-hidden', 'true');
+  figure.insertBefore(ambientCanvas, figure.firstChild);
+
+  const reducedMotion = !!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+  ambientCanvas.setAttribute('data-ambient', reducedMotion ? 'off' : 'on');
+  const ambient = { raf: 0 };
+  const sampleAmbient = (): void => {
+    const ctx = ambientCanvas.getContext('2d');
+    if (ctx && video.videoWidth) {
+      ambientCanvas.width = 32;
+      ambientCanvas.height = 18;
+      ctx.drawImage(video, 0, 0, 32, 18);
+    }
+    ambient.raf = requestAnimationFrame(sampleAmbient);
+  };
+  const startAmbient = (): void => {
+    if (reducedMotion || ambient.raf) return;
+    ambient.raf = requestAnimationFrame(sampleAmbient);
+  };
+  const stopAmbient = (): void => {
+    if (!ambient.raf) return;
+    cancelAnimationFrame(ambient.raf);
+    ambient.raf = 0;
+  };
+
+  // Theater — an ephemeral presentation toggle. Writes data-theater on the
+  // figure and notifies the tool (which re-applies it across re-renders); it
+  // never touches the inline width, so the saved resize width is preserved.
+  const theaterBtn = button('theater', 'Theater mode', IconPlayerTheater);
+  theaterBtn.setAttribute('aria-pressed', 'false');
+  const theater = { on: false };
+  const setTheater = (on: boolean): void => {
+    theater.on = on;
+    figure.setAttribute('data-theater', String(on));
+    theaterBtn.setAttribute('aria-pressed', String(on));
+    theaterBtn.setAttribute('aria-label', on ? 'Exit theater mode' : 'Theater mode');
+    figure.dispatchEvent(new CustomEvent('blok-video-theater', { detail: { on } }));
+  };
+  theaterBtn.addEventListener('click', () => setTheater(!theater.on));
+  bar.insertBefore(theaterBtn, fullscreen);
+
+  // Picture-in-picture — only mounted when the browser supports it.
+  const pipSupported = Boolean(document.pictureInPictureEnabled);
+  const pipBtn = pipSupported ? button('picture-in-picture', 'Picture-in-Picture', IconPlayerPip) : null;
+  const onEnterPip = (): void => pipBtn?.setAttribute('aria-pressed', 'true');
+  const onLeavePip = (): void => pipBtn?.setAttribute('aria-pressed', 'false');
+  if (pipBtn) {
+    pipBtn.setAttribute('aria-pressed', 'false');
+    pipBtn.addEventListener('click', () => {
+      if (document.pictureInPictureElement === video) void document.exitPictureInPicture?.();
+      else void video.requestPictureInPicture?.();
+    });
+    bar.insertBefore(pipBtn, fullscreen);
+    video.addEventListener('enterpictureinpicture', onEnterPip);
+    video.addEventListener('leavepictureinpicture', onLeavePip);
+  }
+
   playToggle.addEventListener('click', togglePlay);
   // Click anywhere on the video to play/pause (the control bar sits above with
   // its own pointer-events, so its hits never reach the media). A click after a
@@ -583,6 +648,8 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
   video.addEventListener('timeupdate', onTimeUpdate);
   video.addEventListener('progress', onProgress);
   video.addEventListener('play', onPlay);
+  video.addEventListener('play', startAmbient);
+  video.addEventListener('pause', stopAmbient);
   video.addEventListener('pause', onPause);
   video.addEventListener('volumechange', onVolumeChange);
   document.addEventListener('fullscreenchange', onFullscreenChange);
@@ -592,6 +659,13 @@ export function attachControls({ video, figure }: ControlsOptions): ControlsHand
     if (state.sleepTimer) clearTimeout(state.sleepTimer);
     document.removeEventListener('mousedown', onMenuOutside);
     void audio.ctx?.close?.();
+    stopAmbient();
+    video.removeEventListener('play', startAmbient);
+    video.removeEventListener('pause', stopAmbient);
+    if (pipBtn) {
+      video.removeEventListener('enterpictureinpicture', onEnterPip);
+      video.removeEventListener('leavepictureinpicture', onLeavePip);
+    }
     video.removeEventListener('click', onVideoClick);
     video.removeEventListener('pointerdown', onPointerDown);
     video.removeEventListener('pointerup', onPointerUp);

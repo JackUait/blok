@@ -828,6 +828,21 @@ export const IconPlayerSettings = `
 </svg>
 `;
 
+// Player picture-in-picture — frame with an inset mini frame
+export const IconPlayerPip = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <rect x="3" y="4.5" width="14" height="11" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
+  <rect x="10" y="9.5" width="5.5" height="4.5" rx="1" fill="currentColor"/>
+</svg>
+`;
+
+// Player theater — wide cinema screen
+export const IconPlayerTheater = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <rect x="2.5" y="6" width="15" height="8" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
+</svg>
+`;
+
 // Download — arrow into tray
 export const IconDownload = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

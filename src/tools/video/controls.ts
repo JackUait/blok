@@ -595,6 +595,9 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
 
   const reducedMotion = !!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
   ambientCanvas.setAttribute('data-ambient', reducedMotion ? 'off' : 'on');
+  // `data-active` drives the glow's opacity: it fades in when the video starts
+  // and fades back out the instant it pauses, so a frozen frame never lingers.
+  ambientCanvas.setAttribute('data-active', 'false');
   const ambient = { raf: 0 };
   const sampleAmbient = (): void => {
     const ctx = ambientCanvas.getContext('2d');
@@ -606,10 +609,13 @@ export function attachControls({ video, figure, storage }: ControlsOptions): Con
     ambient.raf = requestAnimationFrame(sampleAmbient);
   };
   const startAmbient = (): void => {
-    if (reducedMotion || ambient.raf) return;
+    if (reducedMotion) return;
+    ambientCanvas.setAttribute('data-active', 'true');
+    if (ambient.raf) return;
     ambient.raf = requestAnimationFrame(sampleAmbient);
   };
   const stopAmbient = (): void => {
+    ambientCanvas.setAttribute('data-active', 'false');
     if (!ambient.raf) return;
     cancelAnimationFrame(ambient.raf);
     ambient.raf = 0;

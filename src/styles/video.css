@@ -703,9 +703,13 @@
   height: 100%;
   filter: blur(44px) saturate(1.5);
   transform: scale(1.12);
-  opacity: 0.55;
+  /* glow is dark until the video plays; data-active fades it in, and dropping it
+     on pause fades the bloom back out instead of freezing the last frame */
+  opacity: 0;
+  transition: opacity 420ms ease;
   pointer-events: none;
 }
+[data-blok-tool="video"] .blok-video-controls__ambient[data-active="true"] { opacity: 0.55; }
 [data-blok-tool="video"] .blok-video-controls__ambient[data-ambient="off"] { display: none; }
 
 /* theater (cinema) — promote the player into the browser top layer (Popover

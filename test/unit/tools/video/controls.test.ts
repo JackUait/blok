@@ -1152,6 +1152,15 @@ describe('video controls — ambient mode', () => {
     expect(caf).toHaveBeenCalled();
   });
 
+  it('keeps the glow inactive until the video plays, then fades it out on pause', () => {
+    const canvas = h.figure.querySelector('[data-role="video-ambient"]');
+    expect(canvas?.getAttribute('data-active')).toBe('false');
+    h.video.dispatchEvent(new Event('play'));
+    expect(canvas?.getAttribute('data-active')).toBe('true');
+    h.video.dispatchEvent(new Event('pause'));
+    expect(canvas?.getAttribute('data-active')).toBe('false');
+  });
+
   it('never samples under prefers-reduced-motion', () => {
     h.destroy();
     vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }));

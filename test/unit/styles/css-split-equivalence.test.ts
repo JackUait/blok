@@ -242,10 +242,12 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // modes: picture-in-picture + theater cinema-width breakout + ambient glow
     // canvas, polish: idle auto-hide + centre play disc + buffering spinner +
     // elapsed/remaining time toggle + focus-visible rings + right-click context
-    // menu + stats-for-nerds overlay) + --blok-video-buffered token.
+    // menu + stats-for-nerds overlay) + --blok-video-buffered token + ambient
+    // glow play/pause fade (data-active opacity transition so the bloom fades in
+    // on play and out on pause instead of freezing the last frame).
     // Shrinking below the baseline is always acceptable.
     const PRE_SPLIT_BYTES = 390050;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.27);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.28);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

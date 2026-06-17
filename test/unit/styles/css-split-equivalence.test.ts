@@ -236,10 +236,16 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // (Airbnb-style media frame + caption + alignment + resize handles + error
     // state + custom Airbnb-inspired player controls: click-to-toggle media,
     // bottom scrim, coral scrubber, time, volume cluster, fullscreen) +
-    // always-on video-player palette tokens in colors.css.
+    // always-on video-player palette tokens in colors.css + YouTube-parity
+    // player upgrades (buffered/loaded bar + hover time tooltip + bottom mini
+    // progress, gear settings popover for speed/loop/sleep/stable-volume, view
+    // modes: picture-in-picture + theater cinema-width breakout + ambient glow
+    // canvas, polish: idle auto-hide + centre play disc + buffering spinner +
+    // elapsed/remaining time toggle + focus-visible rings + right-click context
+    // menu + stats-for-nerds overlay) + --blok-video-buffered token.
     // Shrinking below the baseline is always acceptable.
     const PRE_SPLIT_BYTES = 390050;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.25);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.27);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

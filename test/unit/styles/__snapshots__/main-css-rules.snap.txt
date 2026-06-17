@@ -4664,6 +4664,10 @@
 
 [data-blok-tool="video"] .blok-video-controls {
   --blok-seek-pct: 0%;
+  --blok-buffered-pct: 0%;
+  --blok-tooltip-x: 0%;
+  --blok-ctx-x: 50%;
+  --blok-ctx-y: 50%;
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -5148,11 +5152,10 @@
 
 [data-blok-tool="video"] .blok-video-controls__spinner {
   position: absolute;
-  top: 50%;
-  left: 50%;
+  inset: 0;
   width: 38px;
   height: 38px;
-  margin: -19px 0 0 -19px;
+  margin: auto;
   border-radius: 50%;
   border: 3px solid var(--blok-video-track);
   border-top-color: var(--blok-video-control-fg);

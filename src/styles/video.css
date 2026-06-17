@@ -288,11 +288,15 @@
 
    Replaces native browser chrome with a bottom scrim + control bar (play/pause,
    scrubber, time, volume, fullscreen) that fades in on hover. Clicking the
-   video itself toggles play/pause — no centre overlay button. White glyphs on a
-   dark scrim, pill geometry, and the brand coral on the progress fill.
+   video toggles play/pause; a centre play disc shows while paused at the start.
+   White glyphs on a dark scrim, pill geometry, brand coral on the progress fill.
    ================================================= */
 [data-blok-tool="video"] .blok-video-controls {
   --blok-seek-pct: 0%;
+  --blok-buffered-pct: 0%;
+  --blok-tooltip-x: 0%;
+  --blok-ctx-x: 50%;
+  --blok-ctx-y: 50%;
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -762,9 +766,9 @@
 /* buffering spinner */
 [data-blok-tool="video"] .blok-video-controls__spinner {
   position: absolute;
-  top: 50%; left: 50%;
+  inset: 0;
   width: 38px; height: 38px;
-  margin: -19px 0 0 -19px;
+  margin: auto;
   border-radius: 50%;
   border: 3px solid var(--blok-video-track);
   border-top-color: var(--blok-video-control-fg);

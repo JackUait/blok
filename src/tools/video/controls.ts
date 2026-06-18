@@ -1,5 +1,7 @@
 import {
   IconCheck,
+  IconChevronLeft,
+  IconChevronRight,
   IconExpandFullscreen,
   IconPlayerBackward,
   IconPlayerForward,
@@ -386,6 +388,8 @@ export function attachControls({ video, figure, storage, glow = 'less' }: Contro
     muteToggle.setAttribute('aria-label', muted ? 'Unmute' : 'Mute');
     // muting parks the slider at the very beginning; unmuted tracks the real volume
     volume.value = muted ? '0' : String(video.volume);
+    // paint the filled (already-set) portion to the left of the thumb
+    volume.style.setProperty('--blok-vol-pct', `${Number(volume.value) * 100}%`);
   };
   // Run a user-driven sound change, syncing UI and popping the glyph only when the
   // audible↔muted state actually flips. Captures state before the mutation because
@@ -570,30 +574,36 @@ export function attachControls({ video, figure, storage, glow = 'less' }: Contro
   };
 
   // ----- gear settings menu (speed / loop) -----
-  // Viewer-accessible in-player popover (the block ☰ menu is editor-only). Built
-  // here so it shares the player's closure state.
-  const menuItem = (action: string, label: string, role: 'menuitemradio' | 'menuitemcheckbox'): HTMLButtonElement => {
-    const item = document.createElement('button');
-    item.type = 'button';
-    item.className = 'blok-video-controls__menu-item';
-    item.setAttribute('data-action', action);
-    item.setAttribute('role', role);
-    item.setAttribute('aria-checked', 'false');
+  // Viewer-accessible in-player popover (the block ☰ menu is editor-only), modelled
+  // on YouTube's settings: a main pane of labelled rows, each carrying its current
+  // value, that slides sideways into a dedicated submenu (speeds with a leading
+  // check, à la YouTube). Built here so it shares the player's closure state.
+  const SPEED_LABEL = (rate: number): string => (rate === 1 ? 'Normal' : `${rate}×`);
+
+  // A main-pane row: label on the left, current value + trailing chevron on the
+  // right. `valueRole` tags the value span so it can be read/updated by name.
+  const navRow = (action: string, label: string, valueRole: string): {
+    row: HTMLButtonElement;
+    value: HTMLElement;
+  } => {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'blok-video-controls__menu-row';
+    row.setAttribute('data-action', action);
+    row.setAttribute('role', 'menuitem');
+    row.setAttribute('aria-haspopup', 'menu');
     const text = document.createElement('span');
     text.className = 'blok-video-controls__menu-label';
     text.textContent = label;
-    const check = document.createElement('span');
-    check.className = 'blok-video-controls__menu-check';
-    check.setAttribute('aria-hidden', 'true');
-    check.innerHTML = IconCheck;
-    item.append(text, check);
-    return item;
-  };
-  const menuSection = (label: string): HTMLElement => {
-    const heading = document.createElement('div');
-    heading.className = 'blok-video-controls__menu-section';
-    heading.textContent = label;
-    return heading;
+    const value = document.createElement('span');
+    value.className = 'blok-video-controls__menu-value';
+    value.setAttribute('data-role', valueRole);
+    const chevron = document.createElement('span');
+    chevron.className = 'blok-video-controls__menu-chevron';
+    chevron.setAttribute('aria-hidden', 'true');
+    chevron.innerHTML = IconChevronRight;
+    row.append(text, value, chevron);
+    return { row, value };
   };
 
   const gear = button('gear', 'Settings', IconPlayerSettings);
@@ -604,49 +614,114 @@ export function attachControls({ video, figure, storage, glow = 'less' }: Contro
   menu.className = 'blok-video-controls__menu';
   menu.setAttribute('data-role', 'playback-menu');
   menu.setAttribute('role', 'menu');
+  menu.setAttribute('data-view', 'main');
   menu.hidden = true;
+
+  // Two stacked panes ride a horizontal track; `data-view` slides between them.
+  const track = document.createElement('div');
+  track.className = 'blok-video-controls__menu-track';
+
+  const mainPane = document.createElement('div');
+  mainPane.className = 'blok-video-controls__menu-pane';
+  mainPane.setAttribute('data-role', 'menu-main');
+
+  const speedPane = document.createElement('div');
+  speedPane.className = 'blok-video-controls__menu-pane';
+  speedPane.setAttribute('data-role', 'menu-speed');
 
   const menuWrap = document.createElement('div');
   menuWrap.className = 'blok-video-controls__menu-wrap';
   menuWrap.append(gear, menu);
 
-  // Speeds render as a compact chip grid rather than eight stacked radio rows —
-  // a denser, more legible speed picker that the active chip lights up coral.
+  // Slide the track and grow/shrink the menu to fit the active pane — the height
+  // tween is what gives the YouTube settings menu its springy resize.
+  const showView = (view: 'main' | 'speed'): void => {
+    menu.setAttribute('data-view', view);
+    const pane = view === 'speed' ? speedPane : mainPane;
+    if (!menu.hidden) menu.style.height = `${pane.scrollHeight}px`;
+  };
+
+  // --- main pane: "Playback speed ›" and the Loop toggle ---
+  const { row: speedNav, value: speedValue } = navRow('open-speed', 'Playback speed', 'menu-value-speed');
+  speedValue.textContent = SPEED_LABEL(state.selectedRate);
+  speedNav.addEventListener('click', () => showView('speed'));
+
+  const loopRow = document.createElement('button');
+  loopRow.type = 'button';
+  loopRow.className = 'blok-video-controls__menu-row';
+  loopRow.setAttribute('data-action', 'loop');
+  loopRow.setAttribute('role', 'menuitemcheckbox');
+  loopRow.setAttribute('aria-checked', 'false');
+  const loopLabel = document.createElement('span');
+  loopLabel.className = 'blok-video-controls__menu-label';
+  loopLabel.textContent = 'Loop';
+  const loopValue = document.createElement('span');
+  loopValue.className = 'blok-video-controls__menu-value';
+  loopValue.setAttribute('data-role', 'menu-value-loop');
+  loopValue.textContent = 'Off';
+  // Empty chevron slot keeps "Off" aligned under the speed row's "Normal".
+  const loopSpacer = document.createElement('span');
+  loopSpacer.className = 'blok-video-controls__menu-chevron';
+  loopSpacer.setAttribute('aria-hidden', 'true');
+  loopRow.append(loopLabel, loopValue, loopSpacer);
+  loopRow.addEventListener('click', () => {
+    media.loop = !media.loop;
+    loopRow.setAttribute('aria-checked', String(media.loop));
+    loopValue.textContent = media.loop ? 'On' : 'Off';
+  });
+
+  mainPane.append(speedNav, loopRow);
+
+  // --- speed pane: a back header + one checkable row per rate ---
+  const speedBack = document.createElement('button');
+  speedBack.type = 'button';
+  speedBack.className = 'blok-video-controls__menu-row blok-video-controls__menu-back';
+  speedBack.setAttribute('data-action', 'speed-back');
+  speedBack.setAttribute('role', 'menuitem');
+  const backChevron = document.createElement('span');
+  backChevron.className = 'blok-video-controls__menu-chevron';
+  backChevron.setAttribute('aria-hidden', 'true');
+  backChevron.innerHTML = IconChevronLeft;
+  const backLabel = document.createElement('span');
+  backLabel.className = 'blok-video-controls__menu-label';
+  backLabel.textContent = 'Playback speed';
+  speedBack.append(backChevron, backLabel);
+  speedBack.addEventListener('click', () => showView('main'));
+
   const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
   const speedItems = SPEEDS.map((rate) => {
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'blok-video-controls__speed-chip';
-    chip.setAttribute('data-action', `speed-${rate}`);
-    chip.setAttribute('role', 'menuitemradio');
-    chip.setAttribute('aria-checked', String(rate === 1));
-    chip.textContent = `${rate}×`;
-    chip.addEventListener('click', () => setRate(rate));
-    return chip;
+    const option = document.createElement('button');
+    option.type = 'button';
+    option.className = 'blok-video-controls__menu-row blok-video-controls__speed-option';
+    option.setAttribute('data-action', `speed-${rate}`);
+    option.setAttribute('role', 'menuitemradio');
+    option.setAttribute('aria-checked', String(rate === 1));
+    const check = document.createElement('span');
+    check.className = 'blok-video-controls__menu-check';
+    check.setAttribute('aria-hidden', 'true');
+    check.innerHTML = IconCheck;
+    const label = document.createElement('span');
+    label.className = 'blok-video-controls__menu-label';
+    label.textContent = SPEED_LABEL(rate);
+    option.append(check, label);
+    option.addEventListener('click', () => setRate(rate));
+    return option;
   });
-  const speedGrid = document.createElement('div');
-  speedGrid.className = 'blok-video-controls__speed-grid';
-  speedGrid.setAttribute('data-role', 'speed-grid');
-  speedGrid.append(...speedItems);
+  speedPane.append(speedBack, ...speedItems);
+
   const setRate = (rate: number): void => {
     state.selectedRate = rate;
     media.playbackRate = rate;
     speedItems.forEach((item) => {
       item.setAttribute('aria-checked', String(item.getAttribute('data-action') === `speed-${rate}`));
     });
+    speedValue.textContent = SPEED_LABEL(rate);
+    // YouTube slides back to the main pane the moment a speed is picked.
+    showView('main');
   };
 
-  const loopItem = menuItem('loop', 'Loop', 'menuitemcheckbox');
-  loopItem.addEventListener('click', () => {
-    media.loop = !media.loop;
-    loopItem.setAttribute('aria-checked', String(media.loop));
-  });
-
-  menu.append(
-    menuSection('Speed'),
-    speedGrid,
-    loopItem,
-  );
+  track.append(mainPane, speedPane);
+  menu.append(track);
   bar.insertBefore(menuWrap, fullscreen);
 
   const onMenuOutside = (event: MouseEvent): void => {
@@ -658,6 +733,7 @@ export function attachControls({ video, figure, storage, glow = 'less' }: Contro
   const openMenu = (): void => {
     if (!menu.hidden) return;
     menu.hidden = false;
+    showView('main'); // always reopen on the top-level pane, like YouTube
     gear.setAttribute('aria-expanded', 'true');
     document.addEventListener('mousedown', onMenuOutside);
   };

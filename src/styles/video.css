@@ -204,6 +204,7 @@
 [data-blok-tool="video"] .blok-video-controls {
   --blok-seek-pct: 0%;
   --blok-buffered-pct: 0%;
+  --blok-vol-pct: 100%;
   --blok-tooltip-x: 0%;
   --blok-ctx-x: 50%;
   --blok-ctx-y: 50%;
@@ -566,7 +567,12 @@
   margin: 0;
   -webkit-appearance: none;
   appearance: none;
-  background: var(--blok-video-volume-track);
+  background: linear-gradient(
+    to right,
+    var(--blok-video-accent) var(--blok-vol-pct),
+    var(--blok-video-volume-track) var(--blok-vol-pct)
+  );
+  box-shadow: var(--blok-video-thumb-shadow);
   border-radius: var(--blok-radius-pill);
   opacity: 0;
   cursor: pointer;
@@ -584,12 +590,14 @@
   width: 11px; height: 11px;
   border-radius: var(--blok-radius-pill);
   background: var(--blok-video-thumb);
+  box-shadow: var(--blok-video-thumb-shadow);
 }
 [data-blok-tool="video"] .blok-video-controls__volume::-moz-range-thumb {
   width: 11px; height: 11px;
   border: 0;
   border-radius: var(--blok-radius-pill);
   background: var(--blok-video-thumb);
+  box-shadow: var(--blok-video-thumb-shadow);
 }
 /* mute glyph pops when the user flips audible↔muted */
 @keyframes blok-video-mute-pop {
@@ -606,22 +614,25 @@
   position: relative;
   flex-shrink: 0;
 }
+/* YouTube-style settings popover: a fixed-width card whose height tweens between
+   panes (set inline from JS), with a horizontal track that slides the main pane
+   out and the speed submenu in. */
 [data-blok-tool="video"] .blok-video-controls__menu {
   position: absolute;
   right: 0;
   bottom: calc(100% + var(--blok-space-2));
-  min-width: 200px;
-  max-height: 280px;
-  overflow-y: auto;
-  padding: var(--blok-space-1-5);
+  width: 240px;
+  overflow: hidden;
+  padding: var(--blok-space-1);
   border-radius: var(--blok-radius-lg);
-  background: var(--blok-video-burst-bg);
+  background: var(--blok-video-menu-bg);
   box-shadow: var(--blok-video-burst-shadow);
   -webkit-backdrop-filter: blur(18px) saturate(1.4);
   backdrop-filter: blur(18px) saturate(1.4);
   color: var(--blok-video-control-fg);
   transform-origin: bottom right;
   animation: blok-video-menu-in 140ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: height 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
   z-index: 3;
 }
 [data-blok-tool="video"] .blok-video-controls__menu[hidden] { display: none; }
@@ -629,61 +640,31 @@
   from { opacity: 0; transform: translateY(6px) scale(0.96); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
-[data-blok-tool="video"] .blok-video-controls__menu-section {
-  padding: var(--blok-space-1) var(--blok-space-2) var(--blok-space-1-5);
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: var(--blok-video-time-fg);
-  opacity: 0.55;
+
+/* the two panes ride a 200%-wide flex track; data-view slides it sideways */
+[data-blok-tool="video"] .blok-video-controls__menu-track {
+  display: flex;
+  align-items: flex-start;
+  width: 200%;
+  transition: transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+[data-blok-tool="video"] .blok-video-controls__menu[data-view="speed"] .blok-video-controls__menu-track {
+  transform: translateX(-50%);
+}
+[data-blok-tool="video"] .blok-video-controls__menu-pane {
+  flex: 0 0 50%;
+  display: flex;
+  flex-direction: column;
 }
 
-/* speed picker — a dense segment grid, the active rate lit white. A hairline
-   under the grid divides Speed from the toggle rows below. */
-[data-blok-tool="video"] .blok-video-controls__speed-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--blok-space-1);
-  margin-bottom: var(--blok-space-1-5);
-  padding: 0 var(--blok-space-2) var(--blok-space-2);
-  border-bottom: 1px solid var(--blok-video-track);
-}
-[data-blok-tool="video"] .blok-video-controls__speed-chip {
-  padding: var(--blok-space-1) 0;
-  border: 1px solid transparent;
-  border-radius: var(--blok-radius-md);
-  background: var(--blok-video-control-bg-hover);
-  color: var(--blok-video-control-fg);
-  font-size: 12px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
-  cursor: pointer;
-  transition: background 130ms ease, color 130ms ease, transform 130ms ease, box-shadow 130ms ease;
-}
-[data-blok-tool="video"] .blok-video-controls__speed-chip:hover {
-  background: var(--blok-video-control-fg);
-  color: var(--blok-video-stage);
-  transform: translateY(-1px);
-}
-[data-blok-tool="video"] .blok-video-controls__speed-chip[aria-checked="true"] {
-  background: var(--blok-video-accent);
-  color: var(--blok-video-burst-fg);
-  box-shadow: 0 4px 14px -4px var(--blok-video-accent);
-}
-[data-blok-tool="video"] .blok-video-controls__speed-chip:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--blok-video-focus-ring);
-}
-
-[data-blok-tool="video"] .blok-video-controls__menu-item {
+/* a single tappable row — label left, value/chevron right */
+[data-blok-tool="video"] .blok-video-controls__menu-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--blok-space-3);
+  gap: var(--blok-space-2);
   width: 100%;
-  padding: var(--blok-space-1-5) var(--blok-space-2);
+  min-height: 40px;
+  padding: var(--blok-space-1-5) var(--blok-space-2-5);
   border: 0;
   border-radius: var(--blok-radius-md);
   background: transparent;
@@ -692,30 +673,65 @@
   font-weight: 500;
   text-align: left;
   cursor: pointer;
+  transition: background 120ms ease;
 }
-[data-blok-tool="video"] .blok-video-controls__menu-item:hover { background: var(--blok-video-control-bg-hover); }
-/* Always-present checkbox box so the row reads intentionally even when off. */
+[data-blok-tool="video"] .blok-video-controls__menu-row:hover { background: var(--blok-video-control-bg-hover); }
+[data-blok-tool="video"] .blok-video-controls__menu-row:focus-visible {
+  outline: none;
+  background: var(--blok-video-control-bg-hover);
+  box-shadow: inset 0 0 0 1.5px var(--blok-video-focus-ring);
+}
+[data-blok-tool="video"] .blok-video-controls__menu-label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* current-value hint on the right of a main row (e.g. "Normal", "On") */
+[data-blok-tool="video"] .blok-video-controls__menu-value {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--blok-video-menu-value-fg);
+  font-variant-numeric: tabular-nums;
+}
+[data-blok-tool="video"] .blok-video-controls__menu-chevron {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-right: calc(-1 * var(--blok-space-1));
+  color: var(--blok-video-time-fg);
+}
+[data-blok-tool="video"] .blok-video-controls__menu-chevron svg { width: 16px; height: 16px; }
+
+/* speed submenu back header — sits above the options, divided by a hairline */
+[data-blok-tool="video"] .blok-video-controls__menu-back {
+  margin-bottom: var(--blok-space-1);
+  padding-left: var(--blok-space-1);
+  border-bottom: 1px solid var(--blok-video-track);
+  border-radius: 0;
+  font-weight: 600;
+}
+[data-blok-tool="video"] .blok-video-controls__menu-back .blok-video-controls__menu-chevron { margin-right: 0; }
+
+/* a speed option: leading check column (reserved even when unchecked) + label */
+[data-blok-tool="video"] .blok-video-controls__speed-option { font-variant-numeric: tabular-nums; }
 [data-blok-tool="video"] .blok-video-controls__menu-check {
   display: grid;
   place-items: center;
-  width: 19px;
-  height: 19px;
-  border: 1.5px solid var(--blok-video-track);
-  border-radius: var(--blok-radius-sm);
-  color: var(--blok-video-burst-fg);
-  transition: background 130ms ease, border-color 130ms ease;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--blok-video-accent);
 }
 [data-blok-tool="video"] .blok-video-controls__menu-check svg {
-  width: 13px;
-  height: 13px;
+  width: 16px;
+  height: 16px;
   opacity: 0;
-  transition: opacity 130ms ease;
+  transition: opacity 120ms ease;
 }
-[data-blok-tool="video"] .blok-video-controls__menu-item[aria-checked="true"] .blok-video-controls__menu-check {
-  background: var(--blok-video-accent);
-  border-color: var(--blok-video-accent);
-}
-[data-blok-tool="video"] .blok-video-controls__menu-item[aria-checked="true"] .blok-video-controls__menu-check svg { opacity: 1; }
+[data-blok-tool="video"] .blok-video-controls__speed-option[aria-checked="true"] .blok-video-controls__menu-check svg { opacity: 1; }
+[data-blok-tool="video"] .blok-video-controls__speed-option[aria-checked="true"] { font-weight: 600; }
 
 /* view-mode + gear toggles tint when active */
 [data-blok-tool="video"] .blok-video-controls__btn[data-action="gear"][aria-expanded="true"],
@@ -894,7 +910,6 @@
 [data-blok-tool="video"] .blok-video-controls__btn:focus-visible,
 [data-blok-tool="video"] .blok-video-controls__center:focus-visible,
 [data-blok-tool="video"] .blok-video-controls__time:focus-visible,
-[data-blok-tool="video"] .blok-video-controls__menu-item:focus-visible,
 [data-blok-tool="video"] .blok-video-controls__ctx-item:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-video-focus-ring);

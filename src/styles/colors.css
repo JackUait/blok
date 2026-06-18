@@ -424,13 +424,16 @@
   --blok-video-time-fg: rgba(255, 255, 255, 0.8);
   --blok-video-track: rgba(255, 255, 255, 0.2);
   --blok-video-buffered: rgba(255, 255, 255, 0.35);
-  --blok-video-volume-track: rgba(255, 255, 255, 0.25);
+  --blok-video-volume-track: rgba(0, 0, 0, 0.3);
   --blok-video-thumb: #ffffff;
   --blok-video-thumb-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   --blok-video-burst-bg: rgba(0, 0, 0, 0.5);
   --blok-video-burst-fg: #ffffff;
   --blok-video-burst-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.4);
   --blok-video-burst-ring: rgba(255, 255, 255, 0.4);
+  /* Settings popover — near-opaque dark so video never bleeds through the text. */
+  --blok-video-menu-bg: rgba(22, 22, 22, 0.94);
+  --blok-video-menu-value-fg: rgba(255, 255, 255, 0.62);
   --blok-video-theater-scrim: rgba(0, 0, 0, 0.8);
   --blok-video-theater-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.6);
   --blok-video-scrim-strong: rgba(0, 0, 0, 0.6);

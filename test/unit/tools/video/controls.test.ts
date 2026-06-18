@@ -786,7 +786,7 @@ describe('video controls — playback gear menu', () => {
   });
 
   it('lists eight playback speeds with Normal active by default', () => {
-    expect(menu().querySelectorAll('[data-action^="speed-"]')).toHaveLength(8);
+    expect(menu().querySelectorAll('[role="menuitemradio"]')).toHaveLength(8);
     expect(q(h.controls, '[data-action="speed-1"]').getAttribute('aria-checked')).toBe('true');
   });
 
@@ -797,27 +797,60 @@ describe('video controls — playback gear menu', () => {
     expect(q(h.controls, '[data-action="speed-1"]').getAttribute('aria-checked')).toBe('false');
   });
 
-  it('lays the speeds out as chips in a dedicated grid, not stacked menu rows', () => {
-    const grid = q(h.controls, '[data-role="speed-grid"]');
-    const chips = grid.querySelectorAll('[data-action^="speed-"]');
-    expect(chips).toHaveLength(8);
-    chips.forEach((chip) => {
-      expect(chip.classList.contains('blok-video-controls__speed-chip')).toBe(true);
-      // Chips are NOT the generic full-width menu rows.
-      expect(chip.classList.contains('blok-video-controls__menu-item')).toBe(false);
-    });
-    // Compact glyph labels — "1×" reads better in a chip than the verbose "Normal".
-    expect(q(h.controls, '[data-action="speed-1"]').textContent).toBe('1×');
+  it('lays the speeds out as a vertical YouTube-style submenu, not a chip grid', () => {
+    // No legacy chip grid — speeds are full-width radio rows in a sliding pane.
+    expect(h.controls.querySelector('[data-role="speed-grid"]')).toBeNull();
+    expect(h.controls.querySelector('.blok-video-controls__speed-chip')).toBeNull();
+    const options = menu().querySelectorAll('.blok-video-controls__speed-option');
+    expect(options).toHaveLength(8);
+    // The active rate reads as "Normal", à la YouTube — not "1×".
+    expect(q(h.controls, '[data-action="speed-1"]').textContent).toContain('Normal');
+    expect(q(h.controls, '[data-action="speed-1.5"]').textContent).toContain('1.5×');
   });
 
-  it('loop toggles media.loop and reflects the checked state', () => {
+  it('opens the speed submenu from the main row and navigates back', () => {
+    // The main pane shows a "Playback speed" row carrying the current value.
+    const open = q(h.controls, '[data-action="open-speed"]');
+    expect(open.getAttribute('aria-haspopup')).toBe('menu');
+    expect(q(h.controls, '[data-role="menu-value-speed"]').textContent).toBe('Normal');
+
+    gear().click();
+    expect(menu().getAttribute('data-view')).toBe('main');
+    open.click();
+    expect(menu().getAttribute('data-view')).toBe('speed');
+    q(h.controls, '[data-action="speed-back"]').click();
+    expect(menu().getAttribute('data-view')).toBe('main');
+  });
+
+  it('selecting a speed updates the main-row value and returns to the main view', () => {
+    gear().click();
+    q(h.controls, '[data-action="open-speed"]').click();
+    q(h.controls, '[data-action="speed-1.5"]').click();
+    expect(q(h.controls, '[data-role="menu-value-speed"]').textContent).toBe('1.5×');
+    expect(menu().getAttribute('data-view')).toBe('main');
+  });
+
+  it('reopening the gear resets to the main view', () => {
+    gear().click();
+    q(h.controls, '[data-action="open-speed"]').click();
+    expect(menu().getAttribute('data-view')).toBe('speed');
+    gear().click(); // close
+    gear().click(); // reopen
+    expect(menu().getAttribute('data-view')).toBe('main');
+  });
+
+  it('loop toggles media.loop and reflects the checked state with On/Off text', () => {
     const loop = q(h.controls, '[data-action="loop"]');
+    const value = q(h.controls, '[data-role="menu-value-loop"]');
     expect(h.video.loop).toBe(false);
+    expect(value.textContent).toBe('Off');
     loop.click();
     expect(h.video.loop).toBe(true);
     expect(loop.getAttribute('aria-checked')).toBe('true');
+    expect(value.textContent).toBe('On');
     loop.click();
     expect(h.video.loop).toBe(false);
+    expect(value.textContent).toBe('Off');
   });
 
   it('does not offer a sleep timer', () => {

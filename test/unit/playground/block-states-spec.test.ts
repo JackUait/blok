@@ -109,6 +109,35 @@ describe('playground block states spec (index.html)', () => {
     });
   });
 
+  describe('video entry', () => {
+    test('has a video tab', () => {
+      expect(rawSpec).toContain("tool: 'video'");
+    });
+
+    test.each([
+      'Loaded',
+      'With caption',
+      'Small',
+      'Left aligned',
+      'Upload failed',
+    ])('covers the "%s" state', (label) => {
+      expect(sectionFor('video')).toContain(`label: '${label}'`);
+    });
+
+    test('all non-empty states carry videoWidth and videoHeight', () => {
+      const section = sectionFor('video');
+      const stateBlocks = [...section.matchAll(/id: 'vd-[^']+'[\s\S]*?data: \{([\s\S]*?)\}\s*\}\]/g)];
+
+      for (const match of stateBlocks) {
+        const dataBlock = match[1];
+        if (dataBlock.includes("url:")) {
+          expect(dataBlock, `state ${match[0].slice(0, 40)}`).toContain('videoWidth:');
+          expect(dataBlock, `state ${match[0].slice(0, 40)}`).toContain('videoHeight:');
+        }
+      }
+    });
+  });
+
   describe('gallery preview tools', () => {
     test('mountStatePreview registers the embed tool', () => {
       expect(mountTools).toContain('embed: Embed');

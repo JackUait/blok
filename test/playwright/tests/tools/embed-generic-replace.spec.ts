@@ -7,7 +7,7 @@ import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 const HOLDER_ID = 'blok';
 const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 
-const EMBED_CONFIG = { linkPaste: { menu: true, allowGenericEmbed: true } };
+const EMBED_CONFIG = { linkPaste: { allowGenericEmbed: true } };
 
 declare global {
   interface Window {

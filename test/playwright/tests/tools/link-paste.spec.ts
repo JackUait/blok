@@ -85,6 +85,14 @@ const pasteText = async (locator: Locator, text: string): Promise<void> => {
 const firstEditable = (page: Page): Locator =>
   page.locator(`${BLOCK_SELECTOR}:nth-of-type(1) [contenteditable]`).first();
 
+/** Pick a view from the paste menu that a URL paste always opens. */
+const pickMenu = async (page: Page, action: 'embed' | 'bookmark' | 'plain'): Promise<void> => {
+  const item = page.locator(`[data-blok-item-name="paste-menu-${action}"]`);
+
+  await expect(item).toBeVisible();
+  await item.click();
+};
+
 const stubUnfurl = async (page: Page): Promise<void> => {
   await page.route('**/__unfurl*', async (route) => {
     await route.fulfill({
@@ -113,129 +121,21 @@ test.describe('Link paste', () => {
     await stubUnfurl(page);
   });
 
-  test('pasting a generic URL creates a bookmark card', async ({ page }) => {
-    await createBlok(page);
-    const editable = firstEditable(page);
-
-    await editable.click();
-    await pasteText(editable, 'https://example.com/article');
-
-    const card = page.locator('[data-blok-testid="bookmark-card"]');
-
-    await expect(card).toBeVisible();
-    await expect(card).toContainText('Stubbed Title');
-  });
-
-  test('pasting a YouTube URL creates an embed iframe', async ({ page }) => {
+  test('a URL paste always opens the menu — no block is auto-claimed', async ({ page }) => {
     await createBlok(page);
     const editable = firstEditable(page);
 
     await editable.click();
     await pasteText(editable, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
 
-    const iframe = page.locator('[data-blok-testid="embed-frame"]');
-
-    await expect(iframe).toBeVisible();
-    await expect(iframe).toHaveAttribute(
-      'src',
-      'https://www.youtube.com/embed/dQw4w9WgXcQ'
-    );
-  });
-
-  test('a pasted embed stretches to full width with side resize handles', async ({ page }) => {
-    await createBlok(page);
-    const editable = firstEditable(page);
-
-    await editable.click();
-    await pasteText(editable, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
-
-    const figure = page.locator('[data-role="embed-figure"]');
-
-    await expect(figure).toBeVisible();
-
-    // Both edge handles are wired; they reveal on hover (Notion-style).
-    await expect(figure.locator('[data-role="resize-handle"]')).toHaveCount(2);
-    await figure.hover();
-    await expect(figure.locator('[data-role="resize-handle"][data-edge="left"]')).toBeVisible();
-    await expect(figure.locator('[data-role="resize-handle"][data-edge="right"]')).toBeVisible();
-
-    const figureBox = await figure.boundingBox();
-    const toolBox = await page.locator('[data-blok-tool="embed"]').boundingBox();
-
-    if (!figureBox || !toolBox) {
-      throw new Error('missing layout boxes');
-    }
-    // Embed stretches to fill (near) the full available content width by default.
-    expect(figureBox.width).toBeGreaterThan(toolBox.width * 0.95);
-  });
-
-  test('the embed hover toolbar toggles a caption and links to the original', async ({ page }) => {
-    await createBlok(page);
-    const editable = firstEditable(page);
-
-    await editable.click();
-    await pasteText(editable, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
-
-    const figure = page.locator('[data-role="embed-figure"]');
-
-    await expect(figure).toBeVisible();
-    await figure.hover();
-
-    const overlay = figure.locator('[data-role="embed-overlay"]');
-
-    await expect(overlay).toBeVisible();
-
-    // "Open original" points at the source URL in a new tab.
-    const open = overlay.locator('[data-action="open-original"]');
-
-    await expect(open).toHaveAttribute('href', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
-    await expect(open).toHaveAttribute('target', '_blank');
-
-    // Caption toggle reveals an editable caption field.
-    await expect(figure.locator('[data-role="embed-caption"]')).toHaveCount(0);
-    await overlay.locator('[data-action="caption-toggle"]').click();
-    await expect(figure.locator('[data-role="embed-caption"]')).toBeVisible();
-
-    const saved = await saveBlok(page);
-    const embed = saved.blocks.find((block) => block.type === 'embed');
-
-    expect((embed?.data as { captionVisible?: boolean }).captionVisible).toBe(true);
-  });
-
-  test('a pasted bookmark persists across save and reload', async ({ page }) => {
-    await createBlok(page);
-    const editable = firstEditable(page);
-
-    await editable.click();
-    await pasteText(editable, 'https://example.com/article');
-    await expect(page.locator('[data-blok-testid="bookmark-card"]')).toBeVisible();
-
-    const saved = await saveBlok(page);
-    const bookmarkBlock = saved.blocks.find((block) => block.type === 'bookmark');
-
-    expect(bookmarkBlock).toBeDefined();
-    expect((bookmarkBlock?.data as { url?: string }).url).toBe('https://example.com/article');
-
-    await createBlok(page, saved);
-
-    await expect(page.locator('[data-blok-testid="bookmark-card"]')).toBeVisible();
-  });
-});
-
-test.describe('Link paste menu (opt-in)', () => {
-  const MENU_CONFIG = { linkPaste: { menu: true } };
-
-  test.beforeAll(async () => {
-    await ensureBlokBundleBuilt();
-  });
-
-  test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
-    await stubUnfurl(page);
+    // The menu is shown; nothing is embedded or bookmarked until the user picks.
+    await expect(page.locator('[data-blok-item-name="paste-menu-embed"]')).toBeVisible();
+    await expect(page.locator('[data-blok-testid="embed-frame"]')).toHaveCount(0);
+    await expect(page.locator('[data-blok-testid="bookmark-card"]')).toHaveCount(0);
   });
 
   test('shows the pasted link immediately and anchors the menu at its end', async ({ page }) => {
-    await createBlok(page, undefined, MENU_CONFIG);
+    await createBlok(page);
     const editable = firstEditable(page);
 
     await editable.click();
@@ -263,19 +163,16 @@ test.describe('Link paste menu (opt-in)', () => {
   });
 
   test('pasting a generic URL opens the menu, and Bookmark inserts a card', async ({ page }) => {
-    await createBlok(page, undefined, MENU_CONFIG);
+    await createBlok(page);
     const editable = firstEditable(page);
 
     await editable.click();
     await pasteText(editable, 'https://example.com/article');
 
-    const bookmarkItem = page.locator('[data-blok-item-name="paste-menu-bookmark"]');
-
-    await expect(bookmarkItem).toBeVisible();
     // The menu replaces auto-claim: no card until the user picks.
     await expect(page.locator('[data-blok-testid="bookmark-card"]')).toHaveCount(0);
 
-    await bookmarkItem.click();
+    await pickMenu(page, 'bookmark');
 
     const card = page.locator('[data-blok-testid="bookmark-card"]');
 
@@ -284,7 +181,7 @@ test.describe('Link paste menu (opt-in)', () => {
   });
 
   test('pasting a YouTube URL offers Embed, which inserts an iframe', async ({ page }) => {
-    await createBlok(page, undefined, MENU_CONFIG);
+    await createBlok(page);
     const editable = firstEditable(page);
 
     await editable.click();
@@ -306,17 +203,96 @@ test.describe('Link paste menu (opt-in)', () => {
     );
   });
 
+  test('a chosen embed stretches to full width with side resize handles', async ({ page }) => {
+    await createBlok(page);
+    const editable = firstEditable(page);
+
+    await editable.click();
+    await pasteText(editable, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    await pickMenu(page, 'embed');
+
+    const figure = page.locator('[data-role="embed-figure"]');
+
+    await expect(figure).toBeVisible();
+
+    // Both edge handles are wired; they reveal on hover (Notion-style).
+    await expect(figure.locator('[data-role="resize-handle"]')).toHaveCount(2);
+    await figure.hover();
+    await expect(figure.locator('[data-role="resize-handle"][data-edge="left"]')).toBeVisible();
+    await expect(figure.locator('[data-role="resize-handle"][data-edge="right"]')).toBeVisible();
+
+    const figureBox = await figure.boundingBox();
+    const toolBox = await page.locator('[data-blok-tool="embed"]').boundingBox();
+
+    if (!figureBox || !toolBox) {
+      throw new Error('missing layout boxes');
+    }
+    // Embed stretches to fill (near) the full available content width by default.
+    expect(figureBox.width).toBeGreaterThan(toolBox.width * 0.95);
+  });
+
+  test('the embed hover toolbar toggles a caption and links to the original', async ({ page }) => {
+    await createBlok(page);
+    const editable = firstEditable(page);
+
+    await editable.click();
+    await pasteText(editable, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    await pickMenu(page, 'embed');
+
+    const figure = page.locator('[data-role="embed-figure"]');
+
+    await expect(figure).toBeVisible();
+    await figure.hover();
+
+    const overlay = figure.locator('[data-role="embed-overlay"]');
+
+    await expect(overlay).toBeVisible();
+
+    // "Open original" points at the source URL in a new tab.
+    const open = overlay.locator('[data-action="open-original"]');
+
+    await expect(open).toHaveAttribute('href', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    await expect(open).toHaveAttribute('target', '_blank');
+
+    // Caption toggle reveals an editable caption field.
+    await expect(figure.locator('[data-role="embed-caption"]')).toHaveCount(0);
+    await overlay.locator('[data-action="caption-toggle"]').click();
+    await expect(figure.locator('[data-role="embed-caption"]')).toBeVisible();
+
+    const saved = await saveBlok(page);
+    const embed = saved.blocks.find((block) => block.type === 'embed');
+
+    expect((embed?.data as { captionVisible?: boolean }).captionVisible).toBe(true);
+  });
+
+  test('a chosen bookmark persists across save and reload', async ({ page }) => {
+    await createBlok(page);
+    const editable = firstEditable(page);
+
+    await editable.click();
+    await pasteText(editable, 'https://example.com/article');
+    await pickMenu(page, 'bookmark');
+    await expect(page.locator('[data-blok-testid="bookmark-card"]')).toBeVisible();
+
+    const saved = await saveBlok(page);
+    const bookmarkBlock = saved.blocks.find((block) => block.type === 'bookmark');
+
+    expect(bookmarkBlock).toBeDefined();
+    expect((bookmarkBlock?.data as { url?: string }).url).toBe('https://example.com/article');
+
+    await createBlok(page, saved);
+
+    await expect(page.locator('[data-blok-testid="bookmark-card"]')).toBeVisible();
+  });
+
   test('choosing Plain link keeps the URL as a link, not a card', async ({ page }) => {
-    await createBlok(page, undefined, MENU_CONFIG);
+    await createBlok(page);
     const editable = firstEditable(page);
 
     await editable.click();
     await pasteText(editable, 'https://example.com/article');
 
-    const plainItem = page.locator('[data-blok-item-name="paste-menu-plain"]');
-
-    await expect(plainItem).toBeVisible();
-    await plainItem.click();
+    await pickMenu(page, 'plain');
 
     await expect(page.locator('[data-blok-testid="bookmark-card"]')).toHaveCount(0);
 
@@ -326,7 +302,7 @@ test.describe('Link paste menu (opt-in)', () => {
   });
 
   test('Escape dismisses the menu and keeps the URL as a link', async ({ page }) => {
-    await createBlok(page, undefined, MENU_CONFIG);
+    await createBlok(page);
     const editable = firstEditable(page);
 
     await editable.click();

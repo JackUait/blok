@@ -24,10 +24,9 @@ describe('API.config', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('exposes the linkPaste config slice', () => {
-    const api = makeApi({ linkPaste: { menu: true, allowGenericEmbed: true } });
+    const api = makeApi({ linkPaste: { allowGenericEmbed: true } });
 
     expect(api.methods.config.linkPaste?.allowGenericEmbed).toBe(true);
-    expect(api.methods.config.linkPaste?.menu).toBe(true);
   });
 
   it('returns undefined linkPaste when unset', () => {

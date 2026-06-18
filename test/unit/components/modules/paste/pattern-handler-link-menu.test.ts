@@ -9,8 +9,8 @@ import type { SanitizerConfigBuilder } from '../../../../../src/components/modul
 import type { HandlerContext } from '../../../../../src/components/modules/paste/types';
 
 /**
- * The opt-in paste menu intercepts a URL paste before the auto-claim path.
- * These tests pin the gating decision (menu vs auto-insert), not the popover UI.
+ * A URL paste always opens the menu instead of auto-claiming a block.
+ * These tests pin the routing decision (menu vs auto-insert), not the popover UI.
  */
 describe('PatternHandler — link paste menu gating', () => {
   const pasteMock = vi.fn();
@@ -78,8 +78,8 @@ describe('PatternHandler — link paste menu gating', () => {
     vi.restoreAllMocks();
   });
 
-  it('opens the menu instead of auto-inserting when linkPaste.menu is on', async () => {
-    const handler = makeHandler({ linkPaste: { menu: true } });
+  it('opens the menu instead of auto-inserting for a URL paste', async () => {
+    const handler = makeHandler({});
 
     const handled = await handler.handle('https://example.com/article', context);
 
@@ -90,7 +90,7 @@ describe('PatternHandler — link paste menu gating', () => {
   });
 
   it('inserts the link immediately so it stays visible while the menu is open', async () => {
-    const handler = makeHandler({ linkPaste: { menu: true } });
+    const handler = makeHandler({});
 
     await handler.handle('https://example.com/article', context);
 
@@ -103,7 +103,7 @@ describe('PatternHandler — link paste menu gating', () => {
   });
 
   it('keeps the already-shown link without re-inserting when dismissed', async () => {
-    const handler = makeHandler({ linkPaste: { menu: true } });
+    const handler = makeHandler({});
 
     await handler.handle('https://example.com/article', context);
     expect(insertMock).toHaveBeenCalledTimes(1);
@@ -115,7 +115,7 @@ describe('PatternHandler — link paste menu gating', () => {
   });
 
   it('keeps the already-shown link without re-inserting when Plain is chosen', async () => {
-    const handler = makeHandler({ linkPaste: { menu: true } });
+    const handler = makeHandler({});
 
     await handler.handle('https://example.com/article', context);
     expect(insertMock).toHaveBeenCalledTimes(1);
@@ -127,18 +127,8 @@ describe('PatternHandler — link paste menu gating', () => {
     expect(pasteMock).not.toHaveBeenCalled();
   });
 
-  it('auto-inserts (no menu) when linkPaste.menu is off', async () => {
+  it('auto-inserts when the matched text is not an http URL', async () => {
     const handler = makeHandler({});
-
-    const handled = await handler.handle('https://example.com/article', context);
-
-    expect(handled).toBe(true);
-    expect(fakeMenu.open).not.toHaveBeenCalled();
-    expect(pasteMock).toHaveBeenCalledTimes(1);
-  });
-
-  it('auto-inserts even with menu on when the matched text is not an http URL', async () => {
-    const handler = makeHandler({ linkPaste: { menu: true } });
 
     const handled = await handler.handle('ftp://nope', context);
 
@@ -148,7 +138,7 @@ describe('PatternHandler — link paste menu gating', () => {
   });
 
   it('routes the bookmark choice through a forced pattern paste', async () => {
-    const handler = makeHandler({ linkPaste: { menu: true } });
+    const handler = makeHandler({});
 
     await handler.handle('https://example.com/article', context);
     menuOpen?.onSelect('bookmark');

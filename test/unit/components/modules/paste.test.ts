@@ -962,14 +962,16 @@ describe('Paste module', () => {
   });
 
   describe('PatternHandler', () => {
-    it('substitutes pattern matches on inline paste and replaces current default block', async () => {
+    // URLs are routed to the link paste menu (covered separately); a non-URL
+    // pattern still auto-substitutes its block on inline paste.
+    it('substitutes a non-URL pattern match on inline paste and replaces current default block', async () => {
       const { paste, mocks } = createPaste();
 
       const patternTool = {
         name: 'link',
         pasteConfig: {
           patterns: {
-            link: /^https:\/\/example\.com$/,
+            link: /^::link::$/,
           },
         },
         baseSanitizeConfig: {},
@@ -997,7 +999,7 @@ describe('Paste module', () => {
       });
 
       const dataTransfer = new MockDataTransfer(
-        { 'text/plain': 'https://example.com' },
+        { 'text/plain': '::link::' },
         { length: 0 } as FileList,
         ['text/plain']
       );
@@ -1011,7 +1013,7 @@ describe('Paste module', () => {
       expect(tool).toBe('link');
       expect(event).toBeInstanceOf(CustomEvent);
       expect(event.type).toBe('pattern');
-      expect((event.detail as { data: string; key: string }).data).toBe('https://example.com');
+      expect((event.detail as { data: string; key: string }).data).toBe('::link::');
       expect((event.detail as { data: string; key: string }).key).toBe('link');
       expect(mocks.Caret.setToBlock).toHaveBeenCalledWith({ id: 'link-block' }, mocks.Caret.positions.END);
     });

@@ -73,6 +73,8 @@ export class VideoTool implements BlockTool {
     if (this.data.alignment !== undefined) out.alignment = this.data.alignment;
     if (this.data.fileName !== undefined) out.fileName = this.data.fileName;
     if (this.data.mimeType !== undefined) out.mimeType = this.data.mimeType;
+    if (this.data.videoWidth !== undefined) out.videoWidth = this.data.videoWidth;
+    if (this.data.videoHeight !== undefined) out.videoHeight = this.data.videoHeight;
     return out;
   }
 
@@ -324,6 +326,19 @@ export class VideoTool implements BlockTool {
     if (video) {
       this.controlsHandle = attachControls({ video, figure });
       media.appendChild(this.controlsHandle.element);
+
+      // Capture natural video dimensions on first metadata load so the player
+      // can restore its aspect ratio immediately on subsequent loads (no
+      // layout shift while the video buffer initializes).
+      if (this.data.videoWidth === undefined) {
+        video.addEventListener('loadedmetadata', () => {
+          if (video.videoWidth > 0 && video.videoHeight > 0) {
+            this.data.videoWidth = video.videoWidth;
+            this.data.videoHeight = video.videoHeight;
+            this.block.dispatchChange();
+          }
+        }, { once: true });
+      }
     }
 
     if (!this.readOnly) {

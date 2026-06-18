@@ -33,6 +33,9 @@ export function renderVideo(data: Partial<VideoData> & { url: string }): HTMLEle
   if (data.width !== undefined) {
     figure.style.width = `${data.width}%`;
   }
+  if (data.videoWidth !== undefined && data.videoHeight !== undefined) {
+    figure.style.aspectRatio = `${data.videoWidth} / ${data.videoHeight}`;
+  }
 
   // The media wrapper hugs the player pixels and anchors the overlaid chrome
   // (custom controls, edit toolbar, resize handles) so they sit over the video

@@ -69,6 +69,27 @@ describe('VideoTool — RENDERED state', () => {
     });
   });
 
+  it('save() includes videoWidth and videoHeight when present in data', () => {
+    const tool = new VideoTool(createOptions({
+      url: 'https://x/y.mp4',
+      videoWidth: 1920,
+      videoHeight: 1080,
+    }));
+    const root = tool.render();
+    expect(tool.save(root)).toMatchObject({
+      videoWidth: 1920,
+      videoHeight: 1080,
+    });
+  });
+
+  it('save() omits videoWidth/videoHeight when not yet known', () => {
+    const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }));
+    const root = tool.render();
+    const saved = tool.save(root);
+    expect(saved).not.toHaveProperty('videoWidth');
+    expect(saved).not.toHaveProperty('videoHeight');
+  });
+
   it('validate({ url: "" }) returns false, non-empty returns true', () => {
     const tool = new VideoTool(createOptions());
     expect(tool.validate({ url: '' } as VideoData)).toBe(false);
@@ -243,6 +264,78 @@ describe('VideoTool — resize', () => {
     handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 700, bubbles: true }));
     expect(tool.save().width).toBe(40);
     expect(block.dispatchChange).toHaveBeenCalled();
+  });
+});
+
+describe('VideoTool — dimension persistence', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('applies aspect-ratio on figure when videoWidth/videoHeight are in data', () => {
+    const tool = new VideoTool(createOptions({
+      url: 'https://x/y.mp4',
+      videoWidth: 1920,
+      videoHeight: 1080,
+    }));
+    const root = tool.render();
+    const figure = root.querySelector<HTMLElement>('[data-role="video-figure"]');
+    expect(figure).not.toBeNull();
+    expect(figure!.style.aspectRatio).toBe('1920 / 1080');
+  });
+
+  it('does not set aspect-ratio when dimensions are absent', () => {
+    const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }));
+    const root = tool.render();
+    const figure = root.querySelector<HTMLElement>('[data-role="video-figure"]');
+    expect(figure!.style.aspectRatio).toBe('');
+  });
+
+  it('captures natural video dimensions on metadata load and dispatches change', () => {
+    const block = createMockBlock();
+    const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }, {}, block));
+    const root = tool.render();
+    const video = root.querySelector('video')!;
+    // Simulate the browser reporting natural dimensions
+    Object.defineProperty(video, 'videoWidth', { value: 1280, configurable: true });
+    Object.defineProperty(video, 'videoHeight', { value: 720, configurable: true });
+    video.dispatchEvent(new Event('loadedmetadata'));
+    expect(tool.save().videoWidth).toBe(1280);
+    expect(tool.save().videoHeight).toBe(720);
+    expect(block.dispatchChange).toHaveBeenCalled();
+  });
+
+  it('does not overwrite existing dimensions on subsequent metadata loads', () => {
+    const block = createMockBlock();
+    const tool = new VideoTool(createOptions({
+      url: 'https://x/y.mp4',
+      videoWidth: 1920,
+      videoHeight: 1080,
+    }, {}, block));
+    const root = tool.render();
+    const video = root.querySelector('video')!;
+    Object.defineProperty(video, 'videoWidth', { value: 640, configurable: true });
+    Object.defineProperty(video, 'videoHeight', { value: 480, configurable: true });
+    video.dispatchEvent(new Event('loadedmetadata'));
+    // Should keep the original 1920x1080, not overwrite with 640x480
+    expect(tool.save().videoWidth).toBe(1920);
+    expect(tool.save().videoHeight).toBe(1080);
+  });
+
+  it('re-applies aspect-ratio after a re-render (e.g. alignment change)', () => {
+    const tool = new VideoTool(createOptions({
+      url: 'https://x/y.mp4',
+      videoWidth: 1920,
+      videoHeight: 1080,
+    }));
+    const root = tool.render();
+    const figure = root.querySelector<HTMLElement>('[data-role="video-figure"]')!;
+    expect(figure.style.aspectRatio).toBe('1920 / 1080');
+    // Trigger re-render via alignment change
+    const items = tool.renderSettings() as unknown as { name?: string; children?: { items: { name?: string; onActivate?: () => void }[] } }[];
+    items.find(i => i.name === 'video-alignment')?.children?.items
+      .find(c => c.name === 'video-alignment-left')?.onActivate?.();
+    const newFigure = root.querySelector<HTMLElement>('[data-role="video-figure"]')!;
+    expect(newFigure.style.aspectRatio).toBe('1920 / 1080');
   });
 });
 

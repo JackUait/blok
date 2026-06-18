@@ -21,6 +21,10 @@ export interface VideoData extends BlockToolData {
   fileName?: string;
   /** Source MIME type (e.g. video/mp4), when known */
   mimeType?: string;
+  /** Natural (intrinsic) pixel width of the video, captured on first metadata load. */
+  videoWidth?: number;
+  /** Natural (intrinsic) pixel height of the video, captured on first metadata load. */
+  videoHeight?: number;
 }
 
 /**

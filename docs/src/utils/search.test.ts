@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getSearchIndex } from './search';
+import { getSearchIndex, search } from './search';
 
 describe('search', () => {
   it('should not index any recipe entries', () => {
@@ -12,5 +12,65 @@ describe('search', () => {
     const index = getSearchIndex();
     const recipePaths = index.filter(item => item.path === '/recipes');
     expect(recipePaths).toHaveLength(0);
+  });
+
+  describe('result kind and section', () => {
+    it('tags every indexed item with a known kind', () => {
+      const index = getSearchIndex();
+      const allowed = new Set(['method', 'property', 'option', 'section', 'page']);
+
+      expect(index.length).toBeGreaterThan(0);
+      for (const item of index) {
+        expect(allowed.has(item.kind)).toBe(true);
+      }
+    });
+
+    it('tags method entries as "method" and gives them a parent section', () => {
+      const methods = getSearchIndex().filter(item => item.kind === 'method');
+
+      expect(methods.length).toBeGreaterThan(0);
+      for (const method of methods) {
+        expect(method.section).toBeTruthy();
+      }
+    });
+
+    it('tags config-option entries as "option" with their section', () => {
+      const options = getSearchIndex().filter(item => item.kind === 'option');
+
+      expect(options.length).toBeGreaterThan(0);
+      for (const option of options) {
+        expect(option.section).toBeTruthy();
+      }
+    });
+
+    it('tags property entries as "property"', () => {
+      const properties = getSearchIndex().filter(item => item.kind === 'property');
+
+      expect(properties.length).toBeGreaterThan(0);
+    });
+
+    it('tags top-level pages as "page"', () => {
+      const pages = getSearchIndex().filter(item => item.module === 'Page');
+
+      expect(pages.length).toBeGreaterThan(0);
+      for (const page of pages) {
+        expect(page.kind).toBe('page');
+      }
+    });
+
+    it('tags section overview entries as "section"', () => {
+      const sections = getSearchIndex().filter(item => item.kind === 'section');
+
+      expect(sections.length).toBeGreaterThan(0);
+    });
+
+    it('carries kind and section through search results', () => {
+      const results = search('block', getSearchIndex());
+
+      expect(results.length).toBeGreaterThan(0);
+      for (const result of results) {
+        expect(result.kind).toBeTruthy();
+      }
+    });
   });
 });

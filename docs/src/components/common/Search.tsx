@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { search, getSearchIndex } from "@/utils/search";
 import type { SearchResult } from "@/types/search";
 import { ModuleIcon } from "./ModuleIcon";
+import { KindIcon } from "./KindIcon";
 import { KeyIcon, ShortcutKeys } from "./KeyIcon";
 import { useI18n } from "../../contexts/I18nContext";
 import { cn } from "@/lib/utils";
@@ -63,7 +64,10 @@ const highlightMatch = (text: string, query: string): React.ReactNode => {
 
   return parts.map((part, index) =>
     testRegex.test(part) ? (
-      <mark key={index} className="bg-transparent font-semibold text-foreground">
+      <mark
+        key={index}
+        className="rounded-[3px] bg-primary/12 px-0.5 font-semibold text-primary"
+      >
         {part}
       </mark>
     ) : (
@@ -552,64 +556,106 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
           >
             <div className="max-h-[60vh] overflow-y-auto p-2" ref={resultsRef}>
               {results.length === 0 ? (
-                <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
+                <div className="flex flex-col items-center px-6 py-12 text-center">
                   {query.trim() ? (
                     <>
-                      <div className="mb-1 flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
-                        <svg
-                          width="32"
-                          height="32"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                        >
-                          <circle
-                            cx="11"
-                            cy="11"
-                            r="7"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          />
-                          <path
-                            d="M21 21l-4.35-4.35"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                          />
-                          <path
-                            d="M8 11h6"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                          />
+                      {/* Same doc page, greyed — no coral title — giving a resigned
+                          head-shake because nothing matched. */}
+                      <div className="mb-4" aria-hidden="true">
+                        <svg width="72" height="82" viewBox="0 0 56 64" fill="none">
+                          <g>
+                            <path
+                              d="M12 7H36L48 19V54a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V11a4 4 0 0 1 4-4Z"
+                              className="fill-card stroke-muted-foreground/40"
+                              strokeWidth="1.6"
+                              strokeLinejoin="round"
+                            />
+                            <path
+                              d="M36 7v8a4 4 0 0 0 4 4h8"
+                              className="fill-secondary stroke-muted-foreground/40"
+                              strokeWidth="1.6"
+                              strokeLinejoin="round"
+                            />
+                            {/* Blank, greyed content — nothing matched */}
+                            <rect x="16" y="23" width="22" height="4.5" rx="2.25" className="fill-muted-foreground/30" />
+                            <rect x="16" y="33" width="24" height="3" rx="1.5" className="fill-muted-foreground/20" />
+                            <rect x="16" y="39" width="19" height="3" rx="1.5" className="fill-muted-foreground/20" />
+                            <rect x="16" y="45" width="22" height="3" rx="1.5" className="fill-muted-foreground/20" />
+                          </g>
                         </svg>
                       </div>
                       <p className="text-base font-semibold text-foreground">
-                        {t("search.noResultsTitle")}
+                        {t("search.noResultsFor")}{" "}
+                        <span className="text-primary">
+                          &ldquo;{query.trim()}&rdquo;
+                        </span>
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="mt-1 text-sm text-muted-foreground">
                         {t("search.noResultsDescription")}
                       </p>
                     </>
                   ) : (
                     <>
-                      <div className="mb-1 flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+                      {/* One confident doc page. Its dog-ear corner folds and
+                          unfolds from time to time: the flap pivots around the
+                          diagonal crease. The page body stays notched, so when the
+                          flap lays flat (card-coloured) it completes the rectangle,
+                          and when folded it shows the underside dog-ear. */}
+                      <div
+                        className="mb-4"
+                        aria-hidden="true"
+                        style={{ perspective: "300px" }}
+                      >
                         <svg
-                          width="32"
-                          height="32"
-                          viewBox="0 0 24 24"
+                          width="72"
+                          height="82"
+                          viewBox="0 0 56 64"
                           fill="none"
+                          style={{ overflow: "visible", transformStyle: "preserve-3d" }}
                         >
-                          <circle
-                            cx="11"
-                            cy="11"
-                            r="7"
-                            stroke="currentColor"
-                            strokeWidth="2"
+                          {/* Page fill (notched) — unstroked; the outline below skips
+                              the diagonal so no crease shows when the corner unfolds. */}
+                          <path
+                            d="M12 7H36L48 19V54a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V11a4 4 0 0 1 4-4Z"
+                            className="fill-card"
                           />
                           <path
-                            d="M21 21l-4.35-4.35"
-                            stroke="currentColor"
-                            strokeWidth="2"
+                            d="M48 19V54a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V11a4 4 0 0 1 4-4H36"
+                            className="stroke-muted-foreground/40"
+                            strokeWidth="1.6"
+                            fill="none"
+                            strokeLinejoin="round"
+                          />
+                          {/* Coral title block + body lines */}
+                          <rect x="16" y="23" width="22" height="4.5" rx="2.25" className="fill-primary" />
+                          <rect x="16" y="33" width="24" height="3" rx="1.5" className="fill-muted-foreground/35" />
+                          <rect x="16" y="39" width="19" height="3" rx="1.5" className="fill-muted-foreground/35" />
+                          <rect x="16" y="45" width="22" height="3" rx="1.5" className="fill-muted-foreground/35" />
+                          {/* The folding corner flap, drawn at its unfolded
+                              position; the animation pivots it onto the page. Its
+                              two leg strokes become the rectangle's top+right edges
+                              when flat, and the dog-ear's free edges when folded. */}
+                          <g className="paper-fold">
+                            <path
+                              className="paper-fold-face"
+                              d="M36 7H44a4 4 0 0 1 4 4V19Z"
+                            />
+                            <path
+                              d="M36 7H44a4 4 0 0 1 4 4V19"
+                              className="stroke-muted-foreground/40"
+                              strokeWidth="1.6"
+                              fill="none"
+                              strokeLinejoin="round"
+                            />
+                          </g>
+                          {/* The crease, along the fixed fold axis. Visible only
+                              when folded (it's the cut edge); fades out as the corner
+                              lays flat so the rectangle reads seamless. */}
+                          <path
+                            className="paper-crease stroke-muted-foreground/40"
+                            d="M36 7L48 19"
+                            strokeWidth="1.6"
+                            fill="none"
                             strokeLinecap="round"
                           />
                         </svg>
@@ -617,7 +663,7 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
                       <p className="text-base font-semibold text-foreground">
                         {t("search.emptyTitle")}
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="mt-1 text-sm text-muted-foreground">
                         {t("search.emptyDescription")}
                       </p>
                     </>
@@ -658,7 +704,7 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
                         )}
                         <button
                           className={cn(
-                            "group flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
+                            "group flex w-full cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors",
                             isSelected
                               ? "bg-secondary"
                               : "hover:bg-secondary/60",
@@ -673,11 +719,46 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
                           data-search-result-index={index}
                           data-keyboard-nav={isKeyboardNavMode}
                         >
+                          {/* Kind tile: a glyph that's the same for every result of a
+                              kind, so the eye groups methods / options / pages before
+                              reading a word. Methods carry the coral accent (callable). */}
+                          <span
+                            className={cn(
+                              "flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors",
+                              result.kind === "method"
+                                ? "bg-primary/10 text-primary"
+                                : isSelected
+                                  ? "bg-background text-muted-foreground"
+                                  : "bg-secondary text-muted-foreground group-hover:bg-background",
+                            )}
+                            data-blok-testid="search-result-kind"
+                            data-kind={result.kind}
+                          >
+                            <KindIcon kind={result.kind} />
+                          </span>
                           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                            <span className="truncate text-sm font-medium text-foreground">
-                              {highlightMatch(result.title, query)}
+                            <span className="flex min-w-0 items-center gap-2">
+                              <span className="truncate text-sm font-medium text-foreground">
+                                {highlightMatch(result.title, query)}
+                              </span>
+                              <span
+                                className={cn(
+                                  "shrink-0 text-[10px] font-semibold uppercase tracking-[0.05em]",
+                                  result.kind === "method"
+                                    ? "text-primary/80"
+                                    : "text-muted-foreground/60",
+                                )}
+                              >
+                                {t(`search.kind.${result.kind}`)}
+                              </span>
                             </span>
                             <p className="truncate text-xs text-muted-foreground">
+                              {result.section && (
+                                <span className="font-medium text-foreground/65">
+                                  {result.section}
+                                  {result.description ? " · " : ""}
+                                </span>
+                              )}
                               {highlightMatch(result.description || "", query)}
                             </p>
                           </div>

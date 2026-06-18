@@ -493,10 +493,18 @@
     "noResultsDescription": "Try different keywords or browse the documentation sections",
     "emptyTitle": "Search Blok docs",
     "emptyDescription": "Find API methods, configuration options, tools, and more",
+    "noResultsFor": "No matches for",
     "navigate": "navigate",
     "select": "select",
     "result": "result",
-    "results": "results"
+    "results": "results",
+    "kind": {
+      "method": "Method",
+      "property": "Property",
+      "option": "Option",
+      "section": "Section",
+      "page": "Page"
+    }
   },
   "theme": {
     "light": "Light theme",

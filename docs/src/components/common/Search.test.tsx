@@ -136,6 +136,8 @@ describe('Search', () => {
         description: 'Only one',
         category: 'api',
         module: 'Core',
+        kind: 'method',
+        section: 'Blok Class',
         path: '/docs',
         hash: 'test-single',
         rank: 1,

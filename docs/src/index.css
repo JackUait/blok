@@ -282,11 +282,75 @@
   }
 }
 
+/* Search empty-state glyph — the doc page's corner folds and unfolds from time
+   to time. The flap pivots around the diagonal crease (axis 1,1,0). Resting
+   state is the folded dog-ear (rotate 180° reflects the corner onto the page);
+   periodically it opens flat and folds back. The base transform keeps the
+   dog-ear correct even when the animation is off / 3D is unsupported. */
+.paper-fold {
+  transform-box: fill-box;
+  transform-origin: left top;
+  transform-style: preserve-3d;
+  transform: rotate3d(1, 1, 0, 180deg);
+  animation: paper-fold 5.5s ease-in-out infinite;
+}
+
+@keyframes paper-fold {
+  0%,
+  55%,
+  100% {
+    transform: rotate3d(1, 1, 0, 180deg);
+  }
+  75%,
+  84% {
+    transform: rotate3d(1, 1, 0, 0deg);
+  }
+}
+
+/* The flap face is the page underside (secondary) when folded, and blends to
+   the page colour (card) as it lays flat so the corner reads as unfolded. */
+.paper-fold-face {
+  animation: paper-fold-face 5.5s ease-in-out infinite;
+}
+
+@keyframes paper-fold-face {
+  0%,
+  62%,
+  100% {
+    fill: var(--secondary);
+  }
+  72%,
+  87% {
+    fill: var(--card);
+  }
+}
+
+/* The crease line is the cut edge: shown while folded, faded out as the corner
+   lays flat so the unfolded page reads as a seamless rectangle. */
+.paper-crease {
+  animation: paper-crease 5.5s ease-in-out infinite;
+}
+
+@keyframes paper-crease {
+  0%,
+  58%,
+  100% {
+    opacity: 1;
+  }
+  74%,
+  85% {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .group:hover .feature-blob,
   .hero-blob,
   .hero-float,
-  .hero-caret {
+  .hero-caret,
+  .paper-fold,
+  .paper-fold-face,
+  .paper-crease {
     animation: none;
   }
 }

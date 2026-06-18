@@ -25,6 +25,10 @@ export function renderVideo(data: Partial<VideoData> & { url: string }): HTMLEle
   media.className = 'blok-video-media';
   media.setAttribute('data-role', 'video-media');
   media.style.position = 'relative';
+  // Reserve space before loadedmetadata fires — without this the <video>
+  // collapses to zero height then "pops" when the browser learns the
+  // intrinsic ratio (the "squeeze" visual glitch on load).
+  media.style.aspectRatio = data.aspectRatio ?? '16 / 9';
 
   // No native `controls` — a custom Airbnb-style control surface is attached
   // separately (see controls.ts) and fully replaces the browser chrome.

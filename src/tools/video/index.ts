@@ -77,6 +77,7 @@ export class VideoTool implements BlockTool {
     if (this.data.glow !== undefined) out.glow = this.data.glow;
     if (this.data.fileName !== undefined) out.fileName = this.data.fileName;
     if (this.data.mimeType !== undefined) out.mimeType = this.data.mimeType;
+    if (this.data.aspectRatio !== undefined) out.aspectRatio = this.data.aspectRatio;
     return out;
   }
 
@@ -347,6 +348,21 @@ export class VideoTool implements BlockTool {
     if (video) {
       this.controlsHandle = attachControls({ video, figure, glow: this.data.glow ?? 'less' });
       media.appendChild(this.controlsHandle.element);
+
+      // When metadata arrives, update the media wrapper's aspect ratio so it
+      // matches the video's intrinsic dimensions.  If the ratio differs from
+      // the default 16 : 9 (or a previously stored value) we persist it so
+      // subsequent renders skip the layout pop.
+      video.addEventListener('loadedmetadata', () => {
+        if (video.videoWidth > 0 && video.videoHeight > 0) {
+          const ratio = `${video.videoWidth} / ${video.videoHeight}`;
+          if (ratio !== this.data.aspectRatio) {
+            this.data.aspectRatio = ratio;
+            media.style.aspectRatio = ratio;
+            this.block.dispatchChange();
+          }
+        }
+      }, { once: true });
     }
 
     // Theater is an ephemeral view mode: observe the player's toggle to keep our

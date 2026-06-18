@@ -26,6 +26,8 @@ export interface VideoData extends BlockToolData {
   fileName?: string;
   /** Source MIME type (e.g. video/mp4), when known */
   mimeType?: string;
+  /** Intrinsic aspect ratio string (e.g. '16 / 9'), cached from loadedmetadata. */
+  aspectRatio?: string;
 }
 
 /**

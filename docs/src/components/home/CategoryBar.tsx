@@ -14,13 +14,12 @@ interface Category {
 }
 
 const CATEGORIES: Category[] = [
-  { key: "getStarted", href: "/#quick-start", icon: "guide" },
-  { key: "blocks", href: "/docs#blocks", icon: "blocks" },
+  { key: "getStarted", href: "/", icon: "guide" },
+  { key: "docs", href: "/docs", icon: "page" },
   { key: "tools", href: "/tools", icon: "tools" },
-  { key: "inlineTools", href: "/docs#inline-toolbar-api", icon: "inline" },
-  { key: "api", href: "/docs#core", icon: "api" },
-  { key: "events", href: "/docs#events", icon: "events" },
+  { key: "playground", href: "/demo", icon: "block" },
   { key: "migration", href: "/migration", icon: "history" },
+  { key: "changelog", href: "/changelog", icon: "events" },
 ];
 
 /** Path portion of an href, ignoring any hash. */

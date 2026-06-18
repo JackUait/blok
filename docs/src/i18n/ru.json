@@ -321,12 +321,11 @@
     "categories": {
       "label": "Обзор документации",
       "getStarted": "Начало работы",
-      "blocks": "Блоки",
+      "docs": "Документация",
       "tools": "Инструменты",
-      "inlineTools": "Инлайн-инструменты",
-      "api": "API",
-      "events": "События",
-      "migration": "Миграция"
+      "playground": "Песочница",
+      "migration": "Миграция",
+      "changelog": "История изменений"
     },
     "features": {
       "title1": "Для разработчиков —",

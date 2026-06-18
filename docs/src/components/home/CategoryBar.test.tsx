@@ -29,13 +29,12 @@ describe('CategoryBar', () => {
     renderBar();
 
     const expected: Array<[RegExp, string]> = [
-      [/get started/i, '/#quick-start'],
-      [/^blocks$/i, '/docs#blocks'],
+      [/get started/i, '/'],
+      [/^docs$/i, '/docs'],
       [/^tools$/i, '/tools'],
-      [/inline tools/i, '/docs#inline-toolbar-api'],
-      [/^api$/i, '/docs#core'],
-      [/^events$/i, '/docs#events'],
+      [/^playground$/i, '/demo'],
       [/^migration$/i, '/migration'],
+      [/^changelog$/i, '/changelog'],
     ];
 
     expected.forEach(([name, href]) => {
@@ -69,6 +68,6 @@ describe('CategoryBar', () => {
     localStorage.setItem('blok-docs-locale', 'ru');
     renderBar();
     expect(screen.getByRole('link', { name: /начало работы/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /^блоки$/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^документация$/i })).toBeInTheDocument();
   });
 });

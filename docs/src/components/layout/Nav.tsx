@@ -18,7 +18,6 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
   const { t } = useI18n();
   const [navScrolled, setNavScrolled] = useState(false);
   const [navHidden, setNavHidden] = useState(false);
-  const [scrollProgress, setScrollProgress] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const lastScrollYRef = useRef(0);
@@ -42,11 +41,6 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
       const scrollY = window.scrollY;
       const lastY = lastScrollYRef.current;
       setNavScrolled(scrollY > 20);
-
-      // Reading progress along the island's bottom edge
-      const maxScroll =
-        document.documentElement.scrollHeight - window.innerHeight;
-      setScrollProgress(maxScroll > 0 ? Math.min(1, scrollY / maxScroll) : 0);
 
       if (scrollY <= HIDE_THRESHOLD) {
         setNavHidden(false);
@@ -156,10 +150,10 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
         >
           <Link
             to="/"
-            className="flex shrink-0 items-center gap-2 font-display text-xl font-extrabold tracking-tight"
+            className="nav-brand flex shrink-0 items-center gap-1.5 font-display text-xl font-extrabold tracking-tight"
           >
-            <Logo size={34} />
-            <p>Blok</p>
+            <Logo size={42} className="nav-brand-mascot" />
+            <img src="/logo-wordmark.png" alt="" className="nav-brand-wordmark h-5 w-auto" />
           </Link>
 
           {/* Center search — Airbnb-style pill: dark prompt on the left, a coral
@@ -169,7 +163,7 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
             <button
               type="button"
               className={cn(
-                "group flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-border/80 bg-background shadow-[0_2px_8px_rgba(17,17,17,0.07)] transition-[box-shadow,border-color] duration-200 ease-out hover:border-foreground/15 hover:shadow-[0_6px_18px_rgba(17,17,17,0.13)] sm:h-12 sm:w-full sm:justify-between sm:pl-5 sm:pr-1.5",
+                "group flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-border/50 bg-background/55 backdrop-blur-md transition-colors duration-200 ease-out hover:border-border hover:bg-background/80 sm:h-12 sm:w-full sm:justify-between sm:pl-5 sm:pr-1.5",
                 searchOpen && "pointer-events-none opacity-0",
               )}
               onClick={() => setSearchOpen(true)}
@@ -219,8 +213,8 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
               <button
                 type="button"
                 className={cn(
-                  "flex h-10 cursor-pointer items-center gap-2.5 rounded-full border border-border bg-background py-1 pr-1 pl-3.5 transition-all hover:shadow-card-hover hover:border-foreground/20",
-                  menuOpen && "shadow-card-hover border-foreground/20",
+                  "flex size-9 cursor-pointer items-center justify-center rounded-full text-foreground/80 transition-colors hover:bg-secondary hover:text-foreground",
+                  menuOpen && "bg-secondary text-foreground",
                 )}
                 aria-label={t("nav.toggleMenu")}
                 aria-expanded={menuOpen}
@@ -229,18 +223,12 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
                 onClick={() => setMenuOpen((prev) => !prev)}
               >
                 <span
-                  className="flex flex-col items-end justify-center gap-[3px]"
+                  className="flex flex-col items-center justify-center gap-[3.5px]"
                   aria-hidden="true"
                 >
-                  <span className="block h-0.5 w-4 rounded-full bg-foreground" />
-                  <span className="block h-0.5 w-4 rounded-full bg-foreground" />
-                  <span className="block h-0.5 w-4 rounded-full bg-foreground" />
-                </span>
-                <span
-                  className="flex size-7 items-center justify-center overflow-hidden rounded-full bg-secondary"
-                  aria-hidden="true"
-                >
-                  <Logo size={24} />
+                  <span className="block h-[1.5px] w-[18px] rounded-full bg-current" />
+                  <span className="block h-[1.5px] w-[18px] rounded-full bg-current" />
+                  <span className="block h-[1.5px] w-[18px] rounded-full bg-current" />
                 </span>
               </button>
 
@@ -290,16 +278,6 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
               </div>
             </div>
           </div>
-
-          {/* Reading-progress hairline — only meaningful once condensed */}
-          <span
-            aria-hidden="true"
-            className={cn(
-              "pointer-events-none absolute inset-x-6 bottom-1 h-0.5 origin-left rounded-full bg-primary/70 transition-opacity duration-300 motion-reduce:transition-none",
-              navScrolled ? "opacity-100" : "opacity-0",
-            )}
-            style={{ transform: `scaleX(${scrollProgress})` }}
-          />
         </div>
       </nav>
     </>

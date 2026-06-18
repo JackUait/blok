@@ -38,6 +38,6 @@ describe('Logo', () => {
   it('should use the mascot image source', () => {
     render(<Logo />);
     const img = screen.getByRole('img');
-    expect(img).toHaveAttribute('src', '/mascot.png');
+    expect(img).toHaveAttribute('src', '/logo-no-sign.png');
   });
 });

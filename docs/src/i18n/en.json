@@ -321,12 +321,11 @@
     "categories": {
       "label": "Browse the documentation",
       "getStarted": "Get started",
-      "blocks": "Blocks",
+      "docs": "Docs",
       "tools": "Tools",
-      "inlineTools": "Inline tools",
-      "api": "API",
-      "events": "Events",
-      "migration": "Migration"
+      "playground": "Playground",
+      "migration": "Migration",
+      "changelog": "Changelog"
     },
     "features": {
       "title1": "Built for developers,",

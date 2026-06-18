@@ -79,21 +79,18 @@ export const Hero: React.FC = () => {
                 aria-hidden="true"
               />
 
-              {/* faux Blok editor window — sells the block-based product */}
-              <div
-                className="relative overflow-hidden rounded-2xl border border-border bg-background/85 text-left backdrop-blur-sm"
-                aria-hidden="true"
-              >
+              {/* faux Blok editor window — sells the block-based product. No overflow
+                  clip so the slash menu can drop past the window edge with real depth. */}
+              <div className="relative rounded-2xl border border-border bg-background/85 text-left backdrop-blur-sm" aria-hidden="true">
                 {/* window chrome */}
-                <div className="flex items-center gap-1.5 border-b border-border/70 px-3.5 py-2.5">
-                  <span className="size-2.5 rounded-full bg-chart-3/70" />
-                  <span className="size-2.5 rounded-full bg-chart-4/70" />
-                  <span className="size-2.5 rounded-full bg-chart-5/40" />
-                  <span className="ml-2 h-2 w-16 rounded-full bg-muted" />
+                <div className="flex items-center gap-1.5 rounded-t-2xl border-b border-border/70 px-3.5 py-2.5">
+                  <span className="size-2.5 rounded-full bg-chart-3/80" />
+                  <span className="size-2.5 rounded-full bg-chart-4/80" />
+                  <span className="size-2.5 rounded-full bg-chart-5/50" />
                 </div>
 
                 {/* editor blocks */}
-                <div className="space-y-3.5 px-4 py-4">
+                <div className="space-y-3 px-4 pb-10 pt-4">
                   {/* heading block with hover affordances (handle + plus) */}
                   <div className="relative flex items-center gap-2">
                     <div className="flex items-center gap-1 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
@@ -103,54 +100,60 @@ export const Hero: React.FC = () => {
                           <line x1="5" y1="12" x2="19" y2="12" />
                         </svg>
                       </span>
-                      <svg width="8" height="14" viewBox="0 0 6 14" className="fill-muted-foreground/50">
-                        <circle cx="1.5" cy="2" r="1.3" />
-                        <circle cx="4.5" cy="2" r="1.3" />
-                        <circle cx="1.5" cy="7" r="1.3" />
-                        <circle cx="4.5" cy="7" r="1.3" />
-                        <circle cx="1.5" cy="12" r="1.3" />
-                        <circle cx="4.5" cy="12" r="1.3" />
+                      <svg width="7" height="13" viewBox="0 0 7 13" className="fill-muted-foreground/70">
+                        <circle cx="2" cy="2.5" r="1.05" />
+                        <circle cx="5" cy="2.5" r="1.05" />
+                        <circle cx="2" cy="6.5" r="1.05" />
+                        <circle cx="5" cy="6.5" r="1.05" />
+                        <circle cx="2" cy="10.5" r="1.05" />
+                        <circle cx="5" cy="10.5" r="1.05" />
                       </svg>
                     </div>
                     <div className="h-3.5 w-36 rounded-md bg-brand-gradient" />
                   </div>
 
-                  {/* paragraph skeleton */}
+                  {/* active block — user just typed "/", slash menu drops below it */}
+                  <div className="relative z-10 flex h-5 items-center gap-0.5 pl-1">
+                    <span className="font-mono text-sm font-semibold leading-none text-muted-foreground">/</span>
+                    <span className="hero-caret h-4 w-px bg-foreground" />
+
+                    {/* slash-command menu — the block-based "wow", drops from the caret */}
+                    <div className="absolute -left-1 top-[calc(100%+0.5rem)] w-44 rounded-xl border border-border bg-card p-1.5 shadow-card-hover transition-transform duration-300 group-hover:-translate-y-0.5">
+                      <div className="flex items-center gap-1.5 px-1.5 pb-1 pt-0.5">
+                        <span className="font-mono text-[11px] font-semibold text-primary">/</span>
+                        <span className="h-1.5 w-10 rounded-full bg-muted" />
+                      </div>
+                      <div className="space-y-px border-t border-border/70 pt-1">
+                        {[
+                          { c: 'bg-chart-1', w: 'w-14' },
+                          { c: 'bg-chart-2', w: 'w-10' },
+                          { c: 'bg-chart-4', w: 'w-12' },
+                        ].map((row, i) => (
+                          <div
+                            key={row.c}
+                            className={`flex items-center gap-2 rounded-lg px-1.5 py-0.5 ${i === 0 ? 'bg-muted ring-1 ring-border' : ''}`}
+                          >
+                            <span className={`flex size-4 items-center justify-center rounded-md ${row.c} opacity-90`}>
+                              <span className="size-1.5 rounded-[2px] bg-background/80" />
+                            </span>
+                            <span className={`h-1.5 ${row.w} rounded-full bg-muted-foreground/25`} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* paragraph skeleton — sits behind the open menu */}
                   <div className="space-y-2 pl-1">
                     <div className="h-2.5 w-full rounded-full bg-muted" />
                     <div className="h-2.5 w-11/12 rounded-full bg-muted" />
                     <div className="h-2.5 w-2/3 rounded-full bg-muted" />
                   </div>
-
-                  {/* active empty block with blinking caret */}
-                  <div className="flex h-4 items-center pl-1">
-                    <span className="hero-caret h-4 w-px bg-foreground" />
-                  </div>
-                </div>
-
-                {/* slash-command menu popover — the block-based "wow" */}
-                <div className="absolute -right-6 bottom-3 w-40 rounded-xl border border-border bg-card p-1.5 shadow-card-hover transition-transform duration-300 group-hover:-translate-y-1">
-                  <div className="px-1.5 pb-1 pt-0.5 font-mono text-[10px] font-semibold text-primary">
-                    /
-                  </div>
-                  {[
-                    { c: 'bg-chart-1', w: 'w-12' },
-                    { c: 'bg-chart-2', w: 'w-16' },
-                    { c: 'bg-chart-4', w: 'w-10' },
-                  ].map((row, i) => (
-                    <div
-                      key={row.c}
-                      className={`flex items-center gap-2 rounded-lg px-1.5 py-1 ${i === 0 ? 'bg-muted' : ''}`}
-                    >
-                      <span className={`size-4 rounded-md ${row.c} opacity-80`} />
-                      <span className={`h-1.5 ${row.w} rounded-full bg-muted`} />
-                    </div>
-                  ))}
                 </div>
               </div>
 
               {/* CTA */}
-              <span className="relative mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-4 py-2.5 text-sm font-semibold text-background transition-transform duration-300 group-hover:scale-[1.02]">
+              <span className="relative mt-7 flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-4 py-2.5 text-sm font-semibold text-background transition-transform duration-300 group-hover:scale-[1.02]">
                 {t('home.hero.ctaTryItOut')}
                 <svg
                   width="14"

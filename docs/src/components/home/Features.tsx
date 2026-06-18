@@ -18,8 +18,9 @@ const cardVariants: Variants = {
   },
 };
 
-// Snappy spring used for hover lift + tap feedback.
-const hoverSpring = { type: "spring", stiffness: 400, damping: 28 } as const;
+// Bouncy spring for hover lift + tap feedback — a touch of overshoot gives the
+// cards a playful, alive feel without feeling sluggish.
+const hoverSpring = { type: "spring", stiffness: 380, damping: 20 } as const;
 
 export const Features: React.FC = () => {
   const { t } = useI18n();
@@ -282,17 +283,17 @@ new Blok({ holder: 'editor' });`,
 
   return (
     <section
-      className="relative py-20 sm:py-28"
+      className="py-20 sm:py-28"
       id="features"
       aria-label={t('home.features.sectionLabel')}
     >
       <div className="mx-auto w-full max-w-6xl px-6">
         <div className="max-w-2xl">
-          <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             <span className="block">{t('home.features.title1')}</span>
             <span className="block">{t('home.features.title2')}</span>
           </h2>
-          <p className="mt-5 text-lg leading-relaxed text-muted-foreground">
+          <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
             {t('home.features.description')}
           </p>
         </div>
@@ -310,26 +311,26 @@ new Blok({ holder: 'editor' });`,
               type="button"
               key={feature.accent}
               variants={cardVariants}
-              whileHover={{ y: -6 }}
+              whileHover={{ y: -4 }}
               whileTap={{ scale: 0.98 }}
               transition={hoverSpring}
-              className="group flex cursor-pointer flex-col items-start gap-5 rounded-2xl border border-border bg-card p-7 text-left shadow-sm transition-[border-color,box-shadow] hover:border-foreground/15 hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="group flex cursor-pointer flex-col items-start gap-5 rounded-3xl border border-black/[0.04] bg-secondary p-8 text-left transition-shadow duration-300 hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-white/[0.08]"
               onClick={() => handleFeatureClick(feature)}
               aria-label={feature.learnMore}
             >
-              <div className="feature-blob flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-[colors,transform] group-hover:scale-105 group-hover:bg-primary group-hover:text-primary-foreground">
+              <div className="feature-blob flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-[colors,transform] duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground">
                 {feature.icon}
               </div>
-              <div className="space-y-2">
-                <h3 className="text-xl font-bold tracking-tight">
+              <div className="space-y-2.5">
+                <h3 className="text-xl font-semibold tracking-tight">
                   {feature.title}
                 </h3>
                 <p className="text-[15px] leading-relaxed text-muted-foreground">
                   {feature.description}
                 </p>
               </div>
-              <span className="mt-auto inline-flex items-center gap-1.5 pt-2 text-sm font-semibold text-primary">
-                <span className="opacity-70 transition-opacity group-hover:opacity-100">
+              <span className="mt-auto inline-flex items-center gap-1.5 pt-2 text-sm font-medium text-primary">
+                <span className="transition-opacity group-hover:opacity-100 opacity-80">
                   {t('home.features.learnMoreLabel')}
                 </span>
                 <svg
@@ -351,9 +352,9 @@ new Blok({ holder: 'editor' });`,
           ))}
         </motion.div>
 
-        {/* Supporting capabilities — compact, scanned second. */}
+        {/* Supporting capabilities — quiet Airbnb chips, scanned second. */}
         <motion.div
-          className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
           variants={gridVariants}
           initial="hidden"
           whileInView="show"
@@ -365,18 +366,32 @@ new Blok({ holder: 'editor' });`,
               key={feature.accent}
               variants={cardVariants}
               whileHover={{ y: -3 }}
-              whileTap={{ scale: 0.97 }}
+              whileTap={{ scale: 0.98 }}
               transition={hoverSpring}
-              className="group flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-left shadow-sm transition-[border-color,box-shadow] hover:border-foreground/15 hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="group flex min-h-[68px] cursor-pointer items-center gap-3.5 rounded-2xl border border-black/[0.04] bg-secondary p-4 text-left transition-shadow duration-300 hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-white/[0.08]"
               onClick={() => handleFeatureClick(feature)}
               aria-label={feature.learnMore}
             >
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+              <div className="feature-blob flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-[colors,transform] duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground">
                 {feature.icon}
               </div>
-              <h3 className="text-[15px] font-semibold tracking-tight">
+              <h3 className="flex-1 text-[15px] font-medium tracking-tight">
                 {feature.title}
               </h3>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                className="shrink-0 text-muted-foreground/50 opacity-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-primary group-hover:opacity-100"
+              >
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
             </motion.button>
           ))}
         </motion.div>

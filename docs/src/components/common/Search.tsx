@@ -10,7 +10,6 @@ import { search, getSearchIndex } from "@/utils/search";
 import type { SearchResult } from "@/types/search";
 import { ModuleIcon } from "./ModuleIcon";
 import { KindIcon } from "./KindIcon";
-import { KeyIcon, ShortcutKeys } from "./KeyIcon";
 import { useI18n } from "../../contexts/I18nContext";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +20,10 @@ interface SearchProps {
 
 const SEARCH_SHORTCUT = "k";
 const SEARCH_DEBOUNCE_MS = 150;
+
+// Keycap chip — mirrors the ⌘K kbd in the search input.
+const KEYCAP_CLASS =
+  "inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-secondary px-1 font-mono text-[10px] font-semibold leading-none text-muted-foreground/70";
 
 // Highlight matching text in search results
 // Matches the query term OR words that share a common prefix with it
@@ -788,11 +791,18 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
               )}
             </div>
 
-            <div className="flex items-center justify-center border-t border-border px-5 py-3">
-              <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                <ShortcutKeys keys={["↑", "↓"]} /> {t("search.navigate")}
-                <span className="mx-1 inline-block h-3 w-px bg-border" />
-                <KeyIcon>↵</KeyIcon> {t("search.select")}
+            <div className="flex items-center justify-center gap-4 border-t border-border bg-secondary/40 px-5 py-2.5">
+              <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <kbd className={KEYCAP_CLASS}>↑</kbd>
+                  <kbd className={KEYCAP_CLASS}>↓</kbd>
+                </span>
+                {t("search.navigate")}
+              </span>
+              <span className="h-3 w-px bg-border" />
+              <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <kbd className={KEYCAP_CLASS}>↵</kbd>
+                {t("search.select")}
               </span>
             </div>
           </div>

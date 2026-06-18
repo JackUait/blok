@@ -621,7 +621,7 @@
   position: absolute;
   right: 0;
   bottom: calc(100% + var(--blok-space-2));
-  width: 240px;
+  width: 210px;
   overflow: hidden;
   padding: var(--blok-space-1);
   border-radius: var(--blok-radius-lg);
@@ -663,13 +663,13 @@
   align-items: center;
   gap: var(--blok-space-2);
   width: 100%;
-  min-height: 40px;
-  padding: var(--blok-space-1-5) var(--blok-space-2-5);
+  min-height: 30px;
+  padding: var(--blok-space-1) var(--blok-space-2-5);
   border: 0;
   border-radius: var(--blok-radius-md);
   background: transparent;
   color: inherit;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   text-align: left;
   cursor: pointer;
@@ -688,7 +688,7 @@
 /* current-value hint on the right of a main row (e.g. "Normal", "On") */
 [data-blok-tool="video"] .blok-video-controls__menu-value {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--blok-video-menu-value-fg);
   font-variant-numeric: tabular-nums;
@@ -697,12 +697,12 @@
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   margin-right: calc(-1 * var(--blok-space-1));
   color: var(--blok-video-time-fg);
 }
-[data-blok-tool="video"] .blok-video-controls__menu-chevron svg { width: 16px; height: 16px; }
+[data-blok-tool="video"] .blok-video-controls__menu-chevron svg { width: 14px; height: 14px; }
 
 /* speed submenu back header — sits above the options, divided by a hairline */
 [data-blok-tool="video"] .blok-video-controls__menu-back {
@@ -720,13 +720,13 @@
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   color: var(--blok-video-accent);
 }
 [data-blok-tool="video"] .blok-video-controls__menu-check svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   opacity: 0;
   transition: opacity 120ms ease;
 }

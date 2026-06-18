@@ -24,7 +24,7 @@ import {
 } from '../../components/icons';
 import { attachResizeHandle, type ResizeEdge } from '../image/resizer';
 import { renderUploadingState, type UploadingStateElement } from '../image/uploading-state';
-import { DEFAULT_CAPTION_PLACEHOLDER, URL_PATTERN } from './constants';
+import { DEFAULT_CAPTION_PLACEHOLDER, MIN_WIDTH_PX, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { tr } from './i18n';
 import { renderCaptionRow, renderVideo } from './ui';
@@ -393,6 +393,7 @@ export class VideoTool implements BlockTool {
         container: figure.parentElement ?? figure,
         edge,
         alignment: this.data.alignment ?? 'center',
+        minWidthPx: MIN_WIDTH_PX,
         onPreview: (percent) => {
           figure.style.setProperty('width', `${percent}%`);
         },

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   computeWidthPercent,
+  computeWidthResult,
   clampPercent,
   attachResizeHandle,
   alignmentFraction,
@@ -174,6 +175,36 @@ describe('computeWidthPercent', () => {
   });
 });
 
+describe('computeWidthResult', () => {
+  it('flags clampedToMin when the drag wants to shrink below the floor', () => {
+    const result = computeWidthResult({
+      edge: 'right',
+      containerWidth: 1000,
+      startWidth: 500,
+      startX: 600,
+      currentX: 0, // yank far past the wall
+      alignFrac: 0,
+      minWidthPx: 300,
+    });
+    expect(result.percent).toBe(30);
+    expect(result.clampedToMin).toBe(true);
+  });
+
+  it('does not flag clampedToMin while the width stays above the floor', () => {
+    const result = computeWidthResult({
+      edge: 'right',
+      containerWidth: 1000,
+      startWidth: 500,
+      startX: 600,
+      currentX: 700,
+      alignFrac: 0,
+      minWidthPx: 300,
+    });
+    expect(result.percent).toBe(60);
+    expect(result.clampedToMin).toBe(false);
+  });
+});
+
 describe('attachResizeHandle', () => {
   function makeRect(width: number, left = 0): DOMRect {
     return {
@@ -225,6 +256,44 @@ describe('attachResizeHandle', () => {
 
     expect(updates[updates.length - 1]).toBe(70);
     expect(committed).toBe(70);
+    detach();
+  });
+
+  it('toggles data-resize-blocked on the figure while pinned at the floor, clears on release', () => {
+    const parent = document.createElement('div');
+    const figure = document.createElement('div');
+    parent.appendChild(figure);
+    Object.defineProperty(parent, 'getBoundingClientRect', {
+      value: () => makeRect(1000, 0),
+    });
+    Object.defineProperty(figure, 'getBoundingClientRect', {
+      value: () => makeRect(500, 250),
+    });
+    const handle = document.createElement('div');
+    figure.appendChild(handle);
+    handle.setPointerCapture = (): void => undefined;
+    handle.releasePointerCapture = (): void => undefined;
+
+    const detach = attachResizeHandle({
+      handle,
+      figure,
+      container: parent,
+      edge: 'right',
+      minWidthPx: 300, // 30% floor on a 1000px container
+      onPreview: () => undefined,
+      onCommit: () => undefined,
+    });
+
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 750, bubbles: true }));
+    // Push well above the floor first → not blocked.
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 900, bubbles: true }));
+    expect(figure.getAttribute('data-resize-blocked')).not.toBe('true');
+    // Then yank far past the wall → pinned at the floor → blocked.
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: -2000, bubbles: true }));
+    expect(figure.getAttribute('data-resize-blocked')).toBe('true');
+    // Releasing clears the cue.
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: -2000, bubbles: true }));
+    expect(figure.getAttribute('data-resize-blocked')).not.toBe('true');
     detach();
   });
 

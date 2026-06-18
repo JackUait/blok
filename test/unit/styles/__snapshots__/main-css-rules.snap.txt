@@ -6719,6 +6719,20 @@
   display: none;
 }
 
+[data-resize-blocked="true"] {
+  animation: blok-resize-recoil 260ms ease-out;
+}
+
+[data-resize-blocked="true"] [data-role="resize-handle"][data-edge] {
+  background: var(--blok-handle-fg-default);
+  border-color: var(--blok-handle-fg-default);
+  cursor: not-allowed;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-resize-blocked="true"] {
+  animation: none;
+}
+
 [data-blok-tool="image"] .blok-image-toolbar {
   position: absolute;
   top: 10px;

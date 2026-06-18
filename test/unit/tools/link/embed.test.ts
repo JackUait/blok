@@ -531,6 +531,34 @@ describe('Embed sizing & resize', () => {
 
     expect(tool.save().widthPercent).toBe(20);
   });
+
+  it('flags the figure as resize-blocked while pinned at the per-service minimum, clears on commit', () => {
+    const tool = new Embed(createOptions(iframeData()));
+    const root = tool.render();
+    const figure = figureOf(root);
+
+    if (!figure) {
+      throw new Error('figure missing');
+    }
+
+    Object.defineProperty(root, 'getBoundingClientRect', { value: () => makeRect(1000, 0) });
+    Object.defineProperty(figure, 'getBoundingClientRect', { value: () => makeRect(1000, 0) });
+
+    const handle = root.querySelector<HTMLElement>('[data-role="resize-handle"][data-edge="right"]');
+
+    if (!handle) {
+      throw new Error('handle missing');
+    }
+    handle.setPointerCapture = (): void => undefined;
+    handle.releasePointerCapture = (): void => undefined;
+
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 1000, bubbles: true }));
+    // Yank past the wall — pinned at the 20% per-service floor.
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 0, bubbles: true }));
+    expect(figure.getAttribute('data-resize-blocked')).toBe('true');
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 0, bubbles: true }));
+    expect(figure.getAttribute('data-resize-blocked')).not.toBe('true');
+  });
 });
 
 describe('Embed block toolbar anchoring', () => {

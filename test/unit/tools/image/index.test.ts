@@ -638,6 +638,26 @@ describe('ImageTool — resize', () => {
     handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 560, bubbles: true }));
     expect(tool.save().width).toBe(60);
   });
+
+  it('flags the figure as resize-blocked while dragged below its minimum width, clears on commit', () => {
+    const block = createMockBlock();
+    const tool = new ImageTool(createOptions({ url: 'u', width: 100 }, {}, block));
+    const root = tool.render();
+    const figure = root.querySelector('figure');
+    if (!figure) throw new Error('figure missing');
+    stubRect(root, 1000);
+    stubRect(figure, 1000);
+    const handle = root.querySelector<HTMLElement>('[data-role="resize-handle"][data-edge="right"]');
+    if (!handle) throw new Error('handle missing');
+    handle.setPointerCapture = (): void => undefined;
+    handle.releasePointerCapture = (): void => undefined;
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 1000, bubbles: true }));
+    // Yank past the floor — width pins at the 10% minimum.
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 0, bubbles: true }));
+    expect(figure.getAttribute('data-resize-blocked')).toBe('true');
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 0, bubbles: true }));
+    expect(figure.getAttribute('data-resize-blocked')).not.toBe('true');
+  });
 });
 
 describe('ImageTool — fullscreen triggers', () => {

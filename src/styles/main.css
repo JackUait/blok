@@ -362,6 +362,7 @@
 @import './bookmark.css';
 @import './file.css';
 @import './columns.css';
+@import './resize-cue.css';
 
 /*
   Image tool — selectors audited by unit tests (no backdrop-filter regression,

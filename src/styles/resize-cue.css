@@ -1,0 +1,26 @@
+/*
+  Shared resize floor cue. When a resizable block (image / video / embed) is
+  dragged to its minimum width, attachResizeHandle sets data-resize-blocked on
+  the figure (see image/resizer.ts). The figure gives a soft nudge and the
+  dragged handle turns neutral, signalling "can't shrink further".
+
+  Imported AFTER the per-tool stylesheets so the handle rule wins the cascade
+  over each tool's same-specificity [data-role="resize-handle"]:hover/:active
+  rules (the [data-edge] qualifier matches their specificity; later source
+  order breaks the tie).
+*/
+
+[data-resize-blocked="true"] {
+  animation: blok-resize-recoil 260ms ease-out;
+}
+[data-resize-blocked="true"] [data-role="resize-handle"][data-edge] {
+  background: var(--blok-handle-fg-default);
+  border-color: var(--blok-handle-fg-default);
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-resize-blocked="true"] {
+    animation: none;
+  }
+}

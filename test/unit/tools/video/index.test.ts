@@ -304,10 +304,51 @@ describe('VideoTool — resize', () => {
     handle.setPointerCapture = (): void => undefined;
     handle.releasePointerCapture = (): void => undefined;
     handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 1000, bubbles: true }));
-    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 700, bubbles: true }));
-    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 700, bubbles: true }));
-    expect(tool.save().width).toBe(40);
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 800, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 800, bubbles: true }));
+    expect(tool.save().width).toBe(60);
     expect(block.dispatchChange).toHaveBeenCalled();
+  });
+
+  it('floors the player width at the 440px minimum when dragged narrower', () => {
+    const block = createMockBlock();
+    const tool = new VideoTool(createOptions({ url: 'u', width: 100 }, {}, block));
+    const root = tool.render();
+    const figure = root.querySelector<HTMLElement>('[data-role="video-figure"]');
+    if (!figure) throw new Error('figure missing');
+    stubRect(root, 1000);
+    stubRect(figure, 1000);
+    const handle = root.querySelector<HTMLElement>('[data-role="resize-handle"][data-edge="right"]');
+    if (!handle) throw new Error('handle missing');
+    handle.setPointerCapture = (): void => undefined;
+    handle.releasePointerCapture = (): void => undefined;
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 1000, bubbles: true }));
+    // Drag the edge way past the left wall — width wants to collapse to ~0.
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 0, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 0, bubbles: true }));
+    // 440px floor on a 1000px container → 44%, not the global 10%.
+    expect(tool.save().width).toBe(44);
+  });
+
+  it('flags the figure as resize-blocked while dragged past the floor, clears on commit', () => {
+    const block = createMockBlock();
+    const tool = new VideoTool(createOptions({ url: 'u', width: 100 }, {}, block));
+    const root = tool.render();
+    const figure = root.querySelector<HTMLElement>('[data-role="video-figure"]');
+    if (!figure) throw new Error('figure missing');
+    stubRect(root, 1000);
+    stubRect(figure, 1000);
+    const handle = root.querySelector<HTMLElement>('[data-role="resize-handle"][data-edge="right"]');
+    if (!handle) throw new Error('handle missing');
+    handle.setPointerCapture = (): void => undefined;
+    handle.releasePointerCapture = (): void => undefined;
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 1000, bubbles: true }));
+    // Yank past the wall — width pins at the floor.
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 0, bubbles: true }));
+    expect(figure.getAttribute('data-resize-blocked')).toBe('true');
+    // Releasing clears the blocked state.
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 0, bubbles: true }));
+    expect(figure.getAttribute('data-resize-blocked')).not.toBe('true');
   });
 });
 

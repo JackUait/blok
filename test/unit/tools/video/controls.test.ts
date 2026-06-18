@@ -762,7 +762,9 @@ describe('video controls — playback gear menu', () => {
   afterEach(() => { vi.useRealTimers(); h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
 
   const gear = (): HTMLElement => q(h.controls, '[data-action="gear"]');
-  const menu = (): HTMLElement => q(h.controls, '[data-role="playback-menu"]');
+  // The menu now lives on the figure (outside the clipped controls overlay), so menu
+  // elements are queried from h.figure — a superset that still contains the controls.
+  const menu = (): HTMLElement => q(h.figure, '[data-role="playback-menu"]');
 
   it('renders a gear button and a hidden menu', () => {
     expect(gear().getAttribute('aria-haspopup')).toBe('menu');
@@ -785,54 +787,117 @@ describe('video controls — playback gear menu', () => {
     expect((menu() as HTMLElement & { hidden: boolean }).hidden).toBe(true);
   });
 
+  it('clicking the video while the menu is open just dismisses it without toggling playback', () => {
+    gear().click();
+    expect((menu() as HTMLElement & { hidden: boolean }).hidden).toBe(false);
+
+    // Replay the real pointer sequence for a click on the video surface while the
+    // menu is open: pointerdown (menu still open) → document mousedown (closes the
+    // menu via the outside handler) → pointerup → click. The press is a dismiss
+    // gesture, so the trailing click must NOT start playback.
+    h.video.dispatchEvent(new Event('pointerdown'));
+    h.video.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    h.video.dispatchEvent(new Event('pointerup'));
+    h.video.click();
+
+    expect((menu() as HTMLElement & { hidden: boolean }).hidden).toBe(true);
+    expect(h.video.play).not.toHaveBeenCalled();
+  });
+
   it('lists eight playback speeds with Normal active by default', () => {
     expect(menu().querySelectorAll('[role="menuitemradio"]')).toHaveLength(8);
-    expect(q(h.controls, '[data-action="speed-1"]').getAttribute('aria-checked')).toBe('true');
+    expect(q(h.figure, '[data-action="speed-1"]').getAttribute('aria-checked')).toBe('true');
   });
 
   it('selecting a speed sets playbackRate and moves the check', () => {
-    q(h.controls, '[data-action="speed-1.5"]').click();
+    q(h.figure, '[data-action="speed-1.5"]').click();
     expect(h.video.playbackRate).toBe(1.5);
-    expect(q(h.controls, '[data-action="speed-1.5"]').getAttribute('aria-checked')).toBe('true');
-    expect(q(h.controls, '[data-action="speed-1"]').getAttribute('aria-checked')).toBe('false');
+    expect(q(h.figure, '[data-action="speed-1.5"]').getAttribute('aria-checked')).toBe('true');
+    expect(q(h.figure, '[data-action="speed-1"]').getAttribute('aria-checked')).toBe('false');
   });
 
   it('lays the speeds out as a vertical YouTube-style submenu, not a chip grid', () => {
     // No legacy chip grid — speeds are full-width radio rows in a sliding pane.
-    expect(h.controls.querySelector('[data-role="speed-grid"]')).toBeNull();
-    expect(h.controls.querySelector('.blok-video-controls__speed-chip')).toBeNull();
+    expect(h.figure.querySelector('[data-role="speed-grid"]')).toBeNull();
+    expect(h.figure.querySelector('.blok-video-controls__speed-chip')).toBeNull();
     const options = menu().querySelectorAll('.blok-video-controls__speed-option');
     expect(options).toHaveLength(8);
     // The active rate reads as "Normal", à la YouTube — not "1×".
-    expect(q(h.controls, '[data-action="speed-1"]').textContent).toContain('Normal');
-    expect(q(h.controls, '[data-action="speed-1.5"]').textContent).toContain('1.5×');
+    expect(q(h.figure, '[data-action="speed-1"]').textContent).toContain('Normal');
+    expect(q(h.figure, '[data-action="speed-1.5"]').textContent).toContain('1.5×');
   });
 
   it('opens the speed submenu from the main row and navigates back', () => {
     // The main pane shows a "Playback speed" row carrying the current value.
-    const open = q(h.controls, '[data-action="open-speed"]');
+    const open = q(h.figure, '[data-action="open-speed"]');
     expect(open.getAttribute('aria-haspopup')).toBe('menu');
-    expect(q(h.controls, '[data-role="menu-value-speed"]').textContent).toBe('Normal');
+    expect(q(h.figure, '[data-role="menu-value-speed"]').textContent).toBe('Normal');
 
     gear().click();
     expect(menu().getAttribute('data-view')).toBe('main');
     open.click();
     expect(menu().getAttribute('data-view')).toBe('speed');
-    q(h.controls, '[data-action="speed-back"]').click();
+    q(h.figure, '[data-action="speed-back"]').click();
     expect(menu().getAttribute('data-view')).toBe('main');
+  });
+
+  it('mounts the menu on the figure (outside the clipped controls overlay) so it can overflow a short player', () => {
+    const m = q(h.figure, '[data-role="playback-menu"]');
+    // The controls overlay box is overflow:hidden in the real DOM (it rounds/clips the
+    // player chrome). A tall speed submenu must therefore live on the figure, not inside
+    // that overlay, or it gets clipped inside a small video instead of spilling outside.
+    expect(h.figure.contains(m)).toBe(true);
+    expect(h.controls.contains(m)).toBe(false);
+  });
+
+  it('parks the off-screen pane as inert so its clipped controls leave the tab order', () => {
+    const speedPane = (): HTMLElement => q(h.figure, '[data-role="menu-speed"]');
+    const mainPane = (): HTMLElement => q(h.figure, '[data-role="menu-main"]');
+
+    gear().click();
+    // Main view: the speed pane is parked off-screen (clipped by overflow), so its
+    // rate buttons must be inert — otherwise keyboard/AT users reach invisible rows.
+    expect(menu().getAttribute('data-view')).toBe('main');
+    expect(speedPane().hasAttribute('inert')).toBe(true);
+    expect(mainPane().hasAttribute('inert')).toBe(false);
+
+    // Sliding to the speed view flips which pane is parked.
+    q(h.figure, '[data-action="open-speed"]').click();
+    expect(speedPane().hasAttribute('inert')).toBe(false);
+    expect(mainPane().hasAttribute('inert')).toBe(true);
+  });
+
+  it('sizes the menu to include its own padding + border so the last row is not clipped', () => {
+    // jsdom has no layout engine, so stub the pane content height and the menu's
+    // chrome. The menu is box-sizing: border-box, so height must add the vertical
+    // padding + border on top of the pane's scrollHeight — otherwise the content
+    // box is shorter than the pane and the trailing Loop row gets clipped.
+    const mainPane = q(h.figure, '[data-role="menu-main"]');
+    Object.defineProperty(mainPane, 'scrollHeight', { configurable: true, value: 78 });
+    const realGetComputedStyle = window.getComputedStyle.bind(window);
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((el, pseudo) => {
+      if (el === menu()) {
+        return { paddingTop: '6px', paddingBottom: '6px', borderTopWidth: '1px', borderBottomWidth: '1px' } as CSSStyleDeclaration;
+      }
+      return realGetComputedStyle(el, pseudo ?? undefined);
+    });
+
+    gear().click(); // opens → showView('main')
+    // 78 (pane) + 12 (padding) + 2 (border) = 92
+    expect(menu().style.height).toBe('92px');
   });
 
   it('selecting a speed updates the main-row value and returns to the main view', () => {
     gear().click();
-    q(h.controls, '[data-action="open-speed"]').click();
-    q(h.controls, '[data-action="speed-1.5"]').click();
-    expect(q(h.controls, '[data-role="menu-value-speed"]').textContent).toBe('1.5×');
+    q(h.figure, '[data-action="open-speed"]').click();
+    q(h.figure, '[data-action="speed-1.5"]').click();
+    expect(q(h.figure, '[data-role="menu-value-speed"]').textContent).toBe('1.5×');
     expect(menu().getAttribute('data-view')).toBe('main');
   });
 
   it('reopening the gear resets to the main view', () => {
     gear().click();
-    q(h.controls, '[data-action="open-speed"]').click();
+    q(h.figure, '[data-action="open-speed"]').click();
     expect(menu().getAttribute('data-view')).toBe('speed');
     gear().click(); // close
     gear().click(); // reopen
@@ -840,8 +905,8 @@ describe('video controls — playback gear menu', () => {
   });
 
   it('loop toggles media.loop and reflects the checked state with On/Off text', () => {
-    const loop = q(h.controls, '[data-action="loop"]');
-    const value = q(h.controls, '[data-role="menu-value-loop"]');
+    const loop = q(h.figure, '[data-action="loop"]');
+    const value = q(h.figure, '[data-role="menu-value-loop"]');
     expect(h.video.loop).toBe(false);
     expect(value.textContent).toBe('Off');
     loop.click();
@@ -854,24 +919,34 @@ describe('video controls — playback gear menu', () => {
   });
 
   it('does not offer a sleep timer', () => {
-    expect(h.controls.querySelectorAll('[data-action^="sleep-"]')).toHaveLength(0);
-    expect(h.controls.textContent).not.toContain('Sleep timer');
+    expect(h.figure.querySelectorAll('[data-action^="sleep-"]')).toHaveLength(0);
+    expect(h.figure.textContent).not.toContain('Sleep timer');
   });
 
   it('does not offer a stable-volume toggle', () => {
-    expect(h.controls.querySelector('[data-action="stable-volume"]')).toBeNull();
-    expect(h.controls.textContent).not.toContain('Stable volume');
+    expect(h.figure.querySelector('[data-action="stable-volume"]')).toBeNull();
+    expect(h.figure.textContent).not.toContain('Stable volume');
   });
 
   it('releasing a 2× hold restores the menu-selected rate, not 1×', () => {
     vi.useFakeTimers();
-    q(h.controls, '[data-action="speed-1.5"]').click();
+    q(h.figure, '[data-action="speed-1.5"]').click();
     expect(h.video.playbackRate).toBe(1.5);
     h.video.dispatchEvent(new Event('pointerdown'));
     vi.advanceTimersByTime(300);
     expect(h.video.playbackRate).toBe(2);
     h.video.dispatchEvent(new Event('pointerup'));
     expect(h.video.playbackRate).toBe(1.5);
+  });
+
+  it('renders a leading icon glyph on each main-pane settings row', () => {
+    // Each top-level row carries a leading icon span (speed = gauge, loop = repeat)
+    // so the menu reads as a crafted settings panel rather than a bare text list.
+    const speedRow = q(h.figure, '[data-action="open-speed"]');
+    const loopRow = q(h.figure, '[data-action="loop"]');
+
+    expect(speedRow.querySelector('.blok-video-controls__menu-icon svg')).not.toBeNull();
+    expect(loopRow.querySelector('.blok-video-controls__menu-icon svg')).not.toBeNull();
   });
 });
 

@@ -1309,6 +1309,7 @@
   --blok-video-accent: #ffffff;
   --blok-video-control-fg: #ffffff;
   --blok-video-control-bg-hover: rgba(255, 255, 255, 0.1);
+  --blok-video-control-bg-active: rgba(255, 255, 255, 0.2);
   --blok-video-time-fg: rgba(255, 255, 255, 0.8);
   --blok-video-track: rgba(255, 255, 255, 0.2);
   --blok-video-buffered: rgba(255, 255, 255, 0.35);
@@ -1321,6 +1322,9 @@
   --blok-video-burst-ring: rgba(255, 255, 255, 0.4);
   --blok-video-menu-bg: rgba(22, 22, 22, 0.94);
   --blok-video-menu-value-fg: rgba(255, 255, 255, 0.62);
+  --blok-video-menu-border: rgba(255, 255, 255, 0.08);
+  --blok-video-menu-icon: rgba(255, 255, 255, 0.9);
+  --blok-video-menu-row-active: color-mix(in srgb, var(--blok-video-accent) 14%, transparent);
   --blok-video-theater-scrim: rgba(0, 0, 0, 0.8);
   --blok-video-theater-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.6);
   --blok-video-scrim-strong: rgba(0, 0, 0, 0.6);
@@ -4959,25 +4963,35 @@
 
 [data-blok-tool="video"] .blok-video-controls__menu {
   position: absolute;
-  right: 0;
-  bottom: calc(100% + var(--blok-space-2));
-  width: 210px;
+  width: 224px;
   overflow: hidden;
-  padding: var(--blok-space-1);
+  padding: var(--blok-space-1-5);
+  border: 1px solid var(--blok-video-menu-border);
   border-radius: var(--blok-radius-lg);
-  background: var(--blok-video-menu-bg);
   box-shadow: var(--blok-video-burst-shadow);
-  -webkit-backdrop-filter: blur(18px) saturate(1.4);
-  backdrop-filter: blur(18px) saturate(1.4);
   color: var(--blok-video-control-fg);
   transform-origin: bottom right;
-  animation: blok-video-menu-in 140ms cubic-bezier(0.2, 0.8, 0.2, 1);
   transition: height 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
   z-index: 3;
 }
 
+[data-blok-tool="video"] .blok-video-controls__menu::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--blok-video-menu-bg);
+  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+  backdrop-filter: blur(22px) saturate(1.6);
+}
+
 [data-blok-tool="video"] .blok-video-controls__menu[hidden] {
   display: none;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-tool="video"] .blok-video-controls__menu {
+  animation: blok-video-menu-in 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 [data-blok-tool="video"] .blok-video-controls__menu-track {
@@ -5002,27 +5016,50 @@
   align-items: center;
   gap: var(--blok-space-2);
   width: 100%;
-  min-height: 30px;
-  padding: var(--blok-space-1) var(--blok-space-2-5);
+  min-height: 34px;
+  padding: var(--blok-space-1-5) var(--blok-space-2-5);
   border: 0;
   border-radius: var(--blok-radius-md);
   background: transparent;
   color: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   text-align: left;
   cursor: pointer;
-  transition: background 120ms ease;
+  transition: background 120ms ease, transform 120ms ease;
 }
 
 [data-blok-tool="video"] .blok-video-controls__menu-row:hover {
   background: var(--blok-video-control-bg-hover);
 }
 
+[data-blok-tool="video"] .blok-video-controls__menu-row:hover .blok-video-controls__menu-icon, [data-blok-tool="video"] .blok-video-controls__menu-row:hover .blok-video-controls__menu-value, [data-blok-tool="video"] .blok-video-controls__menu-row:hover .blok-video-controls__menu-chevron {
+  color: var(--blok-video-control-fg);
+}
+
+[data-blok-tool="video"] .blok-video-controls__menu-row:active {
+  transform: scale(0.985);
+}
+
 [data-blok-tool="video"] .blok-video-controls__menu-row:focus-visible {
   outline: none;
   background: var(--blok-video-control-bg-hover);
   box-shadow: inset 0 0 0 1.5px var(--blok-video-focus-ring);
+}
+
+[data-blok-tool="video"] .blok-video-controls__menu-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: var(--blok-video-menu-icon);
+  transition: color 120ms ease;
+}
+
+[data-blok-tool="video"] .blok-video-controls__menu-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
 [data-blok-tool="video"] .blok-video-controls__menu-label {
@@ -5032,10 +5069,12 @@
 
 [data-blok-tool="video"] .blok-video-controls__menu-value {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
+  letter-spacing: 0.01em;
   color: var(--blok-video-menu-value-fg);
   font-variant-numeric: tabular-nums;
+  transition: color 120ms ease;
 }
 
 [data-blok-tool="video"] .blok-video-controls__menu-chevron {
@@ -5045,7 +5084,8 @@
   width: 14px;
   height: 14px;
   margin-right: calc(-1 * var(--blok-space-1));
-  color: var(--blok-video-time-fg);
+  color: var(--blok-video-menu-icon);
+  transition: color 120ms ease;
 }
 
 [data-blok-tool="video"] .blok-video-controls__menu-chevron svg {
@@ -5054,10 +5094,8 @@
 }
 
 [data-blok-tool="video"] .blok-video-controls__menu-back {
-  margin-bottom: var(--blok-space-1);
+  margin-bottom: var(--blok-space-1-5);
   padding-left: var(--blok-space-1);
-  border-bottom: 1px solid var(--blok-video-track);
-  border-radius: 0;
   font-weight: 600;
 }
 
@@ -5082,18 +5120,28 @@
   width: 14px;
   height: 14px;
   opacity: 0;
-  transition: opacity 120ms ease;
+  transform: scale(0.5);
+  transform-origin: center;
+  transition: opacity 140ms ease, transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 [data-blok-tool="video"] .blok-video-controls__speed-option[aria-checked="true"] .blok-video-controls__menu-check svg {
   opacity: 1;
+  transform: scale(1);
 }
 
 [data-blok-tool="video"] .blok-video-controls__speed-option[aria-checked="true"] {
+  background: var(--blok-video-menu-row-active);
   font-weight: 600;
 }
 
+[@media (prefers-reduced-motion: no-preference)] [data-blok-tool="video"] .blok-video-controls__menu[data-view="speed"] [data-role="menu-speed"] .blok-video-controls__menu-row {
+  animation: blok-video-menu-rise 260ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  animation-delay: calc(var(--row, 0) * 22ms);
+}
+
 [data-blok-tool="video"] .blok-video-controls__btn[data-action="gear"][aria-expanded="true"], [data-blok-tool="video"] .blok-video-controls__btn[data-action="theater"][aria-pressed="true"], [data-blok-tool="video"] .blok-video-controls__btn[data-action="picture-in-picture"][aria-pressed="true"] {
+  background: var(--blok-video-control-bg-active);
   color: var(--blok-video-accent);
 }
 

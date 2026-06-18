@@ -421,6 +421,7 @@
   --blok-video-accent: #ffffff;
   --blok-video-control-fg: #ffffff;
   --blok-video-control-bg-hover: rgba(255, 255, 255, 0.1);
+  --blok-video-control-bg-active: rgba(255, 255, 255, 0.2);
   --blok-video-time-fg: rgba(255, 255, 255, 0.8);
   --blok-video-track: rgba(255, 255, 255, 0.2);
   --blok-video-buffered: rgba(255, 255, 255, 0.35);
@@ -434,6 +435,10 @@
   /* Settings popover — near-opaque dark so video never bleeds through the text. */
   --blok-video-menu-bg: rgba(22, 22, 22, 0.94);
   --blok-video-menu-value-fg: rgba(255, 255, 255, 0.62);
+  /* Frosted-glass edge + resting glyph tint + selected-row wash. */
+  --blok-video-menu-border: rgba(255, 255, 255, 0.08);
+  --blok-video-menu-icon: rgba(255, 255, 255, 0.9);
+  --blok-video-menu-row-active: color-mix(in srgb, var(--blok-video-accent) 14%, transparent);
   --blok-video-theater-scrim: rgba(0, 0, 0, 0.8);
   --blok-video-theater-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.6);
   --blok-video-scrim-strong: rgba(0, 0, 0, 0.6);

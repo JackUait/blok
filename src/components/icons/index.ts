@@ -845,6 +845,25 @@ export const IconPlayerTheater = `
 </svg>
 `;
 
+// Player speed — tachometer gauge (arc + needle + hub) for the playback-speed row
+export const IconPlayerSpeed = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M5.4 15.4a6.5 6.5 0 1 1 9.2 0" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M10 10.8 13.1 7.7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <circle cx="10" cy="10.8" r="1" fill="currentColor"/>
+</svg>
+`;
+
+// Player loop — repeat glyph (two opposing arrowheads tracing a loop)
+export const IconPlayerLoop = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M4 12V9a2.5 2.5 0 0 1 2.5-2.5H14.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12.5 4.5 15 6.5l-2.5 2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M16 8v3a2.5 2.5 0 0 1-2.5 2.5H5.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M7.5 15.5 5 13.5l2.5-2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Download — arrow into tray
 export const IconDownload = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

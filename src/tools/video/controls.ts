@@ -6,10 +6,12 @@ import {
   IconPlayerBackward,
   IconPlayerForward,
   IconPlayerFullscreenExit,
+  IconPlayerLoop,
   IconPlayerPause,
   IconPlayerPip,
   IconPlayerPlay,
   IconPlayerSettings,
+  IconPlayerSpeed,
   IconPlayerTheater,
   IconPlayerVolume,
   IconPlayerVolumeMute,
@@ -459,6 +461,11 @@ export function attachControls({ video, figure, storage, glow = 'less' }: Contro
   };
   const onPointerDown = (event: PointerEvent): void => {
     if (event.button) return; // primary button only
+    // A press that begins while the settings menu is open is a dismiss gesture: the
+    // document mousedown closes the menu, and this press must neither toggle playback
+    // nor engage press-and-hold. Flag the trailing click for suppression, skip the
+    // hold timer, and let the outside-click handler do the closing.
+    if (!menu.hidden) { hold.suppressClick = true; return; }
     hold.timer = window.setTimeout(engageHold, HOLD_MS);
   };
   const onPointerUp = (): void => {
@@ -580,9 +587,19 @@ export function attachControls({ video, figure, storage, glow = 'less' }: Contro
   // check, à la YouTube). Built here so it shares the player's closure state.
   const SPEED_LABEL = (rate: number): string => (rate === 1 ? 'Normal' : `${rate}×`);
 
-  // A main-pane row: label on the left, current value + trailing chevron on the
-  // right. `valueRole` tags the value span so it can be read/updated by name.
-  const navRow = (action: string, label: string, valueRole: string): {
+  // Leading glyph for a main-pane row — gives each setting a scannable icon
+  // so the menu reads as a crafted panel, not a bare text list.
+  const menuIcon = (svg: string): HTMLSpanElement => {
+    const icon = document.createElement('span');
+    icon.className = 'blok-video-controls__menu-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML = svg;
+    return icon;
+  };
+
+  // A main-pane row: optional leading icon, label, current value + trailing
+  // chevron. `valueRole` tags the value span so it can be read/updated by name.
+  const navRow = (action: string, label: string, valueRole: string, iconSvg?: string): {
     row: HTMLButtonElement;
     value: HTMLElement;
   } => {
@@ -592,6 +609,8 @@ export function attachControls({ video, figure, storage, glow = 'less' }: Contro
     row.setAttribute('data-action', action);
     row.setAttribute('role', 'menuitem');
     row.setAttribute('aria-haspopup', 'menu');
+    const children: HTMLElement[] = [];
+    if (iconSvg) children.push(menuIcon(iconSvg));
     const text = document.createElement('span');
     text.className = 'blok-video-controls__menu-label';
     text.textContent = label;
@@ -602,7 +621,8 @@ export function attachControls({ video, figure, storage, glow = 'less' }: Contro
     chevron.className = 'blok-video-controls__menu-chevron';
     chevron.setAttribute('aria-hidden', 'true');
     chevron.innerHTML = IconChevronRight;
-    row.append(text, value, chevron);
+    children.push(text, value, chevron);
+    row.append(...children);
     return { row, value };
   };
 
@@ -631,18 +651,31 @@ export function attachControls({ video, figure, storage, glow = 'less' }: Contro
 
   const menuWrap = document.createElement('div');
   menuWrap.className = 'blok-video-controls__menu-wrap';
-  menuWrap.append(gear, menu);
+  menuWrap.append(gear);
 
   // Slide the track and grow/shrink the menu to fit the active pane — the height
   // tween is what gives the YouTube settings menu its springy resize.
   const showView = (view: 'main' | 'speed'): void => {
     menu.setAttribute('data-view', view);
     const pane = view === 'speed' ? speedPane : mainPane;
-    if (!menu.hidden) menu.style.height = `${pane.scrollHeight}px`;
+    // The parked pane is only clipped from sight by overflow — without `inert`
+    // its rows stay in the tab order and AT tree, so keyboard/screen-reader users
+    // land on invisible controls. Inert the off-screen pane, free the active one.
+    mainPane.toggleAttribute('inert', view !== 'main');
+    speedPane.toggleAttribute('inert', view !== 'speed');
+    if (!menu.hidden) {
+      // The menu is box-sizing: border-box, so an inline height shrinks the content
+      // box by its own padding + border. Add that chrome back, or the active pane
+      // overflows and the trailing row (Loop) is clipped at the bottom edge.
+      const px = (value: string): number => parseFloat(value) || 0;
+      const cs = getComputedStyle(menu);
+      const chrome = px(cs.paddingTop) + px(cs.paddingBottom) + px(cs.borderTopWidth) + px(cs.borderBottomWidth);
+      menu.style.height = `${pane.scrollHeight + chrome}px`;
+    }
   };
 
   // --- main pane: "Playback speed ›" and the Loop toggle ---
-  const { row: speedNav, value: speedValue } = navRow('open-speed', 'Playback speed', 'menu-value-speed');
+  const { row: speedNav, value: speedValue } = navRow('open-speed', 'Playback speed', 'menu-value-speed', IconPlayerSpeed);
   speedValue.textContent = SPEED_LABEL(state.selectedRate);
   speedNav.addEventListener('click', () => showView('speed'));
 
@@ -663,7 +696,7 @@ export function attachControls({ video, figure, storage, glow = 'less' }: Contro
   const loopSpacer = document.createElement('span');
   loopSpacer.className = 'blok-video-controls__menu-chevron';
   loopSpacer.setAttribute('aria-hidden', 'true');
-  loopRow.append(loopLabel, loopValue, loopSpacer);
+  loopRow.append(menuIcon(IconPlayerLoop), loopLabel, loopValue, loopSpacer);
   loopRow.addEventListener('click', () => {
     media.loop = !media.loop;
     loopRow.setAttribute('aria-checked', String(media.loop));
@@ -689,10 +722,12 @@ export function attachControls({ video, figure, storage, glow = 'less' }: Contro
   speedBack.addEventListener('click', () => showView('main'));
 
   const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
-  const speedItems = SPEEDS.map((rate) => {
+  const speedItems = SPEEDS.map((rate, index) => {
     const option = document.createElement('button');
     option.type = 'button';
     option.className = 'blok-video-controls__menu-row blok-video-controls__speed-option';
+    // Stagger index for the cascade-in animation; the back header (--row 0) leads.
+    option.style.setProperty('--row', String(index + 1));
     option.setAttribute('data-action', `speed-${rate}`);
     option.setAttribute('role', 'menuitemradio');
     option.setAttribute('aria-checked', String(rate === 1));
@@ -723,25 +758,52 @@ export function attachControls({ video, figure, storage, glow = 'less' }: Contro
   track.append(mainPane, speedPane);
   menu.append(track);
   bar.insertBefore(menuWrap, fullscreen);
+  // The menu lives on the figure, NOT inside the overflow:hidden media box, so a tall
+  // speed submenu spills outside a short player instead of being clipped to its frame.
+  // It is then anchored to the gear by hand on each open / viewport change.
+  figure.appendChild(menu);
+
+  const MENU_GAP = 8;
+  const positionMenu = (): void => {
+    const g = gear.getBoundingClientRect();
+    const f = figure.getBoundingClientRect();
+    // Right edge tracks the gear's right edge; bottom sits MENU_GAP above the gear,
+    // so the card grows upward — out of the player when there isn't room below the bar.
+    menu.style.right = `${f.right - g.right}px`;
+    menu.style.bottom = `${f.bottom - g.top + MENU_GAP}px`;
+  };
 
   const onMenuOutside = (event: MouseEvent): void => {
     if (menu.hidden) return;
     const target = event.target as Node | null;
-    if (target && menuWrap.contains(target)) return;
+    // Keep open for clicks on the gear (menuWrap) or anywhere inside the menu itself —
+    // the menu is no longer a descendant of menuWrap, so it must be checked separately.
+    if (target && (menuWrap.contains(target) || menu.contains(target))) return;
     closeMenu();
   };
   const openMenu = (): void => {
     if (!menu.hidden) return;
     menu.hidden = false;
+    // Snap straight to the main pane: if it was closed on the speed view, suppress the
+    // track-slide + height tween for this frame so it opens clean instead of replaying
+    // the slide-back from the previous state. Transitions resume for in-menu navigation.
+    menu.style.transition = 'none';
+    track.style.transition = 'none';
     showView('main'); // always reopen on the top-level pane, like YouTube
+    void menu.offsetHeight; // flush the snap before transitions come back
+    menu.style.transition = '';
+    track.style.transition = '';
+    positionMenu();
     gear.setAttribute('aria-expanded', 'true');
     document.addEventListener('mousedown', onMenuOutside);
+    window.addEventListener('resize', positionMenu);
   };
   const closeMenu = (): void => {
     if (menu.hidden) return;
     menu.hidden = true;
     gear.setAttribute('aria-expanded', 'false');
     document.removeEventListener('mousedown', onMenuOutside);
+    window.removeEventListener('resize', positionMenu);
   };
   gear.addEventListener('click', (event) => {
     event.stopPropagation();
@@ -1196,6 +1258,8 @@ export function attachControls({ video, figure, storage, glow = 'less' }: Contro
     // Drop any slot height reserved for an in-progress theater session.
     const slot = figure.parentElement;
     if (slot) slot.style.minHeight = '';
+    closeMenu(); // drop the resize/outside listeners if the menu was open
+    menu.remove(); // the menu lives on the figure, so root.remove() won't take it
     root.remove();
   };
 

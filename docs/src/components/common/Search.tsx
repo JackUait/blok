@@ -5,6 +5,7 @@ import {
   useRef,
   useCallback,
 } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { search, getSearchIndex } from "@/utils/search";
 import type { SearchResult } from "@/types/search";
@@ -16,6 +17,9 @@ import { cn } from "@/lib/utils";
 interface SearchProps {
   open: boolean;
   onClose: () => void;
+  /** Dim the page behind the panel. Driven by the same morph as the panel so
+      the tint fades in/out in lockstep with the open/close animation. */
+  tinted?: boolean;
 }
 
 const SEARCH_SHORTCUT = "k";
@@ -122,7 +126,7 @@ const PANEL_MAX_WIDTH = 560;
 // settles — reads as a soft morph instead of an abrupt pop.
 const MORPH_EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
 
-export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
+export const Search: React.FC<SearchProps> = ({ open, onClose, tinted }) => {
   const navigate = useNavigate();
   const { t } = useI18n();
   const [query, setQuery] = useState("");
@@ -446,11 +450,29 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
       : expandedWidth;
 
   return (
-    <div
-      ref={wrapperRef}
-      className="pointer-events-none absolute left-1/2 top-0 z-50 -translate-x-1/2"
-      style={{ width: expandedWidth }}
-    >
+    <>
+      {/* Page tint — fades in/out on the SAME `entered` morph (and same
+          duration + easing) as the panel, so dim and panel move together.
+          Portaled to <body> so it can sit below the nav (z-30) yet above the
+          page. Only active when the caller asks for it (scrolled state). */}
+      {createPortal(
+        <div
+          aria-hidden="true"
+          className="fixed inset-0 z-30 bg-foreground/25 backdrop-blur-[2px] motion-reduce:transition-none"
+          style={{
+            opacity: entered && tinted ? 1 : 0,
+            pointerEvents: entered && tinted ? "auto" : "none",
+            transition: `opacity ${MORPH_MS}ms ${MORPH_EASE}`,
+          }}
+        />,
+        document.body,
+      )}
+
+      <div
+        ref={wrapperRef}
+        className="pointer-events-none absolute left-1/2 top-0 z-50 -translate-x-1/2"
+        style={{ width: expandedWidth }}
+      >
       <div
         className="pointer-events-auto mx-auto overflow-hidden border border-border bg-card"
         style={{
@@ -808,6 +830,7 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };

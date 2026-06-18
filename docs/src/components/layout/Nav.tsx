@@ -18,6 +18,7 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
   const { t } = useI18n();
   const [navScrolled, setNavScrolled] = useState(false);
   const [navHidden, setNavHidden] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const lastScrollYRef = useRef(0);
@@ -41,6 +42,12 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
       const scrollY = window.scrollY;
       const lastY = lastScrollYRef.current;
       setNavScrolled(scrollY > 20);
+
+      // Reading progress along the island's bottom edge
+      const maxScroll =
+        document.documentElement.scrollHeight - window.innerHeight;
+      setScrollProgress(maxScroll > 0 ? Math.min(1, scrollY / maxScroll) : 0);
+
       if (scrollY <= HIDE_THRESHOLD) {
         setNavHidden(false);
       } else if (scrollY > lastY) {
@@ -127,18 +134,26 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
     <>
       <nav
         className={cn(
-          "fixed inset-x-0 top-0 z-40 transition-[transform,box-shadow,background-color,border-color] duration-300 border-b",
-          navScrolled
-            ? "border-border bg-background/85 shadow-sm backdrop-blur-xl"
-            : "border-transparent bg-background/60 backdrop-blur-md",
+          "fixed inset-x-0 top-0 z-40 px-3 transition-transform duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none sm:px-4",
           navHidden && !menuOpen
-            ? "nav-hidden -translate-y-full"
+            ? "nav-hidden -translate-y-[140%]"
             : "translate-y-0",
         )}
         data-nav
         data-blok-testid="nav"
       >
-        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-6">
+        {/* The bar morphs between two states: an airy, edge-to-edge transparent
+            strip at the very top, and — once scrolled — a compact frosted
+            "island" that detaches from the screen edges (rounded, bordered,
+            elevated). A coral hairline traces reading progress along its base. */}
+        <div
+          className={cn(
+            "relative mx-auto flex w-full items-center justify-between gap-5 border transition-[height,max-width,border-radius,background-color,border-color,box-shadow,padding] duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            navScrolled
+              ? "mt-3.5 h-[4.5rem] max-w-5xl rounded-[1.75rem] border-border/70 bg-background/70 px-4 shadow-[0_14px_40px_-12px_rgba(17,17,17,0.3)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 sm:px-6"
+              : "mt-0 h-16 max-w-6xl rounded-none border-transparent bg-transparent px-6",
+          )}
+        >
           <Link
             to="/"
             className="flex shrink-0 items-center gap-2 font-display text-xl font-extrabold tracking-tight"
@@ -182,7 +197,11 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
               </span>
             </button>
 
-            <Search open={searchOpen} onClose={() => setSearchOpen(false)} />
+            <Search
+              open={searchOpen}
+              onClose={() => setSearchOpen(false)}
+              tinted={navScrolled}
+            />
           </div>
 
           {/* Right cluster: language, theme, account/menu pill */}
@@ -271,6 +290,16 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
               </div>
             </div>
           </div>
+
+          {/* Reading-progress hairline — only meaningful once condensed */}
+          <span
+            aria-hidden="true"
+            className={cn(
+              "pointer-events-none absolute inset-x-6 bottom-1 h-0.5 origin-left rounded-full bg-primary/70 transition-opacity duration-300 motion-reduce:transition-none",
+              navScrolled ? "opacity-100" : "opacity-0",
+            )}
+            style={{ transform: `scaleX(${scrollProgress})` }}
+          />
         </div>
       </nav>
     </>

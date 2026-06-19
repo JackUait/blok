@@ -1667,5 +1667,41 @@ describe('ImageTool — GIF auto-conversion', () => {
     expect(label).not.toBeNull();
     expect(label?.textContent).toBe('tools.image.converting');
   });
+
+  it('converts a remote .gif URL when fetch succeeds', async () => {
+    mockConvert.mockResolvedValue(new Blob([new Uint8Array([1])], { type: 'video/webm' }));
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, arrayBuffer: async () => new ArrayBuffer(8) })));
+    const insert = vi.fn();
+    const api = createMockApi();
+    (api as unknown as { blocks: unknown }).blocks = { getBlockIndex: () => 1, insert };
+    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }) };
+    const tool = new ImageTool({ ...createOptions(), api });
+    tool.render();
+    const event = new CustomEvent('paste', { detail: { key: 'image', data: 'https://x/cat.gif' } }) as PatternPasteEvent;
+    Object.defineProperty(event, 'type', { value: 'pattern' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(insert).toHaveBeenCalledWith('video', expect.objectContaining({ autoplay: true, loop: true }), {}, 1, false, true);
+    vi.unstubAllGlobals();
+  });
+
+  it('keeps the GIF as an image when remote fetch is blocked (CORS)', async () => {
+    mockConvert.mockResolvedValue(new Blob([new Uint8Array([1])], { type: 'video/webm' }));
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch'); }));
+    const insert = vi.fn();
+    const api = createMockApi();
+    (api as unknown as { blocks: unknown }).blocks = { getBlockIndex: () => 1, insert };
+    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }) };
+    const tool = new ImageTool({ ...createOptions(), api });
+    const root = tool.render();
+    const event = new CustomEvent('paste', { detail: { key: 'image', data: 'https://x/cat.gif' } }) as PatternPasteEvent;
+    Object.defineProperty(event, 'type', { value: 'pattern' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(insert).not.toHaveBeenCalled();
+    expect(mockConvert).not.toHaveBeenCalled();
+    expect(root.querySelector('img')?.getAttribute('src')).toBe('https://x/cat.gif');
+    vi.unstubAllGlobals();
+  });
 });
 

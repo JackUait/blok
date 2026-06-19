@@ -158,7 +158,11 @@ export class ImageTool implements BlockTool {
   public onPaste(event: PasteEvent): void {
     if (event.type === 'pattern') {
       const detail = (event as PatternPasteEvent).detail;
-      this.applyResult({ url: detail.data });
+      if (this.shouldConvertGifUrl(detail.data)) {
+        this.startUrl(detail.data);
+      } else {
+        this.applyResult({ url: detail.data });
+      }
       return;
     }
     if (event.type === 'tag') {
@@ -253,6 +257,17 @@ export class ImageTool implements BlockTool {
   }
 
   private startUrl(url: string): void {
+    if (this.shouldConvertGifUrl(url)) {
+      void this.convertGifUrlToVideoBlock(url).then((handled) => {
+        if (!handled) this.loadImageUrl(url);
+      });
+      return;
+    }
+    this.loadImageUrl(url);
+  }
+
+  /** Existing startUrl body, extracted verbatim. */
+  private loadImageUrl(url: string): void {
     this.lastFileName = null;
     this.lastSource = { kind: 'url', url };
     this.state = 'LOADING';
@@ -263,6 +278,34 @@ export class ImageTool implements BlockTool {
       .handleUrl(url, { onProgress: this.reportProgress })
       .then((result) => this.applyResult(result))
       .catch((err) => this.applyError(err));
+  }
+
+  private shouldConvertGifUrl(url: string): boolean {
+    return this.config.convertGifToVideo !== false && /\.gif(\?|#|$)/i.test(url);
+  }
+
+  private async convertGifUrlToVideoBlock(url: string): Promise<boolean> {
+    let bytes: ArrayBuffer;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return false;
+      bytes = await res.arrayBuffer();
+    } catch {
+      return false; // CORS / network → keep the GIF as an image URL
+    }
+    this.state = 'LOADING';
+    this.errorMessage = null;
+    this.renderState();
+    try {
+      const blob = await convertGifToWebm(bytes, { onProgress: this.reportProgress });
+      if (!blob) return false;
+      const webm = new File([blob], 'animation.webm', { type: 'video/webm' });
+      const uploadedUrl = await this.uploadConverted(webm);
+      if (uploadedUrl === null) return false;
+      return this.swapToVideoBlock(uploadedUrl, webm.name);
+    } catch {
+      return false;
+    }
   }
 
   private retryLastSource(): void {

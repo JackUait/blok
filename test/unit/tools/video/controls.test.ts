@@ -542,6 +542,45 @@ describe('video controls — playback', () => {
   });
 });
 
+describe('video controls — smooth scrubber', () => {
+  let h: Harness;
+  let rafQueue: FrameRequestCallback[];
+  beforeEach(() => {
+    vi.clearAllMocks();
+    rafQueue = [];
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => { rafQueue.push(cb); return rafQueue.length; });
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
+    h = mount();
+    setProp(h.video, 'duration', 100);
+    h.video.dispatchEvent(new Event('loadedmetadata'));
+  });
+  afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
+
+  // Run every animation frame queued so far; reschedules land in a fresh queue.
+  const frame = (): void => { const cbs = rafQueue; rafQueue = []; cbs.forEach((cb) => cb(0)); };
+
+  it('advances the scrubber fill between timeupdate events while playing', () => {
+    h.video.dispatchEvent(new Event('play'));
+    setProp(h.video, 'currentTime', 10);
+    frame();
+    expect(h.controls.style.getPropertyValue('--blok-seek-pct')).toBe('10%');
+    // No timeupdate event — only the animation frame loop drives this.
+    setProp(h.video, 'currentTime', 20);
+    frame();
+    expect(h.controls.style.getPropertyValue('--blok-seek-pct')).toBe('20%');
+  });
+
+  it('stops driving the scrubber once paused', () => {
+    h.video.dispatchEvent(new Event('play'));
+    frame();
+    h.video.dispatchEvent(new Event('pause'));
+    rafQueue = [];
+    setProp(h.video, 'currentTime', 50);
+    frame();
+    expect(h.controls.style.getPropertyValue('--blok-seek-pct')).toBe('0%');
+  });
+});
+
 describe('video controls — progress + seeking', () => {
   let h: Harness;
   beforeEach(() => { vi.clearAllMocks(); h = mount(); });
@@ -1562,7 +1601,7 @@ describe('video controls — ambient mode', () => {
     h.destroy();
     h = mount({ glow: 'none' });
     h.video.dispatchEvent(new Event('play'));
-    expect(raf).not.toHaveBeenCalled();
+    expect(h.figure.querySelector('[data-role="video-ambient"]')?.getAttribute('data-active')).toBe('false');
   });
 
   it('never samples under prefers-reduced-motion', () => {
@@ -1570,7 +1609,7 @@ describe('video controls — ambient mode', () => {
     vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }));
     h = mount();
     h.video.dispatchEvent(new Event('play'));
-    expect(raf).not.toHaveBeenCalled();
+    expect(h.figure.querySelector('[data-role="video-ambient"]')?.getAttribute('data-active')).toBe('false');
   });
 
   it('cancels the sampling loop on destroy', () => {

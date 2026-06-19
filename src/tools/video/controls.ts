@@ -322,6 +322,31 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   };
   const onProgress = (): void => paintBuffered();
 
+  // The browser fires `timeupdate` only ~4×/s, so painting the scrubber off it
+  // makes the fill lurch forward in visible steps. While the video is actually
+  // playing we drive the elapsed fill from `requestAnimationFrame` instead, so
+  // it glides at the display's refresh rate. `timeupdate` stays the source of
+  // truth for the time label and buffered bar; this loop only smooths the fill.
+  // We skip the loop's writes while the user is dragging the thumb so a slow
+  // seek can't yank it back to a stale `currentTime`.
+  const seekLoop = { raf: 0, scrubbing: false };
+  const tickSeek = (): void => {
+    if (!seekLoop.scrubbing) seek.value = String(video.currentTime);
+    paintSeek();
+    seekLoop.raf = requestAnimationFrame(tickSeek);
+  };
+  const startSeekLoop = (): void => {
+    if (seekLoop.raf) return;
+    seekLoop.raf = requestAnimationFrame(tickSeek);
+  };
+  const stopSeekLoop = (): void => {
+    if (!seekLoop.raf) return;
+    cancelAnimationFrame(seekLoop.raf);
+    seekLoop.raf = 0;
+  };
+  const onSeekScrubStart = (): void => { seekLoop.scrubbing = true; };
+  const onSeekScrubEnd = (): void => { seekLoop.scrubbing = false; };
+
   // ----- hover frame preview -----
   // A throwaway second <video>, sharing the source, is seeked to the hovered time
   // and painted into the tooltip canvas — a client-side stand-in for the sprite
@@ -1307,6 +1332,10 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   video.addEventListener('timeupdate', onTimeUpdate);
   video.addEventListener('progress', onProgress);
   video.addEventListener('play', onPlay);
+  video.addEventListener('play', startSeekLoop);
+  video.addEventListener('pause', stopSeekLoop);
+  seek.addEventListener('pointerdown', onSeekScrubStart);
+  document.addEventListener('pointerup', onSeekScrubEnd);
   video.addEventListener('play', startAmbient);
   video.addEventListener('play', updateCenter);
   video.addEventListener('play', scheduleHide);
@@ -1337,6 +1366,11 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     document.removeEventListener('keydown', onTheaterKey);
     video.removeEventListener('contextmenu', onContextMenu);
     cancelAnimationFrame(speedGlide.raf);
+    stopSeekLoop();
+    video.removeEventListener('play', startSeekLoop);
+    video.removeEventListener('pause', stopSeekLoop);
+    seek.removeEventListener('pointerdown', onSeekScrubStart);
+    document.removeEventListener('pointerup', onSeekScrubEnd);
     stopAmbient();
     video.removeEventListener('play', startAmbient);
     video.removeEventListener('play', updateCenter);

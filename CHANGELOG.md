@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.17.0](https://github.com/JackUait/blok/compare/v0.16.1...v0.17.0) (2026-06-19)
+
+### Features
+
+- **Video** — New native Video block with a custom Airbnb-style player, brought to YouTube parity: full keyboard control (`j`/`l`/`k`, `0`–`9`, `Home`/`End`, frame-step, volume, speed), a scrubber with buffered range, hover frame-preview tooltip and mini progress bar, an in-player gear menu (Notion-style playback speed with glide, loop, ambient-glow intensity), and view modes — picture-in-picture, a FLIP-morphed theater/cinema mode, and a fade-in ambient glow. Player polish includes click-to-toggle play/pause, a centre play/pause burst, press-and-hold for 2× playback, arrow-key ±5s seek with side indicators, idle auto-hide, buffer spinner, time-remaining toggle, right-click menu, stats overlay and persisted preferences.
+- **Video** — Custom fullscreen surface with a top caption bar, a "Hide controls" tune for a control-free player, and GIF-style autoplay/loop tunes.
+- **Image** — Auto-convert dropped, pasted and remote-URL GIFs into a looping Video block via WebCodecs + webm-muxer, gated by the `convertGifToVideo` config (default on); the original GIF is kept on CORS failure, with a "Converting…" label shown during conversion.
+- **Media** — 30MB default upload limit with per-type `maxSize` configuration and human-readable too-large errors.
+
+### Bug Fixes
+
+- **Paste** — URL paste always prompts now; the previous auto-embed behaviour has been removed. **Breaking:** consumers relying on silent auto-embed must opt in through the paste menu.
+- **Video** — Reserve the aspect ratio before metadata loads to prevent squeeze-on-load, centre and letterbox the fullscreen player, strip editor chrome in fullscreen, and hide the bottom mini progress bar while fullscreen.
+
+### Maintenance
+
+- **Build** — Move `webm-muxer` to devDependencies so it is bundled rather than treated as an external runtime dependency.
+- **README** — Replace the logo with the optimized noodle mascot.
+- **Playground** — Use real self-hosted videos in the block-states gallery.
+
 ## [0.16.0](https://github.com/JackUait/blok/compare/v0.15.1...v0.16.0) (2026-06-16)
 
 ### Features

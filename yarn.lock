@@ -1176,6 +1176,7 @@ __metadata:
     vite: "npm:8.0.9"
     vite-plugin-css-injected-by-js: "npm:5.0.1"
     vitest: "npm:4.1.8"
+    webm-muxer: "npm:^5.1.4"
     yaml: "npm:^2.8.3"
     yjs: "npm:13.6.30"
   peerDependencies:
@@ -2730,6 +2731,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/dom-webcodecs@npm:^0.1.4":
+  version: 0.1.18
+  resolution: "@types/dom-webcodecs@npm:0.1.18"
+  checksum: 10c0/dcf0a36869bddb6ec1534039911bd5517985c03503da6d6cfea4ef26480c763f91b2ef4f03dcc7b3c8a68740efc1ed93b0f63a865823877eb8675f98a772f67d
+  languageName: node
+  linkType: hard
+
 "@types/esrecurse@npm:^4.3.1":
   version: 4.3.1
   resolution: "@types/esrecurse@npm:4.3.1"
@@ -2856,6 +2864,13 @@ __metadata:
   version: 3.0.3
   resolution: "@types/unist@npm:3.0.3"
   checksum: 10c0/2b1e4adcab78388e088fcc3c0ae8700f76619dbcb4741d7d201f87e2cb346bfc29a89003cfea2d76c996e1061452e14fcd737e8b25aacf949c1f2d6b2bc3dd60
+  languageName: node
+  linkType: hard
+
+"@types/wicg-file-system-access@npm:^2020.9.5":
+  version: 2020.9.8
+  resolution: "@types/wicg-file-system-access@npm:2020.9.8"
+  checksum: 10c0/baa8ca664b4ebc89b4d39f8ee98fa81b887009b0dc99008f9e69b35e6ddb286018b6309232ed3970666c543ce85e7f447c9cdd20152d92b1ff810d29d5895a36
   languageName: node
   linkType: hard
 
@@ -12407,6 +12422,16 @@ __metadata:
   version: 8.0.1
   resolution: "webidl-conversions@npm:8.0.1"
   checksum: 10c0/3f6f327ca5fa0c065ed8ed0ef3b72f33623376e68f958e9b7bd0df49fdb0b908139ac2338d19fb45bd0e05595bda96cb6d1622222a8b413daa38a17aacc4dd46
+  languageName: node
+  linkType: hard
+
+"webm-muxer@npm:^5.1.4":
+  version: 5.1.4
+  resolution: "webm-muxer@npm:5.1.4"
+  dependencies:
+    "@types/dom-webcodecs": "npm:^0.1.4"
+    "@types/wicg-file-system-access": "npm:^2020.9.5"
+  checksum: 10c0/ed5c675f637853846c9f6fb0b26ed3236b877773b6f3e4e98e9c08fd3dbbd8179b036fccab5a74dc6a7e70d51f77750f32956b9d695dcc3dde7c51a3f9000d7d
   languageName: node
   linkType: hard
 

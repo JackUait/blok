@@ -150,7 +150,8 @@
     "mdast-util-math": "^3.0.0",
     "micromark-extension-gfm": "^3.0.0",
     "micromark-extension-math": "^3.1.0",
-    "nanoid": "5.1.9"
+    "nanoid": "5.1.9",
+    "webm-muxer": "^5.1.4"
   },
   "devDependencies": {
     "@aiden0z/pptx-renderer": "^1.1.0",

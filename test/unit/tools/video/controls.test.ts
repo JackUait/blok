@@ -1365,6 +1365,9 @@ describe('video controls — theater entrance/exit (FLIP via Web Animations)', (
     showPopover = vi.fn(() => { open = true; });
     hidePopover = vi.fn(() => { open = false; });
     // Teach jsdom the Popover API + :popover-open matching the FLIP relies on.
+    // `popover` must reflect on the prototype too: the controls feature-detect
+    // routes through supportsPopoverAPI(), which checks `'popover' in prototype`.
+    (HTMLElement.prototype as unknown as { popover: unknown }).popover = null;
     (HTMLElement.prototype as unknown as { showPopover: unknown }).showPopover = showPopover;
     (HTMLElement.prototype as unknown as { hidePopover: unknown }).hidePopover = hidePopover;
     // Stub the Web Animations API: record keyframes/options and expose onfinish so
@@ -1399,6 +1402,7 @@ describe('video controls — theater entrance/exit (FLIP via Web Animations)', (
   afterEach(() => {
     h.destroy();
     document.body.innerHTML = '';
+    delete (HTMLElement.prototype as Partial<{ popover: unknown }>).popover;
     delete (HTMLElement.prototype as Partial<{ showPopover: unknown }>).showPopover;
     delete (HTMLElement.prototype as Partial<{ hidePopover: unknown }>).hidePopover;
     delete (HTMLElement.prototype as Partial<{ animate: unknown }>).animate;

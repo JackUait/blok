@@ -855,6 +855,93 @@ const editor = new Blok({
 });`,
   },
 
+  {
+    id: 'video',
+    exportName: 'Video',
+    type: 'block',
+    badge: 'Block Tool',
+    title: 'Video',
+    description:
+      'A full-featured video player block. Renders an uploaded or linked video with a custom control bar (play/pause, scrubber with buffered range and hover preview, volume, playback speed, loop, picture-in-picture, theater and fullscreen modes), an optional caption, and an ambient glow behind the player. Videos are sent through a consumer-supplied uploader; when none is provided the tool falls back to a local blob URL (uploadByFile) or the pasted URL (uploadByUrl). An optional MIME allowlist and max size gate what is accepted.',
+    importExample: `import { Video } from '@jackuait/blok/tools';`,
+    configOptions: [
+      {
+        option: 'uploader',
+        type: 'VideoUploader',
+        default: 'undefined',
+        description:
+          'Consumer-supplied uploader with optional `uploadByFile(file, ctx)` and `uploadByUrl(url, ctx)` methods, each resolving to `{ url, fileName? }`. The `ctx.onProgress(percent)` callback reports upload progress. When omitted, videos fall back to a blob URL or the pasted URL.',
+      },
+      {
+        option: 'types',
+        type: 'string[]',
+        default: 'video/mp4, video/webm, video/ogg',
+        description: 'Accepted MIME allowlist for uploads.',
+      },
+      {
+        option: 'maxSize',
+        type: 'MaxSizeConfig',
+        default: '100 MiB',
+        description:
+          'Max upload size. A number caps every type (bytes); an object caps per MIME type with `\'*\'` as the fallback.',
+      },
+      {
+        option: 'captionPlaceholder',
+        type: 'string',
+        default: '"Write a caption…"',
+        description: 'Placeholder text shown in the caption field.',
+      },
+      {
+        option: 'glow',
+        type: "'more' | 'less' | 'minimal' | 'none'",
+        default: "'minimal'",
+        description: 'Ambient glow intensity rendered behind every player.',
+      },
+    ],
+    saveDataShape: `interface VideoData {
+  url: string;             // Video source URL — http(s) or blob:
+  caption?: string;        // Plain-text caption
+  captionVisible?: boolean; // Caption visible in the rendered state (default true)
+  width?: number;          // Rendered width in pixels (resize handle)
+  alignment?: 'left' | 'center' | 'right';
+  autoplay?: boolean;      // Autoplay on render
+  loop?: boolean;          // Loop playback
+  hideControls?: boolean;  // Render a control-free player
+  fileName?: string;       // Original filename, when known
+  mimeType?: string;       // MIME type
+  aspectRatio?: string;    // e.g. "16 / 9", used to reserve layout space
+}`,
+    saveDataExample: `{
+  "id": "vid001",
+  "type": "video",
+  "data": {
+    "url": "https://example.com/media/clip.mp4",
+    "fileName": "clip.mp4",
+    "mimeType": "video/mp4",
+    "alignment": "center"
+  }
+}`,
+    usageExample: `import { Blok } from '@jackuait/blok';
+import { Video } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    video: {
+      class: Video,
+      config: {
+        uploader: {
+          async uploadByFile(file) {
+            const url = await myUpload(file);
+            return { url, fileName: file.name };
+          },
+        },
+      },
+    },
+  },
+});`,
+  },
+
   // ── Inline Tools ──────────────────────────────────────────────────────────
   {
     id: 'bold',

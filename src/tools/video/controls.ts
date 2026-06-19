@@ -17,6 +17,7 @@ import {
   IconPlayerVolumeMute,
   IconPlus,
 } from '../../components/icons';
+import { promoteToTopLayer, removeFromTopLayer, supportsPopoverAPI } from '../../components/utils/top-layer';
 import type { VideoGlow } from '../../../types/tools/video';
 
 /** Minimal storage seam (localStorage-shaped) for volume + position persistence. */
@@ -985,7 +986,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   // is driven explicitly — an outside pointer-down or Escape — so it behaves the
   // same with or without the Popover API and never races browser light-dismiss.
   // It never touches the inline width, so the saved resize width is preserved.
-  const canPopover = typeof figure.showPopover === 'function';
+  const canPopover = supportsPopoverAPI();
   const theaterBtn = button('theater', 'Theater mode', IconPlayerTheater);
   theaterBtn.setAttribute('aria-pressed', 'false');
   // `inlineRect` is the VIDEO's grid-slot rect, captured on enter (before
@@ -1064,9 +1065,14 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     if (slot) slot.style.minHeight = `${figure.getBoundingClientRect().height}px`;
     figure.setAttribute('data-theater', 'true');
     if (!canPopover) return; // popover-less fallback: the CSS keyframe owns it
-    if (!figure.matches(':popover-open')) {
-      figure.setAttribute('popover', 'manual');
-      try { figure.showPopover(); } catch { figure.removeAttribute('popover'); return; }
+    // Route promotion through the Top-Layer chokepoint so the data-blok-top-layer
+    // marker (and its UA-popover CSS reset) is applied centrally. The theater rules
+    // keyed on [data-theater="true"] out-specify that generic reset, so the centred
+    // fixed layout survives. On failure, unwind the marker/attribute it set.
+    if (!figure.matches(':popover-open') && !promoteToTopLayer(figure)) {
+      removeFromTopLayer(figure);
+
+      return;
     }
     if (reducedMotion || !canAnimate) return;
     const centre = video.getBoundingClientRect();
@@ -1081,10 +1087,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     // Tear down atomically (one paint) so the card never flashes back to centre.
     const finalize = (): void => {
       cancelFlip();
-      if (canPopover && figure.matches(':popover-open')) {
-        try { figure.hidePopover(); } catch { /* already closed */ }
-      }
-      figure.removeAttribute('popover');
+      removeFromTopLayer(figure);
       figure.setAttribute('data-theater', 'false');
       figure.removeAttribute('data-theater-leaving');
       // Release the reserved slot height so it tracks the figure again.
@@ -1381,9 +1384,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     document.removeEventListener('fullscreenchange', onFullscreenChange);
     document.removeEventListener('pointerdown', onTheaterOutside);
     cancelFlip();
-    if (canPopover && figure.matches(':popover-open')) {
-      try { figure.hidePopover(); } catch { /* already closed */ }
-    }
+    removeFromTopLayer(figure);
     // Drop any slot height reserved for an in-progress theater session.
     const slot = figure.parentElement;
     if (slot) slot.style.minHeight = '';

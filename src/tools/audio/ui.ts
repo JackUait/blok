@@ -48,6 +48,20 @@ export function renderNowPlaying(data: AudioData, opts: NowPlayingOptions): NowP
     cover.appendChild(placeholder);
   }
 
+  // Decorative "now playing" equalizer — a dark badge of dancing bars pinned to
+  // the cover. CSS reveals + animates it only while the figure is playing
+  // (driven by the [data-playing] attribute the controls toggle).
+  const eq = document.createElement('span');
+  eq.className = 'blok-audio-eq';
+  eq.setAttribute('data-role', 'audio-eq');
+  eq.setAttribute('aria-hidden', 'true');
+  ['a', 'b', 'c'].forEach(() => {
+    const bar = document.createElement('span');
+    bar.className = 'blok-audio-eq__bar';
+    eq.appendChild(bar);
+  });
+  cover.appendChild(eq);
+
   const title = editableLine('audio-title', data.title, opts.editable, opts.titlePlaceholder);
   title.className = 'blok-audio-title';
   const artist = editableLine('audio-artist', data.artist, opts.editable, opts.artistPlaceholder);

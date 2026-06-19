@@ -35,6 +35,16 @@ describe('renderNowPlaying', () => {
     expect(img?.getAttribute('src')).toBe('https://x/c.jpg');
   });
 
+  it('renders a decorative now-playing equalizer with 3 bars inside the cover', () => {
+    const { cover, body } = renderNowPlaying({ url: 'u' }, { editable: true });
+    const eq = cover.querySelector('[data-role="audio-eq"]');
+    expect(eq).not.toBeNull();
+    expect(eq?.getAttribute('aria-hidden')).toBe('true');
+    expect(eq?.querySelectorAll('.blok-audio-eq__bar').length).toBe(3);
+    // The equalizer is a cover overlay, never part of the body column.
+    expect(body.contains(eq as Node)).toBe(false);
+  });
+
   it('returns a body element with class blok-audio-body and data-role audio-body', () => {
     const { body } = renderNowPlaying({ url: 'u' }, { editable: true });
     expect(body).not.toBeNull();

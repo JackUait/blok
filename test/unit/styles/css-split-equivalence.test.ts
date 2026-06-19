@@ -275,8 +275,12 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // caption footer with hairline), always 100% wide (resizer removed), tall stretched
     // cover panel + music-note placeholder, hero 56px waveform, larger filled play puck,
     // gear-anchored speed menu, loop active = solid black. +~3KB intentional growth.
+    // Audio "alive" motion pass: staggered mount entrance (blok-audio-rise), a now-playing
+    // equalizer badge on the cover (blok-audio-eq-bounce, dark overlay pill + white bars,
+    // revealed only while data-playing) and a play-puck heartbeat ring (blok-audio-pulse) —
+    // all reduced-motion gated. +~2.5KB intentional growth.
     // Shrinking below the baseline is always acceptable.
-    const PRE_SPLIT_BYTES = 403500;
+    const PRE_SPLIT_BYTES = 406500;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.302);
     const actual = localImportedByteBudget(ENTRY);
 

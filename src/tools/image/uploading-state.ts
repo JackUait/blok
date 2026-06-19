@@ -5,6 +5,7 @@ import { tr } from './i18n';
 export interface UploadingStateOptions {
   fileName: string;
   sizeLabel?: string;
+  statusLabel?: string;
   onCancel?(): void;
   i18n?: I18nInstance;
 }
@@ -33,7 +34,7 @@ export function renderUploadingState(opts: UploadingStateOptions): UploadingStat
 
   const label = document.createElement('span');
   label.className = 'blok-image-uploading__label';
-  label.textContent = tr(opts.i18n, 'tools.image.uploadingLabel');
+  label.textContent = opts.statusLabel ?? tr(opts.i18n, 'tools.image.uploadingLabel');
 
   const name = document.createElement('span');
   name.className = 'blok-image-uploading__filename';

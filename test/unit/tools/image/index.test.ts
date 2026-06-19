@@ -5,6 +5,12 @@ import type { ImageData, ImageConfig } from '../../../../types/tools/image';
 import type { API, BlockToolConstructorOptions, BlockAPI, FilePasteEvent, HTMLPasteEvent, PatternPasteEvent } from '../../../../types';
 import { simulateClick, simulateKeydown } from '../../../helpers/simulate';
 
+vi.mock('../../../../src/tools/image/gif-to-webm', () => ({
+  convertGifToWebm: vi.fn(),
+}));
+import { convertGifToWebm } from '../../../../src/tools/image/gif-to-webm';
+const mockConvert = vi.mocked(convertGifToWebm);
+
 const createMockApi = (): API => ({
   styles: { block: 'blok-block' },
   i18n: { t: (k: string) => k, has: () => false },
@@ -1563,6 +1569,65 @@ describe('ImageTool — auto-retry loading dimensions', () => {
 
     expect(MockImage.lastInstance).toBeNull();
     expect(figure.style.aspectRatio).toBe('800 / 400');
+  });
+});
+
+describe('ImageTool — GIF auto-conversion', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  const gifFile = (): File => new File([new Uint8Array(8)], 'cat.gif', { type: 'image/gif' });
+
+  const pasteGif = (tool: ImageTool): void => {
+    const event = new CustomEvent('paste', { detail: { file: gifFile() } }) as FilePasteEvent;
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+  };
+
+  it('swaps to a video block with autoplay+loop when conversion succeeds', async () => {
+    mockConvert.mockResolvedValue(new Blob([new Uint8Array([1])], { type: 'video/webm' }));
+    const insert = vi.fn();
+    const api = createMockApi();
+    (api as unknown as { blocks: unknown }).blocks = { getBlockIndex: () => 2, insert };
+    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }) };
+    const tool = new ImageTool({ ...createOptions(), api });
+    tool.render();
+    pasteGif(tool);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mockConvert).toHaveBeenCalledOnce();
+    expect(insert).toHaveBeenCalledWith(
+      'video',
+      expect.objectContaining({ autoplay: true, loop: true, mimeType: 'video/webm' }),
+      {}, 2, false, true,
+    );
+  });
+
+  it('falls back to a normal image upload when conversion returns null', async () => {
+    mockConvert.mockResolvedValue(null);
+    const insert = vi.fn();
+    const api = createMockApi();
+    (api as unknown as { blocks: unknown }).blocks = { getBlockIndex: () => 0, insert };
+    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }) };
+    const tool = new ImageTool({ ...createOptions(), api });
+    const root = tool.render();
+    pasteGif(tool);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(insert).not.toHaveBeenCalled();
+    // blob-url image upload path → rendered image
+    expect(root.querySelector('img')).not.toBeNull();
+  });
+
+  it('does not convert when convertGifToVideo is false', async () => {
+    const insert = vi.fn();
+    const api = createMockApi();
+    (api as unknown as { blocks: unknown }).blocks = { getBlockIndex: () => 0, insert };
+    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }) };
+    const tool = new ImageTool({ ...createOptions({}, { convertGifToVideo: false }), api });
+    tool.render();
+    pasteGif(tool);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mockConvert).not.toHaveBeenCalled();
+    expect(insert).not.toHaveBeenCalled();
   });
 });
 

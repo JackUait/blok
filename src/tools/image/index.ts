@@ -52,6 +52,8 @@ import { openAltPopover } from './alt-popover';
 import { probeImageDimensions } from './probe-dimensions';
 import { renderUploadingState, type UploadingStateElement } from './uploading-state';
 import { Uploader, type UploadResult } from './uploader';
+import { convertGifToWebm } from './gif-to-webm';
+import { resolveConvertedUploader } from './converted-uploader';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -176,6 +178,17 @@ export class ImageTool implements BlockTool {
   };
 
   private startUpload(file: File): void {
+    if (this.shouldConvertGif(file.type)) {
+      void this.convertGifToVideoBlock(file).then((handled) => {
+        if (!handled) this.uploadImageFile(file);
+      });
+      return;
+    }
+    this.uploadImageFile(file);
+  }
+
+  /** Existing upload body, extracted verbatim. */
+  private uploadImageFile(file: File): void {
     this.lastFileName = file.name;
     this.lastSource = { kind: 'file', file };
     this.state = 'LOADING';
@@ -186,6 +199,52 @@ export class ImageTool implements BlockTool {
       .handleFile(file, { onProgress: this.reportProgress })
       .then((result) => this.applyResult(result))
       .catch((err) => this.applyError(err));
+  }
+
+  private shouldConvertGif(mimeType: string): boolean {
+    return this.config.convertGifToVideo !== false && mimeType === 'image/gif';
+  }
+
+  /**
+   * Try to convert a GIF to a looping WebM video block. Returns true only when
+   * the block was swapped; false means the caller should keep the GIF (image).
+   */
+  private async convertGifToVideoBlock(file: File): Promise<boolean> {
+    this.state = 'LOADING';
+    this.errorMessage = null;
+    this.brokenImage = false;
+    this.lastFileName = file.name;
+    this.renderState();
+    try {
+      const blob = await convertGifToWebm(await file.arrayBuffer(), { onProgress: this.reportProgress });
+      if (!blob) return false;
+      const webm = new File([blob], file.name.replace(/\.gif$/i, '.webm'), { type: 'video/webm' });
+      const url = await this.uploadConverted(webm);
+      if (url === null) return false;
+      return this.swapToVideoBlock(url, webm.name);
+    } catch {
+      return false;
+    }
+  }
+
+  private async uploadConverted(file: File): Promise<string | null> {
+    const upload = resolveConvertedUploader(this.api, this.config);
+    if (upload) {
+      const res = await upload(file, { onProgress: this.reportProgress });
+      return res.url;
+    }
+    return URL.createObjectURL(file);
+  }
+
+  private swapToVideoBlock(url: string, fileName: string): boolean {
+    const index = this.api.blocks.getBlockIndex(this.block.id);
+    if (index === undefined) return false;
+    this.api.blocks.insert(
+      'video',
+      { url, autoplay: true, loop: true, mimeType: 'video/webm', fileName },
+      {}, index, false, true,
+    );
+    return true;
   }
 
   private startUrl(url: string): void {

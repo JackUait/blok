@@ -53,6 +53,7 @@ export class AudioTool implements BlockTool {
   private resizeDetach: (() => void)[] = [];
   private controlsHandle: ControlsHandle | null = null;
   private waveformHandle: WaveformHandle | null = null;
+  private destroyed = false;
 
   constructor(options: BlockToolConstructorOptions<AudioData, AudioConfig>) {
     this.api = options.api;
@@ -199,6 +200,7 @@ export class AudioTool implements BlockTool {
   }
 
   public removed(): void {
+    this.destroyed = true;
     this.detachResize();
     this.controlsHandle?.destroy();
     this.controlsHandle = null;
@@ -248,25 +250,31 @@ export class AudioTool implements BlockTool {
       // Metadata: title, artist, cover
       void readTrackMetadata(file)
         .then(async (meta) => {
-          if (meta.title) this.data.title = meta.title;
-          if (meta.artist) this.data.artist = meta.artist;
+          if (this.destroyed) return;
+          let changed = false;
+          if (meta.title) { this.data.title = meta.title; changed = true; }
+          if (meta.artist) { this.data.artist = meta.artist; changed = true; }
           if (meta.cover) {
             const coverUrl = await resolveCover(meta.cover, this.config.uploader).catch(() => undefined);
-            if (coverUrl) this.data.coverUrl = coverUrl;
+            if (coverUrl) { this.data.coverUrl = coverUrl; changed = true; }
           }
-          this.renderState();
-          this.block.dispatchChange();
+          if (this.destroyed) return;
+          if (changed) {
+            this.renderState();
+            this.block.dispatchChange();
+          }
         })
         .catch(() => { /* leave player working without metadata */ });
 
       // Waveform peaks + duration
       void decodePeaks(file)
         .then((peaks) => {
-          if (peaks) {
+          if (this.destroyed) return;
+          if (peaks && peaks.length) {
             this.data.peaks = peaks;
+            this.renderState();
+            this.block.dispatchChange();
           }
-          this.renderState();
-          this.block.dispatchChange();
         })
         .catch(() => { /* leave player working without waveform */ });
     }

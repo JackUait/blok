@@ -3,6 +3,25 @@ import type { API, BlockAPI, BlockToolConstructorOptions } from '../../../../typ
 import type { AudioConfig, AudioData } from '../../../../types/tools/audio';
 import { AudioTool } from '../../../../src/tools/audio';
 
+vi.mock('../../../../src/tools/audio/metadata', () => ({
+  readTrackMetadata: vi.fn().mockResolvedValue({}),
+  resolveCover: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../../../src/tools/audio/waveform', () => ({
+  decodePeaks: vi.fn().mockResolvedValue(null),
+  attachWaveform: vi.fn().mockReturnValue({ destroy: vi.fn() }),
+}));
+
+vi.mock('../../../../src/tools/audio/uploader', () => {
+  class AudioUploadError extends Error {}
+  class Uploader {
+    handleFile = vi.fn().mockResolvedValue({ url: 'https://cdn/track.mp3', fileName: 'track.mp3' });
+    handleUrl = vi.fn().mockResolvedValue({ url: 'https://cdn/track.mp3' });
+  }
+  return { AudioUploadError, Uploader };
+});
+
 const createMockApi = (): API => ({
   styles: { block: 'blok-block' },
   i18n: { t: (k: string) => k, has: () => false },
@@ -74,5 +93,51 @@ describe('AudioTool', () => {
     tool.setReadOnly(true);
     const title = root.querySelector('[data-role="audio-title"]');
     expect(title?.getAttribute('contenteditable')).toBe('false');
+  });
+
+  it('I1: removed() sets destroyed flag and enrichment no longer calls dispatchChange', async () => {
+    const block = createMockBlock();
+    const tool = new AudioTool(opts({ url: '' }, {}, block));
+    tool.render();
+    // Trigger upload path which fires async enrichment
+    tool.onPaste({ type: 'file', detail: { file: new File(['x'], 'track.mp3', { type: 'audio/mpeg' }) } } as never);
+    // Remove block before enrichment resolves
+    tool.removed();
+    // Flush all microtasks
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    // The initial applyResult calls dispatchChange once; after removal no further calls
+    const callCount = (block.dispatchChange as ReturnType<typeof vi.fn>).mock.calls.length;
+    // Advance another tick to ensure enrichment callbacks ran
+    await Promise.resolve();
+    expect((block.dispatchChange as ReturnType<typeof vi.fn>).mock.calls.length).toBe(callCount);
+    expect((tool as unknown as { destroyed: boolean }).destroyed).toBe(true);
+  });
+
+  it('I2: null peaks (jsdom) does not call dispatchChange or set peaks', async () => {
+    const block = createMockBlock();
+    const tool = new AudioTool(opts({ url: '' }, {}, block));
+    tool.render();
+    tool.onPaste({ type: 'file', detail: { file: new File(['x'], 'track.mp3', { type: 'audio/mpeg' }) } } as never);
+    // Flush all microtasks so enrichment callbacks run
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(tool.save().peaks).toBeUndefined();
+    // dispatchChange called exactly once (from applyResult), not again for null peaks
+    const dispatchCalls = (block.dispatchChange as ReturnType<typeof vi.fn>).mock.calls.length;
+    expect(dispatchCalls).toBe(1);
+  });
+
+  it('caption round-trip: blur on [data-role="audio-caption"] updates save().caption', () => {
+    const tool = new AudioTool(opts({ url: 'https://x/y.mp3', caption: '' }));
+    const root = tool.render();
+    const captionEl = root.querySelector<HTMLElement>('[data-role="audio-caption"]');
+    expect(captionEl).not.toBeNull();
+    captionEl!.textContent = 'My caption';
+    captionEl!.dispatchEvent(new Event('blur'));
+    expect(tool.save().caption).toBe('My caption');
   });
 });

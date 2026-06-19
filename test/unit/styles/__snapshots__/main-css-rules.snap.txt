@@ -5542,6 +5542,10 @@
   opacity: 1;
 }
 
+[data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] .blok-video-controls__mini {
+  display: none;
+}
+
 [@media (prefers-reduced-motion: reduce)] [data-blok-tool="video"] .blok-video-controls__bar, [data-blok-tool="video"] .blok-video-controls__title, [data-blok-tool="video"] .blok-video-controls__volume, [data-blok-tool="video"] .blok-video-controls__mini, [data-blok-tool="video"] .blok-video-controls__seek-tooltip, [data-blok-tool="video"] .blok-video-controls__seek-wrap::before, [data-blok-tool="video"] .blok-video-controls__buffered, [data-blok-tool="video"] .blok-video-controls__seek, [data-blok-tool="video"] .blok-video-controls__speed {
   transition: none;
 }

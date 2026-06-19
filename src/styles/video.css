@@ -1197,6 +1197,9 @@
   transition: opacity 160ms ease;
 }
 [data-blok-tool="video"] .blok-video-inner[data-controls-hidden="true"] .blok-video-controls__mini { opacity: 1; }
+/* In fullscreen the bottom edge-line is redundant — the full scrubber is one
+   mouse-move away — and reads as a stray hairline across the immersive frame. */
+[data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] .blok-video-controls__mini { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   [data-blok-tool="video"] .blok-video-controls__bar,

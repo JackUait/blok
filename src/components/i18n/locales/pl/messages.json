@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "Pokaż podpis",
   "tools.video.autoplay": "Autoodtwarzanie",
   "tools.video.loop": "Zapętl",
+  "tools.video.hideControls": "Ukryj elementy sterujące",
   "tools.video.replace": "Zamień wideo",
   "tools.video.download": "Pobierz",
   "tools.video.copyUrl": "Kopiuj URL",

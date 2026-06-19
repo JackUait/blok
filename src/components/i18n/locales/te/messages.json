@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "శీర్షికను టోగుల్ చేయి",
   "tools.video.autoplay": "ఆటో ప్లే",
   "tools.video.loop": "లూప్",
+  "tools.video.hideControls": "నియంత్రణలను దాచు",
   "tools.video.replace": "వీడియోను భర్తీ చేయి",
   "tools.video.download": "డౌన్‌లోడ్",
   "tools.video.copyUrl": "URL కాపీ చేయి",

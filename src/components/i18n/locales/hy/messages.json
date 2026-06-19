@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "Փոխարկել ենթագիրը",
   "tools.video.autoplay": "Ինքնաշխատ նվագարկում",
   "tools.video.loop": "Կրկնել",
+  "tools.video.hideControls": "Թաքցնել կառավարման տարրերը",
   "tools.video.replace": "Փոխարինել տեսանյութը",
   "tools.video.download": "Ներբեռնել",
   "tools.video.copyUrl": "Պատճենել URL-ն",

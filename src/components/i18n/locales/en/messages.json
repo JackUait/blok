@@ -340,6 +340,7 @@
   "tools.video.toggleCaption": "Toggle caption",
   "tools.video.autoplay": "Autoplay",
   "tools.video.loop": "Loop",
+  "tools.video.hideControls": "Hide controls",
   "tools.video.replace": "Replace video",
   "tools.video.download": "Download",
   "tools.video.copyUrl": "Copy URL",

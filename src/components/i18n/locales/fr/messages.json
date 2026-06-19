@@ -395,6 +395,7 @@
   "tools.video.toggleCaption": "Afficher ou masquer la légende",
   "tools.video.autoplay": "Lecture automatique",
   "tools.video.loop": "Boucle",
+  "tools.video.hideControls": "Masquer les commandes",
   "tools.video.replace": "Remplacer la vidéo",
   "tools.video.download": "Télécharger",
   "tools.video.copyUrl": "Copier l’URL",

@@ -395,6 +395,7 @@
   "tools.video.toggleCaption": "I-toggle ang caption",
   "tools.video.autoplay": "Autoplay",
   "tools.video.loop": "Loop",
+  "tools.video.hideControls": "Itago ang mga kontrol",
   "tools.video.replace": "Palitan ang video",
   "tools.video.download": "I-download",
   "tools.video.copyUrl": "Kopyahin ang URL",

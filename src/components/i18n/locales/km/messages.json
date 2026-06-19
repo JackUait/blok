@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "បិទ/បើកចំណងជើងរង",
   "tools.video.autoplay": "ចាក់ស្វ័យប្រវត្តិ",
   "tools.video.loop": "រង្វិលជុំ",
+  "tools.video.hideControls": "លាក់​ការ​គ្រប់គ្រង",
   "tools.video.replace": "ជំនួសវីដេអូ",
   "tools.video.download": "ទាញយក",
   "tools.video.copyUrl": "ចម្លង URL",

@@ -395,6 +395,7 @@
   "tools.video.toggleCaption": "Mostrar u ocultar título",
   "tools.video.autoplay": "Reproducción automática",
   "tools.video.loop": "Bucle",
+  "tools.video.hideControls": "Ocultar controles",
   "tools.video.replace": "Sustituir vídeo",
   "tools.video.download": "Descargar",
   "tools.video.copyUrl": "Copiar URL",

@@ -20,6 +20,7 @@ import {
   IconDownload,
   IconPlayerLoop,
   IconPlayerPlay,
+  IconPlayerSettings,
   IconReplace,
   IconVideo,
 } from '../../components/icons';
@@ -80,6 +81,7 @@ export class VideoTool implements BlockTool {
     if (this.data.alignment !== undefined) out.alignment = this.data.alignment;
     if (this.data.autoplay) out.autoplay = true;
     if (this.data.loop) out.loop = true;
+    if (this.data.hideControls) out.hideControls = true;
     if (this.data.fileName !== undefined) out.fileName = this.data.fileName;
     if (this.data.mimeType !== undefined) out.mimeType = this.data.mimeType;
     if (this.data.aspectRatio !== undefined) out.aspectRatio = this.data.aspectRatio;
@@ -188,6 +190,14 @@ export class VideoTool implements BlockTool {
         onActivate: (): void => this.toggleLoop(),
       },
       {
+        icon: IconPlayerSettings,
+        title: tr(i18n, 'tools.video.hideControls', 'Hide controls'),
+        name: 'video-hide-controls',
+        isActive: this.data.hideControls === true,
+        closeOnActivate: true,
+        onActivate: (): void => this.toggleHideControls(),
+      },
+      {
         icon: IconReplace,
         title: tr(i18n, 'tools.video.replace', 'Replace video'),
         name: 'video-replace',
@@ -278,6 +288,7 @@ export class VideoTool implements BlockTool {
     r.setAttribute('data-state', this.state.toLowerCase());
     r.setAttribute('data-align', this.data.alignment ?? 'center');
     r.setAttribute('data-caption', this.data.captionVisible === false ? 'off' : 'on');
+    r.setAttribute('data-controls', this.data.hideControls === true ? 'off' : 'on');
   }
 
   private renderState(): void {
@@ -364,13 +375,18 @@ export class VideoTool implements BlockTool {
         video.setAttribute('muted', '');
         video.setAttribute('autoplay', '');
       }
-      this.controlsHandle = attachControls({
-        video,
-        figure,
-        glow: this.config.glow ?? 'minimal',
-        loop: this.data.loop === true,
-      });
-      media.appendChild(this.controlsHandle.element);
+      // "Hide controls" tune renders a clean, control-free frame — the custom
+      // chrome is skipped entirely (native controls were never attached). Loop
+      // and autoplay above still apply: they are content/viewer affordances.
+      if (this.data.hideControls !== true) {
+        this.controlsHandle = attachControls({
+          video,
+          figure,
+          glow: this.config.glow ?? 'minimal',
+          loop: this.data.loop === true,
+        });
+        media.appendChild(this.controlsHandle.element);
+      }
 
       // When metadata arrives, update the media wrapper's aspect ratio so it
       // matches the video's intrinsic dimensions.  If the ratio differs from
@@ -466,6 +482,12 @@ export class VideoTool implements BlockTool {
 
   private toggleLoop(): void {
     this.data.loop = this.data.loop !== true ? true : undefined;
+    this.block.dispatchChange();
+    this.renderState();
+  }
+
+  private toggleHideControls(): void {
+    this.data.hideControls = this.data.hideControls !== true ? true : undefined;
     this.block.dispatchChange();
     this.renderState();
   }

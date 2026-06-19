@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "Тайлбарыг сэлгэх",
   "tools.video.autoplay": "Автомат тоглуулах",
   "tools.video.loop": "Давтах",
+  "tools.video.hideControls": "Удирдлагуудыг нуух",
   "tools.video.download": "Татах",
   "tools.video.copyUrl": "URL хуулах",
   "tools.video.moreOptions": "Бусад сонголтууд",

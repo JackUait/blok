@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "Visa eller dölj bildtext",
   "tools.video.autoplay": "Automatisk uppspelning",
   "tools.video.loop": "Upprepa",
+  "tools.video.hideControls": "Dölj kontroller",
   "tools.video.replace": "Ersätt video",
   "tools.video.download": "Ladda ner",
   "tools.video.copyUrl": "Kopiera URL",

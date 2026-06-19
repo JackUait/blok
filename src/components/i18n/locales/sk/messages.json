@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "Zobraziť popis",
   "tools.video.autoplay": "Automatické prehrávanie",
   "tools.video.loop": "Opakovať",
+  "tools.video.hideControls": "Skryť ovládacie prvky",
   "tools.video.replace": "Nahradiť video",
   "tools.video.download": "Stiahnuť",
   "tools.video.copyUrl": "Kopírovať URL",

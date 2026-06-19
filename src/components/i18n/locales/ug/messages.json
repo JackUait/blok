@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "ئىزاھاتنى ئۆزگەرتىش",
   "tools.video.autoplay": "ئاپتوماتىك قويۇش",
   "tools.video.loop": "تەكرارلاش",
+  "tools.video.hideControls": "كونترۇللارنى يوشۇرۇش",
   "tools.video.replace": "سىننى ئالماشتۇرۇش",
   "tools.video.download": "چۈشۈرۈش",
   "tools.video.copyUrl": "URL نى كۆچۈرۈش",

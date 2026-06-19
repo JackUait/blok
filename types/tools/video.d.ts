@@ -25,6 +25,8 @@ export interface VideoData extends BlockToolData {
   autoplay?: boolean;
   /** Loop playback. Applies in both edit and read-only modes. */
   loop?: boolean;
+  /** Hide the playback controls — renders a clean, control-free media frame. */
+  hideControls?: boolean;
   /** Original filename, when known */
   fileName?: string;
   /** Source MIME type (e.g. video/mp4), when known */

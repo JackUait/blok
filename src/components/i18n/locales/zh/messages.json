@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "显示/隐藏说明",
   "tools.video.autoplay": "自动播放",
   "tools.video.loop": "循环",
+  "tools.video.hideControls": "隐藏控件",
   "tools.video.replace": "替换视频",
   "tools.video.download": "下载",
   "tools.video.copyUrl": "复制链接",

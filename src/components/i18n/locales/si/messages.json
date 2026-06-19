@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "සිරස්තලය මාරු කරන්න",
   "tools.video.autoplay": "ස්වයංක්‍රීය ධාවනය",
   "tools.video.loop": "පුනරාවර්තනය",
+  "tools.video.hideControls": "පාලන සඟවන්න",
   "tools.video.replace": "වීඩියෝව ප්‍රතිස්ථාපනය",
   "tools.video.download": "බාගන්න",
   "tools.video.copyUrl": "URL පිටපත් කරන්න",

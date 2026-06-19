@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "Afișează sau ascunde legenda",
   "tools.video.autoplay": "Redare automată",
   "tools.video.loop": "Repetare",
+  "tools.video.hideControls": "Ascunde controalele",
   "tools.video.replace": "Înlocuiește videoclipul",
   "tools.video.download": "Descarcă",
   "tools.video.copyUrl": "Copiază URL-ul",

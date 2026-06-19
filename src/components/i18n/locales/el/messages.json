@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "Εναλλαγή λεζάντας",
   "tools.video.autoplay": "Αυτόματη αναπαραγωγή",
   "tools.video.loop": "Επανάληψη",
+  "tools.video.hideControls": "Απόκρυψη χειριστηρίων",
   "tools.video.replace": "Αντικατάσταση βίντεο",
   "tools.video.download": "Λήψη",
   "tools.video.copyUrl": "Αντιγραφή URL",

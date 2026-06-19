@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "ކެޕްޝަން ޓޮގަލް",
   "tools.video.autoplay": "އޮޓޯ ޕްލޭ",
   "tools.video.loop": "ތަކުރާރު",
+  "tools.video.hideControls": "ކޮންޓްރޯލްތައް ފޮރުވާ",
   "tools.video.replace": "ވީޑިއޯ ބަދަލުކުރޭ",
   "tools.video.download": "ޑައުންލޯޑް",
   "tools.video.copyUrl": "URL ކޮޕީ",

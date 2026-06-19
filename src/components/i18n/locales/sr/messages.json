@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "Прикажи натпис",
   "tools.video.autoplay": "Аутоматска репродукција",
   "tools.video.loop": "Понављање",
+  "tools.video.hideControls": "Сакриј контроле",
   "tools.video.replace": "Замени видео",
   "tools.video.download": "Преузми",
   "tools.video.copyUrl": "Копирај URL",

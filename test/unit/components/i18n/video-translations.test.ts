@@ -14,6 +14,7 @@ const VIDEO_KEYS = [
   'tools.video.toggleCaption',
   'tools.video.autoplay',
   'tools.video.loop',
+  'tools.video.hideControls',
   'tools.video.replace',
   'tools.video.download',
   'tools.video.copyUrl',

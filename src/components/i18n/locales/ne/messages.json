@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "क्याप्शन टगल गर्नुहोस्",
   "tools.video.autoplay": "स्वतः प्ले",
   "tools.video.loop": "लूप",
+  "tools.video.hideControls": "नियन्त्रणहरू लुकाउनुहोस्",
   "tools.video.download": "डाउनलोड",
   "tools.video.copyUrl": "URL कपी गर्नुहोस्",
   "tools.video.moreOptions": "थप विकल्पहरू",

@@ -49,6 +49,23 @@ describe('VideoTool — RENDERED state', () => {
     expect(root.querySelector('[data-role="video-controls"]')).not.toBeNull();
   });
 
+  it('omits the control surface when hideControls is set (clean, control-free frame)', () => {
+    const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4', hideControls: true }));
+    const root = tool.render();
+    const video = root.querySelector('video');
+    expect(video).not.toBeNull();
+    // No custom chrome and no native controls — just the bare media surface.
+    expect(root.querySelector('[data-role="video-controls"]')).toBeNull();
+    expect(video?.hasAttribute('controls')).toBe(false);
+    expect(root.getAttribute('data-controls')).toBe('off');
+  });
+
+  it('keeps loop wiring intact even with controls hidden (loop is content)', () => {
+    const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4', hideControls: true, loop: true }));
+    const root = tool.render();
+    expect(root.querySelector('video')?.loop).toBe(true);
+  });
+
   it('save() returns the persisted shape', () => {
     const tool = new VideoTool(createOptions({
       url: 'https://x/y.mp4',
@@ -300,6 +317,35 @@ describe('VideoTool — editor actions (block settings)', () => {
     // toggling back clears them
     find(settings(tool), 'video-autoplay')?.onActivate?.();
     expect(tool.save().autoplay).toBeUndefined();
+  });
+
+  it('exposes a Hide controls block tune reflecting the persisted state', () => {
+    const tool = new VideoTool(createOptions({ url: 'u', hideControls: true }));
+    tool.render();
+    const items = settings(tool);
+    expect(items.map((i) => i.name)).toContain('video-hide-controls');
+    expect(find(items, 'video-hide-controls')?.isActive).toBe(true);
+  });
+
+  it('Hide controls tune defaults to inactive when unset', () => {
+    const tool = new VideoTool(createOptions({ url: 'u' }));
+    tool.render();
+    expect(find(settings(tool), 'video-hide-controls')?.isActive).toBe(false);
+  });
+
+  it('toggling the Hide controls tune persists the flag, re-renders, and dispatches', () => {
+    const block = createMockBlock();
+    const tool = new VideoTool(createOptions({ url: 'u' }, {}, block));
+    const root = tool.render();
+    expect(root.querySelector('[data-role="video-controls"]')).not.toBeNull();
+    find(settings(tool), 'video-hide-controls')?.onActivate?.();
+    expect(tool.save().hideControls).toBe(true);
+    expect(root.querySelector('[data-role="video-controls"]')).toBeNull();
+    expect(block.dispatchChange).toHaveBeenCalled();
+    // toggling back clears it and restores the controls
+    find(settings(tool), 'video-hide-controls')?.onActivate?.();
+    expect(tool.save().hideControls).toBeUndefined();
+    expect(root.querySelector('[data-role="video-controls"]')).not.toBeNull();
   });
 
   it('read-only autoplay renders a muted, looping gif-style player', () => {

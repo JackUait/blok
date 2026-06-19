@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "Preklopi napis",
   "tools.video.autoplay": "Samodejno predvajanje",
   "tools.video.loop": "Ponavljanje",
+  "tools.video.hideControls": "Skrij kontrolnike",
   "tools.video.replace": "Zamenjaj video",
   "tools.video.download": "Prenesi",
   "tools.video.copyUrl": "Kopiraj URL",

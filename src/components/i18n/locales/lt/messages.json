@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "Perjungti parašą",
   "tools.video.autoplay": "Automatinis paleidimas",
   "tools.video.loop": "Kartoti",
+  "tools.video.hideControls": "Slėpti valdiklius",
   "tools.video.replace": "Pakeisti vaizdo įrašą",
   "tools.video.download": "Atsisiųsti",
   "tools.video.copyUrl": "Kopijuoti URL",

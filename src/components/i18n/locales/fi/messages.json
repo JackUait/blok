@@ -395,6 +395,7 @@
   "tools.video.toggleCaption": "Näytä tai piilota kuvateksti",
   "tools.video.autoplay": "Automaattinen toisto",
   "tools.video.loop": "Toista",
+  "tools.video.hideControls": "Piilota säätimet",
   "tools.video.replace": "Korvaa video",
   "tools.video.download": "Lataa",
   "tools.video.copyUrl": "Kopioi URL",

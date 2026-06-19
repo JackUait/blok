@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "Alihkan keterangan",
   "tools.video.autoplay": "Putar otomatis",
   "tools.video.loop": "Ulang",
+  "tools.video.hideControls": "Sembunyikan kontrol",
   "tools.video.replace": "Ganti video",
   "tools.video.download": "Unduh",
   "tools.video.copyUrl": "Salin URL",

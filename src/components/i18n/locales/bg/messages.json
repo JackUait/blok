@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "Превключи надпис",
   "tools.video.autoplay": "Автоматично възпроизвеждане",
   "tools.video.loop": "Повтаряне",
+  "tools.video.hideControls": "Скрий контролите",
   "tools.video.replace": "Замяна на видеото",
   "tools.video.download": "Изтегли",
   "tools.video.copyUrl": "Копирай URL",

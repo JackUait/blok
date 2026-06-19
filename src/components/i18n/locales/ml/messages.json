@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "അടിക്കുറിപ്പ് ടോഗിൾ",
   "tools.video.autoplay": "സ്വയം പ്ലേ",
   "tools.video.loop": "ലൂപ്പ്",
+  "tools.video.hideControls": "നിയന്ത്രണങ്ങൾ മറയ്ക്കുക",
   "tools.video.download": "ഡൗൺലോഡ്",
   "tools.video.copyUrl": "URL പകർത്തുക",
   "tools.video.moreOptions": "കൂടുതൽ ഓപ്ഷനുകൾ",

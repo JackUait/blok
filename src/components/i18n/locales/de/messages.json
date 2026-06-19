@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "Beschriftung ein- oder ausblenden",
   "tools.video.autoplay": "Autoplay",
   "tools.video.loop": "Wiederholen",
+  "tools.video.hideControls": "Steuerung ausblenden",
   "tools.video.replace": "Video ersetzen",
   "tools.video.download": "Herunterladen",
   "tools.video.copyUrl": "URL kopieren",

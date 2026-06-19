@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "ক্যাপশন টগল করুন",
   "tools.video.autoplay": "স্বয়ংক্রিয় প্লে",
   "tools.video.loop": "লুপ",
+  "tools.video.hideControls": "নিয়ন্ত্রণ লুকান",
   "tools.video.replace": "ভিডিও প্রতিস্থাপন",
   "tools.video.download": "ডাউনলোড",
   "tools.video.copyUrl": "URL কপি করুন",

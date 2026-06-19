@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "Bật/tắt chú thích",
   "tools.video.autoplay": "Tự động phát",
   "tools.video.loop": "Lặp lại",
+  "tools.video.hideControls": "Ẩn điều khiển",
   "tools.video.replace": "Thay video",
   "tools.video.download": "Tải xuống",
   "tools.video.copyUrl": "Sao chép URL",

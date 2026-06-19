@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "Прикажи опис",
   "tools.video.autoplay": "Автоматско репродуцирање",
   "tools.video.loop": "Повторување",
+  "tools.video.hideControls": "Сокриј контроли",
   "tools.video.download": "Преземи",
   "tools.video.copyUrl": "Копирај URL",
   "tools.video.moreOptions": "Повеќе",

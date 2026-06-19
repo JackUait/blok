@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "Altyazıyı aç/kapat",
   "tools.video.autoplay": "Otomatik oynat",
   "tools.video.loop": "Döngü",
+  "tools.video.hideControls": "Kontrolleri gizle",
   "tools.video.replace": "Videoyu değiştir",
   "tools.video.download": "İndir",
   "tools.video.copyUrl": "URL'yi kopyala",

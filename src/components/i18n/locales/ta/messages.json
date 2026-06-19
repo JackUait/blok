@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "தலைப்புரையை நிலை மாற்று",
   "tools.video.autoplay": "தானியங்கி இயக்கம்",
   "tools.video.loop": "மீண்டும்",
+  "tools.video.hideControls": "கட்டுப்பாடுகளை மறை",
   "tools.video.replace": "வீடியோவை மாற்று",
   "tools.video.download": "பதிவிறக்கு",
   "tools.video.copyUrl": "URL நகலெடு",

@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "Onyesha au ficha maelezo",
   "tools.video.autoplay": "Cheza kiotomatiki",
   "tools.video.loop": "Rudia",
+  "tools.video.hideControls": "Ficha vidhibiti",
   "tools.video.replace": "Badilisha video",
   "tools.video.download": "Pakua",
   "tools.video.copyUrl": "Nakili URL",

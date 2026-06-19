@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "کیپشن دکھائیں/چھپائیں",
   "tools.video.autoplay": "خودکار پلے",
   "tools.video.loop": "لوپ",
+  "tools.video.hideControls": "کنٹرولز چھپائیں",
   "tools.video.replace": "ویڈیو تبدیل کریں",
   "tools.video.download": "ڈاؤن لوڈ",
   "tools.video.copyUrl": "URL کاپی کریں",

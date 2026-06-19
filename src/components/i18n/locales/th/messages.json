@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "แสดง/ซ่อนคำบรรยาย",
   "tools.video.autoplay": "เล่นอัตโนมัติ",
   "tools.video.loop": "เล่นวนซ้ำ",
+  "tools.video.hideControls": "ซ่อนตัวควบคุม",
   "tools.video.replace": "แทนที่วิดีโอ",
   "tools.video.download": "ดาวน์โหลด",
   "tools.video.copyUrl": "คัดลอก URL",

@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "Mostrar ou ocultar legenda",
   "tools.video.autoplay": "Reprodução automática",
   "tools.video.loop": "Repetir",
+  "tools.video.hideControls": "Ocultar controles",
   "tools.video.replace": "Substituir vídeo",
   "tools.video.download": "Baixar",
   "tools.video.copyUrl": "Copiar URL",

@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "စာတန်း ဖွင့်/ပိတ်",
   "tools.video.autoplay": "အလိုအလျောက်ဖွင့်ခြင်း",
   "tools.video.loop": "ထပ်တလဲလဲ",
+  "tools.video.hideControls": "ထိန်းချုပ်မှုများကို ဖျောက်ပါ",
   "tools.video.download": "ဒေါင်းလုဒ်",
   "tools.video.copyUrl": "URL ကူးယူ",
   "tools.video.moreOptions": "အခြားရွေးချယ်စရာများ",

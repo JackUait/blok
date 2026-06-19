@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "キャプションの表示切替",
   "tools.video.autoplay": "自動再生",
   "tools.video.loop": "ループ",
+  "tools.video.hideControls": "コントロールを非表示",
   "tools.video.replace": "動画を置き換える",
   "tools.video.download": "ダウンロード",
   "tools.video.copyUrl": "URL をコピー",

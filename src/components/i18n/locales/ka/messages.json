@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "წარწერის ჩართვა/გამორთვა",
   "tools.video.autoplay": "ავტომატური დაკვრა",
   "tools.video.loop": "გამეორება",
+  "tools.video.hideControls": "კონტროლის დამალვა",
   "tools.video.replace": "ვიდეოს ჩანაცვლება",
   "tools.video.download": "ჩამოტვირთვა",
   "tools.video.copyUrl": "URL-ის კოპირება",

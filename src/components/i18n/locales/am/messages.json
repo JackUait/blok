@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "መግለጫ ቀያይር",
   "tools.video.autoplay": "በራስ-ሰር ማጫወት",
   "tools.video.loop": "ድግግሞሽ",
+  "tools.video.hideControls": "መቆጣጠሪያዎችን ደብቅ",
   "tools.video.replace": "ቪዲዮ ተካ",
   "tools.video.download": "አውርድ",
   "tools.video.copyUrl": "URL ቅዳ",

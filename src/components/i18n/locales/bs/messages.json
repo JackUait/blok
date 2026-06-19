@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "Uključi/isključi natpis",
   "tools.video.autoplay": "Automatska reprodukcija",
   "tools.video.loop": "Ponavljanje",
+  "tools.video.hideControls": "Sakrij kontrole",
   "tools.video.replace": "Zamijeni video",
   "tools.video.download": "Preuzmi",
   "tools.video.copyUrl": "Kopiraj URL",

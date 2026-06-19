@@ -395,6 +395,7 @@
   "tools.video.toggleCaption": "कैप्शन टॉगल करें",
   "tools.video.autoplay": "स्वतः चलाएँ",
   "tools.video.loop": "लूप",
+  "tools.video.hideControls": "नियंत्रण छिपाएँ",
   "tools.video.replace": "वीडियो बदलें",
   "tools.video.download": "डाउनलोड",
   "tools.video.copyUrl": "URL कॉपी करें",

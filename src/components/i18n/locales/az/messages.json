@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "Başlığı aç/bağla",
   "tools.video.autoplay": "Avtomatik oxutma",
   "tools.video.loop": "Təkrar",
+  "tools.video.hideControls": "İdarəetmələri gizlət",
   "tools.video.replace": "Videonu dəyişdir",
   "tools.video.download": "Yüklə",
   "tools.video.copyUrl": "URL-i kopyala",

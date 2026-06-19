@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "Показать подпись",
   "tools.video.autoplay": "Автовоспроизведение",
   "tools.video.loop": "Повтор",
+  "tools.video.hideControls": "Скрыть элементы управления",
   "tools.video.replace": "Заменить видео",
   "tools.video.download": "Скачать",
   "tools.video.copyUrl": "Копировать URL",

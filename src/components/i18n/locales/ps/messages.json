@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "سرلیک ښکاره/پټ کړئ",
   "tools.video.autoplay": "اتوماتیک پلی",
   "tools.video.loop": "تکرار",
+  "tools.video.hideControls": "کنټرولونه پټ کړئ",
   "tools.video.replace": "ویډیو بدل کړئ",
   "tools.video.download": "ډاونلوډ",
   "tools.video.copyUrl": "URL کاپي",

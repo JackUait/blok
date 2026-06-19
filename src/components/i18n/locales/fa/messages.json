@@ -395,6 +395,7 @@
   "tools.video.toggleCaption": "نمایش/پنهان کردن زیرنویس",
   "tools.video.autoplay": "پخش خودکار",
   "tools.video.loop": "تکرار",
+  "tools.video.hideControls": "پنهان کردن کنترل‌ها",
   "tools.video.replace": "جایگزینی ویدیو",
   "tools.video.download": "دانلود",
   "tools.video.copyUrl": "کپی URL",

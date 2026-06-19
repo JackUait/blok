@@ -395,6 +395,7 @@
   "tools.video.toggleCaption": "Képaláírás mutatása vagy elrejtése",
   "tools.video.autoplay": "Automatikus lejátszás",
   "tools.video.loop": "Ismétlés",
+  "tools.video.hideControls": "Vezérlők elrejtése",
   "tools.video.replace": "Videó cseréje",
   "tools.video.download": "Letöltés",
   "tools.video.copyUrl": "URL másolása",

@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "ເປີດ/ປິດຄຳບັນຍາຍ",
   "tools.video.autoplay": "ຫຼິ້ນອັດຕະໂນມັດ",
   "tools.video.loop": "ວົນຊ້ຳ",
+  "tools.video.hideControls": "ເຊື່ອງການຄວບຄຸມ",
   "tools.video.replace": "ປ່ຽນວິດີໂອ",
   "tools.video.download": "ດາວໂຫຼດ",
   "tools.video.copyUrl": "ສຳເນົາ URL",

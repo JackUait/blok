@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "캡션 표시/숨기기",
   "tools.video.autoplay": "자동 재생",
   "tools.video.loop": "반복",
+  "tools.video.hideControls": "컨트롤 숨기기",
   "tools.video.replace": "동영상 교체",
   "tools.video.download": "다운로드",
   "tools.video.copyUrl": "URL 복사",

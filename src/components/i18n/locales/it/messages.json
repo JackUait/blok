@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "Mostra o nascondi didascalia",
   "tools.video.autoplay": "Riproduzione automatica",
   "tools.video.loop": "Ripeti",
+  "tools.video.hideControls": "Nascondi controlli",
   "tools.video.replace": "Sostituisci video",
   "tools.video.download": "Scarica",
   "tools.video.copyUrl": "Copia URL",

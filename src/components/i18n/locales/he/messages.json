@@ -395,6 +395,7 @@
   "tools.video.toggleCaption": "הצג/הסתר כיתוב",
   "tools.video.autoplay": "ניגון אוטומטי",
   "tools.video.loop": "לולאה",
+  "tools.video.hideControls": "הסתר פקדים",
   "tools.video.replace": "החלף וידאו",
   "tools.video.download": "הורדה",
   "tools.video.copyUrl": "העתק כתובת",

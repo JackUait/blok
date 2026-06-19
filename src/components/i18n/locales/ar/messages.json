@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "إظهار/إخفاء التعليق",
   "tools.video.autoplay": "تشغيل تلقائي",
   "tools.video.loop": "تكرار",
+  "tools.video.hideControls": "إخفاء عناصر التحكم",
   "tools.video.replace": "استبدال الفيديو",
   "tools.video.download": "تنزيل",
   "tools.video.copyUrl": "نسخ الرابط",

@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "Vis eller skjul bildetekst",
   "tools.video.autoplay": "Automatisk avspilling",
   "tools.video.loop": "Gjenta",
+  "tools.video.hideControls": "Skjul kontroller",
   "tools.video.download": "Last ned",
   "tools.video.copyUrl": "Kopier URL",
   "tools.video.moreOptions": "Flere alternativer",

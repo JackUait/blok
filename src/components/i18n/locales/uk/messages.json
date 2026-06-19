@@ -396,6 +396,7 @@
   "tools.video.toggleCaption": "Показати підпис",
   "tools.video.autoplay": "Автовідтворення",
   "tools.video.loop": "Повтор",
+  "tools.video.hideControls": "Сховати елементи керування",
   "tools.video.replace": "Замінити відео",
   "tools.video.download": "Завантажити",
   "tools.video.copyUrl": "Копіювати URL",

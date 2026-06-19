@@ -69,7 +69,7 @@ describe('MigrationCard', () => {
     expect(screen.getByText(/Our automated codemod handles most of the transition/)).toBeInTheDocument();
   });
 
-  it('should render the migration badge', () => {
+  it('should not render the migration badge', () => {
     render(
       <I18nProvider>
         <MemoryRouter>
@@ -78,8 +78,8 @@ describe('MigrationCard', () => {
       </I18nProvider>
     );
 
-    expect(screen.getByTestId('migration-badge')).toBeInTheDocument();
-    expect(screen.getByText('Zero downtime migration')).toBeInTheDocument();
+    expect(screen.queryByTestId('migration-badge')).not.toBeInTheDocument();
+    expect(screen.queryByText('Zero downtime migration')).not.toBeInTheDocument();
   });
 
   it('should render the migration code', async () => {

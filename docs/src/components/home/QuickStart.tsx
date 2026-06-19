@@ -1,7 +1,23 @@
 import { useMemo, useState } from "react";
+import { motion, type Variants } from "framer-motion";
 import { CodeBlock } from "../common/CodeBlock";
 import type { PackageManager } from "../common/PackageManagerToggle";
 import { useI18n } from "../../contexts/I18nContext";
+
+// Steps rise + fade in sequence as the timeline scrolls into view.
+const railVariants: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.12, delayChildren: 0.05 } },
+};
+
+const stepVariants: Variants = {
+  hidden: { opacity: 0, y: 24 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { type: "spring", stiffness: 220, damping: 26 },
+  },
+};
 
 const PACKAGE_NAME = "@jackuait/blok";
 
@@ -74,15 +90,15 @@ export const QuickStart: React.FC = () => {
         aria-hidden="true"
       >
         <div
-          className="absolute -top-24 left-1/4 size-96 rounded-full bg-primary/5 blur-3xl"
+          className="absolute -top-24 left-1/4 size-96 rounded-full bg-primary/[0.03] blur-3xl"
           data-blok-testid="quick-start-blur"
         ></div>
-        <div className="absolute bottom-0 right-1/4 size-80 rounded-full bg-chart-3/5 blur-3xl"></div>
+        <div className="absolute bottom-0 right-1/4 size-80 rounded-full bg-foreground/[0.02] blur-3xl"></div>
       </div>
 
       <div className="mx-auto w-full max-w-4xl px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
             {t('home.quickStart.title')}
           </h2>
           <p className="mt-5 text-lg leading-relaxed text-muted-foreground">
@@ -90,17 +106,25 @@ export const QuickStart: React.FC = () => {
           </p>
         </div>
 
-        <div className="relative mt-14 flex flex-col gap-8" data-blok-testid="install-steps">
-          {/* Vertical timeline connector */}
+        <motion.div
+          className="relative mt-16 flex flex-col gap-6 sm:gap-7"
+          data-blok-testid="install-steps"
+          variants={railVariants}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-80px" }}
+        >
+          {/* Vertical timeline connector — a quiet neutral rail that fades out at the end */}
           <div
-            className="absolute left-5 top-5 bottom-5 w-px bg-border sm:left-6"
+            className="absolute left-[1.4375rem] top-7 bottom-7 w-px bg-gradient-to-b from-border via-border to-transparent sm:left-[1.5625rem]"
             aria-hidden="true"
           ></div>
 
           {STEPS.map((step, index) => (
-            <div
+            <motion.div
               key={step.number}
-              className="relative flex gap-5 sm:gap-6"
+              variants={stepVariants}
+              className="group relative flex gap-5 sm:gap-6"
               data-blok-testid={`install-step-${step.number}`}
               style={{ "--step-delay": `${index * 0.15}s` } as React.CSSProperties}
             >
@@ -108,13 +132,13 @@ export const QuickStart: React.FC = () => {
                 className="relative z-10 shrink-0"
                 data-blok-testid={`step-number-${step.number}`}
               >
-                <div className="flex size-10 items-center justify-center rounded-full bg-foreground text-base font-bold text-background shadow-sm sm:size-12">
+                <div className="flex size-11 items-center justify-center rounded-full bg-primary text-base font-semibold text-primary-foreground ring-4 ring-secondary/40 transition-transform duration-300 group-hover:scale-105 sm:size-12">
                   <span>{step.number}</span>
                 </div>
               </div>
 
               <div
-                className="min-w-0 flex-1 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6"
+                className="min-w-0 flex-1 rounded-2xl border border-black/[0.07] bg-card p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-0.5 hover:border-black/[0.1] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] dark:border-white/[0.08] dark:hover:border-white/[0.14] sm:p-6"
                 data-blok-testid={`step-content-${step.number}`}
               >
                 <h3 className="text-lg font-bold tracking-tight">{step.title}</h3>
@@ -143,9 +167,9 @@ export const QuickStart: React.FC = () => {
                   )}
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );

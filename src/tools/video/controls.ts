@@ -1018,7 +1018,21 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   // data-theater promotes it to fixed/centre) and reused to land the exit morph.
   const theater = { on: false, inlineRect: null as DOMRect | null };
   const onTheaterKey = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape') setTheater(false);
+    if (event.key !== 'Escape') return;
+    // Cancel the browser's own Escape/close-watcher handling for the top-layer
+    // popover. Left to run, it disturbs the popover the same tick our dismiss
+    // animates, leaving the exit a scale-less slide that snaps small at the end
+    // (clicking outside the card has no such handler and morphs cleanly). The
+    // listener is on `window` in capture so this fires BEFORE the browser's
+    // close-watcher claims the event — a document/bubble listener is too late.
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    // Defer the dismiss out of the keydown tick. Starting the FLIP synchronously
+    // inside Escape handling makes Chromium drop the morph's scale (the card
+    // slides at full size then snaps small); run a frame later — once the
+    // browser's top-layer Escape handling has settled — and it scales cleanly,
+    // exactly like dismissing via an outside pointer-down.
+    requestAnimationFrame(() => setTheater(false));
   };
   // Click anywhere off the cinema card (the dimmed backdrop) closes it.
   const onTheaterOutside = (event: Event): void => {
@@ -1147,13 +1161,13 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     theaterBtn.setAttribute('aria-label', on ? 'Exit theater mode' : 'Theater mode');
     if (on) {
       enterTheater();
-      // Capture phase: while the figure sits in the top layer (popover), the
-      // browser's close-watcher intercepts Escape and stops propagation right
-      // after the capture phase, so a bubble-phase listener would never fire.
-      document.addEventListener('keydown', onTheaterKey, true);
+      // window + capture: fire before the browser's popover close-watcher claims
+      // Escape (it does so between window- and document-capture), so our
+      // preventDefault actually suppresses it and only our clean dismiss runs.
+      window.addEventListener('keydown', onTheaterKey, true);
       document.addEventListener('pointerdown', onTheaterOutside);
     } else {
-      document.removeEventListener('keydown', onTheaterKey, true);
+      window.removeEventListener('keydown', onTheaterKey, true);
       document.removeEventListener('pointerdown', onTheaterOutside);
       leaveTheater();
     }
@@ -1366,7 +1380,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     document.removeEventListener('mousedown', onMenuOutside);
     document.removeEventListener('mousedown', onCtxOutside);
     document.removeEventListener('keydown', onCtxKeydown);
-    document.removeEventListener('keydown', onTheaterKey, true);
+    window.removeEventListener('keydown', onTheaterKey, true);
     video.removeEventListener('contextmenu', onContextMenu);
     cancelAnimationFrame(speedGlide.raf);
     stopSeekLoop();

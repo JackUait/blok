@@ -1347,27 +1347,44 @@ describe('video controls — theater mode', () => {
     expect(h.figure.getAttribute('data-theater')).toBe('false');
   });
 
-  it('exits theater on Escape', () => {
+  // The Escape dismiss is deferred a frame (so the FLIP scale isn't dropped by
+  // running inside the keydown tick); flush it before asserting.
+  const nextFrame = (): Promise<void> => new Promise((resolve) => { requestAnimationFrame(() => resolve()); });
+
+  it('exits theater on Escape', async () => {
     const btn = q(h.controls, '[data-action="theater"]');
     btn.click();
     expect(h.figure.getAttribute('data-theater')).toBe('true');
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await nextFrame();
     expect(h.figure.getAttribute('data-theater')).toBe('false');
     expect(btn.getAttribute('aria-pressed')).toBe('false');
   });
 
-  it('exits theater on Escape even when the top layer consumes the event before it bubbles to document', () => {
+  it('exits theater on Escape even when the top layer consumes the event before it bubbles to document', async () => {
     const btn = q(h.controls, '[data-action="theater"]');
     btn.click();
     expect(h.figure.getAttribute('data-theater')).toBe('true');
     // Model the browser's popover/close-watcher: a real Escape is intercepted
     // after the capture phase, so propagation is stopped before the event ever
-    // bubbles up to a document-level listener. A bubble-phase handler on
-    // document would silently never fire — the dismiss must run in capture.
+    // bubbles up to a document-level listener. A window capture-phase handler
+    // still fires first — a bubble-phase one would silently never run.
     h.figure.addEventListener('keydown', (e) => { if (e.key === 'Escape') e.stopPropagation(); });
     // Focus lives inside the figure in theater, so the event travels
-    // capture(document → figure) then bubble(figure ⤬ stopped).
+    // capture(window → figure) then bubble(figure ⤬ stopped).
     h.video.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await nextFrame();
+    expect(h.figure.getAttribute('data-theater')).toBe('false');
+  });
+
+  it('defers the Escape dismiss out of the keydown tick (so the exit FLIP keeps its scale)', async () => {
+    const btn = q(h.controls, '[data-action="theater"]');
+    btn.click();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    // Still in theater synchronously — running leaveTheater inside the Escape
+    // event makes Chromium drop the morph's scale; it must start a frame later.
+    expect(h.figure.getAttribute('data-theater')).toBe('true');
+    await nextFrame();
     expect(h.figure.getAttribute('data-theater')).toBe('false');
   });
 

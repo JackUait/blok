@@ -2,6 +2,25 @@ import { Link } from 'react-router-dom';
 import { useI18n } from '../../contexts/I18nContext';
 import { Button } from '@/components/ui/button';
 
+/** Six-dot drag handle — the universal "grab this block" affordance. */
+const BlockHandle: React.FC<{ tone?: 'light' }> = ({ tone }) => (
+  <svg
+    width="7"
+    height="13"
+    viewBox="0 0 7 13"
+    className={`mt-1 shrink-0 opacity-50 transition-opacity duration-300 group-hover:opacity-90 ${
+      tone === 'light' ? 'fill-background/45' : 'fill-muted-foreground/70'
+    }`}
+  >
+    <circle cx="2" cy="2.5" r="1.05" />
+    <circle cx="5" cy="2.5" r="1.05" />
+    <circle cx="2" cy="6.5" r="1.05" />
+    <circle cx="5" cy="6.5" r="1.05" />
+    <circle cx="2" cy="10.5" r="1.05" />
+    <circle cx="5" cy="10.5" r="1.05" />
+  </svg>
+);
+
 export const Hero: React.FC = () => {
   const { t } = useI18n();
 
@@ -58,117 +77,87 @@ export const Hero: React.FC = () => {
 
         <div className="relative flex justify-center lg:justify-end" data-blok-testid="hero-demo">
           <div className="hero-float group relative duration-1000 animate-in fade-in zoom-in-95 fill-mode-both delay-150">
-            {/* layered offset card behind — hovering its exposed edge drives the front card */}
+            {/* the noodle sunset blooms behind the stack */}
             <div
-              className="absolute inset-0 translate-x-4 translate-y-4 rounded-[2.25rem] border border-border bg-card/60 shadow-card transition-all duration-300 group-hover:translate-x-5 group-hover:translate-y-5"
+              className="hero-blob pointer-events-none absolute -inset-8 -z-10 bg-brand-gradient opacity-25 blur-3xl transition-opacity duration-500 group-hover:opacity-40"
               aria-hidden="true"
             />
-            {/* morphing gradient halo — the "noodle" glow */}
-            <div
-              className="hero-blob pointer-events-none absolute -inset-3 -z-10 bg-brand-gradient opacity-30 blur-2xl transition-opacity duration-300 group-hover:opacity-40"
-              aria-hidden="true"
-            />
+
+            {/* Everything is a block — a loose stack of real block types, each drifting
+                on its own parallax cycle with its own drag handle. The dark code block
+                anchors the bottom. The whole stack opens the playground. */}
             <Link
               to="/demo"
-              className="relative block w-72 max-w-full rounded-[2.25rem] border border-border bg-card p-5 shadow-card transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-card-hover sm:w-80"
+              className="relative flex w-72 max-w-full flex-col gap-3.5 transition-[gap] duration-500 ease-out group-hover:gap-5 sm:w-80"
               aria-label={t('home.hero.mascotAriaLabel')}
             >
-              {/* soft brand stage behind the editor window */}
-              <div
-                className="hero-blob pointer-events-none absolute left-1/2 top-1/2 -z-0 size-56 -translate-x-1/2 -translate-y-1/2 bg-brand-gradient opacity-[0.12] blur-2xl"
-                aria-hidden="true"
-              />
-
-              {/* faux Blok editor window — sells the block-based product. No overflow
-                  clip so the slash menu can drop past the window edge with real depth. */}
-              <div className="relative rounded-2xl border border-border bg-background/85 text-left backdrop-blur-sm" aria-hidden="true">
-                {/* window chrome */}
-                <div className="flex items-center gap-1.5 rounded-t-2xl border-b border-border/70 px-3.5 py-2.5">
-                  <span className="size-2.5 rounded-full bg-chart-3/80" />
-                  <span className="size-2.5 rounded-full bg-chart-4/80" />
-                  <span className="size-2.5 rounded-full bg-chart-5/50" />
+              {/* Heading block */}
+              <div className="hero-card-a flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-card transition-shadow duration-300 hover:shadow-card-hover">
+                <BlockHandle />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 w-4/5 rounded-md bg-brand-gradient" />
+                  <div className="h-2 w-full rounded-full bg-muted" />
                 </div>
+              </div>
 
-                {/* editor blocks */}
-                <div className="space-y-3 px-4 pb-10 pt-4">
-                  {/* heading block with hover affordances (handle + plus) */}
-                  <div className="relative flex items-center gap-2">
-                    <div className="flex items-center gap-1 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                      <span className="flex size-4 items-center justify-center rounded-[5px] border border-border text-muted-foreground">
-                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                          <line x1="12" y1="5" x2="12" y2="19" />
-                          <line x1="5" y1="12" x2="19" y2="12" />
-                        </svg>
-                      </span>
-                      <svg width="7" height="13" viewBox="0 0 7 13" className="fill-muted-foreground/70">
-                        <circle cx="2" cy="2.5" r="1.05" />
-                        <circle cx="5" cy="2.5" r="1.05" />
-                        <circle cx="2" cy="6.5" r="1.05" />
-                        <circle cx="5" cy="6.5" r="1.05" />
-                        <circle cx="2" cy="10.5" r="1.05" />
-                        <circle cx="5" cy="10.5" r="1.05" />
+              {/* To-do block */}
+              <div className="hero-card-b flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-card transition-shadow duration-300 hover:shadow-card-hover">
+                <BlockHandle />
+                <div className="flex-1 space-y-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex size-4 shrink-0 items-center justify-center rounded-[5px] bg-primary text-primary-foreground">
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
                       </svg>
-                    </div>
-                    <div className="h-3.5 w-36 rounded-md bg-brand-gradient" />
+                    </span>
+                    <span className="h-2 flex-1 rounded-full bg-muted-foreground/25" />
                   </div>
-
-                  {/* active block — user just typed "/", slash menu drops below it */}
-                  <div className="relative z-10 flex h-5 items-center gap-0.5 pl-1">
-                    <span className="font-mono text-sm font-semibold leading-none text-muted-foreground">/</span>
-                    <span className="hero-caret h-4 w-px bg-foreground" />
-
-                    {/* slash-command menu — the block-based "wow", drops from the caret */}
-                    <div className="absolute -left-1 top-[calc(100%+0.5rem)] w-44 rounded-xl border border-border bg-card p-1.5 shadow-card-hover transition-transform duration-300 group-hover:-translate-y-0.5">
-                      <div className="flex items-center gap-1.5 px-1.5 pb-1 pt-0.5">
-                        <span className="font-mono text-[11px] font-semibold text-primary">/</span>
-                        <span className="h-1.5 w-10 rounded-full bg-muted" />
-                      </div>
-                      <div className="space-y-px border-t border-border/70 pt-1">
-                        {[
-                          { c: 'bg-chart-1', w: 'w-14' },
-                          { c: 'bg-chart-2', w: 'w-10' },
-                          { c: 'bg-chart-4', w: 'w-12' },
-                        ].map((row, i) => (
-                          <div
-                            key={row.c}
-                            className={`flex items-center gap-2 rounded-lg px-1.5 py-0.5 ${i === 0 ? 'bg-muted ring-1 ring-border' : ''}`}
-                          >
-                            <span className={`flex size-4 items-center justify-center rounded-md ${row.c} opacity-90`}>
-                              <span className="size-1.5 rounded-[2px] bg-background/80" />
-                            </span>
-                            <span className={`h-1.5 ${row.w} rounded-full bg-muted-foreground/25`} />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* paragraph skeleton — sits behind the open menu */}
-                  <div className="space-y-2 pl-1">
-                    <div className="h-2.5 w-full rounded-full bg-muted" />
-                    <div className="h-2.5 w-11/12 rounded-full bg-muted" />
-                    <div className="h-2.5 w-2/3 rounded-full bg-muted" />
+                  <div className="flex items-center gap-2.5">
+                    <span className="size-4 shrink-0 rounded-[5px] border-2 border-border" />
+                    <span className="h-2 w-4/5 rounded-full bg-muted" />
                   </div>
                 </div>
               </div>
 
-              {/* CTA */}
-              <span className="relative mt-7 flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-4 py-2.5 text-sm font-semibold text-background transition-transform duration-300 group-hover:scale-[1.02]">
-                {t('home.hero.ctaTryItOut')}
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  aria-hidden="true"
-                  className="transition-transform duration-300 group-hover:translate-x-0.5"
-                >
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <polyline points="12 5 19 12 12 19" />
-                </svg>
-              </span>
+              {/* Image block */}
+              <div className="hero-card-c flex items-start gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-card transition-shadow duration-300 hover:shadow-card-hover">
+                <BlockHandle />
+                <div className="flex-1 space-y-2.5">
+                  <div className="relative h-20 w-full overflow-hidden rounded-lg bg-muted">
+                    <span className="absolute inset-0 flex items-center justify-center text-muted-foreground/40">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="4" width="18" height="16" rx="2.5" />
+                        <circle cx="8.5" cy="9.5" r="1.8" />
+                        <path d="m4 17 5-4 4 3 3-2 4 3" />
+                      </svg>
+                    </span>
+                  </div>
+                  <div className="h-2 w-1/2 rounded-full bg-muted" />
+                </div>
+              </div>
+
+              {/* Code block — the dark anchor, hints at clean JSON output */}
+              <div className="hero-card-d flex items-start gap-3 rounded-2xl border border-foreground/10 bg-foreground p-3.5 shadow-card transition-shadow duration-300 hover:shadow-card-hover">
+                <BlockHandle tone="light" />
+                <div className="flex-1 space-y-2">
+                  <div className="flex gap-2">
+                    <span className="h-2 w-12 rounded-full bg-chart-1" />
+                    <span className="h-2 flex-1 rounded-full bg-background/20" />
+                  </div>
+                  <div className="flex gap-2 pl-4">
+                    <span className="h-2 w-10 rounded-full bg-chart-4" />
+                    <span className="h-2 flex-1 rounded-full bg-background/20" />
+                  </div>
+                  <div className="flex gap-2 pl-4">
+                    <span className="h-2 w-16 rounded-full bg-chart-3" />
+                    <span className="h-2 w-10 rounded-full bg-background/20" />
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="h-2 w-9 rounded-full bg-background/20" />
+                    <span className="h-2 w-20 rounded-full bg-background/20" />
+                  </div>
+                </div>
+              </div>
             </Link>
           </div>
         </div>

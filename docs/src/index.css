@@ -268,17 +268,59 @@
   }
 }
 
-.hero-caret {
-  animation: hero-caret-blink 1.1s step-end infinite;
+/* Block-stack parallax — each card in the hero drifts on its own slow cycle with
+   a slight resting tilt, so the stack reads as loose, independent blocks floating
+   at different depths rather than a flat list. Desynced via negative delays. */
+.hero-card-a {
+  animation: hero-card-a 7s ease-in-out infinite;
+}
+.hero-card-b {
+  animation: hero-card-b 8.4s ease-in-out -0.6s infinite;
+}
+.hero-card-c {
+  animation: hero-card-c 7.7s ease-in-out -1.2s infinite;
+}
+.hero-card-d {
+  animation: hero-card-d 9s ease-in-out -0.3s infinite;
 }
 
-@keyframes hero-caret-blink {
+@keyframes hero-card-a {
   0%,
   100% {
-    opacity: 1;
+    transform: translateY(0) rotate(-1.4deg);
   }
   50% {
-    opacity: 0;
+    transform: translateY(-7px) rotate(-0.4deg);
+  }
+}
+
+@keyframes hero-card-b {
+  0%,
+  100% {
+    transform: translateY(0) rotate(1.1deg);
+  }
+  50% {
+    transform: translateY(6px) rotate(0.3deg);
+  }
+}
+
+@keyframes hero-card-c {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-0.7deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(0.7deg);
+  }
+}
+
+@keyframes hero-card-d {
+  0%,
+  100% {
+    transform: translateY(0) rotate(1.3deg);
+  }
+  50% {
+    transform: translateY(7px) rotate(0.2deg);
   }
 }
 
@@ -389,8 +431,11 @@
 @media (prefers-reduced-motion: reduce) {
   .group:hover .feature-blob,
   .hero-blob,
+  .hero-card-a,
+  .hero-card-b,
+  .hero-card-c,
+  .hero-card-d,
   .hero-float,
-  .hero-caret,
   .paper-fold,
   .paper-fold-face,
   .paper-crease {

@@ -43,4 +43,10 @@ describe('renderCaptionRow', () => {
     expect(cap?.getAttribute('contenteditable')).toBe('true');
     expect(cap?.getAttribute('data-placeholder')).toBe('Write a caption…');
   });
+
+  it('renders a non-editable caption when not editable', () => {
+    const row = renderCaptionRow({ value: 'hi', placeholder: 'Write a caption…', editable: false });
+    const cap = row.querySelector('[data-role="audio-caption"]');
+    expect(cap?.getAttribute('contenteditable')).toBe('false');
+  });
 });

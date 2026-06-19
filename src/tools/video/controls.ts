@@ -30,8 +30,10 @@ export interface ControlsOptions {
   figure: HTMLElement;
   /** Defaults to window.localStorage; pass null to disable persistence. */
   storage?: VideoStorage | null;
-  /** Ambient glow intensity behind the player. Default 'less'. */
+  /** Ambient glow intensity behind the player. Default 'minimal'. */
   glow?: VideoGlow;
+  /** Initial loop state (persisted via the block's Loop tune). Default false. */
+  loop?: boolean;
 }
 
 export interface ControlsHandle {
@@ -101,7 +103,7 @@ function button(action: string, label: string, icon: string, extraClass = ''): H
  * fullscreen). Returns the control element plus a teardown that detaches every
  * media listener.
  */
-export function attachControls({ video, figure, storage, glow = 'less' }: ControlsOptions): ControlsHandle {
+export function attachControls({ video, figure, storage, glow = 'minimal', loop = false }: ControlsOptions): ControlsHandle {
   const root = document.createElement('div');
   root.className = 'blok-video-controls';
   root.setAttribute('data-role', 'video-controls');
@@ -238,6 +240,9 @@ export function attachControls({ video, figure, storage, glow = 'less' }: Contro
   // `media` aliases the param so the property writes below are not flagged as
   // parameter reassignment.
   const media = video;
+  // Seed the live loop state from the persisted Loop tune so the gear/context
+  // menus open already reflecting it (otherwise they'd read "Off" while looping).
+  media.loop = loop;
   const state = {
     playing: false,
     selectedRate: 1,
@@ -636,6 +641,16 @@ export function attachControls({ video, figure, storage, glow = 'less' }: Contro
   menu.setAttribute('role', 'menu');
   menu.setAttribute('data-view', 'main');
   menu.hidden = true;
+  // The panes ride a 200%-wide track, so this overflow:hidden box is horizontally
+  // scrollable. Focusing a control in the off-screen right-half pane (open speed,
+  // pick a rate) makes the browser auto-scroll the menu to reveal it, and that
+  // scroll fights the transform-based slide — leaving the tall speed pane shoved
+  // into view beside the card. The slide is the only thing that should move the
+  // panes, so pin the scroll back to the origin whenever the browser nudges it.
+  menu.addEventListener('scroll', () => {
+    if (menu.scrollLeft) menu.scrollLeft = 0;
+    if (menu.scrollTop) menu.scrollTop = 0;
+  });
 
   // Two stacked panes ride a horizontal track; `data-view` slides between them.
   const track = document.createElement('div');
@@ -684,14 +699,14 @@ export function attachControls({ video, figure, storage, glow = 'less' }: Contro
   loopRow.className = 'blok-video-controls__menu-row';
   loopRow.setAttribute('data-action', 'loop');
   loopRow.setAttribute('role', 'menuitemcheckbox');
-  loopRow.setAttribute('aria-checked', 'false');
+  loopRow.setAttribute('aria-checked', String(loop));
   const loopLabel = document.createElement('span');
   loopLabel.className = 'blok-video-controls__menu-label';
   loopLabel.textContent = 'Loop';
   const loopValue = document.createElement('span');
   loopValue.className = 'blok-video-controls__menu-value';
   loopValue.setAttribute('data-role', 'menu-value-loop');
-  loopValue.textContent = 'Off';
+  loopValue.textContent = loop ? 'On' : 'Off';
   // Empty chevron slot keeps "Off" aligned under the speed row's "Normal".
   const loopSpacer = document.createElement('span');
   loopSpacer.className = 'blok-video-controls__menu-chevron';

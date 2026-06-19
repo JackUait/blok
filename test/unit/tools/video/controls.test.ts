@@ -841,6 +841,23 @@ describe('video controls — playback gear menu', () => {
     expect(menu().getAttribute('data-view')).toBe('main');
   });
 
+  it('pins the menu scroll position so focus-into-view cannot defeat the slide', () => {
+    gear().click();
+    const m = menu();
+    // The two panes ride a 200%-wide track, so the overflow:hidden menu is
+    // horizontally scrollable. In a real browser, focusing a control that lives
+    // in the off-screen right-half pane (entering the speed submenu, picking a
+    // rate) makes the browser auto-scroll the menu to reveal it — scrollLeft
+    // drifts to a pane width and fights the transform-based slide, leaving the
+    // tall speed pane shoved into view beside the card. The slide must be the
+    // only thing that moves the panes, so the menu pins its scroll to the origin.
+    m.scrollLeft = 210;
+    m.scrollTop = 40;
+    m.dispatchEvent(new Event('scroll'));
+    expect(m.scrollLeft).toBe(0);
+    expect(m.scrollTop).toBe(0);
+  });
+
   it('mounts the menu on the figure (outside the clipped controls overlay) so it can overflow a short player', () => {
     const m = q(h.figure, '[data-role="playback-menu"]');
     // The controls overlay box is overflow:hidden in the real DOM (it rounds/clips the
@@ -1365,9 +1382,18 @@ describe('video controls — ambient mode', () => {
     expect(canvas?.getAttribute('data-active')).toBe('false');
   });
 
-  it('defaults the glow level to "less"', () => {
+  it('defaults the glow level to "minimal"', () => {
     const canvas = h.figure.querySelector('[data-role="video-ambient"]');
-    expect(canvas?.getAttribute('data-glow')).toBe('less');
+    expect(canvas?.getAttribute('data-glow')).toBe('minimal');
+  });
+
+  it('seeds the loop control from the persisted loop option so the gear stays in sync', () => {
+    h.destroy();
+    h = mount({ loop: true });
+    expect(h.video.loop).toBe(true);
+    const loopRow = q(h.figure, '[data-action="loop"]');
+    expect(loopRow.getAttribute('aria-checked')).toBe('true');
+    expect(q(h.figure, '[data-role="menu-value-loop"]').textContent).toBe('On');
   });
 
   it('reflects an explicit glow level on the ambient canvas', () => {

@@ -3,8 +3,8 @@ import { BlockToolData } from './block-tool-data';
 /** Horizontal alignment of the video within its container. */
 export type VideoAlignment = 'left' | 'center' | 'right';
 
-/** Ambient glow intensity behind the player. Default 'less'. */
-export type VideoGlow = 'more' | 'less' | 'none';
+/** Ambient glow intensity behind the player. Default 'minimal'. */
+export type VideoGlow = 'more' | 'less' | 'minimal' | 'none';
 
 /**
  * Persisted data shape for the Video block tool.
@@ -20,8 +20,10 @@ export interface VideoData extends BlockToolData {
   width?: number;
   /** Horizontal alignment */
   alignment?: VideoAlignment;
-  /** Ambient glow intensity behind the player. Default 'less'. */
-  glow?: VideoGlow;
+  /** Autoplay (muted) for read-only viewers — pairs with `loop` for a gif feel. */
+  autoplay?: boolean;
+  /** Loop playback. Applies in both edit and read-only modes. */
+  loop?: boolean;
   /** Original filename, when known */
   fileName?: string;
   /** Source MIME type (e.g. video/mp4), when known */
@@ -59,4 +61,6 @@ export interface VideoConfig {
   maxSize?: number;
   /** Caption placeholder. Default "Write a caption…" */
   captionPlaceholder?: string;
+  /** Ambient glow intensity behind every player. Default 'minimal'. */
+  glow?: VideoGlow;
 }

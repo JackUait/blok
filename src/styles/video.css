@@ -818,7 +818,10 @@
   transition: opacity 420ms ease;
   pointer-events: none;
 }
-/* user-chosen glow intensity (block settings → Glow): more / less / none */
+/* user-chosen glow intensity (block settings → Glow): more / less / minimal / none.
+   minimal is the default — a barely-there bloom that lifts the player off the page
+   without competing with the frame. */
+[data-blok-tool="video"] .blok-video-controls__ambient[data-glow="minimal"][data-active="true"] { opacity: 0.3; }
 [data-blok-tool="video"] .blok-video-controls__ambient[data-glow="less"][data-active="true"] { opacity: 0.55; }
 [data-blok-tool="video"] .blok-video-controls__ambient[data-glow="more"][data-active="true"] { opacity: 0.85; }
 [data-blok-tool="video"] .blok-video-controls__ambient[data-glow="none"] { display: none; }

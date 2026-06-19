@@ -203,6 +203,7 @@ describe('VideoTool — editor actions (block settings)', () => {
 
   type SettingsItem = {
     name?: string;
+    isActive?: boolean;
     onActivate?: () => void;
     children?: { items: SettingsItem[] };
   };
@@ -246,20 +247,65 @@ describe('VideoTool — editor actions (block settings)', () => {
     expect(tool.save().captionVisible).toBe(false);
   });
 
-  it('block-settings glow option sets that exact level, dispatches, and reflects on the canvas', () => {
+  it('applies the configured glow level to the player (Blok config, not a block tune)', () => {
+    const tool = new VideoTool(createOptions({ url: 'u' }, { glow: 'more' }));
+    const root = tool.render();
+    expect(root.querySelector('[data-role="video-ambient"]')?.getAttribute('data-glow')).toBe('more');
+  });
+
+  it('defaults the glow level to "minimal" when the config omits it', () => {
+    const tool = new VideoTool(createOptions({ url: 'u' }));
+    const root = tool.render();
+    expect(root.querySelector('[data-role="video-ambient"]')?.getAttribute('data-glow')).toBe('minimal');
+  });
+
+  it('does not expose a Glow block tune (it lives in the Blok config now)', () => {
+    const tool = new VideoTool(createOptions({ url: 'u' }));
+    tool.render();
+    const items = tool.renderSettings() as unknown[];
+    expect(items.map((i) => (i as { name?: string }).name)).not.toContain('video-glow');
+  });
+
+  it('exposes Autoplay and Loop block tunes reflecting the persisted state', () => {
+    const tool = new VideoTool(createOptions({ url: 'u', autoplay: true }));
+    tool.render();
+    const items = settings(tool);
+    expect(items.map((i) => i.name)).toEqual(expect.arrayContaining(['video-autoplay', 'video-loop']));
+    expect(find(items, 'video-autoplay')?.isActive).toBe(true);
+    expect(find(items, 'video-loop')?.isActive).toBe(false);
+  });
+
+  it('toggling the Autoplay and Loop tunes persists the flags and dispatches', () => {
     const block = createMockBlock();
     const tool = new VideoTool(createOptions({ url: 'u' }, {}, block));
-    const root = tool.render();
-    const pick = (value: string): void => {
-      find(settings(tool), 'video-glow')?.children?.items
-        .find((c) => c.name === `video-glow-${value}`)?.onActivate?.();
-    };
-    pick('more');
-    expect(tool.save().glow).toBe('more');
-    expect(root.querySelector('[data-role="video-ambient"]')?.getAttribute('data-glow')).toBe('more');
-    pick('none');
-    expect(tool.save().glow).toBe('none');
+    tool.render();
+    find(settings(tool), 'video-autoplay')?.onActivate?.();
+    find(settings(tool), 'video-loop')?.onActivate?.();
+    expect(tool.save().autoplay).toBe(true);
+    expect(tool.save().loop).toBe(true);
     expect(block.dispatchChange).toHaveBeenCalled();
+    // toggling back clears them
+    find(settings(tool), 'video-autoplay')?.onActivate?.();
+    expect(tool.save().autoplay).toBeUndefined();
+  });
+
+  it('read-only autoplay renders a muted, looping gif-style player', () => {
+    const tool = new VideoTool({ ...createOptions({ url: 'u', autoplay: true, loop: true }), readOnly: true });
+    const root = tool.render();
+    const v = root.querySelector('video');
+    expect(v?.muted).toBe(true);
+    expect(v?.hasAttribute('autoplay')).toBe(true);
+    expect(v?.loop).toBe(true);
+  });
+
+  it('does not autoplay in edit mode (autoplay is a read-only viewer affordance)', () => {
+    const tool = new VideoTool(createOptions({ url: 'u', autoplay: true, loop: true }));
+    const root = tool.render();
+    const v = root.querySelector('video');
+    expect(v?.hasAttribute('autoplay')).toBe(false);
+    expect(v?.muted).toBe(false);
+    // loop still applies in edit mode — it is content, not an autoplay affordance
+    expect(v?.loop).toBe(true);
   });
 
   it('block-settings replace item returns the tool to EMPTY state', () => {
@@ -390,11 +436,12 @@ describe('VideoTool — renderSettings', () => {
     expect(names(items)).toEqual(expect.arrayContaining([
       'video-alignment',
       'video-caption',
-      'video-glow',
       'video-replace',
       'video-download',
       'video-copy-url',
     ]));
+    // Glow is a Blok-config option now, not a per-block tune.
+    expect(names(items)).not.toContain('video-glow');
   });
 
   it('activating copy-url writes the video URL to the clipboard', () => {

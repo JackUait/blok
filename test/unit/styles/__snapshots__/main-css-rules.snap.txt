@@ -5158,6 +5158,10 @@
   pointer-events: none;
 }
 
+[data-blok-tool="video"] .blok-video-controls__ambient[data-glow="minimal"][data-active="true"] {
+  opacity: 0.3;
+}
+
 [data-blok-tool="video"] .blok-video-controls__ambient[data-glow="less"][data-active="true"] {
   opacity: 0.55;
 }

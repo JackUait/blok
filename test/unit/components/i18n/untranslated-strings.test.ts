@@ -227,10 +227,12 @@ const VIDEO_COGNATE_RETENTIONS: Record<string, string[]> = {
   bs: ['toolNames.video'],
   cs: ['toolNames.video'],
   da: ['toolNames.video', 'tools.video.emptyUpload', 'tools.video.emptyLink'],
-  de: ['toolNames.video', 'tools.video.emptyLink'],
+  // "Autoplay" is the native loanword for the setting in German UIs.
+  de: ['toolNames.video', 'tools.video.emptyLink', 'tools.video.autoplay'],
   et: ['toolNames.video', 'tools.video.emptyLink', 'tools.video.emptyUrlAria'],
   fi: ['toolNames.video'],
-  fil: ['toolNames.video', 'tools.video.emptyLink'],
+  // "Autoplay"/"Loop" are the standard English loanwords in Filipino (Tagalog) UIs.
+  fil: ['toolNames.video', 'tools.video.emptyLink', 'tools.video.autoplay', 'tools.video.loop'],
   hr: ['toolNames.video'],
   id: ['toolNames.video'],
   it: ['toolNames.video'],

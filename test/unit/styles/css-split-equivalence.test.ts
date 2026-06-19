@@ -254,9 +254,11 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Video speed-submenu entry cascade: blok-video-menu-rise keyframe + reduced-motion
     // -gated per-row staggered animation (--row index) so the rate list lifts into place
     // instead of snapping in as a rigid block.
+    // Video "Minimal" glow level: new default ambient-glow intensity (data-glow="minimal"
+    // opacity rule) — a barely-there bloom, sits below "Less".
     // Shrinking below the baseline is always acceptable.
     const PRE_SPLIT_BYTES = 391500;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.283);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.284);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

@@ -241,9 +241,10 @@
   background: var(--blok-text-primary);
 }
 
-/* loop active state */
+/* loop active state — neutral black, no accent color */
 [data-blok-tool="audio"] .blok-audio-controls [data-role="audio-loop"][aria-pressed="true"] {
-  color: var(--blok-color-accent);
+  color: var(--blok-text-primary);
+  background: var(--blok-bg-hover);
 }
 
 /* speed gear */

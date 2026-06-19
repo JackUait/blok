@@ -378,7 +378,7 @@ export class AudioTool implements BlockTool {
     const titlePlaceholder = tr(this.api.i18n, 'tools.audio.titlePlaceholder', 'Track title');
     const artistPlaceholder = tr(this.api.i18n, 'tools.audio.artistPlaceholder', 'Artist');
 
-    const { figure, audio, waveformMount, title, artist } = renderNowPlaying(this.data, {
+    const { figure, audio, waveformMount, title, artist, body } = renderNowPlaying(this.data, {
       editable: !this.readOnly,
       titlePlaceholder,
       artistPlaceholder,
@@ -389,7 +389,7 @@ export class AudioTool implements BlockTool {
       this.waveformHandle = attachWaveform({ mount: waveformMount, media: audio, peaks: this.data.peaks });
     }
 
-    // Transport controls
+    // Transport controls — appended into the right-column body (under waveform)
     this.controlsHandle = attachControls({
       media: audio,
       figure,
@@ -399,9 +399,9 @@ export class AudioTool implements BlockTool {
         this.block.dispatchChange();
       },
     });
-    figure.appendChild(this.controlsHandle.element);
+    body.appendChild(this.controlsHandle.element);
 
-    // Caption row
+    // Caption row — outside body, below the card
     const placeholder = this.config.captionPlaceholder ?? DEFAULT_CAPTION_PLACEHOLDER;
     const captionVisible = this.data.captionVisible !== false;
     if (captionVisible || !this.readOnly) {

@@ -10,6 +10,7 @@ export interface NowPlayingElements {
   figure: HTMLElement;
   audio: HTMLAudioElement;
   cover: HTMLElement;
+  body: HTMLElement;
   waveformMount: HTMLElement;
   title: HTMLElement;
   artist: HTMLElement;
@@ -50,6 +51,11 @@ export function renderNowPlaying(data: AudioData, opts: NowPlayingOptions): NowP
   waveformMount.className = 'blok-audio-waveform';
   waveformMount.setAttribute('data-role', 'audio-waveform');
 
+  const body = document.createElement('div');
+  body.className = 'blok-audio-body';
+  body.setAttribute('data-role', 'audio-body');
+  body.append(title, artist, waveformMount);
+
   const audio = document.createElement('audio');
   audio.setAttribute('data-role', 'audio-media');
   audio.setAttribute('preload', 'metadata');
@@ -57,8 +63,8 @@ export function renderNowPlaying(data: AudioData, opts: NowPlayingOptions): NowP
   audio.tabIndex = 0;
   if (data.loop) audio.loop = true;
 
-  figure.append(cover, title, artist, waveformMount, audio);
-  return { figure, audio, cover, waveformMount, title, artist };
+  figure.append(cover, body, audio);
+  return { figure, audio, cover, body, waveformMount, title, artist };
 }
 
 export interface CaptionRowOptions {

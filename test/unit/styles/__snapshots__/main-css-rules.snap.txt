@@ -5798,7 +5798,8 @@
 }
 
 [data-blok-tool="audio"] .blok-audio-controls [data-role="audio-loop"][aria-pressed="true"] {
-  color: var(--blok-color-accent);
+  color: var(--blok-text-primary);
+  background: var(--blok-bg-hover);
 }
 
 [data-blok-tool="audio"] .blok-audio-controls [data-role="audio-speed"][aria-expanded="true"] {

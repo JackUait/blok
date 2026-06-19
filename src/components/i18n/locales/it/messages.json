@@ -255,6 +255,7 @@
   "tools.image.moreOptions": "Altre opzioni",
   "tools.image.uploading": "Caricamento…",
   "tools.image.uploadingLabel": "Caricamento in corso",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Annulla caricamento",
   "tools.image.uploadProgress": "Avanzamento del caricamento",
   "tools.image.altEdit": "Modifica testo alternativo",

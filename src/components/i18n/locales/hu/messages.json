@@ -254,6 +254,7 @@
   "tools.image.moreOptions": "További lehetőségek",
   "tools.image.uploading": "Feltöltés…",
   "tools.image.uploadingLabel": "Feltöltés",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Feltöltés megszakítása",
   "tools.image.uploadProgress": "Feltöltés állapota",
   "tools.image.altEdit": "Alt szöveg szerkesztése",

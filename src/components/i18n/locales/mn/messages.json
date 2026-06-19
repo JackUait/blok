@@ -254,6 +254,7 @@
   "tools.image.moreOptions": "Бусад сонголтууд",
   "tools.image.uploading": "Байршуулж байна…",
   "tools.image.uploadingLabel": "Байршуулж байна",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Байршуулахыг цуцлах",
   "tools.image.uploadProgress": "Байршуулах явц",
   "tools.image.altEdit": "Alt текст засварлах",

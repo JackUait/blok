@@ -254,6 +254,7 @@
   "tools.image.moreOptions": "Más opciones",
   "tools.image.uploading": "Subiendo…",
   "tools.image.uploadingLabel": "Subiendo",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Cancelar subida",
   "tools.image.uploadProgress": "Progreso de la subida",
   "tools.image.altEdit": "Editar texto alternativo",

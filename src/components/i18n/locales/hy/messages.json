@@ -255,6 +255,7 @@
   "tools.image.moreOptions": "Այլ ընտրանքներ",
   "tools.image.uploading": "Վերբեռնվում է…",
   "tools.image.uploadingLabel": "Վերբեռնվում է",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Չեղարկել վերբեռնումը",
   "tools.image.uploadProgress": "Վերբեռնման առաջընթաց",
   "tools.image.altEdit": "Խմբագրել այլընտրանքային տեքստը",

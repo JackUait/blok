@@ -255,6 +255,7 @@
   "tools.image.moreOptions": "Više",
   "tools.image.uploading": "Slanje…",
   "tools.image.uploadingLabel": "Slanje",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Otkaži slanje",
   "tools.image.uploadProgress": "Napredak slanja",
   "tools.image.altEdit": "Uredi alternativni tekst",

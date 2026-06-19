@@ -254,6 +254,7 @@
   "tools.image.moreOptions": "گزینه‌های بیشتر",
   "tools.image.uploading": "در حال بارگذاری…",
   "tools.image.uploadingLabel": "در حال بارگذاری",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "لغو بارگذاری",
   "tools.image.uploadProgress": "پیشرفت بارگذاری",
   "tools.image.altEdit": "ویرایش متن جایگزین",

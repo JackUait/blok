@@ -254,6 +254,7 @@
   "tools.image.moreOptions": "Daha fazla seçenek",
   "tools.image.uploading": "Yükleniyor…",
   "tools.image.uploadingLabel": "Yükleniyor",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Yüklemeyi iptal et",
   "tools.image.uploadProgress": "Yükleme ilerlemesi",
   "tools.image.altEdit": "Alternatif metni düzenle",

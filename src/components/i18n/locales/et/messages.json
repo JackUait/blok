@@ -254,6 +254,7 @@
   "tools.image.moreOptions": "Rohkem valikuid",
   "tools.image.uploading": "Üleslaadimine…",
   "tools.image.uploadingLabel": "Üleslaadimine",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Tühista üleslaadimine",
   "tools.image.uploadProgress": "Üleslaadimise edenemine",
   "tools.image.altEdit": "Muuda alt-teksti",

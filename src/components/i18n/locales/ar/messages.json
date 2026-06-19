@@ -255,6 +255,7 @@
   "tools.image.moreOptions": "المزيد من الخيارات",
   "tools.image.uploading": "جارٍ الرفع…",
   "tools.image.uploadingLabel": "جارٍ الرفع",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "إلغاء الرفع",
   "tools.image.uploadProgress": "تقدّم الرفع",
   "tools.image.altEdit": "تعديل النص البديل",

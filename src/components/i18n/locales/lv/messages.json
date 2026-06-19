@@ -254,6 +254,7 @@
   "tools.image.moreOptions": "Vairāk",
   "tools.image.uploading": "Augšupielāde…",
   "tools.image.uploadingLabel": "Augšupielāde",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Atcelt augšupielādi",
   "tools.image.uploadProgress": "Augšupielādes gaita",
   "tools.image.altEdit": "Rediģēt alt tekstu",

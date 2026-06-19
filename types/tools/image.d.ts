@@ -85,6 +85,11 @@ export interface ImageConfig {
    * type with `'*'` as the fallback. Default 30 MiB. See {@link MaxSizeConfig}.
    */
   maxSize?: MaxSizeConfig;
+  /**
+   * Auto-convert animated GIFs to a looping WebM video block on insert.
+   * Default true. Set false to keep GIFs as image blocks.
+   */
+  convertGifToVideo?: boolean;
   /** Caption placeholder. Default "Write a caption…" */
   captionPlaceholder?: string;
 }

@@ -254,6 +254,7 @@
   "tools.image.moreOptions": "更多选项",
   "tools.image.uploading": "上传中…",
   "tools.image.uploadingLabel": "上传中",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "取消上传",
   "tools.image.uploadProgress": "上传进度",
   "tools.image.altEdit": "编辑替代文本",

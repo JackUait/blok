@@ -255,6 +255,7 @@
   "tools.image.moreOptions": "نور اختیارونه",
   "tools.image.uploading": "اپلوډ کیږي…",
   "tools.image.uploadingLabel": "اپلوډ کیږي",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "اپلوډ لغوه",
   "tools.image.uploadProgress": "د اپلوډ پرمختګ",
   "tools.image.altEdit": "alt متن سمول",

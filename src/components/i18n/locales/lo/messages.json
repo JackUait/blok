@@ -255,6 +255,7 @@
   "tools.image.moreOptions": "ຕົວເລືອກເພີ່ມເຕີມ",
   "tools.image.uploading": "ກຳລັງອັບໂຫຼດ…",
   "tools.image.uploadingLabel": "ກຳລັງອັບໂຫຼດ",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "ຍົກເລີກການອັບໂຫຼດ",
   "tools.image.uploadProgress": "ຄວາມຄືບໜ້າການອັບໂຫຼດ",
   "tools.image.altEdit": "ແກ້ໄຂຂໍ້ຄວາມທົດແທນ",

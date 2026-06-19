@@ -254,6 +254,7 @@
   "tools.image.moreOptions": "Ще",
   "tools.image.uploading": "Завантаження…",
   "tools.image.uploadingLabel": "Завантаження",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Скасувати завантаження",
   "tools.image.uploadProgress": "Прогрес завантаження",
   "tools.image.altEdit": "Змінити альтернативний текст",

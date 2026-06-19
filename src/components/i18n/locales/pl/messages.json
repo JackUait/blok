@@ -255,6 +255,7 @@
   "tools.image.moreOptions": "Więcej",
   "tools.image.uploading": "Wysyłanie…",
   "tools.image.uploadingLabel": "Wysyłanie",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Anuluj wysyłanie",
   "tools.image.uploadProgress": "Postęp wysyłania",
   "tools.image.altEdit": "Edytuj tekst alternatywny",

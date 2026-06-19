@@ -254,6 +254,7 @@
   "tools.image.moreOptions": "Više",
   "tools.image.uploading": "Prijenos…",
   "tools.image.uploadingLabel": "Prijenos",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Otkaži prijenos",
   "tools.image.uploadProgress": "Napredak prijenosa",
   "tools.image.altEdit": "Uredi alternativni tekst",

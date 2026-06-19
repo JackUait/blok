@@ -255,6 +255,7 @@
   "tools.image.moreOptions": "Още",
   "tools.image.uploading": "Качване…",
   "tools.image.uploadingLabel": "Качване",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Отмени качването",
   "tools.image.uploadProgress": "Напредък на качването",
   "tools.image.altEdit": "Редактирай алтернативния текст",

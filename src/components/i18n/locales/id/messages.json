@@ -255,6 +255,7 @@
   "tools.image.moreOptions": "Opsi lainnya",
   "tools.image.uploading": "Mengunggah…",
   "tools.image.uploadingLabel": "Mengunggah",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Batalkan unggahan",
   "tools.image.uploadProgress": "Kemajuan unggahan",
   "tools.image.altEdit": "Edit teks alternatif",

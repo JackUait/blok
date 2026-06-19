@@ -254,6 +254,7 @@
   "tools.image.moreOptions": "Tùy chọn khác",
   "tools.image.uploading": "Đang tải lên…",
   "tools.image.uploadingLabel": "Đang tải lên",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Hủy tải lên",
   "tools.image.uploadProgress": "Tiến độ tải lên",
   "tools.image.altEdit": "Chỉnh sửa văn bản thay thế",

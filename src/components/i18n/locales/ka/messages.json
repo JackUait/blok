@@ -255,6 +255,7 @@
   "tools.image.moreOptions": "მეტი პარამეტრები",
   "tools.image.uploading": "იტვირთება…",
   "tools.image.uploadingLabel": "იტვირთება",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "ატვირთვის გაუქმება",
   "tools.image.uploadProgress": "ატვირთვის პროცესი",
   "tools.image.altEdit": "ალტერნატიული ტექსტის რედაქტირება",

@@ -254,6 +254,7 @@
   "tools.image.moreOptions": "Meer opties",
   "tools.image.uploading": "Uploaden…",
   "tools.image.uploadingLabel": "Bezig met uploaden",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Upload annuleren",
   "tools.image.uploadProgress": "Uploadvoortgang",
   "tools.image.altEdit": "Alt-tekst bewerken",

@@ -254,6 +254,7 @@
   "tools.image.moreOptions": "Lisää asetuksia",
   "tools.image.uploading": "Ladataan…",
   "tools.image.uploadingLabel": "Ladataan",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Peruuta lataus",
   "tools.image.uploadProgress": "Latauksen edistyminen",
   "tools.image.altEdit": "Muokkaa vaihtoehtoista tekstiä",

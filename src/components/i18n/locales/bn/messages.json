@@ -255,6 +255,7 @@
   "tools.image.moreOptions": "আরও বিকল্প",
   "tools.image.uploading": "আপলোড হচ্ছে…",
   "tools.image.uploadingLabel": "আপলোড হচ্ছে",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "আপলোড বাতিল",
   "tools.image.uploadProgress": "আপলোডের অগ্রগতি",
   "tools.image.altEdit": "alt টেক্সট সম্পাদনা",

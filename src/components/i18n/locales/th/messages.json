@@ -254,6 +254,7 @@
   "tools.image.moreOptions": "ตัวเลือกเพิ่มเติม",
   "tools.image.uploading": "กำลังอัปโหลด…",
   "tools.image.uploadingLabel": "กำลังอัปโหลด",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "ยกเลิกการอัปโหลด",
   "tools.image.uploadProgress": "ความคืบหน้าการอัปโหลด",
   "tools.image.altEdit": "แก้ไขข้อความอธิบายภาพ",

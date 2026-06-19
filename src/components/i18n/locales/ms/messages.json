@@ -254,6 +254,7 @@
   "tools.image.moreOptions": "Pilihan lain",
   "tools.image.uploading": "Memuat naik…",
   "tools.image.uploadingLabel": "Memuat naik",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Batal muat naik",
   "tools.image.uploadProgress": "Kemajuan muat naik",
   "tools.image.altEdit": "Edit teks alternatif",

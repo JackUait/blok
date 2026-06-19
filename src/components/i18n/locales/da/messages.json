@@ -255,6 +255,7 @@
   "tools.image.moreOptions": "Flere indstillinger",
   "tools.image.uploading": "Uploader…",
   "tools.image.uploadingLabel": "Uploader",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Annullér upload",
   "tools.image.uploadProgress": "Uploadforløb",
   "tools.image.altEdit": "Redigér alt-tekst",

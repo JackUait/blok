@@ -255,6 +255,7 @@
   "tools.image.moreOptions": "その他のオプション",
   "tools.image.uploading": "アップロード中…",
   "tools.image.uploadingLabel": "アップロード中",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "アップロードをキャンセル",
   "tools.image.uploadProgress": "アップロードの進行状況",
   "tools.image.altEdit": "代替テキストを編集",

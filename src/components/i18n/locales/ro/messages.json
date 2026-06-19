@@ -255,6 +255,7 @@
   "tools.image.moreOptions": "Mai multe opțiuni",
   "tools.image.uploading": "Se încarcă…",
   "tools.image.uploadingLabel": "Se încarcă",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Anulează încărcarea",
   "tools.image.uploadProgress": "Progres încărcare",
   "tools.image.altEdit": "Editează textul alternativ",

@@ -254,6 +254,7 @@
   "tools.image.moreOptions": "Fler alternativ",
   "tools.image.uploading": "Laddar upp…",
   "tools.image.uploadingLabel": "Laddar upp",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Avbryt uppladdning",
   "tools.image.uploadProgress": "Uppladdningens förlopp",
   "tools.image.altEdit": "Redigera alt-text",

@@ -255,6 +255,7 @@
   "tools.image.moreOptions": "Ещё",
   "tools.image.uploading": "Загрузка…",
   "tools.image.uploadingLabel": "Загрузка",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Отменить загрузку",
   "tools.image.uploadProgress": "Прогресс загрузки",
   "tools.image.altEdit": "Изменить альтернативный текст",

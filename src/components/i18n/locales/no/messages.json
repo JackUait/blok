@@ -254,6 +254,7 @@
   "tools.image.moreOptions": "Flere alternativer",
   "tools.image.uploading": "Laster opp…",
   "tools.image.uploadingLabel": "Laster opp",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Avbryt opplasting",
   "tools.image.uploadProgress": "Opplastingsfremdrift",
   "tools.image.altEdit": "Rediger alt-tekst",

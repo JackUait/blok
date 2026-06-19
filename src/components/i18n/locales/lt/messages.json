@@ -255,6 +255,7 @@
   "tools.image.moreOptions": "Daugiau",
   "tools.image.uploading": "Įkeliama…",
   "tools.image.uploadingLabel": "Įkeliama",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Atšaukti įkėlimą",
   "tools.image.uploadProgress": "Įkėlimo eiga",
   "tools.image.altEdit": "Redaguoti alt tekstą",

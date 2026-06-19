@@ -255,6 +255,7 @@
   "tools.image.moreOptions": "Weitere Optionen",
   "tools.image.uploading": "Wird hochgeladen…",
   "tools.image.uploadingLabel": "Hochladen",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Upload abbrechen",
   "tools.image.uploadProgress": "Upload-Fortschritt",
   "tools.image.altEdit": "Alternativtext bearbeiten",

@@ -255,6 +255,7 @@
   "tools.image.moreOptions": "Më shumë opsione",
   "tools.image.uploading": "Duke ngarkuar…",
   "tools.image.uploadingLabel": "Duke ngarkuar",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Anulo ngarkimin",
   "tools.image.uploadProgress": "Progresi i ngarkimit",
   "tools.image.altEdit": "Redakto tekstin alternativ",

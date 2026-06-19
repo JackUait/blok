@@ -254,6 +254,7 @@
   "tools.image.moreOptions": "Iba pang opsyon",
   "tools.image.uploading": "Naga-upload…",
   "tools.image.uploadingLabel": "Naga-upload",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "Kanselahin ang upload",
   "tools.image.uploadProgress": "Progreso ng upload",
   "tools.image.altEdit": "I-edit ang alt text",

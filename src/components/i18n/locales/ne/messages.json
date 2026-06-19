@@ -254,6 +254,7 @@
   "tools.image.moreOptions": "थप विकल्पहरू",
   "tools.image.uploading": "अपलोड हुँदैछ…",
   "tools.image.uploadingLabel": "अपलोड हुँदैछ",
+  "tools.image.converting": "Converting…",
   "tools.image.cancelUpload": "अपलोड रद्द गर्नुहोस्",
   "tools.image.uploadProgress": "अपलोड प्रगति",
   "tools.image.altEdit": "alt पाठ सम्पादन गर्नुहोस्",

@@ -76,6 +76,7 @@ const PENDING_TRANSLATION_KEYS = new Set<string>([
   'tools.image.errorFileTooLarge',
   'tools.video.errorFileTooLarge',
   'tools.file.errorFileTooLarge',
+  'tools.image.converting',
 ]);
 
 const UNIVERSAL_SYMBOL_KEYS = new Set<string>([

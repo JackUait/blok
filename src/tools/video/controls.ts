@@ -1147,10 +1147,13 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     theaterBtn.setAttribute('aria-label', on ? 'Exit theater mode' : 'Theater mode');
     if (on) {
       enterTheater();
-      document.addEventListener('keydown', onTheaterKey);
+      // Capture phase: while the figure sits in the top layer (popover), the
+      // browser's close-watcher intercepts Escape and stops propagation right
+      // after the capture phase, so a bubble-phase listener would never fire.
+      document.addEventListener('keydown', onTheaterKey, true);
       document.addEventListener('pointerdown', onTheaterOutside);
     } else {
-      document.removeEventListener('keydown', onTheaterKey);
+      document.removeEventListener('keydown', onTheaterKey, true);
       document.removeEventListener('pointerdown', onTheaterOutside);
       leaveTheater();
     }
@@ -1363,7 +1366,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     document.removeEventListener('mousedown', onMenuOutside);
     document.removeEventListener('mousedown', onCtxOutside);
     document.removeEventListener('keydown', onCtxKeydown);
-    document.removeEventListener('keydown', onTheaterKey);
+    document.removeEventListener('keydown', onTheaterKey, true);
     video.removeEventListener('contextmenu', onContextMenu);
     cancelAnimationFrame(speedGlide.raf);
     stopSeekLoop();

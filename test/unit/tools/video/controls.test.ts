@@ -1356,6 +1356,21 @@ describe('video controls — theater mode', () => {
     expect(btn.getAttribute('aria-pressed')).toBe('false');
   });
 
+  it('exits theater on Escape even when the top layer consumes the event before it bubbles to document', () => {
+    const btn = q(h.controls, '[data-action="theater"]');
+    btn.click();
+    expect(h.figure.getAttribute('data-theater')).toBe('true');
+    // Model the browser's popover/close-watcher: a real Escape is intercepted
+    // after the capture phase, so propagation is stopped before the event ever
+    // bubbles up to a document-level listener. A bubble-phase handler on
+    // document would silently never fire — the dismiss must run in capture.
+    h.figure.addEventListener('keydown', (e) => { if (e.key === 'Escape') e.stopPropagation(); });
+    // Focus lives inside the figure in theater, so the event travels
+    // capture(document → figure) then bubble(figure ⤬ stopped).
+    h.video.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(h.figure.getAttribute('data-theater')).toBe('false');
+  });
+
   it('detaches the Escape listener after leaving theater and on destroy', () => {
     const btn = q(h.controls, '[data-action="theater"]');
     btn.click();

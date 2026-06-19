@@ -150,8 +150,7 @@
     "mdast-util-math": "^3.0.0",
     "micromark-extension-gfm": "^3.0.0",
     "micromark-extension-math": "^3.1.0",
-    "nanoid": "5.1.9",
-    "webm-muxer": "^5.1.4"
+    "nanoid": "5.1.9"
   },
   "devDependencies": {
     "@aiden0z/pptx-renderer": "^1.1.0",
@@ -218,6 +217,7 @@
     "vite": "8.0.9",
     "vite-plugin-css-injected-by-js": "5.0.1",
     "vitest": "4.1.8",
+    "webm-muxer": "^5.1.4",
     "yaml": "^2.8.3",
     "yjs": "13.6.30"
   },

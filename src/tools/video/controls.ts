@@ -327,47 +327,55 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   // sheets native players ship. Created lazily on first hover so we don't pull the
   // bytes twice until someone actually scrubs.
   const THUMB_W = 160;
-  let preview: HTMLVideoElement | null = null;
-  let previewReady = false;
-  let previewBusy = false;
-  let pendingPreviewTime = -1;
+  const preview: {
+    el: HTMLVideoElement | null;
+    ready: boolean;
+    busy: boolean;
+    pendingTime: number;
+  } = {
+    el: null,
+    ready: false,
+    busy: false,
+    pendingTime: -1,
+  };
   const drawPreviewFrame = (): void => {
-    previewBusy = false;
+    preview.busy = false;
     const ctx = seekThumb.getContext('2d');
-    if (ctx && preview && preview.videoWidth > 0) {
+    if (ctx && preview.el && preview.el.videoWidth > 0) {
       seekThumb.width = THUMB_W;
-      seekThumb.height = Math.round(THUMB_W * (preview.videoHeight / preview.videoWidth));
-      ctx.drawImage(preview, 0, 0, seekThumb.width, seekThumb.height);
+      seekThumb.height = Math.round(THUMB_W * (preview.el.videoHeight / preview.el.videoWidth));
+      ctx.drawImage(preview.el, 0, 0, seekThumb.width, seekThumb.height);
       seekThumb.setAttribute('data-ready', 'true');
     }
     // The pointer may have moved on while we were seeking — chase the latest time.
-    if (pendingPreviewTime >= 0 && preview && Math.abs(preview.currentTime - pendingPreviewTime) > 0.05) {
-      seekPreviewTo(pendingPreviewTime);
+    if (preview.pendingTime >= 0 && preview.el && Math.abs(preview.el.currentTime - preview.pendingTime) > 0.05) {
+      seekPreviewTo(preview.pendingTime);
     }
   };
   function seekPreviewTo(time: number): void {
-    pendingPreviewTime = time;
-    if (!preview || !previewReady || previewBusy) return;
-    previewBusy = true;
-    preview.currentTime = time;
+    preview.pendingTime = time;
+    if (!preview.el || !preview.ready || preview.busy) return;
+    preview.busy = true;
+    preview.el.currentTime = time;
   }
   const ensurePreview = (): void => {
-    if (preview) return;
+    if (preview.el) return;
     const src = video.currentSrc || video.getAttribute('src') || '';
     if (!src) return;
-    preview = document.createElement('video');
-    preview.className = 'blok-video-controls__preview-source';
-    preview.setAttribute('data-role', 'seek-preview-source');
-    preview.muted = true;
-    preview.preload = 'auto';
-    if (video.crossOrigin) preview.crossOrigin = video.crossOrigin;
-    preview.src = src;
-    preview.addEventListener('loadeddata', () => {
-      previewReady = true;
-      if (pendingPreviewTime >= 0) seekPreviewTo(pendingPreviewTime);
+    const el = document.createElement('video');
+    el.className = 'blok-video-controls__preview-source';
+    el.setAttribute('data-role', 'seek-preview-source');
+    el.muted = true;
+    el.preload = 'auto';
+    if (video.crossOrigin) el.crossOrigin = video.crossOrigin;
+    el.src = src;
+    el.addEventListener('loadeddata', () => {
+      preview.ready = true;
+      if (preview.pendingTime >= 0) seekPreviewTo(preview.pendingTime);
     });
-    preview.addEventListener('seeked', drawPreviewFrame);
-    root.appendChild(preview);
+    el.addEventListener('seeked', drawPreviewFrame);
+    preview.el = el;
+    root.appendChild(el);
   };
 
   // Float the hover tooltip over the scrubber at the cursor, reading the time at
@@ -387,7 +395,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   };
   const onSeekHoverLeave = (): void => {
     seekTooltip.setAttribute('aria-hidden', 'true');
-    pendingPreviewTime = -1;
+    preview.pendingTime = -1;
   };
   const onPlay = (): void => setPlaying(true);
   const onPause = (): void => setPlaying(false);
@@ -1356,12 +1364,12 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     seekFlash.removeEventListener('animationend', onSeekFlashEnd);
     seek.removeEventListener('pointermove', onSeekHover);
     seek.removeEventListener('pointerleave', onSeekHoverLeave);
-    if (preview) {
-      preview.removeEventListener('seeked', drawPreviewFrame);
-      preview.removeAttribute('src');
-      preview.load();
-      preview.remove();
-      preview = null;
+    if (preview.el) {
+      preview.el.removeEventListener('seeked', drawPreviewFrame);
+      preview.el.removeAttribute('src');
+      preview.el.load();
+      preview.el.remove();
+      preview.el = null;
     }
     video.removeEventListener('loadedmetadata', onLoadedMetadata);
     video.removeEventListener('timeupdate', onTimeUpdate);

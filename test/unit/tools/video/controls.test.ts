@@ -708,7 +708,7 @@ describe('video controls — volume + fullscreen', () => {
   });
 
   it('muting drives the volume slider to the very beginning', () => {
-    const slider = q(h.controls, '[data-role="volume"]') as HTMLInputElement;
+    const slider = q<HTMLInputElement>(h.controls, '[data-role="volume"]');
     setProp(h.video, 'volume', 0.6);
     h.video.dispatchEvent(new Event('volumechange'));
     expect(slider.value).toBe('0.6');
@@ -734,7 +734,7 @@ describe('video controls — volume + fullscreen', () => {
 
   it('does not pop the mute icon for a volume change that keeps it audible', () => {
     const btn = q(h.controls, '[data-action="mute-toggle"]');
-    const slider = q(h.controls, '[data-role="volume"]') as HTMLInputElement;
+    const slider = q<HTMLInputElement>(h.controls, '[data-role="volume"]');
     slider.value = '0.4';
     slider.dispatchEvent(new Event('input'));
     expect(btn.classList.contains('is-bumped')).toBe(false);
@@ -742,7 +742,7 @@ describe('video controls — volume + fullscreen', () => {
 
   it('pops the mute icon when the slider is dragged to zero', () => {
     const btn = q(h.controls, '[data-action="mute-toggle"]');
-    const slider = q(h.controls, '[data-role="volume"]') as HTMLInputElement;
+    const slider = q<HTMLInputElement>(h.controls, '[data-role="volume"]');
     slider.value = '0';
     slider.dispatchEvent(new Event('input'));
     expect(btn.classList.contains('is-bumped')).toBe(true);
@@ -761,7 +761,7 @@ describe('video controls — volume + fullscreen', () => {
     cap.textContent = 'Big Buck Bunny';
     h.figure.appendChild(cap);
 
-    const title = q(h.controls, '[data-role="video-title"]') as HTMLElement & { hidden: boolean };
+    const title = q(h.controls, '[data-role="video-title"]');
     // No title chrome inline — it only belongs to the fullscreen surface.
     expect(title.hidden).toBe(true);
 
@@ -777,7 +777,7 @@ describe('video controls — volume + fullscreen', () => {
   });
 
   it('keeps the fullscreen title bar hidden when the video has no caption', () => {
-    const title = q(h.controls, '[data-role="video-title"]') as HTMLElement & { hidden: boolean };
+    const title = q(h.controls, '[data-role="video-title"]');
     Object.defineProperty(document, 'fullscreenElement', { value: h.figure, configurable: true });
     document.dispatchEvent(new Event('fullscreenchange'));
     expect(title.hidden).toBe(true);
@@ -1658,10 +1658,12 @@ describe('video controls — persistence', () => {
     setProp(video, 'play', vi.fn().mockResolvedValue(undefined));
     setProp(video, 'pause', vi.fn());
     figure.appendChild(video);
-    document.body.appendChild(figure);
+    const slot = document.createElement('div');
+    slot.appendChild(figure);
+    document.body.appendChild(slot);
     const handle = attachControls({ video, figure, storage });
     figure.appendChild(handle.element);
-    return { figure, video, controls: handle.element, destroy: handle.destroy };
+    return { figure, slot, video, controls: handle.element, setTheater: handle.setTheater, destroy: handle.destroy };
   };
   afterEach(() => { document.body.innerHTML = ''; vi.restoreAllMocks(); });
 

@@ -67,14 +67,14 @@ export async function convertGifToWebm(
 
   const g = globalThis as Record<string, unknown>;
   const DecoderCtor = g.ImageDecoder as new (init: { data: ArrayBuffer; type: string }) => ImageDecoderLike;
-  const EncoderCtor = g.VideoEncoder as unknown as VideoEncoderCtor;
+  const EncoderCtor = g.VideoEncoder as VideoEncoderCtor;
 
-  let decoder: ImageDecoderLike | null = null;
-  let encoder: VideoEncoderLike | null = null;
+  const resources: { decoder?: ImageDecoderLike; encoder?: VideoEncoderLike } = {};
   const openFrames: DecodedFrame[] = [];
 
   try {
-    decoder = new DecoderCtor({ data, type: 'image/gif' });
+    const decoder = new DecoderCtor({ data, type: 'image/gif' });
+    resources.decoder = decoder;
     await decoder.tracks.ready;
     const frameCount = decoder.tracks.selectedTrack?.frameCount ?? 0;
     if (frameCount <= 1) return null;
@@ -95,10 +95,11 @@ export async function convertGifToWebm(
       firstTimestampBehavior: 'offset',
     });
 
-    encoder = new EncoderCtor({
+    const encoder = new EncoderCtor({
       output: (chunk, meta) => muxer.addVideoChunk(chunk as never, meta as never),
       error: () => undefined,
     });
+    resources.encoder = encoder;
     encoder.configure({
       codec: codec.encoderCodec,
       width,
@@ -106,15 +107,14 @@ export async function convertGifToWebm(
       bitrate: Math.max(200_000, width * height * 4),
     });
 
-    let timestamp = 0;
-    for (let i = 0; i < frameCount; i++) {
-      const frame = i === 0 ? first.image : (await decoder.decode({ frameIndex: i })).image;
-      if (i !== 0) openFrames.push(frame);
-      // Re-stamp so timestamps are monotonic from GIF delays (µs).
-      const stamped = frame as DecodedFrame & { timestamp: number };
-      stamped.timestamp = timestamp;
-      encoder.encode(frame, { keyFrame: i % KEYFRAME_INTERVAL === 0 });
-      timestamp += frame.duration ?? 100_000;
+    const indices = Array.from({ length: frameCount }, (_unused, i) => i);
+    // Running timestamp held in a const cursor so each frame is re-stamped to be
+    // monotonic from the accumulated GIF delays (µs) without a mutable `let`.
+    const cursor = { timestamp: 0 };
+    for (const i of indices) {
+      const frame = await getFrame(i, first.image, decoder);
+      cursor.timestamp = encodeFrame(encoder, frame, i, cursor.timestamp);
+      collectFrame(openFrames, frame, i);
       opts.onProgress?.(Math.round(((i + 1) / frameCount) * 100));
     }
 
@@ -127,7 +127,44 @@ export async function convertGifToWebm(
     openFrames.forEach((f) => {
       try { f.close(); } catch { /* already closed */ }
     });
-    try { encoder?.close(); } catch { /* noop */ }
-    try { decoder?.close(); } catch { /* noop */ }
+    try { resources.encoder?.close(); } catch { /* noop */ }
+    try { resources.decoder?.close(); } catch { /* noop */ }
   }
+}
+
+/**
+ * Resolve a decoded frame for the given index. Frame 0 reuses the already
+ * decoded first image; later frames are decoded on demand.
+ */
+async function getFrame(
+  index: number,
+  first: DecodedFrame,
+  decoder: ImageDecoderLike,
+): Promise<DecodedFrame> {
+  if (index === 0) return first;
+  return (await decoder.decode({ frameIndex: index })).image;
+}
+
+/**
+ * Encode one frame at the given timestamp and return the timestamp for the
+ * next frame (current + this frame's GIF delay, in µs).
+ */
+function encodeFrame(
+  encoder: VideoEncoderLike,
+  frame: DecodedFrame,
+  index: number,
+  timestamp: number,
+): number {
+  const stamped = frame as DecodedFrame & { timestamp: number };
+  stamped.timestamp = timestamp;
+  encoder.encode(frame, { keyFrame: index % KEYFRAME_INTERVAL === 0 });
+  return timestamp + (frame.duration ?? 100_000);
+}
+
+/**
+ * Track later frames so they can be closed in the finally block. Frame 0 is
+ * already tracked by the caller.
+ */
+function collectFrame(openFrames: DecodedFrame[], frame: DecodedFrame, index: number): void {
+  if (index !== 0) openFrames.push(frame);
 }

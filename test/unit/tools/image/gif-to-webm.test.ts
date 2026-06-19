@@ -23,7 +23,7 @@ const installWebCodecs = (frameCount: number, frames: FakeFrame[]): void => {
   class FakeImageDecoder {
     tracks = { ready: Promise.resolve(), selectedTrack: { frameCount } };
     constructor(public init: unknown) {}
-    async decode({ frameIndex }: { frameIndex: number }): Promise<{ image: FakeFrame; complete: boolean }> {
+    async decode(_opts: { frameIndex: number }): Promise<{ image: FakeFrame; complete: boolean }> {
       const image = makeFrame();
       frames.push(image);
       return { image, complete: true };

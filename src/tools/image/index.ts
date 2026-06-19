@@ -285,14 +285,8 @@ export class ImageTool implements BlockTool {
   }
 
   private async convertGifUrlToVideoBlock(url: string): Promise<boolean> {
-    let bytes: ArrayBuffer;
-    try {
-      const res = await fetch(url);
-      if (!res.ok) return false;
-      bytes = await res.arrayBuffer();
-    } catch {
-      return false; // CORS / network → keep the GIF as an image URL
-    }
+    const bytes = await this.fetchGifBytes(url);
+    if (!bytes) return false;
     this.converting = true;
     this.state = 'LOADING';
     this.errorMessage = null;
@@ -308,6 +302,16 @@ export class ImageTool implements BlockTool {
     } catch {
       this.converting = false;
       return false;
+    }
+  }
+
+  private async fetchGifBytes(url: string): Promise<ArrayBuffer | null> {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      return await res.arrayBuffer();
+    } catch {
+      return null; // CORS / network → keep the GIF as an image URL
     }
   }
 

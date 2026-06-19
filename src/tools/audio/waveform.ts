@@ -59,14 +59,19 @@ function getAudioContextCtor(): AudioContextCtor | null {
   return w.AudioContext ?? w.webkitAudioContext ?? null;
 }
 
-export async function decodePeaks(file: File): Promise<number[] | null> {
+export interface DecodedAudio {
+  peaks: number[];
+  duration: number;
+}
+
+export async function decodePeaks(file: File): Promise<DecodedAudio | null> {
   const Ctor = getAudioContextCtor();
   if (!Ctor) return null;
   try {
     const ctx = new Ctor();
     try {
       const buffer = await ctx.decodeAudioData(await file.arrayBuffer());
-      return peaksFromAudioBuffer(buffer);
+      return { peaks: peaksFromAudioBuffer(buffer), duration: buffer.duration };
     } finally {
       void ctx.close();
     }

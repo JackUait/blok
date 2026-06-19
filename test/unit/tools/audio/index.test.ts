@@ -13,6 +13,12 @@ vi.mock('../../../../src/tools/audio/waveform', () => ({
   attachWaveform: vi.fn().mockReturnValue({ destroy: vi.fn() }),
 }));
 
+// Helper to get the mocked decodePeaks function after module mocking
+async function getDecodePeaksMock() {
+  const mod = await import('../../../../src/tools/audio/waveform');
+  return mod.decodePeaks as ReturnType<typeof vi.fn>;
+}
+
 vi.mock('../../../../src/tools/audio/uploader', () => {
   class AudioUploadError extends Error {}
   class Uploader {
@@ -132,6 +138,23 @@ describe('AudioTool', () => {
     // dispatchChange called exactly once (from applyResult), not again for null peaks
     const dispatchCalls = (block.dispatchChange as ReturnType<typeof vi.fn>).mock.calls.length;
     expect(dispatchCalls).toBe(1);
+  });
+
+  it('I3: decoded peaks and duration are cached in data and round-trip through save()', async () => {
+    const decodePeaksMock = await getDecodePeaksMock();
+    decodePeaksMock.mockResolvedValueOnce({ peaks: [0.1, 0.5, 1], duration: 8 });
+
+    const block = createMockBlock();
+    const tool = new AudioTool(opts({ url: '' }, {}, block));
+    tool.render();
+    tool.onPaste({ type: 'file', detail: { file: new File(['x'], 'track.mp3', { type: 'audio/mpeg' }) } } as never);
+    // Flush all microtasks so enrichment callbacks run
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(tool.save().peaks).toEqual([0.1, 0.5, 1]);
+    expect(tool.save().duration).toBe(8);
   });
 
   it('caption round-trip: blur on [data-role="audio-caption"] updates save().caption', () => {

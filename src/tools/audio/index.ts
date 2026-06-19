@@ -268,10 +268,11 @@ export class AudioTool implements BlockTool {
 
       // Waveform peaks + duration
       void decodePeaks(file)
-        .then((peaks) => {
+        .then((decoded) => {
           if (this.destroyed) return;
-          if (peaks && peaks.length) {
-            this.data.peaks = peaks;
+          if (decoded && decoded.peaks.length) {
+            this.data.peaks = decoded.peaks;
+            this.data.duration = decoded.duration;
             this.renderState();
             this.block.dispatchChange();
           }

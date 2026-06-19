@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.18.0](https://github.com/JackUait/blok/compare/v0.17.0...v0.18.0) (2026-06-19)
+
+### Features
+
+- **Audio** — New native Audio block tool. Now-playing card with cover art (lazy `music-metadata` extraction), a waveform canvas with click/drag seek, transport controls (play/pause, volume, playback speed, loop, keyboard shortcuts, persisted preferences), file and URL upload, paste handling routed away from the File block, read-only support, and i18n across all locales. The player card is a full-bleed redesign — a tall cover panel (music-note placeholder when there is no art), a hero waveform scrubber with rounded bars, a slim transport bar, and motion polish.
+- **Media** — Image, video, and audio blocks now accept any file of their media family (`image/*`, `video/*`, `audio/*`) by default. Restrict the accepted types through the existing `types` config, which now accepts both exact MIME types (`image/png`) and family wildcards (`image/*`).
+
+### Bug Fixes
+
+- **Types** — Export `File`, `Audio`, and `Video` (and their data/config/uploader types) and add the `file`/`audio`/`video` keys to `defaultBlockTools` from the `@jackuait/blok/tools` types entry. The runtime already exported these tools; consumers no longer need a local ambient type shim to import them.
+
+### Maintenance
+
+- **Playground** — Audio block states in the block-states gallery (real ID3-tagged track and a "No cover art" state) plus an e2e harness for insert/upload/play/seek.
+
 ## [0.17.0](https://github.com/JackUait/blok/compare/v0.16.1...v0.17.0) (2026-06-19)
 
 ### Features

@@ -203,6 +203,7 @@
     "jszip": "^3.10.1",
     "katex": "^0.16.44",
     "mermaid": "^11.15.0",
+    "music-metadata": "^11.13.0",
     "playwright": "1.59.1",
     "postcss": "8.5.10",
     "prismjs": "^1.30.0",

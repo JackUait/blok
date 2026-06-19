@@ -4466,6 +4466,8 @@
   align-items: center;
   justify-content: center;
   background: var(--blok-video-stage);
+  width: 100% !important;
+  height: 100%;
 }
 
 [data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] .blok-video-media {
@@ -4477,6 +4479,37 @@
 
 [data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] .blok-video-media video {
   height: 100%;
+}
+
+[data-blok-tool="video"] .blok-video-controls__title {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: var(--blok-space-4) var(--blok-space-5) var(--blok-space-6);
+  background: linear-gradient(to bottom, var(--blok-video-scrim-strong) 0%, var(--blok-video-scrim-mid) 55%, transparent 100%);
+  color: var(--blok-video-control-fg);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  text-align: left;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 160ms ease, transform 160ms ease;
+  z-index: 1;
+}
+
+[data-blok-tool="video"] .blok-video-inner:hover .blok-video-controls__title, [data-blok-tool="video"] .blok-video-controls:focus-within .blok-video-controls__title, [data-blok-tool="video"] .blok-video-inner:not([data-playing="true"]) .blok-video-controls__title {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+[data-blok-tool="video"] .blok-video-inner[data-controls-hidden="true"] .blok-video-controls__title {
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
 }
 
 [data-blok-tool="video"] [data-role="resize-handle"] {
@@ -5509,7 +5542,7 @@
   opacity: 1;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-tool="video"] .blok-video-controls__bar, [data-blok-tool="video"] .blok-video-controls__volume, [data-blok-tool="video"] .blok-video-controls__mini, [data-blok-tool="video"] .blok-video-controls__seek-tooltip, [data-blok-tool="video"] .blok-video-controls__seek-wrap::before, [data-blok-tool="video"] .blok-video-controls__buffered, [data-blok-tool="video"] .blok-video-controls__seek, [data-blok-tool="video"] .blok-video-controls__speed {
+[@media (prefers-reduced-motion: reduce)] [data-blok-tool="video"] .blok-video-controls__bar, [data-blok-tool="video"] .blok-video-controls__title, [data-blok-tool="video"] .blok-video-controls__volume, [data-blok-tool="video"] .blok-video-controls__mini, [data-blok-tool="video"] .blok-video-controls__seek-tooltip, [data-blok-tool="video"] .blok-video-controls__seek-wrap::before, [data-blok-tool="video"] .blok-video-controls__buffered, [data-blok-tool="video"] .blok-video-controls__seek, [data-blok-tool="video"] .blok-video-controls__speed {
   transition: none;
 }
 

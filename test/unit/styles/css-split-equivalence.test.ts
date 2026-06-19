@@ -265,9 +265,12 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // readout + round −/＋ steppers + a continuous 0.05-step slider (JS-driven fill via
     // --blok-speed-pct) + a row of preset chips (0.5×/1×/1.5×/2×, "Normal" caption under
     // 1×); section-staggered settle on submenu entry.
+    // Video custom fullscreen surface: caption surfaced as a top title bar (YouTube-style
+    // scrim + typography, fading with the control bar) + inline-width override so a
+    // resized player fills the whole screen in fullscreen.
     // Shrinking below the baseline is always acceptable.
     const PRE_SPLIT_BYTES = 391500;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.298);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.302);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

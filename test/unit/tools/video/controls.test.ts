@@ -754,6 +754,35 @@ describe('video controls — volume + fullscreen', () => {
     q(h.controls, '[data-action="fullscreen"]').click();
     expect(request).toHaveBeenCalledTimes(1);
   });
+
+  it('surfaces the caption as a top title bar in fullscreen, hidden otherwise', () => {
+    const cap = document.createElement('div');
+    cap.setAttribute('data-role', 'video-caption');
+    cap.textContent = 'Big Buck Bunny';
+    h.figure.appendChild(cap);
+
+    const title = q(h.controls, '[data-role="video-title"]') as HTMLElement & { hidden: boolean };
+    // No title chrome inline — it only belongs to the fullscreen surface.
+    expect(title.hidden).toBe(true);
+
+    Object.defineProperty(document, 'fullscreenElement', { value: h.figure, configurable: true });
+    document.dispatchEvent(new Event('fullscreenchange'));
+    expect(title.hidden).toBe(false);
+    expect(title.textContent).toBe('Big Buck Bunny');
+    expect(h.figure.getAttribute('data-fullscreen')).toBe('true');
+
+    Object.defineProperty(document, 'fullscreenElement', { value: null, configurable: true });
+    document.dispatchEvent(new Event('fullscreenchange'));
+    expect(title.hidden).toBe(true);
+  });
+
+  it('keeps the fullscreen title bar hidden when the video has no caption', () => {
+    const title = q(h.controls, '[data-role="video-title"]') as HTMLElement & { hidden: boolean };
+    Object.defineProperty(document, 'fullscreenElement', { value: h.figure, configurable: true });
+    document.dispatchEvent(new Event('fullscreenchange'));
+    expect(title.hidden).toBe(true);
+    expect(title.textContent).toBe('');
+  });
 });
 
 describe('video controls — playback gear menu', () => {

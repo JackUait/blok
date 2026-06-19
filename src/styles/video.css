@@ -105,6 +105,10 @@
   align-items: center;
   justify-content: center;
   background: var(--blok-video-stage);
+  /* Beat the inline width:N% a resized player carries — otherwise a clip scaled
+     down in the page would only fill a fraction of the screen in fullscreen. */
+  width: 100% !important;
+  height: 100%;
 }
 [data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] .blok-video-media {
   width: 100%;
@@ -114,6 +118,38 @@
 }
 [data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] .blok-video-media video {
   height: 100%;
+}
+
+/* Fullscreen title bar — the caption surfaced at the top of the immersive
+   surface (YouTube-style), fading together with the bottom control bar. Lives
+   inside the controls overlay; `hidden` keeps it out of the inline player. */
+[data-blok-tool="video"] .blok-video-controls__title {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  padding: var(--blok-space-4) var(--blok-space-5) var(--blok-space-6);
+  background: linear-gradient(to bottom, var(--blok-video-scrim-strong) 0%, var(--blok-video-scrim-mid) 55%, transparent 100%);
+  color: var(--blok-video-control-fg);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  text-align: left;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 160ms ease, transform 160ms ease;
+  z-index: 1;
+}
+[data-blok-tool="video"] .blok-video-inner:hover .blok-video-controls__title,
+[data-blok-tool="video"] .blok-video-controls:focus-within .blok-video-controls__title,
+[data-blok-tool="video"] .blok-video-inner:not([data-playing="true"]) .blok-video-controls__title {
+  opacity: 1;
+  transform: translateY(0);
+}
+[data-blok-tool="video"] .blok-video-inner[data-controls-hidden="true"] .blok-video-controls__title {
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
 }
 
 /* ----- resize handle — Notion-style pill straddling the edge ----- */
@@ -1164,6 +1200,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   [data-blok-tool="video"] .blok-video-controls__bar,
+  [data-blok-tool="video"] .blok-video-controls__title,
   [data-blok-tool="video"] .blok-video-controls__volume,
   [data-blok-tool="video"] .blok-video-controls__mini,
   [data-blok-tool="video"] .blok-video-controls__seek-tooltip,

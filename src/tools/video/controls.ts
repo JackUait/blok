@@ -237,6 +237,15 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   miniProgress.setAttribute('aria-hidden', 'true');
   root.appendChild(miniProgress);
 
+  // Fullscreen title bar — the block's caption surfaced at the top of the
+  // immersive surface (à la YouTube), fading in/out with the control bar. Stays
+  // `hidden` outside fullscreen, so it never bleeds into the inline player.
+  const titleBar = document.createElement('div');
+  titleBar.className = 'blok-video-controls__title';
+  titleBar.setAttribute('data-role', 'video-title');
+  titleBar.hidden = true;
+  root.appendChild(titleBar);
+
   // ----- state sync -----
   // `media` aliases the param so the property writes below are not flagged as
   // parameter reassignment.
@@ -415,6 +424,16 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     figure.setAttribute('data-fullscreen', String(isFull));
     fullscreen.innerHTML = isFull ? IconPlayerFullscreenExit : IconExpandFullscreen;
     fullscreen.setAttribute('aria-label', isFull ? 'Exit fullscreen' : 'Fullscreen');
+    // Lift the live caption into the top title bar on entry; clear it on exit so
+    // it can pick up later edits next time. Empty caption → no bar.
+    if (isFull) {
+      const text = figure.querySelector('[data-role="video-caption"]')?.textContent?.trim() ?? '';
+      titleBar.textContent = text;
+      titleBar.hidden = text.length === 0;
+    } else {
+      titleBar.hidden = true;
+      titleBar.textContent = '';
+    }
   };
 
   // Flash the just-taken action's glyph in the centre, restarting the CSS

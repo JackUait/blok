@@ -13,7 +13,7 @@
 <body>
   <script type="module">
     import { Blok, DATA_ATTR, version } from '/dist/blok.mjs?_v=1';
-    import { Header, Paragraph, List, Table, Toggle, Callout, Quote, Code, Bold, Italic, Link, Convert, Marker, Underline, Strikethrough, InlineCode, Database, DatabaseRow, Image, Video, Divider, ColumnList, Column, Columns, Embed, Bookmark } from '/dist/tools.mjs?_v=1';
+    import { Header, Paragraph, List, Table, Toggle, Callout, Quote, Code, Bold, Italic, Link, Convert, Marker, Underline, Strikethrough, InlineCode, Database, DatabaseRow, Image, Video, Audio, Divider, ColumnList, Column, Columns, Embed, Bookmark } from '/dist/tools.mjs?_v=1';
 
     // Create default tools configuration (mimics pre-modular behavior)
     // Block tools with inlineToolbar enabled
@@ -60,6 +60,9 @@
       },
       video: {
         class: Video,
+      },
+      audio: {
+        class: Audio,
       },
       divider: {
         class: Divider,

@@ -931,7 +931,7 @@
 
   <script type="module">
     import { Blok } from './src/blok.ts';
-    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Quote, Code, Image, File as FileBlock, Video, ColumnList, Column, Embed, Bookmark, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Quote, Code, Image, File as FileBlock, Video, Audio, ColumnList, Column, Embed, Bookmark, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
@@ -962,6 +962,7 @@
         image: true,
         file: true,
         video: true,
+        audio: true,
         columns: true,
       },
     };
@@ -1891,6 +1892,17 @@
           },
         },
       };
+      if (state.tools.audio) tools.audio = {
+        class: Audio,
+        config: {
+          uploader: {
+            uploadByFile: async (file) => ({
+              url: URL.createObjectURL(file),
+              fileName: file.name,
+            }),
+          },
+        },
+      };
       if (state.tools.columns) {
         tools.column_list = ColumnList;
         tools.column = Column;
@@ -2578,6 +2590,19 @@
         ],
       },
       {
+        tool: 'audio',
+        label: 'Audio',
+        states: [
+          { label: 'Empty (upload)', blocks: [{ id: 'au-empty', type: 'audio', data: { url: '' } }] },
+          { label: 'Loaded', blocks: [{ id: 'au-loaded', type: 'audio', data: {
+            url: '/samples/sample.mp3',
+            title: 'Sample Track',
+            artist: 'Unknown Artist',
+            peaks: [0.2,0.5,0.8,0.6,0.3,0.9,0.7,0.4,0.2,0.6,0.8,0.5,0.3,0.7,0.9,0.4,0.2,0.5,0.8,0.6,0.3,0.9,0.7,0.4,0.2,0.6,0.8,0.5,0.3,0.7,0.9,0.4],
+          } }] },
+        ],
+      },
+      {
         tool: 'file',
         label: 'File',
         states: [
@@ -2770,6 +2795,17 @@
           image: Image,
           video: {
             class: Video,
+            config: {
+              uploader: {
+                uploadByFile: async (file) => ({
+                  url: URL.createObjectURL(file),
+                  fileName: file.name,
+                }),
+              },
+            },
+          },
+          audio: {
+            class: Audio,
             config: {
               uploader: {
                 uploadByFile: async (file) => ({

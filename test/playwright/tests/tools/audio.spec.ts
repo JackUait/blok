@@ -119,33 +119,29 @@ test('clicking the play button flips it to a pause affordance', async ({ page })
   // Before play: aria-label is "Play".
   await expect(playBtn).toHaveAttribute('aria-label', 'Play');
 
-  // Click the play button. The controls call media.play() which is allowed in
-  // headless Chromium when triggered by a real user gesture (click).
-  // Whether media actually plays depends on codec support, but the UI must
-  // react immediately by flipping the button and setting data-playing="true"
-  // on the figure. If play() rejects (autoplay policy), we drive the state
-  // directly via the media element's play event.
+  // Wait for media metadata to load so that play() is more likely to succeed.
+  await expect.poll(
+    () => page.evaluate(() => {
+      const audio = document.querySelector<HTMLAudioElement>('[data-role="audio-media"]');
+      return audio ? audio.readyState : 0;
+    }),
+    { timeout: 10_000 }
+  ).toBeGreaterThanOrEqual(1); // HAVE_METADATA
+
+  // Click the play button — this is a real trusted user gesture so headless
+  // Chromium permits media.play(). The controls wire up an 'onPlay' listener
+  // on the media element that calls setPlaying(true), which synchronously:
+  //   • sets figure[data-playing]="true"
+  //   • sets playToggle[aria-label]="Pause"
   await playBtn.click();
 
-  // The figure toggles data-playing="true" synchronously on media.play() dispatch.
-  // Wait for the UI state change — the button label becomes "Pause".
-  // Fallback: programmatically fire the play event in case headless blocked autoplay.
-  await page.evaluate(() => {
-    const audio = document.querySelector<HTMLAudioElement>('[data-role="audio-media"]');
-    if (!audio) return;
-    // If the media is still paused (autoplay blocked), synthesize the play event
-    // so the control surface reflects the intended state.
-    if (audio.paused) {
-      audio.dispatchEvent(new Event('play'));
-    }
-  });
-
+  // Assert the UI flipped via web-first auto-waiting (no fixed sleeps).
   await expect(playBtn).toHaveAttribute('aria-label', 'Pause');
   await expect(audioBlock.locator('[data-role="audio-figure"]')).toHaveAttribute('data-playing', 'true');
 });
 
 // ---------------------------------------------------------------------------
-// 4. Seek — time readout advances after setting currentTime
+// 4. Seek — clicking the waveform canvas advances currentTime and the readout
 // ---------------------------------------------------------------------------
 test('seeking via the waveform canvas advances the time readout', async ({ page }) => {
   await createBlok(page);
@@ -160,29 +156,37 @@ test('seeking via the waveform canvas advances the time readout', async ({ page 
   const timeEl = audioBlock.locator('[data-role="audio-time"]');
   await expect(timeEl).toBeVisible();
 
-  // The waveform canvas seek is driven by pointerdown, but it only moves
-  // currentTime when media.duration is finite. In headless Chromium the blob
-  // URL is decoded asynchronously and the browser clamps currentTime to the
-  // real audio duration (1 second for our fixture).
-  //
-  // We fake a duration of 10 s and set currentTime to a value within the real
-  // audio's 1-second boundary — the browser clamps assignment to the actual
-  // duration, so we drive both via the controls' timeupdate handler by
-  // overriding duration on the JS side and dispatching timeupdate.
-  await page.evaluate(() => {
-    const audio = document.querySelector<HTMLAudioElement>('[data-role="audio-media"]');
-    if (!audio) return;
+  // The waveform canvas seek handler (pointerdown) only sets currentTime when
+  // media.duration is finite. Wait for loadedmetadata so duration is available.
+  await expect.poll(
+    () => page.evaluate(() => {
+      const audio = document.querySelector<HTMLAudioElement>('[data-role="audio-media"]');
+      return audio ? audio.duration : 0;
+    }),
+    { timeout: 10_000 }
+  ).toBeGreaterThan(0);
 
-    // Provide a synthetic duration so the formatter shows a non-trivial denominator.
-    Object.defineProperty(audio, 'duration', { value: 10, configurable: true });
-    // currentTime within real file bounds — browser will honour this.
-    audio.currentTime = 0.5;
-    // Override the getter to return our desired display value (the waveform
-    // controls only read media.currentTime in the timeupdate handler).
-    Object.defineProperty(audio, 'currentTime', { value: 5, configurable: true });
-    audio.dispatchEvent(new Event('timeupdate'));
-  });
+  // Locate the waveform canvas and get its bounding box.
+  const canvas = audioBlock.locator('[data-role="audio-waveform-canvas"]');
+  await expect(canvas).toBeVisible();
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error('Canvas bounding box not available');
 
-  // After timeupdate the controls should show 00:05 / 00:10.
-  await expect(timeEl).toContainText('00:05');
+  // Click near the horizontal center of the canvas (~50% position).
+  // This dispatches a real pointerdown event that the waveform handler uses to
+  // compute: currentTime = ratio * duration  →  ~4s for an 8s fixture.
+  await canvas.click({ position: { x: Math.round(box.width / 2), y: Math.round(box.height / 2) } });
+
+  // Assert currentTime advanced beyond 0.
+  await expect.poll(
+    () => page.evaluate(() => {
+      const audio = document.querySelector<HTMLAudioElement>('[data-role="audio-media"]');
+      return audio ? audio.currentTime : 0;
+    }),
+    { timeout: 5_000 }
+  ).toBeGreaterThan(0);
+
+  // Assert the time readout no longer shows "0:00" — it should display something
+  // like "00:03" or "00:04" (center of an 8s track).
+  await expect(timeEl).not.toContainText('0:00 / 0:00');
 });

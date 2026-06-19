@@ -87,6 +87,7 @@ export class ImageTool implements BlockTool {
   private brokenImage = false;
   private retrying = false;
   private reloadAttempts = 0;
+  private converting = false;
 
   constructor(options: BlockToolConstructorOptions<ImageData, ImageConfig>) {
     this.api = options.api;
@@ -189,6 +190,7 @@ export class ImageTool implements BlockTool {
 
   /** Existing upload body, extracted verbatim. */
   private uploadImageFile(file: File): void {
+    this.converting = false;
     this.lastFileName = file.name;
     this.lastSource = { kind: 'file', file };
     this.state = 'LOADING';
@@ -210,6 +212,7 @@ export class ImageTool implements BlockTool {
    * the block was swapped; false means the caller should keep the GIF (image).
    */
   private async convertGifToVideoBlock(file: File): Promise<boolean> {
+    this.converting = true;
     this.state = 'LOADING';
     this.errorMessage = null;
     this.brokenImage = false;
@@ -217,12 +220,14 @@ export class ImageTool implements BlockTool {
     this.renderState();
     try {
       const blob = await convertGifToWebm(await file.arrayBuffer(), { onProgress: this.reportProgress });
-      if (!blob) return false;
+      if (!blob) { this.converting = false; return false; }
       const webm = new File([blob], file.name.replace(/\.gif$/i, '.webm'), { type: 'video/webm' });
       const url = await this.uploadConverted(webm);
-      if (url === null) return false;
+      if (url === null) { this.converting = false; return false; }
+      this.converting = false;
       return this.swapToVideoBlock(url, webm.name);
     } catch {
+      this.converting = false;
       return false;
     }
   }
@@ -644,6 +649,7 @@ export class ImageTool implements BlockTool {
       fileName: this.lastFileName ?? this.api.i18n.t('tools.image.uploading'),
       onCancel: () => this.transitionToEmpty(),
       i18n: this.api.i18n,
+      ...(this.converting ? { statusLabel: this.api.i18n.t('tools.image.converting') } : {}),
     });
     this.uploadingEl = el;
     this.root.appendChild(el);

@@ -1629,5 +1629,43 @@ describe('ImageTool — GIF auto-conversion', () => {
     expect(mockConvert).not.toHaveBeenCalled();
     expect(insert).not.toHaveBeenCalled();
   });
+
+  it('falls back to normal image upload when conversion succeeds but WebM upload rejects', async () => {
+    const webmBlob = new Blob([new Uint8Array([1])], { type: 'video/webm' });
+    mockConvert.mockResolvedValue(webmBlob);
+    const insert = vi.fn();
+    const uploadByFile = vi.fn().mockRejectedValue(new Error('upload failed'));
+    const api = createMockApi();
+    (api as unknown as { blocks: unknown }).blocks = { getBlockIndex: () => 0, insert };
+    (api as unknown as { tools: unknown }).tools = {
+      getToolsConfig: () => ({ tools: { video: { config: { uploader: { uploadByFile } } } } }),
+    };
+    const tool = new ImageTool({ ...createOptions(), api });
+    const root = tool.render();
+    pasteGif(tool);
+    await new Promise((r) => setTimeout(r, 0));
+    // The converted-WebM upload rejected, so swapToVideoBlock was never called
+    expect(insert).not.toHaveBeenCalled();
+    // The fallback uploadImageFile path ran, producing a blob-url image
+    expect(root.querySelector('img')).not.toBeNull();
+  });
+
+  it('shows the converting label in the loading UI while GIF is being converted', async () => {
+    // Keep conversion pending so we can inspect the loading UI
+    mockConvert.mockImplementation(() => new Promise<Blob>(() => { /* never resolves */ }));
+    const api = createMockApi();
+    (api as unknown as { blocks: unknown }).blocks = { getBlockIndex: () => 0, insert: vi.fn() };
+    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }) };
+    const tool = new ImageTool({ ...createOptions(), api });
+    const root = tool.render();
+    pasteGif(tool);
+    // Flush the file.arrayBuffer() microtask so convertGifToWebm is called and the
+    // renderState() inside convertGifToVideoBlock has run.
+    await Promise.resolve();
+    await Promise.resolve();
+    const label = root.querySelector<HTMLElement>('.blok-image-uploading__label');
+    expect(label).not.toBeNull();
+    expect(label?.textContent).toBe('tools.image.converting');
+  });
 });
 

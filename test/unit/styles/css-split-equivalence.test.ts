@@ -256,9 +256,18 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // instead of snapping in as a rigid block.
     // Video "Minimal" glow level: new default ambient-glow intensity (data-glow="minimal"
     // opacity rule) — a barely-there bloom, sits below "Less".
+    // Video speed-submenu morph redesign: layered depth-swap (parked pane recedes —
+    // fades + scale(0.92) — while the entering pane pushes forward, so the view-switch
+    // reads as depth rather than a flat sideways slide) + spring track-slide with mild
+    // overshoot + longer 320ms height/slide so the motion is actually legible at real
+    // speed + transform-only rise keyframe (rows lift instead of fade-stacking).
+    // Video YouTube-style speed control: replaced the discrete radio list with a live
+    // readout + round −/＋ steppers + a continuous 0.05-step slider (JS-driven fill via
+    // --blok-speed-pct) + a row of preset chips (0.5×/1×/1.5×/2×, "Normal" caption under
+    // 1×); section-staggered settle on submenu entry.
     // Shrinking below the baseline is always acceptable.
     const PRE_SPLIT_BYTES = 391500;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.284);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.298);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

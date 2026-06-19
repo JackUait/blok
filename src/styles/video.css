@@ -205,6 +205,7 @@
   --blok-seek-pct: 0%;
   --blok-buffered-pct: 0%;
   --blok-vol-pct: 100%;
+  --blok-speed-pct: 42.86%;
   --blok-tooltip-x: 0%;
   --blok-ctx-x: 50%;
   --blok-ctx-y: 50%;
@@ -630,7 +631,7 @@
   box-shadow: var(--blok-video-burst-shadow);
   color: var(--blok-video-control-fg);
   transform-origin: bottom right;
-  transition: height 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: height 320ms cubic-bezier(0.2, 0.85, 0.25, 1);
   z-index: 3;
 }
 /* Frosted glass lives on a ::before so it is NOT on the same box as overflow: hidden —
@@ -651,10 +652,13 @@
   from { opacity: 0; transform: translateY(8px) scale(0.94); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
-/* each speed row lifts into place — drives the staggered cascade on submenu entry */
+/* each speed row lifts into place — drives the staggered cascade on submenu entry.
+   Transform-only: the pane cross-fade (below) owns the opacity, so rows stay visible
+   and merely settle up — no fade-stacked-on-fade that left late rows pouring into an
+   already-full card. */
 @keyframes blok-video-menu-rise {
-  from { opacity: 0; transform: translateY(7px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { transform: translateY(10px); }
+  to   { transform: translateY(0); }
 }
 /* Entrance is motion only — honour reduced-motion by dropping the animation. */
 @media (prefers-reduced-motion: no-preference) {
@@ -668,7 +672,9 @@
   display: flex;
   align-items: flex-start;
   width: 200%;
-  transition: transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Spring curve (control-point y > 1) overshoots the slide a touch, so the panes
+     land with a gentle settle instead of snapping flat to a stop. */
+  transition: transform 320ms cubic-bezier(0.32, 1.12, 0.4, 1);
 }
 [data-blok-tool="video"] .blok-video-controls__menu[data-view="speed"] .blok-video-controls__menu-track {
   transform: translateX(-50%);
@@ -677,6 +683,18 @@
   flex: 0 0 50%;
   display: flex;
   flex-direction: column;
+  /* Each pane recedes (shrinks + fades back) as it parks and pushes forward (grows
+     in) as it enters, so the view-switch reads as a layered depth swap rather than a
+     flat sideways slide. Opacity runs quicker than the transform so the outgoing pane
+     clears the seam before the slide settles — no double-stack of text mid-slide. */
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 200ms ease, transform 320ms cubic-bezier(0.32, 1.12, 0.4, 1);
+}
+[data-blok-tool="video"] .blok-video-controls__menu[data-view="speed"] [data-role="menu-main"],
+[data-blok-tool="video"] .blok-video-controls__menu[data-view="main"] [data-role="menu-speed"] {
+  opacity: 0;
+  transform: scale(0.92);
 }
 
 /* a single tappable row — leading glyph + label left, value/chevron right */
@@ -755,44 +773,144 @@
 }
 [data-blok-tool="video"] .blok-video-controls__menu-back .blok-video-controls__menu-chevron { margin-right: 0; }
 
-/* a speed option: leading check column (reserved even when unchecked) + label */
-[data-blok-tool="video"] .blok-video-controls__speed-option { font-variant-numeric: tabular-nums; }
-[data-blok-tool="video"] .blok-video-controls__menu-check {
+/* ===== Notion-style speed control: quiet readout + flat steppers + segmented presets ===== */
+/* The live value, stated calmly (Notion never shouts a number); tabular so the card
+   width doesn't jitter as digits change. */
+[data-blok-tool="video"] .blok-video-controls__speed-readout {
+  margin: var(--blok-space-1) 0 var(--blok-space-2);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--blok-video-control-fg);
+}
+
+/* − [slider] ＋ — flat icon steppers (no filled discs) flank a flexible track */
+[data-blok-tool="video"] .blok-video-controls__speed-slider-row {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  padding: 0;
+}
+[data-blok-tool="video"] .blok-video-controls__speed-step {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 14px;
-  height: 14px;
-  color: var(--blok-video-accent);
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--blok-radius-md);
+  background: transparent;
+  color: var(--blok-video-menu-icon);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, transform 120ms ease, opacity 120ms ease;
 }
-[data-blok-tool="video"] .blok-video-controls__menu-check svg {
-  width: 14px;
-  height: 14px;
-  opacity: 0;
-  transform: scale(0.5);
-  transform-origin: center;
-  transition: opacity 140ms ease, transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
+[data-blok-tool="video"] .blok-video-controls__speed-step:hover {
+  background: var(--blok-video-control-bg-hover);
+  color: var(--blok-video-control-fg);
 }
-[data-blok-tool="video"] .blok-video-controls__speed-option[aria-checked="true"] .blok-video-controls__menu-check svg {
-  opacity: 1;
-  transform: scale(1);
+[data-blok-tool="video"] .blok-video-controls__speed-step:active { transform: scale(0.92); }
+[data-blok-tool="video"] .blok-video-controls__speed-step:disabled { opacity: 0.3; cursor: default; transform: none; }
+[data-blok-tool="video"] .blok-video-controls__speed-step:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1.5px var(--blok-video-focus-ring);
 }
-/* the chosen rate gets a quiet accent wash + heavier weight */
-[data-blok-tool="video"] .blok-video-controls__speed-option[aria-checked="true"] {
-  background: var(--blok-video-menu-row-active);
-  font-weight: 600;
+[data-blok-tool="video"] .blok-video-controls__speed-step svg { width: 16px; height: 16px; }
+
+/* the continuous slider — a thin white elapsed fill + small knob on a faint track.
+   The fill gradient is JS-driven via --blok-speed-pct, exactly like the volume slider. */
+[data-blok-tool="video"] .blok-video-controls__speed-slider {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 3px;
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: linear-gradient(
+    to right,
+    var(--blok-video-accent) var(--blok-speed-pct),
+    var(--blok-video-track) var(--blok-speed-pct)
+  );
+  border-radius: var(--blok-radius-pill);
+  cursor: pointer;
+}
+[data-blok-tool="video"] .blok-video-controls__speed-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-video-thumb);
+  box-shadow: var(--blok-video-thumb-shadow);
+  transition: transform 120ms ease;
+}
+[data-blok-tool="video"] .blok-video-controls__speed-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-video-thumb);
+  box-shadow: var(--blok-video-thumb-shadow);
+}
+[data-blok-tool="video"] .blok-video-controls__speed-slider:active::-webkit-slider-thumb { transform: scale(1.2); }
+[data-blok-tool="video"] .blok-video-controls__speed-slider:focus-visible { outline: none; }
+[data-blok-tool="video"] .blok-video-controls__speed-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow: var(--blok-video-thumb-shadow), 0 0 0 4px var(--blok-video-focus-ring);
 }
 
-/* Entering the speed submenu: rows cascade up in sequence as the card grows,
-   instead of the whole list snapping in as one rigid block. --row (set per row
-   from JS) staggers the start so the back header leads and each rate follows.
-   `backwards` holds the hidden state through the delay, then frees the transform
-   so the row's press-scale still works. Reduced-motion keeps the plain slide. */
+/* preset rates float on the frosted glass like the menu rows — no filled track, no
+   raised card (those read as a foreign block against the airy list). Inactive labels
+   are muted; the active rate fills with the same subtle tint a row gets on hover. */
+[data-blok-tool="video"] .blok-video-controls__speed-chips {
+  display: flex;
+  gap: var(--blok-space-1);
+  margin-top: var(--blok-space-2-5);
+}
+[data-blok-tool="video"] .blok-video-controls__speed-chip {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--blok-space-0-5);
+  min-width: 0;
+  min-height: 30px;
+  padding: var(--blok-space-1);
+  border: 0;
+  border-radius: var(--blok-radius-md);
+  background: transparent;
+  color: var(--blok-video-menu-value-fg);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, transform 120ms ease;
+}
+[data-blok-tool="video"] .blok-video-controls__speed-chip:hover {
+  background: var(--blok-video-control-bg-hover);
+  color: var(--blok-video-control-fg);
+}
+[data-blok-tool="video"] .blok-video-controls__speed-chip:active { transform: scale(0.96); }
+[data-blok-tool="video"] .blok-video-controls__speed-chip:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px var(--blok-video-focus-ring);
+}
+
+/* Entering the speed submenu: the sections (back header → readout → slider → chips)
+   settle up in sequence as the card grows, instead of snapping in as one rigid block.
+   `backwards` holds the lowered position through the delay, then frees the transform so
+   each section's press-scale still works. The stagger is tight so the last section lands
+   as the height tween settles. Reduced-motion keeps the plain slide. */
 @media (prefers-reduced-motion: no-preference) {
-  [data-blok-tool="video"] .blok-video-controls__menu[data-view="speed"] [data-role="menu-speed"] .blok-video-controls__menu-row {
-    animation: blok-video-menu-rise 260ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
-    animation-delay: calc(var(--row, 0) * 22ms);
+  [data-blok-tool="video"] .blok-video-controls__menu[data-view="speed"] [data-role="menu-speed"] > * {
+    animation: blok-video-menu-rise 300ms cubic-bezier(0.2, 0.85, 0.25, 1) backwards;
   }
+  [data-blok-tool="video"] .blok-video-controls__menu[data-view="speed"] [data-role="menu-speed"] > :nth-child(2) { animation-delay: 45ms; }
+  [data-blok-tool="video"] .blok-video-controls__menu[data-view="speed"] [data-role="menu-speed"] > :nth-child(3) { animation-delay: 90ms; }
+  [data-blok-tool="video"] .blok-video-controls__menu[data-view="speed"] [data-role="menu-speed"] > :nth-child(4) { animation-delay: 135ms; }
 }
 
 /* view-mode + gear toggles read as selected when active: a filled pill + accent tint */

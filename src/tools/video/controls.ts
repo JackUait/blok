@@ -1,8 +1,8 @@
 import {
-  IconCheck,
   IconChevronLeft,
   IconChevronRight,
   IconExpandFullscreen,
+  IconMinus,
   IconPlayerBackward,
   IconPlayerForward,
   IconPlayerFullscreenExit,
@@ -15,6 +15,7 @@ import {
   IconPlayerTheater,
   IconPlayerVolume,
   IconPlayerVolumeMute,
+  IconPlus,
 } from '../../components/icons';
 import type { VideoGlow } from '../../../types/tools/video';
 
@@ -590,7 +591,9 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   // on YouTube's settings: a main pane of labelled rows, each carrying its current
   // value, that slides sideways into a dedicated submenu (speeds with a leading
   // check, à la YouTube). Built here so it shares the player's closure state.
-  const SPEED_LABEL = (rate: number): string => (rate === 1 ? 'Normal' : `${rate}×`);
+  const SPEED_LABEL = (rate: number): string => `${rate}×`;
+  // Honoured by the preset-jump glide and the ambient sampler — both opt out of motion.
+  const reducedMotion = !!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
 
   // Leading glyph for a main-pane row — gives each setting a scannable icon
   // so the menu reads as a crafted panel, not a bare text list.
@@ -707,7 +710,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   loopValue.className = 'blok-video-controls__menu-value';
   loopValue.setAttribute('data-role', 'menu-value-loop');
   loopValue.textContent = loop ? 'On' : 'Off';
-  // Empty chevron slot keeps "Off" aligned under the speed row's "Normal".
+  // Empty chevron slot keeps "Off" aligned under the speed row's value.
   const loopSpacer = document.createElement('span');
   loopSpacer.className = 'blok-video-controls__menu-chevron';
   loopSpacer.setAttribute('aria-hidden', 'true');
@@ -720,12 +723,25 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
 
   mainPane.append(speedNav, loopRow);
 
-  // --- speed pane: a back header + one checkable row per rate ---
+  // --- speed pane: YouTube-style control — back header + live readout + −/＋
+  //     steppers flanking a continuous slider + a row of quick-jump preset chips.
+  //     It's a control panel, not a menu list, so the pane is a labelled group. ---
+  // SPEED_MIN / SPEED_MAX are shared with the Shift+./Shift+, keyboard shortcut above.
+  const SPEED_SLIDER_STEP = 0.05;
+  const SPEED_PRESETS = [0.5, 1, 1.5, 2];
+  // 0.05 steps accumulate binary-float error (1 + 0.05×3 = 1.1500000000000001);
+  // snap every rate to 2dp so the readout text and the chip === checks stay exact.
+  const clampRate = (rate: number): number =>
+    Math.min(SPEED_MAX, Math.max(SPEED_MIN, Math.round(rate * 100) / 100));
+
+  speedPane.setAttribute('role', 'group');
+  speedPane.setAttribute('aria-label', 'Playback speed');
+
   const speedBack = document.createElement('button');
   speedBack.type = 'button';
   speedBack.className = 'blok-video-controls__menu-row blok-video-controls__menu-back';
   speedBack.setAttribute('data-action', 'speed-back');
-  speedBack.setAttribute('role', 'menuitem');
+  speedBack.setAttribute('aria-label', 'Back');
   const backChevron = document.createElement('span');
   backChevron.className = 'blok-video-controls__menu-chevron';
   backChevron.setAttribute('aria-hidden', 'true');
@@ -736,39 +752,110 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   speedBack.append(backChevron, backLabel);
   speedBack.addEventListener('click', () => showView('main'));
 
-  const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
-  const speedItems = SPEEDS.map((rate, index) => {
-    const option = document.createElement('button');
-    option.type = 'button';
-    option.className = 'blok-video-controls__menu-row blok-video-controls__speed-option';
-    // Stagger index for the cascade-in animation; the back header (--row 0) leads.
-    option.style.setProperty('--row', String(index + 1));
-    option.setAttribute('data-action', `speed-${rate}`);
-    option.setAttribute('role', 'menuitemradio');
-    option.setAttribute('aria-checked', String(rate === 1));
-    const check = document.createElement('span');
-    check.className = 'blok-video-controls__menu-check';
-    check.setAttribute('aria-hidden', 'true');
-    check.innerHTML = IconCheck;
-    const label = document.createElement('span');
-    label.className = 'blok-video-controls__menu-label';
-    label.textContent = SPEED_LABEL(rate);
-    option.append(check, label);
-    option.addEventListener('click', () => setRate(rate));
-    return option;
-  });
-  speedPane.append(speedBack, ...speedItems);
+  // Big live value, à la YouTube's "1.00x" — slider announces itself, so hide it from AT.
+  const speedReadout = document.createElement('div');
+  speedReadout.className = 'blok-video-controls__speed-readout';
+  speedReadout.setAttribute('data-role', 'speed-readout');
+  speedReadout.setAttribute('aria-hidden', 'true');
+  speedReadout.textContent = SPEED_LABEL(state.selectedRate);
 
-  const setRate = (rate: number): void => {
-    state.selectedRate = rate;
-    media.playbackRate = rate;
-    speedItems.forEach((item) => {
-      item.setAttribute('aria-checked', String(item.getAttribute('data-action') === `speed-${rate}`));
-    });
-    speedValue.textContent = SPEED_LABEL(rate);
-    // YouTube slides back to the main pane the moment a speed is picked.
-    showView('main');
+  const speedStepper = (action: string, icon: string, label: string): HTMLButtonElement => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'blok-video-controls__speed-step';
+    btn.setAttribute('data-action', action);
+    btn.setAttribute('aria-label', label);
+    btn.innerHTML = icon;
+    return btn;
   };
+  const speedDec = speedStepper('speed-dec', IconMinus, 'Decrease playback speed');
+  const speedInc = speedStepper('speed-inc', IconPlus, 'Increase playback speed');
+
+  const speedSlider = document.createElement('input');
+  speedSlider.type = 'range';
+  speedSlider.className = 'blok-video-controls__speed-slider';
+  speedSlider.setAttribute('data-role', 'speed-slider');
+  speedSlider.min = String(SPEED_MIN);
+  speedSlider.max = String(SPEED_MAX);
+  speedSlider.step = String(SPEED_SLIDER_STEP);
+  speedSlider.value = String(state.selectedRate);
+  speedSlider.setAttribute('aria-label', 'Playback speed');
+  speedSlider.setAttribute('aria-valuetext', SPEED_LABEL(state.selectedRate));
+  speedSlider.addEventListener('input', () => setRate(Number(speedSlider.value)));
+  // Drive the elapsed-fill gradient from JS, exactly like the volume slider.
+  const speedFillPct = (rate: number): string => `${((rate - SPEED_MIN) / (SPEED_MAX - SPEED_MIN)) * 100}%`;
+  speedSlider.style.setProperty('--blok-speed-pct', speedFillPct(state.selectedRate));
+
+  const speedSliderRow = document.createElement('div');
+  speedSliderRow.className = 'blok-video-controls__speed-slider-row';
+  speedSliderRow.append(speedDec, speedSlider, speedInc);
+
+  // Presets are quick-jump shortcuts, not a selection: plain buttons that nudge the
+  // slider to a round rate. No radio/aria-checked — the slider is the value control.
+  const speedChips = SPEED_PRESETS.map((rate) => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'blok-video-controls__speed-chip';
+    chip.setAttribute('data-action', `speed-${rate}`);
+    chip.textContent = `${rate}×`;
+    chip.addEventListener('click', () => {
+      const from = state.selectedRate;
+      setRate(rate);
+      glideSpeedThumb(from, rate);
+    });
+    return chip;
+  });
+  const speedChipRow = document.createElement('div');
+  speedChipRow.className = 'blok-video-controls__speed-chips';
+  speedChipRow.setAttribute('aria-label', 'Speed presets');
+  speedChipRow.append(...speedChips);
+
+  speedPane.append(speedBack, speedReadout, speedSliderRow, speedChipRow);
+
+  // A preset-jump glide in flight (rAF id; 0 = idle). Any direct rate change — drag,
+  // stepper, or another preset — cancels it so the thumb never has two owners.
+  const speedGlide = { raf: 0 };
+  const setRate = (rate: number): void => {
+    cancelAnimationFrame(speedGlide.raf);
+    const next = clampRate(rate);
+    state.selectedRate = next;
+    media.playbackRate = next;
+    const label = SPEED_LABEL(next);
+    speedReadout.textContent = label;
+    speedValue.textContent = label;
+    speedSlider.value = String(next);
+    speedSlider.setAttribute('aria-valuetext', label);
+    speedSlider.style.setProperty('--blok-speed-pct', speedFillPct(next));
+    speedDec.disabled = next <= SPEED_MIN;
+    speedInc.disabled = next >= SPEED_MAX;
+  };
+  // Clicking a preset applies the rate instantly (setRate, above) but glides the thumb +
+  // fill from the old position into place rather than teleporting. A native range thumb
+  // can't be CSS-transitioned — its position IS the value — so tween the value over a few
+  // frames (easeOutCubic). Reduced-motion keeps the instant jump setRate already made.
+  const glideSpeedThumb = (from: number, to: number): void => {
+    cancelAnimationFrame(speedGlide.raf);
+    if (reducedMotion || from === to) return;
+    const startedAt = performance.now();
+    const paint = (rate: number): void => {
+      speedSlider.value = String(rate);
+      speedSlider.style.setProperty('--blok-speed-pct', speedFillPct(rate));
+    };
+    paint(from);
+    const tween = (now: number): void => {
+      const t = Math.min(1, (now - startedAt) / 240);
+      const eased = 1 - (1 - t) ** 3;
+      paint(from + (to - from) * eased);
+      if (t < 1) { speedGlide.raf = requestAnimationFrame(tween); return; }
+      speedGlide.raf = 0;
+      paint(to);
+    };
+    speedGlide.raf = requestAnimationFrame(tween);
+  };
+  speedDec.addEventListener('click', () => setRate(state.selectedRate - SPEED_SLIDER_STEP));
+  speedInc.addEventListener('click', () => setRate(state.selectedRate + SPEED_SLIDER_STEP));
+  speedDec.disabled = state.selectedRate <= SPEED_MIN;
+  speedInc.disabled = state.selectedRate >= SPEED_MAX;
 
   track.append(mainPane, speedPane);
   menu.append(track);
@@ -835,7 +922,6 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   ambientCanvas.setAttribute('aria-hidden', 'true');
   figure.insertBefore(ambientCanvas, figure.firstChild);
 
-  const reducedMotion = !!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
   ambientCanvas.setAttribute('data-ambient', reducedMotion ? 'off' : 'on');
   // `data-glow` is the user's chosen intensity (more / less / none) — drives the
   // peak opacity in CSS; 'none' hides the canvas and skips sampling entirely.
@@ -1220,6 +1306,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     document.removeEventListener('keydown', onCtxKeydown);
     document.removeEventListener('keydown', onTheaterKey);
     video.removeEventListener('contextmenu', onContextMenu);
+    cancelAnimationFrame(speedGlide.raf);
     stopAmbient();
     video.removeEventListener('play', startAmbient);
     video.removeEventListener('play', updateCenter);

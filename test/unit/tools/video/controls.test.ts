@@ -804,34 +804,101 @@ describe('video controls — playback gear menu', () => {
     expect(h.video.play).not.toHaveBeenCalled();
   });
 
-  it('lists eight playback speeds with Normal active by default', () => {
-    expect(menu().querySelectorAll('[role="menuitemradio"]')).toHaveLength(8);
-    expect(q(h.figure, '[data-action="speed-1"]').getAttribute('aria-checked')).toBe('true');
+  // --- YouTube-style speed slider (readout + −/＋ steppers + continuous slider + presets) ---
+  const slider = (): HTMLInputElement => q<HTMLInputElement>(h.figure, '[data-role="speed-slider"]');
+  const readout = (): HTMLElement => q(h.figure, '[data-role="speed-readout"]');
+  const chip = (rate: string): HTMLElement => q(h.figure, `[data-action="speed-${rate}"]`);
+  const dragSlider = (value: number): void => {
+    const s = slider();
+    s.value = String(value);
+    s.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+
+  it('replaces the radio list with a continuous 0.05-step speed slider', () => {
+    // No legacy radio rows / speed-option rows remain.
+    expect(menu().querySelectorAll('[role="menuitemradio"]')).toHaveLength(0);
+    expect(menu().querySelectorAll('.blok-video-controls__speed-option')).toHaveLength(0);
+    const s = slider();
+    expect(s.type).toBe('range');
+    expect(s.min).toBe('0.25');
+    expect(s.max).toBe('2');
+    expect(s.step).toBe('0.05');
+    expect(s.value).toBe('1');
   });
 
-  it('selecting a speed sets playbackRate and moves the check', () => {
-    q(h.figure, '[data-action="speed-1.5"]').click();
+  it('defaults to 1× in the readout and the main-row value', () => {
+    expect(readout().textContent).toBe('1×');
+    expect(q(h.figure, '[data-role="menu-value-speed"]').textContent).toBe('1×');
+  });
+
+  it('dragging the slider sets a fine playbackRate and syncs the readout + main row', () => {
+    dragSlider(1.15);
+    expect(h.video.playbackRate).toBe(1.15);
+    expect(readout().textContent).toBe('1.15×');
+    expect(q(h.figure, '[data-role="menu-value-speed"]').textContent).toBe('1.15×');
+  });
+
+  it('the ＋ / − steppers nudge by 0.05 and clamp (disabled) at the bounds', () => {
+    const inc = q<HTMLButtonElement>(h.figure, '[data-action="speed-inc"]');
+    const dec = q<HTMLButtonElement>(h.figure, '[data-action="speed-dec"]');
+    inc.click();
+    expect(h.video.playbackRate).toBe(1.05);
+    dec.click();
+    dec.click();
+    expect(h.video.playbackRate).toBe(0.95);
+    // top bound
+    dragSlider(2);
+    inc.click();
+    expect(h.video.playbackRate).toBe(2);
+    expect(inc.disabled).toBe(true);
+    // bottom bound
+    dragSlider(0.25);
+    dec.click();
+    expect(h.video.playbackRate).toBe(0.25);
+    expect(dec.disabled).toBe(true);
+  });
+
+  it('stepping avoids floating-point drift in the rate and readout', () => {
+    const inc = q<HTMLButtonElement>(h.figure, '[data-action="speed-inc"]');
+    inc.click();
+    inc.click();
+    inc.click();
+    expect(h.video.playbackRate).toBe(1.15);
+    expect(readout().textContent).toBe('1.15×');
+  });
+
+  it('offers the 0.5× / 1× / 1.5× / 2× presets as plain jump buttons — never a selection', () => {
+    expect(h.figure.querySelectorAll('.blok-video-controls__speed-chip')).toHaveLength(4);
+    ['0.5', '1', '1.5', '2'].forEach((rate) => {
+      const c = chip(rate);
+      expect(c).not.toBeNull();
+      // Presets are shortcuts, not a radio group — no selected/checked semantics.
+      expect(c.getAttribute('role')).not.toBe('radio');
+      expect(c.hasAttribute('aria-checked')).toBe(false);
+    });
+    // The 1× chip reads as plain "1×" — no "Normal" caption.
+    expect(chip('1').textContent).toBe('1×');
+    expect(h.figure.querySelector('.blok-video-controls__speed-chip-caption')).toBeNull();
+  });
+
+  it('a preset chip jumps to its exact rate and keeps the pane open, without marking itself selected', () => {
+    gear().click();
+    q(h.figure, '[data-action="open-speed"]').click();
+    expect(menu().getAttribute('data-view')).toBe('speed');
+
+    chip('1.5').click();
     expect(h.video.playbackRate).toBe(1.5);
-    expect(q(h.figure, '[data-action="speed-1.5"]').getAttribute('aria-checked')).toBe('true');
-    expect(q(h.figure, '[data-action="speed-1"]').getAttribute('aria-checked')).toBe('false');
-  });
-
-  it('lays the speeds out as a vertical YouTube-style submenu, not a chip grid', () => {
-    // No legacy chip grid — speeds are full-width radio rows in a sliding pane.
-    expect(h.figure.querySelector('[data-role="speed-grid"]')).toBeNull();
-    expect(h.figure.querySelector('.blok-video-controls__speed-chip')).toBeNull();
-    const options = menu().querySelectorAll('.blok-video-controls__speed-option');
-    expect(options).toHaveLength(8);
-    // The active rate reads as "Normal", à la YouTube — not "1×".
-    expect(q(h.figure, '[data-action="speed-1"]').textContent).toContain('Normal');
-    expect(q(h.figure, '[data-action="speed-1.5"]').textContent).toContain('1.5×');
+    // A preset never lights up as "selected" — it just nudges the slider.
+    expect(chip('1.5').hasAttribute('aria-checked')).toBe(false);
+    // Picking a preset does NOT auto-return — you stay to fine-tune (unlike the old list).
+    expect(menu().getAttribute('data-view')).toBe('speed');
   });
 
   it('opens the speed submenu from the main row and navigates back', () => {
     // The main pane shows a "Playback speed" row carrying the current value.
     const open = q(h.figure, '[data-action="open-speed"]');
     expect(open.getAttribute('aria-haspopup')).toBe('menu');
-    expect(q(h.figure, '[data-role="menu-value-speed"]').textContent).toBe('Normal');
+    expect(q(h.figure, '[data-role="menu-value-speed"]').textContent).toBe('1×');
 
     gear().click();
     expect(menu().getAttribute('data-view')).toBe('main');
@@ -904,12 +971,13 @@ describe('video controls — playback gear menu', () => {
     expect(menu().style.height).toBe('92px');
   });
 
-  it('selecting a speed updates the main-row value and returns to the main view', () => {
+  it('selecting a speed updates the main-row value but stays on the speed view to fine-tune', () => {
     gear().click();
     q(h.figure, '[data-action="open-speed"]').click();
     q(h.figure, '[data-action="speed-1.5"]').click();
     expect(q(h.figure, '[data-role="menu-value-speed"]').textContent).toBe('1.5×');
-    expect(menu().getAttribute('data-view')).toBe('main');
+    // The slider is a live-adjust surface — picking a preset no longer slides back.
+    expect(menu().getAttribute('data-view')).toBe('speed');
   });
 
   it('reopening the gear resets to the main view', () => {
@@ -964,6 +1032,60 @@ describe('video controls — playback gear menu', () => {
 
     expect(speedRow.querySelector('.blok-video-controls__menu-icon svg')).not.toBeNull();
     expect(loopRow.querySelector('.blok-video-controls__menu-icon svg')).not.toBeNull();
+  });
+});
+
+describe('video controls — preset glide animation', () => {
+  let h: Harness;
+  let raf: ReturnType<typeof vi.fn>;
+  let caf: ReturnType<typeof vi.fn>;
+  beforeEach(() => {
+    vi.clearAllMocks();
+    raf = vi.fn().mockReturnValue(7);
+    caf = vi.fn();
+    vi.stubGlobal('requestAnimationFrame', raf);
+    vi.stubGlobal('cancelAnimationFrame', caf);
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false })); // motion allowed
+    h = mount();
+  });
+  afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+
+  const chip = (rate: string): HTMLElement => q(h.figure, `[data-action="speed-${rate}"]`);
+  const slider = (): HTMLInputElement => q<HTMLInputElement>(h.figure, '[data-role="speed-slider"]');
+
+  it('applies the new rate at once but glides the thumb to it from the old position', () => {
+    chip('2').click();
+    // The rate (and readout) change instantly — only the thumb animates.
+    expect(h.video.playbackRate).toBe(2);
+    // The glide is scheduled, and the thumb starts back at the prior rate (1×),
+    // not snapped to 2× — proof it travels rather than teleporting.
+    expect(raf).toHaveBeenCalled();
+    expect(Number(slider().value)).toBe(1);
+  });
+
+  it('jumps straight to the rate with no animation under prefers-reduced-motion', () => {
+    h.destroy();
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }));
+    raf.mockClear();
+    h = mount();
+    chip('2').click();
+    expect(h.video.playbackRate).toBe(2);
+    expect(Number(slider().value)).toBe(2);
+    expect(raf).not.toHaveBeenCalled();
+  });
+
+  it('does not glide on a small stepper nudge — only presets animate', () => {
+    raf.mockClear();
+    q(h.figure, '[data-action="speed-inc"]').click();
+    expect(h.video.playbackRate).toBe(1.05);
+    expect(raf).not.toHaveBeenCalled();
+  });
+
+  it('cancels an in-flight glide on destroy', () => {
+    chip('2').click();
+    caf.mockClear();
+    h.destroy();
+    expect(caf).toHaveBeenCalledWith(7); // the rAF id the glide is holding
   });
 });
 

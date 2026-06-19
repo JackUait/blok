@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
 
 - **Paste** — URL paste always prompts now; the previous auto-embed behaviour has been removed. **Breaking:** consumers relying on silent auto-embed must opt in through the paste menu.
 - **Video** — Reserve the aspect ratio before metadata loads to prevent squeeze-on-load, centre and letterbox the fullscreen player, strip editor chrome in fullscreen, and hide the bottom mini progress bar while fullscreen.
+- **Video** — Exit theater mode reliably on Escape via a capture-phase listener with a smooth deferred dismiss, and drive the scrubber fill with `requestAnimationFrame` for smooth playback tracking.
 
 ### Maintenance
 

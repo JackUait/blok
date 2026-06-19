@@ -1,0 +1,78 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { API, BlockAPI, BlockToolConstructorOptions } from '../../../../types';
+import type { AudioConfig, AudioData } from '../../../../types/tools/audio';
+import { AudioTool } from '../../../../src/tools/audio';
+
+const createMockApi = (): API => ({
+  styles: { block: 'blok-block' },
+  i18n: { t: (k: string) => k, has: () => false },
+} as unknown as API);
+
+const createMockBlock = (): BlockAPI => ({
+  id: 'a1',
+  name: 'audio',
+  holder: document.createElement('div'),
+  dispatchChange: vi.fn(),
+} as unknown as BlockAPI);
+
+const opts = (
+  data: Partial<AudioData> = {},
+  config: AudioConfig = {},
+  block?: BlockAPI,
+): BlockToolConstructorOptions<AudioData, AudioConfig> => ({
+  data: { url: '', ...data } as AudioData,
+  config,
+  api: createMockApi(),
+  block: block ?? createMockBlock(),
+  readOnly: false,
+});
+
+beforeEach(() => vi.clearAllMocks());
+afterEach(() => vi.restoreAllMocks());
+
+describe('AudioTool', () => {
+  it('renders an empty state when there is no url', () => {
+    const tool = new AudioTool(opts());
+    const root = tool.render();
+    expect(root.querySelector('.blok-media-empty')).not.toBeNull();
+  });
+
+  it('renders an <audio> without native controls when a url is present', () => {
+    const tool = new AudioTool(opts({ url: 'https://x/y.mp3' }));
+    const root = tool.render();
+    const audio = root.querySelector('[data-role="audio-media"]');
+    expect(audio).not.toBeNull();
+    expect((audio as HTMLAudioElement).hasAttribute('controls')).toBe(false);
+  });
+
+  it('save() returns only defined fields', () => {
+    const tool = new AudioTool(opts({ url: 'u', title: 'T', artist: 'A', width: 50, alignment: 'center', loop: true }));
+    tool.render();
+    expect(tool.save()).toEqual({ url: 'u', title: 'T', artist: 'A', width: 50, alignment: 'center', loop: true });
+  });
+
+  it('validate() requires a non-empty url', () => {
+    const tool = new AudioTool(opts());
+    expect(tool.validate({ url: '' } as AudioData)).toBe(false);
+    expect(tool.validate({ url: 'u' } as AudioData)).toBe(true);
+  });
+
+  it('toolbox uses the music icon and audio titleKey', () => {
+    expect(AudioTool.toolbox.titleKey).toBe('audio');
+    expect(AudioTool.toolbox.icon).toContain('<svg');
+  });
+
+  it('pasteConfig claims audio files and the audio URL pattern', () => {
+    const cfg = AudioTool.pasteConfig;
+    expect(cfg.files?.mimeTypes).toContain('audio/*');
+    expect(cfg.patterns?.audio).toBeInstanceOf(RegExp);
+  });
+
+  it('setReadOnly(true) locks the editable title', () => {
+    const tool = new AudioTool(opts({ url: 'u', title: 'T' }));
+    const root = tool.render();
+    tool.setReadOnly(true);
+    const title = root.querySelector('[data-role="audio-title"]');
+    expect(title?.getAttribute('contenteditable')).toBe('false');
+  });
+});

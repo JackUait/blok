@@ -243,7 +243,12 @@ export function attachControls({
   });
 
   speedMenu.append(speedReadout, speedSlider, speedChipRow);
-  figure.appendChild(speedMenu);
+
+  // Gear + menu share a positioned wrapper so the menu anchors directly above
+  // the gear button (rather than the card corner).
+  const speedWrap = document.createElement('div');
+  speedWrap.className = 'blok-audio-controls__speed-wrap';
+  speedWrap.append(gearBtn, speedMenu);
 
   const openSpeedMenu = (): void => {
     if (!speedMenu.hidden) return;
@@ -279,7 +284,7 @@ export function attachControls({
   volumeWrap.className = 'blok-audio-controls__volume-wrap';
   volumeWrap.append(muteToggle, volumeInput);
 
-  root.append(playToggle, timeEl, volumeWrap, gearBtn, loopBtn);
+  root.append(playToggle, timeEl, volumeWrap, speedWrap, loopBtn);
 
   // ----- intent handlers -----
   const togglePlay = (): void => {

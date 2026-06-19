@@ -105,16 +105,25 @@ export function attachWaveform(opts: {
     if (!ctx) return;
     ctx.scale(dpr, dpr);
     const played = media.duration ? media.currentTime / media.duration : 0;
-    const barW = rect.width / peaks.length;
+    const slot = rect.width / peaks.length;
+    const gap = Math.min(2, slot * 0.34);
+    const barW = Math.max(1, slot - gap);
+    const radius = Math.min(barW / 2, 2);
     const styles = getComputedStyle(canvas);
     const playedColor = styles.getPropertyValue('--blok-audio-bar-played').trim() || '#222';
     const baseColor = styles.getPropertyValue('--blok-audio-bar').trim() || '#ccc';
     peaks.forEach((peak, i) => {
-      const h = Math.max(2, peak * rect.height);
-      const x = i * barW;
+      const h = Math.max(2, peak * rect.height * 0.92);
+      const x = i * slot;
       const y = (rect.height - h) / 2;
       ctx.fillStyle = i / peaks.length < played ? playedColor : baseColor;
-      ctx.fillRect(x, y, Math.max(1, barW - 1), h);
+      if (typeof ctx.roundRect === 'function') {
+        ctx.beginPath();
+        ctx.roundRect(x, y, barW, h, radius);
+        ctx.fill();
+      } else {
+        ctx.fillRect(x, y, barW, h);
+      }
     });
   };
 

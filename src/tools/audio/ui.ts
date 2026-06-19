@@ -1,3 +1,4 @@
+import { IconMusic } from '../../components/icons';
 import type { AudioData } from '../../../types/tools/audio';
 
 export interface NowPlayingOptions {
@@ -30,7 +31,6 @@ export function renderNowPlaying(data: AudioData, opts: NowPlayingOptions): NowP
   figure.className = 'blok-audio-inner';
   figure.setAttribute('data-role', 'audio-figure');
   figure.style.margin = '0';
-  if (data.width !== undefined) figure.style.width = `${data.width}%`;
 
   const cover = document.createElement('div');
   cover.className = 'blok-audio-cover';
@@ -40,6 +40,12 @@ export function renderNowPlaying(data: AudioData, opts: NowPlayingOptions): NowP
     img.src = data.coverUrl;
     img.alt = '';
     cover.appendChild(img);
+  } else {
+    const placeholder = document.createElement('span');
+    placeholder.className = 'blok-audio-cover__placeholder';
+    placeholder.setAttribute('aria-hidden', 'true');
+    placeholder.innerHTML = IconMusic;
+    cover.appendChild(placeholder);
   }
 
   const title = editableLine('audio-title', data.title, opts.editable, opts.titlePlaceholder);

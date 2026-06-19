@@ -271,8 +271,12 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Audio tool: audio.css — Airbnb-neutral "now playing" card (cover art + title +
     // artist + waveform + slim control bar: play/pause, time, volume cluster, gear
     // speed menu, loop toggle; waveform seek vars; empty/loading/error state styles).
+    // Audio full-width redesign: card is now a CSS grid (cover + body row, full-width
+    // caption footer with hairline), always 100% wide (resizer removed), tall stretched
+    // cover panel + music-note placeholder, hero 56px waveform, larger filled play puck,
+    // gear-anchored speed menu, loop active = solid black. +~3KB intentional growth.
     // Shrinking below the baseline is always acceptable.
-    const PRE_SPLIT_BYTES = 400649;
+    const PRE_SPLIT_BYTES = 403500;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.302);
     const actual = localImportedByteBudget(ENTRY);
 

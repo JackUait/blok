@@ -22,9 +22,8 @@ import {
   IconPlayerLoop,
   IconReplace,
 } from '../../components/icons';
-import { attachResizeHandle, type ResizeEdge } from '../image/resizer';
 import { renderUploadingState, type UploadingStateElement } from '../image/uploading-state';
-import { DEFAULT_CAPTION_PLACEHOLDER, MIN_WIDTH_PX, URL_PATTERN } from './constants';
+import { DEFAULT_CAPTION_PLACEHOLDER, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { tr } from './i18n';
 import { renderCaptionRow, renderNowPlaying } from './ui';
@@ -50,7 +49,6 @@ export class AudioTool implements BlockTool {
   private lastFileName: string | null = null;
   private errorMessage: string | null = null;
   private lastSource: { kind: 'file'; file: File } | { kind: 'url'; url: string } | null = null;
-  private resizeDetach: (() => void)[] = [];
   private controlsHandle: ControlsHandle | null = null;
   private waveformHandle: WaveformHandle | null = null;
   private destroyed = false;
@@ -201,7 +199,6 @@ export class AudioTool implements BlockTool {
 
   public removed(): void {
     this.destroyed = true;
-    this.detachResize();
     this.controlsHandle?.destroy();
     this.controlsHandle = null;
     this.waveformHandle?.destroy();
@@ -292,12 +289,6 @@ export class AudioTool implements BlockTool {
     this.renderState();
   }
 
-  private detachResize(): void {
-    while (this.resizeDetach.length > 0) {
-      this.resizeDetach.pop()?.();
-    }
-  }
-
   private syncRootAttributes(): void {
     if (!this.root) return;
     const r = this.root;
@@ -308,7 +299,6 @@ export class AudioTool implements BlockTool {
 
   private renderState(): void {
     if (!this.root) return;
-    this.detachResize();
     this.controlsHandle?.destroy();
     this.controlsHandle = null;
     this.waveformHandle?.destroy();
@@ -442,36 +432,6 @@ export class AudioTool implements BlockTool {
     }
 
     this.root.appendChild(figure);
-
-    if (!this.readOnly) {
-      this.attachResizeHandles(figure);
-    }
-  }
-
-  private attachResizeHandles(figure: HTMLElement): void {
-    const edges: ResizeEdge[] = ['left', 'right'];
-    for (const edge of edges) {
-      const handle = document.createElement('div');
-      handle.setAttribute('data-role', 'resize-handle');
-      handle.setAttribute('data-edge', edge);
-      figure.appendChild(handle);
-      const detach = attachResizeHandle({
-        handle,
-        figure,
-        container: figure.parentElement ?? figure,
-        edge,
-        alignment: this.data.alignment ?? 'center',
-        minWidthPx: MIN_WIDTH_PX,
-        onPreview: (percent) => {
-          figure.style.setProperty('width', `${percent}%`);
-        },
-        onCommit: (percent) => {
-          this.data.width = percent;
-          this.block.dispatchChange();
-        },
-      });
-      this.resizeDetach.push(detach);
-    }
   }
 
   private setAlignment(next: AudioAlignment): void {

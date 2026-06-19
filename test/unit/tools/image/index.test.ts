@@ -1574,7 +1574,10 @@ describe('ImageTool — auto-retry loading dimensions', () => {
 
 describe('ImageTool — GIF auto-conversion', () => {
   beforeEach(() => vi.clearAllMocks());
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
 
   const gifFile = (): File => new File([new Uint8Array(8)], 'cat.gif', { type: 'image/gif' });
 
@@ -1682,7 +1685,6 @@ describe('ImageTool — GIF auto-conversion', () => {
     tool.onPaste(event);
     await new Promise((r) => setTimeout(r, 0));
     expect(insert).toHaveBeenCalledWith('video', expect.objectContaining({ autoplay: true, loop: true }), {}, 1, false, true);
-    vi.unstubAllGlobals();
   });
 
   it('keeps the GIF as an image when remote fetch is blocked (CORS)', async () => {
@@ -1701,7 +1703,25 @@ describe('ImageTool — GIF auto-conversion', () => {
     expect(insert).not.toHaveBeenCalled();
     expect(mockConvert).not.toHaveBeenCalled();
     expect(root.querySelector('img')?.getAttribute('src')).toBe('https://x/cat.gif');
-    vi.unstubAllGlobals();
+  });
+
+  it('shows the converting label in the loading UI while a remote GIF URL is being converted', async () => {
+    // Keep conversion pending so we can inspect the loading UI before it resolves.
+    mockConvert.mockImplementation(() => new Promise<Blob>(() => { /* never resolves */ }));
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, arrayBuffer: async () => new ArrayBuffer(8) })));
+    const api = createMockApi();
+    (api as unknown as { blocks: unknown }).blocks = { getBlockIndex: () => 0, insert: vi.fn() };
+    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }) };
+    const tool = new ImageTool({ ...createOptions(), api });
+    const root = tool.render();
+    const event = new CustomEvent('paste', { detail: { key: 'image', data: 'https://x/anim.gif' } }) as PatternPasteEvent;
+    Object.defineProperty(event, 'type', { value: 'pattern' });
+    tool.onPaste(event);
+    // Flush fetch + arrayBuffer microtasks so convertGifUrlToVideoBlock reaches convertGifToWebm.
+    for (let i = 0; i < 5; i++) await Promise.resolve();
+    const label = root.querySelector<HTMLElement>('.blok-image-uploading__label');
+    expect(label).not.toBeNull();
+    expect(label?.textContent).toBe('tools.image.converting');
   });
 });
 

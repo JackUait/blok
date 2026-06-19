@@ -293,17 +293,20 @@ export class ImageTool implements BlockTool {
     } catch {
       return false; // CORS / network → keep the GIF as an image URL
     }
+    this.converting = true;
     this.state = 'LOADING';
     this.errorMessage = null;
     this.renderState();
     try {
       const blob = await convertGifToWebm(bytes, { onProgress: this.reportProgress });
-      if (!blob) return false;
+      if (!blob) { this.converting = false; return false; }
       const webm = new File([blob], 'animation.webm', { type: 'video/webm' });
       const uploadedUrl = await this.uploadConverted(webm);
-      if (uploadedUrl === null) return false;
+      if (uploadedUrl === null) { this.converting = false; return false; }
+      this.converting = false;
       return this.swapToVideoBlock(uploadedUrl, webm.name);
     } catch {
+      this.converting = false;
       return false;
     }
   }

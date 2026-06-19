@@ -844,6 +844,11 @@ describe('CodeTool', () => {
       expect(mockCleanup1).not.toHaveBeenCalled();
       // Observable outcome: the edited content survives the same-language re-highlight.
       expect(tool.save(el).code).toBe('x=2');
+
+      // Cancel the pending 600ms language-detection debounce this real-timer
+      // input scheduled, so it can't fire as a straggler during a later test
+      // and inflate the shared detectLanguage mock.
+      tool.removed();
     });
 
     it('invokes prior cleanup when re-highlighting with a different language', async () => {
@@ -914,6 +919,10 @@ describe('CodeTool', () => {
       simulateInput(codeEl);
 
       expect(gutter.children).toHaveLength(3);
+
+      // Cancel the pending 600ms detection debounce scheduled by this
+      // real-timer input so it can't straggle into a later test.
+      tool.removed();
     });
 
     it('updates gutter immediately when Enter creates a new line', async () => {
@@ -1030,6 +1039,9 @@ describe('CodeTool', () => {
       expect(codeEl.lastChild).not.toBeInstanceOf(HTMLBRElement);
 
       el.remove();
+      // Cancel the pending 600ms detection debounce scheduled by this
+      // real-timer input so it can't straggle into a later test.
+      tool.removed();
     });
 
     it('save() excludes the trailing BR from saved data', async () => {

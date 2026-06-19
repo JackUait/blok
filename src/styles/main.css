@@ -358,6 +358,7 @@
 @import './media-empty.css';
 @import './image.css';
 @import './video.css';
+@import './audio.css';
 @import './embed.css';
 @import './bookmark.css';
 @import './file.css';

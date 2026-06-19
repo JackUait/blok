@@ -1,0 +1,373 @@
+
+/* =================================================
+   Audio block tool — "Now Playing" card
+
+   Airbnb-neutral media card: horizontal layout with square cover art on the
+   left and a stacked column (title, artist, waveform, controls) on the right.
+   Black active states, clean light surfaces, restrained shadows, no decorative
+   gradients. Palette mirrors the image/video tool conventions.
+   ================================================= */
+
+/* ----- palette / token declarations -----
+   Every --blok-audio-* var used below must be declared here so the
+   declared-custom-props gate (R3) passes. The waveform fill vars are also
+   set inline by waveform.ts; the declarations here supply non-zero defaults
+   that read correctly before JS runs. */
+[data-blok-tool="audio"] {
+  --blok-audio-cover-size: 72px;
+  --blok-audio-gap: var(--blok-space-3);
+  --blok-audio-radius: var(--blok-radius-md);
+  --blok-audio-bar-height: 3px;
+  --blok-audio-bar: var(--blok-border-subtle);
+  --blok-audio-bar-played: var(--blok-text-primary);
+  --blok-audio-seek-pct: 0%;
+  --blok-audio-vol-pct: 100%;
+  --blok-audio-speed-pct: 50%;
+
+  position: relative;
+  margin: var(--blok-space-2-5) 0;
+  font-family: var(--blok-font-family, var(--blok-font-sans));
+}
+
+/* ----- alignment ------------------------------------------ */
+[data-blok-tool="audio"][data-align="left"]   { text-align: left; }
+[data-blok-tool="audio"][data-align="center"] { text-align: center; }
+[data-blok-tool="audio"][data-align="right"]  { text-align: right; }
+
+/* ----- card wrapper (figure) ------------------------------- */
+[data-blok-tool="audio"] .blok-audio-inner {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--blok-audio-gap);
+  padding: var(--blok-space-3);
+  background: var(--blok-bg-primary);
+  border: 1px solid var(--blok-border-subtle);
+  border-radius: var(--blok-audio-radius);
+  box-shadow: var(--blok-image-shadow-resting);
+  max-width: 100%;
+  vertical-align: top;
+  transition: box-shadow var(--blok-duration-base) ease;
+}
+[data-blok-tool="audio"] .blok-audio-inner:hover {
+  box-shadow: var(--blok-video-shadow-hover);
+}
+
+/* ----- block selection ------------------------------------ */
+[data-blok-element-content].bg-selection:has([data-blok-tool="audio"]) {
+  background-color: transparent;
+}
+[data-blok-element-content].bg-selection:has([data-blok-tool="audio"]) .blok-audio-inner {
+  background-color: var(--blok-selection);
+  border-radius: var(--blok-space-1);
+}
+
+/* ----- cover art ------------------------------------------ */
+[data-blok-tool="audio"] .blok-audio-cover {
+  flex-shrink: 0;
+  width: var(--blok-audio-cover-size);
+  height: var(--blok-audio-cover-size);
+  border-radius: var(--blok-audio-radius);
+  overflow: hidden;
+  background: var(--blok-bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+[data-blok-tool="audio"] .blok-audio-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ----- right column (title + artist + waveform + controls) - */
+[data-blok-tool="audio"] .blok-audio-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-1);
+}
+
+/* ----- title ----------------------------------------------- */
+[data-blok-tool="audio"] .blok-audio-title {
+  font-size: var(--blok-font-size-body);
+  font-weight: var(--blok-font-weight-semibold);
+  color: var(--blok-text-primary);
+  line-height: var(--blok-line-height-body);
+  outline: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+[data-blok-tool="audio"] [data-role="audio-title"][contenteditable="true"]:empty::before {
+  content: attr(data-placeholder);
+  color: var(--blok-text-tertiary);
+  pointer-events: none;
+}
+
+/* ----- artist ---------------------------------------------- */
+[data-blok-tool="audio"] .blok-audio-artist {
+  font-size: var(--blok-font-size-ui-label);
+  font-weight: var(--blok-font-weight-regular);
+  color: var(--blok-text-secondary);
+  line-height: var(--blok-line-height-body);
+  outline: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+[data-blok-tool="audio"] [data-role="audio-artist"][contenteditable="true"]:empty::before {
+  content: attr(data-placeholder);
+  color: var(--blok-text-tertiary);
+  pointer-events: none;
+}
+
+/* ----- waveform canvas ------------------------------------- */
+[data-blok-tool="audio"] .blok-audio-waveform {
+  position: relative;
+  width: 100%;
+  height: 48px;
+  cursor: pointer;
+  border-radius: var(--blok-audio-radius);
+  overflow: hidden;
+}
+[data-blok-tool="audio"] .blok-audio-waveform__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ----- controls bar --------------------------------------- */
+[data-blok-tool="audio"] .blok-audio-controls {
+  --blok-audio-seek-pct: 0%;
+  --blok-audio-vol-pct: 100%;
+  --blok-audio-speed-pct: 50%;
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+}
+
+/* generic control button */
+[data-blok-tool="audio"] .blok-audio-controls [data-role] {
+  flex-shrink: 0;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--blok-radius-pill);
+  background: transparent;
+  color: var(--blok-text-primary);
+  cursor: pointer;
+  transition: background var(--blok-duration-base) ease, transform var(--blok-duration-base) ease;
+}
+[data-blok-tool="audio"] .blok-audio-controls [data-role]:hover {
+  background: var(--blok-bg-hover);
+}
+[data-blok-tool="audio"] .blok-audio-controls [data-role]:active {
+  transform: scale(0.92);
+}
+[data-blok-tool="audio"] .blok-audio-controls [data-role] svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* play / pause */
+[data-blok-tool="audio"] .blok-audio-controls [data-role="audio-play"] {
+  background: var(--blok-text-primary);
+  color: var(--blok-bg-primary);
+}
+[data-blok-tool="audio"] .blok-audio-controls [data-role="audio-play"]:hover {
+  background: var(--blok-text-secondary);
+  color: var(--blok-bg-primary);
+}
+
+/* time readout */
+[data-blok-tool="audio"] .blok-audio-controls__time {
+  flex-shrink: 0;
+  font-size: var(--blok-font-size-ui-compact);
+  font-weight: var(--blok-font-weight-medium);
+  font-variant-numeric: tabular-nums;
+  color: var(--blok-text-secondary);
+  user-select: none;
+}
+
+/* volume cluster */
+[data-blok-tool="audio"] .blok-audio-controls__volume-wrap {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+}
+
+/* volume range */
+[data-blok-tool="audio"] .blok-audio-controls__volume {
+  width: 0;
+  height: var(--blok-audio-bar-height);
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: linear-gradient(
+    to right,
+    var(--blok-audio-bar-played) var(--blok-audio-vol-pct),
+    var(--blok-audio-bar) var(--blok-audio-vol-pct)
+  );
+  border-radius: var(--blok-radius-pill);
+  opacity: 0;
+  cursor: pointer;
+  transition: width var(--blok-duration-slow) ease, opacity var(--blok-duration-slow) ease;
+}
+[data-blok-tool="audio"] .blok-audio-controls__volume-wrap:hover .blok-audio-controls__volume,
+[data-blok-tool="audio"] .blok-audio-controls__volume-wrap:focus-within .blok-audio-controls__volume {
+  width: 60px;
+  opacity: 1;
+}
+[data-blok-tool="audio"] .blok-audio-controls__volume::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 11px;
+  height: 11px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-text-primary);
+}
+[data-blok-tool="audio"] .blok-audio-controls__volume::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border: 0;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-text-primary);
+}
+
+/* loop active state */
+[data-blok-tool="audio"] .blok-audio-controls [data-role="audio-loop"][aria-pressed="true"] {
+  color: var(--blok-color-accent);
+}
+
+/* speed gear */
+[data-blok-tool="audio"] .blok-audio-controls [data-role="audio-speed"][aria-expanded="true"] {
+  background: var(--blok-bg-hover);
+}
+
+/* ----- speed menu ----------------------------------------- */
+[data-blok-tool="audio"] .blok-audio-controls__speed-menu {
+  position: absolute;
+  bottom: calc(100% + var(--blok-space-2));
+  right: 0;
+  min-width: 120px;
+  padding: var(--blok-space-2);
+  background: var(--blok-bg-primary);
+  border: 1px solid var(--blok-border-subtle);
+  border-radius: var(--blok-audio-radius);
+  box-shadow: var(--blok-image-shadow-popover);
+  z-index: var(--blok-z-popover);
+}
+[data-blok-tool="audio"] .blok-audio-controls__speed-menu[hidden] { display: none; }
+
+[data-blok-tool="audio"] .blok-audio-controls__speed-readout {
+  font-size: var(--blok-font-size-ui-label);
+  font-weight: var(--blok-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--blok-text-primary);
+  text-align: center;
+  margin-bottom: var(--blok-space-2);
+}
+
+[data-blok-tool="audio"] .blok-audio-controls__speed-slider {
+  width: 100%;
+  height: var(--blok-audio-bar-height);
+  margin: 0 0 var(--blok-space-2);
+  -webkit-appearance: none;
+  appearance: none;
+  background: linear-gradient(
+    to right,
+    var(--blok-audio-bar-played) var(--blok-audio-speed-pct),
+    var(--blok-audio-bar) var(--blok-audio-speed-pct)
+  );
+  border-radius: var(--blok-radius-pill);
+  cursor: pointer;
+}
+[data-blok-tool="audio"] .blok-audio-controls__speed-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 11px;
+  height: 11px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-text-primary);
+}
+[data-blok-tool="audio"] .blok-audio-controls__speed-slider::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border: 0;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-text-primary);
+}
+
+[data-blok-tool="audio"] .blok-audio-controls__speed-chips {
+  display: flex;
+  gap: var(--blok-space-1);
+}
+[data-blok-tool="audio"] .blok-audio-controls__speed-chip {
+  flex: 1 1 0;
+  padding: var(--blok-space-1) 0;
+  border: 0;
+  border-radius: var(--blok-audio-radius);
+  background: transparent;
+  color: var(--blok-text-secondary);
+  font-size: var(--blok-font-size-ui-compact);
+  font-weight: var(--blok-font-weight-medium);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  cursor: pointer;
+  transition: background var(--blok-duration-base) ease, color var(--blok-duration-base) ease;
+}
+[data-blok-tool="audio"] .blok-audio-controls__speed-chip:hover {
+  background: var(--blok-bg-hover);
+  color: var(--blok-text-primary);
+}
+
+/* ----- caption row ---------------------------------------- */
+[data-blok-tool="audio"] .blok-audio-caption-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--blok-space-2);
+}
+[data-blok-tool="audio"] .blok-audio-caption {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: block;
+  margin-top: var(--blok-space-2);
+  font-size: 13.5px;
+  color: var(--blok-text-secondary);
+  line-height: 1.5;
+  outline: none;
+  min-height: 1em;
+}
+[data-blok-tool="audio"] [data-role="audio-caption"][contenteditable="true"]:empty::before {
+  content: attr(data-placeholder);
+  color: var(--blok-text-tertiary);
+  pointer-events: none;
+}
+
+/* ----- empty / loading / error states --------------------- */
+[data-blok-tool="audio"][data-state="empty"] .blok-audio-inner,
+[data-blok-tool="audio"][data-state="loading"] .blok-audio-inner {
+  opacity: 0.7;
+}
+[data-blok-tool="audio"][data-state="error"] .blok-audio-inner {
+  border-color: color-mix(in srgb, var(--blok-color-danger) 30%, var(--blok-border-subtle));
+  background: color-mix(in srgb, var(--blok-color-danger) 4%, var(--blok-bg-primary));
+}
+
+/* ----- hide caption in non-rendered states --------------- */
+[data-blok-tool="audio"]:not([data-state="rendered"]) .blok-audio-caption-row {
+  display: none;
+}
+
+/* ----- reduced motion ------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-tool="audio"] .blok-audio-inner,
+  [data-blok-tool="audio"] .blok-audio-controls__volume { transition: none; }
+}

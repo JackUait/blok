@@ -268,8 +268,11 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Video custom fullscreen surface: caption surfaced as a top title bar (YouTube-style
     // scrim + typography, fading with the control bar) + inline-width override so a
     // resized player fills the whole screen in fullscreen.
+    // Audio tool: audio.css — Airbnb-neutral "now playing" card (cover art + title +
+    // artist + waveform + slim control bar: play/pause, time, volume cluster, gear
+    // speed menu, loop toggle; waveform seek vars; empty/loading/error state styles).
     // Shrinking below the baseline is always acceptable.
-    const PRE_SPLIT_BYTES = 391500;
+    const PRE_SPLIT_BYTES = 400649;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.302);
     const actual = localImportedByteBudget(ENTRY);
 

@@ -77,6 +77,10 @@ const PENDING_TRANSLATION_KEYS = new Set<string>([
   'tools.video.errorFileTooLarge',
   'tools.file.errorFileTooLarge',
   'tools.image.converting',
+  // Audio tool: error copy and audio-specific metadata fields ship English-first.
+  'tools.audio.errorFileTooLarge',
+  'tools.audio.titlePlaceholder',
+  'tools.audio.artistPlaceholder',
 ]);
 
 const UNIVERSAL_SYMBOL_KEYS = new Set<string>([
@@ -267,6 +271,42 @@ const VIDEO_COGNATE_RETENTIONS: Record<string, string[]> = {
 };
 
 for (const [locale, keys] of Object.entries(VIDEO_COGNATE_RETENTIONS)) {
+  const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
+  for (const key of keys) set.add(key);
+}
+
+/**
+ * Audio tool cognates. "Audio", "Upload", "Link", "Loop", and "URL" are the
+ * standard loanwords in these locales — identical to the English source for the
+ * same reason their video/image/file siblings are already retained.
+ * Merged in additively so the per-locale sets above stay readable.
+ */
+const AUDIO_COGNATE_RETENTIONS: Record<string, string[]> = {
+  az: ['toolNames.audio'],
+  bs: ['toolNames.audio'],
+  cs: ['toolNames.audio'],
+  da: ['tools.audio.emptyUpload', 'tools.audio.emptyLink'],
+  de: ['toolNames.audio', 'tools.audio.emptyLink'],
+  es: ['toolNames.audio'],
+  et: ['tools.audio.emptyLink'],
+  // "Audio"/"Loop"/"Link" are the standard English loanwords in Filipino (Tagalog) UIs.
+  fil: ['toolNames.audio', 'tools.audio.loop', 'tools.audio.emptyLink'],
+  fr: ['toolNames.audio'],
+  id: ['toolNames.audio'],
+  it: ['toolNames.audio'],
+  lv: ['toolNames.audio', 'tools.audio.emptyUrlAria'],
+  ms: ['toolNames.audio'],
+  nl: ['toolNames.audio', 'tools.audio.emptyLink'],
+  pl: ['toolNames.audio', 'tools.audio.emptyLink'],
+  pt: ['tools.audio.emptyLink'],
+  ro: ['toolNames.audio', 'tools.audio.emptyLink'],
+  sk: ['toolNames.audio'],
+  sl: ['toolNames.audio'],
+  sq: ['toolNames.audio'],
+  vi: ['toolNames.audio'],
+};
+
+for (const [locale, keys] of Object.entries(AUDIO_COGNATE_RETENTIONS)) {
   const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
   for (const key of keys) set.add(key);
 }

@@ -1,4 +1,4 @@
-import type { AudioData } from '../../types/tools/audio';
+import type { AudioData } from '../../../types/tools/audio';
 
 export interface NowPlayingOptions {
   editable: boolean;

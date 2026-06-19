@@ -4,14 +4,18 @@ import { AudioTool } from '../../../../src/tools/audio';
 
 describe('audio paste routing', () => {
   it('the File tool no longer claims audio MIME types', () => {
-    const mimes = FileTool.pasteConfig.files?.mimeTypes ?? [];
+    const pc = FileTool.pasteConfig;
+    const mimes = pc !== false ? (pc.files?.mimeTypes ?? []) : [];
     expect(mimes).not.toContain('audio/*');
   });
   it('the File tool no longer claims audio extensions', () => {
-    const exts = FileTool.pasteConfig.files?.extensions ?? [];
+    const pc = FileTool.pasteConfig;
+    const exts = pc !== false ? (pc.files?.extensions ?? []) : [];
     expect(exts).not.toEqual(expect.arrayContaining(['mp3', 'wav', 'ogg']));
   });
   it('the Audio tool claims audio MIME types', () => {
-    expect(AudioTool.pasteConfig.files?.mimeTypes).toContain('audio/*');
+    const pc = AudioTool.pasteConfig;
+    if (pc === false) throw new Error('pasteConfig is false');
+    expect(pc.files?.mimeTypes).toContain('audio/*');
   });
 });

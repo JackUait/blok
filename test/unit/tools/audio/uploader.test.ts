@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { Uploader, AudioUploadError } from '../../../../src/tools/audio/uploader';
+import { Uploader } from '../../../../src/tools/audio/uploader';
 
 const mp3 = (size: number) =>
   new File([new Uint8Array(size)], 'song.mp3', { type: 'audio/mpeg' });

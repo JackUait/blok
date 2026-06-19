@@ -5,28 +5,24 @@ import { WAVEFORM_BUCKETS } from './constants';
  * Each bucket holds the max absolute amplitude across its slice; the whole
  * array is then divided by the global max so the loudest bucket is 1.
  */
+
+function bucketPeak(channel: Float32Array, start: number, end: number): number {
+  return channel.slice(start, end).reduce((max, v) => Math.max(max, Math.abs(v)), 0);
+}
+
 export function computePeaks(channel: Float32Array, buckets = WAVEFORM_BUCKETS): number[] {
-  const out = new Array<number>(buckets).fill(0);
-  if (channel.length === 0) return out;
+  if (channel.length === 0) return new Array<number>(buckets).fill(0);
 
   const step = channel.length / buckets;
-  let globalMax = 0;
-  for (let b = 0; b < buckets; b++) {
+  const out = Array.from({ length: buckets }, (_, b) => {
     const start = Math.floor(b * step);
     const end = Math.min(channel.length, Math.floor((b + 1) * step));
-    let peak = 0;
-    for (let i = start; i < end; i++) {
-      const amp = Math.abs(channel[i]);
-      if (amp > peak) peak = amp;
-    }
-    out[b] = peak;
-    if (peak > globalMax) globalMax = peak;
-  }
+    return bucketPeak(channel, start, end);
+  });
 
-  if (globalMax > 0) {
-    for (let b = 0; b < buckets; b++) out[b] /= globalMax;
-  }
-  return out;
+  const globalMax = Math.max(0, ...out);
+  if (globalMax <= 0) return out;
+  return out.map((v) => v / globalMax);
 }
 
 interface ChannelSource {
@@ -41,17 +37,16 @@ export function peaksFromAudioBuffer(buffer: ChannelSource, buckets = WAVEFORM_B
   if (numberOfChannels <= 1) return computePeaks(buffer.getChannelData(0), buckets);
 
   const mono = new Float32Array(length);
-  for (let ch = 0; ch < numberOfChannels; ch++) {
-    const data = buffer.getChannelData(ch);
-    for (let i = 0; i < length; i++) mono[i] += data[i] / numberOfChannels;
-  }
+  Array.from({ length: numberOfChannels }, (_, ch) => buffer.getChannelData(ch)).forEach((data) => {
+    data.forEach((v, i) => { mono[i] += v / numberOfChannels; });
+  });
   return computePeaks(mono, buckets);
 }
 
 export function ratioFromPointer(clientX: number, rect: { left: number; width: number }): number {
   if (rect.width <= 0) return 0;
   const r = (clientX - rect.left) / rect.width;
-  return r < 0 ? 0 : r > 1 ? 1 : r;
+  return Math.min(1, Math.max(0, r));
 }
 
 type AudioContextCtor = typeof AudioContext;
@@ -109,20 +104,20 @@ export function attachWaveform(opts: {
     const styles = getComputedStyle(canvas);
     const playedColor = styles.getPropertyValue('--blok-audio-bar-played').trim() || '#222';
     const baseColor = styles.getPropertyValue('--blok-audio-bar').trim() || '#ccc';
-    for (let i = 0; i < peaks.length; i++) {
-      const h = Math.max(2, peaks[i] * rect.height);
+    peaks.forEach((peak, i) => {
+      const h = Math.max(2, peak * rect.height);
       const x = i * barW;
       const y = (rect.height - h) / 2;
       ctx.fillStyle = i / peaks.length < played ? playedColor : baseColor;
       ctx.fillRect(x, y, Math.max(1, barW - 1), h);
-    }
+    });
   };
 
-  let raf = 0;
+  const rafState = { id: 0 };
   const onTime = (): void => {
-    if (raf) return;
-    raf = requestAnimationFrame(() => {
-      raf = 0;
+    if (rafState.id) return;
+    rafState.id = requestAnimationFrame(() => {
+      rafState.id = 0;
       mount.style.setProperty(
         '--blok-audio-seek-pct',
         String(media.duration ? (media.currentTime / media.duration) * 100 : 0),
@@ -136,10 +131,10 @@ export function attachWaveform(opts: {
     media.currentTime = ratioFromPointer(clientX, canvas.getBoundingClientRect()) * media.duration;
     draw();
   };
-  let dragging = false;
-  const onDown = (e: PointerEvent): void => { dragging = true; seek(e.clientX); };
-  const onMove = (e: PointerEvent): void => { if (dragging) seek(e.clientX); };
-  const onUp = (): void => { dragging = false; };
+  const drag = { active: false };
+  const onDown = (e: PointerEvent): void => { drag.active = true; seek(e.clientX); };
+  const onMove = (e: PointerEvent): void => { if (drag.active) seek(e.clientX); };
+  const onUp = (): void => { drag.active = false; };
 
   canvas.addEventListener('pointerdown', onDown);
   globalThis.addEventListener('pointermove', onMove);
@@ -150,7 +145,7 @@ export function attachWaveform(opts: {
 
   return {
     destroy(): void {
-      if (raf) cancelAnimationFrame(raf);
+      if (rafState.id) cancelAnimationFrame(rafState.id);
       canvas.removeEventListener('pointerdown', onDown);
       globalThis.removeEventListener('pointermove', onMove);
       globalThis.removeEventListener('pointerup', onUp);

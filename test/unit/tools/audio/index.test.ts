@@ -77,12 +77,15 @@ describe('AudioTool', () => {
   });
 
   it('toolbox uses the music icon and audio titleKey', () => {
-    expect(AudioTool.toolbox.titleKey).toBe('audio');
-    expect(AudioTool.toolbox.icon).toContain('<svg');
+    expect(AudioTool.toolbox).toMatchObject({ titleKey: 'audio' });
+    const tb = AudioTool.toolbox;
+    const entry = Array.isArray(tb) ? tb[0] : tb;
+    expect(entry.icon).toContain('<svg');
   });
 
   it('pasteConfig claims audio files and the audio URL pattern', () => {
     const cfg = AudioTool.pasteConfig;
+    if (cfg === false) throw new Error('pasteConfig is false');
     expect(cfg.files?.mimeTypes).toContain('audio/*');
     expect(cfg.patterns?.audio).toBeInstanceOf(RegExp);
   });

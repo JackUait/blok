@@ -25,9 +25,7 @@ export function mapMetadata(raw: RawTags): TrackMeta {
 }
 
 function toBase64(bytes: Uint8Array): string {
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary);
+  return btoa(Array.from(bytes, (b) => String.fromCharCode(b)).join(''));
 }
 
 export async function resolveCover(
@@ -35,7 +33,7 @@ export async function resolveCover(
   uploader?: AudioUploader,
 ): Promise<string | undefined> {
   if (uploader?.uploadByFile) {
-    const file = new File([cover.data], 'cover', { type: cover.mimeType });
+    const file = new File([new Uint8Array(cover.data)], 'cover', { type: cover.mimeType });
     const res = await uploader.uploadByFile(file);
     return res.url;
   }

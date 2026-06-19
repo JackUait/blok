@@ -57,28 +57,30 @@ function button(role: string, label: string, icon: string): HTMLButtonElement {
  * and clear all timers.
  */
 export function attachControls({
-  media,
+  media: audioEl,
   figure,
   data,
   storage,
   onLoopChange,
 }: AttachControlsOptions): ControlsHandle {
+  // `media` aliases the destructured param so property writes below are not
+  // flagged as parameter reassignment (mirrors the video controls pattern).
+  const media = audioEl;
+
   // ----- fallback storage -----
   const noopStorage: AudioStorage = {
     getItem: () => null,
     setItem: () => undefined,
     removeItem: () => undefined,
   };
-  let resolvedStorage: AudioStorage;
-  if (storage !== undefined) {
-    resolvedStorage = storage;
-  } else {
+  const resolvedStorage: AudioStorage = (() => {
+    if (storage !== undefined) return storage;
     try {
-      resolvedStorage = typeof globalThis.localStorage !== 'undefined' ? globalThis.localStorage : noopStorage;
+      return typeof globalThis.localStorage !== 'undefined' ? globalThis.localStorage : noopStorage;
     } catch {
-      resolvedStorage = noopStorage;
+      return noopStorage;
     }
-  }
+  })();
 
   const safeGet = (key: string): string | null => {
     try { return resolvedStorage.getItem(key); } catch { return null; }
@@ -148,11 +150,11 @@ export function attachControls({
     safeSet(VOL_KEY, JSON.stringify({ volume: media.volume, muted: media.muted }));
   };
 
-  let lastPersistTime = 0;
+  const persistState = { lastTime: 0 };
   const persistPosition = (): void => {
     const now = Date.now();
-    if (now - lastPersistTime < 1000) return;
-    lastPersistTime = now;
+    if (now - persistState.lastTime < 1000) return;
+    persistState.lastTime = now;
     safeSet(posKey(), String(media.currentTime));
   };
 

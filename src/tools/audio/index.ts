@@ -251,15 +251,15 @@ export class AudioTool implements BlockTool {
       void readTrackMetadata(file)
         .then(async (meta) => {
           if (this.destroyed) return;
-          let changed = false;
-          if (meta.title) { this.data.title = meta.title; changed = true; }
-          if (meta.artist) { this.data.artist = meta.artist; changed = true; }
+          const dirty = { value: false };
+          if (meta.title) { this.data.title = meta.title; dirty.value = true; }
+          if (meta.artist) { this.data.artist = meta.artist; dirty.value = true; }
           if (meta.cover) {
             const coverUrl = await resolveCover(meta.cover, this.config.uploader).catch(() => undefined);
-            if (coverUrl) { this.data.coverUrl = coverUrl; changed = true; }
+            if (coverUrl) { this.data.coverUrl = coverUrl; dirty.value = true; }
           }
           if (this.destroyed) return;
-          if (changed) {
+          if (dirty.value) {
             this.renderState();
             this.block.dispatchChange();
           }

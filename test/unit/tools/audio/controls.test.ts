@@ -74,4 +74,15 @@ describe('attachControls', () => {
     attachControls({ media, figure, data: { url: 'u' }, storage });
     expect(media.volume).toBeCloseTo(0.3, 5);
   });
+
+  it('does not restore position when duration is unknown (0)', () => {
+    const media = makeMedia();
+    Object.defineProperty(media, 'duration', { value: 0, configurable: true });
+    const figure = document.createElement('figure');
+    const storage = memoryStorage();
+    storage.setItem('blok:audio:pos:u', '42');
+    attachControls({ media, figure, data: { url: 'u' }, storage });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    expect(media.currentTime).toBe(0);
+  });
 });

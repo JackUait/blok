@@ -30,13 +30,13 @@ export interface ControlsHandle {
   destroy(): void;
 }
 
-/** Format a seconds value into `m:ss` (e.g. 125 → "2:05"). */
+/** Format a seconds value into `MM:SS` (e.g. 125 → "02:05"). */
 export function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds <= 0) return '0:00';
   const total = Math.floor(seconds);
   const mins = Math.floor(total / 60);
   const secs = total % 60;
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
 function button(role: string, label: string, icon: string): HTMLButtonElement {
@@ -177,7 +177,7 @@ export function attachControls({
     if (raw === null) return;
     const target = Number(raw);
     const dur = Number.isFinite(media.duration) ? media.duration : 0;
-    if (Number.isFinite(target) && target > 0 && (dur === 0 || target < dur - 5)) {
+    if (Number.isFinite(target) && target > 0 && dur > 5 && target < dur - 5) {
       media.currentTime = target;
     }
   };
@@ -261,11 +261,12 @@ export function attachControls({
     closeSpeedMenu();
   };
 
-  gearBtn.addEventListener('click', (event) => {
+  const onGearClick = (event: MouseEvent): void => {
     event.stopPropagation();
     if (speedMenu.hidden) openSpeedMenu();
     else closeSpeedMenu();
-  });
+  };
+  gearBtn.addEventListener('click', onGearClick);
 
   // ----- loop -----
   const loopBtn = button('audio-loop', 'Loop', IconPlayerLoop);
@@ -389,6 +390,7 @@ export function attachControls({
     muteToggle.removeEventListener('click', onMuteClick);
     volumeInput.removeEventListener('input', onVolumeInput);
     loopBtn.removeEventListener('click', onLoopClick);
+    gearBtn.removeEventListener('click', onGearClick);
     speedSlider.removeEventListener('input', onSpeedSliderInput);
 
     media.removeEventListener('play', onPlay);

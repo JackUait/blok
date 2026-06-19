@@ -49,6 +49,18 @@ describe('renderEmptyState', () => {
     expect(onUrl).toHaveBeenCalledWith('https://x/y.png');
   });
 
+  it('accepts pasting any image/* file by default (e.g. image/avif)', () => {
+    const onFile = vi.fn();
+    const el = renderEmptyState({ onFile, onUrl: vi.fn() });
+    const card = el.querySelector<HTMLElement>('.blok-media-empty__card');
+    if (!card) throw new Error('card missing');
+    const file = new File([new Uint8Array(1)], 'a.avif', { type: 'image/avif' });
+    const ev = new Event('paste') as Event & { clipboardData: unknown };
+    ev.clipboardData = { items: [{ kind: 'file', getAsFile: () => file }] };
+    card.dispatchEvent(ev);
+    expect(onFile).toHaveBeenCalledWith(file);
+  });
+
   it('renders inline error from setError(message)', () => {
     const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn() });
     el.setError('boom');

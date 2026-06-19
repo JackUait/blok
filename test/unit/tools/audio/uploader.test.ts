@@ -11,6 +11,20 @@ describe('Audio Uploader', () => {
       .rejects.toMatchObject({ code: 'UNSUPPORTED_TYPE' });
   });
 
+  it('accepts any audio/* type by default (e.g. audio/x-aiff)', async () => {
+    const spy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:audio');
+    const u = new Uploader({});
+    await expect(u.handleFile(new File([new Uint8Array(10)], 'x.aiff', { type: 'audio/x-aiff' })))
+      .resolves.toMatchObject({ url: 'blob:audio' });
+    spy.mockRestore();
+  });
+
+  it('honors a restrictive types config', async () => {
+    const u = new Uploader({ types: ['audio/mpeg'] });
+    await expect(u.handleFile(new File([new Uint8Array(10)], 'x.flac', { type: 'audio/flac' })))
+      .rejects.toMatchObject({ code: 'UNSUPPORTED_TYPE' });
+  });
+
   it('rejects a file over the max size', async () => {
     const u = new Uploader({ maxSize: 10 });
     await expect(u.handleFile(mp3(50))).rejects.toMatchObject({ code: 'FILE_TOO_LARGE' });

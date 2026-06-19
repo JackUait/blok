@@ -1,5 +1,6 @@
 import type { ImageConfig } from '../../../types/tools/image';
 import { resolveMaxSize } from '../../components/utils/max-size';
+import { matchesMime } from '../../components/utils/mime-match';
 import { DEFAULT_MAX_SIZE, DEFAULT_MIME_TYPES } from './constants';
 import { ImageError } from './errors';
 
@@ -90,7 +91,7 @@ export class Uploader {
     const types = this.config.types ?? [...DEFAULT_MIME_TYPES];
     const maxSize = resolveMaxSize(this.config.maxSize, file.type, DEFAULT_MAX_SIZE);
 
-    if (!types.includes(file.type)) {
+    if (!matchesMime(file.type, types)) {
       throw new ImageError('UNSUPPORTED_TYPE', file.type || 'unknown');
     }
     if (file.size > maxSize) {

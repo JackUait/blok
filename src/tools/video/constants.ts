@@ -1,8 +1,5 @@
-export const DEFAULT_MIME_TYPES = [
-  'video/mp4',
-  'video/webm',
-  'video/ogg',
-] as const;
+// Accept any video type by default; consumers restrict via the `types` config.
+export const DEFAULT_MIME_TYPES = ['video/*'] as const;
 
 export const DEFAULT_MAX_SIZE = 100 * 1024 * 1024; // 100 MiB
 

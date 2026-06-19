@@ -58,7 +58,10 @@ export interface VideoUploader {
  */
 export interface VideoConfig {
   uploader?: VideoUploader;
-  /** Accepted MIME types. Default: video/mp4, video/webm, video/ogg */
+  /**
+   * Accepted MIME types. Entries may be exact (`video/mp4`) or family wildcards
+   * (`video/*`). Default: `['video/*']` — any video type.
+   */
   types?: string[];
   /**
    * Max upload size. A number caps every type (bytes); an object caps per MIME

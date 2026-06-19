@@ -5,6 +5,7 @@ import {
   IconUpload,
 } from '../icons';
 import { formatBytes } from './format-bytes';
+import { matchesMime } from './mime-match';
 
 /**
  * Shared "empty" uploader surface for media-style block tools (image, file):
@@ -78,7 +79,7 @@ function formatsLabel(types: readonly string[]): string {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const t of types) {
-    if (t === '*' || t === '*/*' || !t.includes('/')) continue;
+    if (t === '*' || t === '*/*' || t.endsWith('/*') || !t.includes('/')) continue;
     const label = mimeToLabel(t);
     if (seen.has(label)) continue;
     seen.add(label);
@@ -419,7 +420,7 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     for (const item of Array.from(clip.items)) {
       if (item.kind !== 'file') continue;
       const file = item.getAsFile();
-      if (file && (!types.length || types.some((t) => file.type === t))) {
+      if (file && (!types.length || matchesMime(file.type, types))) {
         ev.preventDefault();
         opts.onFile(file);
         return;

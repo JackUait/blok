@@ -16,6 +16,16 @@ describe('video Uploader.handleFile', () => {
       .rejects.toMatchObject({ code: 'UNSUPPORTED_TYPE' });
   });
 
+  it('accepts any video/* type by default (e.g. video/x-matroska)', async () => {
+    await expect(new Uploader({}).handleFile(makeFile('x.mkv', 'video/x-matroska', 10)))
+      .resolves.toMatchObject({ url: 'blob:video' });
+  });
+
+  it('honors a restrictive types config', async () => {
+    await expect(new Uploader({ types: ['video/mp4'] }).handleFile(makeFile('x.webm', 'video/webm', 10)))
+      .rejects.toMatchObject({ code: 'UNSUPPORTED_TYPE' });
+  });
+
   it('keeps a 100 MiB default ceiling (larger than the shared 30 MiB media default)', async () => {
     const under = makeFile('ok.mp4', 'video/mp4', 90 * 1024 * 1024);
     const over = makeFile('big.mp4', 'video/mp4', 110 * 1024 * 1024);

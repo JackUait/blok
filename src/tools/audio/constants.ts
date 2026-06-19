@@ -1,12 +1,5 @@
-export const DEFAULT_MIME_TYPES = [
-  'audio/mpeg',
-  'audio/wav',
-  'audio/ogg',
-  'audio/webm',
-  'audio/flac',
-  'audio/aac',
-  'audio/mp4',
-] as const;
+// Accept any audio type by default; consumers restrict via the `types` config.
+export const DEFAULT_MIME_TYPES = ['audio/*'] as const;
 
 export const DEFAULT_MAX_SIZE = 30 * 1024 * 1024; // 30 MiB
 

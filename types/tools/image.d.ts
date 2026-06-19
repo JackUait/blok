@@ -78,7 +78,10 @@ export interface ImageUploader {
  */
 export interface ImageConfig {
   uploader?: ImageUploader;
-  /** Accepted MIME types. Default: image/jpeg, image/png, image/gif, image/webp, image/svg+xml */
+  /**
+   * Accepted MIME types. Entries may be exact (`image/png`) or family wildcards
+   * (`image/*`). Default: `['image/*']` — any image type.
+   */
   types?: string[];
   /**
    * Max upload size. A number caps every type (bytes); an object caps per MIME

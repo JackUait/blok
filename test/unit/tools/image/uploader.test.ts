@@ -8,6 +8,26 @@ describe('Uploader', () => {
   });
   afterEach(() => vi.restoreAllMocks());
 
+  describe('handleFile type validation', () => {
+    const makeFile = (name: string, type: string): File =>
+      new File([new Uint8Array(10)], name, { type });
+
+    it('accepts any image/* type by default (e.g. image/avif)', async () => {
+      await expect(new Uploader({}).handleFile(makeFile('x.avif', 'image/avif')))
+        .resolves.toMatchObject({ url: 'blob:test' });
+    });
+
+    it('still rejects out-of-family types by default', async () => {
+      await expect(new Uploader({}).handleFile(makeFile('x.pdf', 'application/pdf')))
+        .rejects.toMatchObject({ code: 'UNSUPPORTED_TYPE' });
+    });
+
+    it('honors a restrictive types config', async () => {
+      await expect(new Uploader({ types: ['image/png'] }).handleFile(makeFile('x.jpg', 'image/jpeg')))
+        .rejects.toMatchObject({ code: 'UNSUPPORTED_TYPE' });
+    });
+  });
+
   describe('handleUrl validation', () => {
     it('throws INVALID_URL on garbage input', async () => {
       const u = new Uploader({});

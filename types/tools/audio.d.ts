@@ -30,6 +30,10 @@ export interface AudioUploader {
 
 export interface AudioConfig {
   uploader?: AudioUploader;
+  /**
+   * Accepted MIME types. Entries may be exact (`audio/mpeg`) or family wildcards
+   * (`audio/*`). Default: `['audio/*']` — any audio type.
+   */
   types?: string[];
   maxSize?: MaxSizeConfig;
   captionPlaceholder?: string;

@@ -30,7 +30,9 @@ import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { tr } from './i18n';
 import { renderCaptionRow, renderVideo } from './ui';
 import { attachControls, type ControlsHandle } from './controls';
-import { Uploader, type UploadResult } from './uploader';
+import { Uploader, VideoUploadError, type UploadResult } from './uploader';
+import { uploadErrorMessage } from '../../components/utils/upload-error-message';
+import { pickDisplayMaxSize } from '../../components/utils/max-size';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -45,6 +47,7 @@ export class VideoTool implements BlockTool {
   private state: ToolState;
   private uploadingEl: UploadingStateElement | null = null;
   private lastFileName: string | null = null;
+  private errorMessage: string | null = null;
   private lastSource: { kind: 'file'; file: File } | { kind: 'url'; url: string } | null = null;
   private resizeDetach: (() => void)[] = [];
   private controlsHandle: ControlsHandle | null = null;
@@ -225,7 +228,7 @@ export class VideoTool implements BlockTool {
     void this.uploader
       .handleFile(file, { onProgress: (p) => this.uploadingEl?.setProgress(p) })
       .then((result) => this.applyResult(result, file.type))
-      .catch(() => this.applyError());
+      .catch((err) => this.applyError(err));
   }
 
   private startUrl(url: string): void {
@@ -236,7 +239,7 @@ export class VideoTool implements BlockTool {
     void this.uploader
       .handleUrl(url, { onProgress: (p) => this.uploadingEl?.setProgress(p) })
       .then((result) => this.applyResult(result))
-      .catch(() => this.applyError());
+      .catch((err) => this.applyError(err));
   }
 
   private applyResult(result: UploadResult, mimeType?: string): void {
@@ -246,12 +249,19 @@ export class VideoTool implements BlockTool {
       fileName: result.fileName ?? this.lastFileName ?? this.data.fileName,
       mimeType: mimeType || this.data.mimeType,
     };
+    this.errorMessage = null;
     this.state = 'RENDERED';
     this.renderState();
     this.block.dispatchChange();
   }
 
-  private applyError(): void {
+  private applyError(err?: unknown): void {
+    this.errorMessage = err instanceof VideoUploadError
+      ? uploadErrorMessage(err, (key) => this.api.i18n.t(key), {
+        tooLarge: 'tools.video.errorFileTooLarge',
+        generic: 'tools.video.errorUploadFailed',
+      })
+      : null;
     this.state = 'ERROR';
     this.renderState();
   }
@@ -300,7 +310,7 @@ export class VideoTool implements BlockTool {
       onFile: (file) => this.startUpload(file),
       onUrl: (url) => this.startUrl(url),
       acceptTypes: this.config.types,
-      maxSize: this.config.maxSize,
+      maxSize: pickDisplayMaxSize(this.config.maxSize),
       i18n: this.api.i18n,
     });
     this.root.appendChild(el);
@@ -323,7 +333,7 @@ export class VideoTool implements BlockTool {
     wrap.setAttribute('data-role', 'video-error');
 
     const message = document.createElement('span');
-    message.textContent = tr(this.api.i18n, 'tools.video.errorUploadFailed', 'Upload failed');
+    message.textContent = this.errorMessage ?? tr(this.api.i18n, 'tools.video.errorUploadFailed', 'Upload failed');
 
     const retry = document.createElement('button');
     retry.type = 'button';

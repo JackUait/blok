@@ -18,6 +18,8 @@ import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { renderUploadingState, type UploadingStateElement } from './uploading-state';
 import { renderCaptionRow, renderFileCard } from './ui';
 import { Uploader } from './uploader';
+import { FileToolError } from './errors';
+import { uploadErrorMessage } from '../../components/utils/upload-error-message';
 import { safeHttpHref } from './url';
 import { isPreviewable } from './preview';
 import { openFilePreview } from './preview-modal';
@@ -41,6 +43,7 @@ export class FileTool implements BlockTool {
   private state: ToolState;
   private uploadingEl: UploadingStateElement | null = null;
   private lastFileName: string | null = null;
+  private errorMessage: string | null = null;
   private previewTeardown: (() => void) | null = null;
   /** When the pending upload is an image, the result converts to an Image block. */
   private pendingImageConversion = false;
@@ -165,7 +168,7 @@ export class FileTool implements BlockTool {
     void this.uploader
       .handleFile(file, { onProgress: (p) => this.uploadingEl?.setProgress(p) })
       .then((result) => this.applyResult(result))
-      .catch(() => this.applyError());
+      .catch((err) => this.applyError(err));
   }
 
   private startUrl(url: string): void {
@@ -177,10 +180,11 @@ export class FileTool implements BlockTool {
     void this.uploader
       .handleUrl(url, { onProgress: (p) => this.uploadingEl?.setProgress(p) })
       .then((result) => this.applyResult(result))
-      .catch(() => this.applyError());
+      .catch((err) => this.applyError(err));
   }
 
   private applyResult(result: FileUploadResult): void {
+    this.errorMessage = null;
     this.data = {
       ...this.data,
       url: result.url,
@@ -238,7 +242,13 @@ export class FileTool implements BlockTool {
     return true;
   }
 
-  private applyError(): void {
+  private applyError(err?: unknown): void {
+    this.errorMessage = err instanceof FileToolError
+      ? uploadErrorMessage(err, (key) => this.api.i18n.t(key), {
+        tooLarge: 'tools.file.errorFileTooLarge',
+        generic: 'tools.file.errorUploadFailed',
+      })
+      : null;
     this.state = 'ERROR';
     this.renderState();
   }
@@ -362,7 +372,7 @@ export class FileTool implements BlockTool {
     wrap.setAttribute('data-role', 'file-error');
 
     const message = document.createElement('span');
-    message.textContent = i18n.t('tools.file.errorUploadFailed');
+    message.textContent = this.errorMessage ?? i18n.t('tools.file.errorUploadFailed');
 
     const retry = document.createElement('button');
     retry.type = 'button';

@@ -43,10 +43,30 @@ describe('Uploader.handleFile', () => {
       .rejects.toMatchObject({ code: 'FILE_TOO_LARGE' } as Partial<FileToolError>);
   });
 
-  it('accepts any type and any size when types/maxSize are omitted (no paywall)', async () => {
+  it('accepts any type but caps size at the 30 MiB default when maxSize is omitted', async () => {
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:ok');
+    const result = await new Uploader({}).handleFile(makeFile('ok.bin', 'application/octet-stream', 20 * 1024 * 1024));
+    expect(result.url).toBe('blob:ok');
+
+    await expect(new Uploader({}).handleFile(makeFile('huge.bin', 'application/octet-stream', 31 * 1024 * 1024)))
+      .rejects.toMatchObject({ code: 'FILE_TOO_LARGE' } as Partial<FileToolError>);
+  });
+
+  it('allows unlimited size when maxSize is Infinity', async () => {
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:big');
-    const result = await new Uploader({}).handleFile(makeFile('huge.bin', 'application/octet-stream', 50_000_000));
+    const result = await new Uploader({ maxSize: Number.POSITIVE_INFINITY })
+      .handleFile(makeFile('huge.bin', 'application/octet-stream', 500_000_000));
     expect(result.url).toBe('blob:big');
+  });
+
+  it('supports per-MIME-type ceilings via an object maxSize', async () => {
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:zip');
+    const config = { 'application/zip': 100 * 1024 * 1024, '*': 1024 };
+    const zip = await new Uploader({ maxSize: config }).handleFile(makeFile('a.zip', 'application/zip', 10 * 1024 * 1024));
+    expect(zip.url).toBe('blob:zip');
+
+    await expect(new Uploader({ maxSize: config }).handleFile(makeFile('b.txt', 'text/plain', 4096)))
+      .rejects.toMatchObject({ code: 'FILE_TOO_LARGE' } as Partial<FileToolError>);
   });
 });
 

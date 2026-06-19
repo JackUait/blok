@@ -170,6 +170,19 @@ describe('VideoTool — onPaste', () => {
     expect(tool.save().url).toBe('blob:fake');
     expect(root.querySelector('video')?.getAttribute('src')).toBe('blob:fake');
   });
+
+  it('shows human-readable copy (not a raw error code) when the file exceeds maxSize', async () => {
+    const tool = new VideoTool(createOptions({}, { maxSize: 5 }));
+    const root = tool.render();
+    const file = new File([new Uint8Array(50)], 'big.mp4', { type: 'video/mp4' });
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    const msg = root.querySelector('[data-role="video-error"] span');
+    expect(msg?.textContent).toBe('tools.video.errorFileTooLarge');
+    expect(msg?.textContent).not.toContain('FILE_TOO_LARGE');
+  });
 });
 
 describe('VideoTool — EMPTY state', () => {

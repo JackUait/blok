@@ -16,4 +16,7 @@ export const PASTE_EXTENSIONS = [
   'mp3', 'wav', 'ogg', 'mp4', 'mov', 'avi', 'mkv',
 ] as const;
 
+/** Default upload ceiling (bytes) when the consumer does not configure `maxSize`. */
+export const DEFAULT_MAX_SIZE = 30 * 1024 * 1024; // 30 MiB
+
 export const DEFAULT_CAPTION_PLACEHOLDER = 'Write a caption…';

@@ -33,6 +33,8 @@ import {
 } from '../../components/icons';
 import { DEFAULT_CAPTION_PLACEHOLDER, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
+import { uploadErrorMessage } from '../../components/utils/upload-error-message';
+import { pickDisplayMaxSize } from '../../components/utils/max-size';
 import { renderErrorState } from './error-state';
 import { ImageError } from './errors';
 import { attachResizeHandle, type ResizeEdge } from './resizer';
@@ -231,7 +233,12 @@ export class ImageTool implements BlockTool {
 
   private applyError(err: unknown): void {
     this.state = 'ERROR';
-    this.errorMessage = err instanceof Error ? err.message : this.api.i18n.t('tools.image.errorUploadFailed');
+    this.errorMessage = err instanceof ImageError
+      ? uploadErrorMessage(err, (key) => this.api.i18n.t(key), {
+        tooLarge: 'tools.image.errorFileTooLarge',
+        generic: 'tools.image.errorUploadFailed',
+      })
+      : this.api.i18n.t('tools.image.errorUploadFailed');
     this.brokenImage = false;
     this.retrying = false;
     this.renderState();
@@ -565,7 +572,7 @@ export class ImageTool implements BlockTool {
       onFile: (file) => this.startUpload(file),
       onUrl: (url) => this.startUrl(url),
       acceptTypes: this.config.types,
-      maxSize: this.config.maxSize,
+      maxSize: pickDisplayMaxSize(this.config.maxSize),
       i18n: this.api.i18n,
     });
     this.emptyStateEl = el;

@@ -961,6 +961,21 @@ describe('ImageTool — error state', () => {
     expect(title?.textContent).toBe('tools.image.errorUploadFailedTitle');
   });
 
+  it('routes a FILE_TOO_LARGE rejection through human-readable copy (no raw error code leaks)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const tool = new ImageTool(createOptions({}, { maxSize: 5 }));
+    const root = tool.render();
+    const file = new File([new Uint8Array(50)], 'big.png', { type: 'image/png' });
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    const msg = root.querySelector('[data-role="error-state"] .blok-image-error__msg');
+    // Mock i18n echoes the key, so routing through i18n yields the key — never the raw "FILE_TOO_LARGE: 50 > 5".
+    expect(msg?.textContent).toBe('tools.image.errorFileTooLarge');
+    expect(msg?.textContent).not.toContain('FILE_TOO_LARGE');
+  });
+
   it('upload error uses a distinct icon (data-variant) vs broken-image error', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const tool = new ImageTool(createOptions(

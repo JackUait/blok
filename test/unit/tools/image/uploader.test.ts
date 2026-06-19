@@ -97,6 +97,31 @@ describe('Uploader', () => {
       await expect(u.handleFile(file)).rejects.toMatchObject({ code: 'FILE_TOO_LARGE' });
     });
 
+    it('defaults to a 30 MiB ceiling when maxSize is omitted', async () => {
+      const u = new Uploader({});
+      const under = makeFile('ok.png', 'image/png', 20 * 1024 * 1024);
+      const over = makeFile('big.png', 'image/png', 31 * 1024 * 1024);
+
+      await expect(u.handleFile(under)).resolves.toMatchObject({ url: expect.stringMatching(/^blob:/) });
+      await expect(u.handleFile(over)).rejects.toMatchObject({ code: 'FILE_TOO_LARGE' });
+    });
+
+    it('reports the offending and limit bytes in the FILE_TOO_LARGE detail', async () => {
+      const u = new Uploader({ maxSize: 100 });
+      const file = makeFile('x.png', 'image/png', 250);
+
+      await expect(u.handleFile(file)).rejects.toMatchObject({ detail: '250 > 100' });
+    });
+
+    it('supports per-MIME-type ceilings via an object maxSize', async () => {
+      const u = new Uploader({ maxSize: { 'image/gif': 50 * 1024 * 1024, '*': 1024 } });
+      const gif = makeFile('a.gif', 'image/gif', 10 * 1024 * 1024);
+      const png = makeFile('b.png', 'image/png', 4096);
+
+      await expect(u.handleFile(gif)).resolves.toMatchObject({ url: expect.stringMatching(/^blob:/) });
+      await expect(u.handleFile(png)).rejects.toMatchObject({ code: 'FILE_TOO_LARGE' });
+    });
+
     it('accepts custom types config and falls back to blob URL', async () => {
       const u = new Uploader({ types: ['image/avif'] });
       const png = makeFile('x.png', 'image/png', 10);

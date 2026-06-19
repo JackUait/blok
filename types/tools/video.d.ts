@@ -1,4 +1,5 @@
 import { BlockToolData } from './block-tool-data';
+import { MaxSizeConfig } from './max-size';
 
 /** Horizontal alignment of the video within its container. */
 export type VideoAlignment = 'left' | 'center' | 'right';
@@ -57,8 +58,11 @@ export interface VideoConfig {
   uploader?: VideoUploader;
   /** Accepted MIME types. Default: video/mp4, video/webm, video/ogg */
   types?: string[];
-  /** Max file size in bytes. Default 100 MiB. */
-  maxSize?: number;
+  /**
+   * Max upload size. A number caps every type (bytes); an object caps per MIME
+   * type with `'*'` as the fallback. Default 100 MiB. See {@link MaxSizeConfig}.
+   */
+  maxSize?: MaxSizeConfig;
   /** Caption placeholder. Default "Write a caption…" */
   captionPlaceholder?: string;
   /** Ambient glow intensity behind every player. Default 'minimal'. */

@@ -1,4 +1,5 @@
 import { BlockToolData } from './block-tool-data';
+import { MaxSizeConfig } from './max-size';
 
 /** Horizontal alignment of the image within its container. */
 export type ImageAlignment = 'left' | 'center' | 'right';
@@ -79,8 +80,11 @@ export interface ImageConfig {
   uploader?: ImageUploader;
   /** Accepted MIME types. Default: image/jpeg, image/png, image/gif, image/webp, image/svg+xml */
   types?: string[];
-  /** Max file size in bytes. Default 10 MiB. */
-  maxSize?: number;
+  /**
+   * Max upload size. A number caps every type (bytes); an object caps per MIME
+   * type with `'*'` as the fallback. Default 30 MiB. See {@link MaxSizeConfig}.
+   */
+  maxSize?: MaxSizeConfig;
   /** Caption placeholder. Default "Write a caption…" */
   captionPlaceholder?: string;
 }

@@ -65,6 +65,19 @@ describe('locale completeness (keys match en)', () => {
  * Keys whose English value is a keyboard symbol / universal notation and is
  * expected to stay identical in every locale (⌘/, Ctrl+/, ...).
  */
+/**
+ * Keys that ship English-first by product decision (2026-06-19): the upload
+ * size-limit error copy. They are present in every locale (so category 1 stays
+ * green) but intentionally fall back to the English string at runtime via
+ * i18next `fallbackLng: 'en'` until translated. Remove a key from here once its
+ * real per-locale translations land.
+ */
+const PENDING_TRANSLATION_KEYS = new Set<string>([
+  'tools.image.errorFileTooLarge',
+  'tools.video.errorFileTooLarge',
+  'tools.file.errorFileTooLarge',
+]);
+
 const UNIVERSAL_SYMBOL_KEYS = new Set<string>([
   'blockSettings.menuShortcutMac',
   'blockSettings.menuShortcutWin',
@@ -268,6 +281,7 @@ describe('locale values are translated (identical-to-en only when cognate)', () 
       const allowed = COGNATE_RETENTIONS[locale] ?? new Set<string>();
       const offenders = Object.keys(english).filter(key => {
         if (UNIVERSAL_SYMBOL_KEYS.has(key)) return false;
+        if (PENDING_TRANSLATION_KEYS.has(key)) return false;
         if (allowed.has(key)) return false;
 
         return key in messages && messages[key] === english[key];

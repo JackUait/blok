@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.0](https://github.com/JackUait/blok/compare/v0.18.0...v0.19.0) (2026-06-20)
+
+### Features
+
+- **Width** — New public `width` API on the editor instance: `instance.width.get()`, `set('full' | 'narrow')`, and `toggle()` switch the content layout between `'narrow'` (the default, constrained to `--max-width-content`) and `'full'` (the content `max-width` is removed so it fills its container). It mirrors the `theme` API, including buffering a `set()` call made before the editor is ready and replaying it once the editor is initialized.
+
+### Bug Fixes
+
+- **Types** — Declare the `history` API on the exported `Blok` instance type. `history` (`clear()`, `undo()`/`redo()`, `canUndo()`/`canRedo()`) was already available at runtime; consumers no longer need to cast the instance to reach it.
+
 ## [0.18.0](https://github.com/JackUait/blok/compare/v0.17.0...v0.18.0) (2026-06-19)
 
 ### Features

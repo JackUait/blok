@@ -256,6 +256,11 @@
 
 .hero-float {
   animation: hero-float 7s ease-in-out infinite;
+  /* The perspective frustum for the whole block scene. Living on the parent (not the
+     stack itself) lets the stack tilt *inside* it, so cards at different translateZ
+     parallax apart. Origin sits a touch high for a pleasing look-down on the stack. */
+  perspective: 1500px;
+  perspective-origin: 50% 46%;
 }
 
 @keyframes hero-float {
@@ -268,59 +273,134 @@
   }
 }
 
-/* Block-stack parallax — each card in the hero drifts on its own slow cycle with
-   a slight resting tilt, so the stack reads as loose, independent blocks floating
-   at different depths rather than a flat list. Desynced via negative delays. */
+/* Block-stack choreography — the four hero blocks endlessly re-arrange themselves
+   through a shuffled, curated set of formations (list, explode, cascade, ring). The
+   FORMATION engine lives in Hero.tsx (Web Animations API) because the order
+   is randomised every cycle — something CSS keyframes can't express. JS drives each
+   card's full `transform` (translate + translateZ depth + 3D rotateX/rotateY + scale, so
+   the cards BEND into shapes AND sit at their own depth); the `.hero-float` perspective +
+   `.hero-stack` preserve-3d give those tilts real volume, and the pointer-parallax tilt
+   makes near/far cards shift apart. This CSS layer only adds the perpetual `wander`
+   drift, on the individual `translate`/`rotate` properties so it composes with the JS
+   `transform` instead of clobbering it. The incommensurate periods (6.3 / 7.4 / 8.1 /
+   6.9s) keep the drift from ever repeating in lock-step. */
 .hero-card-a {
-  animation: hero-card-a 7s ease-in-out infinite;
+  animation: hero-wander 6.3s ease-in-out infinite;
 }
 .hero-card-b {
-  animation: hero-card-b 8.4s ease-in-out -0.6s infinite;
+  animation: hero-wander-alt 7.4s ease-in-out -2s infinite;
 }
 .hero-card-c {
-  animation: hero-card-c 7.7s ease-in-out -1.2s infinite;
+  animation: hero-wander 8.1s ease-in-out -3.5s infinite;
 }
 .hero-card-d {
-  animation: hero-card-d 9s ease-in-out -0.3s infinite;
+  animation: hero-wander-alt 6.9s ease-in-out -1.2s infinite;
 }
 
-@keyframes hero-card-a {
+.hero-stack {
+  transform-origin: center;
+  /* preserve-3d keeps every card's translateZ as real depth inside the parent's
+     perspective. The transform is the pointer-parallax TILT (the engine writes the two
+     custom properties on mousemove); the spin lives on the separate `rotate` property so
+     the two never clobber each other. The transition eases the tilt — and its return to
+     rest when the pointer leaves. */
+  transform-style: preserve-3d;
+  transform: rotateX(var(--hero-tilt-x, 0deg)) rotateY(var(--hero-tilt-y, 0deg));
+  transition: transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* Each card is a 3D SLAB, not a flat plane. The front face is the styled card; two side
+   walls are extruded back in Z from its left/right edges. Face-on they're edge-on (so
+   invisible) — but when the card flips during a transition (rotateY → 90°) a wall turns to
+   face the viewer, revealing the card's solid THICKNESS instead of a paper-thin sprite.
+   The walls carry the per-card transform/wander (on `.hero-card-*`) as one rigid body. */
+.hero-slab {
+  position: relative;
+  transform-origin: center;
+  transform-style: preserve-3d;
+  --slab-thick: 13px;
+}
+.hero-slab-face {
+  position: relative;
+  z-index: 1;
+  backface-visibility: hidden;
+}
+.hero-slab-edge {
+  position: absolute;
+  /* inset top/bottom past the face's 16px corner radius (rounded-2xl) so the straight
+     walls stay within the card's straight edges and never poke out at the corners */
+  top: 19px;
+  bottom: 19px;
+  border-radius: 2px;
+  width: var(--slab-thick);
+  /* a distinctly darker side than the white face (ambient occlusion), lit→shaded across
+     the depth so it reads as a solid card edge rather than a flat band */
+  background: linear-gradient(
+    to right,
+    color-mix(in oklab, var(--muted), black 6%),
+    color-mix(in oklab, var(--muted), black 30%)
+  );
+  backface-visibility: hidden;
+}
+.hero-slab-edge-l {
+  left: 0;
+  transform-origin: left center;
+  transform: rotateY(90deg);
+}
+.hero-slab-edge-r {
+  right: 0;
+  transform-origin: right center;
+  transform: rotateY(-90deg);
+}
+.hero-slab-edge--dark {
+  background: linear-gradient(to right, oklch(0.34 0 0), oklch(0.16 0 0));
+}
+
+@keyframes hero-wander {
   0%,
   100% {
-    transform: translateY(0) rotate(-1.4deg);
+    translate: 0px 0px;
+    rotate: 0deg;
   }
-  50% {
-    transform: translateY(-7px) rotate(-0.4deg);
+  20% {
+    translate: 7px -9px;
+    rotate: 1.2deg;
+  }
+  40% {
+    translate: -6px -4px;
+    rotate: -1deg;
+  }
+  58% {
+    translate: 9px 6px;
+    rotate: 1.6deg;
+  }
+  78% {
+    translate: -8px 8px;
+    rotate: -1.3deg;
   }
 }
 
-@keyframes hero-card-b {
+@keyframes hero-wander-alt {
   0%,
   100% {
-    transform: translateY(0) rotate(1.1deg);
+    translate: 0px 0px;
+    rotate: 0deg;
   }
-  50% {
-    transform: translateY(6px) rotate(0.3deg);
+  22% {
+    translate: -8px 7px;
+    rotate: -1.4deg;
   }
-}
-
-@keyframes hero-card-c {
-  0%,
-  100% {
-    transform: translateY(0) rotate(-0.7deg);
+  44% {
+    translate: 6px 9px;
+    rotate: 1.1deg;
   }
-  50% {
-    transform: translateY(-5px) rotate(0.7deg);
+  62% {
+    translate: -9px -6px;
+    rotate: -1.6deg;
   }
-}
-
-@keyframes hero-card-d {
-  0%,
-  100% {
-    transform: translateY(0) rotate(1.3deg);
-  }
-  50% {
-    transform: translateY(7px) rotate(0.2deg);
+  82% {
+    translate: 7px -8px;
+    rotate: 1.3deg;
   }
 }
 
@@ -436,6 +516,7 @@
   .hero-card-c,
   .hero-card-d,
   .hero-float,
+  .hero-stack,
   .paper-fold,
   .paper-fold-face,
   .paper-crease {

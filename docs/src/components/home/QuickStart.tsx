@@ -94,7 +94,7 @@ export const QuickStart: React.FC = () => {
         <div className="absolute bottom-[-4rem] left-[6%] size-72 rounded-full bg-primary/[0.04] blur-3xl"></div>
       </div>
 
-      <div className="mx-auto w-full max-w-4xl px-6">
+      <div className="mx-auto w-full max-w-5xl px-6">
         <div className="mx-auto max-w-2xl text-center">
           <div
             className="mx-auto mb-6 h-1 w-12 rounded-full bg-brand-gradient"

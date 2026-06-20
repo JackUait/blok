@@ -2,11 +2,14 @@
  * Waveform "now playing" liveliness math.
  *
  * The cached peaks are static — there's no real-time FFT — so the sense of a
- * live visualizer comes from animating a cluster of bars around the playhead.
- * The cluster is shaped like a comet: a bright head at the playhead, a tight
- * leading edge, and a longer decaying wake trailing into the already-played
- * bars. As playback advances, that comet travels left→right across the
- * waveform.
+ * live visualizer is composed from two layers:
+ *
+ *   1. A focal **comet** at the playhead: a bright head spike, a tight leading
+ *      edge, and a longer decaying wake trailing into the already-played bars.
+ *      It travels left→right as playback advances.
+ *   2. A global **ambient** ripple that flows across the entire field so no bar
+ *      sits frozen. It's biased stronger on the played side (a shimmering wake
+ *      of music) and faint on the not-yet-played preview ahead.
  *
  * All functions are pure so the behaviour is unit-testable; the canvas in
  * waveform.ts just samples them per bar, per frame.
@@ -55,6 +58,25 @@ export function barWobble(index: number, timeSeconds: number): number {
   return a * 0.6 + b * 0.4;
 }
 
+/**
+ * Slow travelling undulation across the whole bar field, in [-1, 1]. Two waves
+ * propagate in opposite directions (the `-index`/`+index` phase terms) so the
+ * field gently churns rather than sliding uniformly. Kept low-frequency so the
+ * motion is graceful, not busy.
+ */
+export function ambientWave(index: number, timeSeconds: number): number {
+  const a = Math.sin(timeSeconds * 2.1 - index * 0.35);
+  const b = Math.sin(timeSeconds * 1.3 + index * 0.21);
+  return a * 0.6 + b * 0.4;
+}
+
+/** Ambient swing applied to every bar (the faint preview-side breath). */
+const AMBIENT_BASE = 0.035;
+/** Extra ambient swing layered onto the played side (the shimmering wake). */
+const AMBIENT_PLAYED = 0.06;
+/** Bars ahead of the playhead over which the played-side shimmer fades out. */
+const AMBIENT_AHEAD_FADE = 26;
+
 interface LiveAmplitudeOptions {
   basePeak: number;
   index: number;
@@ -67,9 +89,9 @@ interface LiveAmplitudeOptions {
 }
 
 /**
- * Final 0..1 bar amplitude, blending the static peak with the playhead-localized
- * comet. The comet body swells the cluster, the head spike brightens the bar at
- * the playhead, and a bidirectional wobble makes the whole thing flicker. The
+ * Final 0..1 bar amplitude, blending the static peak with two live layers: the
+ * playhead-localized comet (body swell + bright head spike + bidirectional
+ * dance) and a global ambient ripple biased toward the played side. The
  * combined boost is scaled by `energy` (for the pause settle) and zeroed under
  * `reduced` (prefers-reduced-motion).
  */
@@ -78,13 +100,18 @@ export function liveAmplitude(opts: LiveAmplitudeOptions): number {
   if (reduced || energy <= 0) return basePeak;
 
   const distance = index - playheadIndex;
-  const env = cometEnvelope(distance);
-  if (env === 0) return basePeak;
 
+  // Layer 1 — focal comet near the playhead.
+  const env = cometEnvelope(distance);
   const head = headFocus(distance);
-  // Comet body swell + bright head spike, with a bidirectional dance on top.
-  const boost = env * 0.15 + head * 0.2 + env * 0.28 * barWobble(index, timeSeconds);
-  const amp = basePeak + boost * energy;
+  const comet = env * 0.15 + head * 0.2 + env * 0.28 * barWobble(index, timeSeconds);
+
+  // Layer 2 — global ambient ripple. Full strength behind the playhead (the
+  // played wake), fading across AMBIENT_AHEAD_FADE bars into the preview ahead.
+  const playedBias = distance <= 0 ? 1 : Math.max(0, 1 - distance / AMBIENT_AHEAD_FADE);
+  const ambient = ambientWave(index, timeSeconds) * (AMBIENT_BASE + AMBIENT_PLAYED * playedBias);
+
+  const amp = basePeak + (comet + ambient) * energy;
 
   return Math.min(1, Math.max(0, amp));
 }

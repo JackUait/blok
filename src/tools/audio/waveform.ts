@@ -1,4 +1,5 @@
 import { WAVEFORM_BUCKETS } from './constants';
+import { liveAmplitude } from './liveliness';
 
 /**
  * Reduce raw mono samples to `buckets` peak values normalized to 0..1.
@@ -95,16 +96,36 @@ export function attachWaveform(opts: {
   canvas.className = 'blok-audio-waveform__canvas';
   mount.appendChild(canvas);
 
-  const draw = (): void => {
+  const prefersReducedMotion = (): boolean =>
+    globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+
+  // `playing` drives the continuous animation loop AND tells draw() to apply the
+  // playhead-localized liveliness. It's only true between play and pause/ended.
+  const anim = { playing: false, rafId: 0, lastSize: '' };
+
+  const draw = (now: number): void => {
     const rect = canvas.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return;
     const dpr = globalThis.devicePixelRatio || 1;
-    canvas.width = Math.round(rect.width * dpr);
-    canvas.height = Math.round(rect.height * dpr);
+    const targetW = Math.round(rect.width * dpr);
+    const targetH = Math.round(rect.height * dpr);
+    // Resizing the backing store clears it; only pay that cost when the box
+    // actually changed (every frame of the loop would otherwise reallocate).
+    if (canvas.width !== targetW || canvas.height !== targetH) {
+      canvas.width = targetW;
+      canvas.height = targetH;
+    }
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.scale(dpr, dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, rect.width, rect.height);
+
     const played = media.duration ? media.currentTime / media.duration : 0;
+    const playheadIndex = played * peaks.length;
+    const reduced = prefersReducedMotion();
+    const timeSeconds = now / 1000;
+    const live = anim.playing && !reduced;
+
     const slot = rect.width / peaks.length;
     const gap = Math.min(2, slot * 0.34);
     const barW = Math.max(1, slot - gap);
@@ -113,10 +134,13 @@ export function attachWaveform(opts: {
     const playedColor = styles.getPropertyValue('--blok-audio-bar-played').trim() || '#222';
     const baseColor = styles.getPropertyValue('--blok-audio-bar').trim() || '#ccc';
     peaks.forEach((peak, i) => {
-      const h = Math.max(2, peak * rect.height * 0.92);
+      const amp = live
+        ? liveAmplitude({ basePeak: peak, index: i, playheadIndex, timeSeconds, reduced })
+        : peak;
+      const h = Math.max(2, amp * rect.height * 0.92);
       const x = i * slot;
       const y = (rect.height - h) / 2;
-      ctx.fillStyle = i / peaks.length < played ? playedColor : baseColor;
+      ctx.fillStyle = i < playheadIndex ? playedColor : baseColor;
       if (typeof ctx.roundRect === 'function') {
         ctx.beginPath();
         ctx.roundRect(x, y, barW, h, radius);
@@ -127,23 +151,45 @@ export function attachWaveform(opts: {
     });
   };
 
-  const rafState = { id: 0 };
+  const setSeekVar = (): void => {
+    mount.style.setProperty(
+      '--blok-audio-seek-pct',
+      String(media.duration ? (media.currentTime / media.duration) * 100 : 0),
+    );
+  };
+
+  const loop = (now: number): void => {
+    draw(now);
+    anim.rafId = anim.playing ? requestAnimationFrame(loop) : 0;
+  };
+
+  const onPlay = (): void => {
+    setSeekVar();
+    anim.playing = true;
+    // No continuous loop under reduced motion — timeupdate alone advances the
+    // played boundary, with no dancing bars.
+    if (!anim.rafId && !prefersReducedMotion()) anim.rafId = requestAnimationFrame(loop);
+  };
+  const onStop = (): void => {
+    anim.playing = false;
+    if (anim.rafId) { cancelAnimationFrame(anim.rafId); anim.rafId = 0; }
+    // Settle the bars back to their resting peaks in one final static frame.
+    draw(0);
+  };
+
+  // Keeps the played boundary + seek var current while paused-seeking or when
+  // the continuous loop is off (reduced motion). The loop owns drawing while it
+  // runs, so skip the redundant paint then.
   const onTime = (): void => {
-    if (rafState.id) return;
-    rafState.id = requestAnimationFrame(() => {
-      rafState.id = 0;
-      mount.style.setProperty(
-        '--blok-audio-seek-pct',
-        String(media.duration ? (media.currentTime / media.duration) * 100 : 0),
-      );
-      draw();
-    });
+    setSeekVar();
+    if (!anim.rafId) draw(0);
   };
 
   const seek = (clientX: number): void => {
     if (!media.duration) return;
     media.currentTime = ratioFromPointer(clientX, canvas.getBoundingClientRect()) * media.duration;
-    draw();
+    setSeekVar();
+    if (!anim.rafId) draw(0);
   };
   const drag = { active: false };
   const onDown = (e: PointerEvent): void => { drag.active = true; seek(e.clientX); };
@@ -153,18 +199,25 @@ export function attachWaveform(opts: {
   canvas.addEventListener('pointerdown', onDown);
   globalThis.addEventListener('pointermove', onMove);
   globalThis.addEventListener('pointerup', onUp);
+  media.addEventListener('play', onPlay);
+  media.addEventListener('pause', onStop);
+  media.addEventListener('ended', onStop);
   media.addEventListener('timeupdate', onTime);
-  media.addEventListener('loadedmetadata', draw);
-  draw();
+  media.addEventListener('loadedmetadata', onTime);
+  draw(0);
 
   return {
     destroy(): void {
-      if (rafState.id) cancelAnimationFrame(rafState.id);
+      if (anim.rafId) cancelAnimationFrame(anim.rafId);
+      anim.playing = false;
       canvas.removeEventListener('pointerdown', onDown);
       globalThis.removeEventListener('pointermove', onMove);
       globalThis.removeEventListener('pointerup', onUp);
+      media.removeEventListener('play', onPlay);
+      media.removeEventListener('pause', onStop);
+      media.removeEventListener('ended', onStop);
       media.removeEventListener('timeupdate', onTime);
-      media.removeEventListener('loadedmetadata', draw);
+      media.removeEventListener('loadedmetadata', onTime);
       canvas.remove();
     },
   };

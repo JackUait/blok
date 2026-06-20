@@ -31,7 +31,7 @@ export const Features: React.FC = () => {
   const FEATURES = useMemo<FeatureDetail[]>(() => [
     {
       icon: (
-        <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" className="fi fi-json">
           {/* JSON braces */}
           <path d="M12 8L8 16l4 8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           <path d="M20 8l4 8-4 8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -57,7 +57,7 @@ export const Features: React.FC = () => {
     },
     {
       icon: (
-        <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" className="fi fi-blocks">
           {/* Stacked blocks — the block library */}
           <rect x="6" y="6" width="10" height="8" rx="2" stroke="currentColor" strokeWidth="2" />
           <rect x="16" y="10" width="10" height="8" rx="2" stroke="currentColor" strokeWidth="2" />
@@ -86,7 +86,7 @@ new Blok({ holder: 'editor' });`,
     },
     {
       icon: (
-        <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" className="fi fi-ext">
           {/* Dashed frame + plus — bring your own block */}
           <rect x="6" y="6" width="20" height="20" rx="4" stroke="currentColor" strokeWidth="2" strokeDasharray="4 3" />
           <path d="M16 11v10M11 16h10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
@@ -117,7 +117,7 @@ new Blok({ holder: 'editor' });`,
     },
     {
       icon: (
-        <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" className="fi fi-slash">
           {/* Menu box with slash */}
           <rect x="6" y="8" width="20" height="16" rx="3" stroke="currentColor" strokeWidth="2" />
           <path d="M18 12L14 20" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
@@ -148,7 +148,7 @@ new Blok({ holder: 'editor' });`,
     },
     {
       icon: (
-        <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" className="fi fi-kanban">
           {/* Kanban columns */}
           <rect x="5" y="6" width="6" height="20" rx="1.5" stroke="currentColor" strokeWidth="2" />
           <rect x="13" y="6" width="6" height="13" rx="1.5" stroke="currentColor" strokeWidth="2" />
@@ -172,7 +172,7 @@ new Blok({ holder: 'editor' });`,
     },
     {
       icon: (
-        <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" className="fi fi-table">
           {/* Table grid */}
           <rect x="5" y="7" width="22" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
           <path d="M5 13h22M5 19h22M13 7v18M20 7v18" stroke="currentColor" strokeWidth="1.5" />
@@ -195,7 +195,7 @@ new Blok({ holder: 'editor' });`,
     },
     {
       icon: (
-        <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" className="fi fi-embed">
           {/* Embed frame with play */}
           <rect x="5" y="7" width="22" height="18" rx="3" stroke="currentColor" strokeWidth="2" />
           <path d="M14 12.5l5.5 3.5-5.5 3.5z" fill="currentColor" />
@@ -218,7 +218,7 @@ new Blok({ holder: 'editor' });`,
     },
     {
       icon: (
-        <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" className="fi fi-history">
           {/* Undo / redo arrows */}
           <path d="M10 16a6 6 0 0 1 6-6h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           <path d="M16 7l3 3-3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -243,7 +243,7 @@ new Blok({ holder: 'editor' });`,
     },
     {
       icon: (
-        <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" className="fi fi-globe">
           {/* Globe */}
           <circle cx="16" cy="16" r="9" stroke="currentColor" strokeWidth="2" />
           <ellipse cx="16" cy="16" rx="4" ry="9" stroke="currentColor" strokeWidth="1.5" />

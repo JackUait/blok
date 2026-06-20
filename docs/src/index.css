@@ -246,6 +246,175 @@
   animation: feature-blob-morph 6.5s ease-out infinite;
 }
 
+/* Per-icon hover choreography — each SVG animates to mime what it represents
+   (braces breathe, blocks re-stack, bars rise, the globe spins…). All CSS-only,
+   gated on the card's .group:hover so the blob and the icon move together.
+   fill-box origins let each sub-shape transform around its own centre/base. */
+.fi path,
+.fi rect,
+.fi circle,
+.fi ellipse {
+  transform-box: fill-box;
+}
+
+/* 1 — Clean JSON: the braces part outward, framing content as it flows in. */
+.group:hover .fi-json path:nth-of-type(1) {
+  animation: brace-left 0.6s ease-in-out;
+}
+.group:hover .fi-json path:nth-of-type(2) {
+  animation: brace-right 0.6s ease-in-out;
+}
+@keyframes brace-left {
+  50% {
+    transform: translateX(-2.5px);
+  }
+}
+@keyframes brace-right {
+  50% {
+    transform: translateX(2.5px);
+  }
+}
+
+/* 2 — Blocks for everything: the stack re-assembles, one block at a time. */
+.group:hover .fi-blocks rect {
+  transform-origin: center;
+  animation: block-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+.group:hover .fi-blocks rect:nth-of-type(2) {
+  animation-delay: 0.08s;
+}
+.group:hover .fi-blocks rect:nth-of-type(3) {
+  animation-delay: 0.16s;
+}
+@keyframes block-pop {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* 3 — Extensible: only the plus pulses — drop in your own block. */
+.group:hover .fi-ext path {
+  transform-origin: center;
+  animation: plus-pulse 0.6s ease-in-out;
+}
+@keyframes plus-pulse {
+  50% {
+    transform: scale(1.25) rotate(90deg);
+  }
+}
+
+/* 4 — Slash menu: the slash redraws itself, like the keystroke that summons it. */
+.fi-slash path {
+  stroke-dasharray: 10;
+}
+.group:hover .fi-slash path {
+  animation: slash-draw 0.5s ease-out;
+}
+@keyframes slash-draw {
+  from {
+    stroke-dashoffset: 10;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* 5 — Databases & boards: the columns rise like sorting bars, left to right. */
+.group:hover .fi-kanban rect {
+  transform-origin: bottom;
+  animation: bar-rise 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+.group:hover .fi-kanban rect:nth-of-type(2) {
+  animation-delay: 0.08s;
+}
+.group:hover .fi-kanban rect:nth-of-type(3) {
+  animation-delay: 0.16s;
+}
+@keyframes bar-rise {
+  0% {
+    transform: scaleY(0.25);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+/* 6 — Tables that behave: the grid lines stroke themselves in. */
+.fi-table path {
+  stroke-dasharray: 80;
+}
+.group:hover .fi-table path {
+  animation: grid-draw 0.6s ease-out;
+}
+@keyframes grid-draw {
+  from {
+    stroke-dashoffset: 80;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* 7 — Embeds: the play head presses in, then springs back. */
+.group:hover .fi-embed path {
+  transform-origin: center;
+  animation: play-press 0.6s ease-in-out;
+}
+@keyframes play-press {
+  40% {
+    transform: scale(0.78);
+  }
+  70% {
+    transform: scale(1.2);
+  }
+}
+
+/* 8 — Undo & redo: the whole glyph rocks back, then forward. */
+.fi-history {
+  transform-origin: center;
+}
+.group:hover .fi-history {
+  animation: history-rock 0.65s ease-in-out;
+}
+@keyframes history-rock {
+  30% {
+    transform: rotate(-22deg);
+  }
+  70% {
+    transform: rotate(22deg);
+  }
+}
+
+/* 9 — Languages: the meridian sweeps, turning the globe on its axis. */
+.group:hover .fi-globe ellipse {
+  transform-origin: center;
+  animation: meridian-spin 1.3s ease-in-out infinite;
+}
+@keyframes meridian-spin {
+  50% {
+    transform: scaleX(0.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .group:hover .fi-json path,
+  .group:hover .fi-blocks rect,
+  .group:hover .fi-ext path,
+  .group:hover .fi-slash path,
+  .group:hover .fi-kanban rect,
+  .group:hover .fi-table path,
+  .group:hover .fi-embed path,
+  .group:hover .fi-history,
+  .group:hover .fi-globe ellipse {
+    animation: none;
+  }
+}
+
 /* Hero stage motion — the mascot card breathes, its gradient halo morphs like a
    noodle, and the floating chips drift on offset cycles. All slow + subtle so it
    reads as "alive", never busy. Continuous (not hover-gated) since it's the hero. */

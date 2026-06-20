@@ -99,9 +99,18 @@ export function attachWaveform(opts: {
   const prefersReducedMotion = (): boolean =>
     globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
-  // `playing` drives the continuous animation loop AND tells draw() to apply the
-  // playhead-localized liveliness. It's only true between play and pause/ended.
-  const anim = { playing: false, rafId: 0, lastSize: '' };
+  // Animation state. `playing` is true between play and pause/ended and pins the
+  // boost energy at full. On pause we keep the loop alive briefly with `settling`
+  // so the bars glide back to their resting peaks (energy ramps 1→0) instead of
+  // snapping. `energy` reflects the current boost multiplier.
+  const SETTLE_MS = 420;
+  const anim = { playing: false, settling: false, settleStart: 0, rafId: 0 };
+
+  const energyAt = (now: number): number => {
+    if (anim.playing) return 1;
+    if (!anim.settling) return 0;
+    return Math.min(1, Math.max(0, 1 - (now - anim.settleStart) / SETTLE_MS));
+  };
 
   const draw = (now: number): void => {
     const rect = canvas.getBoundingClientRect();
@@ -124,7 +133,8 @@ export function attachWaveform(opts: {
     const playheadIndex = played * peaks.length;
     const reduced = prefersReducedMotion();
     const timeSeconds = now / 1000;
-    const live = anim.playing && !reduced;
+    const energy = reduced ? 0 : energyAt(now);
+    const live = energy > 0;
 
     const slot = rect.width / peaks.length;
     const gap = Math.min(2, slot * 0.34);
@@ -135,7 +145,7 @@ export function attachWaveform(opts: {
     const baseColor = styles.getPropertyValue('--blok-audio-bar').trim() || '#ccc';
     peaks.forEach((peak, i) => {
       const amp = live
-        ? liveAmplitude({ basePeak: peak, index: i, playheadIndex, timeSeconds, reduced })
+        ? liveAmplitude({ basePeak: peak, index: i, playheadIndex, timeSeconds, reduced, energy })
         : peak;
       const h = Math.max(2, amp * rect.height * 0.92);
       const x = i * slot;
@@ -160,21 +170,38 @@ export function attachWaveform(opts: {
 
   const loop = (now: number): void => {
     draw(now);
-    anim.rafId = anim.playing ? requestAnimationFrame(loop) : 0;
+    // Keep looping while playing, or while the post-pause settle still has energy.
+    const keepGoing = anim.playing || (anim.settling && energyAt(now) > 0);
+    if (keepGoing) {
+      anim.rafId = requestAnimationFrame(loop);
+    } else {
+      anim.settling = false;
+      anim.rafId = 0;
+    }
   };
 
   const onPlay = (): void => {
     setSeekVar();
     anim.playing = true;
+    anim.settling = false;
     // No continuous loop under reduced motion — timeupdate alone advances the
     // played boundary, with no dancing bars.
     if (!anim.rafId && !prefersReducedMotion()) anim.rafId = requestAnimationFrame(loop);
   };
   const onStop = (): void => {
-    anim.playing = false;
-    if (anim.rafId) { cancelAnimationFrame(anim.rafId); anim.rafId = 0; }
-    // Settle the bars back to their resting peaks in one final static frame.
-    draw(0);
+    // Hand off to the settle ramp so the bars glide down rather than snap. Under
+    // reduced motion there's no loop/boost to settle, so just stop.
+    if (anim.playing && !prefersReducedMotion()) {
+      anim.playing = false;
+      anim.settling = true;
+      anim.settleStart = globalThis.performance?.now?.() ?? 0;
+      if (!anim.rafId) anim.rafId = requestAnimationFrame(loop);
+    } else {
+      anim.playing = false;
+      anim.settling = false;
+      if (anim.rafId) { cancelAnimationFrame(anim.rafId); anim.rafId = 0; }
+      draw(0);
+    }
   };
 
   // Keeps the played boundary + seek var current while paused-seeking or when

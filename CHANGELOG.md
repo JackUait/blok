@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.2](https://github.com/JackUait/blok/compare/v0.19.1...v0.19.2) (2026-06-20)
+
+### ⚠ BREAKING CHANGES
+
+- **Types** — `OutputBlockData`'s `data` field is now typed `Record<string, unknown>` instead of `any` (matching `BlockToolData` and `SavedData`). Reading a property off a saved block's `data` — e.g. on `save()` output — now yields `unknown` rather than `any`, so code that indexes into `block.data` may need a cast or type guard. This is a type-only change with no runtime effect.
+
+### Bug Fixes
+
+- **Types** — Published `.d.ts` declarations are now self-contained and no longer re-export raw `src/*.ts`. A bare `import { Blok } from '@jackuait/blok'` previously dragged editor source into the consumer's TypeScript program (through `tooltip` and `popover` → `flipper`), surfacing internal type errors under strict consumer flags such as `noUncheckedIndexedAccess`. The `tooltip` and `popover` declarations now inline their public types, so consuming the package no longer type-checks Blok's internals. (The opt-in `/markdown` subpath is unchanged.)
+- **Types** — The published declarations are now internally consistent under `skipLibCheck: false`. Fixed an incorrect `BlockToolData` import path in the `database`/`header`/`list` tool declarations (which also produced spurious "incorrectly extends `BlockTool`" errors), added a missing `InlineToolConstructable`/`InlineToolConstructorOptions` import in the type entry, and removed phantom `Dictionary`/`DictValue` re-exports.
+
+### Maintenance
+
+- **Dependencies** — Moved `nanoid` to `devDependencies`; it is bundled into every dist artifact and was never a runtime external.
+
 ## [0.19.1](https://github.com/JackUait/blok/compare/v0.19.0...v0.19.1) (2026-06-20)
 
 ### Features

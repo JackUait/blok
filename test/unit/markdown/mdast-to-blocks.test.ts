@@ -233,17 +233,19 @@ describe('mdastToBlocks', () => {
       const tableBlock = blocks.find(b => b.type === 'table');
 
       expect(tableBlock).toBeDefined();
-      expect(tableBlock!.data.withHeadings).toBe(true);
-      expect(tableBlock!.data.content).toHaveLength(2); // 2 rows
-      expect(tableBlock!.data.content[0]).toHaveLength(2); // 2 cols
+      const tableData = tableBlock!.data as { withHeadings: boolean; content: { blocks: string[] }[][] };
+
+      expect(tableData.withHeadings).toBe(true);
+      expect(tableData.content).toHaveLength(2); // 2 rows
+      expect(tableData.content[0]).toHaveLength(2); // 2 cols
       // Each cell has blocks array with one ID
-      expect(tableBlock!.data.content[0][0].blocks).toHaveLength(1);
+      expect(tableData.content[0][0].blocks).toHaveLength(1);
       // Cell paragraph blocks exist in the output
-      const cellBlockIds = tableBlock!.data.content.flat().flatMap((cell: { blocks: string[] }) => cell.blocks);
+      const cellBlockIds = tableData.content.flat().flatMap((cell: { blocks: string[] }) => cell.blocks);
       const cellBlocks = blocks.filter(b => cellBlockIds.includes(b.id!));
 
       expect(cellBlocks).toHaveLength(4);
-      expect(cellBlocks[0].data.text).toBe('Name');
+      expect((cellBlocks[0].data as { text: string }).text).toBe('Name');
       expect(cellBlocks[0].parent).toBe(tableBlock!.id);
     });
   });

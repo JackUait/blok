@@ -5,12 +5,11 @@
  */
 
 import {
-  Dictionary,
-  DictValue,
   BlokConfig,
   I18nConfig,
   I18nDictionary,
 } from './configs';
+import { InlineToolConstructable, InlineToolConstructorOptions } from './tools';
 
 import {
   Blocks,
@@ -81,8 +80,6 @@ export {
   LogLevels,
   ConversionConfig,
   I18nDictionary,
-  Dictionary,
-  DictValue,
   I18nConfig,
   UserInfo,
 } from './configs';

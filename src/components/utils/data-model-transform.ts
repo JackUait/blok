@@ -33,7 +33,7 @@ type LegacyListItem = LegacyListItemObject | OldChecklistItem | string;
 /**
  * Legacy list data structure for data model transformation.
  */
-interface LegacyListData {
+type LegacyListData = {
   style: 'unordered' | 'ordered' | 'checklist';
   items: LegacyListItem[];
   start?: number;
@@ -45,7 +45,7 @@ interface LegacyListData {
  * Blok has no dedicated checklist tool — checklist is a style of the List tool —
  * so this is expanded into per-item flat `list` blocks with style 'checklist'.
  */
-interface LegacyChecklistData {
+type LegacyChecklistData = {
   items: LegacyListItem[];
 }
 
@@ -54,7 +54,7 @@ interface LegacyChecklistData {
  * Old format: { type: "linkTool", data: { link, meta: { title, description, image: { url }, favicon, domain } } }
  * Maps to Blok's flat Bookmark data shape (see types BookmarkMeta).
  */
-interface LegacyLinkToolData {
+type LegacyLinkToolData = {
   link: string;
   meta?: {
     title?: string;
@@ -70,7 +70,7 @@ interface LegacyLinkToolData {
  * Legacy toggle list data structure for data model transformation.
  * Old format: { title: string, isExpanded?: boolean, body: { blocks: [], time, version }, titleVariant?: number }
  */
-interface LegacyToggleListData {
+type LegacyToggleListData = {
   title: string;
   isExpanded?: boolean;
   titleVariant?: number;
@@ -85,7 +85,7 @@ interface LegacyToggleListData {
  * Legacy callout data structure for data model transformation.
  * Old format: { title?: string, body: { blocks: [] } | null, variant, emoji, isEmojiVisible }
  */
-interface LegacyCalloutData {
+type LegacyCalloutData = {
   title?: string;
   body?: {
     blocks?: OutputBlockData[];
@@ -311,7 +311,7 @@ const isLegacyToggleListBlock = (block: OutputBlockData): block is OutputBlockDa
     return false;
   }
 
-  const data = block.data as Record<string, unknown>;
+  const data = block.data;
 
   return typeof data === 'object' && data !== null && 'title' in data;
 };
@@ -326,7 +326,7 @@ const isLegacyCalloutBlock = (block: OutputBlockData): block is OutputBlockData<
     return false;
   }
 
-  const data = block.data as Record<string, unknown>;
+  const data = block.data;
 
   return typeof data === 'object' && data !== null && 'body' in data;
 };
@@ -761,7 +761,7 @@ const expandCalloutToHierarchical = (
  * can't silently lose information.
  */
 const expandImageToHierarchical = (block: OutputBlockData, warned: Set<string>): OutputBlockData => {
-  const rawData = (block.data ?? {}) as Record<string, unknown>;
+  const rawData = (block.data ?? {});
   const {
     file,
     url: flatUrl,
@@ -858,7 +858,7 @@ const expandLinkToolToHierarchical = (
 const expandQuoteToHierarchical = (block: OutputBlockData, warned: Set<string>): OutputBlockData[] => {
   warnLossyQuoteFields(block, warned);
 
-  const rawData = (block.data ?? {}) as Record<string, unknown>;
+  const rawData = (block.data ?? {});
   const { caption, alignment: _alignment, ...rest } = rawData;
 
   const quoteBlock: OutputBlockData = {
@@ -897,7 +897,7 @@ const expandQuoteToHierarchical = (block: OutputBlockData, warned: Set<string>):
  */
 const expandTableToHierarchical = (block: OutputBlockData): OutputBlockData[] => {
   const tableId = block.id ?? generateBlockId();
-  const rawData = (block.data ?? {}) as Record<string, unknown>;
+  const rawData = (block.data ?? {});
   const { content: _content, withHeadings, withHeadingColumn, stretched, ...restData } = rawData;
   const rows = getTableContentRows(rawData) ?? [];
   const childBlocks: OutputBlockData[] = [];
@@ -977,7 +977,7 @@ const WARNING_EMOJI = '⚠️';
  */
 const expandWarningToHierarchical = (block: OutputBlockData): OutputBlockData[] => {
   const calloutId = block.id ?? generateBlockId();
-  const data = (block.data ?? {}) as Record<string, unknown>;
+  const data = (block.data ?? {});
   const title = typeof data.title === 'string' ? data.title : '';
   const message = typeof data.message === 'string' ? data.message : '';
 
@@ -1021,7 +1021,7 @@ const expandWarningToHierarchical = (block: OutputBlockData): OutputBlockData[] 
  * equivalent and is dropped + warned once per pass.
  */
 const expandAttachesToHierarchical = (block: OutputBlockData, warned: Set<string>): OutputBlockData => {
-  const data = (block.data ?? {}) as Record<string, unknown>;
+  const data = (block.data ?? {});
   const file = (typeof data.file === 'object' && data.file !== null ? data.file : {}) as Record<string, unknown>;
   const url = typeof file.url === 'string' ? file.url : '';
   const title = typeof data.title === 'string' ? data.title : undefined;
@@ -1389,7 +1389,7 @@ const isFlatModelCalloutBlock = (block: OutputBlockData): boolean => {
     return false;
   }
 
-  const data = block.data as Record<string, unknown>;
+  const data = block.data;
 
   return typeof data === 'object' && data !== null && !('body' in data);
 };
@@ -1404,7 +1404,7 @@ const processRootCalloutItem = (
 ): OutputBlockData => {
   markBlockAsProcessed(block.id, processedIds);
 
-  const data = block.data as Record<string, unknown>;
+  const data = block.data;
 
   // Map backgroundColor preset → variant
   const backgroundColor = data.backgroundColor as string | null | undefined;
@@ -1907,7 +1907,7 @@ export const reclaimDetachedTableCells = (blocks: OutputBlockData[]): OutputBloc
         });
       });
 
-      return { ...block, data: { ...(block.data as Record<string, unknown>), content: newContent } } as OutputBlockData;
+      return { ...block, data: { ...(block.data), content: newContent } } as OutputBlockData;
     }
 
     return block;

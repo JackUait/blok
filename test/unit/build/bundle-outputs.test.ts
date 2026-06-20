@@ -83,7 +83,7 @@ function specifiersInSource(source: string): string[] {
 /** Resolve a relative specifier from a file to an on-disk module path, or null. */
 function resolveRelativeModule(fromFile: string, spec: string): string | null {
   const base = resolve(dirname(fromFile), spec)
-  for (const candidate of [`${base}.ts`, join(base, 'index.ts'), `${base}.d.ts`, base]) {
+  for (const candidate of [`${base}.ts`, join(base, 'index.ts'), `${base}.d.ts`, join(base, 'index.d.ts'), base]) {
     if (existsSync(candidate)) {
       return candidate
     }
@@ -139,6 +139,51 @@ function danglingRefsInDeclaration(dts: string, publishedRoots: Set<string>): st
         : `${dts} -> ${spec} (resolves into unpublished "${topLevel}/")`
     })
     .filter((entry): entry is string => entry !== null)
+}
+
+/**
+ * Walk the declaration graph reachable from a published entry's `.d.ts`,
+ * following only relative `.d.ts` imports, and collect every relative
+ * specifier that resolves into `src/`.
+ *
+ * A consumer that does a bare `import ... from '@jackuait/blok'` resolves to
+ * `types/index.d.ts`. TypeScript follows that file's imports; `skipLibCheck`
+ * skips other `.d.ts` files, but any reference that resolves to a raw `src/*.ts`
+ * module pulls that source into the consumer's program and type-checks it under
+ * the consumer's compiler flags (e.g. `noUncheckedIndexedAccess`). The bare
+ * entry's declaration closure must therefore be self-contained — no `src/` leak.
+ */
+/** Relative imports of a declaration file, resolved to on-disk module paths. */
+function relativeTargets(file: string): { spec: string; resolved: string }[] {
+  return specifiersInSource(readFileSync(file, 'utf-8'))
+    .filter((spec) => spec.startsWith('.'))
+    .map((spec) => ({ spec, resolved: resolveRelativeModule(file, spec) }))
+    .filter((target): target is { spec: string; resolved: string } => target.resolved !== null)
+}
+
+function srcLeaksReachableFrom(entry: string): string[] {
+  const leaks: string[] = []
+  const visited = new Set<string>()
+  const queue = [entry]
+  while (queue.length > 0) {
+    const file = queue.pop()
+    if (file === undefined || visited.has(file)) {
+      continue
+    }
+    visited.add(file)
+    const targets = relativeTargets(file)
+    leaks.push(
+      ...targets
+        .filter((target) => target.resolved.startsWith(srcDir))
+        .map((target) => `${file.slice(repoRoot.length + 1)} -> ${target.spec}`),
+    )
+    queue.push(
+      ...targets
+        .filter((target) => !target.resolved.startsWith(srcDir) && target.resolved.endsWith('.d.ts'))
+        .map((target) => target.resolved),
+    )
+  }
+  return leaks
 }
 
 function collectTypeSurfaceExternals(): Set<string> {
@@ -322,6 +367,15 @@ describe('published package is self-contained (install footprint)', () => {
     // micromark-util-types, @types/mdast) are pulled in by the declared cluster.
     const transitiveOnly = new Set(['mdast', 'micromark-util-types', '@types/mdast', '@types/unist'])
     expect(undeclared.filter((pkg) => !transitiveOnly.has(pkg))).toEqual([])
+  })
+
+  it('the bare-import type entry is self-contained (drags no raw src into consumers)', () => {
+    // The default `import { Blok } from '@jackuait/blok'` resolves to
+    // types/index.d.ts. Its declaration closure must not re-export from `src/*.ts`,
+    // or consumers with stricter flags (noUncheckedIndexedAccess) inherit type
+    // errors from Blok's raw source they never wrote.
+    const leaks = srcLeaksReachableFrom(resolve(typesDir, 'index.d.ts'))
+    expect(leaks).toEqual([])
   })
 
   it('no published type declaration references a path outside the published files', () => {

@@ -1,6 +1,47 @@
 import { PopoverItemParams } from './popover-item';
-import type { Flipper } from '../../../src/components/flipper';
 import { PopoverEvent } from './popover-event';
+
+/**
+ * Public surface of the internal keyboard-navigation Flipper that a popover
+ * exposes for reuse via {@link PopoverParams.flipper}.
+ *
+ * Declared structurally here (rather than imported from raw src) so the
+ * published declarations stay self-contained: a bare `import` of the package
+ * must never drag Blok's `.ts` source into a consumer's type program. The
+ * concrete Flipper is internal — consumers never construct it; it is only
+ * passed between Blok's own popovers.
+ */
+export interface Flipper {
+  /** True while the flipper is handling keyboard navigation. */
+  readonly isActivated: boolean;
+
+  /** Begin handling keyboard navigation over the given items. */
+  activate(items?: HTMLElement[], cursorPosition?: number): void;
+
+  /** Stop handling keyboard navigation. */
+  deactivate(): void;
+
+  /** Focus the first navigable item. */
+  focusFirst(): void;
+
+  /** Focus the item at the given position. */
+  focusItem(position: number, options?: { skipNextTab?: boolean }): void;
+
+  /** True if a navigable item currently has focus. */
+  hasFocus(): boolean;
+
+  /** Register a callback fired on each flip (navigation step). */
+  onFlip(cb: () => void): void;
+
+  /** Remove a previously registered flip callback. */
+  removeOnFlip(cb: () => void): void;
+
+  /** Toggle handling of keydown events originating from contenteditable targets. */
+  setHandleContentEditableTargets(value: boolean): void;
+
+  /** Whether keydown events from contenteditable targets are handled. */
+  getHandleContentEditableTargets(): boolean;
+}
 
 /**
  * Params required to render popover

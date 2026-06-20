@@ -6,45 +6,12 @@ import {
 } from './top-layer';
 import { twJoin } from './tw';
 
-/**
- * Tooltip supported content
- */
-export type TooltipContent = HTMLElement | DocumentFragment | Node | string;
+// TooltipContent / TooltipOptions are declared in the published types
+// (types/api/tooltip.d.ts) as the single source of truth, so the package's
+// declaration surface stays self-contained and never re-exports raw src.
+import type { TooltipContent, TooltipOptions } from '@/types/api/tooltip';
 
-/**
- * Base options interface for tooltips
- */
-export interface TooltipOptions {
-  /**
-   * Tooltip placement: top|bottom|left|right
-   */
-  placement?: string;
-
-  /**
-   * Tooltip top margin
-   */
-  marginTop?: number;
-
-  /**
-   * Tooltip left margin
-   */
-  marginLeft?: number;
-
-  /**
-   * Tooltip right margin
-   */
-  marginRight?: number;
-
-  /**
-   * Tooltip bottom margin
-   */
-  marginBottom?: number;
-
-  /**
-   * Timout before showing
-   */
-  delay?: number;
-}
+export type { TooltipContent, TooltipOptions };
 
 const DEFAULT_OFFSET = 10;
 const TOOLTIP_ROLE = 'tooltip';

@@ -235,7 +235,7 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     // Verify the new empty paragraph was inserted between First and Second blocks
     // by checking the output data order
     const outputData = await page.evaluate(() => window.blokInstance?.save());
-    const blockTexts = outputData?.blocks.map((b: { data: { text: string } }) => b.data.text);
+    const blockTexts = outputData?.blocks.map((b) => (b.data as { text: string }).text);
 
     expect(blockTexts).toStrictEqual(['First block', '', 'Second block']);
 
@@ -265,7 +265,7 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
 
     // Verify the new empty paragraph was inserted at the top
     const outputData = await page.evaluate(() => window.blokInstance?.save());
-    const blockTexts = outputData?.blocks.map((b: { data: { text: string } }) => b.data.text);
+    const blockTexts = outputData?.blocks.map((b) => (b.data as { text: string }).text);
 
     expect(blockTexts).toStrictEqual(['', 'Only block']);
 
@@ -297,7 +297,7 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
 
     // Verify the second block remains empty (no "/" inserted)
     const outputData = await page.evaluate(() => window.blokInstance?.save());
-    const blockTexts = outputData?.blocks.map((b: { data: { text: string } }) => b.data.text);
+    const blockTexts = outputData?.blocks.map((b) => (b.data as { text: string }).text);
 
     expect(blockTexts).toStrictEqual(['First block', '']);
 

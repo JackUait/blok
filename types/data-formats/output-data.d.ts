@@ -6,9 +6,12 @@ import { BlockId } from './block-id';
  * Output of one Tool
  *
  * @template Type - the string literal describing a tool type
- * @template Data - the structure describing a data object supported by the tool
+ * @template Data - the structure describing a data object supported by the tool.
+ *   Defaults to `Record<string, unknown>` (matching {@link BlockToolData}) so
+ *   reading saved block data is type-guarded: property access yields `unknown`,
+ *   not `any`. Pass a concrete shape for fully-typed access.
  */
-export interface OutputBlockData<Type extends string = string, Data extends object = any> {
+export interface OutputBlockData<Type extends string = string, Data extends object = Record<string, unknown>> {
   /**
    * Unique Id of the block
    */

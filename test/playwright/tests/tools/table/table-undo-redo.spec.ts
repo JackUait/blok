@@ -333,7 +333,7 @@ test.describe('Table Undo/Redo', () => {
 
     expect(tableBlock).toBeDefined();
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+     
     const content = tableBlock?.data.content as { blocks: string[] }[][];
 
     expect(content).toHaveLength(2);
@@ -342,7 +342,7 @@ test.describe('Table Undo/Redo', () => {
 
     // Verify paragraph blocks still contain the original text
     const paragraphBlocks = savedData.blocks.filter((b: { type: string }) => b.type === 'paragraph');
-    const paragraphTexts = paragraphBlocks.map((b: { data: { text: string } }) => b.data.text);
+    const paragraphTexts = paragraphBlocks.map((b) => (b.data as { text: string }).text);
 
     expect(paragraphTexts).toContain('Alpha');
     expect(paragraphTexts).toContain('Beta');
@@ -470,10 +470,10 @@ test.describe('Table Undo/Redo', () => {
 
     expect(tableBlock).toBeDefined();
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+     
     expect(tableBlock?.data.withHeadings).toBe(true);
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+     
     const content = tableBlock?.data.content as { blocks: string[] }[][];
 
     expect(content).toHaveLength(2);
@@ -482,7 +482,7 @@ test.describe('Table Undo/Redo', () => {
 
     // Verify paragraph blocks contain the original text
     const paragraphBlocks = savedData.blocks.filter((b: { type: string }) => b.type === 'paragraph');
-    const paragraphTexts = paragraphBlocks.map((b: { data: { text: string } }) => b.data.text);
+    const paragraphTexts = paragraphBlocks.map((b) => (b.data as { text: string }).text);
 
     expect(paragraphTexts).toContain('Name');
     expect(paragraphTexts).toContain('Value');
@@ -573,7 +573,7 @@ test.describe('Table Undo/Redo', () => {
 
     expect(tableBlock).toBeDefined();
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+     
     const content = tableBlock?.data.content as { blocks: string[] }[][];
 
     expect(content).toHaveLength(3);
@@ -670,7 +670,7 @@ test.describe('Table Undo/Redo', () => {
     // 8. Save and verify data integrity
     const savedData = await saveBlok(page);
     const paragraphBlocks = savedData.blocks.filter((b: { type: string }) => b.type === 'paragraph');
-    const paragraphTexts = paragraphBlocks.map((b: { data: { text: string } }) => b.data.text);
+    const paragraphTexts = paragraphBlocks.map((b) => (b.data as { text: string }).text);
 
     expect(paragraphTexts).toContain('Alpha');
     expect(paragraphTexts).toContain('Beta');
@@ -819,7 +819,7 @@ test.describe('Table Undo/Redo', () => {
 
     expect(tableBlock).toBeDefined();
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+     
     const content = tableBlock?.data.content as { blocks: string[]; color?: string }[][];
 
     expect(content).toHaveLength(2);

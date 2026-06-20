@@ -235,11 +235,11 @@ test.describe('table tool', () => {
       const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
 
       expect(tableBlock).toBeDefined();
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+       
       expect(tableBlock?.data.withHeadings).toBe(true);
 
       // Cells now contain block references, not strings
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+       
       const content = tableBlock?.data.content as { blocks: string[] }[][];
 
       expect(content).toHaveLength(2);
@@ -256,7 +256,7 @@ test.describe('table tool', () => {
       // Verify the paragraph blocks contain the original text
       const paragraphBlocks = savedData?.blocks.filter((b: { type: string }) => b.type === 'paragraph');
 
-      const paragraphTexts = paragraphBlocks?.map((b: { data: { text: string } }) => b.data.text) as string[];
+      const paragraphTexts = paragraphBlocks?.map((b) => (b.data as { text: string }).text) as string[];
 
       expect(paragraphTexts).toContain('Name');
       expect(paragraphTexts).toContain('Value');
@@ -303,7 +303,7 @@ test.describe('table tool', () => {
         (b: { id?: string }) => b.id === firstCellBlockId
       );
 
-      expect((cellParagraph as { data: { text: string } })?.data.text).toBe('Hello');
+      expect((cellParagraph as unknown as { data: { text: string } })?.data.text).toBe('Hello');
     });
   });
 
@@ -567,7 +567,7 @@ test.describe('table tool', () => {
 
       const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+       
       expect(tableBlock?.data.colWidths).toStrictEqual([400, 200]);
     });
 
@@ -793,7 +793,7 @@ test.describe('table tool', () => {
 
       const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+       
       const content = tableBlock?.data.content as { blocks: string[] }[][];
 
       expect(content).toHaveLength(3);
@@ -808,7 +808,7 @@ test.describe('table tool', () => {
         (b: { id?: string }) => b.id === newCellBlockId
       );
 
-      expect((cellParagraph as { data: { text: string } })?.data.text).toBe('New');
+      expect((cellParagraph as unknown as { data: { text: string } })?.data.text).toBe('New');
     });
 
     test('add controls are not present in readOnly mode', async ({ page }) => {

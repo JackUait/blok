@@ -36,9 +36,11 @@ class Blok {
   private readonly initialConfiguration: BlokConfig|string|undefined;
 
   /**
-   * Promise that resolves when core modules are ready and UI is rendered on the page
+   * Promise that resolves when core modules are ready and UI is rendered on the page.
+   * Resolves with the fully-initialized Blok instance, so awaiting it narrows a
+   * pre-ready reference (see {@link PendingBlok}) to the complete API surface.
    */
-  public isReady: Promise<void>;
+  public isReady: Promise<Blok>;
 
   /**
    * Stores destroy method implementation.
@@ -218,7 +220,7 @@ class Blok {
 
         Object.setPrototypeOf(this, null);
 
-        return;
+        return this;
       }
 
       this.exportAPI(blok);
@@ -276,6 +278,8 @@ class Blok {
        * @todo pass API as an argument. It will allow to use Blok's API when blok is ready
        */
       onReady();
+
+      return this;
     });
   }
 

@@ -208,10 +208,36 @@ export function wrapLegacyInlineTool(
 ): InlineToolConstructable;
 
 /**
+ * The surface of a Blok instance that is guaranteed to exist synchronously,
+ * immediately after `new Blok()` and before `isReady` has resolved.
+ *
+ * Blok constructs its module APIs (`blocks`, `caret`, `history`, `readOnly`, …)
+ * asynchronously: they only become available once `isReady` resolves. Accessing
+ * them earlier returns `undefined` at runtime. Type a reference you hold during
+ * that window as `PendingBlok` so the not-yet-available members are unreachable,
+ * then await `isReady` to obtain the fully-initialized {@link Blok}:
+ *
+ * @example
+ * const pending: PendingBlok = new Blok(config);
+ * const editor = await pending.isReady; // editor is a ready Blok
+ * editor.blocks.render(data);
+ */
+export interface PendingBlok {
+  /** Resolves with the fully-initialized Blok instance once core modules are ready. */
+  isReady: Promise<Blok>;
+  /** Destroy the instance. Safe to call before `isReady` resolves. */
+  destroy(): void;
+  /** Theme API, exposed immediately after construction. */
+  theme: Theme;
+  /** Width API, exposed immediately after construction. */
+  width: Width;
+}
+
+/**
  * Main Blok class
  */
 export class Blok {
-  public isReady: Promise<void>;
+  public isReady: Promise<Blok>;
 
   public blocks: Blocks;
   public caret: Caret;

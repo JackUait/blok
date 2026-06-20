@@ -341,10 +341,20 @@ describe('Blok', () => {
   });
 
   describe('isReady promise', () => {
-    it('should resolve when Core is ready', async () => {
+    it('should resolve with the ready Blok instance when Core is ready', async () => {
       const blok = new Blok();
 
-      await expect(blok.isReady).resolves.toBeUndefined();
+      await expect(blok.isReady).resolves.toBe(blok);
+    });
+
+    it('should resolve with an instance exposing the exported module API', async () => {
+      const blok = new Blok();
+
+      const ready = await blok.isReady;
+
+      // After isReady resolves, exportAPI has set the prototype to the API methods,
+      // so module shorthands like save() are live on the resolved handle.
+      expect(typeof (ready as unknown as Record<string, unknown>).save).toBe('function');
     });
 
     it('should call exportAPI when Core is ready', async () => {

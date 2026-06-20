@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.1](https://github.com/JackUait/blok/compare/v0.19.0...v0.19.1) (2026-06-20)
+
+### Features
+
+- **Types** — `isReady` now resolves with the fully-initialized `Blok` instance (was `Promise<void>`), so `const editor = await blok.isReady` yields a ready, fully-typed editor without a cast. New exported `PendingBlok` type describes the surface available synchronously after `new Blok()` and before `isReady` resolves (`isReady`, `destroy`, `theme`, `width`) — type a reference held during that window as `PendingBlok` instead of widening to `Partial<Blok>`, then await `isReady` to narrow it to the full API. `new Blok()` still returns the full `Blok`, so existing usage is unaffected.
+
 ## [0.19.0](https://github.com/JackUait/blok/compare/v0.18.0...v0.19.0) (2026-06-20)
 
 ### Features

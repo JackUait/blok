@@ -386,30 +386,29 @@
 }
 
 /* ----- caption row (full-width footer) --------------------
-   The row is a single-track grid wrapper so it can collapse to zero height
-   (grid-template-rows 1fr → 0fr) when the caption is toggled, while the inner
-   element holds the actual padding/border that fade out with it. */
+   The row claims its full height in a single layout step; the visible reveal
+   rides transform + opacity on the inner, keeping the whole animation on the
+   compositor. This is deliberate: animating the row's *height* would resize the
+   card every frame, forcing a re-raster of its 24px-blur box-shadow and the
+   high-DPI waveform canvas each frame — which is what made the toggle lag.
+   overflow:hidden clips the inner as it slides; padding/border live on the
+   caption child below so they're clipped too. */
 [data-blok-tool="audio"] .blok-audio-caption-row {
   grid-column: 1 / -1;
   grid-row: 2;
-  display: grid;
-  grid-template-rows: 1fr;
-  transition:
-    grid-template-rows var(--blok-duration-slow) var(--blok-ease-popover),
-    opacity var(--blok-duration-slow) var(--blok-ease-popover);
-}
-[data-blok-tool="audio"] .blok-audio-caption-row.is-collapsed {
-  grid-template-rows: 0fr;
-  opacity: 0;
-}
-/* overflow:hidden + min-height:0 lets the grid track collapse fully to 0; the
-   padding/border live on the caption child below so they get clipped too. */
-[data-blok-tool="audio"] .blok-audio-caption-row__inner {
-  min-height: 0;
   overflow: hidden;
+}
+[data-blok-tool="audio"] .blok-audio-caption-row__inner {
   display: flex;
   align-items: flex-start;
   gap: var(--blok-space-2);
+  transition:
+    transform var(--blok-duration-slow) var(--blok-ease-popover),
+    opacity var(--blok-duration-slow) var(--blok-ease-popover);
+}
+[data-blok-tool="audio"] .blok-audio-caption-row.is-collapsed .blok-audio-caption-row__inner {
+  transform: translateY(6px);
+  opacity: 0;
 }
 [data-blok-tool="audio"] .blok-audio-caption {
   flex: 1 1 auto;
@@ -547,5 +546,5 @@
   /* The badge still appears while playing — it just holds steady. */
   [data-blok-tool="audio"] .blok-audio-eq { transition: none; }
   /* Caption appears/disappears instantly (JS also takes the instant path). */
-  [data-blok-tool="audio"] .blok-audio-caption-row { transition: none; }
+  [data-blok-tool="audio"] .blok-audio-caption-row__inner { transition: none; }
 }

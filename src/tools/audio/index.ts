@@ -480,9 +480,11 @@ export class AudioTool implements BlockTool {
       return;
     }
     const row = this.createCaptionRow();
+    // Appended at full height immediately (a single layout step); is-collapsed
+    // only offsets/fades the inner, so the reveal animates on the compositor.
     row.classList.add('is-collapsed');
     figure.appendChild(row);
-    // Force a reflow so the collapsed state is committed, then expand into view.
+    // Commit the collapsed start frame, then settle the inner into place.
     void row.offsetHeight;
     row.classList.remove('is-collapsed');
   }
@@ -493,11 +495,13 @@ export class AudioTool implements BlockTool {
     row.classList.add('is-collapsed');
     const finish = (): void => {
       if (this.captionExitTimer) { clearTimeout(this.captionExitTimer); this.captionExitTimer = null; }
+      row.removeEventListener('transitionend', onEnd);
       row.remove();
     };
-    row.addEventListener('transitionend', (e) => {
-      if (e.propertyName === 'grid-template-rows') finish();
-    }, { once: true });
+    const onEnd = (e: TransitionEvent): void => {
+      if (e.propertyName === 'opacity') finish();
+    };
+    row.addEventListener('transitionend', onEnd);
     // Fallback in case transitionend never fires (display:none, interrupted, etc.).
     this.captionExitTimer = setTimeout(finish, 360);
   }

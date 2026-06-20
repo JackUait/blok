@@ -38,6 +38,29 @@ describe('LAYOUTS matrix', () => {
     expect(cells.length).toBeGreaterThan(0);
   });
 
+  it('authors exactly the required (view, count) cells', () => {
+    const required: Record<string, number[]> = {
+      stack: [1, 2, 3, 4, 5],
+      explode: [2, 3, 4, 5],
+      cascade: [2, 3, 4, 5],
+      orbit: [3, 4, 5],
+    };
+    for (const [view, counts] of Object.entries(required)) {
+      for (const count of counts) {
+        expect(LAYOUTS[view]?.[count], `${view}@${count} missing`).toBeDefined();
+      }
+    }
+    // No extra views beyond the required set.
+    expect(Object.keys(LAYOUTS).sort()).toEqual(Object.keys(required).sort());
+  });
+
+  it('gives stack@1 three single-card variants', () => {
+    expect(LAYOUTS.stack[1]).toHaveLength(3);
+    for (const variant of LAYOUTS.stack[1]) {
+      expect(variant).toHaveLength(1);
+    }
+  });
+
   it('never overlaps two cards within any variant', () => {
     for (const { view, count, variant, vi } of cells) {
       for (let i = 0; i < variant.length; i++) {

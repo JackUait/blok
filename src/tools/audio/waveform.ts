@@ -1,5 +1,5 @@
 import { WAVEFORM_BUCKETS } from './constants';
-import { liveAmplitude } from './liveliness';
+import { liveAmplitude, headColorBlend, entranceEase } from './liveliness';
 
 /**
  * Reduce raw mono samples to `buckets` peak values normalized to 0..1.
@@ -104,13 +104,17 @@ export function attachWaveform(opts: {
   // so the bars glide back to their resting peaks (energy ramps 1→0) instead of
   // snapping. `energy` reflects the current boost multiplier.
   const SETTLE_MS = 420;
-  const anim = { playing: false, settling: false, settleStart: 0, rafId: 0 };
+  // The comet-head colour blooms in over ENTRANCE_MS each time playback starts.
+  const ENTRANCE_MS = 650;
+  const anim = { playing: false, settling: false, settleStart: 0, entranceStart: 0, rafId: 0 };
 
   const energyAt = (now: number): number => {
     if (anim.playing) return 1;
     if (!anim.settling) return 0;
     return Math.min(1, Math.max(0, 1 - (now - anim.settleStart) / SETTLE_MS));
   };
+
+  const entranceAt = (now: number): number => entranceEase((now - anim.entranceStart) / ENTRANCE_MS);
 
   const draw = (now: number): void => {
     const rect = canvas.getBoundingClientRect();
@@ -135,6 +139,7 @@ export function attachWaveform(opts: {
     const timeSeconds = now / 1000;
     const energy = reduced ? 0 : energyAt(now);
     const live = energy > 0;
+    const entrance = live ? entranceAt(now) : 0;
 
     const slot = rect.width / peaks.length;
     const gap = Math.min(2, slot * 0.34);
@@ -143,6 +148,18 @@ export function attachWaveform(opts: {
     const styles = getComputedStyle(canvas);
     const playedColor = styles.getPropertyValue('--blok-audio-bar-played').trim() || '#222';
     const baseColor = styles.getPropertyValue('--blok-audio-bar').trim() || '#ccc';
+    const headColor = styles.getPropertyValue('--blok-audio-bar-head').trim() || playedColor;
+
+    const paintBar = (x: number, y: number, h: number): void => {
+      if (typeof ctx.roundRect === 'function') {
+        ctx.beginPath();
+        ctx.roundRect(x, y, barW, h, radius);
+        ctx.fill();
+      } else {
+        ctx.fillRect(x, y, barW, h);
+      }
+    };
+
     peaks.forEach((peak, i) => {
       const amp = live
         ? liveAmplitude({ basePeak: peak, index: i, playheadIndex, timeSeconds, reduced, energy })
@@ -151,12 +168,19 @@ export function attachWaveform(opts: {
       const x = i * slot;
       const y = (rect.height - h) / 2;
       ctx.fillStyle = i < playheadIndex ? playedColor : baseColor;
-      if (typeof ctx.roundRect === 'function') {
-        ctx.beginPath();
-        ctx.roundRect(x, y, barW, h, radius);
-        ctx.fill();
-      } else {
-        ctx.fillRect(x, y, barW, h);
+      paintBar(x, y, h);
+
+      // Comet-head colour shift — overlay the head tint, its alpha ramping in
+      // with the entrance and fading out on the settle (energy).
+      if (live) {
+        const blend = headColorBlend({ distance: i - playheadIndex, energy, entrance });
+        if (blend > 0.001) {
+          ctx.save();
+          ctx.globalAlpha = Math.min(1, blend);
+          ctx.fillStyle = headColor;
+          paintBar(x, y, h);
+          ctx.restore();
+        }
       }
     });
   };
@@ -184,6 +208,8 @@ export function attachWaveform(opts: {
     setSeekVar();
     anim.playing = true;
     anim.settling = false;
+    // Restart the head-colour entrance so it blooms in on every play.
+    anim.entranceStart = globalThis.performance?.now?.() ?? 0;
     // No continuous loop under reduced motion — timeupdate alone advances the
     // played boundary, with no dancing bars.
     if (!anim.rafId && !prefersReducedMotion()) anim.rafId = requestAnimationFrame(loop);

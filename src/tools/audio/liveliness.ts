@@ -77,6 +77,25 @@ const AMBIENT_PLAYED = 0.06;
 /** Bars ahead of the playhead over which the played-side shimmer fades out. */
 const AMBIENT_AHEAD_FADE = 26;
 
+/**
+ * Ease-out cubic for the head-colour entrance ramp: 0→1 with most of the travel
+ * up front, so the colour blooms in quickly then settles. Clamped to [0, 1].
+ */
+export function entranceEase(progress: number): number {
+  const t = Math.min(1, Math.max(0, progress));
+  return 1 - (1 - t) ** 3;
+}
+
+/**
+ * 0..1 tint strength for a bar's comet-head colour overlay. Peaks at the
+ * playhead (via {@link headFocus}) and scales with both the live `energy` (so it
+ * fades out on the pause settle) and the `entrance` ramp (so it animates in when
+ * playback starts).
+ */
+export function headColorBlend(opts: { distance: number; energy: number; entrance: number }): number {
+  return headFocus(opts.distance) * opts.energy * opts.entrance;
+}
+
 interface LiveAmplitudeOptions {
   basePeak: number;
   index: number;

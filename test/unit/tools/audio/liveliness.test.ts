@@ -4,6 +4,8 @@ import {
   headFocus,
   ambientWave,
   liveAmplitude,
+  entranceEase,
+  headColorBlend,
   REACH_AHEAD,
   REACH_BEHIND,
 } from '../../../../src/tools/audio/liveliness';
@@ -65,6 +67,37 @@ describe('ambientWave', () => {
   it('varies across the field and over time', () => {
     expect(ambientWave(3, 0.5)).not.toBe(ambientWave(9, 0.5));
     expect(ambientWave(5, 0.2)).not.toBe(ambientWave(5, 0.9));
+  });
+});
+
+describe('entranceEase', () => {
+  it('runs 0→1 and clamps outside that range', () => {
+    expect(entranceEase(0)).toBe(0);
+    expect(entranceEase(1)).toBe(1);
+    expect(entranceEase(-0.5)).toBe(0);
+    expect(entranceEase(2)).toBe(1);
+  });
+
+  it('eases out — most of the progress lands early', () => {
+    expect(entranceEase(0.5)).toBeGreaterThan(0.5);
+    // monotonically increasing
+    const xs = [0, 0.2, 0.4, 0.6, 0.8, 1].map((t) => entranceEase(t));
+    for (let i = 1; i < xs.length; i++) expect(xs[i]).toBeGreaterThan(xs[i - 1]);
+  });
+});
+
+describe('headColorBlend', () => {
+  it('is 0 outside the head and peaks at the playhead', () => {
+    expect(headColorBlend({ distance: 5, energy: 1, entrance: 1 })).toBe(0);
+    expect(headColorBlend({ distance: 0, energy: 1, entrance: 1 })).toBe(1);
+  });
+
+  it('scales with both energy and the entrance ramp', () => {
+    const full = headColorBlend({ distance: 0, energy: 1, entrance: 1 });
+    expect(headColorBlend({ distance: 0, energy: 0.5, entrance: 1 })).toBeCloseTo(full * 0.5, 10);
+    expect(headColorBlend({ distance: 0, energy: 1, entrance: 0.5 })).toBeCloseTo(full * 0.5, 10);
+    expect(headColorBlend({ distance: 0, energy: 0, entrance: 1 })).toBe(0);
+    expect(headColorBlend({ distance: 0, energy: 1, entrance: 0 })).toBe(0);
   });
 });
 

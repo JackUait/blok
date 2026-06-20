@@ -5,6 +5,7 @@ import {
   SLOT_CONTENT_PX,
   FACE_PAD,
   CARD_WIDTH,
+  posesForVariant,
   type Variant,
 } from './heroFormations';
 
@@ -99,5 +100,22 @@ describe('LAYOUTS matrix', () => {
       expect(count, view).toBeGreaterThanOrEqual(1);
       expect(count, view).toBeLessThanOrEqual(5);
     }
+  });
+});
+
+describe('posesForVariant', () => {
+  it('returns one pose per card, parking absent slots', () => {
+    const variant = LAYOUTS.stack[2][0];
+    const poses = posesForVariant(variant);
+
+    expect(poses).toHaveLength(CARD_KEYS.length);
+    const activeSlots = new Set(variant.map((entry) => entry.slot));
+    CARD_KEYS.forEach((slot, i) => {
+      if (activeSlots.has(slot)) {
+        expect(poses[i].scale).toBeGreaterThan(0);
+      } else {
+        expect(poses[i].scale).toBe(0);
+      }
+    });
   });
 });

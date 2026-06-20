@@ -2,80 +2,16 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useI18n } from '../../contexts/I18nContext';
 import { Button } from '@/components/ui/button';
-
-const CARD_KEYS = ['a', 'b', 'c', 'd', 'e'] as const;
-type CardKey = (typeof CARD_KEYS)[number];
-
-/** Resting vertical centre of each card relative to the stack centre (px). Lets the
- *  formation engine drop a block on an absolute point regardless of its own height. */
-const REST_Y: Record<CardKey, number> = { a: -218, b: -135, c: -21, d: 100, e: 204 };
-
-/** Each formation is a per-card tuple `[x, y, rotZ, scale, rotX, rotY, skewX, z]` in
- *  stack-centre coordinates (a→d). The 3D rotations let the cards BEND, and the final
- *  `z` (translateZ) lifts each card to its own DEPTH in the stack's perspective volume —
- *  so the arrangements are genuinely volumetric and parallax apart when the stack tilts
- *  toward the pointer. The engine converts x/y into per-card translate deltas at runtime.
- *  Add a formation here and it joins the shuffle. */
-type FormTuple = readonly [number, number, number, number, number, number, number, number];
-const FORMATIONS: Record<string, readonly [FormTuple, FormTuple, FormTuple, FormTuple]> = {
-  // A tight, curated set — four distinct gestures, each one a deliberate "wow":
-  // rest → burst → dive → orbit. No filler. The trailing `z` gives every card its own
-  // depth so the whole set reads as a 3D scene, not flat cut-outs.
-
-  // resting stack, but layered in depth — heading floats forward, code recedes. The y's
-  // are spread a touch wider than the natural flow so the cards breathe apart in this view.
-  list: [[0, -188, 0, 1, 0, 0, 0, 60], [0, -93, 0, 1, 0, 0, 0, 20], [0, 37, 0, 1, 0, 0, 0, -20], [0, 174, 0, 1, 0, 0, 0, -60]],
-  // Exploded view — the four blocks burst apart into their own quadrants, each at a
-  // different depth and gentle 3D tilt (the hero IS an "exploded block stack"). Spreading
-  // across BOTH axes + depth keeps the wide cards from ever overlapping into a clump.
-  explode: [[-132, -78, -5, 0.77, 5, 13, 0, 64], [126, -98, 5, 0.75, 6, -14, 0, -48], [-110, 102, 6, 0.79, -6, 12, 0, 32], [142, 86, -4, 0.77, -5, -13, 0, -68]],
-  // diagonal staircase plunging into depth — equal scale + evenly stepped + a softened
-  // depth gradient so the cards share the diagonal evenly rather than bunching in the middle
-  cascade: [[-140, -162, -6, 0.86, 0, 12, 0, 64], [-47, -54, -6, 0.86, 0, 12, 0, 22], [47, 54, -6, 0.86, 0, 12, 0, -22], [140, 162, -6, 0.86, 0, 12, 0, -64]],
-  // four-point orbit at the cardinal points (a spin formation → the stack turns a full
-  // circle). Radius pulled just past where the left/right cards would collide at centre,
-  // so the blocks read BIG and densely fill the orbit rather than float apart.
-  circle: [[0, -134, 0, 0.8, 0, 0, 0, 80], [134, 0, 0, 0.8, 0, 0, 0, -80], [0, 134, 0, 0.8, 0, 0, 0, 80], [-134, 0, 0, 0.8, 0, 0, 0, -80]],
-};
-const FORMATION_KEYS = Object.keys(FORMATIONS);
-/** Formations the whole stack spins a full turn through — the orbit "wow" moment. */
-const SPIN_FORMATIONS = new Set(['circle']);
-/** How many of the four blocks take part in a given view. Drawn fresh each transition so
- *  the stack shows a *different number* of cards every time (the rest shrink away to
- *  nothing) — weighted toward 3–4 so it never feels too sparse, with the occasional pair. */
-const VIEW_COUNTS = [2, 3, 3, 4, 4] as const;
-/** Per-count fit: as the block count drops, pull the arrangement in (`spread`) and bump the
- *  card size (`scaleMul`, capped at full width) so a 2–3 block view still fills the frame
- *  deliberately instead of flinging a few cards to the corners around a hollow centre. */
-const FIT: Record<number, { spread: number; scaleMul: number }> = {
-  2: { spread: 0.6, scaleMul: 1.2 },
-  3: { spread: 0.82, scaleMul: 1.1 },
-  4: { spread: 1, scaleMul: 1 },
-};
-
-type Pose = {
-  tx: number;
-  ty: number;
-  tz: number;
-  rot: number;
-  scale: number;
-  rx: number;
-  ry: number;
-  kx: number;
-};
-
-/** Resolve a formation into per-card poses (translate deltas + depth + 3D rotation). */
-const posesFor = (key: string): Pose[] =>
-  FORMATIONS[key].map(([x, y, rot, scale, rx, ry, kx, z], i) => ({
-    tx: x,
-    ty: y - REST_Y[CARD_KEYS[i]],
-    tz: z,
-    rot,
-    scale,
-    rx,
-    ry,
-    kx,
-  }));
+import {
+  CARD_KEYS,
+  LAYOUTS,
+  VIEW_KEYS,
+  SPIN_VIEWS,
+  posesForVariant,
+  identityPoses,
+  type CardKey,
+  type Pose,
+} from './heroFormations';
 
 /** Build a transform string with a FIXED function order, so the Web Animations API
  *  interpolates each component smoothly between keyframes (a mismatched function list
@@ -440,7 +376,7 @@ const SLOT_KINDS: Record<CardKey, readonly BlockKind[]> = {
   d: ['code'],
   e: ['bookmark', 'audio', 'columns'],
 };
-/** The opening quartet — a clean first impression before the shuffle kicks in. */
+/** The opening quintet — a clean first impression before the shuffle kicks in. */
 const INITIAL_KINDS: readonly BlockKind[] = ['heading', 'todo', 'image', 'code', 'bookmark'];
 
 /** One block card in the stack, built as a 3D SLAB so it has real thickness: the styled
@@ -470,14 +406,14 @@ const HeroCard: React.FC<{ slot: CardKey; kind: BlockKind }> = ({ slot, kind }) 
 export const Hero: React.FC = () => {
   const { t } = useI18n();
   const stackRef = useRef<HTMLAnchorElement>(null);
-  // The block type currently rendered in each slot (a→d). The engine reshuffles it on
-  // every transition so the visible quartet is a fresh random mix — a tour of Blok's
+  // The block type currently rendered in each slot (a→e). The engine reshuffles it on
+  // every transition so the visible quintet is a fresh random mix — a tour of Blok's
   // block types that isn't tied to any particular formation.
   const [kinds, setKinds] = useState<readonly BlockKind[]>(INITIAL_KINDS);
 
-  // Formation engine — endlessly re-arranges the four hero blocks through a *shuffled*
-  // set of formations. Each leg bends through a perpendicular waypoint (curved arc, not
-  // a straight slide) and orbit-like formations spin the whole stack a full turn. Driven
+  // Formation engine — endlessly re-arranges the hero blocks through a *shuffled*
+  // set of views. Each leg bends through a perpendicular waypoint (curved arc, not
+  // a straight slide) and orbit-like views spin the whole stack a full turn. Driven
   // here rather than in CSS because the order is randomised every cycle. The per-card
   // `transform` wander (index.css) composes on top via distinct transform properties.
   useEffect(() => {
@@ -498,78 +434,26 @@ export const Hero: React.FC = () => {
     const sign = (): number => (Math.random() < 0.5 ? -1 : 1);
     const wait = (ms: number): Promise<void> =>
       new Promise((resolve) => window.setTimeout(resolve, ms));
-    // Fisher–Yates pick of k distinct items from [0..3].
-    const sample = (k: number): number[] => {
-      const a = [0, 1, 2, 3];
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-      }
-      return a.slice(0, k).sort((x, y) => x - y);
-    };
-    // A card sitting this view out: shrink to nothing at the stack centre, tucked back in
-    // depth, so it cleanly vanishes (and later grows back when it rejoins a formation).
-    const parked = (slot: CardKey): Pose => ({
-      tx: 0,
-      ty: -REST_Y[slot],
-      tz: -60,
-      rot: 0,
-      scale: 0,
-      rx: 0,
-      ry: 0,
-      kx: 0,
-    });
-    // Build the per-card poses for a view that uses only `n` of the four cards. A random
-    // subset of `n` formation positions is taken (re-centred so the smaller group stays
-    // balanced rather than leaving a hole), and a random subset of `n` cards is dropped
-    // into them top-to-bottom; the leftover cards park (shrink away). At n=4 the formation
-    // is used exactly as authored.
-    const buildPoses = (key: string, n: number): Pose[] => {
-      const tuples = FORMATIONS[key];
-      const fit = FIT[n] ?? { spread: 1, scaleMul: 1 };
-      const posIdx = sample(n);
-      let pts = posIdx.map((pi) => tuples[pi].slice() as number[]);
-      if (n < 4) {
-        // Re-centre the chosen positions, then pull them in toward the centre by `spread`
-        // so the smaller group reads as a tight, balanced cluster — not corner-flung.
-        const cx = pts.reduce((s, p) => s + p[0], 0) / n;
-        const cy = pts.reduce((s, p) => s + p[1], 0) / n;
-        pts = pts.map((p) => {
-          const q = p.slice();
-          q[0] = (q[0] - cx) * fit.spread;
-          q[1] = (q[1] - cy) * fit.spread;
-          return q;
-        });
-      }
-      const activeCards = sample(n);
-      return CARD_KEYS.map((slot, ci) => {
-        const k = activeCards.indexOf(ci);
-        if (k === -1) return parked(slot);
-        const [x, y, rot, scale, rx, ry, kx, z] = pts[k];
-        // Grow the cards a touch for sparser views, but never past their natural width.
-        return { tx: x, ty: y - REST_Y[slot], tz: z, rot, scale: Math.min(1, scale * fit.scaleMul), rx, ry, kx };
-      });
-    };
 
     let running = true;
     let paused = false;
     let cardAnims: Animation[] = [];
     let stackAnim: Animation | null = null;
     let stackDeg = 0;
-    let current = posesFor('list');
-    let currentKey = 'list';
-    let previousKey = 'list';
+    let current = identityPoses();
+    let currentView = '__initial__';
+    let previousView = '__initial__';
 
-    // Random next formation, never the current one and never an immediate echo of the
-    // one before — so the sequence reads shuffled, not cyclic.
-    const pickNext = (): string => {
-      let key = currentKey;
-      while (key === currentKey || key === previousKey) {
-        key = FORMATION_KEYS[Math.floor(Math.random() * FORMATION_KEYS.length)];
+    // Random next view, never the current one and never an immediate echo of the one
+    // before — so the sequence reads shuffled, not cyclic.
+    const pickNextView = (): string => {
+      let view = currentView;
+      while (view === currentView || view === previousView) {
+        view = VIEW_KEYS[Math.floor(Math.random() * VIEW_KEYS.length)];
       }
-      previousKey = currentKey;
-      currentKey = key;
-      return key;
+      previousView = currentView;
+      currentView = view;
+      return view;
     };
 
     // Bake the just-finished pose into inline styles, then drop the old animations so
@@ -679,12 +563,15 @@ export const Hero: React.FC = () => {
         while (paused && running) await wait(120);
         if (!running) break;
         commitAndClear();
-        const key = pickNext();
-        const count = VIEW_COUNTS[Math.floor(Math.random() * VIEW_COUNTS.length)];
-        const next = buildPoses(key, count);
-        const duration = transitionTo(next, SPIN_FORMATIONS.has(key));
+        const view = pickNextView();
+        const counts = Object.keys(LAYOUTS[view]).map(Number);
+        const count = counts[Math.floor(Math.random() * counts.length)];
+        const variants = LAYOUTS[view][count];
+        const variant = variants[Math.floor(Math.random() * variants.length)];
+        const next = posesForVariant(variant);
+        const duration = transitionTo(next, SPIN_VIEWS.has(view));
         // Reshuffle the blocks at the transition midpoint — exactly when the cards blink to
-        // their dimmest — so the fresh, random quartet only emerges as they fade back in.
+        // their dimmest — so the fresh, random quintet only emerges as they fade back in.
         // Each slot draws a new kind from its own pool, never repeating its current one.
         swapTimer = window.setTimeout(() => {
           if (!running) return;
@@ -814,7 +701,7 @@ export const Hero: React.FC = () => {
                 own drag handle. The whole stack endlessly re-choreographs itself through a
                 curated set of bold gestures — exploded view, diagonal cascade, spinning
                 orbit, resting list — and each card flips edge-on mid-move to morph into a
-                different block type, so the quartet keeps changing. The dark
+                different block type, so the quintet keeps changing. The dark
                 code block anchors the bottom. Hover freezes the formation; the stack opens
                 the playground. */}
             <Link
@@ -823,7 +710,7 @@ export const Hero: React.FC = () => {
               className="hero-stack relative flex w-72 max-w-full flex-col gap-3.5 sm:w-80"
               aria-label={t('home.hero.mascotAriaLabel')}
             >
-              {/* Four block cards — each slot shows a random block kind, reshuffled per
+              {/* Five block cards — each slot shows a random block kind, reshuffled per
                   transition (a tour of capabilities); the slot keeps each card's formation
                   identity + height stable. */}
               {CARD_KEYS.map((slot, i) => (

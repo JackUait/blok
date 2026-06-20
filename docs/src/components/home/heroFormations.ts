@@ -150,3 +150,47 @@ export const LAYOUTS: Record<string, Record<number, readonly Variant[]>> = {
     ],
   },
 };
+
+export interface Pose {
+  tx: number;
+  ty: number;
+  tz: number;
+  rot: number;
+  scale: number;
+  rx: number;
+  ry: number;
+  kx: number;
+}
+
+/** A card sitting a view out: shrink to nothing at the stack centre, tucked back in depth. */
+export const parked = (slot: CardKey): Pose => ({
+  tx: 0,
+  ty: -REST_Y[slot],
+  tz: -60,
+  rot: 0,
+  scale: 0,
+  rx: 0,
+  ry: 0,
+  kx: 0,
+});
+
+/** Resolve a variant into per-card poses (translate deltas + depth + 3D rotation), parking
+ *  every slot the variant does not name. Pose `y` is absolute stack-centre, converted to a
+ *  translate delta against the card's resting flow position. */
+export const posesForVariant = (variant: Variant): Pose[] => {
+  const bySlot = new Map<CardKey, FormTuple>(variant.map((entry) => [entry.slot, entry.pose]));
+  return CARD_KEYS.map((slot) => {
+    const tuple = bySlot.get(slot);
+    if (!tuple) return parked(slot);
+    const [x, y, rot, scale, rx, ry, kx, z] = tuple;
+    return { tx: x, ty: y - REST_Y[slot], tz: z, rot, scale, rx, ry, kx };
+  });
+};
+
+/** All cards at rest (flow position, full size) — the opening state before the loop runs. */
+export const identityPoses = (): Pose[] =>
+  CARD_KEYS.map(() => ({ tx: 0, ty: 0, tz: 0, rot: 0, scale: 1, rx: 0, ry: 0, kx: 0 }));
+
+export const VIEW_KEYS: readonly string[] = Object.keys(LAYOUTS);
+/** Views the whole stack spins a full turn through — the orbit "wow" moment. */
+export const SPIN_VIEWS: ReadonlySet<string> = new Set(['orbit']);

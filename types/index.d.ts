@@ -33,6 +33,7 @@ import {
   Theme,
   ThemeMode,
   ResolvedTheme,
+  Width,
 } from './api';
 
 import { OutputData } from './data-formats';
@@ -129,6 +130,8 @@ export {
   Theme,
   ThemeMode,
   ResolvedTheme,
+  Width,
+  EditorWidth,
 } from './api';
 export {
   BlockMutationType,
@@ -212,6 +215,7 @@ export class Blok {
 
   public blocks: Blocks;
   public caret: Caret;
+  public history: History;
   public sanitizer: Sanitizer;
   public saver: Saver;
   public selection: Selection;
@@ -221,6 +225,7 @@ export class Blok {
   public tooltip: Tooltip;
   public readOnly: ReadOnly;
   public theme: Theme;
+  public width: Width;
   constructor(configuration?: BlokConfig|string);
 
   /**

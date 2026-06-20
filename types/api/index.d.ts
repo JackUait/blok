@@ -18,3 +18,4 @@ export * from './ui';
 export * from './tools';
 
 export * from './theme';
+export * from './width';

@@ -63,6 +63,8 @@ export const DATA_ATTR = {
   contentAlign: 'data-blok-content-align',
   /** Right-to-left mode */
   rtl: 'data-blok-rtl',
+  /** Editor content width mode (present with value "full" for wide mode; absent = narrow) */
+  width: 'data-blok-width',
 
   // ============================================
   // Drag and Drop

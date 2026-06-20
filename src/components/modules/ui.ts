@@ -3,6 +3,7 @@
  * Module UI
  * @type {UI}
  */
+import type { EditorWidth } from '../../../types/api/width';
 import styles from '../../styles/main.css?inline';
 import { Module } from '../__module';
 import {
@@ -345,6 +346,35 @@ export class UI extends Module<UINodes> {
     const { BlockManager } = this.Blok;
 
     this.nodes.wrapper.setAttribute(DATA_ATTR.empty, BlockManager.isBlokEmpty ? 'true' : 'false');
+  }
+
+  /**
+   * Current editor content width mode. Defaults to 'narrow'.
+   */
+  private widthMode: EditorWidth = 'narrow';
+
+  /**
+   * Returns the current editor content width mode.
+   */
+  public getWidthMode(): EditorWidth {
+    return this.widthMode;
+  }
+
+  /**
+   * Sets the editor content width mode by writing the width data attribute on
+   * the editor wrapper. 'narrow' (the default) leaves the attribute absent so
+   * the content keeps its `--max-width-content` constraint; 'full' adds it so
+   * the dedicated CSS rule removes the constraint.
+   * @param mode - the width mode to apply
+   */
+  public setWidthMode(mode: EditorWidth): void {
+    this.widthMode = mode;
+
+    if (mode === 'full') {
+      this.nodes.wrapper.setAttribute(DATA_ATTR.width, 'full');
+    } else {
+      this.nodes.wrapper.removeAttribute(DATA_ATTR.width);
+    }
   }
 
   /**

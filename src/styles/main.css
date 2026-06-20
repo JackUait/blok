@@ -274,6 +274,17 @@
 }
 
 /**
+ * Content width mode
+ * 'full' (data-blok-width="full" on the editor wrapper) removes the
+ * --max-width-content constraint so content fills its container. The default
+ * 'narrow' mode leaves the attribute absent and keeps the max-w-blok-content
+ * Tailwind utility intact. Unlayered selector overrides the @layer utilities rule.
+ */
+[data-blok-width="full"] [data-blok-element-content] {
+  max-width: none;
+}
+
+/**
  * Multi-block drag visual feedback
  * Makes selected blocks semi-transparent during multi-block drag operation
  */

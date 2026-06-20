@@ -5,7 +5,7 @@
  */
 import '@babel/register';
 
-import type { BlokConfig, API } from '../types';
+import type { BlokConfig, API, EditorWidth } from '../types';
 
 import { DATA_ATTR } from './components/constants/data-attributes';
 import { Core } from './components/core';
@@ -142,6 +142,38 @@ class Blok {
     };
 
     /**
+     * Width API — expose it on the instance immediately (mirrors the theme API),
+     * so host apps can call instance.width.set('full') before isReady without a
+     * silent no-op. The chosen mode is buffered and replayed once UI is ready.
+     */
+    const widthBuffer = { pendingMode: null as EditorWidth | null };
+
+    const getUIModule = (): BlokModules['UI'] | undefined =>
+      (blok.moduleInstances as Partial<BlokModules>).UI;
+
+    const readWidthMode = (): EditorWidth => {
+      const ui = getUIModule();
+
+      return ui !== undefined ? ui.getWidthMode() : (widthBuffer.pendingMode ?? 'narrow');
+    };
+
+    const applyWidthMode = (mode: EditorWidth): void => {
+      widthBuffer.pendingMode = mode;
+
+      const ui = getUIModule();
+
+      if (ui !== undefined) {
+        ui.setWidthMode(mode);
+      }
+    };
+
+    (this as Record<string, unknown>).width = {
+      get: (): EditorWidth => readWidthMode(),
+      set: (mode: EditorWidth): void => applyWidthMode(mode),
+      toggle: (): void => applyWidthMode(readWidthMode() === 'full' ? 'narrow' : 'full'),
+    };
+
+    /**
      * We need to export isReady promise in the constructor
      * as it can be used before other API methods are exported
      * @type {Promise<void>}
@@ -201,6 +233,16 @@ class Blok {
           tm.setMode(themeBuffer.pendingMode);
         }
         themeBuffer.pendingMode = null;
+      }
+
+      // Apply any width mode buffered before isReady resolved.
+      if (widthBuffer.pendingMode !== null) {
+        const ui = (blok.moduleInstances as Partial<BlokModules>).UI;
+
+        if (ui !== undefined) {
+          ui.setWidthMode(widthBuffer.pendingMode);
+        }
+        widthBuffer.pendingMode = null;
       }
 
       // Scroll to the block referenced by the URL hash, if present.

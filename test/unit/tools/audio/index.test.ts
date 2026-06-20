@@ -166,4 +166,57 @@ describe('AudioTool', () => {
     captionEl!.dispatchEvent(new Event('blur'));
     expect(tool.save().caption).toBe('My caption');
   });
+
+  const activateSetting = (tool: AudioTool, name: string): void => {
+    const flat: { name?: string; onActivate?: () => void; children?: { items?: unknown[] } }[] = [];
+    const walk = (arr: unknown[]): void => {
+      for (const it of arr) {
+        const item = it as { name?: string; onActivate?: () => void; children?: { items?: unknown[] } };
+        flat.push(item);
+        if (item.children?.items) walk(item.children.items);
+      }
+    };
+    const settings = tool.renderSettings();
+    walk(Array.isArray(settings) ? settings : [settings]);
+    const target = flat.find((it) => it.name === name);
+    if (!target?.onActivate) throw new Error(`no activatable setting named ${name}`);
+    target.onActivate();
+  };
+
+  it('removing the caption hides the field in edit mode and clears the text', () => {
+    const tool = new AudioTool(opts({ url: 'https://x/y.mp3', caption: 'Hello' }));
+    const root = tool.render();
+    expect(root.querySelector('[data-role="audio-caption"]')).not.toBeNull();
+
+    activateSetting(tool, 'audio-caption'); // toggle off → remove
+
+    // Field gone even though we are in edit mode (not read-only).
+    expect(root.querySelector('[data-role="audio-caption"]')).toBeNull();
+    const saved = tool.save();
+    expect(saved.captionVisible).toBe(false);
+    expect(saved.caption).toBeUndefined();
+  });
+
+  it('the Caption setting reflects the removed state as inactive', () => {
+    const tool = new AudioTool(opts({ url: 'https://x/y.mp3', caption: 'Hello' }));
+    tool.render();
+    activateSetting(tool, 'audio-caption'); // off
+    const settings = tool.renderSettings();
+    const flat = Array.isArray(settings) ? settings : [settings];
+    const captionItem = flat.find((it) => (it as { name?: string }).name === 'audio-caption') as { isActive?: boolean };
+    expect(captionItem.isActive).toBe(false);
+  });
+
+  it('re-enabling the caption restores an empty field without resurrecting old text', () => {
+    const tool = new AudioTool(opts({ url: 'https://x/y.mp3', caption: 'Hello' }));
+    const root = tool.render();
+    activateSetting(tool, 'audio-caption'); // off
+    activateSetting(tool, 'audio-caption'); // on again
+
+    const captionEl = root.querySelector<HTMLElement>('[data-role="audio-caption"]');
+    expect(captionEl).not.toBeNull();
+    expect(captionEl!.textContent).toBe('');
+    expect(tool.save().captionVisible).toBe(true);
+    expect(tool.save().caption).toBeUndefined();
+  });
 });

@@ -395,7 +395,7 @@ export class AudioTool implements BlockTool {
     // Caption row — outside body, below the card
     const placeholder = this.config.captionPlaceholder ?? DEFAULT_CAPTION_PLACEHOLDER;
     const captionVisible = this.data.captionVisible !== false;
-    if (captionVisible || !this.readOnly) {
+    if (captionVisible) {
       figure.appendChild(renderCaptionRow({
         value: this.data.caption ?? '',
         placeholder,
@@ -442,7 +442,11 @@ export class AudioTool implements BlockTool {
   }
 
   private toggleCaption(): void {
-    this.data.captionVisible = this.data.captionVisible === false;
+    const enabling = this.data.captionVisible === false;
+    this.data.captionVisible = enabling;
+    // Removing the caption clears its text too, so re-enabling starts fresh
+    // rather than resurrecting the old text.
+    if (!enabling) this.data.caption = undefined;
     this.block.dispatchChange();
     this.renderState();
   }

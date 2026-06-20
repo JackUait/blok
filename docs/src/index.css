@@ -296,9 +296,6 @@
 .hero-card-d {
   animation: hero-wander-alt 6.9s ease-in-out -1.2s infinite;
 }
-.hero-card-e {
-  animation: hero-wander 7.7s ease-in-out -2.6s infinite;
-}
 
 .hero-stack {
   transform-origin: center;
@@ -355,10 +352,6 @@
   transform-origin: right center;
   transform: rotateY(-90deg);
 }
-.hero-slab-edge--dark {
-  background: linear-gradient(to right, oklch(0.34 0 0), oklch(0.16 0 0));
-}
-
 @keyframes hero-wander {
   0%,
   100% {
@@ -405,6 +398,169 @@
     translate: 7px -8px;
     rotate: 1.3deg;
   }
+}
+
+/* ── Hero block CONTENT micro-motion ──────────────────────────────────────────────
+   Each card body runs one small, idiomatic loop that hints at what the block DOES — a
+   self-checking todo, an audio equaliser, a blinking code caret, a dropping map pin, a
+   typing heading, a loading sheen on media — so the stack reads as a LIVING document, not
+   frozen skeletons. All slow, low-amplitude and looping; every motion lives purely on the
+   content layer (inner transforms / opacity / colour), never on the card's own transform,
+   so it composes cleanly with the formation engine (Hero.tsx) and the `hero-wander` drift.
+   Staggered families take their per-element `animation-delay` inline. Disabled under
+   reduced-motion (see the block at the foot of this file). */
+
+/* Equaliser — waveform bars rise and fall around their centre (audio "now playing"). */
+@keyframes hero-eq {
+  0%,
+  100% {
+    transform: scaleY(0.42);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+.hero-eq-bar {
+  transform-origin: center;
+  animation: hero-eq 1.05s ease-in-out infinite;
+}
+
+/* Gentle breathing — accent bars, status pills, icons, streaming list rows. */
+@keyframes hero-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+.hero-pulse {
+  animation: hero-pulse 2.4s ease-in-out infinite;
+}
+
+/* Blinking insertion caret — the code block reads as a live editor. */
+@keyframes hero-caret {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  55%,
+  100% {
+    opacity: 0;
+  }
+}
+.hero-caret {
+  animation: hero-caret 1.05s steps(1, end) infinite;
+}
+
+/* Self-completing todo — the empty box fills and a tick draws in, then resets. */
+@keyframes hero-check-box {
+  0%,
+  58%,
+  100% {
+    background-color: transparent;
+    border-color: var(--border);
+  }
+  74%,
+  92% {
+    background-color: var(--primary);
+    border-color: var(--primary);
+  }
+}
+@keyframes hero-check-draw {
+  0%,
+  60% {
+    stroke-dashoffset: 24;
+  }
+  76%,
+  92% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: 24;
+  }
+}
+.hero-check-box {
+  animation: hero-check-box 4.2s ease-in-out infinite;
+}
+.hero-check-draw {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: hero-check-draw 4.2s ease-in-out infinite;
+}
+
+/* Toggle disclosure — the chevron swings from closed (▶) to open (▼) and back. */
+@keyframes hero-chevron {
+  0%,
+  38%,
+  100% {
+    transform: rotate(0deg);
+  }
+  55%,
+  88% {
+    transform: rotate(90deg);
+  }
+}
+.hero-chevron {
+  transform-origin: 45% 50%;
+  animation: hero-chevron 4s ease-in-out infinite;
+}
+
+/* Map pin — drops in and settles with a small secondary bounce. */
+@keyframes hero-pin {
+  0%,
+  100% {
+    transform: translate(-50%, -100%);
+  }
+  12% {
+    transform: translate(-50%, -132%);
+  }
+  30% {
+    transform: translate(-50%, -100%);
+  }
+  40% {
+    transform: translate(-50%, -113%);
+  }
+  50% {
+    transform: translate(-50%, -100%);
+  }
+}
+.hero-pin {
+  animation: hero-pin 3.6s cubic-bezier(0.5, 0.05, 0.4, 1) infinite;
+}
+
+/* Typewriter — the heading's underline writes itself out, holds, then clears. */
+@keyframes hero-type {
+  0% {
+    transform: scaleX(0);
+  }
+  42%,
+  82% {
+    transform: scaleX(1);
+  }
+  100% {
+    transform: scaleX(0);
+  }
+}
+.hero-type {
+  transform-origin: left center;
+  animation: hero-type 3.8s ease-in-out infinite;
+}
+
+/* Play affordance — the transport button breathes (video/embed). */
+@keyframes hero-pop {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
+}
+.hero-pop {
+  transform-origin: center;
+  animation: hero-pop 2.2s ease-in-out infinite;
 }
 
 /* Nav brand hover — the noodle mascot springs into a quick bob + wiggle and the
@@ -518,9 +674,17 @@
   .hero-card-b,
   .hero-card-c,
   .hero-card-d,
-  .hero-card-e,
   .hero-float,
   .hero-stack,
+  .hero-eq-bar,
+  .hero-pulse,
+  .hero-caret,
+  .hero-check-box,
+  .hero-check-draw,
+  .hero-chevron,
+  .hero-pin,
+  .hero-type,
+  .hero-pop,
   .paper-fold,
   .paper-fold-face,
   .paper-crease {

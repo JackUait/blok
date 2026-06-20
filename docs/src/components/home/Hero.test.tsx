@@ -1,7 +1,8 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { Hero } from './Hero';
+import { Hero, SLOT_KINDS } from './Hero';
+import { LAYOUTS, CARD_KEYS } from './heroFormations';
 import { I18nProvider } from '../../contexts/I18nContext';
 
 describe('Hero', () => {
@@ -98,7 +99,24 @@ describe('Hero', () => {
     expect(screen.getByTestId('hero-demo')).toBeInTheDocument();
   });
 
-  it('should render five hero block cards', () => {
+  it('never pins a single block kind to an always-present slot', () => {
+    // The slots present in EVERY formation (the intersection across all variants) show on
+    // every loop. If such a slot had a single-kind pool, that block would appear literally
+    // every loop — give those slots a varied pool so no one block type ever dominates.
+    const alwaysPresent = CARD_KEYS.filter((slot) =>
+      Object.values(LAYOUTS).every((counts) =>
+        Object.values(counts).every((variants) =>
+          variants.every((variant) => variant.some((entry) => entry.slot === slot))
+        )
+      )
+    );
+    expect(alwaysPresent.length).toBeGreaterThan(0);
+    for (const slot of alwaysPresent) {
+      expect(SLOT_KINDS[slot].length, `slot ${slot} is always on screen`).toBeGreaterThan(1);
+    }
+  });
+
+  it('should render four hero block cards', () => {
     render(
       <I18nProvider>
         <MemoryRouter>
@@ -107,7 +125,23 @@ describe('Hero', () => {
       </I18nProvider>
     );
 
-    expect(screen.getAllByTestId('hero-card')).toHaveLength(5);
+    expect(screen.getAllByTestId('hero-card')).toHaveLength(4);
+  });
+
+  it('opens on the full four-card formation', () => {
+    render(
+      <I18nProvider>
+        <MemoryRouter>
+          <Hero />
+        </MemoryRouter>
+      </I18nProvider>
+    );
+
+    // The opening pose is stack@4, so all four cards are on screen from the first paint.
+    const visible = screen
+      .getAllByTestId('hero-card')
+      .filter((card) => card.style.opacity !== '0');
+    expect(visible).toHaveLength(4);
   });
 
   it('should render Russian strings when locale is ru', () => {

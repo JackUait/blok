@@ -3,12 +3,12 @@ import { Link } from 'react-router-dom';
 import { useI18n } from '../../contexts/I18nContext';
 import { Button } from '@/components/ui/button';
 
-const CARD_KEYS = ['a', 'b', 'c', 'd'] as const;
+const CARD_KEYS = ['a', 'b', 'c', 'd', 'e'] as const;
 type CardKey = (typeof CARD_KEYS)[number];
 
 /** Resting vertical centre of each card relative to the stack centre (px). Lets the
  *  formation engine drop a block on an absolute point regardless of its own height. */
-const REST_Y: Record<CardKey, number> = { a: -164, b: -81, c: 33, d: 154 };
+const REST_Y: Record<CardKey, number> = { a: -218, b: -135, c: -21, d: 100, e: 204 };
 
 /** Each formation is a per-card tuple `[x, y, rotZ, scale, rotX, rotY, skewX, z]` in
  *  stack-centre coordinates (a→d). The 3D rotations let the cards BEND, and the final
@@ -427,7 +427,7 @@ const renderBlockBody = (kind: BlockKind): React.ReactNode => {
 
 /** Fixed body height per slot, so swapping block types never changes a card's height —
  *  the formation REST_Y constants stay valid across every set. */
-const SLOT_BODY_H: Record<CardKey, string> = { a: 'h-9', b: 'h-[42px]', c: 'h-[98px]', d: 'h-14' };
+const SLOT_BODY_H: Record<CardKey, string> = { a: 'h-9', b: 'h-[42px]', c: 'h-[98px]', d: 'h-14', e: 'h-16' };
 
 /** The pool of block types each slot may show. On every swap the engine picks a fresh
  *  random kind per slot (never an immediate repeat), so the displayed quartet is an
@@ -436,11 +436,12 @@ const SLOT_BODY_H: Record<CardKey, string> = { a: 'h-9', b: 'h-[42px]', c: 'h-[9
 const SLOT_KINDS: Record<CardKey, readonly BlockKind[]> = {
   a: ['heading', 'quote', 'callout'],
   b: ['todo', 'bulletList', 'numberList', 'toggle'],
-  c: ['image', 'table', 'bookmark', 'bookmarkRich', 'video', 'audio', 'embed', 'embedSocial', 'embedMap', 'columns', 'database'],
+  c: ['image', 'table', 'bookmarkRich', 'video', 'embed', 'embedSocial', 'embedMap', 'database'],
   d: ['code'],
+  e: ['bookmark', 'audio', 'columns'],
 };
 /** The opening quartet — a clean first impression before the shuffle kicks in. */
-const INITIAL_KINDS: readonly BlockKind[] = ['heading', 'todo', 'image', 'code'];
+const INITIAL_KINDS: readonly BlockKind[] = ['heading', 'todo', 'image', 'code', 'bookmark'];
 
 /** One block card in the stack, built as a 3D SLAB so it has real thickness: the styled
  *  card is the front face, and two extruded side "walls" sit at its left/right edges. When
@@ -451,7 +452,7 @@ const INITIAL_KINDS: readonly BlockKind[] = ['heading', 'todo', 'image', 'code']
 const HeroCard: React.FC<{ slot: CardKey; kind: BlockKind }> = ({ slot, kind }) => {
   const dark = kind === 'code';
   return (
-    <div className={`hero-card-${slot} hero-slab`}>
+    <div className={`hero-card-${slot} hero-slab`} data-blok-testid="hero-card">
       <span className={`hero-slab-edge hero-slab-edge-l ${dark ? 'hero-slab-edge--dark' : ''}`} aria-hidden="true" />
       <span className={`hero-slab-edge hero-slab-edge-r ${dark ? 'hero-slab-edge--dark' : ''}`} aria-hidden="true" />
       <div

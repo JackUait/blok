@@ -296,6 +296,9 @@
 .hero-card-d {
   animation: hero-wander-alt 6.9s ease-in-out -1.2s infinite;
 }
+.hero-card-e {
+  animation: hero-wander 7.7s ease-in-out -2.6s infinite;
+}
 
 .hero-stack {
   transform-origin: center;
@@ -515,6 +518,7 @@
   .hero-card-b,
   .hero-card-c,
   .hero-card-d,
+  .hero-card-e,
   .hero-float,
   .hero-stack,
   .paper-fold,

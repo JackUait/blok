@@ -98,6 +98,18 @@ describe('Hero', () => {
     expect(screen.getByTestId('hero-demo')).toBeInTheDocument();
   });
 
+  it('should render five hero block cards', () => {
+    render(
+      <I18nProvider>
+        <MemoryRouter>
+          <Hero />
+        </MemoryRouter>
+      </I18nProvider>
+    );
+
+    expect(screen.getAllByTestId('hero-card')).toHaveLength(5);
+  });
+
   it('should render Russian strings when locale is ru', () => {
     localStorage.setItem('blok-docs-locale', 'ru');
     render(

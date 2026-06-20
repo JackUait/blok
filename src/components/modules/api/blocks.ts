@@ -416,7 +416,7 @@ export class BlocksAPI extends Module {
       return this.Blok.BlockManager.composeBlock({
         id,
         tool: type || (this.config.defaultBlock as string),
-        data: data as BlockToolData,
+        data: data,
         tunes,
         parentId: parent,
         contentIds: content,

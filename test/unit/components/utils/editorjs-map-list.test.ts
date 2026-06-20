@@ -52,7 +52,7 @@ const expectAllRenderableListBlocks = (out: OutputBlockData[]): void => {
 };
 
 const dataOf = (block: OutputBlockData): Record<string, unknown> =>
-  block.data as Record<string, unknown>;
+  block.data;
 
 describe('editorjs-map-list — list family migration', () => {
   beforeEach(() => {

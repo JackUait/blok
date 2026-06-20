@@ -156,7 +156,7 @@ test.describe('Table Configuration - Stretched Option', () => {
     const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
 
     expect(tableBlock).toBeDefined();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+     
     expect(tableBlock?.data.stretched).toBe(true);
   });
 
@@ -206,7 +206,7 @@ test.describe('Table Configuration - Stretched Option', () => {
     const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
 
     expect(tableBlock).toBeDefined();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+     
     expect(tableBlock?.data.stretched).toBe(true);
   });
 });

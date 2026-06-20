@@ -139,7 +139,7 @@ describe('editorjs map: previously-unsupported blocks (raw / warning / attaches)
     expect(out[0].type).toBe('bookmark');
     expect(RENDERABLE_TYPES.has(out[0].type)).toBe(true);
 
-    const data = out[0].data as Record<string, unknown>;
+    const data = out[0].data;
 
     expect(data.url).toBe('https://example.com/report.pdf');
     expect(data.title).toBe('Quarterly report');

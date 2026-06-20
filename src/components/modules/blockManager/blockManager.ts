@@ -516,7 +516,7 @@ export class BlockManager extends Module {
     // Those nested inserts sync to Yjs. If fromJSON() ran after, it would wipe
     // them (fromJSON replaces the entire Yjs array). Running fromJSON first
     // ensures nested blocks created during rendered() persist in Yjs.
-    const blockDataArray: OutputBlockData<string, Record<string, unknown>>[] = blocks.map(block => {
+    const blockDataArray: OutputBlockData[] = blocks.map(block => {
       const tunes = block.preservedTunes;
 
       return {
@@ -1410,7 +1410,7 @@ export class BlockManager extends Module {
    * @param blocks - the fully reconciled blocks about to be handed to Yjs
    */
   private assertInsertManyHierarchy(blocks: Block[]): void {
-    const snapshot: OutputBlockData<string, Record<string, unknown>>[] = blocks.map((block) => ({
+    const snapshot: OutputBlockData[] = blocks.map((block) => ({
       id: block.id,
       type: block.name,
       data: {},

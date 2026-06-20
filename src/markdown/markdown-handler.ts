@@ -1,4 +1,3 @@
-import type { BlockToolData } from '../../types';
 import type { BlokModules } from '../types-internal/blok-modules';
 import type { SanitizerConfigBuilder } from '../components/modules/paste/sanitizer-config';
 import type { ToolRegistry } from '../components/modules/paste/tool-registry';
@@ -93,7 +92,7 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
       BlockManager.composeBlock({
         id,
         tool: type,
-        data: blockData as BlockToolData,
+        data: blockData,
         parentId: parent,
       })
     );

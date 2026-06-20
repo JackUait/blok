@@ -347,7 +347,7 @@ test.describe('list tool (ListItem)', () => {
       });
 
       expect(savedData?.blocks).toHaveLength(2);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[1].data.depth).toBe(1);
     });
 
@@ -373,7 +373,7 @@ test.describe('list tool (ListItem)', () => {
         return await window.blokInstance?.save();
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[0].data.depth).toBe(1);
     });
 
@@ -400,7 +400,7 @@ test.describe('list tool (ListItem)', () => {
         return await window.blokInstance?.save();
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[1].data.depth ?? 0).toBe(0);
     });
 
@@ -428,7 +428,7 @@ test.describe('list tool (ListItem)', () => {
       });
 
       expect(savedData?.blocks).toHaveLength(2);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
     });
 
@@ -457,7 +457,7 @@ test.describe('list tool (ListItem)', () => {
         return await window.blokInstance?.save();
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[2].data.depth).toBe(2);
 
       // Now try to indent again - should NOT work because previous item is at depth 1
@@ -469,7 +469,7 @@ test.describe('list tool (ListItem)', () => {
       });
 
       // Should still be at depth 2
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData2?.blocks[2].data.depth).toBe(2);
     });
 
@@ -494,7 +494,7 @@ test.describe('list tool (ListItem)', () => {
         return await window.blokInstance?.save();
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[1].data.depth).toBe(1);
 
       // Press Tab again - should NOT indent further because first item is at depth 0
@@ -506,7 +506,7 @@ test.describe('list tool (ListItem)', () => {
       });
 
       // Should still be at depth 1
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[1].data.depth).toBe(1);
     });
 
@@ -533,7 +533,7 @@ test.describe('list tool (ListItem)', () => {
         return await window.blokInstance?.save();
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[3].data.depth).toBe(3);
     });
   });
@@ -554,9 +554,9 @@ test.describe('list tool (ListItem)', () => {
 
       expect(savedData?.blocks).toHaveLength(2);
       expect(savedData?.blocks[0].type).toBe('list');
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[0].data.text).toBe('First');
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[1].data.text).toBe('Second');
     });
 
@@ -574,13 +574,13 @@ test.describe('list tool (ListItem)', () => {
       });
 
       expect(savedData?.blocks).toHaveLength(2);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[0].data.text).toBe('Parent');
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[1].data.text).toBe('Child');
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[1].data.depth).toBe(1);
     });
 
@@ -615,13 +615,13 @@ test.describe('list tool (ListItem)', () => {
       });
 
       expect(savedData?.blocks).toHaveLength(1);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[0].data.text).toContain('<a href="https://example.com"');
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[0].data.text).toContain('target="_blank"');
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[0].data.text).toContain('rel="nofollow"');
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[0].data.text).toContain('>link</a>');
     });
 
@@ -670,7 +670,7 @@ test.describe('list tool (ListItem)', () => {
         return await window.blokInstance?.save();
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[0].data.text).toContain('href="https://google.com"');
     });
   });
@@ -1594,7 +1594,7 @@ test.describe('list tool (ListItem)', () => {
         return await window.blokInstance?.save();
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[0].data.depth).toBe(1);
     });
 
@@ -1621,7 +1621,7 @@ test.describe('list tool (ListItem)', () => {
       });
 
       // First-in-group items are capped at depth 1
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[0].data.depth).toBe(1);
     });
 
@@ -1648,7 +1648,7 @@ test.describe('list tool (ListItem)', () => {
       });
 
       // Deep item should be capped at depth 1 (previous item depth 0 + 1)
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[1].data.depth).toBe(1);
     });
 
@@ -1676,7 +1676,7 @@ test.describe('list tool (ListItem)', () => {
       });
 
       // Depth should remain 1 since it's still valid
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[1].data.depth).toBe(1);
     });
 
@@ -1738,7 +1738,7 @@ test.describe('list tool (ListItem)', () => {
         return await window.blokInstance?.save();
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[0].data.depth).toBe(1);
     });
   });
@@ -1813,9 +1813,9 @@ test.describe('list tool (ListItem)', () => {
         return await window.blokInstance?.save();
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[1].data.depth).toBe(1);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[2].data.depth).toBe(1);
     });
 
@@ -1841,9 +1841,9 @@ test.describe('list tool (ListItem)', () => {
         return await window.blokInstance?.save();
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[1].data.depth ?? 0).toBe(0);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[2].data.depth ?? 0).toBe(0);
     });
 
@@ -1868,9 +1868,9 @@ test.describe('list tool (ListItem)', () => {
         return await window.blokInstance?.save();
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[0].data.depth).toBe(1);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[1].data.depth).toBe(1);
     });
 
@@ -1896,9 +1896,9 @@ test.describe('list tool (ListItem)', () => {
         return await window.blokInstance?.save();
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[1].data.depth).toBe(1);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[2].data.depth ?? 0).toBe(0);
     });
 
@@ -1929,7 +1929,7 @@ test.describe('list tool (ListItem)', () => {
         return await window.blokInstance?.save();
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
     });
 

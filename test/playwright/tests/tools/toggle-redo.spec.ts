@@ -193,7 +193,7 @@ test.describe('Toggle redo regression', () => {
     const dataAfterType = await saveBlok(page);
     const toggleAfterType = dataAfterType.blocks.find(b => b.type === 'toggle');
     const childAfterType = dataAfterType.blocks.find(
-      b => b.type === 'paragraph' && String((b.data as Record<string, unknown>).text) === 'hello world'
+      b => b.type === 'paragraph' && String((b.data).text) === 'hello world'
     );
 
     expect(childAfterType).toBeDefined();
@@ -220,7 +220,7 @@ test.describe('Toggle redo regression', () => {
     const dataAfterRedo = await saveBlok(page);
     const toggleAfterRedo = dataAfterRedo.blocks.find(b => b.type === 'toggle');
     const childAfterRedo = dataAfterRedo.blocks.find(
-      b => b.type === 'paragraph' && String((b.data as Record<string, unknown>).text) === 'hello world'
+      b => b.type === 'paragraph' && String((b.data).text) === 'hello world'
     );
 
     expect(childAfterRedo).toBeDefined();
@@ -260,10 +260,10 @@ test.describe('Toggle redo regression', () => {
     const dataAfterEdit = await saveBlok(page);
     const toggleAfterEdit = dataAfterEdit.blocks.find(b => b.type === 'toggle');
 
-    expect(String((toggleAfterEdit?.data as Record<string, unknown> | undefined)?.text)).toContain('extra');
+    expect(String((toggleAfterEdit?.data)?.text)).toContain('extra');
 
     const childAfterEdit = dataAfterEdit.blocks.find(
-      b => b.type === 'paragraph' && String((b.data as Record<string, unknown>).text) === 'child text'
+      b => b.type === 'paragraph' && String((b.data).text) === 'child text'
     );
 
     expect(toggleAfterEdit?.content).toContain(childAfterEdit?.id);
@@ -278,7 +278,7 @@ test.describe('Toggle redo regression', () => {
     const dataAfterUndo = await saveBlok(page);
     const toggleAfterUndo = dataAfterUndo.blocks.find(b => b.type === 'toggle');
     const childAfterUndo = dataAfterUndo.blocks.find(
-      b => b.type === 'paragraph' && String((b.data as Record<string, unknown>).text) === 'child text'
+      b => b.type === 'paragraph' && String((b.data).text) === 'child text'
     );
 
     expect(toggleAfterUndo?.content).toContain(childAfterUndo?.id);
@@ -292,7 +292,7 @@ test.describe('Toggle redo regression', () => {
     const dataAfterRedo = await saveBlok(page);
     const toggleAfterRedo = dataAfterRedo.blocks.find(b => b.type === 'toggle');
     const childAfterRedo = dataAfterRedo.blocks.find(
-      b => b.type === 'paragraph' && String((b.data as Record<string, unknown>).text) === 'child text'
+      b => b.type === 'paragraph' && String((b.data).text) === 'child text'
     );
 
     expect(toggleAfterRedo?.content).toContain(childAfterRedo?.id);
@@ -323,7 +323,7 @@ test.describe('Toggle redo regression', () => {
     const toggleBefore = dataBefore.blocks.find(b => b.type === 'toggle');
     const childBefore = dataBefore.blocks.find(b => b.type === 'paragraph');
 
-    expect(String((childBefore?.data as Record<string, unknown> | undefined)?.text)).toBe('hello');
+    expect(String((childBefore?.data)?.text)).toBe('hello');
     expect(toggleBefore?.content).toContain(childBefore?.id);
 
     // Undo — may remove entire block (Enter + text in same capture)
@@ -394,7 +394,7 @@ test.describe('Toggle redo regression', () => {
     const childRedone = dataAllRedone.blocks.find(b => b.type === 'paragraph');
 
     expect(childRedone).toBeDefined();
-    expect(String((childRedone?.data as Record<string, unknown> | undefined)?.text)).toBe('abc');
+    expect(String((childRedone?.data)?.text)).toBe('abc');
     expect(toggleRedone?.content).toContain(childRedone?.id);
 
     await expect(childInsideToggle).toBeVisible();
@@ -442,7 +442,7 @@ test.describe('Toggle redo regression', () => {
     const childAfterRedo = dataAfterRedo.blocks.find(b => b.type === 'paragraph');
 
     expect(childAfterRedo).toBeDefined();
-    expect(String((childAfterRedo?.data as Record<string, unknown> | undefined)?.text)).toBe('heading child text');
+    expect(String((childAfterRedo?.data)?.text)).toBe('heading child text');
     expect(headerAfterRedo?.content).toContain(childAfterRedo?.id);
   });
 
@@ -564,7 +564,7 @@ test.describe('Toggle redo regression', () => {
     const paragraphsAfterUndo = dataAfterUndo.blocks.filter(b => b.type === 'paragraph');
 
     expect(paragraphsAfterUndo).toHaveLength(1);
-    expect(String((paragraphsAfterUndo[0].data as Record<string, unknown>).text)).toBe('existing child');
+    expect(String((paragraphsAfterUndo[0].data).text)).toBe('existing child');
 
     // 4. Redo block creation, then redo text
     await page.keyboard.press(REDO_SHORTCUT);
@@ -576,7 +576,7 @@ test.describe('Toggle redo regression', () => {
     const dataAfterRedo = await saveBlok(page);
     const toggleAfterRedo = dataAfterRedo.blocks.find(b => b.type === 'toggle');
     const paragraphsAfterRedo = dataAfterRedo.blocks.filter(b => b.type === 'paragraph');
-    const newChild = paragraphsAfterRedo.find(p => String((p.data as Record<string, unknown>).text) === 'new text');
+    const newChild = paragraphsAfterRedo.find(p => String((p.data).text) === 'new text');
 
     expect(paragraphsAfterRedo).toHaveLength(2);
     expect(newChild).toBeDefined();

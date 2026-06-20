@@ -95,7 +95,7 @@ test.describe('Pasting multi-block content into a column', () => {
       const block = saved.blocks.find(
         (b) =>
           b.data &&
-          Object.values(b.data as Record<string, unknown>).some(
+          Object.values(b.data).some(
             (v) => typeof v === 'string' && v.includes(sentinel)
           )
       );
@@ -142,7 +142,7 @@ test.describe('Pasting multi-block content into a column', () => {
       const block = saved.blocks.find(
         (b) =>
           b.data &&
-          Object.values(b.data as Record<string, unknown>).some(
+          Object.values(b.data).some(
             (v) => typeof v === 'string' && v.includes(sentinel)
           )
       );

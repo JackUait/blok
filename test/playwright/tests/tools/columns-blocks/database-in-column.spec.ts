@@ -251,7 +251,7 @@ test.describe('Database inside a column', () => {
         type: block.type,
         parent: block.parent,
         content: block.content,
-        primary: primaryOf({ type: block.type, data: block.data as Record<string, unknown> }),
+        primary: primaryOf({ type: block.type, data: block.data }),
       }));
 
     expect(project(after)).toEqual(project(before));

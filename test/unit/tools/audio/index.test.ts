@@ -53,7 +53,24 @@ const opts = (
 });
 
 beforeEach(() => vi.clearAllMocks());
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+
+/** Force prefers-reduced-motion so caption toggles take the instant path. */
+const setReducedMotion = (reduced: boolean): void => {
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: reduced && query.includes('reduced-motion'),
+    media: query,
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+};
 
 describe('AudioTool', () => {
   it('renders an empty state when there is no url', () => {
@@ -184,6 +201,7 @@ describe('AudioTool', () => {
   };
 
   it('removing the caption hides the field in edit mode and clears the text', () => {
+    setReducedMotion(true);
     const tool = new AudioTool(opts({ url: 'https://x/y.mp3', caption: 'Hello' }));
     const root = tool.render();
     expect(root.querySelector('[data-role="audio-caption"]')).not.toBeNull();
@@ -198,6 +216,7 @@ describe('AudioTool', () => {
   });
 
   it('the Caption setting reflects the removed state as inactive', () => {
+    setReducedMotion(true);
     const tool = new AudioTool(opts({ url: 'https://x/y.mp3', caption: 'Hello' }));
     tool.render();
     activateSetting(tool, 'audio-caption'); // off
@@ -208,6 +227,7 @@ describe('AudioTool', () => {
   });
 
   it('re-enabling the caption restores an empty field without resurrecting old text', () => {
+    setReducedMotion(true);
     const tool = new AudioTool(opts({ url: 'https://x/y.mp3', caption: 'Hello' }));
     const root = tool.render();
     activateSetting(tool, 'audio-caption'); // off
@@ -218,5 +238,45 @@ describe('AudioTool', () => {
     expect(captionEl!.textContent).toBe('');
     expect(tool.save().captionVisible).toBe(true);
     expect(tool.save().caption).toBeUndefined();
+  });
+
+  it('adding the caption animates in without rebuilding the player', () => {
+    setReducedMotion(false);
+    const tool = new AudioTool(opts({ url: 'https://x/y.mp3', captionVisible: false }));
+    const root = tool.render();
+    const figureBefore = root.querySelector('[data-role="audio-figure"]');
+    expect(root.querySelector('[data-role="audio-caption-row"]')).toBeNull();
+
+    activateSetting(tool, 'audio-caption'); // enable → animate in
+
+    expect(root.querySelector('[data-role="audio-caption-row"]')).not.toBeNull();
+    // Same figure instance — the card was not torn down and rebuilt.
+    expect(root.querySelector('[data-role="audio-figure"]')).toBe(figureBefore);
+    expect(tool.save().captionVisible).toBe(true);
+  });
+
+  it('removing the caption collapses the row, then removes it after the transition', () => {
+    setReducedMotion(false);
+    vi.useFakeTimers();
+    try {
+      const tool = new AudioTool(opts({ url: 'https://x/y.mp3', caption: 'Hello' }));
+      const root = tool.render();
+      const figureBefore = root.querySelector('[data-role="audio-figure"]');
+
+      activateSetting(tool, 'audio-caption'); // disable → animate out
+
+      // Row still present, collapsing; data already updated; card not rebuilt.
+      const row = root.querySelector<HTMLElement>('[data-role="audio-caption-row"]');
+      expect(row).not.toBeNull();
+      expect(row!.classList.contains('is-collapsed')).toBe(true);
+      expect(tool.save().captionVisible).toBe(false);
+      expect(root.querySelector('[data-role="audio-figure"]')).toBe(figureBefore);
+
+      // Once the collapse transition finishes, the row is gone.
+      vi.advanceTimersByTime(500);
+      expect(root.querySelector('[data-role="audio-caption-row"]')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

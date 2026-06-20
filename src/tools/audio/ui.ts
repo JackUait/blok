@@ -97,8 +97,13 @@ export function renderCaptionRow(opts: CaptionRowOptions): HTMLElement {
   const row = document.createElement('div');
   row.className = 'blok-audio-caption-row';
   row.setAttribute('data-role', 'audio-caption-row');
+  // Inner wrapper carries the visible layout (padding/border) so the row itself
+  // can collapse cleanly via grid-template-rows when toggled.
+  const inner = document.createElement('div');
+  inner.className = 'blok-audio-caption-row__inner';
   const cap = editableLine('audio-caption', opts.value, opts.editable, opts.placeholder);
   cap.className = 'blok-audio-caption';
-  row.appendChild(cap);
+  inner.appendChild(cap);
+  row.appendChild(inner);
   return row;
 }

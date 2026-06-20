@@ -52,6 +52,8 @@ export class AudioTool implements BlockTool {
   private controlsHandle: ControlsHandle | null = null;
   private waveformHandle: WaveformHandle | null = null;
   private destroyed = false;
+  /** Pending fallback timer for the caption collapse-out animation. */
+  private captionExitTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(options: BlockToolConstructorOptions<AudioData, AudioConfig>) {
     this.api = options.api;
@@ -199,6 +201,7 @@ export class AudioTool implements BlockTool {
 
   public removed(): void {
     this.destroyed = true;
+    if (this.captionExitTimer) { clearTimeout(this.captionExitTimer); this.captionExitTimer = null; }
     this.controlsHandle?.destroy();
     this.controlsHandle = null;
     this.waveformHandle?.destroy();
@@ -299,6 +302,7 @@ export class AudioTool implements BlockTool {
 
   private renderState(): void {
     if (!this.root) return;
+    if (this.captionExitTimer) { clearTimeout(this.captionExitTimer); this.captionExitTimer = null; }
     this.controlsHandle?.destroy();
     this.controlsHandle = null;
     this.waveformHandle?.destroy();
@@ -393,14 +397,9 @@ export class AudioTool implements BlockTool {
     body.appendChild(this.controlsHandle.element);
 
     // Caption row — outside body, below the card
-    const placeholder = this.config.captionPlaceholder ?? DEFAULT_CAPTION_PLACEHOLDER;
     const captionVisible = this.data.captionVisible !== false;
     if (captionVisible) {
-      figure.appendChild(renderCaptionRow({
-        value: this.data.caption ?? '',
-        placeholder,
-        editable: !this.readOnly,
-      }));
+      figure.appendChild(this.createCaptionRow());
     }
 
     // Wire title/artist blur handlers
@@ -419,19 +418,30 @@ export class AudioTool implements BlockTool {
       }
     });
 
-    // Wire caption blur handler
-    const captionEl = figure.querySelector<HTMLElement>('[data-role="audio-caption"]');
-    if (captionEl) {
-      captionEl.addEventListener('blur', () => {
-        const next = captionEl.textContent ?? '';
-        if (next !== this.data.caption) {
-          this.data.caption = next || undefined;
-          this.block.dispatchChange();
-        }
-      });
-    }
-
     this.root.appendChild(figure);
+  }
+
+  /** Build a caption row (with its blur handler wired) ready to mount. */
+  private createCaptionRow(): HTMLElement {
+    const placeholder = this.config.captionPlaceholder ?? DEFAULT_CAPTION_PLACEHOLDER;
+    const row = renderCaptionRow({
+      value: this.data.caption ?? '',
+      placeholder,
+      editable: !this.readOnly,
+    });
+    const captionEl = row.querySelector<HTMLElement>('[data-role="audio-caption"]');
+    captionEl?.addEventListener('blur', () => {
+      const next = captionEl.textContent ?? '';
+      if (next !== this.data.caption) {
+        this.data.caption = next || undefined;
+        this.block.dispatchChange();
+      }
+    });
+    return row;
+  }
+
+  private prefersReducedMotion(): boolean {
+    return globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
   }
 
   private setAlignment(next: AudioAlignment): void {
@@ -448,7 +458,48 @@ export class AudioTool implements BlockTool {
     // rather than resurrecting the old text.
     if (!enabling) this.data.caption = undefined;
     this.block.dispatchChange();
-    this.renderState();
+
+    const figure = this.root?.querySelector<HTMLElement>('[data-role="audio-figure"]');
+    // No live card to animate (or motion is off) — fall back to an instant
+    // re-render so the caption snaps in/out.
+    if (!figure || this.prefersReducedMotion()) {
+      this.renderState();
+      return;
+    }
+    this.syncRootAttributes();
+    if (enabling) this.animateCaptionIn(figure);
+    else this.animateCaptionOut(figure);
+  }
+
+  private animateCaptionIn(figure: HTMLElement): void {
+    const existing = figure.querySelector<HTMLElement>('[data-role="audio-caption-row"]');
+    if (existing) {
+      // A collapse-out was mid-flight — cancel it and re-open in place.
+      if (this.captionExitTimer) { clearTimeout(this.captionExitTimer); this.captionExitTimer = null; }
+      existing.classList.remove('is-collapsed');
+      return;
+    }
+    const row = this.createCaptionRow();
+    row.classList.add('is-collapsed');
+    figure.appendChild(row);
+    // Force a reflow so the collapsed state is committed, then expand into view.
+    void row.offsetHeight;
+    row.classList.remove('is-collapsed');
+  }
+
+  private animateCaptionOut(figure: HTMLElement): void {
+    const row = figure.querySelector<HTMLElement>('[data-role="audio-caption-row"]');
+    if (!row) return;
+    row.classList.add('is-collapsed');
+    const finish = (): void => {
+      if (this.captionExitTimer) { clearTimeout(this.captionExitTimer); this.captionExitTimer = null; }
+      row.remove();
+    };
+    row.addEventListener('transitionend', (e) => {
+      if (e.propertyName === 'grid-template-rows') finish();
+    }, { once: true });
+    // Fallback in case transitionend never fires (display:none, interrupted, etc.).
+    this.captionExitTimer = setTimeout(finish, 360);
   }
 
   private toggleLoop(): void {

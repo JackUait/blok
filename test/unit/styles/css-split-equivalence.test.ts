@@ -279,8 +279,12 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // equalizer badge on the cover (blok-audio-eq-bounce, dark overlay pill + white bars,
     // revealed only while data-playing) and a play-puck heartbeat ring (blok-audio-pulse) —
     // all reduced-motion gated. +~2.5KB intentional growth.
+    // Audio caption add/remove animation: caption row is a collapsing grid wrapper
+    // (grid-template-rows 1fr↔0fr + opacity) with an inner padding/border element,
+    // a .is-collapsed state, and a reduced-motion transition:none — so toggling the
+    // Caption setting glides the row in/out instead of snapping. +~0.8KB intentional growth.
     // Shrinking below the baseline is always acceptable.
-    const PRE_SPLIT_BYTES = 406500;
+    const PRE_SPLIT_BYTES = 407500;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.302);
     const actual = localImportedByteBudget(ENTRY);
 

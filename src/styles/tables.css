@@ -152,3 +152,13 @@
 [data-blok-theme="dark"] [data-blok-interface] [data-blok-table-haze="right"] {
   background-image: linear-gradient(to left, var(--blok-dark), transparent);
 }
+
+/* Table card pins its top toolbar anchor absolutely to the (position:relative)
+   wrapper top, so the +/tunes buttons sit flush with the table's top edge while
+   the marker stays out of the flow — it never becomes the wrapper's firstChild,
+   which the grid/scroll structure relies on. */
+[data-blok-tool="table"] .blok-toolbar-top-anchor {
+  position: absolute;
+  top: 0;
+  left: 0;
+}

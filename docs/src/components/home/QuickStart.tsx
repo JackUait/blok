@@ -124,31 +124,23 @@ export const QuickStart: React.FC = () => {
               <motion.div
                 key={step.number}
                 variants={stepVariants}
-                className="group relative grid grid-cols-[auto_minmax(0,1fr)] gap-x-5 sm:gap-x-8"
+                className="group relative sm:pl-24"
                 data-blok-testid={`install-step-${step.number}`}
                 style={{ "--step-delay": `${index * 0.15}s` } as React.CSSProperties}
               >
-                {/* Oversized sunset-gradient numeral + the thread that carries the eye down */}
-                <div className="relative flex flex-col items-center">
+                {/* Desktop-only thread that carries the eye down the gutter between steps */}
+                {!isLast && (
                   <div
-                    className="shrink-0 select-none pt-1 leading-none"
-                    data-blok-testid={`step-number-${step.number}`}
-                  >
-                    <span className="text-brand-gradient inline-block font-display text-5xl font-extrabold leading-none tabular-nums transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-105 sm:text-7xl">
-                      {step.number}
-                    </span>
-                  </div>
-                  {!isLast && (
-                    <div
-                      className="mt-4 w-px flex-1 bg-gradient-to-b from-border to-transparent"
-                      aria-hidden="true"
-                    ></div>
-                  )}
-                </div>
+                    className="pointer-events-none absolute top-[4.5rem] bottom-[-1.5rem] left-[3.25rem] hidden w-px bg-gradient-to-b from-border to-transparent sm:block"
+                    aria-hidden="true"
+                  ></div>
+                )}
 
-                {/* The step card — premium surface with a hairline sunset seam up top */}
+                {/* The step card — premium surface with a hairline sunset seam up top.
+                    On mobile it spans full width; on desktop it sits to the right of the
+                    gutter numeral (which is pulled out via absolute positioning). */}
                 <div
-                  className="relative overflow-hidden rounded-3xl border border-black/[0.06] bg-card p-5 shadow-[0_4px_24px_-10px_rgba(0,0,0,0.12)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_44px_-16px_rgba(0,0,0,0.22)] dark:border-white/[0.07] sm:p-7"
+                  className="relative rounded-3xl border border-black/[0.06] bg-card p-5 shadow-[0_4px_24px_-10px_rgba(0,0,0,0.12)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_44px_-16px_rgba(0,0,0,0.22)] dark:border-white/[0.07] sm:p-7"
                   data-blok-testid={`step-content-${step.number}`}
                 >
                   <div
@@ -156,7 +148,20 @@ export const QuickStart: React.FC = () => {
                     aria-hidden="true"
                   ></div>
 
-                  <h3 className="text-xl font-bold tracking-tight">{step.title}</h3>
+                  {/* Header: number badge sits inline beside the title on mobile, then is
+                      lifted into the desktop gutter so wide screens keep the offset numeral */}
+                  <div className="flex items-baseline gap-3">
+                    <div
+                      className="shrink-0 select-none leading-none sm:absolute sm:-left-[4.25rem] sm:top-6"
+                      data-blok-testid={`step-number-${step.number}`}
+                    >
+                      <span className="text-brand-gradient inline-block font-display text-4xl font-extrabold leading-none tabular-nums transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-105 sm:text-7xl">
+                        {step.number}
+                      </span>
+                    </div>
+                    <h3 className="text-xl font-bold tracking-tight">{step.title}</h3>
+                  </div>
+
                   <p
                     className="mt-2 text-[15px] leading-relaxed text-muted-foreground"
                     data-blok-testid={`step-description-${step.number}`}

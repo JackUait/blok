@@ -454,6 +454,16 @@
       "viewGuide": "View Migration Guide",
       "viewCodemod": "View Codemod"
     },
+    "trusted": {
+      "title": "Companies that trust us",
+      "tagline": "Global QSR leader",
+      "summary": "Blok powers the internal knowledge base behind one of the world's largest pizza chains — thousands of authors, one block model.",
+      "statCountriesValue": "20+",
+      "statCountriesLabel": "Countries served",
+      "statStoresValue": "1,800+",
+      "statStoresLabel": "Stores worldwide",
+      "cta": "Build with Blok"
+    },
     "featureModal": {
       "close": "Close modal",
       "keyBenefits": "Key Benefits",

@@ -8,6 +8,7 @@ import { CategoryBar, HOME_CATEGORIES, type HomeView } from '../components/home/
 import { Features } from '../components/home/Features';
 import { QuickStart } from '../components/home/QuickStart';
 import { MigrationCard } from '../components/home/MigrationCard';
+import { TrustedBy } from '../components/home/TrustedBy';
 import { ApiContent } from './ApiPage';
 import { ToolsContent } from './ToolsPage';
 import { DemoContent } from './DemoPage';
@@ -98,6 +99,7 @@ export const HomePage: React.FC = () => {
             <Features />
             <QuickStart />
             <MigrationCard />
+            <TrustedBy />
           </>
         );
     }

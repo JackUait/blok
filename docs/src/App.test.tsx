@@ -17,6 +17,12 @@ vi.mock('framer-motion', () => {
     'whileInView',
     'transition',
     'viewport',
+    'drag',
+    'dragControls',
+    'dragListener',
+    'dragConstraints',
+    'dragElastic',
+    'onDragEnd',
   ]);
 
   // Render any motion.<tag> (div, button, …) as a plain passthrough element.
@@ -38,6 +44,20 @@ vi.mock('framer-motion', () => {
     AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
     motion,
     useReducedMotion: () => false,
+    useDragControls: () => ({ start: () => {} }),
+    useInView: () => true,
+    useMotionValue: (value: number) => value,
+    useVelocity: () => 0,
+    useTransform: () => 0,
+    // Settle straight to the target value; no async stepping needed in tests.
+    animate: (
+      _from: number,
+      to: number,
+      opts?: { onUpdate?: (value: number) => void }
+    ) => {
+      opts?.onUpdate?.(to);
+      return { stop: () => {} };
+    },
   };
 });
 

@@ -294,9 +294,29 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // at rest, it swings the needle down onto the record while data-playing, and a soft
     // conic shine wedge sweeps round with the grooves so the spin reads. Reduced-motion
     // gated (arm snaps, disc holds). +~3KB intentional growth.
+    // Audio vinyl realism pass: the disc gains a centre→edge vignette + glossy outer
+    // bevel, finer grooves, a fixed two-band specular "bow-tie" reflection (masked off
+    // the label) and a matte off-white label with a printed ring. The tonearm is rebuilt
+    // from real parts (extra DOM nodes in ui.ts): a FIXED pivot base/deck mount anchors a
+    // rotating brushed-aluminium tube (specular glint); the tube carries a cylindrical
+    // counterweight on a rear stub behind the pivot (adjustment dial + end-cap) and an
+    // angled headshell with a cartridge body and a stylus tip at the playing end. The
+    // headshell itself rotates on touchdown (a delayed spring on [data-playing]) so the
+    // cartridge seats down into the groove as the stylus lands, like a real arm.
+    // +~6KB intentional growth.
+    // Audio tonearm rebuilt as ONE cohesive SVG object (drawn in ui.ts, not stacked
+    // CSS boxes): tube, gimbal pivot, counterweight, headshell, cartridge and a diamond
+    // stylus, all under a single light source + shared drop shadow so it reads as a real
+    // arm instead of layered sprites. This MOVED the bulk of the arm out of CSS into the
+    // SVG markup, so audio.css actually SHRANK (~7KB) versus the prior CSS-parts arm —
+    // only the svg's layout/swing/contact rules and the metal/cart tokens remain in CSS.
     // Shrinking below the baseline is always acceptable.
+    // Audio no-cover redesign: the tonearm is removed entirely (SVG + all arm tokens/
+    // rules deleted) and the disc becomes the hero — enlarged to fill the freed panel,
+    // with its spin now driven by disc.ts (inertial transform: spins up on play, coasts
+    // down on pause) instead of a CSS keyframe. Net SHRINK in audio.css.
     const PRE_SPLIT_BYTES = 407500;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.322);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.336);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

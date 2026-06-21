@@ -14,10 +14,6 @@
   to { opacity: 1; transform: translateY(0) }
 }
 
-@keyframes blok-audio-spin {
-  to { transform: rotate(1turn) }
-}
-
 @keyframes blok-block-target-pulse {
   0% { background-color: var(--blok-selection) }
   60% { background-color: var(--blok-selection) }

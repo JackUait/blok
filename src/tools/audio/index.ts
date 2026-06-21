@@ -124,7 +124,13 @@ export class AudioTool implements BlockTool {
   }
 
   public getToolbarAnchorElement(): HTMLElement | undefined {
-    return this.root?.querySelector<HTMLElement>('[data-role="audio-figure"]') ?? undefined;
+    // Anchor on the top-of-card marker so the +/tunes buttons sit flush with the
+    // top of the cover art. Fall back to the figure if the marker isn't present.
+    return (
+      this.root?.querySelector<HTMLElement>('[data-role="audio-toolbar-anchor"]') ??
+      this.root?.querySelector<HTMLElement>('[data-role="audio-figure"]') ??
+      undefined
+    );
   }
 
   public setReadOnly(state: boolean): void {

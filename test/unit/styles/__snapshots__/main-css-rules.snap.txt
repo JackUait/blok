@@ -1971,6 +1971,12 @@
   background-image: linear-gradient(to left, var(--blok-dark), transparent);
 }
 
+[data-blok-tool="table"] .blok-toolbar-top-anchor {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
 [data-blok-slash-search], [data-blok-slash-search]:focus-visible {
   display: inline-flex;
   align-items: center;
@@ -5588,26 +5594,28 @@
   --blok-audio-vol-pct: 100%;
   --blok-audio-speed-pct: 50%;
   --blok-audio-pulse-ring: color-mix(in srgb, var(--blok-text-primary) 20%, transparent);
-  --blok-audio-disc-size: 78px;
+  --blok-audio-disc-size: 92px;
   --blok-audio-groove-w: 0.75px;
-  --blok-audio-groove-gap: 2.5px;
-  --blok-audio-spin-dur: 4s;
+  --blok-audio-groove-gap: 2px;
   --blok-audio-cover-glow: color-mix(in srgb, var(--blok-bg-primary) 55%, transparent);
   --blok-audio-disc-base: var(--blok-overlay-dark);
-  --blok-audio-disc-edge: color-mix(in srgb, var(--blok-text-on-dark) 7%, var(--blok-overlay-dark));
-  --blok-audio-disc-groove: color-mix(in srgb, var(--blok-text-on-dark) 11%, transparent);
-  --blok-audio-disc-sheen: color-mix(in srgb, var(--blok-text-on-dark) 24%, transparent);
-  --blok-audio-disc-sheen-soft: color-mix(in srgb, var(--blok-text-on-dark) 9%, transparent);
+  --blok-audio-disc-deep: color-mix(in srgb, #000 42%, var(--blok-overlay-dark));
+  --blok-audio-disc-edge: color-mix(in srgb, var(--blok-text-on-dark) 6%, var(--blok-overlay-dark));
+  --blok-audio-disc-groove: color-mix(in srgb, var(--blok-text-on-dark) 8%, transparent);
   --blok-audio-disc-rim: color-mix(in srgb, var(--blok-text-on-dark) 16%, transparent);
-  --blok-audio-disc-label: var(--blok-text-on-dark);
-  --blok-audio-disc-label-edge: color-mix(in srgb, var(--blok-text-on-dark) 80%, var(--blok-overlay-dark));
+  --blok-audio-disc-rim-light: color-mix(in srgb, var(--blok-text-on-dark) 26%, transparent);
+  --blok-audio-disc-sheen: color-mix(in srgb, var(--blok-text-on-dark) 32%, transparent);
+  --blok-audio-disc-sheen-soft: color-mix(in srgb, var(--blok-text-on-dark) 12%, transparent);
+  --blok-audio-disc-shine: color-mix(in srgb, var(--blok-text-on-dark) 10%, transparent);
+  --blok-audio-disc-label: color-mix(in srgb, var(--blok-text-on-dark) 93%, var(--blok-overlay-dark));
+  --blok-audio-disc-label-hi: var(--blok-text-on-dark);
+  --blok-audio-disc-label-edge: color-mix(in srgb, var(--blok-text-on-dark) 72%, var(--blok-overlay-dark));
+  --blok-audio-disc-label-ring: color-mix(in srgb, var(--blok-overlay-dark) 24%, transparent);
   --blok-audio-disc-hole: var(--blok-overlay-dark);
-  --blok-audio-disc-shine: color-mix(in srgb, var(--blok-text-on-dark) 9%, transparent);
-  --blok-audio-arm: color-mix(in srgb, var(--blok-text-on-dark) 70%, var(--blok-overlay-dark));
-  --blok-audio-arm-hi: color-mix(in srgb, var(--blok-text-on-dark) 92%, var(--blok-overlay-dark));
-  --blok-audio-arm-pivot: color-mix(in srgb, var(--blok-text-on-dark) 44%, var(--blok-overlay-dark));
-  --blok-audio-arm-head: color-mix(in srgb, var(--blok-text-on-dark) 24%, var(--blok-overlay-dark));
-  --blok-audio-arm-track: 0deg;
+  --blok-audio-mask-solid: #000;
+  --blok-audio-disc-inner-shadow: rgba(0, 0, 0, 0.5);
+  --blok-audio-label-shadow: rgba(0, 0, 0, 0.35);
+  --blok-audio-spindle-catch: rgba(255, 255, 255, 0.4);
   position: relative;
   margin: var(--blok-space-2-5) 0;
   font-family: var(--blok-font-family, var(--blok-font-sans));
@@ -5710,19 +5718,20 @@
   height: var(--blok-audio-disc-size);
   transform: translate(-50%, -50%);
   border-radius: var(--blok-radius-pill);
-  background: radial-gradient(58% 50% at 32% 26%, var(--blok-audio-disc-sheen), transparent 60%), radial-gradient(42% 34% at 72% 80%, var(--blok-audio-disc-sheen-soft), transparent 62%);
+  background: radial-gradient(72% 50% at 50% 2%, var(--blok-audio-disc-sheen), transparent 60%), conic-gradient( from 142deg at 50% 50%, transparent 0 6%, var(--blok-audio-disc-sheen) 15%, transparent 30% 64%, var(--blok-audio-disc-sheen-soft) 80%, transparent 92% 100% ), radial-gradient(44% 36% at 72% 84%, var(--blok-audio-disc-sheen-soft), transparent 62%);
+  mask: radial-gradient(circle at center, transparent 30%, var(--blok-audio-mask-solid) 40%);
+  -webkit-mask: radial-gradient(circle at center, transparent 30%, var(--blok-audio-mask-solid) 40%);
   pointer-events: none;
 }
 
 [data-blok-tool="audio"] .blok-audio-cover__disc {
   position: relative;
+  will-change: transform;
   width: var(--blok-audio-disc-size);
   height: var(--blok-audio-disc-size);
   border-radius: var(--blok-radius-pill);
-  background: conic-gradient( from 210deg, transparent 0 64%, var(--blok-audio-disc-shine) 78%, transparent 92% 100% ), repeating-radial-gradient( circle at center, var(--blok-audio-disc-groove) 0 var(--blok-audio-groove-w), transparent var(--blok-audio-groove-w) var(--blok-audio-groove-gap) ), radial-gradient(circle at center, var(--blok-audio-disc-edge), var(--blok-audio-disc-base) 78%);
-  box-shadow: inset 0 0 0 1px var(--blok-audio-disc-rim), var(--blok-image-shadow-resting);
-  animation: blok-audio-spin var(--blok-audio-spin-dur) linear infinite;
-  animation-play-state: paused;
+  background: conic-gradient( from 210deg, transparent 0 64%, var(--blok-audio-disc-shine) 78%, transparent 92% 100% ), radial-gradient( circle at center, transparent 82%, var(--blok-audio-disc-rim-light) 85% 87%, transparent 90% ), repeating-radial-gradient( circle at center, var(--blok-audio-disc-groove) 0 var(--blok-audio-groove-w), transparent var(--blok-audio-groove-w) var(--blok-audio-groove-gap) ), radial-gradient( circle at center, var(--blok-audio-disc-edge) 0 14%, var(--blok-audio-disc-base) 44%, var(--blok-audio-disc-base) 72%, var(--blok-audio-disc-deep) 100% );
+  box-shadow: inset 0 0 0 1px var(--blok-audio-disc-rim), inset 0 0 7px var(--blok-audio-disc-inner-shadow), var(--blok-image-shadow-resting);
 }
 
 [data-blok-tool="audio"] .blok-audio-cover__disc::before {
@@ -5730,8 +5739,8 @@
   position: absolute;
   inset: 36%;
   border-radius: var(--blok-radius-pill);
-  background: radial-gradient(circle at 42% 38%, var(--blok-audio-disc-label), var(--blok-audio-disc-label-edge));
-  box-shadow: inset 0 0 0 1px var(--blok-audio-disc-rim);
+  background: radial-gradient( circle at center, transparent 58%, var(--blok-audio-disc-label-ring) 60% 64%, transparent 66% ), radial-gradient( circle at 40% 34%, var(--blok-audio-disc-label-hi), var(--blok-audio-disc-label) 52%, var(--blok-audio-disc-label-edge) );
+  box-shadow: inset 0 0 0 1px var(--blok-audio-disc-rim), 0 1px 1px var(--blok-audio-label-shadow);
 }
 
 [data-blok-tool="audio"] .blok-audio-cover__disc::after {
@@ -5740,50 +5749,7 @@
   inset: 47%;
   border-radius: var(--blok-radius-pill);
   background: var(--blok-audio-disc-hole);
-}
-
-[data-blok-tool="audio"] .blok-audio-cover__arm {
-  position: absolute;
-  top: 13px;
-  right: 14px;
-  width: 46px;
-  height: 4px;
-  border-radius: var(--blok-radius-pill);
-  background: linear-gradient(to bottom, var(--blok-audio-arm-hi), var(--blok-audio-arm));
-  box-shadow: var(--blok-image-shadow-resting);
-  transform-origin: calc(100% - 3px) center;
-  transform: rotate(-16deg);
-  transition: transform var(--blok-duration-slow) var(--blok-ease-spring);
-  pointer-events: none;
-}
-
-[data-blok-tool="audio"] .blok-audio-cover__arm::before {
-  content: "";
-  position: absolute;
-  right: -5px;
-  top: 50%;
-  width: 13px;
-  height: 13px;
-  transform: translateY(-50%);
-  border-radius: var(--blok-radius-pill);
-  background: radial-gradient(circle at 38% 34%, var(--blok-audio-arm-hi), var(--blok-audio-arm-pivot));
-  box-shadow: var(--blok-image-shadow-resting);
-}
-
-[data-blok-tool="audio"] .blok-audio-cover__arm::after {
-  content: "";
-  position: absolute;
-  left: -2px;
-  top: 50%;
-  width: 9px;
-  height: 8px;
-  transform: translateY(-50%) rotate(18deg);
-  border-radius: var(--blok-radius-sm);
-  background: var(--blok-audio-arm-head);
-}
-
-[data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-cover__arm {
-  transform: rotate(calc(-42deg - var(--blok-audio-arm-track, 0deg)));
+  box-shadow: inset 0 1px 1px var(--blok-audio-spindle-catch);
 }
 
 [data-blok-tool="audio"] .blok-audio-body {
@@ -6175,10 +6141,6 @@
   animation-duration: 540ms;
 }
 
-[data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-cover__disc {
-  animation-play-state: running;
-}
-
 [data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-controls [data-role="audio-play"] {
   animation: blok-audio-pulse var(--blok-duration-rotation) var(--blok-ease-spring) infinite;
 }
@@ -6187,15 +6149,11 @@
   transition: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-tool="audio"][data-state="rendered"] .blok-audio-cover, [data-blok-tool="audio"][data-state="rendered"] .blok-audio-title, [data-blok-tool="audio"][data-state="rendered"] .blok-audio-artist, [data-blok-tool="audio"][data-state="rendered"] .blok-audio-waveform, [data-blok-tool="audio"][data-state="rendered"] .blok-audio-controls, [data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-eq__bar, [data-blok-tool="audio"] .blok-audio-cover__disc, [data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-controls [data-role="audio-play"] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-tool="audio"][data-state="rendered"] .blok-audio-cover, [data-blok-tool="audio"][data-state="rendered"] .blok-audio-title, [data-blok-tool="audio"][data-state="rendered"] .blok-audio-artist, [data-blok-tool="audio"][data-state="rendered"] .blok-audio-waveform, [data-blok-tool="audio"][data-state="rendered"] .blok-audio-controls, [data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-eq__bar, [data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-controls [data-role="audio-play"] {
   animation: none;
 }
 
 [@media (prefers-reduced-motion: reduce)] [data-blok-tool="audio"] .blok-audio-eq {
-  transition: none;
-}
-
-[@media (prefers-reduced-motion: reduce)] [data-blok-tool="audio"] .blok-audio-cover__arm {
   transition: none;
 }
 

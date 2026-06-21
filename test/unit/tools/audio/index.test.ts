@@ -279,4 +279,22 @@ describe('AudioTool', () => {
       vi.useRealTimers();
     }
   });
+
+  describe('toolbar anchor', () => {
+    it('anchors the +/tunes toolbar to the top of the card, not the title row', () => {
+      const tool = new AudioTool(opts({ url: 'https://x/y.mp3', title: 'T', artist: 'A' }));
+      const root = tool.render();
+
+      const anchor = tool.getToolbarAnchorElement();
+      expect(anchor).toBeDefined();
+      // The anchor is a dedicated top-of-card marker so the generic positioner
+      // centers the gutter buttons flush with the cover art, not on the title.
+      expect(anchor?.getAttribute('data-role')).toBe('audio-toolbar-anchor');
+
+      const figure = root.querySelector('[data-role="audio-figure"]');
+      expect(figure?.contains(anchor as Node)).toBe(true);
+      // It must be the first child so it sits at the very top of the card.
+      expect(figure?.firstElementChild).toBe(anchor);
+    });
+  });
 });

@@ -62,20 +62,22 @@ describe('renderNowPlaying', () => {
     expect(body.contains(waveformMount)).toBe(true);
   });
 
-  it('cover is NOT inside body — it is a sibling (figure first child)', () => {
+  it('cover is NOT inside body — it is a direct sibling under the figure', () => {
     const { figure, cover, body } = renderNowPlaying({ url: 'u' }, { editable: true });
     expect(body.contains(cover)).toBe(false);
-    expect(figure.children[0]).toBe(cover);
-    expect(figure.children[1]).toBe(body);
+    expect(cover.parentElement).toBe(figure);
+    expect(body.parentElement).toBe(figure);
   });
 
-  it('figure children order is [cover, body, audio]', () => {
+  it('figure children order is [toolbar-anchor, cover, body, audio]', () => {
     const { figure, cover, body, audio } = renderNowPlaying({ url: 'u' }, { editable: true });
     const children = Array.from(figure.children);
-    expect(children[0]).toBe(cover);
-    expect(children[1]).toBe(body);
-    expect(children[2]).toBe(audio);
-    expect(children.length).toBe(3);
+    // A zero-size toolbar anchor leads so the +/tunes buttons center on the card top.
+    expect(children[0].getAttribute('data-role')).toBe('audio-toolbar-anchor');
+    expect(children[1]).toBe(cover);
+    expect(children[2]).toBe(body);
+    expect(children[3]).toBe(audio);
+    expect(children.length).toBe(4);
   });
 
   it('all data-role attributes are still reachable via figure.querySelector', () => {

@@ -76,6 +76,28 @@ describe('CategoryBar', () => {
     );
   });
 
+  it('scrolls the active pill into view when the selection changes', () => {
+    const scrollIntoView = vi.spyOn(HTMLElement.prototype, 'scrollIntoView');
+
+    const { rerender } = render(
+      <I18nProvider>
+        <CategoryBar activeView="getStarted" onSelect={vi.fn()} />
+      </I18nProvider>
+    );
+
+    scrollIntoView.mockClear();
+
+    rerender(
+      <I18nProvider>
+        <CategoryBar activeView="changelog" onSelect={vi.fn()} />
+      </I18nProvider>
+    );
+
+    // The newly-active pill is brought into the visible scroll window so the
+    // current view is never hidden off-screen on a narrow viewport.
+    expect(scrollIntoView).toHaveBeenCalled();
+  });
+
   it('renders translated labels in Russian', () => {
     localStorage.setItem('blok-docs-locale', 'ru');
     renderBar();

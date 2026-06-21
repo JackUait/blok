@@ -4,15 +4,20 @@ import { CodemodCard } from '../components/migration/CodemodCard';
 import { MigrationSteps } from '../components/migration/MigrationSteps';
 import { useI18n } from '../contexts/I18nContext';
 import { NAV_LINKS } from '../utils/constants';
+import { cn } from '@/lib/utils';
 
-export const MigrationPage: React.FC = () => {
+interface MigrationContentProps {
+  /** When embedded inline (homepage tab strip), tighten the hero top spacing. */
+  inline?: boolean;
+}
+
+/** The Editor.js → Blok migration body — hero, codemod, steps, CTA. */
+export const MigrationContent: React.FC<MigrationContentProps> = ({ inline = false }) => {
   const { t } = useI18n();
 
   return (
     <>
-      <Nav links={NAV_LINKS} />
-      <main className="min-h-screen bg-background pt-16">
-        <section className="mx-auto w-full max-w-6xl px-6 pb-12 pt-16 text-center sm:pt-24">
+        <section className={cn('mx-auto w-full max-w-6xl px-6 pb-12 text-center', inline ? 'pt-10' : 'pt-16 sm:pt-24')}>
           <h1 className="flex flex-col items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-wide text-primary sm:text-sm">
               {t('migration.heroFromEditorJS')}
@@ -92,8 +97,16 @@ export const MigrationPage: React.FC = () => {
             </div>
           </div>
         </section>
-      </main>
-      <Footer />
     </>
   );
 };
+
+export const MigrationPage: React.FC = () => (
+  <>
+    <Nav links={NAV_LINKS} />
+    <main className="min-h-screen bg-background pt-16">
+      <MigrationContent />
+    </main>
+    <Footer />
+  </>
+);

@@ -229,8 +229,17 @@ const formatDescription = (text: string): React.ReactNode => {
   return formatPart(text, 0);
 };
 
-const ChangelogPage: React.FC = () => {
+interface ChangelogContentProps {
+  /** When embedded inline (homepage tab strip), tighten the header top spacing. */
+  inline?: boolean;
+}
+
+const ChangelogContent: React.FC<ChangelogContentProps> = ({ inline = false }) => {
   const { t, locale } = useI18n();
+  const headerClass = cn(
+    'mx-auto max-w-3xl px-6 pb-24 text-center',
+    inline ? 'pt-10' : 'pt-16 sm:pt-24',
+  );
   const [releases, setReleases] = useState<Release[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -260,43 +269,31 @@ const ChangelogPage: React.FC = () => {
 
   if (loading) {
     return (
-      <>
-        <Nav links={NAV_LINKS} />
-        <main className="min-h-screen bg-background pt-16">
-          <div className="mx-auto max-w-3xl px-6 pt-16 pb-24 text-center sm:pt-24">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-bold tracking-wide text-primary uppercase">
-              <span className="size-3.5 [&>svg]:size-full" aria-hidden="true">
-                <Icons.clock />
-              </span>
-              {t('changelog.badge')}
-            </span>
-            <h1 className="mt-6 font-display text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
-              {t('changelog.title')}
-            </h1>
-            <p className="mt-4 text-lg text-muted-foreground">{t('changelog.loading')}</p>
-          </div>
-        </main>
-        <Footer />
-      </>
+      <div className={headerClass}>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-bold tracking-wide text-primary uppercase">
+          <span className="size-3.5 [&>svg]:size-full" aria-hidden="true">
+            <Icons.clock />
+          </span>
+          {t('changelog.badge')}
+        </span>
+        <h1 className="mt-6 font-display text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
+          {t('changelog.title')}
+        </h1>
+        <p className="mt-4 text-lg text-muted-foreground">{t('changelog.loading')}</p>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <>
-        <Nav links={NAV_LINKS} />
-        <main className="min-h-screen bg-background pt-16">
-          <div className="mx-auto max-w-3xl px-6 pt-16 pb-24 text-center sm:pt-24">
-            <h1 className="font-display text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
-              {t('changelog.title')}
-            </h1>
-            <p className="mt-4 text-lg text-muted-foreground">
-              {t('changelog.errorLoading')} {error}
-            </p>
-          </div>
-        </main>
-        <Footer />
-      </>
+      <div className={headerClass}>
+        <h1 className="font-display text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
+          {t('changelog.title')}
+        </h1>
+        <p className="mt-4 text-lg text-muted-foreground">
+          {t('changelog.errorLoading')} {error}
+        </p>
+      </div>
     );
   }
 
@@ -323,25 +320,23 @@ const ChangelogPage: React.FC = () => {
 
   return (
     <>
-      <Nav links={NAV_LINKS} />
-      <main className="min-h-screen bg-background pt-16">
-        <div className="mx-auto max-w-3xl px-6 pt-16 pb-24 text-center sm:pt-24">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-bold tracking-wide text-primary uppercase">
-            <span className="size-3.5 [&>svg]:size-full" aria-hidden="true">
-              <Icons.clock />
-            </span>
-            {t('changelog.badge')}
+      <div className={headerClass}>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-bold tracking-wide text-primary uppercase">
+          <span className="size-3.5 [&>svg]:size-full" aria-hidden="true">
+            <Icons.clock />
           </span>
-          <h1 className="mt-6 font-display text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
-            {t('changelog.title')}
-          </h1>
-          <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
-            {t('changelog.description')}
-          </p>
-        </div>
+          {t('changelog.badge')}
+        </span>
+        <h1 className="mt-6 font-display text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
+          {t('changelog.title')}
+        </h1>
+        <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
+          {t('changelog.description')}
+        </p>
+      </div>
 
-        <div className="mx-auto max-w-3xl px-6 pb-24">
-          <ol className="relative space-y-12 border-l border-border pl-8 sm:pl-10">
+      <div className="mx-auto max-w-3xl px-6 pb-24">
+        <ol className="relative space-y-12 border-l border-border pl-8 sm:pl-10">
             {visibleReleases.map((release) => (
               <li key={release.version} className="relative">
                 <span
@@ -431,10 +426,19 @@ const ChangelogPage: React.FC = () => {
             ))}
           </ol>
         </div>
-      </main>
-      <Footer />
     </>
   );
 };
 
+const ChangelogPage: React.FC = () => (
+  <>
+    <Nav links={NAV_LINKS} />
+    <main className="min-h-screen bg-background pt-16">
+      <ChangelogContent />
+    </main>
+    <Footer />
+  </>
+);
+
+export { ChangelogContent };
 export default ChangelogPage;

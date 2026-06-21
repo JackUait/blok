@@ -17,7 +17,13 @@ interface BlokEditor {
   destroy?: () => void;
 }
 
-export const DemoPage: React.FC = () => {
+interface DemoContentProps {
+  /** When embedded inline (homepage tab strip), tighten the top spacing. */
+  inline?: boolean;
+}
+
+/** The interactive playground body — editor + JSON output, no page chrome. */
+export const DemoContent: React.FC<DemoContentProps> = ({ inline = false }) => {
   const { t, locale } = useI18n();
   const [showOutput, setShowOutput] = useState(false);
   const [output, setOutput] = useState<string>(() => t('demo.outputInitialMessage'));
@@ -68,10 +74,7 @@ export const DemoPage: React.FC = () => {
   }, []);
 
   return (
-    <>
-      <Nav links={NAV_LINKS} />
-      <main className="min-h-screen bg-background pt-16">
-        <div className="mx-auto w-full max-w-6xl px-6 py-12 sm:py-16">
+    <div className={cn('mx-auto w-full max-w-6xl px-6', inline ? 'pt-8 pb-12 sm:pt-10' : 'py-12 sm:py-16')}>
           <div className="mx-auto mb-10 max-w-2xl text-center">
             <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wide text-primary">
               <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />
@@ -253,8 +256,15 @@ export const DemoPage: React.FC = () => {
             </div>
           </div>
         </div>
-      </main>
-      <Footer />
-    </>
   );
 };
+
+export const DemoPage: React.FC = () => (
+  <>
+    <Nav links={NAV_LINKS} />
+    <main className="min-h-screen bg-background pt-16">
+      <DemoContent />
+    </main>
+    <Footer />
+  </>
+);

@@ -1,17 +1,16 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { I18nProvider } from '../../contexts/I18nContext';
-import { CategoryBar } from './CategoryBar';
+import { CategoryBar, type HomeView } from './CategoryBar';
 
-const renderBar = (initialPath = '/') =>
+const renderBar = (activeView: HomeView = 'getStarted', onSelect = vi.fn()) => {
   render(
     <I18nProvider>
-      <MemoryRouter initialEntries={[initialPath]}>
-        <CategoryBar />
-      </MemoryRouter>
+      <CategoryBar activeView={activeView} onSelect={onSelect} />
     </I18nProvider>
   );
+  return onSelect;
+};
 
 describe('CategoryBar', () => {
   beforeEach(() => {
@@ -25,49 +24,62 @@ describe('CategoryBar', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders every category as a link', () => {
+  it('renders every category as a button (no navigation)', () => {
     renderBar();
 
-    const expected: Array<[RegExp, string]> = [
-      [/get started/i, '/'],
-      [/^docs$/i, '/docs'],
-      [/^tools$/i, '/tools'],
-      [/^playground$/i, '/demo'],
-      [/^migration$/i, '/migration'],
-      [/^changelog$/i, '/changelog'],
+    const expected = [
+      /get started/i,
+      /^docs$/i,
+      /^tools$/i,
+      /^playground$/i,
+      /^migration$/i,
+      /^changelog$/i,
     ];
 
-    expected.forEach(([name, href]) => {
-      const link = screen.getByRole('link', { name });
-      expect(link).toHaveAttribute('href', href);
+    expected.forEach((name) => {
+      expect(screen.getByRole('button', { name })).toBeInTheDocument();
     });
+
+    // The pills no longer route anywhere.
+    expect(screen.queryByRole('link', { name: /^docs$/i })).not.toBeInTheDocument();
   });
 
   it('does not render recipes or integrations categories', () => {
     renderBar();
-    expect(screen.queryByRole('link', { name: /^recipes$/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /^integrations$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^recipes$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^integrations$/i })).not.toBeInTheDocument();
   });
 
-  it('marks the category matching the current route as current', () => {
-    renderBar('/tools');
-    const active = screen.getByRole('link', { name: /^tools$/i });
-    expect(active).toHaveAttribute('aria-current', 'page');
-
-    const inactive = screen.getByRole('link', { name: /^migration$/i });
-    expect(inactive).not.toHaveAttribute('aria-current');
+  it('calls onSelect with the view when a pill is clicked', () => {
+    const onSelect = renderBar('getStarted');
+    fireEvent.click(screen.getByRole('button', { name: /^tools$/i }));
+    expect(onSelect).toHaveBeenCalledWith('tools');
   });
 
-  it('marks "Get started" as current on the home route', () => {
-    renderBar('/');
-    const active = screen.getByRole('link', { name: /get started/i });
-    expect(active).toHaveAttribute('aria-current', 'page');
+  it('marks the active view as pressed and others as not', () => {
+    renderBar('tools');
+    expect(screen.getByRole('button', { name: /^tools$/i })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    expect(screen.getByRole('button', { name: /^migration$/i })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
+  });
+
+  it('marks "Get started" as pressed when it is the active view', () => {
+    renderBar('getStarted');
+    expect(screen.getByRole('button', { name: /get started/i })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
   });
 
   it('renders translated labels in Russian', () => {
     localStorage.setItem('blok-docs-locale', 'ru');
     renderBar();
-    expect(screen.getByRole('link', { name: /начало работы/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /^документация$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /начало работы/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^документация$/i })).toBeInTheDocument();
   });
 });

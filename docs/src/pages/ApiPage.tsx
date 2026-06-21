@@ -7,8 +7,16 @@ import { ApiSection } from '../components/api/ApiSection';
 import { useApiTranslations } from '../hooks/useApiTranslations';
 import { useI18n } from '../contexts/I18nContext';
 import { NAV_LINKS } from '../utils/constants';
+import { cn } from '@/lib/utils';
 
-export const ApiPage: React.FC = () => {
+interface ApiContentProps {
+  /** When embedded inline (e.g. inside the homepage tab strip), drop the
+   *  fixed-nav clearance padding and the standalone landmark spacing. */
+  inline?: boolean;
+}
+
+/** The API documentation body — sidebar + sections — without page chrome. */
+export const ApiContent: React.FC<ApiContentProps> = ({ inline = false }) => {
   const { locale } = useI18n();
   const { apiSections, sidebarSections, filterLabel } = useApiTranslations();
   
@@ -115,40 +123,49 @@ export const ApiPage: React.FC = () => {
   }, [apiSections]);
 
   return (
-    <>
-      <Nav links={NAV_LINKS} />
-      <div
-        className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-10 px-6 pt-24 pb-24 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-12"
-        data-blok-testid="api-docs"
-      >
-        <div className="hidden lg:block">
-          <Sidebar
-            key={`sidebar-${locale}`}
+    <div
+      className={cn(
+        'mx-auto grid w-full max-w-7xl grid-cols-1 gap-10 px-6 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-12',
+        inline ? 'pt-8 pb-16' : 'pt-24 pb-24',
+      )}
+      data-blok-testid="api-docs"
+    >
+      <div className="hidden lg:block">
+        <Sidebar
+          key={`sidebar-${locale}`}
+          sections={sidebarSections}
+          activeSection={activeSection}
+          variant="api"
+          filterLabel={filterLabel}
+        />
+      </div>
+      <div className="min-w-0">
+        <div className="lg:hidden">
+          <MobileSectionNav
+            key={`mobile-nav-${locale}`}
             sections={sidebarSections}
             activeSection={activeSection}
-            variant="api"
-            filterLabel={filterLabel}
           />
         </div>
-        <div className="min-w-0">
-          <div className="lg:hidden">
-            <MobileSectionNav
-              key={`mobile-nav-${locale}`}
-              sections={sidebarSections}
-              activeSection={activeSection}
-            />
-          </div>
-          <main
-            className="mx-auto flex max-w-3xl flex-col gap-20"
-            data-blok-testid="api-main"
-          >
-            {apiSections.map((section) => (
-              <ApiSection key={`${locale}-${section.id}`} section={section} />
-            ))}
-          </main>
+        <div
+          className="mx-auto flex max-w-3xl flex-col gap-20"
+          data-blok-testid="api-main"
+        >
+          {apiSections.map((section) => (
+            <ApiSection key={`${locale}-${section.id}`} section={section} />
+          ))}
         </div>
       </div>
-      <Footer />
-    </>
+    </div>
   );
 };
+
+export const ApiPage: React.FC = () => (
+  <>
+    <Nav links={NAV_LINKS} />
+    <main>
+      <ApiContent />
+    </main>
+    <Footer />
+  </>
+);

@@ -119,6 +119,23 @@ describe('FeatureModal', () => {
     expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true');
   });
 
+  it('should focus the close button without scrolling the page on open', () => {
+    // The drawer mounts transformed off-screen; an unscoped focus() would scroll
+    // the overlay to reveal the button, causing a visible jump on open.
+    const focusSpy = vi.spyOn(HTMLButtonElement.prototype, 'focus');
+    renderModal();
+    expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true });
+    focusSpy.mockRestore();
+  });
+
+  it('should render a drag handle for the mobile bottom-sheet drawer', () => {
+    renderModal();
+    const grabber = screen.getByTestId('sheet-grabber');
+    expect(grabber).toBeInTheDocument();
+    // Purely decorative affordance — must not be announced to screen readers.
+    expect(grabber).toHaveAttribute('aria-hidden', 'true');
+  });
+
   it('should render Russian strings when locale is ru', () => {
     localStorage.setItem('blok-docs-locale', 'ru');
     render(

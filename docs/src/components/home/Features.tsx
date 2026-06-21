@@ -442,7 +442,7 @@ new Blok({ holder: 'editor' });`,
 
         {/* Supporting capabilities — quiet Airbnb chips, scanned second. */}
         <motion.div
-          className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          className="mt-10 grid grid-cols-2 gap-3 sm:mt-4 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3"
           variants={gridVariants}
           initial="hidden"
           whileInView="show"
@@ -456,14 +456,14 @@ new Blok({ holder: 'editor' });`,
               whileHover={{ y: -3 }}
               whileTap={{ scale: 0.98 }}
               transition={hoverSpring}
-              className="group flex min-h-[68px] cursor-pointer items-center gap-3.5 rounded-2xl border border-black/[0.04] bg-secondary p-4 text-left transition-shadow duration-300 hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-white/[0.08]"
+              className="group flex min-h-[116px] cursor-pointer flex-col items-start gap-3 rounded-2xl border border-black/[0.04] bg-secondary p-4 text-left transition-shadow duration-300 hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-white/[0.08] sm:min-h-[68px] sm:flex-row sm:items-center sm:gap-3.5"
               onClick={() => handleFeatureClick(feature)}
               aria-label={feature.learnMore}
             >
-              <div className="feature-blob flex size-10 shrink-0 items-center justify-center bg-primary/10 text-primary transition-[colors,transform] duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground">
+              <div className="feature-blob flex size-11 shrink-0 items-center justify-center bg-primary/10 text-primary transition-[colors,transform] duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground sm:size-10">
                 {feature.icon}
               </div>
-              <h3 className="flex-1 text-[15px] font-medium tracking-tight">
+              <h3 className="max-w-[7rem] text-[14px] font-medium leading-snug tracking-tight sm:max-w-none sm:flex-1 sm:text-[15px]">
                 {feature.title}
               </h3>
               <svg
@@ -476,7 +476,7 @@ new Blok({ holder: 'editor' });`,
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 aria-hidden="true"
-                className="shrink-0 text-muted-foreground/50 opacity-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-primary group-hover:opacity-100"
+                className="mt-auto shrink-0 self-end text-primary/40 transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-primary sm:mt-0 sm:self-auto sm:text-muted-foreground/50 sm:opacity-0 sm:group-hover:opacity-100"
               >
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>

@@ -97,9 +97,9 @@ export const HomePage: React.FC = () => {
         return (
           <>
             <Features />
+            <TrustedBy />
             <QuickStart />
             <MigrationCard />
-            <TrustedBy />
           </>
         );
     }

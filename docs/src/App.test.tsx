@@ -74,13 +74,22 @@ describe('App', () => {
 
     // Store original history for scrollRestoration testing
     originalHistory = window.history;
+
+    sessionStorage.clear();
   });
 
   afterEach(() => {
     vi.clearAllMocks();
+    sessionStorage.clear();
     // Restore original history
     Object.defineProperty(window, 'history', {
       value: originalHistory,
+      writable: true,
+      configurable: true,
+    });
+    // Tests below mutate window.scrollY; reset it so it can't leak between tests.
+    Object.defineProperty(window, 'scrollY', {
+      value: 0,
       writable: true,
       configurable: true,
     });
@@ -128,11 +137,11 @@ describe('App', () => {
     expect(heading).toBeInTheDocument();
   });
 
-  it('should set scrollRestoration to auto to preserve scroll position on reload', () => {
+  it('should set scrollRestoration to manual so it can restore scroll position itself on reload', () => {
     // Create a mock history with scrollRestoration property
     const mockHistory = {
       ...originalHistory,
-      scrollRestoration: 'manual' as 'auto' | 'manual',
+      scrollRestoration: 'auto' as 'auto' | 'manual',
     };
 
     // Override global history
@@ -150,7 +159,114 @@ describe('App', () => {
       </MemoryRouter>
     );
 
-    // After app renders, scrollRestoration should be set to 'auto'
-    expect(mockHistory.scrollRestoration).toBe('auto');
+    // The app takes manual control because native restoration is unreliable
+    // when content renders progressively (animations, lazy sections).
+    expect(mockHistory.scrollRestoration).toBe('manual');
+  });
+
+  it('should restore the saved scroll position for the current path on reload', () => {
+    // Simulate a previous visit to "/" that was scrolled to y=500
+    sessionStorage.setItem('blok-docs:scroll:/', '500');
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <I18nProvider>
+          <App />
+        </I18nProvider>
+      </MemoryRouter>
+    );
+
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 500, left: 0, behavior: 'instant' });
+  });
+
+  it('should restore the position saved for the specific path, not another path', () => {
+    sessionStorage.setItem('blok-docs:scroll:/', '100');
+    sessionStorage.setItem('blok-docs:scroll:/docs', '700');
+
+    render(
+      <MemoryRouter initialEntries={['/docs']}>
+        <I18nProvider>
+          <App />
+        </I18nProvider>
+      </MemoryRouter>
+    );
+
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 700, left: 0, behavior: 'instant' });
+    expect(window.scrollTo).not.toHaveBeenCalledWith({ top: 100, left: 0, behavior: 'instant' });
+  });
+
+  it('should not restore when there is no saved position (stay at top)', () => {
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <I18nProvider>
+          <App />
+        </I18nProvider>
+      </MemoryRouter>
+    );
+
+    expect(window.scrollTo).not.toHaveBeenCalled();
+  });
+
+  it('should save the current scroll position when the page is hidden (pagehide)', () => {
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <I18nProvider>
+          <App />
+        </I18nProvider>
+      </MemoryRouter>
+    );
+
+    Object.defineProperty(window, 'scrollY', {
+      value: 880,
+      writable: true,
+      configurable: true,
+    });
+    window.dispatchEvent(new Event('pagehide'));
+
+    expect(sessionStorage.getItem('blok-docs:scroll:/')).toBe('880');
+  });
+
+  it('should save the current scroll position for the current path while scrolling', () => {
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <I18nProvider>
+          <App />
+        </I18nProvider>
+      </MemoryRouter>
+    );
+
+    Object.defineProperty(window, 'scrollY', {
+      value: 320,
+      writable: true,
+      configurable: true,
+    });
+    window.dispatchEvent(new Event('scroll'));
+
+    expect(sessionStorage.getItem('blok-docs:scroll:/')).toBe('320');
+  });
+
+  it('should not overwrite the saved position with a clamped scroll while it is restoring', () => {
+    // A previous visit was deep on the page.
+    sessionStorage.setItem('blok-docs:scroll:/', '2000');
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <I18nProvider>
+          <App />
+        </I18nProvider>
+      </MemoryRouter>
+    );
+
+    // While the page is still short, the browser clamps our restore scrollTo and
+    // fires a scroll event reporting a much smaller offset. That must NOT clobber
+    // the target we're trying to restore to.
+    Object.defineProperty(window, 'scrollY', {
+      value: 40,
+      writable: true,
+      configurable: true,
+    });
+    window.dispatchEvent(new Event('scroll'));
+
+    expect(sessionStorage.getItem('blok-docs:scroll:/')).toBe('2000');
   });
 });

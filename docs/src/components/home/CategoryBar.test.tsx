@@ -76,6 +76,21 @@ describe('CategoryBar', () => {
     );
   });
 
+  it('does not scroll the active pill into view on initial mount', () => {
+    // scrollIntoView bubbles to the window's scroll position, so firing it on
+    // mount would yank the page to the category bar and fight scroll restoration
+    // on reload. It must only react to actual selection changes.
+    const scrollIntoView = vi.spyOn(HTMLElement.prototype, 'scrollIntoView');
+
+    render(
+      <I18nProvider>
+        <CategoryBar activeView="getStarted" onSelect={vi.fn()} />
+      </I18nProvider>
+    );
+
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+
   it('scrolls the active pill into view when the selection changes', () => {
     const scrollIntoView = vi.spyOn(HTMLElement.prototype, 'scrollIntoView');
 

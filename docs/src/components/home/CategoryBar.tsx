@@ -87,7 +87,15 @@ export const CategoryBar: React.FC<CategoryBarProps> = ({ activeView, onSelect }
   }, [syncEdges, items.length]);
 
   // Keep the active pill in the visible window whenever the selection changes.
+  // Skip the very first run: scrollIntoView bubbles to the window's scroll
+  // position, so firing it on mount would yank the page down to the bar and
+  // fight scroll restoration on reload.
+  const didMountRef = useRef(false);
   useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
     const prefersReduced = window.matchMedia?.(
       "(prefers-reduced-motion: reduce)",
     ).matches;

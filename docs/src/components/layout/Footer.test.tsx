@@ -74,7 +74,16 @@ describe('Footer', () => {
   it('should render the copyright notice', () => {
     renderFooter();
 
-    expect(screen.getByText(/2026 JackUait/)).toBeInTheDocument();
+    expect(screen.getByText(/2026/)).toBeInTheDocument();
+  });
+
+  it('should link the author name to Telegram', () => {
+    renderFooter();
+
+    const authorLink = screen.getByRole('link', { name: 'JackUait' });
+    expect(authorLink).toHaveAttribute('href', 'https://t.me/jackuait');
+    expect(authorLink).toHaveAttribute('target', '_blank');
+    expect(authorLink).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
   it('should render the Apache 2.0 license link', () => {

@@ -477,7 +477,8 @@
     "contributing": "Contributing",
     "githubAriaLabel": "GitHub",
     "telegramAriaLabel": "Telegram",
-    "copyrightText": "© 2026 JackUait",
+    "copyrightYear": "© 2026",
+    "author": "JackUait",
     "licensedUnder": "Licensed under"
   },
   "languageSelector": {

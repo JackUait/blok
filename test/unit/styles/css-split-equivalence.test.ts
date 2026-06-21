@@ -283,9 +283,20 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // (grid-template-rows 1fr↔0fr + opacity) with an inner padding/border element,
     // a .is-collapsed state, and a reduced-motion transition:none — so toggling the
     // Caption setting glides the row in/out instead of snapping. +~0.8KB intentional growth.
+    // Audio no-cover placeholder redesign: the flat grey "missing image" music-note
+    // glyph is replaced by a glossy black vinyl record drawn in pure CSS — a near-black
+    // overlay-dark face + fine repeating-radial-gradient grooves + a small cream label
+    // + a crisp spindle hole, with a FIXED specular glint (placeholder::after) the
+    // grooves shimmer under as the disc spins. The disc always owns the spin animation
+    // but holds animation-play-state:paused until data-playing, so play/pause freezes
+    // and resumes the angle instead of snapping. A CSS tonearm (brushed-metal arm +
+    // pivot bearing + dark headshell/needle) is mounted top-right: parked off the disc
+    // at rest, it swings the needle down onto the record while data-playing, and a soft
+    // conic shine wedge sweeps round with the grooves so the spin reads. Reduced-motion
+    // gated (arm snaps, disc holds). +~3KB intentional growth.
     // Shrinking below the baseline is always acceptable.
     const PRE_SPLIT_BYTES = 407500;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.302);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.322);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

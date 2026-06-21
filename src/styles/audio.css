@@ -33,6 +33,37 @@
   --blok-audio-speed-pct: 50%;
   --blok-audio-pulse-ring: color-mix(in srgb, var(--blok-text-primary) 20%, transparent);
 
+  /* no-cover vinyl placeholder — a glossy black record. The disc body is built
+     from --blok-overlay-dark (near-black in both themes) so it always reads as
+     vinyl, not a grey CD; grooves + sheen are white at low alpha, the label is
+     a cream-white puck, the spindle is a crisp dark dot. A fixed specular sits
+     above the disc (placeholder::after) so grooves shimmer *under* it as it spins. */
+  --blok-audio-disc-size: 78px;
+  --blok-audio-groove-w: 0.75px;
+  --blok-audio-groove-gap: 2.5px;
+  --blok-audio-spin-dur: 4s;
+  --blok-audio-cover-glow: color-mix(in srgb, var(--blok-bg-primary) 55%, transparent);
+  --blok-audio-disc-base: var(--blok-overlay-dark);
+  --blok-audio-disc-edge: color-mix(in srgb, var(--blok-text-on-dark) 7%, var(--blok-overlay-dark));
+  --blok-audio-disc-groove: color-mix(in srgb, var(--blok-text-on-dark) 11%, transparent);
+  --blok-audio-disc-sheen: color-mix(in srgb, var(--blok-text-on-dark) 24%, transparent);
+  --blok-audio-disc-sheen-soft: color-mix(in srgb, var(--blok-text-on-dark) 9%, transparent);
+  --blok-audio-disc-rim: color-mix(in srgb, var(--blok-text-on-dark) 16%, transparent);
+  --blok-audio-disc-label: var(--blok-text-on-dark);
+  --blok-audio-disc-label-edge: color-mix(in srgb, var(--blok-text-on-dark) 80%, var(--blok-overlay-dark));
+  --blok-audio-disc-hole: var(--blok-overlay-dark);
+  /* a soft highlight wedge printed on the disc — sweeps round with the grooves so
+     the (otherwise radially-symmetric) spin actually reads as motion. */
+  --blok-audio-disc-shine: color-mix(in srgb, var(--blok-text-on-dark) 9%, transparent);
+  /* tonearm — a brushed-metal arm + pivot bearing + dark headshell/needle. */
+  --blok-audio-arm: color-mix(in srgb, var(--blok-text-on-dark) 70%, var(--blok-overlay-dark));
+  --blok-audio-arm-hi: color-mix(in srgb, var(--blok-text-on-dark) 92%, var(--blok-overlay-dark));
+  --blok-audio-arm-pivot: color-mix(in srgb, var(--blok-text-on-dark) 44%, var(--blok-overlay-dark));
+  --blok-audio-arm-head: color-mix(in srgb, var(--blok-text-on-dark) 24%, var(--blok-overlay-dark));
+  /* inward groove tracking — set by controls.ts from playback progress, folded
+     into the engaged transform so the arm creeps toward the centre as it plays. */
+  --blok-audio-arm-track: 0deg;
+
   position: relative;
   margin: var(--blok-space-2-5) 0;
   font-family: var(--blok-font-family, var(--blok-font-sans));
@@ -70,6 +101,20 @@
   display: none;
 }
 
+/* Top-of-card toolbar anchor — a zero-size marker the editor centers the +/tunes
+   buttons on. Pinned to the top-left of the grid; line-height stays a hair above 0
+   (the positioner floors a 0 line-height back to its 24px default), so the buttons
+   land flush with the top of the cover art. */
+[data-blok-tool="audio"] .blok-audio-toolbar-anchor {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: start;
+  width: 0;
+  height: 0;
+  line-height: 1px;
+  pointer-events: none;
+}
+
 /* ----- block selection ------------------------------------ */
 [data-blok-element-content].bg-selection:has([data-blok-tool="audio"]) {
   background-color: transparent;
@@ -100,13 +145,129 @@
   object-fit: cover;
   display: block;
 }
+/* ----- no-cover placeholder: a glossy black vinyl record --- */
 [data-blok-tool="audio"] .blok-audio-cover__placeholder {
+  position: relative;
   display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  /* faint top-centre sheen so the panel has depth behind the disc */
+  background: radial-gradient(120% 90% at 50% 36%, var(--blok-audio-cover-glow), transparent 70%);
 }
-[data-blok-tool="audio"] .blok-audio-cover__placeholder svg {
-  width: 34px;
-  height: 34px;
-  color: var(--blok-text-tertiary);
+
+/* fixed specular glint pinned over the disc — it does NOT rotate, so the grooves
+   shimmer beneath it as the record spins (the bit that sells the motion). */
+[data-blok-tool="audio"] .blok-audio-cover__placeholder::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--blok-audio-disc-size);
+  height: var(--blok-audio-disc-size);
+  transform: translate(-50%, -50%);
+  border-radius: var(--blok-radius-pill);
+  background:
+    radial-gradient(58% 50% at 32% 26%, var(--blok-audio-disc-sheen), transparent 60%),
+    radial-gradient(42% 34% at 72% 80%, var(--blok-audio-disc-sheen-soft), transparent 62%);
+  pointer-events: none;
+}
+
+/* the record body: fine concentric grooves over a near-black radial face,
+   lifted off the panel by an inset rim + soft shadow. Always carries the spin
+   animation but holds paused until the track plays (so play/pause never snaps). */
+[data-blok-tool="audio"] .blok-audio-cover__disc {
+  position: relative;
+  width: var(--blok-audio-disc-size);
+  height: var(--blok-audio-disc-size);
+  border-radius: var(--blok-radius-pill);
+  background:
+    conic-gradient(
+      from 210deg,
+      transparent 0 64%,
+      var(--blok-audio-disc-shine) 78%,
+      transparent 92% 100%
+    ),
+    repeating-radial-gradient(
+      circle at center,
+      var(--blok-audio-disc-groove) 0 var(--blok-audio-groove-w),
+      transparent var(--blok-audio-groove-w) var(--blok-audio-groove-gap)
+    ),
+    radial-gradient(circle at center, var(--blok-audio-disc-edge), var(--blok-audio-disc-base) 78%);
+  box-shadow:
+    inset 0 0 0 1px var(--blok-audio-disc-rim),
+    var(--blok-image-shadow-resting);
+  animation: blok-audio-spin var(--blok-audio-spin-dur) linear infinite;
+  animation-play-state: paused;
+}
+
+/* centre label — a small cream puck (~28% of the disc) */
+[data-blok-tool="audio"] .blok-audio-cover__disc::before {
+  content: "";
+  position: absolute;
+  inset: 36%;
+  border-radius: var(--blok-radius-pill);
+  background:
+    radial-gradient(circle at 42% 38%, var(--blok-audio-disc-label), var(--blok-audio-disc-label-edge));
+  box-shadow: inset 0 0 0 1px var(--blok-audio-disc-rim);
+}
+
+/* spindle hole — a crisp dark dot punched through the label */
+[data-blok-tool="audio"] .blok-audio-cover__disc::after {
+  content: "";
+  position: absolute;
+  inset: 47%;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-audio-disc-hole);
+}
+
+/* tonearm — mounted top-right, pivots from its bearing. Parked (needle lifted
+   off the disc) at rest; swings down onto the record while playing. The disc
+   spins beneath the fixed needle, so the scene reads as a turntable. */
+[data-blok-tool="audio"] .blok-audio-cover__arm {
+  position: absolute;
+  top: 13px;
+  right: 14px;
+  width: 46px;
+  height: 4px;
+  border-radius: var(--blok-radius-pill);
+  background: linear-gradient(to bottom, var(--blok-audio-arm-hi), var(--blok-audio-arm));
+  box-shadow: var(--blok-image-shadow-resting);
+  transform-origin: calc(100% - 3px) center;
+  transform: rotate(-16deg);
+  transition: transform var(--blok-duration-slow) var(--blok-ease-spring);
+  pointer-events: none;
+}
+/* pivot bearing — the housing the arm rotates around (right end) */
+[data-blok-tool="audio"] .blok-audio-cover__arm::before {
+  content: "";
+  position: absolute;
+  right: -5px;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  transform: translateY(-50%);
+  border-radius: var(--blok-radius-pill);
+  background: radial-gradient(circle at 38% 34%, var(--blok-audio-arm-hi), var(--blok-audio-arm-pivot));
+  box-shadow: var(--blok-image-shadow-resting);
+}
+/* headshell + needle — the dark cartridge at the playing end */
+[data-blok-tool="audio"] .blok-audio-cover__arm::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: 50%;
+  width: 9px;
+  height: 8px;
+  transform: translateY(-50%) rotate(18deg);
+  border-radius: var(--blok-radius-sm);
+  background: var(--blok-audio-arm-head);
+}
+/* engaged — arm drops the needle onto the spinning record, then creeps inward
+   with playback progress (--blok-audio-arm-track, set by controls.ts) */
+[data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-cover__arm {
+  transform: rotate(calc(-42deg - var(--blok-audio-arm-track, 0deg)));
 }
 
 /* ----- right column (title + artist + waveform + controls) - */
@@ -517,6 +678,18 @@
   50%      { height: 96%; }
 }
 
+/* ----- vinyl placeholder spins while playing ---------------------
+   The disc always owns the spin animation (declared above); we only flip its
+   play-state, so pausing freezes the record at its current angle — like a real
+   turntable — and resuming carries on instead of snapping back to 12 o'clock. */
+[data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-cover__disc {
+  animation-play-state: running;
+}
+
+@keyframes blok-audio-spin {
+  to { transform: rotate(1turn); }
+}
+
 /* ----- 3. play puck heartbeat while playing ---------------------- */
 [data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-controls [data-role="audio-play"] {
   animation: blok-audio-pulse var(--blok-duration-rotation) var(--blok-ease-spring) infinite;
@@ -540,11 +713,14 @@
   [data-blok-tool="audio"][data-state="rendered"] .blok-audio-waveform,
   [data-blok-tool="audio"][data-state="rendered"] .blok-audio-controls,
   [data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-eq__bar,
+  [data-blok-tool="audio"] .blok-audio-cover__disc,
   [data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-controls [data-role="audio-play"] {
     animation: none;
   }
   /* The badge still appears while playing — it just holds steady. */
   [data-blok-tool="audio"] .blok-audio-eq { transition: none; }
+  /* The tonearm still drops onto the record while playing — it just snaps. */
+  [data-blok-tool="audio"] .blok-audio-cover__arm { transition: none; }
   /* Caption appears/disappears instantly (JS also takes the instant path). */
   [data-blok-tool="audio"] .blok-audio-caption-row__inner { transition: none; }
 }

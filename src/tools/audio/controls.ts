@@ -7,7 +7,11 @@ import {
   IconPlayerVolume,
   IconPlayerVolumeMute,
 } from '../../components/icons';
+import { createNeedleLife } from './needle';
 import type { AudioData } from '../../../types/tools/audio';
+
+/** How far (deg) the tonearm creeps inward over a full track — groove tracking. */
+const ARM_TRACK_MAX_DEG = 12;
 
 /** Minimal storage seam (localStorage-shaped) for volume + position persistence. */
 export interface AudioStorage {
@@ -99,13 +103,28 @@ export function attachControls({
 
   const state = { playing: false, selectedRate: 1 };
 
+  // Random tremor + bumps for the no-cover tonearm (no-op when a cover image is
+  // shown — the arm only exists in the vinyl placeholder).
+  const needle = createNeedleLife(figure);
+
   const setPlaying = (next: boolean): void => {
     state.playing = next;
     figure.setAttribute('data-playing', String(next));
     playToggle.innerHTML = next ? IconPlayerPause : IconPlayerPlay;
     playToggle.setAttribute('aria-label', next ? 'Pause' : 'Play');
+    if (next) needle.start(); else needle.stop();
   };
   setPlaying(false);
+
+  // Groove tracking: nudge the tonearm slowly inward as the track plays, mapped
+  // to playback progress. Composed into the CSS engaged transform via a var.
+  const arm = figure.querySelector<HTMLElement>('.blok-audio-cover__arm');
+  const updateArmTracking = (): void => {
+    if (!arm) return;
+    const dur = media.duration;
+    const progress = Number.isFinite(dur) && dur > 0 ? Math.min(1, media.currentTime / dur) : 0;
+    arm.style.setProperty('--blok-audio-arm-track', `${(progress * ARM_TRACK_MAX_DEG).toFixed(2)}deg`);
+  };
 
   // ----- time readout -----
   const timeEl = document.createElement('span');
@@ -318,6 +337,7 @@ export function attachControls({
   const onTimeUpdate = (): void => {
     renderTime();
     persistPosition();
+    updateArmTracking();
   };
   const onLoadedMetadata = (): void => {
     renderTime();
@@ -391,6 +411,7 @@ export function attachControls({
 
   // ----- destroy -----
   const destroy = (): void => {
+    needle.destroy();
     closeSpeedMenu();
 
     playToggle.removeEventListener('click', togglePlay);

@@ -1,4 +1,3 @@
-import { IconMusic } from '../../components/icons';
 import type { AudioData } from '../../../types/tools/audio';
 
 export interface NowPlayingOptions {
@@ -41,10 +40,18 @@ export function renderNowPlaying(data: AudioData, opts: NowPlayingOptions): NowP
     img.alt = '';
     cover.appendChild(img);
   } else {
+    // No artwork: stand a vinyl turntable in the panel instead of a flat
+    // "missing image" glyph. Disc (grooves/label/spindle) + a tonearm are pure
+    // CSS; while the track plays the disc spins and the arm swings onto it (it
+    // parks off to the side when stopped — see the [data-playing] rules).
     const placeholder = document.createElement('span');
     placeholder.className = 'blok-audio-cover__placeholder';
     placeholder.setAttribute('aria-hidden', 'true');
-    placeholder.innerHTML = IconMusic;
+    const disc = document.createElement('span');
+    disc.className = 'blok-audio-cover__disc';
+    const arm = document.createElement('span');
+    arm.className = 'blok-audio-cover__arm';
+    placeholder.append(disc, arm);
     cover.appendChild(placeholder);
   }
 

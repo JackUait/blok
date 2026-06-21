@@ -318,7 +318,7 @@ new Blok({ holder: 'editor' });`,
               onClick={() => handleFeatureClick(feature)}
               aria-label={feature.learnMore}
             >
-              <div className="feature-blob flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-[colors,transform] duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground">
+              <div className="feature-blob flex size-14 items-center justify-center bg-primary/10 text-primary transition-[colors,transform] duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground">
                 {feature.icon}
               </div>
               <div className="space-y-2.5">
@@ -372,7 +372,7 @@ new Blok({ holder: 'editor' });`,
               onClick={() => handleFeatureClick(feature)}
               aria-label={feature.learnMore}
             >
-              <div className="feature-blob flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-[colors,transform] duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground">
+              <div className="feature-blob flex size-10 shrink-0 items-center justify-center bg-primary/10 text-primary transition-[colors,transform] duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground">
                 {feature.icon}
               </div>
               <h3 className="flex-1 text-[15px] font-medium tracking-tight">

@@ -211,9 +211,13 @@
 }
 
 /* Organic blob morph for feature-card icons — runs only while the card is hovered.
-   0%/100% match the resting rounded square (43% ≈ rounded-2xl's 24px on size-14), so
-   the shape eases smoothly into and out of the blobs instead of snapping. */
+   The resting radius is set here (not via Tailwind rounded-*) as a size-independent
+   percentage that exactly equals the morph's 0%/100% frame. That way every blob —
+   pillar or compact — starts the morph from its static shape and, when the animation
+   is removed on hover-out, the transition eases it back to the same static shape
+   instead of snapping. */
 .feature-blob {
+  border-radius: 43% 43% 43% 43% / 43% 43% 43% 43%;
   transition: border-radius 0.7s ease-in-out;
 }
 
@@ -275,10 +279,10 @@
   }
 }
 
-/* 2 — Blocks for everything: the stack re-assembles, one block at a time. */
+/* 2 — Blocks for everything: the stack springs in place, one block at a time. */
 .group:hover .fi-blocks rect {
   transform-origin: center;
-  animation: block-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation: block-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .group:hover .fi-blocks rect:nth-of-type(2) {
   animation-delay: 0.08s;
@@ -287,13 +291,11 @@
   animation-delay: 0.16s;
 }
 @keyframes block-pop {
-  0% {
-    transform: scale(0.3);
-    opacity: 0;
+  40% {
+    transform: scale(0.78);
   }
   100% {
     transform: scale(1);
-    opacity: 1;
   }
 }
 
@@ -308,26 +310,41 @@
   }
 }
 
-/* 4 — Slash menu: the slash redraws itself, like the keystroke that summons it. */
-.fi-slash path {
-  stroke-dasharray: 10;
-}
+/* 4 — Slash menu: the slash strikes like a pressed key, then the menu box pops
+   open a beat later in answer. */
 .group:hover .fi-slash path {
-  animation: slash-draw 0.5s ease-out;
+  transform-origin: center;
+  animation: slash-strike 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-@keyframes slash-draw {
-  from {
-    stroke-dashoffset: 10;
+.group:hover .fi-slash rect {
+  transform-origin: center;
+  animation: slash-box-react 0.6s ease-out 0.1s backwards;
+}
+@keyframes slash-strike {
+  35% {
+    transform: scale(0.82);
   }
-  to {
-    stroke-dashoffset: 0;
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes slash-box-react {
+  0%,
+  18% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
   }
 }
 
-/* 5 — Databases & boards: the columns rise like sorting bars, left to right. */
+/* 5 — Databases & boards: the columns bounce like sorting bars, left to right. */
 .group:hover .fi-kanban rect {
   transform-origin: bottom;
-  animation: bar-rise 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation: bar-bounce 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .group:hover .fi-kanban rect:nth-of-type(2) {
   animation-delay: 0.08s;
@@ -335,28 +352,26 @@
 .group:hover .fi-kanban rect:nth-of-type(3) {
   animation-delay: 0.16s;
 }
-@keyframes bar-rise {
-  0% {
-    transform: scaleY(0.25);
+@keyframes bar-bounce {
+  45% {
+    transform: scaleY(0.6);
   }
   100% {
     transform: scaleY(1);
   }
 }
 
-/* 6 — Tables that behave: the grid lines stroke themselves in. */
-.fi-table path {
-  stroke-dasharray: 80;
-}
+/* 6 — Tables that behave: the grid settles into place with a soft pulse. */
 .group:hover .fi-table path {
-  animation: grid-draw 0.6s ease-out;
+  transform-origin: center;
+  animation: grid-pulse 1s ease-in-out;
 }
-@keyframes grid-draw {
-  from {
-    stroke-dashoffset: 80;
+@keyframes grid-pulse {
+  40% {
+    transform: scale(0.88);
   }
-  to {
-    stroke-dashoffset: 0;
+  70% {
+    transform: scale(1.06);
   }
 }
 
@@ -406,6 +421,7 @@
   .group:hover .fi-blocks rect,
   .group:hover .fi-ext path,
   .group:hover .fi-slash path,
+  .group:hover .fi-slash rect,
   .group:hover .fi-kanban rect,
   .group:hover .fi-table path,
   .group:hover .fi-embed path,

@@ -1,9 +1,6 @@
 import { Link } from "react-router-dom";
-import { CodeBlock } from "../common/CodeBlock";
 import { useI18n } from "../../contexts/I18nContext";
 import { Button } from "@/components/ui/button";
-
-const MIGRATION_COMMAND = "npx -p @jackuait/blok migrate-from-editorjs ./src";
 
 export const MigrationCard: React.FC = () => {
   const { t } = useI18n();
@@ -20,10 +17,10 @@ export const MigrationCard: React.FC = () => {
             aria-hidden="true"
           />
 
-          <div className="relative grid items-center gap-10 p-8 sm:p-12 lg:grid-cols-[1fr_1.05fr] lg:gap-14">
+          <div className="relative p-8 sm:p-12 lg:p-16">
             {/* Copy + calls to action */}
             <div
-              className="text-center lg:text-left"
+              className="mx-auto max-w-2xl text-center"
               data-blok-testid="migration-content"
             >
               <h2
@@ -34,13 +31,13 @@ export const MigrationCard: React.FC = () => {
               </h2>
 
               <p
-                className="mx-auto mt-4 max-w-xl text-lg leading-relaxed text-muted-foreground lg:mx-0"
+                className="mx-auto mt-4 max-w-xl text-lg leading-relaxed text-muted-foreground"
                 data-blok-testid="migration-description"
               >
                 {t('home.migrationCard.description')}
               </p>
 
-              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start">
+              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Button variant="brand" size="lg" asChild>
                   <Link to="/migration">
                     {t('home.migrationCard.viewGuide')}
@@ -62,11 +59,6 @@ export const MigrationCard: React.FC = () => {
                   </a>
                 </Button>
               </div>
-            </div>
-
-            {/* The one command that does the work */}
-            <div className="text-left" data-blok-testid="migration-code">
-              <CodeBlock code={MIGRATION_COMMAND} language="bash" />
             </div>
           </div>
         </div>

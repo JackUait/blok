@@ -111,6 +111,30 @@ describe('Features', () => {
     });
   });
 
+  it('should render carousel pagination dots, one per pillar feature', () => {
+    renderFeatures();
+
+    // The three pillars become a swipeable carousel on mobile, paginated by dots.
+    const dots = screen.getAllByRole('button', { name: /^Go to / });
+    expect(dots).toHaveLength(3);
+    expect(screen.getByRole('button', { name: 'Go to Clean JSON output' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Go to Blocks for everything' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Go to Extensible by design' })).toBeInTheDocument();
+  });
+
+  it('should mark the first pillar as the current carousel slide initially', () => {
+    renderFeatures();
+
+    expect(screen.getByRole('button', { name: 'Go to Clean JSON output' })).toHaveAttribute(
+      'aria-current',
+      'true'
+    );
+    expect(screen.getByRole('button', { name: 'Go to Blocks for everything' })).not.toHaveAttribute(
+      'aria-current',
+      'true'
+    );
+  });
+
   it('should render Russian strings when locale is ru', () => {
     localStorage.setItem('blok-docs-locale', 'ru');
     render(

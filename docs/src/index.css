@@ -250,6 +250,12 @@
   animation: feature-blob-morph 6.5s ease-out infinite;
 }
 
+/* Mobile carousel has no hover, so the focused card's icon blob morphs
+   continuously to keep it feeling alive. */
+[data-pillar-focused="true"] .feature-blob {
+  animation: feature-blob-morph 6.5s ease-out infinite;
+}
+
 /* Per-icon hover choreography — each SVG animates to mime what it represents
    (braces breathe, blocks re-stack, bars rise, the globe spins…). All CSS-only,
    gated on the card's .group:hover so the blob and the icon move together.
@@ -854,6 +860,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .group:hover .feature-blob,
+  [data-pillar-focused="true"] .feature-blob,
   .hero-blob,
   .hero-card-a,
   .hero-card-b,

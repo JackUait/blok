@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, type Variants } from "framer-motion";
 import { SectionReveal } from "../common/SectionReveal";
 import { FeatureModal, type FeatureDetail } from "./FeatureModal";
@@ -19,6 +19,18 @@ const cardVariants: Variants = {
   },
 };
 
+// Each pillar springs up to full size as it becomes the focused card in the
+// carousel, and rests slightly smaller + dimmed while it's a peeking neighbour.
+// On desktop every card is in view at once, so they all sit focused.
+const pillarVariants: Variants = {
+  unfocused: { scale: 0.88, opacity: 0.5 },
+  focused: {
+    scale: 1,
+    opacity: 1,
+    transition: { type: "spring", stiffness: 260, damping: 26 },
+  },
+};
+
 // Bouncy spring for hover lift + tap feedback — a touch of overshoot gives the
 // cards a playful, alive feel without feeling sluggish.
 const hoverSpring = { type: "spring", stiffness: 380, damping: 20 } as const;
@@ -28,6 +40,25 @@ export const Features: React.FC = () => {
   const [selectedFeature, setSelectedFeature] = useState<FeatureDetail | null>(
     null,
   );
+  // On mobile the three pillars collapse into a horizontal snap-scroll carousel;
+  // `activeIndex` drives the pagination dots and the focus scale-up. Only the
+  // centred card grows to full size — neighbours rest smaller + dimmed. On the
+  // desktop grid every card is shown at once, so the focus effect is disabled.
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [isCarousel, setIsCarousel] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 767px)").matches,
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsCarousel(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
 
   const FEATURES = useMemo<FeatureDetail[]>(() => [
     {
@@ -282,6 +313,30 @@ new Blok({ holder: 'editor' });`,
     setSelectedFeature(null);
   };
 
+  // Track which pillar is centred in the scrollport so the right dot lights up.
+  const handleCarouselScroll = () => {
+    const el = carouselRef.current;
+    if (!el) return;
+    const cards = Array.from(el.children) as HTMLElement[];
+    const viewportCenter = el.getBoundingClientRect().left + el.clientWidth / 2;
+    let closest = 0;
+    let minDistance = Infinity;
+    cards.forEach((card, index) => {
+      const rect = card.getBoundingClientRect();
+      const distance = Math.abs(rect.left + rect.width / 2 - viewportCenter);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closest = index;
+      }
+    });
+    setActiveIndex(closest);
+  };
+
+  const scrollToCard = (index: number) => {
+    const card = carouselRef.current?.children[index] as HTMLElement | undefined;
+    card?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  };
+
   return (
     <section
       className="py-20 sm:py-28"
@@ -299,23 +354,32 @@ new Blok({ holder: 'editor' });`,
           </p>
         </SectionReveal>
 
-        {/* The three pillars that define Blok — large, scanned first. */}
-        <motion.div
-          className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-3"
-          variants={gridVariants}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-80px" }}
+        {/* The three pillars that define Blok — large, scanned first.
+            Mobile: a horizontal snap-scroll carousel. Cards snap to centre and
+            sit at ~74vw, so a middle card shows a peek of BOTH neighbours; the
+            13vw side padding lets the first/last card centre at the extremes.
+            md+: a static three-up grid. */}
+        <div
+          ref={carouselRef}
+          onScroll={handleCarouselScroll}
+          className="-mx-6 mt-14 flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-px-[13vw] px-[13vw] pb-2 [-ms-overflow-style:none] [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0 md:scroll-px-0 md:pb-0 [&::-webkit-scrollbar]:hidden"
         >
-          {primaryFeatures.map((feature) => (
+          {primaryFeatures.map((feature, index) => (
             <motion.button
               type="button"
               key={feature.accent}
-              variants={cardVariants}
+              variants={pillarVariants}
+              initial={false}
+              animate={
+                !isCarousel || index === activeIndex ? "focused" : "unfocused"
+              }
+              data-pillar-focused={
+                isCarousel && index === activeIndex ? "true" : undefined
+              }
               whileHover={{ y: -4 }}
               whileTap={{ scale: 0.98 }}
               transition={hoverSpring}
-              className="group flex cursor-pointer flex-col items-start gap-5 rounded-3xl border border-black/[0.04] bg-secondary p-8 text-left transition-shadow duration-300 hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-white/[0.08]"
+              className="group flex w-[74vw] shrink-0 snap-center cursor-pointer flex-col items-start gap-5 rounded-3xl border border-black/[0.04] bg-secondary p-8 text-left transition-shadow duration-300 hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-white/[0.08] md:w-auto md:shrink"
               onClick={() => handleFeatureClick(feature)}
               aria-label={feature.learnMore}
             >
@@ -351,7 +415,30 @@ new Blok({ holder: 'editor' });`,
               </span>
             </motion.button>
           ))}
-        </motion.div>
+        </div>
+
+        {/* Carousel pagination — mobile only; the grid shows all three at md+. */}
+        <div
+          className="mt-5 flex justify-center gap-2 md:hidden"
+          role="group"
+          aria-label={t('home.features.sectionLabel')}
+        >
+          {primaryFeatures.map((feature, index) => {
+            const isActive = index === activeIndex;
+            return (
+              <button
+                key={feature.accent}
+                type="button"
+                onClick={() => scrollToCard(index)}
+                aria-current={isActive ? "true" : undefined}
+                aria-label={`Go to ${feature.title}`}
+                className={`h-2 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                  isActive ? "w-6 bg-primary" : "w-2 bg-foreground/15"
+                }`}
+              />
+            );
+          })}
+        </div>
 
         {/* Supporting capabilities — quiet Airbnb chips, scanned second. */}
         <motion.div

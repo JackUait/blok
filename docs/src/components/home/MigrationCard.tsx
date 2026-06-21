@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { SectionReveal } from "../common/SectionReveal";
 import { useI18n } from "../../contexts/I18nContext";
 import { Button } from "@/components/ui/button";
 
@@ -6,7 +7,7 @@ export const MigrationCard: React.FC = () => {
   const { t } = useI18n();
   return (
     <section className="pb-24 pt-4" data-blok-testid="migration-section">
-      <div className="mx-auto w-full max-w-6xl px-6">
+      <SectionReveal className="mx-auto w-full max-w-6xl px-6">
         <div
           className="relative overflow-hidden rounded-[2rem] border border-black/[0.06] bg-card shadow-card dark:border-white/[0.08]"
           data-blok-testid="migration-card"
@@ -62,7 +63,7 @@ export const MigrationCard: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
+      </SectionReveal>
     </section>
   );
 };

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { CategoryIcon } from "../common/CategoryIcon";
+import { SectionReveal } from "../common/SectionReveal";
 import { useI18n } from "../../contexts/I18nContext";
 import { cn } from "@/lib/utils";
 
@@ -45,7 +46,11 @@ export const CategoryBar: React.FC = () => {
   );
 
   return (
-    <nav
+    <SectionReveal
+      as="nav"
+      y={10}
+      blur={false}
+      viewportMargin="0px"
       className="border-y border-border bg-background/80 backdrop-blur"
       aria-label={t("home.categories.label")}
       data-blok-testid="category-bar"
@@ -70,6 +75,6 @@ export const CategoryBar: React.FC = () => {
           </Link>
         ))}
       </div>
-    </nav>
+    </SectionReveal>
   );
 };

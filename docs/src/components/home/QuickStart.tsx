@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion, type Variants } from "framer-motion";
+import { SectionReveal } from "../common/SectionReveal";
 import { CodeBlock } from "../common/CodeBlock";
 import type { PackageManager } from "../common/PackageManagerToggle";
 import { useI18n } from "../../contexts/I18nContext";
@@ -95,7 +96,7 @@ export const QuickStart: React.FC = () => {
       </div>
 
       <div className="mx-auto w-full max-w-5xl px-6">
-        <div className="mx-auto max-w-2xl text-center">
+        <SectionReveal className="mx-auto max-w-2xl text-center">
           <div
             className="mx-auto mb-6 h-1 w-12 rounded-full bg-brand-gradient"
             aria-hidden="true"
@@ -106,7 +107,7 @@ export const QuickStart: React.FC = () => {
           <p className="mt-5 text-lg leading-relaxed text-muted-foreground">
             {t('home.quickStart.description')}
           </p>
-        </div>
+        </SectionReveal>
 
         <motion.div
           className="mt-16 flex flex-col gap-6 sm:mt-20 sm:gap-8"

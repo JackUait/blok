@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion, type Variants } from "framer-motion";
+import { SectionReveal } from "../common/SectionReveal";
 import { FeatureModal, type FeatureDetail } from "./FeatureModal";
 import { useI18n } from "../../contexts/I18nContext";
 
@@ -288,7 +289,7 @@ new Blok({ holder: 'editor' });`,
       aria-label={t('home.features.sectionLabel')}
     >
       <div className="mx-auto w-full max-w-6xl px-6">
-        <div className="max-w-2xl">
+        <SectionReveal className="max-w-2xl">
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             <span className="block">{t('home.features.title1')}</span>
             <span className="block">{t('home.features.title2')}</span>
@@ -296,7 +297,7 @@ new Blok({ holder: 'editor' });`,
           <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
             {t('home.features.description')}
           </p>
-        </div>
+        </SectionReveal>
 
         {/* The three pillars that define Blok — large, scanned first. */}
         <motion.div

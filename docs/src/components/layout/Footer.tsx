@@ -16,8 +16,10 @@ const TelegramIcon = () => (
 export const Footer: React.FC = () => {
   const { t } = useI18n();
 
+  // An underline drawn as a background gradient so it can grow from 0 → full
+  // width on hover (width can't be transitioned on text-decoration).
   const linkClass =
-    "text-sm text-muted-foreground transition-colors hover:text-foreground";
+    "inline-block w-fit bg-[linear-gradient(currentColor,currentColor)] bg-[length:0%_1.5px] bg-left-bottom bg-no-repeat pb-px text-sm text-muted-foreground transition-[color,background-size] duration-300 ease-out hover:bg-[length:100%_1.5px] hover:text-foreground motion-reduce:transition-none";
 
   return (
     <footer className="border-t border-border bg-secondary/40">
@@ -131,7 +133,7 @@ export const Footer: React.FC = () => {
           <div className="flex items-center gap-2">
             <a
               href="https://github.com/JackUait/blok"
-              className="flex size-10 items-center justify-center rounded-full border border-border text-foreground/70 transition-colors hover:border-foreground/30 hover:text-foreground"
+              className="flex size-10 items-center justify-center rounded-full border border-border text-foreground/70 transition-[color,background-color,border-color] duration-200 hover:border-foreground/30 hover:bg-secondary hover:text-foreground"
               target="_blank"
               rel="noopener noreferrer"
               aria-label={t("footer.githubAriaLabel")}
@@ -140,7 +142,7 @@ export const Footer: React.FC = () => {
             </a>
             <a
               href="https://t.me/that_ai_guy"
-              className="flex size-10 items-center justify-center rounded-full border border-border text-foreground/70 transition-colors hover:border-foreground/30 hover:text-foreground"
+              className="flex size-10 items-center justify-center rounded-full border border-border text-foreground/70 transition-[color,background-color,border-color] duration-200 hover:border-foreground/30 hover:bg-secondary hover:text-foreground"
               target="_blank"
               rel="noopener noreferrer"
               aria-label={t("footer.telegramAriaLabel")}

@@ -24,10 +24,20 @@ export const ThemeToggle: React.FC = () => {
       title={label}
     >
       <span className="relative flex size-[18px] items-center justify-center">
+        {/* `key` remounts the glyph on theme change so the enter animation
+            replays — a soft rotate-and-fade swap rather than a hard cut. */}
         {theme === "dark" ? (
-          <MoonIcon className="size-[18px]" strokeWidth={2} />
+          <MoonIcon
+            key="moon"
+            className="size-[18px] animate-in fade-in zoom-in-95 spin-in-45 fill-mode-both duration-300 ease-out motion-reduce:animate-none"
+            strokeWidth={2}
+          />
         ) : (
-          <SunIcon className="size-[18px]" strokeWidth={2} />
+          <SunIcon
+            key="sun"
+            className="size-[18px] animate-in fade-in zoom-in-95 spin-in-45 fill-mode-both duration-300 ease-out motion-reduce:animate-none"
+            strokeWidth={2}
+          />
         )}
       </span>
     </Button>

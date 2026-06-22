@@ -66,6 +66,25 @@ describe('attachControls', () => {
     h.destroy();
   });
 
+  it('applies a preset speed but keeps the menu open for further tweaking', () => {
+    const media = makeMedia();
+    const figure = document.createElement('figure');
+    const h = attachControls({ media, figure, data: { url: 'u' } });
+    figure.appendChild(h.element);
+
+    const gear = h.element.querySelector('[data-role="audio-speed"]') as HTMLButtonElement;
+    gear.click();
+    const menu = h.element.querySelector('.blok-audio-controls__speed-menu') as HTMLElement;
+    expect(menu.hidden).toBe(false);
+
+    const chips = h.element.querySelectorAll('.blok-audio-controls__speed-chip');
+    (chips[3] as HTMLButtonElement).click(); // 2× preset
+
+    expect(media.playbackRate).toBe(2);
+    expect(menu.hidden).toBe(false); // stays open — the user may keep adjusting
+    h.destroy();
+  });
+
   it('restores persisted volume on attach', () => {
     const media = makeMedia();
     const figure = document.createElement('figure');

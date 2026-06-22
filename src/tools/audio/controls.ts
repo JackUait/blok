@@ -281,10 +281,9 @@ export function attachControls({
     chip.type = 'button';
     chip.className = 'blok-audio-controls__speed-chip';
     chip.textContent = `${rate}×`;
-    chip.addEventListener('click', () => {
-      setRate(rate);
-      closeSpeedMenu();
-    });
+    // Apply the preset but leave the menu open so the user can keep nudging the
+    // rate (slider/steppers/other presets) without re-opening it each time.
+    chip.addEventListener('click', () => setRate(rate));
     speedChipRow.appendChild(chip);
   });
 

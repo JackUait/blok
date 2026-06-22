@@ -1,7 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { API, BlockAPI, BlockToolConstructorOptions } from '../../../../types';
+import type { MenuConfig } from '../../../../types/tools/menu-config';
 import type { AudioConfig, AudioData } from '../../../../types/tools/audio';
+import type * as CoverPickerModule from '../../../../src/tools/audio/cover-picker';
 import { AudioTool } from '../../../../src/tools/audio';
+
+const toMenuArray = (config: MenuConfig): Array<Record<string, unknown>> => {
+  return (Array.isArray(config) ? config : [config]) as Array<Record<string, unknown>>;
+};
 
 vi.mock('../../../../src/tools/audio/metadata', () => ({
   readTrackMetadata: vi.fn().mockResolvedValue({}),
@@ -16,7 +22,7 @@ const coverPickerCalls: Array<{
 }> = [];
 
 vi.mock('../../../../src/tools/audio/cover-picker', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../../src/tools/audio/cover-picker')>();
+  const actual = await importOriginal<typeof CoverPickerModule>();
   return {
     ...actual,
     openCoverPicker: vi.fn((o: { onFile: (f: File) => void; onUrl: (u: string) => void; onClose?: () => void }) => {
@@ -382,7 +388,7 @@ describe('AudioTool', () => {
       const { tool, root, block } = renderTool({ coverUrl: 'https://cdn/cover.png' });
       expect(root.querySelector('[data-role="audio-cover"] img')).not.toBeNull();
 
-      const remove = tool.renderSettings().find((i) => 'name' in i && i.name === 'audio-cover-remove');
+      const remove = toMenuArray(tool.renderSettings()).find((i) => 'name' in i && i.name === 'audio-cover-remove');
       expect(remove).toBeDefined();
       (remove as { onActivate: () => void }).onActivate();
 
@@ -393,7 +399,7 @@ describe('AudioTool', () => {
 
     it('hides Remove cover when no cover is set', () => {
       const { tool } = renderTool();
-      const remove = tool.renderSettings().find((i) => 'name' in i && i.name === 'audio-cover-remove');
+      const remove = toMenuArray(tool.renderSettings()).find((i) => 'name' in i && i.name === 'audio-cover-remove');
       expect(remove).toBeUndefined();
     });
   });

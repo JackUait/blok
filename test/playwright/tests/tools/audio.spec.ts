@@ -266,10 +266,10 @@ test('user can set a cover image from a URL', async ({ page }) => {
 
   // The URL input must be visible — this assertion guards the rendered picker width.
   // A 2px-wide picker would make the input invisible/unreachable, catching the bug.
-  await expect(picker.locator('input[type="url"]')).toBeVisible();
+  await expect(picker.getByRole('textbox')).toBeVisible();
 
   // Fill the URL and submit with real interactions.
-  await picker.locator('input[type="url"]').fill('https://example.com/cover.jpg');
+  await picker.getByRole('textbox').fill('https://example.com/cover.jpg');
   await picker.locator('[data-action="submit-url"]').click();
 
   // The cover img must appear with the submitted src.
@@ -401,8 +401,8 @@ test('user can remove a cover and the vinyl disc returns', async ({ page }) => {
   const picker2 = page.locator('[data-role="audio-cover-picker"]');
   await expect(picker2).toBeVisible();
   await picker2.locator('[data-tab="embed"]').click();
-  await expect(picker2.locator('input[type="url"]')).toBeVisible();
-  await picker2.locator('input[type="url"]').fill('https://example.com/cover.jpg');
+  await expect(picker2.getByRole('textbox')).toBeVisible();
+  await picker2.getByRole('textbox').fill('https://example.com/cover.jpg');
   await picker2.locator('[data-action="submit-url"]').click();
 
   // Confirm cover img is set before removing it.
@@ -422,5 +422,5 @@ test('user can remove a cover and the vinyl disc returns', async ({ page }) => {
 
   // The img must be gone and the vinyl disc placeholder must return.
   await expect(page.locator(`${AUDIO_BLOCK_SELECTOR} [data-role="audio-cover"] img`)).toHaveCount(0);
-  await expect(page.locator(`${AUDIO_BLOCK_SELECTOR} .blok-audio-cover__disc`)).toBeVisible();
+  await expect(page.locator(`${AUDIO_BLOCK_SELECTOR} [data-role="audio-cover-disc"]`)).toBeVisible();
 });

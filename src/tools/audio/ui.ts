@@ -62,6 +62,7 @@ export function renderNowPlaying(data: AudioData, opts: NowPlayingOptions): NowP
     placeholder.setAttribute('aria-hidden', 'true');
     const disc = document.createElement('span');
     disc.className = 'blok-audio-cover__disc';
+    disc.setAttribute('data-role', 'audio-cover-disc');
     placeholder.append(disc);
     cover.appendChild(placeholder);
   }
@@ -80,16 +81,21 @@ export function renderNowPlaying(data: AudioData, opts: NowPlayingOptions): NowP
   });
   cover.appendChild(eq);
 
-  let coverButton: HTMLButtonElement | undefined;
-  if (opts.editable) {
-    coverButton = document.createElement('button');
-    coverButton.type = 'button';
-    coverButton.className = 'blok-audio-cover__change';
-    coverButton.setAttribute('data-role', 'audio-cover-change');
-    coverButton.setAttribute('aria-label', opts.coverChangeLabel ?? 'Change cover');
-    coverButton.innerHTML = IconImage;
-    cover.appendChild(coverButton);
-  }
+  const coverButton = ((): HTMLButtonElement | undefined => {
+    if (!opts.editable) {
+      return undefined;
+    }
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'blok-audio-cover__change';
+    button.setAttribute('data-role', 'audio-cover-change');
+    button.setAttribute('aria-label', opts.coverChangeLabel ?? 'Change cover');
+    button.innerHTML = IconImage;
+    cover.appendChild(button);
+
+    return button;
+  })();
 
   const title = editableLine('audio-title', data.title, opts.editable, opts.titlePlaceholder);
   title.className = 'blok-audio-title';

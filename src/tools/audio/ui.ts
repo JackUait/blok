@@ -1,9 +1,11 @@
 import type { AudioData } from '../../../types/tools/audio';
+import { IconImage } from '../../components/icons';
 
 export interface NowPlayingOptions {
   editable: boolean;
   titlePlaceholder?: string;
   artistPlaceholder?: string;
+  coverChangeLabel?: string;
 }
 
 export interface NowPlayingElements {
@@ -14,6 +16,7 @@ export interface NowPlayingElements {
   waveformMount: HTMLElement;
   title: HTMLElement;
   artist: HTMLElement;
+  coverButton?: HTMLButtonElement;
 }
 
 function editableLine(role: string, value: string | undefined, editable: boolean, placeholder?: string): HTMLElement {
@@ -77,6 +80,17 @@ export function renderNowPlaying(data: AudioData, opts: NowPlayingOptions): NowP
   });
   cover.appendChild(eq);
 
+  let coverButton: HTMLButtonElement | undefined;
+  if (opts.editable) {
+    coverButton = document.createElement('button');
+    coverButton.type = 'button';
+    coverButton.className = 'blok-audio-cover__change';
+    coverButton.setAttribute('data-role', 'audio-cover-change');
+    coverButton.setAttribute('aria-label', opts.coverChangeLabel ?? 'Change cover');
+    coverButton.innerHTML = IconImage;
+    cover.appendChild(coverButton);
+  }
+
   const title = editableLine('audio-title', data.title, opts.editable, opts.titlePlaceholder);
   title.className = 'blok-audio-title';
   const artist = editableLine('audio-artist', data.artist, opts.editable, opts.artistPlaceholder);
@@ -99,7 +113,7 @@ export function renderNowPlaying(data: AudioData, opts: NowPlayingOptions): NowP
   if (data.loop) audio.loop = true;
 
   figure.append(toolbarAnchor, cover, body, audio);
-  return { figure, audio, cover, body, waveformMount, title, artist };
+  return { figure, audio, cover, body, waveformMount, title, artist, coverButton };
 }
 
 export interface CaptionRowOptions {

@@ -93,6 +93,21 @@ describe('renderNowPlaying', () => {
   });
 });
 
+describe('renderNowPlaying cover button', () => {
+  it('adds a change-cover button when editable', () => {
+    const els = renderNowPlaying({ url: 'https://cdn/a.mp3' }, { editable: true });
+    expect(els.coverButton).toBeInstanceOf(HTMLButtonElement);
+    expect(els.cover.contains(els.coverButton!)).toBe(true);
+    expect(els.coverButton!.getAttribute('aria-label')).toBeTruthy();
+  });
+
+  it('omits the change-cover button in read-only mode', () => {
+    const els = renderNowPlaying({ url: 'https://cdn/a.mp3' }, { editable: false });
+    expect(els.coverButton).toBeUndefined();
+    expect(els.cover.querySelector('[data-role="audio-cover-change"]')).toBeNull();
+  });
+});
+
 describe('renderCaptionRow', () => {
   it('renders an editable caption with a placeholder', () => {
     const row = renderCaptionRow({ value: '', placeholder: 'Write a caption…', editable: true });

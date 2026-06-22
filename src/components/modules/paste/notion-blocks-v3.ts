@@ -557,6 +557,8 @@ function mapAudio(props: Record<string, unknown>, format: Record<string, unknown
   const fileName = plainText(props.title);
 
   if (fileName.length > 0) {
+    // `title` is the player's visible label; `fileName` drives the download name.
+    data.title = fileName;
     data.fileName = fileName;
   }
 
@@ -675,9 +677,10 @@ function segmentContent(raw: string, annotations: unknown[], byId?: Map<string, 
     return escapeHtml(formatNotionDate(date));
   }
 
-  // A user mention ('u') carries only a UUID — the display name is not in the
-  // clipboard — so drop it rather than leak the raw placeholder glyph.
-  if (hasFlag(annotations, 'u')) {
+  // A user mention ('u'), or a malformed date mention ('d' with a missing /
+  // non-object arg), carries no renderable content — drop it rather than leak
+  // the raw placeholder glyph.
+  if (hasFlag(annotations, 'u') || hasFlag(annotations, 'd')) {
     return '';
   }
 

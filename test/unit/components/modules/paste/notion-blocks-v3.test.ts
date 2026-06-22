@@ -734,12 +734,23 @@ describe('parseNotionBlocksV3', () => {
   });
 
   describe('audio blocks (phase 6)', () => {
-    it('maps an external (http) audio block to an audio tool with its filename', () => {
+    it('maps an external (http) audio block to an audio tool with a visible title and filename', () => {
       const out = parseNotionBlocksV3(
         v3(value('au', 'audio', { properties: { source: [['https://cdn.test/song.mp3']], title: [['song.mp3']] } }))
       );
 
-      expect(out).toEqual([{ id: 'au', tool: 'audio', data: { url: 'https://cdn.test/song.mp3', fileName: 'song.mp3' } }]);
+      // `title` drives the player's visible label; `fileName` drives the download name.
+      expect(out).toEqual([
+        { id: 'au', tool: 'audio', data: { url: 'https://cdn.test/song.mp3', title: 'song.mp3', fileName: 'song.mp3' } },
+      ]);
+    });
+
+    it('maps an external audio block without a title to just a url', () => {
+      const out = parseNotionBlocksV3(
+        v3(value('au', 'audio', { properties: { source: [['https://cdn.test/clip.mp3']] } }))
+      );
+
+      expect(out).toEqual([{ id: 'au', tool: 'audio', data: { url: 'https://cdn.test/clip.mp3' } }]);
     });
 
     it('falls back to a filename paragraph for an attachment audio (no usable URL)', () => {
@@ -804,6 +815,18 @@ describe('parseNotionBlocksV3', () => {
       );
 
       expect(out?.[0].data.text).toBe('<b>2026-06-22</b>');
+    });
+
+    it('drops a malformed date mention (non-object / missing arg) without leaking the glyph', () => {
+      const stringArg = parseNotionBlocksV3(
+        v3(value('a', 'text', { properties: title(['x '], ['‣', [['d', 'oops']]]) }))
+      );
+      const noArg = parseNotionBlocksV3(
+        v3(value('b', 'text', { properties: title(['y '], ['‣', [['d']]]) }))
+      );
+
+      expect(stringArg?.[0].data.text).toBe('x ');
+      expect(noArg?.[0].data.text).toBe('y ');
     });
 
     it('drops an unresolvable user mention without leaking the placeholder glyph', () => {

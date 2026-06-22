@@ -48,6 +48,13 @@ export interface MediaEmptyStateOptions {
   labels: MediaEmptyStateLabels;
   onFile(file: File): void;
   onUrl(url: string): void;
+  /**
+   * Animate the panel height when switching Upload/Link tabs. Defaults to true.
+   * The tween smooths inline reflow (image/file blocks), but in a floating
+   * popover (audio cover-picker) nothing reflows beneath it, so the tween only
+   * reads as lag — those callers pass false for an instant, snappy swap.
+   */
+  animateSwap?: boolean;
 }
 
 const MIME_LABELS: Record<string, string> = {
@@ -176,6 +183,8 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
   const accept = types.length ? types.join(',') : '*';
   const formats = formatsLabel(types);
   const sizeHint = opts.maxSize !== undefined ? formatBytes(opts.maxSize) : '';
+
+  const swapAnimates = opts.animateSwap !== false;
 
   const root = document.createElement('div') as unknown as MediaEmptyStateElement;
   root.className = 'blok-media-empty';
@@ -375,7 +384,7 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
   tabList.forEach((tab, idx) => {
     tab.addEventListener('click', (ev) => {
       ev.stopPropagation();
-      activate(tabKinds[idx], true);
+      activate(tabKinds[idx], swapAnimates);
       tab.focus();
     });
     tab.addEventListener('keydown', (ev) => {
@@ -383,16 +392,16 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
         ev.preventDefault();
         const dir = ev.key === 'ArrowRight' ? 1 : -1;
         const next = (idx + dir + tabList.length) % tabList.length;
-        activate(tabKinds[next], true);
+        activate(tabKinds[next], swapAnimates);
         tabList[next].focus();
       } else if (ev.key === 'Home') {
         ev.preventDefault();
-        activate(tabKinds[0], true);
+        activate(tabKinds[0], swapAnimates);
         tabList[0].focus();
       } else if (ev.key === 'End') {
         ev.preventDefault();
         const last = tabList.length - 1;
-        activate(tabKinds[last], true);
+        activate(tabKinds[last], swapAnimates);
         tabList[last].focus();
       }
     });

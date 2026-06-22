@@ -54,6 +54,34 @@ describe('openCoverPicker', () => {
     expect(document.querySelector('[data-role="audio-cover-picker"]')).toBeNull();
   });
 
+  it('does not run the panel height-swap animation when switching tabs', () => {
+    // Make the WAAPI path reachable: real animate + reduced-motion off. The
+    // picker is a floating popover, so the media-empty height tween (built to
+    // smooth inline reflow) only reads as lag here — it must be opted out.
+    const animateSpy = vi.fn(() => ({ finished: Promise.resolve(undefined) }));
+    const proto = HTMLElement.prototype as unknown as { animate?: unknown };
+    const original = proto.animate;
+    proto.animate = animateSpy;
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false }));
+
+    try {
+      const anchor = document.createElement('div');
+      document.body.appendChild(anchor);
+      const handle = openCoverPicker({ anchor, onFile: vi.fn(), onUrl: vi.fn() });
+      const dialog = document.querySelector('[data-role="audio-cover-picker"]')!;
+
+      animateSpy.mockClear();
+      dialog.querySelector<HTMLButtonElement>('[data-tab="embed"]')!.click();
+      expect(animateSpy).not.toHaveBeenCalled();
+
+      handle.close();
+    } finally {
+      if (original) proto.animate = original;
+      else delete proto.animate;
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('invokes onClose when the user presses Escape', () => {
     const anchor = document.createElement('div');
     document.body.appendChild(anchor);

@@ -43,6 +43,9 @@ export function openCoverPicker(opts: OpenCoverPickerOptions): CoverPickerHandle
     acceptTypes: [...COVER_TYPES],
     onFile: opts.onFile,
     onUrl: opts.onUrl,
+    // Instant tab swap — the picker is a floating popover, so the height tween
+    // (which exists to smooth inline reflow) only reads as lag here.
+    animateSwap: false,
     labels: {
       add: tr(opts.i18n, 'tools.audio.coverAdd', 'Add a cover'),
       upload: tr(opts.i18n, 'tools.audio.coverUpload', 'Upload'),

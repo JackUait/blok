@@ -5716,7 +5716,7 @@
   transition: opacity var(--blok-duration-base) ease;
 }
 
-[data-blok-tool="audio"] .blok-audio-cover:hover .blok-audio-cover__change, [data-blok-tool="audio"] .blok-audio-cover__change:focus-visible {
+[data-blok-tool="audio"] .blok-audio-cover:hover .blok-audio-cover__change, [data-blok-tool="audio"] .blok-audio-cover.is-picker-open .blok-audio-cover__change, [data-blok-tool="audio"] .blok-audio-cover__change:focus-visible {
   opacity: 1;
 }
 

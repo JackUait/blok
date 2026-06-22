@@ -578,12 +578,19 @@ export class AudioTool implements BlockTool {
     const anchor = this.root?.querySelector<HTMLElement>('[data-role="audio-cover"]');
     if (!anchor) return;
     this.coverPicker?.close();
+    // Keep the cover's hover affordance (scrim + change icon) lit while the
+    // picker is open — the pointer has left the cover for the popup, so :hover
+    // alone would drop it.
+    anchor.classList.add('is-picker-open');
     this.coverPicker = openCoverPicker({
       anchor,
       i18n: this.api.i18n,
       onFile: (file) => this.applyCoverFile(file),
       onUrl: (url) => this.applyCoverUrl(url),
-      onClose: () => { this.coverPicker = null; },
+      onClose: () => {
+        anchor.classList.remove('is-picker-open');
+        this.coverPicker = null;
+      },
     });
   }
 

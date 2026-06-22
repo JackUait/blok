@@ -340,6 +340,18 @@ describe('AudioTool', () => {
       expect(coverPickerCalls[0].handle.close).toHaveBeenCalled();
     });
 
+    it('keeps the cover marked open while the picker is mounted', () => {
+      const { root } = renderTool();
+      const cover = root.querySelector<HTMLElement>('[data-role="audio-cover"]')!;
+      expect(cover.classList.contains('is-picker-open')).toBe(false);
+
+      root.querySelector<HTMLButtonElement>('[data-role="audio-cover-change"]')!.click();
+      expect(cover.classList.contains('is-picker-open')).toBe(true);
+
+      coverPickerCalls[0].onClose?.();
+      expect(cover.classList.contains('is-picker-open')).toBe(false);
+    });
+
     it('uploads a cover file through the configured uploader', async () => {
       const uploadByFile = vi.fn().mockResolvedValue({ url: 'https://cdn/uploaded.png' });
       const { root } = renderTool({}, { uploader: { uploadByFile } });

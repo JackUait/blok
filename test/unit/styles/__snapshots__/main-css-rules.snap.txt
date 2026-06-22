@@ -5726,13 +5726,14 @@
   pointer-events: none;
 }
 
-.blok-audio-cover-picker {
+.blok-audio-cover-picker, .blok-audio-cover-picker[data-blok-top-layer][popover] {
   z-index: 1;
   width: min(360px, calc(100vw - 32px));
-}
-
-.blok-audio-cover-picker[data-blok-top-layer][popover] {
-  width: min(360px, calc(100vw - 32px));
+  padding: var(--blok-space-2);
+  background: var(--blok-bg-primary);
+  border: 1px solid var(--blok-border-subtle);
+  border-radius: var(--blok-radius-lg);
+  box-shadow: var(--blok-popover-box-shadow);
 }
 
 [data-blok-tool="audio"] .blok-audio-cover__placeholder {

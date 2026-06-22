@@ -278,6 +278,45 @@ test('user can set a cover image from a URL', async ({ page }) => {
   await expect(coverImg).toHaveAttribute('src', 'https://example.com/cover.jpg');
 });
 
+test('cover picker paints a themed surface matching the player (no white canvas)', async ({ page }) => {
+  await createBlok(page);
+
+  // Force dark theme on the document root so the body-level top-layer picker
+  // resolves dark tokens — the exact condition under which it used to render the
+  // UA white [popover] canvas behind its translucent card.
+  await page.evaluate(() => document.documentElement.setAttribute('data-blok-theme', 'dark'));
+
+  await insertAudioBlock(page);
+
+  const audioBlock = page.locator(AUDIO_BLOCK_SELECTOR);
+  await audioBlock.getByTestId('file-input').setInputFiles(FIXTURE_PATH);
+  await expect(audioBlock.locator('[data-role="audio-controls"]')).toBeVisible();
+
+  const cover = audioBlock.locator('[data-role="audio-cover"]');
+  await cover.hover();
+  const changeBtn = audioBlock.locator('[data-role="audio-cover-change"]');
+  await expect(changeBtn).toBeVisible();
+  await changeBtn.click();
+
+  const picker = page.locator('[data-role="audio-cover-picker"]');
+  await expect(picker).toBeVisible();
+
+  // The picker must paint a solid themed surface (the player's --blok-bg-primary)
+  // so the dark theme's translucent card layers over dark, never the UA white
+  // [popover] canvas the top-layer reset leaves unset.
+  const surfaces = await page.evaluate(() => {
+    const pick = document.querySelector('[data-role="audio-cover-picker"]');
+    const player = document.querySelector('[data-blok-tool="audio"] .blok-audio-inner');
+    return {
+      picker: pick ? getComputedStyle(pick).backgroundColor : null,
+      player: player ? getComputedStyle(player).backgroundColor : null,
+    };
+  });
+  expect(surfaces.picker).toBe(surfaces.player);
+  // Guard the specific regression: a white [popover] canvas behind the card.
+  expect(surfaces.picker).not.toBe('rgb(255, 255, 255)');
+});
+
 // ---------------------------------------------------------------------------
 // 7. Cover — remove via block settings restores the spinning disc
 // ---------------------------------------------------------------------------

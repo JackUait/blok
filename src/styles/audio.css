@@ -72,6 +72,9 @@
   --blok-audio-disc-inner-shadow: rgba(0, 0, 0, 0.5);
   --blok-audio-label-shadow: rgba(0, 0, 0, 0.35);
   --blok-audio-spindle-catch: rgba(255, 255, 255, 0.4);
+  /* cover overlay button — a semi-transparent dark scrim (same near-black as
+     the disc, blended down to ~45% opacity so the art shows through) */
+  --blok-audio-cover-scrim: color-mix(in srgb, var(--blok-overlay-dark) 50%, transparent);
 
   position: relative;
   margin: var(--blok-space-2-5) 0;
@@ -154,6 +157,42 @@
   object-fit: cover;
   display: block;
 }
+
+/* ----- change-cover overlay button (edit mode only) -------- */
+/* Stretches across the full cover panel; stays invisible until the cover
+   is hovered or the button receives keyboard focus — preventing it from
+   obscuring the art in read-only contexts. */
+[data-blok-tool="audio"] .blok-audio-cover__change {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--blok-text-on-dark);
+  background: var(--blok-audio-cover-scrim);
+  opacity: 0;
+  transition: opacity var(--blok-duration-base) ease;
+}
+[data-blok-tool="audio"] .blok-audio-cover:hover .blok-audio-cover__change,
+[data-blok-tool="audio"] .blok-audio-cover__change:focus-visible {
+  opacity: 1;
+}
+[data-blok-tool="audio"] .blok-audio-cover__change svg {
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+
+/* ----- cover-picker dialog (top-layer promoted) ------------- */
+/* top-layer.ts neutralises UA popover resets; keep this rule minimal —
+   the renderMediaEmptyState surface inside carries its own styling. */
+.blok-audio-cover-picker {
+  z-index: 1;
+}
+
 /* ----- no-cover placeholder: a glossy black vinyl record --- */
 [data-blok-tool="audio"] .blok-audio-cover__placeholder {
   position: relative;
@@ -769,4 +808,6 @@
   /* The record holds still under reduced motion (disc.ts skips the spin loop). */
   /* Caption appears/disappears instantly (JS also takes the instant path). */
   [data-blok-tool="audio"] .blok-audio-caption-row__inner { transition: none; }
+  /* Cover overlay button appears instantly — no fade. */
+  [data-blok-tool="audio"] .blok-audio-cover__change { transition: none; }
 }

@@ -5617,6 +5617,7 @@
   --blok-audio-disc-inner-shadow: rgba(0, 0, 0, 0.5);
   --blok-audio-label-shadow: rgba(0, 0, 0, 0.35);
   --blok-audio-spindle-catch: rgba(255, 255, 255, 0.4);
+  --blok-audio-cover-scrim: color-mix(in srgb, var(--blok-overlay-dark) 50%, transparent);
   position: relative;
   margin: var(--blok-space-2-5) 0;
   font-family: var(--blok-font-family, var(--blok-font-sans));
@@ -5698,6 +5699,35 @@
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+[data-blok-tool="audio"] .blok-audio-cover__change {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--blok-text-on-dark);
+  background: var(--blok-audio-cover-scrim);
+  opacity: 0;
+  transition: opacity var(--blok-duration-base) ease;
+}
+
+[data-blok-tool="audio"] .blok-audio-cover:hover .blok-audio-cover__change, [data-blok-tool="audio"] .blok-audio-cover__change:focus-visible {
+  opacity: 1;
+}
+
+[data-blok-tool="audio"] .blok-audio-cover__change svg {
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+
+.blok-audio-cover-picker {
+  z-index: 1;
 }
 
 [data-blok-tool="audio"] .blok-audio-cover__placeholder {
@@ -6206,6 +6236,10 @@
 }
 
 [@media (prefers-reduced-motion: reduce)] [data-blok-tool="audio"] .blok-audio-caption-row__inner {
+  transition: none;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-tool="audio"] .blok-audio-cover__change {
   transition: none;
 }
 

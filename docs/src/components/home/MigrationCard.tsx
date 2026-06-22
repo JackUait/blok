@@ -18,7 +18,7 @@ export const MigrationCard: React.FC = () => {
             aria-hidden="true"
           />
 
-          <div className="relative p-8 sm:p-12 lg:p-16">
+          <div className="relative px-6 py-10 sm:p-12 lg:p-16">
             {/* Copy + calls to action */}
             <div
               className="mx-auto max-w-2xl text-center"
@@ -38,8 +38,8 @@ export const MigrationCard: React.FC = () => {
                 {t('home.migrationCard.description')}
               </p>
 
-              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <Button variant="brand" size="lg" asChild>
+              <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
+                <Button variant="brand" size="lg" asChild className="w-full sm:w-auto">
                   <Link to="/migration">
                     {t('home.migrationCard.viewGuide')}
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -47,7 +47,7 @@ export const MigrationCard: React.FC = () => {
                     </svg>
                   </Link>
                 </Button>
-                <Button variant="outline" size="lg" asChild>
+                <Button variant="outline" size="lg" asChild className="w-full sm:w-auto">
                   <a
                     href="https://github.com/jackuait/blok/tree/master/codemod"
                     target="_blank"

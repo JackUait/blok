@@ -413,6 +413,35 @@ describe('parseNotionBlocksV3', () => {
 
       expect(out?.[0].data.text).toBe('see ‣');
     });
+
+    // Real Notion clipboard mentions are 3-element `[p, pageId, spaceId]` and
+    // reference a page that is NOT included in a single-page copy — so the
+    // realistic path is "extra args ignored, placeholder preserved".
+    it('reads the page id from a real 3-element mention and keeps the placeholder when absent', () => {
+      const out = parseNotionBlocksV3(
+        v3(
+          value('a', 'text', {
+            properties: title(
+              ['‣', [['p', 'b0f73136-810b-4d02-8d9d-feebc2fa5eb2', '6ca10a2a-d599-486f-8f8f-560b1615b563']]],
+              [' ']
+            ),
+          })
+        )
+      );
+
+      expect(out?.[0].data.text).toBe('‣ ');
+    });
+
+    it('resolves a 3-element mention when the referenced page IS in the payload', () => {
+      const out = parseNotionBlocksV3(
+        v3Tree(
+          value('p1', 'text', { properties: title(['‣', [['p', 'pg', 'space-id']]]) }),
+          value('pg', 'page', { properties: title(['Linked']) })
+        )
+      );
+
+      expect(out?.[0].data.text).toBe('Linked');
+    });
   });
 
   describe('nesting', () => {

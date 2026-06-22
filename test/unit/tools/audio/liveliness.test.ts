@@ -144,6 +144,45 @@ describe('liveAmplitude', () => {
     }
   });
 
+  it('only adds energy — the live boost never pulls a bar below its static peak', () => {
+    // Regression: the dance/ambient used to swing *negative*, so near the
+    // playhead a quiet bar would clamp to ~0 and render as a flickering dot —
+    // a notch in the waveform. Liveliness must energize the bars upward, never
+    // gouge holes into the static shape.
+    const base = 0.3;
+    for (let index = -8; index <= 18; index++) {
+      for (let k = 0; k < 160; k++) {
+        const a = liveAmplitude({ basePeak: base, index, playheadIndex: 10, timeSeconds: k * 0.025, reduced: false });
+        expect(a).toBeGreaterThanOrEqual(base - 1e-9);
+      }
+    }
+  });
+
+  it('keeps a near-silent bar beside the playhead visibly lifted, never a flat dot', () => {
+    const mins: number[] = [];
+    for (let k = 0; k < 200; k++) {
+      mins.push(liveAmplitude({ basePeak: 0.02, index: 9, playheadIndex: 10, timeSeconds: k * 0.03, reduced: false }));
+    }
+    expect(Math.min(...mins)).toBeGreaterThan(0.05);
+  });
+
+  it('pulses with strong, visible energy at the playhead — not a timid wiggle', () => {
+    // The playing bars must really *dance*. A quiet bar under the playhead
+    // should swing across a large fraction of the full height over time.
+    // (Probed at a low base so the top-end clamp doesn't mask the real swing.)
+    const vals: number[] = [];
+    for (let k = 0; k < 100; k++) {
+      vals.push(liveAmplitude({ basePeak: 0.05, index: 10, playheadIndex: 10, timeSeconds: k * 0.05, reduced: false }));
+    }
+    expect(Math.max(...vals) - Math.min(...vals)).toBeGreaterThan(0.4);
+  });
+
+  it('localizes the big pump to the playhead — the distant field only breathes', () => {
+    // The energetic dance is focal: bars far from the playhead get a gentle
+    // ambient breath, an order of magnitude calmer than the comet.
+    expect(swing(10, 10)).toBeGreaterThan(swing(60, 10) * 4);
+  });
+
   it('lifts even quiet sections into visible life near the playhead', () => {
     const peak = Math.max(
       ...[0, 0.1, 0.2, 0.3, 0.4, 0.5].map((t) =>
@@ -154,7 +193,10 @@ describe('liveAmplitude', () => {
   });
 
   it('scales the live boost by energy (for the pause settle)', () => {
-    const opts = { basePeak: 0.2, index: 10, playheadIndex: 10, timeSeconds: 0.12, reduced: false };
+    // Measured on a wake bar (distance -4): the playhead itself pumps hard
+    // enough to saturate at full height, where the clamp would mask the linear
+    // scaling this guards.
+    const opts = { basePeak: 0.2, index: 6, playheadIndex: 10, timeSeconds: 0.12, reduced: false };
     const full = liveAmplitude({ ...opts, energy: 1 });
     const half = liveAmplitude({ ...opts, energy: 0.5 });
     const none = liveAmplitude({ ...opts, energy: 0 });

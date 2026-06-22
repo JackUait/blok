@@ -70,10 +70,21 @@ export function ambientWave(index: number, timeSeconds: number): number {
   return a * 0.6 + b * 0.4;
 }
 
+/** Comet-body lift at the playhead, tapering out along the wake/leading edge. */
+const COMET_FLOOR = 0.34;
+/** Extra lift layered onto the tight head spike right under the playhead. */
+const HEAD_FLOOR = 0.5;
+/**
+ * How hard the comet pulses, as a fraction of its floor. Kept < 1 so the
+ * downward half of the swing never drops a bar below its lifted base — the
+ * dance reads as a strong pump, never a hole punched into the waveform.
+ */
+const DANCE_THROW = 0.82;
+
 /** Ambient swing applied to every bar (the faint preview-side breath). */
-const AMBIENT_BASE = 0.035;
+const AMBIENT_BASE = 0.04;
 /** Extra ambient swing layered onto the played side (the shimmering wake). */
-const AMBIENT_PLAYED = 0.06;
+const AMBIENT_PLAYED = 0.17;
 /** Bars ahead of the playhead over which the played-side shimmer fades out. */
 const AMBIENT_AHEAD_FADE = 26;
 
@@ -119,16 +130,23 @@ export function liveAmplitude(opts: LiveAmplitudeOptions): number {
   if (reduced || energy <= 0) return basePeak;
 
   const distance = index - playheadIndex;
-
-  // Layer 1 — focal comet near the playhead.
   const env = cometEnvelope(distance);
   const head = headFocus(distance);
-  const comet = env * 0.15 + head * 0.2 + env * 0.28 * barWobble(index, timeSeconds);
 
-  // Layer 2 — global ambient ripple. Full strength behind the playhead (the
-  // played wake), fading across AMBIENT_AHEAD_FADE bars into the preview ahead.
+  // Layer 1 — focal comet. A guaranteed-positive "alive" floor blooms at the
+  // playhead and tapers along the wake, lifting even silent bars into view. A
+  // vigorous bidirectional pulse then rides on top — but its swing is capped at
+  // DANCE_THROW of the floor, so the trough stays at/above the lifted base. Big
+  // visible motion, yet it can never gouge a bar back down to a flat dot.
+  const floor = env * COMET_FLOOR + head * HEAD_FLOOR;
+  const comet = floor * (1 + DANCE_THROW * barWobble(index, timeSeconds));
+
+  // Layer 2 — global ambient breath. Rectified to [0, 1] so it only adds, it
+  // keeps the whole field shimmering: full strength on the played wake, fading
+  // across AMBIENT_AHEAD_FADE bars into the preview ahead.
   const playedBias = distance <= 0 ? 1 : Math.max(0, 1 - distance / AMBIENT_AHEAD_FADE);
-  const ambient = ambientWave(index, timeSeconds) * (AMBIENT_BASE + AMBIENT_PLAYED * playedBias);
+  const ripple = (ambientWave(index, timeSeconds) + 1) / 2;
+  const ambient = ripple * (AMBIENT_BASE + AMBIENT_PLAYED * playedBias);
 
   const amp = basePeak + (comet + ambient) * energy;
 

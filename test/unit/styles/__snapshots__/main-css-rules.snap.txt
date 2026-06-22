@@ -5728,7 +5728,7 @@
 
 .blok-audio-cover-picker, .blok-audio-cover-picker[data-blok-top-layer][popover] {
   z-index: 1;
-  width: min(360px, calc(100vw - 32px));
+  width: min(440px, calc(100vw - 32px));
   padding: var(--blok-space-2);
   background: var(--blok-bg-primary);
   border: 1px solid var(--blok-border-subtle);

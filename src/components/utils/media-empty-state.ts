@@ -49,13 +49,20 @@ export interface MediaEmptyStateOptions {
   onFile(file: File): void;
   onUrl(url: string): void;
   /**
-   * Animate the panel height when switching Upload/Link tabs. Defaults to true.
-   * The tween smooths inline reflow (image/file blocks), but in a floating
-   * popover (audio cover-picker) nothing reflows beneath it, so the tween only
-   * reads as lag — those callers pass false for an instant, snappy swap.
+   * How the panel transitions when switching Upload/Link tabs:
+   * - `'reflow'` (default): ease the panel height between the two layouts and
+   *   fade the incoming content in. Smooths the inline reflow of image/file
+   *   blocks, where content below the card shifts with the height.
+   * - `'slide'`: keep the height instant and slide + fade the incoming panel in
+   *   from the travel direction. A floating popover (audio cover-picker) has
+   *   nothing reflowing beneath it, so a height tween only reads as lag — the
+   *   directional slide gives the swap personality without the bottom-edge crawl.
+   * - `'none'`: swap instantly with no animation.
    */
-  animateSwap?: boolean;
+  swap?: MediaEmptyStateSwap;
 }
+
+export type MediaEmptyStateSwap = 'reflow' | 'slide' | 'none';
 
 const MIME_LABELS: Record<string, string> = {
   'image/jpeg': 'JPG',
@@ -177,6 +184,26 @@ function animatePanelSwap(panel: HTMLElement, startHeight: number): void {
   }
 }
 
+/**
+ * Slides the freshly-rendered panel content in from the travel direction while
+ * fading it up — `dir` is +1 when moving to a tab on the right, -1 to the left.
+ * The panel keeps its new height instantly; only the content moves, so there is
+ * no bottom-edge crawl (the part that read as lag in a floating popover).
+ */
+function animatePanelContent(panel: HTMLElement, dir: number): void {
+  const dx = dir * 12;
+  for (const child of Array.from(panel.children)) {
+    if (!canAnimate(child)) continue;
+    child.animate(
+      [
+        { opacity: 0, transform: `translateX(${dx}px)` },
+        { opacity: 1, transform: 'translateX(0)' },
+      ],
+      { duration: 200, easing: SWAP_EASING, fill: 'backwards' }
+    );
+  }
+}
+
 export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyStateElement {
   const { labels } = opts;
   const types = opts.acceptTypes;
@@ -184,7 +211,7 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
   const formats = formatsLabel(types);
   const sizeHint = opts.maxSize !== undefined ? formatBytes(opts.maxSize) : '';
 
-  const swapAnimates = opts.animateSwap !== false;
+  const swapMode: MediaEmptyStateSwap = opts.swap ?? 'reflow';
 
   const root = document.createElement('div') as unknown as MediaEmptyStateElement;
   root.className = 'blok-media-empty';
@@ -358,10 +385,17 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     queueMicrotask(() => urlInput.focus());
   };
 
-  const activate = (kind: SourceKind, animate = false): void => {
-    const startHeight = animate && canAnimate(panel) && !prefersReducedMotion()
+  const activate = (kind: SourceKind, transition = false): void => {
+    const prevKind = card.getAttribute('data-active-tab') as SourceKind | null;
+    const motion = transition
+      && swapMode !== 'none'
+      && canAnimate(panel)
+      && !prefersReducedMotion();
+    // Capture the reflow start-height before the content swaps (height tween only).
+    const startHeight = motion && swapMode === 'reflow'
       ? panel.getBoundingClientRect().height
       : null;
+    const dir = prevKind ? Math.sign(tabKinds.indexOf(kind) - tabKinds.indexOf(prevKind)) : 0;
 
     const activeTab = tabList[tabKinds.indexOf(kind)];
     for (const tab of tabList) {
@@ -376,15 +410,15 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     if (kind === 'upload') renderUpload();
     else renderEmbed();
 
-    if (startHeight !== null) {
-      animatePanelSwap(panel, startHeight);
-    }
+    if (!motion) return;
+    if (swapMode === 'reflow' && startHeight !== null) animatePanelSwap(panel, startHeight);
+    else if (swapMode === 'slide') animatePanelContent(panel, dir);
   };
 
   tabList.forEach((tab, idx) => {
     tab.addEventListener('click', (ev) => {
       ev.stopPropagation();
-      activate(tabKinds[idx], swapAnimates);
+      activate(tabKinds[idx], true);
       tab.focus();
     });
     tab.addEventListener('keydown', (ev) => {
@@ -392,16 +426,16 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
         ev.preventDefault();
         const dir = ev.key === 'ArrowRight' ? 1 : -1;
         const next = (idx + dir + tabList.length) % tabList.length;
-        activate(tabKinds[next], swapAnimates);
+        activate(tabKinds[next], true);
         tabList[next].focus();
       } else if (ev.key === 'Home') {
         ev.preventDefault();
-        activate(tabKinds[0], swapAnimates);
+        activate(tabKinds[0], true);
         tabList[0].focus();
       } else if (ev.key === 'End') {
         ev.preventDefault();
         const last = tabList.length - 1;
-        activate(tabKinds[last], swapAnimates);
+        activate(tabKinds[last], true);
         tabList[last].focus();
       }
     });

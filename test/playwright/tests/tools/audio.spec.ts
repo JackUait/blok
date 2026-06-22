@@ -355,6 +355,29 @@ test('cover picker subtree uses border-box so the tab-swap height does not jump'
   expect(boxes.card).toBe('border-box');
 });
 
+test('cover picker animates in when opened', async ({ page }) => {
+  await createBlok(page);
+  await insertAudioBlock(page);
+
+  const audioBlock = page.locator(AUDIO_BLOCK_SELECTOR);
+  await audioBlock.getByTestId('file-input').setInputFiles(FIXTURE_PATH);
+  await expect(audioBlock.locator('[data-role="audio-controls"]')).toBeVisible();
+
+  const cover = audioBlock.locator('[data-role="audio-cover"]');
+  await cover.hover();
+  const changeBtn = audioBlock.locator('[data-role="audio-cover-change"]');
+  await expect(changeBtn).toBeVisible();
+  await changeBtn.click();
+
+  const picker = page.locator('[data-role="audio-cover-picker"]');
+  await expect(picker).toBeVisible();
+
+  // The entrance keyframes are a declared CSS property, so they persist in the
+  // computed style after the animation settles — the assertion is deterministic.
+  const animName = await picker.evaluate((el) => getComputedStyle(el).animationName);
+  expect(animName).toBe('blok-audio-cover-picker-in');
+});
+
 // ---------------------------------------------------------------------------
 // 7. Cover — remove via block settings restores the spinning disc
 // ---------------------------------------------------------------------------

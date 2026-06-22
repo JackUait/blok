@@ -5740,6 +5740,15 @@
   box-sizing: border-box;
 }
 
+.blok-audio-cover-picker {
+  transform-origin: top left;
+  animation: blok-audio-cover-picker-in var(--blok-duration-slow) var(--blok-ease-popover) both;
+}
+
+[@media (prefers-reduced-motion: reduce)] .blok-audio-cover-picker {
+  animation: none;
+}
+
 [data-blok-tool="audio"] .blok-audio-cover__placeholder {
   position: relative;
   display: flex;

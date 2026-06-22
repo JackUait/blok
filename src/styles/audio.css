@@ -225,6 +225,24 @@
   box-sizing: border-box;
 }
 
+/* Entrance — the picker rises + scales up from its top-left anchor corner so it
+   reads as growing out of the cover, matching the block's own mount language
+   (blok-audio-rise / --blok-ease-popover). The directional content slide between
+   the Upload/Link tabs is driven from media-empty-state.ts (WAAPI). */
+.blok-audio-cover-picker {
+  transform-origin: top left;
+  animation: blok-audio-cover-picker-in var(--blok-duration-slow) var(--blok-ease-popover) both;
+}
+
+@keyframes blok-audio-cover-picker-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blok-audio-cover-picker { animation: none; }
+}
+
 /* ----- no-cover placeholder: a glossy black vinyl record --- */
 [data-blok-tool="audio"] .blok-audio-cover__placeholder {
   position: relative;

@@ -54,11 +54,13 @@ describe('openCoverPicker', () => {
     expect(document.querySelector('[data-role="audio-cover-picker"]')).toBeNull();
   });
 
-  it('does not run the panel height-swap animation when switching tabs', () => {
-    // Make the WAAPI path reachable: real animate + reduced-motion off. The
-    // picker is a floating popover, so the media-empty height tween (built to
-    // smooth inline reflow) only reads as lag here — it must be opted out.
-    const animateSpy = vi.fn(() => ({ finished: Promise.resolve(undefined) }));
+  it('slides the new panel in on tab switch without tweening the popover height', () => {
+    // Make the WAAPI path reachable: real animate + reduced-motion off. A
+    // floating popover has nothing reflowing beneath it, so the inline height
+    // tween only read as lag — the picker uses the directional content slide
+    // instead: the new panel slides + fades in while the popover resizes
+    // instantly (no bottom-edge crawl).
+    const animateSpy = vi.fn((..._args: unknown[]) => ({ finished: Promise.resolve(undefined) }));
     const proto = HTMLElement.prototype as unknown as { animate?: unknown };
     const original = proto.animate;
     proto.animate = animateSpy;
@@ -72,7 +74,14 @@ describe('openCoverPicker', () => {
 
       animateSpy.mockClear();
       dialog.querySelector<HTMLButtonElement>('[data-tab="embed"]')!.click();
-      expect(animateSpy).not.toHaveBeenCalled();
+
+      // The incoming panel content slides/fades in...
+      expect(animateSpy).toHaveBeenCalled();
+      // ...but the popover height itself never tweens (that crawl read as lag).
+      const tweensHeight = animateSpy.mock.calls.some(([frames]: unknown[]) =>
+        Array.isArray(frames)
+        && frames.some((f: unknown) => f !== null && typeof f === 'object' && 'height' in f));
+      expect(tweensHeight).toBe(false);
 
       handle.close();
     } finally {

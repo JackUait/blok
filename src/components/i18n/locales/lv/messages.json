@@ -442,5 +442,20 @@
   "tools.audio.emptyMaxSize": "līdz {size}",
   "tools.audio.emptyUrlPlaceholder": "Ielīmējiet audio URL…",
   "tools.audio.emptyUrlAria": "Audio URL",
-  "tools.audio.emptySourceAria": "Audio avots"
+  "tools.audio.emptySourceAria": "Audio avots",
+  "tools.audio.coverChange": "Change cover",
+  "tools.audio.coverSet": "Set cover image",
+  "tools.audio.coverRemove": "Remove cover",
+  "tools.audio.coverErrorType": "Choose an image file",
+  "tools.audio.coverErrorTooLarge": "Image is too large",
+  "tools.audio.coverAdd": "Add a cover",
+  "tools.audio.coverUpload": "Augšupielādēt",
+  "tools.audio.coverLink": "Saite",
+  "tools.audio.coverChooseFile": "Izvēlēties failu",
+  "tools.audio.coverOrDropHere": "vai nometiet attēlu šeit",
+  "tools.audio.coverDropToUpload": "Nometiet, lai augšupielādētu",
+  "tools.audio.coverInsert": "Ievietot",
+  "tools.audio.coverUrlPlaceholder": "Ielīmējiet attēla URL…",
+  "tools.audio.coverUrlAria": "Attēla URL",
+  "tools.audio.coverSourceAria": "Attēla avots"
 }

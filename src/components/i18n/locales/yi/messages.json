@@ -442,5 +442,20 @@
   "tools.audio.emptyMaxSize": "ביז {size}",
   "tools.audio.emptyUrlPlaceholder": "לייג צו אויך URL…",
   "tools.audio.emptyUrlAria": "אויך URL",
-  "tools.audio.emptySourceAria": "אויך מקור"
+  "tools.audio.emptySourceAria": "אויך מקור",
+  "tools.audio.coverChange": "Change cover",
+  "tools.audio.coverSet": "Set cover image",
+  "tools.audio.coverRemove": "Remove cover",
+  "tools.audio.coverErrorType": "Choose an image file",
+  "tools.audio.coverErrorTooLarge": "Image is too large",
+  "tools.audio.coverAdd": "Add a cover",
+  "tools.audio.coverUpload": "אפלאד",
+  "tools.audio.coverLink": "לינק",
+  "tools.audio.coverChooseFile": "קלייב א טעקע",
+  "tools.audio.coverOrDropHere": "אדער לאז פאלן א בילד דא",
+  "tools.audio.coverDropToUpload": "לאז פאלן צו לאדן",
+  "tools.audio.coverInsert": "אריינלייגן",
+  "tools.audio.coverUrlPlaceholder": "לייג צו בילד URL…",
+  "tools.audio.coverUrlAria": "בילד URL",
+  "tools.audio.coverSourceAria": "בילד מקור"
 }

@@ -442,5 +442,20 @@
   "tools.audio.emptyMaxSize": "بحد أقصى {size}",
   "tools.audio.emptyUrlPlaceholder": "الصق رابط صوت…",
   "tools.audio.emptyUrlAria": "رابط الصوت",
-  "tools.audio.emptySourceAria": "مصدر الصوت"
+  "tools.audio.emptySourceAria": "مصدر الصوت",
+  "tools.audio.coverChange": "Change cover",
+  "tools.audio.coverSet": "Set cover image",
+  "tools.audio.coverRemove": "Remove cover",
+  "tools.audio.coverErrorType": "Choose an image file",
+  "tools.audio.coverErrorTooLarge": "Image is too large",
+  "tools.audio.coverAdd": "Add a cover",
+  "tools.audio.coverUpload": "رفع",
+  "tools.audio.coverLink": "رابط",
+  "tools.audio.coverChooseFile": "اختيار ملف",
+  "tools.audio.coverOrDropHere": "أو أسقط صورة هنا",
+  "tools.audio.coverDropToUpload": "أسقط للرفع",
+  "tools.audio.coverInsert": "إدراج",
+  "tools.audio.coverUrlPlaceholder": "الصق رابط صورة…",
+  "tools.audio.coverUrlAria": "رابط الصورة",
+  "tools.audio.coverSourceAria": "مصدر الصورة"
 }

@@ -442,5 +442,20 @@
   "tools.audio.emptyMaxSize": "iki {size}",
   "tools.audio.emptyUrlPlaceholder": "Įklijuokite vaizdo įrašo URL…",
   "tools.audio.emptyUrlAria": "Vaizdo įrašo URL",
-  "tools.audio.emptySourceAria": "Vaizdo įrašo šaltinis"
+  "tools.audio.emptySourceAria": "Vaizdo įrašo šaltinis",
+  "tools.audio.coverChange": "Change cover",
+  "tools.audio.coverSet": "Set cover image",
+  "tools.audio.coverRemove": "Remove cover",
+  "tools.audio.coverErrorType": "Choose an image file",
+  "tools.audio.coverErrorTooLarge": "Image is too large",
+  "tools.audio.coverAdd": "Add a cover",
+  "tools.audio.coverUpload": "Įkelti",
+  "tools.audio.coverLink": "Nuoroda",
+  "tools.audio.coverChooseFile": "Pasirinkti failą",
+  "tools.audio.coverOrDropHere": "arba vilkite paveikslą čia",
+  "tools.audio.coverDropToUpload": "Paleiskite, kad įkeltumėte",
+  "tools.audio.coverInsert": "Įterpti",
+  "tools.audio.coverUrlPlaceholder": "Įklijuokite paveikslo URL…",
+  "tools.audio.coverUrlAria": "Paveikslo URL",
+  "tools.audio.coverSourceAria": "Paveikslo šaltinis"
 }

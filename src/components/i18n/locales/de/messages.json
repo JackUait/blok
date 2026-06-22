@@ -442,5 +442,20 @@
   "tools.audio.emptyMaxSize": "max. {size}",
   "tools.audio.emptyUrlPlaceholder": "Audio-URL einfügen…",
   "tools.audio.emptyUrlAria": "Audio-URL",
-  "tools.audio.emptySourceAria": "Audioquelle"
+  "tools.audio.emptySourceAria": "Audioquelle",
+  "tools.audio.coverChange": "Change cover",
+  "tools.audio.coverSet": "Set cover image",
+  "tools.audio.coverRemove": "Remove cover",
+  "tools.audio.coverErrorType": "Choose an image file",
+  "tools.audio.coverErrorTooLarge": "Image is too large",
+  "tools.audio.coverAdd": "Add a cover",
+  "tools.audio.coverUpload": "Hochladen",
+  "tools.audio.coverLink": "Link",
+  "tools.audio.coverChooseFile": "Datei auswählen",
+  "tools.audio.coverOrDropHere": "oder Bild hier ablegen",
+  "tools.audio.coverDropToUpload": "Zum Hochladen ablegen",
+  "tools.audio.coverInsert": "Einfügen",
+  "tools.audio.coverUrlPlaceholder": "Bild-URL einfügen…",
+  "tools.audio.coverUrlAria": "Bild-URL",
+  "tools.audio.coverSourceAria": "Bildquelle"
 }

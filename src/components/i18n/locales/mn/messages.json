@@ -442,5 +442,20 @@
   "tools.audio.emptyMaxSize": "хамгийн их {size}",
   "tools.audio.emptyUrlPlaceholder": "Аудионы URL буулгах…",
   "tools.audio.emptyUrlAria": "Аудионы URL",
-  "tools.audio.emptySourceAria": "Аудионы эх сурвалж"
+  "tools.audio.emptySourceAria": "Аудионы эх сурвалж",
+  "tools.audio.coverChange": "Change cover",
+  "tools.audio.coverSet": "Set cover image",
+  "tools.audio.coverRemove": "Remove cover",
+  "tools.audio.coverErrorType": "Choose an image file",
+  "tools.audio.coverErrorTooLarge": "Image is too large",
+  "tools.audio.coverAdd": "Add a cover",
+  "tools.audio.coverUpload": "Байршуулах",
+  "tools.audio.coverLink": "Холбоос",
+  "tools.audio.coverChooseFile": "Файл сонгох",
+  "tools.audio.coverOrDropHere": "эсвэл зургийг энд чирч оруулна уу",
+  "tools.audio.coverDropToUpload": "Байршуулахын тулд буулгана уу",
+  "tools.audio.coverInsert": "Оруулах",
+  "tools.audio.coverUrlPlaceholder": "Зургийн URL буулгах…",
+  "tools.audio.coverUrlAria": "Зургийн URL",
+  "tools.audio.coverSourceAria": "Зургийн эх сурвалж"
 }

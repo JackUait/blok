@@ -442,5 +442,20 @@
   "tools.audio.emptyMaxSize": "പരമാവധി {size}",
   "tools.audio.emptyUrlPlaceholder": "ഓഡിയോ URL ഒട്ടിക്കുക…",
   "tools.audio.emptyUrlAria": "ഓഡിയോ URL",
-  "tools.audio.emptySourceAria": "ഓഡിയോ ഉറവിടം"
+  "tools.audio.emptySourceAria": "ഓഡിയോ ഉറവിടം",
+  "tools.audio.coverChange": "Change cover",
+  "tools.audio.coverSet": "Set cover image",
+  "tools.audio.coverRemove": "Remove cover",
+  "tools.audio.coverErrorType": "Choose an image file",
+  "tools.audio.coverErrorTooLarge": "Image is too large",
+  "tools.audio.coverAdd": "Add a cover",
+  "tools.audio.coverUpload": "അപ്‌ലോഡ്",
+  "tools.audio.coverLink": "ലിങ്ക്",
+  "tools.audio.coverChooseFile": "ഫയൽ തിരഞ്ഞെടുക്കുക",
+  "tools.audio.coverOrDropHere": "അല്ലെങ്കിൽ ഇവിടെ ചിത്രം ഇടുക",
+  "tools.audio.coverDropToUpload": "അപ്‌ലോഡ് ചെയ്യാൻ ഇടുക",
+  "tools.audio.coverInsert": "ചേർക്കുക",
+  "tools.audio.coverUrlPlaceholder": "ചിത്രം URL ഒട്ടിക്കുക…",
+  "tools.audio.coverUrlAria": "ചിത്രം URL",
+  "tools.audio.coverSourceAria": "ചിത്ര ഉറവിടം"
 }

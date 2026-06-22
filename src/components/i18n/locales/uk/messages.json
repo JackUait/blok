@@ -442,5 +442,20 @@
   "tools.audio.emptyMaxSize": "до {size}",
   "tools.audio.emptyUrlPlaceholder": "Вставте URL аудіо…",
   "tools.audio.emptyUrlAria": "URL аудіо",
-  "tools.audio.emptySourceAria": "Джерело аудіо"
+  "tools.audio.emptySourceAria": "Джерело аудіо",
+  "tools.audio.coverChange": "Change cover",
+  "tools.audio.coverSet": "Set cover image",
+  "tools.audio.coverRemove": "Remove cover",
+  "tools.audio.coverErrorType": "Choose an image file",
+  "tools.audio.coverErrorTooLarge": "Image is too large",
+  "tools.audio.coverAdd": "Add a cover",
+  "tools.audio.coverUpload": "Завантажити",
+  "tools.audio.coverLink": "Посилання",
+  "tools.audio.coverChooseFile": "Вибрати файл",
+  "tools.audio.coverOrDropHere": "або перетягніть сюди",
+  "tools.audio.coverDropToUpload": "Відпустіть для завантаження",
+  "tools.audio.coverInsert": "Вставити",
+  "tools.audio.coverUrlPlaceholder": "Вставте URL зображення…",
+  "tools.audio.coverUrlAria": "URL зображення",
+  "tools.audio.coverSourceAria": "Джерело зображення"
 }

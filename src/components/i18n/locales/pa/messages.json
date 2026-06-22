@@ -442,5 +442,20 @@
   "tools.audio.emptyMaxSize": "ਵੱਧ ਤੋਂ ਵੱਧ {size}",
   "tools.audio.emptyUrlPlaceholder": "ਆਡੀਓ URL ਪੇਸਟ ਕਰੋ…",
   "tools.audio.emptyUrlAria": "ਆਡੀਓ URL",
-  "tools.audio.emptySourceAria": "ਆਡੀਓ ਸਰੋਤ"
+  "tools.audio.emptySourceAria": "ਆਡੀਓ ਸਰੋਤ",
+  "tools.audio.coverChange": "Change cover",
+  "tools.audio.coverSet": "Set cover image",
+  "tools.audio.coverRemove": "Remove cover",
+  "tools.audio.coverErrorType": "Choose an image file",
+  "tools.audio.coverErrorTooLarge": "Image is too large",
+  "tools.audio.coverAdd": "Add a cover",
+  "tools.audio.coverUpload": "ਅੱਪਲੋਡ",
+  "tools.audio.coverLink": "ਲਿੰਕ",
+  "tools.audio.coverChooseFile": "ਫਾਈਲ ਚੁਣੋ",
+  "tools.audio.coverOrDropHere": "ਜਾਂ ਇੱਥੇ ਤਸਵੀਰ ਛੱਡੋ",
+  "tools.audio.coverDropToUpload": "ਅੱਪਲੋਡ ਕਰਨ ਲਈ ਛੱਡੋ",
+  "tools.audio.coverInsert": "ਸ਼ਾਮਲ ਕਰੋ",
+  "tools.audio.coverUrlPlaceholder": "ਤਸਵੀਰ URL ਪੇਸਟ ਕਰੋ…",
+  "tools.audio.coverUrlAria": "ਤਸਵੀਰ URL",
+  "tools.audio.coverSourceAria": "ਤਸਵੀਰ ਸਰੋਤ"
 }

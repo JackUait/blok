@@ -442,5 +442,20 @@
   "tools.audio.emptyMaxSize": "އެންމެ ގިނަވެގެން {size}",
   "tools.audio.emptyUrlPlaceholder": "އޯޑިއޯ URL ޕޭސްޓް ކުރޭ…",
   "tools.audio.emptyUrlAria": "އޯޑިއޯ URL",
-  "tools.audio.emptySourceAria": "އޯޑިއޯގެ މަޞްދަރު"
+  "tools.audio.emptySourceAria": "އޯޑިއޯގެ މަޞްދަރު",
+  "tools.audio.coverChange": "Change cover",
+  "tools.audio.coverSet": "Set cover image",
+  "tools.audio.coverRemove": "Remove cover",
+  "tools.audio.coverErrorType": "Choose an image file",
+  "tools.audio.coverErrorTooLarge": "Image is too large",
+  "tools.audio.coverAdd": "Add a cover",
+  "tools.audio.coverUpload": "އަޕްލޯޑް",
+  "tools.audio.coverLink": "ލިންކް",
+  "tools.audio.coverChooseFile": "ފައިލް ޚިޔާރުކުރޭ",
+  "tools.audio.coverOrDropHere": "ނުވަތަ މިތަނަށް ފޮޓޯ ޑްރޮޕް ކުރޭ",
+  "tools.audio.coverDropToUpload": "އަޕްލޯޑް ކުރުމަށް ޑްރޮޕް",
+  "tools.audio.coverInsert": "އެތެރެކުރޭ",
+  "tools.audio.coverUrlPlaceholder": "ފޮޓޯ URL ޕޭސްޓް ކުރޭ…",
+  "tools.audio.coverUrlAria": "ފޮޓޯ URL",
+  "tools.audio.coverSourceAria": "ފޮޓޯގެ މަޞްދަރު"
 }

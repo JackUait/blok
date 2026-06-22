@@ -442,5 +442,20 @@
   "tools.audio.emptyMaxSize": "max. {size}",
   "tools.audio.emptyUrlPlaceholder": "Lipește URL-ul unui audio…",
   "tools.audio.emptyUrlAria": "URL-ul audioului",
-  "tools.audio.emptySourceAria": "Sursa audioului"
+  "tools.audio.emptySourceAria": "Sursa audioului",
+  "tools.audio.coverChange": "Change cover",
+  "tools.audio.coverSet": "Set cover image",
+  "tools.audio.coverRemove": "Remove cover",
+  "tools.audio.coverErrorType": "Choose an image file",
+  "tools.audio.coverErrorTooLarge": "Image is too large",
+  "tools.audio.coverAdd": "Add a cover",
+  "tools.audio.coverUpload": "Încarcă",
+  "tools.audio.coverLink": "Link",
+  "tools.audio.coverChooseFile": "Alege fișier",
+  "tools.audio.coverOrDropHere": "sau plasează o imagine aici",
+  "tools.audio.coverDropToUpload": "Plasează pentru a încărca",
+  "tools.audio.coverInsert": "Inserează",
+  "tools.audio.coverUrlPlaceholder": "Lipește URL-ul unei imagini…",
+  "tools.audio.coverUrlAria": "URL-ul imaginii",
+  "tools.audio.coverSourceAria": "Sursa imaginii"
 }

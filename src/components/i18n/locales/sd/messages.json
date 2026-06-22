@@ -442,5 +442,20 @@
   "tools.audio.emptyMaxSize": "وڌ ۾ وڌ {size}",
   "tools.audio.emptyUrlPlaceholder": "آڊيو جو URL پيسٽ ڪريو…",
   "tools.audio.emptyUrlAria": "آڊيو URL",
-  "tools.audio.emptySourceAria": "آڊيو جو ذريعو"
+  "tools.audio.emptySourceAria": "آڊيو جو ذريعو",
+  "tools.audio.coverChange": "Change cover",
+  "tools.audio.coverSet": "Set cover image",
+  "tools.audio.coverRemove": "Remove cover",
+  "tools.audio.coverErrorType": "Choose an image file",
+  "tools.audio.coverErrorTooLarge": "Image is too large",
+  "tools.audio.coverAdd": "Add a cover",
+  "tools.audio.coverUpload": "اپ لوڊ",
+  "tools.audio.coverLink": "لنڪ",
+  "tools.audio.coverChooseFile": "فائل چونڊيو",
+  "tools.audio.coverOrDropHere": "يا هتي تصوير ڇڏيو",
+  "tools.audio.coverDropToUpload": "اپ لوڊ لاءِ ڇڏيو",
+  "tools.audio.coverInsert": "داخل ڪريو",
+  "tools.audio.coverUrlPlaceholder": "تصوير جو URL پيسٽ ڪريو…",
+  "tools.audio.coverUrlAria": "تصوير URL",
+  "tools.audio.coverSourceAria": "تصوير جو ذريعو"
 }

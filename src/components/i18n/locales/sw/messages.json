@@ -442,5 +442,20 @@
   "tools.audio.emptyMaxSize": "upeo {size}",
   "tools.audio.emptyUrlPlaceholder": "Bandika URL ya sauti…",
   "tools.audio.emptyUrlAria": "URL ya sauti",
-  "tools.audio.emptySourceAria": "Chanzo cha sauti"
+  "tools.audio.emptySourceAria": "Chanzo cha sauti",
+  "tools.audio.coverChange": "Change cover",
+  "tools.audio.coverSet": "Set cover image",
+  "tools.audio.coverRemove": "Remove cover",
+  "tools.audio.coverErrorType": "Choose an image file",
+  "tools.audio.coverErrorTooLarge": "Image is too large",
+  "tools.audio.coverAdd": "Add a cover",
+  "tools.audio.coverUpload": "Pakia",
+  "tools.audio.coverLink": "Kiungo",
+  "tools.audio.coverChooseFile": "Chagua faili",
+  "tools.audio.coverOrDropHere": "au dondosha picha hapa",
+  "tools.audio.coverDropToUpload": "Dondosha ili kupakia",
+  "tools.audio.coverInsert": "Ingiza",
+  "tools.audio.coverUrlPlaceholder": "Bandika URL ya picha…",
+  "tools.audio.coverUrlAria": "URL ya picha",
+  "tools.audio.coverSourceAria": "Chanzo cha picha"
 }

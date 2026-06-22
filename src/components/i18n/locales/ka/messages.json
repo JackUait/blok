@@ -442,5 +442,20 @@
   "tools.audio.emptyMaxSize": "მაქს. {size}",
   "tools.audio.emptyUrlPlaceholder": "ჩასვით აუდიოს URL…",
   "tools.audio.emptyUrlAria": "აუდიოს URL",
-  "tools.audio.emptySourceAria": "აუდიოს წყარო"
+  "tools.audio.emptySourceAria": "აუდიოს წყარო",
+  "tools.audio.coverChange": "Change cover",
+  "tools.audio.coverSet": "Set cover image",
+  "tools.audio.coverRemove": "Remove cover",
+  "tools.audio.coverErrorType": "Choose an image file",
+  "tools.audio.coverErrorTooLarge": "Image is too large",
+  "tools.audio.coverAdd": "Add a cover",
+  "tools.audio.coverUpload": "ატვირთვა",
+  "tools.audio.coverLink": "ბმული",
+  "tools.audio.coverChooseFile": "ფაილის არჩევა",
+  "tools.audio.coverOrDropHere": "ან ჩააგდეთ სურათი აქ",
+  "tools.audio.coverDropToUpload": "ჩააგდეთ ასატვირთად",
+  "tools.audio.coverInsert": "ჩასმა",
+  "tools.audio.coverUrlPlaceholder": "ჩასვით სურათის URL…",
+  "tools.audio.coverUrlAria": "სურათის URL",
+  "tools.audio.coverSourceAria": "სურათის წყარო"
 }

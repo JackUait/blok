@@ -442,5 +442,20 @@
   "tools.audio.emptyMaxSize": "до {size}",
   "tools.audio.emptyUrlPlaceholder": "Поставете URL на аудио…",
   "tools.audio.emptyUrlAria": "URL на аудио",
-  "tools.audio.emptySourceAria": "Източник на аудио"
+  "tools.audio.emptySourceAria": "Източник на аудио",
+  "tools.audio.coverChange": "Change cover",
+  "tools.audio.coverSet": "Set cover image",
+  "tools.audio.coverRemove": "Remove cover",
+  "tools.audio.coverErrorType": "Choose an image file",
+  "tools.audio.coverErrorTooLarge": "Image is too large",
+  "tools.audio.coverAdd": "Add a cover",
+  "tools.audio.coverUpload": "Качи",
+  "tools.audio.coverLink": "Връзка",
+  "tools.audio.coverChooseFile": "Избери файл",
+  "tools.audio.coverOrDropHere": "или пуснете изображение тук",
+  "tools.audio.coverDropToUpload": "Пуснете, за да качите",
+  "tools.audio.coverInsert": "Вмъкни",
+  "tools.audio.coverUrlPlaceholder": "Поставете URL на изображение…",
+  "tools.audio.coverUrlAria": "URL на изображение",
+  "tools.audio.coverSourceAria": "Източник на изображение"
 }

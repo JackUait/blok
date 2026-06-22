@@ -442,5 +442,20 @@
   "tools.audio.emptyMaxSize": "උපරිම {size}",
   "tools.audio.emptyUrlPlaceholder": "ශ්‍රව්‍ය URL අලවන්න…",
   "tools.audio.emptyUrlAria": "ශ්‍රව්‍ය URL",
-  "tools.audio.emptySourceAria": "ශ්‍රව්‍යවේ මූලාශ්‍රය"
+  "tools.audio.emptySourceAria": "ශ්‍රව්‍යවේ මූලාශ්‍රය",
+  "tools.audio.coverChange": "Change cover",
+  "tools.audio.coverSet": "Set cover image",
+  "tools.audio.coverRemove": "Remove cover",
+  "tools.audio.coverErrorType": "Choose an image file",
+  "tools.audio.coverErrorTooLarge": "Image is too large",
+  "tools.audio.coverAdd": "Add a cover",
+  "tools.audio.coverUpload": "උඩුගත",
+  "tools.audio.coverLink": "සබැඳිය",
+  "tools.audio.coverChooseFile": "ගොනුව තෝරන්න",
+  "tools.audio.coverOrDropHere": "හෝ මෙහි රූපයක් දමන්න",
+  "tools.audio.coverDropToUpload": "උඩුගත කිරීමට දමන්න",
+  "tools.audio.coverInsert": "ඇතුළත් කරන්න",
+  "tools.audio.coverUrlPlaceholder": "රූප URL අලවන්න…",
+  "tools.audio.coverUrlAria": "රූප URL",
+  "tools.audio.coverSourceAria": "රූපයේ මූලාශ්‍රය"
 }

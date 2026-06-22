@@ -442,5 +442,20 @@
   "tools.audio.emptyMaxSize": "μέγ. {size}",
   "tools.audio.emptyUrlPlaceholder": "Επικολλήστε URL ήχος…",
   "tools.audio.emptyUrlAria": "URL ήχος",
-  "tools.audio.emptySourceAria": "Πηγή ήχος"
+  "tools.audio.emptySourceAria": "Πηγή ήχος",
+  "tools.audio.coverChange": "Change cover",
+  "tools.audio.coverSet": "Set cover image",
+  "tools.audio.coverRemove": "Remove cover",
+  "tools.audio.coverErrorType": "Choose an image file",
+  "tools.audio.coverErrorTooLarge": "Image is too large",
+  "tools.audio.coverAdd": "Add a cover",
+  "tools.audio.coverUpload": "Μεταφόρτωση",
+  "tools.audio.coverLink": "Σύνδεσμος",
+  "tools.audio.coverChooseFile": "Επιλογή αρχείου",
+  "tools.audio.coverOrDropHere": "ή σύρετε μια εικόνα εδώ",
+  "tools.audio.coverDropToUpload": "Αφήστε για μεταφόρτωση",
+  "tools.audio.coverInsert": "Εισαγωγή",
+  "tools.audio.coverUrlPlaceholder": "Επικολλήστε URL εικόνας…",
+  "tools.audio.coverUrlAria": "URL εικόνας",
+  "tools.audio.coverSourceAria": "Πηγή εικόνας"
 }

@@ -442,5 +442,20 @@
   "tools.audio.emptyMaxSize": "สูงสุด {size}",
   "tools.audio.emptyUrlPlaceholder": "วาง URL เสียง…",
   "tools.audio.emptyUrlAria": "URL เสียง",
-  "tools.audio.emptySourceAria": "แหล่งที่มาของเสียง"
+  "tools.audio.emptySourceAria": "แหล่งที่มาของเสียง",
+  "tools.audio.coverChange": "Change cover",
+  "tools.audio.coverSet": "Set cover image",
+  "tools.audio.coverRemove": "Remove cover",
+  "tools.audio.coverErrorType": "Choose an image file",
+  "tools.audio.coverErrorTooLarge": "Image is too large",
+  "tools.audio.coverAdd": "Add a cover",
+  "tools.audio.coverUpload": "อัปโหลด",
+  "tools.audio.coverLink": "ลิงก์",
+  "tools.audio.coverChooseFile": "เลือกไฟล์",
+  "tools.audio.coverOrDropHere": "หรือวางรูปภาพที่นี่",
+  "tools.audio.coverDropToUpload": "วางเพื่ออัปโหลด",
+  "tools.audio.coverInsert": "แทรก",
+  "tools.audio.coverUrlPlaceholder": "วาง URL รูปภาพ…",
+  "tools.audio.coverUrlAria": "URL รูปภาพ",
+  "tools.audio.coverSourceAria": "แหล่งที่มาของรูปภาพ"
 }

@@ -442,5 +442,20 @@
   "tools.audio.emptyMaxSize": "最大 {size}",
   "tools.audio.emptyUrlPlaceholder": "音声 URL を貼り付け…",
   "tools.audio.emptyUrlAria": "音声 URL",
-  "tools.audio.emptySourceAria": "音声ソース"
+  "tools.audio.emptySourceAria": "音声ソース",
+  "tools.audio.coverChange": "Change cover",
+  "tools.audio.coverSet": "Set cover image",
+  "tools.audio.coverRemove": "Remove cover",
+  "tools.audio.coverErrorType": "Choose an image file",
+  "tools.audio.coverErrorTooLarge": "Image is too large",
+  "tools.audio.coverAdd": "Add a cover",
+  "tools.audio.coverUpload": "アップロード",
+  "tools.audio.coverLink": "リンク",
+  "tools.audio.coverChooseFile": "ファイルを選択",
+  "tools.audio.coverOrDropHere": "またはここに画像をドロップ",
+  "tools.audio.coverDropToUpload": "ドロップしてアップロード",
+  "tools.audio.coverInsert": "挿入",
+  "tools.audio.coverUrlPlaceholder": "画像 URL を貼り付け…",
+  "tools.audio.coverUrlAria": "画像 URL",
+  "tools.audio.coverSourceAria": "画像ソース"
 }

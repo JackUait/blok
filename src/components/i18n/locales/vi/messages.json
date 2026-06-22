@@ -442,5 +442,20 @@
   "tools.audio.emptyMaxSize": "tối đa {size}",
   "tools.audio.emptyUrlPlaceholder": "Dán URL audio…",
   "tools.audio.emptyUrlAria": "URL audio",
-  "tools.audio.emptySourceAria": "Nguồn audio"
+  "tools.audio.emptySourceAria": "Nguồn audio",
+  "tools.audio.coverChange": "Change cover",
+  "tools.audio.coverSet": "Set cover image",
+  "tools.audio.coverRemove": "Remove cover",
+  "tools.audio.coverErrorType": "Choose an image file",
+  "tools.audio.coverErrorTooLarge": "Image is too large",
+  "tools.audio.coverAdd": "Add a cover",
+  "tools.audio.coverUpload": "Tải lên",
+  "tools.audio.coverLink": "Liên kết",
+  "tools.audio.coverChooseFile": "Chọn tệp",
+  "tools.audio.coverOrDropHere": "hoặc thả ảnh vào đây",
+  "tools.audio.coverDropToUpload": "Thả để tải lên",
+  "tools.audio.coverInsert": "Chèn",
+  "tools.audio.coverUrlPlaceholder": "Dán URL ảnh…",
+  "tools.audio.coverUrlAria": "URL hình ảnh",
+  "tools.audio.coverSourceAria": "Nguồn hình ảnh"
 }

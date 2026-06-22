@@ -442,5 +442,20 @@
   "tools.audio.emptyMaxSize": "تر ډېره {size}",
   "tools.audio.emptyUrlPlaceholder": "د غږ URL پیسټ کړئ…",
   "tools.audio.emptyUrlAria": "غږ URL",
-  "tools.audio.emptySourceAria": "د غږ سرچینه"
+  "tools.audio.emptySourceAria": "د غږ سرچینه",
+  "tools.audio.coverChange": "Change cover",
+  "tools.audio.coverSet": "Set cover image",
+  "tools.audio.coverRemove": "Remove cover",
+  "tools.audio.coverErrorType": "Choose an image file",
+  "tools.audio.coverErrorTooLarge": "Image is too large",
+  "tools.audio.coverAdd": "Add a cover",
+  "tools.audio.coverUpload": "اپلوډ",
+  "tools.audio.coverLink": "لینک",
+  "tools.audio.coverChooseFile": "فایل وټاکئ",
+  "tools.audio.coverOrDropHere": "یا دلته انځور پرېږدئ",
+  "tools.audio.coverDropToUpload": "د اپلوډ لپاره پرېږدئ",
+  "tools.audio.coverInsert": "داخلول",
+  "tools.audio.coverUrlPlaceholder": "د انځور URL پیسټ کړئ…",
+  "tools.audio.coverUrlAria": "انځور URL",
+  "tools.audio.coverSourceAria": "د انځور سرچینه"
 }

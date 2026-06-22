@@ -442,5 +442,20 @@
   "tools.audio.emptyMaxSize": "max. {size}",
   "tools.audio.emptyUrlPlaceholder": "Incolla l’URL di un audio…",
   "tools.audio.emptyUrlAria": "URL del audio",
-  "tools.audio.emptySourceAria": "Origine del audio"
+  "tools.audio.emptySourceAria": "Origine del audio",
+  "tools.audio.coverChange": "Change cover",
+  "tools.audio.coverSet": "Set cover image",
+  "tools.audio.coverRemove": "Remove cover",
+  "tools.audio.coverErrorType": "Choose an image file",
+  "tools.audio.coverErrorTooLarge": "Image is too large",
+  "tools.audio.coverAdd": "Add a cover",
+  "tools.audio.coverUpload": "Carica",
+  "tools.audio.coverLink": "Collegamento",
+  "tools.audio.coverChooseFile": "Scegli file",
+  "tools.audio.coverOrDropHere": "oppure trascina qui un’immagine",
+  "tools.audio.coverDropToUpload": "Rilascia per caricare",
+  "tools.audio.coverInsert": "Inserisci",
+  "tools.audio.coverUrlPlaceholder": "Incolla l’URL di un’immagine…",
+  "tools.audio.coverUrlAria": "URL dell’immagine",
+  "tools.audio.coverSourceAria": "Origine dell’immagine"
 }

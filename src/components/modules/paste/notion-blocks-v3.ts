@@ -248,13 +248,13 @@ function mapValue(value: NotionValue, byId: Map<string, NotionValue>): Mapped | 
     case 'text':
       return { tool: 'paragraph', data: { text } };
     case 'header':
-      return { tool: 'header', data: { text, level: 1 } };
+      return mapHeader(text, 1, value.format);
     case 'sub_header':
-      return { tool: 'header', data: { text, level: 2 } };
+      return mapHeader(text, 2, value.format);
     case 'sub_sub_header':
-      return { tool: 'header', data: { text, level: 3 } };
+      return mapHeader(text, 3, value.format);
     case 'quote':
-      return { tool: 'quote', data: { text } };
+      return { tool: 'quote', data: value.format?.quote_size === 'large' ? { text, size: 'large' } : { text } };
     case 'divider':
       return { tool: 'divider', data: {} };
     case 'code':
@@ -290,8 +290,27 @@ function mapValue(value: NotionValue, byId: Map<string, NotionValue>): Mapped | 
       return mapMediaFile('file', props, value.format ?? {}, text);
     case 'video':
       return mapVideo(props, value.format ?? {}, text);
+    case 'audio':
+      return mapAudio(props, value.format ?? {}, text);
+    case 'pdf':
+      return mapMediaFile('file', props, value.format ?? {}, text);
+    // Standalone service embeds carry their URL in `source` / `display_source`;
+    // resolve via the embed registry, falling back to a bookmark.
     case 'drive':
-      return mapDrive(props, value.format ?? {}, text);
+    case 'embed':
+    case 'tweet':
+    case 'gist':
+    case 'codepen':
+    case 'figma':
+    case 'maps':
+    case 'miro':
+    case 'loom':
+    case 'typeform':
+    case 'invision':
+    case 'framer':
+    case 'whimsical':
+    case 'abstract':
+      return mapEmbedOrBookmark(props, value.format ?? {}, text);
     case 'callout': {
       const format = value.format ?? {};
       const emoji = typeof format.page_icon === 'string' && format.page_icon.length > 0 ? format.page_icon : DEFAULT_EMOJI;
@@ -304,9 +323,24 @@ function mapValue(value: NotionValue, byId: Map<string, NotionValue>): Mapped | 
       // Document/tab wrappers — skip, promote children. (Sub-page references
       // are handled in a later phase.)
       return null;
+    case 'transclusion_container':
+      // Synced-block original: Blok has no synced primitive, so flatten it —
+      // drop the wrapper and promote its children to the same level.
+      return null;
+    case 'transclusion_reference':
+      // Synced-block duplicate: a pointer only; the referenced content is not
+      // in the clipboard. Drop it rather than leave a stray empty paragraph.
+      return null;
+    case 'table_of_contents':
+    case 'breadcrumb':
+    case 'copy_indicator':
+    case 'link_to_page':
+    case 'alias':
+      // Structure-only / derived blocks carry no migratable content — drop them
+      // (a paragraph fallback would leave an empty stray block).
+      return null;
     default:
-      // Unmapped types (media, columns, tables, equation…) fall back to a
-      // paragraph for now; later phases give each its own mapping.
+      // Unmapped types fall back to a paragraph carrying their title text.
       return { tool: 'paragraph', data: { text } };
   }
 }
@@ -373,7 +407,28 @@ function mapMediaFile(
   }
 
   if (tool === 'image') {
-    return { tool: 'image', data: { url } };
+    const data: Record<string, unknown> = { url };
+    const alignment = mediaAlignment(format.block_alignment);
+
+    if (alignment !== null) {
+      data.alignment = alignment;
+    }
+
+    Object.assign(data, captionFields(props.caption));
+
+    const alt = plainText(props.alt_text);
+
+    if (alt.length > 0) {
+      data.alt = alt;
+    }
+
+    const crop = mapImageCrop(format.image_edit_metadata);
+
+    if (crop !== null) {
+      data.crop = crop;
+    }
+
+    return { tool: 'image', data };
   }
 
   const data: Record<string, unknown> = { url };
@@ -383,7 +438,58 @@ function mapMediaFile(
     data.fileName = fileName;
   }
 
+  Object.assign(data, captionFields(props.caption));
+
   return { tool: 'file', data };
+}
+
+/** A left/right block alignment (the default `center` is omitted), else `null`. */
+function mediaAlignment(value: unknown): 'left' | 'right' | null {
+  return value === 'left' || value === 'right' ? value : null;
+}
+
+/** A visible plain-text caption as block-data fields, or `{}` when absent. */
+function captionFields(caption: unknown): Record<string, unknown> {
+  const text = plainText(caption);
+
+  return text.length > 0 ? { caption: text, captionVisible: true } : {};
+}
+
+/**
+ * Convert a Notion percent-space crop region (`{x,y,width,height,unit:'%'}`) to
+ * Blok's `{x,y,w,h[,shape]}` (same percent space — a key rename). A full-frame
+ * crop is a no-op and is skipped; a non-`None` mask becomes a crop shape.
+ */
+function mapImageCrop(meta: unknown): Record<string, unknown> | null {
+  if (meta === null || typeof meta !== 'object') {
+    return null;
+  }
+
+  const crop = (meta as { crop?: unknown }).crop;
+
+  if (crop === null || typeof crop !== 'object') {
+    return null;
+  }
+
+  const { x, y, width, height, unit } = crop as Record<string, unknown>;
+
+  if (unit !== '%' || typeof x !== 'number' || typeof y !== 'number' || typeof width !== 'number' || typeof height !== 'number') {
+    return null;
+  }
+
+  // A full-frame crop changes nothing — don't emit it.
+  if (x === 0 && y === 0 && width === 100 && height === 100) {
+    return null;
+  }
+
+  const result: Record<string, unknown> = { x, y, w: width, h: height };
+  const mask = (meta as { mask?: unknown }).mask;
+
+  if (mask === 'circle' || mask === 'ellipse') {
+    result.shape = mask;
+  }
+
+  return result;
 }
 
 /** Map a Notion video to an embed (provider match) or a direct video block. */
@@ -396,11 +502,27 @@ function mapVideo(props: Record<string, unknown>, format: Record<string, unknown
 
   const embed = resolveEmbed(url);
 
-  return embed ?? { tool: 'video', data: { url } };
+  if (embed !== null) {
+    return embed;
+  }
+
+  const data: Record<string, unknown> = { url };
+  const alignment = mediaAlignment(format.block_alignment);
+
+  if (alignment !== null) {
+    data.alignment = alignment;
+  }
+
+  Object.assign(data, captionFields(props.caption));
+
+  return { tool: 'video', data };
 }
 
-/** Map a Notion drive embed to an embed (provider match) or a bookmark. */
-function mapDrive(props: Record<string, unknown>, format: Record<string, unknown>, text: string): Mapped {
+/**
+ * Map a Notion service-embed block (drive, tweet, gist, figma, codepen…) to a
+ * resolved embed (provider match) or a bookmark carrying the live URL.
+ */
+function mapEmbedOrBookmark(props: Record<string, unknown>, format: Record<string, unknown>, text: string): Mapped {
   const url = firstHttpUrl(props.source, format.display_source);
 
   if (url === null) {
@@ -408,6 +530,37 @@ function mapDrive(props: Record<string, unknown>, format: Record<string, unknown
   }
 
   return resolveEmbed(url) ?? { tool: 'bookmark', data: { url } };
+}
+
+/** Map a Notion heading to a Blok header, preserving its toggleable state. */
+function mapHeader(text: string, level: number, format: Record<string, unknown> | undefined): Mapped {
+  // Notion's clipboard record-map carries only whether a heading is toggleable,
+  // not its per-instance collapsed state, so toggle headings default to open.
+  return format?.toggleable === true
+    ? { tool: 'header', data: { text, level, isToggleable: true, isOpen: true } }
+    : { tool: 'header', data: { text, level } };
+}
+
+/**
+ * Map a Notion audio block to the Blok audio tool when it has a usable http(s)
+ * URL. Notion-uploaded audio uses `attachment:` refs with no loadable URL, so
+ * those fall back to a filename paragraph (like image/file/video).
+ */
+function mapAudio(props: Record<string, unknown>, format: Record<string, unknown>, text: string): Mapped {
+  const url = firstHttpUrl(props.source, format.display_source);
+
+  if (url === null) {
+    return { tool: 'paragraph', data: { text } };
+  }
+
+  const data: Record<string, unknown> = { url };
+  const fileName = plainText(props.title);
+
+  if (fileName.length > 0) {
+    data.fileName = fileName;
+  }
+
+  return { tool: 'audio', data };
 }
 
 /** Resolve a URL against the embed registry into Blok embed data, or `null`. */
@@ -483,11 +636,12 @@ function segmentHtml(segment: unknown, byId?: Map<string, NotionValue>): string 
   const raw = typeof segment[0] === 'string' ? segment[0] : '';
   const annotations = Array.isArray(segment[1]) ? segment[1] : [];
 
-  // Colour flags ('h') collapse into ONE <mark>; content flags ('e' equation,
-  // 'p' page mention) replace the placeholder glyph. Every other flag wraps the
-  // resulting content from the inside out.
+  // Colour flags ('h') collapse into ONE <mark>; content flags replace the
+  // placeholder glyph: 'e' equation, 'p' page mention, 'd' date, 'u' user
+  // mention. Every other flag wraps the resulting content from the inside out.
+  const contentFlags = ['e', 'p', 'd', 'u'];
   const isColour = (a: unknown): boolean => Array.isArray(a) && a[0] === 'h';
-  const isContent = (a: unknown): boolean => Array.isArray(a) && (a[0] === 'e' || a[0] === 'p');
+  const isContent = (a: unknown): boolean => Array.isArray(a) && contentFlags.includes(a[0] as string);
   const inner = annotations
     .filter((a) => !isColour(a) && !isContent(a))
     .reduce<string>((html, annotation) => wrapMark(annotation, html), segmentContent(raw, annotations, byId));
@@ -515,6 +669,18 @@ function segmentContent(raw: string, annotations: unknown[], byId?: Map<string, 
     return pageMentionContent(pageId, raw, byId);
   }
 
+  const date = dateArg(annotations);
+
+  if (date !== null) {
+    return escapeHtml(formatNotionDate(date));
+  }
+
+  // A user mention ('u') carries only a UUID — the display name is not in the
+  // clipboard — so drop it rather than leak the raw placeholder glyph.
+  if (hasFlag(annotations, 'u')) {
+    return '';
+  }
+
   return escapeHtml(raw);
 }
 
@@ -527,6 +693,46 @@ function flagArg(annotations: unknown[], flag: string): string | null {
   }
 
   return null;
+}
+
+/** Whether any annotation carries the given flag. */
+function hasFlag(annotations: unknown[], flag: string): boolean {
+  return annotations.some((annotation) => Array.isArray(annotation) && annotation[0] === flag);
+}
+
+/** The object argument of an inline date (`'d'`) annotation, or `null`. */
+function dateArg(annotations: unknown[]): Record<string, unknown> | null {
+  for (const annotation of annotations) {
+    if (Array.isArray(annotation) && annotation[0] === 'd' && isPlainObject(annotation[1])) {
+      return annotation[1];
+    }
+  }
+
+  return null;
+}
+
+/** Whether a value is a non-null, non-array object. */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Format a Notion inline date object to plain text. Blok has no inline date
+ * pill, so a single date, a date+time, or a range render as text.
+ */
+function formatNotionDate(date: Record<string, unknown>): string {
+  const part = (dateKey: string, timeKey: string): string => {
+    const day = typeof date[dateKey] === 'string' ? date[dateKey] : '';
+    const time = typeof date[timeKey] === 'string' ? date[timeKey] : '';
+
+    if (day.length === 0) {
+      return '';
+    }
+
+    return time.length > 0 ? `${day} ${time}` : day;
+  };
+
+  return [part('start_date', 'start_time'), part('end_date', 'end_time')].filter((p) => p.length > 0).join(' → ');
 }
 
 /**

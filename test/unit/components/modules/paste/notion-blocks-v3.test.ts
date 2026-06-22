@@ -692,6 +692,305 @@ describe('parseNotionBlocksV3', () => {
     });
   });
 
+  describe('standalone service embeds (phase 6)', () => {
+    it('maps a tweet embed block to a resolved embed', () => {
+      const out = parseNotionBlocksV3(
+        v3(value('e1', 'tweet', { properties: { source: [['https://twitter.com/jack/status/20']] } }))
+      );
+
+      expect(out?.[0]).toMatchObject({
+        id: 'e1',
+        tool: 'embed',
+        data: { service: 'twitter', source: 'https://twitter.com/jack/status/20', kind: 'script' },
+      });
+    });
+
+    it('maps a figma embed via format.display_source', () => {
+      const out = parseNotionBlocksV3(
+        v3(
+          value('e2', 'figma', {
+            properties: {},
+            format: { display_source: 'https://www.figma.com/file/abc/Design' },
+          })
+        )
+      );
+
+      expect(out?.[0]).toMatchObject({ id: 'e2', tool: 'embed', data: { service: 'figma' } });
+    });
+
+    it('falls back to a bookmark for an unmatched generic embed url', () => {
+      const out = parseNotionBlocksV3(
+        v3(value('e3', 'embed', { properties: { source: [['https://example.com/x']] } }))
+      );
+
+      expect(out).toEqual([{ id: 'e3', tool: 'bookmark', data: { url: 'https://example.com/x' } }]);
+    });
+
+    it('falls back to an empty paragraph for an embed with no http source', () => {
+      const out = parseNotionBlocksV3(v3(value('e4', 'codepen')));
+
+      expect(out).toEqual([{ id: 'e4', tool: 'paragraph', data: { text: '' } }]);
+    });
+  });
+
+  describe('audio blocks (phase 6)', () => {
+    it('maps an external (http) audio block to an audio tool with its filename', () => {
+      const out = parseNotionBlocksV3(
+        v3(value('au', 'audio', { properties: { source: [['https://cdn.test/song.mp3']], title: [['song.mp3']] } }))
+      );
+
+      expect(out).toEqual([{ id: 'au', tool: 'audio', data: { url: 'https://cdn.test/song.mp3', fileName: 'song.mp3' } }]);
+    });
+
+    it('falls back to a filename paragraph for an attachment audio (no usable URL)', () => {
+      const out = parseNotionBlocksV3(
+        v3(
+          value('au', 'audio', {
+            properties: { source: [['attachment:uuid:track.mp3']], title: [['track.mp3']] },
+            format: { display_source: 'attachment:uuid:track.mp3' },
+          })
+        )
+      );
+
+      expect(out).toEqual([{ id: 'au', tool: 'paragraph', data: { text: 'track.mp3' } }]);
+    });
+  });
+
+  describe('pdf blocks (phase 6)', () => {
+    it('maps an external pdf to a file block', () => {
+      const out = parseNotionBlocksV3(
+        v3(value('pd', 'pdf', { properties: { source: [['https://x.test/spec.pdf']], title: [['spec.pdf']] } }))
+      );
+
+      expect(out).toEqual([{ id: 'pd', tool: 'file', data: { url: 'https://x.test/spec.pdf', fileName: 'spec.pdf' } }]);
+    });
+
+    it('falls back to a filename paragraph for an attachment pdf', () => {
+      const out = parseNotionBlocksV3(
+        v3(value('pd', 'pdf', { properties: { source: [['attachment:uuid:spec.pdf']], title: [['spec.pdf']] } }))
+      );
+
+      expect(out).toEqual([{ id: 'pd', tool: 'paragraph', data: { text: 'spec.pdf' } }]);
+    });
+  });
+
+  describe('inline date & user mention (phase 6)', () => {
+    it('renders an inline date mention as plain text without leaking the placeholder glyph', () => {
+      const out = parseNotionBlocksV3(
+        v3(value('a', 'text', { properties: title(['due '], ['‣', [['d', { type: 'date', start_date: '2026-06-22' }]]]) }))
+      );
+
+      expect(out?.[0].data.text).toBe('due 2026-06-22');
+    });
+
+    it('renders a date range with start/end and times', () => {
+      const out = parseNotionBlocksV3(
+        v3(
+          value('a', 'text', {
+            properties: title([
+              '‣',
+              [['d', { type: 'daterange', start_date: '2026-06-22', start_time: '09:00', end_date: '2026-06-23', end_time: '17:00' }]],
+            ]),
+          })
+        )
+      );
+
+      expect(out?.[0].data.text).toBe('2026-06-22 09:00 → 2026-06-23 17:00');
+    });
+
+    it('still applies formatting marks around an inline date', () => {
+      const out = parseNotionBlocksV3(
+        v3(value('a', 'text', { properties: title(['‣', [['d', { type: 'date', start_date: '2026-06-22' }], ['b']]]) }))
+      );
+
+      expect(out?.[0].data.text).toBe('<b>2026-06-22</b>');
+    });
+
+    it('drops an unresolvable user mention without leaking the placeholder glyph', () => {
+      const out = parseNotionBlocksV3(
+        v3(value('a', 'text', { properties: title(['hi '], ['‣', [['u', 'user-uuid']]]) }))
+      );
+
+      expect(out?.[0].data.text).toBe('hi ');
+    });
+
+    it('preserves the underlying text of a comment mark (no glyph, keeps content)', () => {
+      const out = parseNotionBlocksV3(
+        v3(value('a', 'text', { properties: title(['commented', [['m', 'discussion-uuid']]]) }))
+      );
+
+      expect(out?.[0].data.text).toBe('commented');
+    });
+  });
+
+  describe('heading toggleable state (phase 6)', () => {
+    it('marks a toggleable heading as a collapsible container with its children nested', () => {
+      const out = parseNotionBlocksV3(
+        v3Tree(
+          value('h', 'sub_sub_header', { properties: title(['Toggle H3']), format: { toggleable: true }, content: ['c1'] }),
+          value('c1', 'text', { properties: title(['body']), parent_id: 'h' })
+        )
+      );
+
+      expect(out).toEqual([
+        { id: 'h', tool: 'header', data: { text: 'Toggle H3', level: 3, isToggleable: true, isOpen: true } },
+        { id: 'c1', tool: 'paragraph', data: { text: 'body' }, parentId: 'h' },
+      ]);
+    });
+
+    it('leaves a non-toggleable heading as a plain header', () => {
+      const out = parseNotionBlocksV3(v3(value('h', 'header', { properties: title(['Plain']) })));
+
+      expect(out).toEqual([{ id: 'h', tool: 'header', data: { text: 'Plain', level: 1 } }]);
+    });
+  });
+
+  describe('quote size (phase 6)', () => {
+    it('maps a large quote to size:large', () => {
+      const out = parseNotionBlocksV3(
+        v3(value('q', 'quote', { properties: title(['big']), format: { quote_size: 'large' } }))
+      );
+
+      expect(out).toEqual([{ id: 'q', tool: 'quote', data: { text: 'big', size: 'large' } }]);
+    });
+
+    it('omits size for a default quote', () => {
+      const out = parseNotionBlocksV3(v3(value('q', 'quote', { properties: title(['normal']) })));
+
+      expect(out).toEqual([{ id: 'q', tool: 'quote', data: { text: 'normal' } }]);
+    });
+  });
+
+  describe('media alignment / caption / crop (phase 6)', () => {
+    it('preserves left/right image alignment but omits the center default', () => {
+      const left = parseNotionBlocksV3(
+        v3(value('im', 'image', { properties: { source: [['https://x.test/i.png']] }, format: { block_alignment: 'left' } }))
+      );
+      const center = parseNotionBlocksV3(
+        v3(value('im', 'image', { properties: { source: [['https://x.test/i.png']] }, format: { block_alignment: 'center' } }))
+      );
+
+      expect(left).toEqual([{ id: 'im', tool: 'image', data: { url: 'https://x.test/i.png', alignment: 'left' } }]);
+      expect(center).toEqual([{ id: 'im', tool: 'image', data: { url: 'https://x.test/i.png' } }]);
+    });
+
+    it('preserves image caption (visible) and alt text', () => {
+      const out = parseNotionBlocksV3(
+        v3(
+          value('im', 'image', {
+            properties: { source: [['https://x.test/i.png']], caption: [['a caption']], alt_text: [['alt words']] },
+          })
+        )
+      );
+
+      expect(out).toEqual([
+        {
+          id: 'im',
+          tool: 'image',
+          data: { url: 'https://x.test/i.png', caption: 'a caption', captionVisible: true, alt: 'alt words' },
+        },
+      ]);
+    });
+
+    it('converts a percent crop region, renaming width/height to w/h', () => {
+      const out = parseNotionBlocksV3(
+        v3(
+          value('im', 'image', {
+            properties: { source: [['https://x.test/i.png']] },
+            format: { image_edit_metadata: { crop: { x: 16.5, y: 0, unit: '%', width: 77.5, height: 100 }, mask: 'None' } },
+          })
+        )
+      );
+
+      expect(out).toEqual([
+        { id: 'im', tool: 'image', data: { url: 'https://x.test/i.png', crop: { x: 16.5, y: 0, w: 77.5, h: 100 } } },
+      ]);
+    });
+
+    it('maps a circle crop mask to a crop shape', () => {
+      const out = parseNotionBlocksV3(
+        v3(
+          value('im', 'image', {
+            properties: { source: [['https://x.test/i.png']] },
+            format: { image_edit_metadata: { crop: { x: 10, y: 10, unit: '%', width: 80, height: 80 }, mask: 'circle' } },
+          })
+        )
+      );
+
+      expect((out?.[0].data as { crop: unknown }).crop).toEqual({ x: 10, y: 10, w: 80, h: 80, shape: 'circle' });
+    });
+
+    it('ignores a full-frame (no-op) crop', () => {
+      const out = parseNotionBlocksV3(
+        v3(
+          value('im', 'image', {
+            properties: { source: [['https://x.test/i.png']] },
+            format: { image_edit_metadata: { crop: { x: 0, y: 0, unit: '%', width: 100, height: 100 }, mask: 'None' } },
+          })
+        )
+      );
+
+      expect(out).toEqual([{ id: 'im', tool: 'image', data: { url: 'https://x.test/i.png' } }]);
+    });
+
+    it('preserves caption + alignment on a direct video block', () => {
+      const out = parseNotionBlocksV3(
+        v3(
+          value('v', 'video', {
+            properties: { source: [['https://cdn.test/clip.mp4']], caption: [['clip cap']] },
+            format: { block_alignment: 'right' },
+          })
+        )
+      );
+
+      expect(out).toEqual([
+        { id: 'v', tool: 'video', data: { url: 'https://cdn.test/clip.mp4', alignment: 'right', caption: 'clip cap', captionVisible: true } },
+      ]);
+    });
+
+    it('preserves caption on a file block', () => {
+      const out = parseNotionBlocksV3(
+        v3(value('f', 'file', { properties: { source: [['https://x.test/doc.pdf']], title: [['doc.pdf']], caption: [['the doc']] } }))
+      );
+
+      expect(out).toEqual([
+        { id: 'f', tool: 'file', data: { url: 'https://x.test/doc.pdf', fileName: 'doc.pdf', caption: 'the doc', captionVisible: true } },
+      ]);
+    });
+  });
+
+  describe('synced blocks & structure-only drops (phase 6)', () => {
+    it('flattens a synced container, promoting its children to the same level', () => {
+      const out = parseNotionBlocksV3(
+        v3Tree(
+          value('sc', 'transclusion_container', { content: ['c1', 'c2'] }),
+          value('c1', 'text', { properties: title(['one']), parent_id: 'sc' }),
+          value('c2', 'text', { properties: title(['two']), parent_id: 'sc' })
+        )
+      );
+
+      expect(out).toEqual([
+        { id: 'c1', tool: 'paragraph', data: { text: 'one' } },
+        { id: 'c2', tool: 'paragraph', data: { text: 'two' } },
+      ]);
+    });
+
+    it('drops a synced reference (pointer-only) without emitting a block', () => {
+      const out = parseNotionBlocksV3(v3(value('sr', 'transclusion_reference')));
+
+      expect(out).toEqual([]);
+    });
+
+    it.each(['table_of_contents', 'breadcrumb', 'copy_indicator', 'link_to_page', 'alias'])(
+      'drops the structure-only block type "%s" instead of leaving a stray paragraph',
+      (type) => {
+        const out = parseNotionBlocksV3(v3(value('x', type, { properties: title(['ignored']) })));
+
+        expect(out).toEqual([]);
+      }
+    );
+  });
+
   describe('against the real captured fixture', () => {
     const fixture = readFileSync(
       resolve(dirname(fileURLToPath(import.meta.url)), '../../../../fixtures/notion/demo-page.blocks-v3.json'),

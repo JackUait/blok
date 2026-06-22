@@ -8,6 +8,25 @@ vi.mock('../../../../src/tools/audio/metadata', () => ({
   resolveCover: vi.fn().mockResolvedValue(undefined),
 }));
 
+const coverPickerCalls: Array<{
+  onFile: (f: File) => void;
+  onUrl: (u: string) => void;
+  onClose?: () => void;
+  handle: { close: ReturnType<typeof vi.fn>; setError: ReturnType<typeof vi.fn> };
+}> = [];
+
+vi.mock('../../../../src/tools/audio/cover-picker', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../src/tools/audio/cover-picker')>();
+  return {
+    ...actual,
+    openCoverPicker: vi.fn((o: { onFile: (f: File) => void; onUrl: (u: string) => void; onClose?: () => void }) => {
+      const handle = { close: vi.fn(), setError: vi.fn() };
+      coverPickerCalls.push({ onFile: o.onFile, onUrl: o.onUrl, onClose: o.onClose, handle });
+      return handle;
+    }),
+  };
+});
+
 vi.mock('../../../../src/tools/audio/waveform', () => ({
   decodePeaks: vi.fn().mockResolvedValue(null),
   attachWaveform: vi.fn().mockReturnValue({ destroy: vi.fn() }),
@@ -52,7 +71,10 @@ const opts = (
   readOnly: false,
 });
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  coverPickerCalls.length = 0;
+});
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -295,6 +317,72 @@ describe('AudioTool', () => {
       expect(figure?.contains(anchor as Node)).toBe(true);
       // It must be the first child so it sits at the very top of the card.
       expect(figure?.firstElementChild).toBe(anchor);
+    });
+  });
+
+  describe('custom cover', () => {
+    const renderTool = (data = {}, config = {}) => {
+      const block = createMockBlock();
+      const tool = new AudioTool(opts({ url: 'https://cdn/a.mp3', ...data }, config, block));
+      const root = tool.render();
+      document.body.appendChild(root);
+      return { tool, root, block };
+    };
+
+    it('stores a submitted cover URL and re-renders the image', () => {
+      const { root, block } = renderTool();
+      root.querySelector<HTMLButtonElement>('[data-role="audio-cover-change"]')!.click();
+      coverPickerCalls[0].onUrl('https://cdn/cover.png');
+
+      const img = root.querySelector<HTMLImageElement>('[data-role="audio-cover"] img');
+      expect(img?.getAttribute('src')).toBe('https://cdn/cover.png');
+      expect(block.dispatchChange).toHaveBeenCalled();
+      expect(coverPickerCalls[0].handle.close).toHaveBeenCalled();
+    });
+
+    it('uploads a cover file through the configured uploader', async () => {
+      const uploadByFile = vi.fn().mockResolvedValue({ url: 'https://cdn/uploaded.png' });
+      const { root } = renderTool({}, { uploader: { uploadByFile } });
+      root.querySelector<HTMLButtonElement>('[data-role="audio-cover-change"]')!.click();
+
+      const file = new File(['x'], 'c.png', { type: 'image/png' });
+      coverPickerCalls[0].onFile(file);
+      await vi.waitFor(() => {
+        expect(uploadByFile).toHaveBeenCalledWith(file);
+      });
+      await vi.waitFor(() => {
+        const img = root.querySelector<HTMLImageElement>('[data-role="audio-cover"] img');
+        expect(img?.getAttribute('src')).toBe('https://cdn/uploaded.png');
+      });
+    });
+
+    it('rejects a non-image file via setError without mutating data', () => {
+      const { root, block } = renderTool();
+      root.querySelector<HTMLButtonElement>('[data-role="audio-cover-change"]')!.click();
+      (block.dispatchChange as ReturnType<typeof vi.fn>).mockClear();
+
+      coverPickerCalls[0].onFile(new File(['x'], 'song.mp3', { type: 'audio/mpeg' }));
+      expect(coverPickerCalls[0].handle.setError).toHaveBeenCalled();
+      expect(block.dispatchChange).not.toHaveBeenCalled();
+    });
+
+    it('removeCover reverts to the disc placeholder', () => {
+      const { tool, root, block } = renderTool({ coverUrl: 'https://cdn/cover.png' });
+      expect(root.querySelector('[data-role="audio-cover"] img')).not.toBeNull();
+
+      const remove = tool.renderSettings().find((i) => 'name' in i && i.name === 'audio-cover-remove');
+      expect(remove).toBeDefined();
+      (remove as { onActivate: () => void }).onActivate();
+
+      expect(root.querySelector('[data-role="audio-cover"] img')).toBeNull();
+      expect(root.querySelector('.blok-audio-cover__disc')).not.toBeNull();
+      expect(block.dispatchChange).toHaveBeenCalled();
+    });
+
+    it('hides Remove cover when no cover is set', () => {
+      const { tool } = renderTool();
+      const remove = tool.renderSettings().find((i) => 'name' in i && i.name === 'audio-cover-remove');
+      expect(remove).toBeUndefined();
     });
   });
 });

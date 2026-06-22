@@ -18,15 +18,18 @@ import {
   IconCaption,
   IconCopy,
   IconDownload,
+  IconImage,
   IconMusic,
   IconPlayerLoop,
   IconReplace,
+  IconTrash,
 } from '../../components/icons';
 import { renderUploadingState, type UploadingStateElement } from '../image/uploading-state';
 import { DEFAULT_CAPTION_PLACEHOLDER, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { tr } from './i18n';
 import { renderCaptionRow, renderNowPlaying } from './ui';
+import { openCoverPicker, validateCoverFile, type CoverPickerHandle } from './cover-picker';
 import { attachControls, type ControlsHandle } from './controls';
 import { attachWaveform, decodePeaks, type WaveformHandle } from './waveform';
 import { readTrackMetadata, resolveCover } from './metadata';
@@ -52,6 +55,7 @@ export class AudioTool implements BlockTool {
   private controlsHandle: ControlsHandle | null = null;
   private waveformHandle: WaveformHandle | null = null;
   private destroyed = false;
+  private coverPicker: CoverPickerHandle | null = null;
   /** Pending fallback timer for the caption collapse-out animation. */
   private captionExitTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -189,6 +193,22 @@ export class AudioTool implements BlockTool {
         onActivate: (): void => this.transitionToEmpty(),
       },
       {
+        icon: IconImage,
+        title: tr(i18n, 'tools.audio.coverSet', 'Set cover image'),
+        name: 'audio-cover-set',
+        closeOnActivate: true,
+        onActivate: (): void => this.openCoverPicker(),
+      },
+      ...(this.data.coverUrl
+        ? [{
+          icon: IconTrash,
+          title: tr(i18n, 'tools.audio.coverRemove', 'Remove cover'),
+          name: 'audio-cover-remove',
+          closeOnActivate: true,
+          onActivate: (): void => this.removeCover(),
+        }]
+        : []),
+      {
         icon: IconDownload,
         title: tr(i18n, 'tools.audio.download', 'Download'),
         name: 'audio-download',
@@ -215,6 +235,11 @@ export class AudioTool implements BlockTool {
     if (this.data.url.startsWith('blob:')) {
       URL.revokeObjectURL(this.data.url);
     }
+    if (this.data.coverUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(this.data.coverUrl);
+    }
+    this.coverPicker?.close();
+    this.coverPicker = null;
   }
 
   private startUpload(file: File): void {
@@ -379,10 +404,11 @@ export class AudioTool implements BlockTool {
     const titlePlaceholder = tr(this.api.i18n, 'tools.audio.titlePlaceholder', 'Track title');
     const artistPlaceholder = tr(this.api.i18n, 'tools.audio.artistPlaceholder', 'Artist');
 
-    const { figure, audio, waveformMount, title, artist, body } = renderNowPlaying(this.data, {
+    const { figure, audio, waveformMount, title, artist, body, coverButton } = renderNowPlaying(this.data, {
       editable: !this.readOnly,
       titlePlaceholder,
       artistPlaceholder,
+      coverChangeLabel: tr(this.api.i18n, 'tools.audio.coverChange', 'Change cover'),
     });
 
     // Waveform (if peaks are available)
@@ -423,6 +449,8 @@ export class AudioTool implements BlockTool {
         this.block.dispatchChange();
       }
     });
+
+    coverButton?.addEventListener('click', () => this.openCoverPicker());
 
     this.root.appendChild(figure);
   }
@@ -543,5 +571,63 @@ export class AudioTool implements BlockTool {
     if (clip && typeof clip.writeText === 'function') {
       void clip.writeText(this.data.url);
     }
+  }
+
+  private openCoverPicker(): void {
+    if (this.readOnly) return;
+    const anchor = this.root?.querySelector<HTMLElement>('[data-role="audio-cover"]');
+    if (!anchor) return;
+    this.coverPicker?.close();
+    this.coverPicker = openCoverPicker({
+      anchor,
+      i18n: this.api.i18n,
+      onFile: (file) => this.applyCoverFile(file),
+      onUrl: (url) => this.applyCoverUrl(url),
+      onClose: () => { this.coverPicker = null; },
+    });
+  }
+
+  private applyCoverFile(file: File): void {
+    const error = validateCoverFile(file, this.api.i18n);
+    if (error) {
+      this.coverPicker?.setError(error);
+      return;
+    }
+    const uploader = this.config.uploader;
+    const upload = uploader?.uploadByFile
+      ? uploader.uploadByFile(file).then((res) => res.url)
+      : Promise.resolve(URL.createObjectURL(file));
+    void upload
+      .then((url) => {
+        if (this.destroyed) return;
+        this.setCover(url);
+        this.coverPicker?.close();
+      })
+      .catch(() => {
+        this.coverPicker?.setError(
+          tr(this.api.i18n, 'tools.audio.errorUploadFailed', 'Upload failed')
+        );
+      });
+  }
+
+  private applyCoverUrl(url: string): void {
+    this.setCover(url);
+    this.coverPicker?.close();
+  }
+
+  private setCover(url: string): void {
+    const prev = this.data.coverUrl;
+    if (prev && prev !== url && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
+    this.data.coverUrl = url;
+    this.renderState();
+    this.block.dispatchChange();
+  }
+
+  private removeCover(): void {
+    const prev = this.data.coverUrl;
+    if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+    this.data.coverUrl = undefined;
+    this.renderState();
+    this.block.dispatchChange();
   }
 }

@@ -75,6 +75,26 @@ describe('attachControls', () => {
     expect(media.volume).toBeCloseTo(0.3, 5);
   });
 
+  it('paints the volume slider fill from the gradient property the stylesheet reads', () => {
+    const media = makeMedia();
+    const figure = document.createElement('figure');
+    const h = attachControls({ media, figure, data: { url: 'u' } });
+    const volume = h.element.querySelector('[data-role="audio-volume"]') as HTMLInputElement;
+
+    // Drag to half volume — the painted track must fill to 50%.
+    volume.value = '0.5';
+    volume.dispatchEvent(new Event('input', { bubbles: true }));
+    // audio.css gradient consumes --blok-audio-vol-pct; if JS writes any other
+    // name the fill stays frozen at its 100% default and muted looks identical.
+    expect(volume.style.getPropertyValue('--blok-audio-vol-pct')).toBe('50%');
+
+    // Muting parks the fill at 0% so the bar visibly empties.
+    const mute = h.element.querySelector('[data-role="audio-mute"]') as HTMLButtonElement;
+    mute.click();
+    expect(volume.style.getPropertyValue('--blok-audio-vol-pct')).toBe('0%');
+    h.destroy();
+  });
+
   it('does not restore position when duration is unknown (0)', () => {
     const media = makeMedia();
     Object.defineProperty(media, 'duration', { value: 0, configurable: true });

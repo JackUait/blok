@@ -148,7 +148,10 @@ export function attachControls({
     muteToggle.innerHTML = muted ? IconPlayerVolumeMute : IconPlayerVolume;
     muteToggle.setAttribute('aria-label', muted ? 'Unmute' : 'Mute');
     volumeInput.value = muted ? '0' : String(media.volume);
-    volumeInput.style.setProperty('--blok-vol-pct', `${Number(volumeInput.value) * 100}%`);
+    // audio.css paints the filled track from --blok-audio-vol-pct (same naming
+    // as the speed slider's --blok-audio-speed-pct); writing any other name
+    // freezes the fill at its 100% default, so muted looks identical to full.
+    volumeInput.style.setProperty('--blok-audio-vol-pct', `${Number(volumeInput.value) * 100}%`);
   };
 
   // ----- persistence -----

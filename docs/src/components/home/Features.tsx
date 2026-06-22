@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { motion, type Variants } from "framer-motion";
+import { motion, useInView, type Variants } from "framer-motion";
 import { SectionReveal } from "../common/SectionReveal";
 import { FeatureModal, type FeatureDetail } from "./FeatureModal";
 import { useI18n } from "../../contexts/I18nContext";
@@ -34,6 +34,136 @@ const pillarVariants: Variants = {
 // Bouncy spring for hover lift + tap feedback — a touch of overshoot gives the
 // cards a playful, alive feel without feeling sluggish.
 const hoverSpring = { type: "spring", stiffness: 380, damping: 20 } as const;
+
+// Each pillar glyph animates its OWN internals to echo what the icon MEANS,
+// rather than sharing one generic whole-element move. The shared spring keeps
+// them feeling like one family; the per-part orchestration (below) is what makes
+// each unique and on-context.
+const glyphSpring = { type: "spring", stiffness: 280, damping: 18 } as const;
+
+// Parent SVG variants: hold until the card is in view, then release the parts in
+// sequence. `delayChildren` carries the per-card stagger so the three cards fire
+// one after another, not all at once.
+const glyphContainer = (delay: number, stagger: number): Variants => ({
+  hidden: {},
+  shown: { transition: { delayChildren: delay, staggerChildren: stagger } },
+});
+
+type GlyphProps = { state: "hidden" | "shown"; delay: number };
+
+// 0 — Clean JSON: the two braces slide in from opposite edges and meet in the
+// middle, the way brackets close around the value they enclose.
+const BracesGlyph: React.FC<GlyphProps> = ({ state, delay }) => (
+  <motion.svg
+    viewBox="0 0 32 32"
+    fill="none"
+    className="overflow-visible"
+    initial="hidden"
+    animate={state}
+    variants={glyphContainer(delay, 0.08)}
+  >
+    <motion.path
+      d="M12 8L8 16l4 8"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      variants={{ hidden: { opacity: 0, x: -14 }, shown: { opacity: 1, x: 0 } }}
+      transition={glyphSpring}
+    />
+    <motion.path
+      d="M20 8l4 8-4 8"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      variants={{ hidden: { opacity: 0, x: 14 }, shown: { opacity: 1, x: 0 } }}
+      transition={glyphSpring}
+    />
+  </motion.svg>
+);
+
+// 1 — Blocks for everything: the three blocks pop in one after another, each
+// scaling up from its own centre, like blocks being stacked into place.
+const BlocksGlyph: React.FC<GlyphProps> = ({ state, delay }) => {
+  const block: Variants = {
+    hidden: { opacity: 0, scale: 0.3, y: -3 },
+    shown: { opacity: 1, scale: 1, y: 0 },
+  };
+  const pivot = { transformBox: "fill-box", transformOrigin: "center" } as const;
+  return (
+    <motion.svg
+      viewBox="0 0 32 32"
+      fill="none"
+      initial="hidden"
+      animate={state}
+      variants={glyphContainer(delay, 0.14)}
+    >
+      <motion.rect x="6" y="6" width="10" height="8" rx="2" stroke="currentColor" strokeWidth="2" variants={block} transition={glyphSpring} style={pivot} />
+      <motion.rect x="16" y="10" width="10" height="8" rx="2" stroke="currentColor" strokeWidth="2" variants={block} transition={glyphSpring} style={pivot} />
+      <motion.rect x="8" y="18" width="10" height="8" rx="2" stroke="currentColor" strokeWidth="2" variants={block} transition={glyphSpring} style={pivot} />
+    </motion.svg>
+  );
+};
+
+// 2 — Extensible by design: the dashed "drop zone" frame settles in first, then
+// the plus literally draws itself stroke-by-stroke — the gesture of adding a new
+// block into the slot.
+const ExtensibleGlyph: React.FC<GlyphProps> = ({ state, delay }) => {
+  const stroke: Variants = {
+    hidden: { pathLength: 0, opacity: 0 },
+    shown: { pathLength: 1, opacity: 1 },
+  };
+  return (
+    <motion.svg
+      viewBox="0 0 32 32"
+      fill="none"
+      initial="hidden"
+      animate={state}
+      variants={glyphContainer(delay, 0.16)}
+    >
+      <motion.rect
+        x="6"
+        y="6"
+        width="20"
+        height="20"
+        rx="4"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeDasharray="4 3"
+        variants={{ hidden: { opacity: 0, scale: 0.65 }, shown: { opacity: 1, scale: 1 } }}
+        transition={glyphSpring}
+        style={{ transformBox: "fill-box", transformOrigin: "center" }}
+      />
+      <motion.path d="M16 11v10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" variants={stroke} transition={{ duration: 0.3, ease: "easeOut" }} />
+      <motion.path d="M11 16h10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" variants={stroke} transition={{ duration: 0.3, ease: "easeOut" }} />
+    </motion.svg>
+  );
+};
+
+const PILLAR_GLYPHS = [BracesGlyph, BlocksGlyph, ExtensibleGlyph];
+
+// Renders the right animated glyph for a pillar and gates it on scroll-into-view.
+// The ref sits on the STATIC outer span (never the animated SVG) so the observer
+// box stays put; `animate` toggles the whole part-orchestration on each entry, so
+// the glyph re-plays its contextual animation every time the card scrolls in.
+const PillarGlyph: React.FC<{ index: number }> = ({ index }) => {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { amount: 0.3 });
+  const Glyph = PILLAR_GLYPHS[index] ?? PILLAR_GLYPHS[0];
+
+  return (
+    <span
+      ref={ref}
+      aria-hidden="true"
+      className="pointer-events-none absolute -bottom-10 -right-8 size-44 text-primary/[0.06] transition-colors duration-500 group-hover:text-primary/[0.11] [&_svg]:size-full"
+    >
+      <span className="block size-full transition-transform duration-500 ease-out group-hover:-rotate-6 group-hover:scale-110">
+        <Glyph state={inView ? "shown" : "hidden"} delay={index * 0.12} />
+      </span>
+    </span>
+  );
+};
 
 export const Features: React.FC = () => {
   const { t } = useI18n();
@@ -379,39 +509,43 @@ new Blok({ holder: 'editor' });`,
               whileHover={{ y: -4 }}
               whileTap={{ scale: 0.98 }}
               transition={hoverSpring}
-              className="group flex w-[74vw] shrink-0 snap-center cursor-pointer flex-col items-start gap-5 rounded-3xl border border-black/[0.04] bg-secondary p-8 text-left transition-shadow duration-300 hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-white/[0.08] md:w-auto md:shrink"
+              className="group relative flex w-[74vw] shrink-0 snap-center cursor-pointer flex-col items-start overflow-hidden rounded-3xl border border-border/60 bg-card p-8 text-left transition-[border-color] duration-300 hover:border-primary/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background md:w-auto md:shrink"
               onClick={() => handleFeatureClick(feature)}
               aria-label={feature.learnMore}
             >
-              <div className="feature-blob flex size-14 items-center justify-center bg-primary/10 text-primary transition-[colors,transform] duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground">
-                {feature.icon}
-              </div>
-              <div className="space-y-2.5">
-                <h3 className="text-xl font-semibold tracking-tight">
-                  {feature.title}
-                </h3>
+              <PillarGlyph index={index} />
+              <div className="relative z-10 space-y-3">
+                <div>
+                  <span
+                    aria-hidden="true"
+                    className="mb-3.5 block h-[3px] w-9 rounded-full bg-linear-to-r from-brand-from via-brand-via to-brand-to transition-[width] duration-300 group-hover:w-14"
+                  />
+                  <h3 className="text-2xl font-bold leading-[1.15] tracking-tight">
+                    {feature.title}
+                  </h3>
+                </div>
                 <p className="text-[15px] leading-relaxed text-muted-foreground">
                   {feature.description}
                 </p>
               </div>
-              <span className="mt-auto inline-flex items-center gap-1.5 pt-2 text-sm font-medium text-primary">
-                <span className="transition-opacity group-hover:opacity-100 opacity-80">
-                  {t('home.features.learnMoreLabel')}
+              <span className="relative z-10 mt-7 flex w-full items-center border-t border-border/50 pt-4 text-sm font-medium text-primary">
+                {t('home.features.learnMoreLabel')}
+                <span className="ml-auto flex size-7 items-center justify-center rounded-full border border-primary/30 bg-card text-primary transition-[background-color,color,border-color] duration-200 group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    className="transition-transform duration-200 group-hover:translate-x-0.5"
+                  >
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
                 </span>
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                  className="transition-transform duration-200 group-hover:translate-x-1"
-                >
-                  <path d="M5 12h14M12 5l7 7-7 7" />
-                </svg>
               </span>
             </motion.button>
           ))}
@@ -460,7 +594,7 @@ new Blok({ holder: 'editor' });`,
               onClick={() => handleFeatureClick(feature)}
               aria-label={feature.learnMore}
             >
-              <div className="feature-blob flex size-11 shrink-0 items-center justify-center bg-primary/10 text-primary transition-[colors,transform] duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground sm:size-10">
+              <div className="feature-blob flex size-11 shrink-0 items-center justify-center bg-primary/10 text-primary transition-[background-color,color,transform] duration-300 group-hover:scale-110 group-hover:bg-linear-to-br group-hover:from-brand-from group-hover:via-brand-via group-hover:to-brand-to group-hover:text-white sm:size-10">
                 {feature.icon}
               </div>
               <h3 className="max-w-[7rem] text-[14px] font-medium leading-snug tracking-tight sm:max-w-none sm:flex-1 sm:text-[15px]">

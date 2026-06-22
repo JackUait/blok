@@ -46,29 +46,30 @@ describe('Features', () => {
     expect(featureCards).toHaveLength(9);
   });
 
-  it('should render Clean JSON output feature', () => {
+  it('should render the clean JSON pillar as a title-only tile', () => {
     renderFeatures();
 
-    expect(screen.getByText('Clean JSON output')).toBeInTheDocument();
-    expect(screen.getByText((content) => content.includes('typed JSON blocks'))).toBeInTheDocument();
+    expect(screen.getByText('Typed JSON, never HTML')).toBeInTheDocument();
+    // Pillars are now title-only — the descriptive prose moved into the modal.
+    expect(screen.queryByText((content) => content.includes('typed JSON blocks'))).not.toBeInTheDocument();
   });
 
-  it('should render the block library feature', () => {
+  it('should render the block library pillar as a title-only tile', () => {
     renderFeatures();
 
-    expect(screen.getByText('Blocks for everything')).toBeInTheDocument();
+    expect(screen.getByText('Every block, built in')).toBeInTheDocument();
     expect(
-      screen.getByText((content) => content.includes('Notion-style blocks'))
-    ).toBeInTheDocument();
+      screen.queryByText((content) => content.includes('Notion-style blocks'))
+    ).not.toBeInTheDocument();
   });
 
-  it('should render the extensibility feature', () => {
+  it('should render the extensibility pillar as a title-only tile', () => {
     renderFeatures();
 
     const button = screen.getByRole('button', { name: 'Learn more about extending Blok' });
     const withinButton = within(button);
-    expect(withinButton.getByText('Extensible by design')).toBeInTheDocument();
-    expect(withinButton.getByText((content) => content.includes('block tunes'))).toBeInTheDocument();
+    expect(withinButton.getByText('Bring your own blocks')).toBeInTheDocument();
+    expect(withinButton.queryByText((content) => content.includes('block tunes'))).not.toBeInTheDocument();
   });
 
   it('should render the secondary capabilities as title-only cards', () => {
@@ -76,10 +77,10 @@ describe('Features', () => {
 
     // Secondary cards are scannable: title present, descriptive prose removed.
     expect(screen.getByText('Slash menu & Markdown')).toBeInTheDocument();
-    expect(screen.getByText('Databases & boards')).toBeInTheDocument();
+    expect(screen.getByText('Databases & kanban boards')).toBeInTheDocument();
     expect(screen.getByText('Tables that behave')).toBeInTheDocument();
     expect(screen.getByText('Embeds & link previews')).toBeInTheDocument();
-    expect(screen.getByText('Undo & redo')).toBeInTheDocument();
+    expect(screen.getByText('Conflict-free undo & redo')).toBeInTheDocument();
     expect(screen.getByText('68 languages, RTL-ready')).toBeInTheDocument();
 
     // The wordy descriptions that made the section feel crowded are gone.
@@ -117,19 +118,19 @@ describe('Features', () => {
     // The three pillars become a swipeable carousel on mobile, paginated by dots.
     const dots = screen.getAllByRole('button', { name: /^Go to / });
     expect(dots).toHaveLength(3);
-    expect(screen.getByRole('button', { name: 'Go to Clean JSON output' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Go to Blocks for everything' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Go to Extensible by design' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Go to Typed JSON, never HTML' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Go to Every block, built in' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Go to Bring your own blocks' })).toBeInTheDocument();
   });
 
   it('should mark the first pillar as the current carousel slide initially', () => {
     renderFeatures();
 
-    expect(screen.getByRole('button', { name: 'Go to Clean JSON output' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Go to Typed JSON, never HTML' })).toHaveAttribute(
       'aria-current',
       'true'
     );
-    expect(screen.getByRole('button', { name: 'Go to Blocks for everything' })).not.toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Go to Every block, built in' })).not.toHaveAttribute(
       'aria-current',
       'true'
     );
@@ -143,6 +144,6 @@ describe('Features', () => {
       </I18nProvider>
     );
     expect(screen.queryByText('Почему Blok')).not.toBeInTheDocument();
-    expect(screen.getByText('Чистый JSON')).toBeInTheDocument();
+    expect(screen.getByText('Типизированный JSON, не HTML')).toBeInTheDocument();
   });
 });

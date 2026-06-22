@@ -334,8 +334,8 @@
       "sectionLabel": "Features",
       "learnMoreLabel": "Learn more",
       "cleanJson": {
-        "title": "Clean JSON output",
-        "description": "Content is typed JSON blocks, not an HTML blob. Store it, diff it, or render it on a server that never touches the DOM.",
+        "title": "Typed JSON, never HTML",
+        "description": "Just typed JSON blocks — never an HTML blob.",
         "learnMore": "Learn more about Clean JSON output",
         "details": {
           "summary": "Blok is headless. Every document is a flat tree of typed blocks with stable IDs, so the output is the same whether you save it to a database, diff it in version control, or render it server-side.",
@@ -346,8 +346,8 @@
         }
       },
       "blockLibrary": {
-        "title": "Blocks for everything",
-        "description": "Tables, databases, columns, callouts, toggles, code, media and embeds — Notion-style blocks ship in the box.",
+        "title": "Every block, built in",
+        "description": "Notion-style blocks, ready in the box.",
         "learnMore": "Learn more about the block library",
         "details": {
           "summary": "Blok comes with the blocks people expect from a modern editor: nestable tables and toggles, multi-column layouts, kanban databases, syntax-highlighted code, image, video and file uploads, and live embeds — all first-class blocks.",
@@ -358,8 +358,8 @@
         }
       },
       "customBlocks": {
-        "title": "Extensible by design",
-        "description": "Build your own block tools, inline tools and block tunes against a deep, typed API with full lifecycle hooks.",
+        "title": "Bring your own blocks",
+        "description": "Your own block tools, inline tools and block tunes.",
         "learnMore": "Learn more about extending Blok",
         "details": {
           "summary": "Three extension points — block tools, inline tools and block tunes — sit on a deep public API (blocks, caret, history, selection and more) with lifecycle hooks for render, save, validate and move.",
@@ -382,7 +382,7 @@
         }
       },
       "databases": {
-        "title": "Databases & boards",
+        "title": "Databases & kanban boards",
         "description": "Schema-driven databases where every row is a block. Switch between kanban board and list views.",
         "learnMore": "Learn more about databases",
         "details": {
@@ -418,7 +418,7 @@
         }
       },
       "undoRedo": {
-        "title": "Undo & redo",
+        "title": "Conflict-free undo & redo",
         "description": "Yjs-backed history with ⌘Z / ⌘⇧Z. Conflict-free, grouped at word boundaries, and it restores your caret.",
         "learnMore": "Learn more about undo and redo",
         "details": {

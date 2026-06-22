@@ -190,3 +190,44 @@ test('seeking via the waveform canvas advances the time readout', async ({ page 
   // like "00:03" or "00:04" (center of an 8s track).
   await expect(timeEl).not.toContainText('0:00 / 0:00');
 });
+
+// ---------------------------------------------------------------------------
+// 5. Regression — the volume slider and time readout must NOT inherit the
+//    generic 30×30 pill-button styling. The control bar's button rule was once
+//    written as `.blok-audio-controls [data-role]`, which also matched the
+//    volume <input data-role="audio-volume"> and the time <span data-role=
+//    "audio-time"> — rendering the volume as a fat 30px pill toggle and
+//    squashing the time text into a 30px grid box. Scoping the rule to
+//    `button[data-role]` is what keeps these slim/natural.
+// ---------------------------------------------------------------------------
+test('volume slider and time readout do not inherit pill-button sizing', async ({ page }) => {
+  await createBlok(page);
+  await insertAudioBlock(page);
+
+  const audioBlock = page.locator(AUDIO_BLOCK_SELECTOR);
+  await audioBlock.getByTestId('file-input').setInputFiles(FIXTURE_PATH);
+
+  await expect(audioBlock.locator('[data-role="audio-controls"]')).toBeVisible();
+
+  const metrics = await audioBlock.evaluate((root) => {
+    const read = (selector: string): { height: number; width: number; display: string } => {
+      const el = root.querySelector(selector);
+      if (!el) throw new Error(`missing ${selector}`);
+      const cs = getComputedStyle(el);
+      return { height: parseFloat(cs.height), width: parseFloat(cs.width), display: cs.display };
+    };
+    return {
+      volume: read('[data-role="audio-volume"]'),
+      time: read('[data-role="audio-time"]'),
+    };
+  });
+
+  // The volume slider is a slim track, not a 30px circular pill.
+  expect(metrics.volume.height).toBeLessThan(12);
+  expect(metrics.volume.display).not.toBe('grid');
+
+  // The time readout is a free-flowing text span wide enough for "MM:SS / MM:SS",
+  // not a 30px square button box.
+  expect(metrics.time.display).not.toBe('grid');
+  expect(metrics.time.width).toBeGreaterThan(40);
+});

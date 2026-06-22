@@ -1,4 +1,5 @@
 import {
+  IconMinus,
   IconPlayerLoop,
   IconPlayerPause,
   IconPlayerPlay,
@@ -6,6 +7,7 @@ import {
   IconPlayerSpeed,
   IconPlayerVolume,
   IconPlayerVolumeMute,
+  IconPlus,
 } from '../../components/icons';
 import { createPlatterSpin } from './disc';
 import type { AudioData } from '../../../types/tools/audio';
@@ -214,6 +216,20 @@ export function attachControls({
   speedReadout.setAttribute('aria-hidden', 'true');
   speedReadout.textContent = speedLabel(state.selectedRate);
 
+  // − [slider] ＋ — flat steppers flank the track, mirroring the video player.
+  // Identified by class only (no data-role) so the generic button[data-role]
+  // control-button rule doesn't size them into 30px pills.
+  const speedStepper = (icon: string, label: string): HTMLButtonElement => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'blok-audio-controls__speed-step';
+    btn.setAttribute('aria-label', label);
+    btn.innerHTML = icon;
+    return btn;
+  };
+  const speedDec = speedStepper(IconMinus, 'Decrease playback speed');
+  const speedInc = speedStepper(IconPlus, 'Increase playback speed');
+
   const speedSlider = document.createElement('input');
   speedSlider.type = 'range';
   speedSlider.className = 'blok-audio-controls__speed-slider';
@@ -223,6 +239,12 @@ export function attachControls({
   speedSlider.value = String(state.selectedRate);
   speedSlider.setAttribute('aria-label', 'Playback speed');
 
+  // Drive the elapsed-fill gradient from JS so the painted track tracks the
+  // native knob exactly (same approach as the volume + video sliders).
+  const speedFillPct = (rate: number): string =>
+    `${((rate - SPEED_MIN) / (SPEED_MAX - SPEED_MIN)) * 100}%`;
+  speedSlider.style.setProperty('--blok-audio-speed-pct', speedFillPct(state.selectedRate));
+
   const setRate = (rate: number): void => {
     const next = clampRate(rate);
     state.selectedRate = next;
@@ -230,11 +252,25 @@ export function attachControls({
     speedReadout.textContent = speedLabel(next);
     speedSlider.value = String(next);
     speedSlider.setAttribute('aria-valuetext', speedLabel(next));
+    speedSlider.style.setProperty('--blok-audio-speed-pct', speedFillPct(next));
+    speedDec.disabled = next <= SPEED_MIN;
+    speedInc.disabled = next >= SPEED_MAX;
   };
 
   const onSpeedSliderInput = (): void => setRate(Number(speedSlider.value));
   speedSlider.addEventListener('input', onSpeedSliderInput);
+  speedDec.addEventListener('click', () => setRate(state.selectedRate - SPEED_SLIDER_STEP));
+  speedInc.addEventListener('click', () => setRate(state.selectedRate + SPEED_SLIDER_STEP));
+  speedDec.disabled = state.selectedRate <= SPEED_MIN;
+  speedInc.disabled = state.selectedRate >= SPEED_MAX;
 
+  const speedSliderRow = document.createElement('div');
+  speedSliderRow.className = 'blok-audio-controls__speed-slider-row';
+  speedSliderRow.append(speedDec, speedSlider, speedInc);
+
+  // Quiet quick-jump presets (mirrors the video player): every chip reads the
+  // same muted weight, lifting only on hover. The live rate is communicated by
+  // the readout + slider knob, not a filled "selected" chip.
   const speedChipRow = document.createElement('div');
   speedChipRow.className = 'blok-audio-controls__speed-chips';
   SPEED_PRESETS.forEach((rate) => {
@@ -249,7 +285,7 @@ export function attachControls({
     speedChipRow.appendChild(chip);
   });
 
-  speedMenu.append(speedReadout, speedSlider, speedChipRow);
+  speedMenu.append(speedReadout, speedSliderRow, speedChipRow);
 
   // Gear + menu share a positioned wrapper so the menu anchors directly above
   // the gear button (rather than the card corner).

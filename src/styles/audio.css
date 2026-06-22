@@ -20,7 +20,10 @@
   --blok-audio-pad: var(--blok-space-3-5);
   --blok-audio-radius: var(--blok-radius-md);
   --blok-audio-wave-height: 56px;
-  --blok-audio-bar-height: 3px;
+  --blok-audio-bar-height: 4px;
+  /* lift the slim slider thumbs (volume + speed) off the track so they read as
+     tactile pucks rather than flat dots */
+  --blok-audio-thumb-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
   --blok-audio-ctrl-size: 30px;
   --blok-audio-play-size: 36px;
   --blok-audio-bar: var(--blok-border-subtle);
@@ -347,8 +350,12 @@
   margin-top: var(--blok-space-1);
 }
 
-/* generic control button */
-[data-blok-tool="audio"] .blok-audio-controls [data-role] {
+/* generic control button — scoped to <button> so the volume <input> and the
+   time <span> (both carry data-role) keep their own slim/text styling instead
+   of being clobbered into a 30px pill. Every button-specific rule below is also
+   anchored on `button[data-role…]` so they share this rule's specificity and
+   win on source order. */
+[data-blok-tool="audio"] .blok-audio-controls button[data-role] {
   flex-shrink: 0;
   display: inline-grid;
   place-items: center;
@@ -362,20 +369,20 @@
   cursor: pointer;
   transition: background var(--blok-duration-base) ease, color var(--blok-duration-base) ease, transform var(--blok-duration-base) ease;
 }
-[data-blok-tool="audio"] .blok-audio-controls [data-role]:hover {
+[data-blok-tool="audio"] .blok-audio-controls button[data-role]:hover {
   background: var(--blok-bg-hover);
   color: var(--blok-text-primary);
 }
-[data-blok-tool="audio"] .blok-audio-controls [data-role]:active {
+[data-blok-tool="audio"] .blok-audio-controls button[data-role]:active {
   transform: scale(0.92);
 }
-[data-blok-tool="audio"] .blok-audio-controls [data-role] svg {
+[data-blok-tool="audio"] .blok-audio-controls button[data-role] svg {
   width: 17px;
   height: 17px;
 }
 
 /* play / pause — filled black puck */
-[data-blok-tool="audio"] .blok-audio-controls [data-role="audio-play"] {
+[data-blok-tool="audio"] .blok-audio-controls button[data-role="audio-play"] {
   width: var(--blok-audio-play-size);
   height: var(--blok-audio-play-size);
   margin-right: var(--blok-space-0-5);
@@ -383,15 +390,15 @@
   color: var(--blok-bg-primary);
   box-shadow: var(--blok-image-shadow-resting);
 }
-[data-blok-tool="audio"] .blok-audio-controls [data-role="audio-play"]:hover {
+[data-blok-tool="audio"] .blok-audio-controls button[data-role="audio-play"]:hover {
   background: var(--blok-text-primary);
   color: var(--blok-bg-primary);
   transform: scale(1.05);
 }
-[data-blok-tool="audio"] .blok-audio-controls [data-role="audio-play"]:active {
+[data-blok-tool="audio"] .blok-audio-controls button[data-role="audio-play"]:active {
   transform: scale(0.96);
 }
-[data-blok-tool="audio"] .blok-audio-controls [data-role="audio-play"] svg {
+[data-blok-tool="audio"] .blok-audio-controls button[data-role="audio-play"] svg {
   width: 19px;
   height: 19px;
 }
@@ -445,6 +452,7 @@
   height: 12px;
   border-radius: var(--blok-radius-pill);
   background: var(--blok-text-primary);
+  box-shadow: var(--blok-audio-thumb-shadow);
 }
 [data-blok-tool="audio"] .blok-audio-controls__volume::-moz-range-thumb {
   width: 12px;
@@ -452,14 +460,15 @@
   border: 0;
   border-radius: var(--blok-radius-pill);
   background: var(--blok-text-primary);
+  box-shadow: var(--blok-audio-thumb-shadow);
 }
 
 /* loop active state — neutral black, no accent color */
-[data-blok-tool="audio"] .blok-audio-controls [data-role="audio-loop"][aria-pressed="true"] {
+[data-blok-tool="audio"] .blok-audio-controls button[data-role="audio-loop"][aria-pressed="true"] {
   color: var(--blok-bg-primary);
   background: var(--blok-text-primary);
 }
-[data-blok-tool="audio"] .blok-audio-controls [data-role="audio-loop"][aria-pressed="true"]:hover {
+[data-blok-tool="audio"] .blok-audio-controls button[data-role="audio-loop"][aria-pressed="true"]:hover {
   color: var(--blok-bg-primary);
   background: var(--blok-text-primary);
 }
@@ -470,7 +479,7 @@
   display: inline-flex;
   flex-shrink: 0;
 }
-[data-blok-tool="audio"] .blok-audio-controls [data-role="audio-speed"][aria-expanded="true"] {
+[data-blok-tool="audio"] .blok-audio-controls button[data-role="audio-speed"][aria-expanded="true"] {
   background: var(--blok-bg-hover);
   color: var(--blok-text-primary);
 }
@@ -499,10 +508,50 @@
   margin-bottom: var(--blok-space-2);
 }
 
+/* − [slider] ＋ — flat icon steppers flank a flexible track (mirrors the video
+   player's speed control). */
+[data-blok-tool="audio"] .blok-audio-controls__speed-slider-row {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  margin-bottom: var(--blok-space-2);
+}
+[data-blok-tool="audio"] .blok-audio-controls__speed-step {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--blok-radius-sm);
+  background: transparent;
+  color: var(--blok-text-tertiary);
+  cursor: pointer;
+  transition: background var(--blok-duration-base) ease, color var(--blok-duration-base) ease, transform var(--blok-duration-base) ease, opacity var(--blok-duration-base) ease;
+}
+[data-blok-tool="audio"] .blok-audio-controls__speed-step:hover {
+  background: var(--blok-bg-hover);
+  color: var(--blok-text-primary);
+}
+[data-blok-tool="audio"] .blok-audio-controls__speed-step:active {
+  transform: scale(0.92);
+}
+[data-blok-tool="audio"] .blok-audio-controls__speed-step:disabled {
+  opacity: 0.35;
+  cursor: default;
+  transform: none;
+}
+[data-blok-tool="audio"] .blok-audio-controls__speed-step svg {
+  width: 15px;
+  height: 15px;
+}
+
 [data-blok-tool="audio"] .blok-audio-controls__speed-slider {
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
   height: var(--blok-audio-bar-height);
-  margin: 0 0 var(--blok-space-2);
+  margin: 0;
   -webkit-appearance: none;
   appearance: none;
   background: linear-gradient(
@@ -520,6 +569,7 @@
   height: 12px;
   border-radius: var(--blok-radius-pill);
   background: var(--blok-text-primary);
+  box-shadow: var(--blok-audio-thumb-shadow);
 }
 [data-blok-tool="audio"] .blok-audio-controls__speed-slider::-moz-range-thumb {
   width: 12px;
@@ -527,6 +577,7 @@
   border: 0;
   border-radius: var(--blok-radius-pill);
   background: var(--blok-text-primary);
+  box-shadow: var(--blok-audio-thumb-shadow);
 }
 
 [data-blok-tool="audio"] .blok-audio-controls__speed-chips {

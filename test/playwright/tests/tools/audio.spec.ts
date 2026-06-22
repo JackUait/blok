@@ -261,40 +261,16 @@ test('user can set a cover image from a URL', async ({ page }) => {
   const picker = page.locator('[data-role="audio-cover-picker"]');
   await expect(picker).toBeVisible();
 
-  // Switch to the Link (embed) tab and submit the URL entirely via JS evaluate
-  // so the Blok redactor overlay (which is a higher stacking context) cannot
-  // intercept pointer events that would close or skip the picker.
-  await page.evaluate(() => {
-    const pickerEl = document.querySelector<HTMLElement>('[data-role="audio-cover-picker"]');
-    if (!pickerEl) throw new Error('picker not found');
+  // Switch to the Link (embed) tab with a real click.
+  await picker.locator('[data-tab="embed"]').click();
 
-    // 1. Click the embed tab.
-    const tab = pickerEl.querySelector<HTMLButtonElement>('[data-tab="embed"]');
-    if (!tab) throw new Error('embed tab not found');
-    tab.click();
-  });
+  // The URL input must be visible — this assertion guards the rendered picker width.
+  // A 2px-wide picker would make the input invisible/unreachable, catching the bug.
+  await expect(picker.locator('input[type="url"]')).toBeVisible();
 
-  // Wait for the URL input to be present in the DOM (renderEmbed runs synchronously
-  // after tab.click()). Use state:'attached' because the input's popover ancestor
-  // may register as 'hidden' in Playwright's visibility model while still being
-  // the true interactive target (it's in the CSS top layer).
-  await page.waitForSelector('[data-role="audio-cover-picker"] input[type="url"]', { state: 'attached' });
-
-  // Fill and submit via evaluate so the redactor overlay cannot interfere.
-  await page.evaluate(() => {
-    const input = document.querySelector<HTMLInputElement>('[data-role="audio-cover-picker"] input[type="url"]');
-    if (!input) throw new Error('url input not found');
-    // Set the value and fire both input (to sync validity) and keydown Enter
-    // (the commit path) so the picker's validation logic accepts the URL.
-    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
-    nativeInputValueSetter?.call(input, 'https://example.com/cover.jpg');
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-
-    // Click the submit button after the input event fires (sync).
-    const btn = document.querySelector<HTMLButtonElement>('[data-role="audio-cover-picker"] [data-action="submit-url"]');
-    if (!btn) throw new Error('submit button not found');
-    btn.click();
-  });
+  // Fill the URL and submit with real interactions.
+  await picker.locator('input[type="url"]').fill('https://example.com/cover.jpg');
+  await picker.locator('[data-action="submit-url"]').click();
 
   // The cover img must appear with the submitted src.
   const coverImg = page.locator(`${AUDIO_BLOCK_SELECTOR} [data-role="audio-cover"] img`);
@@ -324,21 +300,10 @@ test('user can remove a cover and the vinyl disc returns', async ({ page }) => {
 
   const picker2 = page.locator('[data-role="audio-cover-picker"]');
   await expect(picker2).toBeVisible();
-  await page.evaluate(() => {
-    const pickerEl = document.querySelector<HTMLElement>('[data-role="audio-cover-picker"]');
-    const tab = pickerEl?.querySelector<HTMLButtonElement>('[data-tab="embed"]');
-    tab?.click();
-  });
-  await page.waitForSelector('[data-role="audio-cover-picker"] input[type="url"]', { state: 'attached' });
-  await page.evaluate(() => {
-    const input = document.querySelector<HTMLInputElement>('[data-role="audio-cover-picker"] input[type="url"]');
-    if (!input) throw new Error('url input not found');
-    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
-    nativeInputValueSetter?.call(input, 'https://example.com/cover.jpg');
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    const btn = document.querySelector<HTMLButtonElement>('[data-role="audio-cover-picker"] [data-action="submit-url"]');
-    btn?.click();
-  });
+  await picker2.locator('[data-tab="embed"]').click();
+  await expect(picker2.locator('input[type="url"]')).toBeVisible();
+  await picker2.locator('input[type="url"]').fill('https://example.com/cover.jpg');
+  await picker2.locator('[data-action="submit-url"]').click();
 
   // Confirm cover img is set before removing it.
   const coverImg = page.locator(`${AUDIO_BLOCK_SELECTOR} [data-role="audio-cover"] img`);

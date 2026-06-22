@@ -5728,6 +5728,11 @@
 
 .blok-audio-cover-picker {
   z-index: 1;
+  width: min(360px, calc(100vw - 32px));
+}
+
+.blok-audio-cover-picker[data-blok-top-layer][popover] {
+  width: min(360px, calc(100vw - 32px));
 }
 
 [data-blok-tool="audio"] .blok-audio-cover__placeholder {

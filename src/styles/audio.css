@@ -187,10 +187,23 @@
 }
 
 /* ----- cover-picker dialog (top-layer promoted) ------------- */
-/* top-layer.ts neutralises UA popover resets; keep this rule minimal —
-   the renderMediaEmptyState surface inside carries its own styling. */
+/* The dialog needs an explicit width — without it the flex-column media-empty
+   surface inside collapses to a ~2px sliver. Two things to beat:
+   1. The `[data-blok-top-layer][popover]` reset in main.css (specificity
+      0,0,2,0) forces `width:auto`, so the width must be re-asserted with
+      matching specificity (mirrors the image-lightbox / file-preview
+      precedent).
+   2. The dialog lives at document.body level where the editor's scoped spacing
+      tokens (--blok-space-*) don't cascade — so a plain length, not a token
+      (a token would make the calc invalid and drop the width).
+   The base rule covers the no-Popover-API fallback (element stays in normal
+   flow, no reset applied); the qualified rule overrides the top-layer reset. */
 .blok-audio-cover-picker {
   z-index: 1;
+  width: min(360px, calc(100vw - 32px));
+}
+.blok-audio-cover-picker[data-blok-top-layer][popover] {
+  width: min(360px, calc(100vw - 32px));
 }
 
 /* ----- no-cover placeholder: a glossy black vinyl record --- */

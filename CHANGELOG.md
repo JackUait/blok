@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.20.0](https://github.com/JackUait/blok/compare/v0.19.2...v0.20.0) (2026-06-22)
+
+### Features
+
+- **Paste** — Content copied from Notion now migrates as native blocks with full state preserved. When Notion's lossless clipboard JSON is present it is used directly (the high-fidelity path), with an HTML fallback for sources that only expose markup. Inline equations and page mentions are mapped to their Blok equivalents.
+- **Audio** — Custom cover art. A cover picker (file upload or image URL) opens from an editable overlay button on the player; covers can be set, replaced, or removed (via a "Remove cover" block setting), with an animated picker open, a sliding Upload/Link tab transition, a themed surface that matches the player, and i18n across all locales. Audio blocks with no cover now show an inertial spinning-vinyl turntable placeholder instead of an empty panel.
+
+### Bug Fixes
+
+- **Audio** — Repaired the transport controls and the video-style playback-speed menu, which now stays open after picking a preset. The volume bar fill is fixed so a muted track reads differently from a full one, and the playing waveform pulses smoothly without gouging its dots. The caption toggle stays on the compositor, and the cover picker no longer jumps height on tab swap, gets an explicit width so the URL field isn't cramped, and revokes leaked cover blobs on a destroy race.
+- **Table** — Pinned the top toolbar anchor flush to the table edge.
+
+### Maintenance
+
+- **Tests** — Added unit and e2e coverage for custom cover set/remove and for real Notion page-mention arity, and cleared the lint/type violations the cover-art work introduced.
+
 ## [0.19.2](https://github.com/JackUait/blok/compare/v0.19.1...v0.19.2) (2026-06-20)
 
 ### ⚠ BREAKING CHANGES

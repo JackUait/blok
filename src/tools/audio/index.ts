@@ -599,7 +599,12 @@ export class AudioTool implements BlockTool {
       : Promise.resolve(URL.createObjectURL(file));
     void upload
       .then((url) => {
-        if (this.destroyed) return;
+        if (this.destroyed) {
+          // Block was removed mid-upload: a no-uploader blob URL would otherwise
+          // leak (it was never assigned to coverUrl, so removed() can't revoke it).
+          if (url.startsWith('blob:')) URL.revokeObjectURL(url);
+          return;
+        }
         this.setCover(url);
         this.coverPicker?.close();
       })

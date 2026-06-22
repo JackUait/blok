@@ -98,7 +98,7 @@ describe('renderNowPlaying cover button', () => {
     const els = renderNowPlaying({ url: 'https://cdn/a.mp3' }, { editable: true });
     expect(els.coverButton).toBeInstanceOf(HTMLButtonElement);
     expect(els.cover.contains(els.coverButton!)).toBe(true);
-    expect(els.coverButton!.getAttribute('aria-label')).toBeTruthy();
+    expect(els.coverButton!.getAttribute('aria-label')).toBe('Change cover');
   });
 
   it('omits the change-cover button in read-only mode', () => {

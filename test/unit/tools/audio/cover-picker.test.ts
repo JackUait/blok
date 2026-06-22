@@ -23,6 +23,10 @@ describe('validateCoverFile', () => {
   it('rejects an oversized image', () => {
     expect(validateCoverFile(makeFile('image/png', COVER_MAX_SIZE + 1))).not.toBeNull();
   });
+
+  it('does not type-reject a file with an empty MIME type (falls through to size check)', () => {
+    expect(validateCoverFile(makeFile('', 1024))).toBeNull();
+  });
 });
 
 describe('openCoverPicker', () => {

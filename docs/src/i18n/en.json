@@ -444,8 +444,7 @@
     },
     "quickStart": {
       "eyebrow": "Get Started",
-      "title": "Up and running in minutes",
-      "description": "Three simple steps to integrate Blok into your project"
+      "title": "Up and running in minutes"
     },
     "migrationCard": {
       "badge": "Zero downtime migration",

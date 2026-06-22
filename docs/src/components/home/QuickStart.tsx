@@ -104,9 +104,6 @@ export const QuickStart: React.FC = () => {
           <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
             {t('home.quickStart.title')}
           </h2>
-          <p className="mt-5 text-lg leading-relaxed text-muted-foreground">
-            {t('home.quickStart.description')}
-          </p>
         </SectionReveal>
 
         <motion.div

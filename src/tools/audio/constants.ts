@@ -19,3 +19,9 @@ export const COVER_DATA_URL_CAP_BYTES = 150 * 1024;
 
 /** Direct links to a playable audio file. */
 export const URL_PATTERN = /^https?:\/\/\S+\.(mp3|wav|ogg|oga|m4a|aac|flac|weba)(\?\S*)?$/i;
+
+/** Accepted cover-image MIME types (family wildcard). */
+export const COVER_TYPES = ['image/*'] as const;
+
+/** Max cover-image size in bytes. */
+export const COVER_MAX_SIZE = 10 * 1024 * 1024; // 10 MiB

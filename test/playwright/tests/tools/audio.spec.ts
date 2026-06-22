@@ -7,6 +7,8 @@ import type { Blok } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
+const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
+
 const HOLDER_ID = 'blok';
 const AUDIO_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="audio"]`;
 const FIXTURE_PATH = join(process.cwd(), 'test/playwright/fixtures/audio/sample.mp3');
@@ -230,4 +232,130 @@ test('volume slider and time readout do not inherit pill-button sizing', async (
   // not a 30px square button box.
   expect(metrics.time.display).not.toBe('grid');
   expect(metrics.time.width).toBeGreaterThan(40);
+});
+
+// ---------------------------------------------------------------------------
+// 6. Cover — set from URL
+// ---------------------------------------------------------------------------
+test('user can set a cover image from a URL', async ({ page }) => {
+  await createBlok(page);
+  await insertAudioBlock(page);
+
+  const audioBlock = page.locator(AUDIO_BLOCK_SELECTOR);
+
+  // Upload sample audio so the player renders (cover area appears once rendered).
+  await audioBlock.getByTestId('file-input').setInputFiles(FIXTURE_PATH);
+  await expect(audioBlock.locator('[data-role="audio-controls"]')).toBeVisible();
+
+  // Hover the cover area to reveal the change-cover overlay button.
+  const cover = audioBlock.locator('[data-role="audio-cover"]');
+  await cover.hover();
+
+  // Click the change-cover button.
+  const changeBtn = audioBlock.locator('[data-role="audio-cover-change"]');
+  await expect(changeBtn).toBeVisible();
+  await changeBtn.click();
+
+  // The picker dialog is promoted to the CSS top layer (appended to document.body)
+  // — locate it at the page level, NOT scoped inside the audio block selector.
+  const picker = page.locator('[data-role="audio-cover-picker"]');
+  await expect(picker).toBeVisible();
+
+  // Switch to the Link (embed) tab and submit the URL entirely via JS evaluate
+  // so the Blok redactor overlay (which is a higher stacking context) cannot
+  // intercept pointer events that would close or skip the picker.
+  await page.evaluate(() => {
+    const pickerEl = document.querySelector<HTMLElement>('[data-role="audio-cover-picker"]');
+    if (!pickerEl) throw new Error('picker not found');
+
+    // 1. Click the embed tab.
+    const tab = pickerEl.querySelector<HTMLButtonElement>('[data-tab="embed"]');
+    if (!tab) throw new Error('embed tab not found');
+    tab.click();
+  });
+
+  // Wait for the URL input to be present in the DOM (renderEmbed runs synchronously
+  // after tab.click()). Use state:'attached' because the input's popover ancestor
+  // may register as 'hidden' in Playwright's visibility model while still being
+  // the true interactive target (it's in the CSS top layer).
+  await page.waitForSelector('[data-role="audio-cover-picker"] input[type="url"]', { state: 'attached' });
+
+  // Fill and submit via evaluate so the redactor overlay cannot interfere.
+  await page.evaluate(() => {
+    const input = document.querySelector<HTMLInputElement>('[data-role="audio-cover-picker"] input[type="url"]');
+    if (!input) throw new Error('url input not found');
+    // Set the value and fire both input (to sync validity) and keydown Enter
+    // (the commit path) so the picker's validation logic accepts the URL.
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+    nativeInputValueSetter?.call(input, 'https://example.com/cover.jpg');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+
+    // Click the submit button after the input event fires (sync).
+    const btn = document.querySelector<HTMLButtonElement>('[data-role="audio-cover-picker"] [data-action="submit-url"]');
+    if (!btn) throw new Error('submit button not found');
+    btn.click();
+  });
+
+  // The cover img must appear with the submitted src.
+  const coverImg = page.locator(`${AUDIO_BLOCK_SELECTOR} [data-role="audio-cover"] img`);
+  await expect(coverImg).toBeAttached();
+  await expect(coverImg).toHaveAttribute('src', 'https://example.com/cover.jpg');
+});
+
+// ---------------------------------------------------------------------------
+// 7. Cover — remove via block settings restores the spinning disc
+// ---------------------------------------------------------------------------
+test('user can remove a cover and the vinyl disc returns', async ({ page }) => {
+  await createBlok(page);
+  await insertAudioBlock(page);
+
+  const audioBlock = page.locator(AUDIO_BLOCK_SELECTOR);
+
+  // Upload sample audio so the player renders.
+  await audioBlock.getByTestId('file-input').setInputFiles(FIXTURE_PATH);
+  await expect(audioBlock.locator('[data-role="audio-controls"]')).toBeVisible();
+
+  // Set a cover via URL (reuse the same flow as the test above).
+  const cover = audioBlock.locator('[data-role="audio-cover"]');
+  await cover.hover();
+  const changeBtn = audioBlock.locator('[data-role="audio-cover-change"]');
+  await expect(changeBtn).toBeVisible();
+  await changeBtn.click();
+
+  const picker2 = page.locator('[data-role="audio-cover-picker"]');
+  await expect(picker2).toBeVisible();
+  await page.evaluate(() => {
+    const pickerEl = document.querySelector<HTMLElement>('[data-role="audio-cover-picker"]');
+    const tab = pickerEl?.querySelector<HTMLButtonElement>('[data-tab="embed"]');
+    tab?.click();
+  });
+  await page.waitForSelector('[data-role="audio-cover-picker"] input[type="url"]', { state: 'attached' });
+  await page.evaluate(() => {
+    const input = document.querySelector<HTMLInputElement>('[data-role="audio-cover-picker"] input[type="url"]');
+    if (!input) throw new Error('url input not found');
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+    nativeInputValueSetter?.call(input, 'https://example.com/cover.jpg');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    const btn = document.querySelector<HTMLButtonElement>('[data-role="audio-cover-picker"] [data-action="submit-url"]');
+    btn?.click();
+  });
+
+  // Confirm cover img is set before removing it.
+  const coverImg = page.locator(`${AUDIO_BLOCK_SELECTOR} [data-role="audio-cover"] img`);
+  await expect(coverImg).toBeAttached();
+
+  // Open block settings — hover the block first so the settings toggler appears.
+  await audioBlock.hover();
+  const settingsBtn = page.locator(SETTINGS_BUTTON_SELECTOR);
+  await expect(settingsBtn).toBeVisible();
+  await settingsBtn.click();
+
+  // Click the "Remove cover" settings item.
+  const removeItem = page.locator('[data-blok-item-name="audio-cover-remove"]');
+  await expect(removeItem).toBeVisible();
+  await removeItem.click();
+
+  // The img must be gone and the vinyl disc placeholder must return.
+  await expect(page.locator(`${AUDIO_BLOCK_SELECTOR} [data-role="audio-cover"] img`)).toHaveCount(0);
+  await expect(page.locator(`${AUDIO_BLOCK_SELECTOR} .blok-audio-cover__disc`)).toBeVisible();
 });

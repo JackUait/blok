@@ -5736,6 +5736,10 @@
   box-shadow: var(--blok-popover-box-shadow);
 }
 
+.blok-audio-cover-picker, .blok-audio-cover-picker * {
+  box-sizing: border-box;
+}
+
 [data-blok-tool="audio"] .blok-audio-cover__placeholder {
   position: relative;
   display: flex;

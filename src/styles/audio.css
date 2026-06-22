@@ -214,6 +214,16 @@
   border-radius: var(--blok-radius-lg);
   box-shadow: var(--blok-popover-box-shadow);
 }
+/* The picker lives at document.body, outside blok's scoped border-box reset, so
+   its subtree would default to content-box. The media-empty Upload/Link height-
+   swap animation measures the border-box height but animates the `height`
+   property — under content-box that adds the panel padding on top, overshooting
+   then snapping back (a visible height jump). Match the inline (border-box)
+   context the component was built for. */
+.blok-audio-cover-picker,
+.blok-audio-cover-picker * {
+  box-sizing: border-box;
+}
 
 /* ----- no-cover placeholder: a glossy black vinyl record --- */
 [data-blok-tool="audio"] .blok-audio-cover__placeholder {

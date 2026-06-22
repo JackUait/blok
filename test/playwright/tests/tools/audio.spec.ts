@@ -317,6 +317,44 @@ test('cover picker paints a themed surface matching the player (no white canvas)
   expect(surfaces.picker).not.toBe('rgb(255, 255, 255)');
 });
 
+test('cover picker subtree uses border-box so the tab-swap height does not jump', async ({ page }) => {
+  await createBlok(page);
+  await insertAudioBlock(page);
+
+  const audioBlock = page.locator(AUDIO_BLOCK_SELECTOR);
+  await audioBlock.getByTestId('file-input').setInputFiles(FIXTURE_PATH);
+  await expect(audioBlock.locator('[data-role="audio-controls"]')).toBeVisible();
+
+  const cover = audioBlock.locator('[data-role="audio-cover"]');
+  await cover.hover();
+  const changeBtn = audioBlock.locator('[data-role="audio-cover-change"]');
+  await expect(changeBtn).toBeVisible();
+  await changeBtn.click();
+
+  const picker = page.locator('[data-role="audio-cover-picker"]');
+  await expect(picker).toBeVisible();
+
+  // The picker is appended to document.body, outside blok's scoped border-box
+  // reset, so its panel defaulted to content-box. The Upload/Link height-swap
+  // animation measures the border-box height but animates the `height` property,
+  // which under content-box adds the panel padding on top — overshooting then
+  // snapping back (the visible jump). Border-box keeps the animated height equal
+  // to the measured one.
+  const boxes = await page.evaluate(() => {
+    const root = document.querySelector('[data-role="audio-cover-picker"]');
+    const panel = root?.querySelector('.blok-media-empty__panel');
+    const card = root?.querySelector('.blok-media-empty__card');
+    return {
+      dialog: root ? getComputedStyle(root).boxSizing : null,
+      panel: panel ? getComputedStyle(panel).boxSizing : null,
+      card: card ? getComputedStyle(card).boxSizing : null,
+    };
+  });
+  expect(boxes.dialog).toBe('border-box');
+  expect(boxes.panel).toBe('border-box');
+  expect(boxes.card).toBe('border-box');
+});
+
 // ---------------------------------------------------------------------------
 // 7. Cover — remove via block settings restores the spinning disc
 // ---------------------------------------------------------------------------

@@ -359,6 +359,62 @@ describe('parseNotionBlocksV3', () => {
     });
   });
 
+  describe('inline equation & page mention (phase 5)', () => {
+    it('renders an inline equation as inline code carrying the LaTeX', () => {
+      const out = parseNotionBlocksV3(
+        v3(value('a', 'text', { properties: title(['x is '], ['⁍', [['e', 'x^2']]]) }))
+      );
+
+      expect(out?.[0].data.text).toBe('x is <code>x^2</code>');
+    });
+
+    it('escapes HTML-special characters inside the equation LaTeX', () => {
+      const out = parseNotionBlocksV3(
+        v3(value('a', 'text', { properties: title(['⁍', [['e', 'a < b & c']]]) }))
+      );
+
+      expect(out?.[0].data.text).toBe('<code>a &lt; b &amp; c</code>');
+    });
+
+    it('still applies formatting marks around an inline equation', () => {
+      const out = parseNotionBlocksV3(
+        v3(value('a', 'text', { properties: title(['⁍', [['e', 'x^2'], ['b']]]) }))
+      );
+
+      expect(out?.[0].data.text).toBe('<b><code>x^2</code></b>');
+    });
+
+    it('resolves a page mention to the referenced page title', () => {
+      const out = parseNotionBlocksV3(
+        v3Tree(
+          value('p1', 'text', { properties: title(['see '], ['‣', [['p', 'pg']]]) }),
+          value('pg', 'page', { properties: title(['My Page']) })
+        )
+      );
+
+      expect(out?.[0].data.text).toBe('see My Page');
+    });
+
+    it('escapes the resolved page-mention title', () => {
+      const out = parseNotionBlocksV3(
+        v3Tree(
+          value('p1', 'text', { properties: title(['‣', [['p', 'pg']]]) }),
+          value('pg', 'page', { properties: title(['A & B <x>']) })
+        )
+      );
+
+      expect(out?.[0].data.text).toBe('A &amp; B &lt;x&gt;');
+    });
+
+    it('falls back to the placeholder text when the mentioned page is not in the payload', () => {
+      const out = parseNotionBlocksV3(
+        v3(value('p1', 'text', { properties: title(['see '], ['‣', [['p', 'missing']]]) }))
+      );
+
+      expect(out?.[0].data.text).toBe('see ‣');
+    });
+  });
+
   describe('nesting', () => {
     it('emits descendants in document order with parentId set, root without', () => {
       const out = parseNotionBlocksV3(

@@ -133,7 +133,7 @@ export function parseNotionBlocksV3(json: string): NotionParsedBlock[] | null {
       return;
     }
 
-    const mapped = mapValue(value);
+    const mapped = mapValue(value, byId);
     const children = Array.isArray(value.content) ? value.content : [];
 
     if (mapped === null) {
@@ -187,7 +187,7 @@ function expandTable(
     return columnOrder.map((columnId) => {
       const cellId = `${rowId}:${columnId}`;
 
-      cells.push({ id: cellId, tool: 'paragraph', data: { text: richText(rowProperties[columnId]) }, parentId: tableId });
+      cells.push({ id: cellId, tool: 'paragraph', data: { text: richText(rowProperties[columnId], byId) }, parentId: tableId });
 
       return { blocks: [cellId] };
     });
@@ -240,9 +240,9 @@ function resolveColumnOrder(
  * Map one Notion block value to a Blok tool + data, or `null` for structural
  * wrappers that should be dropped while their children are promoted.
  */
-function mapValue(value: NotionValue): Mapped | null {
+function mapValue(value: NotionValue, byId: Map<string, NotionValue>): Mapped | null {
   const props = value.properties ?? {};
-  const text = richText(props.title);
+  const text = richText(props.title, byId);
 
   switch (value.type) {
     case 'text':
@@ -461,17 +461,21 @@ function plainText(title: unknown): string {
   return title.map((seg) => (Array.isArray(seg) && typeof seg[0] === 'string' ? seg[0] : '')).join('');
 }
 
-/** Convert a Notion rich-text array into Blok inline HTML. */
-function richText(title: unknown): string {
+/**
+ * Convert a Notion rich-text array into Blok inline HTML. `byId` resolves
+ * page-mention (`p`) flags to their referenced page title when that page is
+ * present in the pasted payload.
+ */
+function richText(title: unknown, byId?: Map<string, NotionValue>): string {
   if (!Array.isArray(title)) {
     return '';
   }
 
-  return title.map((seg) => segmentHtml(seg)).join('');
+  return title.map((seg) => segmentHtml(seg, byId)).join('');
 }
 
 /** Convert one rich-text segment `[text, [[flag, …args], …]]` to HTML. */
-function segmentHtml(segment: unknown): string {
+function segmentHtml(segment: unknown, byId?: Map<string, NotionValue>): string {
   if (!Array.isArray(segment)) {
     return '';
   }
@@ -479,14 +483,61 @@ function segmentHtml(segment: unknown): string {
   const raw = typeof segment[0] === 'string' ? segment[0] : '';
   const annotations = Array.isArray(segment[1]) ? segment[1] : [];
 
-  // Colour flags ('h') collapse into ONE <mark>; every other flag wraps inside it.
+  // Colour flags ('h') collapse into ONE <mark>; content flags ('e' equation,
+  // 'p' page mention) replace the placeholder glyph. Every other flag wraps the
+  // resulting content from the inside out.
   const isColour = (a: unknown): boolean => Array.isArray(a) && a[0] === 'h';
+  const isContent = (a: unknown): boolean => Array.isArray(a) && (a[0] === 'e' || a[0] === 'p');
   const inner = annotations
-    .filter((a) => !isColour(a))
-    .reduce<string>((html, annotation) => wrapMark(annotation, html), escapeHtml(raw));
+    .filter((a) => !isColour(a) && !isContent(a))
+    .reduce<string>((html, annotation) => wrapMark(annotation, html), segmentContent(raw, annotations, byId));
   const style = buildColourStyle(annotations.filter(isColour));
 
   return style.length > 0 ? `<mark style="${style}">${inner}</mark>` : inner;
+}
+
+/**
+ * The base inner content of a segment: an inline `<code>` LaTeX equation (`e`),
+ * a resolved page-mention title (`p`), or the plain escaped text. Equation and
+ * mention flags carry their content in the flag args / record-map, so they
+ * replace the segment's placeholder glyph (`⁍` / `‣`) entirely.
+ */
+function segmentContent(raw: string, annotations: unknown[], byId?: Map<string, NotionValue>): string {
+  const latex = flagArg(annotations, 'e');
+
+  if (latex !== null) {
+    return `<code>${escapeHtml(latex)}</code>`;
+  }
+
+  const pageId = flagArg(annotations, 'p');
+
+  if (pageId !== null) {
+    return pageMentionContent(pageId, raw, byId);
+  }
+
+  return escapeHtml(raw);
+}
+
+/** The string argument of the first `[flag, arg, …]` annotation, or `null`. */
+function flagArg(annotations: unknown[], flag: string): string | null {
+  for (const annotation of annotations) {
+    if (Array.isArray(annotation) && annotation[0] === flag && typeof annotation[1] === 'string') {
+      return annotation[1];
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Resolve a page-mention to the referenced page's title when it is present in
+ * the pasted payload; otherwise keep the original placeholder text. (Mentions
+ * usually point at pages outside the copied selection, which are unresolvable.)
+ */
+function pageMentionContent(pageId: string, raw: string, byId?: Map<string, NotionValue>): string {
+  const titleText = plainText(byId?.get(pageId)?.properties?.title);
+
+  return escapeHtml(titleText.length > 0 ? titleText : raw);
 }
 
 /** A parsed Notion colour token: a preset name applied as text or background. */
@@ -569,7 +620,8 @@ function wrapMark(annotation: unknown, inner: string): string {
       return href === null ? inner : `<a href="${escapeAttr(href)}">${inner}</a>`;
     }
     default:
-      // 'h' (colour), 'p' (page mention), 'e' (equation) — later phases.
+      // 'h' (colour), 'e' (equation) and 'p' (page mention) are handled before
+      // wrapping (in segmentHtml / segmentContent), not here.
       return inner;
   }
 }

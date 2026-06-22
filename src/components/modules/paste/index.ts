@@ -5,6 +5,8 @@ import { composeSanitizerConfig, clean } from '../../utils/sanitizer';
 
 import { SAFE_STRUCTURAL_TAGS } from './constants';
 import { preprocessGoogleDocsHtml } from './google-docs-preprocessor';
+import { preprocessNotionHtml } from './notion-preprocessor';
+import { NOTION_BLOCKS_V3_MIME, parseNotionBlocksV3 } from './notion-blocks-v3';
 import type { PasteHandler } from './handlers/base';
 import { BlokDataHandler } from './handlers/blok-data-handler';
 import { FilesHandler } from './handlers/files-handler';
@@ -104,9 +106,15 @@ export class Paste extends Module {
    * Handle pasted data transfer object.
    */
   public async processDataTransfer(dataTransfer: DataTransfer, pasteTarget?: Element): Promise<void> {
-    const blokData = dataTransfer.getData(this.MIME_TYPE);
     const plainData = dataTransfer.getData('text/plain');
     const rawHtmlData = dataTransfer.getData('text/html');
+
+    // Native Blok clipboard data always wins. When absent, fall back to
+    // Notion's lossless proprietary flavour (web→web paste): it carries full
+    // block state (checked, language, nesting, colour…) that the HTML flavour
+    // cannot. We translate it into the Blok clipboard shape so it flows through
+    // the existing BlokDataHandler two-pass hierarchy builder.
+    const blokData = dataTransfer.getData(this.MIME_TYPE) || this.readNotionBlocksV3(dataTransfer);
 
     // Route to handlers based on data type
     const handled = await this.routeToHandlers(dataTransfer, plainData, rawHtmlData, blokData, pasteTarget);
@@ -117,6 +125,27 @@ export class Paste extends Module {
 
     // Fallback: process as plain text
     await this.processAsText(plainData);
+  }
+
+  /**
+   * Read Notion's `text/_notion-blocks-v3-production` clipboard flavour and
+   * translate it into the Blok clipboard JSON shape, or return '' when it is
+   * absent / unparseable (so the caller falls back to the HTML path).
+   */
+  private readNotionBlocksV3(dataTransfer: DataTransfer): string {
+    const raw = dataTransfer.getData(NOTION_BLOCKS_V3_MIME);
+
+    if (!raw) {
+      return '';
+    }
+
+    const parsed = parseNotionBlocksV3(raw);
+
+    if (parsed === null || parsed.length === 0) {
+      return '';
+    }
+
+    return JSON.stringify(parsed);
   }
 
   /**
@@ -222,7 +251,7 @@ export class Paste extends Module {
       { br: {} }
     );
 
-    const preprocessed = preprocessGoogleDocsHtml(rawHtmlData);
+    const preprocessed = preprocessNotionHtml(preprocessGoogleDocsHtml(rawHtmlData));
     const cleanData = clean(preprocessed, customConfig);
     const cleanDataIsHtml = dom$.isHTMLString(cleanData);
     const shouldProcessAsPlain = !cleanData.trim() || (cleanData.trim() === plainData || !cleanDataIsHtml);

@@ -2731,4 +2731,72 @@ describe('Paste module', () => {
       });
     });
   });
+
+  describe('Notion v3 clipboard flavor', () => {
+    const notionV3 = JSON.stringify({
+      blocks: [
+        {
+          blockId: 'a',
+          blockSubtree: {
+            __version__: 3,
+            block: {
+              a: {
+                value: {
+                  id: 'a',
+                  type: 'text',
+                  properties: { title: [['hi from notion']] },
+                  parent_id: 'page',
+                  parent_table: 'block',
+                  alive: true,
+                },
+              },
+            },
+          },
+        },
+      ],
+      action: 'paste',
+      wasContiguousSelection: true,
+    });
+
+    it('routes the lossless Notion JSON through the Blok data handler', async () => {
+      const { paste, mocks } = createPaste();
+
+      await paste.prepare();
+      mocks.BlockManager.insert.mockReturnValue({ id: 'new-a' });
+
+      const dataTransfer = new MockDataTransfer({
+        'text/_notion-blocks-v3-production': notionV3,
+        'text/plain': 'hi from notion',
+      });
+
+      await paste.processDataTransfer(dataTransfer);
+
+      expect(mocks.BlockManager.insert).toHaveBeenCalledTimes(1);
+      expect(mocks.BlockManager.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tool: 'paragraph',
+          data: expect.objectContaining({ text: 'hi from notion' }),
+        })
+      );
+    });
+
+    it('prefers native application/x-blok data over the Notion flavor', async () => {
+      const { paste, mocks } = createPaste();
+
+      await paste.prepare();
+      mocks.BlockManager.insert.mockReturnValue({ id: 'new-x' });
+
+      const dataTransfer = new MockDataTransfer({
+        'application/x-blok': JSON.stringify([{ id: 'x', tool: 'paragraph', data: { text: 'native' } }]),
+        'text/_notion-blocks-v3-production': notionV3,
+        'text/plain': 'hi',
+      });
+
+      await paste.processDataTransfer(dataTransfer);
+
+      expect(mocks.BlockManager.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ text: 'native' }) })
+      );
+    });
+  });
 });

@@ -856,6 +856,92 @@ const editor = new Blok({
   },
 
   {
+    id: 'audio',
+    exportName: 'Audio',
+    type: 'block',
+    badge: 'Block Tool',
+    title: 'Audio',
+    description:
+      'A music-player style audio block. Renders an uploaded or linked audio file with a custom control bar (play/pause, a waveform scrubber, volume, playback speed, loop), optional cover art, title/artist metadata, and a caption. Waveform peaks and duration are decoded once and cached in the saved data so playback renders instantly on reload. Audio is sent through a consumer-supplied uploader; when none is provided the tool falls back to a local blob URL (uploadByFile) or the pasted URL (uploadByUrl). An optional MIME allowlist and max size gate what is accepted.',
+    importExample: `import { Audio } from '@jackuait/blok/tools';`,
+    configOptions: [
+      {
+        option: 'uploader',
+        type: 'AudioUploader',
+        default: 'undefined',
+        description:
+          'Consumer-supplied uploader with optional `uploadByFile(file, ctx)` and `uploadByUrl(url, ctx)` methods, each resolving to `{ url, fileName? }`. The `ctx.onProgress(percent)` callback reports upload progress. When omitted, audio falls back to a blob URL or the pasted URL.',
+      },
+      {
+        option: 'types',
+        type: 'string[]',
+        default: "['audio/*']",
+        description:
+          'Accepted MIME allowlist. Entries may be exact (`audio/mpeg`) or family wildcards (`audio/*`). Defaults to any audio type.',
+      },
+      {
+        option: 'maxSize',
+        type: 'MaxSizeConfig',
+        default: 'undefined',
+        description:
+          'Max upload size. A number caps every type (bytes); an object caps per MIME type with `\'*\'` as the fallback.',
+      },
+      {
+        option: 'captionPlaceholder',
+        type: 'string',
+        default: 'undefined',
+        description: 'Placeholder text shown in the caption field.',
+      },
+    ],
+    saveDataShape: `interface AudioData {
+  url: string;             // Audio source URL — http(s) or blob:
+  caption?: string;        // Plain-text caption
+  captionVisible?: boolean; // Caption visible in the rendered state
+  title?: string;          // Track title (from file metadata or edited)
+  artist?: string;         // Track artist
+  coverUrl?: string;       // Cover art image URL
+  loop?: boolean;          // Loop playback
+  width?: number;          // Rendered width in pixels (resize handle)
+  alignment?: 'left' | 'center' | 'right';
+  fileName?: string;       // Original filename, when known
+  mimeType?: string;       // MIME type
+  duration?: number;       // Decoded duration in seconds (cached)
+  peaks?: number[];        // Cached waveform peaks for the scrubber
+}`,
+    saveDataExample: `{
+  "id": "aud001",
+  "type": "audio",
+  "data": {
+    "url": "https://example.com/media/track.mp3",
+    "fileName": "track.mp3",
+    "mimeType": "audio/mpeg",
+    "title": "My Song",
+    "artist": "The Artist",
+    "alignment": "center"
+  }
+}`,
+    usageExample: `import { Blok } from '@jackuait/blok';
+import { Audio } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    audio: {
+      class: Audio,
+      config: {
+        uploader: {
+          async uploadByFile(file) {
+            const url = await myUpload(file);
+            return { url, fileName: file.name };
+          },
+        },
+      },
+    },
+  },
+});`,
+  },
+
+  {
     id: 'video',
     exportName: 'Video',
     type: 'block',

@@ -209,13 +209,20 @@ describe('Nav', () => {
     expect(screen.getByLabelText('Поиск (⌘K)')).toBeInTheDocument();
   });
 
-  describe('hide on scroll', () => {
+  describe('scroll-linked hide/reveal', () => {
     const setScrollY = (value: number) => {
       Object.defineProperty(window, 'scrollY', {
         value,
         writable: true,
         configurable: true,
       });
+    };
+
+    // The header transform is driven continuously by the scroll gesture:
+    // translateY(0px) = fully visible, translateY(-120px) = fully tucked away.
+    const offsetOf = (nav: HTMLElement): number => {
+      const match = /translateY\((-?\d+(?:\.\d+)?)px\)/.exec(nav.style.transform);
+      return match ? Math.abs(parseFloat(match[1])) : 0;
     };
 
     beforeEach(() => {
@@ -226,7 +233,7 @@ describe('Nav', () => {
       });
     });
 
-    it('is visible at the top of the page', () => {
+    it('is fully visible at the top of the page', () => {
       render(
         <TestWrapper>
           <Nav links={mockLinks} />
@@ -237,10 +244,33 @@ describe('Nav', () => {
         setScrollY(40);
         fireEvent.scroll(window);
       });
-      expect(nav.className).not.toContain('hidden');
+      expect(offsetOf(nav)).toBe(0);
     });
 
-    it('hides when scrolling down past the threshold', () => {
+    it('tucks away progressively — partially hidden for a partial scroll', () => {
+      render(
+        <TestWrapper>
+          <Nav links={mockLinks} />
+        </TestWrapper>
+      );
+      const nav = screen.getByRole('navigation');
+      // Anchor just past the hide threshold (80px), then scroll down 30px more.
+      act(() => {
+        setScrollY(80);
+        fireEvent.scroll(window);
+      });
+      act(() => {
+        setScrollY(110);
+        fireEvent.scroll(window);
+      });
+      // Tucks ~2x the scrolled distance (a short scroll hides it): ~60px tucked,
+      // still partial — proving continuous tracking, not a snap.
+      expect(offsetOf(nav)).toBeGreaterThan(0);
+      expect(offsetOf(nav)).toBeLessThan(120);
+      expect(offsetOf(nav)).toBeCloseTo(60, 0);
+    });
+
+    it('is fully hidden once scrolled far enough down', () => {
       render(
         <TestWrapper>
           <Nav links={mockLinks} />
@@ -248,17 +278,17 @@ describe('Nav', () => {
       );
       const nav = screen.getByRole('navigation');
       act(() => {
-        setScrollY(50);
+        setScrollY(80);
         fireEvent.scroll(window);
       });
       act(() => {
-        setScrollY(200);
+        setScrollY(600);
         fireEvent.scroll(window);
       });
-      expect(nav.className).toContain('hidden');
+      expect(offsetOf(nav)).toBe(120);
     });
 
-    it('shows again when scrolling up', () => {
+    it('reveals progressively when scrolling back up', () => {
       render(
         <TestWrapper>
           <Nav links={mockLinks} />
@@ -266,15 +296,44 @@ describe('Nav', () => {
       );
       const nav = screen.getByRole('navigation');
       act(() => {
-        setScrollY(300);
+        setScrollY(80);
         fireEvent.scroll(window);
       });
-      expect(nav.className).toContain('hidden');
       act(() => {
-        setScrollY(200);
+        setScrollY(600);
         fireEvent.scroll(window);
       });
-      expect(nav.className).not.toContain('hidden');
+      expect(offsetOf(nav)).toBe(120);
+      // Scroll up 20px — header peeks back ~2x (40px), still partly tucked.
+      act(() => {
+        setScrollY(580);
+        fireEvent.scroll(window);
+      });
+      expect(offsetOf(nav)).toBeCloseTo(80, 0);
+      expect(offsetOf(nav)).toBeGreaterThan(0);
+    });
+
+    it('snaps back to fully visible when returning to the top', () => {
+      render(
+        <TestWrapper>
+          <Nav links={mockLinks} />
+        </TestWrapper>
+      );
+      const nav = screen.getByRole('navigation');
+      act(() => {
+        setScrollY(80);
+        fireEvent.scroll(window);
+      });
+      act(() => {
+        setScrollY(600);
+        fireEvent.scroll(window);
+      });
+      expect(offsetOf(nav)).toBe(120);
+      act(() => {
+        setScrollY(40);
+        fireEvent.scroll(window);
+      });
+      expect(offsetOf(nav)).toBe(0);
     });
   });
 });

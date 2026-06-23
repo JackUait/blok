@@ -93,22 +93,79 @@ const useTilt = () => {
 
 // The showpiece: Blok's headless output rendered as a tiny syntax-lit editor
 // pane with a live caret, lit by a warm brand glow bleeding in from the corner.
-const CleanJsonViz: React.FC = () => (
+const CleanJsonViz: React.FC = () => {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const edgeRef = useRef<HTMLSpanElement>(null);
+  const dividerRef = useRef<HTMLSpanElement>(null);
+  const reduce = useReducedMotion();
+
+  // Light the editor's border where the tile's glow blob touches it — driven off
+  // the whole tile (not just the pane) so the edge reacts to the blob, not the
+  // bare cursor, matching the chip-grid behaviour. Both the outer ring and the
+  // inner header divider share one mask: the header sits flush at the pane's
+  // top-left, so the pane-relative coordinates line up on it too.
+  useEffect(() => {
+    if (reduce) return;
+    const wrap = wrapRef.current;
+    const tile = wrap?.closest(".bento-tile");
+    if (!wrap || !tile) return;
+
+    const apply = (clientX: number | null, clientY: number | null) => {
+      const edges = [edgeRef.current, dividerRef.current];
+      if (clientX === null || clientY === null) {
+        edges.forEach((edge) => edge && (edge.style.opacity = "0"));
+        return;
+      }
+      const r = wrap.getBoundingClientRect();
+      const mask = `radial-gradient(${CHIP_GLOW_RADIUS}px circle at ${clientX - r.left}px ${clientY - r.top}px, #000 0%, transparent 62%)`;
+      edges.forEach((edge) => {
+        if (!edge) return;
+        edge.style.opacity = "1";
+        edge.style.maskImage = mask;
+        edge.style.webkitMaskImage = mask;
+      });
+    };
+
+    const onMove = (e: Event) => {
+      const pe = e as PointerEvent;
+      if (pe.pointerType === "mouse") apply(pe.clientX, pe.clientY);
+    };
+    const onLeave = () => apply(null, null);
+
+    tile.addEventListener("pointermove", onMove);
+    tile.addEventListener("pointerleave", onLeave);
+    return () => {
+      tile.removeEventListener("pointermove", onMove);
+      tile.removeEventListener("pointerleave", onLeave);
+    };
+  }, [reduce]);
+
+  return (
   <div
+    ref={wrapRef}
     aria-hidden="true"
-    className="relative w-full overflow-hidden rounded-2xl border border-border/60 bg-secondary/60 shadow-sm"
+    className="relative flex h-full w-full flex-col overflow-hidden rounded-2xl border border-border/60 bg-secondary shadow-sm"
   >
-    <div className="pointer-events-none absolute -right-12 -top-12 size-44 rounded-full bg-linear-to-br from-brand-from via-brand-via to-brand-to opacity-20 blur-3xl transition-opacity duration-500 group-hover:opacity-35" />
+    <span
+      ref={edgeRef}
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 z-20 rounded-2xl border-[1.5px] border-brand-from opacity-0 transition-opacity duration-200"
+    />
     <div className="relative flex items-center gap-1.5 border-b border-border/50 px-4 py-2.5">
+      <span
+        ref={dividerRef}
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-20 border-b border-brand-from opacity-0 transition-opacity duration-200"
+      />
       <span className="size-2.5 rounded-full bg-foreground/15" />
       <span className="size-2.5 rounded-full bg-foreground/15" />
       <span className="size-2.5 rounded-full bg-foreground/15" />
-      <span className="ml-2 flex items-center font-mono text-[10px] tracking-tight text-muted-foreground">
+      <span className="ml-2 flex items-center font-mono text-[11px] tracking-tight text-muted-foreground">
         editor.save()
         <span className="bento-caret ml-0.5 inline-block h-3 w-px bg-primary" />
       </span>
     </div>
-    <pre className="relative overflow-hidden px-4 py-3 font-mono text-[10.5px] leading-[1.7] text-muted-foreground">
+    <pre className="relative flex-1 overflow-hidden px-5 py-4 font-mono text-[12.5px] leading-[1.85] text-muted-foreground">
       {"{\n  "}
       <span className="text-brand-gradient font-semibold">"blocks"</span>
       {": [\n    { "}
@@ -119,66 +176,387 @@ const CleanJsonViz: React.FC = () => (
       <span className="text-muted-foreground/60">"type"</span>
       {": "}
       <span className="text-primary">"paragraph"</span>
-      {" }\n  ]\n}"}
+      {",\n      "}
+      <span className="text-muted-foreground/60">"data"</span>
+      {": { "}
+      <span className="text-muted-foreground/60">"text"</span>
+      {": "}
+      <span className="text-primary">"Hello"</span>
+      {" } },\n    { "}
+      <span className="text-muted-foreground/60">"id"</span>
+      {": "}
+      <span className="text-primary">"x2"</span>
+      {",\n      "}
+      <span className="text-muted-foreground/60">"type"</span>
+      {": "}
+      <span className="text-primary">"header"</span>
+      {",\n      "}
+      <span className="text-muted-foreground/60">"data"</span>
+      {": { "}
+      <span className="text-muted-foreground/60">"level"</span>
+      {": "}
+      <span className="text-foreground">2</span>
+      {" } }\n  ],\n  "}
+      <span className="text-brand-gradient font-semibold">"version"</span>
+      {": "}
+      <span className="text-primary">"0.19.0"</span>
+      {"\n}"}
     </pre>
   </div>
-);
+  );
+};
 
-// One compact glyph per shipped block type — a palette you could scan.
-const BLOCK_CHIPS: { label: string; path: React.ReactNode }[] = [
-  { label: "Table", path: <><rect x="4" y="5" width="16" height="14" rx="2" /><path d="M4 10h16M4 15h16M10 5v14" /></> },
-  { label: "Database", path: <><rect x="5" y="4" width="4" height="16" rx="1" /><rect x="11" y="4" width="4" height="10" rx="1" /><rect x="17" y="4" width="2" height="13" rx="1" /></> },
-  { label: "Columns", path: <><rect x="4" y="5" width="6" height="14" rx="1.5" /><rect x="14" y="5" width="6" height="14" rx="1.5" /></> },
-  { label: "Callout", path: <><rect x="4" y="5" width="16" height="14" rx="3" /><path d="M9 12h6" /></> },
-  { label: "Code", path: <><path d="M9 8l-4 4 4 4M15 8l4 4-4 4" /></> },
-  { label: "Media", path: <><rect x="4" y="5" width="16" height="14" rx="2" /><circle cx="9" cy="10" r="1.6" /><path d="M5 17l5-4 4 3 5-4" /></> },
-  { label: "Embed", path: <><rect x="4" y="6" width="16" height="12" rx="2" /><path d="M11 9.5l4 2.5-4 2.5z" fill="currentColor" stroke="none" /></> },
-  { label: "Toggle", path: <><path d="M9 7l5 5-5 5" /><path d="M6 19h12" /></> },
+// One glyph per shipped block type — a duotone palette you could scan: crisp
+// strokes carrying soft currentColor fills for mass. At rest every glyph is
+// muted; when the blob touches a chip its lit copy adopts the block's own accent.
+const BLOCK_CHIPS: { label: string; color: string; path: React.ReactNode }[] = [
+  {
+    label: "Table",
+    color: "#4c6fff",
+    path: (
+      <>
+        <path d="M6 4.75h12a2.25 2.25 0 0 1 2.25 2.25V9.5H3.75V7A2.25 2.25 0 0 1 6 4.75Z" fill="currentColor" fillOpacity="0.16" stroke="none" />
+        <rect x="3.75" y="4.75" width="16.5" height="14.5" rx="3" />
+        <path d="M3.75 9.5h16.5M10 9.5v9.75" />
+      </>
+    ),
+  },
+  {
+    label: "Database",
+    color: "#8b5cf6",
+    path: (
+      <>
+        <ellipse cx="12" cy="5.75" rx="7" ry="2.6" fill="currentColor" fillOpacity="0.16" stroke="none" />
+        <path d="M5 5.75v12.5c0 1.43 3.13 2.6 7 2.6s7-1.17 7-2.6V5.75" />
+        <ellipse cx="12" cy="5.75" rx="7" ry="2.6" />
+        <path d="M5 12c0 1.43 3.13 2.6 7 2.6s7-1.17 7-2.6" />
+      </>
+    ),
+  },
+  {
+    label: "Columns",
+    color: "#16a34a",
+    path: (
+      <>
+        <rect x="3.75" y="4.75" width="6.5" height="14.5" rx="2" fill="currentColor" fillOpacity="0.16" stroke="none" />
+        <rect x="3.75" y="4.75" width="6.5" height="14.5" rx="2" />
+        <rect x="13.75" y="4.75" width="6.5" height="14.5" rx="2" />
+      </>
+    ),
+  },
+  {
+    label: "Callout",
+    color: "#f2922e",
+    path: (
+      <>
+        <rect x="3.5" y="5" width="17" height="14" rx="3.5" fill="currentColor" fillOpacity="0.12" stroke="none" />
+        <rect x="3.5" y="5" width="17" height="14" rx="3.5" />
+        <path d="M7 8.75v6.5" strokeWidth="2.1" />
+        <path d="M10.75 10h6M10.75 14h4" />
+      </>
+    ),
+  },
+  {
+    label: "Code",
+    color: "#e94e7a",
+    path: (
+      <>
+        <rect x="3.25" y="4.75" width="17.5" height="14.5" rx="3.5" fill="currentColor" fillOpacity="0.1" stroke="none" />
+        <rect x="3.25" y="4.75" width="17.5" height="14.5" rx="3.5" />
+        <path d="M9 9.75 6.5 12 9 14.25M15 9.75 17.5 12 15 14.25M13 8.75 11 15.25" />
+      </>
+    ),
+  },
+  {
+    label: "Media",
+    color: "#0ea5a4",
+    path: (
+      <>
+        <rect x="3.5" y="5" width="17" height="14" rx="3.5" fill="currentColor" fillOpacity="0.1" stroke="none" />
+        <rect x="3.5" y="5" width="17" height="14" rx="3.5" />
+        <circle cx="8.5" cy="9.5" r="1.5" fill="currentColor" stroke="none" />
+        <path d="M4 16.5 8 13l2.75 2.4L15 10l5.5 5.25" />
+      </>
+    ),
+  },
+  {
+    label: "Embed",
+    color: "#ef4444",
+    path: (
+      <>
+        <rect x="3.5" y="5.5" width="17" height="13" rx="3.5" fill="currentColor" fillOpacity="0.1" stroke="none" />
+        <rect x="3.5" y="5.5" width="17" height="13" rx="3.5" />
+        <path d="M10.25 9.4 15 12l-4.75 2.6Z" fill="currentColor" stroke="none" />
+      </>
+    ),
+  },
+  {
+    label: "Toggle",
+    color: "#6366f1",
+    path: (
+      <>
+        <path d="M6 8 10 11.5 6 15Z" fill="currentColor" fillOpacity="0.18" />
+        <path d="M13 9.5h5.5M13 13.75h5.5" />
+      </>
+    ),
+  },
 ];
 
-const BlocksViz: React.FC = () => (
-  <div aria-hidden="true" className="grid w-full grid-cols-4 gap-2">
-    {BLOCK_CHIPS.map((chip, i) => (
+// The palette, drawn once. The `lit` copy paints each chip in its own block
+// accent (border + glyph + label) and is stacked over the muted base, then
+// revealed through a radial mask at the cursor — so the chips the blob touches
+// light up crisply in their own colour, which the base copy can't show.
+const ChipGrid: React.FC<{ lit?: boolean }> = ({ lit }) => (
+  <div className="grid h-full w-full grid-cols-4 gap-2">
+    {BLOCK_CHIPS.map((chip) => (
       <div
         key={chip.label}
-        className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-border/50 bg-card/70 py-2.5 text-muted-foreground transition-all duration-300 group-hover:-translate-y-0.5 group-hover:border-primary/30 group-hover:text-primary"
-        style={{ transitionDelay: `${i * 25}ms` }}
+        style={lit ? { color: chip.color, borderColor: chip.color } : undefined}
+        className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border py-2.5 ${
+          lit ? "" : "border-border/50 bg-card text-muted-foreground"
+        }`}
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           {chip.path}
         </svg>
-        <span className="text-[10px] font-medium leading-none tracking-tight">{chip.label}</span>
+        <span className="text-[10px] font-semibold leading-none tracking-tight">{chip.label}</span>
       </div>
     ))}
   </div>
 );
 
-// A "bring your own block" snippet + the lifecycle hooks a custom tool gets.
-const LIFECYCLE = ["rendered", "updated", "moved", "removed"];
+// Radius of the brand spotlight revealed over masked layers, in px — matched to
+// the tile's visible glow blob (.bento-spot, 226×200 + ~1.2× squash + blur, so it
+// reaches ~140px from the cursor) so an element lights the instant the glow
+// visually touches it rather than lagging until the cursor is right on top. The
+// reveal fades out at 62% → ~143px, tracking the blob's edge.
+const CHIP_GLOW_RADIUS = 230;
 
-const ExtensibleViz: React.FC = () => (
-  <div aria-hidden="true" className="flex w-full flex-col gap-2.5">
-    <div className="rounded-xl border border-border/60 bg-secondary/60 px-3 py-2 font-mono text-[10.5px] leading-relaxed text-muted-foreground">
-      <span className="text-brand-gradient font-semibold">class</span>{" "}
-      <span className="text-foreground">MyTool</span>{" {"}
-      <br />
-      {"  "}<span className="text-primary">render</span>(){" { … }"}
-      <br />
-      {"}"}
+const BlocksViz: React.FC = () => {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const litRef = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
+
+  // Drive the border reveal off the whole tile, not just the grid — so the chips
+  // light the moment the tile's glow blob reaches them, even while the cursor is
+  // still over the title. (Scoping the listener to the grid made borders wait for
+  // the mouse to physically arrive, decoupling them from the blob.)
+  useEffect(() => {
+    if (reduce) return;
+    const wrap = wrapRef.current;
+    const tile = wrap?.closest(".bento-tile");
+    if (!wrap || !tile) return;
+
+    const apply = (clientX: number | null, clientY: number | null) => {
+      const lit = litRef.current;
+      if (!lit) return;
+      if (clientX === null || clientY === null) {
+        lit.style.opacity = "0";
+        return;
+      }
+      const r = wrap.getBoundingClientRect();
+      const mask = `radial-gradient(${CHIP_GLOW_RADIUS}px circle at ${clientX - r.left}px ${clientY - r.top}px, #000 0%, transparent 62%)`;
+      lit.style.opacity = "1";
+      lit.style.maskImage = mask;
+      lit.style.webkitMaskImage = mask;
+    };
+
+    const onMove = (e: Event) => {
+      const pe = e as PointerEvent;
+      if (pe.pointerType === "mouse") apply(pe.clientX, pe.clientY);
+    };
+    const onLeave = () => apply(null, null);
+
+    tile.addEventListener("pointermove", onMove);
+    tile.addEventListener("pointerleave", onLeave);
+    return () => {
+      tile.removeEventListener("pointermove", onMove);
+      tile.removeEventListener("pointerleave", onLeave);
+    };
+  }, [reduce]);
+
+  return (
+    <div ref={wrapRef} aria-hidden="true" className="relative w-full">
+      <ChipGrid />
+      <div
+        ref={litRef}
+        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200"
+      >
+        <ChipGrid lit />
+      </div>
     </div>
-    <div className="flex flex-wrap gap-1.5">
-      {LIFECYCLE.map((hook, i) => (
-        <span
-          key={hook}
-          className="rounded-full border border-border/60 bg-card/70 px-2.5 py-1 font-mono text-[10px] text-muted-foreground transition-colors duration-300 group-hover:border-primary/30 group-hover:text-primary"
-          style={{ transitionDelay: `${i * 35}ms` }}
-        >
-          {hook}()
+  );
+};
+
+// "Bring your own blocks" told without a line of code — because the value lands
+// for anyone, not just developers. We frame it as a live block-picker dropdown
+// that floats up out of the tile and spills past its right + bottom borders (the
+// tile clips it), so it reads as one slice of a larger menu — the "popover
+// poking over the container edge" feel that worked best. The picker lists a
+// familiar block, a custom one marked "yours" to make "custom" tangible, and an
+// inviting dashed row to add whatever block you dream up. No jargon.
+const PAGE_BLOCKS: { label: string; glyph: React.ReactNode; mine?: boolean }[] = [
+  // document with text lines — duotone: soft-filled page behind crisp strokes
+  {
+    label: "Text",
+    glyph: (
+      <>
+        <rect x="4.75" y="3.5" width="14.5" height="17" rx="3.2" fill="currentColor" fillOpacity="0.15" stroke="none" />
+        <rect x="4.75" y="3.5" width="14.5" height="17" rx="3.2" />
+        <path d="M8 8.5h8M8 12h8M8 15.5h5" />
+      </>
+    ),
+  },
+  // rounded bar chart — a custom "Poll" block someone added themselves
+  {
+    label: "Poll",
+    mine: true,
+    glyph: (
+      <>
+        <path d="M4 20.25h16" />
+        <rect x="5.5" y="11.5" width="3.6" height="6.5" rx="1.3" fill="currentColor" fillOpacity="0.2" stroke="none" />
+        <rect x="5.5" y="11.5" width="3.6" height="6.5" rx="1.3" />
+        <rect x="10.2" y="6.5" width="3.6" height="11.5" rx="1.3" fill="currentColor" fillOpacity="0.2" stroke="none" />
+        <rect x="10.2" y="6.5" width="3.6" height="11.5" rx="1.3" />
+        <rect x="14.9" y="9" width="3.6" height="9" rx="1.3" fill="currentColor" fillOpacity="0.2" stroke="none" />
+        <rect x="14.9" y="9" width="3.6" height="9" rx="1.3" />
+      </>
+    ),
+  },
+];
+
+const ExtensibleViz: React.FC = () => {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const edgeRef = useRef<HTMLSpanElement>(null);
+  const addLitRef = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
+
+  // Light the picker's border where the tile's glow blob touches it — the same
+  // tile-wide pointer tracking the other tiles use, but measured against the
+  // floating dropdown card (which bleeds past the tile edges).
+  useEffect(() => {
+    if (reduce) return;
+    const card = cardRef.current;
+    const tile = card?.closest(".bento-tile");
+    if (!card || !tile) return;
+
+    // Each masked layer (border ring + the "add your own" reveal) measures its
+    // own box, so a single cursor position lights both correctly wherever they
+    // sit in the card.
+    const apply = (clientX: number | null, clientY: number | null) => {
+      [edgeRef.current, addLitRef.current].forEach((el) => {
+        if (!el) return;
+        if (clientX === null || clientY === null) {
+          el.style.opacity = "0";
+          return;
+        }
+        const r = el.getBoundingClientRect();
+        const mask = `radial-gradient(${CHIP_GLOW_RADIUS}px circle at ${clientX - r.left}px ${clientY - r.top}px, #000 0%, transparent 62%)`;
+        el.style.opacity = "1";
+        el.style.maskImage = mask;
+        el.style.webkitMaskImage = mask;
+      });
+    };
+
+    const onMove = (e: Event) => {
+      const pe = e as PointerEvent;
+      if (pe.pointerType === "mouse") apply(pe.clientX, pe.clientY);
+    };
+    const onLeave = () => apply(null, null);
+
+    tile.addEventListener("pointermove", onMove);
+    tile.addEventListener("pointerleave", onLeave);
+    return () => {
+      tile.removeEventListener("pointermove", onMove);
+      tile.removeEventListener("pointerleave", onLeave);
+    };
+  }, [reduce]);
+
+  return (
+  <div aria-hidden="true" className="relative h-full min-h-[150px] w-full">
+    {/* Floating block-picker dropdown — wider than the tile's viz column and
+        anchored top-left so it bleeds over the right + bottom borders. */}
+    <div ref={cardRef} className="absolute left-0 top-[-6px] w-[122%] overflow-hidden rounded-2xl border border-border/60 bg-card shadow-[0_24px_55px_-14px_rgba(0,0,0,0.25)]">
+      {/* brand border revealed where the glow blob touches the picker's edge */}
+      <span
+        ref={edgeRef}
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-30 rounded-2xl border-[1.5px] border-brand-from opacity-0 transition-opacity duration-200"
+      />
+      {/* picker search header */}
+      <div className="flex items-center gap-2 border-b border-border/50 px-3.5 py-2">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground/70">
+          <circle cx="11" cy="11" r="6.5" />
+          <path d="m20 20-3.5-3.5" />
+        </svg>
+        <span className="flex items-center text-[11.5px] font-medium tracking-tight text-muted-foreground">
+          Add a block
+          <span className="bento-caret ml-0.5 inline-block h-3 w-px bg-primary" />
         </span>
-      ))}
+      </div>
+
+      <div className="flex flex-col gap-1 px-2 pt-2 pb-6">
+        {PAGE_BLOCKS.map((block) => (
+          <div
+            key={block.label}
+            style={block.mine ? { borderColor: "var(--brand-from)" } : undefined}
+            className={`flex items-center gap-2.5 rounded-xl border px-3 py-1.5 ${
+              block.mine ? "bg-primary/[0.06]" : "border-transparent"
+            }`}
+          >
+            <span
+              className={`flex size-7 shrink-0 items-center justify-center rounded-[10px] ${
+                block.mine
+                  ? "bg-linear-to-br from-brand-from to-brand-to text-white shadow-[0_4px_12px_-2px_rgba(233,78,122,0.5)] ring-1 ring-inset ring-white/25"
+                  : "border border-border/60 bg-card text-muted-foreground shadow-sm"
+              }`}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                {block.glyph}
+              </svg>
+            </span>
+            <span className={`text-[12px] font-semibold tracking-tight ${block.mine ? "text-foreground" : "text-muted-foreground"}`}>
+              {block.label}
+            </span>
+            {block.mine && (
+              <span className="ml-auto rounded-full bg-linear-to-r from-brand-from to-brand-to px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                yours
+              </span>
+            )}
+          </div>
+        ))}
+
+        {/* The invitation: gray at rest, its brand colour revealed only where the
+            glow blob masks over it (lit duplicate stacked above the gray base). */}
+        <div className="relative">
+          <div className="flex items-center gap-2.5 rounded-xl border border-dashed border-border px-3 py-1.5 text-muted-foreground">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-[10px] border border-dashed border-border">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M12 6v12M6 12h12" />
+              </svg>
+            </span>
+            <span className="text-[12px] font-semibold tracking-tight">Add your own block</span>
+          </div>
+          <div
+            ref={addLitRef}
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200"
+          >
+            <div className="flex items-center gap-2.5 rounded-xl border border-dashed border-primary px-3 py-1.5 text-primary">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-[10px] border border-dashed border-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M12 6v12M6 12h12" />
+                </svg>
+              </span>
+              <span className="text-[12px] font-semibold tracking-tight">Add your own block</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-);
+  );
+};
 
 // The slash toolbox: a search row with a live caret + fuzzy-matched results.
 const SLASH_ROWS = [
@@ -188,7 +566,7 @@ const SLASH_ROWS = [
 ];
 
 const SlashViz: React.FC = () => (
-  <div aria-hidden="true" className="w-full overflow-hidden rounded-xl border border-border/60 bg-card/80 shadow-sm">
+  <div aria-hidden="true" className="w-full overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
     <div className="flex items-center gap-2 border-b border-border/50 px-3 py-2">
       <span className="flex size-5 items-center justify-center rounded-md bg-linear-to-br from-brand-from to-brand-to font-mono text-[11px] font-bold text-white">/</span>
       <span className="font-mono text-[11px] text-muted-foreground">head</span>
@@ -222,7 +600,7 @@ const KANBAN = [
 const DatabasesViz: React.FC = () => (
   <div aria-hidden="true" className="flex w-full gap-2">
     {KANBAN.map((col, ci) => (
-      <div key={ci} className="flex flex-1 flex-col gap-1.5 rounded-xl bg-secondary/70 p-1.5">
+      <div key={ci} className="flex flex-1 flex-col gap-1.5 rounded-xl bg-secondary p-1.5">
         <span className="mx-1 mt-0.5 h-1.5 w-6 rounded-full bg-linear-to-r from-brand-from to-brand-to opacity-70" />
         {col.h.map((h, ri) => (
           <div
@@ -264,7 +642,7 @@ const EmbedsViz: React.FC = () => (
     {EMBEDS.map((e) => (
       <div
         key={e.host}
-        className="bento-sheen relative flex items-center gap-2.5 overflow-hidden rounded-xl border border-border/60 bg-card/80 p-2 transition-transform duration-300 group-hover:translate-x-0.5"
+        className="bento-sheen relative flex items-center gap-2.5 overflow-hidden rounded-xl border border-border/60 bg-card p-2 transition-transform duration-300 group-hover:translate-x-0.5"
       >
         <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-brand-from via-brand-via to-brand-to text-[13px] text-white">
           {e.tag}
@@ -282,7 +660,7 @@ const EmbedsViz: React.FC = () => (
 // each step, with the ⌘Z shortcut hovering above.
 const UndoViz: React.FC = () => (
   <div aria-hidden="true" className="flex w-full flex-col items-center gap-3.5 py-1">
-    <div className="flex items-center gap-1.5 rounded-full border border-border/60 bg-card/80 px-2.5 py-1 font-mono text-[10px] text-muted-foreground shadow-sm">
+    <div className="flex items-center gap-1.5 rounded-full border border-border/60 bg-card px-2.5 py-1 font-mono text-[10px] text-muted-foreground shadow-sm">
       <span>⌘Z</span>
       <span className="text-foreground/20">·</span>
       <span>⌘⇧Z</span>
@@ -321,7 +699,7 @@ const LanguagesViz: React.FC = () => (
         <span
           key={loc.label}
           dir={loc.rtl ? "rtl" : "ltr"}
-          className="rounded-full border border-border/60 bg-card/70 px-2 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors duration-300 group-hover:border-primary/30 group-hover:text-primary"
+          className="rounded-full border border-border/60 bg-card px-2 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors duration-300 group-hover:border-primary/30 group-hover:text-primary"
           style={{ transitionDelay: `${i * 30}ms` }}
         >
           {loc.label}
@@ -374,7 +752,7 @@ const PillarTile: React.FC<
       transition={hoverSpring}
       style={tilt.style}
       {...tilt.handlers}
-      className={`bento-tile group relative flex w-[74vw] shrink-0 snap-center cursor-pointer flex-col items-start gap-4 overflow-hidden rounded-3xl border border-border/60 bg-card p-7 text-left transition-[border-color] duration-300 hover:border-primary/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background md:w-auto md:shrink lg:w-auto ${TILE[feature.accent].span} ${
+      className={`bento-tile group relative flex w-[74vw] shrink-0 snap-center cursor-pointer flex-col items-start gap-4 overflow-hidden rounded-3xl border border-border/60 bg-card p-7 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background md:w-auto md:shrink lg:w-auto ${TILE[feature.accent].span} ${
         isHero ? "lg:gap-3.5 lg:p-7" : "lg:flex-row lg:items-stretch"
       }`}
       onClick={() => onOpen(feature)}
@@ -383,16 +761,12 @@ const PillarTile: React.FC<
       <span className="bento-spot" aria-hidden="true" />
 
       <div className={`relative z-10 flex flex-col ${isHero ? "" : "lg:w-[44%] lg:shrink-0 lg:justify-center"}`}>
-        <span
-          aria-hidden="true"
-          className="mb-3.5 block h-[3px] w-9 rounded-full bg-linear-to-r from-brand-from via-brand-via to-brand-to transition-[width] duration-300 group-hover:w-14"
-        />
-        <h3 className={`text-balance font-bold leading-[1.05] tracking-tight ${isHero ? "text-[1.9rem] lg:text-[2.35rem]" : "text-[1.5rem] lg:text-[1.75rem]"}`}>
+        <h3 className={`text-balance font-extrabold leading-[1.05] tracking-tight ${isHero ? "text-[1.9rem] lg:text-[2.35rem]" : "text-[1.5rem] lg:text-[1.75rem]"}`}>
           {feature.title}
         </h3>
       </div>
 
-      <div className="relative z-10 flex w-full flex-1 items-center">
+      <div className={`relative z-10 flex w-full flex-1 ${isHero ? "items-stretch" : "items-center"}`}>
         <Viz />
       </div>
     </motion.button>

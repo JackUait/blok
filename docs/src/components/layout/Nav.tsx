@@ -17,10 +17,12 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
   const location = useLocation();
   const { t } = useI18n();
   const [navScrolled, setNavScrolled] = useState(false);
-  const [navHidden, setNavHidden] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const lastScrollYRef = useRef(0);
+  const hideOffsetRef = useRef(0);
+  const menuOpenRef = useRef(false);
+  const navRef = useRef<HTMLElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Determine active link based on current location
@@ -35,21 +37,39 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
     });
   }, [links, location.pathname]);
 
+  // Drive the header's vertical position directly from the scroll gesture so it
+  // tucks away and peeks back in proportion to how far you scroll — a continuous
+  // scroll-linked motion rather than a binary snap. translateY(0) = fully shown,
+  // translateY(-MAX_HIDE) = fully tucked above the viewport.
   useEffect(() => {
-    const HIDE_THRESHOLD = 80;
+    const HIDE_THRESHOLD = 80; // keep the bar pinned near the very top
+    const MAX_HIDE = 120; // px of travel to fully clear the island + its shadow
+    const HIDE_SPEED = 2; // bar travels Nx the scroll delta → hides over ~60px
+    const reduceMotion =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
     const handleScroll = () => {
       const scrollY = window.scrollY;
-      const lastY = lastScrollYRef.current;
+      const delta = scrollY - lastScrollYRef.current;
       setNavScrolled(scrollY > 20);
 
-      if (scrollY <= HIDE_THRESHOLD) {
-        setNavHidden(false);
-      } else if (scrollY > lastY) {
-        setNavHidden(true);
-      } else if (scrollY < lastY) {
-        setNavHidden(false);
-      }
+      // Pin the bar fully open near the top, while a menu is open, or under
+      // reduced-motion. Otherwise accumulate the gesture: scrolling down adds to
+      // the tuck offset, scrolling up subtracts, clamped so the bar can rest
+      // anywhere between fully shown and fully tucked.
+      const offset =
+        reduceMotion || menuOpenRef.current || scrollY <= HIDE_THRESHOLD
+          ? 0
+          : Math.min(
+              Math.max(hideOffsetRef.current + delta * HIDE_SPEED, 0),
+              MAX_HIDE,
+            );
+      hideOffsetRef.current = offset;
       lastScrollYRef.current = scrollY;
+
+      const nav = navRef.current;
+      if (nav) nav.style.transform = `translateY(${-offset}px)`;
     };
 
     const tickingState = { value: false };
@@ -66,6 +86,23 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // Opening the menu pulls the bar fully back into view (smoothly), so the
+  // dropdown never anchors to a half-tucked header.
+  useEffect(() => {
+    menuOpenRef.current = menuOpen;
+    if (!menuOpen) return;
+    hideOffsetRef.current = 0;
+    const nav = navRef.current;
+    if (nav) {
+      nav.style.transition = "transform 300ms cubic-bezier(0.22,1,0.36,1)";
+      nav.style.transform = "translateY(0px)";
+      const clear = window.setTimeout(() => {
+        nav.style.transition = "";
+      }, 320);
+      return () => window.clearTimeout(clear);
+    }
+  }, [menuOpen]);
 
   // Close menu on route change
   useEffect(() => {
@@ -127,12 +164,8 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
   return (
     <>
       <nav
-        className={cn(
-          "fixed inset-x-0 top-0 z-40 px-3 transition-transform duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none sm:px-4",
-          navHidden && !menuOpen
-            ? "nav-hidden -translate-y-[140%]"
-            : "translate-y-0",
-        )}
+        ref={navRef}
+        className="fixed inset-x-0 top-0 z-40 px-3 will-change-transform sm:px-4"
         data-nav
         data-blok-testid="nav"
       >

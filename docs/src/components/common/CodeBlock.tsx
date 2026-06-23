@@ -20,6 +20,12 @@ interface CodeBlockProps {
   showPackageManagerToggle?: boolean;
   packageName?: string;
   onPackageManagerChange?: (manager: PackageManager) => void;
+  /**
+   * When embedded inside a parent surface (e.g. a window frame), drop the
+   * block's own border / radius / background so it blends into the host shell
+   * instead of drawing a second card outline.
+   */
+  embedded?: boolean;
 }
 
 const getInstallCommand = (
@@ -150,6 +156,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   showPackageManagerToggle = false,
   packageName,
   onPackageManagerChange,
+  embedded = false,
 }) => {
   const { copyToClipboard } = useCopyToClipboard();
   const { t } = useI18n();
@@ -266,7 +273,10 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
 
   return (
     <div
-      className="code-block group relative overflow-hidden rounded-2xl border border-border bg-card"
+      className={cn(
+        "code-block group relative overflow-hidden",
+        !embedded && "rounded-2xl border border-border bg-card",
+      )}
       data-code-block
       data-blok-testid="code-block"
     >

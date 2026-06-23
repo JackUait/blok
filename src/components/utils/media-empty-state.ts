@@ -1,3 +1,4 @@
+import type { MediaSource } from '../../../types/tools/media-source';
 import {
   IconArrowDownLine,
   IconArrowUp,
@@ -73,7 +74,8 @@ export interface MediaEmptyStateOptions {
 
 export type MediaEmptyStateSwap = 'reflow' | 'slide' | 'none';
 
-export type MediaSource = 'upload' | 'url' | 'both';
+/** Re-exported from the public type so the renderer and tools share one source. */
+export type { MediaSource };
 
 const MIME_LABELS: Record<string, string> = {
   'image/jpeg': 'JPG',

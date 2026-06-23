@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.21.1](https://github.com/JackUait/blok/compare/v0.21.0...v0.21.1) (2026-06-24)
+
+### Features
+
+- **Media** — Image, video, audio, and file blocks can now be restricted to upload-only or link-only via configuration, so consumers can offer a single source instead of always exposing both.
+
+### Maintenance
+
+- **Media** — Deduped `MediaSource` into a single shared type across the media tools.
+- **Docs** — Documented the audio block tool, and added upload-only and link-only empty states to the playground gallery.
+
 ## [0.21.0](https://github.com/JackUait/blok/compare/v0.20.0...v0.21.0) (2026-06-23)
 
 ### Bug Fixes

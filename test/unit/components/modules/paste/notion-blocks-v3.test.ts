@@ -384,7 +384,7 @@ describe('parseNotionBlocksV3', () => {
       expect(out?.[0].data.text).toBe('<b><code>x^2</code></b>');
     });
 
-    it('resolves a page mention to the referenced page title', () => {
+    it('resolves a page mention to a link carrying the referenced page title', () => {
       const out = parseNotionBlocksV3(
         v3Tree(
           value('p1', 'text', { properties: title(['see '], ['‣', [['p', 'pg']]]) }),
@@ -392,7 +392,7 @@ describe('parseNotionBlocksV3', () => {
         )
       );
 
-      expect(out?.[0].data.text).toBe('see My Page');
+      expect(out?.[0].data.text).toBe('see <a href="https://www.notion.so/pg">My Page</a>');
     });
 
     it('escapes the resolved page-mention title', () => {
@@ -403,21 +403,22 @@ describe('parseNotionBlocksV3', () => {
         )
       );
 
-      expect(out?.[0].data.text).toBe('A &amp; B &lt;x&gt;');
+      expect(out?.[0].data.text).toBe('<a href="https://www.notion.so/pg">A &amp; B &lt;x&gt;</a>');
     });
 
-    it('falls back to the placeholder text when the mentioned page is not in the payload', () => {
+    it('links an unresolved page mention to the Notion page instead of leaking the glyph', () => {
       const out = parseNotionBlocksV3(
         v3(value('p1', 'text', { properties: title(['see '], ['‣', [['p', 'missing']]]) }))
       );
 
-      expect(out?.[0].data.text).toBe('see ‣');
+      expect(out?.[0].data.text).toBe('see <a href="https://www.notion.so/missing">Untitled</a>');
+      expect(out?.[0].data.text).not.toContain('‣');
     });
 
     // Real Notion clipboard mentions are 3-element `[p, pageId, spaceId]` and
     // reference a page that is NOT included in a single-page copy — so the
-    // realistic path is "extra args ignored, placeholder preserved".
-    it('reads the page id from a real 3-element mention and keeps the placeholder when absent', () => {
+    // realistic path is "extra args ignored, link to the absent page".
+    it('reads the page id from a real 3-element mention and links to it when absent', () => {
       const out = parseNotionBlocksV3(
         v3(
           value('a', 'text', {
@@ -429,10 +430,12 @@ describe('parseNotionBlocksV3', () => {
         )
       );
 
-      expect(out?.[0].data.text).toBe('‣ ');
+      expect(out?.[0].data.text).toBe(
+        '<a href="https://www.notion.so/b0f73136810b4d028d9dfeebc2fa5eb2">Untitled</a> '
+      );
     });
 
-    it('resolves a 3-element mention when the referenced page IS in the payload', () => {
+    it('resolves a 3-element mention to a link when the referenced page IS in the payload', () => {
       const out = parseNotionBlocksV3(
         v3Tree(
           value('p1', 'text', { properties: title(['‣', [['p', 'pg', 'space-id']]]) }),
@@ -440,7 +443,41 @@ describe('parseNotionBlocksV3', () => {
         )
       );
 
-      expect(out?.[0].data.text).toBe('Linked');
+      expect(out?.[0].data.text).toBe('<a href="https://www.notion.so/pg">Linked</a>');
+    });
+  });
+
+  describe('Notion-internal references → links (so nothing is silently dropped)', () => {
+    it('maps a top-level sub-page (page block) to a bookmark linking to the Notion page', () => {
+      const out = parseNotionBlocksV3(
+        v3(value('33cc2586-eb6d-80f3-841e-d78fd95462d6', 'page', { properties: title(['Test']) }))
+      )!;
+
+      expect(out).toHaveLength(1);
+      expect(out[0].tool).toBe('bookmark');
+      expect(out[0].data).toMatchObject({
+        url: 'https://www.notion.so/33cc2586eb6d80f3841ed78fd95462d6',
+        title: 'Test',
+      });
+    });
+
+    it('maps a top-level block with an EMPTY subtree (linked database) to a bookmark', () => {
+      // Linked databases / collection views ship with an empty subtree — only
+      // the blockId is present. Pack one resolvable sibling so the v3 path wins.
+      const payload = JSON.stringify({
+        blocks: [
+          { blockId: '333c2586-eb6d-8023-a921-f68d8701ba2e', blockSubtree: { __version__: 3, block: {} } },
+          subtreeOf([value('t1', 'text', { properties: title(['after']) })]),
+        ],
+        action: 'paste',
+        wasContiguousSelection: true,
+      });
+
+      const out = parseNotionBlocksV3(payload)!;
+
+      expect(out[0].tool).toBe('bookmark');
+      expect(out[0].data.url).toBe('https://www.notion.so/333c2586eb6d8023a921f68d8701ba2e');
+      expect(out[1].data.text).toBe('after');
     });
   });
 
@@ -629,7 +666,7 @@ describe('parseNotionBlocksV3', () => {
       expect(out).toEqual([{ id: 'im', tool: 'image', data: { url: 'https://x.test/i.png' } }]);
     });
 
-    it('falls back to a filename paragraph for an attachment image (no usable URL)', () => {
+    it('falls back to a Notion-link bookmark for an attachment image (no usable URL)', () => {
       const out = parseNotionBlocksV3(
         v3(
           value('im', 'image', {
@@ -639,7 +676,26 @@ describe('parseNotionBlocksV3', () => {
         )
       );
 
-      expect(out).toEqual([{ id: 'im', tool: 'paragraph', data: { text: 'logo.png' } }]);
+      expect(out).toEqual([
+        { id: 'im', tool: 'bookmark', data: { url: 'https://www.notion.so/im', title: 'logo.png' } },
+      ]);
+    });
+
+    it('derives the bookmark title from the attachment source when an image has no title', () => {
+      const out = parseNotionBlocksV3(
+        v3(
+          value('im', 'image', {
+            properties: { source: [['attachment:uuid:photo%20final.png']] },
+            format: { display_source: 'attachment:uuid:photo%20final.png' },
+          })
+        )
+      )!;
+
+      expect(out[0]).toEqual({
+        id: 'im',
+        tool: 'bookmark',
+        data: { url: 'https://www.notion.so/im', title: 'photo final.png' },
+      });
     });
 
     it('maps an external (http) file to a file block with its name', () => {
@@ -650,12 +706,14 @@ describe('parseNotionBlocksV3', () => {
       expect(out).toEqual([{ id: 'f', tool: 'file', data: { url: 'https://x.test/doc.pdf', fileName: 'doc.pdf' } }]);
     });
 
-    it('falls back to a filename paragraph for an attachment file', () => {
+    it('falls back to a Notion-link bookmark for an attachment file', () => {
       const out = parseNotionBlocksV3(
         v3(value('f', 'file', { properties: { source: [['attachment:uuid:doc.pdf']], title: [['doc.pdf']] } }))
       );
 
-      expect(out).toEqual([{ id: 'f', tool: 'paragraph', data: { text: 'doc.pdf' } }]);
+      expect(out).toEqual([
+        { id: 'f', tool: 'bookmark', data: { url: 'https://www.notion.so/f', title: 'doc.pdf' } },
+      ]);
     });
 
     it('maps a YouTube video to a resolved embed block', () => {
@@ -753,7 +811,7 @@ describe('parseNotionBlocksV3', () => {
       expect(out).toEqual([{ id: 'au', tool: 'audio', data: { url: 'https://cdn.test/clip.mp3' } }]);
     });
 
-    it('falls back to a filename paragraph for an attachment audio (no usable URL)', () => {
+    it('falls back to a Notion-link bookmark for an attachment audio (no usable URL)', () => {
       const out = parseNotionBlocksV3(
         v3(
           value('au', 'audio', {
@@ -763,7 +821,9 @@ describe('parseNotionBlocksV3', () => {
         )
       );
 
-      expect(out).toEqual([{ id: 'au', tool: 'paragraph', data: { text: 'track.mp3' } }]);
+      expect(out).toEqual([
+        { id: 'au', tool: 'bookmark', data: { url: 'https://www.notion.so/au', title: 'track.mp3' } },
+      ]);
     });
   });
 
@@ -776,12 +836,14 @@ describe('parseNotionBlocksV3', () => {
       expect(out).toEqual([{ id: 'pd', tool: 'file', data: { url: 'https://x.test/spec.pdf', fileName: 'spec.pdf' } }]);
     });
 
-    it('falls back to a filename paragraph for an attachment pdf', () => {
+    it('falls back to a Notion-link bookmark for an attachment pdf', () => {
       const out = parseNotionBlocksV3(
         v3(value('pd', 'pdf', { properties: { source: [['attachment:uuid:spec.pdf']], title: [['spec.pdf']] } }))
       );
 
-      expect(out).toEqual([{ id: 'pd', tool: 'paragraph', data: { text: 'spec.pdf' } }]);
+      expect(out).toEqual([
+        { id: 'pd', tool: 'bookmark', data: { url: 'https://www.notion.so/pd', title: 'spec.pdf' } },
+      ]);
     });
   });
 

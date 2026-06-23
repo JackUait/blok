@@ -129,14 +129,19 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
   /**
    * Insert Blok JSON blocks using a two-pass approach:
    *
-   * Pass 1 — child blocks (those whose parentId is within the pasted set) are
-   * inserted first.  They receive new IDs, which are recorded in a map.
-   *
-   * Pass 2 — root/container blocks (e.g. tables) are inserted with their data
-   * remapped so that any old child-block ID references are replaced by the new
-   * IDs from Pass 1.  This prevents container tools (TableCellBlocks) from
+   * Pass 1 — TABLE cell children (blocks whose parentId is a pasted table) are
+   * inserted first.  They receive new IDs, which are recorded in a map, so the
+   * owning table can be inserted with its `data.content` references remapped to
+   * the new cell IDs.  This prevents container tools (TableCellBlocks) from
    * resolving old IDs that still exist in the editor and stealing blocks from
    * the original table.
+   *
+   * Pass 2 — every other block (roots AND flow-nested children such as list
+   * sub-items and toggle/callout/column children) is inserted in DOCUMENT ORDER
+   * with its data remapped.  Preserving document order is what keeps a nested
+   * child from rendering above its parent (the Notion-paste scramble bug);
+   * flow-nested blocks have no separate DOM container, so their array position
+   * IS their visual position.
    *
    * After both passes the parent-child hierarchy is re-established using the
    * accumulated old→new ID mapping.
@@ -187,12 +192,26 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
       ? (currentBlock?.id ?? null)
       : (currentBlock?.parentId ?? null);
 
-    // Set of old IDs present in this paste, used to identify parent-child pairs.
-    const pastedOldIds = new Set(blocks.map(b => b.id));
+    // IDs of pasted table blocks. ONLY a table's cell children must be inserted
+    // before their parent: the table block's `data.content` references its cell
+    // child IDs and the table tool resolves (adopts) them on insert, so the
+    // cells must already exist with their new IDs. Every OTHER nested block —
+    // list sub-items, toggle/callout/column children — is "flow-nested" and
+    // must be inserted in DOCUMENT ORDER. Inserting those children-first
+    // scrambled the document: a nested list child rendered ABOVE its parent and
+    // the whole top-level order collapsed (Notion paste "broken order" bug).
+    const pastedTableIds = new Set(
+      blocks.filter(b => b.tool === 'table' && b.id !== undefined).map(b => b.id)
+    );
+
+    const isTableCellChild = (block: BlokClipboardBlock): boolean =>
+      block.parentId !== undefined &&
+      block.parentId !== null &&
+      pastedTableIds.has(block.parentId);
 
     type Entry = { sanitized: (typeof sanitizedBlocks)[number]; original: BlokClipboardBlock };
-    const children: Entry[] = [];
-    const roots: Entry[] = [];
+    const tableCells: Entry[] = [];
+    const documentFlow: Entry[] = [];
 
     sanitizedBlocks.forEach((sanitizedBlock, i) => {
       const original = blocks[i];
@@ -201,12 +220,7 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
         return;
       }
 
-      const isChild =
-        original.parentId !== undefined &&
-        original.parentId !== null &&
-        pastedOldIds.has(original.parentId);
-
-      (isChild ? children : roots).push({ sanitized: sanitizedBlock, original });
+      (isTableCellChild(original) ? tableCells : documentFlow).push({ sanitized: sanitizedBlock, original });
     });
 
     /**
@@ -220,8 +234,9 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
     // each BlockManager.insert and setBlockParent lands on its own undo
     // stack item, and the user has to press undo N times to clear a paste.
     const runInsertPasses = (): void => {
-      // Pass 1: insert children first so they exist with new IDs before the parent.
-      children.forEach(({ sanitized, original }) => {
+      // Pass 1: insert table cells first so they exist with new IDs before the
+      // owning table block is inserted with its (remapped) content references.
+      tableCells.forEach(({ sanitized, original }) => {
         const block = BlockManager.insert({ tool: sanitized.tool, data: sanitized.data });
 
         oldIdToEntry.set(original.id, { newBlock: block, original });
@@ -235,10 +250,11 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
         oldIdToNewId.set(oldId, newBlock.id);
       }
 
-      // Pass 2: insert root blocks with child IDs remapped in their data.
-      // Skip replace when children were pre-inserted to avoid replacing a
-      // just-inserted child paragraph rather than the original empty block.
-      roots.forEach(({ sanitized, original }, idx) => {
+      // Pass 2: insert every remaining block in DOCUMENT ORDER, remapping any
+      // table cell IDs in their data. Skip replace when table cells were
+      // pre-inserted to avoid replacing a just-inserted cell paragraph rather
+      // than the original empty block.
+      documentFlow.forEach(({ sanitized, original }, idx) => {
         const remappedData = oldIdToNewId.size > 0
           ? remapIds(sanitized.data, oldIdToNewId) as typeof sanitized.data
           : sanitized.data;
@@ -246,7 +262,7 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
         const block = BlockManager.insert({
           tool: sanitized.tool,
           data: remappedData,
-          replace: idx === 0 && shouldReplaceFirst && children.length === 0,
+          replace: idx === 0 && shouldReplaceFirst && tableCells.length === 0,
         });
 
         /**

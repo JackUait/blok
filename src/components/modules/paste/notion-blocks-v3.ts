@@ -102,7 +102,7 @@ export function parseNotionBlocksV3(json: string): NotionParsedBlock[] | null {
 
   const topLevelOrder = blocks
     .map((entry) => (entry as { blockId?: string })?.blockId)
-    .filter((id): id is string => typeof id === 'string' && byId.has(id));
+    .filter((id): id is string => typeof id === 'string');
 
   const result: NotionParsedBlock[] = [];
   const visited = new Set<string>();
@@ -154,7 +154,19 @@ export function parseNotionBlocksV3(json: string): NotionParsedBlock[] | null {
     children.forEach((childId) => walk(childId, id));
   };
 
-  topLevelOrder.forEach((id) => walk(id, null));
+  topLevelOrder.forEach((id) => {
+    // A top-level block with no resolvable value has an EMPTY subtree — Notion
+    // ships linked databases, collection views and link-to-page references this
+    // way (their data lives on another page, omitted from the clipboard). Emit
+    // a bookmark to the Notion page so the block is not silently dropped.
+    if (!byId.has(id)) {
+      result.push({ id, tool: 'bookmark', data: { url: notionPageUrl(id) } });
+
+      return;
+    }
+
+    walk(id, null);
+  });
 
   return result;
 }
@@ -285,15 +297,15 @@ function mapValue(value: NotionValue, byId: Map<string, NotionValue>): Mapped | 
     case 'bookmark':
       return mapBookmark(props, value.format ?? {}, text);
     case 'image':
-      return mapMediaFile('image', props, value.format ?? {}, text);
+      return mapMediaFile('image', props, value.format ?? {}, text, value.id);
     case 'file':
-      return mapMediaFile('file', props, value.format ?? {}, text);
+      return mapMediaFile('file', props, value.format ?? {}, text, value.id);
     case 'video':
-      return mapVideo(props, value.format ?? {}, text);
+      return mapVideo(props, value.format ?? {}, text, value.id);
     case 'audio':
-      return mapAudio(props, value.format ?? {}, text);
+      return mapAudio(props, value.format ?? {}, text, value.id);
     case 'pdf':
-      return mapMediaFile('file', props, value.format ?? {}, text);
+      return mapMediaFile('file', props, value.format ?? {}, text, value.id);
     // Standalone service embeds carry their URL in `source` / `display_source`;
     // resolve via the embed registry, falling back to a bookmark.
     case 'drive':
@@ -319,9 +331,12 @@ function mapValue(value: NotionValue, byId: Map<string, NotionValue>): Mapped | 
       return { tool: 'callout', data: { emoji, text, textColor, backgroundColor } };
     }
     case 'page':
+      // A `page` block inside content is a SUB-PAGE reference: its body lives on
+      // a separate Notion page that is not in the clipboard. Emit a bookmark
+      // linking to that page so the reference is not silently dropped.
+      return { tool: 'bookmark', data: { url: notionPageUrl(value.id), ...(text.length > 0 ? { title: text } : {}) } };
     case 'tab':
-      // Document/tab wrappers — skip, promote children. (Sub-page references
-      // are handled in a later phase.)
+      // Tab wrapper — skip, promote children to the same level.
       return null;
     case 'transclusion_container':
       // Synced-block original: Blok has no synced primitive, so flatten it —
@@ -398,12 +413,13 @@ function mapMediaFile(
   tool: 'image' | 'file',
   props: Record<string, unknown>,
   format: Record<string, unknown>,
-  text: string
+  text: string,
+  id: string
 ): Mapped {
   const url = firstHttpUrl(props.source, format.display_source);
 
   if (url === null) {
-    return { tool: 'paragraph', data: { text } };
+    return attachmentFallback(id, props, text);
   }
 
   if (tool === 'image') {
@@ -493,11 +509,11 @@ function mapImageCrop(meta: unknown): Record<string, unknown> | null {
 }
 
 /** Map a Notion video to an embed (provider match) or a direct video block. */
-function mapVideo(props: Record<string, unknown>, format: Record<string, unknown>, text: string): Mapped {
+function mapVideo(props: Record<string, unknown>, format: Record<string, unknown>, text: string, id: string): Mapped {
   const url = firstHttpUrl(props.source, format.display_source);
 
   if (url === null) {
-    return { tool: 'paragraph', data: { text } };
+    return attachmentFallback(id, props, text);
   }
 
   const embed = resolveEmbed(url);
@@ -544,13 +560,13 @@ function mapHeader(text: string, level: number, format: Record<string, unknown> 
 /**
  * Map a Notion audio block to the Blok audio tool when it has a usable http(s)
  * URL. Notion-uploaded audio uses `attachment:` refs with no loadable URL, so
- * those fall back to a filename paragraph (like image/file/video).
+ * those fall back to a Notion-link bookmark (like image/file/video).
  */
-function mapAudio(props: Record<string, unknown>, format: Record<string, unknown>, text: string): Mapped {
+function mapAudio(props: Record<string, unknown>, format: Record<string, unknown>, text: string, id: string): Mapped {
   const url = firstHttpUrl(props.source, format.display_source);
 
   if (url === null) {
-    return { tool: 'paragraph', data: { text } };
+    return attachmentFallback(id, props, text);
   }
 
   const data: Record<string, unknown> = { url };
@@ -739,14 +755,67 @@ function formatNotionDate(date: Record<string, unknown>): string {
 }
 
 /**
- * Resolve a page-mention to the referenced page's title when it is present in
- * the pasted payload; otherwise keep the original placeholder text. (Mentions
- * usually point at pages outside the copied selection, which are unresolvable.)
+ * The canonical Notion URL for a block/page id. Notion's share URLs use the id
+ * with dashes stripped; `www.notion.so/<id>` resolves regardless of workspace.
+ */
+function notionPageUrl(id: string): string {
+  return `https://www.notion.so/${id.replace(/-/g, '')}`;
+}
+
+/**
+ * Fallback for uploaded media (image / video / audio / file / pdf) whose binary
+ * is NOT on the clipboard: Notion exports private attachments as
+ * `attachment:<uuid>:<filename>` references with no fetchable URL, in BOTH the
+ * JSON and HTML flavours. Rather than drop the block to a bare filename
+ * paragraph, emit a bookmark to the block's Notion location so it is not
+ * silently lost and the user can open the source to re-download the file. The
+ * filename becomes the bookmark title.
+ */
+function attachmentFallback(id: string, props: Record<string, unknown>, text: string): Mapped {
+  const fileName = text.length > 0 ? text : attachmentName(props.source);
+  const data: Record<string, unknown> = { url: notionPageUrl(id) };
+
+  if (fileName.length > 0) {
+    data.title = fileName;
+  }
+
+  return { tool: 'bookmark', data };
+}
+
+/** Extract the human filename from an `attachment:<uuid>:<filename>` source. */
+function attachmentName(source: unknown): string {
+  const firstSegment: unknown = Array.isArray(source) ? source[0] : undefined;
+  const first: unknown = Array.isArray(firstSegment) ? firstSegment[0] : undefined;
+
+  if (typeof first !== 'string') {
+    return '';
+  }
+
+  const match = /^attachment:[^:]+:(.+)$/.exec(first);
+
+  if (match === null) {
+    return '';
+  }
+
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
+}
+
+/**
+ * Render an inline page-mention as a link to the referenced Notion page. Uses
+ * the page title when it is present in the pasted payload, otherwise `Untitled`
+ * (mentions usually point at pages outside the copied selection). Linking — vs
+ * the old behaviour of leaking the raw `‣` glyph — keeps the reference
+ * navigable so the user can still reach the source page after migration.
  */
 function pageMentionContent(pageId: string, raw: string, byId?: Map<string, NotionValue>): string {
   const titleText = plainText(byId?.get(pageId)?.properties?.title);
+  const label = titleText.length > 0 ? titleText : 'Untitled';
 
-  return escapeHtml(titleText.length > 0 ? titleText : raw);
+  return `<a href="${escapeAttr(notionPageUrl(pageId))}">${escapeHtml(label)}</a>`;
 }
 
 /** A parsed Notion colour token: a preset name applied as text or background. */

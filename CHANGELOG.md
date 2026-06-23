@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.21.0](https://github.com/JackUait/blok/compare/v0.20.0...v0.21.0) (2026-06-23)
+
+### Bug Fixes
+
+- **Paste** — Rich clipboards (Notion and similar) ship both a faithful HTML payload and a lossy Markdown twin. Routing now prefers the HTML handler, so pasted images, links, and structure the Markdown twin drops are preserved.
+- **Paste** — Notion content keeps its document order: nested children no longer render above their parents (only table cells stay children-first, since the table tool resolves cell ids on insert). Internal references that previously vanished — sub-pages, linked databases / collection views, and inline page mentions — now paste as Notion bookmarks/links instead of being dropped or leaking the raw "‣" glyph, and uploaded media whose binary isn't on the clipboard becomes a Notion-link bookmark carrying the filename rather than a bare filename paragraph.
+- **Paste** — Pasted external Notion audio now shows its title (the player reads `data.title`, which was left blank), and a malformed inline date annotation no longer leaks the raw "‣" placeholder glyph.
+
+### Maintenance
+
+- **Tests** — Added regression coverage for HTML-over-Markdown routing, document-order preservation, internal-reference rescue, pasted audio titles, and date-glyph handling.
+
 ## [0.20.0](https://github.com/JackUait/blok/compare/v0.19.2...v0.20.0) (2026-06-22)
 
 ### Features

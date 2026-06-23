@@ -1754,9 +1754,61 @@ describe('Paste module', () => {
       expect(handlers[1]).toBe(tableCellsHandler);
       expect(handlers[2]).toBe(filesHandler);
       expect(handlers[3]).toBe(patternHandler);
-      expect(handlers[4]).toBe(markdownHandler);
-      expect(handlers[5]).toBe(htmlHandler);
+      expect(handlers[4]).toBe(htmlHandler);
+      expect(handlers[5]).toBe(markdownHandler);
       expect(handlers[6]).toBe(textHandler);
+    });
+
+    it('prefers HtmlHandler over MarkdownHandler when paste carries both rich HTML and markdown-like text (Notion paste)', async () => {
+      const { paste, mocks } = createPaste();
+
+      const defaultTool = {
+        name: 'paragraph',
+        pasteConfig: {},
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.defaultTool = defaultTool;
+      mocks.Tools.blockTools.set('paragraph', defaultTool);
+
+      await paste.prepare();
+
+      // Keep the cleaned HTML as real HTML so HtmlHandler is eligible.
+      vi.spyOn(sanitizer, 'clean').mockImplementation((html: string) => html);
+
+      mocks.BlockManager.currentBlock = {
+        tool: { isDefault: true },
+        isEmpty: true,
+      };
+      mocks.BlockManager.paste.mockReturnValue({ id: 'block-id' });
+
+      // MarkdownHandler routes through insertMany/composeBlock; if it wrongly
+      // wins, these run instead of BlockManager.paste.
+      const insertMany = vi.fn();
+      const composeBlock = vi.fn(() => ({ id: 'composed' }));
+      (mocks.BlockManager as unknown as { insertMany: unknown }).insertMany = insertMany;
+      (mocks.BlockManager as unknown as { composeBlock: unknown }).composeBlock = composeBlock;
+
+      // Notion's clipboard ships rich HTML *and* a markdown plain-text twin
+      // (note the `# ` heading and `**bold**` markdown signals).
+      const html = '<h1>Heading</h1><p>Some <strong>bold</strong> words</p>';
+      const plain = '# Heading\n\nSome **bold** words';
+
+      const dataTransfer = new MockDataTransfer(
+        {
+          'text/html': html,
+          'text/plain': plain,
+        },
+        {} as FileList,
+        ['text/html', 'text/plain']
+      );
+
+      await paste.processDataTransfer(dataTransfer);
+
+      // HtmlHandler (priority 40) must win over MarkdownHandler (priority 30).
+      expect(mocks.BlockManager.paste).toHaveBeenCalled();
+      expect(insertMany).not.toHaveBeenCalled();
     });
 
     it('BlokDataHandler returns priority 100 for valid JSON', () => {

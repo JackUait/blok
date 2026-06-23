@@ -47,14 +47,19 @@ export class Paste extends Module {
 
     await this.toolRegistry.processTools();
 
-    // Initialize handlers in priority order (higher priority first)
+    // Initialize handlers in priority order (higher priority first).
+    // HtmlHandler (40) must precede MarkdownHandler (30): rich clipboards such
+    // as Notion ship both a faithful text/html payload and a lossy markdown
+    // text/plain twin, and routing picks the first eligible handler in this
+    // list. Trying HTML first keeps images, links and other structure that the
+    // markdown twin drops; markdown still wins when no usable HTML is present.
     this.handlers = [
       new BlokDataHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder, this.config),
       new TableCellsHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
       new FilesHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
       new PatternHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder, this.config),
-      new MarkdownHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
       new HtmlHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
+      new MarkdownHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
       new TextHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder, this.config),
     ];
   }

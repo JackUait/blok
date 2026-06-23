@@ -936,6 +936,11 @@
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
     import { renderUploadingState as renderFileUploadingState } from './src/tools/file/uploading-state.ts';
+    import { renderEmptyState as renderImageEmptyState } from './src/tools/image/empty-state.ts';
+    import { renderEmptyState as renderVideoEmptyState } from './src/tools/video/empty-state.ts';
+    import { renderEmptyState as renderAudioEmptyState } from './src/tools/audio/empty-state.ts';
+    import { renderEmptyState as renderFileEmptyState } from './src/tools/file/empty-state.ts';
+    import { LightweightI18n } from './src/components/i18n/lightweight-i18n.ts';
     import { version } from './package.json';
 
     document.getElementById('pg-version').textContent = `v${version}`;
@@ -2508,6 +2513,8 @@
         label: 'Image',
         states: [
           { label: 'Empty (upload)', blocks: [{ id: 'im-empty', type: 'image', data: {} }] },
+          { label: 'Empty · upload only', blocks: [{ id: 'im-empty-upload', type: 'image', data: {} }] },
+          { label: 'Empty · link only', blocks: [{ id: 'im-empty-link', type: 'image', data: {} }] },
           { label: 'Loaded', blocks: [{ id: 'im-loaded', type: 'image', data: {
             url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800',
             caption: 'Mountain vista',
@@ -2560,6 +2567,8 @@
         label: 'Video',
         states: [
           { label: 'Empty (upload)', blocks: [{ id: 'vd-empty', type: 'video', data: {} }] },
+          { label: 'Empty · upload only', blocks: [{ id: 'vd-empty-upload', type: 'video', data: {} }] },
+          { label: 'Empty · link only', blocks: [{ id: 'vd-empty-link', type: 'video', data: {} }] },
           { label: 'Loaded', blocks: [{ id: 'vd-loaded', type: 'video', data: {
             url: '/samples/big-buck-bunny.mp4',
             width: 80,
@@ -2594,6 +2603,8 @@
         label: 'Audio',
         states: [
           { label: 'Empty (upload)', blocks: [{ id: 'au-empty', type: 'audio', data: { url: '' } }] },
+          { label: 'Empty · upload only', blocks: [{ id: 'au-empty-upload', type: 'audio', data: { url: '' } }] },
+          { label: 'Empty · link only', blocks: [{ id: 'au-empty-link', type: 'audio', data: { url: '' } }] },
           { label: 'Loaded', blocks: [{ id: 'au-loaded', type: 'audio', data: {
             url: '/samples/soundhelix-song-1.mp3',
             fileName: 'soundhelix-song-1.mp3',
@@ -2620,6 +2631,8 @@
         label: 'File',
         states: [
           { label: 'Empty (upload)', blocks: [{ id: 'fl-empty', type: 'file', data: { url: '' } }] },
+          { label: 'Empty · upload only', blocks: [{ id: 'fl-empty-upload', type: 'file', data: { url: '' } }] },
+          { label: 'Empty · link only', blocks: [{ id: 'fl-empty-link', type: 'file', data: { url: '' } }] },
           { label: 'Uploading', blocks: [{ id: 'fl-uploading', type: 'file', data: { url: '' } }] },
           { label: 'PDF (previewable)', blocks: [{ id: 'fl-pdf', type: 'file', data: {
             url: 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf',
@@ -2912,6 +2925,28 @@
           uploadingEl.setProgress(64);
           fileUploadingRoot.appendChild(uploadingEl);
         }
+
+        // Render the single-source empty states. `sources` is a tool-level
+        // config, so the gallery's shared editor can't vary it per block —
+        // swap each synthetic empty block's tool DOM for a real empty state
+        // rendered with the restricted `sources`.
+        const noop = () => {};
+        const fileEmptyI18n = new LightweightI18n();
+        const swapEmptyState = (blockId, tool, el) => {
+          const root = holder.querySelector(`[data-blok-id="${blockId}"] [data-blok-tool="${tool}"]`);
+          if (root) {
+            root.replaceChildren();
+            root.appendChild(el);
+          }
+        };
+        swapEmptyState('im-empty-upload', 'image', renderImageEmptyState({ sources: 'upload', onFile: noop, onUrl: noop }));
+        swapEmptyState('im-empty-link', 'image', renderImageEmptyState({ sources: 'url', onFile: noop, onUrl: noop }));
+        swapEmptyState('vd-empty-upload', 'video', renderVideoEmptyState({ sources: 'upload', onFile: noop, onUrl: noop }));
+        swapEmptyState('vd-empty-link', 'video', renderVideoEmptyState({ sources: 'url', onFile: noop, onUrl: noop }));
+        swapEmptyState('au-empty-upload', 'audio', renderAudioEmptyState({ sources: 'upload', onFile: noop, onUrl: noop }));
+        swapEmptyState('au-empty-link', 'audio', renderAudioEmptyState({ sources: 'url', onFile: noop, onUrl: noop }));
+        swapEmptyState('fl-empty-upload', 'file', renderFileEmptyState({ sources: 'upload', acceptTypes: [], i18n: fileEmptyI18n, onFile: noop, onUrl: noop }));
+        swapEmptyState('fl-empty-link', 'file', renderFileEmptyState({ sources: 'url', acceptTypes: [], i18n: fileEmptyI18n, onFile: noop, onUrl: noop }));
       });
     }
 

@@ -61,6 +61,7 @@ export { ImageData, ImageConfig, ImageUploader, ImageAlignment, ImageSize, Image
 export { FileData, FileConfig, FileUploader, FileUploadContext, FileUploadResult } from './tools/file';
 export { AudioData, AudioConfig, AudioUploader, AudioUploadContext, AudioAlignment } from './tools/audio';
 export { VideoData, VideoConfig, VideoUploader, VideoUploadContext, VideoAlignment, VideoGlow } from './tools/video';
+export { MediaSource } from './tools/media-source';
 export { ColumnListData } from './tools/column-list';
 export { ColumnData } from './tools/column';
 

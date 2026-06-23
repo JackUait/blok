@@ -98,6 +98,7 @@ export class FileTool implements BlockTool {
 
   public onPaste(event: PasteEvent): void {
     if (event.type === 'file') {
+      if (this.config.sources === 'url') return;
       this.startUpload((event as FilePasteEvent).detail.file);
     }
   }
@@ -346,6 +347,7 @@ export class FileTool implements BlockTool {
   private buildEmpty(): EmptyStateElement {
     return renderEmptyState({
       acceptTypes: this.config.types ?? [],
+      sources: this.config.sources,
       i18n: this.api.i18n,
       onFile: (file) => this.startUpload(file),
       onUrl: (url) => this.startUrl(url),

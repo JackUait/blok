@@ -1,5 +1,6 @@
 import { BlockToolData } from './block-tool-data';
 import { MaxSizeConfig } from './max-size';
+import { MediaSource } from './media-source';
 
 /** Horizontal alignment of the image within its container. */
 export type ImageAlignment = 'left' | 'center' | 'right';
@@ -88,6 +89,11 @@ export interface ImageConfig {
    * type with `'*'` as the fallback. Default 30 MiB. See {@link MaxSizeConfig}.
    */
   maxSize?: MaxSizeConfig;
+  /**
+   * Restrict how an image may be added. Default `'both'` (Upload + Link).
+   * Use `'upload'` for file-only or `'url'` for link-only. See {@link MediaSource}.
+   */
+  sources?: MediaSource;
   /**
    * Auto-convert animated GIFs to a looping WebM video block on insert.
    * Default true. Set false to keep GIFs as image blocks.

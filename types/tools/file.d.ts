@@ -1,5 +1,6 @@
 import { BlockToolData } from './block-tool-data';
 import { MaxSizeConfig } from './max-size';
+import { MediaSource } from './media-source';
 
 /** Persisted data shape for the File block tool. */
 export interface FileData extends BlockToolData {
@@ -69,6 +70,11 @@ export interface FileConfig {
    * unlimited. See {@link MaxSizeConfig}.
    */
   maxSize?: MaxSizeConfig;
+  /**
+   * Restrict how a file may be added. Default `'both'` (Upload + Link).
+   * Use `'upload'` for file-only or `'url'` for link-only. See {@link MediaSource}.
+   */
+  sources?: MediaSource;
   /** Caption placeholder. */
   captionPlaceholder?: string;
 }

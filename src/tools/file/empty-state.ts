@@ -1,6 +1,7 @@
 import {
   renderMediaEmptyState,
   type MediaEmptyStateElement,
+  type MediaSource,
 } from '../../components/utils/media-empty-state';
 import type { I18nInstance } from '../../components/utils/tools';
 
@@ -11,6 +12,8 @@ export interface EmptyStateOptions {
   acceptTypes: string[];
   /** Max file size in bytes — surfaced in the formats hint when set. */
   maxSize?: number;
+  /** Which insert sources to expose. Default `'both'`. */
+  sources?: MediaSource;
   i18n: I18nInstance;
   onFile(file: File): void;
   onUrl(url: string): void;
@@ -21,6 +24,7 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
   return renderMediaEmptyState({
     acceptTypes: opts.acceptTypes,
     maxSize: opts.maxSize,
+    sources: opts.sources,
     onFile: opts.onFile,
     onUrl: opts.onUrl,
     labels: {

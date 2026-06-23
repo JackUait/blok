@@ -80,4 +80,18 @@ describe('file renderEmptyState', () => {
     el.setError('boom');
     expect(el.querySelector('[data-role="error"]')?.textContent).toBe('boom');
   });
+
+  it('with sources "upload" forwards through and hides the Link tab', () => {
+    const el = render({ sources: 'upload' });
+    expect(el.querySelector('[data-tab="embed"]')).toBeNull();
+    expect(el.querySelector('input[type="file"]')).not.toBeNull();
+    expect(el.querySelector('[role="tablist"]')).toBeNull();
+  });
+
+  it('with sources "url" forwards through and hides upload (no file input)', () => {
+    const el = render({ sources: 'url' });
+    expect(el.querySelector('[data-tab="upload"]')).toBeNull();
+    expect(el.querySelector('input[type="file"]')).toBeNull();
+    expect(el.querySelector('input[type="url"]')).not.toBeNull();
+  });
 });

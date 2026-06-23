@@ -169,6 +169,16 @@ describe('FileTool — upload flow', () => {
     expect(block.dispatchChange).toHaveBeenCalled();
   });
 
+  it('with sources "url" ignores a pasted file (no upload)', async () => {
+    const uploadByFile = vi.fn().mockResolvedValue({ url: 'https://cdn/a.pdf', fileName: 'a.pdf', size: 10 });
+    const tool = new FileTool(createOptions({}, { sources: 'url', uploader: { uploadByFile } }));
+    const root = tool.render();
+    tool.onPaste(filePasteEvent(new File([new Uint8Array(10)], 'a.pdf', { type: 'application/pdf' })));
+    await flush();
+    expect(uploadByFile).not.toHaveBeenCalled();
+    expect(root.querySelector('[data-role="file-name"]')).toBeNull();
+  });
+
   it('shows the error state when the upload fails', async () => {
     const uploadByFile = vi.fn().mockRejectedValue(new Error('boom'));
     const tool = new FileTool(createOptions({}, { uploader: { uploadByFile } }));

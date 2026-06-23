@@ -191,6 +191,48 @@ describe('ImageTool — onPaste', () => {
   });
 });
 
+describe('ImageTool — onPaste honors sources config', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('with sources "url" ignores a pasted file (no upload)', async () => {
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:fake');
+    const tool = new ImageTool(createOptions({}, { sources: 'url' }));
+    tool.render();
+    const file = new File([new Uint8Array(10)], 'p.png', { type: 'image/png' });
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(tool.save().url).toBe('');
+    expect(createObjectURL).not.toHaveBeenCalled();
+  });
+
+  it('with sources "upload" ignores a pasted URL pattern (no url set)', async () => {
+    const tool = new ImageTool(createOptions({}, { sources: 'upload' }));
+    tool.render();
+    const event = new CustomEvent('paste', {
+      detail: { key: 'image', data: 'https://x/y.png' },
+    }) as PatternPasteEvent;
+    Object.defineProperty(event, 'type', { value: 'pattern' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(tool.save().url).toBe('');
+  });
+
+  it('with sources "upload" ignores a pasted <img> tag (no url set)', async () => {
+    const tool = new ImageTool(createOptions({}, { sources: 'upload' }));
+    tool.render();
+    const img = document.createElement('img');
+    img.setAttribute('src', 'https://x/y.png');
+    const event = new CustomEvent('paste', { detail: { data: img } }) as HTMLPasteEvent;
+    Object.defineProperty(event, 'type', { value: 'tag' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(tool.save().url).toBe('');
+  });
+});
+
 describe('ImageTool — EMPTY state', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());

@@ -49,6 +49,15 @@ export interface MediaEmptyStateOptions {
   onFile(file: File): void;
   onUrl(url: string): void;
   /**
+   * Which insert sources to expose:
+   * - `'both'` (default): show the Upload and Link tabs.
+   * - `'upload'`: file upload only — the Link tab and URL bar are hidden.
+   * - `'url'`: link/embed only — the Upload dropzone, file picker, and
+   *   drag/paste-to-upload affordances are hidden.
+   * With a single source the tablist is omitted entirely.
+   */
+  sources?: MediaSource;
+  /**
    * How the panel transitions when switching Upload/Link tabs:
    * - `'reflow'` (default): ease the panel height between the two layouts and
    *   fade the incoming content in. Smooths the inline reflow of image/file
@@ -63,6 +72,8 @@ export interface MediaEmptyStateOptions {
 }
 
 export type MediaEmptyStateSwap = 'reflow' | 'slide' | 'none';
+
+export type MediaSource = 'upload' | 'url' | 'both';
 
 const MIME_LABELS: Record<string, string> = {
   'image/jpeg': 'JPG',
@@ -213,6 +224,10 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
 
   const swapMode: MediaEmptyStateSwap = opts.swap ?? 'reflow';
 
+  const source: MediaSource = opts.sources ?? 'both';
+  const showUpload = source !== 'url';
+  const showEmbed = source !== 'upload';
+
   const root = document.createElement('div') as unknown as MediaEmptyStateElement;
   root.className = 'blok-media-empty';
   root.setAttribute('data-blok-media-empty-state', '');
@@ -233,17 +248,27 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
   panel.setAttribute('data-panel-host', '');
   panel.setAttribute('role', 'tabpanel');
 
+  const initialKind: SourceKind = showUpload ? 'upload' : 'embed';
+
   const tabs = document.createElement('div');
   tabs.className = 'blok-media-empty__tabs';
   tabs.setAttribute('role', 'tablist');
   tabs.setAttribute('aria-label', labels.sourceAria);
-  const uploadTab = makeTab('upload', labels.upload, panel.id, true);
-  const embedTab = makeTab('embed', labels.embed, panel.id, false);
-  tabs.append(uploadTab, embedTab);
-  panel.setAttribute('aria-labelledby', uploadTab.id);
-
-  const tabList = [uploadTab, embedTab];
-  const tabKinds: SourceKind[] = ['upload', 'embed'];
+  const tabList: HTMLButtonElement[] = [];
+  const tabKinds: SourceKind[] = [];
+  if (showUpload) {
+    const uploadTab = makeTab('upload', labels.upload, panel.id, true);
+    tabs.append(uploadTab);
+    tabList.push(uploadTab);
+    tabKinds.push('upload');
+  }
+  if (showEmbed) {
+    const embedTab = makeTab('embed', labels.embed, panel.id, !showUpload);
+    tabs.append(embedTab);
+    tabList.push(embedTab);
+    tabKinds.push('embed');
+  }
+  panel.setAttribute('aria-labelledby', tabList[0].id);
 
   const dropOverlay = document.createElement('div');
   dropOverlay.className = 'blok-media-empty__drop-overlay';
@@ -456,53 +481,59 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     }
   });
 
-  card.addEventListener('paste', (ev) => {
-    if (card.getAttribute('data-active-tab') !== 'upload') return;
-    const clip = ev.clipboardData;
-    if (!clip) return;
-    for (const item of Array.from(clip.items)) {
-      if (item.kind !== 'file') continue;
-      const file = item.getAsFile();
-      if (file && (!types.length || matchesMime(file.type, types))) {
-        ev.preventDefault();
-        opts.onFile(file);
-        return;
+  // File-based affordances (paste/drag/drop) only apply when upload is enabled.
+  if (showUpload) {
+    card.addEventListener('paste', (ev) => {
+      if (card.getAttribute('data-active-tab') !== 'upload') return;
+      const clip = ev.clipboardData;
+      if (!clip) return;
+      for (const item of Array.from(clip.items)) {
+        if (item.kind !== 'file') continue;
+        const file = item.getAsFile();
+        if (file && (!types.length || matchesMime(file.type, types))) {
+          ev.preventDefault();
+          opts.onFile(file);
+          return;
+        }
       }
-    }
-  });
+    });
 
-  const drag = { depth: 0 };
-  card.addEventListener('dragenter', (ev) => {
-    if (!ev.dataTransfer?.types.includes('Files')) return;
-    ev.preventDefault();
-    drag.depth += 1;
-    card.classList.add('is-dragover');
-  });
-  card.addEventListener('dragover', (ev) => {
-    const dt = ev.dataTransfer;
-    if (!dt?.types.includes('Files')) return;
-    ev.preventDefault();
-    dt.dropEffect = 'copy';
-  });
-  card.addEventListener('dragleave', () => {
-    drag.depth = Math.max(0, drag.depth - 1);
-    if (drag.depth === 0) card.classList.remove('is-dragover');
-  });
-  card.addEventListener('drop', (ev) => {
-    ev.preventDefault();
-    drag.depth = 0;
-    card.classList.remove('is-dragover');
-    const file = ev.dataTransfer?.files?.[0];
-    if (file) opts.onFile(file);
-  });
+    const drag = { depth: 0 };
+    card.addEventListener('dragenter', (ev) => {
+      if (!ev.dataTransfer?.types.includes('Files')) return;
+      ev.preventDefault();
+      drag.depth += 1;
+      card.classList.add('is-dragover');
+    });
+    card.addEventListener('dragover', (ev) => {
+      const dt = ev.dataTransfer;
+      if (!dt?.types.includes('Files')) return;
+      ev.preventDefault();
+      dt.dropEffect = 'copy';
+    });
+    card.addEventListener('dragleave', () => {
+      drag.depth = Math.max(0, drag.depth - 1);
+      if (drag.depth === 0) card.classList.remove('is-dragover');
+    });
+    card.addEventListener('drop', (ev) => {
+      ev.preventDefault();
+      drag.depth = 0;
+      card.classList.remove('is-dragover');
+      const file = ev.dataTransfer?.files?.[0];
+      if (file) opts.onFile(file);
+    });
+  }
 
   const header = document.createElement('div');
   header.className = 'blok-media-empty__header';
-  header.append(label, tabs);
+  // A single source needs no tablist — show just the caption.
+  if (tabList.length > 1) header.append(label, tabs);
+  else header.append(label);
 
-  card.append(header, panel, dropOverlay);
+  card.append(header, panel);
+  if (showUpload) card.append(dropOverlay);
   root.append(card, error);
-  activate('upload');
+  activate(initialKind);
 
   root.setError = (message: string | null): void => {
     if (!message) {

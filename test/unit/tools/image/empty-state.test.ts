@@ -69,6 +69,42 @@ describe('renderEmptyState', () => {
     expect(err.textContent).toBe('boom');
   });
 
+  it('with sources "upload" renders only the Upload source (no Link tab)', () => {
+    const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn(), sources: 'upload' });
+    expect(el.querySelector('[data-tab="embed"]')).toBeNull();
+    expect(el.querySelector('input[type="file"]')).not.toBeNull();
+  });
+
+  it('with sources "url" renders only the Link source (no Upload tab, URL input active)', () => {
+    const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn(), sources: 'url' });
+    expect(el.querySelector('[data-tab="upload"]')).toBeNull();
+    expect(el.querySelector('input[type="url"]')).not.toBeNull();
+    expect(el.querySelector('input[type="file"]')).toBeNull();
+  });
+
+  it('with a single source hides the tablist entirely', () => {
+    const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn(), sources: 'upload' });
+    expect(el.querySelector('[role="tablist"]')).toBeNull();
+  });
+
+  it('with sources "url" a dropped file does NOT trigger onFile', () => {
+    const onFile = vi.fn();
+    const el = renderEmptyState({ onFile, onUrl: vi.fn(), sources: 'url' });
+    const card = el.querySelector<HTMLElement>('.blok-media-empty__card');
+    if (!card) throw new Error('card missing');
+    const file = new File([new Uint8Array(1)], 'a.png', { type: 'image/png' });
+    const ev = new Event('drop') as Event & { dataTransfer: unknown };
+    ev.dataTransfer = { files: [file] };
+    card.dispatchEvent(ev);
+    expect(onFile).not.toHaveBeenCalled();
+  });
+
+  it('defaults to both sources when sources omitted', () => {
+    const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn() });
+    expect(el.querySelector('[data-tab="upload"]')).not.toBeNull();
+    expect(el.querySelector('[data-tab="embed"]')).not.toBeNull();
+  });
+
   it('falls back to English when i18n omitted', () => {
     const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn() });
     const card = el.querySelector<HTMLElement>('.blok-media-empty__card');

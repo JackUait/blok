@@ -1,5 +1,6 @@
 import { BlockToolData } from './block-tool-data';
 import { MaxSizeConfig } from './max-size';
+import { MediaSource } from './media-source';
 
 /** Horizontal alignment of the video within its container. */
 export type VideoAlignment = 'left' | 'center' | 'right';
@@ -68,6 +69,11 @@ export interface VideoConfig {
    * type with `'*'` as the fallback. Default 100 MiB. See {@link MaxSizeConfig}.
    */
   maxSize?: MaxSizeConfig;
+  /**
+   * Restrict how a video may be added. Default `'both'` (Upload + Link).
+   * Use `'upload'` for file-only or `'url'` for link-only. See {@link MediaSource}.
+   */
+  sources?: MediaSource;
   /** Caption placeholder. Default "Write a caption…" */
   captionPlaceholder?: string;
   /** Ambient glow intensity behind every player. Default 'minimal'. */

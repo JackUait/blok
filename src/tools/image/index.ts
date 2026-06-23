@@ -156,7 +156,9 @@ export class ImageTool implements BlockTool {
   }
 
   public onPaste(event: PasteEvent): void {
+    const sources = this.config.sources;
     if (event.type === 'pattern') {
+      if (sources === 'upload') return;
       const detail = (event as PatternPasteEvent).detail;
       if (this.shouldConvertGifUrl(detail.data)) {
         this.startUrl(detail.data);
@@ -166,6 +168,7 @@ export class ImageTool implements BlockTool {
       return;
     }
     if (event.type === 'tag') {
+      if (sources === 'upload') return;
       const node = (event as HTMLPasteEvent).detail.data;
       const src = node?.getAttribute?.('src') ?? '';
       if (!src) return;
@@ -173,6 +176,7 @@ export class ImageTool implements BlockTool {
       return;
     }
     if (event.type === 'file') {
+      if (sources === 'url') return;
       const detail = (event as FilePasteEvent).detail;
       this.startUpload(detail.file);
     }
@@ -687,6 +691,7 @@ export class ImageTool implements BlockTool {
       onUrl: (url) => this.startUrl(url),
       acceptTypes: this.config.types,
       maxSize: pickDisplayMaxSize(this.config.maxSize),
+      sources: this.config.sources,
       i18n: this.api.i18n,
     });
     this.emptyStateEl = el;

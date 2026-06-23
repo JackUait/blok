@@ -1,5 +1,6 @@
 import { BlockToolData } from './block-tool-data';
 import { MaxSizeConfig } from './max-size';
+import { MediaSource } from './media-source';
 
 export type AudioAlignment = 'left' | 'center' | 'right';
 
@@ -36,5 +37,10 @@ export interface AudioConfig {
    */
   types?: string[];
   maxSize?: MaxSizeConfig;
+  /**
+   * Restrict how audio may be added. Default `'both'` (Upload + Link).
+   * Use `'upload'` for file-only or `'url'` for link-only. See {@link MediaSource}.
+   */
+  sources?: MediaSource;
   captionPlaceholder?: string;
 }

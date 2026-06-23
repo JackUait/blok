@@ -141,6 +141,26 @@ describe('AudioTool', () => {
     expect(cfg.patterns?.audio).toBeInstanceOf(RegExp);
   });
 
+  it('with sources "url" ignores a pasted file (no upload)', async () => {
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:fake');
+    const tool = new AudioTool(opts({ url: '' }, { sources: 'url' }));
+    tool.render();
+    tool.onPaste({ type: 'file', detail: { file: new File(['x'], 'track.mp3', { type: 'audio/mpeg' }) } } as never);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(tool.save().url).toBe('');
+    expect(createObjectURL).not.toHaveBeenCalled();
+  });
+
+  it('with sources "upload" ignores a pasted URL pattern (no url set)', async () => {
+    const tool = new AudioTool(opts({ url: '' }, { sources: 'upload' }));
+    tool.render();
+    tool.onPaste({ type: 'pattern', detail: { data: 'https://x/y.mp3' } } as never);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(tool.save().url).toBe('');
+  });
+
   it('setReadOnly(true) locks the editable title', () => {
     const tool = new AudioTool(opts({ url: 'u', title: 'T' }));
     const root = tool.render();

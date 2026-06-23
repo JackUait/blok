@@ -118,11 +118,14 @@ export class AudioTool implements BlockTool {
   }
 
   public onPaste(event: PasteEvent): void {
+    const sources = this.config.sources;
     if (event.type === 'pattern') {
+      if (sources === 'upload') return;
       this.applyResult({ url: (event as PatternPasteEvent).detail.data });
       return;
     }
     if (event.type === 'file') {
+      if (sources === 'url') return;
       this.startUpload((event as FilePasteEvent).detail.file);
     }
   }
@@ -364,6 +367,7 @@ export class AudioTool implements BlockTool {
       onUrl: (url) => this.startUrl(url),
       acceptTypes: this.config.types,
       maxSize: pickDisplayMaxSize(this.config.maxSize),
+      sources: this.config.sources,
       i18n: this.api.i18n,
     });
     this.root.appendChild(el);

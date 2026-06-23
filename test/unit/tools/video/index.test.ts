@@ -175,6 +175,29 @@ describe('VideoTool — onPaste', () => {
     expect(root.querySelector('video')?.getAttribute('src')).toBe('https://x/y.mp4');
   });
 
+  it('with sources "url" ignores a pasted file (no upload)', async () => {
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:fake');
+    const tool = new VideoTool(createOptions({}, { sources: 'url' }));
+    tool.render();
+    const file = new File([new Uint8Array(10)], 'clip.mp4', { type: 'video/mp4' });
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(tool.save().url).toBe('');
+    expect(createObjectURL).not.toHaveBeenCalled();
+  });
+
+  it('with sources "upload" ignores a pasted URL pattern (no url set)', async () => {
+    const tool = new VideoTool(createOptions({}, { sources: 'upload' }));
+    tool.render();
+    const event = new CustomEvent('paste', { detail: { key: 'video', data: 'https://x/y.mp4' } }) as PatternPasteEvent;
+    Object.defineProperty(event, 'type', { value: 'pattern' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(tool.save().url).toBe('');
+  });
+
   it('onPaste(file) routes through the uploader and sets a blob URL', async () => {
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:fake');
     const tool = new VideoTool(createOptions());

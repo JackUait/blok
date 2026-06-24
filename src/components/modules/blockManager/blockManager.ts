@@ -154,6 +154,25 @@ export class BlockManager extends Module {
   }
 
   /**
+   * Apply a new editor-level placeholder to existing blocks and future ones.
+   * Backs the reactive `editor.placeholder` API: mutates the shared config,
+   * updates the default tool adapter (so blocks created afterward use it), and
+   * sweeps existing blocks for an in-place update.
+   * @param value - new placeholder text, or false to clear it
+   */
+  public setPlaceholder(value: string | false): void {
+    this.config.placeholder = value;
+
+    const defaultToolName = this.config.defaultBlock ?? 'paragraph';
+
+    this.Blok.Tools.blockTools.get(defaultToolName)?.setDefaultPlaceholder(value);
+
+    for (const block of this.blocks) {
+      block.setPlaceholder(value);
+    }
+  }
+
+  /**
    * Check if each Block is empty
    * @returns {boolean}
    */

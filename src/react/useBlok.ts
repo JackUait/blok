@@ -164,6 +164,15 @@ export function useBlok(config: UseBlokConfig, deps?: DependencyList): Blok | nu
     editor.width.set(width);
   }, [editor, width]);
 
+  // Reactive: placeholder
+  const { placeholder } = config;
+  useEffect(() => {
+    if (editor === null || placeholder === undefined) {
+      return;
+    }
+    editor.placeholder.set(placeholder);
+  }, [editor, placeholder]);
+
   return editor;
 }
 

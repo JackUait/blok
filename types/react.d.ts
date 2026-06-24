@@ -11,6 +11,7 @@ import type React from 'react';
  * - `autofocus` — calls `editor.focus()` when changed to true
  * - `theme` — calls `editor.theme.set(value)`
  * - `width` — calls `editor.width.set(value)`
+ * - `placeholder` — calls `editor.placeholder.set(value)`
  *
  * All other config is consumed once at editor creation.
  */

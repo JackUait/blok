@@ -10,6 +10,7 @@ import type { BlokConfig, Blok, EditorWidth } from '@/types';
  * - `autofocus` — calls `editor.focus()` when changed to true
  * - `theme` — calls `editor.theme.set(value)`
  * - `width` — calls `editor.width.set(value)`
+ * - `placeholder` — calls `editor.placeholder.set(value)`
  */
 export interface UseBlokConfig extends Omit<BlokConfig, 'holder'> {
   /** Editor content width mode. Synced reactively after mount via `editor.width.set()`. */

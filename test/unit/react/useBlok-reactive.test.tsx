@@ -12,6 +12,7 @@ interface MockInstance {
   focus: ReturnType<typeof vi.fn>;
   theme: { set: ReturnType<typeof vi.fn> };
   width: { set: ReturnType<typeof vi.fn> };
+  placeholder: { set: ReturnType<typeof vi.fn> };
   render: ReturnType<typeof vi.fn>;
 }
 
@@ -25,6 +26,7 @@ vi.mock('../../../src/blok', () => ({
     public focus = vi.fn();
     public theme = { set: vi.fn() };
     public width = { set: vi.fn() };
+    public placeholder = { set: vi.fn() };
     public render = vi.fn();
     constructor(config: { holder: HTMLElement }) {
       const wrapper = document.createElement('div');
@@ -71,5 +73,18 @@ describe('useBlok reactive theme/width', () => {
 
     expect(instances).toHaveLength(1);
     expect(instances[0].width.set).toHaveBeenLastCalledWith('full');
+  });
+
+  it('syncs placeholder via editor.placeholder.set without recreating', async () => {
+    const { rerender } = render(<Harness config={{ placeholder: 'First' }} />);
+    await act(async () => { await Promise.resolve(); });
+    expect(instances).toHaveLength(1);
+    expect(instances[0].placeholder.set).toHaveBeenCalledWith('First');
+
+    rerender(<Harness config={{ placeholder: 'Second' }} />);
+    await act(async () => { await Promise.resolve(); });
+
+    expect(instances).toHaveLength(1); // not recreated
+    expect(instances[0].placeholder.set).toHaveBeenLastCalledWith('Second');
   });
 });

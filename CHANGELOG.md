@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.23.0](https://github.com/JackUait/blok/compare/v0.22.0...v0.23.0) (2026-06-24)
+
+### Features
+
+- **React** — A blessed `<BlokEditor>` component is now the recommended way to embed Blok in React. It forwards a typed ref to the live editor instance, takes an uncontrolled `data` seed, and reactively syncs `readOnly`, `autofocus`, `theme`, and `width` props without recreating the editor. Its `onReady` callback fires after the ref commits, so consumers can safely call `ref.current` from inside it. The lower-level `useBlok` hook plus `BlokContent` remain available as an escape hatch.
+
+### Maintenance
+
+- **React** — `useBlok` now reactively syncs `theme` and `width` prop changes to the editor instance, mirroring the existing `readOnly`/`autofocus` pattern.
+- **Docs** — The demo wrapper now dogfoods `BlokEditor`, and the README React section documents the recommended `BlokEditor` path, the uncontrolled `data` contract, reactive props, and the `useBlok` + `BlokContent` escape hatch.
+- **Tests** — Added e2e coverage for save-via-ref and live prop toggles, a published-vs-source type-drift guard, and `data-blok-testid`-based locators.
+
 ## [0.22.0](https://github.com/JackUait/blok/compare/v0.21.1...v0.22.0) (2026-06-24)
 
 ### Features

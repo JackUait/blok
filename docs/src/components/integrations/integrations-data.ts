@@ -134,7 +134,7 @@ export const REACT_SECTIONS: IntegrationSection[] = [
         type: 'unknown[]',
         default: '[]',
         description:
-          'Optional dependency array. When any value changes, the editor is destroyed and recreated — useful when switching documents.',
+          'Optional dependency array. When any value changes, the editor is destroyed and recreated — useful when switching documents. Values must be referentially stable (primitives, or useMemo-stable objects/arrays); an unstable reference recreates the editor on every render.',
       },
     ],
     properties: [
@@ -183,7 +183,7 @@ export const REACT_SECTIONS: IntegrationSection[] = [
     badge: 'Guide',
     title: 'Switching Documents',
     description:
-      'Pass a deps array as the second argument to useBlok to recreate the editor when your document changes. The old instance is destroyed cleanly before the new one is created.',
+      'Pass a deps array as the second argument to useBlok to recreate the editor when your document changes. The old instance is destroyed cleanly before the new one is created. Keep deps values referentially stable — wrap objects and arrays (like uploaders) in useMemo so an unchanged dep keeps the same identity and avoids needless recreation.',
     example: DEPS_EXAMPLE,
   },
   {

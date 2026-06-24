@@ -87,4 +87,35 @@ test.describe('BlokEditor component', () => {
     await page.getByTestId('toggle-readonly').click();
     await expect(host.locator('[contenteditable]').first()).toHaveAttribute('contenteditable', 'false');
   });
+
+  test('forwards id (and other div props) to the editor container element', async ({ page }) => {
+    await page.goto(URL);
+    await expect(page.getByTestId('status')).toHaveText('ready');
+
+    // Both id and data-blok-testid passed to <BlokEditor> land on the same container,
+    // which holds the editor DOM — proving arbitrary div props are forwarded.
+    const container = page.getByTestId('editor-container');
+    await expect(container).toHaveAttribute('id', 'editor-entry-point');
+    await expect(container.locator('[data-blok-editor]')).toBeVisible();
+  });
+
+  test('placeholder is reactive end-to-end (real cross-module chain, no remount)', async ({ page }) => {
+    await page.goto(URL);
+    await expect(page.getByTestId('status')).toHaveText('ready');
+
+    const host = page.getByTestId('editor-host');
+    const paragraph = host.locator('[contenteditable="true"]').filter({ hasText: 'Hello from BlokEditor' });
+    await expect(paragraph).toBeVisible();
+
+    // The editor-level placeholder is applied to the default paragraph block.
+    await expect(paragraph).toHaveAttribute('data-blok-placeholder-active', 'First placeholder');
+
+    // Changing the placeholder prop updates the live DOM attribute through the full
+    // chain (editor.placeholder.set → BlockManager → Block → Paragraph) without remount.
+    await page.getByTestId('toggle-placeholder').click();
+    await expect(paragraph).toHaveAttribute('data-blok-placeholder-active', 'Second placeholder');
+
+    // Content survived (no recreation), proving an in-place update.
+    await expect(paragraph).toContainText('Hello from BlokEditor');
+  });
 });

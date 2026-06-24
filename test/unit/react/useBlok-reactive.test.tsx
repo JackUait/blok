@@ -87,4 +87,16 @@ describe('useBlok reactive theme/width', () => {
     expect(instances).toHaveLength(1); // not recreated
     expect(instances[0].placeholder.set).toHaveBeenLastCalledWith('Second');
   });
+
+  it('propagates placeholder=false (clear) — guards on undefined, not falsiness', async () => {
+    const { rerender } = render(<Harness config={{ placeholder: 'Hint' }} />);
+    await act(async () => { await Promise.resolve(); });
+    expect(instances[0].placeholder.set).toHaveBeenCalledWith('Hint');
+
+    rerender(<Harness config={{ placeholder: false }} />);
+    await act(async () => { await Promise.resolve(); });
+
+    expect(instances).toHaveLength(1); // not recreated
+    expect(instances[0].placeholder.set).toHaveBeenLastCalledWith(false);
+  });
 });

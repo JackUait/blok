@@ -176,6 +176,39 @@ class Blok {
     };
 
     /**
+     * Placeholder API — exposed immediately (mirrors theme/width) so host apps
+     * can call instance.placeholder.set(...) before isReady without a silent
+     * no-op. The value is buffered and replayed once BlockManager is ready.
+     */
+    const placeholderBuffer = { pending: null as string | false | null };
+
+    const getBlockManager = (): BlokModules['BlockManager'] | undefined =>
+      (blok.moduleInstances as Partial<BlokModules>).BlockManager;
+
+    const applyPlaceholder = (value: string | false): void => {
+      placeholderBuffer.pending = value;
+
+      const bm = getBlockManager();
+
+      if (bm !== undefined) {
+        bm.setPlaceholder(value);
+      }
+    };
+
+    (this as Record<string, unknown>).placeholder = {
+      get: (): string | false => {
+        if (placeholderBuffer.pending !== null) {
+          return placeholderBuffer.pending;
+        }
+
+        const cfg = this.initialConfiguration;
+
+        return isObject(cfg) ? ((cfg as BlokConfig).placeholder ?? false) : false;
+      },
+      set: (value: string | false): void => applyPlaceholder(value),
+    };
+
+    /**
      * We need to export isReady promise in the constructor
      * as it can be used before other API methods are exported
      * @type {Promise<void>}
@@ -245,6 +278,16 @@ class Blok {
           ui.setWidthMode(widthBuffer.pendingMode);
         }
         widthBuffer.pendingMode = null;
+      }
+
+      // Apply any placeholder buffered before isReady resolved.
+      if (placeholderBuffer.pending !== null) {
+        const bm = (blok.moduleInstances as Partial<BlokModules>).BlockManager;
+
+        if (bm !== undefined) {
+          bm.setPlaceholder(placeholderBuffer.pending);
+        }
+        placeholderBuffer.pending = null;
       }
 
       // Scroll to the block referenced by the URL hash, if present.

@@ -105,6 +105,9 @@ vi.mock('../../src/components/core', () => {
       getWidthMode: vi.fn().mockReturnValue('narrow'),
       setWidthMode: vi.fn(),
     } as unknown as BlokModules['UI'],
+    BlockManager: {
+      setPlaceholder: vi.fn(),
+    } as unknown as BlokModules['BlockManager'],
   });
 
   const mockModuleInstances = createMockModuleInstances();
@@ -1382,6 +1385,87 @@ describe('Blok', () => {
       const instance = coreModuleForInstance.lastInstance?.();
 
       expect(instance?.moduleInstances.UI?.setWidthMode).toHaveBeenCalledWith('full');
+    });
+  });
+
+  describe('placeholder API', () => {
+    it('should expose placeholder.get/set immediately after construction', () => {
+      const blok = new Blok({ placeholder: 'Hello' });
+      const api = (blok as unknown as Record<string, unknown>).placeholder as {
+        get: () => string | false;
+        set: (v: string | false) => void;
+      };
+
+      expect(typeof api.set).toBe('function');
+      expect(typeof api.get).toBe('function');
+      expect(api.get()).toBe('Hello');
+    });
+
+    it('should route placeholder.set to BlockManager.setPlaceholder once ready', async () => {
+      const blok = new Blok({ placeholder: 'Hello' });
+
+      await blok.isReady;
+
+      const api = (blok as unknown as Record<string, unknown>).placeholder as {
+        set: (v: string | false) => void;
+      };
+      api.set('Changed');
+
+      const coreModule = await import('../../src/components/core') as {
+        lastInstance?: () => Core | undefined;
+      };
+      const instance = coreModule.lastInstance?.();
+
+      expect(instance?.moduleInstances.BlockManager?.setPlaceholder).toHaveBeenCalledWith('Changed');
+    });
+
+    it('should buffer placeholder.set made before isReady and replay after', async () => {
+      const deferred: { promise: Promise<void>; resolve: () => void } = (() => {
+        let resolve: () => void = () => {};
+        const promise = new Promise<void>((res) => { resolve = res; });
+
+        return { promise, resolve };
+      })();
+
+      const coreModule = await import('../../src/components/core') as {
+        Core: new (...args: unknown[]) => Core;
+        lastInstance?: () => Core | undefined;
+      };
+      const OriginalMockCore = coreModule.Core;
+      const deferredIsReady = deferred.promise;
+
+      const PatchedCore = class extends OriginalMockCore {
+        constructor(...args: unknown[]) {
+          super(...args);
+          this.moduleInstances = {} as BlokModules;
+          this.isReady = deferredIsReady.then(() => {
+            const mockInstances = (coreModule as { mockModuleInstances?: Partial<BlokModules> }).mockModuleInstances;
+
+            if (mockInstances) {
+              Object.assign(this.moduleInstances, mockInstances);
+            }
+          });
+        }
+      } as unknown as typeof coreModule.Core;
+
+      (coreModule as Record<string, unknown>).Core = PatchedCore;
+
+      const blok = new Blok({ placeholder: 'Hello' });
+
+      const api = (blok as unknown as Record<string, unknown>).placeholder as
+        { set: (v: string | false) => void; get: () => string | false };
+
+      api.set('Buffered');
+      expect(api.get()).toBe('Buffered');
+
+      deferred.resolve();
+      await blok.isReady;
+
+      const lastCoreInstance = coreModule.lastInstance?.();
+
+      expect(lastCoreInstance?.moduleInstances.BlockManager?.setPlaceholder).toHaveBeenCalledWith('Buffered');
+
+      (coreModule as Record<string, unknown>).Core = OriginalMockCore;
     });
   });
 

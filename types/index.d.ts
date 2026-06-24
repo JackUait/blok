@@ -129,6 +129,7 @@ export {
   ResolvedTheme,
   Width,
   EditorWidth,
+  Placeholder,
 } from './api';
 export {
   BlockMutationType,
@@ -228,6 +229,8 @@ export interface PendingBlok {
   theme: Theme;
   /** Width API, exposed immediately after construction. */
   width: Width;
+  /** Placeholder API, exposed immediately after construction. */
+  placeholder: Placeholder;
 }
 
 /**
@@ -249,6 +252,7 @@ export class Blok {
   public readOnly: ReadOnly;
   public theme: Theme;
   public width: Width;
+  public placeholder: Placeholder;
   constructor(configuration?: BlokConfig|string);
 
   /**

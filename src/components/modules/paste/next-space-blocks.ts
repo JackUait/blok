@@ -21,15 +21,17 @@
  * which the two-pass `BlokDataHandler` builder turns into a nested block tree.
  */
 
+import { COLOR_PRESETS } from '../../shared/color-presets';
 import { DEFAULT_EMOJI } from '../../../tools/callout/constants';
 import { DEFAULT_LANGUAGE, LANGUAGES } from '../../../tools/code/constants';
 import { matchEmbedService } from '../../../tools/link/registry';
 
-// NOTE: notion-blocks-v3 also imports `colorVarName` from
-// '../../shared/color-presets' for its inline <mark> colour styling. buildin's
-// captured clipboard carries no inline colour marks (every enhancer is `{}`),
-// so the current plain-text mapping does not need it — wire it in alongside the
-// TODO(inline-marks) work in `segmentsToHtml` once formatted content is captured.
+// NOTE: notion-blocks-v3 also uses `colorVarName` for its inline <mark> colour
+// styling. buildin's captured clipboard carries no inline colour marks (every
+// enhancer is `{}`), so the plain-text mapping does not need it — wire it in
+// alongside the TODO(inline-marks) work in `segmentsToHtml` once formatted
+// content is captured. (Block-level callout colours ARE handled, via
+// `normalizeBuildinColor` below.)
 
 /** MIME flavours that carry buildin.ai's lossless block envelope. */
 export const NEXT_SPACE_MIMES = ['text/next-space-blocks', 'text/next-space-content'];
@@ -152,6 +154,18 @@ export function parseNextSpaceBlocks(json: string): NextSpaceParsedBlock[] | nul
 
     result.push(block);
 
+    // Blok's callout keeps its body in CHILD blocks (CalloutData has no `text`
+    // field), so the callout's inline text — which buildin stores on the callout
+    // node itself — becomes a child paragraph, matching what a native callout
+    // copy carries. (Any `subNodes` are appended after it below.)
+    if (node.type === 13) {
+      const body = segmentsToHtml((node.data ?? {}).segments);
+
+      if (body.length > 0) {
+        result.push({ id: `${id}:callout-body`, tool: 'paragraph', data: { text: body }, parentId: id });
+      }
+    }
+
     const children = Array.isArray(node.subNodes) ? node.subNodes : [];
 
     children.forEach((childId) => walk(childId, id));
@@ -243,7 +257,7 @@ function mapNode(node: NextSpaceNode): Mapped | null {
     case 12:
       return { tool: 'quote', data: { text } };
     case 13:
-      return mapCallout(node, data, text);
+      return mapCallout(node, data);
     case 25:
       return {
         tool: 'code',
@@ -271,20 +285,40 @@ function mapNode(node: NextSpaceNode): Mapped | null {
   }
 }
 
-/** Map a buildin callout (type 13) — colour names live on the node, not data. */
-function mapCallout(node: NextSpaceNode, data: Record<string, unknown>, text: string): Mapped {
+/**
+ * Map a buildin callout (type 13) to callout DATA only — colour names live on
+ * the node (not `data`). The body text is emitted SEPARATELY as a child
+ * paragraph by the walker (Blok callouts store their body as child blocks), so
+ * no `text` field is emitted here (the callout tool would silently discard it).
+ */
+function mapCallout(node: NextSpaceNode, data: Record<string, unknown>): Mapped {
   const icon = isPlainObject(data.icon) ? data.icon : {};
   const emoji = typeof icon.value === 'string' && icon.value.length > 0 ? icon.value : DEFAULT_EMOJI;
 
   return {
     tool: 'callout',
-    data: { emoji, text, textColor: colorName(node.textColor), backgroundColor: colorName(node.backgroundColor) },
+    data: { emoji, textColor: normalizeBuildinColor(node.textColor), backgroundColor: normalizeBuildinColor(node.backgroundColor) },
   };
 }
 
-/** A non-empty colour name, or `null` for the empty (no-colour) default. */
-function colorName(value: unknown): string | null {
-  return typeof value === 'string' && value.length > 0 ? value : null;
+/** The set of colour preset names Blok recognises (its callout/marker palette). */
+const BLOK_COLOR_NAMES = new Set(COLOR_PRESETS.map((preset) => preset.name));
+
+/**
+ * Map a buildin colour NAME to a valid Blok preset name, or `null`. buildin uses
+ * British `grey`; Blok's preset is American `gray` — passing `grey` through
+ * verbatim yields an undefined `var(--blok-color-grey-bg)` that silently drops
+ * the colour (and the callout's border). Names outside Blok's palette collapse
+ * to `null` rather than render broken.
+ */
+function normalizeBuildinColor(value: unknown): string | null {
+  if (typeof value !== 'string' || value.length === 0) {
+    return null;
+  }
+
+  const name = value.toLowerCase() === 'grey' ? 'gray' : value.toLowerCase();
+
+  return BLOK_COLOR_NAMES.has(name) ? name : null;
 }
 
 /** The `language` string from a code block's `data.format`, or `undefined`. */

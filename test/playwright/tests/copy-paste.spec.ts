@@ -1337,7 +1337,16 @@ test.describe('buildin.ai paste (next-space-blocks lossless flavour)', () => {
 
     // Code language + callout emoji preserved (impossible via the HTML twin).
     expect((roots.find((b) => b.type === 'code')?.data as { language?: string }).language).toBe('yaml');
-    expect((roots.find((b) => b.type === 'callout')?.data as { emoji?: string }).emoji).toBe('⚠️');
+
+    const callout = roots.find((b) => b.type === 'callout');
+
+    expect((callout?.data as { emoji?: string }).emoji).toBe('⚠️');
+
+    // Callout body reconstructs as a CHILD paragraph (Blok callouts have no
+    // inline text field) — not silently dropped.
+    const calloutBody = saved.blocks.filter((b) => b.parent === callout?.id && b.type === 'paragraph');
+
+    expect(calloutBody.map((b) => (b.data as { text?: string }).text)).toContain('call me out!');
 
     // Toggle keeps its revealed child block, parented under the toggle.
     const toggle = roots.find((b) => b.type === 'toggle');

@@ -210,7 +210,11 @@ describe('parseNextSpaceBlocks', () => {
   });
 
   describe('callout (type 13)', () => {
-    it('maps emoji + named background colour', () => {
+    // Blok's callout stores its body as CHILD blocks (CalloutData has no `text`
+    // field), exactly like a native callout copy carries its body paragraph. So
+    // the parser must emit the callout (colours only) PLUS a child paragraph —
+    // never an inline `data.text`, which the callout tool silently discards.
+    it('maps emoji + colour and emits the body as a child paragraph (no inline text)', () => {
       const out = parseNextSpaceBlocks(
         envelope(
           node('cl', 13, {
@@ -221,14 +225,15 @@ describe('parseNextSpaceBlocks', () => {
       );
 
       expect(out).toEqual([
-        { id: 'cl', tool: 'callout', data: { emoji: '⚠️', text: 'call me out!', textColor: null, backgroundColor: 'yellow' } },
+        { id: 'cl', tool: 'callout', data: { emoji: '⚠️', textColor: null, backgroundColor: 'yellow' } },
+        { id: 'cl:callout-body', tool: 'paragraph', data: { text: 'call me out!' }, parentId: 'cl' },
       ]);
     });
 
     it('defaults the emoji and leaves colours null when absent', () => {
       const out = parseNextSpaceBlocks(envelope(node('cl', 13, { data: segments('x') })));
 
-      expect(out?.[0].data).toEqual({ emoji: '💡', text: 'x', textColor: null, backgroundColor: null });
+      expect(out?.[0].data).toEqual({ emoji: '💡', textColor: null, backgroundColor: null });
     });
 
     it('maps a named text colour', () => {
@@ -236,7 +241,29 @@ describe('parseNextSpaceBlocks', () => {
         envelope(node('cl', 13, { textColor: 'blue', data: { ...segments('x'), icon: { type: 'emoji', value: '💡' } } }))
       );
 
-      expect(out?.[0].data).toEqual({ emoji: '💡', text: 'x', textColor: 'blue', backgroundColor: null });
+      expect(out?.[0].data).toEqual({ emoji: '💡', textColor: 'blue', backgroundColor: null });
+    });
+
+    it('normalizes buildin British "grey" to Blok\'s "gray" preset', () => {
+      const out = parseNextSpaceBlocks(envelope(node('cl', 13, { backgroundColor: 'grey', data: segments('x') })));
+
+      expect((out?.[0].data as { backgroundColor: string | null }).backgroundColor).toBe('gray');
+    });
+
+    it('drops colour names outside Blok\'s preset palette to null', () => {
+      const out = parseNextSpaceBlocks(
+        envelope(node('cl', 13, { backgroundColor: 'mauve', textColor: 'chartreuse', data: segments('x') }))
+      );
+
+      expect(out?.[0].data).toEqual({ emoji: '💡', textColor: null, backgroundColor: null });
+    });
+
+    it('omits the body child paragraph when the callout has no text', () => {
+      const out = parseNextSpaceBlocks(envelope(node('cl', 13, { backgroundColor: 'yellow', data: segments() })));
+
+      expect(out).toEqual([
+        { id: 'cl', tool: 'callout', data: { emoji: '💡', textColor: null, backgroundColor: 'yellow' } },
+      ]);
     });
   });
 

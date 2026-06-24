@@ -13,6 +13,9 @@ function createMockBlokInstance(): {
   readOnly: { set: ReturnType<typeof vi.fn> };
   focus: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
+  theme: { set: ReturnType<typeof vi.fn> };
+  width: { set: ReturnType<typeof vi.fn> };
+  placeholder: { set: ReturnType<typeof vi.fn> };
 } {
   return {
     isReady: Promise.resolve(),
@@ -20,6 +23,9 @@ function createMockBlokInstance(): {
     readOnly: { set: vi.fn().mockResolvedValue(false) },
     focus: vi.fn().mockReturnValue(true),
     save: vi.fn().mockResolvedValue({ time: 0, blocks: [], version: '0' }),
+    theme: { set: vi.fn() },
+    width: { set: vi.fn() },
+    placeholder: { set: vi.fn() },
   };
 }
 
@@ -48,6 +54,9 @@ vi.mock('../../../src/blok', () => {
       public readOnly: { set: ReturnType<typeof vi.fn> };
       public focus: ReturnType<typeof vi.fn>;
       public save: ReturnType<typeof vi.fn>;
+      public theme: { set: ReturnType<typeof vi.fn> };
+      public width: { set: ReturnType<typeof vi.fn> };
+      public placeholder: { set: ReturnType<typeof vi.fn> };
 
       constructor(config?: unknown) {
         MockBlokConstructor(config);
@@ -67,6 +76,9 @@ vi.mock('../../../src/blok', () => {
         this.readOnly = instance.readOnly;
         this.focus = instance.focus;
         this.save = instance.save;
+        this.theme = instance.theme;
+        this.width = instance.width;
+        this.placeholder = instance.placeholder;
         mockBlokInstances.push(instance);
       }
     },

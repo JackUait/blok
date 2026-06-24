@@ -33,6 +33,7 @@ import {
   ThemeMode,
   ResolvedTheme,
   Width,
+  Placeholder,
 } from './api';
 
 import { OutputData } from './data-formats';

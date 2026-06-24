@@ -55,3 +55,36 @@ test.describe('React adapter', () => {
     await expect(paragraph).toHaveAttribute('contenteditable', 'false');
   });
 });
+
+test.describe('BlokEditor component', () => {
+  const URL = 'http://localhost:4444/test/playwright/fixtures/blok-editor.html';
+
+  test.beforeAll(() => {
+    ensureBlokBundleBuilt();
+  });
+
+  test('saves via ref and survives theme/width/readOnly toggles', async ({ page }) => {
+    await page.goto(URL);
+    await expect(page.getByTestId('status')).toHaveText('ready');
+
+    const host = page.locator('.editor-host');
+    const paragraph = host.locator('[contenteditable="true"]').filter({ hasText: 'Hello from BlokEditor' });
+    await expect(paragraph).toBeVisible();
+
+    // Type, then toggle theme + width — content must survive (no remount)
+    await paragraph.click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' - kept');
+    await page.getByTestId('toggle-theme').click();
+    await page.getByTestId('toggle-width').click();
+    await expect(host.locator('[contenteditable]')).toContainText('Hello from BlokEditor - kept');
+
+    // Save via the imperative ref
+    await page.getByTestId('save').click();
+    await expect(page.getByTestId('output')).toContainText('Hello from BlokEditor - kept');
+
+    // readOnly toggle still works
+    await page.getByTestId('toggle-readonly').click();
+    await expect(host.locator('[contenteditable]').first()).toHaveAttribute('contenteditable', 'false');
+  });
+});

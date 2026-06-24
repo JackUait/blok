@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Blok BlokEditor E2E Test</title>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "/test/playwright/fixtures/vendor/react.mjs",
+      "react-dom/client": "/test/playwright/fixtures/vendor/react-dom-client.mjs",
+      "react/jsx-runtime": "/test/playwright/fixtures/vendor/react-jsx-runtime.mjs"
+    }
+  }
+  </script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    #editor-container { border: 1px solid #ccc; min-height: 200px; padding: 10px; }
+    button { margin-right: 8px; padding: 4px 12px; }
+    #output { white-space: pre-wrap; background: #f5f5f5; padding: 10px; font-family: monospace; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module">
+    import React, { useState, useRef, useCallback, useEffect } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { jsx, jsxs } from 'react/jsx-runtime';
+    import { BlokEditor } from '/dist/react.mjs?_v=1';
+    const { Paragraph, Header } = await import('/dist/tools.mjs?_v=1');
+
+    function App() {
+      const ref = useRef(null);
+      const [readOnly, setReadOnly] = useState(false);
+      const [theme, setTheme] = useState('light');
+      const [width, setWidth] = useState('narrow');
+      const [output, setOutput] = useState('');
+      const [status, setStatus] = useState('loading');
+
+      const handleSave = useCallback(async () => {
+        if (ref.current === null) return;
+        const data = await ref.current.save();
+        setOutput(JSON.stringify(data));
+      }, []);
+
+      return jsxs('div', {
+        children: [
+          jsx('div', { 'data-blok-testid': 'status', children: status }),
+          jsx('button', { 'data-blok-testid': 'save', onClick: handleSave, children: 'Save' }),
+          jsx('button', { 'data-blok-testid': 'toggle-readonly', onClick: () => setReadOnly(p => !p), children: 'ReadOnly' }),
+          jsx('button', { 'data-blok-testid': 'toggle-theme', onClick: () => setTheme(t => t === 'light' ? 'dark' : 'light'), children: 'Theme' }),
+          jsx('button', { 'data-blok-testid': 'toggle-width', onClick: () => setWidth(w => w === 'narrow' ? 'full' : 'narrow'), children: 'Width' }),
+          jsx(BlokEditor, {
+            ref,
+            className: 'editor-host',
+            tools: { paragraph: { class: Paragraph }, header: { class: Header } },
+            data: { blocks: [{ id: 'b1', type: 'paragraph', data: { text: 'Hello from BlokEditor' } }] },
+            readOnly, theme, width,
+            onReady: () => setStatus('ready'),
+          }),
+          jsx('pre', { 'data-blok-testid': 'output', id: 'output', children: output }),
+        ],
+      });
+    }
+    createRoot(document.getElementById('root')).render(jsx(App, {}));
+  </script>
+</body>
+</html>

@@ -146,6 +146,24 @@ export function useBlok(config: UseBlokConfig, deps?: DependencyList): Blok | nu
     editor.focus();
   }, [editor, autofocus]);
 
+  // Reactive: theme
+  const { theme } = config;
+  useEffect(() => {
+    if (editor === null || theme === undefined) {
+      return;
+    }
+    editor.theme.set(theme);
+  }, [editor, theme]);
+
+  // Reactive: width
+  const { width } = config;
+  useEffect(() => {
+    if (editor === null || width === undefined) {
+      return;
+    }
+    editor.width.set(width);
+  }, [editor, width]);
+
   return editor;
 }
 

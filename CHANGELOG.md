@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.23.2](https://github.com/JackUait/blok/compare/v0.23.1...v0.23.2) (2026-06-25)
+
+### Maintenance
+
+- **Docs** — Documented two React-adapter caveats. `<BlokEditor>` must not be wrapped in `styled()` or any HOC that reserves the `theme` prop: styled-components claims `theme` for its own `ThemeProvider`, so it never reaches the editor and theme sync silently breaks — render it directly and style the container via `className`. And `deps` values must be referentially stable (each value compared individually, not the array wrapper), otherwise the editor is recreated on every render. Both caveats now appear in the README, the docs site, and the `BlokEditor`/`useBlok` JSDoc and published type declarations.
+
 ## [0.23.1](https://github.com/JackUait/blok/compare/v0.23.0...v0.23.1) (2026-06-25)
 
 ### Features

@@ -63,6 +63,43 @@ describe('Paragraph Tool - Custom Configurations', () => {
     });
   });
 
+  describe('setPlaceholder (reactive)', () => {
+    it('updates the live placeholder attribute on an editable block', () => {
+      const options = createParagraphOptions({}, { placeholder: 'Old' });
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+      expect(element).toHaveAttribute('data-blok-placeholder-active', 'Old');
+
+      paragraph.setPlaceholder('New placeholder');
+      expect(element).toHaveAttribute('data-blok-placeholder-active', 'New placeholder');
+    });
+
+    it('clears the placeholder attribute when set to false', () => {
+      const options = createParagraphOptions({}, { placeholder: 'Old' });
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+
+      paragraph.setPlaceholder(false);
+      expect(element).toHaveAttribute('data-blok-placeholder-active', '');
+    });
+
+    it('is a no-op on a read-only block (no DOM write) but updates internal state', () => {
+      const options = { ...createParagraphOptions({}, { placeholder: 'Old' }), readOnly: true };
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+      // read-only render does not set the active placeholder attribute
+      expect(element.hasAttribute('data-blok-placeholder-active')).toBe(false);
+
+      paragraph.setPlaceholder('New');
+      // still no attribute while read-only
+      expect(element.hasAttribute('data-blok-placeholder-active')).toBe(false);
+
+      // toggling back to edit shows the updated placeholder
+      paragraph.setReadOnly(false);
+      expect(element).toHaveAttribute('data-blok-placeholder-active', 'New');
+    });
+  });
+
   describe('preserveBlank configuration', () => {
     it('validates empty paragraph as invalid when preserveBlank is false', () => {
       const options = createParagraphOptions({}, { preserveBlank: false });

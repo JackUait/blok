@@ -322,6 +322,26 @@ export class Paragraph implements BlockTool {
   }
 
   /**
+   * Update the block's placeholder text in place (reactive editor.placeholder API).
+   * Updates internal state always; writes the live attribute only when editable
+   * and rendered. A read-only block picks up the new text on the next edit toggle.
+   *
+   * @param value - new placeholder text, or false to clear it
+   */
+  public setPlaceholder(value: string | false): void {
+    this._placeholder = value === false ? '' : value;
+
+    if (!this._element || this.readOnly) {
+      return;
+    }
+
+    this._element.setAttribute(
+      'data-blok-placeholder-active',
+      value === false ? '' : this.api.i18n.t(this._placeholder)
+    );
+  }
+
+  /**
    * Method that specified how to merge two Text blocks.
    * Called by Editor by backspace at the beginning of the Block
    *

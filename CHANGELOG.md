@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.23.1](https://github.com/JackUait/blok/compare/v0.23.0...v0.23.1) (2026-06-25)
+
+### Features
+
+- **Core** — A new `editor.placeholder` runtime API (`get`/`set`) lets consumers read and change the empty-paragraph placeholder on a live editor, mirroring the existing `width` API. Updates apply to existing blocks and to blocks created afterwards.
+- **React** — `<BlokEditor>` now accepts a reactive `placeholder` prop (backed by the new core API) that updates the editor in place without recreating it, and forwards all standard `<div>` attributes — `id`, `aria-*`, `data-*`, and the like — to the editor container.
+
 ## [0.23.0](https://github.com/JackUait/blok/compare/v0.22.0...v0.23.0) (2026-06-24)
 
 ### Features

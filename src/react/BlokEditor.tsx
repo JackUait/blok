@@ -28,7 +28,11 @@ import type { UseBlokConfig } from './types';
 export interface BlokEditorProps
   extends Omit<UseBlokConfig, 'onReady'>,
     Omit<HTMLAttributes<HTMLDivElement>, 'style' | 'onChange'> {
-  /** When any value changes, the editor is destroyed and recreated. */
+  /**
+   * When any value changes, the editor is destroyed and recreated. Keep each
+   * value referentially stable (primitives or useMemo-stable objects) — a dep
+   * whose identity changes every render recreates the editor each time.
+   */
   deps?: DependencyList;
   /** Test id forwarded to the editor container element (via data-testid). */
   'data-testid'?: string;
@@ -45,6 +49,11 @@ const CONFIG_KEY_SET = new Set<string>(USE_BLOK_CONFIG_KEYS);
 /**
  * The recommended way to embed Blok in React. Internally wires `useBlok` and
  * `BlokContent`, and forwards a ref to the live `Blok` instance.
+ *
+ * Don't wrap this component in `styled()` or any HOC that reserves the `theme`
+ * prop — styled-components claims `theme` for its own `ThemeProvider`, so it
+ * never reaches the editor and theme sync silently breaks. Render it directly
+ * and style the container via `className`.
  *
  * @example
  * ```tsx

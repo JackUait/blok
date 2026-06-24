@@ -34,7 +34,7 @@ export interface BlokContentProps extends React.HTMLAttributes<HTMLDivElement> {
  * React hook that creates and manages a Blok editor instance.
  *
  * @param config - Editor configuration (all BlokConfig props except `holder`)
- * @param deps - Optional dependency array. When any dep changes, the editor is destroyed and recreated.
+ * @param deps - Optional dependency array. When any dep changes, the editor is destroyed and recreated. Keep each value referentially stable (primitives or useMemo-stable objects) so the editor isn't recreated every render.
  * @returns The Blok editor instance, or null during SSR / before initialization.
  *
  * @example
@@ -72,7 +72,11 @@ export declare const BlokContent: React.ForwardRefExoticComponent<BlokContentPro
 export interface BlokEditorProps
   extends Omit<UseBlokConfig, 'onReady'>,
     Omit<React.HTMLAttributes<HTMLDivElement>, 'style' | 'onChange'> {
-  /** When any value changes, the editor is destroyed and recreated. */
+  /**
+   * When any value changes, the editor is destroyed and recreated. Keep each
+   * value referentially stable (primitives or useMemo-stable objects) — a dep
+   * whose identity changes every render recreates the editor each time.
+   */
   deps?: React.DependencyList;
   /** Test id forwarded to the editor container element (via data-testid). */
   'data-testid'?: string;
@@ -83,6 +87,11 @@ export interface BlokEditorProps
 /**
  * The recommended all-in-one React component. Wires useBlok + BlokContent and
  * forwards a ref to the live Blok instance (null before the editor is ready).
+ *
+ * Don't wrap this component in `styled()` or any HOC that reserves the `theme`
+ * prop — styled-components claims `theme` for its own `ThemeProvider`, so it
+ * never reaches the editor and theme sync silently breaks. Render it directly
+ * and style the container via `className`.
  *
  * @example
  * ```tsx

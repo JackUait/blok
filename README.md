@@ -68,7 +68,7 @@ new Blok({
 
   `data` is the **initial content only** — the editor owns the document after mount. Read content via `onChange` or `ref.current.save()`; replace it via `ref.current.render(newData)`; passing a new `data` reference does not reload content.
 
-  Reactive props (`readOnly`, `theme`, `width`, `autofocus`) sync without remounting. When structural config like `tools` needs to change, pass a `deps` array — the editor is destroyed and recreated whenever any dep value changes. Keep `deps` values referentially stable (primitives, or `useMemo`-stable objects/arrays); an unstable reference changes identity on every render and recreates the editor each time.
+  Reactive props (`readOnly`, `theme`, `width`, `autofocus`) sync without remounting. When structural config like `tools` needs to change, pass a `deps` array — the editor is destroyed and recreated whenever any dep value changes. Keep each value inside `deps` referentially stable: pass primitives or `useMemo`-stable objects, since a dep value whose identity changes every render recreates the editor each time. (The individual values are compared, not the array wrapper, so a fresh `[a, b]` literal each render is fine when `a` and `b` are stable; omitting `deps` creates the editor once.)
 
   Don't wrap `<BlokEditor>` in `styled()` or any HOC that reserves the `theme` prop — styled-components claims `theme` for its own `ThemeProvider`, so it never reaches the editor and theme sync silently breaks. Render `<BlokEditor>` directly and style it through `className`.
 

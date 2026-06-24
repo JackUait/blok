@@ -134,7 +134,7 @@ export const REACT_SECTIONS: IntegrationSection[] = [
         type: 'unknown[]',
         default: '[]',
         description:
-          'Optional dependency array. When any value changes, the editor is destroyed and recreated — useful when switching documents. Values must be referentially stable (primitives, or useMemo-stable objects/arrays); an unstable reference recreates the editor on every render.',
+          'Optional dependency array. When any value changes, the editor is destroyed and recreated — useful when switching documents. Each value in the array should be referentially stable (a primitive, or a useMemo-stable object), since a dep whose identity changes every render recreates the editor. The values are compared individually, not the array wrapper, so a fresh array literal each render is fine when its values are stable.',
       },
     ],
     properties: [

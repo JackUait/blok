@@ -67,7 +67,7 @@ test.describe('BlokEditor component', () => {
     await page.goto(URL);
     await expect(page.getByTestId('status')).toHaveText('ready');
 
-    const host = page.locator('.editor-host');
+    const host = page.getByTestId('editor-host');
     const paragraph = host.locator('[contenteditable="true"]').filter({ hasText: 'Hello from BlokEditor' });
     await expect(paragraph).toBeVisible();
 

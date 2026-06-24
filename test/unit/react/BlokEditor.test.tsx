@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, act } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import React, { createRef } from 'react';
 import { BlokEditor } from '../../../src/react/BlokEditor';
 import type { Blok } from '@/types';
@@ -30,6 +30,7 @@ vi.mock('../../../src/blok', () => ({
     constructor(config: { holder: HTMLElement }) {
       const wrapper = document.createElement('div');
       wrapper.setAttribute('data-blok-editor', 'true');
+      wrapper.setAttribute('data-testid', 'blok-editor-inner');
       config.holder.appendChild(wrapper);
       this.isReady = Promise.resolve();
       instances.push(this as unknown as MockInstance);
@@ -47,12 +48,12 @@ describe('BlokEditor', () => {
   });
 
   it('renders the editor and applies className to the container', async () => {
-    const { container } = render(<BlokEditor className="my-editor" />);
+    render(<BlokEditor className="my-editor" data-testid="editor-host" />);
     await act(async () => { await Promise.resolve(); });
 
-    const host = container.querySelector('.my-editor');
-    expect(host).not.toBeNull();
-    expect(host?.querySelector('[data-blok-editor]')).not.toBeNull();
+    const host = screen.getByTestId('editor-host');
+    expect(host.classList.contains('my-editor')).toBe(true);
+    expect(screen.getByTestId('blok-editor-inner')).not.toBeNull();
   });
 
   it('forwards a typed ref to the live instance once ready (null before)', async () => {

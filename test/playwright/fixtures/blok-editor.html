@@ -49,13 +49,16 @@
           jsx('button', { 'data-blok-testid': 'toggle-readonly', onClick: () => setReadOnly(p => !p), children: 'ReadOnly' }),
           jsx('button', { 'data-blok-testid': 'toggle-theme', onClick: () => setTheme(t => t === 'light' ? 'dark' : 'light'), children: 'Theme' }),
           jsx('button', { 'data-blok-testid': 'toggle-width', onClick: () => setWidth(w => w === 'narrow' ? 'full' : 'narrow'), children: 'Width' }),
-          jsx(BlokEditor, {
-            ref,
-            className: 'editor-host',
-            tools: { paragraph: { class: Paragraph }, header: { class: Header } },
-            data: { blocks: [{ id: 'b1', type: 'paragraph', data: { text: 'Hello from BlokEditor' } }] },
-            readOnly, theme, width,
-            onReady: () => setStatus('ready'),
+          jsx('div', {
+            'data-blok-testid': 'editor-host',
+            children: jsx(BlokEditor, {
+              ref,
+              className: 'editor-host',
+              tools: { paragraph: { class: Paragraph }, header: { class: Header } },
+              data: { blocks: [{ id: 'b1', type: 'paragraph', data: { text: 'Hello from BlokEditor' } }] },
+              readOnly, theme, width,
+              onReady: () => setStatus('ready'),
+            }),
           }),
           jsx('pre', { 'data-blok-testid': 'output', id: 'output', children: output }),
         ],

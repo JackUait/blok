@@ -15,6 +15,8 @@ export interface BlokEditorProps extends UseBlokConfig {
   deps?: DependencyList;
   /** Class name applied to the editor container element. */
   className?: string;
+  /** Test id forwarded to the editor container element (via data-testid). */
+  'data-testid'?: string;
 }
 
 /**
@@ -29,11 +31,11 @@ export interface BlokEditorProps extends UseBlokConfig {
  * ```
  */
 export const BlokEditor = forwardRef<Blok | null, BlokEditorProps>(
-  function BlokEditor({ deps, className, ...config }, ref) {
+  function BlokEditor({ deps, className, 'data-testid': dataTestId, ...config }, ref) {
     const editor = useBlok(config, deps);
 
     useImperativeHandle<Blok | null, Blok | null>(ref, () => editor, [editor]);
 
-    return <BlokContent editor={editor} className={className} />;
+    return <BlokContent editor={editor} className={className} data-testid={dataTestId} />;
   }
 );

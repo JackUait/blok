@@ -88,4 +88,15 @@ describe('BlokEditor', () => {
     await act(async () => { await Promise.resolve(); });
     expect(instances).toHaveLength(2);
   });
+
+  it('fires onReady with the live instance after the ref is committed', async () => {
+    const ref = createRef<Blok | null>();
+    const onReady = vi.fn();
+    render(<BlokEditor ref={ref} onReady={onReady} />);
+    await act(async () => { await Promise.resolve(); });
+
+    expect(onReady).toHaveBeenCalledTimes(1);
+    expect(onReady.mock.calls[0][0]).toBe(instances[0] as unknown as Blok);
+    expect(ref.current).toBe(instances[0] as unknown as Blok);
+  });
 });

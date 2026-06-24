@@ -63,14 +63,19 @@ export function useBlok(
 export declare const BlokContent: React.ForwardRefExoticComponent<BlokContentProps & React.RefAttributes<HTMLDivElement>>;
 
 /**
- * Props for the BlokEditor component — all useBlok config plus container
- * `className` and an optional `deps` list that forces recreation when changed.
+ * Props for the BlokEditor component — all useBlok config (except `onReady`,
+ * re-typed to receive the ready instance) plus container `className`/`data-testid`
+ * and an optional `deps` list that forces recreation when changed.
  */
-export interface BlokEditorProps extends UseBlokConfig {
+export interface BlokEditorProps extends Omit<UseBlokConfig, 'onReady'> {
   /** When any value changes, the editor is destroyed and recreated. */
   deps?: React.DependencyList;
   /** Class name applied to the editor container element. */
   className?: string;
+  /** Test id forwarded to the editor container element (via data-testid). */
+  'data-testid'?: string;
+  /** Called once the editor is ready, with the live Blok instance (ref is also committed). */
+  onReady?: (editor: Blok) => void;
 }
 
 /**

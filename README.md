@@ -59,7 +59,18 @@ new Blok({
 
 ### Other entry points
 
-- `@jackuait/blok/react` — a `useBlok` hook and a `BlokContent` component for React 18/19.
+- `@jackuait/blok/react` — React 18/19 adapter. The recommended entry point is `<BlokEditor>`, an all-in-one component that forwards a ref to the live `Blok` instance:
+
+  ```tsx
+  const ref = useRef<Blok | null>(null);
+  <BlokEditor ref={ref} tools={tools} data={initialData} theme={theme} onReady={(editor) => {/* editor ready */}} />;
+  ```
+
+  `data` is the **initial content only** — the editor owns the document after mount. Read content via `onChange` or `ref.current.save()`; replace it via `ref.current.render(newData)`; passing a new `data` reference does not reload content.
+
+  Reactive props (`readOnly`, `theme`, `width`, `autofocus`) sync without remounting. When structural config like `tools` needs to change, pass a `deps` array — the editor is destroyed and recreated whenever any dep value changes.
+
+  For advanced control (e.g., rendering outside a single container), use `useBlok` + `BlokContent` directly.
 - `@jackuait/blok/markdown` — `markdownToBlocks(md)` to import Markdown (GFM, with optional math) as Blok data.
 - `@jackuait/blok/locales` — locale data, if you'd rather load it yourself.
 

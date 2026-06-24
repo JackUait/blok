@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.22.0](https://github.com/JackUait/blok/compare/v0.21.1...v0.22.0) (2026-06-24)
+
+### Features
+
+- **Paste** — Content copied from buildin.ai now imports as native Blok blocks at full fidelity. buildin's clipboard carries a lossless `text/next-space-blocks` JSON payload beside a lossy Markdown/HTML twin; Blok previously fell back to the twin, where tables collapsed to literal `|pipes|`, media degraded to links, and callouts, toggles, columns, to-dos, and code language flattened away. A new handler decodes the JSON directly, reconstructing the same native blocks as a Blok→Blok paste — paragraphs, to-dos, H1–H4, tables (grid + parented cells), bulleted/numbered lists, toggles, dividers, quotes, callouts (emoji + colour), code (with language), equations, toggle-headings, column lists, and image/video/audio/file/embed-bookmark media. (Inline marks — bold/italic/link/colour — are a documented follow-up.)
+
+### Bug Fixes
+
+- **Paste** — Callout body and colour now survive import from both Notion and buildin.ai. Blok's callout stores its body in child blocks, so the inline title/body text the parsers emitted as `data.text` was silently discarded — the callout is now emitted (colours only) plus a child paragraph carrying its text. Out-of-palette callout colours (e.g. buildin's British `grey`, or any name outside Blok's 9-colour preset) previously produced an undefined CSS variable that dropped both the background and the border; colours now normalize through Blok's preset palette (`grey`→`gray`; unknown names clamp to null).
+
 ## [0.21.1](https://github.com/JackUait/blok/compare/v0.21.0...v0.21.1) (2026-06-24)
 
 ### Features

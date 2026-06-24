@@ -47,6 +47,8 @@ vi.mock('framer-motion', () => {
     useDragControls: () => ({ start: () => {} }),
     useInView: () => true,
     useMotionValue: (value: number) => value,
+    // A settable stand-in for the spring values used by the tilt cards.
+    useSpring: () => ({ set: () => {}, get: () => 0 }),
     useVelocity: () => 0,
     useTransform: () => 0,
     // Settle straight to the target value; no async stepping needed in tests.

@@ -39,11 +39,11 @@ describe('Features', () => {
     ).toBeInTheDocument();
   });
 
-  it('should render all 9 feature cards as buttons', () => {
+  it('should render all 10 feature cards as buttons', () => {
     renderFeatures();
 
     const featureCards = screen.getAllByRole('button', { name: /learn more about/i });
-    expect(featureCards).toHaveLength(9);
+    expect(featureCards).toHaveLength(10);
   });
 
   it('should render the clean JSON pillar as a title-only tile', () => {
@@ -76,18 +76,19 @@ describe('Features', () => {
     renderFeatures();
 
     // Secondary cards are scannable: title present, descriptive prose removed.
-    expect(screen.getByText('Slash menu & Markdown')).toBeInTheDocument();
-    expect(screen.getByText('Databases & kanban boards')).toBeInTheDocument();
-    expect(screen.getByText('Tables that behave')).toBeInTheDocument();
-    expect(screen.getByText('Embeds & link previews')).toBeInTheDocument();
+    expect(screen.getByText('Insert blocks with /')).toBeInTheDocument();
+    expect(screen.getByText('Databases, boards & lists')).toBeInTheDocument();
+    expect(screen.getByText('Spreadsheet-grade tables')).toBeInTheDocument();
+    expect(screen.getByText('Embed 100+ services')).toBeInTheDocument();
     expect(screen.getByText('Conflict-free undo & redo')).toBeInTheDocument();
     expect(screen.getByText('68 languages, RTL-ready')).toBeInTheDocument();
+    expect(screen.getByText('Image, video & audio')).toBeInTheDocument();
 
     // The wordy descriptions that made the section feel crowded are gone.
     expect(screen.queryByText((content) => content.includes('Markdown shortcuts'))).not.toBeInTheDocument();
     expect(screen.queryByText((content) => content.includes('every row is a block'))).not.toBeInTheDocument();
     expect(screen.queryByText((content) => content.includes('Merged cells'))).not.toBeInTheDocument();
-    expect(screen.queryByText((content) => content.includes('100+ services'))).not.toBeInTheDocument();
+    expect(screen.queryByText((content) => content.includes('Paste a link to embed'))).not.toBeInTheDocument();
     expect(screen.queryByText((content) => content.includes('Yjs-backed'))).not.toBeInTheDocument();
     expect(screen.queryByText((content) => content.includes('right-to-left support'))).not.toBeInTheDocument();
   });

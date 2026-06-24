@@ -614,21 +614,123 @@ const DatabasesViz: React.FC = () => (
   </div>
 );
 
-// A grid with a heading row, a merged cell and a brand-tinted cell that pulses.
-const TablesViz: React.FC = () => (
-  <div aria-hidden="true" className="grid w-full grid-cols-4 grid-rows-3 gap-[3px] overflow-hidden rounded-xl border border-border/60 bg-border/60 p-[3px]">
-    {Array.from({ length: 4 }).map((_, i) => (
-      <div key={`h${i}`} className="h-6 rounded-[5px] bg-secondary" />
-    ))}
-    <div className="col-span-2 rounded-[5px] bg-card transition-colors duration-300 group-hover:bg-primary/10" />
-    <div className="rounded-[5px] bg-card" />
-    <div className="rounded-[5px] bg-card" />
-    <div className="rounded-[5px] bg-card" />
-    <div className="bento-cell rounded-[5px] bg-linear-to-br from-brand-from to-brand-to" />
-    <div className="rounded-[5px] bg-card" />
-    <div className="rounded-[5px] bg-card" />
-  </div>
-);
+// A calm little spreadsheet that plays one animation when the whole tile is
+// hovered: the Task column resizes wider while the table's real blue (#3b82f6)
+// resize line glides along the moving Task | Owner edge. Nothing is interactive
+// per-cell; reduced-motion users get the plain static table.
+const TABLE_HEADERS: { label: string; cls: string }[] = [
+  { label: "Group", cls: "col-start-1 rounded-tl-lg" },
+  { label: "Task", cls: "col-start-2" },
+  { label: "Owner", cls: "col-start-3" },
+  { label: "Date", cls: "col-start-4 rounded-tr-lg" },
+];
+
+const TablesViz: React.FC = () => {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const edgeRef = useRef<HTMLSpanElement>(null);
+  const reduce = useReducedMotion();
+
+  // Light the table's border with brand pink where the tile's glow blob touches
+  // it — the same blob-tracked radial reveal the JSON pane and chip grid use.
+  useEffect(() => {
+    if (reduce) return;
+    const wrap = wrapRef.current;
+    const tile = wrap?.closest(".bento-tile");
+    if (!wrap || !tile) return;
+
+    const apply = (clientX: number | null, clientY: number | null) => {
+      const edge = edgeRef.current;
+      if (!edge) return;
+      if (clientX === null || clientY === null) {
+        edge.style.opacity = "0";
+        return;
+      }
+      const r = wrap.getBoundingClientRect();
+      const mask = `radial-gradient(${CHIP_GLOW_RADIUS}px circle at ${clientX - r.left}px ${clientY - r.top}px, #000 0%, transparent 62%)`;
+      edge.style.opacity = "1";
+      edge.style.maskImage = mask;
+      edge.style.webkitMaskImage = mask;
+    };
+
+    const onMove = (e: Event) => {
+      const pe = e as PointerEvent;
+      if (pe.pointerType === "mouse") apply(pe.clientX, pe.clientY);
+    };
+    const onLeave = () => apply(null, null);
+
+    tile.addEventListener("pointermove", onMove);
+    tile.addEventListener("pointerleave", onLeave);
+    return () => {
+      tile.removeEventListener("pointermove", onMove);
+      tile.removeEventListener("pointerleave", onLeave);
+    };
+  }, [reduce]);
+
+  return (
+    // bg-card gives the table an opaque base so the tile's hover glow can't bleed
+    // through the semi-transparent gridlines and cell tints.
+    <div ref={wrapRef} aria-hidden="true" className="relative w-full self-start rounded-xl bg-card text-[10px] font-medium leading-tight">
+      {/* brand border revealed where the glow blob touches the table */}
+      <span
+        ref={edgeRef}
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-30 rounded-xl border-[1.5px] border-brand-from opacity-0 transition-opacity duration-200"
+      />
+      {/* The table is taller than its tile, so the lower rows spill past the
+          bottom edge (the tile clips them) — a spreadsheet that keeps going. */}
+      <div className="grid w-full grid-cols-[0.7fr_1.6fr_1fr_0.85fr] grid-rows-[repeat(7,auto)] gap-[3px] rounded-xl border border-border/60 bg-border/60 p-[3px] transition-[grid-template-columns] duration-500 ease-out motion-safe:group-hover:grid-cols-[0.7fr_1.95fr_0.65fr_0.85fr]">
+      {/* heading row */}
+      {TABLE_HEADERS.map(({ label, cls }) => (
+        <div
+          key={label}
+          className={`${cls} row-start-1 flex h-6 items-center bg-secondary px-2 font-semibold text-muted-foreground`}
+        >
+          {label}
+        </div>
+      ))}
+
+      {/* group "Web" — a merged cell spanning its two task rows */}
+      <div className="col-start-1 row-start-2 row-span-2 flex items-center justify-center bg-secondary text-center font-semibold text-muted-foreground">Web</div>
+      <div className="col-start-2 row-start-2 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">Landing page</span></div>
+      {/* background-coloured cell */}
+      <div className="col-start-3 row-start-2 flex items-center overflow-hidden bg-[#16a34a]/14 px-2 py-1.5 text-foreground/80"><span className="truncate">Ann</span></div>
+      <div className="col-start-4 row-start-2 flex items-center overflow-hidden bg-card px-2 py-1.5 text-muted-foreground"><span className="truncate">Jun 24</span></div>
+
+      <div className="col-start-2 row-start-3 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">Checkout</span></div>
+      {/* text-coloured cell — the other cell-colour mode */}
+      <div className="col-start-3 row-start-3 flex items-center overflow-hidden bg-card px-2 py-1.5 font-semibold text-primary"><span className="truncate">Lee</span></div>
+      <div className="col-start-4 row-start-3 flex items-center overflow-hidden bg-card px-2 py-1.5 text-muted-foreground"><span className="truncate">Jul 02</span></div>
+
+      {/* group "App" */}
+      <div className="col-start-1 row-start-4 row-span-2 flex items-center justify-center bg-secondary text-center font-semibold text-muted-foreground">App</div>
+      <div className="col-start-2 row-start-4 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">Onboarding</span></div>
+      <div className="col-start-3 row-start-4 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">Max</span></div>
+      <div className="col-start-4 row-start-4 flex items-center overflow-hidden bg-card px-2 py-1.5 text-muted-foreground"><span className="truncate">Aug 03</span></div>
+
+      <div className="col-start-2 row-start-5 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">Settings</span></div>
+      {/* background-coloured cell */}
+      <div className="col-start-3 row-start-5 flex items-center overflow-hidden bg-[#3b82f6]/12 px-2 py-1.5 text-foreground/80"><span className="truncate">Zoe</span></div>
+      <div className="col-start-4 row-start-5 flex items-center overflow-hidden bg-card px-2 py-1.5 text-muted-foreground"><span className="truncate">Aug 10</span></div>
+
+      {/* group "Mobile" — these rows are the ones that bleed off the bottom */}
+      <div className="col-start-1 row-start-6 row-span-2 flex items-center justify-center bg-secondary text-center font-semibold text-muted-foreground">Mobile</div>
+      <div className="col-start-2 row-start-6 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">Release</span></div>
+      <div className="col-start-3 row-start-6 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">Kim</span></div>
+      <div className="col-start-4 row-start-6 flex items-center overflow-hidden bg-card px-2 py-1.5 text-muted-foreground"><span className="truncate">Sep 01</span></div>
+
+      <div className="col-start-2 row-start-7 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">Hotfix</span></div>
+      <div className="col-start-3 row-start-7 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">Sam</span></div>
+      <div className="col-start-4 row-start-7 flex items-center overflow-hidden bg-card px-2 py-1.5 text-muted-foreground"><span className="truncate">Sep 05</span></div>
+
+      {/* the real blue resize line, parked on the Task | Owner edge — rides along
+          as the column widens on hover */}
+      <span className="pointer-events-none relative z-20 col-start-3 row-start-1 row-span-7">
+        <span className="absolute inset-y-0 -left-[2px] w-[2px] bg-[#3b82f6] opacity-0 transition-opacity duration-150 motion-safe:group-hover:opacity-100" />
+      </span>
+      </div>
+    </div>
+  );
+};
 
 // Two link-preview cards: a live embed favicon + an OpenGraph bookmark, with a
 // loading sheen sweeping across the skeleton rows.
@@ -709,17 +811,62 @@ const LanguagesViz: React.FC = () => (
   </div>
 );
 
+// Media blocks — image, video and audio. A poster frame with a play head over a
+// soft brand wash, and an audio track with a little waveform underneath.
+const WAVE = [5, 9, 14, 8, 12, 6, 11, 15, 7, 10, 13, 6, 9, 5, 8];
+
+const MediaViz: React.FC = () => (
+  <div aria-hidden="true" className="flex w-full flex-col gap-2">
+    {/* image / video poster with a play head */}
+    <div className="relative flex h-14 items-center justify-center overflow-hidden rounded-xl border border-border/60 bg-linear-to-br from-brand-from/25 via-brand-via/20 to-brand-to/25">
+      <svg className="absolute bottom-1.5 left-2 text-white/70" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="8" cy="9" r="1.4" fill="currentColor" stroke="none" />
+        <path d="M3 16.5 8 12l3 2.6L15 10l6 6" />
+      </svg>
+      <span className="relative flex size-8 items-center justify-center rounded-full bg-white/90 text-primary shadow-sm transition-transform duration-300 group-hover:scale-110">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M8 5.5 19 12 8 18.5Z" />
+        </svg>
+      </span>
+    </div>
+    {/* audio track with a waveform — the leading bars brand-lit like a playhead */}
+    <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-card px-2.5 py-2">
+      <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-linear-to-br from-brand-from to-brand-to text-white">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M9 18V6l10-2.5V14" />
+          <circle cx="6.5" cy="18" r="2.5" fill="currentColor" stroke="none" />
+          <circle cx="16.5" cy="14" r="2.5" fill="currentColor" stroke="none" />
+        </svg>
+      </span>
+      <div className="flex flex-1 items-center gap-[2px]">
+        {WAVE.map((h, i) => (
+          <span
+            key={i}
+            className={`w-[2px] rounded-full ${i < 5 ? "bg-primary" : "bg-foreground/25"}`}
+            style={{ height: `${h}px` }}
+          />
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
 // Maps a feature's unique accent key → its bento span (lg only) + its diorama.
 const TILE: Record<string, { span: string; viz: React.FC }> = {
   coral: { span: "lg:col-span-2 lg:row-span-2", viz: CleanJsonViz },
   green: { span: "lg:col-span-2", viz: BlocksViz },
   orange: { span: "lg:col-span-2", viz: ExtensibleViz },
-  pink: { span: "lg:col-span-1", viz: SlashViz },
-  purple: { span: "lg:col-span-1", viz: DatabasesViz },
-  cyan: { span: "lg:col-span-2", viz: TablesViz },
-  blue: { span: "lg:col-span-2", viz: EmbedsViz },
-  yellow: { span: "lg:col-span-1", viz: UndoViz },
-  mauve: { span: "lg:col-span-1", viz: LanguagesViz },
+  // The capability tiles use lg:order-* to drive the grid auto-placement into the
+  // hero-led mosaic (Tables a 2×2 showpiece, the rest orbiting) without having to
+  // reorder the FEATURES data. Pillars stay at the default order, so they fill the
+  // top rows first.
+  pink: { span: "lg:col-span-1 lg:order-1", viz: SlashViz },
+  purple: { span: "lg:col-span-1 lg:order-2", viz: DatabasesViz },
+  cyan: { span: "lg:col-span-2 lg:order-3", viz: TablesViz },
+  blue: { span: "lg:col-span-1 lg:order-4", viz: EmbedsViz },
+  media: { span: "lg:col-span-1 lg:order-5", viz: MediaViz },
+  yellow: { span: "lg:col-span-1 lg:order-6", viz: UndoViz },
+  mauve: { span: "lg:col-span-1 lg:order-7", viz: LanguagesViz },
 };
 
 type TileProps = {
@@ -788,16 +935,13 @@ const CapabilityTile: React.FC<TileProps> = ({ feature, onOpen }) => {
       transition={hoverSpring}
       style={tilt.style}
       {...tilt.handlers}
-      className={`bento-tile group relative flex min-h-[60px] cursor-pointer flex-col justify-center gap-3 overflow-hidden rounded-2xl border border-black/[0.04] bg-secondary p-4 text-left transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-white/[0.08] lg:justify-start lg:p-5 ${TILE[feature.accent].span}`}
+      className={`bento-tile group relative flex min-h-[60px] cursor-pointer flex-col justify-center gap-3 overflow-hidden rounded-2xl border border-border/60 bg-card p-4 text-left transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:justify-start lg:p-5 ${TILE[feature.accent].span}`}
       onClick={() => onOpen(feature)}
       aria-label={feature.learnMore}
     >
       <span className="bento-spot" aria-hidden="true" />
       <div className="relative z-10 flex w-full items-center gap-3.5">
-        <div className="feature-blob flex size-10 shrink-0 items-center justify-center bg-primary/10 text-primary transition-[background-color,color,transform] duration-300 group-hover:scale-110 group-hover:bg-linear-to-br group-hover:from-brand-from group-hover:via-brand-via group-hover:to-brand-to group-hover:text-white">
-          {feature.icon}
-        </div>
-        <h3 className="flex-1 text-balance text-[1.05rem] font-semibold leading-snug tracking-tight">
+        <h3 className="flex-1 text-balance text-[1.05rem] font-bold leading-snug tracking-tight">
           {feature.title}
         </h3>
         <svg
@@ -850,10 +994,11 @@ export const Features: React.FC = () => {
   const FEATURES = useMemo<FeatureDetail[]>(() => [
     {
       icon: (
-        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" className="fi fi-json">
-          {/* JSON braces */}
-          <path d="M12 8L8 16l4 8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M20 8l4 8-4 8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="fi fi-json">
+          {/* Braces cradling a value node */}
+          <path d="M14 7.5C11.8 7.5 12.4 9.8 12.4 11.2 12.4 12.6 11.6 13.3 10.5 14 11.6 14.7 12.4 15.4 12.4 16.8 12.4 18.2 11.8 20.5 14 20.5" />
+          <path d="M18 7.5C20.2 7.5 19.6 9.8 19.6 11.2 19.6 12.6 20.4 13.3 21.5 14 20.4 14.7 19.6 15.4 19.6 16.8 19.6 18.2 20.2 20.5 18 20.5" />
+          <circle cx="16" cy="14" r="1.15" fill="currentColor" stroke="none" />
         </svg>
       ),
       title: t('home.features.cleanJson.title'),
@@ -876,11 +1021,11 @@ export const Features: React.FC = () => {
     },
     {
       icon: (
-        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" className="fi fi-blocks">
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="fi fi-blocks">
           {/* Stacked blocks — the block library */}
-          <rect x="6" y="6" width="10" height="8" rx="2" stroke="currentColor" strokeWidth="2" />
-          <rect x="16" y="10" width="10" height="8" rx="2" stroke="currentColor" strokeWidth="2" />
-          <rect x="8" y="18" width="10" height="8" rx="2" stroke="currentColor" strokeWidth="2" />
+          <rect x="5.5" y="5.5" width="11" height="9" rx="2.6" fill="currentColor" fillOpacity="0.12" />
+          <rect x="16.5" y="10.5" width="11" height="9" rx="2.6" fill="currentColor" fillOpacity="0.12" />
+          <rect x="9.5" y="17.5" width="11" height="9" rx="2.6" fill="currentColor" fillOpacity="0.22" />
         </svg>
       ),
       title: t('home.features.blockLibrary.title'),
@@ -905,10 +1050,10 @@ new Blok({ holder: 'editor' });`,
     },
     {
       icon: (
-        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" className="fi fi-ext">
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="fi fi-ext">
           {/* Dashed frame + plus — bring your own block */}
-          <rect x="6" y="6" width="20" height="20" rx="4" stroke="currentColor" strokeWidth="2" strokeDasharray="4 3" />
-          <path d="M16 11v10M11 16h10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+          <rect x="6" y="6" width="20" height="20" rx="5" strokeDasharray="3.5 3.6" fill="currentColor" fillOpacity="0.08" />
+          <path d="M16 11.5v9M11.5 16h9" strokeWidth="2.4" />
         </svg>
       ),
       title: t('home.features.customBlocks.title'),
@@ -936,10 +1081,10 @@ new Blok({ holder: 'editor' });`,
     },
     {
       icon: (
-        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" className="fi fi-slash">
-          {/* Menu box with slash */}
-          <rect x="6" y="8" width="20" height="16" rx="3" stroke="currentColor" strokeWidth="2" />
-          <path d="M18 12L14 20" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="fi fi-slash">
+          {/* Command menu with a slash key */}
+          <rect x="5" y="7.5" width="22" height="17" rx="5" fill="currentColor" fillOpacity="0.12" />
+          <path d="M18.5 12 13.5 20" strokeWidth="2.3" />
         </svg>
       ),
       title: t('home.features.slashCommands.title'),
@@ -967,11 +1112,11 @@ new Blok({ holder: 'editor' });`,
     },
     {
       icon: (
-        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" className="fi fi-kanban">
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="fi fi-kanban">
           {/* Kanban columns */}
-          <rect x="5" y="6" width="6" height="20" rx="1.5" stroke="currentColor" strokeWidth="2" />
-          <rect x="13" y="6" width="6" height="13" rx="1.5" stroke="currentColor" strokeWidth="2" />
-          <rect x="21" y="6" width="6" height="16" rx="1.5" stroke="currentColor" strokeWidth="2" />
+          <rect x="5" y="6" width="6" height="20" rx="2.2" fill="currentColor" fillOpacity="0.16" />
+          <rect x="13" y="6" width="6" height="13" rx="2.2" fill="currentColor" fillOpacity="0.16" />
+          <rect x="21" y="6" width="6" height="16" rx="2.2" fill="currentColor" fillOpacity="0.16" />
         </svg>
       ),
       title: t('home.features.databases.title'),
@@ -991,10 +1136,10 @@ new Blok({ holder: 'editor' });`,
     },
     {
       icon: (
-        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" className="fi fi-table">
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="fi fi-table">
           {/* Table grid */}
-          <rect x="5" y="7" width="22" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
-          <path d="M5 13h22M5 19h22M13 7v18M20 7v18" stroke="currentColor" strokeWidth="1.5" />
+          <rect x="5" y="7" width="22" height="18" rx="3.5" fill="currentColor" fillOpacity="0.10" />
+          <path d="M5 13h22M5 19h22M12.5 7v18M19.5 7v18" strokeWidth="1.6" />
         </svg>
       ),
       title: t('home.features.tables.title'),
@@ -1014,10 +1159,10 @@ new Blok({ holder: 'editor' });`,
     },
     {
       icon: (
-        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" className="fi fi-embed">
-          {/* Embed frame with play */}
-          <rect x="5" y="7" width="22" height="18" rx="3" stroke="currentColor" strokeWidth="2" />
-          <path d="M14 12.5l5.5 3.5-5.5 3.5z" fill="currentColor" />
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="fi fi-embed">
+          {/* Embed frame with a play head */}
+          <rect x="5" y="7" width="22" height="18" rx="4.5" fill="currentColor" fillOpacity="0.10" />
+          <path d="M14 12.4 19.8 16 14 19.6 Z" fill="currentColor" strokeWidth="1.6" />
         </svg>
       ),
       title: t('home.features.embeds.title'),
@@ -1037,12 +1182,12 @@ new Blok({ holder: 'editor' });`,
     },
     {
       icon: (
-        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" className="fi fi-history">
-          {/* Undo / redo arrows */}
-          <path d="M10 16a6 6 0 0 1 6-6h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M16 7l3 3-3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M22 16a6 6 0 0 1-6 6h-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
-          <path d="M16 25l-3-3 3-3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.5" />
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="fi fi-history">
+          {/* Undo / redo — two looping arrows */}
+          <path d="M22.5 13.2A8 8 0 0 0 8.5 10.4" />
+          <path d="M8 6.4 8.2 11.4 13.2 11" />
+          <path d="M9.5 18.8A8 8 0 0 0 23.5 21.6" opacity="0.55" />
+          <path d="M24 25.6 23.8 20.6 18.8 21" opacity="0.55" />
         </svg>
       ),
       title: t('home.features.undoRedo.title'),
@@ -1062,11 +1207,11 @@ new Blok({ holder: 'editor' });`,
     },
     {
       icon: (
-        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" className="fi fi-globe">
-          {/* Globe */}
-          <circle cx="16" cy="16" r="9" stroke="currentColor" strokeWidth="2" />
-          <ellipse cx="16" cy="16" rx="4" ry="9" stroke="currentColor" strokeWidth="1.5" />
-          <path d="M8 12h16M8 20h16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="fi fi-globe">
+          {/* Globe with meridian + parallels */}
+          <circle cx="16" cy="16" r="9.5" fill="currentColor" fillOpacity="0.10" />
+          <ellipse cx="16" cy="16" rx="4.3" ry="9.5" strokeWidth="1.7" />
+          <path d="M7 12.5h18M7 19.5h18" strokeWidth="1.7" />
         </svg>
       ),
       title: t('home.features.languages.title'),
@@ -1085,6 +1230,30 @@ new Blok({ holder: 'editor' });`,
   i18n: { locale: 'ar' } // Arabic with RTL
 });`,
         apiLink: "/docs#i18n-api",
+      },
+    },
+    {
+      icon: (
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="fi fi-media">
+          {/* Picture frame with a mountain + sun */}
+          <rect x="4" y="6" width="24" height="20" rx="3.5" fill="currentColor" fillOpacity="0.1" />
+          <circle cx="11" cy="13" r="2" fill="currentColor" stroke="none" />
+          <path d="M5 22l6-5 4 3.2L21 14l6 5.5" />
+        </svg>
+      ),
+      title: t('home.features.media.title'),
+      description: t('home.features.media.description'),
+      learnMore: t('home.features.media.learnMore'),
+      accent: "media",
+      details: {
+        summary: t('home.features.media.details.summary'),
+        benefits: [
+          t('home.features.media.details.benefit1'),
+          t('home.features.media.details.benefit2'),
+          t('home.features.media.details.benefit3'),
+          t('home.features.media.details.benefit4'),
+        ],
+        apiLink: "/tools#image",
       },
     },
   ], [t]);

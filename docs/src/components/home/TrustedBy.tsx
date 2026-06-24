@@ -11,7 +11,7 @@ import {
   type MotionValue,
   type Variants,
 } from "framer-motion";
-import { Globe, Store, type LucideIcon } from "lucide-react";
+import { Globe, Mail, Send, Store, type LucideIcon } from "lucide-react";
 import { SectionReveal } from "../common/SectionReveal";
 import { useI18n } from "../../contexts/I18nContext";
 
@@ -315,38 +315,93 @@ export const TrustedBy: React.FC = () => {
             </div>
           </SectionReveal>
 
-          {/* ── Proof tiles — a floating bento stack ─────────────────────── */}
-          <motion.ul
-            className="grid auto-rows-fr gap-5"
-            data-blok-testid="trusted-stats"
-            variants={tilesContainer}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, margin: "-80px" }}
-          >
-            {stats.map((stat) => (
-              <motion.li
-                key={stat.label}
-                variants={tileVariant}
-                whileHover={{ y: -6 }}
-                transition={tileHover}
-                className="group/tile relative flex flex-col justify-center gap-2 overflow-hidden rounded-[1.75rem] border border-black/[0.05] bg-card p-7 shadow-card transition-shadow duration-300 hover:shadow-card-hover dark:border-white/[0.08]"
+          {/* ── Side column: proof tiles stacked over the contact CTA ─────── */}
+          <div className="flex flex-col gap-5">
+            {/* Proof tiles — a floating bento stack. */}
+            <motion.ul
+              className="grid flex-1 auto-rows-fr gap-5"
+              data-blok-testid="trusted-stats"
+              variants={tilesContainer}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, margin: "-80px" }}
+            >
+              {stats.map((stat) => (
+                <motion.li
+                  key={stat.label}
+                  variants={tileVariant}
+                  whileHover={{ y: -6 }}
+                  transition={tileHover}
+                  className="group/tile relative flex flex-col justify-center gap-2 overflow-hidden rounded-[1.75rem] border border-black/[0.05] bg-card p-7 shadow-card transition-shadow duration-300 hover:shadow-card-hover dark:border-white/[0.08]"
+                >
+                  {/* Oversized ghost glyph — depth and motif, almost subliminal. */}
+                  <stat.Icon
+                    className="pointer-events-none absolute -bottom-5 -right-4 size-32 text-foreground opacity-[0.05] transition-[transform,opacity,color] duration-500 ease-out group-hover/tile:-translate-y-1.5 group-hover/tile:rotate-3 group-hover/tile:scale-110 group-hover/tile:text-primary group-hover/tile:opacity-[0.13]"
+                    strokeWidth={1.25}
+                    aria-hidden="true"
+                  />
+                  <span className="relative font-display text-[44px] font-extrabold leading-none tracking-tight text-foreground">
+                    <CountUp value={stat.value} />
+                  </span>
+                  <span className="relative text-base text-muted-foreground">
+                    {stat.label}
+                  </span>
+                </motion.li>
+              ))}
+            </motion.ul>
+
+            {/* Contact card — a clean Airbnb-style sibling of the stat tiles:
+                same white surface, soft shadow, and oversized ghost glyph. It
+                offers two ways to reach the team, so the card is a container (not
+                a single link) holding a primary Telegram pill and a quieter email
+                button beside it. */}
+            <SectionReveal delay={0.16} className="flex">
+              <div
+                className="group/talk relative flex w-full flex-col justify-between gap-7 overflow-hidden rounded-[1.75rem] border border-black/[0.05] bg-card p-7 shadow-card transition-[transform,box-shadow] duration-500 ease-out hover:-translate-y-1 hover:shadow-card-hover dark:border-white/[0.08]"
+                data-blok-testid="trusted-contact"
               >
-                {/* Oversized ghost glyph — depth and motif, almost subliminal. */}
-                <stat.Icon
-                  className="pointer-events-none absolute -bottom-5 -right-4 size-32 text-foreground opacity-[0.05] transition-[transform,opacity,color] duration-500 ease-out group-hover/tile:-translate-y-1.5 group-hover/tile:rotate-3 group-hover/tile:scale-110 group-hover/tile:text-primary group-hover/tile:opacity-[0.13]"
+                {/* Oversized ghost paper plane — the same depth motif as the
+                    Globe/Store tiles, banking and warming to brand on hover. */}
+                <Send
+                  className="pointer-events-none absolute -bottom-5 -right-4 size-32 text-foreground opacity-[0.05] transition-[transform,opacity,color] duration-500 ease-out group-hover/talk:-translate-y-1.5 group-hover/talk:translate-x-1.5 group-hover/talk:-rotate-6 group-hover/talk:text-primary group-hover/talk:opacity-[0.13]"
                   strokeWidth={1.25}
                   aria-hidden="true"
                 />
-                <span className="relative font-display text-[44px] font-extrabold leading-none tracking-tight text-foreground">
-                  <CountUp value={stat.value} />
-                </span>
-                <span className="relative text-base text-muted-foreground">
-                  {stat.label}
-                </span>
-              </motion.li>
-            ))}
-          </motion.ul>
+
+                <div className="relative flex flex-col gap-2">
+                  <h3 className="text-pretty text-[19px] font-bold leading-tight tracking-tight text-foreground">
+                    {t("home.trusted.contactTitle")}
+                  </h3>
+                  <p className="max-w-[26ch] text-pretty text-[15px] leading-relaxed text-muted-foreground">
+                    {t("home.trusted.contactLead")}
+                  </p>
+                </div>
+
+                <div className="relative flex flex-wrap items-center gap-3">
+                  {/* Primary channel — the brand-gradient pill mirrors the
+                      "Build with Blok" CTA, so the bento speaks one CTA language. */}
+                  <a
+                    href="https://t.me/jackuait"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group/tg inline-flex items-center gap-2 rounded-full bg-brand-gradient px-5 py-3 text-[14px] font-semibold text-white shadow-[0_8px_20px_-8px_color-mix(in_srgb,var(--brand-via)_70%,transparent)] transition-[filter,box-shadow] duration-300 hover:shadow-[0_12px_26px_-8px_color-mix(in_srgb,var(--brand-via)_75%,transparent)] hover:brightness-[1.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]"
+                  >
+                    <Send className="size-4 -translate-x-[0.5px]" strokeWidth={2.2} aria-hidden="true" />
+                    {t("home.trusted.contactTelegram")}
+                  </a>
+
+                  {/* Secondary channel — a quiet bordered pill for email. */}
+                  <a
+                    href="mailto:jackuait@gmail.com?subject=Blok%20for%20our%20team"
+                    className="inline-flex items-center gap-2 rounded-full border border-black/[0.12] bg-card px-5 py-3 text-[14px] font-semibold text-foreground transition-[border-color,background-color] duration-300 hover:border-foreground/30 hover:bg-foreground/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] dark:border-white/[0.16] dark:hover:bg-white/[0.05]"
+                  >
+                    <Mail className="size-4 text-primary" strokeWidth={2.2} aria-hidden="true" />
+                    {t("home.trusted.contactEmail")}
+                  </a>
+                </div>
+              </div>
+            </SectionReveal>
+          </div>
         </div>
       </div>
     </section>

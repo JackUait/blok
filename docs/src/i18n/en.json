@@ -370,7 +370,7 @@
         }
       },
       "slashCommands": {
-        "title": "Slash menu & Markdown",
+        "title": "Insert blocks with /",
         "description": "Type / to search and insert any block, or use Markdown shortcuts like #, -, 1., [] and >.",
         "learnMore": "Learn more about the slash menu and Markdown",
         "details": {
@@ -382,7 +382,7 @@
         }
       },
       "databases": {
-        "title": "Databases & kanban boards",
+        "title": "Databases, boards & lists",
         "description": "Schema-driven databases where every row is a block. Switch between kanban board and list views.",
         "learnMore": "Learn more about databases",
         "details": {
@@ -394,7 +394,7 @@
         }
       },
       "tables": {
-        "title": "Tables that behave",
+        "title": "Spreadsheet-grade tables",
         "description": "Merged cells, column resizing, cell colors, heading rows and full keyboard navigation.",
         "learnMore": "Learn more about tables",
         "details": {
@@ -406,7 +406,7 @@
         }
       },
       "embeds": {
-        "title": "Embeds & link previews",
+        "title": "Embed 100+ services",
         "description": "Paste a link to embed 100+ services — YouTube, Figma, Spotify, Gist — or get an OpenGraph bookmark card.",
         "learnMore": "Learn more about embeds",
         "details": {
@@ -439,6 +439,18 @@
           "benefit2": "Right-to-left layout (Arabic, Hebrew, Farsi…)",
           "benefit3": "Lazy-loaded — minimal base bundle",
           "benefit4": "Override any string"
+        }
+      },
+      "media": {
+        "title": "Image, video & audio",
+        "description": "Drop in images, a YouTube-grade video player and audio with live waveforms — all first-class blocks.",
+        "learnMore": "Learn more about media blocks",
+        "details": {
+          "summary": "Rich media is built in: resizable images, a full video player with scrubbing and speed control, and audio blocks that render a waveform from the decoded track.",
+          "benefit1": "Resizable images with captions",
+          "benefit2": "Video player — scrubber, speed, PiP & theater",
+          "benefit3": "Audio blocks with cached waveform peaks",
+          "benefit4": "Paste or drag a file to upload"
         }
       }
     },
@@ -473,7 +485,11 @@
       "statCountriesLabel": "Countries served",
       "statStoresValue": "1,800+",
       "statStoresLabel": "Stores worldwide",
-      "cta": "Build with Blok"
+      "cta": "Build with Blok",
+      "contactTitle": "Bringing Blok to your team?",
+      "contactLead": "We'll help you set it up and adapt it to exactly what you need.",
+      "contactTelegram": "Chat on Telegram",
+      "contactEmail": "Email us"
     },
     "featureModal": {
       "close": "Close modal",

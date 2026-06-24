@@ -62,7 +62,8 @@ export interface FeatureDetail {
     | "yellow"
     | "red"
     | "purple"
-    | "blue";
+    | "blue"
+    | "media";
   details: {
     summary: string;
     benefits: string[];

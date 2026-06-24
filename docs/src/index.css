@@ -246,15 +246,10 @@
   }
 }
 
-.group:hover .feature-blob {
-  animation: feature-blob-morph 6.5s ease-out infinite;
-}
-
-/* Mobile carousel has no hover, so the focused card's icon blob morphs
-   continuously to keep it feeling alive. */
-[data-pillar-focused="true"] .feature-blob {
-  animation: feature-blob-morph 6.5s ease-out infinite;
-}
+/* The icon blob's morph is driven from JS (useBlobMorph in Features.tsx) so each
+   shape is freshly randomised and the loop never repeats — a CSS keyframe can't.
+   The base `.feature-blob` transition above eases between shapes and back to the
+   resting circle on leave. */
 
 /* Per-icon hover choreography — each SVG animates to mime what it represents
    (braces breathe, blocks re-stack, bars rise, the globe spins…). All CSS-only,

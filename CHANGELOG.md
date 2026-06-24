@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.23.3](https://github.com/JackUait/blok/compare/v0.23.2...v0.23.3) (2026-06-25)
+
+### Features
+
+- **React** — The `<BlokEditor>`/`useBlok` `data` prop is now reactive: passing new content re-renders the editor in place via `editor.render()` instead of being read only once at creation. Identical content is de-duplicated (deep-equality) so the caret is never clobbered, rapid changes are serialized, and a freshly-seeded editor is not double-rendered.
+- **Core** — New typed render events: `blocks:rendered` (payload `{ count }`) fires when a batch finishes rendering, and `block:rendered` (payload `{ blockId }`) fires per block. The runtime event-name constants `BlocksRendered`/`BlockRendered` are exported, so consumers can react to rendering instead of polling the DOM. The public `Events` API is now typed against an event/payload map while still accepting arbitrary string events.
+- **Core** — New `link` config (`{ target, rel, transformHref }`) lets consumers configure the anchors the link tool creates instead of post-processing the DOM. Defaults (`_blank`/`nofollow`) are preserved, configured values now survive save, and URL validation/allowlisting is unchanged.
+- **Paste** — New `onBeforePaste(html) => string | null` config hook transforms (or drops) raw clipboard HTML before Blok preprocessing; returning `null` falls back to plain-text paste.
+- **API** — New `editor.tools.update(name, config)` shallow-merges a tool's config in place — e.g. swap an uploader — without recreating the editor.
+
+### Maintenance
+
+- **Tests** — Exported stable `TEST_ID` constants (plus button, settings toggler, block wrapper) wired into the editor chrome via `data-blok-testid`, so consumers no longer query internal selectors.
+
 ## [0.23.2](https://github.com/JackUait/blok/compare/v0.23.1...v0.23.2) (2026-06-25)
 
 ### Maintenance

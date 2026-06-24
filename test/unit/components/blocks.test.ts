@@ -2,6 +2,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { Blocks } from '../../../src/components/blocks';
 import type { Block } from '../../../src/components/block';
 import { BlockToolAPI } from '../../../src/components/block';
+import { BlockRendered } from '../../../src/components/events';
+import type { BlokEventMap } from '../../../src/components/events';
+import type { EventsDispatcher } from '../../../src/components/utils/events';
 
 /**
  * Unit tests for Blocks class
@@ -62,6 +65,60 @@ describe('Blocks', () => {
       const blocks = createBlocks();
 
       expect(blocks.workingArea).toBe(workingArea);
+    });
+  });
+
+  describe('block:rendered event', () => {
+    const createBlocksWithDispatcher = (): { blocks: Blocks; emit: ReturnType<typeof vi.fn> } => {
+      workingArea.innerHTML = '';
+      if (!document.body.contains(workingArea)) {
+        document.body.appendChild(workingArea);
+      }
+
+      const emit = vi.fn();
+      const dispatcher = { emit } as unknown as EventsDispatcher<BlokEventMap>;
+
+      return {
+        blocks: new Blocks(workingArea, dispatcher),
+        emit,
+      };
+    };
+
+    it('emits block:rendered with the block id when a block is pushed', () => {
+      const { blocks, emit } = createBlocksWithDispatcher();
+      const block = createMockBlock('block-1');
+
+      blocks.push(block);
+
+      expect(emit).toHaveBeenCalledWith(BlockRendered, { blockId: 'block-1' });
+    });
+
+    it('emits block:rendered for each block inserted via insertMany', () => {
+      const { blocks, emit } = createBlocksWithDispatcher();
+      const block1 = createMockBlock('block-1');
+      const block2 = createMockBlock('block-2');
+
+      blocks.insertMany([block1, block2], 0);
+
+      expect(emit).toHaveBeenCalledWith(BlockRendered, { blockId: 'block-1' });
+      expect(emit).toHaveBeenCalledWith(BlockRendered, { blockId: 'block-2' });
+    });
+
+    it('emits block:rendered for a single inserted block', () => {
+      const { blocks, emit } = createBlocksWithDispatcher();
+      const block = createMockBlock('block-1');
+
+      blocks.insert(0, block);
+
+      expect(emit).toHaveBeenCalledWith(BlockRendered, { blockId: 'block-1' });
+    });
+
+    it('does not require a dispatcher (optional constructor argument)', () => {
+      const blocks = new Blocks(workingArea);
+      const block = createMockBlock('block-1');
+
+      expect(() => blocks.push(block)).not.toThrow();
+      expect(block.call).toHaveBeenCalledWith(BlockToolAPI.RENDERED);
     });
   });
 

@@ -113,7 +113,16 @@ export class Paste extends Module {
    */
   public async processDataTransfer(dataTransfer: DataTransfer, pasteTarget?: Element): Promise<void> {
     const plainData = dataTransfer.getData('text/plain');
-    const rawHtmlData = dataTransfer.getData('text/html');
+
+    // Give consumers a chance to transform or drop the raw clipboard HTML
+    // before any Blok preprocessing/sanitization runs. Returning a string
+    // replaces the HTML for the rest of the pipeline; returning null aborts the
+    // HTML paste path entirely (an empty string makes HtmlHandler bail, so the
+    // paste falls through to the plain-text handler).
+    const clipboardHtml = dataTransfer.getData('text/html');
+    const rawHtmlData = clipboardHtml && this.config.onBeforePaste
+      ? this.config.onBeforePaste(clipboardHtml) ?? ''
+      : clipboardHtml;
 
     // Native Blok clipboard data always wins. When absent, fall back to the
     // lossless proprietary flavours of other editors (web→web paste): they

@@ -75,7 +75,13 @@ const getSuggestionChip = (itemWrapper: HTMLElement): HTMLElement | null => {
   return itemWrapper.querySelector<HTMLElement>('[data-link-suggestion]');
 };
 
-const createTool = (): ToolSetup => {
+type LinkConfig = {
+  target?: string;
+  rel?: string;
+  transformHref?: (href: string) => string;
+};
+
+const createTool = (linkConfig?: LinkConfig): ToolSetup => {
   const toolbar = { close: vi.fn() };
   const inlineToolbar = { close: vi.fn() };
   const notifier = { show: vi.fn() };
@@ -86,6 +92,9 @@ const createTool = (): ToolSetup => {
     inlineToolbar,
     notifier,
     i18n,
+    config: {
+      link: linkConfig,
+    },
   } as unknown as API;
 
   const tool = new LinkInlineTool({ api });
@@ -137,11 +146,13 @@ describe('LinkInlineTool', () => {
   it('exposes inline metadata and shortcut', () => {
     expect(LinkInlineTool.isInline).toBe(true);
     expect(LinkInlineTool.title).toBe('Link');
+    // target/rel pass through so consumer-configured BlokConfig.link values
+    // survive sanitization; created anchors still default via insertLink().
     expect(LinkInlineTool.sanitize).toEqual({
       a: {
         href: true,
-        target: '_blank',
-        rel: 'nofollow',
+        target: true,
+        rel: true,
       },
     });
     expect(LinkInlineTool.shortcut).toBe('CMD+K');
@@ -358,6 +369,76 @@ describe('LinkInlineTool', () => {
 
     expect(anchorCheck).toBeNull();
     expect(document.body).toHaveTextContent('link text');
+  });
+
+  describe('global link config', () => {
+    const insertNewAnchor = (tool: InstanceType<typeof LinkInlineTool>, href: string): HTMLAnchorElement => {
+      const range = document.createRange();
+      const textNode = document.createTextNode('selected text');
+
+      document.body.appendChild(textNode);
+      range.selectNodeContents(textNode);
+
+      const selectionMock = {
+        getRangeAt: vi.fn().mockReturnValue(range),
+        rangeCount: 1,
+        removeAllRanges: vi.fn(),
+        addRange: vi.fn(),
+      };
+
+      vi.spyOn(window, 'getSelection').mockReturnValue(selectionMock as unknown as Selection);
+
+      (tool as unknown as { insertLink(link: string): void }).insertLink(href);
+
+      const anchor = document.querySelector('a');
+
+      if (!anchor) {
+        throw new Error('Anchor not inserted');
+      }
+
+      return anchor;
+    };
+
+    it('defaults to target="_blank" and rel="nofollow" when no link config is provided', () => {
+      const { tool } = createTool();
+      const anchor = insertNewAnchor(tool, 'https://google.com');
+
+      expect(anchor.target).toBe('_blank');
+      expect(anchor.rel).toBe('nofollow');
+    });
+
+    it('applies configured target and rel to created anchors', () => {
+      const { tool } = createTool({ target: '_self', rel: 'noopener noreferrer' });
+      const anchor = insertNewAnchor(tool, 'https://google.com');
+
+      expect(anchor.target).toBe('_self');
+      expect(anchor.rel).toBe('noopener noreferrer');
+    });
+
+    it('applies configured target and rel when editing an existing anchor', () => {
+      const { tool, selection } = createTool({ target: '_top', rel: 'sponsored' });
+
+      const existing = document.createElement('a');
+
+      existing.href = 'https://old.com';
+      existing.textContent = 'link';
+      document.body.appendChild(existing);
+      selection.findParentTag.mockReturnValue(existing);
+
+      (tool as unknown as { insertLink(link: string): void }).insertLink('https://new.com');
+
+      expect(existing.target).toBe('_top');
+      expect(existing.rel).toBe('sponsored');
+    });
+
+    it('transforms the href via transformHref before assigning it to the anchor', () => {
+      const transformHref = vi.fn((href: string) => `https://proxy.example/?u=${encodeURIComponent(href)}`);
+      const { tool } = createTool({ transformHref });
+      const anchor = insertNewAnchor(tool, 'https://google.com/');
+
+      expect(transformHref).toHaveBeenCalledWith('https://google.com/');
+      expect(anchor.getAttribute('href')).toBe('https://proxy.example/?u=https%3A%2F%2Fgoogle.com%2F');
+    });
   });
 
   describe('suggestion chip', () => {

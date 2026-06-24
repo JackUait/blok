@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import type { MockInstance } from 'vitest';
 
 import { Renderer } from '../../../../src/components/modules/renderer';
+import { BlocksRendered } from '../../../../src/components/events';
 import type { OutputBlockData } from '../../../../types';
 import type { StubData } from '../../../../src/tools/stub';
 import * as utils from '../../../../src/components/utils';
@@ -31,6 +32,7 @@ interface RendererTestContext {
   renderer: Renderer;
   blockManager: MockBlockManager;
   tools: MockTools;
+  emit: ReturnType<typeof vi.fn>;
 }
 
 const createMockBlock = ({ id, tool, marker }: { id?: string; tool: string; marker?: string }): ComposeBlockReturn => {
@@ -83,11 +85,14 @@ const createRenderer = (
     ...options?.tools,
   };
 
+  const emit = vi.fn();
+
   const renderer = new Renderer({
     config: {},
     eventsDispatcher: {
       on: vi.fn(),
       off: vi.fn(),
+      emit,
     } as unknown as Renderer['eventsDispatcher'],
   });
 
@@ -107,6 +112,7 @@ const createRenderer = (
     renderer,
     blockManager,
     tools,
+    emit,
   };
 };
 
@@ -550,6 +556,27 @@ describe('Renderer module', () => {
       expect.stringContaining('dupe-id'),
       'warn'
     );
+  });
+
+  it('emits blocks:rendered with the rendered block count after a batch render', async () => {
+    const { renderer, tools, emit } = createRenderer();
+
+    tools.available.set('paragraph', {});
+
+    await renderer.render([
+      { id: 'b1', type: 'paragraph', data: {} },
+      { id: 'b2', type: 'paragraph', data: {} },
+    ]);
+
+    expect(emit).toHaveBeenCalledWith(BlocksRendered, { count: 2 });
+  });
+
+  it('emits blocks:rendered with count 1 when rendering an empty document', async () => {
+    const { renderer, emit } = createRenderer();
+
+    await renderer.render([]);
+
+    expect(emit).toHaveBeenCalledWith(BlocksRendered, { count: 1 });
   });
 
   it('falls back to the tool name when toolbox metadata is missing', () => {

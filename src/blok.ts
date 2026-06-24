@@ -26,6 +26,11 @@ export const version = getBlokVersion();
 export { DATA_ATTR } from './components/constants/data-attributes';
 
 /**
+ * Re-export the stable test-id hooks for targeting editor chrome in tests
+ */
+export { TEST_ID } from './components/constants/test-ids';
+
+/**
  * Blok
  * @license Apache-2.0
  */
@@ -542,3 +547,10 @@ export default Blok;
  * into Blok's `render()→MenuConfig` inline tool contract.
  */
 export { wrapLegacyInlineTool } from './components/inline-tools/wrap-legacy-inline-tool';
+
+/**
+ * Typed event-name constants for editor lifecycle events observable via
+ * `blok.events.on(...)`. Prefer these over raw strings to avoid typos and
+ * get typed payloads (see {@link BlokEditorEventMap}).
+ */
+export { BlockRendered, BlocksRendered } from './components/events';

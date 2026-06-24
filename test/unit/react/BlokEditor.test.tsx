@@ -69,16 +69,16 @@ describe('BlokEditor', () => {
     expect(typeof ref.current?.save).toBe('function');
   });
 
-  it('treats data as seed-only: new data reference does NOT recreate or render', async () => {
+  it('dedupes data by content: a new reference with identical content does NOT recreate or render', async () => {
     const { rerender } = render(<BlokEditor data={{ blocks: [] }} />);
     await act(async () => { await Promise.resolve(); });
     expect(instances).toHaveLength(1);
 
-    rerender(<BlokEditor data={{ blocks: [] }} />); // brand-new object reference
+    rerender(<BlokEditor data={{ blocks: [] }} />); // brand-new object reference, same content
     await act(async () => { await Promise.resolve(); });
 
     expect(instances).toHaveLength(1);            // not recreated
-    expect(instances[0].render).not.toHaveBeenCalled(); // not re-seeded
+    expect(instances[0].render).not.toHaveBeenCalled(); // deep-equal: no redundant render
   });
 
   it('recreates when deps change', async () => {

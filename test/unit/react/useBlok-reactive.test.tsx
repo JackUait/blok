@@ -100,3 +100,77 @@ describe('useBlok reactive theme/width', () => {
     expect(instances[0].placeholder.set).toHaveBeenLastCalledWith(false);
   });
 });
+
+describe('useBlok reactive data', () => {
+  /**
+   * The render chain is microtask-deferred (serialized), so flush several
+   * microtasks to let queued editor.render() calls run.
+   */
+  const flush = async (): Promise<void> => {
+    for (let i = 0; i < 5; i++) {
+      await Promise.resolve();
+    }
+  };
+
+  beforeEach(() => {
+    instances = [];
+    vi.clearAllMocks();
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('does not render on initial mount (data is seeded at construction)', async () => {
+    render(<Harness config={{ data: { blocks: [] } }} />);
+    await act(async () => { await flush(); });
+
+    expect(instances).toHaveLength(1);
+    expect(instances[0].render).not.toHaveBeenCalled();
+  });
+
+  it('renders new data reactively when content changes, without recreating', async () => {
+    const first = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'a' } }] };
+    const second = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'b' } }] };
+
+    const { rerender } = render(<Harness config={{ data: first }} />);
+    await act(async () => { await flush(); });
+    expect(instances[0].render).not.toHaveBeenCalled();
+
+    rerender(<Harness config={{ data: second }} />);
+    await act(async () => { await flush(); });
+
+    expect(instances).toHaveLength(1); // not recreated
+    expect(instances[0].render).toHaveBeenCalledTimes(1);
+    expect(instances[0].render).toHaveBeenCalledWith(second);
+  });
+
+  it('does not render when a new data reference has identical content (deep-equal dedup)', async () => {
+    const { rerender } = render(
+      <Harness config={{ data: { blocks: [{ id: '1', type: 'paragraph', data: { text: 'x' } }] } }} />
+    );
+    await act(async () => { await flush(); });
+
+    rerender(
+      <Harness config={{ data: { blocks: [{ id: '1', type: 'paragraph', data: { text: 'x' } }] } }} />
+    );
+    await act(async () => { await flush(); });
+
+    expect(instances).toHaveLength(1);
+    expect(instances[0].render).not.toHaveBeenCalled();
+  });
+
+  it('serializes successive data changes in order', async () => {
+    const v1 = { blocks: [{ id: '1', type: 'paragraph', data: { text: '1' } }] };
+    const v2 = { blocks: [{ id: '1', type: 'paragraph', data: { text: '2' } }] };
+
+    const { rerender } = render(<Harness config={{ data: v1 }} />);
+    await act(async () => { await flush(); });
+
+    rerender(<Harness config={{ data: v2 }} />);
+    await act(async () => { await flush(); });
+
+    const calls = instances[0].render.mock.calls;
+
+    expect(calls.at(-1)?.[0]).toEqual(v2);
+  });
+});

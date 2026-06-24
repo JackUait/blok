@@ -60,6 +60,17 @@ export interface BlokConfig {
   sanitizer?: SanitizerConfig;
 
   /**
+   * Transform or clean the raw clipboard HTML before Blok processes it.
+   * Runs on the unmodified `text/html` payload, before any Blok preprocessing
+   * or sanitization, so you no longer need a capture-phase paste interceptor.
+   *
+   * @param html - the raw `text/html` clipboard string
+   * @returns the transformed HTML to feed into the rest of the paste pipeline,
+   *          or `null` to skip the HTML paste path (paste falls through to plain text).
+   */
+  onBeforePaste?: (html: string) => string | null;
+
+  /**
    * If true, toolbar won't be shown
    */
   hideToolbar?: boolean;
@@ -123,6 +134,32 @@ export interface BlokConfig {
    * Internalization config
    */
   i18n?: I18nConfig;
+
+  /**
+   * Configures how the Link inline tool builds anchor elements, so consumers can
+   * control the created `<a>` instead of post-processing the rendered DOM.
+   */
+  link?: {
+    /**
+     * `target` attribute applied to created anchors.
+     * @default '_blank'
+     */
+    target?: string;
+
+    /**
+     * `rel` attribute applied to created anchors.
+     * @default 'nofollow'
+     */
+    rel?: string;
+
+    /**
+     * Transforms the href just before it is assigned to the anchor.
+     * Runs after URL validation/normalization, on the final value.
+     * @param href - the validated, protocol-normalized href
+     * @returns the href to set on the anchor
+     */
+    transformHref?: (href: string) => string;
+  };
 
   /**
    * Notion-style link-paste behavior. Pasting a URL always opens a small menu

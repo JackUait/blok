@@ -34,4 +34,19 @@ describe('API.config', () => {
 
     expect(api.methods.config.linkPaste).toBeUndefined();
   });
+
+  it('exposes the link config slice', () => {
+    const transformHref = (href: string): string => href;
+    const api = makeApi({ link: { target: '_self', rel: 'noopener', transformHref } });
+
+    expect(api.methods.config.link?.target).toBe('_self');
+    expect(api.methods.config.link?.rel).toBe('noopener');
+    expect(api.methods.config.link?.transformHref).toBe(transformHref);
+  });
+
+  it('returns undefined link when unset', () => {
+    const api = makeApi({});
+
+    expect(api.methods.config.link).toBeUndefined();
+  });
 });

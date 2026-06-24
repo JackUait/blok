@@ -778,5 +778,66 @@ describe('tools module', () => {
       expect(blockTool?.inlineTools.has('bold')).toBe(false);
     });
   });
+
+  describe('.updateToolConfig()', () => {
+    class ConfigurableBlockTool {
+      /**
+       *
+       */
+      public render(): HTMLElement {
+        return document.createElement('div');
+      }
+
+      /**
+       *
+       */
+      public save(): void {}
+    }
+
+    it('merges new config so the live tool adapter exposes it', async () => {
+      const originalUploader = (): void => {};
+      const module = createModule({
+        defaultBlock: 'image',
+        tools: {
+          image: {
+            class: ConfigurableBlockTool as unknown as ToolConstructable,
+            config: {
+              uploader: originalUploader,
+              keep: 'me',
+            },
+          },
+        },
+      });
+
+      await module.prepare();
+
+      const newUploader = (): void => {};
+
+      module.updateToolConfig('image', { uploader: newUploader });
+
+      const settings = module.blockTools.get('image')?.settings as {
+        uploader: () => void;
+        keep: string;
+      };
+
+      expect(settings.uploader).toBe(newUploader);
+      expect(settings.keep).toBe('me');
+    });
+
+    it('throws for an unknown tool', async () => {
+      const module = createModule({
+        defaultBlock: 'image',
+        tools: {
+          image: ConfigurableBlockTool as unknown as ToolConstructable,
+        },
+      });
+
+      await module.prepare();
+
+      expect(() => module.updateToolConfig('missing', { foo: 'bar' })).toThrowError(
+        'Tool "missing" is not registered.'
+      );
+    });
+  });
 });
 

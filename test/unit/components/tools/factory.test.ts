@@ -319,6 +319,64 @@ describe('ToolsFactory', () => {
     expect(instantiatedOptions?.api).not.toBe(apiStub.methods);
   });
 
+  describe('updateConfig', () => {
+    it('merges new config so a freshly built adapter carries it', () => {
+      const toolName = 'image';
+      const originalUploader = (): void => {};
+      const toolsConfig = {
+        [toolName]: createToolConfig({
+          config: {
+            uploader: originalUploader,
+            keep: 'me',
+          },
+        }),
+      };
+      const { factory } = createFactory(toolsConfig);
+
+      const newUploader = (): void => {};
+
+      factory.updateConfig(toolName, { uploader: newUploader });
+
+      factory.get(toolName);
+
+      const builtConfig = blockAdapterMockControl.instances.at(-1)?.options.config.config as {
+        uploader: () => void;
+        keep: string;
+      };
+
+      expect(builtConfig.uploader).toBe(newUploader);
+      expect(builtConfig.keep).toBe('me');
+    });
+
+    it('creates the config object when the tool has no config yet', () => {
+      const toolName = 'image';
+      const toolsConfig = {
+        [toolName]: createToolConfig({ config: undefined }),
+      };
+      const { factory } = createFactory(toolsConfig);
+
+      const uploader = (): void => {};
+
+      factory.updateConfig(toolName, { uploader });
+
+      factory.get(toolName);
+
+      const builtConfig = blockAdapterMockControl.instances.at(-1)?.options.config.config as {
+        uploader: () => void;
+      };
+
+      expect(builtConfig.uploader).toBe(uploader);
+    });
+
+    it('throws for an unknown tool', () => {
+      const { factory } = createFactory({});
+
+      expect(() => factory.updateConfig('missing', { foo: 'bar' })).toThrowError(
+        'Tool "missing" is not registered.'
+      );
+    });
+  });
+
   describe('i18n namespace wrapping', () => {
     /**
      * Creates an API stub with mock i18n.t() and has() functions that track calls

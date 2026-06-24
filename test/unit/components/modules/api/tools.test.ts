@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { ToolsAPI } from '../../../../../src/components/modules/api/tools';
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
@@ -12,6 +12,7 @@ import type { BlockToolAdapter } from '../../../../../src/components/tools/block
 type CreateToolsApiResult = {
   toolsApi: ToolsAPI;
   blockTools: Map<string, BlockToolAdapter>;
+  updateToolConfig: ReturnType<typeof vi.fn>;
 };
 
 const createToolsApi = (
@@ -26,20 +27,31 @@ const createToolsApi = (
 
   const toolsApi = new ToolsAPI(moduleConfig);
   const blockTools = new Map(blockToolsEntries);
+  const updateToolConfig = vi.fn();
 
   toolsApi.state = {
     Tools: {
       blockTools,
+      updateToolConfig,
     },
   } as unknown as BlokModules;
 
   return {
     toolsApi,
     blockTools,
+    updateToolConfig,
   };
 };
 
 describe('ToolsAPI', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('exposes getBlockTools via methods getter', () => {
     const toolA = { name: 'toolA' } as unknown as BlockToolAdapter;
     const toolB = { name: 'toolB' } as unknown as BlockToolAdapter;
@@ -115,6 +127,18 @@ describe('ToolsAPI', () => {
         tools: toolsConfig,
         theme: 'dark',
       });
+    });
+  });
+
+  describe('update', () => {
+    it('delegates to Tools.updateToolConfig with the tool name and config', () => {
+      const { toolsApi, updateToolConfig } = createToolsApi();
+      const uploader = (): void => {};
+
+      toolsApi.methods.update('image', { uploader });
+
+      expect(updateToolConfig).toHaveBeenCalledTimes(1);
+      expect(updateToolConfig).toHaveBeenCalledWith('image', { uploader });
     });
   });
 });

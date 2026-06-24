@@ -41,6 +41,9 @@ export class API extends Module {
         get linkPaste() {
           return apiConfig.linkPaste;
         },
+        get link() {
+          return apiConfig.link;
+        },
       },
       rectangleSelection: this.Blok.RectangleSelection,
     };

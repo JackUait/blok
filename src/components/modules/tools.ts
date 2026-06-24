@@ -213,6 +213,24 @@ export class Tools extends Module {
   }
 
   /**
+   * Shallow-merges new user configuration into an already-prepared tool.
+   *
+   * Lets consumers swap config (e.g. an uploader) at runtime without recreating
+   * the editor. The stored config is mutated in place, so the live tool adapter
+   * and any block created afterwards pick up the new values. Blocks already
+   * mounted keep their current config until they are re-rendered.
+   * @param name - tool name
+   * @param config - partial tool config to merge in
+   */
+  public updateToolConfig(name: string, config: Partial<ToolConfig>): void {
+    if (!this.available.has(name) && !this.unavailable.has(name)) {
+      throw new Error(`Tool "${name}" is not registered.`);
+    }
+
+    this.getFactory().updateConfig(name, config);
+  }
+
+  /**
    * Return general Sanitizer config for all inline tools
    */
   public getAllInlineToolsSanitizeConfig(): SanitizerConfig {

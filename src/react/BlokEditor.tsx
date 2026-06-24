@@ -20,10 +20,13 @@ import type { UseBlokConfig } from './types';
  * keep their editor-config meaning (they collide with div attributes of the same
  * name), so the container is styled via `className` rather than an inline `style`.
  *
- * `data` is uncontrolled (seed-only): it sets the INITIAL content. After mount the
- * editor owns the document — passing a new `data` reference does NOT reload it.
- * Read content via `onChange` or the ref (`ref.current.save()`); replace it
- * imperatively via `ref.current.render(newData)`.
+ * `data` is reactive (controlled-ish): it seeds the INITIAL content and, after
+ * mount, changing it to new *content* re-renders the editor via `render()` — no
+ * recreation. Updates are deep-equal–deduped (a new reference with identical
+ * content is a no-op, so it won't clobber the caret) and serialized (rapid
+ * changes can't overlap). Read content via `onChange` or the ref
+ * (`ref.current.save()`). For ad-hoc reloads you can still call
+ * `ref.current.render(newData)`.
  */
 export interface BlokEditorProps
   extends Omit<UseBlokConfig, 'onReady'>,

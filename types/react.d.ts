@@ -12,6 +12,8 @@ import type React from 'react';
  * - `theme` — calls `editor.theme.set(value)`
  * - `width` — calls `editor.width.set(value)`
  * - `placeholder` — calls `editor.placeholder.set(value)`
+ * - `data` — re-renders via `editor.render(value)` when the content changes
+ *   (deep-equal–deduped and serialized; seeds the initial content at creation)
  *
  * All other config is consumed once at editor creation.
  */

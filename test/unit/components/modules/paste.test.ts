@@ -74,6 +74,7 @@ interface CreatePasteOptions {
   defaultBlock?: string;
   sanitizer?: SanitizerConfig;
   defaultTool?: BlockToolAdapter;
+  onBeforePaste?: BlokConfig['onBeforePaste'];
 }
 
 type ListenersMock = {
@@ -182,6 +183,7 @@ const createPaste = (options?: CreatePasteOptions): { paste: Paste; mocks: Paste
     config: {
       defaultBlock: options?.defaultBlock ?? 'paragraph',
       sanitizer: options?.sanitizer ?? {},
+      onBeforePaste: options?.onBeforePaste,
     },
     eventsDispatcher: {
       on: vi.fn(),
@@ -2849,6 +2851,115 @@ describe('Paste module', () => {
       expect(mocks.BlockManager.insert).toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ text: 'native' }) })
       );
+    });
+  });
+
+  describe('onBeforePaste hook', () => {
+    const setUpDefaultTool = (mocks: PasteMocks): void => {
+      const defaultTool = {
+        name: 'paragraph',
+        pasteConfig: {},
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      // eslint-disable-next-line no-param-reassign -- configuring shared test mocks by design
+      mocks.Tools.defaultTool = defaultTool;
+      mocks.Tools.blockTools.set('paragraph', defaultTool);
+      // eslint-disable-next-line no-param-reassign -- configuring shared test mocks by design
+      mocks.BlockManager.currentBlock = {
+        tool: { isDefault: true },
+        isEmpty: true,
+      };
+      mocks.BlockManager.paste.mockReturnValue({ id: 'block-id' });
+    };
+
+    it('passes raw clipboard HTML through unchanged when no hook is configured', async () => {
+      const { paste, mocks } = createPaste();
+
+      setUpDefaultTool(mocks);
+
+      await paste.prepare();
+
+      const dataTransfer = new MockDataTransfer(
+        {
+          'text/html': '<p>hello world</p>',
+          'text/plain': 'hello world',
+        },
+        {} as FileList,
+        ['text/html', 'text/plain']
+      );
+
+      await paste.processDataTransfer(dataTransfer);
+
+      expect(mocks.BlockManager.paste).toHaveBeenCalled();
+
+      const [, event] = mocks.BlockManager.paste.mock.calls[0];
+      const detail = event.detail as { data: HTMLElement };
+
+      expect(detail.data.textContent).toBe('hello world');
+    });
+
+    it('feeds the transformed HTML into the pipeline when the hook returns a string', async () => {
+      const onBeforePaste = vi.fn((_html: string) => '<p>transformed text</p>');
+      const { paste, mocks } = createPaste({ onBeforePaste });
+
+      setUpDefaultTool(mocks);
+
+      await paste.prepare();
+
+      // Pass the (transformed) HTML straight through sanitization so we can
+      // observe exactly what reached the handler.
+      vi.spyOn(sanitizer, 'clean').mockImplementation((html: string) => html);
+
+      const dataTransfer = new MockDataTransfer(
+        {
+          'text/html': '<p>original text</p>',
+          'text/plain': 'original text',
+        },
+        {} as FileList,
+        ['text/html', 'text/plain']
+      );
+
+      await paste.processDataTransfer(dataTransfer);
+
+      expect(onBeforePaste).toHaveBeenCalledWith('<p>original text</p>');
+      expect(mocks.BlockManager.paste).toHaveBeenCalled();
+
+      const [, event] = mocks.BlockManager.paste.mock.calls[0];
+      const detail = event.detail as { data: HTMLElement };
+
+      expect(detail.data.textContent).toBe('transformed text');
+    });
+
+    it('skips the HTML paste path and falls through to plain text when the hook returns null', async () => {
+      const onBeforePaste = vi.fn((_html: string): string | null => null);
+      const { paste, mocks } = createPaste({ onBeforePaste });
+
+      setUpDefaultTool(mocks);
+
+      await paste.prepare();
+
+      const dataTransfer = new MockDataTransfer(
+        {
+          'text/html': '<p><strong>rich</strong> html</p>',
+          'text/plain': 'plain fallback',
+        },
+        {} as FileList,
+        ['text/html', 'text/plain']
+      );
+
+      await paste.processDataTransfer(dataTransfer);
+
+      expect(onBeforePaste).toHaveBeenCalledWith('<p><strong>rich</strong> html</p>');
+      expect(mocks.BlockManager.paste).toHaveBeenCalledTimes(1);
+
+      const [, event] = mocks.BlockManager.paste.mock.calls[0];
+      const detail = event.detail as { data: HTMLElement };
+
+      // The rich HTML must be ignored; only the plain-text fallback is inserted.
+      expect(detail.data.textContent).toBe('plain fallback');
+      expect(detail.data.querySelector('strong')).toBeNull();
     });
   });
 });

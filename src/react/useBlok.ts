@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, type DependencyList } from 'react';
 import { Blok as BlokRuntime } from '../blok';
 import { setHolder, removeHolder } from './holder-map';
+import { deepEqual } from './deep-equal';
 import type { Blok } from '@/types';
 import type { UseBlokConfig } from './types';
 
@@ -172,6 +173,42 @@ export function useBlok(config: UseBlokConfig, deps?: DependencyList): Blok | nu
     }
     editor.placeholder.set(placeholder);
   }, [editor, placeholder]);
+
+  // Reactive: data (controlled content)
+  //
+  // `data` seeds the editor at construction. Afterwards, changing the prop to
+  // new *content* re-renders the editor via the public render() API — no
+  // recreation. Updates are deep-equal–deduped (so a new reference with the
+  // same content is a no-op and won't clobber the caret) and serialized (so
+  // rapid changes can't trigger overlapping render passes).
+  const { data } = config;
+  const lastRenderedDataRef = useRef(config.data);
+  const seededEditorRef = useRef<Blok | null>(null);
+  const renderChainRef = useRef<Promise<void>>(Promise.resolve());
+  useEffect(() => {
+    if (editor === null || data === undefined) {
+      return;
+    }
+
+    // A freshly created editor was already seeded with `data` at construction;
+    // record it without re-rendering.
+    if (seededEditorRef.current !== editor) {
+      seededEditorRef.current = editor;
+      lastRenderedDataRef.current = data;
+
+      return;
+    }
+
+    // Unchanged content — skip the redundant render.
+    if (deepEqual(data, lastRenderedDataRef.current)) {
+      return;
+    }
+
+    lastRenderedDataRef.current = data;
+    renderChainRef.current = renderChainRef.current
+      .catch(() => undefined)
+      .then(() => editor.render(data));
+  }, [editor, data]);
 
   return editor;
 }

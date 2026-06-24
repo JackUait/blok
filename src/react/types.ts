@@ -11,6 +11,8 @@ import type { BlokConfig, Blok, EditorWidth } from '@/types';
  * - `theme` — calls `editor.theme.set(value)`
  * - `width` — calls `editor.width.set(value)`
  * - `placeholder` — calls `editor.placeholder.set(value)`
+ * - `data` — re-renders via `editor.render(value)` when content changes
+ *   (deep-equal–deduped and serialized; seeds the initial content at creation)
  */
 export interface UseBlokConfig extends Omit<BlokConfig, 'holder'> {
   /** Editor content width mode. Synced reactively after mount via `editor.width.set()`. */

@@ -42,6 +42,7 @@ import { BlockAddedMutationType, BlockAddedEvent } from './events/block/BlockAdd
 import { BlockChangedMutationType, BlockChangedEvent } from './events/block/BlockChanged';
 import { BlockMovedMutationType, BlockMovedEvent } from './events/block/BlockMoved';
 import { BlockRemovedMutationType, BlockRemovedEvent } from './events/block/BlockRemoved';
+import { BlokEditorEventMap, BlockRenderedPayload, BlocksRenderedPayload } from './events/editor-events';
 
 /**
  * Interfaces used for development
@@ -144,6 +145,9 @@ export {
   BlockMovedEvent,
   BlockChangedMutationType,
   BlockChangedEvent,
+  BlokEditorEventMap,
+  BlockRenderedPayload,
+  BlocksRenderedPayload,
 }
 
 /**
@@ -170,7 +174,7 @@ export interface API {
   ui: Ui;
   theme: Theme;
   /** Read-only view of selected editor configuration. */
-  config: Readonly<Pick<BlokConfig, 'linkPaste'>>;
+  config: Readonly<Pick<BlokConfig, 'linkPaste' | 'link'>>;
   rectangleSelection: {
     cancelActiveSelection: () => void;
     isRectActivated: () => boolean;

@@ -30,6 +30,9 @@ export class ToolsAPI extends Module {
 
         return result;
       },
+      update: (name, config) => {
+        this.Blok.Tools.updateToolConfig(name, config);
+      },
     };
   }
 }

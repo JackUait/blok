@@ -269,7 +269,7 @@ export class BlockManager extends Module {
    * Define this._blocks property
    */
   public prepare(): void {
-    const blocks = new Blocks(this.Blok.UI.nodes.redactor);
+    const blocks = new Blocks(this.Blok.UI.nodes.redactor, this.eventsDispatcher);
 
     /**
      * We need to use Proxy to overload set/get [] operator.

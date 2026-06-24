@@ -1,5 +1,6 @@
 import type { BlokModules } from '../../../types-internal/blok-modules';
 import type { Block } from '../../block';
+import { DATA_ATTR, TEST_ID } from '../../constants';
 import { Dom as $ } from '../../dom';
 import { IconPlus } from '../../icons';
 import { SelectionUtils } from '../../selection/index';
@@ -126,7 +127,7 @@ export class PlusButtonHandler {
       innerHTML: IconPlus,
     });
 
-    plusButton.setAttribute('data-blok-testid', 'plus-button');
+    plusButton.setAttribute(DATA_ATTR.testid, TEST_ID.plusButton);
 
     // eslint-disable-next-line no-param-reassign -- nodes is mutated by design
     nodes.plusButton = plusButton;

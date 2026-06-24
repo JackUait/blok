@@ -46,20 +46,12 @@ export default defineConfig({
             code: `
               import React from 'react';
               export const BlokEditor = React.forwardRef(function MockBlokEditor(props, ref) {
-                const instanceRef = React.useRef(null);
-
                 React.useImperativeHandle(ref, () => ({
                   save: () => Promise.resolve({ blocks: [] }),
                   clear: () => Promise.resolve(),
                   undo: () => Promise.resolve(),
                   redo: () => Promise.resolve(),
                 }));
-
-                React.useEffect(() => {
-                  if (props.onReady) {
-                    setTimeout(() => props.onReady(), 0);
-                  }
-                }, []);
 
                 return React.createElement('div', { className: props.className, 'data-testid': 'mock-blok-editor' });
               });

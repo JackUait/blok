@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "../../contexts/I18nContext";
 import { useTheme } from "../../hooks/useTheme";
 
@@ -17,7 +17,6 @@ type BlokReactModule = {
 };
 type BlokToolsModule = {
   Header: unknown; Paragraph: unknown; List: unknown;
-  Bold: unknown; Italic: unknown; Link: unknown;
 };
 
 export const EditorWrapper: React.FC<{
@@ -25,12 +24,20 @@ export const EditorWrapper: React.FC<{
 }> = ({ onEditorReady }) => {
   const { t } = useI18n();
   const { resolvedTheme } = useTheme();
-  const editorRef = useRef<BlokEditorInstance | null>(null);
   const [mods, setMods] = useState<{ react: BlokReactModule; tools: BlokToolsModule } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const onEditorReadyRef = useRef(onEditorReady);
   onEditorReadyRef.current = onEditorReady;
+
+  // Fires when BlokEditor attaches/detaches its instance to the forwarded ref.
+  // Using a callback ref (not onReady) guarantees the instance is committed
+  // before we hand it to the consumer — onReady fires before the ref commits.
+  const handleEditorRef = useCallback((instance: BlokEditorInstance | null) => {
+    if (instance) {
+      onEditorReadyRef.current?.(instance);
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -75,12 +82,11 @@ export const EditorWrapper: React.FC<{
   }
 
   const { BlokEditor } = mods.react;
-  const { Header, Paragraph, List, Bold, Italic, Link } = mods.tools;
-  void Bold; void Italic; void Link;
+  const { Header, Paragraph, List } = mods.tools;
 
   return (
     <BlokEditor
-      ref={editorRef}
+      ref={handleEditorRef}
       className="blok-editor"
       theme={resolvedTheme}
       tools={{
@@ -94,9 +100,6 @@ export const EditorWrapper: React.FC<{
           { id: "intro-block", type: "paragraph", data: { text: t("demo.welcomeParagraph") } },
           { id: "features-list", type: "list", data: { style: "unordered", items: [t("demo.welcomeListItem1"), t("demo.welcomeListItem2"), t("demo.welcomeListItem3"), t("demo.welcomeListItem4")] } },
         ],
-      }}
-      onReady={() => {
-        if (editorRef.current) onEditorReadyRef.current?.(editorRef.current);
       }}
     />
   );

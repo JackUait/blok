@@ -263,7 +263,10 @@ describe('parseNotionBlocksV3', () => {
   });
 
   describe('callout (phase 2)', () => {
-    it('maps icon + background colour', () => {
+    // Blok's callout stores its body in CHILD blocks (CalloutData has no `text`
+    // field), so the callout's inline title line must become a child paragraph —
+    // an inline `data.text` would be silently discarded by the callout tool.
+    it('maps icon + background colour and emits the title as a child paragraph', () => {
       const out = parseNotionBlocksV3(
         v3(
           value('cl', 'callout', {
@@ -274,7 +277,8 @@ describe('parseNotionBlocksV3', () => {
       );
 
       expect(out).toEqual([
-        { id: 'cl', tool: 'callout', data: { emoji: '💡', text: 'note', textColor: null, backgroundColor: 'gray' } },
+        { id: 'cl', tool: 'callout', data: { emoji: '💡', textColor: null, backgroundColor: 'gray' } },
+        { id: 'cl:callout-body', tool: 'paragraph', data: { text: 'note' }, parentId: 'cl' },
       ]);
     });
 
@@ -283,13 +287,13 @@ describe('parseNotionBlocksV3', () => {
         v3(value('cl', 'callout', { properties: title(['x']), format: { page_icon: '⚠️', block_color: 'blue' } }))
       );
 
-      expect(out?.[0].data).toEqual({ emoji: '⚠️', text: 'x', textColor: 'blue', backgroundColor: null });
+      expect(out?.[0].data).toEqual({ emoji: '⚠️', textColor: 'blue', backgroundColor: null });
     });
 
     it('defaults the emoji and leaves colours null when format is absent', () => {
       const out = parseNotionBlocksV3(v3(value('cl', 'callout', { properties: title(['x']) })));
 
-      expect(out?.[0].data).toEqual({ emoji: '💡', text: 'x', textColor: null, backgroundColor: null });
+      expect(out?.[0].data).toEqual({ emoji: '💡', textColor: null, backgroundColor: null });
     });
 
     it('treats default_background as no colour', () => {
@@ -297,10 +301,26 @@ describe('parseNotionBlocksV3', () => {
         v3(value('cl', 'callout', { properties: title(['x']), format: { page_icon: '💡', block_color: 'default_background' } }))
       );
 
-      expect(out?.[0].data).toEqual({ emoji: '💡', text: 'x', textColor: null, backgroundColor: null });
+      expect(out?.[0].data).toEqual({ emoji: '💡', textColor: null, backgroundColor: null });
     });
 
-    it('nests callout body blocks as children', () => {
+    it('clamps a callout colour outside Blok\'s preset palette to null', () => {
+      const out = parseNotionBlocksV3(
+        v3(value('cl', 'callout', { properties: title(['x']), format: { page_icon: '💡', block_color: 'teal_background' } }))
+      );
+
+      expect(out?.[0].data).toEqual({ emoji: '💡', textColor: null, backgroundColor: null });
+    });
+
+    it('omits the body child paragraph when the callout has no title text', () => {
+      const out = parseNotionBlocksV3(v3(value('cl', 'callout', { format: { page_icon: '💡' } })));
+
+      expect(out).toEqual([
+        { id: 'cl', tool: 'callout', data: { emoji: '💡', textColor: null, backgroundColor: null } },
+      ]);
+    });
+
+    it('nests the inline title AND body blocks as children, title first', () => {
       const out = parseNotionBlocksV3(
         v3Tree(
           value('cl', 'callout', { properties: title(['Note']), format: { page_icon: '💡' }, content: ['c1'] }),
@@ -309,7 +329,8 @@ describe('parseNotionBlocksV3', () => {
       );
 
       expect(out).toEqual([
-        { id: 'cl', tool: 'callout', data: { emoji: '💡', text: 'Note', textColor: null, backgroundColor: null } },
+        { id: 'cl', tool: 'callout', data: { emoji: '💡', textColor: null, backgroundColor: null } },
+        { id: 'cl:callout-body', tool: 'paragraph', data: { text: 'Note' }, parentId: 'cl' },
         { id: 'c1', tool: 'paragraph', data: { text: 'body' }, parentId: 'cl' },
       ]);
     });

@@ -20,7 +20,7 @@
  * correctly-nested block tree.
  */
 
-import { colorVarName } from '../../shared/color-presets';
+import { COLOR_PRESETS, colorVarName } from '../../shared/color-presets';
 import { DEFAULT_EMOJI } from '../../../tools/callout/constants';
 import { DEFAULT_LANGUAGE, LANGUAGES } from '../../../tools/code/constants';
 import { matchEmbedService } from '../../../tools/link/registry';
@@ -150,6 +150,17 @@ export function parseNotionBlocksV3(json: string): NotionParsedBlock[] | null {
     }
 
     result.push(block);
+
+    // Blok's callout keeps its body in CHILD blocks, so the callout's own inline
+    // title line becomes a child paragraph (emitted before its `content`
+    // children), matching what a native callout copy carries.
+    if (value.type === 'callout') {
+      const calloutTitle = richText(value.properties?.title, byId);
+
+      if (calloutTitle.length > 0) {
+        result.push({ id: `${id}:callout-body`, tool: 'paragraph', data: { text: calloutTitle }, parentId: id });
+      }
+    }
 
     children.forEach((childId) => walk(childId, id));
   };
@@ -328,7 +339,10 @@ function mapValue(value: NotionValue, byId: Map<string, NotionValue>): Mapped | 
       const emoji = typeof format.page_icon === 'string' && format.page_icon.length > 0 ? format.page_icon : DEFAULT_EMOJI;
       const { textColor, backgroundColor } = parseBlockColor(format.block_color);
 
-      return { tool: 'callout', data: { emoji, text, textColor, backgroundColor } };
+      // No inline `text`: Blok's callout stores its body in CHILD blocks, so the
+      // callout's title line is emitted as a child paragraph by `walk` (and a
+      // stray `data.text` would be silently discarded by the callout tool).
+      return { tool: 'callout', data: { emoji, textColor, backgroundColor } };
     }
     case 'page':
       // A `page` block inside content is a SUB-PAGE reference: its body lives on
@@ -862,11 +876,21 @@ function buildColourStyle(colourFlags: unknown[]): string {
   return parts.join('; ');
 }
 
-/** Map a Notion `block_color` to callout `{ textColor, backgroundColor }` names. */
+/** The set of colour preset names Blok recognises (its callout/marker palette). */
+const BLOK_COLOR_NAMES = new Set(COLOR_PRESETS.map((preset) => preset.name));
+
+/**
+ * Map a Notion `block_color` to callout `{ textColor, backgroundColor }` names.
+ * Names outside Blok's preset palette collapse to `null`: the callout tool
+ * builds `var(--blok-color-<name>-…)` from the name verbatim, so an unrecognised
+ * name yields an undefined custom property that silently drops the colour AND
+ * the callout's border. Notion's palette already aligns with Blok's, so this is
+ * a safety clamp rather than a remap.
+ */
 function parseBlockColor(token: unknown): { textColor: string | null; backgroundColor: string | null } {
   const colour = parseNotionColour(token);
 
-  if (colour === null) {
+  if (colour === null || !BLOK_COLOR_NAMES.has(colour.name)) {
     return { textColor: null, backgroundColor: null };
   }
 

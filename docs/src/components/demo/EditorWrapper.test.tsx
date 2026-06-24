@@ -66,7 +66,7 @@ describe('EditorWrapper', () => {
       expect(typeof editor.save).toBe('function');
     });
 
-    it('exposes an editor with a destroy method', async () => {
+    it('exposes an editor instance with save/clear/undo/redo methods', async () => {
       const onEditorReady = vi.fn();
 
       renderEditor({ onEditorReady });
@@ -76,7 +76,10 @@ describe('EditorWrapper', () => {
       });
 
       const editor = onEditorReady.mock.calls[0][0];
-      expect(typeof editor.destroy).toBe('function');
+      expect(typeof editor.save).toBe('function');
+      expect(typeof editor.clear).toBe('function');
+      expect(typeof editor.undo).toBe('function');
+      expect(typeof editor.redo).toBe('function');
     });
   });
 
@@ -148,7 +151,7 @@ describe('EditorWrapper', () => {
   });
 
   describe('cleanup on unmount', () => {
-    it('calls destroy on the editor instance when component unmounts', async () => {
+    it('does not throw when unmounting after the editor initializes', async () => {
       const onEditorReady = vi.fn();
 
       const { unmount } = renderEditor({ onEditorReady });
@@ -157,14 +160,8 @@ describe('EditorWrapper', () => {
         expect(onEditorReady).toHaveBeenCalledOnce();
       });
 
-      const editor = onEditorReady.mock.calls[0][0];
-      const destroySpy = vi.spyOn(editor, 'destroy');
-
-      act(() => {
-        unmount();
-      });
-
-      expect(destroySpy).toHaveBeenCalledOnce();
+      // Destroy is handled internally by the BlokEditor adapter — unmounting must not throw
+      expect(() => act(() => unmount())).not.toThrow();
     });
 
     it('does not throw when unmounting before the editor finishes initializing', () => {

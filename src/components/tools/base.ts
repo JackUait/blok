@@ -192,6 +192,15 @@ export abstract class BaseToolAdapter<Type extends ToolType = ToolType, ToolClas
   }
 
   /**
+   * Update the editor-level default placeholder. Used by the reactive
+   * `editor.placeholder` API so blocks created AFTER the change use the new value.
+   * @param value - new default placeholder, or false to disable it
+   */
+  public setDefaultPlaceholder(value: string | false): void {
+    this.defaultPlaceholder = value;
+  }
+
+  /**
    * Returns Tool user configuration.
    * Extracts tool-specific options from flat config and merges with nested config.
    */

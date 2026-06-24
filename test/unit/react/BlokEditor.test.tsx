@@ -103,10 +103,10 @@ describe('BlokEditor', () => {
   });
 
   it('forwards id to the container element', async () => {
-    render(<BlokEditor id="editor-entry-point" />);
+    render(<BlokEditor id="editor-entry-point" data-testid="host" />);
     await act(async () => { await Promise.resolve(); });
 
-    expect(document.getElementById('editor-entry-point')).not.toBeNull();
+    expect(screen.getByTestId('host').getAttribute('id')).toBe('editor-entry-point');
   });
 
   it('forwards arbitrary div props (aria-*, data-*, title) to the container', async () => {

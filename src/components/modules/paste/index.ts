@@ -7,6 +7,7 @@ import { SAFE_STRUCTURAL_TAGS } from './constants';
 import { preprocessGoogleDocsHtml } from './google-docs-preprocessor';
 import { preprocessNotionHtml } from './notion-preprocessor';
 import { NOTION_BLOCKS_V3_MIME, parseNotionBlocksV3 } from './notion-blocks-v3';
+import { NEXT_SPACE_MIMES, parseNextSpaceBlocks } from './next-space-blocks';
 import type { PasteHandler } from './handlers/base';
 import { BlokDataHandler } from './handlers/blok-data-handler';
 import { FilesHandler } from './handlers/files-handler';
@@ -114,12 +115,15 @@ export class Paste extends Module {
     const plainData = dataTransfer.getData('text/plain');
     const rawHtmlData = dataTransfer.getData('text/html');
 
-    // Native Blok clipboard data always wins. When absent, fall back to
-    // Notion's lossless proprietary flavour (web→web paste): it carries full
-    // block state (checked, language, nesting, colour…) that the HTML flavour
-    // cannot. We translate it into the Blok clipboard shape so it flows through
-    // the existing BlokDataHandler two-pass hierarchy builder.
-    const blokData = dataTransfer.getData(this.MIME_TYPE) || this.readNotionBlocksV3(dataTransfer);
+    // Native Blok clipboard data always wins. When absent, fall back to the
+    // lossless proprietary flavours of other editors (web→web paste): they
+    // carry full block state (checked, language, nesting, colour…) that the
+    // HTML flavour cannot. We translate them into the Blok clipboard shape so
+    // they flow through the existing BlokDataHandler two-pass hierarchy builder.
+    const blokData =
+      dataTransfer.getData(this.MIME_TYPE) ||
+      this.readNotionBlocksV3(dataTransfer) ||
+      this.readNextSpaceBlocks(dataTransfer);
 
     // Route to handlers based on data type
     const handled = await this.routeToHandlers(dataTransfer, plainData, rawHtmlData, blokData, pasteTarget);
@@ -151,6 +155,29 @@ export class Paste extends Module {
     }
 
     return JSON.stringify(parsed);
+  }
+
+  /**
+   * Read buildin.ai's `text/next-space-blocks` / `text/next-space-content`
+   * clipboard flavours and translate them into the Blok clipboard JSON shape,
+   * or return '' when absent / unparseable (so the caller falls back to HTML).
+   */
+  private readNextSpaceBlocks(dataTransfer: DataTransfer): string {
+    for (const mime of NEXT_SPACE_MIMES) {
+      const raw = dataTransfer.getData(mime);
+
+      if (!raw) {
+        continue;
+      }
+
+      const parsed = parseNextSpaceBlocks(raw);
+
+      if (parsed !== null && parsed.length > 0) {
+        return JSON.stringify(parsed);
+      }
+    }
+
+    return '';
   }
 
   /**

@@ -960,6 +960,18 @@
   }
 }
 
+/* Audio waveform equalizer — each bar squashes and stretches about its centre;
+   staggered delays (set inline per bar) make the row ripple like live playback. */
+@keyframes audio-eq {
+  0%,
+  100% {
+    transform: scaleY(0.5);
+  }
+  50% {
+    transform: scaleY(1.25);
+  }
+}
+
 /* Lit-from-above edge + a soft, layered ambient shadow that deepens on hover. */
 .bento-tile {
   isolation: isolate;

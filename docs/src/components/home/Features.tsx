@@ -1049,22 +1049,33 @@ const MediaViz: React.FC = () => {
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 z-30 rounded-xl border-[1.5px] border-brand-from opacity-0 transition-opacity duration-200"
       />
-      {/* sky */}
-      <div className="absolute inset-0 bg-linear-to-b from-brand-from/45 via-brand-via/35 to-brand-to/40" />
-      {/* sun */}
-      <div className="absolute right-7 top-3 size-4 rounded-full bg-white/75 blur-[0.5px]" />
-      {/* mountain range silhouette — turns the swatch into recognisable photo content */}
-      <svg className="absolute inset-x-0 bottom-0 h-6 w-full text-foreground/25" viewBox="0 0 120 28" preserveAspectRatio="none" fill="currentColor" aria-hidden="true">
-        <path d="M0 28 22 12 38 22 60 5 82 22 100 13 120 25 120 28Z" />
-      </svg>
-      {/* video play button */}
-      <span className="absolute inset-0 m-auto flex size-9 items-center justify-center rounded-full bg-white/95 text-primary shadow-md transition-transform duration-300 group-hover:scale-110">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      {/* The sunset scene drifts in a slow ken-burns push while the tile is hovered,
+          so the still photo reads as live footage the moment you reach for play. */}
+      <div className="absolute inset-0 origin-center transition-transform duration-[1400ms] ease-out motion-safe:group-hover:scale-[1.08]">
+        {/* sky — dusk gradient, warmer as it nears the ridgeline */}
+        <div className="absolute inset-0 bg-linear-to-b from-brand-from/45 via-brand-via/35 to-brand-to/50" />
+        {/* horizon haze: the sun's warmth pooling along the mountain line */}
+        <div className="absolute inset-x-0 bottom-2 h-7 bg-linear-to-t from-brand-to/45 via-brand-via/15 to-transparent" />
+        {/* setting sun — a bright core bleeding into a soft warm halo, swelling on hover */}
+        <div className="absolute right-6 top-1 size-9 rounded-full bg-[radial-gradient(circle,_rgba(255,255,255,0.95)_0%,_rgba(255,255,255,0.55)_26%,_rgba(255,255,255,0)_64%)] transition-transform duration-700 ease-out motion-safe:group-hover:scale-110" />
+        {/* far range — hazy and pale, hung higher up the sky */}
+        <svg className="absolute inset-x-0 bottom-0 h-7 w-full text-foreground/15" viewBox="0 0 120 28" preserveAspectRatio="none" fill="currentColor" aria-hidden="true">
+          <path d="M0 28 16 14 30 20 50 9 68 18 88 8 104 16 120 11 120 28Z" />
+        </svg>
+        {/* near range — darker and lower, overlapping the far range to build depth */}
+        <svg className="absolute inset-x-0 bottom-0 h-5 w-full text-foreground/32" viewBox="0 0 120 22" preserveAspectRatio="none" fill="currentColor" aria-hidden="true">
+          <path d="M0 22 18 13 34 18 54 10 72 16 92 11 110 17 120 14 120 22Z" />
+        </svg>
+      </div>
+      {/* video play button — a sonar ring pulses outward while hovered */}
+      <span className="absolute inset-0 z-10 m-auto flex size-9 items-center justify-center rounded-full bg-white/95 text-primary shadow-md transition-transform duration-300 group-hover:scale-110">
+        <span className="pointer-events-none absolute inset-0 rounded-full ring-2 ring-white/70 opacity-0 motion-safe:group-hover:animate-ping" aria-hidden="true" />
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="relative translate-x-px">
           <path d="M8 5.5 19 12 8 18.5Z" />
         </svg>
       </span>
       {/* duration badge — the unmistakable "this is a video" cue */}
-      <span className="absolute bottom-1.5 right-1.5 rounded bg-black/45 px-1 py-px font-mono text-[8px] font-medium text-white">0:24</span>
+      <span className="absolute bottom-1.5 right-1.5 z-10 rounded bg-black/45 px-1 py-px font-mono text-[8px] font-medium text-white backdrop-blur-sm">0:24</span>
     </div>
     {/* Audio: a clip you can scrub — note chip, waveform playhead, duration. */}
     <div ref={audioRef} className="relative flex items-center gap-2.5 rounded-xl border border-border/60 bg-card px-2.5 py-2">
@@ -1074,19 +1085,21 @@ const MediaViz: React.FC = () => {
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 z-30 rounded-xl border-[1.5px] border-brand-from opacity-0 transition-opacity duration-200"
       />
-      <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-linear-to-br from-brand-from to-brand-to text-white">
+      <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-linear-to-br from-brand-from to-brand-to text-white shadow-sm transition-transform duration-300 ease-out group-hover:scale-110 group-hover:-rotate-3">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M9 18V6l10-2.5V14" />
           <circle cx="6.5" cy="18" r="2.5" fill="currentColor" stroke="none" />
           <circle cx="16.5" cy="14" r="2.5" fill="currentColor" stroke="none" />
         </svg>
       </span>
+      {/* Waveform — bars sit still as a frozen clip, then dance like a live
+          equalizer while the tile is hovered (staggered phase per bar). */}
       <div className="flex flex-1 items-center gap-[2px]">
         {WAVE.map((h, i) => (
           <span
             key={i}
-            className={`w-[2px] rounded-full ${i < 5 ? "bg-primary" : "bg-foreground/25"}`}
-            style={{ height: `${h}px` }}
+            className={`w-[2px] rounded-full ${i < 5 ? "bg-primary" : "bg-foreground/25"} motion-safe:group-hover:animate-[audio-eq_700ms_ease-in-out_infinite]`}
+            style={{ height: `${h}px`, animationDelay: `${i * -0.09}s`, animationDuration: `${0.66 + (i % 4) * 0.13}s` }}
           />
         ))}
       </div>

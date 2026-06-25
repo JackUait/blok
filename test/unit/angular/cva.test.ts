@@ -72,6 +72,20 @@ describe('BlokEditorComponent ControlValueAccessor', () => {
     expect(editor.render).toHaveBeenCalledWith(doc('external'));
   });
 
+  it('does not clobber the editor when the form is reset to null', async () => {
+    const fixture = await mountReady();
+    const editor = blokRegistry.last;
+
+    editor.render.mockClear();
+    fixture.componentInstance.ctrl.reset(null);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    // writeValue(null) clears the tracked value (data$ -> undefined); the data
+    // effect early-returns on undefined, so the live content is left untouched.
+    expect(editor.render).not.toHaveBeenCalled();
+  });
+
   it('maps form disabled state to editor readOnly', async () => {
     const fixture = await mountReady();
     const editor = blokRegistry.last;

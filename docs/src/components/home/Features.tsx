@@ -1120,7 +1120,7 @@ const ShortcutBadge: React.FC<{
   litRef: React.RefObject<HTMLSpanElement | null>;
 }> = ({ show, icon, keys, litRef }) => (
   <span
-    className="absolute -top-3 right-3 flex items-center gap-1.5 rounded-lg border border-border/60 bg-card px-2 py-1 shadow-md transition-all duration-300"
+    className="absolute -top-3 right-3 z-40 flex items-center gap-1.5 rounded-lg border border-border/60 bg-card px-2 py-1 shadow-md transition-all duration-300"
     style={{
       opacity: show ? 1 : 0,
       transform: show ? "translateY(0) scale(1)" : "translateY(3px) scale(0.92)",

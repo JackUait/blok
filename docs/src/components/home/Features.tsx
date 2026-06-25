@@ -988,11 +988,67 @@ const LanguagesViz: React.FC = () => (
 // not an abstract swatch.
 const WAVE = [5, 9, 14, 8, 12, 6, 11, 15, 7, 10, 13, 6, 9, 5, 8];
 
-const MediaViz: React.FC = () => (
+const MediaViz: React.FC = () => {
+  const videoRef = useRef<HTMLDivElement>(null);
+  const videoEdgeRef = useRef<HTMLSpanElement>(null);
+  const audioRef = useRef<HTMLDivElement>(null);
+  const audioEdgeRef = useRef<HTMLSpanElement>(null);
+  const reduce = useReducedMotion();
+
+  // Light each media block's border with brand pink where the tile's glow blob
+  // touches it — the same blob-tracked radial reveal the JSON pane, chip grid and
+  // table use. Each edge is masked against its own block's rect so the two blocks
+  // light independently as the blob sweeps across them.
+  useEffect(() => {
+    if (reduce) return;
+    const tile = videoRef.current?.closest(".bento-tile");
+    if (!tile) return;
+
+    const panes: Array<[HTMLDivElement | null, HTMLSpanElement | null]> = [
+      [videoRef.current, videoEdgeRef.current],
+      [audioRef.current, audioEdgeRef.current],
+    ];
+
+    const apply = (clientX: number | null, clientY: number | null) => {
+      for (const [block, edge] of panes) {
+        if (!block || !edge) continue;
+        if (clientX === null || clientY === null) {
+          edge.style.opacity = "0";
+          continue;
+        }
+        const r = block.getBoundingClientRect();
+        const mask = `radial-gradient(${CHIP_GLOW_RADIUS}px circle at ${clientX - r.left}px ${clientY - r.top}px, #000 0%, transparent 62%)`;
+        edge.style.opacity = "1";
+        edge.style.maskImage = mask;
+        edge.style.webkitMaskImage = mask;
+      }
+    };
+
+    const onMove = (e: Event) => {
+      const pe = e as PointerEvent;
+      if (pe.pointerType === "mouse") apply(pe.clientX, pe.clientY);
+    };
+    const onLeave = () => apply(null, null);
+
+    tile.addEventListener("pointermove", onMove);
+    tile.addEventListener("pointerleave", onLeave);
+    return () => {
+      tile.removeEventListener("pointermove", onMove);
+      tile.removeEventListener("pointerleave", onLeave);
+    };
+  }, [reduce]);
+
+  return (
   <div aria-hidden="true" className="flex w-full flex-col gap-2">
     {/* Image / video: a sunset photo you can play. bg-card gives an opaque base so
         the tile's hover glow blob can't bleed pink through the translucent sky. */}
-    <div className="relative h-[60px] overflow-hidden rounded-xl border border-border/60 bg-card">
+    <div ref={videoRef} className="relative h-[60px] overflow-hidden rounded-xl border border-border/60 bg-card">
+      {/* brand border revealed where the glow blob touches the block */}
+      <span
+        ref={videoEdgeRef}
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-30 rounded-xl border-[1.5px] border-brand-from opacity-0 transition-opacity duration-200"
+      />
       {/* sky */}
       <div className="absolute inset-0 bg-linear-to-b from-brand-from/45 via-brand-via/35 to-brand-to/40" />
       {/* sun */}
@@ -1011,7 +1067,13 @@ const MediaViz: React.FC = () => (
       <span className="absolute bottom-1.5 right-1.5 rounded bg-black/45 px-1 py-px font-mono text-[8px] font-medium text-white">0:24</span>
     </div>
     {/* Audio: a clip you can scrub — note chip, waveform playhead, duration. */}
-    <div className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card px-2.5 py-2">
+    <div ref={audioRef} className="relative flex items-center gap-2.5 rounded-xl border border-border/60 bg-card px-2.5 py-2">
+      {/* brand border revealed where the glow blob touches the block */}
+      <span
+        ref={audioEdgeRef}
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-30 rounded-xl border-[1.5px] border-brand-from opacity-0 transition-opacity duration-200"
+      />
       <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-linear-to-br from-brand-from to-brand-to text-white">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M9 18V6l10-2.5V14" />
@@ -1031,7 +1093,8 @@ const MediaViz: React.FC = () => (
       <span className="shrink-0 font-mono text-[9px] text-muted-foreground">1:32</span>
     </div>
   </div>
-);
+  );
+};
 
 // Maps a feature's unique accent key → its bento span (lg only) + its diorama.
 const TILE: Record<string, { span: string; viz: React.FC }> = {

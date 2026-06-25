@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.23.4](https://github.com/JackUait/blok/compare/v0.23.3...v0.23.4) (2026-06-25)
+
+### Features
+
+- **Core** — New `onSave(data, api)` config delivers the full serialized `OutputData` (debounced via the existing change-batch window) whenever content changes — the "output half" of a controlled editor. Pair it with the `data` config to mirror editor state into your own store with a single callback instead of calling `saver.save()` by hand. Only user-driven changes trigger it; programmatic `render()` does not (the change observer is disabled during render), so a controlled round-trip won't recurse. Available to all consumers, not just React.
+- **React** — `<BlokEditor>`/`useBlok` now accept `onSave`, making `<BlokEditor data={data} onSave={setData} />` a true controlled component to pair with the reactive `data` prop from 0.23.3. The callback is ref-stable (never recreates the editor) and attached only when provided. Echoing the payload straight back via `onSave={setData}` is caret-stable: the adapter records the editor's own emitted output as the content baseline, so the round-trip deep-equal–dedupes to a no-op (no re-render, no caret reset) while genuine external `data` changes still render in place.
+
 ## [0.23.3](https://github.com/JackUait/blok/compare/v0.23.2...v0.23.3) (2026-06-25)
 
 ### Features

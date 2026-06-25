@@ -929,13 +929,13 @@ const EmbedsViz: React.FC = () => (
 );
 
 const UNDO_ARROW = (
-  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M9 14 4 9l5-5" />
     <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H9" />
   </svg>
 );
 const REDO_ARROW = (
-  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="m15 14 5-5-5-5" />
     <path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H15" />
   </svg>
@@ -1042,8 +1042,8 @@ const UndoViz: React.FC = () => {
         </div>
 
         {/* the shortcut cue cross-fades: ⌘Z as you undo, ⌘⇧Z as you redo on leave */}
-        <ShortcutBadge show={phase === "undo"} icon={UNDO_ARROW} keys="⌘Z" />
-        <ShortcutBadge show={phase === "redo"} icon={REDO_ARROW} keys="⌘⇧Z" />
+        <ShortcutBadge show={phase === "undo"} icon={UNDO_ARROW} keys={["⌘", "Z"]} />
+        <ShortcutBadge show={phase === "redo"} icon={REDO_ARROW} keys={["⌘", "⇧", "Z"]} />
       </div>
     </div>
   );
@@ -1061,16 +1061,26 @@ const CursorFlag: React.FC<{ name: string; className: string; style?: React.CSSP
 );
 
 // The undo/redo shortcut tag above the document, cross-fading with the phase.
-const ShortcutBadge: React.FC<{ show: boolean; icon: React.ReactNode; keys: string }> = ({ show, icon, keys }) => (
+// Each key is its own little keycap so the combo reads as keys, not glyphs.
+const ShortcutBadge: React.FC<{ show: boolean; icon: React.ReactNode; keys: string[] }> = ({ show, icon, keys }) => (
   <span
-    className="absolute -top-2.5 right-3 flex items-center gap-1 rounded-md border border-border/70 bg-card px-1.5 py-0.5 text-primary shadow-sm transition-all duration-300"
+    className="absolute -top-3 right-3 flex items-center gap-1.5 rounded-lg border border-border/60 bg-card px-2 py-1 shadow-md transition-all duration-300"
     style={{
       opacity: show ? 1 : 0,
       transform: show ? "translateY(0) scale(1)" : "translateY(3px) scale(0.92)",
     }}
   >
-    {icon}
-    <span className="font-mono text-[8px] font-semibold leading-none">{keys}</span>
+    <span className="text-primary">{icon}</span>
+    <span className="flex items-center gap-0.5">
+      {keys.map((k, i) => (
+        <kbd
+          key={i}
+          className="inline-flex h-[15px] min-w-[15px] items-center justify-center rounded-[4px] border border-border/70 bg-secondary px-1 text-[9px] font-semibold leading-none text-foreground/70 shadow-[0_1px_0_var(--border)]"
+        >
+          {k}
+        </kbd>
+      ))}
+    </span>
   </span>
 );
 

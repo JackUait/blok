@@ -39,11 +39,11 @@ describe('Features', () => {
     ).toBeInTheDocument();
   });
 
-  it('should render all 10 feature cards as buttons', () => {
+  it('should render all 9 feature cards as buttons', () => {
     renderFeatures();
 
     const featureCards = screen.getAllByRole('button', { name: /learn more about/i });
-    expect(featureCards).toHaveLength(10);
+    expect(featureCards).toHaveLength(9);
   });
 
   it('should render the clean JSON pillar as a title-only tile', () => {
@@ -76,8 +76,9 @@ describe('Features', () => {
     renderFeatures();
 
     // Secondary cards are scannable: title present, descriptive prose removed.
-    expect(screen.getByText('Insert blocks with /')).toBeInTheDocument();
-    expect(screen.getByText('Databases, boards & lists')).toBeInTheDocument();
+    // The "/" renders as a <kbd> keycap, so assert the heading's accessible name
+    // (which still reads "Type / to add anything") rather than a single text node.
+    expect(screen.getByRole('heading', { name: 'Type / to add anything' })).toBeInTheDocument();
     expect(screen.getByText('Spreadsheet-grade tables')).toBeInTheDocument();
     expect(screen.getByText('Embed 100+ services')).toBeInTheDocument();
     expect(screen.getByText('Conflict-free undo & redo')).toBeInTheDocument();
@@ -101,7 +102,6 @@ describe('Features', () => {
       'Learn more about the block library',
       'Learn more about extending Blok',
       'Learn more about the slash menu and Markdown',
-      'Learn more about databases',
       'Learn more about tables',
       'Learn more about embeds',
       'Learn more about undo and redo',

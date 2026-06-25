@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
+  AnimatePresence,
   motion,
   useReducedMotion,
   useSpring,
@@ -558,61 +559,230 @@ const ExtensibleViz: React.FC = () => {
   );
 };
 
-// The slash toolbox: a search row with a live caret + fuzzy-matched results.
-const SLASH_ROWS = [
-  { label: "Heading", k: "H1", active: true },
-  { label: "Table", k: "/tb", active: false },
-  { label: "Code", k: "```", active: false },
-];
-
-const SlashViz: React.FC = () => (
-  <div aria-hidden="true" className="w-full overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
-    <div className="flex items-center gap-2 border-b border-border/50 px-3 py-2">
-      <span className="flex size-5 items-center justify-center rounded-md bg-linear-to-br from-brand-from to-brand-to font-mono text-[11px] font-bold text-white">/</span>
-      <span className="font-mono text-[11px] text-muted-foreground">head</span>
-      <span className="bento-caret h-3.5 w-px bg-primary" />
-    </div>
-    <div className="flex flex-col p-1">
-      {SLASH_ROWS.map((row) => (
-        <div
-          key={row.label}
-          className={`flex items-center justify-between rounded-lg px-2 py-1.5 text-[11px] transition-colors ${
-            row.active
-              ? "bg-primary/10 text-primary"
-              : "text-muted-foreground group-hover:bg-secondary"
-          }`}
-        >
-          <span className="font-medium">{row.label}</span>
-          <span className="font-mono text-[9px] opacity-70">{row.k}</span>
-        </div>
-      ))}
-    </div>
-  </div>
+// A faithful replica of Blok's real slash menu — the toolbox popover you get the
+// instant you type "/" in the editor. Everything mirrors the popover's own design
+// tokens so it reads as the genuine article rather than a stylised stand-in:
+//   • white card, the app's exact border + layered shadow
+//   • w-6 / rounded-lg icon chips on bg rgba(55,53,47,.06)  (--blok-popover-icon-bg)
+//   • the block's real letter glyph (T, H₁…) and its Markdown shortcut on the right
+//   • the current block highlighted in Blok blue rgba(35,131,226,.14) (--blok-item-focus-bg)
+// Rows are the literal top of the menu (Text, Heading 1–3), in order.
+// "H" with a subscript level — Blok's own heading-icon shape, set in the docs
+// display font so it reads as a crafted glyph rather than plain text.
+const Hn: React.FC<{ n: string }> = ({ n }) => (
+  <span className="flex items-baseline font-bold leading-none">
+    <span className="text-[13px]">H</span>
+    <span className="text-[8.5px] font-semibold">{n}</span>
+  </span>
 );
 
-// A three-lane kanban where every card is itself a block — the cards breathe.
-const KANBAN = [
-  { n: 2, h: [13, 9] },
-  { n: 1, h: [16] },
-  { n: 2, h: [11, 14] },
+// Polished duotone glyphs for the list-style blocks the hover search surfaces.
+const slashIcon = (paths: React.ReactNode) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    {paths}
+  </svg>
+);
+
+type SlashRow = { label: string; glyph: React.ReactNode; shortcut?: string; current?: boolean };
+
+// Two result sets the diorama swaps between: the resting menu (you've typed
+// "text") and what a live search for a to-do block surfaces on hover.
+const SLASH_REST_QUERY = "text";
+const SLASH_HOVER_QUERY = "to-do";
+
+const SLASH_REST_RESULTS: SlashRow[] = [
+  { label: "Text", current: true, glyph: <span className="text-[13px] font-bold leading-none">T</span> },
+  { label: "Heading 1", shortcut: "#", glyph: <Hn n="1" /> },
+  { label: "Heading 2", shortcut: "##", glyph: <Hn n="2" /> },
 ];
 
-const DatabasesViz: React.FC = () => (
-  <div aria-hidden="true" className="flex w-full gap-2">
-    {KANBAN.map((col, ci) => (
-      <div key={ci} className="flex flex-1 flex-col gap-1.5 rounded-xl bg-secondary p-1.5">
-        <span className="mx-1 mt-0.5 h-1.5 w-6 rounded-full bg-linear-to-r from-brand-from to-brand-to opacity-70" />
-        {col.h.map((h, ri) => (
-          <div
-            key={ri}
-            className="bento-breathe rounded-lg border border-border/50 bg-card"
-            style={{ height: `${h}px`, animationDelay: `${(ci * 2 + ri) * 0.35}s` }}
-          />
-        ))}
+const SLASH_HOVER_RESULTS: SlashRow[] = [
+  {
+    label: "To-do list",
+    current: true,
+    shortcut: "[]",
+    glyph: slashIcon(
+      <>
+        <rect x="4" y="4.5" width="15" height="15" rx="4.5" fill="currentColor" fillOpacity="0.16" stroke="none" />
+        <rect x="4" y="4.5" width="15" height="15" rx="4.5" />
+        <path d="M7.8 12l2.5 2.5L16 9" strokeWidth="2" />
+      </>,
+    ),
+  },
+  {
+    label: "Toggle list",
+    shortcut: ">",
+    glyph: slashIcon(
+      <>
+        <path d="M7 7.5l5 4-5 4Z" fill="currentColor" fillOpacity="0.18" />
+        <path d="M14.5 9.5h4M14.5 13.5h4" />
+      </>,
+    ),
+  },
+  {
+    label: "Bulleted list",
+    shortcut: "-",
+    glyph: slashIcon(
+      <>
+        <path d="M9.5 8h9.5M9.5 12h9.5M9.5 16h6.5" />
+        <circle cx="5.5" cy="8" r="1.25" fill="currentColor" stroke="none" />
+        <circle cx="5.5" cy="12" r="1.25" fill="currentColor" stroke="none" />
+        <circle cx="5.5" cy="16" r="1.25" fill="currentColor" stroke="none" />
+      </>,
+    ),
+  },
+];
+
+const SlashRowView: React.FC<{ row: SlashRow }> = ({ row }) => (
+  <motion.div
+    layout
+    initial={{ opacity: 0, y: 8, filter: "blur(4px)" }}
+    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+    exit={{ opacity: 0, y: -8, filter: "blur(4px)" }}
+    transition={{ duration: 0.24, ease: "easeOut" }}
+    className={`flex items-center gap-3 rounded-xl px-2.5 py-2 ${
+      row.current ? "bg-primary/[0.07]" : ""
+    }`}
+  >
+    <span
+      className={`flex size-7 shrink-0 items-center justify-center rounded-[11px] ${
+        row.current
+          ? "bg-linear-to-br from-brand-from to-brand-to text-white shadow-[0_4px_12px_-2px_rgba(233,78,122,0.5)] ring-1 ring-inset ring-white/25"
+          : "border border-border/60 bg-secondary text-foreground/70 shadow-sm"
+      }`}
+    >
+      {row.glyph}
+    </span>
+    <span className={`text-[13px] tracking-tight ${row.current ? "font-semibold text-foreground" : "font-medium text-foreground/90"}`}>
+      {row.label}
+    </span>
+    {row.shortcut && (
+      <span className="ml-auto font-mono text-[11px] text-muted-foreground/55">{row.shortcut}</span>
+    )}
+  </motion.div>
+);
+
+// Blok's slash menu, dressed for the docs: a search field carrying the "/" query
+// over the result list, styled in the bento's house language (rounded card,
+// designed shadow, squircle chips, brand-gradient current row). Hovering the tile
+// plays a live search — the typed query erases and retypes "/to-do", and the
+// results filter from the text/heading set to the list-block set as it goes.
+const SlashViz: React.FC = () => {
+  const reduce = useReducedMotion();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const edgeRef = useRef<HTMLSpanElement>(null);
+  const [query, setQuery] = useState(SLASH_REST_QUERY);
+  const [results, setResults] = useState<SlashRow[]>(SLASH_REST_RESULTS);
+  // queryRef mirrors `query` so a freshly-started sequence can erase from wherever
+  // the caret currently sits; genRef invalidates any in-flight sequence the moment
+  // the pointer enters or leaves again.
+  const queryRef = useRef(query);
+  const genRef = useRef(0);
+
+  useEffect(() => {
+    if (reduce) return;
+    const tile = rootRef.current?.closest(".bento-tile");
+    if (!tile) return;
+
+    const setQ = (s: string) => {
+      queryRef.current = s;
+      setQuery(s);
+    };
+
+    const play = async (word: string, rows: SlashRow[]) => {
+      const gen = ++genRef.current;
+      const wait = (ms: number) =>
+        new Promise<void>((resolve) => setTimeout(resolve, ms));
+      // erase whatever's there
+      for (let i = queryRef.current.length - 1; i >= 0; i--) {
+        if (genRef.current !== gen) return;
+        setQ(queryRef.current.slice(0, i));
+        await wait(45);
+      }
+      if (genRef.current !== gen) return;
+      setResults(rows);
+      await wait(150);
+      // type the new query
+      for (let i = 1; i <= word.length; i++) {
+        if (genRef.current !== gen) return;
+        setQ(word.slice(0, i));
+        await wait(65);
+      }
+    };
+
+    const onEnter = () => void play(SLASH_HOVER_QUERY, SLASH_HOVER_RESULTS);
+    const onLeave = () => void play(SLASH_REST_QUERY, SLASH_REST_RESULTS);
+
+    // Light the card's border pink where the tile's glow blob touches it — the
+    // same radial-mask edge-light the JSON / Tables / Blocks tiles use.
+    const applyEdge = (clientX: number | null, clientY: number | null) => {
+      const edge = edgeRef.current;
+      const root = rootRef.current;
+      if (!edge || !root) return;
+      if (clientX === null || clientY === null) {
+        edge.style.opacity = "0";
+        return;
+      }
+      const r = root.getBoundingClientRect();
+      const mask = `radial-gradient(${CHIP_GLOW_RADIUS}px circle at ${clientX - r.left}px ${clientY - r.top}px, #000 0%, transparent 62%)`;
+      edge.style.opacity = "1";
+      edge.style.maskImage = mask;
+      edge.style.webkitMaskImage = mask;
+    };
+    const onMove = (e: Event) => {
+      const pe = e as PointerEvent;
+      if (pe.pointerType === "mouse") applyEdge(pe.clientX, pe.clientY);
+    };
+    const onEdgeLeave = () => applyEdge(null, null);
+
+    tile.addEventListener("pointerenter", onEnter);
+    tile.addEventListener("pointerleave", onLeave);
+    tile.addEventListener("pointermove", onMove);
+    tile.addEventListener("pointerleave", onEdgeLeave);
+    return () => {
+      genRef.current++;
+      tile.removeEventListener("pointerenter", onEnter);
+      tile.removeEventListener("pointerleave", onLeave);
+      tile.removeEventListener("pointermove", onMove);
+      tile.removeEventListener("pointerleave", onEdgeLeave);
+    };
+  }, [reduce]);
+
+  return (
+    <div
+      ref={rootRef}
+      aria-hidden="true"
+      className="relative w-full overflow-hidden rounded-2xl border border-border/60 bg-card p-2 shadow-[0_20px_44px_-18px_rgba(0,0,0,0.22)]"
+    >
+      {/* Brand border revealed where the tile's glow blob touches the card. */}
+      <span
+        ref={edgeRef}
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-30 rounded-2xl border-[1.5px] border-brand-from opacity-0 transition-opacity duration-200"
+      />
+      {/* Search field — the "/" query you typed, with a live caret. */}
+      <div className="mb-1.5 flex items-center gap-2 rounded-xl bg-secondary/60 px-2.5 py-2">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-muted-foreground/70">
+          <circle cx="11" cy="11" r="6.5" />
+          <path d="m20 20-3.5-3.5" />
+        </svg>
+        <span className="flex items-center font-mono text-[12.5px] tracking-tight text-foreground">
+          <span className="text-muted-foreground">/</span>
+          {query}
+          <span className="bento-caret ml-px inline-block h-3.5 w-px bg-primary" />
+        </span>
       </div>
-    ))}
-  </div>
-);
+
+      <div className="flex flex-col">
+        <AnimatePresence mode="popLayout" initial={false}>
+          {results.map((row) => (
+            <SlashRowView key={row.label} row={row} />
+          ))}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+};
 
 // A calm little spreadsheet that plays one animation when the whole tile is
 // hovered: the Task column resizes wider while the table's real blue (#3b82f6)
@@ -811,26 +981,36 @@ const LanguagesViz: React.FC = () => (
   </div>
 );
 
-// Media blocks — image, video and audio. A poster frame with a play head over a
-// soft brand wash, and an audio track with a little waveform underneath.
+// Media blocks — image, video and audio. The top is a real-looking photo poster
+// (sunset landscape) wearing a video play button + timestamp, so it reads as both
+// an image and a playable video the way a real media block does; the bottom is an
+// audio clip you can scrub. Concrete media a newcomer recognises at a glance —
+// not an abstract swatch.
 const WAVE = [5, 9, 14, 8, 12, 6, 11, 15, 7, 10, 13, 6, 9, 5, 8];
 
 const MediaViz: React.FC = () => (
   <div aria-hidden="true" className="flex w-full flex-col gap-2">
-    {/* image / video poster with a play head */}
-    <div className="relative flex h-14 items-center justify-center overflow-hidden rounded-xl border border-border/60 bg-linear-to-br from-brand-from/25 via-brand-via/20 to-brand-to/25">
-      <svg className="absolute bottom-1.5 left-2 text-white/70" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <circle cx="8" cy="9" r="1.4" fill="currentColor" stroke="none" />
-        <path d="M3 16.5 8 12l3 2.6L15 10l6 6" />
+    {/* Image / video: a sunset photo you can play. */}
+    <div className="relative h-[60px] overflow-hidden rounded-xl border border-border/60">
+      {/* sky */}
+      <div className="absolute inset-0 bg-linear-to-b from-brand-from/45 via-brand-via/35 to-brand-to/40" />
+      {/* sun */}
+      <div className="absolute right-7 top-3 size-4 rounded-full bg-white/75 blur-[0.5px]" />
+      {/* mountain range silhouette — turns the swatch into recognisable photo content */}
+      <svg className="absolute inset-x-0 bottom-0 h-6 w-full text-foreground/25" viewBox="0 0 120 28" preserveAspectRatio="none" fill="currentColor" aria-hidden="true">
+        <path d="M0 28 22 12 38 22 60 5 82 22 100 13 120 25 120 28Z" />
       </svg>
-      <span className="relative flex size-8 items-center justify-center rounded-full bg-white/90 text-primary shadow-sm transition-transform duration-300 group-hover:scale-110">
+      {/* video play button */}
+      <span className="absolute inset-0 m-auto flex size-9 items-center justify-center rounded-full bg-white/95 text-primary shadow-md transition-transform duration-300 group-hover:scale-110">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M8 5.5 19 12 8 18.5Z" />
         </svg>
       </span>
+      {/* duration badge — the unmistakable "this is a video" cue */}
+      <span className="absolute bottom-1.5 right-1.5 rounded bg-black/45 px-1 py-px font-mono text-[8px] font-medium text-white">0:24</span>
     </div>
-    {/* audio track with a waveform — the leading bars brand-lit like a playhead */}
-    <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-card px-2.5 py-2">
+    {/* Audio: a clip you can scrub — note chip, waveform playhead, duration. */}
+    <div className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card px-2.5 py-2">
       <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-linear-to-br from-brand-from to-brand-to text-white">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M9 18V6l10-2.5V14" />
@@ -847,6 +1027,7 @@ const MediaViz: React.FC = () => (
           />
         ))}
       </div>
+      <span className="shrink-0 font-mono text-[9px] text-muted-foreground">1:32</span>
     </div>
   </div>
 );
@@ -861,12 +1042,12 @@ const TILE: Record<string, { span: string; viz: React.FC }> = {
   // reorder the FEATURES data. Pillars stay at the default order, so they fill the
   // top rows first.
   pink: { span: "lg:col-span-1 lg:order-1", viz: SlashViz },
-  purple: { span: "lg:col-span-1 lg:order-2", viz: DatabasesViz },
-  cyan: { span: "lg:col-span-2 lg:order-3", viz: TablesViz },
-  blue: { span: "lg:col-span-1 lg:order-4", viz: EmbedsViz },
-  media: { span: "lg:col-span-1 lg:order-5", viz: MediaViz },
-  yellow: { span: "lg:col-span-1 lg:order-6", viz: UndoViz },
-  mauve: { span: "lg:col-span-1 lg:order-7", viz: LanguagesViz },
+  cyan: { span: "lg:col-span-2 lg:order-2", viz: TablesViz },
+  media: { span: "lg:col-span-1 lg:order-3", viz: MediaViz },
+  // Last row: a single tile, Embeds spanning the two middle columns, a single tile.
+  yellow: { span: "lg:col-span-1 lg:order-4", viz: UndoViz },
+  blue: { span: "lg:col-span-2 lg:order-5", viz: EmbedsViz },
+  mauve: { span: "lg:col-span-1 lg:order-6", viz: LanguagesViz },
 };
 
 type TileProps = {
@@ -920,6 +1101,20 @@ const PillarTile: React.FC<
   );
 };
 
+// Renders a tile title, tinting any literal "/" with the brand gradient so the
+// slash reads as the command character, not stray punctuation. Surrounding
+// spacing is preserved verbatim, so it works for both "Type / to add anything"
+// and the Russian "Введите /, чтобы…". Titles without a slash pass straight through.
+const renderTitleWithSlashKey = (title: string): React.ReactNode => {
+  if (!title.includes("/")) return title;
+  return title.split("/").map((segment, i) => (
+    <Fragment key={i}>
+      {i > 0 && <span className="text-brand-gradient font-extrabold">/</span>}
+      {segment}
+    </Fragment>
+  ));
+};
+
 // A supporting capability — a compact title chip below lg, unfolding into its
 // own diorama tile in the bento.
 const CapabilityTile: React.FC<TileProps> = ({ feature, onOpen }) => {
@@ -942,7 +1137,7 @@ const CapabilityTile: React.FC<TileProps> = ({ feature, onOpen }) => {
       <span className="bento-spot" aria-hidden="true" />
       <div className="relative z-10 flex w-full items-center gap-3.5">
         <h3 className="flex-1 text-balance text-[1.05rem] font-bold leading-snug tracking-tight">
-          {feature.title}
+          {renderTitleWithSlashKey(feature.title)}
         </h3>
         <svg
           width="16"
@@ -1108,30 +1303,6 @@ new Blok({ holder: 'editor' });`,
   }
 });`,
         apiLink: "/docs#toolbar-api",
-      },
-    },
-    {
-      icon: (
-        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="fi fi-kanban">
-          {/* Kanban columns */}
-          <rect x="5" y="6" width="6" height="20" rx="2.2" fill="currentColor" fillOpacity="0.16" />
-          <rect x="13" y="6" width="6" height="13" rx="2.2" fill="currentColor" fillOpacity="0.16" />
-          <rect x="21" y="6" width="6" height="16" rx="2.2" fill="currentColor" fillOpacity="0.16" />
-        </svg>
-      ),
-      title: t('home.features.databases.title'),
-      description: t('home.features.databases.description'),
-      learnMore: t('home.features.databases.learnMore'),
-      accent: "purple",
-      details: {
-        summary: t('home.features.databases.details.summary'),
-        benefits: [
-          t('home.features.databases.details.benefit1'),
-          t('home.features.databases.details.benefit2'),
-          t('home.features.databases.details.benefit3'),
-          t('home.features.databases.details.benefit4'),
-        ],
-        apiLink: "/tools#database",
       },
     },
     {

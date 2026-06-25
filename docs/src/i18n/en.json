@@ -370,7 +370,7 @@
         }
       },
       "slashCommands": {
-        "title": "Insert blocks with /",
+        "title": "Type / to add anything",
         "description": "Type / to search and insert any block, or use Markdown shortcuts like #, -, 1., [] and >.",
         "learnMore": "Learn more about the slash menu and Markdown",
         "details": {

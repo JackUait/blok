@@ -28,7 +28,7 @@ import type {
   OutputBlockData,
   OutputData,
   ThemeMode,
-} from '@/types';
+} from '@jackuait/blok';
 import type { BlokAngularConfig } from './types';
 
 /**

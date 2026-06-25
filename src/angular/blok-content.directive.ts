@@ -14,8 +14,7 @@ import {
 import { isPlatformBrowser } from '@angular/common';
 // Imported via the package's public specifier so ng-packagr externalizes the
 // core as a peer dependency (consumers share a single Blok instance + CSS).
-import { Blok as BlokRuntime } from '@jackuait/blok';
-import type { Blok } from '@/types';
+import { Blok as BlokRuntime, type Blok } from '@jackuait/blok';
 import type { BlokAngularConfig } from './types';
 
 /**

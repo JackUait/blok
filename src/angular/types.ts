@@ -1,4 +1,4 @@
-import type { BlokConfig, EditorWidth } from '@/types';
+import type { BlokConfig, EditorWidth } from '@jackuait/blok';
 
 /**
  * Configuration for the Angular adapter. Same as `BlokConfig` but without

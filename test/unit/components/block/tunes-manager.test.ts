@@ -209,6 +209,27 @@ describe('TunesManager', () => {
       expect(config.commonTunes).toEqual([itemReturn]);
     });
 
+    it('forwards the render context to each tune render method', () => {
+      const userTune = createTuneAdapter('userTune');
+      const internalTune = createTuneAdapter('internalTune', { isInternal: true });
+      const tunesCollection = new ToolsCollection<BlockTuneAdapter>(
+        [
+          [userTune.adapter.name, userTune.adapter],
+          [internalTune.adapter.name, internalTune.adapter],
+        ]
+      );
+
+      const manager = new TunesManager(tunesCollection, {}, mockBlockAPI);
+
+      const getPopoverElement = vi.fn(() => null);
+      const context = { getPopoverElement };
+
+      manager.getMenuConfig(undefined, context);
+
+      expect(userTune.instance.render).toHaveBeenCalledWith(context);
+      expect(internalTune.instance.render).toHaveBeenCalledWith(context);
+    });
+
     it('handles undefined/null gracefully', () => {
       const userTune = createTuneAdapter('userTune');
       // Override render to return undefined

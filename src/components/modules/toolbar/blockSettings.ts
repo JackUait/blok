@@ -1,4 +1,5 @@
 import type { MenuConfigItem } from '../../../../types/tools';
+import type { BlockTuneRenderContext } from '../../../../types/block-tunes/block-tune';
 import { Module } from '../../__module';
 import type { Block } from '../../block';
 import { BlockAPI } from '../../block/api';
@@ -194,8 +195,19 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         this.Blok.BlockSelection.clearCache();
       }
 
+      /**
+       * Expose the (not-yet-created) tune popover element to custom tunes via
+       * their render context. The popover is built further down, so the element
+       * is filled in after construction; tunes capturing the context resolve it
+       * lazily (e.g. when opening a sub-menu) instead of reaching into the DOM.
+       */
+      const popoverRef: { current: HTMLElement | null } = { current: null };
+      const renderContext: BlockTuneRenderContext = {
+        getPopoverElement: () => popoverRef.current,
+      };
+
       /** Get tool-specific tunes and common tunes (delete, move, etc.) */
-      const { toolTunes, commonTunes } = block.getTunes();
+      const { toolTunes, commonTunes } = block.getTunes(renderContext);
 
       const items = await this.getTunesItems(block, commonTunes, toolTunes);
 
@@ -235,7 +247,8 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       }
 
       this.popover = new PopoverClass(popoverParams);
-      this.popover.getElement().setAttribute('data-blok-testid', 'block-tunes-popover');
+      popoverRef.current = this.popover.getElement();
+      popoverRef.current.setAttribute('data-blok-testid', 'block-tunes-popover');
 
       this.popover.on(PopoverEvent.Closed, this.onPopoverClose);
 

@@ -123,6 +123,22 @@ export function useBlok(config: UseBlokConfig, deps?: DependencyList): Blok | nu
       };
     }
 
+    // onBeforeRender / onAfterRender are opt-in (absent prop must stay absent so
+    // the core skips them). When present, route through the ref so the latest
+    // callback is always used without recreating the editor.
+    if (currentConfig.onBeforeRender) {
+      blokConfig.onBeforeRender = (
+        ...args: Parameters<NonNullable<UseBlokConfig['onBeforeRender']>>
+      ): ReturnType<NonNullable<UseBlokConfig['onBeforeRender']>> =>
+        configRef.current.onBeforeRender?.(...args) ?? args[0];
+    }
+
+    if (currentConfig.onAfterRender) {
+      blokConfig.onAfterRender = (...args: Parameters<NonNullable<UseBlokConfig['onAfterRender']>>): void => {
+        configRef.current.onAfterRender?.(...args);
+      };
+    }
+
     const blok = new BlokRuntime(blokConfig) as unknown as Blok;
     state.editor = blok;
     setHolder(blok, holder);

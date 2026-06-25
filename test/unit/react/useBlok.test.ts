@@ -554,6 +554,79 @@ describe('useBlok', () => {
     expect(passedConfig.onSave).toBeUndefined();
   });
 
+  it('should use latest onBeforeRender callback ref without recreating editor', async () => {
+    type OnBeforeRender = NonNullable<UseBlokConfig['onBeforeRender']>;
+    const onBeforeRender1: OnBeforeRender = vi.fn((blocks: Parameters<OnBeforeRender>[0]) => blocks);
+    const onBeforeRender2: OnBeforeRender = vi.fn((blocks: Parameters<OnBeforeRender>[0]) => blocks);
+
+    const { rerender } = renderHook(
+      ({ onBeforeRender }: { onBeforeRender: OnBeforeRender }) => useBlok({ onBeforeRender }),
+      { initialProps: { onBeforeRender: onBeforeRender1 } }
+    );
+
+    await flushAll();
+
+    const passedConfig = MockBlokConstructor.mock.calls[0][0] as {
+      onBeforeRender: OnBeforeRender;
+    };
+
+    expect(typeof passedConfig.onBeforeRender).toBe('function');
+
+    rerender({ onBeforeRender: onBeforeRender2 });
+
+    const blocks: Parameters<OnBeforeRender>[0] = [{ type: 'paragraph', data: {} }];
+    const result = passedConfig.onBeforeRender(blocks);
+
+    expect(onBeforeRender1).not.toHaveBeenCalled();
+    expect(onBeforeRender2).toHaveBeenCalledWith(blocks);
+    expect(result).toBe(blocks);
+
+    expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
+    expect(mockBlokInstances).toHaveLength(1);
+  });
+
+  it('should use latest onAfterRender callback ref without recreating editor', async () => {
+    const onAfterRender1 = vi.fn();
+    const onAfterRender2 = vi.fn();
+
+    const { rerender } = renderHook(
+      ({ onAfterRender }: { onAfterRender: () => void }) => useBlok({ onAfterRender }),
+      { initialProps: { onAfterRender: onAfterRender1 } }
+    );
+
+    await flushAll();
+
+    const passedConfig = MockBlokConstructor.mock.calls[0][0] as {
+      onAfterRender: (...args: unknown[]) => void;
+    };
+
+    expect(typeof passedConfig.onAfterRender).toBe('function');
+
+    rerender({ onAfterRender: onAfterRender2 });
+
+    passedConfig.onAfterRender();
+
+    expect(onAfterRender1).not.toHaveBeenCalled();
+    expect(onAfterRender2).toHaveBeenCalledTimes(1);
+
+    expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
+    expect(mockBlokInstances).toHaveLength(1);
+  });
+
+  it('does not pass onBeforeRender / onAfterRender to the editor config when omitted', async () => {
+    renderHook(() => useBlok({}));
+
+    await flushAll();
+
+    const passedConfig = MockBlokConstructor.mock.calls[0][0] as {
+      onBeforeRender?: unknown;
+      onAfterRender?: unknown;
+    };
+
+    expect(passedConfig.onBeforeRender).toBeUndefined();
+    expect(passedConfig.onAfterRender).toBeUndefined();
+  });
+
   it('should not expose a stale editor when isReady resolves after deps change', async () => {
     // First editor: isReady is deferred so we can control when it resolves
     const resolveFn: { current: (() => void) | null } = { current: null };

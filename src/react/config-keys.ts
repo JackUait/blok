@@ -31,6 +31,8 @@ export const USE_BLOK_CONFIG_KEYS = [
   'onReady',
   'onChange',
   'onSave',
+  'onBeforeRender',
+  'onAfterRender',
   'inlineToolbar',
   'tunes',
   'style',

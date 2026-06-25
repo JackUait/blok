@@ -72,7 +72,7 @@ export {
   FilePasteEvent,
   FilePasteEventDetail,
 } from './tools';
-export {BlockTune, BlockTuneConstructable} from './block-tunes';
+export {BlockTune, BlockTuneConstructable, BlockTuneRenderContext} from './block-tunes';
 export {
   BlokConfig,
   SanitizerConfig,

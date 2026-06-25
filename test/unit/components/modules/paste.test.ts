@@ -75,6 +75,7 @@ interface CreatePasteOptions {
   sanitizer?: SanitizerConfig;
   defaultTool?: BlockToolAdapter;
   onBeforePaste?: BlokConfig['onBeforePaste'];
+  link?: BlokConfig['link'];
 }
 
 type ListenersMock = {
@@ -184,6 +185,7 @@ const createPaste = (options?: CreatePasteOptions): { paste: Paste; mocks: Paste
       defaultBlock: options?.defaultBlock ?? 'paragraph',
       sanitizer: options?.sanitizer ?? {},
       onBeforePaste: options?.onBeforePaste,
+      link: options?.link,
     },
     eventsDispatcher: {
       on: vi.fn(),
@@ -1427,6 +1429,57 @@ describe('Paste module', () => {
   });
 
   describe('HtmlHandler', () => {
+    it('applies the link config to pasted anchors', async () => {
+      const transformHref = vi.fn((href: string) => `https://public.example/?u=${encodeURIComponent(href)}`);
+      const { paste, mocks } = createPaste({
+        link: { target: '_top', rel: 'noreferrer', transformHref },
+      });
+
+      const defaultTool = {
+        name: 'paragraph',
+        pasteConfig: {},
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.defaultTool = defaultTool;
+      mocks.Tools.blockTools.set('paragraph', defaultTool);
+      mocks.Tools.getAllInlineToolsSanitizeConfig.mockReturnValue({ a: { href: true, target: true, rel: true } });
+
+      await paste.prepare();
+
+      // Passthrough clean so the anchor survives sanitization in this unit test.
+      vi.spyOn(sanitizer, 'clean').mockImplementation((html: string) => html);
+
+      mocks.BlockManager.currentBlock = {
+        tool: { isDefault: true },
+        isEmpty: true,
+      };
+      mocks.BlockManager.paste.mockReturnValue({ id: 'block-id' });
+
+      const dataTransfer = new MockDataTransfer(
+        {
+          'text/html': '<p>See <a href="https://kb.internal/page">this</a></p>',
+          'text/plain': 'See this',
+        },
+        {} as FileList,
+        ['text/html', 'text/plain']
+      );
+
+      await paste.processDataTransfer(dataTransfer);
+
+      expect(mocks.BlockManager.paste).toHaveBeenCalled();
+
+      const [, event] = mocks.BlockManager.paste.mock.calls[0];
+      const detail = event.detail as { data: HTMLElement };
+      const anchor = detail.data.querySelector('a');
+
+      expect(transformHref).toHaveBeenCalledWith('https://kb.internal/page');
+      expect(anchor?.getAttribute('href')).toBe('https://public.example/?u=https%3A%2F%2Fkb.internal%2Fpage');
+      expect(anchor?.getAttribute('target')).toBe('_top');
+      expect(anchor?.getAttribute('rel')).toBe('noreferrer');
+    });
+
     it('preserves Google Docs bold/italic through processDataTransfer flow', async () => {
       const { paste, mocks } = createPaste();
 

@@ -1,6 +1,6 @@
 import type { ThemeMode, ResolvedTheme } from '../api/theme';
 import {ToolConstructable, ToolSettings} from '../tools';
-import {API, LogLevels, OutputData} from '../index';
+import {API, LogLevels, OutputBlockData, OutputData} from '../index';
 import {SanitizerConfig} from './sanitizer-config';
 import {I18nConfig} from './i18n-config';
 import { BlockMutationEvent } from '../events/block';
@@ -136,8 +136,17 @@ export interface BlokConfig {
   i18n?: I18nConfig;
 
   /**
-   * Configures how the Link inline tool builds anchor elements, so consumers can
-   * control the created `<a>` instead of post-processing the rendered DOM.
+   * Configures how Blok builds anchor (`<a>`) elements, so consumers can control
+   * the created links instead of post-processing the rendered DOM.
+   *
+   * Applies on every path that produces anchors:
+   * - the interactive **Link inline tool** (links the user creates by hand),
+   * - **render** — anchors coming from stored block HTML when `blocks.render()`
+   *   runs (e.g. saved articles whose `<a>` never went through the inline tool),
+   * - **paste** — `<a>` arriving via the clipboard.
+   *
+   * On the render and paste paths `target`/`rel` are forced and `transformHref`
+   * rewrites the href, exactly as for hand-created links.
    */
   link?: {
     /**
@@ -154,8 +163,13 @@ export interface BlokConfig {
 
     /**
      * Transforms the href just before it is assigned to the anchor.
-     * Runs after URL validation/normalization, on the final value.
-     * @param href - the validated, protocol-normalized href
+     *
+     * On the inline-tool path it runs after URL validation/normalization, on the
+     * final value. On the render and paste paths it runs against each anchor's
+     * existing href, so it must be idempotent (re-rendering already-transformed
+     * content must not change the result again).
+     *
+     * @param href - the href to transform
      * @returns the href to set on the anchor
      */
     transformHref?: (href: string) => string;
@@ -203,6 +217,32 @@ export interface BlokConfig {
    * @param api - blok.js api
    */
   onSave?(data: OutputData, api: API): void;
+
+  /**
+   * Transforms the blocks array just before it is rendered, on every render
+   * (the initial render and every `blocks.render()` call). Use it to run
+   * app-specific data migrations inside Blok instead of pre-processing the
+   * data before handing it to the editor.
+   *
+   * Receives the raw saved blocks (the exact array passed to render, before any
+   * format analysis or hierarchical expansion) and must return the blocks to
+   * render. Returning an empty array renders an empty document; returning blocks
+   * for an empty input injects them.
+   *
+   * @param blocks - the blocks about to be rendered
+   * @returns the blocks to actually render
+   */
+  onBeforeRender?(blocks: OutputBlockData[]): OutputBlockData[];
+
+  /**
+   * Fires after a render completes and the blocks are in the DOM — on the
+   * initial render and on every `blocks.render()` call. Use it for post-render
+   * side effects (scroll restoration, attaching observers, …). Distinct from
+   * `onReady`, which fires once when the editor first becomes ready.
+   *
+   * @param api - blok.js api
+   */
+  onAfterRender?(api: API): void;
 
   /**
    * Defines default toolbar for all tools.

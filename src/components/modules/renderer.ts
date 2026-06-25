@@ -13,6 +13,8 @@ import {
   type DataFormatAnalysis,
 } from '../utils/data-model-transform';
 import { migrateMarkColors } from '../utils/color-migration';
+import { applyLinkConfig } from '../utils/apply-link-config';
+import { DATA_ATTR } from '../constants';
 import { BlocksRendered } from '../events';
 
 /**
@@ -86,6 +88,14 @@ export class Renderer extends Module {
    * @param blocksData - blocks to render
    */
   public render(blocksData: OutputBlockData[]): Promise<void> {
+    const { wrapper } = this.Blok.UI.nodes;
+
+    /**
+     * Flip the render-readiness gate off synchronously: while a (re-)render is
+     * in flight the previously rendered content may already be cleared.
+     */
+    wrapper.removeAttribute(DATA_ATTR.rendered);
+
     return new Promise((resolve) => {
       const renderedCount = this.insertRenderedBlocks(blocksData);
 
@@ -93,7 +103,9 @@ export class Renderer extends Module {
        * Wait till browser will render inserted Blocks and resolve a promise
        */
       window.requestIdleCallback(() => {
+        wrapper.setAttribute(DATA_ATTR.rendered, '');
         this.eventsDispatcher.emit(BlocksRendered, { count: renderedCount });
+        this.config.onAfterRender?.(this.Blok.API.methods);
         resolve();
       }, { timeout: 2000 });
     });
@@ -107,7 +119,15 @@ export class Renderer extends Module {
   private insertRenderedBlocks(blocksData: OutputBlockData[]): number {
     const { Tools, BlockManager } = this.Blok;
 
-    if (blocksData.length === 0) {
+    // Give consumers a chance to transform the blocks array before anything is
+    // rendered — e.g. to run app-specific legacy-data migrations inside Blok.
+    // Runs on the raw saved shape (before format analysis / hierarchical
+    // expansion) so the hook sees exactly what was passed to render().
+    const sourceBlocks = this.config.onBeforeRender !== undefined
+      ? this.config.onBeforeRender(blocksData)
+      : blocksData;
+
+    if (sourceBlocks.length === 0) {
       BlockManager.insert();
 
       return 1;
@@ -115,13 +135,13 @@ export class Renderer extends Module {
 
     // Analyze and potentially transform the input data
     const dataModelConfig = this.config.dataModel || 'auto';
-    const analysis = analyzeDataFormat(blocksData);
+    const analysis = analyzeDataFormat(sourceBlocks);
     this.detectedInputFormat = analysis.format;
 
     // Transform to hierarchical if config requires it
     const expandedBlocks = shouldExpandToHierarchical(dataModelConfig, analysis.format)
-      ? expandToHierarchical(blocksData)
-      : blocksData;
+      ? expandToHierarchical(sourceBlocks)
+      : sourceBlocks;
 
     // Recover migrated cells whose text a pre-fix save detached to root:
     // re-attach `cell-<row>-<col>`-id orphans back into their empty cell.
@@ -239,6 +259,14 @@ export class Renderer extends Module {
      */
     BlockManager.insertMany(blocks);
     migrateMarkColors(this.Blok.UI.nodes.redactor);
+
+    // Apply the editor's `link` config (target / rel / transformHref) to every
+    // anchor coming from stored block HTML, mirroring the interactive Link
+    // inline tool. Without this, link config only governs links the user
+    // creates by hand — anchors from saved articles keep their stored attrs.
+    if (this.config.link !== undefined) {
+      applyLinkConfig(this.Blok.UI.nodes.redactor, this.config.link);
+    }
 
     return blocks.length;
   }

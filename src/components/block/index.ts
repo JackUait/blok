@@ -8,6 +8,7 @@ import type {
   PopoverItemParams
 } from '../../../types';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
+import type { BlockTuneRenderContext } from '../../../types/block-tunes/block-tune';
 import type { SavedData } from '../../../types/data-formats';
 import { Dom as $, toggleEmptyMark } from '../dom';
 import type { BlokEventMap } from '../events';
@@ -501,14 +502,14 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * Returns data to render in Block Tunes menu.
    * Splits block tunes into 2 groups: block specific tunes and common tunes
    */
-  public getTunes(): {
+  public getTunes(renderContext?: BlockTuneRenderContext): {
       toolTunes: PopoverItemParams[];
       commonTunes: PopoverItemParams[];
       } {
     /** Tool's tunes: may be defined as return value of optional renderSettings method */
     const tunesDefinedInTool = typeof this.toolInstance.renderSettings === 'function' ? this.toolInstance.renderSettings() : [];
 
-    return this.tunesManager.getMenuConfig(tunesDefinedInTool);
+    return this.tunesManager.getMenuConfig(tunesDefinedInTool, renderContext);
   }
 
   /**

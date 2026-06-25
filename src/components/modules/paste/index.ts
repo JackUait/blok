@@ -59,7 +59,7 @@ export class Paste extends Module {
       new TableCellsHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
       new FilesHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
       new PatternHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder, this.config),
-      new HtmlHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
+      new HtmlHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder, this.config),
       new MarkdownHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
       new TextHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder, this.config),
     ];

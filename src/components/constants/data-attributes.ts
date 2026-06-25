@@ -24,6 +24,10 @@ export const DATA_ATTR = {
   editor: 'data-blok-editor',
   /** Redactor zone */
   redactor: 'data-blok-redactor',
+  /** Present on the editor wrapper once a `blocks.render()` batch has finished
+   *  inserting blocks into the DOM; removed while a re-render is in flight.
+   *  Acts as a stable render-readiness gate for consumers (e.g. E2E waits). */
+  rendered: 'data-blok-rendered',
 
   // ============================================
   // Block Identifiers

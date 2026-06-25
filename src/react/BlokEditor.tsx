@@ -29,9 +29,12 @@ import type { UseBlokConfig } from './types';
  *
  * Pair `data` with `onSave` for a true controlled component: `onSave` is the
  * output half, firing (debounced) with the full serialized `OutputData` on every
- * content change — no manual `ref.current.save()` polling. The deep-equal guard
- * on `data` breaks the `onSave → setState → data` loop, so
- * `<BlokEditor data={data} onSave={setData} />` is safe.
+ * content change — no manual `ref.current.save()` polling. Echoing that payload
+ * straight back via `onSave={setData}` is safe and caret-stable: the adapter
+ * records the editor's own emitted output as the content baseline, so the
+ * `onSave → setState → data` round-trip deep-equals that baseline and is deduped
+ * to a no-op (no re-render, no caret reset, no recursion). Genuine external `data`
+ * changes still re-render in place.
  */
 export interface BlokEditorProps
   extends Omit<UseBlokConfig, 'onReady'>,

@@ -14,6 +14,7 @@ interface MockInstance {
   width: { set: ReturnType<typeof vi.fn> };
   placeholder: { set: ReturnType<typeof vi.fn> };
   render: ReturnType<typeof vi.fn>;
+  config: { onSave?: (...args: unknown[]) => void };
 }
 
 let instances: MockInstance[] = [];
@@ -28,7 +29,9 @@ vi.mock('../../../src/blok', () => ({
     public width = { set: vi.fn() };
     public placeholder = { set: vi.fn() };
     public render = vi.fn();
-    constructor(config: { holder: HTMLElement }) {
+    public config: { holder: HTMLElement; onSave?: (...args: unknown[]) => void };
+    constructor(config: { holder: HTMLElement; onSave?: (...args: unknown[]) => void }) {
+      this.config = config;
       const wrapper = document.createElement('div');
       wrapper.setAttribute('data-blok-editor', 'true');
       config.holder.appendChild(wrapper);
@@ -157,6 +160,58 @@ describe('useBlok reactive data', () => {
 
     expect(instances).toHaveLength(1);
     expect(instances[0].render).not.toHaveBeenCalled();
+  });
+
+  it('does not re-render (no caret reset) when controlled data echoes the onSave payload', async () => {
+    // Editor is seeded, the user edits, and the serialized payload carries a
+    // fresh time/version so it does NOT deep-equal the seed. A naive controlled
+    // setup would render() it back in and reset the caret — the editor already
+    // reflects this content, so it must be a no-op.
+    const seed = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'a' } }] };
+    const payload = {
+      blocks: [{ id: '1', type: 'paragraph', data: { text: 'ab' } }],
+      time: 123,
+      version: '1',
+    };
+    const onSave = vi.fn();
+
+    const { rerender } = render(<Harness config={{ data: seed, onSave }} />);
+    await act(async () => { await flush(); });
+    expect(instances[0].render).not.toHaveBeenCalled();
+
+    // Editor emits onSave (a user edit, serialized) -> forwarded to the consumer
+    act(() => { instances[0].config.onSave?.(payload); });
+    expect(onSave).toHaveBeenCalledWith(payload);
+
+    // Controlled consumer echoes the payload straight back into `data`
+    rerender(<Harness config={{ data: payload, onSave }} />);
+    await act(async () => { await flush(); });
+
+    expect(instances).toHaveLength(1);            // not recreated
+    expect(instances[0].render).not.toHaveBeenCalled(); // no render -> caret preserved
+  });
+
+  it('still renders a genuine external change that differs from the last onSave payload', async () => {
+    const seed = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'a' } }] };
+    const payload = {
+      blocks: [{ id: '1', type: 'paragraph', data: { text: 'ab' } }],
+      time: 123,
+      version: '1',
+    };
+    const external = { blocks: [{ id: '2', type: 'paragraph', data: { text: 'loaded elsewhere' } }] };
+    const onSave = vi.fn();
+
+    const { rerender } = render(<Harness config={{ data: seed, onSave }} />);
+    await act(async () => { await flush(); });
+
+    act(() => { instances[0].config.onSave?.(payload); });
+
+    // A different document (not the editor's own output) must still render
+    rerender(<Harness config={{ data: external, onSave }} />);
+    await act(async () => { await flush(); });
+
+    expect(instances[0].render).toHaveBeenCalledTimes(1);
+    expect(instances[0].render).toHaveBeenCalledWith(external);
   });
 
   it('serializes successive data changes in order', async () => {

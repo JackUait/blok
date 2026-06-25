@@ -43,6 +43,17 @@ export function useBlok(config: UseBlokConfig, deps?: DependencyList): Blok | nu
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const depsToken = useMemo(() => ({}), deps ?? []);
 
+  // Tracks the data the editor currently reflects — set when content is seeded
+  // or rendered (the reactive `data` effect below) AND when the editor emits its
+  // own serialized content via `onSave`. The latter is what makes a controlled
+  // `onSave -> setData -> data` round-trip a no-op: the echoed payload deep-equals
+  // this baseline, so the data effect skips the redundant render() (which would
+  // otherwise reset the caret). Declared here so the `onSave` wrapper below can
+  // update it before the consumer's setState re-runs the data effect.
+  const lastRenderedDataRef = useRef(config.data);
+  const seededEditorRef = useRef<Blok | null>(null);
+  const renderChainRef = useRef<Promise<void>>(Promise.resolve());
+
   // Main lifecycle effect
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -104,6 +115,10 @@ export function useBlok(config: UseBlokConfig, deps?: DependencyList): Blok | nu
     // The wrapper reads through the ref so the latest callback is always used.
     if (currentConfig.onSave) {
       blokConfig.onSave = (...args: Parameters<NonNullable<UseBlokConfig['onSave']>>): void => {
+        // Record the editor's own serialized output as the rendered baseline so a
+        // controlled consumer echoing it straight back into `data` is a no-op —
+        // no redundant render(), no caret reset, no round-trip recursion.
+        lastRenderedDataRef.current = args[0];
         configRef.current.onSave?.(...args);
       };
     }
@@ -187,13 +202,12 @@ export function useBlok(config: UseBlokConfig, deps?: DependencyList): Blok | nu
   //
   // `data` seeds the editor at construction. Afterwards, changing the prop to
   // new *content* re-renders the editor via the public render() API — no
-  // recreation. Updates are deep-equal–deduped (so a new reference with the
-  // same content is a no-op and won't clobber the caret) and serialized (so
-  // rapid changes can't trigger overlapping render passes).
+  // recreation. Updates are deep-equal–deduped against the editor's current
+  // content baseline (`lastRenderedDataRef`, declared above and also updated by
+  // the `onSave` wrapper) so a new reference with the same content — including
+  // the editor's own serialized output echoed back — is a no-op and won't
+  // clobber the caret. Renders are serialized so rapid changes can't overlap.
   const { data } = config;
-  const lastRenderedDataRef = useRef(config.data);
-  const seededEditorRef = useRef<Blok | null>(null);
-  const renderChainRef = useRef<Promise<void>>(Promise.resolve());
   useEffect(() => {
     if (editor === null || data === undefined) {
       return;

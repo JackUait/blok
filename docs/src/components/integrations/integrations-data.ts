@@ -80,7 +80,9 @@ const [data, setData] = useState(INITIAL_DATA);
 const editor = useBlok({ tools, data, onSave: setData });
 
 // 'data' now mirrors editor content — persist it, diff it, etc.
-// The deep-equal guard breaks the onSave -> setState -> data loop.
+// Echoing onSave's output back is caret-stable: the adapter treats the
+// editor's own emitted content as a no-op, so the round-trip never
+// re-renders or recurses.
 return <BlokContent editor={editor} />;`;
 
 const READ_ONLY_EXAMPLE = `// Toggle read-only mode reactively — no editor recreation needed
@@ -186,7 +188,7 @@ export const REACT_SECTIONS: IntegrationSection[] = [
     badge: 'Guide',
     title: 'Controlled Component',
     description:
-      'Pair the reactive data prop with onSave for a true controlled component. data flows in (re-rendered in place, deep-equal–deduped so the caret is never clobbered); onSave flows out, firing debounced with the full serialized OutputData on every change. Wiring onSave={setData} keeps your state in sync without polling editor.save() — the deep-equal guard on data breaks the round-trip loop. Use the lower-level onChange(api, event) when you need raw mutation events instead.',
+      'Pair the reactive data prop with onSave for a true controlled component. data flows in (re-rendered in place, deep-equal–deduped so the caret is never clobbered); onSave flows out, firing debounced with the full serialized OutputData on every change. Wiring onSave={setData} keeps your state in sync without polling editor.save(), and stays caret-stable: the adapter records the editor’s own emitted output as the content baseline, so echoing it back is a no-op while genuine external changes still render. Use the lower-level onChange(api, event) when you need raw mutation events instead.',
     example: CONTROLLED_EXAMPLE,
   },
   {

@@ -1854,6 +1854,7 @@ __metadata:
     react-router-dom: "npm:^7.13.1"
     rimraf: "npm:^6.1.3"
     shiki: "npm:^4.0.2"
+    simple-icons: "npm:^16.24.0"
     tailwind-merge: "npm:^3.6.0"
     tailwindcss: "npm:^4.3.1"
     tw-animate-css: "npm:^1.4.0"
@@ -3313,6 +3314,13 @@ __metadata:
   version: 2.0.0
   resolution: "siginfo@npm:2.0.0"
   checksum: 10c0/3def8f8e516fbb34cb6ae415b07ccc5d9c018d85b4b8611e3dc6f8be6d1899f693a4382913c9ed51a06babb5201639d76453ab297d1c54a456544acf5c892e34
+  languageName: node
+  linkType: hard
+
+"simple-icons@npm:^16.24.0":
+  version: 16.24.0
+  resolution: "simple-icons@npm:16.24.0"
+  checksum: 10c0/00c26c6fda47c6b5770a86b69e99aa1eefca5325ff3fe2255d434b2c74ebd2f911b872edcccb8525f0fae58c3c37bc85ab4bff751f5c15f206500ae4a8216373
   languageName: node
   linkType: hard
 

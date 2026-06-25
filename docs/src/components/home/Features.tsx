@@ -8,6 +8,7 @@ import {
 } from "framer-motion";
 import { SectionReveal } from "../common/SectionReveal";
 import { FeatureModal, type FeatureDetail } from "./FeatureModal";
+import { EMBED_SERVICES, type EmbedService } from "./embed-services";
 import { useI18n } from "../../contexts/I18nContext";
 
 // The capabilities below the pillars rise, scale up and de-blur in sequence as
@@ -902,135 +903,43 @@ const TablesViz: React.FC = () => {
   );
 };
 
-// A wall of recognisable services in their own brand colours — the variety is the
-// point ("100+"), where two grey rows couldn't be. Each tile lifts on a staggered
-// delay on hover, and a final "+90" chip stands in for the long tail.
-const SERVICES: Array<{ name: string; color: string; icon: React.ReactNode }> = [
-  {
-    name: "YouTube",
-    color: "#FF0000",
-    icon: <path fill="currentColor" d="M9.5 8.2v7.6L16 12z" />,
-  },
-  {
-    name: "Spotify",
-    color: "#1DB954",
-    icon: (
-      <g fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
-        <path d="M6.5 13.6c3.2-.9 7.4-.6 10.8 1.3" />
-        <path d="M6 10.6c4.1-1.1 9.2-.7 12.6 1.7" />
-        <path d="M5.6 7.7c5-1.2 10.8-.5 14.2 2.1" />
-      </g>
-    ),
-  },
-  {
-    name: "Figma",
-    color: "#F24E1E",
-    icon: (
-      <path
-        fill="currentColor"
-        d="M10 3a2.5 2.5 0 0 0 0 5h2V3h-2Zm4 0v5h2a2.5 2.5 0 0 0 0-5h-2Zm0 7a2.5 2.5 0 1 0 2.5 2.5A2.5 2.5 0 0 0 14 10Zm-4 0a2.5 2.5 0 0 0 0 5h2v-5h-2Zm0 7a2.5 2.5 0 1 0 2 1.25V17h-2Z"
-      />
-    ),
-  },
-  {
-    name: "X",
-    color: "#000000",
-    icon: <path stroke="currentColor" strokeWidth="2" strokeLinecap="round" d="M6.5 6.5l11 11M17.5 6.5l-11 11" />,
-  },
-  {
-    name: "GitHub",
-    color: "#24292F",
-    icon: (
-      <g fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="7" cy="6.5" r="2" />
-        <circle cx="7" cy="17.5" r="2" />
-        <circle cx="16.5" cy="7.5" r="2" />
-        <path d="M7 8.5v7M16.5 9.5c0 3.5-4.5 2.5-4.5 6" />
-      </g>
-    ),
-  },
-  {
-    name: "Maps",
-    color: "#1A73E8",
-    icon: <path fill="currentColor" fillRule="evenodd" d="M12 2a6 6 0 0 0-6 6c0 4.4 6 12 6 12s6-7.6 6-12a6 6 0 0 0-6-6Zm0 8.3A2.3 2.3 0 1 1 12 5.7a2.3 2.3 0 0 1 0 4.6Z" clipRule="evenodd" />,
-  },
-  {
-    name: "Twitch",
-    color: "#9146FF",
-    icon: <path fill="currentColor" d="M6 4 4.8 7v9.5H8V20l3.2-3.2h2.6L19 11.4V4Z" />,
-  },
-  {
-    name: "SoundCloud",
-    color: "#FF5500",
-    icon: (
-      <g fill="currentColor">
-        <rect x="5" y="11" width="1.6" height="5" rx=".8" />
-        <rect x="8" y="9" width="1.6" height="7" rx=".8" />
-        <rect x="11" y="7.5" width="1.6" height="8.5" rx=".8" />
-        <rect x="14" y="9.5" width="1.6" height="6.5" rx=".8" />
-        <rect x="17" y="11.5" width="1.6" height="4.5" rx=".8" />
-      </g>
-    ),
-  },
-  {
-    name: "Vimeo",
-    color: "#17B5EA",
-    icon: <path fill="currentColor" d="M9.5 8.2v7.6L16 12z" />,
-  },
-  {
-    name: "Dribbble",
-    color: "#EA4C89",
-    icon: (
-      <g fill="none" stroke="currentColor" strokeWidth="1.6">
-        <circle cx="12" cy="12" r="8.2" />
-        <path d="M5.5 8.4c4 .6 9.6 2.3 12.9 6.5M4.5 13.3c5.2-1.5 10.5 0 13.5 4.3M9.1 4.4c3.1 4.2 5.1 9.5 5.7 15.3" />
-      </g>
-    ),
-  },
-  {
-    name: "Loom",
-    color: "#625DF5",
-    icon: (
-      <g fill="currentColor">
-        <circle cx="12" cy="7.4" r="2.1" />
-        <circle cx="8.1" cy="14" r="2.1" />
-        <circle cx="15.9" cy="14" r="2.1" />
-      </g>
-    ),
-  },
-  {
-    name: "Instagram",
-    color: "#E1306C",
-    icon: (
-      <g fill="none" stroke="currentColor" strokeWidth="1.7">
-        <rect x="5" y="5" width="14" height="14" rx="4.4" />
-        <circle cx="12" cy="12" r="3.3" />
-        <circle cx="16.3" cy="7.7" r="1.05" fill="currentColor" stroke="none" />
-      </g>
-    ),
-  },
-];
+// Every embed provider Blok supports, in its own brand colour. Real logos come
+// from simple-icons (see embed-services.ts, generated from the link/embed
+// registry); the handful simple-icons no longer ships render as brand monograms.
+// A glossy app-icon tile gives each real depth rather than a flat dot.
+const serviceInitials = (title: string): string => {
+  const words = title.replace(/[()]/g, "").split(/[\s.]+/).filter(Boolean);
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+  const caps = words[0].match(/[A-Z]/g);
+  if (caps && caps.length >= 2) return caps.slice(0, 2).join("");
+  return words[0].slice(0, 2).toUpperCase();
+};
 
-// A glossy app-icon tile: brand fill, a soft top sheen and a hairline ring give it
-// real depth rather than reading as a flat dot.
-const ServiceIcon: React.FC<{ service: (typeof SERVICES)[number] }> = ({ service }) => (
+const ServiceIcon: React.FC<{ service: EmbedService }> = ({ service }) => (
   <span
-    className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[12px] text-white ring-1 ring-black/5 shadow-[0_3px_8px_-2px_rgba(0,0,0,0.22)]"
-    style={{ background: service.color }}
+    className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[12px] text-white shadow-[0_3px_8px_-2px_rgba(0,0,0,0.22)] ring-1 ring-black/5"
+    style={{ background: service.hex ?? "#64748B" }}
   >
     <span className="pointer-events-none absolute inset-0 bg-linear-to-b from-white/25 to-transparent" />
-    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" className="relative">
-      {service.icon}
-    </svg>
+    {service.path ? (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="relative">
+        <path d={service.path} />
+      </svg>
+    ) : (
+      <span className="relative text-[11px] font-bold tracking-tight">{serviceInitials(service.title)}</span>
+    )}
   </span>
 );
 
-// Two rows of service icons drift in opposite directions on a seamless loop — an
-// endless stream of integrations that says "100+" far better than a static list.
-// Edges fade out; the marquee pauses on hover so a name can land.
-const EDGE_FADE = "linear-gradient(to right, transparent, #000 9%, #000 91%, transparent)";
-const ROW_A = SERVICES.slice(0, 7);
-const ROW_B = SERVICES.slice(7).concat(SERVICES.slice(0, 2));
+// The full roster drifts in two rows scrolling opposite directions on a seamless
+// loop — an endless stream of integrations that says "100+" better than any list.
+// Edges fade out; the marquee pauses on hover so a logo can land.
+const EDGE_FADE = "linear-gradient(to right, transparent, #000 7%, #000 93%, transparent)";
+const EMBED_HALF = Math.ceil(EMBED_SERVICES.length / 2);
+const EMBED_ROWS = [
+  { items: EMBED_SERVICES.slice(0, EMBED_HALF), anim: "bento-marquee-l", dur: "66s" },
+  { items: EMBED_SERVICES.slice(EMBED_HALF), anim: "bento-marquee-r", dur: "78s" },
+];
 
 const EmbedsViz: React.FC = () => (
   <div
@@ -1039,16 +948,14 @@ const EmbedsViz: React.FC = () => (
     style={{ maskImage: EDGE_FADE, WebkitMaskImage: EDGE_FADE }}
   >
     <div className="flex flex-col gap-3">
-      {[
-        { items: ROW_A, anim: "bento-marquee-l" },
-        { items: ROW_B, anim: "bento-marquee-r" },
-      ].map((row, r) => (
+      {EMBED_ROWS.map((row, r) => (
         <div
           key={r}
           className={`flex w-max gap-3 ${row.anim} group-hover:[animation-play-state:paused]`}
+          style={{ animationDuration: row.dur }}
         >
           {[...row.items, ...row.items].map((s, i) => (
-            <ServiceIcon key={`${s.name}-${i}`} service={s} />
+            <ServiceIcon key={`${s.title}-${i}`} service={s} />
           ))}
         </div>
       ))}

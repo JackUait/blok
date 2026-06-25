@@ -116,6 +116,15 @@ export default defineConfig(({ mode }) => {
     },
 
     optimizeDeps: {
+      // Scope the dependency scan to the real dev playground. Vite otherwise
+      // crawls every *.html in the project, including the Playwright adapter E2E
+      // fixtures under test/playwright/fixtures/ — static, import-map-driven pages
+      // (served by `npx serve`, not Vite) whose bare specifiers (the Angular
+      // fixture's `@jackuait/blok-angular` and the APF FESM's `@jackuait/blok`)
+      // resolve only via the page import map, never from node_modules. Crawling
+      // them aborts the scan ("dependencies … could not be resolved") and disables
+      // pre-bundling for the whole dev server.
+      entries: ['index.html'],
       // Force re-bundling of dependencies in development
       force: true,
     },

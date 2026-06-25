@@ -12,6 +12,13 @@ const cliPkg = JSON.parse(readFileSync(path.resolve(dirname, 'packages/cli/packa
 export default defineConfig({
   define: {
     __CLI_VERSION__: JSON.stringify(cliPkg.version),
+    // Vue runtime feature flags. The Vue adapter is authored as render functions
+    // (no @vitejs/plugin-vue), so these globals aren't replaced by the SFC plugin;
+    // defining them here silences Vue's "feature flag undefined" warnings under the
+    // `unit` jsdom project where @vue/test-utils mounts the adapter components.
+    __VUE_OPTIONS_API__: 'true',
+    __VUE_PROD_DEVTOOLS__: 'false',
+    __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'false',
   },
   test: {
     coverage: {

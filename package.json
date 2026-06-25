@@ -22,6 +22,9 @@
       "react": [
         "./types/react.d.ts"
       ],
+      "vue": [
+        "./types/vue.d.ts"
+      ],
       "angular": [
         "./dist/angular/index.d.ts"
       ],
@@ -54,6 +57,11 @@
       "types": "./types/react.d.ts",
       "import": "./dist/react.mjs",
       "require": "./dist/react.cjs"
+    },
+    "./vue": {
+      "types": "./types/vue.d.ts",
+      "import": "./dist/vue.mjs",
+      "require": "./dist/vue.cjs"
     },
     "./angular": {
       "types": "./dist/angular/index.d.ts",
@@ -104,7 +112,7 @@
     "build": "node scripts/generate-fonts.mjs && vite build --mode production && vite build --config vite.config.iife.mjs --mode production && vite build --config vite.config.umd.mjs --mode production && node scripts/build-locales.mjs && yarn build:angular",
     "build:angular": "node scripts/build-angular.mjs",
     "build:cli": "node scripts/build-cli.mjs",
-    "build:test": "node scripts/generate-fonts.mjs && vite build --mode test && vite build --config vite.config.iife.mjs --mode test && vite build --config vite.config.umd.mjs --mode test && node scripts/build-locales.mjs test && node scripts/build-react-vendor.mjs && node scripts/build-angular.mjs && node scripts/build-angular-vendor.mjs",
+    "build:test": "node scripts/generate-fonts.mjs && vite build --mode test && vite build --config vite.config.iife.mjs --mode test && vite build --config vite.config.umd.mjs --mode test && node scripts/build-locales.mjs test && node scripts/build-react-vendor.mjs && node scripts/build-vue-vendor.mjs && node scripts/build-angular.mjs && node scripts/build-angular-vendor.mjs",
     "lint": "sh -c 'eslint .; ESLINT_EXIT=$?; tsc --noEmit; TSC_EXIT=$?; if [ $ESLINT_EXIT -ne 0 ] || [ $TSC_EXIT -ne 0 ]; then exit 1; fi'",
     "lint:fix": "eslint . --fix",
     "lint:tests": "eslint test/",
@@ -199,6 +207,7 @@
     "@vitest/coverage-v8": "4.1.8",
     "@vitest/eslint-plugin": "1.6.16",
     "@vitest/ui": "4.1.8",
+    "@vue/test-utils": "^2.4.11",
     "chromatic": "16.5.0",
     "cldr-annotations-full": "^48.2.0",
     "docx-preview": "^0.3.7",
@@ -242,6 +251,7 @@
     "vite": "8.0.9",
     "vite-plugin-css-injected-by-js": "5.0.1",
     "vitest": "4.1.8",
+    "vue": "^3.5.39",
     "webm-muxer": "^5.1.4",
     "yaml": "^2.8.3",
     "yjs": "13.6.30",
@@ -253,13 +263,17 @@
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
-    "react-dom": "^18.0.0 || ^19.0.0"
+    "react-dom": "^18.0.0 || ^19.0.0",
+    "vue": "^3.5.0"
   },
   "peerDependenciesMeta": {
     "react": {
       "optional": true
     },
     "react-dom": {
+      "optional": true
+    },
+    "vue": {
       "optional": true
     }
   }

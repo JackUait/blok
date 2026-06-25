@@ -31,6 +31,7 @@ export default defineConfig(({ mode }) => {
           tools: path.resolve(__dirname, 'src', 'tools', 'index.ts'),
           full: path.resolve(__dirname, 'src', 'full.ts'),
           react: path.resolve(__dirname, 'src', 'react', 'index.ts'),
+          vue: path.resolve(__dirname, 'src', 'vue', 'index.ts'),
           markdown: path.resolve(__dirname, 'src', 'markdown', 'index.ts'),
         },
         formats: ['es', 'cjs'],
@@ -38,6 +39,7 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         external: [
           'react', 'react-dom', 'react/jsx-runtime',
+          'vue',
         ],
         output: [
           {

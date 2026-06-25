@@ -929,53 +929,53 @@ const EmbedsViz: React.FC = () => (
 );
 
 // "Conflict-free" is the whole point: two people edit the same line at once, and
-// undo reverts only your own change. So this is a live co-editing scene — Ana and
-// Lee both typing — where Ana's word is undone then redone on a loop (⌘Z flashing
-// in time) while Lee's word never moves. That collision-that-never-happens is the
-// feature; plain undo/redo buttons couldn't show it.
+// undo reverts only your own change. So this is a shared paragraph with two named
+// live cursors (Ana + Lee). Hover the tile and Ana's word is undone then redone
+// (⌘Z flashing in time) while Lee's word never moves — the collision that never
+// happens. Plain undo/redo buttons couldn't show it.
 const UndoViz: React.FC = () => (
-  <div aria-hidden="true" className="flex w-full flex-col gap-2.5">
-    {/* who's in the doc right now */}
-    <div className="flex items-center gap-3 text-[10px] font-medium text-muted-foreground">
-      <span className="flex items-center gap-1.5">
-        <span className="size-2 rounded-full bg-primary" />
-        Ana
-      </span>
-      <span className="flex items-center gap-1.5">
-        <span className="size-2 rounded-full bg-indigo-500" />
-        Lee
-      </span>
-      <span className="ml-auto flex items-center gap-1 text-[9px] text-muted-foreground/70">
-        <span className="bento-caret size-1.5 rounded-full bg-emerald-500" />
-        editing live
-      </span>
-    </div>
-
-    {/* the shared document — both carets live in the same paragraph */}
-    <div className="relative flex flex-col gap-2 rounded-xl border border-border/60 bg-card px-3 py-2.5">
-      <span className="h-1.5 w-3/4 rounded-full bg-foreground/12" />
+  <div aria-hidden="true" className="w-full">
+    <div className="relative w-full rounded-xl border border-border/60 bg-card px-3 pb-3 pt-7">
+      {/* the co-edited line — both labelled cursors live in the same sentence */}
       <div className="flex h-3.5 items-center gap-1.5">
-        <span className="h-1.5 w-5 rounded-full bg-foreground/12" />
-        {/* Ana's word — undone then redone on a loop, her caret riding the edge */}
+        <span className="h-1.5 w-6 rounded-full bg-foreground/12" />
+        {/* Ana — her word retracts into the caret on the undo beat (hover only) */}
         <span className="relative flex h-3.5 items-center">
-          <span className="bento-coedit h-1.5 w-7 rounded-full bg-primary" />
-          <span className="bento-caret absolute -right-1 h-3.5 w-0.5 rounded-full bg-primary" />
+          <CursorFlag name="Ana" className="bg-primary" />
+          <span className="h-1.5 w-7 origin-right rounded-full bg-primary motion-safe:group-hover:animate-[bento-coedit_4.8s_ease-in-out_infinite]" />
+          <span className="bento-caret ml-0.5 h-3.5 w-0.5 rounded-full bg-primary" />
         </span>
-        <span className="h-1.5 w-4 rounded-full bg-foreground/12" />
-        {/* Lee's word — never budges, whatever Ana undoes */}
+        <span className="h-1.5 w-3 rounded-full bg-foreground/12" />
+        {/* Lee — never budges, whatever Ana undoes */}
         <span className="relative flex h-3.5 items-center">
-          <span className="h-1.5 w-5 rounded-full bg-indigo-500" />
-          <span className="bento-caret absolute -right-1 h-3.5 w-0.5 rounded-full bg-indigo-500" style={{ animationDelay: "0.5s" }} />
+          <CursorFlag name="Lee" className="bg-indigo-500" />
+          <span className="h-1.5 w-6 rounded-full bg-indigo-500" />
+          <span className="bento-caret ml-0.5 h-3.5 w-0.5 rounded-full bg-indigo-500" style={{ animationDelay: "0.5s" }} />
         </span>
+        <span className="h-1.5 flex-1 rounded-full bg-foreground/12" />
       </div>
-      <span className="h-1.5 w-2/3 rounded-full bg-foreground/12" />
+      {/* the rest of the paragraph */}
+      <div className="mt-2 flex flex-col gap-2">
+        <span className="block h-1.5 w-11/12 rounded-full bg-foreground/12" />
+        <span className="block h-1.5 w-2/3 rounded-full bg-foreground/12" />
+      </div>
 
       {/* ⌘Z flashes exactly when Ana's word is undone — undo is scoped to her */}
-      <span className="bento-coedit-key absolute -top-2.5 right-2 rounded-md border border-border/70 bg-card px-1.5 py-0.5 font-mono text-[8px] font-semibold text-primary shadow-sm">
+      <span className="absolute -top-2.5 right-3 rounded-md border border-border/70 bg-card px-1.5 py-0.5 font-mono text-[8px] font-semibold text-primary opacity-0 shadow-sm motion-safe:group-hover:animate-[bento-coedit-key_4.8s_ease-in-out_infinite]">
         ⌘Z
       </span>
     </div>
   </div>
+);
+
+// A collaborator's name tab, sitting just above their caret — the speech-tab
+// corner (squared bottom-right) points down at the cursor.
+const CursorFlag: React.FC<{ name: string; className: string }> = ({ name, className }) => (
+  <span
+    className={`absolute bottom-full right-0 mb-1 whitespace-nowrap rounded-md rounded-br-[2px] px-1 py-px text-[7px] font-bold leading-[1.5] text-white shadow-sm ${className}`}
+  >
+    {name}
+  </span>
 );
 
 // The headline number — a shimmering gradient 68 — orbited by a few locale

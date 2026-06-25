@@ -1080,21 +1080,6 @@
 }
 
 /* The undo playhead walks the history track, stepping over each node. */
-/* Conflict-free undo, triggered on tile hover (via group-hover utilities): Ana's
-   word is typed, undone, then redone, while Lee's word never moves — two people's
-   edits never collide. origin-right is set on the element so it retracts into its
-   caret. */
-@keyframes bento-coedit {
-  0%, 30% { transform: scaleX(1); }
-  46%, 62% { transform: scaleX(0); }
-  80%, 100% { transform: scaleX(1); }
-}
-/* The ⌘Z badge flashes in the window where Ana's word is undone. */
-@keyframes bento-coedit-key {
-  0%, 38%, 72%, 100% { opacity: 0; transform: translateY(2px) scale(0.92); }
-  48%, 62% { opacity: 1; transform: translateY(0) scale(1); }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .bento-caret,
   .bento-breathe,

@@ -928,45 +928,101 @@ const EmbedsViz: React.FC = () => (
   </div>
 );
 
+const UNDO_ARROW = (
+  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M9 14 4 9l5-5" />
+    <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H9" />
+  </svg>
+);
+const REDO_ARROW = (
+  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="m15 14 5-5-5-5" />
+    <path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H15" />
+  </svg>
+);
+
 // "Conflict-free" is the whole point: two people edit the same line at once, and
 // undo reverts only your own change. So this is a shared paragraph with two named
-// live cursors (Ana + Lee). Hover the tile and Ana's word is undone then redone
-// (⌘Z flashing in time) while Lee's word never moves — the collision that never
+// live cursors (Ana + Lee). Hovering the tile *undoes* Ana's word — it retracts
+// into her caret and stays gone while you look (⌘Z) — and leaving the tile *redoes*
+// it, springing back (⌘⇧Z). Lee's word never moves: the collision that never
 // happens. Plain undo/redo buttons couldn't show it.
-const UndoViz: React.FC = () => (
-  <div aria-hidden="true" className="w-full">
-    <div className="relative w-full rounded-xl border border-border/60 bg-card px-3 pb-3 pt-7">
-      {/* the co-edited line — both labelled cursors live in the same sentence */}
-      <div className="flex h-3.5 items-center gap-1.5">
-        <span className="h-1.5 w-6 rounded-full bg-foreground/12" />
-        {/* Ana — her word retracts into the caret on the undo beat (hover only) */}
-        <span className="relative flex h-3.5 items-center">
-          <CursorFlag name="Ana" className="bg-primary" />
-          <span className="h-1.5 w-7 origin-right rounded-full bg-primary motion-safe:group-hover:animate-[bento-coedit_4.8s_ease-in-out_infinite]" />
-          <span className="bento-caret ml-0.5 h-3.5 w-0.5 rounded-full bg-primary" />
-        </span>
-        <span className="h-1.5 w-3 rounded-full bg-foreground/12" />
-        {/* Lee — never budges, whatever Ana undoes */}
-        <span className="relative flex h-3.5 items-center">
-          <CursorFlag name="Lee" className="bg-indigo-500" />
-          <span className="h-1.5 w-6 rounded-full bg-indigo-500" />
-          <span className="bento-caret ml-0.5 h-3.5 w-0.5 rounded-full bg-indigo-500" style={{ animationDelay: "0.5s" }} />
-        </span>
-        <span className="h-1.5 flex-1 rounded-full bg-foreground/12" />
-      </div>
-      {/* the rest of the paragraph */}
-      <div className="mt-2 flex flex-col gap-2">
-        <span className="block h-1.5 w-11/12 rounded-full bg-foreground/12" />
-        <span className="block h-1.5 w-2/3 rounded-full bg-foreground/12" />
-      </div>
+const UndoViz: React.FC = () => {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [phase, setPhase] = useState<"idle" | "undo" | "redo">("idle");
+  const reduce = useReducedMotion();
 
-      {/* ⌘Z flashes exactly when Ana's word is undone — undo is scoped to her */}
-      <span className="absolute -top-2.5 right-3 rounded-md border border-border/70 bg-card px-1.5 py-0.5 font-mono text-[8px] font-semibold text-primary opacity-0 shadow-sm motion-safe:group-hover:animate-[bento-coedit-key_4.8s_ease-in-out_infinite]">
-        ⌘Z
-      </span>
+  useEffect(() => {
+    if (reduce) return;
+    const tile = rootRef.current?.closest(".bento-tile");
+    if (!tile) return;
+    let redoTimer: ReturnType<typeof setTimeout>;
+    const onEnter = () => {
+      clearTimeout(redoTimer);
+      setPhase("undo");
+    };
+    const onLeave = () => {
+      setPhase("redo");
+      // hold the redo cue briefly, then settle back to the resting state
+      redoTimer = setTimeout(() => setPhase("idle"), 700);
+    };
+    tile.addEventListener("pointerenter", onEnter);
+    tile.addEventListener("pointerleave", onLeave);
+    return () => {
+      clearTimeout(redoTimer);
+      tile.removeEventListener("pointerenter", onEnter);
+      tile.removeEventListener("pointerleave", onLeave);
+    };
+  }, [reduce]);
+
+  const undone = phase === "undo";
+
+  return (
+    <div ref={rootRef} aria-hidden="true" className="w-full">
+      <div className="relative w-full rounded-xl border border-border/60 bg-card px-3 pb-3 pt-7">
+        {/* the co-edited line — both labelled cursors live in the same sentence */}
+        <div className="flex h-3.5 items-center gap-1.5">
+          <span className="h-1.5 w-6 rounded-full bg-foreground/12" />
+          {/* Ana — her word retracts into the caret on undo, springs back on redo */}
+          <span className="relative flex h-3.5 items-center">
+            <CursorFlag name="Ana" className="bg-primary" />
+            <span
+              className="h-1.5 w-7 origin-right rounded-full bg-primary"
+              style={{
+                transform: undone ? "scaleX(0)" : "scaleX(1)",
+                opacity: undone ? 0 : 1,
+                transition: undone
+                  ? "transform 360ms cubic-bezier(0.5,0,0.75,0), opacity 280ms ease-out"
+                  : "transform 560ms cubic-bezier(0.34,1.56,0.64,1), opacity 360ms ease-in",
+              }}
+            />
+            <span
+              className="bento-caret ml-0.5 h-3.5 w-0.5 origin-center rounded-full bg-primary transition-transform duration-300"
+              style={{ transform: undone ? "scaleY(1.2)" : "scaleY(1)" }}
+            />
+          </span>
+          <span className="h-1.5 w-3 rounded-full bg-foreground/12" />
+          {/* Lee — never budges, whatever Ana undoes */}
+          <span className="relative flex h-3.5 items-center">
+            <CursorFlag name="Lee" className="bg-indigo-500" />
+            <span className="h-1.5 w-6 rounded-full bg-indigo-500" />
+            <span className="bento-caret ml-0.5 h-3.5 w-0.5 rounded-full bg-indigo-500" style={{ animationDelay: "0.5s" }} />
+          </span>
+          <span className="h-1.5 flex-1 rounded-full bg-foreground/12" />
+        </div>
+        {/* the rest of the paragraph */}
+        <div className="mt-2 flex flex-col gap-2">
+          <span className="block h-1.5 w-11/12 rounded-full bg-foreground/12" />
+          <span className="block h-1.5 w-2/3 rounded-full bg-foreground/12" />
+        </div>
+
+        {/* the shortcut cue cross-fades: ⌘Z as you undo, ⌘⇧Z as you redo on leave */}
+        <ShortcutBadge show={phase === "undo"} icon={UNDO_ARROW} keys="⌘Z" />
+        <ShortcutBadge show={phase === "redo"} icon={REDO_ARROW} keys="⌘⇧Z" />
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // A collaborator's name tab, sitting just above their caret — the speech-tab
 // corner (squared bottom-right) points down at the cursor.
@@ -975,6 +1031,20 @@ const CursorFlag: React.FC<{ name: string; className: string }> = ({ name, class
     className={`absolute bottom-full right-0 mb-1 whitespace-nowrap rounded-md rounded-br-[2px] px-1 py-px text-[7px] font-bold leading-[1.5] text-white shadow-sm ${className}`}
   >
     {name}
+  </span>
+);
+
+// The undo/redo shortcut tag above the document, cross-fading with the phase.
+const ShortcutBadge: React.FC<{ show: boolean; icon: React.ReactNode; keys: string }> = ({ show, icon, keys }) => (
+  <span
+    className="absolute -top-2.5 right-3 flex items-center gap-1 rounded-md border border-border/70 bg-card px-1.5 py-0.5 text-primary shadow-sm transition-all duration-300"
+    style={{
+      opacity: show ? 1 : 0,
+      transform: show ? "translateY(0) scale(1)" : "translateY(3px) scale(0.92)",
+    }}
+  >
+    {icon}
+    <span className="font-mono text-[8px] font-semibold leading-none">{keys}</span>
   </span>
 );
 

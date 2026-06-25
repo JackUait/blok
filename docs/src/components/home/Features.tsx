@@ -951,29 +951,35 @@ const UndoViz: React.FC = () => {
   const rootRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const edgeRef = useRef<HTMLSpanElement>(null);
+  const undoLitRef = useRef<HTMLSpanElement | null>(null);
+  const redoLitRef = useRef<HTMLSpanElement | null>(null);
   const [phase, setPhase] = useState<"idle" | "undo" | "redo">("idle");
   const reduce = useReducedMotion();
 
-  // Light the document's border with brand pink where the tile's glow blob
-  // touches it — the same blob-tracked radial reveal the other tiles use.
+  // Light the document border and the shortcut keycaps with brand pink where the
+  // tile's glow blob touches them — each lit layer masked against its own rect,
+  // the same blob-tracked radial reveal the other tiles use.
   useEffect(() => {
     if (reduce) return;
     const card = cardRef.current;
     const tile = card?.closest(".bento-tile");
     if (!card || !tile) return;
 
+    const targets = [edgeRef, undoLitRef, redoLitRef];
     const apply = (clientX: number | null, clientY: number | null) => {
-      const edge = edgeRef.current;
-      if (!edge) return;
-      if (clientX === null || clientY === null) {
-        edge.style.opacity = "0";
-        return;
+      for (const ref of targets) {
+        const el = ref.current;
+        if (!el) continue;
+        if (clientX === null || clientY === null) {
+          el.style.opacity = "0";
+          continue;
+        }
+        const r = el.getBoundingClientRect();
+        const mask = `radial-gradient(${CHIP_GLOW_RADIUS}px circle at ${clientX - r.left}px ${clientY - r.top}px, #000 0%, transparent 62%)`;
+        el.style.opacity = "1";
+        el.style.maskImage = mask;
+        el.style.webkitMaskImage = mask;
       }
-      const r = card.getBoundingClientRect();
-      const mask = `radial-gradient(${CHIP_GLOW_RADIUS}px circle at ${clientX - r.left}px ${clientY - r.top}px, #000 0%, transparent 62%)`;
-      edge.style.opacity = "1";
-      edge.style.maskImage = mask;
-      edge.style.webkitMaskImage = mask;
     };
 
     const onMove = (e: Event) => {
@@ -1086,8 +1092,8 @@ const UndoViz: React.FC = () => {
         </div>
 
         {/* the shortcut cue cross-fades: ⌘Z as you undo, ⌘⇧Z as you redo on leave */}
-        <ShortcutBadge show={phase === "undo"} icon={UNDO_ARROW} keys={["⌘", "Z"]} />
-        <ShortcutBadge show={phase === "redo"} icon={REDO_ARROW} keys={["⌘", "⇧", "Z"]} />
+        <ShortcutBadge show={phase === "undo"} icon={UNDO_ARROW} keys={["⌘", "Z"]} litRef={undoLitRef} />
+        <ShortcutBadge show={phase === "redo"} icon={REDO_ARROW} keys={["⌘", "⇧", "Z"]} litRef={redoLitRef} />
       </div>
     </div>
   );
@@ -1105,8 +1111,14 @@ const CursorFlag: React.FC<{ name: string; className: string; style?: React.CSSP
 );
 
 // The undo/redo shortcut tag above the document, cross-fading with the phase.
-// Each key is its own little keycap so the combo reads as keys, not glyphs.
-const ShortcutBadge: React.FC<{ show: boolean; icon: React.ReactNode; keys: string[] }> = ({ show, icon, keys }) => (
+// Each key is its own keycap; only the pill's own border lights brand pink where
+// the glow blob touches it (via the litRef overlay) — the keycaps stay neutral.
+const ShortcutBadge: React.FC<{
+  show: boolean;
+  icon: React.ReactNode;
+  keys: string[];
+  litRef: React.RefObject<HTMLSpanElement | null>;
+}> = ({ show, icon, keys, litRef }) => (
   <span
     className="absolute -top-3 right-3 flex items-center gap-1.5 rounded-lg border border-border/60 bg-card px-2 py-1 shadow-md transition-all duration-300"
     style={{
@@ -1125,6 +1137,12 @@ const ShortcutBadge: React.FC<{ show: boolean; icon: React.ReactNode; keys: stri
         </kbd>
       ))}
     </span>
+    {/* the container's border lights brand pink where the glow blob touches it */}
+    <span
+      ref={litRef}
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 rounded-lg border border-brand-from opacity-0 transition-opacity duration-200"
+    />
   </span>
 );
 

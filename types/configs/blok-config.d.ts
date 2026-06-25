@@ -1,6 +1,6 @@
 import type { ThemeMode, ResolvedTheme } from '../api/theme';
 import {ToolConstructable, ToolSettings} from '../tools';
-import {API, LogLevels, OutputBlockData, OutputData} from '../index';
+import {API, Blok, LogLevels, OutputBlockData, OutputData} from '../index';
 import {SanitizerConfig} from './sanitizer-config';
 import {I18nConfig} from './i18n-config';
 import { BlockMutationEvent } from '../events/block';
@@ -190,9 +190,16 @@ export interface BlokConfig {
   };
 
   /**
-   * Fires when Blok is ready to work
+   * Fires when Blok is ready to work.
+   *
+   * Receives the fully-initialized {@link Blok} instance, so you can drive the
+   * editor's API straight from the handler (mirrors the React/Vue/Angular
+   * adapters, whose `ready` events emit the live instance). The argument is
+   * optional — existing zero-argument handlers keep working unchanged.
+   *
+   * @param blok - the ready Blok instance
    */
-  onReady?(): void;
+  onReady?(blok?: Blok): void;
 
   /**
    * Fires when something changed in DOM

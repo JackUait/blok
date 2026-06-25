@@ -4,11 +4,12 @@ import * as VueApi from '../../../src/vue/index';
 import { BlokContent } from '../../../src/vue/index';
 
 describe('@jackuait/blok/vue exports', () => {
-  it('exports BlokEditor, BlokContent, useBlok, provideBlok, BLOK_DEFAULT_CONFIG', () => {
+  it('exports BlokEditor, BlokContent, useBlok, provideBlok, useBlokDefaults, BLOK_DEFAULT_CONFIG', () => {
     expect(VueApi.BlokEditor).toBeDefined();
     expect(VueApi.BlokContent).toBeDefined();
     expect(typeof VueApi.useBlok).toBe('function');
     expect(typeof VueApi.provideBlok).toBe('function');
+    expect(typeof VueApi.useBlokDefaults).toBe('function');
     expect(VueApi.BLOK_DEFAULT_CONFIG).toBeDefined();
   });
 

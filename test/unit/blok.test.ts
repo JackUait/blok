@@ -314,6 +314,31 @@ describe('Blok', () => {
       expect(typeof blok.destroy).toBe('function');
     });
 
+    it('passes the ready Blok instance to the onReady callback', async () => {
+      const onReady = vi.fn();
+      const config: BlokConfig = {
+        holder: 'blok',
+        onReady,
+      };
+
+      if (mocks.mockIsObject) {
+        mocks.mockIsObject.mockReturnValue(true);
+      }
+      if (mocks.mockIsFunction) {
+        mocks.mockIsFunction.mockReturnValue(true);
+      }
+
+      const blok = new Blok(config);
+
+      await blok.isReady;
+
+      // The ready hook now receives the live instance (parity with the
+      // React/Vue/Angular adapters, which all hand the editor to their `ready`).
+      // Identity check (not toHaveBeenCalledWith, whose deep-compare would walk
+      // the instance's `isMobile` getter into the partial test mock).
+      expect(onReady.mock.calls[0][0]).toBe(blok);
+    });
+
     it('should use default empty onReady function when not provided', async () => {
       const config: BlokConfig = {
         holder: 'blok',

@@ -5,7 +5,7 @@
  */
 import '@babel/register';
 
-import type { BlokConfig, API, EditorWidth } from '../types';
+import type { BlokConfig, API, EditorWidth, Blok as PublicBlok } from '../types';
 
 import { DATA_ATTR } from './components/constants/data-attributes';
 import { Core } from './components/core';
@@ -322,10 +322,11 @@ class Blok {
         }
       }
 
-      /**
-       * @todo pass API as an argument. It will allow to use Blok's API when blok is ready
-       */
-      onReady();
+      // Hand the fully-exported instance to onReady so callers can drive the
+      // editor's API the moment it's ready (parity with the React/Vue/Angular
+      // adapters, whose `ready` events all emit the live instance). The argument
+      // is optional, so existing zero-arg `onReady` handlers are unaffected.
+      onReady(this as unknown as PublicBlok);
 
       return this;
     });

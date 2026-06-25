@@ -1,4 +1,5 @@
 import {
+  inject,
   onBeforeUnmount,
   onMounted,
   shallowRef,
@@ -11,6 +12,7 @@ import {
 import { Blok as BlokRuntime } from '../blok';
 import { setHolder, removeHolder } from './holder-map';
 import { deepEqual } from '../shared/deep-equal';
+import { BLOK_DEFAULT_CONFIG, mergeBlokDefaults } from './provide-blok';
 import type { Blok, OutputData } from '@/types';
 import type { UseBlokConfig } from './types';
 
@@ -35,6 +37,16 @@ export function useBlok(
   // handing consumers a proxy instead of the real editor.
   const editor = shallowRef<Blok | null>(null);
 
+  // App-wide defaults from the nearest `provideBlok()`, injected once (the Vue
+  // analog of React's `useContext(BlokDefaultsContext)`). Merged UNDER the
+  // per-instance config so the escape-hatch path (`useBlok` + `BlokContent`)
+  // honors them exactly like `<BlokEditor>`. `inject` must run synchronously in
+  // `setup`, hence at the top of the composable.
+  const defaults = inject(BLOK_DEFAULT_CONFIG, {});
+
+  /** Per-instance config with `provideBlok` defaults merged under it (instance wins). */
+  const mergedConfig = (): UseBlokConfig => mergeBlokDefaults(defaults, toValue(config));
+
   // Mutable adapter state (held in one object to avoid `let` reassignment):
   // - `current` is the editor that should own the holder/ref; it guards async
   //   isReady resolution against a stale editor (e.g. after a recreate).
@@ -51,7 +63,7 @@ export function useBlok(
   } = {
     current: null,
     holder: null,
-    lastRenderedData: toValue(config).data,
+    lastRenderedData: mergedConfig().data,
     seededEditor: null,
     renderChain: Promise.resolve(),
   };
@@ -62,7 +74,11 @@ export function useBlok(
    * proxies would break core's identity checks and the holder WeakMap key.
    */
   const buildConfig = (): Record<string, unknown> => {
-    const snapshot = { ...toRaw(toValue(config)) } as Record<string, unknown>;
+    // Merge `provideBlok` defaults under the raw per-instance config, then
+    // de-proxy. `toRaw` unwraps both the config and its `data` so no Vue reactive
+    // proxy reaches core (Risk R0): proxies would break core's identity checks
+    // and the holder WeakMap key.
+    const snapshot = { ...mergeBlokDefaults(toRaw(defaults), toRaw(toValue(config))) } as Record<string, unknown>;
 
     delete snapshot.holder;
 
@@ -102,7 +118,7 @@ export function useBlok(
     if (typeof snapshot.onSave === 'function') {
       snapshot.onSave = (...args: Parameters<NonNullable<UseBlokConfig['onSave']>>): void => {
         state.lastRenderedData = args[0];
-        toValue(config).onSave?.(...args);
+        mergedConfig().onSave?.(...args);
       };
     }
 
@@ -129,7 +145,7 @@ export function useBlok(
   // `theme`/`width`/`placeholder` guard on `=== undefined` (NOT falsiness) so a
   // real `placeholder: false` (clear) still propagates.
   watch(
-    [editor, () => toValue(config).readOnly],
+    [editor, () => mergedConfig().readOnly],
     ([ed, readOnly]) => {
       if (ed) {
         void ed.readOnly.set(readOnly ?? false);
@@ -139,7 +155,7 @@ export function useBlok(
   );
 
   watch(
-    [editor, () => toValue(config).theme],
+    [editor, () => mergedConfig().theme],
     ([ed, theme]) => {
       if (ed && theme !== undefined) {
         ed.theme.set(theme);
@@ -149,7 +165,7 @@ export function useBlok(
   );
 
   watch(
-    [editor, () => toValue(config).width],
+    [editor, () => mergedConfig().width],
     ([ed, width]) => {
       if (ed && width !== undefined) {
         ed.width.set(width);
@@ -159,7 +175,7 @@ export function useBlok(
   );
 
   watch(
-    [editor, () => toValue(config).placeholder],
+    [editor, () => mergedConfig().placeholder],
     ([ed, placeholder]) => {
       if (ed && placeholder !== undefined) {
         ed.placeholder.set(placeholder);
@@ -169,7 +185,7 @@ export function useBlok(
   );
 
   watch(
-    [editor, () => toValue(config).autofocus],
+    [editor, () => mergedConfig().autofocus],
     ([ed, autofocus]) => {
       if (ed && autofocus) {
         ed.focus();
@@ -183,7 +199,7 @@ export function useBlok(
   // against the baseline (so an unchanged reference, including the editor's own
   // echoed output, is a no-op) and serialized via `renderChain`.
   watch(
-    [editor, () => toValue(config).data],
+    [editor, () => mergedConfig().data],
     ([ed, data]) => {
       if (!ed || data === undefined) {
         return;

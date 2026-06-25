@@ -109,8 +109,8 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     const blokConfig = {
       ...currentConfig,
       holder,
-      onReady: (): void => {
-        configRef.current.onReady?.();
+      onReady: (...args: Parameters<NonNullable<UseBlokConfig['onReady']>>): void => {
+        configRef.current.onReady?.(...args);
       },
       onChange: (...args: Parameters<NonNullable<UseBlokConfig['onChange']>>): void => {
         configRef.current.onChange?.(...args);

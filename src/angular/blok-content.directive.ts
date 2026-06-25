@@ -15,6 +15,7 @@ import { isPlatformBrowser } from '@angular/common';
 // Imported via the package's public specifier so ng-packagr externalizes the
 // core as a peer dependency (consumers share a single Blok instance + CSS).
 import { Blok as BlokRuntime, type Blok } from '@jackuait/blok';
+import { BLOK_DEFAULT_CONFIG } from './provide-blok';
 import type { BlokAngularConfig } from './types';
 
 /**
@@ -43,6 +44,12 @@ export class BlokContentDirective implements OnDestroy {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly ngZone = inject(NgZone);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+  /**
+   * App-wide defaults from `provideBlok()`, merged UNDER the bound `[config]` so
+   * the escape-hatch path honors them just like `<blok-editor>` (which also
+   * merges, idempotently). Mirrors React's `useBlok` merging context defaults.
+   */
+  private readonly defaults = inject(BLOK_DEFAULT_CONFIG, { optional: true }) ?? {};
 
   /** Construction-time Blok config (everything except `holder`, which the directive owns). */
   @Input() config: Partial<BlokAngularConfig> = {};
@@ -90,12 +97,20 @@ export class BlokContentDirective implements OnDestroy {
     this.destroyed = false;
     this.instance.set(null);
 
+    // Merge provideBlok defaults under the bound config (instance wins; tools
+    // registries compose across both layers rather than replacing).
+    const merged: Partial<BlokAngularConfig> = { ...this.defaults, ...this.config };
+
+    if (this.defaults.tools !== undefined || this.config.tools !== undefined) {
+      merged.tools = { ...this.defaults.tools, ...this.config.tools };
+    }
+
     // Construct outside Angular's zone so the editor's internal DOM churn never
     // schedules change detection.
     const blok = this.ngZone.runOutsideAngular(
       () =>
         new BlokRuntime({
-          ...this.config,
+          ...merged,
           holder: this.host.nativeElement,
         }) as unknown as Blok
     );

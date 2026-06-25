@@ -1,7 +1,6 @@
-import { computed, defineComponent, getCurrentInstance, h, inject, watch, type PropType } from 'vue';
+import { computed, defineComponent, getCurrentInstance, h, watch, type PropType } from 'vue';
 import { useBlok } from './useBlok';
 import { BlokContent } from './BlokContent';
-import { BLOK_DEFAULT_CONFIG } from './provide-blok';
 import { BLOK_EDITOR_CONFIG_KEYS } from './config-keys';
 import type {
   API,
@@ -78,9 +77,6 @@ export const BlokEditor = defineComponent({
   setup(props, { emit, expose, attrs }) {
     const instance = getCurrentInstance();
 
-    // App-wide defaults from `provideBlok()`, merged UNDER per-instance props.
-    const defaults = inject(BLOK_DEFAULT_CONFIG, {});
-
     /** Listener presence (the Vue analog of Angular's `output.observed`). */
     const hasListener = (handlerKey: string): boolean => {
       const vnodeProps = instance?.vnode.props;
@@ -88,10 +84,14 @@ export const BlokEditor = defineComponent({
       return vnodeProps != null && handlerKey in vnodeProps;
     };
 
-    /** Snapshot the props + gated emit-callbacks into a `UseBlokConfig`. */
+    /**
+     * Snapshot the props + gated emit-callbacks into a `UseBlokConfig`. App-wide
+     * `provideBlok` defaults are merged in by `useBlok` (the lifecycle engine),
+     * so this component stays thin and the escape-hatch path honors defaults too
+     * — mirroring React, where only `useBlok` merges.
+     */
     const buildConfig = (): UseBlokConfig => {
-      // provideBlok defaults seed the config; per-instance props override below.
-      const config: Record<string, unknown> = { ...defaults };
+      const config: Record<string, unknown> = {};
 
       for (const key of BLOK_EDITOR_CONFIG_KEYS) {
         const value = props[key];
@@ -99,12 +99,6 @@ export const BlokEditor = defineComponent({
         if (value !== undefined) {
           config[key] = value;
         }
-      }
-
-      // tools registries MERGE across the default + instance layers (a shared
-      // registry composes with per-instance additions) rather than replacing.
-      if (defaults.tools !== undefined || props.tools !== undefined) {
-        config.tools = { ...defaults.tools, ...props.tools };
       }
 
       if (hasListener('onChange')) {

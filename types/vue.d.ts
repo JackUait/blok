@@ -132,3 +132,9 @@ export declare const BLOK_DEFAULT_CONFIG: InjectionKey<Partial<UseBlokConfig>>;
  * (call inside a parent component's `setup`). Mirrors Angular's `provideBlok`.
  */
 export declare function provideBlok(defaults: Partial<UseBlokConfig>): void;
+
+/**
+ * Reads the app-wide Blok defaults from the nearest `provideBlok` (or `{}`).
+ * Mirrors React's `useBlokDefaults`. Call inside `setup`.
+ */
+export declare function useBlokDefaults(): Partial<UseBlokConfig>;

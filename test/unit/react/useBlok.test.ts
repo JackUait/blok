@@ -513,6 +513,47 @@ describe('useBlok', () => {
     expect(mockBlokInstances).toHaveLength(1);
   });
 
+  it('should use latest onSave callback ref without recreating editor', async () => {
+    const onSave1 = vi.fn();
+    const onSave2 = vi.fn();
+
+    const { rerender } = renderHook(
+      ({ onSave }: { onSave: () => void }) => useBlok({ onSave }),
+      { initialProps: { onSave: onSave1 } }
+    );
+
+    await flushAll();
+
+    const passedConfig = MockBlokConstructor.mock.calls[0][0] as {
+      onSave: (...args: unknown[]) => void;
+    };
+
+    expect(typeof passedConfig.onSave).toBe('function');
+
+    // Update to new callback
+    rerender({ onSave: onSave2 });
+
+    // Call the wrapper — should call onSave2 (latest), not onSave1
+    passedConfig.onSave({ blocks: [] });
+
+    expect(onSave1).not.toHaveBeenCalled();
+    expect(onSave2).toHaveBeenCalledTimes(1);
+
+    // Verify no editor recreation occurred
+    expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
+    expect(mockBlokInstances).toHaveLength(1);
+  });
+
+  it('does not pass an onSave callback to the editor config when the prop is omitted', async () => {
+    renderHook(() => useBlok({}));
+
+    await flushAll();
+
+    const passedConfig = MockBlokConstructor.mock.calls[0][0] as { onSave?: unknown };
+
+    expect(passedConfig.onSave).toBeUndefined();
+  });
+
   it('should not expose a stale editor when isReady resolves after deps change', async () => {
     // First editor: isReady is deferred so we can control when it resolves
     const resolveFn: { current: (() => void) | null } = { current: null };

@@ -72,6 +72,17 @@ export function BlogEditor() {
   );
 }`;
 
+const CONTROLLED_EXAMPLE = `// data + onSave = a true controlled component
+const [data, setData] = useState(INITIAL_DATA);
+
+// data flows in (re-renders in place, deep-equal–deduped);
+// onSave flows out (debounced, full serialized OutputData).
+const editor = useBlok({ tools, data, onSave: setData });
+
+// 'data' now mirrors editor content — persist it, diff it, etc.
+// The deep-equal guard breaks the onSave -> setState -> data loop.
+return <BlokContent editor={editor} />;`;
+
 const READ_ONLY_EXAMPLE = `// Toggle read-only mode reactively — no editor recreation needed
 const [readOnly, setReadOnly] = useState(false);
 
@@ -127,7 +138,7 @@ export const REACT_SECTIONS: IntegrationSection[] = [
         type: 'UseBlokConfig',
         default: '—',
         description:
-          'All standard Blok configuration options except holder, which is managed internally. Callbacks (onChange, onReady) are ref-stable and never cause recreation.',
+          'All standard Blok configuration options except holder, which is managed internally. Callbacks (onChange, onSave, onReady) are ref-stable and never cause recreation.',
       },
       {
         option: 'deps',
@@ -169,6 +180,14 @@ export const REACT_SECTIONS: IntegrationSection[] = [
         description: 'All standard div attributes (className, style, id, aria-*, etc.) are passed through.',
       },
     ],
+  },
+  {
+    id: 'react-controlled',
+    badge: 'Guide',
+    title: 'Controlled Component',
+    description:
+      'Pair the reactive data prop with onSave for a true controlled component. data flows in (re-rendered in place, deep-equal–deduped so the caret is never clobbered); onSave flows out, firing debounced with the full serialized OutputData on every change. Wiring onSave={setData} keeps your state in sync without polling editor.save() — the deep-equal guard on data breaks the round-trip loop. Use the lower-level onChange(api, event) when you need raw mutation events instead.',
+    example: CONTROLLED_EXAMPLE,
   },
   {
     id: 'react-read-only',

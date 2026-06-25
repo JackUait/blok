@@ -30,6 +30,7 @@ export const USE_BLOK_CONFIG_KEYS = [
   'onBeforePaste',
   'onReady',
   'onChange',
+  'onSave',
   'inlineToolbar',
   'tunes',
   'style',

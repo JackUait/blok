@@ -14,6 +14,7 @@ interface MockInstance {
   placeholder: { set: ReturnType<typeof vi.fn> };
   render: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
+  config: Record<string, unknown>;
 }
 
 let instances: MockInstance[] = [];
@@ -29,7 +30,9 @@ vi.mock('../../../src/blok', () => ({
     public placeholder = { set: vi.fn() };
     public render = vi.fn();
     public save = vi.fn().mockResolvedValue({ blocks: [] });
+    public config: Record<string, unknown>;
     constructor(config: { holder: HTMLElement }) {
+      this.config = config;
       const wrapper = document.createElement('div');
       wrapper.setAttribute('data-blok-editor', 'true');
       wrapper.setAttribute('data-testid', 'blok-editor-inner');
@@ -142,5 +145,18 @@ describe('BlokEditor', () => {
 
     // readOnly reached useBlok → editor.readOnly.set was called
     expect(instances[0]?.readOnly.set).toHaveBeenCalledWith(true);
+  });
+
+  it('routes onSave to the editor config, not onto the container as an attribute', async () => {
+    const onSave = vi.fn();
+    render(<BlokEditor data-testid="host" onSave={onSave} />);
+    await act(async () => { await Promise.resolve(); });
+
+    // onSave reached useBlok → forwarded into the editor config (ref-wrapped)
+    expect(typeof instances[0]?.config.onSave).toBe('function');
+
+    // and it did NOT leak onto the container element as an attribute
+    const host = screen.getByTestId('host');
+    expect(host.hasAttribute('onsave')).toBe(false);
   });
 });

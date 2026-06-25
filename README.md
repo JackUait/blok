@@ -62,11 +62,11 @@ new Blok({
 - `@jackuait/blok/react` — React 18/19 adapter. The recommended entry point is `<BlokEditor>`, an all-in-one component that forwards a ref to the live `Blok` instance:
 
   ```tsx
-  const ref = useRef<Blok | null>(null);
-  <BlokEditor ref={ref} tools={tools} data={initialData} theme={theme} onReady={(editor) => {/* editor ready */}} />;
+  const [data, setData] = useState(initialData);
+  <BlokEditor tools={tools} data={data} onSave={setData} theme={theme} />;
   ```
 
-  `data` is the **initial content only** — the editor owns the document after mount. Read content via `onChange` or `ref.current.save()`; replace it via `ref.current.render(newData)`; passing a new `data` reference does not reload content.
+  `data` + `onSave` make `<BlokEditor>` a true **controlled component**. `data` is reactive: passing new content re-renders the editor in place (deep-equal–deduped, so identical content never clobbers the caret). `onSave` is the output half: it fires — debounced — with the full serialized `OutputData` on every content change, so you no longer poll `ref.current.save()` by hand. The deep-equal guard on `data` breaks the `onSave → setState → data` round-trip, so wiring `onSave={setData}` is safe. (You can still forward a ref and call `ref.current.render(newData)` for ad-hoc reloads, or use the lower-level `onChange(api, event)` for mutation events.)
 
   Reactive props (`readOnly`, `theme`, `width`, `autofocus`) sync without remounting. When structural config like `tools` needs to change, pass a `deps` array — the editor is destroyed and recreated whenever any dep value changes. Keep each value inside `deps` referentially stable: pass primitives or `useMemo`-stable objects, since a dep value whose identity changes every render recreates the editor each time. (The individual values are compared, not the array wrapper, so a fresh `[a, b]` literal each render is fine when `a` and `b` are stable; omitting `deps` creates the editor once.)
 

@@ -188,6 +188,23 @@ export interface BlokConfig {
   onChange?(api: API, event: BlockMutationEvent | BlockMutationEvent[]): void;
 
   /**
+   * Fires with the full serialized {@link OutputData} whenever the content
+   * changes. This is the "output half" of a controlled editor: pair it with the
+   * `data` config (or the React `data` prop) to mirror the editor state into your
+   * own store with a single callback instead of calling `saver.save()` by hand.
+   *
+   * Serialization is debounced through the same change-batching window as
+   * `onChange`, so a burst of edits produces a single `onSave` call. Only
+   * user-driven content changes trigger it — programmatic `render()` does not
+   * (the change observer is disabled during render), so a controlled
+   * `data → render → onSave → setData` round-trip won't recurse.
+   *
+   * @param data - the full serialized output of the editor
+   * @param api - blok.js api
+   */
+  onSave?(data: OutputData, api: API): void;
+
+  /**
    * Defines default toolbar for all tools.
    */
   inlineToolbar?: string[]|boolean;

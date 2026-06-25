@@ -24,9 +24,14 @@ import type { UseBlokConfig } from './types';
  * mount, changing it to new *content* re-renders the editor via `render()` — no
  * recreation. Updates are deep-equal–deduped (a new reference with identical
  * content is a no-op, so it won't clobber the caret) and serialized (rapid
- * changes can't overlap). Read content via `onChange` or the ref
- * (`ref.current.save()`). For ad-hoc reloads you can still call
+ * changes can't overlap). For ad-hoc reloads you can still call
  * `ref.current.render(newData)`.
+ *
+ * Pair `data` with `onSave` for a true controlled component: `onSave` is the
+ * output half, firing (debounced) with the full serialized `OutputData` on every
+ * content change — no manual `ref.current.save()` polling. The deep-equal guard
+ * on `data` breaks the `onSave → setState → data` loop, so
+ * `<BlokEditor data={data} onSave={setData} />` is safe.
  */
 export interface BlokEditorProps
   extends Omit<UseBlokConfig, 'onReady'>,

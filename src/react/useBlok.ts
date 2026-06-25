@@ -99,6 +99,15 @@ export function useBlok(config: UseBlokConfig, deps?: DependencyList): Blok | nu
       },
     };
 
+    // Only attach onSave when the consumer opted in: its mere presence makes the
+    // core serialize on every change batch, so an absent prop must stay absent.
+    // The wrapper reads through the ref so the latest callback is always used.
+    if (currentConfig.onSave) {
+      blokConfig.onSave = (...args: Parameters<NonNullable<UseBlokConfig['onSave']>>): void => {
+        configRef.current.onSave?.(...args);
+      };
+    }
+
     const blok = new BlokRuntime(blokConfig) as unknown as Blok;
     state.editor = blok;
     setHolder(blok, holder);

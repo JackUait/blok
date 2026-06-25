@@ -13,6 +13,10 @@ import type { BlokConfig, Blok, EditorWidth } from '@/types';
  * - `placeholder` — calls `editor.placeholder.set(value)`
  * - `data` — re-renders via `editor.render(value)` when content changes
  *   (deep-equal–deduped and serialized; seeds the initial content at creation)
+ *
+ * The `onSave` config (inherited from `BlokConfig`) is the controlled output
+ * half: it fires with the full serialized `OutputData` on every content change,
+ * so `data` + `onSave` form a controlled component without manual `save()` calls.
  */
 export interface UseBlokConfig extends Omit<BlokConfig, 'holder'> {
   /** Editor content width mode. Synced reactively after mount via `editor.width.set()`. */

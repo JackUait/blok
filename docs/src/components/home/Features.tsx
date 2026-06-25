@@ -990,8 +990,9 @@ const WAVE = [5, 9, 14, 8, 12, 6, 11, 15, 7, 10, 13, 6, 9, 5, 8];
 
 const MediaViz: React.FC = () => (
   <div aria-hidden="true" className="flex w-full flex-col gap-2">
-    {/* Image / video: a sunset photo you can play. */}
-    <div className="relative h-[60px] overflow-hidden rounded-xl border border-border/60">
+    {/* Image / video: a sunset photo you can play. bg-card gives an opaque base so
+        the tile's hover glow blob can't bleed pink through the translucent sky. */}
+    <div className="relative h-[60px] overflow-hidden rounded-xl border border-border/60 bg-card">
       {/* sky */}
       <div className="absolute inset-0 bg-linear-to-b from-brand-from/45 via-brand-via/35 to-brand-to/40" />
       {/* sun */}

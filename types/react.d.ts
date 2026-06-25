@@ -1,5 +1,5 @@
 import type { BlokConfig } from './index';
-import type { Blok, EditorWidth } from './index';
+import type { Blok, EditorWidth, BlockRenderedPayload, BlocksRenderedPayload } from './index';
 import type React from 'react';
 
 /**
@@ -84,6 +84,14 @@ export interface BlokEditorProps
   'data-testid'?: string;
   /** Called once the editor is ready, with the live Blok instance (ref is also committed). */
   onReady?: (editor: Blok) => void;
+  /**
+   * Called after a batch render completes (core `blocks:rendered` event). The
+   * declarative analog of `ref.current.on('blocks:rendered', …)` — mirrors the
+   * Vue/Angular adapters' rendered-lifecycle outputs.
+   */
+  onBlocksRendered?: (payload: BlocksRenderedPayload) => void;
+  /** Called for each block rendered into the DOM (core `block:rendered` event). */
+  onBlockRendered?: (payload: BlockRenderedPayload) => void;
 }
 
 /**
@@ -104,3 +112,24 @@ export interface BlokEditorProps
 export declare const BlokEditor: React.ForwardRefExoticComponent<
   BlokEditorProps & React.RefAttributes<Blok | null>
 >;
+
+/**
+ * Registers app-wide Blok defaults for every `useBlok` / `<BlokEditor>` rendered
+ * beneath it. Per-instance config overrides these, and the `tools` registry is
+ * merged (shared registry composes with per-instance additions) rather than
+ * replaced. Mirrors Vue's and Angular's `provideBlok`.
+ *
+ * @example
+ * ```tsx
+ * <BlokProvider defaults={{ theme: 'dark', tools: sharedTools }}>
+ *   <App />
+ * </BlokProvider>
+ * ```
+ */
+export declare function BlokProvider(props: {
+  defaults: Partial<UseBlokConfig>;
+  children?: React.ReactNode;
+}): React.ReactElement;
+
+/** Reads the app-wide Blok defaults from the nearest `BlokProvider` (or `{}`). */
+export declare function useBlokDefaults(): Partial<UseBlokConfig>;

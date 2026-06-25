@@ -14,6 +14,8 @@ interface MockInstance {
   placeholder: { set: ReturnType<typeof vi.fn> };
   render: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
+  on: ReturnType<typeof vi.fn>;
+  off: ReturnType<typeof vi.fn>;
   config: Record<string, unknown>;
 }
 
@@ -30,6 +32,8 @@ vi.mock('../../../src/blok', () => ({
     public placeholder = { set: vi.fn() };
     public render = vi.fn();
     public save = vi.fn().mockResolvedValue({ blocks: [] });
+    public on = vi.fn();
+    public off = vi.fn();
     public config: Record<string, unknown>;
     constructor(config: { holder: HTMLElement }) {
       this.config = config;
@@ -145,6 +149,63 @@ describe('BlokEditor', () => {
 
     // readOnly reached useBlok → editor.readOnly.set was called
     expect(instances[0]?.readOnly.set).toHaveBeenCalledWith(true);
+  });
+
+  it('subscribes to blocks:rendered / block:rendered and forwards the payloads', async () => {
+    const onBlocksRendered = vi.fn();
+    const onBlockRendered = vi.fn();
+    render(<BlokEditor onBlocksRendered={onBlocksRendered} onBlockRendered={onBlockRendered} />);
+    await act(async () => { await Promise.resolve(); });
+
+    const inst = instances[0];
+    const calls = inst.on.mock.calls as Array<[string, (payload: unknown) => void]>;
+    const blocksHandler = calls.find((c) => c[0] === 'blocks:rendered')?.[1];
+    const blockHandler = calls.find((c) => c[0] === 'block:rendered')?.[1];
+
+    expect(typeof blocksHandler).toBe('function');
+    expect(typeof blockHandler).toBe('function');
+
+    blocksHandler?.({ count: 2 });
+    blockHandler?.({ index: 1 });
+
+    expect(onBlocksRendered).toHaveBeenCalledWith({ count: 2 });
+    expect(onBlockRendered).toHaveBeenCalledWith({ index: 1 });
+  });
+
+  it('does not subscribe to rendered events when no handlers are provided', async () => {
+    render(<BlokEditor />);
+    await act(async () => { await Promise.resolve(); });
+
+    const calls = instances[0].on.mock.calls as Array<[string, unknown]>;
+    const subscribed = calls.map((c) => c[0]);
+    expect(subscribed).not.toContain('blocks:rendered');
+    expect(subscribed).not.toContain('block:rendered');
+  });
+
+  it('unsubscribes from rendered events on unmount', async () => {
+    const { unmount } = render(<BlokEditor onBlocksRendered={() => undefined} />);
+    await act(async () => { await Promise.resolve(); });
+    const inst = instances[0];
+
+    unmount();
+    await act(async () => { await Promise.resolve(); });
+
+    expect(inst.off).toHaveBeenCalledWith('blocks:rendered', expect.any(Function));
+  });
+
+  it('does not leak rendered-event handlers onto the container as attributes', async () => {
+    render(
+      <BlokEditor
+        data-testid="host"
+        onBlocksRendered={() => undefined}
+        onBlockRendered={() => undefined}
+      />
+    );
+    await act(async () => { await Promise.resolve(); });
+
+    const host = screen.getByTestId('host');
+    expect(host.hasAttribute('onblocksrendered')).toBe(false);
+    expect(host.hasAttribute('onblockrendered')).toBe(false);
   });
 
   it('routes onSave to the editor config, not onto the container as an attribute', async () => {

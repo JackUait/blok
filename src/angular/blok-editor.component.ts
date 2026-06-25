@@ -27,6 +27,7 @@ import type {
   EditorWidth,
   OutputBlockData,
   OutputData,
+  ResolvedTheme,
   ThemeMode,
 } from '@jackuait/blok';
 import type { BlokAngularConfig } from './types';
@@ -89,6 +90,9 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
 
   /** Fires after the editor finishes (re-)rendering (core `onAfterRender`). */
   @Output() readonly afterRender = new EventEmitter<API>();
+
+  /** Fires with the resolved theme whenever it changes (core `onThemeChange`). */
+  @Output() readonly themeChange = new EventEmitter<ResolvedTheme>();
 
   /** Fires after a batch render completes (core `blocks:rendered` event). */
   @Output() readonly blocksRendered = new EventEmitter<BlocksRenderedPayload>();
@@ -251,6 +255,11 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
 
     if (this.afterRender.observed) {
       cfg.onAfterRender = (api: API): void => this.ngZone.run(() => this.afterRender.emit(api));
+    }
+
+    if (this.themeChange.observed) {
+      cfg.onThemeChange = (resolved: ResolvedTheme): void =>
+        this.ngZone.run(() => this.themeChange.emit(resolved));
     }
 
     // Transforms run synchronously inside core's render/paste pipeline and must

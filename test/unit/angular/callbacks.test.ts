@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { API, OutputBlockData } from '@/types';
+import type { API, OutputBlockData, ResolvedTheme } from '@/types';
 
 vi.mock('@jackuait/blok', async () => ({ Blok: (await import('./_mock-blok')).MockBlok }));
 
@@ -14,6 +14,7 @@ import { BlokEditorComponent } from '../../../src/angular/blok-editor.component'
   template: `<blok-editor
     (change)="changes.push($event)"
     (afterRender)="afters.push($event)"
+    (themeChange)="themeChanges.push($event)"
     [onBeforeRender]="beforeRender"
     [onBeforePaste]="beforePaste"
   ></blok-editor>`,
@@ -21,6 +22,7 @@ import { BlokEditorComponent } from '../../../src/angular/blok-editor.component'
 class WiredHost {
   changes: unknown[] = [];
   afters: unknown[] = [];
+  themeChanges: ResolvedTheme[] = [];
   beforeRender = (blocks: OutputBlockData[]): OutputBlockData[] => [
     ...blocks,
     { id: 'injected', type: 'paragraph', data: {} },
@@ -79,6 +81,15 @@ describe('BlokEditorComponent opt-in callbacks', () => {
     expect(fixture.componentInstance.afters).toEqual([api]);
   });
 
+  it('emits the themeChange output from core onThemeChange when observed', async () => {
+    const fixture = await mountReady(WiredHost);
+
+    (blokRegistry.last.config.onThemeChange as (t: ResolvedTheme) => void)('dark');
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.themeChanges).toEqual(['dark']);
+  });
+
   it('threads the onBeforeRender transform return value into core config', async () => {
     await mountReady(WiredHost);
     const transform = blokRegistry.last.config.onBeforeRender as (
@@ -104,6 +115,7 @@ describe('BlokEditorComponent opt-in callbacks', () => {
 
     expect(config.onChange).toBeUndefined();
     expect(config.onAfterRender).toBeUndefined();
+    expect(config.onThemeChange).toBeUndefined();
     expect(config.onBeforeRender).toBeUndefined();
     expect(config.onBeforePaste).toBeUndefined();
   });

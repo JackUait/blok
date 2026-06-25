@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef, useMemo, type DependencyList } from 'react';
+import { useState, useEffect, useRef, useMemo, useContext, type DependencyList } from 'react';
 import { Blok as BlokRuntime } from '../blok';
 import { setHolder, removeHolder } from './holder-map';
 import { deepEqual } from './deep-equal';
+import { BlokDefaultsContext, mergeBlokDefaults } from './provide-blok';
 import type { Blok } from '@/types';
 import type { UseBlokConfig } from './types';
 
@@ -25,7 +26,13 @@ interface EditorInstanceState {
  * @param deps - Optional dependency array; when values change, the editor is recreated
  * @returns The Blok instance once ready, or null during initialization / SSR
  */
-export function useBlok(config: UseBlokConfig, deps?: DependencyList): Blok | null {
+export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok | null {
+  // App-wide defaults from the nearest <BlokProvider> are merged UNDER the
+  // per-instance config (instance wins; tools registries merge). When no
+  // provider is present this returns `configInput` unchanged.
+  const defaults = useContext(BlokDefaultsContext);
+  const config = mergeBlokDefaults(defaults, configInput);
+
   const [editor, setEditor] = useState<Blok | null>(null);
   const configRef = useRef(config);
   configRef.current = config;

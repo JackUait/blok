@@ -9,7 +9,7 @@ import {
 import { useBlok } from './useBlok';
 import { BlokContent } from './BlokContent';
 import { USE_BLOK_CONFIG_KEYS } from './config-keys';
-import type { Blok } from '@/types';
+import type { Blok, BlockRenderedPayload, BlocksRenderedPayload } from '@/types';
 import type { UseBlokConfig } from './types';
 
 /**
@@ -52,6 +52,14 @@ export interface BlokEditorProps
    * forwarded ref is committed, so `ref.current` is also populated at this point.
    */
   onReady?: (editor: Blok) => void;
+  /**
+   * Called after a batch render completes (core `blocks:rendered` event). The
+   * declarative analog of `ref.current.on('blocks:rendered', …)` — mirrors the
+   * Vue/Angular adapters' rendered-lifecycle outputs.
+   */
+  onBlocksRendered?: (payload: BlocksRenderedPayload) => void;
+  /** Called for each block rendered into the DOM (core `block:rendered` event). */
+  onBlockRendered?: (payload: BlockRenderedPayload) => void;
 }
 
 /** Fast membership test for partitioning props into editor config vs. div attributes. */
@@ -73,7 +81,7 @@ const CONFIG_KEY_SET = new Set<string>(USE_BLOK_CONFIG_KEYS);
  * ```
  */
 export const BlokEditor = forwardRef<Blok | null, BlokEditorProps>(
-  function BlokEditor({ deps, onReady, ...rest }, ref) {
+  function BlokEditor({ deps, onReady, onBlocksRendered, onBlockRendered, ...rest }, ref) {
     const config: Record<string, unknown> = {};
     const divProps: Record<string, unknown> = {};
 
@@ -102,6 +110,47 @@ export const BlokEditor = forwardRef<Blok | null, BlokEditorProps>(
         onReadyRef.current?.(editor);
       }
     }, [editor]);
+
+    // Subscribe to the rendered-lifecycle events (the declarative analog of the
+    // Vue/Angular outputs). Latest handlers are read through refs so a new
+    // callback identity never resubscribes; presence booleans in the deps add or
+    // drop subscriptions when a handler appears/disappears.
+    const onBlocksRenderedRef = useRef(onBlocksRendered);
+    onBlocksRenderedRef.current = onBlocksRendered;
+    const onBlockRenderedRef = useRef(onBlockRendered);
+    onBlockRenderedRef.current = onBlockRendered;
+
+    const hasBlocksRendered = Boolean(onBlocksRendered);
+    const hasBlockRendered = Boolean(onBlockRendered);
+    useEffect(() => {
+      if (editor === null) {
+        return;
+      }
+
+      const subscriptions: Array<[string, (payload?: unknown) => void]> = [];
+
+      if (hasBlocksRendered) {
+        const handler = (payload?: unknown): void =>
+          onBlocksRenderedRef.current?.(payload as BlocksRenderedPayload);
+
+        editor.on('blocks:rendered', handler);
+        subscriptions.push(['blocks:rendered', handler]);
+      }
+
+      if (hasBlockRendered) {
+        const handler = (payload?: unknown): void =>
+          onBlockRenderedRef.current?.(payload as BlockRenderedPayload);
+
+        editor.on('block:rendered', handler);
+        subscriptions.push(['block:rendered', handler]);
+      }
+
+      return (): void => {
+        for (const [name, handler] of subscriptions) {
+          editor.off(name, handler);
+        }
+      };
+    }, [editor, hasBlocksRendered, hasBlockRendered]);
 
     return <BlokContent editor={editor} {...(divProps as HTMLAttributes<HTMLDivElement>)} />;
   }

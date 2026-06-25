@@ -7,4 +7,9 @@ describe('@jackuait/blok/react exports', () => {
     expect(ReactApi.BlokContent).toBeDefined();
     expect(ReactApi.BlokEditor).toBeDefined();
   });
+
+  it('exports the provideBlok surface (BlokProvider + useBlokDefaults)', () => {
+    expect(typeof ReactApi.BlokProvider).toBe('function');
+    expect(typeof ReactApi.useBlokDefaults).toBe('function');
+  });
 });

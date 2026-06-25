@@ -42,6 +42,12 @@
   "exclude": [
     "dist",
     "node_modules",
-    "storybook-static"
+    "storybook-static",
+    // Angular adapter sources use standard decorators + Angular's template
+    // type-checker, which clash with this config's `experimentalDecorators` +
+    // `jsx: react-jsx`. They are type-checked by `yarn lint:angular` (ngc) via
+    // tsconfig.spec.json instead.
+    "src/angular",
+    "test/unit/angular"
   ]
 }

@@ -1,0 +1,43 @@
+{
+  // TypeScript program for the Angular unit-test pass (@analogjs/vite-plugin-angular,
+  // JIT). Kept separate from the root config because Angular uses standard
+  // decorators + its own template type-checker, which clash with the root's
+  // `experimentalDecorators` + `jsx: react-jsx` (used by the React adapter).
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "experimentalDecorators": false,
+    "emitDecoratorMetadata": false,
+    "jsx": "preserve",
+    // vitest/globals = describe/it/expect in specs; node kept for safety.
+    "types": ["vitest/globals", "node"],
+    // Resolve the public `@jackuait/blok` specifier (used by the adapter for the
+    // runtime import) to the published declaration, so ngc type-checks against the
+    // package's own types instead of descending into core source. `paths` replaces
+    // the inherited set, so re-declare `@/types`.
+    "paths": {
+      "@/types": ["./types/", "./docs/src/types"],
+      "@/types/*": ["./types/*", "./docs/src/types/*"],
+      "@jackuait/blok": ["./types/index.d.ts"]
+    }
+  },
+  "angularCompilerOptions": {
+    "strictTemplates": true
+  },
+  // Override the root `exclude` (which hides src/angular + test/unit/angular from
+  // the React-JSX tsc) so this Angular program actually sees those sources.
+  "exclude": [
+    "dist",
+    "node_modules",
+    "storybook-static"
+  ],
+  "include": [
+    "src/angular/**/*.ts",
+    "src/shared/**/*.ts",
+    "test/unit/angular/**/*.ts",
+    // Ambient declarations the transitively-imported core relies on
+    // (*.css?inline, vite/client, internal module shims).
+    "vite-env.d.ts",
+    "src/env.d.ts",
+    "src/**/*.d.ts"
+  ]
+}

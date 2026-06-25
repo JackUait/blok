@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.23.5](https://github.com/JackUait/blok/compare/v0.23.4...v0.23.5) (2026-06-25)
+
+### Features
+
+- **Core** — The `link` config (`{ target, rel, transformHref }`) now also applies on the **render** and **paste** paths, not just the interactive link tool. Anchors coming from stored block HTML (rendered via `blocks.render()`) and `<a>` arriving through the clipboard now get the configured `target`/`rel` forced and `transformHref` applied to their href — so consumers no longer need to post-process the rendered or pasted DOM. Because the render path rewrites live anchors whose href round-trips into saved data, `transformHref` must be idempotent.
+- **Core** — New `onBeforeRender(blocks) => blocks` config transforms the blocks array before every render (the initial render and each `blocks.render()`), letting you run app-specific data migrations inside Blok instead of pre-processing the data yourself. It runs on the raw saved blocks before format analysis, so it can also inject blocks into an empty document.
+- **Core** — New `onAfterRender(api)` config fires after a render completes and the blocks are in the DOM (initial render and every `blocks.render()`), for post-render side effects such as scroll restoration — distinct from the once-only `onReady`.
+- **Core** — A stable `data-blok-rendered` attribute (exposed as `DATA_ATTR.rendered`) is now set on the editor wrapper when a render batch finishes inserting blocks, and removed while a re-render is in flight — a DOM-level render-readiness gate that complements the existing `blocks:rendered` event.
+- **Block Tunes** — A custom tune's `render(context)` now receives an optional `BlockTuneRenderContext` whose `getPopoverElement()` returns the host tune popover element (`[data-blok-popover]`), so tunes can anchor sub-menus or portals inside Blok's popover without reaching into the DOM via `closest(...)`. The element resolves once the popover mounts (it is `null` synchronously during `render()`).
+- **React** — `<BlokEditor>`/`useBlok` now accept `onBeforeRender` and `onAfterRender`. Both are attached only when provided and are ref-stable, so updating the callbacks never recreates the editor.
+
 ## [0.23.4](https://github.com/JackUait/blok/compare/v0.23.3...v0.23.4) (2026-06-25)
 
 ### Features

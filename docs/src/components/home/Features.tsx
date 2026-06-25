@@ -986,7 +986,13 @@ const LanguagesViz: React.FC = () => (
 // an image and a playable video the way a real media block does; the bottom is an
 // audio clip you can scrub. Concrete media a newcomer recognises at a glance —
 // not an abstract swatch.
-const WAVE = [5, 9, 14, 8, 12, 6, 11, 15, 7, 10, 13, 6, 9, 5, 8];
+// Enough bars to span the full track (spread edge-to-edge via justify-between);
+// the first third reads as the played portion (see PLAYED below).
+const WAVE = [
+  4, 7, 10, 6, 12, 8, 14, 9, 11, 7, 13, 6, 10, 15, 8, 12,
+  7, 9, 5, 11, 8, 13, 6, 10, 7, 12, 9, 6, 8, 5,
+];
+const PLAYED = Math.round(WAVE.length / 3);
 
 const MediaViz: React.FC = () => {
   const videoRef = useRef<HTMLDivElement>(null);
@@ -1108,11 +1114,11 @@ const MediaViz: React.FC = () => {
       </span>
       {/* Waveform — bars sit still as a frozen clip, then dance like a live
           equalizer while the tile is hovered (staggered phase per bar). */}
-      <div className="flex flex-1 items-center gap-[2px]">
+      <div className="flex flex-1 items-center justify-between">
         {WAVE.map((h, i) => (
           <span
             key={i}
-            className={`w-[2px] rounded-full ${i < 5 ? "bg-primary" : "bg-foreground/25"} motion-safe:group-hover:animate-[audio-eq_700ms_ease-in-out_infinite]`}
+            className={`w-[2px] rounded-full ${i < PLAYED ? "bg-primary" : "bg-foreground/25"} motion-safe:group-hover:animate-[audio-eq_700ms_ease-in-out_infinite]`}
             style={{ height: `${h}px`, animationDelay: `${i * -0.09}s`, animationDuration: `${0.66 + (i % 4) * 0.13}s` }}
           />
         ))}

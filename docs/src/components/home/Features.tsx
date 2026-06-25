@@ -1049,23 +1049,37 @@ const MediaViz: React.FC = () => {
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 z-30 rounded-xl border-[1.5px] border-brand-from opacity-0 transition-opacity duration-200"
       />
-      {/* The sunset scene drifts in a slow ken-burns push while the tile is hovered,
-          so the still photo reads as live footage the moment you reach for play. */}
-      <div className="absolute inset-0 origin-center transition-transform duration-[1400ms] ease-out motion-safe:group-hover:scale-[1.08]">
-        {/* sky — dusk gradient, warmer as it nears the ridgeline */}
-        <div className="absolute inset-0 bg-linear-to-b from-brand-from/45 via-brand-via/35 to-brand-to/50" />
-        {/* horizon haze: the sun's warmth pooling along the mountain line */}
-        <div className="absolute inset-x-0 bottom-2 h-7 bg-linear-to-t from-brand-to/45 via-brand-via/15 to-transparent" />
-        {/* setting sun — a bright core bleeding into a soft warm halo, swelling on hover */}
-        <div className="absolute right-6 top-1 size-9 rounded-full bg-[radial-gradient(circle,_rgba(255,255,255,0.95)_0%,_rgba(255,255,255,0.55)_26%,_rgba(255,255,255,0)_64%)] transition-transform duration-700 ease-out motion-safe:group-hover:scale-110" />
+      {/* Layered dusk scene — each plane drifts at its own rate on hover for a soft
+          parallax push, so the still reads as live footage the moment you reach play. */}
+      <div className="absolute inset-0">
+        {/* sky — cool dusk up high melting into warm rose, gold at the ridgeline */}
+        <div className="absolute inset-0 bg-linear-to-b from-brand-from/45 via-brand-via/35 to-brand-to/55" />
+        <div className="absolute inset-x-0 top-0 h-2/3 bg-linear-to-b from-violet-400/15 to-transparent" />
+        {/* a lone wisp of cloud, drifting on hover */}
+        <div className="absolute left-5 top-3 h-1.5 w-12 rounded-full bg-white/35 blur-[3px] transition-transform duration-[1600ms] ease-out motion-safe:group-hover:-translate-x-2" />
+        {/* golden bloom pooling along the horizon beneath the sun */}
+        <div className="absolute -bottom-1 right-1 h-9 w-28 rounded-[100%] bg-[radial-gradient(closest-side,_rgba(255,221,186,0.6),_rgba(255,221,186,0)_72%)] blur-[2px]" />
+        {/* a pair of birds, far off in the evening sky */}
+        <svg className="absolute left-8 top-2.5 w-7 text-foreground/25 transition-transform duration-[1600ms] ease-out motion-safe:group-hover:translate-x-1 motion-safe:group-hover:-translate-y-0.5" viewBox="0 0 28 9" fill="none" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round" aria-hidden="true">
+          <path d="M1 5 Q3 2.5 5 5 Q7 2.5 9 5" />
+          <path d="M16 6.5 Q17.6 4.6 19 6.5 Q20.4 4.6 22 6.5" />
+        </svg>
+        {/* setting sun — a luminous core bleeding into a wide warm bloom, rising on hover */}
+        <div className="absolute right-5 top-0 size-14 -translate-y-1 rounded-full bg-[radial-gradient(circle,_rgba(255,255,255,0.98)_0%,_rgba(255,250,242,0.7)_18%,_rgba(255,232,205,0.32)_42%,_rgba(255,232,205,0)_70%)] transition-transform duration-700 ease-out motion-safe:group-hover:-translate-y-2 motion-safe:group-hover:scale-110" />
+        {/* distant range — a pale haze ridge, atmospheric perspective at its faintest */}
+        <svg className="absolute inset-x-0 bottom-0 h-8 w-full origin-bottom text-foreground/8 transition-transform duration-[1400ms] ease-out motion-safe:group-hover:scale-[1.02]" viewBox="0 0 120 30" preserveAspectRatio="none" fill="currentColor" aria-hidden="true">
+          <path d="M0 30 20 18 38 24 58 14 78 22 98 13 120 20 120 30Z" />
+        </svg>
         {/* far range — hazy and pale, hung higher up the sky */}
-        <svg className="absolute inset-x-0 bottom-0 h-7 w-full text-foreground/15" viewBox="0 0 120 28" preserveAspectRatio="none" fill="currentColor" aria-hidden="true">
+        <svg className="absolute inset-x-0 bottom-0 h-7 w-full origin-bottom text-foreground/16 transition-transform duration-[1400ms] ease-out motion-safe:group-hover:scale-[1.05]" viewBox="0 0 120 28" preserveAspectRatio="none" fill="currentColor" aria-hidden="true">
           <path d="M0 28 16 14 30 20 50 9 68 18 88 8 104 16 120 11 120 28Z" />
         </svg>
         {/* near range — darker and lower, overlapping the far range to build depth */}
-        <svg className="absolute inset-x-0 bottom-0 h-5 w-full text-foreground/32" viewBox="0 0 120 22" preserveAspectRatio="none" fill="currentColor" aria-hidden="true">
+        <svg className="absolute inset-x-0 bottom-0 h-5 w-full origin-bottom text-foreground/34 transition-transform duration-[1400ms] ease-out motion-safe:group-hover:scale-[1.1]" viewBox="0 0 120 22" preserveAspectRatio="none" fill="currentColor" aria-hidden="true">
           <path d="M0 22 18 13 34 18 54 10 72 16 92 11 110 17 120 14 120 22Z" />
         </svg>
+        {/* photographic vignette — warm, soft, frames the scene */}
+        <div className="absolute inset-0 bg-[radial-gradient(120%_130%_at_50%_32%,_transparent_56%,_rgba(70,35,45,0.16)_100%)]" />
       </div>
       {/* video play button — a sonar ring pulses outward while hovered */}
       <span className="absolute inset-0 z-10 m-auto flex size-9 items-center justify-center rounded-full bg-white/95 text-primary shadow-md transition-transform duration-300 group-hover:scale-110">

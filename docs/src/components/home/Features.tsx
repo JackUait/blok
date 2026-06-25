@@ -949,8 +949,46 @@ const REDO_ARROW = (
 // happens. Plain undo/redo buttons couldn't show it.
 const UndoViz: React.FC = () => {
   const rootRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const edgeRef = useRef<HTMLSpanElement>(null);
   const [phase, setPhase] = useState<"idle" | "undo" | "redo">("idle");
   const reduce = useReducedMotion();
+
+  // Light the document's border with brand pink where the tile's glow blob
+  // touches it — the same blob-tracked radial reveal the other tiles use.
+  useEffect(() => {
+    if (reduce) return;
+    const card = cardRef.current;
+    const tile = card?.closest(".bento-tile");
+    if (!card || !tile) return;
+
+    const apply = (clientX: number | null, clientY: number | null) => {
+      const edge = edgeRef.current;
+      if (!edge) return;
+      if (clientX === null || clientY === null) {
+        edge.style.opacity = "0";
+        return;
+      }
+      const r = card.getBoundingClientRect();
+      const mask = `radial-gradient(${CHIP_GLOW_RADIUS}px circle at ${clientX - r.left}px ${clientY - r.top}px, #000 0%, transparent 62%)`;
+      edge.style.opacity = "1";
+      edge.style.maskImage = mask;
+      edge.style.webkitMaskImage = mask;
+    };
+
+    const onMove = (e: Event) => {
+      const pe = e as PointerEvent;
+      if (pe.pointerType === "mouse") apply(pe.clientX, pe.clientY);
+    };
+    const onLeave = () => apply(null, null);
+
+    tile.addEventListener("pointermove", onMove);
+    tile.addEventListener("pointerleave", onLeave);
+    return () => {
+      tile.removeEventListener("pointermove", onMove);
+      tile.removeEventListener("pointerleave", onLeave);
+    };
+  }, [reduce]);
 
   useEffect(() => {
     if (reduce) return;
@@ -982,7 +1020,13 @@ const UndoViz: React.FC = () => {
 
   return (
     <div ref={rootRef} aria-hidden="true" className="w-full">
-      <div className="relative w-full rounded-xl border border-border/60 bg-card px-3 pb-3 pt-7">
+      <div ref={cardRef} className="relative w-full rounded-xl border border-border/60 bg-card px-3 pb-3 pt-7">
+        {/* brand border revealed where the glow blob touches the document */}
+        <span
+          ref={edgeRef}
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-30 rounded-xl border-[1.5px] border-brand-from opacity-0 transition-opacity duration-200"
+        />
         {/* the co-edited line — both labelled cursors live in the same sentence */}
         <div className="flex h-3.5 items-center gap-1.5">
           <span className="h-1.5 w-6 rounded-full bg-foreground/12" />

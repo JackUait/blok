@@ -972,28 +972,87 @@ const SERVICES: Array<{ name: string; color: string; icon: React.ReactNode }> = 
       </g>
     ),
   },
+  {
+    name: "Vimeo",
+    color: "#17B5EA",
+    icon: <path fill="currentColor" d="M9.5 8.2v7.6L16 12z" />,
+  },
+  {
+    name: "Dribbble",
+    color: "#EA4C89",
+    icon: (
+      <g fill="none" stroke="currentColor" strokeWidth="1.6">
+        <circle cx="12" cy="12" r="8.2" />
+        <path d="M5.5 8.4c4 .6 9.6 2.3 12.9 6.5M4.5 13.3c5.2-1.5 10.5 0 13.5 4.3M9.1 4.4c3.1 4.2 5.1 9.5 5.7 15.3" />
+      </g>
+    ),
+  },
+  {
+    name: "Loom",
+    color: "#625DF5",
+    icon: (
+      <g fill="currentColor">
+        <circle cx="12" cy="7.4" r="2.1" />
+        <circle cx="8.1" cy="14" r="2.1" />
+        <circle cx="15.9" cy="14" r="2.1" />
+      </g>
+    ),
+  },
+  {
+    name: "Instagram",
+    color: "#E1306C",
+    icon: (
+      <g fill="none" stroke="currentColor" strokeWidth="1.7">
+        <rect x="5" y="5" width="14" height="14" rx="4.4" />
+        <circle cx="12" cy="12" r="3.3" />
+        <circle cx="16.3" cy="7.7" r="1.05" fill="currentColor" stroke="none" />
+      </g>
+    ),
+  },
 ];
 
+// A glossy app-icon tile: brand fill, a soft top sheen and a hairline ring give it
+// real depth rather than reading as a flat dot.
+const ServiceIcon: React.FC<{ service: (typeof SERVICES)[number] }> = ({ service }) => (
+  <span
+    className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[12px] text-white ring-1 ring-black/5 shadow-[0_3px_8px_-2px_rgba(0,0,0,0.22)]"
+    style={{ background: service.color }}
+  >
+    <span className="pointer-events-none absolute inset-0 bg-linear-to-b from-white/25 to-transparent" />
+    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" className="relative">
+      {service.icon}
+    </svg>
+  </span>
+);
+
+// Two rows of service icons drift in opposite directions on a seamless loop — an
+// endless stream of integrations that says "100+" far better than a static list.
+// Edges fade out; the marquee pauses on hover so a name can land.
+const EDGE_FADE = "linear-gradient(to right, transparent, #000 9%, #000 91%, transparent)";
+const ROW_A = SERVICES.slice(0, 7);
+const ROW_B = SERVICES.slice(7).concat(SERVICES.slice(0, 2));
+
 const EmbedsViz: React.FC = () => (
-  <div aria-hidden="true" className="flex w-full flex-wrap items-center gap-2">
-    {SERVICES.map((s, i) => (
-      <span
-        key={s.name}
-        className="flex size-9 shrink-0 items-center justify-center rounded-xl text-white shadow-sm transition-transform duration-300 ease-out group-hover:-translate-y-0.5"
-        style={{ background: s.color, transitionDelay: `${i * 35}ms` }}
-      >
-        <svg width="19" height="19" viewBox="0 0 24 24" aria-hidden="true">
-          {s.icon}
-        </svg>
-      </span>
-    ))}
-    {/* the long tail — what won't fit on screen */}
-    <span
-      className="flex h-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-brand-from via-brand-via to-brand-to px-3 text-[12px] font-bold tracking-tight text-white shadow-sm transition-transform duration-300 ease-out group-hover:-translate-y-0.5"
-      style={{ transitionDelay: `${SERVICES.length * 35}ms` }}
-    >
-      +90
-    </span>
+  <div
+    aria-hidden="true"
+    className="w-full overflow-hidden py-1"
+    style={{ maskImage: EDGE_FADE, WebkitMaskImage: EDGE_FADE }}
+  >
+    <div className="flex flex-col gap-3">
+      {[
+        { items: ROW_A, anim: "bento-marquee-l" },
+        { items: ROW_B, anim: "bento-marquee-r" },
+      ].map((row, r) => (
+        <div
+          key={r}
+          className={`flex w-max gap-3 ${row.anim} group-hover:[animation-play-state:paused]`}
+        >
+          {[...row.items, ...row.items].map((s, i) => (
+            <ServiceIcon key={`${s.name}-${i}`} service={s} />
+          ))}
+        </div>
+      ))}
+    </div>
   </div>
 );
 

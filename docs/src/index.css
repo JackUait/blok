@@ -1041,6 +1041,23 @@
   animation: bento-breathe 3.2s ease-in-out infinite;
 }
 
+/* Embeds marquee — two rows of service icons drift in opposite directions on a
+   seamless loop (the track holds two copies, so 50% is one full set). */
+@keyframes bento-marquee-l {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes bento-marquee-r {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
+}
+.bento-marquee-l {
+  animation: bento-marquee-l 24s linear infinite;
+}
+.bento-marquee-r {
+  animation: bento-marquee-r 28s linear infinite;
+}
+
 /* The brand-tinted table cell glows in and out. */
 @keyframes bento-cell {
   0%, 100% { opacity: 0.5; }
@@ -1079,13 +1096,14 @@
   animation: bento-shimmer 4.5s linear infinite;
 }
 
-/* The undo playhead walks the history track, stepping over each node. */
 @media (prefers-reduced-motion: reduce) {
   .bento-caret,
   .bento-breathe,
   .bento-cell,
   .bento-sheen::after,
-  .bento-shimmer {
+  .bento-shimmer,
+  .bento-marquee-l,
+  .bento-marquee-r {
     animation: none;
   }
 }

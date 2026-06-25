@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blok Angular Adapter E2E Test</title>
+  <script type="importmap">
+  {
+    "imports": {
+      "@angular/core": "/test/playwright/fixtures/vendor/angular/core.mjs",
+      "@angular/common": "/test/playwright/fixtures/vendor/angular/common.mjs",
+      "@angular/common/http": "/test/playwright/fixtures/vendor/angular/common-http.mjs",
+      "@angular/compiler": "/test/playwright/fixtures/vendor/angular/compiler.mjs",
+      "@angular/platform-browser": "/test/playwright/fixtures/vendor/angular/platform-browser.mjs",
+      "@angular/forms": "/test/playwright/fixtures/vendor/angular/forms.mjs",
+      "rxjs": "/test/playwright/fixtures/vendor/angular/rxjs.mjs",
+      "rxjs/operators": "/test/playwright/fixtures/vendor/angular/rxjs-operators.mjs",
+      "tslib": "/test/playwright/fixtures/vendor/angular/tslib.mjs",
+      "@jackuait/blok": "/dist/blok.mjs?_v=1",
+      "@jackuait/blok/tools": "/dist/tools.mjs?_v=1",
+      "@jackuait/blok-angular": "/dist/angular/fesm2022/jackuait-blok-angular.mjs?_v=1"
+    }
+  }
+  </script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    #editor-host { border: 1px solid #ccc; min-height: 200px; padding: 10px; margin: 10px 0; }
+    button { margin-right: 8px; padding: 4px 12px; }
+    #output { white-space: pre-wrap; background: #f5f5f5; padding: 10px; margin-top: 10px; font-family: monospace; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <app-root></app-root>
+
+  <script type="module">
+    // zone.js installs the global Zone — must load before bootstrap.
+    import '/test/playwright/fixtures/vendor/angular/zone.mjs';
+    // @angular/compiler enables the runtime JIT linker so the adapter's
+    // partial-Ivy FESM (ɵɵngDeclareComponent) and the app component finalize
+    // on first use.
+    import '@angular/compiler';
+    // The pre-compiled fixture app (decorators downleveled by esbuild).
+    import '/test/playwright/fixtures/vendor/angular/app.mjs';
+  </script>
+</body>
+</html>

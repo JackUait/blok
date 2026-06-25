@@ -928,26 +928,61 @@ const EmbedsViz: React.FC = () => (
   </div>
 );
 
-// A history track — three nodes, a playhead that walks between them and lights
-// each step, with the ⌘Z shortcut hovering above.
+// The two moves a newcomer needs to know, spelled out: a labelled Undo and Redo
+// row, each with its directional arrow and real keycaps. A soft ring pulses from
+// one to the other in turn (staggered animation-delay) so the pair reads as a
+// back-and-forth, not two unrelated buttons.
+const UNDO_STEPS = [
+  {
+    label: "Undo",
+    keys: ["⌘", "Z"],
+    nudge: "group-hover:-translate-x-0.5",
+    delay: "0s",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M9 14 4 9l5-5" />
+        <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H9" />
+      </svg>
+    ),
+  },
+  {
+    label: "Redo",
+    keys: ["⌘", "⇧", "Z"],
+    nudge: "group-hover:translate-x-0.5",
+    delay: "1.6s",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="m15 14 5-5-5-5" />
+        <path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H15" />
+      </svg>
+    ),
+  },
+];
+
 const UndoViz: React.FC = () => (
-  <div aria-hidden="true" className="flex w-full flex-col items-center gap-3.5 py-1">
-    <div className="flex items-center gap-1.5 rounded-full border border-border/60 bg-card px-2.5 py-1 font-mono text-[10px] text-muted-foreground shadow-sm">
-      <span>⌘Z</span>
-      <span className="text-foreground/20">·</span>
-      <span>⌘⇧Z</span>
-    </div>
-    <div className="relative h-3 w-full">
-      <span className="absolute inset-x-2 top-1/2 h-px -translate-y-1/2 bg-border" />
-      {[8, 50, 92].map((p) => (
-        <span
-          key={p}
-          className="absolute top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/20"
-          style={{ left: `${p}%` }}
-        />
-      ))}
-      <span className="bento-undo-head absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-linear-to-br from-brand-from to-brand-to shadow-[0_0_0_4px_color-mix(in_srgb,var(--primary)_15%,transparent)]" />
-    </div>
+  <div aria-hidden="true" className="flex w-full flex-col gap-2">
+    {UNDO_STEPS.map((s) => (
+      <div
+        key={s.label}
+        className="bento-step flex items-center gap-2.5 rounded-xl border border-border/60 bg-card px-3 py-2"
+        style={{ animationDelay: s.delay }}
+      >
+        <span className={`flex size-7 shrink-0 items-center justify-center rounded-lg bg-secondary text-primary transition-transform duration-300 ${s.nudge}`}>
+          {s.icon}
+        </span>
+        <span className="flex-1 text-[13px] font-semibold text-foreground">{s.label}</span>
+        <span className="flex items-center gap-1">
+          {s.keys.map((k, i) => (
+            <kbd
+              key={i}
+              className="min-w-[18px] rounded-[5px] border border-border/70 bg-secondary px-1 py-0.5 text-center font-mono text-[10px] font-medium text-muted-foreground shadow-[0_1px_0_var(--border)]"
+            >
+              {k}
+            </kbd>
+          ))}
+        </span>
+      </div>
+    ))}
   </div>
 );
 

@@ -1080,13 +1080,19 @@
 }
 
 /* The undo playhead walks the history track, stepping over each node. */
-@keyframes bento-undo {
-  0%, 10% { left: 8%; }
-  45%, 55% { left: 50%; }
-  90%, 100% { left: 92%; }
+/* Undo/redo rows take turns: a brand ring blooms then fades. The two rows share
+   this 3.2s cycle but offset by half (delay set inline), so one lights, then the
+   other — reading as a back-and-forth between the pair. */
+@keyframes bento-step {
+  0%, 8%, 42%, 100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 0%, transparent);
+  }
+  22% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
+  }
 }
-.bento-undo-head {
-  animation: bento-undo 4.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+.bento-step {
+  animation: bento-step 3.2s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1095,7 +1101,7 @@
   .bento-cell,
   .bento-sheen::after,
   .bento-shimmer,
-  .bento-undo-head {
+  .bento-step {
     animation: none;
   }
 }

@@ -1080,19 +1080,25 @@
 }
 
 /* The undo playhead walks the history track, stepping over each node. */
-/* Undo/redo rows take turns: a brand ring blooms then fades. The two rows share
-   this 3.2s cycle but offset by half (delay set inline), so one lights, then the
-   other — reading as a back-and-forth between the pair. */
-@keyframes bento-step {
-  0%, 8%, 42%, 100% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 0%, transparent);
-  }
-  22% {
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
-  }
+/* Conflict-free undo: Ana's word is typed, undone, then redone on a loop, while
+   Lee's word (no animation) never moves — two people's edits never collide. */
+@keyframes bento-coedit {
+  0%, 34% { transform: scaleX(1); }
+  48%, 64% { transform: scaleX(0); }
+  80%, 100% { transform: scaleX(1); }
 }
-.bento-step {
-  animation: bento-step 3.2s ease-in-out infinite;
+.bento-coedit {
+  transform-origin: left center;
+  animation: bento-coedit 4.8s ease-in-out infinite;
+}
+/* The ⌘Z badge flashes in the window where Ana's word is undone. */
+@keyframes bento-coedit-key {
+  0%, 40%, 72%, 100% { opacity: 0; transform: translateY(2px) scale(0.92); }
+  50%, 62% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.bento-coedit-key {
+  opacity: 0;
+  animation: bento-coedit-key 4.8s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1101,7 +1107,8 @@
   .bento-cell,
   .bento-sheen::after,
   .bento-shimmer,
-  .bento-step {
+  .bento-coedit,
+  .bento-coedit-key {
     animation: none;
   }
 }

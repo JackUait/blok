@@ -928,61 +928,53 @@ const EmbedsViz: React.FC = () => (
   </div>
 );
 
-// The two moves a newcomer needs to know, spelled out: a labelled Undo and Redo
-// row, each with its directional arrow and real keycaps. A soft ring pulses from
-// one to the other in turn (staggered animation-delay) so the pair reads as a
-// back-and-forth, not two unrelated buttons.
-const UNDO_STEPS = [
-  {
-    label: "Undo",
-    keys: ["⌘", "Z"],
-    nudge: "group-hover:-translate-x-0.5",
-    delay: "0s",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M9 14 4 9l5-5" />
-        <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H9" />
-      </svg>
-    ),
-  },
-  {
-    label: "Redo",
-    keys: ["⌘", "⇧", "Z"],
-    nudge: "group-hover:translate-x-0.5",
-    delay: "1.6s",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="m15 14 5-5-5-5" />
-        <path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H15" />
-      </svg>
-    ),
-  },
-];
-
+// "Conflict-free" is the whole point: two people edit the same line at once, and
+// undo reverts only your own change. So this is a live co-editing scene — Ana and
+// Lee both typing — where Ana's word is undone then redone on a loop (⌘Z flashing
+// in time) while Lee's word never moves. That collision-that-never-happens is the
+// feature; plain undo/redo buttons couldn't show it.
 const UndoViz: React.FC = () => (
-  <div aria-hidden="true" className="flex w-full flex-col gap-2">
-    {UNDO_STEPS.map((s) => (
-      <div
-        key={s.label}
-        className="bento-step flex items-center gap-2.5 rounded-xl border border-border/60 bg-card px-3 py-2"
-        style={{ animationDelay: s.delay }}
-      >
-        <span className={`flex size-7 shrink-0 items-center justify-center rounded-lg bg-secondary text-primary transition-transform duration-300 ${s.nudge}`}>
-          {s.icon}
+  <div aria-hidden="true" className="flex w-full flex-col gap-2.5">
+    {/* who's in the doc right now */}
+    <div className="flex items-center gap-3 text-[10px] font-medium text-muted-foreground">
+      <span className="flex items-center gap-1.5">
+        <span className="size-2 rounded-full bg-primary" />
+        Ana
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="size-2 rounded-full bg-indigo-500" />
+        Lee
+      </span>
+      <span className="ml-auto flex items-center gap-1 text-[9px] text-muted-foreground/70">
+        <span className="bento-caret size-1.5 rounded-full bg-emerald-500" />
+        editing live
+      </span>
+    </div>
+
+    {/* the shared document — both carets live in the same paragraph */}
+    <div className="relative flex flex-col gap-2 rounded-xl border border-border/60 bg-card px-3 py-2.5">
+      <span className="h-1.5 w-3/4 rounded-full bg-foreground/12" />
+      <div className="flex h-3.5 items-center gap-1.5">
+        <span className="h-1.5 w-5 rounded-full bg-foreground/12" />
+        {/* Ana's word — undone then redone on a loop, her caret riding the edge */}
+        <span className="relative flex h-3.5 items-center">
+          <span className="bento-coedit h-1.5 w-7 rounded-full bg-primary" />
+          <span className="bento-caret absolute -right-1 h-3.5 w-0.5 rounded-full bg-primary" />
         </span>
-        <span className="flex-1 text-[13px] font-semibold text-foreground">{s.label}</span>
-        <span className="flex items-center gap-1">
-          {s.keys.map((k, i) => (
-            <kbd
-              key={i}
-              className="min-w-[18px] rounded-[5px] border border-border/70 bg-secondary px-1 py-0.5 text-center font-mono text-[10px] font-medium text-muted-foreground shadow-[0_1px_0_var(--border)]"
-            >
-              {k}
-            </kbd>
-          ))}
+        <span className="h-1.5 w-4 rounded-full bg-foreground/12" />
+        {/* Lee's word — never budges, whatever Ana undoes */}
+        <span className="relative flex h-3.5 items-center">
+          <span className="h-1.5 w-5 rounded-full bg-indigo-500" />
+          <span className="bento-caret absolute -right-1 h-3.5 w-0.5 rounded-full bg-indigo-500" style={{ animationDelay: "0.5s" }} />
         </span>
       </div>
-    ))}
+      <span className="h-1.5 w-2/3 rounded-full bg-foreground/12" />
+
+      {/* ⌘Z flashes exactly when Ana's word is undone — undo is scoped to her */}
+      <span className="bento-coedit-key absolute -top-2.5 right-2 rounded-md border border-border/70 bg-card px-1.5 py-0.5 font-mono text-[8px] font-semibold text-primary shadow-sm">
+        ⌘Z
+      </span>
+    </div>
   </div>
 );
 

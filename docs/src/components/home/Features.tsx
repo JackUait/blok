@@ -976,6 +976,9 @@ const UndoViz: React.FC = () => {
   }, [reduce]);
 
   const undone = phase === "undo";
+  // While you undo, Lee keeps working: his word grows (caret advancing) on hover
+  // and settles back on leave — two people editing at once, no collision.
+  const typing = phase === "undo";
 
   return (
     <div ref={rootRef} aria-hidden="true" className="w-full">
@@ -1002,10 +1005,13 @@ const UndoViz: React.FC = () => {
             />
           </span>
           <span className="h-1.5 w-3 rounded-full bg-foreground/12" />
-          {/* Lee — never budges, whatever Ana undoes */}
+          {/* Lee — keeps typing while you undo; his text never collides with Ana's */}
           <span className="relative flex h-3.5 items-center">
             <CursorFlag name="Lee" className="bg-indigo-500" />
-            <span className="h-1.5 w-6 rounded-full bg-indigo-500" />
+            <span
+              className="h-1.5 rounded-full bg-indigo-500"
+              style={{ width: typing ? "2.75rem" : "1.5rem", transition: "width 620ms cubic-bezier(0.22,1,0.36,1)" }}
+            />
             <span className="bento-caret ml-0.5 h-3.5 w-0.5 rounded-full bg-indigo-500" style={{ animationDelay: "0.5s" }} />
           </span>
           <span className="h-1.5 flex-1 rounded-full bg-foreground/12" />

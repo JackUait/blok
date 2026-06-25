@@ -902,29 +902,98 @@ const TablesViz: React.FC = () => {
   );
 };
 
-// Two link-preview cards: a live embed favicon + an OpenGraph bookmark, with a
-// loading sheen sweeping across the skeleton rows.
-const EMBEDS = [
-  { tag: "▶", host: "youtube.com", w: "w-3/4" },
-  { tag: "✦", host: "figma.com", w: "w-2/3" },
+// A wall of recognisable services in their own brand colours — the variety is the
+// point ("100+"), where two grey rows couldn't be. Each tile lifts on a staggered
+// delay on hover, and a final "+90" chip stands in for the long tail.
+const SERVICES: Array<{ name: string; color: string; icon: React.ReactNode }> = [
+  {
+    name: "YouTube",
+    color: "#FF0000",
+    icon: <path fill="currentColor" d="M9.5 8.2v7.6L16 12z" />,
+  },
+  {
+    name: "Spotify",
+    color: "#1DB954",
+    icon: (
+      <g fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
+        <path d="M6.5 13.6c3.2-.9 7.4-.6 10.8 1.3" />
+        <path d="M6 10.6c4.1-1.1 9.2-.7 12.6 1.7" />
+        <path d="M5.6 7.7c5-1.2 10.8-.5 14.2 2.1" />
+      </g>
+    ),
+  },
+  {
+    name: "Figma",
+    color: "#F24E1E",
+    icon: (
+      <path
+        fill="currentColor"
+        d="M10 3a2.5 2.5 0 0 0 0 5h2V3h-2Zm4 0v5h2a2.5 2.5 0 0 0 0-5h-2Zm0 7a2.5 2.5 0 1 0 2.5 2.5A2.5 2.5 0 0 0 14 10Zm-4 0a2.5 2.5 0 0 0 0 5h2v-5h-2Zm0 7a2.5 2.5 0 1 0 2 1.25V17h-2Z"
+      />
+    ),
+  },
+  {
+    name: "X",
+    color: "#000000",
+    icon: <path stroke="currentColor" strokeWidth="2" strokeLinecap="round" d="M6.5 6.5l11 11M17.5 6.5l-11 11" />,
+  },
+  {
+    name: "GitHub",
+    color: "#24292F",
+    icon: (
+      <g fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="7" cy="6.5" r="2" />
+        <circle cx="7" cy="17.5" r="2" />
+        <circle cx="16.5" cy="7.5" r="2" />
+        <path d="M7 8.5v7M16.5 9.5c0 3.5-4.5 2.5-4.5 6" />
+      </g>
+    ),
+  },
+  {
+    name: "Maps",
+    color: "#1A73E8",
+    icon: <path fill="currentColor" fillRule="evenodd" d="M12 2a6 6 0 0 0-6 6c0 4.4 6 12 6 12s6-7.6 6-12a6 6 0 0 0-6-6Zm0 8.3A2.3 2.3 0 1 1 12 5.7a2.3 2.3 0 0 1 0 4.6Z" clipRule="evenodd" />,
+  },
+  {
+    name: "Twitch",
+    color: "#9146FF",
+    icon: <path fill="currentColor" d="M6 4 4.8 7v9.5H8V20l3.2-3.2h2.6L19 11.4V4Z" />,
+  },
+  {
+    name: "SoundCloud",
+    color: "#FF5500",
+    icon: (
+      <g fill="currentColor">
+        <rect x="5" y="11" width="1.6" height="5" rx=".8" />
+        <rect x="8" y="9" width="1.6" height="7" rx=".8" />
+        <rect x="11" y="7.5" width="1.6" height="8.5" rx=".8" />
+        <rect x="14" y="9.5" width="1.6" height="6.5" rx=".8" />
+        <rect x="17" y="11.5" width="1.6" height="4.5" rx=".8" />
+      </g>
+    ),
+  },
 ];
 
 const EmbedsViz: React.FC = () => (
-  <div aria-hidden="true" className="flex w-full flex-col gap-2">
-    {EMBEDS.map((e) => (
-      <div
-        key={e.host}
-        className="bento-sheen relative flex items-center gap-2.5 overflow-hidden rounded-xl border border-border/60 bg-card p-2 transition-transform duration-300 group-hover:translate-x-0.5"
+  <div aria-hidden="true" className="flex w-full flex-wrap items-center gap-2">
+    {SERVICES.map((s, i) => (
+      <span
+        key={s.name}
+        className="flex size-9 shrink-0 items-center justify-center rounded-xl text-white shadow-sm transition-transform duration-300 ease-out group-hover:-translate-y-0.5"
+        style={{ background: s.color, transitionDelay: `${i * 35}ms` }}
       >
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-brand-from via-brand-via to-brand-to text-[13px] text-white">
-          {e.tag}
-        </span>
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <span className={`h-1.5 rounded-full bg-foreground/15 ${e.w}`} />
-          <span className="font-mono text-[9px] text-muted-foreground">{e.host}</span>
-        </div>
-      </div>
+        <svg width="19" height="19" viewBox="0 0 24 24" aria-hidden="true">
+          {s.icon}
+        </svg>
+      </span>
     ))}
+    {/* the long tail — what won't fit on screen */}
+    <span
+      className="flex h-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-brand-from via-brand-via to-brand-to px-3 text-[12px] font-bold tracking-tight text-white shadow-sm transition-transform duration-300 ease-out group-hover:-translate-y-0.5"
+      style={{ transitionDelay: `${SERVICES.length * 35}ms` }}
+    >
+      +90
+    </span>
   </div>
 );
 

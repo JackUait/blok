@@ -39,7 +39,7 @@ const createHeaderOptions = (
   config,
   api: createMockAPI(),
   readOnly: false,
-  block: { id: 'test-block-id' } as never,
+  block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
 });
 
 /**
@@ -107,7 +107,7 @@ describe('Header Tool - Custom Configurations', () => {
         config: { defaultLevel: 3 },
         api: createMockAPI(),
         readOnly: false,
-        block: {} as never,
+        block: { dispatchChange: vi.fn() } as never,
       };
       const header = new Header(options);
       const element = header.render();
@@ -121,7 +121,7 @@ describe('Header Tool - Custom Configurations', () => {
         config: {},
         api: createMockAPI(),
         readOnly: false,
-        block: {} as never,
+        block: { dispatchChange: vi.fn() } as never,
       };
       const header = new Header(options);
       const element = header.render();
@@ -136,7 +136,7 @@ describe('Header Tool - Custom Configurations', () => {
         config: { levels: [1, 2], defaultLevel: 5 },
         api: createMockAPI(),
         readOnly: false,
-        block: {} as never,
+        block: { dispatchChange: vi.fn() } as never,
       };
       const header = new Header(options);
       const element = header.render();
@@ -279,7 +279,7 @@ describe('Header Tool - Custom Configurations', () => {
         },
         api: createMockAPI(),
         readOnly: false,
-        block: {} as never,
+        block: { dispatchChange: vi.fn() } as never,
       };
       const header = new Header(options);
       const element = header.render();
@@ -394,13 +394,38 @@ describe('Header Tool - Custom Configurations', () => {
           config: {},
           api: createMockAPI(),
           readOnly: true,
-          block: { id: 'test-block-id' } as never,
+          block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
         };
         const header = new Header(options);
         const wrapper = header.render();
         const heading = wrapper.querySelector(`[${TOGGLE_ATTR.toggleOpen}]`);
 
         expect(heading?.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
+      });
+
+      it('calls block.dispatchChange on collapse/expand so isOpen syncs to Yjs', () => {
+        // Regression: toggle-heading open state only mutates mutation-free
+        // containers and the ignored data-blok-toggle-open attribute, so the
+        // MutationObserver never fires. Without an explicit dispatchChange the
+        // new isOpen never reaches Yjs (no undo, no remote propagation).
+        const dispatchChange = vi.fn();
+        const options = createHeaderOptions({ text: 'Toggle', level: 2, isToggleable: true });
+
+        options.block = { id: 'test-block-id', dispatchChange } as never;
+
+        const header = new Header(options);
+
+        const element = header.render();
+
+        dispatchChange.mockClear();
+
+        header.collapse();
+        expect(header.save(element).isOpen).toBe(false);
+        expect(dispatchChange).toHaveBeenCalledTimes(1);
+
+        header.expand();
+        expect(header.save(element).isOpen).toBe(true);
+        expect(dispatchChange).toHaveBeenCalledTimes(2);
       });
 
       it('arrow element is outside the contenteditable heading (wrapper sibling)', () => {
@@ -430,7 +455,7 @@ describe('Header Tool - Custom Configurations', () => {
           config: {},
           api,
           readOnly: false,
-          block: { id: 'test-block-id' } as never,
+          block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
         });
         const wrapper = header.render();
         header.rendered();
@@ -449,7 +474,7 @@ describe('Header Tool - Custom Configurations', () => {
           config: {},
           api,
           readOnly: false,
-          block: { id: 'test-block-id' } as never,
+          block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
         });
         const wrapper = header.render();
         header.rendered();
@@ -531,7 +556,7 @@ describe('Header Tool - Custom Configurations', () => {
           config: {},
           api: mockAPI,
           readOnly: false,
-          block: { id: 'test-block-id' } as never,
+          block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
         };
 
         const header = new Header(options);
@@ -738,7 +763,7 @@ describe('Header Tool - Custom Configurations', () => {
           config: {},
           api: mockAPI,
           readOnly: false,
-          block: { id: 'test-block-id' } as never,
+          block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
         };
 
         const header = new Header(options);
@@ -987,7 +1012,7 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
       config: {},
       api: mockAPI,
       readOnly: false,
-      block: { id: 'test-block-id' } as never,
+      block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
     });
     const wrapper = header.render();
     header.rendered();
@@ -1036,7 +1061,7 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
       config: {},
       api: mockAPI,
       readOnly: false,
-      block: { id: 'test-block-id' } as never,
+      block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
     });
     const wrapper = header.render();
     header.rendered();
@@ -1076,7 +1101,7 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
       config: {},
       api: mockAPI,
       readOnly: true,
-      block: { id: 'test-block-id' } as never,
+      block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
     });
     const wrapper = header.render();
     header.rendered();
@@ -1173,7 +1198,7 @@ describe('Header Tool - setData() for undo/redo', () => {
       config: {},
       api,
       readOnly: false,
-      block: { id: 'test-block-id' } as never,
+      block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
     });
 
     const wrapper = header.render();

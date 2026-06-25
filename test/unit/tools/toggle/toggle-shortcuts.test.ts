@@ -48,7 +48,7 @@ const createToggleOptions = (
   config,
   api: createMockAPI(),
   readOnly: false,
-  block: { id: 'test-block-id' } as never,
+  block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
 });
 
 describe('ToggleItem shortcuts', () => {

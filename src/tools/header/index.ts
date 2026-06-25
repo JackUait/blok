@@ -7,6 +7,7 @@
  */
 import type {
   API,
+  BlockAPI,
   BlockTool,
   BlockToolConstructorOptions,
   BlockToolData,
@@ -175,6 +176,13 @@ export class Header implements BlockTool {
   private blockId?: string;
 
   /**
+   * Block instance — used to force a Yjs sync of `isOpen` on collapse/expand,
+   * since the open-state visuals all land in mutation-free/ignored DOM that
+   * the MutationObserver never reports.
+   */
+  private block?: BlockAPI;
+
+  /**
    * Render plugin's main Element and fill it with saved data
    *
    * @param options - constructor options
@@ -194,6 +202,7 @@ export class Header implements BlockTool {
 
     if (block) {
       this.blockId = block.id;
+      this.block = block;
     }
 
     if (!readOnly && this._data.isToggleable) {
@@ -367,6 +376,7 @@ export class Header implements BlockTool {
 
     this.updateChildrenVisibility();
     this.updateBodyPlaceholderVisibility();
+    this.syncOpenState();
   }
 
   /**
@@ -389,6 +399,7 @@ export class Header implements BlockTool {
 
     this.updateChildrenVisibility();
     this.updateBodyPlaceholderVisibility();
+    this.syncOpenState();
   }
 
   /**
@@ -899,6 +910,21 @@ export class Header implements BlockTool {
 
     this.updateChildrenVisibility();
     this.updateBodyPlaceholderVisibility();
+    this.syncOpenState();
+  }
+
+  /**
+   * Force a Yjs sync of the toggle-heading open state.
+   *
+   * Collapse/expand only mutates mutation-free child containers and the
+   * ignored `data-blok-toggle-open` attribute, so the MutationObserver never
+   * reports it. Without this dispatch the new `isOpen` would not reach Yjs —
+   * leaving it non-undoable and invisible to remote collaborators.
+   */
+  private syncOpenState(): void {
+    if (!this.readOnly) {
+      this.block?.dispatchChange();
+    }
   }
 
   /**

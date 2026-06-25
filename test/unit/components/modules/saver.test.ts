@@ -352,6 +352,45 @@ describe('Saver module', () => {
     expect(logSpy).toHaveBeenCalledWith('Block «paragraph» skipped because saved data is invalid');
   });
 
+  it('promotes a dangling-parent block to root in output WITHOUT mutating the live block', async () => {
+    // Regression: save() is a read path and must not mutate the live block
+    // model. The dangling-parentId repair previously did `block.parentId = null`
+    // on the live Block, diverging the in-memory model from the Yjs source of
+    // truth (the repair never reached Yjs, and a later observe could re-apply
+    // the stale value). The output must still promote the orphan to root.
+    vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+    vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+
+    const danglingBlock = createBlockMock({
+      id: 'orphan-1',
+      tool: 'paragraph',
+      data: { text: 'orphan' },
+      parentId: 'ghost-parent', // parent id not present in the blocks array
+    });
+
+    const rootBlock = createBlockMock({
+      id: 'root-1',
+      tool: 'paragraph',
+      data: { text: 'root' },
+    });
+
+    const { saver } = createSaver({
+      blocks: [danglingBlock.block, rootBlock.block],
+      toolSanitizeConfigs: { paragraph: {} },
+    });
+
+    const result = await saver.save();
+
+    // Output ships the orphan at root level — no dangling `parent` reference.
+    const orphanOut = result?.blocks.find(b => b.id === 'orphan-1');
+
+    expect(orphanOut).toBeDefined();
+    expect(orphanOut?.parent).toBeUndefined();
+
+    // The live block model is untouched by the (read-only) save.
+    expect(danglingBlock.block.parentId).toBe('ghost-parent');
+  });
+
   it('preserves image blocks inside table cells when they have parentId', async () => {
     vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
 
@@ -794,7 +833,7 @@ describe('Saver module', () => {
       vi.unstubAllEnvs();
     });
 
-    it('clears dangling parentId and promotes orphan to root without throwing', async () => {
+    it('promotes orphan to root in output without throwing and without mutating the live block', async () => {
       vi.stubEnv('NODE_ENV', 'test');
       vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
       const logLabeledSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
@@ -821,7 +860,7 @@ describe('Saver module', () => {
       const result = await saver.save();
 
       // Save must succeed — no hierarchy violation should be thrown because
-      // the repair pass cleared the dangling ref before validation ran.
+      // the orphan is treated as root for output purposes before validation.
       expect(saver.getLastSaveError()).toBeUndefined();
       expect(result).toBeDefined();
 
@@ -832,43 +871,46 @@ describe('Saver module', () => {
 
       const outputB = result?.blocks.find(b => b.id === 'B');
 
-      // B must NOT carry a parent field — it was promoted to root
+      // B must NOT carry a parent field — it was promoted to root in OUTPUT
       expect(outputB).toBeDefined();
       expect(outputB).not.toHaveProperty('parent');
 
-      // The repair must have logged exactly one warning about the cleared ref
+      // save() is read-only: the live block's parentId must be left untouched
+      // (mutating it diverges the in-memory model from the Yjs source of truth).
+      expect(orphanB.block.parentId).toBe('missing-block-id');
+
+      // The save still logs one warning about the dangling ref it routed around
       expect(logLabeledSpy).toHaveBeenCalledWith(
-        expect.stringMatching(/cleared dangling parentId missing-block-id on block B/),
+        expect.stringMatching(/dangling parentId missing-block-id on block B/),
         'warn'
       );
     });
   });
 
   describe('hierarchy drift assertion gate (NODE_ENV)', () => {
-    // The dangling-parentId repair pass runs before validation, so the old
-    // "orphan points at ghost parent" fixture no longer reaches the gate — it
-    // is repaired pre-validation and the orphan is promoted to root-level.
-    // To still exercise the NODE_ENV gate, these tests induce drift AFTER the
-    // repair pass by mutating block.parentId inside block.save() — which runs
-    // later in doSave's Promise.all step, after repair has already executed.
-    // This simulates a regression where some late mutation path re-introduces
-    // a dangling reference between repair and makeOutput.
+    // The dangling-parentId handling promotes any orphan to root in OUTPUT, so
+    // a parent referencing a non-existent id can never reach the gate. To still
+    // exercise the NODE_ENV gate, induce a STRUCTURAL drift the repair does not
+    // cover: an invalid parent with no parentId of its own is dropped from
+    // output by makeOutput (invalid + no parent → skipped), orphaning its valid
+    // child whose `parent` now points at a block missing from the output —
+    // exactly the child-parent-missing violation validateHierarchy catches.
     const driftingBlocks = (): Block[] => {
-      const orphan = createBlockMock({
+      const droppedParent = createBlockMock({
+        id: 'ghost-parent',
+        tool: 'paragraph',
+        data: { text: '' },
+        isValid: false, // invalid + no parentId → skipped by makeOutput
+      });
+
+      const child = createBlockMock({
         id: 'orphan-child',
         tool: 'paragraph',
         data: { text: 'ejected from nowhere' },
+        parentId: 'ghost-parent', // resolves at snapshot, but parent is dropped
       });
 
-      // Rewire save() so it flips parentId to a ghost id at save time — this
-      // happens AFTER the repair pass, so drift reaches makeOutput intact.
-      orphan.saveMock.mockImplementation(() => {
-        (orphan.block as { parentId: string | null }).parentId = 'ghost-parent';
-
-        return Promise.resolve(orphan.savedData);
-      });
-
-      return [orphan.block];
+      return [droppedParent.block, child.block];
     };
 
     afterEach(() => {

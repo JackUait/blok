@@ -375,20 +375,17 @@ export class DragOperations {
     const firstBlockIndex = this.blockManager.getBlockIndex(firstBlock);
     const movingDown = insertIndex > firstBlockIndex;
 
-    // For multi-block moves, group them as a single undo entry using transactMoves
-    const isMultiBlockMove = sortedBlocks.length > 1;
-    const executeMoves = (): void => {
-      if (movingDown) {
-        this.moveBlocksDown(blocksToMove, insertIndex);
-      } else {
-        this.moveBlocksUp(blocksToMove, insertIndex);
-      }
-    };
-
-    if (isMultiBlockMove && this.yjsManager) {
-      this.yjsManager.transactMoves(executeMoves);
+    // Execute the array moves directly. Do NOT open a transactMoves group here:
+    // the sole caller, DragController.handleDrop, already wraps the entire drop
+    // (these moves AND the subsequent setBlockParent reparent loop) in one
+    // transactMoves. A nested group would close YjsManager.isMoveGroupActive in
+    // its finally before that reparent loop runs, routing setBlockParent onto a
+    // separate Y.UndoManager entry and splitting a drag-reparent into a
+    // two-step undo. Grouping is the caller's responsibility.
+    if (movingDown) {
+      this.moveBlocksDown(blocksToMove, insertIndex);
     } else {
-      executeMoves();
+      this.moveBlocksUp(blocksToMove, insertIndex);
     }
 
     // Clear selection first, then re-select all moved blocks

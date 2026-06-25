@@ -327,6 +327,94 @@ describe('column resizer keyboard resize + aria', () => {
   });
 });
 
+describe('column resize persists widthRatio to Yjs (dispatchChange)', () => {
+  // The resizer mutates each column holder's flex-grow directly. The holder
+  // lives OUTSIDE the column tool's observed subtree, so the MutationObserver
+  // never fires — the new width must be flushed to Yjs explicitly via the
+  // column block's dispatchChange (Column.save reads flex-grow back). Without
+  // this the resize is not undoable and not propagated to collaborators.
+  const stubWidth = (el: HTMLElement, width: number): void => {
+    Object.defineProperty(el, 'getBoundingClientRect', {
+      configurable: true,
+      value: () =>
+        ({ width, height: 10, top: 0, left: 0, right: width, bottom: 10, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect,
+    });
+  };
+
+  const buildWithColumns = (): {
+    resizer: HTMLElement;
+    left: HTMLElement;
+    right: HTMLElement;
+    columns: Array<{ id: string; holder: HTMLElement; dispatchChange: ReturnType<typeof vi.fn> }>;
+  } => {
+    const left = document.createElement('div');
+    const right = document.createElement('div');
+
+    left.style.flexGrow = '1';
+    right.style.flexGrow = '1';
+    stubWidth(left, 200);
+    stubWidth(right, 200);
+
+    // jsdom does not implement pointer capture — stub so the drag handlers run.
+    const noop = (): void => {};
+
+    const container = document.createElement('div');
+
+    container.append(left, right);
+
+    const columns = [left, right].map((holder, i) => ({
+      id: `c${i}`,
+      holder,
+      dispatchChange: vi.fn(),
+    }));
+    const getChildren = vi.fn().mockReturnValue(columns);
+    const i18n = { t: vi.fn().mockReturnValue('Resize columns') };
+    const api = { blocks: { getChildren }, i18n } as unknown as API;
+
+    buildColumnResizers(container, [left, right], false, api, 'cl-1');
+
+    const resizer = container.querySelector(`[${COLUMN_RESIZER_ATTR}]`);
+
+    if (!(resizer instanceof HTMLElement)) {
+      throw new Error('resizer not built');
+    }
+
+    Object.defineProperty(resizer, 'setPointerCapture', { configurable: true, value: noop });
+    Object.defineProperty(resizer, 'releasePointerCapture', { configurable: true, value: noop });
+
+    return { resizer, left, right, columns };
+  };
+
+  it('flushes both columns to Yjs when a keyboard resize commits', () => {
+    const { resizer, columns } = buildWithColumns();
+
+    resizer.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+
+    expect(columns[0].dispatchChange).toHaveBeenCalledTimes(1);
+    expect(columns[1].dispatchChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT flush on a no-op keyboard key', () => {
+    const { resizer, columns } = buildWithColumns();
+
+    resizer.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+
+    expect(columns[0].dispatchChange).not.toHaveBeenCalled();
+    expect(columns[1].dispatchChange).not.toHaveBeenCalled();
+  });
+
+  it('flushes both columns to Yjs when a pointer drag-resize ends', () => {
+    const { resizer, columns } = buildWithColumns();
+
+    resizer.dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX: 100, bubbles: true }));
+    resizer.dispatchEvent(new PointerEvent('pointermove', { clientX: 140, bubbles: true }));
+    resizer.dispatchEvent(new PointerEvent('pointerup', { clientX: 140, bubbles: true }));
+
+    expect(columns[0].dispatchChange).toHaveBeenCalledTimes(1);
+    expect(columns[1].dispatchChange).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('column resizer dblclick equalizes widths', () => {
   const makeHolder = (grow: string): HTMLElement => {
     const el = document.createElement('div');
@@ -343,7 +431,7 @@ describe('column resizer dblclick equalizes widths', () => {
 
     container.append(left, right);
 
-    const columns = [left, right].map((holder, i) => ({ id: `c${i}`, holder }));
+    const columns = [left, right].map((holder, i) => ({ id: `c${i}`, holder, dispatchChange: vi.fn() }));
     const getChildren = vi.fn().mockReturnValue(columns);
     const i18n = { t: vi.fn().mockReturnValue('Resize columns') };
     const api = { blocks: { getChildren }, i18n } as unknown as API;

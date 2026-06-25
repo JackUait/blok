@@ -127,10 +127,23 @@ export class Saver extends Module {
      */
     const blockIds = new Set(blocks.map(b => b.id));
 
+    /**
+     * Compute an EFFECTIVE parentId per block WITHOUT mutating the live model.
+     *
+     * save() is a read path — mutating `block.parentId` here diverges the
+     * in-memory model from the Yjs source of truth (the repair never reaches
+     * Yjs, and a later observe could re-apply the stale value) and makes save()
+     * non-idempotent. So a block whose parentId dangles (points at an id not in
+     * the live array) is treated as root-level for output purposes ONLY, via
+     * this map; the live `block.parentId` is left untouched.
+     */
+    const effectiveParentId = new Map<string, string | null>();
     for (const block of blocks) {
       if (block.parentId !== null && !blockIds.has(block.parentId)) {
-        logLabeled(`Saver: cleared dangling parentId ${block.parentId} on block ${block.id}`, 'warn');
-        block.parentId = null;
+        logLabeled(`Saver: treating dangling parentId ${block.parentId} on block ${block.id} as root in output`, 'warn');
+        effectiveParentId.set(block.id, null);
+      } else {
+        effectiveParentId.set(block.id, block.parentId);
       }
     }
 
@@ -148,19 +161,25 @@ export class Saver extends Module {
      */
     const childrenByParent = new Map<string, string[]>();
     for (const block of blocks) {
-      if (block.parentId === null) {
+      const parentId = effectiveParentId.get(block.id) ?? null;
+
+      if (parentId === null) {
         continue;
       }
-      const siblings = childrenByParent.get(block.parentId);
+      const siblings = childrenByParent.get(parentId);
       if (siblings === undefined) {
-        childrenByParent.set(block.parentId, [block.id]);
+        childrenByParent.set(parentId, [block.id]);
       } else {
         siblings.push(block.id);
       }
     }
 
     const chainData: Array<Promise<SaverValidatedData>> = blocks.map((block: Block) => {
-      return this.getSavedData(block, childrenByParent.get(block.id) ?? []);
+      return this.getSavedData(
+        block,
+        childrenByParent.get(block.id) ?? [],
+        effectiveParentId.get(block.id) ?? null
+      );
     });
 
     this.lastSaveError = undefined;
@@ -197,8 +216,14 @@ export class Saver extends Module {
    * @param block - block to save
    * @param derivedContentIds - content ids computed from live children's parentId
    *        (source of truth, see doSave for rationale)
+   * @param effectiveParentId - parentId to emit in output; a dangling parent is
+   *        passed as null so the orphan ships at root WITHOUT mutating the block
    */
-  private async getSavedData(block: Block, derivedContentIds: string[]): Promise<SaverValidatedData> {
+  private async getSavedData(
+    block: Block,
+    derivedContentIds: string[],
+    effectiveParentId: string | null
+  ): Promise<SaverValidatedData> {
     const blockData = await block.save();
     const toolName = block.name;
     const normalizedData = blockData?.data !== undefined
@@ -217,7 +242,7 @@ export class Saver extends Module {
     return {
       ...normalizedData,
       isValid,
-      parentId: block.parentId,
+      parentId: effectiveParentId,
       contentIds: derivedContentIds,
       lastEditedAt: block.lastEditedAt,
       lastEditedBy: block.lastEditedBy,

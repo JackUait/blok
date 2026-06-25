@@ -7,6 +7,7 @@
 
 import type {
   API,
+  BlockAPI,
   BlockTool,
   BlockToolConstructorOptions,
   ToolboxConfig,
@@ -45,6 +46,8 @@ export class ToggleItem implements BlockTool {
 
   private blockId?: string;
 
+  private block?: BlockAPI;
+
   constructor({ data, config, api, readOnly, block }: BlockToolConstructorOptions<ToggleItemData, ToggleItemConfig>) {
     this.api = api;
     this.readOnly = readOnly;
@@ -54,6 +57,7 @@ export class ToggleItem implements BlockTool {
 
     if (block) {
       this.blockId = block.id;
+      this.block = block;
     }
 
     if (!readOnly) {
@@ -296,6 +300,8 @@ export class ToggleItem implements BlockTool {
   }
 
   private setOpenState(open: boolean): void {
+    const changed = this._isOpen !== open;
+
     this._isOpen = open;
 
     if (this._arrowElement && this._element) {
@@ -307,6 +313,14 @@ export class ToggleItem implements BlockTool {
 
     this.updateChildrenVisibility();
     this.updateBodyPlaceholderVisibility();
+
+    // The visual updates above all land in mutation-free subtrees and on the
+    // ignored `data-blok-toggle-open` attribute, so the MutationObserver never
+    // fires for an open/close. Dispatch explicitly so the new `isOpen` reaches
+    // Yjs — making it undoable and visible to remote collaborators.
+    if (changed && !this.readOnly) {
+      this.block?.dispatchChange();
+    }
   }
 
   private toggleOpen(): void {

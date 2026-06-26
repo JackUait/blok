@@ -148,6 +148,7 @@ const createMockDependencies = (): BlockOperationsDependencies => {
       transact: vi.fn((fn: () => void) => fn()),
       toJSON: vi.fn(() => []),
       getBlockById: vi.fn(() => undefined),
+      getBlockDataObject: vi.fn(() => undefined),
       onBlocksChanged: vi.fn(() => vi.fn()),
       fromJSON: vi.fn(),
     } as unknown as YjsManager,

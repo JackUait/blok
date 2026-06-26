@@ -5,6 +5,8 @@ import { announce } from '../../utils/announcer';
 import { hide as hideTooltip } from '../../utils/tooltip';
 
 import { addColumnToList, wrapInNewColumnList } from '../../../tools/column-drop';
+import { INDENT_PER_LEVEL } from '../../../tools/list/constants';
+import { LIST_TEST_IDS } from '../../../tools/list/dom-builder';
 import { DragA11y } from './a11y/DragA11y';
 import { DragOperations } from './operations/DragOperations';
 import { DragPreview } from './preview/DragPreview';
@@ -19,6 +21,7 @@ import { ToggleSpringLoader } from './utils/ToggleSpringLoader';
 import { hasPassedThreshold } from './utils/drag.constants';
 import { findScrollableAncestor } from './utils/findScrollableAncestor';
 import { ListItemDescendants } from './utils/ListItemDescendants';
+import { getListItemDepth } from './utils/depthUtils';
 
 interface BoundHandlers {
   onMouseMove: (e: MouseEvent) => void;
@@ -412,7 +415,7 @@ export class DragController extends Module {
     // full editor width (gutters included), so without these offsets the
     // top/bottom reorder line stretches across the whole screen and the side
     // bars land out in the margins. Applies to every edge.
-    this.applyContentIndicatorOffsets(dropTarget.block);
+    this.applyContentIndicatorOffsets(dropTarget.block, dropTarget.edge, dropTarget.depth);
 
     // For a column side-drop, stretch the vertical indicator bar to the full
     // height of the column row, not just the single target block.
@@ -436,7 +439,11 @@ export class DragController extends Module {
    *
    * @param block - The drop target block
    */
-  private applyContentIndicatorOffsets(block: Block): void {
+  private applyContentIndicatorOffsets(
+    block: Block,
+    edge: 'top' | 'bottom' | 'left' | 'right',
+    depth: number
+  ): void {
     const content = block.holder.querySelector('[data-blok-element-content]');
 
     if (!(content instanceof HTMLElement)) {
@@ -448,6 +455,67 @@ export class DragController extends Module {
 
     block.holder.style.setProperty('--drop-indicator-side-left', `${contentRect.left - holderRect.left}px`);
     block.holder.style.setProperty('--drop-indicator-side-right', `${holderRect.right - contentRect.right}px`);
+
+    // For a list item reorder (top/bottom line), tuck the indicator under the
+    // text: start it where the text begins (past the bullet/number marker) and
+    // cut it where the text ends, rather than running across the full content
+    // width. Side drops (columns) keep the content-box offsets above.
+    if (edge === 'top' || edge === 'bottom') {
+      this.applyListItemTextOffsets(block, holderRect, depth);
+    }
+  }
+
+  /**
+   * Aligns the horizontal drop indicator with a list item's rendered text:
+   * `--drop-indicator-side-left` to the text start (after the marker, at the
+   * predicted nesting depth) and `--drop-indicator-side-right` to the text end.
+   * The full indent is baked into the left offset, so `--drop-indicator-depth`
+   * is zeroed to cancel the CSS depth multiplier. No-op for non-list blocks.
+   *
+   * @param block - The drop target block
+   * @param holderRect - The block holder's bounding rect (already measured)
+   * @param predictedDepth - The depth the dropped item will land at
+   */
+  private applyListItemTextOffsets(block: Block, holderRect: DOMRect, predictedDepth: number): void {
+    const container = block.holder.querySelector(
+      `[data-blok-testid="${LIST_TEST_IDS.contentContainer}"], [data-blok-testid="${LIST_TEST_IDS.checklistContent}"]`
+    );
+
+    if (!(container instanceof HTMLElement)) {
+      return;
+    }
+
+    const containerRect = container.getBoundingClientRect();
+
+    // When the item will nest deeper than its current depth, shift the line
+    // right by the extra indentation so it previews the post-drop position.
+    const targetDepth = getListItemDepth(block) ?? 0;
+    const depthShift = Math.max(0, predictedDepth - targetDepth) * INDENT_PER_LEVEL;
+
+    const textRight = this.measureTextRight(container) ?? containerRect.right;
+    const left = containerRect.left - holderRect.left + depthShift;
+    const right = Math.max(0, holderRect.right - textRight);
+
+    block.holder.style.setProperty('--drop-indicator-side-left', `${left}px`);
+    block.holder.style.setProperty('--drop-indicator-side-right', `${right}px`);
+    block.holder.style.setProperty('--drop-indicator-depth', '0');
+  }
+
+  /**
+   * Returns the x-coordinate where the rendered text inside a container ends, by
+   * measuring its content range. Returns null when the range has no measurable
+   * width (empty text, or environments without layout) so callers can fall back
+   * to the container edge.
+   *
+   * @param container - The contenteditable text container of a list item
+   */
+  private measureTextRight(container: HTMLElement): number | null {
+    const range = document.createRange();
+
+    range.selectNodeContents(container);
+    const rect = range.getBoundingClientRect();
+
+    return rect.width > 0 ? rect.right : null;
   }
 
   /**

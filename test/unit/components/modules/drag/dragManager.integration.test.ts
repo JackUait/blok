@@ -316,6 +316,102 @@ describe("DragManager - Component Integration", () => {
     });
   });
 
+  describe("List item drop indicator alignment", () => {
+    it("anchors the drop line under a list item's text (start past marker, cut at text end)", () => {
+      const { dragManager, blocks, wrapper } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      blocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      // Turn block-4 into a list item with a text content container.
+      const targetBlock = blocks[3];
+      targetBlock.holder.setAttribute("data-list-depth", "0");
+
+      const itemContent = targetBlock.holder.querySelector(
+        "[data-blok-element-content]",
+      ) as HTMLElement;
+      const container = document.createElement("div");
+      container.setAttribute("data-blok-testid", "list-content-container");
+      container.textContent = "Fifth item";
+      itemContent.appendChild(container);
+
+      // Holder spans the full content width (0..300). The text content starts at
+      // 40 (past the bullet marker) and the container stretches to 280.
+      (targetBlock.holder.getBoundingClientRect as Mock).mockReturnValue({
+        top: 200,
+        bottom: 250,
+        left: 0,
+        right: 300,
+        width: 300,
+        height: 50,
+        x: 0,
+        y: 200,
+        toJSON: () => ({}),
+      });
+      container.getBoundingClientRect = vi.fn(() => ({
+        top: 200,
+        bottom: 250,
+        left: 40,
+        right: 280,
+        width: 240,
+        height: 50,
+        x: 40,
+        y: 200,
+        toJSON: () => ({}),
+      }));
+
+      // The rendered text ends at x=120 (shorter than the flex container).
+      const realCreateRange = document.createRange.bind(document);
+      vi.spyOn(document, "createRange").mockImplementation(() => {
+        const range = realCreateRange();
+        range.getBoundingClientRect = () =>
+          ({
+            top: 200,
+            bottom: 218,
+            left: 40,
+            right: 120,
+            width: 80,
+            height: 18,
+            x: 40,
+            y: 200,
+            toJSON: () => ({}),
+          }) as DOMRect;
+        return range;
+      });
+
+      const dragHandle = document.createElement("div");
+      dragManager.setupDragHandle(dragHandle, blocks[0]);
+      dragHandle.dispatchEvent(
+        createMouseEvent("mousedown", { clientX: 100, clientY: 100 }),
+      );
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 110, clientY: 100 }),
+      );
+
+      vi.mocked(document.elementFromPoint).mockReturnValue(targetBlock.holder);
+      // Bottom half of the target -> drop below it.
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 50, clientY: 240 }),
+      );
+
+      expect(targetBlock.holder).toHaveAttribute("data-drop-indicator");
+      // Line starts where the text starts (after the bullet marker).
+      expect(
+        targetBlock.holder.style.getPropertyValue("--drop-indicator-side-left"),
+      ).toBe("40px");
+      // Line ends where the text ends: 300 (holder right) - 120 (text right).
+      expect(
+        targetBlock.holder.style.getPropertyValue("--drop-indicator-side-right"),
+      ).toBe("180px");
+      // Indentation is baked into side-left, so the CSS depth multiplier is off.
+      expect(
+        targetBlock.holder.style.getPropertyValue("--drop-indicator-depth"),
+      ).toBe("0");
+
+      document.dispatchEvent(createMouseEvent("mouseup"));
+    });
+  });
+
   describe("DragStateMachine + DragOperations integration", () => {
     it("should not execute operation when state machine is cancelled", () => {
       const { dragManager, blocks, wrapper, modules } = createDragManager();

@@ -282,9 +282,13 @@ export class YjsManager extends Module {
   /**
    * Mark the caret position before a change starts.
    * Call this before any operation that might be undoable.
+   * @param force - When true, re-capture even if a pending snapshot exists.
+   *   Pass this from keyboard gesture handlers so a stale pending left by a
+   *   prior operation cannot become this gesture's caret-before. See
+   *   {@link UndoHistory.markCaretBeforeChange}.
    */
-  public markCaretBeforeChange(): void {
-    this.undoHistory.markCaretBeforeChange();
+  public markCaretBeforeChange(force = false): void {
+    this.undoHistory.markCaretBeforeChange(force);
   }
 
   /**

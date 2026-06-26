@@ -561,28 +561,52 @@ export class UndoHistory {
 
     const { BlockManager } = this.blok;
 
-    // If currentBlock is not set (e.g., debounced selectionchange hasn't fired yet
-    // for nested blocks like table cell paragraphs), resolve it from the selection.
-    const currentBlock = BlockManager.currentBlock ?? (() => {
-      const anchorNode = window.getSelection()?.anchorNode;
+    // Prefer the block the caret is *actually* in (the live DOM selection) over
+    // `BlockManager.currentBlock`. The latter is updated by a debounced (180ms)
+    // selectionchange handler, so it can lag behind the real caret — e.g. when
+    // the caret just moved into another block and an undoable change fires before
+    // the debounce. Trusting the stale block records a snapshot whose blockId
+    // belongs to one block while the offset is read from another, sending the
+    // caret to the wrong block on undo/redo.
+    //
+    // Resolution must stay side-effect free: this runs inside the Yjs
+    // `stack-item-added` / `stack-item-updated` listeners (mid-transaction), so
+    // it uses the read-only `getBlockByChildNode` rather than
+    // `setCurrentBlockByChildNode`, which would mutate `currentBlockIndex` and
+    // corrupt in-flight merge/undo operations.
+    //
+    // Fall back to currentBlock when there is no in-block selection (e.g. focus
+    // is on a toolbar control, or selectionchange hasn't set it yet for nested
+    // blocks like table cell paragraphs).
+    const anchorNode = window.getSelection()?.anchorNode ?? null;
+    const selectionBlock = anchorNode !== null
+      ? BlockManager.getBlockByChildNode(anchorNode)
+      : undefined;
 
-      if (anchorNode !== null && anchorNode !== undefined) {
-        return BlockManager.setCurrentBlockByChildNode(anchorNode);
-      }
-
-      return undefined;
-    })();
+    const currentBlock = selectionBlock ?? BlockManager.currentBlock;
 
     if (currentBlock === undefined) {
       return null;
     }
 
-    const currentInput = currentBlock.currentInput;
-    const offset = currentInput !== undefined ? getCaretOffset(currentInput) : 0;
+    // When the snapshot comes from the live selection, derive the input + offset
+    // from that same selection so the inputIndex/offset stay consistent with the
+    // block id (a multi-input block records the input the caret is actually in).
+    // Otherwise fall back to the block's tracked current input.
+    const selectedIndex = selectionBlock !== undefined && anchorNode !== null
+      ? currentBlock.inputs.findIndex(
+        candidate => candidate === anchorNode || candidate.contains(anchorNode)
+      )
+      : -1;
+
+    const inputIndex = selectedIndex !== -1 ? selectedIndex : currentBlock.currentInputIndex;
+    const input = selectedIndex !== -1 ? currentBlock.inputs[selectedIndex] : currentBlock.currentInput;
+
+    const offset = input !== undefined ? getCaretOffset(input) : 0;
 
     return {
       blockId: currentBlock.id,
-      inputIndex: currentBlock.currentInputIndex,
+      inputIndex,
       offset,
     };
   }
@@ -590,10 +614,23 @@ export class UndoHistory {
   /**
    * Mark the caret position before a change starts.
    * Call this before any operation that might be undoable.
-   * Only captures on first call; subsequent calls are ignored until reset.
+   *
+   * By default only the first call captures; subsequent calls are ignored until
+   * the pending state is reset (when a change is recorded). This dedupes the
+   * keydown + beforeinput pair for one keystroke and, crucially, prevents a
+   * change's own follow-up writes (e.g. the deferred `syncBlockDataToYjs` after
+   * an Enter split) from overwriting the genuine pre-change caret with the
+   * post-change one.
+   *
+   * @param force - When true, always (re)capture, discarding any existing
+   *   pending snapshot. Pass this from keyboard gesture handlers (keydown /
+   *   beforeinput): a new gesture means the caret-before is the caret *now*, so
+   *   a stale pending left dangling by a prior operation's no-op follow-up write
+   *   must not survive into this one. Without it, the caret would restore to that
+   *   stale position (e.g. the start of the wrong block) on undo.
    */
-  public markCaretBeforeChange(): void {
-    if (this.hasPendingCaret) {
+  public markCaretBeforeChange(force = false): void {
+    if (this.hasPendingCaret && !force) {
       return;
     }
 

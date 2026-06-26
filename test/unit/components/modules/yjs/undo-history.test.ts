@@ -8,6 +8,7 @@ const createMockBlok = (): BlokModules => {
   const blockManager = {
     currentBlock: undefined,
     getBlockById: vi.fn(),
+    getBlockByChildNode: vi.fn(),
     firstBlock: undefined,
   };
 
@@ -172,6 +173,50 @@ describe('UndoHistory', () => {
       expect(snapshot?.blockId).toBe('b1');
     });
 
+    it('captures the block from the live selection when currentBlock is stale', () => {
+      // `BlockManager.currentBlock` is updated by a debounced selectionchange
+      // handler (180ms), so it can lag behind the real caret. If we trust it
+      // blindly, the snapshot records the wrong block id while reading the
+      // offset from the live selection — undo/redo then sends the caret to the
+      // wrong block. The snapshot must reflect the block the caret is actually in.
+      const staleBlock = {
+        id: 'stale-block',
+        currentInputIndex: 0,
+        currentInput: document.createElement('div'),
+        inputs: [document.createElement('div')],
+      };
+
+      const liveInput = document.createElement('div');
+
+      liveInput.setAttribute('contenteditable', 'true');
+      const liveTextNode = document.createTextNode('live block text');
+
+      liveInput.appendChild(liveTextNode);
+      const liveBlock = {
+        id: 'live-block',
+        currentInputIndex: 0,
+        currentInput: liveInput,
+        inputs: [liveInput],
+      };
+
+      (blok.BlockManager as unknown as { currentBlock: typeof staleBlock }).currentBlock = staleBlock;
+      (blok.BlockManager as unknown as { getBlockByChildNode: ReturnType<typeof vi.fn> })
+        .getBlockByChildNode.mockImplementation((node: Node) =>
+          (node === liveTextNode ? liveBlock : undefined));
+
+      const getSelectionSpy = vi.spyOn(window, 'getSelection').mockReturnValue({
+        anchorNode: liveTextNode,
+        rangeCount: 0,
+      } as unknown as Selection);
+
+      const snapshot = history.captureCaretSnapshot();
+
+      getSelectionSpy.mockRestore();
+
+      expect(snapshot?.blockId).toBe('live-block');
+      expect(snapshot?.inputIndex).toBe(0);
+    });
+
     it('returns null when no current block', () => {
       (blok.BlockManager as unknown as { currentBlock: undefined }).currentBlock = undefined;
 
@@ -219,6 +264,36 @@ describe('UndoHistory', () => {
       // The caret before should still be from the first call
       // (This tests the hasPendingCaret guard)
       expect(history.captureCaretSnapshot()).not.toBeNull();
+    });
+
+    it('forced markCaretBeforeChange re-captures past a stale pending snapshot', () => {
+      const mockBlock = {
+        id: 'b1',
+        currentInputIndex: 0,
+        currentInput: document.createElement('div'),
+      };
+
+      (blok.BlockManager as unknown as { currentBlock: typeof mockBlock }).currentBlock = mockBlock;
+
+      const captureSpy = vi.spyOn(history, 'captureCaretSnapshot');
+
+      // First call captures the pending snapshot.
+      history.markCaretBeforeChange();
+      expect(captureSpy).toHaveBeenCalledTimes(1);
+
+      // Unforced call while a pending snapshot exists is ignored (dedupes the
+      // keydown + beforeinput pair, and keeps a change's own follow-up writes
+      // from overwriting the genuine pre-change caret).
+      history.markCaretBeforeChange();
+      expect(captureSpy).toHaveBeenCalledTimes(1);
+
+      // A forced call (from a fresh keyboard gesture) re-captures, discarding a
+      // stale pending left dangling by a prior operation's no-op follow-up
+      // write. Without this the caret resets to that stale position on undo.
+      history.markCaretBeforeChange(true);
+      expect(captureSpy).toHaveBeenCalledTimes(2);
+
+      captureSpy.mockRestore();
     });
   });
 

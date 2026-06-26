@@ -155,8 +155,10 @@ const SERVICES = [
   ["Threads"],
 ];
 
-// Services intentionally excluded from the carousel (by request).
-const EXCLUDE = new Set(["Podbean"]);
+// Services intentionally excluded from the carousel (by request) — poor-looking
+// tiles: Podbean, tldraw (white glyph on near-white), BitChute (red on red),
+// Poll Everywhere (low-quality favicon).
+const EXCLUDE = new Set(["Podbean", "tldraw", "BitChute", "Poll Everywhere"]);
 
 const out = [];
 const dropped = [];

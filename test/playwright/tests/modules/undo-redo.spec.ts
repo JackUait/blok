@@ -4139,6 +4139,87 @@ test.describe('yjs undo/redo', () => {
       expect(offset).toBe(0);
     });
 
+    test('redo of consecutive splits never jumps caret to the document top', async ({ page }) => {
+      // Regression: stepping through redo of several splits must land the caret
+      // at the start of each newly-created block (offset 0), NOT at the very
+      // beginning of the document. The leading blocks make a stray jump to the
+      // top (the firstBlock fallback in restoreCaretSnapshot) detectable: a
+      // buggy redo would focus index 0 instead of the descending new blocks.
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'LEAD ZERO top block' } },
+        { type: 'paragraph', data: { text: 'LEAD ONE second block' } },
+        { type: 'paragraph', data: { text: 'ABCDEFGHIJKL' } },
+      ]);
+
+      const TARGET = 2; // index of the paragraph we split
+
+      const setCaret = async (paraIndex: number, charOffset: number): Promise<void> => {
+        await getParagraphByIndex(page, paraIndex).locator('[contenteditable="true"]').click();
+        await page.evaluate(({ paraIndex, charOffset }) => {
+          const wrappers = document.querySelectorAll('[data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable="true"]');
+          const el = wrappers[paraIndex];
+          const textNode = el?.firstChild;
+
+          if (textNode) {
+            const range = document.createRange();
+            const sel = window.getSelection();
+
+            range.setStart(textNode, charOffset);
+            range.setEnd(textNode, charOffset);
+            sel?.removeAllRanges();
+            sel?.addRange(range);
+          }
+        }, { paraIndex, charOffset });
+      };
+
+      const focusedIndex = async (): Promise<number | null> => {
+        const count = await page.locator(BLOCK_WRAPPER_SELECTOR).count();
+
+        for (let i = 0; i < count; i++) {
+          if (await isFocused(getParagraphByIndex(page, i).locator('[contenteditable="true"]'))) {
+            return i;
+          }
+        }
+
+        return null;
+      };
+
+      // Three rapid middle splits: ABC|DEF|GHI|JKL on the paragraph at TARGET
+      await setCaret(TARGET, 3);
+      await page.keyboard.press('Enter');
+      await setCaret(TARGET + 1, 3);
+      await page.keyboard.press('Enter');
+      await setCaret(TARGET + 2, 3);
+      await page.keyboard.press('Enter');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(6);
+
+      // Undo all three splits, back to the single ABCDEFGHIJKL paragraph
+      for (let i = 0; i < 3; i++) {
+        await page.keyboard.press(UNDO_SHORTCUT);
+        await waitForDelay(page, 250);
+      }
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+
+      // Redo each split: caret must land at the start (offset 0) of the new
+      // lower block (index 3, then 4, then 5) — never the document-top block.
+      const expectedNewBlock = [3, 4, 5];
+
+      for (let i = 0; i < 3; i++) {
+        await page.keyboard.press(REDO_SHORTCUT);
+        await waitForDelay(page, 250);
+
+        const index = await focusedIndex();
+
+        expect(index).toBe(expectedNewBlock[i]);
+
+        const offset = await getCaretOffset(getParagraphByIndex(page, expectedNewBlock[i]).locator('[contenteditable="true"]'));
+
+        expect(offset).toBe(0);
+      }
+    });
+
     test('redo after undoing list item deletion restores deleted items', async ({ page }) => {
       // Create multiple list items
       await resetBlok(page);

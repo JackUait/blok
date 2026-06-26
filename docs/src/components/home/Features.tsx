@@ -1109,7 +1109,19 @@ const EmbedsViz: React.FC = () => {
   }, [reduce]);
 
   return (
-    <div ref={winRef} aria-hidden="true" className="flex size-full items-center overflow-hidden">
+    <div
+      ref={winRef}
+      aria-hidden="true"
+      className="flex size-full items-center overflow-hidden"
+      // The band overhangs the window top/bottom, so the row clipped just above
+      // bleeds its drop shadow into the empty gap at the top edge. Fade the top and
+      // bottom edges so that bleed dissolves into the card instead of reading as a
+      // stray shadow line. The fade lands on the empty inter-row gap, not the icons.
+      style={{
+        maskImage: "linear-gradient(to bottom, transparent, #000 16px, #000 calc(100% - 16px), transparent)",
+        WebkitMaskImage: "linear-gradient(to bottom, transparent, #000 16px, #000 calc(100% - 16px), transparent)",
+      }}
+    >
       <div className="-ml-[22%] flex w-[144%] flex-col gap-3 transition-transform duration-[800ms] ease-out will-change-transform motion-safe:group-hover:[transform:rotate(-19deg)_scale(1.32)]">
         {EMBED_ROWS.map((row, r) => (
           <div

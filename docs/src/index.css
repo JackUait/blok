@@ -1102,6 +1102,18 @@
   animation: plus-pulse 0.6s ease-in-out 0.35s backwards;
 }
 
+/* "Every block, built in": on hover the whole palette ripples to life — each block
+   glyph springs up with a bouncy lift, staggered along the grid diagonal so a wave
+   sweeps across the chips, then settles back to rest. */
+.group:hover .fi-chip {
+  transform-origin: center;
+  animation: chip-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+@keyframes chip-pop {
+  0%, 100% { transform: translateY(0) scale(1); }
+  42% { transform: translateY(-3px) scale(1.14); }
+}
+
 /* Hover-away: :hover can't fire a one-shot on exit, so the card is tagged
    `byob-leaving` from JS (see ExtensibleViz). The menu relaxes — rows dip the
    other way, the bars ease down a touch, the badge softens — then everyone
@@ -1167,6 +1179,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .group:hover .fi-chip,
   .group:hover .fi-row,
   .group:hover .fi-poll-bar,
   .group:hover .fi-byob-badge,

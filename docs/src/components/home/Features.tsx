@@ -985,41 +985,56 @@ const EmbedsViz: React.FC = () => {
 
     const tiles = Array.from(win.querySelectorAll<HTMLElement>(".embed-tile"));
     const noise = tiles.map((_, i) => tileNoise(i));
+    // Each tile eases toward its distance-based target instead of snapping, so
+    // fast cursor moves (and the settle after the pointer leaves) read smoothly.
+    const curScale = new Float32Array(tiles.length).fill(1);
+    const curRot = new Float32Array(tiles.length);
+    const EASE = 0.16; // lerp factor per frame
     let pointer: { x: number; y: number } | null = null;
     let raf = 0;
     let running = false;
 
     const frame = () => {
-      if (!pointer) {
-        for (const t of tiles) {
-          t.style.transform = "";
-          t.style.zIndex = "";
-        }
-        running = false;
-        return;
-      }
+      let busy = false;
       for (let i = 0; i < tiles.length; i++) {
         const t = tiles[i];
-        const r = t.getBoundingClientRect();
-        const dx = pointer.x - (r.left + r.width / 2);
-        const dy = pointer.y - (r.top + r.height / 2);
-        const d = Math.hypot(dx, dy);
-        if (d >= MAG_RADIUS) {
+        let tScale = 1;
+        let tRot = 0;
+        if (pointer) {
+          const r = t.getBoundingClientRect();
+          const dx = pointer.x - (r.left + r.width / 2);
+          const dy = pointer.y - (r.top + r.height / 2);
+          const d = Math.hypot(dx, dy);
+          if (d < MAG_RADIUS) {
+            const lin = 1 - d / MAG_RADIUS; // 0..1
+            const f = lin * lin * (3 - 2 * lin); // smoothstep — softer shoulders
+            const n = noise[i];
+            tScale = 1 + MAG_PEAK * f * (0.72 + n * 0.7);
+            tRot = (n - 0.5) * 16 * f;
+          }
+        }
+        const s = curScale[i] + (tScale - curScale[i]) * EASE;
+        const ro = curRot[i] + (tRot - curRot[i]) * EASE;
+        const settled = Math.abs(s - 1) < 0.002 && Math.abs(ro) < 0.03;
+        curScale[i] = settled ? 1 : s;
+        curRot[i] = settled ? 0 : ro;
+        if (settled) {
           if (t.style.transform) {
             t.style.transform = "";
             t.style.zIndex = "";
           }
-          continue;
+        } else {
+          t.style.transform = `scale(${curScale[i].toFixed(3)}) rotate(${curRot[i].toFixed(2)}deg)`;
+          t.style.zIndex = String(2 + Math.round((curScale[i] - 1) * 6));
+          busy = true;
         }
-        const lin = 1 - d / MAG_RADIUS; // 0..1
-        const f = lin * lin * (3 - 2 * lin); // smoothstep — softer shoulders
-        const n = noise[i];
-        const scale = 1 + MAG_PEAK * f * (0.72 + n * 0.7);
-        const rot = (n - 0.5) * 16 * f;
-        t.style.transform = `scale(${scale.toFixed(3)}) rotate(${rot.toFixed(2)}deg)`;
-        t.style.zIndex = String(2 + Math.round(f * 5));
       }
-      raf = requestAnimationFrame(frame);
+      // Keep animating while the cursor is present or tiles are still settling.
+      if (pointer || busy) {
+        raf = requestAnimationFrame(frame);
+      } else {
+        running = false;
+      }
     };
 
     const kick = () => {

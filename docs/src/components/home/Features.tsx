@@ -960,7 +960,7 @@ const EMBED_ROWS = Array.from({ length: EMBED_BAND_ROWS }, (_, i) => {
 // reaches. Tiles fall off smoothly to scale 1 at the rim, so crossing the edge
 // is continuous (no snap).
 const MAG_RADIUS = 116;
-const MAG_PEAK = 0.72;
+const MAG_PEAK = 0.42;
 
 // Deterministic per-tile jitter so the cluster never looks like a tidy dome:
 // each tile pops to a slightly different size and cocks at its own angle.

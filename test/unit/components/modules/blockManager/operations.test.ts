@@ -1935,6 +1935,37 @@ describe('BlockOperations', () => {
 
       expect(splitAddCall).toBeDefined();
     });
+
+    it('creates the new block with the source block\'s FULL data, not just text', () => {
+      // Regression guard for the heading undo-caret bug: the new block must
+      // inherit ALL of the source block's tool data (e.g. a header's `level`),
+      // with only `text` overridden by the extracted content. Writing partial
+      // `{ text }` left other keys missing in Yjs, so a deferred
+      // didMutated→syncBlockDataToYjs wrote them in a SEPARATE transaction — a
+      // spurious undo entry that desynced caret restoration. If anyone reverts
+      // split() to `data: { text: extractedText }`, this test must fail.
+      (dependencies.YjsManager.getBlockDataObject as ReturnType<typeof vi.fn>).mockReturnValue({
+        text: 'HelloWorld',
+        level: 2,
+      });
+
+      const fragment = document.createDocumentFragment();
+      fragment.appendChild(document.createTextNode('World'));
+      (dependencies.Caret.extractFragmentFromCaretPosition as ReturnType<typeof vi.fn>).mockReturnValue(fragment);
+
+      operations.currentBlockIndexValue = 0;
+      operations.split(blocksStore);
+
+      const addBlockCalls = (dependencies.YjsManager.addBlock as ReturnType<typeof vi.fn>).mock.calls;
+      const newBlockArg = addBlockCalls
+        .map((call: unknown[]) => call[0] as { data?: Record<string, unknown> })
+        .find(arg => arg?.data !== undefined && 'level' in (arg.data ?? {}));
+
+      // The new block inherits `level` from the source...
+      expect(newBlockArg?.data?.level).toBe(2);
+      // ...while `text` is the extracted tail, not the source's original text.
+      expect(newBlockArg?.data?.text).toBe('World');
+    });
   });
 
   describe('splitBlockWithData', () => {

@@ -918,10 +918,12 @@ const serviceInitials = (title: string): string => {
 const ServiceIcon: React.FC<{ service: EmbedService }> = ({ service }) => (
   <span
     className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[12px] text-white shadow-[0_3px_8px_-2px_rgba(0,0,0,0.22)] ring-1 ring-black/5"
-    style={{ background: service.hex ?? "#64748B" }}
+    style={{ background: service.img ? "#fff" : service.hex ?? "#64748B" }}
   >
-    <span className="pointer-events-none absolute inset-0 bg-linear-to-b from-white/25 to-transparent" />
-    {service.path ? (
+    {!service.img && <span className="pointer-events-none absolute inset-0 bg-linear-to-b from-white/25 to-transparent" />}
+    {service.img ? (
+      <img src={service.img} alt="" loading="lazy" decoding="async" className="relative size-7 object-contain" />
+    ) : service.path ? (
       <svg width="20" height="20" viewBox={`0 0 ${service.vb ?? 24} ${service.vb ?? 24}`} fill="currentColor" aria-hidden="true" className="relative">
         <path d={service.path} />
       </svg>

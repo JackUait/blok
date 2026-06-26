@@ -57,7 +57,31 @@ const SUPPLEMENT = {
   },
 };
 
-// Brand colours for services with no logo in any icon library (rendered as monograms).
+// Services with no logo in any icon library: we fall back to their real
+// favicon (the brand's own app icon), fetched at generation time and inlined
+// as a base64 data URI so the bundle stays self-contained.
+const DOMAINS = {
+  RUTUBE: "rutube.ru", Youku: "youku.com", "Yandex Music": "music.yandex.ru", ARTE: "www.arte.tv",
+  Anghami: "anghami.com", Streamable: "streamable.com", Vidyard: "vidyard.com", Desmos: "desmos.com",
+  SOOP: "sooplive.com", Coub: "coub.com", BitChute: "bitchute.com", Acast: "acast.com",
+  Podbean: "podbean.com", Buzzsprout: "buzzsprout.com", Transistor: "transistor.fm", TuneIn: "tunein.com",
+  Boomplay: "boomplay.com", Tally: "tally.so", Jotform: "jotform.com", Whimsical: "whimsical.com",
+  Mentimeter: "mentimeter.com", Plunker: "plnkr.co", Datawrapper: "datawrapper.de", Flourish: "flourish.studio",
+  "Our World in Data": "ourworldindata.org", GeoGebra: "geogebra.org", Genially: "genially.com", Infogram: "infogram.com",
+  Felt: "felt.com", Wakelet: "wakelet.com", "Poll Everywhere": "polleverywhere.com", "Tencent Video": "v.qq.com",
+  Kinescope: "kinescope.io", Vidio: "vidio.com", Smotrim: "smotrim.ru",
+};
+
+async function fetchFavicon(domain) {
+  const r = await fetch(`https://www.google.com/s2/favicons?domain=${domain}&sz=128`);
+  if (!r.ok) return null;
+  const buf = Buffer.from(await r.arrayBuffer());
+  if (buf.length < 120) return null; // generic globe fallback
+  const type = (r.headers.get("content-type") || "image/png").split(";")[0];
+  return `data:${type};base64,${buf.toString("base64")}`;
+}
+
+// Brand colours for services that resolve to neither a glyph nor a favicon (monogram of last resort).
 const FALLBACK_HEX = {
   RUTUBE: "#000000", CodePen: "#0B0B0B", Youku: "#00A0E9", "Yandex Music": "#FFCC00",
   ARTE: "#FF1400", Anghami: "#B5179E", Streamable: "#0F90FA", Vidyard: "#2E3192",
@@ -107,6 +131,14 @@ for (const [title] of SERVICES) {
   } else if (SUPPLEMENT[title]) {
     const { hex, path, vb } = SUPPLEMENT[title];
     out.push({ title, hex, path, vb });
+  } else if (DOMAINS[title]) {
+    const img = await fetchFavicon(DOMAINS[title]);
+    if (img) {
+      out.push({ title, hex: FALLBACK_HEX[title] ?? "#64748B", path: null, img });
+    } else {
+      missing.push(title);
+      out.push({ title, hex: FALLBACK_HEX[title] ?? "#64748B", path: null });
+    }
   } else {
     missing.push(title);
     out.push({ title, hex: FALLBACK_HEX[title] ?? "#64748B", path: null });
@@ -116,8 +148,10 @@ for (const [title] of SERVICES) {
 const body =
   "// AUTO-GENERATED — do not edit by hand.\n" +
   "// Service list mirrors src/tools/link/registry.ts; logos + brand colours come\n" +
-  "// from simple-icons (plus a few from CoreUI Brands). Regenerate: node docs/scripts/gen-embed-services.mjs\n" +
-  "export interface EmbedService {\n  title: string;\n  hex: string | null;\n  path: string | null;\n  /** Glyph viewBox size; defaults to 24 (simple-icons). */\n  vb?: number;\n}\n\n" +
+  "// from simple-icons (plus a few from CoreUI Brands). Services with no library\n" +
+  "// logo carry `img`: their real favicon, inlined as a base64 data URI.\n" +
+  "// Regenerate: node docs/scripts/gen-embed-services.mjs\n" +
+  "export interface EmbedService {\n  title: string;\n  hex: string | null;\n  path: string | null;\n  /** Glyph viewBox size; defaults to 24 (simple-icons). */\n  vb?: number;\n  /** Base64 favicon data URI, when no vector glyph exists. */\n  img?: string;\n}\n\n" +
   "export const EMBED_SERVICES: EmbedService[] = " +
   JSON.stringify(out, null, 2) +
   ";\n";

@@ -24,9 +24,17 @@ describe("EMBED_SERVICES", () => {
     expect(codepen?.vb).toBe(32);
   });
 
-  it("keeps a brand colour for monogram fallbacks", () => {
+  it("gives every service a real icon — vector glyph or favicon, never a monogram", () => {
     for (const s of EMBED_SERVICES) {
-      if (s.path === null) expect(s.hex, s.title).toBeTruthy();
+      expect(Boolean(s.path) || Boolean(s.img), s.title).toBe(true);
+    }
+  });
+
+  it("inlines favicons as base64 data URIs for services without a vector glyph", () => {
+    const favicons = EMBED_SERVICES.filter((s) => !s.path);
+    expect(favicons.length).toBe(35);
+    for (const s of favicons) {
+      expect(s.img, s.title).toMatch(/^data:image\/(png|jpeg);base64,/);
     }
   });
 });

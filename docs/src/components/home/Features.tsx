@@ -10,6 +10,9 @@ import { SectionReveal } from "../common/SectionReveal";
 import { FeatureModal, type FeatureDetail } from "./FeatureModal";
 import { EMBED_SERVICES, type EmbedService } from "./embed-services";
 import { useI18n } from "../../contexts/I18nContext";
+// Repo root = the @jackuait/blok package; its version is the build-time fallback
+// for the live npm lookup below (vite's server.fs.allow includes "..").
+import rootPkg from "../../../../package.json";
 
 // The capabilities below the pillars rise, scale up and de-blur in sequence as
 // the mosaic scrolls into view — the Apple bento "develops" rather than popping.
@@ -112,15 +115,42 @@ const BlockHandle: React.FC = () => (
   </div>
 );
 
+// The sample editor.save() output advertises Blok's *latest published* version.
+// We look it up from the npm registry (the source of truth for "latest") on
+// mount, falling back to the version this build was cut from when the lookup is
+// unavailable — so the field is always real, never a hand-typed string.
+const BLOK_PACKAGE = "@jackuait/blok";
+
+const useLatestBlokVersion = (): string => {
+  const [version, setVersion] = useState<string>(rootPkg.version);
+  useEffect(() => {
+    let active = true;
+    fetch(`https://registry.npmjs.org/${BLOK_PACKAGE}/latest`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { version?: string } | null) => {
+        if (active && data?.version) setVersion(data.version);
+      })
+      .catch(() => {
+        /* offline / blocked — keep the build-time fallback */
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+  return version;
+};
+
 // The showpiece for "Typed JSON, never HTML": a flip card. At rest it shows the
-// clean, typed JSON the editor saves to; on hover the card turns to reveal the
-// very document that JSON renders as inside the editor — "Hello, Blok" over
-// Blok's mark, with a live caret and block handles. Two sides of one coin: what
-// you ship, and what the user sees.
-const CleanJsonViz: React.FC = () => (
+// clean, typed JSON the editor saves to — the whole object, in full; on hover
+// the card turns to reveal the very document that JSON renders as inside the
+// editor — "Hello, Blok" over Blok's mark, with a live caret and block handles.
+// Two sides of one coin: what you ship, and what the user sees.
+const CleanJsonViz: React.FC = () => {
+  const version = useLatestBlokVersion();
+  return (
   <div aria-hidden="true" className="relative h-full w-full [perspective:1600px]">
     <div className="fi-flip-inner relative h-full min-h-[15rem] w-full [transform-style:preserve-3d]">
-      {/* FRONT — the JSON the document saves to */}
+      {/* FRONT — the JSON the document saves to, shown complete */}
       <div className="fi-flip-face absolute inset-0 flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-secondary shadow-sm">
         <div className="flex shrink-0 items-center gap-1.5 border-b border-border/50 px-4 py-2.5">
           <span className="size-2.5 rounded-full bg-foreground/15" />
@@ -131,42 +161,70 @@ const CleanJsonViz: React.FC = () => (
             <span className="bento-caret ml-0.5 inline-block h-3 w-px bg-primary" />
           </span>
         </div>
-        <pre className="relative flex-1 overflow-hidden px-5 py-4 font-mono text-[12.5px] leading-[1.85] text-muted-foreground">
-          {"{\n  "}
-          <span className="text-brand-gradient font-semibold">"blocks"</span>
-          {": [\n    { "}
-          <span className="text-muted-foreground/60">"id"</span>
-          {": "}
-          <span className="text-primary">"h7k2"</span>
-          {",\n      "}
-          <span className="text-muted-foreground/60">"type"</span>
-          {": "}
-          <span className="text-primary">"header"</span>
-          {",\n      "}
-          <span className="text-muted-foreground/60">"data"</span>
-          {": { "}
-          <span className="text-muted-foreground/60">"text"</span>
-          {": "}
-          <span className="text-primary">"Hello, Blok"</span>
-          {" } },\n    { "}
-          <span className="text-muted-foreground/60">"id"</span>
-          {": "}
-          <span className="text-primary">"m3p9"</span>
-          {",\n      "}
-          <span className="text-muted-foreground/60">"type"</span>
-          {": "}
-          <span className="text-primary">"image"</span>
-          {",\n      "}
-          <span className="text-muted-foreground/60">"data"</span>
-          {": { "}
-          <span className="text-muted-foreground/60">"url"</span>
-          {": "}
-          <span className="text-primary">"/blok.png"</span>
-          {" } }\n  ],\n  "}
-          <span className="text-brand-gradient font-semibold">"version"</span>
-          {": "}
-          <span className="text-primary">"0.19.0"</span>
-          {"\n}"}
+        <pre className="relative flex flex-1 items-center overflow-hidden px-5 py-3 font-mono text-[11.5px] leading-[1.55] text-muted-foreground lg:text-[12px]">
+          <code>
+            {"{\n  "}
+            <span className="text-brand-gradient font-semibold">"blocks"</span>
+            {": [\n    { "}
+            <span className="text-muted-foreground/60">"id"</span>
+            {": "}
+            <span className="text-primary">"pg"</span>
+            {", "}
+            <span className="text-muted-foreground/60">"type"</span>
+            {": "}
+            <span className="text-primary">"page"</span>
+            {",\n      "}
+            <span className="text-muted-foreground/60">"content"</span>
+            {": ["}
+            <span className="text-primary">"h1"</span>
+            {", "}
+            <span className="text-primary">"im"</span>
+            {"] },\n    { "}
+            <span className="text-muted-foreground/60">"id"</span>
+            {": "}
+            <span className="text-primary">"h1"</span>
+            {", "}
+            <span className="text-muted-foreground/60">"type"</span>
+            {": "}
+            <span className="text-primary">"header"</span>
+            {", "}
+            <span className="text-muted-foreground/60">"parent"</span>
+            {": "}
+            <span className="text-primary">"pg"</span>
+            {",\n      "}
+            <span className="text-muted-foreground/60">"data"</span>
+            {": { "}
+            <span className="text-muted-foreground/60">"text"</span>
+            {": "}
+            <span className="text-primary">"Hello, Blok"</span>
+            {", "}
+            <span className="text-muted-foreground/60">"level"</span>
+            {": "}
+            <span className="text-foreground">1</span>
+            {" } },\n    { "}
+            <span className="text-muted-foreground/60">"id"</span>
+            {": "}
+            <span className="text-primary">"im"</span>
+            {", "}
+            <span className="text-muted-foreground/60">"type"</span>
+            {": "}
+            <span className="text-primary">"image"</span>
+            {", "}
+            <span className="text-muted-foreground/60">"parent"</span>
+            {": "}
+            <span className="text-primary">"pg"</span>
+            {",\n      "}
+            <span className="text-muted-foreground/60">"data"</span>
+            {": { "}
+            <span className="text-muted-foreground/60">"url"</span>
+            {": "}
+            <span className="text-primary">"/blok.png"</span>
+            {" } }\n  ],\n  "}
+            <span className="text-brand-gradient font-semibold">"version"</span>
+            {": "}
+            <span className="text-primary">{`"${version}"`}</span>
+            {"\n}"}
+          </code>
         </pre>
       </div>
 
@@ -207,7 +265,8 @@ const CleanJsonViz: React.FC = () => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // One glyph per shipped block type — a duotone palette you could scan: crisp
 // strokes carrying soft currentColor fills for mass. At rest every glyph is

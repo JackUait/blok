@@ -1323,46 +1323,82 @@ const GREETINGS = (
   ] as [string, string][]
 ).map(([code, text]) => ({ code, text, rtl: RTL_GREET.has(code) }));
 
+type Greeting = { text: string; rtl: boolean };
+const WHATS_UP: Greeting = { text: "What's up?", rtl: false };
+
 const LanguagesViz: React.FC = () => {
   const reduce = useReducedMotion();
+  const rootRef = useRef<HTMLDivElement>(null);
   const [idx, setIdx] = useState(0);
+  const [active, setActive] = useState<Greeting>(GREETINGS[0]);
   const [count, setCount] = useState(0);
   const [phase, setPhase] = useState<"typing" | "deleting">("typing");
+  const [hover, setHover] = useState(false);
 
-  const g = GREETINGS[idx];
-  const chars = useMemo(() => Array.from(g.text), [g.text]);
+  const chars = useMemo(() => Array.from(active.text), [active.text]);
 
-  // Typewriter: type the greeting char-by-char, hold, delete it, then advance to
-  // the next locale and type that one — looping all 68. RTL greetings type from
-  // the right with the caret pinned to their leading (right) edge. Driven by one
-  // self-rescheduling timer whose delay depends on the current phase.
+  // Hovering anywhere on the tile swaps the language loop for a friendly
+  // "What's up?": the current word deletes, the phrase types in and holds while
+  // hovered; leaving resumes the loop at the next locale.
+  useEffect(() => {
+    const group = rootRef.current?.closest("button");
+    if (!group) return;
+    const enter = () => {
+      setHover(true);
+      if (reduce) setActive(WHATS_UP);
+      else setPhase("deleting");
+    };
+    const leave = () => {
+      setHover(false);
+      if (reduce) setActive(GREETINGS[idx]);
+      else setPhase("deleting");
+    };
+    group.addEventListener("mouseenter", enter);
+    group.addEventListener("mouseleave", leave);
+    return () => {
+      group.removeEventListener("mouseenter", enter);
+      group.removeEventListener("mouseleave", leave);
+    };
+  }, [reduce, idx]);
+
+  // Typewriter: type the active word char-by-char, hold, delete it, then pick the
+  // next word (the hovered phrase, or the next locale) and type that — looping all
+  // 68. RTL words type from the right with the caret on their leading edge. Driven
+  // by one self-rescheduling timer whose delay depends on the current phase. The
+  // active word only swaps at count 0, so deletes never visibly jump text.
   useEffect(() => {
     if (reduce) return;
     let t: number;
     if (phase === "typing") {
       if (count < chars.length) {
         t = window.setTimeout(() => setCount((c) => c + 1), 70);
-      } else {
+      } else if (!hover) {
         t = window.setTimeout(() => setPhase("deleting"), 1200);
       }
     } else if (count > 0) {
       t = window.setTimeout(() => setCount((c) => c - 1), 32);
     } else {
       t = window.setTimeout(() => {
-        setIdx((i) => (i + 1) % GREETINGS.length);
+        if (hover) {
+          setActive(WHATS_UP);
+        } else {
+          const ni = (idx + 1) % GREETINGS.length;
+          setIdx(ni);
+          setActive(GREETINGS[ni]);
+        }
         setPhase("typing");
       }, 240);
     }
     return () => window.clearTimeout(t);
-  }, [phase, count, chars.length, reduce]);
+  }, [phase, count, chars.length, hover, idx, reduce]);
 
-  const shown = reduce ? g.text : chars.slice(0, count).join("");
+  const shown = reduce ? active.text : chars.slice(0, count).join("");
 
   return (
-    <div aria-hidden="true" className="flex size-full items-center">
+    <div ref={rootRef} aria-hidden="true" className="flex size-full items-center">
       <div className="relative h-16 w-full overflow-hidden rounded-2xl border border-border/60 bg-secondary/40 px-5 shadow-[inset_0_1px_3px_rgba(0,0,0,0.05)]">
-        <div className={`flex h-full items-center gap-2.5 ${g.rtl ? "flex-row-reverse" : ""}`}>
-          <span dir={g.rtl ? "rtl" : "ltr"} className="text-[1.7rem] font-semibold tracking-tight text-foreground/90">
+        <div className={`flex h-full items-center gap-2.5 ${active.rtl ? "flex-row-reverse" : ""}`}>
+          <span dir={active.rtl ? "rtl" : "ltr"} className="text-[1.7rem] font-semibold tracking-tight text-foreground/90">
             {shown}
           </span>
           <span className="bento-caret inline-block h-7 w-[3px] rounded-full bg-brand-from" />

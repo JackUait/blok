@@ -1438,6 +1438,102 @@ test.describe('drag and drop', () => {
       expect(getBlockText(savedData?.blocks[2])).toBe('First');
       expect(getBlockText(savedData?.blocks[3])).toBe('Child A');
     });
+
+    /**
+     * Regression (commit 7baeee54): dropping a top-level list item at the END of
+     * a nested sub-list it ALREADY follows lands it at the slot it already
+     * occupies (fromIndex === toIndex). The flat-array move is a no-op, and the
+     * depth-recalculating moved() hook used to be skipped — so the item kept its
+     * depth and the drop silently did nothing ("the item does not get dropped").
+     *
+     * Regression (commit aeaa598f): the depth DID need to change, and when it
+     * does the unordered bullet glyph (•/◦/▪) must refresh — adjustDepthTo only
+     * updated margin + data-depth, leaving a depth-2 item showing the depth-0 "•".
+     */
+    test('nests a top-level item dropped at the end of a deeper sub-list (no-op slot) and refreshes its bullet glyph', async ({ page }) => {
+      // - First (depth 0)
+      //   - Nested A (depth 1)
+      //     - Deep A1 (depth 2)
+      // - Second (depth 0) <- already right after Deep A1; drop on Deep A1's bottom
+      const blocks = createListBlocks([
+        { text: 'First' },
+        { text: 'Nested A', depth: 1 },
+        { text: 'Deep A1', depth: 2 },
+        { text: 'Second' },
+      ]);
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      const secondBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Second' });
+
+      await secondBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drop at the bottom edge of "Deep A1" — the end of the nested sub-list.
+      const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Deep A1' });
+
+      await performDragDrop(page, settingsButton, targetBlock, 'bottom');
+
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+      // Order is unchanged (it was already last), but the depth must now match the
+      // end of the nested list — the drop must actually take effect.
+      expect(getBlockText(savedData?.blocks[0])).toBe('First');
+      expect(getBlockText(savedData?.blocks[1])).toBe('Nested A');
+      expect(getBlockText(savedData?.blocks[2])).toBe('Deep A1');
+      expect(getBlockText(savedData?.blocks[3])).toBe('Second');
+      expect(getBlockDepth(savedData?.blocks[3])).toBe(2); // ← no-op without the fix
+
+      // The bullet glyph must reflect the new depth (depth 2 → "▪"), not the stale "•".
+      const droppedMarker = secondBlock.locator('[data-list-marker]');
+
+      await expect(droppedMarker).toHaveText('▪');
+    });
+
+    test('nests a top-level ORDERED item dropped at the end of a nested sub-list and renumbers it', async ({ page }) => {
+      // 1. First (depth 0)
+      //    a. Second (depth 1)
+      // 2. Third (depth 0) <- already right after Second; drop on Second's bottom
+      const blocks: OutputData['blocks'] = [
+        { id: 'ord-0', type: 'list', data: { text: 'First', style: 'ordered' } },
+        { id: 'ord-1', type: 'list', data: { text: 'Second', style: 'ordered', depth: 1 } },
+        { id: 'ord-2', type: 'list', data: { text: 'Third', style: 'ordered' } },
+      ];
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      const thirdBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Third' });
+
+      await thirdBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drop at the bottom edge of "Second" — the end of the nested sub-list.
+      const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Second' });
+
+      await performDragDrop(page, settingsButton, targetBlock, 'bottom');
+
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+      expect(getBlockText(savedData?.blocks[0])).toBe('First');
+      expect(getBlockText(savedData?.blocks[1])).toBe('Second');
+      expect(getBlockText(savedData?.blocks[2])).toBe('Third');
+      expect(getBlockDepth(savedData?.blocks[2])).toBe(1); // ← no-op without the fix
+
+      // Nested ordered item renumbers from "2." to the second sibling "b.".
+      const droppedMarker = thirdBlock.locator('[data-list-marker]');
+
+      await expect(droppedMarker).toHaveText('b.');
+    });
   });
 
   test.describe('toolbar visibility during drag', () => {

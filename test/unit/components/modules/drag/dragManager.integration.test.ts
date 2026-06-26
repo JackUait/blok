@@ -560,6 +560,51 @@ describe("DragManager - Component Integration", () => {
       expect(wrapper).not.toHaveAttribute(DATA_ATTR.dragging);
     });
 
+    it("fires the moved() hook on a same-slot drop so list items can re-nest (regression)", () => {
+      // Regression (commit 7baeee54): dropping a block at the slot it already
+      // occupies (drop on the bottom edge of its immediate predecessor) makes
+      // fromIndex === toIndex, so the flat array does not change. The moved()
+      // lifecycle hook MUST still fire — list items recompute their depth only
+      // there — otherwise dropping a top-level item at the end of a nested
+      // sub-list it already follows silently does nothing.
+      const { dragManager, blocks, wrapper, modules } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      blocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      // Drag block-2 (index 1) and drop it on the BOTTOM edge of block-1
+      // (index 0) — the slot block-2 already occupies.
+      const sourceBlock = blocks[1];
+      const targetBlock = blocks[0];
+      const dragHandle = document.createElement("div");
+
+      dragManager.setupDragHandle(dragHandle, sourceBlock);
+
+      dragHandle.dispatchEvent(
+        createMouseEvent("mousedown", { clientX: 100, clientY: 100 }),
+      );
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 110, clientY: 100 }),
+      );
+
+      // target block-1 occupies the top of the editor (rect top 0, bottom 50);
+      // drop near its bottom edge (central X to avoid the side-drop zones).
+      vi.mocked(document.elementFromPoint).mockReturnValue(targetBlock.holder);
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 50, clientY: 45 }),
+      );
+
+      document.dispatchEvent(createMouseEvent("mouseup", { altKey: false }));
+
+      // No flat-array reorder happened (same slot)...
+      expect(modules.BlockManager.move).not.toHaveBeenCalled();
+      // ...but the moved() hook fired on the dragged block so depth can recompute.
+      expect(sourceBlock.call).toHaveBeenCalledWith(
+        "moved",
+        expect.objectContaining({ fromIndex: 1, toIndex: 1 }),
+      );
+    });
+
     it("should abort handleDrop completely when target became stale mid-drag (Layer 13)", () => {
       // Regression: wrong-block-dropped family.
       //

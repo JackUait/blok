@@ -1433,7 +1433,7 @@ const LanguagesViz: React.FC = () => {
 
   return (
     <div ref={rootRef} aria-hidden="true" className="flex size-full items-center">
-      <div ref={fieldRef} className="relative h-16 w-full overflow-hidden rounded-2xl border border-border/60 bg-secondary/40 px-5 shadow-[inset_0_1px_3px_rgba(0,0,0,0.05)]">
+      <div ref={fieldRef} className="relative h-16 w-full overflow-hidden rounded-2xl border border-border/60 bg-secondary px-5 shadow-[inset_0_1px_3px_rgba(0,0,0,0.05)] transition-colors duration-300 group-hover:border-brand-from/50">
         <div
           className={`flex h-full items-center gap-2.5 ${active.rtl ? "flex-row-reverse" : ""}`}
           style={{ transform: `scale(${scale})`, transformOrigin: active.rtl ? "right center" : "left center" }}

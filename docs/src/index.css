@@ -1066,19 +1066,23 @@
   will-change: transform;
 }
 
-/* "Bring your own blocks": on hover the picker acts out the moment a custom block
-   is born. The dashed "+" rotates like the trigger, the Poll block drops into the
-   list with a spring, and its "yours" badge pops in a beat later. */
-.group:hover .fi-byob-row {
-  animation: byob-drop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) 0.06s backwards;
+/* "Bring your own blocks": on hover the custom Poll block comes alive. Its bars
+   rise like votes landing in real time (staggered, each overshooting then
+   settling), the "yours" badge stamps on once the chart is built, and the dashed
+   "+" rotates like the trigger that spawned it — your own block, working. */
+.fi-poll-bar {
+  transform-box: fill-box;
+  transform-origin: center bottom;
 }
-@keyframes byob-drop {
-  0% { transform: translateY(-9px) scale(0.96); opacity: 0; }
-  55% { opacity: 1; }
-  100% { transform: translateY(0) scale(1); opacity: 1; }
+.group:hover .fi-poll-bar {
+  animation: poll-vote 0.62s cubic-bezier(0.34, 1.6, 0.5, 1) backwards;
+}
+@keyframes poll-vote {
+  0% { transform: scaleY(0.08); }
+  100% { transform: scaleY(1); }
 }
 .group:hover .fi-byob-badge {
-  animation: byob-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) 0.36s backwards;
+  animation: byob-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.46s backwards;
 }
 @keyframes byob-pop {
   0% { transform: scale(0); }
@@ -1087,7 +1091,7 @@
 }
 .group:hover .fi-byob-plus {
   transform-origin: center;
-  animation: plus-pulse 0.6s ease-in-out backwards;
+  animation: plus-pulse 0.6s ease-in-out 0.1s backwards;
 }
 
 /* The brand-tinted table cell glows in and out. */
@@ -1129,7 +1133,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .group:hover .fi-byob-row,
+  .group:hover .fi-poll-bar,
   .group:hover .fi-byob-badge,
   .group:hover .fi-byob-plus,
   .bento-caret,

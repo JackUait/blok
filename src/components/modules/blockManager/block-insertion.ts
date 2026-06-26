@@ -303,6 +303,16 @@ export class BlockInsertion {
     const newBlockId = generateBlockId();
     const insertIndex = this.ctx.rawCurrentBlockIndex + 1;
 
+    // The new block must inherit ALL of the source block's tool data (e.g. a
+    // header's `level`), not just its text. Creating it with only `{ text }`
+    // leaves other keys missing in Yjs; the new block then renders with default
+    // data and a deferred didMutated→syncBlockDataToYjs writes the missing keys
+    // in a SEPARATE transaction. That extra, no-op undo entry pollutes the undo
+    // stack and desyncs caret restoration — the heading undo-caret bug. A
+    // paragraph has no extra keys, so its split never hit this. Reading the data
+    // before the transaction keeps the snapshot free of the truncation write.
+    const sourceData = this.dependencies.YjsManager.getBlockDataObject(currentBlock.id) ?? {};
+
     return this.yjsSync.withAtomicOperation(() => {
       // Extract fragment (mutates DOM - removes text after caret)
       const extractedFragment = this.dependencies.Caret.extractFragmentFromCaretPosition();
@@ -316,13 +326,17 @@ export class BlockInsertion {
       const truncatedText = currentBlock.holder
         .querySelector('[contenteditable="true"]')?.innerHTML ?? '';
 
+      // New block carries the source block's full data with only `text` replaced
+      // by the extracted content, so it is complete in a single transaction.
+      const newBlockData = { ...sourceData, text: extractedText };
+
       // Atomic Yjs transaction: update original + add new (single undo entry)
       this.dependencies.YjsManager.transact(() => {
         this.dependencies.YjsManager.updateBlockData(currentBlock.id, 'text', truncatedText);
         this.dependencies.YjsManager.addBlock({
           id: newBlockId,
           type: currentBlock.name,
-          data: { text: extractedText },
+          data: newBlockData,
           parent: currentBlock.parentId ?? undefined,
         }, insertIndex);
       });
@@ -331,7 +345,7 @@ export class BlockInsertion {
       const newBlock = this.ctx.insert({
         id: newBlockId,
         tool: currentBlock.name,
-        data: { text: extractedText },
+        data: newBlockData,
         needToFocus: false,
         skipYjsSync: true,
       }, blocksStore);

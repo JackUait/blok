@@ -57,7 +57,10 @@ export class KeyboardController extends Controller {
   };
 
   private readonly redactorBeforeinputHandler = (): void => {
-    this.Blok.YjsManager.markCaretBeforeChange();
+    // force: a beforeinput is the start of a fresh user edit, so the
+    // caret-before is the caret right now — discard any stale pending snapshot
+    // left dangling by a previous operation's no-op follow-up write.
+    this.Blok.YjsManager.markCaretBeforeChange(true);
   };
 
   private readonly redactorKeydownHandler = (event: Event): void => {
@@ -81,7 +84,11 @@ export class KeyboardController extends Controller {
     }
 
     if (KEYS_REQUIRING_CARET_CAPTURE.has(event.key)) {
-      this.Blok.YjsManager.markCaretBeforeChange();
+      // force: this keydown begins a new gesture (Enter split, Backspace merge,
+      // etc.). Re-capture so a stale pending from a prior operation's deferred
+      // sync can't become this gesture's caret-before (which would reset the
+      // caret to the wrong position on undo).
+      this.Blok.YjsManager.markCaretBeforeChange(true);
     }
   };
 
@@ -129,8 +136,9 @@ export class KeyboardController extends Controller {
 
     /**
      * Capture caret position on keydown for keys that tools commonly intercept.
-     * Uses capture phase to run before tool handlers.
-     * markCaretBeforeChange() is idempotent - if beforeinput also fires, the second call is ignored.
+     * Uses capture phase to run before tool handlers. Both this and the
+     * beforeinput handler force a re-capture; when both fire for one keystroke
+     * they capture the same pre-change caret, so the duplicate is harmless.
      */
     this.readOnlyMutableListeners.on(this.redactorElement, 'keydown', this.redactorKeydownHandler, true);
   }

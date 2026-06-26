@@ -324,8 +324,20 @@ export class DragOperations {
     // Adjust index if moving from before the target
     const toIndex = fromIndex < baseIndex ? baseIndex - 1 : baseIndex;
 
-    // Only move if position actually changed
+    // Position unchanged: the source is dropped at the slot it already occupies
+    // (e.g. a list item dropped at the end of a nested sub-list it already
+    // follows). Skip the flat-array reorder — there is nothing to move — but
+    // STILL fire the moved() hook so tools that derive state from their
+    // neighbours can react. List items recompute their depth only in moved(); on
+    // a same-position drop the depth must still update to nest into the sub-list,
+    // otherwise the drop is a silent no-op.
     if (fromIndex === toIndex) {
+      sourceBlock.call(BlockToolAPI.MOVED, { fromIndex, toIndex });
+
+      if (this.blockSelection) {
+        this.blockSelection.selectBlock(sourceBlock);
+      }
+
       return { movedBlocks: [sourceBlock], targetIndex: fromIndex };
     }
 

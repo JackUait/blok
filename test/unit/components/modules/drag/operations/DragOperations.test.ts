@@ -4,6 +4,7 @@
 
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { DragOperations } from '../../../../../../src/components/modules/drag/operations/DragOperations';
+import { BlockToolAPI } from '../../../../../../src/components/block';
 import type { Block } from '../../../../../../src/components/block';
 import type { SavedData } from '../../../../../../types/data-formats';
 
@@ -112,7 +113,7 @@ describe('DragOperations', () => {
       expect(result.targetIndex).toBe(2);
     });
 
-    it('should not move if position unchanged', () => {
+    it('should not reorder the flat array if position unchanged', () => {
       const sourceBlock = createMockBlock('source', 'paragraph', { text: 'source' });
       const targetBlock = createMockBlock('target', 'paragraph', { text: 'target' });
 
@@ -128,6 +129,35 @@ describe('DragOperations', () => {
       expect(mockBlockManager.move).not.toHaveBeenCalled();
       expect(result.movedBlocks).toEqual([sourceBlock]);
       expect(result.targetIndex).toBe(2);
+    });
+
+    /**
+     * Regression: dropping a list item at the end of a nested sub-list lands it
+     * immediately after the block it already follows, so the flat-array position
+     * does not change (fromIndex === toIndex). List depth is recalculated ONLY in
+     * the tool's moved() hook — so the hook MUST still fire on a same-position
+     * drop, otherwise the depth never updates and the drop is a silent no-op
+     * ("the item does not get dropped").
+     */
+    it('should still fire the moved() hook when position is unchanged (depth-only drop)', () => {
+      const sourceBlock = createMockBlock('source', 'list', { text: 'source' });
+      const targetBlock = createMockBlock('target', 'list', { text: 'target' });
+
+      mockBlockManager.getBlockIndex = vi.fn((block) => {
+        if (block === sourceBlock) return 2;
+        if (block === targetBlock) return 3;
+        return -1;
+      });
+
+      operations.moveBlocks([sourceBlock], targetBlock, 'top');
+
+      // No flat-array reorder, but the tool's moved() hook must run so a list
+      // item can recompute its depth against its new neighbours.
+      expect(mockBlockManager.move).not.toHaveBeenCalled();
+      expect(sourceBlock.call).toHaveBeenCalledWith(
+        BlockToolAPI.MOVED,
+        expect.objectContaining({ fromIndex: 2, toIndex: 2 })
+      );
     });
   });
 

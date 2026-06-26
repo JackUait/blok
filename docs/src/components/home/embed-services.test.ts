@@ -42,7 +42,7 @@ describe("EMBED_SERVICES", () => {
 
   it("excludes low-res and opted-out services from the carousel", () => {
     const byTitle = new Set(EMBED_SERVICES.map((s) => s.title));
-    for (const title of ["ARTE", "GeoGebra", "Streamable", "Whimsical", "Desmos", "Buzzsprout", "Vidio", "Podbean", "tldraw", "BitChute", "Poll Everywhere", "Genially"]) {
+    for (const title of ["ARTE", "GeoGebra", "Streamable", "Whimsical", "Desmos", "Buzzsprout", "Vidio", "Podbean", "tldraw", "BitChute", "Poll Everywhere", "Genially", "KakaoTV"]) {
       expect(byTitle.has(title), title).toBe(false);
     }
   });

@@ -158,13 +158,12 @@ const SERVICES = [
 // Services intentionally excluded from the carousel (by request) — poor-looking
 // tiles: Podbean, tldraw (white glyph on near-white), BitChute (red on red),
 // Poll Everywhere (low-quality favicon).
-const EXCLUDE = new Set(["Podbean", "tldraw", "BitChute", "Poll Everywhere", "Genially"]);
+const EXCLUDE = new Set(["Podbean", "tldraw", "BitChute", "Poll Everywhere", "Genially", "KakaoTV"]);
 
 // Per-tile look overrides. `fg` recolours the glyph (default white). KakaoTalk's
 // white bubble on yellow read as a logo-in-a-logo, so it gets a white tile with
 // the brand-yellow bubble instead.
 const OVERRIDE = {
-  KakaoTV: { hex: "#FFFFFF", fg: "#FFCD00" },
   // Tally's flower filled the tile edge-to-edge; inset it on a white frame.
   Tally: { hex: "#FFFFFF", pad: true },
 };

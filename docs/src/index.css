@@ -1066,39 +1066,40 @@
   will-change: transform;
 }
 
-/* "Bring your own blocks": on hover the picker opens like a real block menu. Rows
-   cascade in top-to-bottom, the selection lands on the custom Poll block whose
-   bars rise like votes in real time, then "by you" stamps on — the menu assembles
-   and settles on your own block. */
+/* "Bring your own blocks": the picker is fully shown at rest — its still state —
+   and the hover animation plays FROM that state and returns to it, never resetting
+   to an empty frame. A ripple travels down the rows, the custom Poll block's bars
+   jump like live incoming votes, then "by you" gives a confirming pulse. Every
+   keyframe starts and ends at the resting appearance, so there is no flash. */
 .group:hover .fi-row {
-  animation: byob-row-in 0.44s cubic-bezier(0.22, 0.61, 0.36, 1) backwards;
+  animation: byob-row-wave 0.42s ease-in-out backwards;
 }
-@keyframes byob-row-in {
-  0% { opacity: 0; transform: translateY(9px); }
-  100% { opacity: 1; transform: translateY(0); }
+@keyframes byob-row-wave {
+  0%, 100% { transform: translateY(0); }
+  45% { transform: translateY(-4px); }
 }
 .fi-poll-bar {
   transform-box: fill-box;
   transform-origin: center bottom;
 }
 .group:hover .fi-poll-bar {
-  animation: poll-vote 0.62s cubic-bezier(0.34, 1.6, 0.5, 1) backwards;
+  animation: poll-update 0.55s cubic-bezier(0.34, 1.6, 0.5, 1) backwards;
 }
-@keyframes poll-vote {
-  0% { transform: scaleY(0.08); }
-  100% { transform: scaleY(1); }
+@keyframes poll-update {
+  0%, 100% { transform: scaleY(1); }
+  30% { transform: scaleY(1.22); }
+  62% { transform: scaleY(0.9); }
 }
 .group:hover .fi-byob-badge {
-  animation: byob-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.66s backwards;
+  animation: byob-pulse 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s backwards;
 }
-@keyframes byob-pop {
-  0% { transform: scale(0); }
-  70% { transform: scale(1.16); }
-  100% { transform: scale(1); }
+@keyframes byob-pulse {
+  0%, 100% { transform: scale(1); }
+  45% { transform: scale(1.16); }
 }
 .group:hover .fi-byob-plus {
   transform-origin: center;
-  animation: plus-pulse 0.6s ease-in-out 0.4s backwards;
+  animation: plus-pulse 0.6s ease-in-out 0.35s backwards;
 }
 
 /* The brand-tinted table cell glows in and out. */

@@ -503,13 +503,13 @@ const ExtensibleViz: React.FC = () => {
             key={block.label}
             style={block.mine ? { borderColor: "var(--brand-from)" } : undefined}
             className={`flex items-center gap-2.5 rounded-xl border px-3 py-1.5 ${
-              block.mine ? "bg-primary/[0.06]" : "border-transparent"
+              block.mine ? "fi-byob-row bg-primary/[0.06]" : "border-transparent"
             }`}
           >
             <span
               className={`flex size-7 shrink-0 items-center justify-center rounded-[10px] ${
                 block.mine
-                  ? "bg-linear-to-br from-brand-from to-brand-to text-white shadow-[0_4px_12px_-2px_rgba(233,78,122,0.5)] ring-1 ring-inset ring-white/25"
+                  ? "bg-linear-to-br from-brand-from to-brand-to text-white shadow-[0_4px_12px_-2px_rgba(233,78,122,0.5)] ring-1 ring-inset ring-white/25 transition-transform duration-300 ease-out lg:group-hover:scale-110 lg:group-hover:-rotate-3"
                   : "border border-border/60 bg-card text-muted-foreground shadow-sm"
               }`}
             >
@@ -521,7 +521,7 @@ const ExtensibleViz: React.FC = () => {
               {block.label}
             </span>
             {block.mine && (
-              <span className="ml-auto rounded-full bg-linear-to-r from-brand-from to-brand-to px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+              <span className="fi-byob-badge ml-auto inline-block origin-center rounded-full bg-linear-to-r from-brand-from to-brand-to px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
                 yours
               </span>
             )}
@@ -533,7 +533,7 @@ const ExtensibleViz: React.FC = () => {
         <div className="relative">
           <div className="flex items-center gap-2.5 rounded-xl border border-dashed border-border px-3 py-1.5 text-muted-foreground">
             <span className="flex size-7 shrink-0 items-center justify-center rounded-[10px] border border-dashed border-border">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <svg className="fi-byob-plus" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M12 6v12M6 12h12" />
               </svg>
             </span>

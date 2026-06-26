@@ -165,6 +165,8 @@ const EXCLUDE = new Set(["Podbean", "tldraw", "BitChute", "Poll Everywhere", "Ge
 // the brand-yellow bubble instead.
 const OVERRIDE = {
   KakaoTV: { hex: "#FFFFFF", fg: "#FFCD00" },
+  // Tally's flower filled the tile edge-to-edge; inset it on a white frame.
+  Tally: { hex: "#FFFFFF", pad: true },
 };
 
 const out = [];
@@ -208,7 +210,7 @@ const body =
   "// from simple-icons (plus a few from CoreUI Brands). Services with no library\n" +
   "// logo carry `img`: their real favicon, inlined as a base64 data URI.\n" +
   "// Regenerate: node docs/scripts/gen-embed-services.mjs\n" +
-  "export interface EmbedService {\n  title: string;\n  /** Tile background: brand colour, or the favicon's sampled edge colour. */\n  hex: string | null;\n  path: string | null;\n  /** Glyph viewBox size; defaults to 24 (simple-icons). */\n  vb?: number;\n  /** Base64 favicon data URI, when no vector glyph exists. */\n  img?: string;\n  /** Favicon fills the tile edge-to-edge (app-icon with a solid edge). */\n  cover?: boolean;\n  /** Glyph colour override; defaults to white. */\n  fg?: string;\n}\n\n" +
+  "export interface EmbedService {\n  title: string;\n  /** Tile background: brand colour, or the favicon's sampled edge colour. */\n  hex: string | null;\n  path: string | null;\n  /** Glyph viewBox size; defaults to 24 (simple-icons). */\n  vb?: number;\n  /** Base64 favicon data URI, when no vector glyph exists. */\n  img?: string;\n  /** Favicon fills the tile edge-to-edge (app-icon with a solid edge). */\n  cover?: boolean;\n  /** Glyph colour override; defaults to white. */\n  fg?: string;\n  /** Inset the favicon a bit instead of filling the tile edge-to-edge. */\n  pad?: boolean;\n}\n\n" +
   "export const EMBED_SERVICES: EmbedService[] = " +
   JSON.stringify(out, null, 2) +
   ";\n";

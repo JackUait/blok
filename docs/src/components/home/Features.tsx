@@ -927,7 +927,7 @@ const ServiceIcon: React.FC<{ service: EmbedService }> = ({ service }) => (
         alt=""
         loading="lazy"
         decoding="async"
-        className={service.cover ? "relative size-full object-cover" : "relative size-7 object-contain"}
+        className={service.pad ? "relative size-[35px] object-contain" : service.cover ? "relative size-full object-cover" : "relative size-7 object-contain"}
       />
     ) : service.path ? (
       <svg width="20" height="20" viewBox={`0 0 ${service.vb ?? 24} ${service.vb ?? 24}`} fill={service.fg ?? "currentColor"} aria-hidden="true" className="relative">

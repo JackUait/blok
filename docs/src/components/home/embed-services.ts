@@ -16,6 +16,8 @@ export interface EmbedService {
   cover?: boolean;
   /** Glyph colour override; defaults to white. */
   fg?: string;
+  /** Inset the favicon a bit instead of filling the tile edge-to-edge. */
+  pad?: boolean;
 }
 
 export const EMBED_SERVICES: EmbedService[] = [
@@ -397,10 +399,11 @@ export const EMBED_SERVICES: EmbedService[] = [
   },
   {
     "title": "Tally",
-    "hex": "#bebebe",
+    "hex": "#FFFFFF",
     "path": null,
     "img": "data:image/png;base64,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",
-    "cover": true
+    "cover": true,
+    "pad": true
   },
   {
     "title": "Jotform",

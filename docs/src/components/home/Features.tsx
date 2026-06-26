@@ -944,7 +944,7 @@ const ServiceIcon: React.FC<{ service: EmbedService }> = ({ service }) => (
 // band of rows; only the middle two show through the window at rest. On hover the
 // whole band tilts (see EmbedsViz) and the extra rows fill in, so the icons read
 // as one diagonal river flowing from the bottom-left to the top-right.
-const EMBED_BAND_ROWS = 8;
+const EMBED_BAND_ROWS = 10;
 const EMBED_ROWS = Array.from({ length: EMBED_BAND_ROWS }, (_, i) => {
   const start = (Math.floor(EMBED_SERVICES.length / EMBED_BAND_ROWS) * i + i * 3) % EMBED_SERVICES.length;
   const rotated = [...EMBED_SERVICES.slice(start), ...EMBED_SERVICES.slice(0, start)];
@@ -961,7 +961,7 @@ const EmbedsViz: React.FC = () => (
     {/* The band is wider than the tile and shifted left so the left-aligned,
         seamless marquee always covers from beyond the left edge to far past the
         right — no exposed edge at any scroll phase, even once rotated. */}
-    <div className="-ml-[22%] flex w-[144%] flex-col gap-3 transition-transform duration-[800ms] ease-out will-change-transform motion-safe:group-hover:[transform:rotate(-19deg)_scale(1.18)]">
+    <div className="-ml-[22%] flex w-[144%] flex-col gap-3 transition-transform duration-[800ms] ease-out will-change-transform motion-safe:group-hover:[transform:rotate(-19deg)_scale(1.32)]">
       {EMBED_ROWS.map((row, r) => (
         <div
           key={r}

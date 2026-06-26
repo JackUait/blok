@@ -922,7 +922,7 @@ const ServiceIcon: React.FC<{ service: EmbedService }> = ({ service }) => (
   >
     <span className="pointer-events-none absolute inset-0 bg-linear-to-b from-white/25 to-transparent" />
     {service.path ? (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="relative">
+      <svg width="20" height="20" viewBox={`0 0 ${service.vb ?? 24} ${service.vb ?? 24}`} fill="currentColor" aria-hidden="true" className="relative">
         <path d={service.path} />
       </svg>
     ) : (

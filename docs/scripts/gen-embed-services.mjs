@@ -42,7 +42,22 @@ const SLUG = {
   "ArcGIS StoryMaps": "arcgis",
 };
 
-// Brand colours for services simple-icons no longer ships (rendered as monograms).
+// Real brand glyphs simple-icons doesn't ship, sourced from CoreUI Brands (cib).
+// Single-path, currentColor, 32x32 viewBox — render identically to simple-icons.
+const SUPPLEMENT = {
+  CodePen: {
+    hex: "#000000",
+    vb: 32,
+    path: "m32 10.912l-.027-.12l-.02-.063q-.022-.052-.041-.104c0-.021-.016-.041-.027-.063l-.047-.093l-.036-.063l-.063-.084l-.057-.057l-.084-.063l-.063-.041l-.077-.057l-.057-.052l-.021-.025L16.771.255a1.35 1.35 0 0 0-1.52 0L.527 10.068l-.079.068l-.052.052l-.068.077l-.047.057l-.068.084c-.025.02-.041.036-.041.057l-.068.083l-.025.079c-.027.015-.027.052-.043.093l-.009.068c-.027.041-.027.077-.027.12v9.995c0 .063.005.12.016.181l.011.063a1 1 0 0 0 .025.115l.021.063c.015.037.02.073.036.104l.031.063c0 .016.016.057.037.084l.041.052c.021.015.041.052.063.077l.036.057l.052.052c.016.016.016.043.043.043l.077.052l.057.041l.011.021l14.631 9.771c.219.161.5.219.76.219c.255 0 .516-.084.755-.24l14.881-9.875l.067-.079l.047-.063l.052-.077l.043-.068l.036-.093l.021-.068l.041-.104l.021-.057l.041-.109v-10c0-.063 0-.125-.027-.188l-.015-.057l.057.005zm-15.984 8.369l-4.871-3.251l4.871-3.26l4.864 3.256zm-1.38-8.896l-5.964 3.984l-4.817-3.219l10.781-7.187zm-8.443 5.642l-3.444 2.307v-4.599l3.444 2.301zm2.479 1.666l5.964 3.989v6.427L3.855 20.921l4.823-3.228zm8.713 3.99l5.969-3.975l4.817 3.224l-10.787 7.188zm8.443-5.642l3.443-2.292v4.605l-3.443-2.308zm-2.473-1.656l-5.964-3.984V3.958l10.781 7.187l-4.817 3.219z",
+  },
+  LinkedIn: {
+    hex: "#0A66C2",
+    vb: 32,
+    path: "M27.26 27.271h-4.733v-7.427c0-1.771-.037-4.047-2.475-4.047c-2.468 0-2.844 1.921-2.844 3.916v7.557h-4.739V11.999h4.552v2.083h.061c.636-1.203 2.183-2.468 4.491-2.468c4.801 0 5.692 3.161 5.692 7.271v8.385zM7.115 9.912a2.75 2.75 0 0 1-2.751-2.756a2.753 2.753 0 1 1 2.751 2.756m2.374 17.359H4.74V12h4.749zM29.636 0H2.36C1.057 0 0 1.031 0 2.307v27.387c0 1.276 1.057 2.307 2.36 2.307h27.271c1.301 0 2.369-1.031 2.369-2.307V2.307C32 1.031 30.932 0 29.631 0z",
+  },
+};
+
+// Brand colours for services with no logo in any icon library (rendered as monograms).
 const FALLBACK_HEX = {
   RUTUBE: "#000000", CodePen: "#0B0B0B", Youku: "#00A0E9", "Yandex Music": "#FFCC00",
   ARTE: "#FF1400", Anghami: "#B5179E", Streamable: "#0F90FA", Vidyard: "#2E3192",
@@ -87,19 +102,22 @@ for (const [title] of SERVICES) {
   const slug = SLUG[title];
   if (slug && bySlug.has(slug)) icon = bySlug.get(slug);
   if (!icon) icon = byTitle.get(norm(title)) ?? null;
-  if (!icon) {
+  if (icon) {
+    out.push({ title, hex: "#" + icon.hex, path: icon.path });
+  } else if (SUPPLEMENT[title]) {
+    const { hex, path, vb } = SUPPLEMENT[title];
+    out.push({ title, hex, path, vb });
+  } else {
     missing.push(title);
     out.push({ title, hex: FALLBACK_HEX[title] ?? "#64748B", path: null });
-  } else {
-    out.push({ title, hex: "#" + icon.hex, path: icon.path });
   }
 }
 
 const body =
   "// AUTO-GENERATED — do not edit by hand.\n" +
   "// Service list mirrors src/tools/link/registry.ts; logos + brand colours come\n" +
-  "// from simple-icons. Regenerate: node docs/scripts/gen-embed-services.mjs\n" +
-  "export interface EmbedService {\n  title: string;\n  hex: string | null;\n  path: string | null;\n}\n\n" +
+  "// from simple-icons (plus a few from CoreUI Brands). Regenerate: node docs/scripts/gen-embed-services.mjs\n" +
+  "export interface EmbedService {\n  title: string;\n  hex: string | null;\n  path: string | null;\n  /** Glyph viewBox size; defaults to 24 (simple-icons). */\n  vb?: number;\n}\n\n" +
   "export const EMBED_SERVICES: EmbedService[] = " +
   JSON.stringify(out, null, 2) +
   ";\n";

@@ -158,7 +158,7 @@ const SERVICES = [
 // Services intentionally excluded from the carousel (by request) — poor-looking
 // tiles: Podbean, tldraw (white glyph on near-white), BitChute (red on red),
 // Poll Everywhere (low-quality favicon).
-const EXCLUDE = new Set(["Podbean", "tldraw", "BitChute", "Poll Everywhere"]);
+const EXCLUDE = new Set(["Podbean", "tldraw", "BitChute", "Poll Everywhere", "Genially"]);
 
 // Per-tile look overrides. `fg` recolours the glyph (default white). KakaoTalk's
 // white bubble on yellow read as a logo-in-a-logo, so it gets a white tile with

@@ -2,8 +2,10 @@ import { describe, it, expect } from "vitest";
 import { EMBED_SERVICES } from "./embed-services";
 
 describe("EMBED_SERVICES", () => {
-  it("keeps the carousel at 100+ services", () => {
-    expect(EMBED_SERVICES.length).toBeGreaterThanOrEqual(100);
+  it("showcases a healthy subset of supported services", () => {
+    // A curated showcase (poor-looking tiles are pruned); the "100+" claim in
+    // copy refers to total supported providers, not the marquee count.
+    expect(EMBED_SERVICES.length).toBeGreaterThanOrEqual(90);
   });
 
   it("gives every service a brand colour", () => {
@@ -40,7 +42,7 @@ describe("EMBED_SERVICES", () => {
 
   it("excludes low-res and opted-out services from the carousel", () => {
     const byTitle = new Set(EMBED_SERVICES.map((s) => s.title));
-    for (const title of ["ARTE", "GeoGebra", "Streamable", "Whimsical", "Desmos", "Buzzsprout", "Vidio", "Podbean", "tldraw", "BitChute", "Poll Everywhere"]) {
+    for (const title of ["ARTE", "GeoGebra", "Streamable", "Whimsical", "Desmos", "Buzzsprout", "Vidio", "Podbean", "tldraw", "BitChute", "Poll Everywhere", "Genially"]) {
       expect(byTitle.has(title), title).toBe(false);
     }
   });

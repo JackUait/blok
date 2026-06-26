@@ -385,7 +385,10 @@ const BlocksViz: React.FC = () => {
       const ly = clientY - r.top;
 
       // Colour reveal: the lit copy is unmasked in a radius around the cursor.
-      const mask = `radial-gradient(${CHIP_GLOW_RADIUS}px circle at ${lx}px ${ly}px, #000 0%, transparent 62%)`;
+      // The mask is positioned against the overlay's own (enlarged) box, so the
+      // reveal still sits under the cursor in screen space.
+      const lr = lit.getBoundingClientRect();
+      const mask = `radial-gradient(${CHIP_GLOW_RADIUS}px circle at ${(clientX - lr.left).toFixed(1)}px ${(clientY - lr.top).toFixed(1)}px, #000 0%, transparent 62%)`;
       lit.style.opacity = "1";
       lit.style.maskImage = mask;
       lit.style.webkitMaskImage = mask;
@@ -423,9 +426,13 @@ const BlocksViz: React.FC = () => {
   return (
     <div ref={wrapRef} aria-hidden="true" className="relative w-full">
       <ChipGrid />
+      {/* The lit overlay is grown 20px past the grid (with matching padding so the
+          inner copy still sits exactly over the base) — its CSS mask is bound to
+          this box, and without the slack the chips' hover lift/scale pushed the
+          outer rows past the edge and the mask clipped their coloured borders. */}
       <div
         ref={litRef}
-        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200"
+        className="pointer-events-none absolute -inset-5 p-5 opacity-0 transition-opacity duration-200"
       >
         <ChipGrid lit />
       </div>

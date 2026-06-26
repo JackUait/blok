@@ -1324,61 +1324,48 @@ const GREETINGS = (
 ).map(([code, text]) => ({ code, text, rtl: RTL_GREET.has(code) }));
 
 const LanguagesViz: React.FC = () => {
-  const trackRef = useRef<HTMLDivElement>(null);
   const reduce = useReducedMotion();
+  const [idx, setIdx] = useState(0);
+  const [count, setCount] = useState(0);
+  const [phase, setPhase] = useState<"typing" | "deleting">("typing");
 
-  // A seamless vertical carousel: the track holds every greeting plus a repeat of
-  // the first, so after the last we slide onto the clone and snap back to the top
-  // (transition off) without a visible jump. Pure setTimeout so it scales to all
-  // 68 without authoring per-item keyframes.
+  const g = GREETINGS[idx];
+  const chars = useMemo(() => Array.from(g.text), [g.text]);
+
+  // Typewriter: type the greeting char-by-char, hold, delete it, then advance to
+  // the next locale and type that one — looping all 68. RTL greetings type from
+  // the right with the caret pinned to their leading (right) edge. Driven by one
+  // self-rescheduling timer whose delay depends on the current phase.
   useEffect(() => {
-    if (reduce || !trackRef.current) return;
-    const track: HTMLDivElement = trackRef.current;
-    const N = GREETINGS.length;
-    const step = 100 / (N + 1); // track height = N + 1 items
-    const DWELL = 1500;
-    const SLIDE = 560;
-    let idx = 0;
-    let timer = 0;
-    const schedule = (ms: number) => {
-      timer = window.setTimeout(tick, ms);
-    };
-    function tick() {
-      idx += 1;
-      track.style.transition = `transform ${SLIDE}ms cubic-bezier(0.76, 0, 0.24, 1)`;
-      track.style.transform = `translateY(-${(idx * step).toFixed(4)}%)`;
-      if (idx === N) {
-        // Landed on the clone of the first greeting — snap home, then continue.
-        timer = window.setTimeout(() => {
-          track.style.transition = "none";
-          track.style.transform = "translateY(0)";
-          idx = 0;
-          void track.offsetHeight; // reflow so the next slide animates
-          schedule(DWELL);
-        }, SLIDE);
+    if (reduce) return;
+    let t: number;
+    if (phase === "typing") {
+      if (count < chars.length) {
+        t = window.setTimeout(() => setCount((c) => c + 1), 70);
       } else {
-        schedule(DWELL);
+        t = window.setTimeout(() => setPhase("deleting"), 1200);
       }
+    } else if (count > 0) {
+      t = window.setTimeout(() => setCount((c) => c - 1), 32);
+    } else {
+      t = window.setTimeout(() => {
+        setIdx((i) => (i + 1) % GREETINGS.length);
+        setPhase("typing");
+      }, 240);
     }
-    schedule(DWELL);
-    return () => window.clearTimeout(timer);
-  }, [reduce]);
+    return () => window.clearTimeout(t);
+  }, [phase, count, chars.length, reduce]);
+
+  const shown = reduce ? g.text : chars.slice(0, count).join("");
 
   return (
     <div aria-hidden="true" className="flex size-full items-center">
       <div className="relative h-16 w-full overflow-hidden rounded-2xl border border-border/60 bg-secondary/40 px-5 shadow-[inset_0_1px_3px_rgba(0,0,0,0.05)]">
-        <div ref={trackRef} className="flex flex-col">
-          {[...GREETINGS, GREETINGS[0]].map((g, i) => (
-            <div
-              key={i}
-              className={`flex h-16 items-center gap-2.5 ${g.rtl ? "flex-row-reverse" : ""}`}
-            >
-              <span dir={g.rtl ? "rtl" : "ltr"} className="text-[1.7rem] font-semibold tracking-tight text-foreground/90">
-                {g.text}
-              </span>
-              <span className="bento-caret inline-block h-7 w-[3px] rounded-full bg-brand-from" />
-            </div>
-          ))}
+        <div className={`flex h-full items-center gap-2.5 ${g.rtl ? "flex-row-reverse" : ""}`}>
+          <span dir={g.rtl ? "rtl" : "ltr"} className="text-[1.7rem] font-semibold tracking-tight text-foreground/90">
+            {shown}
+          </span>
+          <span className="bento-caret inline-block h-7 w-[3px] rounded-full bg-brand-from" />
         </div>
       </div>
     </div>

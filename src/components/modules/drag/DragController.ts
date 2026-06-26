@@ -466,11 +466,11 @@ export class DragController extends Module {
   }
 
   /**
-   * Aligns the horizontal drop indicator with a list item's rendered text:
-   * `--drop-indicator-side-left` to the text start (after the marker, at the
-   * predicted nesting depth) and `--drop-indicator-side-right` to the text end.
-   * The full indent is baked into the left offset, so `--drop-indicator-depth`
-   * is zeroed to cancel the CSS depth multiplier. No-op for non-list blocks.
+   * Aligns the horizontal drop indicator with a list item: `--drop-indicator-
+   * side-left` to the item's start (the marker, at the predicted nesting depth)
+   * and `--drop-indicator-side-right` to the text end. The full indent is baked
+   * into the left offset, so `--drop-indicator-depth` is zeroed to cancel the
+   * CSS depth multiplier. No-op for non-list blocks.
    *
    * @param block - The drop target block
    * @param holderRect - The block holder's bounding rect (already measured)
@@ -485,6 +485,14 @@ export class DragController extends Module {
       return;
     }
 
+    // The blue line starts at the very beginning of the list item — the marker
+    // (bullet/number/checkbox) — which is the left edge of the listitem element.
+    // It falls back to the text container if the listitem wrapper is missing.
+    const item = block.holder.querySelector('[role="listitem"]');
+    const startRect = item instanceof HTMLElement
+      ? item.getBoundingClientRect()
+      : container.getBoundingClientRect();
+
     const containerRect = container.getBoundingClientRect();
 
     // When the item will nest deeper than its current depth, shift the line
@@ -493,7 +501,7 @@ export class DragController extends Module {
     const depthShift = Math.max(0, predictedDepth - targetDepth) * INDENT_PER_LEVEL;
 
     const textRight = this.measureTextRight(container) ?? containerRect.right;
-    const left = containerRect.left - holderRect.left + depthShift;
+    const left = startRect.left - holderRect.left + depthShift;
     const right = Math.max(0, holderRect.right - textRight);
 
     block.holder.style.setProperty('--drop-indicator-side-left', `${left}px`);

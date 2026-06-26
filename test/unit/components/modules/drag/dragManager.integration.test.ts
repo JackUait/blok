@@ -317,26 +317,30 @@ describe("DragManager - Component Integration", () => {
   });
 
   describe("List item drop indicator alignment", () => {
-    it("anchors the drop line under a list item's text (start past marker, cut at text end)", () => {
+    it("anchors the drop line from the list item marker to the text end", () => {
       const { dragManager, blocks, wrapper } = createDragManager();
 
       document.body.appendChild(wrapper);
       blocks.forEach((block) => wrapper.appendChild(block.holder));
 
-      // Turn block-4 into a list item with a text content container.
+      // Turn block-4 into a list item: a listitem (starting at the marker) that
+      // holds a text content container (starting past the marker).
       const targetBlock = blocks[3];
       targetBlock.holder.setAttribute("data-list-depth", "0");
 
       const itemContent = targetBlock.holder.querySelector(
         "[data-blok-element-content]",
       ) as HTMLElement;
+      const item = document.createElement("div");
+      item.setAttribute("role", "listitem");
       const container = document.createElement("div");
       container.setAttribute("data-blok-testid", "list-content-container");
       container.textContent = "Fifth item";
-      itemContent.appendChild(container);
+      item.appendChild(container);
+      itemContent.appendChild(item);
 
-      // Holder spans the full content width (0..300). The text content starts at
-      // 40 (past the bullet marker) and the container stretches to 280.
+      // Holder spans the full content width (0..300). The list item (marker)
+      // starts at 16; the text content starts at 40 (past the marker).
       (targetBlock.holder.getBoundingClientRect as Mock).mockReturnValue({
         top: 200,
         bottom: 250,
@@ -348,6 +352,17 @@ describe("DragManager - Component Integration", () => {
         y: 200,
         toJSON: () => ({}),
       });
+      item.getBoundingClientRect = vi.fn(() => ({
+        top: 200,
+        bottom: 250,
+        left: 16,
+        right: 280,
+        width: 264,
+        height: 50,
+        x: 16,
+        y: 200,
+        toJSON: () => ({}),
+      }));
       container.getBoundingClientRect = vi.fn(() => ({
         top: 200,
         bottom: 250,
@@ -395,10 +410,10 @@ describe("DragManager - Component Integration", () => {
       );
 
       expect(targetBlock.holder).toHaveAttribute("data-drop-indicator");
-      // Line starts where the text starts (after the bullet marker).
+      // Line starts at the list item marker (item left edge), not after it.
       expect(
         targetBlock.holder.style.getPropertyValue("--drop-indicator-side-left"),
-      ).toBe("40px");
+      ).toBe("16px");
       // Line ends where the text ends: 300 (holder right) - 120 (text right).
       expect(
         targetBlock.holder.style.getPropertyValue("--drop-indicator-side-right"),

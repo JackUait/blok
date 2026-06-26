@@ -155,9 +155,16 @@ const SERVICES = [
   ["Threads"],
 ];
 
+// Services intentionally excluded from the carousel (by request).
+const EXCLUDE = new Set(["Podbean"]);
+
 const out = [];
 const dropped = [];
 for (const [title] of SERVICES) {
+  if (EXCLUDE.has(title)) {
+    dropped.push(`${title} (excluded)`);
+    continue;
+  }
   let icon = null;
   const slug = SLUG[title];
   if (slug && bySlug.has(slug)) icon = bySlug.get(slug);

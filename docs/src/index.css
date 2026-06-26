@@ -1108,22 +1108,36 @@
    rest. The base tiles carry the shadow; the lit (colour-revealed) copy rides the
    same lift transform so the two stay in lockstep under the cursor mask. */
 .group:hover .fi-chip-base,
-.group:hover .fi-chip-lit {
+.group:hover .fi-chip-lit,
+.group:hover .fi-chip-glyph {
   transform-origin: center;
 }
 .group:hover .fi-chip-base {
-  animation: chip-float 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation: chip-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
 }
 .group:hover .fi-chip-lit {
-  animation: chip-lift 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation: chip-lift 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
 }
-@keyframes chip-float {
+.group:hover .fi-chip-glyph {
+  animation: chip-glyph-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+/* The tile springs up with a soft shadow bloom, overshoots, then settles —
+   giving the lift a bit of weight and bounce instead of a flat slide. */
+@keyframes chip-pop {
   0%, 100% { transform: translateY(0) scale(1); box-shadow: 0 0 0 0 rgba(17, 12, 10, 0); }
-  42% { transform: translateY(-5px) scale(1.05); box-shadow: 0 9px 18px -7px rgba(17, 12, 10, 0.2); }
+  38% { transform: translateY(-7px) scale(1.06); box-shadow: 0 13px 24px -8px rgba(17, 12, 10, 0.26); }
+  66% { transform: translateY(-1px) scale(1.005); box-shadow: 0 6px 13px -7px rgba(17, 12, 10, 0.14); }
 }
 @keyframes chip-lift {
   0%, 100% { transform: translateY(0) scale(1); }
-  42% { transform: translateY(-5px) scale(1.05); }
+  38% { transform: translateY(-7px) scale(1.06); }
+  66% { transform: translateY(-1px) scale(1.005); }
+}
+/* The glyph rides a touch higher and later than its tile — a little parallax
+   that makes each chip read as a physical object being plucked up. */
+@keyframes chip-glyph-pop {
+  0%, 100% { transform: translateY(0) scale(1); }
+  44% { transform: translateY(-3px) scale(1.16); }
 }
 
 /* Hover-away: :hover can't fire a one-shot on exit, so the card is tagged
@@ -1193,6 +1207,7 @@
 @media (prefers-reduced-motion: reduce) {
   .group:hover .fi-chip-base,
   .group:hover .fi-chip-lit,
+  .group:hover .fi-chip-glyph,
   .group:hover .fi-row,
   .group:hover .fi-poll-bar,
   .group:hover .fi-byob-badge,

@@ -310,24 +310,28 @@ const BLOCK_CHIPS: { label: string; color: string; path: React.ReactNode }[] = [
 // light up crisply in their own colour, which the base copy can't show.
 const ChipGrid: React.FC<{ lit?: boolean }> = ({ lit }) => (
   <div className="grid h-full w-full grid-cols-4 gap-2">
-    {BLOCK_CHIPS.map((chip, i) => (
+    {BLOCK_CHIPS.map((chip, i) => {
       // Diagonal stagger (row + col) so the lift sweeps across the palette as a wave.
-      <div
-        key={chip.label}
-        style={{
-          animationDelay: `${(Math.floor(i / 4) + (i % 4)) * 0.06}s`,
-          ...(lit ? { color: chip.color, borderColor: chip.color } : {}),
-        }}
-        className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border py-2.5 ${
-          lit ? "fi-chip-lit" : "fi-chip-base border-border/50 bg-card text-muted-foreground"
-        }`}
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          {chip.path}
-        </svg>
-        <span className="text-[10px] font-semibold leading-none tracking-tight">{chip.label}</span>
-      </div>
-    ))}
+      const delay = (Math.floor(i / 4) + (i % 4)) * 0.06;
+      return (
+        <div
+          key={chip.label}
+          style={{
+            animationDelay: `${delay}s`,
+            ...(lit ? { color: chip.color, borderColor: chip.color } : {}),
+          }}
+          className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border py-2.5 ${
+            lit ? "fi-chip-lit" : "fi-chip-base border-border/50 bg-card text-muted-foreground"
+          }`}
+        >
+          {/* Glyph pops a touch higher and later than its tile, for layered depth. */}
+          <svg className="fi-chip-glyph" style={{ animationDelay: `${delay + 0.05}s` }} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            {chip.path}
+          </svg>
+          <span className="text-[10px] font-semibold leading-none tracking-tight">{chip.label}</span>
+        </div>
+      );
+    })}
   </div>
 );
 

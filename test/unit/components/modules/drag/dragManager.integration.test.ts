@@ -407,6 +407,66 @@ describe("DragManager - Component Integration", () => {
       expect(
         targetBlock.holder.style.getPropertyValue("--drop-indicator-depth"),
       ).toBe("0");
+      // The grayish lead-in segment (editor left edge -> blue line start) is
+      // enabled for list items via this attribute.
+      expect(targetBlock.holder).toHaveAttribute("data-drop-indicator-lead");
+
+      document.dispatchEvent(createMouseEvent("mouseup"));
+    });
+
+    it("clears the lead-in attribute when the indicator moves to a non-list block", () => {
+      const { dragManager, blocks, wrapper } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      blocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      // block-4 is a list item with a text container; block-3 is a plain block.
+      const listTarget = blocks[3];
+      listTarget.holder.setAttribute("data-list-depth", "0");
+      const listContent = listTarget.holder.querySelector(
+        "[data-blok-element-content]",
+      ) as HTMLElement;
+      const container = document.createElement("div");
+      container.setAttribute("data-blok-testid", "list-content-container");
+      container.textContent = "List item";
+      listContent.appendChild(container);
+      container.getBoundingClientRect = vi.fn(
+        () => new DOMRect(40, 200, 240, 50),
+      );
+      (listTarget.holder.getBoundingClientRect as Mock).mockReturnValue(
+        new DOMRect(0, 200, 300, 50),
+      );
+
+      const plainTarget = blocks[2];
+      (plainTarget.holder.getBoundingClientRect as Mock).mockReturnValue(
+        new DOMRect(0, 120, 300, 50),
+      );
+
+      const dragHandle = document.createElement("div");
+      dragManager.setupDragHandle(dragHandle, blocks[0]);
+      dragHandle.dispatchEvent(
+        createMouseEvent("mousedown", { clientX: 100, clientY: 100 }),
+      );
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 110, clientY: 100 }),
+      );
+
+      // First hover the list item -> lead-in is enabled.
+      vi.mocked(document.elementFromPoint).mockReturnValue(listTarget.holder);
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 50, clientY: 240 }),
+      );
+      expect(listTarget.holder).toHaveAttribute("data-drop-indicator-lead");
+
+      // Then move to a plain block -> the list block's lead-in is cleared and
+      // the plain block never gets one.
+      vi.mocked(document.elementFromPoint).mockReturnValue(plainTarget.holder);
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 50, clientY: 160 }),
+      );
+
+      expect(plainTarget.holder).not.toHaveAttribute("data-drop-indicator-lead");
+      expect(listTarget.holder).not.toHaveAttribute("data-drop-indicator-lead");
 
       document.dispatchEvent(createMouseEvent("mouseup"));
     });

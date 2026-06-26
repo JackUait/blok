@@ -1202,6 +1202,7 @@
   --blok-database-card-actions-bg: #1e2533;
   --blok-button-focus-bg-hover: #fbfcfe;
   --blok-dnd-drop-indicator-bg: #d4e3fc;
+  --blok-dnd-drop-indicator-lead-bg: #dcdcda;
   --blok-dnd-drop-indicator-thickness: 6px;
   --blok-dnd-drop-indicator-thickness-vertical: 5px;
   --blok-table-add-pill-border: rgba(55, 53, 47, 0.17);
@@ -1469,6 +1470,7 @@
   --blok-database-card-actions-bg: #0f1420;
   --blok-button-focus-bg-hover: #2d2d2c;
   --blok-dnd-drop-indicator-bg: #1f3a5c;
+  --blok-dnd-drop-indicator-lead-bg: #3a3d42;
   --blok-table-add-pill-border: rgba(255, 255, 255, 0.17);
   --blok-database-card-menu-hover-bg: rgba(255, 255, 255, 0.12);
   --blok-database-column-pill-text: rgba(255, 255, 255, 0.9);
@@ -1612,6 +1614,7 @@
   --blok-database-card-actions-bg: #0f1420;
   --blok-button-focus-bg-hover: #2d2d2c;
   --blok-dnd-drop-indicator-bg: #1f3a5c;
+  --blok-dnd-drop-indicator-lead-bg: #3a3d42;
   --blok-table-add-pill-border: rgba(255, 255, 255, 0.17);
   --blok-database-card-menu-hover-bg: rgba(255, 255, 255, 0.12);
   --blok-database-column-pill-text: rgba(255, 255, 255, 0.9);
@@ -1739,9 +1742,13 @@
   background-color: var(--blok-dnd-drop-indicator-bg);
 }
 
+[data-drop-indicator="top"], [data-drop-indicator="bottom"] {
+  --drop-line-start: calc(var(--drop-indicator-side-left, 0px) + var(--drop-indicator-depth, 0) * var(--blok-space-3));
+}
+
 [data-drop-indicator="top"]::before, [data-drop-indicator="bottom"]::before {
   height: var(--blok-dnd-drop-indicator-thickness);
-  left: calc(var(--drop-indicator-side-left, 0px) + var(--drop-indicator-depth, 0) * var(--blok-space-3));
+  left: var(--drop-line-start);
   right: var(--drop-indicator-side-right, 0px);
 }
 
@@ -1750,6 +1757,22 @@
 }
 
 [data-drop-indicator="top"]::before {
+  transform: translateY(-50%);
+}
+
+[data-drop-indicator-lead]::after {
+  z-index: 9;
+  height: var(--blok-dnd-drop-indicator-thickness);
+  left: 0;
+  right: calc(100% - var(--drop-line-start) - 2px);
+  background-color: var(--blok-dnd-drop-indicator-lead-bg);
+}
+
+[data-drop-indicator-lead][data-drop-indicator="bottom"]::after {
+  transform: translateY(50%);
+}
+
+[data-drop-indicator-lead][data-drop-indicator="top"]::after {
   transform: translateY(-50%);
 }
 

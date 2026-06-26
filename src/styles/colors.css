@@ -264,6 +264,9 @@
   /* Small UI surfaces that can't reach a var via Tailwind arbitrary syntax. */
   --blok-button-focus-bg-hover: #fbfcfe;
   --blok-dnd-drop-indicator-bg: #d4e3fc;
+  /* Grayish lead-in that runs from the editor's left edge to where the blue
+     list drop line starts, so an indented line reads as a full-width rule. */
+  --blok-dnd-drop-indicator-lead-bg: #dcdcda;
   /* Drop-line geometry. The horizontal (top/bottom) rule spans the content
      width, so 6px reads as a thin line; the vertical (left/right) bar is short,
      so it gets a slimmer width to read the same. */
@@ -611,6 +614,7 @@
 
     --blok-button-focus-bg-hover: #2d2d2c;
     --blok-dnd-drop-indicator-bg: #1f3a5c;
+    --blok-dnd-drop-indicator-lead-bg: #3a3d42;
 
     --blok-table-add-pill-border: rgba(255, 255, 255, 0.17);
     --blok-database-card-menu-hover-bg: rgba(255, 255, 255, 0.12);
@@ -783,6 +787,7 @@
 
   --blok-button-focus-bg-hover: #2d2d2c;
   --blok-dnd-drop-indicator-bg: #1f3a5c;
+  --blok-dnd-drop-indicator-lead-bg: #3a3d42;
 
   --blok-table-add-pill-border: rgba(255, 255, 255, 0.17);
   --blok-database-card-menu-hover-bg: rgba(255, 255, 255, 0.12);

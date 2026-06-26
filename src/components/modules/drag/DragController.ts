@@ -499,6 +499,12 @@ export class DragController extends Module {
     block.holder.style.setProperty('--drop-indicator-side-left', `${left}px`);
     block.holder.style.setProperty('--drop-indicator-side-right', `${right}px`);
     block.holder.style.setProperty('--drop-indicator-depth', '0');
+
+    // Enable the grayish lead-in segment that runs from the editor's left edge
+    // (the holder's own left, which sits flush with the editor) up to where the
+    // blue line starts, so the indented list line reads as part of a full-width
+    // rule. Pure CSS draws it from this attribute and the side-left offset.
+    block.holder.setAttribute('data-drop-indicator-lead', '');
   }
 
   /**
@@ -513,6 +519,11 @@ export class DragController extends Module {
     const range = document.createRange();
 
     range.selectNodeContents(container);
+
+    if (typeof range.getBoundingClientRect !== 'function') {
+      return null;
+    }
+
     const rect = range.getBoundingClientRect();
 
     return rect.width > 0 ? rect.right : null;
@@ -608,6 +619,7 @@ export class DragController extends Module {
     block.holder.style.removeProperty('--drop-indicator-side-right');
     block.holder.style.removeProperty('--drop-indicator-side-top');
     block.holder.style.removeProperty('--drop-indicator-side-bottom');
+    block.holder.removeAttribute('data-drop-indicator-lead');
   }
 
   private onMouseUp(e: MouseEvent): void {

@@ -315,8 +315,11 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // rules deleted) and the disc becomes the hero — enlarged to fill the freed panel,
     // with its spin now driven by disc.ts (inertial transform: spins up on play, coasts
     // down on pause) instead of a CSS keyframe. Net SHRINK in audio.css.
+    // Drag drop-indicator: list-item drop lines gained a grayish lead-in
+    // (::after rule + lead-bg tokens) drawn from the editor's left edge to the
+    // coloured line. ~1KB intentional growth.
     const PRE_SPLIT_BYTES = 407500;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.336);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.34);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

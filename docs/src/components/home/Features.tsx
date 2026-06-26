@@ -917,7 +917,7 @@ const serviceInitials = (title: string): string => {
 
 const ServiceIcon: React.FC<{ service: EmbedService }> = ({ service }) => (
   <span
-    className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[12px] text-white shadow-[0_3px_8px_-2px_rgba(0,0,0,0.22)] ring-1 ring-black/5"
+    className="embed-tile relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[12px] text-white shadow-[0_3px_8px_-2px_rgba(0,0,0,0.22)] ring-1 ring-black/5"
     style={{ background: service.hex ?? "#64748B" }}
   >
     {!service.img && <span className="pointer-events-none absolute inset-0 bg-linear-to-b from-white/25 to-transparent" />}
@@ -958,90 +958,26 @@ const EMBED_ROWS = Array.from({ length: EMBED_BAND_ROWS }, (_, i) => {
 // fills every corner. Rows scroll right, so the icons travel up to the right.
 // The band is wider than the tile and shifted left so the left-aligned, seamless
 // marquee always covers from beyond the left edge to far past the right — no
-// exposed edge at any scroll phase, even once rotated. Rendered twice (base +
-// magnifier copy); both share the same deterministic CSS marquee + group-hover
-// tilt, so they animate in lock-step and the lens copy overlays the base exactly.
-const EmbedBand: React.FC = () => (
-  <div className="-ml-[22%] flex w-[144%] flex-col gap-3 transition-transform duration-[800ms] ease-out will-change-transform motion-safe:group-hover:[transform:rotate(-19deg)_scale(1.32)]">
-    {EMBED_ROWS.map((row, r) => (
-      <div
-        key={r}
-        className="flex w-max gap-3 bento-marquee-r"
-        style={{ animationDuration: row.dur }}
-      >
-        {[...row.items, ...row.items].map((s, i) => (
-          <ServiceIcon key={`${r}-${s.title}-${i}`} service={s} />
-        ))}
-      </div>
-    ))}
+// exposed edge at any scroll phase, even once rotated. Each tile carries
+// .embed-tile so it pops (grows + lifts above its neighbours) as the cursor
+// passes over it, dock-magnification style — see index.css.
+const EmbedsViz: React.FC = () => (
+  <div aria-hidden="true" className="flex size-full items-center overflow-hidden">
+    <div className="-ml-[22%] flex w-[144%] flex-col gap-3 transition-transform duration-[800ms] ease-out will-change-transform motion-safe:group-hover:[transform:rotate(-19deg)_scale(1.32)]">
+      {EMBED_ROWS.map((row, r) => (
+        <div
+          key={r}
+          className="flex w-max gap-3 bento-marquee-r"
+          style={{ animationDuration: row.dur }}
+        >
+          {[...row.items, ...row.items].map((s, i) => (
+            <ServiceIcon key={`${r}-${s.title}-${i}`} service={s} />
+          ))}
+        </div>
+      ))}
+    </div>
   </div>
 );
-
-// On-screen lens geometry: the masked circle has radius LENS_R in the lens
-// layer's own coords, but the layer is scaled by LENS_MAG about the cursor, so
-// the visible radius (and the glass ring that traces it) is LENS_R * LENS_MAG.
-const LENS_R = 46;
-const LENS_MAG = 1.4;
-
-// A magnifier that follows the cursor: a second copy of the band, scaled up about
-// the pointer and clipped to a soft circle, sits over the base. Whatever the glow
-// blob hovers reads as enlarged under glass; everything outside the lens shows the
-// untouched base band through the transparent part of the mask.
-const EmbedsViz: React.FC = () => {
-  const ref = useRef<HTMLDivElement>(null);
-  const reduce = useReducedMotion();
-
-  const track = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType !== "mouse") return;
-    const el = ref.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    el.style.setProperty("--lx", `${e.clientX - rect.left}px`);
-    el.style.setProperty("--ly", `${e.clientY - rect.top}px`);
-  };
-
-  const lensMask = `radial-gradient(circle ${LENS_R}px at var(--lx, 50%) var(--ly, 50%), #000 56%, transparent 100%)`;
-
-  return (
-    <div
-      ref={ref}
-      aria-hidden="true"
-      onPointerMove={reduce ? undefined : track}
-      className="relative flex size-full items-center overflow-hidden"
-    >
-      <EmbedBand />
-      {!reduce && (
-        <>
-          {/* Magnified copy, clipped to the lens; only shown while the tile is
-              active (band visible on hover). */}
-          <div
-            className="pointer-events-none absolute inset-0 hidden items-center opacity-0 transition-opacity duration-200 lg:flex lg:group-hover:opacity-100"
-            style={{
-              transform: `scale(${LENS_MAG})`,
-              transformOrigin: "var(--lx, 50%) var(--ly, 50%)",
-              WebkitMaskImage: lensMask,
-              maskImage: lensMask,
-            }}
-          >
-            <EmbedBand />
-          </div>
-          {/* Glass rim + faint highlight that traces the lens edge. */}
-          <span
-            className="pointer-events-none absolute hidden rounded-full opacity-0 ring-1 ring-white/60 transition-opacity duration-200 lg:block lg:group-hover:opacity-100"
-            style={{
-              left: "var(--lx, 50%)",
-              top: "var(--ly, 50%)",
-              width: `${LENS_R * LENS_MAG * 2}px`,
-              height: `${LENS_R * LENS_MAG * 2}px`,
-              transform: "translate(-50%, -50%)",
-              boxShadow: "0 1px 10px rgba(0,0,0,0.12), inset 0 0 14px rgba(255,255,255,0.28)",
-            }}
-          />
-        </>
-      )}
-    </div>
-  );
-};
 
 const UNDO_ARROW = (
   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

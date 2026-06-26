@@ -472,6 +472,85 @@ describe('UndoHistory', () => {
     });
   });
 
+  describe('after-snapshot auto-refresh (defense-in-depth)', () => {
+    it('refreshes the "after" snapshot once focus settles after the change', async () => {
+      // Root-cause guard for "redo caret does not catch up to the new block":
+      // Yjs `stack-item-added` fires mid-transaction, BEFORE a structural handler
+      // (Enter split, paste, tool insert) moves the caret to the new block. So the
+      // "after" snapshot captured there points at the OLD block. A microtask
+      // re-capture, after the synchronous gesture settles focus, makes redo land
+      // on the right block automatically — without each handler having to call
+      // updateLastCaretAfterPosition() by hand.
+      const blockA = {
+        id: 'block-a',
+        currentInputIndex: 0,
+        currentInput: document.createElement('div'),
+        inputs: [document.createElement('div')],
+      };
+      const blockB = {
+        id: 'block-b',
+        currentInputIndex: 0,
+        currentInput: document.createElement('div'),
+        inputs: [document.createElement('div')],
+      };
+
+      // Caret is in block A when the undoable change is recorded.
+      (blok.BlockManager as unknown as { currentBlock: typeof blockA }).currentBlock = blockA;
+
+      // A tracked ('local') change creates an undo stack item; stack-item-added
+      // fires mid-transaction and captures after = block A.
+      ydoc.transact(() => {
+        const yblock = new Y.Map<unknown>();
+        yblock.set('id', 'block-a');
+        yblock.set('type', 'paragraph');
+        yblock.set('data', new Y.Map<unknown>());
+        yblocks.push([yblock]);
+      }, 'local');
+
+      const stack = (history as unknown as { caretUndoStack: CaretHistoryEntry[] }).caretUndoStack;
+      expect(stack[stack.length - 1].after?.blockId).toBe('block-a');
+
+      // The gesture handler now moves focus to the new block (mirrors
+      // handleEnter's Caret.setToBlock, which runs AFTER the listener).
+      (blok.BlockManager as unknown as { currentBlock: typeof blockB }).currentBlock = blockB;
+
+      // Microtask drains: the "after" snapshot catches up to where focus settled.
+      await Promise.resolve();
+
+      expect(stack[stack.length - 1].after?.blockId).toBe('block-b');
+    });
+
+    it('does not downgrade a captured "after" snapshot to null when focus leaves all blocks', async () => {
+      const blockA = {
+        id: 'block-a',
+        currentInputIndex: 0,
+        currentInput: document.createElement('div'),
+        inputs: [document.createElement('div')],
+      };
+
+      (blok.BlockManager as unknown as { currentBlock: typeof blockA }).currentBlock = blockA;
+
+      ydoc.transact(() => {
+        const yblock = new Y.Map<unknown>();
+        yblock.set('id', 'block-a');
+        yblock.set('type', 'paragraph');
+        yblock.set('data', new Y.Map<unknown>());
+        yblocks.push([yblock]);
+      }, 'local');
+
+      const stack = (history as unknown as { caretUndoStack: CaretHistoryEntry[] }).caretUndoStack;
+      expect(stack[stack.length - 1].after?.blockId).toBe('block-a');
+
+      // Focus leaves every block (e.g. moved to a toolbar control). The refresh
+      // must NOT overwrite the good snapshot with null.
+      (blok.BlockManager as unknown as { currentBlock: undefined }).currentBlock = undefined;
+
+      await Promise.resolve();
+
+      expect(stack[stack.length - 1].after?.blockId).toBe('block-a');
+    });
+  });
+
   describe('caret restoration edge cases', () => {
     it('preserves focus (no document-top jump) when snapshot block no longer exists', () => {
       // Regression: when the snapshot's block can't be resolved, undo/redo must

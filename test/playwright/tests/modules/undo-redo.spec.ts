@@ -5011,7 +5011,7 @@ test.describe('yjs undo/redo', () => {
       await expect(paragraphInput).toHaveText('');
     });
 
-    test('boundary character with no timeout does not create checkpoint', async ({ page }) => {
+    test('boundary character with quick resume does not create checkpoint', async ({ page }) => {
       await createBlokWithBlocks(page, [
         {
           type: 'paragraph',
@@ -5024,11 +5024,19 @@ test.describe('yjs undo/redo', () => {
 
       await paragraphInput.click();
 
-      // Type "Hello " (with space - boundary character)
-      await page.keyboard.type('Hello ');
-      // Immediately continue typing before timeout (less than 100ms)
-      await waitForDelay(page, 50);
-      await page.keyboard.type('world');
+      // Type a boundary character (space) and immediately resume typing. The
+      // boundary arms a BOUNDARY_TIMEOUT_MS (100ms) checkpoint timer; resuming
+      // before it elapses must clear the pending boundary (the clearBoundary
+      // path in handleSmartGrouping) so both words stay in ONE undo group.
+      //
+      // NOTE: the resume is driven continuously (no artificial mid-typing
+      // waitForDelay). A real wall-clock pause here races the 100ms product timer
+      // against Playwright's variable CDP keystroke delivery (observed 11-139ms),
+      // which makes the test flaky under load. The exact timed-pause boundary
+      // semantics are covered deterministically by the unit tests in
+      // undo-history.test.ts (markBoundary / checkAndHandleBoundary with fake
+      // timers); this E2E asserts the end-to-end grouping outcome.
+      await page.keyboard.type('Hello world');
 
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 

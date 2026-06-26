@@ -175,12 +175,23 @@ export class UndoHistory {
 
       if (event.type === 'undo') {
         // New undo entry was created - record caret positions
-        this.caretUndoStack.push({
+        const entry: CaretHistoryEntry = {
           before: this.pendingCaretBefore,
           after: this.captureCaretSnapshot(),
-        });
+        };
+
+        this.caretUndoStack.push(entry);
         // Clear redo stack on new action (standard undo/redo behavior)
         this.caretRedoStack = [];
+
+        // Defense-in-depth backstop for "redo caret does not catch up to the new
+        // block". This listener runs mid-transaction, BEFORE a structural handler
+        // (Enter split, paste, tool insert) calls Caret.setToBlock on the newly
+        // created block — so `after` above still points at the original block.
+        // Re-capture once the synchronous gesture has settled focus, making redo
+        // land on the right block AUTOMATICALLY for every tool, instead of relying
+        // on each handler to remember updateLastCaretAfterPosition() by hand.
+        this.scheduleAfterSnapshotRefresh(entry);
       }
       this.resetPendingCaretState();
     });
@@ -207,6 +218,48 @@ export class UndoHistory {
       }
 
       this.resetPendingCaretState();
+    });
+  }
+
+  /**
+   * Re-capture the "after" snapshot of a freshly recorded undo entry once the
+   * current synchronous gesture has settled focus.
+   *
+   * Yjs fires `stack-item-added` mid-transaction, before control returns to the
+   * handler that created the block and moved the caret into it. A microtask
+   * drains after that handler completes (still before any user interaction or
+   * undo/redo), so by then `Caret.setToBlock` has run and the live selection
+   * reflects where the caret truly ended up. Updating the captured entry there
+   * is what makes redo restore the caret to the new block for ANY tool — the
+   * generalized form of the per-handler updateLastCaretAfterPosition() calls.
+   *
+   * The scheduled entry's identity is checked against the current top of the
+   * stack so a later unrelated entry can't be clobbered if more changes land
+   * before the drain.
+   */
+  private scheduleAfterSnapshotRefresh(entry: CaretHistoryEntry): void {
+    queueMicrotask(() => {
+      // Never fight an in-flight undo/redo (it owns caret restoration).
+      if (this.isPerformingUndoRedo) {
+        return;
+      }
+
+      // Only refresh while the scheduled entry is still the most recent one — if
+      // another change (or a clear) landed before this microtask drained, leave
+      // it alone rather than rewriting an unrelated entry.
+      const lastIndex = this.caretUndoStack.length - 1;
+
+      if (lastIndex < 0 || this.caretUndoStack[lastIndex] !== entry) {
+        return;
+      }
+
+      const settled = this.captureCaretSnapshot();
+
+      // Never downgrade a good snapshot to null if focus has since left every
+      // block (e.g. moved to a toolbar control) by the time the microtask runs.
+      if (settled !== null) {
+        this.caretUndoStack[lastIndex].after = settled;
+      }
     });
   }
 

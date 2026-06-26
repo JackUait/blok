@@ -1298,32 +1298,47 @@ const ShortcutBadge: React.FC<{
   </span>
 );
 
-// The headline number — a shimmering gradient 68 — orbited by a few locale
-// chips, one of them right-to-left.
-const LOCALES = [
-  { label: "EN", rtl: false },
-  { label: "RU", rtl: false },
-  { label: "日本語", rtl: false },
+// The headline number — a shimmering gradient 68 — over a spread of real native-
+// script names so the breadth reads at a glance. The two right-to-left languages
+// carry an "rtl" badge and brand tint, turning the abstract "RTL-ready" claim
+// into something a newcomer can see, and a dashed "+62" makes the 68 tangible.
+const LOCALES: { label: string; rtl?: boolean }[] = [
+  { label: "English" },
+  { label: "Русский" },
+  { label: "日本語" },
+  { label: "हिन्दी" },
   { label: "العربية", rtl: true },
+  { label: "עברית", rtl: true },
 ];
 
 const LanguagesViz: React.FC = () => (
   <div aria-hidden="true" className="flex w-full flex-col gap-2.5">
     <div className="flex items-baseline gap-1.5">
       <span className="text-brand-gradient bento-shimmer text-4xl font-extrabold leading-none tracking-tight">68</span>
-      <span className="text-[11px] font-medium text-muted-foreground">locales</span>
+      <span className="text-[11px] font-medium text-muted-foreground">locales, built in</span>
     </div>
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-wrap items-center gap-1.5">
       {LOCALES.map((loc, i) => (
         <span
           key={loc.label}
-          dir={loc.rtl ? "rtl" : "ltr"}
-          className="rounded-full border border-border/60 bg-card px-2 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors duration-300 group-hover:border-primary/30 group-hover:text-primary"
+          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors duration-300 ${
+            loc.rtl
+              ? "border-brand-from/30 bg-brand-from/5 text-brand-from"
+              : "border-border/60 bg-card text-muted-foreground group-hover:border-primary/30 group-hover:text-primary"
+          }`}
           style={{ transitionDelay: `${i * 30}ms` }}
         >
-          {loc.label}
+          {loc.rtl && (
+            <span className="rounded-[3px] bg-brand-from/15 px-1 text-[7px] font-bold uppercase leading-[1.5] tracking-wider">
+              rtl
+            </span>
+          )}
+          <span dir={loc.rtl ? "rtl" : "ltr"}>{loc.label}</span>
         </span>
       ))}
+      <span className="rounded-full border border-dashed border-border/70 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground/80">
+        +62
+      </span>
     </div>
   </div>
 );

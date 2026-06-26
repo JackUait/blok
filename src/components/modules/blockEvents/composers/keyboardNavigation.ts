@@ -187,6 +187,15 @@ export class KeyboardNavigation extends BlockEventComposer {
       this.Blok.Caret.setToBlock(blockToFocus);
 
       /**
+       * Refresh the "after" caret snapshot now that focus has moved to the new
+       * block. Yjs `stack-item-added` fires inside createBlockOnEnter (the split
+       * / insert transaction) BEFORE setToBlock runs, so the snapshot captured
+       * there still points at the original block. Without this, redo restores
+       * the caret to the old block instead of the newly created one.
+       */
+      this.Blok.YjsManager.updateLastCaretAfterPosition();
+
+      /**
        * Show Toolbar
        */
       this.Blok.Toolbar.moveAndOpen(blockToFocus);

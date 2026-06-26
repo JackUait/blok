@@ -4074,6 +4074,71 @@ test.describe('yjs undo/redo', () => {
       expect(isFirstItemFocused).toBe(false);
     });
 
+    test('redo after paragraph split places caret in the new block', async ({ page }) => {
+      // Regression: on redo of an Enter split, the caret must land at the start
+      // of the new (second) block where the split occurred — not stay at the
+      // split point in the first block. The "after" snapshot is captured during
+      // Yjs stack-item-added, which fires inside split() BEFORE Caret.setToBlock
+      // moves focus to the new block, leaving the snapshot stale. handleEnter
+      // refreshes it after the caret moves so redo restores the correct position.
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'First Second' },
+        },
+      ]);
+
+      const firstInput = getParagraphByIndex(page, 0).locator('[contenteditable="true"]');
+
+      await firstInput.click();
+
+      // Position caret after "First"
+      await page.evaluate(() => {
+        const paragraph = document.querySelector('[data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable="true"]');
+        const textNode = paragraph?.firstChild;
+
+        if (textNode) {
+          const range = document.createRange();
+          const sel = window.getSelection();
+
+          range.setStart(textNode, 5);
+          range.setEnd(textNode, 5);
+          sel?.removeAllRanges();
+          sel?.addRange(range);
+        }
+      });
+
+      // Split
+      await page.keyboard.press('Enter');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+
+      // Undo merges the blocks back
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+
+      // Redo should re-split and focus the new (second) block
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+
+      // KEY TEST: caret lands in the new (second) block, not the first
+      const secondInput = getParagraphByIndex(page, 1).locator('[contenteditable="true"]');
+      const isSecondFocused = await isFocused(secondInput);
+
+      expect(isSecondFocused).toBe(true);
+
+      const isFirstFocused = await isFocused(getParagraphByIndex(page, 0).locator('[contenteditable="true"]'));
+
+      expect(isFirstFocused).toBe(false);
+
+      // Caret should be at the start of the new block (the split point)
+      const offset = await getCaretOffset(secondInput);
+
+      expect(offset).toBe(0);
+    });
+
     test('redo after undoing list item deletion restores deleted items', async ({ page }) => {
       // Create multiple list items
       await resetBlok(page);

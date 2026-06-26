@@ -117,6 +117,7 @@ const createBlokModules = (overrides: Partial<BlokModules> = {}): BlokModules =>
     YjsManager: {
       stopCapturing: vi.fn(),
       markCaretBeforeChange: vi.fn(),
+      updateLastCaretAfterPosition: vi.fn(),
     } as unknown as BlokModules['YjsManager'],
   };
 
@@ -326,6 +327,7 @@ describe('KeyboardNavigation', () => {
         YjsManager: {
           stopCapturing,
           markCaretBeforeChange: vi.fn(),
+          updateLastCaretAfterPosition: vi.fn(),
         } as unknown as BlokModules['YjsManager'],
       });
       const keyboardNavigation = new KeyboardNavigation(blok);
@@ -402,6 +404,7 @@ describe('KeyboardNavigation', () => {
         YjsManager: {
           stopCapturing: vi.fn(),
           markCaretBeforeChange: vi.fn(),
+          updateLastCaretAfterPosition: vi.fn(),
         } as unknown as BlokModules['YjsManager'],
       });
 
@@ -492,6 +495,7 @@ describe('KeyboardNavigation', () => {
         YjsManager: {
           stopCapturing: vi.fn(),
           markCaretBeforeChange: vi.fn(),
+          updateLastCaretAfterPosition: vi.fn(),
         } as unknown as BlokModules['YjsManager'],
       });
 
@@ -582,6 +586,7 @@ describe('KeyboardNavigation', () => {
         YjsManager: {
           stopCapturing: vi.fn(),
           markCaretBeforeChange: vi.fn(),
+          updateLastCaretAfterPosition: vi.fn(),
         } as unknown as BlokModules['YjsManager'],
       });
 
@@ -670,6 +675,7 @@ describe('KeyboardNavigation', () => {
         YjsManager: {
           stopCapturing: vi.fn(),
           markCaretBeforeChange: vi.fn(),
+          updateLastCaretAfterPosition: vi.fn(),
         } as unknown as BlokModules['YjsManager'],
       });
 
@@ -718,6 +724,7 @@ describe('KeyboardNavigation', () => {
         YjsManager: {
           stopCapturing,
           markCaretBeforeChange: vi.fn(),
+          updateLastCaretAfterPosition: vi.fn(),
         } as unknown as BlokModules['YjsManager'],
       });
       const keyboardNavigation = new KeyboardNavigation(blok);
@@ -776,6 +783,7 @@ describe('KeyboardNavigation', () => {
         } as unknown as BlokModules['Toolbar'],
         YjsManager: {
           markCaretBeforeChange: vi.fn(),
+          updateLastCaretAfterPosition: vi.fn(),
         } as unknown as BlokModules['YjsManager'],
       });
 

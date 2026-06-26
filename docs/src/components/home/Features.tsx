@@ -1298,61 +1298,73 @@ const ShortcutBadge: React.FC<{
   </span>
 );
 
-// The whole tile is a live "type a greeting" demo: an editor field that rolls a
-// greeting through all 68 supported locales (src/components/i18n/locales), the
-// editor speaking every language. RTL is read from the same canonical set, so
-// those lines flip and the caret lands on the right edge — the "RTL-ready" claim
-// made watchable. The roll is JS-driven (see below) to scale to any count.
+// The whole tile is a live editor field that rolls a phrase through all 68
+// supported locales (src/components/i18n/locales) — the editor speaking every
+// language. At rest it says hello; hovering switches to a casual "What's up?",
+// still in all 68 tongues. RTL is read from the same canonical set, so those
+// lines flip and the caret lands on the right edge — "RTL-ready" made watchable.
+// Each entry is [code, hello, what's-up]; both share the locale's direction.
 const RTL_GREET = new Set(["ar", "dv", "fa", "he", "ku", "ps", "sd", "ug", "ur", "yi"]);
-const GREETINGS = (
+const PHRASES = (
   [
-    ["en", "Hello"], ["am", "ሰላም"], ["ar", "مرحبا"], ["az", "Salam"], ["bg", "Здравей"],
-    ["bn", "নমস্কার"], ["bs", "Zdravo"], ["cs", "Ahoj"], ["da", "Hej"], ["de", "Hallo"],
-    ["dv", "ހެލޯ"], ["el", "Γεια"], ["es", "Hola"], ["et", "Tere"], ["fa", "سلام"],
-    ["fi", "Hei"], ["fil", "Kamusta"], ["fr", "Bonjour"], ["gu", "નમસ્તે"], ["he", "שלום"],
-    ["hi", "नमस्ते"], ["hr", "Bok"], ["hu", "Szia"], ["hy", "Բարև"], ["id", "Halo"],
-    ["it", "Ciao"], ["ja", "こんにちは"], ["ka", "გამარჯობა"], ["km", "សួស្តី"], ["kn", "ನಮಸ್ಕಾರ"],
-    ["ko", "안녕하세요"], ["ku", "سڵاو"], ["lo", "ສະບາຍດີ"], ["lt", "Labas"], ["lv", "Sveiki"],
-    ["mk", "Здраво"], ["ml", "നമസ്കാരം"], ["mn", "Сайн уу"], ["mr", "नमस्कार"], ["ms", "Helo"],
-    ["my", "မင်္ဂလာပါ"], ["ne", "नमस्ते"], ["nl", "Hallo"], ["no", "Hei"], ["pa", "ਸਤ ਸ੍ਰੀ ਅਕਾਲ"],
-    ["pl", "Cześć"], ["ps", "سلام"], ["pt", "Olá"], ["ro", "Bună"], ["ru", "Привет"],
-    ["sd", "سلام"], ["si", "ආයුබෝවන්"], ["sk", "Ahoj"], ["sl", "Živjo"], ["sq", "Përshëndetje"],
-    ["sr", "Здраво"], ["sv", "Hej"], ["sw", "Jambo"], ["ta", "வணக்கம்"], ["te", "నమస్కారం"],
-    ["th", "สวัสดี"], ["tr", "Merhaba"], ["ug", "سالام"], ["uk", "Привіт"], ["ur", "سلام"],
-    ["vi", "Xin chào"], ["yi", "העלא"], ["zh", "你好"],
-  ] as [string, string][]
-).map(([code, text]) => ({ code, text, rtl: RTL_GREET.has(code) }));
+    ["en", "Hello", "What's up?"], ["am", "ሰላም", "እንዴት ነህ?"], ["ar", "مرحبا", "ما الأخبار؟"],
+    ["az", "Salam", "Nə var nə yox?"], ["bg", "Здравей", "Какво става?"], ["bn", "নমস্কার", "কী খবর?"],
+    ["bs", "Zdravo", "Šta ima?"], ["cs", "Ahoj", "Co se děje?"], ["da", "Hej", "Hvad så?"],
+    ["de", "Hallo", "Was geht?"], ["dv", "ހެލޯ", "ކިހިނެއް؟"], ["el", "Γεια", "Τι κάνεις;"],
+    ["es", "Hola", "¿Qué tal?"], ["et", "Tere", "Kuidas läheb?"], ["fa", "سلام", "چه خبر؟"],
+    ["fi", "Hei", "Mitä kuuluu?"], ["fil", "Kamusta", "Anong balita?"], ["fr", "Bonjour", "Quoi de neuf?"],
+    ["gu", "નમસ્તે", "શું ચાલે છે?"], ["he", "שלום", "מה נשמע?"], ["hi", "नमस्ते", "क्या हाल है?"],
+    ["hr", "Bok", "Što ima?"], ["hu", "Szia", "Mi újság?"], ["hy", "Բարև", "Ի՞նչ կա?"],
+    ["id", "Halo", "Apa kabar?"], ["it", "Ciao", "Come va?"], ["ja", "こんにちは", "元気？"],
+    ["ka", "გამარჯობა", "რა ხდება?"], ["km", "សួស្តី", "សុខសប្បាយទេ?"], ["kn", "ನಮಸ್ಕಾರ", "ಏನ್ ಸಮಾಚಾರ?"],
+    ["ko", "안녕하세요", "잘 지내?"], ["ku", "سڵاو", "چۆنی؟"], ["lo", "ສະບາຍດີ", "ສະບາຍດີບໍ?"],
+    ["lt", "Labas", "Kaip sekasi?"], ["lv", "Sveiki", "Kā iet?"], ["mk", "Здраво", "Како си?"],
+    ["ml", "നമസ്കാരം", "എന്ത് വിശേഷം?"], ["mn", "Сайн уу", "Юу байна?"], ["mr", "नमस्कार", "काय चाललंय?"],
+    ["ms", "Helo", "Apa khabar?"], ["my", "မင်္ဂလာပါ", "နေကောင်းလား?"], ["ne", "नमस्ते", "के छ?"],
+    ["nl", "Hallo", "Hoe gaat het?"], ["no", "Hei", "Hva skjer?"], ["pa", "ਸਤ ਸ੍ਰੀ ਅਕਾਲ", "ਕੀ ਹਾਲ ਹੈ?"],
+    ["pl", "Cześć", "Co słychać?"], ["ps", "سلام", "څنګه يې؟"], ["pt", "Olá", "Tudo bem?"],
+    ["ro", "Bună", "Ce faci?"], ["ru", "Привет", "Как дела?"], ["sd", "سلام", "ڪيئن آهيو؟"],
+    ["si", "ආයුබෝවන්", "කොහොමද?"], ["sk", "Ahoj", "Čo je nové?"], ["sl", "Živjo", "Kako si?"],
+    ["sq", "Përshëndetje", "Si je?"], ["sr", "Здраво", "Како си?"], ["sv", "Hej", "Läget?"],
+    ["sw", "Jambo", "Mambo?"], ["ta", "வணக்கம்", "எப்படி இருக்க?"], ["te", "నమస్కారం", "ఏంటి సంగతులు?"],
+    ["th", "สวัสดี", "เป็นไงบ้าง?"], ["tr", "Merhaba", "Ne haber?"], ["ug", "سالام", "قانداق؟"],
+    ["uk", "Привіт", "Як справи?"], ["ur", "سلام", "کیا حال ہے؟"], ["vi", "Xin chào", "Dạo này sao?"],
+    ["yi", "העלא", "וואָס מאַכסטו?"], ["zh", "你好", "怎么样？"],
+  ] as [string, string, string][]
+).map(([code, hello, whatsup]) => ({ code, hello, whatsup, rtl: RTL_GREET.has(code) }));
 
 type Greeting = { text: string; rtl: boolean };
-const WHATS_UP: Greeting = { text: "What's up?", rtl: false };
+// Resolve a locale to the word currently being typed — hello at rest, "what's
+// up?" while hovered — keeping the locale's text direction.
+const pickPhrase = (i: number, hover: boolean): Greeting => {
+  const p = PHRASES[i];
+  return { text: hover ? p.whatsup : p.hello, rtl: p.rtl };
+};
 
 const LanguagesViz: React.FC = () => {
   const reduce = useReducedMotion();
   const rootRef = useRef<HTMLDivElement>(null);
+  const hoverRef = useRef(false);
   const [idx, setIdx] = useState(0);
-  const [active, setActive] = useState<Greeting>(GREETINGS[0]);
+  const [active, setActive] = useState<Greeting>(() => pickPhrase(0, false));
   const [count, setCount] = useState(0);
   const [phase, setPhase] = useState<"typing" | "deleting">("typing");
-  const [hover, setHover] = useState(false);
 
   const chars = useMemo(() => Array.from(active.text), [active.text]);
 
-  // Hovering anywhere on the tile swaps the language loop for a friendly
-  // "What's up?": the current word deletes, the phrase types in and holds while
-  // hovered; leaving resumes the loop at the next locale.
+  // Hovering anywhere on the tile switches the loop from "hello" to a casual
+  // "What's up?" in the same language — the current word deletes and the new one
+  // types in; the locale cycle keeps running underneath either way.
   useEffect(() => {
     const group = rootRef.current?.closest("button");
     if (!group) return;
-    const enter = () => {
-      setHover(true);
-      if (reduce) setActive(WHATS_UP);
-      else setPhase("deleting");
+    const onHover = (h: boolean) => () => {
+      hoverRef.current = h;
+      if (reduce) setActive((a) => pickPhrase(idx, h) ?? a);
+      else setPhase("deleting"); // delete current, retype with the new field
     };
-    const leave = () => {
-      setHover(false);
-      if (reduce) setActive(GREETINGS[idx]);
-      else setPhase("deleting");
-    };
+    const enter = onHover(true);
+    const leave = onHover(false);
     group.addEventListener("mouseenter", enter);
     group.addEventListener("mouseleave", leave);
     return () => {
@@ -1361,36 +1373,33 @@ const LanguagesViz: React.FC = () => {
     };
   }, [reduce, idx]);
 
-  // Typewriter: type the active word char-by-char, hold, delete it, then pick the
-  // next word (the hovered phrase, or the next locale) and type that — looping all
-  // 68. RTL words type from the right with the caret on their leading edge. Driven
-  // by one self-rescheduling timer whose delay depends on the current phase. The
-  // active word only swaps at count 0, so deletes never visibly jump text.
+  // Typewriter: type the active word char-by-char, hold, delete it, advance to the
+  // next locale, and type that — looping all 68 in whichever field hover selects.
+  // RTL words type from the right with the caret on their leading edge. One self-
+  // rescheduling timer; the active word only swaps at count 0, so deletes never
+  // visibly jump text. hoverRef is read live so a mid-cycle hover takes effect at
+  // the next word boundary without restarting the loop.
   useEffect(() => {
     if (reduce) return;
     let t: number;
     if (phase === "typing") {
       if (count < chars.length) {
         t = window.setTimeout(() => setCount((c) => c + 1), 70);
-      } else if (!hover) {
+      } else {
         t = window.setTimeout(() => setPhase("deleting"), 1200);
       }
     } else if (count > 0) {
       t = window.setTimeout(() => setCount((c) => c - 1), 32);
     } else {
       t = window.setTimeout(() => {
-        if (hover) {
-          setActive(WHATS_UP);
-        } else {
-          const ni = (idx + 1) % GREETINGS.length;
-          setIdx(ni);
-          setActive(GREETINGS[ni]);
-        }
+        const ni = (idx + 1) % PHRASES.length;
+        setIdx(ni);
+        setActive(pickPhrase(ni, hoverRef.current));
         setPhase("typing");
       }, 240);
     }
     return () => window.clearTimeout(t);
-  }, [phase, count, chars.length, hover, idx, reduce]);
+  }, [phase, count, chars.length, idx, reduce]);
 
   const shown = reduce ? active.text : chars.slice(0, count).join("");
 

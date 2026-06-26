@@ -427,15 +427,15 @@ const PAGE_BLOCKS: { label: string; glyph: React.ReactNode; mine?: boolean }[] =
     glyph: (
       <>
         <path d="M4 20.25h16" />
-        <g className="fi-poll-bar" style={{ animationDelay: "0.05s" }}>
+        <g className="fi-poll-bar" style={{ animationDelay: "0.30s" }}>
           <rect x="5.5" y="11.5" width="3.6" height="6.5" rx="1.3" fill="currentColor" fillOpacity="0.2" stroke="none" />
           <rect x="5.5" y="11.5" width="3.6" height="6.5" rx="1.3" />
         </g>
-        <g className="fi-poll-bar" style={{ animationDelay: "0.22s" }}>
+        <g className="fi-poll-bar" style={{ animationDelay: "0.47s" }}>
           <rect x="10.2" y="6.5" width="3.6" height="11.5" rx="1.3" fill="currentColor" fillOpacity="0.2" stroke="none" />
           <rect x="10.2" y="6.5" width="3.6" height="11.5" rx="1.3" />
         </g>
-        <g className="fi-poll-bar" style={{ animationDelay: "0.135s" }}>
+        <g className="fi-poll-bar" style={{ animationDelay: "0.385s" }}>
           <rect x="14.9" y="9" width="3.6" height="9" rx="1.3" fill="currentColor" fillOpacity="0.2" stroke="none" />
           <rect x="14.9" y="9" width="3.6" height="9" rx="1.3" />
         </g>
@@ -503,11 +503,11 @@ const ExtensibleViz: React.FC = () => {
         className="pointer-events-none absolute inset-0 z-30 rounded-2xl border-[1.5px] border-brand-from opacity-0 transition-opacity duration-200"
       />
       <div className="flex flex-col gap-1 px-2 pt-2 pb-6">
-        {PAGE_BLOCKS.map((block) => (
+        {PAGE_BLOCKS.map((block, i) => (
           <div
             key={block.label}
-            style={block.mine ? { borderColor: "var(--brand-from)" } : undefined}
-            className={`flex items-center gap-2.5 rounded-xl border px-3 py-1.5 ${
+            style={{ animationDelay: `${0.03 + i * 0.08}s`, ...(block.mine ? { borderColor: "var(--brand-from)" } : {}) }}
+            className={`fi-row flex items-center gap-2.5 rounded-xl border px-3 py-1.5 ${
               block.mine ? "bg-primary/[0.06]" : "border-transparent"
             }`}
           >
@@ -535,7 +535,7 @@ const ExtensibleViz: React.FC = () => {
 
         {/* The invitation: gray at rest, its brand colour revealed only where the
             glow blob masks over it (lit duplicate stacked above the gray base). */}
-        <div className="relative">
+        <div className="fi-row relative" style={{ animationDelay: `${0.03 + PAGE_BLOCKS.length * 0.08}s` }}>
           <div className="flex items-center gap-2.5 rounded-xl border border-dashed border-border px-3 py-1.5 text-muted-foreground">
             <span className="flex size-7 shrink-0 items-center justify-center rounded-[10px] border border-dashed border-border">
               <svg className="fi-byob-plus" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">

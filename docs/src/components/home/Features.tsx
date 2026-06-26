@@ -1480,27 +1480,39 @@ const CapabilityTile: React.FC<TileProps> = ({ feature, onOpen }) => {
     >
       <span className="bento-spot" aria-hidden="true" />
       <div
-        className={`relative z-10 flex w-full items-center gap-3.5 ${
-          isEmbeds ? "transition-all duration-500 ease-out lg:group-hover:max-h-0 lg:group-hover:min-h-0 lg:group-hover:-translate-y-1 lg:group-hover:overflow-hidden lg:group-hover:opacity-0" : ""
+        className={`relative z-10 grid ${
+          isEmbeds
+            ? "transition-[grid-template-rows] duration-[600ms] ease-[cubic-bezier(0.22,1,0.36,1)] lg:grid-rows-[1fr] lg:group-hover:grid-rows-[0fr]"
+            : ""
         }`}
       >
-        <h3 className="flex-1 text-balance text-[1.05rem] font-bold leading-snug tracking-tight">
-          {renderTitleWithSlashKey(feature.title)}
-        </h3>
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-          className="shrink-0 text-primary/40 transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-primary lg:hidden"
-        >
-          <path d="M5 12h14M12 5l7 7-7 7" />
-        </svg>
+        <div className={isEmbeds ? "min-h-0 overflow-hidden" : ""}>
+          <div
+            className={`flex w-full items-center gap-3.5 ${
+              isEmbeds
+                ? "transition-[transform,opacity,filter] duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] lg:group-hover:-translate-y-2 lg:group-hover:opacity-0 lg:group-hover:blur-[2px]"
+                : ""
+            }`}
+          >
+            <h3 className="flex-1 text-balance text-[1.05rem] font-bold leading-snug tracking-tight">
+              {renderTitleWithSlashKey(feature.title)}
+            </h3>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              className="shrink-0 text-primary/40 transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-primary lg:hidden"
+            >
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </div>
+        </div>
       </div>
       <div
         className={`relative z-10 hidden flex-1 items-center lg:flex ${

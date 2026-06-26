@@ -985,7 +985,12 @@ const ServiceIcon: React.FC<{ service: EmbedService }> = ({ service }) => (
 const EMBED_BAND_ROWS = 10;
 const EMBED_ROW_LEN = 14;
 const EMBED_ROW_STAGGER = 14;
-const EMBED_ROW_DUR = "30s";
+// Each row scrolls at its own pace (adjacent rows always differ) so the band reads
+// as parallel streams rather than one rigid sheet. This is safe for the no-repeat
+// guarantee because uniqueness is structural, not synchronised: any co-visible rows
+// (≤5 of 10, always inside a 7-row window) hold disjoint logo chunks, so they can
+// never share a logo regardless of how their horizontal offsets drift apart.
+const EMBED_ROW_DURS = ["30s", "44s", "36s", "50s", "40s"];
 // Exported for the uniqueness regression test (Features.test.tsx).
 export const EMBED_ROWS = Array.from({ length: EMBED_BAND_ROWS }, (_, i) => {
   const start = (i * EMBED_ROW_STAGGER) % EMBED_SERVICES.length;
@@ -1110,7 +1115,7 @@ const EmbedsViz: React.FC = () => {
           <div
             key={r}
             className="flex w-max gap-3 bento-marquee-r"
-            style={{ animationDuration: EMBED_ROW_DUR }}
+            style={{ animationDuration: EMBED_ROW_DURS[r % EMBED_ROW_DURS.length] }}
           >
             {[...row.items, ...row.items].map((s, i) => (
               <ServiceIcon key={`${r}-${s.title}-${i}`} service={s} />

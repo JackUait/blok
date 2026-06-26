@@ -1064,9 +1064,11 @@
    sweeps across, no visible lens. Scale composes inside the band's diagonal
    tilt, so the growth tracks the flow. Pure CSS :hover keeps it cheap. */
 .embed-tile {
+  /* Springy overshoot so the grow/shrink reads as a distinct bouncy pop, not an
+     instant jump, as tiles sweep under the cursor. */
   transition:
-    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.2s ease;
+    transform 0.34s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.34s ease;
 }
 .embed-tile:hover {
   transform: scale(1.55);

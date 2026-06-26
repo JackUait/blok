@@ -960,7 +960,7 @@ const EMBED_ROWS = Array.from({ length: EMBED_BAND_ROWS }, (_, i) => {
 // reaches. Tiles fall off smoothly to scale 1 at the rim, so crossing the edge
 // is continuous (no snap).
 const MAG_RADIUS = 116;
-const MAG_PEAK = 0.42;
+const MAG_PEAK = 0.26;
 
 // Deterministic per-tile jitter so the cluster never looks like a tidy dome:
 // each tile pops to a slightly different size and cocks at its own angle.
@@ -1009,8 +1009,8 @@ const EmbedsViz: React.FC = () => {
             const lin = 1 - d / MAG_RADIUS; // 0..1
             const f = lin * lin * (3 - 2 * lin); // smoothstep — softer shoulders
             const n = noise[i];
-            tScale = 1 + MAG_PEAK * f * (0.72 + n * 0.7);
-            tRot = (n - 0.5) * 16 * f;
+            tScale = 1 + MAG_PEAK * f * (0.7 + n * 0.5);
+            tRot = (n - 0.5) * 11 * f;
           }
         }
         const s = curScale[i] + (tScale - curScale[i]) * EASE;

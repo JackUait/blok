@@ -2,6 +2,8 @@ import * as si from "simple-icons";
 import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { PNG } from "pngjs";
+import jpeg from "jpeg-js";
 
 const OUT = process.argv[2] ?? join(dirname(fileURLToPath(import.meta.url)), "../src/components/home/embed-services.ts");
 
@@ -78,7 +80,35 @@ async function fetchFavicon(domain) {
   const buf = Buffer.from(await r.arrayBuffer());
   if (buf.length < 120) return null; // generic globe fallback
   const type = (r.headers.get("content-type") || "image/png").split(";")[0];
-  return `data:${type};base64,${buf.toString("base64")}`;
+  return { img: `data:${type};base64,${buf.toString("base64")}`, buf, type };
+}
+
+// Sample the favicon's edge ring and return the dominant opaque colour, so the
+// tile background can extend the icon's own border seamlessly. Returns null when
+// the border is transparent (a glyph-only favicon) — caller keeps the brand hex.
+function edgeColor({ buf, type }) {
+  let img;
+  try {
+    img = type === "image/jpeg" ? jpeg.decode(buf, { useTArray: true, formatAsRGBA: true }) : PNG.sync.read(buf);
+  } catch {
+    return null;
+  }
+  const { width: w, height: h, data } = img;
+  const at = (x, y) => {
+    const i = (y * w + x) * 4;
+    return [data[i], data[i + 1], data[i + 2], data[i + 3]];
+  };
+  const inset = Math.max(1, Math.round(w * 0.06)); // skip anti-aliased rounded corners
+  const pts = [];
+  for (let f = 1; f <= 7; f++) {
+    const x = Math.round((w - 1) * (f / 8));
+    const y = Math.round((h - 1) * (f / 8));
+    pts.push([x, inset], [x, h - 1 - inset], [inset, y], [w - 1 - inset, y]);
+  }
+  const opaque = pts.map((p) => at(p[0], p[1])).filter((c) => c[3] > 230);
+  if (opaque.length < pts.length * 0.5) return null; // mostly transparent border
+  const avg = opaque.reduce((a, c) => [a[0] + c[0], a[1] + c[1], a[2] + c[2]], [0, 0, 0]).map((s) => Math.round(s / opaque.length));
+  return "#" + avg.map((v) => v.toString(16).padStart(2, "0")).join("");
 }
 
 // Brand colours for services that resolve to neither a glyph nor a favicon (monogram of last resort).
@@ -132,9 +162,11 @@ for (const [title] of SERVICES) {
     const { hex, path, vb } = SUPPLEMENT[title];
     out.push({ title, hex, path, vb });
   } else if (DOMAINS[title]) {
-    const img = await fetchFavicon(DOMAINS[title]);
-    if (img) {
-      out.push({ title, hex: FALLBACK_HEX[title] ?? "#64748B", path: null, img });
+    const fav = await fetchFavicon(DOMAINS[title]);
+    if (fav) {
+      const ec = edgeColor(fav);
+      const hex = ec ?? FALLBACK_HEX[title] ?? "#64748B";
+      out.push({ title, hex, path: null, img: fav.img, ...(ec ? { cover: true } : {}) });
     } else {
       missing.push(title);
       out.push({ title, hex: FALLBACK_HEX[title] ?? "#64748B", path: null });
@@ -151,7 +183,7 @@ const body =
   "// from simple-icons (plus a few from CoreUI Brands). Services with no library\n" +
   "// logo carry `img`: their real favicon, inlined as a base64 data URI.\n" +
   "// Regenerate: node docs/scripts/gen-embed-services.mjs\n" +
-  "export interface EmbedService {\n  title: string;\n  hex: string | null;\n  path: string | null;\n  /** Glyph viewBox size; defaults to 24 (simple-icons). */\n  vb?: number;\n  /** Base64 favicon data URI, when no vector glyph exists. */\n  img?: string;\n}\n\n" +
+  "export interface EmbedService {\n  title: string;\n  /** Tile background: brand colour, or the favicon's sampled edge colour. */\n  hex: string | null;\n  path: string | null;\n  /** Glyph viewBox size; defaults to 24 (simple-icons). */\n  vb?: number;\n  /** Base64 favicon data URI, when no vector glyph exists. */\n  img?: string;\n  /** Favicon fills the tile edge-to-edge (app-icon with a solid edge). */\n  cover?: boolean;\n}\n\n" +
   "export const EMBED_SERVICES: EmbedService[] = " +
   JSON.stringify(out, null, 2) +
   ";\n";

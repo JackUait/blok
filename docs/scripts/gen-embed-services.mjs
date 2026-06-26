@@ -160,6 +160,13 @@ const SERVICES = [
 // Poll Everywhere (low-quality favicon).
 const EXCLUDE = new Set(["Podbean", "tldraw", "BitChute", "Poll Everywhere"]);
 
+// Per-tile look overrides. `fg` recolours the glyph (default white). KakaoTalk's
+// white bubble on yellow read as a logo-in-a-logo, so it gets a white tile with
+// the brand-yellow bubble instead.
+const OVERRIDE = {
+  KakaoTV: { hex: "#FFFFFF", fg: "#FFCD00" },
+};
+
 const out = [];
 const dropped = [];
 for (const [title] of SERVICES) {
@@ -191,13 +198,17 @@ for (const [title] of SERVICES) {
   }
 }
 
+for (const s of out) {
+  if (OVERRIDE[s.title]) Object.assign(s, OVERRIDE[s.title]);
+}
+
 const body =
   "// AUTO-GENERATED — do not edit by hand.\n" +
   "// Service list mirrors src/tools/link/registry.ts; logos + brand colours come\n" +
   "// from simple-icons (plus a few from CoreUI Brands). Services with no library\n" +
   "// logo carry `img`: their real favicon, inlined as a base64 data URI.\n" +
   "// Regenerate: node docs/scripts/gen-embed-services.mjs\n" +
-  "export interface EmbedService {\n  title: string;\n  /** Tile background: brand colour, or the favicon's sampled edge colour. */\n  hex: string | null;\n  path: string | null;\n  /** Glyph viewBox size; defaults to 24 (simple-icons). */\n  vb?: number;\n  /** Base64 favicon data URI, when no vector glyph exists. */\n  img?: string;\n  /** Favicon fills the tile edge-to-edge (app-icon with a solid edge). */\n  cover?: boolean;\n}\n\n" +
+  "export interface EmbedService {\n  title: string;\n  /** Tile background: brand colour, or the favicon's sampled edge colour. */\n  hex: string | null;\n  path: string | null;\n  /** Glyph viewBox size; defaults to 24 (simple-icons). */\n  vb?: number;\n  /** Base64 favicon data URI, when no vector glyph exists. */\n  img?: string;\n  /** Favicon fills the tile edge-to-edge (app-icon with a solid edge). */\n  cover?: boolean;\n  /** Glyph colour override; defaults to white. */\n  fg?: string;\n}\n\n" +
   "export const EMBED_SERVICES: EmbedService[] = " +
   JSON.stringify(out, null, 2) +
   ";\n";

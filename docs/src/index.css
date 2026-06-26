@@ -1102,6 +1102,32 @@
   animation: plus-pulse 0.6s ease-in-out 0.35s backwards;
 }
 
+/* Hover-away: :hover can't fire a one-shot on exit, so the card is tagged
+   `byob-leaving` from JS (see ExtensibleViz). The menu relaxes — rows dip the
+   other way, the bars ease down a touch, the badge softens — then everyone
+   settles back to the resting state. */
+.byob-leaving .fi-row {
+  animation: byob-row-relax 0.42s ease-in-out backwards;
+}
+@keyframes byob-row-relax {
+  0%, 100% { transform: translateY(0); }
+  45% { transform: translateY(3px); }
+}
+.byob-leaving .fi-poll-bar {
+  animation: poll-settle 0.42s ease-out backwards;
+}
+@keyframes poll-settle {
+  0%, 100% { transform: scaleY(1); }
+  40% { transform: scaleY(0.88); }
+}
+.byob-leaving .fi-byob-badge {
+  animation: byob-soften 0.4s ease-out backwards;
+}
+@keyframes byob-soften {
+  0%, 100% { transform: scale(1); }
+  45% { transform: scale(0.9); }
+}
+
 /* The brand-tinted table cell glows in and out. */
 @keyframes bento-cell {
   0%, 100% { opacity: 0.5; }
@@ -1145,6 +1171,9 @@
   .group:hover .fi-poll-bar,
   .group:hover .fi-byob-badge,
   .group:hover .fi-byob-plus,
+  .byob-leaving .fi-row,
+  .byob-leaving .fi-poll-bar,
+  .byob-leaving .fi-byob-badge,
   .bento-caret,
   .bento-breathe,
   .bento-cell,

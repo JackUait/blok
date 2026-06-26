@@ -481,11 +481,29 @@ const ExtensibleViz: React.FC = () => {
       const pe = e as PointerEvent;
       if (pe.pointerType === "mouse") apply(pe.clientX, pe.clientY);
     };
-    const onLeave = () => apply(null, null);
 
+    // :hover drives the enter animation, but it can't fire a one-shot on the way
+    // out — so on pointerleave we tag the card to play a "relax" gesture, then
+    // clear the tag (on re-enter or once it has run) so the next leave replays it.
+    let leaveTimer: ReturnType<typeof setTimeout>;
+    const onEnter = () => {
+      window.clearTimeout(leaveTimer);
+      card.classList.remove("byob-leaving");
+    };
+    const onLeave = () => {
+      apply(null, null);
+      card.classList.add("byob-leaving");
+      window.clearTimeout(leaveTimer);
+      leaveTimer = setTimeout(() => card.classList.remove("byob-leaving"), 760);
+    };
+
+    tile.addEventListener("pointerenter", onEnter);
     tile.addEventListener("pointermove", onMove);
     tile.addEventListener("pointerleave", onLeave);
     return () => {
+      window.clearTimeout(leaveTimer);
+      card.classList.remove("byob-leaving");
+      tile.removeEventListener("pointerenter", onEnter);
       tile.removeEventListener("pointermove", onMove);
       tile.removeEventListener("pointerleave", onLeave);
     };

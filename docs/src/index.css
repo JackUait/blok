@@ -1041,8 +1041,8 @@
   animation: bento-breathe 3.2s ease-in-out infinite;
 }
 
-/* Embeds marquee — two rows of service icons drift in opposite directions on a
-   seamless loop (the track holds two copies, so 50% is one full set). */
+/* Embeds marquee — rows of service icons scroll right on a seamless loop (the
+   track holds two copies, so 50% is one full set). */
 @keyframes bento-marquee-l {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
@@ -1056,6 +1056,14 @@
 }
 .bento-marquee-r {
   animation: bento-marquee-r 28s linear infinite;
+}
+/* On hover the stack (two identical row-groups) drifts up by exactly one group
+   pitch — two rows (2.5rem) plus their gaps (3 × 0.75rem) = 6.5rem — looping
+   seamlessly. Combined with the rightward scroll, icons travel bottom-left to
+   top-right. Paused until the tile is hovered. */
+@keyframes bento-rise {
+  from { transform: translateY(0); }
+  to { transform: translateY(-6.5rem); }
 }
 
 /* The brand-tinted table cell glows in and out. */

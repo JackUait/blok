@@ -939,29 +939,41 @@ const ServiceIcon: React.FC<{ service: EmbedService }> = ({ service }) => (
   </span>
 );
 
-// The full roster drifts in two rows scrolling opposite directions on a seamless
-// loop — an endless stream of integrations that says "100+" better than any list.
-// Edges fade out; the marquee pauses on hover so a logo can land.
+// The full roster drifts across two rows on a seamless loop — an endless stream
+// of integrations that says "100+" better than any list. At rest the rows scroll
+// right; on hover the whole stack also drifts upward (see EmbedsViz), so the
+// icons travel diagonally from the bottom-left to the top-right.
 const EMBED_HALF = Math.ceil(EMBED_SERVICES.length / 2);
 const EMBED_ROWS = [
-  { items: EMBED_SERVICES.slice(0, EMBED_HALF), anim: "bento-marquee-l", dur: "66s" },
-  { items: EMBED_SERVICES.slice(EMBED_HALF), anim: "bento-marquee-r", dur: "78s" },
+  { items: EMBED_SERVICES.slice(0, EMBED_HALF), anim: "bento-marquee-r", dur: "66s" },
+  { items: EMBED_SERVICES.slice(EMBED_HALF), anim: "bento-marquee-r", dur: "52s" },
 ];
 
+// One vertical group: both rows, scrolling right. The viz stacks two identical
+// groups so the upward rise can loop seamlessly (group N+1 backfills group N).
+const EmbedRowGroup: React.FC = () => (
+  <div className="flex flex-col gap-3">
+    {EMBED_ROWS.map((row, r) => (
+      <div
+        key={r}
+        className={`flex w-max gap-3 ${row.anim}`}
+        style={{ animationDuration: row.dur }}
+      >
+        {[...row.items, ...row.items].map((s, i) => (
+          <ServiceIcon key={`${s.title}-${i}`} service={s} />
+        ))}
+      </div>
+    ))}
+  </div>
+);
+
+// Window is exactly two rows tall (5.75rem); the stack inside is two groups
+// (one pitch taller) that rises on hover — paused at rest, running on hover.
 const EmbedsViz: React.FC = () => (
-  <div aria-hidden="true" className="-mx-5 overflow-hidden py-1">
-    <div className="flex flex-col gap-3">
-      {EMBED_ROWS.map((row, r) => (
-        <div
-          key={r}
-          className={`flex w-max gap-3 ${row.anim} group-hover:[animation-play-state:paused]`}
-          style={{ animationDuration: row.dur }}
-        >
-          {[...row.items, ...row.items].map((s, i) => (
-            <ServiceIcon key={`${s.title}-${i}`} service={s} />
-          ))}
-        </div>
-      ))}
+  <div aria-hidden="true" className="-mx-5 h-[5.75rem] overflow-hidden">
+    <div className="flex flex-col gap-3 [animation:bento-rise_2.6s_linear_infinite] [animation-play-state:paused] motion-safe:group-hover:[animation-play-state:running]">
+      <EmbedRowGroup />
+      <EmbedRowGroup />
     </div>
   </div>
 );

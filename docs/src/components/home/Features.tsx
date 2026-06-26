@@ -1353,6 +1353,8 @@ const nextIndex = (cur: number, n: number): number => {
 const LanguagesViz: React.FC = () => {
   const reduce = useReducedMotion();
   const rootRef = useRef<HTMLDivElement>(null);
+  const fieldRef = useRef<HTMLDivElement>(null);
+  const edgeRef = useRef<HTMLSpanElement>(null);
   const hoverRef = useRef(false);
   // Start on a random sign so the first one shown isn't always English.
   const startIdx = useRef<number>(undefined as unknown as number);
@@ -1384,6 +1386,43 @@ const LanguagesViz: React.FC = () => {
       group.removeEventListener("mouseleave", leave);
     };
   }, [reduce, idx]);
+
+  // Light the field's border brand-pink only where the glow blob reaches the edge
+  // — the same masked-edge reveal the other tiles use. Driven off the whole tile
+  // so the lit arc trails the blob, masked through a field-relative radial.
+  useEffect(() => {
+    if (reduce) return;
+    const tile = rootRef.current?.closest(".bento-tile");
+    const field = fieldRef.current;
+    if (!tile || !field) return;
+
+    const apply = (clientX: number | null, clientY: number | null) => {
+      const edge = edgeRef.current;
+      if (!edge) return;
+      if (clientX === null || clientY === null) {
+        edge.style.opacity = "0";
+        return;
+      }
+      const r = field.getBoundingClientRect();
+      const mask = `radial-gradient(${CHIP_GLOW_RADIUS}px circle at ${clientX - r.left}px ${clientY - r.top}px, #000 0%, transparent 62%)`;
+      edge.style.opacity = "1";
+      edge.style.maskImage = mask;
+      edge.style.webkitMaskImage = mask;
+    };
+
+    const onMove = (e: Event) => {
+      const pe = e as PointerEvent;
+      if (pe.pointerType === "mouse") apply(pe.clientX, pe.clientY);
+    };
+    const onLeave = () => apply(null, null);
+
+    tile.addEventListener("pointermove", onMove);
+    tile.addEventListener("pointerleave", onLeave);
+    return () => {
+      tile.removeEventListener("pointermove", onMove);
+      tile.removeEventListener("pointerleave", onLeave);
+    };
+  }, [reduce]);
 
   // Typewriter: type the active word char-by-char, hold, delete it, advance to the
   // next locale, and type that — looping all 68 in whichever field hover selects.
@@ -1419,7 +1458,6 @@ const LanguagesViz: React.FC = () => {
   // line down to fit the field. Measure the FULL active phrase (hidden twin) once
   // per word — not the typed prefix — so the type size stays steady while it
   // types and never overflows. Anchored to the leading edge so the caret holds.
-  const fieldRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLSpanElement>(null);
   const [scale, setScale] = useState(1);
   useLayoutEffect(() => {
@@ -1433,7 +1471,12 @@ const LanguagesViz: React.FC = () => {
 
   return (
     <div ref={rootRef} aria-hidden="true" className="flex size-full items-center">
-      <div ref={fieldRef} className="relative h-16 w-full overflow-hidden rounded-2xl border border-border/60 bg-secondary px-5 shadow-[inset_0_1px_3px_rgba(0,0,0,0.05)] transition-colors duration-300 group-hover:border-brand-from/50">
+      <div ref={fieldRef} className="relative h-16 w-full overflow-hidden rounded-2xl border border-border/60 bg-secondary px-5 shadow-[inset_0_1px_3px_rgba(0,0,0,0.05)]">
+        <span
+          ref={edgeRef}
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-20 rounded-2xl border-[1.5px] border-brand-from opacity-0 transition-opacity duration-200"
+        />
         <div
           className={`flex h-full items-center gap-2.5 ${active.rtl ? "flex-row-reverse" : ""}`}
           style={{ transform: `scale(${scale})`, transformOrigin: active.rtl ? "right center" : "left center" }}

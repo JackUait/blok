@@ -945,7 +945,7 @@ const serviceInitials = (title: string): string => {
 const ServiceIcon: React.FC<{ service: EmbedService }> = ({ service }) => (
   <span
     data-svc={service.title}
-    className="embed-tile relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[12px] text-white shadow-[0_3px_8px_-2px_rgba(0,0,0,0.22)] ring-1 ring-black/5"
+    className="embed-tile relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[12px] text-white shadow-[0_5px_7px_-3px_rgba(0,0,0,0.2)] ring-1 ring-black/5"
     style={{ background: service.hex ?? "#64748B" }}
   >
     {!service.img && <span className="pointer-events-none absolute inset-0 bg-linear-to-b from-white/25 to-transparent" />}

@@ -1311,11 +1311,41 @@ const LOCALES: { label: string; rtl?: boolean }[] = [
   { label: "עברית", rtl: true },
 ];
 
+// A live "type a greeting" demo rolls through eight tongues — the editor speaking
+// every language. Rendered with a 9th item repeating the 1st for a seamless loop
+// (the .i18n-roll keyframes step by 100/9); the two RTL lines flip so the caret
+// lands on the right edge, showing RTL in action.
+const GREETINGS: { text: string; rtl?: boolean }[] = [
+  { text: "Hello" },
+  { text: "Bonjour" },
+  { text: "Привет" },
+  { text: "こんにちは" },
+  { text: "안녕하세요" },
+  { text: "नमस्ते" },
+  { text: "مرحبا", rtl: true },
+  { text: "שלום", rtl: true },
+];
+
 const LanguagesViz: React.FC = () => (
   <div aria-hidden="true" className="flex w-full flex-col gap-2.5">
     <div className="flex items-baseline gap-1.5">
       <span className="text-brand-gradient bento-shimmer text-4xl font-extrabold leading-none tracking-tight">68</span>
       <span className="text-[11px] font-medium text-muted-foreground">locales, built in</span>
+    </div>
+    <div className="relative h-9 w-fit min-w-[9.5rem] max-w-full overflow-hidden rounded-lg border border-border/50 bg-secondary/40 px-2.5 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)]">
+      <div className="i18n-roll flex flex-col">
+        {[...GREETINGS, GREETINGS[0]].map((g, i) => (
+          <div
+            key={i}
+            className={`flex h-9 items-center gap-1.5 ${g.rtl ? "flex-row-reverse" : ""}`}
+          >
+            <span dir={g.rtl ? "rtl" : "ltr"} className="text-[15px] font-semibold text-foreground/85">
+              {g.text}
+            </span>
+            <span className="bento-caret inline-block h-4 w-0.5 rounded-full bg-brand-from" />
+          </div>
+        ))}
+      </div>
     </div>
     <div className="flex flex-wrap items-center gap-1.5">
       {LOCALES.map((loc, i) => (

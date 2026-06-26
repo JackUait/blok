@@ -113,51 +113,15 @@ const BlockHandle: React.FC = () => (
 );
 
 // The showpiece for "Typed JSON, never HTML": a flip card. At rest it shows the
-// rendered page you author — "Hello, Blok" over Blok's mark, framed like a live
-// editor with a blinking caret. On hover the card turns to reveal the clean,
-// typed JSON that same document saves to. Two sides of the same coin: what you
-// see, and what you ship.
+// clean, typed JSON the editor saves to; on hover the card turns to reveal the
+// very document that JSON renders as inside the editor — "Hello, Blok" over
+// Blok's mark, with a live caret and block handles. Two sides of one coin: what
+// you ship, and what the user sees.
 const CleanJsonViz: React.FC = () => (
   <div aria-hidden="true" className="relative h-full w-full [perspective:1600px]">
     <div className="fi-flip-inner relative h-full min-h-[15rem] w-full [transform-style:preserve-3d]">
-      {/* FRONT — the document exactly as it renders inside the editor: a clean
-          page of left-aligned blocks, a heading with a live caret, an image
-          block, each with the gutter handle Blok shows beside a block. */}
-      <div className="fi-flip-face absolute inset-0 flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
-        <div className="flex shrink-0 items-center gap-1.5 border-b border-border/50 px-4 py-2.5">
-          <span className="size-2.5 rounded-full bg-foreground/15" />
-          <span className="size-2.5 rounded-full bg-foreground/15" />
-          <span className="size-2.5 rounded-full bg-foreground/15" />
-          <span className="ml-auto flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-            <span className="size-1.5 rounded-full bg-brand-gradient" />
-            rendered
-          </span>
-        </div>
-        <div className="relative flex flex-1 flex-col justify-center gap-4 py-7 pl-14 pr-7 lg:gap-5">
-          {/* heading block */}
-          <div className="relative">
-            <BlockHandle />
-            <h2 className="text-[1.95rem] font-extrabold leading-[1.1] tracking-tight lg:text-[2.3rem]">
-              Hello, <span className="text-brand-gradient">Blok</span>
-              <span className="bento-caret ml-0.5 inline-block h-[1.5rem] w-[2.5px] translate-y-[3px] rounded-full bg-brand-from align-middle lg:h-[1.75rem]" />
-            </h2>
-          </div>
-          {/* image block */}
-          <div className="relative">
-            <BlockHandle />
-            <img
-              src="/logo-no-sign.png"
-              alt=""
-              width={92}
-              height={92}
-              className="rounded-2xl drop-shadow-[0_10px_24px_rgba(233,78,122,0.28)]"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* BACK — the JSON that document saves to */}
-      <div className="fi-flip-face fi-flip-back absolute inset-0 flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-secondary shadow-sm">
+      {/* FRONT — the JSON the document saves to */}
+      <div className="fi-flip-face absolute inset-0 flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-secondary shadow-sm">
         <div className="flex shrink-0 items-center gap-1.5 border-b border-border/50 px-4 py-2.5">
           <span className="size-2.5 rounded-full bg-foreground/15" />
           <span className="size-2.5 rounded-full bg-foreground/15" />
@@ -204,6 +168,42 @@ const CleanJsonViz: React.FC = () => (
           <span className="text-primary">"0.19.0"</span>
           {"\n}"}
         </pre>
+      </div>
+
+      {/* BACK — that JSON rendered inside the editor: a clean page of left-aligned
+          blocks, a heading with a live caret and an image block, each with the
+          gutter handle Blok shows beside a block. */}
+      <div className="fi-flip-face fi-flip-back absolute inset-0 flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
+        <div className="flex shrink-0 items-center gap-1.5 border-b border-border/50 px-4 py-2.5">
+          <span className="size-2.5 rounded-full bg-foreground/15" />
+          <span className="size-2.5 rounded-full bg-foreground/15" />
+          <span className="size-2.5 rounded-full bg-foreground/15" />
+          <span className="ml-auto flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+            <span className="size-1.5 rounded-full bg-brand-gradient" />
+            rendered
+          </span>
+        </div>
+        <div className="relative flex flex-1 flex-col justify-center gap-4 py-7 pl-14 pr-7 lg:gap-5">
+          {/* heading block */}
+          <div className="relative">
+            <BlockHandle />
+            <h2 className="text-[1.95rem] font-extrabold leading-[1.1] tracking-tight lg:text-[2.3rem]">
+              Hello, <span className="text-brand-gradient">Blok</span>
+              <span className="bento-caret ml-0.5 inline-block h-[1.5rem] w-[2.5px] translate-y-[3px] rounded-full bg-brand-from align-middle lg:h-[1.75rem]" />
+            </h2>
+          </div>
+          {/* image block */}
+          <div className="relative">
+            <BlockHandle />
+            <img
+              src="/logo-no-sign.png"
+              alt=""
+              width={92}
+              height={92}
+              className="rounded-2xl drop-shadow-[0_10px_24px_rgba(233,78,122,0.28)]"
+            />
+          </div>
+        </div>
       </div>
     </div>
   </div>

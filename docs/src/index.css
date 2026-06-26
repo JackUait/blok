@@ -1058,32 +1058,12 @@
   animation: bento-marquee-r 28s linear infinite;
 }
 
-/* Dock-style magnification for the embeds carousel: the tile under the cursor
-   swells and lifts above its row, and its immediate neighbours follow with a
-   gentle falloff — so a little cluster of services pops out as the pointer
-   sweeps across, no visible lens. Scale composes inside the band's diagonal
-   tilt, so the growth tracks the flow. Pure CSS :hover keeps it cheap. */
+/* Cursor-proximity magnification for the embeds carousel is driven per-frame
+   from Features.tsx (EmbedsViz): tiles near the pointer swell in 2D with a
+   per-tile size/tilt jitter, so the highlight reads as an organic cluster. The
+   tile keeps its own transform on a composited layer for smooth scaling. */
 .embed-tile {
-  /* Springy overshoot so the grow/shrink reads as a distinct bouncy pop, not an
-     instant jump, as tiles sweep under the cursor. */
-  transition:
-    transform 0.34s cubic-bezier(0.34, 1.56, 0.64, 1),
-    box-shadow 0.34s ease;
-}
-.embed-tile:hover {
-  transform: scale(1.55);
-  z-index: 3;
-  box-shadow: 0 9px 20px -5px rgba(0, 0, 0, 0.38);
-}
-.embed-tile:hover + .embed-tile,
-.embed-tile:has(+ .embed-tile:hover) {
-  transform: scale(1.3);
-  z-index: 2;
-}
-.embed-tile:hover + .embed-tile + .embed-tile,
-.embed-tile:has(+ .embed-tile + .embed-tile:hover) {
-  transform: scale(1.14);
-  z-index: 1;
+  will-change: transform;
 }
 
 /* The brand-tinted table cell glows in and out. */

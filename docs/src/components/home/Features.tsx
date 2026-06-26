@@ -956,28 +956,114 @@ const EMBED_ROWS = Array.from({ length: EMBED_BAND_ROWS }, (_, i) => {
 // window only shows the middle rows at rest; on hover the tile expands the window
 // to full height and the band tilts + scales just enough that the diagonal still
 // fills every corner. Rows scroll right, so the icons travel up to the right.
+// Radius (px) of the cursor's influence and the peak scale a dead-centre tile
+// reaches. Tiles fall off smoothly to scale 1 at the rim, so crossing the edge
+// is continuous (no snap).
+const MAG_RADIUS = 116;
+const MAG_PEAK = 0.72;
+
+// Deterministic per-tile jitter so the cluster never looks like a tidy dome:
+// each tile pops to a slightly different size and cocks at its own angle.
+const tileNoise = (i: number) => {
+  const s = Math.sin(i * 12.9898 + 4.1) * 43758.5453;
+  return s - Math.floor(s); // 0..1, stable per index
+};
+
 // The band is wider than the tile and shifted left so the left-aligned, seamless
 // marquee always covers from beyond the left edge to far past the right — no
-// exposed edge at any scroll phase, even once rotated. Each tile carries
-// .embed-tile so it pops (grows + lifts above its neighbours) as the cursor
-// passes over it, dock-magnification style — see index.css.
-const EmbedsViz: React.FC = () => (
-  <div aria-hidden="true" className="flex size-full items-center overflow-hidden">
-    <div className="-ml-[22%] flex w-[144%] flex-col gap-3 transition-transform duration-[800ms] ease-out will-change-transform motion-safe:group-hover:[transform:rotate(-19deg)_scale(1.32)]">
-      {EMBED_ROWS.map((row, r) => (
-        <div
-          key={r}
-          className="flex w-max gap-3 bento-marquee-r"
-          style={{ animationDuration: row.dur }}
-        >
-          {[...row.items, ...row.items].map((s, i) => (
-            <ServiceIcon key={`${r}-${s.title}-${i}`} service={s} />
-          ))}
-        </div>
-      ))}
+// exposed edge at any scroll phase, even once rotated. A pointer-driven rAF loop
+// swells whatever sits near the cursor in 2D (every direction, not just the row)
+// with a per-tile size/tilt jitter, so the highlight reads as an organic, ever-
+// shifting cluster instead of a predictable bump.
+const EmbedsViz: React.FC = () => {
+  const winRef = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
+
+  useEffect(() => {
+    const win = winRef.current;
+    if (reduce || !win) return;
+
+    const tiles = Array.from(win.querySelectorAll<HTMLElement>(".embed-tile"));
+    const noise = tiles.map((_, i) => tileNoise(i));
+    let pointer: { x: number; y: number } | null = null;
+    let raf = 0;
+    let running = false;
+
+    const frame = () => {
+      if (!pointer) {
+        for (const t of tiles) {
+          t.style.transform = "";
+          t.style.zIndex = "";
+        }
+        running = false;
+        return;
+      }
+      for (let i = 0; i < tiles.length; i++) {
+        const t = tiles[i];
+        const r = t.getBoundingClientRect();
+        const dx = pointer.x - (r.left + r.width / 2);
+        const dy = pointer.y - (r.top + r.height / 2);
+        const d = Math.hypot(dx, dy);
+        if (d >= MAG_RADIUS) {
+          if (t.style.transform) {
+            t.style.transform = "";
+            t.style.zIndex = "";
+          }
+          continue;
+        }
+        const lin = 1 - d / MAG_RADIUS; // 0..1
+        const f = lin * lin * (3 - 2 * lin); // smoothstep — softer shoulders
+        const n = noise[i];
+        const scale = 1 + MAG_PEAK * f * (0.72 + n * 0.7);
+        const rot = (n - 0.5) * 16 * f;
+        t.style.transform = `scale(${scale.toFixed(3)}) rotate(${rot.toFixed(2)}deg)`;
+        t.style.zIndex = String(2 + Math.round(f * 5));
+      }
+      raf = requestAnimationFrame(frame);
+    };
+
+    const kick = () => {
+      if (!running) {
+        running = true;
+        raf = requestAnimationFrame(frame);
+      }
+    };
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType !== "mouse") return;
+      pointer = { x: e.clientX, y: e.clientY };
+      kick();
+    };
+    const onLeave = () => {
+      pointer = null;
+    };
+
+    win.addEventListener("pointermove", onMove);
+    win.addEventListener("pointerleave", onLeave);
+    return () => {
+      win.removeEventListener("pointermove", onMove);
+      win.removeEventListener("pointerleave", onLeave);
+      cancelAnimationFrame(raf);
+    };
+  }, [reduce]);
+
+  return (
+    <div ref={winRef} aria-hidden="true" className="flex size-full items-center overflow-hidden">
+      <div className="-ml-[22%] flex w-[144%] flex-col gap-3 transition-transform duration-[800ms] ease-out will-change-transform motion-safe:group-hover:[transform:rotate(-19deg)_scale(1.32)]">
+        {EMBED_ROWS.map((row, r) => (
+          <div
+            key={r}
+            className="flex w-max gap-3 bento-marquee-r"
+            style={{ animationDuration: row.dur }}
+          >
+            {[...row.items, ...row.items].map((s, i) => (
+              <ServiceIcon key={`${r}-${s.title}-${i}`} service={s} />
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const UNDO_ARROW = (
   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

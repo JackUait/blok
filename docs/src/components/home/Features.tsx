@@ -942,8 +942,6 @@ const ServiceIcon: React.FC<{ service: EmbedService }> = ({ service }) => (
 // The full roster drifts in two rows scrolling opposite directions on a seamless
 // loop — an endless stream of integrations that says "100+" better than any list.
 // Edges fade out; the marquee pauses on hover so a logo can land.
-const EDGE_FADE =
-  "linear-gradient(to right, transparent, transparent 6%, #000 30%, #000 70%, transparent 94%, transparent)";
 const EMBED_HALF = Math.ceil(EMBED_SERVICES.length / 2);
 const EMBED_ROWS = [
   { items: EMBED_SERVICES.slice(0, EMBED_HALF), anim: "bento-marquee-l", dur: "66s" },
@@ -951,11 +949,7 @@ const EMBED_ROWS = [
 ];
 
 const EmbedsViz: React.FC = () => (
-  <div
-    aria-hidden="true"
-    className="-mx-5 overflow-hidden py-1"
-    style={{ maskImage: EDGE_FADE, WebkitMaskImage: EDGE_FADE }}
-  >
+  <div aria-hidden="true" className="-mx-5 overflow-hidden py-1">
     <div className="flex flex-col gap-3">
       {EMBED_ROWS.map((row, r) => (
         <div

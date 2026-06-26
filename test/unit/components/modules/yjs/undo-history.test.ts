@@ -473,7 +473,11 @@ describe('UndoHistory', () => {
   });
 
   describe('caret restoration edge cases', () => {
-    it('restores to first block when snapshot block no longer exists', () => {
+    it('preserves focus (no document-top jump) when snapshot block no longer exists', () => {
+      // Regression: when the snapshot's block can't be resolved, undo/redo must
+      // NOT teleport the caret to the first block at the document START — that
+      // is the user-visible "caret jumps to the very beginning on redo" bug.
+      // Focus is preserved instead.
       const firstBlock = { id: 'first-block', inputs: [] };
       const snapshot = { blockId: 'deleted-block', inputIndex: 0, offset: 5 };
 
@@ -490,8 +494,32 @@ describe('UndoHistory', () => {
 
       history.undo();
 
-      // Should fall back to first block
-      expect(blok.Caret.setToBlock).toHaveBeenCalledWith(firstBlock, 'start');
+      // Must NOT jump to the first block / document top — focus is preserved
+      expect(blok.Caret.setToBlock).not.toHaveBeenCalled();
+      expect(blok.Caret.setToInput).not.toHaveBeenCalled();
+    });
+
+    it('does not jump caret to document top on redo when after-block is gone', () => {
+      // The redo path restores the entry's "after" snapshot. If that block no
+      // longer exists, redo must preserve focus rather than yanking the caret to
+      // the very beginning of the document.
+      const firstBlock = { id: 'first-block', inputs: [] };
+
+      (blok.BlockManager as unknown as { getBlockById: typeof vi.fn; firstBlock: typeof firstBlock })
+        .getBlockById = vi.fn().mockReturnValue(undefined);
+      (blok.BlockManager as unknown as { firstBlock: typeof firstBlock }).firstBlock = firstBlock;
+
+      // Seed a redo entry whose "after" points at a since-removed block
+      const redoEntry: CaretHistoryEntry = {
+        before: { blockId: 'b-before', inputIndex: 0, offset: 2 },
+        after: { blockId: 'gone-block', inputIndex: 0, offset: 0 },
+      };
+      (history as unknown as { caretRedoStack: CaretHistoryEntry[] }).caretRedoStack.push(redoEntry);
+
+      history.redo();
+
+      expect(blok.Caret.setToBlock).not.toHaveBeenCalled();
+      expect(blok.Caret.setToInput).not.toHaveBeenCalled();
     });
 
     it('preserves existing focus when snapshot is null', () => {

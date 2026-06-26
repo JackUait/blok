@@ -679,12 +679,12 @@ export class UndoHistory {
     const { BlockManager, Caret } = this.blok;
     const block = BlockManager.getBlockById(snapshot.blockId);
 
-    // Block no longer exists - focus first block if available
-    if (block === undefined && BlockManager.firstBlock !== undefined) {
-      Caret.setToBlock(BlockManager.firstBlock, Caret.positions.START);
-      return;
-    }
-
+    // Block no longer exists. Do NOT yank the caret to the first block at the
+    // document START — that is the user-visible "caret jumps to the very
+    // beginning on undo/redo" bug. The snapshot recorded a position deep in the
+    // document; teleporting to the top is never the right recovery and loses the
+    // user's place. Preserve whatever focus state exists after the DOM update
+    // instead (same philosophy as the null-snapshot branch above).
     if (block === undefined) {
       return;
     }

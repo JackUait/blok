@@ -939,41 +939,37 @@ const ServiceIcon: React.FC<{ service: EmbedService }> = ({ service }) => (
   </span>
 );
 
-// The full roster drifts across two rows on a seamless loop — an endless stream
-// of integrations that says "100+" better than any list. At rest the rows scroll
-// right; on hover the whole stack also drifts upward (see EmbedsViz), so the
-// icons travel diagonally from the bottom-left to the top-right.
-const EMBED_HALF = Math.ceil(EMBED_SERVICES.length / 2);
-const EMBED_ROWS = [
-  { items: EMBED_SERVICES.slice(0, EMBED_HALF), anim: "bento-marquee-r", dur: "66s" },
-  { items: EMBED_SERVICES.slice(EMBED_HALF), anim: "bento-marquee-r", dur: "52s" },
-];
+// The full roster scrolls right on a seamless loop — an endless stream of
+// integrations that says "100+" better than any list. The viz is actually a tall
+// band of rows; only the middle two show through the window at rest. On hover the
+// whole band tilts (see EmbedsViz) and the extra rows fill in, so the icons read
+// as one diagonal river flowing from the bottom-left to the top-right.
+const EMBED_BAND_ROWS = 8;
+const EMBED_ROWS = Array.from({ length: EMBED_BAND_ROWS }, (_, i) => {
+  const start = (Math.floor(EMBED_SERVICES.length / EMBED_BAND_ROWS) * i + i * 3) % EMBED_SERVICES.length;
+  const rotated = [...EMBED_SERVICES.slice(start), ...EMBED_SERVICES.slice(0, start)];
+  return { items: rotated.slice(0, 30), dur: `${44 + i * 6}s` };
+});
 
-// One vertical group: both rows, scrolling right. The viz stacks two identical
-// groups so the upward rise can loop seamlessly (group N+1 backfills group N).
-const EmbedRowGroup: React.FC = () => (
-  <div className="flex flex-col gap-3">
-    {EMBED_ROWS.map((row, r) => (
-      <div
-        key={r}
-        className={`flex w-max gap-3 ${row.anim}`}
-        style={{ animationDuration: row.dur }}
-      >
-        {[...row.items, ...row.items].map((s, i) => (
-          <ServiceIcon key={`${s.title}-${i}`} service={s} />
-        ))}
-      </div>
-    ))}
-  </div>
-);
-
-// Window is exactly two rows tall (5.75rem); the stack inside is two groups
-// (one pitch taller) that rises on hover — paused at rest, running on hover.
+// An eight-row band, vertically centred so it over-hangs its window top and
+// bottom, with each row horizontally centred (over-hanging left and right). The
+// window only shows the middle rows at rest; on hover the tile expands the window
+// to full height and the band tilts + scales just enough that the diagonal still
+// fills every corner. Rows scroll right, so the icons travel up to the right.
 const EmbedsViz: React.FC = () => (
-  <div aria-hidden="true" className="-mx-5 h-[5.75rem] overflow-hidden">
-    <div className="flex flex-col gap-3 [animation:bento-rise_2.6s_linear_infinite] [animation-play-state:paused] motion-safe:group-hover:[animation-play-state:running]">
-      <EmbedRowGroup />
-      <EmbedRowGroup />
+  <div aria-hidden="true" className="flex size-full items-center overflow-hidden">
+    <div className="flex w-full flex-col items-center gap-3 transition-transform duration-[800ms] ease-out will-change-transform motion-safe:group-hover:[transform:rotate(-19deg)_scale(1.12)]">
+      {EMBED_ROWS.map((row, r) => (
+        <div
+          key={r}
+          className="flex w-max gap-3 bento-marquee-r"
+          style={{ animationDuration: row.dur }}
+        >
+          {[...row.items, ...row.items].map((s, i) => (
+            <ServiceIcon key={`${r}-${s.title}-${i}`} service={s} />
+          ))}
+        </div>
+      ))}
     </div>
   </div>
 );
@@ -1462,6 +1458,9 @@ const renderTitleWithSlashKey = (title: string): React.ReactNode => {
 const CapabilityTile: React.FC<TileProps> = ({ feature, onOpen }) => {
   const Viz = TILE[feature.accent].viz;
   const tilt = useTilt();
+  // The embeds tile clears its title on hover so the diagonal river of logos can
+  // flood the whole block.
+  const isEmbeds = feature.accent === "blue";
 
   return (
     <motion.button
@@ -1472,12 +1471,16 @@ const CapabilityTile: React.FC<TileProps> = ({ feature, onOpen }) => {
       transition={hoverSpring}
       style={tilt.style}
       {...tilt.handlers}
-      className={`bento-tile group relative flex min-h-[60px] cursor-pointer flex-col justify-center gap-3 overflow-hidden rounded-2xl border border-border/60 bg-card p-4 text-left transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:justify-start lg:p-5 ${TILE[feature.accent].span}`}
+      className={`bento-tile group relative flex min-h-[60px] cursor-pointer flex-col justify-center gap-3 overflow-hidden rounded-2xl border border-border/60 bg-card p-4 text-left transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:justify-start lg:p-5 ${isEmbeds ? "lg:transition-[gap,background-color] lg:group-hover:gap-0" : ""} ${TILE[feature.accent].span}`}
       onClick={() => onOpen(feature)}
       aria-label={feature.learnMore}
     >
       <span className="bento-spot" aria-hidden="true" />
-      <div className="relative z-10 flex w-full items-center gap-3.5">
+      <div
+        className={`relative z-10 flex w-full items-center gap-3.5 ${
+          isEmbeds ? "transition-all duration-500 ease-out lg:group-hover:max-h-0 lg:group-hover:-translate-y-1 lg:group-hover:overflow-hidden lg:group-hover:opacity-0" : ""
+        }`}
+      >
         <h3 className="flex-1 text-balance text-[1.05rem] font-bold leading-snug tracking-tight">
           {renderTitleWithSlashKey(feature.title)}
         </h3>
@@ -1496,7 +1499,13 @@ const CapabilityTile: React.FC<TileProps> = ({ feature, onOpen }) => {
           <path d="M5 12h14M12 5l7 7-7 7" />
         </svg>
       </div>
-      <div className="relative z-10 hidden w-full flex-1 items-center pt-1 lg:flex">
+      <div
+        className={`relative z-10 hidden w-full flex-1 items-center lg:flex ${
+          isEmbeds
+            ? "-mx-5 overflow-hidden transition-[margin] duration-500 ease-out lg:group-hover:-mb-5 lg:group-hover:-mt-5"
+            : "pt-1"
+        }`}
+      >
         <Viz />
       </div>
     </motion.button>

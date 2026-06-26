@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   AnimatePresence,
   motion,
@@ -1403,15 +1403,41 @@ const LanguagesViz: React.FC = () => {
 
   const shown = reduce ? active.text : chars.slice(0, count).join("");
 
+  // Some "what's up?" phrases are far longer than a one-word hello, so size the
+  // line down to fit the field. Measure the FULL active phrase (hidden twin) once
+  // per word — not the typed prefix — so the type size stays steady while it
+  // types and never overflows. Anchored to the leading edge so the caret holds.
+  const fieldRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLSpanElement>(null);
+  const [scale, setScale] = useState(1);
+  useLayoutEffect(() => {
+    const field = fieldRef.current;
+    const measure = measureRef.current;
+    if (!field || !measure) return;
+    const avail = field.clientWidth - 40 - 16; // px-5 padding + caret/gap reserve
+    const w = measure.scrollWidth;
+    setScale(w > avail && w > 0 ? Math.max(0.5, avail / w) : 1);
+  }, [active.text]);
+
   return (
     <div ref={rootRef} aria-hidden="true" className="flex size-full items-center">
-      <div className="relative h-16 w-full overflow-hidden rounded-2xl border border-border/60 bg-secondary/40 px-5 shadow-[inset_0_1px_3px_rgba(0,0,0,0.05)]">
-        <div className={`flex h-full items-center gap-2.5 ${active.rtl ? "flex-row-reverse" : ""}`}>
-          <span dir={active.rtl ? "rtl" : "ltr"} className="text-[1.7rem] font-semibold tracking-tight text-foreground/90">
+      <div ref={fieldRef} className="relative h-16 w-full overflow-hidden rounded-2xl border border-border/60 bg-secondary/40 px-5 shadow-[inset_0_1px_3px_rgba(0,0,0,0.05)]">
+        <div
+          className={`flex h-full items-center gap-2.5 ${active.rtl ? "flex-row-reverse" : ""}`}
+          style={{ transform: `scale(${scale})`, transformOrigin: active.rtl ? "right center" : "left center" }}
+        >
+          <span dir={active.rtl ? "rtl" : "ltr"} className="whitespace-nowrap text-[1.7rem] font-semibold tracking-tight text-foreground/90">
             {shown}
           </span>
-          <span className="bento-caret inline-block h-7 w-[3px] rounded-full bg-brand-from" />
+          <span className="bento-caret inline-block h-7 w-[3px] shrink-0 rounded-full bg-brand-from" />
         </div>
+        <span
+          ref={measureRef}
+          aria-hidden="true"
+          className="pointer-events-none absolute -z-10 whitespace-nowrap text-[1.7rem] font-semibold tracking-tight opacity-0"
+        >
+          {active.text}
+        </span>
       </div>
     </div>
   );

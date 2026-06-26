@@ -310,14 +310,10 @@ const BLOCK_CHIPS: { label: string; color: string; path: React.ReactNode }[] = [
 // light up crisply in their own colour, which the base copy can't show.
 const ChipGrid: React.FC<{ lit?: boolean }> = ({ lit }) => (
   <div className="grid h-full w-full grid-cols-4 gap-2">
-    {BLOCK_CHIPS.map((chip, i) => (
-      // Diagonal stagger (row + col) so the lift sweeps across the palette as a wave.
+    {BLOCK_CHIPS.map((chip) => (
       <div
         key={chip.label}
-        style={{
-          animationDelay: `${(Math.floor(i / 4) + (i % 4)) * 0.06}s`,
-          ...(lit ? { color: chip.color, borderColor: chip.color } : {}),
-        }}
+        style={lit ? { color: chip.color, borderColor: chip.color } : undefined}
         className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border py-2.5 ${
           lit ? "fi-chip-lit" : "fi-chip-base border-border/50 bg-card text-muted-foreground"
         }`}
@@ -338,46 +334,89 @@ const ChipGrid: React.FC<{ lit?: boolean }> = ({ lit }) => (
 // reveal fades out at 62% → ~143px, tracking the blob's edge.
 const CHIP_GLOW_RADIUS = 230;
 
+// How far the cursor's "pull" reaches, in px. Sized so a chip starts rising about
+// when the glow blob starts colouring it — the lit chips and the lifted chips are
+// the same ones, instead of the old one-shot wave that fired regardless of where
+// the pointer was.
+const CHIP_LIFT_RADIUS = 200;
+
 const BlocksViz: React.FC = () => {
   const wrapRef = useRef<HTMLDivElement>(null);
   const litRef = useRef<HTMLDivElement>(null);
   const reduce = useReducedMotion();
 
-  // Drive the border reveal off the whole tile, not just the grid — so the chips
-  // light the moment the tile's glow blob reaches them, even while the cursor is
-  // still over the title. (Scoping the listener to the grid made borders wait for
-  // the mouse to physically arrive, decoupling them from the blob.)
+  // The palette behaves like a dock: each chip magnifies toward the pointer (lift
+  // + scale + a soft shadow that grows with proximity) and the lit copy is
+  // revealed through a matching radial mask — both driven off the whole tile, so
+  // the chips respond the moment the glow reaches them, even from over the title.
   useEffect(() => {
     if (reduce) return;
     const wrap = wrapRef.current;
+    const lit = litRef.current;
     const tile = wrap?.closest(".bento-tile");
-    if (!wrap || !tile) return;
+    if (!wrap || !lit || !tile) return;
 
-    const apply = (clientX: number | null, clientY: number | null) => {
-      const lit = litRef.current;
-      if (!lit) return;
-      if (clientX === null || clientY === null) {
-        lit.style.opacity = "0";
-        return;
-      }
+    const baseChips = Array.from(wrap.querySelectorAll<HTMLElement>(".fi-chip-base"));
+    const litChips = Array.from(lit.querySelectorAll<HTMLElement>(".fi-chip-lit"));
+
+    // Resting chip centres in wrap-local coords. offset* is layout-based, so it's
+    // immune to the transforms we write back — no measure/transform feedback loop.
+    let centers: Array<{ x: number; y: number }> = [];
+    const measure = () => {
+      centers = baseChips.map((c) => ({
+        x: c.offsetLeft + c.offsetWidth / 2,
+        y: c.offsetTop + c.offsetHeight / 2,
+      }));
+    };
+    measure();
+
+    const reset = () => {
+      lit.style.opacity = "0";
+      baseChips.forEach((bc, i) => {
+        bc.style.transform = "";
+        bc.style.boxShadow = "";
+        if (litChips[i]) litChips[i].style.transform = "";
+      });
+    };
+
+    const apply = (clientX: number, clientY: number) => {
       const r = wrap.getBoundingClientRect();
-      const mask = `radial-gradient(${CHIP_GLOW_RADIUS}px circle at ${clientX - r.left}px ${clientY - r.top}px, #000 0%, transparent 62%)`;
+      const lx = clientX - r.left;
+      const ly = clientY - r.top;
+
+      // Colour reveal: the lit copy is unmasked in a radius around the cursor.
+      const mask = `radial-gradient(${CHIP_GLOW_RADIUS}px circle at ${lx}px ${ly}px, #000 0%, transparent 62%)`;
       lit.style.opacity = "1";
       lit.style.maskImage = mask;
       lit.style.webkitMaskImage = mask;
+
+      // Proximity magnify: closer chips rise more, smoothstep falloff.
+      baseChips.forEach((bc, i) => {
+        const c = centers[i];
+        const t = Math.max(0, 1 - Math.hypot(lx - c.x, ly - c.y) / CHIP_LIFT_RADIUS);
+        const inf = t * t * (3 - 2 * t);
+        const transform = `translateY(${(-12 * inf).toFixed(2)}px) scale(${(1 + 0.08 * inf).toFixed(3)})`;
+        bc.style.transform = transform;
+        bc.style.boxShadow =
+          inf > 0.01
+            ? `0 ${(11 * inf).toFixed(1)}px ${(22 * inf).toFixed(1)}px -8px rgba(17, 12, 10, ${(0.24 * inf).toFixed(3)})`
+            : "";
+        if (litChips[i]) litChips[i].style.transform = transform;
+      });
     };
 
     const onMove = (e: Event) => {
       const pe = e as PointerEvent;
       if (pe.pointerType === "mouse") apply(pe.clientX, pe.clientY);
     };
-    const onLeave = () => apply(null, null);
 
     tile.addEventListener("pointermove", onMove);
-    tile.addEventListener("pointerleave", onLeave);
+    tile.addEventListener("pointerleave", reset);
+    window.addEventListener("resize", measure);
     return () => {
       tile.removeEventListener("pointermove", onMove);
-      tile.removeEventListener("pointerleave", onLeave);
+      tile.removeEventListener("pointerleave", reset);
+      window.removeEventListener("resize", measure);
     };
   }, [reduce]);
 

@@ -1107,27 +1107,16 @@
    along the grid diagonal so a wave sweeps across the chips, then settles back to
    rest. The base tiles carry the shadow; the lit (colour-revealed) copy rides the
    same lift transform so the two stay in lockstep under the cursor mask. */
-.group:hover .fi-chip-base,
-.group:hover .fi-chip-lit {
+/* "Every block, built in": the chips magnify toward the cursor like a dock —
+   each rises, scales, and casts a soft shadow that falls off with distance,
+   driven per-chip from JS (BlocksViz) so the chips the glow lights are exactly
+   the ones that lift. CSS just eases each chip's transform/shadow as the pointer
+   moves, giving a fluid follow rather than the old one-shot wave. */
+.fi-chip-base,
+.fi-chip-lit {
   transform-origin: center;
-}
-.group:hover .fi-chip-base {
-  animation: chip-float 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
-}
-.group:hover .fi-chip-lit {
-  animation: chip-lift 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
-}
-/* The whole chip — icon and label together, as one solid object — springs up
-   with a soft shadow blooming beneath it, then settles back. Keeping the glyph
-   rigidly part of the tile (rather than floating it separately) is what reads as
-   a real card being plucked instead of a glitchy, detached icon. */
-@keyframes chip-float {
-  0%, 100% { transform: translateY(0) scale(1); box-shadow: 0 0 0 0 rgba(17, 12, 10, 0); }
-  42% { transform: translateY(-6px) scale(1.05); box-shadow: 0 11px 20px -8px rgba(17, 12, 10, 0.22); }
-}
-@keyframes chip-lift {
-  0%, 100% { transform: translateY(0) scale(1); }
-  42% { transform: translateY(-6px) scale(1.05); }
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease;
+  will-change: transform;
 }
 
 /* Hover-away: :hover can't fire a one-shot on exit, so the card is tagged
@@ -1195,8 +1184,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .group:hover .fi-chip-base,
-  .group:hover .fi-chip-lit,
   .group:hover .fi-row,
   .group:hover .fi-poll-bar,
   .group:hover .fi-byob-badge,
@@ -1212,5 +1199,11 @@
   .bento-marquee-l,
   .bento-marquee-r {
     animation: none;
+  }
+  /* The chip magnify is JS-driven (BlocksViz bails out under reduced motion),
+     so just make sure no transition lingers on the resting chips. */
+  .fi-chip-base,
+  .fi-chip-lit {
+    transition: none;
   }
 }

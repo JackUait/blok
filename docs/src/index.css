@@ -1102,11 +1102,6 @@
   animation: plus-pulse 0.6s ease-in-out 0.35s backwards;
 }
 
-/* "Every block, built in": on hover the whole palette floats to life — each chip
-   tile lifts and grows a touch with a soft shadow blooming beneath it, staggered
-   along the grid diagonal so a wave sweeps across the chips, then settles back to
-   rest. The base tiles carry the shadow; the lit (colour-revealed) copy rides the
-   same lift transform so the two stay in lockstep under the cursor mask. */
 /* "Every block, built in": the chips magnify toward the cursor like a dock —
    each rises, scales, and casts a soft shadow that falls off with distance,
    driven per-chip from JS (BlocksViz) so the chips the glow lights are exactly
@@ -1116,6 +1111,24 @@
 .fi-chip-lit {
   transform-origin: center;
   transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease;
+}
+
+/* "Typed JSON, never HTML": the hero diorama is a flip card. The front is the
+   rendered page you author; on hover the whole tile turns it 180° to reveal the
+   clean JSON that document saves to. backface-visibility hides whichever side
+   faces away, so only one is ever readable. */
+.fi-flip-inner {
+  transition: transform 0.72s cubic-bezier(0.76, 0, 0.24, 1);
+}
+.group:hover .fi-flip-inner {
+  transform: rotateY(180deg);
+}
+.fi-flip-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.fi-flip-back {
+  transform: rotateY(180deg);
 }
 
 /* Hover-away: :hover can't fire a one-shot on exit, so the card is tagged
@@ -1204,5 +1217,22 @@
   .fi-chip-base,
   .fi-chip-lit {
     transition: none;
+  }
+  /* No 3D spin: keep both faces flat and cross-fade the JSON in over the render. */
+  .fi-flip-inner {
+    transition: none;
+    transform: none;
+  }
+  .fi-flip-face {
+    backface-visibility: visible;
+    -webkit-backface-visibility: visible;
+  }
+  .fi-flip-back {
+    transform: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .group:hover .fi-flip-back {
+    opacity: 1;
   }
 }

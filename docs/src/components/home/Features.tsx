@@ -93,120 +93,121 @@ const useTilt = () => {
    surrounding <button> owns the accessible label.
    ========================================================================== */
 
-// The showpiece: Blok's headless output rendered as a tiny syntax-lit editor
-// pane with a live caret, lit by a warm brand glow bleeding in from the corner.
-const CleanJsonViz: React.FC = () => {
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const edgeRef = useRef<HTMLSpanElement>(null);
-  const dividerRef = useRef<HTMLSpanElement>(null);
-  const reduce = useReducedMotion();
-
-  // Light the editor's border where the tile's glow blob touches it — driven off
-  // the whole tile (not just the pane) so the edge reacts to the blob, not the
-  // bare cursor, matching the chip-grid behaviour. Both the outer ring and the
-  // inner header divider share one mask: the header sits flush at the pane's
-  // top-left, so the pane-relative coordinates line up on it too.
-  useEffect(() => {
-    if (reduce) return;
-    const wrap = wrapRef.current;
-    const tile = wrap?.closest(".bento-tile");
-    if (!wrap || !tile) return;
-
-    const apply = (clientX: number | null, clientY: number | null) => {
-      const edges = [edgeRef.current, dividerRef.current];
-      if (clientX === null || clientY === null) {
-        edges.forEach((edge) => edge && (edge.style.opacity = "0"));
-        return;
-      }
-      const r = wrap.getBoundingClientRect();
-      const mask = `radial-gradient(${CHIP_GLOW_RADIUS}px circle at ${clientX - r.left}px ${clientY - r.top}px, #000 0%, transparent 62%)`;
-      edges.forEach((edge) => {
-        if (!edge) return;
-        edge.style.opacity = "1";
-        edge.style.maskImage = mask;
-        edge.style.webkitMaskImage = mask;
-      });
-    };
-
-    const onMove = (e: Event) => {
-      const pe = e as PointerEvent;
-      if (pe.pointerType === "mouse") apply(pe.clientX, pe.clientY);
-    };
-    const onLeave = () => apply(null, null);
-
-    tile.addEventListener("pointermove", onMove);
-    tile.addEventListener("pointerleave", onLeave);
-    return () => {
-      tile.removeEventListener("pointermove", onMove);
-      tile.removeEventListener("pointerleave", onLeave);
-    };
-  }, [reduce]);
-
-  return (
-  <div
-    ref={wrapRef}
-    aria-hidden="true"
-    className="relative flex h-full w-full flex-col overflow-hidden rounded-2xl border border-border/60 bg-secondary shadow-sm"
-  >
-    <span
-      ref={edgeRef}
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-0 z-20 rounded-2xl border-[1.5px] border-brand-from opacity-0 transition-opacity duration-200"
-    />
-    <div className="relative flex items-center gap-1.5 border-b border-border/50 px-4 py-2.5">
-      <span
-        ref={dividerRef}
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 z-20 border-b border-brand-from opacity-0 transition-opacity duration-200"
-      />
-      <span className="size-2.5 rounded-full bg-foreground/15" />
-      <span className="size-2.5 rounded-full bg-foreground/15" />
-      <span className="size-2.5 rounded-full bg-foreground/15" />
-      <span className="ml-2 flex items-center font-mono text-[11px] tracking-tight text-muted-foreground">
-        editor.save()
-        <span className="bento-caret ml-0.5 inline-block h-3 w-px bg-primary" />
-      </span>
-    </div>
-    <pre className="relative flex-1 overflow-hidden px-5 py-4 font-mono text-[12.5px] leading-[1.85] text-muted-foreground">
-      {"{\n  "}
-      <span className="text-brand-gradient font-semibold">"blocks"</span>
-      {": [\n    { "}
-      <span className="text-muted-foreground/60">"id"</span>
-      {": "}
-      <span className="text-primary">"x1"</span>
-      {",\n      "}
-      <span className="text-muted-foreground/60">"type"</span>
-      {": "}
-      <span className="text-primary">"paragraph"</span>
-      {",\n      "}
-      <span className="text-muted-foreground/60">"data"</span>
-      {": { "}
-      <span className="text-muted-foreground/60">"text"</span>
-      {": "}
-      <span className="text-primary">"Hello"</span>
-      {" } },\n    { "}
-      <span className="text-muted-foreground/60">"id"</span>
-      {": "}
-      <span className="text-primary">"x2"</span>
-      {",\n      "}
-      <span className="text-muted-foreground/60">"type"</span>
-      {": "}
-      <span className="text-primary">"header"</span>
-      {",\n      "}
-      <span className="text-muted-foreground/60">"data"</span>
-      {": { "}
-      <span className="text-muted-foreground/60">"level"</span>
-      {": "}
-      <span className="text-foreground">2</span>
-      {" } }\n  ],\n  "}
-      <span className="text-brand-gradient font-semibold">"version"</span>
-      {": "}
-      <span className="text-primary">"0.19.0"</span>
-      {"\n}"}
-    </pre>
+// The gutter affordance Blok renders beside each block — the + to add and the
+// six-dot grip to drag — drawn faint, the way it rests next to a block in the
+// editor. Sits in the left gutter so the content column stays clean.
+const BlockHandle: React.FC = () => (
+  <div className="absolute -left-9 top-1/2 flex -translate-y-1/2 items-center gap-0.5 text-muted-foreground/35">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M12 6v12M6 12h12" />
+    </svg>
+    <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor">
+      <circle cx="2.5" cy="3" r="1.25" />
+      <circle cx="7.5" cy="3" r="1.25" />
+      <circle cx="2.5" cy="8" r="1.25" />
+      <circle cx="7.5" cy="8" r="1.25" />
+      <circle cx="2.5" cy="13" r="1.25" />
+      <circle cx="7.5" cy="13" r="1.25" />
+    </svg>
   </div>
-  );
-};
+);
+
+// The showpiece for "Typed JSON, never HTML": a flip card. At rest it shows the
+// rendered page you author — "Hello, Blok" over Blok's mark, framed like a live
+// editor with a blinking caret. On hover the card turns to reveal the clean,
+// typed JSON that same document saves to. Two sides of the same coin: what you
+// see, and what you ship.
+const CleanJsonViz: React.FC = () => (
+  <div aria-hidden="true" className="relative h-full w-full [perspective:1600px]">
+    <div className="fi-flip-inner relative h-full min-h-[15rem] w-full [transform-style:preserve-3d]">
+      {/* FRONT — the document exactly as it renders inside the editor: a clean
+          page of left-aligned blocks, a heading with a live caret, an image
+          block, each with the gutter handle Blok shows beside a block. */}
+      <div className="fi-flip-face absolute inset-0 flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
+        <div className="flex shrink-0 items-center gap-1.5 border-b border-border/50 px-4 py-2.5">
+          <span className="size-2.5 rounded-full bg-foreground/15" />
+          <span className="size-2.5 rounded-full bg-foreground/15" />
+          <span className="size-2.5 rounded-full bg-foreground/15" />
+          <span className="ml-auto flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+            <span className="size-1.5 rounded-full bg-brand-gradient" />
+            rendered
+          </span>
+        </div>
+        <div className="relative flex flex-1 flex-col justify-center gap-4 py-7 pl-14 pr-7 lg:gap-5">
+          {/* heading block */}
+          <div className="relative">
+            <BlockHandle />
+            <h2 className="text-[1.95rem] font-extrabold leading-[1.1] tracking-tight lg:text-[2.3rem]">
+              Hello, <span className="text-brand-gradient">Blok</span>
+              <span className="bento-caret ml-0.5 inline-block h-[1.5rem] w-[2.5px] translate-y-[3px] rounded-full bg-brand-from align-middle lg:h-[1.75rem]" />
+            </h2>
+          </div>
+          {/* image block */}
+          <div className="relative">
+            <BlockHandle />
+            <img
+              src="/logo-no-sign.png"
+              alt=""
+              width={92}
+              height={92}
+              className="rounded-2xl drop-shadow-[0_10px_24px_rgba(233,78,122,0.28)]"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* BACK — the JSON that document saves to */}
+      <div className="fi-flip-face fi-flip-back absolute inset-0 flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-secondary shadow-sm">
+        <div className="flex shrink-0 items-center gap-1.5 border-b border-border/50 px-4 py-2.5">
+          <span className="size-2.5 rounded-full bg-foreground/15" />
+          <span className="size-2.5 rounded-full bg-foreground/15" />
+          <span className="size-2.5 rounded-full bg-foreground/15" />
+          <span className="ml-2 flex items-center font-mono text-[11px] tracking-tight text-muted-foreground">
+            editor.save()
+            <span className="bento-caret ml-0.5 inline-block h-3 w-px bg-primary" />
+          </span>
+        </div>
+        <pre className="relative flex-1 overflow-hidden px-5 py-4 font-mono text-[12.5px] leading-[1.85] text-muted-foreground">
+          {"{\n  "}
+          <span className="text-brand-gradient font-semibold">"blocks"</span>
+          {": [\n    { "}
+          <span className="text-muted-foreground/60">"id"</span>
+          {": "}
+          <span className="text-primary">"h7k2"</span>
+          {",\n      "}
+          <span className="text-muted-foreground/60">"type"</span>
+          {": "}
+          <span className="text-primary">"header"</span>
+          {",\n      "}
+          <span className="text-muted-foreground/60">"data"</span>
+          {": { "}
+          <span className="text-muted-foreground/60">"text"</span>
+          {": "}
+          <span className="text-primary">"Hello, Blok"</span>
+          {" } },\n    { "}
+          <span className="text-muted-foreground/60">"id"</span>
+          {": "}
+          <span className="text-primary">"m3p9"</span>
+          {",\n      "}
+          <span className="text-muted-foreground/60">"type"</span>
+          {": "}
+          <span className="text-primary">"image"</span>
+          {",\n      "}
+          <span className="text-muted-foreground/60">"data"</span>
+          {": { "}
+          <span className="text-muted-foreground/60">"url"</span>
+          {": "}
+          <span className="text-primary">"/blok.png"</span>
+          {" } }\n  ],\n  "}
+          <span className="text-brand-gradient font-semibold">"version"</span>
+          {": "}
+          <span className="text-primary">"0.19.0"</span>
+          {"\n}"}
+        </pre>
+      </div>
+    </div>
+  </div>
+);
 
 // One glyph per shipped block type — a duotone palette you could scan: crisp
 // strokes carrying soft currentColor fills for mass. At rest every glyph is

@@ -1341,12 +1341,24 @@ const pickPhrase = (i: number, hover: boolean): Greeting => {
   return { text: hover ? p.whatsup : p.hello, rtl: p.rtl };
 };
 
+// Random next locale, never the current one. Picks uniformly among the other
+// N - 1 entries (map [0, N-2] over the gap left by `cur`), so every sign has an
+// equal chance and no sign ever repeats back-to-back.
+const randomIndex = (n: number): number => Math.floor(Math.random() * n);
+const nextIndex = (cur: number, n: number): number => {
+  const r = Math.floor(Math.random() * (n - 1));
+  return r >= cur ? r + 1 : r;
+};
+
 const LanguagesViz: React.FC = () => {
   const reduce = useReducedMotion();
   const rootRef = useRef<HTMLDivElement>(null);
   const hoverRef = useRef(false);
-  const [idx, setIdx] = useState(0);
-  const [active, setActive] = useState<Greeting>(() => pickPhrase(0, false));
+  // Start on a random sign so the first one shown isn't always English.
+  const startIdx = useRef<number>(undefined as unknown as number);
+  if (startIdx.current === undefined) startIdx.current = randomIndex(PHRASES.length);
+  const [idx, setIdx] = useState(startIdx.current);
+  const [active, setActive] = useState<Greeting>(() => pickPhrase(startIdx.current, false));
   const [count, setCount] = useState(0);
   const [phase, setPhase] = useState<"typing" | "deleting">("typing");
 
@@ -1392,7 +1404,7 @@ const LanguagesViz: React.FC = () => {
       t = window.setTimeout(() => setCount((c) => c - 1), 32);
     } else {
       t = window.setTimeout(() => {
-        const ni = (idx + 1) % PHRASES.length;
+        const ni = nextIndex(idx, PHRASES.length);
         setIdx(ni);
         setActive(pickPhrase(ni, hoverRef.current));
         setPhase("typing");

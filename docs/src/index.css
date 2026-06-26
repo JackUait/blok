@@ -1102,16 +1102,28 @@
   animation: plus-pulse 0.6s ease-in-out 0.35s backwards;
 }
 
-/* "Every block, built in": on hover the whole palette ripples to life — each block
-   glyph springs up with a bouncy lift, staggered along the grid diagonal so a wave
-   sweeps across the chips, then settles back to rest. */
-.group:hover .fi-chip {
+/* "Every block, built in": on hover the whole palette floats to life — each chip
+   tile lifts and grows a touch with a soft shadow blooming beneath it, staggered
+   along the grid diagonal so a wave sweeps across the chips, then settles back to
+   rest. The base tiles carry the shadow; the lit (colour-revealed) copy rides the
+   same lift transform so the two stay in lockstep under the cursor mask. */
+.group:hover .fi-chip-base,
+.group:hover .fi-chip-lit {
   transform-origin: center;
-  animation: chip-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
 }
-@keyframes chip-pop {
+.group:hover .fi-chip-base {
+  animation: chip-float 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+.group:hover .fi-chip-lit {
+  animation: chip-lift 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+@keyframes chip-float {
+  0%, 100% { transform: translateY(0) scale(1); box-shadow: 0 0 0 0 rgba(17, 12, 10, 0); }
+  42% { transform: translateY(-5px) scale(1.05); box-shadow: 0 9px 18px -7px rgba(17, 12, 10, 0.2); }
+}
+@keyframes chip-lift {
   0%, 100% { transform: translateY(0) scale(1); }
-  42% { transform: translateY(-3px) scale(1.14); }
+  42% { transform: translateY(-5px) scale(1.05); }
 }
 
 /* Hover-away: :hover can't fire a one-shot on exit, so the card is tagged
@@ -1179,7 +1191,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .group:hover .fi-chip,
+  .group:hover .fi-chip-base,
+  .group:hover .fi-chip-lit,
   .group:hover .fi-row,
   .group:hover .fi-poll-bar,
   .group:hover .fi-byob-badge,

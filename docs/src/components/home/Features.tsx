@@ -311,19 +311,18 @@ const BLOCK_CHIPS: { label: string; color: string; path: React.ReactNode }[] = [
 const ChipGrid: React.FC<{ lit?: boolean }> = ({ lit }) => (
   <div className="grid h-full w-full grid-cols-4 gap-2">
     {BLOCK_CHIPS.map((chip, i) => (
+      // Diagonal stagger (row + col) so the lift sweeps across the palette as a wave.
       <div
         key={chip.label}
-        style={lit ? { color: chip.color, borderColor: chip.color } : undefined}
+        style={{
+          animationDelay: `${(Math.floor(i / 4) + (i % 4)) * 0.06}s`,
+          ...(lit ? { color: chip.color, borderColor: chip.color } : {}),
+        }}
         className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border py-2.5 ${
-          lit ? "" : "border-border/50 bg-card text-muted-foreground"
+          lit ? "fi-chip-lit" : "fi-chip-base border-border/50 bg-card text-muted-foreground"
         }`}
       >
-        {/* Diagonal stagger (row + col) so the pop sweeps across the palette as a wave. */}
-        <svg
-          className="fi-chip"
-          style={{ animationDelay: `${(Math.floor(i / 4) + (i % 4)) * 0.06}s` }}
-          width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
-        >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           {chip.path}
         </svg>
         <span className="text-[10px] font-semibold leading-none tracking-tight">{chip.label}</span>

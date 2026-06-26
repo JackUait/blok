@@ -1298,23 +1298,11 @@ const ShortcutBadge: React.FC<{
   </span>
 );
 
-// The headline number — a shimmering gradient 68 — over a spread of real native-
-// script names so the breadth reads at a glance. The two right-to-left languages
-// carry an "rtl" badge and brand tint, turning the abstract "RTL-ready" claim
-// into something a newcomer can see, and a dashed "+62" makes the 68 tangible.
-const LOCALES: { label: string; rtl?: boolean }[] = [
-  { label: "English" },
-  { label: "Русский" },
-  { label: "日本語" },
-  { label: "हिन्दी" },
-  { label: "العربية", rtl: true },
-  { label: "עברית", rtl: true },
-];
-
-// A live "type a greeting" demo rolls through eight tongues — the editor speaking
-// every language. Rendered with a 9th item repeating the 1st for a seamless loop
-// (the .i18n-roll keyframes step by 100/9); the two RTL lines flip so the caret
-// lands on the right edge, showing RTL in action.
+// The whole tile is a live "type a greeting" demo: an editor field that rolls a
+// greeting through eight tongues — the editor speaking every language. Rendered
+// with a 9th item repeating the 1st for a seamless loop (the .i18n-roll keyframes
+// step by 100/9); the two RTL lines flip so the caret lands on the right edge,
+// turning the abstract "RTL-ready" claim into something a newcomer can watch.
 const GREETINGS: { text: string; rtl?: boolean }[] = [
   { text: "Hello" },
   { text: "Bonjour" },
@@ -1327,48 +1315,21 @@ const GREETINGS: { text: string; rtl?: boolean }[] = [
 ];
 
 const LanguagesViz: React.FC = () => (
-  <div aria-hidden="true" className="flex w-full flex-col gap-2.5">
-    <div className="flex items-baseline gap-1.5">
-      <span className="text-brand-gradient bento-shimmer text-4xl font-extrabold leading-none tracking-tight">68</span>
-      <span className="text-[11px] font-medium text-muted-foreground">locales, built in</span>
-    </div>
-    <div className="relative h-9 w-fit min-w-[9.5rem] max-w-full overflow-hidden rounded-lg border border-border/50 bg-secondary/40 px-2.5 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)]">
+  <div aria-hidden="true" className="flex size-full items-center">
+    <div className="relative h-16 w-full overflow-hidden rounded-2xl border border-border/60 bg-secondary/40 px-5 shadow-[inset_0_1px_3px_rgba(0,0,0,0.05)]">
       <div className="i18n-roll flex flex-col">
         {[...GREETINGS, GREETINGS[0]].map((g, i) => (
           <div
             key={i}
-            className={`flex h-9 items-center gap-1.5 ${g.rtl ? "flex-row-reverse" : ""}`}
+            className={`flex h-16 items-center gap-2.5 ${g.rtl ? "flex-row-reverse" : ""}`}
           >
-            <span dir={g.rtl ? "rtl" : "ltr"} className="text-[15px] font-semibold text-foreground/85">
+            <span dir={g.rtl ? "rtl" : "ltr"} className="text-[1.75rem] font-semibold tracking-tight text-foreground/90">
               {g.text}
             </span>
-            <span className="bento-caret inline-block h-4 w-0.5 rounded-full bg-brand-from" />
+            <span className="bento-caret inline-block h-7 w-[3px] rounded-full bg-brand-from" />
           </div>
         ))}
       </div>
-    </div>
-    <div className="flex flex-wrap items-center gap-1.5">
-      {LOCALES.map((loc, i) => (
-        <span
-          key={loc.label}
-          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors duration-300 ${
-            loc.rtl
-              ? "border-brand-from/30 bg-brand-from/5 text-brand-from"
-              : "border-border/60 bg-card text-muted-foreground group-hover:border-primary/30 group-hover:text-primary"
-          }`}
-          style={{ transitionDelay: `${i * 30}ms` }}
-        >
-          {loc.rtl && (
-            <span className="rounded-[3px] bg-brand-from/15 px-1 text-[7px] font-bold uppercase leading-[1.5] tracking-wider">
-              rtl
-            </span>
-          )}
-          <span dir={loc.rtl ? "rtl" : "ltr"}>{loc.label}</span>
-        </span>
-      ))}
-      <span className="rounded-full border border-dashed border-border/70 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground/80">
-        +62
-      </span>
     </div>
   </div>
 );

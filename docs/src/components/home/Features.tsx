@@ -409,6 +409,17 @@ const PAGE_BLOCKS: { label: string; glyph: React.ReactNode; mine?: boolean }[] =
       </>
     ),
   },
+  // checkbox — a to-do block, duotone tile with a crisp tick
+  {
+    label: "To-do",
+    glyph: (
+      <>
+        <rect x="3.75" y="3.75" width="16.5" height="16.5" rx="4.2" fill="currentColor" fillOpacity="0.15" stroke="none" />
+        <rect x="3.75" y="3.75" width="16.5" height="16.5" rx="4.2" />
+        <path d="M8 12.2l2.7 2.7L16 9.3" />
+      </>
+    ),
+  },
   // rounded bar chart — a custom "Poll" block someone added themselves
   {
     label: "Poll",
@@ -484,7 +495,7 @@ const ExtensibleViz: React.FC = () => {
   <div aria-hidden="true" className="relative h-full min-h-[150px] w-full">
     {/* Floating block-picker dropdown — wider than the tile's viz column and
         anchored top-left so it bleeds over the right + bottom borders. */}
-    <div ref={cardRef} className="absolute left-[6%] top-[40px] w-[145%] overflow-hidden rounded-2xl border border-border/60 bg-card shadow-[0_24px_55px_-14px_rgba(0,0,0,0.25)]">
+    <div ref={cardRef} className="absolute left-[6%] top-[8px] w-[145%] overflow-hidden rounded-2xl border border-border/60 bg-card shadow-[0_24px_55px_-14px_rgba(0,0,0,0.25)]">
       {/* brand border revealed where the glow blob touches the picker's edge */}
       <span
         ref={edgeRef}

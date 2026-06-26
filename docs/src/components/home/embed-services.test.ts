@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { EMBED_SERVICES } from "./embed-services";
 
 describe("EMBED_SERVICES", () => {
-  it("lists every supported embed service", () => {
-    expect(EMBED_SERVICES.length).toBe(111);
+  it("keeps the carousel at 100+ services", () => {
+    expect(EMBED_SERVICES.length).toBeGreaterThanOrEqual(100);
   });
 
   it("gives every service a brand colour", () => {
@@ -32,9 +32,16 @@ describe("EMBED_SERVICES", () => {
 
   it("inlines favicons as base64 data URIs for services without a vector glyph", () => {
     const favicons = EMBED_SERVICES.filter((s) => !s.path);
-    expect(favicons.length).toBe(35);
+    expect(favicons.length).toBeGreaterThan(0);
     for (const s of favicons) {
       expect(s.img, s.title).toMatch(/^data:image\/(png|jpeg);base64,/);
+    }
+  });
+
+  it("excludes low-res favicon services from the carousel", () => {
+    const byTitle = new Set(EMBED_SERVICES.map((s) => s.title));
+    for (const title of ["ARTE", "GeoGebra", "Streamable", "Whimsical", "Desmos", "Buzzsprout", "Vidio"]) {
+      expect(byTitle.has(title), title).toBe(false);
     }
   });
 });

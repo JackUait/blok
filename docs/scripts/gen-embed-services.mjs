@@ -83,16 +83,22 @@ async function fetchFavicon(domain) {
   return { img: `data:${type};base64,${buf.toString("base64")}`, buf, type };
 }
 
-// Sample the favicon's edge ring and return the dominant opaque colour, so the
-// tile background can extend the icon's own border seamlessly. Returns null when
-// the border is transparent (a glyph-only favicon) — caller keeps the brand hex.
-function edgeColor({ buf, type }) {
-  let img;
+// Favicons below this native resolution look soft on a retina tile; we drop
+// those services from the carousel rather than show a pixelated logo.
+const MIN_FAVICON_RES = 64;
+
+function decodeFavicon({ buf, type }) {
   try {
-    img = type === "image/jpeg" ? jpeg.decode(buf, { useTArray: true, formatAsRGBA: true }) : PNG.sync.read(buf);
+    return type === "image/jpeg" ? jpeg.decode(buf, { useTArray: true, formatAsRGBA: true }) : PNG.sync.read(buf);
   } catch {
     return null;
   }
+}
+
+// Sample the favicon's edge ring and return the dominant opaque colour, so the
+// tile background can extend the icon's own border seamlessly. Returns null when
+// the border is transparent (a glyph-only favicon) — caller keeps the brand hex.
+function edgeColor(img) {
   const { width: w, height: h, data } = img;
   const at = (x, y) => {
     const i = (y * w + x) * 4;
@@ -150,7 +156,7 @@ const SERVICES = [
 ];
 
 const out = [];
-const missing = [];
+const dropped = [];
 for (const [title] of SERVICES) {
   let icon = null;
   const slug = SLUG[title];
@@ -163,17 +169,16 @@ for (const [title] of SERVICES) {
     out.push({ title, hex, path, vb });
   } else if (DOMAINS[title]) {
     const fav = await fetchFavicon(DOMAINS[title]);
-    if (fav) {
-      const ec = edgeColor(fav);
+    const decoded = fav ? decodeFavicon(fav) : null;
+    if (decoded && decoded.width >= MIN_FAVICON_RES) {
+      const ec = edgeColor(decoded);
       const hex = ec ?? FALLBACK_HEX[title] ?? "#64748B";
       out.push({ title, hex, path: null, img: fav.img, ...(ec ? { cover: true } : {}) });
     } else {
-      missing.push(title);
-      out.push({ title, hex: FALLBACK_HEX[title] ?? "#64748B", path: null });
+      dropped.push(`${title} (${decoded ? decoded.width + "px" : "no favicon"})`);
     }
   } else {
-    missing.push(title);
-    out.push({ title, hex: FALLBACK_HEX[title] ?? "#64748B", path: null });
+    dropped.push(`${title} (no source)`);
   }
 }
 
@@ -190,4 +195,4 @@ const body =
 
 writeFileSync(OUT, body);
 console.log("written:", out.length, "services ->", OUT);
-console.log("MISSING (", missing.length, "):", missing.join(", "));
+console.log("DROPPED low-res (", dropped.length, "):", dropped.join(", "));

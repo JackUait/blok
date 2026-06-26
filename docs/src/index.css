@@ -1116,7 +1116,6 @@
 .fi-chip-lit {
   transform-origin: center;
   transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease;
-  will-change: transform;
 }
 
 /* Hover-away: :hover can't fire a one-shot on exit, so the card is tagged

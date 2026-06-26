@@ -917,6 +917,7 @@ const serviceInitials = (title: string): string => {
 
 const ServiceIcon: React.FC<{ service: EmbedService }> = ({ service }) => (
   <span
+    data-svc={service.title}
     className="embed-tile relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[12px] text-white shadow-[0_3px_8px_-2px_rgba(0,0,0,0.22)] ring-1 ring-black/5"
     style={{ background: service.hex ?? "#64748B" }}
   >
@@ -944,11 +945,25 @@ const ServiceIcon: React.FC<{ service: EmbedService }> = ({ service }) => (
 // band of rows; only the middle two show through the window at rest. On hover the
 // whole band tilts (see EmbedsViz) and the extra rows fill in, so the icons read
 // as one diagonal river flowing from the bottom-left to the top-right.
+// Uniqueness guarantee: a viewer must never see the same logo twice at once. All
+// rows scroll at the SAME speed and direction, so the band moves as one rigid
+// sheet — the relative offset between rows is fixed forever. The roster (98) is
+// cut into disjoint chunks of ROW_LEN (14): STAGGER === ROW_LEN means adjacent
+// rows share NO service at all, so they can never collide however the window
+// straddles a row's seamless copy. 98 = 7 × 14, so seven chunks tile the roster
+// exactly and the 10 rows cycle through them; any run of ≤ 7 stacked rows (far
+// more than are ever co-visible) shows seven distinct chunks. ROW_LEN also stays
+// above the most columns ever visible in one row, so a row never shows its own
+// second copy alongside the first. Result: the visible band is always repeat-free.
 const EMBED_BAND_ROWS = 10;
-const EMBED_ROWS = Array.from({ length: EMBED_BAND_ROWS }, (_, i) => {
-  const start = (Math.floor(EMBED_SERVICES.length / EMBED_BAND_ROWS) * i + i * 3) % EMBED_SERVICES.length;
+const EMBED_ROW_LEN = 14;
+const EMBED_ROW_STAGGER = 14;
+const EMBED_ROW_DUR = "30s";
+// Exported for the uniqueness regression test (Features.test.tsx).
+export const EMBED_ROWS = Array.from({ length: EMBED_BAND_ROWS }, (_, i) => {
+  const start = (i * EMBED_ROW_STAGGER) % EMBED_SERVICES.length;
   const rotated = [...EMBED_SERVICES.slice(start), ...EMBED_SERVICES.slice(0, start)];
-  return { items: rotated.slice(0, 30), dur: `${44 + i * 6}s` };
+  return { items: rotated.slice(0, EMBED_ROW_LEN) };
 });
 
 // An eight-row band, vertically centred so it over-hangs its window top and
@@ -1068,7 +1083,7 @@ const EmbedsViz: React.FC = () => {
           <div
             key={r}
             className="flex w-max gap-3 bento-marquee-r"
-            style={{ animationDuration: row.dur }}
+            style={{ animationDuration: EMBED_ROW_DUR }}
           >
             {[...row.items, ...row.items].map((s, i) => (
               <ServiceIcon key={`${r}-${s.title}-${i}`} service={s} />

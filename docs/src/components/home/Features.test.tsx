@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
-import { Features } from './Features';
+import { Features, EMBED_ROWS } from './Features';
 import { I18nProvider } from '../../contexts/I18nContext';
 
 const renderFeatures = () =>
@@ -13,6 +13,20 @@ const renderFeatures = () =>
 describe('Features', () => {
   afterEach(() => {
     localStorage.removeItem('blok-docs-locale');
+  });
+
+  // Regression guard for the embeds carousel: a viewer must never see the same
+  // logo twice at once. Far more rows than can ever be co-visible (7) are checked
+  // for any consecutive window — each holds a disjoint set of services, so no
+  // matter how the marquee scrolls, the visible band can't repeat a logo.
+  it('never stacks the same embed logo across co-visible rows', () => {
+    const WINDOW = 7;
+    for (let start = 0; start + WINDOW <= EMBED_ROWS.length; start++) {
+      const titles = EMBED_ROWS.slice(start, start + WINDOW).flatMap((row) =>
+        row.items.map((s) => s.title)
+      );
+      expect(new Set(titles).size, `rows ${start}..${start + WINDOW - 1}`).toBe(titles.length);
+    }
   });
 
   it('should render a section element with id="features"', () => {

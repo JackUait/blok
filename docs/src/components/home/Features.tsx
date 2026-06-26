@@ -526,8 +526,8 @@ const ExtensibleViz: React.FC = () => {
               {block.label}
             </span>
             {block.mine && (
-              <span className="fi-byob-badge ml-auto inline-block origin-center rounded-full bg-linear-to-r from-brand-from to-brand-to px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
-                yours
+              <span className="fi-byob-badge ml-1.5 inline-block origin-center whitespace-nowrap rounded-full bg-linear-to-r from-brand-from to-brand-to px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                by you
               </span>
             )}
           </div>

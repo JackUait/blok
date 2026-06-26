@@ -1032,24 +1032,6 @@
   animation: bento-blink 1.05s steps(1, end) infinite;
 }
 
-/* i18n tile — a localized editor field that cycles a greeting through nine
-   languages (a vertical slot of 9 items, the 9th repeating the 1st for a
-   seamless loop). Each greeting holds, then slides up; step = 100/9 ≈ 11.111%. */
-@keyframes i18n-roll {
-  0%, 8% { transform: translateY(0); }
-  11.1%, 19.1% { transform: translateY(-11.111%); }
-  22.2%, 30.2% { transform: translateY(-22.222%); }
-  33.3%, 41.3% { transform: translateY(-33.333%); }
-  44.4%, 52.4% { transform: translateY(-44.444%); }
-  55.5%, 63.5% { transform: translateY(-55.555%); }
-  66.6%, 74.6% { transform: translateY(-66.666%); }
-  77.7%, 85.7% { transform: translateY(-77.777%); }
-  88.8%, 100% { transform: translateY(-88.888%); }
-}
-.i18n-roll {
-  animation: i18n-roll 15s cubic-bezier(0.76, 0, 0.24, 1) infinite;
-}
-
 /* Kanban cards gently breathe. */
 @keyframes bento-breathe {
   0%, 100% { transform: translateY(0); }
@@ -1128,7 +1110,6 @@
   .bento-cell,
   .bento-sheen::after,
   .bento-shimmer,
-  .i18n-roll,
   .bento-marquee-l,
   .bento-marquee-r {
     animation: none;

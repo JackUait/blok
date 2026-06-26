@@ -1299,40 +1299,91 @@ const ShortcutBadge: React.FC<{
 );
 
 // The whole tile is a live "type a greeting" demo: an editor field that rolls a
-// greeting through eight tongues — the editor speaking every language. Rendered
-// with a 9th item repeating the 1st for a seamless loop (the .i18n-roll keyframes
-// step by 100/9); the two RTL lines flip so the caret lands on the right edge,
-// turning the abstract "RTL-ready" claim into something a newcomer can watch.
-const GREETINGS: { text: string; rtl?: boolean }[] = [
-  { text: "Hello" },
-  { text: "Bonjour" },
-  { text: "Привет" },
-  { text: "こんにちは" },
-  { text: "안녕하세요" },
-  { text: "नमस्ते" },
-  { text: "مرحبا", rtl: true },
-  { text: "שלום", rtl: true },
-];
+// greeting through all 68 supported locales (src/components/i18n/locales), the
+// editor speaking every language. RTL is read from the same canonical set, so
+// those lines flip and the caret lands on the right edge — the "RTL-ready" claim
+// made watchable. The roll is JS-driven (see below) to scale to any count.
+const RTL_GREET = new Set(["ar", "dv", "fa", "he", "ku", "ps", "sd", "ug", "ur", "yi"]);
+const GREETINGS = (
+  [
+    ["en", "Hello"], ["am", "ሰላም"], ["ar", "مرحبا"], ["az", "Salam"], ["bg", "Здравей"],
+    ["bn", "নমস্কার"], ["bs", "Zdravo"], ["cs", "Ahoj"], ["da", "Hej"], ["de", "Hallo"],
+    ["dv", "ހެލޯ"], ["el", "Γεια"], ["es", "Hola"], ["et", "Tere"], ["fa", "سلام"],
+    ["fi", "Hei"], ["fil", "Kamusta"], ["fr", "Bonjour"], ["gu", "નમસ્તે"], ["he", "שלום"],
+    ["hi", "नमस्ते"], ["hr", "Bok"], ["hu", "Szia"], ["hy", "Բարև"], ["id", "Halo"],
+    ["it", "Ciao"], ["ja", "こんにちは"], ["ka", "გამარჯობა"], ["km", "សួស្តី"], ["kn", "ನಮಸ್ಕಾರ"],
+    ["ko", "안녕하세요"], ["ku", "سڵاو"], ["lo", "ສະບາຍດີ"], ["lt", "Labas"], ["lv", "Sveiki"],
+    ["mk", "Здраво"], ["ml", "നമസ്കാരം"], ["mn", "Сайн уу"], ["mr", "नमस्कार"], ["ms", "Helo"],
+    ["my", "မင်္ဂလာပါ"], ["ne", "नमस्ते"], ["nl", "Hallo"], ["no", "Hei"], ["pa", "ਸਤ ਸ੍ਰੀ ਅਕਾਲ"],
+    ["pl", "Cześć"], ["ps", "سلام"], ["pt", "Olá"], ["ro", "Bună"], ["ru", "Привет"],
+    ["sd", "سلام"], ["si", "ආයුබෝවන්"], ["sk", "Ahoj"], ["sl", "Živjo"], ["sq", "Përshëndetje"],
+    ["sr", "Здраво"], ["sv", "Hej"], ["sw", "Jambo"], ["ta", "வணக்கம்"], ["te", "నమస్కారం"],
+    ["th", "สวัสดี"], ["tr", "Merhaba"], ["ug", "سالام"], ["uk", "Привіт"], ["ur", "سلام"],
+    ["vi", "Xin chào"], ["yi", "העלא"], ["zh", "你好"],
+  ] as [string, string][]
+).map(([code, text]) => ({ code, text, rtl: RTL_GREET.has(code) }));
 
-const LanguagesViz: React.FC = () => (
-  <div aria-hidden="true" className="flex size-full items-center">
-    <div className="relative h-16 w-full overflow-hidden rounded-2xl border border-border/60 bg-secondary/40 px-5 shadow-[inset_0_1px_3px_rgba(0,0,0,0.05)]">
-      <div className="i18n-roll flex flex-col">
-        {[...GREETINGS, GREETINGS[0]].map((g, i) => (
-          <div
-            key={i}
-            className={`flex h-16 items-center gap-2.5 ${g.rtl ? "flex-row-reverse" : ""}`}
-          >
-            <span dir={g.rtl ? "rtl" : "ltr"} className="text-[1.75rem] font-semibold tracking-tight text-foreground/90">
-              {g.text}
-            </span>
-            <span className="bento-caret inline-block h-7 w-[3px] rounded-full bg-brand-from" />
-          </div>
-        ))}
+const LanguagesViz: React.FC = () => {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
+
+  // A seamless vertical carousel: the track holds every greeting plus a repeat of
+  // the first, so after the last we slide onto the clone and snap back to the top
+  // (transition off) without a visible jump. Pure setTimeout so it scales to all
+  // 68 without authoring per-item keyframes.
+  useEffect(() => {
+    if (reduce || !trackRef.current) return;
+    const track: HTMLDivElement = trackRef.current;
+    const N = GREETINGS.length;
+    const step = 100 / (N + 1); // track height = N + 1 items
+    const DWELL = 1500;
+    const SLIDE = 560;
+    let idx = 0;
+    let timer = 0;
+    const schedule = (ms: number) => {
+      timer = window.setTimeout(tick, ms);
+    };
+    function tick() {
+      idx += 1;
+      track.style.transition = `transform ${SLIDE}ms cubic-bezier(0.76, 0, 0.24, 1)`;
+      track.style.transform = `translateY(-${(idx * step).toFixed(4)}%)`;
+      if (idx === N) {
+        // Landed on the clone of the first greeting — snap home, then continue.
+        timer = window.setTimeout(() => {
+          track.style.transition = "none";
+          track.style.transform = "translateY(0)";
+          idx = 0;
+          void track.offsetHeight; // reflow so the next slide animates
+          schedule(DWELL);
+        }, SLIDE);
+      } else {
+        schedule(DWELL);
+      }
+    }
+    schedule(DWELL);
+    return () => window.clearTimeout(timer);
+  }, [reduce]);
+
+  return (
+    <div aria-hidden="true" className="flex size-full items-center">
+      <div className="relative h-16 w-full overflow-hidden rounded-2xl border border-border/60 bg-secondary/40 px-5 shadow-[inset_0_1px_3px_rgba(0,0,0,0.05)]">
+        <div ref={trackRef} className="flex flex-col">
+          {[...GREETINGS, GREETINGS[0]].map((g, i) => (
+            <div
+              key={i}
+              className={`flex h-16 items-center gap-2.5 ${g.rtl ? "flex-row-reverse" : ""}`}
+            >
+              <span dir={g.rtl ? "rtl" : "ltr"} className="text-[1.7rem] font-semibold tracking-tight text-foreground/90">
+                {g.text}
+              </span>
+              <span className="bento-caret inline-block h-7 w-[3px] rounded-full bg-brand-from" />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 // Media blocks — image, video and audio. The top is a real-looking photo poster
 // (sunset landscape) wearing a video play button + timestamp, so it reads as both

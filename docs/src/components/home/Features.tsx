@@ -1481,7 +1481,7 @@ const CapabilityTile: React.FC<TileProps> = ({ feature, onOpen }) => {
       <span className="bento-spot" aria-hidden="true" />
       <div
         className={`relative z-10 flex w-full items-center gap-3.5 ${
-          isEmbeds ? "transition-all duration-500 ease-out lg:group-hover:max-h-0 lg:group-hover:-translate-y-1 lg:group-hover:overflow-hidden lg:group-hover:opacity-0" : ""
+          isEmbeds ? "transition-all duration-500 ease-out lg:group-hover:max-h-0 lg:group-hover:min-h-0 lg:group-hover:-translate-y-1 lg:group-hover:overflow-hidden lg:group-hover:opacity-0" : ""
         }`}
       >
         <h3 className="flex-1 text-balance text-[1.05rem] font-bold leading-snug tracking-tight">
@@ -1503,10 +1503,10 @@ const CapabilityTile: React.FC<TileProps> = ({ feature, onOpen }) => {
         </svg>
       </div>
       <div
-        className={`relative z-10 hidden w-full flex-1 items-center lg:flex ${
+        className={`relative z-10 hidden flex-1 items-center lg:flex ${
           isEmbeds
-            ? "-mx-5 overflow-hidden transition-[margin] duration-500 ease-out lg:group-hover:-mb-5 lg:group-hover:-mt-5"
-            : "pt-1"
+            ? "-mx-5 w-[calc(100%+2.5rem)] overflow-hidden transition-[margin] duration-500 ease-out lg:group-hover:-mb-8 lg:group-hover:-mt-10"
+            : "w-full pt-1"
         }`}
       >
         <Viz />

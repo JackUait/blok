@@ -952,7 +952,7 @@ const EMBED_ROWS = [
 const EmbedsViz: React.FC = () => (
   <div
     aria-hidden="true"
-    className="w-full overflow-hidden py-1"
+    className="-mx-5 overflow-hidden py-1"
     style={{ maskImage: EDGE_FADE, WebkitMaskImage: EDGE_FADE }}
   >
     <div className="flex flex-col gap-3">

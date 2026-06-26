@@ -958,7 +958,10 @@ const EMBED_ROWS = Array.from({ length: EMBED_BAND_ROWS }, (_, i) => {
 // fills every corner. Rows scroll right, so the icons travel up to the right.
 const EmbedsViz: React.FC = () => (
   <div aria-hidden="true" className="flex size-full items-center overflow-hidden">
-    <div className="flex w-full flex-col items-center gap-3 transition-transform duration-[800ms] ease-out will-change-transform motion-safe:group-hover:[transform:rotate(-19deg)_scale(1.12)]">
+    {/* The band is wider than the tile and shifted left so the left-aligned,
+        seamless marquee always covers from beyond the left edge to far past the
+        right — no exposed edge at any scroll phase, even once rotated. */}
+    <div className="-ml-[22%] flex w-[144%] flex-col gap-3 transition-transform duration-[800ms] ease-out will-change-transform motion-safe:group-hover:[transform:rotate(-19deg)_scale(1.18)]">
       {EMBED_ROWS.map((row, r) => (
         <div
           key={r}

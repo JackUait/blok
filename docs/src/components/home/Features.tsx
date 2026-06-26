@@ -491,18 +491,6 @@ const ExtensibleViz: React.FC = () => {
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 z-30 rounded-2xl border-[1.5px] border-brand-from opacity-0 transition-opacity duration-200"
       />
-      {/* picker search header */}
-      <div className="flex items-center gap-2 border-b border-border/50 px-3.5 py-2">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground/70">
-          <circle cx="11" cy="11" r="6.5" />
-          <path d="m20 20-3.5-3.5" />
-        </svg>
-        <span className="flex items-center text-[11.5px] font-medium tracking-tight text-muted-foreground">
-          Add a block
-          <span className="bento-caret ml-0.5 inline-block h-3 w-px bg-primary" />
-        </span>
-      </div>
-
       <div className="flex flex-col gap-1 px-2 pt-2 pb-6">
         {PAGE_BLOCKS.map((block) => (
           <div

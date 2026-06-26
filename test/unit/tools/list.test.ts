@@ -862,3 +862,65 @@ describe('List Tool - setReadOnly', () => {
     expect(list.render()).toBe(element);
   });
 });
+
+describe('List Tool - moved() marker refresh', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /**
+   * A stub list block at a given depth, shaped so ListMarkerCalculator and
+   * ListDepthValidator can read its depth from the holder's listitem margin.
+   */
+  const makeListBlock = (depth: number): { name: string; holder: HTMLElement } => {
+    const holder = document.createElement('div');
+    const listItem = document.createElement('div');
+
+    listItem.setAttribute('role', 'listitem');
+
+    if (depth > 0) {
+      listItem.style.marginLeft = `${depth * 27}px`;
+    }
+    holder.appendChild(listItem);
+
+    return { name: 'list', holder };
+  };
+
+  /**
+   * Regression: dropping an unordered list item to a deeper position changes its
+   * depth via the moved() hook, but adjustDepthTo only touched margin/data-depth.
+   * The bullet glyph (•/◦/▪) is depth-derived and must refresh too — otherwise a
+   * depth-2 item keeps showing the depth-0 "•".
+   */
+  it('refreshes the unordered bullet glyph when moved() deepens the item', () => {
+    // Preceding run: depth 0 → 1 → 2, so the dropped item is promoted to depth 2.
+    const neighbors = [makeListBlock(0), makeListBlock(1), makeListBlock(2)];
+    const api = createMockAPI();
+
+    api.blocks.getBlockByIndex = (index: number) => neighbors[index] as never;
+    api.blocks.getBlockIndex = () => 3;
+    api.blocks.getCurrentBlockIndex = () => 3;
+    api.blocks.getBlocksCount = () => 4;
+
+    const list = new List({
+      data: { text: '', style: 'unordered', depth: 0 } as ListItemData,
+      config: {},
+      api,
+      readOnly: false,
+      block: {} as never,
+    });
+    const element = list.render();
+    const marker = element.querySelector('[data-list-marker]') as HTMLElement;
+
+    expect(marker.textContent).toBe('•');
+
+    list.moved({ fromIndex: 5, toIndex: 3, isGroupMove: false });
+
+    expect(element.getAttribute('data-list-depth')).toBe('2');
+    expect(marker.textContent).toBe('▪');
+  });
+});

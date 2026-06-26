@@ -231,6 +231,11 @@ export class ListItem implements BlockTool {
 
     if (currentDepth !== targetDepth) {
       this.adjustDepthTo(targetDepth);
+      // adjustDepthTo only updates margin + data-depth. The marker glyph is
+      // depth-derived (unordered bullets •/◦/▪ and ordered a./i. formatting),
+      // so refresh it too — otherwise a depth-changed item keeps its old glyph.
+      // Mirrors the adjustDepthTo + updateMarkerForDepth pairing used on setData.
+      this.updateMarkerForDepth(targetDepth, this._data.style);
     }
   }
 

@@ -83,10 +83,39 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
     const getChildren = (parentId: string | null): BlockNode[] =>
       snapshotNodes(reader).filter((n) => n.parentId === parentId);
 
+    const nest = (id: string, parentId: string): void => {
+      editor.blocks.setBlockParent(id, parentId);
+    };
+
+    const unnest = (id: string): void => {
+      editor.blocks.setBlockParent(id, null);
+    };
+
+    const remove = (id: string): void => {
+      const index = editor.blocks.getBlockIndex(id);
+
+      if (index === undefined) {
+        return;
+      }
+      void editor.blocks.delete(index);
+    };
+
+    const transact = (fn: () => void): void => {
+      if (editor.blocks.transact !== undefined) {
+        editor.blocks.transact(fn);
+      } else {
+        fn();
+      }
+    };
+
     return {
       ...EMPTY_API,
       getById,
       getChildren,
+      nest,
+      unnest,
+      remove,
+      transact,
     };
   }, [editor]);
 }

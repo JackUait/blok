@@ -19,6 +19,9 @@ const makeFakeEditor = (
         return idx === -1 ? undefined : idx;
       },
       getById: (id: string) => list.find((b) => b.id === id) ?? null,
+      setBlockParent: vi.fn(),
+      delete: vi.fn(),
+      transact: vi.fn((fn: () => void) => fn()),
     },
     events: {
       on: (_name: string, cb: () => void) => listeners.add(cb),
@@ -70,5 +73,47 @@ describe('useBlocks reads', () => {
     const { result } = renderHook(() => useBlocks(null));
     expect(result.current.getById('x')).toBeNull();
     expect(result.current.getChildren(null)).toEqual([]);
+  });
+});
+
+describe('useBlocks mutators (delegation)', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('nest delegates to setBlockParent(id, parentId)', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'p', name: 'toggle' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.nest('a', 'p'));
+    expect(editor.blocks.setBlockParent).toHaveBeenCalledWith('a', 'p');
+  });
+
+  it('unnest delegates to setBlockParent(id, null)', () => {
+    const { editor } = makeFakeEditor([{ id: 'a', parentId: 'p' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.unnest('a'));
+    expect(editor.blocks.setBlockParent).toHaveBeenCalledWith('a', null);
+  });
+
+  it('remove resolves the flat index then delegates to delete', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.remove('b'));
+    expect(editor.blocks.delete).toHaveBeenCalledWith(1);
+  });
+
+  it('remove is a no-op when the id is unknown', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.remove('ghost'));
+    expect(editor.blocks.delete).not.toHaveBeenCalled();
+  });
+
+  it('transact delegates to editor.blocks.transact', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    const fn = vi.fn();
+    act(() => result.current.transact(fn));
+    expect(editor.blocks.transact).toHaveBeenCalledTimes(1);
+    expect(fn).toHaveBeenCalledTimes(1);
   });
 });

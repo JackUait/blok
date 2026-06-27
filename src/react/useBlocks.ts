@@ -4,9 +4,11 @@ import type { Blok } from '../../types';
 import {
   snapshotNodes,
   resolveInsertIndex,
+  resolveMoveIndex,
   type BlockNode,
   type IndexReader,
   type InsertSpec,
+  type MoveTarget,
   type UseBlocksApi,
 } from './blocks-snapshot';
 
@@ -110,6 +112,17 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       }
     };
 
+    const move = (id: string, target: MoveTarget): void => {
+      const fromIndex = editor.blocks.getBlockIndex(id);
+
+      if (fromIndex === undefined) {
+        return;
+      }
+      const toIndex = resolveMoveIndex(reader, target);
+
+      editor.blocks.move(toIndex, fromIndex);
+    };
+
     const insert = (spec: InsertSpec = {}): BlockNode | null => {
       const parentId = spec.parentId ?? null;
       const position = spec.position ?? 'end';
@@ -145,6 +158,7 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       getById,
       getChildren,
       insert,
+      move,
       nest,
       unnest,
       remove,

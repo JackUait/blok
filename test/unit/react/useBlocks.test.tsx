@@ -28,6 +28,7 @@ const makeFakeEditor = (
       }),
       setBlockParent: vi.fn(),
       delete: vi.fn(),
+      move: vi.fn(),
       transact: vi.fn((fn: () => void) => fn()),
     },
     on: (_name: string, cb: () => void) => listeners.add(cb),
@@ -159,5 +160,31 @@ describe('useBlocks insert', () => {
     let created: ReturnType<typeof result.current.insert> = null;
     act(() => { created = result.current.insert({}); });
     expect(created).toBeNull();
+  });
+});
+
+describe('useBlocks move', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('move with toIndex delegates to editor.blocks.move(toIndex, fromIndex)', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.move('a', { toIndex: 2 }));
+    expect(editor.blocks.move).toHaveBeenCalledWith(2, 0);
+  });
+
+  it('move after a sibling resolves to sibling index + 1', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.move('c', { after: 'a' }));
+    expect(editor.blocks.move).toHaveBeenCalledWith(1, 2);
+  });
+
+  it('move is a no-op when the moved id is unknown', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.move('ghost', { toIndex: 0 }));
+    expect(editor.blocks.move).not.toHaveBeenCalled();
   });
 });

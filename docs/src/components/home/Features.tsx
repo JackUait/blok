@@ -157,49 +157,66 @@ const CleanJsonViz: React.FC = () => {
           <span className="size-2.5 rounded-full bg-foreground/15" />
           <span className="size-2.5 rounded-full bg-foreground/15" />
         </div>
-        <pre className="relative flex flex-1 items-center overflow-hidden px-5 py-3 font-mono text-[11.5px] leading-[1.55] text-muted-foreground lg:text-[12px]">
-          <code>
-            {"{\n  "}
-            <span className="text-brand-gradient font-semibold">"blocks"</span>
-            {": [\n    { "}
-            <span className="text-muted-foreground/60">"id"</span>
-            {": "}
-            <span className="text-primary">"h1"</span>
-            {", "}
-            <span className="text-muted-foreground/60">"type"</span>
-            {": "}
-            <span className="text-primary">"header"</span>
-            {",\n      "}
-            <span className="text-muted-foreground/60">"data"</span>
-            {": { "}
-            <span className="text-muted-foreground/60">"text"</span>
-            {": "}
-            <span className="text-primary">"Hello, Blok"</span>
-            {", "}
-            <span className="text-muted-foreground/60">"level"</span>
-            {": "}
-            <span className="text-foreground">1</span>
-            {" } },\n    { "}
-            <span className="text-muted-foreground/60">"id"</span>
-            {": "}
-            <span className="text-primary">"im"</span>
-            {", "}
-            <span className="text-muted-foreground/60">"type"</span>
-            {": "}
-            <span className="text-primary">"image"</span>
-            {",\n      "}
-            <span className="text-muted-foreground/60">"data"</span>
-            {": { "}
-            <span className="text-muted-foreground/60">"url"</span>
-            {": "}
-            <span className="text-primary">"/blok.png"</span>
-            {" } }\n  ],\n  "}
-            <span className="text-brand-gradient font-semibold">"version"</span>
-            {": "}
-            <span className="text-primary">{`"${version}"`}</span>
-            {"\n}"}
-          </code>
-        </pre>
+        <div className="relative flex flex-1 items-center overflow-hidden px-5 py-3">
+          {/* warm brand light bleeding from the top-right so the code surface has
+              depth instead of a flat fill */}
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-12 -top-16 size-44 rounded-full bg-[radial-gradient(circle,rgba(233,78,122,0.16),transparent_70%)] blur-2xl"
+          />
+          <div className="relative flex gap-3 font-mono text-[11.5px] leading-[1.55] lg:text-[12px]">
+            {/* line-number gutter — turns the dump into a real code surface */}
+            <pre className="select-none text-right tabular-nums text-muted-foreground/30">
+              {"1\n2\n3\n4\n5\n6\n7\n8\n9"}
+            </pre>
+            <span aria-hidden="true" className="w-px self-stretch bg-border/60" />
+            <pre className="text-muted-foreground">
+              <code>
+                {"{\n  "}
+                <span className="text-brand-gradient font-semibold">"blocks"</span>
+                {": [\n    { "}
+                <span className="text-muted-foreground/60">"id"</span>
+                {": "}
+                <span className="text-primary">"h1"</span>
+                {", "}
+                <span className="text-muted-foreground/60">"type"</span>
+                {": "}
+                <span className="text-primary">"header"</span>
+                {",\n      "}
+                <span className="text-muted-foreground/60">"data"</span>
+                {": { "}
+                <span className="text-muted-foreground/60">"text"</span>
+                {": "}
+                {/* the value that becomes the big heading on the flip side —
+                    shown selected, tying the data to what the user sees */}
+                <span className="rounded-[3px] bg-brand-from/15 px-0.5 text-primary">"Hello, Blok"</span>
+                {", "}
+                <span className="text-muted-foreground/60">"level"</span>
+                {": "}
+                <span className="text-foreground">1</span>
+                {" } },\n    { "}
+                <span className="text-muted-foreground/60">"id"</span>
+                {": "}
+                <span className="text-primary">"im"</span>
+                {", "}
+                <span className="text-muted-foreground/60">"type"</span>
+                {": "}
+                <span className="text-primary">"image"</span>
+                {",\n      "}
+                <span className="text-muted-foreground/60">"data"</span>
+                {": { "}
+                <span className="text-muted-foreground/60">"url"</span>
+                {": "}
+                <span className="text-primary">"/blok.png"</span>
+                {" } }\n  ],\n  "}
+                <span className="text-brand-gradient font-semibold">"version"</span>
+                {": "}
+                <span className="text-primary">{`"${version}"`}</span>
+                {"\n}"}
+              </code>
+            </pre>
+          </div>
+        </div>
       </div>
 
       {/* BACK — that JSON rendered inside the editor: a clean page of left-aligned
@@ -212,6 +229,16 @@ const CleanJsonViz: React.FC = () => {
           <span className="size-2.5 rounded-full bg-foreground/15" />
         </div>
         <div className="relative flex flex-1 flex-col justify-center gap-4 py-7 pl-14 pr-7 lg:gap-5">
+          {/* dotted editor canvas — faint paper texture so the surface has tooth */}
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 [background-image:radial-gradient(circle,var(--color-border)_1px,transparent_1px)] [background-size:18px_18px] opacity-50"
+          />
+          {/* warm aura slowly breathing behind the mark */}
+          <span
+            aria-hidden="true"
+            className="bento-aura pointer-events-none absolute bottom-2 left-8 size-44 rounded-full bg-[radial-gradient(circle,rgba(233,78,122,0.18),rgba(230,128,25,0.1)_45%,transparent_72%)] blur-2xl"
+          />
           {/* heading block */}
           <div className="relative">
             <BlockHandle />
@@ -230,6 +257,20 @@ const CleanJsonViz: React.FC = () => {
               height={92}
               className="rounded-2xl drop-shadow-[0_10px_24px_rgba(233,78,122,0.28)]"
             />
+          </div>
+          {/* empty trailing block — the slash-command affordance Blok shows on a
+              fresh line; live editor furniture, not content, so it stays out of
+              the JSON while making the canvas feel inhabited */}
+          <div className="relative flex items-center text-muted-foreground/45">
+            <BlockHandle />
+            <span className="bento-caret inline-block h-[1.15rem] w-[2.5px] rounded-full bg-brand-from" />
+            <span className="ml-2 text-[0.95rem] tracking-tight">
+              Type{" "}
+              <kbd className="rounded-md border border-border/70 bg-secondary px-1.5 py-0.5 font-mono text-[0.72rem] text-muted-foreground/80 shadow-sm">
+                /
+              </kbd>{" "}
+              for commands
+            </span>
           </div>
         </div>
       </div>
@@ -1476,14 +1517,12 @@ const pickPhrase = (i: number, hover: boolean): Greeting => {
   return { text: hover ? p.whatsup : p.hello, rtl: p.rtl };
 };
 
-// Random next locale, never the current one. Picks uniformly among the other
-// N - 1 entries (map [0, N-2] over the gap left by `cur`), so every sign has an
-// equal chance and no sign ever repeats back-to-back.
-const randomIndex = (n: number): number => Math.floor(Math.random() * n);
-const nextIndex = (cur: number, n: number): number => {
-  const r = Math.floor(Math.random() * (n - 1));
-  return r >= cur ? r + 1 : r;
-};
+// Every sign gets an EQUAL chance to appear: a plain uniform draw over all
+// entries, so each language — the current one included — has exactly a 1/N (1/68)
+// chance each cycle. No exclusion, no weighting; rng is injectable for testing.
+export const LANGUAGE_COUNT = PHRASES.length;
+export const pickLocaleIndex = (rng: () => number = Math.random): number =>
+  Math.floor(rng() * LANGUAGE_COUNT);
 
 const LanguagesViz: React.FC = () => {
   const reduce = useReducedMotion();

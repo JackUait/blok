@@ -1192,14 +1192,31 @@ const EmbedsViz: React.FC = () => {
 
     const frame = () => {
       let busy = false;
+      // READ phase: while the cursor is present, gather every tile's current
+      // centre in one batch. The tiles ride the marquee, so the rects change each
+      // frame and can't be cached — but reading them all together costs a single
+      // layout flush instead of one per tile (interleaving reads with the writes
+      // below would force a reflow on every iteration, 280× a frame).
+      let cx: Float32Array | null = null;
+      let cy: Float32Array | null = null;
+      if (pointer) {
+        cx = new Float32Array(tiles.length);
+        cy = new Float32Array(tiles.length);
+        for (let i = 0; i < tiles.length; i++) {
+          const r = tiles[i].getBoundingClientRect();
+          cx[i] = r.left + r.width / 2;
+          cy[i] = r.top + r.height / 2;
+        }
+      }
+      // WRITE phase: ease each tile toward its target and write styles. No layout
+      // reads here, so nothing forces a reflow mid-loop.
       for (let i = 0; i < tiles.length; i++) {
         const t = tiles[i];
         let tScale = 1;
         let tRot = 0;
-        if (pointer) {
-          const r = t.getBoundingClientRect();
-          const dx = pointer.x - (r.left + r.width / 2);
-          const dy = pointer.y - (r.top + r.height / 2);
+        if (pointer && cx && cy) {
+          const dx = pointer.x - cx[i];
+          const dy = pointer.y - cy[i];
           const d = Math.hypot(dx, dy);
           if (d < MAG_RADIUS) {
             const lin = 1 - d / MAG_RADIUS; // 0..1
@@ -1261,15 +1278,7 @@ const EmbedsViz: React.FC = () => {
     <div
       ref={winRef}
       aria-hidden="true"
-      className="flex size-full items-center overflow-hidden"
-      // The band overhangs the window top/bottom, so the row clipped just above
-      // bleeds its drop shadow into the empty gap at the top edge. Fade the top and
-      // bottom edges so that bleed dissolves into the card instead of reading as a
-      // stray shadow line. The fade lands on the empty inter-row gap, not the icons.
-      style={{
-        maskImage: "linear-gradient(to bottom, transparent, #000 16px, #000 calc(100% - 16px), transparent)",
-        WebkitMaskImage: "linear-gradient(to bottom, transparent, #000 16px, #000 calc(100% - 16px), transparent)",
-      }}
+      className="relative flex size-full items-center overflow-hidden"
     >
       <div className="-ml-[22%] flex w-[144%] flex-col gap-3 transition-transform duration-[800ms] ease-out will-change-transform motion-safe:group-hover:[transform:rotate(-19deg)_scale(1.32)]">
         {EMBED_ROWS.map((row, r) => (
@@ -1284,6 +1293,14 @@ const EmbedsViz: React.FC = () => {
           </div>
         ))}
       </div>
+      {/* The band overhangs the window top/bottom, so the row clipped just above
+          bleeds its drop shadow into the empty gap. These two card-coloured fade
+          strips dissolve that bleed — the same effect the old mask-image gave, but
+          as overlays: a CSS mask on the window is a compositing blocker that forces
+          every marquee row to repaint on the main thread each frame (the jank).
+          Without it the translateX animations stay GPU-composited. */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-4 bg-linear-to-b from-card to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-4 bg-linear-to-t from-card to-transparent" />
     </div>
   );
 };

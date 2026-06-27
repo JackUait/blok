@@ -6,6 +6,7 @@ import type { Block } from '../../../block';
 import { DATA_ATTR, createSelector } from '../../../constants';
 import { DRAG_CONFIG } from '../utils/drag.constants';
 import { getBlockNestingDepth, getListItemDepth } from '../utils/depthUtils';
+import { resolveTargetDepth } from '../../../../tools/list/depth-validator';
 
 export interface DropTarget {
   block: Block;
@@ -761,64 +762,21 @@ export class DropTargetDetector {
     const nextIsNestingContext = nextDepth !== null;
     const nextDepthValue = nextDepth ?? 0;
 
-    // Predict the exact post-drop depth for ANY dragged block. The source's
+    // Predict the exact post-drop depth for ANY dragged block via the SAME
+    // resolveTargetDepth the list tool's move hook uses, so the indicator can
+    // never predict a depth different from the one the drop applies. The source's
     // current depth is its list depth (list items) or its flat indent (others),
-    // defaulting to 0 for an un-nested block. Mirrors ListDepthValidator so the
-    // indicator matches what the drop will actually apply.
-    if (sourceBlock) {
-      const sourceDepth = depthOf(sourceBlock) ?? 0;
+    // defaulting to 0 — including the defensive no-source case (production always
+    // supplies the dragged block), so every path goes through one rule.
+    const sourceDepth = sourceBlock ? depthOf(sourceBlock) ?? 0 : 0;
 
-      return this.predictListItemDepth(
-        sourceDepth, prevDepthValue, previousIsNestingContext, nextDepthValue, nextIsNestingContext
-      );
-    }
-
-    // No source block (defensive — production always supplies the dragged block).
-    // Fall back to neighbour-based depth purely for cosmetic indicator placement.
-    if (nextDepthValue > 0 && nextDepthValue <= prevDepthValue + 1) {
-      return nextDepthValue;
-    }
-
-    if (prevDepthValue > 0) {
-      return prevDepthValue;
-    }
-
-    return 0;
-  }
-
-  /**
-   * Mirrors ListDepthValidator.getTargetDepthForMove to predict the exact
-   * post-drop depth for a list item. This ensures the visual indicator
-   * shows the same depth the item will actually have after being dropped.
-   */
-  private predictListItemDepth(
-    currentDepth: number,
-    previousDepth: number,
-    previousIsListItem: boolean,
-    nextDepth: number,
-    nextIsListItem: boolean
-  ): number {
-    const maxAllowedDepth = previousIsListItem ? previousDepth + 1 : 0;
-
-    // Cap current depth at max allowed
-    if (currentDepth > maxAllowedDepth) {
-      return maxAllowedDepth;
-    }
-
-    // Match next depth if it's deeper than current and within bounds
-    if (nextIsListItem && nextDepth > currentDepth && nextDepth <= maxAllowedDepth) {
-      return nextDepth;
-    }
-
-    // Match previous depth if deeper than current, appending into its sub-list. A
-    // shallower (or absent) next item must NOT pull the drop back to root — nesting
-    // from the bottom of a nested item is valid. A *deeper* next item is handled by
-    // the shouldMatchNextDepth case above, so here next is never deeper than prev.
-    if (previousIsListItem && previousDepth > currentDepth && previousDepth <= maxAllowedDepth && nextDepth <= previousDepth) {
-      return previousDepth;
-    }
-
-    return currentDepth;
+    return resolveTargetDepth({
+      currentDepth: sourceDepth,
+      previousIsListItem: previousIsNestingContext,
+      previousDepth: prevDepthValue,
+      nextIsListItem: nextIsNestingContext,
+      nextDepth: nextDepthValue,
+    });
   }
 
   /**

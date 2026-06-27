@@ -24,6 +24,75 @@ export interface DepthValidationOptions {
 }
 
 /**
+ * The neighbour context around a drop slot, already reduced to depths + flags.
+ */
+export interface DepthResolutionContext {
+  /** The dragged item's current depth. */
+  currentDepth: number;
+  /** Whether the block immediately BEFORE the slot is a nesting context (a list item; for non-list drag sources, any indented block). */
+  previousIsListItem: boolean;
+  /** That previous block's depth (0 when it is not a nesting context). */
+  previousDepth: number;
+  /** Whether the block immediately AFTER the slot is a nesting context. */
+  nextIsListItem: boolean;
+  /** That next block's depth (0 when it is not a nesting context). */
+  nextDepth: number;
+  /** Skip the match-next / match-previous promotions (group moves preserve relative structure). */
+  skipDepthPromotion?: boolean;
+}
+
+/**
+ * THE single source of truth for "what depth does a block land at when dropped
+ * into this slot". Pure, DOM-free, shared by BOTH the list tool's move hook
+ * ({@link ListDepthValidator.getTargetDepthForMove}) and the drag drop-indicator
+ * ({@link DropTargetDetector.calculateTargetDepth}).
+ *
+ * Keeping this in ONE place is a hard guarantee, not a convenience: the indicator
+ * preview and the actual drop are computed by the same code, so the indicator can
+ * never predict a depth different from the one the drop applies. (This rule used
+ * to be hand-mirrored in two functions that silently drifted, which is exactly
+ * how "nest from the bottom" and the paragraph-before-list mismatch happened.)
+ *
+ * Rules:
+ * 1. Cap at `maxAllowed = previousIsListItem ? previousDepth + 1 : 1`. A non-list
+ *    (or absent) predecessor still allows ONE level — a list may begin nested,
+ *    matching {@link ListDepthValidator.getMaxAllowedDepth}'s first-in-group rule.
+ * 2. Group moves keep their own relative depth (no promotion).
+ * 3. Promote to a DEEPER next item (become its sibling), else
+ * 4. Append into a DEEPER previous item's sub-list ("nest from the bottom"); a
+ *    shallower/absent next item must not pull the drop back to root.
+ */
+export const resolveTargetDepth = (context: DepthResolutionContext): number => {
+  const { currentDepth, previousIsListItem, previousDepth, nextIsListItem, nextDepth, skipDepthPromotion } = context;
+
+  const maxAllowedDepth = previousIsListItem ? previousDepth + 1 : 1;
+
+  if (currentDepth > maxAllowedDepth) {
+    return maxAllowedDepth;
+  }
+
+  if (skipDepthPromotion) {
+    return currentDepth;
+  }
+
+  // Match a deeper next item, becoming its sibling — prevents inserting a
+  // shallower item that would break the following nested structure.
+  if (nextIsListItem && nextDepth > currentDepth && nextDepth <= maxAllowedDepth) {
+    return nextDepth;
+  }
+
+  // Otherwise append into a deeper previous item's sub-list. A shallower (or
+  // absent) next item does NOT pull the drop back to root — prev(1), dropped(1),
+  // next(0) is valid ("nest from the bottom"). A deeper next item was handled
+  // just above.
+  if (previousIsListItem && previousDepth > currentDepth && previousDepth <= maxAllowedDepth && nextDepth <= previousDepth) {
+    return previousDepth;
+  }
+
+  return currentDepth;
+};
+
+/**
  * Validates and adjusts depth values for list items.
  * Pure functions that read from the BlocksAPI but don't mutate state.
  */
@@ -66,55 +135,26 @@ export class ListDepthValidator {
    */
   getTargetDepthForMove(options: DepthValidationOptions): number {
     const { blockIndex, currentDepth, skipDepthPromotion } = options;
-    const maxAllowedDepth = this.getMaxAllowedDepth(blockIndex);
 
-    // If current depth exceeds max, cap it
-    if (currentDepth > maxAllowedDepth) {
-      return maxAllowedDepth;
-    }
-
-    // Depth-promotion heuristics are skipped for group moves: the group preserves
-    // its own relative structure, so we should not promote a block's depth to match
-    // its new neighbours (which may be members of the same group).
-    if (skipDepthPromotion) {
-      return currentDepth;
-    }
-
-    // Check if we're inserting before a list item (next block)
-    const nextBlock = this.blocks.getBlockByIndex(blockIndex + 1);
-    const nextIsListItem = nextBlock && nextBlock.name === TOOL_NAME;
-    const nextBlockDepth = nextIsListItem ? this.getBlockDepth(nextBlock) : 0;
-
-    // If next block is a deeper list item, match its depth (become a sibling)
-    // This prevents breaking list structure by inserting a shallower item
-    const shouldMatchNextDepth = nextIsListItem
-      && nextBlockDepth > currentDepth
-      && nextBlockDepth <= maxAllowedDepth;
-
-    if (shouldMatchNextDepth) {
-      return nextBlockDepth;
-    }
-
-    // Check if previous block is a list item at a deeper level
+    // Read the neighbour context from the DOM, then defer the actual decision to
+    // the shared resolveTargetDepth — the SAME function the drag indicator uses,
+    // so the preview can never diverge from this (the applied) result.
     const previousBlock = blockIndex > 0 ? this.blocks.getBlockByIndex(blockIndex - 1) : undefined;
-    const previousIsListItem = previousBlock && previousBlock.name === TOOL_NAME;
-    const previousBlockDepth = previousIsListItem ? this.getBlockDepth(previousBlock) : 0;
+    const previousIsListItem = !!previousBlock && previousBlock.name === TOOL_NAME;
+    const previousDepth = previousIsListItem ? this.getBlockDepth(previousBlock) : 0;
 
-    // If the previous block is deeper, append as a sibling in the nested sub-list
-    // (match its depth). A shallower — or absent — next item must NOT pull the drop
-    // back to root: prev(1), dropped(1), next(0) is a valid structure ("nest from
-    // the bottom"). A *deeper* next item is already handled by shouldMatchNextDepth
-    // above, so the only case left here is a next item no deeper than the previous.
-    const shouldMatchPreviousDepth = previousIsListItem
-      && previousBlockDepth > currentDepth
-      && previousBlockDepth <= maxAllowedDepth
-      && nextBlockDepth <= previousBlockDepth;
+    const nextBlock = this.blocks.getBlockByIndex(blockIndex + 1);
+    const nextIsListItem = !!nextBlock && nextBlock.name === TOOL_NAME;
+    const nextDepth = nextIsListItem ? this.getBlockDepth(nextBlock) : 0;
 
-    if (shouldMatchPreviousDepth) {
-      return previousBlockDepth;
-    }
-
-    return currentDepth;
+    return resolveTargetDepth({
+      currentDepth,
+      previousIsListItem,
+      previousDepth,
+      nextIsListItem,
+      nextDepth,
+      skipDepthPromotion,
+    });
   }
 
   /**

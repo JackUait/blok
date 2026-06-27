@@ -2300,10 +2300,11 @@ export const Features: React.FC = () => {
             ))}
           </div>
 
-          {/* Supporting capabilities. Icon-badged cards in a 2-up grid below lg;
-              from lg up each unfolds into its own bento tile with a diorama. */}
+          {/* Supporting capabilities. One full-width tile per row on mobile so
+              each diorama gets its own row to breathe; a 3-up grid on tablet; and
+              from lg up each unfolds into its own bento tile in the mosaic. */}
           <motion.div
-            className="mt-4 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:contents"
+            className="mt-4 grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-3 lg:contents"
             variants={gridVariants}
             initial="hidden"
             whileInView="show"

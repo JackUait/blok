@@ -272,6 +272,14 @@ describe('Features', () => {
     expect(lgGated).toHaveLength(0);
     // and a known diorama (the embeds logo river) is actually in the tree
     expect(container.querySelector('.bento-marquee-r')).not.toBeNull();
+
+    // one diorama per row on mobile: the capability grid is a single column
+    // below md (tablet restores the 3-up grid; lg dissolves into the bento).
+    const capGrid = screen.getByRole('button', { name: 'Learn more about embeds' }).parentElement;
+    expect(capGrid?.className).toMatch(/(^|\s)grid-cols-1(\s|$)/);
+    expect(capGrid?.className).toContain('md:grid-cols-3');
+    expect(capGrid?.className).not.toMatch(/(^|\s)grid-cols-2(\s|$)/);
+
     // this mounts the full animated section; the default 5s is tight on a loaded
     // machine (see the known heavy-render flake cluster), so give it headroom.
   }, 15000);

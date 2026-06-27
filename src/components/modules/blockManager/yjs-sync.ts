@@ -7,7 +7,8 @@ import type { Map as YMap } from 'yjs';
 
 import { BlockToolAPI } from '../../block';
 import type { Block } from '../../block';
-import { moveElementBefore } from '../../utils/html';
+import { DATA_ATTR } from '../../constants/data-attributes';
+import { moveElementAfter, moveElementBefore } from '../../utils/html';
 import type { YjsManager } from '../yjs';
 import type { BlockChangeEvent } from '../yjs/types';
 
@@ -79,6 +80,11 @@ export class BlockYjsSync {
    * Flag to prevent multiple move syncs in the same event batch
    */
   private moveSyncScheduled = false;
+
+  /**
+   * Flag to prevent multiple root-holder order reconciles in the same event batch
+   */
+  private orderReconcileScheduled = false;
 
   /**
    * Blocks store access
@@ -241,6 +247,66 @@ export class BlockYjsSync {
 
     if (event.type === 'remove') {
       this.handleYjsRemove(event.blockId);
+      // A remove can promote surviving descendants back to root (e.g. undo tears
+      // down a column_list and its leaves return to the document). The block
+      // ARRAY restores their order, but their holders may be stranded at the DOM
+      // position they held inside the now-removed container — blocksStore.move()
+      // can't fix it because the array index already matches. Re-assert the DOM
+      // order against the array once the teardown settles.
+      this.scheduleRootHolderReconcile();
+    }
+  }
+
+  /**
+   * Schedule a single root-holder DOM order reconcile for the current event
+   * batch. Debounced via a microtask so a multi-event teardown (column_list +
+   * its columns) reconciles exactly once, after the block array and parent
+   * relationships have fully settled.
+   */
+  private scheduleRootHolderReconcile(): void {
+    if (this.orderReconcileScheduled) {
+      return;
+    }
+
+    this.orderReconcileScheduled = true;
+
+    queueMicrotask(() => {
+      this.orderReconcileScheduled = false;
+      // Run inside an atomic operation so the holder moves don't echo back to
+      // Yjs as fresh local writes (which would pollute the undo/redo stacks).
+      this.withAtomicOperation(() => {
+        this.reconcileRootHolderOrder();
+      });
+    });
+  }
+
+  /**
+   * Walk the root-level blocks in array order and re-assert their DOM order to
+   * match. A block is "at root" when its holder lives directly in the document
+   * flow rather than inside a container's nested-blocks region (column, toggle,
+   * callout, etc.). Nested blocks are skipped — they follow their container's
+   * holder and must never be lifted out here.
+   *
+   * This repairs the model-vs-DOM divergence left when an undo removes a
+   * container and its descendants are promoted to root: the array order is
+   * authoritative, the holders are not.
+   */
+  private reconcileRootHolderOrder(): void {
+    const isAtRoot = (block: Block): boolean =>
+      block.holder.closest(`[${DATA_ATTR.nestedBlocks}], [data-blok-toggle-children]`) === null;
+
+    let prevHolder: HTMLElement | null = null;
+
+    for (const block of this.repository.blocks) {
+      if (!isAtRoot(block)) {
+        continue;
+      }
+
+      if (prevHolder !== null && prevHolder.nextElementSibling !== block.holder) {
+        moveElementAfter(block.holder, prevHolder);
+      }
+
+      prevHolder = block.holder;
     }
   }
 

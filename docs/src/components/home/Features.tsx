@@ -1030,9 +1030,16 @@ const TablesViz: React.FC = () => {
       {TABLE_HEADERS.map(({ label, cls }) => (
         <div
           key={label}
-          className={`${cls} row-start-1 flex h-6 items-center bg-secondary px-2 font-semibold text-muted-foreground`}
+          className={`${cls} row-start-1 flex h-6 items-center gap-1 bg-secondary px-2 font-semibold text-muted-foreground`}
         >
           {label}
+          {/* Date is the sorted column (rows ascend Jun→Sep) — a small ascending
+              cue in the table's own blue. */}
+          {label === "Date" && (
+            <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M6 15l6-6 6 6" />
+            </svg>
+          )}
         </div>
       ))}
 
@@ -1069,10 +1076,15 @@ const TablesViz: React.FC = () => {
       <div className="col-start-3 row-start-7 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">Sam</span></div>
       <div className="col-start-4 row-start-7 flex items-center overflow-hidden bg-card px-2 py-1.5 text-muted-foreground"><span className="truncate">Sep 05</span></div>
 
-      {/* the real blue resize line, parked on the Task | Owner edge — rides along
-          as the column widens on hover */}
-      <span className="pointer-events-none relative z-20 col-start-3 row-start-1 row-span-7">
-        <span className="absolute inset-y-0 -left-[2px] w-[2px] bg-[#3b82f6] opacity-0 transition-opacity duration-150 motion-safe:group-hover:opacity-100" />
+      {/* Drag-to-fill — the spreadsheet's signature gesture. The Owner column's
+          first cell is selected, then on hover the selection sweeps down the whole
+          column with its fill handle riding the bottom edge. Pure CSS (animated
+          inset), so reduced-motion users just see the static selected cell. */}
+      <span className="pointer-events-none relative z-20 col-start-3 row-start-2 row-span-6">
+        <span className="absolute inset-x-[1px] top-[1px] bottom-[83%] rounded-[3px] border-[1.5px] border-[#3b82f6] bg-[#3b82f6]/10 transition-[bottom] duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-safe:group-hover:bottom-[1px]">
+          {/* fill handle — the little square you'd grab to drag the series down */}
+          <span className="absolute -bottom-[3.5px] -right-[3.5px] size-[6px] rounded-[1.5px] border border-white bg-[#3b82f6] shadow-sm" />
+        </span>
       </span>
       </div>
     </div>

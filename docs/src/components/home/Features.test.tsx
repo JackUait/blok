@@ -29,6 +29,33 @@ describe('Features', () => {
     }
   });
 
+  // Regression guard for the embeds marquee "half-gap jump". Each row duplicates
+  // its items and scrolls translateX(-50%) -> 0 for a seamless loop, so the track
+  // must be two identical halves. With a flex `gap`, the track width is
+  // 2N*item + (2N-1)*gap, so -50% is one copy MINUS half a gap: every cycle the
+  // row snapped sideways by ~6px (the visible jump). The fix is per-item spacing
+  // (each tile owns its trailing margin) so -50% lands exactly on the seam. Lock
+  // both invariants so the jump can never return.
+  it('spaces the embeds marquee per tile, not with flex gap', () => {
+    const { container } = renderFeatures();
+    const rows = Array.from(
+      container.querySelectorAll<HTMLElement>('.bento-marquee-r')
+    );
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      const tiles = Array.from(row.querySelectorAll<HTMLElement>('.embed-tile'));
+      // Two identical halves are the precondition for a seamless translateX(-50%).
+      expect(tiles.length).toBeGreaterThan(0);
+      expect(tiles.length % 2).toBe(0);
+      // A flex `gap` on the track reintroduces the half-gap snap.
+      expect(row.className).not.toMatch(/(^|\s)gap-/);
+      // Spacing lives on each tile instead, so the track is exactly tileable.
+      for (const tile of tiles) {
+        expect(tile.className).toMatch(/(^|\s)mr-3(\s|$)/);
+      }
+    }
+  });
+
   // The "68 languages" tile rolls a greeting through every supported locale. Each
   // sign must have an EQUAL chance to appear — exactly 1/68 — so the locale picker
   // is a plain uniform draw over all entries, never one that excludes the current.

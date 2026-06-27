@@ -1099,7 +1099,7 @@ const serviceInitials = (title: string): string => {
 const ServiceIcon: React.FC<{ service: EmbedService }> = ({ service }) => (
   <span
     data-svc={service.title}
-    className="embed-tile relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[12px] text-white shadow-[0_5px_7px_-3px_rgba(0,0,0,0.2)] ring-1 ring-black/5"
+    className="embed-tile relative mr-3 flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[12px] text-white shadow-[0_5px_7px_-3px_rgba(0,0,0,0.2)] ring-1 ring-black/5"
     style={{ background: service.hex ?? "#64748B" }}
   >
     {!service.img && <span className="pointer-events-none absolute inset-0 bg-linear-to-b from-white/25 to-transparent" />}
@@ -1289,7 +1289,13 @@ const EmbedsViz: React.FC = () => {
         {EMBED_ROWS.map((row, r) => (
           <div
             key={r}
-            className="flex w-max gap-3 bento-marquee-r"
+            // Spacing lives on each tile (mr-3), NOT a flex `gap`. The row is two
+            // identical halves scrolled translateX(-50%); a flex gap makes the
+            // track 2N*item + (2N-1)*gap, so -50% falls half a gap short of the
+            // seam and the row snaps sideways ~6px every cycle (the visible jump).
+            // Per-tile margin keeps the track exactly tileable, so the loop is
+            // truly seamless.
+            className="flex w-max bento-marquee-r"
             style={{ animationDuration: EMBED_ROW_DURS[r % EMBED_ROW_DURS.length] }}
           >
             {[...row.items, ...row.items].map((s, i) => (

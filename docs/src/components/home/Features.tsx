@@ -147,11 +147,32 @@ const useLatestBlokVersion = (): string => {
 // Two sides of one coin: what you ship, and what the user sees.
 const CleanJsonViz: React.FC = () => {
   const version = useLatestBlokVersion();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
+
+  // The faces are opaque and cover the tile's own edge glow, so we feed each
+  // face its own card-local --mx/--my and let .fi-edge light the border where
+  // the blob is — same trick the bento tiles use, measured against this card.
+  const trackBlob = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (reduce || e.pointerType !== "mouse") return;
+    const el = rootRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty("--mx", `${(((e.clientX - r.left) / r.width) * 100).toFixed(2)}%`);
+    el.style.setProperty("--my", `${(((e.clientY - r.top) / r.height) * 100).toFixed(2)}%`);
+  };
+
   return (
-  <div aria-hidden="true" className="relative h-full w-full [perspective:1600px]">
+  <div
+    ref={rootRef}
+    aria-hidden="true"
+    onPointerMove={trackBlob}
+    className="relative h-full w-full [perspective:1600px]"
+  >
     <div className="fi-flip-inner relative h-full min-h-[15rem] w-full [transform-style:preserve-3d]">
       {/* FRONT — the JSON the document saves to, shown complete */}
       <div className="fi-flip-face absolute inset-0 flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-secondary shadow-sm">
+        <span className="fi-edge" aria-hidden="true" />
         <div className="flex shrink-0 items-center gap-1.5 border-b border-border/50 px-4 py-2.5">
           <span className="size-2.5 rounded-full bg-foreground/15" />
           <span className="size-2.5 rounded-full bg-foreground/15" />
@@ -217,6 +238,7 @@ const CleanJsonViz: React.FC = () => {
           blocks — the heading and the mark — with a trailing empty block that
           carries the live caret and the gutter handle Blok shows beside it. */}
       <div className="fi-flip-face fi-flip-back absolute inset-0 flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
+        <span className="fi-edge" aria-hidden="true" />
         <div className="flex shrink-0 items-center gap-1.5 border-b border-border/50 px-4 py-2.5">
           <span className="size-2.5 rounded-full bg-foreground/15" />
           <span className="size-2.5 rounded-full bg-foreground/15" />

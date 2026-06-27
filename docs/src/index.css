@@ -1141,6 +1141,36 @@
   transform: rotateY(180deg);
 }
 
+/* The flip card's faces are opaque and sit above the tile's own ::after edge
+   glow, so they hide it. Each face carries its own brand border that lights
+   where the blob reaches — fed by the card-local --mx/--my the viz writes on
+   pointer move — so the highlight trails the blob just like the bento tiles.
+   backface-visibility on the face hides the edge of whichever side is turned
+   away, so only the visible face's border ever glows. */
+.fi-edge {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  border: 1.5px solid var(--brand-from);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  --fi-edge-shape: radial-gradient(
+    240px circle at var(--mx, 50%) var(--my, 50%),
+    #000 0%,
+    #000 22%,
+    transparent 72%
+  );
+  -webkit-mask-image: var(--fi-edge-shape);
+  mask-image: var(--fi-edge-shape);
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .group:hover .fi-edge {
+    opacity: 1;
+  }
+}
+
 /* Hover-away: :hover can't fire a one-shot on exit, so the card is tagged
    `byob-leaving` from JS (see ExtensibleViz). The menu relaxes — rows dip the
    other way, the bars ease down a touch, the badge softens — then everyone

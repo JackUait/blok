@@ -156,10 +156,6 @@ const CleanJsonViz: React.FC = () => {
           <span className="size-2.5 rounded-full bg-foreground/15" />
           <span className="size-2.5 rounded-full bg-foreground/15" />
           <span className="size-2.5 rounded-full bg-foreground/15" />
-          <span className="ml-2 flex items-center font-mono text-[11px] tracking-tight text-muted-foreground">
-            editor.save()
-            <span className="bento-caret ml-0.5 inline-block h-3 w-px bg-primary" />
-          </span>
         </div>
         <pre className="relative flex flex-1 items-center overflow-hidden px-5 py-3 font-mono text-[11.5px] leading-[1.55] text-muted-foreground lg:text-[12px]">
           <code>
@@ -214,10 +210,6 @@ const CleanJsonViz: React.FC = () => {
           <span className="size-2.5 rounded-full bg-foreground/15" />
           <span className="size-2.5 rounded-full bg-foreground/15" />
           <span className="size-2.5 rounded-full bg-foreground/15" />
-          <span className="ml-auto flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-            <span className="size-1.5 rounded-full bg-brand-gradient" />
-            rendered
-          </span>
         </div>
         <div className="relative flex flex-1 flex-col justify-center gap-4 py-7 pl-14 pr-7 lg:gap-5">
           {/* heading block */}

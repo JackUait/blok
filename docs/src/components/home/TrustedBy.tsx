@@ -201,7 +201,7 @@ const CountUp: React.FC<{ value: string }> = ({ value }) => {
       <span className="sr-only">{value}</span>
       <span aria-hidden="true" className="relative inline-flex items-center tabular-nums leading-none">
         {wheels}
-        {suffix && <span className="text-brand-gradient">{suffix}</span>}
+        {suffix && <span className="text-muted-foreground">{suffix}</span>}
         {/* Soft haze blurring the reel's top & bottom edges, its opacity bound
             to the reel's speed so it fades out exactly as the digits slow. */}
         <motion.span
@@ -293,8 +293,8 @@ export const TrustedBy: React.FC = () => {
                 {/* Editorial pull-quote: an oversized ghost quotation mark — the
                     same near-subliminal motif as the stat tiles' ghost glyphs —
                     leads in, the claim sits in the display face, and the kicker
-                    after the dash lifts into the brand gradient as the line you
-                    remember. */}
+                    after the dash carries the weight. Emphasis is by weight, not
+                    colour: the brand gradient is reserved for the CTAs alone. */}
                 <blockquote className="relative mt-12 sm:mt-14">
                   <span
                     aria-hidden="true"
@@ -302,14 +302,12 @@ export const TrustedBy: React.FC = () => {
                   >
                     &ldquo;
                   </span>
-                  <p className="relative max-w-xl text-pretty font-display text-[22px] font-medium leading-[1.4] tracking-tight text-foreground/85 sm:text-[28px]">
+                  <p className="relative max-w-xl text-pretty font-display text-[22px] font-medium leading-[1.4] tracking-tight text-foreground/75 sm:text-[28px]">
                     {claim}
                     {kicker && (
                       <>
                         {" — "}
-                        <span className="font-bold text-brand-gradient [box-decoration-break:clone] [-webkit-box-decoration-break:clone]">
-                          {kicker}
-                        </span>
+                        <span className="font-bold text-foreground">{kicker}</span>
                       </>
                     )}
                   </p>
@@ -418,7 +416,7 @@ export const TrustedBy: React.FC = () => {
                     href="mailto:jackuait@gmail.com?subject=Blok%20for%20our%20team"
                     className="inline-flex items-center gap-2 rounded-full border border-black/[0.12] bg-card px-5 py-3 text-[14px] font-semibold text-foreground transition-[border-color,background-color] duration-300 hover:border-foreground/30 hover:bg-foreground/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] dark:border-white/[0.16] dark:hover:bg-white/[0.05]"
                   >
-                    <Mail className="size-4 text-primary" strokeWidth={2.2} aria-hidden="true" />
+                    <Mail className="size-4 text-muted-foreground" strokeWidth={2.2} aria-hidden="true" />
                     {t("home.trusted.contactEmail")}
                   </a>
                 </div>

@@ -220,8 +220,8 @@ const CleanJsonViz: React.FC = () => {
       </div>
 
       {/* BACK — that JSON rendered inside the editor: a clean page of left-aligned
-          blocks, a heading with a live caret and an image block, each with the
-          gutter handle Blok shows beside a block. */}
+          blocks — the heading and the mark — with a trailing empty block that
+          carries the live caret and the gutter handle Blok shows beside it. */}
       <div className="fi-flip-face fi-flip-back absolute inset-0 flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
         <div className="flex shrink-0 items-center gap-1.5 border-b border-border/50 px-4 py-2.5">
           <span className="size-2.5 rounded-full bg-foreground/15" />
@@ -241,15 +241,12 @@ const CleanJsonViz: React.FC = () => {
           />
           {/* heading block */}
           <div className="relative">
-            <BlockHandle />
             <h2 className="text-[1.95rem] font-extrabold leading-[1.1] tracking-tight lg:text-[2.3rem]">
-              Hello, <span className="text-brand-gradient">Blok</span>
-              <span className="bento-caret ml-0.5 inline-block h-[1.5rem] w-[2.5px] translate-y-[3px] rounded-full bg-brand-from align-middle lg:h-[1.75rem]" />
+              Hello, Blok
             </h2>
           </div>
           {/* image block */}
           <div className="relative">
-            <BlockHandle />
             <img
               src="/logo-no-sign.png"
               alt=""
@@ -1532,7 +1529,7 @@ const LanguagesViz: React.FC = () => {
   const hoverRef = useRef(false);
   // Start on a random sign so the first one shown isn't always English.
   const startIdx = useRef<number>(undefined as unknown as number);
-  if (startIdx.current === undefined) startIdx.current = randomIndex(PHRASES.length);
+  if (startIdx.current === undefined) startIdx.current = pickLocaleIndex();
   const [idx, setIdx] = useState(startIdx.current);
   const [active, setActive] = useState<Greeting>(() => pickPhrase(startIdx.current, false));
   const [count, setCount] = useState(0);
@@ -1617,14 +1614,14 @@ const LanguagesViz: React.FC = () => {
       t = window.setTimeout(() => setCount((c) => c - 1), 32);
     } else {
       t = window.setTimeout(() => {
-        const ni = nextIndex(idx, PHRASES.length);
+        const ni = pickLocaleIndex();
         setIdx(ni);
         setActive(pickPhrase(ni, hoverRef.current));
         setPhase("typing");
       }, 240);
     }
     return () => window.clearTimeout(t);
-  }, [phase, count, chars.length, idx, reduce]);
+  }, [phase, count, chars.length, reduce]);
 
   const shown = reduce ? active.text : chars.slice(0, count).join("");
 
@@ -1830,11 +1827,11 @@ const TILE: Record<string, { span: string; viz: React.FC }> = {
   // reorder the FEATURES data. Pillars stay at the default order, so they fill the
   // top rows first.
   pink: { span: "lg:col-span-1 lg:order-1", viz: SlashViz },
-  cyan: { span: "lg:col-span-2 lg:order-2", viz: TablesViz },
+  blue: { span: "lg:col-span-2 lg:order-2", viz: EmbedsViz },
   media: { span: "lg:col-span-1 lg:order-3", viz: MediaViz },
-  // Last row: a single tile, Embeds spanning the two middle columns, a single tile.
+  // Last row: a single tile, Tables spanning the two middle columns, a single tile.
   yellow: { span: "lg:col-span-1 lg:order-4", viz: UndoViz },
-  blue: { span: "lg:col-span-2 lg:order-5", viz: EmbedsViz },
+  cyan: { span: "lg:col-span-2 lg:order-5", viz: TablesViz },
   mauve: { span: "lg:col-span-1 lg:order-6", viz: LanguagesViz },
 };
 

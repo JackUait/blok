@@ -1030,12 +1030,15 @@
   z-index: 20;
 }
 
-/* Blinking insertion caret — JSON + slash read as live editors. */
+/* Blinking insertion caret — JSON + slash read as live editors. The caret sits
+   solid while the tile is still and only blinks once the tile is hovered (when
+   its typing/collab animation actually plays); a caret blinking on an idle block
+   reads as a glitch. */
 @keyframes bento-blink {
   0%, 45% { opacity: 1; }
   55%, 100% { opacity: 0; }
 }
-.bento-caret {
+.group:hover .bento-caret {
   animation: bento-blink 1.05s steps(1, end) infinite;
 }
 
@@ -1240,7 +1243,7 @@
   .byob-leaving .fi-row,
   .byob-leaving .fi-poll-bar,
   .byob-leaving .fi-byob-badge,
-  .bento-caret,
+  .group:hover .bento-caret,
   .bento-breathe,
   .bento-cell,
   .bento-sheen::after,

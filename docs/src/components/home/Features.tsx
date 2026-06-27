@@ -299,14 +299,14 @@ const BLOCK_CHIPS: { label: string; color: string; path: React.ReactNode }[] = [
     ),
   },
   {
-    label: "Database",
+    label: "List",
     color: "#8b5cf6",
     path: (
       <>
-        <ellipse cx="12" cy="5.75" rx="7" ry="2.6" fill="currentColor" fillOpacity="0.16" stroke="none" />
-        <path d="M5 5.75v12.5c0 1.43 3.13 2.6 7 2.6s7-1.17 7-2.6V5.75" />
-        <ellipse cx="12" cy="5.75" rx="7" ry="2.6" />
-        <path d="M5 12c0 1.43 3.13 2.6 7 2.6s7-1.17 7-2.6" />
+        <circle cx="5.5" cy="6.75" r="1.35" fill="currentColor" stroke="none" />
+        <circle cx="5.5" cy="12" r="1.35" fill="currentColor" stroke="none" />
+        <circle cx="5.5" cy="17.25" r="1.35" fill="currentColor" stroke="none" />
+        <path d="M9.75 6.75h9.75M9.75 12h9.75M9.75 17.25h6.5" />
       </>
     ),
   },

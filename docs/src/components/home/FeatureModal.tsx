@@ -45,6 +45,19 @@ const sheetVariants: Variants = {
   }),
 };
 
+// The body's contents settle in after the panel arrives: each block lifts and
+// fades on a heavy custom curve, staggered top to bottom, so the drawer reads as
+// composed rather than pasted in all at once.
+const SETTLE = [0.32, 0.72, 0, 1] as const;
+const bodyVariants: Variants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.06, delayChildren: 0.12 } },
+};
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 14 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.55, ease: SETTLE } },
+};
+
 export interface FeatureDetail {
   icon: React.ReactNode;
   title: string;
@@ -169,6 +182,12 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
     }
   };
 
+  // Reduced-motion users get the panel and its contents instantly, no settle.
+  const bodyMotion = reduce
+    ? {}
+    : { variants: bodyVariants, initial: "hidden" as const, animate: "visible" as const };
+  const itemMotion = reduce ? {} : { variants: itemVariants };
+
   return (
     <AnimatePresence custom={exitVelocity.current}>
       {feature && (
@@ -185,7 +204,7 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
         >
           <motion.div
             ref={modalRef}
-            className="relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-border bg-card shadow-2xl sm:h-full sm:max-h-none sm:w-[28rem] sm:max-w-[92vw] sm:rounded-3xl sm:rounded-r-none"
+            className="relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-[1.75rem] border border-border/70 bg-card shadow-[0_-12px_60px_-20px_rgba(17,12,10,0.22)] sm:h-full sm:max-h-none sm:w-[28rem] sm:max-w-[92vw] sm:rounded-[1.75rem] sm:rounded-r-none sm:shadow-[-24px_0_80px_-28px_rgba(17,12,10,0.26)]"
             variants={isSheet ? sheetVariants : drawerVariants}
             custom={exitVelocity.current}
             initial="hidden"
@@ -235,7 +254,7 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
                 </h2>
                 <button
                   ref={closeButtonRef}
-                  className="-mr-1 inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="-mr-1 inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground ring-1 ring-transparent transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-secondary hover:text-foreground hover:ring-border/60 active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   onClick={onClose}
                   aria-label={t('home.featureModal.close')}
                 >
@@ -251,30 +270,44 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
               </div>
             </div>
 
-            {/* Body — scrolls independently between the fixed header and footer. */}
-            <div className="flex-1 space-y-7 overflow-y-auto px-5 pb-6 pt-1 sm:px-7">
-              {/* Hero — the clicked tile's own diorama. A bento-tile group so the
-                  resting diorama shows by default and the tile's animation plays on
-                  hover, exactly as in the grid; the border lights under the cursor. */}
+            {/* Body — scrolls independently between the fixed header and footer.
+                Its blocks settle in staggered once the panel arrives. */}
+            <motion.div
+              className="flex-1 space-y-7 overflow-y-auto px-5 pb-6 pt-1 sm:px-7"
+              {...bodyMotion}
+            >
+              {/* Hero — the clicked tile's own diorama, set in a machined tray:
+                  an outer shell holds the inner plate on concentric radii, like a
+                  glass plate in an aluminium frame. The inner plate is the bento
+                  tile, so the resting diorama shows by default and animates on
+                  hover, with the border lighting under the cursor. */}
               {visual && (
-                <div
-                  ref={heroRef}
-                  onPointerMove={trackGlow}
+                <motion.div
+                  {...itemMotion}
                   aria-hidden="true"
-                  className="bento-tile group relative h-72 overflow-hidden rounded-2xl border border-border/60 bg-card p-4"
+                  className="rounded-[1.65rem] bg-secondary/50 p-1.5 ring-1 ring-black/[0.04] dark:ring-white/[0.06]"
                 >
-                  <span className="bento-spot" aria-hidden="true" />
-                  <div className="relative z-10 flex h-full w-full items-center">
-                    {visual}
+                  <div
+                    ref={heroRef}
+                    onPointerMove={trackGlow}
+                    className="bento-tile group relative h-[17rem] overflow-hidden rounded-[calc(1.65rem-0.375rem)] border border-border/60 bg-card p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+                  >
+                    <span className="bento-spot" aria-hidden="true" />
+                    <div className="relative z-10 flex h-full w-full items-center">
+                      {visual}
+                    </div>
                   </div>
-                </div>
+                </motion.div>
               )}
 
-              <p className="text-[15px] leading-relaxed text-muted-foreground">
+              <motion.p
+                {...itemMotion}
+                className="text-[15px] leading-relaxed text-muted-foreground"
+              >
                 {feature.details.summary}
-              </p>
+              </motion.p>
 
-              <div>
+              <motion.div {...itemMotion}>
                 <h3 className="text-[13px] font-semibold tracking-tight text-muted-foreground">
                   {t('home.featureModal.keyBenefits')}
                 </h3>
@@ -302,18 +335,34 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
                     </li>
                   ))}
                 </ul>
-              </div>
+              </motion.div>
 
-            </div>
+            </motion.div>
 
-            {/* Footer — sticky CTA into the relevant docs. */}
+            {/* Footer — sticky CTA into the relevant docs. A full pill with the
+                arrow nested in its own island that drifts on hover; the whole
+                button presses in on tap. */}
             {feature.details.apiLink && (
               <div className="shrink-0 border-t border-border/60 px-5 py-4 sm:px-7">
                 <a
                   href={feature.details.apiLink}
-                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="group relative inline-flex w-full items-center justify-center rounded-full bg-primary py-3.5 pl-6 pr-14 text-sm font-semibold text-primary-foreground shadow-[0_10px_28px_-10px_rgba(225,75,110,0.55)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_14px_34px_-10px_rgba(225,75,110,0.65)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   {t('home.featureModal.viewApiDocs')}
+                  <span
+                    aria-hidden="true"
+                    className="absolute inset-y-0 right-1.5 my-auto flex size-9 items-center justify-center rounded-full bg-white/15 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-0.5 group-hover:scale-105"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path
+                        d="M5 12h13M13 6l6 6-6 6"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
                 </a>
               </div>
             )}

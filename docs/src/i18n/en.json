@@ -494,7 +494,7 @@
     "featureModal": {
       "close": "Close modal",
       "keyBenefits": "Key benefits",
-      "viewApiDocs": "View documentation →"
+      "viewApiDocs": "View documentation"
     }
   },
   "footer": {

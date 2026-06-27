@@ -494,7 +494,7 @@
     "featureModal": {
       "close": "Закрыть",
       "keyBenefits": "Ключевые преимущества",
-      "viewApiDocs": "Открыть документацию →"
+      "viewApiDocs": "Открыть документацию"
     }
   },
   "footer": {

@@ -84,7 +84,9 @@ describe('FeatureModal', () => {
 
   it('should render the docs link when apiLink is provided', () => {
     renderModal();
-    const link = screen.getByText('View documentation →');
+    // The arrow is a nested, aria-hidden icon, so the accessible name is just
+    // the label.
+    const link = screen.getByRole('link', { name: 'View documentation' });
     expect(link).toBeInTheDocument();
     expect(link).toHaveAttribute('href', '/docs#core-save');
   });

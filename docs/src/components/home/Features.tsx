@@ -1895,25 +1895,13 @@ type TileProps = {
   onOpen: (feature: FeatureDetail) => void;
 };
 
-// The trailing chevron-in-a-circle that marks a tile as tappable below lg — the
-// "button-in-button" island. Nudges right on press for a touch of kinetic life.
-const TapArrow: React.FC = () => (
-  <span
-    aria-hidden="true"
-    className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-primary transition-transform duration-300 group-active:translate-x-0.5"
-  >
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 12h14M12 5l7 7-7 7" />
-    </svg>
-  </span>
-);
-
-// A defining pillar. Below lg it is a full-width statement ROW — a brand-tinted
-// icon tile, the title, and a tap-arrow — stacked one above the next, so all
-// three foundations are visible at once (no carousel) and the rich diorama opens
-// in the drawer on tap. From lg up the very same button dissolves into the bento
-// (display:contents on its wrapper) and grows its inline diorama back: the hero
-// (coral) stacks title-over-diorama, the two wides run text-beside-diorama.
+// A defining pillar — the largest tiles in the mosaic. At every size it carries
+// its live diorama (the thing that makes the product feel alive, not a flat
+// corporate list): below lg the pillars stack full-width with the title over the
+// diorama; from lg up the same button dissolves into the bento via its wrapper's
+// display:contents — the hero (coral) keeps title-over-diorama, the two wides run
+// text-beside-diorama. The little brand-tinted glyph badges the title with the
+// feature's mark so each pillar reads instantly.
 const PillarTile: React.FC<TileProps> = ({ feature, onOpen }) => {
   const Viz = TILE[feature.accent].viz;
   const isHero = feature.accent === "coral";
@@ -1927,35 +1915,29 @@ const PillarTile: React.FC<TileProps> = ({ feature, onOpen }) => {
       transition={hoverSpring}
       style={tilt.style}
       {...tilt.handlers}
-      className={`bento-tile group relative flex w-full cursor-pointer items-center gap-4 overflow-hidden rounded-3xl border border-border/60 bg-card p-5 text-left transition-colors duration-300 active:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:w-auto lg:items-stretch lg:gap-3.5 lg:p-7 lg:active:bg-card ${TILE[feature.accent].span} ${
-        isHero ? "lg:flex-col" : "lg:flex-row lg:items-stretch"
+      className={`bento-tile group relative flex w-full cursor-pointer flex-col items-start gap-4 overflow-hidden rounded-3xl border border-border/60 bg-card p-6 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:w-auto lg:gap-3.5 lg:p-7 ${TILE[feature.accent].span} ${
+        isHero ? "" : "lg:flex-row lg:items-stretch"
       }`}
       onClick={() => onOpen(feature)}
       aria-label={feature.learnMore}
     >
       <span className="bento-spot" aria-hidden="true" />
 
-      {/* mobile/tablet only: the feature glyph in a soft brand-tinted tile */}
-      <span
-        aria-hidden="true"
-        className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary [&_svg]:size-7 lg:hidden"
-      >
-        {feature.icon}
-      </span>
-
-      <div className={`relative z-10 flex min-w-0 flex-1 flex-col lg:flex-none ${isHero ? "" : "lg:w-[44%] lg:shrink-0 lg:justify-center"}`}>
-        <h3 className={`text-balance font-extrabold leading-[1.1] tracking-tight lg:leading-[1.05] ${isHero ? "text-[1.2rem] lg:text-[2.35rem]" : "text-[1.2rem] lg:text-[1.75rem]"}`}>
+      <div className={`relative z-10 flex w-full items-center gap-3.5 ${isHero ? "" : "lg:w-[42%] lg:shrink-0 lg:flex-col lg:items-start lg:justify-center lg:gap-3"}`}>
+        {/* the feature glyph in a soft brand-tinted tile — dropped on lg, where
+            the diorama alone carries the tile */}
+        <span
+          aria-hidden="true"
+          className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary [&_svg]:size-[1.6rem] lg:hidden"
+        >
+          {feature.icon}
+        </span>
+        <h3 className={`text-balance font-extrabold leading-[1.1] tracking-tight lg:leading-[1.05] ${isHero ? "text-[1.4rem] lg:text-[2.35rem]" : "text-[1.35rem] lg:text-[1.75rem]"}`}>
           {feature.title}
         </h3>
       </div>
 
-      {/* mobile/tablet only: tap affordance */}
-      <span className="relative z-10 lg:hidden">
-        <TapArrow />
-      </span>
-
-      {/* lg+ only: the live diorama returns inside the bento cell */}
-      <div className={`relative z-10 hidden w-full flex-1 lg:flex ${isHero ? "items-stretch" : "items-center"}`}>
+      <div className={`relative z-10 flex w-full flex-1 ${isHero ? "min-h-[16rem] items-stretch lg:min-h-0" : "min-h-[9rem] items-center lg:min-h-0"}`}>
         <Viz />
       </div>
     </motion.button>
@@ -1994,22 +1976,11 @@ const CapabilityTile: React.FC<TileProps> = ({ feature, onOpen }) => {
       transition={hoverSpring}
       style={tilt.style}
       {...tilt.handlers}
-      className={`bento-tile group relative flex min-h-[7rem] cursor-pointer flex-col justify-between gap-3 overflow-hidden rounded-2xl border border-border/60 bg-card p-4 text-left transition-colors duration-300 active:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:min-h-0 lg:justify-start lg:p-5 lg:active:bg-card ${isEmbeds ? "bento-edge-top lg:transition-[gap,background-color] lg:group-hover:gap-0" : ""} ${TILE[feature.accent].span}`}
+      className={`bento-tile group relative flex cursor-pointer flex-col justify-start gap-3 overflow-hidden rounded-2xl border border-border/60 bg-card p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:p-5 ${isEmbeds ? "bento-edge-top lg:transition-[gap,background-color] lg:group-hover:gap-0" : ""} ${TILE[feature.accent].span}`}
       onClick={() => onOpen(feature)}
       aria-label={feature.learnMore}
     >
       <span className="bento-spot" aria-hidden="true" />
-
-      {/* mobile/tablet only: a glyph badge + tap affordance on the top line */}
-      <div className="relative z-10 flex items-center justify-between lg:hidden">
-        <span
-          aria-hidden="true"
-          className="flex size-10 items-center justify-center rounded-xl bg-secondary text-primary [&_svg]:size-[1.35rem]"
-        >
-          {feature.icon}
-        </span>
-        <TapArrow />
-      </div>
 
       <div
         className={`relative z-10 grid ${
@@ -2020,22 +1991,32 @@ const CapabilityTile: React.FC<TileProps> = ({ feature, onOpen }) => {
       >
         <div className={isEmbeds ? "min-h-0 overflow-hidden" : ""}>
           <div
-            className={`flex w-full items-center gap-3.5 ${
+            className={`flex w-full items-center gap-2.5 ${
               isEmbeds
                 ? "transition-[transform,opacity,filter] duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] lg:group-hover:-translate-y-2 lg:group-hover:opacity-0 lg:group-hover:blur-[2px]"
                 : ""
             }`}
           >
-            <h3 className="flex-1 text-balance text-[1.05rem] font-bold leading-snug tracking-tight">
+            {/* glyph badge — dropped on lg, where the diorama carries the tile */}
+            <span
+              aria-hidden="true"
+              className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary [&_svg]:size-[1.1rem] lg:hidden"
+            >
+              {feature.icon}
+            </span>
+            <h3 className="flex-1 text-balance text-[1.02rem] font-bold leading-snug tracking-tight">
               {renderTitleWithSlashKey(feature.title)}
             </h3>
           </div>
         </div>
       </div>
+      {/* Below lg every diorama sits in a fixed-height window so the tiles read
+          as a uniform row of previews (no flooding marquees or stranded little
+          dioramas); from lg up it releases to fill the bento cell as before. */}
       <div
-        className={`relative z-10 hidden flex-1 items-center lg:flex ${
+        className={`relative z-10 flex h-[6.75rem] items-center justify-center overflow-hidden lg:h-auto lg:flex-1 ${
           isEmbeds
-            ? "-mx-5 w-[calc(100%+2.5rem)] overflow-hidden transition-[margin] duration-500 ease-out lg:group-hover:-mb-8 lg:group-hover:-mt-10"
+            ? "-mx-4 w-[calc(100%+2rem)] lg:-mx-5 lg:w-[calc(100%+2.5rem)] lg:transition-[margin] lg:duration-500 lg:ease-out lg:group-hover:-mb-8 lg:group-hover:-mt-10"
             : "w-full pt-1"
         }`}
       >

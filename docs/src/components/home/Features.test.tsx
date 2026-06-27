@@ -259,6 +259,23 @@ describe('Features', () => {
     }
   });
 
+  // The first mobile redesign stripped every tile down to an icon + title, which
+  // read as a dull corporate list. The signature live dioramas are back on every
+  // tile at all sizes — what makes the product feel alive — so no tile may gate
+  // its diorama behind `lg` (the old "hidden ... lg:flex" pattern). Lock it.
+  it('renders the live dioramas inline on mobile, not gated behind lg', () => {
+    const { container } = renderFeatures();
+
+    const lgGated = Array.from(container.querySelectorAll('[class*="lg:flex"]')).filter(
+      (el) => /(^|\s)hidden(\s|$)/.test(el.className),
+    );
+    expect(lgGated).toHaveLength(0);
+    // and a known diorama (the embeds logo river) is actually in the tree
+    expect(container.querySelector('.bento-marquee-r')).not.toBeNull();
+    // this mounts the full animated section; the default 5s is tight on a loaded
+    // machine (see the known heavy-render flake cluster), so give it headroom.
+  }, 15000);
+
   it('stacks the Embeds tile above the Tables tile in the bento grid', () => {
     renderFeatures();
 

@@ -374,11 +374,11 @@
         "description": "Type / to search and insert any block, or use Markdown shortcuts like #, -, 1., [] and >.",
         "learnMore": "Learn more about the slash menu and Markdown",
         "details": {
-          "summary": "Block insertion stays on the keyboard, like a command palette in a code editor.",
-          "benefit1": "Fuzzy-searchable / command palette",
-          "benefit2": "Markdown shortcuts: #, -, 1., [], >",
-          "benefit3": "Click + on any empty block",
-          "benefit4": "Keyboard accessible"
+          "summary": "Type / to open a menu of everything you can add: headings, lists, images, tables and more. Pick one without reaching for the mouse.",
+          "benefit1": "Start typing to filter the menu to what you want",
+          "benefit2": "Markdown shortcuts: # for a heading, - for a list, > for a quote",
+          "benefit3": "Or click the + button on any empty line",
+          "benefit4": "Everything works from the keyboard"
         }
       },
       "tables": {

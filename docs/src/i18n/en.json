@@ -352,7 +352,7 @@
         "details": {
           "summary": "Blok includes the blocks most documents need, so you can put together rich content without building each one yourself.",
           "benefit1": "Tables with merged cells, resizing and cell colors",
-          "benefit2": "Databases with kanban and list views",
+          "benefit2": "Lists: bulleted, numbered and checklists",
           "benefit3": "Columns, callouts, toggles and dividers",
           "benefit4": "Code, image, video, file and 100+ embeds"
         }
@@ -379,18 +379,6 @@
           "benefit2": "Markdown shortcuts: #, -, 1., [], >",
           "benefit3": "Click + on any empty block",
           "benefit4": "Keyboard accessible"
-        }
-      },
-      "databases": {
-        "title": "Databases, boards & lists",
-        "description": "Schema-driven databases where every row is a block. Switch between kanban board and list views.",
-        "learnMore": "Learn more about databases",
-        "details": {
-          "summary": "A database in Blok is a block, and each of its rows is a block too, so structured records live in the same tree as your content.",
-          "benefit1": "Open any row as its own page",
-          "benefit2": "Typed property schema (text, select, date…)",
-          "benefit3": "Kanban board and list views",
-          "benefit4": "Drag cards, columns and rows"
         }
       },
       "tables": {

@@ -152,7 +152,9 @@ const JSON_KEY = "text-brand-gradient font-semibold";
 const JSON_PROP = "text-muted-foreground/60";
 const JSON_VAL = "text-primary";
 const JSON_NUM = "text-foreground";
-const JSON_HL = "rounded-[3px] bg-brand-from/15 px-0.5 text-primary";
+// nowrap so the highlighted value never splits mid-string when a line wraps; it
+// moves to the next row whole.
+const JSON_HL = "whitespace-nowrap rounded-[3px] bg-brand-from/15 px-0.5 text-primary";
 type JsonTok = { t: string; c?: string };
 const buildJsonLines = (version: string): JsonTok[][] => [
   [{ t: "{" }],

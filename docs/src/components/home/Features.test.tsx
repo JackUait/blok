@@ -66,6 +66,9 @@ describe('Features', () => {
     expect(codeCells.length).toBeGreaterThan(0);
     // one code cell per logical JSON line (9), so wrapping keeps the gutter aligned
     expect(codeCells.length).toBe(9);
+    // the highlighted value stays whole when a line wraps, never split mid-string
+    const highlight = container.querySelector('[class*="bg-brand-from"]');
+    expect(highlight?.className).toContain('whitespace-nowrap');
   });
 
   // The "68 languages" tile rolls a greeting through every supported locale. Each

@@ -434,36 +434,42 @@ const BlocksViz: React.FC = () => {
     const baseChips = Array.from(wrap.querySelectorAll<HTMLElement>(".fi-chip-base"));
     const litChips = Array.from(lit.querySelectorAll<HTMLElement>(".fi-chip-lit"));
 
-    // Resting chip centres in wrap-local coords. offset* is layout-based, so it's
-    // immune to the transforms we write back — no measure/transform feedback loop.
+    // Resting chip centres in wrap-local coords plus the wrap/overlay viewport
+    // rects, all read here (mount, enter, scroll, resize) — never in the pointer
+    // path. offset* is layout-based, so it's immune to the transforms we write
+    // back. Caching the rects keeps the per-move work free of getBoundingClientRect,
+    // which otherwise forces a reflow on every event (and thrashes against the
+    // tilt handler's own read/write) — the source of the intermittent jank.
     let centers: Array<{ x: number; y: number }> = [];
+    let wrapRect: DOMRect | null = null;
+    let litRect: DOMRect | null = null;
     const measure = () => {
       centers = baseChips.map((c) => ({
         x: c.offsetLeft + c.offsetWidth / 2,
         y: c.offsetTop + c.offsetHeight / 2,
       }));
+      wrapRect = wrap.getBoundingClientRect();
+      litRect = lit.getBoundingClientRect();
     };
     measure();
 
-    const reset = () => {
-      lit.style.opacity = "0";
-      baseChips.forEach((bc, i) => {
-        bc.style.transform = "";
-        bc.style.boxShadow = "";
-        if (litChips[i]) litChips[i].style.transform = "";
-      });
-    };
+    // Coalesce bursts of pointermove (high-Hz mice fire several per frame) into a
+    // single render per frame via rAF — the heavy work (mask re-raster + 16 chip
+    // transform/box-shadow writes) then runs at most once per painted frame.
+    let rafId = 0;
+    let pendingX = 0;
+    let pendingY = 0;
 
-    const apply = (clientX: number, clientY: number) => {
-      const r = wrap.getBoundingClientRect();
-      const lx = clientX - r.left;
-      const ly = clientY - r.top;
+    const render = () => {
+      rafId = 0;
+      if (!wrapRect || !litRect) return;
+      const lx = pendingX - wrapRect.left;
+      const ly = pendingY - wrapRect.top;
 
       // Colour reveal: the lit copy is unmasked in a radius around the cursor.
       // The mask is positioned against the overlay's own (enlarged) box, so the
       // reveal still sits under the cursor in screen space.
-      const lr = lit.getBoundingClientRect();
-      const mask = `radial-gradient(${CHIP_GLOW_RADIUS}px circle at ${(clientX - lr.left).toFixed(1)}px ${(clientY - lr.top).toFixed(1)}px, #000 0%, transparent 62%)`;
+      const mask = `radial-gradient(${CHIP_GLOW_RADIUS}px circle at ${(pendingX - litRect.left).toFixed(1)}px ${(pendingY - litRect.top).toFixed(1)}px, #000 0%, transparent 62%)`;
       lit.style.opacity = "1";
       lit.style.maskImage = mask;
       lit.style.webkitMaskImage = mask;
@@ -483,16 +489,38 @@ const BlocksViz: React.FC = () => {
       });
     };
 
-    const onMove = (e: Event) => {
-      const pe = e as PointerEvent;
-      if (pe.pointerType === "mouse") apply(pe.clientX, pe.clientY);
+    const reset = () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = 0;
+      }
+      lit.style.opacity = "0";
+      baseChips.forEach((bc, i) => {
+        bc.style.transform = "";
+        bc.style.boxShadow = "";
+        if (litChips[i]) litChips[i].style.transform = "";
+      });
     };
 
+    const onMove = (e: Event) => {
+      const pe = e as PointerEvent;
+      if (pe.pointerType !== "mouse") return;
+      pendingX = pe.clientX;
+      pendingY = pe.clientY;
+      if (!rafId) rafId = requestAnimationFrame(render);
+    };
+
+    // Re-measure rects at hover start (cheap, once per enter) — covers scroll
+    // position changes between mount and hover without a global scroll listener
+    // that would do layout reads on every scroll tick.
     tile.addEventListener("pointermove", onMove);
+    tile.addEventListener("pointerenter", measure);
     tile.addEventListener("pointerleave", reset);
     window.addEventListener("resize", measure);
     return () => {
+      if (rafId) cancelAnimationFrame(rafId);
       tile.removeEventListener("pointermove", onMove);
+      tile.removeEventListener("pointerenter", measure);
       tile.removeEventListener("pointerleave", reset);
       window.removeEventListener("resize", measure);
     };

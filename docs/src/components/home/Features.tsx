@@ -178,8 +178,11 @@ const CleanJsonViz: React.FC = () => {
           <span className="size-2.5 rounded-full bg-foreground/15" />
           <span className="size-2.5 rounded-full bg-foreground/15" />
         </div>
-        <div className="relative flex flex-1 items-center overflow-hidden px-5 py-3">
-          <div className="relative flex gap-3 font-mono text-[11.5px] leading-[1.55] lg:text-[12px]">
+        <div className="@container relative flex flex-1 items-center overflow-hidden px-5 py-3">
+          {/* Font scales with the CONTAINER, not the viewport: full size in the
+              wide grid tile, smaller in the narrow drawer hero, so the longest
+              JSON line always fits the box instead of clipping at the right. */}
+          <div className="relative flex gap-3 font-mono text-[clamp(8.5px,2.9cqi,12px)] leading-[1.55]">
             {/* line-number gutter — turns the dump into a real code surface */}
             <pre className="select-none text-right tabular-nums text-muted-foreground/30">
               {"1\n2\n3\n4\n5\n6\n7\n8\n9"}

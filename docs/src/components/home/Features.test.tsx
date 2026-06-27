@@ -56,6 +56,15 @@ describe('Features', () => {
     }
   });
 
+  // The Clean JSON preview is reused at two very different widths: the wide grid
+  // tile and the narrow drawer hero. Its font must scale to the CONTAINER, not the
+  // viewport, or the long JSON lines clip on the right in the drawer. Lock
+  // container-query sizing (cqi units) so it can't regress to a fixed px size.
+  it('sizes the Clean JSON preview with container units, not a fixed px size', () => {
+    const { container } = renderFeatures();
+    expect(container.querySelector('[class*="cqi"]')).not.toBeNull();
+  });
+
   // The "68 languages" tile rolls a greeting through every supported locale. Each
   // sign must have an EQUAL chance to appear — exactly 1/68 — so the locale picker
   // is a plain uniform draw over all entries, never one that excludes the current.

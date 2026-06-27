@@ -265,14 +265,15 @@ const CountUp: React.FC<{ value: string; surface?: string; suffixClassName?: str
 export const TrustedBy: React.FC = () => {
   const { t } = useI18n();
 
-  // The testimonial reads as a quiet claim with a punchy kicker after the em
-  // dash ("…pizza chains — thousands of authors, one block model."). Split on the
-  // dash so the kicker can lift into the brand gradient; if a translation drops
-  // the dash, the whole line just renders as the claim.
+  // The testimonial reads as a quiet claim closed by a punchy final sentence
+  // ("…pizza chains. Thousands of authors, one block model."). Peel off that last
+  // sentence so it can carry the bold emphasis; if a translation collapses to a
+  // single sentence, the whole line just renders as the claim.
   const summary = t("home.trusted.summary");
-  const dashIndex = summary.indexOf("—");
-  const claim = dashIndex === -1 ? summary : summary.slice(0, dashIndex).trim();
-  const kicker = dashIndex === -1 ? "" : summary.slice(dashIndex + 1).trim();
+  const sentences = summary.match(/[^.!?]+[.!?]+/g);
+  const hasKicker = !!sentences && sentences.length > 1;
+  const claim = hasKicker ? sentences.slice(0, -1).join(" ").trim() : summary;
+  const kicker = hasKicker ? sentences[sentences.length - 1].trim() : "";
 
   // One tilt instance per bento card, so each leans toward the cursor and lights
   // its border independently — exactly like the Features tiles above.
@@ -332,12 +333,9 @@ export const TrustedBy: React.FC = () => {
 
                 <blockquote className="flex flex-1 items-center">
                   <p className="max-w-xl text-balance font-display text-[21px] font-medium leading-[1.42] tracking-tight text-foreground/75 sm:text-[26px]">
-                    {claim}
+                    {claim}{" "}
                     {kicker && (
-                      <>
-                        {" — "}
-                        <span className="font-bold text-foreground">{kicker}</span>
-                      </>
+                      <span className="font-bold text-foreground">{kicker}</span>
                     )}
                   </p>
                 </blockquote>
@@ -393,7 +391,7 @@ export const TrustedBy: React.FC = () => {
                 <div className="h-px w-full bg-border/60" />
 
                 <div
-                  className="flex flex-1 flex-col justify-between gap-6 p-6 sm:p-7"
+                  className="flex flex-1 flex-col justify-center gap-7 p-6 sm:p-7"
                   data-blok-testid="trusted-contact"
                 >
                   <div className="flex flex-col gap-2">

@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
-import { Features, EMBED_ROWS } from './Features';
+import { Features, EMBED_ROWS, LANGUAGE_COUNT, pickLocaleIndex } from './Features';
 import { I18nProvider } from '../../contexts/I18nContext';
 
 const renderFeatures = () =>
@@ -27,6 +27,37 @@ describe('Features', () => {
       );
       expect(new Set(titles).size, `rows ${start}..${start + WINDOW - 1}`).toBe(titles.length);
     }
+  });
+
+  // The "68 languages" tile rolls a greeting through every supported locale. Each
+  // sign must have an EQUAL chance to appear — exactly 1/68 — so the locale picker
+  // is a plain uniform draw over all entries, never one that excludes the current.
+  describe('language sign picker', () => {
+    it('offers exactly 68 languages so each draw is 1/68', () => {
+      expect(LANGUAGE_COUNT).toBe(68);
+    });
+
+    it('gives every language an equal 1/68 share across the random range', () => {
+      // Sweep the picker across evenly-spaced inputs over [0, 1). With one sample
+      // per 1/(N·k) slice, every language must land in exactly the same number of
+      // buckets — a uniform 1/N distribution, no language favored or starved.
+      const PER_BUCKET = 1000;
+      const samples = LANGUAGE_COUNT * PER_BUCKET;
+      const counts = new Array(LANGUAGE_COUNT).fill(0);
+      for (let i = 0; i < samples; i++) {
+        counts[pickLocaleIndex(() => i / samples)]++;
+      }
+      expect(counts.every((c) => c > 0)).toBe(true); // every language reachable
+      expect(new Set(counts).size).toBe(1); // and all equally likely
+      expect(counts[0]).toBe(PER_BUCKET);
+    });
+
+    it('can return the current language again — a true 1/68 draw, not 1/67', () => {
+      // Excluding the current sign would make others 1/67 and the current 0, which
+      // is not equal. A genuine 1/68 draw must be able to repeat the same sign.
+      const current = 10;
+      expect(pickLocaleIndex(() => current / LANGUAGE_COUNT)).toBe(current);
+    });
   });
 
   it('should render a section element with id="features"', () => {
@@ -149,6 +180,18 @@ describe('Features', () => {
       'aria-current',
       'true'
     );
+  });
+
+  it('stacks the Embeds tile above the Tables tile in the bento grid', () => {
+    renderFeatures();
+
+    // Both capability tiles span the middle two columns of the lg bento, so their
+    // lg:order-* is what decides which one sits on top. Embeds (order-2) must come
+    // before Tables (order-5) — the two were swapped from their original stacking.
+    const embeds = screen.getByRole('button', { name: 'Learn more about embeds' });
+    const tables = screen.getByRole('button', { name: 'Learn more about tables' });
+    expect(embeds.className).toContain('lg:order-2');
+    expect(tables.className).toContain('lg:order-5');
   });
 
   it('should render Russian strings when locale is ru', () => {

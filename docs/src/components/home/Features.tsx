@@ -158,12 +158,6 @@ const CleanJsonViz: React.FC = () => {
           <span className="size-2.5 rounded-full bg-foreground/15" />
         </div>
         <div className="relative flex flex-1 items-center overflow-hidden px-5 py-3">
-          {/* warm brand light bleeding from the top-right so the code surface has
-              depth instead of a flat fill */}
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute -right-12 -top-16 size-44 rounded-full bg-[radial-gradient(circle,rgba(233,78,122,0.16),transparent_70%)] blur-2xl"
-          />
           <div className="relative flex gap-3 font-mono text-[11.5px] leading-[1.55] lg:text-[12px]">
             {/* line-number gutter — turns the dump into a real code surface */}
             <pre className="select-none text-right tabular-nums text-muted-foreground/30">
@@ -262,11 +256,7 @@ const CleanJsonViz: React.FC = () => {
             <BlockHandle />
             <span className="bento-caret inline-block h-[1.15rem] w-[2.5px] rounded-full bg-brand-from" />
             <span className="ml-2 text-[0.95rem] tracking-tight">
-              Type{" "}
-              <kbd className="rounded-md border border-border/70 bg-secondary px-1.5 py-0.5 font-mono text-[0.72rem] text-muted-foreground/80 shadow-sm">
-                /
-              </kbd>{" "}
-              for commands
+              Type <span className="font-mono">/</span> for commands
             </span>
           </div>
         </div>
@@ -1823,9 +1813,9 @@ const TILE: Record<string, { span: string; viz: React.FC }> = {
   green: { span: "lg:col-span-2", viz: BlocksViz },
   orange: { span: "lg:col-span-2", viz: ExtensibleViz },
   // The capability tiles use lg:order-* to drive the grid auto-placement into the
-  // hero-led mosaic (Tables a 2×2 showpiece, the rest orbiting) without having to
-  // reorder the FEATURES data. Pillars stay at the default order, so they fill the
-  // top rows first.
+  // hero-led mosaic (two col-span-2 showpieces stacked down the middle, the single
+  // tiles orbiting) without having to reorder the FEATURES data. Pillars stay at
+  // the default order, so they fill the top rows first.
   pink: { span: "lg:col-span-1 lg:order-1", viz: SlashViz },
   blue: { span: "lg:col-span-2 lg:order-2", viz: EmbedsViz },
   media: { span: "lg:col-span-1 lg:order-3", viz: MediaViz },

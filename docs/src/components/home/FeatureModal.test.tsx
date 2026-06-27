@@ -62,6 +62,22 @@ describe('FeatureModal', () => {
     expect(screen.getByTestId('mock-viz')).toBeInTheDocument();
   });
 
+  it('gives the Clean JSON hero a taller plate so its editor preview fits', () => {
+    // The coral viz flips to a full editor canvas whose back face is the tallest
+    // diorama; at the default hero height it overflowed and the trailing line
+    // clipped. Coral gets a taller plate; the others keep the compact one.
+    const { container } = renderModal({ ...mockFeature, accent: 'coral' });
+    const plate = container.querySelector('.bento-tile');
+    expect(plate?.className).toContain('h-[21rem]');
+  });
+
+  it('keeps the compact hero plate for non-coral features', () => {
+    const { container } = renderModal({ ...mockFeature, accent: 'cyan' });
+    const plate = container.querySelector('.bento-tile');
+    expect(plate?.className).toContain('h-[17rem]');
+    expect(plate?.className).not.toContain('h-[21rem]');
+  });
+
   it('should render the benefits heading in sentence case', () => {
     renderModal();
     expect(screen.getByText('Key benefits')).toBeInTheDocument();

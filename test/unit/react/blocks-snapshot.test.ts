@@ -55,6 +55,7 @@ const indexReaderOf = (
 
 describe('resolveInsertIndex', () => {
   beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('root start = 0, root end = block count', () => {
     const r = indexReaderOf([{ id: 'a' }, { id: 'b' }]);
@@ -77,9 +78,22 @@ describe('resolveInsertIndex', () => {
     const r = indexReaderOf([{ id: 'p', name: 'toggle' }, { id: 'after' }]);
     expect(resolveInsertIndex(r, 'p', 'end')).toBe(1);
   });
+
+  it('parent end inserts after the last descendant, not the last direct child', () => {
+    const r = indexReaderOf([
+      { id: 'p', name: 'toggle' },
+      { id: 'c1', parentId: 'p' },
+      { id: 'g', parentId: 'c1' },
+      { id: 'after' },
+    ]);
+    expect(resolveInsertIndex(r, 'p', 'end')).toBe(3);
+  });
 });
 
 describe('resolveMoveIndex', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
   it('toIndex passthrough, before/after resolve via sibling flat index', () => {
     const r = indexReaderOf([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
     expect(resolveMoveIndex(r, { toIndex: 2 })).toBe(2);

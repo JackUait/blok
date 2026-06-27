@@ -95,6 +95,40 @@ const childFlatIndices = (reader: IndexReader, parentId: string): number[] => {
   return out;
 };
 
+/** Map of block id -> parentId, in flat order. */
+const parentMap = (reader: IndexReader): Map<string, string | null> => {
+  const map = new Map<string, string | null>();
+  const count = reader.getBlocksCount();
+
+  for (let i = 0; i < count; i++) {
+    const b = reader.getBlockByIndex(i);
+
+    if (b !== undefined) {
+      map.set(b.id, b.parentId);
+    }
+  }
+
+  return map;
+};
+
+/** True if `id` descends from `ancestorId` via the parentId chain. */
+const isDescendantOf = (
+  parentOf: Map<string, string | null>,
+  id: string,
+  ancestorId: string
+): boolean => {
+  let current = parentOf.get(id) ?? null;
+
+  while (current !== null) {
+    if (current === ancestorId) {
+      return true;
+    }
+    current = parentOf.get(current) ?? null;
+  }
+
+  return false;
+};
+
 /** The flat index at which a new block should be inserted. */
 export const resolveInsertIndex = (
   reader: IndexReader,
@@ -116,15 +150,34 @@ export const resolveInsertIndex = (
     return position === 'start' ? 0 : reader.getBlocksCount();
   }
 
-  const childIndices = childFlatIndices(reader, parentId);
+  const parentIndex = reader.getBlockIndex(parentId);
 
-  if (childIndices.length === 0) {
-    const parentIndex = reader.getBlockIndex(parentId);
-
-    return parentIndex === undefined ? reader.getBlocksCount() : parentIndex + 1;
+  if (parentIndex === undefined) {
+    return reader.getBlocksCount();
   }
 
-  return position === 'start' ? childIndices[0] : childIndices[childIndices.length - 1] + 1;
+  if (position === 'start') {
+    const childIndices = childFlatIndices(reader, parentId);
+
+    return childIndices.length === 0 ? parentIndex + 1 : childIndices[0];
+  }
+
+  // 'end': insert after the parent's last descendant. In flat (DFS) order,
+  // a parent's descendants are contiguous immediately after it.
+  const parentOf = parentMap(reader);
+  const count = reader.getBlocksCount();
+  let last = parentIndex;
+
+  for (let i = parentIndex + 1; i < count; i++) {
+    const b = reader.getBlockByIndex(i);
+
+    if (b === undefined || !isDescendantOf(parentOf, b.id, parentId)) {
+      break;
+    }
+    last = i;
+  }
+
+  return last + 1;
 };
 
 /** The flat toIndex for editor.blocks.move. */

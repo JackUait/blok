@@ -1892,6 +1892,15 @@ const TILE: Record<string, { span: string; viz: React.FC }> = {
   mauve: { span: "lg:col-span-1 lg:order-6", viz: LanguagesViz },
 };
 
+// Renders the diorama for a given accent, so the feature panel can carry the
+// clicked tile's own live visual instead of dropping the user onto a plain card.
+const SelectedFeatureViz: React.FC<{ accent: FeatureDetail["accent"] }> = ({
+  accent,
+}) => {
+  const Viz = TILE[accent].viz;
+  return <Viz />;
+};
+
 type TileProps = {
   feature: FeatureDetail;
   onOpen: (feature: FeatureDetail) => void;
@@ -2105,7 +2114,7 @@ export const Features: React.FC = () => {
         ],
         codeExample: `import Blok from '@jackuait/blok/full';
 
-// Tables, databases, columns, code, media and embeds — all registered
+// Tables, databases, columns, code, media and embeds: all registered
 new Blok({ holder: 'editor' });`,
         apiLink: "/tools",
       },
@@ -2416,7 +2425,11 @@ new Blok({ holder: 'editor' });`,
         </div>
       </div>
 
-      <FeatureModal feature={selectedFeature} onClose={handleCloseModal} />
+      <FeatureModal
+        feature={selectedFeature}
+        visual={selectedFeature ? <SelectedFeatureViz accent={selectedFeature.accent} /> : null}
+        onClose={handleCloseModal}
+      />
     </section>
   );
 };

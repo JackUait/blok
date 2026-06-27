@@ -17,10 +17,16 @@ const mockFeature: FeatureDetail = {
   },
 };
 
-const renderModal = (feature: FeatureDetail | null = mockFeature, onClose = vi.fn()) =>
+const visualNode = <div data-blok-testid="mock-viz">live diorama</div>;
+
+const renderModal = (
+  feature: FeatureDetail | null = mockFeature,
+  onClose = vi.fn(),
+  visual: React.ReactNode = visualNode,
+) =>
   render(
     <I18nProvider>
-      <FeatureModal feature={feature} onClose={onClose} />
+      <FeatureModal feature={feature} visual={visual} onClose={onClose} />
     </I18nProvider>
   );
 
@@ -34,7 +40,7 @@ describe('FeatureModal', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('should render the modal backdrop when feature is provided', () => {
+  it('should render the dialog when feature is provided', () => {
     renderModal();
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
@@ -49,9 +55,16 @@ describe('FeatureModal', () => {
     expect(screen.getByText('Output is clean JSON, not HTML.')).toBeInTheDocument();
   });
 
-  it('should render the Key Benefits heading', () => {
+  it('should render the tile visual as the panel hero', () => {
     renderModal();
-    expect(screen.getByText('Key Benefits')).toBeInTheDocument();
+    // The clicked tile's own live diorama is carried into the panel so it stays
+    // on-brand instead of dropping the user onto a plain dialog.
+    expect(screen.getByTestId('mock-viz')).toBeInTheDocument();
+  });
+
+  it('should render the benefits heading in sentence case', () => {
+    renderModal();
+    expect(screen.getByText('Key benefits')).toBeInTheDocument();
   });
 
   it('should render each benefit', () => {
@@ -81,9 +94,9 @@ describe('FeatureModal', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('should render the API docs link when apiLink is provided', () => {
+  it('should render the docs link when apiLink is provided', () => {
     renderModal();
-    const link = screen.getByText('View API Documentation →');
+    const link = screen.getByText('View documentation →');
     expect(link).toBeInTheDocument();
     expect(link).toHaveAttribute('href', '/docs#core-save');
   });
@@ -107,7 +120,7 @@ describe('FeatureModal', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  it('should NOT call onClose when clicking inside modal content', () => {
+  it('should NOT call onClose when clicking inside panel content', () => {
     const onClose = vi.fn();
     renderModal(mockFeature, onClose);
     fireEvent.click(screen.getByText('Output is clean JSON, not HTML.'));
@@ -120,7 +133,7 @@ describe('FeatureModal', () => {
   });
 
   it('should focus the close button without scrolling the page on open', () => {
-    // The drawer mounts transformed off-screen; an unscoped focus() would scroll
+    // The panel mounts transformed off-screen; an unscoped focus() would scroll
     // the overlay to reveal the button, causing a visible jump on open.
     const focusSpy = vi.spyOn(HTMLButtonElement.prototype, 'focus');
     renderModal();
@@ -140,7 +153,7 @@ describe('FeatureModal', () => {
     localStorage.setItem('blok-docs-locale', 'ru');
     render(
       <I18nProvider>
-        <FeatureModal feature={mockFeature} onClose={vi.fn()} />
+        <FeatureModal feature={mockFeature} visual={visualNode} onClose={vi.fn()} />
       </I18nProvider>
     );
     expect(screen.getByRole('button', { name: 'Закрыть' })).toBeInTheDocument();

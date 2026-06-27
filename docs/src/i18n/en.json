@@ -493,8 +493,8 @@
     },
     "featureModal": {
       "close": "Close modal",
-      "keyBenefits": "Key Benefits",
-      "viewApiDocs": "View API Documentation →"
+      "keyBenefits": "Key benefits",
+      "viewApiDocs": "View documentation →"
     }
   },
   "footer": {

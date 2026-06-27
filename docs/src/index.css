@@ -1010,9 +1010,10 @@
   opacity: 0;
   transition: opacity 0.3s ease;
   --edge-shape: radial-gradient(
-    180px circle at var(--mx, 50%) var(--my, 50%),
+    240px circle at var(--mx, 50%) var(--my, 50%),
     #000 0%,
-    transparent 64%
+    #000 22%,
+    transparent 72%
   );
   -webkit-mask-image: var(--edge-shape);
   mask-image: var(--edge-shape);

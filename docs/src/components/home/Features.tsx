@@ -32,19 +32,6 @@ const cardVariants: Variants = {
   },
 };
 
-// Each pillar springs up to full size as it becomes the focused card in the
-// mobile carousel, and rests slightly smaller + dimmed while it's a peeking
-// neighbour. On the desktop bento every card is in view at once, so they all
-// sit focused.
-const pillarVariants: Variants = {
-  unfocused: { scale: 0.88, opacity: 0.5 },
-  focused: {
-    scale: 1,
-    opacity: 1,
-    transition: { type: "spring", stiffness: 260, damping: 26 },
-  },
-};
-
 // Bouncy spring for hover lift + tap feedback — a touch of overshoot gives the
 // tiles a playful, alive feel without feeling sluggish.
 const hoverSpring = { type: "spring", stiffness: 380, damping: 20 } as const;
@@ -1908,15 +1895,26 @@ type TileProps = {
   onOpen: (feature: FeatureDetail) => void;
 };
 
-// A defining pillar — the largest tiles in the mosaic. The hero (coral) stacks
-// vertically with its diorama; the two wides run text-beside-diorama at lg.
-const PillarTile: React.FC<
-  TileProps & {
-    index: number;
-    isCarousel: boolean;
-    activeIndex: number;
-  }
-> = ({ feature, index, isCarousel, activeIndex, onOpen }) => {
+// The trailing chevron-in-a-circle that marks a tile as tappable below lg — the
+// "button-in-button" island. Nudges right on press for a touch of kinetic life.
+const TapArrow: React.FC = () => (
+  <span
+    aria-hidden="true"
+    className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-primary transition-transform duration-300 group-active:translate-x-0.5"
+  >
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 12h14M12 5l7 7-7 7" />
+    </svg>
+  </span>
+);
+
+// A defining pillar. Below lg it is a full-width statement ROW — a brand-tinted
+// icon tile, the title, and a tap-arrow — stacked one above the next, so all
+// three foundations are visible at once (no carousel) and the rich diorama opens
+// in the drawer on tap. From lg up the very same button dissolves into the bento
+// (display:contents on its wrapper) and grows its inline diorama back: the hero
+// (coral) stacks title-over-diorama, the two wides run text-beside-diorama.
+const PillarTile: React.FC<TileProps> = ({ feature, onOpen }) => {
   const Viz = TILE[feature.accent].viz;
   const isHero = feature.accent === "coral";
   const tilt = useTilt();
@@ -1924,30 +1922,40 @@ const PillarTile: React.FC<
   return (
     <motion.button
       type="button"
-      variants={pillarVariants}
-      initial={false}
-      animate={!isCarousel || index === activeIndex ? "focused" : "unfocused"}
-      data-pillar-focused={isCarousel && index === activeIndex ? "true" : undefined}
       whileHover={{ y: -4 }}
       whileTap={{ scale: 0.98 }}
       transition={hoverSpring}
       style={tilt.style}
       {...tilt.handlers}
-      className={`bento-tile group relative flex w-[74vw] shrink-0 snap-center cursor-pointer flex-col items-start gap-4 overflow-hidden rounded-3xl border border-border/60 bg-card p-7 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background md:w-auto md:shrink lg:w-auto ${TILE[feature.accent].span} ${
-        isHero ? "lg:gap-3.5 lg:p-7" : "lg:flex-row lg:items-stretch"
+      className={`bento-tile group relative flex w-full cursor-pointer items-center gap-4 overflow-hidden rounded-3xl border border-border/60 bg-card p-5 text-left transition-colors duration-300 active:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:w-auto lg:items-stretch lg:gap-3.5 lg:p-7 lg:active:bg-card ${TILE[feature.accent].span} ${
+        isHero ? "lg:flex-col" : "lg:flex-row lg:items-stretch"
       }`}
       onClick={() => onOpen(feature)}
       aria-label={feature.learnMore}
     >
       <span className="bento-spot" aria-hidden="true" />
 
-      <div className={`relative z-10 flex flex-col ${isHero ? "" : "lg:w-[44%] lg:shrink-0 lg:justify-center"}`}>
-        <h3 className={`text-balance font-extrabold leading-[1.05] tracking-tight ${isHero ? "text-[1.9rem] lg:text-[2.35rem]" : "text-[1.5rem] lg:text-[1.75rem]"}`}>
+      {/* mobile/tablet only: the feature glyph in a soft brand-tinted tile */}
+      <span
+        aria-hidden="true"
+        className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary [&_svg]:size-7 lg:hidden"
+      >
+        {feature.icon}
+      </span>
+
+      <div className={`relative z-10 flex min-w-0 flex-1 flex-col lg:flex-none ${isHero ? "" : "lg:w-[44%] lg:shrink-0 lg:justify-center"}`}>
+        <h3 className={`text-balance font-extrabold leading-[1.1] tracking-tight lg:leading-[1.05] ${isHero ? "text-[1.2rem] lg:text-[2.35rem]" : "text-[1.2rem] lg:text-[1.75rem]"}`}>
           {feature.title}
         </h3>
       </div>
 
-      <div className={`relative z-10 flex w-full flex-1 ${isHero ? "items-stretch" : "items-center"}`}>
+      {/* mobile/tablet only: tap affordance */}
+      <span className="relative z-10 lg:hidden">
+        <TapArrow />
+      </span>
+
+      {/* lg+ only: the live diorama returns inside the bento cell */}
+      <div className={`relative z-10 hidden w-full flex-1 lg:flex ${isHero ? "items-stretch" : "items-center"}`}>
         <Viz />
       </div>
     </motion.button>
@@ -1986,11 +1994,23 @@ const CapabilityTile: React.FC<TileProps> = ({ feature, onOpen }) => {
       transition={hoverSpring}
       style={tilt.style}
       {...tilt.handlers}
-      className={`bento-tile group relative flex min-h-[60px] cursor-pointer flex-col justify-center gap-3 overflow-hidden rounded-2xl border border-border/60 bg-card p-4 text-left transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:justify-start lg:p-5 ${isEmbeds ? "bento-edge-top lg:transition-[gap,background-color] lg:group-hover:gap-0" : ""} ${TILE[feature.accent].span}`}
+      className={`bento-tile group relative flex min-h-[7rem] cursor-pointer flex-col justify-between gap-3 overflow-hidden rounded-2xl border border-border/60 bg-card p-4 text-left transition-colors duration-300 active:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:min-h-0 lg:justify-start lg:p-5 lg:active:bg-card ${isEmbeds ? "bento-edge-top lg:transition-[gap,background-color] lg:group-hover:gap-0" : ""} ${TILE[feature.accent].span}`}
       onClick={() => onOpen(feature)}
       aria-label={feature.learnMore}
     >
       <span className="bento-spot" aria-hidden="true" />
+
+      {/* mobile/tablet only: a glyph badge + tap affordance on the top line */}
+      <div className="relative z-10 flex items-center justify-between lg:hidden">
+        <span
+          aria-hidden="true"
+          className="flex size-10 items-center justify-center rounded-xl bg-secondary text-primary [&_svg]:size-[1.35rem]"
+        >
+          {feature.icon}
+        </span>
+        <TapArrow />
+      </div>
+
       <div
         className={`relative z-10 grid ${
           isEmbeds
@@ -2009,20 +2029,6 @@ const CapabilityTile: React.FC<TileProps> = ({ feature, onOpen }) => {
             <h3 className="flex-1 text-balance text-[1.05rem] font-bold leading-snug tracking-tight">
               {renderTitleWithSlashKey(feature.title)}
             </h3>
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-              className="shrink-0 text-primary/40 transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-primary lg:hidden"
-            >
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
           </div>
         </div>
       </div>
@@ -2044,25 +2050,6 @@ export const Features: React.FC = () => {
   const [selectedFeature, setSelectedFeature] = useState<FeatureDetail | null>(
     null,
   );
-  // On mobile the three pillars collapse into a horizontal snap-scroll carousel;
-  // `activeIndex` drives the pagination dots and the focus scale-up. Only the
-  // centred card grows to full size. From lg up everything reflows into a single
-  // Apple-style bento mosaic, so the focus effect and dots are retired.
-  const carouselRef = useRef<HTMLDivElement>(null);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [isCarousel, setIsCarousel] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      window.matchMedia("(max-width: 767px)").matches,
-  );
-
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
-    const update = () => setIsCarousel(mq.matches);
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
-  }, []);
 
   const FEATURES = useMemo<FeatureDetail[]>(() => [
     {
@@ -2294,30 +2281,6 @@ export const Features: React.FC = () => {
     setSelectedFeature(null);
   };
 
-  // Track which pillar is centred in the scrollport so the right dot lights up.
-  const handleCarouselScroll = () => {
-    const el = carouselRef.current;
-    if (!el) return;
-    const cards = Array.from(el.children) as HTMLElement[];
-    const viewportCenter = el.getBoundingClientRect().left + el.clientWidth / 2;
-    let closest = 0;
-    let minDistance = Infinity;
-    cards.forEach((card, index) => {
-      const rect = card.getBoundingClientRect();
-      const distance = Math.abs(rect.left + rect.width / 2 - viewportCenter);
-      if (distance < minDistance) {
-        minDistance = distance;
-        closest = index;
-      }
-    });
-    setActiveIndex(closest);
-  };
-
-  const scrollToCard = (index: number) => {
-    const card = carouselRef.current?.children[index] as HTMLElement | undefined;
-    card?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-  };
-
   return (
     <section
       className="py-20 sm:py-28"
@@ -2341,52 +2304,25 @@ export const Features: React.FC = () => {
             `display: contents`, so all nine tiles drop straight into this grid
             and place themselves via their per-tile span classes. */}
         <div className="mt-14 lg:grid lg:grid-cols-4 lg:auto-rows-[11.5rem] lg:gap-4">
-          {/* The three pillars that define Blok — the largest tiles in the mosaic.
-              Mobile: a horizontal snap-scroll carousel that peeks both neighbours. */}
-          <div
-            ref={carouselRef}
-            onScroll={handleCarouselScroll}
-            className="-mx-6 flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-px-[13vw] px-[13vw] pb-2 [-ms-overflow-style:none] [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0 md:scroll-px-0 md:pb-0 lg:contents [&::-webkit-scrollbar]:hidden"
-          >
-            {primaryFeatures.map((feature, index) => (
+          {/* The three pillars that define Blok. Below lg they stack as full-width
+              statement rows (icon + title + tap arrow), so all three foundations
+              read at once and the rich diorama opens in the drawer on tap. From lg
+              up this wrapper goes `display: contents`, dropping the same buttons
+              into the bento where they grow their inline dioramas back. */}
+          <div className="flex flex-col gap-3 lg:contents">
+            {primaryFeatures.map((feature) => (
               <PillarTile
                 key={feature.accent}
                 feature={feature}
-                index={index}
-                isCarousel={isCarousel}
-                activeIndex={activeIndex}
                 onOpen={handleFeatureClick}
               />
             ))}
           </div>
 
-          {/* Carousel pagination — mobile only; the bento shows everything at lg+. */}
-          <div
-            className="mt-5 flex justify-center gap-2 md:hidden"
-            role="group"
-            aria-label={t('home.features.sectionLabel')}
-          >
-            {primaryFeatures.map((feature, index) => {
-              const isActive = index === activeIndex;
-              return (
-                <button
-                  key={feature.accent}
-                  type="button"
-                  onClick={() => scrollToCard(index)}
-                  aria-current={isActive ? "true" : undefined}
-                  aria-label={`Go to ${feature.title}`}
-                  className={`h-2 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
-                    isActive ? "w-6 bg-primary" : "w-2 bg-foreground/15"
-                  }`}
-                />
-              );
-            })}
-          </div>
-
-          {/* Supporting capabilities. Compact title chips below lg; from lg up
-              each unfolds into its own bento tile with a diorama. */}
+          {/* Supporting capabilities. Icon-badged cards in a 2-up grid below lg;
+              from lg up each unfolds into its own bento tile with a diorama. */}
           <motion.div
-            className="mt-10 grid grid-cols-2 gap-3 sm:mt-6 sm:gap-4 md:grid-cols-3 lg:contents"
+            className="mt-4 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:contents"
             variants={gridVariants}
             initial="hidden"
             whileInView="show"

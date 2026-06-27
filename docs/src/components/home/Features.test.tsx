@@ -67,7 +67,8 @@ describe('Features', () => {
     // one code cell per logical JSON line (9), so wrapping keeps the gutter aligned
     expect(codeCells.length).toBe(9);
     // the highlighted value stays whole when a line wraps, never split mid-string
-    const highlight = container.querySelector('[class*="bg-brand-from"]');
+    // (scoped to the <code> so it can't collide with brand-tinted icon badges)
+    const highlight = container.querySelector('code [class*="bg-brand-from"]');
     expect(highlight?.className).toContain('whitespace-nowrap');
   });
 
@@ -220,28 +221,42 @@ describe('Features', () => {
     });
   });
 
-  it('should render carousel pagination dots, one per pillar feature', () => {
-    renderFeatures();
+  // Mobile was re-imagined away from a peek-carousel (cramped diorama + dots,
+  // only one pillar visible at a time) into a calm vertical index: the pillars
+  // stack as full-width statement rows, the capabilities sit in an icon grid, and
+  // the rich dioramas open in the drawer on tap. Lock the carousel's removal so it
+  // can't creep back.
+  it('no longer renders a mobile pillar carousel', () => {
+    const { container } = renderFeatures();
 
-    // The three pillars become a swipeable carousel on mobile, paginated by dots.
-    const dots = screen.getAllByRole('button', { name: /^Go to / });
-    expect(dots).toHaveLength(3);
-    expect(screen.getByRole('button', { name: 'Go to Typed JSON, never HTML' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Go to Every block, built in' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Go to Bring your own blocks' })).toBeInTheDocument();
+    // the pagination dots are gone — there is no swipeable slide deck to page
+    expect(screen.queryAllByRole('button', { name: /^Go to / })).toHaveLength(0);
+    // and the pillar track is no longer a horizontal snap-scroller
+    expect(container.querySelector('.snap-x')).toBeNull();
+    expect(container.querySelector('[class*="overflow-x-auto"]')).toBeNull();
   });
 
-  it('should mark the first pillar as the current carousel slide initially', () => {
+  it('stacks the pillars vertically on mobile (flex column, not a scroller)', () => {
     renderFeatures();
 
-    expect(screen.getByRole('button', { name: 'Go to Typed JSON, never HTML' })).toHaveAttribute(
-      'aria-current',
-      'true'
-    );
-    expect(screen.getByRole('button', { name: 'Go to Every block, built in' })).not.toHaveAttribute(
-      'aria-current',
-      'true'
-    );
+    const pillar = screen.getByRole('button', { name: 'Learn more about Clean JSON output' });
+    const track = pillar.parentElement;
+    expect(track?.className).toMatch(/(^|\s)flex-col(\s|$)/);
+    // from lg up the same buttons dissolve into the bento via display:contents
+    expect(track?.className).toContain('lg:contents');
+  });
+
+  it('shows each feature its own icon inline on mobile (pillars + capabilities)', () => {
+    const { container } = renderFeatures();
+
+    // The feature glyphs — previously only used inside the drawer — now badge
+    // every tile on mobile so the grid reads visually, not as a wall of text.
+    for (const icon of [
+      'fi-json', 'fi-blocks', 'fi-ext', // pillars
+      'fi-slash', 'fi-table', 'fi-embed', 'fi-history', 'fi-globe', 'fi-media', // capabilities
+    ]) {
+      expect(container.querySelector(`.${icon}`), icon).not.toBeNull();
+    }
   });
 
   it('stacks the Embeds tile above the Tables tile in the bento grid', () => {

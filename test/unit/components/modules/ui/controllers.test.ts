@@ -493,6 +493,27 @@ describe('KeyboardController', () => {
       expect(blok.YjsManager.redo).not.toHaveBeenCalled();
     });
 
+    it('still fires redo when Cmd+Shift+Z follows Cmd+Z within 50ms (regression: redo-after-undo swallowed)', () => {
+      // The double-fire guard must dedupe only an IDENTICAL repeated action
+      // (one physical keypress emitting duplicate keydowns), never a genuinely
+      // distinct follow-up. A user undoing then immediately redoing fires two
+      // DIFFERENT actions back-to-back; sharing one timestamp across undo+redo
+      // wrongly swallowed the redo, so redo of a just-undone column creation
+      // silently did nothing. Distinct actions must never be debounced.
+      const { controller, blok } = createKeyboardController();
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      const undoEvent = new KeyboardEvent('keydown', { key: 'z', ctrlKey: true });
+      const redoEvent = new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, shiftKey: true });
+
+      document.dispatchEvent(undoEvent);
+      document.dispatchEvent(redoEvent);
+
+      expect(blok.YjsManager.undo).toHaveBeenCalledTimes(1);
+      expect(blok.YjsManager.redo).toHaveBeenCalledTimes(1);
+    });
+
     it('prevents double-firing within 50ms', () => {
       const { controller, blok } = createKeyboardController();
 

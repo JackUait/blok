@@ -20,9 +20,13 @@ export class KeyboardController extends Controller {
   private someToolbarOpened: () => boolean;
 
   /**
-   * Timestamp of last undo/redo call to prevent double-firing
+   * Timestamp and identity of the last undo/redo dispatched, used to dedupe a
+   * single physical keypress that emits duplicate keydown events. Keyed by
+   * action so the guard only ever swallows an IDENTICAL repeat — a genuinely
+   * distinct follow-up (e.g. redo right after undo) is never debounced.
    */
   private lastUndoRedoTime = 0;
+  private lastUndoRedoAction: 'undo' | 'redo' | null = null;
 
   /**
    * The redactor element for keydown capture
@@ -520,20 +524,27 @@ export class KeyboardController extends Controller {
       return;
     }
 
-    // Prevent double-firing within 50ms
+    // Dedupe a single physical keypress that emits duplicate keydown events,
+    // but ONLY when the SAME action repeats inside the window. Duplicates of one
+    // press always share the same modifiers, so an undo followed by a redo (Shift
+    // toggled) is a genuinely distinct gesture and must never be swallowed —
+    // sharing one timestamp across both wrongly dropped a redo issued right after
+    // an undo (e.g. redoing a just-undone column creation did nothing).
     const now = Date.now();
+    const action: 'undo' | 'redo' = event.shiftKey ? 'redo' : 'undo';
 
-    if (now - this.lastUndoRedoTime < 50) {
+    if (action === this.lastUndoRedoAction && now - this.lastUndoRedoTime < 50) {
       event.preventDefault();
 
       return;
     }
     this.lastUndoRedoTime = now;
+    this.lastUndoRedoAction = action;
 
     event.preventDefault();
     event.stopPropagation();
 
-    if (event.shiftKey) {
+    if (action === 'redo') {
       this.Blok.YjsManager.redo();
     } else {
       this.Blok.YjsManager.undo();

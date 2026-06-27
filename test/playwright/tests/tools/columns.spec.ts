@@ -714,6 +714,7 @@ test.describe('Columns tool', () => {
   for (const side of ['left', 'right'] as const) {
     test(`undo of a drag-beside column creation (${side}) keeps the moved block in its original DOM slot`, async ({ page }) => {
       const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
+      const REDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
       const ORIGINAL = ['h1', 'i1', 'i2', 'i3', 'h2', 'o1', 'o2', 'o3'];
 
       const domOrder = (): Promise<(string | null)[]> => page.evaluate(() =>
@@ -762,6 +763,26 @@ test.describe('Columns tool', () => {
       expect(afterUndo.blocks.find(b => b.id === 'h2')?.parent ?? null).toBeNull();
       expect(afterUndo.blocks.map(b => b.id)).toEqual(ORIGINAL);
       expect(await domOrder()).toEqual(ORIGINAL);
+
+      // Redo immediately after the undo must rebuild BOTH columns. Regression:
+      // the undo/redo keydown guard shared ONE timestamp across undo + redo, so a
+      // redo landing within 50ms of the undo (faster than a human, but routine
+      // back-to-back) was swallowed by the double-fire debounce and silently did
+      // nothing — the columns never came back. The guard is now keyed per action,
+      // so a distinct redo right after an undo always fires.
+      await page.keyboard.press(REDO_SHORTCUT);
+      await page.waitForFunction(
+        () => document.querySelector('[data-blok-columns]') !== null,
+        { timeout: 2000 }
+      );
+
+      await expect(page.locator('[data-blok-column]')).toHaveCount(2);
+
+      const afterRedo = await saveBlok(page);
+
+      expect(afterRedo.blocks.filter(b => b.type === 'column')).toHaveLength(2);
+      expect(afterRedo.blocks.filter(b => b.type === 'column_list')).toHaveLength(1);
+      expect(afterRedo.blocks.find(b => b.id === 'h2')?.parent ?? null).not.toBeNull();
     });
   }
 

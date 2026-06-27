@@ -187,4 +187,29 @@ describe('useBlocks move', () => {
     act(() => result.current.move('ghost', { toIndex: 0 }));
     expect(editor.blocks.move).not.toHaveBeenCalled();
   });
+
+  it('move after a later sibling (forward) compensates for the post-removal shift', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.move('a', { after: 'b' }));
+    // resolveMoveIndex({after:'b'}) = 2; forward move from 0 → decremented to 1.
+    expect(editor.blocks.move).toHaveBeenCalledWith(1, 0);
+  });
+
+  it('move before a later sibling (forward) compensates for the post-removal shift', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.move('a', { before: 'c' }));
+    // resolveMoveIndex({before:'c'}) = 2; forward move from 0 → decremented to 1.
+    expect(editor.blocks.move).toHaveBeenCalledWith(1, 0);
+  });
+
+  it('move after the last block (forward to end) stays within Blok bounds', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.move('a', { after: 'c' }));
+    // resolveMoveIndex({after:'c'}) = 3 (= length); decremented to 2 so Blok's
+    // toIndex<length guard doesn't silently drop the move.
+    expect(editor.blocks.move).toHaveBeenCalledWith(2, 0);
+  });
 });

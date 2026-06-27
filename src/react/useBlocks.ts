@@ -118,7 +118,17 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       if (fromIndex === undefined) {
         return;
       }
-      const toIndex = resolveMoveIndex(reader, target);
+
+      const resolved = resolveMoveIndex(reader, target);
+
+      // Blok's Blocks.move() removes the block (splice fromIndex) BEFORE
+      // re-inserting at toIndex, so toIndex lives in the POST-removal index
+      // space. For a relative (before/after) forward move the reference index
+      // shifts down by one once the block is removed, so compensate — this also
+      // keeps a move-to-end within Blok's `toIndex < length` bound. A literal
+      // { toIndex } is the caller's explicit final resting index: pass through.
+      const isRelative = !('toIndex' in target);
+      const toIndex = isRelative && fromIndex < resolved ? resolved - 1 : resolved;
 
       editor.blocks.move(toIndex, fromIndex);
     };

@@ -30,10 +30,8 @@ const makeFakeEditor = (
       delete: vi.fn(),
       transact: vi.fn((fn: () => void) => fn()),
     },
-    events: {
-      on: (_name: string, cb: () => void) => listeners.add(cb),
-      off: (_name: string, cb: () => void) => listeners.delete(cb),
-    },
+    on: (_name: string, cb: () => void) => listeners.add(cb),
+    off: (_name: string, cb: () => void) => listeners.delete(cb),
   };
   return {
     editor: editor as unknown as Blok,

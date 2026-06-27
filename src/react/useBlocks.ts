@@ -58,9 +58,9 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
         onStoreChange();
       };
 
-      editor.events.on(BLOCK_CHANGED_EVENT, handler);
+      editor.on(BLOCK_CHANGED_EVENT, handler);
 
-      return () => editor.events.off(BLOCK_CHANGED_EVENT, handler);
+      return () => editor.off(BLOCK_CHANGED_EVENT, handler);
     },
     [editor]
   );

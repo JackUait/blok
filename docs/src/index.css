@@ -1033,15 +1033,6 @@
   animation: bento-blink 1.05s steps(1, end) infinite;
 }
 
-/* Soft brand aura that slowly breathes behind the rendered mark. */
-@keyframes bento-aura {
-  0%, 100% { opacity: 0.5; transform: scale(1); }
-  50% { opacity: 0.85; transform: scale(1.09); }
-}
-.bento-aura {
-  animation: bento-aura 4.6s ease-in-out infinite;
-}
-
 /* Kanban cards gently breathe. */
 @keyframes bento-breathe {
   0%, 100% { transform: translateY(0); }
@@ -1244,7 +1235,6 @@
   .byob-leaving .fi-poll-bar,
   .byob-leaving .fi-byob-badge,
   .bento-caret,
-  .bento-aura,
   .bento-breathe,
   .bento-cell,
   .bento-sheen::after,

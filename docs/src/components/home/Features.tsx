@@ -250,11 +250,6 @@ const CleanJsonViz: React.FC = () => {
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 [background-image:radial-gradient(circle,var(--color-border)_1px,transparent_1px)] [background-size:18px_18px] opacity-50"
           />
-          {/* warm aura slowly breathing behind the mark */}
-          <span
-            aria-hidden="true"
-            className="bento-aura pointer-events-none absolute bottom-2 left-8 size-44 rounded-full bg-[radial-gradient(circle,rgba(233,78,122,0.18),rgba(230,128,25,0.1)_45%,transparent_72%)] blur-2xl"
-          />
           {/* heading block */}
           <div className="relative">
             <h2 className="text-[1.95rem] font-extrabold leading-[1.1] tracking-tight lg:text-[2.3rem]">
@@ -268,7 +263,7 @@ const CleanJsonViz: React.FC = () => {
               alt=""
               width={92}
               height={92}
-              className="rounded-2xl drop-shadow-[0_10px_24px_rgba(233,78,122,0.28)]"
+              className="rounded-2xl"
             />
           </div>
           {/* empty trailing block — the slash-command affordance Blok shows on a

@@ -71,6 +71,26 @@ describe('Features', () => {
     expect(highlight?.className).toContain('whitespace-nowrap');
   });
 
+  // The Clean JSON flip card carries a fixed-height plate. On a wide tile the 9
+  // lines fit unwrapped and look centred; in a NARROW column (mobile carousel) the
+  // long lines soft-wrap and the object grows past a 15rem plate, so centring it
+  // clips the opening braces off the top and the closing brace off the bottom —
+  // the "broken" look. Lock the responsive cure: a taller plate on mobile that
+  // drops to the compact 15rem only from `sm` up, and top-alignment on mobile so
+  // the first line can never be centred out of view.
+  it('gives the Clean JSON flip card a taller, top-aligned plate on mobile', () => {
+    const { container } = renderFeatures();
+    const inner = container.querySelector('.fi-flip-inner');
+    expect(inner).not.toBeNull();
+    // compact plate is preserved from `sm` up; the base (mobile) floor is taller
+    expect(inner?.className).toMatch(/sm:min-h-\[15rem\]/);
+    expect(inner?.className).toMatch(/(^|\s)min-h-\[(1[6-9]|2\d)(\.\d+)?rem\]/);
+    // the code column tops-aligns on mobile, only centring once it fits unwrapped
+    const codeWrap = container.querySelector('.fi-flip-face .font-mono')?.parentElement;
+    expect(codeWrap?.className).toMatch(/(^|\s)justify-start(\s|$)/);
+    expect(codeWrap?.className).toMatch(/sm:justify-center/);
+  });
+
   // The "68 languages" tile rolls a greeting through every supported locale. Each
   // sign must have an EQUAL chance to appear — exactly 1/68 — so the locale picker
   // is a plain uniform draw over all entries, never one that excludes the current.

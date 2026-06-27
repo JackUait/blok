@@ -193,7 +193,7 @@ const CleanJsonViz: React.FC = () => {
     onPointerMove={trackBlob}
     className="relative h-full w-full [perspective:1600px]"
   >
-    <div className="fi-flip-inner relative h-full min-h-[15rem] w-full [transform-style:preserve-3d]">
+    <div className="fi-flip-inner relative h-full min-h-[20.5rem] w-full sm:min-h-[15rem] [transform-style:preserve-3d]">
       {/* FRONT — the JSON the document saves to, shown complete */}
       <div className="fi-flip-face absolute inset-0 flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-secondary shadow-sm">
         <span className="fi-edge" aria-hidden="true" />
@@ -202,7 +202,7 @@ const CleanJsonViz: React.FC = () => {
           <span className="size-2.5 rounded-full bg-foreground/15" />
           <span className="size-2.5 rounded-full bg-foreground/15" />
         </div>
-        <div className="relative flex flex-1 flex-col justify-center overflow-hidden px-5 py-3">
+        <div className="relative flex flex-1 flex-col justify-start overflow-hidden px-5 py-3 sm:justify-center">
           {/* One row per logical line: a fixed line-number cell plus a code cell
               that soft-wraps (whitespace-pre-wrap) at a readable size, so long
               lines fold onto the next row like an editor instead of clipping. The

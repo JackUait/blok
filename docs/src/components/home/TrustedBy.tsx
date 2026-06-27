@@ -9,11 +9,16 @@ import {
   useTransform,
   useVelocity,
   type MotionValue,
-  type Variants,
 } from "framer-motion";
-import { Globe, Mail, Send, Store, type LucideIcon } from "lucide-react";
+import { Mail, Send } from "lucide-react";
 import { SectionReveal } from "../common/SectionReveal";
 import { useI18n } from "../../contexts/I18nContext";
+
+// A tiny fractal-noise tile, soft-light-blended at low opacity over the dark
+// testimonial card to give the flat gradient a faint film grain — the kind of
+// texture that keeps a large dark surface from looking plasticky.
+const GRAIN =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
 
 /**
  * The official Dodo Brands lockup — the colourful pinwheel mark keeps its brand
@@ -51,7 +56,6 @@ interface Stat {
   /** Display string straight from i18n, e.g. "20+" or "1,000+". */
   value: string;
   label: string;
-  Icon: LucideIcon;
 }
 
 // A 0–9 strip with a trailing 0 so the column wraps from 9 back to 0 seamlessly.
@@ -149,7 +153,13 @@ const RollingComma: React.FC<{ source: MotionValue<number>; threshold: number }>
  * digits drive the wheels, a "+" suffix is preserved, and thousands grouping
  * mirrors the source string.
  */
-const CountUp: React.FC<{ value: string }> = ({ value }) => {
+const CountUp: React.FC<{ value: string; surface?: string; suffixClassName?: string }> = ({
+  value,
+  // Colour of the surface behind the reel, used for the edge haze so it blends
+  // into whatever card it sits on (defaults to the light card token).
+  surface = "var(--color-card)",
+  suffixClassName = "text-muted-foreground",
+}) => {
   const target = Number(value.replace(/[^0-9]/g, "")) || 0;
   const suffix = value.replace(/[\d.,\s]/g, "");
   const grouped = value.includes(",");
@@ -201,40 +211,24 @@ const CountUp: React.FC<{ value: string }> = ({ value }) => {
       <span className="sr-only">{value}</span>
       <span aria-hidden="true" className="relative inline-flex items-center tabular-nums leading-none">
         {wheels}
-        {suffix && <span className="text-muted-foreground">{suffix}</span>}
+        {suffix && <span className={suffixClassName}>{suffix}</span>}
         {/* Soft haze blurring the reel's top & bottom edges, its opacity bound
-            to the reel's speed so it fades out exactly as the digits slow. */}
+            to the reel's speed so it fades out exactly as the digits slow. The
+            colour follows the host surface so it works on light or dark cards. */}
         <motion.span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 h-[0.34em] bg-gradient-to-b from-card to-transparent"
-          style={{ opacity: haze }}
+          className="pointer-events-none absolute inset-x-0 top-0 h-[0.34em]"
+          style={{ opacity: haze, backgroundImage: `linear-gradient(to bottom, ${surface}, transparent)` }}
         />
         <motion.span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-[0.34em] bg-gradient-to-t from-card to-transparent"
-          style={{ opacity: haze }}
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-[0.34em]"
+          style={{ opacity: haze, backgroundImage: `linear-gradient(to top, ${surface}, transparent)` }}
         />
       </span>
     </span>
   );
 };
-
-// The proof tiles drift up and settle one after another as the bento scrolls in.
-const tilesContainer: Variants = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.09, delayChildren: 0.18 } },
-};
-
-const tileVariant: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { type: "spring", stiffness: 230, damping: 24 },
-  },
-};
-
-const tileHover = { type: "spring", stiffness: 380, damping: 22 } as const;
 
 export const TrustedBy: React.FC = () => {
   const { t } = useI18n();
@@ -252,12 +246,10 @@ export const TrustedBy: React.FC = () => {
     {
       value: t("home.trusted.statCountriesValue"),
       label: t("home.trusted.statCountriesLabel"),
-      Icon: Globe,
     },
     {
       value: t("home.trusted.statStoresValue"),
       label: t("home.trusted.statStoresLabel"),
-      Icon: Store,
     },
   ];
 
@@ -275,154 +267,137 @@ export const TrustedBy: React.FC = () => {
           </h2>
         </SectionReveal>
 
-        <div className="mt-12 grid gap-5 lg:grid-cols-[1.55fr_1fr] lg:items-stretch">
-          {/* ── The featured story card ─────────────────────────────────── */}
-          <SectionReveal delay={0.08} className="flex">
+        <div className="mt-12 flex flex-col gap-5">
+          {/* ── Featured testimonial — a dark, atmospheric hero. Warm near-black
+              surface, a soft brand-gradient glow and film grain for depth, the
+              quote in white with the kicker glowing in the brand gradient, and
+              the proof metrics set off by a hairline rule. ─────────────────── */}
+          <SectionReveal delay={0.08}>
             <div
-              className="flex w-full flex-col overflow-hidden rounded-[2rem] border border-black/[0.05] bg-card p-8 shadow-card transition-[transform,box-shadow] duration-500 ease-out hover:-translate-y-1 hover:shadow-card-hover dark:border-white/[0.08] sm:p-12"
+              className="relative overflow-hidden rounded-[2.25rem] p-8 shadow-[0_40px_90px_-40px_rgba(0,0,0,0.55)] ring-1 ring-white/[0.06] sm:p-12 lg:p-14"
+              style={{ backgroundImage: "linear-gradient(150deg, #1e1714 0%, #100c0b 72%)" }}
               data-blok-testid="trusted-featured"
             >
-              <div className="flex flex-1 flex-col">
-                <div className="flex flex-col gap-3">
-                  <DodoLogo className="h-9 w-auto self-start text-foreground" />
-                  <span className="text-[15px] text-muted-foreground">
-                    {t("home.trusted.tagline")}
-                  </span>
-                </div>
+              {/* warm brand glow bleeding from the top-right */}
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute -right-24 -top-28 h-80 w-80 rounded-full bg-[radial-gradient(circle,rgba(233,78,122,0.24),rgba(230,128,25,0.10)_45%,transparent_70%)] blur-3xl"
+              />
+              {/* film grain */}
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 opacity-[0.05] mix-blend-soft-light"
+                style={{ backgroundImage: GRAIN }}
+              />
+              {/* oversized closing quote, a near-subliminal watermark */}
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute -top-8 right-4 select-none font-display text-[11rem] leading-none text-white/[0.04] sm:text-[14rem]"
+              >
+                &rdquo;
+              </span>
 
-                {/* Editorial pull-quote: an oversized ghost quotation mark — the
-                    same near-subliminal motif as the stat tiles' ghost glyphs —
-                    leads in, the claim sits in the display face, and the kicker
-                    after the dash carries the weight. Emphasis is by weight, not
-                    colour: the brand gradient is reserved for the CTAs alone. */}
-                <blockquote className="relative mt-12 sm:mt-14">
-                  <span
-                    aria-hidden="true"
-                    className="pointer-events-none absolute -left-2 -top-12 select-none font-display text-[7rem] leading-none text-foreground/[0.07] sm:-top-14 sm:text-[8.5rem]"
-                  >
-                    &ldquo;
-                  </span>
-                  <p className="relative max-w-xl text-pretty font-display text-[22px] font-medium leading-[1.4] tracking-tight text-foreground/75 sm:text-[28px]">
-                    {claim}
-                    {kicker && (
-                      <>
-                        {" — "}
-                        <span className="font-bold text-foreground">{kicker}</span>
-                      </>
-                    )}
-                  </p>
-                </blockquote>
+              <div className="relative flex flex-col gap-10 lg:flex-row lg:items-stretch lg:gap-14">
+                {/* company · quote · CTA */}
+                <div className="flex flex-1 flex-col">
+                  <div className="flex flex-col gap-3">
+                    <DodoLogo className="h-9 w-auto self-start text-white" />
+                    <span className="text-[15px] text-white/55">
+                      {t("home.trusted.tagline")}
+                    </span>
+                  </div>
 
-                {/* CTA — a true Airbnb pill */}
-                <div className="mt-auto pt-10">
-                  <Link
-                    to="/demo"
-                    className="group/cta inline-flex items-center gap-2 rounded-full bg-brand-gradient px-6 py-3.5 text-[15px] font-semibold text-white shadow-card transition-[transform,box-shadow,filter] duration-300 hover:shadow-card-hover hover:brightness-[1.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]"
-                  >
-                    {t("home.trusted.cta")}
-                    <svg
-                      width="17"
-                      height="17"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      aria-hidden="true"
-                      className="transition-transform duration-300 group-hover/cta:translate-x-1"
+                  <blockquote className="mt-9 flex-1 sm:mt-11">
+                    <p className="max-w-2xl text-balance font-display text-[23px] font-medium leading-[1.4] tracking-tight text-white/80 sm:text-[30px]">
+                      {claim}
+                      {kicker && (
+                        <>
+                          {" — "}
+                          <span className="font-semibold text-brand-gradient [box-decoration-break:clone] [-webkit-box-decoration-break:clone]">
+                            {kicker}
+                          </span>
+                        </>
+                      )}
+                    </p>
+                  </blockquote>
+
+                  <div className="mt-10">
+                    <Link
+                      to="/demo"
+                      className="group/cta inline-flex items-center gap-2 rounded-full bg-brand-gradient px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_12px_30px_-10px_color-mix(in_srgb,var(--brand-via)_70%,transparent)] transition-[transform,box-shadow,filter] duration-300 hover:brightness-[1.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#16100e] active:scale-[0.98]"
                     >
-                      <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </Link>
+                      {t("home.trusted.cta")}
+                      <svg
+                        width="17"
+                        height="17"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        aria-hidden="true"
+                        className="transition-transform duration-300 group-hover/cta:translate-x-1"
+                      >
+                        <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </Link>
+                  </div>
                 </div>
+
+                {/* proof metrics, set off by a hairline */}
+                <ul
+                  className="flex shrink-0 gap-10 border-white/10 sm:gap-14 lg:flex-col lg:justify-center lg:gap-12 lg:border-l lg:pl-14"
+                  data-blok-testid="trusted-stats"
+                >
+                  {stats.map((stat) => (
+                    <li key={stat.label} className="flex flex-col gap-1.5">
+                      <span className="font-display text-[40px] font-extrabold leading-none tracking-tight text-white sm:text-[52px]">
+                        <CountUp value={stat.value} surface="#15100e" suffixClassName="text-white/40" />
+                      </span>
+                      <span className="text-[14px] text-white/55">{stat.label}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
           </SectionReveal>
 
-          {/* ── Side column: proof tiles stacked over the contact CTA ─────── */}
-          <div className="flex flex-col gap-5">
-            {/* Proof tiles — a floating bento stack. */}
-            <motion.ul
-              className="grid flex-1 auto-rows-fr gap-5"
-              data-blok-testid="trusted-stats"
-              variants={tilesContainer}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, margin: "-80px" }}
+          {/* ── Slim contact bar — copy left, the two channels right; the primary
+              action wears Telegram's own blue. ───────────────────────────── */}
+          <SectionReveal delay={0.16}>
+            <div
+              className="flex flex-col gap-5 rounded-[2.25rem] border border-black/[0.06] bg-card p-7 shadow-card dark:border-white/[0.08] sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:p-8"
+              data-blok-testid="trusted-contact"
             >
-              {stats.map((stat) => (
-                <motion.li
-                  key={stat.label}
-                  variants={tileVariant}
-                  whileHover={{ y: -6 }}
-                  transition={tileHover}
-                  className="group/tile relative flex flex-col justify-center gap-2 overflow-hidden rounded-[1.75rem] border border-black/[0.05] bg-card p-7 shadow-card transition-shadow duration-300 hover:shadow-card-hover dark:border-white/[0.08]"
-                >
-                  {/* Oversized ghost glyph — depth and motif, almost subliminal. */}
-                  <stat.Icon
-                    className="pointer-events-none absolute -bottom-5 -right-4 size-32 text-foreground opacity-[0.05] transition-[transform,opacity,color] duration-500 ease-out group-hover/tile:-translate-y-1.5 group-hover/tile:rotate-3 group-hover/tile:scale-110 group-hover/tile:text-primary group-hover/tile:opacity-[0.13]"
-                    strokeWidth={1.25}
-                    aria-hidden="true"
-                  />
-                  <span className="relative font-display text-[44px] font-extrabold leading-none tracking-tight text-foreground">
-                    <CountUp value={stat.value} />
-                  </span>
-                  <span className="relative text-base text-muted-foreground">
-                    {stat.label}
-                  </span>
-                </motion.li>
-              ))}
-            </motion.ul>
-
-            {/* Contact card — a clean Airbnb-style sibling of the stat tiles:
-                same white surface, soft shadow, and oversized ghost glyph. It
-                offers two ways to reach the team, so the card is a container (not
-                a single link) holding a primary Telegram pill and a quieter email
-                button beside it. */}
-            <SectionReveal delay={0.16} className="flex">
-              <div
-                className="group/talk relative flex w-full flex-col justify-between gap-7 overflow-hidden rounded-[1.75rem] border border-black/[0.05] bg-card p-7 shadow-card transition-[transform,box-shadow] duration-500 ease-out hover:-translate-y-1 hover:shadow-card-hover dark:border-white/[0.08]"
-                data-blok-testid="trusted-contact"
-              >
-                {/* Oversized ghost paper plane — the same depth motif as the
-                    Globe/Store tiles, banking and warming to brand on hover. */}
-                <Send
-                  className="pointer-events-none absolute -bottom-5 -right-4 size-32 text-foreground opacity-[0.05] transition-[transform,opacity,color] duration-500 ease-out group-hover/talk:-translate-y-1.5 group-hover/talk:translate-x-1.5 group-hover/talk:-rotate-6 group-hover/talk:text-primary group-hover/talk:opacity-[0.13]"
-                  strokeWidth={1.25}
-                  aria-hidden="true"
-                />
-
-                <div className="relative flex flex-col gap-2">
-                  <h3 className="text-pretty text-[19px] font-bold leading-tight tracking-tight text-foreground">
-                    {t("home.trusted.contactTitle")}
-                  </h3>
-                  <p className="max-w-[26ch] text-pretty text-[15px] leading-relaxed text-muted-foreground">
-                    {t("home.trusted.contactLead")}
-                  </p>
-                </div>
-
-                <div className="relative flex flex-wrap items-center gap-3">
-                  {/* Primary channel — the brand-gradient pill mirrors the
-                      "Build with Blok" CTA, so the bento speaks one CTA language. */}
-                  <a
-                    href="https://t.me/jackuait"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group/tg inline-flex items-center gap-2 rounded-full bg-brand-gradient px-5 py-3 text-[14px] font-semibold text-white shadow-[0_8px_20px_-8px_color-mix(in_srgb,var(--brand-via)_70%,transparent)] transition-[filter,box-shadow] duration-300 hover:shadow-[0_12px_26px_-8px_color-mix(in_srgb,var(--brand-via)_75%,transparent)] hover:brightness-[1.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]"
-                  >
-                    <Send className="size-4 -translate-x-[0.5px]" strokeWidth={2.2} aria-hidden="true" />
-                    {t("home.trusted.contactTelegram")}
-                  </a>
-
-                  {/* Secondary channel — a quiet bordered pill for email. */}
-                  <a
-                    href="mailto:jackuait@gmail.com?subject=Blok%20for%20our%20team"
-                    className="inline-flex items-center gap-2 rounded-full border border-black/[0.12] bg-card px-5 py-3 text-[14px] font-semibold text-foreground transition-[border-color,background-color] duration-300 hover:border-foreground/30 hover:bg-foreground/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] dark:border-white/[0.16] dark:hover:bg-white/[0.05]"
-                  >
-                    <Mail className="size-4 text-muted-foreground" strokeWidth={2.2} aria-hidden="true" />
-                    {t("home.trusted.contactEmail")}
-                  </a>
-                </div>
+              <div className="flex flex-col gap-1.5">
+                <h3 className="text-pretty text-[19px] font-bold leading-tight tracking-tight text-foreground">
+                  {t("home.trusted.contactTitle")}
+                </h3>
+                <p className="max-w-[52ch] text-pretty text-[15px] leading-relaxed text-muted-foreground">
+                  {t("home.trusted.contactLead")}
+                </p>
               </div>
-            </SectionReveal>
-          </div>
+
+              <div className="flex flex-wrap items-center gap-3 sm:shrink-0">
+                {/* Primary channel — Telegram's brand blue. */}
+                <a
+                  href="https://t.me/jackuait"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(180deg,#2aabee,#229ed9)] px-5 py-3 text-[14px] font-semibold text-white shadow-[0_8px_20px_-8px_rgba(34,158,217,0.55)] transition-[filter,box-shadow] duration-300 hover:shadow-[0_12px_26px_-8px_rgba(34,158,217,0.6)] hover:brightness-[1.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]"
+                >
+                  <Send className="size-4 -translate-x-[0.5px]" strokeWidth={2.2} aria-hidden="true" />
+                  {t("home.trusted.contactTelegram")}
+                </a>
+
+                {/* Secondary channel — a quiet bordered pill for email. */}
+                <a
+                  href="mailto:jackuait@gmail.com?subject=Blok%20for%20our%20team"
+                  className="inline-flex items-center gap-2 rounded-full border border-black/[0.12] bg-card px-5 py-3 text-[14px] font-semibold text-foreground transition-[border-color,background-color] duration-300 hover:border-foreground/30 hover:bg-foreground/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] dark:border-white/[0.16] dark:hover:bg-white/[0.05]"
+                >
+                  <Mail className="size-4 text-muted-foreground" strokeWidth={2.2} aria-hidden="true" />
+                  {t("home.trusted.contactEmail")}
+                </a>
+              </div>
+            </div>
+          </SectionReveal>
         </div>
       </div>
     </section>

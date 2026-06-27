@@ -1023,6 +1023,12 @@
     opacity: 1;
   }
 }
+/* The embeds marquee reaches the tile edge, so its icons (in the z-10 content
+   layer) would otherwise paint over the z-1 border arc. Lift this tile's border
+   above the content so the logos slide UNDER the pink frame. */
+.bento-edge-top::after {
+  z-index: 20;
+}
 
 /* Blinking insertion caret — JSON + slash read as live editors. */
 @keyframes bento-blink {

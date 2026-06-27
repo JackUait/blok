@@ -1970,7 +1970,7 @@ const CapabilityTile: React.FC<TileProps> = ({ feature, onOpen }) => {
       transition={hoverSpring}
       style={tilt.style}
       {...tilt.handlers}
-      className={`bento-tile group relative flex min-h-[60px] cursor-pointer flex-col justify-center gap-3 overflow-hidden rounded-2xl border border-border/60 bg-card p-4 text-left transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:justify-start lg:p-5 ${isEmbeds ? "lg:transition-[gap,background-color] lg:group-hover:gap-0" : ""} ${TILE[feature.accent].span}`}
+      className={`bento-tile group relative flex min-h-[60px] cursor-pointer flex-col justify-center gap-3 overflow-hidden rounded-2xl border border-border/60 bg-card p-4 text-left transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:justify-start lg:p-5 ${isEmbeds ? "bento-edge-top lg:transition-[gap,background-color] lg:group-hover:gap-0" : ""} ${TILE[feature.accent].span}`}
       onClick={() => onOpen(feature)}
       aria-label={feature.learnMore}
     >

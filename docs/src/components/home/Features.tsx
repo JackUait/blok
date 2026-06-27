@@ -168,29 +168,11 @@ const CleanJsonViz: React.FC = () => {
             {": [\n    { "}
             <span className="text-muted-foreground/60">"id"</span>
             {": "}
-            <span className="text-primary">"pg"</span>
-            {", "}
-            <span className="text-muted-foreground/60">"type"</span>
-            {": "}
-            <span className="text-primary">"page"</span>
-            {",\n      "}
-            <span className="text-muted-foreground/60">"content"</span>
-            {": ["}
-            <span className="text-primary">"h1"</span>
-            {", "}
-            <span className="text-primary">"im"</span>
-            {"] },\n    { "}
-            <span className="text-muted-foreground/60">"id"</span>
-            {": "}
             <span className="text-primary">"h1"</span>
             {", "}
             <span className="text-muted-foreground/60">"type"</span>
             {": "}
             <span className="text-primary">"header"</span>
-            {", "}
-            <span className="text-muted-foreground/60">"parent"</span>
-            {": "}
-            <span className="text-primary">"pg"</span>
             {",\n      "}
             <span className="text-muted-foreground/60">"data"</span>
             {": { "}
@@ -209,10 +191,6 @@ const CleanJsonViz: React.FC = () => {
             <span className="text-muted-foreground/60">"type"</span>
             {": "}
             <span className="text-primary">"image"</span>
-            {", "}
-            <span className="text-muted-foreground/60">"parent"</span>
-            {": "}
-            <span className="text-primary">"pg"</span>
             {",\n      "}
             <span className="text-muted-foreground/60">"data"</span>
             {": { "}

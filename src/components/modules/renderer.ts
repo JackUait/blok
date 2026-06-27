@@ -166,7 +166,7 @@ export class Renderer extends Module {
      * Create Blocks instances
      */
     const blocks = processedBlocks.map((blockData: OutputBlockData) => {
-      const { tunes, parent, content, lastEditedAt, lastEditedBy } = blockData;
+      const { tunes, parent, content, indent, lastEditedAt, lastEditedBy } = blockData;
       const hasDuplicateId = blockData.id !== undefined && seenIds.has(blockData.id);
 
       if (hasDuplicateId) {
@@ -224,6 +224,7 @@ export class Renderer extends Module {
             tunes,
             parentId: parent,
             contentIds: content,
+            indent,
             lastEditedAt,
             lastEditedBy,
           });
@@ -245,6 +246,7 @@ export class Renderer extends Module {
             tunes,
             parentId: parent,
             contentIds: content,
+            indent,
             lastEditedAt,
             lastEditedBy,
           });

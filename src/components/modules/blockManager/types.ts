@@ -24,6 +24,8 @@ export interface ComposeBlockOptions {
   parentId?: string;
   /** Array of child block ids */
   contentIds?: string[];
+  /** Flat nesting/indentation level (0 = root) so any block can nest inside a list */
+  indent?: number;
   /** Bind events immediately instead of deferring via requestIdleCallback */
   bindEventsImmediately?: boolean;
   /** Timestamp of the last edit (milliseconds since epoch) */

@@ -4,9 +4,8 @@
 
 import type { Block } from '../../../block';
 import { DATA_ATTR, createSelector } from '../../../constants';
-import type { BlockManager } from '../../blockManager';
 import { DRAG_CONFIG } from '../utils/drag.constants';
-import { ListItemDepth } from '../utils/ListItemDepth';
+import { getBlockNestingDepth, getListItemDepth } from '../utils/depthUtils';
 
 export interface DropTarget {
   block: Block;
@@ -34,12 +33,10 @@ export class DropTargetDetector {
   private ui: UIAdapter;
   private blockManager: BlockManagerAdapter;
   private sourceBlocks: Block[] = [];
-  private listItemDepth: ListItemDepth;
 
   constructor(ui: UIAdapter, blockManager: BlockManagerAdapter) {
     this.ui = ui;
     this.blockManager = blockManager;
-    this.listItemDepth = new ListItemDepth(blockManager as BlockManager);
   }
 
   /**
@@ -712,14 +709,16 @@ export class DropTargetDetector {
   }
 
   /**
-   * Calculates the target depth for list item nesting.
-   * When a sourceBlock is provided and is a list item, the depth is calculated
-   * to match what ListDepthValidator.getTargetDepthForMove will produce post-drop,
-   * ensuring the visual indicator accurately predicts the final depth.
+   * Calculates the nesting depth a dragged block will land at, for any block
+   * type. List items carry their depth via `data-list-depth`; every other block
+   * carries a flat `indent` via `data-blok-indent`. Both are read uniformly via
+   * {@link getBlockNestingDepth}, so a header/paragraph/image/etc. nests inside a
+   * list exactly like a list item would. The result drives BOTH the drop
+   * indicator and the depth applied on drop, so the preview always matches.
    *
    * @param targetBlock - Block being dropped onto
    * @param targetEdge - Edge of target ('top' or 'bottom')
-   * @param sourceBlock - Optional block being dragged (for accurate list item depth prediction)
+   * @param sourceBlock - Optional block being dragged (for accurate depth prediction)
    * @returns The target depth (0 for root level, 1+ for nested)
    */
   calculateTargetDepth(targetBlock: Block, targetEdge: 'top' | 'bottom', sourceBlock?: Block): number {
@@ -738,36 +737,40 @@ export class DropTargetDetector {
       return 0;
     }
 
-    const previousDepth = this.listItemDepth.getDepth(previousBlock);
-    const previousIsListItem = previousDepth !== null;
+    // Choose the neighbour depth reader to MATCH what actually applies the depth
+    // post-drop, so the indicator never lies:
+    //   - a dragged list item gets its depth from the list tool's moved() hook,
+    //     which considers ONLY list-item neighbours (data-list-depth) — so read
+    //     neighbours list-only too.
+    //   - any other dragged block gets a flat `indent` applied by the drop, which
+    //     nests relative to ANY nesting context (list item OR indented block) —
+    //     so read neighbours generically.
+    const sourceIsList = sourceBlock !== undefined && getListItemDepth(sourceBlock) !== null;
+    const depthOf = (block: Block): number | null =>
+      sourceIsList ? getListItemDepth(block) : getBlockNestingDepth(block);
+
+    const previousDepth = depthOf(previousBlock);
+    // "Nesting context" = a block a following block may nest one level under:
+    // any list item, or any already-indented block. Plain root blocks are not.
+    const previousIsNestingContext = previousDepth !== null;
     const prevDepthValue = previousDepth ?? 0;
 
     // Get the block that will be immediately after the drop position
     const nextBlock = this.blockManager.getBlockByIndex(dropIndex);
-    const nextDepth = nextBlock ? this.listItemDepth.getDepth(nextBlock) : null;
-    const nextIsListItem = nextDepth !== null;
+    const nextDepth = nextBlock ? depthOf(nextBlock) : null;
+    const nextIsNestingContext = nextDepth !== null;
     const nextDepthValue = nextDepth ?? 0;
 
-    // When dragging a list item, predict the exact depth ListDepthValidator will
-    // compute post-drop — so the visual indicator matches the actual result.
-    const sourceDepth = sourceBlock ? this.listItemDepth.getDepth(sourceBlock) : null;
-
-    if (sourceDepth !== null) {
-      return this.predictListItemDepth(
-        sourceDepth, prevDepthValue, previousIsListItem, nextDepthValue, nextIsListItem
-      );
-    }
-
-    // The dragged block is not a list item (header, paragraph, image, quote, …).
-    // List depth is the only nesting that a drop applies — it lives in the list
-    // tool's moved() hook and reads data-list-depth, which non-list blocks never
-    // carry. So handleDropImpl always lands these blocks at root level. Returning
-    // a neighbour-derived depth here made the drop indicator promise a nested
-    // slot the block could never reach, so it visibly snapped back to the first
-    // level on release (the reported nested-list drop bug). Predict 0 so the
-    // indicator matches the real drop position for every non-list block type.
+    // Predict the exact post-drop depth for ANY dragged block. The source's
+    // current depth is its list depth (list items) or its flat indent (others),
+    // defaulting to 0 for an un-nested block. Mirrors ListDepthValidator so the
+    // indicator matches what the drop will actually apply.
     if (sourceBlock) {
-      return 0;
+      const sourceDepth = depthOf(sourceBlock) ?? 0;
+
+      return this.predictListItemDepth(
+        sourceDepth, prevDepthValue, previousIsNestingContext, nextDepthValue, nextIsNestingContext
+      );
     }
 
     // No source block (defensive — production always supplies the dragged block).

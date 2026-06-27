@@ -33,6 +33,15 @@ const getBlockDepth = (block: { data: unknown } | undefined): number | undefined
 };
 
 /**
+ * Helper function to read the core flat list-nesting `indent` from saved output.
+ * @param block - Output block data
+ * @returns The indent level, or undefined when the block is at root.
+ */
+const getBlockIndent = (block: { indent?: number } | undefined): number | undefined => {
+  return block?.indent;
+};
+
+/**
  * Helper function to get bounding box and throw if it doesn't exist.
  * @param locator Locator for the element.
  * @returns Bounding box of the element.
@@ -1582,14 +1591,12 @@ test.describe('drag and drop', () => {
       await expect(droppedMarker).toHaveText('b.');
     });
 
-    test('drop indicator stays full-width root for a non-list block dropped after a nested list item', async ({ page }) => {
-      // Regression for the reported nested-list drop bug: dragging a non-list
-      // block (here a header) to a position right after a nested list item drew
-      // the drop indicator tucked under the nested item's indented text — so it
-      // PROMISED a nested drop. But a header has no list-depth mechanism and
-      // always lands at root, so on release it snapped back to the first level.
-      // The indicator must read as a full-width root line for any non-list source
-      // (no indent lead-in, side-left offset 0) so it matches the real outcome.
+    test('at a nested/root boundary slot a non-list block lands at root, indicator full-width', async ({ page }) => {
+      // Boundary semantics: dropped between a depth-1 item and a depth-0 item, a
+      // non-list block matches list-item behaviour and lands at ROOT (depth 0) —
+      // the next shallower item pulls it back. The indicator must reflect that:
+      // full-width root line (no indent lead-in, side-left 0), and the block
+      // saves with no indent. (Nesting in clearly-nested slots is covered below.)
       const blocks: OutputData['blocks'] = [
         { id: 'h1', type: 'header', data: { text: 'Section', level: 2 } },
         { id: 'l1', type: 'list', data: { text: 'First step', style: 'ordered' } },
@@ -1664,6 +1671,103 @@ test.describe('drag and drop', () => {
       expect(getBlockText(savedData?.blocks[1])).toBe('Second step');
       expect(getBlockText(savedData?.blocks[2])).toBe('Section');
       expect(getBlockText(savedData?.blocks[3])).toBe('Third step');
+      // Root level → no indent persisted on the header.
+      expect(getBlockIndent(savedData?.blocks[2])).toBeUndefined();
+    });
+
+    /**
+     * Drops a non-list block into a clearly-nested slot (top edge of the nested
+     * item, i.e. between the depth-0 head and the depth-1 item) and asserts it
+     * nests to depth 1: indented holder, data-blok-indent, and a persisted
+     * `indent` in saved output. Runs for every block type × list style so ANY
+     * block nests inside ANY list.
+     */
+    const nestsIntoList = (
+      label: string,
+      sourceType: string,
+      sourceData: Record<string, unknown>,
+      sourceText: string,
+      listStyle: 'ordered' | 'unordered' | 'checklist'
+    ): void => {
+      test(`nests a ${label} into a ${listStyle} list at the nested level`, async ({ page }) => {
+        const blocks: OutputData['blocks'] = [
+          { id: 'l1', type: 'list', data: { text: 'Head', style: listStyle } },
+          { id: 'l2', type: 'list', data: { text: 'Nested', style: listStyle, depth: 1 } },
+          { id: 's1', type: sourceType, data: sourceData },
+        ];
+
+        await createBlok(page, { data: { blocks } });
+
+        const sourceBlock = page.getByTestId('block-wrapper').filter({ hasText: sourceText });
+
+        await sourceBlock.hover();
+
+        const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+        await expect(settingsButton).toBeVisible();
+
+        // Drop on the TOP half of the nested item → slot between Head (depth 0)
+        // and Nested (depth 1) → matches the deeper next item → depth 1.
+        const nestedItem = page.getByTestId('block-wrapper').filter({ hasText: 'Nested' });
+
+        await performDragDrop(page, settingsButton, nestedItem, 'top');
+
+        const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+        // Slot order: the source lands between the two list items at index 1,
+        // flanked by the list head and the nested item. (List-item text is not
+        // asserted here — some styles, e.g. checklist, store it differently.)
+        expect(savedData?.blocks).toHaveLength(3);
+        expect(savedData?.blocks[0].type).toBe('list');
+        expect(savedData?.blocks[1].type).toBe(sourceType);
+        expect(getBlockText(savedData?.blocks[1])).toBe(sourceText);
+        expect(savedData?.blocks[2].type).toBe('list');
+        // The dropped block nested to depth 1 and persists its indent.
+        expect(getBlockIndent(savedData?.blocks[1])).toBe(1);
+
+        // The holder is visually indented (margin + data attribute).
+        const droppedHolder = page.getByTestId('block-wrapper').filter({ hasText: sourceText });
+
+        await expect(droppedHolder).toHaveAttribute('data-blok-indent', '1');
+      });
+    };
+
+    nestsIntoList('header', 'header', { text: 'Movable header', level: 2 }, 'Movable header', 'unordered');
+    nestsIntoList('paragraph', 'paragraph', { text: 'Movable paragraph' }, 'Movable paragraph', 'ordered');
+    nestsIntoList('quote', 'quote', { text: 'Movable quote', caption: '' }, 'Movable quote', 'checklist');
+
+    test('a nested block persists its indent across a save/reload round-trip', async ({ page }) => {
+      const blocks: OutputData['blocks'] = [
+        { id: 'l1', type: 'list', data: { text: 'Head', style: 'unordered' } },
+        { id: 'l2', type: 'list', data: { text: 'Nested', style: 'unordered', depth: 1 } },
+        { id: 's1', type: 'header', data: { text: 'Reloadable', level: 2 } },
+      ];
+
+      await createBlok(page, { data: { blocks } });
+
+      const sourceBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Reloadable' });
+
+      await sourceBlock.hover();
+      await expect(page.locator(SETTINGS_BUTTON_SELECTOR)).toBeVisible();
+
+      const nestedItem = page.getByTestId('block-wrapper').filter({ hasText: 'Nested' });
+
+      await performDragDrop(page, page.locator(SETTINGS_BUTTON_SELECTOR), nestedItem, 'top');
+
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+      expect(getBlockIndent(savedData?.blocks?.find(b => getBlockText(b) === 'Reloadable'))).toBe(1);
+
+      // Re-create the editor from the saved output and confirm the indent survives.
+      await createBlok(page, { data: savedData });
+
+      const reloadedHolder = page.getByTestId('block-wrapper').filter({ hasText: 'Reloadable' });
+
+      await expect(reloadedHolder).toHaveAttribute('data-blok-indent', '1');
+
+      const reSaved = await page.evaluate(() => window.blokInstance?.save());
+
+      expect(getBlockIndent(reSaved?.blocks?.find(b => getBlockText(b) === 'Reloadable'))).toBe(1);
     });
   });
 

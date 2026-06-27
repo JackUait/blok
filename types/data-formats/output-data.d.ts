@@ -46,6 +46,13 @@ export interface OutputBlockData<Type extends string = string, Data extends obje
   content?: BlockId[];
 
   /**
+   * Flat list-nesting indentation level (0 = root). Lets any block be nested
+   * inside a list, mirroring the list tool's own depth. Independent of `parent`
+   * — list nesting is a flat indent, not a containment tree. Omit when 0.
+   */
+  indent?: number;
+
+  /**
    * Timestamp (milliseconds since epoch) of the last edit to this block.
    * Automatically tracked by the editor when content changes.
    * Omit for legacy data or blocks that haven't been edited.

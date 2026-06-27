@@ -411,19 +411,15 @@ export class DragController extends Module {
     dropTarget.block.holder.setAttribute('data-drop-indicator', dropTarget.edge);
     dropTarget.block.holder.style.setProperty('--drop-indicator-depth', String(dropTarget.depth));
 
-    // Only a dragged list item can nest into a list. When the source is any
-    // other block (header, paragraph, image, …) it always lands at root level,
-    // so the indicator must read as a full-width root line — NOT get tucked under
-    // the target list item's indented text. Without this, dropping a header onto
-    // the bottom edge of a nested list item drew the line at the nested marker
-    // position, promising a nested drop the block could never reach.
-    const sourceIsListItem = getListItemDepth(sourceBlock) !== null;
-
     // Confine the indicator to the visible content box. The holder spans the
     // full editor width (gutters included), so without these offsets the
     // top/bottom reorder line stretches across the whole screen and the side
     // bars land out in the margins. Applies to every edge.
-    this.applyContentIndicatorOffsets(dropTarget.block, dropTarget.edge, dropTarget.depth, sourceIsListItem);
+    //
+    // The indicator is tucked to the predicted nesting depth for ANY dragged
+    // block — a header/paragraph/etc. nests into a list just like a list item,
+    // so the preview must show the same indented slot the block will land at.
+    this.applyContentIndicatorOffsets(dropTarget.block, dropTarget.edge, dropTarget.depth);
 
     // For a column side-drop, stretch the vertical indicator bar to the full
     // height of the column row, not just the single target block.
@@ -450,8 +446,7 @@ export class DragController extends Module {
   private applyContentIndicatorOffsets(
     block: Block,
     edge: 'top' | 'bottom' | 'left' | 'right',
-    depth: number,
-    sourceIsListItem: boolean
+    depth: number
   ): void {
     const content = block.holder.querySelector('[data-blok-element-content]');
 
@@ -468,13 +463,10 @@ export class DragController extends Module {
     // For a list item reorder (top/bottom line), tuck the indicator under the
     // text: start it where the text begins (past the bullet/number marker) and
     // cut it where the text ends, rather than running across the full content
-    // width. Side drops (columns) keep the content-box offsets above.
-    //
-    // Only do this when the dragged block is itself a list item. A non-list
-    // source lands at root level, so it must keep the full-width content-box
-    // offsets above instead of being tucked under the (possibly nested) target
-    // item — otherwise the indicator previews a nested slot the block can't reach.
-    if ((edge === 'top' || edge === 'bottom') && sourceIsListItem) {
+    // width. Side drops (columns) keep the content-box offsets above. Applies to
+    // any dragged block — a non-list block nests into a list too, so its preview
+    // must sit at the same indented slot it will land at.
+    if (edge === 'top' || edge === 'bottom') {
       this.applyListItemTextOffsets(block, holderRect, depth);
     }
   }
@@ -509,24 +501,33 @@ export class DragController extends Module {
 
     const containerRect = container.getBoundingClientRect();
 
-    // When the item will nest deeper than its current depth, shift the line
-    // right by the extra indentation so it previews the post-drop position.
+    // Shift the line to the PREDICTED depth relative to the target item's own
+    // depth. The shift is signed: a deeper predicted depth pushes the line right
+    // (nest), a shallower one (e.g. a block landing at root next to a nested
+    // item) pulls it back toward the editor edge — without this, the indicator
+    // would tuck under the nested item yet the block would land at root, the
+    // exact indicator-vs-drop mismatch this whole path exists to prevent.
     const targetDepth = getListItemDepth(block) ?? 0;
-    const depthShift = Math.max(0, predictedDepth - targetDepth) * INDENT_PER_LEVEL;
+    const depthShift = (predictedDepth - targetDepth) * INDENT_PER_LEVEL;
 
     const textRight = this.measureTextRight(container) ?? containerRect.right;
-    const left = startRect.left - holderRect.left + depthShift;
+    const left = Math.max(0, startRect.left - holderRect.left + depthShift);
     const right = Math.max(0, holderRect.right - textRight);
 
     block.holder.style.setProperty('--drop-indicator-side-left', `${left}px`);
     block.holder.style.setProperty('--drop-indicator-side-right', `${right}px`);
     block.holder.style.setProperty('--drop-indicator-depth', '0');
 
-    // Enable the grayish lead-in segment that runs from the editor's left edge
-    // (the holder's own left, which sits flush with the editor) up to where the
-    // blue line starts, so the indented list line reads as part of a full-width
-    // rule. Pure CSS draws it from this attribute and the side-left offset.
-    block.holder.setAttribute('data-drop-indicator-lead', '');
+    // Enable the grayish lead-in segment (editor edge → blue line start) only
+    // when the line is actually offset from the editor edge (left > 0). A list
+    // reorder always tucks under the marker (left = the bullet/number gap), so it
+    // keeps the lead even at depth 0; a block landing flush at root (left = 0) is
+    // full-width and gets no lead — leaving it on would falsely preview a nest.
+    if (left > 0) {
+      block.holder.setAttribute('data-drop-indicator-lead', '');
+    } else {
+      block.holder.removeAttribute('data-drop-indicator-lead');
+    }
   }
 
   /**
@@ -857,6 +858,15 @@ export class DragController extends Module {
       preMoveParentIds.set(block.id, block.parentId);
     }
 
+    // Predict the flat list-nesting depth for the drop slot BEFORE the move (it
+    // reads the target's current neighbours). This is the SAME value the drop
+    // indicator showed, so the block lands exactly where the preview promised.
+    // Applied below to non-list blocks; list items derive their own depth via
+    // the list tool's moved() hook.
+    const dropDepth = this.targetDetector
+      ? this.targetDetector.calculateTargetDepth(targetBlock, edge, sourceBlock)
+      : 0;
+
     const result = this.operations.moveBlocks(sourceBlocks, targetBlock, edge);
 
     // Layer 13: stale-drop abort guard.
@@ -909,6 +919,16 @@ export class DragController extends Module {
       }
       this.Blok.BlockManager.setBlockParent(movedBlock, newParentId);
       reparentedBlocks.push(movedBlock);
+    }
+
+    // Apply the flat list-nesting indent so ANY block nests inside a list.
+    // List items derive their depth from their own moved() hook, so skip them.
+    // Blocks dropped at root carry `dropDepth`; blocks dropped INTO a container
+    // (toggle/column) reset to 0 — the container provides the indentation.
+    for (const movedBlock of reparentedBlocks) {
+      if (movedBlock.name !== 'list') {
+        this.Blok.BlockManager.setBlockIndent(movedBlock, newParentId === null ? dropDepth : 0);
+      }
     }
 
     // Notify affected parent blocks so toggle tools update their visual state

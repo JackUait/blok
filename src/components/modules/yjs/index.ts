@@ -224,6 +224,16 @@ export class YjsManager extends Module {
   }
 
   /**
+   * Update a block's flat list-nesting indent level.
+   * @param id - Block id
+   * @param indent - New indentation level (0 = root)
+   * @returns true if the stored value changed
+   */
+  public updateBlockIndent(id: string, indent: number): boolean {
+    return this.documentStore.updateBlockIndent(id, indent);
+  }
+
+  /**
    * Get block Y.Map by id.
    * @param id - Block id
    * @returns Y.Map or undefined if not found

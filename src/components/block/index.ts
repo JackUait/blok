@@ -79,6 +79,12 @@ interface BlockConstructorOptions {
   contentIds?: string[];
 
   /**
+   * Flat nesting/indentation level (0 = root) so any block can be nested inside
+   * a list. Independent of parentId.
+   */
+  indent?: number;
+
+  /**
    * When true, bind internal mutation watchers immediately instead of deferring via requestIdleCallback.
    * Use for user-created blocks where mutations need to be tracked right away.
    * Note: This controls Block-internal events (MutationObserver, input focus).
@@ -143,6 +149,15 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * Empty array if block has no children.
    */
   public contentIds: string[];
+
+  /**
+   * Flat nesting/indentation level (0 = root). Tool-agnostic, mirroring the
+   * list tool's `data.depth` but available to EVERY block so any block can be
+   * nested inside a list. Rendered as a left margin by BlockHierarchy and
+   * persisted as the core `indent` field. Independent of `parentId` — list
+   * nesting is flat, not a containment tree.
+   */
+  public indent: number;
 
   /** Timestamp of the last edit (ms since epoch). Updated by BlockManager on mutation. */
   public lastEditedAt: number | undefined;
@@ -273,6 +288,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
     tunesData,
     parentId,
     contentIds,
+    indent,
     bindMutationWatchersImmediately = false,
     lastEditedAt,
     lastEditedBy,
@@ -287,6 +303,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
     this.id = validatedId;
     this.parentId = parentId ?? null;
     this.contentIds = contentIds ?? [];
+    this.indent = indent ?? 0;
     this.lastEditedAt = lastEditedAt ?? Date.now();
     this.lastEditedBy = lastEditedBy ?? null;
     this.settings = tool.settings;

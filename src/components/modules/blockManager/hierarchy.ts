@@ -11,6 +11,15 @@ import { moveElementAfter, moveElementBefore, moveElementToEnd } from '../../uti
 import type { BlockRepository } from './repository';
 
 /**
+ * Pixels of left margin per flat indentation level for a non-list block nested
+ * inside a list. Matches the list tool's unordered/checklist INDENT_PER_LEVEL
+ * (27px) so an indented paragraph/header/etc. lines up with the list content it
+ * sits among. (Kept as a local constant so the core hierarchy module does not
+ * import from a tool.)
+ */
+const INDENT_PER_LEVEL = 27;
+
+/**
  * BlockHierarchy manages hierarchical relationships between blocks
  */
 export class BlockHierarchy {
@@ -427,18 +436,28 @@ export class BlockHierarchy {
   public updateBlockIndentation(block: Block): void {
     const { holder } = block;
 
+    // Flat list-nesting indentation. Independent of the parentId chain — any
+    // block can carry an explicit `indent` so it nests inside a list. The
+    // `data-blok-indent` attribute is the read source for the drag depth utils.
+    const indent = block.indent ?? 0;
+    const indentPx = indent * INDENT_PER_LEVEL;
+
+    holder.setAttribute(DATA_ATTR.indent, String(indent));
+
     // Blocks inside table cells should not receive visual indentation.
     // The parent-child relationship is semantic (data tracking), not visual.
     if (holder.closest('[data-blok-table-cell-blocks]')) {
-      holder.style.marginLeft = '';
+      holder.style.marginLeft = indentPx > 0 ? `${indentPx}px` : '';
       holder.setAttribute('data-blok-depth', '0');
 
       return;
     }
 
-    // Blocks inside toggle child containers should not receive margin-left indentation.
+    // Blocks inside toggle child containers should not receive parentId-depth
+    // margin (the container indents them) — but an explicit list-nesting indent
+    // still applies, so a paragraph nested in a list inside a toggle lines up.
     if (holder.closest('[data-blok-toggle-children]')) {
-      holder.style.marginLeft = '';
+      holder.style.marginLeft = indentPx > 0 ? `${indentPx}px` : '';
       holder.setAttribute('data-blok-depth', String(this.getBlockDepth(block)));
 
       return;
@@ -447,7 +466,8 @@ export class BlockHierarchy {
     // Columns are a flex layout: the column_list block, its column children, and
     // every block inside a column are positioned by flex, not block-tree depth.
     // Depth-based margin would push the column holders off their even split and
-    // indent the column content. Keep them flush.
+    // indent the column content. Keep them flush — but still honour an explicit
+    // list-nesting indent so a block nested in a list inside a column lines up.
     //
     // The DOM check (`closest`) misses blocks indented BEFORE their holder is
     // mounted into the columns container — e.g. a toolbox-seeded paragraph,
@@ -459,16 +479,43 @@ export class BlockHierarchy {
       holder.closest('[data-blok-columns]') ||
       this.hasColumnAncestor(block)
     ) {
-      holder.style.marginLeft = '';
+      holder.style.marginLeft = indentPx > 0 ? `${indentPx}px` : '';
       holder.setAttribute('data-blok-depth', '0');
 
       return;
     }
 
     const depth = this.getBlockDepth(block);
-    const indentationPx = depth * 24; // 24px per level
+    const indentationPx = depth * 24 + indentPx; // 24px per parentId level + list-nesting indent
 
     holder.style.marginLeft = indentationPx > 0 ? `${indentationPx}px` : '';
     holder.setAttribute('data-blok-depth', depth.toString());
+  }
+
+  /**
+   * Sets the flat list-nesting indentation level of a block (in-memory + DOM
+   * margin) and returns whether the level actually changed. Tool-agnostic: lets
+   * any block nest inside a list. The caller (BlockManager) owns syncing the new
+   * value to Yjs so the write can join an in-flight drag move group.
+   * @param block - the block to indent
+   * @param indent - the new indentation level (clamped to >= 0)
+   * @returns true if the level changed
+   */
+  public setBlockIndent(block: Block, indent: number): boolean {
+    if (this.repository.getBlockIndex(block) === -1) {
+      return false;
+    }
+
+    const next = Math.max(0, Math.trunc(indent));
+
+    if (block.indent === next) {
+      return false;
+    }
+
+    // eslint-disable-next-line no-param-reassign
+    block.indent = next;
+    this.updateBlockIndentation(block);
+
+    return true;
   }
 }

@@ -158,6 +158,7 @@ const createDragManager = (
     move: vi.fn(),
     insert: vi.fn(),
     setBlockParent: vi.fn(),
+    setBlockIndent: vi.fn(),
   };
 
   const blockSelection = {
@@ -495,19 +496,19 @@ describe("DragManager - Component Integration", () => {
       document.dispatchEvent(createMouseEvent("mouseup"));
     });
 
-    it("keeps a full-width root indicator (no tuck) when a non-list block is dropped onto a list item", () => {
-      // Regression: dragging a non-list block (the default plain source) onto a
-      // list item used to tuck the indicator under the item's indented text,
-      // promising a nested drop the block can never reach — it always lands at
-      // root. The indicator must stay full-width: no lead-in, side-left 0.
+    it("tucks the indicator (nested preview) when a non-list block is dropped after a deeper list item", () => {
+      // Any block nests inside a list now. Dropping a non-list block after a
+      // depth-1 list item (no following list item) predicts depth 1, so the
+      // indicator tucks under the item's text (lead-in present) to preview the
+      // nested slot the block will actually land at.
       const { dragManager, blocks, wrapper } = createDragManager();
 
       document.body.appendChild(wrapper);
       blocks.forEach((block) => wrapper.appendChild(block.holder));
 
-      // Source (blocks[0]) is left as a plain paragraph — no data-list-depth.
+      // Source (blocks[0]) is a plain paragraph — it will nest, not stay at root.
       const listTarget = blocks[3];
-      listTarget.holder.setAttribute("data-list-depth", "0");
+      listTarget.holder.setAttribute("data-list-depth", "1");
       const listContent = listTarget.holder.querySelector(
         "[data-blok-element-content]",
       ) as HTMLElement;
@@ -539,11 +540,8 @@ describe("DragManager - Component Integration", () => {
       );
 
       expect(listTarget.holder).toHaveAttribute("data-drop-indicator");
-      // Full-width root line: no indented lead-in, side-left at the content edge.
-      expect(listTarget.holder).not.toHaveAttribute("data-drop-indicator-lead");
-      expect(
-        listTarget.holder.style.getPropertyValue("--drop-indicator-side-left"),
-      ).toBe("0px");
+      // Nested preview: the indented lead-in segment is enabled (tucked under text).
+      expect(listTarget.holder).toHaveAttribute("data-drop-indicator-lead");
 
       document.dispatchEvent(createMouseEvent("mouseup"));
     });
@@ -1278,6 +1276,7 @@ describe("DragManager - Component Integration", () => {
         }),
         insert: vi.fn(),
         setBlockParent: vi.fn(),
+        setBlockIndent: vi.fn(),
       } as unknown as BlokModules["BlockManager"];
     };
 
@@ -1988,6 +1987,7 @@ describe("DragManager - Component Integration", () => {
           return newBlock;
         }),
         setBlockParent: vi.fn(),
+        setBlockIndent: vi.fn(),
       } as unknown as BlokModules["BlockManager"];
     };
 
@@ -2283,6 +2283,7 @@ describe("DragManager - Component Integration", () => {
         setBlockParent: vi.fn(() => {
           callLog.push("setBlockParent");
         }),
+        setBlockIndent: vi.fn(),
       } as unknown as BlokModules["BlockManager"];
 
       let insideTransactMoves = false;
@@ -2359,6 +2360,7 @@ describe("DragManager - Component Integration", () => {
         }),
         insert: vi.fn(),
         setBlockParent: vi.fn(),
+        setBlockIndent: vi.fn(),
       } as unknown as BlokModules["BlockManager"];
 
       const yjsManagerMock = {
@@ -2474,6 +2476,7 @@ describe("DragManager - Component Integration", () => {
         setBlockParent: vi.fn(() => {
           callLog.push("setBlockParent");
         }),
+        setBlockIndent: vi.fn(),
         transactForTool: vi.fn(),
       } as unknown as BlokModules["BlockManager"] & {
         transactForTool: Mock;
@@ -2682,6 +2685,7 @@ describe("DragManager - Component Integration", () => {
       const apiBlocks = {
         insert,
         setBlockParent: vi.fn(),
+        setBlockIndent: vi.fn(),
         getById: vi.fn((id: string) => {
           const b = allBlocks.find((blk) => blk.id === id);
 
@@ -2704,6 +2708,7 @@ describe("DragManager - Component Integration", () => {
         move: vi.fn(),
         insert: vi.fn(),
         setBlockParent: vi.fn(),
+        setBlockIndent: vi.fn(),
       };
 
       const { dragManager } = createDragManager({

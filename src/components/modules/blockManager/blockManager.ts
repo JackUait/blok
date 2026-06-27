@@ -477,6 +477,7 @@ export class BlockManager extends Module {
     tunes?: { [name: string]: BlockTuneData };
     parentId?: string;
     contentIds?: string[];
+    indent?: number;
     bindEventsImmediately?: boolean;
     lastEditedAt?: number;
     lastEditedBy?: string | null;
@@ -545,6 +546,7 @@ export class BlockManager extends Module {
         ...(Object.keys(tunes).length > 0 && { tunes }),
         ...(block.parentId !== null && { parent: block.parentId }),
         ...(block.contentIds.length > 0 && { content: block.contentIds }),
+        ...(block.indent > 0 && { indent: block.indent }),
       };
     });
 
@@ -560,9 +562,10 @@ export class BlockManager extends Module {
       this.blocksStore.insertMany(blocks, index);
     }, { extendThroughRAF: true });
 
-    // Apply indentation for blocks with parentId (hierarchical structure)
+    // Apply indentation for blocks with parentId (hierarchical structure) or an
+    // explicit flat list-nesting indent (any block nested inside a list).
     blocks.forEach(block => {
-      if (block.parentId !== null) {
+      if (block.parentId !== null || block.indent > 0) {
         this.updateBlockIndentation(block);
       }
     });
@@ -972,6 +975,48 @@ export class BlockManager extends Module {
 
       this.syncParentContentIdsToYjs(block.id, oldParentId, newParentId);
     });
+  }
+
+  /**
+   * Sets a block's flat list-nesting indentation level so any block can nest
+   * inside a list. Updates the in-memory model + DOM margin (via BlockHierarchy)
+   * and mirrors the value to Yjs for collaboration. The primary persistence path
+   * is `save()`, which reads `block.indent` directly — Yjs only matters for
+   * collab and Yjs-based undo.
+   *
+   * During a drag the DragController opens a move group; the indent write then
+   * routes through `transactWithoutCapture` so it does not split the single-undo
+   * move into a separate Y.UndoManager entry. Outside a move group (e.g. Tab) it
+   * is a normal captured transaction.
+   * @param block - the block to indent
+   * @param indent - the new indentation level (0 = root)
+   */
+  public setBlockIndent(block: Block, indent: number): void {
+    const changed = this.hierarchy.setBlockIndent(block, indent);
+
+    if (!changed || this.yjsSync.isSyncingFromYjs) {
+      return;
+    }
+
+    const yblock = this.Blok.YjsManager.getBlockById(block.id);
+
+    if (yblock === undefined) {
+      return;
+    }
+
+    if (this.Blok.YjsManager.isInMoveGroup) {
+      this.Blok.YjsManager.transactWithoutCapture(() => {
+        if (block.indent > 0) {
+          yblock.set('indent', block.indent);
+        } else {
+          yblock.delete('indent');
+        }
+      });
+
+      return;
+    }
+
+    this.Blok.YjsManager.updateBlockIndent(block.id, block.indent);
   }
 
   /**

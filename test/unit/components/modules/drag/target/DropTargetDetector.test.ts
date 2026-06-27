@@ -670,12 +670,11 @@ describe('DropTargetDetector', () => {
         expect(depth).toBe(1);
       });
 
-      it('should predict depth 0 for a non-list source dropped after a nested list item', () => {
-        // Regression: a non-list block (header/paragraph/image/…) has no
-        // list-depth mechanism, so handleDropImpl always lands it at root level.
-        // The indicator MUST predict depth 0 — previously it returned the
-        // neighbour's depth (2), so the indicator promised a nested slot the
-        // block could never reach and it snapped back to the first level on drop.
+      it('nests a non-list source under a deeper previous list item (appends to the sub-list)', () => {
+        // A header/paragraph/etc. nests into a list just like a list item. Dropped
+        // after a depth-2 list item with no following list item, it appends to the
+        // sub-list at depth 2 — and the drop applies that same indent, so the
+        // indicator no longer lies.
         const previousBlock = createMockListBlock('prev', 2);
         const targetBlock = createMockBlock('target');
         const sourceBlock = createMockBlock('source', 'header'); // non-list
@@ -689,18 +688,20 @@ describe('DropTargetDetector', () => {
 
         const depth = detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock);
 
-        expect(depth).toBe(0);
+        expect(depth).toBe(2);
       });
 
-      it('should predict depth 0 for a non-list source dropped between a nested item and a root item', () => {
-        // Mirrors the reported video: a header dropped between a depth-1 nested
-        // ordered item and a depth-0 ordered item. The indicator showed the
-        // nested level but the header landed at root — they must agree at 0.
-        const previousBlock = createMockListBlock('prev', 1);
-        const nextBlock = createMockListBlock('next', 0);
+      it('nests a non-list source to match a deeper next list item', () => {
+        // Dropped between a depth-0 item and a depth-1 item, a non-list block
+        // matches the next (deeper) item and nests at depth 1 — mirroring exactly
+        // what a list item would do, so any block nests inside the list.
+        const previousBlock = createMockListBlock('prev', 0);
+        const nextBlock = createMockListBlock('next', 1);
         const targetBlock = createMockBlock('target');
         const sourceBlock = createMockBlock('source', 'header'); // non-list
 
+        // target at index 1, bottom edge → dropIndex 2: prev = index 1 (depth 0),
+        // next = index 2 (depth 1).
         mockBlockManager.getBlockIndex = vi.fn(() => 1);
         mockBlockManager.getBlockByIndex = vi.fn((index) => {
           if (index === 1) return previousBlock;
@@ -711,7 +712,27 @@ describe('DropTargetDetector', () => {
 
         const depth = detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock);
 
-        expect(depth).toBe(0);
+        expect(depth).toBe(1);
+      });
+
+      it('nests a non-list source one level under an already-indented non-list block', () => {
+        // Generic nesting context: a paragraph indented to level 1 (via data-blok-indent,
+        // not a list) is a valid parent, so a block dropped after it can nest to level 2.
+        const previousBlock = createMockBlock('prev', 'paragraph');
+        previousBlock.holder.setAttribute('data-blok-indent', '1');
+        const targetBlock = createMockBlock('target');
+        const sourceBlock = createMockBlock('source', 'header'); // non-list, indent 0
+
+        mockBlockManager.getBlockIndex = vi.fn(() => 1);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => {
+          if (index === 1) return previousBlock;
+
+          return undefined;
+        });
+
+        const depth = detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock);
+
+        expect(depth).toBe(1);
       });
     });
   });

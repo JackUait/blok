@@ -94,6 +94,26 @@ describe('List Tool - rAF timing fixes', () => {
     expect(scheduleUpdateAllSpy).toHaveBeenCalledTimes(1);
   });
 
+  it('calls markerManager.scheduleUpdateAll() on moved() so the source list renumbers after an item leaves it', () => {
+    const options = createListOptions({ text: 'item', style: 'ordered' });
+    const list = new List(options);
+    list.render();
+
+    const scheduleUpdateAllSpy = vi.fn();
+    const markerManager = (list as unknown as { markerManager: { scheduleUpdateAll: () => void } | null }).markerManager;
+
+    if (markerManager) {
+      markerManager.scheduleUpdateAll = scheduleUpdateAllSpy;
+    }
+
+    // Dragging the middle item of a list into another list leaves the source
+    // group short an item — every ordered group must be renumbered, not just
+    // the destination siblings around the moved block.
+    list.moved({ fromIndex: 1, toIndex: 5, isGroupMove: false });
+
+    expect(scheduleUpdateAllSpy).toHaveBeenCalledTimes(1);
+  });
+
   it('calls markerManager.scheduleUpdateAll() when setStyle changes to a different style and rerenders the element', () => {
     const options = createListOptions({ text: 'item', style: 'ordered' });
     const list = new List(options);

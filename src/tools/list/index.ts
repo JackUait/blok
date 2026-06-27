@@ -210,6 +210,11 @@ export class ListItem implements BlockTool {
   public moved(event: MoveEvent): void {
     this.validateAndAdjustDepthAfterMove(event.toIndex, event.isGroupMove);
     this.updateMarkersAfterPositionChange();
+    // updateMarkersAfterPositionChange only renumbers the destination group
+    // around this block. Dragging an item out of another list (e.g. the 2nd of
+    // three) leaves that source group short an item with no moved() hook of its
+    // own, so renumber every ordered group — same as removed() does.
+    this.markerManager?.scheduleUpdateAll();
   }
 
   private updateMarkersAfterPositionChange(): void {

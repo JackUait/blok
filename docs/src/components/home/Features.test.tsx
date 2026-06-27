@@ -57,12 +57,15 @@ describe('Features', () => {
   });
 
   // The Clean JSON preview is reused at two very different widths: the wide grid
-  // tile and the narrow drawer hero. Its font must scale to the CONTAINER, not the
-  // viewport, or the long JSON lines clip on the right in the drawer. Lock
-  // container-query sizing (cqi units) so it can't regress to a fixed px size.
-  it('sizes the Clean JSON preview with container units, not a fixed px size', () => {
+  // tile and the narrow drawer hero. Long lines must soft-wrap (editor-style) at a
+  // readable size rather than clip or shrink to fit. Lock the wrapping code cells
+  // so it can't regress to a single non-wrapping <pre>.
+  it('lets the Clean JSON preview wrap long lines instead of clipping', () => {
     const { container } = renderFeatures();
-    expect(container.querySelector('[class*="cqi"]')).not.toBeNull();
+    const codeCells = container.querySelectorAll('code[class*="whitespace-pre-wrap"]');
+    expect(codeCells.length).toBeGreaterThan(0);
+    // one code cell per logical JSON line (9), so wrapping keeps the gutter aligned
+    expect(codeCells.length).toBe(9);
   });
 
   // The "68 languages" tile rolls a greeting through every supported locale. Each

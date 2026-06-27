@@ -145,8 +145,30 @@ const useLatestBlokVersion = (): string => {
 // the card turns to reveal the very document that JSON renders as inside the
 // editor — "Hello, Blok" over Blok's mark, with a live caret and block handles.
 // Two sides of one coin: what you ship, and what the user sees.
+// The Clean JSON preview is built as tokens per line (not one wide <pre>) so the
+// code can soft-wrap like an editor in narrow containers while the line-number
+// gutter stays aligned to each logical line, instead of shrinking or clipping.
+const JSON_KEY = "text-brand-gradient font-semibold";
+const JSON_PROP = "text-muted-foreground/60";
+const JSON_VAL = "text-primary";
+const JSON_NUM = "text-foreground";
+const JSON_HL = "rounded-[3px] bg-brand-from/15 px-0.5 text-primary";
+type JsonTok = { t: string; c?: string };
+const buildJsonLines = (version: string): JsonTok[][] => [
+  [{ t: "{" }],
+  [{ t: "  " }, { t: '"blocks"', c: JSON_KEY }, { t: ": [" }],
+  [{ t: "    { " }, { t: '"id"', c: JSON_PROP }, { t: ": " }, { t: '"h1"', c: JSON_VAL }, { t: ", " }, { t: '"type"', c: JSON_PROP }, { t: ": " }, { t: '"header"', c: JSON_VAL }, { t: "," }],
+  [{ t: "      " }, { t: '"data"', c: JSON_PROP }, { t: ": { " }, { t: '"text"', c: JSON_PROP }, { t: ": " }, { t: '"Hello, Blok"', c: JSON_HL }, { t: ", " }, { t: '"level"', c: JSON_PROP }, { t: ": " }, { t: "1", c: JSON_NUM }, { t: " } }," }],
+  [{ t: "    { " }, { t: '"id"', c: JSON_PROP }, { t: ": " }, { t: '"im"', c: JSON_VAL }, { t: ", " }, { t: '"type"', c: JSON_PROP }, { t: ": " }, { t: '"image"', c: JSON_VAL }, { t: "," }],
+  [{ t: "      " }, { t: '"data"', c: JSON_PROP }, { t: ": { " }, { t: '"url"', c: JSON_PROP }, { t: ": " }, { t: '"/blok.png"', c: JSON_VAL }, { t: " } }" }],
+  [{ t: "  ]," }],
+  [{ t: "  " }, { t: '"version"', c: JSON_KEY }, { t: ": " }, { t: `"${version}"`, c: JSON_VAL }],
+  [{ t: "}" }],
+];
+
 const CleanJsonViz: React.FC = () => {
   const version = useLatestBlokVersion();
+  const codeLines = buildJsonLines(version);
   const rootRef = useRef<HTMLDivElement>(null);
   const reduce = useReducedMotion();
 
@@ -178,61 +200,30 @@ const CleanJsonViz: React.FC = () => {
           <span className="size-2.5 rounded-full bg-foreground/15" />
           <span className="size-2.5 rounded-full bg-foreground/15" />
         </div>
-        <div className="@container relative flex flex-1 items-center overflow-hidden px-5 py-3">
-          {/* Font scales with the CONTAINER, not the viewport: full size in the
-              wide grid tile, smaller in the narrow drawer hero, so the longest
-              JSON line always fits the box instead of clipping at the right. */}
-          <div className="relative flex gap-3 font-mono text-[clamp(8.5px,2.9cqi,12px)] leading-[1.55]">
-            {/* line-number gutter — turns the dump into a real code surface */}
-            <pre className="select-none text-right tabular-nums text-muted-foreground/30">
-              {"1\n2\n3\n4\n5\n6\n7\n8\n9"}
-            </pre>
-            <span aria-hidden="true" className="w-px self-stretch bg-border/60" />
-            <pre className="text-muted-foreground">
-              <code>
-                {"{\n  "}
-                <span className="text-brand-gradient font-semibold">"blocks"</span>
-                {": [\n    { "}
-                <span className="text-muted-foreground/60">"id"</span>
-                {": "}
-                <span className="text-primary">"h1"</span>
-                {", "}
-                <span className="text-muted-foreground/60">"type"</span>
-                {": "}
-                <span className="text-primary">"header"</span>
-                {",\n      "}
-                <span className="text-muted-foreground/60">"data"</span>
-                {": { "}
-                <span className="text-muted-foreground/60">"text"</span>
-                {": "}
-                {/* the value that becomes the big heading on the flip side —
-                    shown selected, tying the data to what the user sees */}
-                <span className="rounded-[3px] bg-brand-from/15 px-0.5 text-primary">"Hello, Blok"</span>
-                {", "}
-                <span className="text-muted-foreground/60">"level"</span>
-                {": "}
-                <span className="text-foreground">1</span>
-                {" } },\n    { "}
-                <span className="text-muted-foreground/60">"id"</span>
-                {": "}
-                <span className="text-primary">"im"</span>
-                {", "}
-                <span className="text-muted-foreground/60">"type"</span>
-                {": "}
-                <span className="text-primary">"image"</span>
-                {",\n      "}
-                <span className="text-muted-foreground/60">"data"</span>
-                {": { "}
-                <span className="text-muted-foreground/60">"url"</span>
-                {": "}
-                <span className="text-primary">"/blok.png"</span>
-                {" } }\n  ],\n  "}
-                <span className="text-brand-gradient font-semibold">"version"</span>
-                {": "}
-                <span className="text-primary">{`"${version}"`}</span>
-                {"\n}"}
-              </code>
-            </pre>
+        <div className="relative flex flex-1 flex-col justify-center overflow-hidden px-5 py-3">
+          {/* One row per logical line: a fixed line-number cell plus a code cell
+              that soft-wraps (whitespace-pre-wrap) at a readable size, so long
+              lines fold onto the next row like an editor instead of clipping. The
+              left border on each code cell stacks into a continuous gutter rule. */}
+          <div className="font-mono text-[12px] leading-[1.6] text-muted-foreground">
+            {codeLines.map((line, i) => (
+              <div key={i} className="flex items-start">
+                <span className="w-3.5 shrink-0 select-none pr-3 text-right tabular-nums text-muted-foreground/30">
+                  {i + 1}
+                </span>
+                <code className="min-w-0 flex-1 whitespace-pre-wrap break-words border-l border-border/60 pl-3">
+                  {line.map((tok, j) =>
+                    tok.c ? (
+                      <span key={j} className={tok.c}>
+                        {tok.t}
+                      </span>
+                    ) : (
+                      <Fragment key={j}>{tok.t}</Fragment>
+                    ),
+                  )}
+                </code>
+              </div>
+            ))}
           </div>
         </div>
       </div>

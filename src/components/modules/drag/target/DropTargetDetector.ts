@@ -810,8 +810,11 @@ export class DropTargetDetector {
       return nextDepth;
     }
 
-    // Match previous depth if deeper than current and no next list item
-    if (previousIsListItem && !nextIsListItem && previousDepth > currentDepth && previousDepth <= maxAllowedDepth) {
+    // Match previous depth if deeper than current, appending into its sub-list. A
+    // shallower (or absent) next item must NOT pull the drop back to root — nesting
+    // from the bottom of a nested item is valid. A *deeper* next item is handled by
+    // the shouldMatchNextDepth case above, so here next is never deeper than prev.
+    if (previousIsListItem && previousDepth > currentDepth && previousDepth <= maxAllowedDepth && nextDepth <= previousDepth) {
       return previousDepth;
     }
 

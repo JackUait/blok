@@ -209,6 +209,24 @@ describe('ListDepthValidator', () => {
       expect(result).toBe(1);
     });
 
+    it('matches a deeper previous depth even when a shallower next list item follows (nest from the bottom)', () => {
+      // Video repro: First(0), Second(1), Third(0). Dropping a block in the gap
+      // below the nested Second item (and above the shallower Third) must NEST to
+      // depth 1 — prev(1), dropped(1), next(0) is a valid structure. A shallower
+      // next item must NOT pull the drop back to root. Only a *deeper* next item
+      // (handled by shouldMatchNextDepth) overrides the previous-depth match.
+      const blocks = [
+        createMockBlock({ depth: 0 }), // index 0: First
+        createMockBlock({ depth: 1 }), // index 1: Second (previous)
+        createMockBlock({ depth: 0 }), // index 2: placeholder for the moved block
+        createMockBlock({ depth: 0 }), // index 3: Third (next, shallower)
+      ];
+      const blocksAPI = createMockBlocksAPI(blocks);
+      const validator = new ListDepthValidator(blocksAPI);
+
+      expect(validator.getTargetDepthForMove({ blockIndex: 2, currentDepth: 0 })).toBe(1);
+    });
+
     it('keeps current depth when no adjustments needed', () => {
       const blocks = [
         createMockBlock({ depth: 0 }),

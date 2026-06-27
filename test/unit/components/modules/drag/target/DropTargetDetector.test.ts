@@ -715,6 +715,53 @@ describe('DropTargetDetector', () => {
         expect(depth).toBe(1);
       });
 
+      it('nests a non-list source below a deeper previous item even when a shallower list item follows (nest from the bottom)', () => {
+        // Video repro: First(0), Second(1), Third(0). Dropping a header in the
+        // gap below the nested Second item must NEST to depth 1, not snap back to
+        // root just because the next item (Third) is shallower. prev(1) deeper
+        // than the source, next(0) shallower → match the previous nested depth.
+        const previousBlock = createMockListBlock('prev', 1);
+        const nextBlock = createMockListBlock('next', 0);
+        const targetBlock = createMockBlock('target');
+        const sourceBlock = createMockBlock('source', 'header'); // non-list
+
+        mockBlockManager.getBlockIndex = vi.fn(() => 1);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => {
+          // target at index 1, bottom edge → dropIndex 2: prev = index 1 (depth 1),
+          // next = index 2 (depth 0).
+          if (index === 1) return previousBlock;
+          if (index === 2) return nextBlock;
+
+          return undefined;
+        });
+
+        const depth = detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock);
+
+        expect(depth).toBe(1);
+      });
+
+      it('nests a list-item source below a deeper previous item even when a shallower list item follows', () => {
+        // Same boundary as above, but the dragged block is itself a list item.
+        // Indicator prediction must agree with the list tool's moved() hook so the
+        // preview matches the drop: it nests to depth 1, not root.
+        const previousBlock = createMockListBlock('prev', 1);
+        const nextBlock = createMockListBlock('next', 0);
+        const targetBlock = createMockListBlock('target', 0);
+        const sourceBlock = createMockListBlock('source', 0);
+
+        mockBlockManager.getBlockIndex = vi.fn(() => 1);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => {
+          if (index === 1) return previousBlock;
+          if (index === 2) return nextBlock;
+
+          return undefined;
+        });
+
+        const depth = detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock);
+
+        expect(depth).toBe(1);
+      });
+
       it('nests a non-list source one level under an already-indented non-list block', () => {
         // Generic nesting context: a paragraph indented to level 1 (via data-blok-indent,
         // not a list) is a valid parent, so a block dropped after it can nest to level 2.

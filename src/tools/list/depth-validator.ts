@@ -100,12 +100,15 @@ export class ListDepthValidator {
     const previousIsListItem = previousBlock && previousBlock.name === TOOL_NAME;
     const previousBlockDepth = previousIsListItem ? this.getBlockDepth(previousBlock) : 0;
 
-    // If previous block is deeper and there's no next list item to guide us,
-    // match the previous block's depth (append as sibling in the nested list)
+    // If the previous block is deeper, append as a sibling in the nested sub-list
+    // (match its depth). A shallower — or absent — next item must NOT pull the drop
+    // back to root: prev(1), dropped(1), next(0) is a valid structure ("nest from
+    // the bottom"). A *deeper* next item is already handled by shouldMatchNextDepth
+    // above, so the only case left here is a next item no deeper than the previous.
     const shouldMatchPreviousDepth = previousIsListItem
-      && !nextIsListItem
       && previousBlockDepth > currentDepth
-      && previousBlockDepth <= maxAllowedDepth;
+      && previousBlockDepth <= maxAllowedDepth
+      && nextBlockDepth <= previousBlockDepth;
 
     if (shouldMatchPreviousDepth) {
       return previousBlockDepth;

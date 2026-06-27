@@ -1591,12 +1591,13 @@ test.describe('drag and drop', () => {
       await expect(droppedMarker).toHaveText('b.');
     });
 
-    test('at a nested/root boundary slot a non-list block lands at root, indicator full-width', async ({ page }) => {
-      // Boundary semantics: dropped between a depth-1 item and a depth-0 item, a
-      // non-list block matches list-item behaviour and lands at ROOT (depth 0) —
-      // the next shallower item pulls it back. The indicator must reflect that:
-      // full-width root line (no indent lead-in, side-left 0), and the block
-      // saves with no indent. (Nesting in clearly-nested slots is covered below.)
+    test('nests a non-list block dropped at the bottom edge of a nested item (nest from the bottom)', async ({ page }) => {
+      // Nest-from-the-bottom: dropped between a depth-1 item and a depth-0 item, a
+      // non-list block appends into the nested sub-list at depth 1 — the deeper
+      // previous item wins; a shallower next item must NOT pull it back to root
+      // (prev(1), dropped(1), next(0) is a valid structure). The indicator must
+      // reflect that: tucked under the nested item (indent lead-in present,
+      // side-left > 0), and the block saves with indent 1.
       const blocks: OutputData['blocks'] = [
         { id: 'h1', type: 'header', data: { text: 'Section', level: 2 } },
         { id: 'l1', type: 'list', data: { text: 'First step', style: 'ordered' } },
@@ -1620,7 +1621,7 @@ test.describe('drag and drop', () => {
       const settingsBox = await getBoundingBox(settingsButton);
       // Hover the top half of "Third step" (depth 0) — this normalises to the
       // bottom edge of the nested "Second step" (depth 1), the exact drop slot
-      // from the report. The bug tucked the indicator under "Second step".
+      // from the report: the gap at the END of the nested sub-list.
       const thirdItem = page.getByTestId('block-wrapper').filter({ hasText: 'Third step' });
       const thirdBox = await getBoundingBox(thirdItem);
 
@@ -1636,9 +1637,9 @@ test.describe('drag and drop', () => {
         return document.querySelector('[data-drop-indicator]') !== null;
       }, { timeout: 2000 });
 
-      // The indicator must be a full-width root line: no indented lead-in segment
-      // and a zero side-left offset. With the bug it was tucked under the nested
-      // item (lead-in present, side-left ~26px).
+      // The indicator must be tucked under the nested item: an indent lead-in
+      // segment is present and the blue line starts offset from the editor edge
+      // (side-left > 0). The drop applies the SAME depth, so the preview is honest.
       const indicator = await page.evaluate(() => {
         const el = document.querySelector<HTMLElement>('[data-drop-indicator]');
 
@@ -1648,13 +1649,13 @@ test.describe('drag and drop', () => {
 
         return {
           hasLead: el.hasAttribute('data-drop-indicator-lead'),
-          sideLeft: el.style.getPropertyValue('--drop-indicator-side-left').trim(),
+          sideLeft: parseFloat(el.style.getPropertyValue('--drop-indicator-side-left')),
         };
       });
 
       expect(indicator).not.toBeNull();
-      expect(indicator?.hasLead).toBe(false);
-      expect(indicator?.sideLeft).toBe('0px');
+      expect(indicator?.hasLead).toBe(true);
+      expect(indicator?.sideLeft).toBeGreaterThan(0);
 
       await page.mouse.up();
 
@@ -1664,15 +1665,20 @@ test.describe('drag and drop', () => {
         return wrapper?.getAttribute('data-blok-dragging') !== 'true';
       }, { timeout: 2000 });
 
-      // And the header genuinely lands between the two list items at root level.
+      // The header lands between the two list items and NESTS at depth 1.
       const savedData = await page.evaluate(() => window.blokInstance?.save());
 
       expect(getBlockText(savedData?.blocks[0])).toBe('First step');
       expect(getBlockText(savedData?.blocks[1])).toBe('Second step');
       expect(getBlockText(savedData?.blocks[2])).toBe('Section');
       expect(getBlockText(savedData?.blocks[3])).toBe('Third step');
-      // Root level → no indent persisted on the header.
-      expect(getBlockIndent(savedData?.blocks[2])).toBeUndefined();
+      // Nested → indent 1 persisted on the header.
+      expect(getBlockIndent(savedData?.blocks[2])).toBe(1);
+
+      // The holder is visually indented (data attribute set to level 1).
+      const droppedHolder = page.getByTestId('block-wrapper').filter({ hasText: 'Section' });
+
+      await expect(droppedHolder).toHaveAttribute('data-blok-indent', '1');
     });
 
     /**

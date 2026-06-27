@@ -670,12 +670,15 @@ describe('DropTargetDetector', () => {
         expect(depth).toBe(1);
       });
 
-      it('should not change behavior for non-list source blocks', () => {
-        // Source is a paragraph (no depth), previous is a list at depth 2
-        // Should use the neighbor-based algorithm (return 2)
+      it('should predict depth 0 for a non-list source dropped after a nested list item', () => {
+        // Regression: a non-list block (header/paragraph/image/…) has no
+        // list-depth mechanism, so handleDropImpl always lands it at root level.
+        // The indicator MUST predict depth 0 — previously it returned the
+        // neighbour's depth (2), so the indicator promised a nested slot the
+        // block could never reach and it snapped back to the first level on drop.
         const previousBlock = createMockListBlock('prev', 2);
         const targetBlock = createMockBlock('target');
-        const sourceBlock = createMockBlock('source'); // paragraph
+        const sourceBlock = createMockBlock('source', 'header'); // non-list
 
         mockBlockManager.getBlockIndex = vi.fn(() => 1);
         mockBlockManager.getBlockByIndex = vi.fn((index) => {
@@ -686,7 +689,29 @@ describe('DropTargetDetector', () => {
 
         const depth = detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock);
 
-        expect(depth).toBe(2);
+        expect(depth).toBe(0);
+      });
+
+      it('should predict depth 0 for a non-list source dropped between a nested item and a root item', () => {
+        // Mirrors the reported video: a header dropped between a depth-1 nested
+        // ordered item and a depth-0 ordered item. The indicator showed the
+        // nested level but the header landed at root — they must agree at 0.
+        const previousBlock = createMockListBlock('prev', 1);
+        const nextBlock = createMockListBlock('next', 0);
+        const targetBlock = createMockBlock('target');
+        const sourceBlock = createMockBlock('source', 'header'); // non-list
+
+        mockBlockManager.getBlockIndex = vi.fn(() => 1);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => {
+          if (index === 1) return previousBlock;
+          if (index === 2) return nextBlock;
+
+          return undefined;
+        });
+
+        const depth = detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock);
+
+        expect(depth).toBe(0);
       });
     });
   });

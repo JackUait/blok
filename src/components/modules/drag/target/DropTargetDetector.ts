@@ -758,8 +758,20 @@ export class DropTargetDetector {
       );
     }
 
-    // For non-list blocks (or when sourceBlock not provided), use neighbor-based
-    // depth for cosmetic indicator positioning only.
+    // The dragged block is not a list item (header, paragraph, image, quote, …).
+    // List depth is the only nesting that a drop applies — it lives in the list
+    // tool's moved() hook and reads data-list-depth, which non-list blocks never
+    // carry. So handleDropImpl always lands these blocks at root level. Returning
+    // a neighbour-derived depth here made the drop indicator promise a nested
+    // slot the block could never reach, so it visibly snapped back to the first
+    // level on release (the reported nested-list drop bug). Predict 0 so the
+    // indicator matches the real drop position for every non-list block type.
+    if (sourceBlock) {
+      return 0;
+    }
+
+    // No source block (defensive — production always supplies the dragged block).
+    // Fall back to neighbour-based depth purely for cosmetic indicator placement.
     if (nextDepthValue > 0 && nextDepthValue <= prevDepthValue + 1) {
       return nextDepthValue;
     }

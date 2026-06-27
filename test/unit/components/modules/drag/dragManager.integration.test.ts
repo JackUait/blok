@@ -323,6 +323,11 @@ describe("DragManager - Component Integration", () => {
       document.body.appendChild(wrapper);
       blocks.forEach((block) => wrapper.appendChild(block.holder));
 
+      // The dragged source must itself be a list item — the marker-aligned tuck
+      // only previews a real list reorder. A non-list source lands at root, so it
+      // keeps a full-width indicator (covered separately below).
+      blocks[0].holder.setAttribute("data-list-depth", "0");
+
       // Turn block-4 into a list item: a listitem (starting at the marker) that
       // holds a text content container (starting past the marker).
       const targetBlock = blocks[3];
@@ -435,6 +440,10 @@ describe("DragManager - Component Integration", () => {
       document.body.appendChild(wrapper);
       blocks.forEach((block) => wrapper.appendChild(block.holder));
 
+      // The dragged source is a list item, so a list-item target gets the
+      // marker-aligned lead-in; moving onto a plain block clears it.
+      blocks[0].holder.setAttribute("data-list-depth", "0");
+
       // block-4 is a list item with a text container; block-3 is a plain block.
       const listTarget = blocks[3];
       listTarget.holder.setAttribute("data-list-depth", "0");
@@ -482,6 +491,59 @@ describe("DragManager - Component Integration", () => {
 
       expect(plainTarget.holder).not.toHaveAttribute("data-drop-indicator-lead");
       expect(listTarget.holder).not.toHaveAttribute("data-drop-indicator-lead");
+
+      document.dispatchEvent(createMouseEvent("mouseup"));
+    });
+
+    it("keeps a full-width root indicator (no tuck) when a non-list block is dropped onto a list item", () => {
+      // Regression: dragging a non-list block (the default plain source) onto a
+      // list item used to tuck the indicator under the item's indented text,
+      // promising a nested drop the block can never reach — it always lands at
+      // root. The indicator must stay full-width: no lead-in, side-left 0.
+      const { dragManager, blocks, wrapper } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      blocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      // Source (blocks[0]) is left as a plain paragraph — no data-list-depth.
+      const listTarget = blocks[3];
+      listTarget.holder.setAttribute("data-list-depth", "0");
+      const listContent = listTarget.holder.querySelector(
+        "[data-blok-element-content]",
+      ) as HTMLElement;
+      const item = document.createElement("div");
+      item.setAttribute("role", "listitem");
+      const container = document.createElement("div");
+      container.setAttribute("data-blok-testid", "list-content-container");
+      container.textContent = "List item";
+      item.appendChild(container);
+      listContent.appendChild(item);
+      item.getBoundingClientRect = vi.fn(() => new DOMRect(16, 200, 264, 50));
+      container.getBoundingClientRect = vi.fn(() => new DOMRect(40, 200, 240, 50));
+      (listTarget.holder.getBoundingClientRect as Mock).mockReturnValue(
+        new DOMRect(0, 200, 300, 50),
+      );
+
+      const dragHandle = document.createElement("div");
+      dragManager.setupDragHandle(dragHandle, blocks[0]);
+      dragHandle.dispatchEvent(
+        createMouseEvent("mousedown", { clientX: 100, clientY: 100 }),
+      );
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 110, clientY: 100 }),
+      );
+
+      vi.mocked(document.elementFromPoint).mockReturnValue(listTarget.holder);
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 50, clientY: 240 }),
+      );
+
+      expect(listTarget.holder).toHaveAttribute("data-drop-indicator");
+      // Full-width root line: no indented lead-in, side-left at the content edge.
+      expect(listTarget.holder).not.toHaveAttribute("data-drop-indicator-lead");
+      expect(
+        listTarget.holder.style.getPropertyValue("--drop-indicator-side-left"),
+      ).toBe("0px");
 
       document.dispatchEvent(createMouseEvent("mouseup"));
     });

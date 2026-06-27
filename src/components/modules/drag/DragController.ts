@@ -411,11 +411,19 @@ export class DragController extends Module {
     dropTarget.block.holder.setAttribute('data-drop-indicator', dropTarget.edge);
     dropTarget.block.holder.style.setProperty('--drop-indicator-depth', String(dropTarget.depth));
 
+    // Only a dragged list item can nest into a list. When the source is any
+    // other block (header, paragraph, image, …) it always lands at root level,
+    // so the indicator must read as a full-width root line — NOT get tucked under
+    // the target list item's indented text. Without this, dropping a header onto
+    // the bottom edge of a nested list item drew the line at the nested marker
+    // position, promising a nested drop the block could never reach.
+    const sourceIsListItem = getListItemDepth(sourceBlock) !== null;
+
     // Confine the indicator to the visible content box. The holder spans the
     // full editor width (gutters included), so without these offsets the
     // top/bottom reorder line stretches across the whole screen and the side
     // bars land out in the margins. Applies to every edge.
-    this.applyContentIndicatorOffsets(dropTarget.block, dropTarget.edge, dropTarget.depth);
+    this.applyContentIndicatorOffsets(dropTarget.block, dropTarget.edge, dropTarget.depth, sourceIsListItem);
 
     // For a column side-drop, stretch the vertical indicator bar to the full
     // height of the column row, not just the single target block.
@@ -442,7 +450,8 @@ export class DragController extends Module {
   private applyContentIndicatorOffsets(
     block: Block,
     edge: 'top' | 'bottom' | 'left' | 'right',
-    depth: number
+    depth: number,
+    sourceIsListItem: boolean
   ): void {
     const content = block.holder.querySelector('[data-blok-element-content]');
 
@@ -460,7 +469,12 @@ export class DragController extends Module {
     // text: start it where the text begins (past the bullet/number marker) and
     // cut it where the text ends, rather than running across the full content
     // width. Side drops (columns) keep the content-box offsets above.
-    if (edge === 'top' || edge === 'bottom') {
+    //
+    // Only do this when the dragged block is itself a list item. A non-list
+    // source lands at root level, so it must keep the full-width content-box
+    // offsets above instead of being tucked under the (possibly nested) target
+    // item — otherwise the indicator previews a nested slot the block can't reach.
+    if ((edge === 'top' || edge === 'bottom') && sourceIsListItem) {
       this.applyListItemTextOffsets(block, holderRect, depth);
     }
   }

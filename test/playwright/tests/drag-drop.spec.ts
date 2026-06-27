@@ -1581,6 +1581,90 @@ test.describe('drag and drop', () => {
 
       await expect(droppedMarker).toHaveText('b.');
     });
+
+    test('drop indicator stays full-width root for a non-list block dropped after a nested list item', async ({ page }) => {
+      // Regression for the reported nested-list drop bug: dragging a non-list
+      // block (here a header) to a position right after a nested list item drew
+      // the drop indicator tucked under the nested item's indented text — so it
+      // PROMISED a nested drop. But a header has no list-depth mechanism and
+      // always lands at root, so on release it snapped back to the first level.
+      // The indicator must read as a full-width root line for any non-list source
+      // (no indent lead-in, side-left offset 0) so it matches the real outcome.
+      const blocks: OutputData['blocks'] = [
+        { id: 'h1', type: 'header', data: { text: 'Section', level: 2 } },
+        { id: 'l1', type: 'list', data: { text: 'First step', style: 'ordered' } },
+        { id: 'l2', type: 'list', data: { text: 'Second step', style: 'ordered', depth: 1 } },
+        { id: 'l3', type: 'list', data: { text: 'Third step', style: 'ordered' } },
+      ];
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      // Grab the header's drag handle.
+      const headerBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Section' });
+
+      await headerBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      const settingsBox = await getBoundingBox(settingsButton);
+      // Hover the top half of "Third step" (depth 0) — this normalises to the
+      // bottom edge of the nested "Second step" (depth 1), the exact drop slot
+      // from the report. The bug tucked the indicator under "Second step".
+      const thirdItem = page.getByTestId('block-wrapper').filter({ hasText: 'Third step' });
+      const thirdBox = await getBoundingBox(thirdItem);
+
+      await page.mouse.move(settingsBox.x + settingsBox.width / 2, settingsBox.y + settingsBox.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(
+        thirdBox.x + thirdBox.width / 2,
+        thirdBox.y + 3,
+        { steps: 15 }
+      );
+
+      await page.waitForFunction(() => {
+        return document.querySelector('[data-drop-indicator]') !== null;
+      }, { timeout: 2000 });
+
+      // The indicator must be a full-width root line: no indented lead-in segment
+      // and a zero side-left offset. With the bug it was tucked under the nested
+      // item (lead-in present, side-left ~26px).
+      const indicator = await page.evaluate(() => {
+        const el = document.querySelector<HTMLElement>('[data-drop-indicator]');
+
+        if (!el) {
+          return null;
+        }
+
+        return {
+          hasLead: el.hasAttribute('data-drop-indicator-lead'),
+          sideLeft: el.style.getPropertyValue('--drop-indicator-side-left').trim(),
+        };
+      });
+
+      expect(indicator).not.toBeNull();
+      expect(indicator?.hasLead).toBe(false);
+      expect(indicator?.sideLeft).toBe('0px');
+
+      await page.mouse.up();
+
+      await page.waitForFunction(() => {
+        const wrapper = document.querySelector('[data-blok-interface=blok]');
+
+        return wrapper?.getAttribute('data-blok-dragging') !== 'true';
+      }, { timeout: 2000 });
+
+      // And the header genuinely lands between the two list items at root level.
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+      expect(getBlockText(savedData?.blocks[0])).toBe('First step');
+      expect(getBlockText(savedData?.blocks[1])).toBe('Second step');
+      expect(getBlockText(savedData?.blocks[2])).toBe('Section');
+      expect(getBlockText(savedData?.blocks[3])).toBe('Third step');
+    });
   });
 
   test.describe('toolbar visibility during drag', () => {

@@ -1100,6 +1100,53 @@ test.describe('drag and drop', () => {
       expect(getBlockText(savedData?.blocks[3])).toBe('Nested B');
     });
 
+    test('renumbers the source ordered list when its middle item is dragged into another list', async ({ page }) => {
+      // Two separate ordered lists (split by a paragraph). Drag the middle item
+      // of the first list into the second list. The first list must renumber the
+      // item left behind — regression: moved() only renumbered the destination
+      // group, so "Alpha three" stayed "3." instead of becoming "2.".
+      const blocks: OutputData['blocks'] = [
+        { id: 'a1', type: 'list', data: { text: 'Alpha one', style: 'ordered' } },
+        { id: 'a2', type: 'list', data: { text: 'Alpha two', style: 'ordered' } },
+        { id: 'a3', type: 'list', data: { text: 'Alpha three', style: 'ordered' } },
+        { id: 'sep', type: 'paragraph', data: { text: 'separator' } },
+        { id: 'b1', type: 'list', data: { text: 'Bravo one', style: 'ordered' } },
+        { id: 'b2', type: 'list', data: { text: 'Bravo two', style: 'ordered' } },
+      ];
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      const markerFor = (text: string): ReturnType<Page['locator']> =>
+        page.getByTestId('block-wrapper').filter({ hasText: text }).locator('[data-list-marker]');
+
+      // Sanity: first list is 1./2./3. before the drag.
+      await expect(markerFor('Alpha three')).toHaveText('3.');
+
+      // Drag the middle item ("Alpha two") to the bottom of the second list.
+      const middleItem = page.getByTestId('block-wrapper').filter({ hasText: 'Alpha two' });
+
+      await middleItem.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Bravo two' });
+
+      await performDragDrop(page, settingsButton, targetBlock, 'bottom');
+
+      // Source list renumbers: the item left behind moves from 3. to 2.
+      await expect(markerFor('Alpha one')).toHaveText('1.');
+      await expect(markerFor('Alpha three')).toHaveText('2.');
+
+      // Destination list absorbs the moved item as the third entry.
+      await expect(markerFor('Bravo one')).toHaveText('1.');
+      await expect(markerFor('Bravo two')).toHaveText('2.');
+      await expect(markerFor('Alpha two')).toHaveText('3.');
+    });
+
     test('should preserve depth of deeply nested children when dragging parent subtree', async ({ page }) => {
       // Create a list with deeply nested children:
       // - First (depth 0) <- drag this

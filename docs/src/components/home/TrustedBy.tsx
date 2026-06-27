@@ -6,6 +6,7 @@ import {
   useInView,
   useMotionValue,
   useReducedMotion,
+  useSpring,
   useTransform,
   useVelocity,
   type MotionValue,
@@ -14,11 +15,42 @@ import { Mail, Send } from "lucide-react";
 import { SectionReveal } from "../common/SectionReveal";
 import { useI18n } from "../../contexts/I18nContext";
 
-// A tiny fractal-noise tile, soft-light-blended at low opacity over the dark
-// testimonial card to give the flat gradient a faint film grain — the kind of
-// texture that keeps a large dark surface from looking plasticky.
-const GRAIN =
-  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
+// The same cursor-reactive tilt + glow the Features bento tiles use, so these
+// cards behave identically to the rest of the page: a subtle 3D lean toward the
+// pointer and the --mx/--my the .bento-tile border glow and .bento-spot read.
+const hoverSpring = { type: "spring", stiffness: 380, damping: 20 } as const;
+const TILT = 5;
+
+const useTilt = () => {
+  const reduce = useReducedMotion();
+  const rotateX = useSpring(0, { stiffness: 170, damping: 18, mass: 0.4 });
+  const rotateY = useSpring(0, { stiffness: 170, damping: 18, mass: 0.4 });
+
+  if (reduce) {
+    return { style: undefined, handlers: {} as Record<string, never> };
+  }
+
+  return {
+    style: { rotateX, rotateY, transformPerspective: 1000 },
+    handlers: {
+      onPointerMove: (e: React.PointerEvent<HTMLElement>) => {
+        if (e.pointerType !== "mouse") return;
+        const el = e.currentTarget;
+        const rect = el.getBoundingClientRect();
+        const px = (e.clientX - rect.left) / rect.width;
+        const py = (e.clientY - rect.top) / rect.height;
+        rotateX.set((0.5 - py) * TILT * 2);
+        rotateY.set((px - 0.5) * TILT * 2);
+        el.style.setProperty("--mx", `${px * 100}%`);
+        el.style.setProperty("--my", `${py * 100}%`);
+      },
+      onPointerLeave: () => {
+        rotateX.set(0);
+        rotateY.set(0);
+      },
+    },
+  };
+};
 
 /**
  * The official Dodo Brands lockup — the colourful pinwheel mark keeps its brand
@@ -242,6 +274,11 @@ export const TrustedBy: React.FC = () => {
   const claim = dashIndex === -1 ? summary : summary.slice(0, dashIndex).trim();
   const kicker = dashIndex === -1 ? "" : summary.slice(dashIndex + 1).trim();
 
+  // One tilt instance per bento card, so each leans toward the cursor and lights
+  // its border independently — exactly like the Features tiles above.
+  const storyTilt = useTilt();
+  const sideTilt = useTilt();
+
   const stats: Stat[] = [
     {
       value: t("home.trusted.statCountriesValue"),
@@ -262,141 +299,136 @@ export const TrustedBy: React.FC = () => {
     >
       <div className="mx-auto w-full max-w-6xl px-6">
         <SectionReveal className="max-w-2xl">
-          <h2 className="text-4xl font-bold leading-[1.05] tracking-tight text-foreground sm:text-5xl">
+          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             {t("home.trusted.title")}
           </h2>
         </SectionReveal>
 
-        <div className="mt-12 flex flex-col gap-5">
-          {/* ── Featured testimonial — a dark, atmospheric hero. Warm near-black
-              surface, a soft brand-gradient glow and film grain for depth, the
-              quote in white with the kicker glowing in the brand gradient, and
-              the proof metrics set off by a hairline rule. ─────────────────── */}
-          <SectionReveal delay={0.08}>
-            <div
-              className="relative overflow-hidden rounded-[2.25rem] p-8 shadow-[0_40px_90px_-40px_rgba(0,0,0,0.55)] ring-1 ring-white/[0.06] sm:p-12 lg:p-14"
-              style={{ backgroundImage: "linear-gradient(150deg, #1e1714 0%, #100c0b 72%)" }}
+        {/* Built from the same bento tiles as the Features section above — light
+            cards, the cursor-tracked pink border glow, the soft spot, and the
+            hover lift — so this section reads as the same interface, not a
+            separate design. */}
+        <div className="mt-12 grid gap-4 lg:grid-cols-[1.5fr_1fr] lg:items-stretch">
+          {/* ── Featured testimonial tile ──────────────────────────────────── */}
+          <SectionReveal delay={0.08} className="flex">
+            <motion.div
+              className="bento-tile group relative flex w-full overflow-hidden rounded-3xl border border-border/60 bg-card"
+              style={storyTilt.style}
+              {...storyTilt.handlers}
+              whileHover={{ y: -4 }}
+              transition={hoverSpring}
               data-blok-testid="trusted-featured"
             >
-              {/* warm brand glow bleeding from the top-right */}
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute -right-24 -top-28 h-80 w-80 rounded-full bg-[radial-gradient(circle,rgba(233,78,122,0.24),rgba(230,128,25,0.10)_45%,transparent_70%)] blur-3xl"
-              />
-              {/* film grain */}
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0 opacity-[0.05] mix-blend-soft-light"
-                style={{ backgroundImage: GRAIN }}
-              />
-              {/* oversized closing quote, a near-subliminal watermark */}
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute -top-8 right-4 select-none font-display text-[11rem] leading-none text-white/[0.04] sm:text-[14rem]"
-              >
-                &rdquo;
-              </span>
-
-              <div className="relative flex flex-col gap-10 lg:flex-row lg:items-stretch lg:gap-14">
-                {/* company · quote · CTA */}
-                <div className="flex flex-1 flex-col">
-                  <div className="flex flex-col gap-3">
-                    <DodoLogo className="h-9 w-auto self-start text-white" />
-                    <span className="text-[15px] text-white/55">
-                      {t("home.trusted.tagline")}
-                    </span>
-                  </div>
-
-                  <blockquote className="mt-9 flex-1 sm:mt-11">
-                    <p className="max-w-2xl text-balance font-display text-[23px] font-medium leading-[1.4] tracking-tight text-white/80 sm:text-[30px]">
-                      {claim}
-                      {kicker && (
-                        <>
-                          {" — "}
-                          <span className="font-semibold text-brand-gradient [box-decoration-break:clone] [-webkit-box-decoration-break:clone]">
-                            {kicker}
-                          </span>
-                        </>
-                      )}
-                    </p>
-                  </blockquote>
-
-                  <div className="mt-10">
-                    <Link
-                      to="/demo"
-                      className="group/cta inline-flex items-center gap-2 rounded-full bg-brand-gradient px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_12px_30px_-10px_color-mix(in_srgb,var(--brand-via)_70%,transparent)] transition-[transform,box-shadow,filter] duration-300 hover:brightness-[1.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#16100e] active:scale-[0.98]"
-                    >
-                      {t("home.trusted.cta")}
-                      <svg
-                        width="17"
-                        height="17"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        aria-hidden="true"
-                        className="transition-transform duration-300 group-hover/cta:translate-x-1"
-                      >
-                        <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </Link>
-                  </div>
+              <span className="bento-spot" aria-hidden="true" />
+              <div className="relative z-10 flex w-full flex-col p-8 sm:p-10">
+                <div className="flex flex-col gap-3">
+                  <DodoLogo className="h-9 w-auto self-start text-foreground" />
+                  <span className="text-[15px] text-muted-foreground">
+                    {t("home.trusted.tagline")}
+                  </span>
                 </div>
 
-                {/* proof metrics, set off by a hairline */}
+                <div className="my-7 h-px w-full bg-border/60 sm:my-8" />
+
+                <blockquote className="flex flex-1 items-center">
+                  <p className="max-w-xl text-balance font-display text-[21px] font-medium leading-[1.42] tracking-tight text-foreground/75 sm:text-[26px]">
+                    {claim}
+                    {kicker && (
+                      <>
+                        {" — "}
+                        <span className="font-bold text-foreground">{kicker}</span>
+                      </>
+                    )}
+                  </p>
+                </blockquote>
+
+                <div className="pt-9">
+                  <Link
+                    to="/demo"
+                    className="group/cta inline-flex items-center gap-2 rounded-full bg-brand-gradient px-6 py-3.5 text-[15px] font-semibold text-white shadow-card transition-[transform,box-shadow,filter] duration-300 hover:shadow-card-hover hover:brightness-[1.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]"
+                  >
+                    {t("home.trusted.cta")}
+                    <svg
+                      width="17"
+                      height="17"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      aria-hidden="true"
+                      className="transition-transform duration-300 group-hover/cta:translate-x-1"
+                    >
+                      <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </Link>
+                </div>
+              </div>
+            </motion.div>
+          </SectionReveal>
+
+          {/* ── Proof + contact tile — metrics over the two contact channels,
+              split by the same hairlines the tables tile uses. ───────────── */}
+          <SectionReveal delay={0.12} className="flex">
+            <motion.div
+              className="bento-tile group relative flex w-full overflow-hidden rounded-3xl border border-border/60 bg-card"
+              style={sideTilt.style}
+              {...sideTilt.handlers}
+              whileHover={{ y: -4 }}
+              transition={hoverSpring}
+            >
+              <span className="bento-spot" aria-hidden="true" />
+              <div className="relative z-10 flex w-full flex-col">
                 <ul
-                  className="flex shrink-0 gap-10 border-white/10 sm:gap-14 lg:flex-col lg:justify-center lg:gap-12 lg:border-l lg:pl-14"
+                  className="grid grid-cols-2 divide-x divide-border/60"
                   data-blok-testid="trusted-stats"
                 >
                   {stats.map((stat) => (
-                    <li key={stat.label} className="flex flex-col gap-1.5">
-                      <span className="font-display text-[40px] font-extrabold leading-none tracking-tight text-white sm:text-[52px]">
-                        <CountUp value={stat.value} surface="#15100e" suffixClassName="text-white/40" />
+                    <li key={stat.label} className="flex flex-col gap-1.5 p-6 sm:p-7">
+                      <span className="font-display text-[34px] font-extrabold leading-none tracking-tight text-foreground sm:text-[40px]">
+                        <CountUp value={stat.value} />
                       </span>
-                      <span className="text-[14px] text-white/55">{stat.label}</span>
+                      <span className="text-[14px] text-muted-foreground">{stat.label}</span>
                     </li>
                   ))}
                 </ul>
-              </div>
-            </div>
-          </SectionReveal>
 
-          {/* ── Slim contact bar — copy left, the two channels right; the primary
-              action wears Telegram's own blue. ───────────────────────────── */}
-          <SectionReveal delay={0.16}>
-            <div
-              className="flex flex-col gap-5 rounded-[2.25rem] border border-black/[0.06] bg-card p-7 shadow-card dark:border-white/[0.08] sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:p-8"
-              data-blok-testid="trusted-contact"
-            >
-              <div className="flex flex-col gap-1.5">
-                <h3 className="text-pretty text-[19px] font-bold leading-tight tracking-tight text-foreground">
-                  {t("home.trusted.contactTitle")}
-                </h3>
-                <p className="max-w-[52ch] text-pretty text-[15px] leading-relaxed text-muted-foreground">
-                  {t("home.trusted.contactLead")}
-                </p>
-              </div>
+                <div className="h-px w-full bg-border/60" />
 
-              <div className="flex flex-wrap items-center gap-3 sm:shrink-0">
-                {/* Primary channel — Telegram's brand blue. */}
-                <a
-                  href="https://t.me/jackuait"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(180deg,#2aabee,#229ed9)] px-5 py-3 text-[14px] font-semibold text-white shadow-[0_8px_20px_-8px_rgba(34,158,217,0.55)] transition-[filter,box-shadow] duration-300 hover:shadow-[0_12px_26px_-8px_rgba(34,158,217,0.6)] hover:brightness-[1.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]"
+                <div
+                  className="flex flex-1 flex-col justify-between gap-6 p-6 sm:p-7"
+                  data-blok-testid="trusted-contact"
                 >
-                  <Send className="size-4 -translate-x-[0.5px]" strokeWidth={2.2} aria-hidden="true" />
-                  {t("home.trusted.contactTelegram")}
-                </a>
+                  <div className="flex flex-col gap-2">
+                    <h3 className="text-pretty text-[19px] font-bold leading-tight tracking-tight text-foreground">
+                      {t("home.trusted.contactTitle")}
+                    </h3>
+                    <p className="text-pretty text-[15px] leading-relaxed text-muted-foreground">
+                      {t("home.trusted.contactLead")}
+                    </p>
+                  </div>
 
-                {/* Secondary channel — a quiet bordered pill for email. */}
-                <a
-                  href="mailto:jackuait@gmail.com?subject=Blok%20for%20our%20team"
-                  className="inline-flex items-center gap-2 rounded-full border border-black/[0.12] bg-card px-5 py-3 text-[14px] font-semibold text-foreground transition-[border-color,background-color] duration-300 hover:border-foreground/30 hover:bg-foreground/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] dark:border-white/[0.16] dark:hover:bg-white/[0.05]"
-                >
-                  <Mail className="size-4 text-muted-foreground" strokeWidth={2.2} aria-hidden="true" />
-                  {t("home.trusted.contactEmail")}
-                </a>
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/* Primary channel — Telegram's brand blue. */}
+                    <a
+                      href="https://t.me/jackuait"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(180deg,#2aabee,#229ed9)] px-5 py-3 text-[14px] font-semibold text-white shadow-[0_8px_20px_-8px_rgba(34,158,217,0.55)] transition-[filter,box-shadow] duration-300 hover:shadow-[0_12px_26px_-8px_rgba(34,158,217,0.6)] hover:brightness-[1.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]"
+                    >
+                      <Send className="size-4 -translate-x-[0.5px]" strokeWidth={2.2} aria-hidden="true" />
+                      {t("home.trusted.contactTelegram")}
+                    </a>
+
+                    {/* Secondary channel — a quiet bordered pill for email. */}
+                    <a
+                      href="mailto:jackuait@gmail.com?subject=Blok%20for%20our%20team"
+                      className="inline-flex items-center gap-2 rounded-full border border-black/[0.12] bg-card px-5 py-3 text-[14px] font-semibold text-foreground transition-[border-color,background-color] duration-300 hover:border-foreground/30 hover:bg-foreground/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] dark:border-white/[0.16] dark:hover:bg-white/[0.05]"
+                    >
+                      <Mail className="size-4 text-muted-foreground" strokeWidth={2.2} aria-hidden="true" />
+                      {t("home.trusted.contactEmail")}
+                    </a>
+                  </div>
+                </div>
               </div>
-            </div>
+            </motion.div>
           </SectionReveal>
         </div>
       </div>

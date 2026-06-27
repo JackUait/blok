@@ -1030,16 +1030,9 @@ const TablesViz: React.FC = () => {
       {TABLE_HEADERS.map(({ label, cls }) => (
         <div
           key={label}
-          className={`${cls} row-start-1 flex h-6 items-center gap-1 bg-secondary px-2 font-semibold text-muted-foreground`}
+          className={`${cls} row-start-1 flex h-6 items-center bg-secondary px-2 font-semibold text-muted-foreground`}
         >
           {label}
-          {/* Date is the sorted column (rows ascend Jun→Sep) — a small ascending
-              cue in the table's own blue. */}
-          {label === "Date" && (
-            <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M6 15l6-6 6 6" />
-            </svg>
-          )}
         </div>
       ))}
 

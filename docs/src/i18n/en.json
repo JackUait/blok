@@ -338,10 +338,10 @@
         "description": "Just typed JSON blocks, never an HTML blob.",
         "learnMore": "Learn more about Clean JSON output",
         "details": {
-          "summary": "Blok is headless, so your content is data, not markup. You own a clean document model instead of parsing and sanitizing an HTML blob.",
+          "summary": "Blok is a headless editor built around a structured document model. Your app owns that data and decides how to store and display it.",
           "benefit1": "Typed JSON output, no HTML parsing",
           "benefit2": "Stable block IDs for diffing and version control",
-          "benefit3": "Render anywhere: server, client, or native",
+          "benefit3": "Render on the server or the client",
           "benefit4": "Framework-agnostic core with full TypeScript types"
         }
       },
@@ -350,7 +350,7 @@
         "description": "Notion-style blocks, ready in the box.",
         "learnMore": "Learn more about the block library",
         "details": {
-          "summary": "The blocks people expect from a modern editor are already here. You build on top of them instead of rebuilding primitives from scratch.",
+          "summary": "Blok includes the blocks most documents need, so you can put together rich content without building each one yourself.",
           "benefit1": "Tables with merged cells, resizing and cell colors",
           "benefit2": "Databases with kanban and list views",
           "benefit3": "Columns, callouts, toggles and dividers",
@@ -362,11 +362,11 @@
         "description": "Your own block tools, inline tools and block tunes.",
         "learnMore": "Learn more about extending Blok",
         "details": {
-          "summary": "When the built-ins aren't enough, add your own. Custom blocks run on the same public API the core editor is built on, not a limited plugin shim.",
-          "benefit1": "Custom block tools with a simple render/save API",
+          "summary": "Built-in blocks cover most cases. When you need something specific, you can add your own without forking the editor.",
+          "benefit1": "Custom block tools with a render/save API",
           "benefit2": "Custom inline tools and block tunes",
           "benefit3": "Lifecycle hooks: rendered, updated, moved, removed",
-          "benefit4": "Deep public API for blocks, caret, history and more"
+          "benefit4": "Public API for blocks, caret, history and selection"
         }
       },
       "slashCommands": {
@@ -374,11 +374,11 @@
         "description": "Type / to search and insert any block, or use Markdown shortcuts like #, -, 1., [] and >.",
         "learnMore": "Learn more about the slash menu and Markdown",
         "details": {
-          "summary": "Adding a block never means reaching for the mouse or hunting through a menu. Start typing and the right block is one keystroke away.",
+          "summary": "Block insertion stays on the keyboard, like a command palette in a code editor.",
           "benefit1": "Fuzzy-searchable / command palette",
           "benefit2": "Markdown shortcuts: #, -, 1., [], >",
           "benefit3": "Click + on any empty block",
-          "benefit4": "Fully keyboard accessible"
+          "benefit4": "Keyboard accessible"
         }
       },
       "databases": {
@@ -386,8 +386,8 @@
         "description": "Schema-driven databases where every row is a block. Switch between kanban board and list views.",
         "learnMore": "Learn more about databases",
         "details": {
-          "summary": "A real database that lives inside the document, not beside it. Because rows are just blocks, there is no second data model to keep in sync.",
-          "benefit1": "Rows are blocks, so everything stays in the tree",
+          "summary": "A database in Blok is a block, and each of its rows is a block too, so structured records live in the same tree as your content.",
+          "benefit1": "Open any row as its own page",
           "benefit2": "Typed property schema (text, select, date…)",
           "benefit3": "Kanban board and list views",
           "benefit4": "Drag cards, columns and rows"
@@ -398,7 +398,7 @@
         "description": "Merged cells, column resizing, cell colors, heading rows and full keyboard navigation.",
         "learnMore": "Learn more about tables",
         "details": {
-          "summary": "A table that behaves like a spreadsheet, not a grid of text boxes. Every editing move you'd expect on the desktop works here.",
+          "summary": "The table block stores its layout as data, so merged cells and column widths survive a save and reload.",
           "benefit1": "Merge and split cells (colspan / rowspan)",
           "benefit2": "Resize columns and color cells",
           "benefit3": "Heading row and column",
@@ -410,7 +410,7 @@
         "description": "Paste a link to embed 100+ services like YouTube, Figma, Spotify and Gist, or get an OpenGraph bookmark card.",
         "learnMore": "Learn more about embeds",
         "details": {
-          "summary": "Paste a link and it comes alive. No embed codes to copy, no iframes to wire up by hand.",
+          "summary": "Paste a link and Blok works out how best to display it.",
           "benefit1": "100+ embed providers, matched client-side",
           "benefit2": "Video, audio, social, code and design sources",
           "benefit3": "OpenGraph bookmark cards as a fallback",
@@ -422,9 +422,9 @@
         "description": "Yjs-backed history with ⌘Z / ⌘⇧Z. Conflict-free, grouped at word boundaries, and it restores your caret.",
         "learnMore": "Learn more about undo and redo",
         "details": {
-          "summary": "Undo that holds up under real collaboration. It runs on the same CRDT as live editing, so two people working at once never corrupt the history.",
+          "summary": "History is built on the same CRDT that powers live collaboration, so undo behaves predictably even when several people edit at once.",
           "benefit1": "CRDT-based, conflict-free history",
-          "benefit2": "Smart grouping at word boundaries",
+          "benefit2": "Grouped at word boundaries",
           "benefit3": "Caret restored after undo",
           "benefit4": "⌘Z / ⌘⇧Z and a programmatic API"
         }
@@ -434,7 +434,7 @@
         "description": "Lazy-loaded translations for 68 locales with right-to-left support. Only your language ships to the browser.",
         "learnMore": "Learn more about internationalization",
         "details": {
-          "summary": "Reach a global audience without paying for it in bundle size. Each visitor downloads only the language they actually use.",
+          "summary": "The editor's own interface is translated, so your users see Blok in their language.",
           "benefit1": "68 bundled locales",
           "benefit2": "Right-to-left layout (Arabic, Hebrew, Farsi…)",
           "benefit3": "Lazy-loaded for a minimal base bundle",
@@ -446,7 +446,7 @@
         "description": "Drop in images, a YouTube-grade video player and audio with live waveforms. Every one a first-class block.",
         "learnMore": "Learn more about media blocks",
         "details": {
-          "summary": "Images, video and audio are first-class blocks, not plugins bolted on after the fact. Each one ships with the controls people expect.",
+          "summary": "Each kind of media gets its own block, with controls suited to how people use it.",
           "benefit1": "Resizable images with captions",
           "benefit2": "Video player with scrubber, speed, PiP & theater",
           "benefit3": "Audio blocks with cached waveform peaks",

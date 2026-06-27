@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { snapshotNodes, type BlocksReader } from '../../../src/react/blocks-snapshot';
+import { snapshotNodes, resolveInsertIndex, resolveMoveIndex, type BlocksReader, type IndexReader } from '../../../src/react/blocks-snapshot';
 
 /** Build a BlocksReader over a fixed flat list of {id,name,parentId}. */
 const readerOf = (
@@ -36,5 +36,54 @@ describe('snapshotNodes', () => {
     expect(toggle?.contentIds).toEqual(['c1', 'c2']);
     const root2 = nodes.find((n) => n.id === 'root2');
     expect(root2?.contentIds).toEqual([]);
+  });
+});
+
+const indexReaderOf = (
+  rows: Array<{ id: string; name?: string; parentId?: string | null }>
+): IndexReader => {
+  const list = rows.map((r) => ({ id: r.id, name: r.name ?? 'paragraph', parentId: r.parentId ?? null }));
+  return {
+    getBlocksCount: () => list.length,
+    getBlockByIndex: (i: number) => list[i],
+    getBlockIndex: (id: string) => {
+      const idx = list.findIndex((b) => b.id === id);
+      return idx === -1 ? undefined : idx;
+    },
+  };
+};
+
+describe('resolveInsertIndex', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('root start = 0, root end = block count', () => {
+    const r = indexReaderOf([{ id: 'a' }, { id: 'b' }]);
+    expect(resolveInsertIndex(r, null, 'start')).toBe(0);
+    expect(resolveInsertIndex(r, null, 'end')).toBe(2);
+  });
+
+  it('root before/after a sibling resolves to that sibling flat index (+1 for after)', () => {
+    const r = indexReaderOf([{ id: 'a' }, { id: 'b' }]);
+    expect(resolveInsertIndex(r, null, { before: 'b' })).toBe(1);
+    expect(resolveInsertIndex(r, null, { after: 'a' })).toBe(1);
+  });
+
+  it('parent end = after the parent last child', () => {
+    const r = indexReaderOf([{ id: 'p', name: 'toggle' }, { id: 'c1', parentId: 'p' }, { id: 'after' }]);
+    expect(resolveInsertIndex(r, 'p', 'end')).toBe(2);
+  });
+
+  it('empty parent end = right after the parent', () => {
+    const r = indexReaderOf([{ id: 'p', name: 'toggle' }, { id: 'after' }]);
+    expect(resolveInsertIndex(r, 'p', 'end')).toBe(1);
+  });
+});
+
+describe('resolveMoveIndex', () => {
+  it('toIndex passthrough, before/after resolve via sibling flat index', () => {
+    const r = indexReaderOf([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
+    expect(resolveMoveIndex(r, { toIndex: 2 })).toBe(2);
+    expect(resolveMoveIndex(r, { before: 'c' })).toBe(2);
+    expect(resolveMoveIndex(r, { after: 'a' })).toBe(1);
   });
 });

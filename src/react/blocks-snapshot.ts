@@ -73,3 +73,72 @@ export const snapshotNodes = (reader: BlocksReader): BlockNode[] => {
     contentIds: childrenByParent.get(b.id) ?? [],
   }));
 };
+
+/** BlocksReader plus id→flat-index lookup. */
+export interface IndexReader extends BlocksReader {
+  getBlockIndex(id: string): number | undefined;
+}
+
+/** Flat indices of a parent's direct children, ascending. Empty if none. */
+const childFlatIndices = (reader: IndexReader, parentId: string): number[] => {
+  const out: number[] = [];
+  const count = reader.getBlocksCount();
+
+  for (let i = 0; i < count; i++) {
+    const b = reader.getBlockByIndex(i);
+
+    if (b !== undefined && b.parentId === parentId) {
+      out.push(i);
+    }
+  }
+
+  return out;
+};
+
+/** The flat index at which a new block should be inserted. */
+export const resolveInsertIndex = (
+  reader: IndexReader,
+  parentId: string | null,
+  position: InsertPosition
+): number => {
+  if (typeof position === 'object') {
+    const ref = 'before' in position ? position.before : position.after;
+    const refIndex = reader.getBlockIndex(ref);
+
+    if (refIndex === undefined) {
+      return reader.getBlocksCount();
+    }
+
+    return 'before' in position ? refIndex : refIndex + 1;
+  }
+
+  if (parentId === null) {
+    return position === 'start' ? 0 : reader.getBlocksCount();
+  }
+
+  const childIndices = childFlatIndices(reader, parentId);
+
+  if (childIndices.length === 0) {
+    const parentIndex = reader.getBlockIndex(parentId);
+
+    return parentIndex === undefined ? reader.getBlocksCount() : parentIndex + 1;
+  }
+
+  return position === 'start' ? childIndices[0] : childIndices[childIndices.length - 1] + 1;
+};
+
+/** The flat toIndex for editor.blocks.move. */
+export const resolveMoveIndex = (reader: IndexReader, target: MoveTarget): number => {
+  if ('toIndex' in target) {
+    return target.toIndex;
+  }
+
+  const ref = 'before' in target ? target.before : target.after;
+  const refIndex = reader.getBlockIndex(ref);
+
+  if (refIndex === undefined) {
+    return reader.getBlocksCount();
+  }
+
+  return 'before' in target ? refIndex : refIndex + 1;
+};

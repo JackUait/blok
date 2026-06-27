@@ -74,21 +74,9 @@ describe('FeatureModal', () => {
     expect(screen.getByText('Version control friendly')).toBeInTheDocument();
   });
 
-  it('should render the code example without a redundant "Example" heading', () => {
+  it('should not render a code snippet even when codeExample is present', () => {
+    // The drawer leads with the live diorama; the code dump was redundant.
     renderModal();
-    expect(
-      screen.getByText((content) => content.includes('editor.save()'))
-    ).toBeInTheDocument();
-    // The code block self-labels its language, so the extra heading is gone.
-    expect(screen.queryByText('Example')).not.toBeInTheDocument();
-  });
-
-  it('should not render a code block when codeExample is absent', () => {
-    const featureWithoutCode: FeatureDetail = {
-      ...mockFeature,
-      details: { summary: 'Summary', benefits: ['Benefit'] },
-    };
-    renderModal(featureWithoutCode);
     expect(
       screen.queryByText((content) => content.includes('editor.save()'))
     ).not.toBeInTheDocument();

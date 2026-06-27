@@ -2085,8 +2085,6 @@ export const Features: React.FC = () => {
           t('home.features.cleanJson.details.benefit3'),
           t('home.features.cleanJson.details.benefit4'),
         ],
-        codeExample: `const data = await editor.save();
-// { blocks: [{ id: "x1", type: "paragraph", data: { text: "Hello" } }] }`,
         apiLink: "/docs#saver-api",
       },
     },
@@ -2112,10 +2110,6 @@ export const Features: React.FC = () => {
           t('home.features.blockLibrary.details.benefit3'),
           t('home.features.blockLibrary.details.benefit4'),
         ],
-        codeExample: `import Blok from '@jackuait/blok/full';
-
-// Tables, databases, columns, code, media and embeds: all registered
-new Blok({ holder: 'editor' });`,
         apiLink: "/tools",
       },
     },
@@ -2140,13 +2134,6 @@ new Blok({ holder: 'editor' });`,
           t('home.features.customBlocks.details.benefit3'),
           t('home.features.customBlocks.details.benefit4'),
         ],
-        codeExample: `class MyTool {
-  static get toolbox() {
-    return { title: 'My Tool', icon: '<svg>...</svg>' };
-  }
-  render() { return document.createElement('div'); }
-  save(element) { return { text: element.innerHTML }; }
-}`,
         apiLink: "/docs#tools-api",
       },
     },
@@ -2170,14 +2157,6 @@ new Blok({ holder: 'editor' });`,
           t('home.features.slashCommands.details.benefit3'),
           t('home.features.slashCommands.details.benefit4'),
         ],
-        codeExample: `new Blok({
-  tools: {
-    myBlock: {
-      class: MyBlockTool,
-      toolbox: { title: 'My Block', icon: '<svg>...</svg>' }
-    }
-  }
-});`,
         apiLink: "/docs#toolbar-api",
       },
     },
@@ -2273,9 +2252,6 @@ new Blok({ holder: 'editor' });`,
           t('home.features.languages.details.benefit3'),
           t('home.features.languages.details.benefit4'),
         ],
-        codeExample: `new Blok({
-  i18n: { locale: 'ar' } // Arabic with RTL
-});`,
         apiLink: "/docs#i18n-api",
       },
     },

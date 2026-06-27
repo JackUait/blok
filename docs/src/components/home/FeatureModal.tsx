@@ -7,7 +7,6 @@ import {
   type PanInfo,
   type Variants,
 } from "framer-motion";
-import { CodeBlock } from "../common/CodeBlock";
 import { useI18n } from "../../contexts/I18nContext";
 
 // Backdrop fades; the panel slides in from its edge.
@@ -305,12 +304,6 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
                 </ul>
               </div>
 
-              {feature.details.codeExample && (
-                <CodeBlock
-                  code={feature.details.codeExample}
-                  language="typescript"
-                />
-              )}
             </div>
 
             {/* Footer — sticky CTA into the relevant docs. */}

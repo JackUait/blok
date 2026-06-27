@@ -3,8 +3,10 @@ import { useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
 import type { Blok } from '../../types';
 import {
   snapshotNodes,
+  resolveInsertIndex,
   type BlockNode,
   type IndexReader,
+  type InsertSpec,
   type UseBlocksApi,
 } from './blocks-snapshot';
 
@@ -108,10 +110,41 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       }
     };
 
+    const insert = (spec: InsertSpec = {}): BlockNode | null => {
+      const parentId = spec.parentId ?? null;
+      const position = spec.position ?? 'end';
+      const data = spec.data ?? {};
+      const flatIndex = resolveInsertIndex(reader, parentId, position);
+
+      let createdId: string | null = null;
+
+      const run = (): void => {
+        const created = editor.blocks.insert(spec.type, data, {}, flatIndex);
+
+        if (created === undefined || created === null) {
+          return;
+        }
+        createdId = created.id;
+
+        if (parentId !== null) {
+          editor.blocks.setBlockParent(created.id, parentId);
+        }
+      };
+
+      if (parentId !== null) {
+        transact(run);
+      } else {
+        run();
+      }
+
+      return createdId === null ? null : getById(createdId);
+    };
+
     return {
       ...EMPTY_API,
       getById,
       getChildren,
+      insert,
       nest,
       unnest,
       remove,

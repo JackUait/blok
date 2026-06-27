@@ -19,6 +19,13 @@ const makeFakeEditor = (
         return idx === -1 ? undefined : idx;
       },
       getById: (id: string) => list.find((b) => b.id === id) ?? null,
+      insert: vi.fn((type?: string, data?: unknown, _cfg?: unknown, index?: number) => {
+        const id = `new-${list.length}`;
+        const row = { id, name: type ?? 'paragraph', parentId: null };
+        const at = index ?? list.length;
+        list.splice(at, 0, row);
+        return { id, name: row.name, parentId: row.parentId };
+      }),
       setBlockParent: vi.fn(),
       delete: vi.fn(),
       transact: vi.fn((fn: () => void) => fn()),
@@ -115,5 +122,44 @@ describe('useBlocks mutators (delegation)', () => {
     act(() => result.current.transact(fn));
     expect(editor.blocks.transact).toHaveBeenCalledTimes(1);
     expect(fn).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('useBlocks insert', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('root insert at end calls editor.blocks.insert with flat index = count', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let created: ReturnType<typeof result.current.insert> = null;
+    act(() => { created = result.current.insert({ type: 'header', data: { text: 'hi' } }); });
+    expect(editor.blocks.insert).toHaveBeenCalledWith('header', { text: 'hi' }, {}, 2);
+    expect(created).toMatchObject({ type: 'header' });
+  });
+
+  it('root insert before a sibling uses that sibling flat index', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => { result.current.insert({ type: 'paragraph', position: { before: 'b' } }); });
+    expect(editor.blocks.insert).toHaveBeenCalledWith('paragraph', {}, {}, 1);
+  });
+
+  it('parented insert wraps insert + setBlockParent in a single transact', () => {
+    const { editor } = makeFakeEditor([{ id: 'p', name: 'toggle' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => { result.current.insert({ type: 'paragraph', parentId: 'p' }); });
+    expect(editor.blocks.transact).toHaveBeenCalledTimes(1);
+    expect(editor.blocks.insert).toHaveBeenCalledTimes(1);
+    expect(editor.blocks.setBlockParent).toHaveBeenCalledWith('new-1', 'p');
+  });
+
+  it('returns null when editor.blocks.insert yields no block', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    (editor.blocks.insert as ReturnType<typeof vi.fn>).mockReturnValueOnce(undefined);
+    const { result } = renderHook(() => useBlocks(editor));
+    let created: ReturnType<typeof result.current.insert> = null;
+    act(() => { created = result.current.insert({}); });
+    expect(created).toBeNull();
   });
 });

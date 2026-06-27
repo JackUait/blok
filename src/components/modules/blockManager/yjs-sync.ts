@@ -7,7 +7,6 @@ import type { Map as YMap } from 'yjs';
 
 import { BlockToolAPI } from '../../block';
 import type { Block } from '../../block';
-import { DATA_ATTR } from '../../constants/data-attributes';
 import { moveElementAfter, moveElementBefore } from '../../utils/html';
 import type { YjsManager } from '../yjs';
 import type { BlockChangeEvent } from '../yjs/types';
@@ -82,9 +81,18 @@ export class BlockYjsSync {
   private moveSyncScheduled = false;
 
   /**
-   * Flag to prevent multiple root-holder order reconciles in the same event batch
+   * Flag to prevent multiple holder-order reconciles in the same event batch
    */
   private orderReconcileScheduled = false;
+
+  /**
+   * Whether the current event batch removed a block. Only a removal can promote
+   * a surviving descendant back to root and strand its holder, so the holder
+   * auto-fix runs ONLY for remove-driven batches. Reconstruction batches
+   * (add/batch-add during redo) settle their own DOM across a RAF; reordering
+   * holders mid-rebuild corrupts the layout, so they are never auto-moved here.
+   */
+  private batchHadRemove = false;
 
   /**
    * Blocks store access
@@ -221,49 +229,46 @@ export class BlockYjsSync {
   }
 
   /**
-   * Sync a block from Yjs data after undo/redo
+   * Sync a block from Yjs data after undo/redo (or a remote change).
+   *
+   * Every event type ends by scheduling a holder-order reconcile: any undo,
+   * redo, or remote teardown/rebuild can leave a block's holder at a DOM
+   * position that no longer matches the (authoritative) block array — and
+   * blocksStore.move() can't catch it because it keys on the array index, which
+   * is already correct. The reconcile is the single chokepoint that re-asserts
+   * DOM order against the array, then asserts the invariant in dev/test.
+   *
    * @param event - the block change event from YjsManager
    */
   private syncBlockFromYjs(event: BlockChangeEvent): void {
     if (event.type === 'update') {
       this.handleYjsUpdate(event.blockId);
-      return;
-    }
-
-    if (event.type === 'move') {
+    } else if (event.type === 'move') {
       this.handleYjsMove();
-      return;
-    }
-
-    if (event.type === 'add') {
+    } else if (event.type === 'add') {
       this.handleYjsAdd(event.blockId);
-      return;
-    }
-
-    if (event.type === 'batch-add') {
+    } else if (event.type === 'batch-add') {
       this.handleYjsBatchAdd(event.blockIds);
-      return;
+    } else if (event.type === 'remove') {
+      this.handleYjsRemove(event.blockId);
+      this.batchHadRemove = true;
     }
 
-    if (event.type === 'remove') {
-      this.handleYjsRemove(event.blockId);
-      // A remove can promote surviving descendants back to root (e.g. undo tears
-      // down a column_list and its leaves return to the document). The block
-      // ARRAY restores their order, but their holders may be stranded at the DOM
-      // position they held inside the now-removed container — blocksStore.move()
-      // can't fix it because the array index already matches. Re-assert the DOM
-      // order against the array once the teardown settles.
-      this.scheduleRootHolderReconcile();
-    }
+    this.scheduleHolderReconcile();
   }
 
   /**
-   * Schedule a single root-holder DOM order reconcile for the current event
-   * batch. Debounced via a microtask so a multi-event teardown (column_list +
-   * its columns) reconciles exactly once, after the block array and parent
-   * relationships have fully settled.
+   * Schedule a single holder-order reconcile + invariant check for the current
+   * event batch. Debounced via a microtask so a multi-event sync (e.g. a
+   * column_list + its columns being torn down) settles exactly once, after the
+   * block array and parent relationships have stabilised.
+   *
+   * The auto-fix only runs for remove-driven batches (see {@link batchHadRemove})
+   * — the proven, safe case. The invariant check runs for EVERY batch: it never
+   * touches the DOM, so it can't disturb a redo reconstruction, but it WILL trip
+   * a test the instant any sync leaves the holder order diverged from the array.
    */
-  private scheduleRootHolderReconcile(): void {
+  private scheduleHolderReconcile(): void {
     if (this.orderReconcileScheduled) {
       return;
     }
@@ -272,42 +277,124 @@ export class BlockYjsSync {
 
     queueMicrotask(() => {
       this.orderReconcileScheduled = false;
+      const shouldFix = this.batchHadRemove;
+
+      this.batchHadRemove = false;
+
       // Run inside an atomic operation so the holder moves don't echo back to
       // Yjs as fresh local writes (which would pollute the undo/redo stacks).
       this.withAtomicOperation(() => {
-        this.reconcileRootHolderOrder();
+        if (shouldFix) {
+          this.reconcileHolderOrder();
+        }
+
+        this.assertDomOrderInvariantInDev('yjs-sync reconcile');
       });
     });
   }
 
   /**
-   * Walk the root-level blocks in array order and re-assert their DOM order to
-   * match. A block is "at root" when its holder lives directly in the document
-   * flow rather than inside a container's nested-blocks region (column, toggle,
-   * callout, etc.). Nested blocks are skipped — they follow their container's
-   * holder and must never be lifted out here.
+   * Re-assert that every block's holder sits in document order matching the
+   * block array, scoped to true DOM siblings.
    *
-   * This repairs the model-vs-DOM divergence left when an undo removes a
-   * container and its descendants are promoted to root: the array order is
-   * authoritative, the holders are not.
+   * Blocks are grouped by `parentId` (preserving array order); within each
+   * group the holders must appear in document order. Any holder that drifted
+   * is moved back into place. The `parentElement` guard means ONLY genuine DOM
+   * siblings are ever reordered — a stray holder can never be yanked across a
+   * container boundary here, so the pass is safe for every tool (columns,
+   * toggles, tables, databases) regardless of how each manages its own subtree.
+   *
+   * This repairs the model-vs-DOM divergence left when an undo/redo/remote sync
+   * promotes or relocates a block but leaves its holder at the position it held
+   * in the now-changed structure: the array order is authoritative, the holder
+   * position is not.
    */
-  private reconcileRootHolderOrder(): void {
-    const isAtRoot = (block: Block): boolean =>
-      block.holder.closest(`[${DATA_ATTR.nestedBlocks}], [data-blok-toggle-children]`) === null;
+  private reconcileHolderOrder(): void {
+    for (const siblings of this.groupByParent().values()) {
+      let prevHolder: HTMLElement | null = null;
 
-    let prevHolder: HTMLElement | null = null;
+      for (const block of siblings) {
+        if (
+          prevHolder !== null &&
+          prevHolder.parentElement !== null &&
+          block.holder.parentElement === prevHolder.parentElement &&
+          (prevHolder.compareDocumentPosition(block.holder) & Node.DOCUMENT_POSITION_FOLLOWING) === 0
+        ) {
+          moveElementAfter(block.holder, prevHolder);
+        }
+
+        prevHolder = block.holder;
+      }
+    }
+  }
+
+  /**
+   * Dev/test tripwire: throw if any block's holder is out of document order
+   * relative to its array-order sibling. This is the DOM-order analogue of
+   * assertHierarchyInvariantInDev — it catches a model-vs-DOM divergence at the
+   * point of introduction (a failing test) instead of as a silent visual bug
+   * the user only sees after an undo. No-op outside test/development.
+   *
+   * @param context - label of the sync that just ran (for error messages)
+   */
+  private assertDomOrderInvariantInDev(context: string): void {
+    const env = typeof process !== 'undefined' ? process.env?.NODE_ENV : undefined;
+
+    if (env !== 'test' && env !== 'development') {
+      return;
+    }
+
+    const violations: string[] = [];
+
+    for (const siblings of this.groupByParent().values()) {
+      for (let i = 1; i < siblings.length; i++) {
+        const prevHolder = siblings[i - 1].holder;
+        const currHolder = siblings[i].holder;
+
+        // Only compare genuine DOM siblings — cross-container placement is a
+        // hierarchy concern covered by assertHierarchyInvariantInDev, not a
+        // sibling-order one.
+        if (prevHolder.parentElement === null || prevHolder.parentElement !== currHolder.parentElement) {
+          continue;
+        }
+
+        if ((prevHolder.compareDocumentPosition(currHolder) & Node.DOCUMENT_POSITION_FOLLOWING) === 0) {
+          violations.push(
+            `  - "${siblings[i - 1].id}" must precede "${siblings[i].id}" in the DOM ` +
+            `(parent: ${siblings[i].parentId ?? 'root'})`
+          );
+        }
+      }
+    }
+
+    if (violations.length === 0) {
+      return;
+    }
+
+    throw new Error(
+      `Block DOM order diverged from the block array after ${context}:\n${violations.join('\n')}`
+    );
+  }
+
+  /**
+   * Group all blocks by `parentId` (null = root), preserving array order within
+   * each group. Shared by the holder-order reconcile and its invariant check.
+   */
+  private groupByParent(): Map<string | null, Block[]> {
+    const groups = new Map<string | null, Block[]>();
 
     for (const block of this.repository.blocks) {
-      if (!isAtRoot(block)) {
-        continue;
-      }
+      const key = block.parentId ?? null;
+      const siblings = groups.get(key);
 
-      if (prevHolder !== null && prevHolder.nextElementSibling !== block.holder) {
-        moveElementAfter(block.holder, prevHolder);
+      if (siblings === undefined) {
+        groups.set(key, [block]);
+      } else {
+        siblings.push(block);
       }
-
-      prevHolder = block.holder;
     }
+
+    return groups;
   }
 
   /**

@@ -330,16 +330,16 @@
     "features": {
       "title1": "Built for developers,",
       "title2": "designed for users",
-      "description": "Everything you need to ship a modern block editor — clean JSON, a full block library, and a deep, typed API.",
+      "description": "Everything you need to ship a modern block editor: clean JSON, a full block library, and a deep, typed API.",
       "sectionLabel": "Features",
       "learnMoreLabel": "Learn more",
       "cleanJson": {
         "title": "Typed JSON, never HTML",
-        "description": "Just typed JSON blocks — never an HTML blob.",
+        "description": "Just typed JSON blocks, never an HTML blob.",
         "learnMore": "Learn more about Clean JSON output",
         "details": {
           "summary": "Blok is headless. Every document is a flat tree of typed blocks with stable IDs, so the output is the same whether you save it to a database, diff it in version control, or render it server-side.",
-          "benefit1": "Typed JSON output — no HTML parsing",
+          "benefit1": "Typed JSON output, no HTML parsing",
           "benefit2": "Stable block IDs for diffing and version control",
           "benefit3": "Render anywhere: server, client, or native",
           "benefit4": "Framework-agnostic core with full TypeScript types"
@@ -350,7 +350,7 @@
         "description": "Notion-style blocks, ready in the box.",
         "learnMore": "Learn more about the block library",
         "details": {
-          "summary": "Blok comes with the blocks people expect from a modern editor: nestable tables and toggles, multi-column layouts, kanban databases, syntax-highlighted code, image, video and file uploads, and live embeds — all first-class blocks.",
+          "summary": "Blok comes with the blocks people expect from a modern editor: nestable tables and toggles, multi-column layouts, kanban databases, syntax-highlighted code, image, video and file uploads, and live embeds. Every one a first-class block.",
           "benefit1": "Tables with merged cells, resizing and cell colors",
           "benefit2": "Databases with kanban and list views",
           "benefit3": "Columns, callouts, toggles and dividers",
@@ -362,7 +362,7 @@
         "description": "Your own block tools, inline tools and block tunes.",
         "learnMore": "Learn more about extending Blok",
         "details": {
-          "summary": "Three extension points — block tools, inline tools and block tunes — sit on a deep public API (blocks, caret, history, selection and more) with lifecycle hooks for render, save, validate and move.",
+          "summary": "Three extension points (block tools, inline tools and block tunes) sit on a deep public API of blocks, caret, history and selection, with lifecycle hooks for render, save, validate and move.",
           "benefit1": "Custom block tools with a simple render/save API",
           "benefit2": "Custom inline tools and block tunes",
           "benefit3": "Lifecycle hooks: rendered, updated, moved, removed",
@@ -387,7 +387,7 @@
         "learnMore": "Learn more about databases",
         "details": {
           "summary": "Blok's database is a block: rows are child blocks, columns define a typed property schema, and the same data renders as a kanban board or a grouped list.",
-          "benefit1": "Rows are blocks — everything stays in the tree",
+          "benefit1": "Rows are blocks, so everything stays in the tree",
           "benefit2": "Typed property schema (text, select, date…)",
           "benefit3": "Kanban board and list views",
           "benefit4": "Drag cards, columns and rows"
@@ -407,7 +407,7 @@
       },
       "embeds": {
         "title": "Embed 100+ services",
-        "description": "Paste a link to embed 100+ services — YouTube, Figma, Spotify, Gist — or get an OpenGraph bookmark card.",
+        "description": "Paste a link to embed 100+ services like YouTube, Figma, Spotify and Gist, or get an OpenGraph bookmark card.",
         "learnMore": "Learn more about embeds",
         "details": {
           "summary": "Paste a URL and Blok matches it against 100+ providers to render a live embed; anything else becomes a clean OpenGraph bookmark card.",
@@ -437,18 +437,18 @@
           "summary": "Blok ships 68 locales with automatic browser-language detection and right-to-left layout. Locale data is lazy-loaded, so users only download the language they need.",
           "benefit1": "68 bundled locales",
           "benefit2": "Right-to-left layout (Arabic, Hebrew, Farsi…)",
-          "benefit3": "Lazy-loaded — minimal base bundle",
+          "benefit3": "Lazy-loaded for a minimal base bundle",
           "benefit4": "Override any string"
         }
       },
       "media": {
         "title": "Image, video & audio",
-        "description": "Drop in images, a YouTube-grade video player and audio with live waveforms — all first-class blocks.",
+        "description": "Drop in images, a YouTube-grade video player and audio with live waveforms. Every one a first-class block.",
         "learnMore": "Learn more about media blocks",
         "details": {
           "summary": "Rich media is built in: resizable images, a full video player with scrubbing and speed control, and audio blocks that render a waveform from the decoded track.",
           "benefit1": "Resizable images with captions",
-          "benefit2": "Video player — scrubber, speed, PiP & theater",
+          "benefit2": "Video player with scrubber, speed, PiP & theater",
           "benefit3": "Audio blocks with cached waveform peaks",
           "benefit4": "Paste or drag a file to upload"
         }

@@ -12,4 +12,8 @@ describe('@jackuait/blok/react exports', () => {
     expect(typeof ReactApi.BlokProvider).toBe('function');
     expect(typeof ReactApi.useBlokDefaults).toBe('function');
   });
+
+  it('exports useBlocks', () => {
+    expect(typeof ReactApi.useBlocks).toBe('function');
+  });
 });

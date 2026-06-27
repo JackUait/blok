@@ -290,11 +290,13 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
                   <div
                     ref={heroRef}
                     onPointerMove={trackGlow}
-                    // Most dioramas fill the plate, but the Clean JSON (coral) viz
-                    // flips to a full editor canvas whose back face is the tallest
-                    // of them all; the compact plate clipped its trailing line, so
-                    // coral gets extra height.
-                    className={`bento-tile group relative ${feature.accent === "coral" ? "h-[21rem]" : "h-[17rem]"} overflow-hidden rounded-[calc(1.65rem-0.375rem)] border border-border/60 bg-card p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]`}
+                    // Most dioramas sit inside the plate padding, but two need
+                    // special treatment: the Clean JSON (coral) viz flips to a full
+                    // editor canvas whose back face is the tallest of them all, so
+                    // it gets extra height; and the Embeds (blue) viz is a
+                    // full-bleed marquee, so it drops the padding and runs the river
+                    // edge to edge instead of leaving an empty frame.
+                    className={`bento-tile group relative ${feature.accent === "coral" ? "h-[21rem]" : "h-[17rem]"} overflow-hidden rounded-[calc(1.65rem-0.375rem)] border border-border/60 bg-card ${feature.accent === "blue" ? "p-0" : "p-4"} shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]`}
                   >
                     <span className="bento-spot" aria-hidden="true" />
                     <div className="relative z-10 flex h-full w-full items-center">

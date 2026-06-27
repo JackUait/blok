@@ -78,6 +78,22 @@ describe('FeatureModal', () => {
     expect(plate?.className).not.toContain('h-[21rem]');
   });
 
+  it('runs the Embeds river edge to edge (no plate padding)', () => {
+    // The embeds viz is a full-bleed marquee; padding would leave an empty frame
+    // around it. Blue gets p-0 so the river fills the plate to its rounded edges.
+    const { container } = renderModal({ ...mockFeature, accent: 'blue' });
+    const plate = container.querySelector('.bento-tile');
+    expect(plate?.className).toContain('p-0');
+    expect(plate?.className).not.toContain('p-4');
+  });
+
+  it('keeps plate padding for non-embeds features', () => {
+    const { container } = renderModal({ ...mockFeature, accent: 'cyan' });
+    const plate = container.querySelector('.bento-tile');
+    expect(plate?.className).toContain('p-4');
+    expect(plate?.className).not.toContain('p-0');
+  });
+
   it('should render the benefits heading in sentence case', () => {
     renderModal();
     expect(screen.getByText('Key benefits')).toBeInTheDocument();

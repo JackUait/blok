@@ -239,6 +239,15 @@ const tileHover = { type: "spring", stiffness: 380, damping: 22 } as const;
 export const TrustedBy: React.FC = () => {
   const { t } = useI18n();
 
+  // The testimonial reads as a quiet claim with a punchy kicker after the em
+  // dash ("…pizza chains — thousands of authors, one block model."). Split on the
+  // dash so the kicker can lift into the brand gradient; if a translation drops
+  // the dash, the whole line just renders as the claim.
+  const summary = t("home.trusted.summary");
+  const dashIndex = summary.indexOf("—");
+  const claim = dashIndex === -1 ? summary : summary.slice(0, dashIndex).trim();
+  const kicker = dashIndex === -1 ? "" : summary.slice(dashIndex + 1).trim();
+
   const stats: Stat[] = [
     {
       value: t("home.trusted.statCountriesValue"),
@@ -281,14 +290,28 @@ export const TrustedBy: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Editorial pull-statement with a slim brand-gradient rail */}
-                <blockquote className="mt-9 flex gap-5 sm:mt-10 sm:gap-6">
+                {/* Editorial pull-quote: an oversized ghost quotation mark — the
+                    same near-subliminal motif as the stat tiles' ghost glyphs —
+                    leads in, the claim sits in the display face, and the kicker
+                    after the dash lifts into the brand gradient as the line you
+                    remember. */}
+                <blockquote className="relative mt-12 sm:mt-14">
                   <span
-                    className="w-[3px] shrink-0 rounded-full bg-brand-gradient"
                     aria-hidden="true"
-                  />
-                  <p className="max-w-xl text-pretty text-xl font-medium leading-[1.45] tracking-tight text-foreground/90 sm:text-[26px]">
-                    {t("home.trusted.summary")}
+                    className="pointer-events-none absolute -left-2 -top-12 select-none font-display text-[7rem] leading-none text-foreground/[0.07] sm:-top-14 sm:text-[8.5rem]"
+                  >
+                    &ldquo;
+                  </span>
+                  <p className="relative max-w-xl text-pretty font-display text-[22px] font-medium leading-[1.4] tracking-tight text-foreground/85 sm:text-[28px]">
+                    {claim}
+                    {kicker && (
+                      <>
+                        {" — "}
+                        <span className="font-bold text-brand-gradient [box-decoration-break:clone] [-webkit-box-decoration-break:clone]">
+                          {kicker}
+                        </span>
+                      </>
+                    )}
                   </p>
                 </blockquote>
 

@@ -39,6 +39,110 @@ const hoverSpring = { type: "spring", stiffness: 380, damping: 20 } as const;
 // The peak tilt, in degrees, a tile leans toward the cursor.
 const TILT = 5;
 
+// A PointerEvent tagged as synthesized by the touch autoplay sweep, so the tilt
+// can tell a real cursor from the in-view "ghost finger" that drives the dioramas.
+type AutoPointerEvent = PointerEvent & { __auto?: boolean };
+
+// On a touch device there is no cursor, so every diorama — built to wake on
+// `:hover`/`pointermove` — would sit frozen at its rest frame. This hook makes the
+// tile play itself: while it crosses the vertical middle of the viewport it gets
+// the `.is-touch-active` class (the CSS hover choreography is mirrored onto it)
+// and a slow, looping synthetic pointer sweep that drives the cursor-following
+// effects (the chip dock, the edge glow, the embeds cluster). Hover/fine-pointer
+// devices keep the real cursor path and never arm this. Reduced-motion opts out.
+const SWEEP_PERIOD_MS = 3200;
+const useTouchAutoplay = (ref: React.RefObject<HTMLElement | null>) => {
+  const reduce = useReducedMotion();
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || reduce) return;
+    if (typeof window === "undefined" || typeof IntersectionObserver === "undefined") {
+      return;
+    }
+    // Only where there is genuinely no cursor to drive the dioramas.
+    if (!window.matchMedia?.("(hover: none)").matches) return;
+
+    const hasPointerEvent = typeof PointerEvent === "function";
+    let active = false;
+    let raf = 0;
+    let startTs = 0;
+
+    const dispatchAutoMove = (clientX: number, clientY: number) => {
+      if (!hasPointerEvent) return;
+      const ev = new PointerEvent("pointermove", {
+        pointerType: "mouse",
+        clientX,
+        clientY,
+        bubbles: true,
+      });
+      (ev as AutoPointerEvent).__auto = true;
+      el.dispatchEvent(ev);
+    };
+
+    // One easeInOut pass left→right per period, with a gentle vertical bob, so the
+    // chips/logos near the path swell and settle like a finger drifting across.
+    const sweep = (ts: number) => {
+      if (!startTs) startTs = ts;
+      const p = ((ts - startTs) % SWEEP_PERIOD_MS) / SWEEP_PERIOD_MS;
+      const ease = p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2;
+      const r = el.getBoundingClientRect();
+      dispatchAutoMove(
+        r.left + r.width * ease,
+        r.top + r.height * (0.5 + 0.12 * Math.sin(p * Math.PI * 2)),
+      );
+      raf = requestAnimationFrame(sweep);
+    };
+
+    const autoPointer = (type: "pointerenter" | "pointerleave") => {
+      if (!hasPointerEvent) return;
+      const ev = new PointerEvent(type, { pointerType: "mouse", bubbles: false });
+      (ev as AutoPointerEvent).__auto = true;
+      el.dispatchEvent(ev);
+    };
+
+    const enter = () => {
+      if (active) return;
+      active = true;
+      el.classList.add("is-touch-active");
+      // Wake the enter-driven dioramas (slash search, undo/redo, picker ripple,
+      // language phrase) the same way a cursor would.
+      autoPointer("pointerenter");
+      el.dispatchEvent(new MouseEvent("mouseenter", { bubbles: false }));
+      startTs = 0;
+      raf = requestAnimationFrame(sweep);
+    };
+
+    const leave = () => {
+      if (!active) return;
+      active = false;
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+      el.classList.remove("is-touch-active");
+      autoPointer("pointerleave");
+      el.dispatchEvent(new MouseEvent("mouseleave", { bubbles: false }));
+    };
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) enter();
+          else leave();
+        }
+      },
+      // A thin band across the viewport's vertical middle: a tile plays while it
+      // sits in the centre of the screen and settles once it scrolls past.
+      { rootMargin: "-42% 0px -42% 0px", threshold: 0 },
+    );
+    io.observe(el);
+
+    return () => {
+      io.disconnect();
+      if (raf) cancelAnimationFrame(raf);
+      el.classList.remove("is-touch-active");
+    };
+  }, [ref, reduce]);
+};
+
 // Cursor-reactive 3D tilt + specular glow — the Apple bento signature. The tilt
 // rides framer springs (so it eases in and recoils on leave) and the glow is a
 // CSS radial fed the pointer position through --mx/--my. Pointer-fine + motion
@@ -61,8 +165,14 @@ const useTilt = () => {
         const rect = el.getBoundingClientRect();
         const px = (e.clientX - rect.left) / rect.width;
         const py = (e.clientY - rect.top) / rect.height;
-        rotateX.set((0.5 - py) * TILT * 2);
-        rotateY.set((px - 0.5) * TILT * 2);
+        // The touch autoplay (useTouchAutoplay) sweeps a synthetic "mouse" pointer
+        // to bring the dioramas alive in view. Let it drive the glow blob + edge
+        // light (--mx/--my, so they trail the ghost finger), but NOT the 3D tilt —
+        // a tile rocking on its own while you scroll reads as a glitch.
+        if (!(e.nativeEvent as AutoPointerEvent).__auto) {
+          rotateX.set((0.5 - py) * TILT * 2);
+          rotateY.set((px - 0.5) * TILT * 2);
+        }
         el.style.setProperty("--mx", `${px * 100}%`);
         el.style.setProperty("--my", `${py * 100}%`);
       },
@@ -668,7 +778,7 @@ const ExtensibleViz: React.FC = () => {
             <span
               className={`flex size-7 shrink-0 items-center justify-center rounded-[10px] ${
                 block.mine
-                  ? "bg-linear-to-br from-brand-from to-brand-to text-white shadow-[0_4px_12px_-2px_rgba(233,78,122,0.5)] ring-1 ring-inset ring-white/25 transition-transform duration-300 ease-out lg:group-hover:scale-[1.07]"
+                  ? "bg-linear-to-br from-brand-from to-brand-to text-white shadow-[0_4px_12px_-2px_rgba(233,78,122,0.5)] ring-1 ring-inset ring-white/25 transition-transform duration-300 ease-out lg:group-hover:scale-[1.07] group-[.is-touch-active]:scale-[1.07]"
                   : "border border-border/60 bg-card text-muted-foreground shadow-sm"
               }`}
             >
@@ -1008,7 +1118,7 @@ const TablesViz: React.FC = () => {
       />
       {/* The table is taller than its tile, so the lower rows spill past the
           bottom edge (the tile clips them) — a spreadsheet that keeps going. */}
-      <div className="grid w-full grid-cols-[0.7fr_1.6fr_1fr_0.85fr] grid-rows-[repeat(7,auto)] gap-[3px] rounded-xl border border-border/60 bg-border/60 p-[3px] transition-[grid-template-columns] duration-500 ease-out motion-safe:group-hover:grid-cols-[0.7fr_1.95fr_0.65fr_0.85fr]">
+      <div className="grid w-full grid-cols-[0.7fr_1.6fr_1fr_0.85fr] grid-rows-[repeat(7,auto)] gap-[3px] rounded-xl border border-border/60 bg-border/60 p-[3px] transition-[grid-template-columns] duration-500 ease-out motion-safe:group-hover:grid-cols-[0.7fr_1.95fr_0.65fr_0.85fr] motion-safe:group-[.is-touch-active]:grid-cols-[0.7fr_1.95fr_0.65fr_0.85fr]">
       {/* heading row */}
       {TABLE_HEADERS.map(({ label, cls }) => (
         <div
@@ -1057,7 +1167,7 @@ const TablesViz: React.FC = () => {
           column with its fill handle riding the bottom edge. Pure CSS (animated
           inset), so reduced-motion users just see the static selected cell. */}
       <span className="pointer-events-none relative z-20 col-start-3 row-start-2 row-span-6">
-        <span className="absolute inset-x-[1px] top-[1px] bottom-[83%] rounded-[3px] border-[1.5px] border-[#3b82f6] bg-[#3b82f6]/10 transition-[bottom] duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-safe:group-hover:bottom-[1px]">
+        <span className="absolute inset-x-[1px] top-[1px] bottom-[83%] rounded-[3px] border-[1.5px] border-[#3b82f6] bg-[#3b82f6]/10 transition-[bottom] duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-safe:group-hover:bottom-[1px] motion-safe:group-[.is-touch-active]:bottom-[1px]">
           {/* fill handle — the little square you'd grab to drag the series down */}
           <span className="absolute -bottom-[3.5px] -right-[3.5px] size-[6px] rounded-[1.5px] border border-white bg-[#3b82f6] shadow-sm" />
         </span>
@@ -1166,6 +1276,10 @@ const EmbedsViz: React.FC = () => {
   useEffect(() => {
     const win = winRef.current;
     if (reduce || !win) return;
+    // Listen on the whole tile (not just the marquee window) so the touch
+    // autoplay's synthetic sweep — dispatched on the tile button — bubbles in and
+    // drives the cluster, exactly as a real cursor over the tile would.
+    const tile = win.closest(".bento-tile") ?? win;
 
     const tiles = Array.from(win.querySelectorAll<HTMLElement>(".embed-tile"));
     const noise = tiles.map((_, i) => tileNoise(i));
@@ -1253,11 +1367,11 @@ const EmbedsViz: React.FC = () => {
       pointer = null;
     };
 
-    win.addEventListener("pointermove", onMove);
-    win.addEventListener("pointerleave", onLeave);
+    tile.addEventListener("pointermove", onMove as EventListener);
+    tile.addEventListener("pointerleave", onLeave);
     return () => {
-      win.removeEventListener("pointermove", onMove);
-      win.removeEventListener("pointerleave", onLeave);
+      tile.removeEventListener("pointermove", onMove as EventListener);
+      tile.removeEventListener("pointerleave", onLeave);
       cancelAnimationFrame(raf);
     };
   }, [reduce]);
@@ -1268,7 +1382,7 @@ const EmbedsViz: React.FC = () => {
       aria-hidden="true"
       className="relative flex size-full items-center overflow-hidden"
     >
-      <div className="-ml-[22%] flex w-[144%] flex-col gap-3 transition-transform duration-[800ms] ease-out will-change-transform motion-safe:group-hover:[transform:rotate(-19deg)_scale(1.32)]">
+      <div className="-ml-[22%] flex w-[144%] flex-col gap-3 transition-transform duration-[800ms] ease-out will-change-transform motion-safe:group-hover:[transform:rotate(-19deg)_scale(1.32)] motion-safe:group-[.is-touch-active]:[transform:rotate(-19deg)_scale(1.32)]">
         {EMBED_ROWS.map((row, r) => (
           <div
             key={r}
@@ -1796,34 +1910,34 @@ const MediaViz: React.FC = () => {
         <div className="absolute inset-0 bg-linear-to-b from-brand-from/45 via-brand-via/35 to-brand-to/55" />
         <div className="absolute inset-x-0 top-0 h-2/3 bg-linear-to-b from-violet-400/15 to-transparent" />
         {/* a lone wisp of cloud, drifting on hover */}
-        <div className="absolute left-5 top-3 h-1.5 w-12 rounded-full bg-white/35 blur-[3px] transition-transform duration-[1600ms] ease-out motion-safe:group-hover:-translate-x-2" />
+        <div className="absolute left-5 top-3 h-1.5 w-12 rounded-full bg-white/35 blur-[3px] transition-transform duration-[1600ms] ease-out motion-safe:group-hover:-translate-x-2 motion-safe:group-[.is-touch-active]:-translate-x-2" />
         {/* golden bloom pooling along the horizon beneath the sun */}
         <div className="absolute -bottom-1 right-1 h-9 w-28 rounded-[100%] bg-[radial-gradient(closest-side,_rgba(255,221,186,0.6),_rgba(255,221,186,0)_72%)] blur-[2px]" />
         {/* a pair of birds, far off in the evening sky */}
-        <svg className="absolute left-8 top-2.5 w-7 text-foreground/25 transition-transform duration-[1600ms] ease-out motion-safe:group-hover:translate-x-1 motion-safe:group-hover:-translate-y-0.5" viewBox="0 0 28 9" fill="none" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round" aria-hidden="true">
+        <svg className="absolute left-8 top-2.5 w-7 text-foreground/25 transition-transform duration-[1600ms] ease-out motion-safe:group-hover:translate-x-1 motion-safe:group-hover:-translate-y-0.5 motion-safe:group-[.is-touch-active]:translate-x-1 motion-safe:group-[.is-touch-active]:-translate-y-0.5" viewBox="0 0 28 9" fill="none" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round" aria-hidden="true">
           <path d="M1 5 Q3 2.5 5 5 Q7 2.5 9 5" />
           <path d="M16 6.5 Q17.6 4.6 19 6.5 Q20.4 4.6 22 6.5" />
         </svg>
         {/* setting sun — a luminous core bleeding into a wide warm bloom, rising on hover */}
-        <div className="absolute right-5 top-0 size-14 -translate-y-1 rounded-full bg-[radial-gradient(circle,_rgba(255,255,255,0.98)_0%,_rgba(255,250,242,0.7)_18%,_rgba(255,232,205,0.32)_42%,_rgba(255,232,205,0)_70%)] transition-transform duration-700 ease-out motion-safe:group-hover:-translate-y-2 motion-safe:group-hover:scale-110" />
+        <div className="absolute right-5 top-0 size-14 -translate-y-1 rounded-full bg-[radial-gradient(circle,_rgba(255,255,255,0.98)_0%,_rgba(255,250,242,0.7)_18%,_rgba(255,232,205,0.32)_42%,_rgba(255,232,205,0)_70%)] transition-transform duration-700 ease-out motion-safe:group-hover:-translate-y-2 motion-safe:group-hover:scale-110 motion-safe:group-[.is-touch-active]:-translate-y-2 motion-safe:group-[.is-touch-active]:scale-110" />
         {/* distant range — a pale haze ridge, atmospheric perspective at its faintest */}
-        <svg className="absolute inset-x-0 bottom-0 h-8 w-full origin-bottom text-foreground/8 transition-transform duration-[1400ms] ease-out motion-safe:group-hover:scale-[1.02]" viewBox="0 0 120 30" preserveAspectRatio="none" fill="currentColor" aria-hidden="true">
+        <svg className="absolute inset-x-0 bottom-0 h-8 w-full origin-bottom text-foreground/8 transition-transform duration-[1400ms] ease-out motion-safe:group-hover:scale-[1.02] motion-safe:group-[.is-touch-active]:scale-[1.02]" viewBox="0 0 120 30" preserveAspectRatio="none" fill="currentColor" aria-hidden="true">
           <path d="M0 30 20 18 38 24 58 14 78 22 98 13 120 20 120 30Z" />
         </svg>
         {/* far range — hazy and pale, hung higher up the sky */}
-        <svg className="absolute inset-x-0 bottom-0 h-7 w-full origin-bottom text-foreground/16 transition-transform duration-[1400ms] ease-out motion-safe:group-hover:scale-[1.05]" viewBox="0 0 120 28" preserveAspectRatio="none" fill="currentColor" aria-hidden="true">
+        <svg className="absolute inset-x-0 bottom-0 h-7 w-full origin-bottom text-foreground/16 transition-transform duration-[1400ms] ease-out motion-safe:group-hover:scale-[1.05] motion-safe:group-[.is-touch-active]:scale-[1.05]" viewBox="0 0 120 28" preserveAspectRatio="none" fill="currentColor" aria-hidden="true">
           <path d="M0 28 16 14 30 20 50 9 68 18 88 8 104 16 120 11 120 28Z" />
         </svg>
         {/* near range — darker and lower, overlapping the far range to build depth */}
-        <svg className="absolute inset-x-0 bottom-0 h-5 w-full origin-bottom text-foreground/34 transition-transform duration-[1400ms] ease-out motion-safe:group-hover:scale-[1.1]" viewBox="0 0 120 22" preserveAspectRatio="none" fill="currentColor" aria-hidden="true">
+        <svg className="absolute inset-x-0 bottom-0 h-5 w-full origin-bottom text-foreground/34 transition-transform duration-[1400ms] ease-out motion-safe:group-hover:scale-[1.1] motion-safe:group-[.is-touch-active]:scale-[1.1]" viewBox="0 0 120 22" preserveAspectRatio="none" fill="currentColor" aria-hidden="true">
           <path d="M0 22 18 13 34 18 54 10 72 16 92 11 110 17 120 14 120 22Z" />
         </svg>
         {/* photographic vignette — warm, soft, frames the scene */}
         <div className="absolute inset-0 bg-[radial-gradient(120%_130%_at_50%_32%,_transparent_56%,_rgba(70,35,45,0.16)_100%)]" />
       </div>
       {/* video play button — a sonar ring pulses outward while hovered */}
-      <span className="absolute inset-0 z-10 m-auto flex size-9 items-center justify-center rounded-full bg-white/95 text-primary shadow-md transition-transform duration-300 group-hover:scale-110">
-        <span className="pointer-events-none absolute inset-0 rounded-full ring-2 ring-white/70 opacity-0 motion-safe:group-hover:animate-ping" aria-hidden="true" />
+      <span className="absolute inset-0 z-10 m-auto flex size-9 items-center justify-center rounded-full bg-white/95 text-primary shadow-md transition-transform duration-300 group-hover:scale-110 group-[.is-touch-active]:scale-110">
+        <span className="pointer-events-none absolute inset-0 rounded-full ring-2 ring-white/70 opacity-0 motion-safe:group-hover:animate-ping motion-safe:group-[.is-touch-active]:animate-ping" aria-hidden="true" />
         <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="relative translate-x-px">
           <path d="M8 5.5 19 12 8 18.5Z" />
         </svg>
@@ -1839,7 +1953,7 @@ const MediaViz: React.FC = () => {
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 z-30 rounded-xl border-[1.5px] border-brand-from opacity-0 transition-opacity duration-200"
       />
-      <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-linear-to-br from-brand-from to-brand-to text-white shadow-sm transition-transform duration-300 ease-out group-hover:scale-110 group-hover:-rotate-3">
+      <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-linear-to-br from-brand-from to-brand-to text-white shadow-sm transition-transform duration-300 ease-out group-hover:scale-110 group-hover:-rotate-3 group-[.is-touch-active]:scale-110 group-[.is-touch-active]:-rotate-3">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M9 18V6l10-2.5V14" />
           <circle cx="6.5" cy="18" r="2.5" fill="currentColor" stroke="none" />
@@ -1852,7 +1966,7 @@ const MediaViz: React.FC = () => {
         {WAVE.map((h, i) => (
           <span
             key={i}
-            className={`w-[2px] rounded-full ${i < PLAYED ? "bg-primary" : "bg-foreground/25"} motion-safe:group-hover:animate-[audio-eq_700ms_ease-in-out_infinite]`}
+            className={`w-[2px] rounded-full ${i < PLAYED ? "bg-primary" : "bg-foreground/25"} motion-safe:group-hover:animate-[audio-eq_700ms_ease-in-out_infinite] motion-safe:group-[.is-touch-active]:animate-[audio-eq_700ms_ease-in-out_infinite]`}
             style={{ height: `${h}px`, animationDelay: `${i * -0.09}s`, animationDuration: `${0.66 + (i % 4) * 0.13}s` }}
           />
         ))}
@@ -1906,9 +2020,12 @@ const PillarTile: React.FC<TileProps> = ({ feature, onOpen }) => {
   const Viz = TILE[feature.accent].viz;
   const isHero = feature.accent === "coral";
   const tilt = useTilt();
+  const tileRef = useRef<HTMLButtonElement>(null);
+  useTouchAutoplay(tileRef);
 
   return (
     <motion.button
+      ref={tileRef}
       type="button"
       whileHover={{ y: -4 }}
       whileTap={{ scale: 0.98 }}
@@ -1924,14 +2041,6 @@ const PillarTile: React.FC<TileProps> = ({ feature, onOpen }) => {
       <span className="bento-spot" aria-hidden="true" />
 
       <div className={`relative z-10 flex w-full items-center gap-3.5 ${isHero ? "" : "lg:w-[42%] lg:shrink-0 lg:flex-col lg:items-start lg:justify-center lg:gap-3"}`}>
-        {/* the feature glyph in a soft brand-tinted tile — dropped on lg, where
-            the diorama alone carries the tile */}
-        <span
-          aria-hidden="true"
-          className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary [&_svg]:size-[1.6rem] lg:hidden"
-        >
-          {feature.icon}
-        </span>
         <h3 className={`text-balance font-extrabold leading-[1.1] tracking-tight lg:leading-[1.05] ${isHero ? "text-[1.4rem] lg:text-[2.35rem]" : "text-[1.35rem] lg:text-[1.75rem]"}`}>
           {feature.title}
         </h3>
@@ -1963,12 +2072,15 @@ const renderTitleWithSlashKey = (title: string): React.ReactNode => {
 const CapabilityTile: React.FC<TileProps> = ({ feature, onOpen }) => {
   const Viz = TILE[feature.accent].viz;
   const tilt = useTilt();
+  const tileRef = useRef<HTMLButtonElement>(null);
+  useTouchAutoplay(tileRef);
   // The embeds tile clears its title on hover so the diagonal river of logos can
   // flood the whole block.
   const isEmbeds = feature.accent === "blue";
 
   return (
     <motion.button
+      ref={tileRef}
       type="button"
       variants={cardVariants}
       whileHover={{ y: -3 }}
@@ -1997,13 +2109,6 @@ const CapabilityTile: React.FC<TileProps> = ({ feature, onOpen }) => {
                 : ""
             }`}
           >
-            {/* glyph badge — dropped on lg, where the diorama carries the tile */}
-            <span
-              aria-hidden="true"
-              className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary [&_svg]:size-[1.1rem] lg:hidden"
-            >
-              {feature.icon}
-            </span>
             <h3 className="flex-1 text-balance text-[1.02rem] font-bold leading-snug tracking-tight">
               {renderTitleWithSlashKey(feature.title)}
             </h3>

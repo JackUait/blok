@@ -263,10 +263,10 @@
 }
 
 /* 1 — Clean JSON: the braces part outward, framing content as it flows in. */
-.group:hover .fi-json path:nth-of-type(1) {
+:is(.group:hover, .group.is-touch-active) .fi-json path:nth-of-type(1) {
   animation: brace-left 0.6s ease-in-out;
 }
-.group:hover .fi-json path:nth-of-type(2) {
+:is(.group:hover, .group.is-touch-active) .fi-json path:nth-of-type(2) {
   animation: brace-right 0.6s ease-in-out;
 }
 @keyframes brace-left {
@@ -281,14 +281,14 @@
 }
 
 /* 2 — Blocks for everything: the stack springs in place, one block at a time. */
-.group:hover .fi-blocks rect {
+:is(.group:hover, .group.is-touch-active) .fi-blocks rect {
   transform-origin: center;
   animation: block-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.group:hover .fi-blocks rect:nth-of-type(2) {
+:is(.group:hover, .group.is-touch-active) .fi-blocks rect:nth-of-type(2) {
   animation-delay: 0.08s;
 }
-.group:hover .fi-blocks rect:nth-of-type(3) {
+:is(.group:hover, .group.is-touch-active) .fi-blocks rect:nth-of-type(3) {
   animation-delay: 0.16s;
 }
 @keyframes block-pop {
@@ -301,7 +301,7 @@
 }
 
 /* 3 — Extensible: only the plus pulses — drop in your own block. */
-.group:hover .fi-ext path {
+:is(.group:hover, .group.is-touch-active) .fi-ext path {
   transform-origin: center;
   animation: plus-pulse 0.6s ease-in-out;
 }
@@ -313,11 +313,11 @@
 
 /* 4 — Slash menu: the slash strikes like a pressed key, then the menu box pops
    open a beat later in answer. */
-.group:hover .fi-slash path {
+:is(.group:hover, .group.is-touch-active) .fi-slash path {
   transform-origin: center;
   animation: slash-strike 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.group:hover .fi-slash rect {
+:is(.group:hover, .group.is-touch-active) .fi-slash rect {
   transform-origin: center;
   animation: slash-box-react 0.6s ease-out 0.1s backwards;
 }
@@ -343,14 +343,14 @@
 }
 
 /* 5 — Databases & boards: the columns bounce like sorting bars, left to right. */
-.group:hover .fi-kanban rect {
+:is(.group:hover, .group.is-touch-active) .fi-kanban rect {
   transform-origin: bottom;
   animation: bar-bounce 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.group:hover .fi-kanban rect:nth-of-type(2) {
+:is(.group:hover, .group.is-touch-active) .fi-kanban rect:nth-of-type(2) {
   animation-delay: 0.08s;
 }
-.group:hover .fi-kanban rect:nth-of-type(3) {
+:is(.group:hover, .group.is-touch-active) .fi-kanban rect:nth-of-type(3) {
   animation-delay: 0.16s;
 }
 @keyframes bar-bounce {
@@ -363,7 +363,7 @@
 }
 
 /* 6 — Tables that behave: the grid settles into place with a soft pulse. */
-.group:hover .fi-table path {
+:is(.group:hover, .group.is-touch-active) .fi-table path {
   transform-origin: center;
   animation: grid-pulse 1s ease-in-out;
 }
@@ -377,7 +377,7 @@
 }
 
 /* 7 — Embeds: the play head presses in, then springs back. */
-.group:hover .fi-embed path {
+:is(.group:hover, .group.is-touch-active) .fi-embed path {
   transform-origin: center;
   animation: play-press 0.6s ease-in-out;
 }
@@ -394,7 +394,7 @@
 .fi-history {
   transform-origin: center;
 }
-.group:hover .fi-history {
+:is(.group:hover, .group.is-touch-active) .fi-history {
   animation: history-rock 0.65s ease-in-out;
 }
 @keyframes history-rock {
@@ -407,7 +407,7 @@
 }
 
 /* 9 — Languages: the meridian sweeps, turning the globe on its axis. */
-.group:hover .fi-globe ellipse {
+:is(.group:hover, .group.is-touch-active) .fi-globe ellipse {
   transform-origin: center;
   animation: meridian-spin 1.3s ease-in-out infinite;
 }
@@ -418,16 +418,16 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .group:hover .fi-json path,
-  .group:hover .fi-blocks rect,
-  .group:hover .fi-ext path,
-  .group:hover .fi-slash path,
-  .group:hover .fi-slash rect,
-  .group:hover .fi-kanban rect,
-  .group:hover .fi-table path,
-  .group:hover .fi-embed path,
-  .group:hover .fi-history,
-  .group:hover .fi-globe ellipse {
+  :is(.group:hover, .group.is-touch-active) .fi-json path,
+  :is(.group:hover, .group.is-touch-active) .fi-blocks rect,
+  :is(.group:hover, .group.is-touch-active) .fi-ext path,
+  :is(.group:hover, .group.is-touch-active) .fi-slash path,
+  :is(.group:hover, .group.is-touch-active) .fi-slash rect,
+  :is(.group:hover, .group.is-touch-active) .fi-kanban rect,
+  :is(.group:hover, .group.is-touch-active) .fi-table path,
+  :is(.group:hover, .group.is-touch-active) .fi-embed path,
+  :is(.group:hover, .group.is-touch-active) .fi-history,
+  :is(.group:hover, .group.is-touch-active) .fi-globe ellipse {
     animation: none;
   }
 }
@@ -854,7 +854,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .group:hover .feature-blob,
+  :is(.group:hover, .group.is-touch-active) .feature-blob,
   [data-pillar-focused="true"] .feature-blob,
   .hero-blob,
   .hero-card-a,
@@ -920,7 +920,7 @@
     bento-blob-morph 5s ease-in-out infinite,
     bento-blob-wobble 7s ease-in-out infinite;
 }
-.group:hover .bento-spot {
+:is(.group:hover, .group.is-touch-active) .bento-spot {
   opacity: 1;
 }
 @keyframes bento-blob-morph {
@@ -980,7 +980,10 @@
     0 1px 2px rgba(17, 12, 10, 0.04);
   transition: box-shadow 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
-.bento-tile:hover {
+/* The in-view "active" state mirrors hover so a touch device's centered tile
+   lifts the same way (useTouchAutoplay toggles .is-touch-active). */
+.bento-tile:hover,
+.bento-tile.is-touch-active {
   box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.85),
     0 22px 48px -16px rgba(17, 12, 10, 0.22);
@@ -990,7 +993,8 @@
     inset 0 1px 0 0 rgba(255, 255, 255, 0.06),
     0 1px 2px rgba(0, 0, 0, 0.3);
 }
-.dark .bento-tile:hover {
+.dark .bento-tile:hover,
+.dark .bento-tile.is-touch-active {
   box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
     0 24px 52px -16px rgba(0, 0, 0, 0.65);
@@ -1023,6 +1027,13 @@
     opacity: 1;
   }
 }
+/* Touch: the in-view tile lights its border too — the synthetic sweep keeps
+   feeding --mx/--my, so the pink arc trails the ghost finger along the edge.
+   (useTouchAutoplay only arms on no-hover devices and opts out of reduced motion,
+   so this never fires under a real cursor.) */
+.bento-tile.is-touch-active::after {
+  opacity: 1;
+}
 /* The embeds marquee reaches the tile edge, so its icons (in the z-10 content
    layer) would otherwise paint over the z-1 border arc. Lift this tile's border
    above the content so the logos slide UNDER the pink frame. */
@@ -1038,7 +1049,7 @@
   0%, 45% { opacity: 1; }
   55%, 100% { opacity: 0; }
 }
-.group:hover .bento-caret {
+:is(.group:hover, .group.is-touch-active) .bento-caret {
   animation: bento-blink 1.05s steps(1, end) infinite;
 }
 
@@ -1081,7 +1092,7 @@
    to an empty frame. A ripple travels down the rows, the custom Poll block's bars
    jump like live incoming votes, then "by you" gives a confirming pulse. Every
    keyframe starts and ends at the resting appearance, so there is no flash. */
-.group:hover .fi-row {
+:is(.group:hover, .group.is-touch-active) .fi-row {
   animation: byob-row-wave 0.42s ease-in-out backwards;
 }
 @keyframes byob-row-wave {
@@ -1092,7 +1103,7 @@
   transform-box: fill-box;
   transform-origin: center bottom;
 }
-.group:hover .fi-poll-bar {
+:is(.group:hover, .group.is-touch-active) .fi-poll-bar {
   animation: poll-update 0.55s cubic-bezier(0.34, 1.6, 0.5, 1) backwards;
 }
 @keyframes poll-update {
@@ -1100,14 +1111,14 @@
   30% { transform: scaleY(1.22); }
   62% { transform: scaleY(0.9); }
 }
-.group:hover .fi-byob-badge {
+:is(.group:hover, .group.is-touch-active) .fi-byob-badge {
   animation: byob-pulse 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s backwards;
 }
 @keyframes byob-pulse {
   0%, 100% { transform: scale(1); }
   45% { transform: scale(1.16); }
 }
-.group:hover .fi-byob-plus {
+:is(.group:hover, .group.is-touch-active) .fi-byob-plus {
   transform-origin: center;
   animation: plus-pulse 0.6s ease-in-out 0.35s backwards;
 }
@@ -1130,7 +1141,7 @@
 .fi-flip-inner {
   transition: transform 0.72s cubic-bezier(0.76, 0, 0.24, 1);
 }
-.group:hover .fi-flip-inner {
+:is(.group:hover, .group.is-touch-active) .fi-flip-inner {
   transform: rotateY(180deg);
 }
 .fi-flip-face {
@@ -1166,9 +1177,14 @@
   mask-image: var(--fi-edge-shape);
 }
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .group:hover .fi-edge {
+  :is(.group:hover, .group.is-touch-active) .fi-edge {
     opacity: 1;
   }
+}
+/* Touch: the in-view tile lights its diorama edges too (the synthetic sweep
+   feeds each face's card-local --mx/--my). Arms only on no-hover, non-reduced. */
+.group.is-touch-active .fi-edge {
+  opacity: 1;
 }
 
 /* Hover-away: :hover can't fire a one-shot on exit, so the card is tagged
@@ -1236,14 +1252,14 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .group:hover .fi-row,
-  .group:hover .fi-poll-bar,
-  .group:hover .fi-byob-badge,
-  .group:hover .fi-byob-plus,
+  :is(.group:hover, .group.is-touch-active) .fi-row,
+  :is(.group:hover, .group.is-touch-active) .fi-poll-bar,
+  :is(.group:hover, .group.is-touch-active) .fi-byob-badge,
+  :is(.group:hover, .group.is-touch-active) .fi-byob-plus,
   .byob-leaving .fi-row,
   .byob-leaving .fi-poll-bar,
   .byob-leaving .fi-byob-badge,
-  .group:hover .bento-caret,
+  :is(.group:hover, .group.is-touch-active) .bento-caret,
   .bento-breathe,
   .bento-cell,
   .bento-sheen::after,
@@ -1272,7 +1288,7 @@
     opacity: 0;
     transition: opacity 0.2s ease;
   }
-  .group:hover .fi-flip-back {
+  :is(.group:hover, .group.is-touch-active) .fi-flip-back {
     opacity: 1;
   }
 }

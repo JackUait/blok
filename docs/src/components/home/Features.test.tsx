@@ -1,5 +1,5 @@
-import { describe, it, expect, afterEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { render, screen, within, act } from '@testing-library/react';
 import { Features, EMBED_ROWS, LANGUAGE_COUNT, pickLocaleIndex } from './Features';
 import { I18nProvider } from '../../contexts/I18nContext';
 
@@ -246,16 +246,19 @@ describe('Features', () => {
     expect(track?.className).toContain('lg:contents');
   });
 
-  it('shows each feature its own icon inline on mobile (pillars + capabilities)', () => {
+  it('does not badge the mobile tiles with a brand-tinted glyph', () => {
     const { container } = renderFeatures();
 
-    // The feature glyphs — previously only used inside the drawer — now badge
-    // every tile on mobile so the grid reads visually, not as a wall of text.
+    // The little pink glyph badge that used to sit beside each title on mobile
+    // was removed — the live diorama already carries the tile, so the badge only
+    // added visual noise. No tile header may reintroduce the brand-tinted chip…
+    expect(container.querySelector('.bg-primary\\/10')).toBeNull();
+    // …and the feature glyphs (only ever rendered inside that badge) are gone.
     for (const icon of [
       'fi-json', 'fi-blocks', 'fi-ext', // pillars
       'fi-slash', 'fi-table', 'fi-embed', 'fi-history', 'fi-globe', 'fi-media', // capabilities
     ]) {
-      expect(container.querySelector(`.${icon}`), icon).not.toBeNull();
+      expect(container.querySelector(`.${icon}`), icon).toBeNull();
     }
   });
 
@@ -294,6 +297,102 @@ describe('Features', () => {
     const tables = screen.getByRole('button', { name: 'Learn more about tables' });
     expect(embeds.className).toContain('lg:order-2');
     expect(tables.className).toContain('lg:order-5');
+  });
+
+  // Every diorama animation is gated behind the cursor: `:hover` in CSS,
+  // `pointermove` in JS. A touch device has no cursor, so the dioramas froze at
+  // their rest frame. The cure mirrors each hover animation onto an
+  // `.is-touch-active` state that the in-view autoplay toggles on touch — so the
+  // markup must carry a `group-[.is-touch-active]:` companion next to every
+  // `group-hover:` animation, never hover-only. Lock the two representative ones.
+  describe('touch autoplay (dioramas come alive on scroll where there is no cursor)', () => {
+    it('mirrors the Tables column-resize animation onto the touch-active state', () => {
+      const { container } = renderFeatures();
+      const grid = container.querySelector('[class*="grid-rows-[repeat(7"]');
+      expect(grid).not.toBeNull();
+      // the desktop hover path is preserved...
+      expect(grid?.className).toContain('group-hover:grid-cols-');
+      // ...and mirrored so touch (in-view) playback fires the same resize
+      expect(grid?.className).toContain('group-[.is-touch-active]:grid-cols-');
+    });
+
+    it('mirrors the Media waveform equalizer onto the touch-active state', () => {
+      const { container } = renderFeatures();
+      const bar = container.querySelector('[class*="group-hover:animate-[audio-eq"]');
+      expect(bar).not.toBeNull();
+      expect(bar?.className).toContain('group-[.is-touch-active]:animate-[audio-eq');
+    }, 15000);
+
+    it('plays the centered tile on a no-hover device by toggling .is-touch-active', () => {
+      // Simulate a touch device: no hover, coarse pointer.
+      const realMatchMedia = window.matchMedia;
+      window.matchMedia = vi.fn().mockImplementation((q: string) => ({
+        matches: /hover: none|pointer: coarse/.test(q),
+        media: q,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })) as unknown as typeof window.matchMedia;
+
+      // Capture the elements the autoplay observes plus their IO callbacks so the
+      // test can drive scroll-into-view without a real layout.
+      const observed: Array<{
+        el: Element;
+        cb: IntersectionObserverCallback;
+        io: IntersectionObserver;
+      }> = [];
+      const realIO = global.IntersectionObserver;
+      class CapturingIO {
+        root = null;
+        rootMargin = '';
+        thresholds: ReadonlyArray<number> = [];
+        cb: IntersectionObserverCallback;
+        constructor(cb: IntersectionObserverCallback) {
+          this.cb = cb;
+        }
+        observe(el: Element) {
+          observed.push({ el, cb: this.cb, io: this as unknown as IntersectionObserver });
+        }
+        unobserve() {}
+        disconnect() {}
+        takeRecords() {
+          return [];
+        }
+      }
+      global.IntersectionObserver = CapturingIO as unknown as typeof IntersectionObserver;
+
+      try {
+        renderFeatures();
+        const tile = screen.getByRole('button', { name: 'Learn more about tables' });
+        const rec = observed.find((o) => o.el === tile);
+        expect(rec, 'the tile is registered for in-view autoplay').toBeTruthy();
+        expect(tile.classList.contains('is-touch-active')).toBe(false);
+
+        // Crossing the viewport's centre band activates the tile (it "plays").
+        act(() => {
+          rec!.cb(
+            [{ isIntersecting: true, target: tile } as unknown as IntersectionObserverEntry],
+            rec!.io,
+          );
+        });
+        expect(tile.classList.contains('is-touch-active')).toBe(true);
+
+        // Scrolling past settles it back to its rest frame.
+        act(() => {
+          rec!.cb(
+            [{ isIntersecting: false, target: tile } as unknown as IntersectionObserverEntry],
+            rec!.io,
+          );
+        });
+        expect(tile.classList.contains('is-touch-active')).toBe(false);
+      } finally {
+        global.IntersectionObserver = realIO;
+        window.matchMedia = realMatchMedia;
+      }
+    }, 15000);
   });
 
   it('should render Russian strings when locale is ru', () => {

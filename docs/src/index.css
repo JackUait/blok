@@ -980,8 +980,8 @@
     0 1px 2px rgba(17, 12, 10, 0.04);
   transition: box-shadow 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
-/* The in-view "active" state mirrors hover so a touch device's centered tile
-   lifts the same way (useTouchAutoplay toggles .is-touch-active). */
+/* The "active" state mirrors hover so a pressed tile on touch lifts the same way
+   (useTouchPlay toggles .is-touch-active while a finger is on the tile). */
 .bento-tile:hover,
 .bento-tile.is-touch-active {
   box-shadow:
@@ -1027,10 +1027,10 @@
     opacity: 1;
   }
 }
-/* Touch: the in-view tile lights its border too — the synthetic sweep keeps
-   feeding --mx/--my, so the pink arc trails the ghost finger along the edge.
-   (useTouchAutoplay only arms on no-hover devices and opts out of reduced motion,
-   so this never fires under a real cursor.) */
+/* Touch: a pressed tile lights its border too — the finger's pointermove keeps
+   feeding --mx/--my (via useTilt), so the pink arc trails the touch along the
+   edge. (useTouchPlay only arms on no-hover devices and opts out of reduced
+   motion, so this never fires under a real cursor.) */
 .bento-tile.is-touch-active::after {
   opacity: 1;
 }
@@ -1181,8 +1181,9 @@
     opacity: 1;
   }
 }
-/* Touch: the in-view tile lights its diorama edges too (the synthetic sweep
-   feeds each face's card-local --mx/--my). Arms only on no-hover, non-reduced. */
+/* Touch: a pressed tile lights its diorama edges too; once the finger drags, each
+   viz feeds its own card-local --mx/--my for the localized arc. Arms only on
+   no-hover, non-reduced. */
 .group.is-touch-active .fi-edge {
   opacity: 1;
 }

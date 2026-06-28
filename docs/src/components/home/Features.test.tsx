@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { render, screen, within, act } from '@testing-library/react';
+import { render, screen, within, act, fireEvent } from '@testing-library/react';
 import { Features, EMBED_ROWS, LANGUAGE_COUNT, pickLocaleIndex } from './Features';
 import { I18nProvider } from '../../contexts/I18nContext';
 
@@ -302,30 +302,13 @@ describe('Features', () => {
   // Every diorama animation is gated behind the cursor: `:hover` in CSS,
   // `pointermove` in JS. A touch device has no cursor, so the dioramas froze at
   // their rest frame. The cure mirrors each hover animation onto an
-  // `.is-touch-active` state that the in-view autoplay toggles on touch — so the
+  // `.is-touch-active` state the tile carries while a finger is on it — so the
   // markup must carry a `group-[.is-touch-active]:` companion next to every
   // `group-hover:` animation, never hover-only. Lock the two representative ones.
-  describe('touch autoplay (dioramas come alive on scroll where there is no cursor)', () => {
-    it('mirrors the Tables column-resize animation onto the touch-active state', () => {
-      const { container } = renderFeatures();
-      const grid = container.querySelector('[class*="grid-rows-[repeat(7"]');
-      expect(grid).not.toBeNull();
-      // the desktop hover path is preserved...
-      expect(grid?.className).toContain('group-hover:grid-cols-');
-      // ...and mirrored so touch (in-view) playback fires the same resize
-      expect(grid?.className).toContain('group-[.is-touch-active]:grid-cols-');
-    });
-
-    it('mirrors the Media waveform equalizer onto the touch-active state', () => {
-      const { container } = renderFeatures();
-      const bar = container.querySelector('[class*="group-hover:animate-[audio-eq"]');
-      expect(bar).not.toBeNull();
-      expect(bar?.className).toContain('group-[.is-touch-active]:animate-[audio-eq');
-    }, 15000);
-
-    it('plays the centered tile on a no-hover device by toggling .is-touch-active', () => {
-      // Simulate a touch device: no hover, coarse pointer.
-      const realMatchMedia = window.matchMedia;
+  describe('touch gestures (dioramas come alive under the finger, never on autoscroll)', () => {
+    // Make framer-motion + the touch-play hook see a coarse, hoverless device.
+    const asTouchDevice = () => {
+      const real = window.matchMedia;
       window.matchMedia = vi.fn().mockImplementation((q: string) => ({
         matches: /hover: none|pointer: coarse/.test(q),
         media: q,
@@ -336,61 +319,91 @@ describe('Features', () => {
         removeEventListener: vi.fn(),
         dispatchEvent: vi.fn(),
       })) as unknown as typeof window.matchMedia;
+      return () => {
+        window.matchMedia = real;
+      };
+    };
 
-      // Capture the elements the autoplay observes plus their IO callbacks so the
-      // test can drive scroll-into-view without a real layout.
-      const observed: Array<{
-        el: Element;
-        cb: IntersectionObserverCallback;
-        io: IntersectionObserver;
-      }> = [];
-      const realIO = global.IntersectionObserver;
-      class CapturingIO {
-        root = null;
-        rootMargin = '';
-        thresholds: ReadonlyArray<number> = [];
-        cb: IntersectionObserverCallback;
-        constructor(cb: IntersectionObserverCallback) {
-          this.cb = cb;
-        }
-        observe(el: Element) {
-          observed.push({ el, cb: this.cb, io: this as unknown as IntersectionObserver });
-        }
-        unobserve() {}
-        disconnect() {}
-        takeRecords() {
-          return [];
-        }
-      }
-      global.IntersectionObserver = CapturingIO as unknown as typeof IntersectionObserver;
+    it('mirrors the Tables column-resize animation onto the touch-active state', () => {
+      const { container } = renderFeatures();
+      const grid = container.querySelector('[class*="grid-rows-[repeat(7"]');
+      expect(grid).not.toBeNull();
+      // the desktop hover path is preserved...
+      expect(grid?.className).toContain('group-hover:grid-cols-');
+      // ...and mirrored so a finger pressing the tile fires the same resize
+      expect(grid?.className).toContain('group-[.is-touch-active]:grid-cols-');
+    });
 
+    it('mirrors the Media waveform equalizer onto the touch-active state', () => {
+      const { container } = renderFeatures();
+      const bar = container.querySelector('[class*="group-hover:animate-[audio-eq"]');
+      expect(bar).not.toBeNull();
+      expect(bar?.className).toContain('group-[.is-touch-active]:animate-[audio-eq');
+    }, 15000);
+
+    // The autoplay is gone: a tile plays only while a finger is on it. Pressing
+    // wakes it (so the hover choreography runs under the touch), lifting settles it.
+    it('wakes the pressed tile and settles it when the finger lifts', () => {
+      const restore = asTouchDevice();
       try {
         renderFeatures();
         const tile = screen.getByRole('button', { name: 'Learn more about tables' });
-        const rec = observed.find((o) => o.el === tile);
-        expect(rec, 'the tile is registered for in-view autoplay').toBeTruthy();
         expect(tile.classList.contains('is-touch-active')).toBe(false);
 
-        // Crossing the viewport's centre band activates the tile (it "plays").
         act(() => {
-          rec!.cb(
-            [{ isIntersecting: true, target: tile } as unknown as IntersectionObserverEntry],
-            rec!.io,
-          );
+          fireEvent.pointerDown(tile, { pointerType: 'touch', clientX: 20, clientY: 20 });
         });
         expect(tile.classList.contains('is-touch-active')).toBe(true);
 
-        // Scrolling past settles it back to its rest frame.
         act(() => {
-          rec!.cb(
-            [{ isIntersecting: false, target: tile } as unknown as IntersectionObserverEntry],
-            rec!.io,
-          );
+          fireEvent.pointerUp(tile, { pointerType: 'touch', clientX: 20, clientY: 20 });
         });
         expect(tile.classList.contains('is-touch-active')).toBe(false);
       } finally {
-        global.IntersectionObserver = realIO;
-        window.matchMedia = realMatchMedia;
+        restore();
+      }
+    }, 15000);
+
+    // A plain tap is still the way into the detail drawer.
+    it('opens the feature modal on a plain tap', () => {
+      const restore = asTouchDevice();
+      try {
+        renderFeatures();
+        const tile = screen.getByRole('button', { name: 'Learn more about tables' });
+        expect(screen.queryByRole('dialog')).toBeNull();
+
+        act(() => {
+          fireEvent.pointerDown(tile, { pointerType: 'touch', clientX: 20, clientY: 20 });
+          fireEvent.pointerUp(tile, { pointerType: 'touch', clientX: 20, clientY: 20 });
+          fireEvent.click(tile);
+        });
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      } finally {
+        restore();
+      }
+    }, 15000);
+
+    // Dragging a finger across the tile is an "explore" gesture — it plays the
+    // diorama and must NOT fall through to opening the modal.
+    it('plays the diorama without opening the modal when the finger drags across it', () => {
+      const restore = asTouchDevice();
+      try {
+        renderFeatures();
+        const tile = screen.getByRole('button', { name: 'Learn more about tables' });
+
+        act(() => {
+          fireEvent.pointerDown(tile, { pointerType: 'touch', clientX: 20, clientY: 20 });
+          fireEvent.pointerMove(tile, { pointerType: 'touch', clientX: 96, clientY: 24 });
+        });
+        expect(tile.classList.contains('is-touch-active')).toBe(true);
+
+        act(() => {
+          fireEvent.pointerUp(tile, { pointerType: 'touch', clientX: 96, clientY: 24 });
+          fireEvent.click(tile);
+        });
+        expect(screen.queryByRole('dialog')).toBeNull();
+      } finally {
+        restore();
       }
     }, 15000);
   });

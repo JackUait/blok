@@ -39,114 +39,122 @@ const hoverSpring = { type: "spring", stiffness: 380, damping: 20 } as const;
 // The peak tilt, in degrees, a tile leans toward the cursor.
 const TILT = 5;
 
-// A PointerEvent tagged as synthesized by the touch autoplay sweep, so the tilt
-// can tell a real cursor from the in-view "ghost finger" that drives the dioramas.
-type AutoPointerEvent = PointerEvent & { __auto?: boolean };
+// Which pointers drive the glow blob, edge light and proximity effects. A mouse
+// hovers; a finger only emits pointermove while pressing and dragging — both are
+// welcome, so a touch drag lights the diorama just like a cursor sweep. (The 3D
+// tilt stays mouse-only; pen is ignored.)
+const drivesGlow = (pointerType: string): boolean =>
+  pointerType === "mouse" || pointerType === "touch";
 
 // On a touch device there is no cursor, so every diorama — built to wake on
-// `:hover`/`pointermove` — would sit frozen at its rest frame. This hook makes the
-// tile play itself: while it crosses the vertical middle of the viewport it gets
-// the `.is-touch-active` class (the CSS hover choreography is mirrored onto it)
-// and a slow, looping synthetic pointer sweep that drives the cursor-following
-// effects (the chip dock, the edge glow, the embeds cluster). Hover/fine-pointer
-// devices keep the real cursor path and never arm this. Reduced-motion opts out.
-const SWEEP_PERIOD_MS = 3200;
-const useTouchAutoplay = (ref: React.RefObject<HTMLElement | null>) => {
+// `:hover`/`pointermove` — would sit frozen at its rest frame. Rather than play
+// the tiles by themselves (an autoplay that fired as you scrolled past read as
+// gimmicky), this hook hands the choreography to the finger: pressing a tile gives
+// it the `.is-touch-active` class (the CSS hover choreography is mirrored onto it)
+// while the real touch `pointerenter`/`pointermove`/`pointerleave` stream drives
+// the cursor-following effects (chip dock, edge glow, embeds cluster) exactly as a
+// mouse would — those handlers just opt touch in alongside mouse. So a press is a
+// hover and a drag is the cursor moving across the tile.
+//
+// The whole tile is also a button into the feature drawer, so we separate the two
+// intents: a quick tap opens the drawer, while a press-and-hold or a drag is an
+// "explore" gesture meant to *feel* the diorama — and its trailing click is
+// swallowed (via the returned onClickCapture) so it never falls through to the
+// modal. Hover/fine-pointer devices keep the real cursor path and never arm this;
+// reduced-motion opts out entirely.
+const TOUCH_MOVE_THRESHOLD = 10; // px of drift before a press counts as a drag
+const TOUCH_HOLD_MS = 220; // a still press held this long also counts as explore
+const useTouchPlay = (ref: React.RefObject<HTMLElement | null>) => {
   const reduce = useReducedMotion();
+  // True while the press just ended was an explore gesture (held or dragged), so
+  // the click it emits is swallowed instead of opening the drawer.
+  const suppressClickRef = useRef(false);
+
   useEffect(() => {
     const el = ref.current;
     if (!el || reduce) return;
-    if (typeof window === "undefined" || typeof IntersectionObserver === "undefined") {
-      return;
-    }
+    if (typeof window === "undefined") return;
     // Only where there is genuinely no cursor to drive the dioramas.
     if (!window.matchMedia?.("(hover: none)").matches) return;
 
-    const hasPointerEvent = typeof PointerEvent === "function";
-    let active = false;
-    let raf = 0;
-    let startTs = 0;
+    let down = false;
+    let explored = false;
+    let startX = 0;
+    let startY = 0;
+    let holdTimer: ReturnType<typeof setTimeout> | undefined;
 
-    const dispatchAutoMove = (clientX: number, clientY: number) => {
-      if (!hasPointerEvent) return;
-      const ev = new PointerEvent("pointermove", {
-        pointerType: "mouse",
-        clientX,
-        clientY,
-        bubbles: true,
-      });
-      (ev as AutoPointerEvent).__auto = true;
-      el.dispatchEvent(ev);
+    // Once a press becomes an explore (held or dragged), remember to eat its click.
+    const markExplore = () => {
+      if (explored) return;
+      explored = true;
+      suppressClickRef.current = true;
     };
 
-    // One easeInOut pass left→right per period, with a gentle vertical bob, so the
-    // chips/logos near the path swell and settle like a finger drifting across.
-    const sweep = (ts: number) => {
-      if (!startTs) startTs = ts;
-      const p = ((ts - startTs) % SWEEP_PERIOD_MS) / SWEEP_PERIOD_MS;
-      const ease = p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2;
-      const r = el.getBoundingClientRect();
-      dispatchAutoMove(
-        r.left + r.width * ease,
-        r.top + r.height * (0.5 + 0.12 * Math.sin(p * Math.PI * 2)),
-      );
-      raf = requestAnimationFrame(sweep);
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType === "mouse") return;
+      down = true;
+      explored = false;
+      suppressClickRef.current = false;
+      startX = e.clientX;
+      startY = e.clientY;
+      el.classList.add("is-touch-active"); // the press lights the tile at once
+      holdTimer = setTimeout(markExplore, TOUCH_HOLD_MS);
     };
 
-    const autoPointer = (type: "pointerenter" | "pointerleave") => {
-      if (!hasPointerEvent) return;
-      const ev = new PointerEvent(type, { pointerType: "mouse", bubbles: false });
-      (ev as AutoPointerEvent).__auto = true;
-      el.dispatchEvent(ev);
+    const onMove = (e: PointerEvent) => {
+      if (!down || e.pointerType === "mouse") return;
+      if (Math.hypot(e.clientX - startX, e.clientY - startY) > TOUCH_MOVE_THRESHOLD) {
+        markExplore();
+      }
     };
 
-    const enter = () => {
-      if (active) return;
-      active = true;
-      el.classList.add("is-touch-active");
-      // Wake the enter-driven dioramas (slash search, undo/redo, picker ripple,
-      // language phrase) the same way a cursor would.
-      autoPointer("pointerenter");
-      el.dispatchEvent(new MouseEvent("mouseenter", { bubbles: false }));
-      startTs = 0;
-      raf = requestAnimationFrame(sweep);
-    };
-
-    const leave = () => {
-      if (!active) return;
-      active = false;
-      if (raf) cancelAnimationFrame(raf);
-      raf = 0;
+    const end = () => {
+      if (!down) return;
+      down = false;
+      clearTimeout(holdTimer);
       el.classList.remove("is-touch-active");
-      autoPointer("pointerleave");
-      el.dispatchEvent(new MouseEvent("mouseleave", { bubbles: false }));
     };
 
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) enter();
-          else leave();
-        }
-      },
-      // A thin band across the viewport's vertical middle: a tile plays while it
-      // sits in the centre of the screen and settles once it scrolls past.
-      { rootMargin: "-42% 0px -42% 0px", threshold: 0 },
-    );
-    io.observe(el);
+    // A scroll stole the gesture: settle, and never let it count as a tap.
+    const cancel = () => {
+      markExplore();
+      end();
+    };
+
+    el.addEventListener("pointerdown", onDown);
+    el.addEventListener("pointermove", onMove);
+    el.addEventListener("pointerup", end);
+    el.addEventListener("pointerleave", end);
+    el.addEventListener("pointercancel", cancel);
 
     return () => {
-      io.disconnect();
-      if (raf) cancelAnimationFrame(raf);
+      clearTimeout(holdTimer);
       el.classList.remove("is-touch-active");
+      el.removeEventListener("pointerdown", onDown);
+      el.removeEventListener("pointermove", onMove);
+      el.removeEventListener("pointerup", end);
+      el.removeEventListener("pointerleave", end);
+      el.removeEventListener("pointercancel", cancel);
     };
   }, [ref, reduce]);
+
+  const onClickCapture = (e: React.MouseEvent) => {
+    if (suppressClickRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      suppressClickRef.current = false;
+    }
+  };
+
+  return { onClickCapture };
 };
 
 // Cursor-reactive 3D tilt + specular glow — the Apple bento signature. The tilt
 // rides framer springs (so it eases in and recoils on leave) and the glow is a
-// CSS radial fed the pointer position through --mx/--my. Pointer-fine + motion
-// only: touch carousels and reduced-motion users get a flat, still tile.
+// CSS radial fed the pointer position through --mx/--my. A real cursor tilts the
+// tile *and* lights the glow; a finger (which only emits pointermove while pressing
+// and dragging) lights the glow so it trails the touch, but never tilts — a tile
+// rocking under your thumb reads as a glitch. Reduced-motion users get a flat tile.
 const useTilt = () => {
   const reduce = useReducedMotion();
   const rotateX = useSpring(0, { stiffness: 170, damping: 18, mass: 0.4 });
@@ -160,16 +168,13 @@ const useTilt = () => {
     style: { rotateX, rotateY, transformPerspective: 1000 },
     handlers: {
       onPointerMove: (e: React.PointerEvent<HTMLElement>) => {
-        if (e.pointerType !== "mouse") return;
+        const isTouch = e.pointerType === "touch";
+        if (e.pointerType !== "mouse" && !isTouch) return;
         const el = e.currentTarget;
         const rect = el.getBoundingClientRect();
         const px = (e.clientX - rect.left) / rect.width;
         const py = (e.clientY - rect.top) / rect.height;
-        // The touch autoplay (useTouchAutoplay) sweeps a synthetic "mouse" pointer
-        // to bring the dioramas alive in view. Let it drive the glow blob + edge
-        // light (--mx/--my, so they trail the ghost finger), but NOT the 3D tilt —
-        // a tile rocking on its own while you scroll reads as a glitch.
-        if (!(e.nativeEvent as AutoPointerEvent).__auto) {
+        if (!isTouch) {
           rotateX.set((0.5 - py) * TILT * 2);
           rotateY.set((px - 0.5) * TILT * 2);
         }
@@ -275,7 +280,7 @@ const CleanJsonViz: React.FC = () => {
   // face its own card-local --mx/--my and let .fi-edge light the border where
   // the blob is — same trick the bento tiles use, measured against this card.
   const trackBlob = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (reduce || e.pointerType !== "mouse") return;
+    if (reduce || !drivesGlow(e.pointerType)) return;
     const el = rootRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
@@ -597,7 +602,7 @@ const BlocksViz: React.FC = () => {
 
     const onMove = (e: Event) => {
       const pe = e as PointerEvent;
-      if (pe.pointerType !== "mouse") return;
+      if (!drivesGlow(pe.pointerType)) return;
       pendingX = pe.clientX;
       pendingY = pe.clientY;
       if (!rafId) rafId = requestAnimationFrame(render);
@@ -725,7 +730,7 @@ const ExtensibleViz: React.FC = () => {
 
     const onMove = (e: Event) => {
       const pe = e as PointerEvent;
-      if (pe.pointerType === "mouse") apply(pe.clientX, pe.clientY);
+      if (drivesGlow(pe.pointerType)) apply(pe.clientX, pe.clientY);
     };
 
     // :hover drives the enter animation, but it can't fire a one-shot on the way
@@ -1001,7 +1006,7 @@ const SlashViz: React.FC = () => {
     };
     const onMove = (e: Event) => {
       const pe = e as PointerEvent;
-      if (pe.pointerType === "mouse") applyEdge(pe.clientX, pe.clientY);
+      if (drivesGlow(pe.pointerType)) applyEdge(pe.clientX, pe.clientY);
     };
     const onEdgeLeave = () => applyEdge(null, null);
 
@@ -1094,7 +1099,7 @@ const TablesViz: React.FC = () => {
 
     const onMove = (e: Event) => {
       const pe = e as PointerEvent;
-      if (pe.pointerType === "mouse") apply(pe.clientX, pe.clientY);
+      if (drivesGlow(pe.pointerType)) apply(pe.clientX, pe.clientY);
     };
     const onLeave = () => apply(null, null);
 
@@ -1276,9 +1281,9 @@ const EmbedsViz: React.FC = () => {
   useEffect(() => {
     const win = winRef.current;
     if (reduce || !win) return;
-    // Listen on the whole tile (not just the marquee window) so the touch
-    // autoplay's synthetic sweep — dispatched on the tile button — bubbles in and
-    // drives the cluster, exactly as a real cursor over the tile would.
+    // Listen on the whole tile (not just the marquee window) so a cursor — or a
+    // finger pressing and dragging across the tile — drives the cluster from
+    // anywhere over it, not only directly above a logo.
     const tile = win.closest(".bento-tile") ?? win;
 
     const tiles = Array.from(win.querySelectorAll<HTMLElement>(".embed-tile"));
@@ -1359,7 +1364,7 @@ const EmbedsViz: React.FC = () => {
       }
     };
     const onMove = (e: PointerEvent) => {
-      if (e.pointerType !== "mouse") return;
+      if (!drivesGlow(e.pointerType)) return;
       pointer = { x: e.clientX, y: e.clientY };
       kick();
     };
@@ -1469,7 +1474,7 @@ const UndoViz: React.FC = () => {
 
     const onMove = (e: Event) => {
       const pe = e as PointerEvent;
-      if (pe.pointerType === "mouse") apply(pe.clientX, pe.clientY);
+      if (drivesGlow(pe.pointerType)) apply(pe.clientX, pe.clientY);
     };
     const onLeave = () => apply(null, null);
 
@@ -1697,9 +1702,10 @@ const LanguagesViz: React.FC = () => {
 
   const chars = useMemo(() => Array.from(active.text), [active.text]);
 
-  // Hovering anywhere on the tile switches the loop from "hello" to a casual
-  // "What's up?" in the same language — the current word deletes and the new one
-  // types in; the locale cycle keeps running underneath either way.
+  // Hovering anywhere on the tile — or pressing it on touch, where pointerenter/
+  // leave bracket the press — switches the loop from "hello" to a casual "What's
+  // up?" in the same language: the current word deletes and the new one types in;
+  // the locale cycle keeps running underneath either way.
   useEffect(() => {
     const group = rootRef.current?.closest("button");
     if (!group) return;
@@ -1710,11 +1716,11 @@ const LanguagesViz: React.FC = () => {
     };
     const enter = onHover(true);
     const leave = onHover(false);
-    group.addEventListener("mouseenter", enter);
-    group.addEventListener("mouseleave", leave);
+    group.addEventListener("pointerenter", enter);
+    group.addEventListener("pointerleave", leave);
     return () => {
-      group.removeEventListener("mouseenter", enter);
-      group.removeEventListener("mouseleave", leave);
+      group.removeEventListener("pointerenter", enter);
+      group.removeEventListener("pointerleave", leave);
     };
   }, [reduce, idx]);
 
@@ -1743,7 +1749,7 @@ const LanguagesViz: React.FC = () => {
 
     const onMove = (e: Event) => {
       const pe = e as PointerEvent;
-      if (pe.pointerType === "mouse") apply(pe.clientX, pe.clientY);
+      if (drivesGlow(pe.pointerType)) apply(pe.clientX, pe.clientY);
     };
     const onLeave = () => apply(null, null);
 
@@ -1880,7 +1886,7 @@ const MediaViz: React.FC = () => {
 
     const onMove = (e: Event) => {
       const pe = e as PointerEvent;
-      if (pe.pointerType === "mouse") apply(pe.clientX, pe.clientY);
+      if (drivesGlow(pe.pointerType)) apply(pe.clientX, pe.clientY);
     };
     const onLeave = () => apply(null, null);
 
@@ -2021,7 +2027,7 @@ const PillarTile: React.FC<TileProps> = ({ feature, onOpen }) => {
   const isHero = feature.accent === "coral";
   const tilt = useTilt();
   const tileRef = useRef<HTMLButtonElement>(null);
-  useTouchAutoplay(tileRef);
+  const { onClickCapture } = useTouchPlay(tileRef);
 
   return (
     <motion.button
@@ -2035,6 +2041,7 @@ const PillarTile: React.FC<TileProps> = ({ feature, onOpen }) => {
       className={`bento-tile group relative flex w-full cursor-pointer flex-col items-start gap-4 overflow-hidden rounded-3xl border border-border/60 bg-card p-6 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:w-auto lg:gap-3.5 lg:p-7 ${TILE[feature.accent].span} ${
         isHero ? "" : "lg:flex-row lg:items-stretch"
       }`}
+      onClickCapture={onClickCapture}
       onClick={() => onOpen(feature)}
       aria-label={feature.learnMore}
     >
@@ -2073,7 +2080,7 @@ const CapabilityTile: React.FC<TileProps> = ({ feature, onOpen }) => {
   const Viz = TILE[feature.accent].viz;
   const tilt = useTilt();
   const tileRef = useRef<HTMLButtonElement>(null);
-  useTouchAutoplay(tileRef);
+  const { onClickCapture } = useTouchPlay(tileRef);
   // The embeds tile clears its title on hover so the diagonal river of logos can
   // flood the whole block.
   const isEmbeds = feature.accent === "blue";
@@ -2089,6 +2096,7 @@ const CapabilityTile: React.FC<TileProps> = ({ feature, onOpen }) => {
       style={tilt.style}
       {...tilt.handlers}
       className={`bento-tile group relative flex cursor-pointer flex-col justify-start gap-3 overflow-hidden rounded-2xl border border-border/60 bg-card p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:p-5 ${isEmbeds ? "bento-edge-top lg:transition-[gap,background-color] lg:group-hover:gap-0" : ""} ${TILE[feature.accent].span}`}
+      onClickCapture={onClickCapture}
       onClick={() => onOpen(feature)}
       aria-label={feature.learnMore}
     >

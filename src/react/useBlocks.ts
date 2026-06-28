@@ -314,9 +314,15 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
 
       // Idempotent insert-if-absent: a stable explicit id that already exists
       // returns the existing node without inserting a duplicate, so a re-running
-      // effect is safe.
-      if (spec.id !== undefined && editor.blocks.getBlockIndex(spec.id) !== undefined) {
-        return getById(spec.id);
+      // effect is safe. Probe via the silent snapshot getById, NOT
+      // editor.blocks.getBlockIndex — the latter logs a `warn` for any unknown
+      // id, which would spam the console on this (expected-absent) happy path.
+      if (spec.id !== undefined) {
+        const existing = getById(spec.id);
+
+        if (existing !== null) {
+          return existing;
+        }
       }
 
       // A dangling parentId would make core throw (dev) or silently misplace the
@@ -327,7 +333,9 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
 
       const flatIndex = resolveInsertIndex(reader, parentId, position);
 
-      let createdId: string | null = null;
+      // Mutable property on a const holder (no `let`): the inserted id captured
+      // from inside the transact closure for the post-transact return.
+      const result: { createdId: string | null } = { createdId: null };
 
       // Always atomic: a single undo step removes the new block (and, for a
       // parented insert, its reparent) — and gives the insert its own boundary
@@ -336,23 +344,37 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
         const created = ((): { id: string } | null | undefined => {
           try {
             return editor.blocks.insert(spec.type, data, {}, flatIndex, needToFocus, replace, spec.id, spec.tunes);
-          } catch {
-            // Unknown tool type: core throws "Tool not found" — honor null contract.
-            return null;
+          } catch (error) {
+            // The only EXPECTED throw here is an unknown/missing tool — core
+            // reports it as "…not found" (also covers a missing replace target).
+            // Honor the null contract for that; re-throw anything else so a
+            // genuine bug surfaces instead of being masked as a null return.
+            if (error instanceof Error && error.message.includes('not found')) {
+              return null;
+            }
+            throw error;
           }
         })();
 
         if (created === undefined || created === null) {
           return;
         }
-        createdId = created.id;
+        result.createdId = created.id;
 
-        if (parentId !== null) {
+        // Assert the intended parent. Core derives a new block's parent from its
+        // flat predecessor, so a block appended right after a `column` child is
+        // auto-nested into that column. We know the caller's intent: for a
+        // parented insert set the parent; for a root insert (parentId === null)
+        // override back to root ONLY if core nested it, keeping the natural
+        // `insert({ position: 'end' })` a root sibling instead of a stowaway.
+        const landedParentId = getById(created.id)?.parentId ?? null;
+
+        if (landedParentId !== parentId) {
           editor.blocks.setBlockParent(created.id, parentId);
         }
       });
 
-      return createdId === null ? null : getById(createdId);
+      return result.createdId === null ? null : getById(result.createdId);
     };
 
     return {

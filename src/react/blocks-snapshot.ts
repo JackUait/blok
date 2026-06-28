@@ -75,17 +75,10 @@ export interface BlocksReader {
  * deriving each node's contentIds from the children that name it as parent.
  */
 export const snapshotNodes = (reader: BlocksReader): BlockNode[] => {
-  const flat: Array<{ id: string; type: string; parentId: string | null }> = [];
   const count = reader.getBlocksCount();
-
-  for (let i = 0; i < count; i++) {
-    const b = reader.getBlockByIndex(i);
-
-    if (b === undefined) {
-      continue;
-    }
-    flat.push({ id: b.id, type: b.name, parentId: b.parentId });
-  }
+  const flat = Array.from({ length: count }, (_, i) => reader.getBlockByIndex(i))
+    .filter((b): b is { id: string; name: string; parentId: string | null } => b !== undefined)
+    .map((b) => ({ id: b.id, type: b.name, parentId: b.parentId }));
 
   const childrenByParent = new Map<string, string[]>();
 
@@ -114,34 +107,21 @@ export interface IndexReader extends BlocksReader {
 
 /** Flat indices of a parent's direct children, ascending. Empty if none. */
 const childFlatIndices = (reader: IndexReader, parentId: string): number[] => {
-  const out: number[] = [];
   const count = reader.getBlocksCount();
 
-  for (let i = 0; i < count; i++) {
-    const b = reader.getBlockByIndex(i);
-
-    if (b !== undefined && b.parentId === parentId) {
-      out.push(i);
-    }
-  }
-
-  return out;
+  return Array.from({ length: count }, (_, i) => i).filter(
+    (i) => reader.getBlockByIndex(i)?.parentId === parentId
+  );
 };
 
 /** Map of block id -> parentId, in flat order. */
 const parentMap = (reader: IndexReader): Map<string, string | null> => {
-  const map = new Map<string, string | null>();
   const count = reader.getBlocksCount();
+  const entries = Array.from({ length: count }, (_, i) => reader.getBlockByIndex(i))
+    .filter((b): b is { id: string; name: string; parentId: string | null } => b !== undefined)
+    .map((b): [string, string | null] => [b.id, b.parentId]);
 
-  for (let i = 0; i < count; i++) {
-    const b = reader.getBlockByIndex(i);
-
-    if (b !== undefined) {
-      map.set(b.id, b.parentId);
-    }
-  }
-
-  return map;
+  return new Map(entries);
 };
 
 /** True if `id` descends from `ancestorId` via the parentId chain. */
@@ -150,16 +130,13 @@ const isDescendantOf = (
   id: string,
   ancestorId: string
 ): boolean => {
-  let current = parentOf.get(id) ?? null;
+  const parent = parentOf.get(id) ?? null;
 
-  while (current !== null) {
-    if (current === ancestorId) {
-      return true;
-    }
-    current = parentOf.get(current) ?? null;
+  if (parent === null) {
+    return false;
   }
 
-  return false;
+  return parent === ancestorId || isDescendantOf(parentOf, parent, ancestorId);
 };
 
 /**
@@ -177,18 +154,17 @@ const subtreeEndIndex = (reader: IndexReader, index: number): number => {
 
   const parentOf = parentMap(reader);
   const count = reader.getBlocksCount();
-  let last = index;
-
-  for (let i = index + 1; i < count; i++) {
+  // Walk forward from index+1 while blocks remain descendants (DFS contiguity).
+  // The subtree ends just before the first non-descendant, or at the last block
+  // when every follower is a descendant.
+  const followers = Array.from({ length: count - (index + 1) }, (_, k) => index + 1 + k);
+  const breakAt = followers.find((i) => {
     const b = reader.getBlockByIndex(i);
 
-    if (b === undefined || !isDescendantOf(parentOf, b.id, root.id)) {
-      break;
-    }
-    last = i;
-  }
+    return b === undefined || !isDescendantOf(parentOf, b.id, root.id);
+  });
 
-  return last;
+  return breakAt === undefined ? count - 1 : breakAt - 1;
 };
 
 /** The flat index at which a new block should be inserted. */

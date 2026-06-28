@@ -133,6 +133,21 @@ const createRealEditorHarness = (
         index !== undefined ? Math.min(index, blocksStore.length) : blocksStore.length;
 
       blocksStore.insert(insertAt, stub as unknown as Block);
+
+      // Faithful to core block-insertion.ts: a non-parented insert whose flat
+      // PREDECESSOR lives inside a `column` auto-inherits that column as its
+      // parent (the "Duplicate inside a column" path). Replicated here so the
+      // harness exercises the real wrong-parent trap the adapter must counter.
+      const predecessor = blocksStore.array[insertAt - 1];
+      const predecessorParent =
+        predecessor?.parentId !== null && predecessor?.parentId !== undefined
+          ? blocksStore.array.find((b) => b.id === predecessor.parentId)
+          : undefined;
+
+      if (predecessorParent !== undefined && predecessorParent.name === 'column') {
+        hierarchy.setBlockParent(stub as unknown as Block, predecessorParent.id);
+      }
+
       notify();
 
       return { id: stub.id, name: stub.name, parentId: stub.parentId };
@@ -349,6 +364,35 @@ describe('useBlocks — real BlockHierarchy integration', () => {
     expectRerender(() => result.current.unnest('b'));
     expectRerender(() => result.current.move('b', { toIndex: 0 }));
     expectRerender(() => result.current.remove('b'));
+  });
+
+  it('root insert at document end after a column child stays at ROOT (does not inherit the trailing column)', () => {
+    // Column container whose only child is the LAST block in flat order. A
+    // root-level append (`insert({ position: 'end' })`, no parentId) must remain
+    // a root sibling — NOT get auto-nested into the trailing column by core's
+    // predecessor-inherit. The adapter must assert the intended root parent.
+    const harness = createRealEditorHarness([
+      { id: 'col', name: 'column' },
+      { id: 'col-child', parentId: 'col' },
+    ]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    let insertedId: string | null = null;
+
+    act(() => {
+      const created = result.current.insert({ position: 'end' });
+
+      insertedId = created?.id ?? null;
+    });
+
+    expect(insertedId).not.toBeNull();
+    // The new block is a ROOT sibling, NOT a child of the column.
+    expect(result.current.getById(insertedId as unknown as string)?.parentId).toBeNull();
+    expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['col', insertedId]);
+    expect(result.current.getChildren('col').map((n) => n.id)).toEqual(['col-child']);
   });
 
   it('insert at a reparented container end lands after its existing children, before the next root block', () => {

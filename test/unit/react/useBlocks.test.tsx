@@ -310,6 +310,38 @@ describe('useBlocks insert', () => {
     expect(created).toBeNull();
   });
 
+  it('explicit-id insert-if-absent probes existence WITHOUT the warning-emitting getBlockIndex', () => {
+    // The idempotency check must not call editor.blocks.getBlockIndex with the
+    // new id: core's getBlockIndex logs a `warn` for any unknown id, so probing
+    // with it spams the console on the recommended insert-if-absent happy path.
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const getBlockIndexSpy = vi.spyOn(editor.blocks, 'getBlockIndex');
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => { result.current.insert({ id: 'brand-new', position: 'end' }); });
+    expect(editor.blocks.insert).toHaveBeenCalledTimes(1);
+    expect(getBlockIndexSpy).not.toHaveBeenCalledWith('brand-new');
+  });
+
+  it('re-throws an UNEXPECTED core error instead of masking it as a null return', () => {
+    // The catch exists only to honor the null contract for the unknown-tool
+    // case ("…not found"). A genuine bug (any other error) must surface, not be
+    // silently swallowed into a null.
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    (editor.blocks.insert as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+      throw new Error('kaboom: unexpected core failure');
+    });
+    const { result } = renderHook(() => useBlocks(editor));
+    let threw = false;
+    act(() => {
+      try {
+        result.current.insert({ type: 'paragraph' });
+      } catch {
+        threw = true;
+      }
+    });
+    expect(threw).toBe(true);
+  });
+
   it('returns null and never inserts when parentId does not resolve', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }]);
     const { result } = renderHook(() => useBlocks(editor));

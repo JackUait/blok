@@ -24,6 +24,7 @@ const createMockWrapper = (): HTMLElement => {
 const createMockHandlers = (): BlockShortcutsHandlers => ({
   onMoveUp: vi.fn(),
   onMoveDown: vi.fn(),
+  onCopyAsMarkdown: vi.fn(),
 });
 
 describe('BlockShortcuts', () => {
@@ -226,6 +227,31 @@ describe('BlockShortcuts', () => {
       });
     });
 
+    it('calls onCopyAsMarkdown handler when CMD+SHIFT+C is triggered within wrapper', () => {
+      shortcuts.register();
+
+      return new Promise<void>(resolve => {
+        setTimeout(() => {
+          const child = document.createElement('div');
+          wrapper.appendChild(child);
+
+          const event = new KeyboardEvent('keydown', {
+            code: 'KeyC',
+            key: 'c',
+            metaKey: true,
+            shiftKey: true,
+            ctrlKey: true,
+          });
+          Object.defineProperty(event, 'target', { value: child, writable: false });
+
+          document.dispatchEvent(event);
+
+          expect(handlers.onCopyAsMarkdown).toHaveBeenCalledWith();
+          resolve();
+        }, ASYNC_TIMEOUT);
+      });
+    });
+
     it('calls onMoveDown handler when CMD+SHIFT+DOWN is triggered within wrapper', () => {
       shortcuts.register();
 
@@ -346,6 +372,7 @@ describe('BlockShortcuts', () => {
       const nullHandlers = {
         onMoveUp: vi.fn(),
         onMoveDown: vi.fn(),
+        onCopyAsMarkdown: vi.fn(),
       };
       const nullShortcuts = new BlockShortcuts(wrapper, nullHandlers);
 

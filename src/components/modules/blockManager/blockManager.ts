@@ -19,6 +19,7 @@ import { DATA_ATTR } from '../../constants';
 import { BlockChanged } from '../../events';
 import { generateBlockId, logLabeled } from '../../utils';
 import { assertHierarchy, validateHierarchy } from '../../utils/hierarchy-invariant';
+import { getBlockNestingDepth } from '../drag/utils/depthUtils';
 import * as Y from 'yjs';
 
 // Imported modules
@@ -427,6 +428,7 @@ export class BlockManager extends Module {
       {
         onMoveUp: this.moveCurrentBlockUp.bind(this),
         onMoveDown: this.moveCurrentBlockDown.bind(this),
+        onCopyAsMarkdown: () => void this.Blok.BlockSelection.copySelectedBlocksAsMarkdown(),
       }
     );
   }
@@ -657,14 +659,54 @@ export class BlockManager extends Module {
   }
 
   /**
+   * Expand a set of blocks to include each block's flat-indent followers — the
+   * consecutive following blocks nested more deeply via the unified list-nesting
+   * depth ({@link getBlockNestingDepth}). This mirrors Notion, where selecting a
+   * Tab-indented parent also selects everything nested under it, so a delete on
+   * the parent carries its nested children as a unit.
+   * @param blocks - the explicitly selected blocks
+   * @returns the expanded set, in document order, deduplicated
+   */
+  private withFlatIndentFollowers(blocks: Block[]): Block[] {
+    const all = this.blocks;
+    const included = new Set<Block>();
+
+    const followersOf = (block: Block): Block[] => {
+      const startIndex = all.indexOf(block);
+
+      if (startIndex < 0) {
+        return [];
+      }
+
+      const parentDepth = getBlockNestingDepth(block) ?? 0;
+      const rest = all.slice(startIndex + 1);
+      const boundary = rest.findIndex((follower) => (getBlockNestingDepth(follower) ?? 0) <= parentDepth);
+
+      return boundary === -1 ? rest : rest.slice(0, boundary);
+    };
+
+    for (const block of blocks) {
+      included.add(block);
+
+      for (const follower of followersOf(block)) {
+        included.add(follower);
+      }
+    }
+
+    return all.filter((block) => included.has(block));
+  }
+
+  /**
    * Delete all selected blocks and insert a replacement block at their position.
    * Only inserts a replacement block if all blocks were deleted.
    */
   public deleteSelectedBlocksAndInsertReplacement(): Block | undefined {
-    // Collect selected blocks with their indices (sorted by index descending for safe removal)
-    const selectedBlockEntries = this.blocks
-      .map((block, index) => ({ block, index }))
-      .filter(({ block }) => block.selected)
+    // Collect selected blocks, expanded to include each one's flat-indent
+    // followers (Notion deletes a Tab-nested parent together with its children),
+    // then attach indices sorted descending for safe removal.
+    const expandedBlocks = this.withFlatIndentFollowers(this.blocks.filter((block) => block.selected));
+    const selectedBlockEntries = expandedBlocks
+      .map((block) => ({ block, index: this.blocks.indexOf(block) }))
       .sort((a, b) => b.index - a.index);
 
     if (selectedBlockEntries.length === 0) {

@@ -334,6 +334,24 @@ describe('Caret module', () => {
       expect(caret.navigateNext()).toBe(false);
       expect(blockManager.insertAtEnd).not.toHaveBeenCalled();
     });
+
+    it('does not create a trailing block when block creation is disallowed (arrow navigation)', () => {
+      const { caret, blockManager } = createCaret();
+      const block = createBlock({
+        tool: { isDefault: false },
+        inputs: { current: createContentEditable('text') },
+      });
+
+      blockManager.currentBlock = block;
+      blockManager.nextBlock = null;
+
+      vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      const result = caret.navigateNext(false, false);
+
+      expect(result).toBe(false);
+      expect(blockManager.insertAtEnd).not.toHaveBeenCalled();
+    });
   });
 
   describe('navigatePrevious', () => {
@@ -519,6 +537,28 @@ describe('Caret module', () => {
       vi.spyOn(caretUtils, 'getCaretXPosition').mockReturnValue(100);
 
       expect(caret.navigateVerticalNext()).toBe(false);
+    });
+
+    it('does not create a trailing block on Arrow Down when block creation is disallowed', () => {
+      const { caret, blockManager } = createCaret();
+      const currentInput = createContentEditable('text');
+      const currentBlock = createBlock({
+        tool: { isDefault: false },
+        inputs: { current: currentInput },
+      });
+
+      blockManager.currentBlock = currentBlock;
+      blockManager.nextBlock = null;
+      blockManager.nextVisibleBlock = null;
+
+      vi.spyOn(caretUtils, 'isCaretAtLastLine').mockReturnValue(true);
+      vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+      vi.spyOn(caretUtils, 'getCaretXPosition').mockReturnValue(100);
+
+      const result = caret.navigateVerticalNext(false);
+
+      expect(result).toBe(false);
+      expect(blockManager.insertAtEnd).not.toHaveBeenCalled();
     });
 
     it('skips multiple hidden blocks to find next visible block', () => {

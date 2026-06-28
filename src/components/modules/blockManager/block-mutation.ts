@@ -13,6 +13,7 @@ import { announce } from '../../utils/announcer';
 import { convertStringToBlockData, isBlockConvertable } from '../../utils/blocks';
 import { sanitizeBlocks, clean, composeSanitizerConfig } from '../../utils/sanitizer';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
+import { getBlockNestingDepth } from '../drag/utils/depthUtils';
 import type { BlockFactory } from './factory';
 import type { BlockHierarchy } from './hierarchy';
 import type { BlockRepository } from './repository';
@@ -213,7 +214,12 @@ export class BlockMutation {
       (newTool === 'header' && (data as { isToggleable?: boolean }).isToggleable === true);
 
     if (oldContentIds.length > 0 && !newToolCanHostChildren) {
-      // Promote each child to root level, inserting after the new block.
+      // Outdent each child by one level, inserting after the new block. The
+      // children inherit the converted block's ORIGINAL parent (oldParentId), so a
+      // nested child-bearing block's children stay inside the surrounding
+      // container instead of being promoted to the document root — matching
+      // Notion. When the converted block was already top-level, oldParentId is
+      // null and they land at root as before.
       // Route through setBlockParent so the child holder is also moved out
       // of the old (now-removed) parent's toggle-children container and any
       // hidden/indentation state is recomputed — same reasoning as
@@ -227,7 +233,7 @@ export class BlockMutation {
           return;
         }
 
-        this.hierarchy.setBlockParent(childBlock, null);
+        this.hierarchy.setBlockParent(childBlock, oldParentId);
         blocksStore.insert(insertAfterIndex + 1 + offset, childBlock, false, false);
       });
 
@@ -670,6 +676,32 @@ export class BlockMutation {
   }
 
   /**
+   * Count the consecutive blocks immediately after `startIndex` that are nested
+   * more deeply via the unified flat list-nesting depth ({@link getBlockNestingDepth})
+   * — i.e. the block's flat-indent followers, which form a movable group with it
+   * (Notion's structural Tab nesting). A root/un-indented block has effective
+   * depth 0, so it hosts any following blocks indented under it.
+   * @param startIndex - index of the group's parent block
+   * @returns number of contiguous followers (0 when the block has none)
+   */
+  private countFlatIndentFollowers(startIndex: number): number {
+    const start = this.repository.getBlockByIndex(startIndex);
+
+    if (start === undefined || start === null) {
+      return 0;
+    }
+
+    const parentDepth = getBlockNestingDepth(start) ?? 0;
+    const followerCount = this.repository.length - startIndex - 1;
+    const rest = Array.from({ length: followerCount }, (_, offset) =>
+      this.repository.getBlockByIndex(startIndex + 1 + offset));
+    const boundary = rest.findIndex((block) =>
+      block === undefined || block === null || (getBlockNestingDepth(block) ?? 0) <= parentDepth);
+
+    return boundary === -1 ? rest.length : boundary;
+  }
+
+  /**
    * Moves the current block up by one position
    * Does nothing if the block is already at the top
    * @param blocksStore - The blocks store to modify
@@ -687,7 +719,24 @@ export class BlockMutation {
       return;
     }
 
-    this.move(currentIndex - 1, currentIndex, false, blocksStore);
+    // A Tab-indented block's flat-indent followers travel with it as a unit
+    // (Notion structural Tab nesting). Move the single block above the group to
+    // just after the group's end so the whole group rises by one — one move() =
+    // one undo entry. With no followers this is the plain single-block move.
+    const upFollowers = this.countFlatIndentFollowers(currentIndex);
+
+    if (upFollowers === 0) {
+      this.move(currentIndex - 1, currentIndex, false, blocksStore);
+    } else {
+      const movingGroupParent = this.ctx.currentBlock;
+
+      this.move(currentIndex + upFollowers, currentIndex - 1, false, blocksStore);
+
+      if (movingGroupParent !== undefined) {
+        this.ctx.currentBlockIndexValue = this.repository.getBlockIndex(movingGroupParent);
+      }
+    }
+
     this.refocusCurrentBlock();
 
     // Announce successful move (currentBlockIndex is now updated to new position)
@@ -708,8 +757,10 @@ export class BlockMutation {
    */
   public moveCurrentBlockDown(blocksStore: BlocksStore): void {
     const currentIndex = this.ctx.currentBlockIndexValue;
+    const downFollowers = this.countFlatIndentFollowers(currentIndex);
+    const groupEnd = currentIndex + downFollowers;
 
-    if (currentIndex < 0 || currentIndex >= this.repository.length - 1) {
+    if (currentIndex < 0 || groupEnd >= this.repository.length - 1) {
       // Announce boundary condition
       announce(
         this.dependencies.I18n.t('a11y.atBottom'),
@@ -719,7 +770,20 @@ export class BlockMutation {
       return;
     }
 
-    this.move(currentIndex + 1, currentIndex, false, blocksStore);
+    // Move the single block below the flat-indent group to just before the
+    // group's start, so the whole group descends by one (Notion Tab nesting).
+    if (downFollowers === 0) {
+      this.move(currentIndex + 1, currentIndex, false, blocksStore);
+    } else {
+      const movingGroupParent = this.ctx.currentBlock;
+
+      this.move(currentIndex, groupEnd + 1, false, blocksStore);
+
+      if (movingGroupParent !== undefined) {
+        this.ctx.currentBlockIndexValue = this.repository.getBlockIndex(movingGroupParent);
+      }
+    }
+
     this.refocusCurrentBlock();
 
     // Announce successful move (currentBlockIndex is now updated to new position)

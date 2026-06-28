@@ -8,6 +8,7 @@ import type { SanitizerConfig } from '../../../types/configs';
 import { Module } from '../__module';
 import type { Block } from '../block';
 import { Dom as $ } from '../dom';
+import { blocksToMarkdown } from '../../markdown/blocks-to-markdown';
 import { SelectionUtils } from '../selection/index';
 import { delay } from '../utils';
 import { clean, composeSanitizerConfig } from '../utils/sanitizer';
@@ -321,7 +322,6 @@ export class BlockSelection extends Module {
     }
 
     const fakeClipboard = $.make('div');
-    const textPlainChunks: string[] = [];
 
     /**
      * Build custom Blok MIME_TYPE data synchronously using preserved data.
@@ -335,44 +335,8 @@ export class BlockSelection extends Module {
      * (e.g. when a collapsed toggle is copied — its hidden children must travel with it
      * so paste can restore the full toggle with its children).
      */
-    const serializeBlock = (block: Block): { id: string; tool: string; data: Record<string, unknown>; tunes: Record<string, unknown>; parentId: string | null; contentIds: string[] } => ({
-      id: block.id,
-      tool: block.name,
-      data: block.preservedData,
-      tunes: block.preservedTunes,
-      parentId: block.parentId,
-      contentIds: block.contentIds,
-    });
-
-    const collectBlocksWithChildren = (blocks: Block[]): Block[] => {
-      const collected: Block[] = [];
-      const seen = new Set<string>();
-
-      const collect = (block: Block): void => {
-        if (seen.has(block.id)) {
-          return;
-        }
-        seen.add(block.id);
-        collected.push(block);
-
-        for (const childId of block.contentIds) {
-          const child = this.Blok.BlockManager.getBlockById(childId);
-
-          if (child !== undefined && !seen.has(child.id)) {
-            collect(child);
-          }
-        }
-      };
-
-      for (const block of blocks) {
-        collect(block);
-      }
-
-      return collected;
-    };
-
-    const allBlocksToSerialize = collectBlocksWithChildren(this.selectedBlocks);
-    const savedData = allBlocksToSerialize.map(serializeBlock);
+    const savedData = this.serializeBlocksForClipboard(this.selectedBlocks);
+    const textPlainChunks: string[] = [];
 
     this.selectedBlocks.forEach((block) => {
       const cleanHTML = clean(block.holder.innerHTML, this.sanitizerConfig);
@@ -399,6 +363,13 @@ export class BlockSelection extends Module {
       }
     });
 
+    /**
+     * The text/plain flavor carries the rendered text with Markdown syntax
+     * stripped — matching Notion's default Cmd+C, which puts plain rendered text
+     * (no `#`/`**`/`- `) into text/plain. Markdown is produced only by the
+     * explicit "Copy as Markdown" command ({@link copySelectedBlocksAsMarkdown},
+     * bound to Cmd/Ctrl+Shift+C), mirroring Notion.
+     */
     const textPlain = textPlainChunks.join('\n\n');
     const textHTML = fakeClipboard.innerHTML;
 
@@ -422,6 +393,72 @@ export class BlockSelection extends Module {
         console.warn('Failed to set custom clipboard data:', error.message);
       }
     }
+  }
+
+  /**
+   * Copy the selected Blocks (or, if none are selected, the current Block) to the
+   * clipboard as Markdown. Mirrors Notion's "Copy as Markdown" (Cmd/Ctrl+Shift+C),
+   * which is the only Notion copy path that emits Markdown — the default Cmd+C
+   * copies stripped plain text (see {@link copySelectedBlocks}).
+   * @returns {Promise<void>}
+   */
+  public async copySelectedBlocksAsMarkdown(): Promise<void> {
+    const blocks = this.anyBlockSelected ? this.selectedBlocks : [this.Blok.BlockManager.currentBlock].filter((block): block is Block => block != null);
+
+    if (blocks.length === 0) {
+      return;
+    }
+
+    const savedData = this.serializeBlocksForClipboard(blocks);
+    const markdown = blocksToMarkdown(savedData);
+
+    const { clipboard } = navigator;
+
+    if (clipboard !== undefined && typeof clipboard.writeText === 'function') {
+      await clipboard.writeText(markdown);
+    }
+  }
+
+  /**
+   * Serialize Blocks (and any nested children not explicitly in the list) into the
+   * plain shape used for clipboard payloads. Children of selected blocks are
+   * included even when not explicitly selected (e.g. a collapsed toggle's hidden
+   * children must travel with it so paste can restore the full subtree).
+   * @param blocks - the blocks to serialize
+   * @returns serialized block data in document order
+   */
+  private serializeBlocksForClipboard(blocks: Block[]): Array<{ id: string; tool: string; data: Record<string, unknown>; tunes: Record<string, unknown>; parentId: string | null; contentIds: string[] }> {
+    const collected: Block[] = [];
+    const seen = new Set<string>();
+
+    const collect = (block: Block): void => {
+      if (seen.has(block.id)) {
+        return;
+      }
+      seen.add(block.id);
+      collected.push(block);
+
+      for (const childId of block.contentIds) {
+        const child = this.Blok.BlockManager.getBlockById(childId);
+
+        if (child !== undefined && !seen.has(child.id)) {
+          collect(child);
+        }
+      }
+    };
+
+    for (const block of blocks) {
+      collect(block);
+    }
+
+    return collected.map((block) => ({
+      id: block.id,
+      tool: block.name,
+      data: block.preservedData,
+      tunes: block.preservedTunes,
+      parentId: block.parentId,
+      contentIds: block.contentIds,
+    }));
   }
 
   /**
@@ -657,20 +694,15 @@ export class BlockSelection extends Module {
       return;
     }
 
-    const inputs = workingBlock.inputs;
-
     /**
-     * If Block has more than one editable element allow native selection
-     * Second cmd+a will select whole Block
+     * First Cmd+A: allow the native selection of the Block's content (text).
+     * The next press escalates to block-level selection. This mirrors Notion's
+     * three-stage Cmd+A — text → this block → all blocks — for both single-input
+     * and multi-input tools (single-input tools previously skipped the per-block
+     * stage and jumped straight to all-blocks).
      */
-    if (inputs.length > 1 && !this.readyToBlockSelection) {
+    if (!this.readyToBlockSelection) {
       this.readyToBlockSelection = true;
-
-      return;
-    }
-
-    if (inputs.length === 1 && !this.needToSelectAll) {
-      this.needToSelectAll = true;
 
       return;
     }

@@ -487,6 +487,41 @@ describe('BlockSettings', () => {
     expect((convertToItem as { children?: { width?: string } } | undefined)?.children?.width).toBeUndefined();
   });
 
+  it('converts a block that has children without a blocking confirm() prompt', async () => {
+    blockSettings.make();
+
+    const block = createBlock();
+
+    (block as unknown as { contentIds: string[] }).contentIds = ['child-1'];
+    (block as unknown as { data: Promise<unknown> }).data = Promise.resolve({});
+    blokMock.BlockManager.currentBlock = block;
+
+    getConvertibleToolsForBlockMock.mockResolvedValue([{
+      name: 'header',
+      toolbox: [{ icon: '<svg/>', title: 'Heading', name: 'heading' }],
+    }]);
+
+    const selectionStub = { save: vi.fn(), restore: vi.fn(), clearSaved: vi.fn() };
+
+    (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
+
+    await blockSettings.open(block);
+
+    const popover = getLastPopover();
+    const items = (popover?.params as { items: PopoverItemParams[] })?.items;
+    const convertToItem = items?.find(item => (item as PopoverItemParams & { name?: string }).name === 'convert-to');
+    const childItems = (convertToItem as { children?: { items?: PopoverItemParams[] } } | undefined)?.children?.items ?? [];
+
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+    await (childItems[0] as unknown as { onActivate: () => Promise<void> }).onActivate();
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(blokMock.BlockManager.convert).toHaveBeenCalledWith(block, 'header', undefined);
+
+    confirmSpy.mockRestore();
+  });
+
   it('falls back to current block and instantiates mobile popover without focusing flipper', async () => {
     blockSettings.make();
 

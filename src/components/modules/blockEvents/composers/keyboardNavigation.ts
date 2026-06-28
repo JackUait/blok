@@ -4,7 +4,7 @@ import { SelectionUtils } from '../../../selection';
 import { keyCodes, delay, isIosDevice } from '../../../utils';
 import { areBlocksMergeable } from '../../../utils/blocks';
 import { findNbspAfterEmptyInline, focus, isCaretAtEndOfInput, isCaretAtStartOfInput } from '../../../utils/caret/index';
-import { EDITABLE_INPUT_SELECTOR } from '../constants';
+import { EDITABLE_INPUT_SELECTOR, HEADER_TOOL_NAME, LIST_TOOL_NAME, QUOTE_TOOL_NAME } from '../constants';
 import { keyCodeFromEvent } from '../utils/keyboard';
 
 import { BlockEventComposer } from './__base';
@@ -95,7 +95,7 @@ export class KeyboardNavigation extends BlockEventComposer {
    * @param event - keydown event
    */
   public handleTab(event: KeyboardEvent): void {
-    const { InlineToolbar, Caret } = this.Blok;
+    const { InlineToolbar, Caret, BlockSelection } = this.Blok;
 
     const isFlipperActivated = InlineToolbar.opened;
 
@@ -109,6 +109,24 @@ export class KeyboardNavigation extends BlockEventComposer {
      */
     if (this.isCurrentBlockInsideTableCell) {
       return;
+    }
+
+    /**
+     * Notion-style indentation: Tab nests the current block under the preceding
+     * sibling; Shift+Tab outdents. Handled for a single block (no multi-block
+     * selection — that path belongs to blockSelectionKeys.handleIndent). When the
+     * block can't be indented/outdented (first block, already at min/max depth's
+     * navigation cases), fall through to caret navigation so Tab can still move
+     * focus / leave the editor for accessibility.
+     */
+    if (!BlockSelection.anyBlockSelected) {
+      const handled = event.shiftKey ? this.outdentCurrentBlock() : this.indentCurrentBlock();
+
+      if (handled) {
+        event.preventDefault();
+
+        return;
+      }
     }
 
     const isNavigated = event.shiftKey ? Caret.navigatePrevious(true) : Caret.navigateNext(true);
@@ -125,6 +143,71 @@ export class KeyboardNavigation extends BlockEventComposer {
     if (isNavigated) {
       event.preventDefault();
     }
+  }
+
+  /**
+   * Indent the current block one level deeper, nesting it under the immediately
+   * preceding sibling (the block right above it at the same parent level). Uses
+   * the flat list-nesting indent, clamped so a block can never be more than one
+   * level deeper than its predecessor — matching Notion's Tab rule.
+   *
+   * @returns true if Tab was consumed (indented, or already at max depth);
+   *   false to let the caller fall back to caret navigation.
+   */
+  private indentCurrentBlock(): boolean {
+    const { BlockManager } = this.Blok;
+    const { currentBlock, previousBlock } = BlockManager;
+
+    if (currentBlock === undefined || currentBlock.name === LIST_TOOL_NAME) {
+      return false;
+    }
+
+    /**
+     * Nothing to nest under: no preceding block, or the preceding block lives in a
+     * different parent (so it is not a preceding sibling). Fall back to navigation.
+     */
+    if (previousBlock === null || previousBlock.parentId !== currentBlock.parentId) {
+      return false;
+    }
+
+    const currentIndent = currentBlock.indent ?? 0;
+    const maxIndent = (previousBlock.indent ?? 0) + 1;
+    const nextIndent = Math.min(currentIndent + 1, maxIndent);
+
+    if (nextIndent !== currentIndent) {
+      BlockManager.setBlockIndent(currentBlock, nextIndent);
+    }
+
+    /**
+     * Already at max depth: consume Tab anyway so it does not hijack the caret to
+     * the next block (Notion leaves the caret in place when it can't indent further).
+     */
+    return true;
+  }
+
+  /**
+   * Outdent the current block one level. Uses the flat list-nesting indent.
+   *
+   * @returns true if the block was outdented; false (already at root indent) to
+   *   let the caller fall back to caret navigation.
+   */
+  private outdentCurrentBlock(): boolean {
+    const { BlockManager } = this.Blok;
+    const { currentBlock } = BlockManager;
+
+    if (currentBlock === undefined || currentBlock.name === LIST_TOOL_NAME) {
+      return false;
+    }
+
+    const currentIndent = currentBlock.indent ?? 0;
+
+    if (currentIndent <= 0) {
+      return false;
+    }
+
+    BlockManager.setBlockIndent(currentBlock, currentIndent - 1);
+
+    return true;
   }
 
   /**
@@ -281,8 +364,31 @@ export class KeyboardNavigation extends BlockEventComposer {
      */
     const isCurrentTopLevel = currentBlock.parentId === null;
 
-    // Case 1: Caret at start - insert block above
-    if (currentBlock.currentInput !== undefined && isCaretAtStartOfInput(currentBlock.currentInput) && !currentBlock.hasMedia && (currentBlock.parentId === null || !currentBlock.isEmpty)) {
+    /**
+     * Empty heading + Enter: convert the heading to a plain paragraph IN PLACE
+     * (preserving its position), instead of leaving the empty heading behind. The
+     * caret stays in the now-paragraph. Toggle headings are excluded — their
+     * open state nests a new child via the Case 2 toggle path below.
+     */
+    const isToggleHeading = currentBlock.holder.querySelector('[data-blok-toggle-open]') !== null;
+
+    if (currentBlock.isEmpty && currentBlock.name === HEADER_TOOL_NAME && !isToggleHeading) {
+      return this.Blok.BlockManager.replace(currentBlock, this.Blok.Tools.defaultTool.name, { text: '' });
+    }
+
+    /**
+     * Case 1: Caret at start - insert block above.
+     *
+     * For an EMPTY non-default block (e.g. a heading), inserting above and keeping
+     * the caret would trap it in the still-empty heading. Notion instead exits the
+     * heading: a new default paragraph is created below and the caret moves into it.
+     * So empty non-default blocks skip Case 1 and fall through to Case 2.
+     * (An empty default paragraph keeps Case 1 — inserting above with the caret on
+     * the now-lower block is equivalent to inserting below and moving down.)
+     */
+    const isEmptyNonDefaultBlock = currentBlock.isEmpty && !currentBlock.tool.isDefault;
+
+    if (currentBlock.currentInput !== undefined && isCaretAtStartOfInput(currentBlock.currentInput) && !currentBlock.hasMedia && (currentBlock.parentId === null || !currentBlock.isEmpty) && !isEmptyNonDefaultBlock) {
       const newBlock = this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex, false, false, isCurrentTopLevel);
 
       /**
@@ -416,6 +522,38 @@ export class KeyboardNavigation extends BlockEventComposer {
      * paragraph and now wants to undo it) must still work.
      */
     if (this.isCurrentBlockInsideTableCell && !this.areBlocksInSameTableCell(currentBlock, previousBlock)) {
+      return;
+    }
+
+    /**
+     * Notion-style "reset block type to text first" cascade.
+     *
+     * Pressing Backspace at the start of a styled single-line text block converts
+     * it to a plain paragraph — preserving its text and inline formatting —
+     * instead of merging into the previous block or deleting an empty block. A
+     * subsequent Backspace then runs the normal merge/remove logic on the
+     * now-paragraph block.
+     *
+     * This central handler covers the styled blocks whose own tools do NOT already
+     * reset to text on Backspace: headings and quotes. The list, callout and
+     * toggle tools self-convert to a paragraph in their own keydown handlers
+     * (which preventDefault), so they never reach here.
+     *
+     * Toggle headings are excluded: their own element-level keydown handler resets
+     * the toggle state first (and preventDefault()s, so this central handler does
+     * not run for the empty case). They are detected via the toggle-open marker the
+     * header tool renders on its holder.
+     */
+    const isToggleHeading = currentBlock.holder.querySelector('[data-blok-toggle-open]') !== null;
+    const resetsToTextOnBackspace = currentBlock.name === HEADER_TOOL_NAME || currentBlock.name === QUOTE_TOOL_NAME;
+
+    if (resetsToTextOnBackspace && !isToggleHeading) {
+      const defaultToolName = this.Blok.Tools.defaultTool.name;
+      const text = currentBlock.currentInput.innerHTML;
+      const newBlock = BlockManager.replace(currentBlock, defaultToolName, { text });
+
+      Caret.setToBlock(newBlock, Caret.positions.START);
+
       return;
     }
 
@@ -714,17 +852,20 @@ export class KeyboardNavigation extends BlockEventComposer {
       if (isDownKey) {
         /**
          * Arrow Down: Notion-style vertical navigation
-         * Only navigate to next block when caret is at the last line
+         * Only navigate to next block when caret is at the last line.
+         * Pass allowBlockCreation=false so arrowing past the last block never
+         * spawns a trailing paragraph (only Enter creates blocks, like Notion).
          */
-        return this.Blok.Caret.navigateVerticalNext();
+        return this.Blok.Caret.navigateVerticalNext(false);
       }
 
       if (isRightKey) {
         /**
          * Arrow Right: horizontal navigation
-         * Navigate to next block when caret is at the end of input
+         * Navigate to next block when caret is at the end of input. Block creation
+         * is disabled so the caret never spawns a trailing paragraph on Arrow Right.
          */
-        return this.Blok.Caret.navigateNext();
+        return this.Blok.Caret.navigateNext(false, false);
       }
 
       return false;
@@ -737,9 +878,13 @@ export class KeyboardNavigation extends BlockEventComposer {
       event.preventDefault();
 
       /**
-       * Reopen the toolbar at the new block position after navigation
+       * Reposition the toolbar at the new block, but keep the block-action gutter
+       * (plus button + settings toggler) hidden — caret navigation should not pop
+       * the handles, matching Notion where they appear on hover only. Positioning
+       * still happens so a later hover/click lands at the right place.
        */
       this.Blok.Toolbar.moveAndOpen(this.Blok.BlockManager.currentBlock);
+      this.Blok.Toolbar.hideBlockActions();
 
       return;
     }
@@ -871,9 +1016,13 @@ export class KeyboardNavigation extends BlockEventComposer {
       event.preventDefault();
 
       /**
-       * Reopen the toolbar at the new block position after navigation
+       * Reposition the toolbar at the new block, but keep the block-action gutter
+       * (plus button + settings toggler) hidden — caret navigation should not pop
+       * the handles, matching Notion where they appear on hover only. Positioning
+       * still happens so a later hover/click lands at the right place.
        */
       this.Blok.Toolbar.moveAndOpen(this.Blok.BlockManager.currentBlock);
+      this.Blok.Toolbar.hideBlockActions();
 
       return;
     }

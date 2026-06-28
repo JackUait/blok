@@ -13,6 +13,8 @@ export interface BlockShortcutsHandlers {
   onMoveUp: () => void;
   /** Handler for moving block down */
   onMoveDown: () => void;
+  /** Handler for copying the selection as Markdown (Notion's Cmd/Ctrl+Shift+C) */
+  onCopyAsMarkdown: () => void;
 }
 
 /**
@@ -43,7 +45,7 @@ export class BlockShortcuts {
    */
   public register(): void {
     setTimeout(() => {
-    const shortcutNames = ['CMD+SHIFT+UP', 'CMD+SHIFT+DOWN'];
+    const shortcutNames = ['CMD+SHIFT+UP', 'CMD+SHIFT+DOWN', 'CMD+SHIFT+C'];
 
     // Clear any existing shortcuts to avoid duplicate registration errors
     for (const name of this.registeredShortcutNames) {
@@ -83,6 +85,20 @@ export class BlockShortcuts {
       },
     });
     this.registeredShortcutNames.push('CMD+SHIFT+DOWN');
+
+    // Copy selection as Markdown: Cmd+Shift+C (Mac) / Ctrl+Shift+C (Windows/Linux)
+    Shortcuts.add({
+      name: 'CMD+SHIFT+C',
+      on: document,
+      handler: (event: KeyboardEvent) => {
+        if (!this.shouldHandleShortcut(event)) {
+          return;
+        }
+        event.preventDefault();
+        this.handlers.onCopyAsMarkdown();
+      },
+    });
+    this.registeredShortcutNames.push('CMD+SHIFT+C');
     }, 0);
   }
 

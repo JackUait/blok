@@ -307,6 +307,33 @@ describe('MarkdownShortcuts', () => {
       );
     });
 
+    it('converts "+ " to unordered list', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '+ ';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(true);
+      expect(replace).toHaveBeenCalledWith(
+        mockBlock,
+        'list',
+        expect.objectContaining({
+          style: 'unordered',
+        })
+      );
+    });
+
     it('converts "* " to unordered list', () => {
       const mockBlock = createBlock();
       if (mockBlock.currentInput) {

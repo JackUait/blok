@@ -333,6 +333,42 @@ describe('BlockOperations', () => {
     vi.clearAllMocks();
   });
 
+  describe('moveCurrentBlockUp/Down flat-indent group cohesion', () => {
+    it('carries a flat-indented follower when moving the parent up (Notion Tab nesting)', () => {
+      const above = createMockBlock({ id: 'above' });
+      const parent = createMockBlock({ id: 'parent' });
+      const follower = createMockBlock({ id: 'follower' });
+      follower.holder.setAttribute('data-blok-indent', '1');
+
+      const store = createBlocksStore([above, parent, follower]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 1);
+      ops.setYjsSync(yjsSync);
+
+      ops.moveCurrentBlockUp(store);
+
+      expect(repo.blocks.map((block) => block.id)).toEqual(['parent', 'follower', 'above']);
+    });
+
+    it('carries a flat-indented follower when moving the parent down', () => {
+      const parent = createMockBlock({ id: 'parent' });
+      const follower = createMockBlock({ id: 'follower' });
+      follower.holder.setAttribute('data-blok-indent', '1');
+      const below = createMockBlock({ id: 'below' });
+
+      const store = createBlocksStore([parent, follower, below]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 0);
+      ops.setYjsSync(yjsSync);
+
+      ops.moveCurrentBlockDown(store);
+
+      expect(repo.blocks.map((block) => block.id)).toEqual(['below', 'parent', 'follower']);
+    });
+  });
+
   describe('currentBlockIndexValue getter/setter', () => {
     it('returns the current block index', () => {
       expect(operations.currentBlockIndexValue).toBe(0);
@@ -1110,6 +1146,38 @@ describe('BlockOperations', () => {
 
       expect(child1Index).toBeGreaterThan(newBlockIndex);
       expect(child2Index).toBeGreaterThan(child1Index);
+    });
+
+    it('outdents children to the original parent (not root) when converting a NESTED child-bearing block', () => {
+      // outerToggle > innerToggle > grandchild. Converting innerToggle to a
+      // non-hosting paragraph should leave grandchild inside outerToggle, not at
+      // the document root — matching Notion's outdent-one-level behaviour.
+      const grandchild = createMockBlock({ id: 'grandchild', name: 'paragraph', parentId: 'inner' });
+      const innerToggle = createMockBlock({ id: 'inner', name: 'toggle', parentId: 'outer', contentIds: ['grandchild'] });
+      const outerToggle = createMockBlock({ id: 'outer', name: 'toggle', contentIds: ['inner'] });
+
+      const testStore = createBlocksStore([outerToggle, innerToggle, grandchild]);
+      const testRepo = new BlockRepository();
+      testRepo.initialize(testStore);
+      const testHierarchy = new BlockHierarchy(testRepo);
+      const testOps = new BlockOperations(
+        dependencies,
+        testRepo,
+        factory,
+        testHierarchy,
+        blockDidMutatedSpy,
+        0
+      );
+      testOps.setYjsSync(yjsSync);
+
+      const newBlock = testOps.replace(innerToggle, 'paragraph', { text: '' }, testStore);
+
+      // Grandchild stays inside the surrounding container (outer), not promoted to root.
+      expect(grandchild.parentId).toBe('outer');
+      // The converted block hosts no children.
+      expect(newBlock.contentIds).toHaveLength(0);
+      // Grandchild follows the converted block in document order.
+      expect(testRepo.getBlockIndex(grandchild)).toBeGreaterThan(testRepo.getBlockIndex(newBlock));
     });
 
     it('keeps children when replacing toggle with another hosting tool (toggle→toggle)', () => {

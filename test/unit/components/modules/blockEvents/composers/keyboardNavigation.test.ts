@@ -156,41 +156,143 @@ afterEach(() => {
 
 describe('KeyboardNavigation', () => {
   describe('handleTab', () => {
-    it('navigates to next input when Tab is pressed', () => {
-      const navigateNext = vi.fn(() => true);
-      const blok = createBlokModules({
-        Caret: {
-          navigateNext,
-        } as unknown as BlokModules['Caret'],
-      });
+    const tabModules = (
+      current: Block | undefined,
+      previous: Block | null,
+      caret: Partial<BlokModules['Caret']> = {}
+    ): BlokModules => createBlokModules({
+      BlockManager: {
+        currentBlock: current,
+        previousBlock: previous,
+        setBlockIndent: vi.fn(),
+      } as unknown as BlokModules['BlockManager'],
+      Caret: {
+        navigateNext: vi.fn(() => false),
+        navigatePrevious: vi.fn(() => false),
+        ...caret,
+      } as unknown as BlokModules['Caret'],
+    });
+
+    it('indents the current block under the preceding sibling on Tab', () => {
+      const current = createBlock({ id: 'cur', indent: 0, parentId: null });
+      const previous = createBlock({ id: 'prev', indent: 0, parentId: null });
+      const blok = tabModules(current, previous);
+      const setBlockIndent = blok.BlockManager.setBlockIndent as ReturnType<typeof vi.fn>;
+      const navigateNext = blok.Caret.navigateNext as ReturnType<typeof vi.fn>;
       const keyboardNavigation = new KeyboardNavigation(blok);
       const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
 
       keyboardNavigation.handleTab(event);
 
-      expect(navigateNext).toHaveBeenCalledWith(true);
+      expect(setBlockIndent).toHaveBeenCalledWith(current, 1);
+      expect(navigateNext).not.toHaveBeenCalled();
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
     });
 
-    it('navigates to previous input when Shift+Tab is pressed', () => {
-      const navigatePrevious = vi.fn(() => true);
-      const blok = createBlokModules({
-        Caret: {
-          navigatePrevious,
-        } as unknown as BlokModules['Caret'],
-      });
+    it('outdents the current block on Shift+Tab', () => {
+      const current = createBlock({ id: 'cur', indent: 2, parentId: null });
+      const previous = createBlock({ id: 'prev', indent: 2, parentId: null });
+      const blok = tabModules(current, previous);
+      const setBlockIndent = blok.BlockManager.setBlockIndent as ReturnType<typeof vi.fn>;
+      const navigatePrevious = blok.Caret.navigatePrevious as ReturnType<typeof vi.fn>;
       const keyboardNavigation = new KeyboardNavigation(blok);
       const event = createKeyboardEvent({ key: 'Tab', shiftKey: true });
 
       keyboardNavigation.handleTab(event);
 
-      expect(navigatePrevious).toHaveBeenCalledWith(true);
+      expect(setBlockIndent).toHaveBeenCalledWith(current, 1);
+      expect(navigatePrevious).not.toHaveBeenCalled();
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
     });
 
+    it('clamps indentation to one level deeper than the preceding sibling', () => {
+      const current = createBlock({ id: 'cur', indent: 1, parentId: null });
+      const previous = createBlock({ id: 'prev', indent: 0, parentId: null });
+      const blok = tabModules(current, previous);
+      const setBlockIndent = blok.BlockManager.setBlockIndent as ReturnType<typeof vi.fn>;
+      const navigateNext = blok.Caret.navigateNext as ReturnType<typeof vi.fn>;
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
+
+      keyboardNavigation.handleTab(event);
+
+      // Already at max depth under the predecessor: no further indent, but Tab is
+      // consumed (no caret hijack to the next block).
+      expect(setBlockIndent).not.toHaveBeenCalled();
+      expect(navigateNext).not.toHaveBeenCalled();
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not indent list items (they manage their own depth)', () => {
+      const current = createBlock({ id: 'cur', indent: 0, parentId: null, name: 'list' });
+      const previous = createBlock({ id: 'prev', indent: 0, parentId: null });
+      const navigateNext = vi.fn(() => true);
+      const blok = tabModules(current, previous, { navigateNext });
+      const setBlockIndent = blok.BlockManager.setBlockIndent as ReturnType<typeof vi.fn>;
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
+
+      keyboardNavigation.handleTab(event);
+
+      expect(setBlockIndent).not.toHaveBeenCalled();
+      expect(navigateNext).toHaveBeenCalledWith(true);
+    });
+
+    it('falls back to navigation when there is no preceding block on Tab', () => {
+      const current = createBlock({ id: 'cur', indent: 0, parentId: null });
+      const navigateNext = vi.fn(() => true);
+      const blok = tabModules(current, null, { navigateNext });
+      const setBlockIndent = blok.BlockManager.setBlockIndent as ReturnType<typeof vi.fn>;
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
+
+      keyboardNavigation.handleTab(event);
+
+      expect(setBlockIndent).not.toHaveBeenCalled();
+      expect(navigateNext).toHaveBeenCalledWith(true);
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back to navigation when block is already fully outdented on Shift+Tab', () => {
+      const current = createBlock({ id: 'cur', indent: 0, parentId: null });
+      const previous = createBlock({ id: 'prev', indent: 0, parentId: null });
+      const navigatePrevious = vi.fn(() => true);
+      const blok = tabModules(current, previous, { navigatePrevious });
+      const setBlockIndent = blok.BlockManager.setBlockIndent as ReturnType<typeof vi.fn>;
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Tab', shiftKey: true });
+
+      keyboardNavigation.handleTab(event);
+
+      expect(setBlockIndent).not.toHaveBeenCalled();
+      expect(navigatePrevious).toHaveBeenCalledWith(true);
+    });
+
+    it('does not indent under a preceding block in a different parent', () => {
+      const current = createBlock({ id: 'cur', indent: 0, parentId: 'toggle-1' });
+      const previous = createBlock({ id: 'prev', indent: 0, parentId: null });
+      const navigateNext = vi.fn(() => true);
+      const blok = tabModules(current, previous, { navigateNext });
+      const setBlockIndent = blok.BlockManager.setBlockIndent as ReturnType<typeof vi.fn>;
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
+
+      keyboardNavigation.handleTab(event);
+
+      expect(setBlockIndent).not.toHaveBeenCalled();
+      expect(navigateNext).toHaveBeenCalledWith(true);
+    });
+
     it('does not navigate when InlineToolbar is opened', () => {
+      const current = createBlock({ id: 'cur', indent: 0, parentId: null });
+      const previous = createBlock({ id: 'prev', indent: 0, parentId: null });
       const navigateNext = vi.fn();
       const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: current,
+          previousBlock: previous,
+          setBlockIndent: vi.fn(),
+        } as unknown as BlokModules['BlockManager'],
         Caret: {
           navigateNext,
         } as unknown as BlokModules['Caret'],
@@ -198,44 +300,27 @@ describe('KeyboardNavigation', () => {
           opened: true,
         } as unknown as BlokModules['InlineToolbar'],
       });
+      const setBlockIndent = blok.BlockManager.setBlockIndent as ReturnType<typeof vi.fn>;
       const keyboardNavigation = new KeyboardNavigation(blok);
       const event = createKeyboardEvent({ key: 'Tab' });
 
       keyboardNavigation.handleTab(event);
 
       expect(navigateNext).not.toHaveBeenCalled();
+      expect(setBlockIndent).not.toHaveBeenCalled();
       expect(event.preventDefault).not.toHaveBeenCalled();
     });
 
-    it('does not prevent default Tab behavior when navigation fails', () => {
+    it('does not prevent default Tab behavior when navigation fails (tab out of editor)', () => {
+      const current = createBlock({ id: 'cur', indent: 0, parentId: null });
       const navigateNext = vi.fn(() => false);
-      const blok = createBlokModules({
-        Caret: {
-          navigateNext,
-        } as unknown as BlokModules['Caret'],
-      });
+      const blok = tabModules(current, null, { navigateNext });
       const keyboardNavigation = new KeyboardNavigation(blok);
       const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
 
       keyboardNavigation.handleTab(event);
 
       expect(navigateNext).toHaveBeenCalledWith(true);
-      expect(event.preventDefault).not.toHaveBeenCalled();
-    });
-
-    it('does not prevent default Shift+Tab behavior when navigation fails', () => {
-      const navigatePrevious = vi.fn(() => false);
-      const blok = createBlokModules({
-        Caret: {
-          navigatePrevious,
-        } as unknown as BlokModules['Caret'],
-      });
-      const keyboardNavigation = new KeyboardNavigation(blok);
-      const event = createKeyboardEvent({ key: 'Tab', shiftKey: true });
-
-      keyboardNavigation.handleTab(event);
-
-      expect(navigatePrevious).toHaveBeenCalledWith(true);
       expect(event.preventDefault).not.toHaveBeenCalled();
     });
   });
@@ -343,6 +428,69 @@ describe('KeyboardNavigation', () => {
       expect(moveAndOpen).toHaveBeenCalled();
       // Verify default browser behavior was prevented
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    });
+
+    it('replaces an empty heading with a paragraph in place on Enter and focuses it', () => {
+      const setToBlock = vi.fn();
+      const headingInput = document.createElement('div');
+      headingInput.contentEditable = 'true';
+      const headingBlock = createBlock({
+        id: 'heading-block',
+        name: 'header',
+        isEmpty: true,
+        parentId: null,
+        currentInput: headingInput,
+        tool: {
+          isDefault: false,
+          isLineBreaksEnabled: false,
+          name: 'header',
+        } as unknown as Block['tool'],
+      });
+      const paragraphBlock = createBlock({ id: 'paragraph-in-place' });
+      const replace = vi.fn(() => paragraphBlock);
+      const insertDefaultBlockAtIndex = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: headingBlock,
+          currentBlockIndex: 1,
+          replace,
+          insertDefaultBlockAtIndex,
+          split: vi.fn(),
+          setBlockParent: vi.fn(),
+          transactForTool: vi.fn((fn: () => void) => fn()),
+        } as unknown as BlokModules['BlockManager'],
+        Tools: {
+          defaultTool: { name: 'paragraph' },
+        } as unknown as BlokModules['Tools'],
+        Caret: {
+          setToBlock,
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          moveAndOpen: vi.fn(),
+        } as unknown as BlokModules['Toolbar'],
+        YjsManager: {
+          stopCapturing: vi.fn(),
+          markCaretBeforeChange: vi.fn(),
+          updateLastCaretAfterPosition: vi.fn(),
+        } as unknown as BlokModules['YjsManager'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Enter' });
+
+      const startSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+      const endSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleEnter(event);
+
+      // The heading is converted to a paragraph IN PLACE — no extra block inserted.
+      expect(replace).toHaveBeenCalledWith(headingBlock, 'paragraph', { text: '' });
+      expect(insertDefaultBlockAtIndex).not.toHaveBeenCalled();
+      // Focus moves into the replacement paragraph.
+      expect(setToBlock).toHaveBeenCalledWith(paragraphBlock);
+
+      startSpy.mockRestore();
+      endSpy.mockRestore();
     });
 
     it('creates a new child inside the toggle when Enter is pressed on an empty last child', () => {
@@ -862,6 +1010,186 @@ describe('KeyboardNavigation', () => {
       expect(event.preventDefault).not.toHaveBeenCalled();
 
       isCaretAtStartOfInputSpy.mockRestore();
+    });
+
+    const createHeadingBlock = (html: string, overrides: Partial<Block> = {}): Block => {
+      const headingInput = document.createElement('div');
+      headingInput.contentEditable = 'true';
+      headingInput.innerHTML = html;
+
+      const holder = document.createElement('div');
+      holder.appendChild(headingInput);
+
+      return createBlock({
+        id: 'heading-block',
+        name: 'header',
+        parentId: null,
+        holder,
+        currentInput: headingInput,
+        firstInput: headingInput,
+        lastInput: headingInput,
+        inputs: [headingInput],
+        tool: {
+          isDefault: false,
+          isLineBreaksEnabled: false,
+          name: 'header',
+        } as unknown as Block['tool'],
+        ...overrides,
+      });
+    };
+
+    it('resets a non-empty heading to a paragraph instead of merging on Backspace at start', () => {
+      const headingBlock = createHeadingBlock('Hello <b>world</b>', { isEmpty: false });
+      const paragraphBlock = createBlock({ id: 'paragraph-block' });
+      const replace = vi.fn(() => paragraphBlock);
+      const mergeBlocks = vi.fn(() => Promise.resolve());
+      const setToBlock = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: headingBlock,
+          previousBlock: createBlock({ id: 'prev-block', isEmpty: false }),
+          replace,
+          mergeBlocks,
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          setToBlock,
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        Tools: {
+          defaultTool: { name: 'paragraph' },
+        } as unknown as BlokModules['Tools'],
+        Toolbar: { close: vi.fn() } as unknown as BlokModules['Toolbar'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Backspace' });
+      const spy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleBackspace(event);
+
+      expect(replace).toHaveBeenCalledWith(headingBlock, 'paragraph', { text: 'Hello <b>world</b>' });
+      expect(mergeBlocks).not.toHaveBeenCalled();
+      expect(setToBlock).toHaveBeenCalledWith(paragraphBlock, 'start');
+
+      spy.mockRestore();
+    });
+
+    it('resets a quote to a paragraph instead of merging on Backspace at start, matching Notion', () => {
+      const quoteInput = document.createElement('div');
+      quoteInput.contentEditable = 'true';
+      quoteInput.innerHTML = 'A quote';
+
+      const holder = document.createElement('div');
+      holder.appendChild(quoteInput);
+
+      const quoteBlock = createBlock({
+        id: 'quote-block',
+        name: 'quote',
+        parentId: null,
+        isEmpty: false,
+        holder,
+        currentInput: quoteInput,
+        firstInput: quoteInput,
+        lastInput: quoteInput,
+        inputs: [quoteInput],
+        tool: { isDefault: false, isLineBreaksEnabled: false, name: 'quote' } as unknown as Block['tool'],
+      });
+      const paragraphBlock = createBlock({ id: 'paragraph-block' });
+      const replace = vi.fn(() => paragraphBlock);
+      const mergeBlocks = vi.fn(() => Promise.resolve());
+      const setToBlock = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: quoteBlock,
+          previousBlock: createBlock({ id: 'prev-block', isEmpty: false }),
+          replace,
+          mergeBlocks,
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          setToBlock,
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        Tools: {
+          defaultTool: { name: 'paragraph' },
+        } as unknown as BlokModules['Tools'],
+        Toolbar: { close: vi.fn() } as unknown as BlokModules['Toolbar'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Backspace' });
+      const spy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleBackspace(event);
+
+      expect(replace).toHaveBeenCalledWith(quoteBlock, 'paragraph', { text: 'A quote' });
+      expect(mergeBlocks).not.toHaveBeenCalled();
+      expect(setToBlock).toHaveBeenCalledWith(paragraphBlock, 'start');
+
+      spy.mockRestore();
+    });
+
+    it('resets an empty heading to an empty paragraph instead of deleting it on Backspace', () => {
+      const headingBlock = createHeadingBlock('', { isEmpty: true });
+      const paragraphBlock = createBlock({ id: 'paragraph-block' });
+      const replace = vi.fn(() => paragraphBlock);
+      const removeBlock = vi.fn();
+      const setToBlock = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: headingBlock,
+          previousBlock: createBlock({ id: 'prev-block', isEmpty: false }),
+          replace,
+          removeBlock,
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          setToBlock,
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        Tools: {
+          defaultTool: { name: 'paragraph' },
+        } as unknown as BlokModules['Tools'],
+        Toolbar: { close: vi.fn() } as unknown as BlokModules['Toolbar'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Backspace' });
+      const spy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleBackspace(event);
+
+      expect(replace).toHaveBeenCalledWith(headingBlock, 'paragraph', { text: '' });
+      expect(removeBlock).not.toHaveBeenCalled();
+
+      spy.mockRestore();
+    });
+
+    it('resets a first-in-document heading to a paragraph on Backspace instead of doing nothing', () => {
+      const headingBlock = createHeadingBlock('Title', { isEmpty: false });
+      const paragraphBlock = createBlock({ id: 'paragraph-block' });
+      const replace = vi.fn(() => paragraphBlock);
+      const setToBlock = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: headingBlock,
+          previousBlock: null,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          setToBlock,
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        Tools: {
+          defaultTool: { name: 'paragraph' },
+        } as unknown as BlokModules['Tools'],
+        Toolbar: { close: vi.fn() } as unknown as BlokModules['Toolbar'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Backspace' });
+      const spy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleBackspace(event);
+
+      expect(replace).toHaveBeenCalledWith(headingBlock, 'paragraph', { text: 'Title' });
+      expect(setToBlock).toHaveBeenCalledWith(paragraphBlock, 'start');
+
+      spy.mockRestore();
     });
 
     it('navigates to previous input when not at first input', () => {
@@ -1825,6 +2153,38 @@ describe('KeyboardNavigation', () => {
       keyboardNavigation.handleArrowRightAndDown(event);
 
       expect(event.preventDefault).not.toHaveBeenCalled();
+    });
+
+    it('hides the block-action gutter instead of popping it when arrow navigation crosses a block', () => {
+      const moveAndOpen = vi.fn();
+      const hideBlockActions = vi.fn();
+      const navigateVerticalNext = vi.fn(() => true);
+      const blok = createBlokModules({
+        Caret: {
+          navigateVerticalNext,
+          navigateNext: vi.fn(() => false),
+          navigatePrevious: vi.fn(() => false),
+          navigateVerticalPrevious: vi.fn(() => false),
+        } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          moveAndOpen,
+          hideBlockActions,
+          close: vi.fn(),
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'ArrowDown', keyCode: keyCodes.DOWN });
+
+      const endSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(false);
+
+      keyboardNavigation.handleArrowRightAndDown(event);
+
+      expect(navigateVerticalNext).toHaveBeenCalled();
+      // Gutter (plus/settings handles) must not pop on caret navigation — Notion
+      // shows it on hover only.
+      expect(hideBlockActions).toHaveBeenCalled();
+
+      endSpy.mockRestore();
     });
   });
 

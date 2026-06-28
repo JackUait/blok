@@ -68,6 +68,13 @@ export interface CaretSnapshot {
 export interface CaretHistoryEntry {
   before: CaretSnapshot | null;
   after: CaretSnapshot | null;
+  /**
+   * Which timeline this operation belongs to. The caret stack interleaves moves
+   * and Yjs text edits in chronological order, so undo/redo consult the top
+   * entry's kind to unwind the correct stack — keeping history strictly
+   * reverse-chronological even when a move sits between edits.
+   */
+  kind?: 'move' | 'edit';
 }
 
 /**

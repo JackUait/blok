@@ -157,6 +157,68 @@ describe('UndoHistory', () => {
     });
   });
 
+  describe('chronological undo across moves and edits', () => {
+    const getText = (id: string): string =>
+      (yblocks.toArray().find((b) => b.get('id') === id)?.get('text') as string) ?? '';
+
+    it('undoes the most recent operation first when a move is sandwiched between text edits', () => {
+      // Seed two blocks without tracking (no 'local' origin → no undo entries).
+      ydoc.transact(() => {
+        const b1 = new Y.Map<unknown>();
+
+        b1.set('id', 'b1');
+        b1.set('text', '');
+        const b2 = new Y.Map<unknown>();
+
+        b2.set('id', 'b2');
+        b2.set('text', '');
+        yblocks.insert(0, [b1, b2]);
+      });
+
+      const moveCallback = vi.fn();
+
+      history.setMoveCallback(moveCallback);
+
+      // Edit 1 (tracked) — typing into b1.
+      ydoc.transact(() => {
+        getBlock('b1').set('text', 'A');
+      }, 'local');
+      history.stopCapturing();
+
+      // Move b1 (recorded between the two edits).
+      history.recordMove('b1', 0, 1, false);
+      history.stopCapturing();
+
+      // Edit 2 (tracked) — more typing into b1.
+      ydoc.transact(() => {
+        getBlock('b1').set('text', 'AB');
+      }, 'local');
+
+      // 1st undo: the most recent operation is Edit 2, NOT the move.
+      history.undo();
+      expect(getText('b1')).toBe('A');
+      expect(moveCallback).not.toHaveBeenCalled();
+
+      // 2nd undo: now the move.
+      history.undo();
+      expect(moveCallback).toHaveBeenCalledWith('b1', 0, 'move-undo');
+
+      // 3rd undo: Edit 1.
+      history.undo();
+      expect(getText('b1')).toBe('');
+    });
+
+    function getBlock(id: string): Y.Map<unknown> {
+      const block = yblocks.toArray().find((b) => b.get('id') === id);
+
+      if (block === undefined) {
+        throw new Error(`block ${id} not found`);
+      }
+
+      return block;
+    }
+  });
+
   describe('caret tracking', () => {
     it('captures caret snapshot', () => {
       const mockBlock = {

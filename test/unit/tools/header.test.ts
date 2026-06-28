@@ -66,6 +66,14 @@ describe('Header Tool - Custom Configurations', () => {
 
       expect(element).toHaveAttribute('data-placeholder', 'Heading 2');
     });
+
+    it('does not render a placeholder in read-only mode', () => {
+      const options = { ...createHeaderOptions({}, {}), readOnly: true };
+      const header = new Header(options);
+      const element = header.render();
+
+      expect(element).not.toHaveAttribute('data-placeholder');
+    });
   });
 
 

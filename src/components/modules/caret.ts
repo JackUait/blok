@@ -496,8 +496,12 @@ export class Caret extends Module {
    * Before moving caret, we should check if caret position is at the end of Plugins node
    * Using {@link Dom#getDeepestNode} to get a last node and match with current selection
    * @param {boolean} force - pass true to skip check for caret position
+   * @param {boolean} allowBlockCreation - when false, do NOT insert a trailing
+   *   default block to exit the last non-default block. Arrow keys pass false so
+   *   navigation never creates blocks (only Enter does), matching Notion; Tab and
+   *   other callers keep the create-to-exit affordance.
    */
-  public navigateNext(force = false): boolean {
+  public navigateNext(force = false, allowBlockCreation = true): boolean {
     const { BlockManager } = this.Blok;
     const { currentBlock, nextVisibleBlock: nextBlock } = BlockManager;
 
@@ -581,9 +585,10 @@ export class Caret extends Module {
 
       /**
        * If there is no nextBlock, but currentBlock is not default,
-       * insert new default block at the end and navigate to it
+       * insert new default block at the end and navigate to it — unless block
+       * creation is disallowed (arrow keys), in which case navigation simply stops.
        */
-      return BlockManager.insertAtEnd();
+      return allowBlockCreation ? BlockManager.insertAtEnd() : null;
     };
 
     const blockToNavigate = getBlockToNavigate();
@@ -706,7 +711,7 @@ export class Caret extends Module {
    * Preserves horizontal caret position when moving between blocks.
    * @returns {boolean} - true if navigation to next block occurred
    */
-  public navigateVerticalNext(): boolean {
+  public navigateVerticalNext(allowBlockCreation = true): boolean {
     const { BlockManager } = this.Blok;
     const { currentBlock, nextVisibleBlock: nextBlock } = BlockManager;
 
@@ -809,7 +814,7 @@ export class Caret extends Module {
      */
     const isAtEnd = currentInput !== undefined ? isCaretAtEndOfInput(currentInput) : true;
 
-    if (!currentBlock.tool.isDefault && isAtEnd) {
+    if (allowBlockCreation && !currentBlock.tool.isDefault && isAtEnd) {
       const newBlock = BlockManager.insertAtEnd();
 
       this.setToBlock(newBlock, this.positions.START);

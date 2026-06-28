@@ -45,10 +45,10 @@ export const CHECKLIST_PATTERN = /^\[(x|X| )?\]\s([\s\S]*)$/;
 
 /**
  * Regex pattern for detecting bulleted list shortcuts.
- * Matches patterns like "- " or "* " at the start of text
+ * Matches patterns like "- ", "* " or "+ " at the start of text
  * Captures remaining content after the shortcut in group 1
  */
-export const UNORDERED_LIST_PATTERN = /^[-*]\s([\s\S]*)$/;
+export const UNORDERED_LIST_PATTERN = /^[-*+]\s([\s\S]*)$/;
 
 /**
  * Regex patterns for detecting list shortcuts.

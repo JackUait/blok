@@ -596,6 +596,32 @@ describe('BlockManager', () => {
     expect(result).toBe(replacementBlock);
   });
 
+  it('deletes flat-indented followers together with their selected parent block (Notion subtree delete)', () => {
+    const parent = createBlockStub({ id: 'parent' });
+    const indentedChild = createBlockStub({ id: 'child' });
+    const sibling = createBlockStub({ id: 'sibling' });
+
+    // child is visually nested under parent via flat indent; sibling is back at root
+    indentedChild.holder.setAttribute('data-blok-indent', '1');
+
+    parent.selected = true; // only the parent is explicitly selected
+
+    const { blockManager } = createBlockManager({
+      initialBlocks: [parent, indentedChild, sibling],
+    });
+
+    const removeSpy = vi
+      .spyOn(blockManager as unknown as { removeBlock: BlockManager['removeBlock'] }, 'removeBlock')
+      .mockResolvedValue();
+
+    blockManager.deleteSelectedBlocksAndInsertReplacement();
+
+    // parent AND its indented follower are removed; the root sibling is untouched
+    expect(removeSpy).toHaveBeenCalledWith(indentedChild, false, true);
+    expect(removeSpy).toHaveBeenCalledWith(parent, false, true);
+    expect(removeSpy).not.toHaveBeenCalledWith(sibling, false, true);
+  });
+
   it('splits the current block using caret fragment contents', () => {
     const fragment = document.createDocumentFragment();
 

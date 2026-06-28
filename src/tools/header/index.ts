@@ -734,10 +734,14 @@ export class Header implements BlockTool {
     const translatedName = this.api.i18n.t(this.currentLevel.nameKey);
     const placeholderText = this.resolvePlaceholderText(translatedName);
 
+    /**
+     * Only wire up the placeholder when editable. In read-only mode the heading
+     * must not display a placeholder (matching the paragraph tool and Notion),
+     * so we leave data-placeholder unset — the empty:before content then resolves
+     * to an empty string and nothing is rendered.
+     */
     if (!this.readOnly) {
       this.placeholderCleanup = setupPlaceholder(tag, placeholderText);
-    } else {
-      tag.setAttribute('data-placeholder', placeholderText);
     }
 
     if (!this.readOnly && this._data.isToggleable) {

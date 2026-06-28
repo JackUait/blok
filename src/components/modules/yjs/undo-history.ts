@@ -178,6 +178,7 @@ export class UndoHistory {
         const entry: CaretHistoryEntry = {
           before: this.pendingCaretBefore,
           after: this.captureCaretSnapshot(),
+          kind: 'edit',
         };
 
         this.caretUndoStack.push(entry);
@@ -284,8 +285,13 @@ export class UndoHistory {
     // caret restoration to catch cases where the referenced block no longer exists.
     const savedScrollY = window.scrollY;
 
-    // Check if the last operation was a move (or group of moves)
-    const lastMoveGroup = this.moveUndoStack.pop();
+    // The caret stack interleaves moves and Yjs edits in chronological order, so
+    // its top entry tells us which timeline the most recent operation belongs to.
+    // Unwind that one — keeping undo strictly reverse-chronological even when a
+    // move is sandwiched between text edits (otherwise moves were always undone
+    // first, regardless of when they happened).
+    const lastWasMove = this.caretUndoStack[this.caretUndoStack.length - 1]?.kind === 'move';
+    const lastMoveGroup = lastWasMove ? this.moveUndoStack.pop() : undefined;
 
     if (lastMoveGroup !== undefined && lastMoveGroup.length > 0) {
       // Push to redo stack for potential redo
@@ -329,8 +335,11 @@ export class UndoHistory {
     // Save scroll position before DOM manipulation (same rationale as undo).
     const savedScrollY = window.scrollY;
 
-    // Check if the last undone operation was a move (or group of moves)
-    const lastMoveGroup = this.moveRedoStack.pop();
+    // Mirror undo(): the caret redo stack's top entry tells us whether the next
+    // redo is a move or a Yjs edit, so they replay in the same chronological order
+    // they were undone.
+    const nextIsMove = this.caretRedoStack[this.caretRedoStack.length - 1]?.kind === 'move';
+    const lastMoveGroup = nextIsMove ? this.moveRedoStack.pop() : undefined;
 
     if (lastMoveGroup !== undefined && lastMoveGroup.length > 0) {
       // Push back to undo stack
@@ -482,6 +491,7 @@ export class UndoHistory {
     this.caretUndoStack.push({
       before: this.pendingCaretBefore,
       after: this.captureCaretSnapshot(),
+      kind: 'move',
     });
     this.caretRedoStack = [];
     this.resetPendingCaretState();

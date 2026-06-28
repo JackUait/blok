@@ -12,6 +12,13 @@ import type { BlockToolData } from '../../types';
 export interface SerializableBlock {
   tool: string;
   data: BlockToolData;
+  /**
+   * Flat list-nesting (Tab) indent level. Applied as leading indentation so a
+   * Tab-nested paragraph/header serializes nested instead of flat — matching
+   * Notion's Markdown export. List items carry their own nesting via
+   * `data.depth`, so this is ignored for the `list` tool.
+   */
+  indent?: number;
 }
 
 /** Number of spaces used per nesting level for list items. */
@@ -118,18 +125,8 @@ const blockToMarkdown = (block: SerializableBlock): string => {
   const text = inlineHtmlToMarkdown(asString(data.text));
 
   switch (block.tool) {
-    case 'header': {
-      const level = Math.min(Math.max(Number(data.level) || 1, 1), 6);
-
-      return `${'#'.repeat(level)} ${text}`;
-    }
-    case 'quote':
-      return `> ${text}`;
-    case 'code':
-      return `\`\`\`\n${htmlToText(asString(data.code) || asString(data.text))}\n\`\`\``;
-    case 'divider':
-      return '---';
     case 'list': {
+      // List items carry their own nesting via data.depth (not the flat indent).
       const indent = LIST_INDENT.repeat(Math.max(Number(data.depth ?? 0), 0));
 
       if (data.style === 'ordered') {
@@ -143,7 +140,27 @@ const blockToMarkdown = (block: SerializableBlock): string => {
       return `${indent}- ${text}`;
     }
     default:
-      return text;
+      break;
+  }
+
+  // Flat Tab-indent applies to every non-list block so nested paragraphs,
+  // headers and quotes serialize indented instead of flattened.
+  const flatIndent = LIST_INDENT.repeat(Math.max(Number(block.indent ?? 0), 0));
+
+  switch (block.tool) {
+    case 'header': {
+      const level = Math.min(Math.max(Number(data.level) || 1, 1), 6);
+
+      return `${flatIndent}${'#'.repeat(level)} ${text}`;
+    }
+    case 'quote':
+      return `${flatIndent}> ${text}`;
+    case 'code':
+      return `${flatIndent}\`\`\`\n${htmlToText(asString(data.code) || asString(data.text))}\n\`\`\``;
+    case 'divider':
+      return `${flatIndent}---`;
+    default:
+      return `${flatIndent}${text}`;
   }
 };
 

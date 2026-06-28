@@ -12,7 +12,6 @@ const createMockBlock = (options: {
   id?: string;
   parentId?: string | null;
   contentIds?: string[];
-  indent?: number;
   name?: string;
 } = {}): Block => {
   const holder = document.createElement('div');
@@ -24,7 +23,6 @@ const createMockBlock = (options: {
     holder,
     parentId: options.parentId ?? null,
     contentIds: options.contentIds ?? [],
-    indent: options.indent ?? 0,
     call: vi.fn(),
   } as unknown as Block;
 
@@ -35,7 +33,7 @@ const createMockBlock = (options: {
  * Create a BlocksStore with mock blocks and initialize repository
  */
 const createRepositoryWithBlocks = (
-  blockConfigs: Array<{ id: string; parentId?: string | null; contentIds?: string[]; indent?: number; name?: string }>
+  blockConfigs: Array<{ id: string; parentId?: string | null; contentIds?: string[]; name?: string }>
 ): BlockRepository => {
   const workingArea = document.createElement('div');
   const blocksStore = new Blocks(workingArea);
@@ -1241,66 +1239,4 @@ describe('BlockHierarchy', () => {
     });
   });
 
-  describe('setBlockIndent / flat list-nesting indent', () => {
-    beforeEach(() => {
-      repository = createRepositoryWithBlocks([
-        { id: 'list-1', name: 'list' },
-        { id: 'para-1', name: 'paragraph' },
-      ]);
-      hierarchy = new BlockHierarchy(repository);
-      const para = requireBlock('para-1');
-
-      workingArea.appendChild(para.holder);
-    });
-
-    it('renders a left margin and data-blok-indent for a non-list block', () => {
-      const para = requireBlock('para-1');
-
-      const changed = hierarchy.setBlockIndent(para, 1);
-
-      expect(changed).toBe(true);
-      expect(para.indent).toBe(1);
-      // 1 level × 27px (matches the list INDENT_PER_LEVEL so it lines up).
-      expect(para.holder.style.marginLeft).toBe('27px');
-      expect(para.holder).toHaveAttribute('data-blok-indent', '1');
-    });
-
-    it('stacks deeper levels (level 2 → 54px)', () => {
-      const para = requireBlock('para-1');
-
-      hierarchy.setBlockIndent(para, 2);
-
-      expect(para.holder.style.marginLeft).toBe('54px');
-      expect(para.holder).toHaveAttribute('data-blok-indent', '2');
-    });
-
-    it('clears the margin when outdented back to root', () => {
-      const para = requireBlock('para-1');
-
-      hierarchy.setBlockIndent(para, 2);
-      hierarchy.setBlockIndent(para, 0);
-
-      expect(para.indent).toBe(0);
-      expect(para.holder.style.marginLeft).toBe('');
-      expect(para.holder).toHaveAttribute('data-blok-indent', '0');
-    });
-
-    it('returns false and is a no-op when the level is unchanged', () => {
-      const para = requireBlock('para-1');
-
-      hierarchy.setBlockIndent(para, 1);
-
-      expect(hierarchy.setBlockIndent(para, 1)).toBe(false);
-    });
-
-    it('clamps negative levels to 0', () => {
-      const para = requireBlock('para-1');
-
-      hierarchy.setBlockIndent(para, 1);
-      hierarchy.setBlockIndent(para, -3);
-
-      expect(para.indent).toBe(0);
-      expect(para.holder.style.marginLeft).toBe('');
-    });
-  });
 });

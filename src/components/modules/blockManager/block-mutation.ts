@@ -200,51 +200,18 @@ export class BlockMutation {
     }
 
     /**
-     * Tools that can host children (have a toggle-children container in their DOM).
-     * When replacing with a non-hosting tool, children must be promoted to root level
-     * rather than orphaned inside a block that has no children container.
+     * Nesting is structural (parentId/contentIds) and tool-agnostic — any block,
+     * including a plain paragraph or header, can host children, which render as
+     * margin-indented siblings when the tool has no children container. So "turn
+     * into" keeps the children nested under the retyped block (matching Notion)
+     * regardless of the target tool: just re-home them onto the new block.
      *
-     * A header can only host children when isToggleable is true in its data.
-     * Regular (non-toggleable) headers have no children container.
+     * `reparentChildren` uses setBlockParent, which pushes each child id onto
+     * `newBlock.contentIds`. Reset it first so we don't end up with a pre-existing
+     * array plus appended ids.
      */
-    const newToolCanHostChildren = newTool === 'toggle' ||
-      newTool === 'callout' ||
-      newTool === 'column_list' ||
-      newTool === 'column' ||
-      (newTool === 'header' && (data as { isToggleable?: boolean }).isToggleable === true);
-
-    if (oldContentIds.length > 0 && !newToolCanHostChildren) {
-      // Outdent each child by one level, inserting after the new block. The
-      // children inherit the converted block's ORIGINAL parent (oldParentId), so a
-      // nested child-bearing block's children stay inside the surrounding
-      // container instead of being promoted to the document root — matching
-      // Notion. When the converted block was already top-level, oldParentId is
-      // null and they land at root as before.
-      // Route through setBlockParent so the child holder is also moved out
-      // of the old (now-removed) parent's toggle-children container and any
-      // hidden/indentation state is recomputed — same reasoning as
-      // `reparentChildren` above.
-      const insertAfterIndex = this.repository.getBlockIndex(newBlock);
-
-      oldContentIds.forEach((childId, offset) => {
-        const childBlock = this.repository.getBlockById(childId);
-
-        if (childBlock === undefined) {
-          return;
-        }
-
-        this.hierarchy.setBlockParent(childBlock, oldParentId);
-        blocksStore.insert(insertAfterIndex + 1 + offset, childBlock, false, false);
-      });
-
-      newBlock.contentIds = [];
-    } else {
-      // `reparentChildren` uses setBlockParent, which pushes each child id
-      // onto `newBlock.contentIds`. Reset it first so we don't end up with a
-      // pre-existing array plus appended ids.
-      newBlock.contentIds = [];
-      this.reparentChildren(oldContentIds, newBlock.id);
-    }
+    newBlock.contentIds = [];
+    this.reparentChildren(oldContentIds, newBlock.id);
 
     this.ctx.assertHierarchyInvariantInDev('replace');
 

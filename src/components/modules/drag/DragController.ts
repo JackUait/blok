@@ -921,14 +921,13 @@ export class DragController extends Module {
       reparentedBlocks.push(movedBlock);
     }
 
-    // Apply the flat list-nesting indent so ANY block nests inside a list.
-    // List items derive their depth from their own moved() hook, so skip them.
-    // Blocks dropped at root carry `dropDepth`; blocks dropped INTO a container
-    // (toggle/column) reset to 0 — the container provides the indentation.
-    for (const movedBlock of reparentedBlocks) {
-      if (movedBlock.name !== 'list') {
-        this.Blok.BlockManager.setBlockIndent(movedBlock, newParentId === null ? dropDepth : 0);
-      }
+    // Apply STRUCTURAL nesting so a block dropped at a visual depth becomes a
+    // real child in the block tree. List items derive their depth from their own
+    // moved() hook (skip them). Blocks dropped INTO an explicit container
+    // (toggle/column) already got their parent above. Blocks dropped at "root"
+    // with dropDepth > 0 are re-homed under the preceding block at dropDepth-1.
+    if (newParentId === null) {
+      this.applyStructuralDropDepth(reparentedBlocks, dropDepth, movedBlockIds, affectedParentIds);
     }
 
     // Notify affected parent blocks so toggle tools update their visual state
@@ -953,6 +952,82 @@ export class DragController extends Module {
     }
 
     this.Blok.Toolbar.moveAndOpen(sourceBlock);
+  }
+
+  /**
+   * Maps a drop-slot depth (what the indicator showed) to a STRUCTURAL parent:
+   * the nearest preceding block (not part of the moving group) whose depth is one
+   * less than the target depth. Returns null for a root-level drop (depth 0) or
+   * when there is no suitable ancestor at this position.
+   * @param movedBlock - the block that was dropped
+   * @param dropDepth - the visual depth the drop indicator showed
+   * @param movingIds - ids of every block in the moving group (skipped as anchors)
+   */
+  private resolveStructuralParentForDepth(
+    movedBlock: Block,
+    dropDepth: number,
+    movingIds: Set<string>
+  ): string | null {
+    if (dropDepth <= 0) {
+      return null;
+    }
+
+    const index = this.Blok.BlockManager.getBlockIndex(movedBlock);
+    const preceding = this.Blok.BlockManager.blocks.slice(0, index).reverse();
+
+    for (const candidate of preceding) {
+      if (movingIds.has(candidate.id)) {
+        continue;
+      }
+
+      const candidateDepth = this.Blok.BlockManager.getBlockDepth(candidate);
+
+      if (candidateDepth === dropDepth - 1) {
+        return candidate.id;
+      }
+
+      // A shallower block than the target parent depth means there is no valid
+      // ancestor at this slot — fall back to root rather than over-nesting.
+      if (candidateDepth < dropDepth - 1) {
+        return null;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Re-homes each dropped root block under the preceding block at dropDepth-1 so
+   * a block dropped at a visual depth becomes a real structural child. Skips list
+   * items (own depth) and no-ops when the parent is already correct.
+   * @param reparentedBlocks - the dropped blocks that landed at root level
+   * @param dropDepth - the visual depth the drop indicator showed
+   * @param movingIds - ids of the moving group (skipped as anchors)
+   * @param affectedParentIds - accumulator of parents to notify afterwards
+   */
+  private applyStructuralDropDepth(
+    reparentedBlocks: Block[],
+    dropDepth: number,
+    movingIds: Set<string>,
+    affectedParentIds: Set<string>
+  ): void {
+    for (const movedBlock of reparentedBlocks) {
+      if (movedBlock.name === 'list') {
+        continue;
+      }
+
+      const structuralParentId = this.resolveStructuralParentForDepth(movedBlock, dropDepth, movingIds);
+
+      if (structuralParentId === movedBlock.parentId) {
+        continue;
+      }
+
+      this.Blok.BlockManager.setBlockParent(movedBlock, structuralParentId);
+
+      if (structuralParentId !== null) {
+        affectedParentIds.add(structuralParentId);
+      }
+    }
   }
 
   /**
@@ -1145,6 +1220,109 @@ export class DragController extends Module {
     }
 
     this.Blok.Toolbar.moveAndOpen(result.duplicatedBlocks[0]);
+  }
+
+  /**
+   * Duplicate a block (or the active block selection) in place — directly below
+   * the source group and in the same parent — for the Cmd/Ctrl+D shortcut. A
+   * single block is expanded to its full subtree (list/flat-indent followers via
+   * depth, toggle/callout children via contentIds) so the copy carries its
+   * children, mirroring alt-drag duplication.
+   * @param block - the block the shortcut fired on (or a selected block)
+   * @returns the duplicated blocks (empty when nothing was duplicated)
+   */
+  public async duplicateBlocksInPlace(block: Block): Promise<Block[]> {
+    // Drag internals initialize lazily on the first drag; Cmd+D can fire before
+    // any drag has happened, so ensure operations/descendant helpers exist.
+    this.lazyInit();
+
+    if (!this.operations) {
+      return [];
+    }
+
+    const isBlockSelected = block.selected;
+    const initialBlocks = isBlockSelected
+      ? this.Blok.BlockSelection.selectedBlocks
+      : [block];
+
+    // For a single block, include its descendants (same expansion as drag-start).
+    const listDescendants = !isBlockSelected && this.listItemDescendants
+      ? this.listItemDescendants.getDescendants(block)
+      : [];
+    const hasHierarchyChildren = !isBlockSelected && block.contentIds?.length > 0;
+    const hierarchyDescendants = listDescendants.length === 0 && hasHierarchyChildren
+      ? this.getHierarchyDescendants(block)
+      : [];
+    const descendants = listDescendants.length > 0 ? listDescendants : hierarchyDescendants;
+    const sourceBlocks = descendants.length > 0 ? [block, ...descendants] : initialBlocks;
+
+    if (sourceBlocks.length === 0) {
+      return [];
+    }
+
+    /**
+     * Anchor the copies after the LAST block of the source group (in document
+     * order), so the whole group is duplicated below itself in the same parent.
+     */
+    const anchor = sourceBlocks.reduce((latest, candidate) =>
+      this.Blok.BlockManager.getBlockIndex(candidate) > this.Blok.BlockManager.getBlockIndex(latest)
+        ? candidate
+        : latest
+    );
+
+    const prep = await this.operations.prepareDuplicates(sourceBlocks, anchor, 'bottom');
+
+    if (prep.aborted) {
+      return [];
+    }
+
+    const resultRef: { current: { duplicatedBlocks: Block[]; targetIndex: number } } = {
+      current: { duplicatedBlocks: [], targetIndex: prep.baseInsertIndex },
+    };
+
+    const applyAndReparent = (): void => {
+      if (!this.operations) {
+        return;
+      }
+
+      resultRef.current = this.operations.applyDuplicates(prep);
+
+      /**
+       * applyDuplicates wires up internal child→parent links among the
+       * duplicated set. The remaining job is to keep each ROOT of the set (a
+       * block whose original parent is NOT itself being duplicated) in the same
+       * parent as its source — insert() only auto-inherits a column parent, so
+       * a root copied from inside a toggle/callout would otherwise escape it.
+       */
+      resultRef.current.duplicatedBlocks.forEach((dup, index) => {
+        const original = prep.sortedBlocks[index];
+
+        if (original === undefined) {
+          return;
+        }
+
+        const originalParentId = original.parentId;
+        const isRootOfSet = originalParentId === null || !prep.sourceIds.has(originalParentId);
+
+        if (isRootOfSet && dup.parentId !== originalParentId) {
+          this.Blok.BlockManager.setBlockParent(dup, originalParentId);
+        }
+      });
+    };
+
+    if (typeof this.Blok.BlockManager.transactForTool === 'function') {
+      this.Blok.BlockManager.transactForTool(applyAndReparent);
+    } else {
+      applyAndReparent();
+    }
+
+    const duplicated = resultRef.current.duplicatedBlocks;
+
+    if (duplicated.length > 0) {
+      this.Blok.Toolbar.moveAndOpen(duplicated[0]);
+    }
+
+    return duplicated;
   }
 
   private onKeyDown(e: KeyboardEvent): void {

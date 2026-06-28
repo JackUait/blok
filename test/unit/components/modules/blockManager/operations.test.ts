@@ -144,6 +144,7 @@ const createMockDependencies = (): BlockOperationsDependencies => {
       moveBlock: vi.fn(),
       updateBlockData: vi.fn(),
       updateBlockTune: vi.fn(),
+      updateBlockIndent: vi.fn(),
       stopCapturing: vi.fn(),
       transact: vi.fn((fn: () => void) => fn()),
       toJSON: vi.fn(() => []),
@@ -338,7 +339,7 @@ describe('BlockOperations', () => {
       const above = createMockBlock({ id: 'above' });
       const parent = createMockBlock({ id: 'parent' });
       const follower = createMockBlock({ id: 'follower' });
-      follower.holder.setAttribute('data-blok-indent', '1');
+      follower.holder.setAttribute('data-blok-depth', '1');
 
       const store = createBlocksStore([above, parent, follower]);
       const repo = new BlockRepository();
@@ -354,7 +355,7 @@ describe('BlockOperations', () => {
     it('carries a flat-indented follower when moving the parent down', () => {
       const parent = createMockBlock({ id: 'parent' });
       const follower = createMockBlock({ id: 'follower' });
-      follower.holder.setAttribute('data-blok-indent', '1');
+      follower.holder.setAttribute('data-blok-depth', '1');
       const below = createMockBlock({ id: 'below' });
 
       const store = createBlocksStore([parent, follower, below]);
@@ -1108,7 +1109,7 @@ describe('BlockOperations', () => {
       expect(newBlock).toBeDefined();
     });
 
-    it('promotes children to sibling level after new block when replacing toggle with non-hosting tool', () => {
+    it('keeps children nested under the converted block when replacing with any tool (structural turn-into)', () => {
       // Set up a toggle block with 2 child blocks
       const child1 = createMockBlock({ id: 'child-1', name: 'paragraph', parentId: 'toggle-1' });
       const child2 = createMockBlock({ id: 'child-2', name: 'paragraph', parentId: 'toggle-1' });
@@ -1129,29 +1130,19 @@ describe('BlockOperations', () => {
       );
       testOps.setYjsSync(yjsSync);
 
-      // Replace the toggle with a paragraph (a non-hosting tool)
+      // Replace the toggle with a plain paragraph — nesting is structural and
+      // tool-agnostic, so the children stay nested under the converted block.
       const newBlock = testOps.replace(toggleBlock, 'paragraph', { text: '' }, testStore);
 
-      // The new block should not have contentIds pointing to children
-      expect(newBlock.contentIds).toHaveLength(0);
-
-      // Children should have parentId set to null (promoted to root level)
-      expect(child1.parentId).toBeNull();
-      expect(child2.parentId).toBeNull();
-
-      // Children should appear after the new paragraph in the block list
-      const newBlockIndex = testRepo.getBlockIndex(newBlock);
-      const child1Index = testRepo.getBlockIndex(child1);
-      const child2Index = testRepo.getBlockIndex(child2);
-
-      expect(child1Index).toBeGreaterThan(newBlockIndex);
-      expect(child2Index).toBeGreaterThan(child1Index);
+      expect(newBlock.contentIds).toEqual(['child-1', 'child-2']);
+      expect(child1.parentId).toBe(newBlock.id);
+      expect(child2.parentId).toBe(newBlock.id);
     });
 
-    it('outdents children to the original parent (not root) when converting a NESTED child-bearing block', () => {
-      // outerToggle > innerToggle > grandchild. Converting innerToggle to a
-      // non-hosting paragraph should leave grandchild inside outerToggle, not at
-      // the document root — matching Notion's outdent-one-level behaviour.
+    it('keeps a nested block\'s children nested under it after converting (structural)', () => {
+      // outerToggle > innerToggle > grandchild. Converting innerToggle to a plain
+      // paragraph keeps grandchild nested under the converted block, and the
+      // converted block itself stays a child of outerToggle.
       const grandchild = createMockBlock({ id: 'grandchild', name: 'paragraph', parentId: 'inner' });
       const innerToggle = createMockBlock({ id: 'inner', name: 'toggle', parentId: 'outer', contentIds: ['grandchild'] });
       const outerToggle = createMockBlock({ id: 'outer', name: 'toggle', contentIds: ['inner'] });
@@ -1172,12 +1163,11 @@ describe('BlockOperations', () => {
 
       const newBlock = testOps.replace(innerToggle, 'paragraph', { text: '' }, testStore);
 
-      // Grandchild stays inside the surrounding container (outer), not promoted to root.
-      expect(grandchild.parentId).toBe('outer');
-      // The converted block hosts no children.
-      expect(newBlock.contentIds).toHaveLength(0);
-      // Grandchild follows the converted block in document order.
-      expect(testRepo.getBlockIndex(grandchild)).toBeGreaterThan(testRepo.getBlockIndex(newBlock));
+      // The converted block stays inside the surrounding container (outer).
+      expect(newBlock.parentId).toBe('outer');
+      // Grandchild stays nested under the converted block.
+      expect(grandchild.parentId).toBe(newBlock.id);
+      expect(newBlock.contentIds).toEqual(['grandchild']);
     });
 
     it('keeps children when replacing toggle with another hosting tool (toggle→toggle)', () => {
@@ -1206,7 +1196,7 @@ describe('BlockOperations', () => {
       expect(child1.parentId).toBe(newBlock.id);
     });
 
-    it('promotes children to root level when replacing toggle header with regular header', () => {
+    it('keeps children nested when replacing toggle header with regular header', () => {
       // Register header tool in the factory
       const headerAdapter = createMockBlockToolAdapter('header');
 
@@ -1237,23 +1227,13 @@ describe('BlockOperations', () => {
       );
       testOps.setYjsSync(yjsSync);
 
-      // Replace toggle header with a regular (non-toggleable) header via Backspace
+      // Replace toggle header with a regular (non-toggleable) header — nesting is
+      // structural, so the children stay nested under the converted header.
       const newBlock = testOps.replace(toggleHeader, 'header', { text: '', level: 2 }, testStore);
 
-      // Children should be promoted to root level (parentId = null)
-      expect(child1.parentId).toBeNull();
-      expect(child2.parentId).toBeNull();
-
-      // New block should have no children
-      expect(newBlock.contentIds).toHaveLength(0);
-
-      // Children should appear after the new header in the block list
-      const newBlockIndex = testRepo.getBlockIndex(newBlock);
-      const child1Index = testRepo.getBlockIndex(child1);
-      const child2Index = testRepo.getBlockIndex(child2);
-
-      expect(child1Index).toBeGreaterThan(newBlockIndex);
-      expect(child2Index).toBeGreaterThan(child1Index);
+      expect(newBlock.contentIds).toEqual(['child-1', 'child-2']);
+      expect(child1.parentId).toBe(newBlock.id);
+      expect(child2.parentId).toBe(newBlock.id);
     });
 
     it('keeps children when replacing regular header with toggle header', () => {

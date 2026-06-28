@@ -226,6 +226,7 @@ const createBlockManager = (
       updateBlockData: vi.fn(() => true),
       updateBlockMetadata: vi.fn(() => true),
       updateBlockTune: vi.fn(),
+      updateBlockIndent: vi.fn(),
       stopCapturing: vi.fn(),
       transact: vi.fn((fn: () => void) => fn()),
       toJSON: vi.fn(() => []),
@@ -602,7 +603,7 @@ describe('BlockManager', () => {
     const sibling = createBlockStub({ id: 'sibling' });
 
     // child is visually nested under parent via flat indent; sibling is back at root
-    indentedChild.holder.setAttribute('data-blok-indent', '1');
+    indentedChild.holder.setAttribute('data-blok-depth', '1');
 
     parent.selected = true; // only the parent is explicitly selected
 
@@ -865,6 +866,7 @@ describe('BlockManager', () => {
       moveBlock: vi.fn(),
       updateBlockData: vi.fn(),
       updateBlockTune: vi.fn(),
+      updateBlockIndent: vi.fn(),
       stopCapturing: vi.fn(),
       transact: vi.fn((fn: () => void) => fn()),
       onBlocksChanged: vi.fn(() => vi.fn()),
@@ -995,7 +997,7 @@ describe('BlockManager', () => {
       expect(childBlock2.holder.classList.contains('hidden')).toBe(false);
     });
 
-    it('replace() transfers parentId to the new block and promotes children when new tool cannot host them', () => {
+    it('replace() transfers parentId to the new block and keeps children nested under it (structural)', () => {
       const parentBlock = createBlockStub({ id: 'grandparent' });
       const blockToReplace = createBlockStub({ id: 'toggle-parent' });
       const childBlock = createBlockStub({ id: 'child-1' });
@@ -1024,11 +1026,10 @@ describe('BlockManager', () => {
       expect(parentBlock.contentIds).toContain('new-block');
       expect(parentBlock.contentIds).not.toContain('toggle-parent');
 
-      // Since paragraph cannot host children, children are outdented one level to
-      // the converted block's ORIGINAL parent ('grandparent') — not orphaned inside
-      // the paragraph and not promoted all the way to the document root.
-      expect(result.contentIds).toHaveLength(0);
-      expect(childBlock.parentId).toBe('grandparent');
+      // Nesting is structural and tool-agnostic, so the child stays nested under
+      // the converted block (a paragraph can host children too).
+      expect(result.contentIds).toContain('child-1');
+      expect(childBlock.parentId).toBe('new-block');
     });
 
     it('update() preserves parentId and contentIds on the recreated block', async () => {

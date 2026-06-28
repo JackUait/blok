@@ -74,10 +74,6 @@ export class YBlockSerializer {
       yblock.set('contentIds', Y.Array.from(blockData.content));
     }
 
-    if (blockData.indent !== undefined && blockData.indent > 0) {
-      yblock.set('indent', blockData.indent);
-    }
-
     if (blockData.lastEditedAt !== undefined) {
       yblock.set('lastEditedAt', blockData.lastEditedAt);
     }
@@ -132,12 +128,6 @@ export class YBlockSerializer {
 
     if (contentIds instanceof Y.Array && contentIds.length > 0) {
       block.content = contentIds.toArray();
-    }
-
-    const indent = yblock.get('indent');
-
-    if (typeof indent === 'number' && indent > 0) {
-      block.indent = indent;
     }
 
     const lastEditedAt = yblock.get('lastEditedAt');

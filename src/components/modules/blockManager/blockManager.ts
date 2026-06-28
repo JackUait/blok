@@ -429,6 +429,7 @@ export class BlockManager extends Module {
         onMoveUp: this.moveCurrentBlockUp.bind(this),
         onMoveDown: this.moveCurrentBlockDown.bind(this),
         onCopyAsMarkdown: () => void this.Blok.BlockSelection.copySelectedBlocksAsMarkdown(),
+        onDuplicate: this.duplicateCurrentBlock.bind(this),
       }
     );
   }
@@ -480,7 +481,6 @@ export class BlockManager extends Module {
     tunes?: { [name: string]: BlockTuneData };
     parentId?: string;
     contentIds?: string[];
-    indent?: number;
     bindEventsImmediately?: boolean;
     lastEditedAt?: number;
     lastEditedBy?: string | null;
@@ -549,7 +549,6 @@ export class BlockManager extends Module {
         ...(Object.keys(tunes).length > 0 && { tunes }),
         ...(block.parentId !== null && { parent: block.parentId }),
         ...(block.contentIds.length > 0 && { content: block.contentIds }),
-        ...(block.indent > 0 && { indent: block.indent }),
       };
     });
 
@@ -565,10 +564,9 @@ export class BlockManager extends Module {
       this.blocksStore.insertMany(blocks, index);
     }, { extendThroughRAF: true });
 
-    // Apply indentation for blocks with parentId (hierarchical structure) or an
-    // explicit flat list-nesting indent (any block nested inside a list).
+    // Apply indentation for blocks with parentId (hierarchical structure).
     blocks.forEach(block => {
-      if (block.parentId !== null || block.indent > 0) {
+      if (block.parentId !== null) {
         this.updateBlockIndentation(block);
       }
     });
@@ -1045,48 +1043,6 @@ export class BlockManager extends Module {
   }
 
   /**
-   * Sets a block's flat list-nesting indentation level so any block can nest
-   * inside a list. Updates the in-memory model + DOM margin (via BlockHierarchy)
-   * and mirrors the value to Yjs for collaboration. The primary persistence path
-   * is `save()`, which reads `block.indent` directly — Yjs only matters for
-   * collab and Yjs-based undo.
-   *
-   * During a drag the DragController opens a move group; the indent write then
-   * routes through `transactWithoutCapture` so it does not split the single-undo
-   * move into a separate Y.UndoManager entry. Outside a move group (e.g. Tab) it
-   * is a normal captured transaction.
-   * @param block - the block to indent
-   * @param indent - the new indentation level (0 = root)
-   */
-  public setBlockIndent(block: Block, indent: number): void {
-    const changed = this.hierarchy.setBlockIndent(block, indent);
-
-    if (!changed || this.yjsSync.isSyncingFromYjs) {
-      return;
-    }
-
-    const yblock = this.Blok.YjsManager.getBlockById(block.id);
-
-    if (yblock === undefined) {
-      return;
-    }
-
-    if (this.Blok.YjsManager.isInMoveGroup) {
-      this.Blok.YjsManager.transactWithoutCapture(() => {
-        if (block.indent > 0) {
-          yblock.set('indent', block.indent);
-        } else {
-          yblock.delete('indent');
-        }
-      });
-
-      return;
-    }
-
-    this.Blok.YjsManager.updateBlockIndent(block.id, block.indent);
-  }
-
-  /**
    * Reparent a block in response to UndoHistory replaying a drag move.
    *
    * The replay path has ALREADY written the new parentId to Yjs under
@@ -1362,6 +1318,31 @@ export class BlockManager extends Module {
     this._currentBlockIndex = this.operations.currentBlockIndexValue;
     this.operations.moveCurrentBlockDown(this.blocksStore);
     this._currentBlockIndex = this.operations.currentBlockIndexValue;
+  }
+
+  /**
+   * Duplicate the current block (or the whole block selection) right below it,
+   * carrying nested children/flat-indent followers — Notion's Cmd/Ctrl+D. Reuses
+   * the drag module's duplicate pipeline so saves, deep-clones and internal
+   * reparenting stay consistent with alt-drag duplication.
+   */
+  public duplicateCurrentBlock(): void {
+    // Layer 21: see moveCurrentBlockUp above — never mutate mid-drag.
+    if (this.Blok.DragManager?.isDragging) {
+      return;
+    }
+
+    const { BlockSelection } = this.Blok;
+    const selected = BlockSelection.selectedBlocks;
+    const anchor = BlockSelection.anyBlockSelected
+      ? selected[selected.length - 1]
+      : this.currentBlock;
+
+    if (anchor === undefined) {
+      return;
+    }
+
+    void this.Blok.DragManager?.duplicateBlocksInPlace(anchor);
   }
 
   /**

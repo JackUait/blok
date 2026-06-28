@@ -26,10 +26,6 @@ type SaverValidatedData = ValidatedData & {
    */
   contentIds?: string[];
   /**
-   * Flat list-nesting indentation level (0 = root)
-   */
-  indent?: number;
-  /**
    * Timestamp of the last edit to this block
    */
   lastEditedAt?: number;
@@ -248,7 +244,6 @@ export class Saver extends Module {
       isValid,
       parentId: effectiveParentId,
       contentIds: derivedContentIds,
-      indent: block.indent,
       lastEditedAt: block.lastEditedAt,
       lastEditedBy: block.lastEditedBy,
     };
@@ -262,7 +257,7 @@ export class Saver extends Module {
   private makeOutput(allExtractedData: SaverValidatedData[]): OutputData {
     const extractedBlocks: OutputData['blocks'] = [];
 
-    allExtractedData.forEach(({ id, tool, data, tunes, isValid, parentId, contentIds, indent, lastEditedAt, lastEditedBy }) => {
+    allExtractedData.forEach(({ id, tool, data, tunes, isValid, parentId, contentIds, lastEditedAt, lastEditedBy }) => {
       const hasParent = parentId !== undefined && parentId !== null;
 
       if (!isValid && !hasParent) {
@@ -292,7 +287,6 @@ export class Saver extends Module {
 
       const isTunesEmpty = tunes === undefined || isEmpty(tunes);
       const hasContent = contentIds !== undefined && contentIds.length > 0;
-      const hasIndent = indent !== undefined && indent > 0;
       const hasLastEdited = lastEditedAt !== undefined;
       const hasLastEditedBy = lastEditedBy !== undefined && lastEditedBy !== null;
 
@@ -308,9 +302,6 @@ export class Saver extends Module {
         },
         ...hasContent && {
           content: contentIds,
-        },
-        ...hasIndent && {
-          indent,
         },
         ...hasLastEdited && {
           lastEditedAt,

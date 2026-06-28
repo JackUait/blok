@@ -773,7 +773,7 @@ describe('DropTargetDetector', () => {
         // Generic nesting context: a paragraph indented to level 1 (via data-blok-indent,
         // not a list) is a valid parent, so a block dropped after it can nest to level 2.
         const previousBlock = createMockBlock('prev', 'paragraph');
-        previousBlock.holder.setAttribute('data-blok-indent', '1');
+        previousBlock.holder.setAttribute('data-blok-depth', '1');
         const targetBlock = createMockBlock('target');
         const sourceBlock = createMockBlock('source', 'header'); // non-list, indent 0
 

@@ -430,6 +430,193 @@ describe('MarkdownShortcuts', () => {
         })
       );
     });
+
+    it('converts "a. " to ordered list (Notion alphabetic alias)', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = 'a. ';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+
+      const result = markdownShortcuts.handleInput(createInputEvent());
+
+      expect(result).toBe(true);
+      expect(replace).toHaveBeenCalledWith(
+        mockBlock,
+        'list',
+        expect.objectContaining({ style: 'ordered' })
+      );
+    });
+
+    it('converts "i. " to ordered list (Notion roman/alpha alias)', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = 'i. ';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+
+      const result = markdownShortcuts.handleInput(createInputEvent());
+
+      expect(result).toBe(true);
+      expect(replace).toHaveBeenCalledWith(
+        mockBlock,
+        'list',
+        expect.objectContaining({ style: 'ordered' })
+      );
+    });
+
+    it('converts "c. " to ordered list with start number 3', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = 'c. ';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+
+      const result = markdownShortcuts.handleInput(createInputEvent());
+
+      expect(result).toBe(true);
+      expect(replace).toHaveBeenCalledWith(
+        mockBlock,
+        'list',
+        expect.objectContaining({ style: 'ordered', start: 3 })
+      );
+    });
+
+    it('does NOT convert a multi-letter word like "etc. " into a list', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = 'etc. ';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+
+      const result = markdownShortcuts.handleInput(createInputEvent());
+
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('inline markdown auto-format', () => {
+    const setupInline = (rawText: string, closingChar: string): {
+      input: HTMLElement;
+      result: boolean;
+      dispatchChange: ReturnType<typeof vi.fn>;
+    } => {
+      const input = document.createElement('div');
+      input.contentEditable = 'true';
+      document.body.appendChild(input);
+      const textNode = document.createTextNode(rawText);
+      input.appendChild(textNode);
+
+      const range = document.createRange();
+      range.setStart(textNode, rawText.length);
+      range.collapse(true);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+
+      const dispatchChange = vi.fn();
+      const mockBlock = createBlock({
+        currentInput: input,
+        firstInput: input,
+        lastInput: input,
+        inputs: [input],
+        dispatchChange,
+      } as unknown as Partial<Block>);
+      const blok = createBlokModules({
+        BlockManager: { currentBlock: mockBlock } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+
+      const result = markdownShortcuts.handleInput(createInputEvent({ data: closingChar }));
+
+      return { input, result, dispatchChange };
+    };
+
+    afterEach(() => {
+      document.body.innerHTML = '';
+    });
+
+    it('wraps **bold** in <strong> when the closing ** is typed', () => {
+      const { input, result, dispatchChange } = setupInline('**bold**', '*');
+
+      expect(result).toBe(true);
+      expect(input.querySelector('strong')?.textContent).toBe('bold');
+      expect(input.textContent).toBe('bold');
+      expect(dispatchChange).toHaveBeenCalled();
+    });
+
+    it('wraps *italic* in <i>', () => {
+      const { input, result } = setupInline('*italic*', '*');
+
+      expect(result).toBe(true);
+      expect(input.querySelector('i')?.textContent).toBe('italic');
+    });
+
+    it('wraps `code` in <code> literally', () => {
+      const { input, result } = setupInline('`x = 1`', '`');
+
+      expect(result).toBe(true);
+      expect(input.querySelector('code')?.textContent).toBe('x = 1');
+    });
+
+    it('wraps ~strike~ in <s>', () => {
+      const { input, result } = setupInline('~gone~', '~');
+
+      expect(result).toBe(true);
+      expect(input.querySelector('s')?.textContent).toBe('gone');
+    });
+
+    it('preserves leading text before the formatted span', () => {
+      const { input, result } = setupInline('say **hi**', '*');
+
+      expect(result).toBe(true);
+      expect(input.querySelector('strong')?.textContent).toBe('hi');
+      expect(input.textContent).toBe('say hi');
+    });
+
+    it('does NOT format when there is no opening marker', () => {
+      const { input, result } = setupInline('just text*', '*');
+
+      expect(result).toBe(false);
+      expect(input.querySelector('strong')).toBeNull();
+      expect(input.querySelector('i')).toBeNull();
+    });
+
+    it('does NOT prematurely italicize while bold is still being typed (**bold*)', () => {
+      const { input, result } = setupInline('**bold*', '*');
+
+      expect(result).toBe(false);
+      expect(input.querySelector('i')).toBeNull();
+    });
   });
 
   describe('header shortcut', () => {

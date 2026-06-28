@@ -15,6 +15,8 @@ export interface BlockShortcutsHandlers {
   onMoveDown: () => void;
   /** Handler for copying the selection as Markdown (Notion's Cmd/Ctrl+Shift+C) */
   onCopyAsMarkdown: () => void;
+  /** Handler for duplicating the current block / selection (Notion's Cmd/Ctrl+D) */
+  onDuplicate: () => void;
 }
 
 /**
@@ -45,7 +47,7 @@ export class BlockShortcuts {
    */
   public register(): void {
     setTimeout(() => {
-    const shortcutNames = ['CMD+SHIFT+UP', 'CMD+SHIFT+DOWN', 'CMD+SHIFT+C'];
+    const shortcutNames = ['CMD+SHIFT+UP', 'CMD+SHIFT+DOWN', 'CMD+SHIFT+C', 'CMD+D'];
 
     // Clear any existing shortcuts to avoid duplicate registration errors
     for (const name of this.registeredShortcutNames) {
@@ -99,6 +101,20 @@ export class BlockShortcuts {
       },
     });
     this.registeredShortcutNames.push('CMD+SHIFT+C');
+
+    // Duplicate block(s): Cmd+D (Mac) / Ctrl+D (Windows/Linux)
+    Shortcuts.add({
+      name: 'CMD+D',
+      on: document,
+      handler: (event: KeyboardEvent) => {
+        if (!this.shouldHandleShortcut(event)) {
+          return;
+        }
+        event.preventDefault();
+        this.handlers.onDuplicate();
+      },
+    });
+    this.registeredShortcutNames.push('CMD+D');
     }, 0);
   }
 

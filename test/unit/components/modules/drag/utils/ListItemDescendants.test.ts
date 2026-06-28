@@ -30,7 +30,7 @@ describe('ListItemDescendants', () => {
   const createIndentedBlock = (id: string, indent: number): Partial<Block> => {
     const holder = document.createElement('div');
     holder.setAttribute('data-blok-element', 'block');
-    holder.setAttribute('data-blok-indent', String(indent));
+    holder.setAttribute('data-blok-depth', String(indent));
 
     return {
       id,

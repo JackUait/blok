@@ -208,38 +208,6 @@ export class DocumentStore {
   }
 
   /**
-   * Update a block's flat list-nesting indent level directly on the Y.Map.
-   * Stores positive levels and deletes the key at level 0 so root blocks carry
-   * no `indent` entry (mirrors how parentId is deleted at root).
-   * @param id - Block id
-   * @param indent - New indentation level (0 = root)
-   * @returns true if the stored value changed
-   */
-  public updateBlockIndent(id: string, indent: number): boolean {
-    const yblock = this.getBlockById(id);
-
-    if (yblock === undefined) {
-      return false;
-    }
-
-    const current = (yblock.get('indent') as number | undefined) ?? 0;
-
-    if (current === indent) {
-      return false;
-    }
-
-    this.transact(() => {
-      if (indent > 0) {
-        yblock.set('indent', indent);
-      } else {
-        yblock.delete('indent');
-      }
-    }, 'local');
-
-    return true;
-  }
-
-  /**
    * Update a block's edit metadata fields directly on the Y.Map.
    * @param id - Block id
    * @param lastEditedAt - Timestamp in milliseconds

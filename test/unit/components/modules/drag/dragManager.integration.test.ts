@@ -270,6 +270,33 @@ describe("DragManager - Component Integration", () => {
     vi.useRealTimers();
   });
 
+  describe("duplicateBlocksInPlace (Cmd+D)", () => {
+    it("duplicates a single block right below it and opens the toolbar on the copy", async () => {
+      const { dragManager, blocks, modules } = createDragManager();
+      const blockManager = modules.BlockManager as unknown as {
+        insert: ReturnType<typeof vi.fn>;
+        getBlockIndex: (block: Block) => number;
+      };
+      const toolbar = modules.Toolbar as unknown as { moveAndOpen: ReturnType<typeof vi.fn> };
+
+      (blocks[0] as unknown as { save: () => Promise<unknown> }).save = vi
+        .fn()
+        .mockResolvedValue({ data: { text: "Hello" }, tunes: {} });
+
+      const dup = createBlockStub({ id: "dup-1" });
+      blockManager.insert.mockReturnValue(dup);
+
+      const result = await dragManager.duplicateBlocksInPlace(blocks[0]);
+
+      // The source block was saved and a copy of its tool/data inserted below it.
+      expect(blockManager.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ tool: "paragraph", index: 1 })
+      );
+      expect(result).toEqual([dup]);
+      expect(toolbar.moveAndOpen).toHaveBeenCalledWith(dup);
+    });
+  });
+
   describe("AutoScroll + DropTargetDetector integration", () => {
     it("should detect drop target during drag operation", () => {
       const { dragManager, blocks, wrapper } = createDragManager();

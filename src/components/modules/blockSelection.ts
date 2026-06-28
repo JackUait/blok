@@ -427,7 +427,7 @@ export class BlockSelection extends Module {
    * @param blocks - the blocks to serialize
    * @returns serialized block data in document order
    */
-  private serializeBlocksForClipboard(blocks: Block[]): Array<{ id: string; tool: string; data: Record<string, unknown>; tunes: Record<string, unknown>; parentId: string | null; contentIds: string[] }> {
+  private serializeBlocksForClipboard(blocks: Block[]): Array<{ id: string; tool: string; data: Record<string, unknown>; tunes: Record<string, unknown>; parentId: string | null; contentIds: string[]; indent: number }> {
     const collected: Block[] = [];
     const seen = new Set<string>();
 
@@ -458,6 +458,7 @@ export class BlockSelection extends Module {
       tunes: block.preservedTunes,
       parentId: block.parentId,
       contentIds: block.contentIds,
+      indent: this.Blok.BlockManager.getBlockDepth(block),
     }));
   }
 
@@ -695,6 +696,17 @@ export class BlockSelection extends Module {
     }
 
     /**
+     * Once every Block is selected, further Cmd+A is a terminal no-op — Notion
+     * stays at "all selected" until the selection is cleared (typing, click,
+     * arrows, Escape) rather than looping back to text selection.
+     */
+    if (this.allBlocksSelected) {
+      event.preventDefault();
+
+      return;
+    }
+
+    /**
      * First Cmd+A: allow the native selection of the Block's content (text).
      * The next press escalates to block-level selection. This mirrors Notion's
      * three-stage Cmd+A — text → this block → all blocks — for both single-input
@@ -702,6 +714,21 @@ export class BlockSelection extends Module {
      * stage and jumped straight to all-blocks).
      */
     if (!this.readyToBlockSelection) {
+      /**
+       * An empty block has no text to select natively, and a block whose text is
+       * already fully selected has nothing left to escalate at the text stage —
+       * both jump straight to block-level selection so the press count matches
+       * Notion (two presses to all-blocks instead of three).
+       */
+      if (workingBlock.isEmpty || this.isBlockFullySelected(workingBlock)) {
+        event.preventDefault();
+        this.selectBlock(workingBlock);
+        this.needToSelectAll = true;
+        this.readyToBlockSelection = true;
+
+        return;
+      }
+
       this.readyToBlockSelection = true;
 
       return;
@@ -748,6 +775,26 @@ export class BlockSelection extends Module {
    * Select All Blocks
    * Each Block has selected setter that makes Block copyable
    */
+  /**
+   * Whether the current native selection already spans the whole of the given
+   * block's text. Used so the first Cmd+A promotes straight to block selection
+   * when there is nothing left to select at the text stage (Notion parity).
+   * @param block - the block whose content to compare against the selection
+   */
+  private isBlockFullySelected(block: Block): boolean {
+    const selection = SelectionUtils.get();
+
+    if (selection === null || selection.isCollapsed || selection.rangeCount === 0) {
+      return false;
+    }
+
+    const normalize = (value: string): string => value.replace(/\s+/g, ' ').trim();
+    const selectedText = normalize(selection.toString());
+    const blockText = normalize(block.pluginsContent.textContent ?? '');
+
+    return blockText.length > 0 && selectedText === blockText;
+  }
+
   private selectAllBlocks(): void {
     /**
      * Save selection

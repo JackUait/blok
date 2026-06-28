@@ -449,18 +449,6 @@ export class BlockYjsSync {
       }
     }
 
-    // Reconcile the flat list-nesting indent. A remote peer may have indented
-    // this block into a list; mirror the new level and re-render its margin.
-    // Runs inside withAtomicOperation so the re-indent doesn't echo back to Yjs.
-    const remoteIndent = (yblock.get('indent') as number | undefined) ?? 0;
-
-    if (remoteIndent !== block.indent) {
-      this.withAtomicOperation(() => {
-        block.indent = remoteIndent;
-        this.handlers.updateIndentation(block);
-      });
-    }
-
     // Check if tunes have changed - if so, we need to recreate the block
     // because tunes are instantiated during block construction
     const currentTunes = block.preservedTunes;
@@ -479,7 +467,6 @@ export class BlockYjsSync {
         tunes,
         contentIds: block.contentIds.length > 0 ? [...block.contentIds] : undefined,
         parentId: block.parentId ?? undefined,
-        indent: block.indent > 0 ? block.indent : undefined,
         bindEventsImmediately: true,
         lastEditedAt,
         lastEditedBy,
@@ -513,7 +500,6 @@ export class BlockYjsSync {
             tunes: block.preservedTunes,
             contentIds: block.contentIds.length > 0 ? [...block.contentIds] : undefined,
             parentId: block.parentId ?? undefined,
-            indent: block.indent > 0 ? block.indent : undefined,
             bindEventsImmediately: true,
             lastEditedAt,
             lastEditedBy,

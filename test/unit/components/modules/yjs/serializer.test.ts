@@ -98,38 +98,6 @@ describe('YBlockSerializer', () => {
       expect(data.content).toEqual(['b2', 'b3']);
     });
 
-    it('round-trips the flat list-nesting indent when > 0', () => {
-      const yblocks = ydoc.getArray('test');
-
-      const yblock = serializer.outputDataToYBlock({
-        id: 'b1',
-        type: 'header',
-        data: { text: 'Nested', level: 2 },
-        indent: 2,
-      });
-
-      yblocks.push([yblock]);
-      const data = serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>);
-
-      expect(data.indent).toBe(2);
-    });
-
-    it('omits indent at root level (0)', () => {
-      const yblocks = ydoc.getArray('test');
-
-      const yblock = serializer.outputDataToYBlock({
-        id: 'b1',
-        type: 'paragraph',
-        data: { text: 'Root' },
-        indent: 0,
-      });
-
-      yblocks.push([yblock]);
-      const data = serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>);
-
-      expect(data.indent).toBeUndefined();
-    });
-
     it('normalizes empty paragraph data to { text: "" }', () => {
       const yblocks = ydoc.getArray('test');
 

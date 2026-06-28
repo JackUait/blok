@@ -31,6 +31,12 @@ describe('blocksToMarkdown', () => {
     expect(blocksToMarkdown([{ tool: 'list', data: { text: 'child', style: 'unordered', depth: 1 } }])).toBe('    - child');
   });
 
+  it('indents flat-indented (Tab-nested) non-list blocks by their indent level', () => {
+    expect(blocksToMarkdown([{ tool: 'paragraph', data: { text: 'nested' }, indent: 1 }])).toBe('    nested');
+    expect(blocksToMarkdown([{ tool: 'header', data: { text: 'Sub', level: 2 }, indent: 1 }])).toBe('    ## Sub');
+    expect(blocksToMarkdown([{ tool: 'paragraph', data: { text: 'deep' }, indent: 2 }])).toBe('        deep');
+  });
+
   it('serializes quote, divider and code blocks', () => {
     expect(blocksToMarkdown([{ tool: 'quote', data: { text: 'wisdom' } }])).toBe('> wisdom');
     expect(blocksToMarkdown([{ tool: 'divider', data: {} }])).toBe('---');

@@ -156,40 +156,36 @@ export class KeyboardNavigation extends BlockEventComposer {
    */
   private indentCurrentBlock(): boolean {
     const { BlockManager } = this.Blok;
-    const { currentBlock, previousBlock } = BlockManager;
+    const { currentBlock } = BlockManager;
 
     if (currentBlock === undefined || currentBlock.name === LIST_TOOL_NAME) {
       return false;
     }
 
     /**
-     * Nothing to nest under: no preceding block, or the preceding block lives in a
-     * different parent (so it is not a preceding sibling). Fall back to navigation.
+     * Notion's Tab nests the block as the LAST child of its preceding sibling
+     * (the nearest block before it at the same level). No preceding sibling —
+     * the block is the first child of its parent (or the first block) — means
+     * there is nothing to nest under, so fall back to caret navigation.
      */
-    if (previousBlock === null || previousBlock.parentId !== currentBlock.parentId) {
+    const precedingSibling = this.getPrecedingSibling(currentBlock);
+
+    if (precedingSibling === null) {
       return false;
     }
 
-    const currentIndent = currentBlock.indent ?? 0;
-    const maxIndent = (previousBlock.indent ?? 0) + 1;
-    const nextIndent = Math.min(currentIndent + 1, maxIndent);
+    BlockManager.setBlockParent(currentBlock, precedingSibling.id);
 
-    if (nextIndent !== currentIndent) {
-      BlockManager.setBlockIndent(currentBlock, nextIndent);
-    }
-
-    /**
-     * Already at max depth: consume Tab anyway so it does not hijack the caret to
-     * the next block (Notion leaves the caret in place when it can't indent further).
-     */
     return true;
   }
 
   /**
-   * Outdent the current block one level. Uses the flat list-nesting indent.
+   * Outdent the current block one structural level. The block becomes a sibling
+   * of its former parent (a child of the grandparent), and — matching Notion's
+   * outliner — adopts its following same-parent siblings as its own children.
    *
-   * @returns true if the block was outdented; false (already at root indent) to
-   *   let the caller fall back to caret navigation.
+   * @returns true if the block was outdented; false (already at root) to let the
+   *   caller fall back to caret navigation.
    */
   private outdentCurrentBlock(): boolean {
     const { BlockManager } = this.Blok;
@@ -199,15 +195,87 @@ export class KeyboardNavigation extends BlockEventComposer {
       return false;
     }
 
-    const currentIndent = currentBlock.indent ?? 0;
-
-    if (currentIndent <= 0) {
+    if (currentBlock.parentId === null) {
       return false;
     }
 
-    BlockManager.setBlockIndent(currentBlock, currentIndent - 1);
+    const parent = BlockManager.getBlockById(currentBlock.parentId);
+
+    if (parent === undefined) {
+      return false;
+    }
+
+    const grandparentId = parent.parentId;
+
+    /**
+     * Capture the following siblings BEFORE any reparent (reparenting mutates
+     * the parent's contentIds), then adopt them under the outdented block so the
+     * content that used to sit below it stays nested beneath it.
+     */
+    const followingSiblings = this.getFollowingSiblings(currentBlock);
+
+    for (const sibling of followingSiblings) {
+      BlockManager.setBlockParent(sibling, currentBlock.id);
+    }
+
+    BlockManager.setBlockParent(currentBlock, grandparentId);
 
     return true;
+  }
+
+  /**
+   * Returns the block immediately before `block` (in document order) that shares
+   * its parent — its preceding sibling — or null when `block` is the first child
+   * of its parent (or the first block).
+   * @param block - the block whose preceding sibling to find
+   */
+  private getPrecedingSibling(block: Block): Block | null {
+    const { BlockManager } = this.Blok;
+    const index = BlockManager.getBlockIndex(block);
+    const preceding = BlockManager.blocks.slice(0, index).reverse();
+
+    for (const candidate of preceding) {
+      // Reached the parent without finding a sibling: block is the first child.
+      if (candidate.id === block.parentId) {
+        return null;
+      }
+
+      if (candidate.parentId === block.parentId) {
+        return candidate;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Returns `block`'s following siblings (same parent, after it in order), read
+   * from the parent's contentIds so it is robust to interleaved descendants.
+   * @param block - the block whose following siblings to collect
+   */
+  private getFollowingSiblings(block: Block): Block[] {
+    const { BlockManager } = this.Blok;
+
+    if (block.parentId === null) {
+      return [];
+    }
+
+    const parent = BlockManager.getBlockById(block.parentId);
+
+    if (parent === undefined) {
+      return [];
+    }
+
+    const position = parent.contentIds.indexOf(block.id);
+
+    if (position === -1) {
+      return [];
+    }
+
+    return parent.contentIds
+      .slice(position + 1)
+      .map((id) => BlockManager.getBlockById(id))
+      .filter((sibling): sibling is Block => sibling !== undefined);
   }
 
   /**
@@ -432,6 +500,10 @@ export class KeyboardNavigation extends BlockEventComposer {
       if (isToggleOpen) {
         this.Blok.BlockManager.setBlockParent(newBlock, currentBlock.id);
       } else if (currentBlock.parentId !== null && newBlock.parentId !== currentBlock.parentId) {
+        /**
+         * A nested block's new sibling keeps the same parent — Notion creates the
+         * new line at the same nesting level, not at root.
+         */
         this.Blok.BlockManager.setBlockParent(newBlock, currentBlock.parentId);
       }
 
@@ -565,9 +637,21 @@ export class KeyboardNavigation extends BlockEventComposer {
     }
 
     /**
-     * If prev Block is empty, it should be removed just like a character
+     * If prev Block is empty, it should be removed just like a character.
+     *
+     * Exception (Notion parity): when the empty previous block is a STYLED block
+     * (heading/quote/list — anything that isn't the plain default paragraph) and
+     * the current block has text, the text is absorbed INTO the previous block
+     * and adopts its type — the destination type wins. Only a plain empty
+     * paragraph above is deleted like a line break.
      */
     if (previousBlock.isEmpty) {
+      if (!currentBlock.isEmpty && !previousBlock.tool.isDefault && areBlocksMergeable(previousBlock, currentBlock)) {
+        this.mergeBlocks(previousBlock, currentBlock);
+
+        return;
+      }
+
       void BlockManager.removeBlock(previousBlock);
 
       return;

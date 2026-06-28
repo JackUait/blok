@@ -97,6 +97,7 @@ const createBlockSelection = (overrides: ModuleOverrides = {}): BlockSelectionSe
     getBlockByIndex: vi.fn((index: number) => blocks[index]),
     getBlock: vi.fn((element: HTMLElement) => blocks.find((block) => block.holder === element) ?? null),
     getBlockById: vi.fn((id: string) => blocks.find((block) => block.id === id) ?? undefined),
+      getBlockDepth: vi.fn(() => 0),
     removeSelectedBlocks: vi.fn(() => 0),
     insertDefaultBlockAtIndex: vi.fn(),
     deleteSelectedBlocksAndInsertReplacement: vi.fn(),
@@ -511,6 +512,7 @@ describe('BlockSelection', () => {
           getBlockByIndex: vi.fn((index: number) => allHierarchyBlocks[index]),
           getBlock: vi.fn(),
           getBlockById: vi.fn((id: string) => allHierarchyBlocks.find(b => b.id === id) ?? undefined),
+      getBlockDepth: vi.fn(() => 0),
           removeSelectedBlocks: vi.fn(),
           insertDefaultBlockAtIndex: vi.fn(),
           deleteSelectedBlocksAndInsertReplacement: vi.fn(),
@@ -598,6 +600,7 @@ describe('BlockSelection', () => {
           getBlockByIndex: vi.fn((index: number) => allBlocks[index]),
           getBlock: vi.fn(),
           getBlockById: vi.fn((id: string) => allBlocks.find(b => b.id === id) ?? undefined),
+      getBlockDepth: vi.fn(() => 0),
           removeSelectedBlocks: vi.fn(),
           insertDefaultBlockAtIndex: vi.fn(),
           deleteSelectedBlocksAndInsertReplacement: vi.fn(),
@@ -785,6 +788,78 @@ describe('BlockSelection', () => {
       // 3rd press: escalate to all blocks.
       handler.handleCommandA(event);
       expect(selectAllSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('reaches all-blocks in two presses for an empty block (no native text to select)', () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      (blocks[0] as unknown as { isEmpty: boolean }).isEmpty = true;
+      const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');
+      const selectBlockSpy = vi.spyOn(blockSelection, 'selectBlock');
+      const event = {
+        target: blocks[0].holder,
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent;
+      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
+
+      // 1st press on an empty block goes straight to block selection.
+      handler.handleCommandA(event);
+      expect(selectBlockSpy).toHaveBeenCalledWith(blocks[0]);
+      expect(selectAllSpy).not.toHaveBeenCalled();
+
+      // 2nd press escalates to all blocks.
+      handler.handleCommandA(event);
+      expect(selectAllSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('is a terminal no-op once all blocks are selected (does not loop back to text selection)', () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');
+      const selectBlockSpy = vi.spyOn(blockSelection, 'selectBlock');
+      const event = {
+        target: blocks[0].holder,
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent;
+      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
+
+      handler.handleCommandA(event); // text
+      handler.handleCommandA(event); // block
+      handler.handleCommandA(event); // all blocks
+      expect(selectAllSpy).toHaveBeenCalledTimes(1);
+
+      const selectBlockCallsAfterAll = selectBlockSpy.mock.calls.length;
+
+      // 4th and 5th presses must NOT re-enter the cycle.
+      handler.handleCommandA(event);
+      handler.handleCommandA(event);
+
+      expect(selectAllSpy).toHaveBeenCalledTimes(1);
+      expect(selectBlockSpy.mock.calls.length).toBe(selectBlockCallsAfterAll);
+    });
+
+    it('promotes straight to block selection on the first press when the text is already fully selected', () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      Object.defineProperty(blocks[0], 'pluginsContent', {
+        configurable: true,
+        get: () => ({ textContent: 'Sample text' }) as unknown as HTMLElement,
+      });
+      const selectBlockSpy = vi.spyOn(blockSelection, 'selectBlock');
+      const getSpy = vi.spyOn(SelectionUtils, 'get').mockReturnValue({
+        isCollapsed: false,
+        rangeCount: 1,
+        toString: () => 'Sample text',
+        removeAllRanges: vi.fn(),
+      } as unknown as Selection);
+      const event = {
+        target: blocks[0].holder,
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent;
+      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
+
+      handler.handleCommandA(event);
+
+      expect(selectBlockSpy).toHaveBeenCalledWith(blocks[0]);
+
+      getSpy.mockRestore();
     });
 
     it('selects current block when tool exposes multiple inputs', () => {

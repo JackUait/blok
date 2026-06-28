@@ -58,6 +58,16 @@ export const UNORDERED_LIST_PATTERN = /^[-*+]\s([\s\S]*)$/;
 export const ORDERED_LIST_PATTERN = /^(\d+)[.)]\s([\s\S]*)$/;
 
 /**
+ * Regex pattern for detecting alphabetic ordered-list shortcuts, matching
+ * Notion's "a. " / "i. " aliases. Restricted to a SINGLE letter so multi-letter
+ * words (e.g. "etc. ") never get converted into a list. The captured letter maps
+ * to an ordinal (a/i = 1, b = 2, ...) for the list's start number; the list tool
+ * renders the actual a/i/1 glyph based on nesting depth.
+ * Captures the letter in group 1 and remaining content in group 2.
+ */
+export const ALPHA_ORDERED_LIST_PATTERN = /^([a-zA-Z])[.)]\s([\s\S]*)$/;
+
+/**
  * Regex pattern for detecting header shortcuts.
  * Matches patterns like "# ", "## ", "### " etc. at the start of text (1-6 hashes)
  * Captures remaining content after the shortcut in group 2

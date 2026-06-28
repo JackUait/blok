@@ -42,7 +42,14 @@ const EMPTY_API: UseBlocksApi = {
 
 /**
  * React hook exposing an id/parentId-relative, reactive view of the block tree.
- * Re-renders whenever the editor emits 'block changed'.
+ * Re-renders whenever the editor emits 'block changed' — including programmatic
+ * `nest`/`unnest` reparents, which Blok now surfaces as a structural mutation.
+ *
+ * Pre-ready contract: while `editor` is null (before `useBlok` resolves) the
+ * returned API is the stable {@link EMPTY_API} — every method is a no-op,
+ * `insert`/`getById` return `null`, and `getChildren` returns `[]`. Calls made
+ * before the editor is ready are silently dropped, so guard on a non-null editor
+ * (or render-gate on it) when an insert must not be lost.
  * @param editor - the Blok instance from useBlok, or null before it is ready
  */
 export function useBlocks(editor: Blok | null): UseBlocksApi {

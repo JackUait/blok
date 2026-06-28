@@ -389,6 +389,51 @@ describe('BlockManager', () => {
     })).toBe(true);
   });
 
+  it('reparents a block via setBlockParent and emits a movement mutation', async () => {
+    const firstBlock = createBlockStub({ id: 'block-1' });
+    const secondBlock = createBlockStub({ id: 'block-2' });
+    const { blockManager, eventsDispatcher } = createBlockManager({
+      initialBlocks: [firstBlock, secondBlock],
+    });
+
+    // insertMany seeds blocks inside a Yjs atomic op whose cleanup is deferred to
+    // requestAnimationFrame; flush it so isSyncingFromYjs returns to its real
+    // resting state (false) before the user-style reparent.
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    const emitSpy = vi.spyOn(eventsDispatcher, 'emit');
+
+    blockManager.setBlockParent(secondBlock, firstBlock.id);
+
+    expect(secondBlock.parentId).toBe(firstBlock.id);
+    // A programmatic reparent must notify 'block changed' listeners (e.g. the
+    // React useBlocks hook) so they re-render — emitted as a BlockMoved mutation.
+    const movedCalls = emitSpy.mock.calls.filter((call: unknown[]) => call[0] === BlockChanged);
+    expect(movedCalls.some((call: unknown[]) => {
+      const payload = call[1] as { event: CustomEvent<BlockMutationEventDetail> };
+      return payload.event.type === BlockMovedMutationType &&
+             (payload.event.detail).target?.id === secondBlock.id;
+    })).toBe(true);
+  });
+
+  it('does not emit a movement mutation when setBlockParent does not change the parent', () => {
+    const firstBlock = createBlockStub({ id: 'block-1' });
+    const { blockManager, eventsDispatcher } = createBlockManager({
+      initialBlocks: [firstBlock],
+    });
+
+    const emitSpy = vi.spyOn(eventsDispatcher, 'emit');
+
+    // Already at root — reasserting null parent is a no-op reparent.
+    blockManager.setBlockParent(firstBlock, null);
+
+    const movedCalls = emitSpy.mock.calls.filter((call: unknown[]) =>
+      call[0] === BlockChanged &&
+      (call[1] as { event: CustomEvent<BlockMutationEventDetail> }).event.type === BlockMovedMutationType
+    );
+    expect(movedCalls).toHaveLength(0);
+  });
+
   it('should not move a restricted tool into a table cell', () => {
     // Setup: block-1 (paragraph inside table cell), block-2 (header outside)
     const cellBlock = createBlockStub({ id: 'cell-block', name: 'paragraph' });
@@ -953,10 +998,11 @@ describe('BlockManager', () => {
       expect(parentBlock.contentIds).toContain('new-block');
       expect(parentBlock.contentIds).not.toContain('toggle-parent');
 
-      // Since paragraph cannot host children, children are promoted to root level
-      // (not orphaned inside the paragraph's contentIds)
+      // Since paragraph cannot host children, children are outdented one level to
+      // the converted block's ORIGINAL parent ('grandparent') — not orphaned inside
+      // the paragraph and not promoted all the way to the document root.
       expect(result.contentIds).toHaveLength(0);
-      expect(childBlock.parentId).toBeNull();
+      expect(childBlock.parentId).toBe('grandparent');
     });
 
     it('update() preserves parentId and contentIds on the recreated block', async () => {

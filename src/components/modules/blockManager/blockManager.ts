@@ -9,6 +9,7 @@ import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-dat
 import type { BlockMutationEventMap, BlockMutationType } from '../../../../types/events/block';
 import { BlockAddedMutationType } from '../../../../types/events/block/BlockAdded';
 import { BlockChangedMutationType } from '../../../../types/events/block/BlockChanged';
+import { BlockMovedMutationType } from '../../../../types/events/block/BlockMoved';
 import { BlockRemovedMutationType } from '../../../../types/events/block/BlockRemoved';
 import { Module } from '../../__module';
 import type { Block } from '../../block';
@@ -924,6 +925,30 @@ export class BlockManager extends Module {
     const oldParentId = block.parentId;
 
     this.hierarchy.setBlockParent(block, newParentId);
+
+    // Notify 'block changed' listeners that the tree structure changed, so
+    // consumers like the React `useBlocks` hook re-render on a programmatic
+    // nest/unnest. A reparent is a move in the tree — emit BlockMoved (which,
+    // unlike BlockChanged, does not re-sync block data to Yjs; setBlockParent
+    // owns its own parentId/contentIds Yjs writes below).
+    //
+    // Guard against the paths that emit their own structural events:
+    //   - reparents that do not actually change the parent (drag re-asserts the
+    //     same parent to fix DOM placement; tools re-claim already-owned blocks),
+    //   - the drag move pipeline (pointer drag / open move group) which fires
+    //     BlockMoved through `move()` already,
+    //   - Yjs sync (undo/redo/remote) which drives re-renders via its own path.
+    const actualNewParentId = block.parentId;
+    const isDragMove = this.Blok.YjsManager.isInMoveGroup || this._isPointerDragActive;
+
+    if (actualNewParentId !== oldParentId && !this.yjsSync.isSyncingFromYjs && !isDragMove) {
+      const index = this.repository.getBlockIndex(block);
+
+      this.blockDidMutated(BlockMovedMutationType, block, {
+        fromIndex: index,
+        toIndex: index,
+      });
+    }
 
     // Sync the child block's parentId to Yjs so undo/redo can restore the relationship.
     // Without this, blocks created via insertDefaultBlockAtIndex + setBlockParent (e.g.,

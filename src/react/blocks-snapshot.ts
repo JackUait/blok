@@ -129,6 +129,35 @@ const isDescendantOf = (
   return false;
 };
 
+/**
+ * The flat index of the last block in the contiguous subtree rooted at `index`.
+ * In flat (DFS) order a block's descendants sit immediately after it, so this
+ * walks forward while blocks remain descendants of the block at `index`.
+ * Returns `index` itself when the block has no descendants.
+ */
+const subtreeEndIndex = (reader: IndexReader, index: number): number => {
+  const root = reader.getBlockByIndex(index);
+
+  if (root === undefined) {
+    return index;
+  }
+
+  const parentOf = parentMap(reader);
+  const count = reader.getBlocksCount();
+  let last = index;
+
+  for (let i = index + 1; i < count; i++) {
+    const b = reader.getBlockByIndex(i);
+
+    if (b === undefined || !isDescendantOf(parentOf, b.id, root.id)) {
+      break;
+    }
+    last = i;
+  }
+
+  return last;
+};
+
 /** The flat index at which a new block should be inserted. */
 export const resolveInsertIndex = (
   reader: IndexReader,
@@ -138,12 +167,21 @@ export const resolveInsertIndex = (
   if (typeof position === 'object') {
     const ref = 'before' in position ? position.before : position.after;
     const refIndex = reader.getBlockIndex(ref);
+    const refParent =
+      refIndex === undefined ? undefined : reader.getBlockByIndex(refIndex)?.parentId ?? null;
 
-    if (refIndex === undefined) {
-      return reader.getBlocksCount();
+    // before/after is sibling-relative: the ref must be a child of the requested
+    // parent. When the ref is missing or lives in a DIFFERENT parent, the
+    // parentId constraint wins — fall back to appending at the end of the
+    // requested parent rather than splicing into an unrelated subtree (the
+    // cross-parent mis-place) or silently landing at the document end.
+    if (refIndex === undefined || refParent !== parentId) {
+      return resolveInsertIndex(reader, parentId, 'end');
     }
 
-    return 'before' in position ? refIndex : refIndex + 1;
+    // 'after' must clear the ref's entire subtree, not just the ref node, or the
+    // new block splits the ref's descendants in flat (DFS) order.
+    return 'before' in position ? refIndex : subtreeEndIndex(reader, refIndex) + 1;
   }
 
   if (parentId === null) {
@@ -162,22 +200,8 @@ export const resolveInsertIndex = (
     return childIndices.length === 0 ? parentIndex + 1 : childIndices[0];
   }
 
-  // 'end': insert after the parent's last descendant. In flat (DFS) order,
-  // a parent's descendants are contiguous immediately after it.
-  const parentOf = parentMap(reader);
-  const count = reader.getBlocksCount();
-  let last = parentIndex;
-
-  for (let i = parentIndex + 1; i < count; i++) {
-    const b = reader.getBlockByIndex(i);
-
-    if (b === undefined || !isDescendantOf(parentOf, b.id, parentId)) {
-      break;
-    }
-    last = i;
-  }
-
-  return last + 1;
+  // 'end': insert after the parent's last descendant.
+  return subtreeEndIndex(reader, parentIndex) + 1;
 };
 
 /** The flat toIndex for editor.blocks.move. */
@@ -193,5 +217,7 @@ export const resolveMoveIndex = (reader: IndexReader, target: MoveTarget): numbe
     return reader.getBlocksCount();
   }
 
-  return 'before' in target ? refIndex : refIndex + 1;
+  // 'after' must clear the ref's entire subtree (see resolveInsertIndex), or the
+  // moved block lands among the ref's descendants instead of past them.
+  return 'before' in target ? refIndex : subtreeEndIndex(reader, refIndex) + 1;
 };

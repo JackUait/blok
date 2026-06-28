@@ -129,14 +129,26 @@ export class BlockShortcuts {
   }
 
   /**
-   * Determines whether the block movement shortcut should be handled
+   * Determines whether the block movement shortcut should be handled.
+   *
+   * The common case is a caret inside a block: the event targets a
+   * contenteditable within the wrapper. But block-level / navigation selection
+   * blurs that contenteditable, so the keydown then targets document.body —
+   * outside the wrapper — even though THIS editor still owns the selection.
+   * Without a fallback, Cmd+Shift+Arrow / Cmd+D silently do nothing whenever a
+   * block is selected. Fall back to "does this wrapper currently hold a selected
+   * block?", which stays multi-editor safe because each instance only inspects
+   * its own subtree.
    * @param event - Keyboard event
    * @returns true if shortcut should be handled
    */
   private shouldHandleShortcut(event: KeyboardEvent): boolean {
     const target = event.target;
 
-    return target instanceof HTMLElement &&
-      this.wrapper.contains(target);
+    if (target instanceof HTMLElement && this.wrapper.contains(target)) {
+      return true;
+    }
+
+    return this.wrapper.querySelector('[data-blok-selected="true"], [data-blok-navigation-focused="true"]') !== null;
   }
 }

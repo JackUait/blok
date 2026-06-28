@@ -1241,20 +1241,27 @@ export class DragController extends Module {
     }
 
     const isBlockSelected = block.selected;
-    const initialBlocks = isBlockSelected
+    const baseBlocks = isBlockSelected
       ? this.Blok.BlockSelection.selectedBlocks
       : [block];
 
-    // For a single block, include its descendants (same expansion as drag-start).
-    const listDescendants = !isBlockSelected && this.listItemDescendants
-      ? this.listItemDescendants.getDescendants(block)
-      : [];
-    const hasHierarchyChildren = !isBlockSelected && block.contentIds?.length > 0;
-    const hierarchyDescendants = listDescendants.length === 0 && hasHierarchyChildren
-      ? this.getHierarchyDescendants(block)
-      : [];
-    const descendants = listDescendants.length > 0 ? listDescendants : hierarchyDescendants;
-    const sourceBlocks = descendants.length > 0 ? [block, ...descendants] : initialBlocks;
+    // Expand EVERY base block to its full subtree (list/flat-indent followers
+    // via depth, toggle/callout children via contentIds), de-duplicating across
+    // the set. The expansion must run for multi-block selections too: a selected
+    // block's nested descendants are usually not themselves selected, yet they
+    // must travel with their parent into the copy (Notion's Cmd+D parity).
+    const seen = new Set<string>();
+    const sourceBlocks = baseBlocks
+      .flatMap((baseBlock) => [baseBlock, ...this.collectDuplicateDescendants(baseBlock)])
+      .filter((member) => {
+        if (seen.has(member.id)) {
+          return false;
+        }
+
+        seen.add(member.id);
+
+        return true;
+      });
 
     if (sourceBlocks.length === 0) {
       return [];
@@ -1420,6 +1427,30 @@ export class DragController extends Module {
       return;
     }
     this.Blok.Toolbar.moveAndOpen(blockToShow);
+  }
+
+  /**
+   * Collects a block's full set of duplicable descendants, unifying the two
+   * nesting carriers: list/flat-indent followers (via `data-list-depth`) take
+   * precedence, otherwise toggle/callout children via `parentId`/`contentIds`.
+   * Returns an empty array for a leaf block.
+   * @param block - block whose subtree should be collected
+   * @returns descendant blocks (excluding the block itself)
+   */
+  private collectDuplicateDescendants(block: Block): Block[] {
+    const listDescendants = this.listItemDescendants
+      ? this.listItemDescendants.getDescendants(block)
+      : [];
+
+    if (listDescendants.length > 0) {
+      return listDescendants;
+    }
+
+    if (block.contentIds?.length > 0) {
+      return this.getHierarchyDescendants(block);
+    }
+
+    return [];
   }
 
   /**

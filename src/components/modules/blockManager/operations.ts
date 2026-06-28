@@ -372,17 +372,19 @@ export class BlockOperations implements OperationsContext {
   /**
    * Moves the current block up by one position
    * @param blocksStore - The blocks store to modify
+   * @param selectedBlocks - blocks under block-level selection (moved together)
    */
-  public moveCurrentBlockUp(blocksStore: BlocksStore): void {
-    this.mutation.moveCurrentBlockUp(blocksStore);
+  public moveCurrentBlockUp(blocksStore: BlocksStore, selectedBlocks?: Block[]): void {
+    this.mutation.moveCurrentBlockUp(blocksStore, selectedBlocks);
   }
 
   /**
    * Moves the current block down by one position
    * @param blocksStore - The blocks store to modify
+   * @param selectedBlocks - blocks under block-level selection (moved together)
    */
-  public moveCurrentBlockDown(blocksStore: BlocksStore): void {
-    this.mutation.moveCurrentBlockDown(blocksStore);
+  public moveCurrentBlockDown(blocksStore: BlocksStore, selectedBlocks?: Block[]): void {
+    this.mutation.moveCurrentBlockDown(blocksStore, selectedBlocks);
   }
 
   /**

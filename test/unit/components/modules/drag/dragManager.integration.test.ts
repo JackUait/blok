@@ -295,6 +295,40 @@ describe("DragManager - Component Integration", () => {
       expect(result).toEqual([dup]);
       expect(toolbar.moveAndOpen).toHaveBeenCalledWith(dup);
     });
+
+    it("duplicates a multi-block selection together with each block's unselected nested descendants (M9)", async () => {
+      const { dragManager, blocks, modules } = createDragManager();
+      const blockManager = modules.BlockManager as unknown as {
+        insert: ReturnType<typeof vi.fn>;
+      };
+      const blockSelection = modules.BlockSelection as unknown as {
+        selectedBlocks: Block[];
+      };
+
+      // block-1 is a container whose child block-3 is NOT part of the selection;
+      // block-1 and block-2 are the two selected blocks.
+      (blocks[0] as unknown as { contentIds: string[] }).contentIds = ["block-3"];
+      (blocks[2] as unknown as { parentId: string | null }).parentId = "block-1";
+
+      for (const block of [blocks[0], blocks[1], blocks[2]]) {
+        (block as unknown as { save: () => Promise<unknown> }).save = vi
+          .fn()
+          .mockResolvedValue({ data: { text: block.id }, tunes: {} });
+      }
+
+      blocks[0].selected = true;
+      blocks[1].selected = true;
+      blockSelection.selectedBlocks = [blocks[0], blocks[1]];
+
+      blockManager.insert.mockImplementation(() => createBlockStub({ id: `dup-${Math.random().toString(16).slice(2)}` }));
+
+      await dragManager.duplicateBlocksInPlace(blocks[0]);
+
+      // Without descendant expansion only the two selected blocks duplicate (2
+      // inserts). The unselected nested child must travel with its parent, so
+      // all three blocks duplicate.
+      expect(blockManager.insert).toHaveBeenCalledTimes(3);
+    });
   });
 
   describe("AutoScroll + DropTargetDetector integration", () => {

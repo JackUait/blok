@@ -285,6 +285,95 @@ describe('BlockManager.moveCurrentBlockUp/Down (drag guard)', () => {
 });
 
 /**
+ * H13 (multi-block move) + M8 (block selection survives a move).
+ *
+ * BlockManager.moveCurrentBlockUp/Down must hand the active block-level
+ * selection to operations so the whole contiguous group moves together, and
+ * must re-apply that selection afterwards so the user can repeat the shortcut
+ * without the selection collapsing into a text caret.
+ */
+describe('BlockManager.moveCurrentBlockUp/Down (block selection)', () => {
+  const createBlockManagerWithSelection = (selectedBlocks: Block[]): {
+    blockManager: BlockManager;
+    moveUpSpy: ReturnType<typeof vi.fn>;
+    moveDownSpy: ReturnType<typeof vi.fn>;
+    selectBlockSpy: ReturnType<typeof vi.fn>;
+  } => {
+    const blockManager = new BlockManager(createModuleConfig());
+    const moveUpSpy = vi.fn();
+    const moveDownSpy = vi.fn();
+    const selectBlockSpy = vi.fn();
+
+    (blockManager as unknown as Record<string, unknown>).operations = {
+      suppressStopCapturing: false,
+      currentBlockIndexValue: 0,
+      moveCurrentBlockUp: moveUpSpy,
+      moveCurrentBlockDown: moveDownSpy,
+    };
+
+    (blockManager as unknown as Record<string, unknown>)._blocks = {};
+
+    blockManager.state = {
+      YjsManager: { stopCapturing: vi.fn() },
+      DragManager: { isDragging: false },
+      BlockSelection: {
+        anyBlockSelected: selectedBlocks.length > 0,
+        selectedBlocks,
+        selectBlock: selectBlockSpy,
+      },
+    } as unknown as BlokModules;
+
+    return { blockManager, moveUpSpy, moveDownSpy, selectBlockSpy };
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('passes the block selection to operations.moveCurrentBlockDown', () => {
+    const selected = [{ id: 'a' }, { id: 'b' }] as unknown as Block[];
+    const { blockManager, moveDownSpy } = createBlockManagerWithSelection(selected);
+
+    blockManager.moveCurrentBlockDown();
+
+    expect(moveDownSpy).toHaveBeenCalledWith(expect.anything(), selected);
+  });
+
+  it('passes the block selection to operations.moveCurrentBlockUp', () => {
+    const selected = [{ id: 'a' }, { id: 'b' }] as unknown as Block[];
+    const { blockManager, moveUpSpy } = createBlockManagerWithSelection(selected);
+
+    blockManager.moveCurrentBlockUp();
+
+    expect(moveUpSpy).toHaveBeenCalledWith(expect.anything(), selected);
+  });
+
+  it('re-applies the block selection after a move so it can be repeated', () => {
+    const selected = [{ id: 'a' }, { id: 'b' }] as unknown as Block[];
+    const { blockManager, selectBlockSpy } = createBlockManagerWithSelection(selected);
+
+    blockManager.moveCurrentBlockDown();
+
+    expect(selectBlockSpy).toHaveBeenCalledTimes(2);
+    expect(selectBlockSpy).toHaveBeenCalledWith(selected[0]);
+    expect(selectBlockSpy).toHaveBeenCalledWith(selected[1]);
+  });
+
+  it('does not pass a selection or re-select for a plain caret move', () => {
+    const { blockManager, moveDownSpy, selectBlockSpy } = createBlockManagerWithSelection([]);
+
+    blockManager.moveCurrentBlockDown();
+
+    expect(moveDownSpy).toHaveBeenCalledWith(expect.anything(), undefined);
+    expect(selectBlockSpy).not.toHaveBeenCalled();
+  });
+});
+
+/**
  * Fix 1 (Yjs contentIds companion write).
  *
  * BlockManager.setBlockParent() previously wrote yblock.set('parentId', …) on

@@ -1301,9 +1301,13 @@ export class BlockManager extends Module {
       return;
     }
 
+    const selectedBlocks = this.selectedBlocksForMove();
+
     this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    this.operations.moveCurrentBlockUp(this.blocksStore);
+    this.operations.moveCurrentBlockUp(this.blocksStore, selectedBlocks);
     this._currentBlockIndex = this.operations.currentBlockIndexValue;
+
+    this.reselectAfterMove(selectedBlocks);
   }
 
   /**
@@ -1315,9 +1319,48 @@ export class BlockManager extends Module {
       return;
     }
 
+    const selectedBlocks = this.selectedBlocksForMove();
+
     this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    this.operations.moveCurrentBlockDown(this.blocksStore);
+    this.operations.moveCurrentBlockDown(this.blocksStore, selectedBlocks);
     this._currentBlockIndex = this.operations.currentBlockIndexValue;
+
+    this.reselectAfterMove(selectedBlocks);
+  }
+
+  /**
+   * Block-level selection that a keyboard move should carry as one group, or
+   * undefined for a plain caret move. Returns the selected blocks in document
+   * order so the move resolves a contiguous span.
+   */
+  private selectedBlocksForMove(): Block[] | undefined {
+    const { BlockSelection } = this.Blok;
+
+    if (BlockSelection === undefined || !BlockSelection.anyBlockSelected) {
+      return undefined;
+    }
+
+    const selected = BlockSelection.selectedBlocks;
+
+    return selected.length > 0 ? selected : undefined;
+  }
+
+  /**
+   * Re-applies block-level selection to the moved blocks so a multi/single
+   * block selection survives the move and the user can repeat the shortcut.
+   * No-op for caret moves (selectedBlocks undefined).
+   * @param selectedBlocks - the selection captured before the move
+   */
+  private reselectAfterMove(selectedBlocks: Block[] | undefined): void {
+    if (selectedBlocks === undefined) {
+      return;
+    }
+
+    const { BlockSelection } = this.Blok;
+
+    for (const block of selectedBlocks) {
+      BlockSelection.selectBlock(block);
+    }
   }
 
   /**

@@ -370,6 +370,157 @@ describe('BlockOperations', () => {
     });
   });
 
+  describe('moveCurrentBlockUp/Down stepping over a neighbour subtree (H14)', () => {
+    it('moves a block DOWN over the whole subtree of the block below it', () => {
+      // A has no followers; B owns the flat-indented child B1. Moving A down
+      // must land it AFTER B1, not between B and B1.
+      const a = createMockBlock({ id: 'a' });
+      const b = createMockBlock({ id: 'b' });
+      const b1 = createMockBlock({ id: 'b1' });
+      b1.holder.setAttribute('data-blok-depth', '1');
+
+      const store = createBlocksStore([a, b, b1]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 0);
+      ops.setYjsSync(yjsSync);
+
+      ops.moveCurrentBlockDown(store);
+
+      expect(repo.blocks.map((block) => block.id)).toEqual(['b', 'b1', 'a']);
+    });
+
+    it('moves a block UP over the whole subtree of the block above it', () => {
+      // B owns the flat-indented child B1; A sits below. Moving A up must land
+      // it ABOVE B (the subtree root), not between B and B1.
+      const b = createMockBlock({ id: 'b' });
+      const b1 = createMockBlock({ id: 'b1' });
+      b1.holder.setAttribute('data-blok-depth', '1');
+      const a = createMockBlock({ id: 'a' });
+
+      const store = createBlocksStore([b, b1, a]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 2);
+      ops.setYjsSync(yjsSync);
+
+      ops.moveCurrentBlockUp(store);
+
+      expect(repo.blocks.map((block) => block.id)).toEqual(['a', 'b', 'b1']);
+    });
+  });
+
+  describe('moveCurrentBlock container boundary clamp (H15)', () => {
+    it('does NOT move the last child of a callout past the container edge (down)', () => {
+      const callout = createMockBlock({ id: 'callout', name: 'callout', contentIds: ['c1', 'c2'] });
+      const c1 = createMockBlock({ id: 'c1', parentId: 'callout' });
+      const c2 = createMockBlock({ id: 'c2', parentId: 'callout' });
+      const after = createMockBlock({ id: 'after' });
+
+      const store = createBlocksStore([callout, c1, c2, after]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 2);
+      ops.setYjsSync(yjsSync);
+
+      ops.moveCurrentBlockDown(store);
+
+      expect(repo.blocks.map((block) => block.id)).toEqual(['callout', 'c1', 'c2', 'after']);
+      expect(c2.parentId).toBe('callout');
+      expect(dependencies.YjsManager.moveBlock).not.toHaveBeenCalled();
+      expect(dependencies.I18n.t).toHaveBeenCalledWith('a11y.atBottom');
+    });
+
+    it('does NOT move the first child of a toggle above the container (up)', () => {
+      const toggle = createMockBlock({ id: 'toggle', name: 'toggle', contentIds: ['c1', 'c2'] });
+      const c1 = createMockBlock({ id: 'c1', parentId: 'toggle' });
+      const c2 = createMockBlock({ id: 'c2', parentId: 'toggle' });
+
+      const store = createBlocksStore([toggle, c1, c2]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 1);
+      ops.setYjsSync(yjsSync);
+
+      ops.moveCurrentBlockUp(store);
+
+      expect(repo.blocks.map((block) => block.id)).toEqual(['toggle', 'c1', 'c2']);
+      expect(c1.parentId).toBe('toggle');
+      expect(dependencies.YjsManager.moveBlock).not.toHaveBeenCalled();
+      expect(dependencies.I18n.t).toHaveBeenCalledWith('a11y.atTop');
+    });
+
+    it('reorders two children WITHIN a toggle container (down)', () => {
+      const toggle = createMockBlock({ id: 'toggle', name: 'toggle', contentIds: ['c1', 'c2'] });
+      const c1 = createMockBlock({ id: 'c1', parentId: 'toggle' });
+      const c2 = createMockBlock({ id: 'c2', parentId: 'toggle' });
+
+      const store = createBlocksStore([toggle, c1, c2]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 1);
+      ops.setYjsSync(yjsSync);
+
+      ops.moveCurrentBlockDown(store);
+
+      expect(repo.blocks.map((block) => block.id)).toEqual(['toggle', 'c2', 'c1']);
+      expect(c1.parentId).toBe('toggle');
+      expect(c2.parentId).toBe('toggle');
+    });
+
+    it('carries a container and its children together when moving it down', () => {
+      const toggle = createMockBlock({ id: 'toggle', name: 'toggle', contentIds: ['c1'] });
+      const c1 = createMockBlock({ id: 'c1', parentId: 'toggle' });
+      const after = createMockBlock({ id: 'after' });
+
+      const store = createBlocksStore([toggle, c1, after]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 0);
+      ops.setYjsSync(yjsSync);
+
+      ops.moveCurrentBlockDown(store);
+
+      expect(repo.blocks.map((block) => block.id)).toEqual(['after', 'toggle', 'c1']);
+    });
+  });
+
+  describe('moveCurrentBlockUp/Down for a multi-block selection (H13)', () => {
+    it('moves a contiguous selection down together as one group', () => {
+      const x = createMockBlock({ id: 'x' });
+      const a = createMockBlock({ id: 'a' });
+      const b = createMockBlock({ id: 'b' });
+      const y = createMockBlock({ id: 'y' });
+
+      const store = createBlocksStore([x, a, b, y]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 1);
+      ops.setYjsSync(yjsSync);
+
+      ops.moveCurrentBlockDown(store, [a, b]);
+
+      expect(repo.blocks.map((block) => block.id)).toEqual(['x', 'y', 'a', 'b']);
+    });
+
+    it('moves a contiguous selection up together as one group', () => {
+      const x = createMockBlock({ id: 'x' });
+      const a = createMockBlock({ id: 'a' });
+      const b = createMockBlock({ id: 'b' });
+      const y = createMockBlock({ id: 'y' });
+
+      const store = createBlocksStore([x, a, b, y]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 1);
+      ops.setYjsSync(yjsSync);
+
+      ops.moveCurrentBlockUp(store, [a, b]);
+
+      expect(repo.blocks.map((block) => block.id)).toEqual(['a', 'b', 'x', 'y']);
+    });
+  });
+
   describe('currentBlockIndexValue getter/setter', () => {
     it('returns the current block index', () => {
       expect(operations.currentBlockIndexValue).toBe(0);

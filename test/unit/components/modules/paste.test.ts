@@ -907,6 +907,101 @@ describe('Paste module', () => {
       expect(mocks.BlockManager.setCurrentBlockByChildNode).not.toHaveBeenCalled();
       expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
     });
+
+    it('inserts raw plain text and bypasses markdown conversion when Shift is held (paste-without-formatting)', async () => {
+      const { paste, mocks } = createPaste();
+
+      mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+
+      await paste.prepare();
+
+      // Guard: markdown conversion must not run for the Shift paste.
+      const markdownSpy = vi.spyOn(MarkdownHandler.prototype, 'handle').mockResolvedValue(true);
+
+      const div = document.createElement('div');
+
+      mocks.holder.appendChild(div);
+
+      const currentBlock = {
+        name: 'paragraph',
+        tool: { isDefault: true, baseSanitizeConfig: {} },
+        isEmpty: false,
+        currentInput: document.createElement('div'),
+      };
+
+      mocks.BlockManager.currentBlock = currentBlock;
+      mocks.BlockManager.setCurrentBlockByChildNode.mockReturnValue(currentBlock);
+
+      paste.toggleReadOnly(false);
+
+      // Cmd/Ctrl+Shift+V: the browser paste event itself carries no shiftKey,
+      // so the module must track Shift via a preceding keydown.
+      const keydown = new KeyboardEvent('keydown', { bubbles: true, shiftKey: true, key: 'v' });
+
+      div.dispatchEvent(keydown);
+
+      const event = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent;
+      const clipboardData = new MockDataTransfer(
+        { 'text/plain': '# Title', 'text/html': '<h1>Title</h1>' },
+        {} as FileList,
+        ['text/plain', 'text/html']
+      );
+
+      Object.defineProperty(event, 'clipboardData', { value: clipboardData });
+
+      div.dispatchEvent(event);
+
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      // Markdown/HTML conversion is bypassed; the literal text is inserted.
+      expect(markdownSpy).not.toHaveBeenCalled();
+      expect(mocks.Caret.insertContentAtCaretPosition).toHaveBeenCalledWith('# Title');
+
+      markdownSpy.mockRestore();
+    });
+
+    it('still converts markdown text on a normal paste (no Shift)', async () => {
+      const { paste, mocks } = createPaste();
+
+      mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+
+      await paste.prepare();
+
+      const markdownSpy = vi.spyOn(MarkdownHandler.prototype, 'handle').mockResolvedValue(true);
+
+      const div = document.createElement('div');
+
+      mocks.holder.appendChild(div);
+
+      const currentBlock = {
+        name: 'paragraph',
+        tool: { isDefault: true, baseSanitizeConfig: {} },
+        isEmpty: false,
+        currentInput: document.createElement('div'),
+      };
+
+      mocks.BlockManager.currentBlock = currentBlock;
+      mocks.BlockManager.setCurrentBlockByChildNode.mockReturnValue(currentBlock);
+
+      paste.toggleReadOnly(false);
+
+      const event = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent;
+      const clipboardData = new MockDataTransfer(
+        { 'text/plain': '# Title' },
+        {} as FileList,
+        ['text/plain']
+      );
+
+      Object.defineProperty(event, 'clipboardData', { value: clipboardData });
+
+      div.dispatchEvent(event);
+
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      expect(markdownSpy).toHaveBeenCalledWith('# Title', expect.anything());
+
+      markdownSpy.mockRestore();
+    });
   });
 
   describe('FilesHandler', () => {

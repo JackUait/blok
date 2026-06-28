@@ -38,6 +38,15 @@ export class Paste extends Module {
   private handlers!: PasteHandler[];
 
   /**
+   * Whether the most recent keyboard activity had Shift held. A `paste`
+   * ClipboardEvent carries no modifier flags, so we read Shift from the
+   * keydown/keyup that drives Cmd/Ctrl+Shift+V and use it to route the paste
+   * to the raw plain-text path (paste-without-formatting), bypassing the
+   * markdown/HTML→blocks conversion pipeline.
+   */
+  private isShiftHeld = false;
+
+  /**
    * Set onPaste callback and collect tools' paste configurations.
    */
   public async prepare(): Promise<void> {
@@ -334,6 +343,8 @@ export class Paste extends Module {
     const holder = this.Blok.UI.nodes.holder;
 
     this.listeners.on(holder, 'paste', this.handlePasteEventWrapper);
+    this.listeners.on(holder, 'keydown', this.handleShiftStateWrapper);
+    this.listeners.on(holder, 'keyup', this.handleShiftStateWrapper);
     this.listeners.on(holder, 'drop', this.handleDropEventWrapper);
     this.listeners.on(holder, 'dragover', this.handleDragOverEventWrapper);
     this.listeners.on(holder, 'dragleave', this.handleDragLeaveEventWrapper);
@@ -346,6 +357,8 @@ export class Paste extends Module {
     const holder = this.Blok.UI.nodes.holder;
 
     this.listeners.off(holder, 'paste', this.handlePasteEventWrapper);
+    this.listeners.off(holder, 'keydown', this.handleShiftStateWrapper);
+    this.listeners.off(holder, 'keyup', this.handleShiftStateWrapper);
     this.listeners.off(holder, 'drop', this.handleDropEventWrapper);
     this.listeners.off(holder, 'dragover', this.handleDragOverEventWrapper);
     this.listeners.off(holder, 'dragleave', this.handleDragLeaveEventWrapper);
@@ -356,6 +369,15 @@ export class Paste extends Module {
    */
   private handlePasteEventWrapper = (event: Event): void => {
     void this.handlePasteEvent(event as ClipboardEvent);
+  };
+
+  /**
+   * Track whether Shift is currently held so a following paste can route to
+   * the raw plain-text path. Reading shiftKey on both keydown and keyup keeps
+   * the flag in sync as the modifier is pressed and released.
+   */
+  private handleShiftStateWrapper = (event: Event): void => {
+    this.isShiftHeld = (event as KeyboardEvent).shiftKey;
   };
 
   private handleDropEventWrapper = (event: Event): void => {
@@ -563,7 +585,14 @@ export class Paste extends Module {
     if (event.clipboardData) {
       const pasteTarget = event.target instanceof Element ? event.target : undefined;
 
-      await this.processDataTransfer(event.clipboardData, pasteTarget);
+      // Cmd/Ctrl+Shift+V (paste without formatting): insert the clipboard's
+      // raw text/plain payload, skipping the markdown/HTML→blocks conversion
+      // that processDataTransfer would otherwise apply.
+      if (this.isShiftHeld) {
+        await this.processAsText(event.clipboardData.getData('text/plain'));
+      } else {
+        await this.processDataTransfer(event.clipboardData, pasteTarget);
+      }
     }
 
     Toolbar.moveAndOpen();

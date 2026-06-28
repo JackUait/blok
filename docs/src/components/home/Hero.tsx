@@ -760,7 +760,7 @@ export const Hero: React.FC = () => {
           <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground duration-700 animate-in fade-in slide-in-from-bottom-3 fill-mode-both delay-100 lg:mx-0">
             {t('home.hero.description')}
           </p>
-          <div className="mt-9 flex flex-col items-center justify-center gap-3 duration-700 animate-in fade-in slide-in-from-bottom-3 fill-mode-both delay-200 sm:flex-row lg:justify-start">
+          <div className="mt-9 hidden flex-col items-center justify-center gap-3 duration-700 animate-in fade-in slide-in-from-bottom-3 fill-mode-both delay-200 sm:flex sm:flex-row lg:justify-start">
             <Button variant="brand" size="lg" asChild>
               <a href="#quick-start" onClick={handleScrollToQuickStart}>
                 {t('home.hero.ctaGetStarted')}

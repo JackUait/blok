@@ -175,4 +175,12 @@ describe('resolveMoveIndex', () => {
     // moving after 'p' must target past p's whole subtree → before 'tail'
     expect(resolveMoveIndex(r, { after: 'p' })).toBe(3);
   });
+
+  it('clamps an out-of-range { toIndex } into the valid block range', () => {
+    const r = indexReaderOf([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
+    // Blok's Blocks.move() silently no-ops when toIndex >= length or < 0.
+    // resolveMoveIndex must clamp so the caller's move is never dropped.
+    expect(resolveMoveIndex(r, { toIndex: 99 })).toBe(2);
+    expect(resolveMoveIndex(r, { toIndex: -5 })).toBe(0);
+  });
 });

@@ -114,6 +114,33 @@ describe('useBlocks mutators (delegation)', () => {
     expect(editor.blocks.delete).not.toHaveBeenCalled();
   });
 
+  it('remove deletes the whole subtree (descendants first) instead of promoting children to root', () => {
+    const { editor } = makeFakeEditor([
+      { id: 'p', name: 'toggle' },
+      { id: 'c', parentId: 'p' },
+      { id: 'g', parentId: 'c' },
+      { id: 'tail' },
+    ]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.remove('p'));
+    // Deepest-first by descending flat index so each index stays valid: g(2), c(1), p(0).
+    const deleteMock = editor.blocks.delete as ReturnType<typeof vi.fn>;
+    const calls = deleteMock.mock.calls.map((args) => args[0] as number);
+    expect(calls).toEqual([2, 1, 0]);
+    // 'tail' (index 3) must be left untouched.
+    expect(calls).not.toContain(3);
+  });
+
+  it('groups a subtree remove in a single transact', () => {
+    const { editor } = makeFakeEditor([
+      { id: 'p', name: 'toggle' },
+      { id: 'c', parentId: 'p' },
+    ]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.remove('p'));
+    expect(editor.blocks.transact).toHaveBeenCalledTimes(1);
+  });
+
   it('transact delegates to editor.blocks.transact', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }]);
     const { result } = renderHook(() => useBlocks(editor));
@@ -133,7 +160,8 @@ describe('useBlocks insert', () => {
     const { result } = renderHook(() => useBlocks(editor));
     let created: ReturnType<typeof result.current.insert> = null;
     act(() => { created = result.current.insert({ type: 'header', data: { text: 'hi' } }); });
-    expect(editor.blocks.insert).toHaveBeenCalledWith('header', { text: 'hi' }, {}, 2);
+    // needToFocus=false: programmatic creation must not steal the caret.
+    expect(editor.blocks.insert).toHaveBeenCalledWith('header', { text: 'hi' }, {}, 2, false);
     expect(created).toMatchObject({ type: 'header' });
   });
 
@@ -141,7 +169,50 @@ describe('useBlocks insert', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => { result.current.insert({ type: 'paragraph', position: { before: 'b' } }); });
-    expect(editor.blocks.insert).toHaveBeenCalledWith('paragraph', {}, {}, 1);
+    expect(editor.blocks.insert).toHaveBeenCalledWith('paragraph', {}, {}, 1, false);
+  });
+
+  it('focuses the new block only when spec.focus is true', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => { result.current.insert({ type: 'paragraph', focus: true }); });
+    expect(editor.blocks.insert).toHaveBeenCalledWith('paragraph', {}, {}, 1, true);
+  });
+
+  it('returns null (does not throw) when the tool type is unknown', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    (editor.blocks.insert as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+      throw new Error('Could not compose Block. Tool «nope» not found.');
+    });
+    const { result } = renderHook(() => useBlocks(editor));
+    let created: ReturnType<typeof result.current.insert> = null;
+    let threw = false;
+    act(() => {
+      try {
+        created = result.current.insert({ type: 'nope' });
+      } catch {
+        threw = true;
+      }
+    });
+    expect(threw).toBe(false);
+    expect(created).toBeNull();
+  });
+
+  it('returns null and never inserts when parentId does not resolve', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let created: ReturnType<typeof result.current.insert> = null;
+    act(() => { created = result.current.insert({ parentId: 'ghost' }); });
+    expect(created).toBeNull();
+    expect(editor.blocks.insert).not.toHaveBeenCalled();
+    expect(editor.blocks.setBlockParent).not.toHaveBeenCalled();
+  });
+
+  it('wraps a root insert in a transact so it is a single atomic undo step', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => { result.current.insert({ type: 'paragraph' }); });
+    expect(editor.blocks.transact).toHaveBeenCalledTimes(1);
   });
 
   it('parented insert wraps insert + setBlockParent in a single transact', () => {

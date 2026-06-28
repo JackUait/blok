@@ -16,8 +16,25 @@ export interface InsertSpec {
   data?: BlockToolData;
   parentId?: string | null;
   position?: InsertPosition;
+  /**
+   * Move the caret into the new block. Defaults to `false`: a programmatic
+   * insert from React must not steal focus from wherever the user is typing.
+   * Set `true` for an explicit "add a block and start editing it" flow.
+   */
+  focus?: boolean;
 }
 
+/**
+ * Where to move an existing block.
+ *
+ * `before`/`after` are POSITION targets, not parent assignments: the block is
+ * relocated to that flat slot and — because Blok keeps the flat array as the
+ * canonical document order — ADOPTS the parent of wherever it lands. Moving a
+ * nested block to `{ after: someRootBlock }` therefore unnests it to root, and
+ * moving a root block in among a container's children nests it. Use
+ * `nest`/`unnest` when you want to change the parent without choosing a sibling
+ * slot. `toIndex` is an absolute flat index (clamped into range).
+ */
 export type MoveTarget = { before: string } | { after: string } | { toIndex: number };
 
 export interface UseBlocksApi {
@@ -207,7 +224,11 @@ export const resolveInsertIndex = (
 /** The flat toIndex for editor.blocks.move. */
 export const resolveMoveIndex = (reader: IndexReader, target: MoveTarget): number => {
   if ('toIndex' in target) {
-    return target.toIndex;
+    // Blok's Blocks.move() silently no-ops on an out-of-range index, so clamp
+    // an explicit toIndex into [0, count-1] rather than dropping the move.
+    const lastIndex = Math.max(0, reader.getBlocksCount() - 1);
+
+    return Math.min(Math.max(target.toIndex, 0), lastIndex);
   }
 
   const ref = 'before' in target ? target.before : target.after;

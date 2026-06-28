@@ -147,11 +147,22 @@ const createRealEditorHarness = (
       hierarchy.setBlockParent(block, parentId);
     },
 
-    delete: async (_index?: number): Promise<void> => {
+    delete: async (index?: number): Promise<void> => {
+      if (index !== undefined && index >= 0 && index < blocksStore.length) {
+        blocksStore.remove(index);
+      }
       await Promise.resolve();
     },
 
-    move: (_toIndex: number, _fromIndex?: number): void => undefined,
+    // Faithful to Blok's Blocks.move(): toIndex is POST-removal index space
+    // (splice out fromIndex, then splice in at toIndex). The auto-reparent that
+    // the real BlockManager.move layers on top is asserted explicitly by
+    // useBlocks via setBlockParent, so a pure flat reorder is sufficient here.
+    move: (toIndex: number, fromIndex?: number): void => {
+      if (fromIndex !== undefined) {
+        blocksStore.move(toIndex, fromIndex);
+      }
+    },
 
     transact: (fn: () => void): void => fn(),
   };
@@ -233,5 +244,109 @@ describe('useBlocks — real BlockHierarchy integration', () => {
     // Real BlockHierarchy.setBlockParent set block-b.parentId = null
     expect(result.current.getChildren('block-a')).toHaveLength(0);
     expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['block-a', 'block-b']);
+  });
+
+  it('nesting a NON-adjacent block keeps the flat array DFS-contiguous', () => {
+    // [A, B, C] all root. Nesting C under A naively (bare setBlockParent) would
+    // leave the flat array as [A, B, C] with C.parentId=A — B wedged between A
+    // and its own child. useBlocks must relocate C so the model stays contiguous.
+    const harness = createRealEditorHarness([{ id: 'A' }, { id: 'B' }, { id: 'C' }]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    act(() => {
+      result.current.nest('C', 'A');
+    });
+
+    // C is now A's child AND sits immediately after A in flat order.
+    expect(result.current.getChildren('A').map((n) => n.id)).toEqual(['C']);
+    expect(result.current.getById('C')?.parentId).toBe('A');
+    expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['A', 'B']);
+    // Flat (document) order: A, then its child C, then root sibling B.
+    const flat: string[] = [];
+
+    for (let i = 0; i < harness.editor.blocks.getBlocksCount(); i++) {
+      const node = harness.editor.blocks.getBlockByIndex(i);
+
+      if (node !== undefined) {
+        flat.push(node.id);
+      }
+    }
+    expect(flat).toEqual(['A', 'C', 'B']);
+  });
+
+  it('nesting a block that itself has children relocates the WHOLE subtree contiguously', () => {
+    // [A, B, C, C1] with C1 nested under C (e.g. a list item with a sub-item,
+    // nested via the flat indent model — child holder NOT DOM-contained, so
+    // Blok's resortNestedBlocks can't carry it). nest('C','A') must move C AND
+    // C1, not strand C1 after root sibling B.
+    const harness = createRealEditorHarness([
+      { id: 'A' },
+      { id: 'B' },
+      { id: 'C' },
+      { id: 'C1', parentId: 'C' },
+    ]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    expect(result.current.getChildren('C').map((n) => n.id)).toEqual(['C1']);
+
+    act(() => {
+      result.current.nest('C', 'A');
+    });
+
+    expect(result.current.getChildren('A').map((n) => n.id)).toEqual(['C']);
+    expect(result.current.getChildren('C').map((n) => n.id)).toEqual(['C1']);
+
+    const flat: string[] = [];
+
+    for (let i = 0; i < harness.editor.blocks.getBlocksCount(); i++) {
+      const node = harness.editor.blocks.getBlockByIndex(i);
+
+      if (node !== undefined) {
+        flat.push(node.id);
+      }
+    }
+    // C's whole subtree sits contiguously after A, before root sibling B.
+    expect(flat).toEqual(['A', 'C', 'C1', 'B']);
+  });
+
+  it('insert at a reparented container end lands after its existing children, before the next root block', () => {
+    const harness = createRealEditorHarness([{ id: 'A' }, { id: 'B' }, { id: 'C' }]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    act(() => {
+      result.current.nest('C', 'A');
+    });
+
+    let insertedId: string | null = null;
+
+    act(() => {
+      const created = result.current.insert({ type: 'paragraph', parentId: 'A', position: 'end' });
+
+      insertedId = created?.id ?? null;
+    });
+
+    // The new child must be A's LAST child and sit between C and root-sibling B.
+    expect(insertedId).not.toBeNull();
+    expect(result.current.getChildren('A').map((n) => n.id)).toEqual(['C', insertedId]);
+
+    const flat: string[] = [];
+
+    for (let i = 0; i < harness.editor.blocks.getBlocksCount(); i++) {
+      const node = harness.editor.blocks.getBlockByIndex(i);
+
+      if (node !== undefined) {
+        flat.push(node.id);
+      }
+    }
+    expect(flat).toEqual(['A', 'C', insertedId, 'B']);
   });
 });

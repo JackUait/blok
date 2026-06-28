@@ -8,6 +8,7 @@ import { EDITABLE_INPUT_SELECTOR, HEADER_TOOL_NAME, LIST_TOOL_NAME, QUOTE_TOOL_N
 import { keyCodeFromEvent } from '../utils/keyboard';
 
 import { BlockEventComposer } from './__base';
+import { getPrecedingSibling, getFollowingSiblings } from './structural-siblings';
 
 /**
  * Checks if the keyboard event is a block movement shortcut (Cmd/Ctrl+Shift+Arrow)
@@ -95,7 +96,7 @@ export class KeyboardNavigation extends BlockEventComposer {
    * @param event - keydown event
    */
   public handleTab(event: KeyboardEvent): void {
-    const { InlineToolbar, Caret, BlockSelection } = this.Blok;
+    const { InlineToolbar, BlockSelection } = this.Blok;
 
     const isFlipperActivated = InlineToolbar.opened;
 
@@ -112,47 +113,42 @@ export class KeyboardNavigation extends BlockEventComposer {
     }
 
     /**
-     * Notion-style indentation: Tab nests the current block under the preceding
-     * sibling; Shift+Tab outdents. Handled for a single block (no multi-block
-     * selection — that path belongs to blockSelectionKeys.handleIndent). When the
-     * block can't be indented/outdented (first block, already at min/max depth's
-     * navigation cases), fall through to caret navigation so Tab can still move
-     * focus / leave the editor for accessibility.
+     * Multi-block selections are indented/outdented by blockSelectionKeys.handleIndent,
+     * which runs before this handler. If we still reach here with a selection it could
+     * not act, so do nothing rather than relocate the caret.
      */
-    if (!BlockSelection.anyBlockSelected) {
-      const handled = event.shiftKey ? this.outdentCurrentBlock() : this.indentCurrentBlock();
-
-      if (handled) {
-        event.preventDefault();
-
-        return;
-      }
+    if (BlockSelection.anyBlockSelected) {
+      return;
     }
-
-    const isNavigated = event.shiftKey ? Caret.navigatePrevious(true) : Caret.navigateNext(true);
 
     /**
-     * Prevent default Tab behaviour only when navigation occurred within the
-     * editor. When navigateNext/navigatePrevious returns false (no next/prev
-     * block), allow the browser default so focus can leave the editor to
-     * external elements (e.g. inputs after the editor).
-     *
-     * Nested editors (e.g. database card drawer) are safe because the table
-     * cell guard above returns early, and those editors handle Tab themselves.
+     * Notion-style indentation: Tab nests the current block under the preceding
+     * sibling; Shift+Tab outdents.
      */
-    if (isNavigated) {
+    const handled = event.shiftKey ? this.outdentCurrentBlock() : this.indentCurrentBlock();
+
+    if (handled) {
       event.preventDefault();
+
+      return;
     }
+
+    /**
+     * Indent/outdent was impossible (no preceding sibling for Tab, already at root
+     * for Shift+Tab). Notion never relocates the caret to another block on Tab, so
+     * this is a strict no-op: we do NOT navigate the caret. We also leave the native
+     * Tab default intact (no preventDefault) so focus can still leave the editor for
+     * accessibility.
+     */
   }
 
   /**
-   * Indent the current block one level deeper, nesting it under the immediately
-   * preceding sibling (the block right above it at the same parent level). Uses
-   * the flat list-nesting indent, clamped so a block can never be more than one
-   * level deeper than its predecessor — matching Notion's Tab rule.
+   * Indent the current block one level deeper, nesting it structurally under the
+   * immediately preceding sibling (the block right above it at the same parent
+   * level) via parentId/contentIds — matching Notion's Tab rule.
    *
-   * @returns true if Tab was consumed (indented, or already at max depth);
-   *   false to let the caller fall back to caret navigation.
+   * @returns true if the block was indented; false when it cannot be (a list, or
+   *   no preceding sibling), so the caller can treat Tab as a no-op.
    */
   private indentCurrentBlock(): boolean {
     const { BlockManager } = this.Blok;
@@ -166,9 +162,9 @@ export class KeyboardNavigation extends BlockEventComposer {
      * Notion's Tab nests the block as the LAST child of its preceding sibling
      * (the nearest block before it at the same level). No preceding sibling —
      * the block is the first child of its parent (or the first block) — means
-     * there is nothing to nest under, so fall back to caret navigation.
+     * there is nothing to nest under, so this is a no-op.
      */
-    const precedingSibling = this.getPrecedingSibling(currentBlock);
+    const precedingSibling = getPrecedingSibling(BlockManager, currentBlock);
 
     if (precedingSibling === null) {
       return false;
@@ -184,8 +180,8 @@ export class KeyboardNavigation extends BlockEventComposer {
    * of its former parent (a child of the grandparent), and — matching Notion's
    * outliner — adopts its following same-parent siblings as its own children.
    *
-   * @returns true if the block was outdented; false (already at root) to let the
-   *   caller fall back to caret navigation.
+   * @returns true if the block was outdented; false when it cannot be (a list, or
+   *   already at root), so the caller can treat Shift+Tab as a no-op.
    */
   private outdentCurrentBlock(): boolean {
     const { BlockManager } = this.Blok;
@@ -212,7 +208,7 @@ export class KeyboardNavigation extends BlockEventComposer {
      * the parent's contentIds), then adopt them under the outdented block so the
      * content that used to sit below it stays nested beneath it.
      */
-    const followingSiblings = this.getFollowingSiblings(currentBlock);
+    const followingSiblings = getFollowingSiblings(BlockManager, currentBlock);
 
     for (const sibling of followingSiblings) {
       BlockManager.setBlockParent(sibling, currentBlock.id);
@@ -221,61 +217,6 @@ export class KeyboardNavigation extends BlockEventComposer {
     BlockManager.setBlockParent(currentBlock, grandparentId);
 
     return true;
-  }
-
-  /**
-   * Returns the block immediately before `block` (in document order) that shares
-   * its parent — its preceding sibling — or null when `block` is the first child
-   * of its parent (or the first block).
-   * @param block - the block whose preceding sibling to find
-   */
-  private getPrecedingSibling(block: Block): Block | null {
-    const { BlockManager } = this.Blok;
-    const index = BlockManager.getBlockIndex(block);
-    const preceding = BlockManager.blocks.slice(0, index).reverse();
-
-    for (const candidate of preceding) {
-      // Reached the parent without finding a sibling: block is the first child.
-      if (candidate.id === block.parentId) {
-        return null;
-      }
-
-      if (candidate.parentId === block.parentId) {
-        return candidate;
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Returns `block`'s following siblings (same parent, after it in order), read
-   * from the parent's contentIds so it is robust to interleaved descendants.
-   * @param block - the block whose following siblings to collect
-   */
-  private getFollowingSiblings(block: Block): Block[] {
-    const { BlockManager } = this.Blok;
-
-    if (block.parentId === null) {
-      return [];
-    }
-
-    const parent = BlockManager.getBlockById(block.parentId);
-
-    if (parent === undefined) {
-      return [];
-    }
-
-    const position = parent.contentIds.indexOf(block.id);
-
-    if (position === -1) {
-      return [];
-    }
-
-    return parent.contentIds
-      .slice(position + 1)
-      .map((id) => BlockManager.getBlockById(id))
-      .filter((sibling): sibling is Block => sibling !== undefined);
   }
 
   /**
@@ -370,6 +311,42 @@ export class KeyboardNavigation extends BlockEventComposer {
    * sibling after the toggle (like pressing Enter on an empty last list item).
    * Returns the promoted block, or null if no promotion occurred.
    */
+  /**
+   * Whether an empty nested block should stepwise-outdent on Enter. True only for
+   * blocks structurally nested under a PLAIN parent (e.g. a paragraph indented under
+   * another paragraph via Tab). Special containers — toggles, columns and callouts —
+   * manage their own empty-child Enter behaviour and are excluded, as are table cells
+   * and lists (lists handle their own Enter).
+   * @param block - the empty block where Enter was pressed
+   */
+  private shouldOutdentEmptyNestedBlock(block: Block): boolean {
+    if (block.parentId == null || block.name === LIST_TOOL_NAME || this.isCurrentBlockInsideTableCell) {
+      return false;
+    }
+
+    const parent = this.Blok.BlockManager.getBlockById(block.parentId);
+
+    if (parent === undefined) {
+      return false;
+    }
+
+    /**
+     * Container tools (toggle, callout, column) render a dedicated nested-blocks
+     * area in their holder and own their empty-child Enter behaviour. A plain
+     * structural parent (a paragraph/header with Tab-nested children) renders no
+     * such area — only that case should stepwise-outdent.
+     */
+    const hasNestedBlocksContainer = parent.holder.querySelector(
+      '[data-blok-toggle-open], [data-blok-toggle-children], [data-blok-nested-blocks]'
+    ) !== null;
+
+    if (hasNestedBlocksContainer || parent.name === 'column' || parent.name === 'column_list') {
+      return false;
+    }
+
+    return true;
+  }
+
   private promoteLastEmptyToggleChild(currentBlock: Block): Block | null {
     if (!currentBlock.isEmpty || currentBlock.parentId == null || this.isCurrentBlockInsideTableCell) {
       return null;
@@ -442,6 +419,20 @@ export class KeyboardNavigation extends BlockEventComposer {
 
     if (currentBlock.isEmpty && currentBlock.name === HEADER_TOOL_NAME && !isToggleHeading) {
       return this.Blok.BlockManager.replace(currentBlock, this.Blok.Tools.defaultTool.name, { text: '' });
+    }
+
+    /**
+     * Empty nested block + Enter: stepwise outdent (Notion). Instead of creating a
+     * new sibling below, promote THIS block one structural level (to its grandparent,
+     * adopting its following siblings — the same as Shift+Tab) and keep the caret in
+     * it. Repeated Enter steps it out until it reaches the top level, where the normal
+     * Case 2 path then creates a new block. Special containers (toggle, column,
+     * callout) are excluded — they keep their own empty-child Enter behaviour below.
+     */
+    if (currentBlock.isEmpty && this.shouldOutdentEmptyNestedBlock(currentBlock)) {
+      this.outdentCurrentBlock();
+
+      return currentBlock;
     }
 
     /**

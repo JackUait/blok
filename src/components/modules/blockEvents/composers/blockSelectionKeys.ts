@@ -3,6 +3,7 @@ import { SelectionUtils } from '../../../selection/index';
 import { LIST_TOOL_NAME } from '../constants';
 
 import { BlockEventComposer } from './__base';
+import { getPrecedingSibling, getFollowingSiblings } from './structural-siblings';
 
 /**
  * BlockSelectionKeys Composer handles keyboard interactions when blocks are selected.
@@ -122,29 +123,119 @@ export class BlockSelectionKeys extends BlockEventComposer {
       return false;
     }
 
-    const allListItems = BlockSelection.selectedBlocks.every(
-      (block) => block.name === LIST_TOOL_NAME
-    );
+    const selectedBlocks = BlockSelection.selectedBlocks;
+    const allListItems = selectedBlocks.every((block) => block.name === LIST_TOOL_NAME);
 
-    if (!allListItems) {
+    if (allListItems) {
+      event.preventDefault();
+
+      const isOutdent = event.shiftKey;
+
+      if (isOutdent && this.canOutdentSelectedListItems()) {
+        void this.updateSelectedListItemsDepth(-1);
+
+        return true;
+      }
+
+      if (!isOutdent && this.canIndentSelectedListItems()) {
+        void this.updateSelectedListItemsDepth(1);
+      }
+
+      return true;
+    }
+
+    /**
+     * Non-list selections of ANY block type indent/outdent structurally, the same
+     * way single-block Tab nesting does — selecting paragraphs/headings and pressing
+     * Tab nests the whole group (Notion parity). Mixed list + non-list selections are
+     * left to the default (lists store depth differently), so return false.
+     */
+    const noListItems = selectedBlocks.every((block) => block.name !== LIST_TOOL_NAME);
+
+    if (!noListItems) {
       return false;
     }
 
     event.preventDefault();
 
-    const isOutdent = event.shiftKey;
-
-    if (isOutdent && this.canOutdentSelectedListItems()) {
-      void this.updateSelectedListItemsDepth(-1);
-
-      return true;
-    }
-
-    if (!isOutdent && this.canIndentSelectedListItems()) {
-      void this.updateSelectedListItemsDepth(1);
+    if (event.shiftKey) {
+      this.outdentSelectedBlocksStructurally(selectedBlocks);
+    } else {
+      this.indentSelectedBlocksStructurally(selectedBlocks);
     }
 
     return true;
+  }
+
+  /**
+   * Nest the whole selection one level deeper, under the preceding sibling of the
+   * first selected block. Only the selection's top-level blocks are reparented;
+   * their descendants follow automatically. No-op when the first block has no
+   * preceding sibling (nothing to nest under).
+   * @param blocks - the selected blocks, in document order
+   */
+  private indentSelectedBlocksStructurally(blocks: Block[]): void {
+    const { BlockManager } = this.Blok;
+    const first = blocks[0];
+
+    if (first === undefined) {
+      return;
+    }
+
+    const precedingSibling = getPrecedingSibling(BlockManager, first);
+
+    if (precedingSibling === null) {
+      return;
+    }
+
+    const originalParentId = first.parentId;
+
+    for (const block of blocks) {
+      if (block.parentId === originalParentId) {
+        BlockManager.setBlockParent(block, precedingSibling.id);
+      }
+    }
+  }
+
+  /**
+   * Outdent the whole selection one level: each top-level selected block becomes a
+   * sibling of its former parent (a child of the grandparent). The siblings that
+   * follow the last selected block are adopted under it, mirroring single-block
+   * Shift+Tab. No-op when the selection is already at the document root.
+   * @param blocks - the selected blocks, in document order
+   */
+  private outdentSelectedBlocksStructurally(blocks: Block[]): void {
+    const { BlockManager } = this.Blok;
+    const first = blocks[0];
+    const last = blocks[blocks.length - 1];
+
+    if (first === undefined || last === undefined || first.parentId === null) {
+      return;
+    }
+
+    const parent = BlockManager.getBlockById(first.parentId);
+
+    if (parent === undefined) {
+      return;
+    }
+
+    const grandparentId = parent.parentId;
+    const originalParentId = first.parentId;
+
+    /**
+     * Capture and adopt the following siblings BEFORE reparenting (reparenting
+     * mutates the parent's contentIds) so the content below the selection stays
+     * nested beneath the outdented group.
+     */
+    for (const sibling of getFollowingSiblings(BlockManager, last)) {
+      BlockManager.setBlockParent(sibling, last.id);
+    }
+
+    for (const block of blocks) {
+      if (block.parentId === originalParentId) {
+        BlockManager.setBlockParent(block, grandparentId);
+      }
+    }
   }
 
   /**

@@ -209,18 +209,23 @@ describe('KeyboardNavigation', () => {
       expect(setBlockParent).toHaveBeenCalledWith(current, 'a');
     });
 
-    it('does not nest the first child of a parent (no preceding sibling)', () => {
+    it('is a strict no-op when the block is the first child of a parent (no preceding sibling)', () => {
       const parent = createBlock({ id: 'p', parentId: null });
       const current = createBlock({ id: 'cur', parentId: 'p' });
       const navigateNext = vi.fn(() => true);
       const blok = tabModules([parent, current], current, { navigateNext });
       const setBlockParent = blok.BlockManager.setBlockParent as ReturnType<typeof vi.fn>;
       const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
 
-      keyboardNavigation.handleTab(createKeyboardEvent({ key: 'Tab', shiftKey: false }));
+      keyboardNavigation.handleTab(event);
 
+      // Notion: Tab never relocates the caret to another block. When indent is
+      // impossible (no preceding sibling) it does nothing — caret stays put and
+      // the native Tab default is left intact so focus can still leave the editor.
       expect(setBlockParent).not.toHaveBeenCalled();
-      expect(navigateNext).toHaveBeenCalledWith(true);
+      expect(navigateNext).not.toHaveBeenCalled();
+      expect(event.preventDefault).not.toHaveBeenCalled();
     });
 
     it('outdents to the grandparent and adopts following siblings on Shift+Tab', () => {
@@ -241,7 +246,7 @@ describe('KeyboardNavigation', () => {
       expect(navigatePrevious).not.toHaveBeenCalled();
     });
 
-    it('does not indent list items (they manage their own depth)', () => {
+    it('does not indent list items (they manage their own depth) — no-op, no caret move', () => {
       const previous = createBlock({ id: 'prev', parentId: null });
       const current = createBlock({ id: 'cur', parentId: null, name: 'list' });
       const navigateNext = vi.fn(() => true);
@@ -252,33 +257,37 @@ describe('KeyboardNavigation', () => {
       keyboardNavigation.handleTab(createKeyboardEvent({ key: 'Tab', shiftKey: false }));
 
       expect(setBlockParent).not.toHaveBeenCalled();
-      expect(navigateNext).toHaveBeenCalledWith(true);
+      expect(navigateNext).not.toHaveBeenCalled();
     });
 
-    it('falls back to navigation when there is no preceding block on Tab', () => {
+    it('is a strict no-op when there is no preceding block on Tab', () => {
       const current = createBlock({ id: 'cur', parentId: null });
       const navigateNext = vi.fn(() => true);
       const blok = tabModules([current], current, { navigateNext });
       const setBlockParent = blok.BlockManager.setBlockParent as ReturnType<typeof vi.fn>;
       const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
 
-      keyboardNavigation.handleTab(createKeyboardEvent({ key: 'Tab', shiftKey: false }));
+      keyboardNavigation.handleTab(event);
 
       expect(setBlockParent).not.toHaveBeenCalled();
-      expect(navigateNext).toHaveBeenCalledWith(true);
+      expect(navigateNext).not.toHaveBeenCalled();
+      expect(event.preventDefault).not.toHaveBeenCalled();
     });
 
-    it('falls back to navigation when block is already at root on Shift+Tab', () => {
+    it('is a strict no-op when block is already at root on Shift+Tab', () => {
       const current = createBlock({ id: 'cur', parentId: null });
       const navigatePrevious = vi.fn(() => true);
       const blok = tabModules([current], current, { navigatePrevious });
       const setBlockParent = blok.BlockManager.setBlockParent as ReturnType<typeof vi.fn>;
       const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Tab', shiftKey: true });
 
-      keyboardNavigation.handleTab(createKeyboardEvent({ key: 'Tab', shiftKey: true }));
+      keyboardNavigation.handleTab(event);
 
       expect(setBlockParent).not.toHaveBeenCalled();
-      expect(navigatePrevious).toHaveBeenCalledWith(true);
+      expect(navigatePrevious).not.toHaveBeenCalled();
+      expect(event.preventDefault).not.toHaveBeenCalled();
     });
 
     it('does not navigate when InlineToolbar is opened', () => {
@@ -312,7 +321,7 @@ describe('KeyboardNavigation', () => {
       expect(event.preventDefault).not.toHaveBeenCalled();
     });
 
-    it('does not prevent default Tab behavior when navigation fails (tab out of editor)', () => {
+    it('leaves native Tab default intact when indent is impossible (tab out of editor)', () => {
       const current = createBlock({ id: 'cur', parentId: null });
       const navigateNext = vi.fn(() => false);
       const blok = tabModules([current], current, { navigateNext });
@@ -321,7 +330,9 @@ describe('KeyboardNavigation', () => {
 
       keyboardNavigation.handleTab(event);
 
-      expect(navigateNext).toHaveBeenCalledWith(true);
+      // No indent target and no caret relocation: preventDefault is NOT called,
+      // so the browser's native Tab can move focus out of the editor (a11y).
+      expect(navigateNext).not.toHaveBeenCalled();
       expect(event.preventDefault).not.toHaveBeenCalled();
     });
   });
@@ -550,6 +561,64 @@ describe('KeyboardNavigation', () => {
       keyboardNavigation.handleEnter(event);
 
       expect(setBlockParent).toHaveBeenCalledWith(newBlock, 'parent-x');
+
+      startSpy.mockRestore();
+      endSpy.mockRestore();
+    });
+
+    it('outdents an empty nested block one level on Enter instead of creating a sibling (stepwise outdent)', () => {
+      const grandparentId = 'gp';
+      const parentId = 'p';
+
+      const parentBlock = createBlock({ id: parentId, parentId: grandparentId, contentIds: ['cur'] });
+      const emptyNested = createBlock({
+        id: 'cur',
+        parentId,
+        isEmpty: true,
+        currentInput: (() => {
+          const input = document.createElement('div');
+          input.contentEditable = 'true';
+          return input;
+        })(),
+      });
+
+      const insertDefaultBlockAtIndex = vi.fn();
+      const setBlockParent = vi.fn();
+      const setToBlock = vi.fn();
+      const getBlockById = vi.fn((id: string) => {
+        if (id === parentId) return parentBlock;
+        if (id === grandparentId) return createBlock({ id: grandparentId, parentId: null });
+        return undefined;
+      });
+
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: emptyNested,
+          currentBlockIndex: 1,
+          insertDefaultBlockAtIndex,
+          setBlockParent,
+          getBlockById,
+          split: vi.fn(),
+          transactForTool: vi.fn((fn: () => void) => fn()),
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+          setToBlock,
+        } as unknown as BlokModules['Caret'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Enter' });
+
+      const startSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+      const endSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleEnter(event);
+
+      // The empty block itself is promoted to its grandparent; no new sibling block
+      // is created and the caret stays in the (now-outdented) block.
+      expect(setBlockParent).toHaveBeenCalledWith(emptyNested, grandparentId);
+      expect(insertDefaultBlockAtIndex).not.toHaveBeenCalled();
+      expect(setToBlock).toHaveBeenCalledWith(emptyNested);
 
       startSpy.mockRestore();
       endSpy.mockRestore();

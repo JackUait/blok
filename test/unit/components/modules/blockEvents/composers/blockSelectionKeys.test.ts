@@ -544,6 +544,115 @@ describe('BlockSelectionKeys', () => {
       });
     });
 
+    describe('structural indent for non-list selections (H6)', () => {
+      it('indents a multi-paragraph selection under the preceding sibling', () => {
+        const pre = createBlock({ id: 'pre', name: 'paragraph', parentId: null });
+        const p1 = createBlock({ id: 'p1', name: 'paragraph', parentId: null, selected: true });
+        const p2 = createBlock({ id: 'p2', name: 'paragraph', parentId: null, selected: true });
+        const blocks = [pre, p1, p2];
+        const setBlockParent = vi.fn();
+        const blok = createBlokModules({
+          BlockSelection: {
+            anyBlockSelected: true,
+            selectedBlocks: [p1, p2],
+          } as unknown as BlokModules['BlockSelection'],
+          BlockManager: {
+            blocks,
+            getBlockIndex: vi.fn((block: Block) => blocks.indexOf(block)),
+            getBlockById: vi.fn((id: string) => blocks.find((b) => b.id === id)),
+            setBlockParent,
+          } as unknown as BlokModules['BlockManager'],
+        });
+        const blockSelectionKeys = new BlockSelectionKeys(blok);
+        const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
+
+        const result = blockSelectionKeys.handleIndent(event);
+
+        expect(result).toBe(true);
+        expect(event.preventDefault).toHaveBeenCalledTimes(1);
+        expect(setBlockParent).toHaveBeenCalledWith(p1, 'pre');
+        expect(setBlockParent).toHaveBeenCalledWith(p2, 'pre');
+      });
+
+      it('is a no-op when the first selected block has no preceding sibling', () => {
+        const p1 = createBlock({ id: 'p1', name: 'paragraph', parentId: null, selected: true });
+        const p2 = createBlock({ id: 'p2', name: 'paragraph', parentId: null, selected: true });
+        const blocks = [p1, p2];
+        const setBlockParent = vi.fn();
+        const blok = createBlokModules({
+          BlockSelection: {
+            anyBlockSelected: true,
+            selectedBlocks: [p1, p2],
+          } as unknown as BlokModules['BlockSelection'],
+          BlockManager: {
+            blocks,
+            getBlockIndex: vi.fn((block: Block) => blocks.indexOf(block)),
+            getBlockById: vi.fn((id: string) => blocks.find((b) => b.id === id)),
+            setBlockParent,
+          } as unknown as BlokModules['BlockManager'],
+        });
+        const blockSelectionKeys = new BlockSelectionKeys(blok);
+        const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
+
+        const result = blockSelectionKeys.handleIndent(event);
+
+        // Handled (prevents caret navigation) but performs no reparenting.
+        expect(result).toBe(true);
+        expect(event.preventDefault).toHaveBeenCalledTimes(1);
+        expect(setBlockParent).not.toHaveBeenCalled();
+      });
+
+      it('outdents a multi-paragraph selection to the grandparent, adopting trailing siblings', () => {
+        const gp = createBlock({ id: 'gp', name: 'paragraph', parentId: null });
+        const parent = createBlock({ id: 'p', name: 'paragraph', parentId: 'gp', contentIds: ['p1', 'p2', 'trail'] });
+        const p1 = createBlock({ id: 'p1', name: 'paragraph', parentId: 'p', selected: true });
+        const p2 = createBlock({ id: 'p2', name: 'paragraph', parentId: 'p', selected: true });
+        const trail = createBlock({ id: 'trail', name: 'paragraph', parentId: 'p' });
+        const blocks = [gp, parent, p1, p2, trail];
+        const setBlockParent = vi.fn();
+        const blok = createBlokModules({
+          BlockSelection: {
+            anyBlockSelected: true,
+            selectedBlocks: [p1, p2],
+          } as unknown as BlokModules['BlockSelection'],
+          BlockManager: {
+            blocks,
+            getBlockIndex: vi.fn((block: Block) => blocks.indexOf(block)),
+            getBlockById: vi.fn((id: string) => blocks.find((b) => b.id === id)),
+            setBlockParent,
+          } as unknown as BlokModules['BlockManager'],
+        });
+        const blockSelectionKeys = new BlockSelectionKeys(blok);
+        const event = createKeyboardEvent({ key: 'Tab', shiftKey: true });
+
+        const result = blockSelectionKeys.handleIndent(event);
+
+        expect(result).toBe(true);
+        expect(event.preventDefault).toHaveBeenCalledTimes(1);
+        // The trailing sibling is adopted by the last selected block, then both
+        // selected blocks move up to the grandparent.
+        expect(setBlockParent).toHaveBeenCalledWith(trail, 'p2');
+        expect(setBlockParent).toHaveBeenCalledWith(p1, 'gp');
+        expect(setBlockParent).toHaveBeenCalledWith(p2, 'gp');
+      });
+
+      it('leaves mixed list + non-list selections to default (returns false)', () => {
+        const mixed = [createBlock({ name: 'paragraph' }), createBlock({ name: 'list' })];
+        const blok = createBlokModules({
+          BlockSelection: {
+            anyBlockSelected: true,
+            selectedBlocks: mixed,
+          } as unknown as BlokModules['BlockSelection'],
+        });
+        const blockSelectionKeys = new BlockSelectionKeys(blok);
+        const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
+
+        const result = blockSelectionKeys.handleIndent(event);
+
+        expect(result).toBe(false);
+      });
+    });
+
     describe('outdent (Shift+Tab)', () => {
       it('returns false when selected blocks have depth 0', () => {
         const mockListBlock = createBlock({ name: 'list', id: 'list-block' });

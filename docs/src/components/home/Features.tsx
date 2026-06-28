@@ -1027,10 +1027,24 @@ const SlashViz: React.FC = () => {
     <div
       ref={rootRef}
       aria-hidden="true"
-      // self-start: this menu is taller than the bento cell, so it top-aligns
-      // (like the table diorama) and overflows only downward — where the card
-      // border clips it flush — instead of centering and riding over the title.
-      className="relative w-full self-start overflow-hidden rounded-2xl border border-border/60 bg-card p-2 shadow-[0_20px_44px_-18px_rgba(0,0,0,0.22)]"
+      // self-start so the menu top-pins and only ever overflows downward (clipped
+      // flush by the tile / drawer hero). Anchoring the search field at the top is
+      // vital: the result list changes height as rows animate in and out, so a
+      // top-pinned menu grows/shrinks downward (stable) rather than bouncing about
+      // a centre line.
+      //
+      // max-w-[14rem] + mx-auto fix the menu to one width and centre it, so it reads
+      // as the SAME card in every container — the bento cell, the wide drawer hero,
+      // and the mobile stack — instead of stretching full-bleed to each. Paired with
+      // the fixed 108px window each container gives it, the slash menu renders as an
+      // identical clipped teaser everywhere.
+      //
+      // Unlike the other dioramas (which fill their tile), this menu is a floating
+      // card with a padding ring around it — so the tile's raw glow blob would bleed
+      // through that ring. The fix is upstream: the slash tile/hero does NOT render
+      // the .bento-spot blob (see CapabilityTile and FeatureModal), so the only glow
+      // here is the crisp brand edge-light painted on this card's border below.
+      className="relative mx-auto w-full max-w-[14rem] self-start overflow-hidden rounded-2xl border border-border/60 bg-card p-2 shadow-[0_20px_44px_-18px_rgba(0,0,0,0.22)]"
     >
       {/* Brand border revealed where the tile's glow blob touches the card. */}
       <span
@@ -2087,6 +2101,10 @@ const CapabilityTile: React.FC<TileProps> = ({ feature, onOpen }) => {
   // The embeds tile clears its title on hover so the diagonal river of logos can
   // flood the whole block.
   const isEmbeds = feature.accent === "blue";
+  // The slash menu is a floating card with a padding ring around it (every other
+  // diorama fills its tile). The tile's raw glow blob bleeds through that ring, so
+  // this tile skips the blob and relies on the menu's own brand edge-light instead.
+  const isSlash = feature.accent === "pink";
 
   return (
     <motion.button
@@ -2103,7 +2121,7 @@ const CapabilityTile: React.FC<TileProps> = ({ feature, onOpen }) => {
       onClick={() => onOpen(feature)}
       aria-label={feature.learnMore}
     >
-      <span className="bento-spot" aria-hidden="true" />
+      {!isSlash && <span className="bento-spot" aria-hidden="true" />}
 
       <div
         className={`relative z-10 grid ${
@@ -2127,14 +2145,19 @@ const CapabilityTile: React.FC<TileProps> = ({ feature, onOpen }) => {
         </div>
       </div>
       {/* Below lg the discrete dioramas grow to their natural height (108px floor)
-          so nothing is cut off in the single-column stack; the embeds tile keeps a
-          fixed window because its viz is a flooding marquee. From lg up every tile
-          releases to fill the bento cell as before. */}
+          so nothing is cut off in the single-column stack. The embeds tile keeps a
+          fixed window because its viz is a flooding marquee; the slash menu likewise
+          uses a fixed 108px window so it clips at the tile's bottom edge — the same
+          teaser the desktop bento cell and the drawer show, rather than unfurling to
+          its full height. From lg up every tile releases to fill the bento cell,
+          where the taller dioramas read as a clipped teaser. */}
       <div
         className={`relative z-10 flex items-center justify-center lg:h-auto lg:flex-1 ${
           isEmbeds
             ? "overflow-hidden h-[6.75rem] -mx-4 w-[calc(100%+2rem)] lg:-mx-5 lg:w-[calc(100%+2.5rem)] lg:transition-[margin] lg:duration-500 lg:ease-out lg:group-hover:-mb-8 lg:group-hover:-mt-10"
-            : "overflow-hidden lg:overflow-visible min-h-[6.75rem] w-full pt-1 lg:min-h-0"
+            : isSlash
+              ? "overflow-hidden lg:overflow-visible h-[6.75rem] w-full pt-1 lg:h-auto"
+              : "overflow-hidden lg:overflow-visible min-h-[6.75rem] w-full pt-1 lg:min-h-0"
         }`}
       >
         <Viz />

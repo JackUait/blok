@@ -78,6 +78,28 @@ describe('FeatureModal', () => {
     expect(plate?.className).not.toContain('h-[21rem]');
   });
 
+  it('sizes the slash hero to the same clipped teaser the bento cell shows', () => {
+    // The slash menu must render identically on the main page, in the drawer, and on
+    // mobile. The bento cell shows it as a 108px clipped teaser, so the drawer plate
+    // is sized to that window (h-[8.75rem] = the 108px menu window + the p-4 frame)
+    // and the menu overflows the bottom, clipped flush — not the full 3-row menu.
+    const { container } = renderModal({ ...mockFeature, accent: 'pink' });
+    const plate = container.querySelector('.bento-tile');
+    expect(plate?.className).toContain('h-[8.75rem]');
+    expect(plate?.className).not.toContain('h-[17rem]');
+  });
+
+  it('skips the glow blob on the slash hero (its floating card would bleed it)', () => {
+    // The slash menu is a floating card with a padding ring; the raw .bento-spot
+    // blob bled through it. Pink relies on the menu's own edge-light, so the hero
+    // omits the blob — while other accents keep it.
+    const { container: pink } = renderModal({ ...mockFeature, accent: 'pink' });
+    expect(pink.querySelector('.bento-tile .bento-spot')).toBeNull();
+
+    const { container: other } = renderModal({ ...mockFeature, accent: 'cyan' });
+    expect(other.querySelector('.bento-tile .bento-spot')).not.toBeNull();
+  });
+
   it('runs the Embeds river edge to edge (no plate padding)', () => {
     // The embeds viz is a full-bleed marquee; padding would leave an empty frame
     // around it. Blue gets p-0 so the river fills the plate to its rounded edges.

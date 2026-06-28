@@ -309,13 +309,14 @@ describe('Features', () => {
   it('releases the capability diorama window on desktop instead of hard-clipping', () => {
     const { container } = renderFeatures();
 
-    // the discrete capability dioramas (slash, media, undo, tables, languages)
-    // all carry the mobile height floor; the embeds tile uses a fixed h-[6.75rem]
-    // marquee window instead, so it is intentionally excluded.
+    // the grow-to-fit capability dioramas (media, undo, tables, languages) all carry
+    // the mobile height floor; the embeds tile uses a fixed h-[6.75rem] marquee
+    // window, and the slash menu uses a fixed h-[6.75rem] teaser clip — both are
+    // intentionally excluded from the grow-to-fit floor group.
     const dioramaWraps = Array.from(
       container.querySelectorAll<HTMLElement>('div'),
     ).filter((el) => /(^|\s)min-h-\[6\.75rem\]/.test(el.className));
-    expect(dioramaWraps).toHaveLength(5);
+    expect(dioramaWraps).toHaveLength(4);
 
     for (const wrap of dioramaWraps) {
       // mobile keeps the clip so the floor can't be overrun in the stacked column
@@ -326,24 +327,67 @@ describe('Features', () => {
     }
   });
 
-  // The slash menu diorama is taller than its bento cell. Its wrapper centers the
-  // diorama vertically — fine for the short tiles — but a centered tall card
-  // overflows EQUALLY up and down, and the upward half rode over the tile title,
-  // covering it (the "broken" look). The equally-tall table diorama avoids this by
-  // top-aligning itself (self-start) so it only ever overflows downward, where the
-  // card border clips it flush. Lock the slash diorama to the same rule.
+  // Find the slash diorama's window wrapper (the div holding the SlashViz card).
+  // Scoped to the slash button, so the fixed h-[6.75rem] teaser clip is unambiguous.
+  const findSlashWindow = (slash: HTMLElement) =>
+    Array.from(slash.querySelectorAll<HTMLElement>('div')).find((el) =>
+      /(^|\s)h-\[6\.75rem\]/.test(el.className),
+    );
+
   it('top-aligns the slash diorama so a tall menu never rides over the tile title', () => {
     renderFeatures();
     const slash = screen.getByRole('button', {
       name: 'Learn more about the slash menu and Markdown',
     });
-    const wrap = Array.from(slash.querySelectorAll<HTMLElement>('div')).find((el) =>
-      /(^|\s)min-h-\[6\.75rem\]/.test(el.className),
-    );
+    const wrap = findSlashWindow(slash);
     expect(wrap).toBeDefined();
     // the SlashViz root is the diorama card — the direct child of the wrapper
     const card = wrap?.querySelector<HTMLElement>(':scope > div');
     expect(card?.className).toMatch(/(^|\s)self-start(\s|$)/);
+  });
+
+  // The slash menu has one capped width (max-w-[14rem]) + mx-auto so it reads as the
+  // same card in every container instead of stretching full-bleed to each. It shows
+  // as a clipped teaser everywhere — desktop bento cell, drawer, AND mobile — via a
+  // fixed h-[6.75rem] window (NOT the grow-to-fit min-h-[6.75rem] floor), so on mobile
+  // it clips at the tile's bottom edge rather than unfurling to its full height.
+  // Lock the capped width and the fixed-clip window.
+  it('caps the slash menu width and clips it to a fixed teaser on mobile', () => {
+    renderFeatures();
+    const slash = screen.getByRole('button', {
+      name: 'Learn more about the slash menu and Markdown',
+    });
+    const wrap = findSlashWindow(slash);
+    // a fixed teaser clip on mobile, not the grow-to-fit full-menu floor
+    expect(wrap?.className).toMatch(/(^|\s)h-\[6\.75rem\](\s|$)/);
+    expect(wrap?.className).not.toMatch(/(^|\s)min-h-\[6\.75rem\](\s|$)/);
+    // mobile clips, desktop releases
+    expect(wrap?.className).toMatch(/(^|\s)overflow-hidden(\s|$)/);
+    expect(wrap?.className).toMatch(/(^|\s)lg:overflow-visible(\s|$)/);
+    // the card itself is capped to one width and centred
+    const card = wrap?.querySelector<HTMLElement>(':scope > div');
+    expect(card?.className).toMatch(/(^|\s)max-w-\[14rem\](\s|$)/);
+    expect(card?.className).toMatch(/(^|\s)mx-auto(\s|$)/);
+  });
+
+  // Every other diorama fills its tile, so the tile's cursor-following glow blob
+  // (.bento-spot) is hidden behind it and only the soft edge shows. The slash menu
+  // is a floating card with a padding ring around it, so the raw blob bled through
+  // that ring — worst at a touched edge on mobile. The slash tile therefore skips
+  // the blob entirely and relies on the menu's own brand edge-light; every other
+  // tile still renders it. Lock both halves so the bleed can't regress.
+  it('omits the raw glow blob on the slash tile but keeps it on the others', () => {
+    renderFeatures();
+    const slash = screen.getByRole('button', {
+      name: 'Learn more about the slash menu and Markdown',
+    });
+    expect(slash.querySelector('.bento-spot')).toBeNull();
+
+    // a sibling capability tile (tables) still carries the blob
+    const tables = screen.getByRole('button', {
+      name: 'Learn more about tables',
+    });
+    expect(tables.querySelector('.bento-spot')).not.toBeNull();
   });
 
   // Every diorama animation is gated behind the cursor: `:hover` in CSS,

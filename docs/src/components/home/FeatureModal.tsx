@@ -290,15 +290,24 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
                   <div
                     ref={heroRef}
                     onPointerMove={trackGlow}
-                    // Most dioramas sit inside the plate padding, but two need
+                    // Most dioramas sit inside the plate padding, but three need
                     // special treatment: the Clean JSON (coral) viz flips to a full
                     // editor canvas whose back face is the tallest of them all, so
-                    // it gets extra height; and the Embeds (blue) viz is a
-                    // full-bleed marquee, so it drops the padding and runs the river
-                    // edge to edge instead of leaving an empty frame.
-                    className={`bento-tile group relative ${feature.accent === "coral" ? "h-[21rem]" : "h-[17rem]"} overflow-hidden rounded-[calc(1.65rem-0.375rem)] border border-border/60 bg-card ${feature.accent === "blue" ? "p-0" : "p-4"} shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]`}
+                    // it gets extra height; the Embeds (blue) viz is a full-bleed
+                    // marquee, so it drops the padding and runs the river edge to
+                    // edge instead of leaving an empty frame; and the slash menu
+                    // (pink) is shown as the SAME clipped teaser it is in the bento
+                    // cell, so its plate is sized to that 108px window (h-[8.75rem] =
+                    // the menu window + p-4) and the menu overflows the bottom,
+                    // clipped flush — matching the main-page and mobile renders.
+                    className={`bento-tile group relative ${feature.accent === "coral" ? "h-[21rem]" : feature.accent === "pink" ? "h-[8.75rem]" : "h-[17rem]"} overflow-hidden rounded-[calc(1.65rem-0.375rem)] border border-border/60 bg-card ${feature.accent === "blue" ? "p-0" : "p-4"} shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]`}
                   >
-                    <span className="bento-spot" aria-hidden="true" />
+                    {/* The slash menu (pink) is a floating card with a padding ring
+                        the raw glow blob would bleed through; it relies on its own
+                        brand edge-light instead, so this hero skips the blob. */}
+                    {feature.accent !== "pink" && (
+                      <span className="bento-spot" aria-hidden="true" />
+                    )}
                     <div className="relative z-10 flex h-full w-full items-center">
                       {visual}
                     </div>

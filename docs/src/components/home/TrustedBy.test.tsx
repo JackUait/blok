@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { TrustedBy } from './TrustedBy';
 import { I18nProvider } from '../../contexts/I18nContext';
@@ -97,5 +97,45 @@ describe('TrustedBy', () => {
     expect(
       screen.getByRole('heading', { name: /Компании, которые нам доверяют/i })
     ).toBeInTheDocument();
+  });
+
+  // The cards carry the same cursor-tracked glow + border light as the Features
+  // bento tiles. With no cursor on touch they'd sit dark, so — like the Features
+  // tiles — a finger pressing a card lights it (`.is-touch-active`, which the
+  // shared `.bento-tile` CSS reads for the spot, edge glow and lift) and lifting
+  // settles it. The cards aren't buttons, so there's no click to guard; the inner
+  // links stay tappable.
+  describe('touch gestures (cards light under the finger, never just on hover)', () => {
+    it('wakes the pressed card and settles it when the finger lifts', () => {
+      renderTrustedBy();
+      const card = screen.getByTestId('trusted-featured');
+      expect(card.classList.contains('is-touch-active')).toBe(false);
+
+      fireEvent.pointerDown(card, { pointerType: 'touch', clientX: 20, clientY: 20 });
+      expect(card.classList.contains('is-touch-active')).toBe(true);
+
+      fireEvent.pointerUp(card, { pointerType: 'touch', clientX: 20, clientY: 20 });
+      expect(card.classList.contains('is-touch-active')).toBe(false);
+    });
+
+    it('also wakes the stats/contact card on press', () => {
+      renderTrustedBy();
+      const card = screen.getByTestId('trusted-stats').closest('.bento-tile');
+      expect(card).not.toBeNull();
+      expect(card!.classList.contains('is-touch-active')).toBe(false);
+
+      fireEvent.pointerDown(card!, { pointerType: 'touch', clientX: 10, clientY: 10 });
+      expect(card!.classList.contains('is-touch-active')).toBe(true);
+
+      fireEvent.pointerCancel(card!, { pointerType: 'touch', clientX: 10, clientY: 10 });
+      expect(card!.classList.contains('is-touch-active')).toBe(false);
+    });
+
+    it('leaves a mouse pointer to the desktop :hover path (no is-touch-active)', () => {
+      renderTrustedBy();
+      const card = screen.getByTestId('trusted-featured');
+      fireEvent.pointerDown(card, { pointerType: 'mouse', clientX: 20, clientY: 20 });
+      expect(card.classList.contains('is-touch-active')).toBe(false);
+    });
   });
 });

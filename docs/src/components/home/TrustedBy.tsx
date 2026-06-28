@@ -18,6 +18,13 @@ import { useI18n } from "../../contexts/I18nContext";
 // The same cursor-reactive tilt + glow the Features bento tiles use, so these
 // cards behave identically to the rest of the page: a subtle 3D lean toward the
 // pointer and the --mx/--my the .bento-tile border glow and .bento-spot read.
+//
+// On touch there is no cursor, so — mirroring the Features tiles — a finger
+// press lights the card (`.is-touch-active`, which the shared `.bento-tile` CSS
+// reads for the spot, edge glow and lift) and its pointermove feeds --mx/--my so
+// the glow trails the finger across the card; lifting/cancelling settles it. A
+// finger never 3D-tilts (a card rocking under your thumb reads as a glitch). The
+// cards aren't buttons, so there's no click to guard — the inner links stay live.
 const hoverSpring = { type: "spring", stiffness: 380, damping: 20 } as const;
 const TILT = 5;
 
@@ -30,23 +37,45 @@ const useTilt = () => {
     return { style: undefined, handlers: {} as Record<string, never> };
   }
 
+  // Feed the glow blob + border light the pointer position (as a fraction of the
+  // card), shared by a cursor sweep and a finger drag alike.
+  const lightGlow = (e: React.PointerEvent<HTMLElement>) => {
+    const el = e.currentTarget;
+    const rect = el.getBoundingClientRect();
+    el.style.setProperty("--mx", `${((e.clientX - rect.left) / rect.width) * 100}%`);
+    el.style.setProperty("--my", `${((e.clientY - rect.top) / rect.height) * 100}%`);
+  };
+
   return {
     style: { rotateX, rotateY, transformPerspective: 1000 },
     handlers: {
       onPointerMove: (e: React.PointerEvent<HTMLElement>) => {
-        if (e.pointerType !== "mouse") return;
-        const el = e.currentTarget;
-        const rect = el.getBoundingClientRect();
-        const px = (e.clientX - rect.left) / rect.width;
-        const py = (e.clientY - rect.top) / rect.height;
-        rotateX.set((0.5 - py) * TILT * 2);
-        rotateY.set((px - 0.5) * TILT * 2);
-        el.style.setProperty("--mx", `${px * 100}%`);
-        el.style.setProperty("--my", `${py * 100}%`);
+        const isTouch = e.pointerType === "touch";
+        if (e.pointerType !== "mouse" && !isTouch) return;
+        if (!isTouch) {
+          const el = e.currentTarget;
+          const rect = el.getBoundingClientRect();
+          rotateX.set((0.5 - (e.clientY - rect.top) / rect.height) * TILT * 2);
+          rotateY.set(((e.clientX - rect.left) / rect.width - 0.5) * TILT * 2);
+        }
+        lightGlow(e);
       },
-      onPointerLeave: () => {
+      onPointerDown: (e: React.PointerEvent<HTMLElement>) => {
+        if (e.pointerType !== "touch") return;
+        e.currentTarget.classList.add("is-touch-active");
+        lightGlow(e); // place the glow under the initial touch
+      },
+      onPointerUp: (e: React.PointerEvent<HTMLElement>) => {
+        if (e.pointerType !== "touch") return;
+        e.currentTarget.classList.remove("is-touch-active");
+      },
+      onPointerCancel: (e: React.PointerEvent<HTMLElement>) => {
+        e.currentTarget.classList.remove("is-touch-active");
+      },
+      onPointerLeave: (e: React.PointerEvent<HTMLElement>) => {
         rotateX.set(0);
         rotateY.set(0);
+        e.currentTarget.classList.remove("is-touch-active");
       },
     },
   };

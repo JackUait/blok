@@ -13,10 +13,12 @@ export interface SerializableBlock {
   tool: string;
   data: BlockToolData;
   /**
-   * Flat list-nesting (Tab) indent level. Applied as leading indentation so a
-   * Tab-nested paragraph/header serializes nested instead of flat — matching
-   * Notion's Markdown export. List items carry their own nesting via
-   * `data.depth`, so this is ignored for the `list` tool.
+   * Structural nesting depth (the parentId chain length), applied as leading
+   * indentation so a Tab/drag-nested block serializes nested instead of flat —
+   * matching Notion's Markdown export. Used for EVERY tool, including `list`:
+   * list nesting is structural now, so its indent comes from here (with a
+   * fallback to the legacy flat `data.depth` for imported lists that have no
+   * structural parent yet).
    */
   indent?: number;
 }
@@ -126,8 +128,13 @@ const blockToMarkdown = (block: SerializableBlock): string => {
 
   switch (block.tool) {
     case 'list': {
-      // List items carry their own nesting via data.depth (not the flat indent).
-      const indent = LIST_INDENT.repeat(Math.max(Number(data.depth ?? 0), 0));
+      // List nesting is structural (parentId chain), carried in `indent` —
+      // consistent with how Tab-nested text/headers serialize. Fall back to the
+      // legacy flat `data.depth` for imported lists that have no structural parent
+      // yet, so their indentation survives a copy-as-markdown.
+      const structuralDepth = Math.max(Number(block.indent ?? 0), 0);
+      const flatDepth = Math.max(Number(data.depth ?? 0), 0);
+      const indent = LIST_INDENT.repeat(structuralDepth > 0 ? structuralDepth : flatDepth);
 
       if (data.style === 'ordered') {
         return `${indent}1. ${text}`;

@@ -305,6 +305,29 @@ describe('block-operations', () => {
       expect(result.depth).toBeUndefined();
     });
 
+    it('emits the explicit structural depth when provided, overriding a stale data.depth', () => {
+      // Nesting is now structural (parentId chain). The list tool passes its
+      // structural depth in; serialization follows that, never the (possibly
+      // stale) stored data.depth — so a dragged/keyboard-nested item round-trips.
+      const element = createMockElement('Content', 'unordered', 0);
+      const data: ListItemData = { text: '', style: 'unordered', checked: false, depth: 0 };
+
+      const result = saveListItem(data, element, () => element.querySelector('[data-blok-testid="list-content-container"]') as HTMLElement, 2);
+
+      expect(result.depth).toBe(2);
+    });
+
+    it('omits depth when the explicit structural depth is 0 even if data.depth is stale', () => {
+      // The item sits at root in the tree (structural depth 0) but still carries a
+      // stale flat data.depth=2 — serialization must drop it, not emit depth 2.
+      const element = createMockElement('Content', 'unordered', 2);
+      const data: ListItemData = { text: '', style: 'unordered', checked: false, depth: 2 };
+
+      const result = saveListItem(data, element, () => element.querySelector('[data-blok-testid="list-content-container"]') as HTMLElement, 0);
+
+      expect(result.depth).toBeUndefined();
+    });
+
     it('handles when getContentElement returns null', () => {
       const element = createMockElement('Content');
       const data: ListItemData = { text: 'Original', style: 'unordered', checked: false };

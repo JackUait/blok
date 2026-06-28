@@ -726,6 +726,67 @@ describe("DragManager - Component Integration", () => {
       );
     });
 
+    it("re-fires moved() on a dragged list item after the drop reparents it, so its depth re-derives from the final structural position (no stale flat depth)", () => {
+      // List nesting is structural (parentId/contentIds). The moved() hook fired
+      // during the flat-array move runs BEFORE the drop sets the item's final
+      // structural parent, so it would derive depth from a stale parent. After the
+      // reparent completes, the drop MUST re-fire moved() so the list tool
+      // recomputes its depth/indent/marker/numbering from the actual tree —
+      // keeping data.depth consistent with the structural parent (the gap that let
+      // a keyboard-nested item carry a stale flat depth into save()).
+      const { dragManager, blocks, wrapper, modules } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      blocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      // Drag the list item at index 1 down past block-4 (index 3) — a real
+      // reorder, not a same-slot drop.
+      const sourceBlock = blocks[1];
+      (sourceBlock as unknown as { name: string }).name = "list";
+      sourceBlock.holder.setAttribute("data-list-depth", "0");
+
+      const targetBlock = blocks[3];
+      (targetBlock.holder.getBoundingClientRect as Mock).mockReturnValue({
+        top: 200,
+        bottom: 250,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 50,
+        x: 0,
+        y: 200,
+        toJSON: () => ({}),
+      });
+
+      const dragHandle = document.createElement("div");
+      dragManager.setupDragHandle(dragHandle, sourceBlock);
+
+      dragHandle.dispatchEvent(
+        createMouseEvent("mousedown", { clientX: 100, clientY: 100 }),
+      );
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 110, clientY: 100 }),
+      );
+
+      vi.mocked(document.elementFromPoint).mockReturnValue(targetBlock.holder);
+      // Bottom half of block-4 -> drop below it (a real move at root depth).
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 50, clientY: 240 }),
+      );
+
+      document.dispatchEvent(createMouseEvent("mouseup", { altKey: false }));
+
+      // A real reorder happened...
+      expect(modules.BlockManager.move).toHaveBeenCalled();
+      // ...and the dragged LIST item's moved() hook was re-fired after reparenting
+      // so it can recompute its structural depth (the stub's BlockManager.move is a
+      // no-op, so this is the ONLY moved() call — it comes from the re-fire pass).
+      expect(sourceBlock.call).toHaveBeenCalledWith(
+        "moved",
+        expect.objectContaining({}),
+      );
+    });
+
     it("should abort handleDrop completely when target became stale mid-drag (Layer 13)", () => {
       // Regression: wrong-block-dropped family.
       //

@@ -65,12 +65,19 @@ export const rerenderListItem = (context: RerenderContext): HTMLElement | null =
 }
 
 /**
- * Save the list item data
+ * Save the list item data.
+ *
+ * @param depth - the item's STRUCTURAL nesting depth (derived from the parentId
+ *   chain by the list tool). When provided it is the source of truth for the
+ *   serialized depth, so a dragged/keyboard-nested item round-trips even if the
+ *   stored `data.depth` drifted. Falls back to `data.depth` when omitted (e.g.
+ *   imported lists that only carry the legacy flat depth).
  */
 export const saveListItem = (
   data: ListItemData,
   element: HTMLElement | null,
-  getContentElement: () => HTMLElement | null
+  getContentElement: () => HTMLElement | null,
+  depth?: number
 ): ListItemData => {
   if (!element) return data;
 
@@ -87,8 +94,10 @@ export const saveListItem = (
     result.start = data.start;
   }
 
-  if (data.depth !== undefined && data.depth > 0) {
-    result.depth = data.depth;
+  const effectiveDepth = depth ?? data.depth ?? 0;
+
+  if (effectiveDepth > 0) {
+    result.depth = effectiveDepth;
   }
 
   return result;

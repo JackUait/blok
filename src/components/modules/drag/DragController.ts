@@ -1,4 +1,5 @@
 import { Module } from '../../__module';
+import { BlockToolAPI } from '../../block';
 import type { Block } from '../../block';
 import { DATA_ATTR } from '../../constants';
 import { announce } from '../../utils/announcer';
@@ -930,6 +931,22 @@ export class DragController extends Module {
       this.applyStructuralDropDepth(reparentedBlocks, dropDepth, movedBlockIds, affectedParentIds);
     }
 
+    // A list item derives its nesting depth from its position in the block tree.
+    // The moved() hook fired during the flat-array move ran BEFORE the reparenting
+    // above set each item's FINAL structural parent, so it read a stale parent.
+    // Re-fire moved() now that parentId is final, so the list tool recomputes its
+    // depth/indent/marker/numbering from the actual tree — keeping data.depth
+    // consistent with the structural parent (no stale flat depth leaking into save()).
+    for (const movedBlock of result.movedBlocks) {
+      if (movedBlock.name !== 'list') {
+        continue;
+      }
+
+      const listIndex = this.Blok.BlockManager.getBlockIndex(movedBlock);
+
+      movedBlock.call(BlockToolAPI.MOVED, { fromIndex: listIndex, toIndex: listIndex });
+    }
+
     // Notify affected parent blocks so toggle tools update their visual state
     // (e.g. hide/show body placeholder when children are added/removed)
     for (const parentId of affectedParentIds) {
@@ -998,8 +1015,10 @@ export class DragController extends Module {
 
   /**
    * Re-homes each dropped root block under the preceding block at dropDepth-1 so
-   * a block dropped at a visual depth becomes a real structural child. Skips list
-   * items (own depth) and no-ops when the parent is already correct.
+   * a block dropped at a visual depth becomes a real structural child. List items
+   * nest only under a preceding LIST item (resolvePrecedingListParentForDepth);
+   * every other block nests under any preceding block at dropDepth-1
+   * (resolveStructuralParentForDepth). No-ops when the parent is already correct.
    * @param reparentedBlocks - the dropped blocks that landed at root level
    * @param dropDepth - the visual depth the drop indicator showed
    * @param movingIds - ids of the moving group (skipped as anchors)
@@ -1012,11 +1031,9 @@ export class DragController extends Module {
     affectedParentIds: Set<string>
   ): void {
     for (const movedBlock of reparentedBlocks) {
-      if (movedBlock.name === 'list') {
-        continue;
-      }
-
-      const structuralParentId = this.resolveStructuralParentForDepth(movedBlock, dropDepth, movingIds);
+      const structuralParentId = movedBlock.name === 'list'
+        ? this.resolvePrecedingListParentForDepth(movedBlock, dropDepth, movingIds)
+        : this.resolveStructuralParentForDepth(movedBlock, dropDepth, movingIds);
 
       if (structuralParentId === movedBlock.parentId) {
         continue;
@@ -1028,6 +1045,54 @@ export class DragController extends Module {
         affectedParentIds.add(structuralParentId);
       }
     }
+  }
+
+  /**
+   * Maps a list item's drop-slot depth to its STRUCTURAL list parent: the nearest
+   * preceding LIST block (not part of the moving group) whose structural depth is
+   * one less than the drop depth. A list item nests only under a preceding list
+   * item — never under a paragraph — so a non-list predecessor (or a shallower
+   * block than the target parent depth) breaks the run and lands the item at root.
+   * Returns null for a root-level drop (depth 0) or when no such list parent exists.
+   * @param movedBlock - the list block that was dropped
+   * @param dropDepth - the visual depth the drop indicator showed
+   * @param movingIds - ids of every block in the moving group (skipped as anchors)
+   */
+  private resolvePrecedingListParentForDepth(
+    movedBlock: Block,
+    dropDepth: number,
+    movingIds: Set<string>
+  ): string | null {
+    if (dropDepth <= 0) {
+      return null;
+    }
+
+    const index = this.Blok.BlockManager.getBlockIndex(movedBlock);
+    const preceding = this.Blok.BlockManager.blocks.slice(0, index).reverse();
+
+    for (const candidate of preceding) {
+      if (movingIds.has(candidate.id)) {
+        continue;
+      }
+
+      if (candidate.name !== 'list') {
+        return null;
+      }
+
+      const candidateDepth = this.Blok.BlockManager.getBlockDepth(candidate);
+
+      if (candidateDepth === dropDepth - 1) {
+        return candidate.id;
+      }
+
+      // A list item shallower than the target parent depth means there is no valid
+      // list ancestor at this slot — fall back to root rather than over-nesting.
+      if (candidateDepth < dropDepth - 1) {
+        return null;
+      }
+    }
+
+    return null;
   }
 
   /**

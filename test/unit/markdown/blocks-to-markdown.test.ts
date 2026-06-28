@@ -31,6 +31,14 @@ describe('blocksToMarkdown', () => {
     expect(blocksToMarkdown([{ tool: 'list', data: { text: 'child', style: 'unordered', depth: 1 } }])).toBe('    - child');
   });
 
+  it('indents nested list items by their STRUCTURAL indent (parentId chain), not data.depth', () => {
+    // A keyboard/drag-nested list item carries its nesting via the structural
+    // tree, serialized as `indent` (the parentId-chain depth) — mirroring how
+    // Tab-nested text/headers serialize. data.depth is no longer required.
+    expect(blocksToMarkdown([{ tool: 'list', data: { text: 'child', style: 'unordered' }, indent: 1 }])).toBe('    - child');
+    expect(blocksToMarkdown([{ tool: 'list', data: { text: 'deep', style: 'ordered' }, indent: 2 }])).toBe('        1. deep');
+  });
+
   it('indents flat-indented (Tab-nested) non-list blocks by their indent level', () => {
     expect(blocksToMarkdown([{ tool: 'paragraph', data: { text: 'nested' }, indent: 1 }])).toBe('    nested');
     expect(blocksToMarkdown([{ tool: 'header', data: { text: 'Sub', level: 2 }, indent: 1 }])).toBe('    ## Sub');

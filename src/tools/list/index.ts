@@ -514,7 +514,11 @@ export class ListItem implements BlockTool {
   }
 
   public save(): ListItemData {
-    return saveListItem(this._data, this._element, this.getContentElement.bind(this));
+    // Serialize the STRUCTURAL depth (derived from the parentId chain), not the
+    // stored flat data.depth — keeping the saved depth consistent with the block
+    // tree after a drag/keyboard nest. getDepth() falls back to data.depth for
+    // imported lists that are not yet structurally parented.
+    return saveListItem(this._data, this._element, this.getContentElement.bind(this), this.getDepth());
   }
 
   public setData(newData: ListItemData): boolean {

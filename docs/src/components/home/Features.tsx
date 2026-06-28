@@ -2128,10 +2128,10 @@ const CapabilityTile: React.FC<TileProps> = ({ feature, onOpen }) => {
           fixed window because its viz is a flooding marquee. From lg up every tile
           releases to fill the bento cell as before. */}
       <div
-        className={`relative z-10 flex items-center justify-center overflow-hidden lg:h-auto lg:flex-1 ${
+        className={`relative z-10 flex items-center justify-center lg:h-auto lg:flex-1 ${
           isEmbeds
-            ? "h-[6.75rem] -mx-4 w-[calc(100%+2rem)] lg:-mx-5 lg:w-[calc(100%+2.5rem)] lg:transition-[margin] lg:duration-500 lg:ease-out lg:group-hover:-mb-8 lg:group-hover:-mt-10"
-            : "min-h-[6.75rem] w-full pt-1 lg:min-h-0"
+            ? "overflow-hidden h-[6.75rem] -mx-4 w-[calc(100%+2rem)] lg:-mx-5 lg:w-[calc(100%+2.5rem)] lg:transition-[margin] lg:duration-500 lg:ease-out lg:group-hover:-mb-8 lg:group-hover:-mt-10"
+            : "overflow-hidden lg:overflow-visible min-h-[6.75rem] w-full pt-1 lg:min-h-0"
         }`}
       >
         <Viz />

@@ -299,6 +299,33 @@ describe('Features', () => {
     expect(tables.className).toContain('lg:order-5');
   });
 
+  // The mobile-clipping fix windowed every discrete capability diorama to a fixed
+  // 6.75rem box (overflow-hidden) so nothing was cut off in the single-column
+  // stack. But that inner clip leaked onto desktop too, cropping the taller
+  // dioramas (the slash menu, the table) mid-content at 6.75rem instead of letting
+  // them fill to the card border — the bento cell's own overflow-hidden is the
+  // real window. Lock the desktop release: mobile keeps the floor + clip, but from
+  // `lg` up every non-embeds diorama wrapper drops the hard clip.
+  it('releases the capability diorama window on desktop instead of hard-clipping', () => {
+    const { container } = renderFeatures();
+
+    // the discrete capability dioramas (slash, media, undo, tables, languages)
+    // all carry the mobile height floor; the embeds tile uses a fixed h-[6.75rem]
+    // marquee window instead, so it is intentionally excluded.
+    const dioramaWraps = Array.from(
+      container.querySelectorAll<HTMLElement>('div'),
+    ).filter((el) => /(^|\s)min-h-\[6\.75rem\]/.test(el.className));
+    expect(dioramaWraps).toHaveLength(5);
+
+    for (const wrap of dioramaWraps) {
+      // mobile keeps the clip so the floor can't be overrun in the stacked column
+      expect(wrap.className).toMatch(/(^|\s)overflow-hidden(\s|$)/);
+      // ...but desktop releases it so the diorama fills to the card border rather
+      // than cropping mid-content at the inner 6.75rem box
+      expect(wrap.className).toMatch(/(^|\s)lg:overflow-visible(\s|$)/);
+    }
+  });
+
   // Every diorama animation is gated behind the cursor: `:hover` in CSS,
   // `pointermove` in JS. A touch device has no cursor, so the dioramas froze at
   // their rest frame. The cure mirrors each hover animation onto an

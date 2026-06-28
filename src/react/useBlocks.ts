@@ -1,10 +1,14 @@
 // src/react/useBlocks.ts
 import { useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
 import type { Blok } from '../../types';
+import type { BlockToolData } from '../../types/tools';
+import type { BlockTuneData } from '../../types/block-tunes/block-tune-data';
 import {
   snapshotNodes,
   resolveInsertIndex,
   resolveMoveIndex,
+  parentMap,
+  isDescendantOf,
   type BlockNode,
   type IndexReader,
   type InsertSpec,
@@ -33,10 +37,13 @@ const EMPTY_API: UseBlocksApi = {
   getById: () => null,
   getChildren: () => [],
   insert: () => null,
+  insertMany: () => [],
   move: () => undefined,
   nest: () => undefined,
   unnest: () => undefined,
   remove: () => undefined,
+  update: () => undefined,
+  convert: () => undefined,
   transact: (fn: () => void) => fn(),
 };
 
@@ -44,6 +51,13 @@ const EMPTY_API: UseBlocksApi = {
  * React hook exposing an id/parentId-relative, reactive view of the block tree.
  * Re-renders whenever the editor emits 'block changed' — including programmatic
  * `nest`/`unnest` reparents, which Blok now surfaces as a structural mutation.
+ *
+ * Reactivity contract: reads refresh ONLY in response to the editor's
+ * 'block changed' event. A mutation that advances the editor state WITHOUT
+ * emitting it (a tool that mutates its own data without a sync, say) would leave
+ * these reads frozen on the previous snapshot until the next emission. The
+ * built-in mutators here all route through paths that emit, so this only bites
+ * out-of-band tool writes.
  *
  * Pre-ready contract: while `editor` is null (before `useBlok` resolves) the
  * returned API is the stable {@link EMPTY_API} — every method is a no-op,
@@ -62,6 +76,18 @@ const EMPTY_API: UseBlocksApi = {
 export function useBlocks(editor: Blok | null): UseBlocksApi {
   // Monotonic version bumped on every 'block changed'; drives useSyncExternalStore.
   const versionRef = useRef(0);
+
+  // Reset the monotonic version when the editor INSTANCE changes so a fresh
+  // editor doesn't inherit a stale version from a previous one. Done in render
+  // (idempotent: editorRef is updated in the same pass, so a re-render with the
+  // same editor won't reset again) — safe for useSyncExternalStore, which just
+  // re-reads getSnapshot and re-renders if the value differs.
+  const editorRef = useRef(editor);
+
+  if (editorRef.current !== editor) {
+    editorRef.current = editor;
+    versionRef.current = 0;
+  }
 
   const subscribe = useCallback(
     (onStoreChange: () => void): (() => void) => {
@@ -125,11 +151,19 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       }
 
       const out: string[] = [];
+      const visited = new Set<string>();
       const stack: string[] = [rootId];
 
+      // A parentId cycle (possible from a concurrent remote Yjs reparent) would
+      // make this DFS spin forever — track visited ids and skip re-entry so each
+      // block is emitted at most once and the traversal always terminates.
       while (stack.length > 0) {
         const id = stack.pop() as string;
 
+        if (visited.has(id)) {
+          continue;
+        }
+        visited.add(id);
         out.push(id);
         const kids = childrenOf.get(id);
 
@@ -169,7 +203,18 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       if (rootFrom === undefined) {
         return;
       }
-      editor.blocks.move(rootFrom < preRemovalSlot ? preRemovalSlot - 1 : preRemovalSlot, rootFrom);
+
+      // Defensive clamp into [0, count-1]: Blok's move() silently no-ops on an
+      // out-of-range index, so an over-large preRemovalSlot would strand the
+      // root instead of appending it. (In practice resolveInsertIndex stays in
+      // range; this guards a concurrently-shrunk tree.)
+      const lastIndex = Math.max(0, editor.blocks.getBlocksCount() - 1);
+      const rootTarget = Math.min(
+        Math.max(rootFrom < preRemovalSlot ? preRemovalSlot - 1 : preRemovalSlot, 0),
+        lastIndex
+      );
+
+      editor.blocks.move(rootTarget, rootFrom);
 
       // Place each descendant immediately after the previously-positioned member,
       // re-reading the anchor's LIVE index every iteration. A cached root index
@@ -214,9 +259,15 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       }
     };
 
-    // Note: nesting/unnesting a block that lives inside a `column` is not fully
-    // supported — Blok's move() clamps cross-column-boundary moves to a no-op, so
-    // the relocation can't run; use the drag UI for column membership changes.
+    /**
+     * Nest `id` (and its whole subtree) under `parentId`, as one undo step.
+     * No-op when either id is unknown.
+     *
+     * Column boundary caveat: nesting a block that lives inside a `column` (or
+     * into one) is a GRACEFUL no-op — Blok's move() clamps cross-column-boundary
+     * moves, so the relocation can't run and the parent isn't changed. Use the
+     * drag UI for column membership changes. Returns void.
+     */
     const nest = (id: string, parentId: string): void => {
       if (
         editor.blocks.getBlockIndex(parentId) === undefined ||
@@ -239,6 +290,11 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       });
     };
 
+    /**
+     * Promote `id` (and its subtree) to root, as one undo step. No-op when the
+     * id is unknown or already at root. Same column-boundary caveat as
+     * {@link nest}: unnesting out of a `column` is a graceful no-op. Returns void.
+     */
     const unnest = (id: string): void => {
       if (editor.blocks.getBlockIndex(id) === undefined) {
         return;
@@ -294,11 +350,34 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       });
     };
 
+    /**
+     * Move `id` to a flat slot, as a single operation. No-op when `id` is
+     * unknown, or when a relative `{ before|after }` target references `id`
+     * itself or one of its descendants (a block can't be a sibling of its own
+     * child). The guard runs BEFORE the index is resolved.
+     *
+     * Parent-adoption side effect: `before`/`after` are POSITION targets, so the
+     * moved block ADOPTS the parent of wherever it lands (moving into a
+     * container's children nests it; moving out to a root sibling unnests it).
+     * Use {@link nest}/{@link unnest} to change the parent without choosing a
+     * sibling slot. Returns void.
+     */
     const move = (id: string, target: MoveTarget): void => {
       const fromIndex = editor.blocks.getBlockIndex(id);
 
       if (fromIndex === undefined) {
         return;
+      }
+
+      // A relative target can't reference the block itself or any of its own
+      // descendants — a block can't become a sibling of its child. Guard it as
+      // a no-op (an absolute { toIndex } can't express this, so it's skipped).
+      if (!('toIndex' in target)) {
+        const ref = 'before' in target ? target.before : target.after;
+
+        if (ref === id || isDescendantOf(parentMap(reader), ref, id)) {
+          return;
+        }
       }
 
       const resolved = resolveMoveIndex(reader, target);
@@ -315,7 +394,15 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       editor.blocks.move(toIndex, fromIndex);
     };
 
-    const insert = (spec: InsertSpec = {}): BlockNode | null => {
+    /**
+     * Perform one insert (create + intended-parent assertion) WITHOUT opening a
+     * transaction — the caller owns the undo grouping. `insert` wraps a single
+     * call in its own transact; `insertMany` shares ONE transact across the whole
+     * batch so the bulk insert is a single undo step. Returns the created node,
+     * or null when nothing was inserted (idempotent hit returns the existing
+     * node; a guard failure returns null).
+     */
+    const insertWithinTransaction = (spec: InsertSpec): BlockNode | null => {
       const parentId = spec.parentId ?? null;
       const position = spec.position ?? 'end';
       const data = spec.data ?? {};
@@ -349,6 +436,21 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
         return null;
       }
 
+      // A replace targets the before/after ref block ITSELF (the "turn into"
+      // block being overwritten), not a sibling anchor. If that ref doesn't
+      // exist there is nothing to overwrite — return null instead of falling
+      // through to resolveInsertIndex's end-slot fallback, which would
+      // otherwise insert/replace at the wrong place (and then reparent a
+      // dangling target). Validation is skipped for a plain insert (above), so
+      // this is the only guard that protects the replace path.
+      if (replace && typeof position === 'object') {
+        const replaceTargetRef = 'before' in position ? position.before : position.after;
+
+        if (getById(replaceTargetRef) === null) {
+          return null;
+        }
+      }
+
       const flatIndex = resolveInsertIndex(reader, parentId, position, replace);
 
       // A replace is a positional type-swap that PRESERVES the replaced block's
@@ -367,50 +469,119 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       const intendedParentId =
         replaceRef !== null ? getById(replaceRef)?.parentId ?? parentId : parentId;
 
-      // Mutable property on a const holder (no `let`): the inserted id captured
-      // from inside the transact closure for the post-transact return.
-      const result: { createdId: string | null } = { createdId: null };
+      const created = ((): { id: string } | null | undefined => {
+        try {
+          return editor.blocks.insert(spec.type, data, {}, flatIndex, needToFocus, replace, spec.id, spec.tunes);
+        } catch (error) {
+          // The only EXPECTED throw here is an unknown/missing tool — core
+          // reports it as "…not found" (also covers a missing replace target).
+          // Honor the null contract for that; re-throw anything else so a
+          // genuine bug surfaces instead of being masked as a null return.
+          if (error instanceof Error && error.message.includes('not found')) {
+            return null;
+          }
+          throw error;
+        }
+      })();
+
+      if (created === undefined || created === null) {
+        return null;
+      }
+
+      // Assert the intended parent. Core derives a new block's parent from its
+      // flat predecessor, so a block appended right after a `column` child is
+      // auto-nested into that column. We know the caller's intent: for a
+      // parented insert set the parent; for a root insert (parentId === null)
+      // override back to root ONLY if core nested it, keeping the natural
+      // `insert({ position: 'end' })` a root sibling instead of a stowaway. For
+      // a replace, intendedParentId is the overwritten block's own parent, so
+      // the replacement keeps its place in the tree.
+      const landedParentId = getById(created.id)?.parentId ?? null;
+
+      if (landedParentId !== intendedParentId) {
+        editor.blocks.setBlockParent(created.id, intendedParentId);
+      }
+
+      return getById(created.id);
+    };
+
+    /**
+     * Insert one block. Returns the created {@link BlockNode}, or null when the
+     * insert is rejected — an unknown tool type (core "…not found"), a dangling
+     * `parentId`, or a `replace` whose target ref doesn't exist. An explicit
+     * `id` that already exists is insert-if-absent: the existing node is returned
+     * and nothing is created (skipped under `replace`, which is an explicit
+     * overwrite). Validation runs BEFORE the slot is resolved; a `replace`
+     * preserves the overwritten block's parent. Always one atomic undo step.
+     *
+     * The returned node is a fresh-snapshot view (its `contentIds` are derived
+     * per call) — read it immediately; do NOT place it in a `useMemo`/`useEffect`
+     * dependency array expecting per-mutation identity.
+     */
+    const insert = (spec: InsertSpec = {}): BlockNode | null => {
+      // Mutable property on a const holder (no `let`): the node captured from
+      // inside the transact closure for the post-transact return.
+      const result: { node: BlockNode | null } = { node: null };
 
       // Always atomic: a single undo step removes the new block (and, for a
       // parented insert, its reparent) — and gives the insert its own boundary
       // instead of merging into adjacent typing history.
       transact(() => {
-        const created = ((): { id: string } | null | undefined => {
-          try {
-            return editor.blocks.insert(spec.type, data, {}, flatIndex, needToFocus, replace, spec.id, spec.tunes);
-          } catch (error) {
-            // The only EXPECTED throw here is an unknown/missing tool — core
-            // reports it as "…not found" (also covers a missing replace target).
-            // Honor the null contract for that; re-throw anything else so a
-            // genuine bug surfaces instead of being masked as a null return.
-            if (error instanceof Error && error.message.includes('not found')) {
-              return null;
-            }
-            throw error;
+        result.node = insertWithinTransaction(spec);
+      });
+
+      return result.node;
+    };
+
+    const insertMany = (specs: InsertSpec[]): BlockNode[] => {
+      // An empty batch opens no transaction (no spurious undo boundary).
+      if (specs.length === 0) {
+        return [];
+      }
+
+      const created: BlockNode[] = [];
+
+      // ONE transact for the whole batch → a single atomic undo step. Each spec
+      // still runs the full single-insert path (parent assertion, positioning).
+      // Specs that fail to insert return null and are dropped from the result.
+      transact(() => {
+        for (const spec of specs) {
+          const node = insertWithinTransaction(spec);
+
+          if (node !== null) {
+            created.push(node);
           }
-        })();
-
-        if (created === undefined || created === null) {
-          return;
-        }
-        result.createdId = created.id;
-
-        // Assert the intended parent. Core derives a new block's parent from its
-        // flat predecessor, so a block appended right after a `column` child is
-        // auto-nested into that column. We know the caller's intent: for a
-        // parented insert set the parent; for a root insert (parentId === null)
-        // override back to root ONLY if core nested it, keeping the natural
-        // `insert({ position: 'end' })` a root sibling instead of a stowaway. For
-        // a replace, intendedParentId is the overwritten block's own parent, so
-        // the replacement keeps its place in the tree.
-        const landedParentId = getById(created.id)?.parentId ?? null;
-
-        if (landedParentId !== intendedParentId) {
-          editor.blocks.setBlockParent(created.id, intendedParentId);
         }
       });
 
-      return result.createdId === null ? null : getById(result.createdId);
+      return created;
+    };
+
+    const update = (
+      id: string,
+      data?: BlockToolData,
+      tunes?: { [name: string]: BlockTuneData }
+    ): void => {
+      // Silent existence probe (NOT getBlockIndex, which warns on unknown ids).
+      if (getById(id) === null) {
+        return;
+      }
+
+      // Core update is async and forms its own undo/Yjs step, so it is NOT
+      // wrapped in transact (that would close the group before the write lands).
+      // Swallow any rejection so it can't surface as an unhandled rejection.
+      void Promise.resolve(editor.blocks.update(id, data, tunes)).catch(() => undefined);
+    };
+
+    const convert = (id: string, newType: string, dataOverrides?: BlockToolData): void => {
+      if (getById(id) === null) {
+        return;
+      }
+
+      // Core convert is async and rejects when a tool lacks a conversionConfig.
+      // Like update, it owns its own history step (no transact). Swallow the
+      // rejection so a non-convertible block is a graceful no-op.
+      void Promise.resolve(editor.blocks.convert(id, newType, dataOverrides)).catch(() => undefined);
     };
 
     return {
@@ -418,10 +589,13 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       getById,
       getChildren,
       insert,
+      insertMany,
       move,
       nest,
       unnest,
       remove,
+      update,
+      convert,
       transact,
     };
   }, [editor]);

@@ -1,7 +1,15 @@
 import type { BlockToolData } from '../../types/tools';
 import type { BlockTuneData } from '../../types/block-tunes/block-tune-data';
 
-/** A plain, serializable view of one block in the tree. */
+/**
+ * A plain, serializable view of one block in the tree.
+ *
+ * Snapshot-volatile: every read allocates a fresh `BlockNode`, and `contentIds`
+ * is DERIVED per read from the children that currently name this block as parent
+ * (it is not a stored field). Read a node in render and re-read after a change —
+ * don't stash one in a `useMemo`/`useEffect` dependency array expecting stable
+ * identity; depend on the `id` instead.
+ */
 export interface BlockNode {
   id: string;
   type: string;
@@ -56,11 +64,47 @@ export type MoveTarget = { before: string } | { after: string } | { toIndex: num
 export interface UseBlocksApi {
   getById(id: string): BlockNode | null;
   getChildren(parentId: string | null): BlockNode[];
+  /**
+   * Insert one block; returns the created node or null when rejected (unknown
+   * tool type, dangling `parentId`, or a `replace` whose target is missing). An
+   * explicit `id` that already exists is insert-if-absent (returns the existing
+   * node, creates nothing). Atomic — one undo step. The returned node is
+   * {@link BlockNode}-volatile; read it now, don't put it in a dep array.
+   */
   insert(spec?: InsertSpec): BlockNode | null;
+  /**
+   * Insert several blocks atomically, in array order, as ONE undo step. Each
+   * spec is a full {@link InsertSpec} (own type/data/parentId/position), routed
+   * through the same single-`insert` path, so per-spec parent assertion and
+   * positioning still apply. Specs that fail to insert (e.g. a dangling
+   * parentId, or a replace whose target is missing) are dropped; the returned
+   * array holds only the successfully created nodes. An empty input is a no-op
+   * (returns `[]`, opens no transaction). Like `insert`, the returned nodes are
+   * fresh-snapshot volatile — read them now, don't stash them in dep arrays.
+   */
+  insertMany(specs: InsertSpec[]): BlockNode[];
   move(id: string, target: MoveTarget): void;
   nest(id: string, parentId: string): void;
   unnest(id: string): void;
   remove(id: string): void;
+  /**
+   * Update a block's data and/or tunes by id. Delegates to core's async
+   * `blocks.update`, which forms its OWN undo step — the call is NOT wrapped in
+   * `transact` (that would close the group before the async write lands). An
+   * unknown id is a silent no-op; a rejected update is swallowed so it can't
+   * surface as an unhandled rejection. Reads refresh reactively once core emits
+   * 'block changed'. Returns `void`.
+   */
+  update(id: string, data?: BlockToolData, tunes?: { [name: string]: BlockTuneData }): void;
+  /**
+   * Convert a block to another type ("turn into") by id. Delegates to core's
+   * async `blocks.convert`; both tools must provide a `conversionConfig` or core
+   * rejects — that rejection (and any other) is swallowed so a non-convertible
+   * block is a graceful no-op rather than an unhandled rejection. An unknown id
+   * is a silent no-op. Not wrapped in `transact` (core owns its history step).
+   * Returns `void`.
+   */
+  convert(id: string, newType: string, dataOverrides?: BlockToolData): void;
   transact(fn: () => void): void;
 }
 
@@ -115,7 +159,7 @@ const childFlatIndices = (reader: IndexReader, parentId: string): number[] => {
 };
 
 /** Map of block id -> parentId, in flat order. */
-const parentMap = (reader: IndexReader): Map<string, string | null> => {
+export const parentMap = (reader: IndexReader): Map<string, string | null> => {
   const count = reader.getBlocksCount();
   const entries = Array.from({ length: count }, (_, i) => reader.getBlockByIndex(i))
     .filter((b): b is { id: string; name: string; parentId: string | null } => b !== undefined)
@@ -125,7 +169,7 @@ const parentMap = (reader: IndexReader): Map<string, string | null> => {
 };
 
 /** True if `id` descends from `ancestorId` via the parentId chain. */
-const isDescendantOf = (
+export const isDescendantOf = (
   parentOf: Map<string, string | null>,
   id: string,
   ancestorId: string

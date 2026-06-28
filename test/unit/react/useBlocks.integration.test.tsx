@@ -235,6 +235,38 @@ describe('useBlocks — real BlockHierarchy integration', () => {
     expect(children[0].parentId).toBe('container');
   });
 
+  it('insertMany places every block under a container as contiguous children', () => {
+    // Bulk insert must route each spec through the same single-insert parent
+    // assertion path against the REAL hierarchy — not a bare flat append — so
+    // all three land as children of `container` in array order.
+    const harness = createRealEditorHarness([{ id: 'container' }, { id: 'tail' }]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    let created: ReturnType<typeof result.current.insertMany> = [];
+
+    act(() => {
+      created = result.current.insertMany([
+        { type: 'paragraph', parentId: 'container' },
+        { type: 'header', parentId: 'container' },
+        { type: 'paragraph', parentId: 'container' },
+      ]);
+    });
+
+    expect(created).toHaveLength(3);
+
+    const children = result.current.getChildren('container');
+
+    expect(children.map((n) => n.parentId)).toEqual(['container', 'container', 'container']);
+    expect(children.map((n) => n.type)).toEqual(['paragraph', 'header', 'paragraph']);
+    expect(children.map((n) => n.id)).toEqual(created.map((n) => n.id));
+
+    // The pre-existing root sibling is untouched and still a root block.
+    expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['container', 'tail']);
+  });
+
   it('nest then unnest round-trips parentId back to null', () => {
     const harness = createRealEditorHarness([
       { id: 'block-a' },

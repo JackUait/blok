@@ -558,6 +558,30 @@ describe('BlockManager', () => {
     expect(() => blockManager.insertDefaultBlockAtIndex(0)).toThrow('Could not insert default Block. Default block tool is not defined in the configuration.');
   });
 
+  it('throws (never returns undefined) when insert() is called with no tool and no default block', () => {
+    /**
+     * Pins the honest contract behind the public `editor.blocks.insert()` return type.
+     * BlocksAPI.insert() forwards `tool: undefined` to BlockManager.insert when called
+     * with neither a `type` argument nor a configured `defaultBlock`. The synthesis (H1)
+     * claimed this path lets the public API return `undefined` despite its declared
+     * `BlockAPI` return type. In reality BlockManager.insert (→ operations.insert →
+     * BlockInsertion.insert) throws BEFORE constructing a block, so `new BlockAPI(...)`
+     * never receives undefined and the public `BlockAPI` return type stays truthful.
+     */
+    const { blockManager } = createBlockManager();
+
+    (blockManager as unknown as { config: BlokConfig }).config.defaultBlock = undefined;
+
+    let returned: unknown = 'sentinel';
+
+    expect(() => {
+      returned = blockManager.insert({});
+    }).toThrow('Could not insert Block. Tool name is not specified.');
+
+    // The throw happens before any return, so no undefined ever leaks out.
+    expect(returned).toBe('sentinel');
+  });
+
   it('deletes selected blocks and inserts replacement when all blocks are selected', () => {
     const blocks = [
       createBlockStub({ id: 'first' }),

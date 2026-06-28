@@ -29,6 +29,8 @@ const makeFakeEditor = (
       setBlockParent: vi.fn(),
       delete: vi.fn(),
       move: vi.fn(),
+      update: vi.fn(() => Promise.resolve({})),
+      convert: vi.fn(() => Promise.resolve({})),
       transact: vi.fn((fn: () => void) => fn()),
     },
     on: (_name: string, cb: () => void) => listeners.add(cb),
@@ -73,6 +75,24 @@ describe('useBlocks reads', () => {
 
     act(() => emitChange([{ id: 'a' }, { id: 'b' }]));
     expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['a', 'b']);
+  });
+
+  it('reads from and stays reactive to a swapped-in second editor instance', () => {
+    // Switching the editor instance must not leave reads bound to the old one,
+    // and the new editor's 'block changed' must still drive re-renders (the
+    // monotonic version is reset on the editor swap so it doesn't carry over).
+    const first = makeFakeEditor([{ id: 'a' }]);
+    const second = makeFakeEditor([{ id: 'x' }]);
+    const { result, rerender } = renderHook(({ editor }) => useBlocks(editor), {
+      initialProps: { editor: first.editor },
+    });
+    expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['a']);
+
+    rerender({ editor: second.editor });
+    expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['x']);
+
+    act(() => second.emitChange([{ id: 'x' }, { id: 'y' }]));
+    expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['x', 'y']);
   });
 
   it('returns a stable no-op API when editor is null', () => {
@@ -133,6 +153,24 @@ describe('useBlocks mutators (delegation)', () => {
     // Every subtree deletion suppresses the caret move.
     deleteMock.mock.calls.forEach((args) => expect(args[1]).toBe(false));
   });
+
+  it('terminates (no infinite loop) when the parentId graph contains a cycle', () => {
+    // A concurrent remote Yjs reparent could momentarily produce a parentId
+    // cycle (a→b→a). The subtree DFS that remove() relies on must guard against
+    // re-visiting a node, or it would spin forever. Each id is deleted exactly
+    // once; the test would time out against an unguarded traversal.
+    const { editor } = makeFakeEditor([
+      { id: 'a', parentId: 'b' },
+      { id: 'b', parentId: 'a' },
+    ]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.remove('a'));
+    const deleteMock = editor.blocks.delete as ReturnType<typeof vi.fn>;
+    const indices = deleteMock.mock.calls.map((args) => args[0] as number);
+    // Exactly two deletions, one per unique block — no duplicates, no hang.
+    expect(indices).toHaveLength(2);
+    expect(new Set(indices).size).toBe(2);
+  }, 2000);
 
   it('groups a subtree remove in a single transact', () => {
     const { editor } = makeFakeEditor([
@@ -481,6 +519,43 @@ describe('useBlocks insert', () => {
     act(() => { created = result.current.insert({}); });
     expect(created).toBeNull();
   });
+
+  it('replace with a missing before/after ref returns null and inserts nothing (no parentId)', () => {
+    // Can't "turn into" a block that does not exist. Under replace the position
+    // ref IS the target being overwritten, so a missing ref must abort with null
+    // instead of falling through to the end-slot fallback and overwriting/inserting
+    // at the wrong place.
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let created: ReturnType<typeof result.current.insert> = null;
+    act(() => { created = result.current.insert({ type: 'header', position: { before: 'ghost' }, replace: true }); });
+    expect(created).toBeNull();
+    expect(editor.blocks.insert).not.toHaveBeenCalled();
+    expect(editor.blocks.setBlockParent).not.toHaveBeenCalled();
+  });
+
+  it('replace with a missing ref returns null even with a dangling parentId', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let created: ReturnType<typeof result.current.insert> = null;
+    act(() => { created = result.current.insert({ type: 'header', parentId: 'ghost', position: { after: 'nope' }, replace: true }); });
+    expect(created).toBeNull();
+    expect(editor.blocks.insert).not.toHaveBeenCalled();
+    expect(editor.blocks.setBlockParent).not.toHaveBeenCalled();
+  });
+
+  it('replace with a missing ref returns null even with a valid parentId', () => {
+    const { editor } = makeFakeEditor([
+      { id: 'p', name: 'toggle' },
+      { id: 'child', parentId: 'p' },
+    ]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let created: ReturnType<typeof result.current.insert> = null;
+    act(() => { created = result.current.insert({ type: 'header', parentId: 'p', position: { before: 'ghost' }, replace: true }); });
+    expect(created).toBeNull();
+    expect(editor.blocks.insert).not.toHaveBeenCalled();
+    expect(editor.blocks.setBlockParent).not.toHaveBeenCalled();
+  });
 });
 
 describe('useBlocks move', () => {
@@ -541,6 +616,27 @@ describe('useBlocks move', () => {
     expect(editor.blocks.move).toHaveBeenCalledWith(2, 0);
   });
 
+  it('move is a no-op when the relative target is a descendant of the moved block', () => {
+    // Moving a block to sit relative to its OWN descendant is incoherent (a block
+    // can't be a sibling of its child). Guard it as a no-op instead of letting
+    // core attempt a self-referential relocation.
+    const { editor } = makeFakeEditor([
+      { id: 'A', name: 'toggle' },
+      { id: 'A1', parentId: 'A' },
+      { id: 'B' },
+    ]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.move('A', { after: 'A1' }));
+    expect(editor.blocks.move).not.toHaveBeenCalled();
+  });
+
+  it('move is a no-op when the relative target is the moved block itself', () => {
+    const { editor } = makeFakeEditor([{ id: 'A' }, { id: 'B' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.move('A', { before: 'A' }));
+    expect(editor.blocks.move).not.toHaveBeenCalled();
+  });
+
   it('move after the last block (forward to end) stays within Blok bounds', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
     const { result } = renderHook(() => useBlocks(editor));
@@ -548,5 +644,166 @@ describe('useBlocks move', () => {
     // resolveMoveIndex({after:'c'}) = 3 (= length); decremented to 2 so Blok's
     // toIndex<length guard doesn't silently drop the move.
     expect(editor.blocks.move).toHaveBeenCalledWith(2, 0);
+  });
+});
+
+describe('useBlocks update', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('delegates to editor.blocks.update with id, data and tunes', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    const tunes = { align: 'center' };
+    act(() => result.current.update('a', { text: 'hi' }, tunes));
+    expect(editor.blocks.update).toHaveBeenCalledWith('a', { text: 'hi' }, tunes);
+  });
+
+  it('is a no-op when the id is unknown (probed via the silent getById, not getBlockIndex)', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const getBlockIndexSpy = vi.spyOn(editor.blocks, 'getBlockIndex');
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.update('ghost', { text: 'x' }));
+    expect(editor.blocks.update).not.toHaveBeenCalled();
+    expect(getBlockIndexSpy).not.toHaveBeenCalledWith('ghost');
+  });
+
+  it('does NOT wrap in transact — core update forms its own async undo step', () => {
+    // Core's update is async and manages its own Yjs/history grouping. Wrapping
+    // the call in the synchronous transact would close the undo group before the
+    // await resolves, so the hook must delegate directly.
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.update('a', { text: 'hi' }));
+    expect(editor.blocks.transact).not.toHaveBeenCalled();
+  });
+
+  it('does not throw out of the hook when core update rejects', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    (editor.blocks.update as ReturnType<typeof vi.fn>).mockReturnValueOnce(Promise.reject(new Error('boom')));
+    const { result } = renderHook(() => useBlocks(editor));
+    let threw = false;
+    act(() => {
+      try {
+        result.current.update('a', { text: 'hi' });
+      } catch {
+        threw = true;
+      }
+    });
+    expect(threw).toBe(false);
+  });
+
+  it('returns void', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let ret: unknown = 'sentinel';
+    act(() => { ret = result.current.update('a', { text: 'hi' }); });
+    expect(ret).toBeUndefined();
+  });
+});
+
+describe('useBlocks convert', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('delegates to editor.blocks.convert with id, newType and dataOverrides', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.convert('a', 'header', { level: 2 }));
+    expect(editor.blocks.convert).toHaveBeenCalledWith('a', 'header', { level: 2 });
+  });
+
+  it('is a no-op when the id is unknown (silent getById probe)', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const getBlockIndexSpy = vi.spyOn(editor.blocks, 'getBlockIndex');
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.convert('ghost', 'header'));
+    expect(editor.blocks.convert).not.toHaveBeenCalled();
+    expect(getBlockIndexSpy).not.toHaveBeenCalledWith('ghost');
+  });
+
+  it('does not throw out of the hook when core convert rejects (non-convertible block)', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    (editor.blocks.convert as ReturnType<typeof vi.fn>).mockReturnValueOnce(
+      Promise.reject(new Error('Conversion from "a" to "header" is not possible.'))
+    );
+    const { result } = renderHook(() => useBlocks(editor));
+    let threw = false;
+    act(() => {
+      try {
+        result.current.convert('a', 'header');
+      } catch {
+        threw = true;
+      }
+    });
+    expect(threw).toBe(false);
+  });
+});
+
+describe('useBlocks insertMany', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('inserts N blocks in document order within a SINGLE transact and returns N nodes', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let created: ReturnType<typeof result.current.insertMany> = [];
+    act(() => {
+      created = result.current.insertMany([
+        { type: 'header', data: { text: 'one' } },
+        { type: 'paragraph', data: { text: 'two' } },
+        { type: 'paragraph', data: { text: 'three' } },
+      ]);
+    });
+    expect(editor.blocks.insert).toHaveBeenCalledTimes(3);
+    // One atomic undo step for the whole batch.
+    expect(editor.blocks.transact).toHaveBeenCalledTimes(1);
+    expect(created).toHaveLength(3);
+    expect(created.map((n) => n.type)).toEqual(['header', 'paragraph', 'paragraph']);
+  });
+
+  it('returns [] and performs no transact side effects for an empty array', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let created: ReturnType<typeof result.current.insertMany> = ['sentinel'] as unknown as ReturnType<typeof result.current.insertMany>;
+    act(() => { created = result.current.insertMany([]); });
+    expect(created).toEqual([]);
+    expect(editor.blocks.transact).not.toHaveBeenCalled();
+    expect(editor.blocks.insert).not.toHaveBeenCalled();
+  });
+
+  it('filters out specs that fail to insert (e.g. a dangling parentId)', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let created: ReturnType<typeof result.current.insertMany> = [];
+    act(() => {
+      created = result.current.insertMany([
+        { type: 'paragraph' },
+        { type: 'paragraph', parentId: 'ghost' },
+      ]);
+    });
+    // The dangling-parent spec returns null and is dropped from the result.
+    expect(created).toHaveLength(1);
+    expect(editor.blocks.transact).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('useBlocks contentIds', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('a parent node contentIds equals the ids of its direct children', () => {
+    const { editor } = makeFakeEditor([
+      { id: 'p', name: 'toggle' },
+      { id: 'c1', parentId: 'p' },
+      { id: 'c2', parentId: 'p' },
+      { id: 'root2' },
+    ]);
+    const { result } = renderHook(() => useBlocks(editor));
+    const parent = result.current.getById('p');
+    expect(parent?.contentIds).toEqual(result.current.getChildren('p').map((n) => n.id));
+    expect(parent?.contentIds).toEqual(['c1', 'c2']);
+    // A leaf has no children.
+    expect(result.current.getById('root2')?.contentIds).toEqual([]);
   });
 });

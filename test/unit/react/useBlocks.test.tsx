@@ -28,7 +28,17 @@ const makeFakeEditor = (
       }),
       setBlockParent: vi.fn(),
       delete: vi.fn(),
-      move: vi.fn(),
+      // Faithful to Blok's Blocks.move(): toIndex is POST-removal index space
+      // (splice out fromIndex, then re-insert at toIndex). Actually mutating the
+      // list lets the hook re-read each block's new flat index — which the
+      // nest/unnest relocation-success check depends on.
+      move: vi.fn((toIndex: number, fromIndex: number) => {
+        const [moved] = list.splice(fromIndex, 1);
+
+        if (moved !== undefined) {
+          list.splice(toIndex, 0, moved);
+        }
+      }),
       update: vi.fn(() => Promise.resolve({})),
       convert: vi.fn(() => Promise.resolve({})),
       transact: vi.fn((fn: () => void) => fn()),
@@ -118,6 +128,52 @@ describe('useBlocks mutators (delegation)', () => {
     const { result } = renderHook(() => useBlocks(editor));
     act(() => result.current.unnest('a'));
     expect(editor.blocks.setBlockParent).toHaveBeenCalledWith('a', null);
+  });
+
+  it('nest is a no-op when the target parent is the block itself or its own descendant', () => {
+    // Nesting a block under itself (or under one of its own descendants) would
+    // form a cycle. Core's setBlockParent THROWS on a cycle, so the hook must
+    // guard it up front as a no-op instead of crashing the caller.
+    const { editor } = makeFakeEditor([{ id: 'A', name: 'toggle' }, { id: 'A1', parentId: 'A' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.nest('A', 'A'));   // self
+    act(() => result.current.nest('A', 'A1'));  // own descendant
+    expect(editor.blocks.setBlockParent).not.toHaveBeenCalled();
+  });
+
+  it('nest is a no-op when an id is unknown, probed WITHOUT the warning-emitting getBlockIndex', () => {
+    // getBlockIndex logs a `warn` for any unknown id; the existence probe on this
+    // expected-absent no-op path must use the silent snapshot lookup instead.
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'p', name: 'toggle' }]);
+    const getBlockIndexSpy = vi.spyOn(editor.blocks, 'getBlockIndex');
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.nest('ghost', 'p'));
+    act(() => result.current.nest('a', 'ghost'));
+    expect(editor.blocks.setBlockParent).not.toHaveBeenCalled();
+    expect(getBlockIndexSpy).not.toHaveBeenCalledWith('ghost');
+  });
+
+  it('unnest is a no-op when the id is unknown, probed via the silent getById', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const getBlockIndexSpy = vi.spyOn(editor.blocks, 'getBlockIndex');
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.unnest('ghost'));
+    expect(editor.blocks.setBlockParent).not.toHaveBeenCalled();
+    expect(getBlockIndexSpy).not.toHaveBeenCalledWith('ghost');
+  });
+
+  it('groups a nest in a single transact (one undo step)', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'p', name: 'toggle' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.nest('a', 'p'));
+    expect(editor.blocks.transact).toHaveBeenCalledTimes(1);
+  });
+
+  it('groups an unnest in a single transact (one undo step)', () => {
+    const { editor } = makeFakeEditor([{ id: 'a', parentId: 'p' }, { id: 'p', name: 'toggle' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.unnest('a'));
+    expect(editor.blocks.transact).toHaveBeenCalledTimes(1);
   });
 
   it('remove resolves the flat index then delegates to delete without stealing the caret', () => {
@@ -544,6 +600,34 @@ describe('useBlocks insert', () => {
     expect(editor.blocks.setBlockParent).not.toHaveBeenCalled();
   });
 
+  it('replace with a non-object position returns null and inserts nothing (no target ref)', () => {
+    // A replace overwrites a specific target block named by a before/after ref.
+    // With position 'start'/'end' (or omitted) there is no target ref, so replace
+    // must abort with null instead of silently overwriting whatever sits at the
+    // resolved slot.
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let createdEnd: ReturnType<typeof result.current.insert> = null;
+    let createdStart: ReturnType<typeof result.current.insert> = null;
+    act(() => { createdEnd = result.current.insert({ type: 'header', replace: true }); });
+    act(() => { createdStart = result.current.insert({ type: 'header', position: 'start', replace: true }); });
+    expect(createdEnd).toBeNull();
+    expect(createdStart).toBeNull();
+    expect(editor.blocks.insert).not.toHaveBeenCalled();
+    expect(editor.blocks.setBlockParent).not.toHaveBeenCalled();
+  });
+
+  it('a dangling parentId is probed via the silent getById, not the warning-emitting getBlockIndex', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const getBlockIndexSpy = vi.spyOn(editor.blocks, 'getBlockIndex');
+    const { result } = renderHook(() => useBlocks(editor));
+    let created: ReturnType<typeof result.current.insert> = null;
+    act(() => { created = result.current.insert({ parentId: 'ghost' }); });
+    expect(created).toBeNull();
+    expect(editor.blocks.insert).not.toHaveBeenCalled();
+    expect(getBlockIndexSpy).not.toHaveBeenCalledWith('ghost');
+  });
+
   it('replace with a missing ref returns null even with a valid parentId', () => {
     const { editor } = makeFakeEditor([
       { id: 'p', name: 'toggle' },
@@ -635,6 +719,52 @@ describe('useBlocks move', () => {
     const { result } = renderHook(() => useBlocks(editor));
     act(() => result.current.move('A', { before: 'A' }));
     expect(editor.blocks.move).not.toHaveBeenCalled();
+  });
+
+  it('move is a no-op when a relative before/after ref does not exist', () => {
+    // A missing ref must NOT silently dump the block at the document end — that
+    // is a surprising relocation. Treat an unresolved relative target as a no-op.
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.move('a', { after: 'ghost' }));
+    act(() => result.current.move('a', { before: 'nope' }));
+    expect(editor.blocks.move).not.toHaveBeenCalled();
+  });
+
+  it('move is a no-op when the moved id is unknown, probed WITHOUT getBlockIndex', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const getBlockIndexSpy = vi.spyOn(editor.blocks, 'getBlockIndex');
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.move('ghost', { toIndex: 0 }));
+    expect(editor.blocks.move).not.toHaveBeenCalled();
+    expect(getBlockIndexSpy).not.toHaveBeenCalledWith('ghost');
+  });
+
+  it('move with an absolute toIndex landing inside the block own subtree is a no-op', () => {
+    // An absolute toIndex pointing into the moved block's own descendant range
+    // would make core auto-heal the block under its own child — a cycle that
+    // core's guard THROWS on. Guard it as a no-op.
+    const { editor } = makeFakeEditor([
+      { id: 'P', name: 'toggle' },
+      { id: 'c1', parentId: 'P' },
+      { id: 'c2', parentId: 'P' },
+      { id: 'tail' },
+    ]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.move('P', { toIndex: 2 })); // index 2 == c2, inside P's subtree
+    expect(editor.blocks.move).not.toHaveBeenCalled();
+  });
+
+  it('move with an absolute toIndex OUTSIDE the block own subtree still delegates', () => {
+    const { editor } = makeFakeEditor([
+      { id: 'P', name: 'toggle' },
+      { id: 'c1', parentId: 'P' },
+      { id: 'c2', parentId: 'P' },
+      { id: 'tail' },
+    ]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.move('P', { toIndex: 3 })); // index 3 == tail, outside the subtree
+    expect(editor.blocks.move).toHaveBeenCalledWith(3, 0);
   });
 
   it('move after the last block (forward to end) stays within Blok bounds', () => {
@@ -805,5 +935,58 @@ describe('useBlocks contentIds', () => {
     expect(parent?.contentIds).toEqual(['c1', 'c2']);
     // A leaf has no children.
     expect(result.current.getById('root2')?.contentIds).toEqual([]);
+  });
+});
+
+describe('useBlocks pre-ready API (editor is null)', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('mutators are no-ops and read methods return empty/null', () => {
+    const { result } = renderHook(() => useBlocks(null));
+    expect(result.current.getById('x')).toBeNull();
+    expect(result.current.getChildren(null)).toEqual([]);
+    expect(result.current.insert({ type: 'paragraph' })).toBeNull();
+    expect(result.current.insertMany([{ type: 'paragraph' }])).toEqual([]);
+    expect(result.current.move('x', { toIndex: 0 })).toBeUndefined();
+    expect(result.current.nest('a', 'b')).toBeUndefined();
+    expect(result.current.unnest('a')).toBeUndefined();
+    expect(result.current.remove('a')).toBeUndefined();
+    expect(result.current.update('a', { text: 'x' })).toBeUndefined();
+    expect(result.current.convert('a', 'header')).toBeUndefined();
+  });
+
+  it('transact still RUNS its callback even when the editor is null (not a no-op)', () => {
+    // The pre-ready transact is the one exception: it invokes its callback so a
+    // consumer wrapping conditional work in transact still executes that work.
+    const { result } = renderHook(() => useBlocks(null));
+    const fn = vi.fn();
+    act(() => result.current.transact(fn));
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('useBlocks transact fallback (editor.blocks.transact undefined)', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('runs the callback directly when core exposes no transact', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    // Simulate a core build without the optional transact API.
+    (editor.blocks as unknown as { transact?: (fn: () => void) => void }).transact = undefined;
+    const { result } = renderHook(() => useBlocks(editor));
+    const fn = vi.fn();
+    act(() => result.current.transact(fn));
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('a single insert still runs (delegates to core.insert) without a transact', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    (editor.blocks as unknown as { transact?: (fn: () => void) => void }).transact = undefined;
+    const { result } = renderHook(() => useBlocks(editor));
+    let created: ReturnType<typeof result.current.insert> = null;
+    act(() => { created = result.current.insert({ type: 'paragraph' }); });
+    expect(editor.blocks.insert).toHaveBeenCalledTimes(1);
+    expect(created).toMatchObject({ type: 'paragraph' });
   });
 });

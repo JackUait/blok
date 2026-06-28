@@ -135,7 +135,15 @@ export declare function BlokProvider(props: {
 /** Reads the app-wide Blok defaults from the nearest `BlokProvider` (or `{}`). */
 export declare function useBlokDefaults(): Partial<UseBlokConfig>;
 
-/** A plain, serializable view of one block in the tree. */
+/**
+ * A plain, serializable view of one block in the tree.
+ *
+ * Snapshot-volatile: every read allocates a fresh `BlockNode`, and `contentIds`
+ * is DERIVED per read from the children that currently name this block as parent
+ * (it is not a stored field). Read a node in render and re-read after a change —
+ * don't stash one in a `useMemo`/`useEffect` dependency array expecting stable
+ * identity; depend on the `id` instead.
+ */
 export interface BlockNode {
   id: string;
   type: string;
@@ -196,6 +204,12 @@ export interface UseBlocksApi {
    * explicit `id` that already exists is insert-if-absent (returns the existing
    * node, creates nothing). Atomic — one undo step. The returned node is
    * {@link BlockNode}-volatile; read it now, don't put it in a dep array.
+   *
+   * `replace: true` is a positional "turn into": it REQUIRES a `before`/`after`
+   * `position` whose ref IS the block to overwrite. It returns `null` if
+   * `replace` is set without an object `position`, or if that target ref does
+   * not exist. The replacement keeps the overwritten block's own parent (the
+   * caller's `parentId` is ignored under `replace`).
    */
   insert(spec?: InsertSpec): BlockNode | null;
   /**
@@ -209,9 +223,48 @@ export interface UseBlocksApi {
    * fresh-snapshot volatile — read them now, don't stash them in dep arrays.
    */
   insertMany(specs: InsertSpec[]): BlockNode[];
+  /**
+   * Move `id` to a flat slot, as a single operation. No-op when `id` is unknown.
+   * For a relative `{ before|after }` target it is also a no-op when the ref is
+   * `id` itself, a descendant of `id` (a block can't be a sibling of its own
+   * child), OR does not exist — a missing ref is NOT relocated to the document
+   * end. A `{ toIndex }` target is an absolute flat index, clamped into range,
+   * and no-ops if the clamped slot would land inside the block's own subtree.
+   *
+   * Parent-adoption side effect: `before`/`after` are POSITION targets, so the
+   * moved block ADOPTS the parent of wherever it lands (moving into a
+   * container's children nests it; moving out to a root sibling unnests it).
+   * Use {@link nest}/{@link unnest} to change the parent without choosing a
+   * sibling slot. Returns void.
+   */
   move(id: string, target: MoveTarget): void;
+  /**
+   * Nest `id` (and its whole subtree) under `parentId`, as one undo step.
+   * Graceful no-op when either id is unknown, when `parentId === id`, or when
+   * `parentId` is a DESCENDANT of `id` (a block can't be nested under its own
+   * child).
+   *
+   * Column boundary caveat: nesting a block that lives inside a `column` (or
+   * into one) is a GRACEFUL no-op — Blok's move() clamps cross-column-boundary
+   * moves, so the relocation can't run and the parent isn't changed. Use the
+   * drag UI for column membership changes. Returns void.
+   */
   nest(id: string, parentId: string): void;
+  /**
+   * Promote `id` (and its subtree) to root, as one undo step. Graceful no-op
+   * when the id is unknown or already at root. Same column-boundary caveat as
+   * {@link nest}: unnesting out of a `column` is a graceful no-op. Returns void.
+   */
   unnest(id: string): void;
+  /**
+   * Remove a block by id. DESTRUCTIVE: this deletes the block AND its entire
+   * subtree (all transitive descendants), NOT just the single block. Deletion
+   * runs deepest-first (descending flat index) so each parent is childless when
+   * it's removed — this avoids Blok's single-block delete, which would otherwise
+   * PROMOTE a (non-columns) container's children to root and orphan the nested
+   * structure the caller meant to discard. The whole cascade is one undo step.
+   * An unknown id is a silent no-op. Returns void.
+   */
   remove(id: string): void;
   /**
    * Update a block's data and/or tunes by id. Delegates to core's async
@@ -231,6 +284,13 @@ export interface UseBlocksApi {
    * Returns `void`.
    */
   convert(id: string, newType: string, dataOverrides?: BlockToolData): void;
+  /**
+   * Run `fn` as a single atomic undo step: every mutation it makes is grouped
+   * into one history entry, so a single undo reverts the whole batch. Delegates
+   * to core's `blocks.transact` when available and otherwise just invokes `fn`
+   * directly. (`insert`/`insertMany`/`nest`/`unnest`/`remove` already wrap
+   * themselves; use this to group several calls into one step.) Returns void.
+   */
   transact(fn: () => void): void;
 }
 
@@ -239,11 +299,21 @@ export interface UseBlocksApi {
  * Re-renders whenever the editor emits 'block changed' — including programmatic
  * `nest`/`unnest` reparents, which Blok surfaces as a structural mutation.
  *
+ * Reactivity contract: reads refresh ONLY in response to the editor's
+ * 'block changed' event. A mutation that advances the editor state WITHOUT
+ * emitting it (a tool that mutates its own data without a sync, say) would leave
+ * these reads frozen on the previous snapshot until the next emission. The
+ * built-in mutators here all route through paths that emit, so this only bites
+ * out-of-band tool writes.
+ *
  * Pre-ready contract: while `editor` is null (before `useBlok` resolves) the
- * returned API is a stable no-op handle — every method is a no-op,
- * `insert`/`getById` return `null`, and `getChildren` returns `[]`. Calls made
- * before the editor is ready are silently dropped, so guard on a non-null editor
- * (or render-gate on it) when an insert must not be lost.
+ * returned API is a stable handle — `insert`/`getById` return `null`,
+ * `getChildren` returns `[]`, and the mutators (`move`/`nest`/`unnest`/`remove`/
+ * `update`/`convert`/`insertMany`) are no-ops. The one exception is `transact`,
+ * which still RUNS its callback even when the editor is null (it is `fn => fn()`)
+ * — so it is NOT a pure no-op like the others. Calls made before the editor is
+ * ready are otherwise silently dropped, so guard on a non-null editor (or
+ * render-gate on it) when an insert must not be lost.
  *
  * Referential stability: the returned API object is stable across renders (it
  * only changes when `editor` does), but each `getById`/`getChildren` call

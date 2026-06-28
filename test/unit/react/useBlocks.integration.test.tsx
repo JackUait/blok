@@ -175,15 +175,105 @@ const createRealEditorHarness = (
       await Promise.resolve();
     },
 
-    // Faithful to Blok's Blocks.move(): toIndex is POST-removal index space
-    // (splice out fromIndex, then splice in at toIndex). The auto-reparent that
-    // the real BlockManager.move layers on top is asserted explicitly by
-    // useBlocks via setBlockParent, so a pure flat reorder is sufficient here.
+    // Faithful to Blok's Blocks.move() (block-mutation.ts): toIndex is the
+    // POST-removal index space (splice out fromIndex, then splice in at
+    // toIndex). Two core side effects are mirrored so the hook is exercised
+    // against real semantics:
+    //
+    //   1. Column-boundary clamp: a block that lives in a `column` cannot be
+    //      moved next to a block of a DIFFERENT parent (it would be ejected
+    //      from its column). Core no-ops such a move; mirrored here.
+    //   2. Cross-container auto-heal: after the flat reorder, the moved block
+    //      ADOPTS the parent of the block that sat at `toIndex` (read on the
+    //      pre-removal array, as core does). A heal that would form a cycle
+    //      (target parent is the moved block itself or one of its descendants)
+    //      is skipped — real core's BlockHierarchy.setBlockParent refuses such
+    //      a cycle, so the heal never lands; skipping keeps the harness from
+    //      throwing on the transient self-parent the subtree relocation hits
+    //      before useBlocks re-asserts the final parents.
     move: (toIndex: number, fromIndex?: number): void => {
-      if (fromIndex !== undefined) {
-        blocksStore.move(toIndex, fromIndex);
+      if (fromIndex === undefined) {
+        return;
+      }
+
+      const count = blocksStore.length;
+
+      // Mirror repository.validateIndex: 0 <= index < length.
+      if (toIndex < 0 || toIndex >= count || fromIndex < 0 || fromIndex >= count) {
+        return;
+      }
+
+      const movingBlock = blocksStore.array[fromIndex];
+      const neighborBlock = blocksStore.array[toIndex];
+      const destinationParentId = neighborBlock !== undefined ? neighborBlock.parentId : null;
+
+      // (1) Column-boundary clamp.
+      const movingParent =
+        movingBlock?.parentId !== null && movingBlock?.parentId !== undefined
+          ? blocksStore.array.find((b) => b.id === movingBlock.parentId)
+          : undefined;
+
+      if (movingParent?.name === 'column' && destinationParentId !== movingBlock.parentId) {
+        return;
+      }
+
+      blocksStore.move(toIndex, fromIndex);
+
+      // (2) Cross-container auto-heal (cycle-guarded — see method doc).
+      if (movingBlock !== undefined && movingBlock.parentId !== destinationParentId) {
+        const wouldFormCycle = ((): boolean => {
+          let cursor: string | null = destinationParentId;
+          const seen = new Set<string>();
+
+          while (cursor !== null) {
+            if (cursor === movingBlock.id || seen.has(cursor)) {
+              return true;
+            }
+            seen.add(cursor);
+            cursor = blocksStore.array.find((b) => b.id === cursor)?.parentId ?? null;
+          }
+
+          return false;
+        })();
+
+        if (!wouldFormCycle) {
+          hierarchy.setBlockParent(movingBlock, destinationParentId);
+        }
+      }
+
+      notify();
+    },
+
+    /**
+     * Async like core's Blocks.update — mutates the block's data (not exposed on
+     * BlockNode) and notifies so the hook re-renders. Drives reactivity tests.
+     */
+    update: async (
+      id: string,
+      data?: unknown,
+      _tunes?: unknown
+    ): Promise<void> => {
+      const block = blocksStore.array.find((b) => b.id === id);
+
+      if (block !== undefined) {
+        (block as unknown as { data: unknown }).data = data;
         notify();
       }
+      await Promise.resolve();
+    },
+
+    /**
+     * Async like core's Blocks.convert — swaps the block's tool name (the
+     * observable `type` on a BlockNode) and notifies.
+     */
+    convert: async (id: string, newType: string, _dataOverrides?: unknown): Promise<void> => {
+      const block = blocksStore.array.find((b) => b.id === id);
+
+      if (block !== undefined) {
+        (block as unknown as { name: string }).name = newType;
+        notify();
+      }
+      await Promise.resolve();
     },
 
     transact: (fn: () => void): void => fn(),
@@ -532,5 +622,133 @@ describe('useBlocks — real BlockHierarchy integration', () => {
       }
     }
     expect(flat).toEqual(['A', 'C', insertedId, 'B']);
+  });
+
+  it('nest across a column boundary is a graceful no-op (parent unchanged, tree intact)', () => {
+    // [A, col(column), c1, c2] — c1/c2 live inside the column. Core's move()
+    // clamps any attempt to relocate a column member next to a different-parent
+    // block, so the relocation can't run. The hook must then SKIP the reparent
+    // (relocation blocked) — leaving c2 a child of the column and the flat array
+    // untouched — instead of corrupting DFS contiguity by reparenting in place.
+    const harness = createRealEditorHarness([
+      { id: 'A' },
+      { id: 'col', name: 'column' },
+      { id: 'c1', parentId: 'col' },
+      { id: 'c2', parentId: 'col' },
+    ]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    act(() => {
+      result.current.nest('c2', 'A');
+    });
+
+    // c2 is still the column's child; A adopted nothing.
+    expect(result.current.getById('c2')?.parentId).toBe('col');
+    expect(result.current.getChildren('A')).toHaveLength(0);
+    expect(result.current.getChildren('col').map((n) => n.id)).toEqual(['c1', 'c2']);
+
+    const flat: string[] = [];
+
+    for (let i = 0; i < harness.editor.blocks.getBlocksCount(); i++) {
+      const node = harness.editor.blocks.getBlockByIndex(i);
+
+      if (node !== undefined) {
+        flat.push(node.id);
+      }
+    }
+    expect(flat).toEqual(['A', 'col', 'c1', 'c2']);
+  });
+
+  it('move ADOPTS the parent of the slot it lands in (parent-adoption side effect)', () => {
+    // [X, col(column), c] — X is a root block. Moving X to sit after the column
+    // child c lands it among the column's children, so X ADOPTS `col` as its
+    // parent. This is core's flat-position auto-heal, asserted via parentId.
+    const harness = createRealEditorHarness([
+      { id: 'X' },
+      { id: 'col', name: 'column' },
+      { id: 'c', parentId: 'col' },
+    ]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    expect(result.current.getById('X')?.parentId).toBeNull();
+
+    act(() => {
+      result.current.move('X', { after: 'c' });
+    });
+
+    expect(result.current.getById('X')?.parentId).toBe('col');
+    expect(result.current.getChildren('col').map((n) => n.id)).toContain('X');
+  });
+
+  it('move with an unknown relative ref is a no-op (does not relocate to the document end)', () => {
+    const harness = createRealEditorHarness([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    act(() => {
+      result.current.move('a', { after: 'ghost' });
+    });
+
+    // Order unchanged — the unknown ref did not dump 'a' at the end.
+    expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('convert against the real harness swaps the type, re-renders, and is NOT wrapped in transact', () => {
+    const harness = createRealEditorHarness([{ id: 'a', name: 'paragraph' }]);
+
+    workingArea = harness.workingArea;
+
+    const transactSpy = vi.spyOn(harness.editor.blocks, 'transact');
+
+    let renderCount = 0;
+    const { result } = renderHook(() => {
+      renderCount += 1;
+
+      return useBlocks(harness.editor);
+    });
+
+    const before = renderCount;
+
+    act(() => {
+      result.current.convert('a', 'header');
+    });
+
+    expect(result.current.getById('a')?.type).toBe('header');
+    expect(renderCount).toBeGreaterThan(before);
+    // convert owns its own async history step — it must not open a transact.
+    expect(transactSpy).not.toHaveBeenCalled();
+  });
+
+  it('update against the real harness re-renders and is NOT wrapped in transact', () => {
+    const harness = createRealEditorHarness([{ id: 'a' }]);
+
+    workingArea = harness.workingArea;
+
+    const transactSpy = vi.spyOn(harness.editor.blocks, 'transact');
+
+    let renderCount = 0;
+    const { result } = renderHook(() => {
+      renderCount += 1;
+
+      return useBlocks(harness.editor);
+    });
+
+    const before = renderCount;
+
+    act(() => {
+      result.current.update('a', { text: 'updated' });
+    });
+
+    expect(renderCount).toBeGreaterThan(before);
+    // update delegates to core's async update — no synchronous transact wrapper.
+    expect(transactSpy).not.toHaveBeenCalled();
   });
 });

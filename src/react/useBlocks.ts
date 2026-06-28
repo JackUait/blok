@@ -33,6 +33,12 @@ const readerFor = (editor: Blok): IndexReader => {
   };
 };
 
+/**
+ * Stable API returned while the editor is null (before `useBlok` resolves).
+ * Every read returns empty/null and every MUTATOR is a no-op — EXCEPT
+ * `transact`, which still invokes its callback so a consumer wrapping
+ * conditional work in `transact` still runs that work even pre-ready.
+ */
 const EMPTY_API: UseBlocksApi = {
   getById: () => null,
   getChildren: () => [],
@@ -44,6 +50,7 @@ const EMPTY_API: UseBlocksApi = {
   remove: () => undefined,
   update: () => undefined,
   convert: () => undefined,
+  // Not a no-op: still runs the callback (see EMPTY_API doc above).
   transact: (fn: () => void) => fn(),
 };
 
@@ -60,10 +67,11 @@ const EMPTY_API: UseBlocksApi = {
  * out-of-band tool writes.
  *
  * Pre-ready contract: while `editor` is null (before `useBlok` resolves) the
- * returned API is the stable {@link EMPTY_API} — every method is a no-op,
- * `insert`/`getById` return `null`, and `getChildren` returns `[]`. Calls made
- * before the editor is ready are silently dropped, so guard on a non-null editor
- * (or render-gate on it) when an insert must not be lost.
+ * returned API is the stable {@link EMPTY_API} — every MUTATOR is a no-op,
+ * `insert`/`getById` return `null`, and `getChildren` returns `[]`. The one
+ * exception is `transact`, which still invokes its callback even pre-ready.
+ * Mutator calls made before the editor is ready are silently dropped, so guard
+ * on a non-null editor (or render-gate on it) when an insert must not be lost.
  *
  * Referential stability: the returned API object is stable across renders (it
  * only changes when `editor` does), but each `getById`/`getChildren` call
@@ -190,7 +198,7 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
      * root move didn't already pull into place. Keeps the flat array DFS-contiguous,
      * the invariant the flat-index insert API and getChildren ordering depend on.
      */
-    const relocateSubtree = (rootId: string, preRemovalSlot: number): void => {
+    const relocateSubtree = (rootId: string, preRemovalSlot: number): boolean => {
       // Subtree members in current flat (document) order — root first.
       const members = collectSubtreeIds(rootId)
         .map((id) => ({ id, idx: editor.blocks.getBlockIndex(id) }))
@@ -201,7 +209,7 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       const rootFrom = editor.blocks.getBlockIndex(rootId);
 
       if (rootFrom === undefined) {
-        return;
+        return false;
       }
 
       // Defensive clamp into [0, count-1]: Blok's move() silently no-ops on an
@@ -215,6 +223,17 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       );
 
       editor.blocks.move(rootTarget, rootFrom);
+
+      // Detect a BLOCKED relocation: Blok's move() clamps a cross-`column`-
+      // boundary move to a no-op. If the root could not reach its target (it
+      // didn't move and wasn't already there), the relocation failed — report
+      // it so the caller skips the reparent that would otherwise corrupt DFS
+      // contiguity (a child wedged outside its parent's flat run). A legitimate
+      // no-op (already at target, rootFrom === rootTarget) still counts as
+      // relocated so an in-place nest/unnest reparents as intended.
+      if (rootFrom !== rootTarget && editor.blocks.getBlockIndex(rootId) === rootFrom) {
+        return false;
+      }
 
       // Place each descendant immediately after the previously-positioned member,
       // re-reading the anchor's LIVE index every iteration. A cached root index
@@ -243,6 +262,8 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
           editor.blocks.move(from < target ? target - 1 : target, from);
         }
       });
+
+      return true;
     };
 
     // Reparent `id` (root → newParentId, descendants → their original parent).
@@ -261,18 +282,26 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
 
     /**
      * Nest `id` (and its whole subtree) under `parentId`, as one undo step.
-     * No-op when either id is unknown.
+     * No-op when either id is unknown (probed via the silent snapshot, NOT
+     * getBlockIndex, which warns on unknown ids), or when `parentId` is `id`
+     * itself or one of `id`'s own descendants — that would form a cycle, which
+     * core's setBlockParent THROWS on, so the hook guards it up front.
      *
      * Column boundary caveat: nesting a block that lives inside a `column` (or
      * into one) is a GRACEFUL no-op — Blok's move() clamps cross-column-boundary
-     * moves, so the relocation can't run and the parent isn't changed. Use the
+     * moves, so the relocation can't run; the hook detects the blocked
+     * relocation and skips the reparent, leaving the parent unchanged. Use the
      * drag UI for column membership changes. Returns void.
      */
     const nest = (id: string, parentId: string): void => {
-      if (
-        editor.blocks.getBlockIndex(parentId) === undefined ||
-        editor.blocks.getBlockIndex(id) === undefined
-      ) {
+      if (getById(parentId) === null || getById(id) === null) {
+        return;
+      }
+
+      // Cycle guard: a block can't become a child of itself or of one of its
+      // own descendants. Without this, the relocate/reparent reaches core's
+      // setBlockParent, which throws on a cycle and crashes the caller.
+      if (parentId === id || isDescendantOf(parentMap(reader), parentId, id)) {
         return;
       }
 
@@ -282,11 +311,16 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       // "end" slot when that parent's descendants are contiguous — a bare reparent
       // (no relocation) would wedge unrelated blocks between the parent and its new
       // child, corrupting later inserts/reads. Mirrors the drag move-then-reparent.
+      //
+      // Only reparent when the relocation actually placed the block: a clamped
+      // cross-column move leaves it where it was, and reparenting in place would
+      // break DFS contiguity.
       const members = captureSubtreeParents(id);
 
       transact(() => {
-        relocateSubtree(id, resolveInsertIndex(reader, parentId, 'end'));
-        reparentSubtree(members, id, parentId);
+        if (relocateSubtree(id, resolveInsertIndex(reader, parentId, 'end'))) {
+          reparentSubtree(members, id, parentId);
+        }
       });
     };
 
@@ -296,10 +330,12 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
      * {@link nest}: unnesting out of a `column` is a graceful no-op. Returns void.
      */
     const unnest = (id: string): void => {
-      if (editor.blocks.getBlockIndex(id) === undefined) {
+      const node = getById(id);
+
+      if (node === null) {
         return;
       }
-      const parentId = getById(id)?.parentId ?? null;
+      const parentId = node.parentId;
 
       if (parentId === null) {
         return;
@@ -308,11 +344,14 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       // Move id's subtree out past its former parent's whole subtree before
       // clearing the parent, so the promoted block doesn't strand itself between
       // the parent and its remaining children (which would break contiguity).
+      // As with nest, only clear the parent when the relocation succeeded — a
+      // clamped cross-column move must stay a graceful no-op.
       const members = captureSubtreeParents(id);
 
       transact(() => {
-        relocateSubtree(id, resolveInsertIndex(reader, parentId, 'end'));
-        reparentSubtree(members, id, null);
+        if (relocateSubtree(id, resolveInsertIndex(reader, parentId, 'end'))) {
+          reparentSubtree(members, id, null);
+        }
       });
     };
 
@@ -352,9 +391,14 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
 
     /**
      * Move `id` to a flat slot, as a single operation. No-op when `id` is
-     * unknown, or when a relative `{ before|after }` target references `id`
-     * itself or one of its descendants (a block can't be a sibling of its own
-     * child). The guard runs BEFORE the index is resolved.
+     * unknown (probed via the silent snapshot, NOT getBlockIndex, which warns on
+     * unknown ids); when a relative `{ before|after }` target references `id`
+     * itself, one of its descendants (a block can't be a sibling of its own
+     * child), or a ref that does not exist (an unresolved relative target must
+     * not silently dump the block at the document end); or when an absolute
+     * `{ toIndex }` lands inside `id`'s OWN subtree (that would auto-heal the
+     * block under its own child — a cycle core throws on). Guards run BEFORE the
+     * index is resolved into a final move.
      *
      * Parent-adoption side effect: `before`/`after` are POSITION targets, so the
      * moved block ADOPTS the parent of wherever it lands (moving into a
@@ -363,19 +407,44 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
      * sibling slot. Returns void.
      */
     const move = (id: string, target: MoveTarget): void => {
+      // Silent existence probe (NOT getBlockIndex, which warns on unknown ids).
+      if (getById(id) === null) {
+        return;
+      }
+      // id is known, so getBlockIndex won't warn.
       const fromIndex = editor.blocks.getBlockIndex(id);
 
       if (fromIndex === undefined) {
         return;
       }
 
-      // A relative target can't reference the block itself or any of its own
-      // descendants — a block can't become a sibling of its child. Guard it as
-      // a no-op (an absolute { toIndex } can't express this, so it's skipped).
       if (!('toIndex' in target)) {
         const ref = 'before' in target ? target.before : target.after;
 
+        // A relative target can't reference the block itself or any of its own
+        // descendants — a block can't become a sibling of its child.
         if (ref === id || isDescendantOf(parentMap(reader), ref, id)) {
+          return;
+        }
+
+        // An unresolved relative ref must NOT fall through to a relocate-to-end:
+        // a missing target is a no-op, not a surprise jump to the document end.
+        if (getById(ref) === null) {
+          return;
+        }
+      } else {
+        // An absolute toIndex landing inside id's own subtree would make core
+        // auto-heal the block under one of its descendants — a parent/child
+        // cycle that core's setBlockParent THROWS on. Compute the block's own
+        // flat subtree range and no-op when the (clamped) target falls within
+        // it. A leaf's range is a single slot, so this never blocks a real move.
+        const subtreeEnd = collectSubtreeIds(id)
+          .map((memberId) => editor.blocks.getBlockIndex(memberId))
+          .filter((i): i is number => i !== undefined)
+          .reduce((max, i) => Math.max(max, i), fromIndex);
+        const requested = resolveMoveIndex(reader, target);
+
+        if (requested > fromIndex && requested <= subtreeEnd) {
           return;
         }
       }
@@ -428,22 +497,33 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       }
 
       // A dangling parentId would make core throw (dev) or silently misplace the
-      // block at the document end (prod). Honor the null contract instead. Skipped
-      // under replace: a replace ignores parentId entirely (the overwritten
-      // block's own parent governs), so a stale parentId must not abort the
-      // overwrite.
-      if (!replace && parentId !== null && editor.blocks.getBlockIndex(parentId) === undefined) {
+      // block at the document end (prod). Honor the null contract instead. Probe
+      // via the silent snapshot getById, NOT editor.blocks.getBlockIndex, which
+      // logs a `warn` for any unknown id and would spam the console on this
+      // expected-absent no-op path. Skipped under replace: a replace ignores
+      // parentId entirely (the overwritten block's own parent governs), so a
+      // stale parentId must not abort the overwrite.
+      if (!replace && parentId !== null && getById(parentId) === null) {
         return null;
       }
 
       // A replace targets the before/after ref block ITSELF (the "turn into"
-      // block being overwritten), not a sibling anchor. If that ref doesn't
-      // exist there is nothing to overwrite — return null instead of falling
-      // through to resolveInsertIndex's end-slot fallback, which would
-      // otherwise insert/replace at the wrong place (and then reparent a
-      // dangling target). Validation is skipped for a plain insert (above), so
-      // this is the only guard that protects the replace path.
-      if (replace && typeof position === 'object') {
+      // block being overwritten), not a sibling anchor. It therefore REQUIRES an
+      // object position naming that ref:
+      //   - with position 'start'/'end' (or omitted) there is no target ref, so
+      //     a replace has nothing to overwrite — return null rather than silently
+      //     overwriting whatever block happens to sit at the resolved slot;
+      //   - with an object position whose ref doesn't exist there is likewise
+      //     nothing to overwrite — return null instead of falling through to
+      //     resolveInsertIndex's end-slot fallback (which would insert/replace at
+      //     the wrong place and reparent a dangling target).
+      // Validation is skipped for a plain insert (above), so this is the only
+      // guard that protects the replace path.
+      if (replace) {
+        if (typeof position !== 'object') {
+          return null;
+        }
+
         const replaceTargetRef = 'before' in position ? position.before : position.after;
 
         if (getById(replaceTargetRef) === null) {

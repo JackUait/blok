@@ -1027,7 +1027,10 @@ const SlashViz: React.FC = () => {
     <div
       ref={rootRef}
       aria-hidden="true"
-      className="relative w-full overflow-hidden rounded-2xl border border-border/60 bg-card p-2 shadow-[0_20px_44px_-18px_rgba(0,0,0,0.22)]"
+      // self-start: this menu is taller than the bento cell, so it top-aligns
+      // (like the table diorama) and overflows only downward — where the card
+      // border clips it flush — instead of centering and riding over the title.
+      className="relative w-full self-start overflow-hidden rounded-2xl border border-border/60 bg-card p-2 shadow-[0_20px_44px_-18px_rgba(0,0,0,0.22)]"
     >
       {/* Brand border revealed where the tile's glow blob touches the card. */}
       <span

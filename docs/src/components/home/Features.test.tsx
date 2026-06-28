@@ -326,6 +326,26 @@ describe('Features', () => {
     }
   });
 
+  // The slash menu diorama is taller than its bento cell. Its wrapper centers the
+  // diorama vertically — fine for the short tiles — but a centered tall card
+  // overflows EQUALLY up and down, and the upward half rode over the tile title,
+  // covering it (the "broken" look). The equally-tall table diorama avoids this by
+  // top-aligning itself (self-start) so it only ever overflows downward, where the
+  // card border clips it flush. Lock the slash diorama to the same rule.
+  it('top-aligns the slash diorama so a tall menu never rides over the tile title', () => {
+    renderFeatures();
+    const slash = screen.getByRole('button', {
+      name: 'Learn more about the slash menu and Markdown',
+    });
+    const wrap = Array.from(slash.querySelectorAll<HTMLElement>('div')).find((el) =>
+      /(^|\s)min-h-\[6\.75rem\]/.test(el.className),
+    );
+    expect(wrap).toBeDefined();
+    // the SlashViz root is the diorama card — the direct child of the wrapper
+    const card = wrap?.querySelector<HTMLElement>(':scope > div');
+    expect(card?.className).toMatch(/(^|\s)self-start(\s|$)/);
+  });
+
   // Every diorama animation is gated behind the cursor: `:hover` in CSS,
   // `pointermove` in JS. A touch device has no cursor, so the dioramas froze at
   // their rest frame. The cure mirrors each hover animation onto an

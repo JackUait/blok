@@ -875,6 +875,15 @@ describe('BlocksAPI', () => {
       expect(result).toEqual({ wrappedBlock: expect.objectContaining({ id: 'custom' }) as unknown });
     });
 
+    it('forwards tunes to BlockManager.insert', () => {
+      const { blocksApi, blockManager } = createBlocksApi();
+      const tunes = { align: 'center' };
+
+      blocksApi.insert('paragraph', { text: 'x' }, {}, 0, false, false, 'id1', tunes);
+
+      expect(blockManager.insert).toHaveBeenCalledWith(expect.objectContaining({ tunes }));
+    });
+
     it('uses default block type when insert arguments are omitted', () => {
       const { blocksApi, blockManager } = createBlocksApi({
         configOverrides: { defaultBlock: 'header' },

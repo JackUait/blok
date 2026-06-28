@@ -239,7 +239,8 @@ describe('useBlocks insert', () => {
     let created: ReturnType<typeof result.current.insert> = null;
     act(() => { created = result.current.insert({ type: 'header', data: { text: 'hi' } }); });
     // needToFocus=false: programmatic creation must not steal the caret.
-    expect(editor.blocks.insert).toHaveBeenCalledWith('header', { text: 'hi' }, {}, 2, false);
+    // Trailing args: replace=false, id=undefined, tunes=undefined.
+    expect(editor.blocks.insert).toHaveBeenCalledWith('header', { text: 'hi' }, {}, 2, false, false, undefined, undefined);
     expect(created).toMatchObject({ type: 'header' });
   });
 
@@ -247,14 +248,47 @@ describe('useBlocks insert', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => { result.current.insert({ type: 'paragraph', position: { before: 'b' } }); });
-    expect(editor.blocks.insert).toHaveBeenCalledWith('paragraph', {}, {}, 1, false);
+    expect(editor.blocks.insert).toHaveBeenCalledWith('paragraph', {}, {}, 1, false, false, undefined, undefined);
   });
 
   it('focuses the new block only when spec.focus is true', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => { result.current.insert({ type: 'paragraph', focus: true }); });
-    expect(editor.blocks.insert).toHaveBeenCalledWith('paragraph', {}, {}, 1, true);
+    expect(editor.blocks.insert).toHaveBeenCalledWith('paragraph', {}, {}, 1, true, false, undefined, undefined);
+  });
+
+  it('forwards replace to core so a block can be replaced ("turn into") in place', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => { result.current.insert({ type: 'header', position: { before: 'b' }, replace: true }); });
+    // replace=true (6th arg); flat index of 'b' = 1.
+    expect(editor.blocks.insert).toHaveBeenCalledWith('header', {}, {}, 1, false, true, undefined, undefined);
+  });
+
+  it('forwards an explicit id to core', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => { result.current.insert({ type: 'paragraph', id: 'fixed-id' }); });
+    expect(editor.blocks.insert).toHaveBeenCalledWith('paragraph', {}, {}, 1, false, false, 'fixed-id', undefined);
+  });
+
+  it('forwards tunes to core so tune state can be set at creation', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    const tunes = { align: 'center' };
+    act(() => { result.current.insert({ type: 'paragraph', tunes }); });
+    expect(editor.blocks.insert).toHaveBeenCalledWith('paragraph', {}, {}, 1, false, false, undefined, tunes);
+  });
+
+  it('is idempotent when an explicit id already exists (insert-if-absent)', () => {
+    const { editor } = makeFakeEditor([{ id: 'a', name: 'header' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let created: ReturnType<typeof result.current.insert> = null;
+    act(() => { created = result.current.insert({ id: 'a', type: 'paragraph' }); });
+    // The id is already present → return the existing node, never insert a duplicate.
+    expect(editor.blocks.insert).not.toHaveBeenCalled();
+    expect(created).toMatchObject({ id: 'a', type: 'header' });
   });
 
   it('returns null (does not throw) when the tool type is unknown', () => {

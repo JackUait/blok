@@ -1,5 +1,6 @@
 import type { BlokConfig, BlockToolData } from './index';
 import type { Blok, EditorWidth, BlockRenderedPayload, BlocksRenderedPayload } from './index';
+import type { BlockTuneData } from './block-tunes/block-tune-data';
 import type React from 'react';
 
 /**
@@ -156,6 +157,21 @@ export interface InsertSpec {
    * Set `true` for an explicit "add a block and start editing it" flow.
    */
   focus?: boolean;
+  /**
+   * Replace the block at the resolved slot instead of inserting a new one — a
+   * programmatic "turn into". Combine with a `position` that targets the block
+   * to replace, e.g. `{ position: { before: id }, replace: true }`.
+   */
+  replace?: boolean;
+  /**
+   * Explicit id for the new block (generated when omitted). Passing a stable id
+   * makes the insert idempotent: if a block with this id already exists the
+   * existing node is returned and nothing is inserted ("insert if absent"),
+   * so an effect that re-runs won't create duplicates.
+   */
+  id?: string;
+  /** Block tune data to apply at creation, keyed by tune name. */
+  tunes?: { [name: string]: BlockTuneData };
 }
 
 /**

@@ -310,6 +310,14 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       const data = spec.data ?? {};
       // Programmatic insert must not steal the caret unless explicitly asked.
       const needToFocus = spec.focus ?? false;
+      const replace = spec.replace ?? false;
+
+      // Idempotent insert-if-absent: a stable explicit id that already exists
+      // returns the existing node without inserting a duplicate, so a re-running
+      // effect is safe.
+      if (spec.id !== undefined && editor.blocks.getBlockIndex(spec.id) !== undefined) {
+        return getById(spec.id);
+      }
 
       // A dangling parentId would make core throw (dev) or silently misplace the
       // block at the document end (prod). Honor the null contract instead.
@@ -327,7 +335,7 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       transact(() => {
         const created = ((): { id: string } | null | undefined => {
           try {
-            return editor.blocks.insert(spec.type, data, {}, flatIndex, needToFocus);
+            return editor.blocks.insert(spec.type, data, {}, flatIndex, needToFocus, replace, spec.id, spec.tunes);
           } catch {
             // Unknown tool type: core throws "Tool not found" — honor null contract.
             return null;

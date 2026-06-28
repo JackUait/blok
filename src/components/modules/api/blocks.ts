@@ -282,6 +282,7 @@ export class BlocksAPI extends Module {
    * @param {boolean?} needToFocus - flag to focus inserted Block
    * @param replace - pass true to replace the Block existed under passed index
    * @param {string} id — An optional id for the new block. If omitted then the new id will be generated
+   * @param tunes — optional block tune data to apply at creation, keyed by tune name
    */
   public insert = (
     type?: string,
@@ -290,7 +291,8 @@ export class BlocksAPI extends Module {
     index?: number,
     needToFocus?: boolean,
     replace?: boolean,
-    id?: string
+    id?: string,
+    tunes?: { [name: string]: BlockTuneData }
   ): BlockAPIInterface => {
     const defaultTool = type ?? (this.config.defaultBlock);
     const tool = (() => {
@@ -315,6 +317,7 @@ export class BlocksAPI extends Module {
       index,
       needToFocus,
       replace,
+      tunes,
     });
 
     return new BlockAPI(insertedBlock);

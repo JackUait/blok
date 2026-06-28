@@ -111,6 +111,7 @@ export interface Blocks {
    * @param {boolean?} needToFocus - flag to focus inserted Block
    * @param {boolean?} replace - should the existed Block on that index be replaced or not
    * @param {string} id — An optional id for the new block. If omitted then the new id will be generated
+   * @param tunes — optional block tune data to apply at creation, keyed by tune name
    */
   insert(
     type?: string,
@@ -120,6 +121,7 @@ export interface Blocks {
     needToFocus?: boolean,
     replace?: boolean,
     id?: string,
+    tunes?: { [name: string]: BlockTuneData },
   ): BlockAPI;
 
   /**

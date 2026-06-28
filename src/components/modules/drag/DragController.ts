@@ -891,6 +891,11 @@ export class DragController extends Module {
     const movedBlockIds = new Set(result.movedBlocks.map(b => b.id));
     const reparentedBlocks: Block[] = [];
     const affectedParentIds = new Set<string>();
+    // List blocks whose structural parent this drop actually CHANGED. Only these
+    // need their moved() hook re-fired below — a flat-depth list dragged without a
+    // structural reparent must keep the depth its in-move moved() already computed
+    // (re-firing would re-run the flat maxAllowedDepth cap and collapse a subtree).
+    const reparentedListIds = new Set<string>();
 
     for (const movedBlock of result.movedBlocks) {
       // Skip blocks whose parent is also being moved — their internal hierarchy is preserved
@@ -920,6 +925,9 @@ export class DragController extends Module {
       }
       this.Blok.BlockManager.setBlockParent(movedBlock, newParentId);
       reparentedBlocks.push(movedBlock);
+      if (newParentId !== null && movedBlock.name === 'list') {
+        reparentedListIds.add(movedBlock.id);
+      }
     }
 
     // Apply STRUCTURAL nesting so a block dropped at a visual depth becomes a
@@ -928,7 +936,7 @@ export class DragController extends Module {
     // (toggle/column) already got their parent above. Blocks dropped at "root"
     // with dropDepth > 0 are re-homed under the preceding block at dropDepth-1.
     if (newParentId === null) {
-      this.applyStructuralDropDepth(reparentedBlocks, dropDepth, movedBlockIds, affectedParentIds);
+      this.applyStructuralDropDepth(reparentedBlocks, dropDepth, movedBlockIds, affectedParentIds, reparentedListIds);
     }
 
     // A list item derives its nesting depth from its position in the block tree.
@@ -938,7 +946,7 @@ export class DragController extends Module {
     // depth/indent/marker/numbering from the actual tree — keeping data.depth
     // consistent with the structural parent (no stale flat depth leaking into save()).
     for (const movedBlock of result.movedBlocks) {
-      if (movedBlock.name !== 'list') {
+      if (movedBlock.name !== 'list' || !reparentedListIds.has(movedBlock.id)) {
         continue;
       }
 
@@ -1028,7 +1036,8 @@ export class DragController extends Module {
     reparentedBlocks: Block[],
     dropDepth: number,
     movingIds: Set<string>,
-    affectedParentIds: Set<string>
+    affectedParentIds: Set<string>,
+    reparentedListIds: Set<string>
   ): void {
     for (const movedBlock of reparentedBlocks) {
       const structuralParentId = movedBlock.name === 'list'
@@ -1040,6 +1049,12 @@ export class DragController extends Module {
       }
 
       this.Blok.BlockManager.setBlockParent(movedBlock, structuralParentId);
+
+      // This list item's structural parent genuinely changed — its moved() hook
+      // must re-derive depth from the final tree (see the re-fire loop in onDrop).
+      if (movedBlock.name === 'list') {
+        reparentedListIds.add(movedBlock.id);
+      }
 
       if (structuralParentId !== null) {
         affectedParentIds.add(structuralParentId);

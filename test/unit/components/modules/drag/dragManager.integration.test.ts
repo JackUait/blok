@@ -726,14 +726,16 @@ describe("DragManager - Component Integration", () => {
       );
     });
 
-    it("re-fires moved() on a dragged list item after the drop reparents it, so its depth re-derives from the final structural position (no stale flat depth)", () => {
-      // List nesting is structural (parentId/contentIds). The moved() hook fired
-      // during the flat-array move runs BEFORE the drop sets the item's final
-      // structural parent, so it would derive depth from a stale parent. After the
-      // reparent completes, the drop MUST re-fire moved() so the list tool
-      // recomputes its depth/indent/marker/numbering from the actual tree —
-      // keeping data.depth consistent with the structural parent (the gap that let
-      // a keyboard-nested item carry a stale flat depth into save()).
+    it("does NOT re-fire moved() on a flat root-level list reorder, so a dragged subtree keeps its child depths (regression)", () => {
+      // The post-drop moved() re-fire exists ONLY to recompute depth for a list
+      // item whose STRUCTURAL parent the drop actually changed (it is gated on
+      // that). A flat list reorder at root level changes no structural parent, so
+      // re-firing would be spurious — and harmful: moved()'s flat path re-runs the
+      // maxAllowedDepth cap against the new previous block, collapsing the depths of
+      // a dragged nested subtree (a depth-2 grandchild capped to 1). The structural
+      // depth recompute IS covered by the save round-trip tests (block-operations)
+      // and the nested-drag E2E specs; here we lock in that a plain root reorder
+      // triggers NO re-fire.
       const { dragManager, blocks, wrapper, modules } = createDragManager();
 
       document.body.appendChild(wrapper);
@@ -778,10 +780,11 @@ describe("DragManager - Component Integration", () => {
 
       // A real reorder happened...
       expect(modules.BlockManager.move).toHaveBeenCalled();
-      // ...and the dragged LIST item's moved() hook was re-fired after reparenting
-      // so it can recompute its structural depth (the stub's BlockManager.move is a
-      // no-op, so this is the ONLY moved() call — it comes from the re-fire pass).
-      expect(sourceBlock.call).toHaveBeenCalledWith(
+      // ...but the drop changed no structural parent (root-level reorder), so the
+      // structural re-fire pass must NOT call moved() on the dragged list item.
+      // (The stub's BlockManager.move is a no-op, so the in-move moved() doesn't
+      // fire either — the re-fire pass is the only thing that could, and it must not.)
+      expect(sourceBlock.call).not.toHaveBeenCalledWith(
         "moved",
         expect.objectContaining({}),
       );

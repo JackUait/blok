@@ -150,8 +150,25 @@ export interface InsertSpec {
   data?: BlockToolData;
   parentId?: string | null;
   position?: InsertPosition;
+  /**
+   * Move the caret into the new block. Defaults to `false`: a programmatic
+   * insert from React must not steal focus from wherever the user is typing.
+   * Set `true` for an explicit "add a block and start editing it" flow.
+   */
+  focus?: boolean;
 }
 
+/**
+ * Where to move an existing block.
+ *
+ * `before`/`after` are POSITION targets, not parent assignments: the block is
+ * relocated to that flat slot and — because Blok keeps the flat array as the
+ * canonical document order — ADOPTS the parent of wherever it lands. Moving a
+ * nested block to `{ after: someRootBlock }` therefore unnests it to root, and
+ * moving a root block in among a container's children nests it. Use
+ * `nest`/`unnest` when you want to change the parent without choosing a sibling
+ * slot. `toIndex` is an absolute flat index (clamped into range).
+ */
 export type MoveTarget = { before: string } | { after: string } | { toIndex: number };
 
 export interface UseBlocksApi {
@@ -166,8 +183,22 @@ export interface UseBlocksApi {
 }
 
 /**
- * React hook that returns a reactive, id-relative view of the block tree.
- * Re-renders whenever the editor emits 'block changed'.
+ * React hook exposing an id/parentId-relative, reactive view of the block tree.
+ * Re-renders whenever the editor emits 'block changed' — including programmatic
+ * `nest`/`unnest` reparents, which Blok surfaces as a structural mutation.
+ *
+ * Pre-ready contract: while `editor` is null (before `useBlok` resolves) the
+ * returned API is a stable no-op handle — every method is a no-op,
+ * `insert`/`getById` return `null`, and `getChildren` returns `[]`. Calls made
+ * before the editor is ready are silently dropped, so guard on a non-null editor
+ * (or render-gate on it) when an insert must not be lost.
+ *
+ * Referential stability: the returned API object is stable across renders (it
+ * only changes when `editor` does), but each `getById`/`getChildren` call
+ * allocates fresh `BlockNode` objects/arrays from a live snapshot. Read them in
+ * render and re-read after a change — do NOT put a `getById`/`getChildren`
+ * result (or the api handle) in a `useMemo`/`useEffect` dependency array
+ * expecting it to change identity per mutation; depend on the node `id`s instead.
  *
  * @param editor - the Blok instance from useBlok, or null before it is ready
  */

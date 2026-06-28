@@ -37,8 +37,11 @@ export interface Blocks {
   /**
    * Removes current Block
    * @param {number} index - index of a block to delete
+   * @param {boolean} setCaret - whether to move the caret to the surviving current
+   *   block after deletion. Defaults to `true` (interactive delete). Pass `false`
+   *   for programmatic deletion so the user's caret is not moved.
    */
-  delete(index?: number): Promise<void>;
+  delete(index?: number, setCaret?: boolean): Promise<void>;
 
   /**
    * Moves a block to a new index

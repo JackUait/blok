@@ -528,7 +528,21 @@ describe('BlocksAPI', () => {
       expect(blok.Toolbar.close).toHaveBeenCalled();
     });
 
-    it('does not insert default block from delete — removeBlock handles it', async () => {  
+    it('does not re-focus the current block when setCaret is false', async () => {
+      const blocks = [createBlockStub({ id: 'a' }), createBlockStub({ id: 'b' })];
+      const { blocksApi, blockManager, blok } = createBlocksApi({ blocks });
+
+      blockManager.currentBlockIndex = 0;
+
+      await blocksApi.delete(0, false);
+
+      expect(blockManager.removeBlock).toHaveBeenCalledWith(expect.objectContaining({ id: 'a' }));
+      // Programmatic deletion (e.g. React useBlocks.remove) must not steal the caret.
+      expect(blok.Caret.setToBlock).not.toHaveBeenCalled();
+      expect(blok.Toolbar.close).toHaveBeenCalled();
+    });
+
+    it('does not insert default block from delete — removeBlock handles it', async () => {
       const block = createBlockStub({ id: 'only' });
       const { blocksApi, blockManager, blok } = createBlocksApi({ blocks: [ block ] });
 

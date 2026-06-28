@@ -256,17 +256,29 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
 
       // Remove the block AND its descendants. Blok's single-block delete promotes
       // a (non-columns) container's children to root, which would orphan the
-      // nested structure the caller meant to discard. Delete deepest-first by
-      // descending flat index so each captured index stays valid and a parent is
-      // childless by the time it's deleted (no promotion). One undo step.
-      const indices = collectSubtreeIds(id)
-        .map((subId) => editor.blocks.getBlockIndex(subId))
-        .filter((i): i is number => i !== undefined)
-        .sort((a, b) => b - a);
+      // nested structure the caller meant to discard. Delete deepest-first (by
+      // descending flat index) so a parent is childless by the time it's deleted
+      // (no promotion). One undo step.
+      //
+      // Re-resolve each member's index by id AT DELETE TIME rather than reusing a
+      // pre-captured snapshot: a core delete can cascade (deleting a column's last
+      // child auto-removes the empty column) or shift indices, so a stale index
+      // could target the wrong — or an already-gone — block.
+      const orderedIds = collectSubtreeIds(id)
+        .map((subId) => ({ subId, index: editor.blocks.getBlockIndex(subId) }))
+        .filter((m): m is { subId: string; index: number } => m.index !== undefined)
+        .sort((a, b) => b.index - a.index)
+        .map((m) => m.subId);
 
       transact(() => {
-        for (const index of indices) {
-          void editor.blocks.delete(index);
+        for (const subId of orderedIds) {
+          const index = editor.blocks.getBlockIndex(subId);
+
+          // Already removed by a cascading delete of one of its descendants.
+          if (index === undefined) {
+            continue;
+          }
+          void editor.blocks.delete(index, false);
         }
       });
     };

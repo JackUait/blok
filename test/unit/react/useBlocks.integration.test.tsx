@@ -88,6 +88,9 @@ const createRealEditorHarness = (
 
   // Minimal event bus for the 'block changed' subscription in useBlocks
   const listeners = new Set<() => void>();
+  // The real editor fires 'block changed' after every structural mutation; the
+  // facade mirrors that so the hook's reactivity can be exercised end-to-end.
+  const notify = (): void => listeners.forEach((cb) => cb());
 
   /**
    * editor.blocks facade.
@@ -130,6 +133,7 @@ const createRealEditorHarness = (
         index !== undefined ? Math.min(index, blocksStore.length) : blocksStore.length;
 
       blocksStore.insert(insertAt, stub as unknown as Block);
+      notify();
 
       return { id: stub.id, name: stub.name, parentId: stub.parentId };
     },
@@ -145,11 +149,13 @@ const createRealEditorHarness = (
         return;
       }
       hierarchy.setBlockParent(block, parentId);
+      notify();
     },
 
     delete: async (index?: number): Promise<void> => {
       if (index !== undefined && index >= 0 && index < blocksStore.length) {
         blocksStore.remove(index);
+        notify();
       }
       await Promise.resolve();
     },
@@ -161,6 +167,7 @@ const createRealEditorHarness = (
     move: (toIndex: number, fromIndex?: number): void => {
       if (fromIndex !== undefined) {
         blocksStore.move(toIndex, fromIndex);
+        notify();
       }
     },
 
@@ -313,6 +320,35 @@ describe('useBlocks — real BlockHierarchy integration', () => {
     }
     // C's whole subtree sits contiguously after A, before root sibling B.
     expect(flat).toEqual(['A', 'C', 'C1', 'B']);
+  });
+
+  it('mutators re-render the hook (insert, nest, unnest, move, remove emit "block changed")', () => {
+    // The real editor emits 'block changed' on every structural mutation; the
+    // harness mirrors that. Each useBlocks mutator must therefore drive a hook
+    // re-render so consumers reading getById/getChildren in render stay in sync.
+    const harness = createRealEditorHarness([{ id: 'a' }, { id: 'b' }]);
+
+    workingArea = harness.workingArea;
+
+    let renderCount = 0;
+    const { result } = renderHook(() => {
+      renderCount += 1;
+
+      return useBlocks(harness.editor);
+    });
+
+    const expectRerender = (run: () => void): void => {
+      const before = renderCount;
+
+      act(run);
+      expect(renderCount).toBeGreaterThan(before);
+    };
+
+    expectRerender(() => result.current.insert({ type: 'paragraph' }));
+    expectRerender(() => result.current.nest('b', 'a'));
+    expectRerender(() => result.current.unnest('b'));
+    expectRerender(() => result.current.move('b', { toIndex: 0 }));
+    expectRerender(() => result.current.remove('b'));
   });
 
   it('insert at a reparented container end lands after its existing children, before the next root block', () => {

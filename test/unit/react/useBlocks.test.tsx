@@ -100,11 +100,12 @@ describe('useBlocks mutators (delegation)', () => {
     expect(editor.blocks.setBlockParent).toHaveBeenCalledWith('a', null);
   });
 
-  it('remove resolves the flat index then delegates to delete', () => {
+  it('remove resolves the flat index then delegates to delete without stealing the caret', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => result.current.remove('b'));
-    expect(editor.blocks.delete).toHaveBeenCalledWith(1);
+    // setCaret=false: programmatic removal must not move the user's caret.
+    expect(editor.blocks.delete).toHaveBeenCalledWith(1, false);
   });
 
   it('remove is a no-op when the id is unknown', () => {
@@ -129,6 +130,8 @@ describe('useBlocks mutators (delegation)', () => {
     expect(calls).toEqual([2, 1, 0]);
     // 'tail' (index 3) must be left untouched.
     expect(calls).not.toContain(3);
+    // Every subtree deletion suppresses the caret move.
+    deleteMock.mock.calls.forEach((args) => expect(args[1]).toBe(false));
   });
 
   it('groups a subtree remove in a single transact', () => {
@@ -148,6 +151,81 @@ describe('useBlocks mutators (delegation)', () => {
     act(() => result.current.transact(fn));
     expect(editor.blocks.transact).toHaveBeenCalledTimes(1);
     expect(fn).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * A fake editor whose `delete` mutates a live list AND cascades: removing the
+ * last child of a `column` auto-removes the (now empty) column — mirroring Blok
+ * core's container teardown. This exercises remove()'s index handling under
+ * deletions that shift/invalidate other blocks' indices mid-loop.
+ */
+const makeCascadingEditor = (
+  rows: Array<{ id: string; name?: string; parentId?: string | null }>
+) => {
+  const list = rows.map((r) => ({ id: r.id, name: r.name ?? 'paragraph', parentId: r.parentId ?? null }));
+  const editor = {
+    blocks: {
+      getBlocksCount: () => list.length,
+      getBlockByIndex: (i: number) => list[i],
+      getBlockIndex: (id: string) => {
+        const idx = list.findIndex((b) => b.id === id);
+
+        return idx === -1 ? undefined : idx;
+      },
+      delete: vi.fn((index: number) => {
+        const removed = list[index];
+
+        if (removed === undefined) {
+          return;
+        }
+        list.splice(index, 1);
+
+        // Cascade: if the removed block's parent (a column) now has no remaining
+        // children, core auto-removes the empty container too.
+        if (removed.parentId === null) {
+          return;
+        }
+        if (list.some((b) => b.parentId === removed.parentId)) {
+          return;
+        }
+        const parentIdx = list.findIndex((b) => b.id === removed.parentId);
+
+        if (parentIdx !== -1) {
+          list.splice(parentIdx, 1);
+        }
+      }),
+      transact: vi.fn((fn: () => void) => fn()),
+    },
+    on: () => undefined,
+    off: () => undefined,
+  };
+
+  return { editor: editor as unknown as Blok };
+};
+
+describe('useBlocks remove — resilience to cascading deletions', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('does not delete an unrelated block when a core delete cascades to remove the container', () => {
+    // [column, child(of column), tail]. Removing the column means deleting its
+    // child, which cascades to auto-remove the empty column. A naive pre-captured
+    // index loop would then delete index 0 again — hitting 'tail'.
+    const { editor } = makeCascadingEditor([
+      { id: 'column', name: 'column' },
+      { id: 'child', parentId: 'column' },
+      { id: 'tail' },
+    ]);
+    const { result } = renderHook(() => useBlocks(editor));
+
+    act(() => result.current.remove('column'));
+
+    // The whole column subtree is gone; the unrelated 'tail' must survive.
+    expect(result.current.getById('column')).toBeNull();
+    expect(result.current.getById('child')).toBeNull();
+    expect(result.current.getById('tail')).not.toBeNull();
+    expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['tail']);
   });
 });
 
@@ -273,6 +351,23 @@ describe('useBlocks move', () => {
     act(() => result.current.move('a', { before: 'c' }));
     // resolveMoveIndex({before:'c'}) = 2; forward move from 0 → decremented to 1.
     expect(editor.blocks.move).toHaveBeenCalledWith(1, 0);
+  });
+
+  it('move of a block that has descendants delegates a single subtree-aware move', () => {
+    // A has a nested child A1. Moving A past root-sibling B delegates ONE move of
+    // the named block; carrying DOM-contained descendants is core's job (the hook
+    // does not relocate the subtree for move, unlike nest). The toIndex is
+    // computed past B's whole subtree.
+    const { editor } = makeFakeEditor([
+      { id: 'A', name: 'toggle' },
+      { id: 'A1', parentId: 'A' },
+      { id: 'B' },
+    ]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.move('A', { after: 'B' }));
+    // resolveMoveIndex({after:'B'}) = subtreeEnd(B)+1 = 3; forward from 0 → 2.
+    expect(editor.blocks.move).toHaveBeenCalledTimes(1);
+    expect(editor.blocks.move).toHaveBeenCalledWith(2, 0);
   });
 
   it('move after the last block (forward to end) stays within Blok bounds', () => {

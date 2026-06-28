@@ -11,6 +11,7 @@ import { wrapBlocksInColumns } from '../../../tools/column-drop';
 import { SelectionUtils } from '../../selection/index';
 import type { BlockToolAdapter } from '../../tools/block';
 import { isMobileScreen, keyCodes } from '../../utils';
+import { getCaretOffset } from '../../utils/caret/selection';
 import { getConvertibleToolsForBlock, getConvertibleToolsForBlocks } from '../../utils/blocks';
 import type { PopoverItemParams, Popover } from '../../utils/popover';
 import { PopoverDesktop, PopoverMobile, PopoverItemType } from '../../utils/popover';
@@ -187,6 +188,13 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       this.selection.save();
 
       /**
+       * Capture the caret offset within the block BEFORE selectBlock highlights
+       * the whole block content (which clears the collapsed caret). Turn-into
+       * restores the caret to this offset rather than forcing it to the end.
+       */
+      const caretOffset = getCaretOffset();
+
+      /**
        * Highlight content of a Block we are working with
        * For multiple blocks, they should already be selected
        */
@@ -209,7 +217,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       /** Get tool-specific tunes and common tunes (delete, move, etc.) */
       const { toolTunes, commonTunes } = block.getTunes(renderContext);
 
-      const items = await this.getTunesItems(block, commonTunes, toolTunes);
+      const items = await this.getTunesItems(block, commonTunes, toolTunes, caretOffset);
 
       const activeEntry = hasMultipleBlocksSelected
         ? undefined
@@ -355,8 +363,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
    * @param currentBlock –  block we are about to open block tunes for
    * @param commonTunes – common tunes
    * @param toolTunes – tool-specific tunes from renderSettings()
+   * @param caretOffset – caret offset captured before the block was highlighted, restored after a turn-into conversion
    */
-  private async getTunesItems(currentBlock: Block, commonTunes: MenuConfigItem[], toolTunes?: MenuConfigItem[]): Promise<PopoverItemParams[]> {
+  private async getTunesItems(currentBlock: Block, commonTunes: MenuConfigItem[], toolTunes?: MenuConfigItem[], caretOffset = 0): Promise<PopoverItemParams[]> {
     const items = [] as MenuConfigItem[];
     const selectedBlocks = this.Blok.BlockSelection.selectedBlocks;
     const hasMultipleBlocksSelected = selectedBlocks.length > 1;
@@ -448,7 +457,15 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
             Toolbar.close();
 
             if (newBlock) {
-              Caret.setToBlock(newBlock, Caret.positions.END);
+              /**
+               * Multi-block conversions have no single caret to preserve, so
+               * land at the end; a single-block turn-into keeps its prior offset.
+               */
+              if (hasMultipleBlocksSelected) {
+                Caret.setToBlock(newBlock, Caret.positions.END);
+              } else {
+                Caret.setToBlock(newBlock, Caret.positions.DEFAULT, caretOffset);
+              }
             }
           },
         });

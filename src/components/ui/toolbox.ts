@@ -5,6 +5,7 @@ import { SelectionUtils } from '../selection';
 import type { BlockToolAdapter } from '../tools/block';
 import type { ToolsCollection } from '../tools/collection';
 import { beautifyShortcut, capitalize, isMobileScreen } from '../utils';
+import { getCaretOffset } from '../utils/caret/selection';
 import { EventsDispatcher } from '../utils/events';
 import { Listeners } from '../utils/listeners';
 import type { Popover } from '../utils/popover';
@@ -732,9 +733,12 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
          */
         if (currentBlock) {
           try {
+            // Preserve the caret offset across the in-place conversion (Notion
+            // parity) instead of forcing it to the end of the new block.
+            const caretOffset = getCaretOffset();
             const newBlock = await this.api.blocks.convert(currentBlock.id, toolName);
 
-            this.api.caret.setToBlock(newBlock, 'end');
+            this.api.caret.setToBlock(newBlock, 'default', caretOffset);
 
             return;
           } catch (_error) {}

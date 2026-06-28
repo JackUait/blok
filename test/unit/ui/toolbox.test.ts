@@ -1748,8 +1748,54 @@ describe('Toolbox', () => {
 
         expect(event.preventDefault).toHaveBeenCalled();
         expect(mocks.api.blocks.convert).toHaveBeenCalled();
-        expect(mocks.api.caret.setToBlock).toHaveBeenCalledWith(convertedBlock, 'end');
+        expect(mocks.api.caret.setToBlock).toHaveBeenCalledWith(convertedBlock, 'default', 0);
       }
+    });
+
+    it('preserves the caret offset when converting via shortcut (Notion parity)', async () => {
+      new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      const convertedBlock = { id: 'converted-block' } as BlockAPI;
+
+      vi.mocked(mocks.api.blocks.convert).mockResolvedValue(convertedBlock);
+
+      /**
+       * Place a collapsed caret in the middle of a contenteditable block input.
+       * Turn-into must keep the caret at this offset, not jump it to the end.
+       */
+      const editable = document.createElement('div');
+
+      editable.setAttribute('contenteditable', 'true');
+      editable.textContent = 'Hello world';
+      document.body.appendChild(editable);
+
+      const range = document.createRange();
+
+      range.setStart(editable.firstChild as Node, 3);
+      range.collapse(true);
+
+      const selection = window.getSelection();
+
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+
+      const addCalls = vi.mocked(Shortcuts.add).mock.calls;
+      const addCall = addCalls[0]?.[0];
+
+      if (addCall && addCall.handler) {
+        const event = { preventDefault: vi.fn() } as unknown as KeyboardEvent;
+
+        await addCall.handler(event);
+
+        expect(mocks.api.caret.setToBlock).toHaveBeenCalledWith(convertedBlock, 'default', 3);
+      }
+
+      editable.remove();
     });
 
     it('should insert new block when conversion fails', async () => {

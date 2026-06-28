@@ -184,7 +184,60 @@ describe('ConvertInlineTool', () => {
 
     await firstItem?.onActivate?.();
     expect(blocksAPI.convert).toHaveBeenCalledWith(currentBlock.id, convertibleTool.name, toolboxItem.data);
-    expect(caretAPI.setToBlock).toHaveBeenCalledWith(convertedBlock, 'end');
+    expect(caretAPI.setToBlock).toHaveBeenCalledWith(convertedBlock, 'default', 0);
+  });
+
+  it('preserves the caret offset when converting (Notion parity)', async () => {
+    const { tool, blocksAPI, toolsAPI, caretAPI } = createTool();
+
+    /**
+     * Real selection collapsed in the middle of the block input. Converting must
+     * keep the caret at this offset rather than forcing it to the block's end.
+     */
+    const editable = document.createElement('div');
+
+    editable.setAttribute('contenteditable', 'true');
+    editable.textContent = 'Hello world';
+    document.body.appendChild(editable);
+
+    const range = document.createRange();
+
+    range.setStart(editable.firstChild as Node, 4);
+    range.collapse(true);
+
+    const selection = window.getSelection();
+
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+
+    const currentBlock = {
+      id: 'paragraph-block',
+      name: 'paragraph',
+      getActiveToolboxEntry: vi.fn().mockResolvedValue({ title: 'Text' }),
+    };
+    const convertibleTool = {
+      name: 'header',
+      toolbox: [{ title: 'Heading', icon: '<svg>H</svg>', data: { level: 2 } }],
+    } as unknown as BlockToolAdapter;
+    const convertedBlock = { id: 'converted-header' };
+
+    vi.spyOn(SelectionUtils, 'get').mockReturnValue(createSelectionMock(editable.firstChild as Node));
+    blocksAPI.getBlockByElement.mockReturnValue(currentBlock);
+    blocksAPI.convert.mockResolvedValue(convertedBlock);
+    toolsAPI.getBlockTools.mockReturnValue([convertibleTool]);
+    vi.spyOn(BlocksUtils, 'getConvertibleToolsForBlock').mockResolvedValue([convertibleTool]);
+    vi.spyOn(Utils, 'isMobileScreen').mockReturnValue(false);
+    vi.spyOn(ToolsUtils, 'translateToolTitle').mockImplementation(() => 'Heading');
+
+    const config = await tool.render();
+    const menuConfig = config as MenuConfigWithChildren;
+    const items = menuConfig.children?.items ?? [];
+
+    await items[0]?.onActivate?.();
+
+    expect(caretAPI.setToBlock).toHaveBeenCalledWith(convertedBlock, 'default', 4);
+
+    editable.remove();
   });
 
   it('skips fake selection on mobile', async () => {
@@ -261,6 +314,6 @@ describe('ConvertInlineTool', () => {
 
     // Should use standard convert for blocks
     expect(blocksAPI.convert).toHaveBeenCalledWith('paragraph-block', 'header', { level: 2 });
-    expect(caretAPI.setToBlock).toHaveBeenCalledWith(convertedBlock, 'end');
+    expect(caretAPI.setToBlock).toHaveBeenCalledWith(convertedBlock, 'default', 0);
   });
 });

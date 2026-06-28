@@ -4,6 +4,7 @@ import type { MenuConfig, MenuConfigItem } from '../../../types/tools';
 import { SelectionUtils } from '../selection/index';
 import type { BlockToolAdapter } from '../tools/block';
 import { capitalize, isMobileScreen } from '../utils';
+import { getCaretOffset } from '../utils/caret/selection';
 import { getConvertibleToolsForBlock } from '../utils/blocks';
 import { translateToolTitle, translateToolName, type I18nInstance } from '../utils/tools';
 
@@ -80,6 +81,14 @@ export class ConvertInlineTool implements InlineTool {
       return [];
     }
 
+    /**
+     * Capture the caret offset within the current block while the genuine
+     * selection is still live (before the fake background / submenu interaction).
+     * Turn-into keeps the caret at this offset instead of forcing it to the end,
+     * matching Notion and the markdown-shortcut conversion path.
+     */
+    const caretOffset = getCaretOffset();
+
     const allBlockTools = this.toolsAPI.getBlockTools() as BlockToolAdapter[];
     const convertibleTools = await getConvertibleToolsForBlock(currentBlock, allBlockTools);
 
@@ -101,7 +110,7 @@ export class ConvertInlineTool implements InlineTool {
           onActivate: async () => {
             const newBlock = await this.blocksAPI.convert(currentBlock.id, tool.name, toolboxItem.data);
 
-            this.caretAPI.setToBlock(newBlock, 'end');
+            this.caretAPI.setToBlock(newBlock, 'default', caretOffset);
           },
         });
       });

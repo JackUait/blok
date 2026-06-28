@@ -455,7 +455,7 @@ describe('MarkdownShortcuts', () => {
       );
     });
 
-    it('converts "i. " to ordered list (Notion roman/alpha alias)', () => {
+    it('converts "i. " to ordered list (Notion roman alias)', () => {
       const mockBlock = createBlock();
       if (mockBlock.currentInput) {
         mockBlock.currentInput.textContent = 'i. ';
@@ -479,10 +479,35 @@ describe('MarkdownShortcuts', () => {
       );
     });
 
-    it('converts "c. " to ordered list with start number 3', () => {
+    it('starts the "i. " roman alias at 1, not roman-numeral value 9', () => {
       const mockBlock = createBlock();
       if (mockBlock.currentInput) {
-        mockBlock.currentInput.textContent = 'c. ';
+        mockBlock.currentInput.textContent = 'i. ';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+
+      const result = markdownShortcuts.handleInput(createInputEvent());
+
+      expect(result).toBe(true);
+      // start 1 is the default, so it is omitted entirely (never 9).
+      expect(replace).toHaveBeenCalledWith(
+        mockBlock,
+        'list',
+        expect.not.objectContaining({ start: expect.anything() })
+      );
+    });
+
+    it('starts the "a. " alpha alias at 1', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = 'a. ';
       }
       const replace = vi.fn(() => mockBlock);
       const blok = createBlokModules({
@@ -499,8 +524,48 @@ describe('MarkdownShortcuts', () => {
       expect(replace).toHaveBeenCalledWith(
         mockBlock,
         'list',
-        expect.objectContaining({ style: 'ordered', start: 3 })
+        expect.not.objectContaining({ start: expect.anything() })
       );
+    });
+
+    it('does NOT convert "q. " (a letter other than a/i) into a list', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = 'q. ';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+
+      const result = markdownShortcuts.handleInput(createInputEvent());
+
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
+    });
+
+    it('does NOT convert "z) " (a letter other than a/i) into a list', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = 'z) ';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+
+      const result = markdownShortcuts.handleInput(createInputEvent());
+
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
     });
 
     it('does NOT convert a multi-letter word like "etc. " into a list', () => {
@@ -616,6 +681,22 @@ describe('MarkdownShortcuts', () => {
 
       expect(result).toBe(false);
       expect(input.querySelector('i')).toBeNull();
+    });
+
+    it('does NOT format a double span padded with inner spaces (** bold **)', () => {
+      const { input, result } = setupInline('** bold **', '*');
+
+      expect(result).toBe(false);
+      expect(input.querySelector('strong')).toBeNull();
+      expect(input.textContent).toBe('** bold **');
+    });
+
+    it('does NOT format a single span padded with inner spaces (* x *)', () => {
+      const { input, result } = setupInline('* x *', '*');
+
+      expect(result).toBe(false);
+      expect(input.querySelector('i')).toBeNull();
+      expect(input.textContent).toBe('* x *');
     });
   });
 

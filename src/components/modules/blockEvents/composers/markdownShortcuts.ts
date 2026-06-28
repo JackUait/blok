@@ -45,17 +45,21 @@ const detectInlineMarkdown = (text: string, marker: string): InlineMarkdownMatch
 
   const { literal, double: doubleTag, single: singleTag } = rule;
 
+  // Notion only auto-formats CONTIGUOUS spans: leading/trailing inner whitespace
+  // (e.g. `** bold **`, `* x *`) is left as typed.
+  const hasEdgeWhitespace = (inner: string): boolean => /^\s|\s$/.test(inner);
+
   if (doubleTag !== null) {
     const double = new RegExp(`${literal}${literal}([^${marker}]+)${literal}${literal}$`).exec(text);
 
-    if (double !== null) {
+    if (double !== null && !hasEdgeWhitespace(double[1])) {
       return { tag: doubleTag, inner: double[1], length: double[0].length };
     }
   }
 
   const single = new RegExp(`(?<!${literal})${literal}([^${marker}]+)${literal}$`).exec(text);
 
-  if (single !== null) {
+  if (single !== null && !hasEdgeWhitespace(single[1])) {
     return { tag: singleTag, inner: single[1], length: single[0].length };
   }
 
@@ -200,7 +204,9 @@ export class MarkdownShortcuts extends BlockEventComposer {
     this.Blok.YjsManager.stopCapturing();
 
     const marker = listMatch[1];
-    const startNumber = orderedMatch ? parseInt(marker, 10) : marker.toLowerCase().charCodeAt(0) - 96;
+    // Numeric markers ("5. ") start at their value; the alpha/roman aliases
+    // ("a. " / "i. ") both start at 1 — their glyph is depth-driven, not the letter.
+    const startNumber = orderedMatch ? parseInt(marker, 10) : 1;
     const shortcutLength = marker.length + 2;
     const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
     const caretOffset = this.getCaretOffset(currentInput) - shortcutLength;

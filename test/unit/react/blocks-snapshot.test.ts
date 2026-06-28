@@ -152,6 +152,35 @@ describe('resolveInsertIndex', () => {
     // ref 'c1' is nested; a root-level insert ignores it → root end (index 3)
     expect(resolveInsertIndex(r, null, { after: 'c1' })).toBe(3);
   });
+
+  it('parent start = first child index, or right after an empty parent', () => {
+    const withChildren = indexReaderOf([
+      { id: 'p', name: 'toggle' },
+      { id: 'c1', parentId: 'p' },
+      { id: 'c2', parentId: 'p' },
+    ]);
+    // non-empty parent → before the first child (flat index 1)
+    expect(resolveInsertIndex(withChildren, 'p', 'start')).toBe(1);
+
+    const empty = indexReaderOf([{ id: 'p', name: 'toggle' }, { id: 'after' }]);
+    // empty parent → immediately after the parent itself (flat index 1)
+    expect(resolveInsertIndex(empty, 'p', 'start')).toBe(1);
+  });
+
+  it('replace resolves before/after to the ref own flat index, even across parents', () => {
+    const r = indexReaderOf([
+      { id: 'p', name: 'toggle' },
+      { id: 'child', parentId: 'p' },
+      { id: 'root2' },
+    ]);
+    // Without replace, a root-level insert before a NESTED ref falls back to root
+    // end (3) — the sibling-relative parent guard rejects the cross-parent ref.
+    expect(resolveInsertIndex(r, null, { before: 'child' })).toBe(3);
+    // With replace, the ref IS the block being overwritten, not a sibling anchor,
+    // so it resolves to the ref's own flat slot (1) regardless of its parent.
+    expect(resolveInsertIndex(r, null, { before: 'child' }, true)).toBe(1);
+    expect(resolveInsertIndex(r, null, { after: 'child' }, true)).toBe(1);
+  });
 });
 
 describe('resolveMoveIndex', () => {

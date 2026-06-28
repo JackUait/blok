@@ -171,22 +171,33 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       }
       editor.blocks.move(rootFrom < preRemovalSlot ? preRemovalSlot - 1 : preRemovalSlot, rootFrom);
 
-      // Root's new index is stable: every descendant lands AFTER it, so the k-th
-      // descendant's home is rootNew + k + 1. A descendant already there was
-      // carried by resortNestedBlocks (DOM-nested child) — leave it.
-      const rootNew = editor.blocks.getBlockIndex(rootId) ?? rootFrom;
+      // Place each descendant immediately after the previously-positioned member,
+      // re-reading the anchor's LIVE index every iteration. A cached root index
+      // (rootNew + k + 1) only holds for a BACKWARD relocation, where descendants
+      // already sit after the root. For a FORWARD relocation each descendant
+      // move() splices an element out from BEFORE the root, sliding the root (and
+      // a cached index) down one slot per step — so the target overshoots, trips
+      // Blocks.move()'s out-of-range no-op guard, and strands the descendant.
+      // Re-anchoring to the predecessor's current slot absorbs the drift in both
+      // directions and keeps the subtree DFS-contiguous. A descendant already in
+      // place (carried by resortNestedBlocks for a DOM-nested child) is skipped.
+      // The anchor for the k-th descendant is the (k-1)-th — read live each step.
+      const descendants = members.filter((memberId) => memberId !== rootId);
 
-      members
-        .filter((memberId) => memberId !== rootId)
-        .forEach((memberId, k) => {
-          const from = editor.blocks.getBlockIndex(memberId);
-          const target = rootNew + k + 1;
+      descendants.forEach((memberId, k) => {
+        const anchorId = k === 0 ? rootId : descendants[k - 1];
+        const from = editor.blocks.getBlockIndex(memberId);
+        const anchor = editor.blocks.getBlockIndex(anchorId);
 
-          if (from === undefined || from === target) {
-            return;
-          }
+        if (from === undefined || anchor === undefined) {
+          return;
+        }
+        const target = anchor + 1;
+
+        if (from !== target) {
           editor.blocks.move(from < target ? target - 1 : target, from);
-        });
+        }
+      });
     };
 
     // Reparent `id` (root → newParentId, descendants → their original parent).
@@ -317,7 +328,11 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       // effect is safe. Probe via the silent snapshot getById, NOT
       // editor.blocks.getBlockIndex — the latter logs a `warn` for any unknown
       // id, which would spam the console on this (expected-absent) happy path.
-      if (spec.id !== undefined) {
+      //
+      // Skipped under `replace`: a replace is an explicit overwrite, not an
+      // insert, so an existing id must not short-circuit it (the two would
+      // otherwise silently conflict and replace nothing).
+      if (spec.id !== undefined && !replace) {
         const existing = getById(spec.id);
 
         if (existing !== null) {
@@ -326,12 +341,31 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       }
 
       // A dangling parentId would make core throw (dev) or silently misplace the
-      // block at the document end (prod). Honor the null contract instead.
-      if (parentId !== null && editor.blocks.getBlockIndex(parentId) === undefined) {
+      // block at the document end (prod). Honor the null contract instead. Skipped
+      // under replace: a replace ignores parentId entirely (the overwritten
+      // block's own parent governs), so a stale parentId must not abort the
+      // overwrite.
+      if (!replace && parentId !== null && editor.blocks.getBlockIndex(parentId) === undefined) {
         return null;
       }
 
-      const flatIndex = resolveInsertIndex(reader, parentId, position);
+      const flatIndex = resolveInsertIndex(reader, parentId, position, replace);
+
+      // A replace is a positional type-swap that PRESERVES the replaced block's
+      // parent link, so the intended parent is the target's existing parent, not
+      // the caller's (root-defaulting) parentId. Capture it from the pre-insert
+      // snapshot so the post-insert assertion re-nests the replacement correctly
+      // instead of un-nesting it to root. A plain insert uses parentId as-is.
+      const positionRef = ((): string | null => {
+        if (typeof position !== 'object') {
+          return null;
+        }
+
+        return 'before' in position ? position.before : position.after;
+      })();
+      const replaceRef = replace ? positionRef : null;
+      const intendedParentId =
+        replaceRef !== null ? getById(replaceRef)?.parentId ?? parentId : parentId;
 
       // Mutable property on a const holder (no `let`): the inserted id captured
       // from inside the transact closure for the post-transact return.
@@ -366,11 +400,13 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
         // auto-nested into that column. We know the caller's intent: for a
         // parented insert set the parent; for a root insert (parentId === null)
         // override back to root ONLY if core nested it, keeping the natural
-        // `insert({ position: 'end' })` a root sibling instead of a stowaway.
+        // `insert({ position: 'end' })` a root sibling instead of a stowaway. For
+        // a replace, intendedParentId is the overwritten block's own parent, so
+        // the replacement keeps its place in the tree.
         const landedParentId = getById(created.id)?.parentId ?? null;
 
-        if (landedParentId !== parentId) {
-          editor.blocks.setBlockParent(created.id, parentId);
+        if (landedParentId !== intendedParentId) {
+          editor.blocks.setBlockParent(created.id, intendedParentId);
         }
       });
 

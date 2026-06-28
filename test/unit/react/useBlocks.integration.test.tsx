@@ -337,6 +337,78 @@ describe('useBlocks — real BlockHierarchy integration', () => {
     expect(flat).toEqual(['A', 'C', 'C1', 'B']);
   });
 
+  it('FORWARD nest (parent later in the doc) of a block with 2 children stays contiguous', () => {
+    // [C, C1, C2, A] — C is root with two indent-nested children C1, C2; A is a
+    // LATER root block. nest('C','A') relocates C's subtree FORWARD (past where
+    // its descendants were left). The relocation must re-anchor each descendant
+    // to its predecessor's LIVE slot; a cached root index drifts and strands the
+    // 2nd descendant (C2) — leaving a child before its own parent in flat order.
+    const harness = createRealEditorHarness([
+      { id: 'C' },
+      { id: 'C1', parentId: 'C' },
+      { id: 'C2', parentId: 'C' },
+      { id: 'A' },
+    ]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    act(() => {
+      result.current.nest('C', 'A');
+    });
+
+    expect(result.current.getById('C')?.parentId).toBe('A');
+    expect(result.current.getChildren('C').map((n) => n.id)).toEqual(['C1', 'C2']);
+
+    const flat: string[] = [];
+
+    for (let i = 0; i < harness.editor.blocks.getBlocksCount(); i++) {
+      const node = harness.editor.blocks.getBlockByIndex(i);
+
+      if (node !== undefined) {
+        flat.push(node.id);
+      }
+    }
+    // A precedes C, and C's whole subtree sits contiguously right after it.
+    expect(flat).toEqual(['A', 'C', 'C1', 'C2']);
+  });
+
+  it('unnest of a block with 2 children relocates the WHOLE subtree contiguously', () => {
+    // [P, B, B1, B2] — B nested under P, with B1, B2 nested under B. unnest('B')
+    // ALWAYS relocates forward (to the end of P's subtree), so it is the broadest
+    // trigger of the cached-root drift: without the fix B2 is stranded.
+    const harness = createRealEditorHarness([
+      { id: 'P' },
+      { id: 'B', parentId: 'P' },
+      { id: 'B1', parentId: 'B' },
+      { id: 'B2', parentId: 'B' },
+    ]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    act(() => {
+      result.current.unnest('B');
+    });
+
+    expect(result.current.getById('B')?.parentId).toBe(null);
+    expect(result.current.getChildren('B').map((n) => n.id)).toEqual(['B1', 'B2']);
+
+    const flat: string[] = [];
+
+    for (let i = 0; i < harness.editor.blocks.getBlocksCount(); i++) {
+      const node = harness.editor.blocks.getBlockByIndex(i);
+
+      if (node !== undefined) {
+        flat.push(node.id);
+      }
+    }
+    // B promoted to root with its children still contiguous behind it.
+    expect(flat).toEqual(['P', 'B', 'B1', 'B2']);
+  });
+
   it('mutators re-render the hook (insert, nest, unnest, move, remove emit "block changed")', () => {
     // The real editor emits 'block changed' on every structural mutation; the
     // harness mirrors that. Each useBlocks mutator must therefore drive a hook

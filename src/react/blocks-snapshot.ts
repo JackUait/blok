@@ -167,15 +167,29 @@ const subtreeEndIndex = (reader: IndexReader, index: number): number => {
   return breakAt === undefined ? count - 1 : breakAt - 1;
 };
 
-/** The flat index at which a new block should be inserted. */
+/**
+ * The flat index at which a new block should be inserted.
+ *
+ * `replace` flips the meaning of a before/after `position`: under replace the
+ * ref IS the block being overwritten (a "turn into"), not a sibling anchor, so
+ * it resolves to the ref's OWN flat slot regardless of which parent it lives in
+ * — bypassing the sibling-relative parent guard that would otherwise redirect a
+ * nested target to the requested parent's end and replace the wrong block.
+ */
 export const resolveInsertIndex = (
   reader: IndexReader,
   parentId: string | null,
-  position: InsertPosition
+  position: InsertPosition,
+  replace = false
 ): number => {
   if (typeof position === 'object') {
     const ref = 'before' in position ? position.before : position.after;
     const refIndex = reader.getBlockIndex(ref);
+
+    if (replace && refIndex !== undefined) {
+      return refIndex;
+    }
+
     const refParent =
       refIndex === undefined ? undefined : reader.getBlockByIndex(refIndex)?.parentId ?? null;
 

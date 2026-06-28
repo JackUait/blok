@@ -251,6 +251,63 @@ describe('useBlocks insert', () => {
     expect(editor.blocks.insert).toHaveBeenCalledWith('paragraph', {}, {}, 1, false, false, undefined, undefined);
   });
 
+  it('root insert at end does not redundantly call setBlockParent', () => {
+    // The created block already lands at root, so the landedParentId === parentId
+    // guard must skip setBlockParent — no wasted reparent / extra Yjs write.
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => { result.current.insert({ type: 'paragraph' }); });
+    expect(editor.blocks.setBlockParent).not.toHaveBeenCalled();
+  });
+
+  it('root insert after a block clears the ref whole subtree', () => {
+    const { editor } = makeFakeEditor([
+      { id: 'p', name: 'toggle' },
+      { id: 'c1', parentId: 'p' },
+      { id: 'tail' },
+    ]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => { result.current.insert({ type: 'paragraph', position: { after: 'p' } }); });
+    // 'after p' lands past p's child c1 → flat index 2 (before 'tail').
+    expect(editor.blocks.insert).toHaveBeenCalledWith('paragraph', {}, {}, 2, false, false, undefined, undefined);
+  });
+
+  it('parented insert at start lands at the parent first-child slot', () => {
+    const { editor } = makeFakeEditor([
+      { id: 'p', name: 'toggle' },
+      { id: 'c1', parentId: 'p' },
+    ]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => { result.current.insert({ type: 'paragraph', parentId: 'p', position: 'start' }); });
+    // start under non-empty p → before its first child c1 (flat index 1).
+    expect(editor.blocks.insert).toHaveBeenCalledWith('paragraph', {}, {}, 1, false, false, undefined, undefined);
+    expect(editor.blocks.setBlockParent).toHaveBeenCalledWith('new-2', 'p');
+  });
+
+  it('parented insert before a child resolves to that child slot', () => {
+    const { editor } = makeFakeEditor([
+      { id: 'p', name: 'toggle' },
+      { id: 'c1', parentId: 'p' },
+      { id: 'c2', parentId: 'p' },
+    ]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => { result.current.insert({ type: 'paragraph', parentId: 'p', position: { before: 'c2' } }); });
+    expect(editor.blocks.insert).toHaveBeenCalledWith('paragraph', {}, {}, 2, false, false, undefined, undefined);
+  });
+
+  it('parented insert after a child clears that child subtree', () => {
+    const { editor } = makeFakeEditor([
+      { id: 'p', name: 'toggle' },
+      { id: 'c1', parentId: 'p' },
+      { id: 'g', parentId: 'c1' },
+      { id: 'c2', parentId: 'p' },
+    ]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => { result.current.insert({ type: 'paragraph', parentId: 'p', position: { after: 'c1' } }); });
+    // after sibling c1 must skip its descendant g → flat index 3 (before c2).
+    expect(editor.blocks.insert).toHaveBeenCalledWith('paragraph', {}, {}, 3, false, false, undefined, undefined);
+  });
+
   it('focuses the new block only when spec.focus is true', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }]);
     const { result } = renderHook(() => useBlocks(editor));
@@ -264,6 +321,54 @@ describe('useBlocks insert', () => {
     act(() => { result.current.insert({ type: 'header', position: { before: 'b' }, replace: true }); });
     // replace=true (6th arg); flat index of 'b' = 1.
     expect(editor.blocks.insert).toHaveBeenCalledWith('header', {}, {}, 1, false, true, undefined, undefined);
+  });
+
+  it('replace of a NESTED block targets that block own flat index, not root end', () => {
+    const { editor } = makeFakeEditor([
+      { id: 'p', name: 'toggle' },
+      { id: 'child', parentId: 'p' },
+    ]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => { result.current.insert({ type: 'header', position: { before: 'child' }, replace: true }); });
+    // 'child' is nested under p at flat index 1. The documented turn-into pattern
+    // must overwrite IT (index 1), not fall back to root end (index 2).
+    expect(editor.blocks.insert).toHaveBeenCalledWith('header', {}, {}, 1, false, true, undefined, undefined);
+  });
+
+  it('replace of a NESTED block keeps the replacement under the same parent', () => {
+    const { editor } = makeFakeEditor([
+      { id: 'p', name: 'toggle' },
+      { id: 'child', parentId: 'p' },
+    ]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => { result.current.insert({ type: 'header', position: { before: 'child' }, replace: true }); });
+    // A replace is a positional type-swap that PRESERVES the parent link: the new
+    // block (fake insert returns parentId null) is re-parented back under 'p'.
+    expect(editor.blocks.setBlockParent).toHaveBeenCalledWith('new-2', 'p');
+  });
+
+  it('replace ignores a non-resolving parentId instead of bailing to null', () => {
+    const { editor } = makeFakeEditor([
+      { id: 'p', name: 'toggle' },
+      { id: 'child', parentId: 'p' },
+    ]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => {
+      result.current.insert({ type: 'header', parentId: 'ghost', position: { before: 'child' }, replace: true });
+    });
+    // Under replace the target's OWN parent governs, so parentId is irrelevant —
+    // a stale parentId must NOT short-circuit to null; the replace still runs at
+    // the target's slot (index 1).
+    expect(editor.blocks.insert).toHaveBeenCalledWith('header', {}, {}, 1, false, true, undefined, undefined);
+  });
+
+  it('replace runs even when an explicit id already exists (replace is not insert-if-absent)', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => { result.current.insert({ type: 'header', id: 'a', position: { before: 'a' }, replace: true }); });
+    // id 'a' exists, but replace is an explicit overwrite — the insert-if-absent
+    // short-circuit must NOT swallow it. Resolves to 'a' own slot (0) with id 'a'.
+    expect(editor.blocks.insert).toHaveBeenCalledWith('header', {}, {}, 0, false, true, 'a', undefined);
   });
 
   it('forwards an explicit id to core', () => {

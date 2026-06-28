@@ -19,7 +19,7 @@ import {
   mergeListItemData,
   renderListSettings,
 } from './block-operations';
-import { PLACEHOLDER_KEY } from './constants';
+import { PLACEHOLDER_KEY, TOOL_NAME } from './constants';
 import { getContentOffset } from './content-offset';
 import { parseHTML } from './content-operations';
 import { normalizeListItemData } from './data-normalizer';
@@ -34,7 +34,7 @@ import {
   updateMarkersInRange,
   updateAllOrderedListMarkers,
 } from './list-helpers';
-import { handleEnter, handleBackspace, handleIndent, handleOutdent } from './list-keyboard';
+import { handleEnter, handleBackspace } from './list-keyboard';
 import { renderListItem } from './list-lifecycle';
 import { ListMarkerCalculator } from './marker-calculator';
 import { OrderedMarkerManager } from './ordered-marker-manager';
@@ -54,6 +54,15 @@ export class ListItem implements BlockTool {
   private markerManager: OrderedMarkerManager | null;
   private placeholderCleanup: (() => void) | null = null;
   private boundHandleKeyDown: ((event: KeyboardEvent) => void) | null = null;
+
+  /**
+   * Whether this item was structurally nested (had a list parent) at the last
+   * move/render. Lets {@link moved} tell a structural outdent-to-root (depth must
+   * reset to 0) apart from a same-position drag at root (depth recomputed from
+   * neighbours). Drag never sets a list item's `parentId`, so the structural
+   * path only activates for keyboard Tab/Shift+Tab nesting.
+   */
+  private wasStructurallyNested = false;
 
   private blockId?: string;
 
@@ -204,17 +213,72 @@ export class ListItem implements BlockTool {
   }
 
   public rendered(): void {
+    // Seed the structural-nesting flag from the loaded tree so the first move
+    // after render can distinguish a structural outdent from a flat drag.
+    this.wasStructurallyNested = this.getStructuralListDepth() !== null;
     this.updateMarkersAfterPositionChange();
   }
 
   public moved(event: MoveEvent): void {
-    this.validateAndAdjustDepthAfterMove(event.toIndex, event.isGroupMove);
+    const structuralDepth = this.getStructuralListDepth();
+    const isStructural = structuralDepth !== null || this.wasStructurallyNested;
+
+    if (isStructural) {
+      // Keyboard Tab/Shift+Tab nests/outdents list items STRUCTURALLY
+      // (parentId/contentIds) and emits BlockMoved. Derive depth from the tree
+      // and sync the flat carriers (margin + data.depth + marker) so rendering,
+      // numbering and serialization stay correct. An item that was nested and is
+      // now at root (structuralDepth === null) outdented to depth 0.
+      const derivedDepth = structuralDepth ?? 0;
+
+      this.adjustDepthTo(derivedDepth);
+      this.updateMarkerForDepth(derivedDepth, this._data.style);
+      this.wasStructurallyNested = structuralDepth !== null;
+    } else {
+      this.validateAndAdjustDepthAfterMove(event.toIndex, event.isGroupMove);
+    }
+
     this.updateMarkersAfterPositionChange();
     // updateMarkersAfterPositionChange only renumbers the destination group
     // around this block. Dragging an item out of another list (e.g. the 2nd of
     // three) leaves that source group short an item with no moved() hook of its
     // own, so renumber every ordered group — same as removed() does.
     this.markerManager?.scheduleUpdateAll();
+  }
+
+  /**
+   * Structural nesting depth of this list item, DERIVED from its position in the
+   * block tree (the parentId chain), not a stored `data.depth`. Returns the
+   * number of consecutive list ancestors (a list two levels under another list
+   * is depth 2), or null when the item is not structurally nested under another
+   * list — in which case depth falls back to the flat `data.depth` carrier that
+   * drag-and-drop still uses.
+   */
+  private getStructuralListDepth(): number | null {
+    if (this.blockId === undefined) {
+      return null;
+    }
+
+    const countListAncestors = (childId: string, depth: number): number => {
+      const child = this.api.blocks.getById(childId);
+      const parentId = child?.parentId ?? null;
+
+      if (parentId === null) {
+        return depth;
+      }
+
+      const parent = this.api.blocks.getById(parentId);
+
+      if (parent === null || parent.name !== TOOL_NAME) {
+        return depth;
+      }
+
+      return countListAncestors(parentId, depth + 1);
+    };
+
+    const depth = countListAncestors(this.blockId, 0);
+
+    return depth > 0 ? depth : null;
   }
 
   private updateMarkersAfterPositionChange(): void {
@@ -320,7 +384,11 @@ export class ListItem implements BlockTool {
   }
 
   private getDepth(): number {
-    return this._data.depth ?? 0;
+    // Prefer the STRUCTURAL depth (tree position) when the item is nested under
+    // another list via parentId/contentIds — keyboard Tab nesting. Fall back to
+    // the flat `data.depth` carrier for drag-nested items (which set depth but
+    // not parentId) and for un-nested root items.
+    return this.getStructuralListDepth() ?? this._data.depth ?? 0;
   }
 
   private handleKeyDown(event: KeyboardEvent): void {
@@ -337,25 +405,14 @@ export class ListItem implements BlockTool {
       return;
     }
 
-    if (event.key !== 'Tab') {
-      return;
-    }
-
-    const selectedBlocks = document.querySelectorAll('[data-blok-selected="true"]');
-
-    if (selectedBlocks.length > 1) {
-      return;
-    }
-
-    event.preventDefault();
-
-    if (event.shiftKey) {
-      void this.handleOutdent();
-
-      return;
-    }
-
-    void this.handleIndent();
+    /**
+     * Tab / Shift+Tab are intentionally NOT handled here. List nesting is now
+     * structural (parentId/contentIds) and is performed by the shared module
+     * keydown handler (KeyboardNavigation.handleTab) — the SAME path text and
+     * headers use. Leaving the event un-prevented lets it reach that handler,
+     * which nests the item under its preceding sibling (Tab) or outdents it to
+     * the grandparent (Shift+Tab). Depth is then DERIVED from tree position.
+     */
   }
 
   private async handleEnter(): Promise<void> {
@@ -384,34 +441,6 @@ export class ListItem implements BlockTool {
     };
 
     await handleBackspace(context, event);
-  }
-
-  private async handleIndent(): Promise<void> {
-    const context = {
-      api: this.api,
-      blockId: this.blockId,
-      data: this._data,
-      element: this._element,
-      getContentElement: this.getContentElement.bind(this),
-      syncContentFromDOM: this.syncContentFromDOM.bind(this),
-      getDepth: this.getDepth.bind(this),
-    };
-
-    await handleIndent(context, this.depthValidator);
-  }
-
-  private async handleOutdent(): Promise<void> {
-    const context = {
-      api: this.api,
-      blockId: this.blockId,
-      data: this._data,
-      element: this._element,
-      getContentElement: this.getContentElement.bind(this),
-      syncContentFromDOM: this.syncContentFromDOM.bind(this),
-      getDepth: this.getDepth.bind(this),
-    };
-
-    await handleOutdent(context, this.depthValidator);
   }
 
   private syncContentFromDOM(): void {

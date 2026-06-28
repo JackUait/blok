@@ -246,8 +246,8 @@ describe('KeyboardNavigation', () => {
       expect(navigatePrevious).not.toHaveBeenCalled();
     });
 
-    it('does not indent list items (they manage their own depth) — no-op, no caret move', () => {
-      const previous = createBlock({ id: 'prev', parentId: null });
+    it('nests a list item structurally under its preceding sibling on Tab', () => {
+      const previous = createBlock({ id: 'prev', parentId: null, name: 'list' });
       const current = createBlock({ id: 'cur', parentId: null, name: 'list' });
       const navigateNext = vi.fn(() => true);
       const blok = tabModules([previous, current], current, { navigateNext });
@@ -256,8 +256,22 @@ describe('KeyboardNavigation', () => {
 
       keyboardNavigation.handleTab(createKeyboardEvent({ key: 'Tab', shiftKey: false }));
 
-      expect(setBlockParent).not.toHaveBeenCalled();
+      // List nesting is structural now — identical to text/headers — so the item
+      // is reparented under its preceding sibling rather than mutating a flat depth.
+      expect(setBlockParent).toHaveBeenCalledWith(current, 'prev');
       expect(navigateNext).not.toHaveBeenCalled();
+    });
+
+    it('outdents a list item structurally to the grandparent on Shift+Tab', () => {
+      const parent = createBlock({ id: 'p', parentId: null, name: 'list', contentIds: ['cur'] });
+      const current = createBlock({ id: 'cur', parentId: 'p', name: 'list' });
+      const blok = tabModules([parent, current], current);
+      const setBlockParent = blok.BlockManager.setBlockParent as ReturnType<typeof vi.fn>;
+      const keyboardNavigation = new KeyboardNavigation(blok);
+
+      keyboardNavigation.handleTab(createKeyboardEvent({ key: 'Tab', shiftKey: true }));
+
+      expect(setBlockParent).toHaveBeenCalledWith(current, null);
     });
 
     it('is a strict no-op when there is no preceding block on Tab', () => {

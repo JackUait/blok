@@ -99,6 +99,28 @@ export const handleEnter = async (
 };
 
 /**
+ * The id of this list item's structural parent when that parent is itself a
+ * list item — i.e. the item is nested via parentId/contentIds (keyboard Tab).
+ * Returns null when the item is not structurally nested under another list.
+ */
+const getStructuralListParentId = (api: API, blockId: string | undefined): string | null => {
+  if (blockId === undefined) {
+    return null;
+  }
+
+  const block = api.blocks.getById(blockId);
+  const parentId = block?.parentId ?? null;
+
+  if (parentId === null) {
+    return null;
+  }
+
+  const parent = api.blocks.getById(parentId);
+
+  return parent !== null && parent.name === TOOL_NAME ? parentId : null;
+};
+
+/**
  * Exit list or outdent when pressing Enter on empty item
  */
 const exitListOrOutdent = async (
@@ -106,9 +128,28 @@ const exitListOrOutdent = async (
   depthValidator?: ListDepthValidator
 ): Promise<void> => {
   const { api, blockId, getDepth } = context;
+
+  // Structurally nested (keyboard Tab) items outdent one level by reparenting to
+  // the grandparent — keeping nesting in the block tree rather than a flat depth.
+  const structuralParentId = getStructuralListParentId(api, blockId);
+
+  if (structuralParentId !== null && blockId !== undefined) {
+    const grandparentId = api.blocks.getById(structuralParentId)?.parentId ?? null;
+
+    api.blocks.setBlockParent(blockId, grandparentId);
+
+    const outdentedBlock = api.blocks.getById(blockId);
+
+    if (outdentedBlock !== null) {
+      setCaretToBlockContent(api, outdentedBlock);
+    }
+
+    return;
+  }
+
   const currentDepth = getDepth();
 
-  // If nested, outdent instead of exiting
+  // Drag-nested (flat depth) items still outdent via the flat carrier.
   if (currentDepth > 0) {
     await handleOutdent(context, depthValidator);
     return;
@@ -187,39 +228,6 @@ export const handleBackspace = async(
   }
 
   setCaretToBlockContent(api, newBlock, 'start');
-};
-
-/**
- * Handle Tab key - indent the list item
- */
-export const handleIndent = async(
-  context: KeyboardContext,
-  depthValidator: ListDepthValidator
-): Promise<void> => {
-  const { api, blockId, data, syncContentFromDOM, getDepth } = context;
-
-  const currentBlockIndex = api.blocks.getCurrentBlockIndex();
-  const currentDepth = getDepth();
-  const maxAllowedDepth = depthValidator.getMaxAllowedDepth(currentBlockIndex);
-
-  // Can only indent if current depth is below the maximum
-  if (currentDepth >= maxAllowedDepth) return;
-
-  // Sync current content before updating
-  syncContentFromDOM();
-
-  // Increase depth by 1
-  const newDepth = currentDepth + 1;
-  data.depth = newDepth;
-
-  // Update the block data and re-render
-  const updatedBlock = await api.blocks.update(blockId || '', {
-    ...data,
-    depth: newDepth,
-  });
-
-  // Restore focus to the updated block after DOM has been updated
-  setCaretToBlockContent(api, updatedBlock);
 };
 
 /**

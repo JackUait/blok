@@ -461,6 +461,18 @@ export class BlockHierarchy {
       return;
     }
 
+    // List items render their own nesting indentation on their inner
+    // [role="listitem"] element (so the marker glyph aligns with the indent),
+    // derived from their STRUCTURAL depth. Applying the generic parentId-depth
+    // margin to the holder too would double the indent. Keep the holder flush
+    // and still expose the structural depth via data-blok-depth.
+    if (block.name === 'list') {
+      holder.style.marginLeft = '';
+      holder.setAttribute('data-blok-depth', String(this.getBlockDepth(block)));
+
+      return;
+    }
+
     // Blocks inside toggle child containers should not receive parentId-depth
     // margin (the container indents them).
     if (holder.closest('[data-blok-toggle-children]')) {

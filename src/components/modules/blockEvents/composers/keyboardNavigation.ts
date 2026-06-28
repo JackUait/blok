@@ -147,14 +147,14 @@ export class KeyboardNavigation extends BlockEventComposer {
    * immediately preceding sibling (the block right above it at the same parent
    * level) via parentId/contentIds — matching Notion's Tab rule.
    *
-   * @returns true if the block was indented; false when it cannot be (a list, or
-   *   no preceding sibling), so the caller can treat Tab as a no-op.
+   * @returns true if the block was indented; false when it cannot be (no
+   *   preceding sibling), so the caller can treat Tab as a no-op.
    */
   private indentCurrentBlock(): boolean {
     const { BlockManager } = this.Blok;
     const { currentBlock } = BlockManager;
 
-    if (currentBlock === undefined || currentBlock.name === LIST_TOOL_NAME) {
+    if (currentBlock === undefined) {
       return false;
     }
 
@@ -180,14 +180,14 @@ export class KeyboardNavigation extends BlockEventComposer {
    * of its former parent (a child of the grandparent), and — matching Notion's
    * outliner — adopts its following same-parent siblings as its own children.
    *
-   * @returns true if the block was outdented; false when it cannot be (a list, or
-   *   already at root), so the caller can treat Shift+Tab as a no-op.
+   * @returns true if the block was outdented; false when it cannot be (already
+   *   at root), so the caller can treat Shift+Tab as a no-op.
    */
   private outdentCurrentBlock(): boolean {
     const { BlockManager } = this.Blok;
     const { currentBlock } = BlockManager;
 
-    if (currentBlock === undefined || currentBlock.name === LIST_TOOL_NAME) {
+    if (currentBlock === undefined) {
       return false;
     }
 

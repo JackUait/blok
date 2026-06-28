@@ -943,4 +943,48 @@ describe('List Tool - moved() marker refresh', () => {
     expect(element.getAttribute('data-list-depth')).toBe('2');
     expect(marker.textContent).toBe('▪');
   });
+
+  /**
+   * Structural nesting (keyboard Tab): the item is nested under another list via
+   * parentId/contentIds, NOT a flat data.depth. moved() (emitted by the structural
+   * reparent) must DERIVE the depth from the tree and refresh the depth-derived
+   * carriers: the data-list-depth attribute, the depth-formatted ordered marker
+   * (depth 1 → alpha "a."), and the saved data.depth (kept in sync for drag and
+   * serialization).
+   */
+  it('derives depth from the structural parent on moved() and refreshes the marker', () => {
+    const tree: Record<string, { id: string; name: string; parentId: string | null }> = {
+      child: { id: 'child', name: 'list', parentId: 'parent' },
+      parent: { id: 'parent', name: 'list', parentId: null },
+    };
+    const api = createMockAPI();
+
+    api.blocks.getById = (id: string) => (tree[id] ?? null) as never;
+    api.blocks.getBlockByIndex = () => undefined;
+    api.blocks.getBlockIndex = () => 1;
+    api.blocks.getCurrentBlockIndex = () => 1;
+    api.blocks.getBlocksCount = () => 2;
+
+    const list = new List({
+      data: { text: 'item', style: 'ordered', depth: 0 } as ListItemData,
+      config: {},
+      api,
+      readOnly: false,
+      block: { id: 'child' } as never,
+    });
+    const element = list.render();
+    const marker = element.querySelector('[data-list-marker]') as HTMLElement;
+
+    // Before the reparent move is processed, the item renders at depth 0 → "1.".
+    expect(marker.textContent).toBe('1.');
+
+    // The structural reparent emits BlockMoved with fromIndex === toIndex.
+    list.moved({ fromIndex: 1, toIndex: 1, isGroupMove: false });
+
+    // Depth is derived from the parentId chain (1), not the stored data.depth (0).
+    expect(element.getAttribute('data-list-depth')).toBe('1');
+    expect(marker.textContent).toBe('a.');
+    // data.depth stays in sync so drag and serialization keep working.
+    expect(list.save().depth).toBe(1);
+  });
 });

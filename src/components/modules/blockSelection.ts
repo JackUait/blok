@@ -162,6 +162,15 @@ export class BlockSelection extends Module {
   private readyToBlockSelection = false;
 
   /**
+   * Flag used to define the container-scoped intermediate stage.
+   * When the working Block is nested inside a container (column/toggle/callout),
+   * the first escalation selects the container's siblings; the next selects all
+   * Blocks. This flag records that the container stage has already happened.
+   * @type {boolean}
+   */
+  private containerBlocksSelected = false;
+
+  /**
    * SelectionUtils instance
    * @type {SelectionUtils}
    */
@@ -259,6 +268,7 @@ export class BlockSelection extends Module {
     this.needToSelectAll = false;
     this.nativeInputSelected = false;
     this.readyToBlockSelection = false;
+    this.containerBlocksSelected = false;
 
     /**
      * Disable navigation mode when selection is cleared
@@ -494,6 +504,15 @@ export class BlockSelection extends Module {
     blockToSelect.selected = true;
 
     this.clearCache();
+
+    /**
+     * Prime the Cmd+A escalation state so a block selected via any path
+     * (caret, rectangle selection, public API, or the Cmd+A handler itself)
+     * escalates on the next Cmd+A — to the container's siblings when nested,
+     * otherwise to all Blocks — instead of dropping back to the text stage.
+     */
+    this.readyToBlockSelection = true;
+    this.needToSelectAll = true;
 
     /** close InlineToolbar when we selected any Block */
     this.Blok.InlineToolbar.close();
@@ -740,6 +759,19 @@ export class BlockSelection extends Module {
        */
       event.preventDefault();
 
+      /**
+       * Container-scoped intermediate stage (Notion parity): when the working
+       * Block is nested inside a container, the first escalation selects the
+       * container's sibling Blocks; only the next press selects every Block in
+       * the document.
+       */
+      if (workingBlock.parentId !== null && !this.containerBlocksSelected) {
+        this.selectContainerBlocks(workingBlock);
+        this.containerBlocksSelected = true;
+
+        return;
+      }
+
       this.selectAllBlocks();
 
       /**
@@ -747,6 +779,7 @@ export class BlockSelection extends Module {
        */
       this.needToSelectAll = false;
       this.readyToBlockSelection = false;
+      this.containerBlocksSelected = false;
 
       return;
     }
@@ -793,6 +826,54 @@ export class BlockSelection extends Module {
     const blockText = normalize(block.pluginsContent.textContent ?? '');
 
     return blockText.length > 0 && selectedText === blockText;
+  }
+
+  /**
+   * Select the sibling Blocks that share the working Block's container.
+   * Used by the Cmd+A escalation as the intermediate stage between selecting
+   * the single Block and selecting every Block in the document.
+   * @param block - a Block nested inside the container whose siblings to select
+   */
+  private selectContainerBlocks(block: Block): void {
+    const { BlockManager } = this.Blok;
+    const { parentId } = block;
+
+    if (parentId === null) {
+      return;
+    }
+
+    const parent = BlockManager.getBlockById(parentId);
+
+    if (parent === undefined) {
+      return;
+    }
+
+    /**
+     * Save selection — will be restored when closeSelection fires
+     */
+    this.selection.save();
+
+    const selection = SelectionUtils.get();
+
+    selection?.removeAllRanges();
+
+    for (const childId of parent.contentIds) {
+      const child = BlockManager.getBlockById(childId);
+
+      if (child !== undefined) {
+        child.selected = true;
+      }
+    }
+
+    this.clearCache();
+
+    /** close InlineToolbar when we selected the container's Blocks */
+    this.Blok.InlineToolbar.close();
+
+    /**
+     * Show toolbar for multi-block selection
+     */
+    this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
   }
 
   private selectAllBlocks(): void {

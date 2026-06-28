@@ -905,6 +905,78 @@ describe('BlockSelection', () => {
       expect(handler.readyToBlockSelection).toBe(true);
       expect(event.preventDefault).not.toHaveBeenCalled();
     });
+
+    it('M6: when nested, escalates block → container siblings → all blocks', () => {
+      const container = createBlockStub({ id: 'container', contentIds: ['c1', 'c2'] });
+      const c1 = createBlockStub({ id: 'c1', parentId: 'container' });
+      const c2 = createBlockStub({ id: 'c2', parentId: 'container' });
+      const root = createBlockStub({ id: 'root' });
+      const allBlocks = [container, c1, c2, root];
+
+      const { blockSelection } = createBlockSelection({
+        BlockManager: {
+          blocks: allBlocks,
+          currentBlock: c1,
+          getBlockByIndex: vi.fn((index: number) => allBlocks[index]),
+          getBlock: vi.fn((element: HTMLElement) => allBlocks.find((block) => block.holder === element) ?? null),
+          getBlockById: vi.fn((id: string) => allBlocks.find((block) => block.id === id) ?? undefined),
+          getBlockDepth: vi.fn(() => 0),
+          removeSelectedBlocks: vi.fn(),
+          insertDefaultBlockAtIndex: vi.fn(),
+          deleteSelectedBlocksAndInsertReplacement: vi.fn(),
+        } as unknown as BlokModules['BlockManager'],
+      });
+
+      const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');
+      const event = {
+        target: c1.holder,
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent;
+      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
+
+      // 1st press: native text selection only.
+      handler.handleCommandA(event);
+      expect(c1.selected).toBe(false);
+
+      // 2nd press: select just the nested block.
+      handler.handleCommandA(event);
+      expect(c1.selected).toBe(true);
+      expect(c2.selected).toBe(false);
+      expect(selectAllSpy).not.toHaveBeenCalled();
+
+      // 3rd press: container-scoped intermediate stage — select the container's siblings.
+      handler.handleCommandA(event);
+      expect(c1.selected).toBe(true);
+      expect(c2.selected).toBe(true);
+      expect(root.selected).toBe(false);
+      expect(blockSelection.allBlocksSelected).toBe(false);
+      expect(selectAllSpy).not.toHaveBeenCalled();
+
+      // 4th press: escalate to the whole document.
+      handler.handleCommandA(event);
+      expect(selectAllSpy).toHaveBeenCalledTimes(1);
+
+      // 5th press: terminal no-op once everything is selected.
+      handler.handleCommandA(event);
+      expect(selectAllSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('M7: a block pre-selected via selectBlock escalates to all-blocks on the next Cmd+A', () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');
+      const event = {
+        target: blocks[0].holder,
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent;
+      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
+
+      // Pre-select the block through a non-Cmd+A path (caret / rectangle / public API).
+      blockSelection.selectBlock(blocks[0]);
+
+      // The next Cmd+A must escalate, not drop back into the text-selection stage.
+      handler.handleCommandA(event);
+      expect(selectAllSpy).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('replaceSelectedBlocksWithPrintableKey', () => {

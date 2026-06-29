@@ -932,6 +932,84 @@ describe('useBlocks insertMany', () => {
     expect(created).toHaveLength(1);
     expect(editor.blocks.transact).toHaveBeenCalledTimes(1);
   });
+
+  it('an idempotent-id hit in the batch returns the existing node and inserts no duplicate', () => {
+    // A spec whose explicit id already exists is insert-if-absent: it must NOT
+    // create a second block. Only the two genuinely-new specs reach core.insert,
+    // yet the returned array still includes the pre-existing node in its slot.
+    const { editor } = makeFakeEditor([{ id: 'a', name: 'header' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let created: ReturnType<typeof result.current.insertMany> = [];
+    act(() => {
+      created = result.current.insertMany([
+        { type: 'paragraph' },
+        { id: 'a', type: 'paragraph' },
+        { type: 'paragraph' },
+      ]);
+    });
+    // 'a' already exists → no insert for it; only the two new specs hit core.
+    expect(editor.blocks.insert).toHaveBeenCalledTimes(2);
+    expect(editor.blocks.transact).toHaveBeenCalledTimes(1);
+    // The existing node is returned in its slot, keeping its ORIGINAL type.
+    expect(created).toHaveLength(3);
+    expect(created[1]).toMatchObject({ id: 'a', type: 'header' });
+  });
+
+  it('a replace spec mixed with a normal insert forwards replace=true only for the replace spec', () => {
+    // The batch shares one transact; each spec still routes through the single
+    // insert path, so a normal insert stays replace=false while the replace spec
+    // overwrites its before-ref target with replace=true.
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let created: ReturnType<typeof result.current.insertMany> = [];
+    act(() => {
+      created = result.current.insertMany([
+        { type: 'paragraph' },
+        { type: 'header', position: { before: 'b' }, replace: true },
+      ]);
+    });
+    expect(created).toHaveLength(2);
+    expect(editor.blocks.transact).toHaveBeenCalledTimes(1);
+    // 1st spec: plain root append at end (index 2), replace=false.
+    expect(editor.blocks.insert).toHaveBeenNthCalledWith(1, 'paragraph', {}, {}, 2, false, false, undefined, undefined);
+    // 2nd spec: replace 'b' in place at its own flat index 1, replace=true.
+    expect(editor.blocks.insert).toHaveBeenNthCalledWith(2, 'header', {}, {}, 1, false, true, undefined, undefined);
+  });
+
+  it('a focus:true spec in the batch focuses only that block, not its batch siblings', () => {
+    // focus defaults to false so a programmatic batch never steals the caret;
+    // only the spec that opts in passes needToFocus=true to core.
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => {
+      result.current.insertMany([
+        { type: 'paragraph' },
+        { type: 'paragraph', focus: true },
+      ]);
+    });
+    // 1st spec: needToFocus=false (5th arg).
+    expect(editor.blocks.insert).toHaveBeenNthCalledWith(1, 'paragraph', {}, {}, 1, false, false, undefined, undefined);
+    // 2nd spec: needToFocus=true.
+    expect(editor.blocks.insert).toHaveBeenNthCalledWith(2, 'paragraph', {}, {}, 2, true, false, undefined, undefined);
+  });
+
+  it('inserts every spec even when core exposes no transact (fallback runs the batch directly)', () => {
+    // A core build without the optional transact API must still insert each spec
+    // — the batch falls back to running the loop directly instead of dropping it.
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    (editor.blocks as unknown as { transact?: (fn: () => void) => void }).transact = undefined;
+    const { result } = renderHook(() => useBlocks(editor));
+    let created: ReturnType<typeof result.current.insertMany> = [];
+    act(() => {
+      created = result.current.insertMany([
+        { type: 'paragraph' },
+        { type: 'header' },
+      ]);
+    });
+    expect(editor.blocks.insert).toHaveBeenCalledTimes(2);
+    expect(created).toHaveLength(2);
+    expect(created.map((n) => n.type)).toEqual(['paragraph', 'header']);
+  });
 });
 
 describe('useBlocks contentIds', () => {

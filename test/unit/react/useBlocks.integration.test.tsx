@@ -124,10 +124,16 @@ const createRealEditorHarness = (
       type?: string,
       _data?: unknown,
       _cfg?: unknown,
-      index?: number
+      index?: number,
+      _needToFocus?: boolean,
+      _replace?: boolean,
+      explicitId?: string
     ): { id: string; name: string; parentId: string | null } => {
       insertSeq += 1;
-      const id = `inserted-${insertSeq}`;
+      // Faithful to core: an explicit id (7th positional arg) is honored when
+      // present, otherwise core generates one. Lets a batch spec reference an
+      // earlier-created block by a stable id.
+      const id = explicitId ?? `inserted-${insertSeq}`;
       const stub = createBlockStub({ id, name: type ?? 'paragraph' });
       const insertAt =
         index !== undefined ? Math.min(index, blocksStore.length) : blocksStore.length;
@@ -355,6 +361,81 @@ describe('useBlocks — real BlockHierarchy integration', () => {
 
     // The pre-existing root sibling is untouched and still a root block.
     expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['container', 'tail']);
+  });
+
+  it('insertMany resolves a later spec position against a block created EARLIER in the same batch', () => {
+    // The second spec's `{ after: 'first' }` references a block that only comes
+    // into existence one step earlier in the SAME batch. Each spec runs through
+    // the live index model inside one shared transact, so the relative position
+    // must resolve against the just-created 'first' — landing the second block
+    // immediately after it, not at a stale slot.
+    const harness = createRealEditorHarness([{ id: 'root' }]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    let created: ReturnType<typeof result.current.insertMany> = [];
+
+    act(() => {
+      created = result.current.insertMany([
+        { id: 'first', type: 'header' },
+        { type: 'paragraph', position: { after: 'first' } },
+      ]);
+    });
+
+    expect(created).toHaveLength(2);
+    expect(created[0].id).toBe('first');
+
+    const secondId = created[1].id;
+
+    const flat: string[] = [];
+
+    for (let i = 0; i < harness.editor.blocks.getBlocksCount(); i++) {
+      const node = harness.editor.blocks.getBlockByIndex(i);
+
+      if (node !== undefined) {
+        flat.push(node.id);
+      }
+    }
+    // The batch's second block sits directly after the batch's first block.
+    expect(flat).toEqual(['root', 'first', secondId]);
+    expect(flat.indexOf(secondId)).toBe(flat.indexOf('first') + 1);
+  });
+
+  it('root insert with position "start" lands the new block at the document head', () => {
+    // Root `position: 'start'` resolves to flat index 0 end-to-end through
+    // insert() — the new block becomes the FIRST root sibling, ahead of the
+    // existing blocks, and stays at root (parentId null).
+    const harness = createRealEditorHarness([{ id: 'a' }, { id: 'b' }]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    let insertedId: string | null = null;
+
+    act(() => {
+      const node = result.current.insert({ type: 'header', position: 'start' });
+
+      insertedId = node?.id ?? null;
+    });
+
+    expect(insertedId).not.toBeNull();
+    expect(result.current.getById(insertedId as unknown as string)?.parentId).toBeNull();
+    // New block is the first root sibling, ahead of the pre-existing a, b.
+    expect(result.current.getChildren(null).map((n) => n.id)).toEqual([insertedId, 'a', 'b']);
+
+    const flat: string[] = [];
+
+    for (let i = 0; i < harness.editor.blocks.getBlocksCount(); i++) {
+      const node = harness.editor.blocks.getBlockByIndex(i);
+
+      if (node !== undefined) {
+        flat.push(node.id);
+      }
+    }
+    expect(flat).toEqual([insertedId, 'a', 'b']);
   });
 
   it('nest then unnest round-trips parentId back to null', () => {

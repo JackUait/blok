@@ -51,6 +51,7 @@
   "tools.header.toggleHeading3": "හැකිලෙන ශීර්ෂය 3",
   "tools.list.placeholder": "ලැයිස්තුව",
   "blockSettings.delete": "මකන්න",
+  "blockSettings.duplicate": "අනුපිටපත",
   "blockSettings.copyLink": "බ්ලොක් එකට සබැඳිය පිටපත් කරන්න",
   "blockSettings.lastEdited": "අවසන් සංස්කරණය",
   "blockSettings.lastEditedBy": "{name} විසින් අවසන් සංස්කරණය",

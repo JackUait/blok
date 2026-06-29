@@ -76,6 +76,7 @@
   "tools.table.clickToAddColumn": "Klik untuk menambahkan kolom baru",
   "tools.table.dragToAddRemoveColumns": "Seret untuk menambah atau menghapus kolom",
   "blockSettings.delete": "Hapus",
+  "blockSettings.duplicate": "Gandakan",
   "blockSettings.copyLink": "Salin tautan ke blok",
   "blockSettings.lastEdited": "Terakhir diedit",
   "blockSettings.lastEditedBy": "Terakhir diedit oleh {name}",

@@ -58,6 +58,7 @@
   "tools.toggle.ariaLabelCollapse": "Inklappen",
   "tools.toggle.ariaLabelExpand": "Uitklappen",
   "blockSettings.delete": "Verwijderen",
+  "blockSettings.duplicate": "Dupliceren",
   "blockSettings.copyLink": "Link naar blok kopiëren",
   "blockSettings.lastEdited": "Laatst bewerkt",
   "blockSettings.lastEditedBy": "Laatst bewerkt door {name}",

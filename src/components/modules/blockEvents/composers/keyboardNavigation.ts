@@ -124,10 +124,29 @@ export class KeyboardNavigation extends BlockEventComposer {
     /**
      * Notion-style indentation: Tab nests the current block under the preceding
      * sibling; Shift+Tab outdents.
+     *
+     * Wrap the structural reparent in a single `transactMoves` group so it lands
+     * as ONE atomic, undoable entry — exactly like a drag-drop reparent. A bare
+     * `setBlockParent` splits across two history stacks (the array-reorder move
+     * stack plus the `parentId`/`contentIds` write on Y.UndoManager), so a single
+     * Cmd+Z cannot reverse it. `transactMoves` routes the parent write through
+     * `transactWithoutCapture` and attaches it to the move entry. It also keeps the
+     * indent OFF the typing's Y.UndoManager entry, so one Cmd+Z reverts only the
+     * indent and the text typed just before it survives.
      */
-    const handled = event.shiftKey ? this.outdentCurrentBlock() : this.indentCurrentBlock();
+    const { YjsManager } = this.Blok;
+    const outcome = { handled: false };
+    const reparent = (): void => {
+      outcome.handled = event.shiftKey ? this.outdentCurrentBlock() : this.indentCurrentBlock();
+    };
 
-    if (handled) {
+    if (typeof YjsManager.transactMoves === 'function') {
+      YjsManager.transactMoves(reparent);
+    } else {
+      reparent();
+    }
+
+    if (outcome.handled) {
       event.preventDefault();
 
       return;
@@ -410,14 +429,16 @@ export class KeyboardNavigation extends BlockEventComposer {
     const isCurrentTopLevel = currentBlock.parentId === null;
 
     /**
-     * Empty heading + Enter: convert the heading to a plain paragraph IN PLACE
-     * (preserving its position), instead of leaving the empty heading behind. The
-     * caret stays in the now-paragraph. Toggle headings are excluded — their
-     * open state nests a new child via the Case 2 toggle path below.
+     * Empty styled block + Enter: convert the block to a plain paragraph IN PLACE
+     * (preserving its position), instead of leaving the empty styled block behind.
+     * The caret stays in the now-paragraph. Covers headings and quotes — the same
+     * styled blocks the Backspace path resets to text. Toggle headings are excluded
+     * — their open state nests a new child via the Case 2 toggle path below.
      */
     const isToggleHeading = currentBlock.holder.querySelector('[data-blok-toggle-open]') !== null;
+    const resetsToTextOnEmptyEnter = currentBlock.name === HEADER_TOOL_NAME || currentBlock.name === QUOTE_TOOL_NAME;
 
-    if (currentBlock.isEmpty && currentBlock.name === HEADER_TOOL_NAME && !isToggleHeading) {
+    if (currentBlock.isEmpty && resetsToTextOnEmptyEnter && !isToggleHeading) {
       return this.Blok.BlockManager.replace(currentBlock, this.Blok.Tools.defaultTool.name, { text: '' });
     }
 
@@ -664,13 +685,16 @@ export class KeyboardNavigation extends BlockEventComposer {
     const bothBlocksMergeable = areBlocksMergeable(previousBlock, currentBlock);
 
     /**
-     * If Blocks could be merged, do it
-     * Otherwise, just navigate previous block
+     * If Blocks could be merged, do it.
+     *
+     * Otherwise the previous block cannot absorb this one (e.g. an image or other
+     * non-mergeable block). Notion SELECTS that previous block so a second
+     * Backspace deletes it, rather than silently parking the caret at its end.
      */
     if (bothBlocksMergeable) {
       this.mergeBlocks(previousBlock, currentBlock);
     } else {
-      Caret.setToBlock(previousBlock, Caret.positions.END);
+      this.Blok.BlockSelection.selectBlock(previousBlock);
     }
   }
 
@@ -750,6 +774,20 @@ export class KeyboardNavigation extends BlockEventComposer {
      */
     if (nextBlock.isEmpty) {
       void BlockManager.removeBlock(nextBlock);
+
+      return;
+    }
+
+    /**
+     * Notion parity — symmetric to the Backspace "empty styled previous wins"
+     * exception. When the current block is an EMPTY STYLED block (heading/quote —
+     * anything that isn't the plain default paragraph) and the next block has
+     * text, the next block's text is pulled UP into the current block and adopts
+     * its type — the styled block wins. Only when the empty block is a plain
+     * default paragraph does it fall through to the line-break removal below.
+     */
+    if (currentBlock.isEmpty && !currentBlock.tool.isDefault && areBlocksMergeable(currentBlock, nextBlock)) {
+      this.mergeBlocks(currentBlock, nextBlock);
 
       return;
     }
@@ -898,6 +936,21 @@ export class KeyboardNavigation extends BlockEventComposer {
       return;
     }
 
+    /**
+     * Shift+ArrowRight at the END of a block extends the selection into the next
+     * block (cross-block selection) — the same path as Shift+ArrowDown — instead
+     * of collapsing the caret into the adjacent block. Only fires at the boundary
+     * (caret at end, or a block selection already in progress); elsewhere the
+     * native within-block shift-extend is left intact.
+     */
+    const isShiftRightKey = event.shiftKey && keyCode === keyCodes.RIGHT && !this.isRtl;
+
+    if (isShiftRightKey && shouldEnableCBS) {
+      this.Blok.CrossBlockSelection.toggleBlockSelectedState();
+
+      return;
+    }
+
     if (isShiftDownKey) {
       void this.Blok.InlineToolbar.tryToShow();
     }
@@ -921,7 +974,12 @@ export class KeyboardNavigation extends BlockEventComposer {
      * - Arrow Right: use horizontal navigation (character-by-character)
      */
     const isDownKey = keyCode === keyCodes.DOWN;
-    const isRightKey = keyCode === keyCodes.RIGHT && !this.isRtl;
+    /**
+     * Plain (non-Shift) horizontal navigation only — Shift+ArrowRight at a
+     * boundary is handled above as cross-block selection and must never collapse
+     * the caret into the next block.
+     */
+    const isRightKey = keyCode === keyCodes.RIGHT && !this.isRtl && !event.shiftKey;
 
     const isNavigated = (() => {
       if (isDownKey) {
@@ -1052,6 +1110,21 @@ export class KeyboardNavigation extends BlockEventComposer {
       return;
     }
 
+    /**
+     * Shift+ArrowLeft at the START of a block extends the selection into the
+     * previous block (cross-block selection) — the same path as Shift+ArrowUp —
+     * instead of collapsing the caret into the adjacent block. Only fires at the
+     * boundary (caret at start, or a block selection already in progress);
+     * elsewhere the native within-block shift-extend is left intact.
+     */
+    const isShiftLeftKey = event.shiftKey && keyCode === keyCodes.LEFT && !this.isRtl;
+
+    if (isShiftLeftKey && shouldEnableCBS) {
+      this.Blok.CrossBlockSelection.toggleBlockSelectedState(false);
+
+      return;
+    }
+
     if (isShiftUpKey) {
       void this.Blok.InlineToolbar.tryToShow();
     }
@@ -1062,7 +1135,12 @@ export class KeyboardNavigation extends BlockEventComposer {
      * - Arrow Left: use horizontal navigation (character-by-character)
      */
     const isUpKey = keyCode === keyCodes.UP;
-    const isLeftKey = keyCode === keyCodes.LEFT && !this.isRtl;
+    /**
+     * Plain (non-Shift) horizontal navigation only — Shift+ArrowLeft at a
+     * boundary is handled above as cross-block selection and must never collapse
+     * the caret into the previous block.
+     */
+    const isLeftKey = keyCode === keyCodes.LEFT && !this.isRtl && !event.shiftKey;
 
     const isNavigated = (() => {
       if (isUpKey) {

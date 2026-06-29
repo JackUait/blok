@@ -76,6 +76,7 @@
   "tools.table.clickToAddColumn": "Clic para añadir una columna",
   "tools.table.dragToAddRemoveColumns": "Arrastra para añadir o eliminar columnas",
   "blockSettings.delete": "Eliminar",
+  "blockSettings.duplicate": "Duplicar",
   "blockSettings.copyLink": "Copiar enlace al bloque",
   "blockSettings.lastEdited": "Última edición",
   "blockSettings.lastEditedBy": "Última edición de {name}",

@@ -58,6 +58,7 @@
   "tools.toggle.ariaLabelCollapse": "Σύμπτυξη",
   "tools.toggle.ariaLabelExpand": "Ανάπτυξη",
   "blockSettings.delete": "Διαγραφή",
+  "blockSettings.duplicate": "Διπλότυπο",
   "blockSettings.copyLink": "Αντιγραφή συνδέσμου μπλοκ",
   "blockSettings.lastEdited": "Τελευταία επεξεργασία",
   "blockSettings.lastEditedBy": "Τελευταία επεξεργασία από {name}",

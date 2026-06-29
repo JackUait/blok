@@ -6,7 +6,7 @@ import { BlockAPI } from '../../block/api';
 import { Dom as $ } from '../../dom';
 import { BlockSettingsClosed, BlockSettingsOpened, BlokMobileLayoutToggled } from '../../events';
 import { Flipper } from '../../flipper';
-import { IconColumns, IconReplace, IconTrash } from '../../icons';
+import { IconColumns, IconCopy, IconReplace, IconTrash } from '../../icons';
 import { wrapBlocksInColumns } from '../../../tools/column-drop';
 import { SelectionUtils } from '../../selection/index';
 import type { BlockToolAdapter } from '../../tools/block';
@@ -535,12 +535,56 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     }
 
     /**
-     * For single block selection, show common tunes (delete, move, etc.)
-     * For multiple blocks, only show delete option with multi-block delete behavior
+     * Explicit "Duplicate" item (Notion parity) — sits beside delete and runs
+     * the SAME pipeline as Cmd/Ctrl+D (DragManager.duplicateBlocksInPlace), so
+     * nested children/colors/flat-indent followers are carried into the copy.
+     *
+     * The target blocks are captured HERE, at build time: the document mousedown
+     * that fires when the popover item is clicked clears the block selection
+     * before onActivate runs (same caveat as "turn-into-columns" above). For a
+     * multi-block selection we re-select the captured blocks so the whole group
+     * is duplicated; for a single block we duplicate the menu's own block.
+     */
+    const duplicateSelected = hasMultipleBlocksSelected ? [...selectedBlocks] : [];
+    const duplicateItem: MenuConfigItem = {
+      icon: IconCopy,
+      title: this.Blok.I18n.t('blockSettings.duplicate'),
+      name: 'duplicate',
+      secondaryLabel: '⌘D',
+      closeOnActivate: true,
+      onActivate: () => {
+        const { BlockSelection, DragManager, Toolbar } = this.Blok;
+
+        if (duplicateSelected.length > 1) {
+          BlockSelection.clearSelection();
+          duplicateSelected.forEach((selected) => BlockSelection.selectBlock(selected));
+        }
+
+        void DragManager?.duplicateBlocksInPlace(currentBlock);
+
+        Toolbar.close();
+      },
+    };
+
+    /**
+     * For single block selection, show common tunes (delete, move, etc.).
+     * Duplicate sits directly before the delete entry so it reads "Duplicate /
+     * Delete" like Notion (and delete stays the trailing action). When there is
+     * no delete entry (nothing to sit beside) the duplicate is omitted.
+     * For multiple blocks, show Duplicate + a multi-block delete.
      */
     if (!hasMultipleBlocksSelected) {
-      items.push(...commonTunes);
+      const deleteIndex = commonTunes.findIndex(
+        (tune) => 'name' in tune && tune.name === 'delete'
+      );
+
+      if (deleteIndex === -1) {
+        items.push(...commonTunes);
+      } else {
+        items.push(...commonTunes.slice(0, deleteIndex), duplicateItem, ...commonTunes.slice(deleteIndex));
+      }
     } else {
+      items.push(duplicateItem);
       items.push({
         icon: IconTrash,
         title: this.Blok.I18n.t('blockSettings.delete'),

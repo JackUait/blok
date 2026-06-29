@@ -53,6 +53,7 @@
   "tools.header.toggleHeading3": "Titlu reductibil 3",
   "tools.list.placeholder": "Listă",
   "blockSettings.delete": "Șterge",
+  "blockSettings.duplicate": "Duplicare",
   "blockSettings.copyLink": "Copiază linkul blocului",
   "blockSettings.lastEdited": "Ultima editare",
   "blockSettings.lastEditedBy": "Ultima editare de {name}",

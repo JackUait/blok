@@ -74,6 +74,7 @@
   "tools.table.clickToAddColumn": "ကော်လံအသစ်ထည့်ရန် နှိပ်ပါ",
   "tools.table.dragToAddRemoveColumns": "ကော်လံထည့်ရန် သို့မဟုတ် ဖယ်ရန် ဆွဲယူပါ",
   "blockSettings.delete": "ဖျက်ရန်",
+  "blockSettings.duplicate": "မိတ္တူပွားရန်",
   "blockSettings.copyLink": "ဘလောက်သို့ လင့်ခ်ကူးယူရန်",
   "blockSettings.lastEdited": "နောက်ဆုံးတည်းဖြတ်ချိန်",
   "blockSettings.lastEditedBy": "{name} မှ နောက်ဆုံးတည်းဖြတ်သည်",

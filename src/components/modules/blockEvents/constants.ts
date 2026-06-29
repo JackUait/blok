@@ -123,7 +123,9 @@ export const CODE_TOOL_NAME = 'code';
 
 /**
  * Regex pattern for detecting code block shortcuts.
- * Matches ``` followed by a space at the start of text.
- * Captures remaining content after the shortcut in group 1.
+ * Matches ``` on its own — like the "---" divider, no trailing space is required;
+ * the code block fires on the third backtick. An optional trailing space plus
+ * content is still accepted (e.g. "``` foo") for backward compatibility.
+ * Captures any remaining content after the shortcut in group 1.
  */
-export const CODE_PATTERN = /^```\s([\s\S]*)$/;
+export const CODE_PATTERN = /^```(?:\s([\s\S]*))?$/;

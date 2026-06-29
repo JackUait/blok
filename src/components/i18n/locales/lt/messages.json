@@ -53,6 +53,7 @@
   "tools.header.toggleHeading3": "Sutraukiama antraštė 3",
   "tools.list.placeholder": "Sąrašas",
   "blockSettings.delete": "Ištrinti",
+  "blockSettings.duplicate": "Dubliuoti",
   "blockSettings.copyLink": "Kopijuoti nuorodą į bloką",
   "blockSettings.lastEdited": "Paskutinį kartą redaguota",
   "blockSettings.lastEditedBy": "Paskutinį kartą redagavo {name}",

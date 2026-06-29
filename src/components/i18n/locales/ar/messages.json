@@ -76,6 +76,7 @@
   "tools.table.clickToAddColumn": "انقر لإضافة عمود جديد",
   "tools.table.dragToAddRemoveColumns": "اسحب لإضافة أو إزالة أعمدة",
   "blockSettings.delete": "حذف",
+  "blockSettings.duplicate": "تكرار",
   "blockSettings.copyLink": "نسخ رابط الكتلة",
   "blockSettings.lastEdited": "آخر تعديل",
   "blockSettings.lastEditedBy": "آخر تعديل بواسطة {name}",

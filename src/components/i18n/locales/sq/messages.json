@@ -76,6 +76,7 @@
   "tools.table.clickToAddColumn": "Kliko për të shtuar një kolonë të re",
   "tools.table.dragToAddRemoveColumns": "Tërhiq për të shtuar ose hequr kolona",
   "blockSettings.delete": "Fshi",
+  "blockSettings.duplicate": "Dyfisho",
   "blockSettings.copyLink": "Kopjo lidhjen e bllokut",
   "blockSettings.lastEdited": "Ndryshuar për herë të fundit",
   "blockSettings.lastEditedBy": "Ndryshuar për herë të fundit nga {name}",

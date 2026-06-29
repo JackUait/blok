@@ -26,6 +26,10 @@ import { EquationInlineTool as Equation } from './components/inline-tools/inline
 import { Header } from './tools/header';
 import { ListItem as List } from './tools/list';
 import { Paragraph } from './tools/paragraph';
+import { Quote } from './tools/quote';
+import { CalloutTool as Callout } from './tools/callout';
+import { CodeTool as Code } from './tools/code';
+import { ToggleItem as Toggle } from './tools/toggle';
 
 export { Blok, version, DATA_ATTR } from './blok';
 
@@ -74,6 +78,10 @@ export const defaultTools = {
  */
 export const allTools = {
   ...defaultTools,
+  quote: { class: Quote, inlineToolbar: true },
+  callout: { class: Callout, inlineToolbar: true },
+  code: { class: Code, inlineToolbar: false },
+  toggle: { class: Toggle, inlineToolbar: true },
   bold: { class: Bold },
   italic: { class: Italic },
   marker: { class: Marker },

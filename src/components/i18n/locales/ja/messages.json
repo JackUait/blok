@@ -76,6 +76,7 @@
   "tools.table.clickToAddColumn": "クリックして新しい列を追加",
   "tools.table.dragToAddRemoveColumns": "ドラッグして列を追加・削除",
   "blockSettings.delete": "削除",
+  "blockSettings.duplicate": "複製",
   "blockSettings.copyLink": "ブロックへのリンクをコピー",
   "blockSettings.lastEdited": "最終編集",
   "blockSettings.lastEditedBy": "{name} が最終編集",

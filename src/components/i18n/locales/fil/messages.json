@@ -74,6 +74,7 @@
   "tools.table.clickToAddColumn": "I-click para magdagdag ng kolum",
   "tools.table.dragToAddRemoveColumns": "I-drag para magdagdag o magtanggal ng mga kolum",
   "blockSettings.delete": "Burahin",
+  "blockSettings.duplicate": "Gumawa ng kopya",
   "blockSettings.copyLink": "Kopyahin ang link sa block",
   "blockSettings.lastEdited": "Huling na-edit",
   "blockSettings.lastEditedBy": "Huling na-edit ni {name}",

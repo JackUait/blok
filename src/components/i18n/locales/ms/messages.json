@@ -76,6 +76,7 @@
   "tools.table.clickToAddColumn": "Klik untuk tambah lajur baharu",
   "tools.table.dragToAddRemoveColumns": "Seret untuk tambah atau buang lajur",
   "blockSettings.delete": "Padam",
+  "blockSettings.duplicate": "Gandakan",
   "blockSettings.copyLink": "Salin pautan ke blok",
   "blockSettings.lastEdited": "Terakhir disunting",
   "blockSettings.lastEditedBy": "Terakhir disunting oleh {name}",

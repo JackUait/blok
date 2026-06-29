@@ -68,6 +68,7 @@ const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents =>
       navigateVerticalPrevious: vi.fn(() => false),
       setToBlock: vi.fn(),
       insertContentAtCaretPosition: vi.fn(),
+      resetGoalColumn: vi.fn(),
       positions: {
         START: 'start-position',
         END: 'end-position',

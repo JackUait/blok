@@ -76,6 +76,7 @@
   "tools.table.clickToAddColumn": "클릭하여 새 열 추가",
   "tools.table.dragToAddRemoveColumns": "드래그하여 열 추가 또는 제거",
   "blockSettings.delete": "삭제",
+  "blockSettings.duplicate": "복제",
   "blockSettings.copyLink": "블록 링크 복사",
   "blockSettings.lastEdited": "마지막 수정",
   "blockSettings.lastEditedBy": "{name} 님이 마지막으로 수정",

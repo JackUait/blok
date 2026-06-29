@@ -66,6 +66,12 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
   // initializing — still renders instead of being mistaken for the seed.
   const constructedDataRef = useRef(config.data);
   const renderChainRef = useRef<Promise<void>>(Promise.resolve());
+  // The content of the render currently queued/in-flight (distinct from
+  // `lastRenderedDataRef`, which tracks the last SUCCESSFULLY rendered content).
+  // Used to dedupe a re-queue of the same in-flight content without advancing the
+  // success baseline — so a failed render can't strand the baseline on content
+  // the editor never actually showed.
+  const pendingDataRef = useRef<UseBlokConfig['data']>(undefined);
 
   // Main lifecycle effect
   useEffect(() => {
@@ -265,6 +271,9 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     // initializing), fall through and render so the editor reflects the prop.
     if (seededEditorRef.current !== editor) {
       seededEditorRef.current = editor;
+      // A render still pending on a PRIOR editor is moot for this fresh instance;
+      // clear it so its content can't dedupe a needed render on the new editor.
+      pendingDataRef.current = undefined;
 
       if (deepEqual(data, constructedDataRef.current)) {
         lastRenderedDataRef.current = data;
@@ -273,29 +282,37 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
       }
     }
 
-    // Unchanged content — skip the redundant render.
-    if (deepEqual(data, lastRenderedDataRef.current)) {
+    // Skip when the editor already reflects this content (last SUCCESSFUL render)
+    // OR a render of the same content is already queued/in-flight — re-rendering
+    // identical content would needlessly reset the caret.
+    if (deepEqual(data, lastRenderedDataRef.current) || deepEqual(data, pendingDataRef.current)) {
       return;
     }
 
-    // Advance the baseline optimistically so a re-fired effect doesn't queue a
-    // duplicate render for the same content while this one is in flight. The
-    // PREVIOUS baseline is captured so a FAILED render can roll it back —
-    // otherwise a render rejection (malformed `data`) would leave the baseline
-    // pointing at content that never actually rendered, and a later identical or
-    // corrected `data` would be wrongly deduped and the editor left stale.
-    const previousRenderedData = lastRenderedDataRef.current;
-
-    lastRenderedDataRef.current = data;
+    // Mark the content in-flight, but DON'T advance the success baseline until the
+    // render actually resolves. A failed render leaves the editor on its last
+    // successful content, so the baseline must keep pointing there — otherwise a
+    // run of consecutive failures (e.g. successive malformed `data`) would strand
+    // the baseline on a never-rendered payload and wrongly dedupe a later retry.
+    pendingDataRef.current = data;
     renderChainRef.current = renderChainRef.current
       .catch(() => undefined)
       .then(() => editor.render(data))
-      .catch(() => {
-        // Roll back ONLY if nothing newer has since claimed the baseline — a later
-        // successful render must keep its own. Owning this rejection here also
-        // keeps a failed render() from surfacing as an unhandled promise rejection.
-        if (lastRenderedDataRef.current === data) {
-          lastRenderedDataRef.current = previousRenderedData;
+      .then(
+        () => {
+          lastRenderedDataRef.current = data;
+        },
+        () => {
+          // render failed: keep the last successful baseline so a later identical
+          // or corrected `data` re-renders instead of being deduped. Owning the
+          // rejection here also keeps it off the unhandled-rejection path.
+        }
+      )
+      .then(() => {
+        // Clear the in-flight marker once settled, unless a newer render has since
+        // claimed it (then that newer render owns the clear).
+        if (pendingDataRef.current === data) {
+          pendingDataRef.current = undefined;
         }
       });
   }, [editor, data]);

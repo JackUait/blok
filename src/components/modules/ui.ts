@@ -26,6 +26,22 @@ import { createRedactorTouchHandler } from './uiControllers/handlers/touch';
 import { ToggleShortcuts } from '../../tools/toggle/toggle-shortcuts';
 
 /**
+ * Classes that hide an empty, focused block's placeholder while the toolbox is open.
+ *
+ * Each rule is gated on the wrapper carrying `data-blok-toolbox-opened=true`, plus a
+ * focused editable block, and targets the placeholder attribute the tool ACTUALLY renders:
+ *   - paragraph → `data-blok-placeholder-active`
+ *   - header    → `data-placeholder`
+ *
+ * Both attributes must be covered; the historical `[data-blok-placeholder]` selector
+ * matched neither and was inert, leaving the placeholder visible behind the + menu.
+ */
+export const PLACEHOLDER_HIDE_ON_TOOLBOX_CLASSES: string[] = [
+  '[&[data-blok-toolbox-opened=true]_[contentEditable=true][data-blok-placeholder-active]:focus]:before:opacity-0!',
+  '[&[data-blok-toolbox-opened=true]_[contentEditable=true][data-placeholder]:focus]:before:opacity-0!',
+];
+
+/**
  * HTML Elements used for UI
  */
 interface UINodes extends Record<string, unknown> {
@@ -504,7 +520,7 @@ export class UI extends Module<UINodes> {
       // Native selection color
       '[&_::selection]:bg-selection-inline',
       // Hide placeholder when toolbox is opened
-      '[&[data-blok-toolbox-opened=true]_[contentEditable=true][data-blok-placeholder]:focus]:before:opacity-0!',
+      ...PLACEHOLDER_HIDE_ON_TOOLBOX_CLASSES,
       ...(this.isRtl ? [ '[direction:rtl]' ] : []),
     ]);
     this.nodes.wrapper.setAttribute(DATA_ATTR.interface, BLOK_INTERFACE_VALUE);

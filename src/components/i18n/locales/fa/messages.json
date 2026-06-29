@@ -58,6 +58,7 @@
   "tools.toggle.ariaLabelCollapse": "جمع کردن",
   "tools.toggle.ariaLabelExpand": "گسترش",
   "blockSettings.delete": "حذف",
+  "blockSettings.duplicate": "تکثیر",
   "blockSettings.copyLink": "کپی لینک بلوک",
   "blockSettings.lastEdited": "آخرین ویرایش",
   "blockSettings.lastEditedBy": "آخرین ویرایش توسط {name}",

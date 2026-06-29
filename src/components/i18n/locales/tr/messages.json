@@ -53,6 +53,7 @@
   "tools.header.toggleHeading3": "Açılır başlık 3",
   "tools.list.placeholder": "Liste",
   "blockSettings.delete": "Sil",
+  "blockSettings.duplicate": "Çoğalt",
   "blockSettings.copyLink": "Bloğa bağlantı kopyala",
   "blockSettings.lastEdited": "Son düzenleme",
   "blockSettings.lastEditedBy": "Son düzenleyen: {name}",

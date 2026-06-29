@@ -604,6 +604,22 @@ export class BlockMutation {
       : baseBlockData;
 
     /**
+     * Block-level color (textColor / backgroundColor) is a separate data field
+     * that lives OUTSIDE the conversionConfig `text` export/import contract, so
+     * it is never carried by the exported string and would be dropped on every
+     * "turn into". Preserve it from the source block's saved data onto the
+     * converted block — generically, for ANY target tool — so Notion's "color
+     * survives turn-into" behavior holds. Explicit overrides win.
+     */
+    for (const colorField of ['textColor', 'backgroundColor'] as const) {
+      const sourceValue = savedBlock.data[colorField];
+
+      if (typeof sourceValue === 'string' && newBlockData[colorField] === undefined) {
+        newBlockData[colorField] = sourceValue;
+      }
+    }
+
+    /**
      * Bracket the whole convert in a single undo group.
      *
      * Two things can split a convert across multiple Cmd+Z entries if left

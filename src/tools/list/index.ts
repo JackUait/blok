@@ -463,7 +463,7 @@ export class ListItem implements BlockTool {
       getDepth: this.getDepth.bind(this),
     };
 
-    await handleBackspace(context, event);
+    await handleBackspace(context, event, this.depthValidator);
   }
 
   private async handleIndent(): Promise<void> {

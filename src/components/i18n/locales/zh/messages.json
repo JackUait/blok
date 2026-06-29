@@ -58,6 +58,7 @@
   "tools.toggle.ariaLabelCollapse": "折叠",
   "tools.toggle.ariaLabelExpand": "展开",
   "blockSettings.delete": "删除",
+  "blockSettings.duplicate": "创建副本",
   "blockSettings.copyLink": "复制块链接",
   "blockSettings.lastEdited": "上次编辑",
   "blockSettings.lastEditedBy": "{name} 上次编辑",

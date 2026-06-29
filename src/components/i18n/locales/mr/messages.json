@@ -51,6 +51,7 @@
   "tools.header.toggleHeading3": "संकुचित शीर्षक 3",
   "tools.list.placeholder": "यादी",
   "blockSettings.delete": "हटवा",
+  "blockSettings.duplicate": "प्रत बनवा",
   "blockSettings.copyLink": "ब्लॉकची लिंक कॉपी करा",
   "blockSettings.lastEdited": "शेवटचे संपादन",
   "blockSettings.lastEditedBy": "{name} ने शेवटचे संपादन केले",

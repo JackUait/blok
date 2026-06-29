@@ -74,6 +74,7 @@
   "tools.table.clickToAddColumn": "ចុចដើម្បីបន្ថែមជួរឈរថ្មី",
   "tools.table.dragToAddRemoveColumns": "អូសដើម្បីបន្ថែម ឬលុបជួរឈរ",
   "blockSettings.delete": "លុប",
+  "blockSettings.duplicate": "ស្ទួន",
   "blockSettings.copyLink": "ចម្លងតំណទៅប្លុក",
   "blockSettings.lastEdited": "កែសម្រួលចុងក្រោយ",
   "blockSettings.lastEditedBy": "កែសម្រួលចុងក្រោយដោយ {name}",

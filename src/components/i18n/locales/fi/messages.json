@@ -58,6 +58,7 @@
   "tools.toggle.ariaLabelCollapse": "Pienennä",
   "tools.toggle.ariaLabelExpand": "Laajenna",
   "blockSettings.delete": "Poista",
+  "blockSettings.duplicate": "Monista",
   "blockSettings.copyLink": "Kopioi linkki lohkoon",
   "blockSettings.lastEdited": "Viimeksi muokattu",
   "blockSettings.lastEditedBy": "Viimeksi muokannut {name}",

@@ -56,6 +56,7 @@
   "tools.toggle.ariaLabelCollapse": "ሰብስብ",
   "tools.toggle.ariaLabelExpand": "አስፋ",
   "blockSettings.delete": "ሰርዝ",
+  "blockSettings.duplicate": "አባዛ",
   "blockSettings.copyLink": "ወደ ብሎክ አገናኝ ቅዳ",
   "blockSettings.lastEdited": "የመጨረሻ ማስተካከያ",
   "blockSettings.lastEditedBy": "በ{name} የመጨረሻ ማስተካከያ",

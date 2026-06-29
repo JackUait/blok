@@ -7,7 +7,7 @@
 import type { API } from '../../../types';
 
 import { setCaretToBlockContent } from './caret-manager';
-import { INDENT_PER_LEVEL, TOOL_NAME } from './constants';
+import { TOOL_NAME } from './constants';
 import {
   splitContentAtCursor,
   isAtStart,
@@ -168,7 +168,8 @@ const exitListOrOutdent = async (
  */
 export const handleBackspace = async(
   context: KeyboardContext,
-  event: KeyboardEvent
+  event: KeyboardEvent,
+  depthValidator?: ListDepthValidator
 ): Promise<void> => {
   const { api, blockId, data, element, getContentElement, getDepth, syncContentFromDOM } = context;
 
@@ -213,19 +214,36 @@ export const handleBackspace = async(
     return;
   }
 
-  // Convert to paragraph using convert API for proper undo/redo support
-  const newBlock = await api.blocks.convert(blockId, 'paragraph', { text: currentContent });
+  // Notion: Backspace at the START of a NESTED list item outdents it one level
+  // instead of converting it to a paragraph — mirroring the Enter-on-empty path.
+  // Only a top-level item converts to a paragraph.
+  const structuralParentId = getStructuralListParentId(api, blockId);
 
-  // Apply indentation to the new paragraph if the list item was nested
-  if (currentDepth > 0) {
-    requestAnimationFrame(() => {
-      const holder = newBlock.holder;
-      if (holder) {
-        holder.style.marginLeft = `${currentDepth * INDENT_PER_LEVEL}px`;
-        holder.setAttribute('data-blok-depth', String(currentDepth));
-      }
-    });
+  if (structuralParentId !== null) {
+    // Structurally nested (keyboard Tab): reparent to the grandparent, keeping
+    // nesting in the block tree rather than a flat depth.
+    const grandparentId = api.blocks.getById(structuralParentId)?.parentId ?? null;
+
+    api.blocks.setBlockParent(blockId, grandparentId);
+
+    const outdentedBlock = api.blocks.getById(blockId);
+
+    if (outdentedBlock !== null) {
+      setCaretToBlockContent(api, outdentedBlock, 'start');
+    }
+
+    return;
   }
+
+  // Drag-nested (flat depth) items still outdent via the flat carrier.
+  if (currentDepth > 0) {
+    await handleOutdent(context, depthValidator);
+
+    return;
+  }
+
+  // At top level, convert to paragraph using convert API for proper undo/redo support.
+  const newBlock = await api.blocks.convert(blockId, 'paragraph', { text: currentContent });
 
   setCaretToBlockContent(api, newBlock, 'start');
 };

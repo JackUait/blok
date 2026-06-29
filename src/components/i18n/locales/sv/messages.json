@@ -76,6 +76,7 @@
   "tools.table.clickToAddColumn": "Klicka för att lägga till en kolumn",
   "tools.table.dragToAddRemoveColumns": "Dra för att lägga till eller ta bort kolumner",
   "blockSettings.delete": "Ta bort",
+  "blockSettings.duplicate": "Duplicera",
   "blockSettings.copyLink": "Kopiera länk till block",
   "blockSettings.lastEdited": "Senast redigerad",
   "blockSettings.lastEditedBy": "Senast redigerad av {name}",

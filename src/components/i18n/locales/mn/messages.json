@@ -76,6 +76,7 @@
   "tools.table.clickToAddColumn": "Шинэ багана нэмэхийн тулд дарна уу",
   "tools.table.dragToAddRemoveColumns": "Багана нэмэх эсвэл хасахын тулд чирнэ үү",
   "blockSettings.delete": "Устгах",
+  "blockSettings.duplicate": "Хувилах",
   "blockSettings.copyLink": "Блокийн холбоосыг хуулах",
   "blockSettings.lastEdited": "Сүүлд засварласан",
   "blockSettings.lastEditedBy": "{name} сүүлд засварласан",

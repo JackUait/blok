@@ -74,6 +74,7 @@
   "tools.table.clickToAddColumn": "Yeni sütun əlavə etmək üçün klikləyin",
   "tools.table.dragToAddRemoveColumns": "Sütun əlavə etmək və ya silmək üçün dartın",
   "blockSettings.delete": "Sil",
+  "blockSettings.duplicate": "Dublikat et",
   "blockSettings.copyLink": "Bloka keçid kopyala",
   "blockSettings.lastEdited": "Son redaktə",
   "blockSettings.lastEditedBy": "{name} tərəfindən son redaktə",

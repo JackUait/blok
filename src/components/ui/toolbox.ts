@@ -1099,6 +1099,18 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
         return;
       }
 
+      /**
+       * Notion parity: a space typed immediately after "/" cancels the menu and
+       * leaves a literal "/ " in the block. Without this the query would become
+       * a lone space and the toolbox would stay open filtering by whitespace
+       * until the "/" itself is deleted.
+       */
+      if (text.charAt(slashIndex + 1) === ' ') {
+        this.close();
+
+        return;
+      }
+
       // Remember the slash→caret span so a later tool pick strips exactly this
       // range (and can tell whether any real content surrounds it).
       this.slashQuerySpan = { start: slashIndex, end: caretOffset };

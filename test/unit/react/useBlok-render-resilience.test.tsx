@@ -18,9 +18,14 @@ interface MockInstance {
 }
 
 let instances: MockInstance[] = [];
-// When set, the next constructed editor's render() rejects on its first call,
-// then resolves on every subsequent call — simulating a transient failure.
-let rejectFirstRender = false;
+// Number of upcoming render() calls (across all instances) that should REJECT
+// before render starts resolving — lets a test simulate one transient failure
+// (1) or a multi-failure cascade (N).
+let renderFailuresRemaining = 0;
+// When non-null, render() returns a PENDING promise and pushes its controls
+// here so a test can settle each render manually — needed to keep a render
+// in-flight while further distinct data changes queue behind it.
+let deferredRenderControls: Array<{ resolve: () => void; reject: (e: Error) => void }> | null = null;
 
 vi.mock('../../../src/blok', () => ({
   Blok: class MockBlok {
@@ -39,11 +44,16 @@ vi.mock('../../../src/blok', () => ({
       wrapper.setAttribute('data-blok-editor', 'true');
       config.holder.appendChild(wrapper);
 
-      let calls = 0;
-      const shouldRejectFirst = rejectFirstRender;
       this.render = vi.fn().mockImplementation(() => {
-        calls += 1;
-        if (shouldRejectFirst && calls === 1) {
+        if (deferredRenderControls !== null) {
+          const controls = deferredRenderControls;
+
+          return new Promise<void>((resolve, reject) => {
+            controls.push({ resolve, reject });
+          });
+        }
+        if (renderFailuresRemaining > 0) {
+          renderFailuresRemaining -= 1;
           return Promise.reject(new Error('render failed'));
         }
         return Promise.resolve();
@@ -73,7 +83,8 @@ describe('useBlok reactive data — render resilience', () => {
 
   beforeEach(() => {
     instances = [];
-    rejectFirstRender = false;
+    renderFailuresRemaining = 0;
+    deferredRenderControls = null;
     unhandled = [];
     process.on('unhandledRejection', onUnhandled);
     vi.clearAllMocks();
@@ -84,7 +95,7 @@ describe('useBlok reactive data — render resilience', () => {
   });
 
   it('a failed render() does not surface as an unhandled promise rejection', async () => {
-    rejectFirstRender = true;
+    renderFailuresRemaining = 1;
     const seed = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'a' } }] };
     const next = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'b' } }] };
 
@@ -100,7 +111,7 @@ describe('useBlok reactive data — render resilience', () => {
   });
 
   it('retries the same content after a failed render (does not lock the baseline)', async () => {
-    rejectFirstRender = true;
+    renderFailuresRemaining = 1;
     const seed = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'a' } }] };
     // Two distinct references with identical content. The first render fails;
     // the second (same content, new ref) must still attempt a render rather than
@@ -121,6 +132,55 @@ describe('useBlok reactive data — render resilience', () => {
     // The retry must have happened (and succeeded this time).
     expect(instances[0].render).toHaveBeenCalledTimes(2);
     expect(instances[0].render).toHaveBeenLastCalledWith(attempt2);
+  });
+
+  it('keeps the baseline at the last SUCCESSFUL render through a multi-failure cascade', async () => {
+    // Seed S renders nothing (construction). Then A is dispatched and stays
+    // in-flight while B and C arrive behind it; all three then FAIL. The baseline
+    // must stay at the last content the editor ACTUALLY reflects (S) — NOT drift
+    // onto an intermediate never-rendered payload — so a later value equal to a
+    // failed one (B) still re-renders instead of being wrongly deduped.
+    deferredRenderControls = [];
+    const seed = { blocks: [{ id: '1', type: 'paragraph', data: { text: 's' } }] };
+    const a = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'a' } }] };
+    const b = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'b' } }] };
+    const c = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'c' } }] };
+    const bAgain = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'b' } }] };
+
+    const { rerender } = render(<Harness config={{ data: seed }} />);
+    await act(async () => { await flush(); });
+
+    // Each change is its own flushed commit (the realistic case), but render(A)
+    // stays PENDING — so the chain doesn't drain and B/C queue behind it, each
+    // capturing the prior optimistic baseline.
+    rerender(<Harness config={{ data: a }} />);
+    await act(async () => { await flush(); });
+    rerender(<Harness config={{ data: b }} />);
+    await act(async () => { await flush(); });
+    rerender(<Harness config={{ data: c }} />);
+    await act(async () => { await flush(); });
+
+    // Settle every queued render as a FAILURE, in order (rejecting A lets the
+    // chain advance to render(B), which queues a new control, and so on).
+    for (let guard = 0; guard < 10 && deferredRenderControls.length > 0; guard++) {
+      const next = deferredRenderControls.shift();
+      await act(async () => {
+        next?.reject(new Error('render failed'));
+        await flush();
+      });
+    }
+
+    expect(instances[0].render).toHaveBeenCalledTimes(3); // a, b, c all attempted + failed
+    expect(unhandled).toHaveLength(0);
+
+    // Back to a resolving render; a value equal to a FAILED payload (b) must still
+    // render — the baseline must not have drifted onto b (which never rendered).
+    deferredRenderControls = null;
+    rerender(<Harness config={{ data: bAgain }} />);
+    await act(async () => { await flush(); });
+
+    expect(instances[0].render).toHaveBeenCalledTimes(4);
+    expect(instances[0].render).toHaveBeenLastCalledWith(bAgain);
   });
 
   it('does not render on an editor destroyed in the same commit (deps + data change together)', async () => {

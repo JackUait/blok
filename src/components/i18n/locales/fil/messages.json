@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "Ibaba kanan",
   "toolNames.code": "Kodigo",
   "toolNames.inlineCode": "Kodigo",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "Sumulat ng code…",
   "tools.code.language": "Wika",
   "tools.code.copied": "Nakopya na!",

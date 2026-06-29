@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "Κάτω δεξιά",
   "toolNames.code": "Κώδικας",
   "toolNames.inlineCode": "Κώδικας",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "Γράψτε κώδικα…",
   "tools.code.language": "Γλώσσα",
   "tools.code.copied": "Αντιγράφηκε!",

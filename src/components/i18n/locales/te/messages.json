@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "క్రింద కుడి",
   "toolNames.code": "కోడ్",
   "toolNames.inlineCode": "కోడ్",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "కోడ్ రాయండి…",
   "tools.code.language": "భాష",
   "tools.code.copied": "కాపీ అయింది!",

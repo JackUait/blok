@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "למטה מימין",
   "toolNames.code": "קוד",
   "toolNames.inlineCode": "קוד",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "כתוב קוד…",
   "tools.code.language": "שפה",
   "tools.code.copied": "הועתק!",

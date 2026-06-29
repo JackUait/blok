@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "نیچے دائیں",
   "toolNames.code": "کوڈ",
   "toolNames.inlineCode": "کوڈ",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "کوڈ لکھیں…",
   "tools.code.language": "زبان",
   "tools.code.copied": "کاپی ہو گیا!",

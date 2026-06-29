@@ -1,8 +1,22 @@
+import type { Block } from '../../../block';
 import { SelectionUtils as Selection } from '../../../selection/index';
 import { PopoverRegistry } from '../../../utils/popover/popover-registry';
+import { HEADER_TOOL_NAME } from '../../blockEvents/constants';
 import { KEYS_REQUIRING_CARET_CAPTURE } from '../constants';
 
 import { Controller } from './_base';
+
+/**
+ * Maps the "Turn into" shortcut digit (event.code) to the target heading level.
+ * Mirrors Notion: Cmd+Opt+1/2/3 (Mac) or Ctrl+Shift+1/2/3 (Win/Linux) convert the
+ * focused block to Heading 1/2/3, while 0 converts it back to plain Text.
+ */
+const TURN_INTO_LEVEL_BY_CODE: Record<string, number> = {
+  Digit0: 0,
+  Digit1: 1,
+  Digit2: 2,
+  Digit3: 3,
+};
 
 /**
  * KeyboardController handles all document-level keyboard events.
@@ -27,6 +41,15 @@ export class KeyboardController extends Controller {
    */
   private lastUndoRedoTime = 0;
   private lastUndoRedoAction: 'undo' | 'redo' | null = null;
+
+  /**
+   * Timestamp and digit of the last "Turn into" conversion dispatched, used to
+   * dedupe a single physical keypress that emits duplicate keydown events (same
+   * 50ms window rationale as the undo/redo guard above). Without this, one
+   * Cmd+Opt+1 press could fire two conversions and leave two undo entries.
+   */
+  private lastTurnIntoTime = 0;
+  private lastTurnIntoCode: string | null = null;
 
   /**
    * The redactor element for keydown capture
@@ -195,6 +218,17 @@ export class KeyboardController extends Controller {
       }
     }
 
+    /**
+     * "Turn into" shortcuts (Notion parity): Cmd+Opt+0/1/2/3 (Mac) or
+     * Ctrl+Shift+0/1/2/3 (Win/Linux). Matched on event.code (layout-independent)
+     * because the shifted/option-modified `key` for a digit is unreliable
+     * (Shift+1 = "!", Opt+1 = "¡"). Handled before the switch so the digit is
+     * never inserted as text.
+     */
+    if (this.handleTurnInto(event)) {
+      return;
+    }
+
     switch (key) {
       case 'Enter':
         this.handleEnter(event);
@@ -218,10 +252,91 @@ export class KeyboardController extends Controller {
         this.handleZ(event);
         break;
 
+      case 'y':
+      case 'Y':
+        this.handleY(event);
+        break;
+
       default:
         this.handleDefault(event);
         break;
     }
+  }
+
+  /**
+   * Handle the "Turn into" shortcut (Cmd+Opt / Ctrl+Shift + digit).
+   * Converts the focused block to a heading (1/2/3) or back to plain text (0).
+   * @param event - keyboard event
+   * @returns true when the shortcut was recognized and handled
+   */
+  private handleTurnInto(event: KeyboardEvent): boolean {
+    // Mac = Cmd+Opt+digit, Win/Linux = Ctrl+Shift+digit.
+    const matchesModifiers = (event.metaKey && event.altKey) || (event.ctrlKey && event.shiftKey);
+
+    if (!matchesModifiers) {
+      return false;
+    }
+
+    const level = TURN_INTO_LEVEL_BY_CODE[event.code];
+
+    if (level === undefined) {
+      return false;
+    }
+
+    const block = this.Blok.BlockManager.currentBlock;
+
+    if (block === undefined) {
+      return false;
+    }
+
+    // Don't replay the conversion while a drag is in progress (mirrors the
+    // undo/redo guard in handleZ — mutating the tree under the drag is unsafe).
+    if (this.Blok.DragManager.isDragging) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      return true;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    // Dedupe a single physical keypress that emits duplicate keydown events.
+    const now = Date.now();
+
+    if (event.code === this.lastTurnIntoCode && now - this.lastTurnIntoTime < 50) {
+      return true;
+    }
+    this.lastTurnIntoTime = now;
+    this.lastTurnIntoCode = event.code;
+
+    void this.turnBlockInto(block, level);
+
+    return true;
+  }
+
+  /**
+   * Convert the given block to the target type and restore the caret.
+   * Wrapped in stopCapturing() so the conversion is its own undo step (mirrors
+   * the markdown shortcut conversions).
+   * @param block - block to convert
+   * @param level - 0 for plain text (paragraph), 1-3 for the heading level
+   */
+  private async turnBlockInto(block: Block, level: number): Promise<void> {
+    const { BlockManager, Caret, YjsManager } = this.Blok;
+    const isText = level === 0;
+    // Core guarantees config.defaultBlock is populated at init; fall back to
+    // 'paragraph' to satisfy the optional config type.
+    const targetToolName = isText ? this.config.defaultBlock ?? 'paragraph' : HEADER_TOOL_NAME;
+    const dataOverrides = isText ? {} : { level };
+
+    YjsManager.stopCapturing();
+
+    const newBlock = await BlockManager.convert(block, targetToolName, dataOverrides);
+
+    Caret.setToBlock(newBlock, Caret.positions.END);
+
+    YjsManager.stopCapturing();
   }
 
   /**
@@ -549,6 +664,42 @@ export class KeyboardController extends Controller {
     } else {
       this.Blok.YjsManager.undo();
     }
+  }
+
+  /**
+   * Handle Ctrl+Y (redo) — the Windows/Linux redo alias. Notion accepts both
+   * Ctrl+Shift+Z and Ctrl+Y for redo; the latter is routed here. Uses the same
+   * drag guard and double-fire dedup as handleZ so a single press redoes once.
+   * @param event - keyboard event
+   */
+  private handleY(event: KeyboardEvent): void {
+    if (!event.ctrlKey) {
+      this.handleDefault(event);
+
+      return;
+    }
+
+    if (this.Blok.DragManager.isDragging) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      return;
+    }
+
+    const now = Date.now();
+
+    if (this.lastUndoRedoAction === 'redo' && now - this.lastUndoRedoTime < 50) {
+      event.preventDefault();
+
+      return;
+    }
+    this.lastUndoRedoTime = now;
+    this.lastUndoRedoAction = 'redo';
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    this.Blok.YjsManager.redo();
   }
 
   /**

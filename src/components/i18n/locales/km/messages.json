@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "ខាងក្រោមស្ដាំ",
   "toolNames.code": "កូដ",
   "toolNames.inlineCode": "កូដ",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "សរសេរកូដ…",
   "tools.code.language": "ភាសា",
   "tools.code.copied": "បានចម្លង!",

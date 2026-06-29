@@ -204,6 +204,8 @@
   "tools.quote.largeSize": "Large",
   "toolNames.code": "Code",
   "toolNames.inlineCode": "Code",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "Write code…",
   "tools.code.language": "Language",
   "tools.code.copied": "Copied!",

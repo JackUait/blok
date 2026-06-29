@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "右下",
   "toolNames.code": "代码",
   "toolNames.inlineCode": "代码",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "编写代码…",
   "tools.code.language": "语言",
   "tools.code.copied": "已复制！",

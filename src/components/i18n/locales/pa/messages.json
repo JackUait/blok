@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "ਹੇਠਾਂ ਸੱਜੇ",
   "toolNames.code": "ਕੋਡ",
   "toolNames.inlineCode": "ਕੋਡ",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "ਕੋਡ ਲਿਖੋ…",
   "tools.code.language": "ਭਾਸ਼ਾ",
   "tools.code.copied": "ਕਾਪੀ ਹੋ ਗਈ!",

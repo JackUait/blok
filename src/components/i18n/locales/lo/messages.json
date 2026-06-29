@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "ລຸ່ມຂວາ",
   "toolNames.code": "ໂຄດ",
   "toolNames.inlineCode": "ໂຄດ",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "ຂຽນໂຄດ…",
   "tools.code.language": "ພາສາ",
   "tools.code.copied": "ສຳເນົາແລ້ວ!",

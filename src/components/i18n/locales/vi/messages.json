@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "Dưới phải",
   "toolNames.code": "Mã",
   "toolNames.inlineCode": "Mã",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "Viết mã…",
   "tools.code.language": "Ngôn ngữ",
   "tools.code.copied": "Đã sao chép!",

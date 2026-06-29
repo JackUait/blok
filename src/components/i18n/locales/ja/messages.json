@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "右下",
   "toolNames.code": "コード",
   "toolNames.inlineCode": "コード",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "コードを入力…",
   "tools.code.language": "言語",
   "tools.code.copied": "コピーしました！",

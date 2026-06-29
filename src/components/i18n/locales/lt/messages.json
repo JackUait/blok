@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "Apačioje dešinėje",
   "toolNames.code": "Kodas",
   "toolNames.inlineCode": "Kodas",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "Rašykite kodą…",
   "tools.code.language": "Kalba",
   "tools.code.copied": "Nukopijuota!",

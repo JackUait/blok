@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Paragraph, type ParagraphConfig, type ParagraphData } from '../../../src/tools/paragraph';
 import type { API, BlockToolConstructorOptions, PasteEvent } from '../../../types';
+import {
+  PLACEHOLDER_EMPTY_EDITOR_CLASSES,
+  PLACEHOLDER_FOCUS_ONLY_CLASSES,
+} from '../../../src/components/utils/placeholder';
 import { sanitizeBlocks } from '../../../src/components/utils/sanitizer';
 
 const createMockAPI = (): API => ({
@@ -54,12 +58,35 @@ describe('Paragraph Tool - Custom Configurations', () => {
       expect(Paragraph.DEFAULT_PLACEHOLDER).toBe('tools.paragraph.placeholder');
     });
 
-    it('includes empty-editor placeholder classes on rendered element', () => {
+    // FIX D11: Notion shows NOTHING on an unfocused empty paragraph — the
+    // placeholder appears only on focus. The paragraph must therefore NOT carry
+    // the empty-editor placeholder classes (which show the hint whenever the
+    // editor root is [data-blok-empty=true], even without focus).
+    it('does NOT include the unfocused empty-editor placeholder classes (Notion: no placeholder until focus)', () => {
       const options = createParagraphOptions({}, {});
       const paragraph = new Paragraph(options);
       const element = paragraph.render();
 
-      expect(element.getAttribute('class')).toContain('data-blok-empty');
+      const className = element.getAttribute('class') ?? '';
+
+      PLACEHOLDER_EMPTY_EDITOR_CLASSES.forEach((cls) => {
+        expect(className).not.toContain(cls);
+      });
+      // The empty-editor variant is the only source of a `data-blok-empty` hook
+      // on the paragraph; with it removed, none remains.
+      expect(className).not.toContain('data-blok-empty');
+    });
+
+    it('still includes the focus-gated placeholder classes so the hint shows on focus', () => {
+      const options = createParagraphOptions({}, {});
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+
+      const className = element.getAttribute('class') ?? '';
+
+      PLACEHOLDER_FOCUS_ONLY_CLASSES.forEach((cls) => {
+        expect(className).toContain(cls);
+      });
     });
   });
 
@@ -528,19 +555,14 @@ describe('Paragraph Tool - Custom Configurations', () => {
       expect(Paragraph.pasteConfig).toEqual({ tags: ['P'] });
     });
 
-    it('has correct sanitize config', () => {
-      expect(Paragraph.sanitize).toEqual({
-        text: {
-          br: true,
-          img: {
-            src: true,
-            style: true,
-          },
-          p: true,
-          ul: true,
-          li: true,
-        },
-      });
+    it('keeps the existing block-level and image whitelist in the text sanitize config', () => {
+      const text = Paragraph.sanitize.text as Record<string, unknown>;
+
+      expect(text.br).toBe(true);
+      expect(text.img).toEqual({ src: true, style: true });
+      expect(text.p).toBe(true);
+      expect(text.ul).toBe(true);
+      expect(text.li).toBe(true);
     });
   });
 
@@ -596,7 +618,7 @@ describe('Paragraph Tool - Custom Configurations', () => {
       expect(text).toContain('style="width: 100%;"');
     });
 
-    it('preserves block-level HTML (p, ul, li) and strips span through render → save → sanitize pipeline', () => {
+    it('preserves block-level HTML (p, ul, li) and strips decorative span styles through render → save → sanitize pipeline', () => {
       const richHtml = '<p>Utiliza:</p><ul><li>separadores <span style="font-size: 1rem;">gastronorm</span></li><li>recipientes</li></ul>';
       const options = createParagraphOptions({ text: richHtml });
       const paragraph = new Paragraph(options);
@@ -614,7 +636,10 @@ describe('Paragraph Tool - Custom Configurations', () => {
       expect(text).toContain('<p>');
       expect(text).toContain('<ul>');
       expect(text).toContain('<li>');
-      expect(text).not.toContain('<span');
+      // The shared inline whitelist keeps a bare <span> (to support equation spans),
+      // but strips the decorative style attribute — no style-based injection survives.
+      expect(text).not.toContain('font-size');
+      expect(text).not.toContain('style=');
       expect(text).toContain('gastronorm');
     });
 
@@ -637,6 +662,193 @@ describe('Paragraph Tool - Custom Configurations', () => {
       expect(text).not.toContain('<script');
       expect(text).not.toContain('<div');
       expect(text).not.toContain('<iframe');
+    });
+
+    // FIX D3 + D8: inline formatting (and pasted color) must survive in paragraphs,
+    // matching Notion. Previously the text whitelist omitted strong/em/u/s/a/code/mark,
+    // so converting a formatted header to a paragraph stripped the marks, and pasted
+    // colored <mark> was dropped while it survived in headers.
+    it('preserves inline formatting (strong, em, a, code) through render → save → sanitize pipeline', () => {
+      const richHtml =
+        '<strong>bold</strong> <em>italic</em> <a href="https://x.test">link</a> <code>code</code>';
+      const options = createParagraphOptions({ text: richHtml });
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+      const savedData = paragraph.save(element);
+
+      const sanitized = sanitizeBlocks(
+        [{ tool: 'paragraph', data: savedData }],
+        Paragraph.sanitize,
+        {}
+      );
+
+      const text = sanitized[0].data.text as string;
+
+      expect(text).toContain('<strong>bold</strong>');
+      expect(text).toContain('<em>italic</em>');
+      expect(text).toContain('href="https://x.test"');
+      expect(text).toContain('<code>code</code>');
+    });
+
+    it('preserves a colored <mark> (with only its color styles) through the sanitize pipeline', () => {
+      const colored = '<mark style="color: red; position: fixed;">red</mark>';
+      const options = createParagraphOptions({ text: colored });
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+      const savedData = paragraph.save(element);
+
+      const sanitized = sanitizeBlocks(
+        [{ tool: 'paragraph', data: savedData }],
+        Paragraph.sanitize,
+        {}
+      );
+
+      const text = sanitized[0].data.text as string;
+
+      expect(text).toContain('<mark');
+      expect(text).toContain('color: red');
+      expect(text).not.toContain('position');
+    });
+
+    // FIX D3: "Turn into" re-sanitizes the source HTML with the TARGET tool's text
+    // config. Simulate the conversion-strip scenario at the tool level: sanitizing
+    // formatted text with the paragraph's whitelist must keep the marks.
+    it('keeps inline marks when sanitizing formatted text with the paragraph whitelist (conversion-strip scenario)', () => {
+      const formatted = '<strong>Heading text</strong> with <em>emphasis</em>';
+
+      const sanitized = sanitizeBlocks(
+        [{ tool: 'paragraph', data: { text: formatted } }],
+        Paragraph.sanitize,
+        {}
+      );
+
+      const text = sanitized[0].data.text as string;
+
+      expect(text).toContain('<strong>Heading text</strong>');
+      expect(text).toContain('<em>emphasis</em>');
+    });
+  });
+
+  // FIX D1: Notion-style block-level text/background color stored on the block's
+  // data and applied to the rendered element via the shared CSS-var palette.
+  describe('block color (Notion D1)', () => {
+    interface MutableBlockStub {
+      id: string;
+      dispatchChange: ReturnType<typeof vi.fn>;
+    }
+
+    const createOptionsWithBlock = (
+      data: Partial<ParagraphData> = {}
+    ): {
+      options: BlockToolConstructorOptions<ParagraphData, ParagraphConfig>;
+      block: MutableBlockStub;
+    } => {
+      const block: MutableBlockStub = { id: 'block-1', dispatchChange: vi.fn() };
+      const options: BlockToolConstructorOptions<ParagraphData, ParagraphConfig> = {
+        ...createParagraphOptions(data, {}),
+        block: block as unknown as BlockToolConstructorOptions<ParagraphData, ParagraphConfig>['block'],
+      };
+
+      return { options, block };
+    };
+
+    it('applies background color as a shared CSS var on render', () => {
+      const { options } = createOptionsWithBlock({ text: 'Hi', backgroundColor: 'blue' });
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+
+      expect(element.style.backgroundColor).toBe('var(--blok-color-blue-bg)');
+    });
+
+    it('applies text color as a shared CSS var on render', () => {
+      const { options } = createOptionsWithBlock({ text: 'Hi', textColor: 'red' });
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+
+      expect(element.style.color).toBe('var(--blok-color-red-text)');
+    });
+
+    it('does not apply any color style when no color fields are set', () => {
+      const { options } = createOptionsWithBlock({ text: 'Hi' });
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+
+      expect(element.style.color).toBe('');
+      expect(element.style.backgroundColor).toBe('');
+    });
+
+    it('persists the color fields in save()', () => {
+      const { options } = createOptionsWithBlock({
+        text: 'Hi',
+        textColor: 'red',
+        backgroundColor: 'blue',
+      });
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+      const saved = paragraph.save(element);
+
+      expect(saved.text).toBe('Hi');
+      expect(saved.textColor).toBe('red');
+      expect(saved.backgroundColor).toBe('blue');
+    });
+
+    it('omits color fields from save() when unset', () => {
+      const { options } = createOptionsWithBlock({ text: 'Hi' });
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+      const saved = paragraph.save(element);
+
+      expect(saved.textColor).toBeUndefined();
+      expect(saved.backgroundColor).toBeUndefined();
+    });
+
+    it('declares the color fields in the sanitize config so they survive saving', () => {
+      const text = Paragraph.sanitize as Record<string, unknown>;
+
+      expect(text.textColor).toBe(false);
+      expect(text.backgroundColor).toBe(false);
+    });
+
+    it('exposes Text color and Background submenus via renderSettings', () => {
+      const { options } = createOptionsWithBlock({ text: 'Hi' });
+      const paragraph = new Paragraph(options);
+      const settings = paragraph.renderSettings() as Array<{ name?: string; title?: string }>;
+
+      const names = settings.map((s) => s.name);
+
+      expect(names).toContain('block-text-color');
+      expect(names).toContain('block-background-color');
+    });
+
+    it('uses the reused marker i18n keys for the submenu labels', () => {
+      const { options } = createOptionsWithBlock({ text: 'Hi' });
+      const paragraph = new Paragraph(options);
+      const settings = paragraph.renderSettings() as Array<{ name?: string; title?: string }>;
+
+      const textTune = settings.find((s) => s.name === 'block-text-color');
+      const bgTune = settings.find((s) => s.name === 'block-background-color');
+
+      // mock i18n returns the key as-is
+      expect(textTune?.title).toBe('tools.marker.textColor');
+      expect(bgTune?.title).toBe('tools.marker.background');
+    });
+
+    it('persists and re-applies a picked color (mutates data, re-renders, dispatches change)', () => {
+      const { options, block } = createOptionsWithBlock({ text: 'Hi' });
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+
+      const settings = paragraph.renderSettings() as Array<{
+        name?: string;
+        children?: { items: Array<{ title: string; onActivate: () => void }> };
+      }>;
+      const bgTune = settings.find((s) => s.name === 'block-background-color');
+
+      bgTune?.children?.items.find((i) => i.title === 'Blue')?.onActivate();
+
+      expect(element.style.backgroundColor).toBe('var(--blok-color-blue-bg)');
+      expect(paragraph.save(element).backgroundColor).toBe('blue');
+      expect(block.dispatchChange).toHaveBeenCalled();
     });
   });
 });

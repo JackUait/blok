@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "Chini kulia",
   "toolNames.code": "Msimbo",
   "toolNames.inlineCode": "Msimbo",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "Andika msimbo…",
   "tools.code.language": "Lugha",
   "tools.code.copied": "Imenakiliwa!",

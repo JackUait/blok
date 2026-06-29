@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "ئاستى ئوڭ",
   "toolNames.code": "كود",
   "toolNames.inlineCode": "كود",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "كود يېزىڭ…",
   "tools.code.language": "تىل",
   "tools.code.copied": "كۆچۈرۈلدى!",

@@ -164,6 +164,102 @@ describe('Header Toggle Keyboard Handlers', () => {
       contentElement.remove();
     });
 
+    // FIX D10: a COLLAPSED toggle heading + Enter at end must insert ONE plain
+    // paragraph sibling below (Notion), NOT split into a second toggle heading
+    // and NOT add a hidden child.
+    it('collapsed toggle heading + Enter at end inserts a plain paragraph sibling', async () => {
+      const { handleHeaderToggleEnter } = await import('../../../src/tools/header/header-toggle-keyboard');
+
+      const mockSetToBlock = vi.fn();
+      const mockInsert = vi.fn().mockReturnValue({ id: 'new-para-id' });
+      const mockSplitBlock = vi.fn();
+      const mockInsertInsideParent = vi.fn();
+
+      const contentElement = document.createElement('div');
+      contentElement.setAttribute('contenteditable', 'true');
+      contentElement.textContent = 'Heading text';
+      document.body.appendChild(contentElement);
+
+      const context = createMockContext({
+        getContentElement: () => contentElement,
+        isOpen: false,
+        api: {
+          blocks: {
+            splitBlock: mockSplitBlock,
+            getBlockIndex: vi.fn().mockReturnValue(3),
+            getCurrentBlockIndex: vi.fn().mockReturnValue(3),
+            insert: mockInsert,
+            insertInsideParent: mockInsertInsideParent,
+            getChildren: vi.fn().mockReturnValue([]),
+          },
+          caret: { setToBlock: mockSetToBlock },
+        } as unknown as API,
+      });
+
+      // Selection at end of content
+      const range = document.createRange();
+      range.selectNodeContents(contentElement);
+      range.collapse(false);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+
+      await handleHeaderToggleEnter(context);
+
+      // Plain paragraph sibling inserted right after the collapsed block (index 4),
+      // not a toggle split and not a child.
+      expect(mockInsert).toHaveBeenCalledWith('paragraph', undefined, undefined, 4, false);
+      expect(mockSetToBlock).toHaveBeenCalledWith('new-para-id', 'start');
+      expect(mockSplitBlock).not.toHaveBeenCalled();
+      expect(mockInsertInsideParent).not.toHaveBeenCalled();
+
+      contentElement.remove();
+    });
+
+    it('collapsed toggle heading + Enter mid-text still splits (keeps existing path)', async () => {
+      const { handleHeaderToggleEnter } = await import('../../../src/tools/header/header-toggle-keyboard');
+
+      const mockSplitBlock = vi.fn();
+      const mockInsert = vi.fn();
+
+      const contentElement = document.createElement('div');
+      contentElement.setAttribute('contenteditable', 'true');
+      contentElement.textContent = 'Heading text';
+      document.body.appendChild(contentElement);
+
+      const context = createMockContext({
+        getContentElement: () => contentElement,
+        isOpen: false,
+        api: {
+          blocks: {
+            splitBlock: mockSplitBlock,
+            getBlockIndex: vi.fn().mockReturnValue(3),
+            getCurrentBlockIndex: vi.fn().mockReturnValue(3),
+            insert: mockInsert,
+            insertInsideParent: vi.fn(),
+            getChildren: vi.fn().mockReturnValue([]),
+          },
+          caret: { setToBlock: vi.fn() },
+        } as unknown as API,
+      });
+
+      // Caret in the MIDDLE of the text → afterContent is non-empty → split path.
+      const textNode = contentElement.firstChild as Text;
+      const range = document.createRange();
+      range.setStart(textNode, 4);
+      range.setEnd(textNode, 4);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+
+      await handleHeaderToggleEnter(context);
+
+      expect(mockSplitBlock).toHaveBeenCalled();
+      expect(mockInsert).not.toHaveBeenCalled();
+
+      contentElement.remove();
+    });
+
     it('inserts at currentBlockIndex + 1 when toggle heading has no children', async () => {
       const { handleHeaderToggleEnter } = await import('../../../src/tools/header/header-toggle-keyboard');
 

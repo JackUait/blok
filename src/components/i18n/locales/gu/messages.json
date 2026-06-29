@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "નીચે જમણે",
   "toolNames.code": "કોડ",
   "toolNames.inlineCode": "કોડ",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "કોડ લખો…",
   "tools.code.language": "ભાષા",
   "tools.code.copied": "કૉપી થયું!",

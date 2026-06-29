@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "Kanan Bawah",
   "toolNames.code": "Kode",
   "toolNames.inlineCode": "Kode",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "Tulis kode…",
   "tools.code.language": "Bahasa",
   "tools.code.copied": "Disalin!",

@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "אונטן רעכטס",
   "toolNames.code": "קאָד",
   "toolNames.inlineCode": "קאָד",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "שרײַב קאָד…",
   "tools.code.language": "שפּראַך",
   "tools.code.copied": "קאָפּירט!",

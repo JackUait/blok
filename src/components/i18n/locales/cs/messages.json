@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "Dole vpravo",
   "toolNames.code": "Kód",
   "toolNames.inlineCode": "Kód",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "Napište kód…",
   "tools.code.language": "Jazyk",
   "tools.code.copied": "Zkopírováno!",

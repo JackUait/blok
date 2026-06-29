@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "ከታች ቀኝ",
   "toolNames.code": "ኮድ",
   "toolNames.inlineCode": "ኮድ",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "ኮድ ይጻፉ…",
   "tools.code.language": "ቋንቋ",
   "tools.code.copied": "ተቀድቷል!",

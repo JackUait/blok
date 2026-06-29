@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "All paremal",
   "toolNames.code": "Kood",
   "toolNames.inlineCode": "Kood",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "Kirjuta koodi…",
   "tools.code.language": "Keel",
   "tools.code.copied": "Kopeeritud!",

@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "താഴെ വലത്",
   "toolNames.code": "കോഡ്",
   "toolNames.inlineCode": "കോഡ്",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "കോഡ് എഴുതുക…",
   "tools.code.language": "ഭാഷ",
   "tools.code.copied": "പകർത്തി!",

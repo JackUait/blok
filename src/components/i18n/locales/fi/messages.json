@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "Alhaalla oikealla",
   "toolNames.code": "Koodi",
   "toolNames.inlineCode": "Koodi",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "Kirjoita koodia…",
   "tools.code.language": "Kieli",
   "tools.code.copied": "Kopioitu!",

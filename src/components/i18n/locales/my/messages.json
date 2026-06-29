@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "အောက် ညာ",
   "toolNames.code": "ကုဒ်",
   "toolNames.inlineCode": "ကုဒ်",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "ကုဒ်ရေးပါ…",
   "tools.code.language": "ဘာသာစကား",
   "tools.code.copied": "ကူးပြီး!",

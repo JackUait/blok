@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "Bas droite",
   "toolNames.code": "Code",
   "toolNames.inlineCode": "Code en ligne",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "Saisissez du code…",
   "tools.code.language": "Langage",
   "tools.code.copied": "Copié !",

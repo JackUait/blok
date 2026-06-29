@@ -74,6 +74,7 @@ export const Marker: InlineToolConstructable;
 export const Strikethrough: InlineToolConstructable;
 export const Underline: InlineToolConstructable;
 export const InlineCode: InlineToolConstructable;
+export const Equation: InlineToolConstructable;
 
 /**
  * Default block tools configuration
@@ -111,4 +112,5 @@ export const defaultInlineTools: {
   readonly strikethrough: {};
   readonly underline: {};
   readonly inlineCode: {};
+  readonly equation: {};
 };

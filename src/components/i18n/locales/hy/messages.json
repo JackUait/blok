@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "Ներքև աջ",
   "toolNames.code": "Կոդ",
   "toolNames.inlineCode": "Կոդ",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "Գրեք կոդ…",
   "tools.code.language": "Լեզու",
   "tools.code.copied": "Պատճենվեց!",

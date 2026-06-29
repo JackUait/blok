@@ -796,6 +796,16 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
      */
     const index = shouldReplaceBlock ? currentBlockIndex : currentBlockIndex + 1;
 
+    /**
+     * When inserting after a non-empty block (Notion parity: "/" pressed mid- or
+     * end-of-text), the literal "/query" the user typed must be removed from the
+     * current block — only the preceding text stays. When replacing in place the
+     * whole block is discarded, so no stripping is needed there.
+     */
+    if (!shouldReplaceBlock) {
+      this.stripSlashQuery(currentBlock.holder);
+    }
+
     const hasBlockDataOverrides = blockDataOverrides !== undefined && Object.keys(blockDataOverrides).length > 0;
 
     const blockData: BlockToolData | undefined = hasBlockDataOverrides
@@ -945,6 +955,67 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     this.popover?.filterItems(query);
   };
+
+  /**
+   * Removes the trailing "/query" (the slash plus the typed filter) from the
+   * current block's contentEditable, leaving any preceding text untouched.
+   * Used when the toolbox inserts a NEW block after a non-empty block, so the
+   * literal slash command is not left behind (Notion parity).
+   *
+   * The slash and query are the most recently typed plain-text characters at the
+   * caret, so they sit at the end of the contentEditable. Trailing text nodes are
+   * trimmed from the end to preserve any inline formatting in the preceding text.
+   * @param blockHolder - the block's holder element
+   */
+  private stripSlashQuery(blockHolder: HTMLElement): void {
+    const contentEditable = blockHolder.querySelector('[contenteditable="true"]');
+
+    if (contentEditable === null) {
+      return;
+    }
+
+    const fullText = contentEditable.textContent ?? '';
+    const slashIndex = fullText.lastIndexOf('/');
+
+    if (slashIndex === -1) {
+      return;
+    }
+
+    // Number of trailing characters (the "/query") to remove.
+    const charsToRemove = fullText.length - slashIndex;
+
+    // Walk text nodes from the end, trimming until charsToRemove is consumed.
+    this.collectTextNodes(contentEditable).reduceRight((remaining, textNode) => {
+      if (remaining <= 0) {
+        return remaining;
+      }
+
+      const length = textNode.data.length;
+
+      if (length <= remaining) {
+        textNode.remove();
+
+        return remaining - length;
+      }
+
+      textNode.deleteData(length - remaining, remaining);
+
+      return 0;
+    }, charsToRemove);
+  }
+
+  /**
+   * Collects all descendant text nodes of a node in document order.
+   * @param node - the root node to walk
+   * @returns text nodes in order
+   */
+  private collectTextNodes(node: Node): Text[] {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return [node as Text];
+    }
+
+    return Array.from(node.childNodes).flatMap((child) => this.collectTextNodes(child));
+  }
 
   /**
    * Checks if a block contains only slash search text (e.g., "/head").

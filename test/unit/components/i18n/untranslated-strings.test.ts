@@ -88,6 +88,9 @@ const PENDING_TRANSLATION_KEYS = new Set<string>([
   'tools.audio.coverErrorType',
   'tools.audio.coverErrorTooLarge',
   'tools.audio.coverAdd',
+  // Equation inline tool: name + formula-input placeholder ship English-first.
+  'toolNames.equation',
+  'tools.equation.placeholder',
 ]);
 
 const UNIVERSAL_SYMBOL_KEYS = new Set<string>([

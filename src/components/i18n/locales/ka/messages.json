@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "ქვედა მარჯვნივ",
   "toolNames.code": "კოდი",
   "toolNames.inlineCode": "კოდი",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "დაწერეთ კოდი…",
   "tools.code.language": "ენა",
   "tools.code.copied": "კოპირებულია!",

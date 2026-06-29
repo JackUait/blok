@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "ښکته ښی",
   "toolNames.code": "کوډ",
   "toolNames.inlineCode": "کوډ",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "کوډ ولیکئ…",
   "tools.code.language": "ژبه",
   "tools.code.copied": "کاپي شو!",

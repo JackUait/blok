@@ -62,6 +62,14 @@ export const IconMarker = `
 </svg>
 `;
 
+// Equation/inline math icon (radical/square-root glyph)
+export const IconEquation = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3.25 10.5 5 14l2.75-8h8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M11.25 9.75 14.5 13M14.5 9.75 11.25 13" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
 // Underline icon
 export const IconUnderline = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

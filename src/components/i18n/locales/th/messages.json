@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "ล่างขวา",
   "toolNames.code": "โค้ด",
   "toolNames.inlineCode": "โค้ด",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "เขียนโค้ด…",
   "tools.code.language": "ภาษา",
   "tools.code.copied": "คัดลอกแล้ว!",

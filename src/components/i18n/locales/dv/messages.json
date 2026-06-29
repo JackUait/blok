@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "ތިރީ ވާތް",
   "toolNames.code": "ކޯޑް",
   "toolNames.inlineCode": "ކޯޑް",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "ކޯޑް ލިޔޭ…",
   "tools.code.language": "ބަސް",
   "tools.code.copied": "ކޮޕީ ވެއްޖެ!",

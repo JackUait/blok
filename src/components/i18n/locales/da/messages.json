@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "Nederst til højre",
   "toolNames.code": "Kode",
   "toolNames.inlineCode": "Kode",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "Skriv kode…",
   "tools.code.language": "Sprog",
   "tools.code.copied": "Kopieret!",

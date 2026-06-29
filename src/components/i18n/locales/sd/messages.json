@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "ھيٺ ساڄي",
   "toolNames.code": "ڪوڊ",
   "toolNames.inlineCode": "ڪوڊ",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "ڪوڊ لکو…",
   "tools.code.language": "ٻولي",
   "tools.code.copied": "ڪاپي ٿيو!",

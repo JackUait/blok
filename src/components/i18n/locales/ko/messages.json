@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "오른쪽 하단",
   "toolNames.code": "코드",
   "toolNames.inlineCode": "코드",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "코드를 입력하세요…",
   "tools.code.language": "언어",
   "tools.code.copied": "복사됨!",

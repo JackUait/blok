@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "கீழ் வலது",
   "toolNames.code": "குறியீடு",
   "toolNames.inlineCode": "குறியீடு",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "குறியீடு எழுதவும்…",
   "tools.code.language": "மொழி",
   "tools.code.copied": "நகலெடுக்கப்பட்டது!",

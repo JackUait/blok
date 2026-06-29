@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "خوارەوە ڕاست",
   "toolNames.code": "کۆد",
   "toolNames.inlineCode": "کۆد",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "کۆد بنووسە…",
   "tools.code.language": "زمان",
   "tools.code.copied": "کۆپی کرا!",

@@ -1325,6 +1325,91 @@ describe('Toolbox', () => {
         true
       );
     });
+
+    it('strips the typed "/query" from a non-empty block and inserts the new block after it (Notion parity)', async () => {
+      /**
+       * Notion: typing "/" on a NON-empty block opens the menu; selecting a tool
+       * inserts a NEW block as the next sibling and removes only the "/query"
+       * portion from the current block — the preceding text stays intact.
+       */
+      const holderElement = document.createElement('div');
+      const contentEditableElement = document.createElement('div');
+
+      contentEditableElement.setAttribute('contenteditable', 'true');
+      contentEditableElement.textContent = 'Hello/head';
+      holderElement.appendChild(contentEditableElement);
+
+      const nonEmptyBlock = {
+        ...mocks.blockAPI,
+        isEmpty: false,
+        holder: holderElement,
+      };
+
+      vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(nonEmptyBlock as unknown as BlockAPI);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      // Open in slash mode (default), then pick a tool
+      toolbox.open();
+      await toolbox.toolButtonActivated('testTool', {});
+
+      // New block inserted AFTER the current one (index 1, shouldReplace=false)
+      expect(mocks.api.blocks.insert).toHaveBeenCalledWith(
+        'testTool',
+        undefined,
+        undefined,
+        1,
+        undefined,
+        false
+      );
+
+      // Only the "/head" slash query is removed; "Hello" stays in the current block
+      expect(contentEditableElement.textContent).toBe('Hello');
+    });
+
+    it('replaces in place (no stripping needed) when the block contains only "/query"', async () => {
+      const holderElement = document.createElement('div');
+      const contentEditableElement = document.createElement('div');
+
+      contentEditableElement.setAttribute('contenteditable', 'true');
+      contentEditableElement.textContent = '/head';
+      holderElement.appendChild(contentEditableElement);
+
+      const slashOnlyBlock = {
+        ...mocks.blockAPI,
+        isEmpty: false,
+        holder: holderElement,
+      };
+
+      vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(slashOnlyBlock as unknown as BlockAPI);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+      await toolbox.toolButtonActivated('testTool', {});
+
+      // Slash-only block is replaced in place (index 0, shouldReplace=true)
+      expect(mocks.api.blocks.insert).toHaveBeenCalledWith(
+        'testTool',
+        undefined,
+        undefined,
+        0,
+        undefined,
+        true
+      );
+    });
   });
 
   describe('table tool filtering inside table cells', () => {

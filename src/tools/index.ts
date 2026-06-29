@@ -50,6 +50,7 @@ export { MarkerInlineTool as Marker } from '../components/inline-tools/inline-to
 export { UnderlineInlineTool as Underline } from '../components/inline-tools/inline-tool-underline';
 export { StrikethroughInlineTool as Strikethrough } from '../components/inline-tools/inline-tool-strikethrough';
 export { CodeInlineTool as InlineCode } from '../components/inline-tools/inline-tool-code';
+export { EquationInlineTool as Equation } from '../components/inline-tools/inline-tool-equation';
 
 // Default tools configuration for convenience
 // Note: inlineToolbar defaults to true, so it doesn't need to be specified
@@ -83,4 +84,5 @@ export const defaultInlineTools = {
   underline: {},
   strikethrough: {},
   inlineCode: {},
+  equation: {},
 } as const;

@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "පහළ දකුණ",
   "toolNames.code": "කේතය",
   "toolNames.inlineCode": "කේතය",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "කේතය ලියන්න…",
   "tools.code.language": "භාෂාව",
   "tools.code.copied": "පිටපත් කළා!",

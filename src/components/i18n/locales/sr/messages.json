@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "Доле десно",
   "toolNames.code": "Код",
   "toolNames.inlineCode": "Код",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "Напишите код…",
   "tools.code.language": "Језик",
   "tools.code.copied": "Копирано!",

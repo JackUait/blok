@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "Jos dreapta",
   "toolNames.code": "Cod",
   "toolNames.inlineCode": "Cod",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "Scrie cod…",
   "tools.code.language": "Limbaj",
   "tools.code.copied": "Copiat!",

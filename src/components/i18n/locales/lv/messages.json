@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "Apakšā pa labi",
   "toolNames.code": "Kods",
   "toolNames.inlineCode": "Kods",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "Rakstiet kodu…",
   "tools.code.language": "Valoda",
   "tools.code.copied": "Nokopēts!",

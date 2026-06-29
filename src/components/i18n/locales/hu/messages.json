@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "Jobb alsó",
   "toolNames.code": "Kód",
   "toolNames.inlineCode": "Kód",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "Kód írása…",
   "tools.code.language": "Nyelv",
   "tools.code.copied": "Másolva!",

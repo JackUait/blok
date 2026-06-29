@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "Доор баруун",
   "toolNames.code": "Код",
   "toolNames.inlineCode": "Код",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "Код бичих…",
   "tools.code.language": "Хэл",
   "tools.code.copied": "Хуулагдлаа!",

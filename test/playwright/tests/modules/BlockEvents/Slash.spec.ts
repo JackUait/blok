@@ -105,19 +105,77 @@ test.describe('slash keydown', () => {
     });
   }
 
-  test('should not open Toolbox in non-empty block and append slash character', async ({ page }) => {
+  test('should open Toolbox in non-empty block and append slash character (Notion parity)', async ({ page }) => {
     await createParagraphBlok(page, [ 'Hello' ]);
 
     const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
+    // Caret to end of "Hello", then type "/"
     await paragraph.click();
+    await page.keyboard.press('End');
     await paragraph.type('/');
 
-    await expect(page.locator(TOOLBOX_CONTAINER_SELECTOR)).toBeHidden();
+    await expect(page.locator(TOOLBOX_CONTAINER_SELECTOR)).toBeVisible();
 
     const textContent = await getTextContent(paragraph);
 
     expect(textContent).toBe('Hello/');
+  });
+
+  test('selecting a tool on a non-empty block inserts a NEW block and strips the "/query"', async ({ page }) => {
+    await createParagraphBlok(page, [ 'Hello' ]);
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+
+    await paragraph.click();
+    await page.keyboard.press('End');
+    await paragraph.type('/head');
+
+    await expect(page.locator(TOOLBOX_CONTAINER_SELECTOR)).toBeVisible();
+
+    // Pick "Heading" from the filtered toolbox
+    await page.locator(TOOLBOX_ITEM_SELECTOR('header-1')).first().click();
+
+    // A NEW heading block exists alongside the untouched paragraph
+    const headingSelector = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="header"] [contenteditable]`;
+
+    await expect(page.locator(headingSelector)).toBeVisible();
+
+    // The original paragraph keeps "Hello" with the "/head" slash query removed
+    const paragraphText = await getTextContent(page.locator(PARAGRAPH_SELECTOR).first());
+
+    expect(paragraphText).toBe('Hello');
+
+    // The serialized output has the paragraph BEFORE the (empty) heading
+    const types = await page.evaluate(async () => {
+      const data = await window.blokInstance?.save();
+
+      return (data?.blocks ?? []).map((block) => block.type);
+    });
+
+    expect(types).toEqual([ 'paragraph', 'header' ]);
+  });
+
+  test('typing "/" on an EMPTY block still replaces it in place', async ({ page }) => {
+    await createParagraphBlok(page, [ '' ]);
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+
+    await paragraph.click();
+    await paragraph.type('/head');
+
+    await expect(page.locator(TOOLBOX_CONTAINER_SELECTOR)).toBeVisible();
+
+    await page.locator(TOOLBOX_ITEM_SELECTOR('header-1')).first().click();
+
+    // The empty paragraph was converted in place — only a single heading remains
+    const types = await page.evaluate(async () => {
+      const data = await window.blokInstance?.save();
+
+      return (data?.blocks ?? []).map((block) => block.type);
+    });
+
+    expect(types).toEqual([ 'header' ]);
   });
 
   test('should not modify text outside blok when slash pressed', async ({ page }) => {

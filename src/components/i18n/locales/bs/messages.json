@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "Dolje desno",
   "toolNames.code": "Kod",
   "toolNames.inlineCode": "Kod",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "Napišite kod…",
   "tools.code.language": "Jezik",
   "tools.code.copied": "Kopirano!",

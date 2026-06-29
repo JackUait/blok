@@ -422,7 +422,12 @@ describe('UndoHistory', () => {
       vi.useRealTimers();
     });
 
-    it('checkAndHandleBoundary creates checkpoint after timeout', () => {
+    it('does NOT create a per-word checkpoint at a boundary (Notion coalescing)', () => {
+      // Notion coalesces a continuous typing run into ONE undo step; word
+      // boundaries (space/punctuation) must NOT force a checkpoint. Only a pause
+      // longer than the Yjs capture window or a structural op breaks the run.
+      // checkAndHandleBoundary still clears the pending-boundary state, but it
+      // must never call stopCapturing.
       vi.useFakeTimers();
       const stopSpy = vi.spyOn(history.undoManager, 'stopCapturing');
 
@@ -430,13 +435,29 @@ describe('UndoHistory', () => {
       vi.advanceTimersByTime(50); // Only 50ms elapsed
 
       history.checkAndHandleBoundary();
-      expect(stopSpy).not.toHaveBeenCalled(); // Not enough time
+      expect(stopSpy).not.toHaveBeenCalled();
 
       vi.advanceTimersByTime(60); // Now 110ms total
 
       history.checkAndHandleBoundary();
-      expect(stopSpy).toHaveBeenCalledTimes(1);
+      // The per-word checkpoint is gone: stopCapturing is never called here.
+      expect(stopSpy).not.toHaveBeenCalled();
       expect(history.hasPendingBoundary()).toBe(false);
+
+      vi.useRealTimers();
+    });
+
+    it('does NOT call stopCapturing when the boundary timer fires (Notion coalescing)', () => {
+      vi.useFakeTimers();
+      const stopSpy = vi.spyOn(history.undoManager, 'stopCapturing');
+
+      history.markBoundary();
+      // Let the boundary timer fire on its own.
+      vi.advanceTimersByTime(150);
+
+      // The pending boundary clears, but no per-word checkpoint is created.
+      expect(history.hasPendingBoundary()).toBe(false);
+      expect(stopSpy).not.toHaveBeenCalled();
 
       vi.useRealTimers();
     });

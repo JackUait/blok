@@ -313,19 +313,18 @@ export class BlockEvents extends Module {
       this.Blok.BlockManager.setCurrentBlockByChildNode(event.target);
     }
 
-    const currentBlock = this.Blok.BlockManager.currentBlock;
-    const canOpenToolbox = currentBlock?.isEmpty;
-
     /**
      * @todo Handle case when slash pressed when several blocks are selected
      */
 
     /**
-     * Toolbox will be opened only if Block is empty
+     * Notion parity: "/" opens the toolbox regardless of caret position or
+     * block emptiness. On an empty (or slash-only) block the chosen tool
+     * replaces the block in place; on a non-empty block it inserts a NEW block
+     * after the current one and strips the typed "/query" (handled by the
+     * Toolbox). Both flows just need the "/" inserted at the caret and the
+     * toolbox activated.
      */
-    if (!canOpenToolbox) {
-      return;
-    }
 
     /**
      * The Toolbox will be opened with immediate focus on the Search input,

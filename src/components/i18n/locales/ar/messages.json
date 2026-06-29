@@ -207,6 +207,8 @@
   "tools.table.placementBottomRight": "أسفل اليمين",
   "toolNames.code": "كود",
   "toolNames.inlineCode": "كود",
+  "toolNames.equation": "Equation",
+  "tools.equation.placeholder": "Enter a LaTeX formula…",
   "tools.code.placeholder": "اكتب كوداً…",
   "tools.code.language": "اللغة",
   "tools.code.copied": "تم النسخ!",

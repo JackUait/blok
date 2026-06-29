@@ -817,29 +817,27 @@ test.describe('popover', () => {
     await page.locator(SETTINGS_BUTTON_SELECTOR).click();
     await waitForBlockTunesPopover(page);
 
-    // Press Tab - first item is convert-to (appears before custom tunes)
-    await page.keyboard.press('Tab');
+    // Default tunes (block color, convert-to) precede the custom items; Tab to
+    // the first custom html item — this test cares about flipping BETWEEN the
+    // custom items, not the exact count of leading default tunes.
+    const customHtml = (text: string): Locator =>
+      page.locator(`${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-item-html"]`).filter({ hasText: text });
 
-    // Check convert-to item is focused first
-    await expect(page.locator('[data-blok-item-name="convert-to"]')).toHaveAttribute('data-blok-focused', 'true');
-
-    // Press Tab - move to first custom html item
-    await page.keyboard.press('Tab');
+    for (let i = 0; i < 15; i++) {
+      if (await customHtml('Tune1').getAttribute('data-blok-focused') === 'true') {
+        break;
+      }
+      await page.keyboard.press('Tab');
+    }
 
     // Check the first custom html item wrapper is focused
-    await expect(
-      page.locator(`${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-item-html"]`)
-        .filter({ hasText: 'Tune1' })
-    ).toHaveAttribute('data-blok-focused', 'true');
+    await expect(customHtml('Tune1')).toHaveAttribute('data-blok-focused', 'true');
 
-    // Press Tab - move to second custom html item
+    // Press Tab - flip to second custom html item
     await page.keyboard.press('Tab');
 
     // Check the second custom html item wrapper is focused
-    await expect(
-      page.locator(`${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-item-html"]`)
-        .filter({ hasText: 'Tune2' })
-    ).toHaveAttribute('data-blok-focused', 'true');
+    await expect(customHtml('Tune2')).toHaveAttribute('data-blok-focused', 'true');
 
     // Press Tab - move to delete item
     await page.keyboard.press('Tab');
@@ -1066,19 +1064,20 @@ test.describe('popover', () => {
     // Open block tunes menu
     await openBlockTunes(page);
 
-    // Press Tab to focus first item (convert-to appears first due to internal tools)
-    await page.keyboard.press('Tab');
-
-    // Check convert-to item is focused first (it appears before custom tunes)
-    await expect(page.locator('[data-blok-item-name="convert-to"][data-blok-focused="true"]')).toBeVisible();
-
-    // Press Tab to move to first custom tune
-    await page.keyboard.press('Tab');
+    // Default tunes (block color, convert-to) and separators precede the custom
+    // tunes; Tab until the first custom tune is focused.
+    for (let i = 0; i < 15; i++) {
+      if (await page.locator('[data-blok-item-name="test-item-1"]').getAttribute('data-blok-focused') === 'true') {
+        break;
+      }
+      await page.keyboard.press('Tab');
+    }
 
     // Check first custom tune is focused
     await expect(page.locator('[data-blok-item-name="test-item-1"][data-blok-focused="true"]')).toBeVisible();
 
-    // Press Tab to move to second custom tune (skipping separator)
+    // Press Tab once more: the separator between the two custom tunes must be
+    // skipped, landing directly on the second custom tune.
     await page.keyboard.press('Tab');
 
     // Check second custom tune is focused

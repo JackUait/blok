@@ -161,4 +161,19 @@ describe('duplicateBlocksInPlace caret placement (BUG #9)', () => {
     expect(clearSelection).toHaveBeenCalled();
     expect(caret.setToBlock).toHaveBeenCalledWith(dup, caret.positions.END);
   });
+
+  it('briefly highlights the duplicated copy as just-added (blue arrival pulse)', async () => {
+    const dup = createBlockStub('dup-1');
+    const { dragManager, blocks } = createSetup(dup);
+
+    expect(dup.holder.classList.contains('blok-block--target')).toBe(false);
+
+    await dragManager.duplicateBlocksInPlace(blocks[0]);
+
+    // Notion parity: a freshly duplicated block gets the same blue "just added"
+    // arrival pulse as a hash-navigated block (the `blok-block--target` class,
+    // whose keyframes tween `var(--blok-selection)`), signalling what just
+    // appeared. Placing the caret alone (BUG #9) gave no visible cue.
+    expect(dup.holder.classList.contains('blok-block--target')).toBe(true);
+  });
 });

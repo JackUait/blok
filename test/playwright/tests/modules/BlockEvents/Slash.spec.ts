@@ -87,6 +87,30 @@ test.describe('slash keydown', () => {
     expect(textContent).toBe('/');
   });
 
+  test('typing a space right after "/" in an empty block dismisses the Toolbox and keeps a literal "/ " (Notion parity)', async ({ page }) => {
+    await createParagraphBlok(page, [ '' ]);
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+    await paragraph.click();
+    await paragraph.type('/');
+
+    await expect(page.locator(TOOLBOX_CONTAINER_SELECTOR)).toBeVisible();
+
+    // A space typed at the end of otherwise-empty content makes the browser
+    // insert a NON-BREAKING space (U+00A0), not U+0020 — the dismissal must
+    // recognise both, otherwise the menu stays stuck open on this exact path.
+    await page.keyboard.press('Space');
+
+    await expect(page.locator(TOOLBOX_CONTAINER_SELECTOR)).toBeHidden();
+
+    // The literal "/" + whitespace is left in the block (the slash query is NOT
+    // stripped — the menu was cancelled, not used to insert a tool).
+    const textContent = await getTextContent(paragraph);
+
+    expect(textContent).toMatch(/^\/\s$/);
+  });
+
   for (const { description, key } of modifierKeyVariants) {
     test(`should not open Toolbox if Slash pressed with ${description}`, async ({ page }) => {
       await createParagraphBlok(page, [ '' ]);

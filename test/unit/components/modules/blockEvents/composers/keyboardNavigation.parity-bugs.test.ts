@@ -515,4 +515,112 @@ describe('KeyboardNavigation — Notion parity bugs', () => {
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('BUG #3 — Tab indent re-runs the toolbar positioner', () => {
+    it('repositions the toolbar to the current block after a successful Tab indent', () => {
+      const previous = createBlock({ id: 'prev', parentId: null });
+      const current = createBlock({ id: 'cur', parentId: null });
+      const blocks = [previous, current];
+      const moveAndOpen = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: current,
+          blocks,
+          getBlockIndex: (block: Block) => blocks.indexOf(block),
+          getBlockByIndex: (index: number) => blocks[index],
+          getBlockById: (id: string) => blocks.find((b) => b.id === id),
+          setBlockParent: vi.fn(),
+        } as unknown as BlokModules['BlockManager'],
+        Toolbar: {
+          opened: false,
+          close: vi.fn(),
+          moveAndOpen,
+          hideBlockActions: vi.fn(),
+        } as unknown as BlokModules['Toolbar'],
+        YjsManager: {
+          transactMoves: vi.fn((fn: () => void) => fn()),
+          markCaretBeforeChange: vi.fn(),
+          updateLastCaretAfterPosition: vi.fn(),
+        } as unknown as BlokModules['YjsManager'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
+
+      keyboardNavigation.handleTab(event);
+
+      // Indenting shifts the block horizontally; the toolbar's content-relative
+      // gutter offset is cached, so it must be recomputed against the new nested
+      // geometry — otherwise the +/⋮⋮ handles end up jammed against the text.
+      expect(moveAndOpen).toHaveBeenCalledWith(current);
+    });
+
+    it('repositions the toolbar to the current block after a successful Shift+Tab outdent', () => {
+      const parent = createBlock({ id: 'p', parentId: null, contentIds: ['cur'] });
+      const current = createBlock({ id: 'cur', parentId: 'p' });
+      const blocks = [parent, current];
+      const moveAndOpen = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: current,
+          blocks,
+          getBlockIndex: (block: Block) => blocks.indexOf(block),
+          getBlockByIndex: (index: number) => blocks[index],
+          getBlockById: (id: string) => blocks.find((b) => b.id === id),
+          setBlockParent: vi.fn(),
+        } as unknown as BlokModules['BlockManager'],
+        Toolbar: {
+          opened: false,
+          close: vi.fn(),
+          moveAndOpen,
+          hideBlockActions: vi.fn(),
+        } as unknown as BlokModules['Toolbar'],
+        YjsManager: {
+          transactMoves: vi.fn((fn: () => void) => fn()),
+          markCaretBeforeChange: vi.fn(),
+          updateLastCaretAfterPosition: vi.fn(),
+        } as unknown as BlokModules['YjsManager'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Tab', shiftKey: true });
+
+      keyboardNavigation.handleTab(event);
+
+      expect(moveAndOpen).toHaveBeenCalledWith(current);
+    });
+
+    it('does NOT reposition the toolbar when Tab is a no-op (no preceding sibling)', () => {
+      const current = createBlock({ id: 'cur', parentId: null });
+      const blocks = [current];
+      const moveAndOpen = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: current,
+          blocks,
+          getBlockIndex: (block: Block) => blocks.indexOf(block),
+          getBlockByIndex: (index: number) => blocks[index],
+          getBlockById: (id: string) => blocks.find((b) => b.id === id),
+          setBlockParent: vi.fn(),
+        } as unknown as BlokModules['BlockManager'],
+        Toolbar: {
+          opened: false,
+          close: vi.fn(),
+          moveAndOpen,
+          hideBlockActions: vi.fn(),
+        } as unknown as BlokModules['Toolbar'],
+        YjsManager: {
+          transactMoves: vi.fn((fn: () => void) => fn()),
+          markCaretBeforeChange: vi.fn(),
+          updateLastCaretAfterPosition: vi.fn(),
+        } as unknown as BlokModules['YjsManager'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
+
+      keyboardNavigation.handleTab(event);
+
+      // The first block has no preceding sibling → Tab can't indent → strict
+      // no-op, so the toolbar is left alone (and native Tab focus-out preserved).
+      expect(moveAndOpen).not.toHaveBeenCalled();
+    });
+  });
 });

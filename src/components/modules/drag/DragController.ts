@@ -3,6 +3,7 @@ import { BlockToolAPI } from '../../block';
 import type { Block } from '../../block';
 import { DATA_ATTR } from '../../constants';
 import { announce } from '../../utils/announcer';
+import { highlightBlockArrival } from '../../utils/highlight-block-arrival';
 import { hide as hideTooltip } from '../../utils/tooltip';
 
 import { addColumnToList, wrapInNewColumnList } from '../../../tools/column-drop';
@@ -1418,6 +1419,14 @@ export class DragController extends Module {
         this.Blok.BlockSelection.clearSelection();
         this.Blok.Caret.setToBlock(firstCopy, this.Blok.Caret.positions.END);
       }
+
+      /**
+       * Signal that the copy is "just added" with the blue arrival pulse (the
+       * same cue a hash-navigated block gets) — Notion highlights a freshly
+       * duplicated block. Landing the caret alone left no visible indication of
+       * what appeared.
+       */
+      highlightBlockArrival(firstCopy.holder);
 
       this.Blok.Toolbar.moveAndOpen(firstCopy);
     }

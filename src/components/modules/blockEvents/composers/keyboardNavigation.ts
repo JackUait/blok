@@ -147,6 +147,15 @@ export class KeyboardNavigation extends BlockEventComposer {
     }
 
     if (outcome.handled) {
+      /**
+       * The indent/outdent shifts the block horizontally. The toolbar's
+       * content-relative gutter offset is cached by the positioner, so without
+       * an explicit reposition the +/⋮⋮ handles keep the pre-indent offset and
+       * end up jammed against the text. Re-run moveAndOpen (same call Enter
+       * makes) so the positioner recomputes against the new nested geometry.
+       */
+      this.Blok.Toolbar.moveAndOpen(this.Blok.BlockManager.currentBlock);
+
       event.preventDefault();
 
       return;

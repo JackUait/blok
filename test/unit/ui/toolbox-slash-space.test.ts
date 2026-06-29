@@ -180,6 +180,27 @@ describe('Toolbox "/ " (slash + space) dismissal — Notion parity', () => {
     expect(mockPopoverInstance.filterItems).not.toHaveBeenCalledWith(' ');
   });
 
+  it('closes the toolbox when the browser inserts a non-breaking space after "/"', () => {
+    const toolbox = new Toolbox({ api, tools, i18nLabels, i18n: mockI18n });
+
+    toolbox.open();
+    expect(toolbox.opened).toBe(true);
+
+    const contentEditable = blockAPI.holder.querySelector('[contenteditable="true"]') as HTMLElement;
+
+    // When a space is typed right after "/" at the end of (otherwise empty)
+    // content, contenteditable inserts a NON-BREAKING space (U+00A0) to render
+    // the trailing space, not a regular U+0020. The dismissal must treat both
+    // the same — otherwise the menu stays open on the most common path
+    // (type "/" in an empty block, then space). Notion parity.
+    contentEditable.textContent = '/ ';
+    contentEditable.dispatchEvent(new Event('input', { bubbles: true }));
+
+    expect(toolbox.opened).toBe(false);
+    expect(contentEditable.textContent).toBe('/ ');
+    expect(mockPopoverInstance.filterItems).not.toHaveBeenCalledWith(' ');
+  });
+
   it('keeps filtering normally for a non-space query after "/"', () => {
     const toolbox = new Toolbox({ api, tools, i18nLabels, i18n: mockI18n });
 

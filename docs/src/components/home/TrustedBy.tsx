@@ -365,18 +365,20 @@ export const TrustedBy: React.FC = () => {
                       href="https://t.me/jackuait"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(180deg,#2aabee,#229ed9)] px-5 py-3 text-[14px] font-semibold text-white shadow-[0_8px_20px_-8px_rgba(34,158,217,0.55)] transition-[filter,box-shadow] duration-300 hover:shadow-[0_12px_26px_-8px_rgba(34,158,217,0.6)] hover:brightness-[1.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]"
+                      className="group/tg inline-flex items-center gap-2 rounded-full bg-[linear-gradient(180deg,#2aabee,#229ed9)] px-5 py-3 text-[14px] font-semibold text-white shadow-[0_8px_20px_-8px_rgba(34,158,217,0.55)] transition-[filter,box-shadow] duration-300 hover:shadow-[0_12px_26px_-8px_rgba(34,158,217,0.6)] hover:brightness-[1.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]"
                     >
-                      <Send className="size-4 -translate-x-[0.5px]" strokeWidth={2.2} aria-hidden="true" />
+                      {/* The paper plane lifts off — up and to the right — as you hover. */}
+                      <Send className="size-4 -translate-x-[0.5px] transition-transform duration-300 ease-out group-hover/tg:translate-x-[3px] group-hover/tg:-translate-y-[3px]" strokeWidth={2.2} aria-hidden="true" />
                       {t("home.trusted.contactTelegram")}
                     </a>
 
                     {/* Secondary channel — a quiet bordered pill for email. */}
                     <a
                       href="mailto:jackuait@gmail.com?subject=Blok%20for%20our%20team"
-                      className="inline-flex items-center gap-2 rounded-full border border-black/[0.12] bg-card px-5 py-3 text-[14px] font-semibold text-foreground transition-[border-color,background-color] duration-300 hover:border-foreground/30 hover:bg-foreground/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] dark:border-white/[0.16] dark:hover:bg-white/[0.05]"
+                      className="group/mail inline-flex items-center gap-2 rounded-full border border-black/[0.12] bg-card px-5 py-3 text-[14px] font-semibold text-foreground transition-[border-color,background-color] duration-300 hover:border-foreground/30 hover:bg-foreground/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] dark:border-white/[0.16] dark:hover:bg-white/[0.05]"
                     >
-                      <Mail className="size-4 text-muted-foreground" strokeWidth={2.2} aria-hidden="true" />
+                      {/* The envelope lifts a touch and darkens to full ink on hover. */}
+                      <Mail className="size-4 text-muted-foreground transition-[transform,color] duration-300 ease-out group-hover/mail:-translate-y-[1.5px] group-hover/mail:text-foreground" strokeWidth={2.2} aria-hidden="true" />
                       {t("home.trusted.contactEmail")}
                     </a>
                   </div>

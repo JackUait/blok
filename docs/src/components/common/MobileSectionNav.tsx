@@ -6,11 +6,13 @@ import type { SidebarSection } from '../common/Sidebar';
 interface MobileSectionNavProps {
   sections: SidebarSection[];
   activeSection: string;
+  onNavigate?: (id: string) => void;
 }
 
 export const MobileSectionNav: React.FC<MobileSectionNavProps> = ({
   sections,
   activeSection,
+  onNavigate,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useI18n();
@@ -57,6 +59,10 @@ export const MobileSectionNav: React.FC<MobileSectionNavProps> = ({
 
   const handleLinkClick = (sectionId: string): void => {
     setIsOpen(false);
+    if (onNavigate) {
+      onNavigate(sectionId);
+      return;
+    }
     const element = document.getElementById(sectionId);
     if (element) {
       window.history.pushState(null, '', `#${sectionId}`);

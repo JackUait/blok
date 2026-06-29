@@ -41,11 +41,17 @@ export const preserveColorStyles = (node: Element): { [attr: string]: boolean | 
  * Function rule preserving inline equation spans. The LaTeX source lives in the
  * `data-latex` attribute and is re-rendered on load, so only that attribute is
  * kept; any rendered KaTeX markup inside is regenerated and need not survive.
+ *
+ * Decorative / unknown spans return `false` rather than `{}`: HTMLJanitor only
+ * unwraps a node when its rule is `false`/`undefined`. Returning `{}` keeps the
+ * tag (just stripping its attributes), which would leak every `<span>` through
+ * as a bare `<span>` — `text` tools allow `span` ONLY to round-trip equations,
+ * so a span without `data-latex` must be unwrapped, not emptied.
  * @param node - live DOM node provided by HTMLJanitor
- * @returns attribute config keeping `data-latex` only when present
+ * @returns attribute config keeping `data-latex` when present, else `false` to drop the tag
  */
-export const preserveEquationSpan = (node: Element): { [attr: string]: boolean | string } => {
-  return node.getAttribute('data-latex') !== null ? { 'data-latex': true } : {};
+export const preserveEquationSpan = (node: Element): { [attr: string]: boolean | string } | false => {
+  return node.getAttribute('data-latex') !== null ? { 'data-latex': true } : false;
 };
 
 /**

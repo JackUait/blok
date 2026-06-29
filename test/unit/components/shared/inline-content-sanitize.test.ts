@@ -49,6 +49,11 @@ describe('inline-content-sanitize', () => {
 
       expect(result).toContain('data-latex="x^2"');
       expect(result).not.toContain('color:red');
+      // The decorative span must be unwrapped (tag gone), not just emptied —
+      // otherwise every span leaks through as a bare <span>.
+      expect(result).not.toContain('<span style');
+      expect(result).toContain('plain');
+      expect(result.match(/<span/g) ?? []).toHaveLength(1);
     });
   });
 
@@ -84,10 +89,10 @@ describe('inline-content-sanitize', () => {
       expect(preserveEquationSpan(el)).toEqual({ 'data-latex': true });
     });
 
-    it('keeps nothing for a plain span', () => {
+    it('drops a plain span (returns false so HTMLJanitor unwraps it)', () => {
       const el = document.createElement('span');
 
-      expect(preserveEquationSpan(el)).toEqual({});
+      expect(preserveEquationSpan(el)).toBe(false);
     });
   });
 });

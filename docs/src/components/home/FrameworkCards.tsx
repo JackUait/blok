@@ -272,8 +272,10 @@ export const FrameworkCards: React.FC = () => {
           delay={0.05}
           className="mt-12 overflow-hidden rounded-3xl border border-black/[0.06] bg-card shadow-card dark:border-white/[0.08]"
         >
-          {FRAMEWORKS.map((framework) => {
+          {FRAMEWORKS.map((framework, index) => {
             const open = openIds.has(framework.id);
+            const isFirst = index === 0;
+            const isLast = index === FRAMEWORKS.length - 1;
             const triggerId = `framework-trigger-${framework.id}`;
             const panelId = `framework-panel-${framework.id}`;
 
@@ -294,6 +296,12 @@ export const FrameworkCards: React.FC = () => {
                       className={cn(
                         "group flex w-full cursor-pointer items-center gap-4 px-5 py-5 text-left transition-colors sm:px-6",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                        // Match the card's rounded corners so the focus ring and
+                        // hover/open background hug the first row's top and the
+                        // last row's bottom. The last row's bottom only rounds
+                        // while collapsed; once open, the snippet panel sits below.
+                        isFirst && "rounded-t-3xl",
+                        isLast && !open && "rounded-b-3xl",
                         open ? "bg-secondary/40" : "hover:bg-secondary/40",
                       )}
                     >

@@ -715,10 +715,16 @@ export class KeyboardController extends Controller {
    * Handle Ctrl+Y (redo) — the Windows/Linux redo alias. Notion accepts both
    * Ctrl+Shift+Z and Ctrl+Y for redo; the latter is routed here. Uses the same
    * drag guard and double-fire dedup as handleZ so a single press redoes once.
+   *
+   * The redo alias is Ctrl+Y WITHOUT Shift. Ctrl+Shift+Y is a distinct combo
+   * (e.g. a block tool's "CMD+SHIFT+Y" insert shortcut), so when Shift is held
+   * we must fall through to default handling and let the event keep propagating
+   * to the tool-shortcut listener — otherwise the stopPropagation below swallows
+   * it and a spurious redo fires.
    * @param event - keyboard event
    */
   private handleY(event: KeyboardEvent): void {
-    if (!event.ctrlKey) {
+    if (!event.ctrlKey || event.shiftKey) {
       this.handleDefault(event);
 
       return;

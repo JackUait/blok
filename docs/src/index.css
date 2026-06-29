@@ -1034,6 +1034,11 @@
 .bento-tile.is-touch-active::after {
   opacity: 1;
 }
+/* Opt-out modifier: a bento tile that keeps the shadow lift + 3D tilt but drops
+   the pink cursor glow and border arc entirely (used by the "trusted by" tiles). */
+.bento-tile--no-glow::after {
+  content: none;
+}
 /* The embeds marquee reaches the tile edge, so its icons (in the z-10 content
    layer) would otherwise paint over the z-1 border arc. Lift this tile's border
    above the content so the logos slide UNDER the pink frame. */

@@ -245,6 +245,19 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
       return;
     }
 
+    // The lifecycle effect runs BEFORE this one, so a commit that changes `deps`
+    // AND `data` together has already swapped `state.editor` to the freshly
+    // constructed instance (and may have destroyed the old one) by the time this
+    // effect fires with the PREVIOUS render's `editor` closure. Rendering through
+    // that stale handle would target a destroyed editor — and the new instance is
+    // already seeded with the new `data` at construction. Skip unless this closure
+    // still owns the live editor, mirroring the isReady guard above.
+    const state = stateRef.current;
+
+    if (state.editor !== editor || state.isDestroyed) {
+      return;
+    }
+
     // First time observing this editor: it was seeded at construction with
     // `constructedDataRef`. When the current prop still matches that seed, just
     // record the baseline and skip the redundant render. When it has diverged
@@ -265,10 +278,26 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
       return;
     }
 
+    // Advance the baseline optimistically so a re-fired effect doesn't queue a
+    // duplicate render for the same content while this one is in flight. The
+    // PREVIOUS baseline is captured so a FAILED render can roll it back —
+    // otherwise a render rejection (malformed `data`) would leave the baseline
+    // pointing at content that never actually rendered, and a later identical or
+    // corrected `data` would be wrongly deduped and the editor left stale.
+    const previousRenderedData = lastRenderedDataRef.current;
+
     lastRenderedDataRef.current = data;
     renderChainRef.current = renderChainRef.current
       .catch(() => undefined)
-      .then(() => editor.render(data));
+      .then(() => editor.render(data))
+      .catch(() => {
+        // Roll back ONLY if nothing newer has since claimed the baseline — a later
+        // successful render must keep its own. Owning this rejection here also
+        // keeps a failed render() from surfacing as an unhandled promise rejection.
+        if (lastRenderedDataRef.current === data) {
+          lastRenderedDataRef.current = previousRenderedData;
+        }
+      });
   }, [editor, data]);
 
   return editor;

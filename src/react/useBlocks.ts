@@ -67,7 +67,10 @@ const EMPTY_API: UseBlocksApi = {
   getCurrentBlockIndex: () => -1,
   getBlockByIndex: () => null,
   getBlockByElement: () => null,
+  getBlockData: () => null,
+  getBlockIndex: () => null,
   composeBlockData: async () => ({}),
+  renderFromHTML: async () => undefined,
   insertOutputData: () => [],
   splitBlock: () => null,
 };
@@ -659,6 +662,14 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       const needToFocus = spec.focus ?? false;
       const replace = spec.replace ?? false;
 
+      // Every pre-insert guard (id-exists, dangling-parent, missing-ref) and the
+      // replace-parent lookup used to call `getById`, which re-enumerates the
+      // WHOLE tree each time — O(probes·n) per spec, O(k·probes·n) per batch.
+      // The tree can't change until `editor.blocks.insert` runs below, so take
+      // ONE snapshot here and resolve every pre-insert probe against it.
+      const preById = new Map(snapshotNodes(reader).map((n) => [n.id, n]));
+      const probe = (id: string): BlockNode | null => preById.get(id) ?? null;
+
       // Idempotent insert-if-absent: a stable explicit id that already exists
       // returns the existing node without inserting a duplicate, so a re-running
       // effect is safe. Probe via the silent snapshot getById, NOT
@@ -669,7 +680,7 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       // insert, so an existing id must not short-circuit it (the two would
       // otherwise silently conflict and replace nothing).
       if (spec.id !== undefined && !replace) {
-        const existing = getById(spec.id);
+        const existing = probe(spec.id);
 
         if (existing !== null) {
           // Insert-if-absent hit: the block already existed, nothing was created.
@@ -686,7 +697,7 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       // expected-absent no-op path. Skipped under replace: a replace ignores
       // parentId entirely (the overwritten block's own parent governs), so a
       // stale parentId must not abort the overwrite.
-      if (!replace && parentId !== null && getById(parentId) === null) {
+      if (!replace && parentId !== null && probe(parentId) === null) {
         return { node: null, created: false };
       }
 
@@ -709,7 +720,7 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
 
         const replaceTargetRef = 'before' in position ? position.before : position.after;
 
-        if (getById(replaceTargetRef) === null) {
+        if (probe(replaceTargetRef) === null) {
           return { node: null, created: false };
         }
       }
@@ -723,7 +734,7 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       if (!replace && typeof position === 'object') {
         const positionTargetRef = 'before' in position ? position.before : position.after;
 
-        if (getById(positionTargetRef) === null) {
+        if (probe(positionTargetRef) === null) {
           return { node: null, created: false };
         }
       }
@@ -744,7 +755,7 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       })();
       const replaceRef = replace ? positionRef : null;
       const intendedParentId =
-        replaceRef !== null ? getById(replaceRef)?.parentId ?? null : parentId;
+        replaceRef !== null ? probe(replaceRef)?.parentId ?? null : parentId;
 
       const created = ((): { id: string } | null | undefined => {
         try {
@@ -777,11 +788,22 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       // `insert({ position: 'end' })` a root sibling instead of a stowaway. For
       // a replace, intendedParentId is the overwritten block's own parent, so
       // the replacement keeps its place in the tree.
-      const landedParentId = getById(created.id)?.parentId ?? null;
+      // ONE post-insert snapshot for both the landed-parent check and the return
+      // node (was two separate getById enumerations). A freshly-created block has
+      // no children, so reparenting it only flips its own parentId — its derived
+      // contentIds stay `[]`. We therefore reconstruct the corrected node in place
+      // rather than re-enumerating the tree a third time after setBlockParent.
+      const createdNode = snapshotNodes(reader).find((n) => n.id === created.id) ?? null;
+      const landedParentId = createdNode?.parentId ?? null;
 
-      if (landedParentId !== intendedParentId) {
-        editor.blocks.setBlockParent(created.id, intendedParentId);
-      }
+      const node =
+        landedParentId === intendedParentId
+          ? createdNode
+          : ((): BlockNode | null => {
+              editor.blocks.setBlockParent(created.id, intendedParentId);
+
+              return createdNode === null ? null : { ...createdNode, parentId: intendedParentId };
+            })();
 
       // Position the caret inside the freshly-created block when the caller asked
       // for a specific spot (beyond the boolean `focus`). Applied only on a real
@@ -791,7 +813,7 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
         editor.caret.setToBlock(created.id, spec.caret.position ?? 'default', spec.caret.offset ?? 0);
       }
 
-      return { node: getById(created.id), created: true };
+      return { node, created: true };
     };
 
     /**
@@ -1161,6 +1183,34 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
     const composeBlockData = (toolName: string): Promise<BlockToolData> =>
       editor.blocks.composeBlockData(toolName);
 
+    const getBlockData = (
+      id: string
+    ): { data: BlockToolData; tunes: { [name: string]: BlockTuneData } } | null => {
+      const block = editor.blocks.getById(id);
+
+      if (block === null) {
+        return null;
+      }
+
+      // preservedData/preservedTunes are core's SYNCHRONOUS last-extracted view —
+      // the same snapshot clipboard ops read. Returning it (rather than the async
+      // save()) keeps this reader synchronous so a block can be read and re-inserted
+      // (duplicated) inside one render/handler without the ref escape hatch.
+      return { data: block.preservedData, tunes: block.preservedTunes };
+    };
+
+    const getBlockIndex = (id: string): number | null => {
+      if (getById(id) === null) {
+        // Silent existence probe (NOT editor.blocks.getBlockIndex, which warns on
+        // unknown ids) so a miss is a quiet null, matching every other reader.
+        return null;
+      }
+
+      return editor.blocks.getBlockIndex(id) ?? null;
+    };
+
+    const renderFromHTML = (html: string): Promise<void> => editor.blocks.renderFromHTML(html);
+
     const splitBlock = (
       currentBlockId: string,
       currentBlockData: Partial<BlockToolData>,
@@ -1258,7 +1308,10 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       getCurrentBlockIndex,
       getBlockByIndex,
       getBlockByElement,
+      getBlockData,
+      getBlockIndex,
       composeBlockData,
+      renderFromHTML,
       insertOutputData,
       splitBlock,
     };

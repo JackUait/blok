@@ -1186,6 +1186,13 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
     const getBlockData = (
       id: string
     ): { data: BlockToolData; tunes: { [name: string]: BlockTuneData } } | null => {
+      // Silent existence probe via the snapshot getById (NOT editor.blocks.getById,
+      // which logs a `warn` for an unknown id) so a miss is a quiet null, matching
+      // getBlockIndex and the other id-taking readers.
+      if (getById(id) === null) {
+        return null;
+      }
+
       const block = editor.blocks.getById(id);
 
       if (block === null) {

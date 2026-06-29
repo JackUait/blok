@@ -49,7 +49,18 @@ const makeFakeEditor = (rows: Row[]) => {
         const idx = list.findIndex((b) => b.id === id);
         return idx === -1 ? undefined : idx;
       },
-      getById: (id: string) => list.find((b) => b.id === id) ?? null,
+      // Mirror core's blocks.getById, which logs a `warn` for an unknown id.
+      getById: (id: string) => {
+        const found = list.find((b) => b.id === id);
+
+        if (found === undefined) {
+          console.warn(`There is no block with id \`${id}\``);
+
+          return null;
+        }
+
+        return found;
+      },
       insert: vi.fn((type?: string, _data?: unknown, _cfg?: unknown, index?: number) => {
         const id = `new-${list.length}`;
         const row = { id, name: type ?? 'paragraph', parentId: null, preservedData: {}, preservedTunes: {} };
@@ -92,11 +103,17 @@ describe('useBlocks — block-data reader (duplicate is composable)', () => {
     });
   });
 
-  it('getBlockData returns null for an unknown id', () => {
+  it('getBlockData returns null for an unknown id WITHOUT a console warn (silent-probe convention)', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const { editor } = makeFakeEditor([{ id: 'a' }]);
     const { result } = renderHook(() => useBlocks(editor));
 
     expect(result.current.getBlockData('missing')).toBeNull();
+    // Must pre-probe via the silent snapshot getById — never hit core's warning
+    // getById for an id known to be absent, matching the sibling readers.
+    expect(warn).not.toHaveBeenCalled();
+
+    warn.mockRestore();
   });
 
   it('round-trips read -> insert to duplicate a block without the ref', () => {

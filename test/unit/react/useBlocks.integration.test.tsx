@@ -19,6 +19,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useBlocks } from '../../../src/react/useBlocks';
+import type { BlockNode } from '../../../src/react/blocks-snapshot';
 import { ToolNotFoundError } from '../../../src/components/errors/tool-not-found';
 import type { Blok } from '../../../types';
 import { Blocks } from '../../../src/components/blocks';
@@ -368,6 +369,35 @@ const createRealEditorHarness = (
       await Promise.resolve();
 
       return { id: newId, name: newType, parentId };
+    },
+
+    /**
+     * Faithful to core's Blocks.splitBlock: ATOMICALLY (one transact) updates the
+     * current block's data (truncated content) and inserts a fresh block at
+     * `insertIndex` (extracted content). Returns the new BlockAPI-like `{ id }`
+     * and notifies once.
+     */
+    splitBlock: (
+      currentBlockId: string,
+      currentBlockData: unknown,
+      newBlockType: string,
+      newBlockData: unknown,
+      insertIndex: number
+    ): { id: string; name: string; parentId: string | null } => {
+      const current = blocksStore.array.find((b) => b.id === currentBlockId);
+
+      if (current !== undefined) {
+        (current as unknown as { data: unknown }).data = currentBlockData;
+      }
+      insertSeq += 1;
+      const newId = `split-${insertSeq}`;
+      const stub = createBlockStub({ id: newId, name: newBlockType, parentId: null });
+
+      (stub as unknown as { data: unknown }).data = newBlockData;
+      blocksStore.insert(Math.min(Math.max(insertIndex, 0), blocksStore.length), stub as unknown as Block);
+      notify();
+
+      return { id: newId, name: newBlockType, parentId: null };
     },
 
     transact: (fn: () => void): void => fn(),
@@ -1696,6 +1726,38 @@ describe('useBlocks — real BlockHierarchy integration', () => {
     expect(renderCount).toBeGreaterThan(before);
     // update delegates to core's async update — no synchronous transact wrapper.
     expect(transactSpy).not.toHaveBeenCalled();
+  });
+
+  it('splitBlock against the real harness truncates the current block, inserts the new one, and re-renders', () => {
+    const harness = createRealEditorHarness([{ id: 'a' }, { id: 'b' }]);
+
+    workingArea = harness.workingArea;
+
+    let renderCount = 0;
+    const { result } = renderHook(() => {
+      renderCount += 1;
+
+      return useBlocks(harness.editor);
+    });
+
+    const before = renderCount;
+    // Object-property holder defeats control-flow narrowing of an in-closure assign.
+    const captured: { node: BlockNode | null } = { node: null };
+
+    act(() => {
+      captured.node = result.current.splitBlock('a', { text: 'he' }, 'paragraph', { text: 'llo' }, 1);
+    });
+
+    // The new block is created and returned as a live snapshot node...
+    expect(captured.node).not.toBeNull();
+    expect(captured.node?.type).toBe('paragraph');
+    // ...the current block keeps its truncated data, the new block its extracted data...
+    expect(harness.getBlockData('a')?.text).toBe('he');
+    expect(harness.getBlockData(captured.node?.id ?? '')?.text).toBe('llo');
+    // ...the new block lands at the requested flat slot (between 'a' and 'b')...
+    expect(result.current.getBlockByIndex(1)?.id).toBe(captured.node?.id);
+    // ...and the structural mutation re-renders reactive consumers.
+    expect(renderCount).toBeGreaterThan(before);
   });
 
   describe('insertMarkdown — additive markdown → blocks', () => {

@@ -1,4 +1,4 @@
-import type { BlokConfig, BlockToolData, OutputBlockData } from './index';
+import type { BlokConfig, BlockToolData, OutputBlockData, OutputData } from './index';
 import type { Blok, EditorWidth, BlockRenderedPayload, BlocksRenderedPayload } from './index';
 import type { BlockTuneData } from './block-tunes/block-tune-data';
 import type { MarkdownImportConfig } from './markdown';
@@ -461,6 +461,39 @@ export interface UseBlocksApi {
     newBlockData: BlockToolData,
     insertIndex: number
   ): BlockNode | null;
+  /**
+   * Insert a single child block under `parentId` at flat `insertIndex`, atomically
+   * (block creation AND parent assignment in ONE undo step) — delegates to core's
+   * `blocks.insertInsideParent`. This is the atomic nested-child creator: prefer it
+   * over `insert()` + `nest()`, which is TWO undo steps. A dangling `parentId` is a
+   * no-op returning `null` (mirrors {@link insert}); an unknown child tool returns
+   * `null`. `childData` defaults to an empty paragraph. Returns the created
+   * {@link BlockNode}, fresh-snapshot volatile — read it now, don't stash it in a
+   * dep array. Pre-ready: `null`.
+   */
+  insertInsideParent(parentId: string, insertIndex: number, childData?: BlockToolData): BlockNode | null;
+  /**
+   * Replace the WHOLE document with blocks parsed from saved {@link OutputData}
+   * (the `save()` shape) — delegates to core's `blocks.render`. Unlike
+   * {@link insertOutputData}/{@link insertMarkdown} (which are ADDITIVE), this
+   * CLEARS existing content first: a document-LOAD primitive, not an insert. The
+   * HTML counterpart is {@link renderFromHTML}. Async. Pre-ready: resolves
+   * immediately (no-op).
+   */
+  render(data: OutputData): Promise<void>;
+  /**
+   * Remove EVERY block from the document — delegates to core's `blocks.clear`. A
+   * document-reset primitive (pairs with {@link render}). Async. Pre-ready:
+   * resolves immediately (no-op).
+   */
+  clear(): Promise<void>;
+  /**
+   * Whether a Yjs sync (undo/redo) is currently in progress — the React mirror of
+   * core's `blocks.isSyncingFromYjs`. A METHOD (not a property) so it reads the
+   * LIVE flag at call time even though the api handle is memoized. Use it to skip
+   * cleanup that would fight Yjs state during an undo/redo. Pre-ready: `false`.
+   */
+  isSyncingFromYjs(): boolean;
 }
 
 /**

@@ -620,6 +620,41 @@ describe('useBlocks — real BlockHierarchy integration', () => {
     expect(flat).toEqual(['A', 'C', 'C1', 'C2']);
   });
 
+  it('re-nesting a block-with-child into its CURRENT parent is a graceful no-op (nest skip path)', () => {
+    // [P(toggle), X⊂P, X1⊂X] — X is already P's (only, last) child and has its own
+    // child X1. nest('X','P') resolves the destination to the end of P's subtree,
+    // which already IS X's own footprint → relocateSubtree returns 'skipped' (no
+    // physical move). nest must still reparent gracefully (X stays under P, X1
+    // under X) and leave the subtree intact — exercising nest's 'skipped' branch.
+    const harness = createRealEditorHarness([
+      { id: 'P', name: 'toggle' },
+      { id: 'X', parentId: 'P' },
+      { id: 'X1', parentId: 'X' },
+    ]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    act(() => {
+      result.current.nest('X', 'P');
+    });
+
+    expect(result.current.getById('X')?.parentId).toBe('P');
+    expect(result.current.getChildren('X').map((n) => n.id)).toEqual(['X1']);
+
+    const flat: string[] = [];
+
+    for (let i = 0; i < harness.editor.blocks.getBlocksCount(); i++) {
+      const node = harness.editor.blocks.getBlockByIndex(i);
+
+      if (node !== undefined) {
+        flat.push(node.id);
+      }
+    }
+    expect(flat).toEqual(['P', 'X', 'X1']);
+  });
+
   it('unnest of a block with 2 children relocates the WHOLE subtree contiguously', () => {
     // [P, B, B1, B2] — B nested under P, with B1, B2 nested under B. unnest('B')
     // ALWAYS relocates forward (to the end of P's subtree), so it is the broadest
@@ -999,6 +1034,112 @@ describe('useBlocks — real BlockHierarchy integration', () => {
     // Identical id outcome to the skip-path case: id is a root block, k its child.
     expect(result.current.getById('id')?.parentId).toBeNull();
     expect(result.current.getChildren('id').map((n) => n.id)).toEqual(['k']);
+  });
+
+  it('move a subtree AFTER a ref that itself has descendants makes it the ref SIBLING, not its child', () => {
+    // [id(toggle), idc⊂id, X(toggle), Xc⊂X] — move id AFTER X. resolveMoveIndex
+    // clears X's whole subtree, so id lands AFTER Xc at ROOT level → id is X's
+    // SIBLING and must adopt X's parent (null). Core's auto-heal would instead
+    // read the landing-slot neighbour (Xc, whose parent is X) and nest id UNDER X
+    // — position says sibling, parent says child. move() must adopt the ref's
+    // parent so position and parent agree (and so this matches the skip-path heal).
+    const harness = createRealEditorHarness([
+      { id: 'id', name: 'toggle' },
+      { id: 'idc', parentId: 'id' },
+      { id: 'X', name: 'toggle' },
+      { id: 'Xc', parentId: 'X' },
+    ]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    act(() => {
+      result.current.move('id', { after: 'X' });
+    });
+
+    expect(result.current.getById('id')?.parentId).toBeNull();
+    expect(result.current.getChildren('id').map((n) => n.id)).toEqual(['idc']);
+    expect(result.current.getChildren('X').map((n) => n.id)).toEqual(['Xc']);
+
+    const flat: string[] = [];
+
+    for (let i = 0; i < harness.editor.blocks.getBlocksCount(); i++) {
+      const node = harness.editor.blocks.getBlockByIndex(i);
+
+      if (node !== undefined) {
+        flat.push(node.id);
+      }
+    }
+    expect(flat).toEqual(['X', 'Xc', 'id', 'idc']);
+  });
+
+  it('move a subtree BEFORE a ref nested in a container adopts that container (sibling-of-ref)', () => {
+    // [id(toggle), idc⊂id, C(toggle), X⊂C] — move id BEFORE X. id lands at X's
+    // slot INSIDE C → id is X's sibling within C and must adopt C. Core's auto-heal
+    // would read the block before X's slot (C itself, parent null) and leave id at
+    // root — position inside C, parent root. move() must adopt the ref's parent.
+    const harness = createRealEditorHarness([
+      { id: 'id', name: 'toggle' },
+      { id: 'idc', parentId: 'id' },
+      { id: 'C', name: 'toggle' },
+      { id: 'X', parentId: 'C' },
+    ]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    act(() => {
+      result.current.move('id', { before: 'X' });
+    });
+
+    expect(result.current.getById('id')?.parentId).toBe('C');
+    expect(result.current.getChildren('id').map((n) => n.id)).toEqual(['idc']);
+
+    const flat: string[] = [];
+
+    for (let i = 0; i < harness.editor.blocks.getBlocksCount(); i++) {
+      const node = harness.editor.blocks.getBlockByIndex(i);
+
+      if (node !== undefined) {
+        flat.push(node.id);
+      }
+    }
+    expect(flat).toEqual(['C', 'id', 'idc', 'X']);
+  });
+
+  it('move a LEAF after a ref that has descendants makes it the ref SIBLING, not its child', () => {
+    // The same sibling-of-ref rule must hold for the single-block (leaf) path:
+    // [L, X(toggle), Xc⊂X] — move L AFTER X lands L after Xc at root → L is X's
+    // sibling, adopts X's parent (null), NOT X (which the landing-slot auto-heal
+    // would give since the neighbour Xc's parent is X).
+    const harness = createRealEditorHarness([
+      { id: 'L' },
+      { id: 'X', name: 'toggle' },
+      { id: 'Xc', parentId: 'X' },
+    ]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    act(() => {
+      result.current.move('L', { after: 'X' });
+    });
+
+    expect(result.current.getById('L')?.parentId).toBeNull();
+
+    const flat: string[] = [];
+
+    for (let i = 0; i < harness.editor.blocks.getBlocksCount(); i++) {
+      const node = harness.editor.blocks.getBlockByIndex(i);
+
+      if (node !== undefined) {
+        flat.push(node.id);
+      }
+    }
+    expect(flat).toEqual(['X', 'Xc', 'L']);
   });
 
   it('convert against the real harness swaps the type, re-renders, and is NOT wrapped in transact', () => {

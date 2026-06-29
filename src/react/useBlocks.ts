@@ -483,9 +483,13 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
      * land on one index — see the subtree note below). Guards run BEFORE the
      * index is resolved into a final move.
      *
-     * Parent-adoption side effect: `before`/`after` are POSITION targets, so the
-     * moved block ADOPTS the parent of wherever it lands (moving into a
-     * container's children nests it; moving out to a root sibling unnests it).
+     * Parent-adoption side effect: `before`/`after` make the moved block a
+     * SIBLING of the ref — it adopts the REF's parent (moving before/after a
+     * child of a container nests it into that container; moving before/after a
+     * root block unnests it to root). `after` clears the ref's WHOLE subtree, so
+     * the block lands past the ref's descendants, not among them. The adopted
+     * parent is the ref's — NOT the parent of whatever block happens to sit at the
+     * landing slot, which would nest under the ref for `after` a ref-with-children.
      * Use {@link nest}/{@link unnest} to change the parent without choosing a
      * sibling slot. Returns void.
      *
@@ -565,20 +569,25 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
           }
           reassertDescendantParents(subtreeMembers, id);
 
-          // Skip-path heal: relocateSubtree reported 'skipped' because the subtree
-          // already abutted the destination, so NO core move() ran and the
-          // post-move parent auto-heal that move() relies on for the root's
-          // parent-adoption never fired. nest/unnest re-assert the root parent
-          // explicitly; move() must too, or the SAME `move(id, { before: X })`
-          // would adopt X's parent when an unrelated block sits between id and X
-          // (real move runs → auto-heal) but silently keep the old parent when it
-          // doesn't (skip). Apply the adopted parent — the ref's parent, i.e. the
-          // container id becomes a sibling within — to keep the contract
-          // consistent. Idempotent on the 'moved' path (auto-heal already set it),
-          // so only assert on 'skipped'. Can't cycle: ref is neither id nor a
-          // descendant (guarded above), so ref's parent is outside id's subtree.
-          if (outcome === 'skipped') {
-            editor.blocks.setBlockParent(id, getById(ref)?.parentId ?? null);
+          // Adopt the REF's parent (sibling-of-ref) on BOTH the 'moved' and
+          // 'skipped' paths. The position is already sibling-of-ref: resolveMoveIndex
+          // clears the ref's WHOLE subtree for `after` and uses the ref's own slot
+          // for `before`, so id lands as the ref's sibling. The parent must match.
+          // Core's post-move auto-heal does NOT give that — it adopts the parent of
+          // the block at the landing SLOT (pre-removal), which for `after` a
+          // ref-with-descendants is the ref's last descendant (parent = the ref →
+          // nests id UNDER the ref) and for `before` a ref whose flat predecessor
+          // sits in another container is that predecessor's parent. On the 'skipped'
+          // path no move() ran, so no auto-heal fired at all. Assert ref.parentId so
+          // position and parent agree regardless of path. Guarded (mirrors
+          // insertWithinTransaction) so a same-container reorder — the common case,
+          // where the landed parent already matches — fires no redundant reparent.
+          // Can't cycle: ref is neither id nor a descendant (guarded above), so
+          // ref's parent is outside id's subtree.
+          const intendedParent = getById(ref)?.parentId ?? null;
+
+          if ((getById(id)?.parentId ?? null) !== intendedParent) {
+            editor.blocks.setBlockParent(id, intendedParent);
           }
         });
 
@@ -596,7 +605,31 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       const isRelative = !('toIndex' in target);
       const toIndex = isRelative && fromIndex < resolved ? resolved - 1 : resolved;
 
-      editor.blocks.move(toIndex, fromIndex);
+      if (!isRelative) {
+        // Absolute { toIndex }: the caller chose the slot, so let core's auto-heal
+        // adopt that slot's container (the documented absolute-move semantics).
+        editor.blocks.move(toIndex, fromIndex);
+
+        return;
+      }
+
+      // Relative leaf move: same sibling-of-ref rule as the subtree branch — the
+      // moved block adopts the REF's parent, not the landing-slot neighbour's
+      // (which auto-heal would give: the ref's descendant for `after`, or a
+      // cross-container predecessor for `before`). Assert it in the same undo step
+      // as the move, guarded so a same-container reorder fires no redundant
+      // reparent. Can't cycle: ref is guarded to be neither id nor a descendant,
+      // and a leaf has no descendants for ref's parent to fall inside.
+      const ref = 'before' in target ? target.before : target.after;
+
+      transact(() => {
+        editor.blocks.move(toIndex, fromIndex);
+        const intendedParent = getById(ref)?.parentId ?? null;
+
+        if ((getById(id)?.parentId ?? null) !== intendedParent) {
+          editor.blocks.setBlockParent(id, intendedParent);
+        }
+      });
     };
 
     /**

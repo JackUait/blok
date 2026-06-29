@@ -146,6 +146,27 @@ test.describe('Inline equation shortcut', () => {
     expect(savedText).toContain('data-latex="x^2"');
   });
 
+  test('CMD+SHIFT+E opens ONLY the equation menu, not the whole inline toolbar', async ({ page }) => {
+    // Notion parity: triggering a popover-entry inline tool (equation) by its
+    // keyboard shortcut should close the inline toolbar's format-button row and
+    // present just the dedicated equation menu — not the full B/i/link/equation
+    // bar with the input flying out beside it.
+    await createBlokWithEquation(page, [
+      { type: 'paragraph', data: { text: 'x^2' } },
+    ]);
+
+    await selectAllInFirstEditable(page);
+
+    await page.keyboard.press(`${MODIFIER_KEY}+Shift+KeyE`);
+
+    const input = page.getByTestId('inline-equation-input');
+
+    await expect(input).toBeFocused();
+
+    // The format-button row must NOT be rendered — only the equation menu shows.
+    await expect(page.locator('[data-blok-item-name="bold"]')).toHaveCount(0);
+  });
+
   test('CMD+SHIFT+E opens the equation input even with a COLLAPSED caret (no selection)', async ({ page }) => {
     // Notion parity: pressing the shortcut with just a caret (nothing selected)
     // opens the equation input so the user can type a fresh formula at the caret.

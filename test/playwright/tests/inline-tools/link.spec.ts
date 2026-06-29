@@ -444,6 +444,34 @@ test.describe('inline tool link', () => {
     await expect(paragraph.getByRole('link')).toHaveAttribute('href', 'https://shortcut.com');
   });
 
+  test('CMD+K opens ONLY the link menu, not the format-button row', async ({ page }) => {
+    // Notion parity: the link shortcut replaces the inline toolbar with just the
+    // link menu — the B/i/link/… format buttons must not flank a fly-out input.
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Shortcut text',
+        },
+      },
+    ]);
+
+    const paragraph = getParagraphByText(page, 'Shortcut text');
+
+    await selectText(paragraph, 'Shortcut');
+
+    await expect(page.locator(INLINE_TOOLBAR_SELECTOR)).toBeVisible();
+
+    await page.keyboard.press('ControlOrMeta+k');
+
+    const linkInput = page.locator(LINK_INPUT_SELECTOR);
+
+    await expect(linkInput).toBeVisible();
+
+    // The format-button row must NOT be rendered — only the link menu shows.
+    await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="bold"]`)).toHaveCount(0);
+  });
+
   test('should unlink if input is cleared and Enter is pressed', async ({ page }) => {
     await createBlokWithBlocks(page, [
       {

@@ -734,12 +734,6 @@ export const Hero: React.FC = () => {
     };
   }, []);
 
-  const handleScrollToQuickStart = (e: React.MouseEvent<HTMLAnchorElement>): void => {
-    e.preventDefault();
-    const target = document.getElementById('quick-start');
-    target?.scrollIntoView({ behavior: 'auto' });
-  };
-
   return (
     <section className="relative overflow-hidden pt-28 pb-16 sm:pt-32 sm:pb-24">
       {/* Soft brand wash backdrop */}
@@ -762,9 +756,7 @@ export const Hero: React.FC = () => {
           </p>
           <div className="mt-9 hidden flex-col items-center justify-center gap-3 duration-700 animate-in fade-in slide-in-from-bottom-3 fill-mode-both delay-200 sm:flex sm:flex-row lg:justify-start">
             <Button variant="brand" size="lg" asChild>
-              <a href="#quick-start" onClick={handleScrollToQuickStart}>
-                {t('home.hero.ctaGetStarted')}
-              </a>
+              <Link to="/docs">{t('home.hero.ctaGetStarted')}</Link>
             </Button>
             <Button variant="outline" size="lg" asChild>
               <Link to="/demo">

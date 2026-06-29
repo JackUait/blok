@@ -23,7 +23,8 @@ interface BlokModule {
 
 export const EditorWrapper: React.FC<{
   onEditorReady?: (editor: BlokEditor) => void;
-}> = ({ onEditorReady }) => {
+  onChange?: () => void;
+}> = ({ onEditorReady, onChange }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<BlokEditor | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,6 +39,9 @@ export const EditorWrapper: React.FC<{
   // Use a ref to store the latest callback without triggering re-runs
   const onEditorReadyRef = useRef(onEditorReady);
   onEditorReadyRef.current = onEditorReady;
+
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
   // Use a ref to access t inside the one-time effect without adding it as a dependency
   const tRef = useRef(t);
@@ -131,12 +135,10 @@ export const EditorWrapper: React.FC<{
             ],
           },
           onChange: () => {
-            // Optional: Auto-save indicator
-            console.log("Content changed");
+            // Forward edits so hosts can mirror the live save() output.
+            onChangeRef.current?.();
           },
-          onReady: () => {
-            console.log("Blok editor is ready!");
-          },
+          onReady: () => {},
         });
 
         const { editor, isMounted } = editorState;

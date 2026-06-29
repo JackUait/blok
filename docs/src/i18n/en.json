@@ -442,22 +442,6 @@
         }
       }
     },
-    "quickStart": {
-      "eyebrow": "Get Started",
-      "title": "Up and running in minutes",
-      "files": {
-        "install": "~/my-app — zsh",
-        "configure": "editor.ts",
-        "save": "save.ts"
-      },
-      "autoHint": "Auto-playing — click a step to steer",
-      "live": {
-        "badge": "Live",
-        "title": "And then it just runs",
-        "subtitle": "No screenshot — that's the real editor below. Type, hit / for the block menu, drag to reorder.",
-        "ready": "Editor ready"
-      }
-    },
     "migrationCard": {
       "badge": "Zero downtime migration",
       "title": "Migrate from EditorJS",

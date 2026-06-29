@@ -58,20 +58,6 @@ describe('HomePage', () => {
     expect(features).toBeInTheDocument();
   });
 
-  it('should render the QuickStart section', () => {
-    render(
-      <MemoryRouter>
-        <I18nProvider>
-          <HomePage />
-        </I18nProvider>
-      </MemoryRouter>
-    );
-
-    const main = screen.getByRole('main');
-    const quickStart = within(main).getByText(/up and running in minutes/i);
-    expect(quickStart).toBeInTheDocument();
-  });
-
   it('should render the MigrationCard section', () => {
     render(
       <MemoryRouter>

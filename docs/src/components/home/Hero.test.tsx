@@ -58,7 +58,7 @@ describe('Hero', () => {
 
     const getStartedLink = screen.getByRole('link', { name: 'Get Started' });
     expect(getStartedLink).toBeInTheDocument();
-    expect(getStartedLink).toHaveAttribute('href', '#quick-start');
+    expect(getStartedLink).toHaveAttribute('href', '/docs');
   });
 
   it('should render the Try it out button with correct link', () => {

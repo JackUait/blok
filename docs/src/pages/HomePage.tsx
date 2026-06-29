@@ -6,7 +6,6 @@ import { Footer } from '../components/layout/Footer';
 import { Hero } from '../components/home/Hero';
 import { CategoryBar, HOME_CATEGORIES, type HomeView } from '../components/home/CategoryBar';
 import { Features } from '../components/home/Features';
-import { QuickStart } from '../components/home/QuickStart';
 import { MigrationCard } from '../components/home/MigrationCard';
 import { TrustedBy } from '../components/home/TrustedBy';
 import { ApiContent } from './ApiPage';
@@ -98,7 +97,6 @@ export const HomePage: React.FC = () => {
           <>
             <Features />
             <TrustedBy />
-            <QuickStart />
             <MigrationCard />
           </>
         );

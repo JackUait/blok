@@ -51,7 +51,7 @@ export const Footer: React.FC = () => {
               <h4 className="text-[15px] font-semibold text-foreground">
                 {t("footer.docColumnTitle")}
               </h4>
-              <Link to="/#quick-start" className={linkClass}>
+              <Link to="/docs#quick-start" className={linkClass}>
                 {t("footer.quickStart")}
               </Link>
               <Link to="/docs" className={linkClass}>

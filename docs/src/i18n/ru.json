@@ -479,12 +479,11 @@
       "colCapability": "Возможность",
       "rowOutput": "Формат вывода",
       "rowEverythingBlock": "Всё — это блок",
-      "rowBuiltIn": "Таблицы, встраивания и медиа",
-      "rowSlash": "Меню slash-команд",
       "rowTypeScript": "TypeScript в первую очередь",
       "rowI18n": "i18n и RTL",
-      "rowUndo": "Бесконфликтные отмена / повтор",
-      "rowLicense": "Лицензия",
+      "rowMarkdown": "Поддержка Markdown",
+      "rowBindings": "Адаптеры фреймворков",
+      "rowA11y": "Доступность",
       "disclaimer": "Сравнение отражает поведение каждой библиотеки из коробки; все они расширяются через плагины."
     },
     "trusted": {

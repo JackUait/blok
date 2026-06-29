@@ -43,9 +43,24 @@ describe('WhyBlok', () => {
     renderTable();
     const table = screen.getByRole('table');
     expect(within(table).getByText(/everything is a block/i)).toBeInTheDocument();
-    expect(within(table).getByText(/slash/i)).toBeInTheDocument();
     // "Typed JSON" is Blok's output-format value.
     expect(within(table).getByText(/typed json/i)).toBeInTheDocument();
+  });
+
+  it('does not mislabel Editor.js TypeScript support as partial', () => {
+    // Editor.js core is authored in TypeScript, so the row shows a check, not "Partial".
+    renderTable();
+    const tsRow = screen.getByText(/typescript-first/i).closest('tr');
+    expect(tsRow).not.toBeNull();
+    expect(within(tsRow as HTMLElement).queryByText(/partial/i)).not.toBeInTheDocument();
+  });
+
+  it('includes the newly added comparison rows', () => {
+    renderTable();
+    const table = screen.getByRole('table');
+    expect(within(table).getByText(/framework adapters/i)).toBeInTheDocument();
+    expect(within(table).getByText(/markdown/i)).toBeInTheDocument();
+    expect(within(table).getByText(/accessibility/i)).toBeInTheDocument();
   });
 
   it('renders Russian copy when locale is ru', () => {

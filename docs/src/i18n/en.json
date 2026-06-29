@@ -479,12 +479,11 @@
       "colCapability": "Capability",
       "rowOutput": "Output format",
       "rowEverythingBlock": "Everything is a block",
-      "rowBuiltIn": "Tables, embeds & media",
-      "rowSlash": "Slash command menu",
       "rowTypeScript": "TypeScript-first",
       "rowI18n": "i18n & RTL",
-      "rowUndo": "Conflict-free undo / redo",
-      "rowLicense": "License",
+      "rowMarkdown": "Markdown support",
+      "rowBindings": "Framework adapters",
+      "rowA11y": "Accessibility",
       "disclaimer": "Comparison reflects each library's out-of-the-box defaults; all are extensible via plugins."
     },
     "trusted": {

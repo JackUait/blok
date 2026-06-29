@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 export interface SidebarLink {
@@ -17,9 +18,17 @@ interface SidebarProps {
   sections: SidebarSection[];
   activeSection: string;
   variant: SidebarVariant;
+  linkMode?: 'anchor' | 'route';
+  buildHref?: (id: string) => string;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ sections, activeSection, variant }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  sections,
+  activeSection,
+  variant,
+  linkMode = 'anchor',
+  buildHref,
+}) => {
   const navRef = useRef<HTMLElement>(null);
   const sidebarRef = useRef<HTMLElement>(null);
   const previousActiveSectionRef = useRef<string | null>(null);
@@ -94,6 +103,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ sections, activeSection, varia
     scrollActiveIntoView();
   }, [scrollActiveIntoView]);
 
+  const linkClass = (id: string) =>
+    cn(
+      'block rounded-lg px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground',
+      activeSection === id && 'active bg-secondary font-semibold text-foreground',
+    );
+
   return (
     <aside
       ref={sidebarRef}
@@ -114,20 +129,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ sections, activeSection, varia
             <h4 className="mb-1 px-3 text-xs font-bold uppercase tracking-wide text-muted-foreground">
               {section.title}
             </h4>
-            {section.links.map((link) => (
-              <a
-                key={link.id}
-                href={`#${link.id}`}
-                className={cn(
-                  'block rounded-lg px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground',
-                  activeSection === link.id &&
-                    'active bg-secondary font-semibold text-foreground'
-                )}
-                data-blok-testid={`${variant}-sidebar-link-${link.id}`}
-              >
-                {link.label}
-              </a>
-            ))}
+            {section.links.map((link) =>
+              linkMode === 'route' && buildHref ? (
+                <Link
+                  key={link.id}
+                  to={buildHref(link.id)}
+                  className={linkClass(link.id)}
+                  data-blok-testid={`${variant}-sidebar-link-${link.id}`}
+                >
+                  {link.label}
+                </Link>
+              ) : (
+                <a
+                  key={link.id}
+                  href={`#${link.id}`}
+                  className={linkClass(link.id)}
+                  data-blok-testid={`${variant}-sidebar-link-${link.id}`}
+                >
+                  {link.label}
+                </a>
+              )
+            )}
           </div>
         ))}
       </nav>

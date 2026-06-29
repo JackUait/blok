@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { Sidebar, type SidebarSection } from './Sidebar';
 import { I18nProvider } from '../../contexts/I18nContext';
 
@@ -107,6 +108,26 @@ describe('Sidebar', () => {
 
       const coreLink = screen.getByTestId('api-sidebar-link-core');
       expect(coreLink).toHaveAttribute('href', '#core');
+    });
+  });
+
+  describe('route link mode', () => {
+    it('route mode renders router links to module pages', () => {
+      render(
+        <MemoryRouter>
+          <Sidebar
+            sections={MOCK_SECTIONS}
+            activeSection="caret-api"
+            variant="api"
+            linkMode="route"
+            buildHref={(id) => `/docs/${id}`}
+          />
+        </MemoryRouter>,
+        { wrapper: I18nWrapper },
+      );
+      const link = screen.getByTestId('api-sidebar-link-caret-api');
+      expect(link).toHaveAttribute('href', '/docs/caret-api');
+      expect(link).toHaveClass('active');
     });
   });
 

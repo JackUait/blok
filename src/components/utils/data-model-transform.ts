@@ -1129,6 +1129,29 @@ const stripHierarchyFields = (block: OutputBlockData): OutputBlockData => {
 };
 
 /**
+ * Decide how to emit a non-list block during legacy collapse.
+ *
+ * A non-list block nested under a list cannot be folded into the list's legacy
+ * items[] (see processRootListItem), so keep it flat WITH its parent ref — the
+ * parent list block carries a matching content[] ref, so the nesting survives.
+ * Every other non-list block becomes a legacy root block (no parent/content).
+ */
+const collapseNonListBlock = (
+  block: OutputBlockData,
+  blockMap: Map<BlockId, OutputBlockData>
+): OutputBlockData => {
+  const parentBlock = block.parent !== undefined ? blockMap.get(block.parent) : undefined;
+
+  if (parentBlock !== undefined && parentBlock.type === 'list') {
+    const { content: _content, ...keptWithParent } = block;
+
+    return keptWithParent;
+  }
+
+  return stripHierarchyFields(block);
+};
+
+/**
  * Collect child items from content IDs
  */
 const collectChildItems = (
@@ -1212,6 +1235,19 @@ const processRootListItem = (
   const style = isObjectWithStyle(data) ? data.style : 'unordered';
   const start = isObjectWithStart(data) ? data.start : undefined;
 
+  // A list block may have NON-list structural children (e.g. a quote/paragraph
+  // dragged into the list). Legacy `items[]` can only represent list sub-items,
+  // so these children cannot be folded into the list — collectChildItems above
+  // deliberately skips them. Preserve the hierarchy by keeping a `content[]` ref
+  // to each non-list child (the children themselves stay flat with their
+  // `parent` ref, see the isNonListItem branch in collapseToLegacy). Without
+  // this, the child's nesting is silently dropped on save.
+  const nonListContent = (block.content ?? []).filter((childId) => {
+    const child = blockMap.get(childId);
+
+    return child !== undefined && child.type !== 'list';
+  });
+
   const listBlock: OutputBlockData = {
     id: block.id,
     type: 'list',
@@ -1221,6 +1257,7 @@ const processRootListItem = (
       ...(style === 'ordered' && start !== undefined && start !== 1 ? { start } : {}),
     } as LegacyListData,
     ...(block.tunes !== undefined ? { tunes: block.tunes } : {}),
+    ...(nonListContent.length > 0 ? { content: nonListContent } : {}),
   };
 
   return listBlock;
@@ -1581,7 +1618,7 @@ export const collapseToLegacy = (blocks: OutputBlockData[]): OutputBlockData[] =
     }
 
     if (isNonListItem) {
-      result.push(stripHierarchyFields(block));
+      result.push(collapseNonListBlock(block, blockMap));
       markBlockAsProcessed(block.id, processedIds);
     }
   }

@@ -6,7 +6,6 @@ import {
   useInView,
   useMotionValue,
   useReducedMotion,
-  useSpring,
   useTransform,
   useVelocity,
   type MotionValue,
@@ -15,54 +14,30 @@ import { Mail, Send } from "lucide-react";
 import { SectionReveal } from "../common/SectionReveal";
 import { useI18n } from "../../contexts/I18nContext";
 
-// A subtle 3D lean toward the cursor — the same tilt the Features bento tiles
-// use, minus the pink glow/border (those are suppressed here via
-// `.bento-tile--no-glow`). On touch there is no cursor, so a finger press lights
-// the card's hover lift (`.is-touch-active`, read by the shared `.bento-tile`
-// box-shadow) and lifting/cancelling settles it. A finger never 3D-tilts (a card
-// rocking under your thumb reads as a glitch). The cards aren't buttons, so
-// there's no click to guard — the inner links stay live.
+// These cards stay flat — no 3D tilt or pink glow (the latter suppressed via
+// `.bento-tile--no-glow`). The only interaction is the shared shadow lift:
+// desktop gets it from CSS `:hover` + the framer `whileHover` rise, while touch
+// has no hover, so a finger press toggles `.is-touch-active` (read by the
+// `.bento-tile` box-shadow) and lifting/cancelling settles it. The cards aren't
+// buttons, so there's no click to guard — the inner links stay live.
 const hoverSpring = { type: "spring", stiffness: 380, damping: 20 } as const;
-const TILT = 5;
 
-const useTilt = () => {
-  const reduce = useReducedMotion();
-  const rotateX = useSpring(0, { stiffness: 170, damping: 18, mass: 0.4 });
-  const rotateY = useSpring(0, { stiffness: 170, damping: 18, mass: 0.4 });
-
-  if (reduce) {
-    return { style: undefined, handlers: {} as Record<string, never> };
-  }
-
-  return {
-    style: { rotateX, rotateY, transformPerspective: 1000 },
-    handlers: {
-      onPointerMove: (e: React.PointerEvent<HTMLElement>) => {
-        if (e.pointerType !== "mouse") return;
-        const el = e.currentTarget;
-        const rect = el.getBoundingClientRect();
-        rotateX.set((0.5 - (e.clientY - rect.top) / rect.height) * TILT * 2);
-        rotateY.set(((e.clientX - rect.left) / rect.width - 0.5) * TILT * 2);
-      },
-      onPointerDown: (e: React.PointerEvent<HTMLElement>) => {
-        if (e.pointerType !== "touch") return;
-        e.currentTarget.classList.add("is-touch-active");
-      },
-      onPointerUp: (e: React.PointerEvent<HTMLElement>) => {
-        if (e.pointerType !== "touch") return;
-        e.currentTarget.classList.remove("is-touch-active");
-      },
-      onPointerCancel: (e: React.PointerEvent<HTMLElement>) => {
-        e.currentTarget.classList.remove("is-touch-active");
-      },
-      onPointerLeave: (e: React.PointerEvent<HTMLElement>) => {
-        rotateX.set(0);
-        rotateY.set(0);
-        e.currentTarget.classList.remove("is-touch-active");
-      },
-    },
-  };
-};
+const useTouchLift = () => ({
+  onPointerDown: (e: React.PointerEvent<HTMLElement>) => {
+    if (e.pointerType !== "touch") return;
+    e.currentTarget.classList.add("is-touch-active");
+  },
+  onPointerUp: (e: React.PointerEvent<HTMLElement>) => {
+    if (e.pointerType !== "touch") return;
+    e.currentTarget.classList.remove("is-touch-active");
+  },
+  onPointerCancel: (e: React.PointerEvent<HTMLElement>) => {
+    e.currentTarget.classList.remove("is-touch-active");
+  },
+  onPointerLeave: (e: React.PointerEvent<HTMLElement>) => {
+    e.currentTarget.classList.remove("is-touch-active");
+  },
+});
 
 /**
  * The official Dodo Brands lockup — the colourful pinwheel mark keeps its brand
@@ -287,10 +262,10 @@ export const TrustedBy: React.FC = () => {
   const claim = hasKicker ? sentences.slice(0, -1).join(" ").trim() : summary;
   const kicker = hasKicker ? sentences[sentences.length - 1].trim() : "";
 
-  // One tilt instance per bento card, so each leans toward the cursor and lights
-  // its border independently — exactly like the Features tiles above.
-  const storyTilt = useTilt();
-  const sideTilt = useTilt();
+  // One touch-lift handler set per card so a finger press lifts each tile
+  // independently (desktop hover is handled in CSS).
+  const storyLift = useTouchLift();
+  const sideLift = useTouchLift();
 
   const stats: Stat[] = [
     {
@@ -326,8 +301,7 @@ export const TrustedBy: React.FC = () => {
           <SectionReveal delay={0.08} className="flex">
             <motion.div
               className="bento-tile bento-tile--no-glow group relative flex w-full overflow-hidden rounded-3xl border border-border/60 bg-card"
-              style={storyTilt.style}
-              {...storyTilt.handlers}
+              {...storyLift}
               whileHover={{ y: -4 }}
               transition={hoverSpring}
               data-blok-testid="trusted-featured"
@@ -378,8 +352,7 @@ export const TrustedBy: React.FC = () => {
           <SectionReveal delay={0.12} className="flex">
             <motion.div
               className="bento-tile bento-tile--no-glow group relative flex w-full overflow-hidden rounded-3xl border border-border/60 bg-card"
-              style={sideTilt.style}
-              {...sideTilt.handlers}
+              {...sideLift}
               whileHover={{ y: -4 }}
               transition={hoverSpring}
             >

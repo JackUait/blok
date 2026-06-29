@@ -33,12 +33,26 @@ const getBlockDepth = (block: { data: unknown } | undefined): number | undefined
 };
 
 /**
- * Helper function to read the core flat list-nesting `indent` from saved output.
- * @param block - Output block data
- * @returns The indent level, or undefined when the block is at root.
+ * Asserts a saved block is structurally nested one level under a list block.
+ *
+ * Nesting moved from the removed flat `indent` field to the structural
+ * parentId/contentIds model: the child carries a `parent` id, and the parent
+ * (a list block) lists the child in its `content`. This mirrors the canonical
+ * toggle-nesting assertions (`para.parent === toggle.id`,
+ * `toggle.content.toContain(para.id)`).
+ * @param savedData - Full saved output.
+ * @param block - The saved block expected to be nested under a list.
  */
-const getBlockIndent = (block: { indent?: number } | undefined): number | undefined => {
-  return block?.indent;
+const expectNestedUnderList = (
+  savedData: OutputData | undefined,
+  block: OutputData['blocks'][number] | undefined
+): void => {
+  expect(block?.parent).toBeTruthy();
+
+  const parent = savedData?.blocks.find(candidate => candidate.id === block?.parent);
+
+  expect(parent?.type).toBe('list');
+  expect(parent?.content).toContain(block?.id);
 };
 
 /**
@@ -1672,21 +1686,21 @@ test.describe('drag and drop', () => {
       expect(getBlockText(savedData?.blocks[1])).toBe('Second step');
       expect(getBlockText(savedData?.blocks[2])).toBe('Section');
       expect(getBlockText(savedData?.blocks[3])).toBe('Third step');
-      // Nested → indent 1 persisted on the header.
-      expect(getBlockIndent(savedData?.blocks[2])).toBe(1);
+      // Nested → the header is a structural child of the depth-0 list head.
+      expectNestedUnderList(savedData, savedData?.blocks[2]);
 
-      // The holder is visually indented (data attribute set to level 1).
+      // The holder is visually indented (data-blok-depth set to level 1).
       const droppedHolder = page.getByTestId('block-wrapper').filter({ hasText: 'Section' });
 
-      await expect(droppedHolder).toHaveAttribute('data-blok-indent', '1');
+      await expect(droppedHolder).toHaveAttribute('data-blok-depth', '1');
     });
 
     /**
      * Drops a non-list block into a clearly-nested slot (top edge of the nested
      * item, i.e. between the depth-0 head and the depth-1 item) and asserts it
-     * nests to depth 1: indented holder, data-blok-indent, and a persisted
-     * `indent` in saved output. Runs for every block type × list style so ANY
-     * block nests inside ANY list.
+     * nests to depth 1: indented holder (data-blok-depth=1) and a structural
+     * parent/content link in saved output. Runs for every block type × list
+     * style so ANY block nests inside ANY list.
      */
     const nestsIntoList = (
       label: string,
@@ -1728,13 +1742,13 @@ test.describe('drag and drop', () => {
         expect(savedData?.blocks[1].type).toBe(sourceType);
         expect(getBlockText(savedData?.blocks[1])).toBe(sourceText);
         expect(savedData?.blocks[2].type).toBe('list');
-        // The dropped block nested to depth 1 and persists its indent.
-        expect(getBlockIndent(savedData?.blocks[1])).toBe(1);
+        // The dropped block nested to depth 1: a structural child of the list head.
+        expectNestedUnderList(savedData, savedData?.blocks[1]);
 
-        // The holder is visually indented (margin + data attribute).
+        // The holder is visually indented (margin + data-blok-depth attribute).
         const droppedHolder = page.getByTestId('block-wrapper').filter({ hasText: sourceText });
 
-        await expect(droppedHolder).toHaveAttribute('data-blok-indent', '1');
+        await expect(droppedHolder).toHaveAttribute('data-blok-depth', '1');
       });
     };
 
@@ -1742,7 +1756,7 @@ test.describe('drag and drop', () => {
     nestsIntoList('paragraph', 'paragraph', { text: 'Movable paragraph' }, 'Movable paragraph', 'ordered');
     nestsIntoList('quote', 'quote', { text: 'Movable quote', caption: '' }, 'Movable quote', 'checklist');
 
-    test('a nested block persists its indent across a save/reload round-trip', async ({ page }) => {
+    test('a nested block persists its parent link across a save/reload round-trip', async ({ page }) => {
       const blocks: OutputData['blocks'] = [
         { id: 'l1', type: 'list', data: { text: 'Head', style: 'unordered' } },
         { id: 'l2', type: 'list', data: { text: 'Nested', style: 'unordered', depth: 1 } },
@@ -1762,18 +1776,18 @@ test.describe('drag and drop', () => {
 
       const savedData = await page.evaluate(() => window.blokInstance?.save());
 
-      expect(getBlockIndent(savedData?.blocks?.find(b => getBlockText(b) === 'Reloadable'))).toBe(1);
+      expectNestedUnderList(savedData, savedData?.blocks?.find(b => getBlockText(b) === 'Reloadable'));
 
-      // Re-create the editor from the saved output and confirm the indent survives.
+      // Re-create the editor from the saved output and confirm the nesting survives.
       await createBlok(page, { data: savedData });
 
       const reloadedHolder = page.getByTestId('block-wrapper').filter({ hasText: 'Reloadable' });
 
-      await expect(reloadedHolder).toHaveAttribute('data-blok-indent', '1');
+      await expect(reloadedHolder).toHaveAttribute('data-blok-depth', '1');
 
       const reSaved = await page.evaluate(() => window.blokInstance?.save());
 
-      expect(getBlockIndent(reSaved?.blocks?.find(b => getBlockText(b) === 'Reloadable'))).toBe(1);
+      expectNestedUnderList(reSaved, reSaved?.blocks?.find(b => getBlockText(b) === 'Reloadable'));
     });
   });
 

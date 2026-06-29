@@ -1077,9 +1077,17 @@ export default defineConfig(
     ignores: [
       'node_modules/**',
       '.worktrees/**',
+      // Agent worktrees are full repo copies; never lint into them (they also
+      // carry playwright-report artifacts that crash/OOM the tailwind plugin).
+      '.claude/**',
       'eslint.config.mjs',
       '**/*.d.ts',
       'src/components/tools/paragraph/**',
+      // Angular sources are excluded from tsconfig.json (they clash with the root
+      // React-JSX program) and are type-checked separately via `yarn lint:angular`
+      // (ngc). eslint's typed parser can't resolve them, so keep them out here too.
+      'src/angular/**',
+      'test/unit/angular/**',
       'dist',
       'public/assets/**',
       '**/public/assets/**',

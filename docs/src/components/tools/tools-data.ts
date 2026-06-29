@@ -1221,6 +1221,35 @@ const editor = new Blok({
   },
 });`,
   },
+  {
+    id: 'equation',
+    exportName: 'Equation',
+    type: 'inline',
+    badge: 'Inline Tool',
+    title: 'Equation',
+    description:
+      'Renders inline math (LaTeX) with KaTeX. Activated with Cmd/Ctrl+Shift+E — wraps the selected text, or a formula typed into the popover input, in a `<span data-latex="...">`. The LaTeX source is kept in the `data-latex` attribute so the formula round-trips through save/load, while the rendered KaTeX markup is regenerated on load.',
+    importExample: `import { Equation } from '@jackuait/blok/tools';`,
+    configOptions: [],
+    saveDataShape: `// Stored as HTML inside the block's text field.
+// The LaTeX source lives in the data-latex attribute:
+// '<span data-latex="E = mc^2"></span>'`,
+    saveDataExample: `{
+  "type": "paragraph",
+  "data": {
+    "text": "Einstein wrote <span data-latex=\\"E = mc^2\\"></span>"
+  }
+}`,
+    usageExample: `import { Blok } from '@jackuait/blok';
+import { Equation } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    equation: Equation,
+  },
+});`,
+  },
 ];
 
 // Derived lookup sets used by the documentation coverage unit test.

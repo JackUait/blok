@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
-import { MODIFIER_KEY } from '../../../../src/components/constants';
+import { MODIFIER_KEY, selectionChangeDebounceTimeout } from '../../../../src/components/constants';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 
 const HOLDER_ID = 'blok';
@@ -215,10 +215,20 @@ test.describe('Inline equation shortcut', () => {
 
     await expect(input).toBeFocused();
 
-    // Wait well past the 180ms selectionchange debounce, then confirm the menu
-    // is still there and usable.
-    await page.waitForTimeout(500);
+    // Focusing the input collapsed the document selection, which (re)starts the
+    // debounced selectionchange handler that used to tear the menu down. Fire
+    // that event explicitly and wait until its debounced handler has actually
+    // run: a timer queued right after it shares the same delay, so FIFO timer
+    // ordering guarantees this resolves only once the debounce window elapsed.
+    await page.evaluate((debounceMs) => {
+      document.dispatchEvent(new Event('selectionchange'));
 
+      return new Promise<void>((resolve) => {
+        setTimeout(resolve, debounceMs);
+      });
+    }, selectionChangeDebounceTimeout);
+
+    // The menu must still be open and usable after the debounce settled.
     await expect(input).toBeVisible();
     await expect(input).toBeFocused();
   });

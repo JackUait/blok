@@ -250,7 +250,15 @@ test.describe('tab keydown', () => {
     await expect(secondInput).toBeFocused();
   });
 
-  test('should highlight next block when it is contentless (has no inputs)', async ({ page }) => {
+  test('Tab is a no-op when there is no preceding sibling to indent under', async ({ page }) => {
+    /**
+     * Tab now performs Notion-style structural indentation: it nests the current
+     * block under its preceding sibling. The first block of the document has no
+     * preceding sibling, so `indentCurrentBlock` returns false
+     * (keyboardNavigation.ts: getPrecedingSibling === null → return false) and
+     * `handleTab` is a strict no-op — it does NOT relocate the caret to, or
+     * highlight, the contentless block below it (the removed legacy behaviour).
+     */
     await createBlokWithContentlessTool(page);
 
     const firstParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'second paragraph' });
@@ -258,22 +266,22 @@ test.describe('tab keydown', () => {
     await firstParagraph.click();
     await firstParagraph.press('Tab');
 
-    await page.waitForFunction(
-      ({ selector }) => {
-        const element = document.querySelector(selector);
-
-        return element?.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-selected') === 'true';
-      },
-      { selector: CONTENTLESS_TOOL_SELECTOR }
-    );
-
-    const contentlessTool = page.locator(CONTENTLESS_TOOL_SELECTOR);
-
-    const isSelected = await contentlessTool.evaluate((element) => {
+    // No-op contract #1: the contentless block must NOT be selected/highlighted.
+    const contentlessSelected = await page.locator(CONTENTLESS_TOOL_SELECTOR).evaluate((element) => {
       return element.closest('[data-blok-element]')?.getAttribute('data-blok-selected') === 'true';
     });
 
-    expect(isSelected).toBeTruthy();
+    expect(contentlessSelected).toBe(false);
+
+    // No-op contract #2: structure is untouched — no block was indented/nested
+    // and the block order/count is unchanged.
+    const savedTypes = await page.evaluate(async () => {
+      const output = await window.blokInstance?.save();
+
+      return output?.blocks.map((block) => block.type) ?? [];
+    });
+
+    expect(savedTypes).toEqual(['paragraph', 'contentlessTool', 'paragraph']);
   });
 
   test('should focus input outside blok when Tab pressed in last block', async ({ page }) => {
@@ -331,7 +339,15 @@ test.describe('shift+Tab keydown', () => {
     await expect(firstInput).toBeFocused();
   });
 
-  test('should highlight previous block when it is contentless (has no inputs)', async ({ page }) => {
+  test('Shift+Tab is a no-op when the block is already at the root level', async ({ page }) => {
+    /**
+     * Shift+Tab now performs Notion-style structural outdent: it lifts the current
+     * block out of its parent. A root block has `parentId === null`, so
+     * `outdentCurrentBlock` returns false (keyboardNavigation.ts:
+     * currentBlock.parentId === null → return false) and `handleTab` is a strict
+     * no-op — it does NOT relocate the caret to, or highlight, the contentless
+     * block above it (the removed legacy behaviour).
+     */
     await createBlokWithContentlessTool(page);
 
     const lastParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'third paragraph' });
@@ -339,21 +355,22 @@ test.describe('shift+Tab keydown', () => {
     await lastParagraph.click();
     await lastParagraph.press('Shift+Tab');
 
-    await page.waitForFunction(
-      ({ selector }) => {
-        const element = document.querySelector(selector);
-
-        return element?.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-selected') === 'true';
-      },
-      { selector: CONTENTLESS_TOOL_SELECTOR }
-    );
-
-    const contentlessTool = page.locator(CONTENTLESS_TOOL_SELECTOR);
-    const isSelected = await contentlessTool.evaluate((element) => {
+    // No-op contract #1: the contentless block must NOT be selected/highlighted.
+    const contentlessSelected = await page.locator(CONTENTLESS_TOOL_SELECTOR).evaluate((element) => {
       return element.closest('[data-blok-element]')?.getAttribute('data-blok-selected') === 'true';
     });
 
-    expect(isSelected).toBeTruthy();
+    expect(contentlessSelected).toBe(false);
+
+    // No-op contract #2: structure is untouched — no block was outdented and the
+    // block order/count is unchanged.
+    const savedTypes = await page.evaluate(async () => {
+      const output = await window.blokInstance?.save();
+
+      return output?.blocks.map((block) => block.type) ?? [];
+    });
+
+    expect(savedTypes).toEqual(['paragraph', 'contentlessTool', 'paragraph']);
   });
 
   test('should focus input outside blok when Shift+Tab pressed in first block', async ({ page }) => {

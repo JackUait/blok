@@ -339,6 +339,9 @@ test.describe('modules/selection', () => {
     const firstParagraph = getParagraphByIndex(page, 0);
 
     await firstParagraph.click();
+    // Three-stage Cmd+A escalation on a non-empty block with a collapsed caret:
+    // text -> this block -> all blocks.
+    await page.keyboard.press(SELECT_ALL_SHORTCUT);
     await page.keyboard.press(SELECT_ALL_SHORTCUT);
     await page.keyboard.press(SELECT_ALL_SHORTCUT);
 
@@ -1206,7 +1209,9 @@ test.describe('modules/selection', () => {
       // Click first to focus the editor
       await getParagraphByIndex(page, 0).click();
 
-      // Select all blocks (needs double press for block selection)
+      // Three-stage Cmd+A escalation on a non-empty block with a collapsed caret:
+      // text -> this block -> all blocks.
+      await page.keyboard.press(SELECT_ALL_SHORTCUT);
       await page.keyboard.press(SELECT_ALL_SHORTCUT);
       await page.keyboard.press(SELECT_ALL_SHORTCUT);
 

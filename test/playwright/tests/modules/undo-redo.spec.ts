@@ -2646,8 +2646,10 @@ test.describe('yjs undo/redo', () => {
 
       const firstParagraph = getParagraphByIndex(page, 0);
 
-      // Focus on first block and select all blocks with Cmd/Ctrl+A twice
+      // Focus on first block and select all blocks. Three-stage Cmd+A escalation
+      // on a non-empty block with a collapsed caret: text -> this block -> all blocks.
       await firstParagraph.click();
+      await page.keyboard.press(SELECT_ALL_SHORTCUT);
       await page.keyboard.press(SELECT_ALL_SHORTCUT);
       await page.keyboard.press(SELECT_ALL_SHORTCUT);
 
@@ -4352,9 +4354,11 @@ test.describe('yjs undo/redo', () => {
       // Verify we have 3 list items
       await expect(page.locator(LIST_SELECTOR)).toHaveCount(3);
 
-      // Select all list items using Cmd/Ctrl+A twice (first selects text, second selects all blocks)
+      // Select all list items. Three-stage Cmd+A escalation on a non-empty block
+      // with a collapsed caret: text -> this block -> all blocks.
       const firstItem = getListBlockByIndex(page, 0).locator('[contenteditable="true"]');
       await firstItem.click();
+      await page.keyboard.press('Meta+a');
       await page.keyboard.press('Meta+a');
       await page.keyboard.press('Meta+a');
       await waitForDelay(page, 100);

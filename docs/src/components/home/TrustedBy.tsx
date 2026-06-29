@@ -358,13 +358,13 @@ export const TrustedBy: React.FC = () => {
             >
               <div className="relative z-10 flex w-full flex-col">
                 <ul
-                  className="grid grid-cols-2 divide-x divide-border/60"
+                  className="grid h-36 grid-cols-2 divide-x divide-border/60"
                   data-blok-testid="trusted-stats"
                 >
                   {stats.map((stat) => (
                     <li
                       key={stat.label}
-                      className="flex flex-col gap-1.5 px-6 pb-6 pt-10 sm:px-7 sm:pb-7 sm:pt-11"
+                      className="flex flex-col justify-center gap-1.5 px-6 sm:px-7"
                     >
                       <span className="font-display text-[34px] font-extrabold leading-none tracking-tight text-foreground sm:text-[40px]">
                         <CountUp value={stat.value} />
@@ -377,7 +377,7 @@ export const TrustedBy: React.FC = () => {
                 <div className="h-px w-full bg-border/60" />
 
                 <div
-                  className="flex flex-1 flex-col px-6 pb-8 pt-7 sm:px-7 sm:pb-10 sm:pt-8"
+                  className="flex flex-1 flex-col px-6 pb-9 pt-7 sm:px-7 sm:pb-[42px] sm:pt-8"
                   data-blok-testid="trusted-contact"
                 >
                   <div className="flex flex-col gap-2">

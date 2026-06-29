@@ -83,6 +83,26 @@ test.describe('list keyboard shortcuts', () => {
     await expect.poll(() => layout(page)).toEqual(['a/root', 'b/root']);
   });
 
+  test('Tab visually indents the nested list item (its list row gains left margin)', async ({ page }) => {
+    await boot(page, [li('a'), li('b')]);
+
+    const marginOf = (text: string): Promise<number> =>
+      page.getByText(text, { exact: true }).evaluate((el) => {
+        const wrapper = el.closest('[data-blok-testid="block-wrapper"]');
+        const row = wrapper?.querySelector('[role="listitem"]');
+
+        return row ? parseFloat(getComputedStyle(row).marginLeft) || 0 : -1;
+      });
+
+    expect(await marginOf('b')).toBe(0);
+
+    await page.getByText('b', { exact: true }).click();
+    await page.keyboard.press('Tab');
+
+    // Nesting must produce a real visual indent, not just a model change.
+    await expect.poll(() => marginOf('b')).toBeGreaterThan(0);
+  });
+
   test('Tab is a no-op on the first list item (no preceding sibling)', async ({ page }) => {
     await boot(page, [li('a'), li('b')]);
 

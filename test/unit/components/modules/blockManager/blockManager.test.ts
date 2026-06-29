@@ -510,6 +510,44 @@ describe('BlockManager.setBlockParent Yjs contentIds companion write', () => {
     expect(harness.getContentIds('parent-b')).toContain('child');
   });
 
+  it('fires the block tool MOVED lifecycle hook on a real reparent (so tools re-render their nesting UI)', () => {
+    // Regression: keyboard Tab/Shift+Tab nest via setBlockParent, which emitted
+    // the BlockMoved event but never invoked the tool's MOVED hook — so the list
+    // tool's adjustDepthTo (the visual indent) never ran and Tab "did nothing".
+    const harness = createHarness([
+      { id: 'parent-a', parentId: null, contentIds: [] },
+      { id: 'child', parentId: null, contentIds: [] },
+    ]);
+    const child = harness.repository.getBlockById('child');
+
+    if (child === undefined) {
+      throw new Error('child block missing');
+    }
+
+    harness.blockManager.setBlockParent(child, 'parent-a');
+
+    expect(child.call).toHaveBeenCalledWith('moved', expect.objectContaining({
+      fromIndex: expect.any(Number),
+      toIndex: expect.any(Number),
+    }));
+  });
+
+  it('does NOT fire MOVED when the parent does not actually change (no-op reparent)', () => {
+    const harness = createHarness([
+      { id: 'parent-a', parentId: null, contentIds: ['child'] },
+      { id: 'child', parentId: 'parent-a', contentIds: [] },
+    ]);
+    const child = harness.repository.getBlockById('child');
+
+    if (child === undefined) {
+      throw new Error('child block missing');
+    }
+
+    harness.blockManager.setBlockParent(child, 'parent-a');
+
+    expect(child.call).not.toHaveBeenCalledWith('moved', expect.anything());
+  });
+
   it('removes the child id from the old parent Yjs contentIds Y.Array on reparent', () => {
     const harness = createHarness([
       { id: 'parent-a', parentId: null, contentIds: ['child'] },

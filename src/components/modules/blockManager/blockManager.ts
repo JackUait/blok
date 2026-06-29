@@ -13,6 +13,7 @@ import { BlockMovedMutationType } from '../../../../types/events/block/BlockMove
 import { BlockRemovedMutationType } from '../../../../types/events/block/BlockRemoved';
 import { Module } from '../../__module';
 import type { Block } from '../../block';
+import { BlockToolAPI } from '../../block';
 import { BlockAPI } from '../../block/api';
 import { Blocks } from '../../blocks';
 import { DATA_ATTR } from '../../constants';
@@ -985,6 +986,18 @@ export class BlockManager extends Module {
       const index = this.repository.getBlockIndex(block);
 
       this.blockDidMutated(BlockMovedMutationType, block, {
+        fromIndex: index,
+        toIndex: index,
+      });
+
+      // A reparent IS a move in the tree, so fire the tool's MOVED lifecycle hook
+      // too — not just the BlockMoved mutation event. Tools re-render their
+      // nesting-dependent UI here (e.g. the list tool recomputes its structural
+      // depth and applies the indent margin in moved()). Without this, keyboard
+      // Tab/Shift+Tab nesting changed the model but left the block visually
+      // un-indented. The drag path fires MOVED itself (and is excluded above via
+      // isDragMove), so this never double-fires.
+      block.call(BlockToolAPI.MOVED, {
         fromIndex: index,
         toIndex: index,
       });

@@ -310,6 +310,11 @@
       "badge": "Data",
       "description": "The structure of each block in the blocks array."
     },
+    "pagination": {
+      "label": "Pagination",
+      "previous": "Previous",
+      "next": "Next"
+    },
     "concepts": {
       "title": "Everything is a block",
       "badge": "Concepts",

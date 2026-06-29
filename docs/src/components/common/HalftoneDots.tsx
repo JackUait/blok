@@ -27,8 +27,8 @@ export const HalftoneDots: React.FC<{ className?: string }> = ({ className }) =>
     // --- tuning -------------------------------------------------------------
     const SPACING = 26; // gap between dots — larger reads as "more spread out"
     const DOT_R = 1.6; // dot radius in CSS px
-    const REPEL = 92; // base radius of the cursor's influence blob
-    const PUSH = 30; // how far the strongest-pushed dot travels
+    const REPEL = 120; // base radius of the cursor's influence blob
+    const PUSH = 64; // how far the strongest-pushed dot travels
     const EASE = 0.18; // how quickly a dot chases its target (0–1)
     // ------------------------------------------------------------------------
 

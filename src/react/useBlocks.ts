@@ -205,7 +205,7 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
      * root move didn't already pull into place. Keeps the flat array DFS-contiguous,
      * the invariant the flat-index insert API and getChildren ordering depend on.
      */
-    const relocateSubtree = (rootId: string, preRemovalSlot: number): boolean => {
+    const relocateSubtree = (rootId: string, preRemovalSlot: number): 'moved' | 'skipped' | 'blocked' => {
       // Subtree members in current flat (document) order — root first.
       const members = collectSubtreeIds(rootId)
         .map((id) => ({ id, idx: editor.blocks.getBlockIndex(id) }))
@@ -216,7 +216,7 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       const rootFrom = editor.blocks.getBlockIndex(rootId);
 
       if (rootFrom === undefined) {
-        return false;
+        return 'blocked';
       }
 
       // Self-overlap guard. `preRemovalSlot` is the destination the caller
@@ -230,18 +230,24 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       // the block's last child), which BlockHierarchy REFUSES with a thrown cycle
       // error — crashing the caller. But the block is already DFS-contiguous at
       // that destination (its subtree is the tail of the parent's subtree), so
-      // the relocation is a no-op: skip the move and report success, leaving the
+      // the relocation is a no-op: skip the move and report 'skipped', leaving the
       // caller to assert the reparent. Window: `rootFrom < preRemovalSlot <=
       // subtreeEnd + 1`. A backward move (`preRemovalSlot <= rootFrom`) or a
       // genuine forward move past unrelated content (`preRemovalSlot > subtreeEnd
       // + 1`) is untouched.
+      //
+      // 'skipped' (vs 'moved') is reported DISTINCTLY because no `editor.blocks.
+      // move()` ran — so core's post-move parent auto-heal never fired. nest/unnest
+      // re-assert the root's parent explicitly (reparentSubtree), so they don't
+      // care; but move() leans on that auto-heal for the root's parent-adoption, so
+      // it must apply the adopted parent itself on this path (see move()).
       const subtreeEnd = collectSubtreeIds(rootId)
         .map((memberId) => editor.blocks.getBlockIndex(memberId))
         .filter((i): i is number => i !== undefined)
         .reduce((max, i) => Math.max(max, i), rootFrom);
 
       if (preRemovalSlot > rootFrom && preRemovalSlot <= subtreeEnd + 1) {
-        return true;
+        return 'skipped';
       }
 
       // Defensive clamp into [0, count-1]: Blok's move() silently no-ops on an
@@ -264,7 +270,7 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       // no-op (already at target, rootFrom === rootTarget) still counts as
       // relocated so an in-place nest/unnest reparents as intended.
       if (rootFrom !== rootTarget && editor.blocks.getBlockIndex(rootId) === rootFrom) {
-        return false;
+        return 'blocked';
       }
 
       // Place each descendant immediately after the previously-positioned member,
@@ -295,7 +301,7 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
         }
       });
 
-      return true;
+      return 'moved';
     };
 
     // Reparent `id` (root → newParentId, descendants → their original parent).
@@ -384,7 +390,10 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       const members = captureSubtreeParents(id);
 
       transact(() => {
-        if (relocateSubtree(id, resolveInsertIndex(reader, parentId, 'end'))) {
+        // reparentSubtree sets the root's parent EXPLICITLY, so nest is correct on
+        // both the 'moved' and 'skipped' paths — it only bails on a 'blocked'
+        // (clamped cross-column) relocation.
+        if (relocateSubtree(id, resolveInsertIndex(reader, parentId, 'end')) !== 'blocked') {
           reparentSubtree(members, id, parentId);
         }
       });
@@ -421,7 +430,9 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       const members = captureSubtreeParents(id);
 
       transact(() => {
-        if (relocateSubtree(id, resolveInsertIndex(reader, parentId, 'end'))) {
+        // As with nest, reparentSubtree asserts the root's (null) parent on both
+        // 'moved' and 'skipped'; only a 'blocked' clamp keeps it a no-op.
+        if (relocateSubtree(id, resolveInsertIndex(reader, parentId, 'end')) !== 'blocked') {
           reparentSubtree(members, id, null);
         }
       });
@@ -467,9 +478,9 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
      * unknown ids); when a relative `{ before|after }` target references `id`
      * itself, one of its descendants (a block can't be a sibling of its own
      * child), or a ref that does not exist (an unresolved relative target must
-     * not silently dump the block at the document end); or when an absolute
-     * `{ toIndex }` lands inside `id`'s OWN subtree (that would auto-heal the
-     * block under its own child — a cycle core throws on). Guards run BEFORE the
+     * not silently dump the block at the document end); or for ANY absolute
+     * `{ toIndex }` of a block that HAS descendants (a multi-block subtree can't
+     * land on one index — see the subtree note below). Guards run BEFORE the
      * index is resolved into a final move.
      *
      * Parent-adoption side effect: `before`/`after` are POSITION targets, so the
@@ -513,22 +524,12 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
         if (getById(ref) === null) {
           return;
         }
-      } else {
-        // An absolute toIndex landing inside id's own subtree would make core
-        // auto-heal the block under one of its descendants — a parent/child
-        // cycle that core's setBlockParent THROWS on. Compute the block's own
-        // flat subtree range and no-op when the (clamped) target falls within
-        // it. A leaf's range is a single slot, so this never blocks a real move.
-        const subtreeEnd = collectSubtreeIds(id)
-          .map((memberId) => editor.blocks.getBlockIndex(memberId))
-          .filter((i): i is number => i !== undefined)
-          .reduce((max, i) => Math.max(max, i), fromIndex);
-        const requested = resolveMoveIndex(reader, target);
-
-        if (requested > fromIndex && requested <= subtreeEnd) {
-          return;
-        }
       }
+      // NB: an absolute { toIndex } needs no early guard here. A block WITH
+      // descendants no-ops EVERY toIndex move in the subtree branch below
+      // (ambiguous for a multi-block subtree); a leaf has no own-subtree range to
+      // land inside. So a dedicated "toIndex inside own subtree" guard would be
+      // dead code — the subtree-branch no-op already covers the cycle it guarded.
 
       // Subtree-aware relocation. A block WITH descendants can't ride a single
       // core move(): core carries only DOM-contained descendants (resortNested
@@ -552,10 +553,32 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
         }
 
         const preRemovalSlot = resolveMoveIndex(reader, target);
+        // The relative ref whose parent the moved block adopts (toIndex returned
+        // above, so target is { before | after }).
+        const ref = 'before' in target ? target.before : target.after;
 
         transact(() => {
-          if (relocateSubtree(id, preRemovalSlot)) {
-            reassertDescendantParents(subtreeMembers, id);
+          const outcome = relocateSubtree(id, preRemovalSlot);
+
+          if (outcome === 'blocked') {
+            return;
+          }
+          reassertDescendantParents(subtreeMembers, id);
+
+          // Skip-path heal: relocateSubtree reported 'skipped' because the subtree
+          // already abutted the destination, so NO core move() ran and the
+          // post-move parent auto-heal that move() relies on for the root's
+          // parent-adoption never fired. nest/unnest re-assert the root parent
+          // explicitly; move() must too, or the SAME `move(id, { before: X })`
+          // would adopt X's parent when an unrelated block sits between id and X
+          // (real move runs → auto-heal) but silently keep the old parent when it
+          // doesn't (skip). Apply the adopted parent — the ref's parent, i.e. the
+          // container id becomes a sibling within — to keep the contract
+          // consistent. Idempotent on the 'moved' path (auto-heal already set it),
+          // so only assert on 'skipped'. Can't cycle: ref is neither id nor a
+          // descendant (guarded above), so ref's parent is outside id's subtree.
+          if (outcome === 'skipped') {
+            editor.blocks.setBlockParent(id, getById(ref)?.parentId ?? null);
           }
         });
 

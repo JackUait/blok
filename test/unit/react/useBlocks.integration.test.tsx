@@ -786,6 +786,44 @@ describe('useBlocks — real BlockHierarchy integration', () => {
     expect(flat).toEqual(['A', 'col', 'c1', 'c2']);
   });
 
+  it('nest INTO a column is a graceful no-op (column membership is drag-UI only)', () => {
+    // [A, col(column), c1] — nesting the ROOT block A INTO the column must be a
+    // no-op: column membership is owned by the drag UI. Critically, A is NOT a
+    // column member, so core's column-boundary clamp never fires (it only clamps
+    // a block ALREADY in a column) — the relocation would SUCCEED and leak A into
+    // the column. Only the explicit `getById(parentId)?.type === 'column'` guard
+    // stops it. This pins that half of nest's column guard, which the
+    // blocked-relocation detection cannot cover.
+    const harness = createRealEditorHarness([
+      { id: 'A' },
+      { id: 'col', name: 'column' },
+      { id: 'c1', parentId: 'col' },
+    ]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    act(() => {
+      result.current.nest('A', 'col');
+    });
+
+    // A stayed at root; the column is untouched.
+    expect(result.current.getById('A')?.parentId).toBeNull();
+    expect(result.current.getChildren('col').map((n) => n.id)).toEqual(['c1']);
+
+    const flat: string[] = [];
+
+    for (let i = 0; i < harness.editor.blocks.getBlocksCount(); i++) {
+      const node = harness.editor.blocks.getBlockByIndex(i);
+
+      if (node !== undefined) {
+        flat.push(node.id);
+      }
+    }
+    expect(flat).toEqual(['A', 'col', 'c1']);
+  });
+
   it('unnest of a column child is a graceful no-op (stays in the column, tree intact)', () => {
     // Mirror of the nest column test: a `column` member is detached only via the
     // drag UI, so unnest('c2') must leave c2 a child of the column and the flat
@@ -895,6 +933,72 @@ describe('useBlocks — real BlockHierarchy integration', () => {
 
     // Order unchanged — the unknown ref did not dump 'a' at the end.
     expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('move of a subtree to before the block right after it STILL adopts the new parent (skip-path heal)', () => {
+    // [P(toggle), id⊂P, k⊂id, X(root)] — id's subtree [id,k] already abuts X, so
+    // relocateSubtree hits its self-overlap guard and skips the physical move.
+    // But `move`'s parent-adoption contract still applies: moving id `before` the
+    // root block X must make id a ROOT sibling (adopt X's parent = null). The skip
+    // path must NOT silently leave id under P — that would make the SAME call
+    // produce different trees depending only on whether an unrelated block happens
+    // to sit between id's subtree and X (see the CONTROL case below).
+    const harness = createRealEditorHarness([
+      { id: 'P', name: 'toggle' },
+      { id: 'id', parentId: 'P' },
+      { id: 'k', parentId: 'id' },
+      { id: 'X' },
+    ]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    act(() => {
+      result.current.move('id', { before: 'X' });
+    });
+
+    // id adopted X's (root) parent; k stays id's child; flat order unchanged.
+    expect(result.current.getById('id')?.parentId).toBeNull();
+    expect(result.current.getChildren('P')).toHaveLength(0);
+    expect(result.current.getChildren('id').map((n) => n.id)).toEqual(['k']);
+
+    const flat: string[] = [];
+
+    for (let i = 0; i < harness.editor.blocks.getBlocksCount(); i++) {
+      const node = harness.editor.blocks.getBlockByIndex(i);
+
+      if (node !== undefined) {
+        flat.push(node.id);
+      }
+    }
+    expect(flat).toEqual(['P', 'id', 'k', 'X']);
+  });
+
+  it('move of a subtree before X is CONSISTENT whether or not an unrelated block sits between (control)', () => {
+    // Same as above but with Y wedged between k and X, so the relocation is NOT a
+    // skip — the real move runs and core auto-heals. The OUTCOME for id must be
+    // identical to the skip-path case: id adopts root. This pins the consistency
+    // the skip-path heal restores.
+    const harness = createRealEditorHarness([
+      { id: 'P', name: 'toggle' },
+      { id: 'id', parentId: 'P' },
+      { id: 'k', parentId: 'id' },
+      { id: 'Y' },
+      { id: 'X' },
+    ]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    act(() => {
+      result.current.move('id', { before: 'X' });
+    });
+
+    // Identical id outcome to the skip-path case: id is a root block, k its child.
+    expect(result.current.getById('id')?.parentId).toBeNull();
+    expect(result.current.getChildren('id').map((n) => n.id)).toEqual(['k']);
   });
 
   it('convert against the real harness swaps the type, re-renders, and is NOT wrapped in transact', () => {

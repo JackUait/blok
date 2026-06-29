@@ -800,9 +800,11 @@ describe('useBlocks move', () => {
   });
 
   it('move with an absolute toIndex landing inside the block own subtree is a no-op', () => {
-    // An absolute toIndex pointing into the moved block's own descendant range
-    // would make core auto-heal the block under its own child — a cycle that
-    // core's guard THROWS on. Guard it as a no-op.
+    // A toIndex pointing INSIDE the moved block's own subtree is covered by the
+    // same rule as any toIndex on a descendant-having block: it is a graceful
+    // no-op (enforced by the subtree branch — see the next test). This pins the
+    // inside-subtree case specifically, since landing there would otherwise let
+    // core auto-heal the block under its own child (a cycle core THROWS on).
     const { editor } = makeFakeEditor([
       { id: 'P', name: 'toggle' },
       { id: 'c1', parentId: 'P' },

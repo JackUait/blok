@@ -28,28 +28,47 @@ interface FrameworkEntry {
 }
 
 /**
- * The icon tile's mark. Closed: the full-colour brand logo on a white tile.
- * Open: the tile fills with the brand colour and we swap to the monochrome
- * mark, which inherits the tile's white text colour — its negative space (the
- * TS letters, the Vue notch) stays crisp where a flat image-invert would not.
+ * The icon tile's mark. The full-colour brand logo (closed) and the monochrome
+ * mark (open, white-on-brand) are stacked and cross-faded, so opening a row
+ * dissolves one into the other instead of hard-swapping nodes. The monochrome
+ * mark keeps its negative space (the TS letters, the Vue notch) crisp where a
+ * flat image-invert would not. Entries without a colour logo (CDN) just tint
+ * their single mark from muted to white as the tile fills.
  */
 const FrameworkIcon: React.FC<{ framework: FrameworkEntry; open: boolean }> = ({
   framework,
   open,
-}) => {
-  if (open || !framework.logoSrc) {
-    return <>{framework.mono}</>;
-  }
-  return (
-    <img
-      src={framework.logoSrc}
-      alt=""
+}) => (
+  <span className="relative grid size-6 place-items-center">
+    {framework.logoSrc && (
+      <img
+        src={framework.logoSrc}
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        className={cn(
+          "col-start-1 row-start-1 size-6 select-none transition-[opacity,transform] duration-[450ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none",
+          // The TS badge is a full-bleed square; soften its corners. Other marks
+          // have transparent bounds (and shapes that reach the corners), so this
+          // is scoped to the TS logo only.
+          framework.id === "vanilla" && "rounded-[2px]",
+          open ? "scale-90 opacity-0" : "scale-100 opacity-100",
+        )}
+      />
+    )}
+    <span
       aria-hidden="true"
-      draggable={false}
-      className="size-6 select-none"
-    />
-  );
-};
+      className={cn(
+        "col-start-1 row-start-1 flex transition-[opacity,transform] duration-[450ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none",
+        // The colour logo owns the closed state, so its mark stays hidden until
+        // open; CDN has no colour logo, so its mark is always shown.
+        open || !framework.logoSrc ? "scale-100 opacity-100" : "scale-90 opacity-0",
+      )}
+    >
+      {framework.mono}
+    </span>
+  </span>
+);
 
 // Monochrome marks (simple-icons) for the white-on-brand open state. They render
 // in `currentColor`, so the tile's white text colour whites them out cleanly.
@@ -279,15 +298,28 @@ export const FrameworkCards: React.FC = () => {
                       )}
                     >
                       <span
-                        style={open ? { background: framework.brand } : undefined}
                         className={cn(
-                          "flex size-11 shrink-0 items-center justify-center rounded-2xl shadow-sm ring-1 transition-[transform,box-shadow] duration-200 group-hover:scale-[1.06]",
+                          "relative flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white ring-1 shadow-sm transition-[transform,box-shadow,color] duration-[450ms] ease-[cubic-bezier(0.33,1,0.68,1)] group-hover:scale-[1.06] motion-reduce:transition-none dark:bg-white/[0.07]",
                           open
-                            ? "text-white shadow-md ring-transparent"
-                            : "bg-white text-muted-foreground ring-black/[0.06] dark:bg-white/[0.07] dark:ring-white/[0.10]",
+                            ? "text-white shadow-md ring-black/0"
+                            : "text-muted-foreground ring-black/[0.06] dark:ring-white/[0.10]",
                         )}
                       >
-                        <FrameworkIcon framework={framework} open={open} />
+                        {/* Brand fill ripples edge-to-edge from the centre — a
+                            clip circle keeps it seamless, with no white margin. */}
+                        <span
+                          aria-hidden="true"
+                          style={{ background: framework.brand }}
+                          className={cn(
+                            "absolute inset-0 rounded-[inherit] transition-[clip-path] duration-[450ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none",
+                            open
+                              ? "[clip-path:circle(75%_at_50%_50%)]"
+                              : "[clip-path:circle(0%_at_50%_50%)]",
+                          )}
+                        />
+                        <span className="relative">
+                          <FrameworkIcon framework={framework} open={open} />
+                        </span>
                       </span>
 
                       <span className="min-w-0 flex-1">

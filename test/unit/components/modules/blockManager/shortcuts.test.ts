@@ -395,6 +395,49 @@ describe('BlockShortcuts', () => {
       });
     });
 
+    it('both editors keep working: an event in the FIRST-registered wrapper still fires its handler when a SECOND editor is also registered', () => {
+      // Regression: the shortcuts registered on `document`, and the singleton
+      // Shortcuts utility throws on a duplicate name, so each editor's register()
+      // first REMOVED any existing handler of that name. On a multi-editor page
+      // (docs site, playground), only the LAST-initialized editor owned Cmd+D /
+      // move; every other editor silently no-opped when a block was focused.
+      const wrapper2 = document.createElement('div');
+      wrapper2.id = 'editor-wrapper-2';
+      document.body.appendChild(wrapper2);
+      const handlers2 = createMockHandlers();
+      const shortcuts2 = new BlockShortcuts(wrapper2, handlers2);
+
+      shortcuts.register();
+      shortcuts2.register();
+
+      return new Promise<void>(resolve => {
+        setTimeout(() => {
+          const child1 = document.createElement('div');
+          wrapper.appendChild(child1);
+
+          const event = new KeyboardEvent('keydown', {
+            code: 'KeyD',
+            key: 'd',
+            metaKey: true,
+            ctrlKey: true,
+          });
+          Object.defineProperty(event, 'target', { value: child1, writable: false });
+
+          document.dispatchEvent(event);
+
+          // The first editor owns the event (target in its wrapper) and must act,
+          // even though the second editor registered afterwards.
+          expect(handlers.onDuplicate).toHaveBeenCalledWith();
+          // The second editor must NOT cross-fire for an event in another wrapper.
+          expect(handlers2.onDuplicate).not.toHaveBeenCalled();
+
+          shortcuts2.unregister();
+          wrapper2.remove();
+          resolve();
+        }, ASYNC_TIMEOUT);
+      });
+    });
+
     it('works with different wrapper elements', () => {
       const wrapper2 = createMockWrapper();
       const shortcuts2 = new BlockShortcuts(wrapper2, createMockHandlers());

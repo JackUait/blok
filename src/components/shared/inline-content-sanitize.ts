@@ -64,7 +64,7 @@ export const INLINE_TEXT_SANITIZE = {
   u: {},
   s: {},
   del: {},
-  a: { href: true },
+  a: { href: true, target: true, rel: true },
   code: {},
   mark: preserveColorStyles,
   span: preserveEquationSpan,

@@ -991,7 +991,7 @@
 }
 
 [data-blok-interface] ::selection, [data-blok-popover] ::selection {
-  background-color: revert;
+  background-color: var(--blok-selection-inline);
   color: revert;
 }
 

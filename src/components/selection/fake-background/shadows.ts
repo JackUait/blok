@@ -8,14 +8,15 @@ export class FakeBackgroundShadows {
    * Highlight colour for the fake background — the "selection is still here"
    * indicator shown while focus is in a Link/Equation menu input.
    *
-   * Sourced from the editor's `--blok-selection` design token (the same colour
-   * the editor uses for selection elsewhere) so it stays visible and tracks the
-   * theme, including dark mode, automatically. The literal fallback keeps it
-   * visible if the token ever fails to resolve. Do NOT hardcode a colour here: a
-   * faint literal (e.g. `rgba(0, 0, 0, 0.08)`) reads as "no highlight" and is
-   * exactly the bug this indirection prevents.
+   * MUST be the SAME token the native text selection uses (`--blok-selection-
+   * inline`, applied to `::selection` in the scoped preflight) so the highlight
+   * is EXACTLY the colour the user already sees when they select text — opening
+   * a menu must not change the highlight colour. Sharing one token also keeps it
+   * visible and theme-aware (incl. dark mode) automatically. The literal
+   * fallback keeps it visible if the token ever fails to resolve. Do NOT hardcode
+   * a colour here, and do NOT let it drift from the `::selection` colour.
    */
-  private static readonly BG_COLOR = 'var(--blok-selection, #e1f2ff)';
+  private static readonly BG_COLOR = 'var(--blok-selection-inline, #d4ecff)';
 
   /**
    * Applies box-shadow to a wrapper to extend the background to fill line-height

@@ -250,7 +250,9 @@ test.describe('selection with link input', () => {
       if (elements.length === 0) return null;
       const firstEl = elements[0] as HTMLElement;
       const wrapper = firstEl.closest('[data-blok-interface]') ?? document.documentElement;
-      const selectionToken = getComputedStyle(wrapper).getPropertyValue('--blok-selection').trim();
+      // --blok-selection-inline is the SAME token the native ::selection uses,
+      // so the fake highlight is exactly the colour the user sees when selecting.
+      const selectionToken = getComputedStyle(wrapper).getPropertyValue('--blok-selection-inline').trim();
 
       return {
         boxDecorationBreak: firstEl.style.boxDecorationBreak,
@@ -266,13 +268,14 @@ test.describe('selection with link input', () => {
     expect(styles?.boxDecorationBreak).toBe('clone');
     expect(styles?.whiteSpace).toBe('pre-wrap');
 
-    // The highlight colour must come from the editor's selection token (so it
-    // stays visible and theme-aware), never a faint hardcoded literal that reads
-    // as "no highlight".
-    expect(styles?.boxShadow).toContain('var(--blok-selection');
+    // The highlight colour must come from the SAME token the native text
+    // selection uses (--blok-selection-inline) so it is exactly the colour the
+    // user already sees — never a faint hardcoded literal that reads as "no
+    // highlight".
+    expect(styles?.boxShadow).toContain('var(--blok-selection-inline');
     expect(styles?.boxShadow).not.toContain('rgba(0, 0, 0, 0.08)');
 
-    // And it must actually RENDER as the selection colour — proving the
+    // And it must actually RENDER as that selection colour — proving the
     // highlight is visible, not transparent — by resolving the token to rgb and
     // checking the computed box-shadow uses it.
     expect(styles?.selectionToken).toBeTruthy();
@@ -289,5 +292,29 @@ test.describe('selection with link input', () => {
     }, styles?.selectionToken ?? '');
 
     expect(styles?.computedBoxShadow).toContain(tokenRgb);
+
+    // The whole point: the fake highlight must be EXACTLY the native selection
+    // colour. They are kept identical by both reading --blok-selection-inline —
+    // assert the editor's ::selection rule uses that same token, so opening a
+    // menu can never change the highlight colour.
+    const selectionRuleUsesToken = await page.evaluate(() => {
+      const allRules = Array.from(document.styleSheets).flatMap((sheet) => {
+        try {
+          return Array.from(sheet.cssRules);
+        } catch {
+          return [];
+        }
+      });
+
+      return allRules.some((rule) => {
+        const text = rule.cssText;
+
+        return text.includes('::selection') &&
+          text.includes('background-color') &&
+          text.includes('--blok-selection-inline');
+      });
+    });
+
+    expect(selectionRuleUsesToken).toBe(true);
   });
 });

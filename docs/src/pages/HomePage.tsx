@@ -6,6 +6,8 @@ import { Footer } from '../components/layout/Footer';
 import { Hero } from '../components/home/Hero';
 import { CategoryBar, HOME_CATEGORIES, type HomeView } from '../components/home/CategoryBar';
 import { Features } from '../components/home/Features';
+import { FrameworkCards } from '../components/home/FrameworkCards';
+import { WhyBlok } from '../components/home/WhyBlok';
 import { MigrationCard } from '../components/home/MigrationCard';
 import { TrustedBy } from '../components/home/TrustedBy';
 import { ApiContent } from './ApiPage';
@@ -96,6 +98,8 @@ export const HomePage: React.FC = () => {
         return (
           <>
             <Features />
+            <FrameworkCards />
+            <WhyBlok />
             <TrustedBy />
             <MigrationCard />
           </>

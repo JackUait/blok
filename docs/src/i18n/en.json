@@ -449,6 +449,38 @@
       "viewGuide": "View Migration Guide",
       "viewCodemod": "View Codemod"
     },
+    "frameworks": {
+      "sectionLabel": "Integrations",
+      "title1": "Drop Blok into",
+      "title2": "your stack",
+      "description": "A framework-agnostic core with a fully typed API, a first-class React adapter, and a zero-build CDN script. Pick whichever fits your project.",
+      "vanillaName": "Vanilla JS / TypeScript",
+      "vanillaTagline": "Framework-agnostic core",
+      "vanillaDescription": "Instantiate Blok against any DOM node. Fully typed, with zero framework lock-in.",
+      "reactName": "React",
+      "reactTagline": "Hook + component",
+      "reactDescription": "The useBlok hook owns the editor lifecycle; BlokContent mounts it. React 18 & 19.",
+      "cdnName": "CDN",
+      "cdnTagline": "No bundler required",
+      "cdnDescription": "Drop in one script tag and use the BlokEditor global — perfect for quick prototypes.",
+      "docsLink": "Read the integration guide"
+    },
+    "whyBlok": {
+      "sectionLabel": "Comparison",
+      "title1": "Why Blok",
+      "title2": "over the alternatives",
+      "description": "Other editors hand you a minimal core and a plugin shopping list. Blok ships the batteries — typed JSON, a full block library, and a deep API — out of the box.",
+      "colCapability": "Capability",
+      "rowOutput": "Output format",
+      "rowEverythingBlock": "Everything is a block",
+      "rowBuiltIn": "Tables, embeds & media",
+      "rowSlash": "Slash command menu",
+      "rowTypeScript": "TypeScript-first",
+      "rowI18n": "i18n & RTL",
+      "rowUndo": "Conflict-free undo / redo",
+      "rowLicense": "License",
+      "disclaimer": "Comparison reflects each library's out-of-the-box defaults; all are extensible via plugins."
+    },
     "trusted": {
       "title": "Companies that trust us",
       "tagline": "Global QSR leader",

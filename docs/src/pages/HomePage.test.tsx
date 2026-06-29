@@ -58,6 +58,34 @@ describe('HomePage', () => {
     expect(features).toBeInTheDocument();
   });
 
+  it('should render the framework integration cards', () => {
+    render(
+      <MemoryRouter>
+        <I18nProvider>
+          <HomePage />
+        </I18nProvider>
+      </MemoryRouter>
+    );
+
+    const main = screen.getByRole('main');
+    expect(within(main).getByTestId('frameworks-section')).toBeInTheDocument();
+    expect(within(main).getAllByTestId('framework-card')).toHaveLength(3);
+  });
+
+  it('should render the "Why Blok" comparison table', () => {
+    render(
+      <MemoryRouter>
+        <I18nProvider>
+          <HomePage />
+        </I18nProvider>
+      </MemoryRouter>
+    );
+
+    const main = screen.getByRole('main');
+    expect(within(main).getByTestId('why-blok-section')).toBeInTheDocument();
+    expect(within(main).getByRole('table')).toBeInTheDocument();
+  });
+
   it('should render the MigrationCard section', () => {
     render(
       <MemoryRouter>

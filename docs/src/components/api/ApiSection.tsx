@@ -105,18 +105,31 @@ const QuickStartContent: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-10">
-      {steps.map((step, index) => (
-        <div key={index} className="flex flex-col gap-3 sm:flex-row sm:gap-5">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary font-display text-sm font-bold text-foreground">
-            {index + 1}
-          </span>
-          <div className="min-w-0 flex-1">
-            <h3 className="font-display text-lg font-bold tracking-tight text-foreground">{step.title}</h3>
-            <p className="mt-1 mb-4 text-sm leading-relaxed text-muted-foreground">{step.description}</p>
-            {step.code}
+      {steps.map((step, index) => {
+        const isLast = index === steps.length - 1;
+        return (
+          <div key={index} className="relative flex flex-col gap-3 sm:flex-row sm:gap-5">
+            {/* Guided-flow connector — a hairline that threads the numbered
+                markers into one continuous sequence (sm+ only, where the markers
+                share a left column). It runs behind the markers, whose opaque
+                bg-card fills mask it under each circle. */}
+            {!isLast && (
+              <span
+                aria-hidden
+                className="absolute top-10 -bottom-10 left-[1.125rem] hidden w-px -translate-x-1/2 bg-gradient-to-b from-border to-border/30 sm:block"
+              />
+            )}
+            <span className="relative z-10 flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-card font-display text-sm font-bold text-primary shadow-sm">
+              {index + 1}
+            </span>
+            <div className="min-w-0 flex-1 pb-1">
+              <h3 className="font-display text-lg font-bold tracking-tight text-foreground">{step.title}</h3>
+              <p className="mt-1 mb-4 text-sm leading-relaxed text-muted-foreground">{step.description}</p>
+              {step.code}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };

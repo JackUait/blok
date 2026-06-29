@@ -88,6 +88,30 @@ const selectAllInFirstEditable = async (page: Page): Promise<void> => {
   }, HOLDER_ID);
 };
 
+const placeCollapsedCaretInFirstEditable = async (page: Page, offset: number): Promise<void> => {
+  await page.evaluate(({ holder, caretOffset }) => {
+    const wrapper = document.getElementById(holder);
+    const editable = wrapper?.querySelector('[contenteditable="true"]');
+
+    if (!editable) {
+      throw new Error('Editable not found');
+    }
+
+    (editable as HTMLElement).focus();
+
+    const textNode = editable.firstChild ?? editable;
+    const range = document.createRange();
+
+    range.setStart(textNode, caretOffset);
+    range.collapse(true);
+
+    const selection = window.getSelection();
+
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  }, { holder: HOLDER_ID, caretOffset: offset });
+};
+
 test.describe('Inline equation shortcut', () => {
   test.beforeAll(ensureBlokBundleBuilt);
 
@@ -120,5 +144,35 @@ test.describe('Inline equation shortcut', () => {
     });
 
     expect(savedText).toContain('data-latex="x^2"');
+  });
+
+  test('CMD+SHIFT+E opens the equation input even with a COLLAPSED caret (no selection)', async ({ page }) => {
+    // Notion parity: pressing the shortcut with just a caret (nothing selected)
+    // opens the equation input so the user can type a fresh formula at the caret.
+    // Regression: the inline toolbar refused to show without a range selection,
+    // so the shortcut silently did nothing for popover-entry tools.
+    await createBlokWithEquation(page, [
+      { type: 'paragraph', data: { text: 'before after' } },
+    ]);
+
+    await placeCollapsedCaretInFirstEditable(page, 'before'.length);
+
+    await page.keyboard.press(`${MODIFIER_KEY}+Shift+KeyE`);
+
+    const input = page.getByTestId('inline-equation-input');
+
+    await expect(input).toBeFocused();
+
+    await input.fill('a^2');
+    await input.press('Enter');
+
+    const savedText = await page.evaluate(async () => {
+      const data = await window.blokInstance?.save();
+      const block = data?.blocks?.[0] as { data?: { text?: string } } | undefined;
+
+      return block?.data?.text ?? '';
+    });
+
+    expect(savedText).toContain('data-latex="a^2"');
   });
 });

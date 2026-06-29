@@ -12,6 +12,7 @@ import type { Popover } from '../utils/popover';
 import { PopoverDesktop, PopoverMobile } from '../utils/popover';
 import { Shortcuts } from '../utils/shortcuts';
 import { translateToolTitle, type I18nInstance } from '../utils/tools';
+import { getBlockColorToolboxEntries, type BlockColorData } from '../shared/block-color';
 
 import type { API, BlockToolData, ToolboxConfigEntry, PopoverItemParams, BlockAPI } from '@/types';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -243,6 +244,23 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   private openedWithSlash = true;
 
   /**
+   * Plain-text offsets of the most recently typed "/query" within the searched
+   * block (slash mode only): `start` is the slash position, `end` is the caret.
+   * Tracked on every input so that — when a tool is picked, even via a mouse
+   * click that has since moved the caret — the toolbox knows exactly which span
+   * to strip and whether any real content remains around it. Null until the
+   * first slash-mode input event after opening.
+   */
+  private slashQuerySpan: { start: number; end: number } | null = null;
+
+  /**
+   * Names of the block-color command items appended to the toolbox. Tracked so
+   * they can be shown/hidden per-open depending on whether the current block
+   * supports block-level color.
+   */
+  private colorCommandNames: string[] = [];
+
+  /**
    * Toolbox constructor
    * @param options - available parameters
    * @param options.api - Blok API methods
@@ -407,6 +425,12 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     }
 
     /**
+     * Block-color commands only make sense for blocks that render block-level
+     * color (paragraph, header, …). Show them just for those; hide otherwise.
+     */
+    this.toggleColorCommandsHidden(!this.blockSupportsBlockColor(currentBlock));
+
+    /**
      * Always anchor the popover to a rect derived from the current context,
      * never from the trigger element (plus button). The trigger rect is fragile:
      * it can be hidden, offscreen, misaligned with the caret in nested containers
@@ -461,6 +485,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     this.popover?.show();
 
     this.openedWithSlash = withSlash;
+    this.slashQuerySpan = null;
     this.opened = true;
     this.emit(ToolboxEvent.Opened);
   }
@@ -605,6 +630,76 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   }
 
   /**
+   * Shows or hides every block-color command item in one pass.
+   * @param isHidden - true to hide the color commands, false to show them
+   */
+  private toggleColorCommandsHidden(isHidden: boolean): void {
+    for (const name of this.colorCommandNames) {
+      this.popover?.toggleItemHiddenByName(name, isHidden);
+    }
+  }
+
+  /**
+   * Whether the given block renders block-level color, i.e. its tool opts into
+   * the color data fields via the shared block-color sanitize config. Used to
+   * gate the block-color slash commands so they only appear where they apply.
+   * @param block - the block to test (typically the current block)
+   */
+  private blockSupportsBlockColor(block: BlockAPI | undefined): boolean {
+    if (block === undefined) {
+      return false;
+    }
+
+    return this.toolSupportsBlockColor(this.tools.get(block.name));
+  }
+
+  /**
+   * Whether a tool opts into block-level color, detected by the color data
+   * fields appearing in its sanitize config (spread in via BLOCK_COLOR_SANITIZE).
+   * @param tool - tool adapter to test (may be undefined)
+   */
+  private toolSupportsBlockColor(tool: BlockToolAdapter | undefined): boolean {
+    const sanitize = tool?.sanitizeConfig;
+
+    if (sanitize === undefined || sanitize === null) {
+      return false;
+    }
+
+    return 'textColor' in sanitize || 'backgroundColor' in sanitize;
+  }
+
+  /**
+   * Recolors the CURRENT block (text or background) in response to a block-color
+   * slash command, instead of inserting a new block. The typed "/query" is
+   * stripped first so it is not persisted, then the color field is merged into
+   * the block's data (undefined clears it), which re-renders with the color
+   * applied. The caret is restored and the toolbar closed.
+   * @param field - which color field to set
+   * @param value - preset name to apply, or undefined to clear it
+   */
+  private async applyBlockColorCommand(field: keyof BlockColorData, value: string | undefined): Promise<void> {
+    const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
+    const currentBlock = this.api.blocks.getBlockByIndex(currentBlockIndex);
+
+    if (!currentBlock) {
+      return;
+    }
+
+    if (this.openedWithSlash) {
+      const contentEditable = currentBlock.holder.querySelector<HTMLElement>('[contenteditable="true"]');
+
+      if (contentEditable !== null) {
+        this.stripSlashQuery(contentEditable, this.resolveSlashQuerySpan(contentEditable));
+      }
+    }
+
+    await this.api.blocks.update(currentBlock.id, { [field]: value });
+
+    this.api.caret.setToBlock(currentBlockIndex);
+    this.api.toolbar.close({ setExplicitlyClosed: false });
+  }
+
+  /**
    * Returns list of tools that enables the Toolbox (by specifying the 'toolbox' getter)
    */
   private get toolsToBeDisplayed(): BlockToolAdapter[] {
@@ -694,6 +789,39 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
         return acc;
       }, []);
 
+    /**
+     * Append flat block-color commands ("Red Background", "Orange Text color", …)
+     * so the slash menu can recolor the CURRENT block. Unlike tool entries these
+     * do not insert a block — their onActivate recolors in place. Only added when
+     * a color-capable tool is registered, and only shown when the current block
+     * itself supports block color (gated on open).
+     */
+    const anyToolSupportsColor = Array.from(this.tools.values()).some((tool) => this.toolSupportsBlockColor(tool));
+
+    if (anyToolSupportsColor) {
+      const colorEntries = getBlockColorToolboxEntries({
+        textColor: this.i18n.t('tools.marker.textColor'),
+        background: this.i18n.t('tools.marker.background'),
+        default: this.i18n.t('tools.marker.default'),
+      });
+
+      this.colorCommandNames = colorEntries.map((entry) => entry.name);
+
+      colorEntries.forEach((entry) => {
+        result.push({
+          icon: entry.icon,
+          title: entry.title,
+          name: entry.name,
+          onActivate: (): void => {
+            void this.applyBlockColorCommand(entry.field, entry.value);
+          },
+          secondaryLabel: '',
+          englishTitle: entry.title,
+          searchTerms: entry.searchTerms,
+        });
+      });
+    }
+
     this._toolboxItemsToBeDisplayed = result;
 
     return result;
@@ -779,16 +907,34 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     const currentBlockParentId: string | null = currentBlock.parentId ?? null;
 
+    const contentEditable = currentBlock.holder.querySelector<HTMLElement>('[contenteditable="true"]');
+
     /**
-     * Check if the block contains only slash search text (e.g., "/head").
-     * If so, treat it as empty and replace it with the new block.
-     *
-     * When opened without slash (via plus button), any text in the block
-     * is a search query, not user content — always replace.
+     * The slash query span (slash→caret) the user typed before picking a tool.
+     * In slash mode this is the only text that gets removed; everything around
+     * it is real block content.
      */
+    const slashQuerySpan = this.openedWithSlash && contentEditable !== null
+      ? this.resolveSlashQuerySpan(contentEditable)
+      : null;
+
+    /**
+     * Replace the current block in place only when nothing but the slash query
+     * remains. Otherwise (real content sits before and/or after the "/query")
+     * the new block is inserted as the next sibling — the current block keeps
+     * its content with just the "/query" stripped (Notion parity).
+     *
+     * When opened without slash (via plus button), any text in the block is a
+     * search query, not user content — always replace.
+     */
+    const blockText = contentEditable?.textContent ?? '';
+    const blockHasOnlySlashQuery = slashQuerySpan !== null
+      && blockText.charAt(slashQuerySpan.start) === '/'
+      && this.removeSpan(blockText, slashQuerySpan).trim() === '';
+
     const shouldReplaceBlock = currentBlock.isEmpty
-      || this.isBlockSlashSearchOnly(currentBlock.holder)
-      || !this.openedWithSlash;
+      || !this.openedWithSlash
+      || blockHasOnlySlashQuery;
 
     /**
      * On mobile version, we see the Plus Button even near non-empty blocks,
@@ -797,13 +943,13 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     const index = shouldReplaceBlock ? currentBlockIndex : currentBlockIndex + 1;
 
     /**
-     * When inserting after a non-empty block (Notion parity: "/" pressed mid- or
-     * end-of-text), the literal "/query" the user typed must be removed from the
-     * current block — only the preceding text stays. When replacing in place the
-     * whole block is discarded, so no stripping is needed there.
+     * When inserting after a non-empty block (Notion parity: "/" pressed before,
+     * mid- or end-of-text), only the literal "/query" the user typed is removed
+     * from the current block — text before AND after it stays. When replacing in
+     * place the whole block is discarded, so no stripping is needed there.
      */
-    if (!shouldReplaceBlock) {
-      this.stripSlashQuery(currentBlock.holder);
+    if (!shouldReplaceBlock && contentEditable !== null && slashQuerySpan !== null) {
+      this.stripSlashQuery(contentEditable, slashQuerySpan);
     }
 
     const hasBlockDataOverrides = blockDataOverrides !== undefined && Object.keys(blockDataOverrides).length > 0;
@@ -915,6 +1061,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       this.currentContentEditable = null;
     }
 
+    this.slashQuerySpan = null;
     this.popover?.filterItems('');
   }
 
@@ -951,6 +1098,10 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
         return;
       }
+
+      // Remember the slash→caret span so a later tool pick strips exactly this
+      // range (and can tell whether any real content surrounds it).
+      this.slashQuerySpan = { start: slashIndex, end: caretOffset };
     }
 
     const query = this.openedWithSlash
@@ -996,51 +1147,80 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   }
 
   /**
-   * Removes the trailing "/query" (the slash plus the typed filter) from the
-   * current block's contentEditable, leaving any preceding text untouched.
-   * Used when the toolbox inserts a NEW block after a non-empty block, so the
-   * literal slash command is not left behind (Notion parity).
-   *
-   * The slash and query are the most recently typed plain-text characters at the
-   * caret, so they sit at the end of the contentEditable. Trailing text nodes are
-   * trimmed from the end to preserve any inline formatting in the preceding text.
-   * @param blockHolder - the block's holder element
+   * Resolves the plain-text span (slash→caret) of the "/query" the user typed
+   * in the current block. Prefers the span tracked on the last input event (so
+   * a tool picked by mouse click — which has since moved the caret — still maps
+   * to the right range). Falls back to the live caret, then to the last "/" and
+   * end-of-text, so behavior is unchanged for end-of-block slash typing.
+   * @param contentEditable - the current block's contentEditable element
+   * @returns the slash-query span as plain-text offsets
    */
-  private stripSlashQuery(blockHolder: HTMLElement): void {
-    const contentEditable = blockHolder.querySelector('[contenteditable="true"]');
+  private resolveSlashQuerySpan(contentEditable: HTMLElement): { start: number; end: number } {
+    if (this.slashQuerySpan !== null) {
+      return this.slashQuerySpan;
+    }
 
-    if (contentEditable === null) {
+    const text = contentEditable.textContent ?? '';
+    const end = this.getCaretOffsetWithinSearchBlock(text.length);
+    const start = text.lastIndexOf('/', Math.max(0, end - 1));
+
+    return { start: start === -1 ? text.length : start,
+      end };
+  }
+
+  /**
+   * Returns `text` with the given plain-text [start, end) span removed.
+   * @param text - source text
+   * @param span - span to remove
+   */
+  private removeSpan(text: string, span: { start: number; end: number }): string {
+    return text.slice(0, span.start) + text.slice(span.end);
+  }
+
+  /**
+   * Removes the "/query" the user typed — exactly the plain-text [start, end)
+   * span — from the current block's contentEditable, leaving any text BEFORE the
+   * slash and AFTER the caret untouched. Used when the toolbox inserts a NEW
+   * block after a non-empty block, so the literal slash command is not left
+   * behind (Notion parity) and no surrounding content is lost.
+   * @param contentEditable - the block's contentEditable element
+   * @param span - plain-text offsets of the slash query to remove
+   */
+  private stripSlashQuery(contentEditable: HTMLElement, span: { start: number; end: number }): void {
+    let charsToRemove = span.end - span.start;
+
+    if (charsToRemove <= 0) {
       return;
     }
 
-    const fullText = contentEditable.textContent ?? '';
-    const slashIndex = fullText.lastIndexOf('/');
+    // Walk text nodes in document order, tracking each node's plain-text offset,
+    // and delete the portion overlapping [start, end). Iterating over a static
+    // list lets us remove emptied nodes without disturbing the walk.
+    let offset = 0;
 
-    if (slashIndex === -1) {
-      return;
-    }
-
-    // Number of trailing characters (the "/query") to remove.
-    const charsToRemove = fullText.length - slashIndex;
-
-    // Walk text nodes from the end, trimming until charsToRemove is consumed.
-    this.collectTextNodes(contentEditable).reduceRight((remaining, textNode) => {
-      if (remaining <= 0) {
-        return remaining;
-      }
-
+    for (const textNode of this.collectTextNodes(contentEditable)) {
       const length = textNode.data.length;
+      const nodeStart = offset;
+      const nodeEnd = offset + length;
 
-      if (length <= remaining) {
-        textNode.remove();
+      offset = nodeEnd;
 
-        return remaining - length;
+      if (charsToRemove <= 0 || nodeEnd <= span.start || nodeStart >= span.end) {
+        continue;
       }
 
-      textNode.deleteData(length - remaining, remaining);
+      const from = Math.max(0, span.start - nodeStart);
+      const to = Math.min(length, span.end - nodeStart);
+      const count = to - from;
 
-      return 0;
-    }, charsToRemove);
+      if (from === 0 && to === length) {
+        textNode.remove();
+      } else {
+        textNode.deleteData(from, count);
+      }
+
+      charsToRemove -= count;
+    }
   }
 
   /**
@@ -1054,19 +1234,5 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     }
 
     return Array.from(node.childNodes).flatMap((child) => this.collectTextNodes(child));
-  }
-
-  /**
-   * Checks if a block contains only slash search text (e.g., "/head").
-   * A block is considered "slash search only" if its text starts with "/" and contains no other content before it.
-   * @param blockHolder - the block's holder element
-   * @returns true if the block only contains slash search text
-   */
-  private isBlockSlashSearchOnly(blockHolder: HTMLElement): boolean {
-    const contentEditable = blockHolder.querySelector('[contenteditable="true"]');
-    const text = contentEditable?.textContent?.trim() || '';
-
-    // Block must start with "/" to be considered slash search only
-    return text.startsWith('/');
   }
 }

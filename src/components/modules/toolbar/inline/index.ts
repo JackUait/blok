@@ -420,6 +420,16 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
       await this.openingPromise;
     }
 
+    /**
+     * The toolbar refused to show — almost always because the caret is collapsed
+     * (nothing is selected). Popover-entry tools (Link, Equation) still need to
+     * present their input at the caret, so force the toolbar open for them and
+     * fall through to activating the item in the freshly built popover.
+     */
+    if (this.popover === null && this.toolOpensPopover(toolName)) {
+      await this.forceOpenForCaretTool();
+    }
+
     if (this.popover) {
       this.popover.activateItemByName(toolName);
 
@@ -427,6 +437,56 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     this.invokeToolActionDirectly(toolName);
+  }
+
+  /**
+   * Whether the named inline tool renders as a nested popover (e.g. Link,
+   * Equation) — i.e. its render config carries `children` rather than a direct
+   * `onActivate`. Such tools open an input/menu when activated.
+   * @param toolName - inline tool name
+   */
+  private toolOpensPopover(toolName: string): boolean {
+    const tool = this.Blok.Tools.inlineTools.get(toolName);
+
+    if (!tool) {
+      return false;
+    }
+
+    const rendered = tool.create().render();
+    const items = Array.isArray(rendered) ? rendered : [rendered];
+
+    return items.some((item) => 'children' in item && Boolean(item.children));
+  }
+
+  /**
+   * Forces the inline toolbar open at a collapsed caret (bypassing the usual
+   * "needs a non-empty selection" gate) so a popover-entry tool's shortcut can
+   * present its input. All other validity checks still apply.
+   */
+  private async forceOpenForCaretTool(): Promise<void> {
+    this.initialize();
+
+    const { allowed } = this.selectionValidator.canShow({ allowCollapsed: true });
+
+    if (!allowed) {
+      return;
+    }
+
+    this.openingPromise = this.open();
+
+    try {
+      await this.openingPromise;
+    } catch {
+      this.opened = false;
+
+      if (this.popover) {
+        this.popover.hide?.();
+        this.popover.destroy?.();
+        this.popover = null;
+      }
+    } finally {
+      this.openingPromise = null;
+    }
   }
 
   /**

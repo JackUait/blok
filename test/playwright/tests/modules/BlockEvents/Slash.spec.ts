@@ -177,6 +177,72 @@ test.describe('slash keydown', () => {
     await expect(page.locator(TOOLBOX_ITEM_SELECTOR('header-1')).first()).toBeVisible();
   });
 
+  test('typing "/" BEFORE existing content inserts a NEW block and keeps the content (Notion parity)', async ({ page }) => {
+    await createParagraphBlok(page, [ 'Hello' ]);
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+
+    // Caret to the START of "Hello", then type "/head" → "/headHello".
+    await paragraph.click();
+    await page.keyboard.press('Home');
+    await page.keyboard.type('/head');
+
+    await expect(page.locator(TOOLBOX_CONTAINER_SELECTOR)).toBeVisible();
+
+    await page.locator(TOOLBOX_ITEM_SELECTOR('header-1')).first().click();
+
+    // The original paragraph must NOT be replaced — "Hello" survives with the
+    // "/head" slash query stripped, and a NEW heading is inserted after it.
+    const paragraphText = await getTextContent(page.locator(PARAGRAPH_SELECTOR).first());
+
+    expect(paragraphText).toBe('Hello');
+
+    const types = await page.evaluate(async () => {
+      const data = await window.blokInstance?.save();
+
+      return (data?.blocks ?? []).map((block) => block.type);
+    });
+
+    expect(types).toEqual([ 'paragraph', 'header' ]);
+  });
+
+  test('slash block-color command recolors the CURRENT block in place (does not insert)', async ({ page }) => {
+    await createParagraphBlok(page, [ 'Color me' ]);
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+
+    await paragraph.click();
+    await page.keyboard.press('End');
+    await paragraph.type('/red background');
+
+    await expect(page.locator(TOOLBOX_CONTAINER_SELECTOR)).toBeVisible();
+
+    // The flat "Red Background" color command is reachable by the typed query.
+    await page.locator(TOOLBOX_ITEM_SELECTOR('block-color-bg-red')).first().click();
+
+    // The block is recolored in place: its text keeps "Color me" (the "/red
+    // background" query stripped), no new block is inserted, and the saved data
+    // carries backgroundColor: 'red'.
+    const paragraphText = await getTextContent(page.locator(PARAGRAPH_SELECTOR).first());
+
+    expect(paragraphText).toBe('Color me');
+
+    const result = await page.evaluate(async () => {
+      const data = await window.blokInstance?.save();
+      const blocks = data?.blocks ?? [];
+
+      return {
+        count: blocks.length,
+        type: blocks[0]?.type,
+        backgroundColor: (blocks[0]?.data as { backgroundColor?: string } | undefined)?.backgroundColor,
+      };
+    });
+
+    expect(result.count).toBe(1);
+    expect(result.type).toBe('paragraph');
+    expect(result.backgroundColor).toBe('red');
+  });
+
   test('typing "/" on an EMPTY block still replaces it in place', async ({ page }) => {
     await createParagraphBlok(page, [ '' ]);
 

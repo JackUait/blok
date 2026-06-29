@@ -208,6 +208,7 @@ describe('Toolbox', () => {
 
     const blockAPI = {
       id: 'test-block-id',
+      name: 'testTool',
       isEmpty: true,
       call: vi.fn(),
       holder: holderElement,
@@ -237,6 +238,7 @@ describe('Toolbox', () => {
         convert: vi.fn(),
         composeBlockData: vi.fn(async () => ({})),
         insert: vi.fn(() => blockAPI),
+        update: vi.fn(async () => blockAPI),
         setBlockParent: vi.fn(),
         transact: vi.fn((fn: () => void) => fn()),
         stopBlockMutationWatching: vi.fn(),
@@ -1456,6 +1458,140 @@ describe('Toolbox', () => {
         true
       );
     });
+
+    it('inserts a NEW block (does not replace) when "/" is typed BEFORE existing content', async () => {
+      /**
+       * The block already held "Hello"; the user placed the caret at the START
+       * and typed "/head" → "/headHello" with the caret right after "/head".
+       * The leading "/head" is a slash query but "Hello" is real content, so the
+       * tool must be inserted as a NEW block — the "Hello" content must NOT be
+       * replaced/discarded. Regression: the old `startsWith('/')` check treated
+       * the whole block as a search query and replaced it in place.
+       */
+      const holderElement = document.createElement('div');
+      const contentEditableElement = document.createElement('div');
+
+      contentEditableElement.setAttribute('contenteditable', 'true');
+      contentEditableElement.textContent = '/headHello';
+      holderElement.appendChild(contentEditableElement);
+      document.body.appendChild(holderElement);
+
+      const nonEmptyBlock = {
+        ...mocks.blockAPI,
+        isEmpty: false,
+        holder: holderElement,
+      };
+
+      vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(nonEmptyBlock as unknown as BlockAPI);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+
+      // Caret right after "/head" (offset 5) so the query span is bounded there.
+      const textNode = contentEditableElement.firstChild as Text;
+      const range = document.createRange();
+
+      range.setStart(textNode, 5);
+      range.collapse(true);
+
+      const selection = window.getSelection();
+
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+
+      contentEditableElement.dispatchEvent(new Event('input', { bubbles: true }));
+
+      await toolbox.toolButtonActivated('testTool', {});
+
+      // New block inserted AFTER the current one (index 1, shouldReplace=false)
+      expect(mocks.api.blocks.insert).toHaveBeenCalledWith(
+        'testTool',
+        undefined,
+        undefined,
+        1,
+        undefined,
+        false
+      );
+
+      // Only the "/head" slash query is removed; "Hello" stays in the current block
+      expect(contentEditableElement.textContent).toBe('Hello');
+
+      window.getSelection()?.removeAllRanges();
+      holderElement.remove();
+    });
+
+    it('strips only the slash-query span, preserving content typed after the caret', async () => {
+      /**
+       * The block held "Hello world"; the user placed the caret after "Hello"
+       * and typed "/head" → "Hello/head world" with the caret after "/head".
+       * Selecting a tool must insert a NEW block and remove ONLY the "/head"
+       * span — the trailing " world" content must NOT be discarded. Regression:
+       * the old stripper removed from the last "/" to the END of the block.
+       */
+      const holderElement = document.createElement('div');
+      const contentEditableElement = document.createElement('div');
+
+      contentEditableElement.setAttribute('contenteditable', 'true');
+      contentEditableElement.textContent = 'Hello/head world';
+      holderElement.appendChild(contentEditableElement);
+      document.body.appendChild(holderElement);
+
+      const nonEmptyBlock = {
+        ...mocks.blockAPI,
+        isEmpty: false,
+        holder: holderElement,
+      };
+
+      vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(nonEmptyBlock as unknown as BlockAPI);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+
+      // Caret right after "Hello/head" (offset 10).
+      const textNode = contentEditableElement.firstChild as Text;
+      const range = document.createRange();
+
+      range.setStart(textNode, 10);
+      range.collapse(true);
+
+      const selection = window.getSelection();
+
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+
+      contentEditableElement.dispatchEvent(new Event('input', { bubbles: true }));
+
+      await toolbox.toolButtonActivated('testTool', {});
+
+      expect(mocks.api.blocks.insert).toHaveBeenCalledWith(
+        'testTool',
+        undefined,
+        undefined,
+        1,
+        undefined,
+        false
+      );
+
+      // Only "/head" is removed; the leading "Hello" and trailing " world" remain.
+      expect(contentEditableElement.textContent).toBe('Hello world');
+
+      window.getSelection()?.removeAllRanges();
+      holderElement.remove();
+    });
   });
 
   describe('table tool filtering inside table cells', () => {
@@ -2276,6 +2412,155 @@ describe('Toolbox', () => {
       toolbox.setCalloutBackground(null);
 
       expect(popoverEl.style.getPropertyValue('--blok-search-input-bg')).toBe('');
+    });
+  });
+
+  describe('block-color slash commands', () => {
+    /**
+     * A color-capable tool declares the color data fields in its sanitize config
+     * (real paragraph/header spread BLOCK_COLOR_SANITIZE in). Only then does the
+     * toolbox surface the flat block-color commands.
+     */
+    const createColorCapableTool = (textContent: string): {
+      tools: ToolsCollection<BlockToolAdapter>;
+      block: BlockAPI;
+      contentEditable: HTMLDivElement;
+    } => {
+      const holderElement = document.createElement('div');
+      const contentEditableElement = document.createElement('div');
+
+      contentEditableElement.setAttribute('contenteditable', 'true');
+      contentEditableElement.textContent = textContent;
+      holderElement.appendChild(contentEditableElement);
+      document.body.appendChild(holderElement);
+
+      const colorTool = {
+        name: 'paragraph',
+        toolbox: { title: 'Text', icon: '<svg></svg>' },
+        sanitizeConfig: { textColor: false, backgroundColor: false, text: {} },
+      } as unknown as BlockToolAdapter;
+
+      const block = {
+        ...mocks.blockAPI,
+        id: 'colored-block',
+        name: 'paragraph',
+        isEmpty: false,
+        holder: holderElement,
+      } as unknown as BlockAPI;
+
+      return {
+        tools: createToolsCollection([['paragraph', colorTool]]),
+        block,
+        contentEditable: contentEditableElement,
+      };
+    };
+
+    it('surfaces flat block-color commands when a color-capable tool is registered', () => {
+      const { tools } = createColorCapableTool('');
+
+      new Toolbox({ api: mocks.api, tools, i18nLabels, i18n: mockI18n });
+
+      const items = lastPopoverItems.value as Array<{ name?: string; title?: string }>;
+      const colorItems = items.filter((item) => item.name?.startsWith('block-color-'));
+
+      // 9 presets × 2 axes + 2 default resets
+      expect(colorItems).toHaveLength(20);
+      expect(colorItems.some((item) => item.name === 'block-color-bg-red')).toBe(true);
+    });
+
+    it('does NOT surface color commands when no registered tool supports block color', () => {
+      const tools = createToolsCollection([['testTool', mocks.blockToolAdapter]]);
+
+      new Toolbox({ api: mocks.api, tools, i18nLabels, i18n: mockI18n });
+
+      const items = lastPopoverItems.value as Array<{ name?: string }>;
+
+      expect(items.some((item) => item.name?.startsWith('block-color-'))).toBe(false);
+    });
+
+    it('recolors the CURRENT block (does not insert) and strips the "/query"', async () => {
+      const { tools, block, contentEditable } = createColorCapableTool('Hello/red');
+
+      vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(block);
+
+      const toolbox = new Toolbox({ api: mocks.api, tools, i18nLabels, i18n: mockI18n });
+
+      toolbox.open();
+
+      // Caret right after "Hello/red" so the slash span is bounded there.
+      const textNode = contentEditable.firstChild as Text;
+      const range = document.createRange();
+
+      range.setStart(textNode, 'Hello/red'.length);
+      range.collapse(true);
+
+      const selection = window.getSelection();
+
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+
+      contentEditable.dispatchEvent(new Event('input', { bubbles: true }));
+
+      const items = lastPopoverItems.value as Array<{ name?: string; onActivate?: () => void }>;
+      const redBackground = items.find((item) => item.name === 'block-color-bg-red');
+
+      expect(redBackground).toBeDefined();
+
+      redBackground?.onActivate?.();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      // Recolors the current block in place; never inserts a new one.
+      expect(mocks.api.blocks.update).toHaveBeenCalledWith('colored-block', { backgroundColor: 'red' });
+      expect(mocks.api.blocks.insert).not.toHaveBeenCalled();
+
+      // The literal "/red" slash query is removed; "Hello" stays.
+      expect(contentEditable.textContent).toBe('Hello');
+
+      window.getSelection()?.removeAllRanges();
+      block.holder.remove();
+    });
+
+    it('Default reset command clears the field (value undefined)', async () => {
+      const { tools, block } = createColorCapableTool('');
+
+      vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(block);
+
+      const toolbox = new Toolbox({ api: mocks.api, tools, i18nLabels, i18n: mockI18n });
+
+      toolbox.open();
+
+      const items = lastPopoverItems.value as Array<{ name?: string; onActivate?: () => void }>;
+      const defaultBackground = items.find((item) => item.name === 'block-color-bg-default');
+
+      defaultBackground?.onActivate?.();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(mocks.api.blocks.update).toHaveBeenCalledWith('colored-block', { backgroundColor: undefined });
+
+      block.holder.remove();
+    });
+
+    it('hides color commands on open when the current block does NOT support block color', () => {
+      // Color-capable paragraph IS registered (so commands exist), but the
+      // current block is a non-color tool → the commands must be hidden.
+      const { tools } = createColorCapableTool('');
+      const plainBlock = {
+        ...mocks.blockAPI,
+        name: 'testTool',
+        isEmpty: false,
+      } as unknown as BlockAPI;
+
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(plainBlock);
+
+      const toolbox = new Toolbox({ api: mocks.api, tools, i18nLabels, i18n: mockI18n });
+
+      toolbox.open();
+
+      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('block-color-bg-red', true);
     });
   });
 

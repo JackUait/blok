@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   applyBlockColor,
   buildBlockColorTunes,
+  getBlockColorToolboxEntries,
   BLOCK_COLOR_SANITIZE,
   type BlockColorData,
 } from '../../../../src/components/shared/block-color';
@@ -83,6 +84,48 @@ describe('block-color foundation', () => {
 
       bgItems.find((i) => i.title === 'Default')?.onActivate();
       expect(onPick).toHaveBeenCalledWith('backgroundColor', undefined);
+    });
+  });
+
+  describe('getBlockColorToolboxEntries', () => {
+    it('returns a flat text + background command per preset, plus two Default resets', () => {
+      const entries = getBlockColorToolboxEntries(labels);
+
+      // 9 presets × 2 axes + 2 default resets
+      expect(entries).toHaveLength(20);
+
+      const names = entries.map((e) => e.name);
+
+      expect(new Set(names).size).toBe(names.length); // names are unique
+    });
+
+    it('composes translated titles for text and background commands', () => {
+      const entries = getBlockColorToolboxEntries(labels);
+
+      const redText = entries.find((e) => e.field === 'textColor' && e.value === 'red');
+      const redBg = entries.find((e) => e.field === 'backgroundColor' && e.value === 'red');
+
+      expect(redText?.title).toBe('Red Text color');
+      expect(redBg?.title).toBe('Red Background');
+    });
+
+    it('emits Default reset entries that clear each axis (value undefined)', () => {
+      const entries = getBlockColorToolboxEntries(labels);
+
+      const defaults = entries.filter((e) => e.value === undefined);
+
+      expect(defaults).toHaveLength(2);
+      expect(defaults.map((e) => e.field).sort()).toEqual(['backgroundColor', 'textColor']);
+      expect(defaults.every((e) => e.title.startsWith('Default'))).toBe(true);
+    });
+
+    it('carries a swatch icon and color-related search terms for filtering', () => {
+      const entries = getBlockColorToolboxEntries(labels);
+
+      const orangeText = entries.find((e) => e.field === 'textColor' && e.value === 'orange');
+
+      expect(orangeText?.icon).toContain('<span');
+      expect(orangeText?.searchTerms).toEqual(expect.arrayContaining(['color', 'text', 'orange']));
     });
   });
 });

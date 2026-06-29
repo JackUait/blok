@@ -100,6 +100,63 @@ export interface BlockColorTuneOptions {
 }
 
 /**
+ * A single flat block-color command surfaced in the slash menu (toolbox), e.g.
+ * "Red Background" or "Orange Text color". Activating it recolors the CURRENT
+ * block rather than inserting a new one.
+ */
+export interface BlockColorToolboxEntry {
+  /** Unique popover-item name. */
+  name: string;
+  /** Composed, already-translated title (color + axis label). */
+  title: string;
+  /** Inline swatch markup shown as the item icon. */
+  icon: string;
+  /** Which color field this command sets. */
+  field: keyof BlockColorData;
+  /** Preset name to apply, or undefined to clear the field (Default reset). */
+  value: string | undefined;
+  /** Lowercase search aliases so the entry is reachable by query. */
+  searchTerms: string[];
+}
+
+/**
+ * Build the flat list of block-color commands for the slash menu: one "{Color}
+ * {Text color}" and one "{Color} {Background}" per preset hue, plus a Default
+ * reset for each axis. Unlike {@link buildBlockColorTunes} (nested submenus for
+ * the block-settings menu), these are flat, individually searchable entries —
+ * so typing e.g. "/red background" or "/orange text" surfaces them directly.
+ * @param labels - already-translated axis labels (Text color, Background, Default)
+ */
+export const getBlockColorToolboxEntries = (labels: BlockColorLabels): BlockColorToolboxEntry[] => {
+  const axes: Array<{ field: keyof BlockColorData; mode: 'text' | 'bg'; label: string; keyword: string }> = [
+    { field: 'textColor', mode: 'text', label: labels.textColor, keyword: 'text' },
+    { field: 'backgroundColor', mode: 'bg', label: labels.background, keyword: 'background' },
+  ];
+
+  return axes.flatMap((axis) => {
+    const presetEntries = COLOR_PRESETS.map((preset) => ({
+      name: `block-color-${axis.mode}-${preset.name}`,
+      title: `${titleCase(preset.name)} ${axis.label}`,
+      icon: swatch(colorVarName(preset.name, axis.mode), axis.field === 'backgroundColor'),
+      field: axis.field,
+      value: preset.name as string | undefined,
+      searchTerms: ['color', axis.keyword, preset.name],
+    }));
+
+    const defaultEntry = {
+      name: `block-color-${axis.mode}-default`,
+      title: `${labels.default} ${axis.label}`,
+      icon: swatch(axis.field === 'backgroundColor' ? 'transparent' : 'currentColor', axis.field === 'backgroundColor'),
+      field: axis.field,
+      value: undefined,
+      searchTerms: ['color', axis.keyword, 'default'],
+    };
+
+    return [...presetEntries, defaultEntry];
+  });
+};
+
+/**
  * Build the two block-settings entries (Text color, Background) each opening a
  * palette of the shared 9-hue presets plus a Default reset — mirroring Notion's
  * block color menu. Spread the result into a tool's `renderSettings()` output.

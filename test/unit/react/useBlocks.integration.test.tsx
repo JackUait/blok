@@ -1038,6 +1038,141 @@ describe('useBlocks — real BlockHierarchy integration', () => {
     expect(harness.editor.blocks.getBlocksCount()).toBe(countBefore);
   });
 
+  it('insertTree returns null (does not throw) when a node tool type is unknown', () => {
+    const harness = createRealEditorHarness([{ id: 'anchor' }]);
+
+    workingArea = harness.workingArea;
+
+    // Core's insertMany maps composeBlock over every node and THROWS
+    // ("…not found") on the first unknown tool. insertTree must honor the same
+    // null-on-unknown contract as insert/insertMany, not surface the throw.
+    vi.spyOn(harness.editor.blocks, 'insertMany').mockImplementationOnce(() => {
+      throw new Error('Could not compose Block. Tool «nope» not found.');
+    });
+
+    const countBefore = harness.editor.blocks.getBlocksCount();
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    let root: ReturnType<typeof result.current.insertTree> = null;
+    let threw = false;
+
+    act(() => {
+      try {
+        root = result.current.insertTree({ type: 'header', children: [{ type: 'nope' }] });
+      } catch {
+        threw = true;
+      }
+    });
+
+    expect(threw).toBe(false);
+    expect(root).toBeNull();
+    expect(harness.editor.blocks.getBlocksCount()).toBe(countBefore);
+  });
+
+  it('insertTree re-throws an UNEXPECTED core error instead of masking it as null', () => {
+    const harness = createRealEditorHarness([{ id: 'anchor' }]);
+
+    workingArea = harness.workingArea;
+
+    vi.spyOn(harness.editor.blocks, 'insertMany').mockImplementationOnce(() => {
+      throw new Error('kaboom: unexpected core failure');
+    });
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    let threw = false;
+
+    act(() => {
+      try {
+        result.current.insertTree({ type: 'header' });
+      } catch {
+        threw = true;
+      }
+    });
+
+    expect(threw).toBe(true);
+  });
+
+  it('insertTree with a colliding explicit id returns null and inserts nothing', () => {
+    const harness = createRealEditorHarness([{ id: 'dup' }]);
+
+    workingArea = harness.workingArea;
+
+    const insertManySpy = vi.spyOn(harness.editor.blocks, 'insertMany');
+    const countBefore = harness.editor.blocks.getBlocksCount();
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    let root: ReturnType<typeof result.current.insertTree> = null;
+
+    act(() => {
+      root = result.current.insertTree({ id: 'dup', type: 'header', children: [{ type: 'paragraph' }] });
+    });
+
+    expect(root).toBeNull();
+    expect(insertManySpy).not.toHaveBeenCalled();
+    expect(harness.editor.blocks.getBlocksCount()).toBe(countBefore);
+  });
+
+  it('insertTree propagates tunes onto the flattened blocks', () => {
+    const harness = createRealEditorHarness([{ id: 'anchor' }]);
+
+    workingArea = harness.workingArea;
+
+    const insertManySpy = vi.spyOn(harness.editor.blocks, 'insertMany');
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    act(() => {
+      result.current.insertTree({
+        type: 'header',
+        tunes: { align: { alignment: 'center' } },
+        children: [{ type: 'paragraph', tunes: { align: { alignment: 'right' } } }],
+      });
+    });
+
+    const flat = insertManySpy.mock.calls[0][0] as Array<{ type?: string; tunes?: unknown }>;
+
+    expect(flat[0].tunes).toEqual({ align: { alignment: 'center' } });
+    expect(flat[1].tunes).toEqual({ align: { alignment: 'right' } });
+  });
+
+  it('insertTree stamps an empty content array for a childless leaf', () => {
+    const harness = createRealEditorHarness([{ id: 'anchor' }]);
+
+    workingArea = harness.workingArea;
+
+    const insertManySpy = vi.spyOn(harness.editor.blocks, 'insertMany');
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    act(() => {
+      result.current.insertTree({ type: 'header', children: [{ type: 'paragraph', children: [] }] });
+    });
+
+    const flat = insertManySpy.mock.calls[0][0] as Array<{ content?: string[] }>;
+
+    // root has one child id; the leaf has an empty content array.
+    expect(flat[0].content).toHaveLength(1);
+    expect(flat[1].content).toEqual([]);
+  });
+
+  it('insertTree omits the type key for a typeless node (core falls back to its default block)', () => {
+    const harness = createRealEditorHarness([{ id: 'anchor' }]);
+
+    workingArea = harness.workingArea;
+
+    const insertManySpy = vi.spyOn(harness.editor.blocks, 'insertMany');
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    act(() => {
+      result.current.insertTree({ children: [{ type: 'paragraph' }] });
+    });
+
+    const flat = insertManySpy.mock.calls[0][0] as unknown as Array<Record<string, unknown>>;
+
+    // The comment promises the field is OMITTED (not present-with-undefined) so
+    // core's `type || defaultBlock` fallback kicks in cleanly.
+    expect('type' in flat[0]).toBe(false);
+  });
+
   it('update against the real harness re-renders and is NOT wrapped in transact', () => {
     const harness = createRealEditorHarness([{ id: 'a' }]);
 
@@ -1238,6 +1373,40 @@ describe('useBlocks — real BlockHierarchy integration', () => {
         }
       }
       expect(flat).toEqual(['container', created[0].id, created[1].id, 'tail']);
+    });
+
+    it('nesting markdown with INTERNAL structure (a table) under a parentId reparents only the top level', async () => {
+      const harness = createRealEditorHarness([{ id: 'container', name: 'toggle' }]);
+
+      workingArea = harness.workingArea;
+
+      const { result } = renderHook(() => useBlocks(harness.editor));
+
+      let created: Awaited<ReturnType<typeof result.current.insertMarkdown>> = [];
+
+      // A GFM table converts to a top-level table block whose cell children carry
+      // an INTERNAL `parent` (the table id). The parentId seeding must reparent
+      // only the top-level table onto the container and leave the cells pointing
+      // at the table — otherwise the table's internal structure is flattened.
+      await act(async () => {
+        created = await result.current.insertMarkdown('| a | b |\n|---|---|\n| c | d |', {
+          parentId: 'container',
+        });
+      });
+
+      // The top-level table sits under the container.
+      const topLevel = created.filter((n) => n.parentId === 'container');
+
+      expect(topLevel).toHaveLength(1);
+
+      const tableId = topLevel[0].id;
+
+      // At least one converted block keeps an internal parent (the table), NOT
+      // reparented to the container — the internal-structure-preservation branch.
+      const internalChildren = created.filter((n) => n.parentId === tableId);
+
+      expect(internalChildren.length).toBeGreaterThan(0);
+      expect(internalChildren.every((n) => n.parentId !== 'container')).toBe(true);
     });
   });
 });

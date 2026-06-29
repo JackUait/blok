@@ -8,6 +8,7 @@ export { useBlocks } from './useBlocks';
 export type {
   BlockNode,
   InsertSpec,
+  TreeInsertSpec,
   InsertPosition,
   MoveTarget,
   UseBlocksApi,

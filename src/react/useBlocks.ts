@@ -4,6 +4,7 @@ import type { Blok } from '../../types';
 import type { BlockToolData } from '../../types/tools';
 import type { BlockTuneData } from '../../types/block-tunes/block-tune-data';
 import type { OutputBlockData } from '../../types/data-formats/output-data';
+import type { MarkdownImportConfig } from '../markdown/types';
 import { generateBlockId } from '../components/utils/id-generator';
 import {
   snapshotNodes,
@@ -666,6 +667,17 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       // one (core's nanoid scheme) otherwise.
       const flat: OutputBlockData[] = [];
 
+      // Collision guard: an explicit id that already exists in the tree (or is
+      // reused within this same spec) would create a duplicate-id block,
+      // corrupting every id-keyed lookup (getById, parent/content links). A tree
+      // insert always creates fresh blocks (it is NOT insert-if-absent), so a
+      // collision is rejected up front — nothing is inserted and null is
+      // returned, mirroring insert's null contract. Generated ids never collide.
+      // Mutable property on a const holder (no `let`): flipped from inside the
+      // recursive visit when a colliding explicit id is seen.
+      const usedIds = new Set<string>();
+      const collision = { hit: false };
+
       // Pre-order DFS: push self FIRST, then recurse each child, so the flat
       // array is DFS-contiguous (the invariant core's insertMany + the hook's
       // getChildren depend on). `content` is the live child-id array, filled as
@@ -673,17 +685,23 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       // resolved placement parent (undefined for root level); children's `parent`
       // is their enclosing node's id.
       const visit = (node: TreeInsertSpec, parent: string | undefined): string => {
+        if (node.id !== undefined && (usedIds.has(node.id) || getById(node.id) !== null)) {
+          collision.hit = true;
+        }
         const id = node.id ?? generateBlockId();
+
+        usedIds.add(id);
         const content: string[] = [];
-        const flatNode: OutputBlockData = {
+        const flatNode = {
           id,
-          // `type` is omitted when absent so core falls back to its defaultBlock.
-          type: node.type as string,
+          // `type` is OMITTED (not present-with-undefined) when absent so core's
+          // `type || defaultBlock` fallback resolves the default block cleanly.
+          ...(node.type !== undefined ? { type: node.type } : {}),
           data: node.data ?? {},
           content,
           ...(node.tunes !== undefined ? { tunes: node.tunes } : {}),
           ...(parent !== undefined ? { parent } : {}),
-        };
+        } as OutputBlockData;
 
         flat.push(flatNode);
 
@@ -696,12 +714,28 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
 
       const rootId = visit(spec, parentId ?? undefined);
 
+      // A colliding explicit id is rejected before any insert (see usedIds doc).
+      if (collision.hit) {
+        return null;
+      }
+
       const flatIndex = resolveInsertIndex(reader, parentId, position);
 
-      // ONE transact for the whole subtree → a single atomic undo step.
-      transact(() => {
-        editor.blocks.insertMany(flat, flatIndex);
-      });
+      // ONE transact for the whole subtree → a single atomic undo step. Core's
+      // insertMany composes EVERY node before inserting any, so an unknown tool
+      // type throws ("…not found") with nothing inserted. Honor the same
+      // null-on-unknown-tool contract as insert/insertMany rather than surfacing
+      // the throw to the React caller; re-throw any other (genuine-bug) error.
+      try {
+        transact(() => {
+          editor.blocks.insertMany(flat, flatIndex);
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('not found')) {
+          return null;
+        }
+        throw error;
+      }
 
       return getById(rootId);
     };
@@ -715,7 +749,7 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
      */
     const insertMarkdown = async (
       markdown: string,
-      options?: { parentId?: string | null; position?: InsertPosition }
+      options?: { parentId?: string | null; position?: InsertPosition; config?: MarkdownImportConfig }
     ): Promise<BlockNode[]> => {
       const parentId = options?.parentId ?? null;
       const position = options?.position ?? 'end';
@@ -726,13 +760,36 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       }
 
       // Lazy-load the converter (dynamic import mirrors core's markdown lazy
-      // loading and keeps the parser out of the main bundle). This await
-      // resolves BEFORE the synchronous transact below.
-      const { markdownToBlocks } = await import('../markdown/index');
-      const blocks = await markdownToBlocks(markdown);
+      // loading and keeps the parser out of the main bundle) and run it,
+      // forwarding the optional MarkdownImportConfig so custom-tool consumers can
+      // map markdown nodes into their tools (gfm toggle, toolMap, extensions).
+      // Both awaits can fail — a chunk-load error or a malformed-markdown throw;
+      // swallow them and return [] so a converter failure is a graceful no-op
+      // (matching update/convert) rather than an unhandled promise rejection in
+      // the React caller. This await resolves BEFORE the synchronous transact.
+      // Mutable property on a const holder (no `let`): captured from the try.
+      const conversion: { blocks: OutputBlockData[] } = { blocks: [] };
+
+      try {
+        const { markdownToBlocks } = await import('../markdown/index');
+
+        conversion.blocks = await markdownToBlocks(markdown, options?.config);
+      } catch {
+        return [];
+      }
+
+      const blocks = conversion.blocks;
 
       // Empty / whitespace-only markdown opens no transaction (no undo boundary).
       if (blocks.length === 0) {
+        return [];
+      }
+
+      // Re-validate the parent AFTER the await: the pre-await existence check can
+      // go stale if the parent was removed while the converter was in flight.
+      // Stamping a now-dangling parent would orphan the blocks instead of the
+      // promised [] no-op, so re-check and bail out here.
+      if (parentId !== null && getById(parentId) === null) {
         return [];
       }
 

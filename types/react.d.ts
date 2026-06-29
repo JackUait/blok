@@ -1,6 +1,7 @@
 import type { BlokConfig, BlockToolData } from './index';
 import type { Blok, EditorWidth, BlockRenderedPayload, BlocksRenderedPayload } from './index';
 import type { BlockTuneData } from './block-tunes/block-tune-data';
+import type { MarkdownImportConfig } from './markdown';
 import type React from 'react';
 
 /**
@@ -182,14 +183,25 @@ export interface InsertSpec {
   tunes?: { [name: string]: BlockTuneData };
 }
 
+/**
+ * One node of a pre-built nested subtree for {@link UseBlocksApi.insertTree}.
+ *
+ * Each node maps to one block; `children` are inserted nested under it (their
+ * `parentId` set to this node's id) in array order, recursively. Placement
+ * options (`parentId`/`position`) are ROOT-ONLY — they position the whole
+ * subtree among existing blocks and are ignored on nested children, whose parent
+ * is always their enclosing node.
+ */
 export interface TreeInsertSpec {
   type?: string;
   data?: BlockToolData;
   tunes?: { [name: string]: BlockTuneData };
   /**
    * Explicit id for this node (generated when omitted). Unlike `insert`, this is
-   * NOT insert-if-absent: a tree insert always creates fresh blocks, so a
-   * colliding id is the caller's responsibility.
+   * NOT insert-if-absent: a tree insert always creates fresh blocks. A colliding
+   * id — one that already exists in the document, or is reused by another node
+   * in the same spec — is REJECTED up front: nothing is inserted and `insertTree`
+   * returns `null` (a duplicate id would corrupt every id-keyed lookup).
    */
   id?: string;
   /** Direct children, inserted nested under this node, in array order. */
@@ -275,16 +287,25 @@ export interface UseBlocksApi {
    * converted block (one the converter left un-parented) is reparented under
    * `parentId`, while blocks the markdown nested internally (e.g. table-cell
    * children) keep their intra-import parent. A dangling `parentId` is a no-op
-   * (returns `[]`, opens no transaction), matching {@link insert}.
+   * (returns `[]`, opens no transaction), matching {@link insert}; it is
+   * re-checked AFTER the async convert, so a parent removed mid-flight also
+   * no-ops instead of orphaning the blocks.
    *
-   * Returns the created {@link BlockNode}s in document order; empty or
-   * whitespace-only markdown (and a dangling `parentId`) returns `[]` and opens
-   * no transaction. The nodes are fresh-snapshot volatile — read them now, don't
-   * stash them in dep arrays.
+   * `config` (optional {@link MarkdownImportConfig}) is forwarded to the
+   * converter so custom-tool consumers can map markdown nodes into their tools
+   * (`toolMap`/`onUnknownNode`), toggle GFM, or add micromark/mdast extensions.
+   *
+   * Returns ALL created {@link BlockNode}s in document order — including any the
+   * markdown nested internally (e.g. a table's cell children), not just the
+   * top-level run (this differs from {@link insertTree}, which returns only the
+   * root). Empty or whitespace-only markdown, a dangling `parentId`, and a
+   * converter failure (chunk-load or parse error, swallowed) all return `[]` and
+   * open no transaction. The nodes are fresh-snapshot volatile — read them now,
+   * don't stash them in dep arrays.
    */
   insertMarkdown(
     markdown: string,
-    options?: { parentId?: string | null; position?: InsertPosition }
+    options?: { parentId?: string | null; position?: InsertPosition; config?: MarkdownImportConfig }
   ): Promise<BlockNode[]>;
   /**
    * Move `id` to a flat slot, as a single operation. No-op when `id` is unknown.

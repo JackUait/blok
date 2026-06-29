@@ -1,5 +1,6 @@
 import type { BlockToolData } from '../../types/tools';
 import type { BlockTuneData } from '../../types/block-tunes/block-tune-data';
+import type { MarkdownImportConfig } from '../markdown/types';
 
 /**
  * A plain, serializable view of one block in the tree.
@@ -63,8 +64,10 @@ export interface TreeInsertSpec {
   tunes?: { [name: string]: BlockTuneData };
   /**
    * Explicit id for this node (generated when omitted). Unlike `insert`, this is
-   * NOT insert-if-absent: a tree insert always creates fresh blocks, so a
-   * colliding id is the caller's responsibility.
+   * NOT insert-if-absent: a tree insert always creates fresh blocks. A colliding
+   * id — one that already exists in the document, or is reused by another node
+   * in the same spec — is REJECTED up front: nothing is inserted and `insertTree`
+   * returns `null` (a duplicate id would corrupt every id-keyed lookup).
    */
   id?: string;
   /** Direct children, inserted nested under this node, in array order. */
@@ -146,14 +149,22 @@ export interface UseBlocksApi {
    * children) keep their intra-import parent. A dangling `parentId` is a no-op
    * (returns `[]`, opens no transaction), matching {@link insert}.
    *
-   * Returns the created {@link BlockNode}s in document order; empty or
-   * whitespace-only markdown (and a dangling `parentId`) returns `[]` and opens
-   * no transaction. The nodes are fresh-snapshot volatile — read them now, don't
-   * stash them in dep arrays.
+   * `config` (optional {@link MarkdownImportConfig}) is forwarded to the
+   * converter so custom-tool consumers can map markdown nodes into their tools
+   * (`toolMap`/`onUnknownNode`), toggle GFM, or add micromark/mdast extensions.
+   *
+   * Returns ALL created {@link BlockNode}s in document order — including any the
+   * markdown nested internally (e.g. a table's cell children), not just the
+   * top-level run (this differs from {@link insertTree}, which returns only the
+   * root). Empty or whitespace-only markdown, a dangling `parentId` (checked
+   * again after the async convert, so a parent removed mid-flight also no-ops),
+   * and a converter failure (chunk-load or parse error, swallowed) all return
+   * `[]` and open no transaction. The nodes are fresh-snapshot volatile — read
+   * them now, don't stash them in dep arrays.
    */
   insertMarkdown(
     markdown: string,
-    options?: { parentId?: string | null; position?: InsertPosition }
+    options?: { parentId?: string | null; position?: InsertPosition; config?: MarkdownImportConfig }
   ): Promise<BlockNode[]>;
   move(id: string, target: MoveTarget): void;
   nest(id: string, parentId: string): void;

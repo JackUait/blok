@@ -12,6 +12,7 @@ import type {
   BlockNode as PublishedBlockNode,
   InsertPosition as PublishedInsertPosition,
   InsertSpec as PublishedInsertSpec,
+  TreeInsertSpec as PublishedTreeInsertSpec,
   MoveTarget as PublishedMoveTarget,
   UseBlocksApi as PublishedUseBlocksApi,
 } from '../../../types/react';
@@ -22,6 +23,7 @@ import type {
   BlockNode as SourceBlockNode,
   InsertPosition as SourceInsertPosition,
   InsertSpec as SourceInsertSpec,
+  TreeInsertSpec as SourceTreeInsertSpec,
   MoveTarget as SourceMoveTarget,
   UseBlocksApi as SourceUseBlocksApi,
 } from '../../../src/react/blocks-snapshot';
@@ -48,6 +50,7 @@ const _editorProps: AssertEqual<PublishedBlokEditorProps, SourceBlokEditorProps>
 const _blockNode: AssertExact<PublishedBlockNode, SourceBlockNode> = true;
 const _insertPosition: AssertEqual<PublishedInsertPosition, SourceInsertPosition> = true;
 const _insertSpec: AssertExact<PublishedInsertSpec, SourceInsertSpec> = true;
+const _treeInsertSpec: AssertExact<PublishedTreeInsertSpec, SourceTreeInsertSpec> = true;
 const _moveTarget: AssertEqual<PublishedMoveTarget, SourceMoveTarget> = true;
 const _useBlocksApi: AssertExact<PublishedUseBlocksApi, SourceUseBlocksApi> = true;
 
@@ -57,5 +60,6 @@ void _editorProps;
 void _blockNode;
 void _insertPosition;
 void _insertSpec;
+void _treeInsertSpec;
 void _moveTarget;
 void _useBlocksApi;

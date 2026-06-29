@@ -48,6 +48,8 @@ const makeFakeEditor = (
   };
   return {
     editor: editor as unknown as Blok,
+    /** Live count of 'block changed' subscribers — asserts subscribe/cleanup. */
+    listenerCount: (): number => listeners.size,
     /** Mutate the underlying list and fire 'block changed'. */
     emitChange: (next: Array<{ id: string; name?: string; parentId?: string | null }>) => {
       list = next.map((r) => ({ id: r.id, name: r.name ?? 'paragraph', parentId: r.parentId ?? null }));
@@ -110,6 +112,30 @@ describe('useBlocks reads', () => {
     expect(result.current.getById('x')).toBeNull();
     expect(result.current.getChildren(null)).toEqual([]);
   });
+
+  it('detaches its "block changed" listener on unmount', () => {
+    // A dropped cleanup would leak one handler per mounted hook. The swap test
+    // alone wouldn't catch it (the new editor stays reactive regardless), so
+    // assert the listener Set empties on unmount.
+    const { editor, listenerCount } = makeFakeEditor([{ id: 'a' }]);
+    const { unmount } = renderHook(() => useBlocks(editor));
+    expect(listenerCount()).toBe(1);
+    unmount();
+    expect(listenerCount()).toBe(0);
+  });
+
+  it('detaches the previous editor listener when the editor instance is swapped', () => {
+    const first = makeFakeEditor([{ id: 'a' }]);
+    const second = makeFakeEditor([{ id: 'x' }]);
+    const { rerender } = renderHook(({ editor }) => useBlocks(editor), {
+      initialProps: { editor: first.editor },
+    });
+    expect(first.listenerCount()).toBe(1);
+
+    rerender({ editor: second.editor });
+    expect(first.listenerCount()).toBe(0);
+    expect(second.listenerCount()).toBe(1);
+  });
 });
 
 describe('useBlocks mutators (delegation)', () => {
@@ -128,6 +154,18 @@ describe('useBlocks mutators (delegation)', () => {
     const { result } = renderHook(() => useBlocks(editor));
     act(() => result.current.unnest('a'));
     expect(editor.blocks.setBlockParent).toHaveBeenCalledWith('a', null);
+  });
+
+  it('unnest is a no-op for a block already at root (no setBlockParent, move, or transact)', () => {
+    // The already-at-root early return must short-circuit BEFORE any relocate or
+    // reparent work; a regression removing it would needlessly reorder a root
+    // block and fire setBlockParent/transact.
+    const { editor } = makeFakeEditor([{ id: 'a' }]); // a is root (parentId null)
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.unnest('a'));
+    expect(editor.blocks.setBlockParent).not.toHaveBeenCalled();
+    expect(editor.blocks.move).not.toHaveBeenCalled();
+    expect(editor.blocks.transact).not.toHaveBeenCalled();
   });
 
   it('nest is a no-op when the target parent is the block itself or its own descendant', () => {
@@ -699,11 +737,12 @@ describe('useBlocks move', () => {
     expect(editor.blocks.move).toHaveBeenCalledWith(1, 0);
   });
 
-  it('move of a block that has descendants delegates a single subtree-aware move', () => {
-    // A has a nested child A1. Moving A past root-sibling B delegates ONE move of
-    // the named block; carrying DOM-contained descendants is core's job (the hook
-    // does not relocate the subtree for move, unlike nest). The toIndex is
-    // computed past B's whole subtree.
+  it('move of a block that has descendants relocates the WHOLE subtree (not just the root)', () => {
+    // A has an indent (parentId-nested) child A1. Core's single move() carries
+    // only DOM-contained descendants, so a one-shot move of A would strand A1
+    // before A in flat order. move() must instead relocate the whole subtree and
+    // re-assert each descendant's parent, leaving [B, A, A1] with A1 still a
+    // child of A.
     const { editor } = makeFakeEditor([
       { id: 'A', name: 'toggle' },
       { id: 'A1', parentId: 'A' },
@@ -711,9 +750,13 @@ describe('useBlocks move', () => {
     ]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => result.current.move('A', { after: 'B' }));
-    // resolveMoveIndex({after:'B'}) = subtreeEnd(B)+1 = 3; forward from 0 → 2.
-    expect(editor.blocks.move).toHaveBeenCalledTimes(1);
-    expect(editor.blocks.move).toHaveBeenCalledWith(2, 0);
+    // Subtree relocation issues more than one core move (root + each descendant).
+    expect((editor.blocks.move as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(1);
+    // A1's parent is re-asserted to A after the relocation.
+    expect(editor.blocks.setBlockParent).toHaveBeenCalledWith('A1', 'A');
+    // Final flat order: A's subtree sits contiguously after B.
+    expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['B', 'A']);
+    expect(result.current.getChildren('A').map((n) => n.id)).toEqual(['A1']);
   });
 
   it('move is a no-op when the relative target is a descendant of the moved block', () => {
@@ -771,7 +814,11 @@ describe('useBlocks move', () => {
     expect(editor.blocks.move).not.toHaveBeenCalled();
   });
 
-  it('move with an absolute toIndex OUTSIDE the block own subtree still delegates', () => {
+  it('move with an absolute toIndex of a block that HAS descendants is a graceful no-op', () => {
+    // An absolute toIndex can't unambiguously place a multi-block subtree (where
+    // do k blocks land relative to one index?), and moving only the root would
+    // strand the children. So a { toIndex } move of a block WITH descendants is a
+    // documented graceful no-op — use { before }/{ after } to relocate a subtree.
     const { editor } = makeFakeEditor([
       { id: 'P', name: 'toggle' },
       { id: 'c1', parentId: 'P' },
@@ -780,7 +827,18 @@ describe('useBlocks move', () => {
     ]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => result.current.move('P', { toIndex: 3 })); // index 3 == tail, outside the subtree
-    expect(editor.blocks.move).toHaveBeenCalledWith(3, 0);
+    expect(editor.blocks.move).not.toHaveBeenCalled();
+    // Order unchanged — nothing was stranded.
+    expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['P', 'tail']);
+  });
+
+  it('move with an absolute toIndex still delegates a single move for a LEAF block', () => {
+    // A leaf (no descendants) has an unambiguous toIndex placement, so the fast
+    // single-move path is used.
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => result.current.move('a', { toIndex: 2 }));
+    expect(editor.blocks.move).toHaveBeenCalledWith(2, 0);
   });
 
   it('move after the last block (forward to end) stays within Blok bounds', () => {
@@ -1042,12 +1100,22 @@ describe('useBlocks pre-ready API (editor is null)', () => {
     expect(result.current.getChildren(null)).toEqual([]);
     expect(result.current.insert({ type: 'paragraph' })).toBeNull();
     expect(result.current.insertMany([{ type: 'paragraph' }])).toEqual([]);
+    expect(result.current.insertTree({ type: 'paragraph' })).toBeNull();
     expect(result.current.move('x', { toIndex: 0 })).toBeUndefined();
     expect(result.current.nest('a', 'b')).toBeUndefined();
     expect(result.current.unnest('a')).toBeUndefined();
     expect(result.current.remove('a')).toBeUndefined();
     expect(result.current.update('a', { text: 'x' })).toBeUndefined();
     expect(result.current.convert('a', 'header')).toBeUndefined();
+  });
+
+  it('pre-ready insertMarkdown resolves to [] without throwing (async no-op)', async () => {
+    // The one async creator must still honor its empty-result contract pre-ready —
+    // it must resolve to [], not reject (which would surface as an unhandled
+    // rejection in the React caller).
+    const { result } = renderHook(() => useBlocks(null));
+
+    await expect(result.current.insertMarkdown('# heading')).resolves.toEqual([]);
   });
 
   it('transact still RUNS its callback even when the editor is null (not a no-op)', () => {

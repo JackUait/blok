@@ -219,6 +219,31 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
         return false;
       }
 
+      // Self-overlap guard. `preRemovalSlot` is the destination the caller
+      // computed as the END of the (new or former) parent's WHOLE subtree — and
+      // when that parent is an ANCESTOR of the relocating block (always so for
+      // unnest, and for a nest into a block this one already sits under), that
+      // span still CONTAINS this block's own subtree. Moving the root to a slot
+      // at the tail of (or inside) its own footprint splices it in right after
+      // one of its OWN descendants; core's post-move auto-heal then reparents the
+      // block under that descendant (setBlockParent(B, B) when the neighbour is
+      // the block's last child), which BlockHierarchy REFUSES with a thrown cycle
+      // error — crashing the caller. But the block is already DFS-contiguous at
+      // that destination (its subtree is the tail of the parent's subtree), so
+      // the relocation is a no-op: skip the move and report success, leaving the
+      // caller to assert the reparent. Window: `rootFrom < preRemovalSlot <=
+      // subtreeEnd + 1`. A backward move (`preRemovalSlot <= rootFrom`) or a
+      // genuine forward move past unrelated content (`preRemovalSlot > subtreeEnd
+      // + 1`) is untouched.
+      const subtreeEnd = collectSubtreeIds(rootId)
+        .map((memberId) => editor.blocks.getBlockIndex(memberId))
+        .filter((i): i is number => i !== undefined)
+        .reduce((max, i) => Math.max(max, i), rootFrom);
+
+      if (preRemovalSlot > rootFrom && preRemovalSlot <= subtreeEnd + 1) {
+        return true;
+      }
+
       // Defensive clamp into [0, count-1]: Blok's move() silently no-ops on an
       // out-of-range index, so an over-large preRemovalSlot would strand the
       // root instead of appending it. (In practice resolveInsertIndex stays in
@@ -287,6 +312,34 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       }
     };
 
+    // Re-assert ONLY the descendants' captured parents after a subtree relocation,
+    // leaving the ROOT's parent as core's post-move auto-heal set it — used by
+    // move(), whose documented side effect is that the root ADOPTS the parent of
+    // the slot it lands in while its subtree travels with it.
+    const reassertDescendantParents = (
+      members: Array<{ id: string; parentId: string | null }>,
+      rootId: string
+    ): void => {
+      members
+        .filter((m) => m.id !== rootId)
+        .forEach((m) => editor.blocks.setBlockParent(m.id, m.parentId));
+    };
+
+    /**
+     * Whether `id` is a DIRECT child of a `column` block. Column membership is
+     * owned by the drag UI, so a programmatic nest/unnest that would change it is
+     * a graceful no-op (see the nest/unnest docs). Checking this EXPLICITLY makes
+     * that contract reliable: relying on core's move-clamp alone leaks, because
+     * when the relocation needs no actual move (a tail column child already sits
+     * at its relocation target) no boundary-crossing move fires, so nothing
+     * clamps and the reparent would slip through.
+     */
+    const isColumnChild = (id: string): boolean => {
+      const parent = getById(id)?.parentId ?? null;
+
+      return parent !== null && getById(parent)?.type === 'column';
+    };
+
     /**
      * Nest `id` (and its whole subtree) under `parentId`, as one undo step.
      * No-op when either id is unknown (probed via the silent snapshot, NOT
@@ -294,11 +347,11 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
      * itself or one of `id`'s own descendants — that would form a cycle, which
      * core's setBlockParent THROWS on, so the hook guards it up front.
      *
-     * Column boundary caveat: nesting a block that lives inside a `column` (or
-     * into one) is a GRACEFUL no-op — Blok's move() clamps cross-column-boundary
-     * moves, so the relocation can't run; the hook detects the blocked
-     * relocation and skips the reparent, leaving the parent unchanged. Use the
-     * drag UI for column membership changes. Returns void.
+     * Column boundary caveat: nesting a block that lives inside a `column`, or
+     * nesting directly INTO one, is a GRACEFUL no-op — column membership is owned
+     * by the drag UI. This is detected explicitly (via the block's and target's
+     * parent type), so the no-op holds even when no boundary-crossing move fires.
+     * Returns void.
      */
     const nest = (id: string, parentId: string): void => {
       if (getById(parentId) === null || getById(id) === null) {
@@ -309,6 +362,12 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       // own descendants. Without this, the relocate/reparent reaches core's
       // setBlockParent, which throws on a cycle and crashes the caller.
       if (parentId === id || isDescendantOf(parentMap(reader), parentId, id)) {
+        return;
+      }
+
+      // Column-boundary no-op: pulling a block out of a `column`, or pushing one
+      // directly into a column, changes column membership — owned by the drag UI.
+      if (isColumnChild(id) || getById(parentId)?.type === 'column') {
         return;
       }
 
@@ -334,7 +393,8 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
     /**
      * Promote `id` (and its subtree) to root, as one undo step. No-op when the
      * id is unknown or already at root. Same column-boundary caveat as
-     * {@link nest}: unnesting out of a `column` is a graceful no-op. Returns void.
+     * {@link nest}: unnesting a `column` member out to root is a graceful no-op
+     * (column membership changes go through the drag UI). Returns void.
      */
     const unnest = (id: string): void => {
       const node = getById(id);
@@ -345,6 +405,11 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       const parentId = node.parentId;
 
       if (parentId === null) {
+        return;
+      }
+
+      // Column-boundary no-op: a column member is detached only via the drag UI.
+      if (isColumnChild(id)) {
         return;
       }
 
@@ -412,6 +477,15 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
      * container's children nests it; moving out to a root sibling unnests it).
      * Use {@link nest}/{@link unnest} to change the parent without choosing a
      * sibling slot. Returns void.
+     *
+     * Subtree-aware: a block WITH descendants relocates its WHOLE subtree as one
+     * undo step (core's single move() carries only DOM-contained descendants, so
+     * a naive move would strand indent/parentId-nested children before their
+     * parent and corrupt DFS contiguity). Only relative `{ before|after }`
+     * targets name an unambiguous slot for a multi-block subtree; an absolute
+     * `{ toIndex }` of a block that HAS descendants is ambiguous (k blocks can't
+     * all land on one index) and is a graceful no-op — use `{ before|after }` to
+     * relocate a subtree.
      */
     const move = (id: string, target: MoveTarget): void => {
       // Silent existence probe (NOT getBlockIndex, which warns on unknown ids).
@@ -454,6 +528,38 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
         if (requested > fromIndex && requested <= subtreeEnd) {
           return;
         }
+      }
+
+      // Subtree-aware relocation. A block WITH descendants can't ride a single
+      // core move(): core carries only DOM-contained descendants (resortNested
+      // Blocks), so indent/parentId-nested children are left at their old slot —
+      // stranded BEFORE their now-moved parent in flat order, breaking the DFS
+      // contiguity getChildren ordering and flat-index inserts depend on, and
+      // corrupting saved document order. Relocate the whole subtree (as
+      // nest/unnest do) and re-assert each descendant's own parent; the ROOT
+      // keeps the parent core's post-move auto-heal gives it — move()'s
+      // documented parent-adoption side effect — so only descendants are
+      // re-parented. A blocked relocation (a clamped cross-`column` move) leaves
+      // everything in place, a graceful no-op like nest/unnest. An absolute
+      // { toIndex } is ambiguous for a multi-block subtree (see the move() doc),
+      // so it is a graceful no-op here — relative targets relocate the subtree.
+      // A leaf block (no descendants) falls through to the single-move fast path.
+      const subtreeMembers = captureSubtreeParents(id);
+
+      if (subtreeMembers.length > 1) {
+        if ('toIndex' in target) {
+          return;
+        }
+
+        const preRemovalSlot = resolveMoveIndex(reader, target);
+
+        transact(() => {
+          if (relocateSubtree(id, preRemovalSlot)) {
+            reassertDescendantParents(subtreeMembers, id);
+          }
+        });
+
+        return;
       }
 
       const resolved = resolveMoveIndex(reader, target);

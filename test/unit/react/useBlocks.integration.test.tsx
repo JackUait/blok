@@ -238,12 +238,14 @@ const createRealEditorHarness = (
     //      from its column). Core no-ops such a move; mirrored here.
     //   2. Cross-container auto-heal: after the flat reorder, the moved block
     //      ADOPTS the parent of the block that sat at `toIndex` (read on the
-    //      pre-removal array, as core does). A heal that would form a cycle
-    //      (target parent is the moved block itself or one of its descendants)
-    //      is skipped — real core's BlockHierarchy.setBlockParent refuses such
-    //      a cycle, so the heal never lands; skipping keeps the harness from
-    //      throwing on the transient self-parent the subtree relocation hits
-    //      before useBlocks re-asserts the final parents.
+    //      pre-removal array, as core does). This routes through the REAL
+    //      BlockHierarchy.setBlockParent, which THROWS on a parent/child cycle
+    //      exactly as core does — and core's block-mutation.move wraps the heal
+    //      in try/finally with NO catch, so the throw propagates to the caller.
+    //      The harness must mirror that faithfully: it must NOT pre-empt or
+    //      swallow the cycle throw, or it would mask a real production crash in
+    //      useBlocks' subtree relocation (a move whose neighbour is one of the
+    //      moved block's own descendants → setBlockParent(B, B)).
     move: (toIndex: number, fromIndex?: number): void => {
       if (fromIndex === undefined) {
         return;
@@ -272,26 +274,12 @@ const createRealEditorHarness = (
 
       blocksStore.move(toIndex, fromIndex);
 
-      // (2) Cross-container auto-heal (cycle-guarded — see method doc).
+      // (2) Cross-container auto-heal — faithful to core block-mutation.ts:
+      // routes through the REAL BlockHierarchy.setBlockParent, which THROWS on a
+      // cycle (and core does not catch it). No pre-check: the harness surfaces
+      // the same throw real core would (see method doc).
       if (movingBlock !== undefined && movingBlock.parentId !== destinationParentId) {
-        const wouldFormCycle = ((): boolean => {
-          let cursor: string | null = destinationParentId;
-          const seen = new Set<string>();
-
-          while (cursor !== null) {
-            if (cursor === movingBlock.id || seen.has(cursor)) {
-              return true;
-            }
-            seen.add(cursor);
-            cursor = blocksStore.array.find((b) => b.id === cursor)?.parentId ?? null;
-          }
-
-          return false;
-        })();
-
-        if (!wouldFormCycle) {
-          hierarchy.setBlockParent(movingBlock, destinationParentId);
-        }
+        hierarchy.setBlockParent(movingBlock, destinationParentId);
       }
 
       notify();
@@ -798,6 +786,41 @@ describe('useBlocks — real BlockHierarchy integration', () => {
     expect(flat).toEqual(['A', 'col', 'c1', 'c2']);
   });
 
+  it('unnest of a column child is a graceful no-op (stays in the column, tree intact)', () => {
+    // Mirror of the nest column test: a `column` member is detached only via the
+    // drag UI, so unnest('c2') must leave c2 a child of the column and the flat
+    // array untouched — NOT promote it to root.
+    const harness = createRealEditorHarness([
+      { id: 'A' },
+      { id: 'col', name: 'column' },
+      { id: 'c1', parentId: 'col' },
+      { id: 'c2', parentId: 'col' },
+    ]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    act(() => {
+      result.current.unnest('c2');
+    });
+
+    // c2 is still the column's child; nothing was promoted to root.
+    expect(result.current.getById('c2')?.parentId).toBe('col');
+    expect(result.current.getChildren('col').map((n) => n.id)).toEqual(['c1', 'c2']);
+
+    const flat: string[] = [];
+
+    for (let i = 0; i < harness.editor.blocks.getBlocksCount(); i++) {
+      const node = harness.editor.blocks.getBlockByIndex(i);
+
+      if (node !== undefined) {
+        flat.push(node.id);
+      }
+    }
+    expect(flat).toEqual(['A', 'col', 'c1', 'c2']);
+  });
+
   it('move ADOPTS the parent of the slot it lands in (parent-adoption side effect)', () => {
     // [X, col(column), c] — X is a root block. Moving X to sit after the column
     // child c lands it among the column's children, so X ADOPTS `col` as its
@@ -820,6 +843,43 @@ describe('useBlocks — real BlockHierarchy integration', () => {
 
     expect(result.current.getById('X')?.parentId).toBe('col');
     expect(result.current.getChildren('col').map((n) => n.id)).toContain('X');
+  });
+
+  it('move of a parent carries its indent descendants and keeps the subtree contiguous', () => {
+    // [P(toggle), c1, c2, X] with c1/c2 parentId-nested under P. Core's single
+    // move() only carries DOM-contained descendants (resortNestedBlocks); indent
+    // (parentId-only) children are NOT carried — so a naive one-shot move of P
+    // would strand c1/c2 BEFORE P, breaking DFS contiguity (children precede
+    // their parent in flat order) and corrupting saved document order. move()
+    // must relocate the WHOLE subtree: after `move('P', { after: 'X' })` the flat
+    // order is [X, P, c1, c2] with c1/c2 still children of P.
+    const harness = createRealEditorHarness([
+      { id: 'P', name: 'toggle' },
+      { id: 'c1', parentId: 'P' },
+      { id: 'c2', parentId: 'P' },
+      { id: 'X' },
+    ]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    act(() => {
+      result.current.move('P', { after: 'X' });
+    });
+
+    const flat: string[] = [];
+
+    for (let i = 0; i < harness.editor.blocks.getBlocksCount(); i++) {
+      const node = harness.editor.blocks.getBlockByIndex(i);
+
+      if (node !== undefined) {
+        flat.push(node.id);
+      }
+    }
+    expect(flat).toEqual(['X', 'P', 'c1', 'c2']);
+    expect(result.current.getById('P')?.parentId).toBeNull();
+    expect(result.current.getChildren('P').map((n) => n.id)).toEqual(['c1', 'c2']);
   });
 
   it('move with an unknown relative ref is a no-op (does not relocate to the document end)', () => {
@@ -1111,6 +1171,98 @@ describe('useBlocks — real BlockHierarchy integration', () => {
     expect(root).toBeNull();
     expect(insertManySpy).not.toHaveBeenCalled();
     expect(harness.editor.blocks.getBlocksCount()).toBe(countBefore);
+  });
+
+  it('insertTree REJECTS a within-spec duplicate id (two nodes share an id, none pre-existing)', () => {
+    // The collision guard must catch an id reused by ANOTHER node in the SAME
+    // spec, not only one already in the document. Two nodes both { id: 'x' } with
+    // no pre-existing 'x' → nothing inserted, returns null.
+    const harness = createRealEditorHarness([{ id: 'anchor' }]);
+
+    workingArea = harness.workingArea;
+
+    const insertManySpy = vi.spyOn(harness.editor.blocks, 'insertMany');
+    const countBefore = harness.editor.blocks.getBlocksCount();
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    let root: ReturnType<typeof result.current.insertTree> = null;
+
+    act(() => {
+      root = result.current.insertTree({
+        id: 'x',
+        type: 'header',
+        children: [{ id: 'x', type: 'paragraph' }],
+      });
+    });
+
+    expect(root).toBeNull();
+    expect(insertManySpy).not.toHaveBeenCalled();
+    expect(harness.editor.blocks.getBlocksCount()).toBe(countBefore);
+  });
+
+  it('insertTree honors an explicit root position (before an existing block)', () => {
+    // [a, b] then insertTree({ position: { before: 'b' } }) lands the WHOLE
+    // subtree at b's slot, so the flat order is [a, root, child, b].
+    const harness = createRealEditorHarness([{ id: 'a' }, { id: 'b' }]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    let rootId: string | undefined;
+
+    act(() => {
+      const root = result.current.insertTree({
+        type: 'header',
+        position: { before: 'b' },
+        children: [{ type: 'paragraph' }],
+      });
+
+      rootId = root?.id;
+    });
+
+    expect(rootId).toBeDefined();
+
+    const childId = result.current.getChildren(rootId as string)[0]?.id;
+    const flat: string[] = [];
+
+    for (let i = 0; i < harness.editor.blocks.getBlocksCount(); i++) {
+      const node = harness.editor.blocks.getBlockByIndex(i);
+
+      if (node !== undefined) {
+        flat.push(node.id);
+      }
+    }
+    expect(flat).toEqual(['a', rootId, childId, 'b']);
+  });
+
+  it('insertTree IGNORES a nested child placement (parentId/position) — child nests under its enclosing node', () => {
+    // A child node may carry parentId/position (TreeInsertSpec allows them on
+    // every node) but they are ROOT-ONLY: a child is always nested under its
+    // enclosing node, regardless of those fields.
+    const harness = createRealEditorHarness([{ id: 'a' }]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    let rootId: string | undefined;
+    let childId: string | undefined;
+
+    act(() => {
+      const root = result.current.insertTree({
+        type: 'header',
+        children: [{ type: 'paragraph', parentId: 'a', position: 'start' }],
+      });
+
+      rootId = root?.id;
+      childId = result.current.getChildren(rootId as string)[0]?.id;
+    });
+
+    // The child ignored parentId:'a'/position:'start' — it is nested under root.
+    expect(childId).toBeDefined();
+    expect(result.current.getById(childId as string)?.parentId).toBe(rootId);
+    expect(result.current.getChildren('a')).toHaveLength(0);
   });
 
   it('insertTree propagates tunes onto the flattened blocks', () => {

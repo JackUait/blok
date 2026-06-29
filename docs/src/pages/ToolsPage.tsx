@@ -16,7 +16,7 @@ interface ToolsContentProps {
 
 /** The block-tools documentation body — sidebar + tool sections. */
 export const ToolsContent: React.FC<ToolsContentProps> = ({ inline = false }) => {
-  const { toolSections, sidebarSections, filterLabel } = useToolsTranslations();
+  const { toolSections, sidebarSections } = useToolsTranslations();
 
   const [activeSection, setActiveSection] = useState<string>(() => {
     const hash = window.location.hash.slice(1);
@@ -84,7 +84,6 @@ export const ToolsContent: React.FC<ToolsContentProps> = ({ inline = false }) =>
             sections={sidebarSections}
             activeSection={activeSection}
             variant="tools"
-            filterLabel={filterLabel}
           />
         </div>
         <div className="min-w-0">

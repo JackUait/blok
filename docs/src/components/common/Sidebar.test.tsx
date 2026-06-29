@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { Sidebar, type SidebarSection } from './Sidebar';
 import { I18nProvider } from '../../contexts/I18nContext';
 
@@ -50,14 +50,6 @@ describe('Sidebar', () => {
       expect(aside.tagName.toLowerCase()).toBe('aside');
     });
 
-    it('should render the search input with api prefix', () => {
-      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
-
-      const searchInput = screen.getByTestId('api-sidebar-search-input');
-      expect(searchInput).toBeInTheDocument();
-      expect(searchInput).toHaveAttribute('placeholder', 'Filter...');
-    });
-
     it('should apply active class to the active section', () => {
       renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
 
@@ -70,6 +62,15 @@ describe('Sidebar', () => {
 
       const configLink = screen.getByTestId('api-sidebar-link-config');
       expect(configLink).not.toHaveClass('active');
+    });
+  });
+
+  describe('no search bar', () => {
+    it('should not render a search input', () => {
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+
+      expect(screen.queryByTestId('api-sidebar-search')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('api-sidebar-search-input')).not.toBeInTheDocument();
     });
   });
 
@@ -106,108 +107,6 @@ describe('Sidebar', () => {
 
       const coreLink = screen.getByTestId('api-sidebar-link-core');
       expect(coreLink).toHaveAttribute('href', '#core');
-    });
-  });
-
-  describe('search functionality', () => {
-    it('should filter links when typing in search input', () => {
-      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
-
-      const searchInput = screen.getByTestId('api-sidebar-search-input');
-      fireEvent.change(searchInput, { target: { value: 'caret' } });
-
-      // Caret should be visible
-      expect(screen.getByText('Caret')).toBeInTheDocument();
-      // Other links should be filtered out
-      expect(screen.queryByText('Blocks')).not.toBeInTheDocument();
-      expect(screen.queryByText('Quick Start')).not.toBeInTheDocument();
-    });
-
-    it('should show empty state when no results match', () => {
-      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
-
-      const searchInput = screen.getByTestId('api-sidebar-search-input');
-      fireEvent.change(searchInput, { target: { value: 'xyz123notfound' } });
-
-      expect(screen.getByTestId('api-sidebar-empty')).toBeInTheDocument();
-      expect(screen.getByText('No results')).toBeInTheDocument();
-    });
-
-    it('should show clear button when search has value', () => {
-      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
-
-      const searchInput = screen.getByTestId('api-sidebar-search-input');
-      fireEvent.change(searchInput, { target: { value: 'test' } });
-
-      const clearButton = screen.getByTestId('api-sidebar-search-clear');
-      expect(clearButton).toBeInTheDocument();
-    });
-
-    it('should clear search when clear button is clicked', () => {
-      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
-
-      const searchInput = screen.getByTestId('api-sidebar-search-input');
-      fireEvent.change(searchInput, { target: { value: 'caret' } });
-
-      // Should be filtered
-      expect(screen.queryByText('Blocks')).not.toBeInTheDocument();
-
-      // Click clear
-      const clearButton = screen.getByTestId('api-sidebar-search-clear');
-      fireEvent.click(clearButton);
-
-      // Should show all sections again
-      expect(screen.getByText('Blocks')).toBeInTheDocument();
-      expect(screen.getByText('Quick Start')).toBeInTheDocument();
-    });
-
-    it('should filter by section ID as well as label', () => {
-      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
-
-      const searchInput = screen.getByTestId('api-sidebar-search-input');
-      fireEvent.change(searchInput, { target: { value: 'blocks-api' } });
-
-      expect(screen.getByText('Blocks')).toBeInTheDocument();
-    });
-
-    it('should be case insensitive', () => {
-      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
-
-      const searchInput = screen.getByTestId('api-sidebar-search-input');
-      fireEvent.change(searchInput, { target: { value: 'CARET' } });
-
-      expect(screen.getByText('Caret')).toBeInTheDocument();
-    });
-
-    it('should show keyboard shortcut with tooltip when search is empty', () => {
-      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
-
-      const shortcut = screen.getByTestId('api-sidebar-search-shortcut');
-      expect(shortcut).toBeInTheDocument();
-      expect(shortcut).toHaveAttribute('title', 'Press / to focus search');
-    });
-  });
-
-  describe('filterLabel prop', () => {
-    it('should use custom filterLabel for aria-label', () => {
-      renderWithI18n(
-        <Sidebar
-          sections={MOCK_SECTIONS}
-          activeSection="core"
-          variant="api"
-          filterLabel="Filter API sections"
-        />
-      );
-
-      const searchInput = screen.getByTestId('api-sidebar-search-input');
-      expect(searchInput).toHaveAttribute('aria-label', 'Filter API sections');
-    });
-
-    it('should use default filterLabel when not provided', () => {
-      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
-
-      const searchInput = screen.getByTestId('api-sidebar-search-input');
-      expect(searchInput).toHaveAttribute('aria-label', 'Filter sections');
     });
   });
 

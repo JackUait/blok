@@ -18,7 +18,7 @@ interface ApiContentProps {
 /** The API documentation body — sidebar + sections — without page chrome. */
 export const ApiContent: React.FC<ApiContentProps> = ({ inline = false }) => {
   const { locale } = useI18n();
-  const { apiSections, sidebarSections, filterLabel } = useApiTranslations();
+  const { apiSections, sidebarSections } = useApiTranslations();
   
   // Initialize active section from URL hash, defaulting to 'quick-start' (first visible section)
   const [activeSection, setActiveSection] = useState<string>(() => {
@@ -136,7 +136,6 @@ export const ApiContent: React.FC<ApiContentProps> = ({ inline = false }) => {
           sections={sidebarSections}
           activeSection={activeSection}
           variant="api"
-          filterLabel={filterLabel}
         />
       </div>
       <div className="min-w-0">

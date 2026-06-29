@@ -15,6 +15,7 @@ vi.mock('../../../src/markdown/index', () => ({
 }));
 
 import { useBlocks } from '../../../src/react/useBlocks';
+import { ToolNotFoundError } from '../../../src/components/errors/tool-not-found';
 import type { Blok } from '../../../types';
 
 interface Row { id: string; name: string; parentId: string | null }
@@ -84,8 +85,11 @@ describe('useBlocks insertMarkdown — converter edge cases', () => {
     expect(markdownToBlocksMock).toHaveBeenCalledWith('# A', config);
   });
 
-  it('swallows a converter rejection and returns [] instead of an unhandled rejection', async () => {
-    markdownToBlocksMock.mockRejectedValue(new Error('parse boom'));
+  it('swallows a converter rejection and returns [] but surfaces the error to console.warn (diagnostics not lost)', async () => {
+    const boom = new Error('parse boom');
+
+    markdownToBlocksMock.mockRejectedValue(boom);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const { editor, insertManySpy } = makeEditor([{ id: 'a' }]);
     const { result } = renderHook(() => useBlocks(editor));
     let created: Awaited<ReturnType<typeof result.current.insertMarkdown>> = [
@@ -101,9 +105,13 @@ describe('useBlocks insertMarkdown — converter edge cases', () => {
       }
     });
 
+    // Graceful no-op contract preserved: no throw, returns [], inserts nothing.
     expect(threw).toBe(false);
     expect(created).toEqual([]);
     expect(insertManySpy).not.toHaveBeenCalled();
+    // But the failure is no longer swallowed silently — it is surfaced so a real
+    // converter bug is distinguishable from empty markdown.
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('insertMarkdown'), boom);
   });
 
   it('re-validates parentId after the await and returns [] if the parent vanished mid-flight', async () => {
@@ -127,6 +135,71 @@ describe('useBlocks insertMarkdown — converter edge cases', () => {
       created = await result.current.insertMarkdown('# A', { parentId: 'container' });
     });
 
+    expect(created).toEqual([]);
+    expect(insertManySpy).not.toHaveBeenCalled();
+  });
+
+  it('resolves to [] (no unhandled rejection) when the insert throws ToolNotFoundError', async () => {
+    // The conversion succeeds but the mapped tool is unknown, so core's insertMany
+    // throws a typed ToolNotFoundError. That throw lives OUTSIDE the conversion
+    // try/catch, so without a guard it surfaces as an unhandled promise rejection.
+    // It must instead resolve to [] — mirroring insertTree's null-on-unknown-tool.
+    markdownToBlocksMock.mockResolvedValue([{ type: 'nope', data: {} }]);
+    const { editor, insertManySpy } = makeEditor([{ id: 'a' }]);
+
+    insertManySpy.mockImplementationOnce(() => {
+      throw new ToolNotFoundError('nope');
+    });
+    const { result } = renderHook(() => useBlocks(editor));
+    let created: Awaited<ReturnType<typeof result.current.insertMarkdown>> = [
+      { id: 'sentinel', type: 'x', parentId: null, contentIds: [] },
+    ];
+    let threw = false;
+
+    await act(async () => {
+      try {
+        created = await result.current.insertMarkdown('# A');
+      } catch {
+        threw = true;
+      }
+    });
+    expect(threw).toBe(false);
+    expect(created).toEqual([]);
+  });
+
+  it('re-throws an UNEXPECTED insert error instead of masking it as []', async () => {
+    markdownToBlocksMock.mockResolvedValue([{ type: 'paragraph', data: {} }]);
+    const { editor, insertManySpy } = makeEditor([{ id: 'a' }]);
+
+    insertManySpy.mockImplementationOnce(() => {
+      throw new Error('kaboom: unexpected core failure');
+    });
+    const { result } = renderHook(() => useBlocks(editor));
+    let threw = false;
+
+    await act(async () => {
+      try {
+        await result.current.insertMarkdown('# A');
+      } catch {
+        threw = true;
+      }
+    });
+    expect(threw).toBe(true);
+  });
+
+  it('is a no-op (returns []) when an object position references a missing block', async () => {
+    // Same divergence as insertTree: a dangling { before|after } ref must NOT fall
+    // through to an end-append — return [] without inserting.
+    markdownToBlocksMock.mockResolvedValue([{ type: 'paragraph', data: {} }]);
+    const { editor, insertManySpy } = makeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let created: Awaited<ReturnType<typeof result.current.insertMarkdown>> = [
+      { id: 'sentinel', type: 'x', parentId: null, contentIds: [] },
+    ];
+
+    await act(async () => {
+      created = await result.current.insertMarkdown('# A', { position: { after: 'missing' } });
+    });
     expect(created).toEqual([]);
     expect(insertManySpy).not.toHaveBeenCalled();
   });

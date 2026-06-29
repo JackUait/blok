@@ -19,6 +19,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useBlocks } from '../../../src/react/useBlocks';
+import { ToolNotFoundError } from '../../../src/components/errors/tool-not-found';
 import type { Blok } from '../../../types';
 import { Blocks } from '../../../src/components/blocks';
 import { BlockRepository } from '../../../src/components/modules/blockManager/repository';
@@ -128,7 +129,7 @@ const createRealEditorHarness = (
       _cfg?: unknown,
       index?: number,
       _needToFocus?: boolean,
-      _replace?: boolean,
+      replace?: boolean,
       explicitId?: string
     ): { id: string; name: string; parentId: string | null } => {
       insertSeq += 1;
@@ -139,6 +140,40 @@ const createRealEditorHarness = (
       const stub = createBlockStub({ id, name: type ?? 'paragraph' });
       const insertAt =
         index !== undefined ? Math.min(index, blocksStore.length) : blocksStore.length;
+
+      // Faithful to core block-insertion.ts replace path: a replace overwrites the
+      // block AT the target index, capturing its children BEFORE it leaves the
+      // store so they can be RE-HOMED onto the new block (reparentChildrenTo) — a
+      // replaced container (toggle/callout) must not orphan its descendants. The
+      // replaced block's OWN parent link is reasserted by useBlocks afterwards.
+      if (replace === true) {
+        const replaced = blocksStore.array[insertAt];
+        const childIds =
+          replaced !== undefined
+            ? blocksStore.array.filter((b) => b.parentId === replaced.id).map((b) => b.id)
+            : [];
+
+        if (replaced !== undefined) {
+          blocksStore.remove(insertAt);
+        }
+        blocksStore.insert(insertAt, stub as unknown as Block);
+
+        const reparentChildrenTo = (ids: string[], newParentId: string): void => {
+          for (const childId of ids) {
+            const child = blocksStore.array.find((b) => b.id === childId);
+
+            if (child !== undefined) {
+              hierarchy.setBlockParent(child, newParentId);
+            }
+          }
+        };
+
+        reparentChildrenTo(childIds, stub.id);
+
+        notify();
+
+        return { id: stub.id, name: stub.name, parentId: stub.parentId };
+      }
 
       blocksStore.insert(insertAt, stub as unknown as Block);
 
@@ -783,6 +818,53 @@ describe('useBlocks — real BlockHierarchy integration', () => {
     expect(flat).toEqual(['A', 'C', insertedId, 'B']);
   });
 
+  it('turn-into (replace) of a container re-homes its children onto the replacement', () => {
+    // [P(toggle), c1⊂P, c2⊂P, tail]. A replace of P ("turn into") overwrites P at
+    // its own slot; core's reparentChildrenTo re-homes P's children onto the new
+    // block so they are NOT orphaned. useBlocks must forward replace=true and
+    // preserve P's (root) parent on the replacement WITHOUT stranding c1/c2.
+    const harness = createRealEditorHarness([
+      { id: 'P', name: 'toggle' },
+      { id: 'c1', parentId: 'P' },
+      { id: 'c2', parentId: 'P' },
+      { id: 'tail' },
+    ]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    let newId: string | null = null;
+
+    act(() => {
+      const created = result.current.insert({ type: 'header', position: { before: 'P' }, replace: true });
+
+      newId = created?.id ?? null;
+    });
+
+    expect(newId).not.toBeNull();
+    const replacementId = newId as unknown as string;
+
+    // The replacement is a header at root, and P's children moved onto it.
+    expect(result.current.getById(replacementId)?.type).toBe('header');
+    expect(result.current.getById(replacementId)?.parentId).toBeNull();
+    expect(result.current.getChildren(replacementId).map((n) => n.id)).toEqual(['c1', 'c2']);
+    // P is gone; the replacement and tail are the root blocks.
+    expect(result.current.getById('P')).toBeNull();
+    expect(result.current.getChildren(null).map((n) => n.id)).toEqual([replacementId, 'tail']);
+
+    const flat: string[] = [];
+
+    for (let i = 0; i < harness.editor.blocks.getBlocksCount(); i++) {
+      const node = harness.editor.blocks.getBlockByIndex(i);
+
+      if (node !== undefined) {
+        flat.push(node.id);
+      }
+    }
+    expect(flat).toEqual([replacementId, 'c1', 'c2', 'tail']);
+  });
+
   it('nest across a column boundary is a graceful no-op (parent unchanged, tree intact)', () => {
     // [A, col(column), c1, c2] — c1/c2 live inside the column. Core's move()
     // clamps any attempt to relocate a column member next to a different-parent
@@ -1348,11 +1430,11 @@ describe('useBlocks — real BlockHierarchy integration', () => {
 
     workingArea = harness.workingArea;
 
-    // Core's insertMany maps composeBlock over every node and THROWS
-    // ("…not found") on the first unknown tool. insertTree must honor the same
+    // Core's insertMany maps composeBlock over every node and THROWS a typed
+    // ToolNotFoundError on the first unknown tool. insertTree must honor the same
     // null-on-unknown contract as insert/insertMany, not surface the throw.
     vi.spyOn(harness.editor.blocks, 'insertMany').mockImplementationOnce(() => {
-      throw new Error('Could not compose Block. Tool «nope» not found.');
+      throw new ToolNotFoundError('nope', 'Could not compose Block. Tool «nope» not found.');
     });
 
     const countBefore = harness.editor.blocks.getBlocksCount();

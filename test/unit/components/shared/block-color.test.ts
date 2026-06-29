@@ -4,7 +4,6 @@ import {
   buildBlockColorTunes,
   getBlockColorToolboxEntries,
   BLOCK_COLOR_SANITIZE,
-  type BlockColorData,
 } from '../../../../src/components/shared/block-color';
 
 const labels = { textColor: 'Text color', background: 'Background', default: 'Default' };

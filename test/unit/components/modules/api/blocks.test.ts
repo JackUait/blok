@@ -941,9 +941,12 @@ describe('BlocksAPI', () => {
       const result = blocksApi.methods.insertMany(blocksToInsert, 0);
 
       expect(blockManager.composeBlock).toHaveBeenCalledTimes(2);
+      // notify: true so a programmatic bulk insert emits BlockChanged and
+      // reactive consumers (React useBlocks insertTree/insertMarkdown) re-render.
       expect(blockManager.insertMany).toHaveBeenCalledWith(
         expect.arrayContaining([ expect.objectContaining({ id: '1' }) ]),
-        0
+        0,
+        { notify: true }
       );
       expect(result).toHaveLength(2);
       expect(result[0]).toHaveProperty('wrappedBlock');

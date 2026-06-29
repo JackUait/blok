@@ -6,6 +6,7 @@ import type { BlockTuneData } from '../../types/block-tunes/block-tune-data';
 import type { OutputBlockData } from '../../types/data-formats/output-data';
 import type { MarkdownImportConfig } from '../markdown/types';
 import { generateBlockId } from '../components/utils/id-generator';
+import { ToolNotFoundError } from '../components/errors/tool-not-found';
 import {
   snapshotNodes,
   resolveInsertIndex,
@@ -13,6 +14,7 @@ import {
   parentMap,
   isDescendantOf,
   type BlockNode,
+  type CaretTarget,
   type IndexReader,
   type InsertPosition,
   type InsertSpec,
@@ -59,6 +61,15 @@ const EMPTY_API: UseBlocksApi = {
   convert: () => undefined,
   // Not a no-op: still runs the callback (see EMPTY_API doc above).
   transact: (fn: () => void) => fn(),
+  // Like transact, still runs the callback even pre-ready.
+  transactWithoutCapture: (fn: () => void) => fn(),
+  getBlocksCount: () => 0,
+  getCurrentBlockIndex: () => -1,
+  getBlockByIndex: () => null,
+  getBlockByElement: () => null,
+  composeBlockData: async () => ({}),
+  insertOutputData: () => [],
+  splitBlock: () => null,
 };
 
 /**
@@ -640,7 +651,7 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
      * or null when nothing was inserted (idempotent hit returns the existing
      * node; a guard failure returns null).
      */
-    const insertWithinTransaction = (spec: InsertSpec): BlockNode | null => {
+    const insertWithinTransaction = (spec: InsertSpec): { node: BlockNode | null; created: boolean } => {
       const parentId = spec.parentId ?? null;
       const position = spec.position ?? 'end';
       const data = spec.data ?? {};
@@ -661,7 +672,10 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
         const existing = getById(spec.id);
 
         if (existing !== null) {
-          return existing;
+          // Insert-if-absent hit: the block already existed, nothing was created.
+          // insert() still returns the existing node (documented), but insertMany
+          // must EXCLUDE it from its created[] result — hence created: false.
+          return { node: existing, created: false };
         }
       }
 
@@ -673,7 +687,7 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       // parentId entirely (the overwritten block's own parent governs), so a
       // stale parentId must not abort the overwrite.
       if (!replace && parentId !== null && getById(parentId) === null) {
-        return null;
+        return { node: null, created: false };
       }
 
       // A replace targets the before/after ref block ITSELF (the "turn into"
@@ -690,13 +704,27 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       // guard that protects the replace path.
       if (replace) {
         if (typeof position !== 'object') {
-          return null;
+          return { node: null, created: false };
         }
 
         const replaceTargetRef = 'before' in position ? position.before : position.after;
 
         if (getById(replaceTargetRef) === null) {
-          return null;
+          return { node: null, created: false };
+        }
+      }
+
+      // A plain insert with an object position naming a ref that does NOT exist
+      // must be a no-op (return null), NOT a silent append at the document/parent
+      // end. resolveInsertIndex falls back to the end slot for an unresolved ref,
+      // which would dump the block somewhere surprising — a DX footgun. Mirror
+      // move(), which already bails on a missing relative ref. (Skipped under
+      // replace: the block above already validated the replace ref.)
+      if (!replace && typeof position === 'object') {
+        const positionTargetRef = 'before' in position ? position.before : position.after;
+
+        if (getById(positionTargetRef) === null) {
+          return { node: null, created: false };
         }
       }
 
@@ -722,11 +750,15 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
         try {
           return editor.blocks.insert(spec.type, data, {}, flatIndex, needToFocus, replace, spec.id, spec.tunes);
         } catch (error) {
-          // The only EXPECTED throw here is an unknown/missing tool — core
-          // reports it as "…not found" (also covers a missing replace target).
-          // Honor the null contract for that; re-throw anything else so a
-          // genuine bug surfaces instead of being masked as a null return.
-          if (error instanceof Error && error.message.includes('not found')) {
+          // The only EXPECTED throw here is an unknown/missing tool — core throws
+          // a typed ToolNotFoundError. (A missing replace TARGET is a bare Error,
+          // not this type, so it would re-throw — but the replace ref is already
+          // pre-validated above, so it never reaches here.) Honor the null contract
+          // for ToolNotFoundError; re-throw anything else so a genuine
+          // bug surfaces instead of being masked as a null return. Keyed on the
+          // error TYPE, not a 'not found' substring, so an unrelated error whose
+          // message happens to contain "not found" is not wrongly swallowed.
+          if (error instanceof ToolNotFoundError) {
             return null;
           }
           throw error;
@@ -734,7 +766,7 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       })();
 
       if (created === undefined || created === null) {
-        return null;
+        return { node: null, created: false };
       }
 
       // Assert the intended parent. Core derives a new block's parent from its
@@ -751,7 +783,15 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
         editor.blocks.setBlockParent(created.id, intendedParentId);
       }
 
-      return getById(created.id);
+      // Position the caret inside the freshly-created block when the caller asked
+      // for a specific spot (beyond the boolean `focus`). Applied only on a real
+      // creation — an insert-if-absent hit returned earlier, so it never reaches
+      // here. setToBlock takes the block id directly.
+      if (spec.caret !== undefined) {
+        editor.caret.setToBlock(created.id, spec.caret.position ?? 'default', spec.caret.offset ?? 0);
+      }
+
+      return { node: getById(created.id), created: true };
     };
 
     /**
@@ -776,7 +816,9 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       // parented insert, its reparent) — and gives the insert its own boundary
       // instead of merging into adjacent typing history.
       transact(() => {
-        result.node = insertWithinTransaction(spec);
+        // insert() returns the resolved node — including an insert-if-absent hit's
+        // existing node (documented) — so it reads only `.node`, not `.created`.
+        result.node = insertWithinTransaction(spec).node;
       });
 
       return result.node;
@@ -792,13 +834,15 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
 
       // ONE transact for the whole batch → a single atomic undo step. Each spec
       // still runs the full single-insert path (parent assertion, positioning).
-      // Specs that fail to insert return null and are dropped from the result.
+      // Per the documented contract, the result holds ONLY successfully-created
+      // nodes: specs that fail to insert (null node) AND insert-if-absent hits
+      // (existing block, created: false) are both dropped.
       transact(() => {
         for (const spec of specs) {
-          const node = insertWithinTransaction(spec);
+          const result = insertWithinTransaction(spec);
 
-          if (node !== null) {
-            created.push(node);
+          if (result.created && result.node !== null) {
+            created.push(result.node);
           }
         }
       });
@@ -822,6 +866,18 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       // subtree isn't silently dumped at the document end.
       if (parentId !== null && getById(parentId) === null) {
         return null;
+      }
+
+      // Dangling relative position ref: an object { before|after } naming a block
+      // that does not exist must be a no-op, NOT a silent append at the document
+      // end (resolveInsertIndex's unresolved-ref fallback). Mirror insert()'s
+      // missing-ref guard and reject before flattening anything.
+      if (typeof position === 'object') {
+        const positionTargetRef = 'before' in position ? position.before : position.after;
+
+        if (getById(positionTargetRef) === null) {
+          return null;
+        }
       }
 
       // Every node needs a stable id BEFORE flattening so parent/content links
@@ -885,15 +941,16 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
 
       // ONE transact for the whole subtree → a single atomic undo step. Core's
       // insertMany composes EVERY node before inserting any, so an unknown tool
-      // type throws ("…not found") with nothing inserted. Honor the same
-      // null-on-unknown-tool contract as insert/insertMany rather than surfacing
-      // the throw to the React caller; re-throw any other (genuine-bug) error.
+      // type throws a typed ToolNotFoundError with nothing inserted. Honor the
+      // same null-on-unknown-tool contract as insert/insertMany rather than
+      // surfacing the throw to the React caller; re-throw any other (genuine-bug)
+      // error. Keyed on the error TYPE, not a 'not found' substring.
       try {
         transact(() => {
           editor.blocks.insertMany(flat, flatIndex);
         });
       } catch (error) {
-        if (error instanceof Error && error.message.includes('not found')) {
+        if (error instanceof ToolNotFoundError) {
           return null;
         }
         throw error;
@@ -921,6 +978,16 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
         return [];
       }
 
+      // A dangling relative position ref is likewise a no-op (no insert), NOT a
+      // silent append at the document end — mirror insert()/insertTree's guard.
+      if (typeof position === 'object') {
+        const positionTargetRef = 'before' in position ? position.before : position.after;
+
+        if (getById(positionTargetRef) === null) {
+          return [];
+        }
+      }
+
       // Lazy-load the converter (dynamic import mirrors core's markdown lazy
       // loading and keeps the parser out of the main bundle) and run it,
       // forwarding the optional MarkdownImportConfig so custom-tool consumers can
@@ -936,7 +1003,15 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
         const { markdownToBlocks } = await import('../markdown/index');
 
         conversion.blocks = await markdownToBlocks(markdown, options?.config);
-      } catch {
+      } catch (error) {
+        // Graceful no-op: a converter failure (chunk-load or parse error) returns
+        // [] rather than surfacing an unhandled rejection to the React caller. But
+        // surface it to the console so a genuine converter bug is DISTINGUISHABLE
+        // from empty markdown (which returns [] via the blocks.length === 0 path
+        // below, without ever reaching this catch) instead of being swallowed
+        // silently and losing all diagnostics.
+        console.warn('useBlocks.insertMarkdown: markdown conversion failed', error);
+
         return [];
       }
 
@@ -953,6 +1028,17 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       // promised [] no-op, so re-check and bail out here.
       if (parentId !== null && getById(parentId) === null) {
         return [];
+      }
+
+      // Re-validate the relative position ref after the await too: the target
+      // could have been removed while the converter was in flight, in which case
+      // inserting at the stale slot would surprise the caller. No-op instead.
+      if (typeof position === 'object') {
+        const positionTargetRef = 'before' in position ? position.before : position.after;
+
+        if (getById(positionTargetRef) === null) {
+          return [];
+        }
       }
 
       // Nest under the parent by stamping `parent` on each TOP-LEVEL block (one
@@ -976,9 +1062,21 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       // survive composition. ONE transact → a single atomic undo step.
       const result: { created: Array<{ id: string }> } = { created: [] };
 
-      transact(() => {
-        result.created = editor.blocks.insertMany(seeded, flatIndex);
-      });
+      // The insert lives OUTSIDE the conversion try/catch, so an unknown mapped
+      // tool (core throws a typed ToolNotFoundError) would otherwise surface as an
+      // unhandled promise rejection. Honor the same null-on-unknown-tool contract
+      // as insertTree — return [] — and re-throw any other (genuine-bug) error.
+      // Keyed on the error TYPE, not a 'not found' substring.
+      try {
+        transact(() => {
+          result.created = editor.blocks.insertMany(seeded, flatIndex);
+        });
+      } catch (error) {
+        if (error instanceof ToolNotFoundError) {
+          return [];
+        }
+        throw error;
+      }
 
       return result.created
         .map((block) => getById(block.id))
@@ -1001,15 +1099,133 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       void Promise.resolve(editor.blocks.update(id, data, tunes)).catch(() => undefined);
     };
 
-    const convert = (id: string, newType: string, dataOverrides?: BlockToolData): void => {
+    const convert = (
+      id: string,
+      newType: string,
+      dataOverrides?: BlockToolData,
+      options?: { caret?: CaretTarget }
+    ): void => {
       if (getById(id) === null) {
         return;
       }
 
       // Core convert is async and rejects when a tool lacks a conversionConfig.
-      // Like update, it owns its own history step (no transact). Swallow the
-      // rejection so a non-convertible block is a graceful no-op.
-      void Promise.resolve(editor.blocks.convert(id, newType, dataOverrides)).catch(() => undefined);
+      // Like update, it owns its own history step (no transact). Position the
+      // caret only AFTER a successful convert (matching the in-editor keyboard
+      // turn-into, which preserves the caret) when the caller asked for it.
+      // Swallow the rejection so a non-convertible block is a graceful no-op —
+      // and on rejection the caret is left untouched.
+      void Promise.resolve(editor.blocks.convert(id, newType, dataOverrides))
+        .then(() => {
+          if (options?.caret !== undefined) {
+            editor.caret.setToBlock(id, options.caret.position ?? 'default', options.caret.offset ?? 0);
+          }
+        })
+        .catch(() => undefined);
+    };
+
+    const transactWithoutCapture = (fn: () => void): void => {
+      if (editor.blocks.transactWithoutCapture !== undefined) {
+        editor.blocks.transactWithoutCapture(fn);
+      } else {
+        fn();
+      }
+    };
+
+    const getBlocksCount = (): number => editor.blocks.getBlocksCount();
+
+    const getCurrentBlockIndex = (): number => editor.blocks.getCurrentBlockIndex();
+
+    const getBlockByIndex = (index: number): BlockNode | null => {
+      const block = editor.blocks.getBlockByIndex(index);
+
+      return block === undefined ? null : getById(block.id);
+    };
+
+    const getBlockByElement = (element: HTMLElement): BlockNode | null => {
+      const block = editor.blocks.getBlockByElement(element);
+
+      return block === undefined ? null : getById(block.id);
+    };
+
+    const composeBlockData = (toolName: string): Promise<BlockToolData> =>
+      editor.blocks.composeBlockData(toolName);
+
+    const splitBlock = (
+      currentBlockId: string,
+      currentBlockData: Partial<BlockToolData>,
+      newBlockType: string,
+      newBlockData: BlockToolData,
+      insertIndex: number
+    ): BlockNode | null => {
+      // Silent no-op for an unknown current block, matching every other id-taking
+      // mutator. Probe via the snapshot getById (NOT getBlockIndex, which warns).
+      if (getById(currentBlockId) === null) {
+        return null;
+      }
+
+      // An unknown newBlockType makes core's compose path throw a typed
+      // ToolNotFoundError — honor the null contract (mirroring insert/insertTree);
+      // re-throw any other (genuine-bug) error. Keyed on the error TYPE.
+      const created = ((): { id: string } | null | undefined => {
+        try {
+          return editor.blocks.splitBlock(
+            currentBlockId,
+            currentBlockData,
+            newBlockType,
+            newBlockData,
+            insertIndex
+          );
+        } catch (error) {
+          if (error instanceof ToolNotFoundError) {
+            return null;
+          }
+          throw error;
+        }
+      })();
+
+      return created === undefined || created === null ? null : getById(created.id);
+    };
+
+    const insertOutputData = (
+      blocks: OutputBlockData[],
+      options?: { index?: number }
+    ): BlockNode[] => {
+      // An empty batch opens no transaction (no spurious undo boundary).
+      if (blocks.length === 0) {
+        return [];
+      }
+
+      // A negative index is malformed — core throws a bare validation Error. Honor
+      // the silent-no-op convention instead: return [] without inserting (no
+      // transaction, no surprise end-append), consistent with the rest of the API.
+      if (options?.index !== undefined && options.index < 0) {
+        return [];
+      }
+
+      // ONE transact for the whole batch → a single atomic undo step. Delegates
+      // to core's raw insertMany, which honors each block's parent/content links.
+      // Honor the same null/[]-on-unknown-tool contract as insertTree (core throws
+      // a typed ToolNotFoundError); re-throw any other (genuine-bug) error.
+      const result: { created: Array<{ id: string }> } = { created: [] };
+
+      try {
+        transact(() => {
+          result.created =
+            options?.index !== undefined
+              ? editor.blocks.insertMany(blocks, options.index)
+              : editor.blocks.insertMany(blocks);
+        });
+      } catch (error) {
+        if (error instanceof ToolNotFoundError) {
+          return [];
+        }
+        throw error;
+      }
+
+      return result.created
+        .map((block) => getById(block.id))
+        .filter((node): node is BlockNode => node !== null);
     };
 
     return {
@@ -1027,6 +1243,14 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       update,
       convert,
       transact,
+      transactWithoutCapture,
+      getBlocksCount,
+      getCurrentBlockIndex,
+      getBlockByIndex,
+      getBlockByElement,
+      composeBlockData,
+      insertOutputData,
+      splitBlock,
     };
   }, [editor]);
 }

@@ -1,6 +1,17 @@
 import type { BlockToolData } from '../../types/tools';
 import type { BlockTuneData } from '../../types/block-tunes/block-tune-data';
+import type { OutputBlockData } from '../../types/data-formats/output-data';
 import type { MarkdownImportConfig } from '../markdown/types';
+
+/**
+ * Where to place the caret within a block. `position` selects the input
+ * (`'start'`/`'end'`/`'default'`) and `offset` is the character offset within it
+ * — the same shape core's `caret.setToBlock` accepts.
+ */
+export interface CaretTarget {
+  position?: 'start' | 'end' | 'default';
+  offset?: number;
+}
 
 /**
  * A plain, serializable view of one block in the tree.
@@ -47,6 +58,13 @@ export interface InsertSpec {
   id?: string;
   /** Block tune data to apply at creation, keyed by tune name. */
   tunes?: { [name: string]: BlockTuneData };
+  /**
+   * Place the caret inside the newly-created block at a specific position/offset
+   * (e.g. `{ offset: 3 }`). Implies focus. Applied ONLY when a block is actually
+   * created — an insert-if-absent hit (existing id) does not move the caret.
+   * Use this instead of the boolean `focus` when you need a specific offset.
+   */
+  caret?: CaretTarget;
 }
 
 /**
@@ -187,8 +205,63 @@ export interface UseBlocksApi {
    * is a silent no-op. Not wrapped in `transact` (core owns its history step).
    * Returns `void`.
    */
-  convert(id: string, newType: string, dataOverrides?: BlockToolData): void;
+  convert(
+    id: string,
+    newType: string,
+    dataOverrides?: BlockToolData,
+    options?: { caret?: CaretTarget }
+  ): void;
   transact(fn: () => void): void;
+  /**
+   * Run `fn` as one atomic operation that is NOT captured in the undo history —
+   * the React-surface counterpart of core's `transactWithoutCapture`. Use for
+   * silent auto-repair/normalization that a user's CMD+Z should never step
+   * through. Mutations inside still emit reactively. Pre-ready it just runs `fn`.
+   */
+  transactWithoutCapture(fn: () => void): void;
+  /**
+   * The current block count. Reactive (re-reads on 'block changed'). Pre-ready: 0.
+   */
+  getBlocksCount(): number;
+  /**
+   * The flat index of the block holding the caret, or -1 when none. Pre-ready: -1.
+   */
+  getCurrentBlockIndex(): number;
+  /** The block at a flat index as a snapshot {@link BlockNode}, or null. */
+  getBlockByIndex(index: number): BlockNode | null;
+  /**
+   * The block whose holder contains/equals `element`, as a snapshot
+   * {@link BlockNode}, or null. Useful for mapping a DOM event target back to a
+   * block.
+   */
+  getBlockByElement(element: HTMLElement): BlockNode | null;
+  /**
+   * Read a tool's default empty data WITHOUT inserting anything — delegates to
+   * core's `composeBlockData`. Async (a tool's data may be composed lazily).
+   * Rejects (via core) for an unknown tool. Pre-ready: resolves to `{}`.
+   */
+  composeBlockData(toolName: string): Promise<BlockToolData>;
+  /**
+   * Insert a flat array of already-serialized {@link OutputBlockData} (the
+   * `save()` shape) directly, honoring each block's `parent`/`content` links —
+   * the raw counterpart of core's `blocks.insertMany`. Use to re-insert a saved
+   * document fragment without reshaping it into {@link TreeInsertSpec}. One
+   * atomic undo step. Returns the created nodes; pre-ready: `[]` (no insert).
+   */
+  insertOutputData(blocks: OutputBlockData[], options?: { index?: number }): BlockNode[];
+  /**
+   * Atomically split a block: update `currentBlockId` with `currentBlockData`
+   * and insert a new `newBlockType` block at `insertIndex`, as ONE undo step.
+   * Delegates to core's `splitBlock`. Returns the new node, or null pre-ready /
+   * on an unknown id.
+   */
+  splitBlock(
+    currentBlockId: string,
+    currentBlockData: Partial<BlockToolData>,
+    newBlockType: string,
+    newBlockData: BlockToolData,
+    insertIndex: number
+  ): BlockNode | null;
 }
 
 /** The minimal slice of editor.blocks that the snapshot helpers read. */

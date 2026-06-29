@@ -113,6 +113,123 @@ test.describe('React adapter', () => {
     expect(children.map((b) => b.data.text).sort()).toEqual(['Child A', 'Child B']);
   });
 
+  test('a bulk insertTree re-renders a getChildren-reading component (reactivity end-to-end)', async ({ page }) => {
+    await page.goto(REACT_TEST_URL);
+    await expect(page.getByTestId('status')).toHaveText('ready');
+
+    // The fixture's root-count is derived in render from blocks.getChildren(null).
+    // It starts at 1 (the seeded block1) and must update to 2 after a bulk
+    // insertTree WITHOUT any save/click — proving editor.blocks.insertMany now
+    // emits 'block changed' so useBlocks re-renders. (Pre-fix it stayed at 1.)
+    await expect(page.getByTestId('root-count')).toHaveText('1');
+
+    await page.evaluate(() => {
+      const api = (window as unknown as {
+        __blocksApi: { insertTree: (s: unknown) => unknown };
+      }).__blocksApi;
+
+      api.insertTree({ type: 'header', data: { text: 'Reactive' } });
+    });
+
+    await expect(page.getByTestId('root-count')).toHaveText('2');
+  });
+
+  test('a programmatic insert renders a new block holder in the React-managed container', async ({ page }) => {
+    await page.goto(REACT_TEST_URL);
+    await expect(page.getByTestId('status')).toHaveText('ready');
+
+    const editorContainer = page.getByTestId('editor-container');
+    const editables = editorContainer.locator('[contenteditable]');
+
+    await expect(editables).toHaveCount(1);
+
+    await page.evaluate(() => {
+      const api = (window as unknown as {
+        __blocksApi: { insert: (s: unknown) => unknown };
+      }).__blocksApi;
+
+      api.insert({ type: 'paragraph', data: { text: 'Programmatically added' }, position: 'end' });
+    });
+
+    // The created block's holder is adopted into the same React-managed container
+    // and rendered — a real DOM node, not just a saved-model entry.
+    await expect(editables).toHaveCount(2);
+    await expect(editorContainer.getByText('Programmatically added')).toBeVisible();
+  });
+
+  test('an end-user Enter-split gesture creates and renders a second block through the React mount', async ({ page }) => {
+    await page.goto(REACT_TEST_URL);
+    await expect(page.getByTestId('status')).toHaveText('ready');
+
+    const editorContainer = page.getByTestId('editor-container');
+    const firstParagraph = editorContainer.locator('[contenteditable]').first();
+
+    await firstParagraph.click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('Second block');
+
+    // The split produced a real second block in the React-mounted editor.
+    await expect(editorContainer.locator('[contenteditable]')).toHaveCount(2);
+
+    const blocks = await readSavedBlocks(page);
+
+    expect(blocks).toHaveLength(2);
+    expect(blocks[1].data.text).toBe('Second block');
+  });
+
+  test('useBlocks move/nest/unnest/remove/update/convert run against the real bundle', async ({ page }) => {
+    await page.goto(REACT_TEST_URL);
+    await expect(page.getByTestId('status')).toHaveText('ready');
+
+    await page.evaluate(() => {
+      const api = (window as unknown as {
+        __blocksApi: {
+          insert: (s: unknown) => { id: string } | null;
+          nest: (id: string, parentId: string) => void;
+          unnest: (id: string) => void;
+          move: (id: string, target: unknown) => void;
+          update: (id: string, data: unknown) => void;
+          convert: (id: string, type: string) => void;
+          remove: (id: string) => void;
+        };
+      }).__blocksApi;
+
+      api.insert({ type: 'paragraph', id: 'A', data: { text: 'Parent' }, position: 'end' });
+      api.insert({ type: 'paragraph', id: 'B', data: { text: 'Child' }, position: 'end' });
+      api.insert({ type: 'paragraph', id: 'C', data: { text: 'Doomed' }, position: 'end' });
+      api.insert({ type: 'paragraph', id: 'D', data: { text: 'Mover' }, position: 'end' });
+      api.insert({ type: 'paragraph', id: 'E', data: { text: 'Temp' }, position: 'end' });
+
+      api.nest('B', 'A');               // nest:   B becomes a child of A
+      api.nest('E', 'A');               // (set up an unnest target)
+      api.unnest('E');                  // unnest: E promoted back to root
+      api.move('D', { before: 'A' });   // move:   D relocated before A
+      api.update('A', { text: 'Parent updated' }); // update: A's text
+      api.convert('B', 'header');       // convert: B -> header (new id, kept under A)
+      api.remove('C');                  // remove:  delete the throwaway block
+    });
+
+    const blocks = await readSavedBlocks(page);
+    const indexOf = (id: string): number => blocks.findIndex((b) => b.id === id);
+    const parent = blocks.find((b) => b.id === 'A');
+    // convert() recreates the block under a fresh id, so locate the converted
+    // child by its NEW type + preserved parent link rather than the old id.
+    const convertedChild = blocks.find((b) => b.type === 'header' && b.parent === 'A');
+
+    // update
+    expect(parent?.data.text).toBe('Parent updated');
+    // nest + convert: the (retyped) child still names A as its parent.
+    expect(convertedChild).toBeDefined();
+    expect(convertedChild?.data.text).toBe('Child');
+    // unnest: E is back at root (no parent link).
+    expect(blocks.find((b) => b.id === 'E')?.parent ?? null).toBeNull();
+    // move: D now sits before A in document order.
+    expect(indexOf('D')).toBeLessThan(indexOf('A'));
+    // remove: C is gone.
+    expect(blocks.find((b) => b.id === 'C')).toBeUndefined();
+  });
+
   test('useBlocks.insertMarkdown creates REAL blocks from markdown (real bundle, real converter)', async ({ page }) => {
     await page.goto(REACT_TEST_URL);
     await expect(page.getByTestId('status')).toHaveText('ready');

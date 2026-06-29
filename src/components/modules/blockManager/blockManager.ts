@@ -522,8 +522,14 @@ export class BlockManager extends Module {
    * Used during initial rendering of the editor
    * @param blocks - blocks to insert
    * @param index - index where to insert
+   * @param options - extra behavior
+   * @param options.notify - when true, emit ONE BlockChanged (block-added) mutation
+   *   for the whole batch so reactive consumers (e.g. the React useBlocks hook)
+   *   re-render. Defaults to false: the render/seed path (Renderer.render) loads a
+   *   document without firing a change mutation. The public api.blocks.insertMany
+   *   wrapper passes true so a programmatic bulk insert mirrors single insert().
    */
-  public insertMany(blocks: Block[], index = 0): void {
+  public insertMany(blocks: Block[], index = 0, { notify = false }: { notify?: boolean } = {}): void {
     const blockById = new Map<string, Block>();
 
     for (const block of blocks) {
@@ -571,6 +577,17 @@ export class BlockManager extends Module {
         this.updateBlockIndentation(block);
       }
     });
+
+    // Notify reactive consumers (React useBlocks hook) that blocks were added.
+    // Single insert() fires one BlockAdded mutation per block; a bulk insert
+    // fires ONE for the whole atomic batch — enough to bump a subscription
+    // version without an event storm. Gated on `notify` so the render/seed path
+    // (Renderer.render) stays silent (it has its own block:rendered events).
+    if (notify && blocks.length > 0) {
+      this.blockDidMutated(BlockAddedMutationType, blocks[0], {
+        index,
+      });
+    }
   }
 
   /**

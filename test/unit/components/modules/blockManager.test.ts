@@ -12,6 +12,7 @@ import type { BlockToolAdapter } from '../../../../src/components/tools/block';
 import type { InlineToolAdapter } from '../../../../src/components/tools/inline';
 import type { BlockTuneAdapter } from '../../../../src/components/tools/tune';
 import { ToolsCollection } from '../../../../src/components/tools/collection';
+import { ToolNotFoundError } from '../../../../src/components/errors/tool-not-found';
 import { ToolType } from '@/types/tools/adapters/tool-type';
 import type { BlockToolConstructable } from '@/types/tools/block-tool';
 import type { ConversionConfig } from '@/types/configs/conversion-config';
@@ -956,6 +957,63 @@ describe('BlockManager', () => {
     }).toThrow('Block with id "unknown" not found');
   });
 
+  it('throws ToolNotFoundError WITHOUT mutating the document when splitBlockWithData gets an unregistered new tool', () => {
+    const originalBlock = createBlockStub({ id: 'original', name: 'paragraph' });
+
+    originalBlock.holder.innerHTML = '<div contenteditable="true">Hello World</div>';
+
+    const yjsManagerMock = {
+      addBlock: vi.fn(),
+      removeBlock: vi.fn(),
+      moveBlock: vi.fn(),
+      updateBlockData: vi.fn(() => true),
+      updateBlockTune: vi.fn(),
+      updateBlockIndent: vi.fn(),
+      stopCapturing: vi.fn(),
+      transact: vi.fn((fn: () => void) => fn()),
+      onBlocksChanged: vi.fn(() => vi.fn()),
+      fromJSON: vi.fn(),
+    } as unknown as BlokModules['YjsManager'];
+
+    // Only 'paragraph' is registered — 'unknown-tool' is NOT.
+    const toolsCollection = createMockToolsCollection(['paragraph']);
+
+    const { blockManager } = createBlockManager({
+      initialBlocks: [ originalBlock ],
+      blokOverrides: {
+        YjsManager: yjsManagerMock,
+        Tools: {
+          blockTools: toolsCollection,
+        } as unknown as BlokModules['Tools'],
+      },
+    });
+
+    const blockCountBefore = blockManager.blocks.length;
+    const contentElBefore = originalBlock.holder.querySelector('[contenteditable="true"]');
+    const textBefore = contentElBefore?.innerHTML;
+
+    // Splitting into an unregistered tool must throw the typed error...
+    expect(() => {
+      blockManager.splitBlockWithData(
+        'original',
+        { text: 'Hello' },
+        'unknown-tool',
+        { text: ' World' },
+        1
+      );
+    }).toThrow(ToolNotFoundError);
+
+    // ...and leave the document COMPLETELY unchanged: no truncation of the
+    // original block, no phantom block added, no Yjs writes.
+    expect(yjsManagerMock.updateBlockData).not.toHaveBeenCalled();
+    expect(yjsManagerMock.addBlock).not.toHaveBeenCalled();
+    expect(blockManager.blocks.length).toBe(blockCountBefore);
+
+    const contentElAfter = originalBlock.holder.querySelector('[contenteditable="true"]');
+
+    expect(contentElAfter?.innerHTML).toBe(textBefore);
+  });
+
   it('emits enumerable events when blockDidMutated is invoked', () => {
     const block = createBlockStub({ id: 'block-1' });
     const { blockManager, composeBlockSpy: _composeBlockSpy, eventsDispatcher: _eventsDispatcher } = createBlockManager({
@@ -1054,6 +1112,79 @@ describe('BlockManager', () => {
       // the converted block (a paragraph can host children too).
       expect(result.contentIds).toContain('child-1');
       expect(childBlock.parentId).toBe('new-block');
+    });
+
+    it('insert({ replace: true }) re-homes the replaced container children onto the new block', () => {
+      // The generic insert-replace path (what useBlocks.insert({ replace }) and
+      // toolbox/shortcut turn-into delegate to) must preserve the replaced
+      // container's children, exactly like blockManager.replace() above. Without
+      // this, the children keep a parentId pointing at the removed block and are
+      // orphaned — unreachable via getChildren.
+      const blockToReplace = createBlockStub({ id: 'toggle-parent' });
+      const childBlock = createBlockStub({ id: 'child-1' });
+
+      blockToReplace.contentIds = ['child-1'];
+      childBlock.parentId = 'toggle-parent';
+
+      const { blockManager, composeBlockSpy } = createBlockManager({
+        initialBlocks: [blockToReplace, childBlock],
+      });
+
+      blockManager.currentBlockIndex = 0;
+
+      const newBlock = createBlockStub({ id: 'new-block' });
+
+      composeBlockSpy.mockReturnValue(newBlock);
+
+      const result = blockManager.insert({
+        tool: 'paragraph',
+        data: { text: 'converted' },
+        index: 0,
+        replace: true,
+      });
+
+      // The child must follow onto the replacement, not dangle on the removed id.
+      expect(childBlock.parentId).toBe('new-block');
+      expect(result.contentIds).toContain('child-1');
+    });
+
+    it('insert({ replace: true }) with a prebuilt container keeps ITS OWN children (guard)', () => {
+      // The re-home is guarded on the new block having no children of its own
+      // (block-insertion.ts: `block.contentIds.length === 0`). When the caller
+      // replaces with a PREBUILT container that already carries its own
+      // contentIds, those must be preserved — the replaced block's children must
+      // NOT be force-adopted over them. (The common turn-into composes an empty
+      // block, so it still adopts; this guards the explicit prebuilt-container
+      // case, which the re-home test above does not exercise.)
+      const blockToReplace = createBlockStub({ id: 'toggle-parent' });
+      const replacedChild = createBlockStub({ id: 'child-1' });
+
+      blockToReplace.contentIds = ['child-1'];
+      replacedChild.parentId = 'toggle-parent';
+
+      const { blockManager, composeBlockSpy } = createBlockManager({
+        initialBlocks: [blockToReplace, replacedChild],
+      });
+
+      blockManager.currentBlockIndex = 0;
+
+      // The replacement arrives WITH its own child already attached.
+      const newBlock = createBlockStub({ id: 'new-block' });
+
+      newBlock.contentIds = ['own-child'];
+      composeBlockSpy.mockReturnValue(newBlock);
+
+      const result = blockManager.insert({
+        tool: 'paragraph',
+        data: { text: 'converted' },
+        index: 0,
+        replace: true,
+      });
+
+      // The guard skips re-homing: the prebuilt container keeps its own child and
+      // does NOT swallow the replaced block's child.
+      expect(result.contentIds).toEqual(['own-child']);
+      expect(replacedChild.parentId).not.toBe('new-block');
     });
 
     it('update() preserves parentId and contentIds on the recreated block', async () => {
@@ -1218,6 +1349,51 @@ describe('BlockManager', () => {
       expect((toggle as unknown as { contentIds: string[] }).contentIds).toEqual(['tog-kid']);
       expect((header as unknown as { contentIds: string[] }).contentIds).toEqual(['hdr-kid']);
       expect((list as unknown as { contentIds: string[] }).contentIds).toEqual(['list-kid']);
+    });
+  });
+
+  describe('insertMany change notification', () => {
+    /**
+     * Regression guard: a programmatic bulk insert (editor.blocks.insertMany,
+     * used by React useBlocks insertTree/insertMarkdown) must emit a BlockChanged
+     * mutation so reactive consumers (the React useBlocks hook's
+     * useSyncExternalStore subscription) re-render. A single editor.blocks.insert
+     * already emits BlockAdded; insertMany must too. One event for the whole batch
+     * is enough — it only needs to bump the subscription version, not storm.
+     */
+    it('emits a single block-added mutation when notify is requested', () => {
+      const first = createBlockStub({ id: 'bulk-1' });
+      const second = createBlockStub({ id: 'bulk-2' });
+      const { blockManager, eventsDispatcher } = createBlockManager({});
+      const emitSpy = vi.spyOn(eventsDispatcher, 'emit');
+
+      blockManager.insertMany([first, second], 0, { notify: true });
+
+      const changedCalls = emitSpy.mock.calls.filter((call: unknown[]) => call[0] === BlockChanged);
+
+      expect(changedCalls).toHaveLength(1);
+      const payload = changedCalls[0][1] as { event: CustomEvent<BlockMutationEventDetail> };
+
+      expect(payload.event.type).toBe(BlockAddedMutationType);
+    });
+
+    /**
+     * The render/seed path (Renderer.render -> BlockManager.insertMany) must stay
+     * silent: loading a document is not a 'block changed' mutation (it has its own
+     * block:rendered events), and emitting here would fire spurious change events
+     * on every initial render and risk feedback loops with controlled `data`.
+     */
+    it('does not emit a block-changed mutation by default', () => {
+      const first = createBlockStub({ id: 'seed-1' });
+      const second = createBlockStub({ id: 'seed-2' });
+      const { blockManager, eventsDispatcher } = createBlockManager({});
+      const emitSpy = vi.spyOn(eventsDispatcher, 'emit');
+
+      blockManager.insertMany([first, second], 0);
+
+      const changedCalls = emitSpy.mock.calls.filter((call: unknown[]) => call[0] === BlockChanged);
+
+      expect(changedCalls).toHaveLength(0);
     });
   });
 

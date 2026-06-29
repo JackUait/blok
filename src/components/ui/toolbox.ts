@@ -1187,40 +1187,38 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * @param span - plain-text offsets of the slash query to remove
    */
   private stripSlashQuery(contentEditable: HTMLElement, span: { start: number; end: number }): void {
-    let charsToRemove = span.end - span.start;
-
-    if (charsToRemove <= 0) {
+    if (span.end - span.start <= 0) {
       return;
     }
 
-    // Walk text nodes in document order, tracking each node's plain-text offset,
-    // and delete the portion overlapping [start, end). Iterating over a static
-    // list lets us remove emptied nodes without disturbing the walk.
-    let offset = 0;
+    // Walk text nodes in document order, tracking each node's plain-text offset
+    // and the characters left to remove, deleting the portion overlapping
+    // [start, end). Threading the running totals through reduce keeps them
+    // immutable while removing emptied nodes without disturbing the walk.
+    this.collectTextNodes(contentEditable).reduce(
+      ({ offset, charsToRemove }, textNode) => {
+        const length = textNode.data.length;
+        const nodeStart = offset;
+        const nodeEnd = offset + length;
 
-    for (const textNode of this.collectTextNodes(contentEditable)) {
-      const length = textNode.data.length;
-      const nodeStart = offset;
-      const nodeEnd = offset + length;
+        if (charsToRemove <= 0 || nodeEnd <= span.start || nodeStart >= span.end) {
+          return { offset: nodeEnd, charsToRemove };
+        }
 
-      offset = nodeEnd;
+        const from = Math.max(0, span.start - nodeStart);
+        const to = Math.min(length, span.end - nodeStart);
+        const count = to - from;
 
-      if (charsToRemove <= 0 || nodeEnd <= span.start || nodeStart >= span.end) {
-        continue;
-      }
+        if (from === 0 && to === length) {
+          textNode.remove();
+        } else {
+          textNode.deleteData(from, count);
+        }
 
-      const from = Math.max(0, span.start - nodeStart);
-      const to = Math.min(length, span.end - nodeStart);
-      const count = to - from;
-
-      if (from === 0 && to === length) {
-        textNode.remove();
-      } else {
-        textNode.deleteData(from, count);
-      }
-
-      charsToRemove -= count;
-    }
+        return { offset: nodeEnd, charsToRemove: charsToRemove - count };
+      },
+      { offset: 0, charsToRemove: span.end - span.start }
+    );
   }
 
   /**

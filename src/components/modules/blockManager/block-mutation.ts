@@ -13,6 +13,7 @@ import { announce } from '../../utils/announcer';
 import { convertStringToBlockData, isBlockConvertable } from '../../utils/blocks';
 import { sanitizeBlocks, clean, composeSanitizerConfig } from '../../utils/sanitizer';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
+import { ToolNotFoundError } from '../../errors/tool-not-found';
 import { getBlockNestingDepth } from '../drag/utils/depthUtils';
 import type { BlockFactory } from './factory';
 import type { BlockHierarchy } from './hierarchy';
@@ -570,7 +571,7 @@ export class BlockMutation {
     const replacingTool = this.factory.getTool(targetToolName);
 
     if (!replacingTool) {
-      throw new Error(`Could not convert Block. Tool «${targetToolName}» not found.`);
+      throw new ToolNotFoundError(targetToolName, `Could not convert Block. Tool «${targetToolName}» not found.`);
     }
 
     /**

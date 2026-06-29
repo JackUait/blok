@@ -311,21 +311,27 @@ export class BlockYjsSync {
    */
   private reconcileHolderOrder(): void {
     for (const siblings of this.groupByParent().values()) {
-      let prevHolder: HTMLElement | null = null;
-
-      for (const block of siblings) {
-        if (
-          prevHolder !== null &&
-          prevHolder.parentElement !== null &&
-          block.holder.parentElement === prevHolder.parentElement &&
-          (prevHolder.compareDocumentPosition(block.holder) & Node.DOCUMENT_POSITION_FOLLOWING) === 0
-        ) {
-          moveElementAfter(block.holder, prevHolder);
-        }
-
-        prevHolder = block.holder;
-      }
+      this.reconcileSiblingOrder(siblings);
     }
+  }
+
+  /**
+   * Re-assert document order within a single group of true DOM siblings,
+   * moving any holder that drifted back after its array-order predecessor.
+   */
+  private reconcileSiblingOrder(siblings: Block[]): void {
+    siblings.slice(1).forEach((block, index) => {
+      const prevHolder = siblings[index].holder;
+      const currHolder = block.holder;
+
+      if (prevHolder.parentElement === null || currHolder.parentElement !== prevHolder.parentElement) {
+        return;
+      }
+
+      if ((prevHolder.compareDocumentPosition(currHolder) & Node.DOCUMENT_POSITION_FOLLOWING) === 0) {
+        moveElementAfter(currHolder, prevHolder);
+      }
+    });
   }
 
   /**
@@ -347,24 +353,7 @@ export class BlockYjsSync {
     const violations: string[] = [];
 
     for (const siblings of this.groupByParent().values()) {
-      for (let i = 1; i < siblings.length; i++) {
-        const prevHolder = siblings[i - 1].holder;
-        const currHolder = siblings[i].holder;
-
-        // Only compare genuine DOM siblings — cross-container placement is a
-        // hierarchy concern covered by assertHierarchyInvariantInDev, not a
-        // sibling-order one.
-        if (prevHolder.parentElement === null || prevHolder.parentElement !== currHolder.parentElement) {
-          continue;
-        }
-
-        if ((prevHolder.compareDocumentPosition(currHolder) & Node.DOCUMENT_POSITION_FOLLOWING) === 0) {
-          violations.push(
-            `  - "${siblings[i - 1].id}" must precede "${siblings[i].id}" in the DOM ` +
-            `(parent: ${siblings[i].parentId ?? 'root'})`
-          );
-        }
-      }
+      violations.push(...this.collectDomOrderViolations(siblings));
     }
 
     if (violations.length === 0) {
@@ -374,6 +363,33 @@ export class BlockYjsSync {
     throw new Error(
       `Block DOM order diverged from the block array after ${context}:\n${violations.join('\n')}`
     );
+  }
+
+  /**
+   * Collect DOM-order violations within a single group of array-order siblings.
+   * Only genuine DOM siblings are compared — cross-container placement is a
+   * hierarchy concern covered by assertHierarchyInvariantInDev, not a
+   * sibling-order one.
+   */
+  private collectDomOrderViolations(siblings: Block[]): string[] {
+    return siblings.slice(1).reduce<string[]>((violations, curr, index) => {
+      const prev = siblings[index];
+      const prevHolder = prev.holder;
+      const currHolder = curr.holder;
+
+      if (prevHolder.parentElement === null || prevHolder.parentElement !== currHolder.parentElement) {
+        return violations;
+      }
+
+      if ((prevHolder.compareDocumentPosition(currHolder) & Node.DOCUMENT_POSITION_FOLLOWING) === 0) {
+        violations.push(
+          `  - "${prev.id}" must precede "${curr.id}" in the DOM ` +
+          `(parent: ${curr.parentId ?? 'root'})`
+        );
+      }
+
+      return violations;
+    }, []);
   }
 
   /**

@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useBlocks } from '../../../src/react/useBlocks';
+import { ToolNotFoundError } from '../../../src/components/errors/tool-not-found';
 import type { Blok } from '../../../types';
 
 /** A controllable fake editor exposing only what useBlocks consumes. */
@@ -42,6 +43,30 @@ const makeFakeEditor = (
       update: vi.fn(() => Promise.resolve({})),
       convert: vi.fn(() => Promise.resolve({})),
       transact: vi.fn((fn: () => void) => fn()),
+      transactWithoutCapture: vi.fn((fn: () => void) => fn()),
+      getCurrentBlockIndex: vi.fn(() => 0),
+      getBlockByElement: vi.fn((_el: HTMLElement) => undefined as { id: string } | undefined),
+      composeBlockData: vi.fn((type: string) => Promise.resolve({ composedFrom: type })),
+      splitBlock: vi.fn((currentId: string, _curData: unknown, newType: string, _newData: unknown, insertIndex: number) => {
+        const id = `split-${list.length}`;
+
+        list.splice(insertIndex, 0, { id, name: newType, parentId: null });
+        return { id, name: newType, parentId: null };
+      }),
+      insertMany: vi.fn((blocks: Array<{ id?: string; type?: string; parent?: string | null }>, index?: number) => {
+        const at = index ?? list.length;
+        const created = blocks.map((b, i) => ({
+          id: b.id ?? `raw-${list.length + i}`,
+          name: b.type ?? 'paragraph',
+          parentId: b.parent ?? null,
+        }));
+
+        list.splice(at, 0, ...created);
+        return created.map((c) => ({ id: c.id, name: c.name, parentId: c.parentId }));
+      }),
+    },
+    caret: {
+      setToBlock: vi.fn((_idOrIndex: unknown, _position?: string, _offset?: number) => true),
     },
     on: (_name: string, cb: () => void) => listeners.add(cb),
     off: (_name: string, cb: () => void) => listeners.delete(cb),
@@ -383,6 +408,21 @@ describe('useBlocks insert', () => {
     expect(editor.blocks.insert).toHaveBeenCalledWith('paragraph', {}, {}, 1, false, false, undefined, undefined);
   });
 
+  it('insert with a missing before/after ref is a no-op (returns null), not an end-append', () => {
+    // A relative position whose ref does not exist must NOT silently fall through
+    // to resolveInsertIndex's end-slot fallback (which would dump the block at the
+    // document end). An unresolved ref is a no-op — mirroring move(), which already
+    // bails on a missing ref. The DX footgun is the surprise end-append.
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let created: ReturnType<typeof result.current.insert> = { id: 'sentinel' } as never;
+
+    act(() => { created = result.current.insert({ type: 'paragraph', position: { after: 'ghost' } }); });
+
+    expect(created).toBeNull();
+    expect(editor.blocks.insert).not.toHaveBeenCalled();
+  });
+
   it('root insert at end does not redundantly call setBlockParent', () => {
     // The created block already lands at root, so the landedParentId === parentId
     // guard must skip setBlockParent — no wasted reparent / extra Yjs write.
@@ -547,7 +587,7 @@ describe('useBlocks insert', () => {
   it('returns null (does not throw) when the tool type is unknown', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }]);
     (editor.blocks.insert as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
-      throw new Error('Could not compose Block. Tool «nope» not found.');
+      throw new ToolNotFoundError('nope');
     });
     const { result } = renderHook(() => useBlocks(editor));
     let created: ReturnType<typeof result.current.insert> = null;
@@ -582,6 +622,28 @@ describe('useBlocks insert', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }]);
     (editor.blocks.insert as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
       throw new Error('kaboom: unexpected core failure');
+    });
+    const { result } = renderHook(() => useBlocks(editor));
+    let threw = false;
+    act(() => {
+      try {
+        result.current.insert({ type: 'paragraph' });
+      } catch {
+        threw = true;
+      }
+    });
+    expect(threw).toBe(true);
+  });
+
+  it('re-throws a non-tool error EVEN when its message contains "not found" (typed, not substring)', () => {
+    // The unknown-tool swallow must key on the typed ToolNotFoundError, NOT a
+    // brittle message.includes('not found') match — otherwise an unrelated bug
+    // whose message happens to contain "not found" (e.g. a failed network lookup)
+    // would be silently masked as a null no-op. Only a real ToolNotFoundError is
+    // swallowed; everything else surfaces.
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    (editor.blocks.insert as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+      throw new Error('remote resource not found');
     });
     const { result } = renderHook(() => useBlocks(editor));
     let threw = false;
@@ -993,10 +1055,12 @@ describe('useBlocks insertMany', () => {
     expect(editor.blocks.transact).toHaveBeenCalledTimes(1);
   });
 
-  it('an idempotent-id hit in the batch returns the existing node and inserts no duplicate', () => {
+  it('an idempotent-id hit in the batch inserts no duplicate and is EXCLUDED from the created result', () => {
     // A spec whose explicit id already exists is insert-if-absent: it must NOT
-    // create a second block. Only the two genuinely-new specs reach core.insert,
-    // yet the returned array still includes the pre-existing node in its slot.
+    // create a second block. The documented contract is that insertMany returns
+    // "only the successfully created nodes" — so an insert-if-absent hit (the
+    // block already existed, nothing was created) must be DROPPED from the result,
+    // not reported as freshly created.
     const { editor } = makeFakeEditor([{ id: 'a', name: 'header' }]);
     const { result } = renderHook(() => useBlocks(editor));
     let created: ReturnType<typeof result.current.insertMany> = [];
@@ -1010,9 +1074,9 @@ describe('useBlocks insertMany', () => {
     // 'a' already exists → no insert for it; only the two new specs hit core.
     expect(editor.blocks.insert).toHaveBeenCalledTimes(2);
     expect(editor.blocks.transact).toHaveBeenCalledTimes(1);
-    // The existing node is returned in its slot, keeping its ORIGINAL type.
-    expect(created).toHaveLength(3);
-    expect(created[1]).toMatchObject({ id: 'a', type: 'header' });
+    // Only the two genuinely-new nodes are returned; the pre-existing 'a' is not.
+    expect(created).toHaveLength(2);
+    expect(created.some((n) => n.id === 'a')).toBe(false);
   });
 
   it('a replace spec mixed with a normal insert forwards replace=true only for the replace spec', () => {
@@ -1092,6 +1156,81 @@ describe('useBlocks contentIds', () => {
   });
 });
 
+describe('useBlocks insertTree delegation', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('flattens the subtree DFS pre-order and delegates to core insertMany ONCE with (flat, flatIndex)', () => {
+    const { editor } = makeFakeEditor([{ id: 'anchor' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+
+    act(() => {
+      result.current.insertTree({
+        id: 'root',
+        type: 'toggle',
+        children: [
+          { id: 'c1', type: 'paragraph' },
+          { id: 'c2', type: 'header', children: [{ id: 'g', type: 'paragraph' }] },
+        ],
+      });
+    });
+
+    // Whole subtree lands via a SINGLE core.insertMany call (NOT per-node insert).
+    expect(editor.blocks.insertMany).toHaveBeenCalledTimes(1);
+    expect(editor.blocks.insert).not.toHaveBeenCalled();
+
+    const [flat, flatIndex] = (editor.blocks.insertMany as ReturnType<typeof vi.fn>).mock.calls[0];
+
+    // DFS pre-order, parent/content links wired from generated ids.
+    expect((flat as Array<{ id: string }>).map((b) => b.id)).toEqual(['root', 'c1', 'c2', 'g']);
+    expect((flat as Array<{ content?: string[] }>)[0].content).toEqual(['c1', 'c2']);
+    expect((flat as Array<{ parent?: string }>)[3].parent).toBe('c2');
+    // Appended at the document end (after the single existing anchor block).
+    expect(flatIndex).toBe(1);
+  });
+
+  it('rejects a colliding explicit id without inserting anything', () => {
+    const { editor } = makeFakeEditor([{ id: 'dup' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let root: ReturnType<typeof result.current.insertTree> = { id: 'x' } as never;
+
+    act(() => { root = result.current.insertTree({ id: 'dup', type: 'paragraph' }); });
+    expect(root).toBeNull();
+    expect(editor.blocks.insertMany).not.toHaveBeenCalled();
+  });
+
+  it('is a no-op (returns null) when an object position references a missing block', () => {
+    // A dangling { before|after } ref must NOT fall through to resolveInsertIndex's
+    // end-slot fallback and silently append the subtree at the document end —
+    // mirror insert()'s missing-ref guard and return null without inserting.
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let root: ReturnType<typeof result.current.insertTree> = { id: 'sentinel' } as never;
+
+    act(() => { root = result.current.insertTree({ type: 'paragraph', position: { after: 'missing' } }); });
+    expect(root).toBeNull();
+    expect(editor.blocks.insertMany).not.toHaveBeenCalled();
+  });
+
+  it('inserts at the resolved slot when an object position references an EXISTING block', () => {
+    // Positive counterpart to the missing-ref no-op: a VALID { after } ref must
+    // NOT trip the dangling-ref early-return — the subtree is inserted at the slot
+    // right after the ref (between 'a' and 'b'), proving the guard only rejects
+    // genuinely-absent refs.
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+
+    act(() => { result.current.insertTree({ id: 'root', type: 'paragraph', position: { after: 'a' } }); });
+
+    expect(editor.blocks.insertMany).toHaveBeenCalledTimes(1);
+    const [flat, flatIndex] = (editor.blocks.insertMany as ReturnType<typeof vi.fn>).mock.calls[0];
+
+    expect((flat as Array<{ id: string }>).map((b) => b.id)).toEqual(['root']);
+    // Slot directly after 'a' (index 0), i.e. before 'b'.
+    expect(flatIndex).toBe(1);
+  });
+});
+
 describe('useBlocks pre-ready API (editor is null)', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());
@@ -1109,6 +1248,22 @@ describe('useBlocks pre-ready API (editor is null)', () => {
     expect(result.current.remove('a')).toBeUndefined();
     expect(result.current.update('a', { text: 'x' })).toBeUndefined();
     expect(result.current.convert('a', 'header')).toBeUndefined();
+    // Additional surfaced APIs honor the pre-ready contract too.
+    expect(result.current.getBlocksCount()).toBe(0);
+    expect(result.current.getCurrentBlockIndex()).toBe(-1);
+    expect(result.current.getBlockByIndex(0)).toBeNull();
+    expect(result.current.getBlockByElement(document.createElement('div'))).toBeNull();
+    expect(result.current.insertOutputData([{ type: 'paragraph', data: {} }])).toEqual([]);
+    expect(result.current.splitBlock('a', {}, 'paragraph', {}, 0)).toBeNull();
+  });
+
+  it('pre-ready composeBlockData resolves to {} and transactWithoutCapture still runs its callback', async () => {
+    const { result } = renderHook(() => useBlocks(null));
+    const fn = vi.fn();
+
+    act(() => result.current.transactWithoutCapture(fn));
+    expect(fn).toHaveBeenCalledTimes(1);
+    await expect(result.current.composeBlockData('header')).resolves.toEqual({});
   });
 
   it('pre-ready insertMarkdown resolves to [] without throwing (async no-op)', async () => {
@@ -1152,5 +1307,291 @@ describe('useBlocks transact fallback (editor.blocks.transact undefined)', () =>
     act(() => { created = result.current.insert({ type: 'paragraph' }); });
     expect(editor.blocks.insert).toHaveBeenCalledTimes(1);
     expect(created).toMatchObject({ type: 'paragraph' });
+  });
+});
+
+describe('useBlocks additional read/creation APIs', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('getBlocksCount reflects the current block count', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    expect(result.current.getBlocksCount()).toBe(2);
+  });
+
+  it('getCurrentBlockIndex delegates to core', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    (editor.blocks.getCurrentBlockIndex as ReturnType<typeof vi.fn>).mockReturnValue(3);
+    const { result } = renderHook(() => useBlocks(editor));
+    expect(result.current.getCurrentBlockIndex()).toBe(3);
+  });
+
+  it('getBlockByIndex returns a snapshot node or null when out of range', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b', name: 'header' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    expect(result.current.getBlockByIndex(1)).toMatchObject({ id: 'b', type: 'header' });
+    expect(result.current.getBlockByIndex(9)).toBeNull();
+  });
+
+  it('getBlockByElement maps a DOM element back to its block node', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'target', name: 'header' }]);
+    const el = document.createElement('div');
+
+    (editor.blocks.getBlockByElement as ReturnType<typeof vi.fn>).mockImplementation((e: HTMLElement) =>
+      e === el ? { id: 'target' } : undefined
+    );
+    const { result } = renderHook(() => useBlocks(editor));
+    expect(result.current.getBlockByElement(el)).toMatchObject({ id: 'target', type: 'header' });
+    expect(result.current.getBlockByElement(document.createElement('div'))).toBeNull();
+  });
+
+  it('composeBlockData delegates to core and resolves the default data', async () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    const data = await result.current.composeBlockData('header');
+
+    expect(editor.blocks.composeBlockData).toHaveBeenCalledWith('header');
+    expect(data).toEqual({ composedFrom: 'header' });
+  });
+
+  it('transactWithoutCapture delegates to core (no-undo grouping)', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    const fn = vi.fn();
+
+    act(() => result.current.transactWithoutCapture(fn));
+    expect(editor.blocks.transactWithoutCapture).toHaveBeenCalledTimes(1);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('splitBlock delegates and returns the new node', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let node: ReturnType<typeof result.current.splitBlock> = null;
+
+    act(() => { node = result.current.splitBlock('a', { text: 'he' }, 'paragraph', { text: 'llo' }, 1); });
+    expect(editor.blocks.splitBlock).toHaveBeenCalledWith('a', { text: 'he' }, 'paragraph', { text: 'llo' }, 1);
+    expect(node).toMatchObject({ type: 'paragraph' });
+  });
+
+  it('insertOutputData inserts a raw OutputBlockData[] batch and returns the created nodes', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let created: ReturnType<typeof result.current.insertOutputData> = [];
+
+    act(() => {
+      created = result.current.insertOutputData([
+        { id: 'r1', type: 'header', data: { text: 'H' } },
+        { id: 'r2', type: 'paragraph', data: { text: 'P' }, parent: 'r1' },
+      ]);
+    });
+    expect(editor.blocks.insertMany).toHaveBeenCalledTimes(1);
+    expect(created.map((n) => n.id)).toEqual(['r1', 'r2']);
+  });
+
+  it('insert positions the caret in the new block when a caret target is given', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+
+    act(() => { result.current.insert({ type: 'paragraph', caret: { offset: 3 } }); });
+    // The fake's insert returns id `new-1` (list had length 1).
+    expect(editor.caret.setToBlock).toHaveBeenCalledWith('new-1', 'default', 3);
+  });
+
+  it('insert does NOT move the caret on an insert-if-absent hit', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+
+    act(() => { result.current.insert({ id: 'a', type: 'paragraph', caret: { offset: 2 } }); });
+    expect(editor.caret.setToBlock).not.toHaveBeenCalled();
+  });
+
+  it('convert positions the caret after the conversion when a caret target is given', async () => {
+    const { editor } = makeFakeEditor([{ id: 'a', name: 'paragraph' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+
+    await act(async () => {
+      result.current.convert('a', 'header', undefined, { caret: { position: 'end' } });
+      // Flush the convert promise chain (Promise.resolve(convert()).then(setCaret)).
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(editor.blocks.convert).toHaveBeenCalledWith('a', 'header', undefined);
+    expect(editor.caret.setToBlock).toHaveBeenCalledWith('a', 'end', 0);
+  });
+
+  it('insert forwards a non-default caret position (e.g. "end") to setToBlock', () => {
+    // The existing caret test only passes { offset: 3 } (position defaults to
+    // 'default'). This pins that an explicit position string is forwarded too.
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+
+    act(() => { result.current.insert({ type: 'paragraph', caret: { position: 'end' } }); });
+    // offset defaults to 0 when omitted.
+    expect(editor.caret.setToBlock).toHaveBeenCalledWith('new-1', 'end', 0);
+  });
+
+  it('insert forwards caret position "start" with an explicit offset', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+
+    act(() => { result.current.insert({ type: 'paragraph', caret: { position: 'start', offset: 2 } }); });
+    expect(editor.caret.setToBlock).toHaveBeenCalledWith('new-1', 'start', 2);
+  });
+});
+
+describe('useBlocks splitBlock — guards and error handling', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('is a no-op (returns null) when currentBlockId is unknown, without calling core', () => {
+    // Every other id-taking mutator silently no-ops an unknown id; splitBlock must
+    // do the same instead of forwarding a dangling id to core.
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let node: ReturnType<typeof result.current.splitBlock> = { id: 'sentinel' } as never;
+
+    act(() => { node = result.current.splitBlock('ghost', {}, 'paragraph', {}, 0); });
+    expect(node).toBeNull();
+    expect(editor.blocks.splitBlock).not.toHaveBeenCalled();
+  });
+
+  it('returns null (does not throw) when the new block tool type is unknown', () => {
+    // A split into an unknown tool throws a typed ToolNotFoundError from core's
+    // compose path — mirror insert/insertTree and honor the null contract.
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+
+    (editor.blocks.splitBlock as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+      throw new ToolNotFoundError('nope');
+    });
+    const { result } = renderHook(() => useBlocks(editor));
+    let node: ReturnType<typeof result.current.splitBlock> = { id: 'sentinel' } as never;
+    let threw = false;
+
+    act(() => {
+      try {
+        node = result.current.splitBlock('a', {}, 'nope', {}, 1);
+      } catch {
+        threw = true;
+      }
+    });
+    expect(threw).toBe(false);
+    expect(node).toBeNull();
+  });
+
+  it('re-throws an UNEXPECTED core error instead of masking it as null (typed, not substring)', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+
+    (editor.blocks.splitBlock as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+      throw new Error('kaboom: unexpected core failure');
+    });
+    const { result } = renderHook(() => useBlocks(editor));
+    let threw = false;
+
+    act(() => {
+      try {
+        result.current.splitBlock('a', {}, 'paragraph', {}, 1);
+      } catch {
+        threw = true;
+      }
+    });
+    expect(threw).toBe(true);
+  });
+});
+
+describe('useBlocks insertOutputData — guards and error handling', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('returns [] and opens no transaction for an empty array', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let created: ReturnType<typeof result.current.insertOutputData> =
+      ['sentinel'] as unknown as ReturnType<typeof result.current.insertOutputData>;
+
+    act(() => { created = result.current.insertOutputData([]); });
+    expect(created).toEqual([]);
+    expect(editor.blocks.transact).not.toHaveBeenCalled();
+    expect(editor.blocks.insertMany).not.toHaveBeenCalled();
+  });
+
+  it('returns [] (does not throw) when a block tool type is unknown', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+
+    (editor.blocks.insertMany as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+      throw new ToolNotFoundError('nope');
+    });
+    const { result } = renderHook(() => useBlocks(editor));
+    let created: ReturnType<typeof result.current.insertOutputData> =
+      ['sentinel'] as unknown as ReturnType<typeof result.current.insertOutputData>;
+    let threw = false;
+
+    act(() => {
+      try {
+        created = result.current.insertOutputData([{ type: 'nope', data: {} }]);
+      } catch {
+        threw = true;
+      }
+    });
+    expect(threw).toBe(false);
+    expect(created).toEqual([]);
+  });
+
+  it('re-throws an UNEXPECTED core error instead of masking it as []', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+
+    (editor.blocks.insertMany as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+      throw new Error('kaboom: unexpected core failure');
+    });
+    const { result } = renderHook(() => useBlocks(editor));
+    let threw = false;
+
+    act(() => {
+      try {
+        result.current.insertOutputData([{ type: 'paragraph', data: {} }]);
+      } catch {
+        threw = true;
+      }
+    });
+    expect(threw).toBe(true);
+  });
+
+  it('is a graceful no-op (returns [], no insert, no throw) for a negative index', () => {
+    // A negative index is malformed input; core throws a bare validation Error.
+    // Honor the silent-no-op convention instead — return [] without inserting.
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let created: ReturnType<typeof result.current.insertOutputData> =
+      ['sentinel'] as unknown as ReturnType<typeof result.current.insertOutputData>;
+    let threw = false;
+
+    act(() => {
+      try {
+        created = result.current.insertOutputData([{ type: 'paragraph', data: {} }], { index: -1 });
+      } catch {
+        threw = true;
+      }
+    });
+    expect(threw).toBe(false);
+    expect(created).toEqual([]);
+    expect(editor.blocks.insertMany).not.toHaveBeenCalled();
+  });
+
+  it('returns nodes carrying the correct parentId for the explicit-index insert branch', () => {
+    // The options.index branch was previously untested. Insert at an explicit
+    // index and assert the in-batch parent link is reflected on the returned node.
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let created: ReturnType<typeof result.current.insertOutputData> = [];
+
+    act(() => {
+      created = result.current.insertOutputData([
+        { id: 'r1', type: 'header', data: {} },
+        { id: 'r2', type: 'paragraph', data: {}, parent: 'r1' },
+      ], { index: 1 });
+    });
+    expect(editor.blocks.insertMany).toHaveBeenCalledWith(expect.any(Array), 1);
+    expect(created.map((n) => n.id)).toEqual(['r1', 'r2']);
+    expect(created.map((n) => n.parentId)).toEqual([null, 'r1']);
   });
 });

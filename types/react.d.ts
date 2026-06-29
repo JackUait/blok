@@ -1,4 +1,4 @@
-import type { BlokConfig, BlockToolData } from './index';
+import type { BlokConfig, BlockToolData, OutputBlockData } from './index';
 import type { Blok, EditorWidth, BlockRenderedPayload, BlocksRenderedPayload } from './index';
 import type { BlockTuneData } from './block-tunes/block-tune-data';
 import type { MarkdownImportConfig } from './markdown';
@@ -155,6 +155,15 @@ export interface BlockNode {
 /** Where to place a block among its siblings. */
 export type InsertPosition = 'start' | 'end' | { before: string } | { after: string };
 
+/**
+ * Where to place the caret within a block. `position` selects the input
+ * (`'start'`/`'end'`/`'default'`) and `offset` is the character offset within it.
+ */
+export interface CaretTarget {
+  position?: 'start' | 'end' | 'default';
+  offset?: number;
+}
+
 export interface InsertSpec {
   type?: string;
   data?: BlockToolData;
@@ -181,6 +190,12 @@ export interface InsertSpec {
   id?: string;
   /** Block tune data to apply at creation, keyed by tune name. */
   tunes?: { [name: string]: BlockTuneData };
+  /**
+   * Place the caret inside the newly-created block at a specific position/offset
+   * (e.g. `{ offset: 3 }`). Implies focus. Applied ONLY when a block is actually
+   * created — an insert-if-absent hit (existing id) does not move the caret.
+   */
+  caret?: CaretTarget;
 }
 
 /**
@@ -367,7 +382,12 @@ export interface UseBlocksApi {
    * is a silent no-op. Not wrapped in `transact` (core owns its history step).
    * Returns `void`.
    */
-  convert(id: string, newType: string, dataOverrides?: BlockToolData): void;
+  convert(
+    id: string,
+    newType: string,
+    dataOverrides?: BlockToolData,
+    options?: { caret?: CaretTarget }
+  ): void;
   /**
    * Run `fn` as a single atomic undo step: every mutation it makes is grouped
    * into one history entry, so a single undo reverts the whole batch. Delegates
@@ -376,6 +396,49 @@ export interface UseBlocksApi {
    * themselves; use this to group several calls into one step.) Returns void.
    */
   transact(fn: () => void): void;
+  /**
+   * Run `fn` as one atomic operation that is NOT captured in the undo history —
+   * the React-surface counterpart of core's `transactWithoutCapture`. Use for
+   * silent auto-repair/normalization that a user's undo should never step
+   * through. Mutations inside still emit reactively. Pre-ready it just runs `fn`.
+   */
+  transactWithoutCapture(fn: () => void): void;
+  /** The current block count. Reactive (re-reads on 'block changed'). Pre-ready: 0. */
+  getBlocksCount(): number;
+  /** The flat index of the block holding the caret, or -1 when none. Pre-ready: -1. */
+  getCurrentBlockIndex(): number;
+  /** The block at a flat index as a snapshot {@link BlockNode}, or null. */
+  getBlockByIndex(index: number): BlockNode | null;
+  /**
+   * The block whose holder contains/equals `element`, as a snapshot
+   * {@link BlockNode}, or null. Maps a DOM event target back to a block.
+   */
+  getBlockByElement(element: HTMLElement): BlockNode | null;
+  /**
+   * Read a tool's default empty data WITHOUT inserting anything — delegates to
+   * core's `composeBlockData`. Async; rejects for an unknown tool. Pre-ready: `{}`.
+   */
+  composeBlockData(toolName: string): Promise<BlockToolData>;
+  /**
+   * Insert a flat array of already-serialized {@link OutputBlockData} (the
+   * `save()` shape) directly, honoring each block's `parent`/`content` links —
+   * the raw counterpart of core's `blocks.insertMany`. Use to re-insert a saved
+   * document fragment without reshaping it into {@link TreeInsertSpec}. One atomic
+   * undo step. Returns the created nodes; pre-ready: `[]` (no insert).
+   */
+  insertOutputData(blocks: OutputBlockData[], options?: { index?: number }): BlockNode[];
+  /**
+   * Atomically split a block: update `currentBlockId` with `currentBlockData`
+   * and insert a new `newBlockType` block at `insertIndex`, as ONE undo step.
+   * Delegates to core's `splitBlock`. Returns the new node, or null pre-ready.
+   */
+  splitBlock(
+    currentBlockId: string,
+    currentBlockData: Partial<BlockToolData>,
+    newBlockType: string,
+    newBlockData: BlockToolData,
+    insertIndex: number
+  ): BlockNode | null;
 }
 
 /**

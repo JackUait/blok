@@ -5,6 +5,7 @@
  */
 import type { BlokModules } from '../../../types-internal/blok-modules';
 import { Block } from '../../block';
+import { ToolNotFoundError } from '../../errors/tool-not-found';
 import type { BlokEventMap } from '../../events';
 import type { BlockToolAdapter } from '../../tools/block';
 import type { ToolsCollection } from '../../tools/collection';
@@ -71,7 +72,7 @@ export class BlockFactory {
     const tool = this.dependencies.tools.get(name);
 
     if (tool === undefined) {
-      throw new Error(`Could not compose Block. Tool «${name}» not found.`);
+      throw new ToolNotFoundError(name, `Could not compose Block. Tool «${name}» not found.`);
     }
 
     const block = new Block({

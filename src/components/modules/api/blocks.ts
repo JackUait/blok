@@ -6,6 +6,7 @@ import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table
 import { Module } from '../../__module';
 import { Block } from '../../block';
 import { BlockAPI } from '../../block/api';
+import { ToolNotFoundError } from '../../errors/tool-not-found';
 import { capitalize } from '../../utils';
 import { normalizeTableChildParents } from '../../utils/data-model-transform';
 import { highlightBlockArrival } from '../../utils/highlight-block-arrival';
@@ -331,7 +332,7 @@ export class BlocksAPI extends Module {
     const tool = this.Blok.Tools.blockTools.get(toolName);
 
     if (tool === undefined) {
-      throw new Error(`Block Tool with type "${toolName}" not found`);
+      throw new ToolNotFoundError(toolName, `Block Tool with type "${toolName}" not found`);
     }
 
     const block = new Block({
@@ -383,7 +384,7 @@ export class BlocksAPI extends Module {
     const targetBlockTool = Tools.blockTools.get(newType);
 
     if (!targetBlockTool) {
-      throw new Error(`Block Tool with type "${newType}" not found`);
+      throw new ToolNotFoundError(newType, `Block Tool with type "${newType}" not found`);
     }
 
     const originalBlockConvertable = originalBlockTool?.conversionConfig?.export !== undefined;
@@ -435,7 +436,11 @@ export class BlocksAPI extends Module {
       });
     });
     
-    this.Blok.BlockManager.insertMany(blocksToInsert, index);
+    // notify: a programmatic bulk insert through the public API must emit a
+    // BlockChanged mutation (mirroring single insert) so reactive consumers like
+    // the React useBlocks hook re-render. Renderer.render() bypasses this wrapper
+    // and calls BlockManager.insertMany directly, so initial render stays silent.
+    this.Blok.BlockManager.insertMany(blocksToInsert, index, { notify: true });
 
     return blocksToInsert.map((block) => new BlockAPI(block));
   };

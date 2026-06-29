@@ -114,7 +114,7 @@ jobs:
 
   merge-reports:
     name: Merge E2E Reports
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && github.ref != 'refs/heads/master' }}
     needs: [e2e-tests]
     runs-on: ubuntu-latest
     steps:

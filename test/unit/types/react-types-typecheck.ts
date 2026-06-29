@@ -10,6 +10,7 @@ import type {
   BlokContentProps as PublishedBlokContentProps,
   BlokEditorProps as PublishedBlokEditorProps,
   BlockNode as PublishedBlockNode,
+  CaretTarget as PublishedCaretTarget,
   InsertPosition as PublishedInsertPosition,
   InsertSpec as PublishedInsertSpec,
   TreeInsertSpec as PublishedTreeInsertSpec,
@@ -21,6 +22,7 @@ import type { BlokEditorProps as SourceBlokEditorProps } from '../../../src/reac
 import type { BlokContentProps as SourceBlokContentProps } from '../../../src/react/types';
 import type {
   BlockNode as SourceBlockNode,
+  CaretTarget as SourceCaretTarget,
   InsertPosition as SourceInsertPosition,
   InsertSpec as SourceInsertSpec,
   TreeInsertSpec as SourceTreeInsertSpec,
@@ -48,6 +50,10 @@ const _editorProps: AssertEqual<PublishedBlokEditorProps, SourceBlokEditorProps>
 // useBlocks block-creation surface — the published declarations must not drift
 // from the source of truth in src/react/blocks-snapshot.ts.
 const _blockNode: AssertExact<PublishedBlockNode, SourceBlockNode> = true;
+// CaretTarget is otherwise only reachable indirectly (InsertSpec.caret /
+// convert options); assert it directly so a missing-optional drift on the caret
+// shape itself is caught, not just on the fields that embed it.
+const _caretTarget: AssertExact<PublishedCaretTarget, SourceCaretTarget> = true;
 const _insertPosition: AssertEqual<PublishedInsertPosition, SourceInsertPosition> = true;
 const _insertSpec: AssertExact<PublishedInsertSpec, SourceInsertSpec> = true;
 const _treeInsertSpec: AssertExact<PublishedTreeInsertSpec, SourceTreeInsertSpec> = true;
@@ -58,6 +64,7 @@ void _useBlokConfig;
 void _contentProps;
 void _editorProps;
 void _blockNode;
+void _caretTarget;
 void _insertPosition;
 void _insertSpec;
 void _treeInsertSpec;

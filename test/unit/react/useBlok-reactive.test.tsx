@@ -7,6 +7,7 @@ import type { UseBlokConfig } from '../../../src/react/types';
 
 interface MockInstance {
   isReady: Promise<void>;
+  resolveReady: () => void;
   destroy: ReturnType<typeof vi.fn>;
   readOnly: { set: ReturnType<typeof vi.fn> };
   focus: ReturnType<typeof vi.fn>;
@@ -14,14 +15,19 @@ interface MockInstance {
   width: { set: ReturnType<typeof vi.fn> };
   placeholder: { set: ReturnType<typeof vi.fn> };
   render: ReturnType<typeof vi.fn>;
-  config: { onSave?: (...args: unknown[]) => void };
+  config: { data?: unknown; onSave?: (...args: unknown[]) => void };
 }
 
 let instances: MockInstance[] = [];
+// When true, the next constructed editor keeps isReady pending until its
+// resolveReady() is called — lets a test re-render with new data BEFORE the
+// editor reports ready (the pre-isReady race).
+let deferReady = false;
 
 vi.mock('../../../src/blok', () => ({
   Blok: class MockBlok {
     public isReady: Promise<void>;
+    public resolveReady: () => void = () => undefined;
     public destroy = vi.fn();
     public readOnly = { set: vi.fn().mockResolvedValue(true) };
     public focus = vi.fn();
@@ -29,13 +35,19 @@ vi.mock('../../../src/blok', () => ({
     public width = { set: vi.fn() };
     public placeholder = { set: vi.fn() };
     public render = vi.fn();
-    public config: { holder: HTMLElement; onSave?: (...args: unknown[]) => void };
-    constructor(config: { holder: HTMLElement; onSave?: (...args: unknown[]) => void }) {
+    public config: { holder: HTMLElement; data?: unknown; onSave?: (...args: unknown[]) => void };
+    constructor(config: { holder: HTMLElement; data?: unknown; onSave?: (...args: unknown[]) => void }) {
       this.config = config;
       const wrapper = document.createElement('div');
       wrapper.setAttribute('data-blok-editor', 'true');
       config.holder.appendChild(wrapper);
-      this.isReady = Promise.resolve();
+      if (deferReady) {
+        this.isReady = new Promise<void>((resolve) => {
+          this.resolveReady = resolve;
+        });
+      } else {
+        this.isReady = Promise.resolve();
+      }
       instances.push(this as unknown as MockInstance);
     }
   },
@@ -49,6 +61,7 @@ function Harness({ config }: { config: UseBlokConfig }) {
 describe('useBlok reactive theme/width', () => {
   beforeEach(() => {
     instances = [];
+    deferReady = false;
     vi.clearAllMocks();
   });
   afterEach(() => {
@@ -117,6 +130,7 @@ describe('useBlok reactive data', () => {
 
   beforeEach(() => {
     instances = [];
+    deferReady = false;
     vi.clearAllMocks();
   });
   afterEach(() => {
@@ -212,6 +226,53 @@ describe('useBlok reactive data', () => {
 
     expect(instances[0].render).toHaveBeenCalledTimes(1);
     expect(instances[0].render).toHaveBeenCalledWith(external);
+  });
+
+  it('renders when data transitions from undefined to a loaded value after mount', async () => {
+    // The async-fetch pattern: <BlokEditor data={fetched} /> mounts while the
+    // content is still undefined, then the fetch resolves and `data` becomes
+    // defined. The editor was seeded with nothing, so it MUST render the loaded
+    // content — not silently stay empty.
+    const loaded = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'loaded' } }] };
+
+    const { rerender } = render(<Harness config={{ data: undefined }} />);
+    await act(async () => { await flush(); });
+    expect(instances).toHaveLength(1);
+    expect(instances[0].render).not.toHaveBeenCalled();
+
+    rerender(<Harness config={{ data: loaded }} />);
+    await act(async () => { await flush(); });
+
+    expect(instances).toHaveLength(1); // not recreated
+    expect(instances[0].render).toHaveBeenCalledTimes(1);
+    expect(instances[0].render).toHaveBeenCalledWith(loaded);
+  });
+
+  it('renders the latest data when the prop changes before the editor becomes ready', async () => {
+    // The editor is constructed with the mount-time data but does not surface
+    // until isReady resolves. If the parent re-renders with new content during
+    // that window, the editor was built with the STALE value — once ready it
+    // must render the latest prop, not silently keep the construction-time data.
+    deferReady = true;
+    const initial = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'initial' } }] };
+    const updated = { blocks: [{ id: '2', type: 'paragraph', data: { text: 'updated' } }] };
+
+    const { rerender } = render(<Harness config={{ data: initial }} />);
+    await act(async () => { await flush(); });
+    expect(instances).toHaveLength(1);
+
+    // Prop changes BEFORE isReady resolves (editor not yet surfaced).
+    rerender(<Harness config={{ data: updated }} />);
+    await act(async () => { await flush(); });
+
+    // Now the editor reports ready.
+    await act(async () => {
+      instances[0].resolveReady();
+      await flush();
+    });
+
+    expect(instances).toHaveLength(1); // not recreated
+    expect(instances[0].render).toHaveBeenCalledWith(updated);
   });
 
   it('serializes successive data changes in order', async () => {

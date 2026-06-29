@@ -7,6 +7,7 @@ export type { BlokEditorProps } from './BlokEditor';
 export { useBlocks } from './useBlocks';
 export type {
   BlockNode,
+  CaretTarget,
   InsertSpec,
   TreeInsertSpec,
   InsertPosition,

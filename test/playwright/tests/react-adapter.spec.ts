@@ -254,6 +254,73 @@ test.describe('React adapter', () => {
     expect(blocks.some((b) => b.type === 'paragraph' && b.data.text === 'World')).toBe(true);
   });
 
+  test('useBlocks.getBlockData + getBlockIndex duplicate a block without the ref (real bundle)', async ({ page }) => {
+    await page.goto(REACT_TEST_URL);
+    await expect(page.getByTestId('status')).toHaveText('ready');
+
+    const probed = await page.evaluate(() => {
+      const api = (window as unknown as {
+        __blocksApi: {
+          insert: (s: unknown) => { id: string } | null;
+          getBlockData: (id: string) => { data: { text?: string } } | null;
+          getBlockIndex: (id: string) => number | null;
+          getById: (id: string) => { type: string } | null;
+        };
+      }).__blocksApi;
+
+      api.insert({ type: 'header', id: 'ORIG', data: { text: 'Original', level: 2 }, position: 'end' });
+
+      // Read the block's data/tunes through the hook (no ref) and re-insert it —
+      // the composable duplicate flow. preservedData is the block's construction
+      // data immediately, so this works without any prior save round-trip.
+      const src = api.getById('ORIG');
+      const content = api.getBlockData('ORIG');
+
+      api.insert({ type: src?.type, data: content?.data, position: { after: 'ORIG' } });
+
+      return {
+        index: api.getBlockIndex('ORIG'),
+        missingIndex: api.getBlockIndex('nope'),
+        readText: content?.data.text ?? null,
+      };
+    });
+
+    expect(probed.readText).toBe('Original');
+    expect(typeof probed.index).toBe('number');
+    expect(probed.missingIndex).toBeNull();
+
+    const blocks = await readSavedBlocks(page);
+    const headers = blocks.filter((b) => b.type === 'header' && b.data.text === 'Original');
+
+    // The original plus the duplicate read+inserted through the hook.
+    expect(headers).toHaveLength(2);
+  });
+
+  test('useBlocks.renderFromHTML replaces the document with parsed HTML blocks (real bundle)', async ({ page }) => {
+    await page.goto(REACT_TEST_URL);
+    await expect(page.getByTestId('status')).toHaveText('ready');
+
+    await page.evaluate(async () => {
+      const api = (window as unknown as {
+        __blocksApi: {
+          insert: (s: unknown) => { id: string } | null;
+          renderFromHTML: (html: string) => Promise<void>;
+        };
+      }).__blocksApi;
+
+      api.insert({ type: 'paragraph', id: 'STALE', data: { text: 'to be replaced' }, position: 'end' });
+      // renderFromHTML CLEARS the document first (unlike additive insertMarkdown),
+      // so the stale block must be gone and only the parsed HTML must remain.
+      await api.renderFromHTML('<h2>Imported heading</h2><p>Imported body</p>');
+    });
+
+    const blocks = await readSavedBlocks(page);
+
+    expect(blocks.find((b) => b.id === 'STALE')).toBeUndefined();
+    expect(blocks.some((b) => b.type === 'header' && b.data.text === 'Imported heading')).toBe(true);
+    expect(blocks.some((b) => b.type === 'paragraph' && b.data.text === 'Imported body')).toBe(true);
+  });
+
   test('useBlocks.insert replace of a ROOT block stays at root, not nested (bug fix)', async ({ page }) => {
     await page.goto(REACT_TEST_URL);
     await expect(page.getByTestId('status')).toHaveText('ready');

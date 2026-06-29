@@ -410,6 +410,21 @@ export interface UseBlocksApi {
   /** The block at a flat index as a snapshot {@link BlockNode}, or null. */
   getBlockByIndex(index: number): BlockNode | null;
   /**
+   * The absolute flat index of a block by id, or null when unknown. The
+   * counterpart to {@link getBlockByIndex} — use it to target an off-caret
+   * {@link splitBlock} (whose `insertIndex` is absolute) without the ref. Unknown
+   * ids return null silently (no console warn). Pre-ready: null.
+   */
+  getBlockIndex(id: string): number | null;
+  /**
+   * Read a block's current `data` and `tunes` by id WITHOUT mutating anything —
+   * the synchronous last-extracted view (the same snapshot clipboard ops use).
+   * Makes a client-side duplicate composable from the hook alone: read a node,
+   * then `insert({ type, data, tunes, position })`, no ref escape hatch. Unknown
+   * id returns null. Pre-ready: null.
+   */
+  getBlockData(id: string): { data: BlockToolData; tunes: { [name: string]: BlockTuneData } } | null;
+  /**
    * The block whose holder contains/equals `element`, as a snapshot
    * {@link BlockNode}, or null. Maps a DOM event target back to a block.
    */
@@ -419,6 +434,13 @@ export interface UseBlocksApi {
    * core's `composeBlockData`. Async; rejects for an unknown tool. Pre-ready: `{}`.
    */
   composeBlockData(toolName: string): Promise<BlockToolData>;
+  /**
+   * Replace the WHOLE document with blocks parsed from an HTML string —
+   * delegates to core's `renderFromHTML`. Unlike {@link insertMarkdown} (which is
+   * additive), this CLEARS existing content first, so it's a document-load
+   * primitive, not an insert. Async. Pre-ready: resolves immediately (no-op).
+   */
+  renderFromHTML(html: string): Promise<void>;
   /**
    * Insert a flat array of already-serialized {@link OutputBlockData} (the
    * `save()` shape) directly, honoring each block's `parent`/`content` links —

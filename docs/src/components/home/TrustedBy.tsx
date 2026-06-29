@@ -362,7 +362,10 @@ export const TrustedBy: React.FC = () => {
                   data-blok-testid="trusted-stats"
                 >
                   {stats.map((stat) => (
-                    <li key={stat.label} className="flex flex-col gap-1.5 p-6 sm:p-7">
+                    <li
+                      key={stat.label}
+                      className="flex flex-col gap-1.5 px-6 pb-6 pt-10 sm:px-7 sm:pb-7 sm:pt-11"
+                    >
                       <span className="font-display text-[34px] font-extrabold leading-none tracking-tight text-foreground sm:text-[40px]">
                         <CountUp value={stat.value} />
                       </span>
@@ -374,7 +377,7 @@ export const TrustedBy: React.FC = () => {
                 <div className="h-px w-full bg-border/60" />
 
                 <div
-                  className="flex flex-1 flex-col justify-center gap-7 p-6 sm:p-7"
+                  className="flex flex-1 flex-col px-6 pb-8 pt-7 sm:px-7 sm:pb-10 sm:pt-8"
                   data-blok-testid="trusted-contact"
                 >
                   <div className="flex flex-col gap-2">
@@ -386,7 +389,7 @@ export const TrustedBy: React.FC = () => {
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-3">
+                  <div className="mt-auto flex flex-wrap items-center gap-3 pt-7">
                     {/* Primary channel — Telegram's brand blue. */}
                     <a
                       href="https://t.me/jackuait"

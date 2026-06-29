@@ -34,7 +34,7 @@ import {
   updateMarkersInRange,
   updateAllOrderedListMarkers,
 } from './list-helpers';
-import { handleEnter, handleBackspace, handleOutdent } from './list-keyboard';
+import { handleEnter, handleBackspace, handleIndent, handleOutdent } from './list-keyboard';
 import { renderListItem } from './list-lifecycle';
 import { ListMarkerCalculator } from './marker-calculator';
 import { OrderedMarkerManager } from './ordered-marker-manager';
@@ -418,12 +418,22 @@ export class ListItem implements BlockTool {
      * Shift+Tab here for that case by decrementing the flat depth carrier and
      * restoring the caret to the content element.
      */
-    if (event.key === 'Tab' && event.shiftKey) {
-      const isFlatNested = this.getStructuralListDepth() === null && this.getDepth() > 0;
-
-      if (isFlatNested) {
+    if (event.key === 'Tab' && this.getStructuralListDepth() === null) {
+      /**
+       * Flat-carrier items (drag-nested, or authored with `data.depth` but no
+       * list parentId) have no structural parent for the shared Tab handler to
+       * act on: its indent would no-op on the first item / derive the wrong
+       * depth, and its outdent is a no-op. Handle both here via the flat depth
+       * carrier — handleIndent caps at the max allowed depth, handleOutdent
+       * guards at depth 0. Structurally nested items fall through to the shared
+       * handler.
+       */
+      if (event.shiftKey && this.getDepth() > 0) {
         event.preventDefault();
         void this.handleOutdent();
+      } else if (!event.shiftKey) {
+        event.preventDefault();
+        void this.handleIndent();
       }
     }
   }
@@ -454,6 +464,20 @@ export class ListItem implements BlockTool {
     };
 
     await handleBackspace(context, event);
+  }
+
+  private async handleIndent(): Promise<void> {
+    const context = {
+      api: this.api,
+      blockId: this.blockId,
+      data: this._data,
+      element: this._element,
+      getContentElement: this.getContentElement.bind(this),
+      syncContentFromDOM: this.syncContentFromDOM.bind(this),
+      getDepth: this.getDepth.bind(this),
+    };
+
+    await handleIndent(context, this.depthValidator);
   }
 
   private async handleOutdent(): Promise<void> {

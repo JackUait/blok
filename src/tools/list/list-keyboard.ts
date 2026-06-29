@@ -298,3 +298,45 @@ export const handleOutdent = async(
   // Restore focus to the updated block after DOM has been updated
   setCaretToBlockContent(api, updatedBlock);
 };
+
+/**
+ * Handle Tab — indent a FLAT-carrier list item one level via `data.depth`.
+ * Symmetric to {@link handleOutdent}. Used for authored / drag-nested items that
+ * have no structural list parent for the shared module handler to nest under:
+ * the first item (no preceding sibling) would otherwise no-op, and others would
+ * derive the wrong depth from the parentId chain. Caps at the depth-validator's
+ * max-allowed depth (first-in-group = 1, otherwise previous item depth + 1).
+ * @param context - keyboard context for the current list item
+ * @param depthValidator - validator providing the per-index max-allowed depth
+ */
+export const handleIndent = async(
+  context: KeyboardContext,
+  depthValidator: ListDepthValidator
+): Promise<void> => {
+  const { api, blockId, data, syncContentFromDOM, getDepth } = context;
+
+  const currentBlockIndex = blockId !== undefined
+    ? api.blocks.getBlockIndex(blockId) ?? api.blocks.getCurrentBlockIndex()
+    : api.blocks.getCurrentBlockIndex();
+  const currentDepth = getDepth();
+  const maxAllowedDepth = depthValidator.getMaxAllowedDepth(currentBlockIndex);
+
+  // Already at the deepest allowed level — nothing to do.
+  if (currentDepth >= maxAllowedDepth) {
+    return;
+  }
+
+  // Sync current content before updating
+  syncContentFromDOM();
+
+  const newDepth = currentDepth + 1;
+  data.depth = newDepth;
+
+  const updatedBlock = await api.blocks.update(blockId || '', {
+    ...data,
+    depth: newDepth,
+  });
+
+  // Restore focus to the updated block after DOM has been updated
+  setCaretToBlockContent(api, updatedBlock);
+};

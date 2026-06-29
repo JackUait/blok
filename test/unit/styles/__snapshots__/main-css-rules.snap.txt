@@ -708,7 +708,7 @@
 
 }
 
-@import 'tailwindcss/utilities.css' {
+@import 'tailwindcss/utilities.css' layer(utilities) {
 
 }
 

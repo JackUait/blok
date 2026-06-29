@@ -7,15 +7,34 @@
 @import '../tools/image/alt-popover.css';
 
 /*
-  Import Tailwind CSS sub-modules individually (without native @layer wrappers).
-  The default `@import 'tailwindcss'` wraps all output in @layer declarations,
-  which causes styles to lose to ANY un-layered consumer CSS — per the CSS spec,
-  un-layered styles always beat layered styles regardless of specificity.
-  Individual imports avoid this, making the library's styles work in real apps.
+  Import Tailwind CSS sub-modules individually instead of `@import 'tailwindcss'`
+  (we ship a scoped preflight below instead of tailwindcss/preflight.css), but
+  the UTILITIES MUST be imported INTO the `utilities` cascade layer — exactly as
+  the canonical `@import "tailwindcss"` does.
+
+  Why: this bundle is injected into the host page's <head> (UI.loadStyles), so
+  Blok's generated utilities (.text-3xl, .grid, every sm:/lg: responsive variant)
+  live alongside a host Tailwind v4 app's own. Per the CSS cascade-layer spec,
+  UN-LAYERED declarations ALWAYS beat LAYERED ones, regardless of specificity,
+  source order, or media queries. So an un-layered `@import 'tailwindcss/utilities.css'`
+  makes Blok's `.text-3xl` override the host's layered `sm:text-4xl` on the HOST's
+  own elements — collapsing the host's responsive layout the instant the editor
+  mounts. Importing utilities into layer(utilities) keeps the host in control of
+  its own utilities (Blok's, prepended first, fall earlier in the same layer).
+
+  theme.css stays un-layered on purpose: it only emits :root token *values*
+  (--text-3xl, --color-*), which never override a host's utility classes, and
+  Blok wants its own token values to win for a consistent editor appearance.
+
+  UI.loadStyles ALSO prepends the canonical `@layer theme, base, components,
+  utilities;` order statement so that, since this bundle registers the utilities
+  layer first, the host's base (preflight) layer still slots in BEFORE utilities
+  rather than after it. See ui.ts.
+
   See: https://github.com/tailwindlabs/tailwindcss/discussions/13188
 */
 @import 'tailwindcss/theme.css';
-@import 'tailwindcss/utilities.css';
+@import 'tailwindcss/utilities.css' layer(utilities);
 
 @import './isolation.css';
 @import './preflight.css';

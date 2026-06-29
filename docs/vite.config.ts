@@ -23,11 +23,36 @@ const externalDistPlugin = (): Plugin => {
     },
     load(id) {
       if (id.startsWith(parentDistDir)) {
+        // Mark the bundle file as a watched dependency so a rebuild invalidates
+        // this module instead of serving the cached copy (see configureServer).
+        this.addWatchFile(id);
         return fs.readFileSync(id, "utf-8");
       }
       return null;
     },
     configureServer(server) {
+      // The Blok editor bundle in ../dist is produced by a SEPARATE build and
+      // lives outside the docs project root, so vite's watcher never sees it.
+      // Without this, the first `import("/dist/full.mjs")` is cached in the
+      // module graph for the life of the dev server: the page keeps running a
+      // stale editor even after `vite build` regenerates dist, so editor fixes
+      // silently never appear. Watch dist explicitly and, on any change,
+      // invalidate every cached /dist module and force a full reload so the
+      // page always runs the freshly-built editor.
+      server.watcher.add(parentDistDir);
+      const reloadOnDistChange = (file: string) => {
+        if (!file.startsWith(parentDistDir)) return;
+        server.moduleGraph.idToModuleMap.forEach((mod, id) => {
+          if (id.startsWith(parentDistDir)) {
+            server.moduleGraph.invalidateModule(mod);
+          }
+        });
+        server.ws.send({ type: "full-reload" });
+      };
+      server.watcher.on("change", reloadOnDistChange);
+      server.watcher.on("add", reloadOnDistChange);
+      server.watcher.on("unlink", reloadOnDistChange);
+
       // Serve the parent directory files (CHANGELOG.md, etc.)
       server.middlewares.use((req, res, next) => {
         const url = req.url ?? "";

@@ -1,21 +1,33 @@
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
+/** The comic marks the field can be made of. */
+export type HalftoneShape = "dot" | "ring" | "plus" | "diamond" | "triangle";
+
 /**
- * An interactive comic-style halftone dot field, drawn on a canvas so the dots
- * can react to the pointer. A spread-out grid of dots fills the host; the cursor
- * acts as an invisible, shape-shifting blob that shoves nearby dots outward, and
- * each dot eases back to its home position once the cursor moves on. The dots are
- * purely decorative (`aria-hidden`) and never intercept pointer events, so the
- * buttons underneath stay clickable.
+ * An interactive comic-style halftone field, drawn on a canvas so the marks can
+ * react to the pointer. A spread-out grid of marks fills the host; the cursor
+ * acts as an invisible, shape-shifting blob that shoves nearby marks outward, and
+ * each one eases back to its home position once the cursor moves on. The marks
+ * are purely decorative (`aria-hidden`) and never intercept pointer events, so
+ * the controls underneath stay clickable.
  *
- * Tuning lives in the constants below. Colour is read from the canvas's own
- * computed `color`, so set it via the `className` (e.g. `text-foreground/[0.08]`)
- * and it follows light/dark automatically. Honours `prefers-reduced-motion` by
- * painting one static frame and skipping the animation loop.
+ * Pass `shapes` to choose the glyphs — a plain dot field (the default) or a mix
+ * of comic marks (`["ring", "plus", "diamond"]`) scattered deterministically
+ * across the grid. Tuning lives in the constants below. Colour is read from the
+ * canvas's own computed `color`, so set it via the `className`
+ * (e.g. `text-foreground/[0.08]`) and it follows light/dark automatically.
+ * Honours `prefers-reduced-motion` by painting one static frame and skipping the
+ * animation loop.
  */
-export const HalftoneDots: React.FC<{ className?: string }> = ({ className }) => {
+export const HalftoneDots: React.FC<{
+  className?: string;
+  shapes?: HalftoneShape[];
+}> = ({ className, shapes = ["dot"] }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // Stable string key so the effect rebuilds only when the shape set truly
+  // changes, not on every render's fresh array identity.
+  const shapeKey = shapes.join(",");
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -24,12 +36,15 @@ export const HalftoneDots: React.FC<{ className?: string }> = ({ className }) =>
     // jsdom and ancient engines have no 2D context — bail without animating.
     if (!ctx) return;
 
+    const shapeList = shapeKey.split(",") as HalftoneShape[];
+
     // --- tuning -------------------------------------------------------------
-    const SPACING = 26; // gap between dots — larger reads as "more spread out"
-    const DOT_R = 1.6; // dot radius in CSS px
+    const SPACING = 26; // gap between marks — larger reads as "more spread out"
+    const DOT_R = 1.6; // base mark radius in CSS px
+    const STROKE = 1.1; // line weight for the open marks (ring, plus)
     const REPEL = 120; // base radius of the cursor's influence blob
-    const PUSH = 64; // how far the strongest-pushed dot travels
-    const EASE = 0.18; // how quickly a dot chases its target (0–1)
+    const PUSH = 64; // how far the strongest-pushed mark travels
+    const EASE = 0.18; // how quickly a mark chases its target (0–1)
     // ------------------------------------------------------------------------
 
     const reduceMotion = window.matchMedia(
@@ -41,6 +56,7 @@ export const HalftoneDots: React.FC<{ className?: string }> = ({ className }) =>
       hy: number;
       x: number;
       y: number;
+      shape: HalftoneShape;
     }
 
     let dots: Dot[] = [];
@@ -64,6 +80,9 @@ export const HalftoneDots: React.FC<{ className?: string }> = ({ className }) =>
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.lineWidth = STROKE;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
       refreshColor();
 
       dots = [];
@@ -71,20 +90,77 @@ export const HalftoneDots: React.FC<{ className?: string }> = ({ className }) =>
       for (let y = SPACING / 2; y < height + SPACING; y += SPACING) {
         // Stagger alternate rows by half a cell for the diagonal Ben-Day look.
         const offset = (rowIndex % 2) * (SPACING / 2);
+        let colIndex = 0;
         for (let x = SPACING / 2 + offset; x < width + SPACING; x += SPACING) {
-          dots.push({ hx: x, hy: y, x, y });
+          // Scatter the shapes with a cheap integer hash of the grid coords so
+          // the mix looks random but stays stable across rebuilds/resizes.
+          const hash =
+            (Math.imul(colIndex + 1, 73856093) ^
+              Math.imul(rowIndex + 1, 19349663)) >>>
+            0;
+          const shape = shapeList[hash % shapeList.length];
+          dots.push({ hx: x, hy: y, x, y, shape });
+          colIndex += 1;
         }
         rowIndex += 1;
+      }
+    };
+
+    // Draw one comic mark centred at (x, y). Filled shapes use the current
+    // fillStyle; open shapes (ring, plus) stroke with strokeStyle.
+    const drawMark = (shape: HalftoneShape, x: number, y: number): void => {
+      switch (shape) {
+        case "ring": {
+          ctx.beginPath();
+          ctx.arc(x, y, DOT_R + 1, 0, Math.PI * 2);
+          ctx.stroke();
+          break;
+        }
+        case "plus": {
+          const a = DOT_R + 1.3;
+          ctx.beginPath();
+          ctx.moveTo(x - a, y);
+          ctx.lineTo(x + a, y);
+          ctx.moveTo(x, y - a);
+          ctx.lineTo(x, y + a);
+          ctx.stroke();
+          break;
+        }
+        case "diamond": {
+          const a = DOT_R + 1.1;
+          ctx.beginPath();
+          ctx.moveTo(x, y - a);
+          ctx.lineTo(x + a, y);
+          ctx.lineTo(x, y + a);
+          ctx.lineTo(x - a, y);
+          ctx.closePath();
+          ctx.fill();
+          break;
+        }
+        case "triangle": {
+          const a = DOT_R + 1.5;
+          ctx.beginPath();
+          ctx.moveTo(x, y - a);
+          ctx.lineTo(x + a * 0.92, y + a * 0.7);
+          ctx.lineTo(x - a * 0.92, y + a * 0.7);
+          ctx.closePath();
+          ctx.fill();
+          break;
+        }
+        default: {
+          ctx.beginPath();
+          ctx.arc(x, y, DOT_R, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
     };
 
     const paint = (): void => {
       ctx.clearRect(0, 0, width, height);
       ctx.fillStyle = color;
+      ctx.strokeStyle = color;
       for (const d of dots) {
-        ctx.beginPath();
-        ctx.arc(d.x, d.y, DOT_R, 0, Math.PI * 2);
-        ctx.fill();
+        drawMark(d.shape, d.x, d.y);
       }
     };
 
@@ -95,6 +171,7 @@ export const HalftoneDots: React.FC<{ className?: string }> = ({ className }) =>
       t += 0.016;
       ctx.clearRect(0, 0, width, height);
       ctx.fillStyle = color;
+      ctx.strokeStyle = color;
 
       for (const d of dots) {
         let targetX = d.hx;
@@ -124,9 +201,7 @@ export const HalftoneDots: React.FC<{ className?: string }> = ({ className }) =>
         d.x += (targetX - d.x) * EASE;
         d.y += (targetY - d.y) * EASE;
 
-        ctx.beginPath();
-        ctx.arc(d.x, d.y, DOT_R, 0, Math.PI * 2);
-        ctx.fill();
+        drawMark(d.shape, d.x, d.y);
       }
 
       raf = requestAnimationFrame(tick);
@@ -188,7 +263,7 @@ export const HalftoneDots: React.FC<{ className?: string }> = ({ className }) =>
       themeObserver.disconnect();
       visibilityObserver.disconnect();
     };
-  }, []);
+  }, [shapeKey]);
 
   return (
     <canvas

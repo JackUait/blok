@@ -12,6 +12,7 @@ import {
   type MotionValue,
 } from "framer-motion";
 import { Mail, Send } from "lucide-react";
+import { HalftoneDots } from "../common/HalftoneDots";
 import { SectionReveal } from "../common/SectionReveal";
 import { useI18n } from "../../contexts/I18nContext";
 
@@ -350,6 +351,12 @@ export const TrustedBy: React.FC = () => {
               data-blok-testid="trusted-featured"
             >
               <span className="bento-spot" aria-hidden="true" />
+              {/* The same cursor-reactive halftone field as the Migration card,
+                  here rendered as a mix of comic marks rather than plain dots. */}
+              <HalftoneDots
+                className="text-foreground/[0.07]"
+                shapes={["ring", "plus", "diamond"]}
+              />
               <div className="relative z-10 flex w-full flex-col p-8 sm:p-10">
                 <div className="flex flex-col gap-3">
                   <DodoLogo className="h-9 w-auto self-start text-foreground" />
@@ -402,6 +409,10 @@ export const TrustedBy: React.FC = () => {
               transition={hoverSpring}
             >
               <span className="bento-spot" aria-hidden="true" />
+              <HalftoneDots
+                className="text-foreground/[0.07]"
+                shapes={["ring", "plus", "diamond"]}
+              />
               <div className="relative z-10 flex w-full flex-col">
                 <ul
                   className="grid grid-cols-2 divide-x divide-border/60"

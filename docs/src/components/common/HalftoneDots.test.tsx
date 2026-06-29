@@ -22,4 +22,10 @@ describe("HalftoneDots", () => {
     // getContext returns null here; the effect must bail rather than crash.
     expect(() => render(<HalftoneDots />)).not.toThrow();
   });
+
+  it("accepts a custom shape mix without throwing", () => {
+    expect(() =>
+      render(<HalftoneDots shapes={["ring", "plus", "diamond"]} />),
+    ).not.toThrow();
+  });
 });

@@ -18,7 +18,7 @@ export interface ApiSection {
     default: string;
     description: string;
   }[];
-  customType?: "quick-start";
+  customType?: "quick-start" | "concepts";
   example?: string;
 }
 
@@ -29,6 +29,14 @@ export const API_SECTIONS: ApiSection[] = [
     title: "Quick Start",
     description: "Get up and running with Blok in just a few simple steps.",
     customType: "quick-start",
+  },
+  {
+    id: "concepts",
+    badge: "Concepts",
+    title: "Everything is a block",
+    description:
+      "Blok has one core idea. Understand it, and the rest of the API falls into place.",
+    customType: "concepts",
   },
   {
     id: "core",
@@ -1264,6 +1272,10 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
   {
     title: "Guide",
     links: [{ id: "quick-start", label: "Quick Start" }],
+  },
+  {
+    title: "Concepts",
+    links: [{ id: "concepts", label: "Everything is a block" }],
   },
   {
     title: "Core",

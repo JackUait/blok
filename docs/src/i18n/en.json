@@ -47,7 +47,8 @@
       "guide": "Guide",
       "core": "Core",
       "apiModules": "API Modules",
-      "data": "Data"
+      "data": "Data",
+      "concepts": "Concepts"
     },
     "links": {
       "quickStart": "Quick Start",
@@ -72,7 +73,8 @@
       "listeners": "Listeners",
       "tools": "Tools",
       "outputData": "OutputData",
-      "blockData": "BlockData"
+      "blockData": "BlockData",
+      "everythingIsABlock": "Everything is a block"
     },
     "quickStart": {
       "title": "Quick Start",
@@ -306,6 +308,84 @@
       "title": "BlockData",
       "badge": "Data",
       "description": "The structure of each block in the blocks array."
+    },
+    "concepts": {
+      "title": "Everything is a block",
+      "badge": "Concepts",
+      "description": "Blok has one core idea. Understand it, and the rest of the API falls into place.",
+      "lead": "In Blok, every piece of content is a block. There is no separate document model running alongside them — blocks are the universal primitive. A paragraph is a block. A heading is a block. A whole database, and every row inside it, is a block. Once this clicks, the API stops reading like a list of features and starts reading like one consistent tree.",
+      "shape": {
+        "title": "The shape of a block",
+        "body": "Every block — whatever its type — is the same small object. `type` names the tool that renders it, `data` holds that tool's content, and `tunes` holds optional block-level settings."
+      },
+      "tree": {
+        "title": "Blocks form a tree",
+        "body": "Blocks aren't a flat list. Any block can contain other blocks through `contentIds`, and each child points back through `parentId`. A block that holds children is, in effect, a page — opening it means navigating into its children."
+      },
+      "everywhere": {
+        "title": "The same idea, all the way up",
+        "body": "Features that look like separate systems are really just blocks arranged in the tree:",
+        "thingHeader": "This…",
+        "whyHeader": "…is a block because",
+        "rows": {
+          "paragraph": {
+            "thing": "A paragraph",
+            "why": "Its `data` holds the text and inline formatting."
+          },
+          "database": {
+            "thing": "A database",
+            "why": "Its `data` holds the schema and view configs — not a side table."
+          },
+          "row": {
+            "thing": "A database row",
+            "why": "It's a child of the database block; its values live in `data.properties`."
+          },
+          "page": {
+            "thing": "A page",
+            "why": "Any block with children. Opening it navigates into its `contentIds`."
+          }
+        }
+      },
+      "notBlocks": {
+        "title": "What is not a block",
+        "body": "Structured property values — a status, a priority, a due date on a row — are not blocks. They're metadata stored in the owning block's `data`. The rule of thumb: if it has an identity, stores content, and can be nested, it's a block; if it's a typed value that belongs to a block, it lives in that block's `data`."
+      },
+      "why": {
+        "title": "Why this matters to you",
+        "body": "Because everything is a block, you learn one set of moves and they work everywhere:",
+        "items": {
+          "operations": {
+            "label": "One API for everything",
+            "text": "`insert`, `move`, and `delete` operate on any block — a paragraph, a row, or a whole database — with the same calls."
+          },
+          "serialization": {
+            "label": "One save format",
+            "text": "`editor.save()` walks the same tree for every kind of content, so persistence and rendering never need special cases."
+          },
+          "nesting": {
+            "label": "One nesting model",
+            "text": "`parentId` and `contentIds` describe containment everywhere, so a row inside a database and a paragraph inside a toggle behave the same way."
+          }
+        }
+      },
+      "decision": {
+        "title": "Extending Blok? Ask one question",
+        "body": "Before designing a new feature, ask: “Is this a block?” If it represents content, data, or a container, the answer is almost always yes — build it as a block instead of inventing a parallel data model.",
+        "examples": {
+          "calendar": "A calendar view → a view config on a database block; the rows stay row blocks.",
+          "comments": "A comment thread → a block.",
+          "toc": "A table of contents → a block that reads its sibling blocks.",
+          "embed": "An embed → a block."
+        }
+      },
+      "next": {
+        "intro": "Ready to work with the tree directly?",
+        "blocksPrefix": "See the",
+        "blocksLink": "Blocks API",
+        "blocksSuffix": "for inserting and moving blocks, and",
+        "blockDataLink": "BlockData",
+        "blockDataSuffix": "for the exact shape of a saved block."
+      }
     }
   },
   "home": {

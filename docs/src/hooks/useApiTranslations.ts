@@ -8,6 +8,7 @@ import { API_SECTIONS as BASE_API_SECTIONS } from '../components/api/api-data';
  */
 const SECTION_TRANSLATION_KEYS: Record<string, string> = {
   'quick-start': 'api.quickStart',
+  'concepts': 'api.concepts',
   'core': 'api.blokClass',
   'config': 'api.configuration',
   'blocks-api': 'api.blocksApi',
@@ -34,6 +35,7 @@ const SECTION_TRANSLATION_KEYS: Record<string, string> = {
 
 const SIDEBAR_LINK_KEYS: Record<string, string> = {
   'quick-start': 'api.links.quickStart',
+  'concepts': 'api.links.everythingIsABlock',
   'core': 'api.links.blokClass',
   'config': 'api.links.configuration',
   'blocks-api': 'api.links.blocks',
@@ -124,6 +126,10 @@ export const useApiTranslations = () => {
       {
         title: t('api.sections.guide'),
         links: [{ id: 'quick-start', label: t(SIDEBAR_LINK_KEYS['quick-start']) }],
+      },
+      {
+        title: t('api.sections.concepts'),
+        links: [{ id: 'concepts', label: t(SIDEBAR_LINK_KEYS['concepts']) }],
       },
       {
         title: t('api.sections.core'),

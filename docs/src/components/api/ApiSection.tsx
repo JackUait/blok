@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CodeBlock } from "../common/CodeBlock";
 import { CategoryIcon } from "../common/CategoryIcon";
 import { ApiMethodCard } from "./ApiMethodCard";
+import { ConceptsContent } from "./ConceptsContent";
 import { useI18n } from "../../contexts/I18nContext";
 import type { ApiSection as ApiSectionType } from "./api-data";
 import type { PackageManager } from "../common/PackageManagerToggle";
@@ -172,6 +173,18 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
           <SectionHeader section={section} />
         </div>
         <QuickStartContent />
+      </section>
+    );
+  }
+
+  // Render the concepts / explanation content specially
+  if (section.customType === "concepts") {
+    return (
+      <section id={section.id} className="scroll-mt-24" data-blok-testid={section.id} aria-label={section.title}>
+        <div className="mb-10">
+          <SectionHeader section={section} />
+        </div>
+        <ConceptsContent />
       </section>
     );
   }

@@ -5,6 +5,7 @@ describe("API_SECTIONS", () => {
   it("should have all defined sections", () => {
     const expectedSectionIds = [
       "quick-start",
+      "concepts",
       "core",
       "config",
       "blocks-api",

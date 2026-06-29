@@ -59,7 +59,7 @@ describe('useApiTranslations', () => {
     const { result } = renderHook(() => useApiTranslations(), { wrapper });
     
     const sectionTitles = result.current.sidebarSections.map(s => s.title);
-    expect(sectionTitles).toEqual(['Guide', 'Core', 'API Modules', 'Data']);
+    expect(sectionTitles).toEqual(['Guide', 'Concepts', 'Core', 'API Modules', 'Data']);
   });
 
   it('should return the correct number of API sections', () => {
@@ -71,6 +71,7 @@ describe('useApiTranslations', () => {
     // Check specific sections exist
     const sectionIds = result.current.apiSections.map(s => s.id);
     expect(sectionIds).toContain('quick-start');
+    expect(sectionIds).toContain('concepts');
     expect(sectionIds).toContain('core');
     expect(sectionIds).toContain('blocks-api');
   });

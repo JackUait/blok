@@ -14,30 +14,11 @@ import { Mail, Send } from "lucide-react";
 import { SectionReveal } from "../common/SectionReveal";
 import { useI18n } from "../../contexts/I18nContext";
 
-// These cards stay flat — no 3D tilt or pink glow (the latter suppressed via
-// `.bento-tile--no-glow`). The only interaction is the shared shadow lift:
-// desktop gets it from CSS `:hover` + the framer `whileHover` rise, while touch
-// has no hover, so a finger press toggles `.is-touch-active` (read by the
-// `.bento-tile` box-shadow) and lifting/cancelling settles it. The cards aren't
-// buttons, so there's no click to guard — the inner links stay live.
-const hoverSpring = { type: "spring", stiffness: 380, damping: 20 } as const;
-
-const useTouchLift = () => ({
-  onPointerDown: (e: React.PointerEvent<HTMLElement>) => {
-    if (e.pointerType !== "touch") return;
-    e.currentTarget.classList.add("is-touch-active");
-  },
-  onPointerUp: (e: React.PointerEvent<HTMLElement>) => {
-    if (e.pointerType !== "touch") return;
-    e.currentTarget.classList.remove("is-touch-active");
-  },
-  onPointerCancel: (e: React.PointerEvent<HTMLElement>) => {
-    e.currentTarget.classList.remove("is-touch-active");
-  },
-  onPointerLeave: (e: React.PointerEvent<HTMLElement>) => {
-    e.currentTarget.classList.remove("is-touch-active");
-  },
-});
+// These cards stay completely static — no 3D tilt, no pink glow, and no hover
+// lift (movement or shadow). The pink glow/border is suppressed via
+// `.bento-tile--no-glow`, and the hover/active shadow rise via
+// `.bento-tile--no-lift`; only the resting border + shadow remain. The cards
+// aren't buttons, so there's no click to guard — the inner links stay live.
 
 /**
  * The official Dodo Brands lockup — the colourful pinwheel mark keeps its brand
@@ -262,11 +243,6 @@ export const TrustedBy: React.FC = () => {
   const claim = hasKicker ? sentences.slice(0, -1).join(" ").trim() : summary;
   const kicker = hasKicker ? sentences[sentences.length - 1].trim() : "";
 
-  // One touch-lift handler set per card so a finger press lifts each tile
-  // independently (desktop hover is handled in CSS).
-  const storyLift = useTouchLift();
-  const sideLift = useTouchLift();
-
   const stats: Stat[] = [
     {
       value: t("home.trusted.statCountriesValue"),
@@ -299,11 +275,8 @@ export const TrustedBy: React.FC = () => {
         <div className="mt-12 grid gap-4 lg:grid-cols-[1.5fr_1fr] lg:items-stretch">
           {/* ── Featured testimonial tile ──────────────────────────────────── */}
           <SectionReveal delay={0.08} className="flex">
-            <motion.div
-              className="bento-tile bento-tile--no-glow group relative flex w-full overflow-hidden rounded-3xl border border-border/60 bg-card"
-              {...storyLift}
-              whileHover={{ y: -4 }}
-              transition={hoverSpring}
+            <div
+              className="bento-tile bento-tile--no-glow bento-tile--no-lift group relative flex w-full overflow-hidden rounded-3xl border border-border/60 bg-card"
               data-blok-testid="trusted-featured"
             >
               <div className="relative z-10 flex w-full flex-col p-8 sm:p-10">
@@ -344,17 +317,14 @@ export const TrustedBy: React.FC = () => {
                   </Link>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </SectionReveal>
 
           {/* ── Proof + contact tile — metrics over the two contact channels,
               split by the same hairlines the tables tile uses. ───────────── */}
           <SectionReveal delay={0.12} className="flex">
-            <motion.div
-              className="bento-tile bento-tile--no-glow group relative flex w-full overflow-hidden rounded-3xl border border-border/60 bg-card"
-              {...sideLift}
-              whileHover={{ y: -4 }}
-              transition={hoverSpring}
+            <div
+              className="bento-tile bento-tile--no-glow bento-tile--no-lift group relative flex w-full overflow-hidden rounded-3xl border border-border/60 bg-card"
             >
               <div className="relative z-10 flex w-full flex-col">
                 <ul
@@ -412,7 +382,7 @@ export const TrustedBy: React.FC = () => {
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </SectionReveal>
         </div>
       </div>

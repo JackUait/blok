@@ -981,9 +981,10 @@
   transition: box-shadow 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 /* The "active" state mirrors hover so a pressed tile on touch lifts the same way
-   (useTouchPlay toggles .is-touch-active while a finger is on the tile). */
-.bento-tile:hover,
-.bento-tile.is-touch-active {
+   (useTouchPlay toggles .is-touch-active while a finger is on the tile). The
+   `--no-lift` opt-out keeps a tile on its resting shadow (no hover rise). */
+.bento-tile:not(.bento-tile--no-lift):hover,
+.bento-tile:not(.bento-tile--no-lift).is-touch-active {
   box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.85),
     0 22px 48px -16px rgba(17, 12, 10, 0.22);
@@ -993,8 +994,8 @@
     inset 0 1px 0 0 rgba(255, 255, 255, 0.06),
     0 1px 2px rgba(0, 0, 0, 0.3);
 }
-.dark .bento-tile:hover,
-.dark .bento-tile.is-touch-active {
+.dark .bento-tile:not(.bento-tile--no-lift):hover,
+.dark .bento-tile:not(.bento-tile--no-lift).is-touch-active {
   box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
     0 24px 52px -16px rgba(0, 0, 0, 0.65);

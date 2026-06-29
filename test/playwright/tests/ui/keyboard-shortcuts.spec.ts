@@ -357,6 +357,43 @@ test.describe('keyboard shortcuts', () => {
     }).toBe('paragraph');
   });
 
+  test('turn-into shortcut also reaches heading levels 4-6', async ({ page }) => {
+    await createBlokWithTools(page, {
+      data: {
+        blocks: [
+          { type: 'paragraph', data: { text: 'Deep heading' } },
+        ],
+      },
+    });
+
+    const isMac = process.platform === 'darwin';
+    const turnIntoCombo = (digit: number): string =>
+      isMac ? `Meta+Alt+Digit${digit}` : `Control+Shift+Digit${digit}`;
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR, { hasText: 'Deep heading' });
+    const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+    await expect(paragraph).toHaveCount(1);
+    await paragraphInput.click();
+
+    // Each of the 4/5/6 combos must convert to the matching heading level.
+    for (const level of [4, 5, 6]) {
+      const blockInput = page
+        .locator(`${BLOK_INTERFACE_SELECTOR} [contenteditable="true"]`, { hasText: 'Deep heading' })
+        .first();
+
+      await blockInput.click();
+      await page.keyboard.press(turnIntoCombo(level));
+
+      await expect.poll(async () => {
+        const data = await saveBlok(page);
+        const block = data.blocks.find((candidate) => (candidate.data as { text?: string }).text === 'Deep heading');
+
+        return { type: block?.type, level: (block?.data as { level?: number } | undefined)?.level };
+      }).toEqual({ type: 'header', level });
+    }
+  });
+
   test('maps CMD shortcut definitions to platform-specific modifier keys', async ({ page }) => {
     await createBlokWithTools(page, {
       data: {

@@ -156,6 +156,27 @@ test.describe('slash keydown', () => {
     expect(types).toEqual([ 'paragraph', 'header' ]);
   });
 
+  test('slash query is bounded at the caret, not the rest of the block (Notion parity)', async ({ page }) => {
+    await createParagraphBlok(page, [ 'Hello world' ]);
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+
+    // Place the caret after "Hello" (mid-block), then type "/head".
+    await paragraph.click();
+    await page.keyboard.press('Home');
+    for (let i = 0; i < 5; i++) {
+      await page.keyboard.press('ArrowRight');
+    }
+    await page.keyboard.type('/head');
+
+    await expect(page.locator(TOOLBOX_CONTAINER_SELECTOR)).toBeVisible();
+
+    // The query must be "head" (slash→caret), so the Heading tool matches. If the
+    // trailing " world" (content after the caret) leaked into the query it would
+    // be "head world" and nothing would match — the Heading item would be hidden.
+    await expect(page.locator(TOOLBOX_ITEM_SELECTOR('header-1')).first()).toBeVisible();
+  });
+
   test('typing "/" on an EMPTY block still replaces it in place', async ({ page }) => {
     await createParagraphBlok(page, [ '' ]);
 

@@ -796,12 +796,8 @@ export class UndoHistory {
 
   /**
    * Mark that a boundary character (space, punctuation) was just typed.
-   *
-   * Notion coalesces a continuous typing run into a SINGLE undo step, broken
-   * only by a pause longer than the Yjs capture window (CAPTURE_TIMEOUT_MS) or a
-   * structural operation. So this no longer forces a per-word checkpoint: the
-   * boundary state is still tracked (and auto-cleared after BOUNDARY_TIMEOUT_MS)
-   * for callers that inspect it, but the timer must NOT call stopCapturing().
+   * Starts a timer that will call stopCapturing() after BOUNDARY_TIMEOUT_MS
+   * if no new input arrives.
    */
   public markBoundary(): void {
     this.pendingBoundary = true;
@@ -812,10 +808,12 @@ export class UndoHistory {
       clearTimeout(this.boundaryTimeoutId);
     }
 
-    // Clear the pending boundary after the idle window, WITHOUT creating a
-    // checkpoint (the per-word checkpoint was the non-Notion divergence).
+    // Set new timeout to create checkpoint if no more input
     this.boundaryTimeoutId = setTimeout(() => {
-      this.pendingBoundary = false;
+      if (this.pendingBoundary) {
+        this.stopCapturing();
+        this.pendingBoundary = false;
+      }
       this.boundaryTimeoutId = null;
     }, BOUNDARY_TIMEOUT_MS);
   }
@@ -834,13 +832,9 @@ export class UndoHistory {
   }
 
   /**
-   * Check if a pending boundary has timed out and clear it if so.
+   * Check if a pending boundary has timed out and create a checkpoint if so.
    * Called on each keystroke to handle the case where the user resumes typing
    * after a pause longer than BOUNDARY_TIMEOUT_MS.
-   *
-   * No longer creates an undo checkpoint: Notion keeps a typing run as one undo
-   * step regardless of word boundaries (run-breaking is left to the Yjs capture
-   * window and structural ops). This only tidies up the pending-boundary state.
    */
   public checkAndHandleBoundary(): void {
     if (!this.pendingBoundary) {
@@ -850,6 +844,7 @@ export class UndoHistory {
     const elapsed = Date.now() - this.boundaryTimestamp;
 
     if (elapsed >= BOUNDARY_TIMEOUT_MS) {
+      this.stopCapturing();
       this.clearBoundary();
     }
   }

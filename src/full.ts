@@ -21,6 +21,8 @@ import { LinkInlineTool as Link } from './components/inline-tools/inline-tool-li
 import { MarkerInlineTool as Marker } from './components/inline-tools/inline-tool-marker';
 import { UnderlineInlineTool as Underline } from './components/inline-tools/inline-tool-underline';
 import { StrikethroughInlineTool as Strikethrough } from './components/inline-tools/inline-tool-strikethrough';
+import { CodeInlineTool as InlineCode } from './components/inline-tools/inline-tool-code';
+import { EquationInlineTool as Equation } from './components/inline-tools/inline-tool-equation';
 import { Header } from './tools/header';
 import { ListItem as List } from './tools/list';
 import { Paragraph } from './tools/paragraph';
@@ -39,6 +41,8 @@ export {
   Marker,
   Underline,
   Strikethrough,
+  InlineCode,
+  Equation,
   defaultBlockTools,
   defaultInlineTools,
 } from './tools';
@@ -75,5 +79,7 @@ export const allTools = {
   marker: { class: Marker },
   underline: { class: Underline },
   strikethrough: { class: Strikethrough },
+  inlineCode: { class: InlineCode },
+  equation: { class: Equation },
   link: { class: Link },
 } as const;

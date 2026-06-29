@@ -8,14 +8,18 @@ import { Controller } from './_base';
 
 /**
  * Maps the "Turn into" shortcut digit (event.code) to the target heading level.
- * Mirrors Notion: Cmd+Opt+1/2/3 (Mac) or Ctrl+Shift+1/2/3 (Win/Linux) convert the
- * focused block to Heading 1/2/3, while 0 converts it back to plain Text.
+ * Mirrors Notion: Cmd+Opt+1…6 (Mac) or Ctrl+Shift+1…6 (Win/Linux) convert the
+ * focused block to Heading 1–6 (Blok supports H1-H6), while 0 converts it back
+ * to plain Text.
  */
 const TURN_INTO_LEVEL_BY_CODE: Record<string, number> = {
   Digit0: 0,
   Digit1: 1,
   Digit2: 2,
   Digit3: 3,
+  Digit4: 4,
+  Digit5: 5,
+  Digit6: 6,
 };
 
 /**
@@ -265,7 +269,7 @@ export class KeyboardController extends Controller {
 
   /**
    * Handle the "Turn into" shortcut (Cmd+Opt / Ctrl+Shift + digit).
-   * Converts the focused block to a heading (1/2/3) or back to plain text (0).
+   * Converts the focused block to a heading (1–6) or back to plain text (0).
    * @param event - keyboard event
    * @returns true when the shortcut was recognized and handled
    */
@@ -320,7 +324,7 @@ export class KeyboardController extends Controller {
    * Wrapped in stopCapturing() so the conversion is its own undo step (mirrors
    * the markdown shortcut conversions).
    * @param block - block to convert
-   * @param level - 0 for plain text (paragraph), 1-3 for the heading level
+   * @param level - 0 for plain text (paragraph), 1-6 for the heading level
    */
   private async turnBlockInto(block: Block, level: number): Promise<void> {
     const { BlockManager, Caret, YjsManager } = this.Blok;

@@ -934,8 +934,17 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     const text = this.currentContentEditable.textContent || '';
 
+    /**
+     * The query is the text between the slash and the CARET — never the text
+     * after the caret (Notion parity). When "/" is typed mid-block, everything
+     * following the caret is the block's own content and must not pollute the
+     * filter. Fall back to the end of the block when no live caret sits inside
+     * this element (so behavior is unchanged for end-of-block typing).
+     */
+    const caretOffset = this.getCaretOffsetWithinSearchBlock(text.length);
+
     if (this.openedWithSlash) {
-      const slashIndex = text.lastIndexOf('/');
+      const slashIndex = text.lastIndexOf('/', Math.max(0, caretOffset - 1));
 
       if (slashIndex === -1) {
         this.close();
@@ -944,7 +953,9 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       }
     }
 
-    const query = this.openedWithSlash ? text.slice(text.lastIndexOf('/') + 1) : text;
+    const query = this.openedWithSlash
+      ? text.slice(text.lastIndexOf('/', Math.max(0, caretOffset - 1)) + 1, caretOffset)
+      : text;
 
     if (this.currentContentEditable instanceof HTMLElement) {
       this.currentContentEditable.setAttribute(
@@ -955,6 +966,34 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     this.popover?.filterItems(query);
   };
+
+  /**
+   * Plain-text offset of the caret within the block being searched. Returns the
+   * given fallback (typically the block's text length, i.e. "caret at end") when
+   * the live selection is not collapsed inside the searched contentEditable —
+   * keeping end-of-block typing behavior unchanged while letting mid-block "/"
+   * bound its query at the caret.
+   * @param fallback - offset to use when no caret sits inside the search block
+   */
+  private getCaretOffsetWithinSearchBlock(fallback: number): number {
+    if (!(this.currentContentEditable instanceof HTMLElement)) {
+      return fallback;
+    }
+
+    const selection = window.getSelection();
+
+    if (selection === null || selection.rangeCount === 0) {
+      return fallback;
+    }
+
+    const { startContainer } = selection.getRangeAt(0);
+
+    if (!this.currentContentEditable.contains(startContainer)) {
+      return fallback;
+    }
+
+    return getCaretOffset(this.currentContentEditable);
+  }
 
   /**
    * Removes the trailing "/query" (the slash plus the typed filter) from the

@@ -283,7 +283,27 @@ export class EquationInlineTool implements InlineTool {
 
     this.selection.setFakeBackground();
     this.selection.save();
+    this.focusInputWithRetry();
+  }
+
+  /**
+   * Focus the formula input, retrying on the next tick. The popover runs its own
+   * focus management when it opens (after this onOpen callback), which steals
+   * focus back from the input; a deferred re-focus reclaims it. Mirrors the Link
+   * inline tool's input-focus handling.
+   */
+  private focusInputWithRetry(): void {
     this.nodes.input.focus();
+
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+
+    window.setTimeout(() => {
+      if (document.activeElement !== this.nodes.input) {
+        this.nodes.input.focus();
+      }
+    }, 0);
   }
 
   /**

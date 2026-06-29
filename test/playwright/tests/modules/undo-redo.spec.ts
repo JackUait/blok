@@ -4942,7 +4942,7 @@ test.describe('yjs undo/redo', () => {
     const BOUNDARY_TIMEOUT = 150;
     const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+a' : 'Control+a';
 
-    test('word boundary with short pause does NOT create a checkpoint (Notion coalescing)', async ({ page }) => {
+    test('word boundary + pause creates checkpoint', async ({ page }) => {
       await createBlokWithBlocks(page, [
         {
           type: 'paragraph',
@@ -4955,7 +4955,7 @@ test.describe('yjs undo/redo', () => {
 
       await paragraphInput.click();
 
-      // Type "Hello " then pause briefly (shorter than the Yjs capture window)
+      // Type "Hello " then pause long enough for boundary timeout
       await page.keyboard.type('Hello ');
       await waitForDelay(page, BOUNDARY_TIMEOUT);
 
@@ -4966,15 +4966,14 @@ test.describe('yjs undo/redo', () => {
       // Verify full text
       await expect(paragraphInput).toHaveText('Hello world');
 
-      // Notion coalesces the whole run: a word boundary + short pause does NOT
-      // create a per-word checkpoint, so one undo removes the entire run.
+      // Undo should remove only "world" (boundary + pause created checkpoint after "Hello ")
       await page.keyboard.press(UNDO_SHORTCUT);
       await waitForDelay(page, 100);
 
-      await expect(paragraphInput).toHaveText('');
+      await expect(paragraphInput).toHaveText('Hello ');
     });
 
-    test('punctuation with short pause does NOT create a checkpoint (Notion coalescing)', async ({ page }) => {
+    test('punctuation + pause creates checkpoint', async ({ page }) => {
       await createBlokWithBlocks(page, [
         {
           type: 'paragraph',
@@ -4987,7 +4986,7 @@ test.describe('yjs undo/redo', () => {
 
       await paragraphInput.click();
 
-      // Type "Hello," then pause briefly (shorter than the Yjs capture window)
+      // Type "Hello," then pause long enough for boundary timeout
       await page.keyboard.type('Hello,');
       await waitForDelay(page, BOUNDARY_TIMEOUT);
 
@@ -4998,14 +4997,14 @@ test.describe('yjs undo/redo', () => {
       // Verify full text
       await expect(paragraphInput).toHaveText('Hello, world');
 
-      // One undo removes the entire run (no per-word checkpoint at the comma).
+      // Undo should remove only " world" (boundary + pause created checkpoint after "Hello,")
       await page.keyboard.press(UNDO_SHORTCUT);
       await waitForDelay(page, 100);
 
-      await expect(paragraphInput).toHaveText('');
+      await expect(paragraphInput).toHaveText('Hello,');
     });
 
-    test('sentence boundary with short pause does NOT create a checkpoint (Notion coalescing)', async ({ page }) => {
+    test('sentence boundary creates checkpoint', async ({ page }) => {
       await createBlokWithBlocks(page, [
         {
           type: 'paragraph',
@@ -5018,7 +5017,7 @@ test.describe('yjs undo/redo', () => {
 
       await paragraphInput.click();
 
-      // Type "Hello." then pause briefly (shorter than the Yjs capture window)
+      // Type "Hello." then pause long enough for boundary timeout
       await page.keyboard.type('Hello.');
       await waitForDelay(page, BOUNDARY_TIMEOUT);
 
@@ -5029,14 +5028,14 @@ test.describe('yjs undo/redo', () => {
       // Verify full text
       await expect(paragraphInput).toHaveText('Hello. World');
 
-      // One undo removes the entire run (no per-sentence checkpoint at the period).
+      // Undo should remove only " World" (boundary + pause created checkpoint after "Hello.")
       await page.keyboard.press(UNDO_SHORTCUT);
       await waitForDelay(page, 100);
 
-      await expect(paragraphInput).toHaveText('');
+      await expect(paragraphInput).toHaveText('Hello.');
     });
 
-    test('question mark with short pause does NOT create a checkpoint (Notion coalescing)', async ({ page }) => {
+    test('question mark creates checkpoint', async ({ page }) => {
       await createBlokWithBlocks(page, [
         {
           type: 'paragraph',
@@ -5049,7 +5048,7 @@ test.describe('yjs undo/redo', () => {
 
       await paragraphInput.click();
 
-      // Type "What?" then pause briefly (shorter than the Yjs capture window)
+      // Type "What?" then pause long enough for boundary timeout
       await page.keyboard.type('What?');
       await waitForDelay(page, BOUNDARY_TIMEOUT);
 
@@ -5060,44 +5059,11 @@ test.describe('yjs undo/redo', () => {
       // Verify full text
       await expect(paragraphInput).toHaveText('What? Yes');
 
-      // One undo removes the entire run (no checkpoint at the question mark).
+      // Undo should remove only " Yes" (boundary + pause created checkpoint after "What?")
       await page.keyboard.press(UNDO_SHORTCUT);
       await waitForDelay(page, 100);
 
-      await expect(paragraphInput).toHaveText('');
-    });
-
-    test('full multi-word sentence collapses into a single undo step (Notion coalescing)', async ({ page }) => {
-      await createBlokWithBlocks(page, [
-        {
-          type: 'paragraph',
-          data: { text: '' },
-        },
-      ]);
-
-      const paragraph = getParagraphByIndex(page, 0);
-      const paragraphInput = paragraph.locator('[contenteditable="true"]');
-
-      await paragraphInput.click();
-
-      // Type a multi-word run with brief pauses at each word boundary (each shorter
-      // than the Yjs capture window). Notion keeps the whole run as ONE undo step.
-      await page.keyboard.type('hello ');
-      await waitForDelay(page, BOUNDARY_TIMEOUT);
-      await page.keyboard.type('world ');
-      await waitForDelay(page, BOUNDARY_TIMEOUT);
-      await page.keyboard.type('foo ');
-      await waitForDelay(page, BOUNDARY_TIMEOUT);
-      await page.keyboard.type('bar');
-      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
-
-      await expect(paragraphInput).toHaveText('hello world foo bar');
-
-      // A single undo reverts the ENTIRE run, not just the last word.
-      await page.keyboard.press(UNDO_SHORTCUT);
-      await waitForDelay(page, 100);
-
-      await expect(paragraphInput).toHaveText('');
+      await expect(paragraphInput).toHaveText('What?');
     });
 
     test('fast typing batches into single undo group', async ({ page }) => {

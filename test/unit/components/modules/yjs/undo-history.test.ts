@@ -422,12 +422,7 @@ describe('UndoHistory', () => {
       vi.useRealTimers();
     });
 
-    it('does NOT create a per-word checkpoint at a boundary (Notion coalescing)', () => {
-      // Notion coalesces a continuous typing run into ONE undo step; word
-      // boundaries (space/punctuation) must NOT force a checkpoint. Only a pause
-      // longer than the Yjs capture window or a structural op breaks the run.
-      // checkAndHandleBoundary still clears the pending-boundary state, but it
-      // must never call stopCapturing.
+    it('checkAndHandleBoundary creates checkpoint after timeout', () => {
       vi.useFakeTimers();
       const stopSpy = vi.spyOn(history.undoManager, 'stopCapturing');
 
@@ -435,29 +430,28 @@ describe('UndoHistory', () => {
       vi.advanceTimersByTime(50); // Only 50ms elapsed
 
       history.checkAndHandleBoundary();
-      expect(stopSpy).not.toHaveBeenCalled();
+      expect(stopSpy).not.toHaveBeenCalled(); // Not enough time
 
       vi.advanceTimersByTime(60); // Now 110ms total
 
       history.checkAndHandleBoundary();
-      // The per-word checkpoint is gone: stopCapturing is never called here.
-      expect(stopSpy).not.toHaveBeenCalled();
+      expect(stopSpy).toHaveBeenCalledTimes(1);
       expect(history.hasPendingBoundary()).toBe(false);
 
       vi.useRealTimers();
     });
 
-    it('does NOT call stopCapturing when the boundary timer fires (Notion coalescing)', () => {
+    it('boundary timer fires stopCapturing to checkpoint a finished word', () => {
       vi.useFakeTimers();
       const stopSpy = vi.spyOn(history.undoManager, 'stopCapturing');
 
       history.markBoundary();
-      // Let the boundary timer fire on its own.
+      // Let the boundary timer fire on its own after the idle window.
       vi.advanceTimersByTime(150);
 
-      // The pending boundary clears, but no per-word checkpoint is created.
+      // A per-word checkpoint is created and the pending boundary clears.
+      expect(stopSpy).toHaveBeenCalledTimes(1);
       expect(history.hasPendingBoundary()).toBe(false);
-      expect(stopSpy).not.toHaveBeenCalled();
 
       vi.useRealTimers();
     });

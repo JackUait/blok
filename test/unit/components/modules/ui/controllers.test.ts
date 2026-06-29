@@ -612,6 +612,27 @@ describe('KeyboardController', () => {
       expect(blok.BlockManager.convert).toHaveBeenCalledWith(block, 'header', { level: 3 });
     });
 
+    it.each([
+      ['Digit4', 4],
+      ['Digit5', 5],
+      ['Digit6', 6],
+    ])('converts the current block to the matching heading with %s (levels 4-6)', (code, level) => {
+      const { controller, blok } = createKeyboardController({
+        configOverrides: { defaultBlock: 'paragraph' },
+      });
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      const block = makeBlock();
+      blok.BlockManager.currentBlock = block as unknown as typeof blok.BlockManager.currentBlock;
+
+      const event = createTurnIntoEvent(code);
+      Object.defineProperty(event, 'target', { value: document.body });
+      document.dispatchEvent(event);
+
+      expect(blok.BlockManager.convert).toHaveBeenCalledWith(block, 'header', { level });
+    });
+
     it('converts the current block back to Text (paragraph) with the digit-0 combo', () => {
       const { controller, blok } = createKeyboardController({
         configOverrides: { defaultBlock: 'paragraph' },

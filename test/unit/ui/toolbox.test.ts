@@ -1014,8 +1014,54 @@ describe('Toolbox', () => {
 
       // Clear query back to just "/"
       contentEditable.textContent = '/';
-      contentEditable.dispatchEvent(new Event('input', { bubbles: true }));  
+      contentEditable.dispatchEvent(new Event('input', { bubbles: true }));
       expect(contentEditable.getAttribute('data-blok-slash-search')).toBe('Type to search');
+    });
+
+    it('bounds the query at the caret, not the end of the block (Notion parity)', () => {
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      // The selection only persists in jsdom for an attached subtree, and
+      // getCaretOffset reads the live selection to bound the query.
+      document.body.appendChild(mocks.blockAPI.holder);
+
+      toolbox.open();
+
+      const contentEditable = mocks.blockAPI.holder.querySelector('[contenteditable="true"]') as HTMLElement;
+
+      /**
+       * The block already held "Hello world"; the user placed the caret after
+       * "Hello", typed "/h" → "Hello/h world" with the caret right after "h".
+       * The trailing " world" (content after the caret) must NOT pollute the
+       * search query — it should filter by "h" only, not "h world".
+       */
+      contentEditable.textContent = 'Hello/h world';
+
+      const textNode = contentEditable.firstChild as Text;
+      const range = document.createRange();
+
+      range.setStart(textNode, 7); // just after "Hello/h"
+      range.collapse(true);
+
+      const selection = window.getSelection();
+
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+
+      contentEditable.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(mockPopoverInstance.filterItems).toHaveBeenLastCalledWith('h');
+
+      // Clean up the attached subtree + live selection so later tests that read
+      // the global selection (e.g. shortcut-conversion caret offset) are not
+      // affected by this one's lingering caret.
+      window.getSelection()?.removeAllRanges();
+      mocks.blockAPI.holder.remove();
     });
   });
 

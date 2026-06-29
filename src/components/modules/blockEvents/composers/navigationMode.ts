@@ -65,6 +65,15 @@ export class NavigationMode extends BlockEventComposer {
 
     switch (key) {
       case 'ArrowDown':
+        /**
+         * Shift+Arrow must EXTEND the real block selection, not move it. Fall
+         * through so keyboardNavigation's Shift+ArrowDown path drives
+         * CrossBlockSelection (anyBlockSelected is true in navigation mode).
+         */
+        if (event.shiftKey) {
+          return false;
+        }
+
         event.preventDefault();
         event.stopPropagation();
         BlockSelection.navigateNext();
@@ -72,6 +81,10 @@ export class NavigationMode extends BlockEventComposer {
         return true;
 
       case 'ArrowUp':
+        if (event.shiftKey) {
+          return false;
+        }
+
         event.preventDefault();
         event.stopPropagation();
         BlockSelection.navigatePrevious();

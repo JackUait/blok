@@ -99,6 +99,30 @@ export abstract class BasePasteHandler implements PasteHandler {
   /**
    * Insert paste data as blocks.
    */
+  /**
+   * Caret-split for a multi-line plain-text paste into a NON-EMPTY block: extract
+   * the current block's post-caret remainder, merge the FIRST pasted line inline at
+   * the caret, carry that remainder onto the LAST line, and return the remaining
+   * lines (everything after the first) to be inserted as new blocks.
+   * @param data - the multi-line paste, one item per line
+   */
+  private async caretSplitFirstLine(data: PasteData[]): Promise<PasteData[]> {
+    const { Caret } = this.Blok;
+    const trailingFragment = Caret.extractFragmentFromCaretPosition();
+
+    // First line merges into the current block at the caret.
+    await this.processInlinePaste(data[0], false);
+
+    const linesToInsert = data.slice(1);
+
+    // Carry the current block's post-caret remainder onto the last line.
+    if (trailingFragment) {
+      linesToInsert[linesToInsert.length - 1].content.append(trailingFragment);
+    }
+
+    return linesToInsert;
+  }
+
   protected async insertPasteData(
     data: PasteData[],
     canReplaceCurrentBlock: boolean
@@ -116,6 +140,22 @@ export abstract class BasePasteHandler implements PasteHandler {
       this.redirectToTableParentIfNeeded(data, BlockManager);
 
       const currentBlock = BlockManager.currentBlock;
+
+      // Caret-split path: a multi-line PLAIN-TEXT paste (every item is inline,
+      // not a block) into a NON-EMPTY block must split at the caret, matching
+      // Notion: the first line merges into the current block at the caret, the
+      // middle lines become new blocks, and the current block's post-caret
+      // remainder rides with the LAST pasted segment.
+      const isInlineMultiline = data.every((item) => !item.isBlock);
+      const canCaretSplit = isInlineMultiline &&
+        currentBlock !== undefined &&
+        !currentBlock.isEmpty &&
+        currentBlock.currentInput != null;
+
+      const linesToInsert = canCaretSplit
+        ? await this.caretSplitFirstLine(data)
+        : data;
+
       const childContainer = currentBlock?.holder?.querySelector('[data-blok-toggle-children]') ?? null;
       const isInContainerTitle = childContainer !== null &&
         !childContainer.contains(currentBlock?.currentInput ?? null);
@@ -143,7 +183,7 @@ export abstract class BasePasteHandler implements PasteHandler {
 
       const runPasteLoop = (): void => {
         pasteChainRef.current = (async (): Promise<void> => {
-          for (const [index, pasteData] of data.entries()) {
+          for (const [index, pasteData] of linesToInsert.entries()) {
             // Re-assert suppression on every iteration — transactForTool's
             // close-boundary microtask may have flipped suppressStopCapturing
             // back to false before the next paste() runs its sync prefix.

@@ -77,12 +77,13 @@ export const defaultBlockTools = {
 } as const;
 
 export const defaultInlineTools = {
+  // Contiguous toggle group (Notion parity), then Link, then Color (marker) last.
   bold: {},
   italic: {},
-  link: {},
-  marker: {},
   underline: {},
   strikethrough: {},
   inlineCode: {},
   equation: {},
+  link: {},
+  marker: {},
 } as const;

@@ -1019,6 +1019,48 @@ test.describe('copy and paste', () => {
 
       await expect(paragraph).toHaveText('Existing content');
     });
+
+    test('should split a non-empty block at the caret on multi-line plain-text paste', async ({ page }) => {
+      await createBlok(page);
+
+      const paragraph = getParagraphByIndex(page, 0);
+
+      await paragraph.click();
+      await paragraph.type('ABXY');
+
+      // Move the caret between "AB" and "XY".
+      await page.keyboard.press('ArrowLeft');
+      await page.keyboard.press('ArrowLeft');
+
+      await paste(page, paragraph, {
+        'text/plain': '1\n2\n3',
+      });
+
+      // First line merges at the caret, middle line becomes a block, and the
+      // post-caret remainder ("XY") rides with the last line.
+      await expect(page.locator(BLOCK_SELECTOR)).toHaveText(['AB1', '2', '3XY']);
+    });
+
+    test('should insert an inline markdown fragment at the caret in a non-empty block', async ({ page }) => {
+      await createBlok(page);
+
+      const paragraph = getParagraphByIndex(page, 0);
+
+      await paragraph.click();
+      await paragraph.type('Hello ');
+
+      await paste(page, paragraph, {
+        'text/plain': '**bold**',
+      });
+
+      // Inline, not a sibling block: still a single paragraph with rich text.
+      await expect(page.locator(BLOCK_SELECTOR)).toHaveText(['Hello bold']);
+
+      // The pasted "**bold**" became real bold markup inside the same paragraph.
+      const boldCount = await paragraph.evaluate((element) => element.querySelectorAll('strong, b').length);
+
+      expect(boldCount).toBe(1);
+    });
   });
 
   test.describe('paste in read-only mode', () => {

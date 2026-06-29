@@ -1,5 +1,6 @@
 import type { Block } from '../../../block';
 import { SelectionUtils as Selection } from '../../../selection/index';
+import { getCaretOffset } from '../../../utils/caret/selection';
 import { PopoverRegistry } from '../../../utils/popover/popover-registry';
 import { HEADER_TOOL_NAME } from '../../blockEvents/constants';
 import { KEYS_REQUIRING_CARET_CAPTURE } from '../constants';
@@ -334,11 +335,17 @@ export class KeyboardController extends Controller {
     const targetToolName = isText ? this.config.defaultBlock ?? 'paragraph' : HEADER_TOOL_NAME;
     const dataOverrides = isText ? {} : { level };
 
+    // Capture the caret offset within the block BEFORE converting so the caret
+    // can be restored to the same position in the converted block (Notion
+    // parity), matching the inline-toolbar, block-tunes, markdown and
+    // tool-shortcut conversion paths instead of forcing the caret to the end.
+    const caretOffset = getCaretOffset();
+
     YjsManager.stopCapturing();
 
     const newBlock = await BlockManager.convert(block, targetToolName, dataOverrides);
 
-    Caret.setToBlock(newBlock, Caret.positions.END);
+    Caret.setToBlock(newBlock, Caret.positions.DEFAULT, caretOffset);
 
     YjsManager.stopCapturing();
   }

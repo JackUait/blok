@@ -572,13 +572,23 @@ export class BlockSelection extends Module {
     const focusedBlock = this.navigationFocusedBlock;
 
     /**
-     * Remove navigation highlight from current block
+     * Remove navigation marker from current block
      */
     if (focusedBlock) {
       focusedBlock.holder.removeAttribute('data-blok-navigation-focused');
     }
 
     this._navigationModeEnabled = false;
+
+    /**
+     * Clear the REAL block selection that backed navigation mode (the focused
+     * block plus any Shift+Arrow extension). Done before setting the caret so
+     * editing resumes on a clean, unselected block.
+     */
+    for (const selected of this.selectedBlocks) {
+      selected.selected = false;
+    }
+    this.clearCache();
 
     /**
      * If requested, focus the block for editing
@@ -647,7 +657,7 @@ export class BlockSelection extends Module {
     }
 
     /**
-     * Remove highlight from previous block
+     * Remove the navigation marker from the previously focused block
      */
     const previousBlock = this.navigationFocusedBlock;
 
@@ -656,24 +666,48 @@ export class BlockSelection extends Module {
     }
 
     /**
-     * Update focus index and highlight new block
+     * Navigation mode is a REAL single-block selection that moves with the arrow
+     * keys (Notion parity). Collapse any existing selection — the previously
+     * focused block plus any blocks a Shift+Arrow extension added — down to the
+     * newly focused block so plain Arrow navigation stays single-selection while
+     * Backspace/Delete, Cmd+C and Shift+Arrow keep operating on the selection.
      */
-    this.navigationFocusIndex = index;
-    block.holder.setAttribute('data-blok-navigation-focused', 'true');
+    for (const selected of this.selectedBlocks) {
+      if (selected !== block) {
+        selected.selected = false;
+      }
+    }
 
     /**
-     * Remove text selection and blur active element to hide caret
+     * Remove the native text selection and blur the caret BEFORE selecting the
+     * block for real, mirroring {@link selectBlock} — so the selection setter's
+     * fake-cursor logic doesn't drop a stray cursor into the now-selected block.
      */
     const selection = SelectionUtils.get();
 
     selection?.removeAllRanges();
 
-    /**
-     * Blur the active element to remove caret from contenteditable
-     */
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
+
+    /**
+     * Update focus index, mark the new block, and select it for real so
+     * anyBlockSelected becomes true (gates deletion/copy/extension).
+     */
+    this.navigationFocusIndex = index;
+    BlockManager.currentBlockIndex = index;
+    block.holder.setAttribute('data-blok-navigation-focused', 'true');
+    block.selected = true;
+    this.clearCache();
+
+    /**
+     * Prime the Cmd+A escalation state, mirroring {@link selectBlock}, so a Cmd+A
+     * after Escape escalates to all Blocks instead of dropping back to the text
+     * stage.
+     */
+    this.readyToBlockSelection = true;
+    this.needToSelectAll = true;
 
     /**
      * Scroll block into view if needed

@@ -163,11 +163,24 @@ export class KeyboardNavigation extends BlockEventComposer {
 
     /**
      * Indent/outdent was impossible (no preceding sibling for Tab, already at root
-     * for Shift+Tab). Notion never relocates the caret to another block on Tab, so
-     * this is a strict no-op: we do NOT navigate the caret. We also leave the native
-     * Tab default intact (no preventDefault) so focus can still leave the editor for
-     * accessibility.
+     * for Shift+Tab). Notion never tabs focus OUT of the editor, so a non-indentable
+     * Tab must not relocate focus to an element outside Blok.
+     *
+     * Exception: a block with multiple inputs (e.g. a caption) should still let
+     * native Tab walk between its own inputs. So if the current block has a further
+     * input in the Tab direction, let native Tab move to it (it stays inside the
+     * editor); otherwise preventDefault so focus stays put instead of leaving.
      */
+    const { currentBlock } = this.Blok.BlockManager;
+    const hasInputToMoveTo = event.shiftKey
+      ? currentBlock?.previousInput !== undefined
+      : currentBlock?.nextInput !== undefined;
+
+    if (hasInputToMoveTo) {
+      return;
+    }
+
+    event.preventDefault();
   }
 
   /**
@@ -984,11 +997,18 @@ export class KeyboardNavigation extends BlockEventComposer {
      */
     const isDownKey = keyCode === keyCodes.DOWN;
     /**
-     * Plain (non-Shift) horizontal navigation only — Shift+ArrowRight at a
-     * boundary is handled above as cross-block selection and must never collapse
-     * the caret into the next block.
+     * Plain (non-Shift, no Cmd/Ctrl/Alt) horizontal navigation only. Shift+ArrowRight
+     * at a boundary is handled above as cross-block selection, and modifier+ArrowRight
+     * (Cmd = line end, Ctrl/Alt = word) must fall through to the native behaviour
+     * staying in-block — neither may collapse the caret into the next block.
      */
-    const isRightKey = keyCode === keyCodes.RIGHT && !this.isRtl && !event.shiftKey;
+    const isRightKey =
+      keyCode === keyCodes.RIGHT &&
+      !this.isRtl &&
+      !event.shiftKey &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.altKey;
 
     const isNavigated = (() => {
       if (isDownKey) {
@@ -1145,11 +1165,18 @@ export class KeyboardNavigation extends BlockEventComposer {
      */
     const isUpKey = keyCode === keyCodes.UP;
     /**
-     * Plain (non-Shift) horizontal navigation only — Shift+ArrowLeft at a
-     * boundary is handled above as cross-block selection and must never collapse
-     * the caret into the previous block.
+     * Plain (non-Shift, no Cmd/Ctrl/Alt) horizontal navigation only. Shift+ArrowLeft
+     * at a boundary is handled above as cross-block selection, and modifier+ArrowLeft
+     * (Cmd = line start, Ctrl/Alt = word) must fall through to the native behaviour
+     * staying in-block — neither may collapse the caret into the previous block.
      */
-    const isLeftKey = keyCode === keyCodes.LEFT && !this.isRtl && !event.shiftKey;
+    const isLeftKey =
+      keyCode === keyCodes.LEFT &&
+      !this.isRtl &&
+      !event.shiftKey &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.altKey;
 
     const isNavigated = (() => {
       if (isUpKey) {

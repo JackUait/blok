@@ -276,6 +276,47 @@ describe('NavigationMode', () => {
       });
     });
 
+    describe('Shift+Arrow in navigation mode', () => {
+      it('returns false for Shift+ArrowDown so cross-block selection can extend the real selection', () => {
+        const navigateNext = vi.fn();
+        const blok = createBlokModules({
+          BlockSelection: {
+            navigationModeEnabled: true,
+            navigateNext,
+          } as unknown as BlokModules['BlockSelection'],
+        });
+        const navigationMode = new NavigationMode(blok);
+        const event = createKeyboardEvent({ key: 'ArrowDown', shiftKey: true });
+
+        const result = navigationMode.handleKey(event);
+
+        // Falls through so keyboardNavigation's Shift+ArrowDown path drives
+        // CrossBlockSelection (anyBlockSelected is now true), extending instead
+        // of collapsing the selection to a single block.
+        expect(result).toBe(false);
+        expect(navigateNext).not.toHaveBeenCalled();
+        expect(event.preventDefault).not.toHaveBeenCalled();
+      });
+
+      it('returns false for Shift+ArrowUp so cross-block selection can extend the real selection', () => {
+        const navigatePrevious = vi.fn();
+        const blok = createBlokModules({
+          BlockSelection: {
+            navigationModeEnabled: true,
+            navigatePrevious,
+          } as unknown as BlokModules['BlockSelection'],
+        });
+        const navigationMode = new NavigationMode(blok);
+        const event = createKeyboardEvent({ key: 'ArrowUp', shiftKey: true });
+
+        const result = navigationMode.handleKey(event);
+
+        expect(result).toBe(false);
+        expect(navigatePrevious).not.toHaveBeenCalled();
+        expect(event.preventDefault).not.toHaveBeenCalled();
+      });
+    });
+
     describe('Printable key in navigation mode', () => {
       it('disables navigation mode with focus for printable characters', () => {
         const disableNavigationMode = vi.fn();

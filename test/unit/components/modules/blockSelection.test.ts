@@ -1286,6 +1286,79 @@ describe('BlockSelection', () => {
       });
     });
 
+    describe('real block selection (Notion parity)', () => {
+      it('enableNavigationMode marks the focused block as a REAL selection', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+
+        blockManager.currentBlockIndex = 1;
+
+        blockSelection.enableNavigationMode();
+
+        // Escape must produce a genuine block selection so Backspace/Delete,
+        // Cmd+C and Shift+Arrow (all gated on anyBlockSelected) actually fire.
+        expect(blocks[1].selected).toBe(true);
+        expect(blockSelection.anyBlockSelected).toBe(true);
+      });
+
+      it('navigateNext moves the real selection to the adjacent block (stays single-selection)', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+
+        blockManager.currentBlockIndex = 0;
+
+        blockSelection.enableNavigationMode();
+        blockSelection.navigateNext();
+
+        expect(blocks[0].selected).toBe(false);
+        expect(blocks[1].selected).toBe(true);
+        expect(blockSelection.selectedBlocks).toEqual([blocks[1]]);
+      });
+
+      it('navigatePrevious moves the real selection to the previous block (stays single-selection)', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+
+        blockManager.currentBlockIndex = 2;
+
+        blockSelection.enableNavigationMode();
+        blockSelection.navigatePrevious();
+
+        expect(blocks[2].selected).toBe(false);
+        expect(blocks[1].selected).toBe(true);
+        expect(blockSelection.selectedBlocks).toEqual([blocks[1]]);
+      });
+
+      it('navigating collapses any Shift+Arrow extension back to a single selection', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+
+        blockManager.currentBlockIndex = 0;
+
+        blockSelection.enableNavigationMode();
+        // Simulate a Shift+Arrow extension leaving a second block selected.
+        blocks[1].selected = true;
+        blockSelection.clearCache();
+
+        blockSelection.navigateNext();
+
+        expect(blockSelection.selectedBlocks).toEqual([blocks[1]]);
+      });
+
+      it('disableNavigationMode clears the real selection', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+
+        blockManager.currentBlockIndex = 1;
+
+        blockSelection.enableNavigationMode();
+        blockSelection.disableNavigationMode(false);
+
+        expect(blocks[1].selected).toBe(false);
+        expect(blockSelection.anyBlockSelected).toBe(false);
+      });
+    });
+
     describe('clearSelection disables navigation mode', () => {
       it('disables navigation mode when selection is cleared', () => {
         const { blockSelection, modules } = createBlockSelection();

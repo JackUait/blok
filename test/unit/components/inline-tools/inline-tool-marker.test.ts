@@ -1770,4 +1770,88 @@ describe('MarkerInlineTool', () => {
       expect(markerBtn.style.backgroundColor).toBe('transparent');
     });
   });
+
+  describe('applyShortcut — keyboard shortcut applies last-used color directly (Cmd/Ctrl+Shift+H)', () => {
+    /**
+     * Reset the cross-instance last-color memory so each test starts fresh.
+     */
+    beforeEach(() => {
+      (MarkerInlineTool as unknown as { lastColor: unknown }).lastColor = null;
+    });
+
+    /**
+     * Select a character range within a node and make it the window selection.
+     */
+    function selectRange(node: Node, start: number, end: number): void {
+      const range = document.createRange();
+
+      range.setStart(node, start);
+      range.setEnd(node, end);
+
+      const selection = window.getSelection();
+
+      if (!selection) {
+        throw new Error('Test setup failed: no selection available');
+      }
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    it('applies a default highlight when no color was used before (first-time use)', () => {
+      container.innerHTML = 'hello world';
+      selectRange(container.firstChild!, 0, 5);
+
+      tool.applyShortcut();
+
+      const mark = container.querySelector('mark');
+
+      expect(mark).not.toBeNull();
+      expect(mark?.style.backgroundColor).toBe(colorVarName('yellow', 'bg'));
+    });
+
+    it('persists the last selected color when a swatch is picked', () => {
+      container.innerHTML = 'hello world';
+      selectRange(container.firstChild!, 0, 5);
+
+      const config = tool.render() as WithChildren<PopoverItemDefaultBaseParams>;
+      const pickerEl = (config.children.items![0] as PopoverItemHtmlParams).element;
+
+      document.body.appendChild(pickerEl);
+
+      try {
+        pickerEl
+          .querySelector<HTMLElement>('[data-blok-testid="marker-swatch-background-color-red"]')!
+          .click();
+      } finally {
+        document.body.removeChild(pickerEl);
+      }
+
+      const lastColor = (MarkerInlineTool as unknown as {
+        lastColor: { mode: string; value: string } | null;
+      }).lastColor;
+
+      expect(lastColor).not.toBeNull();
+      expect(lastColor?.mode).toBe('background-color');
+      expect(lastColor?.value).toBe(COLOR_PRESETS.find((p) => p.name === 'red')!.bg);
+    });
+
+    it('re-applies the persisted last color directly, without opening the picker', () => {
+      // Simulate a prior pick: red background was the last color used.
+      (MarkerInlineTool as unknown as { lastColor: { mode: string; value: string } }).lastColor = {
+        mode: 'background-color',
+        value: COLOR_PRESETS.find((p) => p.name === 'red')!.bg,
+      };
+
+      container.innerHTML = 'second text';
+      selectRange(container.firstChild!, 0, 6);
+
+      tool.applyShortcut();
+
+      const mark = container.querySelector('mark');
+
+      expect(mark).not.toBeNull();
+      expect(mark?.style.backgroundColor).toBe(colorVarName('red', 'bg'));
+    });
+  });
 });

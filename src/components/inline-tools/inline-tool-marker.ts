@@ -54,9 +54,26 @@ export class MarkerInlineTool implements InlineTool {
   public static titleKey = 'marker';
 
   /**
-   * Keyboard shortcut to open the marker color picker
+   * Keyboard shortcut to apply the last-used marker color directly (Notion parity).
+   * Unlike clicking the toolbar button, the shortcut never opens the picker.
    */
   public static shortcut = 'CMD+SHIFT+H';
+
+  /**
+   * Last color picked from the swatch picker, persisted across tool instances
+   * (a fresh instance is created on every shortcut press) so the shortcut can
+   * re-apply it directly. Null until the user picks a color at least once.
+   */
+  private static lastColor: { mode: ColorMode; value: string } | null = null;
+
+  /**
+   * Highlight applied by the shortcut on first use, before any color is picked.
+   * Matches Notion, which applies a default highlight (yellow background).
+   */
+  private static readonly DEFAULT_SHORTCUT_COLOR: { mode: ColorMode; value: string } = {
+    mode: 'background-color',
+    value: colorVarName('yellow', 'bg'),
+  };
 
   /**
    * CSS properties allowed on <mark> elements.
@@ -171,6 +188,7 @@ export class MarkerInlineTool implements InlineTool {
 
         if (color !== null) {
           this.applyColor(this.colorMode, color);
+          MarkerInlineTool.lastColor = { mode: this.colorMode, value: color };
         } else {
           this.removeColor(this.colorMode);
         }
@@ -231,6 +249,19 @@ export class MarkerInlineTool implements InlineTool {
         },
       },
     };
+  }
+
+  /**
+   * Apply the last-used color directly to the current selection without opening
+   * the picker. Driven by the keyboard shortcut (Cmd/Ctrl+Shift+H). On first use
+   * — before any color has been picked — applies a sensible default highlight,
+   * matching Notion.
+   */
+  public applyShortcut(): void {
+    const { mode, value } = MarkerInlineTool.lastColor ?? MarkerInlineTool.DEFAULT_SHORTCUT_COLOR;
+
+    this.applyColor(mode, value);
+    MarkerInlineTool.lastColor = { mode, value };
   }
 
   /**

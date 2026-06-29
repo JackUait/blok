@@ -257,6 +257,239 @@ describe('KeyboardNavigation — Notion parity bugs', () => {
     });
   });
 
+  describe('BUG #5b — Cmd/Ctrl/Alt+Arrow at a block boundary does NOT cross-block jump', () => {
+    it('Cmd+ArrowRight at the END of a block falls through to native (no navigateNext)', () => {
+      vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
+      vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      const navigateNext = vi.fn(() => false);
+      const blok = createBlokModules({
+        Caret: {
+          navigateNext,
+          navigateVerticalNext: vi.fn(() => false),
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'ArrowRight', code: 'ArrowRight', metaKey: true });
+
+      keyboardNavigation.handleArrowRightAndDown(event);
+
+      // Cmd+Right is line-end (native), it must NOT jump into the next block.
+      expect(navigateNext).not.toHaveBeenCalled();
+    });
+
+    it('Alt+ArrowRight at the END of a block falls through to native word-nav (no navigateNext)', () => {
+      vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
+      vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      const navigateNext = vi.fn(() => false);
+      const blok = createBlokModules({
+        Caret: {
+          navigateNext,
+          navigateVerticalNext: vi.fn(() => false),
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'ArrowRight', code: 'ArrowRight', altKey: true });
+
+      keyboardNavigation.handleArrowRightAndDown(event);
+
+      expect(navigateNext).not.toHaveBeenCalled();
+    });
+
+    it('plain ArrowRight at the END of a block still jumps to the next block (unchanged)', () => {
+      vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
+      vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      const navigateNext = vi.fn(() => false);
+      const blok = createBlokModules({
+        Caret: {
+          navigateNext,
+          navigateVerticalNext: vi.fn(() => false),
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'ArrowRight', code: 'ArrowRight' });
+
+      keyboardNavigation.handleArrowRightAndDown(event);
+
+      expect(navigateNext).toHaveBeenCalled();
+    });
+
+    it('Cmd+ArrowLeft at the START of a block falls through to native (no navigatePrevious)', () => {
+      vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
+      vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+      const navigatePrevious = vi.fn(() => false);
+      const blok = createBlokModules({
+        Caret: {
+          navigatePrevious,
+          navigateVerticalPrevious: vi.fn(() => false),
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'ArrowLeft', code: 'ArrowLeft', metaKey: true });
+
+      keyboardNavigation.handleArrowLeftAndUp(event);
+
+      // Cmd+Left is line-start (native), it must NOT jump into the previous block.
+      expect(navigatePrevious).not.toHaveBeenCalled();
+    });
+
+    it('plain ArrowLeft at the START of a block still jumps to the previous block (unchanged)', () => {
+      vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
+      vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+      const navigatePrevious = vi.fn(() => false);
+      const blok = createBlokModules({
+        Caret: {
+          navigatePrevious,
+          navigateVerticalPrevious: vi.fn(() => false),
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'ArrowLeft', code: 'ArrowLeft' });
+
+      keyboardNavigation.handleArrowLeftAndUp(event);
+
+      expect(navigatePrevious).toHaveBeenCalled();
+    });
+  });
+
+  describe('BUG #8 — non-indentable Tab is a strict no-op that keeps focus in the editor', () => {
+    it('calls preventDefault on the no-op Tab path so native focus never leaves the editor', () => {
+      const current = createBlock({ id: 'cur', parentId: null });
+      const blocks = [current];
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: current,
+          blocks,
+          getBlockIndex: (block: Block) => blocks.indexOf(block),
+          getBlockByIndex: (index: number) => blocks[index],
+          getBlockById: (id: string) => blocks.find((b) => b.id === id),
+          setBlockParent: vi.fn(),
+        } as unknown as BlokModules['BlockManager'],
+        YjsManager: {
+          transactMoves: vi.fn((fn: () => void) => fn()),
+          markCaretBeforeChange: vi.fn(),
+          updateLastCaretAfterPosition: vi.fn(),
+        } as unknown as BlokModules['YjsManager'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
+
+      keyboardNavigation.handleTab(event);
+
+      // First block has no preceding sibling → can't indent → strict no-op. We must
+      // still preventDefault so native Tab does not move focus out of the editor.
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls preventDefault on a no-op Shift+Tab (already at root) too', () => {
+      const current = createBlock({ id: 'cur', parentId: null });
+      const blocks = [current];
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: current,
+          blocks,
+          getBlockIndex: (block: Block) => blocks.indexOf(block),
+          getBlockByIndex: (index: number) => blocks[index],
+          getBlockById: (id: string) => blocks.find((b) => b.id === id),
+          setBlockParent: vi.fn(),
+        } as unknown as BlokModules['BlockManager'],
+        YjsManager: {
+          transactMoves: vi.fn((fn: () => void) => fn()),
+          markCaretBeforeChange: vi.fn(),
+          updateLastCaretAfterPosition: vi.fn(),
+        } as unknown as BlokModules['YjsManager'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Tab', shiftKey: true });
+
+      keyboardNavigation.handleTab(event);
+
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    });
+
+    it('does NOT preventDefault when the block has a further input — native Tab walks between a block\'s own inputs (stays in editor)', () => {
+      const firstInput = document.createElement('div');
+      const secondInput = document.createElement('div');
+      const current = createBlock({
+        id: 'cur',
+        parentId: null,
+        inputs: [firstInput, secondInput],
+        currentInput: firstInput,
+        // caret is on the first input, so a second input exists ahead of it
+        nextInput: secondInput,
+        previousInput: undefined,
+      });
+      const blocks = [current];
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: current,
+          blocks,
+          getBlockIndex: (block: Block) => blocks.indexOf(block),
+          getBlockByIndex: (index: number) => blocks[index],
+          getBlockById: (id: string) => blocks.find((b) => b.id === id),
+          setBlockParent: vi.fn(),
+        } as unknown as BlokModules['BlockManager'],
+        YjsManager: {
+          transactMoves: vi.fn((fn: () => void) => fn()),
+          markCaretBeforeChange: vi.fn(),
+          updateLastCaretAfterPosition: vi.fn(),
+        } as unknown as BlokModules['YjsManager'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
+
+      keyboardNavigation.handleTab(event);
+
+      // Can't indent (root block) but the caret's block has another input ahead,
+      // so native Tab is allowed to move to it — which keeps focus INSIDE the editor.
+      expect(event.preventDefault).not.toHaveBeenCalled();
+    });
+
+    it('does NOT preventDefault on Shift+Tab when an earlier input exists in the block', () => {
+      const firstInput = document.createElement('div');
+      const secondInput = document.createElement('div');
+      const current = createBlock({
+        id: 'cur',
+        parentId: null,
+        inputs: [firstInput, secondInput],
+        currentInput: secondInput,
+        nextInput: undefined,
+        previousInput: firstInput,
+      });
+      const blocks = [current];
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: current,
+          blocks,
+          getBlockIndex: (block: Block) => blocks.indexOf(block),
+          getBlockByIndex: (index: number) => blocks[index],
+          getBlockById: (id: string) => blocks.find((b) => b.id === id),
+          setBlockParent: vi.fn(),
+        } as unknown as BlokModules['BlockManager'],
+        YjsManager: {
+          transactMoves: vi.fn((fn: () => void) => fn()),
+          markCaretBeforeChange: vi.fn(),
+          updateLastCaretAfterPosition: vi.fn(),
+        } as unknown as BlokModules['YjsManager'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Tab', shiftKey: true });
+
+      keyboardNavigation.handleTab(event);
+
+      expect(event.preventDefault).not.toHaveBeenCalled();
+    });
+  });
+
   describe('BUG #6 — Enter in an empty quote converts it to a paragraph in place', () => {
     it('replaces an empty quote with a paragraph IN PLACE on Enter and focuses it', () => {
       const quoteInput = document.createElement('div');

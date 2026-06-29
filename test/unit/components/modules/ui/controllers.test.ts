@@ -7,6 +7,17 @@ import type { BlokConfig } from '../../../../../types';
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
 import { PopoverRegistry } from '../../../../../src/components/utils/popover/popover-registry';
 import type { PopoverAbstract } from '../../../../../src/components/utils/popover/popover-abstract';
+import { getCaretOffset } from '../../../../../src/components/utils/caret/selection';
+import type * as CaretSelectionModule from '../../../../../src/components/utils/caret/selection';
+
+vi.mock('../../../../../src/components/utils/caret/selection', async (importOriginal) => {
+  const actual = await importOriginal<typeof CaretSelectionModule>();
+
+  return {
+    ...actual,
+    getCaretOffset: vi.fn(() => 0),
+  };
+});
 
 const createBlokStub = (): BlokModules => {
   const blockSettingsWrapper = document.createElement('div');
@@ -85,6 +96,7 @@ const createBlokStub = (): BlokModules => {
       positions: {
         START: 'start',
         END: 'end',
+        DEFAULT: 'default',
       },
     },
     YjsManager: {
@@ -700,6 +712,32 @@ describe('KeyboardController', () => {
       document.dispatchEvent(event);
 
       expect(blok.BlockManager.convert).not.toHaveBeenCalled();
+    });
+
+    it('preserves the caret offset across the conversion (Notion parity)', async () => {
+      vi.mocked(getCaretOffset).mockReturnValue(3);
+
+      const { controller, blok } = createKeyboardController({
+        configOverrides: { defaultBlock: 'paragraph' },
+      });
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      const block = makeBlock();
+      blok.BlockManager.currentBlock = block as unknown as typeof blok.BlockManager.currentBlock;
+
+      const newBlock = { id: 'converted' };
+      (blok.BlockManager.convert as ReturnType<typeof vi.fn>).mockResolvedValue(newBlock);
+
+      const event = createTurnIntoEvent('Digit1');
+      Object.defineProperty(event, 'target', { value: document.body });
+      document.dispatchEvent(event);
+
+      // setToBlock runs after the awaited convert() resolves
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(blok.Caret.setToBlock).toHaveBeenCalledWith(newBlock, 'default', 3);
     });
 
     it('does nothing when there is no current block', () => {

@@ -10,6 +10,7 @@ const HOLDER_ID = 'blok';
 const BLOCK_WRAPPER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
 const NAVIGATION_FOCUSED_SELECTOR = '[data-blok-navigation-focused="true"]';
+const SELECTED_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-selected="true"]`;
 
 declare global {
   interface Window {
@@ -414,6 +415,95 @@ test.describe('navigation mode', () => {
       await page.keyboard.press('Escape');
 
       await expect(getBlockByIndex(page, 0)).not.toHaveAttribute('data-blok-navigation-focused', 'true');
+    });
+  });
+
+  test.describe('real block selection (Notion parity)', () => {
+    test('Escape turns the block into a real block selection', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'First block' } },
+        { type: 'paragraph', data: { text: 'Second block' } },
+      ]);
+
+      await getParagraphByIndex(page, 0).click();
+      await page.keyboard.press('Escape');
+
+      // A genuine selection (not just a navigation marker) must exist.
+      await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
+      await expect(page.locator(SELECTED_SELECTOR)).toHaveCount(1);
+    });
+
+    test('Backspace deletes the Escape-selected block', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'First block' } },
+        { type: 'paragraph', data: { text: 'Second block' } },
+      ]);
+
+      await getParagraphByIndex(page, 0).click();
+      await page.keyboard.press('Escape');
+      await page.keyboard.press('Backspace');
+
+      const { blocks } = await saveBlok(page);
+
+      expect(blocks).toHaveLength(1);
+      expect((blocks[0].data as { text: string }).text).toBe('Second block');
+    });
+
+    test('ArrowDown moves the real selection to the adjacent block', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'First block' } },
+        { type: 'paragraph', data: { text: 'Second block' } },
+      ]);
+
+      await getParagraphByIndex(page, 0).click();
+      await page.keyboard.press('Escape');
+      await page.keyboard.press('ArrowDown');
+
+      await expect(getBlockByIndex(page, 0)).not.toHaveAttribute('data-blok-selected', 'true');
+      await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-blok-selected', 'true');
+      // Plain arrow stays single-selection.
+      await expect(page.locator(SELECTED_SELECTOR)).toHaveCount(1);
+    });
+
+    test('Shift+ArrowDown extends the real selection across blocks', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'First block' } },
+        { type: 'paragraph', data: { text: 'Second block' } },
+        { type: 'paragraph', data: { text: 'Third block' } },
+      ]);
+
+      await getParagraphByIndex(page, 0).click();
+      await page.keyboard.press('Escape');
+      await page.keyboard.press('Shift+ArrowDown');
+
+      await expect(page.locator(SELECTED_SELECTOR)).toHaveCount(2);
+      await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
+      await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-blok-selected', 'true');
+    });
+
+    test('the selected block does not shift horizontally on Escape', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'First block' } },
+        { type: 'paragraph', data: { text: 'Second block' } },
+      ]);
+
+      const firstBlock = getBlockByIndex(page, 0);
+
+      await getParagraphByIndex(page, 0).click();
+
+      const before = await firstBlock.boundingBox();
+
+      await page.keyboard.press('Escape');
+      await expect(firstBlock).toHaveAttribute('data-blok-selected', 'true');
+
+      const after = await firstBlock.boundingBox();
+
+      if (before === null || after === null) {
+        throw new Error('Expected block bounding boxes to be measurable');
+      }
+
+      // No horizontal shift: the block's left edge must stay put.
+      expect(Math.abs(after.x - before.x)).toBeLessThanOrEqual(1);
     });
   });
 

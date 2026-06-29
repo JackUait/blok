@@ -222,11 +222,11 @@ describe('KeyboardNavigation', () => {
       keyboardNavigation.handleTab(event);
 
       // Notion: Tab never relocates the caret to another block. When indent is
-      // impossible (no preceding sibling) it does nothing — caret stays put and
-      // the native Tab default is left intact so focus can still leave the editor.
+      // impossible (no preceding sibling) it does nothing — caret stays put — but
+      // it still preventDefaults so native Tab never moves focus out of the editor.
       expect(setBlockParent).not.toHaveBeenCalled();
       expect(navigateNext).not.toHaveBeenCalled();
-      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
     });
 
     it('outdents to the grandparent and adopts following siblings on Shift+Tab', () => {
@@ -287,7 +287,8 @@ describe('KeyboardNavigation', () => {
 
       expect(setBlockParent).not.toHaveBeenCalled();
       expect(navigateNext).not.toHaveBeenCalled();
-      expect(event.preventDefault).not.toHaveBeenCalled();
+      // No-op Tab still preventDefaults so focus stays inside the editor.
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
     });
 
     it('is a strict no-op when block is already at root on Shift+Tab', () => {
@@ -302,7 +303,8 @@ describe('KeyboardNavigation', () => {
 
       expect(setBlockParent).not.toHaveBeenCalled();
       expect(navigatePrevious).not.toHaveBeenCalled();
-      expect(event.preventDefault).not.toHaveBeenCalled();
+      // No-op Shift+Tab still preventDefaults so focus stays inside the editor.
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
     });
 
     it('does not navigate when InlineToolbar is opened', () => {
@@ -336,7 +338,7 @@ describe('KeyboardNavigation', () => {
       expect(event.preventDefault).not.toHaveBeenCalled();
     });
 
-    it('leaves native Tab default intact when indent is impossible (tab out of editor)', () => {
+    it('preventDefaults when indent is impossible so focus never tabs out of the editor', () => {
       const current = createBlock({ id: 'cur', parentId: null });
       const navigateNext = vi.fn(() => false);
       const blok = tabModules([current], current, { navigateNext });
@@ -345,10 +347,10 @@ describe('KeyboardNavigation', () => {
 
       keyboardNavigation.handleTab(event);
 
-      // No indent target and no caret relocation: preventDefault is NOT called,
-      // so the browser's native Tab can move focus out of the editor (a11y).
+      // No indent target and no caret relocation: this is a strict no-op, but Notion
+      // never tabs focus out of the editor, so preventDefault IS called.
       expect(navigateNext).not.toHaveBeenCalled();
-      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
     });
   });
 

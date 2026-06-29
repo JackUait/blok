@@ -44,11 +44,12 @@
       }
     },
     "sections": {
-      "guide": "Guide",
+      "gettingStarted": "Getting started",
       "core": "Core",
-      "apiModules": "API Modules",
-      "data": "Data",
-      "concepts": "Concepts"
+      "editing": "Editing",
+      "interface": "Interface",
+      "extending": "Extending & system",
+      "dataTypes": "Data types"
     },
     "links": {
       "quickStart": "Quick Start",

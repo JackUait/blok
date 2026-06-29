@@ -45,7 +45,7 @@ describe('useApiTranslations', () => {
   it('should return translated sidebar sections', () => {
     const { result } = renderHook(() => useApiTranslations(), { wrapper });
     
-    expect(result.current.sidebarSections[0].title).toBe('Guide');
+    expect(result.current.sidebarSections[0].title).toBe('Getting started');
     expect(result.current.sidebarSections[0].links[0].label).toBe('Quick Start');
   });
 
@@ -59,7 +59,7 @@ describe('useApiTranslations', () => {
     const { result } = renderHook(() => useApiTranslations(), { wrapper });
     
     const sectionTitles = result.current.sidebarSections.map(s => s.title);
-    expect(sectionTitles).toEqual(['Guide', 'Concepts', 'Core', 'API Modules', 'Data']);
+    expect(sectionTitles).toEqual(['Getting started', 'Core', 'Editing', 'Interface', 'Extending & system', 'Data types']);
   });
 
   it('should return the correct number of API sections', () => {
@@ -144,5 +144,17 @@ describe('useApiTranslations', () => {
 
     const holderRow = configSection?.table?.find(r => r.option === 'holder');
     expect(holderRow?.description).toBe('Container element ID or reference');
+  });
+});
+
+describe('useApiTranslations sidebar groups', () => {
+  it('produces the six redesigned buckets in order', () => {
+    const { result } = renderHook(() => useApiTranslations(), { wrapper });
+    const titles = result.current.sidebarSections.map((s) => s.title);
+    expect(titles).toEqual([
+      'Getting started', 'Core', 'Editing', 'Interface', 'Extending & system', 'Data types',
+    ]);
+    expect(result.current.sidebarSections[2].links.map((l) => l.id))
+      .toEqual(['caret-api', 'selection-api', 'styles-api', 'history-api']);
   });
 });

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useI18n } from '../contexts/I18nContext';
 import type { ApiSection, SidebarSection } from '../components/api/api-data';
 import { API_SECTIONS as BASE_API_SECTIONS } from '../components/api/api-data';
+import { SIDEBAR_GROUPS } from '../components/api/api-nav';
 
 /**
  * Mapping of section IDs to translation keys
@@ -122,53 +123,10 @@ export const useApiTranslations = () => {
   }, [t, locale]);
 
   const translatedSidebarSections = useMemo((): SidebarSection[] => {
-    return [
-      {
-        title: t('api.sections.guide'),
-        links: [{ id: 'quick-start', label: t(SIDEBAR_LINK_KEYS['quick-start']) }],
-      },
-      {
-        title: t('api.sections.concepts'),
-        links: [{ id: 'concepts', label: t(SIDEBAR_LINK_KEYS['concepts']) }],
-      },
-      {
-        title: t('api.sections.core'),
-        links: [
-          { id: 'core', label: t(SIDEBAR_LINK_KEYS['core']) },
-          { id: 'config', label: t(SIDEBAR_LINK_KEYS['config']) },
-        ],
-      },
-      {
-        title: t('api.sections.apiModules'),
-        links: [
-          { id: 'blocks-api', label: t(SIDEBAR_LINK_KEYS['blocks-api']) },
-          { id: 'block-api', label: t(SIDEBAR_LINK_KEYS['block-api']) },
-          { id: 'caret-api', label: t(SIDEBAR_LINK_KEYS['caret-api']) },
-          { id: 'events-api', label: t(SIDEBAR_LINK_KEYS['events-api']) },
-          { id: 'history-api', label: t(SIDEBAR_LINK_KEYS['history-api']) },
-          { id: 'saver-api', label: t(SIDEBAR_LINK_KEYS['saver-api']) },
-          { id: 'selection-api', label: t(SIDEBAR_LINK_KEYS['selection-api']) },
-          { id: 'styles-api', label: t(SIDEBAR_LINK_KEYS['styles-api']) },
-          { id: 'toolbar-api', label: t(SIDEBAR_LINK_KEYS['toolbar-api']) },
-          { id: 'inline-toolbar-api', label: t(SIDEBAR_LINK_KEYS['inline-toolbar-api']) },
-          { id: 'notifier-api', label: t(SIDEBAR_LINK_KEYS['notifier-api']) },
-          { id: 'sanitizer-api', label: t(SIDEBAR_LINK_KEYS['sanitizer-api']) },
-          { id: 'tooltip-api', label: t(SIDEBAR_LINK_KEYS['tooltip-api']) },
-          { id: 'readonly-api', label: t(SIDEBAR_LINK_KEYS['readonly-api']) },
-          { id: 'i18n-api', label: t(SIDEBAR_LINK_KEYS['i18n-api']) },
-          { id: 'ui-api', label: t(SIDEBAR_LINK_KEYS['ui-api']) },
-          { id: 'listeners-api', label: t(SIDEBAR_LINK_KEYS['listeners-api']) },
-          { id: 'tools-api', label: t(SIDEBAR_LINK_KEYS['tools-api']) },
-        ],
-      },
-      {
-        title: t('api.sections.data'),
-        links: [
-          { id: 'output-data', label: t(SIDEBAR_LINK_KEYS['output-data']) },
-          { id: 'block-data', label: t(SIDEBAR_LINK_KEYS['block-data']) },
-        ],
-      },
-    ];
+    return SIDEBAR_GROUPS.map((group) => ({
+      title: t(`api.sections.${group.key}`),
+      links: group.moduleIds.map((id) => ({ id, label: t(SIDEBAR_LINK_KEYS[id]) })),
+    }));
   }, [t, locale]);
 
   const filterLabel = useMemo(() => t('api.filterLabel'), [t, locale]);

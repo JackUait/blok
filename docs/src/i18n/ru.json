@@ -44,11 +44,12 @@
       }
     },
     "sections": {
-      "guide": "Руководство",
-      "core": "Ядро",
-      "apiModules": "Модули API",
-      "data": "Данные",
-      "concepts": "Концепции"
+      "gettingStarted": "Начало работы",
+      "core": "Основное",
+      "editing": "Редактирование",
+      "interface": "Интерфейс",
+      "extending": "Расширение и система",
+      "dataTypes": "Типы данных"
     },
     "links": {
       "quickStart": "Быстрый старт",

@@ -36,6 +36,13 @@ const ROWS: ComparisonRow[] = [
     lexical: "Nodes",
   },
   {
+    labelKey: "rowBlocks",
+    blok: "19 built-in",
+    editorjs: "Paragraph only",
+    tiptap: "Basics only",
+    lexical: "Primitives",
+  },
+  {
     labelKey: "rowMarkdown",
     blok: "Built-in",
     editorjs: "Plugin",

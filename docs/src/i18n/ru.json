@@ -479,6 +479,7 @@
       "colCapability": "Возможность",
       "rowOutput": "Формат вывода",
       "rowEverythingBlock": "Всё — это блок",
+      "rowBlocks": "Встроенные блоки",
       "rowTypeScript": "TypeScript в первую очередь",
       "rowI18n": "i18n и RTL",
       "rowMarkdown": "Поддержка Markdown",

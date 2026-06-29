@@ -479,6 +479,7 @@
       "colCapability": "Capability",
       "rowOutput": "Output format",
       "rowEverythingBlock": "Everything is a block",
+      "rowBlocks": "Built-in blocks",
       "rowTypeScript": "TypeScript-first",
       "rowI18n": "i18n & RTL",
       "rowMarkdown": "Markdown support",

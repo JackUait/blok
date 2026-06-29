@@ -1268,50 +1268,9 @@ export interface SidebarSection {
   links: { id: string; label: string }[];
 }
 
-export const SIDEBAR_SECTIONS: SidebarSection[] = [
-  {
-    title: "Guide",
-    links: [{ id: "quick-start", label: "Quick Start" }],
-  },
-  {
-    title: "Concepts",
-    links: [{ id: "concepts", label: "Everything is a block" }],
-  },
-  {
-    title: "Core",
-    links: [
-      { id: "core", label: "Blok Class" },
-      { id: "config", label: "Configuration" },
-    ],
-  },
-  {
-    title: "API Modules",
-    links: [
-      { id: "blocks-api", label: "Blocks" },
-      { id: "block-api", label: "BlockAPI" },
-      { id: "caret-api", label: "Caret" },
-      { id: "events-api", label: "Events" },
-      { id: "history-api", label: "History" },
-      { id: "saver-api", label: "Saver" },
-      { id: "selection-api", label: "Selection" },
-      { id: "styles-api", label: "Styles" },
-      { id: "toolbar-api", label: "Toolbar" },
-      { id: "inline-toolbar-api", label: "InlineToolbar" },
-      { id: "notifier-api", label: "Notifier" },
-      { id: "sanitizer-api", label: "Sanitizer" },
-      { id: "tooltip-api", label: "Tooltip" },
-      { id: "readonly-api", label: "ReadOnly" },
-      { id: "i18n-api", label: "I18n" },
-      { id: "ui-api", label: "UI" },
-      { id: "listeners-api", label: "Listeners" },
-      { id: "tools-api", label: "Tools" },
-    ],
-  },
-  {
-    title: "Data",
-    links: [
-      { id: "output-data", label: "OutputData" },
-      { id: "block-data", label: "BlockData" },
-    ],
-  },
-];
+import { SIDEBAR_GROUPS, GROUP_TITLES_EN, MODULE_LABELS_EN } from './api-nav';
+
+export const SIDEBAR_SECTIONS: SidebarSection[] = SIDEBAR_GROUPS.map((group) => ({
+  title: GROUP_TITLES_EN[group.key],
+  links: group.moduleIds.map((id) => ({ id, label: MODULE_LABELS_EN[id] })),
+}));

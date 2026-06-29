@@ -139,6 +139,16 @@ export class BlockEvents extends Module {
     }
 
     /**
+     * Home/End move the caret horizontally to the line start/end via the
+     * browser's native handling. Like ArrowLeft/Right, a horizontal move must
+     * reset the sticky vertical goal column so the next ArrowUp/Down aims at the
+     * caret's new X instead of a stale column captured by an earlier move.
+     */
+    if (event.key === 'Home' || event.key === 'End') {
+      this.Blok.Caret.resetGoalColumn();
+    }
+
+    /**
      * We check for "key" here since on different keyboard layouts "/" can be typed as "Shift + 7" etc
      * @todo probably using "beforeInput" event would be better here
      */

@@ -1089,7 +1089,7 @@ test.describe('backspace keydown', () => {
     await expectToolbarClosed(page);
   });
 
-  test('should move caret to end of previous block when blocks are not mergeable without merge method', async ({ page }) => {
+  test('should select the previous block when blocks are not mergeable without merge method', async ({ page }) => {
     await createUnmergeableToolBlok(page, { hasConversionConfig: false });
 
     const lastParagraph = await getParagraphLocator(page, 'last');
@@ -1100,12 +1100,17 @@ test.describe('backspace keydown', () => {
 
     const { blocks } = await saveBlok(page);
 
+    // Notion parity: Backspace before a non-mergeable previous block SELECTS it
+    // (block navigation mode) rather than parking the caret at its end.
     expect(blocks).toHaveLength(2);
-    await expectCaretAtEnd(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid=unmergeable-tool]`));
+
+    const previousBlockWrapper = await getBlockWrapperLocator(page, 'first');
+
+    await expect(previousBlockWrapper).toHaveAttribute('data-blok-selected', 'true');
     await expectToolbarClosed(page);
   });
 
-  test('should move caret to end of previous block when blocks are not mergeable despite conversion config', async ({ page }) => {
+  test('should select the previous block when blocks are not mergeable despite conversion config', async ({ page }) => {
     await createUnmergeableToolBlok(page, { hasConversionConfig: true });
 
     const lastParagraph = await getParagraphLocator(page, 'last');
@@ -1116,8 +1121,13 @@ test.describe('backspace keydown', () => {
 
     const { blocks } = await saveBlok(page);
 
+    // Notion parity: Backspace before a non-mergeable previous block SELECTS it
+    // (block navigation mode) rather than parking the caret at its end.
     expect(blocks).toHaveLength(2);
-    await expectCaretAtEnd(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid=unmergeable-tool]`));
+
+    const previousBlockWrapper = await getBlockWrapperLocator(page, 'first');
+
+    await expect(previousBlockWrapper).toHaveAttribute('data-blok-selected', 'true');
     await expectToolbarClosed(page);
   });
 

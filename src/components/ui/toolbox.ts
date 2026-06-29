@@ -1104,8 +1104,14 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
        * leaves a literal "/ " in the block. Without this the query would become
        * a lone space and the toolbox would stay open filtering by whitespace
        * until the "/" itself is deleted.
+       *
+       * A contenteditable inserts a non-breaking space ( ) for the trailing
+       * space after "/" (a regular trailing space would collapse), so accept
+       * either form — otherwise the menu never dismisses.
        */
-      if (text.charAt(slashIndex + 1) === ' ') {
+      const charAfterSlash = text.charAt(slashIndex + 1);
+
+      if (charAfterSlash === ' ' || charAfterSlash === ' ') {
         this.close();
 
         return;

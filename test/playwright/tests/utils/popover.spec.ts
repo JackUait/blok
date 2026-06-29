@@ -839,11 +839,20 @@ test.describe('popover', () => {
     // Check the second custom html item wrapper is focused
     await expect(customHtml('Tune2')).toHaveAttribute('data-blok-focused', 'true');
 
-    // Press Tab - move to delete item
-    await page.keyboard.press('Tab');
+    // Flipping continues past the custom items into the default action items.
+    // Tab until the delete item is focused rather than hard-coding the number of
+    // trailing default tunes between the last custom item and delete.
+    const deleteItem = page.locator('[data-blok-item-name="delete"]');
+
+    for (let i = 0; i < 15; i++) {
+      if (await deleteItem.getAttribute('data-blok-focused') === 'true') {
+        break;
+      }
+      await page.keyboard.press('Tab');
+    }
 
     // Check that delete item got focused
-    await expect(page.locator('[data-blok-item-name="delete"]')).toHaveAttribute('data-blok-focused', 'true');
+    await expect(deleteItem).toHaveAttribute('data-blok-focused', 'true');
   });
 
   test('should display nested popover (desktop)', async ({ page }) => {

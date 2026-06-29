@@ -126,6 +126,35 @@ export interface UseBlocksApi {
    * is fresh-snapshot volatile — read it now, don't stash it in a dep array.
    */
   insertTree(spec: TreeInsertSpec): BlockNode | null;
+  /**
+   * Convert a Markdown string to blocks and insert them ADDITIVELY at a
+   * position, WITHOUT clearing the document (unlike core's `importMarkdown` /
+   * `renderFromHTML`, which replace the whole document). This is the React
+   * "paste markdown → blocks appear" path.
+   *
+   * Async: the markdown converter is lazy-loaded (kept out of the main bundle),
+   * so this is the ONE async creator in the API — `await` the returned promise.
+   * The whole batch is inserted as a single atomic undo step.
+   *
+   * `position` (default `'end'`) places the converted run among `parentId`'s
+   * children (or root siblings when `parentId` is omitted/null), reusing the
+   * same `start`/`end`/`before`/`after` semantics as {@link insert}.
+   *
+   * `parentId` (default `null` = root) nests the import: every TOP-LEVEL
+   * converted block (one the converter left un-parented) is reparented under
+   * `parentId`, while blocks the markdown nested internally (e.g. table-cell
+   * children) keep their intra-import parent. A dangling `parentId` is a no-op
+   * (returns `[]`, opens no transaction), matching {@link insert}.
+   *
+   * Returns the created {@link BlockNode}s in document order; empty or
+   * whitespace-only markdown (and a dangling `parentId`) returns `[]` and opens
+   * no transaction. The nodes are fresh-snapshot volatile — read them now, don't
+   * stash them in dep arrays.
+   */
+  insertMarkdown(
+    markdown: string,
+    options?: { parentId?: string | null; position?: InsertPosition }
+  ): Promise<BlockNode[]>;
   move(id: string, target: MoveTarget): void;
   nest(id: string, parentId: string): void;
   unnest(id: string): void;

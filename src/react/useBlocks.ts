@@ -13,6 +13,7 @@ import {
   isDescendantOf,
   type BlockNode,
   type IndexReader,
+  type InsertPosition,
   type InsertSpec,
   type MoveTarget,
   type TreeInsertSpec,
@@ -48,6 +49,7 @@ const EMPTY_API: UseBlocksApi = {
   insert: () => null,
   insertMany: () => [],
   insertTree: () => null,
+  insertMarkdown: async () => [],
   move: () => undefined,
   nest: () => undefined,
   unnest: () => undefined,
@@ -704,6 +706,66 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       return getById(rootId);
     };
 
+    /**
+     * Convert markdown to blocks and insert them ADDITIVELY — see the
+     * {@link UseBlocksApi.insertMarkdown} doc for the full contract. Async
+     * because the converter is lazy-loaded; the insert itself is one atomic
+     * undo step. parentId nesting is supported: top-level converted blocks are
+     * reparented under parentId, internally-nested ones keep their parent.
+     */
+    const insertMarkdown = async (
+      markdown: string,
+      options?: { parentId?: string | null; position?: InsertPosition }
+    ): Promise<BlockNode[]> => {
+      const parentId = options?.parentId ?? null;
+      const position = options?.position ?? 'end';
+
+      // A dangling parentId is a no-op (no insert), matching `insert`/`insertMany`.
+      if (parentId !== null && getById(parentId) === null) {
+        return [];
+      }
+
+      // Lazy-load the converter (dynamic import mirrors core's markdown lazy
+      // loading and keeps the parser out of the main bundle). This await
+      // resolves BEFORE the synchronous transact below.
+      const { markdownToBlocks } = await import('../markdown/index');
+      const blocks = await markdownToBlocks(markdown);
+
+      // Empty / whitespace-only markdown opens no transaction (no undo boundary).
+      if (blocks.length === 0) {
+        return [];
+      }
+
+      // Nest under the parent by stamping `parent` on each TOP-LEVEL block (one
+      // the converter left un-parented). Blocks the markdown nested internally
+      // (their `parent` already points at a sibling in this batch) are untouched,
+      // so the import's own structure is preserved.
+      const seeded: OutputBlockData[] =
+        parentId === null
+          ? blocks
+          : blocks.map((block) =>
+            block.parent === undefined || block.parent === null
+              ? { ...block, parent: parentId }
+              : block
+          );
+
+      const flatIndex = resolveInsertIndex(reader, parentId, position);
+
+      // Mutable property on a const holder (no `let`): captured from inside the
+      // transact closure. insertMany returns BlockAPI[] (each has `.id`) — the
+      // reliable record of what was created, since the converter's ids may not
+      // survive composition. ONE transact → a single atomic undo step.
+      const result: { created: Array<{ id: string }> } = { created: [] };
+
+      transact(() => {
+        result.created = editor.blocks.insertMany(seeded, flatIndex);
+      });
+
+      return result.created
+        .map((block) => getById(block.id))
+        .filter((node): node is BlockNode => node !== null);
+    };
+
     const update = (
       id: string,
       data?: BlockToolData,
@@ -738,6 +800,7 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       insert,
       insertMany,
       insertTree,
+      insertMarkdown,
       move,
       nest,
       unnest,

@@ -61,6 +61,8 @@ interface RealEditorHarness {
   editor: Blok;
   /** The container element added to document.body — must be removed in afterEach. */
   workingArea: HTMLElement;
+  /** Read the raw `data` stored on a seeded/inserted block (not exposed on BlockNode). */
+  getBlockData: (id: string) => { text?: string; level?: number } | undefined;
 }
 
 let insertSeq = 0;
@@ -160,37 +162,43 @@ const createRealEditorHarness = (
     },
 
     /**
-     * Faithful to core api/blocks.ts insertMany + BlockManager.insertMany:
-     * compose each OutputBlockData into a block (honoring its `parent` and
-     * `content`) and splice them into the store at consecutive indices starting
-     * at `index`. The input array is DFS pre-order, so contiguous insertion keeps
-     * the subtree contiguous in the flat document order. parentId comes straight
-     * from `parent` (snapshotNodes derives contentIds from children's parentId).
+     * Faithful to core's public `blocks.insertMany(blocks, index)`: composes a
+     * block per OutputBlockData entry (honoring its `id`, `type`, `data`, and
+     * `parent`/`content` links), splices them CONTIGUOUSLY into the real store
+     * starting at the clamped flat `index`, and returns a BlockAPI-like `{ id }[]`.
+     * The input array is DFS pre-order, so contiguous insertion keeps a subtree
+     * contiguous in the flat document order. A `parent` link is applied through
+     * the REAL BlockHierarchy so the parent's contentIds stay in sync (parents in
+     * the same batch sit before their children, so the lookup resolves).
      */
     insertMany: (
       blocks: ReadonlyArray<{
         id?: string;
         type?: string;
+        data?: unknown;
         parent?: string | null;
         content?: string[];
       }>,
       index?: number
     ): Array<{ id: string }> => {
       const startAt =
-        index !== undefined ? Math.min(Math.max(index, 0), blocksStore.length) : blocksStore.length;
-      const created: Array<{ id: string }> = [];
+        index !== undefined
+          ? Math.min(Math.max(index, 0), blocksStore.length)
+          : blocksStore.length;
 
-      blocks.forEach((blockData, i) => {
+      const created = blocks.map((cfg, offset) => {
         insertSeq += 1;
-        const id = blockData.id ?? `inserted-${insertSeq}`;
-        const stub = createBlockStub({
-          id,
-          name: blockData.type ?? 'paragraph',
-          parentId: blockData.parent ?? null,
-        });
+        const id = cfg.id ?? `inserted-${insertSeq}`;
+        const stub = createBlockStub({ id, name: cfg.type ?? 'paragraph', parentId: null });
 
-        blocksStore.insert(startAt + i, stub as unknown as Block);
-        created.push({ id });
+        (stub as unknown as { data: unknown }).data = cfg.data;
+        blocksStore.insert(startAt + offset, stub as unknown as Block);
+
+        if (cfg.parent !== null && cfg.parent !== undefined) {
+          hierarchy.setBlockParent(stub as unknown as Block, cfg.parent);
+        }
+
+        return { id };
       });
 
       notify();
@@ -334,7 +342,15 @@ const createRealEditorHarness = (
     },
   } as unknown as Blok;
 
-  return { editor, workingArea };
+  const getBlockData = (id: string): { text?: string; level?: number } | undefined => {
+    const block = blocksStore.array.find((b) => b.id === id);
+
+    return block === undefined
+      ? undefined
+      : ((block as unknown as { data?: { text?: string; level?: number } }).data ?? undefined);
+  };
+
+  return { editor, workingArea, getBlockData };
 };
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -1044,5 +1060,183 @@ describe('useBlocks — real BlockHierarchy integration', () => {
     expect(renderCount).toBeGreaterThan(before);
     // update delegates to core's async update — no synchronous transact wrapper.
     expect(transactSpy).not.toHaveBeenCalled();
+  });
+
+  describe('insertMarkdown — additive markdown → blocks', () => {
+    it('converts markdown and inserts the blocks additively at the document end', async () => {
+      const harness = createRealEditorHarness([{ id: 'seed' }]);
+
+      workingArea = harness.workingArea;
+
+      const { result } = renderHook(() => useBlocks(harness.editor));
+
+      let created: Awaited<ReturnType<typeof result.current.insertMarkdown>> = [];
+
+      await act(async () => {
+        created = await result.current.insertMarkdown('# Hello\n\nWorld');
+      });
+
+      // The pre-existing block is NOT cleared (additive, unlike core importMarkdown).
+      expect(result.current.getById('seed')).not.toBeNull();
+
+      // A header('Hello') followed by a paragraph('World').
+      expect(created.map((n) => n.type)).toEqual(['header', 'paragraph']);
+      expect(harness.getBlockData(created[0].id)?.text).toBe('Hello');
+      expect(harness.getBlockData(created[0].id)?.level).toBe(1);
+      expect(harness.getBlockData(created[1].id)?.text).toBe('World');
+
+      // Appended after the seed, at root, in order.
+      expect(result.current.getChildren(null).map((n) => n.id)).toEqual([
+        'seed',
+        created[0].id,
+        created[1].id,
+      ]);
+    });
+
+    it('returns the created BlockNodes (length, ids, types)', async () => {
+      const harness = createRealEditorHarness([]);
+
+      workingArea = harness.workingArea;
+
+      const { result } = renderHook(() => useBlocks(harness.editor));
+
+      let created: Awaited<ReturnType<typeof result.current.insertMarkdown>> = [];
+
+      await act(async () => {
+        created = await result.current.insertMarkdown('# Title\n\nBody');
+      });
+
+      expect(created).toHaveLength(2);
+      expect(created.map((n) => n.type)).toEqual(['header', 'paragraph']);
+      // Each returned node is a live snapshot view, re-readable by id.
+      expect(created.map((n) => result.current.getById(n.id)?.id)).toEqual(created.map((n) => n.id));
+    });
+
+    it('is atomic — the whole batch flows through a single transact', async () => {
+      const harness = createRealEditorHarness([]);
+
+      workingArea = harness.workingArea;
+
+      const transactSpy = vi.spyOn(harness.editor.blocks, 'transact');
+      const insertManySpy = vi.spyOn(harness.editor.blocks, 'insertMany');
+
+      const { result } = renderHook(() => useBlocks(harness.editor));
+
+      await act(async () => {
+        await result.current.insertMarkdown('# A\n\nB\n\nC');
+      });
+
+      expect(transactSpy).toHaveBeenCalledTimes(1);
+      // insertMany runs inside the transact (one undo step for the whole import).
+      expect(insertManySpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('position: { after } and "start" place the blocks at the right root slot', async () => {
+      const harness = createRealEditorHarness([{ id: 'one' }, { id: 'two' }]);
+
+      workingArea = harness.workingArea;
+
+      const { result } = renderHook(() => useBlocks(harness.editor));
+
+      let afterCreated: Awaited<ReturnType<typeof result.current.insertMarkdown>> = [];
+
+      await act(async () => {
+        afterCreated = await result.current.insertMarkdown('# Mid', { position: { after: 'one' } });
+      });
+
+      expect(result.current.getChildren(null).map((n) => n.id)).toEqual([
+        'one',
+        afterCreated[0].id,
+        'two',
+      ]);
+
+      let startCreated: Awaited<ReturnType<typeof result.current.insertMarkdown>> = [];
+
+      await act(async () => {
+        startCreated = await result.current.insertMarkdown('# Head', { position: 'start' });
+      });
+
+      expect(result.current.getChildren(null)[0].id).toBe(startCreated[0].id);
+    });
+
+    it('empty / whitespace markdown returns [] and opens no transaction', async () => {
+      const harness = createRealEditorHarness([{ id: 'seed' }]);
+
+      workingArea = harness.workingArea;
+
+      const transactSpy = vi.spyOn(harness.editor.blocks, 'transact');
+      const insertManySpy = vi.spyOn(harness.editor.blocks, 'insertMany');
+
+      const { result } = renderHook(() => useBlocks(harness.editor));
+
+      let created: Awaited<ReturnType<typeof result.current.insertMarkdown>> = [{
+        id: 'x',
+        type: 'paragraph',
+        parentId: null,
+        contentIds: [],
+      }];
+
+      await act(async () => {
+        created = await result.current.insertMarkdown('   \n  ');
+      });
+
+      expect(created).toEqual([]);
+      expect(transactSpy).not.toHaveBeenCalled();
+      expect(insertManySpy).not.toHaveBeenCalled();
+      // The seed is untouched.
+      expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['seed']);
+    });
+
+    it('a dangling parentId is a no-op (returns [], opens no transaction)', async () => {
+      const harness = createRealEditorHarness([{ id: 'seed' }]);
+
+      workingArea = harness.workingArea;
+
+      const transactSpy = vi.spyOn(harness.editor.blocks, 'transact');
+
+      const { result } = renderHook(() => useBlocks(harness.editor));
+
+      let created: Awaited<ReturnType<typeof result.current.insertMarkdown>> = [];
+
+      await act(async () => {
+        created = await result.current.insertMarkdown('# X', { parentId: 'ghost' });
+      });
+
+      expect(created).toEqual([]);
+      expect(transactSpy).not.toHaveBeenCalled();
+      expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['seed']);
+    });
+
+    it('parentId nests the converted blocks under the container as contiguous children', async () => {
+      const harness = createRealEditorHarness([{ id: 'container' }, { id: 'tail' }]);
+
+      workingArea = harness.workingArea;
+
+      const { result } = renderHook(() => useBlocks(harness.editor));
+
+      let created: Awaited<ReturnType<typeof result.current.insertMarkdown>> = [];
+
+      await act(async () => {
+        created = await result.current.insertMarkdown('# Hello\n\nWorld', { parentId: 'container' });
+      });
+
+      // Both top-level blocks land under the container, in order.
+      expect(result.current.getChildren('container').map((n) => n.id)).toEqual(
+        created.map((n) => n.id)
+      );
+      expect(created.every((n) => n.parentId === 'container')).toBe(true);
+
+      // Contiguous after the container, before the next root block.
+      const flat: string[] = [];
+
+      for (let i = 0; i < harness.editor.blocks.getBlocksCount(); i++) {
+        const node = harness.editor.blocks.getBlockByIndex(i);
+
+        if (node !== undefined) {
+          flat.push(node.id);
+        }
+      }
+      expect(flat).toEqual(['container', created[0].id, created[1].id, 'tail']);
+    });
   });
 });

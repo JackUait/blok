@@ -49,6 +49,33 @@ export interface InsertSpec {
 }
 
 /**
+ * One node of a pre-built nested subtree for {@link UseBlocksApi.insertTree}.
+ *
+ * Each node maps to one block; `children` are inserted nested under it (their
+ * `parentId` set to this node's id) in array order, recursively. Placement
+ * options (`parentId`/`position`) are ROOT-ONLY — they position the whole
+ * subtree among existing blocks and are ignored on nested children, whose parent
+ * is always their enclosing node.
+ */
+export interface TreeInsertSpec {
+  type?: string;
+  data?: BlockToolData;
+  tunes?: { [name: string]: BlockTuneData };
+  /**
+   * Explicit id for this node (generated when omitted). Unlike `insert`, this is
+   * NOT insert-if-absent: a tree insert always creates fresh blocks, so a
+   * colliding id is the caller's responsibility.
+   */
+  id?: string;
+  /** Direct children, inserted nested under this node, in array order. */
+  children?: TreeInsertSpec[];
+  /** Root-only: where to place the whole subtree. Ignored on nested children. */
+  parentId?: string | null;
+  /** Root-only: slot among siblings of `parentId`. Ignored on nested children. */
+  position?: InsertPosition;
+}
+
+/**
  * Where to move an existing block.
  *
  * `before`/`after` are POSITION targets, not parent assignments: the block is
@@ -83,6 +110,22 @@ export interface UseBlocksApi {
    * fresh-snapshot volatile — read them now, don't stash them in dep arrays.
    */
   insertMany(specs: InsertSpec[]): BlockNode[];
+  /**
+   * Insert a pre-built NESTED subtree in ONE atomic operation (one undo step).
+   * Each {@link TreeInsertSpec} node becomes a block; its `children` are inserted
+   * nested under it (recursively, in array order) so the whole hierarchy lands in
+   * a single call — no follow-up `nest` round-trips. Delegates to core's
+   * tree-aware `blocks.insertMany`, which composes the flat DFS pre-order array
+   * honoring each node's `parent`/`content` links.
+   *
+   * Placement is root-only: the root node's `parentId`/`position` position the
+   * whole subtree among existing blocks (default: appended at the document end);
+   * nested children ignore those fields (their parent is their enclosing node). A
+   * dangling root `parentId` is rejected — nothing is inserted and `null` is
+   * returned (mirrors {@link insert}). Returns the root {@link BlockNode}, which
+   * is fresh-snapshot volatile — read it now, don't stash it in a dep array.
+   */
+  insertTree(spec: TreeInsertSpec): BlockNode | null;
   move(id: string, target: MoveTarget): void;
   nest(id: string, parentId: string): void;
   unnest(id: string): void;

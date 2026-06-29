@@ -160,6 +160,45 @@ const createRealEditorHarness = (
     },
 
     /**
+     * Faithful to core api/blocks.ts insertMany + BlockManager.insertMany:
+     * compose each OutputBlockData into a block (honoring its `parent` and
+     * `content`) and splice them into the store at consecutive indices starting
+     * at `index`. The input array is DFS pre-order, so contiguous insertion keeps
+     * the subtree contiguous in the flat document order. parentId comes straight
+     * from `parent` (snapshotNodes derives contentIds from children's parentId).
+     */
+    insertMany: (
+      blocks: ReadonlyArray<{
+        id?: string;
+        type?: string;
+        parent?: string | null;
+        content?: string[];
+      }>,
+      index?: number
+    ): Array<{ id: string }> => {
+      const startAt =
+        index !== undefined ? Math.min(Math.max(index, 0), blocksStore.length) : blocksStore.length;
+      const created: Array<{ id: string }> = [];
+
+      blocks.forEach((blockData, i) => {
+        insertSeq += 1;
+        const id = blockData.id ?? `inserted-${insertSeq}`;
+        const stub = createBlockStub({
+          id,
+          name: blockData.type ?? 'paragraph',
+          parentId: blockData.parent ?? null,
+        });
+
+        blocksStore.insert(startAt + i, stub as unknown as Block);
+        created.push({ id });
+      });
+
+      notify();
+
+      return created;
+    },
+
+    /**
      * Delegates to the REAL BlockHierarchy.setBlockParent which
      * synchronously mutates block.parentId and contentIds.
      */
@@ -806,6 +845,180 @@ describe('useBlocks — real BlockHierarchy integration', () => {
     expect(renderCount).toBeGreaterThan(before);
     // convert owns its own async history step — it must not open a transact.
     expect(transactSpy).not.toHaveBeenCalled();
+  });
+
+  it('insertTree inserts a two-level subtree: root + nested child', () => {
+    const harness = createRealEditorHarness([{ id: 'anchor' }]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    let rootId: string | null = null;
+
+    act(() => {
+      const root = result.current.insertTree({
+        type: 'header',
+        children: [{ type: 'paragraph' }],
+      });
+
+      rootId = root?.id ?? null;
+    });
+
+    expect(rootId).not.toBeNull();
+
+    const children = result.current.getChildren(rootId as unknown as string);
+
+    expect(children).toHaveLength(1);
+    expect(children[0].parentId).toBe(rootId);
+    expect(children[0].type).toBe('paragraph');
+    expect(result.current.getById(rootId as unknown as string)?.type).toBe('header');
+  });
+
+  it('insertTree preserves a three-level deep nesting chain', () => {
+    const harness = createRealEditorHarness([{ id: 'anchor' }]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    let rootId: string | null = null;
+
+    act(() => {
+      const root = result.current.insertTree({
+        type: 'header',
+        children: [{ type: 'paragraph', children: [{ type: 'paragraph' }] }],
+      });
+
+      rootId = root?.id ?? null;
+    });
+
+    expect(rootId).not.toBeNull();
+
+    const level1 = result.current.getChildren(rootId as unknown as string);
+
+    expect(level1).toHaveLength(1);
+
+    const level2 = result.current.getChildren(level1[0].id);
+
+    expect(level2).toHaveLength(1);
+    expect(level2[0].parentId).toBe(level1[0].id);
+
+    // Flat document order is DFS pre-order: root, child, grandchild — contiguous
+    // after the pre-existing anchor block.
+    const flat: string[] = [];
+
+    for (let i = 0; i < harness.editor.blocks.getBlocksCount(); i++) {
+      const node = harness.editor.blocks.getBlockByIndex(i);
+
+      if (node !== undefined) {
+        flat.push(node.id);
+      }
+    }
+    expect(flat).toEqual(['anchor', rootId, level1[0].id, level2[0].id]);
+  });
+
+  it('insertTree inserts the whole subtree in a SINGLE transaction (one undo step)', () => {
+    const harness = createRealEditorHarness([{ id: 'anchor' }]);
+
+    workingArea = harness.workingArea;
+
+    const transactSpy = vi.spyOn(harness.editor.blocks, 'transact');
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    act(() => {
+      result.current.insertTree({
+        type: 'header',
+        children: [{ type: 'paragraph' }, { type: 'paragraph' }],
+      });
+    });
+
+    // A single transact wraps the entire subtree insert → one atomic undo step.
+    expect(transactSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('insertTree with parentId nests the whole subtree under an existing block', () => {
+    const harness = createRealEditorHarness([{ id: 'container' }, { id: 'tail' }]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    let rootId: string | null = null;
+
+    act(() => {
+      const root = result.current.insertTree({
+        type: 'paragraph',
+        parentId: 'container',
+        children: [{ type: 'paragraph' }],
+      });
+
+      rootId = root?.id ?? null;
+    });
+
+    expect(rootId).not.toBeNull();
+    expect(result.current.getById(rootId as unknown as string)?.parentId).toBe('container');
+    expect(result.current.getChildren('container').map((n) => n.id)).toEqual([rootId]);
+
+    const grandchildren = result.current.getChildren(rootId as unknown as string);
+
+    expect(grandchildren).toHaveLength(1);
+
+    // The subtree sits between the container and the next root sibling.
+    const flat: string[] = [];
+
+    for (let i = 0; i < harness.editor.blocks.getBlocksCount(); i++) {
+      const node = harness.editor.blocks.getBlockByIndex(i);
+
+      if (node !== undefined) {
+        flat.push(node.id);
+      }
+    }
+    expect(flat).toEqual(['container', rootId, grandchildren[0].id, 'tail']);
+  });
+
+  it('insertTree returns the root BlockNode', () => {
+    const harness = createRealEditorHarness([{ id: 'anchor' }]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    let root: ReturnType<typeof result.current.insertTree> = null;
+
+    act(() => {
+      root = result.current.insertTree({ type: 'header', children: [{ type: 'paragraph' }] });
+    });
+
+    expect(root).not.toBeNull();
+    const returned: NonNullable<typeof root> = root as unknown as NonNullable<typeof root>;
+
+    expect(returned.type).toBe('header');
+    expect(returned.parentId).toBeNull();
+  });
+
+  it('insertTree with a dangling parentId returns null and inserts nothing', () => {
+    const harness = createRealEditorHarness([{ id: 'anchor' }]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    const countBefore = harness.editor.blocks.getBlocksCount();
+
+    let root: ReturnType<typeof result.current.insertTree> = null;
+
+    act(() => {
+      root = result.current.insertTree({
+        type: 'paragraph',
+        parentId: 'ghost',
+        children: [{ type: 'paragraph' }],
+      });
+    });
+
+    expect(root).toBeNull();
+    expect(harness.editor.blocks.getBlocksCount()).toBe(countBefore);
   });
 
   it('update against the real harness re-renders and is NOT wrapped in transact', () => {

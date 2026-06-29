@@ -3,6 +3,8 @@ import { useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
 import type { Blok } from '../../types';
 import type { BlockToolData } from '../../types/tools';
 import type { BlockTuneData } from '../../types/block-tunes/block-tune-data';
+import type { OutputBlockData } from '../../types/data-formats/output-data';
+import { generateBlockId } from '../components/utils/id-generator';
 import {
   snapshotNodes,
   resolveInsertIndex,
@@ -13,6 +15,7 @@ import {
   type IndexReader,
   type InsertSpec,
   type MoveTarget,
+  type TreeInsertSpec,
   type UseBlocksApi,
 } from './blocks-snapshot';
 
@@ -44,6 +47,7 @@ const EMPTY_API: UseBlocksApi = {
   getChildren: () => [],
   insert: () => null,
   insertMany: () => [],
+  insertTree: () => null,
   move: () => undefined,
   nest: () => undefined,
   unnest: () => undefined,
@@ -637,6 +641,69 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       return created;
     };
 
+    /**
+     * Insert a pre-built nested subtree as ONE atomic operation. See the
+     * {@link UseBlocksApi.insertTree} contract. Flattens the spec to a DFS
+     * pre-order `OutputBlockData[]` — wiring every node's `parent`/`content`
+     * links from ids generated up front — then delegates to core's tree-aware
+     * `blocks.insertMany` inside a single transact.
+     */
+    const insertTree = (spec: TreeInsertSpec): BlockNode | null => {
+      const parentId = spec.parentId ?? null;
+      const position = spec.position ?? 'end';
+
+      // Dangling root parentId: mirror `insert`'s guard via the silent snapshot
+      // getById (NOT getBlockIndex, which warns on unknown ids). Reject so the
+      // subtree isn't silently dumped at the document end.
+      if (parentId !== null && getById(parentId) === null) {
+        return null;
+      }
+
+      // Every node needs a stable id BEFORE flattening so parent/content links
+      // can reference siblings/children. Respect an explicit node id; generate
+      // one (core's nanoid scheme) otherwise.
+      const flat: OutputBlockData[] = [];
+
+      // Pre-order DFS: push self FIRST, then recurse each child, so the flat
+      // array is DFS-contiguous (the invariant core's insertMany + the hook's
+      // getChildren depend on). `content` is the live child-id array, filled as
+      // each child is visited and returns its id. The root's `parent` is the
+      // resolved placement parent (undefined for root level); children's `parent`
+      // is their enclosing node's id.
+      const visit = (node: TreeInsertSpec, parent: string | undefined): string => {
+        const id = node.id ?? generateBlockId();
+        const content: string[] = [];
+        const flatNode: OutputBlockData = {
+          id,
+          // `type` is omitted when absent so core falls back to its defaultBlock.
+          type: node.type as string,
+          data: node.data ?? {},
+          content,
+          ...(node.tunes !== undefined ? { tunes: node.tunes } : {}),
+          ...(parent !== undefined ? { parent } : {}),
+        };
+
+        flat.push(flatNode);
+
+        for (const child of node.children ?? []) {
+          content.push(visit(child, id));
+        }
+
+        return id;
+      };
+
+      const rootId = visit(spec, parentId ?? undefined);
+
+      const flatIndex = resolveInsertIndex(reader, parentId, position);
+
+      // ONE transact for the whole subtree → a single atomic undo step.
+      transact(() => {
+        editor.blocks.insertMany(flat, flatIndex);
+      });
+
+      return getById(rootId);
+    };
+
     const update = (
       id: string,
       data?: BlockToolData,
@@ -670,6 +737,7 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       getChildren,
       insert,
       insertMany,
+      insertTree,
       move,
       nest,
       unnest,

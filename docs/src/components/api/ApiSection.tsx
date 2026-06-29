@@ -4,33 +4,13 @@ import { CategoryIcon } from "../common/CategoryIcon";
 import { ApiMethodCard } from "./ApiMethodCard";
 import { ConceptsContent } from "./ConceptsContent";
 import { useI18n } from "../../contexts/I18nContext";
+import { generatePropertyId, generateOptionId } from "./api-anchors";
 import type { ApiSection as ApiSectionType } from "./api-data";
 import type { PackageManager } from "../common/PackageManagerToggle";
 
 interface ApiSectionProps {
   section: ApiSectionType;
 }
-
-/**
- * Generate a URL-safe anchor ID from a property or option name
- * e.g., "isReady" -> "core-prop-isready"
- */
-const generatePropertyId = (sectionId: string, propName: string): string => {
-  const cleanName = propName
-    .replace(/[.]+/g, "-")
-    .replace(/-+/g, "-")
-    .toLowerCase();
-  return `${sectionId}-prop-${cleanName}`;
-};
-
-/**
- * Generate a URL-safe anchor ID from a config option name
- * e.g., "holder" -> "config-holder"
- */
-const generateOptionId = (sectionId: string, optionName: string): string => {
-  const cleanName = optionName.toLowerCase();
-  return `${sectionId}-${cleanName}`;
-};
 
 const blockTitleClass =
   "mb-4 font-display text-xs font-bold uppercase tracking-wide text-muted-foreground";

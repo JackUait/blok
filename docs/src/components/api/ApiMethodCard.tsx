@@ -1,27 +1,12 @@
 import type { FC } from "react";
 import type { ApiMethod } from "./api-data";
 import { CodeBlock } from "../common/CodeBlock";
+import { generateMethodId } from "./api-anchors";
 
 export interface ApiMethodCardProps {
   method: ApiMethod;
   sectionId: string;
 }
-
-/**
- * Generate a URL-safe anchor ID from a method name
- * e.g., "blocks.clear()" -> "blocks-clear"
- * e.g., "blocks.move(toIndex, fromIndex?)" -> "blocks-move"
- */
-const generateMethodId = (sectionId: string, methodName: string): string => {
-  // Extract just the method name without parameters
-  const methodBase = methodName.split('(')[0];
-  const cleanName = methodBase
-    .replace(/[.]+/g, "-") // Replace dots with dashes
-    .replace(/-+/g, "-") // Collapse multiple dashes
-    .replace(/-$/, "") // Remove trailing dash
-    .toLowerCase();
-  return `${sectionId}-${cleanName}`;
-};
 
 /**
  * Card component for displaying an API method

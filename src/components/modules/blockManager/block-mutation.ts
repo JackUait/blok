@@ -246,8 +246,13 @@ export class BlockMutation {
    * @param skipDOM - If true, do not manipulate DOM
    * @param blocksStore - The blocks store to modify
    * @param skipMovedHook - If true, do not fire the moved() lifecycle hook
+   * @param skipAutoHeal - If true, do not auto-heal the moved block's parentId from
+   *   its destination neighbour. Callers that perform an in-container reorder of a
+   *   whole subtree (keyboard moveUp/Down) must set this: their per-block lifts make
+   *   a subtree's inner child briefly neighbour an unrelated block, and the heal
+   *   would re-parent it to that transient neighbour, flattening the subtree.
    */
-  public move(toIndex: number, fromIndex: number, skipDOM: boolean, blocksStore: BlocksStore, skipMovedHook = false): void {
+  public move(toIndex: number, fromIndex: number, skipDOM: boolean, blocksStore: BlocksStore, skipMovedHook = false, skipAutoHeal = false): void {
     // Make sure indexes are valid and within a valid range
     if (isNaN(toIndex) || isNaN(fromIndex)) {
       log(`Warning during 'move' call: incorrect indices provided.`, 'warn');
@@ -368,7 +373,8 @@ export class BlockMutation {
        * DragController's `transactMoves` wrapper is open.
        */
       if (
-        movedBlock.parentId !== destinationParentId
+        !skipAutoHeal
+        && movedBlock.parentId !== destinationParentId
         && !this.dependencies.YjsManager.isInMoveGroup
       ) {
         this.hierarchy.setBlockParent(movedBlock, destinationParentId);
@@ -754,37 +760,45 @@ export class BlockMutation {
    */
   public moveCurrentBlockUp(blocksStore: BlocksStore, selectedBlocks?: Block[]): void {
     const group = this.resolveMoveGroup(selectedBlocks);
-    const predecessor = group !== null
-      ? this.repository.getBlockByIndex(group.start - 1)
-      : undefined;
 
-    // Boundary: top of document, or the block above belongs to a different
-    // container (the group is the first child of its toggle/callout/column).
-    if (group === null || group.start <= 0 || predecessor === undefined ||
-        predecessor.parentId !== group.containerParentId) {
+    // Find the ROOT of the previous sibling subtree: the nearest block before the
+    // group, in the SAME container, at the same/shallower depth — skipping that
+    // sibling's own deeper descendants (whether nested via flat depth OR a
+    // structural parentId chain) so the whole subtree is hopped. `undefined` means
+    // there is no preceding sibling in the container, i.e. the group is already its
+    // first child (top edge / first block of a toggle/callout/column).
+    const predStart = ((): number | undefined => {
+      if (group === null) {
+        return undefined;
+      }
+
+      const movingDepth = getBlockNestingDepth(group.anchor) ?? 0;
+      const precedingIndices = Array.from({ length: group.start }, (_, offset) => group.start - 1 - offset);
+
+      return precedingIndices.find((index) => {
+        const candidate = this.repository.getBlockByIndex(index);
+
+        return candidate !== undefined &&
+          candidate.parentId === group.containerParentId &&
+          (getBlockNestingDepth(candidate) ?? 0) <= movingDepth;
+      });
+    })();
+
+    // Boundary: top of document, or the group is the first child of its container.
+    if (group === null || predStart === undefined) {
       announce(this.dependencies.I18n.t('a11y.atTop'), { politeness: 'polite' });
 
       return;
     }
 
-    // Find the ROOT of the previous sibling subtree: the nearest block before
-    // the group, in the same container, at the same/shallower depth — skipping
-    // that sibling's own deeper descendants so the whole subtree is hopped.
-    const movingDepth = getBlockNestingDepth(group.anchor) ?? 0;
-    const precedingIndices = Array.from({ length: group.start }, (_, offset) => group.start - 1 - offset);
-    const predStart = precedingIndices.find((index) => {
-      const candidate = this.repository.getBlockByIndex(index);
-
-      return candidate !== undefined &&
-        candidate.parentId === group.containerParentId &&
-        (getBlockNestingDepth(candidate) ?? 0) <= movingDepth;
-    }) ?? 0;
-
     // Slide the group up so each member lands at predStart..(predStart + size).
     const size = group.end - group.start + 1;
 
     Array.from({ length: size }).forEach((_, offset) => {
-      this.move(predStart + offset, group.start + offset, false, blocksStore);
+      // skipAutoHeal: this is an in-container reorder (boundary-checked above), so
+      // the group's parentId is unchanged and the per-block heal would only corrupt
+      // a moved subtree's inner children.
+      this.move(predStart + offset, group.start + offset, false, blocksStore, false, true);
     });
 
     this.finishMove(group.anchor, selectedBlocks, 'a11y.movedUp');
@@ -818,7 +832,8 @@ export class BlockMutation {
     const neighbourSize = this.subtreeEndIndex(neighbourStart) - neighbourStart + 1;
 
     Array.from({ length: neighbourSize }).forEach((_, offset) => {
-      this.move(group.start + offset, neighbourStart + offset, false, blocksStore);
+      // skipAutoHeal: in-container reorder (boundary-checked above) — see moveCurrentBlockUp.
+      this.move(group.start + offset, neighbourStart + offset, false, blocksStore, false, true);
     });
 
     this.finishMove(group.anchor, selectedBlocks, 'a11y.movedDown');

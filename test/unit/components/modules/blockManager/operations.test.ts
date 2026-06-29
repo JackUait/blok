@@ -408,6 +408,45 @@ describe('BlockOperations', () => {
 
       expect(repo.blocks.map((block) => block.id)).toEqual(['a', 'b', 'b1']);
     });
+
+    it('preserves the STRUCTURAL nesting of the subtree it steps over (down)', () => {
+      // B owns the structural child B1 (parentId/contentIds, not flat depth).
+      // Moving A down lifts B's whole subtree past A; B1 must stay nested under B,
+      // not get flattened to the root by the per-block move auto-heal.
+      const a = createMockBlock({ id: 'a' });
+      const b = createMockBlock({ id: 'b', contentIds: ['b1'] });
+      const b1 = createMockBlock({ id: 'b1', parentId: 'b' });
+
+      const store = createBlocksStore([a, b, b1]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 0);
+      ops.setYjsSync(yjsSync);
+
+      ops.moveCurrentBlockDown(store);
+
+      expect(repo.blocks.map((block) => block.id)).toEqual(['b', 'b1', 'a']);
+      expect(b1.parentId).toBe('b');
+      expect(b.contentIds).toEqual(['b1']);
+    });
+
+    it('preserves the STRUCTURAL nesting of the subtree it steps over (up)', () => {
+      const b = createMockBlock({ id: 'b', contentIds: ['b1'] });
+      const b1 = createMockBlock({ id: 'b1', parentId: 'b' });
+      const a = createMockBlock({ id: 'a' });
+
+      const store = createBlocksStore([b, b1, a]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 2);
+      ops.setYjsSync(yjsSync);
+
+      ops.moveCurrentBlockUp(store);
+
+      expect(repo.blocks.map((block) => block.id)).toEqual(['a', 'b', 'b1']);
+      expect(b1.parentId).toBe('b');
+      expect(b.contentIds).toEqual(['b1']);
+    });
   });
 
   describe('moveCurrentBlock container boundary clamp (H15)', () => {

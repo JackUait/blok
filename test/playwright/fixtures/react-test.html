@@ -27,7 +27,7 @@
     import React, { useState, useCallback } from 'react';
     import { createRoot } from 'react-dom/client';
     import { jsx, jsxs } from 'react/jsx-runtime';
-    import { useBlok, BlokContent } from '/dist/react.mjs?_v=1';
+    import { useBlok, useBlocks, BlokContent } from '/dist/react.mjs?_v=1';
 
     // Import tools from the built dist
     const { Paragraph, Header } = await import('/dist/tools.mjs?_v=1');
@@ -52,6 +52,16 @@
           setStatus('ready');
         },
       });
+
+      // Expose the real useBlocks API (bound to the real built editor) on window
+      // so E2E can drive insertTree / insertMarkdown / insert against the genuine
+      // editor.blocks pipeline — no fakes. Re-exposed on every change so reads
+      // reflect the latest snapshot.
+      const blocks = useBlocks(editor);
+
+      React.useEffect(() => {
+        window.__blocksApi = blocks;
+      }, [blocks]);
 
       // Update status when editor becomes available
       React.useEffect(() => {

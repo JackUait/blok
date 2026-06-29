@@ -29,6 +29,7 @@
     "default": "По умолчанию",
     "parameter": "Аргумент",
     "name": "Имя",
+    "onThisPage": "На этой странице",
     "quickStartSteps": {
       "install": {
         "title": "Установка Blok",

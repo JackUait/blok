@@ -29,6 +29,7 @@
     "default": "Default",
     "parameter": "Parameter",
     "name": "Name",
+    "onThisPage": "On this page",
     "quickStartSteps": {
       "install": {
         "title": "Install Blok",

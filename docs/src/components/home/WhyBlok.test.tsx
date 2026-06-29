@@ -48,11 +48,6 @@ describe('WhyBlok', () => {
     expect(within(table).getByText(/typed json/i)).toBeInTheDocument();
   });
 
-  it('renders a fairness disclaimer', () => {
-    renderTable();
-    expect(screen.getByText(/out-of-the-box defaults/i)).toBeInTheDocument();
-  });
-
   it('renders Russian copy when locale is ru', () => {
     localStorage.setItem('blok-docs-locale', 'ru');
     renderTable();

@@ -76,6 +76,7 @@
   "tools.table.clickToAddColumn": "Kattintson új oszlop hozzáadásához",
   "tools.table.dragToAddRemoveColumns": "Húzza oszlopok hozzáadásához vagy eltávolításához",
   "blockSettings.delete": "Törlés",
+  "blockSettings.duplicate": "Megkettőzés",
   "blockSettings.copyLink": "Hivatkozás másolása a blokkra",
   "blockSettings.lastEdited": "Utoljára szerkesztve",
   "blockSettings.lastEditedBy": "Utoljára szerkesztette: {name}",

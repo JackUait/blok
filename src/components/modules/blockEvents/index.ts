@@ -191,6 +191,12 @@ export class BlockEvents extends Module {
       this.Blok.BlockManager.setCurrentBlockByChildNode(event.target);
     }
 
+    /**
+     * Typing starts a fresh vertical-navigation column: the next ArrowUp/Down
+     * should aim at the caret's new X, not a stale goal column from earlier.
+     */
+    this.Blok.Caret.resetGoalColumn();
+
     // Handle smart grouping for undo
     this.handleSmartGrouping(event);
 
@@ -314,6 +320,16 @@ export class BlockEvents extends Module {
     }
 
     /**
+     * Notion parity: "/" only opens the command menu in text-like blocks. In
+     * blocks such as Code (or Table) "/" is a literal character — the menu must
+     * not open. Bail out (without preventing default) so the slash is typed
+     * normally. Generalizes to ALL non-text blocks via the tool's own settings.
+     */
+    if (!this.isTextLikeBlock()) {
+      return;
+    }
+
+    /**
      * @todo Handle case when slash pressed when several blocks are selected
      */
 
@@ -343,6 +359,37 @@ export class BlockEvents extends Module {
     this.Blok.Toolbar.discardPlusContext();
 
     this.activateToolbox();
+  }
+
+  /**
+   * Whether the current block is "text-like" — i.e. a block where "/" should
+   * open the command menu (paragraph, header, list, quote…) rather than be
+   * inserted as a literal character (code, table…).
+   *
+   * A block is treated as text-like when its tool is the default block, or
+   * when it opts into the inline toolbar AND does not manage its own line
+   * breaks. Tools that manage line breaks (Code, Table) own the full keyboard
+   * inside their content, so "/" must stay a literal character there.
+   *
+   * When no block can be resolved the prior behavior is preserved (treat as
+   * text-like) so the regular paragraph/header slash menu is never blocked.
+   */
+  private isTextLikeBlock(): boolean {
+    const tool = this.Blok.BlockManager.currentBlock?.tool;
+
+    if (tool === undefined) {
+      return true;
+    }
+
+    if (tool.isDefault) {
+      return true;
+    }
+
+    if (tool.isLineBreaksEnabled) {
+      return false;
+    }
+
+    return tool.enabledInlineTools !== false;
   }
 
   /**

@@ -76,6 +76,7 @@
   "tools.table.clickToAddColumn": "نئون ڪالم شامل ڪرڻ لاءِ ڪلڪ ڪريو",
   "tools.table.dragToAddRemoveColumns": "ڪالم شامل يا ختم ڪرڻ لاءِ ڇڪيو",
   "blockSettings.delete": "ختم ڪريو",
+  "blockSettings.duplicate": "نقل ٺاهيو",
   "blockSettings.copyLink": "بلاڪ ڏانهن لنڪ ڪاپي ڪريو",
   "blockSettings.lastEdited": "آخري ترميم",
   "blockSettings.lastEditedBy": "آخري ترميم: {name}",

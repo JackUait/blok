@@ -76,6 +76,7 @@
   "tools.table.clickToAddColumn": "Klikněte pro přidání nového sloupce",
   "tools.table.dragToAddRemoveColumns": "Přetáhněte pro přidání nebo odebrání sloupců",
   "blockSettings.delete": "Smazat",
+  "blockSettings.duplicate": "Duplikovat",
   "blockSettings.copyLink": "Kopírovat odkaz na blok",
   "blockSettings.lastEdited": "Naposledy upraveno",
   "blockSettings.lastEditedBy": "Naposledy upravil/a {name}",

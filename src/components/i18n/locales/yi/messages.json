@@ -76,6 +76,7 @@
   "tools.table.clickToAddColumn": "קליק צו צולייגן אַ נײַע שפּאַלט",
   "tools.table.dragToAddRemoveColumns": "שלעפּ צו צולייגן אָדער אויסמעקן שפּאַלטן",
   "blockSettings.delete": "אויסמעקן",
+  "blockSettings.duplicate": "דופּליקירן",
   "blockSettings.copyLink": "קאָפּירן לינק צום בלאָק",
   "blockSettings.lastEdited": "לעצט רעדאַקטירט",
   "blockSettings.lastEditedBy": "לעצט רעדאַקטירט דורך {name}",

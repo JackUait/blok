@@ -51,6 +51,7 @@
   "tools.header.toggleHeading3": "ຫົວຂໍ້ພັບ 3",
   "tools.list.placeholder": "ລາຍການ",
   "blockSettings.delete": "ລຶບ",
+  "blockSettings.duplicate": "ເຮັດສຳເນົາ",
   "blockSettings.copyLink": "ສຳເນົາລິ້ງໄປຫາບລັອກ",
   "blockSettings.lastEdited": "ແກ້ໄຂລ່າສຸດ",
   "blockSettings.lastEditedBy": "ແກ້ໄຂລ່າສຸດໂດຍ {name}",

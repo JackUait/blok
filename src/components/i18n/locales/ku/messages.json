@@ -76,6 +76,7 @@
   "tools.table.clickToAddColumn": "کلیک بکە بۆ زیادکردنی ستوونی نوێ",
   "tools.table.dragToAddRemoveColumns": "ڕاکێشە بۆ زیادکردن یان سڕینەوەی ستوون",
   "blockSettings.delete": "سڕینەوە",
+  "blockSettings.duplicate": "دووبارەکردنەوە",
   "blockSettings.copyLink": "کۆپیکردنی لینکی بلۆک",
   "blockSettings.lastEdited": "دوایین دەستکاری",
   "blockSettings.lastEditedBy": "دوایین دەستکاری لەلایەن {name}",

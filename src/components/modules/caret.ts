@@ -106,6 +106,42 @@ export class Caret extends Module {
   }
 
   /**
+   * Sticky "goal column" for Notion-style vertical navigation.
+   *
+   * The desired horizontal X is captured on the FIRST vertical move and reused on
+   * every subsequent consecutive vertical move, so the caret keeps its intended
+   * column while passing through shorter lines instead of drifting toward them.
+   * Reset to null by any non-vertical caret action (horizontal navigation or a
+   * caret placement triggered by an edit), so the next vertical move captures a
+   * fresh column.
+   */
+  private goalColumnX: number | null = null;
+
+  /**
+   * Resolves the goal column X for a vertical move: captures the live caret X on
+   * the first move of a streak, then reuses that cached value on every subsequent
+   * consecutive vertical move so the column stays sticky across shorter lines.
+   */
+  private resolveGoalColumnX(): number | null {
+    if (this.goalColumnX === null) {
+      this.goalColumnX = getCaretXPosition();
+    }
+
+    return this.goalColumnX;
+  }
+
+  /**
+   * Clears the sticky vertical-navigation goal column so the next vertical move
+   * recomputes it. Called whenever the caret moves for a NON-vertical reason
+   * (horizontal navigation, or a caret placement triggered by an edit). External
+   * handlers (text input, pointer clicks) should also call this so typing or
+   * clicking before a vertical move starts a fresh column.
+   */
+  public resetGoalColumn(): void {
+    this.goalColumnX = null;
+  }
+
+  /**
    * Method gets Block instance and puts caret to the text node with offset
    * There two ways that method applies caret position:
    * - first found text node: sets at the beginning, but you can pass an offset
@@ -116,6 +152,13 @@ export class Caret extends Module {
    * @param {number} offset - caret offset regarding to the block content
    */
   public setToBlock(block: Block, position: string = this.positions.DEFAULT, offset = 0): void {
+    /**
+     * A non-vertical caret placement (edit, click handler, programmatic move)
+     * resets the sticky vertical goal column. Vertical navigation preserves the
+     * column by routing through setToBlockAtXPosition instead of this method.
+     */
+    this.resetGoalColumn();
+
     const { BlockManager, BlockSelection } = this.Blok;
 
     /**
@@ -247,6 +290,12 @@ export class Caret extends Module {
    * @param {number} offset - caret offset regarding to the text node
    */
   public setToInput(input: HTMLElement, position: string = this.positions.DEFAULT, offset = 0): void {
+    /**
+     * A non-vertical caret placement resets the sticky vertical goal column.
+     * Vertical navigation preserves the column via setToInputAtXPosition instead.
+     */
+    this.resetGoalColumn();
+
     const { currentBlock } = this.Blok.BlockManager;
 
     this.setCaretToInputPosition(input, position, offset);
@@ -502,6 +551,12 @@ export class Caret extends Module {
    *   other callers keep the create-to-exit affordance.
    */
   public navigateNext(force = false, allowBlockCreation = true): boolean {
+    /**
+     * Horizontal navigation (ArrowRight / Tab) resets the sticky vertical goal
+     * column so a subsequent vertical move starts from the caret's new position.
+     */
+    this.resetGoalColumn();
+
     const { BlockManager } = this.Blok;
     const { currentBlock, nextVisibleBlock: nextBlock } = BlockManager;
 
@@ -609,6 +664,12 @@ export class Caret extends Module {
    * @param {boolean} force - pass true to skip check for caret position
    */
   public navigatePrevious(force = false): boolean {
+    /**
+     * Horizontal navigation (ArrowLeft / Shift+Tab) resets the sticky vertical
+     * goal column so a subsequent vertical move starts from the new position.
+     */
+    this.resetGoalColumn();
+
     const { currentBlock, previousVisibleBlock: previousBlock } = this.Blok.BlockManager;
 
     if (!currentBlock) {
@@ -745,9 +806,11 @@ export class Caret extends Module {
     }
 
     /**
-     * Save the current caret X position before navigation
+     * Use the sticky goal column: capture the X on the first vertical move of a
+     * streak, then reuse it for every subsequent consecutive vertical move so the
+     * caret keeps its intended column instead of drifting toward shorter lines.
      */
-    const caretX = getCaretXPosition();
+    const caretX = this.resolveGoalColumnX();
 
     /**
      * Navigate to next input within the block first
@@ -865,9 +928,11 @@ export class Caret extends Module {
     }
 
     /**
-     * Save the current caret X position before navigation
+     * Use the sticky goal column (see navigateVerticalNext): the X is captured
+     * once on the first vertical move and reused on consecutive moves, so the
+     * caret keeps its column when passing UP through shorter lines.
      */
-    const caretX = getCaretXPosition();
+    const caretX = this.resolveGoalColumnX();
 
     /**
      * Navigate to previous input within the block first

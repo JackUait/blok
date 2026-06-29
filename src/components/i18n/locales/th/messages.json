@@ -53,6 +53,7 @@
   "tools.header.toggleHeading3": "หัวข้อพับได้ 3",
   "tools.list.placeholder": "รายการ",
   "blockSettings.delete": "ลบ",
+  "blockSettings.duplicate": "ทำซ้ำ",
   "blockSettings.copyLink": "คัดลอกลิงก์ไปยังบล็อก",
   "blockSettings.lastEdited": "แก้ไขล่าสุด",
   "blockSettings.lastEditedBy": "แก้ไขล่าสุดโดย {name}",

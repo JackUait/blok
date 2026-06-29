@@ -58,6 +58,7 @@
   "tools.toggle.ariaLabelCollapse": "Ծալել",
   "tools.toggle.ariaLabelExpand": "Ծավալել",
   "blockSettings.delete": "Ջնջել",
+  "blockSettings.duplicate": "Կրկնօրինակել",
   "blockSettings.copyLink": "Պատճենել բլոկի հղումը",
   "blockSettings.lastEdited": "Վերջին խմբագրում",
   "blockSettings.lastEditedBy": "Վերջին անգամ խմբագրել է {name}",

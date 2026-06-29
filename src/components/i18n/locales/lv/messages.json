@@ -53,6 +53,7 @@
   "tools.header.toggleHeading3": "Pārslēdzams virsraksts 3",
   "tools.list.placeholder": "Saraksts",
   "blockSettings.delete": "Dzēst",
+  "blockSettings.duplicate": "Dublēt",
   "blockSettings.copyLink": "Kopēt saiti uz bloku",
   "blockSettings.lastEdited": "Pēdējo reizi rediģēts",
   "blockSettings.lastEditedBy": "Pēdējo reizi rediģēja {name}",

@@ -58,6 +58,7 @@
   "tools.toggle.ariaLabelCollapse": "संकुचित करें",
   "tools.toggle.ariaLabelExpand": "विस्तृत करें",
   "blockSettings.delete": "हटाएं",
+  "blockSettings.duplicate": "प्रतिलिपि बनाएँ",
   "blockSettings.copyLink": "ब्लॉक का लिंक कॉपी करें",
   "blockSettings.lastEdited": "अंतिम बार संपादित",
   "blockSettings.lastEditedBy": "{name} द्वारा अंतिम बार संपादित",

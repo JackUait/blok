@@ -58,6 +58,7 @@
   "tools.toggle.ariaLabelCollapse": "Réduire",
   "tools.toggle.ariaLabelExpand": "Développer",
   "blockSettings.delete": "Supprimer",
+  "blockSettings.duplicate": "Dupliquer",
   "blockSettings.copyLink": "Copier le lien du bloc",
   "blockSettings.lastEdited": "Dernière modification",
   "blockSettings.lastEditedBy": "Dernière modification par {name}",

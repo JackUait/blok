@@ -110,6 +110,7 @@ const createBlokModules = (overrides: Partial<BlokModules> = {}): BlokModules =>
     BlockSelection: {
       anyBlockSelected: false,
       clearSelection: vi.fn(),
+      selectBlock: vi.fn(),
     } as unknown as BlokModules['BlockSelection'],
     CrossBlockSelection: {
       toggleBlockSelectedState: vi.fn(),
@@ -1813,11 +1814,12 @@ describe('KeyboardNavigation', () => {
       isCaretAtStartOfInputSpy.mockRestore();
     });
 
-    it('navigates to previous block when blocks are not mergeable', () => {
+    it('selects the previous block when it is not mergeable (so a second Backspace deletes it)', () => {
       const previousBlock = createBlock({ id: 'previous-block', isEmpty: false, mergeable: false });
       const mockBlock = createBlock({ id: 'current-block', isEmpty: false });
       const close = vi.fn();
       const setToBlock = vi.fn();
+      const selectBlock = vi.fn();
       const mergeBlocks = vi.fn(() => Promise.resolve());
       const blok = createBlokModules({
         BlockManager: {
@@ -1829,6 +1831,11 @@ describe('KeyboardNavigation', () => {
           setToBlock,
           positions: { START: 'start', END: 'end', DEFAULT: 'default' },
         } as unknown as BlokModules['Caret'],
+        BlockSelection: {
+          anyBlockSelected: false,
+          clearSelection: vi.fn(),
+          selectBlock,
+        } as unknown as BlokModules['BlockSelection'],
         Toolbar: {
           close,
         } as unknown as BlokModules['Toolbar'],
@@ -1842,7 +1849,10 @@ describe('KeyboardNavigation', () => {
 
       expect(close).toHaveBeenCalled();
       expect(mergeBlocks).not.toHaveBeenCalled();
-      expect(setToBlock).toHaveBeenCalledWith(previousBlock, 'end');
+      // Notion parity: a non-mergeable previous block (e.g. an image) is SELECTED,
+      // not parked-at-end, so the next Backspace removes it.
+      expect(selectBlock).toHaveBeenCalledWith(previousBlock);
+      expect(setToBlock).not.toHaveBeenCalled();
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
 
       isCaretAtStartOfInputSpy.mockRestore();

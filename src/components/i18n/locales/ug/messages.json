@@ -76,6 +76,7 @@
   "tools.table.clickToAddColumn": "يېڭى ئىستون قوشۇش ئۈچۈن چېكىڭ",
   "tools.table.dragToAddRemoveColumns": "ئىستون قوشۇش ياكى ئۆچۈرۈش ئۈچۈن سۆرەڭ",
   "blockSettings.delete": "ئۆچۈرۈش",
+  "blockSettings.duplicate": "كۆپەيتىش",
   "blockSettings.copyLink": "بۆلەككە ئۇلانما كۆچۈرۈش",
   "blockSettings.lastEdited": "ئاخىرقى تەھرىرلەش",
   "blockSettings.lastEditedBy": "{name} ئاخىرقى تەھرىرلىگەن",

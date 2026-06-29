@@ -74,6 +74,7 @@
   "tools.table.clickToAddColumn": "പുതിയ കോളം ചേർക്കാൻ ക്ലിക്ക് ചെയ്യുക",
   "tools.table.dragToAddRemoveColumns": "കോളങ്ങൾ ചേർക്കാനോ നീക്കാനോ വലിച്ചിടുക",
   "blockSettings.delete": "ഇല്ലാതാക്കുക",
+  "blockSettings.duplicate": "തനിപ്പകർപ്പ്",
   "blockSettings.copyLink": "ബ്ലോക്കിലേക്കുള്ള ലിങ്ക് പകർത്തുക",
   "blockSettings.lastEdited": "അവസാനം തിരുത്തിയത്",
   "blockSettings.lastEditedBy": "{name} അവസാനം തിരുത്തിയത്",

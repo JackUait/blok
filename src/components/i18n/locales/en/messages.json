@@ -85,6 +85,7 @@
   "tools.table.placementBottomCenter": "Bottom Center",
   "tools.table.placementBottomRight": "Bottom Right",
   "blockSettings.delete": "Delete",
+  "blockSettings.duplicate": "Duplicate",
   "blockSettings.lastEdited": "Last edited",
   "blockSettings.lastEditedBy": "Last edited by {name}",
   "blockSettings.copyLink": "Copy link to block",

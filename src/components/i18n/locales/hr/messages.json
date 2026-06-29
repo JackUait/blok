@@ -76,6 +76,7 @@
   "tools.table.clickToAddColumn": "Klikni za dodavanje novog stupca",
   "tools.table.dragToAddRemoveColumns": "Povuci za dodavanje ili uklanjanje stupaca",
   "blockSettings.delete": "Obriši",
+  "blockSettings.duplicate": "Dupliciraj",
   "blockSettings.copyLink": "Kopiraj poveznicu na blok",
   "blockSettings.lastEdited": "Zadnje uređivanje",
   "blockSettings.lastEditedBy": "Zadnje uredio/la {name}",

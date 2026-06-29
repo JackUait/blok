@@ -53,6 +53,7 @@
   "tools.header.toggleHeading3": "Prepínací nadpis 3",
   "tools.list.placeholder": "Zoznam",
   "blockSettings.delete": "Odstrániť",
+  "blockSettings.duplicate": "Duplikovať",
   "blockSettings.copyLink": "Kopírovať odkaz na blok",
   "blockSettings.lastEdited": "Naposledy upravené",
   "blockSettings.lastEditedBy": "Naposledy upravil(a) {name}",

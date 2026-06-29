@@ -51,6 +51,7 @@
   "tools.header.toggleHeading3": "मोड्ने शीर्षक ३",
   "tools.list.placeholder": "सूची",
   "blockSettings.delete": "मेटाउनुहोस्",
+  "blockSettings.duplicate": "नक्कल बनाउनुहोस्",
   "blockSettings.copyLink": "ब्लकको लिंक प्रतिलिपि गर्नुहोस्",
   "blockSettings.lastEdited": "अन्तिम सम्पादन",
   "blockSettings.lastEditedBy": "{name} द्वारा अन्तिम सम्पादन",

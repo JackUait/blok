@@ -511,10 +511,25 @@ export class KeyboardController extends Controller {
     }
 
     /**
-     * Clear blocks selection by ESC (but not when entering navigation mode)
+     * Clear blocks selection by ESC (but not when entering navigation mode).
+     *
+     * Notion parity (BUG #19): Escape from the all-blocks selection (Cmd+A
+     * twice) must clear the highlight AND return a text caret, so that case
+     * restores the caret; partial selections just clear.
      */
     if (this.Blok.BlockSelection.anyBlockSelected) {
-      this.Blok.BlockSelection.clearSelection(event);
+      if (this.Blok.BlockSelection.allBlocksSelected) {
+        this.clearAllBlocksSelectionRestoringCaret(event);
+
+        /**
+         * Stop the event here so downstream Escape listeners (block.holder keydown,
+         * navigation mode) don't run and blur the caret we just restored.
+         */
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      } else {
+        this.Blok.BlockSelection.clearSelection(event);
+      }
 
       return;
     }
@@ -573,6 +588,32 @@ export class KeyboardController extends Controller {
     }
 
     this.Blok.Toolbar.close();
+  }
+
+  /**
+   * Clears an all-blocks selection on Escape and returns a text caret to the
+   * editor (Notion parity, BUG #19). selectAllBlocks removed the native range,
+   * so restore the saved selection; if nothing was restored, fall back to
+   * focusing a previously selected block so the user never ends up caretless.
+   * @param event - the Escape keydown event that triggered the clear
+   */
+  private clearAllBlocksSelectionRestoringCaret(event: KeyboardEvent): void {
+    const { BlockSelection, Caret } = this.Blok;
+    const [fallbackBlock] = BlockSelection.selectedBlocks;
+
+    BlockSelection.clearSelection(event, true);
+
+    /**
+     * `selectAllBlocks` removed the native range, so `restoreSelection` has no real
+     * caret to bring back, and any leftover range from the block selection is not
+     * inside an editable block. Deterministically return the caret to the END of the
+     * first formerly-selected block so focus lands back in the editor (Notion's
+     * Escape behaviour) — gating on `isSelectionExists` skipped it, because that flag
+     * can be true for a stale, non-editable range.
+     */
+    if (fallbackBlock !== undefined) {
+      Caret.setToBlock(fallbackBlock, Caret.positions.END);
+    }
   }
 
   /**

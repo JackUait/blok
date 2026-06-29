@@ -76,6 +76,7 @@
   "tools.table.clickToAddColumn": "Klikk for å legge til en ny kolonne",
   "tools.table.dragToAddRemoveColumns": "Dra for å legge til eller fjerne kolonner",
   "blockSettings.delete": "Slett",
+  "blockSettings.duplicate": "Dupliser",
   "blockSettings.copyLink": "Kopier lenke til blokk",
   "blockSettings.lastEdited": "Sist redigert",
   "blockSettings.lastEditedBy": "Sist redigert av {name}",

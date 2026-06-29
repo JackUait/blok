@@ -601,6 +601,11 @@ export class Header implements BlockTool {
       level: level,
       text: this.data.text,
       isToggleable: this._data.isToggleable,
+      // Block-level color is a separate data field (not part of the text export),
+      // so it must be retained explicitly on a level change — exactly like
+      // isToggleable — or normalizeData() drops it and the heading loses its color.
+      textColor: this._data.textColor,
+      backgroundColor: this._data.backgroundColor,
     };
   }
 

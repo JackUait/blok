@@ -51,6 +51,7 @@
   "tools.header.toggleHeading3": "మడత శీర్షిక 3",
   "tools.list.placeholder": "జాబితా",
   "blockSettings.delete": "తొలగించు",
+  "blockSettings.duplicate": "నకలు చేయండి",
   "blockSettings.copyLink": "బ్లాక్‌కు లింక్ కాపీ చేయి",
   "blockSettings.lastEdited": "చివరిగా సవరించబడింది",
   "blockSettings.lastEditedBy": "{name} చివరిగా సవరించారు",

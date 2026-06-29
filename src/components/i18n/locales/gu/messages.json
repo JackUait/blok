@@ -56,6 +56,7 @@
   "tools.toggle.ariaLabelCollapse": "સંકોચો",
   "tools.toggle.ariaLabelExpand": "વિસ્તૃત કરો",
   "blockSettings.delete": "કાઢી નાખો",
+  "blockSettings.duplicate": "નકલ બનાવો",
   "blockSettings.copyLink": "બ્લોકની લિંક કૉપી કરો",
   "blockSettings.lastEdited": "છેલ્લે સંપાદિત",
   "blockSettings.lastEditedBy": "{name} દ્વારા છેલ્લે સંપાદિત",

@@ -76,6 +76,7 @@
   "tools.table.clickToAddColumn": "Кликните за додавање нове колоне",
   "tools.table.dragToAddRemoveColumns": "Превуците за додавање или уклањање колона",
   "blockSettings.delete": "Обриши",
+  "blockSettings.duplicate": "Дуплирај",
   "blockSettings.copyLink": "Копирај везу ка блоку",
   "blockSettings.lastEdited": "Последња измена",
   "blockSettings.lastEditedBy": "Последња измена: {name}",

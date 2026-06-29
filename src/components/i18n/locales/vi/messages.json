@@ -76,6 +76,7 @@
   "tools.table.clickToAddColumn": "Nhấp để thêm cột mới",
   "tools.table.dragToAddRemoveColumns": "Kéo để thêm hoặc xóa cột",
   "blockSettings.delete": "Xóa",
+  "blockSettings.duplicate": "Nhân bản",
   "blockSettings.copyLink": "Sao chép liên kết đến khối",
   "blockSettings.lastEdited": "Chỉnh sửa lần cuối",
   "blockSettings.lastEditedBy": "Chỉnh sửa lần cuối bởi {name}",

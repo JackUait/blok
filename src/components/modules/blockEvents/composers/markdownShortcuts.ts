@@ -7,17 +7,24 @@ import { BlockEventComposer } from './__base';
  * Per-marker inline-markdown rules. `literal` is the regex-escaped marker,
  * `double` the tag for the `**`/`__`/`~~` form (null when there is none), and
  * `single` the tag for the single-marker form.
+ *
+ * `singleOpenGuard` is an optional regex lookbehind prepended to the single-marker
+ * rule. CommonMark disallows intraword `_` emphasis (so `snake_case_` must NOT
+ * italicise), while intraword `*` IS allowed — hence the guard only exists for `_`.
  */
-const INLINE_RULES: Record<string, { literal: string; double: string | null; single: string }> = {
+const INLINE_RULES: Record<string, { literal: string; double: string | null; single: string; singleOpenGuard?: string }> = {
   '*': { literal: '\\*', double: 'strong', single: 'i' },
-  '_': { literal: '_', double: 'strong', single: 'i' },
+  '_': { literal: '_', double: 'strong', single: 'i', singleOpenGuard: '(?<![A-Za-z0-9])' },
   '`': { literal: '`', double: null, single: 'code' },
   '~': { literal: '~', double: 's', single: 's' },
 };
 
 interface InlineMarkdownMatch {
-  /** Tag the span should be wrapped in (e.g. 'strong', 'i', 'code', 's'). */
-  tag: string;
+  /**
+   * Tags the span should be wrapped in, outermost first (e.g. ['strong'] or,
+   * for the triple `***…***` form, ['strong', 'i'] → `<strong><i>…</i></strong>`).
+   */
+  tags: string[];
   /** Text content between the markers. */
   inner: string;
   /** Length (in characters) of the full `marker + inner + marker` match. */
@@ -43,24 +50,37 @@ const detectInlineMarkdown = (text: string, marker: string): InlineMarkdownMatch
     return null;
   }
 
-  const { literal, double: doubleTag, single: singleTag } = rule;
+  const { literal, double: doubleTag, single: singleTag, singleOpenGuard = '' } = rule;
 
   // Notion only auto-formats CONTIGUOUS spans: leading/trailing inner whitespace
   // (e.g. `** bold **`, `* x *`) is left as typed.
   const hasEdgeWhitespace = (inner: string): boolean => /^\s|\s$/.test(inner);
 
-  if (doubleTag !== null) {
-    const double = new RegExp(`${literal}${literal}([^${marker}]+)${literal}${literal}$`).exec(text);
+  // Triple markers (`***bolditalic***`) wrap the inner text as BOTH bold and
+  // italic, consuming all three markers on each side. The leading `(?<!literal)`
+  // also stops the double rule below from half-matching `***x**` mid-typing.
+  if (doubleTag !== null && doubleTag !== singleTag) {
+    const triple = new RegExp(
+      `(?<!${literal})${literal}${literal}${literal}([^${marker}]+)${literal}${literal}${literal}$`
+    ).exec(text);
 
-    if (double !== null && !hasEdgeWhitespace(double[1])) {
-      return { tag: doubleTag, inner: double[1], length: double[0].length };
+    if (triple !== null && !hasEdgeWhitespace(triple[1])) {
+      return { tags: [doubleTag, singleTag], inner: triple[1], length: triple[0].length };
     }
   }
 
-  const single = new RegExp(`(?<!${literal})${literal}([^${marker}]+)${literal}$`).exec(text);
+  if (doubleTag !== null) {
+    const double = new RegExp(`(?<!${literal})${literal}${literal}([^${marker}]+)${literal}${literal}$`).exec(text);
+
+    if (double !== null && !hasEdgeWhitespace(double[1])) {
+      return { tags: [doubleTag], inner: double[1], length: double[0].length };
+    }
+  }
+
+  const single = new RegExp(`${singleOpenGuard}(?<!${literal})${literal}([^${marker}]+)${literal}$`).exec(text);
 
   if (single !== null && !hasEdgeWhitespace(single[1])) {
-    return { tag: singleTag, inner: single[1], length: single[0].length };
+    return { tags: [singleTag], inner: single[1], length: single[0].length };
   }
 
   return null;
@@ -92,6 +112,15 @@ export class MarkdownShortcuts extends BlockEventComposer {
      */
     if (event.data === '-') {
       return this.handleDividerShortcut();
+    }
+
+    /**
+     * Code-block shortcut triggers on the third backtick — no space needed,
+     * mirroring the divider's "---" behaviour. When the text is not a bare
+     * "```" the backtick falls through to inline `code` auto-formatting below.
+     */
+    if (event.data === '`' && this.handleCodeShortcut()) {
+      return true;
     }
 
     if (event.data !== ' ') {
@@ -296,9 +325,18 @@ export class MarkdownShortcuts extends BlockEventComposer {
       fragment.appendChild(document.createTextNode(beforeText));
     }
 
-    const wrapper = document.createElement(match.tag);
+    // Build the (possibly nested) wrapper, outermost tag first. For the triple
+    // `***…***` form this yields `<strong><i>…</i></strong>`.
+    const wrapper = document.createElement(match.tags[0]);
+    const innermost = match.tags.slice(1).reduce<HTMLElement>((parent, tag) => {
+      const child = document.createElement(tag);
 
-    wrapper.textContent = match.inner;
+      parent.appendChild(child);
+
+      return child;
+    }, wrapper);
+
+    innermost.textContent = match.inner;
     fragment.appendChild(wrapper);
 
     const afterNode = afterText.length > 0 ? document.createTextNode(afterText) : null;
@@ -666,7 +704,9 @@ export class MarkdownShortcuts extends BlockEventComposer {
 
     this.Blok.YjsManager.stopCapturing();
 
-    const shortcutLength = 4; // "```" + space
+    // "```" alone removes 3 chars; "``` …" removes the backticks plus the space.
+    const remainingText = match[1] ?? '';
+    const shortcutLength = textContent.length - remainingText.length;
     const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
 
     const newBlock = BlockManager.replace(currentBlock, CODE_TOOL_NAME, {

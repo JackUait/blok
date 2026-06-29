@@ -56,6 +56,7 @@
   "tools.toggle.ariaLabelCollapse": "সংকুচিত করুন",
   "tools.toggle.ariaLabelExpand": "প্রসারিত করুন",
   "blockSettings.delete": "মুছুন",
+  "blockSettings.duplicate": "প্রতিলিপি",
   "blockSettings.copyLink": "ব্লকের লিঙ্ক কপি করুন",
   "blockSettings.lastEdited": "সর্বশেষ সম্পাদনা",
   "blockSettings.lastEditedBy": "{name} দ্বারা সর্বশেষ সম্পাদনা",

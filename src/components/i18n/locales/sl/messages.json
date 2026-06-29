@@ -76,6 +76,7 @@
   "tools.table.clickToAddColumn": "Kliknite za dodajanje novega stolpca",
   "tools.table.dragToAddRemoveColumns": "Povlecite za dodajanje ali odstranjevanje stolpcev",
   "blockSettings.delete": "Izbriši",
+  "blockSettings.duplicate": "Podvoji",
   "blockSettings.copyLink": "Kopiraj povezavo do bloka",
   "blockSettings.lastEdited": "Nazadnje urejeno",
   "blockSettings.lastEditedBy": "Nazadnje uredil(a) {name}",

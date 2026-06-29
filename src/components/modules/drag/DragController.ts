@@ -1406,7 +1406,20 @@ export class DragController extends Module {
     const duplicated = resultRef.current.duplicatedBlocks;
 
     if (duplicated.length > 0) {
-      this.Blok.Toolbar.moveAndOpen(duplicated[0]);
+      const [firstCopy] = duplicated;
+
+      /**
+       * applyDuplicates block-selects the copies — correct for alt-drag, but the
+       * Cmd/Ctrl+D path mirrors Notion by landing a text caret in the new copy
+       * ready to edit. Clear that lingering block selection and focus the first
+       * copy instead. Guarded because narrow drag test harnesses omit Caret.
+       */
+      if (this.Blok.Caret !== undefined) {
+        this.Blok.BlockSelection.clearSelection();
+        this.Blok.Caret.setToBlock(firstCopy, this.Blok.Caret.positions.END);
+      }
+
+      this.Blok.Toolbar.moveAndOpen(firstCopy);
     }
 
     return duplicated;

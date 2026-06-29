@@ -138,7 +138,10 @@ export const WhyBlok: React.FC = () => {
             <table className="w-full min-w-[40rem] border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-black/[0.06] dark:border-white/[0.08]">
-                  <th scope="col" className="px-5 py-4 font-medium text-muted-foreground">
+                  <th
+                    scope="col"
+                    className="sticky left-0 z-20 bg-card px-5 py-4 font-medium text-muted-foreground"
+                  >
                     {t("home.whyBlok.colCapability")}
                   </th>
                   <th
@@ -166,7 +169,7 @@ export const WhyBlok: React.FC = () => {
                   >
                     <th
                       scope="row"
-                      className="px-5 py-4 font-medium text-foreground"
+                      className="sticky left-0 z-10 bg-card px-5 py-4 font-medium text-foreground"
                     >
                       {t(`home.whyBlok.${row.labelKey}`)}
                     </th>

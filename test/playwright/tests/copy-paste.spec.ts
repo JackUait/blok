@@ -736,6 +736,8 @@ test.describe('copy and paste', () => {
       await secondParagraph.click();
       const commandModifier = await getCommandModifierKey(page);
 
+      // Cmd+A is a 3-stage escalation: text → this block → all blocks.
+      await page.keyboard.press(`${commandModifier}+A`);
       await page.keyboard.press(`${commandModifier}+A`);
       await page.keyboard.press(`${commandModifier}+A`);
 
@@ -788,6 +790,8 @@ test.describe('copy and paste', () => {
       await secondParagraph.click();
       const commandModifier = await getCommandModifierKey(page);
 
+      // Cmd+A is a 3-stage escalation: text → this block → all blocks.
+      await page.keyboard.press(`${commandModifier}+A`);
       await page.keyboard.press(`${commandModifier}+A`);
       await page.keyboard.press(`${commandModifier}+A`);
 
@@ -826,6 +830,8 @@ test.describe('copy and paste', () => {
       const firstParagraph = getParagraphByIndex(page, 0);
 
       await firstParagraph.click();
+      // Cmd+A is a 3-stage escalation: text → this block → all blocks.
+      await page.keyboard.press('Control+A');
       await page.keyboard.press('Control+A');
       await page.keyboard.press('Control+A');
 

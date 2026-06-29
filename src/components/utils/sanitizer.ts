@@ -373,7 +373,15 @@ const mergeTagRules = (globalRules: SanitizerConfig, fieldRules: SanitizerConfig
     const globalValue = globalRules[tag];
     const fieldValue = fieldRules ? fieldRules[tag] : undefined;
 
-    if (isFunction(fieldValue)) {
+    /**
+     * A tool's field FUNCTION rule only beats the global rule when the global
+     * rule is itself a function (the field rule is the more specific one). When
+     * the user's global config provides an explicit non-function rule for the
+     * tag (e.g. `span: true`), that deliberate override must win — otherwise a
+     * tool's narrow function (e.g. equation-span) would silently strip what the
+     * user allowed globally.
+     */
+    if (isFunction(fieldValue) && isFunction(globalValue)) {
       merged[tag] = cloneTagConfig(fieldValue as SanitizerRule);
 
       continue;
@@ -391,7 +399,7 @@ const mergeTagRules = (globalRules: SanitizerConfig, fieldRules: SanitizerConfig
       continue;
     }
 
-    if (fieldValue !== undefined) {
+    if (fieldValue !== undefined && !isFunction(fieldValue)) {
       merged[tag] = cloneTagConfig(fieldValue);
 
       continue;

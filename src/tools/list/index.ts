@@ -34,7 +34,7 @@ import {
   updateMarkersInRange,
   updateAllOrderedListMarkers,
 } from './list-helpers';
-import { handleEnter, handleBackspace } from './list-keyboard';
+import { handleEnter, handleBackspace, handleOutdent } from './list-keyboard';
 import { renderListItem } from './list-lifecycle';
 import { ListMarkerCalculator } from './marker-calculator';
 import { OrderedMarkerManager } from './ordered-marker-manager';
@@ -406,13 +406,26 @@ export class ListItem implements BlockTool {
     }
 
     /**
-     * Tab / Shift+Tab are intentionally NOT handled here. List nesting is now
-     * structural (parentId/contentIds) and is performed by the shared module
-     * keydown handler (KeyboardNavigation.handleTab) — the SAME path text and
-     * headers use. Leaving the event un-prevented lets it reach that handler,
-     * which nests the item under its preceding sibling (Tab) or outdents it to
-     * the grandparent (Shift+Tab). Depth is then DERIVED from tree position.
+     * Tab / Shift+Tab nesting is normally structural (parentId/contentIds) and
+     * handled by the shared module keydown handler (KeyboardNavigation.handleTab)
+     * — the SAME path text and headers use. Leaving the event un-prevented lets
+     * it reach that handler, which nests the item under its preceding sibling
+     * (Tab) or outdents it to the grandparent (Shift+Tab).
+     *
+     * Exception: items nested via the FLAT `data.depth` carrier (drag-nested, or
+     * authored from data with `depth` but no list parentId) have no structural
+     * parent for that handler to act on — its outdent is a no-op for them. Handle
+     * Shift+Tab here for that case by decrementing the flat depth carrier and
+     * restoring the caret to the content element.
      */
+    if (event.key === 'Tab' && event.shiftKey) {
+      const isFlatNested = this.getStructuralListDepth() === null && this.getDepth() > 0;
+
+      if (isFlatNested) {
+        event.preventDefault();
+        void this.handleOutdent();
+      }
+    }
   }
 
   private async handleEnter(): Promise<void> {
@@ -441,6 +454,20 @@ export class ListItem implements BlockTool {
     };
 
     await handleBackspace(context, event);
+  }
+
+  private async handleOutdent(): Promise<void> {
+    const context = {
+      api: this.api,
+      blockId: this.blockId,
+      data: this._data,
+      element: this._element,
+      getContentElement: this.getContentElement.bind(this),
+      syncContentFromDOM: this.syncContentFromDOM.bind(this),
+      getDepth: this.getDepth.bind(this),
+    };
+
+    await handleOutdent(context, this.depthValidator);
   }
 
   private syncContentFromDOM(): void {

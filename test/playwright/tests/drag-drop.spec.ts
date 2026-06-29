@@ -84,7 +84,16 @@ const performDragDrop = async (
   page: Page,
   sourceLocator: ReturnType<Page['locator']>,
   targetLocator: ReturnType<Page['locator']>,
-  targetVerticalPosition: 'top' | 'bottom'
+  targetVerticalPosition: 'top' | 'bottom',
+  /**
+   * Optional fraction of the target's height to probe for a 'top' drop instead
+   * of the default 1px-from-the-edge. A taller block (e.g. a checklist item,
+   * whose 20px checkbox makes its hit-box taller than a plain paragraph) can put
+   * the 1px edge in a margin/padding gap where elementFromPoint resolves to an
+   * adjacent block. A small fraction (e.g. 0.25) stays unambiguously in the top
+   * half while landing on the block's own content. No effect on 'bottom' drops.
+   */
+  topInsetFraction?: number
 ): Promise<void> => {
   const sourceBox = await getBoundingBox(sourceLocator);
   const targetBox = await getBoundingBox(targetLocator);
@@ -94,11 +103,12 @@ const performDragDrop = async (
   const targetX = targetBox.x + targetBox.width / 2;
   /**
    * For edge detection:
-   * For 'top', we position just 1px from the top edge to ensure unambiguous edge detection.
+   * For 'top', we position just 1px from the top edge to ensure unambiguous edge detection
+   * (or at `topInsetFraction` of the height when supplied, for taller hit-boxes).
    * For 'bottom', we position just 1px from the bottom edge.
    */
   const targetY = targetVerticalPosition === 'top'
-    ? targetBox.y + 1 // Very close to the top edge
+    ? targetBox.y + (topInsetFraction !== undefined ? targetBox.height * topInsetFraction : 1)
     : targetBox.y + targetBox.height - 1; // Very close to the bottom edge
 
   /**
@@ -676,10 +686,23 @@ test.describe('drag and drop', () => {
       data: { blocks },
     });
 
-    // Select just block 1
-    const block1 = page.getByTestId('block-wrapper').filter({ hasText: 'Block 1' });
+    // Block-select just block 1 via the BlockSelection API. A plain click only
+    // places a caret (block.selected stays false), which routes the drag through
+    // the SINGLE-block path — not the multi-block path this test is named for.
+    // Selecting through the module sets block.selected = true so the drag goes
+    // through selectedBlocks (the multi-block path) with a single member.
+    await page.evaluate(() => {
+      const blok = window.blokInstance;
 
-    await block1.click();
+      if (!blok) {
+        throw new Error('Blok instance not found');
+      }
+      const blockSelection = (blok as unknown as { module: { blockSelection: { selectBlockByIndex: (index: number) => void } } }).module.blockSelection;
+
+      blockSelection.selectBlockByIndex(1);
+    });
+
+    const block1 = page.getByTestId('block-wrapper').filter({ hasText: 'Block 1' });
 
     // Hover to show settings button
     await block1.hover();
@@ -1727,7 +1750,10 @@ test.describe('drag and drop', () => {
         await expect(settingsButton).toBeVisible();
 
         // Drop on the TOP half of the nested item → slot between Head (depth 0)
-        // and Nested (depth 1) → matches the deeper next item → depth 1.
+        // and Nested (depth 1) → matches the deeper next item → depth 1. Probe at
+        // 25% of the item height (still the top half) rather than 1px from the
+        // edge: a checklist item's checkbox makes its hit-box taller, so the 1px
+        // edge can fall in a gap that resolves to the wrong block.
         const nestedItem = page.getByTestId('block-wrapper').filter({ hasText: 'Nested' });
 
         await performDragDrop(page, settingsButton, nestedItem, 'top');
